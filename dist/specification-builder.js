@@ -47,6 +47,7 @@ let canonicalRevision = 0, publishedRevision = 0, pendingConflict, durableConfli
 let pageGroupMembershipStatus = "";
 let pendingPageGroupMembershipReorder;
 let canonicalCommandFeedback;
+let retainedBuilderCanonicalEditor;
 const savedSchemas = () => restoreSchemaLibrary(projectStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY)).filter(({ published }) => published).map((schema) => structuredClone(schema));
 function renderCanonicalEntityEditor(host, kind, entity) {
     if (!state)
@@ -87,14 +88,20 @@ function renderCanonicalEntityEditor(host, kind, entity) {
         host.append(section);
         return;
     }
+    if (retainedBuilderCanonicalEditor?.schemaId === canonical.id && retainedBuilderCanonicalEditor.entityId === entity.id) {
+        host.append(retainedBuilderCanonicalEditor.host);
+        retainedBuilderCanonicalEditor.editor.render();
+        return;
+    }
     const editorHost = document.createElement("section");
     host.append(editorHost);
-    mountCanonicalSchemaEditor({ host: editorHost, surface: "Builder", load: () => state.project.collections[kind].find(({ id: entityId }) => entityId === entity.id).canonicalSchema, id, dispatch: (command) => { const current = state.project.collections[kind].find(({ id: entityId }) => entityId === entity.id).canonicalSchema, result = applyCanonicalCommand(current, command); if (result.status === "applied" || result.status === "rebased") {
+    const retainedEditor = mountCanonicalSchemaEditor({ host: editorHost, surface: "Builder", renderAfterDispatch: false, load: () => state.project.collections[kind].find(({ id: entityId }) => entityId === entity.id).canonicalSchema, id, dispatch: (command) => { const current = state.project.collections[kind].find(({ id: entityId }) => entityId === entity.id).canonicalSchema, result = applyCanonicalCommand(current, command); if (result.status === "applied" || result.status === "rebased") {
             canonicalCommandFeedback = { schemaId: current.id, text: canonicalCommandOutcome(command, result, current) };
             persist(transactProject(state, `${command.kind} canonical property in ${entity.name}`, (project) => ({ ...project, collections: { ...project.collections, [kind]: project.collections[kind].map((candidate) => candidate.id === entity.id ? { ...candidate, canonicalSchema: result.document, ...(kind === "profiles" ? { requirements: [] } : {}) } : candidate) } })));
         } return result; }, onUndo: () => { if (state)
             void durableProjectRuntime.undo(state.project.id); }, onRedo: () => { if (state)
             void durableProjectRuntime.redo(state.project.id); }, ...(canonicalCommandFeedback?.schemaId === canonical.id ? { initialFeedback: canonicalCommandFeedback.text } : {}) });
+    retainedBuilderCanonicalEditor = { schemaId: canonical.id, entityId: entity.id, host: editorHost, editor: retainedEditor };
 }
 function renderCanonicalProfileOverview(host) {
     if (!state || selectedKind !== "profiles" || selectedId)
@@ -193,7 +200,7 @@ function renderComposedSchemaWorkspace(host, entity, kind, scope) {
         const canonicalHost = document.createElement("section");
         canonicalHost.setAttribute("aria-label", `${entity.name} canonical schema contribution`);
         section.append(canonicalHost);
-        mountCanonicalSchemaEditor({ host: canonicalHost, surface: "Builder", load: () => state.project.collections[kind].find(({ id: entityId }) => entityId === entity.id).canonicalSchema, id, dispatch: (command) => { const current = state.project.collections[kind].find(({ id: entityId }) => entityId === entity.id).canonicalSchema, result = applyCanonicalCommand(current, command); if (result.status === "applied" || result.status === "rebased") {
+        mountCanonicalSchemaEditor({ host: canonicalHost, surface: "Builder", renderAfterDispatch: false, load: () => state.project.collections[kind].find(({ id: entityId }) => entityId === entity.id).canonicalSchema, id, dispatch: (command) => { const current = state.project.collections[kind].find(({ id: entityId }) => entityId === entity.id).canonicalSchema, result = applyCanonicalCommand(current, command); if (result.status === "applied" || result.status === "rebased") {
                 canonicalCommandFeedback = { schemaId: current.id, text: canonicalCommandOutcome(command, result, current) };
                 persist(transactProject(state, `${command.kind} canonical property in ${entity.name}`, (project) => ({ ...project, collections: { ...project.collections, [kind]: project.collections[kind].map((candidate) => candidate.id === entity.id ? { ...candidate, canonicalSchema: result.document } : candidate) } })));
             } return result; }, onUndo: () => { if (state)
@@ -380,7 +387,10 @@ catch (error) {
     q("#retry-save").hidden = false;
     if (pendingConflict)
         showConflictReview();
-} render(); renderAssignments(); }
+    render();
+    renderAssignments();
+    return;
+} q("#project-state").textContent = `Saving ${label}… · Published revision ${publishedRevision}`; q("#publish-project").disabled = true; }
 function restore() { const stored = projectStorage.getItem(STORAGE_KEY); let singleton, revision = 0; if (stored)
     try {
         const envelope = restoreCanonicalProjectEnvelope(stored);
@@ -871,7 +881,13 @@ function render() { const empty = q("#project-empty"), workspace = q("#project-w
     document.title = "Specification Studio · No active project";
     q("#project-context").textContent = "No active project";
     return;
-} document.title = `Specification Studio · ${state.project.name} · ${state.project.id}`; q("#project-context").textContent = `${state.project.name} · ${state.project.id} · ${state.project.environments[0]} · ${state.draft ? `Preview Draft` : `Published revision ${publishedRevision}`}`; q("#project-state").textContent = pendingConflict ? `Draft conflict; pending ${pendingConflict.pendingLabel}` : durableConflict ? `${durableConflict.label} conflicts with a newer Saved Draft; review current and pending fields.` : saveStatus.kind === "saving" ? `Saving ${saveStatus.label}… · Published revision ${publishedRevision}` : saveStatus.kind === "failed" ? `Save failed for ${state.project.name}: ${saveStatus.label}. ${saveStatus.message ?? "The last Saved Draft is unchanged."}` : state.draft ? `Saved Draft · Published revision ${publishedRevision}` : `Published revision ${publishedRevision}`; q("#tree-project-name").textContent = state.project.name; q("#undo-project").disabled = !durableProjectRuntime.canUndo(state.project.id) || Boolean(durableProjectRuntime.failedSave()); q("#redo-project").disabled = !durableProjectRuntime.canRedo(state.project.id) || Boolean(durableProjectRuntime.failedSave()); q("#publish-project").disabled = Boolean(durableProjectRuntime.failedSave()); q("#flow-step-editor").hidden = selectedKind !== "flows" || !selectedId || projectOverview; q("#schema-draft-editor").hidden = true; q("#assignment-editor").hidden = selectedKind !== "assignments" || projectOverview; q("#bulk-property-editor").hidden = selectedKind !== "profiles" || !selectedId || projectOverview; renderTree(); renderWorkspace(); layeredSchemaUi?.render(); renderReferenceSelectors(); flowGraphBuilder?.render(); flowDocumentationExportUi?.render(); executableFlowBuilder?.render(); }
+} document.title = `Specification Studio · ${state.project.name} · ${state.project.id}`; q("#project-context").textContent = `${state.project.name} · ${state.project.id} · ${state.project.environments[0]} · ${state.draft ? `Preview Draft` : `Published revision ${publishedRevision}`}`; q("#project-state").textContent = pendingConflict ? `Draft conflict; pending ${pendingConflict.pendingLabel}` : durableConflict ? `${durableConflict.label} conflicts with a newer Saved Draft; review current and pending fields.` : saveStatus.kind === "saving" ? `Saving ${saveStatus.label}… · Published revision ${publishedRevision}` : saveStatus.kind === "failed" ? `Save failed for ${state.project.name}: ${saveStatus.label}. ${saveStatus.message ?? "The last Saved Draft is unchanged."}` : state.draft ? `Saved Draft · Published revision ${publishedRevision}` : `Published revision ${publishedRevision}`; q("#tree-project-name").textContent = state.project.name; q("#undo-project").disabled = !durableProjectRuntime.canUndo(state.project.id) || Boolean(durableProjectRuntime.failedSave()); q("#redo-project").disabled = !durableProjectRuntime.canRedo(state.project.id) || Boolean(durableProjectRuntime.failedSave()); q("#publish-project").disabled = Boolean(durableProjectRuntime.failedSave()); q("#flow-step-editor").hidden = selectedKind !== "flows" || !selectedId || projectOverview; q("#schema-draft-editor").hidden = true; q("#assignment-editor").hidden = selectedKind !== "assignments" || projectOverview; q("#bulk-property-editor").hidden = selectedKind !== "profiles" || !selectedId || projectOverview; renderTree(); renderWorkspace(); const profileWorkspace = selectedKind === "profiles" && Boolean(selectedId) && !projectOverview; if (!profileWorkspace) {
+    layeredSchemaUi?.render();
+    renderReferenceSelectors();
+    flowGraphBuilder?.render();
+    flowDocumentationExportUi?.render();
+    executableFlowBuilder?.render();
+} }
 q("#create-project-form").addEventListener("submit", (event) => { event.preventDefault(); if (durableProjectRuntime.failedSave()) {
     q("#project-state").textContent = "A failed durable Draft blocks creating and switching active project context until Retry succeeds.";
     return;
@@ -890,9 +906,10 @@ q("#undo-project").addEventListener("click", () => { if (!state)
     persistNavigation();
     replaceProjectRoute(restored.kind);
     queueMicrotask(() => document.querySelector(`[data-entity-id="${CSS.escape(restored.id)}"]`)?.focus({ preventScroll: true }));
-} render(); }); });
+    render();
+} }); });
 q("#redo-project").addEventListener("click", () => { if (state)
-    void durableProjectRuntime.redo(state.project.id).then(render); });
+    void durableProjectRuntime.redo(state.project.id); });
 q("#project-search").addEventListener("input", renderWorkspace);
 q("#create-project-schema-draft").addEventListener("submit", (event) => { event.preventDefault(); if (!state)
     return; persist(createProjectSchemaDraft(state, { schemaId: q("#project-schema-id").value.trim(), name: q("#project-schema-name").value.trim(), baseRevision: Number(q("#project-schema-revision").value), description: q("#project-schema-description").value }, id)); q("#schema-draft-result").textContent = "Saved one integrated working draft; the published revision is unchanged until project release."; });
@@ -1120,7 +1137,7 @@ q("#builder-storage-diagnostics").addEventListener("click", () => { const failed
 q("#builder-close-recovery").addEventListener("click", () => { builderRecoveryDialog.close(); builderRecoveryOrigin?.focus(); });
 globalThis.addEventListener("durable-project-saving", (event) => { const label = event.detail?.label ?? "project edit"; saveStatus = { kind: "saving", label }; });
 globalThis.addEventListener("durable-project-saved", () => { saveStatus = { kind: "idle" }; q("#retry-save").hidden = true; if (builderRecoveryDialog.open)
-    builderRecoveryDialog.close(); render(); });
+    builderRecoveryDialog.close(); });
 globalThis.addEventListener("durable-project-save-failed", (event) => { const failed = durableProjectRuntime.failedSave(); if (!failed)
     return; state = { ...structuredClone(failed.state), history: { undo: [], redo: [] } }; saveStatus = { kind: "failed", label: failed.command.label, message: failed.error instanceof Error ? failed.error.message : String(failed.error) }; q("#retry-save").hidden = false; if (failed.conflict) {
     durableConflict = structuredClone(failed.conflict);

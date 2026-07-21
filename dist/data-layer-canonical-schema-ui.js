@@ -19,7 +19,8 @@ export function mountCanonicalSchemaEditor(options) {
     else if (result.status === "applied" || result.status === "rebased") {
         pendingType = undefined;
         feedback = canonicalCommandOutcome(command, result, prior);
-    } render(); return result; };
+    } if (options.renderAfterDispatch !== false && options.host.isConnected)
+        render(); return result; };
     const propertyCommand = (document, kind) => { const propertyId = document.selectedPropertyId; if (!propertyId)
         return; if (kind === "rename") {
         const name = options.host.querySelector('[name="propertyName"]')?.value.trim();
@@ -177,7 +178,9 @@ export function mountCanonicalSchemaEditor(options) {
         status.textContent = feedback;
         advancedSummary.textContent = "Advanced JSON (optional)";
         advancedJson.readOnly = true;
-        advancedJson.value = JSON.stringify(document, null, 2);
+        advancedJson.setAttribute("aria-label", "Canonical schema Advanced JSON");
+        advanced.addEventListener("toggle", () => { if (advanced.open && !advancedJson.value)
+            advancedJson.value = JSON.stringify(options.load(), null, 2); });
         advanced.append(advancedSummary, advancedJson);
         options.host.append(header, navigator, editor, preview, status, advanced);
     }

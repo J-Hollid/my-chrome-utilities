@@ -2235,6 +2235,7 @@ function openLocalRulePromotionReview(propertyPath: string, sourceRuleId: string
 
 function renderSchemaDraft(): void {
   const draft = schemaDraft;
+  const compactDocument=compactCanonicalEditor?.load();
   if (schemaEditor) schemaEditor.hidden = !draft;
   if (closeSchemaEditorButton) closeSchemaEditorButton.hidden = !draft;
   if (saveAndCloseSchemaButton) saveAndCloseSchemaButton.hidden = !draft;
@@ -2249,8 +2250,8 @@ function renderSchemaDraft(): void {
     : null;
   const pendingChanges = storedSchema?.workingDraft?.pendingChanges.length ?? 0;
   const status = document.querySelector<HTMLElement>("#schema-editor-status");
-  if (status) status.textContent = compactCanonicalEditor
-    ? `${compactCanonicalEditor.label} · Draft token ${compactCanonicalEditor.load().revision}`
+  if (status) status.textContent = compactCanonicalEditor&&compactDocument
+    ? `${compactCanonicalEditor.label} · Draft token ${compactDocument.revision}`
     : storedSchema?.published === false
     ? `Unpublished new schema draft · ${pendingChanges} pending changes`
     : storedSchema?.workingDraft
@@ -2279,6 +2280,7 @@ function renderSchemaDraft(): void {
   const allPropertyRows = schemaPropertyRows(draft.document, parentDocuments, excludedInheritedPaths);
   const propertyView = filterAndSortSchemaPropertyRows(allPropertyRows, schemaPropertyFilter.value, schemaPropertySort.value as SchemaPropertySortOrder);
   const propertyRows = propertyView.rows;
+  const compactNodesByPath=new Map(compactDocument?Object.values(compactDocument.nodes).map((node)=>[canonicalPropertyPath(compactDocument,node.id),node] as const):[]);
   const propertyPaths = propertyRows.map(({ displayPath }) => displayPath);
   const allPropertyPaths = allPropertyRows.map(({ displayPath }) => displayPath);
   if (!allPropertyPaths.includes(selectedSchemaPropertyPath)) selectedSchemaPropertyPath = allPropertyPaths[0] ?? "example";
@@ -2302,10 +2304,10 @@ function renderSchemaDraft(): void {
     metadata.textContent = `${propertyRow.filterContext ? "Filter context · " : ""}${inherited ? "Inherited" : path.endsWith(".*") ? "Every item" : property?.propertyOrigin === "manual" ? "Manual" : "Observed"} · type ${property?.type ?? "unknown"}${property?.type === "array" && property.items?.type ? ` of ${property.items.type}` : ""}`;
     const persistedPath = propertyRow.canonicalPath;
     if(compactCanonicalEditor)label.textContent=`${path} · ${persistedPath}`;
-    const compactDocument=compactCanonicalEditor?.load();
-    const compactNode=compactDocument&&Object.values(compactDocument.nodes).find((node)=>canonicalPropertyPath(compactDocument,node.id)===persistedPath);
+    const compactNode=compactNodesByPath.get(persistedPath);
     if(compactNode)metadata.textContent+=` · ${compactNode.provenance.map(({contributorName})=>contributorName).join(" · ")}`;
-    if(compactNode){item.dataset.propertyId=compactNode.id;item.addEventListener("click",(event)=>{if(!compactCanonicalEditor||event.target!==item&&event.target!==label)return;const result=compactCanonicalEditor.dispatch({kind:"select",baseRevision:compactDocument.revision,propertyId:compactNode.id});if(result.status==="conflict")throw new Error(result.message);renderCompactCanonicalEditor();});}
+    if(compactNode){item.dataset.propertyId=compactNode.id;item.addEventListener("click",(event)=>{if(!compactCanonicalEditor||!compactDocument||event.target!==item&&event.target!==label)return;const result=compactCanonicalEditor.dispatch({kind:"select",baseRevision:compactDocument.revision,propertyId:compactNode.id});if(result.status==="conflict")throw new Error(result.message);renderCompactCanonicalEditor();});}
+    if(compactCanonicalEditor&&!selectedRow){item.append(label,metadata);return item;}
     const owningSchema = inherited ? schemaPropertyTypeOwner(draft, persistedPath, schemas) : undefined;
     const typeControls = renderSchemaPropertyTypeEditor({
       schema:draft,
@@ -2693,8 +2695,7 @@ function schemaEditorDraft(schema: SchemaDefinition): SchemaDefinition {
   };
 }
 
-function compactCanonicalProjection(adapter:CompactCanonicalEditorAdapter):SchemaDefinition{
-  const canonical=adapter.load();
+function compactCanonicalProjection(adapter:CompactCanonicalEditorAdapter,canonical=adapter.load()):SchemaDefinition{
   return compactSchemaProjection(canonical,{id:canonical.contributorId,name:canonical.contributorName,version:canonical.revision});
 }
 
@@ -2756,8 +2757,8 @@ function renderCompactCanonicalContext():void{
 function renderCompactCanonicalEditor():void{
   const adapter=compactCanonicalEditor;
   if(!adapter)return;
-  schemaDraft=compactCanonicalProjection(adapter);
   const canonical=adapter.load(),selected=canonical.selectedPropertyId&&canonical.nodes[canonical.selectedPropertyId];
+  schemaDraft=compactCanonicalProjection(adapter,canonical);
   compactCanonicalRevisionSnapshots.set(canonical.revision,structuredClone(canonical));
   if(selected)selectedSchemaPropertyPath=canonicalPropertyPath(canonical,selected.id).slice(1).replaceAll("/",".");
   if(schemaEditor){schemaEditor.dataset.schemaPresentation="compact-panel";schemaEditor.dataset.canonicalRevision=String(canonical.revision);schemaEditor.dataset.canonicalSchemaId=canonical.id;schemaEditor.setAttribute("aria-label","Side panel canonical schema editor");}

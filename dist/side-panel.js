@@ -2194,6 +2194,7 @@ function openLocalRulePromotionReview(propertyPath, sourceRuleId, trigger) {
 }
 function renderSchemaDraft() {
     const draft = schemaDraft;
+    const compactDocument = compactCanonicalEditor?.load();
     if (schemaEditor)
         schemaEditor.hidden = !draft;
     if (closeSchemaEditorButton)
@@ -2216,8 +2217,8 @@ function renderSchemaDraft() {
     const pendingChanges = storedSchema?.workingDraft?.pendingChanges.length ?? 0;
     const status = document.querySelector("#schema-editor-status");
     if (status)
-        status.textContent = compactCanonicalEditor
-            ? `${compactCanonicalEditor.label} · Draft token ${compactCanonicalEditor.load().revision}`
+        status.textContent = compactCanonicalEditor && compactDocument
+            ? `${compactCanonicalEditor.label} · Draft token ${compactDocument.revision}`
             : storedSchema?.published === false
                 ? `Unpublished new schema draft · ${pendingChanges} pending changes`
                 : storedSchema?.workingDraft
@@ -2254,6 +2255,7 @@ function renderSchemaDraft() {
     const allPropertyRows = schemaPropertyRows(draft.document, parentDocuments, excludedInheritedPaths);
     const propertyView = filterAndSortSchemaPropertyRows(allPropertyRows, schemaPropertyFilter.value, schemaPropertySort.value);
     const propertyRows = propertyView.rows;
+    const compactNodesByPath = new Map(compactDocument ? Object.values(compactDocument.nodes).map((node) => [canonicalPropertyPath(compactDocument, node.id), node]) : []);
     const propertyPaths = propertyRows.map(({ displayPath }) => displayPath);
     const allPropertyPaths = allPropertyRows.map(({ displayPath }) => displayPath);
     if (!allPropertyPaths.includes(selectedSchemaPropertyPath))
@@ -2282,15 +2284,18 @@ function renderSchemaDraft() {
         const persistedPath = propertyRow.canonicalPath;
         if (compactCanonicalEditor)
             label.textContent = `${path} · ${persistedPath}`;
-        const compactDocument = compactCanonicalEditor?.load();
-        const compactNode = compactDocument && Object.values(compactDocument.nodes).find((node) => canonicalPropertyPath(compactDocument, node.id) === persistedPath);
+        const compactNode = compactNodesByPath.get(persistedPath);
         if (compactNode)
             metadata.textContent += ` · ${compactNode.provenance.map(({ contributorName }) => contributorName).join(" · ")}`;
         if (compactNode) {
             item.dataset.propertyId = compactNode.id;
-            item.addEventListener("click", (event) => { if (!compactCanonicalEditor || event.target !== item && event.target !== label)
+            item.addEventListener("click", (event) => { if (!compactCanonicalEditor || !compactDocument || event.target !== item && event.target !== label)
                 return; const result = compactCanonicalEditor.dispatch({ kind: "select", baseRevision: compactDocument.revision, propertyId: compactNode.id }); if (result.status === "conflict")
                 throw new Error(result.message); renderCompactCanonicalEditor(); });
+        }
+        if (compactCanonicalEditor && !selectedRow) {
+            item.append(label, metadata);
+            return item;
         }
         const owningSchema = inherited ? schemaPropertyTypeOwner(draft, persistedPath, schemas) : undefined;
         const typeControls = renderSchemaPropertyTypeEditor({
@@ -2910,8 +2915,7 @@ function schemaEditorDraft(schema) {
         ...(draft.canonicalSchema !== undefined ? { canonicalSchema: structuredClone(draft.canonicalSchema) } : {}),
     };
 }
-function compactCanonicalProjection(adapter) {
-    const canonical = adapter.load();
+function compactCanonicalProjection(adapter, canonical = adapter.load()) {
     return compactSchemaProjection(canonical, { id: canonical.contributorId, name: canonical.contributorName, version: canonical.revision });
 }
 function compactCanonicalFacetText(canonical, node) {
@@ -3025,8 +3029,8 @@ function renderCompactCanonicalEditor() {
     const adapter = compactCanonicalEditor;
     if (!adapter)
         return;
-    schemaDraft = compactCanonicalProjection(adapter);
     const canonical = adapter.load(), selected = canonical.selectedPropertyId && canonical.nodes[canonical.selectedPropertyId];
+    schemaDraft = compactCanonicalProjection(adapter, canonical);
     compactCanonicalRevisionSnapshots.set(canonical.revision, structuredClone(canonical));
     if (selected)
         selectedSchemaPropertyPath = canonicalPropertyPath(canonical, selected.id).slice(1).replaceAll("/", ".");
