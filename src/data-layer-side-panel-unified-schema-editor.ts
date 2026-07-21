@@ -40,6 +40,64 @@ export function mountUnifiedSidePanelCanonicalEditor(input:{host:HTMLElement;id:
 const pointer=(path:string)=>`/${path.split(/[./]/).filter(Boolean).join("/")}`;
 const clone=<T>(value:T):T=>structuredClone(value);
 const jsonFacetRule=(schemaId:string,nodeId:string,kind:string)=>`json-facet:${schemaId}:${nodeId}:${kind}`;
+
+export function compactSchemaProjection(document:CanonicalSchemaDocument,identity:{id:string;name:string;version:number}):SchemaDefinition{
+  const base:SchemaDefinition={
+    ...identity,
+    published:false,
+    assignments:[],
+    document:{type:"object"},
+  };
+  const projected=savedSchemaFromCanonical(base,document);
+  const {canonicalSchema:_canonicalSchema,...compact}=projected;
+  return compact;
+}
+
+const same=(left:unknown,right:unknown):boolean=>JSON.stringify(left)===JSON.stringify(right);
+const presenceFamily=(mode:CanonicalPropertyNode["presence"]["mode"]):"required"|"forbidden"|"optional"=>mode.startsWith("required")?"required":mode.startsWith("forbidden")?"forbidden":"optional";
+const valuesWithStableIds=(current:CanonicalPropertyNode["allowedValues"],next:CanonicalPropertyNode["allowedValues"],id:(kind:string)=>string)=>next.map((entry,index)=>{
+  const prior=current[index];
+  return prior&&same(prior.value,entry.value)?{...entry,id:prior.id}:{...entry,id:id("allowed-value")};
+});
+
+export function canonicalCommandsFromCompactProjection(document:CanonicalSchemaDocument,projection:SchemaDefinition,id:(kind:string)=>string):CanonicalCommand[]{
+  const {canonicalSchema:_canonicalSchema,...source}=projection;
+  const parsed=savedSchemaCanonicalDocument(source,id),parsedByPath=new Map(Object.values(parsed.nodes).map((node)=>[canonicalPropertyPath(parsed,node.id),node])),currentByPath=new Map(Object.values(document.nodes).map((node)=>[canonicalPropertyPath(document,node.id),node]));
+  const commands:CanonicalCommand[]=[];
+  let revision=document.revision;
+  const removedPaths=new Set([...currentByPath.keys()].filter((path)=>!parsedByPath.has(path)));
+  for(const [path,current] of [...currentByPath].filter(([candidatePath])=>removedPaths.has(candidatePath)&&!candidatePath.split("/").slice(1,-1).some((_,index)=>removedPaths.has(`/${candidatePath.split("/").slice(1,index+2).join("/")}`)))){
+    commands.push({kind:"delete",baseRevision:revision++,propertyId:current.id});
+  }
+  const addedIdsByPath=new Map<string,string>();
+  for(const [path,candidate] of [...parsedByPath].filter(([candidatePath])=>!currentByPath.has(candidatePath)).sort(([left],[right])=>left.split("/").length-right.split("/").length)){
+    const parentPath=path.split("/").slice(0,-1).join("/"),parentId=parentPath?(currentByPath.get(parentPath)?.id??addedIdsByPath.get(parentPath)):undefined,nodeId=candidate.id;
+    commands.push({kind:"add",baseRevision:revision++,name:candidate.name,type:candidate.type,...(parentId?{parentId}:{}),id:()=>nodeId});
+    addedIdsByPath.set(path,nodeId);
+    if(candidate.itemType)commands.push({kind:"type",baseRevision:revision++,propertyId:nodeId,type:candidate.type,itemType:candidate.itemType,confirmed:true});
+    commands.push({kind:"set",baseRevision:revision++,propertyId:nodeId,patch:{presence:clone(candidate.presence),allowedValues:clone(candidate.allowedValues),rules:clone(candidate.rules),documentation:clone(candidate.documentation)}});
+  }
+  for(const current of Object.values(document.nodes)){
+    const path=canonicalPropertyPath(document,current.id),candidate=parsedByPath.get(path);
+    if(!candidate)continue;
+    if(current.type!==candidate.type||current.itemType!==candidate.itemType){
+      commands.push({kind:"type",baseRevision:revision++,propertyId:current.id,type:candidate.type,...(candidate.itemType?{itemType:candidate.itemType}:{}),confirmed:true});
+    }
+    const candidatePresence=presenceFamily(candidate.presence.mode)===presenceFamily(current.presence.mode)
+      ? current.presence
+      : candidate.presence;
+    const patch={
+      presence:clone(candidatePresence),
+      allowedValues:valuesWithStableIds(current.allowedValues,candidate.allowedValues,id),
+      rules:clone(candidate.rules),
+      documentation:clone(candidate.documentation),
+    };
+    const currentFacets={presence:current.presence,allowedValues:current.allowedValues,rules:current.rules,documentation:current.documentation};
+    if(!same(currentFacets,patch))commands.push({kind:"set",baseRevision:revision++,propertyId:current.id,patch});
+  }
+  return commands;
+}
+
 export function savedSchemaCanonicalDocument(schema:Pick<SchemaDefinition,"id"|"name"|"version"|"document"|"attachedRules"|"documentation"|"canonicalSchema">,id:(kind:string)=>string):CanonicalSchemaDocument{
   if(schema.canonicalSchema)return clone(schema.canonicalSchema);
   const canonical=canonicalSchemaFromJsonSchema({id:`canonical:saved:${schema.id}`,contributorId:schema.id,contributorName:schema.name,sourceIdentity:schema.id,sourceRevision:schema.version,document:schema.document as Record<string,unknown>,idFactory:id}),byPath=new Map(Object.values(canonical.nodes).map((node)=>[canonicalPropertyPath(canonical,node.id),node]));

@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import {
+  canonicalCommandsFromCompactProjection,
+  compactSchemaProjection,
   createUnifiedCanonicalEditorController,
   savedSchemaCanonicalDocument,
   savedSchemaFromCanonical,
@@ -72,5 +74,46 @@ controller.select({key:"flow",label:"Cart step",load:()=>documents.profile,dispa
 controller.dispatch({kind:"view",baseRevision:documents.profile.revision,view:"table"});
 assert.deepEqual(writes,[["flow","view"]]);
 assert.equal(mounts,1,"saved schemas, Page Groups, Pages, Events, Flow contributors, and other roles reuse one mounted canonical editor core");
+
+const compactSource={
+  ...canonical,
+  revision:8,
+  nodes:{
+    ...canonical.nodes,
+    [category.id]:{
+      ...category,
+      presence:{mode:"required-when",condition:{kind:"predicate",propertyId:article.id,operator:"Equals",value:"News"}},
+    },
+  },
+};
+const compact=compactSchemaProjection(compactSource,{id:"schema:article",name:"Article",version:8});
+assert.equal(compact.canonicalSchema,undefined,"the compact renderer receives a projection instead of a nested standalone-editor payload");
+compact.documentation.properties["/article/category"]={
+  ...compact.documentation.properties["/article/category"],
+  description:"Changed through compact panel",
+};
+const compactCommands=canonicalCommandsFromCompactProjection(compactSource,compact,id);
+assert.deepEqual(compactCommands.map(({kind})=>kind),["set"],"one compact facet edit emits one property-scoped canonical command");
+assert.equal(compactCommands[0].propertyId,category.id,"compact edits retain the canonical property identity");
+const compactResult=applyCanonicalCommand(compactSource,compactCommands[0]);
+assert.equal(compactResult.document.nodes[category.id].documentation.description,"Changed through compact panel");
+assert.equal(compactResult.document.nodes[category.id].presence.mode,"required-when","projection edits preserve conditional presence owned by canonical state");
+assert.equal(compactResult.document.nodes[category.id].presence.condition.propertyId,article.id);
+
+const addedProjection=structuredClone(compactSchemaProjection(compactSource,{id:"schema:article",name:"Article",version:8}));
+addedProjection.document.properties.article.properties.section={type:"string",description:"Nested section"};
+const addedCommands=canonicalCommandsFromCompactProjection(compactSource,addedProjection,id);
+assert.equal(addedCommands.some(({kind,name})=>kind==="add"&&name==="section"),true,"compact assisted property creation emits a canonical add command");
+let addedResult=compactSource;
+for(const command of addedCommands){const result=applyCanonicalCommand(addedResult,command);assert.notEqual(result.status,"conflict");assert.notEqual(result.status,"confirmation-required");addedResult=result.document;}
+const section=Object.values(addedResult.nodes).find((node)=>node.name==="section");
+assert.equal(section.parentId,article.id);
+assert.equal(section.documentation.description,"Nested section","new compact properties retain their canonical facets");
+
+const removedProjection=structuredClone(compactSchemaProjection(compactSource,{id:"schema:article",name:"Article",version:8}));
+delete removedProjection.document.properties.article.properties.category;
+const removedCommands=canonicalCommandsFromCompactProjection(compactSource,removedProjection,id);
+assert.deepEqual(removedCommands.map(({kind})=>kind),["delete"],"compact removal emits one canonical subtree command");
+assert.equal(removedCommands[0].propertyId,category.id);
 
 console.log("data-layer unified side-panel schema editor tests passed");

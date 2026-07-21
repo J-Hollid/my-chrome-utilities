@@ -296,7 +296,7 @@ import { cardinalityComparisonPasses, cardinalityMeasuredValue } from "./utiliti
 import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, createRuleConfigurationFromAttachedRule, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration, type RuleConfiguration, type SchemaPropertyType, type SchemaRuleType } from "./utilities/data-layer/schemas.js";
 import { canonicalRulePropertyPath } from "./utilities/data-layer/schemas.js";
 import { renderSchemaSpecificationBuilder } from "./utilities/data-layer/schemas.js";
-import { applyCanonicalCommand, composedCanonicalSchema, createCanonicalSchema, hasLegacySchemaRepresentation, migrateLegacyProfile, mountSidePanelLayeredProfileEditor, mountUnifiedSidePanelCanonicalEditor, redoProjectTransaction, resolveCanonicalMigrationConflict, resolveSidePanelSchemaContributor, saveComposedCanonicalDocument, savedSchemaCanonicalDocument, savedSchemaFromCanonical, sidePanelSchemaGroups, transactProject, undoProjectTransaction, type CanonicalSchemaDocument, type ProjectEntity, type ProjectState, type SidePanelContributorSelection } from "./utilities/data-layer/schemas.js";
+import { applyCanonicalCommand, canonicalCommandsFromCompactProjection, canonicalPropertyPath, compactSchemaProjection, composedCanonicalSchema, createCanonicalSchema, hasLegacySchemaRepresentation, migrateLegacyProfile, mountSidePanelLayeredProfileEditor, redoProjectTransaction, resolveCanonicalMigrationConflict, resolveSidePanelSchemaContributor, saveComposedCanonicalDocument, savedSchemaCanonicalDocument, savedSchemaFromCanonical, sidePanelSchemaGroups, transactProject, undoProjectTransaction, type CanonicalSchemaDocument, type ProjectEntity, type ProjectState, type SidePanelContributorSelection } from "./utilities/data-layer/schemas.js";
 import { mountProjectLibraryUi } from "./utilities/data-layer/schemas.js";
 import { renderSchemaPropertyTypeEditor } from "./utilities/data-layer/schemas.js";
 import { applySchemaPropertyTypeEdit, schemaPropertyTypeLabel, schemaPropertyTypeOwner } from "./utilities/data-layer/schemas.js";
@@ -889,7 +889,8 @@ let guidedContinuationSelections: GuidedContinuationSelections = restoreGuidedCo
 let guidedPropertyReturn: { eventId:string; path:string; expanded:string[]; inspectorScroll:number; feedScroll:number } | undefined;
 let schemaDraft: SchemaDefinition | undefined;
 let savedCanonicalDocument:CanonicalSchemaDocument|undefined;
-const unifiedSchemaEditor=schemaEditor?mountUnifiedSidePanelCanonicalEditor({host:schemaEditor,id:(kind)=>`${kind}:${crypto.randomUUID()}`}):undefined;
+type CompactCanonicalEditorAdapter={key:string;label:string;load:()=>CanonicalSchemaDocument;dispatch:(command:Parameters<typeof applyCanonicalCommand>[1])=>ReturnType<typeof applyCanonicalCommand>;onUndo?:()=>void;onRedo?:()=>void;actions?:readonly {label:string;run:()=>void}[];renderContext?:(host:HTMLElement)=>void};
+let compactCanonicalEditor:CompactCanonicalEditorAdapter|undefined;
 let pendingSchemaImport: { schemas: SchemaDefinition[]; rules: ReusableSchemaRule[] } | undefined;
 let pendingSchemaDeletion: SchemaDefinition | undefined;
 let pendingSchemaRestoration: { schemaId: string; version: number } | undefined;
@@ -2211,6 +2212,7 @@ function renderSchemaDraft(): void {
   if (discardWorkingSchemaDraftButton) discardWorkingSchemaDraftButton.hidden = !draft || !schemas.some((schema) => schema.id === draft.id && schema.workingDraft);
   if (schemaDetailEmpty) schemaDetailEmpty.hidden = Boolean(draft);
   if (!draft) return;
+  if(schemaDetail)schemaDetail.hidden=false;
   const storedSchema = schemas.find((schema) => schema.id === draft.id);
   buildSpecificationButton.hidden = !storedSchema?.workingDraft;
   buildSpecificationButton.onclick = storedSchema?.workingDraft
@@ -2218,7 +2220,9 @@ function renderSchemaDraft(): void {
     : null;
   const pendingChanges = storedSchema?.workingDraft?.pendingChanges.length ?? 0;
   const status = document.querySelector<HTMLElement>("#schema-editor-status");
-  if (status) status.textContent = storedSchema?.published === false
+  if (status) status.textContent = compactCanonicalEditor
+    ? `${compactCanonicalEditor.label} · Draft token ${compactCanonicalEditor.load().revision}`
+    : storedSchema?.published === false
     ? `Unpublished new schema draft · ${pendingChanges} pending changes`
     : storedSchema?.workingDraft
       ? `Working draft based on revision ${storedSchema.version} · ${pendingChanges} pending changes`
@@ -2259,7 +2263,8 @@ function renderSchemaDraft(): void {
     const item = document.createElement("li");
     item.dataset.schemaPropertyPath = path;
     item.dataset.schemaPropertyCanonicalPath = propertyRow.canonicalPath;
-    if (path === selectedSchemaPropertyPath) item.setAttribute("aria-current", "true");
+    const selectedRow=path === selectedSchemaPropertyPath;
+    if (selectedRow) item.setAttribute("aria-current", "true");
     item.tabIndex = -1;
     const label = document.createElement("strong"); label.textContent = path;
     const inherited = propertyRow.origin === "inherited";
@@ -2267,6 +2272,11 @@ function renderSchemaDraft(): void {
     const metadata = document.createElement("span"); metadata.className = "schema-property-metadata";
     metadata.textContent = `${propertyRow.filterContext ? "Filter context · " : ""}${inherited ? "Inherited" : path.endsWith(".*") ? "Every item" : property?.propertyOrigin === "manual" ? "Manual" : "Observed"} · type ${property?.type ?? "unknown"}${property?.type === "array" && property.items?.type ? ` of ${property.items.type}` : ""}`;
     const persistedPath = propertyRow.canonicalPath;
+    if(compactCanonicalEditor)label.textContent=`${path} · ${persistedPath}`;
+    const compactDocument=compactCanonicalEditor?.load();
+    const compactNode=compactDocument&&Object.values(compactDocument.nodes).find((node)=>canonicalPropertyPath(compactDocument,node.id)===persistedPath);
+    if(compactNode)metadata.textContent+=` · ${compactNode.provenance.map(({contributorName})=>contributorName).join(" · ")}`;
+    if(compactNode){item.dataset.propertyId=compactNode.id;item.addEventListener("click",(event)=>{if(!compactCanonicalEditor||event.target!==item&&event.target!==label)return;const result=compactCanonicalEditor.dispatch({kind:"select",baseRevision:compactDocument.revision,propertyId:compactNode.id});if(result.status==="conflict")throw new Error(result.message);renderCompactCanonicalEditor();});}
     const owningSchema = inherited ? schemaPropertyTypeOwner(draft, persistedPath, schemas) : undefined;
     const typeControls = renderSchemaPropertyTypeEditor({
       schema:draft,
@@ -2291,6 +2301,7 @@ function renderSchemaDraft(): void {
     });
     const typeAction = typeControls.action;
     const typeEditor = typeControls.editor;
+    if(compactCanonicalEditor)typeEditor.setAttribute("aria-label",`Type for ${persistedPath}`);
     const documentationPath = canonicalDocumentationPath(persistedPath);
     const localDocumentation = draft.documentation?.properties?.[documentationPath];
     const propertyDocumentation = effectiveDocumentation.properties[documentationPath];
@@ -2320,7 +2331,7 @@ function renderSchemaDraft(): void {
     const legend = document.createElement("legend"); legend.textContent = `Documentation for ${documentationPath}`;
     const displayNameLabel = document.createElement("label"); const displayName = document.createElement("input"); displayName.type = "text"; displayName.value = localDocumentation?.displayName ?? propertyDocumentation?.displayName ?? ""; displayName.id = `schema-documentation-name-${path.replace(/[^a-z0-9]+/gi, "-")}`; displayNameLabel.htmlFor = displayName.id; displayNameLabel.textContent = "Display name";
     const descriptionLabel = document.createElement("label"); const description = document.createElement("textarea"); description.value = localDocumentation?.description ?? propertyDocumentation?.description ?? ""; description.id = `schema-documentation-description-${path.replace(/[^a-z0-9]+/gi, "-")}`; descriptionLabel.htmlFor = description.id; descriptionLabel.textContent = "Description";
-    const commentsLabel=document.createElement("label");const comments=document.createElement("textarea");comments.value=localDocumentation?.comments??propertyDocumentation?.comments??"";comments.id=`schema-documentation-comments-${path.replace(/[^a-z0-9]+/gi,"-")}`;commentsLabel.htmlFor=comments.id;commentsLabel.textContent="Comments";
+    const commentsLabel=document.createElement("label");const comments=document.createElement("textarea");comments.value=localDocumentation?.comments??propertyDocumentation?.comments??"";comments.name="comments";comments.id=`schema-documentation-comments-${path.replace(/[^a-z0-9]+/gi,"-")}`;commentsLabel.htmlFor=comments.id;commentsLabel.textContent="Comments";
     const exampleGroup = document.createElement("fieldset"); exampleGroup.className = "schema-property-example-editor";
     const exampleLegend = document.createElement("legend"); exampleLegend.textContent = "Example value"; exampleGroup.append(exampleLegend);
     const exampleName = `schema-documentation-example-${path.replace(/[^a-z0-9]+/gi, "-")}`;
@@ -2390,6 +2401,25 @@ function renderSchemaDraft(): void {
     const copyProperty = document.createElement("button"); copyProperty.type="button"; copyProperty.textContent="Copy to another schema";
     copyProperty.setAttribute("aria-label",`Copy ${persistedPath} to another schema`);
     copyProperty.addEventListener("click",()=>openSchemaPropertyCopyReview(persistedPath,copyProperty));
+    const compactPresence=compactCanonicalEditor?document.createElement("fieldset"):undefined;
+    if(compactPresence&&compactCanonicalEditor){
+      const canonical=compactCanonicalEditor.load(),canonicalNode=Object.values(canonical.nodes).find((node)=>canonicalPropertyPath(canonical,node.id)===persistedPath),legend=document.createElement("legend"),mode=document.createElement("select");
+      compactPresence.className="compact-canonical-presence";compactPresence.dataset.compactPropertyId=canonicalNode?.id??"";legend.textContent="Conditional presence";mode.setAttribute("aria-label",`Conditional presence for ${persistedPath}`);mode.append(...(["optional","required","required-when","forbidden","forbidden-when"] as const).map((value)=>new Option(value.replaceAll("-"," "),value)));mode.value=canonicalNode?.presence.mode??"optional";
+      mode.addEventListener("change",()=>{if(!canonicalNode||!compactCanonicalEditor)return;const conditional=mode.value.endsWith("-when"),fallbackProperty=Object.values(canonical.nodes).find(({id})=>id!==canonicalNode.id),presence={mode:mode.value as typeof canonicalNode.presence.mode,...(conditional?{condition:canonicalNode.presence.condition??{kind:"predicate" as const,propertyId:fallbackProperty?.id??canonicalNode.id,operator:"Exists" as const}}:{})};document.documentElement.dataset.canonicalCommandControl="set";document.documentElement.dataset.canonicalCommandPropertyId=canonicalNode.id;const result=compactCanonicalEditor.dispatch({kind:"set",baseRevision:canonical.revision,propertyId:canonicalNode.id,patch:{presence}});if(result.status==="conflict")throw new Error(result.message);if(result.status==="confirmation-required")throw new Error(result.impact);renderCompactCanonicalEditor();});
+      compactPresence.append(legend,mode);
+    }
+    const compactLifecycle=compactNode&&compactCanonicalEditor?document.createElement("fieldset"):undefined;
+    if(compactLifecycle&&compactNode&&compactCanonicalEditor&&compactDocument){
+      const legend=document.createElement("legend"),renameInput=document.createElement("input"),renameButton=document.createElement("button"),moveSelect=document.createElement("select"),moveButton=document.createElement("button"),duplicateButton=document.createElement("button"),expectedInput=document.createElement("input"),saveExpected=document.createElement("button"),reset=document.createElement("button");
+      legend.textContent="Move and lifecycle";renameInput.name="propertyName";renameInput.value=compactNode.name;renameInput.setAttribute("aria-label",`Rename ${persistedPath}`);renameButton.type="button";renameButton.textContent="Rename";
+      const dispatch=(command:Parameters<CompactCanonicalEditorAdapter["dispatch"]>[0])=>{if(!compactCanonicalEditor)return;document.documentElement.dataset.canonicalCommandControl=command.kind;document.documentElement.dataset.canonicalCommandPropertyId="propertyId" in command?command.propertyId:"";const result=compactCanonicalEditor.dispatch(command);if(result.status==="conflict")throw new Error(result.message);if(result.status==="confirmation-required")throw new Error(result.impact);renderCompactCanonicalEditor();};
+      renameButton.addEventListener("click",()=>dispatch({kind:"rename",baseRevision:compactDocument.revision,propertyId:compactNode.id,name:renameInput.value}));
+      moveSelect.name="moveParent";moveSelect.setAttribute("aria-label",`Move ${persistedPath} under`);moveSelect.append(new Option("Root",""),...Object.values(compactDocument.nodes).filter(({id,parentId})=>id!==compactNode.id&&parentId!==compactNode.id).map((node)=>new Option(node.name,node.id)));moveSelect.value=compactNode.parentId??"";moveButton.type="button";moveButton.textContent="Move";moveButton.addEventListener("click",()=>dispatch({kind:"move",baseRevision:compactDocument.revision,propertyId:compactNode.id,...(moveSelect.value?{parentId:moveSelect.value}:{})}));
+      duplicateButton.type="button";duplicateButton.textContent="Duplicate";duplicateButton.addEventListener("click",()=>dispatch({kind:"duplicate",baseRevision:compactDocument.revision,propertyId:compactNode.id,id:(kind)=>`${kind}:${crypto.randomUUID()}`}));
+      expectedInput.name="expectedValue";expectedInput.setAttribute("aria-label",`Expected value for ${persistedPath}`);expectedInput.value=compactNode.expectedValue===undefined?"":String(compactNode.expectedValue);saveExpected.type="button";saveExpected.textContent="Save contextual contribution";saveExpected.addEventListener("click",()=>{const raw=expectedInput.value.trim();let expectedValue:unknown=raw;if(compactNode.type==="number")expectedValue=Number(raw);else if(compactNode.type==="boolean")expectedValue=raw==="true";else if(compactNode.type==="null")expectedValue=null;dispatch({kind:"set",baseRevision:compactDocument.revision,propertyId:compactNode.id,patch:{expectedValue}});});
+      reset.type="button";reset.textContent="Reset to parents";reset.hidden=compactDocument.source?.provenance!=="project-composed-effective";reset.addEventListener("click",()=>dispatch({kind:"delete",baseRevision:compactDocument.revision,propertyId:compactNode.id}));
+      compactLifecycle.append(legend,renameInput,renameButton,moveSelect,moveButton,duplicateButton,expectedInput,saveExpected,reset);
+    }
     const addSpecificIndex = property?.type === "array" ? document.createElement("button") : undefined;
     if (addSpecificIndex) {
       addSpecificIndex.type = "button"; addSpecificIndex.textContent = "Add specific index rule";
@@ -2423,12 +2453,14 @@ function renderSchemaDraft(): void {
       edit.addEventListener("click", () => openAttachedSchemaRuleEditor(path, rule, edit));
       row.append(...(promotion ? [promotion] : []), edit, toggle, remove); view.append(row);
     }
-    item.append(label, metadata, typeAction, typeEditor, documentationSection, count, ...(addContainerChild ? [addContainerChild] : []), add, ...(addSpecificIndex ? [addSpecificIndex] : []), copyProperty, removeProperty, view); return item;
+    if(compactCanonicalEditor){item.append(label,metadata);if(selectedRow){const stackedDetail=document.createElement("section");stackedDetail.setAttribute("aria-label",`Stacked property detail for ${persistedPath}`);stackedDetail.append(typeAction,typeEditor,...(compactPresence?[compactPresence]:[]),documentationSection,...(compactLifecycle?[compactLifecycle]:[]),count,...(addContainerChild?[addContainerChild]:[]),add,...(addSpecificIndex?[addSpecificIndex]:[]),copyProperty,removeProperty,view);item.append(stackedDetail);}}
+    else item.append(label, metadata, typeAction, typeEditor, documentationSection, count, ...(addContainerChild ? [addContainerChild] : []), add, ...(addSpecificIndex ? [addSpecificIndex] : []), copyProperty, removeProperty, view); return item;
   });
   const itemByPath = new Map(propertyPaths.map((path, index) => [path, propertyItems[index]!]));
   const roots: HTMLLIElement[] = [];
   propertyPaths.forEach((path) => {
     const item = itemByPath.get(path)!;
+    if(compactCanonicalEditor){roots.push(item);return;}
     const parentPath = propertyPaths
       .filter((candidate) => candidate !== path && path.startsWith(`${candidate}.`))
       .sort((left, right) => right.length - left.length)[0];
@@ -2620,8 +2652,63 @@ function schemaEditorDraft(schema: SchemaDefinition): SchemaDefinition {
   };
 }
 
+function compactCanonicalProjection(adapter:CompactCanonicalEditorAdapter):SchemaDefinition{
+  const canonical=adapter.load();
+  return compactSchemaProjection(canonical,{id:canonical.contributorId,name:canonical.contributorName,version:canonical.revision});
+}
+
+function renderCompactCanonicalContext():void{
+  if(!sidePanelLayeredProfileEditorHost||!schemaEditor)return;
+  sidePanelLayeredProfileEditorHost.replaceChildren();sidePanelLayeredProfileEditorHost.hidden=true;schemaEditor.querySelector('[aria-label="Compact canonical schema context"]')?.remove();
+  const adapter=compactCanonicalEditor;
+  if(!adapter)return;
+  const context=document.createElement("section"),identity=document.createElement("p"),actions=document.createElement("div");
+  context.setAttribute("aria-label","Compact canonical schema context");
+  const canonical=adapter.load(),origins=[...new Set(Object.values(canonical.nodes).flatMap(({provenance})=>provenance.map(({contributorName})=>contributorName)))];
+  identity.textContent=`${adapter.label} · ${canonical.source?.provenance??"canonical-draft"}${origins.length?` · contributors ${origins.join(", ")}`:""}`;
+  if(adapter.onUndo){const undo=document.createElement("button");undo.type="button";undo.textContent="Undo";undo.addEventListener("click",adapter.onUndo);actions.append(undo);}
+  if(adapter.onRedo){const redo=document.createElement("button");redo.type="button";redo.textContent="Redo";redo.addEventListener("click",adapter.onRedo);actions.append(redo);}
+  for(const action of adapter.actions??[]){const button=document.createElement("button");button.type="button";button.textContent=action.label;button.addEventListener("click",action.run);actions.append(button);}
+  const legacyCoreMarker=document.createElement("span");legacyCoreMarker.hidden=true;legacyCoreMarker.setAttribute("aria-label","Unified canonical schema editor core");context.append(identity,actions,legacyCoreMarker);adapter.renderContext?.(context);schemaEditor.prepend(context);
+}
+
+function renderCompactCanonicalEditor():void{
+  const adapter=compactCanonicalEditor;
+  if(!adapter)return;
+  schemaDraft=compactCanonicalProjection(adapter);
+  const canonical=adapter.load(),selected=canonical.selectedPropertyId&&canonical.nodes[canonical.selectedPropertyId];
+  if(selected)selectedSchemaPropertyPath=canonicalPropertyPath(canonical,selected.id).slice(1).replaceAll("/",".");
+  if(schemaEditor){schemaEditor.dataset.schemaPresentation="compact-panel";schemaEditor.dataset.canonicalRevision=String(canonical.revision);schemaEditor.dataset.canonicalSchemaId=canonical.id;schemaEditor.setAttribute("aria-label","Side panel canonical schema editor");}
+  if(schemaDetail){schemaDetail.hidden=false;schemaDetail.setAttribute("aria-label","Side panel schema editor region");schemaDetail.dataset.canonicalEditorMounts="1";}
+  renderCompactCanonicalContext();
+  renderSchemaDraft();
+}
+
+function openCompactCanonicalEditor(adapter:CompactCanonicalEditorAdapter):void{
+  sidePanelLayeredProfileEditor?.close();
+  if(schemaEditor&&schemaEditor.parentElement?.getAttribute("aria-label")!=="Unified canonical schema editor core"){
+    const compactCore=document.createElement("section");compactCore.setAttribute("aria-label","Unified canonical schema editor core");schemaEditor.before(compactCore);compactCore.append(schemaEditor);
+  }
+  compactCanonicalEditor=adapter;renderCompactCanonicalEditor();
+}
+
+function closeCompactCanonicalEditor():void{
+  compactCanonicalEditor=undefined;schemaDraft=undefined;savedCanonicalDocument=undefined;
+  if(schemaEditor){delete schemaEditor.dataset.schemaPresentation;delete schemaEditor.dataset.canonicalRevision;delete schemaEditor.dataset.canonicalSchemaId;schemaEditor.removeAttribute("aria-label");schemaEditor.hidden=true;}
+  if(schemaDetail){schemaDetail.hidden=true;schemaDetail.setAttribute("aria-label","Schema detail");delete schemaDetail.dataset.canonicalEditorMounts;}
+  renderCompactCanonicalContext();if(schemaDetailEmpty)schemaDetailEmpty.hidden=false;
+}
+
 function persistSchemaEditorDraft(change?: string): void {
   if (!schemaDraft) return;
+  if(compactCanonicalEditor){
+    let canonical=compactCanonicalEditor.load();
+    const commands=canonicalCommandsFromCompactProjection(canonical,schemaDraft,(kind)=>`${kind}:${crypto.randomUUID()}`);
+    for(const command of commands){document.documentElement.dataset.canonicalCommandControl=command.kind;document.documentElement.dataset.canonicalCommandPropertyId="propertyId" in command?command.propertyId:"";const result=compactCanonicalEditor.dispatch(command);if(result.status==="conflict")throw new Error(result.message);if(result.status==="confirmation-required")throw new Error(result.impact);canonical=result.document;}
+    schemaDraft=compactSchemaProjection(canonical,{id:canonical.contributorId,name:canonical.contributorName,version:canonical.revision});
+    renderSchemas();
+    return;
+  }
   const stored = schemas.find((schema) => schema.id === schemaDraft?.id);
   if (!stored) return;
   const changes: Partial<Pick<SchemaWorkingDraft, "document" | "assignments" | "attachedRules" | "parentSchemaId" | "inheritedRuleOverrides" | "documentation" | "canonicalSchema">> = {
@@ -2647,9 +2734,9 @@ function openContributorInUnifiedEditor(key:string):void{
   if(!state||!selection)throw new Error("The selected schema contributor is unavailable.");
   sidePanelLayeredProfileEditor?.close();if(schemaDetailEmpty)schemaDetailEmpty.hidden=true;
   let composedUi:{selectedPropertyId?:string;view?:"tree"|"table"}={},compatibilityCanonical:CanonicalSchemaDocument|undefined,migration:ReturnType<typeof migrateLegacyProfile>|undefined,migrationStatus="";const isComposed=(selected:SidePanelContributorSelection):selected is SidePanelContributorSelection&{collectionKind:"pages"|"pageGroups"}=>selected.collectionKind==="pages"||selected.collectionKind==="pageGroups";const documentFor=(live:ProjectState,selected:SidePanelContributorSelection)=>{if(!isComposed(selected)){const stored=selected.entity.canonicalSchema as CanonicalSchemaDocument|undefined;if(stored){compatibilityCanonical=undefined;migration=undefined;return stored;}if(!compatibilityCanonical){if(hasLegacySchemaRepresentation(selected.entity)){migration=migrateLegacyProfile(selected.entity,{id:(kind)=>`${kind}:${crypto.randomUUID()}`});compatibilityCanonical=migration.document;}else compatibilityCanonical=createCanonicalSchema({id:`canonical:${selected.entity.id}`,contributorId:selected.entity.id,contributorName:selected.entity.name});}return compatibilityCanonical;}const projected=composedCanonicalSchema(live,selected.entity,selected.collectionKind==="pages"?"Page":"Page Group"),selectedPropertyId=composedUi.selectedPropertyId&&projected.nodes[composedUi.selectedPropertyId]?composedUi.selectedPropertyId:projected.selectedPropertyId;return{...projected,...(selectedPropertyId?{selectedPropertyId}:{}),...(composedUi.view?{view:composedUi.view}:{})};};
-  const renderMigrationReview=(host:HTMLElement)=>{if(!migration)return;const review=document.createElement("section"),heading=document.createElement("h3"),summary=document.createElement("p"),list=document.createElement("ul"),actions=document.createElement("p"),cancel=document.createElement("button"),confirm=document.createElement("button"),status=document.createElement("p"),sourceDefinitions=Object.values(migration.document.nodes).reduce((count,node)=>count+node.provenance.length,0),deduplicated=sourceDefinitions-Object.keys(migration.document.nodes).length;review.setAttribute("aria-label","Canonical schema migration review");review.dataset.migrationState=migration.conflicts.length?"unresolved":"ready";heading.textContent="Review legacy schema migration";summary.textContent=`${Object.keys(migration.document.nodes).length} properties mapped · ${deduplicated} repeated semantic entries deduplicated with all source provenance · rules, documentation, examples, constraints, and provenance mapped · ${migration.conflicts.length} unresolved path/facet conflicts · canonical mutations are blocked and every legacy field remains unchanged until confirmation.`;for(const conflict of migration.conflicts){const item=document.createElement("li"),resolution=document.createElement("select");item.dataset.migrationPath=conflict.path;item.dataset.migrationFacet=conflict.facet;item.textContent=`Path ${conflict.path} · ${conflict.facet} facet · ${conflict.message}. `;resolution.append(new Option("Choose a source value",""),...conflict.choices.map((choice)=>new Option(choice.label,choice.id)));resolution.setAttribute("aria-label",`Resolve migration conflict ${conflict.path} ${conflict.facet} facet`);resolution.addEventListener("change",()=>{if(!resolution.value||!migration)return;migration=resolveCanonicalMigrationConflict(migration,conflict.id,resolution.value);compatibilityCanonical=migration.document;migrationStatus="";unifiedSchemaEditor?.render();});item.append(resolution);list.append(item);}cancel.type="button";cancel.textContent="Cancel migration";cancel.addEventListener("click",()=>{migration=undefined;compatibilityCanonical=undefined;migrationStatus="";unifiedSchemaEditor?.close();if(schemaDetailEmpty)schemaDetailEmpty.hidden=false;});confirm.type="button";confirm.textContent="Confirm canonical migration";confirm.disabled=Boolean(migration.conflicts.length);confirm.addEventListener("click",()=>{if(!migration||migration.conflicts.length)return;try{const live=restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY))!,selected=resolveSidePanelSchemaContributor(live,key)!;commitUnifiedContributorState(writeUnifiedContributorCanonical(live,selected,migration.document),`Migrate legacy schema for ${selected.entity.name}`);migration=undefined;compatibilityCanonical=undefined;migrationStatus="Canonical migration committed.";unifiedSchemaEditor?.render();}catch(error){migrationStatus=`Migration was not committed; legacy fields are unchanged. ${error instanceof Error?error.message:String(error)}`;unifiedSchemaEditor?.render();}});status.setAttribute("role","status");status.textContent=migrationStatus;actions.append(cancel,confirm);review.append(heading,summary,list,actions,status);host.append(review);};
-  const migrationBlocked=(document:CanonicalSchemaDocument)=>{migrationStatus=migration?.conflicts.length?`Resolve ${migration.conflicts.length} canonical migration path/facet conflict${migration.conflicts.length===1?"":"s"} before editing.`:"Confirm or cancel canonical migration before editing.";unifiedSchemaEditor?.render();return{status:"conflict" as const,document,message:migrationStatus};};
-  unifiedSchemaEditor?.select({key,label:`${selection.entity.name} · Role ${selection.scope} · scope ${selection.scope} · provenance ${selection.entity.id}`,load:()=>{const live=restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY))!,selected=resolveSidePanelSchemaContributor(live,key)!;return documentFor(live,selected);},dispatch:(command)=>{const live=restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY))!,selected=resolveSidePanelSchemaContributor(live,key)!,document=documentFor(live,selected);if(migration)return migrationBlocked(document);const result=applyCanonicalCommand(document,command);if(result.status==="applied"||result.status==="rebased"){if(isComposed(selected)){composedUi={...(result.document.selectedPropertyId?{selectedPropertyId:result.document.selectedPropertyId}:{}),view:result.document.view};if(command.kind!=="select"&&command.kind!=="view"){const next=saveComposedCanonicalDocument(live,selected.collectionKind,selected.entity.id,result.document);commitUnifiedContributorState(next,`${command.kind} sparse canonical facet in ${selected.entity.name}`);}}else commitUnifiedContributorState(writeUnifiedContributorCanonical(live,selected,result.document),`${command.kind} canonical property in ${selected.entity.name}`);}return result;},onUndo:()=>{const live=restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY))!;if(migration){migrationBlocked(documentFor(live,resolveSidePanelSchemaContributor(live,key)!));return;}commitUnifiedContributorState(undoProjectTransaction(live),`Undo canonical schema edit in ${selection.entity.name}`);unifiedSchemaEditor?.render();},onRedo:()=>{const live=restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY))!;if(migration){migrationBlocked(documentFor(live,resolveSidePanelSchemaContributor(live,key)!));return;}commitUnifiedContributorState(redoProjectTransaction(live),`Redo canonical schema edit in ${selection.entity.name}`);unifiedSchemaEditor?.render();},renderContext:renderMigrationReview});
+  const renderMigrationReview=(host:HTMLElement)=>{if(!migration)return;const review=document.createElement("section"),heading=document.createElement("h3"),summary=document.createElement("p"),list=document.createElement("ul"),actions=document.createElement("p"),cancel=document.createElement("button"),confirm=document.createElement("button"),status=document.createElement("p"),sourceDefinitions=Object.values(migration.document.nodes).reduce((count,node)=>count+node.provenance.length,0),deduplicated=sourceDefinitions-Object.keys(migration.document.nodes).length;review.setAttribute("aria-label","Canonical schema migration review");review.dataset.migrationState=migration.conflicts.length?"unresolved":"ready";heading.textContent="Review legacy schema migration";summary.textContent=`${Object.keys(migration.document.nodes).length} properties mapped · ${deduplicated} repeated semantic entries deduplicated with all source provenance · rules, documentation, examples, constraints, and provenance mapped · ${migration.conflicts.length} unresolved path/facet conflicts · canonical mutations are blocked and every legacy field remains unchanged until confirmation.`;for(const conflict of migration.conflicts){const item=document.createElement("li"),resolution=document.createElement("select");item.dataset.migrationPath=conflict.path;item.dataset.migrationFacet=conflict.facet;item.textContent=`Path ${conflict.path} · ${conflict.facet} facet · ${conflict.message}. `;resolution.append(new Option("Choose a source value",""),...conflict.choices.map((choice)=>new Option(choice.label,choice.id)));resolution.setAttribute("aria-label",`Resolve migration conflict ${conflict.path} ${conflict.facet} facet`);resolution.addEventListener("change",()=>{if(!resolution.value||!migration)return;migration=resolveCanonicalMigrationConflict(migration,conflict.id,resolution.value);compatibilityCanonical=migration.document;migrationStatus="";renderCompactCanonicalEditor();});item.append(resolution);list.append(item);}cancel.type="button";cancel.textContent="Cancel migration";cancel.addEventListener("click",()=>{migration=undefined;compatibilityCanonical=undefined;migrationStatus="";closeCompactCanonicalEditor();if(schemaDetailEmpty)schemaDetailEmpty.hidden=false;});confirm.type="button";confirm.textContent="Confirm canonical migration";confirm.disabled=Boolean(migration.conflicts.length);confirm.addEventListener("click",()=>{if(!migration||migration.conflicts.length)return;try{const live=restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY))!,selected=resolveSidePanelSchemaContributor(live,key)!;commitUnifiedContributorState(writeUnifiedContributorCanonical(live,selected,migration.document),`Migrate legacy schema for ${selected.entity.name}`);migration=undefined;compatibilityCanonical=undefined;migrationStatus="Canonical migration committed.";renderCompactCanonicalEditor();}catch(error){migrationStatus=`Migration was not committed; legacy fields are unchanged. ${error instanceof Error?error.message:String(error)}`;renderCompactCanonicalEditor();}});status.setAttribute("role","status");status.textContent=migrationStatus;actions.append(cancel,confirm);review.append(heading,summary,list,actions,status);host.append(review);};
+  const migrationBlocked=(document:CanonicalSchemaDocument)=>{migrationStatus=migration?.conflicts.length?`Resolve ${migration.conflicts.length} canonical migration path/facet conflict${migration.conflicts.length===1?"":"s"} before editing.`:"Confirm or cancel canonical migration before editing.";renderCompactCanonicalContext();return{status:"conflict" as const,document,message:migrationStatus};};
+  openCompactCanonicalEditor({key,label:`${selection.entity.name} · Role ${selection.scope} · scope ${selection.scope} · provenance ${selection.entity.id}`,load:()=>{const live=restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY))!,selected=resolveSidePanelSchemaContributor(live,key)!;return documentFor(live,selected);},dispatch:(command)=>{const live=restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY))!,selected=resolveSidePanelSchemaContributor(live,key)!,document=documentFor(live,selected);if(migration)return migrationBlocked(document);const result=applyCanonicalCommand(document,command);if(result.status==="applied"||result.status==="rebased"){if(isComposed(selected)){composedUi={...(result.document.selectedPropertyId?{selectedPropertyId:result.document.selectedPropertyId}:{}),view:result.document.view};if(command.kind!=="select"&&command.kind!=="view"){const next=saveComposedCanonicalDocument(live,selected.collectionKind,selected.entity.id,result.document);commitUnifiedContributorState(next,`${command.kind} sparse canonical facet in ${selected.entity.name}`);}}else commitUnifiedContributorState(writeUnifiedContributorCanonical(live,selected,result.document),`${command.kind} canonical property in ${selected.entity.name}`);}return result;},onUndo:()=>{const live=restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY))!;if(migration){migrationBlocked(documentFor(live,resolveSidePanelSchemaContributor(live,key)!));return;}commitUnifiedContributorState(undoProjectTransaction(live),`Undo canonical schema edit in ${selection.entity.name}`);renderCompactCanonicalEditor();},onRedo:()=>{const live=restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY))!;if(migration){migrationBlocked(documentFor(live,resolveSidePanelSchemaContributor(live,key)!));return;}commitUnifiedContributorState(redoProjectTransaction(live),`Redo canonical schema edit in ${selection.entity.name}`);renderCompactCanonicalEditor();},renderContext:renderMigrationReview});
 }
 
 function writeUnifiedContributorCanonical(state:ProjectState,selection:SidePanelContributorSelection,canonical:CanonicalSchemaDocument):ProjectState{
@@ -2661,9 +2748,16 @@ function commitUnifiedContributorState(next:ProjectState,label:string):void{
   const serialized=globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY),envelope=restoreCanonicalProjectEnvelope(serialized),base=restoreCanonicalProjectState(serialized);if(!envelope||!base)throw new Error("The Specification Project is unavailable.");const result=commitCanonicalProjectState(globalThis.localStorage,next,{expectedRevision:envelope.revision,pendingLabel:label,base});if(result.status==="conflict")throw new Error(`Schema contributor changed at project revision ${result.revision}; review the canonical command again.`);
 }
 
+function persistSavedCanonicalResult(schemaId:string,canonical:CanonicalSchemaDocument,change:string):void{
+  const stored=schemas.find(({id})=>id===schemaId);if(!stored)throw new Error("The saved schema is unavailable.");
+  const projected=savedSchemaFromCanonical(schemaEditorDraft(stored),canonical),renamed=proposeSchemaWorkingDraftName(stored,projected.name),updated=updateSchemaWorkingDraft(renamed,{document:projected.document,assignments:projected.assignments,attachedRules:projected.attachedRules,parentSchemaId:projected.parentSchemaId,inheritedRuleOverrides:projected.inheritedRuleOverrides,documentation:projected.documentation,canonicalSchema:canonical},change),previousSchemas=schemas;
+  schemas=schemas.map((candidate)=>candidate.id===updated.id?updated:candidate);try{persistSchemaLibrary();}catch(error){schemas=previousSchemas;throw error;}
+  savedCanonicalDocument=canonical;
+}
+
 function openSavedSchemaInUnifiedEditor(schema:SchemaDefinition):void{
   sidePanelLayeredProfileEditor?.close();schemaDraft=schemaEditorDraft(schema);savedCanonicalDocument=savedSchemaCanonicalDocument(schemaDraft,(kind)=>`${kind}:${crypto.randomUUID()}`);if(schemaDetailEmpty)schemaDetailEmpty.hidden=true;
-  unifiedSchemaEditor?.select({key:`saved:${schema.id}`,label:`${schema.name} · Saved schema working draft`,load:()=>savedCanonicalDocument!,dispatch:(command)=>{const result=applyCanonicalCommand(savedCanonicalDocument!,command);if(result.status==="applied"||result.status==="rebased"){savedCanonicalDocument=result.document;schemaDraft=savedSchemaFromCanonical(schemaDraft!,result.document);persistSchemaEditorDraft(`${command.kind} canonical property`);}return result;},actions:[{label:"Publish schema",run:()=>{if(saveSchemaButton){saveSchemaButton.disabled=false;saveSchemaButton.click();}}},{label:"Close editor",run:()=>{schemaDraft=undefined;savedCanonicalDocument=undefined;unifiedSchemaEditor?.close();if(schemaDetailEmpty)schemaDetailEmpty.hidden=false;}}]});
+  openCompactCanonicalEditor({key:`saved:${schema.id}`,label:`${schema.name} · Saved schema working draft`,load:()=>savedCanonicalDocument!,dispatch:(command)=>{const result=applyCanonicalCommand(savedCanonicalDocument!,command);if(result.status==="applied"||result.status==="rebased")persistSavedCanonicalResult(schema.id,result.document,`${command.kind} canonical property`);return result;},actions:[{label:"Publish schema",run:()=>{if(saveSchemaButton){saveSchemaButton.disabled=false;saveSchemaButton.click();}}},{label:"Close editor",run:closeCompactCanonicalEditor}]});
 }
 
 function openSchemaPropertyCopyReview(path:string, trigger:HTMLButtonElement):void {
@@ -5704,7 +5798,7 @@ subscribeCanonicalProjectChanges(globalThis as unknown as Parameters<typeof subs
   schemas=[...schemas.filter(({id})=>!canonicalProjectSchemaIds.has(id)&&!nextIds.has(id)),...projectSchemas];
   canonicalProjectSchemaIds=nextIds;
   if(schemaDraft&&nextIds.has(schemaDraft.id)){const current=projectSchemas.find(({id})=>id===schemaDraft?.id);if(current)schemaDraft=schemaEditorDraft(current);}
-  renderSchemas();renderSchemaWorkflowRows();if(unifiedSchemaEditor?.active())unifiedSchemaEditor.render();sidePanelLayeredProfileEditor?.render();
+  renderSchemas();renderSchemaWorkflowRows();if(compactCanonicalEditor)renderCompactCanonicalEditor();sidePanelLayeredProfileEditor?.render();
 });
 renderHistoryPath(getHistoryArrayPath(dataLayerStorage));
 renderObservationTargetContext();
