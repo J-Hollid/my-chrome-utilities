@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
+import {createSpecificationProject,transactProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
 import {
   commitProjectImport,
   exportProjectBundle,
@@ -7,6 +7,7 @@ import {
   replayProjectCommand,
   resolveProjectWrite,
   restoreProjectLibrary,
+  saveProjectState,
   serializeProjectLibrary,
   setProjectPendingWrite,
   stageProjectImport,
@@ -14,6 +15,10 @@ import {
 
 let seed=0x70a1ec7;
 const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/0x100000000;};
+
+let windowState=createSpecificationProject({name:"Window project",site:"window.example",id:(kind)=>`${kind}:window`}),windowLibrary=projectLibrary([{state:windowState,revision:0,createdAt:"2026-07-20T12:00:00.000Z",lastModifiedAt:"2026-07-20T12:00:00.000Z"}],windowState.project.id),storedWindowLibrary="";
+for(let edit=1;edit<=120;edit+=1){windowState=transactProject(windowState,`Visible edit ${edit}`,(project)=>({...project,notes:`Visible edit ${edit}`}));windowLibrary=saveProjectState(windowLibrary,windowState.project.id,windowState,edit,()=>"2026-07-20T12:00:00.000Z");storedWindowLibrary=serializeProjectLibrary(windowLibrary);assert.deepEqual(JSON.parse(storedWindowLibrary).projects[windowState.project.id].state.history,{undo:[],redo:[]},"project-library persistence excludes window-scoped history");}
+assert.equal(windowLibrary.projects[windowState.project.id].state.history.undo.length,120,"serializing the project library does not mutate active window history");assert.equal(undoProjectTransaction(windowLibrary.projects[windowState.project.id].state).project.notes,"Visible edit 119","library-backed Undo remains visible before close");assert.deepEqual(restoreProjectLibrary(storedWindowLibrary).projects[windowState.project.id].state.history,{undo:[],redo:[]},"restored library records start with empty Undo and Redo");assert.ok(storedWindowLibrary.length<JSON.stringify(windowLibrary).length,"repeated project-library saves do not recursively persist snapshots");
 
 for(let example=0;example<120;example+=1){
   const suffix=`${example}-${Math.floor(random()*1_000_000)}`,projectId=`project:${suffix}`;

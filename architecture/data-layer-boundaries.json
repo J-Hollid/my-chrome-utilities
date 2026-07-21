@@ -217,6 +217,10 @@
       "src/data-layer-layered-schema.ts"
     ]
   },
+  "src/data-layer-compact-canonical-history.ts": {
+    "module": "schemas",
+    "layer": "application"
+  },
   "src/data-layer-canonical-schema-ui.ts": {
     "module": "schemas",
     "layer": "browser",

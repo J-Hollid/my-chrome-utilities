@@ -1,4 +1,4 @@
-import { canonicalPropertyPath, canonicalTableRows, evaluateCanonicalPredicate } from "./data-layer-canonical-schema.js";
+import { canonicalCommandOutcome, canonicalPropertyPath, canonicalTableRows, evaluateCanonicalPredicate } from "./data-layer-canonical-schema.js";
 import { mountCanonicalPredicateEditor } from "./data-layer-canonical-predicate-editor.js";
 const dom = globalThis.document;
 const types = ["string", "number", "integer", "boolean", "object", "array", "null"];
@@ -10,15 +10,15 @@ const select = (name, values, value) => { const control = dom.createElement("sel
     control.append(new Option(entry, entry)); control.value = value; return control; };
 export function bindCanonicalPropertySearch(control, update) { control.addEventListener("input", () => update(control.value)); }
 export function mountCanonicalSchemaEditor(options) {
-    let query = "", feedback = "", pendingType;
-    const send = (command) => { const propertyId = "propertyId" in command ? command.propertyId : ""; options.host.dataset.canonicalCommandControl = command.kind; options.host.dataset.canonicalCommandPropertyId = propertyId; options.host.ownerDocument.documentElement.dataset.canonicalCommandControl = command.kind; options.host.ownerDocument.documentElement.dataset.canonicalCommandPropertyId = propertyId; const result = options.dispatch(command); if (result.status === "conflict")
+    let query = "", feedback = options.initialFeedback ?? "", pendingType;
+    const send = (command) => { const prior = options.load(), result = options.dispatch(command); if (result.status === "conflict")
         feedback = result.message; if (result.status === "confirmation-required" && command.kind === "type") {
         pendingType = { result, command };
         feedback = result.impact;
     }
     else if (result.status === "applied" || result.status === "rebased") {
         pendingType = undefined;
-        feedback = result.status === "rebased" ? "Command rebased onto the current revision." : "Saved";
+        feedback = canonicalCommandOutcome(command, result, prior);
     } render(); return result; };
     const propertyCommand = (document, kind) => { const propertyId = document.selectedPropertyId; if (!propertyId)
         return; if (kind === "rename") {
@@ -47,7 +47,8 @@ export function mountCanonicalSchemaEditor(options) {
         options.host.dataset.canonicalRevision = String(document.revision);
         const header = dom.createElement("header"), title = dom.createElement("h2"), state = dom.createElement("p"), undo = dom.createElement("button"), redo = dom.createElement("button"), baseRevision = input("commandBaseRevision", String(document.revision), "number"), search = dom.createElement("input"), filter = select("propertyFilter", ["All properties", "With conditions", "With documentation", "With issues"], "All properties"), views = dom.createElement("div"), treeView = dom.createElement("button"), tableView = dom.createElement("button"), navigator = dom.createElement("section"), results = dom.createElement("section"), editor = dom.createElement("section"), preview = dom.createElement("section"), status = dom.createElement("output"), advanced = dom.createElement("details"), advancedSummary = dom.createElement("summary"), advancedJson = dom.createElement("textarea");
         title.textContent = document.contributorName;
-        state.textContent = `Draft · ${document.source ? `source ${document.source.identity} revision ${document.source.revision}` : "no source revision"} · lineage ${document.source?.provenance ?? "project-created"} · Saved · revision ${document.revision}`;
+        state.setAttribute("aria-label", "Canonical Draft status");
+        state.textContent = `Draft · ${document.source ? `source ${document.source.identity} revision ${document.source.revision}` : "no source revision"} · lineage ${document.source?.provenance ?? "project-created"} · Saved · Draft token ${document.revision}`;
         undo.type = redo.type = "button";
         undo.textContent = "Undo";
         redo.textContent = "Redo";
@@ -172,6 +173,7 @@ export function mountCanonicalSchemaEditor(options) {
         previewText.textContent = selected ? [selected.documentation.displayText, selected.documentation.description, selected.documentation.comments].filter(Boolean).join(" · ") || "No documentation yet." : "Select a property.";
         preview.append(previewHeading, previewText);
         status.setAttribute("role", "status");
+        status.setAttribute("aria-label", "Canonical command result");
         status.textContent = feedback;
         advancedSummary.textContent = "Advanced JSON (optional)";
         advancedJson.readOnly = true;
@@ -223,6 +225,7 @@ function renderPropertyEditor(host, document, node, send, id, propertyCommand, p
     const predicateHost = dom.createElement("div");
     if (node.presence.mode.endsWith("-when")) {
         const predicate = node.presence.condition, draft = predicate && predicate.kind !== "predicate" ? structuredClone(predicate) : { kind: "all", children: predicate ? [structuredClone(predicate)] : [] }, builder = dom.createElement("fieldset"), legend = dom.createElement("legend"), target = dom.createElement("select"), property = select("predicateProperty", Object.keys(document.nodes), predicate?.kind === "predicate" ? predicate.propertyId : ""), operator = select("predicateOperator", ["Equals", "Does not equal", "Exists", "Does not exist", "Starts with", "Contains", "Matches pattern", "Greater than", "At least", "Less than", "At most"], predicate?.kind === "predicate" ? predicate.operator : "Equals"), value = input("predicateValue", predicate?.kind === "predicate" ? String(predicate.value ?? "") : ""), save = dom.createElement("button"), addPredicate = dom.createElement("button"), all = dom.createElement("button"), any = dom.createElement("button"), not = dom.createElement("button"), summary = dom.createElement("output"), testValue = dom.createElement("textarea"), test = dom.createElement("button"), testResult = dom.createElement("output");
+        builder.setAttribute("aria-label", `Nested conditional presence for ${canonicalPropertyPath(document, node.id)}`);
         legend.textContent = "Nested All / Any / Not predicate builder";
         target.name = "predicateTargetGroup";
         target.setAttribute("aria-label", "Predicate target group");

@@ -32,10 +32,14 @@ const valuesWithStableIds=(current:CanonicalPropertyNode["allowedValues"],next:C
   const prior=current[index];
   return prior&&same(prior.value,entry.value)?{...entry,id:prior.id}:{...entry,id:id("allowed-value")};
 });
-const rulesWithStableConditions=(current:CanonicalPropertyNode["rules"],next:CanonicalPropertyNode["rules"]):CanonicalPropertyNode["rules"]=>next.map((rule)=>{
-  const prior=current.find(({id})=>id===rule.id);
-  return prior?.condition&&!rule.condition?{...rule,condition:clone(prior.condition)}:rule;
-});
+const rulesWithStableConditions=(current:CanonicalPropertyNode["rules"],next:CanonicalPropertyNode["rules"]):CanonicalPropertyNode["rules"]=>{
+  const claimed=new Set<string>();
+  return next.map((rule)=>{
+    const prior=current.find(({id})=>id===rule.id&&!claimed.has(id))??(rule.id.startsWith("json-facet:")?current.find((candidate)=>candidate.id.startsWith("json-facet:")&&candidate.kind===rule.kind&&!claimed.has(candidate.id)):undefined),stable=prior&&rule.id.startsWith("json-facet:")?{...rule,id:prior.id}:rule;
+    if(prior)claimed.add(prior.id);
+    return prior?.condition&&!stable.condition?{...stable,condition:clone(prior.condition)}:stable;
+  });
+};
 
 export function canonicalCommandsFromCompactProjection(document:CanonicalSchemaDocument,projection:SchemaDefinition,id:(kind:string)=>string):CanonicalCommand[]{
   const {canonicalSchema:_canonicalSchema,...source}=projection;
@@ -64,14 +68,15 @@ export function canonicalCommandsFromCompactProjection(document:CanonicalSchemaD
     const candidatePresence=presenceFamily(candidate.presence.mode)===presenceFamily(current.presence.mode)
       ? current.presence
       : candidate.presence;
-    const patch={
+    const candidateFacets={
       presence:clone(candidatePresence),
       allowedValues:valuesWithStableIds(current.allowedValues,candidate.allowedValues,id),
       rules:rulesWithStableConditions(current.rules,candidate.rules),
       documentation:clone(candidate.documentation),
     };
-    const currentFacets={presence:current.presence,allowedValues:current.allowedValues,rules:current.rules,documentation:current.documentation};
-    if(!same(currentFacets,patch))commands.push({kind:"set",baseRevision:revision++,propertyId:current.id,patch});
+    const currentFacets={presence:current.presence,allowedValues:current.allowedValues,rules:current.rules,documentation:current.documentation},patch:Extract<CanonicalCommand,{kind:"set"}>["patch"]={};
+    for(const key of ["presence","allowedValues","rules","documentation"] as const)if(!same(currentFacets[key],candidateFacets[key]))Object.assign(patch,{[key]:candidateFacets[key]});
+    if(Object.keys(patch).length)commands.push({kind:"set",baseRevision:revision++,propertyId:current.id,patch});
   }
   return commands;
 }
@@ -98,9 +103,9 @@ function jsonDefinition(document:CanonicalSchemaDocument,node:CanonicalPropertyN
 export function savedSchemaFromCanonical<T extends SchemaDefinition>(schema:T,canonical:CanonicalSchemaDocument):T{
   const roots=orderedChildren(canonical),root=clone(canonical.sourceContent?.document??{}) as Record<string,unknown>;for(const key of["properties","required","forbidden"])delete root[key];root.type="object";root.properties=Object.fromEntries(roots.map((node)=>[node.name,jsonDefinition(canonical,node)]));const rootRequired=roots.filter(({presence})=>presence.mode.startsWith("required")).map(({name})=>name),rootForbidden=roots.filter(({presence})=>presence.mode.startsWith("forbidden")).map(({name})=>name);if(rootRequired.length)root.required=rootRequired;if(rootForbidden.length)root.forbidden=rootForbidden;const document=root as JsonSchema,attachedRules:AttachedSchemaRule[]=[],properties:Record<string,NonNullable<NonNullable<SchemaDefinition["documentation"]>["properties"]>[string]>={};
   for(const node of Object.values(canonical.nodes)){
-    const path=canonicalPropertyPath(canonical,node.id),priorDocumentation=schema.documentation?.properties?.[path],example=node.documentation.example.method==="blank"?undefined:{value:structuredClone(node.documentation.example.value) as string|number|boolean|null,selectionMethod:node.documentation.example.method==="allowed-value"?"allowed value" as const:"custom" as const};
-    if(node.documentation.displayText||node.documentation.comments||priorDocumentation||node.documentation.example.method==="allowed-value")properties[path]={displayName:node.documentation.displayText,description:node.documentation.description,...(node.documentation.comments?{comments:node.documentation.comments}:{}),...(example?{example}:{})};
-    for(const rule of node.rules){if(rule.id.startsWith("json-facet:"))continue;const prior=(schema.attachedRules??[]).find(({id})=>id===rule.id),operator=rule.kind==="pattern"?(prior?.operator??"regular-expression"):rule.kind==="range"?"numeric-range":rule.kind==="cardinality"?"item-count":prior?.operator??rule.kind,parameters=rule.kind==="pattern"?rule.pattern:rule.kind==="range"?`${rule.minimum??""},${rule.maximum??""}`:rule.kind==="cardinality"?`${rule.minItems??""},${rule.maxItems??""}`:prior?.parameters,propertyPath=prior?.propertyPath&&pointer(prior.propertyPath)===path?prior.propertyPath:path,{conditionGroup:_legacyConditionGroup,...priorWithoutLegacyCondition}=prior??{};attachedRules.push({...priorWithoutLegacyCondition,id:rule.id,version:prior?.version??1,propertyPath,operator,...(parameters!==undefined?{parameters}:{}),severity:rule.severity,message:rule.message});}
+    const path=canonicalPropertyPath(canonical,node.id),priorDocumentation=schema.documentation?.properties?.[path],example=node.documentation.example.method==="blank"?undefined:{value:structuredClone(node.documentation.example.value) as string|number|boolean|null,selectionMethod:node.documentation.example.method==="allowed-value"?"allowed value" as const:"custom" as const},sourceRules=canonical.sourceContent?.definitionsByNodeId?.[node.id]?.rules,embeddedRuleIds=new Set(Array.isArray(sourceRules)?sourceRules.flatMap((rule)=>rule&&typeof rule==="object"&&"id"in rule&&typeof rule.id==="string"?[rule.id]:[]):[]);
+    if(node.documentation.displayText||node.documentation.description||node.documentation.comments||priorDocumentation||example)properties[path]={displayName:node.documentation.displayText,description:node.documentation.description,...(node.documentation.comments?{comments:node.documentation.comments}:{}),...(example?{example}:{})};
+    for(const rule of node.rules){if(rule.id.startsWith("json-facet:"))continue;const prior=(schema.attachedRules??[]).find(({id})=>id===rule.id);if(!prior&&embeddedRuleIds.has(rule.id))continue;const operator=rule.kind==="pattern"?(prior?.operator??"regular-expression"):rule.kind==="range"?"numeric-range":rule.kind==="cardinality"?"item-count":prior?.operator??rule.kind,parameters=rule.kind==="pattern"?rule.pattern:rule.kind==="range"?`${rule.minimum??""},${rule.maximum??""}`:rule.kind==="cardinality"?`${rule.minItems??""},${rule.maxItems??""}`:prior?.parameters,propertyPath=prior?.propertyPath&&pointer(prior.propertyPath)===path?prior.propertyPath:path,{conditionGroup:_legacyConditionGroup,...priorWithoutLegacyCondition}=prior??{};attachedRules.push({...priorWithoutLegacyCondition,id:rule.id,version:prior?.version??1,propertyPath,operator,...(parameters!==undefined?{parameters}:{}),severity:rule.severity,message:rule.message});}
   }
   const clean=(value:JsonSchema):JsonSchema=>{const next=structuredClone(value) as JsonSchema&{attachedRules?:unknown};delete next.attachedRules;if(next.required&&!next.required.length)delete next.required;for(const child of Object.values(next.properties??{}))clean(child);return next;};
   const documentation={...(schema.documentation?.description?{description:schema.documentation.description}:{}),...(Object.keys(properties).length?{properties}:{})};

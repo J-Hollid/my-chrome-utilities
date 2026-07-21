@@ -18,7 +18,7 @@ export function restoreProjectLibrary(serialized) { if (!serialized)
 export function activeProjectContextChange(serialized, currentProjectId, currentRevision = 0) { const library = restoreProjectLibrary(serialized); if (!library)
     throw new Error("Project library synchronization requires persisted library state."); const active = library.activeProjectId ? library.projects[library.activeProjectId] : undefined, changed = library.activeProjectId !== currentProjectId || (active?.revision ?? 0) > currentRevision; return { library, changed, ...(active ? { active } : {}) }; }
 export function projectRecordNeedsSynchronization(record, state, revision) { return record.revision !== revision || JSON.stringify(record.state) !== JSON.stringify(state); }
-export const serializeProjectLibrary = (library) => JSON.stringify(library);
+export const serializeProjectLibrary = (library) => JSON.stringify({ ...clone(library), projects: Object.fromEntries(Object.entries(library.projects).map(([projectId, record]) => [projectId, { ...clone(record), state: { ...clone(record.state), history: { undo: [], redo: [] } } }])) });
 export function migrateSingletonProject(existing, singleton, now = () => new Date().toISOString()) {
     if (existing) {
         const active = existing.activeProjectId ? existing.projects[existing.activeProjectId] : undefined;

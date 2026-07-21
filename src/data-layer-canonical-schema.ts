@@ -41,6 +41,12 @@ export type CanonicalCommandResult=
   |{status:"conflict";document:CanonicalSchemaDocument;propertyId?:string;message:string}
   |{status:"confirmation-required";document:CanonicalSchemaDocument;propertyId:string;impact:string};
 
+export function canonicalCommandOutcome(command:CanonicalCommand,result:Extract<CanonicalCommandResult,{status:"applied"|"rebased"}>,prior:CanonicalSchemaDocument):string{
+  const label=(()=>{if(command.kind!=="set")return({add:"property addition",rename:"name",move:"position",duplicate:"property duplication",delete:"property removal",type:"type",select:"selection",view:"view"} as const)[command.kind];const facets=Object.keys(command.patch),names:Record<string,string>={allowedValues:"allowed values",expectedValue:"expected value",overrideReferences:"override references"};return facets.length===1?(names[facets[0]!]??facets[0]!):"property facets";})();
+  const propertyId="propertyId" in command?command.propertyId:command.kind==="add"?[...result.document.changes].reverse().find(({revision})=>revision===result.document.revision)?.propertyIds.find((id)=>Boolean(result.document.nodes[id])):undefined,path=propertyId?(()=>{const source=result.document.nodes[propertyId]?result.document:prior;try{return canonicalPropertyPath(source,propertyId);}catch{return undefined;}})():undefined,scope=path?` for ${path}`:command.kind==="add"?` for ${command.name}`:"";
+  return`${result.status==="rebased"?"Rebased":"Saved"} ${label}${scope} from Draft token ${command.baseRevision} at Draft token ${result.document.revision}.`;
+}
+
 const clone=<T>(value:T):T=>structuredClone(value);
 const emptyDocumentation=():CanonicalDocumentation=>({displayText:"",description:"",comments:"",example:{method:"blank"}});
 const orderWithin=(document:CanonicalSchemaDocument,parentId?:string):CanonicalPropertyNode[]=>Object.values(document.nodes).filter((node)=>node.parentId===parentId).sort((a,b)=>a.order-b.order||a.id.localeCompare(b.id));

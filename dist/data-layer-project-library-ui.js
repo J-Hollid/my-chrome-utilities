@@ -140,7 +140,7 @@ export function mountProjectLibraryUi(options) {
     subscribeProjectLibraryChanges(options.changeTarget ?? window, () => library, (next) => { library = next; render(); options.onChange?.(); });
     render();
     const captureActiveProject = (state, revision) => { if (library.activeProjectId !== state.project.id)
-        return; library = saveProjectState(library, state.project.id, state, revision, now); options.storage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library)); render(); };
+        return; const activeHistory = library.projects[state.project.id]?.state.history, windowState = !state.history.undo.length && !state.history.redo.length && activeHistory ? { ...state, history: structuredClone(activeHistory) } : state; library = saveProjectState(library, state.project.id, windowState, revision, now); options.storage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library)); render(); };
     const activate = (projectId) => persist(activateProject(library, projectId, now));
     return { render, library: () => cloneLibrary(library), activate, syncActiveProject: projectProjection, captureActiveProject };
 }

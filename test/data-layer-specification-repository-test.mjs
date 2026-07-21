@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {createSpecificationProject,transactProject} from "../dist/data-layer-specification-project.js";
+import {createSpecificationProject,transactProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
 import {commitCanonicalProjectState,inspectCanonicalProjectConflict,resolveCanonicalProjectConflict,restoreCanonicalProjectState,subscribeCanonicalProjectChanges} from "../dist/data-layer-specification-repository.js";
 
 let sequence=0;const id=(kind)=>`${kind}:${++sequence}`;
@@ -52,4 +52,10 @@ const entityState=transactProject(initial,"Add profile",(project)=>({...project,
 const entityCommit=commitCanonicalProjectState(entityStorage,entityState,{expectedRevision:1,base:initial});assert.equal(entityCommit.status,"committed");assert.equal(entityCommit.envelope.entityRevisions["profile:sitewide"],1);
 const changedEntityState=transactProject(entityState,"Rename profile",(project)=>({...project,collections:{...project.collections,profiles:project.collections.profiles.map((profile)=>({...profile,name:"Sitewide context"}))}}));
 const changedEntityCommit=commitCanonicalProjectState(entityStorage,changedEntityState,{expectedRevision:2,base:entityState});assert.equal(changedEntityCommit.status,"committed");assert.equal(changedEntityCommit.envelope.entityRevisions["profile:sitewide"],2,"changed entities must advance their own revision");
+
+const windowStorageValues=new Map(),windowStorage={getItem:(key)=>windowStorageValues.get(key)??null,setItem:(key,value)=>windowStorageValues.set(key,value)};
+let windowState=createSpecificationProject({name:"Window history",site:"window.example",id:(kind)=>`${kind}:window`}),windowRevision=0;
+for(let edit=1;edit<=120;edit+=1){windowState=transactProject(windowState,`Visible edit ${edit}`,(project)=>({...project,notes:`Visible edit ${edit}`}));const saved=commitCanonicalProjectState(windowStorage,windowState,{expectedRevision:windowRevision,pendingLabel:`Visible edit ${edit}`});assert.equal(saved.status,"committed");windowRevision=saved.revision;assert.deepEqual(saved.envelope.history,{undo:[],redo:[]},"each persisted revision excludes window-scoped history");}
+assert.equal(windowState.history.undo.length,120,"repeated saves preserve the active window's full Undo history in memory");assert.equal(undoProjectTransaction(windowState).project.notes,"Visible edit 119","visible Undo remains available before the project window closes");
+const restoredWindow=restoreCanonicalProjectState(windowStorageValues.get("my-chrome-utilities.specification-project.v1"));assert.deepEqual(restoredWindow.history,{undo:[],redo:[]},"reopening a persisted project starts a fresh Undo window");assert.ok(windowStorageValues.get("my-chrome-utilities.specification-project.v1").length<JSON.stringify(windowState).length,"stored revisions do not recursively embed in-memory project snapshots");
 console.log("canonical Specification Project repository tests passed");

@@ -16,7 +16,7 @@ import { layeredContributorPath, layeredContributorsForPath } from "./data-layer
 import { composedSchemaWorkspace, resetComposedSchemaLocalProperty, saveComposedSchemaLocalFacets } from "./data-layer-composed-schema-workspace.js";
 import { mountComposedSchemaFacetBuilder } from "./data-layer-composed-schema-builders.js";
 import { installFlowDocumentationExportUi } from "./data-layer-flow-table-documentation-export-ui.js";
-import { applyCanonicalCommand, canonicalRequirements, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
+import { applyCanonicalCommand, canonicalCommandOutcome, canonicalRequirements, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
 import { createProjectCollectionEntity, hasSavedSchemaAdoptionActions, inspectProjectEntityRemoval, projectCollectionCreationFields, projectCollectionCreationRoute, projectCollectionDefinitions, projectEntityWorkspaceRoute, projectInspectorTogglePresentation, removeProjectCollectionEntity } from "./data-layer-project-entity-lifecycle.js";
 const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, NAVIGATION_KEY = "my-chrome-utilities.specification-project-navigation.v1", START_PATH_KEY = "my-chrome-utilities.specification-project-start.v1", routeParameters = new URLSearchParams(location.search);
@@ -42,6 +42,7 @@ let state, lastCommittedState, library = projectLibrary();
 let canonicalRevision = 0, pendingConflict, stagedBulk, selectedKind = "profiles", selectedId, projectOverview = routeParameters.get("route") === "overview", creationKind, removalReview, lifecycleStatus = "", removedFocus, stagedImport, lastInvokingControl, releasePreflight, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi;
 let pageGroupMembershipStatus = "";
 let pendingPageGroupMembershipReorder;
+let canonicalCommandFeedback;
 const savedSchemas = () => restoreSchemaLibrary(localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY)).filter(({ published }) => published).map((schema) => structuredClone(schema));
 function renderCanonicalEntityEditor(host, kind, entity) {
     if (!state)
@@ -84,8 +85,10 @@ function renderCanonicalEntityEditor(host, kind, entity) {
     }
     const editorHost = document.createElement("section");
     host.append(editorHost);
-    mountCanonicalSchemaEditor({ host: editorHost, surface: "Builder", load: () => state.project.collections[kind].find(({ id: entityId }) => entityId === entity.id).canonicalSchema, id, dispatch: (command) => { const current = state.project.collections[kind].find(({ id: entityId }) => entityId === entity.id).canonicalSchema, result = applyCanonicalCommand(current, command); if (result.status === "applied" || result.status === "rebased")
-            persist(transactProject(state, `${command.kind} canonical property in ${entity.name}`, (project) => ({ ...project, collections: { ...project.collections, [kind]: project.collections[kind].map((candidate) => candidate.id === entity.id ? { ...candidate, canonicalSchema: result.document, ...(kind === "profiles" ? { requirements: [] } : {}) } : candidate) } }))); return result; }, onUndo: () => persist(undoProjectTransaction(state)), onRedo: () => persist(redoProjectTransaction(state)) });
+    mountCanonicalSchemaEditor({ host: editorHost, surface: "Builder", load: () => state.project.collections[kind].find(({ id: entityId }) => entityId === entity.id).canonicalSchema, id, dispatch: (command) => { const current = state.project.collections[kind].find(({ id: entityId }) => entityId === entity.id).canonicalSchema, result = applyCanonicalCommand(current, command); if (result.status === "applied" || result.status === "rebased") {
+            canonicalCommandFeedback = { schemaId: current.id, text: canonicalCommandOutcome(command, result, current) };
+            persist(transactProject(state, `${command.kind} canonical property in ${entity.name}`, (project) => ({ ...project, collections: { ...project.collections, [kind]: project.collections[kind].map((candidate) => candidate.id === entity.id ? { ...candidate, canonicalSchema: result.document, ...(kind === "profiles" ? { requirements: [] } : {}) } : candidate) } })));
+        } return result; }, onUndo: () => persist(undoProjectTransaction(state)), onRedo: () => persist(redoProjectTransaction(state)), ...(canonicalCommandFeedback?.schemaId === canonical.id ? { initialFeedback: canonicalCommandFeedback.text } : {}) });
 }
 function renderCanonicalProfileOverview(host) {
     if (!state || selectedKind !== "profiles" || selectedId)
@@ -184,8 +187,10 @@ function renderComposedSchemaWorkspace(host, entity, kind, scope) {
         const canonicalHost = document.createElement("section");
         canonicalHost.setAttribute("aria-label", `${entity.name} canonical schema contribution`);
         section.append(canonicalHost);
-        mountCanonicalSchemaEditor({ host: canonicalHost, surface: "Builder", load: () => state.project.collections[kind].find(({ id: entityId }) => entityId === entity.id).canonicalSchema, id, dispatch: (command) => { const current = state.project.collections[kind].find(({ id: entityId }) => entityId === entity.id).canonicalSchema, result = applyCanonicalCommand(current, command); if (result.status === "applied" || result.status === "rebased")
-                persist(transactProject(state, `${command.kind} canonical property in ${entity.name}`, (project) => ({ ...project, collections: { ...project.collections, [kind]: project.collections[kind].map((candidate) => candidate.id === entity.id ? { ...candidate, canonicalSchema: result.document } : candidate) } }))); return result; }, onUndo: () => persist(undoProjectTransaction(state)), onRedo: () => persist(redoProjectTransaction(state)) });
+        mountCanonicalSchemaEditor({ host: canonicalHost, surface: "Builder", load: () => state.project.collections[kind].find(({ id: entityId }) => entityId === entity.id).canonicalSchema, id, dispatch: (command) => { const current = state.project.collections[kind].find(({ id: entityId }) => entityId === entity.id).canonicalSchema, result = applyCanonicalCommand(current, command); if (result.status === "applied" || result.status === "rebased") {
+                canonicalCommandFeedback = { schemaId: current.id, text: canonicalCommandOutcome(command, result, current) };
+                persist(transactProject(state, `${command.kind} canonical property in ${entity.name}`, (project) => ({ ...project, collections: { ...project.collections, [kind]: project.collections[kind].map((candidate) => candidate.id === entity.id ? { ...candidate, canonicalSchema: result.document } : candidate) } })));
+            } return result; }, onUndo: () => persist(undoProjectTransaction(state)), onRedo: () => persist(redoProjectTransaction(state)), ...(canonicalCommandFeedback?.schemaId === canonical.id ? { initialFeedback: canonicalCommandFeedback.text } : {}) });
     }
 }
 function renderPageGroupMembershipEditor(host, page) {
@@ -1096,8 +1101,9 @@ subscribeCanonicalProjectChanges(window, ({ revision, state: next }) => {
         library = saveProjectState(library, next.project.id, next, revision);
         localStorage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library));
     }
-    state = structuredClone(next);
-    lastCommittedState = structuredClone(next);
+    const windowHistory = state?.project.id === next.project.id ? structuredClone(state.history) : structuredClone(next.history);
+    state = { ...structuredClone(next), history: windowHistory };
+    lastCommittedState = structuredClone(state);
     canonicalRevision = revision;
     render();
     renderAssignments();

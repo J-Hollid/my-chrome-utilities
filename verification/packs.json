@@ -794,6 +794,7 @@
       "src/data-layer-canonical-schema.ts",
       "src/data-layer-canonical-schema-ui.ts",
       "src/data-layer-canonical-predicate-editor.ts",
+      "src/data-layer-compact-canonical-history.ts",
       "src/data-layer-side-panel-unified-schema-editor.ts",
       "src/data-layer-composed-schema-builders.ts",
       "src/data-layer-composed-schema-workspace.ts",
@@ -806,6 +807,7 @@
     "dependencies": [],
     "unit": [
       "test/data-layer-canonical-schema-authoring-test.mjs",
+      "test/data-layer-compact-canonical-history-test.mjs",
       "test/data-layer-side-panel-unified-schema-editor-test.mjs",
       "test/data-layer-composed-schema-builders-test.mjs",
       "test/data-layer-composed-schema-workspace-test.mjs",

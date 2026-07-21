@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   addCanonicalProperty,
   applyCanonicalCommand,
+  canonicalCommandOutcome,
   canonicalConstraints,
   canonicalPropertyPath,
   canonicalSchemaFromJsonSchema,
@@ -24,6 +25,37 @@ const id=(kind)=>`${kind}:${++sequence}`;
 let document=createCanonicalSchema({id:"schema:sitewide",contributorId:"profile:sitewide",contributorName:"Sitewide"});
 assert.equal(document.revision,0);
 assert.deepEqual(document.rootIds,[]);
+
+const visibleProperty={id:"property:visible",name:"article_type",order:0,type:"string",presence:{mode:"optional"},allowedValues:[],rules:[],documentation:{displayText:"",description:"",comments:"",example:{method:"blank"}},provenance:[{source:"created"}],overrideReferences:[]};
+const visibleBaseDocument={...document,rootIds:[visibleProperty.id],nodes:{[visibleProperty.id]:visibleProperty}};
+const visibleCommandDocument={...visibleBaseDocument,revision:1,nodes:{[visibleProperty.id]:{...visibleProperty,presence:{mode:"forbidden"}}},changes:[{revision:1,propertyIds:[visibleProperty.id],kind:"set"}]};
+assert.equal(
+  canonicalCommandOutcome(
+    {kind:"set",baseRevision:0,propertyId:"property:visible",patch:{presence:{mode:"forbidden"}}},
+    {status:"applied",document:visibleCommandDocument},
+    visibleBaseDocument,
+  ),
+  "Saved presence for /article_type from Draft token 0 at Draft token 1.",
+  "the installed editor should expose the command scope and Draft-token transition",
+);
+assert.equal(
+  canonicalCommandOutcome(
+    {kind:"set",baseRevision:0,propertyId:"property:visible",patch:{presence:{mode:"forbidden"}}},
+    {status:"rebased",document:{...visibleCommandDocument,revision:2,changes:[...visibleCommandDocument.changes,{revision:2,propertyIds:["property:visible"],kind:"set"}]}},
+    visibleBaseDocument,
+  ),
+  "Rebased presence for /article_type from Draft token 0 at Draft token 2.",
+  "a rebased command should remain visibly attributable to its retained base token",
+);
+assert.equal(
+  canonicalCommandOutcome(
+    {kind:"delete",baseRevision:0,propertyId:"property:visible"},
+    {status:"applied",document:{...visibleBaseDocument,revision:1,rootIds:[],nodes:{},changes:[{revision:1,propertyIds:["property:visible"],kind:"delete"}]}},
+    visibleBaseDocument,
+  ),
+  "Saved property removal for /article_type from Draft token 0 at Draft token 1.",
+  "a deletion result should retain the human path from the pre-command Draft",
+);
 
 ({document}=addCanonicalProperty(document,{baseRevision:0,name:"commerce",type:"object",id}));
 const commerce=document.rootIds[0];

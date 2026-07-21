@@ -1,3 +1,14 @@
+export function canonicalCommandOutcome(command, result, prior) {
+    const label = (() => { if (command.kind !== "set")
+        return { add: "property addition", rename: "name", move: "position", duplicate: "property duplication", delete: "property removal", type: "type", select: "selection", view: "view" }[command.kind]; const facets = Object.keys(command.patch), names = { allowedValues: "allowed values", expectedValue: "expected value", overrideReferences: "override references" }; return facets.length === 1 ? (names[facets[0]] ?? facets[0]) : "property facets"; })();
+    const propertyId = "propertyId" in command ? command.propertyId : command.kind === "add" ? [...result.document.changes].reverse().find(({ revision }) => revision === result.document.revision)?.propertyIds.find((id) => Boolean(result.document.nodes[id])) : undefined, path = propertyId ? (() => { const source = result.document.nodes[propertyId] ? result.document : prior; try {
+        return canonicalPropertyPath(source, propertyId);
+    }
+    catch {
+        return undefined;
+    } })() : undefined, scope = path ? ` for ${path}` : command.kind === "add" ? ` for ${command.name}` : "";
+    return `${result.status === "rebased" ? "Rebased" : "Saved"} ${label}${scope} from Draft token ${command.baseRevision} at Draft token ${result.document.revision}.`;
+}
 const clone = (value) => structuredClone(value);
 const emptyDocumentation = () => ({ displayText: "", description: "", comments: "", example: { method: "blank" } });
 const orderWithin = (document, parentId) => Object.values(document.nodes).filter((node) => node.parentId === parentId).sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));

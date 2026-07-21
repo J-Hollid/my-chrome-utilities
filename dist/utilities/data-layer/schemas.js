@@ -10,9 +10,10 @@ export { allowedValueExpansionAvailability } from "../../data-layer-allowed-valu
 export { FLOW_INSTANCES_STORAGE_KEY, FLOW_ROUTING_STORAGE_KEY, SPECIFICATION_PROJECT_STORAGE_KEY, recordSpecificationCapture, recordSpecificationNavigation, recordSpecificationRuntimeObservation } from "./layers/browser/schemas.js";
 export { applyCanonicalSchemaDraftEdits } from "./layers/browser/schemas.js";
 export { commitCanonicalProjectState, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, serializeCanonicalProjectState, subscribeCanonicalProjectChanges } from "./layers/browser/schemas.js";
+export { compactCanonicalPageHistory, prepareCompactCanonicalRedo, prepareCompactCanonicalUndo, recordCompactCanonicalMutation } from "./layers/browser/schemas.js";
 export { appendSharedProfileConstraint, mountSidePanelLayeredProfileEditor, renderSidePanelComposedSchemaContext, sharedProfilePropertyPaths } from "./layers/browser/schemas.js";
 export { composedCanonicalSchema, saveComposedCanonicalDocument } from "./layers/browser/schemas.js";
-export { applyCanonicalCommand, canonicalPropertyPath, createCanonicalSchema, evaluateCanonicalPredicate, hasLegacySchemaRepresentation, migrateLegacyProfile, resolveCanonicalMigrationConflict } from "../../data-layer-canonical-schema.js";
+export { applyCanonicalCommand, canonicalCommandOutcome, canonicalPropertyPath, createCanonicalSchema, evaluateCanonicalPredicate, hasLegacySchemaRepresentation, migrateLegacyProfile, resolveCanonicalMigrationConflict } from "../../data-layer-canonical-schema.js";
 export { canonicalPredicateLeafFromInput, canonicalPredicateOperators, canonicalPredicateText, mountCanonicalPredicateEditor, validateCanonicalPredicateTree } from "../../data-layer-canonical-predicate-editor.js";
 export { canonicalCommandsFromCompactProjection, compactConditionalPresence, compactSchemaProjection, savedSchemaCanonicalDocument, savedSchemaFromCanonical } from "../../data-layer-side-panel-unified-schema-editor.js";
 export { resolveSidePanelSchemaContributor } from "../../data-layer-side-panel-schema-editor.js";

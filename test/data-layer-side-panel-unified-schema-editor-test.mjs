@@ -60,6 +60,23 @@ const moved=applyCanonicalCommand(renamed.document,{kind:"move",baseRevision:ren
 assert.equal(moved.status,"applied");
 const afterMove=savedSchemaFromCanonical(afterRename,moved.document);
 assert.deepEqual(afterMove.attachedRules.map(({propertyPath})=>propertyPath),["/category","/category"],"move atomically rebases every attached-rule path from stable canonical identities");
+const movedCompact=compactSchemaProjection(moved.document,{id:"schema:article",name:"Article",version:moved.document.revision});
+movedCompact.documentation.properties["/category"]={...movedCompact.documentation.properties["/category"],comments:"Edited after rename and move"};
+const movedDocumentationCommands=canonicalCommandsFromCompactProjection(moved.document,movedCompact,id);
+assert.deepEqual(movedDocumentationCommands.map(({kind})=>kind),["set"],"documentation after rename and move remains one canonical command");
+assert.deepEqual(Object.keys(movedDocumentationCommands[0].patch),["documentation"],"reparsed JSON facets retain their canonical rule identities after rename and move");
+
+const libraryCanonical=savedSchemaCanonicalDocument({
+  id:"schema:library",name:"Library",version:4,document:{type:"object",properties:{article_type:{type:"string",enum:["News","Guide"],rules:[{id:"source-rule",kind:"pattern",pattern:"^[A-Z]",severity:"error",message:"Capitalized type"}],description:"Article classification",examples:["News"]},metadata:{type:"object",properties:{}}}},
+  attachedRules:[{id:"library-rule",version:1,propertyPath:"/article_type",operator:"regular-expression",parameters:"^[A-Z]"}],documentation:{description:"Library documentation"},
+},id);
+const libraryArticleType=Object.values(libraryCanonical.nodes).find(({name})=>name==="article_type"),libraryMetadata=Object.values(libraryCanonical.nodes).find(({name})=>name==="metadata");
+const libraryRenamed=applyCanonicalCommand(libraryCanonical,{kind:"rename",baseRevision:libraryCanonical.revision,propertyId:libraryArticleType.id,name:"article_kind"});
+const libraryMoved=applyCanonicalCommand(libraryRenamed.document,{kind:"move",baseRevision:libraryRenamed.document.revision,propertyId:libraryArticleType.id,parentId:libraryMetadata.id});
+const libraryCompact=compactSchemaProjection(libraryMoved.document,{id:"schema:library",name:"Library",version:libraryMoved.document.revision});
+libraryCompact.documentation.properties["/metadata/article_kind"]={...libraryCompact.documentation.properties["/metadata/article_kind"],comments:"Edited library documentation"};
+const libraryDocumentationCommands=canonicalCommandsFromCompactProjection(libraryMoved.document,libraryCompact,id);
+assert.deepEqual(Object.keys(libraryDocumentationCommands[0].patch),["documentation"],"embedded and attached saved-schema rules remain unchanged by documentation after rename and move");
 
 const compactSource={
   ...canonical,
@@ -75,6 +92,9 @@ const compactSource={
 };
 const compact=compactSchemaProjection(compactSource,{id:"schema:article",name:"Article",version:8});
 assert.equal(compact.canonicalSchema,undefined,"the compact renderer receives a projection instead of a nested standalone-editor payload");
+const descriptionOnlySource={...compactSource,nodes:{...compactSource.nodes,[category.id]:{...compactSource.nodes[category.id],documentation:{displayText:"",description:"Migrated description",comments:"",example:{method:"custom",value:"MIGRATED"}}}}};
+const descriptionOnlyProjection=compactSchemaProjection(descriptionOnlySource,{id:"schema:migrated",name:"Migrated",version:1});
+assert.deepEqual(descriptionOnlyProjection.documentation.properties["/article/category"],{displayName:"",description:"Migrated description",example:{value:"MIGRATED",selectionMethod:"custom"}},"description-only migration documentation and custom examples remain visible in the compact projection");
 const compactConditionalRule=compact.attachedRules.find(({id})=>id==="rule:category");
 assert.equal(compactConditionalRule.conditionGroup,undefined,"the compact adapter never translates canonical predicates through the legacy flat conditionGroup");
 compact.documentation.properties["/article/category"]={
@@ -84,6 +104,7 @@ compact.documentation.properties["/article/category"]={
 const compactCommands=canonicalCommandsFromCompactProjection(compactSource,compact,id);
 assert.deepEqual(compactCommands.map(({kind})=>kind),["set"],"one compact facet edit emits one property-scoped canonical command");
 assert.equal(compactCommands[0].propertyId,category.id,"compact edits retain the canonical property identity");
+assert.deepEqual(Object.keys(compactCommands[0].patch),["documentation"],"the compact adapter sends only the facet the operator changed");
 const compactResult=applyCanonicalCommand(compactSource,compactCommands[0]);
 assert.equal(compactResult.document.nodes[category.id].documentation.description,"Changed through compact panel");
 assert.equal(compactResult.document.nodes[category.id].presence.mode,"required-when","projection edits preserve conditional presence owned by canonical state");

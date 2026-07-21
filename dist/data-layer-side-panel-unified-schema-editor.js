@@ -32,10 +32,15 @@ const valuesWithStableIds = (current, next, id) => next.map((entry, index) => {
     const prior = current[index];
     return prior && same(prior.value, entry.value) ? { ...entry, id: prior.id } : { ...entry, id: id("allowed-value") };
 });
-const rulesWithStableConditions = (current, next) => next.map((rule) => {
-    const prior = current.find(({ id }) => id === rule.id);
-    return prior?.condition && !rule.condition ? { ...rule, condition: clone(prior.condition) } : rule;
-});
+const rulesWithStableConditions = (current, next) => {
+    const claimed = new Set();
+    return next.map((rule) => {
+        const prior = current.find(({ id }) => id === rule.id && !claimed.has(id)) ?? (rule.id.startsWith("json-facet:") ? current.find((candidate) => candidate.id.startsWith("json-facet:") && candidate.kind === rule.kind && !claimed.has(candidate.id)) : undefined), stable = prior && rule.id.startsWith("json-facet:") ? { ...rule, id: prior.id } : rule;
+        if (prior)
+            claimed.add(prior.id);
+        return prior?.condition && !stable.condition ? { ...stable, condition: clone(prior.condition) } : stable;
+    });
+};
 export function canonicalCommandsFromCompactProjection(document, projection, id) {
     const { canonicalSchema: _canonicalSchema, ...source } = projection;
     const parsed = savedSchemaCanonicalDocument(source, id), parsedByPath = new Map(Object.values(parsed.nodes).map((node) => [canonicalPropertyPath(parsed, node.id), node])), currentByPath = new Map(Object.values(document.nodes).map((node) => [canonicalPropertyPath(document, node.id), node]));
@@ -66,14 +71,17 @@ export function canonicalCommandsFromCompactProjection(document, projection, id)
         const candidatePresence = presenceFamily(candidate.presence.mode) === presenceFamily(current.presence.mode)
             ? current.presence
             : candidate.presence;
-        const patch = {
+        const candidateFacets = {
             presence: clone(candidatePresence),
             allowedValues: valuesWithStableIds(current.allowedValues, candidate.allowedValues, id),
             rules: rulesWithStableConditions(current.rules, candidate.rules),
             documentation: clone(candidate.documentation),
         };
-        const currentFacets = { presence: current.presence, allowedValues: current.allowedValues, rules: current.rules, documentation: current.documentation };
-        if (!same(currentFacets, patch))
+        const currentFacets = { presence: current.presence, allowedValues: current.allowedValues, rules: current.rules, documentation: current.documentation }, patch = {};
+        for (const key of ["presence", "allowedValues", "rules", "documentation"])
+            if (!same(currentFacets[key], candidateFacets[key]))
+                Object.assign(patch, { [key]: candidateFacets[key] });
+        if (Object.keys(patch).length)
             commands.push({ kind: "set", baseRevision: revision++, propertyId: current.id, patch });
     }
     return commands;
@@ -173,13 +181,16 @@ export function savedSchemaFromCanonical(schema, canonical) {
         root.forbidden = rootForbidden;
     const document = root, attachedRules = [], properties = {};
     for (const node of Object.values(canonical.nodes)) {
-        const path = canonicalPropertyPath(canonical, node.id), priorDocumentation = schema.documentation?.properties?.[path], example = node.documentation.example.method === "blank" ? undefined : { value: structuredClone(node.documentation.example.value), selectionMethod: node.documentation.example.method === "allowed-value" ? "allowed value" : "custom" };
-        if (node.documentation.displayText || node.documentation.comments || priorDocumentation || node.documentation.example.method === "allowed-value")
+        const path = canonicalPropertyPath(canonical, node.id), priorDocumentation = schema.documentation?.properties?.[path], example = node.documentation.example.method === "blank" ? undefined : { value: structuredClone(node.documentation.example.value), selectionMethod: node.documentation.example.method === "allowed-value" ? "allowed value" : "custom" }, sourceRules = canonical.sourceContent?.definitionsByNodeId?.[node.id]?.rules, embeddedRuleIds = new Set(Array.isArray(sourceRules) ? sourceRules.flatMap((rule) => rule && typeof rule === "object" && "id" in rule && typeof rule.id === "string" ? [rule.id] : []) : []);
+        if (node.documentation.displayText || node.documentation.description || node.documentation.comments || priorDocumentation || example)
             properties[path] = { displayName: node.documentation.displayText, description: node.documentation.description, ...(node.documentation.comments ? { comments: node.documentation.comments } : {}), ...(example ? { example } : {}) };
         for (const rule of node.rules) {
             if (rule.id.startsWith("json-facet:"))
                 continue;
-            const prior = (schema.attachedRules ?? []).find(({ id }) => id === rule.id), operator = rule.kind === "pattern" ? (prior?.operator ?? "regular-expression") : rule.kind === "range" ? "numeric-range" : rule.kind === "cardinality" ? "item-count" : prior?.operator ?? rule.kind, parameters = rule.kind === "pattern" ? rule.pattern : rule.kind === "range" ? `${rule.minimum ?? ""},${rule.maximum ?? ""}` : rule.kind === "cardinality" ? `${rule.minItems ?? ""},${rule.maxItems ?? ""}` : prior?.parameters, propertyPath = prior?.propertyPath && pointer(prior.propertyPath) === path ? prior.propertyPath : path, { conditionGroup: _legacyConditionGroup, ...priorWithoutLegacyCondition } = prior ?? {};
+            const prior = (schema.attachedRules ?? []).find(({ id }) => id === rule.id);
+            if (!prior && embeddedRuleIds.has(rule.id))
+                continue;
+            const operator = rule.kind === "pattern" ? (prior?.operator ?? "regular-expression") : rule.kind === "range" ? "numeric-range" : rule.kind === "cardinality" ? "item-count" : prior?.operator ?? rule.kind, parameters = rule.kind === "pattern" ? rule.pattern : rule.kind === "range" ? `${rule.minimum ?? ""},${rule.maximum ?? ""}` : rule.kind === "cardinality" ? `${rule.minItems ?? ""},${rule.maxItems ?? ""}` : prior?.parameters, propertyPath = prior?.propertyPath && pointer(prior.propertyPath) === path ? prior.propertyPath : path, { conditionGroup: _legacyConditionGroup, ...priorWithoutLegacyCondition } = prior ?? {};
             attachedRules.push({ ...priorWithoutLegacyCondition, id: rule.id, version: prior?.version ?? 1, propertyPath, operator, ...(parameters !== undefined ? { parameters } : {}), severity: rule.severity, message: rule.message });
         }
     }

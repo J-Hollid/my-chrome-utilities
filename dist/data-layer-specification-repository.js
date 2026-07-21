@@ -8,7 +8,7 @@ function entityRevisions(state, previous) {
         return [entity.id, !prior || JSON.stringify(prior) !== JSON.stringify(entity) ? revision + 1 : Math.max(1, revision)];
     }));
 }
-function envelopeFor(state, revision, previous, command) { const base = createCanonicalProjectEnvelope(state.project, state.draft?.id ?? `release:${state.project.currentRelease ?? "unpublished"}`); return { ...base, revision, entityRevisions: entityRevisions(state, previous), draft: clone(state.draft), history: clone(state.history), commands: [...(previous?.commands ?? []), ...(command ? [clone(command)] : [])] }; }
+function envelopeFor(state, revision, previous, command) { const base = createCanonicalProjectEnvelope(state.project, state.draft?.id ?? `release:${state.project.currentRelease ?? "unpublished"}`); return { ...base, revision, entityRevisions: entityRevisions(state, previous), draft: clone(state.draft), history: { undo: [], redo: [] }, commands: [...(previous?.commands ?? []), ...(command ? [clone(command)] : [])] }; }
 export function restoreCanonicalProjectEnvelope(serialized) { if (!serialized)
     return undefined; const parsed = JSON.parse(serialized); if ("format" in parsed && parsed.format === "my-chrome-utilities.canonical-specification-project")
     return clone(parsed); if ("project" in parsed)
