@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import {
+  composedCanonicalSchema,
   composedSchemaWorkspace,
   resetComposedSchemaLocalProperty,
+  saveComposedCanonicalDocument,
   saveComposedSchemaLocalFacets,
 } from "../dist/data-layer-composed-schema-workspace.js";
+import {applyCanonicalCommand,canonicalPropertyPath} from "../dist/data-layer-canonical-schema.js";
 import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
 
 let seed=0x636f6d70;
@@ -24,6 +27,16 @@ for(let example=0;example<150;example+=1){
   const reset=resetComposedSchemaLocalProperty(saved,"pages",`page:${example}`,path),resetPage=reset.project.collections.pages[0],resetRows=composedSchemaWorkspace(reset,resetPage,"Page").rows;
   assert.deepEqual(resetPage.localSchemaContributions,[{path:unrelatedPath,documentation:"preserve me"}]);
   assert.equal(resetRows.find(({path:rowPath})=>rowPath===path).effective.expectedValue,parentValue);
+
+  const projected=composedCanonicalSchema(reset,resetPage,"Page"),node=Object.values(projected.nodes).find((candidate)=>canonicalPropertyPath(projected,candidate.id)===path);
+  assert.ok(node,`example ${example} projects its inherited property into the canonical core`);
+  const edited=applyCanonicalCommand(projected,{kind:"set",baseRevision:projected.revision,propertyId:node.id,patch:{expectedValue:localValue}});
+  assert.equal(edited.status,"applied");
+  const written=saveComposedCanonicalDocument(reset,"pages",`page:${example}`,edited.document),writtenPage=written.project.collections.pages[0];
+  assert.equal(writtenPage.localSchemaContributions.length,2);
+  assert.deepEqual(writtenPage.localSchemaContributions.find(({path:storedPath})=>storedPath===unrelatedPath),{path:unrelatedPath,documentation:"preserve me"},`example ${example} conserves an unrelated sparse contribution`);
+  assert.deepEqual(writtenPage.localSchemaContributions.find(({path:storedPath})=>storedPath===path),{path,expectedValue:localValue},`example ${example} stores only its sparse local difference from the effective core`);
+  assert.equal(composedSchemaWorkspace(written,writtenPage,"Page").rows.find(({path:rowPath})=>rowPath===path).effective.expectedValue,localValue);
 }
 
 console.log("data-layer composed schema workspace property tests passed");
