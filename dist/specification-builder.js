@@ -1102,7 +1102,7 @@ subscribeCanonicalProjectChanges(window, ({ revision, state: next }) => {
     render();
     renderAssignments();
     q("#project-state").textContent = `Updated from canonical revision ${revision}`;
-});
+}, () => state ? { projectId: state.project.id, revision: canonicalRevision } : undefined);
 render();
 renderAssignments();
 const applyRequestedRoute = () => { const deepKind = routeParameters.get("kind"), deepId = routeParameters.get("entity"), requestedAction = routeParameters.get("route"); if (deepKind && deepKind in labels) {

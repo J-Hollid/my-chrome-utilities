@@ -1,45 +1,24 @@
-import {canonicalPropertyPath,canonicalSchemaFromJsonSchema,type CanonicalCommand,type CanonicalCommandResult,type CanonicalPredicateOperator,type CanonicalPresenceMode,type CanonicalPropertyNode,type CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
-import {mountCanonicalSchemaEditor,type CanonicalSchemaEditorOptions} from "./data-layer-canonical-schema-ui.js";
+import {canonicalPropertyPath,canonicalSchemaFromJsonSchema,type CanonicalCommand,type CanonicalPredicate,type CanonicalPredicateGroup,type CanonicalPredicateLeaf,type CanonicalPredicateOperator,type CanonicalPresenceMode,type CanonicalPropertyNode,type CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
 import type {AttachedSchemaRule,JsonSchema,SchemaDefinition} from "./data-layer-schema-verification.js";
-
-export interface UnifiedCanonicalEditorAdapter {
-  key:string;
-  label:string;
-  load:()=>CanonicalSchemaDocument;
-  dispatch:(command:CanonicalCommand)=>CanonicalCommandResult;
-  onUndo?:()=>void;
-  onRedo?:()=>void;
-  actions?:readonly {label:string;run:()=>void}[];
-  renderContext?:(host:HTMLElement)=>void;
-}
-type CoreMount=(options:CanonicalSchemaEditorOptions)=>{render():void};
-
-export function createUnifiedCanonicalEditorController(mount:CoreMount,id:(kind:string)=>string=(kind)=>`${kind}:${crypto.randomUUID()}`){
-  let active:UnifiedCanonicalEditorAdapter|undefined;
-  const empty=savedSchemaCanonicalDocument({id:"schema:empty",name:"No schema selected",version:0,document:{type:"object"}},id);
-  const core=mount({host:globalThis.document?.createElement("section") as HTMLElement,surface:"Side panel",load:()=>active?.load()??empty,dispatch:(command)=>active?.dispatch(command)??{status:"conflict",document:empty,message:"Select a schema before editing."},id,onUndo:()=>active?.onUndo?.(),onRedo:()=>active?.onRedo?.()});
-  return{
-    select(adapter:UnifiedCanonicalEditorAdapter){active=adapter;core.render();},
-    clear(){active=undefined;},
-    current:()=>active?.load()??empty,
-    dispatch:(command:CanonicalCommand)=>active?.dispatch(command)??{status:"conflict" as const,document:empty,message:"Select a schema before editing."},
-    active:()=>active,
-    render:()=>core.render(),
-  };
-}
-
-export function mountUnifiedSidePanelCanonicalEditor(input:{host:HTMLElement;id:(kind:string)=>string}){
-  const chrome=document.createElement("header"),identity=document.createElement("p"),actions=document.createElement("div"),coreShell=document.createElement("section"),coreHost=document.createElement("section"),contextHost=document.createElement("section");
-  chrome.setAttribute("aria-label","Unified schema editor context");coreShell.setAttribute("aria-label","Unified canonical schema editor core");coreShell.append(coreHost);contextHost.setAttribute("aria-label","Unified schema inheritance context");chrome.append(identity,actions);input.host.replaceChildren(chrome,coreShell,contextHost);input.host.dataset.canonicalEditorMounts=String(Number(input.host.dataset.canonicalEditorMounts??0)+1);
-  const controller=createUnifiedCanonicalEditorController((options)=>mountCanonicalSchemaEditor({...options,host:coreHost}),input.id);
-  const renderContext=()=>{const active=controller.active();identity.textContent=active?.label??"Select a saved schema or project contributor.";actions.replaceChildren(...(active?.actions??[]).map((action)=>{const button=document.createElement("button");button.type="button";button.textContent=action.label;button.addEventListener("click",action.run);return button;}));contextHost.replaceChildren();contextHost.hidden=!active?.renderContext;if(active?.renderContext)active.renderContext(contextHost);};
-  renderContext();
-  return{select(adapter:UnifiedCanonicalEditorAdapter){controller.select(adapter);input.host.hidden=false;input.host.setAttribute("aria-label","Side panel schema editor region");renderContext();},close(){controller.clear();input.host.hidden=true;input.host.removeAttribute("aria-label");renderContext();},render(){renderContext();controller.render();},active:controller.active};
-}
 
 const pointer=(path:string)=>`/${path.split(/[./]/).filter(Boolean).join("/")}`;
 const clone=<T>(value:T):T=>structuredClone(value);
 const jsonFacetRule=(schemaId:string,nodeId:string,kind:string)=>`json-facet:${schemaId}:${nodeId}:${kind}`;
+const compactOperator=(operator:CanonicalPredicateOperator)=>({"Greater than":"Is greater than","At least":"Is at least","Less than":"Is less than","At most":"Is at most"} as const)[operator as "Greater than"|"At least"|"Less than"|"At most"]??operator;
+const canonicalOperator=(operator:string):CanonicalPredicateOperator=>({"Is greater than":"Greater than","Is at least":"At least","Is less than":"Less than","Is at most":"At most"} as const)[operator as "Is greater than"|"Is at least"|"Is less than"|"Is at most"]??operator as CanonicalPredicateOperator;
+const compactComparison=(value:unknown)=>value===null?{type:"null" as const,value:null}:typeof value==="string"?{type:"string" as const,value}:typeof value==="number"?{type:"number" as const,value}:typeof value==="boolean"?{type:"boolean" as const,value}:undefined;
+function compactRuleCondition(document:CanonicalSchemaDocument,condition:CanonicalPredicate|undefined):AttachedSchemaRule["conditionGroup"]{
+  if(!condition)return undefined;
+  let group:CanonicalPredicateGroup|undefined,leaves:CanonicalPredicateLeaf[];
+  if(condition.kind==="predicate")leaves=[condition];
+  else if((condition.kind==="all"||condition.kind==="any")&&condition.children.every((child)=>child.kind==="predicate")){group=condition;leaves=condition.children as CanonicalPredicateLeaf[];}
+  else return undefined;
+  return{operator:group?.kind==="any"?"Any":"All",predicates:leaves.flatMap((leaf)=>{const node=document.nodes[leaf.propertyId];if(!node)return[];const comparison=compactComparison(leaf.value);return[{propertyPath:canonicalPropertyPath(document,node.id),operator:compactOperator(leaf.operator),...(comparison?{comparison}:{}),detectedType:node.type==="integer"?"number":node.type}];})};
+}
+function canonicalRuleCondition(document:CanonicalSchemaDocument,group:AttachedSchemaRule["conditionGroup"]):CanonicalPredicate|undefined{
+  if(!group)return undefined;const byPath=new Map(Object.values(document.nodes).map((node)=>[canonicalPropertyPath(document,node.id),node.id])),children=group.predicates.flatMap((predicate)=>{const propertyId=byPath.get(pointer(predicate.propertyPath));if(!propertyId)return[];const value=predicate.comparison?.value;return[{kind:"predicate" as const,propertyId,operator:canonicalOperator(predicate.operator),...(value!==undefined?{value}:predicate.comparison?.type==="null"?{value:null}:{})}];});
+  if(!children.length)return undefined;return children.length===1?children[0]:{kind:group.operator==="Any"?"any":"all",children};
+}
 
 export function compactSchemaProjection(document:CanonicalSchemaDocument,identity:{id:string;name:string;version:number}):SchemaDefinition{
   const base:SchemaDefinition={
@@ -63,6 +42,10 @@ const valuesWithStableIds=(current:CanonicalPropertyNode["allowedValues"],next:C
   const prior=current[index];
   return prior&&same(prior.value,entry.value)?{...entry,id:prior.id}:{...entry,id:id("allowed-value")};
 });
+const rulesWithStableConditions=(current:CanonicalPropertyNode["rules"],next:CanonicalPropertyNode["rules"]):CanonicalPropertyNode["rules"]=>next.map((rule)=>{
+  const prior=current.find(({id})=>id===rule.id);
+  return prior?.condition&&!rule.condition?{...rule,condition:clone(prior.condition)}:rule;
+});
 
 export function canonicalCommandsFromCompactProjection(document:CanonicalSchemaDocument,projection:SchemaDefinition,id:(kind:string)=>string):CanonicalCommand[]{
   const {canonicalSchema:_canonicalSchema,...source}=projection;
@@ -79,7 +62,8 @@ export function canonicalCommandsFromCompactProjection(document:CanonicalSchemaD
     commands.push({kind:"add",baseRevision:revision++,name:candidate.name,type:candidate.type,...(parentId?{parentId}:{}),id:()=>nodeId});
     addedIdsByPath.set(path,nodeId);
     if(candidate.itemType)commands.push({kind:"type",baseRevision:revision++,propertyId:nodeId,type:candidate.type,itemType:candidate.itemType,confirmed:true});
-    commands.push({kind:"set",baseRevision:revision++,propertyId:nodeId,patch:{presence:clone(candidate.presence),allowedValues:clone(candidate.allowedValues),rules:clone(candidate.rules),documentation:clone(candidate.documentation)}});
+    const facets={presence:candidate.presence,allowedValues:candidate.allowedValues,rules:candidate.rules,documentation:candidate.documentation},defaults={presence:{mode:"optional"},allowedValues:[],rules:[],documentation:{displayText:"",description:"",comments:"",example:{method:"blank"}}};
+    if(!same(facets,defaults))commands.push({kind:"set",baseRevision:revision++,propertyId:nodeId,patch:clone(facets)});
   }
   for(const current of Object.values(document.nodes)){
     const path=canonicalPropertyPath(document,current.id),candidate=parsedByPath.get(path);
@@ -93,7 +77,7 @@ export function canonicalCommandsFromCompactProjection(document:CanonicalSchemaD
     const patch={
       presence:clone(candidatePresence),
       allowedValues:valuesWithStableIds(current.allowedValues,candidate.allowedValues,id),
-      rules:clone(candidate.rules),
+      rules:rulesWithStableConditions(current.rules,candidate.rules),
       documentation:clone(candidate.documentation),
     };
     const currentFacets={presence:current.presence,allowedValues:current.allowedValues,rules:current.rules,documentation:current.documentation};
@@ -107,7 +91,7 @@ export function savedSchemaCanonicalDocument(schema:Pick<SchemaDefinition,"id"|"
   const canonical=canonicalSchemaFromJsonSchema({id:`canonical:saved:${schema.id}`,contributorId:schema.id,contributorName:schema.name,sourceIdentity:schema.id,sourceRevision:schema.version,document:schema.document as Record<string,unknown>,idFactory:id}),byPath=new Map(Object.values(canonical.nodes).map((node)=>[canonicalPropertyPath(canonical,node.id),node]));
   const definitionsByNodeId:Record<string,Record<string,unknown>>={};
   const visit=(definition:JsonSchema,path:string):void=>{for(const[name,child]of Object.entries(definition.properties??{})){const childPath=`${path}/${name}`,node=byPath.get(childPath),documentation=schema.documentation?.properties?.[childPath],rich=child as JsonSchema&Record<string,unknown>;if(node){definitionsByNodeId[node.id]=clone(rich);if(definition.required?.includes(name))node.presence={mode:"required"};else if(definition.forbidden?.includes(name))node.presence={mode:"forbidden"};if(node.type==="array"&&rich.items&&typeof rich.items==="object"&&typeof rich.items.type==="string")node.itemType=rich.items.type as CanonicalPropertyNode["type"];node.allowedValues=node.allowedValues.map((entry,index)=>({...entry,id:`allowed-value:${node.id}:${index}`}));if(documentation)node.documentation={displayText:documentation.displayName,description:documentation.description||node.documentation.description,comments:documentation.comments??"",example:documentation.example?{method:documentation.example.selectionMethod==="allowed value"?"allowed-value":"custom",value:clone(documentation.example.value)}:node.documentation.example};const minimum=typeof rich.minimum==="number"?rich.minimum:undefined,maximum=typeof rich.maximum==="number"?rich.maximum:undefined,minItems=typeof rich.minItems==="number"?rich.minItems:undefined,maxItems=typeof rich.maxItems==="number"?rich.maxItems:undefined;if(typeof rich.pattern==="string")node.rules.push({id:jsonFacetRule(schema.id,node.id,"pattern"),kind:"pattern",pattern:rich.pattern,severity:"error",message:"Pattern mismatch"});if(minimum!==undefined||maximum!==undefined)node.rules.push({id:jsonFacetRule(schema.id,node.id,"range"),kind:"range",...(minimum!==undefined?{minimum}:{}),...(maximum!==undefined?{maximum}:{}),severity:"error",message:"Outside range"});if(minItems!==undefined||maxItems!==undefined)node.rules.push({id:jsonFacetRule(schema.id,node.id,"cardinality"),kind:"cardinality",...(minItems!==undefined?{minItems}:{}),...(maxItems!==undefined?{maxItems}:{}),severity:"error",message:"Outside cardinality"});}visit(child,childPath);}};visit(schema.document,"");
-  for(const rule of schema.attachedRules??[]){const node=byPath.get(pointer(rule.propertyPath??""));if(!node)continue;const operator=rule.operator?.replaceAll("_","-").replaceAll(" ","-").toLowerCase(),bounds=rule.parameters?.split(",")??[],number=(value:string|undefined)=>value!==undefined&&value!==""&&Number.isFinite(Number(value))?Number(value):undefined,minimum=number(bounds[0]),maximum=number(bounds[1]),kind=operator==="pattern"||operator==="regular-expression"?"pattern":operator==="range"||operator==="numeric-range"?"range":operator==="cardinality"||operator==="item-count"?"cardinality":"custom";node.rules.push({id:rule.id,kind,...(kind==="pattern"&&rule.parameters?{pattern:rule.parameters}:{}),...(kind==="range"&&minimum!==undefined?{minimum}:{}),...(kind==="range"&&maximum!==undefined?{maximum}:{}),...(kind==="cardinality"&&minimum!==undefined?{minItems:minimum}:{}),...(kind==="cardinality"&&maximum!==undefined?{maxItems:maximum}:{}),severity:rule.severity==="warning"?"warning":"error",message:rule.message??rule.name??rule.id,...(rule.id.startsWith("rule:")?{reusableRuleId:rule.id}:{})});}
+  for(const rule of schema.attachedRules??[]){const node=byPath.get(pointer(rule.propertyPath??""));if(!node)continue;const operator=rule.operator?.replaceAll("_","-").replaceAll(" ","-").toLowerCase(),bounds=rule.parameters?.split(",")??[],number=(value:string|undefined)=>value!==undefined&&value!==""&&Number.isFinite(Number(value))?Number(value):undefined,minimum=number(bounds[0]),maximum=number(bounds[1]),kind=operator==="pattern"||operator==="regular-expression"?"pattern":operator==="range"||operator==="numeric-range"?"range":operator==="cardinality"||operator==="item-count"?"cardinality":"custom",condition=canonicalRuleCondition(canonical,rule.conditionGroup);node.rules.push({id:rule.id,kind,...(kind==="pattern"&&rule.parameters?{pattern:rule.parameters}:{}),...(kind==="range"&&minimum!==undefined?{minimum}:{}),...(kind==="range"&&maximum!==undefined?{maximum}:{}),...(kind==="cardinality"&&minimum!==undefined?{minItems:minimum}:{}),...(kind==="cardinality"&&maximum!==undefined?{maxItems:maximum}:{}),...(condition?{condition}:{}),severity:rule.severity==="warning"?"warning":"error",message:rule.message??rule.name??rule.id,...(rule.id.startsWith("rule:")?{reusableRuleId:rule.id}:{})});}
   canonical.sourceContent={document:clone(schema.document as Record<string,unknown>),rules:clone((schema.attachedRules??[]) as unknown as readonly Record<string,unknown>[]),documentation:clone(schema.documentation??{}),examples:[],definitionsByNodeId};return canonical;
 }
 
@@ -126,7 +110,7 @@ export function savedSchemaFromCanonical<T extends SchemaDefinition>(schema:T,ca
   for(const node of Object.values(canonical.nodes)){
     const path=canonicalPropertyPath(canonical,node.id),priorDocumentation=schema.documentation?.properties?.[path],example=node.documentation.example.method==="blank"?undefined:{value:structuredClone(node.documentation.example.value) as string|number|boolean|null,selectionMethod:node.documentation.example.method==="allowed-value"?"allowed value" as const:"custom" as const};
     if(node.documentation.displayText||node.documentation.comments||priorDocumentation||node.documentation.example.method==="allowed-value")properties[path]={displayName:node.documentation.displayText,description:node.documentation.description,...(node.documentation.comments?{comments:node.documentation.comments}:{}),...(example?{example}:{})};
-    for(const rule of node.rules){if(rule.id.startsWith("json-facet:"))continue;const prior=(schema.attachedRules??[]).find(({id})=>id===rule.id),operator=rule.kind==="pattern"?(prior?.operator??"regular-expression"):rule.kind==="range"?"numeric-range":rule.kind==="cardinality"?"item-count":prior?.operator??rule.kind,parameters=rule.kind==="pattern"?rule.pattern:rule.kind==="range"?`${rule.minimum??""},${rule.maximum??""}`:rule.kind==="cardinality"?`${rule.minItems??""},${rule.maxItems??""}`:prior?.parameters,propertyPath=prior?.propertyPath&&pointer(prior.propertyPath)===path?prior.propertyPath:path;attachedRules.push({...prior,id:rule.id,version:prior?.version??1,propertyPath,operator,...(parameters!==undefined?{parameters}:{}),severity:rule.severity,message:rule.message});}
+    for(const rule of node.rules){if(rule.id.startsWith("json-facet:"))continue;const prior=(schema.attachedRules??[]).find(({id})=>id===rule.id),operator=rule.kind==="pattern"?(prior?.operator??"regular-expression"):rule.kind==="range"?"numeric-range":rule.kind==="cardinality"?"item-count":prior?.operator??rule.kind,parameters=rule.kind==="pattern"?rule.pattern:rule.kind==="range"?`${rule.minimum??""},${rule.maximum??""}`:rule.kind==="cardinality"?`${rule.minItems??""},${rule.maxItems??""}`:prior?.parameters,propertyPath=prior?.propertyPath&&pointer(prior.propertyPath)===path?prior.propertyPath:path,conditionGroup=compactRuleCondition(canonical,rule.condition);attachedRules.push({...prior,id:rule.id,version:prior?.version??1,propertyPath,operator,...(parameters!==undefined?{parameters}:{}),...(conditionGroup?{conditionGroup}:{}),severity:rule.severity,message:rule.message});}
   }
   const clean=(value:JsonSchema):JsonSchema=>{const next=structuredClone(value) as JsonSchema&{attachedRules?:unknown};delete next.attachedRules;if(next.required&&!next.required.length)delete next.required;for(const child of Object.values(next.properties??{}))clean(child);return next;};
   const documentation={...(schema.documentation?.description?{description:schema.documentation.description}:{}),...(Object.keys(properties).length?{properties}:{})};

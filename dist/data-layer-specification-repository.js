@@ -16,13 +16,22 @@ export function restoreCanonicalProjectEnvelope(serialized) { if (!serialized)
 function stateFromEnvelope(envelope) { return { project: clone(envelope.project), ...(envelope.draft ? { draft: clone(envelope.draft) } : {}), history: clone(envelope.history ?? { undo: [], redo: [] }) }; }
 export function restoreCanonicalProjectState(serialized) { const envelope = restoreCanonicalProjectEnvelope(serialized); return envelope ? stateFromEnvelope(envelope) : undefined; }
 export function serializeCanonicalProjectState(state, revision) { return JSON.stringify(envelopeFor(state, revision)); }
-export function subscribeCanonicalProjectChanges(target, notify) {
+export function subscribeCanonicalProjectChanges(target, notify, currentContext) {
+    const observedRevisions = new Map();
     const listener = (event) => {
         if (event.key !== CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY || !event.newValue)
             return;
         const envelope = restoreCanonicalProjectEnvelope(event.newValue);
-        if (envelope)
-            notify({ revision: envelope.revision, state: stateFromEnvelope(envelope) });
+        if (!envelope)
+            return;
+        const projectId = envelope.project.id, current = currentContext?.();
+        if (current && current.projectId !== projectId)
+            return;
+        const floor = Math.max(observedRevisions.get(projectId) ?? -1, current?.revision ?? -1);
+        if (envelope.revision <= floor)
+            return;
+        observedRevisions.set(projectId, envelope.revision);
+        notify({ revision: envelope.revision, state: stateFromEnvelope(envelope) });
     };
     target.addEventListener("storage", listener);
     return () => target.removeEventListener("storage", listener);

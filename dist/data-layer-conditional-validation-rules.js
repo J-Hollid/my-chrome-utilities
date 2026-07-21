@@ -24,7 +24,7 @@ export function comparisonValueFromInput(input, type) {
 }
 export function operatorsForConditionType(type) {
     if (type === "string")
-        return [...existenceOperators, ...equalityOperators, "Matches pattern"];
+        return [...existenceOperators, ...equalityOperators, "Starts with", "Contains", "Matches pattern"];
     if (type === "number")
         return [...existenceOperators, ...equalityOperators, ...numericOperators];
     if (type === "boolean" || type === "null")
@@ -47,6 +47,10 @@ export function evaluateConditionPredicate(observed, predicate) {
         return sameTypedValue(observed.value, predicate.comparison);
     if (predicate.operator === "Does not equal")
         return !sameTypedValue(observed.value, predicate.comparison);
+    if (predicate.operator === "Starts with")
+        return typeof observed.value === "string" && predicate.comparison?.type === "string" && observed.value.startsWith(String(predicate.comparison.value));
+    if (predicate.operator === "Contains")
+        return typeof observed.value === "string" && predicate.comparison?.type === "string" && observed.value.includes(String(predicate.comparison.value));
     if (predicate.operator === "Is one of")
         return predicate.comparisons?.some((value) => sameTypedValue(observed.value, value)) ?? false;
     if (predicate.operator === "Matches pattern") {

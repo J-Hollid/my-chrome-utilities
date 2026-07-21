@@ -1,36 +1,34 @@
 import { canonicalPropertyPath, canonicalSchemaFromJsonSchema } from "./data-layer-canonical-schema.js";
-import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
-export function createUnifiedCanonicalEditorController(mount, id = (kind) => `${kind}:${crypto.randomUUID()}`) {
-    let active;
-    const empty = savedSchemaCanonicalDocument({ id: "schema:empty", name: "No schema selected", version: 0, document: { type: "object" } }, id);
-    const core = mount({ host: globalThis.document?.createElement("section"), surface: "Side panel", load: () => active?.load() ?? empty, dispatch: (command) => active?.dispatch(command) ?? { status: "conflict", document: empty, message: "Select a schema before editing." }, id, onUndo: () => active?.onUndo?.(), onRedo: () => active?.onRedo?.() });
-    return {
-        select(adapter) { active = adapter; core.render(); },
-        clear() { active = undefined; },
-        current: () => active?.load() ?? empty,
-        dispatch: (command) => active?.dispatch(command) ?? { status: "conflict", document: empty, message: "Select a schema before editing." },
-        active: () => active,
-        render: () => core.render(),
-    };
-}
-export function mountUnifiedSidePanelCanonicalEditor(input) {
-    const chrome = document.createElement("header"), identity = document.createElement("p"), actions = document.createElement("div"), coreShell = document.createElement("section"), coreHost = document.createElement("section"), contextHost = document.createElement("section");
-    chrome.setAttribute("aria-label", "Unified schema editor context");
-    coreShell.setAttribute("aria-label", "Unified canonical schema editor core");
-    coreShell.append(coreHost);
-    contextHost.setAttribute("aria-label", "Unified schema inheritance context");
-    chrome.append(identity, actions);
-    input.host.replaceChildren(chrome, coreShell, contextHost);
-    input.host.dataset.canonicalEditorMounts = String(Number(input.host.dataset.canonicalEditorMounts ?? 0) + 1);
-    const controller = createUnifiedCanonicalEditorController((options) => mountCanonicalSchemaEditor({ ...options, host: coreHost }), input.id);
-    const renderContext = () => { const active = controller.active(); identity.textContent = active?.label ?? "Select a saved schema or project contributor."; actions.replaceChildren(...(active?.actions ?? []).map((action) => { const button = document.createElement("button"); button.type = "button"; button.textContent = action.label; button.addEventListener("click", action.run); return button; })); contextHost.replaceChildren(); contextHost.hidden = !active?.renderContext; if (active?.renderContext)
-        active.renderContext(contextHost); };
-    renderContext();
-    return { select(adapter) { controller.select(adapter); input.host.hidden = false; input.host.setAttribute("aria-label", "Side panel schema editor region"); renderContext(); }, close() { controller.clear(); input.host.hidden = true; input.host.removeAttribute("aria-label"); renderContext(); }, render() { renderContext(); controller.render(); }, active: controller.active };
-}
 const pointer = (path) => `/${path.split(/[./]/).filter(Boolean).join("/")}`;
 const clone = (value) => structuredClone(value);
 const jsonFacetRule = (schemaId, nodeId, kind) => `json-facet:${schemaId}:${nodeId}:${kind}`;
+const compactOperator = (operator) => ({ "Greater than": "Is greater than", "At least": "Is at least", "Less than": "Is less than", "At most": "Is at most" }[operator] ?? operator);
+const canonicalOperator = (operator) => ({ "Is greater than": "Greater than", "Is at least": "At least", "Is less than": "Less than", "Is at most": "At most" }[operator] ?? operator);
+const compactComparison = (value) => value === null ? { type: "null", value: null } : typeof value === "string" ? { type: "string", value } : typeof value === "number" ? { type: "number", value } : typeof value === "boolean" ? { type: "boolean", value } : undefined;
+function compactRuleCondition(document, condition) {
+    if (!condition)
+        return undefined;
+    let group, leaves;
+    if (condition.kind === "predicate")
+        leaves = [condition];
+    else if ((condition.kind === "all" || condition.kind === "any") && condition.children.every((child) => child.kind === "predicate")) {
+        group = condition;
+        leaves = condition.children;
+    }
+    else
+        return undefined;
+    return { operator: group?.kind === "any" ? "Any" : "All", predicates: leaves.flatMap((leaf) => { const node = document.nodes[leaf.propertyId]; if (!node)
+            return []; const comparison = compactComparison(leaf.value); return [{ propertyPath: canonicalPropertyPath(document, node.id), operator: compactOperator(leaf.operator), ...(comparison ? { comparison } : {}), detectedType: node.type === "integer" ? "number" : node.type }]; }) };
+}
+function canonicalRuleCondition(document, group) {
+    if (!group)
+        return undefined;
+    const byPath = new Map(Object.values(document.nodes).map((node) => [canonicalPropertyPath(document, node.id), node.id])), children = group.predicates.flatMap((predicate) => { const propertyId = byPath.get(pointer(predicate.propertyPath)); if (!propertyId)
+        return []; const value = predicate.comparison?.value; return [{ kind: "predicate", propertyId, operator: canonicalOperator(predicate.operator), ...(value !== undefined ? { value } : predicate.comparison?.type === "null" ? { value: null } : {}) }]; });
+    if (!children.length)
+        return undefined;
+    return children.length === 1 ? children[0] : { kind: group.operator === "Any" ? "any" : "all", children };
+}
 export function compactSchemaProjection(document, identity) {
     const base = {
         ...identity,
@@ -51,6 +49,10 @@ const valuesWithStableIds = (current, next, id) => next.map((entry, index) => {
     const prior = current[index];
     return prior && same(prior.value, entry.value) ? { ...entry, id: prior.id } : { ...entry, id: id("allowed-value") };
 });
+const rulesWithStableConditions = (current, next) => next.map((rule) => {
+    const prior = current.find(({ id }) => id === rule.id);
+    return prior?.condition && !rule.condition ? { ...rule, condition: clone(prior.condition) } : rule;
+});
 export function canonicalCommandsFromCompactProjection(document, projection, id) {
     const { canonicalSchema: _canonicalSchema, ...source } = projection;
     const parsed = savedSchemaCanonicalDocument(source, id), parsedByPath = new Map(Object.values(parsed.nodes).map((node) => [canonicalPropertyPath(parsed, node.id), node])), currentByPath = new Map(Object.values(document.nodes).map((node) => [canonicalPropertyPath(document, node.id), node]));
@@ -67,7 +69,9 @@ export function canonicalCommandsFromCompactProjection(document, projection, id)
         addedIdsByPath.set(path, nodeId);
         if (candidate.itemType)
             commands.push({ kind: "type", baseRevision: revision++, propertyId: nodeId, type: candidate.type, itemType: candidate.itemType, confirmed: true });
-        commands.push({ kind: "set", baseRevision: revision++, propertyId: nodeId, patch: { presence: clone(candidate.presence), allowedValues: clone(candidate.allowedValues), rules: clone(candidate.rules), documentation: clone(candidate.documentation) } });
+        const facets = { presence: candidate.presence, allowedValues: candidate.allowedValues, rules: candidate.rules, documentation: candidate.documentation }, defaults = { presence: { mode: "optional" }, allowedValues: [], rules: [], documentation: { displayText: "", description: "", comments: "", example: { method: "blank" } } };
+        if (!same(facets, defaults))
+            commands.push({ kind: "set", baseRevision: revision++, propertyId: nodeId, patch: clone(facets) });
     }
     for (const current of Object.values(document.nodes)) {
         const path = canonicalPropertyPath(document, current.id), candidate = parsedByPath.get(path);
@@ -82,7 +86,7 @@ export function canonicalCommandsFromCompactProjection(document, projection, id)
         const patch = {
             presence: clone(candidatePresence),
             allowedValues: valuesWithStableIds(current.allowedValues, candidate.allowedValues, id),
-            rules: clone(candidate.rules),
+            rules: rulesWithStableConditions(current.rules, candidate.rules),
             documentation: clone(candidate.documentation),
         };
         const currentFacets = { presence: current.presence, allowedValues: current.allowedValues, rules: current.rules, documentation: current.documentation };
@@ -124,8 +128,8 @@ export function savedSchemaCanonicalDocument(schema, id) {
         const node = byPath.get(pointer(rule.propertyPath ?? ""));
         if (!node)
             continue;
-        const operator = rule.operator?.replaceAll("_", "-").replaceAll(" ", "-").toLowerCase(), bounds = rule.parameters?.split(",") ?? [], number = (value) => value !== undefined && value !== "" && Number.isFinite(Number(value)) ? Number(value) : undefined, minimum = number(bounds[0]), maximum = number(bounds[1]), kind = operator === "pattern" || operator === "regular-expression" ? "pattern" : operator === "range" || operator === "numeric-range" ? "range" : operator === "cardinality" || operator === "item-count" ? "cardinality" : "custom";
-        node.rules.push({ id: rule.id, kind, ...(kind === "pattern" && rule.parameters ? { pattern: rule.parameters } : {}), ...(kind === "range" && minimum !== undefined ? { minimum } : {}), ...(kind === "range" && maximum !== undefined ? { maximum } : {}), ...(kind === "cardinality" && minimum !== undefined ? { minItems: minimum } : {}), ...(kind === "cardinality" && maximum !== undefined ? { maxItems: maximum } : {}), severity: rule.severity === "warning" ? "warning" : "error", message: rule.message ?? rule.name ?? rule.id, ...(rule.id.startsWith("rule:") ? { reusableRuleId: rule.id } : {}) });
+        const operator = rule.operator?.replaceAll("_", "-").replaceAll(" ", "-").toLowerCase(), bounds = rule.parameters?.split(",") ?? [], number = (value) => value !== undefined && value !== "" && Number.isFinite(Number(value)) ? Number(value) : undefined, minimum = number(bounds[0]), maximum = number(bounds[1]), kind = operator === "pattern" || operator === "regular-expression" ? "pattern" : operator === "range" || operator === "numeric-range" ? "range" : operator === "cardinality" || operator === "item-count" ? "cardinality" : "custom", condition = canonicalRuleCondition(canonical, rule.conditionGroup);
+        node.rules.push({ id: rule.id, kind, ...(kind === "pattern" && rule.parameters ? { pattern: rule.parameters } : {}), ...(kind === "range" && minimum !== undefined ? { minimum } : {}), ...(kind === "range" && maximum !== undefined ? { maximum } : {}), ...(kind === "cardinality" && minimum !== undefined ? { minItems: minimum } : {}), ...(kind === "cardinality" && maximum !== undefined ? { maxItems: maximum } : {}), ...(condition ? { condition } : {}), severity: rule.severity === "warning" ? "warning" : "error", message: rule.message ?? rule.name ?? rule.id, ...(rule.id.startsWith("rule:") ? { reusableRuleId: rule.id } : {}) });
     }
     canonical.sourceContent = { document: clone(schema.document), rules: clone((schema.attachedRules ?? [])), documentation: clone(schema.documentation ?? {}), examples: [], definitionsByNodeId };
     return canonical;
@@ -192,8 +196,8 @@ export function savedSchemaFromCanonical(schema, canonical) {
         for (const rule of node.rules) {
             if (rule.id.startsWith("json-facet:"))
                 continue;
-            const prior = (schema.attachedRules ?? []).find(({ id }) => id === rule.id), operator = rule.kind === "pattern" ? (prior?.operator ?? "regular-expression") : rule.kind === "range" ? "numeric-range" : rule.kind === "cardinality" ? "item-count" : prior?.operator ?? rule.kind, parameters = rule.kind === "pattern" ? rule.pattern : rule.kind === "range" ? `${rule.minimum ?? ""},${rule.maximum ?? ""}` : rule.kind === "cardinality" ? `${rule.minItems ?? ""},${rule.maxItems ?? ""}` : prior?.parameters, propertyPath = prior?.propertyPath && pointer(prior.propertyPath) === path ? prior.propertyPath : path;
-            attachedRules.push({ ...prior, id: rule.id, version: prior?.version ?? 1, propertyPath, operator, ...(parameters !== undefined ? { parameters } : {}), severity: rule.severity, message: rule.message });
+            const prior = (schema.attachedRules ?? []).find(({ id }) => id === rule.id), operator = rule.kind === "pattern" ? (prior?.operator ?? "regular-expression") : rule.kind === "range" ? "numeric-range" : rule.kind === "cardinality" ? "item-count" : prior?.operator ?? rule.kind, parameters = rule.kind === "pattern" ? rule.pattern : rule.kind === "range" ? `${rule.minimum ?? ""},${rule.maximum ?? ""}` : rule.kind === "cardinality" ? `${rule.minItems ?? ""},${rule.maxItems ?? ""}` : prior?.parameters, propertyPath = prior?.propertyPath && pointer(prior.propertyPath) === path ? prior.propertyPath : path, conditionGroup = compactRuleCondition(canonical, rule.condition);
+            attachedRules.push({ ...prior, id: rule.id, version: prior?.version ?? 1, propertyPath, operator, ...(parameters !== undefined ? { parameters } : {}), ...(conditionGroup ? { conditionGroup } : {}), severity: rule.severity, message: rule.message });
         }
     }
     const clean = (value) => { const next = structuredClone(value); delete next.attachedRules; if (next.required && !next.required.length)

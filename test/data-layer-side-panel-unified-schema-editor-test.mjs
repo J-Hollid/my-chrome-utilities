@@ -3,7 +3,6 @@ import {
   canonicalCommandsFromCompactProjection,
   compactConditionalPresence,
   compactSchemaProjection,
-  createUnifiedCanonicalEditorController,
   savedSchemaCanonicalDocument,
   savedSchemaFromCanonical,
 } from "../dist/data-layer-side-panel-unified-schema-editor.js";
@@ -61,21 +60,6 @@ assert.equal(moved.status,"applied");
 const afterMove=savedSchemaFromCanonical(afterRename,moved.document);
 assert.deepEqual(afterMove.attachedRules.map(({propertyPath})=>propertyPath),["/category","/category"],"move atomically rebases every attached-rule path from stable canonical identities");
 
-const documents={saved:canonical,profile:{...canonical,id:"canonical:profile",contributorId:"profile:article",contributorName:"Article profile"}},writes=[];
-let mounts=0,render;
-const controller=createUnifiedCanonicalEditorController((options)=>{mounts+=1;render=()=>options.load();return{render};});
-controller.select({key:"saved",label:"Article saved schema",load:()=>documents.saved,dispatch:(command)=>{writes.push(["saved",command.kind]);return{status:"applied",document:documents.saved};}});
-assert.equal(controller.current().id,canonical.id);
-controller.select({key:"profile",label:"Article profile",load:()=>documents.profile,dispatch:(command)=>{writes.push(["profile",command.kind]);return{status:"applied",document:documents.profile};}});
-assert.equal(controller.current().id,"canonical:profile");
-controller.select({key:"page-group",label:"Checkout Page Group",load:()=>documents.profile,dispatch:(command)=>{writes.push(["page-group",command.kind]);return{status:"applied",document:documents.profile};}});
-controller.select({key:"page",label:"Cart Page",load:()=>documents.profile,dispatch:(command)=>{writes.push(["page",command.kind]);return{status:"applied",document:documents.profile};}});
-controller.select({key:"event",label:"Purchase Event",load:()=>documents.profile,dispatch:(command)=>{writes.push(["event",command.kind]);return{status:"applied",document:documents.profile};}});
-controller.select({key:"flow",label:"Cart step",load:()=>documents.profile,dispatch:(command)=>{writes.push(["flow",command.kind]);return{status:"applied",document:documents.profile};}});
-controller.dispatch({kind:"view",baseRevision:documents.profile.revision,view:"table"});
-assert.deepEqual(writes,[["flow","view"]]);
-assert.equal(mounts,1,"saved schemas, Page Groups, Pages, Events, Flow contributors, and other roles reuse one mounted canonical editor core");
-
 const compactSource={
   ...canonical,
   revision:8,
@@ -84,11 +68,14 @@ const compactSource={
     [category.id]:{
       ...category,
       presence:{mode:"required-when",condition:{kind:"predicate",propertyId:article.id,operator:"Equals",value:"News"}},
+      rules:category.rules.map((rule)=>rule.id==="rule:category"?{...rule,condition:{kind:"predicate",propertyId:article.id,operator:"Equals",value:"News"}}:rule),
     },
   },
 };
 const compact=compactSchemaProjection(compactSource,{id:"schema:article",name:"Article",version:8});
 assert.equal(compact.canonicalSchema,undefined,"the compact renderer receives a projection instead of a nested standalone-editor payload");
+const compactConditionalRule=compact.attachedRules.find(({id})=>id==="rule:category");
+assert.deepEqual(compactConditionalRule.conditionGroup,{operator:"All",predicates:[{propertyPath:"/article",operator:"Equals",comparison:{type:"string",value:"News"},detectedType:"object"}]},"the compact rich rule builder receives the canonical condition as editable structured controls");
 compact.documentation.properties["/article/category"]={
   ...compact.documentation.properties["/article/category"],
   description:"Changed through compact panel",
@@ -100,6 +87,11 @@ const compactResult=applyCanonicalCommand(compactSource,compactCommands[0]);
 assert.equal(compactResult.document.nodes[category.id].documentation.description,"Changed through compact panel");
 assert.equal(compactResult.document.nodes[category.id].presence.mode,"required-when","projection edits preserve conditional presence owned by canonical state");
 assert.equal(compactResult.document.nodes[category.id].presence.condition.propertyId,article.id);
+assert.deepEqual(compactResult.document.nodes[category.id].rules.find(({id})=>id==="rule:category").condition,{kind:"predicate",propertyId:article.id,operator:"Equals",value:"News"},"compact projection edits round-trip the rendered canonical rule condition");
+const editedRuleProjection=compactSchemaProjection(compactSource,{id:"schema:article",name:"Article",version:8}),editedConditionalRule=editedRuleProjection.attachedRules.find(({id})=>id==="rule:category");
+editedConditionalRule.conditionGroup.predicates[0].comparison.value="Guide";
+const editedRuleCommands=canonicalCommandsFromCompactProjection(compactSource,editedRuleProjection,id),editedRuleResult=applyCanonicalCommand(compactSource,editedRuleCommands[0]);
+assert.equal(editedRuleResult.document.nodes[category.id].rules.find(({id})=>id==="rule:category").condition.value,"Guide","editing the rendered rich condition writes the typed predicate back to the canonical rule model");
 
 const addedProjection=structuredClone(compactSchemaProjection(compactSource,{id:"schema:article",name:"Article",version:8}));
 addedProjection.document.properties.article.properties.section={type:"string",description:"Nested section"};

@@ -682,6 +682,13 @@ let guidedPropertyReturn;
 let schemaDraft;
 let savedCanonicalDocument;
 let compactCanonicalEditor;
+let compactCanonicalPendingCommand;
+let compactCanonicalPendingBase;
+let compactCanonicalReviewVisible = false;
+const compactCanonicalRevisionSnapshots = new Map();
+let compactCanonicalCommandFeedback = "";
+let compactCanonicalPresenceDraft;
+let pendingManualPropertyCanonicalBase;
 let pendingSchemaImport;
 let pendingSchemaDeletion;
 let pendingSchemaRestoration;
@@ -2425,17 +2432,15 @@ function renderSchemaDraft() {
         copyProperty.addEventListener("click", () => openSchemaPropertyCopyReview(persistedPath, copyProperty));
         const compactPresence = compactCanonicalEditor ? document.createElement("fieldset") : undefined;
         if (compactPresence && compactCanonicalEditor) {
-            const canonical = compactCanonicalEditor.load(), canonicalNode = Object.values(canonical.nodes).find((node) => canonicalPropertyPath(canonical, node.id) === persistedPath), legend = document.createElement("legend"), mode = document.createElement("select"), predicateControls = document.createElement("fieldset"), predicateLegend = document.createElement("legend"), predicateProperty = document.createElement("select"), predicateOperator = document.createElement("select"), predicateValue = document.createElement("input"), savePredicate = document.createElement("button"), currentPredicate = canonicalNode?.presence.condition?.kind === "predicate" ? canonicalNode.presence.condition : undefined, fallbackProperty = Object.values(canonical.nodes).find(({ id, name }) => id !== canonicalNode?.id && name === "article_type") ?? Object.values(canonical.nodes).find(({ id }) => id !== canonicalNode?.id);
+            const canonical = compactCanonicalEditor.load(), canonicalNode = Object.values(canonical.nodes).find((node) => canonicalPropertyPath(canonical, node.id) === persistedPath), legend = document.createElement("legend"), mode = document.createElement("select"), savePresence = document.createElement("button"), predicateControls = document.createElement("fieldset"), predicateLegend = document.createElement("legend"), predicateProperty = document.createElement("select"), predicateOperator = document.createElement("select"), predicateValue = document.createElement("input"), savePredicate = document.createElement("button"), currentPredicate = canonicalNode?.presence.condition?.kind === "predicate" ? canonicalNode.presence.condition : undefined, fallbackProperty = Object.values(canonical.nodes).find(({ id, name }) => id !== canonicalNode?.id && name === "article_type") ?? Object.values(canonical.nodes).find(({ id }) => id !== canonicalNode?.id), presenceDraft = canonicalNode && compactCanonicalPresenceDraft?.propertyId === canonicalNode.id ? compactCanonicalPresenceDraft : undefined;
             compactPresence.className = "compact-canonical-presence";
             compactPresence.dataset.compactPropertyId = canonicalNode?.id ?? "";
             legend.textContent = "Conditional presence";
             mode.setAttribute("aria-label", `Conditional presence for ${persistedPath}`);
             mode.append(...["optional", "required", "required-when", "forbidden", "forbidden-when"].map((value) => new Option(value.replaceAll("-", " "), value)));
-            mode.value = canonicalNode?.presence.mode ?? "optional";
+            mode.value = presenceDraft?.mode ?? canonicalNode?.presence.mode ?? "optional";
             const dispatchPresence = (presence) => { if (!canonicalNode || !compactCanonicalEditor)
-                return; document.documentElement.dataset.canonicalCommandControl = "set"; document.documentElement.dataset.canonicalCommandPropertyId = canonicalNode.id; const result = compactCanonicalEditor.dispatch({ kind: "set", baseRevision: canonical.revision, propertyId: canonicalNode.id, patch: { presence } }); if (result.status === "conflict")
-                throw new Error(result.message); if (result.status === "confirmation-required")
-                throw new Error(result.impact); renderCompactCanonicalEditor(); };
+                return; dispatchCompactCanonicalCommand({ kind: "set", baseRevision: presenceDraft?.baseRevision ?? canonical.revision, propertyId: canonicalNode.id, patch: { presence } }); };
             predicateLegend.textContent = "Typed conditional predicate";
             predicateProperty.setAttribute("aria-label", `Conditional predicate property for ${persistedPath}`);
             predicateProperty.append(...Object.values(canonical.nodes).filter(({ id }) => id !== canonicalNode?.id).map((node) => new Option(`${node.name} · ${canonicalPropertyPath(canonical, node.id)}`, node.id)));
@@ -2451,9 +2456,15 @@ function renderSchemaDraft() {
                 return; dispatchPresence(compactConditionalPresence(mode.value, predicateProperty.value, predicateOperator.value, predicateValue.value)); });
             predicateControls.append(predicateLegend, predicateProperty, predicateOperator, predicateValue, savePredicate);
             predicateControls.hidden = !mode.value.endsWith("-when");
-            mode.addEventListener("change", () => { predicateControls.hidden = !mode.value.endsWith("-when"); if (!mode.value.endsWith("-when") && canonicalNode)
-                dispatchPresence({ mode: mode.value }); });
-            compactPresence.append(legend, mode, predicateControls);
+            mode.addEventListener("change", () => { predicateControls.hidden = !mode.value.endsWith("-when"); if (canonicalNode)
+                compactCanonicalPresenceDraft = { propertyId: canonicalNode.id, baseRevision: presenceDraft?.baseRevision ?? canonical.revision, mode: mode.value }; });
+            savePresence.type = "button";
+            savePresence.textContent = "Save presence";
+            savePresence.hidden = mode.value.endsWith("-when");
+            savePresence.addEventListener("click", () => { if (!mode.isConnected || mode.value.endsWith("-when"))
+                return; dispatchPresence({ mode: mode.value }); });
+            mode.addEventListener("change", () => { savePresence.hidden = mode.value.endsWith("-when"); });
+            compactPresence.append(legend, mode, savePresence, predicateControls);
         }
         const compactLifecycle = compactNode && compactCanonicalEditor ? document.createElement("fieldset") : undefined;
         if (compactLifecycle && compactNode && compactCanonicalEditor && compactDocument) {
@@ -2464,10 +2475,7 @@ function renderSchemaDraft() {
             renameInput.setAttribute("aria-label", `Rename ${persistedPath}`);
             renameButton.type = "button";
             renameButton.textContent = "Rename";
-            const dispatch = (command) => { if (!compactCanonicalEditor)
-                return; document.documentElement.dataset.canonicalCommandControl = command.kind; document.documentElement.dataset.canonicalCommandPropertyId = "propertyId" in command ? command.propertyId : ""; const result = compactCanonicalEditor.dispatch(command); if (result.status === "conflict")
-                throw new Error(result.message); if (result.status === "confirmation-required")
-                throw new Error(result.impact); renderCompactCanonicalEditor(); };
+            const dispatch = (command) => dispatchCompactCanonicalCommand(command);
             renameButton.addEventListener("click", () => dispatch({ kind: "rename", baseRevision: compactDocument.revision, propertyId: compactNode.id, name: renameInput.value }));
             moveSelect.name = "moveParent";
             moveSelect.setAttribute("aria-label", `Move ${persistedPath} under`);
@@ -2811,6 +2819,45 @@ function compactCanonicalProjection(adapter) {
     const canonical = adapter.load();
     return compactSchemaProjection(canonical, { id: canonical.contributorId, name: canonical.contributorName, version: canonical.revision });
 }
+function dispatchCompactCanonicalCommand(command) {
+    const adapter = compactCanonicalEditor;
+    if (!adapter)
+        return;
+    const base = compactCanonicalRevisionSnapshots.get(command.baseRevision);
+    const result = adapter.dispatch(command);
+    if (result.status === "conflict") {
+        compactCanonicalPendingCommand = command;
+        compactCanonicalPendingBase = base;
+        compactCanonicalReviewVisible = false;
+        compactCanonicalCommandFeedback = `${result.message} Compare this command with the latest Draft, retry only this command, or reject the local edit.`;
+        renderCompactCanonicalContext();
+        return;
+    }
+    if (result.status === "confirmation-required") {
+        compactCanonicalPendingCommand = command;
+        compactCanonicalPendingBase = base;
+        compactCanonicalReviewVisible = false;
+        compactCanonicalCommandFeedback = `${result.impact} Compare this command with the latest Draft before retrying or reject the local edit.`;
+        renderCompactCanonicalContext();
+        return;
+    }
+    compactCanonicalPendingCommand = undefined;
+    if (command.kind === "set" && command.patch.presence && compactCanonicalPresenceDraft?.propertyId === command.propertyId)
+        compactCanonicalPresenceDraft = undefined;
+    compactCanonicalPendingBase = undefined;
+    compactCanonicalReviewVisible = false;
+    compactCanonicalCommandFeedback = result.status === "rebased" ? `Command from Draft token ${command.baseRevision} rebased onto Draft token ${result.document.revision}.` : `Saved property command at Draft token ${result.document.revision}.`;
+    renderCompactCanonicalEditor();
+}
+function compactCanonicalCommandScope(command, document) {
+    if (command.kind === "add")
+        return `${command.name}${command.parentId && document.nodes[command.parentId] ? ` under ${canonicalPropertyPath(document, command.parentId)}` : " at root"}`;
+    if ("propertyId" in command) {
+        const node = document.nodes[command.propertyId] ?? compactCanonicalPendingBase?.nodes[command.propertyId];
+        return node ? canonicalPropertyPath(document.nodes[node.id] ? document : compactCanonicalPendingBase, node.id) : command.propertyId;
+    }
+    return command.kind;
+}
 function renderCompactCanonicalContext() {
     if (!sidePanelLayeredProfileEditorHost || !schemaEditor)
         return;
@@ -2820,7 +2867,7 @@ function renderCompactCanonicalContext() {
     const adapter = compactCanonicalEditor;
     if (!adapter)
         return;
-    const context = document.createElement("section"), identity = document.createElement("p"), actions = document.createElement("div");
+    const context = document.createElement("section"), identity = document.createElement("p"), actions = document.createElement("div"), feedback = document.createElement("output");
     context.setAttribute("aria-label", "Compact canonical schema context");
     const canonical = adapter.load(), origins = [...new Set(Object.values(canonical.nodes).flatMap(({ provenance }) => provenance.map(({ contributorName }) => contributorName)))];
     identity.textContent = `${adapter.label} · ${canonical.source?.provenance ?? "canonical-draft"}${origins.length ? ` · contributors ${origins.join(", ")}` : ""}`;
@@ -2845,7 +2892,33 @@ function renderCompactCanonicalContext() {
         button.addEventListener("click", action.run);
         actions.append(button);
     }
-    context.append(identity, actions);
+    feedback.setAttribute("aria-label", "Compact canonical command result");
+    feedback.textContent = compactCanonicalCommandFeedback;
+    if (compactCanonicalPendingCommand) {
+        const compare = document.createElement("button"), retry = document.createElement("button"), reject = document.createElement("button");
+        compare.type = retry.type = reject.type = "button";
+        compare.textContent = "Compare latest property";
+        retry.textContent = "Retry local edit";
+        reject.textContent = "Reject local edit";
+        compare.addEventListener("click", () => { if (!compactCanonicalPendingCommand || !compactCanonicalEditor)
+            return; compactCanonicalReviewVisible = true; const latest = compactCanonicalEditor.load(), scope = compactCanonicalCommandScope(compactCanonicalPendingCommand, latest); compactCanonicalCommandFeedback = `Comparing ${compactCanonicalPendingCommand.kind} for ${scope}: local Draft token ${compactCanonicalPendingCommand.baseRevision} versus latest Draft token ${latest.revision}.`; renderCompactCanonicalContext(); });
+        retry.addEventListener("click", () => { const pending = compactCanonicalPendingCommand; if (!pending || !compactCanonicalEditor)
+            return; dispatchCompactCanonicalCommand({ ...pending, baseRevision: compactCanonicalEditor.load().revision }); });
+        reject.addEventListener("click", () => { if (compactCanonicalPendingCommand && "propertyId" in compactCanonicalPendingCommand && compactCanonicalPresenceDraft?.propertyId === compactCanonicalPendingCommand.propertyId)
+            compactCanonicalPresenceDraft = undefined; compactCanonicalPendingCommand = undefined; compactCanonicalPendingBase = undefined; compactCanonicalReviewVisible = false; compactCanonicalCommandFeedback = "Local edit rejected; the latest Draft remains unchanged."; renderCompactCanonicalEditor(); });
+        actions.append(compare, retry, reject);
+    }
+    context.append(identity, actions, feedback);
+    if (compactCanonicalPendingCommand && compactCanonicalReviewVisible) {
+        const latest = adapter.load(), comparison = document.createElement("section"), heading = document.createElement("h3"), base = document.createElement("pre"), pending = document.createElement("pre"), current = document.createElement("pre"), propertyId = "propertyId" in compactCanonicalPendingCommand ? compactCanonicalPendingCommand.propertyId : undefined;
+        comparison.setAttribute("aria-label", "Command-scoped canonical comparison");
+        heading.textContent = `Command-scoped comparison · ${compactCanonicalCommandScope(compactCanonicalPendingCommand, latest)}`;
+        base.textContent = `Base token ${compactCanonicalPendingCommand.baseRevision}\n${JSON.stringify(propertyId ? compactCanonicalPendingBase?.nodes[propertyId] : compactCanonicalPendingBase?.rootIds ?? [], null, 2)}`;
+        pending.textContent = `Local ${compactCanonicalPendingCommand.kind} command\n${JSON.stringify(compactCanonicalPendingCommand, (key, value) => typeof value === "function" ? "[identity factory]" : value, 2)}`;
+        current.textContent = `Latest token ${latest.revision}\n${JSON.stringify(propertyId ? latest.nodes[propertyId] : latest.rootIds, null, 2)}`;
+        comparison.append(heading, base, pending, current);
+        context.append(comparison);
+    }
     adapter.renderContext?.(context);
     schemaEditor.prepend(context);
 }
@@ -2855,6 +2928,7 @@ function renderCompactCanonicalEditor() {
         return;
     schemaDraft = compactCanonicalProjection(adapter);
     const canonical = adapter.load(), selected = canonical.selectedPropertyId && canonical.nodes[canonical.selectedPropertyId];
+    compactCanonicalRevisionSnapshots.set(canonical.revision, structuredClone(canonical));
     if (selected)
         selectedSchemaPropertyPath = canonicalPropertyPath(canonical, selected.id).slice(1).replaceAll("/", ".");
     if (schemaEditor) {
@@ -2866,7 +2940,6 @@ function renderCompactCanonicalEditor() {
     if (schemaDetail) {
         schemaDetail.hidden = false;
         schemaDetail.setAttribute("aria-label", "Side panel schema editor region");
-        schemaDetail.dataset.canonicalEditorMounts = "1";
     }
     renderCompactCanonicalContext();
     renderSchemaDraft();
@@ -2874,12 +2947,24 @@ function renderCompactCanonicalEditor() {
 function openCompactCanonicalEditor(adapter) {
     sidePanelLayeredProfileEditor?.close();
     compactCanonicalEditor = adapter;
+    compactCanonicalPendingCommand = undefined;
+    compactCanonicalPendingBase = undefined;
+    compactCanonicalReviewVisible = false;
+    compactCanonicalPresenceDraft = undefined;
+    compactCanonicalRevisionSnapshots.clear();
+    compactCanonicalCommandFeedback = "";
     renderCompactCanonicalEditor();
 }
 function closeCompactCanonicalEditor() {
     compactCanonicalEditor = undefined;
     schemaDraft = undefined;
     savedCanonicalDocument = undefined;
+    compactCanonicalPendingCommand = undefined;
+    compactCanonicalPendingBase = undefined;
+    compactCanonicalReviewVisible = false;
+    compactCanonicalPresenceDraft = undefined;
+    compactCanonicalRevisionSnapshots.clear();
+    compactCanonicalCommandFeedback = "";
     if (schemaEditor) {
         delete schemaEditor.dataset.schemaPresentation;
         delete schemaEditor.dataset.canonicalRevision;
@@ -2890,7 +2975,6 @@ function closeCompactCanonicalEditor() {
     if (schemaDetail) {
         schemaDetail.hidden = true;
         schemaDetail.setAttribute("aria-label", "Schema detail");
-        delete schemaDetail.dataset.canonicalEditorMounts;
     }
     renderCompactCanonicalContext();
     if (schemaDetailEmpty)
@@ -2903,14 +2987,17 @@ function persistSchemaEditorDraft(change) {
         let canonical = compactCanonicalEditor.load();
         const commands = canonicalCommandsFromCompactProjection(canonical, schemaDraft, (kind) => `${kind}:${crypto.randomUUID()}`);
         for (const command of commands) {
-            document.documentElement.dataset.canonicalCommandControl = command.kind;
-            document.documentElement.dataset.canonicalCommandPropertyId = "propertyId" in command ? command.propertyId : "";
             const result = compactCanonicalEditor.dispatch(command);
-            if (result.status === "conflict")
-                throw new Error(result.message);
-            if (result.status === "confirmation-required")
-                throw new Error(result.impact);
+            if (result.status === "conflict" || result.status === "confirmation-required") {
+                compactCanonicalPendingCommand = command;
+                compactCanonicalPendingBase = compactCanonicalRevisionSnapshots.get(command.baseRevision);
+                compactCanonicalReviewVisible = false;
+                compactCanonicalCommandFeedback = result.status === "conflict" ? `${result.message} Compare this command with the latest Draft, retry only this command, or reject the local edit.` : `${result.impact} Compare this command with the latest Draft before retrying or reject the local edit.`;
+                renderCompactCanonicalContext();
+                return;
+            }
             canonical = result.document;
+            compactCanonicalCommandFeedback = result.status === "rebased" ? `Command from Draft token ${command.baseRevision} rebased onto Draft token ${canonical.revision}.` : `Saved property command at Draft token ${canonical.revision}.`;
         }
         schemaDraft = compactSchemaProjection(canonical, { id: canonical.contributorId, name: canonical.contributorName, version: canonical.revision });
         renderSchemas();
@@ -3191,6 +3278,14 @@ schemaPropertyRemovalDialog.addEventListener("cancel", (event) => { event.preven
 undoSchemaPropertyRemovalButton.addEventListener("click", () => {
     if (!schemaDraft || !lastSchemaPropertyRemoval)
         return;
+    if (compactCanonicalEditor?.onUndo) {
+        const path = lastSchemaPropertyRemoval.propertyPath;
+        lastSchemaPropertyRemoval = undefined;
+        compactCanonicalEditor.onUndo();
+        schemaPropertyRemovalFeedback.textContent = `Restored ${path} from page-scoped Undo with its canonical identity and tree position.`;
+        undoSchemaPropertyRemovalButton.hidden = true;
+        return;
+    }
     const restored = undoSchemaPropertyRemoval(lastSchemaPropertyRemoval);
     const path = lastSchemaPropertyRemoval.propertyPath;
     schemaDraft = { ...schemaDraft, document: restored.document, attachedRules: restored.attachedRules, ...(restored.documentation !== undefined ? { documentation: restored.documentation } : {}) };
@@ -3257,6 +3352,7 @@ function renderManualPropertyForm() {
 function closeManualPropertyForm(restoreFocus = true) {
     const trigger = pendingManualPropertyContext?.trigger;
     pendingManualPropertyContext = undefined;
+    pendingManualPropertyCanonicalBase = undefined;
     if (schemaManualPropertyDialog.open)
         schemaManualPropertyDialog.close();
     if (restoreFocus)
@@ -3272,6 +3368,7 @@ function openManualPropertyForm() {
     if (!schemaDraft)
         return;
     pendingManualPropertyContext = undefined;
+    pendingManualPropertyCanonicalBase = compactCanonicalEditor ? compactCanonicalEditor.load() : undefined;
     schemaManualPropertyHeading.textContent = confirmSchemaManualPropertyButton.textContent = "Add property";
     schemaManualPropertyPath.value = "";
     schemaManualPropertyType.value = "string";
@@ -3284,6 +3381,7 @@ function openContextualManualPropertyForm(parentPath, trigger) {
     if (!schemaDraft)
         return;
     pendingManualPropertyContext = { parentPath, trigger };
+    pendingManualPropertyCanonicalBase = compactCanonicalEditor ? compactCanonicalEditor.load() : undefined;
     schemaManualPropertyHeading.textContent = trigger.textContent || "Add child property";
     confirmSchemaManualPropertyButton.textContent = "Add property";
     schemaManualPropertyChildName.value = "";
@@ -3308,6 +3406,20 @@ schemaManualPropertyForm.addEventListener("submit", (event) => {
         return;
     }
     const path = inspection.normalizedPath.slice(1).replaceAll("/", ".");
+    if (compactCanonicalEditor && pendingManualPropertyCanonicalBase) {
+        const base = pendingManualPropertyCanonicalBase, baseProjection = compactSchemaProjection(base, { id: base.contributorId, name: base.contributorName, version: base.revision }), candidate = { ...baseProjection, document: addManualProperty(baseProjection.document, [], definition) }, commands = canonicalCommandsFromCompactProjection(base, candidate, (kind) => `${kind}:${crypto.randomUUID()}`);
+        for (const [index, retained] of commands.entries()) {
+            const command = index === 0 ? retained : { ...retained, baseRevision: compactCanonicalEditor.load().revision };
+            dispatchCompactCanonicalCommand(command);
+            if (compactCanonicalPendingCommand)
+                return;
+        }
+        selectedSchemaPropertyPath = path;
+        closeManualPropertyForm(false);
+        renderCompactCanonicalEditor();
+        focusSchemaPropertyRule(path);
+        return;
+    }
     schemaDraft = { ...schemaDraft, document: addManualProperty(schemaDraft.document, schemaParentDocuments(), definition) };
     selectedSchemaPropertyPath = path;
     persistSchemaEditorDraft(`Add manual property ${inspection.normalizedPath}`);
@@ -6439,7 +6551,7 @@ subscribeCanonicalProjectChanges(globalThis, ({ state: next, revision }) => {
     if (compactCanonicalEditor)
         renderCompactCanonicalEditor();
     sidePanelLayeredProfileEditor?.render();
-});
+}, () => { const library = projectLibraryUi.library(), projectId = library.activeProjectId, active = projectId ? library.projects[projectId] : undefined; return projectId && active ? { projectId, revision: active.revision } : undefined; });
 renderHistoryPath(getHistoryArrayPath(dataLayerStorage));
 renderObservationTargetContext();
 if (!savedSessionLiveFeed)

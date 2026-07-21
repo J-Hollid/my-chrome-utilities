@@ -21,11 +21,14 @@ export function restoreCanonicalProjectState(serialized:string|null):ProjectStat
 export function serializeCanonicalProjectState(state:ProjectState,revision:number):string{return JSON.stringify(envelopeFor(state,revision));}
 export interface CanonicalProjectStorageEvent{key:string|null;newValue:string|null}
 export interface CanonicalProjectChangeTarget{addEventListener(type:"storage",listener:(event:CanonicalProjectStorageEvent)=>void):void;removeEventListener(type:"storage",listener:(event:CanonicalProjectStorageEvent)=>void):void}
-export function subscribeCanonicalProjectChanges(target:CanonicalProjectChangeTarget,notify:(change:{revision:number;state:ProjectState})=>void):()=>void{
+export function subscribeCanonicalProjectChanges(target:CanonicalProjectChangeTarget,notify:(change:{revision:number;state:ProjectState})=>void,currentContext?:()=>{projectId:string;revision:number}|undefined):()=>void{
+  const observedRevisions=new Map<string,number>();
   const listener=(event:CanonicalProjectStorageEvent):void=>{
     if(event.key!==CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY||!event.newValue)return;
-    const envelope=restoreCanonicalProjectEnvelope(event.newValue);
-    if(envelope)notify({revision:envelope.revision,state:stateFromEnvelope(envelope)});
+    const envelope=restoreCanonicalProjectEnvelope(event.newValue);if(!envelope)return;
+    const projectId=envelope.project.id,current=currentContext?.();if(current&&current.projectId!==projectId)return;
+    const floor=Math.max(observedRevisions.get(projectId)??-1,current?.revision??-1);if(envelope.revision<=floor)return;
+    observedRevisions.set(projectId,envelope.revision);notify({revision:envelope.revision,state:stateFromEnvelope(envelope)});
   };
   target.addEventListener("storage",listener);
   return()=>target.removeEventListener("storage",listener);

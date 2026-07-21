@@ -891,6 +891,13 @@ let schemaDraft: SchemaDefinition | undefined;
 let savedCanonicalDocument:CanonicalSchemaDocument|undefined;
 type CompactCanonicalEditorAdapter={key:string;label:string;load:()=>CanonicalSchemaDocument;dispatch:(command:Parameters<typeof applyCanonicalCommand>[1])=>ReturnType<typeof applyCanonicalCommand>;onUndo?:()=>void;onRedo?:()=>void;actions?:readonly {label:string;run:()=>void}[];renderContext?:(host:HTMLElement)=>void};
 let compactCanonicalEditor:CompactCanonicalEditorAdapter|undefined;
+let compactCanonicalPendingCommand:Parameters<CompactCanonicalEditorAdapter["dispatch"]>[0]|undefined;
+let compactCanonicalPendingBase:CanonicalSchemaDocument|undefined;
+let compactCanonicalReviewVisible=false;
+const compactCanonicalRevisionSnapshots=new Map<number,CanonicalSchemaDocument>();
+let compactCanonicalCommandFeedback="";
+let compactCanonicalPresenceDraft:{propertyId:string;baseRevision:number;mode:CanonicalSchemaDocument["nodes"][string]["presence"]["mode"]}|undefined;
+let pendingManualPropertyCanonicalBase:CanonicalSchemaDocument|undefined;
 let pendingSchemaImport: { schemas: SchemaDefinition[]; rules: ReusableSchemaRule[] } | undefined;
 let pendingSchemaDeletion: SchemaDefinition | undefined;
 let pendingSchemaRestoration: { schemaId: string; version: number } | undefined;
@@ -2403,18 +2410,19 @@ function renderSchemaDraft(): void {
     copyProperty.addEventListener("click",()=>openSchemaPropertyCopyReview(persistedPath,copyProperty));
     const compactPresence=compactCanonicalEditor?document.createElement("fieldset"):undefined;
     if(compactPresence&&compactCanonicalEditor){
-      const canonical=compactCanonicalEditor.load(),canonicalNode=Object.values(canonical.nodes).find((node)=>canonicalPropertyPath(canonical,node.id)===persistedPath),legend=document.createElement("legend"),mode=document.createElement("select"),predicateControls=document.createElement("fieldset"),predicateLegend=document.createElement("legend"),predicateProperty=document.createElement("select"),predicateOperator=document.createElement("select"),predicateValue=document.createElement("input"),savePredicate=document.createElement("button"),currentPredicate=canonicalNode?.presence.condition?.kind==="predicate"?canonicalNode.presence.condition:undefined,fallbackProperty=Object.values(canonical.nodes).find(({id,name})=>id!==canonicalNode?.id&&name==="article_type")??Object.values(canonical.nodes).find(({id})=>id!==canonicalNode?.id);
-      compactPresence.className="compact-canonical-presence";compactPresence.dataset.compactPropertyId=canonicalNode?.id??"";legend.textContent="Conditional presence";mode.setAttribute("aria-label",`Conditional presence for ${persistedPath}`);mode.append(...(["optional","required","required-when","forbidden","forbidden-when"] as const).map((value)=>new Option(value.replaceAll("-"," "),value)));mode.value=canonicalNode?.presence.mode??"optional";
-      const dispatchPresence=(presence:CanonicalSchemaDocument["nodes"][string]["presence"])=>{if(!canonicalNode||!compactCanonicalEditor)return;document.documentElement.dataset.canonicalCommandControl="set";document.documentElement.dataset.canonicalCommandPropertyId=canonicalNode.id;const result=compactCanonicalEditor.dispatch({kind:"set",baseRevision:canonical.revision,propertyId:canonicalNode.id,patch:{presence}});if(result.status==="conflict")throw new Error(result.message);if(result.status==="confirmation-required")throw new Error(result.impact);renderCompactCanonicalEditor();};
+      const canonical=compactCanonicalEditor.load(),canonicalNode=Object.values(canonical.nodes).find((node)=>canonicalPropertyPath(canonical,node.id)===persistedPath),legend=document.createElement("legend"),mode=document.createElement("select"),savePresence=document.createElement("button"),predicateControls=document.createElement("fieldset"),predicateLegend=document.createElement("legend"),predicateProperty=document.createElement("select"),predicateOperator=document.createElement("select"),predicateValue=document.createElement("input"),savePredicate=document.createElement("button"),currentPredicate=canonicalNode?.presence.condition?.kind==="predicate"?canonicalNode.presence.condition:undefined,fallbackProperty=Object.values(canonical.nodes).find(({id,name})=>id!==canonicalNode?.id&&name==="article_type")??Object.values(canonical.nodes).find(({id})=>id!==canonicalNode?.id),presenceDraft=canonicalNode&&compactCanonicalPresenceDraft?.propertyId===canonicalNode.id?compactCanonicalPresenceDraft:undefined;
+      compactPresence.className="compact-canonical-presence";compactPresence.dataset.compactPropertyId=canonicalNode?.id??"";legend.textContent="Conditional presence";mode.setAttribute("aria-label",`Conditional presence for ${persistedPath}`);mode.append(...(["optional","required","required-when","forbidden","forbidden-when"] as const).map((value)=>new Option(value.replaceAll("-"," "),value)));mode.value=presenceDraft?.mode??canonicalNode?.presence.mode??"optional";
+      const dispatchPresence=(presence:CanonicalSchemaDocument["nodes"][string]["presence"])=>{if(!canonicalNode||!compactCanonicalEditor)return;dispatchCompactCanonicalCommand({kind:"set",baseRevision:presenceDraft?.baseRevision??canonical.revision,propertyId:canonicalNode.id,patch:{presence}});};
       predicateLegend.textContent="Typed conditional predicate";predicateProperty.setAttribute("aria-label",`Conditional predicate property for ${persistedPath}`);predicateProperty.append(...Object.values(canonical.nodes).filter(({id})=>id!==canonicalNode?.id).map((node)=>new Option(`${node.name} · ${canonicalPropertyPath(canonical,node.id)}`,node.id)));predicateProperty.value=currentPredicate?.propertyId??fallbackProperty?.id??"";predicateOperator.setAttribute("aria-label",`Conditional predicate operator for ${persistedPath}`);predicateOperator.append(...(["Equals","Does not equal","Exists","Does not exist","Starts with","Contains"] as const).map((operator)=>new Option(operator,operator)));predicateOperator.value=currentPredicate?.operator??"Equals";predicateValue.setAttribute("aria-label",`Conditional predicate value for ${persistedPath}`);predicateValue.value=currentPredicate?.value===undefined?"":String(currentPredicate.value);savePredicate.type="button";savePredicate.textContent="Save conditional presence";savePredicate.addEventListener("click",()=>{if(!canonicalNode||!predicateProperty.value||!mode.value.endsWith("-when"))return;dispatchPresence(compactConditionalPresence(mode.value as "required-when"|"forbidden-when",predicateProperty.value,predicateOperator.value as "Equals"|"Does not equal"|"Exists"|"Does not exist"|"Starts with"|"Contains",predicateValue.value));});predicateControls.append(predicateLegend,predicateProperty,predicateOperator,predicateValue,savePredicate);predicateControls.hidden=!mode.value.endsWith("-when");
-      mode.addEventListener("change",()=>{predicateControls.hidden=!mode.value.endsWith("-when");if(!mode.value.endsWith("-when")&&canonicalNode)dispatchPresence({mode:mode.value as "optional"|"required"|"forbidden"});});
-      compactPresence.append(legend,mode,predicateControls);
+      mode.addEventListener("change",()=>{predicateControls.hidden=!mode.value.endsWith("-when");if(canonicalNode)compactCanonicalPresenceDraft={propertyId:canonicalNode.id,baseRevision:presenceDraft?.baseRevision??canonical.revision,mode:mode.value as CanonicalSchemaDocument["nodes"][string]["presence"]["mode"]};});
+      savePresence.type="button";savePresence.textContent="Save presence";savePresence.hidden=mode.value.endsWith("-when");savePresence.addEventListener("click",()=>{if(!mode.isConnected||mode.value.endsWith("-when"))return;dispatchPresence({mode:mode.value as "optional"|"required"|"forbidden"});});mode.addEventListener("change",()=>{savePresence.hidden=mode.value.endsWith("-when");});
+      compactPresence.append(legend,mode,savePresence,predicateControls);
     }
     const compactLifecycle=compactNode&&compactCanonicalEditor?document.createElement("fieldset"):undefined;
     if(compactLifecycle&&compactNode&&compactCanonicalEditor&&compactDocument){
       const legend=document.createElement("legend"),renameInput=document.createElement("input"),renameButton=document.createElement("button"),moveSelect=document.createElement("select"),moveButton=document.createElement("button"),duplicateButton=document.createElement("button"),expectedInput=document.createElement("input"),saveExpected=document.createElement("button"),reset=document.createElement("button");
       legend.textContent="Move and lifecycle";renameInput.name="propertyName";renameInput.value=compactNode.name;renameInput.setAttribute("aria-label",`Rename ${persistedPath}`);renameButton.type="button";renameButton.textContent="Rename";
-      const dispatch=(command:Parameters<CompactCanonicalEditorAdapter["dispatch"]>[0])=>{if(!compactCanonicalEditor)return;document.documentElement.dataset.canonicalCommandControl=command.kind;document.documentElement.dataset.canonicalCommandPropertyId="propertyId" in command?command.propertyId:"";const result=compactCanonicalEditor.dispatch(command);if(result.status==="conflict")throw new Error(result.message);if(result.status==="confirmation-required")throw new Error(result.impact);renderCompactCanonicalEditor();};
+      const dispatch=(command:Parameters<CompactCanonicalEditorAdapter["dispatch"]>[0])=>dispatchCompactCanonicalCommand(command);
       renameButton.addEventListener("click",()=>dispatch({kind:"rename",baseRevision:compactDocument.revision,propertyId:compactNode.id,name:renameInput.value}));
       moveSelect.name="moveParent";moveSelect.setAttribute("aria-label",`Move ${persistedPath} under`);moveSelect.append(new Option("Root",""),...Object.values(compactDocument.nodes).filter(({id,parentId})=>id!==compactNode.id&&parentId!==compactNode.id).map((node)=>new Option(node.name,node.id)));moveSelect.value=compactNode.parentId??"";moveButton.type="button";moveButton.textContent="Move";moveButton.addEventListener("click",()=>dispatch({kind:"move",baseRevision:compactDocument.revision,propertyId:compactNode.id,...(moveSelect.value?{parentId:moveSelect.value}:{})}));
       duplicateButton.type="button";duplicateButton.textContent="Duplicate";duplicateButton.addEventListener("click",()=>dispatch({kind:"duplicate",baseRevision:compactDocument.revision,propertyId:compactNode.id,id:(kind)=>`${kind}:${crypto.randomUUID()}`}));
@@ -2658,19 +2666,54 @@ function compactCanonicalProjection(adapter:CompactCanonicalEditorAdapter):Schem
   return compactSchemaProjection(canonical,{id:canonical.contributorId,name:canonical.contributorName,version:canonical.revision});
 }
 
+function dispatchCompactCanonicalCommand(command:Parameters<CompactCanonicalEditorAdapter["dispatch"]>[0]):void{
+  const adapter=compactCanonicalEditor;if(!adapter)return;
+  const base=compactCanonicalRevisionSnapshots.get(command.baseRevision);
+  const result=adapter.dispatch(command);
+  if(result.status==="conflict"){
+    compactCanonicalPendingCommand=command;
+    compactCanonicalPendingBase=base;
+    compactCanonicalReviewVisible=false;
+    compactCanonicalCommandFeedback=`${result.message} Compare this command with the latest Draft, retry only this command, or reject the local edit.`;
+    renderCompactCanonicalContext();return;
+  }
+  if(result.status==="confirmation-required"){
+    compactCanonicalPendingCommand=command;
+    compactCanonicalPendingBase=base;
+    compactCanonicalReviewVisible=false;
+    compactCanonicalCommandFeedback=`${result.impact} Compare this command with the latest Draft before retrying or reject the local edit.`;
+    renderCompactCanonicalContext();return;
+  }
+  compactCanonicalPendingCommand=undefined;
+  if(command.kind==="set"&&command.patch.presence&&compactCanonicalPresenceDraft?.propertyId===command.propertyId)compactCanonicalPresenceDraft=undefined;
+  compactCanonicalPendingBase=undefined;compactCanonicalReviewVisible=false;
+  compactCanonicalCommandFeedback=result.status==="rebased"?`Command from Draft token ${command.baseRevision} rebased onto Draft token ${result.document.revision}.`:`Saved property command at Draft token ${result.document.revision}.`;
+  renderCompactCanonicalEditor();
+}
+
+function compactCanonicalCommandScope(command:Parameters<CompactCanonicalEditorAdapter["dispatch"]>[0],document:CanonicalSchemaDocument):string{
+  if(command.kind==="add")return`${command.name}${command.parentId&&document.nodes[command.parentId]?` under ${canonicalPropertyPath(document,command.parentId)}`:" at root"}`;
+  if("propertyId"in command){const node=document.nodes[command.propertyId]??compactCanonicalPendingBase?.nodes[command.propertyId];return node?canonicalPropertyPath(document.nodes[node.id]?document:compactCanonicalPendingBase!,node.id):command.propertyId;}
+  return command.kind;
+}
+
 function renderCompactCanonicalContext():void{
   if(!sidePanelLayeredProfileEditorHost||!schemaEditor)return;
   sidePanelLayeredProfileEditorHost.replaceChildren();sidePanelLayeredProfileEditorHost.hidden=true;schemaEditor.querySelector('[aria-label="Compact canonical schema context"]')?.remove();
   const adapter=compactCanonicalEditor;
   if(!adapter)return;
-  const context=document.createElement("section"),identity=document.createElement("p"),actions=document.createElement("div");
+  const context=document.createElement("section"),identity=document.createElement("p"),actions=document.createElement("div"),feedback=document.createElement("output");
   context.setAttribute("aria-label","Compact canonical schema context");
   const canonical=adapter.load(),origins=[...new Set(Object.values(canonical.nodes).flatMap(({provenance})=>provenance.map(({contributorName})=>contributorName)))];
   identity.textContent=`${adapter.label} · ${canonical.source?.provenance??"canonical-draft"}${origins.length?` · contributors ${origins.join(", ")}`:""}`;
   if(adapter.onUndo){const undo=document.createElement("button");undo.type="button";undo.textContent="Undo";undo.addEventListener("click",adapter.onUndo);actions.append(undo);}
   if(adapter.onRedo){const redo=document.createElement("button");redo.type="button";redo.textContent="Redo";redo.addEventListener("click",adapter.onRedo);actions.append(redo);}
   for(const action of adapter.actions??[]){const button=document.createElement("button");button.type="button";button.textContent=action.label;button.addEventListener("click",action.run);actions.append(button);}
-  context.append(identity,actions);adapter.renderContext?.(context);schemaEditor.prepend(context);
+  feedback.setAttribute("aria-label","Compact canonical command result");feedback.textContent=compactCanonicalCommandFeedback;
+  if(compactCanonicalPendingCommand){const compare=document.createElement("button"),retry=document.createElement("button"),reject=document.createElement("button");compare.type=retry.type=reject.type="button";compare.textContent="Compare latest property";retry.textContent="Retry local edit";reject.textContent="Reject local edit";compare.addEventListener("click",()=>{if(!compactCanonicalPendingCommand||!compactCanonicalEditor)return;compactCanonicalReviewVisible=true;const latest=compactCanonicalEditor.load(),scope=compactCanonicalCommandScope(compactCanonicalPendingCommand,latest);compactCanonicalCommandFeedback=`Comparing ${compactCanonicalPendingCommand.kind} for ${scope}: local Draft token ${compactCanonicalPendingCommand.baseRevision} versus latest Draft token ${latest.revision}.`;renderCompactCanonicalContext();});retry.addEventListener("click",()=>{const pending=compactCanonicalPendingCommand;if(!pending||!compactCanonicalEditor)return;dispatchCompactCanonicalCommand({...pending,baseRevision:compactCanonicalEditor.load().revision});});reject.addEventListener("click",()=>{if(compactCanonicalPendingCommand&&"propertyId"in compactCanonicalPendingCommand&&compactCanonicalPresenceDraft?.propertyId===compactCanonicalPendingCommand.propertyId)compactCanonicalPresenceDraft=undefined;compactCanonicalPendingCommand=undefined;compactCanonicalPendingBase=undefined;compactCanonicalReviewVisible=false;compactCanonicalCommandFeedback="Local edit rejected; the latest Draft remains unchanged.";renderCompactCanonicalEditor();});actions.append(compare,retry,reject);}
+  context.append(identity,actions,feedback);
+  if(compactCanonicalPendingCommand&&compactCanonicalReviewVisible){const latest=adapter.load(),comparison=document.createElement("section"),heading=document.createElement("h3"),base=document.createElement("pre"),pending=document.createElement("pre"),current=document.createElement("pre"),propertyId="propertyId"in compactCanonicalPendingCommand?compactCanonicalPendingCommand.propertyId:undefined;comparison.setAttribute("aria-label","Command-scoped canonical comparison");heading.textContent=`Command-scoped comparison · ${compactCanonicalCommandScope(compactCanonicalPendingCommand,latest)}`;base.textContent=`Base token ${compactCanonicalPendingCommand.baseRevision}\n${JSON.stringify(propertyId?compactCanonicalPendingBase?.nodes[propertyId]:compactCanonicalPendingBase?.rootIds??[],null,2)}`;pending.textContent=`Local ${compactCanonicalPendingCommand.kind} command\n${JSON.stringify(compactCanonicalPendingCommand,(key,value)=>typeof value==="function"?"[identity factory]":value,2)}`;current.textContent=`Latest token ${latest.revision}\n${JSON.stringify(propertyId?latest.nodes[propertyId]:latest.rootIds,null,2)}`;comparison.append(heading,base,pending,current);context.append(comparison);}
+  adapter.renderContext?.(context);schemaEditor.prepend(context);
 }
 
 function renderCompactCanonicalEditor():void{
@@ -2678,22 +2721,24 @@ function renderCompactCanonicalEditor():void{
   if(!adapter)return;
   schemaDraft=compactCanonicalProjection(adapter);
   const canonical=adapter.load(),selected=canonical.selectedPropertyId&&canonical.nodes[canonical.selectedPropertyId];
+  compactCanonicalRevisionSnapshots.set(canonical.revision,structuredClone(canonical));
   if(selected)selectedSchemaPropertyPath=canonicalPropertyPath(canonical,selected.id).slice(1).replaceAll("/",".");
   if(schemaEditor){schemaEditor.dataset.schemaPresentation="compact-panel";schemaEditor.dataset.canonicalRevision=String(canonical.revision);schemaEditor.dataset.canonicalSchemaId=canonical.id;schemaEditor.setAttribute("aria-label","Side panel canonical schema editor");}
-  if(schemaDetail){schemaDetail.hidden=false;schemaDetail.setAttribute("aria-label","Side panel schema editor region");schemaDetail.dataset.canonicalEditorMounts="1";}
+  if(schemaDetail){schemaDetail.hidden=false;schemaDetail.setAttribute("aria-label","Side panel schema editor region");}
   renderCompactCanonicalContext();
   renderSchemaDraft();
 }
 
 function openCompactCanonicalEditor(adapter:CompactCanonicalEditorAdapter):void{
   sidePanelLayeredProfileEditor?.close();
-  compactCanonicalEditor=adapter;renderCompactCanonicalEditor();
+  compactCanonicalEditor=adapter;compactCanonicalPendingCommand=undefined;compactCanonicalPendingBase=undefined;compactCanonicalReviewVisible=false;compactCanonicalPresenceDraft=undefined;compactCanonicalRevisionSnapshots.clear();compactCanonicalCommandFeedback="";renderCompactCanonicalEditor();
 }
 
 function closeCompactCanonicalEditor():void{
   compactCanonicalEditor=undefined;schemaDraft=undefined;savedCanonicalDocument=undefined;
+  compactCanonicalPendingCommand=undefined;compactCanonicalPendingBase=undefined;compactCanonicalReviewVisible=false;compactCanonicalPresenceDraft=undefined;compactCanonicalRevisionSnapshots.clear();compactCanonicalCommandFeedback="";
   if(schemaEditor){delete schemaEditor.dataset.schemaPresentation;delete schemaEditor.dataset.canonicalRevision;delete schemaEditor.dataset.canonicalSchemaId;schemaEditor.removeAttribute("aria-label");schemaEditor.hidden=true;}
-  if(schemaDetail){schemaDetail.hidden=true;schemaDetail.setAttribute("aria-label","Schema detail");delete schemaDetail.dataset.canonicalEditorMounts;}
+  if(schemaDetail){schemaDetail.hidden=true;schemaDetail.setAttribute("aria-label","Schema detail");}
   renderCompactCanonicalContext();if(schemaDetailEmpty)schemaDetailEmpty.hidden=false;
 }
 
@@ -2702,7 +2747,7 @@ function persistSchemaEditorDraft(change?: string): void {
   if(compactCanonicalEditor){
     let canonical=compactCanonicalEditor.load();
     const commands=canonicalCommandsFromCompactProjection(canonical,schemaDraft,(kind)=>`${kind}:${crypto.randomUUID()}`);
-    for(const command of commands){document.documentElement.dataset.canonicalCommandControl=command.kind;document.documentElement.dataset.canonicalCommandPropertyId="propertyId" in command?command.propertyId:"";const result=compactCanonicalEditor.dispatch(command);if(result.status==="conflict")throw new Error(result.message);if(result.status==="confirmation-required")throw new Error(result.impact);canonical=result.document;}
+    for(const command of commands){const result=compactCanonicalEditor.dispatch(command);if(result.status==="conflict"||result.status==="confirmation-required"){compactCanonicalPendingCommand=command;compactCanonicalPendingBase=compactCanonicalRevisionSnapshots.get(command.baseRevision);compactCanonicalReviewVisible=false;compactCanonicalCommandFeedback=result.status==="conflict"?`${result.message} Compare this command with the latest Draft, retry only this command, or reject the local edit.`:`${result.impact} Compare this command with the latest Draft before retrying or reject the local edit.`;renderCompactCanonicalContext();return;}canonical=result.document;compactCanonicalCommandFeedback=result.status==="rebased"?`Command from Draft token ${command.baseRevision} rebased onto Draft token ${canonical.revision}.`:`Saved property command at Draft token ${canonical.revision}.`;}
     schemaDraft=compactSchemaProjection(canonical,{id:canonical.contributorId,name:canonical.contributorName,version:canonical.revision});
     renderSchemas();
     return;
@@ -2863,6 +2908,7 @@ cancelSchemaPropertyRemovalButton.addEventListener("click", () => closeSchemaPro
 schemaPropertyRemovalDialog.addEventListener("cancel", (event) => { event.preventDefault(); closeSchemaPropertyRemovalDialog(); });
 undoSchemaPropertyRemovalButton.addEventListener("click", () => {
   if (!schemaDraft || !lastSchemaPropertyRemoval) return;
+  if(compactCanonicalEditor?.onUndo){const path=lastSchemaPropertyRemoval.propertyPath;lastSchemaPropertyRemoval=undefined;compactCanonicalEditor.onUndo();schemaPropertyRemovalFeedback.textContent=`Restored ${path} from page-scoped Undo with its canonical identity and tree position.`;undoSchemaPropertyRemovalButton.hidden=true;return;}
   const restored = undoSchemaPropertyRemoval(lastSchemaPropertyRemoval);
   const path = lastSchemaPropertyRemoval.propertyPath;
   schemaDraft = { ...schemaDraft, document:restored.document, attachedRules:restored.attachedRules, ...(restored.documentation !== undefined ? { documentation:restored.documentation } : {}) };
@@ -2931,6 +2977,7 @@ function renderManualPropertyForm(): void {
 function closeManualPropertyForm(restoreFocus = true): void {
   const trigger = pendingManualPropertyContext?.trigger;
   pendingManualPropertyContext = undefined;
+  pendingManualPropertyCanonicalBase=undefined;
   if (schemaManualPropertyDialog.open) schemaManualPropertyDialog.close();
   if (restoreFocus) (trigger ?? addSchemaPropertyButton)?.focus({ preventScroll:true });
 }
@@ -2945,6 +2992,7 @@ function focusSchemaPropertyRule(path: string): void {
 function openManualPropertyForm(): void {
   if (!schemaDraft) return;
   pendingManualPropertyContext = undefined;
+  pendingManualPropertyCanonicalBase=compactCanonicalEditor?compactCanonicalEditor.load():undefined;
   schemaManualPropertyHeading.textContent = confirmSchemaManualPropertyButton.textContent = "Add property";
   schemaManualPropertyPath.value = ""; schemaManualPropertyType.value = "string"; schemaManualArrayItemType.value = "";
   renderManualPropertyForm(); schemaManualPropertyDialog.showModal(); schemaManualPropertyPath.focus({ preventScroll:true });
@@ -2953,6 +3001,7 @@ function openManualPropertyForm(): void {
 function openContextualManualPropertyForm(parentPath: string, trigger: HTMLButtonElement): void {
   if (!schemaDraft) return;
   pendingManualPropertyContext = { parentPath, trigger };
+  pendingManualPropertyCanonicalBase=compactCanonicalEditor?compactCanonicalEditor.load():undefined;
   schemaManualPropertyHeading.textContent = trigger.textContent || "Add child property";
   confirmSchemaManualPropertyButton.textContent = "Add property";
   schemaManualPropertyChildName.value = ""; schemaManualPropertyType.value = "string"; schemaManualArrayItemType.value = "";
@@ -2970,6 +3019,11 @@ schemaManualPropertyForm.addEventListener("submit", (event) => {
   const inspection = inspectManualProperty(schemaDraft.document, schemaParentDocuments(), definition);
   if (inspection.result !== "ready") { renderManualPropertyForm(); return; }
   const path = inspection.normalizedPath.slice(1).replaceAll("/", ".");
+  if(compactCanonicalEditor&&pendingManualPropertyCanonicalBase){
+    const base=pendingManualPropertyCanonicalBase,baseProjection=compactSchemaProjection(base,{id:base.contributorId,name:base.contributorName,version:base.revision}),candidate={...baseProjection,document:addManualProperty(baseProjection.document,[],definition)},commands=canonicalCommandsFromCompactProjection(base,candidate,(kind)=>`${kind}:${crypto.randomUUID()}`);
+    for(const[index,retained]of commands.entries()){const command=index===0?retained:{...retained,baseRevision:compactCanonicalEditor.load().revision};dispatchCompactCanonicalCommand(command);if(compactCanonicalPendingCommand)return;}
+    selectedSchemaPropertyPath=path;closeManualPropertyForm(false);renderCompactCanonicalEditor();focusSchemaPropertyRule(path);return;
+  }
   schemaDraft = { ...schemaDraft, document:addManualProperty(schemaDraft.document, schemaParentDocuments(), definition) };
   selectedSchemaPropertyPath = path;
   persistSchemaEditorDraft(`Add manual property ${inspection.normalizedPath}`);
@@ -5797,7 +5851,7 @@ subscribeCanonicalProjectChanges(globalThis as unknown as Parameters<typeof subs
   canonicalProjectSchemaIds=nextIds;
   if(schemaDraft&&nextIds.has(schemaDraft.id)){const current=projectSchemas.find(({id})=>id===schemaDraft?.id);if(current)schemaDraft=schemaEditorDraft(current);}
   renderSchemas();renderSchemaWorkflowRows();if(compactCanonicalEditor)renderCompactCanonicalEditor();sidePanelLayeredProfileEditor?.render();
-});
+},()=>{const library=projectLibraryUi.library(),projectId=library.activeProjectId,active=projectId?library.projects[projectId]:undefined;return projectId&&active?{projectId,revision:active.revision}:undefined;});
 renderHistoryPath(getHistoryArrayPath(dataLayerStorage));
 renderObservationTargetContext();
 if (!savedSessionLiveFeed) void recoverAttachedObservationTarget();

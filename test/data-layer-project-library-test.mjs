@@ -93,11 +93,16 @@ assert.equal(projectRecordNeedsSynchronization(library.projects["project-retail"
 const externalLibrary=recordProjectNavigation(library,"project-trade",{kind:"flows",id:"flow:project-trade"}),externalSwitch=activeProjectContextChange(JSON.stringify(externalLibrary),"project-retail",15);
 assert.equal(externalSwitch.changed,true,"an external active identity change invalidates the open Studio context");
 assert.equal(externalSwitch.active?.state.project.id,"project-trade");
+assert.equal(externalSwitch.active?.revision,7,"an active-project switch remains valid when the destination has a lower project-scoped revision");
 assert.deepEqual(externalSwitch.active?.navigation,{kind:"flows",id:"flow:project-trade"});
 const unchangedContext=activeProjectContextChange(JSON.stringify(externalLibrary),"project-trade",7);
 assert.equal(unchangedContext.changed,false,"the same active identity and revision do not rerender Studio");
 const externallyEdited=structuredClone(library);externallyEdited.projects["project-trade"].revision=8;
-assert.equal(activeProjectContextChange(JSON.stringify(externallyEdited),"project-trade",7).changed,true,"an external active revision refreshes an already-open Studio");
+const newerContext=activeProjectContextChange(JSON.stringify(externallyEdited),"project-trade",7);
+assert.equal(newerContext.changed,true,"an external active revision refreshes an already-open Studio");
+assert.equal(newerContext.active?.revision,8);
+const delayedOlder=structuredClone(library);delayedOlder.projects["project-trade"].revision=6;
+assert.equal(activeProjectContextChange(JSON.stringify(delayedOlder),"project-trade",newerContext.active.revision).changed,false,"newer-then-older delivery must not regress an already-open Studio");
 const noActive=structuredClone(library);delete noActive.activeProjectId;
 assert.equal(activeProjectContextChange(JSON.stringify(noActive),"project-trade",7).active,undefined,"external deactivation clears project-bound Studio state");
 
