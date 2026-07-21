@@ -2577,10 +2577,6 @@ function renderSchemaDraft() {
     const roots = [];
     propertyPaths.forEach((path) => {
         const item = itemByPath.get(path);
-        if (compactCanonicalEditor) {
-            roots.push(item);
-            return;
-        }
         const parentPath = propertyPaths
             .filter((candidate) => candidate !== path && path.startsWith(`${candidate}.`))
             .sort((left, right) => right.length - left.length)[0];
