@@ -119,6 +119,8 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
             const labels = new Map(Object.entries(suppliedRaw.projects).map(([projectId, entry]) => [projectId, historyLabel(entry.state) ?? "Save project library command"])), supplied = cleanLibrary(suppliedRaw), prior = currentLibrary, next = { ...supplied, projects: { ...prior.projects, ...supplied.projects } }, canonicalCompanions = new Set(Object.entries(supplied.projects).filter(([projectId, entry]) => pendingCanonicalRevisions.get(projectId) === entry.revision).map(([projectId]) => projectId));
             if (same(prior, next))
                 return;
+            if (prior.activeProjectId !== next.activeProjectId)
+                pageHistories.clear();
             currentLibrary = next;
             memory.set(key, serializeProjectLibrary(next));
             enqueue("Save project library command", async () => { for (const [projectId, entry] of Object.entries(supplied.projects)) {
@@ -198,7 +200,8 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
         deferredActiveContext = notification;
         return;
     } if (observedActiveTokens.has(notification.token))
-        return activeInstalls.get(notification.token); observedActiveTokens.add(notification.token); pageHistories.clear(); const route = partialRoutes.get(notification.projectId), prepared = loaded.get(notification.projectId), prepare = prepared || !route ? Promise.resolve(prepared) : repository.loadVisibleProjectRoute(notification.projectId, route).then((value) => { installLoaded(notification.projectId, value, route); return loaded.get(notification.projectId); }), install = trackFeed(prepare.then((active) => { currentLibrary = { ...currentLibrary, activeProjectId: notification.projectId }; memory.set(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(currentLibrary)); if (active)
+        return activeInstalls.get(notification.token); observedActiveTokens.add(notification.token); if (currentLibrary.activeProjectId !== notification.projectId)
+        pageHistories.clear(); const route = partialRoutes.get(notification.projectId), prepared = loaded.get(notification.projectId), prepare = prepared || !route ? Promise.resolve(prepared) : repository.loadVisibleProjectRoute(notification.projectId, route).then((value) => { installLoaded(notification.projectId, value, route); return loaded.get(notification.projectId); }), install = trackFeed(prepare.then((active) => { currentLibrary = { ...currentLibrary, activeProjectId: notification.projectId }; memory.set(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(currentLibrary)); if (active)
         memory.set(CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, serializeCanonicalProjectState(active.state, active.draftSequence));
     else
         memory.delete(CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY); projectionChanged(); })); activeInstalls.set(notification.token, install); void install.finally(() => activeInstalls.delete(notification.token)); return install; }, installSchemaChange = (change) => { const identity = `${change.schemaId}:${change.token}`; if (observedSchemaChanges.has(identity))
@@ -248,7 +251,9 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
         throw new Error("There is no failed durable Draft to export."); return JSON.stringify({ format: "my-chrome-utilities.unsaved-durable-project", version: 1, projectId: failed.projectId, command: { id: failed.command.commandId, label: failed.command.label, baseToken: failed.command.baseToken }, project: failed.state.project, draft: failed.state.draft }); };
     const exportUnsavedSchemas = () => { if (!failedSchema)
         throw new Error("There is no failed Saved Schema Library batch to export."); return JSON.stringify({ format: "my-chrome-utilities.unsaved-saved-schema-batch", version: 1, label: failedSchema.batch.label, names: failedSchema.batch.names, schemas: failedSchema.batch.schemas, operations: { upserts: failedSchema.batch.upserts.map(({ schema, baseToken }) => ({ schema, ...(baseToken ? { baseToken } : {}) })), deletes: failedSchema.batch.deletes }, conflict: failedSchema.conflict }); };
-    const applyHistory = async (projectId, direction) => { await latest; const history = pageHistory(projectId), current = await repository.loadProject(projectId); let command; try {
+    const settleFeeds = async () => { while (feedInstalls.size)
+        await Promise.all([...feedInstalls]); };
+    const applyHistory = async (projectId, direction) => { await latest; await settleFeeds(); const history = pageHistory(projectId), current = await repository.loadProject(projectId); let command; try {
         command = history[direction](current);
     }
     catch (error) {
@@ -257,7 +262,7 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
         notify("durable-project-save-failed", { label: blockedCommand.label, error });
         throw error;
     } if (!command)
-        return; notify("durable-project-saving", { label: command.label }); try {
+        return; notify("durable-project-saving", { label: command.label }); locallySavingProjects.add(projectId); try {
         const result = await repository.saveDraft(command);
         if (result.status === "conflict")
             throw new DOMException(`${command.label} conflicts at ${result.conflictingFields.join(", ")}.`, "AbortError");
@@ -271,9 +276,11 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
         failed = { projectId, projectName: current.state.project.name, state: cleanState(current.state), command, error };
         notify("durable-project-save-failed", { label: command.label, error });
         throw error;
+    }
+    finally {
+        locallySavingProjects.delete(projectId);
     } };
-    const settled = async () => { await latest; while (feedInstalls.size)
-        await Promise.all([...feedInstalls]); };
+    const settled = async () => { await latest; await settleFeeds(); };
     return { repository, storage, ensureProject, ensureProjectRoute, refreshProject, settled, subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); }, failedSave: () => failed ? structuredClone(failed) : undefined, failedSchemaSave: () => failedSchema ? structuredClone(failedSchema) : undefined, retryFailedSave, retryFailedSchemaSave, resolveFailedSave, exportUnsavedDraft, exportUnsavedSchemas, canUndo: projectId => pageHistory(projectId).snapshot().undo.length > 0, canRedo: projectId => pageHistory(projectId).snapshot().redo.length > 0, undo: projectId => applyHistory(projectId, "undo"), redo: projectId => applyHistory(projectId, "redo"), resolveMigration, migration };
 }
 export async function openDurableProjectRuntime(legacy, factory = globalThis.indexedDB, startup = {}) { return createDurableProjectRuntime(await openIndexedDbProjectRepository(factory), legacy, startup); }
