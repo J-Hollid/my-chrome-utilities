@@ -10,8 +10,10 @@ import {
   createCanonicalRepository,
   createCanonicalSchema,
   evaluateCanonicalPredicate,
+  hasLegacySchemaRepresentation,
   migrateLegacyProfile,
   renameCanonicalProperty,
+  resolveCanonicalMigrationConflict,
   setCanonicalProperty,
 } from "../dist/data-layer-canonical-schema.js";
 import {confirmCanonicalMigration,createSpecificationProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
@@ -93,6 +95,10 @@ assert.equal(conflict.propertyId,transactionId);
 assert.deepEqual(observed,[6,7,8]);
 
 const legacyState=createSpecificationProject({name:"Legacy",site:"shop.example",id});
+assert.equal(hasLegacySchemaRepresentation({id:"profile:fresh",name:"Fresh",requirements:[],structuredSchema:{type:"object",properties:{}},structuredDraft:{document:{type:"object",properties:{},required:[]}},schemaConstraints:[]}),false);
+assert.equal(hasLegacySchemaRepresentation({id:"profile:populated-requirement",name:"Populated",requirements:[{path:"/value",type:"string"}]}),true);
+assert.equal(hasLegacySchemaRepresentation({id:"profile:populated-document",name:"Populated",requirements:[],structuredDraft:{document:{type:"object",properties:{value:{type:"string"}}}}}),true);
+assert.equal(hasLegacySchemaRepresentation({id:"profile:populated-constraint",name:"Populated",requirements:[],schemaConstraints:[{path:"/value",presence:"required"}]}),true);
 legacyState.project.collections.profiles.push({
   id:"profile:legacy",name:"Legacy",requirements:[{path:"/article_name",type:"string",required:true,description:"Article"}],
   structuredDraft:{document:{type:"object",properties:{article_name:{type:"string",description:"Article"},article_type:{type:"string",enum:["News","Guide"]}}}},
@@ -112,6 +118,31 @@ assert.equal("structuredDraft" in profile,false);
 assert.equal("schemaConstraints" in profile,false);
 assert.deepEqual(profile.requirements,[]);
 assert.equal(JSON.stringify(undoProjectTransaction(migrated).project),before);
+
+const richLegacy={
+  id:"event:legacy-rich",name:"Legacy rich event",
+  requirements:[{path:"/legacy_value",type:"string",required:true,description:"Requirement documentation",examples:["KEEP"],rules:[{id:"legacy-pattern",kind:"pattern",pattern:"^K",severity:"error",message:"Keep prefix"}]}],
+  structuredDraft:{document:{type:"object",properties:{legacy_value:{type:"number",description:"Draft documentation",examples:[5]}}}},
+  schemaConstraints:[{path:"/legacy_value",type:"string",patterns:["^C"],minimum:1,maximum:9,documentation:"Requirement documentation",examples:["KEEP"]}],
+};
+let richPlan=migrateLegacyProfile(richLegacy,{id});
+assert.deepEqual(richPlan.conflicts.map(({path,facet})=>`${path}:${facet}`).sort(),["/legacy_value:description","/legacy_value:example","/legacy_value:type"]);
+assert.ok(richPlan.conflicts.every(({choices})=>choices.length===2&&choices.every(({label})=>label.includes("from "))));
+for(const conflict of [...richPlan.conflicts])richPlan=resolveCanonicalMigrationConflict(richPlan,conflict.id,conflict.choices[0].id);
+const richNode=richPlan.document.nodes[richPlan.byPath["/legacy_value"]];
+assert.equal(richPlan.conflicts.length,0);
+assert.equal(richNode.id,"property:event:legacy-rich:%2Flegacy_value");
+assert.ok(richNode.rules.some(({id,pattern})=>id==="legacy-pattern"&&pattern==="^K"));
+assert.ok(richNode.rules.some(({kind,pattern})=>kind==="pattern"&&pattern==="^C"));
+assert.ok(richNode.rules.some(({kind,minimum,maximum})=>kind==="range"&&minimum===1&&maximum===9));
+
+const cleanPlan=migrateLegacyProfile({id:"event:legacy-clean",name:"Legacy clean event",schemaConstraints:[{path:"/clean_value",type:"string",presence:"required",patterns:["^C"],documentation:"Clean documentation",examples:["CLEAN"]}]},{id});
+const cleanNode=cleanPlan.document.nodes[cleanPlan.byPath["/clean_value"]];
+assert.equal(cleanPlan.conflicts.length,0);
+assert.equal(cleanNode.presence.mode,"required");
+assert.equal(cleanNode.documentation.description,"Clean documentation");
+assert.equal(cleanNode.documentation.example.value,"CLEAN");
+assert.ok(cleanNode.rules.some(({kind,pattern})=>kind==="pattern"&&pattern==="^C"));
 
 const command=applyCanonicalCommand(document,{kind:"rename",baseRevision:document.revision,propertyId:transactionId,name:"reference"});
 assert.equal(command.status,"applied");
