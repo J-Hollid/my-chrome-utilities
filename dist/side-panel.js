@@ -2832,10 +2832,7 @@ function renderCompactCanonicalContext() {
         button.addEventListener("click", action.run);
         actions.append(button);
     }
-    const legacyCoreMarker = document.createElement("span");
-    legacyCoreMarker.hidden = true;
-    legacyCoreMarker.setAttribute("aria-label", "Unified canonical schema editor core");
-    context.append(identity, actions, legacyCoreMarker);
+    context.append(identity, actions);
     adapter.renderContext?.(context);
     schemaEditor.prepend(context);
 }
@@ -2863,12 +2860,6 @@ function renderCompactCanonicalEditor() {
 }
 function openCompactCanonicalEditor(adapter) {
     sidePanelLayeredProfileEditor?.close();
-    if (schemaEditor && schemaEditor.parentElement?.getAttribute("aria-label") !== "Unified canonical schema editor core") {
-        const compactCore = document.createElement("section");
-        compactCore.setAttribute("aria-label", "Unified canonical schema editor core");
-        schemaEditor.before(compactCore);
-        compactCore.append(schemaEditor);
-    }
     compactCanonicalEditor = adapter;
     renderCompactCanonicalEditor();
 }

@@ -2669,7 +2669,7 @@ function renderCompactCanonicalContext():void{
   if(adapter.onUndo){const undo=document.createElement("button");undo.type="button";undo.textContent="Undo";undo.addEventListener("click",adapter.onUndo);actions.append(undo);}
   if(adapter.onRedo){const redo=document.createElement("button");redo.type="button";redo.textContent="Redo";redo.addEventListener("click",adapter.onRedo);actions.append(redo);}
   for(const action of adapter.actions??[]){const button=document.createElement("button");button.type="button";button.textContent=action.label;button.addEventListener("click",action.run);actions.append(button);}
-  const legacyCoreMarker=document.createElement("span");legacyCoreMarker.hidden=true;legacyCoreMarker.setAttribute("aria-label","Unified canonical schema editor core");context.append(identity,actions,legacyCoreMarker);adapter.renderContext?.(context);schemaEditor.prepend(context);
+  context.append(identity,actions);adapter.renderContext?.(context);schemaEditor.prepend(context);
 }
 
 function renderCompactCanonicalEditor():void{
@@ -2686,9 +2686,6 @@ function renderCompactCanonicalEditor():void{
 
 function openCompactCanonicalEditor(adapter:CompactCanonicalEditorAdapter):void{
   sidePanelLayeredProfileEditor?.close();
-  if(schemaEditor&&schemaEditor.parentElement?.getAttribute("aria-label")!=="Unified canonical schema editor core"){
-    const compactCore=document.createElement("section");compactCore.setAttribute("aria-label","Unified canonical schema editor core");schemaEditor.before(compactCore);compactCore.append(schemaEditor);
-  }
   compactCanonicalEditor=adapter;renderCompactCanonicalEditor();
 }
 
