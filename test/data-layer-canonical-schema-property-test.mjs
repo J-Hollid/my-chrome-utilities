@@ -5,7 +5,9 @@ import {
   canonicalTableRows,
   createCanonicalRepository,
   createCanonicalSchema,
+  migrateLegacyProfile,
   renameCanonicalProperty,
+  resolveCanonicalMigrationConflict,
 } from "../dist/data-layer-canonical-schema.js";
 
 let seed=0x5eed1234;
@@ -36,6 +38,40 @@ for(let example=0;example<200;example+=1){
   assert.equal(names.filter((name)=>name===firstName).length,1);
   assert.equal(names.filter((name)=>name===secondName).length,1);
   assert.equal(current.revision,baseRevision+2);
+}
+
+for(let example=0;example<100;example+=1){
+  let sequence=0;
+  const id=(kind)=>`${kind}:migration:${example}:${++sequence}`;
+  const name=word("legacy"),path=`/${name}`,requiredValue=word("required");
+  const legacy={
+    id:`event:migration:${example}`,name:`Legacy ${example}`,
+    requirements:[{path,type:"string",required:true,allowedValues:[requiredValue],description:`Requirement ${example}`,examples:[requiredValue],rules:[{id:`rule:requirement:${example}`,kind:"pattern",pattern:"^R",severity:"error",message:"Requirement rule"}]}],
+    structuredDraft:{document:{type:"object",properties:{[name]:{type:"number",presence:"optional",enum:[example],description:`Draft ${example}`,examples:[example],minimum:example,maximum:example+10}}}},
+    schemaConstraints:[{path,type:"string",patterns:["^C"],documentation:`Requirement ${example}`,examples:[requiredValue]}],
+  };
+  const legacySnapshot=structuredClone(legacy),plan=migrateLegacyProfile(legacy,{id}),planSnapshot=structuredClone(plan);
+  const repeat=migrateLegacyProfile(legacy,{id:(kind)=>`${kind}:repeat:${example}`});
+  assert.deepEqual(legacy,legacySnapshot,"migration planning must not mutate legacy contributors");
+  assert.equal(plan.byPath[path],`property:${legacy.id}:${encodeURIComponent(path)}`);
+  assert.equal(repeat.byPath[path],plan.byPath[path],"migrated property identity must be stable across reviews");
+  assert.deepEqual(repeat.conflicts.map(({id})=>id),plan.conflicts.map(({id})=>id),"migration conflict identity must be stable across reviews");
+  assert.deepEqual(new Set(plan.conflicts.map(({facet})=>facet)),new Set(["type","presence","allowed values","description","example"]));
+
+  let resolved=plan;
+  for(const conflict of [...plan.conflicts])resolved=resolveCanonicalMigrationConflict(resolved,conflict.id,conflict.choices[0].id);
+  const node=resolved.document.nodes[resolved.byPath[path]];
+  assert.deepEqual(plan,planSnapshot,"resolving migration conflicts must not mutate the prior review plan");
+  assert.equal(resolved.conflicts.length,0);
+  assert.equal(node.type,"string");
+  assert.equal(node.presence.mode,"required");
+  assert.deepEqual(node.allowedValues.map(({value})=>value),[requiredValue]);
+  assert.equal(node.documentation.description,`Requirement ${example}`);
+  assert.equal(node.documentation.example.value,requiredValue);
+  assert.ok(node.rules.some(({id})=>id===`rule:requirement:${example}`));
+  assert.ok(node.rules.some(({kind,pattern})=>kind==="pattern"&&pattern==="^C"));
+  assert.ok(node.rules.some(({kind,minimum,maximum})=>kind==="range"&&minimum===example&&maximum===example+10));
+  assert.ok(node.rules.filter(({id})=>id!==`rule:requirement:${example}`).every(({id})=>id.startsWith("json-facet:")),"schema facets must remain distinguishable from attached rules during round-trip");
 }
 
 console.log("data-layer canonical schema property tests passed");
