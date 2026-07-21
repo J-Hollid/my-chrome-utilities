@@ -139,6 +139,41 @@
         <button id="import-library-project" type="button">Import project</button>
         <input id="import-library-project-file" type="file" accept="application/json,.json" hidden />
         <output id="project-library-status" aria-live="polite"></output>
+        <section id="durable-project-repository" aria-labelledby="durable-project-repository-title">
+          <h4 id="durable-project-repository-title">Durable project storage</h4>
+          <output id="durable-repository-status" aria-live="polite">Opening durable project storage…</output>
+          <section id="durable-migration-review" aria-labelledby="durable-migration-review-title" hidden>
+            <h5 id="durable-migration-review-title" tabindex="-1">Review legacy project migration</h5>
+            <p id="durable-migration-review-summary"></p>
+            <button id="export-legacy-migration-sources" type="button">Export both legacy sources</button>
+            <button id="migrate-legacy-library-source" type="button">Use project library source</button>
+            <button id="migrate-legacy-active-source" type="button">Use active projection source</button>
+            <output id="durable-migration-review-result" aria-live="polite"></output>
+          </section>
+          <button id="open-storage-recovery" type="button">Storage and recovery</button>
+          <dialog id="durable-storage-recovery" aria-labelledby="durable-storage-recovery-title">
+            <section class="durable-recovery-scroll" aria-label="Storage and recovery details">
+              <h4 id="durable-storage-recovery-title" tabindex="-1">Storage and recovery</h4>
+              <dl>
+                <dt>Last Saved Draft</dt><dd id="durable-last-saved">Unavailable</dd>
+                <dt>Published revision</dt><dd id="durable-published-revision">0</dd>
+                <dt>Unsaved command</dt><dd id="durable-unsaved-command">None</dd>
+                <dt>Project data</dt><dd id="durable-project-size">0 B</dd>
+                <dt>Releases</dt><dd id="durable-release-size">0 B</dd>
+                <dt>Fixtures</dt><dd id="durable-fixture-size">0 B</dd>
+                <dt>Migration recovery backup</dt><dd id="durable-migration-backup-size">0 B</dd>
+                <dt>Browser storage estimate</dt><dd id="durable-browser-estimate">Unavailable</dd>
+              </dl>
+              <p id="durable-storage-explanation"></p>
+              <button id="retry-durable-save" type="button" disabled>Retry save</button>
+              <button id="export-unsaved-draft" type="button" disabled>Export unsaved Draft</button>
+              <button id="export-repository-backup" type="button">Export repository backup</button>
+              <button id="open-storage-diagnostics" type="button">Open storage diagnostics</button>
+              <output id="durable-recovery-result" tabindex="-1" aria-live="polite"></output>
+              <button id="close-storage-recovery" type="button">Close</button>
+            </section>
+          </dialog>
+        </section>
       </section>
       <section id="data-layer-panel-library" role="tabpanel" aria-labelledby="data-layer-view-library" hidden>
         <h3>Library</h3>

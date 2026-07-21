@@ -22,4 +22,7 @@ export { adoptSavedSchema, applyCapturedValidationToProfile, capturedValidationD
 export { addPageGroupMembership, confirmPageGroupMembershipMigration, inspectPageGroupMembershipRemoval, movePageGroupMembership, orderedPageGroupIds, pageGroupMembers, previewPageGroupMembershipMove, removePageGroupMembership, requiresPageGroupMembershipMigration, stagePageGroupMembershipMigration } from "../../data-layer-page-group-membership.js";
 export { PROJECT_LIBRARY_STORAGE_KEY, activateProject, commitProjectImport, createProjectInLibrary, exportProjectBundle, migrateSingletonProject, projectLibrary, projectMetadata, recordProjectNavigation, replaceActiveProjectState, resolveProjectNavigation, resolveProjectWrite, restoreProjectLibrary, saveProjectState, serializeProjectLibrary, setProjectPendingWrite, stageProjectImport, updateProjectMetadata } from "./layers/browser/schemas.js";
 export { mountProjectLibraryUi } from "./layers/browser/schemas.js";
+export { openIndexedDbProjectRepository } from "../../data-layer-durable-project-repository.js";
+export { installDurableRepositoryStartupFailure, mountDurableProjectRepositoryUi } from "../../data-layer-durable-project-repository-ui.js";
+export { openDurableProjectRuntime } from "../../data-layer-durable-project-runtime.js";
 //# sourceMappingURL=schemas.js.map

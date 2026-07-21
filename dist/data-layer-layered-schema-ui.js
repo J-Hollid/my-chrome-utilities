@@ -6,7 +6,6 @@ import { mountComposedSchemaFacetBuilder } from "./data-layer-composed-schema-bu
 import { composedSchemaWorkspace, resetComposedSchemaLocalProperty, saveComposedSchemaLocalFacets } from "./data-layer-composed-schema-workspace.js";
 import { flowPageFrameContributor, layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
 import { resolveSidePanelSchemaContributor } from "./data-layer-side-panel-schema-editor.js";
-import { CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY } from "./data-layer-specification-repository.js";
 export { layeredContributionDetails, layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
 const q = (selector) => { const value = document.querySelector(selector); if (!value)
     throw new Error(`Missing ${selector}`); return value; };
@@ -110,7 +109,7 @@ export function mountSidePanelLayeredProfileEditor(options) {
     const select = (key) => { const state = options.load(); if (!state || !resolveSidePanelSchemaContributor(state, key))
         return false; selectedKey = key; render(); return true; };
     close();
-    window.addEventListener("storage", (event) => { if (event.storageArea === localStorage && event.key === CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY && selectedKey)
+    options.subscribe?.(() => { if (selectedKey)
         render(); });
     return { render, select, close };
 }

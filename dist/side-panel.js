@@ -76,6 +76,7 @@ import { renderSchemaSpecificationBuilder } from "./utilities/data-layer/schemas
 import { applyCanonicalCommand, canonicalCommandOutcome, canonicalCommandsFromCompactProjection, canonicalPredicateText, canonicalPropertyPath, compactSchemaProjection, composedCanonicalSchema, createCanonicalSchema, hasLegacySchemaRepresentation, migrateLegacyProfile, mountCanonicalPredicateEditor, mountSidePanelLayeredProfileEditor, resolveCanonicalMigrationConflict, resolveSidePanelSchemaContributor, saveComposedCanonicalDocument, savedSchemaCanonicalDocument, savedSchemaFromCanonical, sidePanelSchemaGroups, transactProject } from "./utilities/data-layer/schemas.js";
 import { compactCanonicalPageHistory, prepareCompactCanonicalRedo, prepareCompactCanonicalUndo, recordCompactCanonicalMutation } from "./utilities/data-layer/schemas.js";
 import { mountProjectLibraryUi } from "./utilities/data-layer/schemas.js";
+import { installDurableRepositoryStartupFailure, mountDurableProjectRepositoryUi, openDurableProjectRuntime } from "./utilities/data-layer/schemas.js";
 import { renderSchemaPropertyTypeEditor } from "./utilities/data-layer/schemas.js";
 import { applySchemaPropertyTypeEdit, schemaPropertyTypeLabel, schemaPropertyTypeOwner } from "./utilities/data-layer/schemas.js";
 import { attachRuleToSchemaProperty, schemaPropertyRows } from "./utilities/data-layer/schemas.js";
@@ -101,7 +102,7 @@ import { renderTemplateChangeReview } from "./utilities/data-layer/event-library
 import { pushPayloadInPage, } from "./utilities/data-layer/event-library.js";
 import { panelEmptyState } from "./panel-empty-states.js";
 import { findPanelEmptyStateElements, renderPanelEmptyState, } from "./panel-empty-states-ui.js";
-import { applyCanonicalSchemaDraftEdits, adoptSavedSchema, applyCapturedValidationToProfile, capturedValidationDestinationChoices, capturedValidationProfileRequirements, compileSpecificationProject, commitCanonicalProjectState, createFixtureFromCapturedValidation, evaluateSpecificationObservation, recordSpecificationCapture, recordSpecificationNavigation, SPECIFICATION_PROJECT_STORAGE_KEY, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, subscribeCanonicalProjectChanges, } from "./utilities/data-layer/schemas.js";
+import { applyCanonicalSchemaDraftEdits, adoptSavedSchema, applyCapturedValidationToProfile, capturedValidationDestinationChoices, capturedValidationProfileRequirements, compileSpecificationProject, commitCanonicalProjectState, createFixtureFromCapturedValidation, evaluateSpecificationObservation, recordSpecificationCapture, recordSpecificationNavigation, SPECIFICATION_PROJECT_STORAGE_KEY, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, } from "./utilities/data-layer/schemas.js";
 const PROJECT_NAME = "my-chrome-utilities";
 const app = document.querySelector("#app");
 const panelRoot = document.querySelector("#side-panel-root");
@@ -112,7 +113,26 @@ const utilityStorageContract = (id) => {
         throw new Error(`Missing utility storage contract: ${id}`);
     return contract;
 };
-const dataLayerStorage = createUtilityStorage(globalThis.localStorage, utilityStorageContract("data-layer"));
+const durableProjectRuntime = await openDurableProjectRuntime(globalThis.localStorage).catch((error) => {
+    installDurableRepositoryStartupFailure(document, error);
+    return new Promise(() => { });
+});
+const projectStorage = durableProjectRuntime.storage;
+const scopedDataLayerStorage = createUtilityStorage(globalThis.localStorage, utilityStorageContract("data-layer"));
+const dataLayerStorage = {
+    get length() { return scopedDataLayerStorage.length; },
+    clear() { scopedDataLayerStorage.clear(); projectStorage.removeItem(SCHEMA_LIBRARY_STORAGE_KEY); },
+    key: (index) => scopedDataLayerStorage.key(index),
+    getItem: (key) => key === SCHEMA_LIBRARY_STORAGE_KEY ? projectStorage.getItem(key) : scopedDataLayerStorage.getItem(key),
+    setItem(key, value) { if (key === SCHEMA_LIBRARY_STORAGE_KEY)
+        projectStorage.setItem(key, value);
+    else
+        scopedDataLayerStorage.setItem(key, value); },
+    removeItem(key) { if (key === SCHEMA_LIBRARY_STORAGE_KEY)
+        projectStorage.removeItem(key);
+    else
+        scopedDataLayerStorage.removeItem(key); },
+};
 const hotkeyStorage = createUtilityStorage(globalThis.localStorage, utilityStorageContract("hotkeys"));
 const shellStorage = createUtilityStorage(globalThis.localStorage, {
     namespace: "my-chrome-utilities.shell",
@@ -666,15 +686,38 @@ let savedInspectorTemplateId;
 const storedSchemaLibrary = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
 let schemas = restoreSchemaLibrary(storedSchemaLibrary);
 let sidePanelLayeredProfileEditor;
-const projectLibraryUi = mountProjectLibraryUi({ root: document, storage: globalThis.localStorage, projectStorageKey: SPECIFICATION_PROJECT_STORAGE_KEY, navigationStorageKey: "my-chrome-utilities.specification-project-navigation.v1", openStudio: (url) => { globalThis.open(url, "_blank"); }, onChange: renderSchemas });
-const canonicalProjectAtStartup = restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY));
+const projectLibraryUi = mountProjectLibraryUi({ root: document, storage: projectStorage, prepareProject: durableProjectRuntime.ensureProject, settled: durableProjectRuntime.settled, subscribe: (listener) => durableProjectRuntime.subscribe(({ library }) => listener(library)), blocked: () => Boolean(durableProjectRuntime.failedSave()), exportProject: async (projectId) => JSON.stringify(await durableProjectRuntime.repository.exportProject(projectId)), importProject: async (serialized, input) => { await durableProjectRuntime.repository.importProject(JSON.parse(serialized), input); }, projectStorageKey: SPECIFICATION_PROJECT_STORAGE_KEY, navigationStorageKey: "my-chrome-utilities.specification-project-navigation.v1", openStudio: (url) => { globalThis.open(url, "_blank"); }, onChange: renderSchemas });
+if (durableProjectRuntime.migration.status === "review-required") {
+    const review = document.querySelector("#durable-migration-review"), summary = document.querySelector("#durable-migration-review-summary"), result = document.querySelector("#durable-migration-review-result"), migration = durableProjectRuntime.migration;
+    review.hidden = false;
+    summary.textContent = `${migration.projectId} differs between ${migration.sources.map(({ source, revision, checksum }) => `${source} generation ${revision} checksum ${checksum}`).join(" and ")}. Conflicting fields: ${migration.conflictingFields.join(", ")}. No source was deleted or imported.`;
+    document.querySelector("#export-legacy-migration-sources").addEventListener("click", () => { const sources = migration.sources.map((source) => ({ ...source, key: source.source === "library" ? "my-chrome-utilities.specification-project-library.v1" : "my-chrome-utilities.specification-project.v1", payload: globalThis.localStorage.getItem(source.source === "library" ? "my-chrome-utilities.specification-project-library.v1" : "my-chrome-utilities.specification-project.v1") })), serialized = JSON.stringify({ format: "my-chrome-utilities.legacy-migration-sources", version: 1, projectId: migration.projectId, sources }), link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([serialized], { type: "application/json" })); link.download = `${migration.projectId}-legacy-migration-sources.json`; link.click(); URL.revokeObjectURL(link.href); result.textContent = "Exported both complete legacy source payloads with their identities and checksums."; });
+    for (const [selector, choice] of [["#migrate-legacy-library-source", "library"], ["#migrate-legacy-active-source", "active"]])
+        document.querySelector(selector).addEventListener("click", () => { result.textContent = `Migrating the reviewed ${choice} source…`; void durableProjectRuntime.resolveMigration(choice).then(() => location.reload(), error => { result.textContent = `Migration was not committed; both legacy sources remain unchanged. ${error instanceof Error ? error.message : String(error)}`; }); });
+}
+if (durableProjectRuntime.migration.status === "invalid-source-review") {
+    const review = document.querySelector("#durable-migration-review"), summary = document.querySelector("#durable-migration-review-summary"), result = document.querySelector("#durable-migration-review-result"), migration = durableProjectRuntime.migration, schemaSource = migration.sources.find(({ key }) => key === "my-chrome-utilities.schema-library.v1"), validChoice = (key) => migration.sources.find((source) => source.key === key)?.valid === true && schemaSource?.valid !== false;
+    review.hidden = false;
+    summary.textContent = `Invalid legacy source recovery only; zero durable project records were written. ${migration.sources.map(({ key, valid, error, bytes, checksum }) => `${key}: ${valid ? "valid" : "invalid"} · ${bytes} bytes · checksum ${checksum} · ${error}`).join(" | ")}. Export every preserved byte, repair the named invalid key and reload, or explicitly choose a valid project source.`;
+    document.querySelector("#export-legacy-migration-sources").addEventListener("click", () => { const serialized = JSON.stringify({ format: "my-chrome-utilities.invalid-legacy-migration-sources", version: 1, actions: migration.actions, sources: migration.sources }), link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([serialized], { type: "application/json" })); link.download = "invalid-legacy-migration-sources.json"; link.click(); URL.revokeObjectURL(link.href); result.textContent = "Exported every invalid and valid legacy source byte-for-byte with errors and checksums."; });
+    for (const [selector, choice, key] of [["#migrate-legacy-library-source", "library", "my-chrome-utilities.specification-project-library.v1"], ["#migrate-legacy-active-source", "active", "my-chrome-utilities.specification-project.v1"]]) {
+        const control = document.querySelector(selector);
+        control.disabled = !validChoice(key);
+        control.addEventListener("click", () => { result.textContent = `Migrating only the explicitly reviewed valid ${choice} source; rejected bytes remain in backup…`; void durableProjectRuntime.resolveMigration(choice).then(() => location.reload(), error => { result.textContent = `Migration was not committed; every legacy source remains byte-identical. ${error instanceof Error ? error.message : String(error)}`; }); });
+    }
+}
+void mountDurableProjectRepositoryUi(document, globalThis.indexedDB, durableProjectRuntime.repository).then((ui) => { globalThis.addEventListener("durable-project-save-failed", (event) => { const origin = document.activeElement instanceof HTMLElement ? document.activeElement : undefined, failed = durableProjectRuntime.failedSave(); if (!failed)
+    return; projectLibraryUi.render(); void ui.reportSaveFailure({ projectId: failed.projectId, projectName: failed.projectName, command: failed.command, retry: async () => { await durableProjectRuntime.retryFailedSave(); projectLibraryUi.render(); }, exportUnsaved: () => { const serialized = durableProjectRuntime.exportUnsavedDraft(), link = document.createElement("a"); link.href = URL.createObjectURL(new Blob([serialized], { type: "application/json" })); link.download = `${failed.projectName.replace(/[^a-z0-9]+/gi, "-").toLowerCase()}-unsaved-draft.json`; link.click(); URL.revokeObjectURL(link.href); }, ...(origin ? { originControl: origin } : {}) }, event.detail?.error ?? failed.error); }); }).catch((error) => { const status = document.querySelector("#durable-repository-status"), open = document.querySelector("#open-storage-recovery"); if (status)
+    status.textContent = `Durable project storage unavailable: ${error instanceof Error ? error.message : String(error)}`; if (open)
+    open.disabled = true; });
+const canonicalProjectAtStartup = restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY));
 if (canonicalProjectAtStartup)
     schemas = [...schemas.filter((schema) => !canonicalProjectAtStartup.project.collections.schemaDrafts.some(({ id }) => id === schema.id)), ...canonicalProjectAtStartup.project.collections.schemaDrafts];
 let canonicalProjectSchemaIds = new Set(canonicalProjectAtStartup?.project.collections.schemaDrafts.map(({ id }) => id) ?? []);
 const restoredSchemaLibrary = serializeSchemaLibrary(schemas.filter(({ id }) => !canonicalProjectSchemaIds.has(id)));
-sidePanelLayeredProfileEditor = sidePanelLayeredProfileEditorHost ? mountSidePanelLayeredProfileEditor({ host: sidePanelLayeredProfileEditorHost, legacyEditor: schemaEditor, emptyHost: schemaDetailEmpty, load: () => restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), persist: (next) => { const serialized = globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY), envelope = restoreCanonicalProjectEnvelope(serialized), base = restoreCanonicalProjectState(serialized); if (!envelope || !base)
-        throw new Error("The Specification Project is unavailable."); const result = commitCanonicalProjectState(globalThis.localStorage, next, { expectedRevision: envelope.revision, pendingLabel: "Side-panel canonical schema command", base }); if (result.status === "conflict")
-        throw new Error(`Schema contributor changed at project revision ${result.revision}; review the structured edit again.`); projectLibraryUi.captureActiveProject(next, result.revision); } }) : undefined;
+sidePanelLayeredProfileEditor = sidePanelLayeredProfileEditorHost ? mountSidePanelLayeredProfileEditor({ host: sidePanelLayeredProfileEditorHost, legacyEditor: schemaEditor, emptyHost: schemaDetailEmpty, load: () => restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), subscribe: (listener) => durableProjectRuntime.subscribe(() => listener()), persist: (next) => { const serialized = projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY), envelope = restoreCanonicalProjectEnvelope(serialized), base = restoreCanonicalProjectState(serialized); if (!envelope || !base)
+        throw new Error("The Specification Project is unavailable."); const result = commitCanonicalProjectState(projectStorage, next, { expectedRevision: envelope.revision, pendingLabel: "Side-panel canonical schema command", base }); if (result.status === "conflict")
+        throw new Error(`Schema contributor changed in a newer Saved Draft; review the structured edit again.`); projectLibraryUi.captureActiveProject(next, result.revision); } }) : undefined;
 if (storedSchemaLibrary && restoredSchemaLibrary !== storedSchemaLibrary) {
     dataLayerStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, restoredSchemaLibrary);
 }
@@ -1882,9 +1925,9 @@ function reviewSavedSchemaAdoption(schema, trigger) {
         if (record.state.project.collections.schemaDrafts.some(({ id }) => id === schema.id))
             throw new Error(`${schema.name} is already used by ${record.state.project.name}.`);
         projectLibraryUi.activate(record.state.project.id);
-        const next = adoptSavedSchema(record.state, schema), result = commitCanonicalProjectState(globalThis.localStorage, next, { expectedRevision: record.revision, pendingLabel: `Adopt saved schema ${schema.name}`, base: record.state });
+        const next = adoptSavedSchema(record.state, schema), result = commitCanonicalProjectState(projectStorage, next, { expectedRevision: record.revision, pendingLabel: `Adopt saved schema ${schema.name}`, base: record.state });
         if (result.status === "conflict")
-            throw new Error(`Project changed at revision ${result.revision}; review adoption again.`);
+            throw new Error(`Project changed in a newer Saved Draft; review adoption again.`);
         projectLibraryUi.captureActiveProject(next, result.revision);
         dialog.close();
         dialog.remove();
@@ -1902,7 +1945,7 @@ function reviewSavedSchemaAdoption(schema, trigger) {
     confirm.focus({ preventScroll: true });
 }
 function renderSchemas() {
-    const query = (schemaSearch?.value ?? "").trim().toLowerCase(), visible = searchSchemas(schemas, query), project = restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), groups = sidePanelSchemaGroups(project, visible).map((group) => ({ ...group, entries: group.name === "Saved schemas" ? group.entries : group.entries.filter((entry) => [entry.name, entry.role, entry.scope, entry.lineage, entry.state].some((value) => String(value).toLowerCase().includes(query))) })).filter(({ entries }) => entries.length), count = groups.reduce((total, { entries }) => total + entries.length, 0), nodes = [];
+    const query = (schemaSearch?.value ?? "").trim().toLowerCase(), visible = searchSchemas(schemas, query), project = restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), groups = sidePanelSchemaGroups(project, visible).map((group) => ({ ...group, entries: group.name === "Saved schemas" ? group.entries : group.entries.filter((entry) => [entry.name, entry.role, entry.scope, entry.lineage, entry.state].some((value) => String(value).toLowerCase().includes(query))) })).filter(({ entries }) => entries.length), count = groups.reduce((total, { entries }) => total + entries.length, 0), nodes = [];
     if (schemaEmptyState)
         schemaEmptyState.hidden = count > 0;
     if (schemaCount)
@@ -2784,7 +2827,7 @@ function openNewSchemaEditor() {
     schemaEditorName?.focus({ preventScroll: true });
 }
 function persistSchemaLibrary() {
-    const previousProject = globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY), previousSchemas = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY), envelope = restoreCanonicalProjectEnvelope(previousProject), project = restoreCanonicalProjectState(previousProject), ownedIds = new Set(project?.project.collections.schemaDrafts.map(({ id }) => id) ?? []), schemaValue = serializeSchemaLibrary(schemas.filter(({ id }) => !ownedIds.has(id))), nextProject = project ? applyCanonicalSchemaDraftEdits(project, schemas) : undefined;
+    const previousProject = projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY), previousSchemas = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY), envelope = restoreCanonicalProjectEnvelope(previousProject), project = restoreCanonicalProjectState(previousProject), ownedIds = new Set(project?.project.collections.schemaDrafts.map(({ id }) => id) ?? []), schemaValue = serializeSchemaLibrary(schemas.filter(({ id }) => !ownedIds.has(id))), nextProject = project ? applyCanonicalSchemaDraftEdits(project, schemas) : undefined;
     const restore = (key, value) => { if (value === null)
         dataLayerStorage.removeItem(key);
     else
@@ -2793,9 +2836,9 @@ function persistSchemaLibrary() {
         if (schemaValue !== previousSchemas)
             dataLayerStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, schemaValue);
         if (nextProject) {
-            const result = commitCanonicalProjectState(globalThis.localStorage, nextProject, { expectedRevision: envelope?.revision ?? 0, pendingLabel: "Side-panel schema edit", ...(project ? { base: project } : {}) });
+            const result = commitCanonicalProjectState(projectStorage, nextProject, { expectedRevision: envelope?.revision ?? 0, pendingLabel: "Side-panel schema edit", ...(project ? { base: project } : {}) });
             if (result.status === "conflict")
-                throw new Error(`Schema edit conflicts with project revision ${result.revision}.`);
+                throw new Error(`Schema edit conflicts with a newer Saved Draft.`);
             projectLibraryUi.captureActiveProject(nextProject, result.revision);
         }
     }
@@ -2924,9 +2967,9 @@ function renderCompactCanonicalContext() {
         const latest = adapter.load(), comparison = document.createElement("section"), heading = document.createElement("h3"), base = document.createElement("pre"), pending = document.createElement("pre"), current = document.createElement("pre"), propertyId = "propertyId" in compactCanonicalPendingCommand ? compactCanonicalPendingCommand.propertyId : undefined;
         comparison.setAttribute("aria-label", "Command-scoped canonical comparison");
         heading.textContent = `Command-scoped comparison · ${compactCanonicalCommandScope(compactCanonicalPendingCommand, latest)}`;
-        base.textContent = `Base token ${compactCanonicalPendingCommand.baseRevision}\n${JSON.stringify(propertyId ? compactCanonicalPendingBase?.nodes[propertyId] : compactCanonicalPendingBase?.rootIds ?? [], null, 2)}`;
-        pending.textContent = `Local ${compactCanonicalPendingCommand.kind} command\n${JSON.stringify(compactCanonicalPendingCommand, (key, value) => typeof value === "function" ? "[identity factory]" : value, 2)}`;
-        current.textContent = `Latest token ${latest.revision}\n${JSON.stringify(propertyId ? latest.nodes[propertyId] : latest.rootIds, null, 2)}`;
+        base.textContent = `Base Saved Draft\n${JSON.stringify(propertyId ? compactCanonicalPendingBase?.nodes[propertyId] : compactCanonicalPendingBase?.rootIds ?? [], null, 2)}`;
+        pending.textContent = `Local ${compactCanonicalPendingCommand.kind} command\n${JSON.stringify(compactCanonicalPendingCommand, (key, value) => key === "baseRevision" ? undefined : typeof value === "function" ? "[identity factory]" : value, 2)}`;
+        current.textContent = `Newer Saved Draft\n${JSON.stringify(propertyId ? latest.nodes[propertyId] : latest.rootIds, null, 2)}`;
         comparison.append(heading, base, pending, current);
         context.append(comparison);
     }
@@ -3043,7 +3086,7 @@ function persistSchemaEditorDraft(change) {
 function openContributorInUnifiedEditor(key) {
     schemaDraft = undefined;
     savedCanonicalDocument = undefined;
-    const state = restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), selection = state && resolveSidePanelSchemaContributor(state, key);
+    const state = restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), selection = state && resolveSidePanelSchemaContributor(state, key);
     if (!state || !selection)
         throw new Error("The selected schema contributor is unavailable.");
     sidePanelLayeredProfileEditor?.close();
@@ -3083,7 +3126,7 @@ function openContributorInUnifiedEditor(key) {
     } cancel.type = "button"; cancel.textContent = "Cancel migration"; cancel.addEventListener("click", () => { migration = undefined; compatibilityCanonical = undefined; migrationStatus = ""; closeCompactCanonicalEditor(); if (schemaDetailEmpty)
         schemaDetailEmpty.hidden = false; }); confirm.type = "button"; confirm.textContent = "Confirm canonical migration"; confirm.disabled = Boolean(migration.conflicts.length); confirm.addEventListener("click", () => { if (!migration || migration.conflicts.length)
         return; try {
-        const live = restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), selected = resolveSidePanelSchemaContributor(live, key);
+        const live = restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), selected = resolveSidePanelSchemaContributor(live, key);
         commitUnifiedContributorState(writeUnifiedContributorCanonical(live, selected, migration.document), `Migrate legacy schema for ${selected.entity.name}`);
         migration = undefined;
         compatibilityCanonical = undefined;
@@ -3096,7 +3139,7 @@ function openContributorInUnifiedEditor(key) {
     } }); status.setAttribute("role", "status"); status.textContent = migrationStatus; actions.append(cancel, confirm); review.append(heading, summary, list, actions, status); host.append(review); };
     const migrationBlocked = (document) => { migrationStatus = migration?.conflicts.length ? `Resolve ${migration.conflicts.length} canonical migration path/facet conflict${migration.conflicts.length === 1 ? "" : "s"} before editing.` : "Confirm or cancel canonical migration before editing."; renderCompactCanonicalContext(); return { status: "conflict", document, message: migrationStatus }; };
     const contributorState = (live, selected, document) => isComposed(selected) ? saveComposedCanonicalDocument(live, selected.collectionKind, selected.entity.id, document) : writeUnifiedContributorCanonical(live, selected, document);
-    const stepHistory = (direction) => { const live = restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), selected = live && resolveSidePanelSchemaContributor(live, key); if (!live || !selected) {
+    const stepHistory = (direction) => { const live = restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), selected = live && resolveSidePanelSchemaContributor(live, key); if (!live || !selected) {
         compactCanonicalCommandFeedback = `${direction} blocked: this contributor is no longer available.`;
         renderCompactCanonicalContext();
         return;
@@ -3107,12 +3150,12 @@ function openContributorInUnifiedEditor(key) {
         compactCanonicalCommandFeedback = step.message;
         renderCompactCanonicalContext();
         return;
-    } commitUnifiedContributorState(contributorState(live, selected, step.document), `${direction} canonical schema edit in ${selected.entity.name}`); compactCanonicalHistory = step.history; compactCanonicalCommandFeedback = `${direction} restored ${selected.entity.name} at Draft token ${step.document.revision}.`; renderCompactCanonicalEditor(); };
+    } commitUnifiedContributorState(contributorState(live, selected, step.document), `${direction} canonical schema edit in ${selected.entity.name}`); compactCanonicalHistory = step.history; compactCanonicalCommandFeedback = `${direction} restored ${selected.entity.name} in the Saved Draft.`; renderCompactCanonicalEditor(); };
     openCompactCanonicalEditor({
         key,
         label: `${selection.entity.name} · Role ${selection.scope} · scope ${selection.scope} · provenance ${selection.entity.id}`,
-        load: () => { const live = restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), selected = resolveSidePanelSchemaContributor(live, key); return documentFor(live, selected); },
-        dispatch: (command) => { const live = restoreCanonicalProjectState(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), selected = resolveSidePanelSchemaContributor(live, key), document = documentFor(live, selected); if (migration)
+        load: () => { const live = restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), selected = resolveSidePanelSchemaContributor(live, key); return documentFor(live, selected); },
+        dispatch: (command) => { const live = restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), selected = resolveSidePanelSchemaContributor(live, key), document = documentFor(live, selected); if (migration)
             return migrationBlocked(document); const result = applyCanonicalCommand(document, command), mutation = command.kind !== "select" && command.kind !== "view"; if (result.status === "applied" || result.status === "rebased") {
             if (isComposed(selected))
                 composedUi = { ...(result.document.selectedPropertyId ? { selectedPropertyId: result.document.selectedPropertyId } : {}), view: result.document.view };
@@ -3140,12 +3183,12 @@ function writeUnifiedContributorCanonical(state, selection, canonical) {
     } const graphs = project.documentationFlowGraphs, graph = graphs[selection.flowId], field = selection.scope === "Flow Page-instance" ? "pageFrames" : "occurrences", entries = graph[field] ?? []; return { ...project, documentationFlowGraphs: { ...graphs, [selection.flowId]: { ...graph, [field]: entries.map(replace) } } }; });
 }
 function commitUnifiedContributorState(next, label) {
-    const serialized = globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY), envelope = restoreCanonicalProjectEnvelope(serialized), base = restoreCanonicalProjectState(serialized);
+    const serialized = projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY), envelope = restoreCanonicalProjectEnvelope(serialized), base = restoreCanonicalProjectState(serialized);
     if (!envelope || !base)
         throw new Error("The Specification Project is unavailable.");
-    const result = commitCanonicalProjectState(globalThis.localStorage, next, { expectedRevision: envelope.revision, pendingLabel: label, base });
+    const result = commitCanonicalProjectState(projectStorage, next, { expectedRevision: envelope.revision, pendingLabel: label, base });
     if (result.status === "conflict")
-        throw new Error(`Schema contributor changed at project revision ${result.revision}; review the canonical command again.`);
+        throw new Error(`Schema contributor changed in a newer Saved Draft; review the canonical command again.`);
     projectLibraryUi.captureActiveProject(next, result.revision);
 }
 function persistSavedCanonicalResult(schemaId, canonical, change) {
@@ -4555,7 +4598,7 @@ function recheckCapturedSchemaValidation() {
             schemaResult.textContent = "No captured events are available to recheck.";
         return;
     }
-    const canonical = restoreCanonicalProjectEnvelope(globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), compiled = canonical ? compileSpecificationProject(canonical) : undefined;
+    const canonical = restoreCanonicalProjectEnvelope(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), compiled = canonical ? compileSpecificationProject(canonical) : undefined;
     let checked = 0;
     const issueRows = [];
     const checkedAt = new Date().toISOString();
@@ -4607,7 +4650,7 @@ function refreshCurrentLiveAfterSchemaPublication() {
     return refreshed.revalidatedEventIds.length;
 }
 function reviewCapturedValidationContinuation(record, trigger) {
-    const serialized = globalThis.localStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY), envelope = restoreCanonicalProjectEnvelope(serialized), project = restoreCanonicalProjectState(serialized), captured = liveObserverState.events.find(({ id }) => id === record.eventId);
+    const serialized = projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY), envelope = restoreCanonicalProjectEnvelope(serialized), project = restoreCanonicalProjectState(serialized), captured = liveObserverState.events.find(({ id }) => id === record.eventId);
     if (!project || !envelope) {
         if (schemaResult)
             schemaResult.textContent = "Create or open a Specification Project before continuing captured validation.";
@@ -4647,16 +4690,16 @@ function reviewCapturedValidationContinuation(record, trigger) {
         const toProfile = destination.value === "profile";
         if (toProfile && !profile.value)
             throw new Error("Choose a Profile for the evaluated requirements.");
-        const next = toProfile ? applyCapturedValidationToProfile(project, { captureId: record.eventId, profileId: profile.value, schemaId: record.schemaId, evaluated: record.evaluated }) : createFixtureFromCapturedValidation(project, { name: name.value.trim(), captureId: record.eventId, sourceId: captured.sourceId, eventName: record.eventName, payload: captured.payload, schemaId: record.schemaId, eventId: event.value, ...(page.value ? { pageId: page.value } : {}), ...(step.value ? { flowStepId: step.value } : {}), ...(profile.value ? { profileId: profile.value } : {}), evaluated: record.evaluated }, (kind) => `${kind}:${crypto.randomUUID()}`), entity = toProfile ? next.project.collections.profiles.find(({ id }) => id === profile.value) : next.project.collections.fixtures.at(-1), kind = toProfile ? "profiles" : "fixtures", result = commitCanonicalProjectState(globalThis.localStorage, next, { expectedRevision: envelope.revision, pendingLabel: `Continue evaluated capture ${record.eventId} as ${toProfile ? "Profile requirements" : "Fixture"}`, base: project });
+        const next = toProfile ? applyCapturedValidationToProfile(project, { captureId: record.eventId, profileId: profile.value, schemaId: record.schemaId, evaluated: record.evaluated }) : createFixtureFromCapturedValidation(project, { name: name.value.trim(), captureId: record.eventId, sourceId: captured.sourceId, eventName: record.eventName, payload: captured.payload, schemaId: record.schemaId, eventId: event.value, ...(page.value ? { pageId: page.value } : {}), ...(step.value ? { flowStepId: step.value } : {}), ...(profile.value ? { profileId: profile.value } : {}), evaluated: record.evaluated }, (kind) => `${kind}:${crypto.randomUUID()}`), entity = toProfile ? next.project.collections.profiles.find(({ id }) => id === profile.value) : next.project.collections.fixtures.at(-1), kind = toProfile ? "profiles" : "fixtures", result = commitCanonicalProjectState(projectStorage, next, { expectedRevision: envelope.revision, pendingLabel: `Continue evaluated capture ${record.eventId} as ${toProfile ? "Profile requirements" : "Fixture"}`, base: project });
         if (result.status === "conflict")
-            throw new Error(`Project changed at revision ${result.revision}; review the continuation again.`);
+            throw new Error(`Project changed in a newer Saved Draft; review the continuation again.`);
         projectLibraryUi.captureActiveProject(next, result.revision);
-        globalThis.localStorage.setItem("my-chrome-utilities.specification-project-navigation.v1", JSON.stringify({ projectId: project.project.id, kind, id: entity.id, source: "side-panel", revision: result.revision, returnEventId: record.eventId, evaluationResultIdentity: record.evaluated.resultIdentity }));
+        globalThis.localStorage.setItem("my-chrome-utilities.specification-project-navigation.v1", JSON.stringify({ projectId: project.project.id, kind, id: entity.id, source: "side-panel", returnEventId: record.eventId, evaluationResultIdentity: record.evaluated.resultIdentity }));
         dialog.close();
         dialog.remove();
         if (schemaResult)
             schemaResult.textContent = `Saved evaluated capture evidence in ${entity.name}; opening it in Specification Studio.`;
-        globalThis.open(`specification-builder.html?project=${encodeURIComponent(project.project.id)}&kind=${kind}&entity=${encodeURIComponent(entity.id)}&source=side-panel&revision=${result.revision}`, "_blank");
+        globalThis.open(`specification-builder.html?project=${encodeURIComponent(project.project.id)}&kind=${kind}&entity=${encodeURIComponent(entity.id)}&source=side-panel`, "_blank");
     }
     catch (error) {
         summary.textContent = error instanceof Error ? error.message : String(error);
@@ -6570,8 +6613,10 @@ if (typeof chrome !== "undefined" && chrome.permissions?.onRemoved) {
         revokeObservationTargetOrigins(permissions.origins ?? []);
     });
 }
-subscribeCanonicalProjectChanges(globalThis, ({ state: next, revision }) => {
-    projectLibraryUi.captureActiveProject(next, revision);
+durableProjectRuntime.subscribe(({ active }) => {
+    const next = active?.state ?? restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY));
+    if (!next)
+        return;
     const projectSchemas = next.project.collections.schemaDrafts, nextIds = new Set(projectSchemas.map(({ id }) => id));
     schemas = [...schemas.filter(({ id }) => !canonicalProjectSchemaIds.has(id) && !nextIds.has(id)), ...projectSchemas];
     canonicalProjectSchemaIds = nextIds;
@@ -6585,7 +6630,7 @@ subscribeCanonicalProjectChanges(globalThis, ({ state: next, revision }) => {
     if (compactCanonicalEditor)
         renderCompactCanonicalEditor();
     sidePanelLayeredProfileEditor?.render();
-}, () => { const library = projectLibraryUi.library(), projectId = library.activeProjectId, active = projectId ? library.projects[projectId] : undefined; return projectId && active ? { projectId, revision: active.revision } : undefined; });
+});
 renderHistoryPath(getHistoryArrayPath(dataLayerStorage));
 renderObservationTargetContext();
 if (!savedSessionLiveFeed)

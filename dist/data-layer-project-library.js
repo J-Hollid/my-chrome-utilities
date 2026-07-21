@@ -147,7 +147,7 @@ export function stageProjectImport(serialized, library, options) {
     catch {
         return importBlocker("bundle", "Choose a readable project bundle.");
     }
-    if (parsed.format !== "my-chrome-utilities.project-bundle")
+    if (parsed.format !== "my-chrome-utilities.project-bundle" && parsed.format !== "my-chrome-utilities.durable-project-bundle")
         return importBlocker("bundle.format", "Choose a readable project bundle.");
     if (parsed.version !== 1)
         return importBlocker("bundle.version", "Use a supported version or migrate externally.");
@@ -161,7 +161,7 @@ export function stageProjectImport(serialized, library, options) {
     const map = new Map([...ids].map((oldId) => [oldId, options.id(oldId)])), project = remapOwned(source, map), name = targetName(library, String(parsed.sourceName ?? source.name));
     project.name = name;
     const draft = parsed.draft && typeof parsed.draft === "object" ? remapOwned(parsed.draft, map) : undefined, state = { project, ...(draft ? { draft } : {}), history: { undo: [], redo: [] } }, entityCounts = Object.fromEntries(Object.entries(project.collections).map(([kind, entries]) => [kind, entries.length]));
-    return { sourceName: String(parsed.sourceName ?? source.name), targetName: name, sourceRevision: Number(parsed.draftRevision ?? 0), projectId: project.id, state, entityCounts, referenceIntegrity: "valid", migrations: [], blockers: [] };
+    return { sourceName: String(parsed.sourceName ?? source.name), targetName: name, sourceRevision: Number(parsed.draftRevision ?? 0), projectId: project.id, state, entityCounts, referenceIntegrity: "valid", migrations: parsed.format === "my-chrome-utilities.durable-project-bundle" ? ["Durable Published project snapshot retained"] : [], blockers: [] };
 }
 export function commitProjectImport(library, staged, now = () => new Date().toISOString()) { if (staged.blockers.length)
     throw new Error("Project import is blocked."); if (library.projects[staged.projectId])

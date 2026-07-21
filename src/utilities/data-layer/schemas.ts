@@ -27,3 +27,6 @@ export { PROJECT_LIBRARY_STORAGE_KEY, activateProject, commitProjectImport, crea
 export type { PendingProjectWrite, ProjectLibrary, ProjectLibraryRecord, ProjectMetadata, ProjectNavigation, StagedProjectBundleImport } from "./layers/browser/schemas.js";
 export { mountProjectLibraryUi } from "./layers/browser/schemas.js";
 export type { ProjectLibraryUi } from "./layers/browser/schemas.js";
+export {openIndexedDbProjectRepository} from "../../data-layer-durable-project-repository.js";
+export {installDurableRepositoryStartupFailure,mountDurableProjectRepositoryUi} from "../../data-layer-durable-project-repository-ui.js";
+export {openDurableProjectRuntime} from "../../data-layer-durable-project-runtime.js";

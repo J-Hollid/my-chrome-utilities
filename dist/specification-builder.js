@@ -1,4 +1,6 @@
-import { addProjectEntity, adoptSavedSchema, buildReleaseReview, commitStagedProjectImport, commitSavedSchemaSynchronization, confirmCanonicalMigration, createSpecificationProject, createProjectSchemaDraft, exportDocumentation, exportSpecificationProjectState, redoProjectTransaction, restoreReleaseAsDraft, saveProjectAssignment, searchProjectAssignments, stageProjectImport, stageSavedSchemaSynchronization, transactProject, undoProjectTransaction, } from "./data-layer-specification-project.js";
+import { addProjectEntity, adoptSavedSchema, buildReleaseReview, commitStagedProjectImport, commitSavedSchemaSynchronization, confirmCanonicalMigration, createProjectSchemaDraft, exportDocumentation, exportSpecificationProjectState, redoProjectTransaction, restoreReleaseAsDraft, saveProjectAssignment, searchProjectAssignments, stageProjectImport, stageSavedSchemaSynchronization, transactProject, undoProjectTransaction, } from "./data-layer-specification-project.js";
+import { openDurableProjectRuntime } from "./data-layer-durable-project-runtime.js";
+import { durableProjectRouteForWorkspace } from "./data-layer-durable-project-repository.js";
 import { applyStagedBulkAction, commitStagedBulkRequirements, stageBulkRequirements } from "./data-layer-specification-bulk.js";
 import { buildEffectiveRequirementCoverage, publishCompiledRelease as publishProjectRelease, runProductionFixture, specificationPreflight } from "./data-layer-specification-assurance.js";
 import { compileSpecificationProject, createCanonicalProjectEnvelope } from "./data-layer-specification-engine.js";
@@ -8,8 +10,8 @@ import { applyFlowPageGroupLaneSelection, flowPageGroupLaneIds, installFlowGraph
 import { addPageGroupMembership, confirmPageGroupMembershipMigration, inspectPageGroupMembershipRemoval, movePageGroupMembership, orderedPageGroupIds, pageGroupMembers, removePageGroupMembership, requiresPageGroupMembershipMigration, stagePageGroupMembershipMigration } from "./data-layer-page-group-membership.js";
 import { restoreSchemaLibrary, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
 const projectPreflight = (current, revision) => specificationPreflight({ ...createCanonicalProjectEnvelope(current.project, current.draft?.id ?? "release"), revision });
-import { CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, commitCanonicalProjectState, inspectCanonicalProjectConflict, resolveCanonicalProjectConflict, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, serializeCanonicalProjectState, subscribeCanonicalProjectChanges, } from "./data-layer-specification-repository.js";
-import { PROJECT_LIBRARY_STORAGE_KEY, activateProject, activeProjectContextChange, migrateSingletonProject, projectLibrary, projectRecordNeedsSynchronization, recordProjectNavigation, replaceActiveProjectState, resolveProjectNavigation, restoreProjectLibrary, saveProjectState, serializeProjectLibrary } from "./data-layer-project-library.js";
+import { CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, commitCanonicalProjectState, inspectCanonicalProjectConflict, resolveCanonicalProjectConflict, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, } from "./data-layer-specification-repository.js";
+import { PROJECT_LIBRARY_STORAGE_KEY, activateProject, activeProjectContextChange, createProjectInLibrary, migrateSingletonProject, projectLibrary, recordProjectNavigation, replaceActiveProjectState, resolveProjectNavigation, restoreProjectLibrary, serializeProjectLibrary } from "./data-layer-project-library.js";
 import { effectivePropertySummary, installLayeredSchemaUi } from "./data-layer-layered-schema-ui.js";
 import { compileLayeredSchema } from "./data-layer-layered-schema.js";
 import { layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
@@ -19,7 +21,9 @@ import { installFlowDocumentationExportUi } from "./data-layer-flow-table-docume
 import { applyCanonicalCommand, canonicalCommandOutcome, canonicalRequirements, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
 import { createProjectCollectionEntity, hasSavedSchemaAdoptionActions, inspectProjectEntityRemoval, projectCollectionCreationFields, projectCollectionCreationRoute, projectCollectionDefinitions, projectEntityWorkspaceRoute, projectInspectorTogglePresentation, removeProjectCollectionEntity } from "./data-layer-project-entity-lifecycle.js";
-const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, NAVIGATION_KEY = "my-chrome-utilities.specification-project-navigation.v1", START_PATH_KEY = "my-chrome-utilities.specification-project-start.v1", routeParameters = new URLSearchParams(location.search);
+const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, NAVIGATION_KEY = "my-chrome-utilities.specification-project-navigation.v1", START_PATH_KEY = "my-chrome-utilities.specification-project-start.v1", routeParameters = new URLSearchParams(location.search), startupProjectId = routeParameters.get("project") ?? undefined, startupKind = routeParameters.get("kind") ?? undefined, startupEntityId = routeParameters.get("entity") ?? undefined, startupRoute = startupKind ? durableProjectRouteForWorkspace(startupKind, startupEntityId) : undefined;
+const durableProjectRuntime = await openDurableProjectRuntime(globalThis.localStorage, globalThis.indexedDB, { ...(startupProjectId ? { projectId: startupProjectId } : {}), ...(startupRoute ? { route: startupRoute } : {}) }).catch((error) => { const status = document.querySelector("#project-state"); if (status)
+    status.textContent = `Durable project storage unavailable: ${error instanceof Error ? error.message : String(error)}`; document.querySelectorAll("button,input,select,textarea").forEach((control) => { control.disabled = true; }); return new Promise(() => { }); }), projectStorage = durableProjectRuntime.storage;
 const q = (selector) => { const element = document.querySelector(selector); if (!element)
     throw new Error(`Missing ${selector}`); return element; };
 const projectInspector = q("#project-inspector"), projectInspectorToggle = q("#toggle-project-inspector"), projectWorkspace = q("#project-workspace");
@@ -39,11 +43,11 @@ q("#project-schema-id").closest("label").hidden = true;
 const id = (kind) => `${kind}:${crypto.randomUUID()}`;
 const labels = { profiles: "Shared Profiles", pages: "Pages", pageGroups: "Page Groups", events: "Events", applicabilitySets: "Applicability", flows: "Flows", fixtures: "Fixtures", schemaDrafts: "Schemas", assignments: "Assignments" };
 let state, lastCommittedState, library = projectLibrary();
-let canonicalRevision = 0, pendingConflict, stagedBulk, selectedKind = "profiles", selectedId, projectOverview = routeParameters.get("route") === "overview", creationKind, removalReview, lifecycleStatus = "", removedFocus, stagedImport, lastInvokingControl, releasePreflight, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi;
+let canonicalRevision = 0, publishedRevision = 0, pendingConflict, stagedBulk, selectedKind = "profiles", selectedId, projectOverview = routeParameters.get("route") === "overview", creationKind, removalReview, lifecycleStatus = "", removedFocus, stagedImport, lastInvokingControl, releasePreflight, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi;
 let pageGroupMembershipStatus = "";
 let pendingPageGroupMembershipReorder;
 let canonicalCommandFeedback;
-const savedSchemas = () => restoreSchemaLibrary(localStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY)).filter(({ published }) => published).map((schema) => structuredClone(schema));
+const savedSchemas = () => restoreSchemaLibrary(projectStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY)).filter(({ published }) => published).map((schema) => structuredClone(schema));
 function renderCanonicalEntityEditor(host, kind, entity) {
     if (!state)
         return;
@@ -318,15 +322,15 @@ function renderPageGroupMembershipEditor(host, page) {
     section.append(heading, guidance, add, menu, picker, stack, effective, evaluation, impact);
     host.append(section);
 }
-function writeProjectState(next) { const result = commitCanonicalProjectState(localStorage, next, { expectedRevision: canonicalRevision, pendingLabel: next.history.undo.at(-1)?.label ?? "Project edit", ...(lastCommittedState ? { base: lastCommittedState } : {}) }); if (result.status === "conflict") {
+function writeProjectState(next) { const result = commitCanonicalProjectState(projectStorage, next, { expectedRevision: canonicalRevision, pendingLabel: next.history.undo.at(-1)?.label ?? "Project edit", ...(lastCommittedState ? { base: lastCommittedState } : {}) }); if (result.status === "conflict") {
     pendingConflict = result;
     state = result.current;
     lastCommittedState = structuredClone(result.current);
     canonicalRevision = result.revision;
-    throw new Error(`Revision conflict: current ${result.revision}; pending ${result.pendingLabel}`);
+    throw new Error(`A newer Saved Draft conflicts with pending ${result.pendingLabel}.`);
 } canonicalRevision = result.revision; pendingConflict = undefined; releasePreflight = undefined; lastCommittedState = structuredClone(next); if (library.activeProjectId) {
     library = replaceActiveProjectState(library, next, result.revision);
-    localStorage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library));
+    projectStorage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library));
 } }
 function showConflictReview() { if (!pendingConflict)
     return; const inspection = inspectCanonicalProjectConflict(pendingConflict), dialog = q("#project-conflict-review"), fields = q("#project-conflict-fields"); q("#project-conflict-summary").textContent = `${pendingConflict.pendingLabel}: ${inspection.pendingFields.length} pending fields, ${inspection.currentFields.length} newer fields, ${inspection.conflictingFields.length} same-field conflicts.`; fields.querySelectorAll("label").forEach((label) => label.remove()); for (const field of inspection.conflictingFields) {
@@ -339,37 +343,37 @@ function showConflictReview() { if (!pendingConflict)
     dialog.showModal(); dialog.querySelector("h2")?.focus(); }
 function persist(next) { state = next; try {
     writeProjectState(next);
-    q("#project-state").textContent = `Saved · revision ${canonicalRevision}`;
+    q("#project-state").textContent = `Saved Draft · Published revision ${publishedRevision}`;
     q("#retry-save").hidden = true;
 }
 catch (error) {
     if (!pendingConflict)
         state = next.draft ? { ...next, draft: { ...next.draft, status: "Save failed" } } : next;
-    q("#project-state").textContent = pendingConflict ? `Conflict at revision ${canonicalRevision}; pending ${pendingConflict.pendingLabel}` : "Save failed";
+    q("#project-state").textContent = pendingConflict ? `Draft conflict; pending ${pendingConflict.pendingLabel}` : "Save failed";
     q("#retry-save").hidden = false;
     if (pendingConflict)
         showConflictReview();
 } render(); renderAssignments(); }
-function restore() { const stored = localStorage.getItem(STORAGE_KEY); let singleton, revision = 0; if (stored)
+function restore() { const stored = projectStorage.getItem(STORAGE_KEY); let singleton, revision = 0; if (stored)
     try {
         const envelope = restoreCanonicalProjectEnvelope(stored);
         singleton = restoreCanonicalProjectState(stored);
         revision = envelope?.revision ?? 0;
     }
     catch {
-        localStorage.removeItem(STORAGE_KEY);
+        projectStorage.removeItem(STORAGE_KEY);
     } const rawNavigation = localStorage.getItem(NAVIGATION_KEY); let legacyNavigation; if (rawNavigation)
     try {
         legacyNavigation = JSON.parse(rawNavigation);
     }
     catch {
         localStorage.removeItem(NAVIGATION_KEY);
-    } library = migrateSingletonProject(restoreProjectLibrary(localStorage.getItem(PROJECT_LIBRARY_STORAGE_KEY)), singleton ? { state: singleton, revision, ...(legacyNavigation ? { navigation: legacyNavigation } : {}) } : undefined); localStorage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library)); const active = library.activeProjectId ? library.projects[library.activeProjectId] : undefined; state = active ? structuredClone(active.state) : undefined; lastCommittedState = state ? structuredClone(state) : undefined; canonicalRevision = active?.revision ?? 0; const navigation = library.activeProjectId ? resolveProjectNavigation(library, library.activeProjectId) : undefined; if (navigation) {
+    } library = migrateSingletonProject(restoreProjectLibrary(projectStorage.getItem(PROJECT_LIBRARY_STORAGE_KEY)), singleton ? { state: singleton, revision, ...(legacyNavigation ? { navigation: legacyNavigation } : {}) } : undefined); projectStorage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library)); const active = library.activeProjectId ? library.projects[library.activeProjectId] : undefined; state = active ? structuredClone(active.state) : undefined; lastCommittedState = state ? structuredClone(state) : undefined; canonicalRevision = active?.revision ?? 0; publishedRevision = active?.publishedRevision ?? Math.max(0, ...(active?.state.project.releases.map(({ revision }) => revision) ?? [0])); const navigation = library.activeProjectId ? resolveProjectNavigation(library, library.activeProjectId) : undefined; if (navigation) {
     selectedKind = navigation.kind ?? selectedKind;
     selectedId = navigation.id;
 } }
 function persistNavigation() { if (!state || library.activeProjectId !== state.project.id)
-    return; const navigation = { kind: selectedKind, ...(selectedId ? { id: selectedId } : {}) }; library = recordProjectNavigation(library, state.project.id, navigation); localStorage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library)); localStorage.setItem(NAVIGATION_KEY, JSON.stringify({ projectId: state.project.id, ...navigation })); }
+    return; const navigation = { kind: selectedKind, ...(selectedId ? { id: selectedId } : {}) }; library = recordProjectNavigation(library, state.project.id, navigation); projectStorage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library)); localStorage.setItem(NAVIGATION_KEY, JSON.stringify({ projectId: state.project.id, ...navigation })); }
 function entitySearchText(value) { return JSON.stringify(value).toLowerCase(); }
 function entitiesForKind(kind) { if (!state)
     return []; return kind === "assignments" ? searchProjectAssignments(state.project, "").rows : state.project.collections[kind]; }
@@ -615,7 +619,7 @@ function renderCreationPage(content, kind) {
         creationKind = undefined;
         selectedKind = kind;
         selectedId = created.id;
-        lifecycleStatus = `Created ${definition.singular} ${created.name} in Draft revision ${canonicalRevision + 1}.`;
+        lifecycleStatus = `Created ${definition.singular} ${created.name} in the Saved Draft.`;
         persist(next);
         persistNavigation();
         replaceProjectRoute(kind, created.id);
@@ -669,7 +673,7 @@ function renderWorkspace() {
     if (projectOverview) {
         const heading = document.createElement("h1"), identity = document.createElement("p"), metadata = document.createElement("dl"), openSchemas = document.createElement("button"), details = [["Purpose", state.project.description], ["Website", state.project.site], ["Owner", String(state.project.owner ?? "")], ["Notes", String(state.project.notes ?? "")]];
         heading.textContent = "Project overview";
-        identity.textContent = `${state.project.name} · stable identity ${state.project.id} · Draft revision ${canonicalRevision}`;
+        identity.textContent = `${state.project.name} · stable identity ${state.project.id} · Saved Draft · Published revision ${publishedRevision}`;
         for (const [label, value] of details) {
             const term = document.createElement("dt"), description = document.createElement("dd");
             term.textContent = label;
@@ -843,8 +847,12 @@ function render() { const empty = q("#project-empty"), workspace = q("#project-w
     document.title = "Specification Studio · No active project";
     q("#project-context").textContent = "No active project";
     return;
-} document.title = `Specification Studio · ${state.project.name} · ${state.project.id}`; q("#project-context").textContent = `${state.project.name} · ${state.project.id} · ${state.project.environments[0]} · ${state.draft ? `Preview Draft` : `Live ${state.project.currentRelease ? "published release" : "not published"}`}`; q("#project-state").textContent = pendingConflict ? `Conflict at revision ${canonicalRevision}; pending ${pendingConflict.pendingLabel}` : `${state.draft?.status ?? "Published"} · revision ${canonicalRevision}`; q("#tree-project-name").textContent = state.project.name; q("#undo-project").disabled = !state.history.undo.length; q("#redo-project").disabled = !state.history.redo.length; q("#flow-step-editor").hidden = selectedKind !== "flows" || !selectedId || projectOverview; q("#schema-draft-editor").hidden = true; q("#assignment-editor").hidden = selectedKind !== "assignments" || projectOverview; q("#bulk-property-editor").hidden = true; renderTree(); renderWorkspace(); layeredSchemaUi?.render(); renderReferenceSelectors(); flowGraphBuilder?.render(); flowDocumentationExportUi?.render(); executableFlowBuilder?.render(); }
-q("#create-project-form").addEventListener("submit", (event) => { event.preventDefault(); const next = createSpecificationProject({ name: q("#project-name").value.trim(), description: q("#project-description").value, site: q("#project-site").value.trim(), environments: ["Production", "Staging"], id }), at = new Date().toISOString(); library = projectLibrary([{ state: next, revision: 0, createdAt: at, lastModifiedAt: at }], next.project.id); localStorage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library)); persist(next); q("#workspace-pane").focus(); });
+} document.title = `Specification Studio · ${state.project.name} · ${state.project.id}`; q("#project-context").textContent = `${state.project.name} · ${state.project.id} · ${state.project.environments[0]} · ${state.draft ? `Preview Draft` : `Published revision ${publishedRevision}`}`; q("#project-state").textContent = pendingConflict ? `Draft conflict; pending ${pendingConflict.pendingLabel}` : state.draft ? `Saved Draft · Published revision ${publishedRevision}` : `Published revision ${publishedRevision}`; q("#tree-project-name").textContent = state.project.name; q("#undo-project").disabled = !state.history.undo.length; q("#redo-project").disabled = !state.history.redo.length; q("#flow-step-editor").hidden = selectedKind !== "flows" || !selectedId || projectOverview; q("#schema-draft-editor").hidden = true; q("#assignment-editor").hidden = selectedKind !== "assignments" || projectOverview; q("#bulk-property-editor").hidden = true; renderTree(); renderWorkspace(); layeredSchemaUi?.render(); renderReferenceSelectors(); flowGraphBuilder?.render(); flowDocumentationExportUi?.render(); executableFlowBuilder?.render(); }
+q("#create-project-form").addEventListener("submit", (event) => { event.preventDefault(); if (durableProjectRuntime.failedSave()) {
+    q("#project-state").textContent = "A failed durable Draft blocks creating and switching active project context until Retry succeeds.";
+    return;
+} library = createProjectInLibrary(library, { name: q("#project-name").value.trim(), purpose: q("#project-description").value, website: q("#project-site").value.trim(), owner: "", notes: "" }, { id }); const activeId = library.activeProjectId; if (!activeId)
+    throw new Error("The created project did not become active."); const next = library.projects[activeId].state; projectStorage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library)); persist(next); q("#workspace-pane").focus(); });
 document.querySelectorAll("[data-start-path]").forEach((button) => button.addEventListener("click", () => { const path = button.dataset.startPath ?? "unknown", messages = { template: "Template project preview staged; confirm to create its complete graph.", import: "Full project migration review is ready for a selected project file.", json: "JSON or JSON Schema requirements staging grid is ready.", spreadsheet: "Spreadsheet requirements staging grid is ready.", adopt: "Saved-schema adoption review is ready with source lineage." }, message = messages[path] ?? "Starting path staged."; localStorage.setItem(START_PATH_KEY, JSON.stringify({ path, message })); q("#start-path-status").textContent = message; }));
 q("#add-entity-form").addEventListener("submit", (event) => { event.preventDefault(); if (!state)
     return; const kind = q("#entity-kind").value, name = q("#entity-name").value.trim(); if (!name)
@@ -980,25 +988,60 @@ else
 q("#close-documentation").addEventListener("click", () => { documentationDialog.close(); lastInvokingControl?.focus(); });
 const releaseDialog = q("#release-review");
 q("#publish-project").addEventListener("click", (event) => { if (!state)
-    return; lastInvokingControl = event.currentTarget; releasePreflight = projectPreflight(state, canonicalRevision); const preflight = releasePreflight, prior = state.project.releases.at(-1), emptyProject = { ...state.project, collections: Object.fromEntries(Object.keys(state.project.collections).map((kind) => [kind, []])), releases: [] }, review = buildReleaseReview(prior ? { ...state.project, collections: prior.snapshot } : emptyProject, state.project), diff = q("#release-diff"); diff.replaceChildren(...review.sections.map((section) => { const item = document.createElement("li"); item.textContent = `${section.kind}: ${section.entityKind}/${section.before ?? section.after}`; return item; })); q("#release-summary").textContent = preflight.blockers.length ? `${preflight.contentIdentity}: publication blocked by ${preflight.blockers.length} issues — ${preflight.blockers.map(({ message }) => message).join(" ")}` : `${preflight.contentIdentity}: Release ${state.project.releases.length + 1} has ${review.sections.length} structured changes and one reviewed executable plan.`; q("#confirm-release").disabled = Boolean(preflight.blockers.length || !review.sections.length); q("#confirm-release-close").disabled = Boolean(preflight.blockers.length || !review.sections.length); q("#restore-release").disabled = !prior; releaseDialog.showModal(); releaseDialog.querySelector("h2")?.focus(); });
-q("#cancel-release").addEventListener("click", () => { releaseDialog.close(); lastInvokingControl?.focus(); });
-const confirmRelease = (close) => { if (!state || !releasePreflight)
-    return; let next; try {
-    next = publishProjectRelease(state, { id, preflight: releasePreflight, write: (project) => writeProjectState({ project, history: { undo: [], redo: [] } }) });
+    return; lastInvokingControl = event.currentTarget; const projectId = state.project.id, releaseSummary = q("#release-summary"); q("#project-state").textContent = `Preparing the current Saved Draft for publication · Published revision ${publishedRevision}`; releaseSummary.textContent = "Preparing the current Saved Draft for publication…"; q("#confirm-release").disabled = true; q("#confirm-release-close").disabled = true; if (!releaseDialog.open)
+    releaseDialog.showModal(); releaseDialog.querySelector("h2")?.focus(); void (async () => { try {
+    await durableProjectRuntime.settled();
+    await durableProjectRuntime.refreshProject(projectId);
+    const durable = await durableProjectRuntime.repository.loadProject(projectId);
+    state = structuredClone(durable.state);
+    lastCommittedState = structuredClone(state);
+    canonicalRevision = durable.draftSequence;
+    publishedRevision = durable.publishedRevision;
+    releasePreflight = projectPreflight(state, state.project.releases.length + 1);
+    const preflight = releasePreflight, prior = state.project.releases.at(-1), emptyProject = { ...state.project, collections: Object.fromEntries(Object.keys(state.project.collections).map((kind) => [kind, []])), releases: [] }, review = buildReleaseReview(prior ? { ...state.project, collections: prior.snapshot } : emptyProject, state.project), diff = q("#release-diff");
+    diff.replaceChildren(...review.sections.map((section) => { const item = document.createElement("li"); item.textContent = `${section.kind}: ${section.entityKind}/${section.before ?? section.after}`; return item; }));
+    releaseSummary.textContent = preflight.blockers.length ? `${preflight.contentIdentity}: publication blocked by ${preflight.blockers.length} issues — ${preflight.blockers.map(({ message }) => message).join(" ")}` : `${preflight.contentIdentity}: Release ${state.project.releases.length + 1} has ${review.sections.length} structured changes and one reviewed executable plan.`;
+    q("#confirm-release").disabled = Boolean(preflight.blockers.length || !review.sections.length);
+    q("#confirm-release-close").disabled = Boolean(preflight.blockers.length || !review.sections.length);
+    q("#restore-release").disabled = !prior;
 }
 catch (error) {
-    q("#project-state").textContent = "Save failed";
-    q("#release-summary").textContent = error instanceof Error ? error.message : "Publication failed; the prior canonical project bytes remain authoritative.";
-    q("#retry-save").hidden = false;
-    return;
-} state = next; releaseDialog.close(); render(); if (close)
-    q("#project-workspace").hidden = true;
-else {
-    q("#release-summary").textContent = `Release ${next.project.releases.length} published from ${next.project.releases.at(-1)?.preflightContentIdentity}. Undo by restoring this release as a new Draft.`;
-    q("#workspace-pane").focus();
+    q("#project-state").textContent = `Publication review failed; the Saved Draft remains available · Published revision ${publishedRevision}`;
+    releaseSummary.textContent = error instanceof Error ? error.message : "Publication review could not load the current Saved Draft.";
+    lastInvokingControl?.focus();
+} })(); });
+q("#cancel-release").addEventListener("click", () => { releaseDialog.close(); lastInvokingControl?.focus(); });
+const confirmRelease = async (close) => { if (!state || !releasePreflight)
+    return; const confirm = q(close ? "#confirm-release-close" : "#confirm-release"), other = q(close ? "#confirm-release" : "#confirm-release-close"); confirm.disabled = other.disabled = true; try {
+    const next = publishProjectRelease(state, { id, preflight: releasePreflight, write: (project) => writeProjectState({ project, history: { undo: [], redo: [] } }) }), publicationId = next.project.releases.at(-1)?.id;
+    if (!publicationId)
+        throw new Error("Publication did not create a reviewed release identity.");
+    await durableProjectRuntime.settled();
+    const durable = await durableProjectRuntime.repository.loadProject(next.project.id), published = await durableProjectRuntime.repository.publish(next.project.id, durable.draftToken, { publicationId });
+    await durableProjectRuntime.refreshProject(next.project.id);
+    await durableProjectRuntime.settled();
+    library = restoreProjectLibrary(projectStorage.getItem(PROJECT_LIBRARY_STORAGE_KEY)) ?? library;
+    const active = library.projects[next.project.id];
+    state = active ? structuredClone(active.state) : structuredClone(next);
+    lastCommittedState = structuredClone(state);
+    canonicalRevision = active?.revision ?? durable.draftSequence + 1;
+    publishedRevision = published.publishedRevision;
+    releaseDialog.close();
+    render();
+    if (close)
+        q("#project-workspace").hidden = true;
+    else {
+        q("#project-state").textContent = `Saved Draft · Published revision ${publishedRevision}`;
+        q("#workspace-pane").focus();
+    }
+}
+catch (error) {
+    q("#project-state").textContent = `Publication failed; the Saved Draft remains available · Published revision ${publishedRevision}`;
+    q("#release-summary").textContent = error instanceof Error ? error.message : "Publication failed; the prior Published revision remains authoritative.";
+    confirm.disabled = other.disabled = false;
 } };
-q("#confirm-release").addEventListener("click", () => confirmRelease(false));
-q("#confirm-release-close").addEventListener("click", () => { confirmRelease(true); lastInvokingControl?.focus(); });
+q("#confirm-release").addEventListener("click", () => void confirmRelease(false));
+q("#confirm-release-close").addEventListener("click", () => void confirmRelease(true).then(() => lastInvokingControl?.focus()));
 q("#restore-release").addEventListener("click", () => { if (!state)
     return; const release = state.project.releases.at(-1); if (!release)
     return; persist(restoreReleaseAsDraft(state, release.id, id)); releaseDialog.close(); q("#workspace-pane").focus(); });
@@ -1053,7 +1096,7 @@ flowDocumentationExportUi = installFlowDocumentationExportUi({ context: flowBuil
 executableFlowBuilder = installExecutableFlowBuilder({ context: flowBuilderContext, persist, id });
 layeredSchemaUi = installLayeredSchemaUi({ context: () => ({ ...state ? { state } : {}, kind: selectedKind, ...(selectedId ? { entityId: selectedId } : {}) }), persist });
 const synchronizeActiveProjectContext = (serialized) => { const change = activeProjectContextChange(serialized, state?.project.id, canonicalRevision); if (!change.changed)
-    return; library = change.library; pendingConflict = undefined; const active = change.active; state = active ? structuredClone(active.state) : undefined; lastCommittedState = state ? structuredClone(state) : undefined; canonicalRevision = active?.revision ?? 0; selectedKind = "profiles"; selectedId = undefined; creationKind = undefined; projectOverview = Boolean(active); if (active) {
+    return; library = change.library; pendingConflict = undefined; const active = change.active; state = active ? structuredClone(active.state) : undefined; lastCommittedState = state ? structuredClone(state) : undefined; canonicalRevision = active?.revision ?? 0; publishedRevision = active?.publishedRevision ?? Math.max(0, ...(active?.state.project.releases.map(({ revision }) => revision) ?? [0])); selectedKind = "profiles"; selectedId = undefined; creationKind = undefined; projectOverview = Boolean(active); if (active) {
     const navigation = resolveProjectNavigation(library, active.state.project.id);
     if (navigation) {
         projectOverview = false;
@@ -1075,14 +1118,7 @@ else {
     for (const key of ["project", "route", "kind", "entity"])
         url.searchParams.delete(key);
     history.replaceState(null, "", url);
-} render(); renderAssignments(); q("#project-state").textContent = active ? `Active project synchronized: ${active.state.project.name} · revision ${active.revision}` : "No active project"; };
-window.addEventListener("storage", (event) => { if (event.key !== PROJECT_LIBRARY_STORAGE_KEY || !event.newValue)
-    return; try {
-    synchronizeActiveProjectContext(event.newValue);
-}
-catch (error) {
-    q("#project-state").textContent = error instanceof Error ? error.message : String(error);
-} });
+} render(); renderAssignments(); q("#project-state").textContent = active ? `Active project synchronized: ${active.state.project.name} · Saved Draft · Published revision ${publishedRevision}` : "No active project"; };
 restore();
 if (!state) {
     const stagedStart = localStorage.getItem(START_PATH_KEY);
@@ -1092,23 +1128,25 @@ if (!state) {
         }
         catch { /* ignore invalid start-path recovery */ }
 }
-subscribeCanonicalProjectChanges(window, ({ revision, state: next }) => {
+durableProjectRuntime.subscribe(({ library: incoming, active }) => {
     if (pendingConflict)
         return;
-    library = restoreProjectLibrary(localStorage.getItem(PROJECT_LIBRARY_STORAGE_KEY)) ?? library;
-    const activeRecord = library.activeProjectId === next.project.id ? library.projects[next.project.id] : undefined;
-    if (activeRecord && projectRecordNeedsSynchronization(activeRecord, next, revision)) {
-        library = saveProjectState(library, next.project.id, next, revision);
-        localStorage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library));
+    if (active?.state.project.id !== state?.project.id) {
+        synchronizeActiveProjectContext(serializeProjectLibrary(incoming));
+        return;
     }
-    const windowHistory = state?.project.id === next.project.id ? structuredClone(state.history) : structuredClone(next.history);
-    state = { ...structuredClone(next), history: windowHistory };
+    library = structuredClone(incoming);
+    if (!active)
+        return;
+    const windowHistory = structuredClone(state?.history ?? active.state.history);
+    state = { ...structuredClone(active.state), history: windowHistory };
     lastCommittedState = structuredClone(state);
-    canonicalRevision = revision;
+    canonicalRevision = active.draftSequence;
+    publishedRevision = active.publishedRevision;
     render();
     renderAssignments();
-    q("#project-state").textContent = `Updated from canonical revision ${revision}`;
-}, () => state ? { projectId: state.project.id, revision: canonicalRevision } : undefined);
+    q("#project-state").textContent = `Updated to the newer Saved Draft · Published revision ${publishedRevision}`;
+});
 render();
 renderAssignments();
 const applyRequestedRoute = () => { const deepKind = routeParameters.get("kind"), deepId = routeParameters.get("entity"), requestedAction = routeParameters.get("route"); if (deepKind && deepKind in labels) {
@@ -1133,23 +1171,7 @@ if (requestedProject && requestedProject !== library.activeProjectId) {
     confirm.textContent = "Confirm project context and continue";
     cancel.textContent = "Cancel";
     confirm.disabled = !target;
-    confirm.addEventListener("click", () => { try {
-        library = activateProject(library, requestedProject);
-        localStorage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library));
-        const record = library.projects[requestedProject];
-        localStorage.setItem(STORAGE_KEY, serializeCanonicalProjectState(record.state, record.revision));
-        state = structuredClone(record.state);
-        lastCommittedState = structuredClone(record.state);
-        canonicalRevision = record.revision;
-        projectOverview = routeParameters.get("route") === "overview";
-        dialog.close();
-        dialog.remove();
-        render();
-        applyRequestedRoute();
-    }
-    catch (error) {
-        summary.textContent = error instanceof Error ? error.message : String(error);
-    } });
+    confirm.addEventListener("click", () => { const prepare = startupRoute ? durableProjectRuntime.ensureProjectRoute(requestedProject, startupRoute).then(() => { }) : durableProjectRuntime.ensureProject(requestedProject); void prepare.then(() => { library = restoreProjectLibrary(projectStorage.getItem(PROJECT_LIBRARY_STORAGE_KEY)) ?? library; library = activateProject(library, requestedProject); projectStorage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library)); return durableProjectRuntime.settled(); }).then(() => { const record = (restoreProjectLibrary(projectStorage.getItem(PROJECT_LIBRARY_STORAGE_KEY)) ?? library).projects[requestedProject]; state = structuredClone(record.state); lastCommittedState = structuredClone(record.state); canonicalRevision = record.revision; publishedRevision = record.publishedRevision ?? Math.max(0, ...record.state.project.releases.map(({ revision }) => revision)); projectOverview = routeParameters.get("route") === "overview"; dialog.close(); dialog.remove(); render(); applyRequestedRoute(); }).catch((error) => { summary.textContent = error instanceof Error ? error.message : String(error); }); });
     cancel.addEventListener("click", () => { dialog.close(); dialog.remove(); });
     dialog.append(heading, summary, confirm, cancel);
     document.body.append(dialog);

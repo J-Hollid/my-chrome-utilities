@@ -21,7 +21,7 @@
       "description": "Open side panel hotkeys"
     }
   },
-  "permissions": ["sidePanel", "activeTab", "scripting"],
+  "permissions": ["sidePanel", "activeTab", "scripting", "storage", "unlimitedStorage"],
   "optional_permissions": ["tabs"],
   "optional_host_permissions": ["http://*/*", "https://*/*"]
 }

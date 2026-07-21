@@ -31,18 +31,33 @@
   },
   {
     "id": "durable_project_repository",
-    "source": [],
+    "source": [
+      "src/data-layer-durable-project-repository.ts",
+      "src/data-layer-durable-project-repository-ui.ts",
+      "src/data-layer-durable-project-runtime.ts",
+      "src/utilities/data-layer/saved-schema-feed.ts"
+    ],
     "dependencies": [
       "project_management"
     ],
-    "unit": [],
-    "property": [],
+    "unit": [
+      "test/data-layer-durable-project-repository-test.mjs",
+      "test/data-layer-durable-project-runtime-test.mjs",
+      "test/data-layer-saved-schema-feed-test.mjs"
+    ],
+    "property": [
+      "test/data-layer-durable-project-repository-property-test.mjs"
+    ],
     "features": [
       "features/data-layer-durable-project-repository.feature",
       "features/data-layer-durable-project-repository-runtime.feature"
     ],
-    "handlers": [],
-    "browserAdapters": []
+    "handlers": [
+      "acceptance/src/acceptance/steps/durable_project_repository.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/durable-project-repository.mjs"
+    ]
   },
   {
     "id": "command-palette",

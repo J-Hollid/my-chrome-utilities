@@ -1,5 +1,7 @@
+import { openIndexedDbProjectRepository } from "./utilities/data-layer/schemas.js";
 const OPEN_SIDE_PANEL_COMMAND = "open-side-panel";
 const FOCUS_APP_HOTKEYS_MESSAGE = { type: "focus-app-hotkeys" };
+void openIndexedDbProjectRepository().catch((error) => console.error("Durable project repository unavailable", error));
 function focusSidePanelHotkeys() {
     void chrome.runtime.sendMessage(FOCUS_APP_HOTKEYS_MESSAGE).catch(() => { });
 }
@@ -29,5 +31,4 @@ chrome.commands.onCommand.addListener((command, tab) => {
         }
     }
 });
-export {};
 //# sourceMappingURL=background.js.map

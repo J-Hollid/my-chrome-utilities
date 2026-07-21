@@ -721,6 +721,29 @@
     "module": "schemas",
     "layer": "application"
   },
+  "src/data-layer-durable-project-repository.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-specification-project.ts"
+    ]
+  },
+  "src/data-layer-durable-project-repository-ui.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-durable-project-repository.ts"
+    ]
+  },
+  "src/data-layer-durable-project-runtime.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-durable-project-repository.ts",
+      "src/data-layer-project-library.ts",
+      "src/data-layer-specification-repository.ts"
+    ]
+  },
   "src/data-layer-specification-runtime.ts": {
     "module": "schemas",
     "layer": "browser"

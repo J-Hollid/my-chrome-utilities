@@ -1,0 +1,11 @@
+import assert from "node:assert/strict";
+import {reconcileSavedSchemaFeed} from "../dist/utilities/data-layer/saved-schema-feed.js";
+
+const clean=(schema)=>{const{workingDraft:_workingDraft,...projection}=structuredClone(schema);return projection;},editable=(schema)=>{const{version:_version,published:_published,revisionHistory:_revisionHistory,workingDraft:_workingDraft,...projection}=structuredClone(schema);return projection;},baseline={id:"schema:one",name:"One",version:1,published:true,document:{type:"object"}},updated={...baseline,name:"One remote",version:2},dirty={...clean(baseline),name:"One local"},newDraft={id:"schema:new",name:"Unsaved",version:1,document:{type:"object"}};
+assert.equal(reconcileSavedSchemaFeed({draft:newDraft,incoming:updated,cleanProjection:clean}).mode,"unknown","an unrelated feed never closes a new unknown schema");
+assert.deepEqual(reconcileSavedSchemaFeed({baseline,draft:clean(baseline),incoming:updated,cleanProjection:clean,editableProjection:editable}),{mode:"install",draft:clean(updated),baseline:updated});
+assert.equal(reconcileSavedSchemaFeed({baseline,draft:clean(baseline),cleanProjection:clean}).mode,"close");
+const dirtyUpdate=reconcileSavedSchemaFeed({baseline,draft:dirty,incoming:updated,cleanProjection:clean});assert.equal(dirtyUpdate.mode,"conflict");assert.deepEqual(dirtyUpdate.draft,dirty);
+const dirtyDelete=reconcileSavedSchemaFeed({baseline,draft:dirty,cleanProjection:clean});assert.equal(dirtyDelete.mode,"conflict");assert.deepEqual(dirtyDelete.draft,dirty);
+const ownSave={...baseline,version:2,workingDraft:{baseVersion:2,sourceVersion:2,document:{type:"object"},assignments:[],pendingChanges:["Saved local edit acknowledgement"]}},ownDraft={...clean(ownSave),name:"One"},acknowledged=reconcileSavedSchemaFeed({baseline,draft:ownDraft,incoming:ownSave,cleanProjection:clean,editableProjection:editable});assert.equal(acknowledged.mode,"install","an editor's own durable feed acknowledges the editable bytes despite transient working-draft metadata");assert.deepEqual(acknowledged.baseline,ownSave,"own-save acknowledgement advances the durable baseline without a conflict");
+console.log("saved-schema feed reconciliation tests passed");
