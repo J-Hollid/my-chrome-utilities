@@ -185,10 +185,14 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
     projectionChanged = (force = false) => { const active = currentLibrary.activeProjectId ? loaded.get(currentLibrary.activeProjectId) : undefined, signature = JSON.stringify([currentLibrary.activeProjectId, active?.draftToken, serializeProjectLibrary(currentLibrary), memory.get(LEGACY_PROJECT_KEYS.schemas)]); if (!force && signature === lastProjectionSignature)
         return; lastProjectionSignature = signature; const projection = { library: structuredClone(currentLibrary), ...(active ? { active: structuredClone(active) } : {}) }; notify("durable-project-projection-changed", projection); for (const listener of listeners)
         listener(structuredClone(projection)); };
-    const trackFeed = (promise) => { feedInstalls.add(promise); void promise.finally(() => feedInstalls.delete(promise)); return promise; }, synchronize = (projectId, draftToken, draftSequence) => { if (!draftToken || draftSequence === undefined)
-        return; const installedSequence = observedProjectSequences.get(projectId) ?? -1; if (draftSequence <= installedSequence)
-        return; observedProjectSequences.set(projectId, draftSequence); const identity = `${projectId}:${draftSequence}`; if (locallySavingProjects.has(projectId) || projectInstalls.has(identity))
-        return; const route = partialRoutes.get(projectId), active = currentLibrary.activeProjectId === projectId, install = trackFeed(!loaded.has(projectId) && !active ? refreshMetadata(projectId) : route ? repository.loadVisibleProjectRoute(projectId, route).then(value => { installLoaded(projectId, value, route); projectionChanged(); }) : forceLoad(projectId).then(() => projectionChanged())); projectInstalls.set(identity, install); void install.finally(() => projectInstalls.delete(identity)); }, installMetadata = (change) => { const identity = `metadata:${change.changeToken}`; if (observedSchemaChanges.has(identity))
+    const trackFeed = (promise) => { feedInstalls.add(promise); void promise.finally(() => feedInstalls.delete(promise)); return promise; }, synchronize = (projectId, draftToken) => { if (!draftToken)
+        return; const identity = `${projectId}:${draftToken}`; if (locallySavingProjects.has(projectId) || projectInstalls.has(identity))
+        return; const install = trackFeed((async () => { const metadata = (await repository.listProjectMetadata()).find(candidate => candidate.projectId === projectId); if (!metadata || metadata.draftSequence <= (observedProjectSequences.get(projectId) ?? -1))
+        return; observedProjectSequences.set(projectId, metadata.draftSequence); const route = partialRoutes.get(projectId), active = currentLibrary.activeProjectId === projectId; if (!loaded.has(projectId) && !active) {
+        await refreshMetadata(projectId);
+        return;
+    } const value = route ? await repository.loadVisibleProjectRoute(projectId, route) : await repository.loadProject(projectId); if (value.draftSequence < (observedProjectSequences.get(projectId) ?? -1))
+        return; installLoaded(projectId, value, route); projectionChanged(); })()); projectInstalls.set(identity, install); void install.finally(() => projectInstalls.delete(identity)); }, installMetadata = (change) => { const identity = `metadata:${change.changeToken}`; if (observedSchemaChanges.has(identity))
         return; observedSchemaChanges.add(identity); trackFeed(refreshMetadata(change.projectId)); }, installActive = (notification) => { if (failed) {
         deferredActiveContext = notification;
         return;
@@ -196,14 +200,14 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
         return activeInstalls.get(notification.token); observedActiveTokens.add(notification.token); pageHistories.clear(); const install = trackFeed((loaded.has(notification.projectId) && partialRoutes.has(notification.projectId) ? Promise.resolve() : forceLoad(notification.projectId)).then(() => { currentLibrary = { ...currentLibrary, activeProjectId: notification.projectId }; memory.set(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(currentLibrary)); const active = loaded.get(notification.projectId); if (active)
         memory.set(CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, serializeCanonicalProjectState(active.state, active.draftSequence)); projectionChanged(); })); activeInstalls.set(notification.token, install); void install.finally(() => activeInstalls.delete(notification.token)); return install; }, installSchemaChange = (change) => { const identity = `${change.schemaId}:${change.token}`; if (observedSchemaChanges.has(identity))
         return; observedSchemaChanges.add(identity); trackFeed(refreshSchemas().then(() => projectionChanged())); };
-    repository.subscribe(({ projectId, draftToken, draftSequence }) => synchronize(projectId, draftToken, draftSequence));
+    repository.subscribe(({ projectId, draftToken }) => synchronize(projectId, draftToken));
     repository.subscribeProjectMetadata(installMetadata);
     repository.subscribeActiveContext(notification => void installActive(notification));
     repository.subscribeSavedSchemas(installSchemaChange);
     if (typeof BroadcastChannel !== "undefined") {
         const channel = new BroadcastChannel("my-chrome-utilities.durable-project-changes");
         channel.addEventListener("message", (event) => { const message = event.data; if (message?.projectId)
-            synchronize(message.projectId, message.draftToken, message.draftSequence); });
+            synchronize(message.projectId, message.draftToken); });
         channel.unref?.();
         const metadataChannel = new BroadcastChannel("my-chrome-utilities.durable-project-metadata");
         metadataChannel.addEventListener("message", (event) => { const message = event.data; if (message.projectId && message.changeToken)
