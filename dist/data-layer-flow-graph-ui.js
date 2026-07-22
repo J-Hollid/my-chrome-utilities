@@ -1,6 +1,6 @@
-import { addFlowPageFrame, addFreePageFrame, addEventOccurrenceToPage, addGraphOccurrence, deriveFlowOccurrenceExample, documentaryFlowGraph, flowOccurrenceExampleEditorRows, flowRelationshipText, inspectFreePageEdgeMove, migrateLegacyFlowContextBindings, moveFlowPageFrame, moveFreePageFrame, moveGraphOccurrence, projectFlowGraph, reviewLegacyFlowContextMigration, removeFlowPageFrame, removeGraphOccurrence, reorderFlowPageGroupLane, saveGraphRelationship, setFlowOccurrenceExample, setFlowPageGroupLanes, } from "./data-layer-flow-graph.js";
+import { addFlowPageFrame, addFreePageFrame, addEventOccurrenceToPage, addGraphOccurrence, deriveFlowOccurrenceExample, documentaryFlowGraph, flowOccurrenceExampleEditorRows, FLOW_GRAPH_GEOMETRY, flowRelationshipText, inspectFreePageEdgeMove, migrateLegacyFlowContextBindings, moveFlowPageFrame, moveFreePageFrame, moveGraphOccurrence, projectFlowGraph, reviewLegacyFlowContextMigration, removeFlowPageFrame, removeGraphOccurrence, reorderFlowPageGroupLane, saveGraphRelationship, setFlowOccurrenceExample, setFlowPageGroupLanes, } from "./data-layer-flow-graph.js";
 import { orderedPageGroupIds } from "./utilities/data-layer/page-group-membership.js";
-const nodeWidth = 170, nodeHeight = 82;
+const nodeWidth = FLOW_GRAPH_GEOMETRY.eventWidth, nodeHeight = FLOW_GRAPH_GEOMETRY.eventHeight;
 const q = (selector, root = document) => { const element = root.querySelector(selector); if (!element)
     throw new Error(`Missing ${selector}`); return element; };
 const svg = (tag) => document.createElementNS("http://www.w3.org/2000/svg", tag);
@@ -23,8 +23,8 @@ function renderOccurrenceExampleControls(host, state, flowId, occurrenceId, pers
     }
 }
 export const ownsPointerDrag = (activePointerId, eventPointerId) => activePointerId !== undefined && activePointerId === eventPointerId;
-export function flowEdgeGeometry(source, target, width = nodeWidth, height = nodeHeight) {
-    const halfWidth = width / 2, halfHeight = height / 2, sourceCenter = { x: source.x + halfWidth, y: source.y + halfHeight }, targetCenter = { x: target.x + halfWidth, y: target.y + halfHeight }, dx = targetCenter.x - sourceCenter.x, dy = targetCenter.y - sourceCenter.y, length = Math.hypot(dx, dy), unitX = length < 0.001 ? 1 : dx / length, unitY = length < 0.001 ? 0 : dy / length, borderDistance = Math.min(Math.abs(unitX) < 0.001 ? Infinity : halfWidth / Math.abs(unitX), Math.abs(unitY) < 0.001 ? Infinity : halfHeight / Math.abs(unitY)), candidateStart = { x: sourceCenter.x + unitX * borderDistance, y: sourceCenter.y + unitY * borderDistance }, candidateEnd = { x: targetCenter.x - unitX * borderDistance, y: targetCenter.y - unitY * borderDistance }, forwardDistance = (candidateEnd.x - candidateStart.x) * unitX + (candidateEnd.y - candidateStart.y) * unitY, midpoint = { x: (sourceCenter.x + targetCenter.x) / 2, y: (sourceCenter.y + targetCenter.y) / 2 }, startX = forwardDistance > 0 ? candidateStart.x : midpoint.x - unitX * 6, startY = forwardDistance > 0 ? candidateStart.y : midpoint.y - unitY * 6, endX = forwardDistance > 0 ? candidateEnd.x : midpoint.x + unitX * 6, endY = forwardDistance > 0 ? candidateEnd.y : midpoint.y + unitY * 6, baseX = endX - unitX * 12, baseY = endY - unitY * 12, normalX = -unitY * 7, normalY = unitX * 7;
+export function flowEdgeGeometry(source, target, sourceSize = { width: nodeWidth, height: nodeHeight }, targetSize = sourceSize) {
+    const startX = source.x + sourceSize.width, startY = source.y + sourceSize.height / 2, endX = target.x, endY = target.y + targetSize.height / 2, dx = endX - startX, dy = endY - startY, length = Math.hypot(dx, dy), unitX = length < 0.001 ? 1 : dx / length, unitY = length < 0.001 ? 0 : dy / length, baseX = endX - unitX * 12, baseY = endY - unitY * 12, normalX = -unitY * 7, normalY = unitX * 7;
     return { startX, startY, endX, endY, arrow: `${baseX + normalX},${baseY + normalY} ${endX},${endY} ${baseX - normalX},${baseY - normalY}` };
 }
 export function installFlowGraphBuilder(options) {
@@ -552,7 +552,11 @@ export function installFlowGraphBuilder(options) {
             frame.addEventListener("click", (event) => { if (suppressPointerClick)
                 event.stopPropagation(); });
             frame.addEventListener("keydown", (event) => { if (!event.key.startsWith("Arrow"))
-                return; event.preventDefault(); const region = event.key === "ArrowLeft" ? "before-lanes" : event.key === "ArrowRight" ? "after-lanes" : storedFrame.freePageRegion, dy = event.key === "ArrowUp" ? -20 : event.key === "ArrowDown" ? 20 : 0; pageFrameFocusIntent = { id: storedFrame.id, revision: Number(current().revision ?? 0), optimisticFocused: false }; persist(moveFreePageFrame(current().state, flow.id, storedFrame.id, { region, x: Number(position.x ?? 24), y: Math.max(55, position.y + dy) })); });
+                return; event.preventDefault(); const region = event.key === "ArrowLeft" ? "before-lanes" : event.key === "ArrowRight" ? "after-lanes" : storedFrame.freePageRegion, dy = event.key === "ArrowUp" ? -20 : event.key === "ArrowDown" ? 20 : 0, currentState = current().state, next = moveFreePageFrame(currentState, flow.id, storedFrame.id, { region, x: Number(position.x ?? 24), y: Math.max(55, position.y + dy) }); if (next === currentState) {
+                pageFrameFocusIntent = undefined;
+                queueMicrotask(() => elementByData("data-free-page-frame-canvas", storedFrame.id)?.focus());
+                return;
+            } pageFrameFocusIntent = { id: storedFrame.id, revision: Number(current().revision ?? 0), optimisticFocused: false }; persist(next); });
             frame.append(rect, label);
             canvas.append(frame);
         }
@@ -595,7 +599,7 @@ export function installFlowGraphBuilder(options) {
             const source = projection.graph.connectionEndpoints.find(({ id, kind }) => id === relationship.sourceEndpoint.id && kind === relationship.sourceEndpoint.kind), target = projection.graph.connectionEndpoints.find(({ id, kind }) => id === relationship.targetEndpoint.id && kind === relationship.targetEndpoint.kind);
             if (!source || !target)
                 continue;
-            const geometry = flowEdgeGeometry(source.layout, target.layout, source.width, source.height), edge = svg("g"), line = svg("line"), arrow = svg("polygon"), label = svg("text");
+            const geometry = flowEdgeGeometry(source.layout, target.layout, { width: source.width, height: source.height }, { width: target.width, height: target.height }), edge = svg("g"), line = svg("line"), arrow = svg("polygon"), label = svg("text");
             edge.classList.add("flow-edge");
             edge.dataset.relationshipId = relationship.id;
             edge.dataset.sourceEndpointKind = relationship.sourceEndpoint.kind;
@@ -638,7 +642,7 @@ export function installFlowGraphBuilder(options) {
             group.setAttribute("role", "button");
             group.setAttribute("aria-label", `${nodeData.name}. Drag or use Arrow keys to move.`);
             box.setAttribute("width", String(nodeWidth));
-            box.setAttribute("height", String(nodeHeight + 12));
+            box.setAttribute("height", String(nodeHeight));
             box.setAttribute("rx", "10");
             title.setAttribute("x", "12");
             title.setAttribute("y", "30");
@@ -686,7 +690,7 @@ export function installFlowGraphBuilder(options) {
                 commitConnection(connection.targets[connection.targetIndex]);
             } });
             input.addEventListener("pointerup", (event) => { event.stopPropagation(); commitConnection(nodeData.id); });
-            const storedOccurrence = stored.occurrences.find(({ id }) => id === nodeData.id), storedPosition = storedOccurrence.position, focusNode = () => queueMicrotask(() => elementByData("data-occurrence-id", nodeData.id)?.focus()), containingPageFrame = projection.graph.connectionEndpoints.find(({ kind, id }) => kind === "page-frame" && id === nodeData.pageFrameId), containedMoveAllowed = (x, y) => Boolean(containingPageFrame && x >= 12 && y >= 40 && x + nodeWidth + 24 <= containingPageFrame.width && y + nodeHeight <= containingPageFrame.height), rejectContainedMove = () => { group.setAttribute("transform", `translate(${layout.x} ${layout.y})`); statusMessage = "Add the predefined Event to another Page frame instead."; statusRepairHref = ""; render(); focusNode(); }, moveContained = (x, y) => { if (!containedMoveAllowed(x, y)) {
+            const storedOccurrence = stored.occurrences.find(({ id }) => id === nodeData.id), storedPosition = storedOccurrence.position, focusNode = () => queueMicrotask(() => elementByData("data-occurrence-id", nodeData.id)?.focus()), containingPageFrame = projection.graph.connectionEndpoints.find(({ kind, id }) => kind === "page-frame" && id === nodeData.pageFrameId), containedMoveAllowed = (x, y) => Boolean(containingPageFrame && x >= FLOW_GRAPH_GEOMETRY.eventMinX && y >= FLOW_GRAPH_GEOMETRY.eventMinY && x + nodeWidth <= containingPageFrame.width && y + nodeHeight <= containingPageFrame.height), rejectContainedMove = () => { group.setAttribute("transform", `translate(${layout.x} ${layout.y})`); statusMessage = "Add the predefined Event to another Page frame instead."; statusRepairHref = ""; render(); focusNode(); }, moveContained = (x, y) => { if (!containedMoveAllowed(x, y)) {
                 rejectContainedMove();
                 return;
             } persist(moveGraphOccurrence(current().state, flow.id, nodeData.id, { x, y })); focusNode(); }, rejectMembershipMove = () => { if (nodeData.freePageFrame) {
@@ -751,7 +755,7 @@ export function installFlowGraphBuilder(options) {
                 suppressNodeClick = false;
                 return;
             } saveSelection({ kind: "occurrence", id: nodeData.id }); });
-            const canvasExample = occurrenceExampleDetails(state, flow.id, nodeData.id, nodeData.name), exampleHost = svg("foreignObject"), resizeCanvasExample = () => { const expandedHeight = canvasExample.open ? Math.max(260, Math.ceil(canvasExample.scrollHeight) + 8) : 30; exampleHost.setAttribute("height", String(expandedHeight)); box.setAttribute("height", String(canvasExample.open ? nodeHeight + expandedHeight - 30 : nodeHeight + 12)); resizeCanvasHeight(); };
+            const canvasExample = occurrenceExampleDetails(state, flow.id, nodeData.id, nodeData.name), exampleHost = svg("foreignObject"), resizeCanvasExample = () => { const expandedHeight = canvasExample.open ? Math.max(260, Math.ceil(canvasExample.scrollHeight) + 8) : 30; exampleHost.setAttribute("height", String(expandedHeight)); box.setAttribute("height", String(canvasExample.open ? nodeHeight + expandedHeight - 30 : nodeHeight)); resizeCanvasHeight(); };
             exampleHost.dataset.eventExampleNode = nodeData.id;
             exampleHost.setAttribute("x", "4");
             exampleHost.setAttribute("y", "62");
@@ -790,7 +794,7 @@ export function installFlowGraphBuilder(options) {
                 canvasScroll.scrollTop = Math.max(0, canvasScroll.scrollTop - edgeStep);
             else if (event.clientY >= scrollBounds.bottom - edgeSize)
                 canvasScroll.scrollTop = Math.min(canvasScroll.scrollHeight - canvasScroll.clientHeight, canvasScroll.scrollTop + edgeStep);
-        } const bounds = canvas.getBoundingClientRect(), scaleX = canvas.viewBox.baseVal.width / bounds.width, scaleY = canvas.viewBox.baseVal.height / bounds.height; connection.preview.setAttribute("x2", String((event.clientX - bounds.left) * scaleX)); connection.preview.setAttribute("y2", String((event.clientY - bounds.top) * scaleY)); document.querySelectorAll(".is-valid-target,.is-invalid-target").forEach((element) => element.classList.remove("is-valid-target", "is-invalid-target")); const node = event.target.closest("[data-occurrence-id]"); if (input && input.dataset.inputPortFor !== connection.sourceId)
+        } const bounds = canvas.getBoundingClientRect(), viewBox = canvas.viewBox.baseVal, scaleX = viewBox.width / bounds.width, scaleY = viewBox.height / bounds.height; connection.preview.setAttribute("x2", String(viewBox.x + (event.clientX - bounds.left) * scaleX)); connection.preview.setAttribute("y2", String(viewBox.y + (event.clientY - bounds.top) * scaleY)); document.querySelectorAll(".is-valid-target,.is-invalid-target").forEach((element) => element.classList.remove("is-valid-target", "is-invalid-target")); const node = event.target.closest("[data-occurrence-id]"); if (input && input.dataset.inputPortFor !== connection.sourceId)
             input.classList.add("is-valid-target");
         else
             (input ?? node ?? canvas).classList.add("is-invalid-target"); });
