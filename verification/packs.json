@@ -771,7 +771,9 @@
       "test/data-layer-flow-page-context-model-test.mjs",
       "test/flow-evidence-reporter-test.mjs"
     ],
-    "property": [],
+    "property": [
+      "test/data-layer-flow-graph-property-test.mjs"
+    ],
     "features": [
       "features/data-layer-directional-flow-specification-graph.feature",
       "features/data-layer-directional-flow-specification-graph-runtime.feature"
