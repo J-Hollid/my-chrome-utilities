@@ -31,3 +31,8 @@
   (is (= :eventToPageMerge (flow-graph/runtime009-example-key {"source" "Customer details add_payment_info" "source_port" "bottom" "target" "Payment Page" "target_port" "top" "kind" "merge"})))
   (is (= :eventInteractionExpectedNext (flow-graph/runtime009-example-key {"source" "Customer details page_view" "source_port" "right" "target" "Customer details add_payment_info" "target_port" "left" "kind" "expected_next"})))
   (is (thrown? clojure.lang.ExceptionInfo (flow-graph/runtime009-example-key {"source" "Customer details Page" "source_port" "right" "target" "Payment Page" "target_port" "top" "kind" "merge"}))))
+
+(deftest runtime023-examples-have-distinct-evidence-keys
+  (is (= :labelled (flow-graph/runtime023-example-key {"kind" "expected_next" "source" "Customer details" "target" "Payment" "label_state" "label Checkout route" "accessible_name" "Delete relationship Checkout route, Customer details to Payment"})))
+  (is (= :unlabelled (flow-graph/runtime023-example-key {"kind" "alternative" "source" "Customer details" "target" "ID verification" "label_state" "no label" "accessible_name" "Delete relationship Customer details to ID verification"})))
+  (is (thrown? clojure.lang.ExceptionInfo (flow-graph/runtime023-example-key {"kind" "alternative" "source" "Customer details" "target" "ID verification" "label_state" "no label" "accessible_name" "Delete relationship wrong endpoint"}))))

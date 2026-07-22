@@ -40,13 +40,21 @@
    ["Customer details Page" "top" "Customer details add_payment_info" "bottom" "alternative"] :pageToEventAlternative
    ["Customer details add_payment_info" "bottom" "Payment Page" "top" "merge"] :eventToPageMerge
    ["Customer details page_view" "right" "Customer details add_payment_info" "left" "expected_next"] :eventInteractionExpectedNext})
+(def runtime023-examples
+  {["expected_next" "Customer details" "Payment" "label Checkout route" "Delete relationship Checkout route, Customer details to Payment"] :labelled
+   ["alternative" "Customer details" "ID verification" "no label" "Delete relationship Customer details to ID verification"] :unlabelled})
+(defn- exact-example-key [example columns discriminators examples message]
+  (let [row (mapv #(support/example-value example %) columns)]
+    (when (some #(support/example-value example %) discriminators)
+      (support/assert! (contains? examples row) message {:row row})
+      (get examples row))))
 (defn runtime009-example-key [example]
-  (let [row (mapv #(support/example-value example %) ["source" "source_port" "target" "target_port" "kind"])]
-    (when (or (nth row 1) (nth row 3))
-      (support/assert! (contains? runtime009-examples row) "Unknown runtime009 endpoint example." {:row row})
-      (get runtime009-examples row))))
+  (exact-example-key example ["source" "source_port" "target" "target_port" "kind"] ["source_port" "target_port"] runtime009-examples "Unknown runtime009 endpoint example."))
+(defn runtime023-example-key [example]
+  (exact-example-key example ["kind" "source" "target" "label_state" "accessible_name"] ["label_state" "accessible_name"] runtime023-examples "Unknown runtime023 relationship-deletion example."))
 (defn validate-example! [_mode example]
   (runtime009-example-key example)
+  (runtime023-example-key example)
   true)
 (defn all-true? [values]
   (boolean (and (map? values) (seq values) (every? true? (vals values)))))
@@ -68,3 +76,7 @@
    feature-files entry-modes :flow-graph-mode
    verify-model! validate-example!
    observe-browser! assert-runtime!))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-22T15:45:56.141943404+02:00", :module-hash "1506144486", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 5, :hash "12328700"} {:id "def/feature-files", :kind "def", :line 7, :end-line 9, :hash "-435723109"} {:id "def/entry-modes", :kind "def", :line 10, :end-line 12, :hash "1245758286"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/checked-command!", :kind "defn-", :line 16, :end-line 19, :hash "-109796194"} {:id "defn-/verify-model!", :kind "defn-", :line 20, :end-line 27, :hash "1983581264"} {:id "defn-/observe-browser!", :kind "defn-", :line 28, :end-line 34, :hash "-1469376060"} {:id "def/runtime-evidence-keys", :kind "def", :line 35, :end-line 36, :hash "1222838996"} {:id "def/required-evidence-keys", :kind "def", :line 37, :end-line 37, :hash "-1295581414"} {:id "def/runtime009-examples", :kind "def", :line 38, :end-line 42, :hash "1540013385"} {:id "def/runtime023-examples", :kind "def", :line 43, :end-line 45, :hash "-1984771249"} {:id "defn-/exact-example-key", :kind "defn-", :line 46, :end-line 50, :hash "-901117598"} {:id "defn/runtime009-example-key", :kind "defn", :line 51, :end-line 52, :hash "-1376855772"} {:id "defn/runtime023-example-key", :kind "defn", :line 53, :end-line 54, :hash "-1160499936"} {:id "defn/validate-example!", :kind "defn", :line 55, :end-line 58, :hash "-355673248"} {:id "defn/all-true?", :kind "defn", :line 59, :end-line 60, :hash "731206003"} {:id "defn/complete-browser-evidence?", :kind "defn", :line 61, :end-line 66, :hash "396718768"} {:id "defn-/assert-runtime!", :kind "defn-", :line 67, :end-line 72, :hash "1781741610"} {:id "def/handlers", :kind "def", :line 74, :end-line 78, :hash "89345785"}]}
+;; clj-mutate-manifest-end
