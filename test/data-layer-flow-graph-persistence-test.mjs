@@ -9,9 +9,9 @@ let state=createSpecificationProject({name:"Shop",site:"shop.example",id});
 const add=(kind,entity)=>{state=addProjectEntity(state,kind,entity,id);return state.project.collections[kind].at(-1);};
 const checkout=add("pages",{name:"Checkout"}),confirmation=add("pages",{name:"Confirmation"}),route=add("events",{name:"route_view",eventName:"route_view",role:"context-setting"}),shipping=add("events",{name:"add_shipping_info",role:"interaction"}),payment=add("events",{name:"add_payment_info",role:"interaction"}),flow=add("flows",{name:"Checkout journey",steps:[]});
 const occurrence=(name,page,event,lane,x)=>{state=addGraphOccurrence(state,flow.id,{name,pageId:page.id,eventId:event.id,fallbackRole:event.role??"interaction",obligation:"Required",minimum:1,maximum:1,layout:{lane,x,y:lane==="Context"?70:190}},id);return documentaryFlowGraph(state.project,flow.id).occurrences.at(-1);};
-const context=occurrence("Checkout context",checkout,route,"Context",30),shippingNode=occurrence("Shipping",checkout,shipping,"Shipping",230),paymentNode=occurrence("Payment",checkout,payment,"Payment",430);
+const context=occurrence("Checkout context",checkout,route,"Legacy context",30),shippingNode=occurrence("Shipping",checkout,shipping,"Legacy delivery",230),paymentNode=occurrence("Payment",checkout,payment,"Legacy payment",430);
 for(const target of[shippingNode,paymentNode])state=saveGraphRelationship(state,flow.id,context.id,{toStepId:target.id,kind:"parallel",group:"checkout"},id);
-state=updateGraphOccurrence(state,flow.id,shippingNode.id,{name:"Delivery options",pageId:confirmation.id,eventId:shipping.id,fallbackRole:"interaction",obligation:"Required",minimum:1,maximum:1,layout:{lane:"Shipping",x:230,y:190}});
+state=updateGraphOccurrence(state,flow.id,shippingNode.id,{name:"Delivery options",pageId:confirmation.id,eventId:shipping.id,fallbackRole:"interaction",obligation:"Required",minimum:1,maximum:1,layout:{lane:"Legacy delivery",x:230,y:190}});
 
 const repository=createMemoryDurableProjectRepository({token:()=>`draft:persistence-${++sequence}`});
 await repository.putProject(state,{draftToken:"draft:persistence-base",active:true});

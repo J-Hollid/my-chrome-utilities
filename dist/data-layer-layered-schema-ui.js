@@ -243,7 +243,8 @@ export function installLayeredSchemaUi(options) {
         selectGraphContributor(target); });
     const openGraphOccurrenceSchema = (occurrenceId, path) => { const { state, kind, entityId: flowId } = options.context(), graphs = state?.project.documentationFlowGraphs, occurrence = flowId ? graphs?.[flowId]?.occurrences?.find(({ id }) => id === occurrenceId) : undefined; if (!state || kind !== "flows" || !flowId || !occurrence)
         return false; graphSelection = occurrence; graphSelectionScope = occurrence.freePageFrame ? "Flow Page-instance" : "Event-occurrence"; returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : undefined; editor.hidden = false; ensureCanonical(); renderEditor(); editorHost.hidden = false; workspace.hidden = true; editor.querySelector("h2")?.focus(); if (path)
-        setTimeout(() => Array.from(editor.querySelectorAll("[data-property-id]")).find((candidate) => candidate.dataset.propertyId === path || candidate.textContent?.includes(path))?.click(), 0); return true; };
+        setTimeout(() => { const candidate = Array.from(editor.querySelectorAll("[data-property-id]")).find((row) => row.dataset.propertyId === path); if (!candidate)
+            return; candidate.click(); setTimeout(() => Array.from(editor.querySelectorAll("[data-property-id]")).find((row) => row.dataset.propertyId === path)?.focus({ preventScroll: true }), 0); }, 0); return true; };
     return { render() { if (editor.hidden) {
             graphSelection = undefined;
             graphSelectionScope = undefined;

@@ -31,7 +31,8 @@ assert.deepEqual(inspectFlowGraph(projection.graph,projection.catalog),[]);
 const isolated={...projection.graph,nodes:[...projection.graph.nodes,{...projection.graph.nodes[0],id:"isolated"}]};
 assert.deepEqual(inspectFlowGraph(isolated,projection.catalog),[],"an isolated documentary occurrence is not a broken reference");
 
-const input={name:"Authoritative Event role",pageId:checkout.id,eventId:route.id,fallbackRole:"interaction",obligation:"Required",minimum:1,maximum:1,layout:{lane:"Shipping",x:230,y:310}};
+const input={name:"Authoritative Event role",pageId:checkout.id,eventId:route.id,fallbackRole:"interaction",obligation:"Required",minimum:1,maximum:1,layout:{lane:"Legacy authored lane",x:230,y:310}};
+assert.throws(()=>addGraphOccurrence(state,flow.id,{...input,layout:undefined},id),/explicit legacy layout/,"uncontained authoring never invents a Shipping lane");
 for(const invalid of[{...input,name:"  "},{...input,pageId:"missing-page"},{...input,eventId:"missing-event"}])assert.throws(()=>addGraphOccurrence(state,flow.id,invalid,id),/requires/);
 state=addGraphOccurrence(state,flow.id,input,id);
 const authoritative=documentaryFlowGraph(state.project,flow.id).occurrences.at(-1);
