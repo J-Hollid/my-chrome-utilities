@@ -21,7 +21,7 @@ state=saveGraphRelationship(state,flow.id,context.id,{toStepId:interaction.id,so
 
 const projection=projectFlowGraph(state.project,flow.id),relationship=projection.graph.relationships[0];
 assert.deepEqual(projection.graph.nodes.map(({id,role,layout})=>({id,role,layout})),[
-  {id:context.id,role:"context-setting",layout:{lane:"Checkout",x:70,y:130}},
+  {id:context.id,role:"interaction",layout:{lane:"Checkout",x:70,y:130}},
   {id:interaction.id,role:"interaction",layout:{lane:"Checkout",x:470,y:250}},
 ]);
 assert.deepEqual(flowOutline(projection.graph).map(({nodeId,relationshipIds})=>({nodeId,relationshipIds})),[{nodeId:context.id,relationshipIds:[relationship.id]},{nodeId:interaction.id,relationshipIds:[]}]);
@@ -38,9 +38,9 @@ assert.throws(()=>addGraphOccurrence(state,flow.id,{...input,pageFrameId:undefin
 for(const invalid of[{...input,name:"  "},{...input,pageId:"missing-page"},{...input,eventId:"missing-event"}])assert.throws(()=>addGraphOccurrence(state,flow.id,invalid,id),/requires/);
 state=addGraphOccurrence(state,flow.id,input,id);
 const authoritative=documentaryFlowGraph(state.project,flow.id).occurrences.at(-1);
-assert.equal(authoritative.role,"context-setting","the direct occurrence persists its documentary Event role");
+assert.equal(authoritative.role,undefined,"the direct occurrence does not persist a documentary role");
 assert.equal("fallbackRole" in authoritative,false,"an Event-owned role does not persist a redundant fallback");
-assert.equal(projectFlowGraph(state.project,flow.id).graph.nodes.at(-1).role,"context-setting","the selected Event definition owns the projected Flow role");
+assert.equal(projectFlowGraph(state.project,flow.id).graph.nodes.at(-1).role,"interaction","every Event occurrence projects as an interaction");
 assert.equal("layout" in authoritative,false,"only lane and position are persisted");
 const beforeNoOp=state;
 assert.equal(reorderGraphOccurrence(state,flow.id,0,0),beforeNoOp);
@@ -49,7 +49,7 @@ state={...state,project:{...state.project,documentationFlowGraphs:{...state.proj
 state=updateGraphOccurrence(state,flow.id,authoritative.id,input);
 assert.equal("layout" in documentaryFlowGraph(state.project,flow.id).occurrences.at(-1),false,"editing strips an input layout object");
 const fallback=occurrence("Fallback role",fallbackEvent,"Context",30,430);
-assert.equal(fallback.role,"interaction");assert.equal("fallbackRole" in fallback,false);
+assert.equal(fallback.role,undefined);assert.equal("fallbackRole" in fallback,false);
 assert.equal(projectFlowGraph(state.project,flow.id).graph.nodes.at(-1).role,"interaction");
 assert.throws(()=>updateGraphOccurrence(state,flow.id,"missing-occurrence",input),/Unknown/);
 assert.equal(moveGraphOccurrence(state,flow.id,"missing-occurrence",{lane:"Context",x:30,y:70}),state);
@@ -155,7 +155,7 @@ assert.equal(inspectPageFrameDrop(canvasState.project,canvasFlow.id,shippingPage
 canvasState=addEventOccurrenceToPage(canvasState,canvasFlow.id,{name:"page_view",pageFrameId:cartFrame.id,pageGroupId:canvasCheckout.id,pageId:cartPage.id,eventId:canvasPageView.id,role:"context-setting",trigger:"Initial load",obligation:"Required",minimum:1,maximum:1,y:130},canvasId);
 canvasState=addInteractionOccurrenceToPage(canvasState,canvasFlow.id,{name:"add_payment_info",pageFrameId:cartFrame.id,pageGroupId:canvasCheckout.id,pageId:cartPage.id,eventId:canvasPayment.id,obligation:"Required",minimum:1,maximum:1,y:250},canvasId);
 const [canvasContext,canvasInteraction]=documentaryFlowGraph(canvasState.project,canvasFlow.id).occurrences;
-assert.equal(canvasContext.pageFrameId,cartFrame.id);assert.equal(canvasContext.eventId,canvasPageView.id);assert.equal(canvasContext.role,"context-setting");assert.equal(canvasContext.trigger,"Initial load");assert.equal("contextBindingId" in canvasContext,false);assert.equal("schema" in canvasContext,false);
+assert.equal(canvasContext.pageFrameId,cartFrame.id);assert.equal(canvasContext.eventId,canvasPageView.id);assert.equal(canvasContext.role,undefined);assert.equal(canvasContext.trigger,"Initial load");assert.equal("contextBindingId" in canvasContext,false);assert.equal("schema" in canvasContext,false);
 assert.equal(canvasInteraction.pageFrameId,cartFrame.id);assert.equal(canvasInteraction.eventId,canvasPayment.id);
 assert.equal(removeFlowPageFrame(canvasState,canvasFlow.id,"missing-frame"),canvasState);
 assert.throws(()=>setFlowPageGroupLanes(canvasState,canvasFlow.id,[canvasDelivery.id]),/Cart.*Move Page frame.*Remove Page frame/);

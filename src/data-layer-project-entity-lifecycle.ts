@@ -22,7 +22,7 @@ export const projectCollectionCreationFields:Record<ProjectEntityKind,readonly P
   profiles:[{key:"description",label:"Profile purpose",control:"textarea"}],
   pageGroups:[{key:"matcher",label:"Membership matcher"}],
   pages:[{key:"pathname",label:"Path matcher"},{key:"pageGroupIds",label:"Page Groups",control:"select",collection:"pageGroups",multiple:true}],
-  events:[{key:"eventName",label:"Canonical event name"},{key:"role",label:"Documentary role",control:"select",options:[{value:"interaction",label:"Interaction"},{value:"context-setting",label:"Context-setting"}],defaultValue:"interaction"}],
+  events:[{key:"eventName",label:"Canonical event name"}],
   applicabilitySets:[{key:"priority",label:"Priority",control:"number",defaultValue:0},{key:"fallback",label:"Fallback",control:"checkbox",defaultValue:false}],
   flows:[{key:"correlationField",label:"Correlation field"}],
   fixtures:[{key:"mode",label:"Fixture mode",control:"select",options:[{value:"event",label:"Event"},{value:"flow",label:"Flow"}],defaultValue:"event"},{key:"eventId",label:"Event",control:"select",collection:"events"},{key:"pageId",label:"Page",control:"select",collection:"pages"},{key:"flowId",label:"Flow",control:"select",collection:"flows"},{key:"releasePolicy",label:"Release policy",control:"select",options:[{value:"required",label:"Required"},{value:"optional",label:"Optional"}],defaultValue:"required"}],

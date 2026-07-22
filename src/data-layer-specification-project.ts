@@ -58,6 +58,11 @@ export function transactProject(state: ProjectState, label: string, update: (pro
   if (!state.draft) throw new Error("Create or restore a project draft before editing.");
   const before = clone(state.project); const project = update(clone(state.project));
   if (project.id !== state.project.id) throw new Error("A project transaction cannot replace project identity.");
+  project.collections.events = project.collections.events.map((event) => {
+    const normalized = clone(event);
+    delete normalized.role;
+    return normalized;
+  });
   return { project, draft:{ ...state.draft, status:"Saved", updatedAt:now() }, history:{ undo:[...state.history.undo, { label, project:before }], redo:[] } };
 }
 
@@ -82,7 +87,7 @@ export function redoProjectTransaction(state: ProjectState): ProjectState {
 }
 
 export function addProjectEntity<T extends Omit<ProjectEntity,"id">>(state: ProjectState, kind: ProjectEntityKind, entity: T, id: IdFactory): ProjectState {
-  const identity=id(kind.slice(0,-1)||kind),added={...clone(entity),id:identity} as unknown as ProjectEntity,canonical=added.canonicalSchema as CanonicalSchemaDocument|undefined;if(canonical){canonical.contributorId=identity;canonical.contributorName=String(entity.name);}
+  const identity=id(kind.slice(0,-1)||kind),cloned=clone(entity) as T&{role?:unknown};if(kind==="events")delete cloned.role;const added={...cloned,id:identity} as unknown as ProjectEntity,canonical=added.canonicalSchema as CanonicalSchemaDocument|undefined;if(canonical){canonical.contributorId=identity;canonical.contributorName=String(entity.name);}
   return transactProject(state,`Add ${entity.name}`,(project)=>({ ...project, collections:{ ...project.collections, [kind]:[...project.collections[kind],added] } } as SpecificationProject));
 }
 

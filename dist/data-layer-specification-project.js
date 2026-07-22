@@ -20,6 +20,11 @@ export function transactProject(state, label, update) {
     const project = update(clone(state.project));
     if (project.id !== state.project.id)
         throw new Error("A project transaction cannot replace project identity.");
+    project.collections.events = project.collections.events.map((event) => {
+        const normalized = clone(event);
+        delete normalized.role;
+        return normalized;
+    });
     return { project, draft: { ...state.draft, status: "Saved", updatedAt: now() }, history: { undo: [...state.history.undo, { label, project: before }], redo: [] } };
 }
 export function confirmCanonicalMigration(state, plan) {
@@ -48,7 +53,10 @@ export function redoProjectTransaction(state) {
     return { ...state, project: clone(entry.project), history: { undo: [...state.history.undo, { label: entry.label, project: clone(state.project) }], redo: state.history.redo.slice(0, -1) } };
 }
 export function addProjectEntity(state, kind, entity, id) {
-    const identity = id(kind.slice(0, -1) || kind), added = { ...clone(entity), id: identity }, canonical = added.canonicalSchema;
+    const identity = id(kind.slice(0, -1) || kind), cloned = clone(entity);
+    if (kind === "events")
+        delete cloned.role;
+    const added = { ...cloned, id: identity }, canonical = added.canonicalSchema;
     if (canonical) {
         canonical.contributorId = identity;
         canonical.contributorName = String(entity.name);
