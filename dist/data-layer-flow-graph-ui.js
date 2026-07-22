@@ -34,6 +34,7 @@ export function installFlowGraphBuilder(options) {
     let selected;
     let connection;
     let relationshipPopoverFocusIntent;
+    let relationshipEdgeFocusIntent;
     let suppressNodeClick = false;
     let statusMessage = "";
     let statusRepairHref = "";
@@ -264,7 +265,7 @@ export function installFlowGraphBuilder(options) {
         setTimeout(() => { suppressNodeClick = false; }, 0);
     } document.querySelector(`[data-flow-endpoint-id="${CSS.escape(sourceId ?? "")}"]`)?.focus(); }
     function clearSelectedRelationshipForConnection() { if (selected?.kind !== "relationship")
-        return; selected = undefined; relationshipPopoverFocusIntent = undefined; document.querySelector('[aria-label="Inline relationship popover"]')?.remove(); }
+        return; selected = undefined; relationshipPopoverFocusIntent = undefined; relationshipEdgeFocusIntent = undefined; document.querySelector('[aria-label="Inline relationship popover"]')?.remove(); }
     function commitConnection(targetId) { const { state, flow, graph, revision } = current(), sourceId = connection?.sourceId; if (!state || !flow || !graph || !sourceId || !targetId || sourceId === targetId) {
         cancelConnection(true, true);
         return;
@@ -300,8 +301,8 @@ export function installFlowGraphBuilder(options) {
         save.textContent = "Save relationship";
         cancel.type = "button";
         cancel.textContent = "Cancel";
-        cancel.addEventListener("click", () => { relationshipPopoverFocusIntent = undefined; selected = undefined; render(); document.querySelector(`[data-flow-endpoint-id="${CSS.escape(sourceId)}"]`)?.focus(); });
-        form.addEventListener("submit", (event) => { event.preventDefault(); relationshipPopoverFocusIntent = undefined; persist(saveGraphRelationship(current().state, flow.id, sourceId, { id: relationship.id, toStepId: targetId, kind: kind.value, group: group.value.trim(), label: label.value.trim(), documentationCondition: condition.value.trim(), expectation: expectation.value.trim() }, options.id)); queueMicrotask(() => document.querySelector(`[data-relationship-id="${CSS.escape(relationship.id)}"]`)?.focus()); });
+        cancel.addEventListener("click", () => { relationshipPopoverFocusIntent = undefined; relationshipEdgeFocusIntent = undefined; selected = undefined; render(); document.querySelector(`[data-flow-endpoint-id="${CSS.escape(sourceId)}"]`)?.focus(); });
+        form.addEventListener("submit", (event) => { event.preventDefault(); relationshipPopoverFocusIntent = undefined; relationshipEdgeFocusIntent = { id: relationship.id, revision: Number(revision ?? 0), optimisticFocused: false }; persist(saveGraphRelationship(current().state, flow.id, sourceId, { id: relationship.id, toStepId: targetId, kind: kind.value, group: group.value.trim(), label: label.value.trim(), documentationCondition: condition.value.trim(), expectation: expectation.value.trim() }, options.id)); queueMicrotask(() => document.querySelector(`[data-relationship-id="${CSS.escape(relationship.id)}"]`)?.focus()); });
         const labeled = (text, control) => { const wrapper = document.createElement("label"); wrapper.append(text, control); return wrapper; };
         form.append(heading, endpoints, labeled("Kind", kind), labeled("Group", group), labeled("Label", label), labeled("Condition", condition), labeled("Expectation", expectation), save, cancel);
         host.append(form);
@@ -793,7 +794,7 @@ export function installFlowGraphBuilder(options) {
         else
             (input ?? node ?? canvas).classList.add("is-invalid-target"); });
         canvas.addEventListener("pointerup", (event) => { if (!connection)
-            return; const delivered = event.target.closest("[data-input-port-for]"), hit = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-input-port-for]"), input = delivered ?? hit; if (input)
+            return; const delivered = event.target.closest("[data-input-port-for]"), hit = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-input-port-for]"), input = hit ?? delivered; if (input)
             commitConnection(input.dataset.inputPortFor);
         else
             cancelConnection(true, true); });
@@ -823,6 +824,20 @@ export function installFlowGraphBuilder(options) {
         section.append(heading, boundary, toolbar, laneControls, status, frames, views, actions, popover);
         host.append(section);
         document.querySelectorAll("[data-occurrence-id],[data-relationship-id],[data-page-frame-id]").forEach((element) => { const id = element.dataset.occurrenceId ?? element.dataset.relationshipId ?? element.dataset.pageFrameId; element.classList.toggle("is-selected", id === selected?.id); });
+        const edgeIntent = relationshipEdgeFocusIntent;
+        if (edgeIntent) {
+            const edge = document.querySelector(`[data-relationship-id="${CSS.escape(edgeIntent.id)}"]`);
+            if (edge) {
+                const renderRevision = Number(current().revision ?? 0), replacement = edgeIntent.optimisticFocused && renderRevision > edgeIntent.revision;
+                if (!edgeIntent.optimisticFocused) {
+                    edgeIntent.optimisticFocused = true;
+                    edgeIntent.revision = renderRevision;
+                }
+                queueMicrotask(() => { if (!edge.isConnected)
+                    return; edge.focus(); if (replacement && relationshipEdgeFocusIntent === edgeIntent)
+                    relationshipEdgeFocusIntent = undefined; });
+            }
+        }
         renderInspector();
     }
     function render() { const { flow } = current(); advanced.hidden = !flow; if (flow)
