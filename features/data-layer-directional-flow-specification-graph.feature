@@ -289,3 +289,22 @@ Feature: Data layer directional Flow specification graph
     Then one migration changes every parallel relationship to alternative
     And relationship identities, typed endpoints, groups, optional labels, conditions, expectations, and graph geometry remain unchanged
     And the upgraded Flow contains no parallel relationship kind
+
+  # Data layer directional Flow specification graph 023
+  Scenario Outline: Data layer directional Flow specification graph 023
+    Given a <kind> relationship from <source> to <target> has <label_state>
+    And its canvas edge is selected with the inline popover open and the Inspector closed
+    Then the popover exposes a Delete relationship button named <accessible_name>
+    When the operator activates Delete relationship
+    Then that relationship is absent from the canvas, synchronized outline, and canonical Flow storage
+    And its source, target, every other relationship, and their canonical identities remain unchanged
+    And feedback names the deleted relationship, Draft status, stale documentation export, and one Undo action
+    And deletion places keyboard focus on <source>
+    When the operator activates Undo
+    Then the same relationship identity, ports, kind, optional label, group, condition, and expectation are restored once
+    And the restored edge receives keyboard focus
+
+    Examples:
+      | kind          | source           | target          | label_state          | accessible_name                                         |
+      | expected_next | Customer details | Payment         | label Checkout route | Delete relationship Checkout route, Customer details to Payment |
+      | alternative   | Customer details | ID verification | no label             | Delete relationship Customer details to ID verification |

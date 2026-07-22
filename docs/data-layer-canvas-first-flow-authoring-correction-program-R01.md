@@ -188,6 +188,15 @@ choice. Existing Parallel relationships migrate to Alternative while retaining
 their stable identity, typed endpoints, group, optional label, condition,
 expectation, and geometry.
 
+Selecting an edge opens the same inline popover with a visible
+`Delete relationship` button. Activating it removes exactly that relationship from
+the graph and synchronized outline in one Draft command; it does not remove or
+rewrite either endpoint or another relationship. The action requires no Inspector
+or second confirmation because the result offers one page-scoped Undo that restores
+the original relationship identity and complete metadata. A labelled relationship's
+button name includes its label plus its human source and target names. An unlabelled
+relationship uses its human source and target names, never raw IDs.
+
 Keyboard connection mode starts from a focused source port, moves a target indicator
 between eligible inputs, commits with Enter, cancels with Escape, and restores focus
 deterministically.
@@ -207,7 +216,7 @@ The main Flow workspace owns:
 - Page-frame and Event-occurrence left, right, top, and bottom ports, port-pair kind
   inference, and drawing;
 - effective-schema-derived Event JSON examples and repair links;
-- inline graph actions and relationship editing; and
+- inline graph actions, relationship editing, and relationship deletion; and
 - the synchronized outline.
 
 Selecting a node exposes inline Move, Connect, Duplicate occurrence, Remove, and
@@ -240,6 +249,12 @@ Invalid drops, Event cross-boundary movement, cancelled connections, guarded lan
 removal, and removal of an in-use Page membership are no-op commands: project bytes
 and revision do not change.
 
+Relationship deletion removes one stable relationship record, advances the Draft,
+invalidates documentation derived from the changed graph topology, and leaves Page
+frames, Event occurrences, endpoints, and unrelated relationships unchanged. Undo
+restores the same relationship identity, ports, inferred kind, group, optional
+label, condition, and expectation.
+
 ## Accessibility and alternative operation
 
 Every pointer operation has a keyboard route. Catalog components are searchable and
@@ -247,6 +262,9 @@ keyboard-insertable. Ports are labelled with source or target Page or Event name
 Connection mode announces the current target and validity. Saving an inline popover
 returns focus to the edge; cancelling returns focus to the source. Graph and outline
 select the same stable item.
+
+The Delete relationship button is keyboard-operable. After deletion focus returns
+to the human source endpoint; after Undo it returns to the restored edge.
 
 The outline is a synchronized alternative projection, not a second model. It may
 edit relationship meaning and occurrence documentation, but it does not reintroduce
@@ -287,7 +305,8 @@ assignment-owned Page resolution, legacy binding migration, and guarded movement
 Implement typed Page-frame and Event-occurrence ports on all four sides, all four
 endpoint combinations, live pointer preview, target validity, atomic commit and
 cancel, deterministic expected_next, alternative, and merge inference, optional
-labels, inline relationship popovers without kind selection, and edge selection.
+labels, inline relationship popovers without kind selection, edge selection, exact
+relationship deletion, focus restoration, and page-scoped Undo.
 
 ### Phase D — keyboard, persistence, and terminal proof
 
@@ -325,6 +344,7 @@ runtime feature.
 | F20 | Membership edits must not orphan Flow frames or move them implicitly | Flow 019 | Reorder leaves placement stable; in-use removal blocks with named repairs | Membership command, frame dependency index, impact review, and Undo | Stable lane after reorder, byte-identical rejection, reassigned frame, affected-output feedback | B, D | Membership removal cannot leave a frame in an ineligible lane |
 | F21 | Flow lanes and branches use the wrong geometry | Flow 020 | Page Group lanes are top-to-bottom horizontal bands containing left-to-right Pages and vertical branches | Canvas layout projection, coordinate persistence, and edge router | Measured band geometry, authored Page coordinates, split/merge edges, and reload evidence | B, C, D | Checkout renders the authored main route and upper branch without fixed columns or vertical-list normalization |
 | F22 | Event nodes lack schema-informed JSON examples | Flow 021 | Expandable read-only JSON, effective provenance, status, and exact repair links | Canonical schema compiler, example resolver, validator, and Flow projection | Parsed nested JSON, source map, missing/invalid paths, no stored payload copy, and live update | D | Complete, Incomplete, Invalid, and Blocked states truthfully reflect the effective occurrence schema |
+| F23 | Relationships cannot be deleted from the canvas | Flow 023 | A named Delete relationship button removes one selected labelled or unlabelled edge and offers identity-preserving Undo | Inline popover, relationship command, graph and outline projections, Draft history, and export staleness | Button accessibility name, exact removed ID, unchanged endpoint and unrelated hashes, focus sequence, stale export, and restored relationship | C, D | One button activation deletes only the selected relationship and one Undo restores it exactly without Inspector access |
 
 ## Terminal acceptance
 
@@ -341,10 +361,11 @@ membership Page must move between eligible selected lanes without changing its
 membership order or effective schema. The installed graph must prove horizontal
 lane bands, left-to-right Pages, a vertical alternative branch, all four typed
 endpoint combinations, ports on all four sides, deterministic port-pair relationship
-kinds, optional labels, side-by-side Events, and an effective-schema-derived Event
-JSON example with truthful status and repair. Ineligible named-lane placement and
-unsafe membership removal remain no-op commands. A component-only canvas, direct
-repository injection, pre-created edges, form-submitted source and target, fixed
-lane constants, manual relationship-kind selector, required relationship label,
-distinct Parallel kind, stored example payload, binding-backed validation, or
+kinds, optional labels, labelled and unlabelled relationship deletion with exact
+Undo, side-by-side Events, and an effective-schema-derived Event JSON example with
+truthful status and repair. Ineligible named-lane placement and unsafe membership
+removal remain no-op commands. A component-only canvas, direct repository injection,
+pre-created edges, form-submitted source and target, fixed lane constants, manual
+relationship-kind selector, required relationship label, distinct Parallel kind,
+Inspector-only deletion, stored example payload, binding-backed validation, or
 assertions over source strings cannot satisfy the runtime feature.

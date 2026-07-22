@@ -145,7 +145,7 @@ Feature: Data layer Flow table documentation export runtime
   # Data layer Flow table documentation export runtime 013
   Scenario: Data layer Flow table documentation export runtime 013
     Given production preview was compiled from graph revision 7 and schema revision set 12
-    When an included occurrence or schema command commits
+    When an included occurrence, relationship-topology, or schema command commits
     Then the installed preview renders stale and all export actions are disabled
     And changed contexts are named
     When actual controls refresh

@@ -291,3 +291,22 @@ Feature: Data layer directional Flow specification graph runtime
     Then one repository migration changes every persisted parallel relationship to alternative
     And production relationship IDs, typed endpoints, groups, optional labels, conditions, expectations, and coordinates equal their pre-upgrade values
     And no stored relationship retains the legacy kind
+
+  # Data layer directional Flow specification graph runtime 023
+  Scenario Outline: Data layer directional Flow specification graph runtime 023
+    Given production has a <kind> relationship from <source> to <target> with <label_state>
+    When actual pointer or keyboard controls select its SVG edge with the Inspector closed
+    Then the installed inline popover renders a Delete relationship button named <accessible_name>
+    When actual controls activate Delete relationship
+    Then the selected SVG edge, outline item, and canonical relationship record are absent
+    And production source, target, every unrelated relationship, and their stable IDs remain byte-identical
+    And the installed result reports relationship deletion, Draft state, an invalidated documentation snapshot, and Undo availability
+    And document.activeElement identifies <source>
+    When actual Undo runs once
+    Then production restores the same relationship ID, ports, kind, optional label, group, condition, and expectation once
+    And document.activeElement is the restored SVG edge
+
+    Examples:
+      | kind          | source           | target          | label_state          | accessible_name                                         |
+      | expected_next | Customer details | Payment         | label Checkout route | Delete relationship Checkout route, Customer details to Payment |
+      | alternative   | Customer details | ID verification | no label             | Delete relationship Customer details to ID verification |

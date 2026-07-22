@@ -147,7 +147,7 @@ Feature: Data layer Flow table documentation export
   # Data layer Flow table documentation export 013
   Scenario: Data layer Flow table documentation export 013
     Given the preview was compiled from graph revision 7 and effective-schema revision set 12
-    When an included occurrence or schema changes
+    When an included occurrence, relationship topology, or schema changes
     Then the preview becomes stale and export actions are disabled
     And the operator sees which contexts changed
     When the operator refreshes the preview

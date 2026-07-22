@@ -154,6 +154,12 @@ target-top infers merge.
 Alternative branches and merges are included in the first canvas release; Parallel
 is not a separate kind, relationship labels are optional, and every other port
 pairing is invalid.
+Selecting an edge exposes a Delete relationship button in its inline popover while
+the Inspector is closed. The button removes only that stable relationship, marks
+documentation from the changed topology stale, and offers one page-scoped Undo that
+restores the same identity, ports, kind, optional label, and metadata. Labelled
+buttons use the label and human endpoint names; unlabelled buttons use human
+endpoint names.
 An Event node's JSON example is read-only and derived from its canonical effective
 occurrence schema, configured examples, and provenance; it is never a stored payload
 copy. Complete, Incomplete, Invalid, and Blocked states distinguish example
