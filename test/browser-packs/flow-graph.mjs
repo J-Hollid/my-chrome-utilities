@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import vm from "node:vm";
 import {headlessChromeArguments,stopHeadlessChrome} from "../support/headless-chrome.mjs";
+import {flowEvidenceFailures,flowInterruptionReport} from "../support/flow-evidence-reporter.mjs";
 
 const wait=(milliseconds)=>new Promise((resolve)=>setTimeout(resolve,milliseconds));
 class DevtoolsSocket{
@@ -94,13 +95,14 @@ try{
   await socket.call("Runtime.enable");
   await socket.call("Page.enable");
   await socket.call("Page.bringToFront");
-  for(const name of ["flowNativeKey","flowNativePointer"])await socket.call("Runtime.addBinding",{name});
-  socket.on("Runtime.bindingCalled",async({name,payload})=>{const action=JSON.parse(payload);try{if(name==="flowNativeKey"){const key=action.key,code=key===" "?"Space":key,windowsVirtualKeyCode=key==="Enter"?13:key==="Escape"?27:key.startsWith("Arrow")?{ArrowLeft:37,ArrowUp:38,ArrowRight:39,ArrowDown:40}[key]:key.charCodeAt(0);await socket.call("Input.dispatchKeyEvent",{type:"keyDown",key,code,windowsVirtualKeyCode,nativeVirtualKeyCode:windowsVirtualKeyCode});await socket.call("Input.dispatchKeyEvent",{type:"keyUp",key,code,windowsVirtualKeyCode,nativeVirtualKeyCode:windowsVirtualKeyCode});}else if(action.type==="drag"){const items=[{mimeType:"application/x-flow-component",data:JSON.stringify(action.component)}];if(action.component.kind==="page")items.push({mimeType:"application/x-flow-page-component",data:action.component.id});const dragData={items,dragOperationsMask:1};for(const type of action.phases??["dragEnter","dragOver","drop"])await socket.call("Input.dispatchDragEvent",{type,x:action.x,y:action.y,data:dragData});}else await socket.call("Input.dispatchMouseEvent",{type:action.type,x:action.x,y:action.y,button:action.type==="mouseMoved"?"none":"left",buttons:action.type==="mouseReleased"?0:1,clickCount:1});}catch(error){console.error("Native input failed",error);}});
+  for(const name of ["flowNativeKey","flowNativePointer","flowEvidencePhase"])await socket.call("Runtime.addBinding",{name});
+  socket.on("Runtime.bindingCalled",async({name,payload})=>{if(name==="flowEvidencePhase"){activePhase=payload;return;}const action=JSON.parse(payload);try{if(name==="flowNativeKey"){const key=action.key,code=key===" "?"Space":key,windowsVirtualKeyCode=key==="Enter"?13:key==="Escape"?27:key.startsWith("Arrow")?{ArrowLeft:37,ArrowUp:38,ArrowRight:39,ArrowDown:40}[key]:key.charCodeAt(0);await socket.call("Input.dispatchKeyEvent",{type:"keyDown",key,code,windowsVirtualKeyCode,nativeVirtualKeyCode:windowsVirtualKeyCode});await socket.call("Input.dispatchKeyEvent",{type:"keyUp",key,code,windowsVirtualKeyCode,nativeVirtualKeyCode:windowsVirtualKeyCode});}else if(action.type==="drag"){const items=[{mimeType:"application/x-flow-component",data:JSON.stringify(action.component)}];if(action.component.kind==="page")items.push({mimeType:"application/x-flow-page-component",data:action.component.id});const dragData={items,dragOperationsMask:1};for(const type of action.phases??["dragEnter","dragOver","drop"])await socket.call("Input.dispatchDragEvent",{type,x:action.x,y:action.y,data:dragData});}else await socket.call("Input.dispatchMouseEvent",{type:action.type,x:action.x,y:action.y,button:action.type==="mouseMoved"?"none":"left",buttons:action.type==="mouseReleased"?0:1,clickCount:1});}catch(error){console.error("Native input failed",error);}});
   await socket.call("Emulation.setDeviceMetricsOverride",{width:1280,height:1000,deviceScaleFactor:1,mobile:false});
   await ready(socket);
 
-  activePhase="runtime001-runtime016";
+  activePhase="runtime001";
   const session=await evaluate(socket,`(async()=>{${helpers}
+    flowEvidencePhase('runtime001');
     set(q('#project-name'),'Canvas Flow shop');
     set(q('#project-site'),'shop.example');
     await submit(q('#create-project-form'),[q('#project-name'),q('#project-site')]);
@@ -123,6 +125,7 @@ try{
     all('button',q('[aria-label="Flow component catalogs"]')).find(({textContent})=>textContent==='Close Inspector').click();
     const closedOperable=inspector.hidden&&['Page Groups','Pages','Events'].every((name)=>workspace.contains(catalog(name)))&&bytes()===initialBytes;
     evidence.runtime001={catalogsInstalled,outlineOwned,closedOperable,inspectorFormFree,advancedSeparated};
+    flowEvidencePhase('runtime002');
 
     const noInitialGraph=all('.flow-lane-label',initialCanvas).length===0&&graphFor().graph.pageGroupIds.length===0;
     for(const name of ['Checkout','Delivery','Confirmation'])await clickCatalog('Page Groups',name);
@@ -134,6 +137,7 @@ try{
     const noFallback=noInitialGraph&&!/(Context|Shipping|Payment|Merge)/.test(JSON.stringify(graph.pageGroupIds))&&all('.flow-lane-label',canvas()).length===3;
     const exactNextAction=q('[role="status"]',q('.documentary-flow')).textContent==='Add a Page from the Pages catalog.';
     evidence.runtime002={exactInitialLabels,exactInitialIds,noFallback,exactNextAction};
+    flowEvidencePhase('runtime003');
 
     const confirmationRow=all('li',q('[aria-label="Page Group lane controls"]')).find(({dataset})=>dataset.pageGroupId===groups.Confirmation.id);
     all('button',confirmationRow).find(({textContent})=>textContent==='Move earlier').click();await pause();
@@ -157,6 +161,7 @@ try{
     const guardStatus=q('[role="status"]',q('.documentary-flow')).textContent;
     const guardedRemoval=bytes()===beforeGuard&&envelope().revision===beforeGuardRevision&&guardStatus.includes('Cart')&&guardStatus.includes('Move Page frame')&&guardStatus.includes('Remove Page frame');
     evidence.runtime003={exactReorder,derivedPositions,idsUnchanged:JSON.stringify(graph.pageGroupIds)===JSON.stringify(reorderedIds),guardedRemoval};
+    flowEvidencePhase('runtime004');
 
     const beforeWrongDrop=bytes(),beforeWrongRevision=envelope().revision,shipping=stored.project.collections.pages.find(({name})=>name==='Shipping');
     await dragComponent(catalogButton('Pages','Shipping'),q('[data-lane-dropzone]',q('[data-page-group-id="'+groups.Checkout.id+'"]',canvas())));
@@ -164,6 +169,7 @@ try{
     const wrongOwnerRejected=bytes()===beforeWrongDrop&&envelope().revision===beforeWrongRevision&&q('[role="status"]',q('.documentary-flow')).textContent.includes('Shipping')&&q('[role="status"]',q('.documentary-flow')).textContent.includes('Checkout');
     const exactRepair=repair.textContent==='Open Page Group membership'&&repair.getAttribute('href')==='?kind=pages&entity='+encodeURIComponent(shipping.id)+'&field=pageGroupIds'&&!q('[aria-label="Page Group lane controls"]').querySelector('input,select');
     evidence.runtime004={exactCartResult,oneCartFrame,cartMembershipLabel,wrongOwnerRejected,exactRepair};
+    flowEvidencePhase('runtime005');
 
     for(const name of ['Shipping','Thank you'])await clickCatalog('Pages',name);
     const cartInitiallyEmpty=graphFor().graph.occurrences.every(({pageFrameId})=>pageFrameId!==cartFrame.id);
@@ -174,6 +180,7 @@ try{
     const exactContextRefs=contextByEvent[events.page_view.id]?.trigger==='Initial load'&&contextByEvent[events.route_view.id]?.trigger==='SPA route change'&&contextRecords.every((record)=>record.pageFrameId===cartFrame.id&&record.pageId===cart.id&&record.pageGroupId===groups.Checkout.id&&record.role==='context-setting'&&!record.contextBindingId);
     const noCopiedContext=contextRecords.length===2&&contextRecords.every((record)=>!('schema' in record)&&!('contextBindingId' in record)&&!('lane' in record)&&!('laneName' in record))&&!('contextEventBindings' in stored.project.collections.pages.find(({id})=>id===cart.id))&&!('contextEventBindings' in stored.project.collections.flows.find(({id})=>id===flow.id));
     evidence.runtime005={cartInitiallyEmpty,pointerAndKeyboardInserted:contextRecords.length===2,exactContextRefs,noCopiedContext};
+    flowEvidencePhase('runtime006');
 
     const eventDefinitionBefore=JSON.stringify(stored.project.collections.events.find(({name})=>name==='add_shipping_info'));
     const membershipsBefore=JSON.stringify(stored.project.collections.pageGroups.map(({id,pageIds})=>({id,pageIds})));
@@ -187,6 +194,7 @@ try{
     const exactReusableRefs=reuse.length===2&&new Set(reuse.map(({id})=>id)).size===2&&reuse.some(({pageFrameId,pageId,pageGroupId})=>pageFrameId===cartFrame.id&&pageId===cart.id&&pageGroupId===groups.Checkout.id)&&reuse.some(({pageFrameId,pageId,pageGroupId})=>pageFrameId===shippingFrame.id&&pageId===shipping.id&&pageGroupId===groups.Delivery.id);
     const reusableSourcesUnchanged=eventDefinitionBefore===JSON.stringify(stored.project.collections.events.find(({name})=>name==='add_shipping_info'))&&membershipsBefore===JSON.stringify(stored.project.collections.pageGroups.map(({id,pageIds})=>({id,pageIds})))&&firstReuseBytes===JSON.stringify(graph.occurrences.find(({id})=>id===firstReuse.id));
     evidence.runtime006={oneShippingEvent,pointerAndKeyboardPlaced:true,exactReusableRefs,reusableSourcesUnchanged};
+    flowEvidencePhase('runtime007');
 
     const landing=stored.project.collections.pages.find(({name})=>name==='Landing'),campaign=stored.project.collections.pages.find(({name})=>name==='Campaign');
     const noInitialFreeFrame=!canvas().querySelector('[data-free-page-frame-canvas]')&&!canvas().querySelector('[data-free-page-edge-target]');
@@ -209,6 +217,7 @@ try{
     const landingRepair=q('.documentary-flow').querySelector('[role="status"] a');
     const landingWrongDrop=bytes()===beforeLandingDrop&&envelope().revision===beforeLandingRevision&&landingRepair?.getAttribute('href')==='?kind=pages&entity='+encodeURIComponent(landing.id)+'&field=pageGroupIds';
     evidence.runtime007={noInitialFreeFrame,exactTransientTargets,narrowTargetGeometry,exactFreeFrames,compactFrameCount,compactFrameGeometry,oppositeFrameSides,bothAcceptEvents,freeRelationshipStarted,unusedTargetsRemoved:!canvas().querySelector('[data-free-page-edge-target]'),landingWrongDrop};
+    flowEvidencePhase('runtime008');
 
     await selectFrame('Cart');await clickCatalog('Events','add_payment_info');
     await selectFrame('Thank you');await clickCatalog('Events','purchase');
@@ -223,6 +232,7 @@ try{
     const keyboardCrossNoWrite=bytes()===beforeKeyCross&&envelope().revision===beforeKeyRevision&&nodeId(paymentOccurrence.id).getAttribute('transform')===lastValidTransform;
     const movementGuidance=q('[role="status"]',q('.documentary-flow')).textContent.includes('Add the predefined Event to another Page frame instead.')&&idCapture===JSON.stringify(stableGraphCapture('Checkout journey').entityIds);
     evidence.runtime008={validPointerMove,validPointerWithinFrame,pointerCrossNoWrite,keyboardRequestedOutside,keyboardCrossNoWrite,movementGuidance,reloadCoordinates:false};
+    flowEvidencePhase('runtime009');
 
     ({graph}=graphFor());const initialOccurrence=graph.occurrences.find(({eventId,role})=>eventId===events.page_view.id&&role==='context-setting'),shippingCartOccurrence=graph.occurrences.find(({eventId,pageFrameId})=>eventId===events.add_shipping_info.id&&pageFrameId===cartFrame.id);
     const initialNode=nodeId(initialOccurrence.id),paymentNode=nodeId(paymentOccurrence.id),shippingCartNode=nodeId(shippingCartOccurrence.id),purchaseNode=nodeId(purchaseOccurrence.id);
@@ -231,6 +241,7 @@ try{
     const exactExpected=expectedRelationship.sourceEndpoint?.kind==='event-occurrence'&&expectedRelationship.sourceEndpoint.id===initialOccurrence.id&&expectedRelationship.targetEndpoint?.kind==='event-occurrence'&&expectedRelationship.targetEndpoint.id===paymentOccurrence.id&&expectedRelationship.kind==='expected-next'&&Boolean(expectedRelationship.id);
     const directedGeometry=expectedEdge.dataset.directed==='true'&&Boolean(q('polygon',expectedEdge))&&(Number(expectedLine.getAttribute('x2'))!==Number(expectedLine.getAttribute('x1'))||Number(expectedLine.getAttribute('y2'))!==Number(expectedLine.getAttribute('y1')));
     evidence.runtime009={previewFollowed:pointerExpected.previewMoved,previewAligned:pointerExpected.previewAligned,targetValid:pointerExpected.valid,exactExpected,directedGeometry,popoverFocused:pointerExpected.popoverFocus};
+    flowEvidencePhase('runtime010');
 
     const cancellation=async(target,release=true)=>{const before=bytes(),revision=envelope().revision,count=graphFor().graph.relationships.length,output=q('[data-output-port-for="'+initialOccurrence.id+'"]');await nativePoint(output,'mousePressed');await nativePoint(target,'mouseMoved');const invalid=target.classList.contains('is-invalid-target')||canvas().classList.contains('is-invalid-target')||Boolean(target.closest('[data-occurrence-id]')?.classList.contains('is-invalid-target'));if(release)await nativePoint(target,'mouseReleased');else await nativeKey('Escape');return{invalid,noWrite:bytes()===before&&envelope().revision===revision&&graphFor().graph.relationships.length===count,removed:!document.querySelector('.flow-connection-preview'),sourceFocus:document.activeElement?.dataset.occurrenceId===initialOccurrence.id};};
     const sourceCancel=await cancellation(nodeId(initialOccurrence.id));
@@ -238,6 +249,7 @@ try{
     const incompatible=q('[data-output-port-for="'+paymentOccurrence.id+'"]'),portCancel=await cancellation(incompatible);
     const escapeCancel=await cancellation(nodeId(initialOccurrence.id),false);
     evidence.runtime010={sourceInvalid:sourceCancel.invalid,sourcePointerup:sourceCancel.noWrite&&sourceCancel.removed&&sourceCancel.sourceFocus,emptyPointerup:emptyCancel.noWrite&&emptyCancel.removed&&emptyCancel.sourceFocus,incompatiblePointerup:portCancel.noWrite&&portCancel.removed&&portCancel.sourceFocus,escapeCancelled:escapeCancel.noWrite&&escapeCancel.removed&&escapeCancel.sourceFocus};
+    flowEvidencePhase('runtime011');
 
     const parallelShipping=await pointerConnect(nodeId(initialOccurrence.id),nodeId(shippingCartOccurrence.id),'parallel','shipping branch');
     const parallelPayment=await pointerConnect(nodeId(initialOccurrence.id),nodeId(paymentOccurrence.id),'parallel','payment branch');
@@ -251,12 +263,14 @@ try{
     const exactProjections=[...parallel,...merge].every(({id,sourceEndpoint,targetEndpoint})=>{const edge=q('[data-relationship-id="'+id+'"]',canvas()),row=q('[data-relationship-id="'+id+'"]',outline());return edge.getAttribute('aria-label').includes(sourceEndpoint.id===initialOccurrence.id?'page_view':sourceEndpoint.id===paymentOccurrence.id?'add_payment_info':'add_shipping_info')&&row.textContent.includes(targetEndpoint.id===purchaseOccurrence.id?'purchase':targetEndpoint.id===paymentOccurrence.id?'add_payment_info':'add_shipping_info');});
     const manualOnly=q('.documentary-flow .status-text').textContent==='Documentary journey expectations are checked manually. Each Event payload schema validates independently.'&&!JSON.stringify(graph).includes('executed');
     evidence.runtime011={exactParallel,exactMerge,exactMeaning,exactProjections,manualOnly};
+    flowEvidencePhase('runtime012');
 
     const beforeKeyboardCount=graph.relationships.length;
     const keyboardExpected=await keyboardConnect(nodeId(initialOccurrence.id),nodeId(paymentOccurrence.id),'expected-next','keyboard payment route');
     ({graph}=graphFor());const keyboardRelationship=graph.relationships.find(({id})=>id===keyboardExpected.createdId);
     evidence.runtime012={popoverFocused:keyboardExpected.popoverFocused,edgeFocused:keyboardExpected.edgeFocused,exactOneCreated:graph.relationships.length===beforeKeyboardCount+1,exactKeyboardRelationship:keyboardRelationship.sourceEndpoint?.kind==='event-occurrence'&&keyboardRelationship.sourceEndpoint.id===initialOccurrence.id&&keyboardRelationship.targetEndpoint?.kind==='event-occurrence'&&keyboardRelationship.targetEndpoint.id===paymentOccurrence.id&&keyboardRelationship.kind==='expected-next'};
     Object.assign(evidence.runtime009,{previewAlignedNormal:previewAlignments.some(({previewAligned,autoscrolled})=>previewAligned&&!autoscrolled),previewAlignedScrolled:previewAlignments.some(({previewAligned,autoscrolled})=>previewAligned&&autoscrolled)});
+    flowEvidencePhase('runtime013');
 
     nodeId(paymentOccurrence.id).dispatchEvent(new MouseEvent('click',{bubbles:true}));await pause();
     const actions=q('[aria-label="Selected node inline actions"]'),inlineActions=['Move','Connect','Duplicate occurrence','Remove','Open schema contribution'].every((name)=>all('button',actions).some(({textContent})=>textContent===name));
@@ -268,6 +282,7 @@ try{
     const openInspector=all('button',q('[aria-label="Flow component catalogs"]')).find(({textContent})=>textContent==='Open Inspector');openInspector.click();await pause();
     const inspectorContext=q('#flow-inspector-context').textContent.includes(paymentOccurrence.id)&&!q('#flow-inspector-context').querySelector('button,form,input,select,textarea');
     evidence.runtime013={inlineActions,schemaOpened,restored,inspectorContext};
+    flowEvidencePhase('runtime016');
 
     ({graph}=graphFor());const landingBeforeMove=graph.pageFrames.find(({id})=>id===freeLanding.id),stripFreePresentation=({freePageRegion,position,...identity})=>identity,landingIdentityBefore=JSON.stringify(stripFreePresentation(landingBeforeMove)),landingReferencesBefore=JSON.stringify({page:envelope().project.collections.pages.find(({id})=>id===landingBeforeMove.pageId),children:graph.occurrences.filter(({pageFrameId})=>pageFrameId===freeLanding.id),relationships:graph.relationships.filter(({sourceEndpoint,targetEndpoint})=>graph.occurrences.some(({id,pageFrameId})=>[sourceEndpoint?.id,targetEndpoint?.id].includes(id)&&pageFrameId===freeLanding.id))});
     const freeLandingCanvas=q('[data-free-page-frame-canvas="'+freeLanding.id+'"]',canvas());freeLandingCanvas.scrollIntoView({block:'center',inline:'center'});await pause();freeLandingCanvas.focus();const freeLandingRect=q('rect',freeLandingCanvas);let pointerEdgeTarget=q('[data-free-page-edge-target="after-lanes"]',canvas());const pointerTargetVisible=pointerEdgeTarget.getAttribute('aria-label')==='Place after lanes',sourceBounds=freeLandingRect.getBoundingClientRect(),labelBounds=q('text',freeLandingCanvas).getBoundingClientRect();let sourcePoint={x:labelBounds.left+labelBounds.width/2,y:labelBounds.top+labelBounds.height/2};if(document.elementFromPoint(sourcePoint.x,sourcePoint.y)?.closest('[data-free-page-frame-canvas]')!==freeLandingCanvas){sourcePoint=undefined;for(let y=Math.max(1,sourceBounds.top+2);y<Math.min(innerHeight-1,sourceBounds.bottom)&&!sourcePoint;y+=4)for(let x=Math.max(1,sourceBounds.left+2);x<Math.min(innerWidth-1,sourceBounds.right);x+=4)if(document.elementFromPoint(x,y)?.closest('[data-free-page-frame-canvas]')===freeLandingCanvas){sourcePoint={x,y};break;}}if(!sourcePoint)throw new Error('No exposed pointer surface on free Page frame');const sourceX=sourcePoint.x,sourceY=sourcePoint.y,sourceHitsFrame=true;let framePointerDown=false;freeLandingCanvas.addEventListener('pointerdown',()=>{framePointerDown=true;},{once:true});flowNativePointer(JSON.stringify({type:'mousePressed',x:sourceX,y:sourceY}));await nativeDone();pointerEdgeTarget=q('[data-free-page-edge-target="after-lanes"]',canvas());pointerEdgeTarget.scrollIntoView({block:'center',inline:'center'});await pause();const targetBounds=pointerEdgeTarget.getBoundingClientRect();let targetPoint;for(let y=Math.max(1,targetBounds.top+2);y<Math.min(innerHeight-1,targetBounds.bottom)&&!targetPoint;y+=4)for(let x=Math.max(1,targetBounds.left+2);x<Math.min(innerWidth-1,targetBounds.right);x+=4)if(document.elementFromPoint(x,y)?.closest('[data-free-page-edge-target]')===pointerEdgeTarget){targetPoint={x,y};break;}if(!targetPoint)throw new Error('No exposed after-lanes pointer target');const targetX=targetPoint.x,targetY=targetPoint.y;for(let step=1;step<=12;step+=1){flowNativePointer(JSON.stringify({type:'mouseMoved',x:sourceX+(targetX-sourceX)*step/12,y:sourceY+(targetY-sourceY)*step/12}));await nativeDone();}flowNativePointer(JSON.stringify({type:'mouseReleased',x:targetX,y:targetY}));await nativeDone();
@@ -283,6 +298,7 @@ try{
     let groupedCard;for(let attempt=0;attempt<40&&!groupedCard;attempt+=1){await pause();groupedCard=document.querySelector('[data-free-page-frame-id="'+groupedFree.frame.id+'"]');}if(!groupedCard)throw new Error('Free Cart frame controls did not settle');const restoreGrouped=q('[data-move-page-frame-to="'+groups.Checkout.id+'"]',groupedCard);
     restoreGrouped.focus();await nativeKey('Enter');const groupedRestored=await groupedCapture(),groupedRenderedRestored=await renderedGroupedCapture(),groupedKeyboardRestored=groupedRestored.frame.pageGroupId===groups.Checkout.id&&!('freePageRegion' in groupedRestored.frame),groupedRestoreIdentityStable=JSON.stringify(withoutPlacement(groupedRestored.frame))===groupedFrameIdentity&&JSON.stringify({page:groupedRestored.page,occurrences:groupedRestored.occurrences,relationships:groupedRestored.relationships})===groupedSemanticBytes,groupedRestoreMembershipStable=groupedRestored.page.pageGroupIds.join('|')===groupedMembershipOrder,groupedRestoreCompiledStable=JSON.stringify(groupedRestored.compiled)===groupedCompiledBefore,groupedRestoreProvenanceStable=JSON.stringify(groupedRestored.compiled.provenance)===JSON.stringify(groupedBefore.compiled.provenance),groupedRenderedRestoreStable=groupedRenderedRestored===groupedRenderedBefore;
     evidence.runtime016={pointerTargetVisible,sourceHitsFrame,framePointerDown,pointerRegionAfter,pointerCoordinatesChanged,pointerIdentityStable,pointerReferencesStable,keyboardReturnedLeft,leftNoopNoWriteFocus,upNoopNoWriteFocus,noopFocusNotStolen,trustedFreePointerSequence:false,foreignPointerIgnored:false,pointerOwnerCommitted:false,protocolCancelGlobal:false,groupedPointerMoved,groupedIdentityStable,groupedMembershipStable,groupedCompiledStable,groupedProvenanceStable,groupedRenderedStable,groupedKeyboardRestored,groupedRestoreIdentityStable,groupedRestoreMembershipStable,groupedRestoreCompiledStable,groupedRestoreProvenanceStable,groupedRenderedRestoreStable,reloadRegions:false,reloadGroupedCheckout:false};
+    flowEvidencePhase('runtime014');
 
     const beforeRename=stableGraphCapture('Checkout journey'),stableSemanticBytes=JSON.stringify({frames:beforeRename.frames,occurrences:beforeRename.occurrences,relationships:beforeRename.relationships});
     await saveEntity('pageGroups','Checkout',async(form)=>set(q('input[name="name"]',form),'Basket'));
@@ -296,6 +312,7 @@ try{
     const renamedPopover=relationshipForm().textContent.includes('page_view → payment_details_added');
     const afterRename=stableGraphCapture('Checkout journey'),renameIdsStable=stableSemanticBytes===JSON.stringify({frames:afterRename.frames,occurrences:afterRename.occurrences,relationships:afterRename.relationships});
     evidence.runtime014={renamedCanvas,renamedCatalogs,renamedOutline,renamedPopover,renameIdsStable,reloadStable:false};
+    flowEvidencePhase('runtime015');
 
     await add('flows','Minimal journey');await openFlow('Minimal journey');
     const closeInspector=all('button',q('[aria-label="Flow component catalogs"]')).find(({textContent})=>textContent==='Close Inspector');closeInspector?.click();
@@ -318,6 +335,8 @@ try{
 
     return{evidence,captures:{checkout:stableGraphCapture('Checkout journey'),minimal:stableGraphCapture('Minimal journey'),paymentOccurrenceId:paymentOccurrence.id,minimalSelectedId:minimalPayment.id,freeLandingId:freeLanding.id,freeCampaignId:freeCampaign.id,cartFrameId:cartFrame.id},installedBoundary:location.protocol==='chrome-extension:'&&chrome.runtime.id===location.hostname};
   })()`);
+
+  activePhase="runtime016";
 
   const touchPoint=(id,x,y)=>({id,x,y,radiusX:2,radiusY:2,force:1});
   const dispatchTouch=async(type,touchPoints)=>{await socket.call("Input.dispatchTouchEvent",{type,touchPoints});await wait(90);};
@@ -465,10 +484,10 @@ try{
   session.evidence.runtime021={...exampleEvidence,blocked:reloadTopology.blocked};
   session.evidence.installedBoundary=session.installedBoundary;
   activePhase="aggregate";
-  const runtimeKeys=Array.from({length:21},(_,index)=>`runtime${String(index+1).padStart(3,"0")}`),falseLeaves=runtimeKeys.flatMap((key)=>session.evidence[key]?Object.entries(session.evidence[key]).filter(([,value])=>!value).map(([leaf,value])=>({path:`${key}.${leaf}`,value,expected:true})):[{path:key,value:"unexecuted",expected:"evidence object"}]);if(!session.evidence.installedBoundary)falseLeaves.push({path:"installedBoundary",value:session.evidence.installedBoundary,expected:true});assert.equal(falseLeaves.length,0,`Flow evidence false leaves: ${JSON.stringify(falseLeaves)}`);
+  const falseLeaves=flowEvidenceFailures(session.evidence);assert.equal(falseLeaves.length,0,`Flow evidence false leaves: ${JSON.stringify(falseLeaves)}`);
   console.log(JSON.stringify({flowGraph:session.evidence}));
 }catch(error){
-  const phases=["startup","runtime001-runtime016","runtime017","runtime018","runtime019","runtime020","runtime021","aggregate"],later=phases.slice(Math.max(0,phases.indexOf(activePhase)+1)).map((phase)=>({phase,status:"unexecuted"}));throw new Error(`Flow phase ${activePhase} interrupted: ${error instanceof Error?error.message:String(error)}; later phases ${JSON.stringify(later)}`,{cause:error});
+  const report=flowInterruptionReport(activePhase,error);throw new Error(`Flow runtime interruption: ${JSON.stringify(report)}`,{cause:error});
 }finally{
   socket?.close();
   await stopHeadlessChrome(chrome);
