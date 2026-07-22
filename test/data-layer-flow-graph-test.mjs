@@ -1,10 +1,11 @@
 import assert from "node:assert/strict";
 import {FLOW_GRAPH_GEOMETRY,addEventOccurrenceToPage,addFlowPageFrame,addFreePageFrame,addGraphOccurrence,addInteractionOccurrenceToPage,applyFlowPageGroupLaneSelection,deriveFlowOccurrenceExample,documentaryFlowGraph,flowOccurrenceEventSchema,flowOccurrenceExampleEditorRows,flowOutline,flowRelationshipText,inferFlowRelationshipKind,inspectFlowGraph,inspectFreePageEdgeMove,inspectOccurrenceContainmentMove,inspectPageFrameDrop,migrateLegacyFlowRelationshipKinds,moveFlowPageFrame,moveFreePageFrame,moveGraphOccurrence,projectFlowGraph,removeFlowPageFrame,removeFlowRelationship,removeGraphOccurrence,reorderFlowPageGroupLane,reorderGraphOccurrence,saveFlowViewState,saveGraphRelationship,setFlowOccurrenceExample,setFlowPageGroupLanes,updateGraphOccurrence} from "../dist/data-layer-flow-graph.js";
-import {consumeRelationshipDeletionFocus,flowEdgeGeometry,flowViewAfterRelationshipDeletion,ownsPointerDrag,restorePointerCancellationFocus} from "../dist/data-layer-flow-graph-ui.js";
+import {consumeRelationshipDeletionFocus,contextSettingPageLabel,flowEdgeGeometry,flowViewAfterRelationshipDeletion,ownsPointerDrag,restorePointerCancellationFocus} from "../dist/data-layer-flow-graph-ui.js";
 import {compileSpecificationProject,createCanonicalProjectEnvelope} from "../dist/data-layer-specification-engine.js";
 import {addFlowStep,addProjectEntity,createSpecificationProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
 
 let sequence=0;
+assert.equal(contextSettingPageLabel("Landing"),"Landing · Context-setting Page","every Page surface uses the fixed context-setting semantic label");
 const id=(kind)=>`${kind}:graph-${++sequence}`;
 let state=createSpecificationProject({name:"Shop",site:"shop.example",id});
 const add=(kind,entity)=>{state=addProjectEntity(state,kind,entity,id);return state.project.collections[kind].at(-1);};

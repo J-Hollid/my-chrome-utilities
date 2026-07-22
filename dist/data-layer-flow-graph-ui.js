@@ -1,5 +1,6 @@
 import { addFlowPageFrame, addFreePageFrame, addEventOccurrenceToPage, addGraphOccurrence, deriveFlowOccurrenceExample, documentaryFlowGraph, flowOccurrenceExampleEditorRows, FLOW_GRAPH_GEOMETRY, flowRelationshipText, inspectFreePageEdgeMove, migrateLegacyFlowContextBindings, migrateLegacyFlowRelationshipKinds, moveFlowPageFrame, moveFreePageFrame, moveGraphOccurrence, projectFlowGraph, reviewLegacyFlowContextMigration, removeFlowPageFrame, removeFlowRelationship, removeGraphOccurrence, reorderFlowPageGroupLane, saveGraphRelationship, setFlowOccurrenceExample, setFlowPageGroupLanes, } from "./data-layer-flow-graph.js";
 import { orderedPageGroupIds } from "./utilities/data-layer/page-group-membership.js";
+export function contextSettingPageLabel(pageName) { return `${pageName} · Context-setting Page`; }
 const nodeWidth = FLOW_GRAPH_GEOMETRY.eventWidth, nodeHeight = FLOW_GRAPH_GEOMETRY.eventHeight;
 const q = (selector, root = document) => { const element = root.querySelector(selector); if (!element)
     throw new Error(`Missing ${selector}`); return element; };
@@ -249,7 +250,7 @@ export function installFlowGraphBuilder(options) {
         host.setAttribute("aria-label", "Flow Page frames");
         host.append(heading);
         for (const frame of graph.pageFrames) {
-            const page = state.project.collections.pages.find(({ id }) => id === frame.pageId), group = state.project.collections.pageGroups.find(({ id }) => id === frame.pageGroupId), card = document.createElement("article"), region = frame.freePageRegion === "before-lanes" ? "before lanes" : "after lanes", title = button(frame.freePageRegion ? `Free ${region} / ${page?.name ?? frame.pageId}` : `${group?.name ?? "Page"} / ${page?.name ?? frame.pageId}`, () => saveSelection({ kind: "page-frame", id: frame.id }));
+            const page = state.project.collections.pages.find(({ id }) => id === frame.pageId), group = state.project.collections.pageGroups.find(({ id }) => id === frame.pageGroupId), card = document.createElement("article"), region = frame.freePageRegion === "before-lanes" ? "before lanes" : "after lanes", title = button(frame.freePageRegion ? `Free ${region} / ${contextSettingPageLabel(page?.name ?? frame.pageId)}` : `${group?.name ?? "Page"} / ${contextSettingPageLabel(page?.name ?? frame.pageId)}`, () => saveSelection({ kind: "page-frame", id: frame.id }));
             card.dataset.pageFrameId = frame.id;
             card.dataset.pageId = frame.pageId;
             if (frame.pageGroupId)
@@ -589,7 +590,9 @@ export function installFlowGraphBuilder(options) {
             rect.classList.add("flow-page-frame", "flow-free-page-frame");
             label.setAttribute("x", "10");
             label.setAttribute("y", "20");
-            label.textContent = `${storedFrame.freePageRegion === "before-lanes" ? "Before" : "After"} lanes · ${page?.name ?? storedFrame.pageId}`;
+            label.setAttribute("textLength", "170");
+            label.setAttribute("lengthAdjust", "spacingAndGlyphs");
+            label.textContent = `${storedFrame.freePageRegion === "before-lanes" ? "Before" : "After"} lanes · ${contextSettingPageLabel(page?.name ?? storedFrame.pageId)}`;
             let start, targetRegion, suppressPointerClick = false;
             const owns = (event) => ownsPointerDrag(start?.pointerId, event.pointerId), stop = (pointerId) => { window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", finish); window.removeEventListener("pointercancel", cancel); if (frame.hasPointerCapture(pointerId))
                 frame.releasePointerCapture(pointerId); start = undefined; targetRegion = undefined; }, move = (event) => { if (!owns(event))
