@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
-import {FLOW_GRAPH_GEOMETRY,addEventOccurrenceToPage,addFlowPageFrame,addFreePageFrame,addGraphOccurrence,addInteractionOccurrenceToPage,applyFlowPageGroupLaneSelection,deriveFlowOccurrenceExample,documentaryFlowGraph,flowOccurrenceEventSchema,flowOccurrenceExampleEditorRows,flowOutline,flowRelationshipText,inferFlowRelationshipKind,inspectFlowGraph,inspectFreePageEdgeMove,inspectOccurrenceContainmentMove,inspectPageFrameDrop,migrateLegacyFlowRelationshipKinds,moveFlowPageFrame,moveFreePageFrame,moveGraphOccurrence,projectFlowGraph,removeFlowPageFrame,removeGraphOccurrence,reorderFlowPageGroupLane,reorderGraphOccurrence,saveFlowViewState,saveGraphRelationship,setFlowOccurrenceExample,setFlowPageGroupLanes,updateGraphOccurrence} from "../dist/data-layer-flow-graph.js";
+import {FLOW_GRAPH_GEOMETRY,addEventOccurrenceToPage,addFlowPageFrame,addFreePageFrame,addGraphOccurrence,addInteractionOccurrenceToPage,applyFlowPageGroupLaneSelection,deriveFlowOccurrenceExample,documentaryFlowGraph,flowOccurrenceEventSchema,flowOccurrenceExampleEditorRows,flowOutline,flowRelationshipText,inferFlowRelationshipKind,inspectFlowGraph,inspectFreePageEdgeMove,inspectOccurrenceContainmentMove,inspectPageFrameDrop,migrateLegacyFlowRelationshipKinds,moveFlowPageFrame,moveFreePageFrame,moveGraphOccurrence,projectFlowGraph,removeFlowPageFrame,removeFlowRelationship,removeGraphOccurrence,reorderFlowPageGroupLane,reorderGraphOccurrence,saveFlowViewState,saveGraphRelationship,setFlowOccurrenceExample,setFlowPageGroupLanes,updateGraphOccurrence} from "../dist/data-layer-flow-graph.js";
 import {flowEdgeGeometry,ownsPointerDrag} from "../dist/data-layer-flow-graph-ui.js";
 import {compileSpecificationProject,createCanonicalProjectEnvelope} from "../dist/data-layer-specification-engine.js";
-import {addFlowStep,addProjectEntity,createSpecificationProject} from "../dist/data-layer-specification-project.js";
+import {addFlowStep,addProjectEntity,createSpecificationProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
 
 let sequence=0;
 const id=(kind)=>`${kind}:graph-${++sequence}`;
@@ -61,6 +61,16 @@ assert.equal(inferFlowRelationshipKind("bottom","top"),"merge");
 for(const [sourcePort,targetPort] of [["left","right"],["right","top"],["top","left"],["bottom","left"]])assert.equal(inferFlowRelationshipKind(sourcePort,targetPort),undefined,`${sourcePort} to ${targetPort} is not a relationship gesture`);
 const beforeInvalidPortPair=state;
 assert.equal(saveGraphRelationship(state,flow.id,context.id,{toStepId:interaction.id,sourcePort:"right",targetPort:"top"},id),beforeInvalidPortPair,"an invalid port pair is an atomic no-op");
+const deletionState=saveGraphRelationship(state,flow.id,interaction.id,{toStepId:authoritative.id,sourcePort:"top",targetPort:"bottom",group:"review",documentationCondition:"identity remains",expectation:"manual",label:"Unrelated"},id),deletionGraph=documentaryFlowGraph(deletionState.project,flow.id),deletedRelationship=structuredClone(deletionGraph.relationships.find(({id})=>id===relationship.id)),unrelatedRelationship=structuredClone(deletionGraph.relationships.find(({id})=>id!==relationship.id)),endpointBytes=JSON.stringify(deletionGraph.occurrences.filter(({id})=>[context.id,interaction.id].includes(id)));
+const afterRelationshipDeletion=removeFlowRelationship(deletionState,flow.id,relationship.id),afterDeletionGraph=documentaryFlowGraph(afterRelationshipDeletion.project,flow.id);
+assert.equal(afterDeletionGraph.relationships.some(({id})=>id===relationship.id),false,"relationship deletion removes the exact stable record");
+assert.deepEqual(afterDeletionGraph.relationships.find(({id})=>id===unrelatedRelationship.id),unrelatedRelationship,"relationship deletion leaves unrelated relationship bytes unchanged");
+assert.equal(JSON.stringify(afterDeletionGraph.occurrences.filter(({id})=>[context.id,interaction.id].includes(id))),endpointBytes,"relationship deletion leaves both endpoints byte-identical");
+assert.match(afterRelationshipDeletion.history.undo.at(-1).label,/Delete Flow relationship/);
+const relationshipDeletionUndone=undoProjectTransaction(afterRelationshipDeletion),restoredDeletionGraph=documentaryFlowGraph(relationshipDeletionUndone.project,flow.id);
+assert.deepEqual(restoredDeletionGraph.relationships.find(({id})=>id===relationship.id),deletedRelationship,"one Undo restores the complete relationship exactly once");
+assert.equal(restoredDeletionGraph.relationships.filter(({id})=>id===relationship.id).length,1);
+assert.equal(removeFlowRelationship(state,flow.id,"missing-relationship"),state,"deleting an unknown relationship is an atomic no-op");
 const legacyRelationshipProject=structuredClone(state.project),legacyRelationships=legacyRelationshipProject.documentationFlowGraphs[flow.id].relationships;
 legacyRelationships.push({id:"relationship:legacy-parallel",sourceEndpoint:{kind:"event-occurrence",id:context.id},targetEndpoint:{kind:"event-occurrence",id:interaction.id},kind:"parallel",group:"legacy",documentationCondition:"documented",expectation:"manual"});
 const legacyRelationshipState={...state,project:legacyRelationshipProject},migratedRelationshipState=migrateLegacyFlowRelationshipKinds(legacyRelationshipState,flow.id),migratedRelationship=documentaryFlowGraph(migratedRelationshipState.project,flow.id).relationships.at(-1);

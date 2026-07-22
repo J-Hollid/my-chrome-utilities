@@ -1,4 +1,4 @@
-import { addFlowPageFrame, addFreePageFrame, addEventOccurrenceToPage, addGraphOccurrence, deriveFlowOccurrenceExample, documentaryFlowGraph, flowOccurrenceExampleEditorRows, FLOW_GRAPH_GEOMETRY, flowRelationshipText, inspectFreePageEdgeMove, migrateLegacyFlowContextBindings, migrateLegacyFlowRelationshipKinds, moveFlowPageFrame, moveFreePageFrame, moveGraphOccurrence, projectFlowGraph, reviewLegacyFlowContextMigration, removeFlowPageFrame, removeGraphOccurrence, reorderFlowPageGroupLane, saveGraphRelationship, setFlowOccurrenceExample, setFlowPageGroupLanes, } from "./data-layer-flow-graph.js";
+import { addFlowPageFrame, addFreePageFrame, addEventOccurrenceToPage, addGraphOccurrence, deriveFlowOccurrenceExample, documentaryFlowGraph, flowOccurrenceExampleEditorRows, FLOW_GRAPH_GEOMETRY, flowRelationshipText, inspectFreePageEdgeMove, migrateLegacyFlowContextBindings, migrateLegacyFlowRelationshipKinds, moveFlowPageFrame, moveFreePageFrame, moveGraphOccurrence, projectFlowGraph, reviewLegacyFlowContextMigration, removeFlowPageFrame, removeFlowRelationship, removeGraphOccurrence, reorderFlowPageGroupLane, saveGraphRelationship, setFlowOccurrenceExample, setFlowPageGroupLanes, } from "./data-layer-flow-graph.js";
 import { orderedPageGroupIds } from "./utilities/data-layer/page-group-membership.js";
 const nodeWidth = FLOW_GRAPH_GEOMETRY.eventWidth, nodeHeight = FLOW_GRAPH_GEOMETRY.eventHeight;
 const q = (selector, root = document) => { const element = root.querySelector(selector); if (!element)
@@ -36,6 +36,7 @@ export function installFlowGraphBuilder(options) {
     let connection;
     let relationshipPopoverFocusIntent;
     let relationshipEdgeFocusIntent;
+    let relationshipDeletionFocusIntent;
     let pageFrameFocusIntent;
     let suppressNodeClick = false;
     let statusMessage = "";
@@ -284,7 +285,7 @@ export function installFlowGraphBuilder(options) {
         const projection = projectFlowGraph(state.project, flow.id).graph, relationship = projection.relationships.find(({ id }) => id === selected.id);
         if (!relationship)
             return;
-        const sourceId = relationship.sourceEndpoint.id, targetId = relationship.targetEndpoint.id, source = projection.connectionEndpoints.find(({ id }) => id === sourceId), target = projection.connectionEndpoints.find(({ id }) => id === targetId), form = document.createElement("form"), heading = document.createElement("h4"), endpoints = document.createElement("p"), inferredKind = document.createElement("p"), group = document.createElement("input"), label = document.createElement("input"), condition = document.createElement("textarea"), expectation = document.createElement("textarea"), save = document.createElement("button"), cancel = document.createElement("button");
+        const sourceId = relationship.sourceEndpoint.id, targetId = relationship.targetEndpoint.id, source = projection.connectionEndpoints.find(({ id }) => id === sourceId), target = projection.connectionEndpoints.find(({ id }) => id === targetId), form = document.createElement("form"), heading = document.createElement("h4"), endpoints = document.createElement("p"), inferredKind = document.createElement("p"), group = document.createElement("input"), label = document.createElement("input"), condition = document.createElement("textarea"), expectation = document.createElement("textarea"), save = document.createElement("button"), cancel = document.createElement("button"), remove = document.createElement("button"), relationshipName = [relationship.label, `${source?.name ?? sourceId} to ${target?.name ?? targetId}`].filter(Boolean).join(", ");
         form.dataset.relationshipPopover = relationship.id;
         form.setAttribute("aria-label", "Inline relationship popover");
         heading.textContent = "Relationship details";
@@ -304,10 +305,14 @@ export function installFlowGraphBuilder(options) {
         save.textContent = "Save relationship";
         cancel.type = "button";
         cancel.textContent = "Cancel";
+        remove.type = "button";
+        remove.textContent = "Delete relationship";
+        remove.setAttribute("aria-label", `Delete relationship ${relationshipName}`);
+        remove.addEventListener("click", () => { relationshipPopoverFocusIntent = undefined; relationshipEdgeFocusIntent = undefined; relationshipDeletionFocusIntent = { id: relationship.id, sourceKind: relationship.sourceEndpoint.kind, sourceId }; selected = undefined; persist(removeFlowRelationship(current().state, flow.id, relationship.id)); statusMessage = `Deleted relationship ${relationshipName}. Saved Draft; documentation preview stale; Undo available.`; render(); });
         cancel.addEventListener("click", () => { relationshipPopoverFocusIntent = undefined; relationshipEdgeFocusIntent = undefined; selected = undefined; render(); document.querySelector(`[data-flow-port-for="${CSS.escape(sourceId)}"][data-flow-port-side="${relationship.sourcePort}"]`)?.focus(); });
         form.addEventListener("submit", (event) => { event.preventDefault(); relationshipPopoverFocusIntent = undefined; relationshipEdgeFocusIntent = { id: relationship.id, revision: Number(revision ?? 0), optimisticFocused: false }; persist(saveGraphRelationship(current().state, flow.id, sourceId, { id: relationship.id, toStepId: targetId, sourcePort: relationship.sourcePort, targetPort: relationship.targetPort, group: group.value.trim(), label: label.value.trim(), documentationCondition: condition.value.trim(), expectation: expectation.value.trim() }, options.id)); queueMicrotask(() => document.querySelector(`[data-relationship-id="${CSS.escape(relationship.id)}"]`)?.focus()); });
         const labeled = (text, control) => { const wrapper = document.createElement("label"); wrapper.append(text, control); return wrapper; };
-        form.append(heading, endpoints, inferredKind, labeled("Group", group), labeled("Optional label", label), labeled("Condition", condition), labeled("Expectation", expectation), save, cancel);
+        form.append(heading, endpoints, inferredKind, labeled("Group", group), labeled("Optional label", label), labeled("Condition", condition), labeled("Expectation", expectation), save, cancel, remove);
         host.append(form);
         const intent = relationshipPopoverFocusIntent;
         if (intent?.id === relationship.id) {
@@ -616,7 +621,7 @@ export function installFlowGraphBuilder(options) {
             const source = projection.graph.connectionEndpoints.find(({ id, kind }) => id === relationship.sourceEndpoint.id && kind === relationship.sourceEndpoint.kind), target = projection.graph.connectionEndpoints.find(({ id, kind }) => id === relationship.targetEndpoint.id && kind === relationship.targetEndpoint.kind);
             if (!source || !target)
                 continue;
-            const geometry = flowEdgeGeometry(source.layout, target.layout, { width: source.width, height: source.height }, { width: target.width, height: target.height }, relationship.sourcePort, relationship.targetPort), edge = svg("g"), line = svg("line"), arrow = svg("polygon"), label = svg("text");
+            const geometry = flowEdgeGeometry(source.layout, target.layout, { width: source.width, height: source.height }, { width: target.width, height: target.height }, relationship.sourcePort, relationship.targetPort), edge = svg("g"), line = svg("line"), arrow = svg("polygon"), label = svg("text"), selectRelationship = () => saveSelection({ kind: "relationship", id: relationship.id });
             edge.classList.add("flow-edge");
             edge.dataset.relationshipId = relationship.id;
             edge.dataset.sourceEndpointKind = relationship.sourceEndpoint.kind;
@@ -638,12 +643,14 @@ export function installFlowGraphBuilder(options) {
             label.setAttribute("x", String((geometry.startX + geometry.endX) / 2));
             label.setAttribute("y", String((geometry.startY + geometry.endY) / 2 - 8));
             label.textContent = relationship.label ?? "";
-            edge.addEventListener("click", () => saveSelection({ kind: "relationship", id: relationship.id }));
+            edge.addEventListener("click", selectRelationship);
+            edge.addEventListener("keydown", (event) => { if (event.key !== "Enter" && event.key !== " ")
+                return; event.preventDefault(); selectRelationship(); });
             edge.append(line, arrow);
             if (relationship.label)
                 edge.append(label);
             canvas.append(edge);
-            const row = document.createElement("li"), control = button(flowRelationshipText(projection.graph, relationship), () => saveSelection({ kind: "relationship", id: relationship.id }));
+            const row = document.createElement("li"), control = button(flowRelationshipText(projection.graph, relationship), selectRelationship);
             row.dataset.relationshipId = relationship.id;
             row.dataset.sourceEndpointKind = relationship.sourceEndpoint.kind;
             row.dataset.sourcePort = relationship.sourcePort;
@@ -891,6 +898,20 @@ export function installFlowGraphBuilder(options) {
         section.append(heading, boundary, toolbar, laneControls, status, frames, views, actions, popover);
         host.append(section);
         document.querySelectorAll("[data-occurrence-id],[data-relationship-id],[data-page-frame-id]").forEach((element) => { const id = element.dataset.occurrenceId ?? element.dataset.relationshipId ?? element.dataset.pageFrameId; element.classList.toggle("is-selected", id === selected?.id); });
+        const deletionIntent = relationshipDeletionFocusIntent;
+        if (deletionIntent) {
+            const restoredEdge = canvas.querySelector(`[data-relationship-id="${CSS.escape(deletionIntent.id)}"]`);
+            if (restoredEdge) {
+                queueMicrotask(() => { if (restoredEdge.isConnected) {
+                    restoredEdge.focus();
+                    relationshipDeletionFocusIntent = undefined;
+                } });
+            }
+            else {
+                const attribute = deletionIntent.sourceKind === "page-frame" ? "data-page-frame-id" : "data-occurrence-id", sourceElement = canvas.querySelector(`[${attribute}="${CSS.escape(deletionIntent.sourceId)}"]`);
+                queueMicrotask(() => sourceElement?.isConnected && sourceElement.focus());
+            }
+        }
         const frameIntent = pageFrameFocusIntent;
         if (frameIntent) {
             const focusedFrame = document.querySelector(`[data-free-page-frame-canvas="${CSS.escape(frameIntent.id)}"]`);

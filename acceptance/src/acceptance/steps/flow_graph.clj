@@ -32,7 +32,7 @@
         (support/assert! observed "Flow graph browser evidence is missing." {:out (:out result)})
         (reset! browser-observation observed))))
 (def runtime-evidence-keys
-  (set (map #(keyword (format "runtime%03d" %)) (range 1 23))))
+  (set (map #(keyword (format "runtime%03d" %)) (range 1 24))))
 (def required-evidence-keys (conj runtime-evidence-keys :installedBoundary))
 (def runtime009-examples
   {["Customer details Page" "right" "Payment Page" "left" "expected_next"] :pageContextExpectedNext
@@ -41,7 +41,7 @@
    ["Customer details page_view" "right" "Customer details add_payment_info" "left" "expected_next"] :eventInteractionExpectedNext})
 (defn runtime009-example-key [example]
   (let [row (mapv #(support/example-value example %) ["source" "source_port" "target" "target_port" "kind"])]
-    (when (some identity row)
+    (when (or (nth row 1) (nth row 3))
       (support/assert! (contains? runtime009-examples row) "Unknown runtime009 endpoint example." {:row row})
       (get runtime009-examples row))))
 (defn validate-example! [_mode example]

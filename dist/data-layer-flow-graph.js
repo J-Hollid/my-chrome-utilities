@@ -317,6 +317,11 @@ export function saveGraphRelationship(state, flowId, fromOccurrenceId, input, id
         return state;
     return transactProject(state, `Save Flow relationship ${input.id ?? "new"}`, (project) => { const current = storedGraph(project, flowId), relationship = { id: input.id ?? id("flow-relationship"), sourceEndpoint, targetEndpoint, sourcePort: input.sourcePort, targetPort: input.targetPort, kind, ...(input.group ? { group: input.group } : {}), ...(input.label ? { label: input.label } : {}), ...(input.documentationCondition ? { documentationCondition: input.documentationCondition } : {}), ...(input.expectation ? { expectation: input.expectation } : {}) }; return saveStoredGraph(project, flowId, { ...current, relationships: current.relationships.some(({ id }) => id === relationship.id) ? current.relationships.map((candidate) => candidate.id === relationship.id ? relationship : candidate) : [...current.relationships, relationship] }); });
 }
+export function removeFlowRelationship(state, flowId, relationshipId) {
+    if (!storedGraph(state.project, flowId).relationships.some(({ id }) => id === relationshipId))
+        return state;
+    return transactProject(state, `Delete Flow relationship ${relationshipId}`, (project) => { const current = storedGraph(project, flowId); return saveStoredGraph(project, flowId, { ...current, relationships: current.relationships.filter(({ id }) => id !== relationshipId) }); });
+}
 export function flowRelationshipText(graph, relationship) { const source = graph.connectionEndpoints.find(({ id, kind }) => id === relationship.sourceEndpoint.id && kind === relationship.sourceEndpoint.kind), target = graph.connectionEndpoints.find(({ id, kind }) => id === relationship.targetEndpoint.id && kind === relationship.targetEndpoint.kind); return [source?.name ?? "Missing endpoint", relationship.kind, target?.name ?? "Missing endpoint", relationship.group, relationship.label, relationship.documentationCondition, relationship.expectation].filter((value) => value !== undefined && value !== "").join(" · "); }
 export function inspectFlowGraph(graph, catalog) { const diagnostics = [], endpointKeys = new Set(graph.connectionEndpoints.map(({ kind, id }) => `${kind}:${id}`)); for (const node of graph.nodes) {
     if (!catalog.events.some(({ id }) => id === node.eventId))
