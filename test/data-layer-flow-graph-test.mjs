@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {FLOW_GRAPH_GEOMETRY,addEventOccurrenceToPage,addFlowPageFrame,addFreePageFrame,addGraphOccurrence,addInteractionOccurrenceToPage,applyFlowPageGroupLaneSelection,deriveFlowOccurrenceExample,documentaryFlowGraph,flowOccurrenceEventSchema,flowOccurrenceExampleEditorRows,flowOutline,flowRelationshipText,inferFlowRelationshipKind,inspectFlowGraph,inspectFreePageEdgeMove,inspectOccurrenceContainmentMove,inspectPageFrameDrop,migrateLegacyFlowRelationshipKinds,moveFlowPageFrame,moveFreePageFrame,moveGraphOccurrence,projectFlowGraph,removeFlowPageFrame,removeFlowRelationship,removeGraphOccurrence,reorderFlowPageGroupLane,reorderGraphOccurrence,saveFlowViewState,saveGraphRelationship,setFlowOccurrenceExample,setFlowPageGroupLanes,updateGraphOccurrence} from "../dist/data-layer-flow-graph.js";
-import {consumeRelationshipDeletionFocus,flowEdgeGeometry,flowViewAfterRelationshipDeletion,ownsPointerDrag} from "../dist/data-layer-flow-graph-ui.js";
+import {consumeRelationshipDeletionFocus,flowEdgeGeometry,flowViewAfterRelationshipDeletion,ownsPointerDrag,restorePointerCancellationFocus} from "../dist/data-layer-flow-graph-ui.js";
 import {compileSpecificationProject,createCanonicalProjectEnvelope} from "../dist/data-layer-specification-engine.js";
 import {addFlowStep,addProjectEntity,createSpecificationProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
 
@@ -93,6 +93,13 @@ assert.deepEqual(restoredRelationshipFocus,{target:"relationship"},"Undo consume
 assert.equal(ownsPointerDrag(undefined,41),false,"a drag has no owner before pointerdown");
 assert.equal(ownsPointerDrag(41,42),false,"a second pointer cannot finish or cancel the active pointer's drag");
 assert.equal(ownsPointerDrag(41,41),true,"only the pointer that started a drag owns its move, finish, and cancel lifecycle");
+const cancellationFocusCalls=[],microtasks=[],animationFrames=[],focusTarget={isConnected:true,focus:()=>cancellationFocusCalls.push("focus")};
+restorePointerCancellationFocus(focusTarget,(callback)=>microtasks.push(callback),(callback)=>animationFrames.push(callback));
+assert.equal(cancellationFocusCalls.length,1,"pointer cancellation restores focus synchronously before the protocol dispatch completes");
+microtasks.shift()();animationFrames.shift()();
+assert.equal(cancellationFocusCalls.length,3,"pointer cancellation repeats focus restoration after microtask and rendering settlement");
+focusTarget.isConnected=false;restorePointerCancellationFocus(focusTarget,(callback)=>callback(),(callback)=>callback());
+assert.equal(cancellationFocusCalls.length,3,"detached replacement frames are never focused");
 assert.deepEqual(FLOW_GRAPH_GEOMETRY,{eventWidth:170,eventHeight:94,eventMinX:12,eventMinY:40,pageFrameMinWidth:190,pageFrameMinHeight:108,pageFrameChildRightPadding:20,pageFrameChildBottomPadding:16},"Flow projection and rendering share one explicit geometry contract");
 assert.deepEqual({startX:directedCheckoutToPayment.startX,startY:directedCheckoutToPayment.startY,endX:directedCheckoutToPayment.endX,endY:directedCheckoutToPayment.endY},{startX:200,startY:117,endX:430,endY:257},"known source output and target input ports must not reverse");
 assert.deepEqual(flowEdgeGeometry({x:10,y:20},{x:400,y:80},{width:190,height:108},{width:170,height:94}),{startX:200,startY:74,endX:400,endY:127,arrow:flowEdgeGeometry({x:10,y:20},{x:400,y:80},{width:190,height:108},{width:170,height:94}).arrow},"mixed Page/Event edges use distinct source and target dimensions");

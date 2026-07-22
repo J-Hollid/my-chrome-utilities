@@ -23,6 +23,8 @@ function renderOccurrenceExampleControls(host, state, flowId, occurrenceId, pers
     }
 }
 export const ownsPointerDrag = (activePointerId, eventPointerId) => activePointerId !== undefined && activePointerId === eventPointerId;
+export function restorePointerCancellationFocus(target, scheduleMicrotask = (callback) => queueMicrotask(callback), scheduleAnimationFrame = (callback) => requestAnimationFrame(callback)) { const restore = () => { if (target.isConnected)
+    target.focus(); }; restore(); scheduleMicrotask(restore); scheduleAnimationFrame(restore); }
 export function flowViewAfterRelationshipDeletion(view, relationshipId) { if (view.selectedItem?.kind !== "relationship" || view.selectedItem.id !== relationshipId)
     return view; const { selectedItem, ...retained } = view; void selectedItem; return retained; }
 export function consumeRelationshipDeletionFocus(intent, relationshipRestored) { if (!intent)
@@ -587,8 +589,7 @@ export function installFlowGraphBuilder(options) {
                 return; const edge = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-free-page-edge-target]"); if (edge?.dataset.freePageEdgeTarget)
                 targetRegion = edge.dataset.freePageEdgeTarget; }, finish = (event) => { if (!owns(event))
                 return; const initial = start, region = targetRegion ?? storedFrame.freePageRegion, afterStart = namedRight, nextX = region === "before-lanes" ? Math.max(12, Math.round(x + event.clientX - initial.clientX)) : Math.max(12, Math.round(x + event.clientX - initial.clientX - afterStart)), nextY = Math.max(55, Math.round(position.y + event.clientY - initial.clientY)); stop(initial.pointerId); persist(moveFreePageFrame(current().state, flow.id, storedFrame.id, { region, x: nextX, y: nextY })); setTimeout(() => elementByData("data-free-page-frame-canvas", storedFrame.id)?.focus(), 50); }, cancel = (event) => { if (!owns(event))
-                return; const pointerId = start.pointerId; stop(pointerId); clearEdgeTargets(); queueMicrotask(() => { if (frame.isConnected)
-                frame.focus(); }); };
+                return; const pointerId = start.pointerId; stop(pointerId); clearEdgeTargets(); restorePointerCancellationFocus(frame); };
             frame.addEventListener("focus", showEdgeTargets);
             frame.addEventListener("pointerdown", (event) => { if (start) {
                 suppressPointerClick = true;
