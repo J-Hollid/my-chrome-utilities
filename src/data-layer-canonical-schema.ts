@@ -10,7 +10,7 @@ export interface CanonicalPredicateGroup {kind:"all"|"any"|"not";children:Canoni
 export type CanonicalPredicate=CanonicalPredicateLeaf|CanonicalPredicateGroup;
 export interface CanonicalPredicateEvidence {matched:boolean;branches:{label:string;matched:boolean;propertyId?:string}[];}
 export interface CanonicalAllowedValue {id:string;value:unknown;label?:string;}
-export interface CanonicalRule {id:string;kind:"pattern"|"range"|"cardinality"|"condition"|"custom";pattern?:string;minimum?:number;maximum?:number;minItems?:number;maxItems?:number;condition?:CanonicalPredicate;severity:"error"|"warning";message:string;reusableRuleId?:string;name?:string;revision?:number;operator?:string;provenance?:CanonicalProvenance;}
+export interface CanonicalRule {id:string;kind:"pattern"|"range"|"cardinality"|"condition"|"custom";pattern?:string;minimum?:number;maximum?:number;minItems?:number;maxItems?:number;condition?:CanonicalPredicate;severity:"error"|"warning";message?:string;enabled?:boolean;reusableRuleId?:string;name?:string;revision?:number;operator?:string;provenance?:CanonicalProvenance;}
 export interface CanonicalDocumentation {displayText:string;description:string;comments:string;example:{method:"allowed-value"|"custom"|"blank";value?:unknown};}
 export interface CanonicalProvenance {source:"created"|"saved-schema"|"requirements"|"structured-schema"|"structured-draft"|"path-constraint";sourceId?:string;revision?:number;contributorId?:string;contributorName?:string;scope?:LayerScope;state?:"inherited"|"shadowed"|"effective";}
 export interface CanonicalPropertyNode {

@@ -2,7 +2,7 @@ import { canonicalPropertyPath, canonicalSchemaFromJsonSchema } from "./data-lay
 const pointer = (path) => `/${path.split(/[./]/).filter(Boolean).join("/")}`;
 const clone = (value) => structuredClone(value);
 const jsonFacetRule = (schemaId, nodeId, kind) => `json-facet:${schemaId}:${nodeId}:${kind}`;
-const canonicalOperator = (operator) => ({ "Is greater than": "Greater than", "Is at least": "At least", "Is less than": "Less than", "Is at most": "At most" }[operator] ?? operator);
+const canonicalOperator = (operator) => ({ "Equal": "Equals", "Is greater than": "Greater than", "Is at least": "At least", "Is less than": "Less than", "Is at most": "At most" }[operator] ?? operator);
 function canonicalRuleCondition(document, group) {
     if (!group)
         return undefined;
@@ -10,7 +10,7 @@ function canonicalRuleCondition(document, group) {
         return []; const value = predicate.comparison?.value; return [{ kind: "predicate", propertyId, operator: canonicalOperator(predicate.operator), ...(value !== undefined ? { value } : predicate.comparison?.type === "null" ? { value: null } : {}) }]; });
     if (!children.length)
         return undefined;
-    return children.length === 1 ? children[0] : { kind: group.operator === "Any" ? "any" : "all", children };
+    return { kind: group.operator === "Any" ? "any" : group.operator === "Not" ? "not" : "all", children };
 }
 export function savedSchemaCanonicalDocument(schema, id, target) {
     if (schema.canonicalSchema)
@@ -52,8 +52,14 @@ export function savedSchemaCanonicalDocument(schema, id, target) {
         const node = byPath.get(pointer(rule.propertyPath ?? ""));
         if (!node)
             continue;
-        const operator = rule.operator?.replaceAll("_", "-").replaceAll(" ", "-").toLowerCase(), bounds = rule.parameters?.split(",") ?? [], number = (value) => value !== undefined && value !== "" && Number.isFinite(Number(value)) ? Number(value) : undefined, minimum = number(bounds[0]), maximum = number(bounds[1]), kind = operator === "pattern" || operator === "regular-expression" ? "pattern" : operator === "range" || operator === "numeric-range" ? "range" : operator === "cardinality" || operator === "item-count" ? "cardinality" : "custom", condition = canonicalRuleCondition(canonical, rule.conditionGroup), sourceMetadata = operator === "exact-value" || operator === "allowed-values" ? { name: rule.name ?? rule.id, revision: rule.version, operator, provenance: { source: "saved-schema", sourceId: schema.id, revision: schema.version } } : {};
-        node.rules.push({ id: rule.id, kind, ...(kind === "pattern" && rule.parameters ? { pattern: rule.parameters } : {}), ...(kind === "range" && minimum !== undefined ? { minimum } : {}), ...(kind === "range" && maximum !== undefined ? { maximum } : {}), ...(kind === "cardinality" && minimum !== undefined ? { minItems: minimum } : {}), ...(kind === "cardinality" && maximum !== undefined ? { maxItems: maximum } : {}), ...(condition ? { condition } : {}), severity: rule.severity === "warning" ? "warning" : "error", message: rule.message ?? rule.name ?? rule.id, ...sourceMetadata, ...(rule.id.startsWith("rule:") && operator !== "exact-value" && operator !== "allowed-values" ? { reusableRuleId: rule.id } : {}) });
+        const operator = rule.operator?.replaceAll("_", "-").replaceAll(" ", "-").toLowerCase(), bounds = rule.parameters?.split(",") ?? [], number = (value) => value !== undefined && value !== "" && Number.isFinite(Number(value)) ? Number(value) : undefined, minimum = number(bounds[0]), maximum = number(bounds[1]), kind = operator === "pattern" || operator === "regular-expression" ? "pattern" : operator === "range" || operator === "numeric-range" ? "range" : operator === "cardinality" || operator === "item-count" ? "cardinality" : "custom", condition = canonicalRuleCondition(canonical, rule.conditionGroup), mappedFacet = operator === "exact-value" || operator === "allowed-values" || operator === "required", sourceMetadata = mappedFacet ? { name: rule.name ?? rule.id, revision: rule.version, operator, provenance: { source: "saved-schema", sourceId: schema.id, revision: schema.version } } : {};
+        node.rules.push({ id: rule.id, kind, ...(kind === "pattern" && rule.parameters ? { pattern: rule.parameters } : {}), ...(kind === "range" && minimum !== undefined ? { minimum } : {}), ...(kind === "range" && maximum !== undefined ? { maximum } : {}), ...(kind === "cardinality" && minimum !== undefined ? { minItems: minimum } : {}), ...(kind === "cardinality" && maximum !== undefined ? { maxItems: maximum } : {}), ...(condition ? { condition } : {}), severity: rule.severity === "warning" ? "warning" : "error", ...(rule.message !== undefined ? { message: rule.message } : {}), ...(typeof rule.enabled === "boolean" ? { enabled: rule.enabled } : {}), ...sourceMetadata, ...(rule.id.startsWith("rule:") && !mappedFacet ? { reusableRuleId: rule.id } : {}) });
+        if (rule.enabled === false)
+            continue;
+        if (operator === "required") {
+            node.presence = condition ? { mode: "required-when", condition } : { mode: "required" };
+            continue;
+        }
         if (condition)
             continue;
         if (operator === "exact-value" && rule.parameters !== undefined)

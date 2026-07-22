@@ -8,6 +8,7 @@ const labeled = (text, control) => { const label = dom.createElement("label"); l
 const input = (name, value = "", type = "text") => { const control = dom.createElement("input"); control.name = name; control.type = type; control.value = value; return control; };
 const select = (name, values, value) => { const control = dom.createElement("select"); control.name = name; for (const entry of values)
     control.append(new Option(entry, entry)); control.value = value; return control; };
+const canonicalPresenceText = (mode) => ({ optional: "Optional", required: "Required", "required-when": "Required when", forbidden: "Forbidden", "forbidden-when": "Forbidden when" })[mode];
 export function bindCanonicalPropertySearch(control, update) { control.addEventListener("input", () => update(control.value)); }
 export function canonicalDispatchRequiresLocalRender(result, renderAfterDispatch) { return renderAfterDispatch !== false || result.status === "confirmation-required"; }
 export function mountCanonicalSchemaEditor(options) {
@@ -93,6 +94,8 @@ export function mountCanonicalSchemaEditor(options) {
                     choose.addEventListener("click", () => send({ kind: "select", baseRevision: document.revision, propertyId: row.id }));
                     type.setAttribute("aria-label", `${row.path} inline type`);
                     presence.setAttribute("aria-label", `${row.path} inline presence`);
+                    for (const option of Array.from(presence.options))
+                        option.textContent = canonicalPresenceText(option.value);
                     values.setAttribute("aria-label", `${row.path} inline allowed values`);
                     expected.setAttribute("aria-label", `${row.path} inline expected value`);
                     documentation.setAttribute("aria-label", `${row.path} inline documentation`);
@@ -227,6 +230,8 @@ function renderPropertyEditor(host, document, node, send, id, propertyCommand, p
     impact.textContent = pendingHere?.result.impact ?? "Impact review: no incompatible dependent data";
     typeSection.append(typeLegend, labeled("Property type", type), labeled("Array item type", itemType), impact, confirm);
     const presence = select("presenceMode", ["optional", "required", "required-when", "forbidden", "forbidden-when"], node.presence.mode), presenceSection = dom.createElement("section");
+    for (const option of Array.from(presence.options))
+        option.textContent = canonicalPresenceText(option.value);
     presence.addEventListener("change", () => send({ kind: "set", baseRevision: document.revision, propertyId: node.id, patch: { presence: { mode: presence.value, ...(presence.value.endsWith("-when") && node.presence.condition ? { condition: node.presence.condition } : {}) } } }));
     presenceSection.append(labeled("Presence", presence));
     const predicateHost = dom.createElement("div");
@@ -323,7 +328,7 @@ function renderPropertyEditor(host, document, node, send, id, propertyCommand, p
     rulesSummary.textContent = "Add rule";
     for (const rule of node.rules) {
         const item = dom.createElement("li"), description = dom.createElement("p"), predicateHost = dom.createElement("section"), origin = rule.name && rule.revision !== undefined ? ` · origin ${rule.name} v${rule.revision}${rule.provenance ? ` · provenance ${rule.provenance.source} ${rule.provenance.sourceId ?? ""} revision ${rule.provenance.revision ?? ""}` : ""}` : "";
-        description.textContent = `${rule.kind} · ${rule.severity} · ${rule.message}${origin}${rule.reusableRuleId ? ` · reusable ${rule.reusableRuleId}` : ""}${rule.condition ? ` · ${plainPredicate(rule.condition, document)}` : ""}`;
+        description.textContent = `${rule.kind}${rule.enabled === undefined ? "" : rule.enabled ? " · enabled" : " · disabled"} · ${rule.severity}${rule.message ? ` · ${rule.message}` : " · no issue message"}${origin}${rule.operator ? ` · operator ${rule.operator}` : ""}${rule.reusableRuleId ? ` · reusable ${rule.reusableRuleId}` : ""}${rule.condition ? ` · ${plainPredicate(rule.condition, document)}` : ""}`;
         mountCanonicalPredicateEditor({ host: predicateHost, document, ...(rule.condition ? { condition: rule.condition } : {}), label: `Nested rule predicate for ${rule.id}`, saveLabel: "Save nested rule predicate", onSave: (condition) => send({ kind: "set", baseRevision: document.revision, propertyId: node.id, patch: { rules: node.rules.map((candidate) => candidate.id === rule.id ? { ...candidate, condition } : candidate) } }), ...(rule.condition ? { onClear: () => send({ kind: "set", baseRevision: document.revision, propertyId: node.id, patch: { rules: node.rules.map((candidate) => { if (candidate.id !== rule.id)
                             return candidate; const { condition: _condition, ...withoutCondition } = candidate; return withoutCondition; }) } }) } : {}) });
         item.append(description, predicateHost);

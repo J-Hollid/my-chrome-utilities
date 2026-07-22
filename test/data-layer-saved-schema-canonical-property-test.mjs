@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import {canonicalPropertyPath} from "../dist/data-layer-canonical-schema.js";
+import {canonicalConstraints,canonicalPropertyPath} from "../dist/data-layer-canonical-schema.js";
+import {compileLayeredSchema,validateLayeredObservation} from "../dist/data-layer-layered-schema.js";
 import {savedSchemaCanonicalDocument} from "../dist/data-layer-saved-schema-canonical.js";
 
 let seed=0x5a9ed123;
@@ -14,11 +15,12 @@ const cases=[
 for(let sample=0;sample<128;sample+=1){
   const selected=cases[Math.floor(random()*cases.length)],schema={
     id:`schema:property-${sample}`,name:`Property ${sample}`,version:1+Math.floor(random()*20),
-    document:{type:"object",properties:{exact:{type:selected.type},allowed:{type:selected.type},conditional:{type:selected.type}}},
+    document:{type:"object",properties:{exact:{type:selected.type},allowed:{type:selected.type},conditional:{type:selected.type},required_action:{type:"string"}}},
     attachedRules:[
-      {id:`rule:exact-${sample}`,name:"Exact source",version:3,propertyPath:"/exact",operator:"exact-value",parameters:String(selected.values[0]),severity:"warning",message:"Exact message"},
-      {id:`rule:allowed-${sample}`,name:"Allowed source",version:5,propertyPath:"/allowed",operator:"allowed-values",parameters:selected.values.map(String).join(","),severity:"warning",message:"Allowed message"},
+      {id:`rule:exact-${sample}`,name:"Exact source",version:3,enabled:true,propertyPath:"/exact",operator:"exact-value",parameters:String(selected.values[0]),severity:"warning",message:"Exact message"},
+      {id:`rule:allowed-${sample}`,name:"Allowed source",version:5,enabled:true,propertyPath:"/allowed",operator:"allowed-values",parameters:selected.values.map(String).join(","),severity:"error"},
       {id:`rule:conditional-${sample}`,name:"Conditional source",version:7,propertyPath:"/conditional",operator:"exact-value",parameters:String(selected.values[0]),conditionGroup:{operator:"All",predicates:[{propertyPath:"/allowed",operator:"Exists"}]},severity:"warning",message:"Conditional message"},
+      {id:`rule:required-${sample}`,name:"Required action",version:1,enabled:true,propertyPath:"/required_action",operator:"required",conditionGroup:{operator:"All",predicates:[{propertyPath:"/exact",operator:"Equals",comparison:{type:selected.type,value:selected.values[0]}}]},severity:"error"},
     ],
     documentation:{properties:{"/exact":{displayName:"Exact",description:"Exact description",comments:"Exact comments"}}},
   },before=JSON.stringify(schema);let sequence=0;
@@ -26,8 +28,19 @@ for(let sample=0;sample<128;sample+=1){
   assert.equal(byPath["/exact"].expectedValue,selected.values[0],`sample ${sample} must preserve the exact value's type`);
   assert.deepEqual(byPath["/allowed"].allowedValues.map(({value})=>value),selected.values,`sample ${sample} must preserve allowed value types and order`);
   assert.equal(byPath["/conditional"].expectedValue,undefined,`sample ${sample} must not project a conditional exact value as unconditional`);
+  assert.equal(byPath["/required_action"].presence.mode,"required-when",`sample ${sample} must map conditional required presence`);
+  assert.deepEqual(byPath["/required_action"].presence.condition,{kind:"all",children:[{kind:"predicate",propertyId:byPath["/exact"].id,operator:"Equals",value:selected.values[0]}]});
   assert.deepEqual(byPath["/exact"].documentation,{displayText:"Exact",description:"Exact description",comments:"Exact comments",example:{method:"blank"}});
   assert.deepEqual(byPath["/exact"].rules[0].provenance,{source:"saved-schema",sourceId:schema.id,revision:schema.version});
+  assert.equal(byPath["/exact"].rules[0].enabled,true);
+  assert.equal(byPath["/allowed"].rules[0].severity,"error");
+  assert.equal("message" in byPath["/allowed"].rules[0],false,"an absent optional issue message must remain absent");
+  const requiredRule=byPath["/required_action"].rules[0],requiredMetadata=(({id,name,revision,enabled,operator,severity,message,provenance})=>({id,name,revision,enabled,operator,severity,message,provenance}))(requiredRule);
+  assert.deepEqual(requiredMetadata,{id:`rule:required-${sample}`,name:"Required action",revision:1,enabled:true,operator:"required",severity:"error",message:undefined,provenance:{source:"saved-schema",sourceId:schema.id,revision:schema.version}});
+  const compiled=compileLayeredSchema([{id:schema.id,name:schema.name,scope:"Shared Profile",constraints:canonicalConstraints(canonical)}],{eventId:"event:test",eventRole:"interaction"}),invalid=validateLayeredObservation({targetId:canonical.id,targetName:schema.name,revision:canonical.revision,compiled},{exact:selected.values[0]}),valid=validateLayeredObservation({targetId:canonical.id,targetName:schema.name,revision:canonical.revision,compiled},{exact:selected.values[0],required_action:"handled"}),notApplicable=validateLayeredObservation({targetId:canonical.id,targetName:schema.name,revision:canonical.revision,compiled},{exact:selected.values[1]});
+  assert.ok(invalid.issues.some(({path,code})=>path==="/required_action"&&code==="REQUIRED"));
+  assert.equal(valid.issues.some(({path})=>path==="/required_action"),false);
+  assert.equal(notApplicable.issues.some(({path})=>path==="/required_action"),false);
   assert.equal(JSON.stringify(schema),before,`sample ${sample} must leave the immutable source unchanged`);
 }
 
