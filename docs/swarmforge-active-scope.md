@@ -66,6 +66,26 @@ The following recent user-approved checkpoints are simultaneously active:
 - `18cb5a0cb1` — Flow canvas topology and schema-derived examples; and
 - `01b3d50a3d` — project entity overview lifecycle.
 
+## Bounded checkpoint feedback batching
+
+For every active scoped candidate, Refactorer and Architect must batch findings
+before returning implementation work to Coder. Refactorer performs one whole-delta
+audit and reports every production, evidence, static, build, and focused-model
+finding in a single inventory. Architect then performs the applicable downstream
+audit and returns one consolidated blocker report for that candidate.
+
+When the exact task pack runs, Architect reports every false evidence leaf emitted
+by that run. If an exception prevents later phases from executing, the report must
+name the interrupted phase, mark each downstream phase as unexecuted, and statically
+audit those downstream boundaries where possible. Unexecuted work is never implied
+to have passed. A known-red bounded pre-gate is returned without spending the exact
+pack or package command.
+
+This batching rule does not widen checkpoint scope or authorize broad regression,
+acceptance-matrix, mutation, or unrelated package runs. Coder receives one combined
+correction batch, uses targeted checks while implementing it, and returns one
+descendant for the next review cycle.
+
 The 2026-07-20 notice claiming project management was outside approved scope and
 the inactive-project clauses in task 687 and task 688 were based on stale role
 branches. They are superseded and must not be used. Flow candidate `b9531aa65a` is
