@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {addFlowPageFrame,documentaryFlowGraph,inferFlowRelationshipKind,migrateLegacyFlowRelationshipKinds,removeFlowRelationship,setFlowPageGroupLanes} from "../dist/data-layer-flow-graph.js";
+import {addEventOccurrenceToPage,addFlowPageFrame,documentaryFlowGraph,inferFlowRelationshipKind,migrateLegacyFlowRelationshipKinds,removeFlowRelationship,setFlowPageGroupLanes} from "../dist/data-layer-flow-graph.js";
 import {resetFlowPageInstanceLocalProperty,saveFlowPageInstanceLocalFacets} from "../dist/data-layer-layered-schema-project.js";
 import {addProjectEntity,createSpecificationProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
 
@@ -95,6 +95,27 @@ for(let sample=0;sample<64;sample+=1){
   for(const [id,before] of Object.entries(siblingsBefore))assert.equal(JSON.stringify(documentaryFlowGraph(state.project,instanceFlow.id).pageFrames.find((frame)=>frame.id===id)),before,`instance sample ${sample} must not mutate sibling ${id}`);
   state=resetFlowPageInstanceLocalProperty(state,instanceFlow.id,target.id,"/status");
   assert.ok(!documentaryFlowGraph(state.project,instanceFlow.id).pageFrames.find(({id})=>id===target.id).localSchemaContributions.some(({path})=>path==="/status"),`instance sample ${sample} must reset only its local property`);
+}
+
+for(let sample=0;sample<64;sample+=1){
+  let propertyIdentity=0,state=createSpecificationProject({name:`Event properties ${sample}`,site:"example.test",id:(kind)=>`${kind}:event-${sample}-${++propertyIdentity}`});
+  const eventId=(kind)=>`${kind}:event-${sample}-${++propertyIdentity}`;
+  state=addProjectEntity(state,"pageGroups",{name:"Checkout"},eventId);
+  const group=state.project.collections.pageGroups[0];
+  state=addProjectEntity(state,"pages",{name:"Cart",pageGroupIds:[group.id]},eventId);
+  state=addProjectEntity(state,"events",{name:"page_view",eventName:"page_view",role:sample%2?"context-setting":"interaction",trigger:sample%3?randomText("trigger"):undefined},eventId);
+  state=addProjectEntity(state,"flows",{name:"Event insertion"},eventId);
+  const page=state.project.collections.pages[0],event=state.project.collections.events[0],eventFlow=state.project.collections.flows[0];
+  assert.equal("role" in event,false,`event sample ${sample} must discard definition roles`);
+  state=setFlowPageGroupLanes(state,eventFlow.id,[group.id]);
+  state=addFlowPageFrame(state,eventFlow.id,{pageId:page.id,pageGroupId:group.id,x:40,y:40},eventId);
+  const frame=documentaryFlowGraph(state.project,eventFlow.id).pageFrames[0],eventBefore=JSON.stringify(event),pageBefore=JSON.stringify(page);
+  state=addEventOccurrenceToPage(state,eventFlow.id,{name:event.name,pageFrameId:frame.id,pageGroupId:group.id,pageId:page.id,eventId:event.id,role:sample%2?"context-setting":"interaction",trigger:event.trigger,obligation:"Required",minimum:1,maximum:1,x:20+Math.floor(random()*80),y:70+Math.floor(random()*80)},eventId);
+  const occurrence=documentaryFlowGraph(state.project,eventFlow.id).occurrences[0];
+  assert.deepEqual({pageFrameId:occurrence.pageFrameId,pageId:occurrence.pageId,pageGroupId:occurrence.pageGroupId,eventId:occurrence.eventId,trigger:occurrence.trigger},{pageFrameId:frame.id,pageId:page.id,pageGroupId:group.id,eventId:event.id,trigger:event.trigger},`event sample ${sample} must preserve exact context references and descriptive trigger`);
+  assert.equal("role" in occurrence,false,`event sample ${sample} must discard occurrence roles`);
+  assert.equal(JSON.stringify(state.project.collections.events[0]),eventBefore,`event sample ${sample} must not mutate its reusable Event definition`);
+  assert.equal(JSON.stringify(state.project.collections.pages[0]),pageBefore,`event sample ${sample} must not copy context into its Page definition`);
 }
 
 console.log("Flow graph property tests passed");
