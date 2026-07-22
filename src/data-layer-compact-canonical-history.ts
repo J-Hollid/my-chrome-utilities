@@ -11,6 +11,7 @@ export interface CompactCanonicalHistorySettlement{history:CompactCanonicalPageH
 const clone=<T>(value:T):T=>structuredClone(value);
 export const compactCanonicalPageHistory=():CompactCanonicalPageHistory=>({contributors:{}});
 export const compactCanonicalHistorySettlement=(history=compactCanonicalPageHistory()):CompactCanonicalHistorySettlement=>({history:clone(history)});
+export const compactCanonicalHistoryKey=(projectId:string,editorKey:string):string=>JSON.stringify([projectId,editorKey]);
 const stack=(history:CompactCanonicalPageHistory,key:string):CompactCanonicalContributorHistory=>history.contributors[key]??{undo:[],redo:[]};
 const sameTransition=(pending:CompactCanonicalPendingHistoryTransition,identity:CompactCanonicalHistoryTransitionIdentity)=>pending.operationId===identity.operationId&&pending.projectId===identity.projectId&&pending.editorKey===identity.editorKey;
 

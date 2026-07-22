@@ -1,6 +1,7 @@
 const clone = (value) => structuredClone(value);
 export const compactCanonicalPageHistory = () => ({ contributors: {} });
 export const compactCanonicalHistorySettlement = (history = compactCanonicalPageHistory()) => ({ history: clone(history) });
+export const compactCanonicalHistoryKey = (projectId, editorKey) => JSON.stringify([projectId, editorKey]);
 const stack = (history, key) => history.contributors[key] ?? { undo: [], redo: [] };
 const sameTransition = (pending, identity) => pending.operationId === identity.operationId && pending.projectId === identity.projectId && pending.editorKey === identity.editorKey;
 export function beginCompactCanonicalHistoryTransition(settlement, transition) {
