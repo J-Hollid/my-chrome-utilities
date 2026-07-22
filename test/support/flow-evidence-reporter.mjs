@@ -2,12 +2,13 @@ export const FLOW_RUNTIME_KEYS=Array.from(
   {length:21},
   (_,index)=>`runtime${String(index+1).padStart(3,"0")}`,
 );
+export const FLOW_RUNTIME_EXECUTION_PLAN=[...FLOW_RUNTIME_KEYS];
 
 const own=(value,key)=>Object.prototype.hasOwnProperty.call(value,key);
 
 export function flowEvidenceFailures(evidence){
   const failures=[];
-  for(const runtime of FLOW_RUNTIME_KEYS){
+  for(const runtime of FLOW_RUNTIME_EXECUTION_PLAN){
     const runtimeEvidence=evidence?.[runtime];
     if(!own(evidence??{},runtime)||runtimeEvidence===null||typeof runtimeEvidence!=="object"||Array.isArray(runtimeEvidence)){
       failures.push({path:runtime,value:own(evidence??{},runtime)?runtimeEvidence:"unexecuted",expected:"non-empty evidence object"});
@@ -25,11 +26,11 @@ export function flowEvidenceFailures(evidence){
 }
 
 export function flowInterruptionReport(activePhase,error){
-  const index=FLOW_RUNTIME_KEYS.indexOf(activePhase);
+  const index=FLOW_RUNTIME_EXECUTION_PLAN.indexOf(activePhase);
   const later=index>=0
-    ?FLOW_RUNTIME_KEYS.slice(index+1)
+    ?FLOW_RUNTIME_EXECUTION_PLAN.slice(index+1)
     :activePhase==="startup"
-      ?FLOW_RUNTIME_KEYS
+      ?FLOW_RUNTIME_EXECUTION_PLAN
       :[];
   return {
     interrupted:activePhase,
