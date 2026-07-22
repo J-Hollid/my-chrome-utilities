@@ -248,3 +248,24 @@ Feature: Data layer canonical Shared Profile schema authoring
       | compact panel detail | changed condition     | article-10  |
     And each result identifies its originating property-scoped command
     And both surfaces persist one canonical property identity without a presentation-specific schema representation
+
+  # Data layer canonical Shared Profile schema authoring 021
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 021
+    Given Opened Article source JSON defines string property <property_path> without const or enum
+    And its separate property documentation stores display text <display_text>, description <description>, and comments <comments> at <property_path>
+    And attached <rule_kind> rule <rule_name> revision <rule_revision> supplies <configured_values> at <property_path> with severity warning and message <issue_message>
+    When the operator reviews and confirms adding Opened Article to the project
+    Then the adopted canonical property preserves <display_text>, <description>, and <comments>
+    And its effective <value_facet> is <configured_values> derived from the attached rule
+    And the expanded builder identifies origin <rule_name> v<rule_revision>, warning, and <issue_message>
+    When the operator switches the adopted Shared Profile to Table
+    Then the <property_path> row shows that documentation and <configured_values> in the Expected or allowed values column
+    And Tree, side panel, compiler, and validator consume the same documented canonical property and rule-derived value
+    When the project is reloaded
+    Then the documentation, effective value, rule metadata, and source provenance remain visible without re-entry or migration
+    And the Saved Schema Library source remains byte-identical
+
+    Examples:
+      | property_path | display_text | description              | comments      | rule_kind      | rule_name             | rule_revision | configured_values                    | issue_message                  | value_facet    |
+      | /article_type | Article type | Editorial classification | CMS taxonomy  | exact-value    | Required article type | 3             | typed string News                    | Use the required article type | Expected value |
+      | /audience     | Audience     | Intended readers          | Access policy | allowed-values | Supported audiences   | 5             | typed strings Public and Subscriber | Choose a supported audience   | Allowed values |

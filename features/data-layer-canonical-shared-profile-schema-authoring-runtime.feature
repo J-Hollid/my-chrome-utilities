@@ -249,3 +249,24 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
       | compact panel detail | changed condition     | article-10         |
     And telemetry attributes each token to its originating property-scoped command
     And repository inspection finds one canonical property identity with no panel-specific or standalone-specific schema payload
+
+  # Data layer canonical Shared Profile schema authoring runtime 021
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 021
+    Given production Opened Article source JSON defines string property <property_path> without const or enum
+    And its separate documentation record stores <display_text>, <description>, and <comments> at <property_path>
+    And attached <rule_kind> rule <rule_name> revision <rule_revision> supplies <configured_values> at <property_path> with severity warning and message <issue_message>
+    When actual controls review and confirm adding Opened Article to the project
+    Then the production canonical node at <property_path> stores <display_text>, <description>, and <comments>
+    And its effective <value_facet> is <configured_values> derived from the attached rule
+    And the installed expanded builder identifies origin <rule_name> v<rule_revision>, warning, and <issue_message>
+    When actual controls switch the adopted Shared Profile to Table
+    Then the installed <property_path> row renders that documentation and <configured_values> in the Expected or allowed values cell
+    And production Tree, side panel, compiler, and validator read the same canonical property identity and effective value
+    When the installed extension reloads
+    Then rendered documentation, effective value, rule metadata, and source provenance remain present without a repair command
+    And production Saved Schema Library bytes remain unchanged
+
+    Examples:
+      | property_path | display_text | description              | comments      | rule_kind      | rule_name             | rule_revision | configured_values                    | issue_message                  | value_facet    |
+      | /article_type | Article type | Editorial classification | CMS taxonomy  | exact-value    | Required article type | 3             | typed string News                    | Use the required article type | Expected value |
+      | /audience     | Audience     | Intended readers          | Access policy | allowed-values | Supported audiences   | 5             | typed strings Public and Subscriber | Choose a supported audience   | Allowed values |
