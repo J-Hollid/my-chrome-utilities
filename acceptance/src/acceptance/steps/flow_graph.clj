@@ -31,13 +31,13 @@
         (support/assert! observed "Flow graph browser evidence is missing." {:out (:out result)})
         (reset! browser-observation observed))))
 (def runtime-evidence-keys
-  (set (map #(keyword (format "runtime%03d" %)) (range 1 22))))
+  (set (map #(keyword (format "runtime%03d" %)) (range 1 23))))
 (def required-evidence-keys (conj runtime-evidence-keys :installedBoundary))
 (def runtime009-examples
-  {["Customer details Page" "Payment Page" "Page context progression"] :pageContextProgression
-   ["Customer details Page" "Customer details add_payment_info" "Event expected within the Page"] :eventExpectedWithinPage
-   ["Customer details add_payment_info" "Payment Page" "Event leads to the next Page"] :eventLeadsToNextPage
-   ["Customer details page_view" "Customer details add_payment_info" "Event interaction progression"] :eventInteractionProgression})
+  {["Customer details Page" "Payment Page" nil] :pageContextProgression
+   ["Customer details Page" "Customer details add_payment_info" nil] :eventExpectedWithinPage
+   ["Customer details add_payment_info" "Payment Page" nil] :eventLeadsToNextPage
+   ["Customer details page_view" "Customer details add_payment_info" nil] :eventInteractionProgression})
 (defn runtime009-example-key [example]
   (let [row (mapv #(support/example-value example %) ["source" "target" "meaning"])]
     (when (some identity row)
