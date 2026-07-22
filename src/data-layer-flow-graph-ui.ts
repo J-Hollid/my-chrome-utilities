@@ -48,7 +48,7 @@ function renderOccurrenceExampleControls(host:HTMLElement,state:ProjectState,flo
 }
 
 export const ownsPointerDrag=(activePointerId:number|undefined,eventPointerId:number):boolean=>activePointerId!==undefined&&activePointerId===eventPointerId;
-export function restorePointerCancellationFocus(target:{readonly isConnected:boolean;focus():void},scheduleMicrotask:(callback:()=>void)=>unknown=(callback)=>queueMicrotask(callback),scheduleAnimationFrame:(callback:()=>void)=>unknown=(callback)=>requestAnimationFrame(callback)):void{const restore=()=>{if(target.isConnected)target.focus();};restore();scheduleMicrotask(restore);scheduleAnimationFrame(restore);}
+export function restorePointerCancellationFocus(target:{readonly isConnected:boolean;focus():void},scheduleMicrotask:(callback:()=>void)=>unknown=(callback)=>queueMicrotask(callback),scheduleSettledTask:(callback:()=>void)=>unknown=(callback)=>setTimeout(callback,0)):void{const restore=()=>{if(target.isConnected)target.focus();};restore();scheduleMicrotask(restore);scheduleSettledTask(restore);}
 type SessionFlowView={selectedItem?:{kind:"page-frame"|"occurrence"|"relationship";id:string}|undefined;viewport?:{x:number;y:number;zoom:number}};
 export interface RelationshipDeletionFocusIntent{id:string;sourceKind:"page-frame"|"event-occurrence";sourceId:string;sourceFocused:boolean}
 export function flowViewAfterRelationshipDeletion(view:SessionFlowView,relationshipId:string):SessionFlowView{if(view.selectedItem?.kind!=="relationship"||view.selectedItem.id!==relationshipId)return view;const{selectedItem,...retained}=view;void selectedItem;return retained;}

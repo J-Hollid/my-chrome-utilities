@@ -23,8 +23,8 @@ function renderOccurrenceExampleControls(host, state, flowId, occurrenceId, pers
     }
 }
 export const ownsPointerDrag = (activePointerId, eventPointerId) => activePointerId !== undefined && activePointerId === eventPointerId;
-export function restorePointerCancellationFocus(target, scheduleMicrotask = (callback) => queueMicrotask(callback), scheduleAnimationFrame = (callback) => requestAnimationFrame(callback)) { const restore = () => { if (target.isConnected)
-    target.focus(); }; restore(); scheduleMicrotask(restore); scheduleAnimationFrame(restore); }
+export function restorePointerCancellationFocus(target, scheduleMicrotask = (callback) => queueMicrotask(callback), scheduleSettledTask = (callback) => setTimeout(callback, 0)) { const restore = () => { if (target.isConnected)
+    target.focus(); }; restore(); scheduleMicrotask(restore); scheduleSettledTask(restore); }
 export function flowViewAfterRelationshipDeletion(view, relationshipId) { if (view.selectedItem?.kind !== "relationship" || view.selectedItem.id !== relationshipId)
     return view; const { selectedItem, ...retained } = view; void selectedItem; return retained; }
 export function consumeRelationshipDeletionFocus(intent, relationshipRestored) { if (!intent)
