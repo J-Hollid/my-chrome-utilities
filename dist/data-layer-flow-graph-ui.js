@@ -258,7 +258,7 @@ export function installFlowGraphBuilder(options) {
             host.append(card);
         }
     }
-    function cancelConnection(announce = true, suppressClick = false) { const sourceId = connection?.sourceId; connection?.preview?.remove(); connection = undefined; document.querySelectorAll(".is-valid-target,.is-invalid-target").forEach((element) => element.classList.remove("is-valid-target", "is-invalid-target")); if (announce)
+    function cancelConnection(announce = true, suppressClick = false) { const sourceId = connection?.sourceId; connection?.preview?.remove(); connection = undefined; document.querySelector(".flow-canvas-scroll")?.classList.remove("is-connecting"); document.querySelectorAll(".is-valid-target,.is-invalid-target").forEach((element) => element.classList.remove("is-valid-target", "is-invalid-target")); if (announce)
         statusMessage = "Connection cancelled; canonical state was not changed."; if (suppressClick) {
         suppressNodeClick = true;
         setTimeout(() => { suppressNodeClick = false; }, 0);
@@ -268,7 +268,7 @@ export function installFlowGraphBuilder(options) {
     function commitConnection(targetId) { const { state, flow, graph, revision } = current(), sourceId = connection?.sourceId; if (!state || !flow || !graph || !sourceId || !targetId || sourceId === targetId) {
         cancelConnection(true, true);
         return;
-    } const before = new Set(graph.relationships.map(({ id }) => id)), next = saveGraphRelationship(state, flow.id, sourceId, { toStepId: targetId, kind: "expected-next" }, options.id), created = documentaryFlowGraph(next.project, flow.id).relationships.find(({ id }) => !before.has(id)); connection = undefined; if (created) {
+    } const before = new Set(graph.relationships.map(({ id }) => id)), next = saveGraphRelationship(state, flow.id, sourceId, { toStepId: targetId, kind: "expected-next" }, options.id), created = documentaryFlowGraph(next.project, flow.id).relationships.find(({ id }) => !before.has(id)); connection = undefined; document.querySelector(".flow-canvas-scroll")?.classList.remove("is-connecting"); if (created) {
         selected = { kind: "relationship", id: created.id };
         relationshipPopoverFocusIntent = { id: created.id, revision: Number(revision ?? 0), optimisticFocused: false };
     } persist(next); }
@@ -779,15 +779,21 @@ export function installFlowGraphBuilder(options) {
             canvas.append(port);
         }
         canvas.addEventListener("pointermove", (event) => { if (!connection?.preview)
-            return; const input = event.target.closest("[data-input-port-for]"), scrollBounds = canvasScroll.getBoundingClientRect(), edgeSize = 36, edgeStep = 28; if (!input && event.clientX <= scrollBounds.left + edgeSize)
-            canvasScroll.scrollLeft = Math.max(0, canvasScroll.scrollLeft - edgeStep);
-        else if (!input && event.clientX >= scrollBounds.right - edgeSize)
-            canvasScroll.scrollLeft = Math.min(canvasScroll.scrollWidth - canvasScroll.clientWidth, canvasScroll.scrollLeft + edgeStep); const bounds = canvas.getBoundingClientRect(), scaleX = canvas.viewBox.baseVal.width / bounds.width, scaleY = canvas.viewBox.baseVal.height / bounds.height; connection.preview.setAttribute("x2", String((event.clientX - bounds.left) * scaleX)); connection.preview.setAttribute("y2", String((event.clientY - bounds.top) * scaleY)); document.querySelectorAll(".is-valid-target,.is-invalid-target").forEach((element) => element.classList.remove("is-valid-target", "is-invalid-target")); const node = event.target.closest("[data-occurrence-id]"); if (input && input.dataset.inputPortFor !== connection.sourceId)
+            return; canvasScroll.classList.add("is-connecting"); const input = event.target.closest("[data-input-port-for]"), scrollBounds = canvasScroll.getBoundingClientRect(), edgeSize = 36, edgeStep = 28; if (!input) {
+            if (event.clientX <= scrollBounds.left + edgeSize)
+                canvasScroll.scrollLeft = Math.max(0, canvasScroll.scrollLeft - edgeStep);
+            else if (event.clientX >= scrollBounds.right - edgeSize)
+                canvasScroll.scrollLeft = Math.min(canvasScroll.scrollWidth - canvasScroll.clientWidth, canvasScroll.scrollLeft + edgeStep);
+            if (event.clientY <= scrollBounds.top + edgeSize)
+                canvasScroll.scrollTop = Math.max(0, canvasScroll.scrollTop - edgeStep);
+            else if (event.clientY >= scrollBounds.bottom - edgeSize)
+                canvasScroll.scrollTop = Math.min(canvasScroll.scrollHeight - canvasScroll.clientHeight, canvasScroll.scrollTop + edgeStep);
+        } const bounds = canvas.getBoundingClientRect(), scaleX = canvas.viewBox.baseVal.width / bounds.width, scaleY = canvas.viewBox.baseVal.height / bounds.height; connection.preview.setAttribute("x2", String((event.clientX - bounds.left) * scaleX)); connection.preview.setAttribute("y2", String((event.clientY - bounds.top) * scaleY)); document.querySelectorAll(".is-valid-target,.is-invalid-target").forEach((element) => element.classList.remove("is-valid-target", "is-invalid-target")); const node = event.target.closest("[data-occurrence-id]"); if (input && input.dataset.inputPortFor !== connection.sourceId)
             input.classList.add("is-valid-target");
         else
             (input ?? node ?? canvas).classList.add("is-invalid-target"); });
         canvas.addEventListener("pointerup", (event) => { if (!connection)
-            return; const input = event.target.closest("[data-input-port-for]"); if (input)
+            return; const delivered = event.target.closest("[data-input-port-for]"), hit = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-input-port-for]"), input = delivered ?? hit; if (input)
             commitConnection(input.dataset.inputPortFor);
         else
             cancelConnection(true, true); });
