@@ -12,8 +12,15 @@ const complete=()=>Object.fromEntries([
 ]);
 
 assert.deepEqual(FLOW_RUNTIME_EXECUTION_PLAN,FLOW_RUNTIME_KEYS);
+assert.equal(FLOW_RUNTIME_KEYS.at(-1),"runtime024","the reporter must audit the newest Flow runtime");
 
 assert.deepEqual(flowEvidenceFailures(complete()),[]);
+
+const falseNewest=complete();
+falseNewest.runtime024={observed:false};
+assert.deepEqual(flowEvidenceFailures(falseNewest),[
+  {path:"runtime024.observed",value:false,expected:true},
+]);
 
 for(const [label,value,expectedPath] of [
   ["missing",undefined,"runtime008"],
