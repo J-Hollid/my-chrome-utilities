@@ -1,17 +1,8 @@
-import { canonicalPropertyPath, canonicalSchemaFromJsonSchema } from "./data-layer-canonical-schema.js";
+import { canonicalPropertyPath } from "./data-layer-canonical-schema.js";
+import { savedSchemaCanonicalDocument } from "./data-layer-saved-schema-canonical.js";
+export { savedSchemaCanonicalDocument } from "./data-layer-saved-schema-canonical.js";
 const pointer = (path) => `/${path.split(/[./]/).filter(Boolean).join("/")}`;
 const clone = (value) => structuredClone(value);
-const jsonFacetRule = (schemaId, nodeId, kind) => `json-facet:${schemaId}:${nodeId}:${kind}`;
-const canonicalOperator = (operator) => ({ "Is greater than": "Greater than", "Is at least": "At least", "Is less than": "Less than", "Is at most": "At most" }[operator] ?? operator);
-function canonicalRuleCondition(document, group) {
-    if (!group)
-        return undefined;
-    const byPath = new Map(Object.values(document.nodes).map((node) => [canonicalPropertyPath(document, node.id), node.id])), children = group.predicates.flatMap((predicate) => { const propertyId = byPath.get(pointer(predicate.propertyPath)); if (!propertyId)
-        return []; const value = predicate.comparison?.value; return [{ kind: "predicate", propertyId, operator: canonicalOperator(predicate.operator), ...(value !== undefined ? { value } : predicate.comparison?.type === "null" ? { value: null } : {}) }]; });
-    if (!children.length)
-        return undefined;
-    return children.length === 1 ? children[0] : { kind: group.operator === "Any" ? "any" : "all", children };
-}
 export function compactSchemaProjection(document, identity) {
     const base = {
         ...identity,
@@ -85,45 +76,6 @@ export function canonicalCommandsFromCompactProjection(document, projection, id)
             commands.push({ kind: "set", baseRevision: revision++, propertyId: current.id, patch });
     }
     return commands;
-}
-export function savedSchemaCanonicalDocument(schema, id) {
-    if (schema.canonicalSchema)
-        return clone(schema.canonicalSchema);
-    const canonical = canonicalSchemaFromJsonSchema({ id: `canonical:saved:${schema.id}`, contributorId: schema.id, contributorName: schema.name, sourceIdentity: schema.id, sourceRevision: schema.version, document: schema.document, idFactory: id }), byPath = new Map(Object.values(canonical.nodes).map((node) => [canonicalPropertyPath(canonical, node.id), node]));
-    const definitionsByNodeId = {};
-    const visit = (definition, path) => { for (const [name, child] of Object.entries(definition.properties ?? {})) {
-        const childPath = `${path}/${name}`, node = byPath.get(childPath), documentation = schema.documentation?.properties?.[childPath], rich = child;
-        if (node) {
-            definitionsByNodeId[node.id] = clone(rich);
-            if (definition.required?.includes(name))
-                node.presence = { mode: "required" };
-            else if (definition.forbidden?.includes(name))
-                node.presence = { mode: "forbidden" };
-            if (node.type === "array" && rich.items && typeof rich.items === "object" && typeof rich.items.type === "string")
-                node.itemType = rich.items.type;
-            node.allowedValues = node.allowedValues.map((entry, index) => ({ ...entry, id: `allowed-value:${node.id}:${index}` }));
-            if (documentation)
-                node.documentation = { displayText: documentation.displayName, description: documentation.description || node.documentation.description, comments: documentation.comments ?? "", example: documentation.example ? { method: documentation.example.selectionMethod === "allowed value" ? "allowed-value" : "custom", value: clone(documentation.example.value) } : node.documentation.example };
-            const minimum = typeof rich.minimum === "number" ? rich.minimum : undefined, maximum = typeof rich.maximum === "number" ? rich.maximum : undefined, minItems = typeof rich.minItems === "number" ? rich.minItems : undefined, maxItems = typeof rich.maxItems === "number" ? rich.maxItems : undefined;
-            if (typeof rich.pattern === "string")
-                node.rules.push({ id: jsonFacetRule(schema.id, node.id, "pattern"), kind: "pattern", pattern: rich.pattern, severity: "error", message: "Pattern mismatch" });
-            if (minimum !== undefined || maximum !== undefined)
-                node.rules.push({ id: jsonFacetRule(schema.id, node.id, "range"), kind: "range", ...(minimum !== undefined ? { minimum } : {}), ...(maximum !== undefined ? { maximum } : {}), severity: "error", message: "Outside range" });
-            if (minItems !== undefined || maxItems !== undefined)
-                node.rules.push({ id: jsonFacetRule(schema.id, node.id, "cardinality"), kind: "cardinality", ...(minItems !== undefined ? { minItems } : {}), ...(maxItems !== undefined ? { maxItems } : {}), severity: "error", message: "Outside cardinality" });
-        }
-        visit(child, childPath);
-    } };
-    visit(schema.document, "");
-    for (const rule of schema.attachedRules ?? []) {
-        const node = byPath.get(pointer(rule.propertyPath ?? ""));
-        if (!node)
-            continue;
-        const operator = rule.operator?.replaceAll("_", "-").replaceAll(" ", "-").toLowerCase(), bounds = rule.parameters?.split(",") ?? [], number = (value) => value !== undefined && value !== "" && Number.isFinite(Number(value)) ? Number(value) : undefined, minimum = number(bounds[0]), maximum = number(bounds[1]), kind = operator === "pattern" || operator === "regular-expression" ? "pattern" : operator === "range" || operator === "numeric-range" ? "range" : operator === "cardinality" || operator === "item-count" ? "cardinality" : "custom", condition = canonicalRuleCondition(canonical, rule.conditionGroup);
-        node.rules.push({ id: rule.id, kind, ...(kind === "pattern" && rule.parameters ? { pattern: rule.parameters } : {}), ...(kind === "range" && minimum !== undefined ? { minimum } : {}), ...(kind === "range" && maximum !== undefined ? { maximum } : {}), ...(kind === "cardinality" && minimum !== undefined ? { minItems: minimum } : {}), ...(kind === "cardinality" && maximum !== undefined ? { maxItems: maximum } : {}), ...(condition ? { condition } : {}), severity: rule.severity === "warning" ? "warning" : "error", message: rule.message ?? rule.name ?? rule.id, ...(rule.id.startsWith("rule:") ? { reusableRuleId: rule.id } : {}) });
-    }
-    canonical.sourceContent = { document: clone(schema.document), rules: clone((schema.attachedRules ?? [])), documentation: clone(schema.documentation ?? {}), examples: [], definitionsByNodeId };
-    return canonical;
 }
 const orderedChildren = (document, parentId) => Object.values(document.nodes).filter((node) => node.parentId === parentId).sort((left, right) => left.order - right.order || left.id.localeCompare(right.id));
 function jsonDefinition(document, node) {

@@ -78,6 +78,13 @@ libraryCompact.documentation.properties["/metadata/article_kind"]={...libraryCom
 const libraryDocumentationCommands=canonicalCommandsFromCompactProjection(libraryMoved.document,libraryCompact,id);
 assert.deepEqual(Object.keys(libraryDocumentationCommands[0].patch),["documentation"],"embedded and attached saved-schema rules remain unchanged by documentation after rename and move");
 
+const persistedRulesCanonical=savedSchemaCanonicalDocument({
+  id:"schema:persisted-rules",name:"Persisted rules",version:4,document:{type:"object",properties:{article_type:{type:"string"}}},
+  rules:[{id:"rule:types",name:"Article types",version:2,propertyPath:"/article_type",operator:"allowed-values",allowedValues:["News","Guide"],severity:"warning",message:"Choose an article type"}],
+},id),persistedRuleNode=Object.values(persistedRulesCanonical.nodes)[0];
+assert.deepEqual(persistedRuleNode.allowedValues.map(({value})=>value),["News","Guide"],"the Saved Schema Library rules field supplies canonical allowed values");
+assert.equal(persistedRuleNode.rules[0].revision,2,"the Saved Schema Library rules field retains source revision metadata");
+
 const compactSource={
   ...canonical,
   revision:8,

@@ -1,4 +1,5 @@
-import {canonicalConstraints,canonicalRequirements,canonicalSchemaFromJsonSchema,canonicalSchemaWithConstraint,createCanonicalSchema,migrateLegacyProfile,type CanonicalMigrationPlan,type CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
+import {canonicalConstraints,canonicalRequirements,canonicalSchemaWithConstraint,createCanonicalSchema,migrateLegacyProfile,type CanonicalMigrationPlan,type CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
+import {savedSchemaCanonicalDocument} from "./data-layer-saved-schema-canonical.js";
 
 export type ProjectEntityKind = "profiles" | "pages" | "pageGroups" | "events" | "applicabilitySets" | "flows" | "fixtures" | "schemaDrafts" | "assignments";
 export type IdFactory = (kind: string) => string;
@@ -195,7 +196,7 @@ export function createProjectSchemaDraft(state:ProjectState,input:ProjectSchemaD
   });
 }
 
-export interface SavedSchemaSource {id:string;name:string;version:number;document:Record<string,unknown>;assignments?:readonly unknown[];rules?:readonly Record<string,unknown>[];documentation?:unknown;examples?:readonly unknown[];published?:boolean}
+export interface SavedSchemaSource {id:string;name:string;version:number;document:Record<string,unknown>;assignments?:readonly unknown[];rules?:readonly AttachedSchemaRule[];documentation?:unknown;examples?:readonly unknown[];published?:boolean}
 export interface SavedSchemaSynchronizationReview {schemaId:string;fromRevision:number;toRevision:number;changes:{path:string;before:unknown;after:unknown}[];localOverrides:string[];source:SavedSchemaSource}
 const equalJson=(left:unknown,right:unknown):boolean=>JSON.stringify(left)===JSON.stringify(right);
 const recordValue=(value:unknown):value is Record<string,unknown>=>Boolean(value)&&typeof value==="object"&&!Array.isArray(value);
@@ -206,7 +207,7 @@ export function adoptSavedSchema(state:ProjectState,source:SavedSchemaSource):Pr
   if(!source.published)throw new Error("Only a published saved schema can be adopted.");
   return transactProject(state,`Adopt saved schema ${source.name}`,(project)=>{
     if(project.collections.schemaDrafts.some(({id})=>id===source.id)||project.collections.profiles.some(({sourceIdentity})=>sourceIdentity===source.id))throw new Error(`Saved schema ${source.name} is already adopted.`);
-    let canonicalSequence=0;const profileId=`profile:${source.id}`,canonicalSchema=canonicalSchemaFromJsonSchema({id:`canonical:${source.id}`,contributorId:profileId,contributorName:source.name,sourceIdentity:source.id,sourceRevision:source.version,document:clone(source.document),idFactory:(kind)=>`${profileId}:${kind}:${++canonicalSequence}`});canonicalSchema.sourceContent={document:clone(source.document),rules:clone(source.rules??[]),documentation:clone(source.documentation??""),examples:clone(source.examples??[])};
+    let canonicalSequence=0;const profileId=`profile:${source.id}`,canonicalSchema=savedSchemaCanonicalDocument({id:source.id,name:source.name,version:source.version,document:clone(source.document),attachedRules:clone(source.rules??[]),...(source.documentation===undefined?{}:{documentation:clone(source.documentation) as NonNullable<SchemaDefinition["documentation"]>})},(kind)=>`${profileId}:${kind}:${++canonicalSequence}`,{id:`canonical:${source.id}`,contributorId:profileId,contributorName:source.name});canonicalSchema.sourceContent={...canonicalSchema.sourceContent!,document:clone(source.document),rules:clone(source.rules??[]) as unknown as readonly Record<string,unknown>[],documentation:clone(source.documentation??""),examples:clone(source.examples??[])};
     const profile:Profile={id:profileId,name:source.name,requirements:[],canonicalSchema,sourceIdentity:source.id,sourceRevision:source.version,adoptionProvenance:{kind:"saved-schema-library",schemaId:source.id,revision:source.version}};
     return{...project,collections:{...project.collections,profiles:[...project.collections.profiles,profile]}};
   });
@@ -342,6 +343,7 @@ import {
   createSchemaWorkingDraft,
   publishSchemaWorkingDraft,
   updateSchemaWorkingDraft,
+  type AttachedSchemaRule,
   type SchemaAssignment,
   type SchemaDefinition,
 } from "./data-layer-schema-verification.js";

@@ -818,6 +818,7 @@
     "id": "layered_schema",
     "source": [
       "src/data-layer-canonical-schema.ts",
+      "src/data-layer-saved-schema-canonical.ts",
       "src/data-layer-canonical-schema-ui.ts",
       "src/data-layer-canonical-predicate-editor.ts",
       "src/data-layer-side-panel-unified-schema-editor.ts",

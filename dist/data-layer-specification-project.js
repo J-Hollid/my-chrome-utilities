@@ -1,4 +1,5 @@
-import { canonicalConstraints, canonicalRequirements, canonicalSchemaFromJsonSchema, canonicalSchemaWithConstraint, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
+import { canonicalConstraints, canonicalRequirements, canonicalSchemaWithConstraint, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
+import { savedSchemaCanonicalDocument } from "./data-layer-saved-schema-canonical.js";
 const clone = (value) => structuredClone(value);
 const now = () => new Date().toISOString();
 export function createSpecificationProject(input) {
@@ -270,8 +271,8 @@ export function adoptSavedSchema(state, source) {
         if (project.collections.schemaDrafts.some(({ id }) => id === source.id) || project.collections.profiles.some(({ sourceIdentity }) => sourceIdentity === source.id))
             throw new Error(`Saved schema ${source.name} is already adopted.`);
         let canonicalSequence = 0;
-        const profileId = `profile:${source.id}`, canonicalSchema = canonicalSchemaFromJsonSchema({ id: `canonical:${source.id}`, contributorId: profileId, contributorName: source.name, sourceIdentity: source.id, sourceRevision: source.version, document: clone(source.document), idFactory: (kind) => `${profileId}:${kind}:${++canonicalSequence}` });
-        canonicalSchema.sourceContent = { document: clone(source.document), rules: clone(source.rules ?? []), documentation: clone(source.documentation ?? ""), examples: clone(source.examples ?? []) };
+        const profileId = `profile:${source.id}`, canonicalSchema = savedSchemaCanonicalDocument({ id: source.id, name: source.name, version: source.version, document: clone(source.document), attachedRules: clone(source.rules ?? []), ...(source.documentation === undefined ? {} : { documentation: clone(source.documentation) }) }, (kind) => `${profileId}:${kind}:${++canonicalSequence}`, { id: `canonical:${source.id}`, contributorId: profileId, contributorName: source.name });
+        canonicalSchema.sourceContent = { ...canonicalSchema.sourceContent, document: clone(source.document), rules: clone(source.rules ?? []), documentation: clone(source.documentation ?? ""), examples: clone(source.examples ?? []) };
         const profile = { id: profileId, name: source.name, requirements: [], canonicalSchema, sourceIdentity: source.id, sourceRevision: source.version, adoptionProvenance: { kind: "saved-schema-library", schemaId: source.id, revision: source.version } };
         return { ...project, collections: { ...project.collections, profiles: [...project.collections.profiles, profile] } };
     });

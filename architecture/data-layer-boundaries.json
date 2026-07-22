@@ -217,6 +217,15 @@
       "src/data-layer-layered-schema.ts"
     ]
   },
+  "src/data-layer-saved-schema-canonical.ts": {
+    "module": "schemas",
+    "layer": "application",
+    "contracts": [
+      "src/data-layer-canonical-schema.ts",
+      "src/data-layer-schema-document.ts",
+      "src/data-layer-schema-documentation.ts"
+    ]
+  },
   "src/data-layer-compact-canonical-history.ts": {
     "module": "schemas",
     "layer": "application"
@@ -694,7 +703,8 @@
     "module": "schemas",
     "layer": "application",
     "contracts": [
-      "src/data-layer-canonical-schema.ts"
+      "src/data-layer-canonical-schema.ts",
+      "src/data-layer-saved-schema-canonical.ts"
     ]
   },
   "src/data-layer-specification-model.ts": {
