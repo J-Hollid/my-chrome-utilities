@@ -35,6 +35,7 @@ export function installFlowGraphBuilder(options) {
     let connection;
     let relationshipPopoverFocusIntent;
     let relationshipEdgeFocusIntent;
+    let pageFrameFocusIntent;
     let suppressNodeClick = false;
     let statusMessage = "";
     let statusRepairHref = "";
@@ -364,7 +365,7 @@ export function installFlowGraphBuilder(options) {
         if (!selectionExists)
             selected = transientView.selectedItem;
         const projection = projectFlowGraph(state.project, flow.id), section = document.createElement("section"), heading = document.createElement("h3"), boundary = document.createElement("p"), toolbar = document.createElement("section"), laneControls = document.createElement("section"), status = document.createElement("p"), frames = document.createElement("section"), views = document.createElement("div"), canvasScroll = document.createElement("div"), canvas = svg("svg"), outline = document.createElement("ol"), popover = document.createElement("section"), actions = document.createElement("section");
-        const freeRoots = stored.pageFrames.filter(({ freePageRegion }) => Boolean(freePageRegion)), hasBefore = freeRoots.some(({ freePageRegion }) => freePageRegion === "before-lanes"), hasAfter = freeRoots.some(({ freePageRegion }) => freePageRegion === "after-lanes"), laneOffset = hasBefore ? 200 : 0, viewWidth = Math.max(960, ...projection.graph.connectionEndpoints.map((endpoint) => endpoint.layout.x + endpoint.width + 100)), viewHeight = Math.max(780, ...projection.graph.connectionEndpoints.map((endpoint) => endpoint.layout.y + endpoint.height + 100)), namedRight = Math.max(760, ...projection.graph.connectionEndpoints.filter(({ freePageRegion }) => !freePageRegion).map((endpoint) => endpoint.layout.x + endpoint.width + 60));
+        const freeRoots = stored.pageFrames.filter(({ freePageRegion }) => Boolean(freePageRegion)), hasBefore = freeRoots.some(({ freePageRegion }) => freePageRegion === "before-lanes"), hasAfter = freeRoots.some(({ freePageRegion }) => freePageRegion === "after-lanes"), laneOffset = hasBefore ? 200 : 0, laneLeft = laneOffset + 10, namedRight = Math.max(laneLeft + 700, ...projection.graph.connectionEndpoints.filter(({ freePageRegion }) => !freePageRegion).map((endpoint) => endpoint.layout.x + endpoint.width + 60)), viewWidth = Math.max(960, namedRight + 100, ...projection.graph.connectionEndpoints.map((endpoint) => endpoint.layout.x + endpoint.width + 100)), viewHeight = Math.max(780, ...projection.graph.connectionEndpoints.map((endpoint) => endpoint.layout.y + endpoint.height + 100));
         section.className = "documentary-flow";
         heading.textContent = "Canvas-first directional Flow";
         boundary.className = "status-text";
@@ -386,17 +387,17 @@ export function installFlowGraphBuilder(options) {
         canvas.setAttribute("aria-label", "Interactive directional Flow canvas");
         canvas.setAttribute("role", "application");
         canvas.dataset.viewport = JSON.stringify(transientView.viewport ?? { x: 0, y: 0, zoom: 1 });
-        canvas.setAttribute("viewBox", `0 0 ${viewWidth} ${viewHeight}`);
-        canvas.style.width = `${viewWidth}px`;
+        canvas.setAttribute("viewBox", `-116 0 ${viewWidth + 116} ${viewHeight}`);
+        canvas.style.width = `${viewWidth + 116}px`;
         canvas.style.height = `${viewHeight}px`;
-        const resizeCanvasHeight = () => { const expanded = Array.from(canvas.querySelectorAll("[data-event-example-node]")).filter((candidate) => candidate.querySelector("details")?.open), height = Math.max(viewHeight, ...expanded.map((candidate) => { const parent = candidate.parentNode, parentY = parent.transform.baseVal.consolidate()?.matrix.f ?? 0; return parentY + Number(candidate.getAttribute("y") ?? 0) + Number(candidate.getAttribute("height") ?? 0); })); canvas.setAttribute("viewBox", `0 0 ${viewWidth} ${height}`); canvas.style.height = `${height}px`; };
+        const resizeCanvasHeight = () => { const expanded = Array.from(canvas.querySelectorAll("[data-event-example-node]")).filter((candidate) => candidate.querySelector("details")?.open), height = Math.max(viewHeight, ...expanded.map((candidate) => { const parent = candidate.parentNode, parentY = parent.transform.baseVal.consolidate()?.matrix.f ?? 0; return parentY + Number(candidate.getAttribute("y") ?? 0) + Number(candidate.getAttribute("height") ?? 0); })); canvas.setAttribute("viewBox", `-116 0 ${viewWidth + 116} ${height}`); canvas.style.height = `${height}px`; };
         outline.setAttribute("aria-label", "Synchronized editable Flow outline");
         views.className = "flow-projections";
-        projection.laneBands.forEach((band) => { const lane = projection.lanes.find(({ id }) => id === band.id), group = svg("g"), rect = svg("rect"), label = svg("text"), x = laneOffset + 10, mark = (event) => { const payload = dropPayload(event), page = payload?.kind === "page" ? current().state?.project.collections.pages.find(({ id }) => id === payload.id) : undefined; if (page)
-            rect.dataset.pageDropState = orderedPageGroupIds(state.project, page.id).includes(lane.id) ? "valid" : "invalid"; }; group.dataset.pageGroupId = lane.id; group.dataset.laneBand = lane.id; rect.setAttribute("x", String(x)); rect.setAttribute("y", String(band.y)); rect.setAttribute("width", String(Math.max(700, namedRight - x))); rect.setAttribute("height", String(band.height)); rect.setAttribute("class", "flow-lane"); rect.dataset.laneDropzone = lane.id; rect.addEventListener("dragenter", mark); rect.addEventListener("dragover", (event) => { event.preventDefault(); mark(event); }); rect.addEventListener("dragleave", () => delete rect.dataset.pageDropState); rect.addEventListener("drop", (event) => { event.preventDefault(); const payload = dropPayload(event), page = payload?.kind === "page" ? current().state?.project.collections.pages.find(({ id }) => id === payload.id) : undefined; if (page)
+        projection.laneBands.forEach((band) => { const lane = projection.lanes.find(({ id }) => id === band.id), group = svg("g"), rect = svg("rect"), label = svg("text"), x = laneLeft, mark = (event) => { const payload = dropPayload(event), page = payload?.kind === "page" ? current().state?.project.collections.pages.find(({ id }) => id === payload.id) : undefined; if (page)
+            rect.dataset.pageDropState = orderedPageGroupIds(state.project, page.id).includes(lane.id) ? "valid" : "invalid"; }; group.dataset.pageGroupId = lane.id; group.dataset.laneBand = lane.id; rect.setAttribute("x", String(x)); rect.setAttribute("y", String(band.y)); rect.setAttribute("width", String(namedRight - x)); rect.setAttribute("height", String(band.height)); rect.setAttribute("class", "flow-lane"); rect.dataset.laneDropzone = lane.id; rect.addEventListener("dragenter", mark); rect.addEventListener("dragover", (event) => { event.preventDefault(); mark(event); }); rect.addEventListener("dragleave", () => delete rect.dataset.pageDropState); rect.addEventListener("drop", (event) => { event.preventDefault(); const payload = dropPayload(event), page = payload?.kind === "page" ? current().state?.project.collections.pages.find(({ id }) => id === payload.id) : undefined; if (page)
             insertPage(page, lane.id); }); label.classList.add("flow-lane-label"); label.setAttribute("x", String(x + 12)); label.setAttribute("y", String(band.y + 25)); label.textContent = lane.name; group.append(rect, label); canvas.append(group); });
         const clearEdgeTargets = () => canvas.querySelectorAll("[data-free-page-edge-target]").forEach((target) => target.remove()), showEdgeTargets = () => { clearEdgeTargets(); for (const region of ["before-lanes", "after-lanes"]) {
-            const target = svg("g"), rect = svg("rect"), label = svg("text"), x = region === "before-lanes" ? 2 : viewWidth - 74;
+            const target = svg("g"), rect = svg("rect"), label = svg("text"), x = region === "before-lanes" ? -112 : namedRight + 10;
             target.dataset.freePageEdgeTarget = region;
             target.setAttribute("role", "button");
             target.setAttribute("aria-label", region === "before-lanes" ? "Place before lanes" : "Place after lanes");
@@ -551,7 +552,7 @@ export function installFlowGraphBuilder(options) {
             frame.addEventListener("click", (event) => { if (suppressPointerClick)
                 event.stopPropagation(); });
             frame.addEventListener("keydown", (event) => { if (!event.key.startsWith("Arrow"))
-                return; event.preventDefault(); const region = event.key === "ArrowLeft" ? "before-lanes" : event.key === "ArrowRight" ? "after-lanes" : storedFrame.freePageRegion, dy = event.key === "ArrowUp" ? -20 : event.key === "ArrowDown" ? 20 : 0; persist(moveFreePageFrame(current().state, flow.id, storedFrame.id, { region, x: Number(position.x ?? 24), y: Math.max(55, position.y + dy) })); queueMicrotask(() => elementByData("data-free-page-frame-canvas", storedFrame.id)?.focus()); });
+                return; event.preventDefault(); const region = event.key === "ArrowLeft" ? "before-lanes" : event.key === "ArrowRight" ? "after-lanes" : storedFrame.freePageRegion, dy = event.key === "ArrowUp" ? -20 : event.key === "ArrowDown" ? 20 : 0; pageFrameFocusIntent = { id: storedFrame.id, revision: Number(current().revision ?? 0), optimisticFocused: false }; persist(moveFreePageFrame(current().state, flow.id, storedFrame.id, { region, x: Number(position.x ?? 24), y: Math.max(55, position.y + dy) })); });
             frame.append(rect, label);
             canvas.append(frame);
         }
@@ -824,6 +825,20 @@ export function installFlowGraphBuilder(options) {
         section.append(heading, boundary, toolbar, laneControls, status, frames, views, actions, popover);
         host.append(section);
         document.querySelectorAll("[data-occurrence-id],[data-relationship-id],[data-page-frame-id]").forEach((element) => { const id = element.dataset.occurrenceId ?? element.dataset.relationshipId ?? element.dataset.pageFrameId; element.classList.toggle("is-selected", id === selected?.id); });
+        const frameIntent = pageFrameFocusIntent;
+        if (frameIntent) {
+            const focusedFrame = document.querySelector(`[data-free-page-frame-canvas="${CSS.escape(frameIntent.id)}"]`);
+            if (focusedFrame) {
+                const renderRevision = Number(current().revision ?? 0), replacement = frameIntent.optimisticFocused && renderRevision > frameIntent.revision;
+                if (!frameIntent.optimisticFocused) {
+                    frameIntent.optimisticFocused = true;
+                    frameIntent.revision = renderRevision;
+                }
+                queueMicrotask(() => { if (!focusedFrame.isConnected)
+                    return; focusedFrame.focus(); if (replacement && pageFrameFocusIntent === frameIntent)
+                    pageFrameFocusIntent = undefined; });
+            }
+        }
         const edgeIntent = relationshipEdgeFocusIntent;
         if (edgeIntent) {
             const edge = document.querySelector(`[data-relationship-id="${CSS.escape(edgeIntent.id)}"]`);
