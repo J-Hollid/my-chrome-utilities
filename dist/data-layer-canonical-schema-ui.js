@@ -9,6 +9,7 @@ const input = (name, value = "", type = "text") => { const control = dom.createE
 const select = (name, values, value) => { const control = dom.createElement("select"); control.name = name; for (const entry of values)
     control.append(new Option(entry, entry)); control.value = value; return control; };
 export function bindCanonicalPropertySearch(control, update) { control.addEventListener("input", () => update(control.value)); }
+export function canonicalDispatchRequiresLocalRender(result, renderAfterDispatch) { return renderAfterDispatch !== false || result.status === "confirmation-required"; }
 export function mountCanonicalSchemaEditor(options) {
     let query = "", feedback = options.initialFeedback ?? "", pendingType;
     const send = (command) => { const prior = options.load(), result = options.dispatch(command); if (result.status === "conflict")
@@ -19,7 +20,7 @@ export function mountCanonicalSchemaEditor(options) {
     else if (result.status === "applied" || result.status === "rebased") {
         pendingType = undefined;
         feedback = canonicalCommandOutcome(command, result, prior);
-    } if (options.renderAfterDispatch !== false && options.host.isConnected)
+    } if (canonicalDispatchRequiresLocalRender(result, options.renderAfterDispatch) && options.host.isConnected)
         render(); return result; };
     const propertyCommand = (document, kind) => { const propertyId = document.selectedPropertyId; if (!propertyId)
         return; if (kind === "rename") {

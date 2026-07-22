@@ -18,7 +18,7 @@ import {
   setCanonicalProperty,
 } from "../dist/data-layer-canonical-schema.js";
 import {confirmCanonicalMigration,createSpecificationProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
-import {bindCanonicalPropertySearch} from "../dist/data-layer-canonical-schema-ui.js";
+import {bindCanonicalPropertySearch,canonicalDispatchRequiresLocalRender} from "../dist/data-layer-canonical-schema-ui.js";
 
 let sequence=0;
 const id=(kind)=>`${kind}:${++sequence}`;
@@ -94,6 +94,8 @@ assert.deepEqual(canonicalConstraints(document).map(({path,presence})=>({path,pr
 const impact=changeCanonicalPropertyType(document,{baseRevision:5,propertyId:commerce,type:"string"});
 assert.equal(impact.status,"confirmation-required");
 assert.match(impact.impact,/child definitions and documentation removed/);
+assert.equal(canonicalDispatchRequiresLocalRender(impact,false),true,"confirmation review must render locally when applied commands rely on the outer durable projection");
+assert.equal(canonicalDispatchRequiresLocalRender({status:"applied",document},false),false,"ordinary applied commands may continue through the outer durable render");
 assert.equal(document.nodes[commerce].type,"object");
 const destructive=changeCanonicalPropertyType(document,{baseRevision:5,propertyId:commerce,type:"string",confirmed:true});
 assert.equal(destructive.status,"applied");
