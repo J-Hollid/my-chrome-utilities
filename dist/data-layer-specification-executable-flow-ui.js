@@ -22,4 +22,4 @@ export function installExecutableFlowBuilder(options) {
         return; options.persist(addFlowStep(state, flowId, { name: name.value.trim(), minimum: 1, maximum: 1, optional: false, transitions: [] }, options.id)); name.value = ""; });
     return { render: () => { const { state, flowId } = options.context(), flow = flowId && state?.project.collections.flows.find(({ id }) => id === flowId), steps = flow ? flow.steps ?? [] : []; editor.hidden = !flow; list.replaceChildren(...steps.map((step, index) => { const item = document.createElement("li"); item.textContent = `${index + 1}. ${step.name}`; return item; })); } };
 }
-//# sourceMappingURL=data-layer-executable-flow-ui.js.map
+//# sourceMappingURL=data-layer-specification-executable-flow-ui.js.map

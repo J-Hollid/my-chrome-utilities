@@ -354,7 +354,7 @@
       "src/data-layer-allowed-values-rule.ts",
       "src/data-layer-cardinality",
       "src/data-layer-conditional",
-      "src/data-layer-executable-flow-ui.ts",
+      "src/data-layer-specification-executable-flow-ui.ts",
       "src/data-layer-guided-nested-property-merge.ts",
       "src/data-layer-guided-rule-parameter-integrity.ts",
       "src/data-layer-guided-schema-picker-ui.ts",

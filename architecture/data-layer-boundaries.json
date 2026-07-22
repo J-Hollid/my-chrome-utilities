@@ -27,7 +27,7 @@
       "src/utilities/data-layer/schemas.ts"
     ]
   },
-  "src/data-layer-executable-flow-ui.ts": {
+  "src/data-layer-specification-executable-flow-ui.ts": {
     "module": "schemas",
     "layer": "browser"
   },
