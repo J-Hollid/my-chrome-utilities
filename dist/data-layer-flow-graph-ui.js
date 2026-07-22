@@ -29,6 +29,7 @@ export function consumeRelationshipDeletionFocus(intent, relationshipRestored) {
     return {}; if (relationshipRestored)
     return { target: "relationship" }; if (!intent.sourceFocused)
     return { target: "source", next: { ...intent, sourceFocused: true } }; return { next: intent }; }
+export function flowRelationshipDeletionAccessibleName(label, sourceName, targetName) { return `Delete relationship ${[label, `${sourceName} to ${targetName}`].filter(Boolean).join(", ")}`; }
 const flowPortPoint = (layout, size, port) => port === "left" ? { x: layout.x, y: layout.y + size.height / 2 } : port === "right" ? { x: layout.x + size.width, y: layout.y + size.height / 2 } : port === "top" ? { x: layout.x + size.width / 2, y: layout.y } : { x: layout.x + size.width / 2, y: layout.y + size.height };
 export function flowEdgeGeometry(source, target, sourceSize = { width: nodeWidth, height: nodeHeight }, targetSize = sourceSize, sourcePort = "right", targetPort = "left") {
     const start = flowPortPoint(source, sourceSize, sourcePort), end = flowPortPoint(target, targetSize, targetPort), startX = start.x, startY = start.y, endX = end.x, endY = end.y, dx = endX - startX, dy = endY - startY, length = Math.hypot(dx, dy), unitX = length < 0.001 ? 1 : dx / length, unitY = length < 0.001 ? 0 : dy / length, baseX = endX - unitX * 12, baseY = endY - unitY * 12, normalX = -unitY * 7, normalY = unitX * 7;
@@ -314,7 +315,7 @@ export function installFlowGraphBuilder(options) {
         cancel.textContent = "Cancel";
         remove.type = "button";
         remove.textContent = "Delete relationship";
-        remove.setAttribute("aria-label", `Delete relationship ${relationshipName}`);
+        remove.setAttribute("aria-label", flowRelationshipDeletionAccessibleName(relationship.label, source?.name ?? sourceId, target?.name ?? targetId));
         remove.addEventListener("click", () => { relationshipPopoverFocusIntent = undefined; relationshipEdgeFocusIntent = undefined; relationshipDeletionFocusIntent = { id: relationship.id, sourceKind: relationship.sourceEndpoint.kind, sourceId, sourceFocused: false }; selected = undefined; const context = current(), view = readView(context.state.project.id, flow.id); writeView(context.state.project.id, flow.id, flowViewAfterRelationshipDeletion(view, relationship.id)); persist(removeFlowRelationship(context.state, flow.id, relationship.id), `Deleted relationship ${relationshipName}. Saved Draft; documentation preview stale; Undo available.`); });
         cancel.addEventListener("click", () => { relationshipPopoverFocusIntent = undefined; relationshipEdgeFocusIntent = undefined; selected = undefined; render(); document.querySelector(`[data-flow-port-for="${CSS.escape(sourceId)}"][data-flow-port-side="${relationship.sourcePort}"]`)?.focus(); });
         form.addEventListener("submit", (event) => { event.preventDefault(); relationshipPopoverFocusIntent = undefined; relationshipEdgeFocusIntent = { id: relationship.id, revision: Number(revision ?? 0), optimisticFocused: false }; persist(saveGraphRelationship(current().state, flow.id, sourceId, { id: relationship.id, toStepId: targetId, sourcePort: relationship.sourcePort, targetPort: relationship.targetPort, group: group.value.trim(), label: label.value.trim(), documentationCondition: condition.value.trim(), expectation: expectation.value.trim() }, options.id)); queueMicrotask(() => document.querySelector(`[data-relationship-id="${CSS.escape(relationship.id)}"]`)?.focus()); });
@@ -568,7 +569,8 @@ export function installFlowGraphBuilder(options) {
                 return; const edge = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-free-page-edge-target]"); if (edge?.dataset.freePageEdgeTarget)
                 targetRegion = edge.dataset.freePageEdgeTarget; }, finish = (event) => { if (!owns(event))
                 return; const initial = start, region = targetRegion ?? storedFrame.freePageRegion, afterStart = namedRight, nextX = region === "before-lanes" ? Math.max(12, Math.round(x + event.clientX - initial.clientX)) : Math.max(12, Math.round(x + event.clientX - initial.clientX - afterStart)), nextY = Math.max(55, Math.round(position.y + event.clientY - initial.clientY)); stop(initial.pointerId); persist(moveFreePageFrame(current().state, flow.id, storedFrame.id, { region, x: nextX, y: nextY })); setTimeout(() => elementByData("data-free-page-frame-canvas", storedFrame.id)?.focus(), 50); }, cancel = (event) => { if (!owns(event))
-                return; const pointerId = start.pointerId; stop(pointerId); clearEdgeTargets(); setTimeout(() => elementByData("data-free-page-frame-canvas", storedFrame.id)?.focus(), 50); };
+                return; const pointerId = start.pointerId; stop(pointerId); clearEdgeTargets(); queueMicrotask(() => { if (frame.isConnected)
+                frame.focus(); }); };
             frame.addEventListener("focus", showEdgeTargets);
             frame.addEventListener("pointerdown", (event) => { if (start) {
                 suppressPointerClick = true;

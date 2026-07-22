@@ -767,6 +767,7 @@
     ],
     "unit": [
       "test/data-layer-flow-graph-test.mjs",
+      "test/data-layer-flow-relationship-deletion-test.mjs",
       "test/data-layer-flow-graph-persistence-test.mjs",
       "test/data-layer-flow-page-context-model-test.mjs",
       "test/flow-evidence-reporter-test.mjs"

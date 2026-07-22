@@ -19,6 +19,7 @@
     result))
 (defn- verify-model! []
   (when-not @model-verified?
+    (checked-command! "Flow relationship deletion verification failed." "node" "test/data-layer-flow-relationship-deletion-test.mjs")
     (checked-command! "Flow graph projection verification failed." "node" "test/data-layer-flow-graph-test.mjs")
     (checked-command! "Flow graph port inference property verification failed." "node" "test/data-layer-flow-graph-property-test.mjs")
     (checked-command! "Flow graph persistence verification failed." "node" "test/data-layer-flow-graph-persistence-test.mjs")
