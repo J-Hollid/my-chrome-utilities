@@ -148,7 +148,12 @@ coordinates inside an expanding Page frame and cannot leave that frame.
 
 Page frames and Event occurrences both expose connection ports. Page-to-Page,
 Page-to-Event, Event-to-Page, and Event-to-Event relationships persist typed stable
-endpoints. Parallel branches and merges are included in the first canvas release.
+endpoints and their connected ports. Source-right to target-left infers
+expected_next, source-top to target-bottom infers alternative, and source-bottom to
+target-top infers merge.
+Alternative branches and merges are included in the first canvas release; Parallel
+is not a separate kind, relationship labels are optional, and every other port
+pairing is invalid.
 An Event node's JSON example is read-only and derived from its canonical effective
 occurrence schema, configured examples, and provenance; it is never a stored payload
 copy. Complete, Incomplete, Invalid, and Blocked states distinguish example

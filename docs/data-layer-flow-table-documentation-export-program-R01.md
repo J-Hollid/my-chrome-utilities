@@ -65,7 +65,7 @@ IDs are never visible.
 ## Documentation order and branching
 
 The graph proposes a deterministic documentation order. A simple path receives 1,
-2, 3. Parallel branches receive labels such as 2a and 2b and remain adjacent beneath
+2, 3. Alternative branches receive labels such as 2a and 2b and remain adjacent beneath
 their branch group before the merge column.
 
 Operators may rename Step labels and reorder documentation columns. These settings

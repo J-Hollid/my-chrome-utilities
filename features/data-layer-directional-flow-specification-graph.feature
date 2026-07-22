@@ -11,7 +11,7 @@ Feature: Data layer directional Flow specification graph
     When the main Flow workspace opens
     Then its toolbar exposes Page Groups, Pages, and Events component catalogs beside the canvas
     And the synchronized outline is a secondary projection in the main workspace
-    And the Inspector may be closed without hiding any creation, placement, connection, or relationship-kind action
+    And the Inspector may be closed without hiding any creation, placement, connection, or relationship-detail action
     And no documentary occurrence or relationship form is mounted in the Inspector
     And Structured executable flow remains separately labelled Advanced and does not duplicate the documentary graph
 
@@ -95,26 +95,27 @@ Feature: Data layer directional Flow specification graph
 
   # Data layer directional Flow specification graph 009
   Scenario Outline: Data layer directional Flow specification graph 009
-    Given Customer details and Payment Page frames and their page_view and add_payment_info occurrences expose connection ports
-    When the operator drags from the <source> output port toward <target>
-    Then a live directed preview follows the pointer and <target> is highlighted as a valid target
-    When the pointer is released on the <target> input port
-    Then one expected-next relationship persists with stable typed source, typed target, and relationship identities
-    And its documentary meaning is <meaning>
+    Given Customer details and Payment Page frames and their page_view and add_payment_info occurrences expose left, right, top, and bottom connection ports
+    When the operator drags from the <source> <source_port> port toward <target>
+    Then a live directed preview follows the pointer and the <target> <target_port> port is highlighted as a valid target
+    When the pointer is released on the <target> <target_port> port
+    Then one relationship persists with kind <kind> and stable typed source, typed target, and relationship identities
+    And <kind> is inferred from the source and target ports without a relationship-kind selector
+    And the relationship persists without a label
     And the canvas renders its directed edge without requiring a source or target form
     And an inline relationship popover opens at the new edge
 
     Examples:
-      | source                            | target                                | meaning                         |
-      | Customer details Page             | Payment Page                          | Page context progression        |
-      | Customer details Page             | Customer details add_payment_info     | Event expected within the Page  |
-      | Customer details add_payment_info | Payment Page                          | Event leads to the next Page    |
-      | Customer details page_view        | Customer details add_payment_info     | Event interaction progression   |
+      | source                            | source_port | target                            | target_port | kind          |
+      | Customer details Page             | right       | Payment Page                      | left        | expected_next |
+      | Customer details Page             | top         | Customer details add_payment_info | bottom      | alternative   |
+      | Customer details add_payment_info | bottom      | Payment Page                      | top         | merge         |
+      | Customer details page_view        | right       | Customer details add_payment_info | left        | expected_next |
 
   # Data layer directional Flow specification graph 010
   Scenario: Data layer directional Flow specification graph 010
-    Given relationship drawing started from the Customer details Page output port
-    When the pointer reaches the same Page frame, empty canvas, or an incompatible target
+    Given relationship drawing started from the Customer details Page right port
+    When the pointer reaches the same Page frame, empty canvas, an incompatible target, or a port pairing other than right to left, top to bottom, or bottom to top
     Then that target is identified as invalid
     When the operator releases the pointer or presses Escape
     Then the preview is removed, focus returns to Customer details Page, and canonical state remains byte-identical
@@ -123,22 +124,23 @@ Feature: Data layer directional Flow specification graph
   # Data layer directional Flow specification graph 011
   Scenario: Data layer directional Flow specification graph 011
     Given four positioned nodes form a fork-and-join candidate
-    When two outgoing connections are completed from page_view
-    And uses each inline popover to set kind Parallel, group Fulfilment choice, and its human label
-    And draws expected-next relationships from both branch Events to purchase
-    And changes those two edges to Merge in group Fulfilment choice
-    Then graph and outline show two parallel branches and their merge with exact directed endpoints
-    And relationship labels, kinds, group, documentation conditions, and expectations persist once
+    When the operator draws two top-to-bottom splits from page_view to the branch Events and two bottom-to-top returns from those Events to purchase
+    Then the first two relationships have inferred kind alternative and the latter two have inferred kind merge
+    And graph and outline show two alternative branches and their merge with exact directed endpoints
+    When the operator labels one alternative relationship Fulfilment choice and leaves the other three relationships unlabelled
+    Then the optional label, inferred kinds, documentation conditions, and expectations persist once
+    And no Parallel kind or relationship-kind selector is available
     And the graph makes no claim that either branch or the complete Flow executed
 
   # Data layer directional Flow specification graph 012
   Scenario: Data layer directional Flow specification graph 012
-    Given keyboard focus is on the page_view output port
+    Given keyboard focus is on the page_view right port
     When Enter starts connection mode
     And Arrow keys move the target indicator to add_payment_info
     And Enter creates the relationship
-    Then the inline relationship popover receives focus for kind and documentation editing
-    When the operator saves and presses Escape
+    Then the created relationship has inferred kind expected_next
+    And the inline relationship popover receives focus for optional label and documentation editing without a kind selector
+    When the operator leaves the label blank, saves, and presses Escape
     Then focus returns to the created edge in the canvas
     And exactly one relationship exists without requiring pointer input or Inspector controls
 
@@ -239,9 +241,11 @@ Feature: Data layer directional Flow specification graph
     And places ID verification above the space between Customer details and Payment
     Then Checkout renders as a horizontal band above Delivery and expands vertically around the branch
     And the Page coordinates remain operator-authored rather than snapping into fixed columns or a vertical list
-    When the operator connects Customer details directly to Payment and alternatively through ID verification before Payment
+    When the operator draws the main-route edge from Customer details right port to Payment left port
+    And routes the upper branch from Customer details top port through ID verification bottom and bottom ports into Payment top port
     And connects Payment to Summary to Confirmation
-    Then the graph shows a directional split above the main route and a merge at Payment
+    Then the direct main route has kind expected_next, the upper branch has kind alternative, and its return to Payment has kind merge
+    And the graph shows a directional split above the main route and a merge at Payment
     And compact Place before lanes and Place after lanes regions remain left and right of all named lane bands
     And reload preserves lane order, branch geometry, Page coordinates, and directed endpoints
 
@@ -272,3 +276,11 @@ Feature: Data layer directional Flow specification graph
     Then status becomes Invalid with the quantity path and issue
     When an inherited schema conflict blocks Product view
     Then status becomes Blocked and the node does not claim that its example is valid
+
+  # Data layer directional Flow specification graph 022
+  Scenario: Data layer directional Flow specification graph 022
+    Given a saved Flow contains labelled and unlabelled relationships with legacy kind parallel
+    When the operator opens the Flow after the relationship-kind upgrade
+    Then one migration changes every parallel relationship to alternative
+    And relationship identities, typed endpoints, groups, optional labels, conditions, expectations, and graph geometry remain unchanged
+    And the upgraded Flow contains no parallel relationship kind

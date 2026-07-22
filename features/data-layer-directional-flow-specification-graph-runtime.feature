@@ -10,7 +10,7 @@ Feature: Data layer directional Flow specification graph runtime
     When actual controls open Checkout journey
     Then the production main workspace renders Page Groups, Pages, and Events catalogs beside the canvas
     And its synchronized outline renders as a secondary main-workspace projection
-    And closing the Inspector leaves every creation, placement, connection, and relationship-kind action operable
+    And closing the Inspector leaves every creation, placement, connection, and relationship-detail action operable
     And the Inspector DOM contains no documentary occurrence or relationship form
     And installed Structured executable flow remains separately labelled Advanced without documentary duplicates
 
@@ -94,26 +94,27 @@ Feature: Data layer directional Flow specification graph runtime
 
   # Data layer directional Flow specification graph runtime 009
   Scenario Outline: Data layer directional Flow specification graph runtime 009
-    Given production Customer details and Payment Page frames plus page_view and add_payment_info occurrences expose ports
-    When actual pointer events drag from <source> output toward <target>
-    Then a temporary directed SVG edge follows the pointer and the target port renders valid state
-    When pointerup occurs on the <target> input
-    Then production storage contains one expected-next relationship with typed stable endpoint and relationship IDs
-    And rendered relationship meaning is <meaning>
+    Given production Customer details and Payment Page frames plus page_view and add_payment_info occurrences expose left, right, top, and bottom ports
+    When actual pointer events drag from the <source> <source_port> port toward <target>
+    Then a temporary directed SVG edge follows the pointer and the <target> <target_port> port renders valid state
+    When pointerup occurs on the <target> <target_port> port
+    Then production storage contains one relationship with kind <kind> and typed stable endpoint and relationship IDs
+    And production infers <kind> from the source and target ports without rendering a relationship-kind selector
+    And canonical relationship storage has no label value
     And the installed canvas renders that edge without submitting a source or target form
     And a rendered inline relationship popover opens beside the edge
 
     Examples:
-      | source                            | target                                | meaning                         |
-      | Customer details Page             | Payment Page                          | Page context progression        |
-      | Customer details Page             | Customer details add_payment_info     | Event expected within the Page  |
-      | Customer details add_payment_info | Payment Page                          | Event leads to the next Page    |
-      | Customer details page_view        | Customer details add_payment_info     | Event interaction progression   |
+      | source                            | source_port | target                            | target_port | kind          |
+      | Customer details Page             | right       | Payment Page                      | left        | expected_next |
+      | Customer details Page             | top         | Customer details add_payment_info | bottom      | alternative   |
+      | Customer details add_payment_info | bottom      | Payment Page                      | top         | merge         |
+      | Customer details page_view        | right       | Customer details add_payment_info | left        | expected_next |
 
   # Data layer directional Flow specification graph runtime 010
   Scenario: Data layer directional Flow specification graph runtime 010
-    Given production connection mode started from Customer details Page output
-    When the pointer reaches the source node, empty canvas, or an incompatible port
+    Given production connection mode started from Customer details Page right port
+    When the pointer reaches the source node, empty canvas, an incompatible endpoint, or a port pairing other than right to left, top to bottom, or bottom to top
     Then the installed target state is invalid
     When pointerup or Escape cancels the gesture
     Then the preview DOM is removed and focus returns to the Customer details Page frame
@@ -122,22 +123,23 @@ Feature: Data layer directional Flow specification graph runtime
   # Data layer directional Flow specification graph runtime 011
   Scenario: Data layer directional Flow specification graph runtime 011
     Given four production nodes form a fork-and-join candidate
-    When actual ports complete two outgoing connections from page_view
-    And each inline popover sets kind Parallel, group Fulfilment choice, and a distinct label
-    And actual ports connect both branch nodes to purchase
-    And those inline popovers set kind Merge and group Fulfilment choice
-    Then installed canvas and outline render the exact two branches and merge endpoints
-    And canonical relationships persist each kind, group, label, condition, and expectation once
+    When actual pointer events draw two top-to-bottom splits from page_view to the branch Events and two bottom-to-top returns from those Events to purchase
+    Then the first two production relationships have inferred kind alternative and the latter two have inferred kind merge
+    And installed canvas and outline render the exact two alternative branches and merge endpoints
+    When actual controls label one alternative relationship Fulfilment choice and leave the other three relationships unlabelled
+    Then canonical relationships persist the optional label, inferred kinds, conditions, and expectations once
+    And the installed editor exposes no Parallel kind or relationship-kind selector
     And no production graph state or output claims execution of a branch or complete Flow
 
   # Data layer directional Flow specification graph runtime 012
   Scenario: Data layer directional Flow specification graph runtime 012
-    Given actual keyboard focus is on the page_view output port
+    Given actual keyboard focus is on the page_view right port
     When Enter starts installed connection mode
     And Arrow keys target add_payment_info
     And Enter commits the edge
-    Then the production inline popover receives focus for kind and documentation editing
-    When actual controls save and press Escape
+    Then the production relationship has inferred kind expected_next
+    And the production inline popover receives focus for optional label and documentation editing without a kind selector
+    When actual controls leave the label blank, save, and press Escape
     Then focus returns to the created SVG edge
     And production storage contains exactly one relationship without pointer or Inspector input
 
@@ -240,9 +242,11 @@ Feature: Data layer directional Flow specification graph runtime
     And place ID verification above the gap between Customer details and Payment
     Then measured Checkout geometry is a horizontal band above Delivery and grows vertically around the branch
     And serialized coordinates equal the operator positions without fixed-column or vertical-list normalization
-    When actual ports connect Customer details directly and through ID verification into Payment
+    When actual ports draw the main-route edge from Customer details right to Payment left
+    And route the upper branch from Customer details top through ID verification bottom and bottom into Payment top
     And connect Payment to Summary to Confirmation
-    Then installed SVG edges show an upper split and merge into Payment
+    Then production stores the direct edge as expected_next, the upper branch as alternative, and its return as merge
+    And installed SVG edges show an upper split and merge into Payment
     And compact production edge targets remain left and right of all named lane bands
     When the built extension reloads
     Then lane order, branch geometry, coordinates, and endpoint identities are unchanged
@@ -274,3 +278,11 @@ Feature: Data layer directional Flow specification graph runtime
     Then installed status is Invalid with the quantity path and issue
     When a production inherited schema conflict blocks Product view
     Then installed status is Blocked and no valid-example claim renders
+
+  # Data layer directional Flow specification graph runtime 022
+  Scenario: Data layer directional Flow specification graph runtime 022
+    Given production migration input contains labelled and unlabelled relationships with legacy kind parallel
+    When the installed extension opens the owning Flow
+    Then one repository migration changes every persisted parallel relationship to alternative
+    And production relationship IDs, typed endpoints, groups, optional labels, conditions, expectations, and coordinates equal their pre-upgrade values
+    And no stored relationship retains the legacy kind

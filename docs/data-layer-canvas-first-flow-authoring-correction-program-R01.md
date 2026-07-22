@@ -14,7 +14,10 @@ The following earlier clauses are explicitly superseded:
 - a per-occurrence relationship form is not the sole relationship-authoring path;
 - relationship creation and editing do not require the Inspector;
 - Page Group selection and ordering do not live only in a Flow Inspector form; and
-- `Context`, `Shipping`, `Payment`, and `Merge` are not semantic or fallback lanes.
+- `Context`, `Shipping`, `Payment`, and `Merge` are not semantic or fallback lanes;
+- relationship kind is inferred from the connected port pair rather than chosen in
+  a relationship editor; and
+- Parallel is not a separate relationship kind from Alternative.
 
 ## Corrective outcome
 
@@ -23,9 +26,11 @@ and orders existing Page Groups to define top-to-bottom horizontal lane bands,
 places Page components left to right or in vertical branches inside eligible bands
 or transient free-page edge regions, positions reusable context-setting and
 interaction Events freely inside Page frames, and draws directed relationships
-between visible Page-frame and Event-occurrence ports. Event nodes present a
-read-only JSON example derived from the effective occurrence schema rather than a
-separate copied payload.
+between visible left, right, top, and bottom Page-frame and Event-occurrence ports.
+The connected port pair determines whether the relationship is expected_next,
+alternative, or merge, and every relationship may remain unlabelled. Event nodes
+present a read-only JSON example derived from the effective occurrence schema
+rather than a separate copied payload.
 
 The Inspector is optional secondary detail. The complete graph can be created,
 connected, documented, persisted, reloaded, and reopened while it is closed.
@@ -153,9 +158,10 @@ provenance, so the operator can distinguish inherited and occurrence-specific da
 
 ### Relationships are drawn topology
 
-Each Page frame and Event occurrence exposes labelled input and output ports.
-Pointer drawing begins at an output port, shows a live directed preview, identifies
-valid and invalid targets, and commits only when released over a valid input port.
+Each Page frame and Event occurrence exposes labelled left, right, top, and bottom
+ports. Pointer drawing begins at a source port, shows a live directed preview,
+identifies valid and invalid targets, and commits only when released over the
+matching target port.
 Escape, empty canvas, the source node, and incompatible targets cancel without a
 partial record.
 
@@ -165,12 +171,24 @@ Event interaction progression. Relationships therefore persist a typed stable
 source endpoint and typed stable target endpoint, each referencing either a Page
 frame or Event occurrence.
 
-The new edge defaults to expected-next and opens an inline popover for expected-
-next, alternative, parallel, or merge; group; label; plain-language documentation
-condition; and expectation. Parallel branches and merges are included in the first
-release.
+Relationship kind is derived from the ordered port pair:
 
-Keyboard connection mode starts from a focused output port, moves a target indicator
+| Source port | Target port | Persisted kind |
+|---|---|---|
+| right | left | `expected_next` |
+| top | bottom | `alternative` |
+| bottom | top | `merge` |
+
+Every other port pairing is invalid and commits no relationship. The inline
+popover provides optional label, group, plain-language documentation condition,
+and expectation fields but no relationship-kind selector. An empty label is valid,
+persists as absent, and renders no placeholder label on the edge. Alternative is
+the only branching kind: Parallel is neither offered nor persisted as a distinct
+choice. Existing Parallel relationships migrate to Alternative while retaining
+their stable identity, typed endpoints, group, optional label, condition,
+expectation, and geometry.
+
+Keyboard connection mode starts from a focused source port, moves a target indicator
 between eligible inputs, commits with Enter, cancels with Escape, and restores focus
 deterministically.
 
@@ -186,7 +204,8 @@ The main Flow workspace owns:
 - Page-frame insertion and transient before-lanes and after-lanes free-page targets;
 - context-setting and interaction Event insertion through one occurrence model;
 - free Page and Event positioning within their respective containment boundaries;
-- Page-frame and Event-occurrence connection ports and drawing;
+- Page-frame and Event-occurrence left, right, top, and bottom ports, port-pair kind
+  inference, and drawing;
 - effective-schema-derived Event JSON examples and repair links;
 - inline graph actions and relationship editing; and
 - the synchronized outline.
@@ -214,7 +233,8 @@ Reload preserves:
 - Event occurrence references, roles, and documentary triggers;
 - Page-frame and Event-occurrence presentation coordinates;
 - selected item and viewport where applicable; and
-- relationship identity, endpoints, kind, group, label, condition, and expectation.
+- relationship identity, endpoints, inferred kind, group, optional label,
+  condition, and expectation.
 
 Invalid drops, Event cross-boundary movement, cancelled connections, guarded lane
 removal, and removal of an in-use Page membership are no-op commands: project bytes
@@ -234,9 +254,9 @@ fixed-lane or source/target forms.
 
 ## Assurance boundary
 
-The graph documents expected topology, optionality, multiplicity, parallel branches,
-merges, and conditions for human review and developer communication. It does not
-validate that a sequence or branch executed.
+The graph documents expected topology, optionality, multiplicity, alternative
+branches, merges, and conditions for human review and developer communication. It
+does not validate that a sequence or branch executed.
 
 Each Event occurrence continues to resolve its canonical effective schema
 independently. Its displayed JSON is a derived example, not a stored schema or
@@ -264,9 +284,10 @@ assignment-owned Page resolution, legacy binding migration, and guarded movement
 
 ### Phase C — graphical relationship authoring
 
-Implement typed Page-frame and Event-occurrence connection ports, all four endpoint
-combinations, live pointer preview, target validity, atomic commit and cancel,
-inline relationship popovers, parallel and merge editing, and edge selection.
+Implement typed Page-frame and Event-occurrence ports on all four sides, all four
+endpoint combinations, live pointer preview, target validity, atomic commit and
+cancel, deterministic expected_next, alternative, and merge inference, optional
+labels, inline relationship popovers without kind selection, and edge selection.
 
 ### Phase D — keyboard, persistence, and terminal proof
 
@@ -291,9 +312,9 @@ runtime feature.
 | F07 | Interaction Events must be reusable components | Flow 006 | Drag and keyboard insertion into Page frames | Event catalog and occurrence command | Same Event ID, distinct occurrence IDs | B | Reuse does not duplicate the Event or schema |
 | F08 | Free Pages are rendered as one permanent lane after all Page Groups | Flow 007 | Transient left and right edge targets create compact frames without Event prerequisites | Free-frame command, edge-target UI, and layout projection | Target geometry, stored region and coordinates, absent placement-group and binding IDs | B | No free-page pseudo-lane, empty lane-sized background, or binding prerequisite remains |
 | F09 | Events cannot be laid out side by side | Flow 008 | Free Event positions expand the owning Page and reject boundary crossing | Pointer/keyboard layout adapter, Page geometry, and repository | Distinct coordinates after reload and unchanged revision on rejection | B | Events retain authored positions inside their Page without semantic mutation |
-| F10 | Relationships are limited to Event-to-Event | Flow 009 | Page-to-Page, Page-to-Event, Event-to-Page, and Event-to-Event drawing | Pointer adapter, typed endpoint model, SVG renderer, and relationship command | Actual pointer events and one canonical relationship for each endpoint combination | C | Every supported endpoint combination is created without source/target form submission |
+| F10 | Relationships are limited to Event-to-Event and side-only ports | Flow 009 | Page-to-Page, Page-to-Event, Event-to-Page, and Event-to-Event drawing through left, right, top, and bottom ports | Pointer adapter, typed endpoint and port model, SVG renderer, and relationship command | Actual pointer events, all three valid port pairs, and one canonical relationship for each endpoint combination | C | Every supported endpoint combination infers expected_next, alternative, or merge without source/target or kind form submission |
 | F11 | Cancelled drawing can leave unsafe state | Flow 010 | Invalid targets and Escape remove preview with no write | Connection state machine and transaction boundary | Byte-identical project and absent partial record | C | Every invalid or cancelled gesture is atomic no-op |
-| F12 | Parallel branches belong in first release | Flow 011 | Two Parallel edges and two Merge edges edited inline | Relationship model and graph/outline renderer | Exact endpoints, kind, group, labels, conditions | C | Branch/merge topology persists without execution claim |
+| F12 | Branch kind and labels require unnecessary manual choices | Flow 011, 022 | Top-to-bottom ports infer Alternative, bottom-to-top ports infer Merge, labels may remain absent, and legacy Parallel becomes Alternative | Relationship model, migration, and graph/outline renderer | Exact endpoints, inferred kinds, optional label, absent kind selector, and migrated legacy records | C | Alternative/merge topology persists without a required label, distinct Parallel kind, or execution claim |
 | F13 | Drawing requires a keyboard equivalent | Flow 012 | Port connection mode, target navigation, popover focus, edge focus | Keyboard state machine and focus adapter | Focus sequence and one stored relationship | D | Complete connection needs neither pointer nor Inspector |
 | F14 | Inspector should complement the canvas | Flow 013 | Inline node actions; optional details; schema editor round trip | Selection routing and workspace restoration | Closed-Inspector actions plus restored node/viewport | A, D | No exclusive graph command appears only in Inspector |
 | F15 | Renames and reload can corrupt human projections | Flow 014 | New names with unchanged IDs, coordinates, topology, and meaning | Catalog subscriptions, repository, renderer | Before/after stable references and reload evidence | D | Renames change labels only |
@@ -319,9 +340,11 @@ either free edge region without losing membership or inherited schema, and a mul
 membership Page must move between eligible selected lanes without changing its
 membership order or effective schema. The installed graph must prove horizontal
 lane bands, left-to-right Pages, a vertical alternative branch, all four typed
-endpoint combinations, side-by-side Events, and an effective-schema-derived Event
+endpoint combinations, ports on all four sides, deterministic port-pair relationship
+kinds, optional labels, side-by-side Events, and an effective-schema-derived Event
 JSON example with truthful status and repair. Ineligible named-lane placement and
 unsafe membership removal remain no-op commands. A component-only canvas, direct
 repository injection, pre-created edges, form-submitted source and target, fixed
-lane constants, stored example payload, binding-backed validation, or assertions
-over source strings cannot satisfy the runtime feature.
+lane constants, manual relationship-kind selector, required relationship label,
+distinct Parallel kind, stored example payload, binding-backed validation, or
+assertions over source strings cannot satisfy the runtime feature.

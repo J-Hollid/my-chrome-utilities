@@ -2,7 +2,7 @@ Feature: Data layer Flow table documentation export
 
   Background:
     Given Checkout journey contains Cart page_view, Shipping add_shipping_info, Payment add_payment_info, and Confirmation purchase contexts
-    And Shipping and Payment are parallel branches that merge before Confirmation
+    And Shipping and Payment are alternative branches that merge before Confirmation
     And every selected context has a canonical effective schema with property provenance
 
   # Data layer Flow table documentation export 001
@@ -62,7 +62,7 @@ Feature: Data layer Flow table documentation export
     Given the graph forks from Cart into Shipping and Payment before merging at Confirmation
     When documentation order is generated
     Then proposed Step labels are 1, 2a, 2b, and 3
-    And parallel columns remain adjacent beneath their shared branch group
+    And alternative columns remain adjacent beneath their shared branch group
     When the operator renames 2a to Delivery choice and moves Payment before Shipping for documentation
     Then preview and exports use the custom label and order
     And graph coordinates, directed relationships, branch meaning, and manual journey semantics remain unchanged
@@ -156,7 +156,7 @@ Feature: Data layer Flow table documentation export
 
   # Data layer Flow table documentation export 014
   Scenario: Data layer Flow table documentation export 014
-    Given Checkout journey has the parallel Shipping and Payment branches with exact values, conditional presence, optional properties, forbidden properties, and one unresolved draft property
+    Given Checkout journey has the alternative Shipping and Payment branches with exact values, conditional presence, optional properties, forbidden properties, and one unresolved draft property
     When the operator configures Flow value map and Data capture matrix through visible controls
     And copies each as Spreadsheet and Rich table
     And requests the configured multi-sheet file

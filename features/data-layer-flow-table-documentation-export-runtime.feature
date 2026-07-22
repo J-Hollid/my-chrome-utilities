@@ -154,7 +154,7 @@ Feature: Data layer Flow table documentation export runtime
 
   # Data layer Flow table documentation export runtime 014
   Scenario: Data layer Flow table documentation export runtime 014
-    Given production Checkout has parallel Shipping and Payment branches with exact, conditional, optional, forbidden, and unresolved effective properties
+    Given production Checkout has alternative Shipping and Payment branches with exact, conditional, optional, forbidden, and unresolved effective properties
     When actual controls configure both documentation views
     And copy each view in Spreadsheet and Rich table modes
     And request the production multi-sheet file
