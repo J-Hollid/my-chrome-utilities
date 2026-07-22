@@ -1,6 +1,23 @@
 const clone = (value) => structuredClone(value);
 export const compactCanonicalPageHistory = () => ({ contributors: {} });
+export const compactCanonicalHistorySettlement = (history = compactCanonicalPageHistory()) => ({ history: clone(history) });
 const stack = (history, key) => history.contributors[key] ?? { undo: [], redo: [] };
+const sameTransition = (pending, identity) => pending.operationId === identity.operationId && pending.projectId === identity.projectId && pending.editorKey === identity.editorKey;
+export function beginCompactCanonicalHistoryTransition(settlement, transition) {
+    if (settlement.pending)
+        throw new Error(`Canonical history transition ${settlement.pending.operationId} is still awaiting a durable outcome.`);
+    return { history: clone(settlement.history), pending: clone(transition) };
+}
+export function completeCompactCanonicalHistoryTransition(settlement, identity) {
+    if (!settlement.pending || !sameTransition(settlement.pending, identity))
+        return clone(settlement);
+    return { history: clone(settlement.pending.history) };
+}
+export function rejectCompactCanonicalHistoryTransition(settlement, identity) {
+    if (!settlement.pending || !sameTransition(settlement.pending, identity))
+        return clone(settlement);
+    return { history: clone(settlement.history) };
+}
 export function recordCompactCanonicalMutation(history, key, before, after) {
     const current = stack(history, key);
     return { contributors: { ...clone(history.contributors), [key]: { undo: [...clone(current.undo), { before: clone(before), after: clone(after) }], redo: [] } } };

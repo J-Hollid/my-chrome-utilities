@@ -4,10 +4,30 @@ export interface CompactCanonicalHistoryEntry {before:CanonicalSchemaDocument;af
 export interface CompactCanonicalContributorHistory {undo:CompactCanonicalHistoryEntry[];redo:CompactCanonicalHistoryEntry[];}
 export interface CompactCanonicalPageHistory {contributors:Record<string,CompactCanonicalContributorHistory>;}
 export type CompactCanonicalHistoryStep={status:"empty"|"blocked";message:string}|{status:"ready";document:CanonicalSchemaDocument;history:CompactCanonicalPageHistory};
+export interface CompactCanonicalHistoryTransitionIdentity{operationId:string;projectId:string;editorKey:string;}
+export interface CompactCanonicalPendingHistoryTransition extends CompactCanonicalHistoryTransitionIdentity{history:CompactCanonicalPageHistory;}
+export interface CompactCanonicalHistorySettlement{history:CompactCanonicalPageHistory;pending?:CompactCanonicalPendingHistoryTransition;}
 
 const clone=<T>(value:T):T=>structuredClone(value);
 export const compactCanonicalPageHistory=():CompactCanonicalPageHistory=>({contributors:{}});
+export const compactCanonicalHistorySettlement=(history=compactCanonicalPageHistory()):CompactCanonicalHistorySettlement=>({history:clone(history)});
 const stack=(history:CompactCanonicalPageHistory,key:string):CompactCanonicalContributorHistory=>history.contributors[key]??{undo:[],redo:[]};
+const sameTransition=(pending:CompactCanonicalPendingHistoryTransition,identity:CompactCanonicalHistoryTransitionIdentity)=>pending.operationId===identity.operationId&&pending.projectId===identity.projectId&&pending.editorKey===identity.editorKey;
+
+export function beginCompactCanonicalHistoryTransition(settlement:CompactCanonicalHistorySettlement,transition:CompactCanonicalPendingHistoryTransition):CompactCanonicalHistorySettlement{
+  if(settlement.pending)throw new Error(`Canonical history transition ${settlement.pending.operationId} is still awaiting a durable outcome.`);
+  return{history:clone(settlement.history),pending:clone(transition)};
+}
+
+export function completeCompactCanonicalHistoryTransition(settlement:CompactCanonicalHistorySettlement,identity:CompactCanonicalHistoryTransitionIdentity):CompactCanonicalHistorySettlement{
+  if(!settlement.pending||!sameTransition(settlement.pending,identity))return clone(settlement);
+  return{history:clone(settlement.pending.history)};
+}
+
+export function rejectCompactCanonicalHistoryTransition(settlement:CompactCanonicalHistorySettlement,identity:CompactCanonicalHistoryTransitionIdentity):CompactCanonicalHistorySettlement{
+  if(!settlement.pending||!sameTransition(settlement.pending,identity))return clone(settlement);
+  return{history:clone(settlement.history)};
+}
 
 export function recordCompactCanonicalMutation(history:CompactCanonicalPageHistory,key:string,before:CanonicalSchemaDocument,after:CanonicalSchemaDocument):CompactCanonicalPageHistory{
   const current=stack(history,key);return{contributors:{...clone(history.contributors),[key]:{undo:[...clone(current.undo),{before:clone(before),after:clone(after)}],redo:[]}}};

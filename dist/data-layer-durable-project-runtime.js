@@ -236,13 +236,14 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
         await installActive(deferred); };
     const retryFailedSchemaSave = async () => { const pending = failedSchema; if (!pending)
         throw new Error("There is no failed Saved Schema Library batch to retry."); enqueue(`Retry ${pending.batch.label}`, () => commitSchemaBatch(pending.batch, true)); await latest; };
-    const resolveFailedSave = async (strategy, pendingFields = []) => { const pending = failed; if (!pending?.conflict)
-        throw new Error("There is no durable Draft conflict to resolve."); if (strategy === "reject") {
+    const resolveFailedSave = async (strategy, pendingFields = []) => { const pending = failed; if (!pending)
+        throw new Error("There is no failed durable Draft to resolve."); if (strategy === "reject") {
         failed = undefined;
         await installCurrent(pending.projectId, partialRoutes.get(pending.projectId));
         projectionChanged();
         return;
-    } if (pending.command.commandId.startsWith("blocked-history:"))
+    } if (!pending.conflict)
+        throw new Error("There is no durable Draft conflict to merge or reapply."); if (pending.command.commandId.startsWith("blocked-history:"))
         throw new Error("A newer value blocks this window Undo or Redo; reject it instead of overwriting the newer Saved Draft."); const current = await repository.loadProject(pending.projectId), selectedSemanticFields = new Set(pendingFields.map(durableConflictSemanticField)), patches = pending.command.patches.filter((patch) => { const field = durablePatchField(patch); return !pending.conflict.conflictingFields.includes(field) || strategy === "reapply" || selectedSemanticFields.has(durableConflictSemanticField(field)); }), command = { ...structuredClone(pending.command), baseToken: current.draftToken, baseSequence: current.draftSequence, patches, pendingState: cleanState(current.state), commandId: `resolve:${pending.command.commandId}` }, result = await repository.saveDraft(command); if (result.status === "conflict") {
         failed = { ...pending, conflict: result, error: new DOMException(`${result.label} still conflicts at ${result.conflictingFields.join(", ")}.`, "AbortError") };
         throw failed.error;
