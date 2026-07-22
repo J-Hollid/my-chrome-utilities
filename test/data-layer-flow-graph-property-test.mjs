@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import {inferFlowRelationshipKind,migrateLegacyFlowRelationshipKinds} from "../dist/data-layer-flow-graph.js";
-import {addProjectEntity,createSpecificationProject} from "../dist/data-layer-specification-project.js";
+import {inferFlowRelationshipKind,migrateLegacyFlowRelationshipKinds,removeFlowRelationship} from "../dist/data-layer-flow-graph.js";
+import {addProjectEntity,createSpecificationProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
 
 const sides=["left","right","top","bottom"];
 const expected=new Map([
@@ -57,5 +57,23 @@ for(let sample=0;sample<128;sample+=1){
 
 const current={...base,project:{...base.project,documentationFlowGraphs:{[flow.id]:{...graph,relationships:[{id:"relationship:current",kind:"alternative",sourcePort:"top",targetPort:"bottom"}]}}}};
 assert.equal(migrateLegacyFlowRelationshipKinds(current,flow.id),current,"a current graph must remain an exact no-op");
+
+for(let sample=0;sample<128;sample+=1){
+  const relationships=Array.from({length:2+Math.floor(random()*12)},(_,index)=>({
+    id:`relationship:deletion-${sample}-${index}`,
+    sourceEndpoint:{kind:index%2?"page-frame":"event-occurrence",id:`source:${sample}:${index}`},
+    targetEndpoint:{kind:index%3?"event-occurrence":"page-frame",id:`target:${sample}:${index}`},
+    sourcePort:index%2?"top":"right",
+    targetPort:index%2?"bottom":"left",
+    kind:index%2?"alternative":"expected_next",
+    group:randomText("group"),
+    ...(index%2?{label:randomText("label")}:{}),
+    documentationCondition:randomText("condition"),
+    expectation:randomText("expectation"),
+  })),removed=relationships[Math.floor(random()*relationships.length)],state={...base,project:{...base.project,documentationFlowGraphs:{[flow.id]:{...graph,relationships}}}};
+  const deleted=removeFlowRelationship(state,flow.id,removed.id),remaining=deleted.project.documentationFlowGraphs[flow.id].relationships;
+  assert.deepEqual(remaining,relationships.filter(({id})=>id!==removed.id),`deletion sample ${sample} must remove only the selected stable identity`);
+  assert.deepEqual(undoProjectTransaction(deleted).project,state.project,`deletion sample ${sample} must round-trip the complete graph through one Undo`);
+}
 
 console.log("Flow graph property tests passed");
