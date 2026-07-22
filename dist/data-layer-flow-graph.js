@@ -43,7 +43,9 @@ function validOccurrence(state, flowId, input) {
     const page = state.project.collections.pages.find(({ id }) => id === input.pageId);
     if (!page)
         throw new Error("A Flow occurrence requires an existing Page.");
-    const graph = storedGraph(state.project, flowId), frame = input.pageFrameId ? graph.pageFrames.find(({ id }) => id === input.pageFrameId) : undefined;
+    if (!input.pageFrameId)
+        throw new Error("A Flow occurrence requires an existing containing Page frame; legacy lane records are migration input only.");
+    const graph = storedGraph(state.project, flowId), frame = graph.pageFrames.find(({ id }) => id === input.pageFrameId);
     if (input.pageFrameId && (!frame || frame.pageId !== page.id || (input.pageGroupId !== undefined && String(frame.pageGroupId ?? "") !== String(input.pageGroupId))))
         throw new Error("A Flow occurrence requires its existing containing Page frame.");
     const effectivePageGroupId = input.pageGroupId ?? frame?.pageGroupId;
