@@ -1,5 +1,6 @@
 import { canonicalConstraints } from "./data-layer-canonical-schema.js";
 import { orderedPageGroupIds } from "./data-layer-page-group-membership.js";
+import { transactProject } from "./data-layer-specification-project.js";
 const contributionFor = (entity, scope) => {
     const canonical = entity.canonicalSchema;
     const base = canonical ? canonicalConstraints(canonical) : (entity.schemaConstraints ?? []), sparse = entity.localSchemaContributions ?? [];
@@ -57,5 +58,18 @@ export function layeredContributorsForPath(state, path, observation = {}) {
 }
 export function layeredContributionDetails(state, entity, scope, flowId) {
     return layeredContributorsForPath(state, layeredContributorPath(state, entity, scope, flowId)).flatMap((contributor) => contributor.constraints.map((constraint) => ({ contributorId: contributor.id, contributorName: contributor.name, scope: contributor.scope, path: constraint.path, target: constraint.target ?? "all", condition: constraint.condition ? JSON.stringify(constraint.condition) : "Always", enforcement: constraint.enforcement ?? "not set", usedById: entity.id, usedByName: entity.name, usedByScope: scope })));
+}
+export function saveFlowPageInstanceLocalFacets(state, flowId, pageFrameId, path, facets) {
+    const graph = state.project.documentationFlowGraphs[flowId], frame = graph?.pageFrames?.find(({ id }) => id === pageFrameId);
+    if (!frame)
+        throw new Error(`Flow Page instance ${pageFrameId} is unavailable.`);
+    const sparse = Object.fromEntries(Object.entries(facets).filter(([, value]) => value !== undefined && value !== ""));
+    return transactProject(state, `Override ${path} at Flow Page instance`, (project) => { const graphs = project.documentationFlowGraphs; return { ...project, documentationFlowGraphs: { ...graphs, [flowId]: { ...graphs[flowId], pageFrames: graphs[flowId].pageFrames.map((candidate) => candidate.id === pageFrameId ? { ...candidate, localSchemaContributions: [...(candidate.localSchemaContributions ?? []).filter((constraint) => constraint.path !== path), ...(Object.keys(sparse).length ? [{ path, ...structuredClone(sparse) }] : [])], compiledTargetsStale: true } : candidate) } } }; });
+}
+export function resetFlowPageInstanceLocalProperty(state, flowId, pageFrameId, path) {
+    const graph = state.project.documentationFlowGraphs[flowId], frame = graph?.pageFrames?.find(({ id }) => id === pageFrameId);
+    if (!frame)
+        throw new Error(`Flow Page instance ${pageFrameId} is unavailable.`);
+    return transactProject(state, `Reset ${path} to parents at Flow Page instance`, (project) => { const graphs = project.documentationFlowGraphs; return { ...project, documentationFlowGraphs: { ...graphs, [flowId]: { ...graphs[flowId], pageFrames: graphs[flowId].pageFrames.map((candidate) => candidate.id === pageFrameId ? { ...candidate, localSchemaContributions: (candidate.localSchemaContributions ?? []).filter((constraint) => constraint.path !== path), compiledTargetsStale: true } : candidate) } } }; });
 }
 //# sourceMappingURL=data-layer-layered-schema-project.js.map

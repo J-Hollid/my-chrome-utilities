@@ -236,7 +236,7 @@ export function installFlowGraphBuilder(options) {
             } });
             card.append(move);
         }
-        card.append(button("Remove Page frame", () => persist(removeFlowPageFrame(current().state, flow.id, frame.id))));
+        card.append(button("Open schema contribution", () => options.openOccurrenceSchema?.(frame.id)), button("Remove Page frame", () => persist(removeFlowPageFrame(current().state, flow.id, frame.id))));
     }
     function renderFrameCards(host) {
         const { state, flow, graph } = current();
@@ -335,10 +335,23 @@ export function installFlowGraphBuilder(options) {
         }
     }
     function renderActions(host) {
+        const { state, flow, graph } = current();
+        if (!state || !flow || !graph)
+            return;
+        if (selected?.kind === "page-frame") {
+            const frame = graph.pageFrames.find(({ id }) => id === selected.id);
+            if (!frame)
+                return;
+            const actions = document.createElement("section");
+            actions.setAttribute("aria-label", "Selected Page instance inline actions");
+            actions.append(button("Move", () => document.querySelector(`[data-page-frame-id="${CSS.escape(frame.id)}"]`)?.focus()), button("Connect", () => document.querySelector(`[data-output-port-for="${CSS.escape(frame.id)}"]`)?.focus()), button("Open schema contribution", () => options.openOccurrenceSchema?.(frame.id)), button("Remove", () => persist(removeFlowPageFrame(current().state, flow.id, frame.id))));
+            host.append(actions);
+            return;
+        }
         if (selected?.kind !== "occurrence")
             return;
-        const { state, flow, graph } = current(), occurrence = graph?.occurrences.find(({ id }) => id === selected.id), node = state && flow ? projectFlowGraph(state.project, flow.id).graph.nodes.find(({ id }) => id === selected.id) : undefined;
-        if (!state || !flow || !graph || !occurrence || !node)
+        const occurrence = graph.occurrences.find(({ id }) => id === selected.id), node = projectFlowGraph(state.project, flow.id).graph.nodes.find(({ id }) => id === selected.id);
+        if (!occurrence || !node)
             return;
         const actions = document.createElement("section"), migration = reviewLegacyFlowContextMigration(state.project, flow.id);
         actions.setAttribute("aria-label", "Selected node inline actions");
@@ -482,19 +495,19 @@ export function installFlowGraphBuilder(options) {
             rect.classList.add("flow-page-frame");
             label.setAttribute("x", "10");
             label.setAttribute("y", "22");
-            label.textContent = page?.name ?? frame.pageId;
+            label.textContent = endpoint.name;
             inputPort.setAttribute("cx", "0");
             inputPort.setAttribute("cy", String(endpoint.height / 2));
             inputPort.setAttribute("r", "8");
             inputPort.tabIndex = 0;
             inputPort.dataset.inputPortFor = frame.id;
-            inputPort.setAttribute("aria-label", `Input port for ${page?.name ?? frame.pageId}`);
+            inputPort.setAttribute("aria-label", `Input port for ${endpoint.name}`);
             outputPort.setAttribute("cx", String(endpoint.width));
             outputPort.setAttribute("cy", String(endpoint.height / 2));
             outputPort.setAttribute("r", "8");
             outputPort.tabIndex = 0;
             outputPort.dataset.outputPortFor = frame.id;
-            outputPort.setAttribute("aria-label", `Output port for ${page?.name ?? frame.pageId}`);
+            outputPort.setAttribute("aria-label", `Output port for ${endpoint.name}`);
             outputPort.addEventListener("pointerdown", (event) => { event.stopPropagation(); beginConnection(); });
             outputPort.addEventListener("keydown", (event) => { if (event.key === "Enter" && !connection) {
                 event.preventDefault();
@@ -544,6 +557,11 @@ export function installFlowGraphBuilder(options) {
             } saveSelection({ kind: "page-frame", id: frame.id }); });
             group.append(rect, label, inputPort, outputPort);
             canvas.append(group);
+            const outlineRow = document.createElement("li"), outlineControl = button(`${endpoint.name} · Page instance`, () => saveSelection({ kind: "page-frame", id: frame.id }));
+            outlineRow.dataset.pageFrameId = frame.id;
+            outlineRow.dataset.pageId = frame.pageId;
+            outlineRow.append(outlineControl);
+            outline.append(outlineRow);
         }
         for (const storedFrame of freeRoots) {
             const frame = svg("g"), rect = svg("rect"), label = svg("text"), page = state.project.collections.pages.find(({ id }) => id === storedFrame.pageId), position = storedFrame.position, endpoint = projection.graph.connectionEndpoints.find(({ kind, id }) => kind === "page-frame" && id === storedFrame.id), x = Number(endpoint?.layout.x ?? position.x ?? 24);

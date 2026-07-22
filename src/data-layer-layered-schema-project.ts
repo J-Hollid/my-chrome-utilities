@@ -1,7 +1,7 @@
 import {canonicalConstraints,type CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
 import type {LayerConstraint,LayerContributor,LayerScope} from "./data-layer-layered-schema.js";
 import {orderedPageGroupIds} from "./data-layer-page-group-membership.js";
-import type {Condition,ProjectEntity,ProjectState} from "./data-layer-specification-project.js";
+import {transactProject,type Condition,type ProjectEntity,type ProjectState} from "./data-layer-specification-project.js";
 
 export interface LayeredContributorPath {profileId?:string;eventId?:string;pageGroupId?:string;pageGroupIds?:string[];pageId?:string;flowId?:string;pageFrameId?:string;occurrenceId?:string;}
 
@@ -40,4 +40,14 @@ export function layeredContributorsForPath(state:ProjectState,path:LayeredContri
 
 export function layeredContributionDetails(state:ProjectState,entity:ProjectEntity,scope:LayerScope,flowId?:string){
   return layeredContributorsForPath(state,layeredContributorPath(state,entity,scope,flowId)).flatMap((contributor)=>contributor.constraints.map((constraint)=>({contributorId:contributor.id,contributorName:contributor.name,scope:contributor.scope,path:constraint.path,target:constraint.target??"all",condition:constraint.condition?JSON.stringify(constraint.condition):"Always",enforcement:constraint.enforcement??"not set",usedById:entity.id,usedByName:entity.name,usedByScope:scope})));
+}
+
+export function saveFlowPageInstanceLocalFacets(state:ProjectState,flowId:string,pageFrameId:string,path:string,facets:Omit<LayerConstraint,"path">):ProjectState{
+  const graph=(state.project.documentationFlowGraphs as Record<string,{pageFrames?:ProjectEntity[]}>)[flowId],frame=graph?.pageFrames?.find(({id})=>id===pageFrameId);if(!frame)throw new Error(`Flow Page instance ${pageFrameId} is unavailable.`);const sparse=Object.fromEntries(Object.entries(facets).filter(([,value])=>value!==undefined&&value!==""));
+  return transactProject(state,`Override ${path} at Flow Page instance`,(project)=>{const graphs=project.documentationFlowGraphs as Record<string,{pageFrames?:ProjectEntity[]}>;return{...project,documentationFlowGraphs:{...graphs,[flowId]:{...graphs[flowId],pageFrames:graphs[flowId]!.pageFrames!.map((candidate)=>candidate.id===pageFrameId?{...candidate,localSchemaContributions:[...((candidate.localSchemaContributions as LayerConstraint[]|undefined)??[]).filter((constraint)=>constraint.path!==path),...(Object.keys(sparse).length?[{path,...structuredClone(sparse)}]:[])],compiledTargetsStale:true}:candidate)}}};});
+}
+
+export function resetFlowPageInstanceLocalProperty(state:ProjectState,flowId:string,pageFrameId:string,path:string):ProjectState{
+  const graph=(state.project.documentationFlowGraphs as Record<string,{pageFrames?:ProjectEntity[]}>)[flowId],frame=graph?.pageFrames?.find(({id})=>id===pageFrameId);if(!frame)throw new Error(`Flow Page instance ${pageFrameId} is unavailable.`);
+  return transactProject(state,`Reset ${path} to parents at Flow Page instance`,(project)=>{const graphs=project.documentationFlowGraphs as Record<string,{pageFrames?:ProjectEntity[]}>;return{...project,documentationFlowGraphs:{...graphs,[flowId]:{...graphs[flowId],pageFrames:graphs[flowId]!.pageFrames!.map((candidate)=>candidate.id===pageFrameId?{...candidate,localSchemaContributions:((candidate.localSchemaContributions as LayerConstraint[]|undefined)??[]).filter((constraint)=>constraint.path!==path),compiledTargetsStale:true}:candidate)}}};});
 }

@@ -1,6 +1,6 @@
 import type {CompiledLayeredSchema,EffectiveProperty} from "./data-layer-layered-schema.js";
 
-export type FlowDocumentationContextKind="page-context"|"interaction";
+export type FlowDocumentationContextKind="page-instance"|"page-context"|"interaction";
 export interface FlowDocumentationUnresolvedReference{path:string;issue:string;repair:string}
 export interface FlowDocumentationContextInput{id:string;kind:FlowDocumentationContextKind;pageFrameId:string;bindingId?:string;occurrenceId?:string;pageName:string;eventName:string;stepLabel:string;effectiveRevision:number;compiled:CompiledLayeredSchema;unresolved?:readonly FlowDocumentationUnresolvedReference[]}
 export interface FlowDocumentationSnapshotInput{projectId:string;projectName:string;flowId:string;flowName:string;graphRevision:number;sourceState:"draft"|"published";generatedAt:string;contexts:readonly FlowDocumentationContextInput[]}

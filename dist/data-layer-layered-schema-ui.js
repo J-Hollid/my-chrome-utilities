@@ -4,7 +4,7 @@ import { applyCanonicalCommand, canonicalSchemaWithConstraint, canonicalTableRow
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
 import { mountComposedSchemaFacetBuilder } from "./data-layer-composed-schema-builders.js";
 import { composedSchemaWorkspace, resetComposedSchemaLocalProperty, saveComposedSchemaLocalFacets } from "./data-layer-composed-schema-workspace.js";
-import { flowPageFrameContributor, layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
+import { flowPageFrameContributor, layeredContributorPath, layeredContributorsForPath, resetFlowPageInstanceLocalProperty, saveFlowPageInstanceLocalFacets } from "./data-layer-layered-schema-project.js";
 import { resolveSidePanelSchemaContributor } from "./data-layer-side-panel-schema-editor.js";
 export { layeredContributionDetails, layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
 const q = (selector) => { const value = document.querySelector(selector); if (!value)
@@ -127,12 +127,38 @@ export function installLayeredSchemaUi(options) {
         return; const legacy = Boolean(entity.requirements || entity.structuredSchema || entity.structuredDraft || entity.schemaConstraints), canonical = legacy ? migrateLegacyProfile(entity, { id }).document : createCanonicalSchema({ id: id("canonical-schema"), contributorId: entity.id, contributorName: entity.name }); if (graphSelection)
         graphSelection = { ...graphSelection, canonicalSchema: canonical }; options.persist(writeCanonical(state, entity, scope, canonical)); };
     const renderCanonicalLayerEditor = (state, entity, scope) => { const canonical = entity.canonicalSchema; if (!canonical)
-        return false; const title = document.createElement("h2"), identity = document.createElement("p"), areas = document.createElement("nav"), host = document.createElement("section"), back = document.createElement("button"), compiled = compileLayeredSchema(layeredContributorsForPath(state, layeredContributorPath(state, entity, scope, options.context().kind === "flows" ? options.context().entityId : undefined)), { eventId: String(entity.eventId ?? entity.id), eventRole: layeredEventRole(entity), occurrenceId: entity.id }); title.tabIndex = -1; title.textContent = "Shared canonical schema editor"; identity.textContent = `Contributor: ${entity.name} · Scope: ${scope}`; areas.textContent = `Inherited constraints · Local contributions · Effective results · Blocking conflicts (${compiled.conflicts.length})`; back.type = "button"; back.textContent = "Return to Flow"; back.addEventListener("click", () => { editor.hidden = true; editorHost.hidden = true; workspace.hidden = false; returnFocus?.focus({ preventScroll: true }); }); editor.append(title, identity, areas, host, renderRuntimeControls(state, entity, scope, compiled), back); mountCanonicalSchemaEditor({ host, surface: canonicalLayerEditorSurface(options.context().kind), load: () => current().entity.canonicalSchema, id, dispatch: (command) => { const live = current(), document = live.entity.canonicalSchema, result = applyCanonicalCommand(document, command); if ((result.status === "applied" || result.status === "rebased") && live.state) {
+        return false; const title = document.createElement("h2"), identity = document.createElement("p"), areas = document.createElement("nav"), host = document.createElement("section"), back = document.createElement("button"), flowId = options.context().kind === "flows" ? options.context().entityId : undefined, compiled = compileLayeredSchema(layeredContributorsForPath(state, layeredContributorPath(state, entity, scope, flowId)), { eventId: String(entity.eventId ?? entity.id), eventRole: layeredEventRole(entity), occurrenceId: entity.id }); title.tabIndex = -1; title.textContent = "Shared canonical schema editor"; identity.textContent = `Contributor: ${entity.name} · Scope: ${scope}`; areas.textContent = `Inherited constraints · Local contributions · Effective results · Blocking conflicts (${compiled.conflicts.length})`; back.type = "button"; back.textContent = "Return to Flow"; back.addEventListener("click", () => { editor.hidden = true; editorHost.hidden = true; workspace.hidden = false; returnFocus?.focus({ preventScroll: true }); }); editor.append(title, identity, areas, host, renderRuntimeControls(state, entity, scope, compiled)); mountCanonicalSchemaEditor({ host, surface: canonicalLayerEditorSurface(options.context().kind), load: () => current().entity.canonicalSchema, id, dispatch: (command) => { const live = current(), document = live.entity.canonicalSchema, result = applyCanonicalCommand(document, command); if ((result.status === "applied" || result.status === "rebased") && live.state) {
             if (graphSelection)
                 graphSelection = { ...graphSelection, canonicalSchema: result.document };
             options.persist(writeCanonical(live.state, live.entity, live.scope, result.document));
             queueMicrotask(renderEditor);
-        } return result; }, onUndo: () => options.onUndo?.(), onRedo: () => options.onRedo?.() }); return true; };
+        } return result; }, onUndo: () => options.onUndo?.(), onRedo: () => options.onRedo?.() }); if (scope === "Flow Page-instance" && flowId) {
+        const composed = document.createElement("section"), model = composedSchemaWorkspace(state, entity, scope, undefined, flowId), propertyChoices = model.rows.flatMap(({ path, effective }) => effective.definitionId ? [{ path, definitionId: effective.definitionId, type: effective.type }] : []);
+        composed.setAttribute("aria-label", `Effective schema at ${entity.name}`);
+        for (const row of model.rows) {
+            const article = document.createElement("article"), summary = document.createElement("p"), builder = document.createElement("section"), action = document.createElement("button");
+            article.dataset.flowInstanceEffectivePath = row.path;
+            summary.textContent = `${row.path} · inherited ${row.inherited ? effectivePropertySummary(row.inherited) : "none"} · local ${Object.keys(row.local).length > 1 ? "present" : "none"} · effective ${effectivePropertySummary(row.effective)} · ${row.validationState} · provenance ${row.provenance.map(({ contributorName }) => contributorName).join(" → ")}`;
+            action.type = "button";
+            action.textContent = row.action === "override" ? "Override here" : row.action === "reset" ? "Reset to parents" : "Remove local property";
+            action.addEventListener("click", () => { if (row.action === "override") {
+                builder.querySelector("input,select,button")?.focus();
+                return;
+            } const live = current(), next = live.state && flowId ? resetFlowPageInstanceLocalProperty(live.state, flowId, entity.id, row.path) : undefined; if (next) {
+                graphSelection = flowPageFrameContributor(next, flowId, entity.id);
+                options.persist(next);
+                queueMicrotask(renderEditor);
+            } });
+            mountComposedSchemaFacetBuilder({ host: builder, path: row.path, local: row.local, effective: row.effective, inherited: row.inherited, propertyChoices, onSave: (facets) => { const live = current(), next = live.state && flowId ? saveFlowPageInstanceLocalFacets(live.state, flowId, entity.id, row.path, facets) : undefined; if (next) {
+                    graphSelection = flowPageFrameContributor(next, flowId, entity.id);
+                    options.persist(next);
+                    queueMicrotask(renderEditor);
+                } } });
+            article.append(summary, action, builder);
+            composed.append(article);
+        }
+        editor.append(composed);
+    } editor.append(back); return true; };
     const contributorsFor = (state, entity, scope) => layeredContributorsForPath(state, layeredContributorPath(state, entity, scope, options.context().kind === "flows" ? options.context().entityId : undefined));
     const storedTargets = (state) => state.project.layeredSchemaTargets ?? [];
     const executableTargets = (state) => storedTargets(state).map((target) => ({ ...target, compiled: compileLayeredSchema(layeredContributorsForPath(state, target), { eventId: target.eventId, eventRole: target.eventRole, ...(target.occurrenceId ? { occurrenceId: target.occurrenceId } : {}) }) }));
@@ -241,8 +267,8 @@ export function installLayeredSchemaUi(options) {
     document.addEventListener("keydown", (event) => { if (event.key !== "Enter" && event.key !== " ")
         return; const target = event.target.closest(graphContributorSelector); if (target)
         selectGraphContributor(target); });
-    const openGraphOccurrenceSchema = (occurrenceId, path) => { const { state, kind, entityId: flowId } = options.context(), graphs = state?.project.documentationFlowGraphs, occurrence = flowId ? graphs?.[flowId]?.occurrences?.find(({ id }) => id === occurrenceId) : undefined; if (!state || kind !== "flows" || !flowId || !occurrence)
-        return false; graphSelection = occurrence; graphSelectionScope = occurrence.freePageFrame ? "Flow Page-instance" : "Event-occurrence"; returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : undefined; editor.hidden = false; ensureCanonical(); renderEditor(); editorHost.hidden = false; workspace.hidden = true; editor.querySelector("h2")?.focus(); if (path)
+    const openGraphOccurrenceSchema = (contributorId, path) => { const { state, kind, entityId: flowId } = options.context(), graphs = state?.project.documentationFlowGraphs, occurrence = flowId ? graphs?.[flowId]?.occurrences?.find(({ id }) => id === contributorId) : undefined, frame = flowId ? flowPageFrameContributor(state, flowId, contributorId) : undefined, contributor = occurrence ?? frame; if (!state || kind !== "flows" || !flowId || !contributor)
+        return false; graphSelection = contributor; graphSelectionScope = frame ? "Flow Page-instance" : occurrence?.freePageFrame ? "Flow Page-instance" : "Event-occurrence"; returnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : undefined; editor.hidden = false; ensureCanonical(); renderEditor(); editorHost.hidden = false; workspace.hidden = true; editor.querySelector("h2")?.focus(); if (path)
         setTimeout(() => { const candidate = Array.from(editor.querySelectorAll("[data-property-id]")).find((row) => row.dataset.propertyId === path); if (!candidate)
             return; candidate.click(); setTimeout(() => Array.from(editor.querySelectorAll("[data-property-id]")).find((row) => row.dataset.propertyId === path)?.focus({ preventScroll: true }), 0); }, 0); return true; };
     return { render() { if (editor.hidden) {

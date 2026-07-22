@@ -20,6 +20,7 @@
 (defn- verify-model! []
   (when-not @model-verified?
     (checked-command! "Flow relationship deletion verification failed." "node" "test/data-layer-flow-relationship-deletion-test.mjs")
+    (checked-command! "Flow Page-instance verification failed." "node" "test/data-layer-flow-page-instance-test.mjs")
     (checked-command! "Flow graph projection verification failed." "node" "test/data-layer-flow-graph-test.mjs")
     (checked-command! "Flow graph port inference property verification failed." "node" "test/data-layer-flow-graph-property-test.mjs")
     (checked-command! "Flow graph persistence verification failed." "node" "test/data-layer-flow-graph-persistence-test.mjs")
@@ -33,7 +34,7 @@
         (support/assert! observed "Flow graph browser evidence is missing." {:out (:out result)})
         (reset! browser-observation observed))))
 (def runtime-evidence-keys
-  (set (map #(keyword (format "runtime%03d" %)) (range 1 24))))
+  (set (map #(keyword (format "runtime%03d" %)) (range 1 25))))
 (def required-evidence-keys (conj runtime-evidence-keys :installedBoundary))
 (def runtime009-examples
   {["Customer details Page" "right" "Payment Page" "left" "expected_next"] :pageContextExpectedNext
