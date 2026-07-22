@@ -308,3 +308,28 @@ Feature: Data layer directional Flow specification graph
       | kind          | source           | target          | label_state          | accessible_name                                         |
       | expected_next | Customer details | Payment         | label Checkout route | Delete relationship Checkout route, Customer details to Payment |
       | alternative   | Customer details | ID verification | no label             | Delete relationship Customer details to ID verification |
+
+  # Data layer directional Flow specification graph 024
+  Scenario Outline: Data layer directional Flow specification graph 024
+    Given Confirmation Page belongs to Checkout and inherits confirmation_status expected value <parent_value>
+    And Decision Page has Approved, Review, and Declined alternative branch ends
+    When the operator inserts Confirmation from the Pages catalog three times into Checkout
+    And positions one Confirmation instance at each branch end
+    And connects Decision top port to each Confirmation bottom port
+    Then the Pages catalog remains available after every insertion
+    And the Flow stores three Page instances with distinct stable frame identities used as their schema contributor identities
+    And all three instances retain the same Confirmation Page and Checkout references
+    And the three alternative relationships target those distinct frame identities rather than the shared Page identity
+    When the operator opens the schema contribution for the Approved Confirmation instance
+    Then the canonical editor shows <parent_value> as inherited and offers Override here without copying inherited facets
+    When the operator saves Approved <approved_value>, Review <review_value>, and Declined <declined_value> as sparse local expected-value overrides
+    Then each instance composes Shared Profile, ordered Page Groups, Confirmation Page, and that Flow Page-instance in order
+    And each instance has its own effective confirmation_status value while every other inherited property remains effective
+    And each save leaves Confirmation Page and the other two instance contributions byte-identical
+    When the operator resets the Review instance confirmation_status to parents
+    Then Review inherits <parent_value> while Approved remains <approved_value> and Declined remains <declined_value>
+    And the synchronized outline and selected-Flow documentation distinguish all three instance contexts and effective values
+
+    Examples:
+      | parent_value | approved_value | review_value  | declined_value |
+      | pending      | approved       | manual_review | declined       |

@@ -146,6 +146,17 @@ contained occurrence model; role and trigger are explanatory metadata, not a
 validation selector. Event occurrences retain free, including side-by-side,
 coordinates inside an expanding Page frame and cannot leave that frame.
 
+Every Page insertion creates a new Flow Page-instance even when that Page already
+appears in the same Flow or lane. Instances retain distinct stable frame and schema-
+contributor identities while referencing the same Page and eligible placement
+group. Each instance inherits the ordinary Shared Profile, ordered Page Group, and
+Page hierarchy, then contributes only sparse local overrides through the same
+canonical editor and Reset to parents behavior as other hierarchy levels. Changes
+to one instance do not mutate the Page or sibling instances. Relationships,
+outline entries, compilation, and selected-Flow documentation resolve the frame
+identity so repeated instances remain distinct contexts with different effective
+values.
+
 Page frames and Event occurrences both expose connection ports. Page-to-Page,
 Page-to-Event, Event-to-Page, and Event-to-Event relationships persist typed stable
 endpoints and their connected ports. Source-right to target-left infers

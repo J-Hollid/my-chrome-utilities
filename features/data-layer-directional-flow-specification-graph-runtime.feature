@@ -310,3 +310,28 @@ Feature: Data layer directional Flow specification graph runtime
       | kind          | source           | target          | label_state          | accessible_name                                         |
       | expected_next | Customer details | Payment         | label Checkout route | Delete relationship Checkout route, Customer details to Payment |
       | alternative   | Customer details | ID verification | no label             | Delete relationship Customer details to ID verification |
+
+  # Data layer directional Flow specification graph runtime 024
+  Scenario Outline: Data layer directional Flow specification graph runtime 024
+    Given production Confirmation Page belongs to Checkout and inherits confirmation_status expected value <parent_value>
+    And production Decision Page has Approved, Review, and Declined alternative branch ends
+    When actual controls insert Confirmation from the Pages catalog three times into Checkout
+    And actual drags position one Confirmation instance at each branch end
+    And actual ports connect Decision top to each Confirmation bottom
+    Then the installed Pages catalog remains available after every insertion
+    And canonical Flow storage has three distinct frame IDs used as their schema contributor IDs
+    And all three frames share the Confirmation Page ID and Checkout ID
+    And production stores three alternative relationships whose target endpoint IDs are those distinct frame IDs
+    When actual controls open the Approved Confirmation instance schema contribution
+    Then the installed canonical editor renders <parent_value> as inherited and Override here without copied inherited facets
+    When actual canonical editors save Approved <approved_value>, Review <review_value>, and Declined <declined_value> as sparse local expected-value facets
+    Then production composes Shared Profile, ordered Page Groups, Confirmation Page, and the owning Flow Page-instance in order
+    And compiled instance values are Approved <approved_value>, Review <review_value>, and Declined <declined_value> with every other inherited property retained
+    And each save leaves canonical Confirmation Page bytes and both unrelated instance contributions byte-identical
+    When actual controls reset Review confirmation_status to parents
+    Then production deletes that local facet and Review compiles <parent_value> while Approved compiles <approved_value> and Declined compiles <declined_value>
+    And the installed outline and selected-Flow documentation render three distinct instance contexts with those effective values
+
+    Examples:
+      | parent_value | approved_value | review_value  | declined_value |
+      | pending      | approved       | manual_review | declined       |

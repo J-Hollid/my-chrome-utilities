@@ -85,6 +85,17 @@ between eligible lanes while retaining its identity, contents, relationships, an
 effective schema. An ineligible target is rejected and deep-links to membership
 editing. The Flow cannot silently rewrite the Page contract.
 
+Adding a Page never consumes or disables its catalog entry. Every insertion creates
+a new Flow Page instance, including repeated insertions into the same Flow and lane.
+Those instances share the stable Page and eligible placement-group references but
+own distinct frame and schema-contributor identities. Each composes Shared Profile,
+ordered Page Groups, Page, and Flow Page instance in that order, stores only sparse
+local facets, and supports the canonical `Override here` and `Reset to parents`
+behavior. Editing one instance cannot mutate the Page or a sibling instance.
+Relationships, outline entries, effective compilation, and selected-Flow
+documentation use frame identity so repeated Page instances remain independent
+branch contexts with different effective values.
+
 Page membership order and Flow lane order are independent. Membership order controls
 general-to-specific schema composition; Flow lane order controls documentary canvas
 layout; the frame's placement-group reference records which eligible lane contains
@@ -210,7 +221,8 @@ The main Flow workspace owns:
 
 - searchable Page Groups, Pages, and Events catalogs;
 - Page Group selection, ordering, and guarded removal;
-- Page-frame insertion and transient before-lanes and after-lanes free-page targets;
+- repeatable Page-instance insertion and transient before-lanes and after-lanes
+  free-page targets;
 - context-setting and interaction Event insertion through one occurrence model;
 - free Page and Event positioning within their respective containment boundaries;
 - Page-frame and Event-occurrence left, right, top, and bottom ports, port-pair kind
@@ -237,7 +249,8 @@ Group, Page, or Event updates rendered labels without rewriting graph topology.
 Reload preserves:
 
 - ordered Page Group references;
-- Page-frame containment;
+- Page-frame identities, shared Page references, containment, and sparse instance
+  schema contributions;
 - free Page-frame before-lanes or after-lanes region and coordinates;
 - Event occurrence references, roles, and documentary triggers;
 - Page-frame and Event-occurrence presentation coordinates;
@@ -345,6 +358,7 @@ runtime feature.
 | F21 | Flow lanes and branches use the wrong geometry | Flow 020 | Page Group lanes are top-to-bottom horizontal bands containing left-to-right Pages and vertical branches | Canvas layout projection, coordinate persistence, and edge router | Measured band geometry, authored Page coordinates, split/merge edges, and reload evidence | B, C, D | Checkout renders the authored main route and upper branch without fixed columns or vertical-list normalization |
 | F22 | Event nodes lack schema-informed JSON examples | Flow 021 | Expandable read-only JSON, effective provenance, status, and exact repair links | Canonical schema compiler, example resolver, validator, and Flow projection | Parsed nested JSON, source map, missing/invalid paths, no stored payload copy, and live update | D | Complete, Incomplete, Invalid, and Blocked states truthfully reflect the effective occurrence schema |
 | F23 | Relationships cannot be deleted from the canvas | Flow 023 | A named Delete relationship button removes one selected labelled or unlabelled edge and offers identity-preserving Undo | Inline popover, relationship command, graph and outline projections, Draft history, and export staleness | Button accessibility name, exact removed ID, unchanged endpoint and unrelated hashes, focus sequence, stale export, and restored relationship | C, D | One button activation deletes only the selected relationship and one Undo restores it exactly without Inspector access |
+| F24 | Reusing a Page collapses alternative branch endpoints | Flow 024 | Every catalog insertion creates an independent Page instance with shared Page inheritance and sparse local overrides | Page catalog, frame command, canonical hierarchy editor, relationship endpoints, outline, compiler, and selected-Flow documentation | Three frame and contributor IDs sharing one Page ID, distinct relationship targets, isolated effective values, parent reset, and rendered contexts | B, C, D | Three Confirmation instances retain independent branch values without duplicating or mutating the Confirmation Page |
 
 ## Terminal acceptance
 
@@ -362,10 +376,11 @@ membership order or effective schema. The installed graph must prove horizontal
 lane bands, left-to-right Pages, a vertical alternative branch, all four typed
 endpoint combinations, ports on all four sides, deterministic port-pair relationship
 kinds, optional labels, labelled and unlabelled relationship deletion with exact
-Undo, side-by-side Events, and an effective-schema-derived Event JSON example with
-truthful status and repair. Ineligible named-lane placement and unsafe membership
-removal remain no-op commands. A component-only canvas, direct repository injection,
-pre-created edges, form-submitted source and target, fixed lane constants, manual
-relationship-kind selector, required relationship label, distinct Parallel kind,
+Undo, three repeated Page instances with isolated schema overrides and relationship
+endpoints, side-by-side Events, and an effective-schema-derived Event JSON example
+with truthful status and repair. Ineligible named-lane placement and unsafe
+membership removal remain no-op commands. A component-only canvas, direct repository
+injection, pre-created edges, form-submitted source and target, fixed lane constants,
+manual relationship-kind selector, required relationship label, distinct Parallel kind,
 Inspector-only deletion, stored example payload, binding-backed validation, or
 assertions over source strings cannot satisfy the runtime feature.
