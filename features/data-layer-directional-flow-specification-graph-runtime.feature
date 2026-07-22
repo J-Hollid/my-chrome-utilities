@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=25881098dc5ee21b2a24e4a610c99600df4d5e2e9d7d9e8a0dbf6c086a36e49f
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-22T12:14:43.316256227Z","feature_name":"Data layer directional Flow specification graph runtime","feature_path":"features/data-layer-directional-flow-specification-graph-runtime.feature","background_hash":"d841c62b6eae057b12b924bd79261056f981b0d06095b10a64286e1ce8752ae3","implementation_hash":"9480aa9b283fdbd275e503f7ba1b953338004f88","scenarios":[{"index":8,"name":"Data layer directional Flow specification graph runtime 009","scenario_hash":"bdf578e52a739959f59baee7d7c10800938042136cf1932a9177a40d0bcbf197","mutation_count":20,"result":{"Total":20,"Killed":20,"Survived":0,"Errors":0},"tested_at":"2026-07-22T12:14:43.316256227Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer directional Flow specification graph runtime
 
   Background:
