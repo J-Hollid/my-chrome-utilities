@@ -759,9 +759,15 @@
     "source": [
       "src/data-layer-flow-graph.ts",
       "src/data-layer-flow-graph-ui.ts",
-      "src/data-layer-executable-flow-ui.ts"
+      "src/data-layer-executable-flow-ui.ts",
+      "src/specification-builder.ts",
+      "specification-builder.html",
+      "specification-builder.css"
     ],
-    "dependencies": [],
+    "dependencies": [
+      "durable_project_repository",
+      "layered_schema"
+    ],
     "unit": [
       "test/data-layer-flow-graph-test.mjs",
       "test/data-layer-flow-graph-persistence-test.mjs",

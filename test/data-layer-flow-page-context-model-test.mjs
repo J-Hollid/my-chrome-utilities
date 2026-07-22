@@ -43,10 +43,11 @@ assert.deepEqual({pageId:freeFrame.pageId,freePageRegion:freeFrame.freePageRegio
 assert.equal("pageGroupId" in freeFrame,false);
 assert.equal(documentaryFlowGraph(state.project,flow.id).occurrences.length,1,"a free Page frame is not an Event occurrence");
 
-const beforeGroupedFree=state;
+const groupedMemberships=structuredClone(state.project.collections.pages.find(({id})=>id===returns.id).pageGroupIds);
 state=addFreePageFrame(state,flow.id,{pageId:returns.id,region:"after-lanes",x:24,y:90},id);
-assert.equal(state,beforeGroupedFree,"membership in an unselected Page Group rejects free-frame creation without a transaction");
-assert.equal(documentaryFlowGraph(state.project,flow.id).pageFrames.some(({pageId})=>pageId===returns.id),false);
+const groupedFree=documentaryFlowGraph(state.project,flow.id).pageFrames.find(({pageId})=>pageId===returns.id);
+assert.deepEqual({freePageRegion:groupedFree.freePageRegion,pageGroupId:groupedFree.pageGroupId,position:groupedFree.position},{freePageRegion:"after-lanes",pageGroupId:undefined,position:{x:24,y:90}},"a grouped Page may use a free edge placement without changing semantic membership");
+assert.deepEqual(state.project.collections.pages.find(({id})=>id===returns.id).pageGroupIds,groupedMemberships);
 
 const legacyPage={...state.project.collections.pages.find(({id})=>id===cart.id),contextEventBindings:[{id:"binding:legacy-page",name:"Initial load",eventId:pageView.id,trigger:"initial-load"},{id:"binding:legacy-route",name:"SPA route change",eventId:routeView.id,trigger:"spa-route-change"}]};
 const legacyGraph=documentaryFlowGraph(state.project,flow.id),otherLegacyGraph=documentaryFlowGraph(state.project,otherFlow.id),legacyOccurrences=[{...legacyGraph.occurrences[0],eventId:undefined,role:undefined,trigger:undefined,contextBindingId:"binding:legacy-page"},{id:"occurrence:legacy-route",name:"Cart route context",pageFrameId:cartFrame.id,pageGroupId:checkout.id,pageId:cart.id,contextBindingId:"binding:legacy-route",position:{y:235},obligation:"Required",minimum:1,maximum:1,optional:false}],otherLegacyOccurrence={id:"occurrence:returns-page-view",name:"Returns initial context",pageFrameId:otherCartFrame.id,pageGroupId:checkout.id,pageId:cart.id,contextBindingId:"binding:legacy-page",position:{y:155},obligation:"Required",minimum:1,maximum:1,optional:false};

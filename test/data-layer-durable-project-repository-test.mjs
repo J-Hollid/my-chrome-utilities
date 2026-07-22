@@ -8,11 +8,13 @@ import {
   createMemoryDurableProjectRepository,
   createPageProjectHistory,
   durableDraftCommand,
+  durableProjectRouteForWorkspace,
   migrateLegacyProjectStorage,
 } from "../dist/data-layer-durable-project-repository.js";
 
 let sequence=0;const id=(kind)=>`${kind}:${++sequence}`;
 const retail=createSpecificationProject({name:"Retail website",site:"retail.example",id});
+assert.equal(durableProjectRouteForWorkspace("pages","page:confirmation").includeFlowGraphs,true,"a Page workspace loads Flow graph references required to block unsafe membership removal");
 retail.project.collections.pages.push({id:"page:confirmation",name:"Confirmation",localSchemaContributions:[{path:"/funnel_step",expectedValue:"3a"}]},{id:"page:cart",name:"Cart"});
 retail.project.collections.fixtures.push({id:"fixture:large",name:"Large capture",payload:{body:"x".repeat(2048)}});
 retail.project.releases.push({id:"release:3",name:"Release 3",revision:3,createdAt:"2026-07-21T00:00:00.000Z",snapshot:{profiles:[],pages:[],pageGroups:[],events:[],applicabilitySets:[],flows:[],fixtures:[],schemaDrafts:[],assignments:[]}});

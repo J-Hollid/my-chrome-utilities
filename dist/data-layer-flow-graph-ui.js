@@ -1,38 +1,62 @@
-import { addFlowPageFrame, addFreePageFrame, addEventOccurrenceToPage, addGraphOccurrence, documentaryFlowGraph, flowRelationshipText, inspectFreePageEdgeMove, migrateLegacyFlowContextBindings, moveFlowPageFrame, moveFreePageFrame, moveGraphOccurrence, projectFlowGraph, reviewLegacyFlowContextMigration, removeFlowPageFrame, removeGraphOccurrence, reorderFlowPageGroupLane, saveFlowViewState, saveGraphRelationship, setFlowPageGroupLanes, } from "./data-layer-flow-graph.js";
+import { addFlowPageFrame, addFreePageFrame, addEventOccurrenceToPage, addGraphOccurrence, deriveFlowOccurrenceExample, documentaryFlowGraph, flowOccurrenceExampleEditorRows, flowRelationshipText, inspectFreePageEdgeMove, migrateLegacyFlowContextBindings, moveFlowPageFrame, moveFreePageFrame, moveGraphOccurrence, projectFlowGraph, reviewLegacyFlowContextMigration, removeFlowPageFrame, removeGraphOccurrence, reorderFlowPageGroupLane, saveGraphRelationship, setFlowOccurrenceExample, setFlowPageGroupLanes, } from "./data-layer-flow-graph.js";
 import { orderedPageGroupIds } from "./utilities/data-layer/page-group-membership.js";
-const nodeWidth = 170, nodeHeight = 82, laneWidth = 220;
+const nodeWidth = 170, nodeHeight = 82;
 const q = (selector, root = document) => { const element = root.querySelector(selector); if (!element)
     throw new Error(`Missing ${selector}`); return element; };
 const svg = (tag) => document.createElementNS("http://www.w3.org/2000/svg", tag);
 const button = (text, action) => { const control = document.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", action); return control; };
 const entityName = (entities, id, fallback = "Unknown") => entities.find((entity) => entity.id === id)?.name ?? fallback;
 const elementByData = (attribute, id) => Array.from(document.querySelectorAll(`[${attribute}]`)).find((element) => element.getAttribute(attribute) === id);
+function renderOccurrenceExampleControls(host, state, flowId, occurrenceId, persist, id) {
+    host.setAttribute("aria-label", "Occurrence example controls");
+    for (const row of flowOccurrenceExampleEditorRows(state.project, flowId, occurrenceId).filter(({ type }) => type !== "object" && type !== "array")) {
+        const item = document.createElement("label"), value = document.createElement("input"), save = document.createElement("button");
+        item.dataset.exampleEditorPath = row.path;
+        item.append(`${row.path} · ${row.type ?? "unknown"} `);
+        value.setAttribute("aria-label", `Example value for ${row.path}`);
+        value.value = row.value === undefined ? "" : String(row.value);
+        save.type = "button";
+        save.textContent = "Save example";
+        save.addEventListener("click", () => persist(setFlowOccurrenceExample(state, flowId, occurrenceId, row.path, value.value, id)));
+        item.append(value, save);
+        host.append(item);
+    }
+}
 export const ownsPointerDrag = (activePointerId, eventPointerId) => activePointerId !== undefined && activePointerId === eventPointerId;
 export function flowEdgeGeometry(source, target, width = nodeWidth, height = nodeHeight) {
     const halfWidth = width / 2, halfHeight = height / 2, sourceCenter = { x: source.x + halfWidth, y: source.y + halfHeight }, targetCenter = { x: target.x + halfWidth, y: target.y + halfHeight }, dx = targetCenter.x - sourceCenter.x, dy = targetCenter.y - sourceCenter.y, length = Math.hypot(dx, dy), unitX = length < 0.001 ? 1 : dx / length, unitY = length < 0.001 ? 0 : dy / length, borderDistance = Math.min(Math.abs(unitX) < 0.001 ? Infinity : halfWidth / Math.abs(unitX), Math.abs(unitY) < 0.001 ? Infinity : halfHeight / Math.abs(unitY)), candidateStart = { x: sourceCenter.x + unitX * borderDistance, y: sourceCenter.y + unitY * borderDistance }, candidateEnd = { x: targetCenter.x - unitX * borderDistance, y: targetCenter.y - unitY * borderDistance }, forwardDistance = (candidateEnd.x - candidateStart.x) * unitX + (candidateEnd.y - candidateStart.y) * unitY, midpoint = { x: (sourceCenter.x + targetCenter.x) / 2, y: (sourceCenter.y + targetCenter.y) / 2 }, startX = forwardDistance > 0 ? candidateStart.x : midpoint.x - unitX * 6, startY = forwardDistance > 0 ? candidateStart.y : midpoint.y - unitY * 6, endX = forwardDistance > 0 ? candidateEnd.x : midpoint.x + unitX * 6, endY = forwardDistance > 0 ? candidateEnd.y : midpoint.y + unitY * 6, baseX = endX - unitX * 12, baseY = endY - unitY * 12, normalX = -unitY * 7, normalY = unitX * 7;
     return { startX, startY, endX, endY, arrow: `${baseX + normalX},${baseY + normalY} ${endX},${endY} ${baseX - normalX},${baseY - normalY}` };
 }
 export function installFlowGraphBuilder(options) {
-    const inspector = q("#project-inspector"), advanced = q("#flow-step-editor"), legacyForm = q("#add-flow-step-form"), legacyList = q("#flow-step-list"), legacyResult = q("#flow-step-result"), inspectorContext = document.createElement("section");
+    const inspector = q("#project-inspector"), advanced = q("#flow-step-editor"), inspectorContext = document.createElement("section");
     inspectorContext.id = "flow-inspector-context";
     inspector.insertBefore(inspectorContext, advanced);
-    legacyForm.hidden = true;
-    legacyList.hidden = true;
-    legacyResult.hidden = true;
     let selected;
     let connection;
     let suppressNodeClick = false;
     let statusMessage = "";
     let statusRepairHref = "";
     let activeCatalogPayload;
-    const clearActiveCatalogPayload = () => { activeCatalogPayload = undefined; };
+    const viewKey = (projectId, flowId) => `my-chrome-utilities.flow-view.v1:${projectId}:${flowId}`;
+    const readView = (projectId, flowId) => { try {
+        return JSON.parse(sessionStorage.getItem(viewKey(projectId, flowId)) ?? "{}");
+    }
+    catch {
+        return {};
+    } };
+    const writeView = (projectId, flowId, view) => sessionStorage.setItem(viewKey(projectId, flowId), JSON.stringify(view));
+    const clearPageDropStates = () => document.querySelectorAll("[data-lane-dropzone]").forEach((lane) => delete lane.dataset.pageDropState);
+    const markPageDropStates = (pageId) => { const { state } = current(); if (!state)
+        return; const memberships = orderedPageGroupIds(state.project, pageId); document.querySelectorAll("[data-lane-dropzone]").forEach((lane) => { lane.dataset.pageDropState = memberships.includes(String(lane.dataset.laneDropzone)) ? "valid" : "invalid"; }); };
+    const clearActiveCatalogPayload = () => { activeCatalogPayload = undefined; clearPageDropStates(); };
     window.addEventListener("pointerup", clearActiveCatalogPayload);
-    window.addEventListener("pointercancel", clearActiveCatalogPayload);
+    window.addEventListener("mouseup", clearActiveCatalogPayload);
     const current = () => { const context = options.context(), flow = context.flowId && context.state?.project.collections.flows.find(({ id }) => id === context.flowId), graph = flow && context.state ? documentaryFlowGraph(context.state.project, flow.id) : undefined; return { ...context, flow, graph }; };
     const persist = (next) => { try {
         statusMessage = "";
         statusRepairHref = "";
         options.persist(next);
+        render();
     }
     catch (error) {
         statusMessage = error instanceof Error ? error.message : String(error);
@@ -40,10 +64,8 @@ export function installFlowGraphBuilder(options) {
     } };
     const pageFrame = (frameId) => current().graph?.pageFrames.find(({ id }) => id === frameId);
     const selectedFrameForPage = (pageId) => current().graph?.pageFrames.find((frame) => frame.pageId === pageId);
-    const saveSelection = (value) => { selected = value; const { state, flow, graph } = current(); if (state && flow && JSON.stringify(graph?.selectedItem) !== JSON.stringify(value))
-        persist(saveFlowViewState(state, flow.id, value ? { selectedItem: value } : {}));
-    else
-        renderInspector(); };
+    const saveSelection = (value) => { selected = value; const { state, flow } = current(); if (state && flow)
+        writeView(state.project.id, flow.id, value ? { selectedItem: value } : {}); render(); };
     function renderInspector() {
         inspectorContext.replaceChildren();
         const { state, flow, graph } = current();
@@ -73,7 +95,8 @@ export function installFlowGraphBuilder(options) {
         const renderItems = () => { const term = search.value.trim().toLowerCase(); items.replaceChildren(...entities.filter(({ name }) => name.toLowerCase().includes(term)).map((entity) => { const control = button(entity.name, () => activate(entity)); control.draggable = true; control.dataset.componentKind = kind === "Page Groups" ? "page-group" : kind === "Pages" ? "page" : "event"; control.dataset.componentId = entity.id; if (kind === "Pages") {
             const { state } = current(), owners = state ? orderedPageGroupIds(state.project, entity.id).map((id) => entityName(state.project.collections.pageGroups, id)) : [];
             control.textContent = `${entity.name} · ${owners.join(" → ") || "Ungrouped"}`;
-        } const payload = () => ({ kind: String(control.dataset.componentKind), id: entity.id }); control.addEventListener("pointerdown", () => { activeCatalogPayload = payload(); }); control.addEventListener("dragstart", (event) => { activeCatalogPayload = payload(); event.dataTransfer?.setData("application/x-flow-component", JSON.stringify(activeCatalogPayload)); if (kind === "Pages")
+        } const payload = () => ({ kind: String(control.dataset.componentKind), id: entity.id }); control.addEventListener("pointerdown", () => { activeCatalogPayload = payload(); if (kind === "Pages")
+            markPageDropStates(entity.id); }); control.addEventListener("dragstart", (event) => { activeCatalogPayload = payload(); event.dataTransfer?.setData("application/x-flow-component", JSON.stringify(activeCatalogPayload)); if (kind === "Pages")
             event.dataTransfer?.setData("application/x-flow-page-component", entity.id); }); control.addEventListener("dragend", clearActiveCatalogPayload); return control; })); };
         search.addEventListener("input", renderItems);
         renderItems();
@@ -88,7 +111,7 @@ export function installFlowGraphBuilder(options) {
             return;
         const memberships = orderedPageGroupIds(state.project, page.id), selectedGroups = state.project.collections.pageGroups.filter((group) => graph.pageGroupIds.includes(group.id) && memberships.includes(group.id)), target = targetGroupId ? selectedGroups.find(({ id }) => id === targetGroupId) : selectedGroups[0];
         if (target) {
-            const next = addFlowPageFrame(state, flow.id, { pageId: page.id, pageGroupId: target.id, y: 80 + graph.pageFrames.filter(({ pageGroupId }) => pageGroupId === target.id).length * 250 }, options.id);
+            const count = graph.pageFrames.filter(({ pageGroupId }) => pageGroupId === target.id).length, next = addFlowPageFrame(state, flow.id, { pageId: page.id, pageGroupId: target.id, x: 40 + count * 240, y: 120 }, options.id);
             if (next === state) {
                 statusMessage = `${page.name} is already placed or does not belong to ${target.name}. Open Page Group membership.`;
                 render();
@@ -125,7 +148,38 @@ export function installFlowGraphBuilder(options) {
         statusMessage = "Select a Page frame before inserting an Event.";
         render();
         return;
-    } const role = (event.role === "context-setting" ? "context-setting" : "interaction"), trigger = role === "context-setting" ? String(event.trigger ?? (event.name === "page_view" ? "Initial load" : event.name === "route_view" ? "SPA route change" : "Page context")) : undefined; persist(addEventOccurrenceToPage(state, flow.id, { name: event.name, pageFrameId: frame.id, ...(frame.pageGroupId ? { pageGroupId: frame.pageGroupId } : {}), pageId: frame.pageId, eventId: event.id, role, ...(trigger ? { trigger } : {}), obligation: "Required", minimum: 1, maximum: 1, y: 120 + graph.occurrences.filter((occurrence) => occurrence.pageFrameId === frame.id).length * 105 }, options.id)); }
+    } const role = (event.role === "context-setting" ? "context-setting" : "interaction"), trigger = role === "context-setting" ? String(event.trigger ?? (event.name === "page_view" ? "Initial load" : event.name === "route_view" ? "SPA route change" : "Page context")) : undefined, count = graph.occurrences.filter((occurrence) => occurrence.pageFrameId === frame.id).length; persist(addEventOccurrenceToPage(state, flow.id, { name: event.name, pageFrameId: frame.id, ...(frame.pageGroupId ? { pageGroupId: frame.pageGroupId } : {}), pageId: frame.pageId, eventId: event.id, role, ...(trigger ? { trigger } : {}), obligation: "Required", minimum: 1, maximum: 1, x: 24 + count * 210, y: 70 }, options.id)); }
+    function occurrenceExampleDetails(state, flowId, occurrenceId, label) {
+        const example = deriveFlowOccurrenceExample(state.project, flowId, occurrenceId), details = document.createElement("details"), summary = document.createElement("summary"), pre = document.createElement("pre"), provenance = document.createElement("ul"), issues = document.createElement("ul"), exampleControls = document.createElement("section");
+        renderOccurrenceExampleControls(exampleControls, state, flowId, occurrenceId, persist, options.id);
+        details.dataset.eventExampleFor = occurrenceId;
+        details.dataset.exampleStatus = example.status;
+        summary.textContent = `${label} · ${example.status} · Derived JSON example`;
+        pre.dataset.readonlyExample = occurrenceId;
+        pre.textContent = example.formattedJson;
+        for (const [path, source] of Object.entries(example.provenance)) {
+            const item = document.createElement("li");
+            item.dataset.examplePath = path;
+            item.dataset.exampleSource = source;
+            item.textContent = `${path} · ${source}`;
+            provenance.append(item);
+        }
+        for (const issue of example.issues) {
+            const item = document.createElement("li"), repair = document.createElement("a"), value = document.createElement("input"), save = button("Save example", () => persist(setFlowOccurrenceExample(current().state, flowId, occurrenceId, issue.path, value.value, options.id)));
+            item.dataset.exampleIssuePath = issue.path;
+            item.dataset.exampleIssueCode = issue.code;
+            repair.href = issue.editHref;
+            repair.textContent = "Edit examples";
+            repair.addEventListener("click", (event) => { if (options.openOccurrenceSchema?.(occurrenceId, issue.path)) {
+                event.preventDefault();
+            } });
+            value.setAttribute("aria-label", `Example value for ${issue.path}`);
+            item.append(`${issue.path} · ${issue.message} `, repair, " ", value, save);
+            issues.append(item);
+        }
+        details.append(summary, pre, provenance, exampleControls, issues);
+        return details;
+    }
     function renderLaneControls(host) {
         const { state, flow, graph } = current();
         if (!state || !flow || !graph)
@@ -157,6 +211,20 @@ export function installFlowGraphBuilder(options) {
     catch {
         return activeCatalogPayload;
     } }
+    function appendPageFrameCardControls(card, title, state, flow, graph, frame) {
+        card.append(title);
+        const memberships = orderedPageGroupIds(state.project, frame.pageId);
+        for (const groupId of graph.pageGroupIds.filter((id) => memberships.includes(id) && id !== frame.pageGroupId)) {
+            const group = state.project.collections.pageGroups.find(({ id }) => id === groupId), move = button(`Move to ${group?.name ?? groupId}`, () => persist(moveFlowPageFrame(current().state, flow.id, frame.id, { pageGroupId: groupId, ...(frame.position.x === undefined ? {} : { x: frame.position.x }), y: frame.position.y })));
+            move.dataset.movePageFrameTo = groupId;
+            move.addEventListener("keydown", (event) => { if (event.key === "Enter") {
+                event.preventDefault();
+                move.click();
+            } });
+            card.append(move);
+        }
+        card.append(button("Remove Page frame", () => persist(removeFlowPageFrame(current().state, flow.id, frame.id))));
+    }
     function renderFrameCards(host) {
         const { state, flow, graph } = current();
         if (!state || !flow || !graph)
@@ -185,7 +253,7 @@ export function installFlowGraphBuilder(options) {
                 statusMessage = "A Page frame cannot contain another Page. Use its owning lane.";
                 render();
             } });
-            card.append(title, button("Remove Page frame", () => persist(removeFlowPageFrame(current().state, flow.id, frame.id))));
+            appendPageFrameCardControls(card, title, state, flow, graph, frame);
             host.append(card);
         }
     }
@@ -193,7 +261,7 @@ export function installFlowGraphBuilder(options) {
         statusMessage = "Connection cancelled; canonical state was not changed."; if (suppressClick) {
         suppressNodeClick = true;
         setTimeout(() => { suppressNodeClick = false; }, 0);
-    } document.querySelector(`[data-occurrence-id="${CSS.escape(sourceId ?? "")}"]`)?.focus(); }
+    } document.querySelector(`[data-flow-endpoint-id="${CSS.escape(sourceId ?? "")}"]`)?.focus(); }
     function commitConnection(targetId) { const { state, flow, graph } = current(), sourceId = connection?.sourceId; if (!state || !flow || !graph || !sourceId || !targetId || sourceId === targetId) {
         cancelConnection(true, true);
         return;
@@ -208,12 +276,12 @@ export function installFlowGraphBuilder(options) {
         const { state, flow, graph } = current(), relationship = graph?.relationships.find(({ id }) => id === selected.id);
         if (!state || !flow || !graph || !relationship)
             return;
-        const projection = projectFlowGraph(state.project, flow.id).graph, source = projection.nodes.find(({ id }) => id === relationship.sourceNodeId), target = projection.nodes.find(({ id }) => id === relationship.targetNodeId), form = document.createElement("form"), heading = document.createElement("h4"), endpoints = document.createElement("p"), kind = document.createElement("select"), group = document.createElement("input"), label = document.createElement("input"), condition = document.createElement("textarea"), expectation = document.createElement("textarea"), save = document.createElement("button"), cancel = document.createElement("button");
+        const projection = projectFlowGraph(state.project, flow.id).graph, sourceId = relationship.sourceEndpoint?.id ?? relationship.sourceNodeId ?? "", targetId = relationship.targetEndpoint?.id ?? relationship.targetNodeId ?? "", source = projection.connectionEndpoints.find(({ id }) => id === sourceId), target = projection.connectionEndpoints.find(({ id }) => id === targetId), form = document.createElement("form"), heading = document.createElement("h4"), endpoints = document.createElement("p"), kind = document.createElement("select"), group = document.createElement("input"), label = document.createElement("input"), condition = document.createElement("textarea"), expectation = document.createElement("textarea"), save = document.createElement("button"), cancel = document.createElement("button");
         form.dataset.relationshipPopover = relationship.id;
         form.setAttribute("aria-label", "Inline relationship popover");
         heading.textContent = "Relationship meaning";
         endpoints.dataset.relationshipEndpoints = relationship.id;
-        endpoints.textContent = `${source?.name ?? relationship.sourceNodeId} → ${target?.name ?? relationship.targetNodeId}`;
+        endpoints.textContent = `${source?.name ?? sourceId} → ${target?.name ?? targetId}`;
         for (const value of ["expected-next", "alternative", "parallel", "merge"])
             kind.append(new Option(value, value));
         kind.value = String(relationship.kind);
@@ -230,8 +298,8 @@ export function installFlowGraphBuilder(options) {
         save.textContent = "Save relationship";
         cancel.type = "button";
         cancel.textContent = "Cancel";
-        cancel.addEventListener("click", () => { selected = undefined; render(); document.querySelector(`[data-occurrence-id="${CSS.escape(relationship.sourceNodeId)}"]`)?.focus(); });
-        form.addEventListener("submit", (event) => { event.preventDefault(); persist(saveGraphRelationship(current().state, flow.id, relationship.sourceNodeId, { id: relationship.id, toStepId: relationship.targetNodeId, kind: kind.value, group: group.value.trim(), label: label.value.trim(), documentationCondition: condition.value.trim(), expectation: expectation.value.trim() }, options.id)); queueMicrotask(() => document.querySelector(`[data-relationship-id="${CSS.escape(relationship.id)}"]`)?.focus()); });
+        cancel.addEventListener("click", () => { selected = undefined; render(); document.querySelector(`[data-flow-endpoint-id="${CSS.escape(sourceId)}"]`)?.focus(); });
+        form.addEventListener("submit", (event) => { event.preventDefault(); persist(saveGraphRelationship(current().state, flow.id, sourceId, { id: relationship.id, toStepId: targetId, kind: kind.value, group: group.value.trim(), label: label.value.trim(), documentationCondition: condition.value.trim(), expectation: expectation.value.trim() }, options.id)); queueMicrotask(() => document.querySelector(`[data-relationship-id="${CSS.escape(relationship.id)}"]`)?.focus()); });
         const labeled = (text, control) => { const wrapper = document.createElement("label"); wrapper.append(text, control); return wrapper; };
         form.append(heading, endpoints, labeled("Kind", kind), labeled("Group", group), labeled("Label", label), labeled("Condition", condition), labeled("Expectation", expectation), save, cancel);
         host.append(form);
@@ -278,11 +346,11 @@ export function installFlowGraphBuilder(options) {
             review.append(heading, list, confirm);
             host.append(review);
         }
-        const selectionExists = selected && (selected.kind === "page-frame" ? stored.pageFrames : selected.kind === "occurrence" ? stored.occurrences : stored.relationships).some(({ id }) => id === selected.id);
+        const transientView = readView(state.project.id, flow.id), selectionExists = selected && (selected.kind === "page-frame" ? stored.pageFrames : selected.kind === "occurrence" ? stored.occurrences : stored.relationships).some(({ id }) => id === selected.id);
         if (!selectionExists)
-            selected = stored.selectedItem;
-        const projection = projectFlowGraph(state.project, flow.id), section = document.createElement("section"), heading = document.createElement("h3"), boundary = document.createElement("p"), toolbar = document.createElement("section"), laneControls = document.createElement("section"), status = document.createElement("p"), frames = document.createElement("section"), views = document.createElement("div"), canvas = svg("svg"), outline = document.createElement("ol"), popover = document.createElement("section"), actions = document.createElement("section");
-        const freeRoots = stored.pageFrames.filter(({ freePageRegion }) => Boolean(freePageRegion)), hasBefore = freeRoots.some(({ freePageRegion }) => freePageRegion === "before-lanes"), hasAfter = freeRoots.some(({ freePageRegion }) => freePageRegion === "after-lanes"), laneOffset = hasBefore ? 200 : 0, viewWidth = Math.max(720, laneOffset + stored.pageGroupIds.length * laneWidth + (hasAfter ? 220 : 40));
+            selected = transientView.selectedItem;
+        const projection = projectFlowGraph(state.project, flow.id), section = document.createElement("section"), heading = document.createElement("h3"), boundary = document.createElement("p"), toolbar = document.createElement("section"), laneControls = document.createElement("section"), status = document.createElement("p"), frames = document.createElement("section"), views = document.createElement("div"), canvasScroll = document.createElement("div"), canvas = svg("svg"), outline = document.createElement("ol"), popover = document.createElement("section"), actions = document.createElement("section");
+        const freeRoots = stored.pageFrames.filter(({ freePageRegion }) => Boolean(freePageRegion)), hasBefore = freeRoots.some(({ freePageRegion }) => freePageRegion === "before-lanes"), hasAfter = freeRoots.some(({ freePageRegion }) => freePageRegion === "after-lanes"), laneOffset = hasBefore ? 200 : 0, viewWidth = Math.max(960, ...projection.graph.connectionEndpoints.map((endpoint) => endpoint.layout.x + endpoint.width + 100)), viewHeight = Math.max(780, ...projection.graph.connectionEndpoints.map((endpoint) => endpoint.layout.y + endpoint.height + 100)), namedRight = Math.max(760, ...projection.graph.connectionEndpoints.filter(({ freePageRegion }) => !freePageRegion).map((endpoint) => endpoint.layout.x + endpoint.width + 60));
         section.className = "documentary-flow";
         heading.textContent = "Canvas-first directional Flow";
         boundary.className = "status-text";
@@ -303,14 +371,16 @@ export function installFlowGraphBuilder(options) {
         canvas.classList.add("flow-graph-canvas");
         canvas.setAttribute("aria-label", "Interactive directional Flow canvas");
         canvas.setAttribute("role", "application");
-        canvas.dataset.viewport = JSON.stringify(stored.viewport ?? { x: 0, y: 0, zoom: 1 });
-        canvas.setAttribute("viewBox", `0 0 ${viewWidth} 780`);
+        canvas.dataset.viewport = JSON.stringify(transientView.viewport ?? { x: 0, y: 0, zoom: 1 });
+        canvas.setAttribute("viewBox", `0 0 ${viewWidth} ${viewHeight}`);
+        canvas.style.width = `${viewWidth}px`;
+        canvas.style.height = `${viewHeight}px`;
         outline.setAttribute("aria-label", "Synchronized editable Flow outline");
         views.className = "flow-projections";
-        projection.lanes.forEach((lane, index) => { const group = svg("g"), rect = svg("rect"), label = svg("text"), x = laneOffset + index * laneWidth + 10, mark = (event) => { const payload = dropPayload(event), page = payload?.kind === "page" ? current().state?.project.collections.pages.find(({ id }) => id === payload.id) : undefined; if (page)
-            rect.dataset.pageDropState = orderedPageGroupIds(state.project, page.id).includes(lane.id) ? "valid" : "invalid"; }; group.dataset.pageGroupId = lane.id; rect.setAttribute("x", String(x)); rect.setAttribute("y", "20"); rect.setAttribute("width", String(laneWidth - 20)); rect.setAttribute("height", "730"); rect.setAttribute("class", "flow-lane"); rect.dataset.laneDropzone = lane.id; rect.addEventListener("dragenter", mark); rect.addEventListener("dragover", (event) => { event.preventDefault(); mark(event); }); rect.addEventListener("dragleave", () => delete rect.dataset.pageDropState); rect.addEventListener("drop", (event) => { event.preventDefault(); const payload = dropPayload(event), page = payload?.kind === "page" ? current().state?.project.collections.pages.find(({ id }) => id === payload.id) : undefined; if (page)
-            insertPage(page, lane.id); }); label.classList.add("flow-lane-label"); label.setAttribute("x", String(x + 12)); label.setAttribute("y", "45"); label.textContent = lane.name; group.append(rect, label); canvas.append(group); });
-        const clearEdgeTargets = () => canvas.querySelectorAll("[data-free-page-edge-target]").forEach((target) => target.remove()), edgeEligible = (page) => orderedPageGroupIds(state.project, page.id).length === 0, showEdgeTargets = () => { clearEdgeTargets(); for (const region of ["before-lanes", "after-lanes"]) {
+        projection.laneBands.forEach((band) => { const lane = projection.lanes.find(({ id }) => id === band.id), group = svg("g"), rect = svg("rect"), label = svg("text"), x = laneOffset + 10, mark = (event) => { const payload = dropPayload(event), page = payload?.kind === "page" ? current().state?.project.collections.pages.find(({ id }) => id === payload.id) : undefined; if (page)
+            rect.dataset.pageDropState = orderedPageGroupIds(state.project, page.id).includes(lane.id) ? "valid" : "invalid"; }; group.dataset.pageGroupId = lane.id; group.dataset.laneBand = lane.id; rect.setAttribute("x", String(x)); rect.setAttribute("y", String(band.y)); rect.setAttribute("width", String(Math.max(700, namedRight - x))); rect.setAttribute("height", String(band.height)); rect.setAttribute("class", "flow-lane"); rect.dataset.laneDropzone = lane.id; rect.addEventListener("dragenter", mark); rect.addEventListener("dragover", (event) => { event.preventDefault(); mark(event); }); rect.addEventListener("dragleave", () => delete rect.dataset.pageDropState); rect.addEventListener("drop", (event) => { event.preventDefault(); const payload = dropPayload(event), page = payload?.kind === "page" ? current().state?.project.collections.pages.find(({ id }) => id === payload.id) : undefined; if (page)
+            insertPage(page, lane.id); }); label.classList.add("flow-lane-label"); label.setAttribute("x", String(x + 12)); label.setAttribute("y", String(band.y + 25)); label.textContent = lane.name; group.append(rect, label); canvas.append(group); });
+        const clearEdgeTargets = () => canvas.querySelectorAll("[data-free-page-edge-target]").forEach((target) => target.remove()), showEdgeTargets = () => { clearEdgeTargets(); for (const region of ["before-lanes", "after-lanes"]) {
             const target = svg("g"), rect = svg("rect"), label = svg("text"), x = region === "before-lanes" ? 2 : viewWidth - 74;
             target.dataset.freePageEdgeTarget = region;
             target.setAttribute("role", "button");
@@ -325,77 +395,121 @@ export function installFlowGraphBuilder(options) {
             label.setAttribute("y", "82");
             label.textContent = region === "before-lanes" ? "Place before lanes" : "Place after lanes";
             target.addEventListener("dragover", (event) => { event.preventDefault(); rect.setAttribute("width", "88"); });
-            target.addEventListener("drop", (event) => { event.preventDefault(); event.stopPropagation(); const payload = dropPayload(event), page = payload?.kind === "page" ? current().state?.project.collections.pages.find(({ id }) => id === payload.id) : undefined; if (page && edgeEligible(page))
-                insertFreePage(page, region, 24, 90);
-            else if (page) {
-                statusMessage = `${page.name} requires explicit Page Group membership before it can leave a named lane.`;
-                statusRepairHref = `?kind=pages&entity=${encodeURIComponent(page.id)}&field=pageGroupIds`;
-                render();
-            } });
+            target.addEventListener("drop", (event) => { event.preventDefault(); event.stopPropagation(); const payload = dropPayload(event), page = payload?.kind === "page" ? current().state?.project.collections.pages.find(({ id }) => id === payload.id) : undefined; if (page)
+                insertFreePage(page, region, 24, 90); });
             target.append(rect, label);
             canvas.append(target);
         } };
+        toolbar.querySelectorAll('[data-component-kind="page"]').forEach((control) => control.addEventListener("pointerdown", showEdgeTargets));
         canvas.addEventListener("dragenter", (event) => { if (!canvas.querySelector("[data-free-page-edge-target]") && (Array.from(event.dataTransfer?.types ?? []).includes("application/x-flow-page-component") || dropPayload(event)?.kind === "page"))
             showEdgeTargets(); });
         canvas.addEventListener("dragleave", (event) => { const bounds = canvas.getBoundingClientRect(); if (event.clientX <= bounds.left || event.clientX >= bounds.right || event.clientY <= bounds.top || event.clientY >= bounds.bottom)
             clearEdgeTargets(); });
-        for (const frame of stored.pageFrames.filter(({ pageGroupId }) => Boolean(pageGroupId))) {
-            const laneIndex = stored.pageGroupIds.indexOf(String(frame.pageGroupId)), x = laneOffset + laneIndex * laneWidth + 20, y = frame.position.y, group = svg("g"), rect = svg("rect"), label = svg("text"), page = state.project.collections.pages.find(({ id }) => id === frame.pageId), memberships = orderedPageGroupIds(state.project, frame.pageId), eligibleLanes = stored.pageGroupIds.filter((id) => memberships.includes(id)), reject = (targetId) => { const target = state.project.collections.pageGroups.find(({ id }) => id === targetId); statusMessage = `${page?.name ?? frame.pageId} cannot move to ${target?.name ?? "that lane"}; add Page Group membership before moving it.`; statusRepairHref = `?kind=pages&entity=${encodeURIComponent(frame.pageId)}&field=pageGroupIds`; render(); setTimeout(() => elementByData("data-page-frame-id", frame.id)?.focus(), 50); }, moveTo = (targetId, nextY) => { if (!eligibleLanes.includes(targetId)) {
+        const placeActiveCatalogPage = (event) => { const payload = activeCatalogPayload, page = payload?.kind === "page" ? current().state?.project.collections.pages.find(({ id }) => id === payload.id) : undefined; if (!page)
+            return; const element = event.target, edge = element.closest("[data-free-page-edge-target]"), lane = element.closest("[data-lane-dropzone]"); if (edge?.dataset.freePageEdgeTarget)
+            insertFreePage(page, edge.dataset.freePageEdgeTarget, 24, 90);
+        else if (lane?.dataset.laneDropzone)
+            insertPage(page, lane.dataset.laneDropzone); };
+        canvas.addEventListener("pointerup", placeActiveCatalogPage);
+        canvas.addEventListener("mouseup", placeActiveCatalogPage);
+        for (const frame of stored.pageFrames.filter(({ pageGroupId, freePageRegion }) => Boolean(pageGroupId) && !freePageRegion)) {
+            const endpoint = projection.graph.connectionEndpoints.find(({ kind, id }) => kind === "page-frame" && id === frame.id), x = endpoint.layout.x, y = endpoint.layout.y, group = svg("g"), rect = svg("rect"), label = svg("text"), inputPort = svg("circle"), outputPort = svg("circle"), page = state.project.collections.pages.find(({ id }) => id === frame.pageId), memberships = orderedPageGroupIds(state.project, frame.pageId), eligibleLanes = stored.pageGroupIds.filter((id) => memberships.includes(id)), reject = (targetId) => { const target = state.project.collections.pageGroups.find(({ id }) => id === targetId); statusMessage = `${page?.name ?? frame.pageId} cannot move to ${target?.name ?? "that lane"}; add Page Group membership before moving it.`; statusRepairHref = `?kind=pages&entity=${encodeURIComponent(frame.pageId)}&field=pageGroupIds`; render(); setTimeout(() => elementByData("data-page-frame-id", frame.id)?.focus(), 50); }, moveTo = (targetId, nextX, nextY) => { if (!eligibleLanes.includes(targetId)) {
                 reject(targetId);
                 return;
-            } const currentState = current().state, next = moveFlowPageFrame(currentState, flow.id, frame.id, { pageGroupId: targetId, y: nextY }); if (next !== currentState)
-                persist(next); setTimeout(() => elementByData("data-page-frame-id", frame.id)?.focus(), 50); };
+            } const band = projection.laneBands.find(({ id }) => id === targetId), currentState = current().state, next = moveFlowPageFrame(currentState, flow.id, frame.id, { pageGroupId: targetId, x: Math.max(20, Math.round(nextX - laneOffset)), y: Math.max(40, Math.round(nextY - (band?.y ?? 0))) }); if (next !== currentState)
+                persist(next); setTimeout(() => elementByData("data-page-frame-id", frame.id)?.focus(), 50); }, beginConnection = () => { connection?.preview?.remove(); const targets = projection.graph.connectionEndpoints.map(({ id }) => id).filter((id) => id !== frame.id); if (!targets.length) {
+                statusMessage = "Add another Page frame or Event occurrence before drawing a relationship.";
+                render();
+                return;
+            } const preview = svg("line"); preview.classList.add("flow-connection-preview"); preview.setAttribute("x1", String(x + endpoint.width)); preview.setAttribute("y1", String(y + endpoint.height / 2)); preview.setAttribute("x2", String(x + endpoint.width + 20)); preview.setAttribute("y2", String(y + endpoint.height / 2)); canvas.append(preview); connection = { sourceId: frame.id, targets, targetIndex: 0, preview }; statusMessage = "Connection mode: choose a valid input port; Escape cancels."; elementByData("data-input-port-for", targets[0] ?? "")?.classList.add("is-valid-target"); outputPort.focus(); };
             group.dataset.pageFrameId = frame.id;
+            group.dataset.flowEndpointId = frame.id;
+            group.dataset.flowEndpointKind = "page-frame";
             group.dataset.pageId = frame.pageId;
             if (frame.pageGroupId)
                 group.dataset.pageGroupId = frame.pageGroupId;
             group.setAttribute("transform", `translate(${x} ${y})`);
             group.tabIndex = 0;
-            rect.setAttribute("width", String(laneWidth - 40));
-            rect.setAttribute("height", "205");
+            rect.setAttribute("width", String(endpoint.width));
+            rect.setAttribute("height", String(endpoint.height));
             rect.setAttribute("rx", "12");
             rect.classList.add("flow-page-frame");
             label.setAttribute("x", "10");
             label.setAttribute("y", "22");
             label.textContent = page?.name ?? frame.pageId;
-            let start, suppressPointerClick = false;
-            const releaseClickSuppression = () => setTimeout(() => { suppressPointerClick = false; }, 1000), finish = (up) => { if (!ownsPointerDrag(start?.pointerId, up.pointerId))
-                return; window.removeEventListener("pointerup", finish); window.removeEventListener("pointercancel", cancel); const initial = start, target = Array.from(canvas.querySelectorAll("[data-lane-dropzone]")).find((lane) => { const bounds = lane.getBoundingClientRect(); return up.clientX >= bounds.left && up.clientX <= bounds.right && up.clientY >= bounds.top && up.clientY <= bounds.bottom; })?.dataset.laneDropzone, pointerId = initial.pointerId, nextY = Math.max(40, Math.round(y + up.clientY - initial.clientY)), horizontal = up.clientX - initial.clientX; if (group.hasPointerCapture(pointerId))
-                group.releasePointerCapture(pointerId); start = undefined; if (suppressPointerClick)
-                releaseClickSuppression(); if (target === frame.pageGroupId && Math.abs(horizontal) > 85) {
-                reject(stored.pageGroupIds[laneIndex + (horizontal < 0 ? -1 : 1)]);
+            inputPort.setAttribute("cx", "0");
+            inputPort.setAttribute("cy", String(endpoint.height / 2));
+            inputPort.setAttribute("r", "8");
+            inputPort.tabIndex = 0;
+            inputPort.dataset.inputPortFor = frame.id;
+            inputPort.setAttribute("aria-label", `Input port for ${page?.name ?? frame.pageId}`);
+            outputPort.setAttribute("cx", String(endpoint.width));
+            outputPort.setAttribute("cy", String(endpoint.height / 2));
+            outputPort.setAttribute("r", "8");
+            outputPort.tabIndex = 0;
+            outputPort.dataset.outputPortFor = frame.id;
+            outputPort.setAttribute("aria-label", `Output port for ${page?.name ?? frame.pageId}`);
+            outputPort.addEventListener("pointerdown", (event) => { event.stopPropagation(); beginConnection(); });
+            outputPort.addEventListener("keydown", (event) => { if (event.key === "Enter" && !connection) {
+                event.preventDefault();
+                beginConnection();
+                return;
+            } if (event.key === "Escape" && connection) {
+                event.preventDefault();
+                cancelConnection();
+                return;
+            } if (event.key === "Enter" && connection) {
+                event.preventDefault();
+                commitConnection(connection.targets[connection.targetIndex]);
+            } });
+            inputPort.addEventListener("pointerup", (event) => { event.stopPropagation(); commitConnection(frame.id); });
+            let start, targetRegion, suppressPointerClick = false;
+            const releaseClickSuppression = () => setTimeout(() => { suppressPointerClick = false; }, 1000), move = (event) => { if (!ownsPointerDrag(start?.pointerId, event.pointerId))
+                return; group.setAttribute("transform", `translate(${x + event.clientX - start.clientX} ${y + event.clientY - start.clientY})`); const edge = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-free-page-edge-target]"); targetRegion = edge?.dataset.freePageEdgeTarget; }, finish = (up) => { if (!ownsPointerDrag(start?.pointerId, up.pointerId))
+                return; window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", finish); window.removeEventListener("pointercancel", cancel); const initial = start, nextX = x + up.clientX - initial.clientX, nextY = y + up.clientY - initial.clientY, target = Array.from(canvas.querySelectorAll("[data-lane-dropzone]")).find((lane) => { const bounds = lane.getBoundingClientRect(); return up.clientX >= bounds.left && up.clientX <= bounds.right && up.clientY >= bounds.top && up.clientY <= bounds.bottom; })?.dataset.laneDropzone, pointerId = initial.pointerId, region = targetRegion; if (group.hasPointerCapture(pointerId))
+                group.releasePointerCapture(pointerId); start = undefined; targetRegion = undefined; if (suppressPointerClick)
+                releaseClickSuppression(); if (region) {
+                persist(moveFreePageFrame(current().state, flow.id, frame.id, { region, x: 24, y: Math.max(55, Math.round(nextY)) }));
                 return;
             } if (target)
-                moveTo(target, nextY); }, cancel = (event) => { if (!ownsPointerDrag(start?.pointerId, event.pointerId))
-                return; window.removeEventListener("pointerup", finish); window.removeEventListener("pointercancel", cancel); if (group.hasPointerCapture(start.pointerId))
-                group.releasePointerCapture(start.pointerId); start = undefined; if (suppressPointerClick)
+                moveTo(target, nextX, nextY);
+            else {
+                group.setAttribute("transform", `translate(${x} ${y})`);
+                clearEdgeTargets();
+            } }, cancel = (event) => { if (!ownsPointerDrag(start?.pointerId, event.pointerId))
+                return; window.removeEventListener("pointermove", move); window.removeEventListener("pointerup", finish); window.removeEventListener("pointercancel", cancel); if (group.hasPointerCapture(start.pointerId))
+                group.releasePointerCapture(start.pointerId); start = undefined; targetRegion = undefined; group.setAttribute("transform", `translate(${x} ${y})`); if (suppressPointerClick)
                 releaseClickSuppression(); };
-            group.addEventListener("pointerdown", (event) => { if (start) {
+            group.addEventListener("focus", showEdgeTargets);
+            group.addEventListener("pointerdown", (event) => { if (event.target.closest("circle"))
+                return; if (start) {
                 suppressPointerClick = true;
                 return;
-            } start = { pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY }; window.addEventListener("pointerup", finish); window.addEventListener("pointercancel", cancel); try {
+            } start = { pointerId: event.pointerId, clientX: event.clientX, clientY: event.clientY }; showEdgeTargets(); window.addEventListener("pointermove", move); window.addEventListener("pointerup", finish); window.addEventListener("pointercancel", cancel); try {
                 group.setPointerCapture(event.pointerId);
             }
             catch { /* Synthetic tests have no active device pointer. */ } });
-            group.addEventListener("keydown", (event) => { if (event.key !== "ArrowLeft" && event.key !== "ArrowRight")
-                return; event.preventDefault(); const from = stored.pageGroupIds.indexOf(String(frame.pageGroupId)), step = event.key === "ArrowLeft" ? -1 : 1, target = stored.pageGroupIds[from + step]; if (target)
-                moveTo(target, y);
-            else
-                reject(); });
-            group.addEventListener("click", (event) => { if (suppressPointerClick) {
+            group.addEventListener("keydown", (event) => { if (!event.key.startsWith("Arrow") || event.target.closest("circle"))
+                return; event.preventDefault(); const dx = event.key === "ArrowLeft" ? -20 : event.key === "ArrowRight" ? 20 : 0, dy = event.key === "ArrowUp" ? -20 : event.key === "ArrowDown" ? 20 : 0; moveTo(String(frame.pageGroupId), x + dx, y + dy); });
+            group.addEventListener("click", (event) => { if (event.target.closest("circle"))
+                return; if (suppressPointerClick) {
                 event.stopPropagation();
                 return;
             } saveSelection({ kind: "page-frame", id: frame.id }); });
-            group.append(rect, label);
+            group.append(rect, label, inputPort, outputPort);
             canvas.append(group);
         }
         for (const storedFrame of freeRoots) {
-            const frame = svg("g"), rect = svg("rect"), label = svg("text"), page = state.project.collections.pages.find(({ id }) => id === storedFrame.pageId), position = storedFrame.position, x = storedFrame.freePageRegion === "before-lanes" ? Number(position.x ?? 24) : laneOffset + stored.pageGroupIds.length * laneWidth + Number(position.x ?? 24);
+            const frame = svg("g"), rect = svg("rect"), label = svg("text"), page = state.project.collections.pages.find(({ id }) => id === storedFrame.pageId), position = storedFrame.position, endpoint = projection.graph.connectionEndpoints.find(({ kind, id }) => kind === "page-frame" && id === storedFrame.id), x = Number(endpoint?.layout.x ?? position.x ?? 24);
             frame.dataset.pageFrameId = storedFrame.id;
             frame.dataset.freePageFrameCanvas = storedFrame.id;
             frame.dataset.freePageRegion = storedFrame.freePageRegion;
             frame.setAttribute("transform", `translate(${x - 10} ${position.y - 12})`);
             frame.tabIndex = 0;
+            frame.addEventListener("dragover", (event) => event.preventDefault());
+            frame.addEventListener("drop", (event) => { event.preventDefault(); const payload = dropPayload(event); if (payload?.kind !== "event")
+                return; const entity = current().state?.project.collections.events.find(({ id }) => id === payload.id); if (entity)
+                insertEvent(entity, storedFrame.id); });
             rect.setAttribute("width", "190");
             rect.setAttribute("height", "108");
             rect.setAttribute("rx", "12");
@@ -408,7 +522,7 @@ export function installFlowGraphBuilder(options) {
                 frame.releasePointerCapture(pointerId); start = undefined; targetRegion = undefined; }, move = (event) => { if (!owns(event))
                 return; const edge = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-free-page-edge-target]"); if (edge?.dataset.freePageEdgeTarget)
                 targetRegion = edge.dataset.freePageEdgeTarget; }, finish = (event) => { if (!owns(event))
-                return; const initial = start, region = targetRegion ?? storedFrame.freePageRegion, afterStart = laneOffset + stored.pageGroupIds.length * laneWidth, nextX = region === "before-lanes" ? Math.max(12, Math.round(x + event.clientX - initial.clientX)) : Math.max(12, Math.round(x + event.clientX - initial.clientX - afterStart)), nextY = Math.max(55, Math.round(position.y + event.clientY - initial.clientY)); stop(initial.pointerId); persist(moveFreePageFrame(current().state, flow.id, storedFrame.id, { region, x: nextX, y: nextY })); setTimeout(() => elementByData("data-free-page-frame-canvas", storedFrame.id)?.focus(), 50); }, cancel = (event) => { if (!owns(event))
+                return; const initial = start, region = targetRegion ?? storedFrame.freePageRegion, afterStart = namedRight, nextX = region === "before-lanes" ? Math.max(12, Math.round(x + event.clientX - initial.clientX)) : Math.max(12, Math.round(x + event.clientX - initial.clientX - afterStart)), nextY = Math.max(55, Math.round(position.y + event.clientY - initial.clientY)); stop(initial.pointerId); persist(moveFreePageFrame(current().state, flow.id, storedFrame.id, { region, x: nextX, y: nextY })); setTimeout(() => elementByData("data-free-page-frame-canvas", storedFrame.id)?.focus(), 50); }, cancel = (event) => { if (!owns(event))
                 return; const pointerId = start.pointerId; stop(pointerId); clearEdgeTargets(); setTimeout(() => elementByData("data-free-page-frame-canvas", storedFrame.id)?.focus(), 50); };
             frame.addEventListener("focus", showEdgeTargets);
             frame.addEventListener("pointerdown", (event) => { if (start) {
@@ -426,13 +540,52 @@ export function installFlowGraphBuilder(options) {
             frame.append(rect, label);
             canvas.append(frame);
         }
+        for (const endpoint of projection.graph.connectionEndpoints.filter(({ kind, freePageRegion }) => kind === "page-frame" && Boolean(freePageRegion))) {
+            const ports = svg("g"), input = svg("circle"), output = svg("circle"), begin = () => { connection?.preview?.remove(); const targets = projection.graph.connectionEndpoints.map(({ id }) => id).filter((id) => id !== endpoint.id); if (!targets.length)
+                return; const preview = svg("line"); preview.classList.add("flow-connection-preview"); preview.setAttribute("x1", String(endpoint.layout.x + endpoint.width)); preview.setAttribute("y1", String(endpoint.layout.y + endpoint.height / 2)); preview.setAttribute("x2", String(endpoint.layout.x + endpoint.width + 20)); preview.setAttribute("y2", String(endpoint.layout.y + endpoint.height / 2)); canvas.append(preview); connection = { sourceId: endpoint.id, targets, targetIndex: 0, preview }; elementByData("data-input-port-for", targets[0] ?? "")?.classList.add("is-valid-target"); output.focus(); };
+            ports.dataset.flowEndpointId = endpoint.id;
+            ports.dataset.flowEndpointKind = "page-frame";
+            ports.setAttribute("transform", `translate(${endpoint.layout.x} ${endpoint.layout.y})`);
+            input.setAttribute("cx", "0");
+            input.setAttribute("cy", String(endpoint.height / 2));
+            input.setAttribute("r", "8");
+            input.tabIndex = 0;
+            input.dataset.inputPortFor = endpoint.id;
+            input.setAttribute("aria-label", `Input port for ${endpoint.name}`);
+            output.setAttribute("cx", String(endpoint.width));
+            output.setAttribute("cy", String(endpoint.height / 2));
+            output.setAttribute("r", "8");
+            output.tabIndex = 0;
+            output.dataset.outputPortFor = endpoint.id;
+            output.setAttribute("aria-label", `Output port for ${endpoint.name}`);
+            output.addEventListener("pointerdown", (event) => { event.stopPropagation(); begin(); });
+            output.addEventListener("keydown", (event) => { if (event.key === "Enter" && !connection) {
+                event.preventDefault();
+                begin();
+                return;
+            } if (event.key === "Escape" && connection) {
+                event.preventDefault();
+                cancelConnection();
+                return;
+            } if (event.key === "Enter" && connection) {
+                event.preventDefault();
+                commitConnection(connection.targets[connection.targetIndex]);
+            } });
+            input.addEventListener("pointerup", (event) => { event.stopPropagation(); commitConnection(endpoint.id); });
+            ports.append(input, output);
+            canvas.append(ports);
+        }
         for (const relationship of projection.graph.relationships) {
-            const source = projection.graph.nodes.find(({ id }) => id === relationship.sourceNodeId), target = projection.graph.nodes.find(({ id }) => id === relationship.targetNodeId);
-            if (!source?.layout || !target?.layout)
+            const source = projection.graph.connectionEndpoints.find(({ id, kind }) => id === relationship.sourceEndpoint.id && kind === relationship.sourceEndpoint.kind), target = projection.graph.connectionEndpoints.find(({ id, kind }) => id === relationship.targetEndpoint.id && kind === relationship.targetEndpoint.kind);
+            if (!source || !target)
                 continue;
-            const geometry = flowEdgeGeometry(source.layout, target.layout), edge = svg("g"), line = svg("line"), arrow = svg("polygon"), label = svg("text");
+            const geometry = flowEdgeGeometry(source.layout, target.layout, source.width, source.height), edge = svg("g"), line = svg("line"), arrow = svg("polygon"), label = svg("text");
             edge.classList.add("flow-edge");
             edge.dataset.relationshipId = relationship.id;
+            edge.dataset.sourceEndpointKind = relationship.sourceEndpoint.kind;
+            edge.dataset.sourceEndpointId = relationship.sourceEndpoint.id;
+            edge.dataset.targetEndpointKind = relationship.targetEndpoint.kind;
+            edge.dataset.targetEndpointId = relationship.targetEndpoint.id;
             edge.dataset.directed = "true";
             edge.tabIndex = 0;
             edge.setAttribute("role", "button");
@@ -450,6 +603,8 @@ export function installFlowGraphBuilder(options) {
             canvas.append(edge);
             const row = document.createElement("li"), control = button(flowRelationshipText(projection.graph, relationship), () => saveSelection({ kind: "relationship", id: relationship.id }));
             row.dataset.relationshipId = relationship.id;
+            row.dataset.sourceEndpointKind = relationship.sourceEndpoint.kind;
+            row.dataset.targetEndpointKind = relationship.targetEndpoint.kind;
             row.append(control);
             outline.append(row);
         }
@@ -459,13 +614,15 @@ export function installFlowGraphBuilder(options) {
             const group = svg("g"), box = svg("rect"), title = svg("text"), detail = svg("text"), input = svg("circle"), output = svg("circle"), layout = nodeData.layout;
             group.classList.add("flow-node");
             group.dataset.occurrenceId = nodeData.id;
+            group.dataset.flowEndpointId = nodeData.id;
+            group.dataset.flowEndpointKind = "event-occurrence";
             group.dataset.keyboardOutputFor = nodeData.id;
             group.setAttribute("transform", `translate(${layout.x} ${layout.y})`);
             group.setAttribute("tabindex", "0");
             group.setAttribute("role", "button");
             group.setAttribute("aria-label", `${nodeData.name}. Drag or use Arrow keys to move.`);
             box.setAttribute("width", String(nodeWidth));
-            box.setAttribute("height", String(nodeHeight));
+            box.setAttribute("height", String(nodeHeight + 12));
             box.setAttribute("rx", "10");
             title.setAttribute("x", "12");
             title.setAttribute("y", "30");
@@ -485,9 +642,9 @@ export function installFlowGraphBuilder(options) {
             output.setAttribute("tabindex", "0");
             output.dataset.outputPortFor = nodeData.id;
             output.setAttribute("aria-label", `Output port for ${nodeData.name}`);
-            const startConnection = () => { connection?.preview?.remove(); const targets = Array.from(document.querySelectorAll("[data-input-port-for]")).map((element) => element.getAttribute("data-input-port-for")).filter((id) => Boolean(id) && id !== nodeData.id); if (!targets.length) {
+            const startConnection = () => { connection?.preview?.remove(); const targets = projection.graph.connectionEndpoints.map(({ id }) => id).filter((id) => id !== nodeData.id); if (!targets.length) {
                 connection = undefined;
-                statusMessage = "Add another occurrence before drawing a relationship.";
+                statusMessage = "Add another Page frame or Event occurrence before drawing a relationship.";
                 render();
                 queueMicrotask(() => elementByData("data-output-port-for", nodeData.id)?.focus());
                 return;
@@ -527,41 +684,31 @@ export function installFlowGraphBuilder(options) {
                 statusMessage = "Add the predefined Event to another Page frame instead.";
                 statusRepairHref = "";
             } render(); focusNode(); };
-            let dragStart, dragEdgeRegion;
+            let dragStart;
             const ownsDrag = (event) => ownsPointerDrag(dragStart?.pointerId, event.pointerId), stopDragTracking = (pointerId) => { window.removeEventListener("pointermove", moveDraggedNode); window.removeEventListener("pointerup", finishDraggedNode); window.removeEventListener("pointercancel", cancelDraggedNode); if (group.hasPointerCapture(pointerId))
-                group.releasePointerCapture(pointerId); dragStart = undefined; dragEdgeRegion = undefined; }, moveDraggedNode = (event) => { if (!ownsDrag(event))
-                return; const edge = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-free-page-edge-target]"); if (edge?.dataset.freePageEdgeTarget)
-                dragEdgeRegion = edge.dataset.freePageEdgeTarget; group.setAttribute("transform", `translate(${dragStart.x + event.clientX - dragStart.clientX} ${dragStart.y + event.clientY - dragStart.clientY})`); }, cancelDraggedNode = (event) => { if (!ownsDrag(event))
-                return; const pointerId = dragStart.pointerId; stopDragTracking(pointerId); clearEdgeTargets(); group.setAttribute("transform", `translate(${layout.x} ${layout.y})`); }, finishDraggedNode = (event) => { if (!ownsDrag(event))
-                return; const initial = dragStart, x = initial.x + event.clientX - initial.clientX, y = Math.max(55, Math.round(initial.y + event.clientY - initial.clientY)), targetEdgeRegion = dragEdgeRegion; stopDragTracking(initial.pointerId); if (nodeData.freePageFrame) {
-                const afterStart = laneOffset + stored.pageGroupIds.length * laneWidth, region = targetEdgeRegion ?? (x < laneOffset ? "before-lanes" : x > afterStart ? "after-lanes" : undefined);
-                if (!region) {
-                    clearEdgeTargets();
-                    rejectMembershipMove();
-                    return;
-                }
-                const relativeX = region === "before-lanes" ? Math.max(12, Math.round(x)) : Math.max(12, Math.round(x - afterStart));
-                persist(moveFreePageFrame(current().state, flow.id, nodeData.id, { region, x: relativeX, y }));
-                focusNode();
-                return;
-            } const semantic = Boolean(nodeData.pageGroupId || nodeData.pageFrameId || nodeData.freePageFrameId), validX = Math.abs(x - layout.x) <= 85; if (!validX) {
-                clearEdgeTargets();
-                if (nodeData.pageGroupId || nodeData.pageFrameId)
-                    rejectMembershipMove();
-                else {
-                    statusMessage = "Move the containing free Page frame between edge regions.";
+                group.releasePointerCapture(pointerId); dragStart = undefined; }, moveDraggedNode = (event) => { if (!ownsDrag(event))
+                return; group.setAttribute("transform", `translate(${dragStart.x + event.clientX - dragStart.clientX} ${dragStart.y + event.clientY - dragStart.clientY})`); }, cancelDraggedNode = (event) => { if (!ownsDrag(event))
+                return; const pointerId = dragStart.pointerId; stopDragTracking(pointerId); group.setAttribute("transform", `translate(${layout.x} ${layout.y})`); }, finishDraggedNode = (event) => { if (!ownsDrag(event))
+                return; const initial = dragStart, x = Math.round(initial.x + event.clientX - initial.clientX), y = Math.round(initial.y + event.clientY - initial.clientY); stopDragTracking(initial.pointerId); if (nodeData.pageFrameId) {
+                const parent = projection.graph.connectionEndpoints.find(({ kind, id }) => kind === "page-frame" && id === nodeData.pageFrameId), relativeX = x - Number(parent?.layout.x ?? 0), relativeY = y - Number(parent?.layout.y ?? 0);
+                if (!parent || relativeX < 12 || relativeY < 40) {
+                    group.setAttribute("transform", `translate(${layout.x} ${layout.y})`);
+                    statusMessage = "Event occurrences cannot cross their Page frame boundary.";
                     render();
                     focusNode();
+                    return;
                 }
+                persist(moveGraphOccurrence(current().state, flow.id, nodeData.id, { x: relativeX, y: relativeY }));
+                focusNode();
                 return;
-            } persist(moveGraphOccurrence(current().state, flow.id, nodeData.id, semantic ? { y } : { lane: layout.lane, x, y })); focusNode(); };
-            group.addEventListener("pointerdown", (event) => { if (event.target.closest("circle") || dragStart)
-                return; dragStart = { x: layout.x, y: layout.y, clientX: event.clientX, clientY: event.clientY, pointerId: event.pointerId }; if (nodeData.freePageFrame)
-                showEdgeTargets(); window.addEventListener("pointermove", moveDraggedNode); window.addEventListener("pointerup", finishDraggedNode); window.addEventListener("pointercancel", cancelDraggedNode); try {
+            } persist(moveGraphOccurrence(current().state, flow.id, nodeData.id, { lane: layout.lane, x, y: Math.max(55, y) })); focusNode(); };
+            group.addEventListener("pointerdown", (event) => { if (event.target.closest("circle,foreignObject") || dragStart)
+                return; dragStart = { x: layout.x, y: layout.y, clientX: event.clientX, clientY: event.clientY, pointerId: event.pointerId }; window.addEventListener("pointermove", moveDraggedNode); window.addEventListener("pointerup", finishDraggedNode); window.addEventListener("pointercancel", cancelDraggedNode); try {
                 group.setPointerCapture(event.pointerId);
             }
             catch { /* Synthetic regression events have no active device pointer to capture. */ } });
-            group.addEventListener("keydown", (event) => { if (event.key === "Enter" && !connection) {
+            group.addEventListener("keydown", (event) => { if (event.target.closest("foreignObject,input,button,a,summary,details"))
+                return; if (event.key === "Enter" && !connection) {
                 event.preventDefault();
                 startConnection();
                 return;
@@ -584,30 +731,41 @@ export function installFlowGraphBuilder(options) {
                     return;
                 }
             } if (!event.key.startsWith("Arrow"))
-                return; event.preventDefault(); const horizontal = event.key === "ArrowLeft" || event.key === "ArrowRight", dy = event.key === "ArrowUp" ? -20 : event.key === "ArrowDown" ? 20 : 0; if (nodeData.freePageFrame) {
-                const region = horizontal ? (event.key === "ArrowLeft" ? "before-lanes" : "after-lanes") : nodeData.freePageRegion, next = moveFreePageFrame(current().state, flow.id, nodeData.id, { region, x: Number(storedPosition.x ?? 24), y: Math.max(55, Number(storedPosition.y ?? 70) + dy) });
-                persist(next);
+                return; event.preventDefault(); const dx = event.key === "ArrowLeft" ? -20 : event.key === "ArrowRight" ? 20 : 0, dy = event.key === "ArrowUp" ? -20 : event.key === "ArrowDown" ? 20 : 0; if (nodeData.pageFrameId) {
+                persist(moveGraphOccurrence(current().state, flow.id, nodeData.id, { x: Math.max(12, Number(storedPosition.x ?? 24) + dx), y: Math.max(40, Number(storedPosition.y ?? 70) + dy) }));
                 focusNode();
                 return;
-            } if (horizontal && (nodeData.pageFrameId || nodeData.pageGroupId)) {
-                rejectMembershipMove();
-                return;
-            } if (horizontal && nodeData.freePageFrameId) {
-                statusMessage = "Move the containing free Page frame between edge regions.";
-                render();
-                focusNode();
-                return;
-            } persist(moveGraphOccurrence(current().state, flow.id, nodeData.id, { y: Math.max(55, layout.y + dy) })); focusNode(); });
-            group.addEventListener("click", () => { if (suppressNodeClick) {
+            } persist(moveGraphOccurrence(current().state, flow.id, nodeData.id, { lane: layout.lane, x: layout.x + dx, y: Math.max(55, layout.y + dy) })); focusNode(); });
+            group.addEventListener("click", (event) => { if (event.target.closest("foreignObject"))
+                return; if (suppressNodeClick) {
                 suppressNodeClick = false;
                 return;
             } saveSelection({ kind: "occurrence", id: nodeData.id }); });
-            group.append(box, title, detail, input, output);
+            const canvasExample = occurrenceExampleDetails(state, flow.id, nodeData.id, nodeData.name), exampleHost = svg("foreignObject");
+            exampleHost.dataset.eventExampleNode = nodeData.id;
+            exampleHost.setAttribute("x", "4");
+            exampleHost.setAttribute("y", "62");
+            exampleHost.setAttribute("width", String(nodeWidth - 8));
+            exampleHost.setAttribute("height", "30");
+            canvasExample.className = "flow-node-example";
+            canvasExample.style.fontSize = "10px";
+            canvasExample.style.background = "white";
+            canvasExample.addEventListener("toggle", () => { exampleHost.setAttribute("height", canvasExample.open ? "260" : "30"); box.setAttribute("height", String(canvasExample.open ? nodeHeight + 230 : nodeHeight + 12)); });
+            exampleHost.append(canvasExample);
+            group.append(box, title, detail, input, output, exampleHost);
             canvas.append(group);
-            const row = document.createElement("li"), control = button(`${nodeData.name} · ${nodeData.role}${nodeData.trigger ? ` · ${nodeData.trigger}` : ""}`, () => saveSelection({ kind: "occurrence", id: nodeData.id }));
+            const row = document.createElement("li"), control = button(`${nodeData.name} · ${nodeData.role}${nodeData.trigger ? ` · ${nodeData.trigger}` : ""}`, () => saveSelection({ kind: "occurrence", id: nodeData.id })), outlineExample = occurrenceExampleDetails(state, flow.id, nodeData.id, nodeData.name);
             row.dataset.occurrenceId = nodeData.id;
-            row.append(control);
+            row.append(control, outlineExample);
             outline.insertBefore(row, outline.querySelector("[data-relationship-id]"));
+        }
+        for (const port of Array.from(canvas.querySelectorAll("[data-input-port-for],[data-output-port-for]"))) {
+            const endpointId = port.dataset.inputPortFor ?? port.dataset.outputPortFor, endpoint = projection.graph.connectionEndpoints.find(({ id }) => id === endpointId);
+            if (!endpoint)
+                continue;
+            port.setAttribute("cx", String(endpoint.layout.x + (port.dataset.outputPortFor ? endpoint.width : 0)));
+            port.setAttribute("cy", String(endpoint.layout.y + endpoint.height / 2));
+            canvas.append(port);
         }
         canvas.addEventListener("pointermove", (event) => { if (!connection?.preview)
             return; const bounds = canvas.getBoundingClientRect(), scaleX = canvas.viewBox.baseVal.width / bounds.width, scaleY = canvas.viewBox.baseVal.height / bounds.height; connection.preview.setAttribute("x2", String((event.clientX - bounds.left) * scaleX)); connection.preview.setAttribute("y2", String((event.clientY - bounds.top) * scaleY)); document.querySelectorAll(".is-valid-target,.is-invalid-target").forEach((element) => element.classList.remove("is-valid-target", "is-invalid-target")); const input = event.target.closest("[data-input-port-for]"), node = event.target.closest("[data-occurrence-id]"); if (input && input.dataset.inputPortFor !== connection.sourceId)
@@ -637,7 +795,9 @@ export function installFlowGraphBuilder(options) {
             event.stopImmediatePropagation();
             commitConnection(connection.targets[connection.targetIndex]);
         } }, true);
-        views.append(canvas, outline);
+        canvasScroll.className = "flow-canvas-scroll";
+        canvasScroll.append(canvas);
+        views.append(canvasScroll, outline);
         renderRelationshipPopover(popover);
         renderActions(actions);
         section.append(heading, boundary, toolbar, laneControls, status, frames, views, actions, popover);

@@ -7,12 +7,8 @@
   (is (empty? (feature-support/unhandled-step-texts flow-graph/feature-files flow-graph/handlers))))
 
 (def complete-evidence
-  {:authoring {:exact true}
-   :branch {:exact true}
-   :topology {:exact true}
-   :keyboard {:exact true}
-   :empty {:exact true}
-   :installedBoundary true})
+  (assoc (into {} (map (fn [number] [(keyword (format "runtime%03d" number)) {:exact true}]) (range 1 22)))
+         :installedBoundary true))
 
 (deftest evidence-maps-cannot-pass-vacuously
   (is (false? (boolean (flow-graph/all-true? nil))))
@@ -23,6 +19,14 @@
 (deftest browser-evidence-requires-every-exact-category
   (is (false? (boolean (flow-graph/complete-browser-evidence? nil))))
   (is (false? (boolean (flow-graph/complete-browser-evidence? {}))))
-  (is (false? (boolean (flow-graph/complete-browser-evidence? (dissoc complete-evidence :keyboard)))))
-  (is (false? (boolean (flow-graph/complete-browser-evidence? (assoc-in complete-evidence [:branch :exact] false)))))
+  (is (false? (boolean (flow-graph/complete-browser-evidence? (dissoc complete-evidence :runtime020)))))
+  (is (false? (boolean (flow-graph/complete-browser-evidence? (assoc complete-evidence :runtime022 {:exact true})))))
+  (is (false? (boolean (flow-graph/complete-browser-evidence? (dissoc complete-evidence :installedBoundary)))))
+  (is (false? (boolean (flow-graph/complete-browser-evidence? (assoc-in complete-evidence [:runtime021 :exact] false)))))
   (is (true? (boolean (flow-graph/complete-browser-evidence? complete-evidence)))))
+
+(deftest runtime009-examples-have-distinct-evidence-keys
+  (is (= :pageContextProgression (flow-graph/runtime009-example-key {"source" "Customer details Page" "target" "Payment Page" "meaning" "Page context progression"})))
+  (is (= :eventExpectedWithinPage (flow-graph/runtime009-example-key {"source" "Customer details Page" "target" "Customer details add_payment_info" "meaning" "Event expected within the Page"})))
+  (is (= :eventLeadsToNextPage (flow-graph/runtime009-example-key {"source" "Customer details add_payment_info" "target" "Payment Page" "meaning" "Event leads to the next Page"})))
+  (is (= :eventInteractionProgression (flow-graph/runtime009-example-key {"source" "Customer details page_view" "target" "Customer details add_payment_info" "meaning" "Event interaction progression"}))))

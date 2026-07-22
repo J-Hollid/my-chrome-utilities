@@ -17,7 +17,9 @@ export {beginCompactCanonicalHistoryTransition,compactCanonicalHistoryKey,compac
 export type {CompactCanonicalHistoryTransitionIdentity,CompactCanonicalPageHistory} from "./layers/browser/schemas.js";
 export { appendSharedProfileConstraint, mountSidePanelLayeredProfileEditor, renderSidePanelComposedSchemaContext, sharedProfilePropertyPaths } from "./layers/browser/schemas.js";
 export { composedCanonicalSchema, saveComposedCanonicalDocument } from "./layers/browser/schemas.js";
-export { applyCanonicalCommand, canonicalCommandOutcome, canonicalPropertyPath, createCanonicalSchema, evaluateCanonicalPredicate, hasLegacySchemaRepresentation, migrateLegacyProfile, resolveCanonicalMigrationConflict, type CanonicalPredicate, type CanonicalPredicateOperator, type CanonicalSchemaDocument } from "../../data-layer-canonical-schema.js";
+export { applyCanonicalCommand, canonicalCommandOutcome, canonicalPropertyPath, canonicalSchemaWithConstraint, createCanonicalSchema, evaluateCanonicalPredicate, hasLegacySchemaRepresentation, migrateLegacyProfile, resolveCanonicalMigrationConflict, type CanonicalPredicate, type CanonicalPredicateOperator, type CanonicalSchemaDocument } from "../../data-layer-canonical-schema.js";
+export { compileLayeredSchema, validateLayeredObservation, type LayerConstraint } from "../../data-layer-layered-schema.js";
+export { layeredContributorPath, layeredContributorsForPath } from "../../data-layer-layered-schema-project.js";
 export { canonicalPredicateLeafFromInput, canonicalPredicateOperators, canonicalPredicateText, mountCanonicalPredicateEditor, validateCanonicalPredicateTree } from "../../data-layer-canonical-predicate-editor.js";
 export { canonicalCommandsFromCompactProjection, compactConditionalPresence, compactSchemaProjection, savedSchemaCanonicalDocument, savedSchemaFromCanonical } from "../../data-layer-side-panel-unified-schema-editor.js";
 export { resolveSidePanelSchemaContributor, type SidePanelContributorSelection } from "../../data-layer-side-panel-schema-editor.js";

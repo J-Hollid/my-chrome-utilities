@@ -1152,7 +1152,7 @@ else {
     builderRecoveryDialog.querySelector("h2")?.focus();
 } render(); });
 const flowBuilderContext = () => ({ ...state ? { state } : {}, revision: canonicalRevision, ...(selectedKind === "flows" && selectedId ? { flowId: selectedId } : {}) });
-flowGraphBuilder = installFlowGraphBuilder({ context: flowBuilderContext, persist, id });
+flowGraphBuilder = installFlowGraphBuilder({ context: flowBuilderContext, persist, id, openOccurrenceSchema: (occurrenceId, path) => layeredSchemaUi?.openGraphOccurrenceSchema(occurrenceId, path) ?? false });
 flowDocumentationExportUi = installFlowDocumentationExportUi({ context: flowBuilderContext, renderFlow: () => { flowGraphBuilder?.render(); flowDocumentationExportUi?.render(); }, openRepair: (contextId, path, repair) => { const selectPath = () => setTimeout(() => Array.from(document.querySelectorAll("[data-property-id]")).find((candidate) => candidate.dataset.propertyId === path || candidate.textContent?.includes(path))?.click(), 0); if (repair.startsWith("Open contributing schema ")) {
         const name = repair.slice("Open contributing schema ".length), match = ["profiles", "events", "pageGroups", "pages", "flows"].flatMap((kind) => state.project.collections[kind].map((entity) => ({ kind, entity }))).find(({ entity }) => entity.name === name);
         if (match) {
