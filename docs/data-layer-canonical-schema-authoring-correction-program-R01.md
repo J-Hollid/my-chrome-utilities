@@ -109,10 +109,12 @@ Adoption is lossless across the Saved Schema's source representations. Property
 documentation stored separately from its JSON document maps to the canonical
 property documentation facets. Unconditional attached `exact-value` and
 `allowed-values` rules supply the effective Expected value and typed Allowed values
-shown by the canonical Table while retaining their rule identity, revision,
-severity, issue message, and provenance. Tree, Table, side panel, compiler, and
-validator consume that same adopted property without manual re-entry or a repair
-migration, and reload does not erase the mapped facets.
+shown by the canonical Table. An attached conditional `required` rule supplies
+Required when presence and its structured condition. Every mapped facet retains
+its rule identity, revision, enabled state, severity, optional issue message, and
+provenance. Tree, Table, side panel, compiler, and validator consume that same
+adopted property without manual re-entry or a repair migration, and reload does not
+erase the mapped facets.
 
 ## One authoring language at every layer
 
@@ -479,7 +481,7 @@ feature.
 | C37 | Inheritance is treated as a standalone composed-view concern | Authoring 018 | The regular panel editor shows parent stacks and stores sparse overrides and resets | Canonical contributor graph, property command bus, compiler, and validator | Stable parent references, sparse child bytes, two-surface result, and absent snapshots | A, C, E | Panel, standalone, compiler, and validator derive one effective property without copying a parent |
 | C38 | Standalone controls can be thinner or different from the established panel editor | Authoring 019 | Representative rich operations round-trip in both directions through purpose-built controls | Shared editor core, command schema, repository subscriptions, and responsive projections | Control availability, command identity, revision equality, canonical bytes, and rendered results | B, E | Every supported panel operation succeeds standalone with the same canonical result and no raw-JSON substitute |
 | C39 | Parity was inverted by mounting the standalone/project editor inside the side panel | Authoring 020 | The panel retains its compact established editor while standalone uses a wide table over the same canonical commands | Surface-specific renderers, canonical command adapter, repository subscriptions, and responsive layout | Installed side-panel and standalone landmarks, complete control inventories, no nested project editor, command identity, revision equality, and 360px measurements | B, E | The side panel remains fully usable with its established compact controls and the standalone workspace independently provides complete parity |
-| C40 | Saved-schema adoption drops separate documentation and rule-derived values | Authoring 021 | Adoption immediately projects property documentation plus exact and allowed rule values into the canonical Table | Saved-schema adoption adapter, canonical property mapper, Table projection, compiler, validator, and repository | Two rule forms, rendered documentation and value cells, retained rule metadata, reload, provenance, and source hash | A, B, C, E | Adopted Shared Profile rows show source documentation and rule-derived expected or allowed values without re-entry while the Saved Schema remains unchanged |
+| C40 | Saved-schema adoption drops separate documentation and rule-derived values | Authoring 021 and 022 | Adoption immediately projects property documentation, exact and allowed rule values, and conditional required presence into the canonical Table | Saved-schema adoption adapter, canonical property mapper, Table projection, compiler, validator, and repository | Three rule forms, rendered documentation, value, presence, and condition cells, retained optional metadata, compiled outcomes, reload, provenance, and source hash | A, B, C, E | Adopted Shared Profile rows show source documentation and all mapped rule facets without re-entry while the Saved Schema remains unchanged |
 
 ## Terminal acceptance
 
@@ -491,8 +493,8 @@ show:
 - one adopted project schema, one property identity, and one revision across
   Builder, Table, side panel, reload, compilation, and validation;
 - lossless adoption of separately stored property documentation and attached exact-
-  value or allowed-values rule projections into the canonical Table without source
-  mutation or manual repair;
+  value, allowed-values, or conditional required rule projections into the canonical
+  Table without source mutation or manual repair;
 - one grouped side-panel Schema list and exactly one established in-panel editor
   region for saved schemas and every contributor role;
 - native inheritance in that editor through stable parent references, sparse local

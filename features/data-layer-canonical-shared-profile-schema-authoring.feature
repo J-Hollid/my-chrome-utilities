@@ -258,19 +258,38 @@ Feature: Data layer canonical Shared Profile schema authoring
   Scenario Outline: Data layer canonical Shared Profile schema authoring 021
     Given Opened Article source JSON defines string property <property_path> without const or enum
     And its separate property documentation stores display text <display_text>, description <description>, and comments <comments> at <property_path>
-    And attached <rule_kind> rule <rule_name> revision <rule_revision> supplies <configured_values> at <property_path> with severity warning and message <issue_message>
+    And attached enabled <rule_kind> rule <rule_name> revision <rule_revision> supplies <configured_values> at <property_path> with severity <severity> and <issue_message>
     When the operator reviews and confirms adding Opened Article to the project
     Then the adopted canonical property preserves <display_text>, <description>, and <comments>
     And its effective <value_facet> is <configured_values> derived from the attached rule
-    And the expanded builder identifies origin <rule_name> v<rule_revision>, warning, and <issue_message>
+    And the expanded builder identifies enabled origin <rule_name> v<rule_revision>, severity <severity>, and <issue_message>
     When the operator switches the adopted Shared Profile to Table
     Then the <property_path> row shows that documentation and <configured_values> in the Expected or allowed values column
     And Tree, side panel, compiler, and validator consume the same documented canonical property and rule-derived value
     When the project is reloaded
-    Then the documentation, effective value, rule metadata, and source provenance remain visible without re-entry or migration
+    Then the mapped facets, rule metadata, and source provenance remain visible without re-entry or migration
     And the Saved Schema Library source remains byte-identical
 
     Examples:
-      | property_path | display_text | description              | comments      | rule_kind      | rule_name             | rule_revision | configured_values                    | issue_message                  | value_facet    |
-      | /article_type | Article type | Editorial classification | CMS taxonomy  | exact-value    | Required article type | 3             | typed string News                    | Use the required article type | Expected value |
-      | /audience     | Audience     | Intended readers          | Access policy | allowed-values | Supported audiences   | 5             | typed strings Public and Subscriber | Choose a supported audience   | Allowed values |
+      | property_path | display_text | description              | comments       | rule_kind      | rule_name                     | rule_revision | configured_values                                                               | severity | issue_message                                | value_facet    |
+      | /article_type | Article type | Editorial classification | CMS taxonomy   | exact-value    | Required article type         | 3             | typed string News                                                               | warning  | issue message Use the required article type | Expected value |
+      | /error_type   | Error type   | Error classification     | Error handling | allowed-values | Allowed values for error_type | 1             | typed strings technical, validation, authentication, login, and notification | error    | no issue message                             | Allowed values |
+
+  # Data layer canonical Shared Profile schema authoring 022
+  Scenario: Data layer canonical Shared Profile schema authoring 022
+    Given Opened Article source JSON defines string properties /page_type and /error_action without required presence
+    And attached enabled required rule Required for error_action revision 1 targets /error_action with severity error
+    And its All condition requires /page_type to Equal typed string error
+    When the operator reviews and confirms adding Opened Article to the project
+    Then imported rule mapping makes /error_action Required when
+    When the operator switches the adopted Shared Profile to Table
+    Then the /error_action row shows Required when in Presence and page_type Equals error in Conditions
+    And its rule detail retains enabled origin Required for error_action v1, severity error, the required operator, target /error_action, and the All condition tree
+    And compiler and validator outcomes are
+      | page_type | error_action | outcome |
+      | error     | absent       | invalid |
+      | error     | present      | valid   |
+      | article   | absent       | valid   |
+    When the project is reloaded
+    Then the mapped facets, rule metadata, and source provenance remain visible without re-entry or migration
+    And the Saved Schema Library source remains byte-identical

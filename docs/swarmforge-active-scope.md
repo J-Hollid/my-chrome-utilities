@@ -224,11 +224,13 @@ collections.
 The global Saved Schema Library remains usable without active project context.
 Adoption safely activates the chosen project and creates one project-owned Draft
 with source lineage. Adoption maps property documentation stored outside the source
-JSON and values expressed by attached exact-value or allowed-values rules into the
-same canonical property used by Tree, Table, side panel, compiler, and validator.
-The adopted Table shows those documentation and effective-value facets immediately,
-preserves the originating rule metadata and provenance, and requires no re-entry or
-repair migration. The immutable Saved Schema source remains byte-identical.
+JSON, values expressed by attached exact-value or allowed-values rules, and Required
+when presence expressed by an attached conditional required rule into the same
+canonical property used by Tree, Table, side panel, compiler, and validator. The
+adopted Table shows those documentation, effective-value, presence, and condition
+facets immediately, preserves originating rule metadata including an absent optional
+issue message and provenance, and requires no re-entry or repair migration. The
+immutable Saved Schema source remains byte-identical.
 Versioned project export contains the complete persisted Draft graph while excluding
 permissions, Live data, caches, UI state, and Undo history.
 Import is staged and atomic, supports Import as new project only, remaps all project-
