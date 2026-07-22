@@ -15,12 +15,15 @@ const cases=[
 for(let sample=0;sample<128;sample+=1){
   const selected=cases[Math.floor(random()*cases.length)],schema={
     id:`schema:property-${sample}`,name:`Property ${sample}`,version:1+Math.floor(random()*20),
-    document:{type:"object",properties:{exact:{type:selected.type},allowed:{type:selected.type},conditional:{type:selected.type},required_action:{type:"string"}}},
+    document:{type:"object",properties:{exact:{type:selected.type},allowed:{type:selected.type},conditional:{type:selected.type},required_action:{type:"string"},disabled_action:{type:"string"},unresolved_action:{type:"string"},partially_resolved_action:{type:"string"}}},
     attachedRules:[
       {id:`rule:exact-${sample}`,name:"Exact source",version:3,enabled:true,propertyPath:"/exact",operator:"exact-value",parameters:String(selected.values[0]),severity:"warning",message:"Exact message"},
       {id:`rule:allowed-${sample}`,name:"Allowed source",version:5,enabled:true,propertyPath:"/allowed",operator:"allowed-values",parameters:selected.values.map(String).join(","),severity:"error"},
       {id:`rule:conditional-${sample}`,name:"Conditional source",version:7,propertyPath:"/conditional",operator:"exact-value",parameters:String(selected.values[0]),conditionGroup:{operator:"All",predicates:[{propertyPath:"/allowed",operator:"Exists"}]},severity:"warning",message:"Conditional message"},
       {id:`rule:required-${sample}`,name:"Required action",version:1,enabled:true,propertyPath:"/required_action",operator:"required",conditionGroup:{operator:"All",predicates:[{propertyPath:"/exact",operator:"Equals",comparison:{type:selected.type,value:selected.values[0]}}]},severity:"error"},
+      {id:`rule:disabled-${sample}`,name:"Disabled action",version:1,enabled:false,propertyPath:"/disabled_action",operator:"required",conditionGroup:{operator:"All",predicates:[{propertyPath:"/exact",operator:"Equals",comparison:{type:selected.type,value:selected.values[0]}}]},severity:"error"},
+      {id:`rule:unresolved-${sample}`,name:"Unresolved action",version:1,enabled:true,propertyPath:"/unresolved_action",operator:"required",conditionGroup:{operator:"All",predicates:[{propertyPath:"/missing",operator:"Exists"}]},severity:"error"},
+      {id:`rule:partial-${sample}`,name:"Partially resolved action",version:1,enabled:true,propertyPath:"/partially_resolved_action",operator:"required",conditionGroup:{operator:"All",predicates:[{propertyPath:"/exact",operator:"Equals",comparison:{type:selected.type,value:selected.values[0]}},{propertyPath:"/missing",operator:"Exists"}]},severity:"error"},
     ],
     documentation:{properties:{"/exact":{displayName:"Exact",description:"Exact description",comments:"Exact comments"}}},
   },before=JSON.stringify(schema);let sequence=0;
@@ -30,6 +33,10 @@ for(let sample=0;sample<128;sample+=1){
   assert.equal(byPath["/conditional"].expectedValue,undefined,`sample ${sample} must not project a conditional exact value as unconditional`);
   assert.equal(byPath["/required_action"].presence.mode,"required-when",`sample ${sample} must map conditional required presence`);
   assert.deepEqual(byPath["/required_action"].presence.condition,{kind:"all",children:[{kind:"predicate",propertyId:byPath["/exact"].id,operator:"Equals",value:selected.values[0]}]});
+  assert.equal(byPath["/disabled_action"].presence.mode,"optional",`sample ${sample} must not project disabled required rules`);
+  assert.equal(byPath["/unresolved_action"].presence.mode,"optional",`sample ${sample} must not broaden an unresolved condition to unconditional required presence`);
+  assert.equal(byPath["/partially_resolved_action"].presence.mode,"optional",`sample ${sample} must not project a partially resolved All condition`);
+  assert.equal("condition" in byPath["/partially_resolved_action"].rules[0],false,`sample ${sample} must not retain a weakened partial condition`);
   assert.deepEqual(byPath["/exact"].documentation,{displayText:"Exact",description:"Exact description",comments:"Exact comments",example:{method:"blank"}});
   assert.deepEqual(byPath["/exact"].rules[0].provenance,{source:"saved-schema",sourceId:schema.id,revision:schema.version});
   assert.equal(byPath["/exact"].rules[0].enabled,true);
