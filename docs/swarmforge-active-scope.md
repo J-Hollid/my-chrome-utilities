@@ -4,12 +4,15 @@
 
 The active specification cycles are the interactive directional Flow graph review,
 focused canonical authoring and layered effective-schema, selected-Flow
-documentation export, project-management, and durable-project repository checkpoints. Their contracts are:
+documentation export, operator-guided Live Flow testing, project-management, and
+durable-project repository checkpoints. Their contracts are:
 
 - `features/data-layer-directional-flow-specification-graph.feature`
 - `features/data-layer-directional-flow-specification-graph-runtime.feature`
 - `features/data-layer-flow-table-documentation-export.feature`
 - `features/data-layer-flow-table-documentation-export-runtime.feature`
+- `features/data-layer-live-flow-guided-testing.feature`
+- `features/data-layer-live-flow-guided-testing-runtime.feature`
 - `features/data-layer-canonical-shared-profile-schema-authoring.feature`
 - `features/data-layer-canonical-shared-profile-schema-authoring-runtime.feature`
 - `features/data-layer-layered-schema-constraints.feature`
@@ -27,6 +30,8 @@ The correction program for the Flow graph contracts is
 `docs/data-layer-canvas-first-flow-authoring-correction-program-R01.md`.
 The program for selected-Flow table documentation is
 `docs/data-layer-flow-table-documentation-export-program-R01.md`.
+The program for operator-guided Live Flow testing is
+`docs/data-layer-live-flow-guided-testing-program-R01.md`.
 The program for project library, active context, and portability is
 `docs/data-layer-project-management-program-R01.md`.
 The correction program for durable project storage, page-scoped Undo/Redo, and
@@ -186,11 +191,13 @@ references without a Page-context binding model.
 The Flow remains documentary: pointer and keyboard positioning, topology,
 optionality, conditions, and multiplicity communicate expected behavior while
 per-Event payload validation remains independent and journey expectations remain
-manual. Existing applicability and assignment rules resolve production Page context
-from observation evidence and the observed Event; Flow role or trigger metadata does
-not replace that resolver. Any retained executable-step authoring is an explicitly
-separate Advanced function and does not duplicate or replace documentary graph
-authoring.
+manual. In the bounded Live Flow-test mode, the operator selects a Flow, a start
+Page frame, each valid relationship-connected Page or Event step, and one observed
+event per step. This manual mode invokes no automatic assignment resolver and makes
+no execution claim; it uses the selected frame or occurrence effective schema for
+ordinary validation and defect reporting. Any retained executable-step authoring is
+an explicitly separate Advanced function and does not duplicate or replace
+documentary graph authoring.
 
 The selected-Flow documentation checkpoint derives a Flow value map and Data capture
 matrix from ordered graph contexts and canonical effective schemas. It reuses the
@@ -338,10 +345,11 @@ The cycle requires named integration with the existing assignment resolver and
 per-Event validator plus Flow selection restoration. These requirements are not a
 general Assignment or resolver redesign. Top-level Fixture and Assignment overview
 creation, opening, and guarded removal are active only as project-entity lifecycle;
-fixture execution and resolver semantics are not. Project-wide batch documentation
-export, coverage, preflight, release assurance, Live, temporal Flow execution, and
-cross-surface concurrency beyond canonical Draft concurrency and durable repository
-subscriptions are not active work. The minimal intentional Publish boundary above
+fixture execution and resolver semantics beyond contributor targeting are not.
+Project-wide batch documentation export, coverage, preflight, release assurance,
+automatic or temporal Flow execution, Live behavior beyond operator-guided Flow
+testing, and cross-surface concurrency beyond canonical Draft concurrency and
+durable repository subscriptions are not active work. The minimal intentional Publish boundary above
 exists only to create immutable project revisions; it does not activate the archived
 preflight, review, release-gate, Live, or publication-assurance programs. Agent
 role-playing without source knowledge and facilitated Windows usability are not
@@ -422,6 +430,21 @@ The selected-Flow documentation checkpoint sequence is exactly:
 node scripts/run-focused-acceptance.mjs --pack flow_export
 node scripts/package.mjs
 ```
+
+The Live Flow testing checkpoint sequence is exactly:
+
+```sh
+node scripts/run-focused-acceptance.mjs --pack live_flow_testing
+node scripts/package.mjs
+```
+
+The `live_flow_testing` pack must register both guided-testing contracts and focused
+production evidence for active-project Flow selection, Page starts, Page and Event
+effective-schema resolution, directed relationship guidance, chronological manual
+feed matching, ordinary validation and defect integration, saved run summaries,
+assignment bypass, and domain immutability. It may declare `flow_graph` and
+`layered_schema` dependencies but must not invoke unrelated or archived Live and
+temporal-Flow suites.
 
 The `flow_export` pack may register shared build dependencies from `flow_graph`, but
 must contain the selected-Flow export features and their production clipboard and
