@@ -35,6 +35,7 @@
       "src/data-layer-durable-project-repository.ts",
       "src/data-layer-durable-project-repository-ui.ts",
       "src/data-layer-durable-project-runtime.ts",
+      "src/data-layer-compact-canonical-history.ts",
       "src/utilities/data-layer/saved-schema-feed.ts"
     ],
     "dependencies": [
@@ -43,6 +44,7 @@
     "unit": [
       "test/data-layer-durable-project-repository-test.mjs",
       "test/data-layer-durable-project-runtime-test.mjs",
+      "test/data-layer-compact-canonical-history-test.mjs",
       "test/data-layer-saved-schema-feed-test.mjs"
     ],
     "property": [
