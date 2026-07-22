@@ -23,6 +23,12 @@ function renderOccurrenceExampleControls(host, state, flowId, occurrenceId, pers
     }
 }
 export const ownsPointerDrag = (activePointerId, eventPointerId) => activePointerId !== undefined && activePointerId === eventPointerId;
+export function flowViewAfterRelationshipDeletion(view, relationshipId) { if (view.selectedItem?.kind !== "relationship" || view.selectedItem.id !== relationshipId)
+    return view; const { selectedItem, ...retained } = view; void selectedItem; return retained; }
+export function consumeRelationshipDeletionFocus(intent, relationshipRestored) { if (!intent)
+    return {}; if (relationshipRestored)
+    return { target: "relationship" }; if (!intent.sourceFocused)
+    return { target: "source", next: { ...intent, sourceFocused: true } }; return { next: intent }; }
 const flowPortPoint = (layout, size, port) => port === "left" ? { x: layout.x, y: layout.y + size.height / 2 } : port === "right" ? { x: layout.x + size.width, y: layout.y + size.height / 2 } : port === "top" ? { x: layout.x + size.width / 2, y: layout.y } : { x: layout.x + size.width / 2, y: layout.y + size.height };
 export function flowEdgeGeometry(source, target, sourceSize = { width: nodeWidth, height: nodeHeight }, targetSize = sourceSize, sourcePort = "right", targetPort = "left") {
     const start = flowPortPoint(source, sourceSize, sourcePort), end = flowPortPoint(target, targetSize, targetPort), startX = start.x, startY = start.y, endX = end.x, endY = end.y, dx = endX - startX, dy = endY - startY, length = Math.hypot(dx, dy), unitX = length < 0.001 ? 1 : dx / length, unitY = length < 0.001 ? 0 : dy / length, baseX = endX - unitX * 12, baseY = endY - unitY * 12, normalX = -unitY * 7, normalY = unitX * 7;
@@ -37,6 +43,7 @@ export function installFlowGraphBuilder(options) {
     let relationshipPopoverFocusIntent;
     let relationshipEdgeFocusIntent;
     let relationshipDeletionFocusIntent;
+    let relationshipDeletionFocusTimer;
     let pageFrameFocusIntent;
     let suppressNodeClick = false;
     let statusMessage = "";
@@ -57,8 +64,8 @@ export function installFlowGraphBuilder(options) {
     window.addEventListener("pointerup", clearActiveCatalogPayload);
     window.addEventListener("mouseup", clearActiveCatalogPayload);
     const current = () => { const context = options.context(), flow = context.flowId && context.state?.project.collections.flows.find(({ id }) => id === context.flowId), graph = flow && context.state ? documentaryFlowGraph(context.state.project, flow.id) : undefined; return { ...context, flow, graph }; };
-    const persist = (next) => { try {
-        statusMessage = "";
+    const persist = (next, feedback = "") => { try {
+        statusMessage = feedback;
         statusRepairHref = "";
         options.persist(next);
         render();
@@ -308,7 +315,7 @@ export function installFlowGraphBuilder(options) {
         remove.type = "button";
         remove.textContent = "Delete relationship";
         remove.setAttribute("aria-label", `Delete relationship ${relationshipName}`);
-        remove.addEventListener("click", () => { relationshipPopoverFocusIntent = undefined; relationshipEdgeFocusIntent = undefined; relationshipDeletionFocusIntent = { id: relationship.id, sourceKind: relationship.sourceEndpoint.kind, sourceId }; selected = undefined; persist(removeFlowRelationship(current().state, flow.id, relationship.id)); statusMessage = `Deleted relationship ${relationshipName}. Saved Draft; documentation preview stale; Undo available.`; render(); });
+        remove.addEventListener("click", () => { relationshipPopoverFocusIntent = undefined; relationshipEdgeFocusIntent = undefined; relationshipDeletionFocusIntent = { id: relationship.id, sourceKind: relationship.sourceEndpoint.kind, sourceId, sourceFocused: false }; selected = undefined; const context = current(), view = readView(context.state.project.id, flow.id); writeView(context.state.project.id, flow.id, flowViewAfterRelationshipDeletion(view, relationship.id)); persist(removeFlowRelationship(context.state, flow.id, relationship.id), `Deleted relationship ${relationshipName}. Saved Draft; documentation preview stale; Undo available.`); });
         cancel.addEventListener("click", () => { relationshipPopoverFocusIntent = undefined; relationshipEdgeFocusIntent = undefined; selected = undefined; render(); document.querySelector(`[data-flow-port-for="${CSS.escape(sourceId)}"][data-flow-port-side="${relationship.sourcePort}"]`)?.focus(); });
         form.addEventListener("submit", (event) => { event.preventDefault(); relationshipPopoverFocusIntent = undefined; relationshipEdgeFocusIntent = { id: relationship.id, revision: Number(revision ?? 0), optimisticFocused: false }; persist(saveGraphRelationship(current().state, flow.id, sourceId, { id: relationship.id, toStepId: targetId, sourcePort: relationship.sourcePort, targetPort: relationship.targetPort, group: group.value.trim(), label: label.value.trim(), documentationCondition: condition.value.trim(), expectation: expectation.value.trim() }, options.id)); queueMicrotask(() => document.querySelector(`[data-relationship-id="${CSS.escape(relationship.id)}"]`)?.focus()); });
         const labeled = (text, control) => { const wrapper = document.createElement("label"); wrapper.append(text, control); return wrapper; };
@@ -898,19 +905,17 @@ export function installFlowGraphBuilder(options) {
         section.append(heading, boundary, toolbar, laneControls, status, frames, views, actions, popover);
         host.append(section);
         document.querySelectorAll("[data-occurrence-id],[data-relationship-id],[data-page-frame-id]").forEach((element) => { const id = element.dataset.occurrenceId ?? element.dataset.relationshipId ?? element.dataset.pageFrameId; element.classList.toggle("is-selected", id === selected?.id); });
+        if (relationshipDeletionFocusTimer !== undefined) {
+            clearTimeout(relationshipDeletionFocusTimer);
+            relationshipDeletionFocusTimer = undefined;
+        }
         const deletionIntent = relationshipDeletionFocusIntent;
         if (deletionIntent) {
-            const restoredEdge = canvas.querySelector(`[data-relationship-id="${CSS.escape(deletionIntent.id)}"]`);
-            if (restoredEdge) {
-                queueMicrotask(() => { if (restoredEdge.isConnected) {
-                    restoredEdge.focus();
-                    relationshipDeletionFocusIntent = undefined;
-                } });
-            }
-            else {
-                const attribute = deletionIntent.sourceKind === "page-frame" ? "data-page-frame-id" : "data-occurrence-id", sourceElement = canvas.querySelector(`[${attribute}="${CSS.escape(deletionIntent.sourceId)}"]`);
-                queueMicrotask(() => sourceElement?.isConnected && sourceElement.focus());
-            }
+            const restored = Boolean(canvas.querySelector(`[data-relationship-id="${CSS.escape(deletionIntent.id)}"]`));
+            if (restored || !deletionIntent.sourceFocused)
+                relationshipDeletionFocusTimer = setTimeout(() => { relationshipDeletionFocusTimer = undefined; if (relationshipDeletionFocusIntent !== deletionIntent)
+                    return; const liveCanvas = document.querySelector('[aria-label="Interactive directional Flow canvas"]'), selector = restored ? `[data-relationship-id="${CSS.escape(deletionIntent.id)}"]` : `[${deletionIntent.sourceKind === "page-frame" ? "data-page-frame-id" : "data-occurrence-id"}="${CSS.escape(deletionIntent.sourceId)}"]`, target = liveCanvas?.querySelector(selector); if (!target?.isConnected)
+                    return; target.focus(); relationshipDeletionFocusIntent = consumeRelationshipDeletionFocus(deletionIntent, restored).next; }, 50);
         }
         const frameIntent = pageFrameFocusIntent;
         if (frameIntent) {

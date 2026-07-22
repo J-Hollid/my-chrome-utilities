@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {FLOW_GRAPH_GEOMETRY,addEventOccurrenceToPage,addFlowPageFrame,addFreePageFrame,addGraphOccurrence,addInteractionOccurrenceToPage,applyFlowPageGroupLaneSelection,deriveFlowOccurrenceExample,documentaryFlowGraph,flowOccurrenceEventSchema,flowOccurrenceExampleEditorRows,flowOutline,flowRelationshipText,inferFlowRelationshipKind,inspectFlowGraph,inspectFreePageEdgeMove,inspectOccurrenceContainmentMove,inspectPageFrameDrop,migrateLegacyFlowRelationshipKinds,moveFlowPageFrame,moveFreePageFrame,moveGraphOccurrence,projectFlowGraph,removeFlowPageFrame,removeFlowRelationship,removeGraphOccurrence,reorderFlowPageGroupLane,reorderGraphOccurrence,saveFlowViewState,saveGraphRelationship,setFlowOccurrenceExample,setFlowPageGroupLanes,updateGraphOccurrence} from "../dist/data-layer-flow-graph.js";
-import {flowEdgeGeometry,ownsPointerDrag} from "../dist/data-layer-flow-graph-ui.js";
+import {consumeRelationshipDeletionFocus,flowEdgeGeometry,flowViewAfterRelationshipDeletion,ownsPointerDrag} from "../dist/data-layer-flow-graph-ui.js";
 import {compileSpecificationProject,createCanonicalProjectEnvelope} from "../dist/data-layer-specification-engine.js";
 import {addFlowStep,addProjectEntity,createSpecificationProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
 
@@ -83,6 +83,13 @@ assert.deepEqual(state.project.collections.flows[0].steps,executableBefore,"docu
 assert.equal(compiledAfter.plan.evaluatorContentIdentity,compiledBefore.plan.evaluatorContentIdentity,"documentary graph authoring must not change compiled/runtime evaluator behavior");
 
 const directedCheckoutToPayment=flowEdgeGeometry({x:30,y:70},{x:430,y:210});
+const deletionViewport={x:42,y:18,zoom:1.25},selectedRelationshipView={selectedItem:{kind:"relationship",id:relationship.id},viewport:deletionViewport};
+assert.deepEqual(flowViewAfterRelationshipDeletion(selectedRelationshipView,relationship.id),{viewport:deletionViewport},"deletion clears its stale session selection without clearing the viewport");
+assert.deepEqual(flowViewAfterRelationshipDeletion({selectedItem:{kind:"occurrence",id:context.id},viewport:deletionViewport},relationship.id),{selectedItem:{kind:"occurrence",id:context.id},viewport:deletionViewport},"deletion preserves an unrelated session selection");
+const deletionFocus={id:relationship.id,sourceKind:"event-occurrence",sourceId:context.id,sourceFocused:false},firstDeletionFocus=consumeRelationshipDeletionFocus(deletionFocus,false),settledDeletionFocus=consumeRelationshipDeletionFocus(firstDeletionFocus.next,false),restoredRelationshipFocus=consumeRelationshipDeletionFocus(settledDeletionFocus.next,true);
+assert.deepEqual(firstDeletionFocus,{target:"source",next:{...deletionFocus,sourceFocused:true}},"deletion requests source focus once");
+assert.deepEqual(settledDeletionFocus,{next:firstDeletionFocus.next},"an unrelated re-render does not steal focus back to the source");
+assert.deepEqual(restoredRelationshipFocus,{target:"relationship"},"Undo consumes the intent by requesting restored-edge focus once");
 assert.equal(ownsPointerDrag(undefined,41),false,"a drag has no owner before pointerdown");
 assert.equal(ownsPointerDrag(41,42),false,"a second pointer cannot finish or cancel the active pointer's drag");
 assert.equal(ownsPointerDrag(41,41),true,"only the pointer that started a drag owns its move, finish, and cancel lifecycle");
