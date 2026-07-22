@@ -56,16 +56,16 @@ export function configureFlowDocumentationSnapshot(snapshot, configuration) {
     return deepFreeze({ ...structuredClone(snapshot), contexts: ordered.map((context) => ({ ...structuredClone(context), stepLabel: configuration.stepLabels?.[context.id]?.trim() || context.stepLabel })) });
 }
 export function orderFlowDocumentationOccurrenceIds(occurrences, relationships, pageGroupIds) {
-    const occurrenceIds = new Set(occurrences.map(({ id }) => id)), parallelBySource = new Map(), mergeByTarget = new Map();
+    const occurrenceIds = new Set(occurrences.map(({ id }) => id)), alternativeBySource = new Map(), mergeByTarget = new Map();
     for (const relationship of relationships) {
         const source = String(relationship.sourceEndpoint?.kind === "event-occurrence" ? relationship.sourceEndpoint.id : relationship.sourceNodeId ?? ""), target = String(relationship.targetEndpoint?.kind === "event-occurrence" ? relationship.targetEndpoint.id : relationship.targetNodeId ?? "");
         if (!occurrenceIds.has(source) || !occurrenceIds.has(target) || source === target)
             continue;
-        const index = relationship.kind === "parallel" ? parallelBySource : relationship.kind === "merge" ? mergeByTarget : undefined;
+        const index = relationship.kind === "alternative" ? alternativeBySource : relationship.kind === "merge" ? mergeByTarget : undefined;
         if (index)
-            index.set(relationship.kind === "parallel" ? source : target, [...(index.get(relationship.kind === "parallel" ? source : target) ?? []), relationship.kind === "parallel" ? target : source]);
+            index.set(relationship.kind === "alternative" ? source : target, [...(index.get(relationship.kind === "alternative" ? source : target) ?? []), relationship.kind === "alternative" ? target : source]);
     }
-    const candidates = [...parallelBySource].flatMap(([source, rawBranches]) => { const branches = [...new Set(rawBranches)]; if (branches.length !== 2)
+    const candidates = [...alternativeBySource].flatMap(([source, rawBranches]) => { const branches = [...new Set(rawBranches)]; if (branches.length !== 2)
         return []; return [...mergeByTarget].flatMap(([target, rawSources]) => { const sources = [...new Set(rawSources)]; return sources.length === 2 && branches.every((id) => sources.includes(id)) && source !== target ? [{ source, target, branches }] : []; }); });
     if (candidates.length !== 1)
         return { ids: occurrences.map(({ id }) => id), labels: {} };

@@ -25,9 +25,9 @@ assert.deepEqual(projection.graph.nodes.map(({id,role,layout})=>({id,role,layout
   {id:interaction.id,role:"interaction",layout:{lane:"Checkout",x:470,y:250}},
 ]);
 assert.deepEqual(flowOutline(projection.graph).map(({nodeId,relationshipIds})=>({nodeId,relationshipIds})),[{nodeId:context.id,relationshipIds:[relationship.id]},{nodeId:interaction.id,relationshipIds:[]}]);
-assert.match(flowRelationshipText(projection.graph,relationship),/route_view · expected-next · add_payment_info/);
+assert.match(flowRelationshipText(projection.graph,relationship),/route_view · expected_next · add_payment_info/);
 assert.equal(relationship.documentationCondition,"checkout is open");
-assert.deepEqual({sourcePort:relationship.sourcePort,targetPort:relationship.targetPort,kind:relationship.kind},{sourcePort:"right",targetPort:"left",kind:"expected-next"});
+assert.deepEqual({sourcePort:relationship.sourcePort,targetPort:relationship.targetPort,kind:relationship.kind},{sourcePort:"right",targetPort:"left",kind:"expected_next"});
 assert.equal("condition" in documentaryFlowGraph(state.project,flow.id).relationships[0],false,"documentary storage rejects executable condition fields");
 assert.deepEqual(inspectFlowGraph(projection.graph,projection.catalog),[]);
 const isolated={...projection.graph,nodes:[...projection.graph.nodes,{...projection.graph.nodes[0],id:"isolated"}]};
@@ -55,7 +55,7 @@ assert.throws(()=>updateGraphOccurrence(state,flow.id,"missing-occurrence",input
 assert.equal(moveGraphOccurrence(state,flow.id,"missing-occurrence",{lane:"Context",x:30,y:70}),state);
 assert.equal(removeGraphOccurrence(state,flow.id,"missing-occurrence"),state);
 assert.throws(()=>saveGraphRelationship(state,flow.id,"missing-occurrence",{toStepId:context.id,sourcePort:"top",targetPort:"bottom"},id),/existing Flow/);
-assert.equal(inferFlowRelationshipKind("right","left"),"expected-next");
+assert.equal(inferFlowRelationshipKind("right","left"),"expected_next");
 assert.equal(inferFlowRelationshipKind("top","bottom"),"alternative");
 assert.equal(inferFlowRelationshipKind("bottom","top"),"merge");
 for(const [sourcePort,targetPort] of [["left","right"],["right","top"],["top","left"],["bottom","left"]])assert.equal(inferFlowRelationshipKind(sourcePort,targetPort),undefined,`${sourcePort} to ${targetPort} is not a relationship gesture`);

@@ -53,14 +53,14 @@ assert.deepEqual(orderFlowDocumentationOccurrenceIds([
   {id:"cart",pageGroupId:"checkout"},
   {id:"shipping",pageGroupId:"shipping"},
 ],[
-  {sourceNodeId:"cart",targetNodeId:"payment",kind:"parallel"},
+  {sourceNodeId:"cart",targetNodeId:"payment",kind:"alternative"},
   {sourceNodeId:"shipping",targetNodeId:"confirmation",kind:"merge"},
-  {sourceNodeId:"cart",targetNodeId:"shipping",kind:"parallel"},
+  {sourceNodeId:"cart",targetNodeId:"shipping",kind:"alternative"},
   {sourceNodeId:"payment",targetNodeId:"confirmation",kind:"merge"},
 ],["checkout","shipping","payment","confirmation"]),{ids:["cart","shipping","payment","confirmation"],labels:{cart:"1",shipping:"2a",payment:"2b",confirmation:"3"}});
 assert.deepEqual(orderFlowDocumentationOccurrenceIds([
   {id:"cart",pageGroupId:"checkout"},{id:"shipping",pageGroupId:"shipping"},{id:"payment",pageGroupId:"payment"},{id:"confirmation",pageGroupId:"confirmation"},
-],[{sourceNodeId:"cart",targetNodeId:"shipping",kind:"parallel"},{sourceNodeId:"payment",targetNodeId:"confirmation",kind:"merge"}],["checkout","shipping","payment","confirmation"]).labels,{});
+],[{sourceNodeId:"cart",targetNodeId:"shipping",kind:"alternative"},{sourceNodeId:"payment",targetNodeId:"confirmation",kind:"merge"}],["checkout","shipping","payment","confirmation"]).labels,{});
 
 const unresolved=compileFlowDocumentationSnapshot({projectId:"project:shop",projectName:"Shop",flowId:"flow:checkout",flowName:"Checkout journey",graphRevision:8,sourceState:"draft",generatedAt:"2026-07-20T00:00:00.000Z",contexts:[{...contexts[2],compiled:compiled({}),unresolved:[{path:"/payment_reference",issue:"Unresolved property reference",repair:"Open Payment property reference"}]}]});
 assert.equal(unresolved.incomplete,true);

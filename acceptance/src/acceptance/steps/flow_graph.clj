@@ -34,12 +34,12 @@
   (set (map #(keyword (format "runtime%03d" %)) (range 1 23))))
 (def required-evidence-keys (conj runtime-evidence-keys :installedBoundary))
 (def runtime009-examples
-  {["Customer details Page" "Payment Page" nil] :pageContextProgression
-   ["Customer details Page" "Customer details add_payment_info" nil] :eventExpectedWithinPage
-   ["Customer details add_payment_info" "Payment Page" nil] :eventLeadsToNextPage
-   ["Customer details page_view" "Customer details add_payment_info" nil] :eventInteractionProgression})
+  {["Customer details Page" "right" "Payment Page" "left" "expected_next"] :pageContextExpectedNext
+   ["Customer details Page" "top" "Customer details add_payment_info" "bottom" "alternative"] :pageToEventAlternative
+   ["Customer details add_payment_info" "bottom" "Payment Page" "top" "merge"] :eventToPageMerge
+   ["Customer details page_view" "right" "Customer details add_payment_info" "left" "expected_next"] :eventInteractionExpectedNext})
 (defn runtime009-example-key [example]
-  (let [row (mapv #(support/example-value example %) ["source" "target" "meaning"])]
+  (let [row (mapv #(support/example-value example %) ["source" "source_port" "target" "target_port" "kind"])]
     (when (some identity row)
       (support/assert! (contains? runtime009-examples row) "Unknown runtime009 endpoint example." {:row row})
       (get runtime009-examples row))))

@@ -26,7 +26,8 @@
   (is (true? (boolean (flow-graph/complete-browser-evidence? complete-evidence)))))
 
 (deftest runtime009-examples-have-distinct-evidence-keys
-  (is (= :pageContextProgression (flow-graph/runtime009-example-key {"source" "Customer details Page" "target" "Payment Page"})))
-  (is (= :eventExpectedWithinPage (flow-graph/runtime009-example-key {"source" "Customer details Page" "target" "Customer details add_payment_info"})))
-  (is (= :eventLeadsToNextPage (flow-graph/runtime009-example-key {"source" "Customer details add_payment_info" "target" "Payment Page"})))
-  (is (= :eventInteractionProgression (flow-graph/runtime009-example-key {"source" "Customer details page_view" "target" "Customer details add_payment_info"}))))
+  (is (= :pageContextExpectedNext (flow-graph/runtime009-example-key {"source" "Customer details Page" "source_port" "right" "target" "Payment Page" "target_port" "left" "kind" "expected_next"})))
+  (is (= :pageToEventAlternative (flow-graph/runtime009-example-key {"source" "Customer details Page" "source_port" "top" "target" "Customer details add_payment_info" "target_port" "bottom" "kind" "alternative"})))
+  (is (= :eventToPageMerge (flow-graph/runtime009-example-key {"source" "Customer details add_payment_info" "source_port" "bottom" "target" "Payment Page" "target_port" "top" "kind" "merge"})))
+  (is (= :eventInteractionExpectedNext (flow-graph/runtime009-example-key {"source" "Customer details page_view" "source_port" "right" "target" "Customer details add_payment_info" "target_port" "left" "kind" "expected_next"})))
+  (is (thrown? clojure.lang.ExceptionInfo (flow-graph/runtime009-example-key {"source" "Customer details Page" "source_port" "right" "target" "Payment Page" "target_port" "top" "kind" "merge"}))))

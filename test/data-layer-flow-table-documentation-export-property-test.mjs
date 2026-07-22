@@ -10,7 +10,7 @@ import {
 
 const permutations=(values)=>values.length<2?[values]:values.flatMap((value,index)=>permutations(values.filter((_,candidate)=>candidate!==index)).map((rest)=>[value,...rest]));
 const occurrences=[{id:"cart",pageGroupId:"checkout"},{id:"shipping",pageGroupId:"shipping"},{id:"payment",pageGroupId:"payment"},{id:"confirmation",pageGroupId:"confirmation"}];
-const relationships=[{sourceNodeId:"cart",targetNodeId:"shipping",kind:"parallel"},{sourceNodeId:"cart",targetNodeId:"payment",kind:"parallel"},{sourceNodeId:"shipping",targetNodeId:"confirmation",kind:"merge"},{sourceNodeId:"payment",targetNodeId:"confirmation",kind:"merge"}];
+const relationships=[{sourceNodeId:"cart",targetNodeId:"shipping",kind:"alternative"},{sourceNodeId:"cart",targetNodeId:"payment",kind:"alternative"},{sourceNodeId:"shipping",targetNodeId:"confirmation",kind:"merge"},{sourceNodeId:"payment",targetNodeId:"confirmation",kind:"merge"}];
 for(const shuffledOccurrences of permutations(occurrences))for(const shuffledRelationships of permutations(relationships))assert.deepEqual(orderFlowDocumentationOccurrenceIds(shuffledOccurrences,shuffledRelationships,["checkout","shipping","payment","confirmation"]),{ids:["cart","shipping","payment","confirmation"],labels:{cart:"1",shipping:"2a",payment:"2b",confirmation:"3"}});
 
 const compiled=(value)=>({status:"ready",properties:{"/unsafe":{presence:"required",expectedValue:value,origins:[{contributorId:"profile",contributorName:"Profile",scope:"Shared Profile"}],superseded:[]}},conflicts:[],provenance:[],exclusions:[]});
