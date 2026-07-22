@@ -16,15 +16,16 @@ Feature: Data layer Flow table documentation export
   # Data layer Flow table documentation export 002
   Scenario: Data layer Flow table documentation export 002
     When the operator includes documentation columns
-      | Page         | Event                | Event role      |
-      | Cart         | page_view            | context-setting |
-      | Shipping     | add_shipping_info    | interaction     |
-      | Payment      | add_payment_info     | interaction     |
-      | Confirmation | purchase             | interaction     |
+      | Page         | Event             |
+      | Cart         | page_view         |
+      | Shipping     | add_shipping_info |
+      | Payment      | add_payment_info  |
+      | Confirmation | purchase          |
     Then every selected column shows its Step label, Page name, and Event name
     And human selectors persist stable Page-frame and Event-occurrence references
     And every column compiles the effective Page and Event branches at that occurrence
-    And context-setting is explanatory Event metadata rather than a binding or separate compiler path
+    And every Page frame establishes context while every Event occurrence is an interaction
+    And no documentation selector, heading, or stored configuration contains a documentary role
     And raw IDs are absent from headings and selection controls
 
   # Data layer Flow table documentation export 003

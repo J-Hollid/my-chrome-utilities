@@ -141,10 +141,15 @@ only the frame's placement-group reference: ordered Page Group memberships,
 inheritance, and effective schema remain unchanged. Empty edge targets do not render
 as permanent lane-sized groups; compact free frames sandwich the named bands only
 where content exists. The Page frame itself is the Page context and may exist
-without any Event. Context-setting and interaction Events use one direct Page-
-contained occurrence model; role and trigger are explanatory metadata, not a
-validation selector. Event occurrences retain free, including side-by-side,
-coordinates inside an expanding Page frame and cannot leave that frame.
+without any Event. Every Page is context-setting and every Event occurrence is an
+interaction; Event creation, editing, catalog insertion, occurrence detail, export,
+and storage expose no documentary role selector or value. An optional Event trigger
+remains descriptive metadata and cannot change those fixed semantics or select a
+validation target. Events can be inserted into a Page frame by pointer activation
+after selecting the frame, pointer drop on the visible canvas frame, or keyboard
+activation. Each successful insertion appears immediately on canvas and outline.
+Event occurrences retain free, including side-by-side, coordinates inside an
+expanding Page frame and cannot leave that frame.
 
 Every Page insertion creates a new Flow Page-instance even when that Page already
 appears in the same Flow or lane. Instances retain distinct stable frame and schema-

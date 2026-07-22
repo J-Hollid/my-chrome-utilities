@@ -24,8 +24,8 @@ The following earlier clauses are explicitly superseded:
 The Flow workspace behaves as a graphical specification editor. An operator selects
 and orders existing Page Groups to define top-to-bottom horizontal lane bands,
 places Page components left to right or in vertical branches inside eligible bands
-or transient free-page edge regions, positions reusable context-setting and
-interaction Events freely inside Page frames, and draws directed relationships
+or transient free-page edge regions, positions reusable interaction Events freely
+inside context-setting Page frames, and draws directed relationships
 between visible left, right, top, and bottom Page-frame and Event-occurrence ports.
 The connected port pair determines whether the relationship is expected_next,
 alternative, or merge, and every relationship may remain unlabelled. Event nodes
@@ -128,18 +128,24 @@ belongs to that Page; the Flow graph does not introduce another validation selec
 
 ### Events define reusable Page-contained components
 
-The Events catalog provides searchable predefined context-setting and interaction
-Events. Dropping or keyboard-inserting either role into a Page frame creates the
-same kind of distinct Page-contained occurrence with stable Page-frame and Event
-references. A context-setting occurrence may document a trigger such as initial
-load or SPA route change. Its role and trigger explain the specification; they do
-not choose the production validation target.
+The Events catalog provides searchable predefined interaction Events. Every Page
+frame establishes context and every Event occurrence is an interaction, so Event
+creation, Event editing, catalog insertion, occurrence detail, and storage expose
+no documentary role selector or value. An optional Event trigger may describe
+initial load, SPA route change, submission, or another interaction, but it does not
+change those fixed semantics or choose the production validation target.
+
+Pointer activation inserts an Event into the selected Page frame, pointer drag may
+drop it directly on a visible canvas Page frame, and keyboard activation inserts it
+into the selected Page frame. Each successful route creates one distinct occurrence
+that immediately appears in the canvas and synchronized outline.
 
 The same Event may be reused in multiple frames without duplicating or mutating its
 definition or schema. No Event insertion, Page placement, compiler, export, or
 assignment path requires a separate Page-context binding. Legacy binding-backed
-graph occurrences migrate to direct Event references with their role and trigger
-preserved; no parallel binding model remains editable or authoritative.
+graph occurrences migrate to direct Event references with optional triggers
+preserved and documentary role fields removed; no parallel binding or role model
+remains editable or authoritative.
 
 An Event occurrence cannot be moved into another Page frame or Page Group. To use
 it elsewhere, the operator inserts the predefined Event again.
@@ -223,7 +229,7 @@ The main Flow workspace owns:
 - Page Group selection, ordering, and guarded removal;
 - repeatable Page-instance insertion and transient before-lanes and after-lanes
   free-page targets;
-- context-setting and interaction Event insertion through one occurrence model;
+- pointer, canvas-drop, and keyboard interaction-Event insertion into Page frames;
 - free Page and Event positioning within their respective containment boundaries;
 - Page-frame and Event-occurrence left, right, top, and bottom ports, port-pair kind
   inference, and drawing;
@@ -252,7 +258,7 @@ Reload preserves:
 - Page-frame identities, shared Page references, containment, and sparse instance
   schema contributions;
 - free Page-frame before-lanes or after-lanes region and coordinates;
-- Event occurrence references, roles, and documentary triggers;
+- Event occurrence references and optional documentary triggers without role fields;
 - Page-frame and Event-occurrence presentation coordinates;
 - selected item and viewport where applicable; and
 - relationship identity, endpoints, inferred kind, group, optional label,
@@ -310,8 +316,9 @@ make the three main-workspace catalogs authoritative.
 
 Implement Page Group lane selection/order, horizontal-band Page layout, free edge
 placement for grouped and ungrouped Pages without membership mutation, multi-
-membership named-lane eligibility, side-by-side reusable Event insertion,
-assignment-owned Page resolution, legacy binding migration, and guarded movement.
+membership named-lane eligibility, side-by-side reusable Event insertion through
+pointer activation, canvas drop, and keyboard activation, assignment-owned Page
+resolution, legacy binding and role migration, and guarded movement.
 
 ### Phase C — graphical relationship authoring
 
@@ -340,8 +347,8 @@ runtime feature.
 | F03 | Swimlanes remain hardcoded | Flow 002 | Empty Flow has no lanes; selected Page Groups exclusively define ordered lanes | Flow repository and lane projection | Stored stable references and rendered lane labels | A, B | No Context, Shipping, Payment, Merge, or other fallback exists |
 | F04 | Lane ordering is hidden in Inspector | Flow 003 | Main-workspace reorder produces top-to-bottom horizontal bands and guards removal | Lane commands and revision store | Order change, measured band order, and blocked removal evidence | B | Reordering changes projection without identity changes |
 | F05 | Pages need Page Group-aware insertion | Flow 004 | Page search, owner labels, valid-lane insert, invalid-lane repair | Page membership resolver and frame command | Stable IDs and no-op rejection | B | A Page cannot be inserted into a group outside its memberships |
-| F06 | Page itself is context and assignment already resolves applicability | Flow 005; Layering 007 | Context-setting Events use ordinary Page-contained occurrences with role and trigger | Event occurrence command, assignment resolver, and legacy migration | Direct Page-frame and Event references, assignment evidence, absent binding state | B, D | No Page or Event action requires or consults a context binding |
-| F07 | Interaction Events must be reusable components | Flow 006 | Drag and keyboard insertion into Page frames | Event catalog and occurrence command | Same Event ID, distinct occurrence IDs | B | Reuse does not duplicate the Event or schema |
+| F06 | Page itself is context and assignment already resolves applicability | Flow 005; Layering 007 | Every Page is context-setting and every Event is interaction, with no documentary role selector or stored role | Event editor, catalog and occurrence commands, assignment resolver, and migration | Three installed insertion routes, direct Page-frame and Event references, fixed labels, absent role and binding state | B, D | Pointer activation, canvas drop, and keyboard activation add Events while no Page or Event action selects or stores a role |
+| F07 | Interaction Events must be reusable components | Flow 006 | Visible canvas and outline projection for repeated insertion into Page frames | Event catalog and occurrence command | Same Event ID, distinct occurrence IDs, two rendered targets | B | Reuse does not duplicate the Event or schema and each insertion is immediately visible |
 | F08 | Free Pages are rendered as one permanent lane after all Page Groups | Flow 007 | Transient left and right edge targets create compact frames without Event prerequisites | Free-frame command, edge-target UI, and layout projection | Target geometry, stored region and coordinates, absent placement-group and binding IDs | B | No free-page pseudo-lane, empty lane-sized background, or binding prerequisite remains |
 | F09 | Events cannot be laid out side by side | Flow 008 | Free Event positions expand the owning Page and reject boundary crossing | Pointer/keyboard layout adapter, Page geometry, and repository | Distinct coordinates after reload and unchanged revision on rejection | B | Events retain authored positions inside their Page without semantic mutation |
 | F10 | Relationships are limited to Event-to-Event and side-only ports | Flow 009 | Page-to-Page, Page-to-Event, Event-to-Page, and Event-to-Event drawing through left, right, top, and bottom ports | Pointer adapter, typed endpoint and port model, SVG renderer, and relationship command | Actual pointer events, all three valid port pairs, and one canonical relationship for each endpoint combination | C | Every supported endpoint combination infers expected_next, alternative, or merge without source/target or kind form submission |
@@ -352,7 +359,7 @@ runtime feature.
 | F15 | Renames and reload can corrupt human projections | Flow 014 | New names with unchanged IDs, coordinates, topology, and meaning | Catalog subscriptions, repository, renderer | Before/after stable references and reload evidence | D | Renames change labels only |
 | F16 | Isolated tests can mask the wrong interface | Flow 015 | Fresh branching Flow built entirely through installed main-workspace controls | Built extension, production storage, Flow UI, and effective-schema example projection | End-to-end control trace, typed canonical records, coordinates, and derived JSON | D | Terminal result has horizontal bands, mixed endpoints, free Events, derived JSON, and no binding model or forbidden state |
 | F17 | Grouped Pages cannot use free entry or exit placement | Flow 016 | Pointer and keyboard move grouped or ungrouped frames between edge regions and eligible lanes | Layout command, membership stack, schema compiler, focus adapter, and reload projection | Stable identities and memberships, absent free placement group, unchanged effective schema, restored focus and sides | B, D | Edge placement changes presentation only and never weakens membership or schema inheritance |
-| F18 | Existing binding-backed projects must not preserve a parallel model | Flow 017 | Human migration review converts referenced legacy records to direct Event occurrences with one Undo | Project migration, occurrence repository, and relationship store | Stable identities and endpoints, direct Event role and trigger, absent legacy keys | A, D | Migrated canonical state contains no contextEventBindings or contextBindingId |
+| F18 | Existing binding-backed projects must not preserve a parallel model | Flow 017 | Human migration review converts referenced legacy records to Page context plus direct interaction Event occurrences with one Undo | Project migration, Event and occurrence repositories, and relationship store | Stable identities and endpoints, retained triggers, fixed labels, absent binding and role keys | A, D | Migrated canonical state contains no contextEventBindings, contextBindingId, or documentary role field |
 | F19 | A multi-group Page may use any applicable selected lane | Flow 018 | All eligible targets identify valid; pointer and keyboard placement preserve semantic state | Lane eligibility resolver, Page-frame command, and canvas projection | Target states, placement reference, stable membership/schema/content identities, and rejected write evidence | B, D | Moving between eligible lanes changes only frame placement and coordinates |
 | F20 | Membership edits must not orphan Flow frames or move them implicitly | Flow 019 | Reorder leaves placement stable; in-use removal blocks with named repairs | Membership command, frame dependency index, impact review, and Undo | Stable lane after reorder, byte-identical rejection, reassigned frame, affected-output feedback | B, D | Membership removal cannot leave a frame in an ineligible lane |
 | F21 | Flow lanes and branches use the wrong geometry | Flow 020 | Page Group lanes are top-to-bottom horizontal bands containing left-to-right Pages and vertical branches | Canvas layout projection, coordinate persistence, and edge router | Measured band geometry, authored Page coordinates, split/merge edges, and reload evidence | B, C, D | Checkout renders the authored main route and upper branch without fixed columns or vertical-list normalization |
@@ -369,7 +376,9 @@ scenarios through the built extension, and packaging consumes that same build.
 Terminal evidence must prove a fresh Flow can be completed with the Inspector
 closed. It must also prove that free Pages use transient left and right edge targets
 rather than a permanent ungrouped lane, and that Page context comes from assignment
-rules while every Event role uses direct Page containment. A grouped Page must use
+rules while every Event occurrence is an interaction with no role field. Pointer
+activation, pointer drop on the visible canvas frame, and keyboard activation must
+each add an Event and update canvas plus outline. A grouped Page must use
 either free edge region without losing membership or inherited schema, and a multi-
 membership Page must move between eligible selected lanes without changing its
 membership order or effective schema. The installed graph must prove horizontal

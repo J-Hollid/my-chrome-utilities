@@ -49,10 +49,10 @@ are stored beneath the controls.
 
 - Every column targets one Flow Event occurrence contained by a Page frame and
   compiles both applicable Page and Event branches.
-- A context-setting role and trigger may explain `Cart / page_view` as initial load
-  or `Cart / route_view` as an SPA change, but they do not create a distinct binding
-  or compiler path. Interaction occurrences such as `Shipping / add_shipping_info`
-  use the same column model.
+- Every Page frame establishes context and every Event occurrence is an interaction.
+  Optional trigger text may explain `Cart / page_view` as initial load or
+  `Cart / route_view` as an SPA change without creating a role selector, stored role,
+  distinct binding, or compiler path.
 
 Flow selection provides the documentary Page/Event context for export. Production
 validation continues to resolve Page applicability through assignment rules and the

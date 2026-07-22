@@ -54,14 +54,21 @@ Feature: Data layer directional Flow specification graph runtime
     And installed guidance opens Shipping membership without a free-form lane control
 
   # Data layer directional Flow specification graph runtime 005
-  Scenario: Data layer directional Flow specification graph runtime 005
-    Given the production Cart frame contains no Event occurrence
-    And production page_view and route_view are context-setting Events
-    When actual pointer controls insert page_view with trigger Initial load
-    And installed keyboard controls insert route_view with trigger SPA route change
-    Then both production records use the Page-contained Event occurrence shape used by interactions
-    And canonical storage retains stable Cart, Checkout, Event, and occurrence IDs plus role and trigger
-    And stored Page and Flow records contain no context-binding, copied schema, or lane-name field
+  Scenario Outline: Data layer directional Flow specification graph runtime 005
+    Given the production <page> Page frame is selected and has no <event> occurrence
+    And production Event <event> has optional trigger <trigger>
+    When the installed Events catalog performs <insertion>
+    Then one rendered <event> occurrence appears inside <page> on the SVG canvas and synchronized outline
+    And rendered node kinds are context-setting Page <page> and interaction Event <event>
+    And canonical storage contains stable Page-frame, Page Group, Event, and occurrence IDs plus optional trigger <trigger>
+    And production Event creation, Event editing, catalog insertion, and occurrence detail contain no Documentary role selector
+    And serialized Event definitions and occurrences contain no role, context binding, copied schema, or lane-name key
+
+    Examples:
+      | page     | event             | trigger           | insertion                                                         |
+      | Cart     | page_view         | Initial load      | activate page_view from the Events catalog by pointer             |
+      | Shipping | add_shipping_info | Form submitted    | drag add_shipping_info onto the visible SVG Shipping frame        |
+      | Payment  | add_payment_info  | Payment submitted | activate add_payment_info from the Events catalog by keyboard     |
 
   # Data layer directional Flow specification graph runtime 006
   Scenario: Data layer directional Flow specification graph runtime 006
@@ -72,6 +79,7 @@ Feature: Data layer directional Flow specification graph runtime
       | container | Event ID          | occurrence ID |
       | Cart      | add_shipping_info | distinct      |
       | Shipping  | add_shipping_info | distinct      |
+    And both installed occurrences render in their Page frames and the synchronized outline
     And the Event definition, reusable schema, memberships, and first occurrence bytes remain unchanged
 
   # Data layer directional Flow specification graph runtime 007
@@ -161,10 +169,10 @@ Feature: Data layer directional Flow specification graph runtime
 
   # Data layer directional Flow specification graph runtime 014
   Scenario: Data layer directional Flow specification graph runtime 014
-    Given the production rename fixture has one context-setting Event node, one interaction Event node, and their directed edge
+    Given the production rename fixture has one context-setting Page frame, two interaction Event nodes, and their directed edges
     When actual collection controls rename Checkout to Basket, Cart to Basket page, and add_payment_info to payment_details_added
     Then installed canvas, catalogs, popover, and outline render the new names
-    And canonical Page Group, Page, Event, occurrence, relationship, role, and trigger values remain byte-identical
+    And canonical Page Group, Page, Event, occurrence, relationship, and trigger values remain byte-identical
     When the built extension reloads
     Then production lane order, containment, coordinates, selection, endpoints, and relationship meaning are unchanged
 
@@ -202,13 +210,14 @@ Feature: Data layer directional Flow specification graph runtime
 
   # Data layer directional Flow specification graph runtime 017
   Scenario: Data layer directional Flow specification graph runtime 017
-    Given the production migration fixture stores Cart page_view and route_view nodes through legacy Page binding records
+    Given the production migration fixture stores Cart page_view and route_view nodes through legacy Page binding records and documentary roles
     When the built extension opens that Checkout journey
     Then installed migration review renders each human Page, Event, trigger, and affected occurrence without raw IDs
     When actual controls confirm migration
     Then migration preserves the complete topology and layout under the original occurrence identities
-    And migrated occurrences directly store Event IDs, context-setting roles, and triggers
-    And serialized production Page and Flow records have no contextEventBindings or contextBindingId key
+    And the migrated canvas presents Cart as Page context and both Events as interactions
+    And migrated occurrences directly store Event IDs and optional triggers without role keys
+    And serialized production Page, Event, and Flow records have no contextEventBindings, contextBindingId, or documentary role key
     When actual Undo runs once
     Then production storage equals the complete pre-migration revision
 

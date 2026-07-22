@@ -55,14 +55,21 @@ Feature: Data layer directional Flow specification graph
     And guidance opens Shipping Page Group membership without offering a free-form lane value
 
   # Data layer directional Flow specification graph 005
-  Scenario: Data layer directional Flow specification graph 005
-    Given Cart Page frame has no Event occurrences
-    And page_view and route_view are predefined as context-setting Events
-    When the operator inserts page_view by pointer with trigger Initial load
-    And inserts route_view by keyboard with trigger SPA route change
-    Then both use the same Page-contained Event occurrence model as interaction Events
-    And each persists stable Cart, Checkout, Event, and occurrence references with its role and trigger
-    And no Page-context binding, copied schema, or lane-name string is stored
+  Scenario Outline: Data layer directional Flow specification graph 005
+    Given <page> Page frame is selected and has no occurrence of <event>
+    And predefined Event <event> has optional trigger <trigger>
+    When the operator <insertion>
+    Then one <event> occurrence appears immediately inside <page> on the canvas and synchronized outline
+    And <page> is identified as a context-setting Page while <event> is identified as an interaction Event
+    And canonical storage retains stable Page-frame, Page Group, Event, and occurrence references plus optional trigger <trigger>
+    And Event creation, Event editing, catalog insertion, and occurrence detail expose no Documentary role selector
+    And no Event definition or occurrence stores a context-setting or interaction role, Page-context binding, copied schema, or lane-name string
+
+    Examples:
+      | page     | event             | trigger           | insertion                                                     |
+      | Cart     | page_view         | Initial load      | activates page_view from the Events catalog by pointer        |
+      | Shipping | add_shipping_info | Form submitted    | drags add_shipping_info onto the visible canvas Shipping frame |
+      | Payment  | add_payment_info  | Payment submitted | activates add_payment_info from the Events catalog by keyboard |
 
   # Data layer directional Flow specification graph 006
   Scenario: Data layer directional Flow specification graph 006
@@ -73,6 +80,7 @@ Feature: Data layer directional Flow specification graph
       | container | Event reference   | occurrence identity |
       | Cart      | add_shipping_info | distinct            |
       | Shipping  | add_shipping_info | distinct            |
+    And both occurrences are visible in their Page frames and the synchronized outline
     And neither Event definition, reusable schema, Page membership, nor the first occurrence changes
 
   # Data layer directional Flow specification graph 007
@@ -162,10 +170,10 @@ Feature: Data layer directional Flow specification graph
 
   # Data layer directional Flow specification graph 014
   Scenario: Data layer directional Flow specification graph 014
-    Given a rename fixture has one context-setting Event node, one interaction Event node, and their directed edge
+    Given a rename fixture has one context-setting Page frame, two interaction Event nodes, and their directed edges
     When Page Group Checkout is renamed Basket, Page Cart is renamed Basket page, and Event add_payment_info is renamed payment_details_added
     Then canvas, catalogs, popover, and outline show the new human names
-    And stored Page Group, Page, Event, occurrence, role, trigger, and relationship values remain byte-for-byte stable
+    And stored Page Group, Page, Event, occurrence, trigger, and relationship values remain byte-for-byte stable
     When the Flow is reloaded
     Then lane order, Page-frame containment, free positions, selection, directed endpoints, and relationship meaning are unchanged
 
@@ -203,13 +211,14 @@ Feature: Data layer directional Flow specification graph
 
   # Data layer directional Flow specification graph 017
   Scenario: Data layer directional Flow specification graph 017
-    Given a saved legacy Checkout journey has Cart page_view and route_view nodes that reference Page-owned binding records
+    Given a saved legacy Checkout journey has Cart page_view and route_view nodes that reference Page-owned binding records and store documentary roles
     When the operator opens the journey after the occurrence-model upgrade
     Then migration review names each Page, Event, trigger, and affected occurrence without exposing raw IDs
     When the operator confirms migration
     Then every affected occurrence keeps its identity, Page-frame containment, position, and relationship endpoints
-    And each occurrence directly stores its Event reference, context-setting role, and trigger
-    And canonical Page and Flow records contain no contextEventBindings or contextBindingId field
+    And Cart is the context-setting Page and both migrated Event occurrences are interactions
+    And each occurrence directly stores its Event reference and optional trigger without a role field
+    And canonical Page, Event, and Flow records contain no contextEventBindings, contextBindingId, or documentary role field
     And one page-scoped Undo restores the complete pre-migration Saved Draft
 
   # Data layer directional Flow specification graph 018

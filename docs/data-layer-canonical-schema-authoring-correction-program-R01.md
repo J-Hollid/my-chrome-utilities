@@ -160,10 +160,10 @@ applicable Shared Profiles -> ordered Page Group stack -> Page -> Flow Page inst
 An Event occurrence outside Page containment compiles only applicable Shared
 Profiles, Event, and occurrence contributions. An Event occurrence inside a Flow
 Page instance combines both branches. The Page or Page instance is itself the
-context; a context-setting role or trigger on an Event occurrence is documentation
-metadata and creates no separate binding or composition path. Page or Page Group
-membership is never invented for an Event, and moving a canvas occurrence cannot
-alter its containing Page or Page Group contract.
+context, and every Event occurrence is an interaction. Optional trigger text is
+documentation metadata and creates no separate role, binding, or composition path.
+Page or Page Group membership is never invented for an Event, and moving a canvas
+occurrence cannot alter its containing Page or Page Group contract.
 
 More-specific contributions may narrow inherited allowed values, add compatible
 rules, or explicitly replace an ordinary inherited expectation at the same
@@ -356,8 +356,9 @@ selection.
 For an observed data-layer Event, the assignment resolver uses the observed Event
 identity and Page applicability evidence such as URL, pathname, `page_name`, or
 other authored predicates. It does not require a Flow context-binding record. Flow
-context-setting roles and triggers explain documentary intent but cannot alter the
-assignment winner or validation schema.
+Page context and optional Event triggers may explain documentary intent, but no
+Event role can be selected or stored and neither can alter the assignment winner or
+validation schema.
 
 The selected-context developer export shows the complete effective property tree,
 inherited and local differences, conditions, documentation, examples, activation,
