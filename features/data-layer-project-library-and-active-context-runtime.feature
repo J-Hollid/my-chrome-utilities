@@ -47,7 +47,7 @@ Feature: Data layer project library and active context runtime
     Then the installed review names both project identities and every project-bound surface that will change
     When selection storage changes from project-retail to project-trade through the review
     Then active-project persistence contains only project-trade
-    And production Shared Profiles, Page Groups, Pages, Events, Applicability, Flows, Fixtures, Schemas, Assignments, documentation, and Studio projections contain no Retail website record
+    And production Shared Profiles, Page Groups, Pages, Events, Applicability, Flows, Fixtures, Assignments, documentation, and Studio projections contain no Retail website record
     And serialized project-retail remains saved and inactive
 
   # Data layer project library and active context runtime 005
@@ -129,7 +129,6 @@ Feature: Data layer project library and active context runtime
       | Applicability   | Retail checkout   | Add Applicability Set     | Create Applicability Set         | Applicability Set |
       | Flows           | Checkout journey  | Add Flow                  | Create Flow                      | Flow              |
       | Fixtures        | Valid purchase    | Add Fixture               | Create Fixture                   | Fixture           |
-      | Schemas         | Purchase payload  | Add Schema                | Create Schema                    | Schema            |
       | Assignments     | Retail Purchase   | Add Assignment            | Create Assignment                | Assignment        |
 
   # Data layer project library and active context runtime 012
@@ -147,11 +146,10 @@ Feature: Data layer project library and active context runtime
       | Shared Profiles | Add Shared Profile        | reusable schema rules and documentation               |
       | Page Groups     | Add Page Group            | shared Page context and inherited requirements         |
       | Pages           | Add Page                  | observable Page context and specific requirements      |
-      | Events          | Add Event                 | reusable interaction or context-setting event          |
+      | Events          | Add Event                 | reusable interaction schema and documentation           |
       | Applicability   | Add Applicability Set     | named observation matching and assignment eligibility |
       | Flows           | Add Flow                  | documentary journey topology                           |
       | Fixtures        | Add Fixture               | saved per-Event validation evidence                    |
-      | Schemas         | Add Schema                | canonical payload definition and Draft lineage         |
       | Assignments     | Add Assignment            | production schema selection for matching observations  |
 
   # Data layer project library and active context runtime 013
@@ -204,11 +202,11 @@ Feature: Data layer project library and active context runtime
       | Events          | Purchase           |
       | Applicability   | Retail checkout    |
       | Flows           | Checkout journey   |
-      | Schemas         | Purchase payload   |
       | Assignments     | Retail Purchase    |
       | Fixtures        | Valid purchase     |
     And the built Specification Studio reloads
     Then each installed overview restores exactly its created row with Open and Remove controls
     And each row opens its dedicated project-scoped workspace
     And the production Inspector DOM contains no generic Add entity form, entity-kind selector, or exclusive removal action
+    And the installed Studio and serialized project contain no Schemas overview, Add Schema route, or schemaDrafts collection
     And canonical project-retail storage owns every created stable ID and reference exactly once

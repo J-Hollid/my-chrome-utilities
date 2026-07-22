@@ -290,3 +290,21 @@ Feature: Data layer layered schema constraints runtime
     When actual controls expand the funnel_step row
     Then type, presence, expected or allowed values, conditions, rules, documentation, example, provenance, Override here, and Reset to parents render as stacked row detail
     And closing the row returns focus to funnel_step while the other production rows remain mounted
+
+  # Data layer layered schema constraints runtime 020
+  Scenario Outline: Data layer layered schema constraints runtime 020
+    Given production <target> has canonical contributions from <effective contributors>
+    And it remains authorable, compilable, and documented with no assignment record
+    When actual controls create Retail Purchase assignment for Purchase observations and select <target>
+    Then persisted assignment data contains that stable contributor ID and kind
+    And repository inspection finds no standalone Schema, schemaDraftId, or copied schema document
+    And production validation compiles current effective values from <effective contributors>
+    And every other unassigned contributor remains operable without a missing-assignment diagnostic
+
+    Examples:
+      | target                                  | effective contributors                    |
+      | Shared Profile Sitewide                 | Sitewide                                  |
+      | Page Group Checkout                     | Sitewide and Checkout                     |
+      | Page Cart                               | Sitewide, Checkout, and Cart              |
+      | Event Purchase                          | Sitewide and Purchase                     |
+      | Flow Page instance Alternative shipping | Sitewide, Shipping, Cart, and Alternative shipping |

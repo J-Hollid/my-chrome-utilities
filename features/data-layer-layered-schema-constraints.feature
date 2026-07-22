@@ -290,3 +290,21 @@ Feature: Data layer layered schema constraints
     When the operator expands the funnel_step row
     Then its type, presence, expected or allowed values, conditions, rules, documentation, example, provenance, Override here, and Reset to parents controls appear as a stacked row detail
     And closing the row restores focus to funnel_step without hiding the other property rows
+
+  # Data layer layered schema constraints 020
+  Scenario Outline: Data layer layered schema constraints 020
+    Given <target> has canonical schema contributions from <effective contributors>
+    And no assignment is required to create, edit, inherit, compile, or document that target
+    When the operator creates Retail Purchase assignment for Purchase observations and selects <target>
+    Then the assignment identifies that stable contributor target and its kind
+    And it stores no standalone Schema, schemaDraftId, or copied schema payload
+    And automatic validation compiles the live effective schema from <effective contributors>
+    And every other unassigned contributor remains available without a missing-assignment warning
+
+    Examples:
+      | target                                  | effective contributors                    |
+      | Shared Profile Sitewide                 | Sitewide                                  |
+      | Page Group Checkout                     | Sitewide and Checkout                     |
+      | Page Cart                               | Sitewide, Checkout, and Cart              |
+      | Event Purchase                          | Sitewide and Purchase                     |
+      | Flow Page instance Alternative shipping | Sitewide, Shipping, Cart, and Alternative shipping |

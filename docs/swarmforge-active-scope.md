@@ -211,15 +211,14 @@ deep-link inside the owning project but do not own the workspace.
 
 Every top-level Studio collection overview owns its type-specific Add action and
 human-named Open and Remove row actions. The covered collections are Shared
-Profiles, Page Groups, Pages, Events, Applicability, Flows, Fixtures, Schemas, and
+Profiles, Page Groups, Pages, Events, Applicability, Flows, Fixtures, and
 Assignments. Add opens a guided project-scoped creation page in the main workspace;
 Open uses the entity's dedicated workspace; Remove performs named dependency impact
 review and never silently cascades. Guided empty states expose the same Add route.
 The contextual Inspector contains no generic Add entity form, entity-kind selector,
-or exclusive removal action. Schemas use the canonical schema model with Draft
-status rather than restoring a parallel lightweight Schema-draft editor. Flow Page
-instances and Event occurrences remain created within the canvas, not as top-level
-collections.
+or exclusive removal action. There is no standalone Schemas collection, Add Schema
+route, or `schemaDrafts` storage. Flow Page instances and Event occurrences remain
+created within the canvas, not as top-level collections.
 
 The global Saved Schema Library remains usable without active project context.
 Adoption safely activates the chosen project and creates one project-owned Draft
@@ -298,6 +297,15 @@ occurrence; incompatible parallel rules block until explicitly resolved. The
 checkpoint supports automatic applicability, manual assignment, or explicit
 Documentation-only activation and includes only the effective-schema developer
 export for a selected context.
+
+An Assignment optionally targets one stable Shared Profile, Page Group, Page,
+Event, or Flow Page-instance identity and kind. The compiler derives that target's
+live effective schema from its inheritance and sparse local facets; assignments
+store no standalone Schema, `schemaDraftId`, or compiled payload copy. Every
+schema-bearing entity remains authorable, compilable, documentable, and available
+for manual use without an Assignment, and none is synthesized. Versioned project
+upgrade converts legacy schemaDrafts to Shared Profiles and remaps their Assignment
+targets without losing canonical content, lineage, or identity.
 
 A Page owns one ordered general-to-specific list of Page Group memberships. Group
 member views derive from that list. Applicable groups compile in relative order, but

@@ -45,7 +45,7 @@ Feature: Data layer project library and active context
     Then the consequence review names the current and target projects and every project-bound surface that will change
     When the operator authorizes replacement of project-retail by project-trade
     Then project-trade is the sole active project identity
-    And Shared Profiles, Page Groups, Pages, Events, Applicability, Flows, Fixtures, Schemas, Assignments, documentation, and Specification Studio show only Trade portal records
+    And Shared Profiles, Page Groups, Pages, Events, Applicability, Flows, Fixtures, Assignments, documentation, and Specification Studio show only Trade portal records
     And Retail website remains saved without becoming a second active context
 
   # Data layer project library and active context 005
@@ -127,7 +127,6 @@ Feature: Data layer project library and active context
       | Applicability   | Retail checkout   | Add Applicability Set     | Create Applicability Set         | Applicability Set |
       | Flows           | Checkout journey  | Add Flow                  | Create Flow                      | Flow              |
       | Fixtures        | Valid purchase    | Add Fixture               | Create Fixture                   | Fixture           |
-      | Schemas         | Purchase payload  | Add Schema                | Create Schema                    | Schema            |
       | Assignments     | Retail Purchase   | Add Assignment            | Create Assignment                | Assignment        |
 
   # Data layer project library and active context 012
@@ -145,11 +144,10 @@ Feature: Data layer project library and active context
       | Shared Profiles | Add Shared Profile        | reusable schema rules and documentation               |
       | Page Groups     | Add Page Group            | shared Page context and inherited requirements         |
       | Pages           | Add Page                  | observable Page context and specific requirements      |
-      | Events          | Add Event                 | reusable interaction or context-setting event          |
+      | Events          | Add Event                 | reusable interaction schema and documentation           |
       | Applicability   | Add Applicability Set     | named observation matching and assignment eligibility |
       | Flows           | Add Flow                  | documentary journey topology                           |
       | Fixtures        | Add Fixture               | saved per-Event validation evidence                    |
-      | Schemas         | Add Schema                | canonical payload definition and Draft lineage         |
       | Assignments     | Add Assignment            | production schema selection for matching observations  |
 
   # Data layer project library and active context 013
@@ -201,11 +199,11 @@ Feature: Data layer project library and active context
       | Events          | Purchase           |
       | Applicability   | Retail checkout    |
       | Flows           | Checkout journey   |
-      | Schemas         | Purchase payload   |
       | Assignments     | Retail Purchase    |
       | Fixtures        | Valid purchase     |
     And the operator reloads Specification Studio
     Then every overview restores exactly its created row with Open and Remove actions
     And each row opens its dedicated project-scoped workspace
     And the contextual Inspector contains no generic Add entity form, entity-kind selector, or exclusive removal action
+    And no Schemas overview, Add Schema route, or schemaDrafts collection exists
     And one canonical project graph owns every created stable identity and reference

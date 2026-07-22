@@ -2,10 +2,11 @@ Feature: Data layer project portability and upgrade runtime
 
   # Data layer project portability and upgrade runtime 001
   Scenario: Data layer project portability and upgrade runtime 001
-    Given production project-retail is active with a Saved Draft based on Published revision 3 and contains metadata, schemas, Pages, Page Groups, Events, Flows, occurrences, applicability, assignments, documentation settings, and adopted-schema lineage
+    Given production project-retail is active with a Saved Draft based on Published revision 3 and contains metadata, canonical contributors, Pages, Page Groups, Events, Flows, occurrences, applicability, assignments, documentation settings, and adopted-schema lineage
     When actual Projects controls export Retail website
     Then one downloaded versioned bundle identifies project-retail, its Saved Draft, and base Published revision 3
     And parsed bundle data contains the complete canonical project graph with resolvable stable references
+    And parsed assignment records contain contributor targets with no schemaDrafts collection or compiled-schema copy
     And it contains no unadopted library schema, permission, Live observation, compilation cache, interface state, or Undo history
     And storage hash, selected context, Saved Draft, and Published revision match their pre-export values
 
@@ -17,7 +18,7 @@ Feature: Data layer project portability and upgrade runtime
     And canonical project storage is unchanged before confirmation
     When actual controls confirm Import as new project
     Then production stores inactive Retail website copy with new project and project-owned entity identities
-    And serialized parent, membership, occurrence, assignment, and Flow references point to the remapped identities
+    And serialized parent, membership, occurrence, assignment contributor target, and Flow references point to the remapped identities
     And external Saved Schema Library lineage still names its original source revision
     And production project-retail plus every prior library entry remains byte-identical
     When actual controls open the imported project
@@ -39,11 +40,14 @@ Feature: Data layer project portability and upgrade runtime
 
   # Data layer project portability and upgrade runtime 004
   Scenario: Data layer project portability and upgrade runtime 004
-    Given production storage has only singleton Legacy shop project project-legacy with metadata, storage generation 9, project graph, navigation, and Undo history
+    Given production storage has only singleton Legacy shop project project-legacy with metadata, storage generation 9, project graph, navigation, Undo history, and Purchase payload in schemaDrafts
+    And serialized Retail Purchase assignment references that legacy schema draft
     When the installed project-library migration runs
     Then one atomic repository write creates one Legacy shop entry with unchanged project and entity identities
     And active-project persistence becomes project-legacy
     And every pre-upgrade content hash for metadata, Draft, graph, and navigation is conserved
+    And production Shared Profiles contain Purchase payload with its canonical content, lineage, and identity
+    And serialized Retail Purchase targets that Shared Profile with no schemaDrafts collection remaining
     And production project state contains no Undo or Redo while a recoverable backup retains their legacy bytes and checksum
     When the extension reloads twice
     Then repository bytes contain one unmigrated-again Legacy shop entry and the same active identity

@@ -350,10 +350,17 @@ No data is discarded merely because it came from a superseded representation.
 ## Selection, export, and validation boundary
 
 An effective schema target may be selected by matcher-driven applicability, an
-explicit human-readable Flow/Page/Event selection, or marked Documentation only.
+explicit human-readable contributor selection, or marked Documentation only.
 Stable references are persisted beneath those controls. Matcher tests expose failed
 predicates and overlapping candidates; equal-priority ambiguity blocks automatic
 selection.
+
+Assignments optionally target one Shared Profile, Page Group, Page, Event, or Flow
+Page instance by stable identity and kind. Each target already owns a canonical
+schema contribution, so the compiler derives its live effective inheritance rather
+than reading a standalone Schema, `schemaDraftId`, or copied schema payload. A
+schema-bearing entity needs no Assignment to be authored, compiled, documented, or
+used manually, and the system does not synthesize one.
 
 For an observed data-layer Event, the assignment resolver uses the observed Event
 identity and Page applicability evidence such as URL, pathname, `page_name`, or
@@ -463,8 +470,8 @@ feature.
 | C19 | Override legality must protect inherited contracts | Layering 005 | Deterministic narrowing, invariant, condition, and named replacement rules | Compiler legality matrix | One result per example row | C | All unsafe weakenings block with explanation |
 | C20 | Contextual grouping must not become different schema models | Layering 006 | Exact Page Group, Page, Event, instance, and occurrence reach | Scope resolver and stable-reference store | Inclusion/exclusion and storage evidence | C | Each target receives exactly its contextual contributors |
 | C21 | Automatic applicability and Page context must be explainable | Layering 007 | Human predicates select Page and Event context without a Flow binding | Matcher and assignment resolver | Winner, rejected candidates, overlap evidence, and absent binding lookup | D | Equal-priority overlap cannot silently select a target and no context binding can change the result |
-| C22 | Schemas may be manually assigned | Layering 008 | Human Flow/Page/Event selection uses stable target | Manual assignment resolver | Unified result and stable target identity | D | Manual validation does not claim an automatic winner |
-| C23 | Schemas may exist for documentation only | Layering 009 | Complete export without validation registration | Compiler, exporter, assignment index | Export and absent index entry | D | Documentation-only content creates no runtime ambiguity |
+| C22 | Effective targets may be manually selected | Layering 008 | Human Flow/Page/Event selection uses stable contributor target | Manual assignment resolver | Unified result and stable target identity | D | Manual validation does not claim an automatic winner |
+| C23 | Contributors may exist for documentation only | Layering 009 | Complete export without validation registration | Compiler, exporter, assignment index | Export and absent index entry | D | Documentation-only content creates no runtime ambiguity |
 | C24 | Flow should not force rich editing into Inspector | Layering 010 | Compact optional summary opens the same full main editor and restores canvas state | Flow selection routing and shared editor | Selection, viewport, and save-impact evidence | B, C | Inspector owns no exclusive or parallel schema editor |
 | C25 | MVP assurance is per-Event, not full-Flow validation | Layering 011 | Positive and negative exact-value results with no sequence claim | Assignment and per-Event validator | Exact issue tuple and unified result | D | Invalid 3a fails expected 3b while valid 3b passes |
 | C26 | Developers need the effective values for a concrete occurrence | Layering 012 | Complete selected-context export plus positive and negative validation | Compiler, exporter, validator | Export, provenance, and issue collection | D, E | Summer article occurrence is documented and validated from one compiled schema |
@@ -482,6 +489,7 @@ feature.
 | C38 | Standalone controls can be thinner or different from the established panel editor | Authoring 019 | Representative rich operations round-trip in both directions through purpose-built controls | Shared editor core, command schema, repository subscriptions, and responsive projections | Control availability, command identity, revision equality, canonical bytes, and rendered results | B, E | Every supported panel operation succeeds standalone with the same canonical result and no raw-JSON substitute |
 | C39 | Parity was inverted by mounting the standalone/project editor inside the side panel | Authoring 020 | The panel retains its compact established editor while standalone uses a wide table over the same canonical commands | Surface-specific renderers, canonical command adapter, repository subscriptions, and responsive layout | Installed side-panel and standalone landmarks, complete control inventories, no nested project editor, command identity, revision equality, and 360px measurements | B, E | The side panel remains fully usable with its established compact controls and the standalone workspace independently provides complete parity |
 | C40 | Saved-schema adoption drops separate documentation and rule-derived values | Authoring 021 and 022 | Adoption immediately projects property documentation, exact and allowed rule values, and conditional required presence into the canonical Table | Saved-schema adoption adapter, canonical property mapper, Table projection, compiler, validator, and repository | Three rule forms, rendered documentation, value, presence, and condition cells, retained optional metadata, compiled outcomes, reload, provenance, and source hash | A, B, C, E | Adopted Shared Profile rows show source documentation and all mapped rule facets without re-entry while the Saved Schema remains unchanged |
+| C41 | schemaDrafts duplicates canonical contributors | Layering 020 | Assignments optionally target Shared Profile, Page Group, Page, Event, or Flow Page instance and compile its live effective schema | Assignment editor, target resolver, contributor compiler, repository, and migration | Five target kinds, persisted identity and kind, effective contributors, absent copied payload and schemaDraftId, unassigned contributor behavior, and legacy migration | A, C, D, E | Production selection uses contributor targets with no standalone Schemas collection or schemaDrafts storage |
 
 ## Terminal acceptance
 
@@ -490,7 +498,7 @@ no findings, the focused `layered_schema` acceptance pack passes against the bui
 extension, and packaging consumes that same built output. The terminal evidence must
 show:
 
-- one adopted project schema, one property identity, and one revision across
+- one adopted project contributor, one property identity, and one revision across
   Builder, Table, side panel, reload, compilation, and validation;
 - lossless adoption of separately stored property documentation and attached exact-
   value, allowed-values, or conditional required rule projections into the canonical
@@ -502,6 +510,8 @@ show:
 - bidirectional standalone parity for structural, type, presence, value, rule,
   documentation, example, lifecycle, impact, and page-scoped Undo/Redo operations;
 - the same rich controls at all contributor levels;
+- optional Assignment targeting for all five eligible contributor kinds, with live
+  effective compilation, no synthesized assignments, and no schemaDrafts model;
 - direct Page and Page Group composed-schema workspaces with all effective rows
   visible, field-level provenance, inline edits, and expandable complex builders;
 - Page-local ordinary overrides that warn rather than disappear when a parent is

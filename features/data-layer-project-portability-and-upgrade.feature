@@ -2,10 +2,11 @@ Feature: Data layer project portability and upgrade
 
   # Data layer project portability and upgrade 001
   Scenario: Data layer project portability and upgrade 001
-    Given active Retail website has a Saved Draft based on Published revision 3 with metadata, schemas, Pages, Page Groups, Events, Flows, occurrences, applicability, assignments, documentation settings, and adopted-schema lineage
+    Given active Retail website has a Saved Draft based on Published revision 3 with metadata, canonical contributors, Pages, Page Groups, Events, Flows, occurrences, applicability, assignments, documentation settings, and adopted-schema lineage
     When the operator exports Retail website from the Projects tab
     Then one versioned project bundle identifies project-retail, its Saved Draft, and base Published revision 3
     And it contains the complete project-owned canonical graph and stable internal references
+    And it contains assignment contributor targets without a schemaDrafts collection or copied compiled schemas
     And it excludes unadopted Saved Schema Library records, browser permissions, Live observations, cached compilation, transient interface state, and Undo history
     And export changes neither the active project, Saved Draft, nor Published revision 3
 
@@ -17,7 +18,7 @@ Feature: Data layer project portability and upgrade
     And no project is created before confirmation
     When the reviewed new-project transaction is accepted
     Then one inactive imported project named Retail website copy receives a new project identity and new identities for every project-owned record
-    And every internal parent, membership, occurrence, assignment, and Flow reference is remapped to those new identities
+    And every internal parent, membership, occurrence, assignment contributor target, and Flow reference is remapped to those new identities
     And external Saved Schema Library lineage continues to identify its original source revision
     And active Retail website plus every pre-existing project remains byte-identical
     When the operator opens the imported project
@@ -39,11 +40,14 @@ Feature: Data layer project portability and upgrade
 
   # Data layer project portability and upgrade 004
   Scenario: Data layer project portability and upgrade 004
-    Given the pre-library installation contains one singleton Legacy shop project with stable identity project-legacy, metadata, storage generation 9, project graph, navigation, and Undo history
+    Given the pre-library installation contains one singleton Legacy shop project with stable identity project-legacy, metadata, storage generation 9, project graph, navigation, Undo history, and Purchase payload in schemaDrafts
+    And Retail Purchase assignment references that legacy schema draft
     When the project-library upgrade runs
     Then one atomic migration creates a Legacy shop library entry without changing project-legacy or its project-owned identities
     And project-legacy becomes the active project
     And metadata, current Draft, project graph, and navigation remain available
+    And Purchase payload becomes a Shared Profile with its complete canonical content, lineage, and identity
+    And Retail Purchase targets that Shared Profile while no schemaDrafts collection remains
     And prior Undo and Redo are absent from the migrated project while a recoverable legacy backup retains their bytes
     And the migration notice states that project content was preserved but prior Undo and Redo were not migrated
     And reloading does not migrate, duplicate, or reset the project again

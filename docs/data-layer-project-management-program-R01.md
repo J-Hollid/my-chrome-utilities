@@ -105,7 +105,7 @@ library and the target becomes the sole active identity.
 
 Side panel and Specification Studio subscribe to the same active-context record.
 They replace project projections only after activation commits. Shared Profiles,
-Page Groups, Pages, Events, Applicability, Flows, Fixtures, Schemas, Assignments,
+Page Groups, Pages, Events, Applicability, Flows, Fixtures, Assignments,
 documentation, and selected entities must not show a mixture from two projects
 during or after the switch.
 
@@ -144,13 +144,21 @@ Each top-level project collection has an overview in Specification Studio:
 - Applicability;
 - Flows;
 - Fixtures;
-- Schemas; and
 - Assignments.
 
-`Schemas` exposes the canonical schema entity and its Draft state. It does not
-restore a separate lightweight `Schema drafts` editor or another schema model. Flow
-Page instances and Event occurrences remain contextual graph components created in
-their owning Flow and Page frame rather than misleading top-level collections.
+There is no separate `Schemas` overview, Add Schema route, or `schemaDrafts`
+collection. Shared Profiles, Page Groups, Pages, Events, and Flow Page instances
+already own canonical schema contributions. Flow Page instances and Event
+occurrences remain contextual graph components created in their owning Flow and
+Page frame rather than misleading top-level collections.
+
+An Assignment optionally targets one stable Shared Profile, Page Group, Page,
+Event, or Flow Page-instance identity. The target's live effective schema is
+compiled from its canonical inheritance and sparse local contribution; an
+Assignment stores neither a standalone schema nor a copied compiled payload.
+Schema-bearing entities do not require Assignments for creation, editing,
+compilation, documentation, or manual use, and no Assignment is synthesized for
+them.
 
 Every populated overview provides a type-specific `Add <entity>` contextual primary
 action. Each row provides accessible `Open <name>` and `Remove <name>` actions. An
@@ -209,7 +217,7 @@ latest fully persisted Saved Draft; a pending failed write must be resolved befo
 export can claim that Draft. One versioned project bundle includes:
 
 - project metadata, Saved Draft state, and base Published revision;
-- canonical schemas and inheritance references;
+- canonical contributors and inheritance references;
 - Pages, Page Groups, Events, Flows, occurrences, applicability, and assignments;
 - documentation configuration; and
 - complete adopted-schema definitions with external source lineage.
@@ -233,7 +241,7 @@ change.
 
 Successful import always assigns a new project identity and new stable identities
 to project-owned records, then remaps every internal parent, membership,
-occurrence, assignment, and Flow reference. External Saved Schema Library lineage
+occurrence, assignment contributor target, and Flow reference. External Saved Schema Library lineage
 continues to identify its original source revision. Existing projects remain byte-
 identical. The imported project is inactive until the operator explicitly opens it.
 Replace, append, and merge into an existing project are not part of this release.
@@ -304,13 +312,13 @@ pair. `Portability NNN` refers to
 | P11 | Project export may omit required graph data or leak transient state | Portability 001 | One versioned persisted-Draft bundle has complete graph and explicit exclusions | Serializer, reference walker, and download adapter | Parsed bundle, resolvable references, excluded categories, unchanged revision | D | Exported project is self-contained without runtime or UI residue |
 | P12 | Import can overwrite an existing project or preserve colliding IDs | Portability 002 | Staged Import as new project remaps owned identities and leaves source inactive | Parser, migrator, remapper, atomic repository commit | Review, new IDs, mapped references, lineage, prior bytes, and compiled result | D, E | Imported graph resolves independently and no prior project changes |
 | P13 | Invalid import can partially mutate the library | Portability 003 | Exact malformed, version, and dangling-reference blockers disable commit | Format validator and transaction boundary | Focused blocker, disabled action, byte equality, counts, and active ID | D | Every invalid bundle produces zero repository writes |
-| P14 | Existing singleton projects need lossless upgrade | Portability 004 | One atomic migration preserves identity, current state, and navigation while omitting page-scoped history | Legacy adapter, durable repository migration, backup, and marker | Before/after graph, active ID, absent active history, history backup, reload count, and recovery bytes | A, E | One reloadable library entry replaces the singleton without duplication or persisted Undo/Redo |
+| P14 | Existing singleton projects need lossless upgrade | Portability 004 | One atomic migration preserves identity, current state, and navigation, converts legacy schemaDrafts to Shared Profiles, remaps Assignment targets, and omits page-scoped history | Legacy adapter, durable repository migration, backup, and marker | Before/after graph, contributor and target identities, absent schemaDrafts, active ID, absent active history, history backup, reload count, and recovery bytes | A, E | One reloadable library entry replaces the singleton without schemaDrafts, duplication, dangling targets, or persisted Undo/Redo |
 | P15 | Components could pass without a coherent installed workflow | Portability 005 | Visible create, edit, switch, Studio, export, import, open, and reload sequence | Installed side panel, Studio, repository, serializer, and router | Operator event trace, active-ID history, project bytes, remapped graph, and reloaded DOM | E | Exactly one project remains active and every project stays isolated end to end |
-| P16 | Entity creation is a generic Inspector form | Context 011 | Every collection overview owns a named Add action and type-specific main-workspace creation page | Studio collection router, canonical creation commands, and Inspector composition | Nine rendered overviews, creation routes, row actions, absent generic kind selector, and canonical IDs | C, E | Every top-level entity can be added, opened, and offered for removal with the Inspector closed |
-| P17 | Empty collections provide no self-guiding start | Context 012 | Guided empty states explain purpose, example, prerequisites, consumers, and the same Add action | Collection projection, guidance model, keyboard router, and focus adapter | Nine zero-record views, guidance fields, creation route identity, and focused heading | C, E | An empty overview starts its entity workflow without Inspector or internal collection knowledge |
+| P16 | Entity creation is a generic Inspector form | Context 011 | Every collection overview owns a named Add action and type-specific main-workspace creation page | Studio collection router, canonical creation commands, and Inspector composition | Eight rendered overviews, creation routes, row actions, absent generic kind selector, and canonical IDs | C, E | Every top-level entity can be added, opened, and offered for removal with the Inspector closed |
+| P17 | Empty collections provide no self-guiding start | Context 012 | Guided empty states explain purpose, example, prerequisites, consumers, and the same Add action | Collection projection, guidance model, keyboard router, and focus adapter | Eight zero-record views, guidance fields, creation route identity, and focused heading | C, E | An empty overview starts its entity workflow without Inspector or internal collection knowledge |
 | P18 | Safe removal is not available from the overview | Context 013 | A named row action opens impact review, removes one entity, reports consequences, and supports identity-preserving Undo | Dependency index, project command repository, evidence invalidation, and focus adapter | Review counts, one removed ID, unaffected bytes, result, Undo identity, and focus sequence | C, E | Removing an unreferenced entity is atomic, explained, reversible, and Inspector-independent |
 | P19 | Removing a referenced entity can cascade or leave dangling state | Context 014 | Removal blocks and deep-links every human-named dependency until explicitly repaired | Cross-collection dependency index, removal guard, and entity routes | Named Flow, Assignment, and Fixture dependencies, disabled confirmation, byte equality, and enabled action after repairs | C, E | No referenced entity is deleted implicitly or leaves a dangling reference |
-| P20 | Collection lifecycle controls fail at narrow widths or keyboard operation | Context 015–016 | Deterministic focus, labelled controls, one-scroll layout, and a nine-collection installed workflow | Responsive Studio UI, accessibility tree, production repository, and reload subscriptions | Overflow measurements, accessible names, focus destinations, created IDs, restored rows, and absent Inspector form | C, E | All nine collections complete Add, Open, and Remove discovery through visible production controls |
+| P20 | Collection lifecycle controls fail at narrow widths or keyboard operation | Context 015–016 | Deterministic focus, labelled controls, one-scroll layout, and an eight-collection installed workflow | Responsive Studio UI, accessibility tree, production repository, and reload subscriptions | Overflow measurements, accessible names, focus destinations, created IDs, restored rows, and absent Inspector form | C, E | All eight collections complete Add, Open, and Remove discovery through visible production controls |
 
 ## Assumptions and deferred decisions
 
@@ -320,8 +328,9 @@ pair. `Portability NNN` refers to
 - Project archive, delete, simultaneous windows pinned to different projects,
   replace import, and cross-project merge require later approved specifications.
 - Fixture and Assignment collection creation, opening, and guarded removal are
-  active here; fixture execution, release publication, Live evaluation, assignment-
-  resolver redesign, and temporal Flow enforcement are not activated.
+  active here. Assignment contributor targeting replaces schemaDraft targeting;
+  fixture execution, release publication, Live evaluation beyond that target
+  resolution, and temporal Flow enforcement are not activated.
 
 ## Terminal acceptance
 
@@ -331,7 +340,7 @@ the built extension, and packaging consumes that same build. Terminal evidence m
 show visible project creation and metadata, one active identity throughout every
 switch, complete cross-surface context replacement, project-owned Studio routing,
 portable export, atomic remapped import, reload persistence, and no cross-project
-entity leakage. It must also create and restore one entity through each of the nine
+entity leakage. It must also create and restore one entity through each of the eight
 collection overviews with the Inspector closed, prove the generic Inspector form is
 absent, and demonstrate safe and dependency-blocked removal through production
 commands.
