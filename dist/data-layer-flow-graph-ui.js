@@ -748,7 +748,7 @@ export function installFlowGraphBuilder(options) {
             exampleHost.setAttribute("width", String(nodeWidth - 8));
             exampleHost.setAttribute("height", "30");
             canvasExample.className = "flow-node-example";
-            canvasExample.style.fontSize = "10px";
+            canvasExample.style.fontSize = "14px";
             canvasExample.style.background = "white";
             canvasExample.addEventListener("toggle", () => { exampleHost.setAttribute("height", canvasExample.open ? "260" : "30"); box.setAttribute("height", String(canvasExample.open ? nodeHeight + 230 : nodeHeight + 12)); });
             exampleHost.append(canvasExample);
