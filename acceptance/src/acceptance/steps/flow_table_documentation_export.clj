@@ -8,7 +8,7 @@
   ["features/data-layer-flow-table-documentation-export.feature"
    "features/data-layer-flow-table-documentation-export-runtime.feature"])
 (def entry-modes
-  {"Checkout journey contains Cart page_view, Shipping add_shipping_info, Payment add_payment_info, and Confirmation purchase contexts" :model
+  {"Checkout journey relates Cart, Shipping, Payment, and Confirmation context-setting Page events" :model
    "the built extension is running with the production Flow editor, canonical compiler, table exporter, clipboard, and download adapter" :runtime})
 (defonce model-verified? (atom false))
 (defonce browser-observation (atom nil))
