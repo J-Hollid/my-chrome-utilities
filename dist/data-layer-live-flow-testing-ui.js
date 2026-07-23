@@ -1,6 +1,23 @@
 import { attachLiveFlowDefect, completeLiveFlowTest, createLiveFlowTest, liveFlowCandidateEvents, liveFlowChoices, liveFlowGraphNodes, matchLiveFlowEvent, selectLiveFlow, selectLiveFlowStep, startLiveFlowPath } from "./data-layer-live-flow-testing.js";
 const button = (text, run) => { const control = document.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 const option = (value, text) => { const item = document.createElement("option"); item.value = value; item.textContent = text; return item; };
+const historyItem = (entry) => {
+    const item = document.createElement("li"), summary = document.createElement("p"), sources = document.createElement("p");
+    summary.textContent = `${entry.stepName} · ${entry.eventId} · revision ${entry.effectiveSchemaRevision} · ${entry.effectiveSchemaRevisionIdentity} · ${entry.status}${entry.defectId ? ` · defect ${entry.defectId}` : ""}`;
+    sources.textContent = `Schema sources: ${entry.provenance.map(({ scope, contributorName }) => `${scope} ${contributorName}`).join(" → ") || "none"}`;
+    item.append(summary, sources);
+    if (entry.issues.length) {
+        const issues = document.createElement("ul");
+        issues.setAttribute("aria-label", `Validation issues for ${entry.stepName}`);
+        for (const issue of entry.issues) {
+            const row = document.createElement("li");
+            row.textContent = `${issue.path} · ${issue.code} · expected ${JSON.stringify(issue.expected)} · actual ${JSON.stringify(issue.actual)} · ${issue.provenance}`;
+            issues.append(row);
+        }
+        item.append(issues);
+    }
+    return item;
+};
 export function mountLiveFlowTestingUi(options) {
     const openControl = options.root.querySelector("#open-live-flow-test"), host = options.root.querySelector("#live-flow-test");
     if (!openControl || !host)
@@ -25,11 +42,8 @@ export function mountLiveFlowTestingUi(options) {
             const untested = document.createElement("p");
             untested.textContent = completed.unchosenAlternatives.length ? `${completed.unchosenAlternatives.length} unchosen alternatives · Not tested` : "No unchosen alternatives";
             const history = document.createElement("ol");
-            for (const entry of completed.history) {
-                const item = document.createElement("li");
-                item.textContent = `${entry.stepName} · ${entry.eventId} · revision ${entry.effectiveSchemaRevision} · ${entry.status}${entry.defectId ? ` · defect ${entry.defectId}` : ""}`;
-                history.append(item);
-            }
+            for (const entry of completed.history)
+                history.append(historyItem(entry));
             summary.append(label, untested, history);
             host.append(summary);
             if (!project) {
@@ -110,8 +124,7 @@ export function mountLiveFlowTestingUi(options) {
             const history = document.createElement("ol");
             history.id = "live-flow-run-history";
             for (const entry of run.history) {
-                const item = document.createElement("li");
-                item.textContent = `${entry.stepName} · ${entry.eventId} · revision ${entry.effectiveSchemaRevision} · ${entry.status}${entry.defectId ? ` · defect ${entry.defectId}` : ""}`;
+                const item = historyItem(entry);
                 if (entry.issues.length && !entry.defectId)
                     item.append(button("Create defect report", () => { const event = options.events().find(({ id: eventId }) => eventId === entry.eventId); if (event)
                         options.onDefect?.(entry, event); }));

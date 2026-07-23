@@ -50,12 +50,14 @@ function restoredLiveEvent(entry) {
         id: entry.id,
         name: entry.name,
         sourceId: entry.sourceId,
+        ...(entry.sourceName ? { sourceName: entry.sourceName } : {}),
         captureTime,
         ...(entry.sourceKind ? { sourceKind: entry.sourceKind } : {}),
         ...(entry.pageUrl ? { pageUrl: entry.pageUrl } : {}),
         ...(entry.payload !== undefined ? { payload: structuredClone(entry.payload) } : {}),
         ...(entry.rawInput !== undefined ? { rawInput: structuredClone(entry.rawInput) } : {}),
         ...(entry.validation ? { validation: entry.validation } : {}),
+        ...(entry.validationDetails ? { validationDetails: structuredClone(entry.validationDetails) } : {}),
     };
 }
 export function restoreFreshSessionLiveObserver(base, sessionState) {

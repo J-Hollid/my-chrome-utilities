@@ -14,10 +14,12 @@ export interface DataLayerEventEntry {
   id?: string;
   sessionId?: string;
   sourceId?: string;
+  sourceName?: string;
   sourceKind?: string;
   pageUrl?: string;
   rawInput?: unknown;
   validation?: string;
+  validationDetails?: unknown;
   provenance?: string;
 }
 
