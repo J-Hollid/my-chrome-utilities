@@ -44,7 +44,7 @@ export function documentaryFlowGraph(project, flowId) { const graph = storedGrap
 export function flowPageGroupLaneIds(project, flowId) { return storedGraph(project, flowId).pageGroupIds; }
 export function flowOccurrenceEventSchema(project, flowId, occurrenceId) {
     const occurrence = storedGraph(project, flowId).occurrences.find(({ id }) => id === occurrenceId), event = project.collections.events.find(({ id }) => id === occurrence?.eventId);
-    return event?.schemaDraftId ?? event?.schemaId;
+    return event?.id;
 }
 function validOccurrence(state, flowId, input) {
     if ("contextBindingId" in input)

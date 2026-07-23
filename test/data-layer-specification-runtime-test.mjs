@@ -30,8 +30,8 @@ const retailApplicability=add("applicabilitySets",{name:"Retail checkout applica
 const tradeApplicability=add("applicabilitySets",{name:"Trade checkout applicability",priority:10,condition:{kind:"all",conditions:[{kind:"predicate",field:"flowId",operator:"equals",value:tradeFlow.id}]}});
 state=createProjectSchemaDraft(state,{schemaId:"schema-retail",name:"Retail requirements",baseRevision:3,description:"Retail"},id);
 state=createProjectSchemaDraft(state,{schemaId:"schema-trade",name:"Trade requirements",baseRevision:4,description:"Trade"},id);
-state=saveProjectAssignment(state,{name:"Retail route",schemaId:"schema-retail",eventId:purchase.id,eventName:"purchase",applicabilitySetId:retailApplicability.id,sourceId:"event-history",target:"payload",priority:10,versionPolicy:"pinned",schemaRevision:3},id);
-state=saveProjectAssignment(state,{name:"Trade route",schemaId:"schema-trade",eventId:purchase.id,eventName:"purchase",applicabilitySetId:tradeApplicability.id,sourceId:"event-history",target:"payload",priority:10,versionPolicy:"pinned",schemaRevision:4},id);
+state=saveProjectAssignment(state,{name:"Retail route",targetId:"schema-retail",targetKind:"Shared Profile",eventId:purchase.id,eventName:"purchase",applicabilitySetId:retailApplicability.id,sourceId:"event-history",target:"payload",priority:10},id);
+state=saveProjectAssignment(state,{name:"Trade route",targetId:"schema-trade",targetKind:"Shared Profile",eventId:purchase.id,eventName:"purchase",applicabilitySetId:tradeApplicability.id,sourceId:"event-history",target:"payload",priority:10},id);
 state={...state,project:{...state.project,publicationPolicy:{...state.project.publicationPolicy,fixturesRequired:false}}};state=publishCompiledRelease(state,{id,write:()=>{}});
 storage.setItem(SPECIFICATION_PROJECT_STORAGE_KEY,JSON.stringify(state));
 

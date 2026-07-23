@@ -74,20 +74,4 @@ export function migrateCanonicalProject(input) {
         conflicts,
     };
 }
-export function applyCanonicalSchemaDraftEdits(state, editedSchemas) {
-    const byId = new Map(editedSchemas.map((schema) => [schema.id, schema]));
-    const schemaDrafts = (state.project.collections.schemaDrafts ?? []).map((schema) => (byId.has(schema.id)
-        ? clone(byId.get(schema.id))
-        : schema));
-    return {
-        ...state,
-        project: {
-            ...state.project,
-            collections: { ...state.project.collections, schemaDrafts },
-        },
-        ...(state.draft
-            ? { draft: { ...state.draft, status: "Saved", updatedAt: new Date().toISOString() } }
-            : {}),
-    };
-}
 //# sourceMappingURL=data-layer-specification-model.js.map

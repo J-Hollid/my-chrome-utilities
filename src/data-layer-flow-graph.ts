@@ -59,7 +59,7 @@ const normalizedOccurrence=(input:ValidatedOccurrence):Omit<ProjectEntity,"id">=
 export function documentaryFlowGraph(project:SpecificationProject,flowId:string):DocumentaryFlowGraph{const graph=storedGraph(project,flowId);return{pageGroupIds:graph.pageGroupIds,pageFrames:graph.pageFrames,occurrences:graph.occurrences,relationships:graph.relationships,...(graph.selectedItem?{selectedItem:graph.selectedItem}:{}),...(graph.viewport?{viewport:graph.viewport}:{})};}
 export function flowPageGroupLaneIds(project:SpecificationProject,flowId:string):readonly string[]{return storedGraph(project,flowId).pageGroupIds;}
 export function flowOccurrenceEventSchema(project:SpecificationProject,flowId:string,occurrenceId:string):unknown{
-  const occurrence=storedGraph(project,flowId).occurrences.find(({id})=>id===occurrenceId),event=project.collections.events.find(({id})=>id===occurrence?.eventId);return event?.schemaDraftId??event?.schemaId;
+  const occurrence=storedGraph(project,flowId).occurrences.find(({id})=>id===occurrenceId),event=project.collections.events.find(({id})=>id===occurrence?.eventId);return event?.id;
 }
 function validOccurrence(state:ProjectState,flowId:string,input:FlowOccurrenceInput):ValidatedOccurrence{
   if("contextBindingId" in input)throw new Error("A legacy Page-context binding is migration input and cannot be authored as a Flow occurrence.");

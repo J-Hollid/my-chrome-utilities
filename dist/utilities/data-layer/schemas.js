@@ -8,7 +8,6 @@ export { SCHEMA_LIBRARY_STORAGE_KEY, addLiveSchemaPropertyDeclaration, addManual
 export { applyArrayValidationRollups, buildValidationPropertyTree, presentValidationPropertyTree, propertyValidationSummary, validationVisual } from "../../data-layer-live-validation-presentation.js";
 export { allowedValueExpansionAvailability } from "../../data-layer-allowed-value-expansion.js";
 export { FLOW_INSTANCES_STORAGE_KEY, FLOW_ROUTING_STORAGE_KEY, SPECIFICATION_PROJECT_STORAGE_KEY, recordSpecificationCapture, recordSpecificationNavigation, recordSpecificationRuntimeObservation } from "./layers/browser/schemas.js";
-export { applyCanonicalSchemaDraftEdits } from "./layers/browser/schemas.js";
 export { commitCanonicalProjectState, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, serializeCanonicalProjectState, subscribeCanonicalProjectChanges } from "./layers/browser/schemas.js";
 export { beginCompactCanonicalHistoryTransition, compactCanonicalHistoryKey, compactCanonicalHistorySettlement, compactCanonicalPageHistory, completeCompactCanonicalHistoryTransition, prepareCompactCanonicalRedo, prepareCompactCanonicalUndo, recordCompactCanonicalMutation, rejectCompactCanonicalHistoryTransition } from "./layers/browser/schemas.js";
 export { appendSharedProfileConstraint, mountSidePanelLayeredProfileEditor, renderSidePanelComposedSchemaContext, sharedProfilePropertyPaths } from "./layers/browser/schemas.js";

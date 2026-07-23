@@ -6,7 +6,7 @@ const contributionFor = (entity, scope) => {
     const canonical = entity.canonicalSchema;
     const requirements = (entity.requirements ?? []).map((requirement) => ({ ...requirement, ...(requirement.required ? { presence: "required" } : requirement.forbidden ? { presence: "forbidden" } : {}) }));
     const base = canonical ? canonicalConstraints(canonical) : (entity.schemaConstraints ?? requirements), sparse = entity.localSchemaContributions ?? [];
-    return { id: entity.id, name: entity.name, scope, constraints: [...base, ...sparse] };
+    return { id: entity.id, name: entity.name, scope, revision: Number(entity.revision ?? entity.version ?? 1), constraints: [...base, ...sparse] };
 };
 const referencedId = (entity, key) => typeof entity[key] === "string" ? String(entity[key]) : undefined;
 const referencedProfileId = (state, entity) => {

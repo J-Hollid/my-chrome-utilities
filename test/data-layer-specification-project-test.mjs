@@ -16,7 +16,6 @@ import {
   exportSpecificationProject,
   importSpecificationProject,
   migrateLegacyLibrary,
-  mergeProjectSchemasIntoLibrary,
   projectPreflight,
   publishProjectRelease,
   redoProjectTransaction,
@@ -44,7 +43,7 @@ let state = createSpecificationProject({
 assert.equal(state.project.name,"Shop data specification");
 assert.equal(state.project.currentRelease,undefined);
 assert.equal(state.draft.status,"Saved");
-assert.deepEqual(Object.keys(state.project.collections),["profiles","pages","pageGroups","events","applicabilitySets","flows","fixtures","schemaDrafts","assignments"]);
+assert.deepEqual(Object.keys(state.project.collections),["profiles","pages","pageGroups","events","applicabilitySets","flows","fixtures","assignments"]);
 
 const add = (kind, entity) => { state = addProjectEntity(state, kind, entity, id); return state.project.collections[kind].at(-1); };
 const sitewide = add("profiles",{name:"Sitewide",requirements:[{path:"/page_type",type:"string",required:true}]});
@@ -191,34 +190,24 @@ assert.ok(coverage.rows.every((row)=>row.issueLink.startsWith("?kind=")));
 
 let integrated = createSpecificationProject({name:"Integrated lifecycle",site:"shop.example",id});
 integrated = createProjectSchemaDraft(integrated,{schemaId:"schema-sitewide",name:"Sitewide page context",baseRevision:1,description:"Shared envelope"},id);
-const publishedBeforeAssignments = JSON.stringify(integrated.project.collections.schemaDrafts[0].publishedRevision);
+const contributorBeforeAssignments = JSON.stringify(integrated.project.collections.profiles[0]);
 const nestedConditions = {kind:"all",conditions:[{kind:"predicate",field:"payload.funnel_id",operator:"equals",value:"retail"},{kind:"not",conditions:[{kind:"predicate",field:"payload.account_type",operator:"equals",value:"trade"}]}]};
-integrated = saveProjectAssignment(integrated,{name:"Retail",schemaId:"schema-sitewide",eventName:"purchase",sourceId:"event-history",target:"payload",priority:10,versionPolicy:"pinned",schemaRevision:1,condition:nestedConditions},id);
-integrated = saveProjectAssignment(integrated,{name:"Trade",schemaId:"schema-sitewide",eventName:"purchase",sourceId:"event-history",target:"payload",priority:10,versionPolicy:"follow latest",condition:{kind:"all",conditions:[{kind:"predicate",field:"payload.account_type",operator:"equals",value:"trade"}]}},id);
+integrated = saveProjectAssignment(integrated,{name:"Retail",targetId:"schema-sitewide",targetKind:"Shared Profile",eventName:"purchase",sourceId:"event-history",target:"payload",priority:10,condition:nestedConditions},id);
+integrated = saveProjectAssignment(integrated,{name:"Trade",targetId:"schema-sitewide",targetKind:"Shared Profile",eventName:"purchase",sourceId:"event-history",target:"payload",priority:10,condition:{kind:"all",conditions:[{kind:"predicate",field:"payload.account_type",operator:"equals",value:"trade"}]}},id);
 assert.equal(integrated.project.collections.assignments.length,2,"assignments are first-class project entities");
-assert.equal(integrated.project.collections.schemaDrafts[0].assignments.length,0,"published assignments must not mutate before release");
-assert.equal(integrated.project.collections.schemaDrafts[0].workingDraft.assignments.length,0,"project routing must not be embedded in a schema copy");
-assert.equal(integrated.project.collections.assignments[0].schemaRevision,1);
-assert.equal(JSON.stringify(integrated.project.collections.schemaDrafts[0].assignments),"[]");
+assert.equal(JSON.stringify(integrated.project.collections.profiles[0]),contributorBeforeAssignments,"assignment routing must not mutate its contributor");
+assert.deepEqual({targetId:integrated.project.collections.assignments[0].targetId,targetKind:integrated.project.collections.assignments[0].targetKind},{targetId:"schema-sitewide",targetKind:"Shared Profile"});
+assert.equal(["schemaDraftId","schemaId","schemaRevision","schemaDocument","compiledSchema"].some((key)=>key in integrated.project.collections.assignments[0]),false,"assignments store no standalone or compiled schema payload");
 const retailAssignment = searchProjectAssignments(integrated.project,"retail").rows[0];
 integrated = saveProjectAssignment(integrated,{...retailAssignment,priority:20},id);
 assert.equal(searchProjectAssignments(integrated.project,"retail").rows[0].id,retailAssignment.id);
 assert.equal(searchProjectAssignments(integrated.project,"retail").rows[0].condition,undefined);
 assert.deepEqual(integrated.project.collections.applicabilitySets.find(({id})=>id===retailAssignment.applicabilitySetId).condition,nestedConditions);
-assert.throws(()=>saveProjectAssignment(integrated,{name:"Blank",schemaId:"",eventName:"",sourceId:"",target:"",priority:0,versionPolicy:"follow latest"},id),/routing fields/);
+assert.throws(()=>saveProjectAssignment(integrated,{name:"Blank",targetId:"",targetKind:"Shared Profile",eventName:"",sourceId:"",target:"",priority:0},id),/routing fields/);
 assert.equal(searchProjectAssignments(integrated.project,"retail").count,1);
 const integratedPublished=publishProjectRelease(integrated,{id,write:()=>{}});
-assert.equal(integratedPublished.project.collections.schemaDrafts[0].workingDraft,undefined);
-assert.equal(integratedPublished.project.collections.schemaDrafts[0].assignments.length,0);
 assert.equal(integratedPublished.project.collections.assignments.length,2);
-assert.equal(integratedPublished.project.collections.schemaDrafts[0].version,2);
-const unrelatedLegacy={id:"schema-legacy",name:"Legacy checkout",version:1,published:true,document:{type:"object"},assignments:[]};
-const staleProjectSchema={id:"schema-sitewide",name:"Stale project copy",version:99,published:true,document:{type:"object"},assignments:[]};
-const authoritativeProjectSchema=integratedPublished.project.collections.schemaDrafts[0];
-const mergedLibrary=mergeProjectSchemasIntoLibrary([unrelatedLegacy,staleProjectSchema],[authoritativeProjectSchema]);
-assert.deepEqual(mergedLibrary.map(({id})=>id),["schema-legacy","schema-sitewide"]);
-assert.equal(mergedLibrary.find(({id})=>id==="schema-legacy"),unrelatedLegacy,"unrelated library schemas must survive project synchronization");
-assert.equal(mergedLibrary.find(({id})=>id==="schema-sitewide"),authoritativeProjectSchema,"project schemas must replace same-ID library copies");
+assert.equal(JSON.stringify(integratedPublished.project.collections.profiles[0]),contributorBeforeAssignments,"publication retains the live contributor instead of producing a schema copy");
 
 let structured = createSpecificationProject({name:"Structured flows",site:"shop.example",id});
 structured = addProjectEntity(structured,"flows",{name:"Retail checkout",steps:[]},id);

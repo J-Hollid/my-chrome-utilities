@@ -113,7 +113,7 @@ for(const [source,target] of [[{x:230,y:70},{x:30,y:70}],[{x:230,y:70},{x:230,y:
 
 let laneSequence=0,laneState=createSpecificationProject({name:"Lane shop",site:"shop.example",id:(kind)=>`${kind}:lane-${++laneSequence}`});
 const laneId=(kind)=>`${kind}:lane-${++laneSequence}`,laneAdd=(kind,entity)=>{laneState=addProjectEntity(laneState,kind,entity,laneId);return laneState.project.collections[kind].at(-1);};
-const laneCheckoutPage=laneAdd("pages",{name:"Checkout"}),laneRoute=laneAdd("events",{name:"route_view",eventName:"route_view",role:"context-setting"}),lanePurchase=laneAdd("events",{name:"Purchase",eventName:"purchase",schemaId:"schema:purchase"});
+const laneCheckoutPage=laneAdd("pages",{name:"Checkout"}),laneRoute=laneAdd("events",{name:"route_view",eventName:"route_view",role:"context-setting"}),lanePurchase=laneAdd("events",{name:"Purchase",eventName:"purchase"});
 const checkoutGroup=laneAdd("pageGroups",{name:"Checkout"}),deliveryGroup=laneAdd("pageGroups",{name:"Delivery"}),confirmationGroup=laneAdd("pageGroups",{name:"Confirmation"}),tradeGroup=laneAdd("pageGroups",{name:"Trade"}),laneFlow=laneAdd("flows",{name:"Checkout journey",steps:[]});laneState={...laneState,project:{...laneState.project,collections:{...laneState.project.collections,pages:laneState.project.collections.pages.map((page)=>page.id===laneCheckoutPage.id?{...page,pageGroupIds:[checkoutGroup.id,deliveryGroup.id,confirmationGroup.id,tradeGroup.id]}:page)}}};const laneCompiledBefore=compileSpecificationProject(createCanonicalProjectEnvelope(laneState.project,"published"));
 laneState=setFlowPageGroupLanes(laneState,laneFlow.id,[checkoutGroup.id,deliveryGroup.id,confirmationGroup.id]);
 laneState=addFlowPageFrame(laneState,laneFlow.id,{pageId:laneCheckoutPage.id,pageGroupId:checkoutGroup.id,x:40,y:40},laneId);laneState=addFlowPageFrame(laneState,laneFlow.id,{pageId:laneCheckoutPage.id,pageGroupId:deliveryGroup.id,x:40,y:40},laneId);
@@ -126,7 +126,7 @@ const initialContext=addLaneOccurrence({pageGroupId:checkoutGroup.id,role:"conte
 assert.throws(()=>setFlowPageGroupLanes(laneState,laneFlow.id,[checkoutGroup.id,confirmationGroup.id]),/reassigned or removed/,"a referenced lane cannot be removed without consequential review");
 for(const occurrenceRecord of [initialContext,routeContext,purchaseOccurrence])assert.equal(["fallbackRole","lane","layout","schema","schemaId","contextBindingId"].some((key)=>key in occurrenceRecord),false,"semantic occurrence storage excludes bindings, lane strings, coordinates, and Event schema copies");
 assert.equal(purchaseOccurrence.position.x,24,"contained occurrences persist their position within the Page frame");assert.equal(initialContext.eventId,laneRoute.id);assert.equal(initialContext.trigger,"Initial load");assert.equal(purchaseOccurrence.eventId,lanePurchase.id);
-assert.equal(flowOccurrenceEventSchema(laneState.project,laneFlow.id,purchaseOccurrence.id),"schema:purchase");
+assert.equal(flowOccurrenceEventSchema(laneState.project,laneFlow.id,purchaseOccurrence.id),lanePurchase.id,"a Flow occurrence resolves its Event contributor identity without a standalone schema reference");
 let laneProjection=projectFlowGraph(laneState.project,laneFlow.id);
 assert.deepEqual(laneProjection.lanes.map(({id,name})=>[id,name]),[[checkoutGroup.id,"Checkout"],[deliveryGroup.id,"Delivery"],[confirmationGroup.id,"Confirmation"]]);
 assert.deepEqual(laneProjection.graph.nodes.map(({pageGroupId,layout})=>[pageGroupId,layout.x,layout.y]),[[checkoutGroup.id,64,130],[checkoutGroup.id,64,250],[deliveryGroup.id,64,774]]);
@@ -143,7 +143,7 @@ const landingPage=laneAdd("pages",{name:"Landing Page"}),campaignPage=laneAdd("p
 let canvasSequence=0,canvasState=createSpecificationProject({name:"Canvas shop",site:"shop.example",id:(kind)=>`${kind}:canvas-${++canvasSequence}`});
 const canvasId=(kind)=>`${kind}:canvas-${++canvasSequence}`,canvasAdd=(kind,entity)=>{canvasState=addProjectEntity(canvasState,kind,entity,canvasId);return canvasState.project.collections[kind].at(-1);};
 const cartPage=canvasAdd("pages",{name:"Cart"}),shippingPage=canvasAdd("pages",{name:"Shipping"});
-const canvasPageView=canvasAdd("events",{name:"page_view",eventName:"page_view",role:"context-setting",schemaId:"schema:page-view"}),canvasPayment=canvasAdd("events",{name:"add_payment_info",eventName:"add_payment_info",schemaId:"schema:payment"});
+const canvasPageView=canvasAdd("events",{name:"page_view",eventName:"page_view",role:"context-setting"}),canvasPayment=canvasAdd("events",{name:"add_payment_info",eventName:"add_payment_info"});
 const canvasCheckout=canvasAdd("pageGroups",{name:"Checkout"}),canvasDelivery=canvasAdd("pageGroups",{name:"Delivery"}),canvasFlow=canvasAdd("flows",{name:"Fresh journey",steps:[]});canvasState={...canvasState,project:{...canvasState.project,collections:{...canvasState.project.collections,pages:canvasState.project.collections.pages.map((page)=>page.id===cartPage.id?{...page,pageGroupIds:[canvasCheckout.id]}:page.id===shippingPage.id?{...page,pageGroupIds:[canvasDelivery.id]}:page)}}};
 assert.deepEqual(documentaryFlowGraph(canvasState.project,canvasFlow.id).pageFrames,[]);
 canvasState=setFlowPageGroupLanes(canvasState,canvasFlow.id,[canvasCheckout.id,canvasDelivery.id]);

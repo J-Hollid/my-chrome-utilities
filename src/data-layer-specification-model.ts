@@ -1,6 +1,5 @@
 import type {
   ProjectEntity,
-  ProjectState,
   SpecificationProject,
 } from "./data-layer-specification-project.js";
 
@@ -134,27 +133,5 @@ export function migrateCanonicalProject(input: {
     sourceProject: clone(input.projectEnvelope.project),
     sourceLibrary: clone(input.schemaLibrary),
     conflicts,
-  };
-}
-
-export function applyCanonicalSchemaDraftEdits(
-  state: ProjectState,
-  editedSchemas: readonly { id: string }[],
-): ProjectState {
-  const byId = new Map(editedSchemas.map((schema) => [schema.id, schema]));
-  const schemaDrafts = (state.project.collections.schemaDrafts??[]).map((schema) => (
-    byId.has(schema.id)
-      ? clone(byId.get(schema.id)!) as unknown as ProjectEntity
-      : schema
-  ));
-  return {
-    ...state,
-    project: {
-      ...state.project,
-      collections: { ...state.project.collections, schemaDrafts },
-    },
-    ...(state.draft
-      ? { draft: { ...state.draft, status: "Saved" as const, updatedAt: new Date().toISOString() } }
-      : {}),
   };
 }

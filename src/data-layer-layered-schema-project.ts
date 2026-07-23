@@ -11,7 +11,7 @@ const contributionFor=(entity:ProjectEntity,scope:LayerScope):LayerContributor=>
   const canonical=entity.canonicalSchema as CanonicalSchemaDocument|undefined;
   const requirements=((entity.requirements as Record<string,unknown>[]|undefined)??[]).map((requirement)=>({...requirement,...(requirement.required?{presence:"required"}:requirement.forbidden?{presence:"forbidden"}:{})})) as LayerConstraint[];
   const base=canonical?canonicalConstraints(canonical):((entity.schemaConstraints as LayerConstraint[]|undefined)??requirements),sparse=(entity.localSchemaContributions as LayerConstraint[]|undefined)??[];
-  return{id:entity.id,name:entity.name,scope,constraints:[...base,...sparse]};
+  return{id:entity.id,name:entity.name,scope,revision:Number(entity.revision??entity.version??1),constraints:[...base,...sparse]};
 };
 const referencedId=(entity:Record<string,unknown>,key:string):string|undefined=>typeof entity[key]==="string"?String(entity[key]):undefined;
 const referencedProfileId=(state:ProjectState,entity:ProjectEntity):string|undefined=>{

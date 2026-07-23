@@ -31,7 +31,6 @@ export { renderSchemaPropertyTypeEditor } from "../../../../data-layer-schema-pr
 export { renderSchemaSpecificationBuilder } from "../../../../data-layer-schema-specification-builder-ui.js";
 export { revalidateCurrentLiveSession } from "../../../../data-layer-schema-publication-refresh.js";
 export { FLOW_INSTANCES_STORAGE_KEY, FLOW_ROUTING_STORAGE_KEY, SPECIFICATION_PROJECT_STORAGE_KEY, recordSpecificationCapture, recordSpecificationNavigation, recordSpecificationRuntimeObservation } from "../../../../data-layer-specification-runtime.js";
-export { applyCanonicalSchemaDraftEdits } from "../../../../data-layer-specification-model.js";
 export { commitCanonicalProjectState, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, serializeCanonicalProjectState, subscribeCanonicalProjectChanges } from "../../../../data-layer-specification-repository.js";
 export { beginCompactCanonicalHistoryTransition, compactCanonicalHistoryKey, compactCanonicalHistorySettlement, compactCanonicalPageHistory, completeCompactCanonicalHistoryTransition, prepareCompactCanonicalRedo, prepareCompactCanonicalUndo, recordCompactCanonicalMutation, rejectCompactCanonicalHistoryTransition } from "../../../../data-layer-compact-canonical-history.js";
 export { adoptSavedSchema, applyCapturedValidationToProfile, capturedValidationDestinationChoices, capturedValidationProfileRequirements, createFixtureFromCapturedValidation, transactProject } from "../../../../data-layer-specification-project.js";
