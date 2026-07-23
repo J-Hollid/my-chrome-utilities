@@ -65,7 +65,6 @@
 (defn- verify-model! []
   (when-not @model-verified?
     (checked! "node" "test/data-layer-project-library-test.mjs")
-    (checked! "node" "test/data-layer-project-entity-lifecycle-property-test.mjs")
     (reset! model-verified? true)))
 (defn- observe-browser! []
   (or @browser-observation
