@@ -1159,7 +1159,7 @@ flowDocumentationExportUi = installFlowDocumentationExportUi({ context: flowBuil
             selectPath();
             return;
         }
-    } layeredSchemaUi?.openGraphOccurrenceSchema(contextId.replace(/^context:/, ""), path); } });
+    } const contributorId = contextId.startsWith("context:frame:") ? contextId.slice("context:frame:".length) : contextId.replace(/^context:/, ""); layeredSchemaUi?.openGraphOccurrenceSchema(contributorId, path); } });
 executableFlowBuilder = installExecutableFlowBuilder({ context: flowBuilderContext, persist, id });
 layeredSchemaUi = installLayeredSchemaUi({ context: () => ({ ...state ? { state } : {}, kind: selectedKind, ...(selectedId ? { entityId: selectedId } : {}) }), persist, onUndo: () => { if (state)
         void durableProjectRuntime.undo(state.project.id); }, onRedo: () => { if (state)
