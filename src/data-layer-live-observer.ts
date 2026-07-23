@@ -35,6 +35,10 @@ export type LiveEvent = Pick<SourceEvent, "id" | "name" | "sourceId" | "captureT
     keyProperties?: Readonly<Record<string, unknown>>;
     defectTriage?: LiveEventDefectTriage;
     manualFlowValidations?: readonly LiveFlowHistoryEntry[];
+    manualFlowContext?: {
+      flowId:string;flowName:string;selectedStepId:string;
+      path:readonly {stepId:string;stepName:string;relationshipId?:string;eventId:string;captureTime:string}[];
+    };
     validationDetails?: {
       issues: readonly ValidationIssue[];
       evaluations: readonly ValidationEvaluation[];

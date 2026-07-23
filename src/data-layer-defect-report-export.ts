@@ -166,6 +166,7 @@ function reportSections(report: GeneratedDefectReport): Array<[string, string]> 
   return [
     ["Summary", report.summary],
     ["Description", report.description],
+    ...(report.event.flowContext ? [["Manual Flow test path", JSON.stringify(report.event.flowContext, null, 2)] as [string,string]] : []),
     ["Steps to reproduce", report.reproductionSteps.map(({ text }) => text).join("\n")],
     ["Actual result", JSON.stringify(report.actual.payload, null, 2)],
     ["Expected result", `${expectedNarrative}\n${expectedPresentation(report)}`.trim()],
@@ -241,7 +242,7 @@ export function renderJiraReport(report: GeneratedDefectReport): {
       const narrative = content.slice(0, Math.max(0, content.lastIndexOf("\n" + presentation)));
       return `<h2>${heading}</h2><p>${escapeHtml(narrative).replaceAll("\n", "<br>")}</p><pre style="font-family:monospace;white-space:pre-wrap">${highlightedExpected(report)}</pre>`;
     }
-    const structured = heading === "Actual result" || heading === "Expected result" || heading === "Validation rules covered" || heading === "Capture metadata" || heading === "Supporting timeline";
+    const structured = heading === "Actual result" || heading === "Expected result" || heading === "Manual Flow test path" || heading === "Validation rules covered" || heading === "Capture metadata" || heading === "Supporting timeline";
     return `<h2>${heading}</h2>${structured ? `<pre style="font-family:monospace;white-space:pre-wrap">${escapeHtml(content)}</pre>` : `<p>${escapeHtml(content)}</p>`}`;
   }).join("");
   const text = sections.map(([heading, content]) => `${heading}\n${content}`).join("\n\n");

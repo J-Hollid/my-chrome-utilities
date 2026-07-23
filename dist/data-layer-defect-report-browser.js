@@ -67,6 +67,7 @@ export function defectCapturedEvent(event) {
         captureTime: event.captureTime,
         payload: event.payload,
         schema: { name: schema?.name ?? "Assigned schema", version: schema?.version ?? 0 },
+        ...(event.manualFlowContext ? { flowContext: structuredClone(event.manualFlowContext) } : {}),
         issues: (event.validationDetails?.issues ?? []).map((issue, index) => {
             const schemaChoices = isRequiredPropertyViolation(issue.message) && schema
                 ? resolveRequiredPropertySchemaChoices({ issuePointer: issue.instancePath, evaluations: event.validationDetails?.evaluations ?? [], assignedSchema: schema })

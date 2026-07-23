@@ -77,7 +77,8 @@ assert.equal(candidates.some(({eventId,eligible})=>eventId==="live-101"&&eligibl
 assert.equal(candidates.every(({selected})=>selected===false),true,"candidate derivation never selects automatically");
 run=matchLiveFlowEvent(run,state,events,"live-101");
 assert.equal(run.history[0].selectionMode,"Manual Flow test");
-assert.deepEqual(run.history[0].contributors.map(({scope})=>scope),["Shared Profile","Page Group","Page","Flow Page-instance"]);
+assert.deepEqual(run.history[0].provenance.map(({scope})=>scope),["Shared Profile","Page Group","Page","Flow Page-instance"]);
+assert.equal("contributors" in run.history[0],false,"run evidence stores provenance rather than copied schema contributors");
 assert.equal(run.history[0].issues.length,0);
 assert.ok(run.history[0].effectiveSchemaRevision>0,"the effective revision comes from canonical contributors");
 assert.equal("assignment" in run.history[0],false);
@@ -90,7 +91,7 @@ assert.equal(candidates.find(({eventId})=>eventId==="live-100").reason,"Captured
 assert.equal(candidates.find(({eventId})=>eventId==="live-101").reason,"Already matched in this run");
 assert.equal(candidates.find(({eventId})=>eventId==="live-103").reason,"Event identity does not match page_view");
 run=matchLiveFlowEvent(run,state,events,"live-102");
-assert.deepEqual(run.history[1].contributors.map(({scope})=>scope),["Shared Profile","Event","Page Group","Page","Flow Page-instance","Event-occurrence"]);
+assert.deepEqual(run.history[1].provenance.map(({scope})=>scope),["Shared Profile","Event","Page Group","Page","Flow Page-instance","Event-occurrence"]);
 assert.equal(run.history[1].target.id,"occurrence:view");
 assert.ok(run.history[1].effectiveSchemaRevision>0);
 assert.equal(liveFlowNextSteps(run,state)[0].displayName,"Success route");

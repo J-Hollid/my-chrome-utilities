@@ -27,6 +27,10 @@ export interface DefectCapturedEvent {
   payload: unknown;
   schema: { name: string; version: number };
   issues: readonly DefectIssue[];
+  flowContext?: {
+    flowId:string;flowName:string;selectedStepId:string;
+    path:readonly {stepId:string;stepName:string;relationshipId?:string;eventId:string;captureTime:string}[];
+  };
 }
 
 export interface ReportIssue extends DefectIssue { selected: boolean }

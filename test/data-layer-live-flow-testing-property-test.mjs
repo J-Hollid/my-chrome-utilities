@@ -47,6 +47,7 @@ const state={project:{
 },draft:{status:"Draft"},history:{undo:[],redo:[]}};
 
 const rotate=(values,count)=>values.map((_,index)=>values[(index+count)%values.length]);
+const contributorFacetBytes=JSON.stringify(state.project.collections);
 for(let sample=0;sample<24;sample+=1){
   const chooseSuccess=sample%2===0,target=chooseSuccess?"success":"failure",other=chooseSuccess?"failure":"success";
   const chronological=[
@@ -88,11 +89,15 @@ for(let sample=0;sample<24;sample+=1){
   const completed=completeLiveFlowTest(run,state,`2026-07-23T10:00:04.${String(sample).padStart(3,"0")}Z`);
   assert.deepEqual(completed.unchosenAlternatives,[{relationshipId:`relationship:submit-${other}`,stepId:`frame:${other}`,status:"Not tested"}]);
   assert.equal(completed.resumeMatching,false);
-  const restored=restoreLiveFlowSummary(serializeLiveFlowSummary(completed));
+  const serialized=serializeLiveFlowSummary(completed);
+  assert.equal(serialized.includes('"contributors"'),false,"saved summaries do not codify copied schema contributors");
+  assert.equal(serialized.includes('"constraints"'),false,"saved summaries do not embed contributor facets");
+  const restored=restoreLiveFlowSummary(serialized);
   assert.deepEqual(restored,JSON.parse(JSON.stringify(completed)),"serialization conserves persisted traversal chronology and validation evidence");
   restored.history[0].target.name="mutated restored summary";
   assert.notEqual(completed.history[0].target.name,restored.history[0].target.name,"restored summaries are isolated from completed runs");
 }
+assert.equal(JSON.stringify(state.project.collections),contributorFacetBytes,"generated traversals conserve every canonical contributor facet");
 
 assert.equal(restoreLiveFlowSummary("not json"),undefined);
 assert.equal(restoreLiveFlowSummary(JSON.stringify({label:"Incomplete",history:[]})),undefined);
