@@ -53,8 +53,10 @@ export function createManualFlowDefectEvent(
   entry: LiveFlowHistoryEntry,
   event: LiveEvent,
 ): LiveEvent {
-  const observedEvent = { ...event };
-  delete observedEvent.manualFlowValidations;
+  const {
+    manualFlowValidations: _retiredFlowResults,
+    ...observedEvent
+  } = event as LiveEvent & { manualFlowValidations?: unknown };
   const context: LiveFlowDefectContext = {
     flowId:entry.flowId,
     flowName:entry.flowName,

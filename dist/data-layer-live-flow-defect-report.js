@@ -17,8 +17,7 @@ function linkEvidence(entry) {
     };
 }
 export function createManualFlowDefectEvent(entry, event) {
-    const observedEvent = { ...event };
-    delete observedEvent.manualFlowValidations;
+    const { manualFlowValidations: _retiredFlowResults, ...observedEvent } = event;
     const context = {
         flowId: entry.flowId,
         flowName: entry.flowName,
