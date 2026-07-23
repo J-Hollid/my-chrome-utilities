@@ -9,6 +9,7 @@ const same = (left, right) => JSON.stringify(comparable(left)) === JSON.stringif
 const record = (value) => Boolean(value) && typeof value === "object" && !Array.isArray(value);
 const bytes = (value) => new TextEncoder().encode(JSON.stringify(value)).byteLength;
 const projectPrefix = (projectId) => `${projectId}:`;
+const byDurableIndex = (left, right) => (left.value.index ?? 0) - (right.value.index ?? 0);
 const fieldFor = (patch) => { const path = ["entity", "graph", "release"].includes(patch.path[0] ?? "") ? patch.path.slice(1) : patch.path; return `${patch.store}/${patch.key}${path.length ? `/${path.join("/")}` : ""}`; };
 export const durablePatchField = (patch) => fieldFor(patch);
 export function durableConflictSemanticField(field) {
@@ -241,7 +242,7 @@ export class DurableProjectRepository {
             if (!metadata || !root)
                 throw new Error(`Durable project ${projectId} is unavailable.`);
             const prefix = projectPrefix(projectId), entityRecords = await transaction.getPrefix("projectEntities", prefix), fixtureRecords = await transaction.getPrefix("fixtures", prefix), graphs = await transaction.getPrefix("flowGraphs", prefix), releases = await transaction.getPrefix("releases", prefix), collections = Object.fromEntries(root.collectionKinds.map(kind => [kind, []]));
-            for (const { value } of [...entityRecords, ...fixtureRecords].sort((left, right) => (left.value.index ?? 0) - (right.value.index ?? 0)))
+            for (const { value } of [...entityRecords, ...fixtureRecords].sort(byDurableIndex))
                 (collections[value.kind] ??= []).push(clone(value.entity));
             const project = { ...clone(root.project), collections, ...(root.hasDocumentationFlowGraphs ? { documentationFlowGraphs: Object.fromEntries(graphs.map(({ value }) => [value.flowId, clone(value.graph)])) } : {}), releases: releases.map(({ value }) => clone(value.release)) }, state = { project, ...(metadata.draft ? { draft: clone(metadata.draft) } : {}), history: { undo: [], redo: [] } };
             return { state, draftToken: metadata.draftToken, draftSequence: metadata.draftSequence ?? 0, publishedRevision: metadata.publishedRevision, lastSavedAt: metadata.lastSavedAt, ...(metadata.navigation ? { navigation: clone(metadata.navigation) } : {}) };
@@ -254,11 +255,11 @@ export class DurableProjectRepository {
             if (!metadata || !root)
                 throw new Error(`Durable project ${projectId} is unavailable.`);
             const collections = Object.fromEntries(root.collectionKinds.map(kind => [kind, []])), compact = await transaction.getPrefix("projectEntityMetadata", projectPrefix(projectId));
-            for (const { value } of compact.sort((left, right) => (left.value.index ?? 0) - (right.value.index ?? 0)))
+            for (const { value } of compact.sort(byDurableIndex))
                 (collections[value.kind] ??= []).push({ id: value.id, name: value.name, placeholder: true });
             const kinds = [...new Set([...(route.collectionKind ? [route.collectionKind] : []), ...(route.collectionKinds ?? [])])];
             for (const kind of kinds) {
-                const store = kind === "fixtures" ? "fixtures" : "projectEntities", prefix = `${projectId}:${kind}:`, selected = route.entityId && kind === route.collectionKind ? await transaction.get(store, `${prefix}${route.entityId}`) : undefined, visible = selected ? [selected] : route.entityId && kind === route.collectionKind ? [] : (await transaction.getPrefix(store, prefix)).map(({ value }) => value).sort((left, right) => (left.index ?? 0) - (right.index ?? 0)), target = collections[kind] ?? [];
+                const store = kind === "fixtures" ? "fixtures" : "projectEntities", prefix = `${projectId}:${kind}:`, selected = route.entityId && kind === route.collectionKind ? await transaction.get(store, `${prefix}${route.entityId}`) : undefined, visible = selected ? [selected] : route.entityId && kind === route.collectionKind ? [] : (await transaction.getPrefix(store, prefix)).sort(byDurableIndex).map(({ value }) => value), target = collections[kind] ?? [];
                 for (const value of visible) {
                     const index = target.findIndex(({ id }) => id === value.entity.id);
                     if (index >= 0)
@@ -269,7 +270,7 @@ export class DurableProjectRepository {
                 collections[kind] = target;
             }
             const graphs = route.includeFlowGraphs ? await transaction.getPrefix("flowGraphs", projectPrefix(projectId)) : [], fixtures = route.includeFixtures && !kinds.includes("fixtures") ? await transaction.getPrefix("fixtures", projectPrefix(projectId)) : [];
-            for (const { value } of fixtures.sort((left, right) => (left.value.index ?? 0) - (right.value.index ?? 0))) {
+            for (const { value } of fixtures.sort(byDurableIndex)) {
                 const target = collections[value.kind] ??= [], index = target.findIndex(({ id }) => id === value.entity.id);
                 if (index >= 0)
                     target[index] = clone(value.entity);
