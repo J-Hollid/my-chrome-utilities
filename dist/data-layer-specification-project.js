@@ -1,4 +1,4 @@
-import { canonicalConstraints, canonicalRequirements, canonicalSchemaWithConstraint, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
+import { canonicalConstraints, canonicalPropertyPath, canonicalRequirements, canonicalSchemaWithConstraint, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { savedSchemaCanonicalDocument, savedSchemaFromCanonical } from "./data-layer-saved-schema-canonical.js";
 const clone = (value) => structuredClone(value);
 const now = () => new Date().toISOString();
@@ -265,6 +265,22 @@ function synchronizeDocument(base, current, next) { if (equalJson(current, base)
     }
     return merged;
 } return clone(current); }
+function synchronizeSavedSchemaRules(base, current, next) {
+    const baseById = new Map(base.map((rule) => [rule.id, rule])), currentById = new Map(current.map((rule) => [rule.id, rule])), nextById = new Map(next.map((rule) => [rule.id, rule])), ids = [...next.map(({ id }) => id), ...current.map(({ id }) => id).filter((id) => !nextById.has(id))];
+    return ids.flatMap((id) => { const oldRule = baseById.get(id), localRule = currentById.get(id), newRule = nextById.get(id); if (!oldRule)
+        return [clone(localRule ?? newRule)]; if (!localRule)
+        return []; if (!newRule)
+        return equalJson(localRule, oldRule) ? [] : [clone(localRule)]; return [synchronizeDocument(oldRule, localRule, newRule)]; });
+}
+function preserveCanonicalPropertyIds(current, next) {
+    const currentByPath = new Map(Object.values(current.nodes).map((node) => [canonicalPropertyPath(current, node.id), node.id])), ids = new Map(Object.values(next.nodes).map((node) => [node.id, currentByPath.get(canonicalPropertyPath(next, node.id)) ?? node.id])), propertyId = (id) => ids.get(id) ?? id, predicate = (value) => value.kind === "predicate" ? { ...value, propertyId: propertyId(value.propertyId) } : { ...value, children: value.children.map(predicate) }, nodes = {};
+    for (const node of Object.values(next.nodes)) {
+        const stableId = propertyId(node.id), embeddedId = (id) => id.replace(node.id, stableId);
+        nodes[stableId] = { ...clone(node), id: stableId, ...(node.parentId ? { parentId: propertyId(node.parentId) } : {}), presence: { ...clone(node.presence), ...(node.presence.condition ? { condition: predicate(node.presence.condition) } : {}) }, allowedValues: node.allowedValues.map((entry) => ({ ...clone(entry), id: embeddedId(entry.id) })), rules: node.rules.map((rule) => ({ ...clone(rule), id: embeddedId(rule.id), ...(rule.condition ? { condition: predicate(rule.condition) } : {}) })) };
+    }
+    const definitions = next.sourceContent?.definitionsByNodeId, sourceContent = next.sourceContent ? { ...clone(next.sourceContent), ...(definitions ? { definitionsByNodeId: Object.fromEntries(Object.entries(definitions).map(([id, definition]) => [propertyId(id), clone(definition)])) } : {}) } : undefined, selected = current.selectedPropertyId && nodes[current.selectedPropertyId] ? current.selectedPropertyId : next.selectedPropertyId ? propertyId(next.selectedPropertyId) : undefined;
+    return { ...clone(next), nodes, rootIds: next.rootIds.map(propertyId), ...(selected ? { selectedPropertyId: selected } : {}), ...(sourceContent ? { sourceContent } : {}), changes: next.changes.map((change) => ({ ...clone(change), propertyIds: change.propertyIds.map(propertyId) })) };
+}
 export function adoptSavedSchema(state, source) {
     if (!source.published)
         throw new Error("Only a published saved schema can be adopted.");
@@ -299,14 +315,21 @@ export function commitSavedSchemaSynchronization(state, review) {
         const adopted = project.collections.profiles.find(({ sourceIdentity }) => sourceIdentity === review.schemaId), canonical = adopted?.canonicalSchema;
         if (!adopted || !canonical || canonical.source?.identity !== review.schemaId || Number(adopted.sourceRevision ?? canonical.source.revision) !== review.fromRevision)
             throw new Error("Saved-schema synchronization review is stale.");
-        const priorContent = canonical.sourceContent ?? { document: {}, rules: [], documentation: {}, examples: [] }, projected = savedSchemaFromCanonical({ id: review.schemaId, name: adopted.name, version: review.fromRevision, document: clone(priorContent.document), assignments: [], attachedRules: clone(priorContent.rules), documentation: clone(priorContent.documentation) }, canonical), document = synchronizeDocument(priorContent.document, projected.document, review.source.document), rules = synchronizeDocument(priorContent.rules, projected.attachedRules ?? [], review.source.rules ?? []), documentation = synchronizeDocument(priorContent.documentation, projected.documentation ?? {}, review.source.documentation ?? {}), examples = synchronizeDocument(priorContent.examples, priorContent.examples, review.source.examples ?? []);
+        const priorContent = canonical.sourceContent ?? { document: {}, rules: [], documentation: {}, examples: [] }, projected = savedSchemaFromCanonical({ id: review.schemaId, name: adopted.name, version: review.fromRevision, document: clone(priorContent.document), assignments: [], attachedRules: clone(priorContent.rules), documentation: clone(priorContent.documentation) }, canonical), document = synchronizeDocument(priorContent.document, projected.document, review.source.document), rules = synchronizeSavedSchemaRules(priorContent.rules, projected.attachedRules ?? [], review.source.rules ?? []), documentation = synchronizeDocument(priorContent.documentation, projected.documentation ?? {}, review.source.documentation ?? {}), examples = synchronizeDocument(priorContent.examples, priorContent.examples, review.source.examples ?? []);
         let sequence = 0;
-        const synchronized = savedSchemaCanonicalDocument({ id: review.schemaId, name: adopted.name, version: review.toRevision, document, attachedRules: rules, ...(documentation === undefined ? {} : { documentation: clone(documentation) }) }, (kind) => `${adopted.id}:sync:${review.toRevision}:${kind}:${++sequence}`, { id: canonical.id, contributorId: adopted.id, contributorName: adopted.name });
-        synchronized.sourceContent = { ...synchronized.sourceContent, document: clone(review.source.document), rules: clone(review.source.rules ?? []), documentation: clone(review.source.documentation ?? {}), examples: clone(review.source.examples ?? examples) };
+        const generated = savedSchemaCanonicalDocument({ id: review.schemaId, name: adopted.name, version: review.toRevision, document, attachedRules: rules, ...(documentation === undefined ? {} : { documentation: clone(documentation) }) }, (kind) => `${adopted.id}:sync:${review.toRevision}:${kind}:${++sequence}`, { id: canonical.id, contributorId: adopted.id, contributorName: adopted.name });
+        generated.sourceContent = { ...generated.sourceContent, document: clone(review.source.document), rules: clone(review.source.rules ?? []), documentation: clone(review.source.documentation ?? {}), examples: clone(review.source.examples ?? examples) };
+        const synchronized = preserveCanonicalPropertyIds(canonical, generated);
         const profiles = project.collections.profiles.map((profile) => profile === adopted ? { ...profile, sourceRevision: review.toRevision, adoptionProvenance: { kind: "saved-schema-library", schemaId: review.schemaId, revision: review.toRevision }, canonicalSchema: synchronized } : profile);
         const fixtures = project.collections.fixtures.map((fixture) => fixture.contributorId === adopted.id || JSON.stringify(fixture).includes(review.schemaId) ? { ...fixture, evidenceStatus: "stale", staleReason: `Contributor ${adopted.id} synchronized to source revision ${review.toRevision}` } : fixture);
         return { ...project, collections: { ...project.collections, profiles, fixtures } };
     });
+}
+export function commitSavedSchemaReview(state, review) {
+    const next = review.kind === "adopt" ? adoptSavedSchema(state, review.source) : commitSavedSchemaSynchronization(state, review.review), sourceId = review.kind === "adopt" ? review.source.id : review.review.schemaId, profileId = next.project.collections.profiles.find(({ sourceIdentity }) => sourceIdentity === sourceId)?.id;
+    if (!profileId)
+        throw new Error(`Saved schema ${sourceId} did not resolve its Shared Profile.`);
+    return { state: next, profileId };
 }
 export function capturedValidationDestinationChoices(project, capture) {
     const named = (entities) => entities.map(({ id, name }) => ({ id, name })), events = named(project.collections.events.filter((event) => event.eventName === capture.eventName && event.sourceId === capture.sourceId));

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import {adoptSavedSchema,commitSavedSchemaSynchronization,createSpecificationProject,stageSavedSchemaSynchronization,transactProject} from "../dist/data-layer-specification-project.js";
-import {canonicalSchemaWithConstraint,canonicalTableRows} from "../dist/data-layer-canonical-schema.js";
+import {adoptSavedSchema,commitSavedSchemaReview,commitSavedSchemaSynchronization,createSpecificationProject,stageSavedSchemaSynchronization,transactProject} from "../dist/data-layer-specification-project.js";
+import {applyCanonicalCommand,canonicalSchemaWithConstraint,canonicalTableRows} from "../dist/data-layer-canonical-schema.js";
 
 let sequence=0;
 const id=(kind)=>`${kind}:${++sequence}`,source={id:"schema:sitewide",name:"Sitewide",version:4,published:true,document:{type:"object",properties:{checkout:{type:"object",properties:{funnel_step:{type:"string",enum:["3a","3b"]}}}}},rules:[{name:"checkout"}],documentation:"Site contract",examples:[{checkout:{funnel_step:"3b"}}],assignments:[]},libraryBytes=JSON.stringify(source);
@@ -53,14 +53,20 @@ assert.equal(JSON.stringify(openedArticle),openedArticleBytes,"lossless adoption
 let synchronized=adoptSavedSchema(createSpecificationProject({name:"Sync",site:"shop.example",id}),{
   id:"schema:purchase",name:"Purchase",version:3,published:true,assignments:[],
   document:{type:"object",properties:{currency:{type:"string",enum:["EUR"]},order_id:{type:"string"}}},
+  rules:[{id:"rule:currency-format",name:"Currency format",version:3,propertyPath:"/currency",operator:"regular-expression",parameters:"^[A-Z]{3}$",severity:"error"}],
 });
-const synchronizedProfile=synchronized.project.collections.profiles[0],locallyEdited=canonicalSchemaWithConstraint(
+const synchronizedProfile=synchronized.project.collections.profiles[0],currencyId=canonicalTableRows(synchronizedProfile.canonicalSchema).find(({path})=>path==="/currency").id,orderId=canonicalTableRows(synchronizedProfile.canonicalSchema).find(({path})=>path==="/order_id").id,locallyConstrained=canonicalSchemaWithConstraint(
   synchronizedProfile.canonicalSchema,
   {path:"/currency",type:"string",allowedValues:["EUR","GBP"]},
   (kind)=>`local:${kind}:${++sequence}`,
-);
-synchronized=transactProject(synchronized,"Keep GBP locally",(project)=>({...project,collections:{...project.collections,profiles:project.collections.profiles.map((candidate)=>candidate.id===synchronizedProfile.id?{...candidate,canonicalSchema:locallyEdited}:candidate)}}));
-const revision4={id:"schema:purchase",name:"Purchase",version:4,published:true,assignments:[],document:{type:"object",properties:{currency:{type:"string",enum:["EUR","USD"]},order_id:{type:"string"},value:{type:"number"}}}};
+),locallyEditedResult=applyCanonicalCommand(locallyConstrained,{kind:"set",baseRevision:locallyConstrained.revision,propertyId:currencyId,patch:{rules:locallyConstrained.nodes[currencyId].rules.map((rule)=>rule.id==="rule:currency-format"?{...rule,severity:"warning"}:rule)}}),locallyRenamedResult=applyCanonicalCommand(locallyEditedResult.document,{kind:"rename",baseRevision:locallyEditedResult.document.revision,propertyId:currencyId,name:"transaction_currency"}),locallyEdited=locallyRenamedResult.document;
+assert.equal(locallyEditedResult.status,"applied");
+assert.equal(locallyRenamedResult.status,"applied");
+synchronized=transactProject(synchronized,"Keep local canonical changes",(project)=>({...project,collections:{...project.collections,profiles:project.collections.profiles.map((candidate)=>candidate.id===synchronizedProfile.id?{...candidate,canonicalSchema:locallyEdited}:candidate)}}));
+const revision4Rules=[
+  {id:"rule:currency-format",name:"Currency format",version:4,propertyPath:"/currency",operator:"regular-expression",parameters:"^[A-Z]{3}$",severity:"error"},
+  {id:"rule:order-required",name:"Order required",version:1,propertyPath:"/order_id",operator:"required",severity:"error"},
+],revision4={id:"schema:purchase",name:"Purchase",version:4,published:true,assignments:[],document:{type:"object",properties:{currency:{type:"string",enum:["EUR","USD"]},order_id:{type:"string"},value:{type:"number"}}},rules:revision4Rules};
 const synchronizationReview=stageSavedSchemaSynchronization(synchronized,revision4);
 assert.equal(synchronizationReview.fromRevision,3);
 assert.equal(synchronizationReview.toRevision,4);
@@ -69,9 +75,21 @@ synchronized=commitSavedSchemaSynchronization(synchronized,synchronizationReview
 const synchronizedResult=synchronized.project.collections.profiles[0],synchronizedRows=canonicalTableRows(synchronizedResult.canonicalSchema);
 assert.equal(synchronizedResult.sourceRevision,4);
 assert.equal(synchronizedResult.canonicalSchema.source.revision,4);
-assert.deepEqual(synchronizedRows.find(({path})=>path==="/currency").node.allowedValues.map(({value})=>value),["EUR","GBP"],"local canonical facets survive source synchronization");
+const synchronizedCurrency=synchronizedRows.find(({path})=>path==="/transaction_currency"),synchronizedOrder=synchronizedRows.find(({path})=>path==="/order_id");
+assert.equal(synchronizedCurrency.id,currencyId,"a locally renamed property keeps its stable canonical identity");
+assert.equal(synchronizedOrder.id,orderId,"an unchanged property keeps its stable canonical identity");
+assert.deepEqual(synchronizedCurrency.node.allowedValues.map(({value})=>value),["EUR","GBP"],"local canonical facets survive source synchronization");
+assert.equal(synchronizedCurrency.node.rules.find(({id})=>id==="rule:currency-format").severity,"warning","a local edit wins over the corresponding source rule update");
+assert.equal(synchronizedOrder.node.rules.find(({id})=>id==="rule:order-required").name,"Order required","an unrelated new source rule enters active canonical content");
 assert.equal(synchronizedRows.find(({path})=>path==="/value").node.type,"number","new source properties enter the active canonical contributor");
 assert.deepEqual(synchronizedResult.canonicalSchema.sourceContent.document,revision4.document,"source content advances to the immutable revision");
+assert.deepEqual(synchronizedResult.canonicalSchema.sourceContent.rules,revision4Rules,"immutable source rules advance even when active canonical rules are merged");
 assert.equal("workingDraft" in synchronizedResult,false);
 assert.equal("sourceLineage" in synchronizedResult,false);
+
+const routeSource={id:"schema:route-collision",name:"Route collision",version:1,published:true,document:{type:"object",properties:{value:{type:"string"}}}},routeBase=createSpecificationProject({name:"Route",site:"route.example",id});
+routeBase.project.collections.profiles.push({id:`profile:${routeSource.id}`,name:"Unrelated route Profile",requirements:[]});
+const routeCompletion=commitSavedSchemaReview(routeBase,{kind:"adopt",source:routeSource});
+assert.notEqual(routeCompletion.profileId,`profile:${routeSource.id}`);
+assert.equal(routeCompletion.state.project.collections.profiles.find(({id})=>id===routeCompletion.profileId).sourceIdentity,routeSource.id,"review completion navigates to the collision-allocated adopted Profile");
 console.log("data-layer layered schema adoption tests passed");
