@@ -702,6 +702,7 @@ const liveFlowTestingUi = mountLiveFlowTestingUi({
     createProject: () => { showDataLayerView("Projects", true); document.querySelector("#create-library-project")?.click(); },
 });
 void liveFlowTestingUi;
+function resetLiveFlowTestingSession() { completedLiveFlowTests = []; liveFlowTestingUi.reset(); }
 let activeSchemaProjectHydration;
 const schemaContributorRoute = { collectionKinds: ["profiles", "pageGroups", "pages", "events", "flows"], includeFlowGraphs: true };
 async function hydrateActiveProjectForSchemas() { if (activeSchemaProjectHydration)
@@ -5359,6 +5360,7 @@ function startLinkedCaptureFromSavedSession(session) {
             timeline: [],
         },
     };
+    resetLiveFlowTestingSession();
     installDefaultSavedEventFeedFilterForNewSession();
     persistSession(dataLayerSessionState, dataLayerStorage);
     setLiveSessionMessage(`Linked capture started from ${session.name}; 0 events in the new session.`);
@@ -5967,6 +5969,7 @@ function startFreshSession() {
         return;
     dataLayerSessionState = fresh.sessionState;
     liveObserverState = fresh.liveObserverState;
+    resetLiveFlowTestingSession();
     installDefaultSavedEventFeedFilterForNewSession();
     dataLayerObserverState = fresh.observerState;
     presentedSourceEventCount = 0;

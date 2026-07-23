@@ -906,6 +906,7 @@ const liveFlowTestingUi=mountLiveFlowTestingUi({
   createProject:()=>{showDataLayerView("Projects",true);document.querySelector<HTMLButtonElement>("#create-library-project")?.click();},
 });
 void liveFlowTestingUi;
+function resetLiveFlowTestingSession():void{completedLiveFlowTests=[];liveFlowTestingUi.reset();}
 let activeSchemaProjectHydration:Promise<void>|undefined;
 const schemaContributorRoute={collectionKinds:["profiles","pageGroups","pages","events","flows"],includeFlowGraphs:true} as const;
 async function hydrateActiveProjectForSchemas():Promise<void>{if(activeSchemaProjectHydration)return activeSchemaProjectHydration;const activeProjectId=projectLibraryUi.library().activeProjectId;if(!activeProjectId)return;activeSchemaProjectHydration=(async()=>{if(schemaResult)schemaResult.textContent="Loading active project schema contributors from durable storage…";await durableProjectRuntime.settled();await durableProjectRuntime.ensureProjectRoute(activeProjectId,schemaContributorRoute);await durableProjectRuntime.settled();const current=restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY));if(!current||current.project.id!==activeProjectId||current.project.placeholder)throw new Error(`Active project ${activeProjectId} did not load its durable schema contributors.`);renderSchemas();if(schemaResult)schemaResult.textContent=`Loaded schema contributors for ${current.project.name}.`;})().finally(()=>{activeSchemaProjectHydration=undefined;});return activeSchemaProjectHydration;}
@@ -4458,6 +4459,7 @@ function startLinkedCaptureFromSavedSession(session: SavedSessionLibrary["sessio
       timeline:[],
     },
   };
+  resetLiveFlowTestingSession();
   installDefaultSavedEventFeedFilterForNewSession();
   persistSession(dataLayerSessionState, dataLayerStorage);
   setLiveSessionMessage(`Linked capture started from ${session.name}; 0 events in the new session.`);
@@ -5210,6 +5212,7 @@ function startFreshSession(): void {
   if (!fresh.started) return;
   dataLayerSessionState = fresh.sessionState;
   liveObserverState = fresh.liveObserverState;
+  resetLiveFlowTestingSession();
   installDefaultSavedEventFeedFilterForNewSession();
   dataLayerObserverState = fresh.observerState;
   presentedSourceEventCount = 0;

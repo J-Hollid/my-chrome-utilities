@@ -15,7 +15,7 @@ export interface LiveFlowTestingUiOptions {
   id?:()=>string;
   now?:()=>string;
 }
-export interface LiveFlowTestingUi {open():Promise<void>;render():void;attachDefect(stepId:string,eventId:string,defectId:string):void;run():LiveFlowTestRun|undefined;summary():CompletedLiveFlowTest|undefined}
+export interface LiveFlowTestingUi {open():Promise<void>;render():void;reset():void;attachDefect(stepId:string,eventId:string,defectId:string):void;run():LiveFlowTestRun|undefined;summary():CompletedLiveFlowTest|undefined}
 
 const button=(text:string,run:()=>void):HTMLButtonElement=>{const control=document.createElement("button");control.type="button";control.textContent=text;control.addEventListener("click",run);return control;};
 const option=(value:string,text:string):HTMLOptionElement=>{const item=document.createElement("option");item.value=value;item.textContent=text;return item;};
@@ -44,5 +44,5 @@ export function mountLiveFlowTestingUi(options:LiveFlowTestingUiOptions):LiveFlo
     const status=document.createElement("output");status.id="live-flow-test-status";status.setAttribute("aria-live","polite");host.append(status);
   };
   const open=async()=>{completed=options.savedSummary?.();project=completed?undefined:await options.activeProject();run=project?createLiveFlowTest(id(),project.project.id):undefined;render();};openControl.addEventListener("click",()=>void open());
-  return{open,render,attachDefect:(stepId,eventId,defectId)=>{if(!run)return;run=attachLiveFlowDefect(run,stepId,defectId,eventId);render();},run:()=>run?structuredClone(run):undefined,summary:()=>completed?structuredClone(completed):undefined};
+  return{open,render,reset:()=>{project=undefined;run=undefined;completed=undefined;host.replaceChildren();host.hidden=true;},attachDefect:(stepId,eventId,defectId)=>{if(!run)return;run=attachLiveFlowDefect(run,stepId,defectId,eventId);render();},run:()=>run?structuredClone(run):undefined,summary:()=>completed?structuredClone(completed):undefined};
 }

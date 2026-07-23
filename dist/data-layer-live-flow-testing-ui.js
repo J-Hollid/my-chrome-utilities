@@ -135,7 +135,7 @@ export function mountLiveFlowTestingUi(options) {
     };
     const open = async () => { completed = options.savedSummary?.(); project = completed ? undefined : await options.activeProject(); run = project ? createLiveFlowTest(id(), project.project.id) : undefined; render(); };
     openControl.addEventListener("click", () => void open());
-    return { open, render, attachDefect: (stepId, eventId, defectId) => { if (!run)
+    return { open, render, reset: () => { project = undefined; run = undefined; completed = undefined; host.replaceChildren(); host.hidden = true; }, attachDefect: (stepId, eventId, defectId) => { if (!run)
             return; run = attachLiveFlowDefect(run, stepId, defectId, eventId); render(); }, run: () => run ? structuredClone(run) : undefined, summary: () => completed ? structuredClone(completed) : undefined };
 }
 //# sourceMappingURL=data-layer-live-flow-testing-ui.js.map
