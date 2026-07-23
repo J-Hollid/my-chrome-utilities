@@ -396,7 +396,7 @@ function entitySearchText(value) { return JSON.stringify(value).toLowerCase(); }
 function entitiesForKind(kind) { if (!state)
     return []; return kind === "assignments" ? searchProjectAssignments(state.project, "").rows : state.project.collections[kind]; }
 const editorFields = {
-    profiles: [], pages: [{ key: "environment", label: "Environment" }, { key: "host", label: "Host matcher" }, { key: "pathname", label: "Path matcher" }, { key: "query", label: "Query matcher" }, { key: "hash", label: "Hash matcher" }, { key: "spa", label: "SPA route", type: "checkbox" }, { key: "expectedEventIds", label: "Expected events", collection: "events", multiple: true }, { key: "profileIds", label: "Requirement profiles", collection: "profiles", multiple: true }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }],
+    profiles: [], pages: [{ key: "eventName", label: "Observed context event name" }, { key: "environment", label: "Environment" }, { key: "host", label: "Host matcher" }, { key: "pathname", label: "Path matcher" }, { key: "query", label: "Query matcher" }, { key: "hash", label: "Hash matcher" }, { key: "spa", label: "SPA route", type: "checkbox" }, { key: "expectedEventIds", label: "Expected interaction Events", collection: "events", multiple: true }, { key: "profileIds", label: "Requirement profiles", collection: "profiles", multiple: true }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }],
     pageGroups: [{ key: "environment", label: "Environment" }, { key: "matcher", label: "Membership matcher" }, { key: "profileIds", label: "Requirement profiles", collection: "profiles", multiple: true }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }],
     events: [{ key: "sourceId", label: "Source" }, { key: "eventName", label: "Canonical event name" }, { key: "trigger", label: "Default documentary trigger" }, { key: "target", label: "Validation target" }, { key: "occurrencePolicy", label: "Occurrence policy" }, { key: "profileIds", label: "Requirement profiles", collection: "profiles", multiple: true }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }],
     applicabilitySets: [{ key: "priority", label: "Priority", type: "number" }, { key: "fallback", label: "Fallback", type: "checkbox" }, { key: "condition", label: "Nested All / Any / Not condition", type: "condition" }],
@@ -482,6 +482,8 @@ function renderFixtureExecution(form, fixture) { const section = document.create
 function renderSelectedEntityEditor(content, entity) { if (!state)
     return; const section = document.createElement("section"), heading = document.createElement("h2"), form = document.createElement("form"), nameLabel = document.createElement("label"), name = document.createElement("input"), actions = document.createElement("div"), save = document.createElement("button"), duplicate = document.createElement("button"), usage = document.createElement("p"); section.className = "contextual-editor"; heading.textContent = `Edit ${labels[selectedKind].replace(/s$/, "")}`; name.name = "name"; name.required = true; name.value = entity.name; nameLabel.textContent = "Name"; nameLabel.append(name); form.append(nameLabel); for (const field of editorFields[selectedKind]) {
     const label = document.createElement("label"), control = fieldControl(field, selectedKind === "flows" && field.key === "pageGroupIds" ? { ...entity, pageGroupIds: flowPageGroupLaneIds(state.project, entity.id) } : entity);
+    if (selectedKind === "pages" && field.key === "eventName")
+        control.setAttribute("required", "");
     label.textContent = field.label;
     label.append(control);
     form.append(label);
@@ -491,6 +493,8 @@ function renderSelectedEntityEditor(content, entity) { if (!state)
     const update = { name: name.value.trim() };
     for (const field of editorFields[selectedKind])
         update[field.key] = editorValue(field, form.elements.namedItem(field.key));
+    if (selectedKind === "pages" && !String(update.eventName ?? "").trim())
+        throw new Error("Observed context event name is required for a Page.");
     const laneIds = selectedKind === "flows" ? update.pageGroupIds : undefined;
     if (laneIds)
         delete update.pageGroupIds;
@@ -627,6 +631,10 @@ function renderCreationPage(content, kind) {
     settings.append(legend);
     for (const field of fields) {
         const label = document.createElement("label"), control = projectCreationFieldControl(field);
+        if (kind === "pages" && field.key === "eventName") {
+            control.required = true;
+            control.setAttribute("placeholder", "Required observed Page event");
+        }
         label.textContent = field.label;
         control.dataset.creationField = field.key;
         label.append(control);
@@ -780,7 +788,7 @@ function renderWorkspace() {
         remove.setAttribute("aria-label", `Remove ${definition.singular} ${entity.name}`);
         remove.addEventListener("click", () => { removalReview = inspectProjectEntityRemoval(state, selectedKind, entity.id); selectedId = undefined; replaceProjectRoute(selectedKind); render(); });
         kindText.className = "search-location";
-        kindText.textContent = definition.singular;
+        kindText.textContent = selectedKind === "pages" ? `Context-setting ${String(entity.eventName ?? "pageview")}` : selectedKind === "events" ? `Interaction ${String(entity.eventName ?? entity.name)}` : definition.singular;
         usage.textContent = `Used ${whereUsed(entity.id).length} times`;
         row.append(open, kindText, usage, remove);
         list.append(row);

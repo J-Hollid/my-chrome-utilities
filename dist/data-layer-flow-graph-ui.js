@@ -1,4 +1,4 @@
-import { addFlowPageFrame, addFreePageFrame, addEventOccurrenceToPage, addGraphOccurrence, deriveFlowOccurrenceExample, documentaryFlowGraph, flowOccurrenceExampleEditorRows, FLOW_GRAPH_GEOMETRY, flowRelationshipText, inspectFreePageEdgeMove, migrateLegacyFlowContextBindings, migrateLegacyFlowRelationshipKinds, moveFlowPageFrame, moveFreePageFrame, moveGraphOccurrence, projectFlowGraph, reviewLegacyFlowContextMigration, removeFlowPageFrame, removeFlowRelationship, removeGraphOccurrence, reorderFlowPageGroupLane, saveGraphRelationship, setFlowOccurrenceExample, setFlowPageGroupLanes, } from "./data-layer-flow-graph.js";
+import { addFlowPageFrame, addFreePageFrame, addEventOccurrenceToPage, addGraphOccurrence, deriveFlowOccurrenceExample, deriveFlowPageFrameExample, documentaryFlowGraph, flowOccurrenceExampleEditorRows, FLOW_GRAPH_GEOMETRY, flowRelationshipText, inspectOccurrencePageChange, migrateLegacyFlowContextBindings, migrateLegacyFlowRelationshipKinds, moveFlowPageFrame, moveFreePageFrame, moveGraphOccurrence, projectFlowGraph, reassignFlowOccurrencePage, reviewLegacyFlowContextMigration, removeFlowPageFrame, removeFlowRelationship, removeGraphOccurrence, reorderFlowPageGroupLane, saveGraphRelationship, setFlowOccurrenceExample, setFlowPageGroupLanes, } from "./data-layer-flow-graph.js";
 import { orderedPageGroupIds } from "./utilities/data-layer/page-group-membership.js";
 export function contextSettingPageLabel(pageName) { return `${pageName} · Context-setting Page`; }
 const nodeWidth = FLOW_GRAPH_GEOMETRY.eventWidth, nodeHeight = FLOW_GRAPH_GEOMETRY.eventHeight;
@@ -196,6 +196,34 @@ export function installFlowGraphBuilder(options) {
         details.append(summary, pre, provenance, exampleControls, issues);
         return details;
     }
+    function pageExampleDetails(state, flowId, frameId, label) {
+        const example = deriveFlowPageFrameExample(state.project, flowId, frameId), details = document.createElement("details"), summary = document.createElement("summary"), pre = document.createElement("pre"), provenance = document.createElement("ul"), issues = document.createElement("ul");
+        details.dataset.pageExampleFor = frameId;
+        details.dataset.exampleStatus = example.status;
+        summary.textContent = `${label} page event · ${example.status} · Derived JSON example`;
+        pre.dataset.readonlyPageExample = frameId;
+        pre.textContent = example.formattedJson;
+        for (const [path, source] of Object.entries(example.provenance)) {
+            const item = document.createElement("li");
+            item.dataset.examplePath = path;
+            item.dataset.exampleSource = source;
+            item.textContent = `${path} · ${source}`;
+            provenance.append(item);
+        }
+        for (const issue of example.issues) {
+            const item = document.createElement("li"), repair = document.createElement("a");
+            item.dataset.exampleIssuePath = issue.path;
+            item.dataset.exampleIssueCode = issue.code;
+            repair.href = issue.editHref;
+            repair.textContent = "Open Page-frame contribution";
+            repair.addEventListener("click", (event) => { if (options.openOccurrenceSchema?.(frameId, issue.path))
+                event.preventDefault(); });
+            item.append(`${issue.path} · ${issue.message} `, repair);
+            issues.append(item);
+        }
+        details.append(summary, pre, provenance, issues);
+        return details;
+    }
     function renderLaneControls(host) {
         const { state, flow, graph } = current();
         if (!state || !flow || !graph)
@@ -239,7 +267,7 @@ export function installFlowGraphBuilder(options) {
             } });
             card.append(move);
         }
-        card.append(button("Open schema contribution", () => options.openOccurrenceSchema?.(frame.id)), button("Remove Page frame", () => persist(removeFlowPageFrame(current().state, flow.id, frame.id))));
+        card.append(pageExampleDetails(state, flow.id, frame.id, entityName(state.project.collections.pages, frame.pageId)), button("Open schema contribution", () => options.openOccurrenceSchema?.(frame.id)), button("Remove Page frame", () => persist(removeFlowPageFrame(current().state, flow.id, frame.id))));
     }
     function renderFrameCards(host) {
         const { state, flow, graph } = current();
@@ -356,15 +384,22 @@ export function installFlowGraphBuilder(options) {
         const occurrence = graph.occurrences.find(({ id }) => id === selected.id), node = projectFlowGraph(state.project, flow.id).graph.nodes.find(({ id }) => id === selected.id);
         if (!occurrence || !node)
             return;
-        const actions = document.createElement("section"), migration = reviewLegacyFlowContextMigration(state.project, flow.id);
-        actions.setAttribute("aria-label", "Selected node inline actions");
-        const connect = () => document.querySelector(`[data-output-port-for="${CSS.escape(occurrence.id)}"]`)?.focus();
-        const duplicate = () => { const next = addGraphOccurrence(current().state, flow.id, { name: `${occurrence.name} copy`, ...(occurrence.pageFrameId ? { pageFrameId: String(occurrence.pageFrameId) } : {}), ...(occurrence.pageGroupId ? { pageGroupId: String(occurrence.pageGroupId) } : {}), ...(occurrence.freePageFrameId ? { freePageFrameId: String(occurrence.freePageFrameId) } : {}), pageId: String(occurrence.pageId), eventId: node.eventId, role: node.role, ...(node.trigger ? { trigger: node.trigger } : {}), obligation: String(occurrence.obligation ?? "Required"), minimum: Number(occurrence.minimum ?? 1), maximum: Number(occurrence.maximum ?? 1), y: Number(occurrence.position?.y ?? 70) + 24 }, options.id); persist(next); }, duplicateButton = button("Duplicate occurrence", duplicate);
+        const actions = document.createElement("section"), migration = reviewLegacyFlowContextMigration(state.project, flow.id), pageChoice = document.createElement("select"), impact = document.createElement("output"), confirmPage = button("Confirm Page change", () => persist(reassignFlowOccurrencePage(current().state, flow.id, occurrence.id, pageChoice.value)));
+        actions.setAttribute("aria-label", "Selected Event occurrence inline actions");
+        pageChoice.setAttribute("aria-label", "Containing Page frame");
+        pageChoice.append(new Option("Choose containing Page", ""));
+        for (const frame of graph.pageFrames.filter(({ id }) => id !== occurrence.pageFrameId)) {
+            const page = state.project.collections.pages.find(({ id }) => id === frame.pageId);
+            pageChoice.append(new Option(`${page?.name ?? frame.pageId} · ${frame.id}`, frame.id));
+        }
+        confirmPage.disabled = true;
+        pageChoice.addEventListener("change", () => { const review = inspectOccurrencePageChange(state.project, flow.id, occurrence.id, pageChoice.value); impact.textContent = review.message; confirmPage.disabled = review.rejected; });
+        const duplicate = () => { const next = addGraphOccurrence(current().state, flow.id, { name: `${occurrence.name} copy`, ...(occurrence.pageFrameId ? { pageFrameId: String(occurrence.pageFrameId) } : {}), ...(occurrence.pageGroupId ? { pageGroupId: String(occurrence.pageGroupId) } : {}), ...(occurrence.freePageFrameId ? { freePageFrameId: String(occurrence.freePageFrameId) } : {}), pageId: String(occurrence.pageId), eventId: node.eventId, ...(node.trigger ? { trigger: node.trigger } : {}), obligation: String(occurrence.obligation ?? "Required"), minimum: Number(occurrence.minimum ?? 1), maximum: Number(occurrence.maximum ?? 1), y: Number(occurrence.position?.y ?? 70) + 24 }, options.id); persist(next); }, duplicateButton = button("Duplicate occurrence", duplicate);
         duplicateButton.disabled = Boolean(migration.items.length || migration.blockers.length);
         if (duplicateButton.disabled)
             duplicateButton.title = "Confirm the Page-context migration before changing this graph.";
         const openSchema = () => { document.querySelector(`[data-occurrence-id="${CSS.escape(occurrence.id)}"]`)?.dispatchEvent(new MouseEvent("click", { bubbles: true })); queueMicrotask(() => { const open = Array.from(document.querySelectorAll('[aria-label="Schema constraints summary"] button')).find(({ textContent }) => textContent?.includes("Open complete schema editor")); open?.click(); }); };
-        actions.append(button("Move", () => document.querySelector(`[data-occurrence-id="${CSS.escape(occurrence.id)}"]`)?.focus()), button("Connect", connect), duplicateButton, button("Remove", () => persist(removeGraphOccurrence(current().state, flow.id, occurrence.id))), button("Open schema contribution", openSchema));
+        actions.append(button("Move within Page", () => document.querySelector(`[data-occurrence-id="${CSS.escape(occurrence.id)}"]`)?.focus()), pageChoice, impact, confirmPage, duplicateButton, button("Remove", () => persist(removeGraphOccurrence(current().state, flow.id, occurrence.id))), button("Open schema contribution", openSchema));
         host.append(actions);
     }
     function renderGraph(flow) {
@@ -408,7 +443,7 @@ export function installFlowGraphBuilder(options) {
         const targetPortFor = (sourcePort) => sourcePort === "right" ? "left" : sourcePort === "top" ? "bottom" : sourcePort === "bottom" ? "top" : undefined;
         const targetPortElement = (endpointId, sourcePort) => { const targetPort = targetPortFor(sourcePort); return targetPort ? document.querySelector(`[data-flow-port-for="${CSS.escape(endpointId)}"][data-flow-port-side="${targetPort}"]`) ?? undefined : undefined; };
         const beginPortConnection = (endpoint, sourcePort, port) => { clearSelectedRelationshipForConnection(); connection?.preview?.remove(); const targetPort = targetPortFor(sourcePort), targets = targetPort ? projection.graph.connectionEndpoints.map(({ id }) => id).filter((id) => id !== endpoint.id) : []; if (!targets.length) {
-            statusMessage = targetPort ? "Add another Page frame or Event occurrence before drawing a relationship." : "This port cannot start a relationship.";
+            statusMessage = targetPort ? "Add another Page frame before drawing a relationship." : "This port cannot start a relationship.";
             render();
             return;
         } const start = flowPortPoint(endpoint.layout, { width: endpoint.width, height: endpoint.height }, sourcePort), preview = svg("line"); preview.classList.add("flow-connection-preview"); preview.setAttribute("x1", String(start.x)); preview.setAttribute("y1", String(start.y)); preview.setAttribute("x2", String(start.x)); preview.setAttribute("y2", String(start.y)); canvas.append(preview); connection = { sourceId: endpoint.id, sourcePort, targets, targetIndex: 0, preview }; statusMessage = `Connection mode: choose a ${targetPort} port; Escape cancels.`; targetPortElement(targets[0], sourcePort)?.classList.add("is-valid-target"); port.focus(); };
@@ -480,7 +515,7 @@ export function installFlowGraphBuilder(options) {
                 return;
             } const band = projection.laneBands.find(({ id }) => id === targetId), currentState = current().state, next = moveFlowPageFrame(currentState, flow.id, frame.id, { pageGroupId: targetId, x: Math.max(20, Math.round(nextX - laneOffset)), y: Math.max(40, Math.round(nextY - (band?.y ?? 0))) }); if (next !== currentState)
                 persist(next); setTimeout(() => elementByData("data-page-frame-id", frame.id)?.focus(), 50); }, beginConnection = () => { clearSelectedRelationshipForConnection(); connection?.preview?.remove(); const targets = projection.graph.connectionEndpoints.map(({ id }) => id).filter((id) => id !== frame.id); if (!targets.length) {
-                statusMessage = "Add another Page frame or Event occurrence before drawing a relationship.";
+                statusMessage = "Add another Page frame before drawing a relationship.";
                 render();
                 return;
             } const preview = svg("line"); preview.classList.add("flow-connection-preview"); preview.setAttribute("x1", String(x + endpoint.width)); preview.setAttribute("y1", String(y + endpoint.height / 2)); preview.setAttribute("x2", String(x + endpoint.width + 20)); preview.setAttribute("y2", String(y + endpoint.height / 2)); canvas.append(preview); connection = { sourceId: frame.id, targets, targetIndex: 0, preview }; statusMessage = "Connection mode: choose a valid input port; Escape cancels."; elementByData("data-input-port-for", targets[0] ?? "")?.classList.add("is-valid-target"); outputPort.focus(); };
@@ -700,12 +735,9 @@ export function installFlowGraphBuilder(options) {
         for (const nodeData of projection.graph.nodes) {
             if (!nodeData.layout)
                 continue;
-            const group = svg("g"), box = svg("rect"), title = svg("text"), detail = svg("text"), input = svg("circle"), output = svg("circle"), layout = nodeData.layout;
+            const group = svg("g"), box = svg("rect"), title = svg("text"), detail = svg("text"), layout = nodeData.layout;
             group.classList.add("flow-node");
             group.dataset.occurrenceId = nodeData.id;
-            group.dataset.flowEndpointId = nodeData.id;
-            group.dataset.flowEndpointKind = "event-occurrence";
-            group.dataset.keyboardOutputFor = nodeData.id;
             group.setAttribute("transform", `translate(${layout.x} ${layout.y})`);
             group.setAttribute("tabindex", "0");
             group.setAttribute("role", "button");
@@ -718,50 +750,10 @@ export function installFlowGraphBuilder(options) {
             title.textContent = nodeData.name;
             detail.setAttribute("x", "12");
             detail.setAttribute("y", "55");
-            detail.textContent = nodeData.role === "context-setting" ? `Context-setting Event${nodeData.trigger ? ` · ${nodeData.trigger}` : ""}` : "Interaction Event";
-            input.setAttribute("cx", "0");
-            input.setAttribute("cy", String(nodeHeight / 2));
-            input.setAttribute("r", "8");
-            input.setAttribute("tabindex", "0");
-            input.dataset.inputPortFor = nodeData.id;
-            input.setAttribute("aria-label", `Input port for ${nodeData.name}`);
-            output.setAttribute("cx", String(nodeWidth));
-            output.setAttribute("cy", String(nodeHeight / 2));
-            output.setAttribute("r", "8");
-            output.setAttribute("tabindex", "0");
-            output.dataset.outputPortFor = nodeData.id;
-            output.setAttribute("aria-label", `Output port for ${nodeData.name}`);
+            detail.textContent = "Interaction Event";
             detail.textContent = `Interaction Event${nodeData.trigger ? ` · ${nodeData.trigger}` : ""}`;
             group.setAttribute("aria-label", `${nodeData.name}. Interaction Event. Drag or use Arrow keys to move.`);
-            const startConnection = () => { clearSelectedRelationshipForConnection(); connection?.preview?.remove(); const targets = projection.graph.connectionEndpoints.map(({ id }) => id).filter((id) => id !== nodeData.id); if (!targets.length) {
-                connection = undefined;
-                statusMessage = "Add another Page frame or Event occurrence before drawing a relationship.";
-                render();
-                queueMicrotask(() => elementByData("data-output-port-for", nodeData.id)?.focus());
-                return;
-            } const preview = svg("line"); preview.classList.add("flow-connection-preview"); preview.setAttribute("x1", String(layout.x + nodeWidth)); preview.setAttribute("y1", String(layout.y + nodeHeight / 2)); preview.setAttribute("x2", String(layout.x + nodeWidth + 20)); preview.setAttribute("y2", String(layout.y + nodeHeight / 2)); canvas.append(preview); connection = { sourceId: nodeData.id, targets, targetIndex: 0, preview }; statusMessage = "Connection mode: choose a valid input port; Escape cancels."; elementByData("data-input-port-for", targets[0] ?? "")?.classList.add("is-valid-target"); output.focus(); };
-            output.addEventListener("pointerdown", (event) => { event.stopPropagation(); startConnection(); });
-            output.addEventListener("keydown", (event) => { event.stopPropagation(); if (event.key === "Enter" && !connection) {
-                event.preventDefault();
-                startConnection();
-                return;
-            } if (!connection)
-                return; if (event.key === "Escape") {
-                event.preventDefault();
-                cancelConnection();
-                return;
-            } if (event.key.startsWith("Arrow")) {
-                event.preventDefault();
-                document.querySelectorAll(".is-valid-target").forEach((element) => element.classList.remove("is-valid-target"));
-                connection.targetIndex = (connection.targetIndex + (event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 1) + connection.targets.length) % connection.targets.length;
-                elementByData("data-input-port-for", connection.targets[connection.targetIndex] ?? "")?.classList.add("is-valid-target");
-                return;
-            } if (event.key === "Enter") {
-                event.preventDefault();
-                commitConnection(connection.targets[connection.targetIndex]);
-            } });
-            input.addEventListener("pointerup", (event) => { event.stopPropagation(); commitConnection(nodeData.id); });
-            const storedOccurrence = stored.occurrences.find(({ id }) => id === nodeData.id), storedPosition = storedOccurrence.position, focusNode = () => queueMicrotask(() => elementByData("data-occurrence-id", nodeData.id)?.focus()), containingPageFrame = projection.graph.connectionEndpoints.find(({ kind, id }) => kind === "page-frame" && id === nodeData.pageFrameId), containedMoveAllowed = (x, y) => Boolean(containingPageFrame && x >= FLOW_GRAPH_GEOMETRY.eventMinX && y >= FLOW_GRAPH_GEOMETRY.eventMinY && x + nodeWidth <= containingPageFrame.width && y + nodeHeight <= containingPageFrame.height), rejectContainedMove = () => { group.setAttribute("transform", `translate(${layout.x} ${layout.y})`); statusMessage = "Add the predefined Event to another Page frame instead."; statusRepairHref = ""; render(); focusNode(); }, moveContained = (x, y) => { if (!containedMoveAllowed(x, y)) {
+            const storedOccurrence = stored.occurrences.find(({ id }) => id === nodeData.id), storedPosition = storedOccurrence.position, focusNode = () => queueMicrotask(() => elementByData("data-occurrence-id", nodeData.id)?.focus()), containingPageFrame = projection.graph.connectionEndpoints.find(({ kind, id }) => kind === "page-frame" && id === nodeData.pageFrameId), containedMoveAllowed = (x, y) => Boolean(containingPageFrame && x >= FLOW_GRAPH_GEOMETRY.eventMinX && y >= FLOW_GRAPH_GEOMETRY.eventMinY && x + nodeWidth <= containingPageFrame.width && y + nodeHeight <= containingPageFrame.height), rejectContainedMove = () => { group.setAttribute("transform", `translate(${layout.x} ${layout.y})`); statusMessage = "Use Change Page to move this Event occurrence to another Page frame."; statusRepairHref = ""; render(); focusNode(); }, moveContained = (x, y) => { if (!containedMoveAllowed(x, y)) {
                 rejectContainedMove();
                 return;
             } persist(moveGraphOccurrence(current().state, flow.id, nodeData.id, { x, y })); focusNode(); }, rejectMembershipMove = () => { if (nodeData.freePageFrame) {
@@ -769,13 +761,8 @@ export function installFlowGraphBuilder(options) {
                 statusMessage = `${page?.name ?? nodeData.name} requires explicit Page Group membership before entering a named lane.`;
                 statusRepairHref = `?kind=pages&entity=${encodeURIComponent(nodeData.pageId)}&field=pageGroupIds`;
             }
-            else if (nodeData.role === "context-setting") {
-                const review = inspectFreePageEdgeMove(current().state.project, flow.id, nodeData.id, nodeData.freePageRegion ?? "after-lanes");
-                statusMessage = review.message;
-                statusRepairHref = review.guidance;
-            }
             else {
-                statusMessage = "Add the predefined Event to another Page frame instead.";
+                statusMessage = "Use Change Page to move this Event occurrence to another Page frame.";
                 statusRepairHref = "";
             } render(); focusNode(); };
             let dragStart;
@@ -788,35 +775,12 @@ export function installFlowGraphBuilder(options) {
                 moveContained(relativeX, relativeY);
                 return;
             } persist(moveGraphOccurrence(current().state, flow.id, nodeData.id, { lane: layout.lane, x, y: Math.max(55, y) })); focusNode(); };
-            group.addEventListener("pointerdown", (event) => { if (event.target.closest("circle,foreignObject") || dragStart)
+            group.addEventListener("pointerdown", (event) => { if (event.target.closest("foreignObject") || dragStart)
                 return; dragStart = { x: layout.x, y: layout.y, clientX: event.clientX, clientY: event.clientY, pointerId: event.pointerId }; window.addEventListener("pointermove", moveDraggedNode); window.addEventListener("pointerup", finishDraggedNode); window.addEventListener("pointercancel", cancelDraggedNode); try {
                 group.setPointerCapture(event.pointerId);
             }
             catch { /* Synthetic regression events have no active device pointer to capture. */ } });
-            group.addEventListener("keydown", (event) => { if (event.target.closest("foreignObject,input,button,a,summary,details"))
-                return; if (event.key === "Enter" && !connection) {
-                event.preventDefault();
-                startConnection();
-                return;
-            } if (connection?.sourceId === nodeData.id) {
-                if (event.key === "Escape") {
-                    event.preventDefault();
-                    cancelConnection();
-                    return;
-                }
-                if (event.key.startsWith("Arrow")) {
-                    event.preventDefault();
-                    document.querySelectorAll(".is-valid-target").forEach((element) => element.classList.remove("is-valid-target"));
-                    connection.targetIndex = (connection.targetIndex + (event.key === "ArrowLeft" || event.key === "ArrowUp" ? -1 : 1) + connection.targets.length) % connection.targets.length;
-                    elementByData("data-input-port-for", connection.targets[connection.targetIndex] ?? "")?.classList.add("is-valid-target");
-                    return;
-                }
-                if (event.key === "Enter") {
-                    event.preventDefault();
-                    commitConnection(connection.targets[connection.targetIndex]);
-                    return;
-                }
-            } if (!event.key.startsWith("Arrow"))
+            group.addEventListener("keydown", (event) => { if (event.target.closest("foreignObject,input,button,a,summary,details") || !event.key.startsWith("Arrow"))
                 return; event.preventDefault(); const dx = event.key === "ArrowLeft" ? -20 : event.key === "ArrowRight" ? 20 : 0, dy = event.key === "ArrowUp" ? -20 : event.key === "ArrowDown" ? 20 : 0; if (nodeData.pageFrameId) {
                 moveContained(Number(storedPosition.x ?? 24) + dx, Number(storedPosition.y ?? 70) + dy);
                 return;
@@ -840,9 +804,9 @@ export function installFlowGraphBuilder(options) {
             canvasSummary.addEventListener("keydown", (event) => { if (event.key !== "Enter" && event.key !== " ")
                 return; event.preventDefault(); canvasExample.open = !canvasExample.open; });
             exampleHost.append(canvasExample);
-            group.append(box, title, detail, input, output, exampleHost);
+            group.append(box, title, detail, exampleHost);
             canvas.append(group);
-            const row = document.createElement("li"), control = button(`${nodeData.name} · ${nodeData.role}${nodeData.trigger ? ` · ${nodeData.trigger}` : ""}`, () => saveSelection({ kind: "occurrence", id: nodeData.id })), outlineExample = occurrenceExampleDetails(state, flow.id, nodeData.id, nodeData.name);
+            const row = document.createElement("li"), control = button(`${nodeData.name} · Interaction Event${nodeData.trigger ? ` · ${nodeData.trigger}` : ""}`, () => saveSelection({ kind: "occurrence", id: nodeData.id })), outlineExample = occurrenceExampleDetails(state, flow.id, nodeData.id, nodeData.name);
             row.dataset.occurrenceId = nodeData.id;
             row.append(control, outlineExample);
             outline.insertBefore(row, outline.querySelector("[data-relationship-id]"));

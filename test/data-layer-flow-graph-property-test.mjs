@@ -38,8 +38,8 @@ const randomText=(prefix)=>`${prefix}-${Math.floor(random()*1_000_000)}`;
 for(let sample=0;sample<128;sample+=1){
   const relationship={
     id:`relationship:legacy-${sample}`,
-    sourceEndpoint:{kind:sample%2?"page-frame":"event-occurrence",id:`source:${sample}`},
-    targetEndpoint:{kind:sample%3?"event-occurrence":"page-frame",id:`target:${sample}`},
+    sourceEndpoint:{kind:"page-frame",id:`source:${sample}`},
+    targetEndpoint:{kind:"page-frame",id:`target:${sample}`},
     kind:"parallel",
     group:randomText("group"),
     ...(sample%2?{label:randomText("label")}:{}),
@@ -62,8 +62,8 @@ assert.equal(migrateLegacyFlowRelationshipKinds(current,flow.id),current,"a curr
 for(let sample=0;sample<128;sample+=1){
   const relationships=Array.from({length:2+Math.floor(random()*12)},(_,index)=>({
     id:`relationship:deletion-${sample}-${index}`,
-    sourceEndpoint:{kind:index%2?"page-frame":"event-occurrence",id:`source:${sample}:${index}`},
-    targetEndpoint:{kind:index%3?"event-occurrence":"page-frame",id:`target:${sample}:${index}`},
+    sourceEndpoint:{kind:"page-frame",id:`source:${sample}:${index}`},
+    targetEndpoint:{kind:"page-frame",id:`target:${sample}:${index}`},
     sourcePort:index%2?"top":"right",
     targetPort:index%2?"bottom":"left",
     kind:index%2?"alternative":"expected_next",
@@ -82,7 +82,7 @@ for(let sample=0;sample<64;sample+=1){
   const instanceId=(kind)=>`${kind}:instance-${sample}-${++propertyIdentity}`;
   state=addProjectEntity(state,"pageGroups",{name:"Checkout"},instanceId);
   const group=state.project.collections.pageGroups[0];
-  state=addProjectEntity(state,"pages",{name:"Confirmation",pageGroupIds:[group.id],schemaConstraints:[{path:"/status",type:"string",expectedValue:"pending"}]},instanceId);
+  state=addProjectEntity(state,"pages",{name:"Confirmation",eventName:"pageview",pageGroupIds:[group.id],schemaConstraints:[{path:"/status",type:"string",expectedValue:"pending"}]},instanceId);
   state=addProjectEntity(state,"flows",{name:"Repeated instances"},instanceId);
   const page=state.project.collections.pages[0],instanceFlow=state.project.collections.flows[0],count=2+Math.floor(random()*7);
   state=setFlowPageGroupLanes(state,instanceFlow.id,[group.id]);
@@ -102,8 +102,8 @@ for(let sample=0;sample<64;sample+=1){
   const eventId=(kind)=>`${kind}:event-${sample}-${++propertyIdentity}`;
   state=addProjectEntity(state,"pageGroups",{name:"Checkout"},eventId);
   const group=state.project.collections.pageGroups[0];
-  state=addProjectEntity(state,"pages",{name:"Cart",pageGroupIds:[group.id]},eventId);
-  state=addProjectEntity(state,"events",{name:"page_view",eventName:"page_view",role:sample%2?"context-setting":"interaction",trigger:sample%3?randomText("trigger"):undefined},eventId);
+  state=addProjectEntity(state,"pages",{name:"Cart",eventName:"pageview",pageGroupIds:[group.id]},eventId);
+  state=addProjectEntity(state,"events",{name:"Add to cart",eventName:"add_to_cart",role:sample%2?"context-setting":"interaction",trigger:sample%3?randomText("trigger"):undefined},eventId);
   state=addProjectEntity(state,"flows",{name:"Event insertion"},eventId);
   const page=state.project.collections.pages[0],event=state.project.collections.events[0],eventFlow=state.project.collections.flows[0];
   assert.equal("role" in event,false,`event sample ${sample} must discard definition roles`);

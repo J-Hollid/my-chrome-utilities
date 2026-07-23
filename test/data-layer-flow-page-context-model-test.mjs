@@ -60,16 +60,16 @@ const blockedState={...state,project:{...state.project,documentationFlowGraphs:{
 const blockedReview=reviewLegacyFlowContextMigration(blockedState.project,flow.id);assert.equal(blockedReview.blockers.length,1);assert.match(blockedReview.blockers[0].message,/Returns initial context.*Returns journey.*missing Page binding/);assert.equal(migrateLegacyFlowContextBindings(blockedState,flow.id),blockedState,"an unresolved cross-Flow reference blocks the whole migration transaction");
 state=migrateLegacyFlowContextBindings(state,flow.id);
 const migrated=documentaryFlowGraph(state.project,flow.id);
-assert.deepEqual(migrated.occurrences.map(({id,eventId,role,trigger})=>({id,eventId,role,trigger})),[{id:direct.id,eventId:pageView.id,role:undefined,trigger:"initial-load"},{id:"occurrence:legacy-route",eventId:routeView.id,role:undefined,trigger:"spa-route-change"}]);
-const migratedOther=documentaryFlowGraph(state.project,otherFlow.id);assert.deepEqual(migratedOther.occurrences.map(({id,eventId,role,trigger,position})=>({id,eventId,role,trigger,position})),[{id:otherLegacyOccurrence.id,eventId:pageView.id,role:undefined,trigger:"initial-load",position:{y:155}}]);assert.deepEqual(migratedOther.relationships,[{id:"relationship:returns-self",sourceNodeId:otherLegacyOccurrence.id,targetNodeId:otherLegacyOccurrence.id,kind:"expected_next"}]);
+assert.deepEqual(migrated.occurrences.map(({id,eventId,role,trigger})=>({id,eventId,role,trigger})),[{id:"occurrence:legacy-route",eventId:routeView.id,role:undefined,trigger:"spa-route-change"}],"the primary Page context becomes Page identity rather than a nested occurrence");
+const migratedOther=documentaryFlowGraph(state.project,otherFlow.id);assert.deepEqual(migratedOther.occurrences,[]);assert.deepEqual(migratedOther.relationships,[],"relationships touching removed Page-context occurrences are removed");
 assert.ok(migrated.occurrences.every((item)=>!("contextBindingId" in item)));
 assert.ok(migratedOther.occurrences.every((item)=>!("contextBindingId" in item)));
 assert.ok(state.project.collections.pages.every((page)=>!("contextEventBindings" in page)));
 assert.ok(state.project.collections.events.every((event)=>!("role" in event)));
 assert.equal(Object.values(state.project.documentationFlowGraphs).flatMap(({occurrences})=>occurrences).some(({contextBindingId})=>contextBindingId),false);
-const projectedContext=projectFlowGraph(state.project,flow.id).graph.nodes.find(({id})=>id===direct.id);
-assert.deepEqual({eventId:projectedContext.eventId,role:projectedContext.role,occurrenceType:projectedContext.occurrenceType,contextBindingId:projectedContext.contextBindingId},{eventId:pageView.id,role:"interaction",occurrenceType:undefined,contextBindingId:undefined});
-assert.equal(layeredEventRole(migrated.occurrences.find(({id})=>id===direct.id)),"interaction");
+assert.equal(state.project.collections.pages.find(({id})=>id===cart.id).eventName,"page_view");
+assert.equal(projectFlowGraph(state.project,flow.id).graph.nodes[0].eventId,routeView.id);
+assert.equal(layeredEventRole(migrated.occurrences[0]),"interaction");
 assert.deepEqual(undoProjectTransaction(state).project,beforeMigration);
 
 console.log("Flow Page-context model tests passed");

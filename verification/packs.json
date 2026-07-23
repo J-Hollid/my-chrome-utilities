@@ -773,6 +773,7 @@
       "test/data-layer-flow-graph-persistence-test.mjs",
       "test/data-layer-flow-page-context-model-test.mjs",
       "test/data-layer-flow-event-insertion-semantics-test.mjs",
+      "test/data-layer-flow-page-event-model-test.mjs",
       "test/flow-evidence-reporter-test.mjs"
     ],
     "property": [

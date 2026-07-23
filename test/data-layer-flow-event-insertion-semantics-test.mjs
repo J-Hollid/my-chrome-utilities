@@ -15,7 +15,7 @@ const id=(kind)=>`${kind}:fixed-event-${++sequence}`;
 let state=createSpecificationProject({name:"Fixed Flow semantics",site:"shop.example",id});
 const add=(kind,entity)=>{state=addProjectEntity(state,kind,entity,id);return state.project.collections[kind].at(-1);};
 const checkout=add("pageGroups",{name:"Checkout"});
-const cart=add("pages",{name:"Cart",pageGroupIds:[checkout.id]});
+const cart=add("pages",{name:"Cart",eventName:"pageview",pageGroupIds:[checkout.id]});
 const pageView=add("events",{name:"page_view",eventName:"page_view",role:"context-setting",trigger:"Initial load"});
 const flow=add("flows",{name:"Checkout journey",steps:[]});
 
@@ -36,12 +36,10 @@ const beforeLegacy=documentaryFlowGraph(state.project,flow.id);
 state={...state,project:{...state.project,collections:{...state.project.collections,events:state.project.collections.events.map((event)=>({...event,role:"context-setting"})),pages:state.project.collections.pages.map((page)=>page.id===cart.id?{...page,contextEventBindings:[binding]}:page)},documentationFlowGraphs:{...state.project.documentationFlowGraphs,[flow.id]:{...beforeLegacy,occurrences:[{...occurrence,eventId:undefined,role:"context-setting",trigger:undefined,contextBindingId:binding.id}]}}}};
 assert.deepEqual(reviewLegacyFlowContextMigration(state.project,flow.id).blockers,[]);
 state=migrateLegacyFlowContextBindings(state,flow.id);
-const migrated=documentaryFlowGraph(state.project,flow.id).occurrences[0],migratedEvent=state.project.collections.events.find(({id:eventId})=>eventId===pageView.id);
-assert.equal(migrated.eventId,pageView.id);
-assert.equal(migrated.trigger,"Legacy trigger");
-assert.equal("role" in migrated,false,"migration removes occurrence role fields");
+const migrated=documentaryFlowGraph(state.project,flow.id),migratedEvent=state.project.collections.events.find(({id:eventId})=>eventId===pageView.id),migratedPage=state.project.collections.pages.find(({id:pageId})=>pageId===cart.id);
+assert.deepEqual(migrated.occurrences,[],"the legacy primary context occurrence is absorbed into its Page");
+assert.equal(migratedPage.eventName,"page_view");
 assert.equal("role" in migratedEvent,false,"migration removes Event-definition role fields");
-assert.equal("contextBindingId" in migrated,false);
-assert.equal("contextEventBindings" in state.project.collections.pages.find(({id:pageId})=>pageId===cart.id),false);
+assert.equal("contextEventBindings" in migratedPage,false);
 
 console.log("Flow Event insertion semantics tests passed");

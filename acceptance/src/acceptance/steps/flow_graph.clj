@@ -26,6 +26,7 @@
     (checked-command! "Flow graph persistence verification failed." "node" "test/data-layer-flow-graph-persistence-test.mjs")
     (checked-command! "Flow Page-context model verification failed." "node" "test/data-layer-flow-page-context-model-test.mjs")
     (checked-command! "Flow Event insertion semantics verification failed." "node" "test/data-layer-flow-event-insertion-semantics-test.mjs")
+    (checked-command! "Flow Page context-event model verification failed." "node" "test/data-layer-flow-page-event-model-test.mjs")
     (reset! model-verified? true)))
 (defn- observe-browser! []
   (or @browser-observation
@@ -38,17 +39,17 @@
   (set (map #(keyword (format "runtime%03d" %)) (range 1 25))))
 (def required-evidence-keys (conj runtime-evidence-keys :installedBoundary))
 (def flow005-examples
-  {[:model ["Cart" "page_view" "Initial load" "activates page_view from the Events catalog by pointer"]] :pointer-activation
+  {[:model ["Cart" "button_click" "Continue clicked" "activates button_click from the Events catalog by pointer"]] :pointer-activation
    [:model ["Shipping" "add_shipping_info" "Form submitted" "drags add_shipping_info onto the visible canvas Shipping frame"]] :pointer-drop
    [:model ["Payment" "add_payment_info" "Payment submitted" "activates add_payment_info from the Events catalog by keyboard"]] :keyboard-activation
-   [:runtime ["Cart" "page_view" "Initial load" "activate page_view from the Events catalog by pointer"]] :pointer-activation
+   [:runtime ["Cart" "button_click" "Continue clicked" "activate button_click from the Events catalog by pointer"]] :pointer-activation
    [:runtime ["Shipping" "add_shipping_info" "Form submitted" "drag add_shipping_info onto the visible SVG Shipping frame"]] :pointer-drop
    [:runtime ["Payment" "add_payment_info" "Payment submitted" "activate add_payment_info from the Events catalog by keyboard"]] :keyboard-activation})
 (def runtime009-examples
-  {["Customer details Page" "right" "Payment Page" "left" "expected_next"] :pageContextExpectedNext
-   ["Customer details Page" "top" "Customer details add_payment_info" "bottom" "alternative"] :pageToEventAlternative
-   ["Customer details add_payment_info" "bottom" "Payment Page" "top" "merge"] :eventToPageMerge
-   ["Customer details page_view" "right" "Customer details add_payment_info" "left" "expected_next"] :eventInteractionExpectedNext})
+  {["Customer details" "right" "Payment" "left" "expected_next"] :pageContextExpectedNext
+   ["Customer details" "top" "ID verification" "bottom" "alternative"] :pageToEventAlternative
+   ["ID verification" "bottom" "Payment" "top" "merge"] :eventToPageMerge
+   ["Payment" "right" "Confirmation" "left" "expected_next"] :eventInteractionExpectedNext})
 (def runtime023-examples
   {["expected_next" "Customer details" "Payment" "label Checkout route" "Delete relationship Checkout route, Customer details to Payment"] :labelled
    ["alternative" "Customer details" "ID verification" "no label" "Delete relationship Customer details to ID verification"] :unlabelled})

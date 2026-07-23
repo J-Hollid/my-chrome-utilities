@@ -58,7 +58,7 @@ export function configureFlowDocumentationSnapshot(snapshot, configuration) {
 export function orderFlowDocumentationOccurrenceIds(occurrences, relationships, pageGroupIds) {
     const occurrenceIds = new Set(occurrences.map(({ id }) => id)), alternativeBySource = new Map(), mergeByTarget = new Map();
     for (const relationship of relationships) {
-        const source = String(relationship.sourceEndpoint?.kind === "event-occurrence" ? relationship.sourceEndpoint.id : relationship.sourceNodeId ?? ""), target = String(relationship.targetEndpoint?.kind === "event-occurrence" ? relationship.targetEndpoint.id : relationship.targetNodeId ?? "");
+        const source = String(relationship.sourceEndpoint?.id ?? relationship.sourceNodeId ?? ""), target = String(relationship.targetEndpoint?.id ?? relationship.targetNodeId ?? "");
         if (!occurrenceIds.has(source) || !occurrenceIds.has(target) || source === target)
             continue;
         const index = relationship.kind === "alternative" ? alternativeBySource : relationship.kind === "merge" ? mergeByTarget : undefined;

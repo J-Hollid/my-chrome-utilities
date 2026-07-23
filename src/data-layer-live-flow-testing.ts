@@ -33,6 +33,7 @@ const payload=(event:LiveFlowEvent):Record<string,unknown>=>{const value=event.p
 function assertRunProject(run:LiveFlowTestRun,state:ProjectState):void{if(state.project.id!==run.projectId)throw new Error("Flow test project context changed.");}
 
 function frameName(state:ProjectState,frame:ProjectEntity):string{return state.project.collections.pages.find(({id})=>id===frame.pageId)?.name??frame.name;}
+function frameEventName(state:ProjectState,frame:ProjectEntity|undefined):string{return String(state.project.collections.pages.find(({id})=>id===frame?.pageId)?.eventName??"pageview");}
 function occurrenceName(state:ProjectState,occurrence:ProjectEntity):string{return occurrence.name||(state.project.collections.events.find(({id})=>id===occurrence.eventId)?.name??occurrence.id);}
 function step(state:ProjectState,flowId:string,id:string):{id:string;kind:LiveFlowStepKind;name:string;entity:ProjectEntity;scope:"Flow Page-instance"|"Event-occurrence"}{
   const current=graphs(state)[flowId];const frame=current?.pageFrames?.find((candidate)=>candidate.id===id);if(frame)return{id,kind:"Page",name:frameName(state,frame),entity:frame,scope:"Flow Page-instance"};
@@ -75,18 +76,21 @@ export function liveFlowEventStepChoices(run:LiveFlowTestRun,state:ProjectState,
   if(!run.history.length){
     const noRootPage=!run.startChoices.some(({recommended})=>recommended);
     return{mode:"initial",noRootPage,choices:run.startChoices.map((choice)=>({
-      id:choice.id,name:choice.name,stepKind:"Page",root:choice.recommended,recorded:false,displayName:choice.name,
+      id:choice.id,name:choice.name,stepKind:"Page",root:choice.recommended,recorded:false,displayName:`${choice.name} ${frameEventName(state,graphs(state)[run.flowId!]?.pageFrames?.find(({id})=>id===choice.id))}`,
     }))};
   }
   const source=step(state,run.flowId,run.currentStepId!);
-  const choices=graph(state,run.flowId).relationships
+  const currentGraph=graphs(state)[run.flowId],contained=(currentGraph?.occurrences??[])
+    .filter(({pageFrameId})=>pageFrameId===run.currentStepId)
+    .map((occurrence)=>{const target=step(state,run.flowId!,occurrence.id);return{id:target.id,name:target.name,stepKind:"Event" as const,root:false,recorded:false,displayName:`${source.name} ${target.name}`};});
+  const related=graph(state,run.flowId).relationships
     .filter((relationship)=>relationship.sourceEndpoint?.id===run.currentStepId&&Boolean(relationship.targetEndpoint?.id))
     .map((relationship)=>{
       const target=step(state,run.flowId!,relationship.targetEndpoint!.id);
       const label=typeof relationship.label==="string"?relationship.label.trim():"";
       return{id:target.id,name:target.name,stepKind:target.kind,root:false,recorded:false,kind:relationshipKind(relationship as unknown as Record<string,unknown>),relationshipId:relationship.id,displayName:label||`${source.name} to ${target.name}`};
     });
-  return{mode:"next",choices,noRootPage:false};
+  return{mode:"next",choices:[...contained,...related],noRootPage:false};
 }
 
 export function linkLiveFlowEvent(run:LiveFlowTestRun,state:ProjectState,event:LiveFlowEvent,stepId:string):LiveFlowTestRun{
@@ -98,13 +102,14 @@ export function linkLiveFlowEvent(run:LiveFlowTestRun,state:ProjectState,event:L
   const selected=step(state,run.flowId,stepId);
   const path=layeredContributorPath(state,selected.entity,selected.scope,run.flowId);
   const contributors=layeredContributorsForPath(state,path,payload(event));
-  const compiled=compileLayeredSchema(contributors,{eventId:String(selected.entity.eventId??event.name),eventRole:selected.kind==="Event"?"interaction":"context",...(selected.kind==="Event"?{occurrenceId:selected.id}:{})});
+  const compiled=compileLayeredSchema(contributors,{eventId:selected.kind==="Page"?frameEventName(state,selected.entity):String(selected.entity.eventId??event.name),eventRole:selected.kind==="Event"?"interaction":"context",...(selected.kind==="Event"?{occurrenceId:selected.id}:{})});
   const effectiveRevision=facetRevision(compiled);
   const validation=validateLayeredObservation({targetId:selected.id,targetName:selected.name,revision:effectiveRevision,compiled},payload(event));
   const pathEntry:LiveFlowMatchedPathEntry={stepId:selected.id,stepName:selected.name,...(offered.relationshipId?{relationshipId:offered.relationshipId}:{}),eventId:event.id,captureTime:event.captureTime};
   const matchedPath=[...run.history.map(({stepId:historyStepId,stepName,relationshipId,eventId,captureTime})=>({stepId:historyStepId,stepName,...(relationshipId?{relationshipId}:{}),eventId,captureTime})),pathEntry];
   const entry:LiveFlowHistoryEntry={projectId:run.projectId,flowId:run.flowId,flowName:run.flowName,stepId:selected.id,stepKind:selected.kind,stepName:selected.name,eventId:event.id,captureTime:event.captureTime,selectionMode:"Manual Flow test",...(offered.relationshipId?{relationshipId:offered.relationshipId}:{}),effectiveSchemaRevision:validation.effectiveSchemaRevision,effectiveSchemaRevisionIdentity:revisionIdentity(effectiveRevision),issues:validation.issues,provenance:clone(validation.provenance),target:{id:selected.id,name:selected.name},status:validation.issues.length?"Invalid":"Valid",matchedPath};
-  return{...run,currentStepId:selected.id,incomingRelationshipId:undefined,history:[...run.history,entry],matchedEventIds:[...run.matchedEventIds,event.id],startedAt:run.startedAt??event.captureTime};
+  const currentPageId=selected.kind==="Page"?selected.id:String(selected.entity.pageFrameId??run.currentStepId);
+  return{...run,currentStepId:currentPageId,incomingRelationshipId:undefined,history:[...run.history,entry],matchedEventIds:[...run.matchedEventIds,event.id],startedAt:run.startedAt??event.captureTime};
 }
 
 export function attachLiveFlowDefect(run:LiveFlowTestRun,stepId:string,defectId:string,eventId?:string):LiveFlowTestRun{return{...run,history:run.history.map((entry)=>entry.stepId===stepId&&(!eventId||entry.eventId===eventId)?{...entry,defectId}:entry)};}
