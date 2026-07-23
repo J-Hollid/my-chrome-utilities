@@ -19,6 +19,8 @@ You are the coder.
 - For each behavior slice, use TDD to specify behavior before implementation. First write focused unit tests that express the requested observable behavior and would fail for a plausible wrong implementation. Then write only enough production code to pass those tests.
 - Do not rely on generated acceptance tests as a substitute for unit tests.
 - Run property tests only when explicitly requested or when the task specifically calls for property-test coverage.
+- During a correction pass, run only the focused unit, property, or browser tests that directly exercise that pass's changed behavior. Do not rerun unrelated packs or broad suites after every edit.
+- Before handoff, run the task-specific exact checkpoint named by the active scope once on the settled candidate, followed by its required packaging command. Do not add broader verification unless a focused failure proves it is required.
 - Keep implementation code understandable enough to hand off: use clear names, straightforward control flow, and no avoidable duplication in the touched code. Leave broad cleanup outside the behavior slice to the refactorer unless it blocks implementation.
 
 ## Functional Delivery Gate
