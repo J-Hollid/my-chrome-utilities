@@ -71,19 +71,24 @@ const initial={
   payload:{site:"shop",currency:"EUR",cart_id:"cart-1"},
 };
 const before={
-  id:"live-100",name:"pageview",sourceId:"history",
+  id:"live-100",name:"page_view",sourceId:"history",
   captureTime:"2026-07-23T10:00:00.000Z",
+  payload:{site:"shop",currency:"EUR",payment_id:"payment-before"},
+};
+const payment={
+  id:"live-102",name:"pageview",sourceId:"history",
+  captureTime:"2026-07-23T10:00:02.000Z",
   payload:{site:"shop",currency:"EUR",payment_id:"payment-1",oForm:{formStepName:"review"}},
 };
 const after={
-  id:"live-102",name:"add_payment_info",sourceId:"history",
-  captureTime:"2026-07-23T10:00:02.000Z",
+  id:"live-103",name:"add_payment_info",sourceId:"history",
+  captureTime:"2026-07-23T10:00:03.000Z",
   payload:{site:"shop",currency:"EUR",payment_id:"payment-1",event_name:"add_payment_info",method:"card"},
 };
 
 let run=selectLiveFlow(createLiveFlowTest("run:outline","project:outline"),state,"flow:checkout");
 run=linkLiveFlowEvent(run,state,initial,"frame:cart");
-const outgoing=liveFlowEventStepChoices(run,state,before.id).choices;
+const outgoing=liveFlowEventStepChoices(run,state,payment.id).choices;
 const relationshipRows=outgoing.map((choice)=>({
   relationship_kind:choice.kind,
   next_step:choice.stepKind==="Page"?`${choice.name} Page frame`:`${choice.name} Event occurrence`,
@@ -91,13 +96,13 @@ const relationshipRows=outgoing.map((choice)=>({
   display_name:choice.displayName,
 }));
 
-run=linkLiveFlowEvent(run,state,before,"frame:payment");
+run=linkLiveFlowEvent(run,state,payment,"frame:payment");
 const paymentEntry=run.history.at(-1);
-const relationshipReport=generateReportDetails(createDefectReport(defectCapturedEvent(createManualFlowDefectEvent(paymentEntry,before))));
+const relationshipReport=generateReportDetails(createDefectReport(defectCapturedEvent(createManualFlowDefectEvent(paymentEntry,payment))));
 const relationshipText=renderJiraReport(relationshipReport).text;
 let initialRun=selectLiveFlow(createLiveFlowTest("run:outline-initial","project:outline"),state,"flow:checkout");
-initialRun=linkLiveFlowEvent(initialRun,state,before,"frame:payment");
-const initialReport=generateReportDetails(createDefectReport(defectCapturedEvent(createManualFlowDefectEvent(initialRun.history[0],before))));
+initialRun=linkLiveFlowEvent(initialRun,state,payment,"frame:payment");
+const initialReport=generateReportDetails(createDefectReport(defectCapturedEvent(createManualFlowDefectEvent(initialRun.history[0],payment))));
 const initialText=renderJiraReport(initialReport).text;
 run=linkLiveFlowEvent(run,state,after,"occurrence:add-payment");
 const occurrenceEntry=run.history.at(-1);
@@ -127,5 +132,5 @@ const outlineRows=[
 ];
 
 assert.equal(outlineRows.length,9,"the production model fixture must demonstrate every Live Flow outline row");
-assert.equal(run.history.map(({eventId})=>eventId).join("|"),"live-101|live-100|live-102");
+assert.equal(run.history.map(({eventId})=>eventId).join("|"),"live-101|live-102|live-103");
 console.log(JSON.stringify({liveFlowTesting:{outlineRows}}));

@@ -9,6 +9,15 @@ import {
   selectLiveFlow,
   serializeLiveFlowSummary,
 } from "../dist/data-layer-live-flow-testing.js";
+import { createManualFlowDefectEvent } from "../dist/data-layer-live-flow-defect-report.js";
+import { createDefectReport } from "../dist/data-layer-defect-report.js";
+import { defectCapturedEvent } from "../dist/data-layer-defect-report-browser.js";
+import { generateReportDetails, renderJiraReport } from "../dist/data-layer-defect-report-export.js";
+import {
+  createValidationDefect,
+  currentDefectIssues,
+  serializeDefectLibrary,
+} from "../dist/data-layer-defect-library.js";
 import {canonicalSchemaWithConstraint,createCanonicalSchema} from "../dist/data-layer-canonical-schema.js";
 
 const canonical=(id,name,path)=>canonicalSchemaWithConstraint(
@@ -45,6 +54,38 @@ const state={project:{
 
 const rotate=(values,count)=>values.map((_,index)=>values[(index+count)%values.length]);
 const contributorFacetBytes=JSON.stringify(state.project.collections);
+const assertDefectSnapshot=(entry,event,expectedKind,expectedLabel,sample)=>{
+  const mutableEntry=structuredClone(entry),mutableEvent=structuredClone(event);
+  const manualEvent=createManualFlowDefectEvent(mutableEntry,mutableEvent);
+  const report=generateReportDetails(createDefectReport(defectCapturedEvent(manualEvent)));
+  const rendered=renderJiraReport(report);
+  const reportBytes=JSON.stringify(report);
+  const persisted=serializeDefectLibrary({defects:[createValidationDefect({
+    id:`defect:snapshot:${expectedKind}:${sample}`,
+    now:`2026-07-23T10:00:05.${String(sample).padStart(3,"0")}Z`,
+    report,
+    issues:currentDefectIssues(manualEvent),
+  })]});
+  mutableEntry.flowName="mutated Flow";
+  mutableEntry.stepName="mutated step";
+  mutableEntry.target.name="mutated target";
+  mutableEntry.provenance[0].contributorName="mutated contributor";
+  mutableEntry.matchedPath[0].stepName="mutated path";
+  mutableEvent.id="mutated event";
+  mutableEvent.payload={mutated:true};
+  assert.equal(JSON.stringify(report),reportBytes,"generated Flow defect reports isolate every source object");
+  assert.equal(renderJiraReport(report).text,rendered.text,"clipboard serialization remains stable after source mutation");
+  const stored=JSON.parse(persisted).defects[0].report;
+  assert.equal(stored.event.flowContext.linkEvidence.kind,expectedKind);
+  assert.equal(stored.event.flowContext.linkEvidence.label,expectedLabel);
+  assert.equal(stored.event.flowContext.eventStepLink.eventId,event.id);
+  assert.equal(stored.event.flowContext.eventStepLink.stepId,entry.stepId);
+  assert.equal(stored.event.flowContext.effectiveTarget.id,entry.target.id);
+  assert.equal(stored.event.flowContext.effectiveSchemaRevision,entry.effectiveSchemaRevision);
+  assert.deepEqual(stored.evidence.flow,stored.event.flowContext);
+  assert.equal(rendered.text.includes(expectedLabel),true);
+  assert.equal(rendered.text.includes(entry.effectiveSchemaRevisionIdentity),true);
+};
 for(let sample=0;sample<24;sample+=1){
   const chooseSuccess=sample%2===0,target=chooseSuccess?"success":"failure",other=chooseSuccess?"failure":"success";
   const chronological=[
@@ -81,6 +122,20 @@ for(let sample=0;sample<24;sample+=1){
   assert.equal(run.history[0].provenance.length>0,true);
   assert.equal(run.history.at(-1).status,"Invalid");
   assert.equal(run.history.at(-1).issues.some(({path})=>path==="/result"),true);
+  assertDefectSnapshot(
+    run.history[0],
+    chronological[2],
+    "start",
+    "Started at Start",
+    sample,
+  );
+  assertDefectSnapshot(
+    run.history.at(-1),
+    chronological[0],
+    "path",
+    `path Start to Submit occurrence to ${chooseSuccess?"Success":"Failure"}`,
+    sample,
+  );
 
   const completed=liveFlowSessionEvidence(run,state,`2026-07-23T10:00:04.${String(sample).padStart(3,"0")}Z`);
   assert.equal(completed.label,"Manual Flow test evidence");
