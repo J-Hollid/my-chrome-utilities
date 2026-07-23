@@ -15,6 +15,21 @@
       "src/utilities/data-layer/schemas.ts"
     ]
   },
+  "src/data-layer-live-flow-testing.ts": {
+    "module": "live-inspection",
+    "layer": "application",
+    "contracts": [
+      "src/utilities/data-layer/flow-graph.ts",
+      "src/utilities/data-layer/schemas.ts"
+    ]
+  },
+  "src/data-layer-live-flow-testing-ui.ts": {
+    "module": "live-inspection",
+    "layer": "browser",
+    "contracts": [
+      "src/utilities/data-layer/schemas.ts"
+    ]
+  },
   "src/data-layer-flow-table-documentation-export.ts": {
     "module": "schemas",
     "layer": "application"

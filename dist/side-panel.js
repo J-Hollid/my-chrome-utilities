@@ -101,6 +101,7 @@ import { createTemplateChangeReview } from "./utilities/data-layer/event-library
 import { renderTemplateChangeReview } from "./utilities/data-layer/event-library.js";
 import { pushPayloadInPage, } from "./utilities/data-layer/event-library.js";
 import { panelEmptyState } from "./panel-empty-states.js";
+import { mountLiveFlowTestingUi } from "./utilities/data-layer/live-inspection.js";
 import { findPanelEmptyStateElements, renderPanelEmptyState, } from "./panel-empty-states-ui.js";
 import { adoptSavedSchema, applyCapturedValidationToProfile, capturedValidationDestinationChoices, capturedValidationProfileRequirements, compileSpecificationProject, commitCanonicalProjectState, createFixtureFromCapturedValidation, evaluateSpecificationObservation, recordSpecificationCapture, recordSpecificationNavigation, SPECIFICATION_PROJECT_STORAGE_KEY, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, } from "./utilities/data-layer/schemas.js";
 const PROJECT_NAME = "my-chrome-utilities";
@@ -668,6 +669,7 @@ let defectListScrollTop = 0;
 let savedSessionLiveFeed = restoreSavedSessionLiveFeed(dataLayerStorage.getItem(SAVED_SESSION_LIVE_FEED_STORAGE_KEY), savedSessionLibrary);
 if (savedSessionLiveFeed)
     liveObserverState = savedSessionLiveFeed.savedView;
+let completedLiveFlowTests = [];
 let archivedSavedSession;
 let pendingSessionSaveDraft;
 let startFreshAfterSessionSave = false;
@@ -687,6 +689,19 @@ const storedSchemaLibrary = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY)
 let schemas = restoreSchemaLibrary(storedSchemaLibrary);
 let sidePanelLayeredProfileEditor;
 const projectLibraryUi = mountProjectLibraryUi({ root: document, storage: projectStorage, prepareProject: durableProjectRuntime.ensureProject, settled: durableProjectRuntime.settled, undoProject: durableProjectRuntime.undo, subscribe: (listener) => durableProjectRuntime.subscribe(({ library }) => listener(library)), blocked: () => Boolean(durableProjectRuntime.failedSave()), exportProject: async (projectId) => JSON.stringify(await durableProjectRuntime.repository.exportProject(projectId)), importProject: async (serialized, input) => { await durableProjectRuntime.repository.importProject(JSON.parse(serialized), input); }, projectStorageKey: SPECIFICATION_PROJECT_STORAGE_KEY, navigationStorageKey: "my-chrome-utilities.specification-project-navigation.v1", openStudio: (url) => { globalThis.open(url, "_blank"); }, onChange: renderSchemas });
+const liveFlowTestingUi = mountLiveFlowTestingUi({
+    root: document,
+    activeProject: async () => { const activeProjectId = projectLibraryUi.library().activeProjectId; if (!activeProjectId)
+        return; await durableProjectRuntime.settled(); await durableProjectRuntime.ensureProject(activeProjectId); await durableProjectRuntime.settled(); const project = restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)); return project?.project.id === activeProjectId && !project.project.placeholder ? project : undefined; },
+    events: () => liveObserverState.events,
+    saveSummary: (summary) => { completedLiveFlowTests = [...completedLiveFlowTests, structuredClone(summary)]; },
+    savedSummary: () => savedSessionLiveFeed?.session.flowTests?.at(-1),
+    onResult: (entry, event) => { liveObserverState = { ...liveObserverState, events: liveObserverState.events.map((candidate) => candidate.id === event.id ? { ...candidate, manualFlowValidations: [...(candidate.manualFlowValidations ?? []), structuredClone(entry)] } : candidate) }; renderLiveObserver(); },
+    onDefect: (entry, event) => { openLiveInspector(event.id); startManualFlowDefectReport(entry, event); },
+    openProject: () => { showDataLayerView("Projects", true); document.querySelector("#project-library-search")?.focus({ preventScroll: true }); },
+    createProject: () => { showDataLayerView("Projects", true); document.querySelector("#create-library-project")?.click(); },
+});
+void liveFlowTestingUi;
 let activeSchemaProjectHydration;
 const schemaContributorRoute = { collectionKinds: ["profiles", "pageGroups", "pages", "events", "flows"], includeFlowGraphs: true };
 async function hydrateActiveProjectForSchemas() { if (activeSchemaProjectHydration)
@@ -1737,10 +1752,64 @@ function openLiveInspector(eventId, preserveReturnSnapshot = false) {
                 setEventValidationUpdateStatus(liveObserverElements, `Validation changed to ${validation}.`);
             },
         }), presentation ? { showNonApplicableProperties: presentation.showNonApplicableProperties } : {});
+    if (event && liveObserverElements.eventInspector)
+        appendManualFlowValidation(liveObserverElements.eventInspector, event);
     renderLiveObserver();
     restoreLiveInspectorPresentation(liveObserverElements.eventInspector, presentation);
     if (!presentation)
         backToEventsButton?.focus({ preventScroll: true });
+}
+function manualFlowDefectEvent(entry, event) {
+    return { ...event, validation: entry.status === "Valid" ? "Valid" : `${entry.issues.length} issues`, validationDetails: { evaluations: [], schema: { id: entry.target.id, name: `${entry.target.name} · Flow path ${entry.stepId}`, version: entry.effectiveSchemaRevision }, issues: entry.issues.map((issue) => ({ instancePath: issue.path, message: `${issue.code} in manually selected Flow step ${entry.stepName}`, expected: JSON.stringify(issue.expected), actual: JSON.stringify(issue.actual), schemaName: entry.target.name, schemaVersion: entry.effectiveSchemaRevision, schemaLocation: `Flow ${entry.relationshipId ?? "start"} → ${entry.stepId}`, rule: issue.code, severity: issue.severity, origin: `Manual Flow test · ${issue.provenance} · ${entry.provenance.map(({ scope, contributorName }) => `${scope} ${contributorName}`).join(" → ")}` })) } };
+}
+function startManualFlowDefectReport(entry, event) {
+    if (!liveObserverElements.eventInspector)
+        return;
+    const selected = manualFlowDefectEvent(entry, event);
+    renderDefectReportBuilder(liveObserverElements.eventInspector, selected, undefined, liveObserverState.events, createLiveDefectReportNavigation(event.id, { reopenCapturedEvent: openLiveInspector, createDefectReportAction: () => liveObserverElements.eventInspector?.querySelector(".live-flow-create-defect") ?? null, closeToLiveFeed: closeInspectorAndReturnToEvents }), {
+        save: async (report, options) => { const selectedPointers = new Set(report.evidence.validation.map(({ pointer }) => pointer)), issues = currentDefectIssues(selected).filter((issue) => selectedPointers.has(issue.concretePath)), defect = createValidationDefect({ id: `defect:${crypto.randomUUID()}`, now: new Date().toISOString(), report, issues }), result = addDefect(defectLibrary, defect, options.saveSeparately); if (result.added) {
+            defectLibrary = result.library;
+            persistDefectLibrary();
+            liveFlowTestingUi.attachDefect(entry.stepId, entry.eventId, defect.id);
+            renderDefects();
+            renderLiveObserver();
+        } if (options.copy && navigator.clipboard?.writeText)
+            await navigator.clipboard.writeText(renderJiraReport(report).text); return result.added ? { feedback: options.copy ? "Flow defect saved and copied for Jira Cloud." : "Flow defect saved." } : { feedback: "A reported defect already matches the selected Flow issue.", existing: result.existing.map((existing) => ({ id: existing.id, label: String(existing.report?.summary ?? existing.id) })) }; },
+        openExisting: (id) => openDefect(id), updateExisting: (id, report) => { defectLibrary = editDefect(defectLibrary, id, { report }, new Date().toISOString()); persistDefectLibrary(); openDefect(id); },
+    });
+}
+function appendManualFlowValidation(inspector, event) {
+    const entries = event.manualFlowValidations ?? [];
+    if (!entries.length)
+        return;
+    const section = document.createElement("section"), heading = document.createElement("h5"), list = document.createElement("ol");
+    section.id = "live-manual-flow-validation";
+    section.setAttribute("aria-label", "Manual Flow test results");
+    heading.textContent = "Manual Flow test results";
+    for (const entry of entries) {
+        const item = document.createElement("li"), summary = document.createElement("p");
+        summary.textContent = `${entry.stepName} · ${entry.status} · effective revision ${entry.effectiveSchemaRevision} · ${entry.selectionMode}`;
+        const provenance = document.createElement("p");
+        provenance.textContent = `Contributors: ${entry.provenance.map(({ scope, contributorName }) => `${scope} ${contributorName}`).join(" → ") || "none"}`;
+        item.append(summary, provenance);
+        if (entry.issues.length) {
+            const issues = document.createElement("ul");
+            for (const issue of entry.issues) {
+                const row = document.createElement("li");
+                row.textContent = `${issue.path}: ${issue.code} · expected ${JSON.stringify(issue.expected)} · actual ${JSON.stringify(issue.actual)} · ${issue.provenance}`;
+                issues.append(row);
+            }
+            const defect = document.createElement("button");
+            defect.type = "button";
+            defect.className = "live-flow-create-defect";
+            defect.textContent = "Create defect report";
+            defect.addEventListener("click", () => startManualFlowDefectReport(entry, event));
+            item.append(issues, defect);
+        }
+        list.append(item);
+    }
+    section.append(heading, list);
+    inspector.append(section);
 }
 function appendOpenInLibraryAction(eventId, templateName) {
     const action = document.createElement("button");
@@ -5860,12 +5929,14 @@ function currentSessionSaveDraft() {
             ...(event.destination ? { destination: event.destination } : {}),
             ...(event.validation ? { validation: event.validation } : {}),
             ...(event.validationDetails ? { validationDetails: event.validationDetails } : {}),
+            ...(event.manualFlowValidations ? { manualFlowValidations: event.manualFlowValidations } : {}),
             provenance: event.provenance ?? {
                 source: "live-observer",
                 capturedAt: event.captureTime,
             },
         })),
         provenance: { source: "live-observer", capturedAt: now },
+        ...(completedLiveFlowTests.length ? { flowTests: structuredClone(completedLiveFlowTests) } : {}),
     });
 }
 function openSessionSaveDialog(startFreshAfterSave = false) {

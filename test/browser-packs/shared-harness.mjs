@@ -8,7 +8,7 @@ import path from "node:path";
 
 const wait=(ms)=>new Promise((resolve)=>setTimeout(resolve,ms));
 const chromeAdapterSource=`(()=>{const calls=[];globalThis.__chromeAdapter={calls};const event=(name)=>({addListener(listener){calls.push('listen:'+name);globalThis.__chromeAdapter[name]=listener;}});globalThis.chrome={runtime:{onMessage:event('runtime.onMessage')},tabs:{async query(){calls.push('tabs.query');return [{id:7,windowId:1,active:true,title:'Fixture tab',url:'https://example.test/checkout'}];},async get(id){calls.push('tabs.get:'+id);return {id,windowId:1,title:'Fixture tab',url:'https://example.test/checkout'};},onUpdated:event('tabs.onUpdated'),onRemoved:event('tabs.onRemoved')},permissions:{async contains(){calls.push('permissions.contains');return true;},async request(){calls.push('permissions.request');return true;},onRemoved:event('permissions.onRemoved')},windows:{async getCurrent(){calls.push('windows.getCurrent');return {id:1};}},scripting:{async executeScript(){calls.push('scripting.executeScript');return [{result:{success:true,result:'pushed'}}];}}};})()`;
-const dataLayerPanelByPack={capture:"data-layer-panel-live","event-library":"data-layer-panel-library",schemas:"data-layer-panel-schemas",defects:"data-layer-panel-defects",replay:"data-layer-panel-library"};
+const dataLayerPanelByPack={capture:"data-layer-panel-live","live-flow-testing":"data-layer-panel-live","event-library":"data-layer-panel-library",schemas:"data-layer-panel-schemas",defects:"data-layer-panel-defects",replay:"data-layer-panel-library"};
 function isolationScope(id){
   if(id==="command-palette")return {utilityId:"command-palette",panelIds:["palette"],removeSelectors:["#utility-directory","#observation-target-picker","#workspace-tabs"]};
   if(id==="hotkeys")return {utilityId:"hotkeys",panelIds:["workspace-panel-hotkeys"],removeSelectors:["#utility-directory","#observation-target-picker"]};
@@ -42,7 +42,8 @@ class DevtoolsSocket{
   close(){this.socket?.destroy();}
 }
 
-export async function runRenderedWorkflow(id,workflow){
+export async function runRenderedWorkflow(id,workflow,options={}){
+  const fullPanel=options.fullPanel===true;
   const profile=await mkdtemp(path.join(os.tmpdir(),`${id}-browser-pack-`));
   const server=createServer(async(request,response)=>{const pathname=new URL(request.url??"/","http://browser-pack.local").pathname;const requested=pathname==="/"?"side-panel.html":pathname.slice(1);const file=path.resolve("dist",requested);if(!file.startsWith(path.resolve("dist")+path.sep)){response.writeHead(404).end();return;}try{const content=await readFile(file);response.writeHead(200,{"Content-Type":file.endsWith(".js")?"text/javascript":file.endsWith(".css")?"text/css":"text/html"}).end(content);}catch{response.writeHead(404).end();}});
   await new Promise((resolve)=>server.listen(0,"127.0.0.1",resolve));
@@ -50,17 +51,18 @@ export async function runRenderedWorkflow(id,workflow){
   let socket;
   try{
     const port=await new Promise((resolve,reject)=>{let output="";const timeout=setTimeout(()=>reject(new Error("Chrome did not expose a debugging port")),10000);chrome.stderr.on("data",(chunk)=>{output+=chunk;const match=output.match(/ws:\/\/127\.0\.0\.1:(\d+)\//);if(match){clearTimeout(timeout);resolve(Number(match[1]));}});chrome.once("error",reject);});
-    const panelUrl=`http://127.0.0.1:${server.address().port}/side-panel.html${isolationQuery(id)}`;
+    const panelUrl=`http://127.0.0.1:${server.address().port}/side-panel.html${fullPanel?"":isolationQuery(id)}`;
     const page=await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent("about:blank")}`,{method:"PUT"}).then((response)=>response.json());
     socket=new DevtoolsSocket(page.webSocketDebuggerUrl);await socket.connect();
     await socket.call("Browser.grantPermissions",{origin:new URL(panelUrl).origin,permissions:["clipboardReadWrite","clipboardSanitizedWrite"]});
     await socket.call("Emulation.setDeviceMetricsOverride",{width:320,height:900,deviceScaleFactor:1,mobile:false});await socket.call("Runtime.enable");await socket.call("Page.enable");
-    if(id==="shell")await socket.call("Page.addScriptToEvaluateOnNewDocument",{source:chromeAdapterSource});
+    if(id==="shell"||fullPanel)await socket.call("Page.addScriptToEvaluateOnNewDocument",{source:chromeAdapterSource});
+    if(options.preload)await socket.call("Page.addScriptToEvaluateOnNewDocument",{source:options.preload});
     await socket.call("Page.navigate",{url:panelUrl});
     await socket.call("Page.bringToFront");
-    const expectedIsolation=id==="shell"?"":isolationScope(id).utilityId;
+    const expectedIsolation=id==="shell"||fullPanel?"":isolationScope(id).utilityId;
     let ready=false;for(let attempt=0;attempt<300;attempt++){const result=await socket.call("Runtime.evaluate",{expression:`document.readyState === 'complete' && document.querySelector('#side-panel-root')?.dataset.utilityShellReady === 'true' && (document.documentElement.dataset.utilityIsolation ?? '') === ${JSON.stringify(expectedIsolation)}`,returnByValue:true});if(result.result.value){ready=true;break;}await wait(50);}assert.equal(ready,true,"Rendered side panel did not become ready in its requested utility scope");
-    const isolated=await socket.call("Runtime.evaluate",{expression:isolationAssertionExpression(id),returnByValue:true});assert.equal(isolated.result.value,true,`${id} browser fixture contains unrelated utility DOM`);
+    if(!fullPanel){const isolated=await socket.call("Runtime.evaluate",{expression:isolationAssertionExpression(id),returnByValue:true});assert.equal(isolated.result.value,true,`${id} browser fixture contains unrelated utility DOM`);}
     const result=await socket.call("Runtime.evaluate",{expression:`(async()=>{${workflow}})()`,returnByValue:true,awaitPromise:true});if(result.exceptionDetails)throw new Error(result.exceptionDetails.exception?.description??result.exceptionDetails.text);assert.equal(result.result.value?.passed,true,JSON.stringify(result.result.value));assert.equal(result.result.value?.width,320);assert.equal(result.result.value?.overflow,false,"workflow must fit the 320px viewport");
     const accessibility=await socket.call("Runtime.evaluate",{expression:accessibilityAssertionExpression,returnByValue:true});assert.equal(accessibility.result.value?.passed,true,`${id} accessibility outcomes failed: ${JSON.stringify(accessibility.result.value)}`);
     console.log(`${id} rendered browser workflow passed`);

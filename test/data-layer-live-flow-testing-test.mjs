@@ -1,0 +1,114 @@
+import assert from "node:assert/strict";
+import {
+  attachLiveFlowDefect,
+  completeLiveFlowTest,
+  createLiveFlowTest,
+  liveFlowCandidateEvents,
+  liveFlowChoices,
+  liveFlowNextSteps,
+  matchLiveFlowEvent,
+  selectLiveFlow,
+  selectLiveFlowStep,
+  serializeLiveFlowSummary,
+  startLiveFlowPath,
+} from "../dist/data-layer-live-flow-testing.js";
+import {canonicalSchemaWithConstraint,createCanonicalSchema} from "../dist/data-layer-canonical-schema.js";
+
+const constraint=(path,values)=>({path,...values});
+let canonicalId=0;
+const canonical=(entityId,entityName,constraints)=>constraints.reduce(
+  (document,item)=>canonicalSchemaWithConstraint(document,item,(kind)=>`${kind}:${++canonicalId}`),
+  createCanonicalSchema({id:`canonical:${entityId}`,contributorId:entityId,contributorName:entityName}),
+);
+const project={
+  id:"project-retail",name:"Retail website",collections:{
+    profiles:[{id:"profile:sitewide",name:"Sitewide",canonicalSchema:canonical("profile:sitewide","Sitewide",[constraint("/site",{presence:"required",type:"string"})])}],
+    pageGroups:[{id:"group:checkout",name:"Checkout",canonicalSchema:canonical("group:checkout","Checkout",[constraint("/currency",{presence:"required",allowedValues:["EUR"]})])}],
+    pages:[
+      {id:"page:cart",name:"Cart",pageGroupIds:["group:checkout"],profileId:"profile:sitewide",pathname:"/cart",canonicalSchema:canonical("page:cart","Cart",[constraint("/cart_id",{presence:"required",type:"string"})])},
+      {id:"page:confirmation",name:"Confirmation",pageGroupIds:["group:checkout"],profileId:"profile:sitewide",pathname:"/confirmation"},
+    ],
+    events:[{id:"event:view",name:"page_view",canonicalSchema:canonical("event:view","page_view",[constraint("/event_name",{expectedValue:"page_view"})])}],
+    applicabilitySets:[],assignments:[],fixtures:[],
+    flows:[{id:"flow:checkout",name:"Checkout journey"}],
+  },
+  documentationFlowGraphs:{
+    "flow:checkout":{
+      pageGroupIds:["group:checkout"],
+      pageFrames:[
+        {id:"frame:cart",name:"Cart frame",pageId:"page:cart",pageGroupId:"group:checkout",localSchemaContributions:[constraint("/instance",{presence:"required",type:"string"})]},
+        {id:"frame:confirmation-a",name:"Confirmation A",pageId:"page:confirmation",pageGroupId:"group:checkout"},
+        {id:"frame:confirmation-b",name:"Confirmation B",pageId:"page:confirmation",pageGroupId:"group:checkout"},
+      ],
+      occurrences:[{id:"occurrence:view",name:"Cart page_view",pageFrameId:"frame:cart",pageId:"page:cart",eventId:"event:view",localSchemaContributions:[constraint("/occurrence",{presence:"required",type:"boolean"})]}],
+      relationships:[
+        {id:"relationship:cart-view",sourceEndpoint:{kind:"page-frame",id:"frame:cart"},targetEndpoint:{kind:"event-occurrence",id:"occurrence:view"},sourcePort:"right",targetPort:"left",kind:"expected_next"},
+        {id:"relationship:view-confirm",sourceEndpoint:{kind:"event-occurrence",id:"occurrence:view"},targetEndpoint:{kind:"page-frame",id:"frame:confirmation-a"},sourcePort:"top",targetPort:"bottom",kind:"alternative",label:"Success route"},
+        {id:"relationship:confirm-repeat",sourceEndpoint:{kind:"page-frame",id:"frame:confirmation-a"},targetEndpoint:{kind:"page-frame",id:"frame:confirmation-b"},sourcePort:"right",targetPort:"left",kind:"expected_next"},
+      ],
+    },
+  },releases:[],publicationPolicy:{warningsBlock:false,fixturesRequired:false},namingConventions:{},
+};
+const state={project,draft:{status:"Draft"},history:{undo:[],redo:[]}};
+const inactive={...state,project:{...project,id:"project-trade",name:"Trade portal",collections:{...project.collections,flows:[{id:"flow:trade",name:"Trade journey"}]}}};
+const events=[
+  {id:"live-100",name:"page_view",sourceId:"history",sourceName:"Data layer",captureTime:"2026-07-23T10:00:00.000Z",pageUrl:"https://shop.example/cart",payload:{}},
+  {id:"live-101",name:"page_view",sourceId:"history",sourceName:"Data layer",captureTime:"2026-07-23T10:00:01.000Z",pageUrl:"https://shop.example/cart",payload:{site:"shop",currency:"EUR",cart_id:"c1",instance:"retail"}},
+  {id:"live-102",name:"page_view",sourceId:"history",sourceName:"Data layer",captureTime:"2026-07-23T10:00:02.000Z",pageUrl:"https://shop.example/cart",payload:{site:"shop",currency:"EUR",cart_id:"c1",instance:"retail",event_name:"page_view",occurrence:true}},
+  {id:"live-103",name:"purchase",sourceId:"history",sourceName:"Data layer",captureTime:"2026-07-23T10:00:03.000Z",pageUrl:"https://shop.example/confirmation",payload:{}},
+];
+
+assert.deepEqual(liveFlowChoices(undefined,[state,inactive]),{flows:[],recovery:["Open project","Create project"]});
+assert.deepEqual(liveFlowChoices("project-retail",[state,inactive]).flows.map(({id,name})=>({id,name})),[{id:"flow:checkout",name:"Checkout journey"}]);
+
+let run=createLiveFlowTest("run:checkout","project-retail");
+run=selectLiveFlow(run,state,"flow:checkout");
+assert.deepEqual(run.startChoices.map(({id,name,recommended})=>({id,name,recommended})),[
+  {id:"frame:cart",name:"Cart",recommended:true},
+  {id:"frame:confirmation-a",name:"Confirmation",recommended:false},
+  {id:"frame:confirmation-b",name:"Confirmation",recommended:false},
+]);
+assert.equal(new Set(run.startChoices.map(({id})=>id)).size,3,"repeated Pages retain distinct frame values");
+assert.equal(run.startChoices.some(({id})=>id==="occurrence:view"),false,"an Event occurrence cannot start a run");
+
+run=startLiveFlowPath(run,"frame:cart");
+let candidates=liveFlowCandidateEvents(run,state,events);
+assert.equal(candidates.some(({eventId,eligible})=>eventId==="live-101"&&eligible),true);
+assert.equal(candidates.every(({selected})=>selected===false),true,"candidate derivation never selects automatically");
+run=matchLiveFlowEvent(run,state,events,"live-101");
+assert.equal(run.history[0].selectionMode,"Manual Flow test");
+assert.deepEqual(run.history[0].contributors.map(({scope})=>scope),["Shared Profile","Page Group","Page","Flow Page-instance"]);
+assert.equal(run.history[0].issues.length,0);
+assert.ok(run.history[0].effectiveSchemaRevision>0,"the effective revision comes from canonical contributors");
+assert.equal("assignment" in run.history[0],false);
+
+const next=liveFlowNextSteps(run,state);
+assert.deepEqual(next.map(({id,kind,displayName})=>({id,kind,displayName})),[{id:"occurrence:view",kind:"expected_next",displayName:"Cart to Cart page_view"}]);
+run=selectLiveFlowStep(run,state,"occurrence:view");
+candidates=liveFlowCandidateEvents(run,state,events);
+assert.equal(candidates.find(({eventId})=>eventId==="live-100").reason,"Captured before the previous match");
+assert.equal(candidates.find(({eventId})=>eventId==="live-101").reason,"Already matched in this run");
+assert.equal(candidates.find(({eventId})=>eventId==="live-103").reason,"Event identity does not match page_view");
+run=matchLiveFlowEvent(run,state,events,"live-102");
+assert.deepEqual(run.history[1].contributors.map(({scope})=>scope),["Shared Profile","Event","Page Group","Page","Flow Page-instance","Event-occurrence"]);
+assert.equal(run.history[1].target.id,"occurrence:view");
+assert.ok(run.history[1].effectiveSchemaRevision>0);
+assert.equal(liveFlowNextSteps(run,state)[0].displayName,"Success route");
+assert.throws(()=>selectLiveFlowStep(run,state,"frame:confirmation-b"),/No relationship from current step/);
+
+run=selectLiveFlowStep(run,state,"frame:confirmation-a");
+run=matchLiveFlowEvent(run,state,events,"live-103");
+assert.deepEqual(run.history.at(-1).issues.map(({path})=>path).sort(),["/currency","/site"],"invalid observations retain concrete canonical property paths");
+run=attachLiveFlowDefect(run,"frame:confirmation-a","defect:flow-103");
+assert.equal(run.history.at(-1).defectId,"defect:flow-103","saved defects link back to the matching history entry");
+
+const projectBytes=JSON.stringify(state.project),assignmentBytes=JSON.stringify(state.project.collections.assignments);
+const completed=completeLiveFlowTest(run,state,"2026-07-23T10:00:04.000Z");
+assert.equal(completed.label,"Completed selected path");
+assert.equal(completed.unchosenAlternatives[0].status,"Not tested");
+assert.equal(completed.history.at(-1).defectId,"defect:flow-103","completed summaries preserve the defect reference");
+assert.equal(JSON.stringify(state.project),projectBytes);
+assert.equal(JSON.stringify(state.project.collections.assignments),assignmentBytes);
+assert.deepEqual(JSON.parse(serializeLiveFlowSummary(completed)),JSON.parse(JSON.stringify(completed)));
+
+console.log("data-layer Live Flow testing tests passed");

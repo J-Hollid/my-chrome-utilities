@@ -818,19 +818,30 @@
   },
   {
     "id": "live_flow_testing",
-    "source": [],
+    "source": [
+      "src/data-layer-live-flow-testing.ts",
+      "src/data-layer-live-flow-testing-ui.ts"
+    ],
     "dependencies": [
+      "capture",
+      "defects",
       "flow_graph",
       "layered_schema"
     ],
-    "unit": [],
+    "unit": [
+      "test/data-layer-live-flow-testing-test.mjs"
+    ],
     "property": [],
     "features": [
       "features/data-layer-live-flow-guided-testing.feature",
       "features/data-layer-live-flow-guided-testing-runtime.feature"
     ],
-    "handlers": [],
-    "browserAdapters": []
+    "handlers": [
+      "acceptance/src/acceptance/steps/live_flow_guided_testing.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/live-flow-testing.mjs"
+    ]
   },
   {
     "id": "layered_schema",

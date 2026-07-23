@@ -109,7 +109,8 @@ function eventRow(
   const badge = document.createElement("span"); badge.className = "live-validation-badge"; badge.dataset.symbol = visual.symbolName; badge.setAttribute("aria-label", validation); badge.textContent = ` · ${visual.badgeText}`;
   const summary = document.createElement("span"); summary.className = "live-event-row-summary"; summary.textContent = summaryText ? ` · ${summaryText}` : "";
   const triage = document.createElement("span"); triage.className = "live-defect-triage-badge"; triage.textContent = event.defectTriage ? ` · ${event.defectTriage.state}` : "";
-  button.append(identity, badge, triage, summary);
+  const manual = document.createElement("span"); manual.className = "live-flow-validation-badge"; const latestManual=event.manualFlowValidations?.at(-1); manual.textContent=latestManual?` · Flow ${latestManual.status}`:"";
+  button.append(identity, badge, manual, triage, summary);
   button.addEventListener("click", () => openEvent(event.id));
   item.append(button);
   return item;
