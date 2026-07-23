@@ -816,6 +816,22 @@
     ]
   },
   {
+    "id": "live_flow_testing",
+    "source": [],
+    "dependencies": [
+      "flow_graph",
+      "layered_schema"
+    ],
+    "unit": [],
+    "property": [],
+    "features": [
+      "features/data-layer-live-flow-guided-testing.feature",
+      "features/data-layer-live-flow-guided-testing-runtime.feature"
+    ],
+    "handlers": [],
+    "browserAdapters": []
+  },
+  {
     "id": "layered_schema",
     "source": [
       "src/data-layer-canonical-schema.ts",
