@@ -7,7 +7,7 @@ const payload = (event) => { const value = event.payload ?? event.rawInput; retu
 function assertRunProject(run, state) { if (state.project.id !== run.projectId)
     throw new Error("Flow test project context changed."); }
 function frameName(state, frame) { return state.project.collections.pages.find(({ id }) => id === frame.pageId)?.name ?? frame.name; }
-function occurrenceName(state, flowId, occurrence) { void flowId; return occurrence.name || (state.project.collections.events.find(({ id }) => id === occurrence.eventId)?.name ?? occurrence.id); }
+function occurrenceName(state, occurrence) { return occurrence.name || (state.project.collections.events.find(({ id }) => id === occurrence.eventId)?.name ?? occurrence.id); }
 function step(state, flowId, id) {
     const current = graphs(state)[flowId];
     const frame = current?.pageFrames?.find((candidate) => candidate.id === id);
@@ -15,7 +15,7 @@ function step(state, flowId, id) {
         return { id, kind: "Page", name: frameName(state, frame), entity: frame, scope: "Flow Page-instance" };
     const occurrence = current?.occurrences?.find((candidate) => candidate.id === id);
     if (occurrence)
-        return { id, kind: "Event", name: occurrenceName(state, flowId, occurrence), entity: occurrence, scope: "Event-occurrence" };
+        return { id, kind: "Event", name: occurrenceName(state, occurrence), entity: occurrence, scope: "Event-occurrence" };
     throw new Error(`Flow graph step ${id} is unavailable.`);
 }
 function stableJson(value) {

@@ -33,10 +33,10 @@ const payload=(event:LiveFlowEvent):Record<string,unknown>=>{const value=event.p
 function assertRunProject(run:LiveFlowTestRun,state:ProjectState):void{if(state.project.id!==run.projectId)throw new Error("Flow test project context changed.");}
 
 function frameName(state:ProjectState,frame:ProjectEntity):string{return state.project.collections.pages.find(({id})=>id===frame.pageId)?.name??frame.name;}
-function occurrenceName(state:ProjectState,flowId:string,occurrence:ProjectEntity):string{void flowId;return occurrence.name||(state.project.collections.events.find(({id})=>id===occurrence.eventId)?.name??occurrence.id);}
+function occurrenceName(state:ProjectState,occurrence:ProjectEntity):string{return occurrence.name||(state.project.collections.events.find(({id})=>id===occurrence.eventId)?.name??occurrence.id);}
 function step(state:ProjectState,flowId:string,id:string):{id:string;kind:LiveFlowStepKind;name:string;entity:ProjectEntity;scope:"Flow Page-instance"|"Event-occurrence"}{
   const current=graphs(state)[flowId];const frame=current?.pageFrames?.find((candidate)=>candidate.id===id);if(frame)return{id,kind:"Page",name:frameName(state,frame),entity:frame,scope:"Flow Page-instance"};
-  const occurrence=current?.occurrences?.find((candidate)=>candidate.id===id);if(occurrence)return{id,kind:"Event",name:occurrenceName(state,flowId,occurrence),entity:occurrence,scope:"Event-occurrence"};
+  const occurrence=current?.occurrences?.find((candidate)=>candidate.id===id);if(occurrence)return{id,kind:"Event",name:occurrenceName(state,occurrence),entity:occurrence,scope:"Event-occurrence"};
   throw new Error(`Flow graph step ${id} is unavailable.`);
 }
 function stableJson(value:unknown):string{
