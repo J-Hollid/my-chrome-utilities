@@ -101,14 +101,13 @@ for (let sample=0; sample<200; sample+=1) {
     "continuation choices must conserve all named Flow steps");
   const payload={sample,nested:{currency:"EUR"}};
   const evaluated={resultIdentity:`result:property-${sample}`,
-    winner:{schemaId:"schema:retail",schemaRevision:3},issueDetails:[]};
+    winner:{schemaId:"profile:retail",schemaRevision:3},issueDetails:[]};
   const fixtureState=createFixtureFromCapturedValidation(
     {project,draft:{id:`draft:${sample}`,status:"Saved",updatedAt:"2026-07-18T00:00:00Z"},history:{undo:[],redo:[]}},
     {name:destinations.suggestedFixtureName,captureId:`capture:${sample}`,
       sourceId:capturedEvent.sourceId,eventName:capturedEvent.eventName,payload,
-      schemaId:"schema:retail",eventId:capturedEvent.id,
+      contributorId:"profile:retail",eventId:capturedEvent.id,
       pageId:destinations.pages[0]?.id,flowStepId:destinations.flowSteps[0]?.id,
-      profileId:destinations.profiles[0]?.id,
       evaluated},
     (kind)=>`${kind}:property-${sample}`,
   );
@@ -120,15 +119,21 @@ for (let sample=0; sample<200; sample+=1) {
     "captured continuation must own an independent observation payload");
   assert.equal(continuedFixture.evaluationResultIdentity,evaluated.resultIdentity,
     "captured Fixtures must retain the production evaluator result identity");
+  assert.equal(continuedFixture.contributorId,"profile:retail",
+    "captured Fixtures must retain the evaluated contributor identity");
+  assert.equal("schemaId" in continuedFixture,false,
+    "captured Fixtures must not retain a legacy schema identity");
   assert.deepEqual(
     {eventId:continuedFixture.eventId,pageId:continuedFixture.pageId,
-      flowStepId:continuedFixture.flowStepId,profileIds:continuedFixture.profileIds},
+      flowStepId:continuedFixture.flowStepId},
     {eventId:capturedEvent.id,pageId:destinations.pages[0]?.id,
-      flowStepId:destinations.flowSteps[0]?.id,profileIds:[destinations.profiles[0]?.id]},
+      flowStepId:destinations.flowSteps[0]?.id},
     "captured Fixtures must conserve the reviewed canonical destination identities");
+  assert.equal("profileIds" in continuedFixture,false,
+    "captured Fixtures must not retain a legacy Profile reference");
   const profiledState=applyCapturedValidationToProfile(
     {project,draft:{id:`draft:${sample}`,status:"Saved",updatedAt:"2026-07-18T00:00:00Z"},history:{undo:[],redo:[]}},
-    {captureId:`capture:${sample}`,profileId:"profile:retail",schemaId:"schema:retail",evaluated},
+    {captureId:`capture:${sample}`,profileId:"profile:retail",contributorId:"profile:retail",evaluated},
   );
   assert.equal(project.collections.profiles[0].requirements.some(({evaluationResultIdentity})=>evaluationResultIdentity),false,
     "Profile continuation must not mutate the prior project revision");

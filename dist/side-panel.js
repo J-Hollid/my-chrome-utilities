@@ -4834,7 +4834,7 @@ async function reviewCapturedValidationContinuation(record, trigger) {
         return;
     }
     const choices = capturedValidationDestinationChoices(project.project, { eventName: record.eventName, sourceId: captured.sourceId });
-    const proposedRequirements = capturedValidationProfileRequirements(project.project, { captureId: record.eventId, schemaId: record.schemaId, evaluated: record.evaluated });
+    const proposedRequirements = capturedValidationProfileRequirements(project.project, { captureId: record.eventId, contributorId: record.schemaId, evaluated: record.evaluated });
     if (!choices.events.length) {
         if (schemaResult)
             schemaResult.textContent = `Add the ${record.eventName} Event to ${project.project.name} before continuing.`;
@@ -4860,7 +4860,7 @@ async function reviewCapturedValidationContinuation(record, trigger) {
         await durableProjectRuntime.settled();
         await durableProjectRuntime.ensureProject(project.project.id);
         await durableProjectRuntime.settled();
-        const loaded = await durableProjectRuntime.repository.loadProject(project.project.id), current = loaded.state, next = toProfile ? applyCapturedValidationToProfile(current, { captureId: record.eventId, profileId: profile.value, schemaId: record.schemaId, evaluated: record.evaluated }) : createFixtureFromCapturedValidation(current, { name: name.value.trim(), captureId: record.eventId, sourceId: captured.sourceId, eventName: record.eventName, payload: captured.payload, schemaId: record.schemaId, eventId: event.value, ...(page.value ? { pageId: page.value } : {}), ...(step.value ? { flowStepId: step.value } : {}), ...(profile.value ? { profileId: profile.value } : {}), evaluated: record.evaluated }, (kind) => `${kind}:${crypto.randomUUID()}`), entity = toProfile ? next.project.collections.profiles.find(({ id }) => id === profile.value) : next.project.collections.fixtures.at(-1), kind = toProfile ? "profiles" : "fixtures", result = commitCanonicalProjectState(projectStorage, next, { expectedRevision: loaded.draftSequence, pendingLabel: `Continue evaluated capture ${record.eventId} as ${toProfile ? "Profile requirements" : "Fixture"}`, base: current });
+        const loaded = await durableProjectRuntime.repository.loadProject(project.project.id), current = loaded.state, next = toProfile ? applyCapturedValidationToProfile(current, { captureId: record.eventId, profileId: profile.value, contributorId: record.schemaId, evaluated: record.evaluated }) : createFixtureFromCapturedValidation(current, { name: name.value.trim(), captureId: record.eventId, sourceId: captured.sourceId, eventName: record.eventName, payload: captured.payload, contributorId: record.schemaId, eventId: event.value, ...(page.value ? { pageId: page.value } : {}), ...(step.value ? { flowStepId: step.value } : {}), evaluated: record.evaluated }, (kind) => `${kind}:${crypto.randomUUID()}`), entity = toProfile ? next.project.collections.profiles.find(({ id }) => id === profile.value) : next.project.collections.fixtures.at(-1), kind = toProfile ? "profiles" : "fixtures", result = commitCanonicalProjectState(projectStorage, next, { expectedRevision: loaded.draftSequence, pendingLabel: `Continue evaluated capture ${record.eventId} as ${toProfile ? "Profile requirements" : "Fixture"}`, base: current });
         if (result.status === "conflict")
             throw new Error(`Project changed in a newer Saved Draft; review the continuation again.`);
         projectLibraryUi.captureActiveProject(next, result.revision);

@@ -305,34 +305,25 @@ export function capturedValidationDestinationChoices(project, capture) {
     return { events, pages: named(project.collections.pages), flowSteps, profiles: named(project.collections.profiles), suggestedFixtureName: `${capture.eventName.replace(/(^|[_-])(\w)/g, (_match, _prefix, letter) => letter.toUpperCase())} captured validation` };
 }
 function assertedEvaluation(input) {
-    if (input.evaluated.winner?.schemaId !== input.schemaId)
-        throw new Error(`Evaluator result ${input.evaluated.resultIdentity} does not prove schema ${input.schemaId}.`);
+    if (input.evaluated.winner?.schemaId !== input.contributorId)
+        throw new Error(`Evaluator result ${input.evaluated.resultIdentity} does not prove contributor ${input.contributorId}.`);
     const issueCodes = [...new Set(input.evaluated.issueDetails.map(({ code }) => code))];
     return { status: input.evaluated.issueDetails.length ? "fail" : "pass", issueCodes };
 }
 export function createFixtureFromCapturedValidation(state, input, id) {
-    if (!state.project.collections.profiles.some(({ id }) => id === input.schemaId || id === input.profileId))
+    if (!state.project.collections.profiles.some(({ id }) => id === input.contributorId))
         throw new Error(`Select a canonical contributor before creating its captured Fixture.`);
-    const expected = assertedEvaluation(input), fixture = { id: id("fixture"), name: input.name, mode: "event", schemaId: input.schemaId, ...(input.eventId ? { eventId: input.eventId } : {}), ...(input.pageId ? { pageId: input.pageId } : {}), ...(input.flowStepId ? { flowStepId: input.flowStepId } : {}), ...(input.profileId ? { profileIds: [input.profileId] } : {}), observations: [{ sourceId: input.sourceId, eventName: input.eventName, payload: clone(input.payload) }], expected, assertions: [{ field: "status", equals: expected.status }, { field: "issueCodes", equals: clone(expected.issueCodes) }], evaluationResultIdentity: input.evaluated.resultIdentity, provenance: { kind: "captured-validation", captureId: input.captureId }, releasePolicy: "required", evidenceStatus: "current" };
+    const expected = assertedEvaluation(input), fixture = { id: id("fixture"), name: input.name, mode: "event", contributorId: input.contributorId, ...(input.eventId ? { eventId: input.eventId } : {}), ...(input.pageId ? { pageId: input.pageId } : {}), ...(input.flowStepId ? { flowStepId: input.flowStepId } : {}), observations: [{ sourceId: input.sourceId, eventName: input.eventName, payload: clone(input.payload) }], expected, assertions: [{ field: "status", equals: expected.status }, { field: "issueCodes", equals: clone(expected.issueCodes) }], evaluationResultIdentity: input.evaluated.resultIdentity, provenance: { kind: "captured-validation", captureId: input.captureId }, releasePolicy: "required", evidenceStatus: "current" };
     return transactProject(state, `Create Fixture from capture ${input.captureId}`, (project) => ({ ...project, collections: { ...project.collections, fixtures: [...project.collections.fixtures, fixture] } }));
-}
-function requirementsFromSchema(document, prefix = "") {
-    const properties = document.properties && typeof document.properties === "object" ? document.properties : {};
-    const required = new Set(Array.isArray(document.required) ? document.required.map(String) : []);
-    return Object.entries(properties).flatMap(([name, definition]) => {
-        const path = `${prefix}/${name}`, own = { path, ...(typeof definition.type === "string" ? { type: definition.type } : {}), ...(required.has(name) ? { required: true } : {}), ...(Array.isArray(definition.enum) ? { allowedValues: clone(definition.enum) } : {}) };
-        return [own, ...(definition.type === "object" ? requirementsFromSchema(definition, path) : [])];
-    });
 }
 export function capturedValidationProfileRequirements(project, input) {
     assertedEvaluation(input);
-    const schema = project.collections.profiles.find(({ id }) => id === input.schemaId);
-    if (!schema)
-        throw new Error(`Select contributor ${input.schemaId} before creating Profile requirements.`);
-    const working = schema.workingDraft, profileIds = working?.profileIds ?? schema.profileIds, profiles = (profileIds ?? []).map((profileId) => project.collections.profiles.find(({ id }) => id === profileId)).filter((profile) => Boolean(profile)), document = working?.document ?? schema.document;
-    if (!profiles.length && !document)
-        throw new Error(`Schema ${input.schemaId} has no evaluated document.`);
-    const requirements = profiles.length ? composeRequirementProfiles(profiles).requirements : requirementsFromSchema(document);
+    const contributor = project.collections.profiles.find(({ id }) => id === input.contributorId);
+    if (!contributor)
+        throw new Error(`Select contributor ${input.contributorId} before creating Profile requirements.`);
+    const requirements = composeRequirementProfiles([contributor]).requirements;
+    if (!requirements.length)
+        throw new Error(`Contributor ${input.contributorId} has no evaluated requirements.`);
     return requirements.map((requirement) => ({ ...clone(requirement), origin: `captured-validation:${input.captureId}`, evaluationResultIdentity: input.evaluated.resultIdentity }));
 }
 export function applyCapturedValidationToProfile(state, input) {

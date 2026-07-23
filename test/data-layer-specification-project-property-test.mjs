@@ -95,19 +95,18 @@ for (let sample = 0; sample < 200; sample += 1) {
 
   const assignmentInput = {
     name:`Assignment ${sample}`,
-    schemaId:`schema-${sample}`,
+    targetId:`profile-${sample}`,
+    targetKind:"Shared Profile",
     eventName:`Event ${sample}`,
     sourceId:`source-${sample}`,
     target:`target-${sample}`,
     priority:sample % 5,
-    versionPolicy:"pinned",
-    schemaRevision:(sample % 3) + 1,
     condition:first,
   };
   const schemaState = createProjectSchemaDraft(initial, {
-    schemaId:assignmentInput.schemaId,
+    schemaId:assignmentInput.targetId,
     name:`Schema ${sample}`,
-    baseRevision:assignmentInput.schemaRevision,
+    baseRevision:(sample % 3) + 1,
     description:`Generated schema ${sample}`,
   }, id);
   const assignmentState = saveProjectAssignment(schemaState, assignmentInput, id);
@@ -128,7 +127,7 @@ for (let sample = 0; sample < 200; sample += 1) {
   const beforeInvalidAssignment = structuredClone(editedAssignmentState);
   assert.throws(() => saveProjectAssignment(editedAssignmentState, {
     ...assignmentInput,
-    target:"",
+    targetId:"",
   }, id), /routing fields/);
   assert.deepEqual(editedAssignmentState, beforeInvalidAssignment,
     "rejected assignment saves must conserve the caller state");

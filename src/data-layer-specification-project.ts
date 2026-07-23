@@ -238,35 +238,26 @@ export function capturedValidationDestinationChoices(project:SpecificationProjec
   return{events,pages:named(project.collections.pages),flowSteps,profiles:named(project.collections.profiles),suggestedFixtureName:`${capture.eventName.replace(/(^|[_-])(\w)/g,(_match,_prefix,letter:string)=>letter.toUpperCase())} captured validation`};
 }
 export interface CapturedValidationResult {resultIdentity:string;winner?:{schemaId:string;schemaRevision:number};issueDetails:readonly {code:string;path?:string}[]}
-export interface CapturedValidationContinuation {name:string;captureId:string;sourceId:string;eventName:string;payload:unknown;schemaId:string;eventId?:string;pageId?:string;flowStepId?:string;profileId?:string;evaluated:CapturedValidationResult}
-function assertedEvaluation(input:{schemaId:string;evaluated:CapturedValidationResult}):{status:"pass"|"fail";issueCodes:string[]}{
-  if(input.evaluated.winner?.schemaId!==input.schemaId)throw new Error(`Evaluator result ${input.evaluated.resultIdentity} does not prove schema ${input.schemaId}.`);
+export interface CapturedValidationContinuation {name:string;captureId:string;sourceId:string;eventName:string;payload:unknown;contributorId:string;eventId?:string;pageId?:string;flowStepId?:string;evaluated:CapturedValidationResult}
+function assertedEvaluation(input:{contributorId:string;evaluated:CapturedValidationResult}):{status:"pass"|"fail";issueCodes:string[]}{
+  if(input.evaluated.winner?.schemaId!==input.contributorId)throw new Error(`Evaluator result ${input.evaluated.resultIdentity} does not prove contributor ${input.contributorId}.`);
   const issueCodes=[...new Set(input.evaluated.issueDetails.map(({code})=>code))];
   return{status:input.evaluated.issueDetails.length?"fail":"pass",issueCodes};
 }
 export function createFixtureFromCapturedValidation(state:ProjectState,input:CapturedValidationContinuation,id:IdFactory):ProjectState{
-  if(!state.project.collections.profiles.some(({id})=>id===input.schemaId||id===input.profileId))throw new Error(`Select a canonical contributor before creating its captured Fixture.`);
-  const expected=assertedEvaluation(input),fixture={id:id("fixture"),name:input.name,mode:"event",schemaId:input.schemaId,...(input.eventId?{eventId:input.eventId}:{}),...(input.pageId?{pageId:input.pageId}:{}),...(input.flowStepId?{flowStepId:input.flowStepId}:{}),...(input.profileId?{profileIds:[input.profileId]}:{}),observations:[{sourceId:input.sourceId,eventName:input.eventName,payload:clone(input.payload)}],expected,assertions:[{field:"status",equals:expected.status},{field:"issueCodes",equals:clone(expected.issueCodes)}],evaluationResultIdentity:input.evaluated.resultIdentity,provenance:{kind:"captured-validation",captureId:input.captureId},releasePolicy:"required",evidenceStatus:"current"};
+  if(!state.project.collections.profiles.some(({id})=>id===input.contributorId))throw new Error(`Select a canonical contributor before creating its captured Fixture.`);
+  const expected=assertedEvaluation(input),fixture={id:id("fixture"),name:input.name,mode:"event",contributorId:input.contributorId,...(input.eventId?{eventId:input.eventId}:{}),...(input.pageId?{pageId:input.pageId}:{}),...(input.flowStepId?{flowStepId:input.flowStepId}:{}),observations:[{sourceId:input.sourceId,eventName:input.eventName,payload:clone(input.payload)}],expected,assertions:[{field:"status",equals:expected.status},{field:"issueCodes",equals:clone(expected.issueCodes)}],evaluationResultIdentity:input.evaluated.resultIdentity,provenance:{kind:"captured-validation",captureId:input.captureId},releasePolicy:"required",evidenceStatus:"current"};
   return transactProject(state,`Create Fixture from capture ${input.captureId}`,(project)=>({...project,collections:{...project.collections,fixtures:[...project.collections.fixtures,fixture]}}));
 }
 
-function requirementsFromSchema(document:Record<string,unknown>,prefix=""):Requirement[]{
-  const properties=document.properties&&typeof document.properties==="object"?document.properties as Record<string,Record<string,unknown>>:{};
-  const required=new Set(Array.isArray(document.required)?document.required.map(String):[]);
-  return Object.entries(properties).flatMap(([name,definition])=>{
-    const path=`${prefix}/${name}`,own:Requirement={path,...(typeof definition.type==="string"?{type:definition.type}:{}),...(required.has(name)?{required:true}:{}),...(Array.isArray(definition.enum)?{allowedValues:clone(definition.enum)}:{})};
-    return[own,...(definition.type==="object"?requirementsFromSchema(definition,path):[])];
-  });
-}
-export function capturedValidationProfileRequirements(project:SpecificationProject,input:{captureId:string;schemaId:string;evaluated:CapturedValidationResult}):Requirement[]{
+export function capturedValidationProfileRequirements(project:SpecificationProject,input:{captureId:string;contributorId:string;evaluated:CapturedValidationResult}):Requirement[]{
   assertedEvaluation(input);
-  const schema=project.collections.profiles.find(({id})=>id===input.schemaId);if(!schema)throw new Error(`Select contributor ${input.schemaId} before creating Profile requirements.`);
-  const working=schema.workingDraft as {document?:Record<string,unknown>;profileIds?:string[]}|undefined,profileIds=working?.profileIds??schema.profileIds as string[]|undefined,profiles=(profileIds??[]).map((profileId)=>project.collections.profiles.find(({id})=>id===profileId)).filter((profile):profile is Profile=>Boolean(profile)),document=working?.document??schema.document as Record<string,unknown>|undefined;
-  if(!profiles.length&&!document)throw new Error(`Schema ${input.schemaId} has no evaluated document.`);
-  const requirements=profiles.length?composeRequirementProfiles(profiles).requirements:requirementsFromSchema(document!);
+  const contributor=project.collections.profiles.find(({id})=>id===input.contributorId);if(!contributor)throw new Error(`Select contributor ${input.contributorId} before creating Profile requirements.`);
+  const requirements=composeRequirementProfiles([contributor]).requirements;
+  if(!requirements.length)throw new Error(`Contributor ${input.contributorId} has no evaluated requirements.`);
   return requirements.map((requirement)=>({...clone(requirement),origin:`captured-validation:${input.captureId}`,evaluationResultIdentity:input.evaluated.resultIdentity}));
 }
-export function applyCapturedValidationToProfile(state:ProjectState,input:{captureId:string;profileId:string;schemaId:string;evaluated:CapturedValidationResult}):ProjectState{
+export function applyCapturedValidationToProfile(state:ProjectState,input:{captureId:string;profileId:string;contributorId:string;evaluated:CapturedValidationResult}):ProjectState{
   const profile=state.project.collections.profiles.find(({id})=>id===input.profileId);if(!profile)throw new Error(`Unknown Profile ${input.profileId}.`);
   const proposed=capturedValidationProfileRequirements(state.project,input);
   let canonical=profile.canonicalSchema??createCanonicalSchema({id:`canonical:${profile.id}`,contributorId:profile.id,contributorName:profile.name}),sequence=0;for(const requirement of proposed)canonical=canonicalSchemaWithConstraint(canonical,requirement,(kind)=>`${kind}:${profile.id}:capture:${++sequence}`);return transactProject(state,`Add evaluated capture ${input.captureId} canonical properties to ${profile.name}`,(project)=>({...project,collections:{...project.collections,profiles:project.collections.profiles.map((candidate)=>candidate.id!==profile.id?candidate:{...candidate,canonicalSchema:canonical,requirements:[]})}}));

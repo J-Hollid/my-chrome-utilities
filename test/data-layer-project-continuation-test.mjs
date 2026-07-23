@@ -1,69 +1,66 @@
 import assert from "node:assert/strict";
+import {canonicalRequirements} from "../dist/data-layer-canonical-schema.js";
+
 import {
-  adoptSavedSchema,
-  commitSavedSchemaSynchronization,
-  capturedValidationDestinationChoices,
   applyCapturedValidationToProfile,
+  capturedValidationProfileRequirements,
   createFixtureFromCapturedValidation,
   createSpecificationProject,
-  stageSavedSchemaSynchronization,
   transactProject,
 } from "../dist/data-layer-specification-project.js";
 
 let sequence=0;
-const id=(kind)=>`${kind}-${++sequence}`;
-let state=createSpecificationProject({name:"Retail and Trade",site:"shop.example",id});
-const saved={id:"schema:purchase",name:"Purchase",version:3,published:true,document:{type:"object",properties:{currency:{type:"string",enum:["EUR"]},order_id:{type:"string"}}},assignments:[]};
+const id=(kind)=>`${kind}:${++sequence}`;
+let state=createSpecificationProject({name:"Contributor continuation",site:"shop.example",id});
+state=transactProject(state,"Add contributor destinations",(project)=>({
+  ...project,
+  collections:{
+    ...project.collections,
+    profiles:[
+      {id:"profile:evaluated",name:"Evaluated contributor",requirements:[{path:"/order_id",type:"string",required:true}],workingDraft:{document:{type:"object",properties:{legacy:{type:"string"}}}},profileIds:["profile:legacy"],document:{type:"object",properties:{legacy:{type:"string"}}}},
+      {id:"profile:destination",name:"Destination",requirements:[]},
+      {id:"profile:legacy",name:"Legacy fallback",requirements:[{path:"/legacy",type:"string"}]},
+    ],
+  },
+}));
 
-state=adoptSavedSchema(state,saved);
-let adopted=state.project.collections.schemaDrafts[0];
-assert.equal(adopted.id,saved.id);
-assert.deepEqual(adopted.sourceLineage,{librarySchemaId:saved.id,adoptedRevision:3,synchronizedRevision:3});
-assert.deepEqual(adopted.workingDraft.document,saved.document);
-assert.notEqual(adopted.workingDraft.document,saved.document,"adoption must own an independent canonical draft");
-assert.throws(()=>adoptSavedSchema(state,saved),/already adopted/);
+const evaluated={resultIdentity:"result:contributor",winner:{schemaId:"profile:evaluated",schemaRevision:7},issueDetails:[]};
+const requirements=capturedValidationProfileRequirements(state.project,{captureId:"capture:1",contributorId:"profile:evaluated",evaluated});
+assert.deepEqual(requirements.map(({path})=>path),["/order_id"],
+  "continuation must read only the contributor's canonical requirements");
 
-state=transactProject(state,"Project override",(project)=>({...project,collections:{...project.collections,schemaDrafts:project.collections.schemaDrafts.map((schema)=>schema.id===saved.id?{...schema,workingDraft:{...schema.workingDraft,document:{...schema.workingDraft.document,properties:{...schema.workingDraft.document.properties,currency:{type:"string",enum:["EUR","GBP"]}}}}}:schema)}}));
-const revision4={...saved,version:4,document:{type:"object",properties:{currency:{type:"string",enum:["EUR","USD"]},order_id:{type:"string"},value:{type:"number"}}}};
-const review=stageSavedSchemaSynchronization(state,revision4);
-assert.equal(review.fromRevision,3);
-assert.equal(review.toRevision,4);
-assert.ok(review.changes.some(({path})=>path==="/properties/value"));
-assert.ok(review.localOverrides.some((path)=>path.startsWith("/properties/currency")));
-state=commitSavedSchemaSynchronization(state,review);
-adopted=state.project.collections.schemaDrafts[0];
-assert.deepEqual(adopted.workingDraft.document.properties.currency.enum,["EUR","GBP"]);
-assert.equal(adopted.workingDraft.document.properties.value.type,"number");
-assert.equal(adopted.sourceLineage.synchronizedRevision,4);
-
-state=transactProject(state,"Named destinations",(project)=>({...project,collections:{...project.collections,events:[{id:"event:purchase",name:"Purchase",eventName:"purchase",sourceId:"event-history"}],pages:[{id:"page:confirmation",name:"Checkout confirmation"}],flows:[{id:"flow:retail",name:"Retail checkout",steps:[{id:"step:confirmation",name:"Confirmation"}]}],profiles:[{id:"profile:retail",name:"Retail",requirements:[]}]}}));
-const choices=capturedValidationDestinationChoices(state.project,{eventName:"purchase",sourceId:"event-history"});
-assert.deepEqual(choices.events,[{id:"event:purchase",name:"Purchase"}]);
-assert.deepEqual(choices.pages,[{id:"page:confirmation",name:"Checkout confirmation"}]);
-assert.deepEqual(choices.flowSteps,[{id:"step:confirmation",name:"Retail checkout / Confirmation"}]);
-assert.deepEqual(choices.profiles,[{id:"profile:retail",name:"Retail"}]);
-assert.equal(choices.suggestedFixtureName,"Purchase captured validation");
-
-const evaluated={resultIdentity:"result:purchase-17",winner:{schemaId:saved.id,schemaRevision:4},issueDetails:[]};
-state=createFixtureFromCapturedValidation(state,{name:"Captured purchase proves schema",captureId:"capture-17",sourceId:"event-history",eventName:"purchase",payload:{currency:"EUR",order_id:"o-1",value:12},schemaId:saved.id,evaluated},id);
+state=createFixtureFromCapturedValidation(state,{
+  name:"Captured contributor proof",
+  captureId:"capture:1",
+  sourceId:"event-history",
+  eventName:"purchase",
+  payload:{order_id:"A-1"},
+  contributorId:"profile:evaluated",
+  eventId:"event:purchase",
+  pageId:"page:confirmation",
+  flowStepId:"step:confirmation",
+  evaluated,
+},id);
 const fixture=state.project.collections.fixtures[0];
-assert.equal(fixture.assertions.length,2);
-assert.deepEqual(fixture.expected,{status:"pass",issueCodes:[]});
-assert.equal(fixture.evaluationResultIdentity,evaluated.resultIdentity);
-assert.deepEqual(fixture.provenance,{kind:"captured-validation",captureId:"capture-17"});
-assert.equal(fixture.observations[0].eventName,"purchase");
-const failed=createFixtureFromCapturedValidation(state,{name:"Captured invalid purchase",captureId:"capture-18",sourceId:"event-history",eventName:"purchase",payload:{currency:"CAD"},schemaId:saved.id,evaluated:{...evaluated,resultIdentity:"result:purchase-18",issueDetails:[{path:"/currency",code:"enum"},{path:"/currency",code:"enum"}]}},id).project.collections.fixtures.at(-1);
-assert.deepEqual(failed.expected,{status:"fail",issueCodes:["enum"]},"assertions must be derived from the evaluated issue result");
+assert.equal(fixture.contributorId,"profile:evaluated");
+assert.equal("schemaId" in fixture,false);
+assert.equal("schemaDraftId" in fixture,false);
+assert.equal("schemaDocument" in fixture,false);
+assert.equal("profileIds" in fixture,false);
 
-state=applyCapturedValidationToProfile(state,{captureId:"capture-17",profileId:"profile:retail",schemaId:saved.id,evaluated});
-const requirements=state.project.collections.profiles[0].requirements;
-assert.deepEqual(requirements.map(({path,type,required,allowedValues})=>({path,type,required,allowedValues})),[
-  {path:"/currency",type:"string",required:undefined,allowedValues:["EUR","GBP"]},
-  {path:"/order_id",type:"string",required:undefined,allowedValues:undefined},
-  {path:"/value",type:"number",required:undefined,allowedValues:undefined},
-]);
-assert.ok(requirements.every(({origin,evaluationResultIdentity})=>origin==="captured-validation:capture-17"&&evaluationResultIdentity===evaluated.resultIdentity));
-assert.equal(state.history.undo.at(-1).label,"Add evaluated capture capture-17 requirements to Retail");
-assert.throws(()=>applyCapturedValidationToProfile(state,{captureId:"capture-18",profileId:"profile:retail",schemaId:saved.id,evaluated:{...evaluated,winner:{schemaId:"schema:other",schemaRevision:1}}}),/does not prove schema/);
+state=applyCapturedValidationToProfile(state,{
+  captureId:"capture:1",
+  profileId:"profile:destination",
+  contributorId:"profile:evaluated",
+  evaluated,
+});
+const destination=state.project.collections.profiles.find(({id:profileId})=>profileId==="profile:destination");
+assert.deepEqual(destination.requirements,[]);
+assert.deepEqual(canonicalRequirements(destination.canonicalSchema).map(({path})=>path),["/order_id"]);
+assert.throws(()=>capturedValidationProfileRequirements(state.project,{
+  captureId:"capture:2",
+  contributorId:"profile:legacy",
+  evaluated:{...evaluated,winner:{schemaId:"profile:evaluated",schemaRevision:7}},
+}),/does not prove contributor/);
 
-console.log("saved-schema and captured-validation continuation tests passed");
+console.log("contributor-native captured continuation tests passed");
