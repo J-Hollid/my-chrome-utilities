@@ -9,6 +9,7 @@ import {appendSharedProfileConstraint,canonicalLayerEditorSurface,compareLayered
 import {assignmentContributorTargets,compileAssignmentContributorTarget,flowPageFrameContributor,layeredContributionDetails,layeredContributorPath,layeredContributorsForPath} from "../dist/data-layer-layered-schema-project.js";
 import {canonicalConstraints,createCanonicalSchema} from "../dist/data-layer-canonical-schema.js";
 import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
+import {compileSpecificationProject,createCanonicalProjectEnvelope,evaluateSpecificationObservation} from "../dist/data-layer-specification-engine.js";
 
 const contribution=(id,name,scope,constraints)=>({id,name,scope,constraints});
 const base=contribution("profile:sitewide","Sitewide","Shared Profile",[
@@ -203,5 +204,34 @@ assert.deepEqual(detailRows.slice(0,2),[
   {contributorId:"profile:selected",contributorName:"Selected",scope:"Shared Profile",path:"/profile_value",target:"all",condition:'{"field":"country","equals":"NL"}',enforcement:"invariant",usedById:"occurrence:selected",usedByName:"Selected occurrence",usedByScope:"Event-occurrence"},
   {contributorId:"event:selected",contributorName:"Selected event",scope:"Event",path:"/event_value",target:"event:selected",condition:"Always",enforcement:"overridable",usedById:"occurrence:selected",usedByName:"Selected occurrence",usedByScope:"Event-occurrence"},
 ]);
+
+const isolatedProject={
+  id:"project:isolated",name:"Isolated targets",site:"example.test",environments:["Production"],namingConventions:{},publicationPolicy:{warningsBlock:false,fixturesRequired:false},releases:[],
+  collections:{
+    profiles:[{id:"profile:shared",name:"Shared target",requirements:[
+      {path:"/nested/value",type:"string",required:true,target:"event:alpha"},
+      {path:"/beta",type:"string",required:true,target:"event:beta"},
+    ]}],
+    pageGroups:[],pages:[],events:[
+      {id:"event:alpha",name:"Alpha",sourceId:"history",eventName:"alpha"},
+      {id:"event:beta",name:"Beta",sourceId:"history",eventName:"beta"},
+    ],applicabilitySets:[],flows:[],fixtures:[],assignments:[
+      {id:"assignment:alpha",name:"Alpha target",targetKind:"Shared Profile",targetId:"profile:shared",eventId:"event:alpha",priority:10},
+      {id:"assignment:beta",name:"Beta target",targetKind:"Shared Profile",targetId:"profile:shared",eventId:"event:beta",priority:10},
+    ],
+  },
+};
+const isolatedEnvelope=createCanonicalProjectEnvelope(isolatedProject,"draft:isolated");
+Object.defineProperty(isolatedEnvelope.project.collections,"schemaDrafts",{enumerable:false,get(){throw new Error("active compilation read schemaDrafts");}});
+const isolatedCompilation=compileSpecificationProject(isolatedEnvelope);
+assert.equal(isolatedCompilation.status,"compiled","active contributor-target compilation never reads legacy schemaDrafts");
+assert.equal(new Set(isolatedCompilation.plan.assignments.map(({schemaKey})=>schemaKey)).size,2,"assignments sharing one contributor keep isolated effective schemas");
+assert.deepEqual(
+  evaluateSpecificationObservation(isolatedCompilation.plan,{sourceId:"history",eventName:"alpha",payload:{}}).issueDetails.map(({path,code})=>({path,code})),
+  [{path:"/nested/value",code:"required"}],
+  "a required nested leaf retains its exact path when its container is absent without leaking the other event target",
+);
+assert.deepEqual(evaluateSpecificationObservation(isolatedCompilation.plan,{sourceId:"history",eventName:"alpha",payload:{nested:{value:"present"}}}).issueDetails,[]);
+assert.deepEqual(evaluateSpecificationObservation(isolatedCompilation.plan,{sourceId:"history",eventName:"beta",payload:{beta:"present"}}).issueDetails,[]);
 
 console.log("data-layer layered schema tests passed");

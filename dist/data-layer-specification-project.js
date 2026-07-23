@@ -133,13 +133,7 @@ export function conditionMatches(condition, context) {
     return !condition.conditions.some((item) => conditionMatches(item, context));
 }
 function lifecycleAssignments(project) {
-    if (project.collections.assignments.length)
-        return project.collections.assignments;
-    const embedded = (project.collections.schemaDrafts ?? []).flatMap((entry) => {
-        const schema = entry;
-        return [...(schema.workingDraft?.assignments ?? schema.assignments ?? [])].map((assignment) => ({ ...clone(assignment), id: assignment.id ?? `${schema.id}:${assignment.sourceId}:${assignment.eventName}:${assignment.target}`, name: assignment.name ?? assignment.eventName, schemaId: schema.id, ...(assignment.schemaVersion !== undefined ? { schemaRevision: assignment.schemaVersion } : {}) }));
-    });
-    return embedded.length ? embedded : project.collections.assignments;
+    return project.collections.assignments;
 }
 export function resolveApplicability(project, context) {
     const candidates = [...project.collections.applicabilitySets, ...lifecycleAssignments(project)].map((entry) => { const condition = entry.condition; const matched = condition ? conditionMatches(condition, context) : false; return { id: entry.id, name: entry.name, matched, priority: Number(entry.priority ?? 0), evidence: matched ? "All configured predicates matched" : "At least one predicate did not match" }; });

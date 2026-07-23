@@ -1,5 +1,4 @@
 import { advanceFlowInstance, conditionMatches as projectConditionMatches, startFlowInstance } from "./data-layer-specification-project.js";
-import { canonicalRequirements } from "./data-layer-canonical-schema.js";
 import { conditionGroupAppliesToValue } from "./data-layer-conditional-validation-rules.js";
 import { assignmentContributorTargets, compileAssignmentContributorTarget } from "./data-layer-layered-schema-project.js";
 export { applyCanonicalCommand, applyCanonicalSchemaDraftEdits, createCanonicalProjectEnvelope, migrateCanonicalProject } from "./data-layer-specification-model.js";
@@ -17,46 +16,7 @@ function contentIdentity(prefix, value) { let hash = 2166136261; for (const char
     hash = Math.imul(hash, 16777619);
 } return `${prefix}:${(hash >>> 0).toString(16).padStart(8, "0")}`; }
 function index(entities) { return Object.fromEntries(entities.map((entity) => [entity.id, clone(entity)])); }
-function requirementDocument(profiles) { const root = { type: "object", properties: {}, required: [] }, effective = new Map(), origins = new Map(), conflicts = []; for (const profile of profiles)
-    for (const requirement of profile.canonicalSchema ? canonicalRequirements(profile.canonicalSchema) : profile.requirements) {
-        const prior = effective.get(requirement.path), pathOrigins = origins.get(requirement.path) ?? [];
-        if (prior?.type && requirement.type && prior.type !== requirement.type)
-            conflicts.push({ path: requirement.path, origins: [...pathOrigins, profile.id], reason: `Incompatible types ${prior.type} and ${requirement.type}` });
-        if (prior && (prior.required && requirement.forbidden || prior.forbidden && requirement.required))
-            conflicts.push({ path: requirement.path, origins: [...pathOrigins, profile.id], reason: "Required and Forbidden are incompatible" });
-        const allowedValues = prior?.allowedValues && requirement.allowedValues ? prior.allowedValues.filter((value) => requirement.allowedValues.some((candidate) => Object.is(candidate, value))) : requirement.allowedValues ?? prior?.allowedValues;
-        if (prior?.allowedValues && requirement.allowedValues && !allowedValues.length)
-            conflicts.push({ path: requirement.path, origins: [...pathOrigins, profile.id], reason: "Allowed-value intersection is empty" });
-        const rules = [...(prior?.rules ?? [])];
-        for (const rule of requirement.rules ?? []) {
-            const existing = rules.find((candidate) => candidate.id === rule.id);
-            if (existing && JSON.stringify(existing) !== JSON.stringify(rule))
-                conflicts.push({ path: requirement.path, origins: [...pathOrigins, profile.id], reason: `Rule ${String(rule.id)} is incompatible` });
-            else if (!existing)
-                rules.push(clone(rule));
-        }
-        effective.set(requirement.path, { ...prior, ...clone(requirement), ...(allowedValues ? { allowedValues } : {}), ...(rules.length ? { rules } : {}) });
-        origins.set(requirement.path, [...pathOrigins, profile.id]);
-    } for (const requirement of effective.values()) {
-    const parts = requirement.path.split("/").filter(Boolean);
-    let node = root;
-    for (let at = 0; at < parts.length; at += 1) {
-        const part = parts[at], last = at === parts.length - 1;
-        if (last) {
-            node.properties[part] = { type: requirement.type ?? "string", ...(requirement.allowedValues ? { enum: requirement.allowedValues } : {}), ...(requirement.description ? { description: requirement.description } : {}), ...(requirement.examples ? { examples: requirement.examples } : {}), ...(requirement.rules?.length ? { "x-rules": requirement.rules } : {}), ...(requirement.forbidden ? { "x-forbidden": true } : {}) };
-            if (requirement.required && !node.required.includes(part))
-                node.required.push(part);
-        }
-        else {
-            node.properties[part] ??= { type: "object", properties: {}, required: [] };
-            if (requirement.required && !node.required.includes(part))
-                node.required.push(part);
-            node = node.properties[part];
-        }
-    }
-} return { document: root, required: root.required, conflicts }; }
-function referencedProfiles(project, schema) { const ids = schema.workingDraft?.profileIds ?? schema.profileIds ?? []; return ids.map((id) => project.collections.profiles.find((profile) => profile.id === id)).filter((profile) => Boolean(profile)); }
-function graphDiagnostics(project) { const pages = new Set(project.collections.pages.map(({ id }) => id)), events = new Set(project.collections.events.map(({ id }) => id)), profiles = new Set(project.collections.profiles.map(({ id }) => id)), schemas = new Set((project.collections.schemaDrafts ?? []).map(({ id }) => id)), applicability = new Set(project.collections.applicabilitySets.map(({ id }) => id)), targets = new Set(assignmentContributorTargets({ project, history: { undo: [], redo: [] } }).map(({ id, kind }) => `${kind}:${id}`)), result = []; for (const flow of project.collections.flows)
+function graphDiagnostics(project) { const pages = new Set(project.collections.pages.map(({ id }) => id)), events = new Set(project.collections.events.map(({ id }) => id)), profiles = new Set(project.collections.profiles.map(({ id }) => id)), applicability = new Set(project.collections.applicabilitySets.map(({ id }) => id)), targets = new Set(assignmentContributorTargets({ project, history: { undo: [], redo: [] } }).map(({ id, kind }) => `${kind}:${id}`)), result = []; for (const flow of project.collections.flows)
     for (const step of flow.steps ?? []) {
         if (step.pageId && !pages.has(String(step.pageId)))
             result.push({ code: "dangling-reference", entityId: step.id, field: "pageId", referenceId: String(step.pageId) });
@@ -66,9 +26,9 @@ function graphDiagnostics(project) { const pages = new Set(project.collections.p
             if (!profiles.has(profileId))
                 result.push({ code: "dangling-reference", entityId: step.id, field: "profileIds", referenceId: profileId });
     } for (const assignment of project.collections.assignments) {
-    const legacyId = assignment.schemaDraftId ?? assignment.schemaId, targetId = assignment.targetId, targetKind = assignment.targetKind;
-    if (legacyId ? !schemas.has(String(legacyId)) : !targetId || !targetKind || !targets.has(`${String(targetKind)}:${String(targetId)}`))
-        result.push({ code: "dangling-reference", entityId: assignment.id, field: legacyId ? "schemaDraftId" : "targetId", referenceId: String(legacyId ?? targetId ?? "") });
+    const targetId = assignment.targetId, targetKind = assignment.targetKind;
+    if (!targetId || !targetKind || !targets.has(`${String(targetKind)}:${String(targetId)}`))
+        result.push({ code: "dangling-reference", entityId: assignment.id, field: "targetId", referenceId: String(targetId ?? "") });
     if (assignment.applicabilitySetId && !applicability.has(String(assignment.applicabilitySetId)))
         result.push({ code: "dangling-reference", entityId: assignment.id, field: "applicabilitySetId", referenceId: String(assignment.applicabilitySetId) });
     if (!assignment.eventId || !events.has(String(assignment.eventId)))
@@ -86,29 +46,22 @@ function layeredDocument(compiled) { const root = { type: "object", properties: 
         }
         else {
             node.properties[name] ??= { type: "object", properties: {}, required: [] };
+            if (property.presence === "required" && !node.required.includes(name))
+                node.required.push(name);
             node = node.properties[name];
         }
     }
 } return { document: root, required: root.required }; }
 export function compileSpecificationProject(envelope) { const diagnostics = graphDiagnostics(envelope.project); if (diagnostics.length)
-    return { status: "blocked", diagnostics }; const schemas = {}, provenance = {}; for (const schema of (envelope.project.collections.schemaDrafts ?? [])) {
-    const profiles = referencedProfiles(envelope.project, schema), compiled = requirementDocument(profiles);
-    if (compiled.conflicts.length)
-        return { status: "blocked", diagnostics: compiled.conflicts.map((conflict) => ({ code: "profile-conflict", entityId: schema.id, field: conflict.path, referenceId: `${conflict.origins.join(",")}: ${conflict.reason}` })) };
-    const working = schema.workingDraft?.document, document = profiles.length ? compiled.document : clone(working ?? schema.document ?? compiled.document), revision = Number(schema.version ?? 1);
-    schemas[schema.id] = { schemaId: schema.id, revision, document, required: compiled.required, profileIds: profiles.map(({ id }) => id) };
-    profiles.forEach((profile, position) => (profile.canonicalSchema ? canonicalRequirements(profile.canonicalSchema) : profile.requirements).forEach((requirement) => { provenance[`${schema.id}:${requirement.path}`] ??= []; provenance[`${schema.id}:${requirement.path}`].push({ profileId: profile.id, profileName: profile.name, position }); }));
-} const state = { project: envelope.project, history: { undo: [], redo: [] } }; for (const assignment of envelope.project.collections.assignments) {
-    if (!assignment.targetId)
-        continue;
+    return { status: "blocked", diagnostics }; const schemas = {}, provenance = {}, state = { project: envelope.project, history: { undo: [], redo: [] } }; for (const assignment of envelope.project.collections.assignments) {
     const result = compileAssignmentContributorTarget(state, assignment, { eventId: String(assignment.eventId), eventRole: "interaction" });
     if (result.compiled.status === "blocked")
         return { status: "blocked", diagnostics: result.compiled.conflicts.map((conflict) => ({ code: "contributor-conflict", entityId: assignment.id, field: conflict.path, referenceId: `${conflict.contributors.join(",")}: ${conflict.message}` })) };
-    const output = layeredDocument(result.compiled), profileIds = [...new Set(result.compiled.provenance.map(({ contributorId }) => contributorId))];
-    schemas[result.target.id] = { schemaId: result.target.id, revision: envelope.revision, document: output.document, required: output.required, profileIds };
+    const schemaKey = assignment.id, output = layeredDocument(result.compiled), profileIds = [...new Set(result.compiled.provenance.map(({ contributorId }) => contributorId))];
+    schemas[schemaKey] = { schemaId: result.target.id, revision: envelope.revision, document: output.document, required: output.required, profileIds };
     for (const [path, property] of Object.entries(result.compiled.properties))
-        provenance[`${result.target.id}:${path}`] = property.origins.map(({ contributorId, contributorName }, position) => ({ profileId: contributorId, profileName: contributorName, position }));
-} const assignments = envelope.project.collections.assignments.map((assignment) => { const targetId = String(assignment.targetId ?? assignment.schemaDraftId ?? assignment.schemaId), targetKind = String(assignment.targetKind ?? "Legacy Schema"); return { assignmentId: assignment.id, targetId, targetKind, ...(assignment.applicabilitySetId ? { applicabilitySetId: String(assignment.applicabilitySetId) } : {}), eventId: String(assignment.eventId), priority: Number(assignment.priority ?? 0), schemaRevision: assignment.targetId ? envelope.revision : Number(assignment.schemaRevision) }; }), planContent = { projectId: envelope.project.id, draftId: envelope.draftId, revision: envelope.revision, sourceProject: clone(envelope.project), pages: index(envelope.project.collections.pages), events: index(envelope.project.collections.events), applicability: index(envelope.project.collections.applicabilitySets), flows: index(envelope.project.collections.flows), schemas, assignments, provenance }, executableContent = { projectId: envelope.project.id, pages: planContent.pages, events: planContent.events, applicability: planContent.applicability, flows: planContent.flows, schemas, assignments, provenance }, plan = { ...planContent, contentIdentity: contentIdentity("plan", planContent), evaluatorContentIdentity: contentIdentity("evaluator", executableContent) }; return { status: "compiled", plan: freeze(plan), diagnostics: [] }; }
+        provenance[`${schemaKey}:${path}`] = property.origins.map(({ contributorId, contributorName }, position) => ({ profileId: contributorId, profileName: contributorName, position }));
+} const assignments = envelope.project.collections.assignments.map((assignment) => ({ assignmentId: assignment.id, targetId: String(assignment.targetId), targetKind: String(assignment.targetKind), schemaKey: assignment.id, ...(assignment.applicabilitySetId ? { applicabilitySetId: String(assignment.applicabilitySetId) } : {}), eventId: String(assignment.eventId), priority: Number(assignment.priority ?? 0), schemaRevision: envelope.revision })), planContent = { projectId: envelope.project.id, draftId: envelope.draftId, revision: envelope.revision, sourceProject: clone(envelope.project), pages: index(envelope.project.collections.pages), events: index(envelope.project.collections.events), applicability: index(envelope.project.collections.applicabilitySets), flows: index(envelope.project.collections.flows), schemas, assignments, provenance }, executableContent = { projectId: envelope.project.id, pages: planContent.pages, events: planContent.events, applicability: planContent.applicability, flows: planContent.flows, schemas, assignments, provenance }, plan = { ...planContent, contentIdentity: contentIdentity("plan", planContent), evaluatorContentIdentity: contentIdentity("evaluator", executableContent) }; return { status: "compiled", plan: freeze(plan), diagnostics: [] }; }
 function conditionMatches(condition, observation) { return condition ? projectConditionMatches(condition, observation) : true; }
 function observedType(value) { return Array.isArray(value) ? "array" : value === null ? "null" : typeof value; }
 function observedText(value) { if (value === undefined)
@@ -119,6 +72,7 @@ function observedText(value) { if (value === undefined)
 catch {
     return String(value);
 } }
+function missingRequiredPaths(document, path) { const required = document?.type === "object" ? document.required ?? [] : []; return required.length ? required.flatMap((name) => missingRequiredPaths(document.properties?.[name], `${path}/${name}`)) : [path]; }
 function ruleFailure(rule, value) { const operator = String(rule.operator ?? "").replaceAll("_", "-").replaceAll(" ", "-").toLowerCase(), parameters = String(rule.parameters ?? ""); if (operator === "required")
     return value === undefined ? { code: "required", expected: "present", message: "Required value" } : undefined; if (value === undefined)
     return undefined; if (operator === "exact-value")
@@ -150,7 +104,8 @@ function validationIssueDetails(value, document, plan, schemaId, path = "", root
     const record = value;
     for (const required of document.required ?? [])
         if (!(required in record))
-            add({ path: `${path}/${required}`, code: "required", severity: "error", message: "Required value", expected: "present", actual: "absent" });
+            for (const missingPath of missingRequiredPaths(document.properties?.[required], `${path}/${required}`))
+                add({ path: missingPath, code: "required", severity: "error", message: "Required value", expected: "present", actual: "absent" });
     for (const [property, child] of Object.entries(document.properties ?? {})) {
         const childPath = `${path}/${property}`, nested = record[property];
         if (child["x-forbidden"] && nested !== undefined)
@@ -178,5 +133,5 @@ function flowTransition(plan, observation, prior) { const sessionId = String(obs
     return { instances: [...prior], ambiguity: { instanceIds: changed.map(({ id }) => id), reason: "Multiple flow instances are equally eligible; no instance was advanced." } }; return { instances: [...others, ...advanced.filter((instance) => instance.history.length > 0)], ...(changed[0] ? { active: changed[0] } : {}) }; }
 export function evaluateSpecificationObservation(plan, observation, priorInstances) { const transition = priorInstances ? flowTransition(plan, observation, priorInstances) : undefined, stateTransition = transition && (transition.instances.length > 0 || transition.active !== undefined || transition.ambiguity !== undefined) ? transition : undefined, active = stateTransition?.active, effectiveObservation = { ...observation, ...(active ? { flowId: active.flowId, activeStepId: active.currentStepId } : {}) }, candidates = plan.assignments.map((assignment) => { const reasons = [], event = plan.events[assignment.eventId], applicability = assignment.applicabilitySetId ? plan.applicability[assignment.applicabilitySetId] : undefined; if (!event || event.eventName !== effectiveObservation.eventName || event.sourceId !== effectiveObservation.sourceId)
     reasons.push("event did not match"); if (assignment.applicabilitySetId && (!applicability || !conditionMatches(applicability.condition, effectiveObservation)))
-    reasons.push("applicability did not match"); return { ...assignment, rejectionReasons: reasons }; }), matching = stateTransition?.ambiguity ? [] : candidates.filter(({ rejectionReasons }) => rejectionReasons.length === 0).sort((left, right) => right.priority - left.priority), highest = matching[0]?.priority, ties = matching.filter(({ priority }) => priority === highest), selected = ties.length === 1 ? ties[0] : undefined, schema = selected ? plan.schemas[selected.targetId] : undefined, winner = selected && schema ? { assignmentId: selected.assignmentId, schemaId: schema.schemaId, schemaRevision: selected.schemaRevision } : undefined, issueDetails = schema ? validationIssueDetails(effectiveObservation.payload, schema.document, plan, schema.schemaId) : [], issues = issueDetails.map(({ path, code, message }) => `${path}: ${code === "required" ? "required" : message}`), resultContent = { planContentIdentity: plan.contentIdentity, ...(plan.releaseId ? { releaseIdentity: plan.releaseId } : {}), candidates, ...(winner ? { winner } : {}), ties: ties.map(({ assignmentId }) => assignmentId), activeFlowId: effectiveObservation.flowId, activeStepId: effectiveObservation.activeStepId, effectiveProfiles: schema?.profileIds ?? [], ...(schema ? { effectiveSchemaRevision: schema.revision } : {}), issues, issueDetails, provenance: schema ? Object.fromEntries(Object.entries(plan.provenance).filter(([key]) => key.startsWith(`${schema.schemaId}:`))) : {}, ...(stateTransition ? { stateTransition } : {}) }; const evaluatorResultContent = { ...resultContent, planContentIdentity: plan.evaluatorContentIdentity }; return { resultIdentity: contentIdentity("result", evaluatorResultContent), ...resultContent }; }
+    reasons.push("applicability did not match"); return { ...assignment, rejectionReasons: reasons }; }), matching = stateTransition?.ambiguity ? [] : candidates.filter(({ rejectionReasons }) => rejectionReasons.length === 0).sort((left, right) => right.priority - left.priority), highest = matching[0]?.priority, ties = matching.filter(({ priority }) => priority === highest), selected = ties.length === 1 ? ties[0] : undefined, schema = selected ? plan.schemas[selected.schemaKey] : undefined, winner = selected && schema ? { assignmentId: selected.assignmentId, schemaId: schema.schemaId, schemaRevision: selected.schemaRevision } : undefined, issueDetails = schema && selected ? validationIssueDetails(effectiveObservation.payload, schema.document, plan, selected.schemaKey) : [], issues = issueDetails.map(({ path, code, message }) => `${path}: ${code === "required" ? "required" : message}`), resultContent = { planContentIdentity: plan.contentIdentity, ...(plan.releaseId ? { releaseIdentity: plan.releaseId } : {}), candidates, ...(winner ? { winner } : {}), ties: ties.map(({ assignmentId }) => assignmentId), activeFlowId: effectiveObservation.flowId, activeStepId: effectiveObservation.activeStepId, effectiveProfiles: schema?.profileIds ?? [], ...(schema ? { effectiveSchemaRevision: schema.revision } : {}), issues, issueDetails, provenance: selected ? Object.fromEntries(Object.entries(plan.provenance).filter(([key]) => key.startsWith(`${selected.schemaKey}:`))) : {}, ...(stateTransition ? { stateTransition } : {}) }; const evaluatorResultContent = { ...resultContent, planContentIdentity: plan.evaluatorContentIdentity }; return { resultIdentity: contentIdentity("result", evaluatorResultContent), ...resultContent }; }
 //# sourceMappingURL=data-layer-specification-engine.js.map

@@ -137,12 +137,7 @@ export function conditionMatches(condition: Condition, context: Record<string,un
 }
 
 function lifecycleAssignments(project:SpecificationProject):ProjectEntity[]{
-  if(project.collections.assignments.length)return project.collections.assignments;
-  const embedded=(project.collections.schemaDrafts??[]).flatMap((entry)=>{
-    const schema=entry as unknown as SchemaDefinition;
-    return [...(schema.workingDraft?.assignments??schema.assignments??[])].map((assignment)=>({...clone(assignment),id:assignment.id??`${schema.id}:${assignment.sourceId}:${assignment.eventName}:${assignment.target}`,name:assignment.name??assignment.eventName,schemaId:schema.id,...(assignment.schemaVersion!==undefined?{schemaRevision:assignment.schemaVersion}:{})}));
-  });
-  return embedded.length?embedded:project.collections.assignments;
+  return project.collections.assignments;
 }
 
 export function resolveApplicability(project: SpecificationProject, context: Record<string,unknown>): { candidates: { id:string; name:string; matched:boolean; priority:number; evidence:string }[]; winner?: { id:string; name:string }; ties: { id:string; name:string }[] } {

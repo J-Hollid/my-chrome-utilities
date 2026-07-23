@@ -12,15 +12,15 @@ export function runProductionFixture(plan, fixture) { const declared = fixture.o
     return { fixtureId: fixture.id, status: "blocked", compiledRevision: plan.revision, steps: [], blockers }; let instances = []; const steps = observations.map((observation, index) => { const actual = evaluateSpecificationObservation(plan, observation, instances); instances = actual.stateTransition?.instances ?? instances; const perStep = stepExpectations[index] ?? (index === observations.length - 1 ? expected : undefined), stepDifferences = differences(actual, perStep), capturedIdentity = fixture.evaluationResultIdentity; if (index === observations.length - 1 && capturedIdentity !== undefined && actual.resultIdentity !== capturedIdentity)
     stepDifferences.push(`resultIdentity: expected ${String(capturedIdentity)}, actual ${actual.resultIdentity}`); return { index, actual, ...(perStep ? { expected: perStep } : {}), differences: stepDifferences }; }); return { fixtureId: fixture.id, status: steps.some(({ differences }) => differences.length) ? "fail" : "pass", compiledRevision: plan.revision, steps }; }
 export function buildEffectiveRequirementCoverage(plan, evidence, range) { const all = []; for (const assignment of plan.assignments) {
-    const schema = plan.schemas[assignment.targetId], event = plan.events[assignment.eventId];
+    const schema = plan.schemas[assignment.schemaKey], event = plan.events[assignment.eventId];
     if (!schema || !event)
         continue;
     for (const flow of Object.values(plan.flows))
         for (const step of flow.steps ?? []) {
             if (step.eventId !== event.id)
                 continue;
-            for (const key of Object.keys(plan.provenance).filter((key) => key.startsWith(`${schema.schemaId}:`))) {
-                const path = key.slice(schema.schemaId.length + 1), proof = evidence.find(({ result }) => result.status === "pass" && result.steps.some(({ actual }) => actual.winner?.assignmentId === assignment.assignmentId && actual.activeStepId === step.id)), waiver = (step.waivers ?? []).find((item) => item.path === path);
+            for (const key of Object.keys(plan.provenance).filter((key) => key.startsWith(`${assignment.schemaKey}:`))) {
+                const path = key.slice(assignment.schemaKey.length + 1), proof = evidence.find(({ result }) => result.status === "pass" && result.steps.some(({ actual }) => actual.winner?.assignmentId === assignment.assignmentId && actual.activeStepId === step.id)), waiver = (step.waivers ?? []).find((item) => item.path === path);
                 all.push({ id: `${step.pageId ?? "any"}:${event.id}:${flow.id}:${step.id}:${path}`, pageId: String(step.pageId ?? ""), eventId: event.id, flowId: flow.id, stepId: step.id, assignmentId: assignment.assignmentId, requirementPath: path, schemaRevision: schema.revision, profileIds: plan.provenance[key].map(({ profileId }) => profileId), state: waiver ? "waived" : proof ? "covered" : "missing", ...(proof ? { fixtureId: proof.fixture.id } : {}) });
             }
         }
