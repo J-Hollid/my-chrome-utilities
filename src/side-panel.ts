@@ -898,15 +898,15 @@ const liveFlowTestingUi=mountLiveFlowTestingUi({
   root:document,
   activeProject:async()=>{const activeProjectId=projectLibraryUi.library().activeProjectId;if(!activeProjectId)return;await durableProjectRuntime.settled();await durableProjectRuntime.ensureProject(activeProjectId);await durableProjectRuntime.settled();const project=restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY));return project?.project.id===activeProjectId&&!project.project.placeholder?project:undefined;},
   events:()=>liveObserverState.events,
-  saveSummary:(summary)=>{completedLiveFlowTests=[...completedLiveFlowTests,structuredClone(summary)];},
+  saveSummary:(summary)=>{completedLiveFlowTests=[structuredClone(summary)];},
   savedSummary:()=>savedSessionLiveFeed?.session.flowTests?.at(-1),
-  onResult:(entry,event)=>{liveObserverState={...liveObserverState,events:liveObserverState.events.map((candidate)=>candidate.id===event.id?{...candidate,manualFlowValidations:[...(candidate.manualFlowValidations??[]),structuredClone(entry)]}:candidate)};renderLiveObserver();},
-  onDefect:(entry,event)=>{openLiveInspector(event.id);startManualFlowDefectReport(entry,event);},
+  onResult:(entry,event)=>{const manual=manualFlowDefectEvent(entry,event as LiveEvent);liveObserverState={...liveObserverState,events:liveObserverState.events.map((candidate)=>candidate.id===event.id?{...candidate,...(manual.validation?{validation:manual.validation}:{}),...(manual.validationDetails?{validationDetails:manual.validationDetails}:{}),manualFlowValidations:[...(candidate.manualFlowValidations??[]),structuredClone(entry)]}:candidate)};renderLiveObserver();openLiveInspector(event.id,true);},
   openProject:()=>{showDataLayerView("Projects",true);document.querySelector<HTMLInputElement>("#project-library-search")?.focus({preventScroll:true});},
   createProject:()=>{showDataLayerView("Projects",true);document.querySelector<HTMLButtonElement>("#create-library-project")?.click();},
 });
-void liveFlowTestingUi;
-function resetLiveFlowTestingSession():void{completedLiveFlowTests=[];liveFlowTestingUi.reset();}
+void liveFlowTestingUi.open();
+durableProjectRuntime.subscribe(()=>{void liveFlowTestingUi.refreshProject();});
+function resetLiveFlowTestingSession():void{completedLiveFlowTests=[];liveFlowTestingUi.reset();void liveFlowTestingUi.open();}
 let activeSchemaProjectHydration:Promise<void>|undefined;
 const schemaContributorRoute={collectionKinds:["profiles","pageGroups","pages","events","flows"],includeFlowGraphs:true} as const;
 async function hydrateActiveProjectForSchemas():Promise<void>{if(activeSchemaProjectHydration)return activeSchemaProjectHydration;const activeProjectId=projectLibraryUi.library().activeProjectId;if(!activeProjectId)return;activeSchemaProjectHydration=(async()=>{if(schemaResult)schemaResult.textContent="Loading active project schema contributors from durable storage…";await durableProjectRuntime.settled();await durableProjectRuntime.ensureProjectRoute(activeProjectId,schemaContributorRoute);await durableProjectRuntime.settled();const current=restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY));if(!current||current.project.id!==activeProjectId||current.project.placeholder)throw new Error(`Active project ${activeProjectId} did not load its durable schema contributors.`);renderSchemas();if(schemaResult)schemaResult.textContent=`Loaded schema contributors for ${current.project.name}.`;})().finally(()=>{activeSchemaProjectHydration=undefined;});return activeSchemaProjectHydration;}
@@ -1942,6 +1942,7 @@ function openLiveInspector(eventId: string, preserveReturnSnapshot = false): voi
     },
   }), presentation ? { showNonApplicableProperties:presentation.showNonApplicableProperties } : {});
   if(event&&liveObserverElements.eventInspector)appendManualFlowValidation(liveObserverElements.eventInspector,event);
+  if(event&&liveObserverElements.eventInspector)liveFlowTestingUi.renderEventDetails(liveObserverElements.eventInspector,event.id);
   renderLiveObserver();
   restoreLiveInspectorPresentation(liveObserverElements.eventInspector, presentation);
   if (!presentation) backToEventsButton?.focus({ preventScroll: true });
@@ -4424,6 +4425,7 @@ function openSessionInLiveFeed(session: SavedSessionLibrary["sessions"][number])
   persistSavedSessionFeed();
   showDataLayerView("Live");
   renderLiveObserver();
+  void liveFlowTestingUi.open();
   if (liveObserverElements.eventList) liveObserverElements.eventList.scrollTop = savedSessionLiveFeed.savedScrollTop;
 }
 

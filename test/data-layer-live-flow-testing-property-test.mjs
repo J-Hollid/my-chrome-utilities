@@ -1,16 +1,13 @@
 import assert from "node:assert/strict";
 import {
   attachLiveFlowDefect,
-  completeLiveFlowTest,
   createLiveFlowTest,
-  liveFlowCandidateEvents,
-  liveFlowNextSteps,
-  matchLiveFlowEvent,
+  liveFlowEventStepChoices,
+  liveFlowSessionEvidence,
+  linkLiveFlowEvent,
   restoreLiveFlowSummary,
   selectLiveFlow,
-  selectLiveFlowStep,
   serializeLiveFlowSummary,
-  startLiveFlowPath,
 } from "../dist/data-layer-live-flow-testing.js";
 import {canonicalSchemaWithConstraint,createCanonicalSchema} from "../dist/data-layer-canonical-schema.js";
 
@@ -57,43 +54,44 @@ for(let sample=0;sample<24;sample+=1){
     {id:`event:${sample}:late-${other}`,name:"page_view",sourceId:"history",captureTime:`2026-07-23T10:00:03.${String(sample).padStart(3,"0")}Z`,pageUrl:`https://example.test/${other}`,payload:{result:other}},
   ];
   const events=sample%3===0?[...chronological].reverse():rotate(chronological,sample%chronological.length);
+  const feedBytes=JSON.stringify(events);
   let run=selectLiveFlow(createLiveFlowTest(`run:${sample}`,state.project.id),state,"flow:branch");
-  run=startLiveFlowPath(run,"frame:start");
-  run=matchLiveFlowEvent(run,state,events,chronological[0].id);
-  assert.deepEqual(liveFlowNextSteps(run,state).map(({id,relationshipId})=>({id,relationshipId})),[
+  assert.deepEqual(liveFlowEventStepChoices(run,state,chronological[2].id).choices.map(({id})=>id),[
+    "frame:start","frame:success","frame:failure",
+  ]);
+  run=linkLiveFlowEvent(run,state,chronological[2],"frame:start");
+  assert.deepEqual(liveFlowEventStepChoices(run,state,chronological[1].id).choices.map(({id,relationshipId})=>({id,relationshipId})),[
     {id:"occurrence:submit",relationshipId:"relationship:start-submit"},
   ]);
-  run=selectLiveFlowStep(run,state,"occurrence:submit");
-  const submitCandidates=liveFlowCandidateEvents(run,state,events);
-  assert.equal(submitCandidates.find(({eventId})=>eventId===chronological[0].id).eligible,false);
-  assert.equal(submitCandidates.find(({eventId})=>eventId===chronological[1].id).eligible,true);
-  run=matchLiveFlowEvent(run,state,events,chronological[1].id);
-  assert.deepEqual(new Set(liveFlowNextSteps(run,state).map(({relationshipId})=>relationshipId)),new Set(["relationship:submit-success","relationship:submit-failure"]));
-  run=selectLiveFlowStep(run,state,`frame:${target}`);
-  const finalCandidates=liveFlowCandidateEvents(run,state,events);
-  assert.equal(finalCandidates.find(({eventId})=>eventId===chronological[0].id).reason,"Already matched in this run");
-  assert.equal(finalCandidates.find(({eventId})=>eventId===chronological[1].id).reason,"Already matched in this run");
-  assert.equal(finalCandidates.find(({eventId})=>eventId===chronological[2].id).eligible,true);
-  run=matchLiveFlowEvent(run,state,events,chronological[2].id);
-  run=attachLiveFlowDefect(run,`frame:${target}`,`defect:${sample}`,chronological[2].id);
+  run=linkLiveFlowEvent(run,state,chronological[1],"occurrence:submit");
+  assert.deepEqual(new Set(liveFlowEventStepChoices(run,state,chronological[0].id).choices.map(({relationshipId})=>relationshipId)),new Set(["relationship:submit-success","relationship:submit-failure"]));
+  run=linkLiveFlowEvent(run,state,chronological[0],`frame:${target}`);
+  run=attachLiveFlowDefect(run,`frame:${target}`,`defect:${sample}`,chronological[0].id);
 
   assert.deepEqual(run.history.map(({stepId})=>stepId),["frame:start","occurrence:submit",`frame:${target}`]);
   assert.deepEqual(run.history.map(({relationshipId})=>relationshipId),[undefined,"relationship:start-submit",`relationship:submit-${target}`]);
-  assert.deepEqual(run.history.map(({eventId})=>eventId),chronological.slice(0,3).map(({id})=>id));
-  assert.equal(run.history.every((entry,index,history)=>index===0||Date.parse(entry.captureTime)>Date.parse(history[index-1].captureTime)),true);
+  assert.deepEqual(run.history.map(({eventId})=>eventId),[chronological[2].id,chronological[1].id,chronological[0].id]);
+  assert.equal(run.history.every((entry,index,history)=>index===0||Date.parse(entry.captureTime)<Date.parse(history[index-1].captureTime)),true,
+    "generated traversals accept operator-selected feed evidence in reverse capture chronology");
+  assert.equal(JSON.stringify(events),feedBytes,"Flow linking does not reorder, hide, select, or mutate feed events");
+  const currentStep=run.currentStepId;
+  assert.equal(liveFlowEventStepChoices(run,state,chronological[2].id).mode,"recorded");
+  assert.equal(run.currentStepId,currentStep,"reviewing generated earlier links conserves the current traversal cursor");
   assert.equal(run.history[0].effectiveSchemaRevision>0,true);
   assert.equal(run.history[0].provenance.length>0,true);
   assert.equal(run.history.at(-1).status,"Invalid");
   assert.equal(run.history.at(-1).issues.some(({path})=>path==="/result"),true);
 
-  const completed=completeLiveFlowTest(run,state,`2026-07-23T10:00:04.${String(sample).padStart(3,"0")}Z`);
+  const completed=liveFlowSessionEvidence(run,state,`2026-07-23T10:00:04.${String(sample).padStart(3,"0")}Z`);
+  assert.equal(completed.label,"Manual Flow test evidence");
+  assert.equal(completed.currentStepId,`frame:${target}`);
   assert.deepEqual(completed.unchosenAlternatives,[{relationshipId:`relationship:submit-${other}`,stepId:`frame:${other}`,status:"Not tested"}]);
   assert.equal(completed.resumeMatching,false);
   const serialized=serializeLiveFlowSummary(completed);
   assert.equal(serialized.includes('"contributors"'),false,"saved summaries do not codify copied schema contributors");
   assert.equal(serialized.includes('"constraints"'),false,"saved summaries do not embed contributor facets");
   const restored=restoreLiveFlowSummary(serialized);
-  assert.deepEqual(restored,JSON.parse(JSON.stringify(completed)),"serialization conserves persisted traversal chronology and validation evidence");
+  assert.deepEqual(restored,JSON.parse(JSON.stringify(completed)),"serialization conserves selected Flow, cursor, event links, and validation evidence");
   restored.history[0].target.name="mutated restored summary";
   assert.notEqual(completed.history[0].target.name,restored.history[0].target.name,"restored summaries are isolated from completed runs");
 }

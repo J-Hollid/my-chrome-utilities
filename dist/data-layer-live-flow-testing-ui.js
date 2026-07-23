@@ -1,50 +1,34 @@
-import { attachLiveFlowDefect, completeLiveFlowTest, createLiveFlowTest, liveFlowAwaitingObservation, liveFlowCandidateEvents, liveFlowChoices, liveFlowGraphNodes, matchLiveFlowEvent, selectLiveFlow, selectLiveFlowStep, startLiveFlowPath } from "./data-layer-live-flow-testing.js";
-import { renderValidationIssueList } from "./data-layer-live-observer-ui.js";
+import { attachLiveFlowDefect, createLiveFlowTest, liveFlowChoices, liveFlowEventLink, liveFlowEventStepChoices, liveFlowSessionEvidence, linkLiveFlowEvent, selectLiveFlow, } from "./data-layer-live-flow-testing.js";
 const button = (text, run) => { const control = document.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 const option = (value, text) => { const item = document.createElement("option"); item.value = value; item.textContent = text; return item; };
-const historyItem = (entry) => {
-    const item = document.createElement("li"), summary = document.createElement("p"), sources = document.createElement("p");
-    summary.textContent = `${entry.stepName} · ${entry.eventId} · revision ${entry.effectiveSchemaRevision} · ${entry.effectiveSchemaRevisionIdentity} · ${entry.status}${entry.defectId ? ` · defect ${entry.defectId}` : ""}`;
-    sources.textContent = `Schema sources: ${entry.provenance.map(({ scope, contributorName }) => `${scope} ${contributorName}`).join(" → ") || "none"}`;
-    item.append(summary, sources);
-    if (entry.issues.length) {
-        const issues = renderValidationIssueList(entry.issues.map((issue) => ({ path: issue.path, message: issue.code, rule: issue.code, severity: issue.severity, origin: issue.provenance, expected: JSON.stringify(issue.expected), actual: JSON.stringify(issue.actual) })));
-        issues.setAttribute("aria-label", `Validation issues for ${entry.stepName}`);
-        item.append(issues);
-    }
-    return item;
-};
 export function mountLiveFlowTestingUi(options) {
-    const openControl = options.root.querySelector("#open-live-flow-test"), host = options.root.querySelector("#live-flow-test");
-    if (!openControl || !host)
-        throw new Error("Live Flow test controls are unavailable.");
+    const host = options.root.querySelector("#live-flow-test");
+    if (!host)
+        throw new Error("Live Flow test context is unavailable.");
     const now = options.now ?? (() => new Date().toISOString()), id = options.id ?? (() => `live-flow:${crypto.randomUUID()}`);
-    let project, run, completed, openGeneration = 0;
-    const setStatus = (text) => { const output = host.querySelector("#live-flow-test-status"); if (output)
-        output.textContent = text; };
+    let project, run, restored = options.savedSummary?.(), openGeneration = 0;
+    const evidence = () => {
+        if (restored)
+            return structuredClone(restored);
+        if (!project || !run?.history.length)
+            return;
+        return liveFlowSessionEvidence(run, project, now());
+    };
     const render = () => {
         host.replaceChildren();
         host.hidden = false;
         const heading = document.createElement("h4");
-        heading.textContent = "Flow test";
+        heading.textContent = "Flow test context";
         const guidance = document.createElement("p");
-        guidance.textContent = "Manual Flow test: choose each graph step and observed feed event. No Flow, event, or Assignment is selected automatically.";
+        guidance.textContent = "Select a Flow, then open any event’s existing details to link an eligible graph step. The event feed remains unchanged and no Assignment is selected automatically.";
         host.append(heading, guidance);
-        if (completed) {
-            const summary = document.createElement("section");
-            summary.id = "live-flow-completed-summary";
-            const label = document.createElement("h5");
-            label.textContent = completed.label;
-            const untested = document.createElement("p");
-            untested.textContent = completed.unchosenAlternatives.length ? `${completed.unchosenAlternatives.length} unchosen alternatives · Not tested` : "No unchosen alternatives";
-            const history = document.createElement("ol");
-            for (const entry of completed.history)
-                history.append(historyItem(entry));
-            summary.append(label, untested, history);
-            host.append(summary);
-            const archived = document.createElement("p");
-            archived.textContent = project ? "Flow test completed; matching was not resumed." : "Saved Flow test summary restored read-only; matching was not resumed.";
-            host.append(archived);
+        if (restored) {
+            const selected = document.createElement("p");
+            selected.id = "live-flow-selected-context";
+            selected.textContent = `Selected Flow: ${restored.flowName}`;
+            const state = document.createElement("p");
+            state.textContent = `Saved session evidence · current step ${restored.currentStepId} · ${restored.unchosenAlternatives.length} unchosen alternatives Not tested`;
+            host.append(selected, state);
             return;
         }
         if (!project) {
@@ -53,90 +37,101 @@ export function mountLiveFlowTestingUi(options) {
             host.append(message, button("Open project", () => options.openProject?.()), button("Create project", () => options.createProject?.()));
             return;
         }
-        const choices = liveFlowChoices(project.project.id, [project]).flows, flowLabel = document.createElement("label"), flowSelect = document.createElement("select");
-        flowSelect.id = "live-flow-selector";
-        flowLabel.textContent = "Flow";
-        flowSelect.append(option("", "Choose Flow"), ...choices.map(({ id: flowId, name }) => option(flowId, name)));
-        flowSelect.value = run?.flowId ?? "";
-        flowSelect.addEventListener("change", () => { run = selectLiveFlow(createLiveFlowTest(id(), project.project.id), project, flowSelect.value); completed = undefined; render(); });
-        flowLabel.append(flowSelect);
-        host.append(flowLabel);
-        if (run?.flowId && !run.currentStepId) {
-            const startLabel = document.createElement("label"), start = document.createElement("select");
-            start.id = "live-flow-start";
-            startLabel.textContent = "Start Page frame";
-            start.append(option("", "Choose start Page"), ...run.startChoices.map((choice) => option(choice.id, `${choice.name} · ${choice.lane} · ${choice.stableFrameId}${choice.recommended ? " · Recommended root" : " · Partial-path start"}`)));
-            start.addEventListener("change", () => { if (start.value)
-                run = startLiveFlowPath(run, start.value); render(); });
-            startLabel.append(start);
-            host.append(startLabel);
+        const label = document.createElement("label"), select = document.createElement("select");
+        label.textContent = "Flow test context";
+        select.id = "live-flow-selector";
+        select.append(option("", "No Flow selected"), ...liveFlowChoices(project.project.id, [project]).flows.map(({ id: flowId, name }) => option(flowId, name)));
+        select.value = run?.flowId ?? "";
+        select.addEventListener("change", () => { run = select.value ? selectLiveFlow(createLiveFlowTest(id(), project.project.id), project, select.value) : createLiveFlowTest(id(), project.project.id); render(); });
+        label.append(select);
+        host.append(label);
+        if (run?.flowName) {
+            const selected = document.createElement("p");
+            selected.id = "live-flow-selected-context";
+            selected.textContent = `Selected Flow: ${run.flowName} · Open an observed event’s details to choose its Flow step.`;
+            host.append(selected);
         }
-        if (run?.currentStepId && !liveFlowAwaitingObservation(run)) {
-            const nodes = liveFlowGraphNodes(run, project), nextSection = document.createElement("section"), title = document.createElement("h5"), list = document.createElement("ul");
-            title.textContent = "Choose next relationship-connected step";
-            nextSection.append(title, list);
-            for (const node of nodes) {
-                const item = document.createElement("li"), control = button(node.next ? `${node.next.displayName} · ${node.next.kind}` : `${node.name} · ${node.stepKind}`, () => { if (node.enabled) {
-                    run = selectLiveFlowStep(run, project, node.id);
-                    render();
-                } });
-                control.disabled = !node.enabled;
-                control.setAttribute("aria-label", `${node.name} · ${node.reason}`);
-                item.append(control, ` · ${node.reason}`);
-                list.append(item);
-            }
-            if (!nodes.some(({ enabled }) => enabled)) {
-                const terminal = document.createElement("p");
-                terminal.textContent = "No outgoing relationship from current step. Complete the selected path or end manually.";
-                nextSection.append(terminal);
-            }
-            host.append(nextSection);
-        }
-        if (run?.currentStepId && liveFlowAwaitingObservation(run)) {
-            const candidates = liveFlowCandidateEvents(run, project, options.events()), section = document.createElement("section"), title = document.createElement("h5"), list = document.createElement("ul");
-            title.textContent = "Choose one observed event";
-            for (const candidate of candidates) {
-                const item = document.createElement("li"), control = button(`Match ${candidate.eventId}`, () => { try {
-                    run = matchLiveFlowEvent(run, project, options.events(), candidate.eventId);
-                    const entry = run.history.at(-1), event = options.events().find(({ id: eventId }) => eventId === candidate.eventId);
-                    options.onResult?.(entry, event);
-                    render();
-                }
-                catch (error) {
-                    setStatus(error instanceof Error ? error.message : String(error));
-                } });
-                control.disabled = !candidate.eligible;
-                control.setAttribute("aria-label", `${candidate.eventId} · ${candidate.evidence} · ${candidate.reason}`);
-                item.textContent = `${candidate.eventId} · ${candidate.evidence} · ${candidate.reason} `;
-                item.append(control);
-                list.append(item);
-            }
-            section.append(title, list);
-            host.append(section);
-        }
-        if (run?.history.length) {
-            const history = document.createElement("ol");
-            history.id = "live-flow-run-history";
-            for (const entry of run.history) {
-                const item = historyItem(entry);
-                if (entry.issues.length && !entry.defectId)
-                    item.append(button("Create defect report", () => { const event = options.events().find(({ id: eventId }) => eventId === entry.eventId); if (event)
-                        options.onDefect?.(entry, event); }));
-                history.append(item);
-            }
-            host.append(history);
-            if (!liveFlowAwaitingObservation(run))
-                host.append(button("Complete selected path", () => { completed = completeLiveFlowTest(run, project, now()); options.saveSummary(completed); render(); }));
-        }
-        const status = document.createElement("output");
-        status.id = "live-flow-test-status";
-        status.setAttribute("aria-live", "polite");
-        host.append(status);
     };
-    const open = async () => { const generation = ++openGeneration, nextCompleted = options.savedSummary?.(), nextProject = nextCompleted ? undefined : await options.activeProject(); if (generation !== openGeneration)
-        return; completed = nextCompleted; project = nextProject; run = project ? createLiveFlowTest(id(), project.project.id) : undefined; render(); };
-    openControl.addEventListener("click", () => void open());
-    return { open, render, reset: () => { openGeneration++; project = undefined; run = undefined; completed = undefined; host.replaceChildren(); host.hidden = true; }, attachDefect: (stepId, eventId, defectId) => { if (!run)
-            return; run = attachLiveFlowDefect(run, stepId, defectId, eventId); render(); }, run: () => run ? structuredClone(run) : undefined, summary: () => completed ? structuredClone(completed) : undefined };
+    const renderEventDetails = (inspector, eventId) => {
+        inspector.querySelector("#live-flow-event-link")?.remove();
+        const selectedRun = run;
+        const recorded = selectedRun ? liveFlowEventLink(selectedRun, eventId) : restored?.history.find((entry) => entry.eventId === eventId);
+        if (!recorded && !project?.project.id)
+            return;
+        if (!recorded && !selectedRun?.flowId)
+            return;
+        const section = document.createElement("section");
+        section.id = "live-flow-event-link";
+        section.setAttribute("aria-label", "Flow step link");
+        const heading = document.createElement("h5");
+        heading.textContent = "Flow step";
+        section.append(heading);
+        if (recorded) {
+            const value = document.createElement("p");
+            value.textContent = `${recorded.flowName} · ${recorded.stepName} · ${recorded.selectionMode} · ${recorded.status}`;
+            const stable = document.createElement("p");
+            stable.textContent = `Recorded graph step ${recorded.stepId}. Reviewing this event does not change the current traversal step.`;
+            section.append(value, stable);
+            inspector.append(section);
+            return;
+        }
+        const selection = liveFlowEventStepChoices(selectedRun, project, eventId);
+        const guidance = document.createElement("p");
+        guidance.textContent = selection.noRootPage
+            ? "This Flow has no root Page frame. Every Page frame remains available in graph order."
+            : selection.mode === "initial" ? "Root Page frames are listed first; every Page frame remains available." : "Choose one direct outgoing relationship target from the current Flow step.";
+        const label = document.createElement("label"), select = document.createElement("select");
+        select.id = "live-flow-step-selector";
+        label.textContent = "Flow step";
+        select.append(option("", "Choose Flow step"));
+        for (const choice of selection.choices) {
+            const status = choice.root ? "Root Page frame" : choice.kind ? `${choice.kind} · ${choice.displayName}` : "Page frame";
+            select.append(option(choice.id, `${choice.name} · ${status} · ${choice.id}`));
+        }
+        const link = button("Link event to Flow step", () => {
+            if (!select.value)
+                return;
+            const event = options.events().find(({ id: eventIdentity }) => eventIdentity === eventId);
+            if (!event)
+                return;
+            run = linkLiveFlowEvent(selectedRun, project, event, select.value);
+            const entry = run.history.at(-1);
+            options.onResult?.(entry, event);
+            const summary = evidence();
+            if (summary)
+                options.saveSummary(summary);
+            render();
+            renderEventDetails(inspector, eventId);
+        });
+        label.append(select);
+        section.append(guidance, label, link);
+        inspector.append(section);
+    };
+    const refreshProject = async () => {
+        const generation = ++openGeneration, next = restored ? undefined : await options.activeProject();
+        if (generation !== openGeneration)
+            return;
+        if (!next) {
+            project = undefined;
+            run = undefined;
+        }
+        else if (project?.project.id !== next.project.id) {
+            project = next;
+            run = createLiveFlowTest(id(), next.project.id);
+        }
+        else
+            project = next;
+        render();
+    };
+    const open = async () => { restored = options.savedSummary?.(); await refreshProject(); };
+    return {
+        open, refreshProject, render, renderEventDetails,
+        reset: () => { openGeneration++; project = undefined; run = undefined; restored = undefined; host.replaceChildren(); host.hidden = true; },
+        attachDefect: (stepId, eventId, defectId) => { if (!run)
+            return; run = attachLiveFlowDefect(run, stepId, defectId, eventId); const summary = evidence(); if (summary)
+            options.saveSummary(summary); },
+        run: () => run ? structuredClone(run) : undefined,
+        summary: evidence,
+    };
 }
 //# sourceMappingURL=data-layer-live-flow-testing-ui.js.map
