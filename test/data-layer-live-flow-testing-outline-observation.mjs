@@ -33,9 +33,9 @@ const state={project:{
     profiles:[{id:"profile:sitewide",name:"Sitewide",canonicalSchema:canonical("profile:sitewide","Sitewide","/site")}],
     pageGroups:[{id:"group:checkout",name:"Checkout",canonicalSchema:canonical("group:checkout","Checkout","/currency")}],
     pages:[
-      {id:"page:cart",name:"Cart",profileId:"profile:sitewide",pageGroupIds:["group:checkout"],canonicalSchema:canonical("page:cart","Cart","/cart_id")},
-      {id:"page:payment",name:"Payment",profileId:"profile:sitewide",pageGroupIds:["group:checkout"],canonicalSchema:withConstraint(canonical("page:payment","Payment","/payment_id"),{path:"/oForm/formStepName",expectedValue:"payment"})},
-      {id:"page:confirmation",name:"Confirmation",profileId:"profile:sitewide",pageGroupIds:["group:checkout"],canonicalSchema:canonical("page:confirmation","Confirmation","/confirmation_id")},
+      {id:"page:cart",name:"Cart",eventName:"pageview",profileId:"profile:sitewide",pageGroupIds:["group:checkout"],canonicalSchema:canonical("page:cart","Cart","/cart_id")},
+      {id:"page:payment",name:"Payment",eventName:"pageview",profileId:"profile:sitewide",pageGroupIds:["group:checkout"],canonicalSchema:withConstraint(canonical("page:payment","Payment","/payment_id"),{path:"/oForm/formStepName",expectedValue:"payment"})},
+      {id:"page:confirmation",name:"Confirmation",eventName:"pageview",profileId:"profile:sitewide",pageGroupIds:["group:checkout"],canonicalSchema:canonical("page:confirmation","Confirmation","/confirmation_id")},
     ],
     events:[
       {id:"event:paypal",name:"PayPal",eventName:"paypal",canonicalSchema:canonical("event:paypal","PayPal","/paypal")},
@@ -89,6 +89,7 @@ const after={
 let run=selectLiveFlow(createLiveFlowTest("run:outline","project:outline"),state,"flow:checkout");
 run=linkLiveFlowEvent(run,state,initial,"frame:cart");
 const outgoing=liveFlowEventStepChoices(run,state,payment.id).choices;
+assert.equal(new Set(outgoing.map(({id})=>id)).size,outgoing.length,"Live Flow choices contain each stable target once");
 const relationshipRows=outgoing.map((choice)=>({
   relationship_kind:choice.kind,
   next_step:choice.stepKind==="Page"?`${choice.name} Page frame`:`${choice.name} Event occurrence`,
@@ -119,7 +120,7 @@ const outlineRows=[
     flow_step:"Payment Page frame",
     effective_schema:"its Shared Profiles, ordered Page Groups, Page, and Flow Page-instance contribution",
   }]:[]),
-  ...(JSON.stringify(occurrenceScopes)===JSON.stringify(["Shared Profile","Event","Page Group","Page","Flow Page-instance","Event-occurrence"])?[{
+  ...(JSON.stringify(occurrenceScopes)===JSON.stringify(["Shared Profile","Page Group","Page","Flow Page-instance","Event","Event-occurrence"])?[{
     flow_step:"Payment add_payment_info occurrence",
     effective_schema:"its Page-instance branch, Event branch, and Event-occurrence contribution",
   }]:[]),
@@ -136,6 +137,6 @@ const outlineRows=[
     ? [{link_evidence:"initial selection at Payment",displayed_link_evidence:"Started at Payment"}] : []),
 ];
 
-assert.equal(outlineRows.length,9,"the production model fixture must demonstrate every Live Flow outline row");
+assert.equal(outlineRows.length,9,"the production model fixture must demonstrate every Live Flow outline row without duplicate choices");
 assert.equal(run.history.map(({eventId})=>eventId).join("|"),"live-101|live-102|live-103");
 console.log(JSON.stringify({liveFlowTesting:{outlineRows}}));

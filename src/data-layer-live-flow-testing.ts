@@ -84,7 +84,7 @@ export function liveFlowEventStepChoices(run:LiveFlowTestRun,state:ProjectState,
     .filter(({pageFrameId})=>pageFrameId===run.currentStepId)
     .map((occurrence)=>{const target=step(state,run.flowId!,occurrence.id);return{id:target.id,name:target.name,stepKind:"Event" as const,root:false,recorded:false,displayName:`${source.name} ${target.name}`};});
   const related=graph(state,run.flowId).relationships
-    .filter((relationship)=>relationship.sourceEndpoint?.id===run.currentStepId&&Boolean(relationship.targetEndpoint?.id))
+    .filter((relationship)=>relationship.sourceEndpoint?.kind==="page-frame"&&relationship.sourceEndpoint.id===run.currentStepId&&relationship.targetEndpoint?.kind==="page-frame")
     .map((relationship)=>{
       const target=step(state,run.flowId!,relationship.targetEndpoint!.id);
       const label=typeof relationship.label==="string"?relationship.label.trim():"";
