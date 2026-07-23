@@ -829,7 +829,8 @@
       "layered_schema"
     ],
     "unit": [
-      "test/data-layer-live-flow-testing-test.mjs"
+      "test/data-layer-live-flow-testing-test.mjs",
+      "test/data-layer-live-flow-testing-outline-observation.mjs"
     ],
     "property": [
       "test/data-layer-live-flow-testing-property-test.mjs"

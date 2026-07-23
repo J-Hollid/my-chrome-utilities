@@ -1,0 +1,109 @@
+import assert from "node:assert/strict";
+import {
+  createLiveFlowTest,
+  liveFlowEventStepChoices,
+  linkLiveFlowEvent,
+  selectLiveFlow,
+} from "../dist/data-layer-live-flow-testing.js";
+import {
+  canonicalSchemaWithConstraint,
+  createCanonicalSchema,
+} from "../dist/data-layer-canonical-schema.js";
+
+let sequence=0;
+const canonical=(entityId,name,path)=>canonicalSchemaWithConstraint(
+  createCanonicalSchema({
+    id:`canonical:${entityId}`,
+    contributorId:entityId,
+    contributorName:name,
+  }),
+  {path,presence:"required",type:"string"},
+  (kind)=>`${kind}:outline:${++sequence}`,
+);
+const state={project:{
+  id:"project:outline",name:"Retail website",
+  collections:{
+    profiles:[{id:"profile:sitewide",name:"Sitewide",canonicalSchema:canonical("profile:sitewide","Sitewide","/site")}],
+    pageGroups:[{id:"group:checkout",name:"Checkout",canonicalSchema:canonical("group:checkout","Checkout","/currency")}],
+    pages:[
+      {id:"page:cart",name:"Cart",profileId:"profile:sitewide",pageGroupIds:["group:checkout"],canonicalSchema:canonical("page:cart","Cart","/cart_id")},
+      {id:"page:payment",name:"Payment",profileId:"profile:sitewide",pageGroupIds:["group:checkout"],canonicalSchema:canonical("page:payment","Payment","/payment_id")},
+      {id:"page:confirmation",name:"Confirmation",profileId:"profile:sitewide",pageGroupIds:["group:checkout"],canonicalSchema:canonical("page:confirmation","Confirmation","/confirmation_id")},
+    ],
+    events:[
+      {id:"event:paypal",name:"PayPal",eventName:"paypal",canonicalSchema:canonical("event:paypal","PayPal","/paypal")},
+      {id:"event:add-payment",name:"add_payment_info",eventName:"add_payment_info",canonicalSchema:canonical("event:add-payment","add_payment_info","/event_name")},
+    ],
+    flows:[{id:"flow:checkout",name:"Checkout journey"}],
+    applicabilitySets:[],assignments:[],fixtures:[],
+  },
+  documentationFlowGraphs:{"flow:checkout":{
+    pageGroupIds:["group:checkout"],
+    pageFrames:[
+      {id:"frame:cart",name:"Cart frame",pageId:"page:cart",pageGroupId:"group:checkout"},
+      {id:"frame:payment",name:"Payment frame",pageId:"page:payment",pageGroupId:"group:checkout"},
+      {id:"frame:confirmation",name:"Confirmation frame",pageId:"page:confirmation",pageGroupId:"group:checkout"},
+    ],
+    occurrences:[
+      {id:"occurrence:paypal",name:"Cart PayPal",pageFrameId:"frame:cart",pageId:"page:cart",eventId:"event:paypal",localSchemaContributions:[{path:"/paypal_route",presence:"required",type:"string"}]},
+      {id:"occurrence:add-payment",name:"Payment add_payment_info",pageFrameId:"frame:payment",pageId:"page:payment",eventId:"event:add-payment",localSchemaContributions:[{path:"/method",presence:"required",type:"string"}]},
+    ],
+    relationships:[
+      {id:"relationship:cart-payment",sourceEndpoint:{kind:"page-frame",id:"frame:cart"},targetEndpoint:{kind:"page-frame",id:"frame:payment"},kind:"expected_next"},
+      {id:"relationship:cart-paypal",sourceEndpoint:{kind:"page-frame",id:"frame:cart"},targetEndpoint:{kind:"event-occurrence",id:"occurrence:paypal"},kind:"alternative",label:"PayPal route"},
+      {id:"relationship:cart-confirmation",sourceEndpoint:{kind:"page-frame",id:"frame:cart"},targetEndpoint:{kind:"page-frame",id:"frame:confirmation"},kind:"merge"},
+      {id:"relationship:payment-add",sourceEndpoint:{kind:"page-frame",id:"frame:payment"},targetEndpoint:{kind:"event-occurrence",id:"occurrence:add-payment"},kind:"expected_next"},
+    ],
+  }},
+  releases:[],publicationPolicy:{warningsBlock:false,fixturesRequired:false},namingConventions:{},
+},draft:{status:"Draft"},history:{undo:[],redo:[]}};
+
+const initial={
+  id:"live-101",name:"page_view",sourceId:"history",
+  captureTime:"2026-07-23T10:00:01.000Z",
+  payload:{site:"shop",currency:"EUR",cart_id:"cart-1"},
+};
+const before={
+  id:"live-100",name:"page_view",sourceId:"history",
+  captureTime:"2026-07-23T10:00:00.000Z",
+  payload:{site:"shop",currency:"EUR",payment_id:"payment-1"},
+};
+const after={
+  id:"live-102",name:"add_payment_info",sourceId:"history",
+  captureTime:"2026-07-23T10:00:02.000Z",
+  payload:{site:"shop",currency:"EUR",payment_id:"payment-1",event_name:"add_payment_info",method:"card"},
+};
+
+let run=selectLiveFlow(createLiveFlowTest("run:outline","project:outline"),state,"flow:checkout");
+run=linkLiveFlowEvent(run,state,initial,"frame:cart");
+const outgoing=liveFlowEventStepChoices(run,state,before.id).choices;
+const relationshipRows=outgoing.map((choice)=>({
+  relationship_kind:choice.kind,
+  next_step:choice.stepKind==="Page"?`${choice.name} Page frame`:`${choice.name} Event occurrence`,
+  label_state:choice.displayName===`Cart to ${choice.name}`?"no label":`label ${choice.displayName}`,
+  display_name:choice.displayName,
+}));
+
+run=linkLiveFlowEvent(run,state,before,"frame:payment");
+const paymentEntry=run.history.at(-1);
+run=linkLiveFlowEvent(run,state,after,"occurrence:add-payment");
+const occurrenceEntry=run.history.at(-1);
+const pageScopes=paymentEntry.provenance.map(({scope})=>scope);
+const occurrenceScopes=occurrenceEntry.provenance.map(({scope})=>scope);
+const outlineRows=[
+  ...relationshipRows,
+  ...(JSON.stringify(pageScopes)===JSON.stringify(["Shared Profile","Page Group","Page","Flow Page-instance"])?[{
+    flow_step:"Payment Page frame",
+    effective_schema:"its Shared Profiles, ordered Page Groups, Page, and Flow Page-instance contribution",
+  }]:[]),
+  ...(JSON.stringify(occurrenceScopes)===JSON.stringify(["Shared Profile","Event","Page Group","Page","Flow Page-instance","Event-occurrence"])?[{
+    flow_step:"Payment add_payment_info occurrence",
+    effective_schema:"its Page-instance branch, Event branch, and Event-occurrence contribution",
+  }]:[]),
+  ...(Date.parse(before.captureTime)<Date.parse(initial.captureTime)?[{capture_order:"before"}]:[]),
+  ...(Date.parse(after.captureTime)>Date.parse(initial.captureTime)?[{capture_order:"after"}]:[]),
+];
+
+assert.equal(outlineRows.length,7,"the production model fixture must demonstrate every Live Flow outline row");
+assert.equal(run.history.map(({eventId})=>eventId).join("|"),"live-101|live-100|live-102");
+console.log(JSON.stringify({liveFlowTesting:{outlineRows}}));
