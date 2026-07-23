@@ -3,6 +3,6 @@ export { DataLayerView, LiveEvent, LiveObserverState, closeLiveInspector, create
 export { LiveInspectorPresentationSnapshot, captureLiveInspectorPresentation, restoreLiveInspectorPresentation } from "../../../../data-layer-live-inspector-presentation-ui.js";
 export { SAVED_SESSION_LIBRARY_STORAGE_KEY, SAVED_SESSION_LIVE_FEED_STORAGE_KEY, SavedSessionLiveFeed, SessionSaveDraft, confirmSessionSave, createSessionSaveDraft, openSavedSessionLiveFeed, recordBackgroundLiveEvent, restoreSavedSessionLiveFeed, returnToCurrentLiveFeed, revalidateSavedSessionLiveFeed, serializeSavedSessionLiveFeed, updateSavedSessionLiveFeedView } from "../../../../data-layer-saved-session-live-feed.js";
 export { createLiveInspectorActions } from "../../../../data-layer-live-inspector-actions.js";
-export { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, setEventValidationUpdateStatus } from "../../../../data-layer-live-observer-ui.js";
+export { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, renderValidationIssueList, setEventValidationUpdateStatus } from "../../../../data-layer-live-observer-ui.js";
 export { renderEventFeedQueryBuilder } from "../../../../data-layer-event-feed-query-ui.js";
 export { restoreInspectorReturnUi } from "../../../../data-layer-live-inspector-return-ui.js";

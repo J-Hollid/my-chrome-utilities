@@ -200,6 +200,7 @@ import {
   renderLiveInspector,
   renderLiveObserverState,
   renderLiveSessionMessage,
+  renderValidationIssueList,
   setEventValidationUpdateStatus,
 } from "./utilities/data-layer/live-inspection.js";
 import { createLiveInspectorActions } from "./utilities/data-layer/live-inspection.js";
@@ -1959,7 +1960,7 @@ function startManualFlowDefectReport(entry:LiveFlowHistoryEntry,event:LiveEvent)
 
 function appendManualFlowValidation(inspector:HTMLElement,event:LiveEvent):void{
   const entries=event.manualFlowValidations??[];if(!entries.length)return;const section=document.createElement("section"),heading=document.createElement("h5"),list=document.createElement("ol");section.id="live-manual-flow-validation";section.setAttribute("aria-label","Manual Flow test results");heading.textContent="Manual Flow test results";
-  for(const entry of entries){const item=document.createElement("li"),summary=document.createElement("p");summary.textContent=`${entry.stepName} · ${entry.status} · effective revision ${entry.effectiveSchemaRevision} · ${entry.selectionMode}`;const provenance=document.createElement("p");provenance.textContent=`Contributors: ${entry.provenance.map(({scope,contributorName})=>`${scope} ${contributorName}`).join(" → ")||"none"}`;item.append(summary,provenance);if(entry.issues.length){const issues=document.createElement("ul");for(const issue of entry.issues){const row=document.createElement("li");row.textContent=`${issue.path}: ${issue.code} · expected ${JSON.stringify(issue.expected)} · actual ${JSON.stringify(issue.actual)} · ${issue.provenance}`;issues.append(row);}const defect=document.createElement("button");defect.type="button";defect.className="live-flow-create-defect";defect.textContent="Create defect report";defect.addEventListener("click",()=>startManualFlowDefectReport(entry,event));item.append(issues,defect);}list.append(item);}section.append(heading,list);inspector.append(section);
+  for(const entry of entries){const item=document.createElement("li"),summary=document.createElement("p");summary.textContent=`${entry.stepName} · ${entry.status} · effective revision ${entry.effectiveSchemaRevision} · ${entry.selectionMode}`;const provenance=document.createElement("p");provenance.textContent=`Contributors: ${entry.provenance.map(({scope,contributorName})=>`${scope} ${contributorName}`).join(" → ")||"none"}`;item.append(summary,provenance);if(entry.issues.length){const issues=renderValidationIssueList(entry.issues.map((issue)=>({path:issue.path,message:issue.code,rule:issue.code,severity:issue.severity,origin:`Manual Flow test · ${issue.provenance}`,expected:JSON.stringify(issue.expected),actual:JSON.stringify(issue.actual)})));issues.setAttribute("aria-label",`Validation issues for ${entry.stepName}`);const defect=document.createElement("button");defect.type="button";defect.className="live-flow-create-defect";defect.textContent="Create defect report";defect.addEventListener("click",()=>startManualFlowDefectReport(entry,event));item.append(issues,defect);}list.append(item);}section.append(heading,list);inspector.append(section);
 }
 
 function appendOpenInLibraryAction(eventId: string, templateName: string): void {

@@ -35,7 +35,7 @@ import { renderEventFeedQueryBuilder } from "./utilities/data-layer/live-inspect
 import { applySavedEventFeedFilter, commitSavedEventFeedFilterLibrary, createSavedEventFeedFilter, deleteSavedEventFeedFilter, renameSavedEventFeedFilter, restoreSavedEventFeedFilterLibrary, restoreSavedEventFeedWorkingView, serializeSavedEventFeedWorkingView, setDefaultSavedEventFeedFilter, updateSavedEventFeedFilter, SAVED_EVENT_FEED_FILTER_STORAGE_KEY, SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY, } from "./utilities/data-layer/live-inspection.js";
 import { confirmSavedSessionDeletion, cancelSavedSessionDeletion, exportSavedSession, importSavedSession, openSavedSession, requestSavedSessionDeletion, renameSavedSession, restoreSavedSessionLibrary, resumeSavedSession, searchSavedSessions, savedSessionSummary, serializeSavedSessionLibrary, } from "./utilities/data-layer/live-inspection.js";
 import { confirmSessionSave, createSessionSaveDraft, openSavedSessionLiveFeed, recordBackgroundLiveEvent, restoreSavedSessionLiveFeed, returnToCurrentLiveFeed, revalidateSavedSessionLiveFeed, SAVED_SESSION_LIBRARY_STORAGE_KEY, SAVED_SESSION_LIVE_FEED_STORAGE_KEY, serializeSavedSessionLiveFeed, updateSavedSessionLiveFeedView, } from "./utilities/data-layer/live-inspection.js";
-import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, setEventValidationUpdateStatus, } from "./utilities/data-layer/live-inspection.js";
+import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, renderValidationIssueList, setEventValidationUpdateStatus, } from "./utilities/data-layer/live-inspection.js";
 import { createLiveInspectorActions } from "./utilities/data-layer/live-inspection.js";
 import { captureLiveInspectorPresentation, restoreLiveInspectorPresentation, } from "./utilities/data-layer/live-inspection.js";
 import { createLiveDefectReportNavigation, renderDefectReportBuilder } from "./utilities/data-layer/defect-reporting.js";
@@ -1794,12 +1794,8 @@ function appendManualFlowValidation(inspector, event) {
         provenance.textContent = `Contributors: ${entry.provenance.map(({ scope, contributorName }) => `${scope} ${contributorName}`).join(" → ") || "none"}`;
         item.append(summary, provenance);
         if (entry.issues.length) {
-            const issues = document.createElement("ul");
-            for (const issue of entry.issues) {
-                const row = document.createElement("li");
-                row.textContent = `${issue.path}: ${issue.code} · expected ${JSON.stringify(issue.expected)} · actual ${JSON.stringify(issue.actual)} · ${issue.provenance}`;
-                issues.append(row);
-            }
+            const issues = renderValidationIssueList(entry.issues.map((issue) => ({ path: issue.path, message: issue.code, rule: issue.code, severity: issue.severity, origin: `Manual Flow test · ${issue.provenance}`, expected: JSON.stringify(issue.expected), actual: JSON.stringify(issue.actual) })));
+            issues.setAttribute("aria-label", `Validation issues for ${entry.stepName}`);
             const defect = document.createElement("button");
             defect.type = "button";
             defect.className = "live-flow-create-defect";
