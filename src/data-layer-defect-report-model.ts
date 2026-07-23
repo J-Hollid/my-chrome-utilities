@@ -94,6 +94,7 @@ export interface ExpectedResultChoice {
   method: "choose an allowed value" | "enter a valid response" | "apply the rule" | "keep the rule generic";
   response?: unknown;
   responseSource?: string;
+  quoteResponse?: boolean;
   operatorProvided?: boolean;
   includeAllowedValuesComment?: boolean;
   responseProvenance?: SchemaChoiceProvenance;

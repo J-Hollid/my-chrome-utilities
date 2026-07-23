@@ -10,7 +10,11 @@ import {
   serializeLiveFlowSummary,
 } from "../dist/data-layer-live-flow-testing.js";
 import { createManualFlowDefectEvent } from "../dist/data-layer-live-flow-defect-report.js";
-import { createDefectReport } from "../dist/data-layer-defect-report.js";
+import {
+  applyExpectedResult,
+  createDefectReport,
+  exactFlowExpectationChoice,
+} from "../dist/data-layer-defect-report.js";
 import { defectCapturedEvent } from "../dist/data-layer-defect-report-browser.js";
 import { generateReportDetails, renderJiraReport } from "../dist/data-layer-defect-report-export.js";
 import {
@@ -156,6 +160,57 @@ for(let sample=0;sample<24;sample+=1){
   assert.notEqual(completed.history[0].target.name,restored.history[0].target.name,"restored summaries are isolated from completed runs");
 }
 assert.equal(JSON.stringify(state.project.collections),contributorFacetBytes,"generated traversals conserve every canonical contributor facet");
+
+const typedExpectations=["payment",7,false,null,""];
+for(const [sample,response] of typedExpectations.entries()){
+  for(const present of [false,true]){
+    const flowContext={
+      flowId:"flow:typed",flowName:"Typed journey",selectedStepId:"frame:typed",selectedStepName:"Typed step",
+      eventId:`typed:${sample}:${present}`,eventStepLink:{eventId:`typed:${sample}:${present}`,stepId:"frame:typed"},
+      path:[{stepId:"frame:typed",stepName:"Typed step",eventId:`typed:${sample}:${present}`,captureTime:"2026-07-23T11:00:00.000Z"}],
+      linkEvidence:{kind:"start",label:"Started at Typed step",pageFrameId:"frame:typed"},
+      effectiveTarget:{id:"frame:typed",name:"Typed step"},effectiveSchemaRevision:sample+1,
+      effectiveSchemaRevisionIdentity:`flow-schema:typed-${sample}`,
+      provenance:[{contributorId:"frame:typed",contributorName:"Typed step",scope:"Flow Page-instance"}],
+    };
+    const issue={
+      id:"typed",severity:"error",pointer:"/typed",constraint:JSON.stringify(response),
+      actual:present?"observed":undefined,rule:"EXPECTED_VALUE",ruleVersion:1,
+    };
+    const event={
+      id:flowContext.eventId,name:"pageview",source:"Event history",pageUrl:"https://example.test/typed",
+      pathname:"/typed",captureTime:"2026-07-23T11:00:00.000Z",payload:present?{typed:"observed"}:{},
+      schema:{name:"Typed step Flow-step expectation",version:sample+1},issues:[issue],flowContext,
+    };
+    const choice=exactFlowExpectationChoice(issue,flowContext);
+    assert.notEqual(choice,undefined,"each JSON typed EXPECTED_VALUE yields one concrete Flow choice");
+    const report=generateReportDetails(applyExpectedResult(createDefectReport(event),[choice]));
+    const correction=report.expected.corrections[0];
+    assert.equal(Object.is(report.expected.payload.typed,response),true);
+    assert.equal(correction.operation,present?"replace":"add");
+    assert.equal(Object.is(correction.response,response),true);
+    assert.equal(correction.marker,"+");
+    assert.equal(correction.responseSource,`Typed step Flow-step expectation · effective schema revision ${sample+1}`);
+    const rendered=renderJiraReport(report);
+    assert.equal(rendered.text.includes(correction.responseSource),true);
+    const stored=JSON.parse(serializeDefectLibrary({defects:[createValidationDefect({
+      id:`defect:typed:${sample}:${present}`,now:"2026-07-23T11:00:01.000Z",report,issues:[],
+    })]})).defects[0].report;
+    assert.equal(Object.is(stored.expected.payload.typed,response),true);
+    assert.equal(stored.expected.corrections[0].responseSource,correction.responseSource);
+    assert.deepEqual(stored.event.flowContext,flowContext);
+  }
+}
+assert.equal(exactFlowExpectationChoice({
+  id:"required",severity:"error",pointer:"/typed",constraint:"present",
+  actual:undefined,rule:"REQUIRED",ruleVersion:1,
+}, {
+  flowId:"flow:typed",flowName:"Typed journey",selectedStepId:"frame:typed",selectedStepName:"Typed step",
+  eventId:"typed:required",eventStepLink:{eventId:"typed:required",stepId:"frame:typed"},path:[],
+  linkEvidence:{kind:"start",label:"Started at Typed step",pageFrameId:"frame:typed"},
+  effectiveTarget:{id:"frame:typed",name:"Typed step"},effectiveSchemaRevision:1,
+  effectiveSchemaRevisionIdentity:"flow-schema:typed",provenance:[],
+}),undefined,"non-exact Flow rules never invent a response");
 
 assert.equal(restoreLiveFlowSummary("not json"),undefined);
 assert.equal(restoreLiveFlowSummary(JSON.stringify({label:"Incomplete",history:[]})),undefined);

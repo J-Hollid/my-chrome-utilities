@@ -1,4 +1,5 @@
 import {
+  exactFlowExpectationChoice,
   expectedResultAssistance,
   isUndeclaredPropertyIssue,
   toggleReportIssue,
@@ -61,9 +62,10 @@ export function appendIssueControls(
     includeCommentLabel.append(includeComment, "Include all allowed values as a comment");
     const genericLabel = document.createElement("label");
     const generic = document.createElement("input"); generic.type = "radio"; generic.name = `defect-response-${reportIssue.id}`;
-    const flowExpectationSource = flowContext
+    const flowExpectationChoice = exactFlowExpectationChoice(reportIssue, flowContext);
+    const flowExpectationSource = flowExpectationChoice?.responseSource ?? (flowContext
       ? `${flowContext.selectedStepName} Flow-step expectation · effective schema revision ${flowContext.effectiveSchemaRevision}`
-      : undefined;
+      : undefined);
     generic.dataset.responseSource = flowExpectationSource
       ? `Use ${flowExpectationSource}`
       : "Use generic constraint";
@@ -77,7 +79,7 @@ export function appendIssueControls(
     }
     generic.addEventListener("change", () => {
       hideCustomResponse();
-      selectedChoices.set(reportIssue.id, {
+      selectedChoices.set(reportIssue.id, flowExpectationChoice ?? {
         issueId: reportIssue.id,
         method: "keep the rule generic",
         responseSource: flowExpectationSource ?? "schema constraint",

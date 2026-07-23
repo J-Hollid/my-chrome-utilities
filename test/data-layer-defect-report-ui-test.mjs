@@ -760,7 +760,7 @@ const flowRoot = new FakeElement("section");
 const flowEvent = {
   id:"live-102",name:"pageview",sourceId:"history",sourceName:"Event history",
   captureTime:"2026-07-23T10:00:02.000Z",pageUrl:"https://shop.test/payment",
-  payload:{funnel_stage:"review"},validation:"1 issues",
+  payload:{oForm:{formStepName:"review"}},validation:"1 issues",
   manualFlowContext:{
     flowId:"flow:checkout",flowName:"Checkout journey",
     selectedStepId:"frame:payment",selectedStepName:"Payment",eventId:"live-102",
@@ -778,7 +778,7 @@ const flowEvent = {
     schema:{id:"frame:payment",name:"Payment Flow-step expectation",version:17},
     evaluations:[],
     issues:[{
-      instancePath:"/funnel_stage",
+      instancePath:"/oForm/formStepName",
       message:"Observed value does not satisfy the linked Payment Flow-step expectation",
       expected:"\"payment\"",actual:"\"review\"",schemaName:"Payment",schemaVersion:17,
       schemaLocation:"Flow relationship:cart-payment → frame:payment",
@@ -792,10 +792,10 @@ assert.equal(
   "Defect report: Checkout journey · Payment · pageview",
 );
 assert.match(
-  element(flowRoot, ({ htmlFor }) => htmlFor === "defect-issue-funnel_stage").textContent,
+  element(flowRoot, ({ htmlFor }) => htmlFor === "defect-issue-formStepName").textContent,
   /observed "review" · expected "payment" · rule EXPECTED_VALUE/,
 );
-const flowAssistance = element(flowRoot, ({ attributes }) => attributes.get("aria-label") === "funnel_stage expected-result assistance");
+const flowAssistance = element(flowRoot, ({ attributes }) => attributes.get("aria-label") === "formStepName expected-result assistance");
 assert.match(
   visibleText(flowAssistance),
   /Use Payment Flow-step expectation · effective schema revision 17 — [^]*"payment"/,
@@ -803,6 +803,13 @@ assert.match(
 assert.doesNotMatch(visibleText(flowAssistance), /generic constraint|manually selected Flow step/i);
 const flowPreview = element(flowRoot, ({ attributes }) => attributes.get("aria-label") === "Final report preview");
 assert.match(flowPreview.innerHTML, /Flow test evidence[\s\S]*path Cart to Payment/);
+const flowExpectationControl = element(flowAssistance, ({ dataset }) => dataset.responseSource?.startsWith("Use Payment Flow-step expectation"));
+flowExpectationControl.checked = true;
+flowExpectationControl.dispatch("change");
+assert.match(flowPreview.innerHTML, /data-operation="replace"/);
+assert.match(flowPreview.innerHTML, /background-color:#d9f7d9/);
+assert.match(flowPreview.innerHTML, /formStepName: &quot;payment&quot;/);
+assert.match(flowPreview.innerHTML, /source Payment Flow-step expectation · effective schema revision 17/);
 
 process.stdout.write(`${JSON.stringify({
   defectReportUi: {

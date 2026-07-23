@@ -162,7 +162,7 @@ function actualDifferenceLine(difference: ReportDifference): string {
 function expectedDifferenceLine(correction: ExpectedCorrection): string | undefined {
   const description = expectedDifferenceDescription(correction);
   return description
-    ? `Expected · ${correction.issueId} · ${correction.operation} · + ${correction.pointer} · ${description}`
+    ? `Expected · ${correction.issueId} · ${correction.operation} · + ${correction.pointer} · ${description}${correction.responseSource ? ` · source ${correction.responseSource}` : ""}`
     : undefined;
 }
 

@@ -1,4 +1,4 @@
-import { expectedResultAssistance, isUndeclaredPropertyIssue, toggleReportIssue, validateAssistedResponse, } from "./data-layer-defect-report.js";
+import { exactFlowExpectationChoice, expectedResultAssistance, isUndeclaredPropertyIssue, toggleReportIssue, validateAssistedResponse, } from "./data-layer-defect-report.js";
 import { exampleValueFromInput } from "./utilities/data-layer/schemas.js";
 export function appendIssueControls(issues, expectedControls, state, selectedChoices) {
     const flowContext = state.report().event.flowContext;
@@ -53,9 +53,10 @@ export function appendIssueControls(issues, expectedControls, state, selectedCho
         const generic = document.createElement("input");
         generic.type = "radio";
         generic.name = `defect-response-${reportIssue.id}`;
-        const flowExpectationSource = flowContext
+        const flowExpectationChoice = exactFlowExpectationChoice(reportIssue, flowContext);
+        const flowExpectationSource = flowExpectationChoice?.responseSource ?? (flowContext
             ? `${flowContext.selectedStepName} Flow-step expectation · effective schema revision ${flowContext.effectiveSchemaRevision}`
-            : undefined;
+            : undefined);
         generic.dataset.responseSource = flowExpectationSource
             ? `Use ${flowExpectationSource}`
             : "Use generic constraint";
@@ -69,7 +70,7 @@ export function appendIssueControls(issues, expectedControls, state, selectedCho
         }
         generic.addEventListener("change", () => {
             hideCustomResponse();
-            selectedChoices.set(reportIssue.id, {
+            selectedChoices.set(reportIssue.id, flowExpectationChoice ?? {
                 issueId: reportIssue.id,
                 method: "keep the rule generic",
                 responseSource: flowExpectationSource ?? "schema constraint",

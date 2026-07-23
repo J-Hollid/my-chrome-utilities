@@ -52,6 +52,26 @@ function issueName(issue: DefectIssue): string {
   return pointerSegments(issue.pointer).at(-1) ?? issue.id;
 }
 
+export function exactFlowExpectationChoice(
+  issue: DefectIssue,
+  flowContext: DefectCapturedEvent["flowContext"],
+): ExpectedResultChoice | undefined {
+  if (!flowContext || issue.rule !== "EXPECTED_VALUE") return undefined;
+  let response: unknown;
+  try {
+    response = JSON.parse(issue.constraint) as unknown;
+  } catch {
+    return undefined;
+  }
+  return {
+    issueId:issue.id,
+    method:"enter a valid response",
+    response:cloneValue(response),
+    responseSource:`${flowContext.selectedStepName} Flow-step expectation · effective schema revision ${flowContext.effectiveSchemaRevision}`,
+    ...(typeof response === "string" ? { quoteResponse:true } : {}),
+  };
+}
+
 export function isUndeclaredPropertyIssue(issue: DefectIssue): boolean {
   return issue.violation === "Undeclared property";
 }
@@ -86,7 +106,7 @@ function responsePresentation(
     kind: "value",
     property,
     value: cloneValue(choice.response),
-    quoteValue: choice.includeAllowedValuesComment !== undefined,
+    quoteValue: choice.quoteResponse ?? choice.includeAllowedValuesComment !== undefined,
     ...(choice.includeAllowedValuesComment && values.length ? { allowedValuesComment: values } : {}),
   };
 }
@@ -195,7 +215,7 @@ export function applyExpectedResult(
       explanations.push(isUndeclaredPropertyIssue(issue) ? `${issue.pointer} is removed as an undeclared property` : `${name} is absent`);
       continue;
     }
-    if (choice.response === undefined || choice.response === null || choice.response === "") {
+    if (!Object.prototype.hasOwnProperty.call(choice, "response")) {
       throw new Error(`A response is required for ${issue.id}.`);
     }
     const operation = pointerValue(payload, issue.pointer) === undefined ? "add" : "replace";

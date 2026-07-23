@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
-import { createDefectReport } from "../dist/data-layer-defect-report.js";
+import {
+  applyExpectedResult,
+  createDefectReport,
+  exactFlowExpectationChoice,
+} from "../dist/data-layer-defect-report.js";
 import { defectCapturedEvent } from "../dist/data-layer-defect-report-browser.js";
 import {
   generateReportDetails,
@@ -14,7 +18,7 @@ const event = {
   sourceName: "Event history",
   captureTime: "2026-07-23T10:00:02.000Z",
   pageUrl: "https://shop.test/payment",
-  payload: { funnel_stage: "review" },
+  payload: { oForm:{ formStepName:"review" } },
 };
 const baseEntry = {
   projectId: "project-retail",
@@ -29,7 +33,7 @@ const baseEntry = {
   effectiveSchemaRevision: 17,
   effectiveSchemaRevisionIdentity: "flow-schema:00000011",
   issues: [{
-    path: "/funnel_stage",
+    path: "/oForm/formStepName",
     code: "EXPECTED_VALUE",
     severity: "error",
     expected: "payment",
@@ -105,6 +109,45 @@ assert.deepEqual(
   relationshipReport.evidence.validation.map(({ actual, constraint, rule }) => ({ actual, constraint, rule })),
   [{ actual: '"review"', constraint: '"payment"', rule: "EXPECTED_VALUE" }],
 );
+const exactChoice = exactFlowExpectationChoice(
+  relationshipReport.issues[0],
+  relationshipReport.event.flowContext,
+);
+assert.deepEqual(exactChoice, {
+  issueId:"formStepName",
+  method:"enter a valid response",
+  response:"payment",
+  responseSource:"Payment Flow-step expectation · effective schema revision 17",
+  quoteResponse:true,
+});
+const correctedRelationshipReport = generateReportDetails(applyExpectedResult(
+  relationshipReport,
+  [exactChoice],
+));
+assert.equal(correctedRelationshipReport.expected.payload.oForm.formStepName, "payment");
+assert.deepEqual(correctedRelationshipReport.expected.corrections, [{
+  issueId:"formStepName",
+  pointer:"/oForm/formStepName",
+  operation:"replace",
+  response:"payment",
+  responseSource:"Payment Flow-step expectation · effective schema revision 17",
+  marker:"+",
+  responsePresentation:{
+    kind:"value",
+    property:"formStepName",
+    value:"payment",
+    quoteValue:true,
+  },
+}]);
+const correctedRendered = renderJiraReport(correctedRelationshipReport);
+assert.match(correctedRendered.html, /data-operation="replace"/);
+assert.match(correctedRendered.html, /background-color:#d9f7d9/);
+assert.match(correctedRendered.html, /formStepName: &quot;payment&quot;/);
+assert.match(correctedRendered.text, /Payment Flow-step expectation · effective schema revision 17/);
+assert.equal(exactFlowExpectationChoice(
+  { ...relationshipReport.issues[0], rule:"REQUIRED", constraint:"present" },
+  relationshipReport.event.flowContext,
+), undefined, "a rule without one concrete exact value stays explanatory");
 assert.equal(
   relationshipReport.summary,
   "pageview does not satisfy Payment in Checkout journey",

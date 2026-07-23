@@ -35,6 +35,24 @@ export function validateAssistedResponse(issue, response) {
 function issueName(issue) {
     return pointerSegments(issue.pointer).at(-1) ?? issue.id;
 }
+export function exactFlowExpectationChoice(issue, flowContext) {
+    if (!flowContext || issue.rule !== "EXPECTED_VALUE")
+        return undefined;
+    let response;
+    try {
+        response = JSON.parse(issue.constraint);
+    }
+    catch {
+        return undefined;
+    }
+    return {
+        issueId: issue.id,
+        method: "enter a valid response",
+        response: cloneValue(response),
+        responseSource: `${flowContext.selectedStepName} Flow-step expectation · effective schema revision ${flowContext.effectiveSchemaRevision}`,
+        ...(typeof response === "string" ? { quoteResponse: true } : {}),
+    };
+}
 export function isUndeclaredPropertyIssue(issue) {
     return issue.violation === "Undeclared property";
 }
@@ -63,7 +81,7 @@ function responsePresentation(issue, choice) {
         kind: "value",
         property,
         value: cloneValue(choice.response),
-        quoteValue: choice.includeAllowedValuesComment !== undefined,
+        quoteValue: choice.quoteResponse ?? choice.includeAllowedValuesComment !== undefined,
         ...(choice.includeAllowedValuesComment && values.length ? { allowedValuesComment: values } : {}),
     };
 }
@@ -163,7 +181,7 @@ export function applyExpectedResult(report, choices) {
             explanations.push(isUndeclaredPropertyIssue(issue) ? `${issue.pointer} is removed as an undeclared property` : `${name} is absent`);
             continue;
         }
-        if (choice.response === undefined || choice.response === null || choice.response === "") {
+        if (!Object.prototype.hasOwnProperty.call(choice, "response")) {
             throw new Error(`A response is required for ${issue.id}.`);
         }
         const operation = pointerValue(payload, issue.pointer) === undefined ? "add" : "replace";
