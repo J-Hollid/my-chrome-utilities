@@ -152,8 +152,6 @@ export function installFlowDocumentationExportUi(options) {
             const item = document.createElement("li"), check = document.createElement("input"), label = document.createElement("input");
             item.dataset.contextId = context.id;
             item.dataset.pageFrameId = context.pageFrameId;
-            if (context.bindingId)
-                item.dataset.bindingId = context.bindingId;
             if (context.occurrenceId)
                 item.dataset.occurrenceId = context.occurrenceId;
             check.type = "checkbox";

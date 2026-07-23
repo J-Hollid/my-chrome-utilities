@@ -17,7 +17,7 @@ const origin=(name,scope="Event")=>({contributorId:`contributor:${name}`,contrib
 const property=(input)=>({...input,origins:[origin(input.origin??"Profile")],superseded:[]});
 const compiled=(properties,conflicts=[])=>({status:conflicts.length?"blocked":"ready",properties,conflicts,provenance:[],exclusions:[]});
 const contexts=[
-  {id:"context:cart",kind:"page-context",pageFrameId:"frame:cart",bindingId:"binding:view",pageName:"Cart",eventName:"page_view",stepLabel:"1",effectiveRevision:4,compiled:compiled({
+  {id:"context:cart",kind:"page-instance",pageFrameId:"frame:cart",pageName:"Cart",eventName:"page_view",stepLabel:"1",effectiveRevision:4,compiled:compiled({
     "/page_name":property({expectedValue:"cart",presence:"required"}),
     "/form_name":property({allowedValues:["guest","logged_in"],presence:"optional"}),
     "/error_message":property({presence:"forbidden"}),
@@ -33,10 +33,10 @@ const contexts=[
 
 const snapshot=compileFlowDocumentationSnapshot({projectId:"project:shop",projectName:"Shop",flowId:"flow:checkout",flowName:"Checkout journey",graphRevision:7,sourceState:"draft",generatedAt:"2026-07-20T00:00:00.000Z",contexts});
 assert.equal(Object.isFrozen(snapshot),true);
-assert.deepEqual(snapshot.contexts.map(({id,pageFrameId,bindingId,occurrenceId})=>({id,pageFrameId,bindingId,occurrenceId})),[
-  {id:"context:cart",pageFrameId:"frame:cart",bindingId:"binding:view",occurrenceId:undefined},
-  {id:"context:shipping",pageFrameId:"frame:shipping",bindingId:undefined,occurrenceId:"occurrence:shipping"},
-  {id:"context:payment",pageFrameId:"frame:payment",bindingId:undefined,occurrenceId:"occurrence:payment"},
+assert.deepEqual(snapshot.contexts.map(({id,pageFrameId,occurrenceId})=>({id,pageFrameId,occurrenceId})),[
+  {id:"context:cart",pageFrameId:"frame:cart",occurrenceId:undefined},
+  {id:"context:shipping",pageFrameId:"frame:shipping",occurrenceId:"occurrence:shipping"},
+  {id:"context:payment",pageFrameId:"frame:payment",occurrenceId:"occurrence:payment"},
 ]);
 const values=flowValueMapTable(snapshot);
 assert.deepEqual(values.headings,["Checkout journey","Step 1 Cart / page_view","Step 2a Shipping / add_shipping_info","Step 2b Payment / add_payment_info"]);

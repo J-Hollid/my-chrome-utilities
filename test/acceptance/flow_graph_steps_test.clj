@@ -7,7 +7,7 @@
   (is (empty? (feature-support/unhandled-step-texts flow-graph/feature-files flow-graph/handlers))))
 
 (def complete-evidence
-  (assoc (into {} (map (fn [number] [(keyword (format "runtime%03d" number)) {:exact true}]) (range 1 25)))
+  (assoc (into {} (map (fn [number] [(keyword (format "runtime%03d" number)) {:exact true}]) (range 1 26)))
          :installedBoundary true))
 
 (deftest evidence-maps-cannot-pass-vacuously
@@ -20,24 +20,24 @@
   (is (false? (boolean (flow-graph/complete-browser-evidence? nil))))
   (is (false? (boolean (flow-graph/complete-browser-evidence? {}))))
   (is (false? (boolean (flow-graph/complete-browser-evidence? (dissoc complete-evidence :runtime020)))))
-  (is (false? (boolean (flow-graph/complete-browser-evidence? (assoc complete-evidence :runtime025 {:exact true})))))
+  (is (false? (boolean (flow-graph/complete-browser-evidence? (assoc complete-evidence :runtime026 {:exact true})))))
   (is (false? (boolean (flow-graph/complete-browser-evidence? (dissoc complete-evidence :installedBoundary)))))
   (is (false? (boolean (flow-graph/complete-browser-evidence? (assoc-in complete-evidence [:runtime021 :exact] false)))))
   (is (true? (boolean (flow-graph/complete-browser-evidence? complete-evidence)))))
 
 (deftest flow005-examples-require-exact-mode-specific-values
-  (is (= :pointer-activation (flow-graph/flow005-example-key :model {"page" "Cart" "event" "page_view" "trigger" "Initial load" "insertion" "activates page_view from the Events catalog by pointer"})))
+  (is (= :pointer-activation (flow-graph/flow005-example-key :model {"page" "Cart" "event" "button_click" "trigger" "Continue clicked" "insertion" "activates button_click from the Events catalog by pointer"})))
   (is (= :pointer-drop (flow-graph/flow005-example-key :runtime {"page" "Shipping" "event" "add_shipping_info" "trigger" "Form submitted" "insertion" "drag add_shipping_info onto the visible SVG Shipping frame"})))
   (is (= :keyboard-activation (flow-graph/flow005-example-key :runtime {"page" "Payment" "event" "add_payment_info" "trigger" "Payment submitted" "insertion" "activate add_payment_info from the Events catalog by keyboard"})))
   (is (thrown? clojure.lang.ExceptionInfo (flow-graph/flow005-example-key :model {"page" "Shipping" "event" "add_shipping_info" "trigger" "Wrong trigger" "insertion" "drags add_shipping_info onto the visible canvas Shipping frame"})))
   (is (thrown? clojure.lang.ExceptionInfo (flow-graph/flow005-example-key :model {"page" "Cart" "event" "page_view" "trigger" "Initial load" "insertion" "activate page_view from the Events catalog by pointer"}))))
 
 (deftest runtime009-examples-have-distinct-evidence-keys
-  (is (= :pageContextExpectedNext (flow-graph/runtime009-example-key {"source" "Customer details Page" "source_port" "right" "target" "Payment Page" "target_port" "left" "kind" "expected_next"})))
-  (is (= :pageToEventAlternative (flow-graph/runtime009-example-key {"source" "Customer details Page" "source_port" "top" "target" "Customer details add_payment_info" "target_port" "bottom" "kind" "alternative"})))
-  (is (= :eventToPageMerge (flow-graph/runtime009-example-key {"source" "Customer details add_payment_info" "source_port" "bottom" "target" "Payment Page" "target_port" "top" "kind" "merge"})))
-  (is (= :eventInteractionExpectedNext (flow-graph/runtime009-example-key {"source" "Customer details page_view" "source_port" "right" "target" "Customer details add_payment_info" "target_port" "left" "kind" "expected_next"})))
-  (is (thrown? clojure.lang.ExceptionInfo (flow-graph/runtime009-example-key {"source" "Customer details Page" "source_port" "right" "target" "Payment Page" "target_port" "top" "kind" "merge"}))))
+  (is (= :pageContextExpectedNext (flow-graph/runtime009-example-key {"source" "Customer details" "source_port" "right" "target" "Payment" "target_port" "left" "kind" "expected_next"})))
+  (is (= :pageToEventAlternative (flow-graph/runtime009-example-key {"source" "Customer details" "source_port" "top" "target" "ID verification" "target_port" "bottom" "kind" "alternative"})))
+  (is (= :eventToPageMerge (flow-graph/runtime009-example-key {"source" "ID verification" "source_port" "bottom" "target" "Payment" "target_port" "top" "kind" "merge"})))
+  (is (= :eventInteractionExpectedNext (flow-graph/runtime009-example-key {"source" "Payment" "source_port" "right" "target" "Confirmation" "target_port" "left" "kind" "expected_next"})))
+  (is (thrown? clojure.lang.ExceptionInfo (flow-graph/runtime009-example-key {"source" "Customer details" "source_port" "right" "target" "Payment" "target_port" "top" "kind" "merge"}))))
 
 (deftest runtime023-examples-have-distinct-evidence-keys
   (is (= :labelled (flow-graph/runtime023-example-key {"kind" "expected_next" "source" "Customer details" "target" "Payment" "label_state" "label Checkout route" "accessible_name" "Delete relationship Checkout route, Customer details to Payment"})))

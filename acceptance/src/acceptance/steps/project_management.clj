@@ -77,7 +77,7 @@
         (reset! browser-observation observed))))
 (def runtime-paths
   (set (concat [:installedBoundary]
-               (map #(keyword (str "context" (format "%03d" %))) (range 1 17))
+               (map #(keyword (str "context" (format "%03d" %))) (range 1 18))
                (map #(keyword (str "portability" (format "%03d" %))) (range 1 6)))))
 (defn complete-browser-evidence? [evidence]
   (boolean (and (map? evidence)

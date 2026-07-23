@@ -36,7 +36,7 @@
         (support/assert! observed "Flow graph browser evidence is missing." {:out (:out result)})
         (reset! browser-observation observed))))
 (def runtime-evidence-keys
-  (set (map #(keyword (format "runtime%03d" %)) (range 1 25))))
+  (set (map #(keyword (format "runtime%03d" %)) (range 1 26))))
 (def required-evidence-keys (conj runtime-evidence-keys :installedBoundary))
 (def flow005-examples
   {[:model ["Cart" "button_click" "Continue clicked" "activates button_click from the Events catalog by pointer"]] :pointer-activation
