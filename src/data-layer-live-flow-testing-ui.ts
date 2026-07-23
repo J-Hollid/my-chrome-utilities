@@ -1,4 +1,5 @@
 import {attachLiveFlowDefect,completeLiveFlowTest,createLiveFlowTest,liveFlowCandidateEvents,liveFlowChoices,liveFlowGraphNodes,matchLiveFlowEvent,selectLiveFlow,selectLiveFlowStep,startLiveFlowPath,type CompletedLiveFlowTest,type LiveFlowEvent,type LiveFlowHistoryEntry,type LiveFlowTestRun} from "./data-layer-live-flow-testing.js";
+import {renderValidationIssueList} from "./data-layer-live-observer-ui.js";
 import type {ProjectState} from "./utilities/data-layer/schemas.js";
 
 export interface LiveFlowTestingUiOptions {
@@ -23,7 +24,7 @@ const historyItem=(entry:LiveFlowHistoryEntry):HTMLLIElement=>{
   summary.textContent=`${entry.stepName} · ${entry.eventId} · revision ${entry.effectiveSchemaRevision} · ${entry.effectiveSchemaRevisionIdentity} · ${entry.status}${entry.defectId?` · defect ${entry.defectId}`:""}`;
   sources.textContent=`Schema sources: ${entry.provenance.map(({scope,contributorName})=>`${scope} ${contributorName}`).join(" → ")||"none"}`;
   item.append(summary,sources);
-  if(entry.issues.length){const issues=document.createElement("ul");issues.setAttribute("aria-label",`Validation issues for ${entry.stepName}`);for(const issue of entry.issues){const row=document.createElement("li");row.textContent=`${issue.path} · ${issue.code} · expected ${JSON.stringify(issue.expected)} · actual ${JSON.stringify(issue.actual)} · ${issue.provenance}`;issues.append(row);}item.append(issues);}
+  if(entry.issues.length){const issues=renderValidationIssueList(entry.issues.map((issue)=>({path:issue.path,message:issue.code,rule:issue.code,severity:issue.severity,origin:issue.provenance,expected:JSON.stringify(issue.expected),actual:JSON.stringify(issue.actual)})));issues.setAttribute("aria-label",`Validation issues for ${entry.stepName}`);item.append(issues);}
   return item;
 };
 

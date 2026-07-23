@@ -325,17 +325,21 @@ function recursiveValidationTree(payload: unknown, evaluations: readonly Validat
   return roots;
 }
 
+export interface ValidationIssuePresentation {path:string;message:string;rule?:string|undefined;severity?:string|undefined;origin?:string|undefined;expected:unknown;actual:unknown}
+export function renderValidationIssueList(issues:readonly ValidationIssuePresentation[],options:{reveal?:(path:string)=>void;append?:(item:HTMLLIElement,index:number)=>void}={}):HTMLUListElement{
+  const list=document.createElement("ul");
+  list.replaceChildren(...issues.map((issue,index)=>{
+    const item=document.createElement("li"),text=`${issue.path||"Event"} · ${issue.message} · rule ${issue.rule??"schema"} · severity ${issue.severity??"error"}${issue.origin?` · ${issue.origin}`:""} · expected ${String(issue.expected)} · actual ${String(issue.actual)}`;
+    if(issue.path&&options.reveal){const link=document.createElement("button");link.type="button";link.textContent=text;link.addEventListener("click",()=>options.reveal?.(issue.path));item.append(link);}else item.textContent=text;
+    options.append?.(item,index);return item;
+  }));
+  return list;
+}
+
 function renderEventLevelIssues(event: LiveEvent, actionHandlers: LiveInspectorActions): HTMLElement {
   const section = document.createElement("section"); section.id = "live-event-validation-issues"; section.setAttribute("aria-labelledby", "live-event-validation-issues-heading");
   const heading = document.createElement("h5"); heading.id = "live-event-validation-issues-heading"; heading.textContent = "Event-level issues";
-  const list = document.createElement("ul");
-  list.replaceChildren(...(event.validationDetails?.issues ?? []).map((issue, issueIndex) => {
-    const item = document.createElement("li");
-    const path = issue.instancePath.replace(/^\//, "").replaceAll("/", ".");
-    const text = `${issue.templatePath ? `template ${issue.templatePath} · ` : ""}${issue.message} · rule ${issue.rule ?? "schema"} · severity ${issue.severity ?? "error"} · ${issue.origin ?? `${issue.schemaName} v${issue.schemaVersion}`} · expected ${issue.expected} · actual ${issue.actual}`;
-    if (path) {
-      const link = document.createElement("button"); link.type = "button"; link.textContent = `${path}: ${text}`; link.addEventListener("click", () => revealLiveProperty(issue.instancePath)); item.append(link);
-    } else item.textContent = `Event: ${text}`;
+  const sourceIssues=event.validationDetails?.issues??[],list=renderValidationIssueList(sourceIssues.map((issue)=>({path:issue.instancePath,message:`${issue.templatePath?`template ${issue.templatePath} · `:""}${issue.message}`,rule:issue.rule,severity:issue.severity,origin:issue.origin??`${issue.schemaName} v${issue.schemaVersion}`,expected:issue.expected,actual:issue.actual})),{reveal:revealLiveProperty,append:(item,issueIndex)=>{
     const issueTriage = event.defectTriage?.issueDetails[issueIndex];
     if (issueTriage?.state === "Reported") {
       for (const defect of issueTriage.defectLinks) {
@@ -349,8 +353,7 @@ function renderEventLevelIssues(event: LiveEvent, actionHandlers: LiveInspectorA
         const create = document.createElement("button"); create.type = "button"; create.textContent = "Create defect report"; create.addEventListener("click", () => actionHandlers.startDefectReport?.(event)); item.append(create);
       }
     }
-    return item;
-  }));
+  }});
   section.append(heading, list); return section;
 }
 

@@ -1,4 +1,5 @@
 import { attachLiveFlowDefect, completeLiveFlowTest, createLiveFlowTest, liveFlowCandidateEvents, liveFlowChoices, liveFlowGraphNodes, matchLiveFlowEvent, selectLiveFlow, selectLiveFlowStep, startLiveFlowPath } from "./data-layer-live-flow-testing.js";
+import { renderValidationIssueList } from "./data-layer-live-observer-ui.js";
 const button = (text, run) => { const control = document.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 const option = (value, text) => { const item = document.createElement("option"); item.value = value; item.textContent = text; return item; };
 const historyItem = (entry) => {
@@ -7,13 +8,8 @@ const historyItem = (entry) => {
     sources.textContent = `Schema sources: ${entry.provenance.map(({ scope, contributorName }) => `${scope} ${contributorName}`).join(" → ") || "none"}`;
     item.append(summary, sources);
     if (entry.issues.length) {
-        const issues = document.createElement("ul");
+        const issues = renderValidationIssueList(entry.issues.map((issue) => ({ path: issue.path, message: issue.code, rule: issue.code, severity: issue.severity, origin: issue.provenance, expected: JSON.stringify(issue.expected), actual: JSON.stringify(issue.actual) })));
         issues.setAttribute("aria-label", `Validation issues for ${entry.stepName}`);
-        for (const issue of entry.issues) {
-            const row = document.createElement("li");
-            row.textContent = `${issue.path} · ${issue.code} · expected ${JSON.stringify(issue.expected)} · actual ${JSON.stringify(issue.actual)} · ${issue.provenance}`;
-            issues.append(row);
-        }
         item.append(issues);
     }
     return item;

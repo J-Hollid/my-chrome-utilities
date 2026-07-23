@@ -409,6 +409,24 @@ function recursiveValidationTree(payload, evaluations, issues) {
             roots.push(copyLegacy(legacy));
     return roots;
 }
+export function renderValidationIssueList(issues, options = {}) {
+    const list = document.createElement("ul");
+    list.replaceChildren(...issues.map((issue, index) => {
+        const item = document.createElement("li"), text = `${issue.path || "Event"} · ${issue.message} · rule ${issue.rule ?? "schema"} · severity ${issue.severity ?? "error"}${issue.origin ? ` · ${issue.origin}` : ""} · expected ${String(issue.expected)} · actual ${String(issue.actual)}`;
+        if (issue.path && options.reveal) {
+            const link = document.createElement("button");
+            link.type = "button";
+            link.textContent = text;
+            link.addEventListener("click", () => options.reveal?.(issue.path));
+            item.append(link);
+        }
+        else
+            item.textContent = text;
+        options.append?.(item, index);
+        return item;
+    }));
+    return list;
+}
 function renderEventLevelIssues(event, actionHandlers) {
     const section = document.createElement("section");
     section.id = "live-event-validation-issues";
@@ -416,48 +434,34 @@ function renderEventLevelIssues(event, actionHandlers) {
     const heading = document.createElement("h5");
     heading.id = "live-event-validation-issues-heading";
     heading.textContent = "Event-level issues";
-    const list = document.createElement("ul");
-    list.replaceChildren(...(event.validationDetails?.issues ?? []).map((issue, issueIndex) => {
-        const item = document.createElement("li");
-        const path = issue.instancePath.replace(/^\//, "").replaceAll("/", ".");
-        const text = `${issue.templatePath ? `template ${issue.templatePath} · ` : ""}${issue.message} · rule ${issue.rule ?? "schema"} · severity ${issue.severity ?? "error"} · ${issue.origin ?? `${issue.schemaName} v${issue.schemaVersion}`} · expected ${issue.expected} · actual ${issue.actual}`;
-        if (path) {
-            const link = document.createElement("button");
-            link.type = "button";
-            link.textContent = `${path}: ${text}`;
-            link.addEventListener("click", () => revealLiveProperty(issue.instancePath));
-            item.append(link);
-        }
-        else
-            item.textContent = `Event: ${text}`;
-        const issueTriage = event.defectTriage?.issueDetails[issueIndex];
-        if (issueTriage?.state === "Reported") {
-            for (const defect of issueTriage.defectLinks) {
-                const reported = document.createElement("button");
-                reported.type = "button";
-                reported.className = "live-reported-defect-link";
-                reported.textContent = `Reported · ${defect.label}`;
-                reported.dataset.issueIndex = String(issueIndex);
-                reported.dataset.defectId = defect.id;
-                reported.addEventListener("click", () => actionHandlers.openReportedDefect?.(defect.id, event, issueIndex, reported));
-                item.append(reported);
+    const sourceIssues = event.validationDetails?.issues ?? [], list = renderValidationIssueList(sourceIssues.map((issue) => ({ path: issue.instancePath, message: `${issue.templatePath ? `template ${issue.templatePath} · ` : ""}${issue.message}`, rule: issue.rule, severity: issue.severity, origin: issue.origin ?? `${issue.schemaName} v${issue.schemaVersion}`, expected: issue.expected, actual: issue.actual })), { reveal: revealLiveProperty, append: (item, issueIndex) => {
+            const issueTriage = event.defectTriage?.issueDetails[issueIndex];
+            if (issueTriage?.state === "Reported") {
+                for (const defect of issueTriage.defectLinks) {
+                    const reported = document.createElement("button");
+                    reported.type = "button";
+                    reported.className = "live-reported-defect-link";
+                    reported.textContent = `Reported · ${defect.label}`;
+                    reported.dataset.issueIndex = String(issueIndex);
+                    reported.dataset.defectId = defect.id;
+                    reported.addEventListener("click", () => actionHandlers.openReportedDefect?.(defect.id, event, issueIndex, reported));
+                    item.append(reported);
+                }
             }
-        }
-        else if (issueTriage) {
-            const state = document.createElement("span");
-            state.className = "live-new-defect-state";
-            state.textContent = issueTriage.state;
-            item.append(state);
-            if (actionHandlers.startDefectReport) {
-                const create = document.createElement("button");
-                create.type = "button";
-                create.textContent = "Create defect report";
-                create.addEventListener("click", () => actionHandlers.startDefectReport?.(event));
-                item.append(create);
+            else if (issueTriage) {
+                const state = document.createElement("span");
+                state.className = "live-new-defect-state";
+                state.textContent = issueTriage.state;
+                item.append(state);
+                if (actionHandlers.startDefectReport) {
+                    const create = document.createElement("button");
+                    create.type = "button";
+                    create.textContent = "Create defect report";
+                    create.addEventListener("click", () => actionHandlers.startDefectReport?.(event));
+                    item.append(create);
+                }
             }
-        }
-        return item;
-    }));
+        } });
     section.append(heading, list);
     return section;
 }

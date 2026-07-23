@@ -29,7 +29,7 @@ const project={
       {id:"page:cart",name:"Cart",pageGroupIds:["group:checkout"],profileId:"profile:sitewide",pathname:"/cart",canonicalSchema:canonical("page:cart","Cart",[constraint("/cart_id",{presence:"required",type:"string"})])},
       {id:"page:confirmation",name:"Confirmation",pageGroupIds:["group:checkout"],profileId:"profile:sitewide",pathname:"/confirmation"},
     ],
-    events:[{id:"event:view",name:"page_view",canonicalSchema:canonical("event:view","page_view",[constraint("/event_name",{expectedValue:"page_view"})])}],
+    events:[{id:"event:view",name:"page_view",sourceId:"history",canonicalSchema:canonical("event:view","page_view",[constraint("/event_name",{expectedValue:"page_view"})])}],
     applicabilitySets:[],assignments:[],fixtures:[],
     flows:[{id:"flow:checkout",name:"Checkout journey"}],
   },
@@ -56,6 +56,7 @@ const events=[
   {id:"live-100",name:"page_view",sourceId:"history",sourceName:"Data layer",captureTime:"2026-07-23T10:00:00.000Z",pageUrl:"https://shop.example/cart",payload:{}},
   {id:"live-101",name:"page_view",sourceId:"history",sourceName:"Data layer",captureTime:"2026-07-23T10:00:01.000Z",pageUrl:"https://shop.example/cart",payload:{site:"shop",currency:"EUR",cart_id:"c1",instance:"retail"}},
   {id:"live-102",name:"page_view",sourceId:"history",sourceName:"Data layer",captureTime:"2026-07-23T10:00:02.000Z",pageUrl:"https://shop.example/cart",payload:{site:"shop",currency:"EUR",cart_id:"c1",instance:"retail",event_name:"page_view",occurrence:true}},
+  {id:"live-102-wrong-source",name:"page_view",sourceId:"gtm",sourceName:"GTM",captureTime:"2026-07-23T10:00:02.500Z",pageUrl:"https://shop.example/cart",payload:{event_name:"page_view"}},
   {id:"live-103",name:"purchase",sourceId:"history",sourceName:"Data layer",captureTime:"2026-07-23T10:00:03.000Z",pageUrl:"https://shop.example/confirmation",payload:{}},
 ];
 
@@ -100,11 +101,14 @@ alteredRun=startLiveFlowPath(alteredRun,"frame:cart");
 alteredRun=matchLiveFlowEvent(alteredRun,alteredFacet,events,"live-101");
 assert.notEqual(alteredRun.history[0].effectiveSchemaRevisionIdentity,run.history[0].effectiveSchemaRevisionIdentity,
   "changing an effective schema facet changes identity even when numeric contributor revisions are unchanged");
+assert.notEqual(alteredRun.history[0].effectiveSchemaRevision,run.history[0].effectiveSchemaRevision,
+  "the displayed effective revision is derived from the same effective facets");
 run=selectLiveFlowStep(run,state,"occurrence:view");
 candidates=liveFlowCandidateEvents(run,state,events);
 assert.equal(candidates.find(({eventId})=>eventId==="live-100").reason,"Captured before the previous match");
 assert.equal(candidates.find(({eventId})=>eventId==="live-101").reason,"Already matched in this run");
 assert.equal(candidates.find(({eventId})=>eventId==="live-103").reason,"Event identity does not match page_view");
+assert.equal(candidates.find(({eventId})=>eventId==="live-102-wrong-source").reason,"Observation source does not match history");
 run=matchLiveFlowEvent(run,state,events,"live-102");
 assert.deepEqual(run.history[1].provenance.map(({scope})=>scope),["Shared Profile","Event","Page Group","Page","Flow Page-instance","Event-occurrence"]);
 assert.equal(run.history[1].target.id,"occurrence:view");
