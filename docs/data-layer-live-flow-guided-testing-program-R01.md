@@ -56,7 +56,12 @@ Profiles, ordered Page Groups, Page contribution, and sparse instance override.
 
 The validation appears in the same event-details presentation used when automatic
 assignment selected a schema. Property highlighting, issue actions, provenance,
-and the usual defect report builder are reused. The result records selection mode
+and the usual defect report builder are reused. Flow context and Flow-produced
+validation details are stored on the same observed-event presentation model, so
+the ordinary Create defect report action receives both. Event details expose one
+validation issue presentation and one defect action; they do not append a separate
+Manual Flow test result list or Flow-only defect action. The recorded Flow-step
+link remains visible in the Flow-step section. The result records selection mode
 Manual Flow test, Flow, graph step, observed event, effective schema revision,
 issues, and provenance.
 
@@ -113,9 +118,11 @@ from the current step.
 ## Defects and session evidence
 
 The existing defect report builder, persistence, and clipboard paths remain
-authoritative. Opening it from a Flow-linked validation issue identifies the
-selected Flow, linked graph step, and observed event in its heading. It retains the
-ordinary payload, issue-selection, report-section, and action controls.
+authoritative. Opening it through the ordinary event-details Create defect report
+action for a Flow-linked validation issue identifies the selected Flow, linked
+graph step, and observed event in its heading. It retains the ordinary payload,
+issue-selection, report-section, and action controls. A separate Flow-only builder
+or defect trigger is not an alternate supported path.
 
 Each selected issue distinguishes the observed value from the expected value and
 identifies the violated rule. Expected-result assistance names the linked Flow-step
@@ -166,7 +173,7 @@ tested, but no output says Flow passed or claims the Flow executed.
 | L05 | Live Flow guided testing 005 | Page and occurrence compiler inputs plus stable target IDs | each graph-step kind uses its live effective schema |
 | L06 | Live Flow guided testing 006 | earlier and later feed-event selection with unchanged feed state | capture chronology never restricts the operator |
 | L07 | Live Flow guided testing 007 | recorded link display and unchanged traversal cursor | reviewing an older linked event does not rewind the path |
-| L08 | Live Flow guided testing 008 | Flow-aware heading, distinct actual and expected evidence, Flow-step assistance, durable report snapshot, and standard defect adapters | an observed-event failure produces a self-contained Flow-aware defect without a Flow execution or definition-failure claim |
+| L08 | Live Flow guided testing 008 | one ordinary event-detail defect action, absent duplicate Flow-result controls, Flow-aware heading, distinct actual and expected evidence, Flow-step assistance, durable report snapshot, and standard defect adapters | the ordinary observed-event failure path produces a self-contained Flow-aware defect without a parallel Flow-only workflow or execution claim |
 | L09 | Live Flow guided testing 009 | restored feed/detail evidence and domain hashes | saved sessions restore links without an execution claim |
 
 ## Terminal acceptance
@@ -184,7 +191,8 @@ active-project Flow context in the existing feed, root-first start selection,
 Page-frame and Event-occurrence effective-schema resolution, relationship-guided
 detail selections, chronology-independent operator event choice, recorded-link
 review without cursor changes, Flow-aware defect headings and evidence snapshots,
-distinct actual and expected issue presentation, ordinary validation and defect
+distinct actual and expected issue presentation, one ordinary event-detail defect
+action with no parallel Flow-result controls, ordinary validation and defect
 adapters, saved session restoration, assignment bypass, and domain immutability.
 It declares its active Flow graph and layered-schema dependencies in the pack
 registry rather than invoking additional commands.

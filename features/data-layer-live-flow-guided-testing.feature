@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=ef2aa5e81653fe7873540e4da441672e64f1e54ba6d9590775d0c7e40f04c868
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-23T15:04:44.843834978Z","feature_name":"Data layer Live Flow guided testing","feature_path":"features/data-layer-live-flow-guided-testing.feature","background_hash":"5609233c5b54974dfd9370699b10d9d794cb8ba25a6668d48f61f22b990d761f","implementation_hash":"sha256:fd6e61db293d66b1d08d1116893eb092ecc143dc4154691854ed963940b26c32","scenarios":[{"index":3,"name":"Data layer Live Flow guided testing 004","scenario_hash":"08e09970925aac94bd9d6482e785383e4eb86189038ff2fd1fb09643a8d64ecf","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-23T15:04:44.843834978Z"},{"index":4,"name":"Data layer Live Flow guided testing 005","scenario_hash":"e98683e708cbcfd2c047c4358e129d5b4816faf97f8cf1f456378e38d27e19b4","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-23T15:04:44.843834978Z"},{"index":5,"name":"Data layer Live Flow guided testing 006","scenario_hash":"c303f5b1b7c31f911e31fa2b14c2de18cd6dedf302c87eb213f7342a7f0afce2","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-23T15:04:44.843834978Z"},{"index":7,"name":"Data layer Live Flow guided testing 008","scenario_hash":"d374702ba4ba7a87dc0d8a80f43a1db2535b0e7947d21fe8c645b9422b3dcc21","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-23T15:04:44.843834978Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer Live Flow guided testing
 
   Background:
@@ -112,7 +107,11 @@ Feature: Data layer Live Flow guided testing
   Scenario Outline: Data layer Live Flow guided testing 008
     Given observed pageview event live-102 is linked to Payment Page frame by <link_evidence>
     And its observed /oForm/formStepName is "review" while the effective Flow-step expectation is "payment"
-    When the operator opens a defect report from that validation issue
+    When the operator reviews live-102 event details
+    Then its ordinary validation presentation contains the Flow-step issue and linked Flow context
+    And event details contain one ordinary Create defect report action for that validation
+    And no separate Flow validation result or Flow-only defect action is added
+    When the operator uses the ordinary Create defect report action
     Then the heading is "Defect report: Checkout journey · Payment · pageview"
     And the issue presents observed "review" separately from expected "payment" with rule EXPECTED_VALUE
     And expected-result assistance reads "Use Payment Flow-step expectation" and identifies its effective schema revision

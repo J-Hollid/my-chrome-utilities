@@ -196,16 +196,20 @@ existing event feed. Opening an observed event's existing details exposes a
 root-first but unrestricted initial Page-frame selector or, after the first link,
 the Page and Event targets of the current step's outgoing relationships. Linking a
 step applies its effective schema through the ordinary event validation and defect
-surfaces. A defect opened from that validation identifies Flow, linked step, and
-observed event; separates actual from expected evidence; attributes assistance to
-the effective Flow-step schema; and snapshots stable link, path-or-start, revision,
-and contributor evidence in saved and copied representations. It reports the
-observed event against the linked expectation without declaring the Flow definition
-defective or the Flow failed or executed. Feed-event chronology is not restricted,
-and revisiting linked evidence does not rewind the current traversal position. This
-manual mode invokes no automatic assignment resolver and makes no execution claim.
-Any retained executable-step authoring is an explicitly separate Advanced function
-and does not duplicate or replace documentary graph authoring.
+surfaces. Flow context and validation details share the observed-event presentation
+model, leaving one ordinary validation issue presentation and one ordinary defect
+action rather than a parallel Manual Flow result and defect path. The recorded
+Flow-step link remains visible in its section. A defect opened from the ordinary
+action identifies Flow, linked step, and observed event; separates actual from
+expected evidence; attributes assistance to the effective Flow-step schema; and
+snapshots stable link, path-or-start, revision, and contributor evidence in saved
+and copied representations. It reports the observed event against the linked
+expectation without declaring the Flow definition defective or the Flow failed or
+executed. Feed-event chronology is not restricted, and revisiting linked evidence
+does not rewind the current traversal position. This manual mode invokes no
+automatic assignment resolver and makes no execution claim. Any retained
+executable-step authoring is an explicitly separate Advanced function and does not
+duplicate or replace documentary graph authoring.
 
 The selected-Flow documentation checkpoint derives a Flow value map and Data capture
 matrix from ordered graph contexts and canonical effective schemas. It reuses the
@@ -452,6 +456,7 @@ root-first Page starts, Page and Event effective-schema resolution, directed
 relationship guidance in event details, chronology-independent operator event
 choice, linked-evidence review without traversal rewind, Flow-aware defect headings,
 distinct actual and expected evidence, durable link and schema-provenance snapshots,
+one ordinary event-detail defect action with no parallel Flow-result controls,
 ordinary validation and defect adapters, saved session restoration, assignment
 bypass, and domain immutability. It may declare `flow_graph` and `layered_schema`
 dependencies but must not invoke unrelated or archived Live and temporal-Flow

@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=1207f310d6ce71e6244b18ac05a544bb60225d1b23cb7aaad71c1b00571157e2
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-23T15:05:19.871944656Z","feature_name":"Data layer Live Flow guided testing runtime","feature_path":"features/data-layer-live-flow-guided-testing-runtime.feature","background_hash":"a452240cf847c6e9ac91c2cbbeea27d72aad80605488cd361dcbd72a1893da92","implementation_hash":"sha256:fac4d2ff182b6cf88f9a952973c8be8797287738218e7653ad0dbbbe7cf91c5c","scenarios":[{"index":3,"name":"Data layer Live Flow guided testing runtime 004","scenario_hash":"f85cc6189fd381192924af6ddb7aee0a9ab0968566ac834cd865a03196462071","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-23T15:05:19.871944656Z"},{"index":4,"name":"Data layer Live Flow guided testing runtime 005","scenario_hash":"34adad433225544964928f9f7c37dc52111f51522f94389a88d6931d8c5e8558","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-23T15:05:19.871944656Z"},{"index":5,"name":"Data layer Live Flow guided testing runtime 006","scenario_hash":"2987df31fb141a328c5b563e644031bc980e8a514bd303af5d0ada0bfb8cce1f","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-23T15:05:19.871944656Z"},{"index":7,"name":"Data layer Live Flow guided testing runtime 008","scenario_hash":"f4a83e41254ca5911928333dde74a4393043fb4c3d87d193c1a96c9e585155eb","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-23T15:05:19.871944656Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer Live Flow guided testing runtime
 
   Background:
@@ -111,7 +106,11 @@ Feature: Data layer Live Flow guided testing runtime
   Scenario Outline: Data layer Live Flow guided testing runtime 008
     Given production pageview event live-102 is linked to Payment frame by <link_evidence>
     And captured /oForm/formStepName is "review" while Payment effective schema requires "payment"
-    When the installed validation issue action opens its defect report
+    When actual controls open live-102 event details
+    Then the Flow-step issue and context are stored on the same production event rendered by the ordinary validation presentation
+    And event details contain only #live-inspector-action-create-defect-report for that validation
+    And event details contain no separate Manual Flow test results issue list or .live-flow-create-defect control
+    When actual controls invoke #live-inspector-action-create-defect-report
     Then the installed heading is "Defect report: Checkout journey · Payment · pageview"
     And issue controls render actual "review", expected "payment", and EXPECTED_VALUE as distinct evidence
     And expected-result controls render "Use Payment Flow-step expectation" with the effective schema revision
