@@ -60,9 +60,10 @@ const synchronizedProfile=synchronized.project.collections.profiles[0],currencyI
   synchronizedProfile.canonicalSchema,
   {path:"/currency",type:"string",allowedValues:["EUR","GBP"]},
   (kind)=>`local:${kind}:${++sequence}`,
-),locallyEditedResult=applyCanonicalCommand(locallyConstrained,{kind:"set",baseRevision:locallyConstrained.revision,propertyId:currencyId,patch:{rules:locallyConstrained.nodes[currencyId].rules.map((rule)=>rule.id==="rule:currency-format"?{...rule,severity:"warning"}:rule)}}),locallyRenamedResult=applyCanonicalCommand(locallyEditedResult.document,{kind:"rename",baseRevision:locallyEditedResult.document.revision,propertyId:currencyId,name:"transaction_currency"}),locallyEdited=locallyRenamedResult.document;
+),locallyEditedResult=applyCanonicalCommand(locallyConstrained,{kind:"set",baseRevision:locallyConstrained.revision,propertyId:currencyId,patch:{rules:locallyConstrained.nodes[currencyId].rules.map((rule)=>rule.id==="rule:currency-format"?{...rule,severity:"warning"}:rule)}}),locallyRenamedResult=applyCanonicalCommand(locallyEditedResult.document,{kind:"rename",baseRevision:locallyEditedResult.document.revision,propertyId:currencyId,name:"transaction_currency"}),locallyMovedResult=applyCanonicalCommand(locallyRenamedResult.document,{kind:"move",baseRevision:locallyRenamedResult.document.revision,propertyId:currencyId,afterId:orderId}),locallyEdited=locallyMovedResult.document;
 assert.equal(locallyEditedResult.status,"applied");
 assert.equal(locallyRenamedResult.status,"applied");
+assert.equal(locallyMovedResult.status,"applied");
 synchronized=transactProject(synchronized,"Keep local canonical changes",(project)=>({...project,collections:{...project.collections,profiles:project.collections.profiles.map((candidate)=>candidate.id===synchronizedProfile.id?{...candidate,canonicalSchema:locallyEdited}:candidate)}}));
 const revision4Rules=[
   {id:"rule:currency-format",name:"Currency format",version:4,propertyPath:"/currency",operator:"regular-expression",parameters:"^[A-Z]{3}$",severity:"error"},
@@ -79,6 +80,7 @@ assert.equal(synchronizedResult.canonicalSchema.source.revision,4);
 const synchronizedCurrency=synchronizedRows.find(({path})=>path==="/transaction_currency"),synchronizedOrder=synchronizedRows.find(({path})=>path==="/order_id");
 assert.equal(synchronizedCurrency.id,currencyId,"a locally renamed property keeps its stable canonical identity");
 assert.equal(synchronizedOrder.id,orderId,"an unchanged property keeps its stable canonical identity");
+assert.deepEqual(synchronizedResult.canonicalSchema.rootIds.map((propertyId)=>synchronizedResult.canonicalSchema.nodes[propertyId].name),["order_id","transaction_currency","value"],"root identities preserve the locally reordered canonical tree");
 assert.deepEqual(synchronizedCurrency.node.allowedValues.map(({value})=>value),["EUR","GBP"],"local canonical facets survive source synchronization");
 assert.equal(synchronizedCurrency.node.rules.find(({id})=>id==="rule:currency-format").severity,"warning","a local edit wins over the corresponding source rule update");
 assert.equal(synchronizedOrder.node.rules.find(({id})=>id==="rule:order-required").name,"Order required","an unrelated new source rule enters active canonical content");
