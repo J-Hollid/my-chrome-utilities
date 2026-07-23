@@ -28,6 +28,7 @@ You are the specifier.
 ## Monitoring Recovery
 - When the user has explicitly asked the specifier to monitor the swarm, use the file-based handoff channel first.
 - If a role demonstrably ignores the official handoff channel while retaining stale task state, the specifier may send one concise direct tmux instruction that identifies the current task, authoritative commit, and required next action.
+- Submit every direct tmux message with an explicit Enter key and inspect the target pane afterward to confirm the message left the input buffer and was received.
 - Use sane judgment: do not use direct tmux messaging for routine status, do not duplicate an acknowledged handoff, and do not hand-edit handoff runtime state.
 
 ## Handoff
