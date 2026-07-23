@@ -16,8 +16,9 @@ for(let example=0;example<120;example+=1){
   let sequence=0;
   const id=(prefix)=>`${prefix}:${suffix}:${sequence++}`;
   const initial=createSpecificationProject({name:`Project ${suffix}`,site:`${suffix}.example`,id});
+  if(kind==="assignments")initial.project.collections.profiles.push({id:`profile:${suffix}`,name:"Target profile",requirements:[]});
   const untouched=Object.fromEntries(kinds.filter((candidate)=>candidate!==kind).map((candidate)=>[candidate,JSON.stringify(initial.project.collections[candidate])]));
-  const created=createProjectCollectionEntity(initial,kind,name,id),entity=created.project.collections[kind][0];
+  const created=createProjectCollectionEntity(initial,kind,name,id,kind==="assignments"?{targetKind:"Shared Profile",targetId:`profile:${suffix}`}:{}),entity=created.project.collections[kind][0];
 
   assert.equal(entity.name,`Entity ${suffix}`,"creation trims the human name");
   assert.equal(created.project.collections[kind].length,1);
@@ -36,6 +37,6 @@ for(let example=0;example<120;example+=1){
 const referenced=createSpecificationProject({name:"References",site:"refs.example",id:(kind)=>`${kind}:refs`});
 assert.throws(()=>createProjectCollectionEntity(referenced,"pages","Page",()=>"page:new",{pageGroupIds:["missing-group"]}),/unknown project reference/);
 assert.throws(()=>createProjectCollectionEntity(referenced,"fixtures","Fixture",()=>"fixture:new",{eventId:"missing-event"}),/does not exist/);
-assert.throws(()=>createProjectCollectionEntity(referenced,"events","Event",()=>"event:new",{role:"magic"}),/unsupported value/);
+assert.throws(()=>createProjectCollectionEntity(referenced,"fixtures","Fixture",()=>"fixture:new",{mode:"magic"}),/unsupported value/);
 
 console.log("data-layer project entity lifecycle properties passed");

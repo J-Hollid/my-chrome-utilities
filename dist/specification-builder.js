@@ -1,4 +1,4 @@
-import { addProjectEntity, adoptSavedSchema, buildReleaseReview, commitStagedProjectImport, commitSavedSchemaSynchronization, confirmCanonicalMigration, createProjectSchemaDraft, exportDocumentation, exportSpecificationProjectState, restoreReleaseAsDraft, saveProjectAssignment, searchProjectAssignments, stageProjectImport, stageSavedSchemaSynchronization, transactProject, } from "./data-layer-specification-project.js";
+import { addProjectEntity, adoptSavedSchema, buildReleaseReview, commitStagedProjectImport, commitSavedSchemaSynchronization, confirmCanonicalMigration, exportDocumentation, exportSpecificationProjectState, restoreReleaseAsDraft, saveProjectAssignment, searchProjectAssignments, stageProjectImport, stageSavedSchemaSynchronization, transactProject, } from "./data-layer-specification-project.js";
 import { openDurableProjectRuntime } from "./data-layer-durable-project-runtime.js";
 import { durableConflictSemanticField, durableProjectRouteForWorkspace } from "./data-layer-durable-project-repository.js";
 import { applyStagedBulkAction, commitStagedBulkRequirements, stageBulkRequirements } from "./data-layer-specification-bulk.js";
@@ -14,11 +14,11 @@ import { CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, commitCanonicalProjectStat
 import { PROJECT_LIBRARY_STORAGE_KEY, activateProject, activeProjectContextChange, createProjectInLibrary, migrateSingletonProject, projectLibrary, recordProjectNavigation, replaceActiveProjectState, resolveProjectNavigation, restoreProjectLibrary, serializeProjectLibrary } from "./data-layer-project-library.js";
 import { effectivePropertySummary, installLayeredSchemaUi } from "./data-layer-layered-schema-ui.js";
 import { compileLayeredSchema } from "./data-layer-layered-schema.js";
-import { layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
+import { assignmentContributorTargets, layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
 import { composedSchemaWorkspace, resetComposedSchemaLocalProperty, saveComposedSchemaLocalFacets } from "./data-layer-composed-schema-workspace.js";
 import { mountComposedSchemaFacetBuilder } from "./data-layer-composed-schema-builders.js";
 import { installFlowDocumentationExportUi } from "./data-layer-flow-table-documentation-export-ui.js";
-import { applyCanonicalCommand, canonicalCommandOutcome, canonicalRequirements, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
+import { applyCanonicalCommand, canonicalCommandOutcome, canonicalRequirements, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
 import { createProjectCollectionEntity, hasSavedSchemaAdoptionActions, inspectProjectEntityRemoval, projectCollectionCreationFields, projectCollectionCreationRoute, projectCollectionDefinitions, projectEntityWorkspaceRoute, projectInspectorTogglePresentation, removeProjectCollectionEntity } from "./data-layer-project-entity-lifecycle.js";
 const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, START_PATH_KEY = "my-chrome-utilities.specification-project-start.v1", routeParameters = new URLSearchParams(location.search), startupProjectId = routeParameters.get("project") ?? undefined, startupKind = routeParameters.get("kind") ?? undefined, startupEntityId = routeParameters.get("entity") ?? undefined, startupRoute = startupKind ? durableProjectRouteForWorkspace(startupKind, startupEntityId) : undefined;
@@ -38,10 +38,8 @@ for (const fieldId of ["project-assignment-path", "project-assignment-value", "p
     q("#save-project-assignment").append(input);
 }
 q("#project-assignment-applicability").required = false;
-q("#project-schema-id").required = false;
-q("#project-schema-id").closest("label").hidden = true;
 const id = (kind) => `${kind}:${crypto.randomUUID()}`;
-const labels = { profiles: "Shared Profiles", pages: "Pages", pageGroups: "Page Groups", events: "Events", applicabilitySets: "Applicability", flows: "Flows", fixtures: "Fixtures", schemaDrafts: "Schemas", assignments: "Assignments" };
+const labels = { profiles: "Shared Profiles", pages: "Pages", pageGroups: "Page Groups", events: "Events", applicabilitySets: "Applicability", flows: "Flows", fixtures: "Fixtures", assignments: "Assignments" };
 let state, lastCommittedState, library = projectLibrary();
 let canonicalRevision = 0, publishedRevision = 0, pendingConflict, durableConflict, saveStatus = { kind: "idle" }, stagedBulk, selectedKind = "profiles", selectedId, projectOverview = routeParameters.get("route") === "overview", creationKind, removalReview, lifecycleStatus = "", removedFocus, stagedImport, lastInvokingControl, releasePreflight, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi;
 let pageGroupMembershipStatus = "";
@@ -54,17 +52,6 @@ function renderCanonicalEntityEditor(host, kind, entity) {
         return;
     const canonical = entity.canonicalSchema;
     if (!canonical) {
-        if (kind === "schemaDrafts") {
-            const section = document.createElement("section"), heading = document.createElement("h3"), summary = document.createElement("p"), initialize = document.createElement("button");
-            heading.textContent = "Initialize canonical Schema Draft";
-            summary.textContent = "Create one canonical payload definition for this project-owned Draft lineage.";
-            initialize.type = "button";
-            initialize.textContent = "Initialize canonical Schema";
-            initialize.addEventListener("click", () => persist(transactProject(state, `Initialize canonical schema for ${entity.name}`, (project) => ({ ...project, collections: { ...project.collections, schemaDrafts: project.collections.schemaDrafts.map((candidate) => candidate.id === entity.id ? { ...candidate, canonicalSchema: createCanonicalSchema({ id: id("canonical-schema"), contributorId: entity.id, contributorName: entity.name }) } : candidate) } }))));
-            section.append(heading, summary, initialize);
-            host.append(section);
-            return;
-        }
         const review = migrateLegacyProfile(entity, { id }), section = document.createElement("section"), heading = document.createElement("h3"), summary = document.createElement("p"), list = document.createElement("ul"), confirm = document.createElement("button");
         const sourceDefinitions = Object.values(review.document.nodes).reduce((count, node) => count + node.provenance.length, 0), deduplicated = sourceDefinitions - Object.keys(review.document.nodes).length;
         section.setAttribute("aria-label", "Canonical schema migration review");
@@ -411,12 +398,11 @@ function entitiesForKind(kind) { if (!state)
 const editorFields = {
     profiles: [], pages: [{ key: "environment", label: "Environment" }, { key: "host", label: "Host matcher" }, { key: "pathname", label: "Path matcher" }, { key: "query", label: "Query matcher" }, { key: "hash", label: "Hash matcher" }, { key: "spa", label: "SPA route", type: "checkbox" }, { key: "expectedEventIds", label: "Expected events", collection: "events", multiple: true }, { key: "profileIds", label: "Requirement profiles", collection: "profiles", multiple: true }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }],
     pageGroups: [{ key: "environment", label: "Environment" }, { key: "matcher", label: "Membership matcher" }, { key: "profileIds", label: "Requirement profiles", collection: "profiles", multiple: true }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }],
-    events: [{ key: "sourceId", label: "Source" }, { key: "eventName", label: "Canonical event name" }, { key: "trigger", label: "Default documentary trigger" }, { key: "schemaDraftId", label: "Reusable payload schema", collection: "schemaDrafts" }, { key: "target", label: "Validation target" }, { key: "occurrencePolicy", label: "Occurrence policy" }, { key: "profileIds", label: "Requirement profiles", collection: "profiles", multiple: true }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }],
+    events: [{ key: "sourceId", label: "Source" }, { key: "eventName", label: "Canonical event name" }, { key: "trigger", label: "Default documentary trigger" }, { key: "target", label: "Validation target" }, { key: "occurrencePolicy", label: "Occurrence policy" }, { key: "profileIds", label: "Requirement profiles", collection: "profiles", multiple: true }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }],
     applicabilitySets: [{ key: "priority", label: "Priority", type: "number" }, { key: "fallback", label: "Fallback", type: "checkbox" }, { key: "condition", label: "Nested All / Any / Not condition", type: "condition" }],
     flows: [{ key: "entryCondition", label: "Entry condition", type: "condition" }, { key: "exitCondition", label: "Exit condition", type: "condition" }, { key: "timeoutMinutes", label: "Timeout minutes", type: "number" }, { key: "correlationField", label: "Correlation field" }, { key: "profileIds", label: "Requirement profiles", collection: "profiles", multiple: true }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }],
     fixtures: [{ key: "mode", label: "Fixture mode" }, { key: "context", label: "Context", type: "json" }, { key: "observations", label: "Ordered observations", type: "json" }, { key: "payload", label: "Payload", type: "json" }, { key: "expected", label: "Expected winner, step, schema and issues", type: "json" }, { key: "releasePolicy", label: "Release policy" }],
-    schemaDrafts: [],
-    assignments: [{ key: "schemaDraftId", label: "Schema", collection: "schemaDrafts" }, { key: "eventId", label: "Event", collection: "events" }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }, { key: "priority", label: "Priority", type: "number" }, { key: "versionPolicy", label: "Version policy" }, { key: "schemaRevision", label: "Pinned schema revision", type: "number" }],
+    assignments: [{ key: "targetKind", label: "Contributor kind" }, { key: "targetId", label: "Contributor target" }, { key: "eventId", label: "Event", collection: "events" }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }, { key: "priority", label: "Priority", type: "number" }],
 };
 function fieldControl(field, entity) { if (field.type === "flow-role") {
     const select = document.createElement("select");
@@ -500,12 +486,7 @@ function renderSelectedEntityEditor(content, entity) { if (!state)
     label.append(control);
     form.append(label);
 } if (selectedKind === "fixtures")
-    renderFixtureExecution(form, entity); if (selectedKind === "schemaDrafts") {
-    const status = document.createElement("p");
-    status.textContent = "Draft · canonical payload definition and project lineage";
-    status.setAttribute("role", "status");
-    form.append(status);
-} save.type = "submit"; save.textContent = "Save complete entity"; duplicate.type = "button"; duplicate.textContent = "Duplicate"; usage.textContent = `Where used: ${whereUsed(entity.id).join(", ") || "None"}`; actions.className = "editor-actions"; actions.append(save, duplicate); form.append(actions, usage); form.addEventListener("submit", (event) => { event.preventDefault(); if (!state)
+    renderFixtureExecution(form, entity); save.type = "submit"; save.textContent = "Save complete entity"; duplicate.type = "button"; duplicate.textContent = "Duplicate"; usage.textContent = `Where used: ${whereUsed(entity.id).join(", ") || "None"}`; actions.className = "editor-actions"; actions.append(save, duplicate); form.append(actions, usage); form.addEventListener("submit", (event) => { event.preventDefault(); if (!state)
     return; try {
     const update = { name: name.value.trim() };
     for (const field of editorFields[selectedKind])
@@ -521,7 +502,7 @@ function renderSelectedEntityEditor(content, entity) { if (!state)
 catch (error) {
     q("#project-state").textContent = error instanceof Error ? error.message : String(error);
 } }); duplicate.addEventListener("click", () => { if (!state)
-    return; const { id: ignored, ...copy } = entity; persist(addProjectEntity(state, selectedKind, { ...structuredClone(copy), name: `${entity.name} copy` }, id)); }); section.append(heading, form); content.append(section); if (selectedKind === "profiles" || selectedKind === "schemaDrafts")
+    return; const { id: ignored, ...copy } = entity; persist(addProjectEntity(state, selectedKind, { ...structuredClone(copy), name: `${entity.name} copy` }, id)); }); section.append(heading, form); content.append(section); if (selectedKind === "profiles")
     renderCanonicalEntityEditor(content, selectedKind, entity); }
 function renderTree() { const tree = q("#project-tree"); tree.replaceChildren(); if (!state)
     return; for (const kind of Object.keys(labels)) {
@@ -535,7 +516,7 @@ function renderTree() { const tree = q("#project-tree"); tree.replaceChildren();
     tree.append(item);
 } const release = document.createElement("li"), button = document.createElement("button"); button.type = "button"; button.textContent = `Releases (${state.project.releases.length})`; button.dataset.kind = "releases"; release.append(button); tree.append(release); }
 function renderCollectionGuidance(content) { if (!state)
-    return; const entityName = { profiles: "Profile", applicabilitySets: "Applicability Set", pages: "Page", pageGroups: "Page", events: "Event", flows: "Flow", assignments: "Assignment", fixtures: "Fixture", schemaDrafts: "Schema" }, name = entityName[selectedKind], section = document.createElement("section"); section.className = "project-guidance"; if (name) {
+    return; const entityName = { profiles: "Profile", applicabilitySets: "Applicability Set", pages: "Page", pageGroups: "Page", events: "Event", flows: "Flow", assignments: "Assignment", fixtures: "Fixture" }, name = entityName[selectedKind], section = document.createElement("section"); section.className = "project-guidance"; if (name) {
     const guidance = entityPurposeGuidance(name), heading = document.createElement("h2"), purpose = document.createElement("p"), example = document.createElement("p"), prerequisites = document.createElement("p"), usedBy = document.createElement("p"), distinction = document.createElement("p");
     heading.textContent = `About ${name}`;
     purpose.textContent = guidance.purpose;
@@ -584,7 +565,15 @@ function hydrateVisibleProjectRoute(kind, entityId, focus) { if (!state)
 function openCollectionOverview(kind, focusId) { projectOverview = false; creationKind = undefined; removalReview = undefined; selectedKind = kind; selectedId = undefined; persistNavigation(); replaceProjectRoute(kind); render(); hydrateVisibleProjectRoute(kind, undefined, () => focusId ? document.querySelector(`[data-entity-id="${CSS.escape(focusId)}"]`) : document.querySelector(`[data-add-kind="${kind}"]`)); }
 function openProjectEntityWorkspace(kind, entityId) { projectOverview = false; creationKind = undefined; removalReview = undefined; selectedKind = kind; selectedId = entityId; persistNavigation(); replaceProjectRoute(kind, entityId); render(); hydrateVisibleProjectRoute(kind, entityId, () => document.querySelector(`[data-project-entity-workspace="${CSS.escape(entityId)}"] h1`)); }
 function openProjectCollectionCreation(kind) { projectOverview = false; creationKind = kind; removalReview = undefined; selectedKind = kind; selectedId = undefined; persistNavigation(); replaceProjectRoute(kind, undefined, "add"); render(); }
-function projectCreationFieldControl(field) { if (field.collection && state) {
+function projectCreationFieldControl(field) { if (field.key === "targetId" && state) {
+    const select = document.createElement("select");
+    select.name = field.key;
+    for (const target of assignmentContributorTargets(state))
+        select.append(new Option(`${target.kind} · ${target.name}`, target.id));
+    if (!select.options.length)
+        select.append(new Option("No canonical contributors available", ""));
+    return select;
+} if (field.collection && state) {
     const select = document.createElement("select");
     select.name = field.key;
     select.multiple = Boolean(field.multiple);
@@ -837,7 +826,7 @@ function refreshDocumentation() { q("#documentation-preview").textContent = docu
 function download(name, text, type = "application/json") { const blob = new Blob([`${text}\n`], { type }), url = URL.createObjectURL(blob), link = document.createElement("a"); link.href = url; link.download = name; link.click(); URL.revokeObjectURL(url); }
 function replaceOptions(select, entities, placeholder) { const value = select.value, empty = document.createElement("option"); empty.value = ""; empty.textContent = placeholder; select.replaceChildren(empty, ...entities.map((entity) => { const option = document.createElement("option"); option.value = entity.id; option.textContent = entity.name; return option; })); select.value = value; }
 function renderReferenceSelectors() { if (!state)
-    return; flowGraphBuilder?.renderSelectors(); replaceOptions(q("#project-assignment-schema"), state.project.collections.schemaDrafts, "Choose schema"); const saved = q("#saved-schema-picker"), selectedSaved = saved.value; saved.replaceChildren(new Option("Choose a published saved schema", ""), ...savedSchemas().map((schema) => new Option(`${schema.name} · revision ${schema.version}`, schema.id))); saved.value = selectedSaved; const eventSelect = q("#project-assignment-event"); replaceOptions(eventSelect, state.project.collections.events, "Choose event"); for (const event of state.project.collections.events) {
+    return; flowGraphBuilder?.renderSelectors(); const targetKind = q("#project-assignment-kind"), targetSelect = q("#project-assignment-contributor"), selectedTarget = targetSelect.value, targets = assignmentContributorTargets(state).filter(({ kind }) => !targetKind.value || kind === targetKind.value); targetSelect.replaceChildren(new Option("Choose contributor", ""), ...targets.map((target) => new Option(`${target.kind} · ${target.name}`, target.id))); targetSelect.value = selectedTarget; const saved = q("#saved-schema-picker"), selectedSaved = saved.value; saved.replaceChildren(new Option("Choose a published saved schema", ""), ...savedSchemas().map((schema) => new Option(`${schema.name} · revision ${schema.version}`, schema.id))); saved.value = selectedSaved; const eventSelect = q("#project-assignment-event"); replaceOptions(eventSelect, state.project.collections.events, "Choose event"); for (const event of state.project.collections.events) {
     const eventName = String(event.eventName ?? "");
     if (eventName && eventName !== event.id) {
         const alias = document.createElement("option");
@@ -859,18 +848,18 @@ function renderAssignments() {
     for (const assignment of result.rows) {
         const item = document.createElement("li"), edit = document.createElement("button");
         edit.type = "button";
-        edit.textContent = `${assignment.name} · ${assignment.schemaId} · ${assignment.eventName} · ${assignment.versionPolicy}${assignment.schemaRevision ? ` revision ${assignment.schemaRevision}` : ""}`;
+        edit.textContent = `${assignment.name} · ${assignment.targetKind} ${assignment.targetId} · ${assignment.eventName}`;
         edit.addEventListener("click", () => {
             q("#project-assignment-id").value = assignment.id;
             q("#project-assignment-name").value = assignment.name;
-            q("#project-assignment-schema").value = String(assignment.schemaDraftId ?? assignment.schemaId);
+            q("#project-assignment-kind").value = String(assignment.targetKind);
+            renderReferenceSelectors();
+            q("#project-assignment-contributor").value = String(assignment.targetId);
             q("#project-assignment-source").value = String(assignment.sourceId);
             q("#project-assignment-event").value = String(assignment.eventId);
             q("#project-assignment-applicability").value = String(assignment.applicabilitySetId);
             q("#project-assignment-target").value = String(assignment.target);
             q("#project-assignment-priority").value = String(assignment.priority);
-            q("#project-assignment-version-policy").value = String(assignment.versionPolicy);
-            q("#project-assignment-revision").value = String(assignment.schemaRevision ?? 1);
             q("#project-assignment-name").focus();
         });
         item.append(edit);
@@ -911,14 +900,12 @@ q("#undo-project").addEventListener("click", () => { if (!state)
 q("#redo-project").addEventListener("click", () => { if (state)
     void durableProjectRuntime.redo(state.project.id); });
 q("#project-search").addEventListener("input", renderWorkspace);
-q("#create-project-schema-draft").addEventListener("submit", (event) => { event.preventDefault(); if (!state)
-    return; persist(createProjectSchemaDraft(state, { schemaId: q("#project-schema-id").value.trim(), name: q("#project-schema-name").value.trim(), baseRevision: Number(q("#project-schema-revision").value), description: q("#project-schema-description").value }, id)); q("#schema-draft-result").textContent = "Saved one integrated working draft; the published revision is unchanged until project release."; });
 const savedSchemaDialog = q("#saved-schema-review"), savedSchemaChanges = q("#saved-schema-review-changes");
 q("#review-saved-schema").addEventListener("click", () => { if (!state)
     return; const source = savedSchemas().find(({ id: schemaId }) => schemaId === q("#saved-schema-picker").value); if (!source) {
     q("#schema-draft-result").textContent = "Choose a published saved schema first.";
     return;
-} savedSchemaChanges.replaceChildren(); const adopted = state.project.collections.schemaDrafts.find(({ id }) => id === source.id); try {
+} savedSchemaChanges.replaceChildren(); const adopted = state.project.collections.profiles.find(({ sourceIdentity }) => sourceIdentity === source.id); try {
     if (adopted) {
         const review = stageSavedSchemaSynchronization(state, source);
         pendingSavedSchema = { kind: "synchronize", review };
@@ -932,7 +919,7 @@ q("#review-saved-schema").addEventListener("click", () => { if (!state)
     }
     else {
         pendingSavedSchema = { kind: "adopt", source };
-        q("#saved-schema-review-summary").textContent = `Adopt ${source.name} revision ${source.version} as one project-owned working draft with source lineage. The saved library remains unchanged.`;
+        q("#saved-schema-review-summary").textContent = `Adopt ${source.name} revision ${source.version} as one project-owned Shared Profile with source lineage. `;
         q("#confirm-saved-schema").textContent = "Commit reviewed adoption";
     }
     savedSchemaDialog.showModal();
@@ -942,11 +929,11 @@ catch (error) {
     q("#schema-draft-result").textContent = error instanceof Error ? error.message : String(error);
 } });
 q("#confirm-saved-schema").addEventListener("click", () => { if (!state || !pendingSavedSchema)
-    return; const completed = pendingSavedSchema; persist(completed.kind === "adopt" ? adoptSavedSchema(state, completed.source) : commitSavedSchemaSynchronization(state, completed.review)); selectedKind = "schemaDrafts"; selectedId = completed.kind === "adopt" ? completed.source.id : completed.review.schemaId; pendingSavedSchema = undefined; savedSchemaDialog.close(); q("#schema-draft-result").textContent = completed.kind === "adopt" ? "Saved schema adopted into the canonical project with revision lineage." : "Reviewed saved-schema revision synchronized; local overrides were preserved and affected evidence was marked stale."; render(); });
+    return; const completed = pendingSavedSchema; persist(completed.kind === "adopt" ? adoptSavedSchema(state, completed.source) : commitSavedSchemaSynchronization(state, completed.review)); selectedKind = "profiles"; selectedId = completed.kind === "adopt" ? `profile:${completed.source.id}` : state.project.collections.profiles.find(({ sourceIdentity }) => sourceIdentity === completed.review.schemaId)?.id; pendingSavedSchema = undefined; savedSchemaDialog.close(); q("#schema-draft-result").textContent = completed.kind === "adopt" ? "Saved schema adopted as a Shared Profile with revision lineage." : "Reviewed saved-schema revision synchronized; local overrides were preserved and affected evidence was marked stale."; render(); });
 q("#cancel-saved-schema").addEventListener("click", () => { pendingSavedSchema = undefined; savedSchemaDialog.close(); q("#review-saved-schema").focus(); });
 q("#save-project-assignment").addEventListener("submit", (event) => { event.preventDefault(); if (!state)
     return; const assignmentId = q("#project-assignment-id").value || undefined, eventValue = q("#project-assignment-event").value, eventEntity = state.project.collections.events.find((candidate) => candidate.id === eventValue || candidate.eventName === eventValue), applicabilitySetId = q("#project-assignment-applicability").value, compatibilityPath = q("#project-assignment-path").value.trim(), condition = !applicabilitySetId && compatibilityPath ? { kind: "predicate", field: compatibilityPath, operator: "equals", value: q("#project-assignment-value").value } : undefined; try {
-    persist(saveProjectAssignment(state, { ...(assignmentId ? { id: assignmentId } : {}), name: q("#project-assignment-name").value.trim(), schemaId: q("#project-assignment-schema").value, ...(eventEntity ? { eventId: eventEntity.id } : {}), eventName: String(eventEntity?.eventName ?? eventEntity?.name ?? ""), ...(applicabilitySetId ? { applicabilitySetId } : {}), ...(condition ? { condition } : {}), sourceId: q("#project-assignment-source").value.trim(), target: q("#project-assignment-target").value, priority: Number(q("#project-assignment-priority").value), versionPolicy: q("#project-assignment-version-policy").value, schemaRevision: Number(q("#project-assignment-revision").value) }, id));
+    persist(saveProjectAssignment(state, { ...(assignmentId ? { id: assignmentId } : {}), name: q("#project-assignment-name").value.trim(), targetKind: q("#project-assignment-kind").value, targetId: q("#project-assignment-contributor").value, ...(eventEntity ? { eventId: eventEntity.id } : {}), eventName: String(eventEntity?.eventName ?? eventEntity?.name ?? ""), ...(applicabilitySetId ? { applicabilitySetId } : {}), ...(condition ? { condition } : {}), sourceId: q("#project-assignment-source").value.trim(), target: q("#project-assignment-target").value, priority: Number(q("#project-assignment-priority").value) }, id));
     q("#project-assignment-id").value = "";
     renderAssignments();
 }
@@ -954,6 +941,7 @@ catch (error) {
     q("#project-assignment-conflicts").textContent = error instanceof Error ? error.message : String(error);
 } });
 q("#project-assignment-search").addEventListener("input", renderAssignments);
+q("#project-assignment-kind").addEventListener("change", renderReferenceSelectors);
 const bulkStageButton = q("#commit-bulk-properties"), bulkDetails = bulkStageButton.closest("details"), bulkFormat = document.createElement("select"), bulkReview = document.createElement("div"), bulkConfirm = document.createElement("button"), bulkRequire = document.createElement("button"), bulkChoices = [["paste", "Paste columns"], ["csv", "Spreadsheet / CSV"], ["json", "JSON requirements"], ["json-schema", "JSON Schema"], ["template", "100-row template"]];
 for (const [value, label] of bulkChoices) {
     const option = document.createElement("option");

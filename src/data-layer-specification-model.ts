@@ -117,7 +117,7 @@ export function migrateCanonicalProject(input: {
     libraryRevision: number;
   }[];
 } {
-  const projectSchemas = input.projectEnvelope.project.collections.schemaDrafts;
+  const projectSchemas = input.projectEnvelope.project.collections.schemaDrafts??[];
   const byId = new Map(input.schemaLibrary.map((schema) => [schema.id, schema]));
   const conflicts = projectSchemas.flatMap((schema) => {
     const library = byId.get(schema.id);
@@ -142,7 +142,7 @@ export function applyCanonicalSchemaDraftEdits(
   editedSchemas: readonly { id: string }[],
 ): ProjectState {
   const byId = new Map(editedSchemas.map((schema) => [schema.id, schema]));
-  const schemaDrafts = state.project.collections.schemaDrafts.map((schema) => (
+  const schemaDrafts = (state.project.collections.schemaDrafts??[]).map((schema) => (
     byId.has(schema.id)
       ? clone(byId.get(schema.id)!) as unknown as ProjectEntity
       : schema

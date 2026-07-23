@@ -1,13 +1,16 @@
 import {canonicalConstraints,type CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
-import type {LayerConstraint,LayerContributor,LayerScope} from "./data-layer-layered-schema.js";
+import {compileLayeredSchema,type CompiledLayeredSchema,type LayerConstraint,type LayerContributor,type LayerContext,type LayerScope} from "./data-layer-layered-schema.js";
 import {orderedPageGroupIds} from "./data-layer-page-group-membership.js";
 import {transactProject,type Condition,type ProjectEntity,type ProjectState} from "./data-layer-specification-project.js";
 
 export interface LayeredContributorPath {profileId?:string;eventId?:string;pageGroupId?:string;pageGroupIds?:string[];pageId?:string;flowId?:string;pageFrameId?:string;occurrenceId?:string;}
+export type AssignmentContributorKind="Shared Profile"|"Page Group"|"Page"|"Event"|"Flow Page instance";
+export interface AssignmentContributorTarget {id:string;name:string;kind:AssignmentContributorKind;flowId?:string;}
 
 const contributionFor=(entity:ProjectEntity,scope:LayerScope):LayerContributor=>{
   const canonical=entity.canonicalSchema as CanonicalSchemaDocument|undefined;
-  const base=canonical?canonicalConstraints(canonical):((entity.schemaConstraints as LayerConstraint[]|undefined)??[]),sparse=(entity.localSchemaContributions as LayerConstraint[]|undefined)??[];
+  const requirements=((entity.requirements as Record<string,unknown>[]|undefined)??[]).map((requirement)=>({...requirement,...(requirement.required?{presence:"required"}:requirement.forbidden?{presence:"forbidden"}:{})})) as LayerConstraint[];
+  const base=canonical?canonicalConstraints(canonical):((entity.schemaConstraints as LayerConstraint[]|undefined)??requirements),sparse=(entity.localSchemaContributions as LayerConstraint[]|undefined)??[];
   return{id:entity.id,name:entity.name,scope,constraints:[...base,...sparse]};
 };
 const referencedId=(entity:Record<string,unknown>,key:string):string|undefined=>typeof entity[key]==="string"?String(entity[key]):undefined;
@@ -36,6 +39,18 @@ export function layeredContributorsForPath(state:ProjectState,path:LayeredContri
   const one=(entities:ProjectEntity[],id:string|undefined,scope:LayerScope)=>id?entities.filter((entity)=>entity.id===id).map((entity)=>contributionFor(entity,scope)):[];
   const groupIds=path.pageGroupIds??(path.pageGroupId?[path.pageGroupId]:[]),groups=groupIds.flatMap((groupId)=>state.project.collections.pageGroups.filter(({id})=>id===groupId).map((group)=>{const contributor=contributionFor(group,"Page Group"),applicability=(state.project.collections.applicabilitySets??[]).find(({id})=>id===group.applicabilitySetId),conditional=Boolean(applicability),active=conditionMatches(applicability?.condition as Condition|undefined,observation);return{...contributor,...(conditional?{active,applicabilityConditional:true,...(!active?{exclusionReason:`${applicability!.name} did not match`}:{})}:{})};}));
   return[...one(state.project.collections.profiles,path.profileId,"Shared Profile"),...one(state.project.collections.events,path.eventId,"Event"),...groups,...one(state.project.collections.pages,path.pageId,"Page"),...(pageFrame?[contributionFor(pageFrame,"Flow Page-instance")]:[]),...(occurrence?[contributionFor(occurrence,occurrence.freePageFrame?"Flow Page-instance":"Event-occurrence")]:[])];
+}
+
+export function assignmentContributorTargets(state:ProjectState):AssignmentContributorTarget[]{
+  const collection=(entities:readonly ProjectEntity[],kind:AssignmentContributorKind)=>entities.map(({id,name})=>({id,name,kind}));
+  const frames=Object.entries(state.project.documentationFlowGraphs??{}).flatMap(([flowId,graph])=>((graph as {pageFrames?:ProjectEntity[]}).pageFrames??[]).map(({id,name})=>({id,name,kind:"Flow Page instance" as const,flowId})));
+  return[...collection(state.project.collections.profiles,"Shared Profile"),...collection(state.project.collections.pageGroups,"Page Group"),...collection(state.project.collections.pages,"Page"),...collection(state.project.collections.events,"Event"),...frames];
+}
+
+export function compileAssignmentContributorTarget(state:ProjectState,assignment:ProjectEntity,context:LayerContext,observation:Record<string,unknown>={}):{target:AssignmentContributorTarget;contributors:LayerContributor[];compiled:CompiledLayeredSchema}{
+  const target=assignmentContributorTargets(state).find(({id,kind})=>id===assignment.targetId&&kind===assignment.targetKind);if(!target)throw new Error(`Assignment ${assignment.name} has an unavailable contributor target.`);
+  const source=target.kind==="Shared Profile"?state.project.collections.profiles.find(({id})=>id===target.id):target.kind==="Page Group"?state.project.collections.pageGroups.find(({id})=>id===target.id):target.kind==="Page"?state.project.collections.pages.find(({id})=>id===target.id):target.kind==="Event"?state.project.collections.events.find(({id})=>id===target.id):flowPageFrameContributor(state,target.flowId!,target.id),scope:LayerScope=target.kind==="Flow Page instance"?"Flow Page-instance":target.kind;
+  if(!source)throw new Error(`Contributor target ${target.id} is unavailable.`);const path=layeredContributorPath(state,source,scope,target.flowId),contributors=layeredContributorsForPath(state,path,observation);return{target,contributors,compiled:compileLayeredSchema(contributors,context)};
 }
 
 export function layeredContributionDetails(state:ProjectState,entity:ProjectEntity,scope:LayerScope,flowId?:string){

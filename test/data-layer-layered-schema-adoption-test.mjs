@@ -24,7 +24,7 @@ assert.equal("schemaConstraints" in profile,false);
 assert.deepEqual(profile.requirements,[]);
 assert.equal(JSON.stringify(source),libraryBytes,"adoption must not change Saved Schema Library bytes");
 assert.equal(state.project.collections.profiles.length,1);
-assert.equal(state.project.collections.schemaDrafts.length,0,"adoption must not create a competing editable draft");
+assert.equal("schemaDrafts" in state.project.collections,false,"adoption must not create a competing editable draft collection");
 
 const openedArticle={
   id:"schema:opened-article",name:"Opened Article",version:4,published:true,assignments:[],

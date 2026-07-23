@@ -688,7 +688,7 @@ let schemas = restoreSchemaLibrary(storedSchemaLibrary);
 let sidePanelLayeredProfileEditor;
 const projectLibraryUi = mountProjectLibraryUi({ root: document, storage: projectStorage, prepareProject: durableProjectRuntime.ensureProject, settled: durableProjectRuntime.settled, undoProject: durableProjectRuntime.undo, subscribe: (listener) => durableProjectRuntime.subscribe(({ library }) => listener(library)), blocked: () => Boolean(durableProjectRuntime.failedSave()), exportProject: async (projectId) => JSON.stringify(await durableProjectRuntime.repository.exportProject(projectId)), importProject: async (serialized, input) => { await durableProjectRuntime.repository.importProject(JSON.parse(serialized), input); }, projectStorageKey: SPECIFICATION_PROJECT_STORAGE_KEY, navigationStorageKey: "my-chrome-utilities.specification-project-navigation.v1", openStudio: (url) => { globalThis.open(url, "_blank"); }, onChange: renderSchemas });
 let activeSchemaProjectHydration;
-const schemaContributorRoute = { collectionKinds: ["profiles", "pageGroups", "pages", "events", "flows", "schemaDrafts"], includeFlowGraphs: true };
+const schemaContributorRoute = { collectionKinds: ["profiles", "pageGroups", "pages", "events", "flows"], includeFlowGraphs: true };
 async function hydrateActiveProjectForSchemas() { if (activeSchemaProjectHydration)
     return activeSchemaProjectHydration; const activeProjectId = projectLibraryUi.library().activeProjectId; if (!activeProjectId)
     return; activeSchemaProjectHydration = (async () => { if (schemaResult)
@@ -743,8 +743,8 @@ void mountDurableProjectRepositoryUi(document, globalThis.indexedDB, durableProj
     open.disabled = true; });
 const canonicalProjectAtStartup = restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY));
 if (canonicalProjectAtStartup)
-    schemas = [...schemas.filter((schema) => !canonicalProjectAtStartup.project.collections.schemaDrafts.some(({ id }) => id === schema.id)), ...canonicalProjectAtStartup.project.collections.schemaDrafts];
-let canonicalProjectSchemaIds = new Set(canonicalProjectAtStartup?.project.collections.schemaDrafts.map(({ id }) => id) ?? []);
+    schemas = [...schemas.filter((schema) => !(canonicalProjectAtStartup.project.collections.schemaDrafts ?? []).some(({ id }) => id === schema.id)), ...canonicalProjectAtStartup.project.collections.schemaDrafts];
+let canonicalProjectSchemaIds = new Set((canonicalProjectAtStartup?.project.collections.schemaDrafts ?? []).map(({ id }) => id) ?? []);
 const restoredSchemaLibrary = serializeSchemaLibrary(schemas.filter(({ id }) => !canonicalProjectSchemaIds.has(id)));
 sidePanelLayeredProfileEditor = sidePanelLayeredProfileEditorHost ? mountSidePanelLayeredProfileEditor({ host: sidePanelLayeredProfileEditorHost, legacyEditor: schemaEditor, emptyHost: schemaDetailEmpty, load: () => restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), subscribe: (listener) => durableProjectRuntime.subscribe(() => listener()), onUndo: () => { const state = restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)); if (state)
         void durableProjectRuntime.undo(state.project.id); }, onRedo: () => { const state = restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)); if (state)
@@ -2885,7 +2885,7 @@ function openNewSchemaEditor() {
     schemaEditorName?.focus({ preventScroll: true });
 }
 function persistSchemaLibrary() {
-    const previousProject = projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY), previousSchemas = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY), envelope = restoreCanonicalProjectEnvelope(previousProject), project = restoreCanonicalProjectState(previousProject), ownedIds = new Set(project?.project.collections.schemaDrafts.map(({ id }) => id) ?? []), schemaValue = serializeSchemaLibrary(schemas.filter(({ id }) => !ownedIds.has(id))), nextProject = project ? applyCanonicalSchemaDraftEdits(project, schemas) : undefined;
+    const previousProject = projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY), previousSchemas = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY), envelope = restoreCanonicalProjectEnvelope(previousProject), project = restoreCanonicalProjectState(previousProject), ownedIds = new Set((project?.project.collections.schemaDrafts ?? []).map(({ id }) => id)), schemaValue = serializeSchemaLibrary(schemas.filter(({ id }) => !ownedIds.has(id))), nextProject = project ? applyCanonicalSchemaDraftEdits(project, schemas) : undefined;
     const restore = (key, value) => { if (value === null)
         dataLayerStorage.removeItem(key);
     else
@@ -4774,7 +4774,7 @@ function recheckCapturedSchemaValidation() {
             const evaluated = compiled?.status === "compiled" ? evaluateSpecificationObservation(compiled.plan, { sourceId: event.sourceId, eventName: event.name, payload: event.payload, pageUrl: event.pageUrl }) : undefined;
             if (evaluated?.winner) {
                 checked += 1;
-                const schema = canonical.project.collections.schemaDrafts.find(({ id }) => id === evaluated.winner.schemaId), state = evaluated.issueDetails.length ? `${evaluated.issueDetails.length} issues` : "Valid";
+                const schema = (canonical.project.collections.schemaDrafts ?? []).find(({ id }) => id === evaluated.winner.schemaId), state = evaluated.issueDetails.length ? `${evaluated.issueDetails.length} issues` : "Valid";
                 issueRows.push(...evaluated.issueDetails.map((issue) => Object.assign(document.createElement("li"), { textContent: `${event.name} · ${issue.path || "root"} · ${issue.message}: expected ${issue.expected}, received ${issue.actual} · evaluated result ${evaluated.resultIdentity}` })));
                 records.push({ eventId: event.id, eventName: event.name, state, checkedAt, schemaId: evaluated.winner.schemaId, schemaName: schema?.name ?? evaluated.winner.schemaId, schemaVersion: evaluated.winner.schemaRevision, target: "payload", issueCodes: evaluated.issueDetails.map(({ code }) => code), assignmentId: evaluated.winner.assignmentId, assignmentName: String(canonical.project.collections.assignments.find(({ id }) => id === evaluated.winner.assignmentId)?.name ?? evaluated.winner.assignmentId), assignmentEvidence: `Evaluated result ${evaluated.resultIdentity}`, evaluated: { resultIdentity: evaluated.resultIdentity, winner: evaluated.winner, issueDetails: evaluated.issueDetails.map(({ code, path }) => ({ code, path })) } });
                 return { ...event, validation: state };
@@ -4835,7 +4835,7 @@ async function reviewCapturedValidationContinuation(record, trigger) {
             schemaResult.textContent = "Recheck the captured event with the project evaluator before continuing.";
         return;
     }
-    if (!project.project.collections.schemaDrafts.some(({ id }) => id === record.schemaId)) {
+    if (!(project.project.collections.schemaDrafts ?? []).some(({ id }) => id === record.schemaId)) {
         if (schemaResult)
             schemaResult.textContent = `Add ${record.schemaName ?? "the validated schema"} to ${project.project.name} before creating its Fixture.`;
         return;

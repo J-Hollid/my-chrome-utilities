@@ -55,7 +55,7 @@ export function applyCanonicalCommand(envelope, command) {
     };
 }
 export function migrateCanonicalProject(input) {
-    const projectSchemas = input.projectEnvelope.project.collections.schemaDrafts;
+    const projectSchemas = input.projectEnvelope.project.collections.schemaDrafts ?? [];
     const byId = new Map(input.schemaLibrary.map((schema) => [schema.id, schema]));
     const conflicts = projectSchemas.flatMap((schema) => {
         const library = byId.get(schema.id);
@@ -76,7 +76,7 @@ export function migrateCanonicalProject(input) {
 }
 export function applyCanonicalSchemaDraftEdits(state, editedSchemas) {
     const byId = new Map(editedSchemas.map((schema) => [schema.id, schema]));
-    const schemaDrafts = state.project.collections.schemaDrafts.map((schema) => (byId.has(schema.id)
+    const schemaDrafts = (state.project.collections.schemaDrafts ?? []).map((schema) => (byId.has(schema.id)
         ? clone(byId.get(schema.id))
         : schema));
     return {

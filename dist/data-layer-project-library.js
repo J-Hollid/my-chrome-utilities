@@ -1,3 +1,4 @@
+import { canonicalSchemaFromJsonSchema } from "./data-layer-canonical-schema.js";
 import { createSpecificationProject, transactProject } from "./data-layer-specification-project.js";
 export const PROJECT_LIBRARY_STORAGE_KEY = "my-chrome-utilities.specification-project-library.v1";
 const clone = (value) => structuredClone(value);
@@ -14,21 +15,42 @@ export function projectLibrary(records = [], activeProjectId) {
 export function restoreProjectLibrary(serialized) { if (!serialized)
     return undefined; const parsed = JSON.parse(serialized); if (parsed.format !== "my-chrome-utilities.project-library" || parsed.version !== 1 || !parsed.projects)
     throw new Error("Unsupported project library format."); if (parsed.activeProjectId && !parsed.projects[parsed.activeProjectId])
-    throw new Error("The active project is missing from the project library."); return clone(parsed); }
+    throw new Error("The active project is missing from the project library."); return { ...clone(parsed), projects: Object.fromEntries(Object.entries(parsed.projects).map(([projectId, record]) => { const upgraded = upgradeLegacySchemaDrafts(record.state); return [projectId, { ...clone(record), state: upgraded.state, ...(upgraded.backup ? { legacyMigrationBackup: upgraded.backup } : {}) }]; })) }; }
 export function activeProjectContextChange(serialized, currentProjectId, currentRevision = 0) { const library = restoreProjectLibrary(serialized); if (!library)
     throw new Error("Project library synchronization requires persisted library state."); const active = library.activeProjectId ? library.projects[library.activeProjectId] : undefined, changed = library.activeProjectId !== currentProjectId || (active?.revision ?? 0) > currentRevision; return { library, changed, ...(active ? { active } : {}) }; }
 export function projectRecordNeedsSynchronization(record, state, revision) { return record.revision !== revision || JSON.stringify(record.state) !== JSON.stringify(state); }
 export const serializeProjectLibrary = (library) => JSON.stringify({ ...clone(library), projects: Object.fromEntries(Object.entries(library.projects).map(([projectId, record]) => [projectId, { ...clone(record), state: { ...clone(record.state), history: { undo: [], redo: [] } } }])) });
+const checksum = (value) => { let hash = 2166136261; for (const character of value) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+} return (hash >>> 0).toString(16).padStart(8, "0"); };
+function upgradeLegacySchemaDrafts(state) {
+    const drafts = state.project.collections.schemaDrafts ?? [];
+    if (!drafts.length)
+        return { state: clone(state) };
+    const bytes = JSON.stringify(state), profileIds = new Set(state.project.collections.profiles.map(({ id }) => id)), profiles = [...clone(state.project.collections.profiles)];
+    for (const draft of drafts) {
+        if (profileIds.has(draft.id))
+            continue;
+        const existing = draft.canonicalSchema, working = draft.workingDraft?.document, document = working ?? draft.document, canonicalSchema = existing ?? canonicalSchemaFromJsonSchema({ id: `canonical:${draft.id}`, contributorId: draft.id, contributorName: draft.name, sourceIdentity: draft.id, sourceRevision: Number(draft.version ?? 1), document: document ?? { type: "object", properties: {} }, idFactory: (kind) => `${draft.id}:${kind}` });
+        profiles.push({ id: draft.id, name: draft.name, requirements: [], canonicalSchema, ...(draft.sourceLineage ? { sourceLineage: clone(draft.sourceLineage) } : {}) });
+        profileIds.add(draft.id);
+    }
+    const assignments = state.project.collections.assignments.map((assignment) => { const targetId = String(assignment.targetId ?? assignment.schemaDraftId ?? assignment.schemaId ?? ""); const next = clone(assignment); delete next.schemaDraftId; delete next.schemaId; delete next.schemaRevision; delete next.schemaDocument; delete next.compiledSchema; return { ...next, ...(targetId ? { targetId, targetKind: String(next.targetKind ?? "Shared Profile") } : {}) }; }), collections = { ...clone(state.project.collections), profiles, assignments };
+    delete collections.schemaDrafts;
+    return { state: { ...clone(state), project: { ...clone(state.project), collections }, history: { undo: [], redo: [] } }, backup: { bytes, checksum: checksum(bytes) } };
+}
 export function migrateSingletonProject(existing, singleton, now = () => new Date().toISOString()) {
     if (existing) {
         const active = existing.activeProjectId ? existing.projects[existing.activeProjectId] : undefined;
         if (!singleton || !active || active.state.project.id !== singleton.state.project.id || active.revision >= singleton.revision)
             return clone(existing);
-        return { ...clone(existing), projects: { ...clone(existing.projects), [singleton.state.project.id]: { ...clone(active), state: clone(singleton.state), revision: singleton.revision, lastModifiedAt: now() } } };
+        const upgraded = upgradeLegacySchemaDrafts(singleton.state);
+        return { ...clone(existing), projects: { ...clone(existing.projects), [singleton.state.project.id]: { ...clone(active), state: upgraded.state, revision: singleton.revision, lastModifiedAt: now(), ...(upgraded.backup ? { legacyMigrationBackup: upgraded.backup } : {}) } } };
     }
     if (!singleton)
         return { ...projectLibrary(), singletonMigrated: true };
-    const at = now(), record = projectRecord(singleton.state, singleton.revision, at, at, singleton.navigation);
+    const at = now(), upgraded = upgradeLegacySchemaDrafts(singleton.state), record = { ...projectRecord(upgraded.state, singleton.revision, at, at, singleton.navigation), ...(upgraded.backup ? { legacyMigrationBackup: upgraded.backup } : {}) };
     return { ...projectLibrary([record], singleton.state.project.id), singletonMigrated: true };
 }
 const metadataFor = (project) => ({ name: project.name, purpose: project.description, website: project.site, owner: String(project.owner ?? ""), notes: String(project.notes ?? "") });

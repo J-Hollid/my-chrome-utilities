@@ -1,10 +1,12 @@
 import assert from "node:assert/strict";
 import {compileLayeredSchema,resolveLayeredTarget,validateLayeredObservation} from "../dist/data-layer-layered-schema.js";
 import {flowPageFrameContributor,layeredContributorPath} from "../dist/data-layer-layered-schema-project.js";
+import {compileSpecificationProject,createCanonicalProjectEnvelope,evaluateSpecificationObservation} from "../dist/data-layer-specification-engine.js";
 
 let seed=0x51a7e;
 const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/0x100000000;};
 const pickSubset=(values)=>values.filter(()=>random()>=0.5);
+let nestedRequiredConserved=true,eventTargetsIsolated=true;
 
 for(let iteration=0;iteration<200;iteration+=1){
   const universe=Array.from({length:2+Math.floor(random()*7)},(_,index)=>`value-${iteration}-${index}`),selected=pickSubset(universe),narrowed=selected.length?selected:[universe[0]];
@@ -30,6 +32,25 @@ for(let iteration=0;iteration<200;iteration+=1){
   assert.equal(contributor.name,frameName||`Page ${iteration} in Flow ${iteration}`,"blank frame names derive from stable human context");
   assert.deepEqual(layeredContributorPath(state,contributor,"Flow Page-instance",flowId),{pageGroupId:groupId,pageGroupIds:[groupId],pageId,flowId,pageFrameId:frameId},"frame contributor paths retain the selected lane and ordered Page Group inheritance path");
   assert.equal(flowPageFrameContributor(state,flowId,`missing:${iteration}`),undefined,"unknown frame IDs never fall back to a Page or Flow entity");
+
+  const project={id:`project:${iteration}`,name:`Project ${iteration}`,site:"example.test",environments:["Production"],namingConventions:{property:"snake_case",event:"snake_case"},publicationPolicy:{warningsBlock:false,fixturesRequired:false},releases:[],collections:{profiles:[{id:`profile:${iteration}`,name:"Target profile",requirements:[{path:"/value",type:"string",required:true}]}],pageGroups:[],pages:[],events:[{id:`event:${iteration}`,name:"Event",sourceId:"event-history",eventName:"event"}],applicabilitySets:[],flows:[],fixtures:[],assignments:[{id:`assignment:${iteration}`,name:"Target assignment",targetKind:"Shared Profile",targetId:`profile:${iteration}`,eventId:`event:${iteration}`,priority:10}]}};
+  const projectCompilation=compileSpecificationProject(createCanonicalProjectEnvelope(project,`draft:${iteration}`));
+  assert.equal(projectCompilation.status,"compiled","current contributor-target Assignments compile without legacy schemaDrafts");
+
+  project.collections.profiles[0].requirements=[{path:"/nested/value",type:"string",required:true}];
+  const nestedCompilation=compileSpecificationProject(createCanonicalProjectEnvelope(project,`draft:nested:${iteration}`));
+  assert.equal(nestedCompilation.status,"compiled");
+  nestedRequiredConserved&&=evaluateSpecificationObservation(nestedCompilation.plan,{sourceId:"event-history",eventName:"event",payload:{}}).issueDetails.some(({path,code})=>path==="/nested/value"&&code==="required");
+
+  project.collections.profiles[0].requirements=[{path:"/alpha",type:"string",required:true,target:`event:${iteration}`},{path:"/beta",type:"string",required:true,target:`event:other:${iteration}`}];
+  project.collections.events.push({id:`event:other:${iteration}`,name:"Other event",sourceId:"event-history",eventName:"other_event"});
+  project.collections.assignments.push({id:`assignment:other:${iteration}`,name:"Other target assignment",targetKind:"Shared Profile",targetId:`profile:${iteration}`,eventId:`event:other:${iteration}`,priority:10});
+  const contextualCompilation=compileSpecificationProject(createCanonicalProjectEnvelope(project,`draft:context:${iteration}`));
+  assert.equal(contextualCompilation.status,"compiled");
+  const alpha=evaluateSpecificationObservation(contextualCompilation.plan,{sourceId:"event-history",eventName:"event",payload:{alpha:"present"}}),beta=evaluateSpecificationObservation(contextualCompilation.plan,{sourceId:"event-history",eventName:"other_event",payload:{beta:"present"}});
+  eventTargetsIsolated&&=alpha.issueDetails.length===0&&beta.issueDetails.length===0;
 }
+
+assert.deepEqual({nestedRequiredConserved,eventTargetsIsolated},{nestedRequiredConserved:true,eventTargetsIsolated:true},"project-plan compilation conserves nested presence and event-specific target schemas");
 
 console.log("data-layer layered schema property tests passed");

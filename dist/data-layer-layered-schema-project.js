@@ -1,9 +1,11 @@
 import { canonicalConstraints } from "./data-layer-canonical-schema.js";
+import { compileLayeredSchema } from "./data-layer-layered-schema.js";
 import { orderedPageGroupIds } from "./data-layer-page-group-membership.js";
 import { transactProject } from "./data-layer-specification-project.js";
 const contributionFor = (entity, scope) => {
     const canonical = entity.canonicalSchema;
-    const base = canonical ? canonicalConstraints(canonical) : (entity.schemaConstraints ?? []), sparse = entity.localSchemaContributions ?? [];
+    const requirements = (entity.requirements ?? []).map((requirement) => ({ ...requirement, ...(requirement.required ? { presence: "required" } : requirement.forbidden ? { presence: "forbidden" } : {}) }));
+    const base = canonical ? canonicalConstraints(canonical) : (entity.schemaConstraints ?? requirements), sparse = entity.localSchemaContributions ?? [];
     return { id: entity.id, name: entity.name, scope, constraints: [...base, ...sparse] };
 };
 const referencedId = (entity, key) => typeof entity[key] === "string" ? String(entity[key]) : undefined;
@@ -55,6 +57,21 @@ export function layeredContributorsForPath(state, path, observation = {}) {
     const one = (entities, id, scope) => id ? entities.filter((entity) => entity.id === id).map((entity) => contributionFor(entity, scope)) : [];
     const groupIds = path.pageGroupIds ?? (path.pageGroupId ? [path.pageGroupId] : []), groups = groupIds.flatMap((groupId) => state.project.collections.pageGroups.filter(({ id }) => id === groupId).map((group) => { const contributor = contributionFor(group, "Page Group"), applicability = (state.project.collections.applicabilitySets ?? []).find(({ id }) => id === group.applicabilitySetId), conditional = Boolean(applicability), active = conditionMatches(applicability?.condition, observation); return { ...contributor, ...(conditional ? { active, applicabilityConditional: true, ...(!active ? { exclusionReason: `${applicability.name} did not match` } : {}) } : {}) }; }));
     return [...one(state.project.collections.profiles, path.profileId, "Shared Profile"), ...one(state.project.collections.events, path.eventId, "Event"), ...groups, ...one(state.project.collections.pages, path.pageId, "Page"), ...(pageFrame ? [contributionFor(pageFrame, "Flow Page-instance")] : []), ...(occurrence ? [contributionFor(occurrence, occurrence.freePageFrame ? "Flow Page-instance" : "Event-occurrence")] : [])];
+}
+export function assignmentContributorTargets(state) {
+    const collection = (entities, kind) => entities.map(({ id, name }) => ({ id, name, kind }));
+    const frames = Object.entries(state.project.documentationFlowGraphs ?? {}).flatMap(([flowId, graph]) => (graph.pageFrames ?? []).map(({ id, name }) => ({ id, name, kind: "Flow Page instance", flowId })));
+    return [...collection(state.project.collections.profiles, "Shared Profile"), ...collection(state.project.collections.pageGroups, "Page Group"), ...collection(state.project.collections.pages, "Page"), ...collection(state.project.collections.events, "Event"), ...frames];
+}
+export function compileAssignmentContributorTarget(state, assignment, context, observation = {}) {
+    const target = assignmentContributorTargets(state).find(({ id, kind }) => id === assignment.targetId && kind === assignment.targetKind);
+    if (!target)
+        throw new Error(`Assignment ${assignment.name} has an unavailable contributor target.`);
+    const source = target.kind === "Shared Profile" ? state.project.collections.profiles.find(({ id }) => id === target.id) : target.kind === "Page Group" ? state.project.collections.pageGroups.find(({ id }) => id === target.id) : target.kind === "Page" ? state.project.collections.pages.find(({ id }) => id === target.id) : target.kind === "Event" ? state.project.collections.events.find(({ id }) => id === target.id) : flowPageFrameContributor(state, target.flowId, target.id), scope = target.kind === "Flow Page instance" ? "Flow Page-instance" : target.kind;
+    if (!source)
+        throw new Error(`Contributor target ${target.id} is unavailable.`);
+    const path = layeredContributorPath(state, source, scope, target.flowId), contributors = layeredContributorsForPath(state, path, observation);
+    return { target, contributors, compiled: compileLayeredSchema(contributors, context) };
 }
 export function layeredContributionDetails(state, entity, scope, flowId) {
     return layeredContributorsForPath(state, layeredContributorPath(state, entity, scope, flowId)).flatMap((contributor) => contributor.constraints.map((constraint) => ({ contributorId: contributor.id, contributorName: contributor.name, scope: contributor.scope, path: constraint.path, target: constraint.target ?? "all", condition: constraint.condition ? JSON.stringify(constraint.condition) : "Always", enforcement: constraint.enforcement ?? "not set", usedById: entity.id, usedByName: entity.name, usedByScope: scope })));

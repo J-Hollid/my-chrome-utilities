@@ -12,7 +12,7 @@ export function runProductionFixture(plan, fixture) { const declared = fixture.o
     return { fixtureId: fixture.id, status: "blocked", compiledRevision: plan.revision, steps: [], blockers }; let instances = []; const steps = observations.map((observation, index) => { const actual = evaluateSpecificationObservation(plan, observation, instances); instances = actual.stateTransition?.instances ?? instances; const perStep = stepExpectations[index] ?? (index === observations.length - 1 ? expected : undefined), stepDifferences = differences(actual, perStep), capturedIdentity = fixture.evaluationResultIdentity; if (index === observations.length - 1 && capturedIdentity !== undefined && actual.resultIdentity !== capturedIdentity)
     stepDifferences.push(`resultIdentity: expected ${String(capturedIdentity)}, actual ${actual.resultIdentity}`); return { index, actual, ...(perStep ? { expected: perStep } : {}), differences: stepDifferences }; }); return { fixtureId: fixture.id, status: steps.some(({ differences }) => differences.length) ? "fail" : "pass", compiledRevision: plan.revision, steps }; }
 export function buildEffectiveRequirementCoverage(plan, evidence, range) { const all = []; for (const assignment of plan.assignments) {
-    const schema = plan.schemas[assignment.schemaDraftId], event = plan.events[assignment.eventId];
+    const schema = plan.schemas[assignment.targetId], event = plan.events[assignment.eventId];
     if (!schema || !event)
         continue;
     for (const flow of Object.values(plan.flows))

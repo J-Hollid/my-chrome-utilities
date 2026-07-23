@@ -20,7 +20,7 @@
 (defn- observe-browser! [] (or @browser-observation (let [result (checked! "node" "test/browser-packs/layered-schema.mjs") line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result)))) observed (:layeredSchema (json/parse-string line true))] (reset! browser-observation observed))))
 (def runtime-paths (set (concat [:installedBoundary :consequential :persistenceReload :sidePanelParity]
                                 (map #(keyword (str "authoring" (format "%03d" %))) (range 1 23))
-                                (map #(keyword (str "layering" (format "%03d" %))) (range 1 20)))))
+                                (map #(keyword (str "layering" (format "%03d" %))) (range 1 21)))))
 (def authoritative-examples
   (set (for [feature-file feature-files
              scenario (:scenarios (gherkin/parse-file feature-file))

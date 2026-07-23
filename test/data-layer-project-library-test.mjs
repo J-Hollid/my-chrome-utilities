@@ -47,6 +47,8 @@ assert.equal(migrated.activeProjectId,"project-retail");
 assert.deepEqual(migrated.projects["project-retail"].state,retail);
 assert.deepEqual(migrated.projects["project-retail"].navigation,legacyNavigation);
 assert.deepEqual(migrateSingletonProject(migrated,{state:trade,revision:7},clock),migrated,"singleton migration is idempotent");
+const legacyWithSchemaDraft=structuredClone(retail);legacyWithSchemaDraft.project.collections.schemaDrafts=[{id:"schema:purchase",name:"Purchase payload",version:4,workingDraft:{document:{type:"object",properties:{order_id:{type:"string"}}}},sourceLineage:{schemaId:"saved:purchase",revision:4}}];legacyWithSchemaDraft.project.collections.assignments=[{id:"assignment:purchase",name:"Retail Purchase",schemaDraftId:"schema:purchase",schemaId:"schema:purchase",schemaRevision:4,eventId:"event:project-retail",eventName:"purchase",sourceId:"event-history",target:"payload",priority:10}];legacyWithSchemaDraft.history.undo.push({label:"Legacy edit",project:structuredClone(legacyWithSchemaDraft.project)});const upgradedLegacy=migrateSingletonProject(undefined,{state:legacyWithSchemaDraft,revision:9},clock),upgradedRecord=upgradedLegacy.projects["project-retail"],upgradedAssignment=upgradedRecord.state.project.collections.assignments[0],upgradedProfile=upgradedRecord.state.project.collections.profiles.find(({id})=>id==="schema:purchase");
+assert.equal("schemaDrafts" in upgradedRecord.state.project.collections,false);assert.equal(upgradedProfile.name,"Purchase payload");assert.equal(upgradedProfile.canonicalSchema.contributorId,"schema:purchase");assert.deepEqual(upgradedProfile.sourceLineage,{schemaId:"saved:purchase",revision:4});assert.equal(upgradedAssignment.targetId,"schema:purchase");assert.equal(upgradedAssignment.targetKind,"Shared Profile");assert.equal("schemaDraftId" in upgradedAssignment,false);assert.equal("schemaId" in upgradedAssignment,false);assert.deepEqual(upgradedRecord.state.history,{undo:[],redo:[]});assert.equal(upgradedRecord.legacyMigrationBackup.checksum.length,8);assert.equal(JSON.parse(upgradedRecord.legacyMigrationBackup.bytes).project.collections.schemaDrafts[0].id,"schema:purchase");
 const newerRetail=structuredClone(retail);newerRetail.project.description="Newer canonical singleton";
 const reconciled=migrateSingletonProject(migrated,{state:newerRetail,revision:15},clock);
 assert.equal(reconciled.projects["project-retail"].revision,15);
@@ -57,7 +59,7 @@ assert.throws(()=>createProjectInLibrary(library,{name:" retail WEBSITE ",purpos
 const created=createProjectInLibrary(library,{name:"Agency platform",purpose:"Client implementation",website:"agency.example.com",owner:"Delivery team",notes:"Initial discovery"},{id:(kind)=>`${kind}:agency`,now:clock});
 assert.equal(created.activeProjectId,"project:agency");
 assert.equal(Object.keys(created.projects).length,3);
-assert.deepEqual(Object.values(created.projects["project:agency"].state.project.collections).map((entries)=>entries.length),[0,0,0,0,0,0,0,0,0]);
+assert.deepEqual(Object.values(created.projects["project:agency"].state.project.collections).map((entries)=>entries.length),[0,0,0,0,0,0,0,0]);
 assert.deepEqual(created.projects["project-retail"],library.projects["project-retail"]);
 
 const entityBytes=JSON.stringify(retail.project.collections),renamed=updateProjectMetadata(library,"project-retail",{name:"Retail data layer",purpose:"Retail contracts",website:"data.retail.example",owner:"Analytics",notes:"Owned"},clock);

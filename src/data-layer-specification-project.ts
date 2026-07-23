@@ -1,7 +1,8 @@
 import {canonicalConstraints,canonicalRequirements,canonicalSchemaWithConstraint,createCanonicalSchema,migrateLegacyProfile,type CanonicalMigrationPlan,type CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
 import {savedSchemaCanonicalDocument} from "./data-layer-saved-schema-canonical.js";
 
-export type ProjectEntityKind = "profiles" | "pages" | "pageGroups" | "events" | "applicabilitySets" | "flows" | "fixtures" | "schemaDrafts" | "assignments";
+export type ProjectEntityKind = "profiles" | "pages" | "pageGroups" | "events" | "applicabilitySets" | "flows" | "fixtures" | "assignments";
+export type AssignmentTargetKind = "Shared Profile" | "Page Group" | "Page" | "Event" | "Flow Page instance";
 export type IdFactory = (kind: string) => string;
 
 export interface Requirement { path: string; type?: string; required?: boolean; forbidden?: boolean; allowedValues?: readonly unknown[]; description?:string; examples?:readonly unknown[]; rules?:readonly Record<string,unknown>[]; introducedIn?:string; origin?: string; evaluationResultIdentity?:string; }
@@ -18,7 +19,8 @@ export interface SpecificationCollections {
   applicabilitySets: ProjectEntity[];
   flows: ProjectEntity[];
   fixtures: ProjectEntity[];
-  schemaDrafts: ProjectEntity[];
+  /** Legacy-only input. Current projects upgrade these records to Shared Profiles. */
+  schemaDrafts?: ProjectEntity[];
   assignments: ProjectEntity[];
 }
 export interface ProjectRelease extends ProjectEntity { revision: number; createdAt: string; snapshot: SpecificationCollections; }
@@ -48,7 +50,7 @@ export function createSpecificationProject(input: { name: string; description?: 
     environments:[...(input.environments ?? ["Production"])],
     namingConventions:{ property:"snake_case", event:"snake_case" },
     publicationPolicy:{ warningsBlock:false, fixturesRequired:true },
-    collections:{ profiles:[], pages:[], pageGroups:[], events:[], applicabilitySets:[], flows:[], fixtures:[], schemaDrafts:[], assignments:[] },
+    collections:{ profiles:[], pages:[], pageGroups:[], events:[], applicabilitySets:[], flows:[], fixtures:[], assignments:[] },
     releases:[],
   };
   return { project, draft:{ id:input.id("draft"), status:"Saved", updatedAt:now() }, history:{ undo:[], redo:[] } };
@@ -136,7 +138,7 @@ export function conditionMatches(condition: Condition, context: Record<string,un
 
 function lifecycleAssignments(project:SpecificationProject):ProjectEntity[]{
   if(project.collections.assignments.length)return project.collections.assignments;
-  const embedded=project.collections.schemaDrafts.flatMap((entry)=>{
+  const embedded=(project.collections.schemaDrafts??[]).flatMap((entry)=>{
     const schema=entry as unknown as SchemaDefinition;
     return [...(schema.workingDraft?.assignments??schema.assignments??[])].map((assignment)=>({...clone(assignment),id:assignment.id??`${schema.id}:${assignment.sourceId}:${assignment.eventName}:${assignment.target}`,name:assignment.name??assignment.eventName,schemaId:schema.id,...(assignment.schemaVersion!==undefined?{schemaRevision:assignment.schemaVersion}:{})}));
   });
@@ -184,7 +186,7 @@ export function commitBulkProperties(state:ProjectState,profileId:string,propert
 }
 export function applyBulkRequirement(state:ProjectState,profileId:string,paths:readonly string[],update:Partial<Requirement>):ProjectState{const profile=state.project.collections.profiles.find(({id})=>id===profileId);if(!profile?.canonicalSchema)throw new Error(`Profile ${profileId} has no canonical schema.`);let canonical=profile.canonicalSchema,sequence=0;const existing=new Map(canonicalConstraints(canonical).map((constraint)=>[constraint.path,constraint])),{required,...canonicalUpdate}=update;for(const path of paths){const prior=existing.get(path);if(!prior)throw new Error(`Canonical property ${path} is unavailable.`);canonical=canonicalSchemaWithConstraint(canonical,{...prior,...canonicalUpdate,...(required===undefined?{}:{presence:required?"required":"optional" as const}),path},(kind)=>`${kind}:${profile.id}:bulk-update:${++sequence}`);}return transactProject(state,`Update ${paths.length} canonical properties`,(project)=>({...project,collections:{...project.collections,profiles:project.collections.profiles.map((candidate)=>candidate.id===profileId?{...candidate,canonicalSchema:canonical,requirements:[]}:candidate)}}));}
 
-export function publishProjectRelease(state:ProjectState,options:{id:IdFactory;write:(project:SpecificationProject)=>void}):ProjectState {if(!state.draft)throw new Error("There is no project draft to publish.");const preflight=projectPreflight(state.project);if(preflight.blockers.length)throw new Error(`Project preflight has ${preflight.blockers.length} blockers.`);const publishedSchemas=state.project.collections.schemaDrafts.map((entry)=>{const schema=entry as unknown as SchemaDefinition;return (schema.workingDraft?publishSchemaWorkingDraft(schema):schema) as unknown as ProjectEntity;}),collections={...state.project.collections,schemaDrafts:publishedSchemas};const revision=Math.max(0,...state.project.releases.map((release)=>release.revision))+1,release:ProjectRelease={id:options.id("release"),name:`Release ${revision}`,revision,createdAt:now(),snapshot:clone(collections)};const project={...state.project,collections,releases:[...state.project.releases,release],currentRelease:release.id};options.write(project);return{project,history:{undo:[],redo:[]}};}
+export function publishProjectRelease(state:ProjectState,options:{id:IdFactory;write:(project:SpecificationProject)=>void}):ProjectState {if(!state.draft)throw new Error("There is no project draft to publish.");const preflight=projectPreflight(state.project);if(preflight.blockers.length)throw new Error(`Project preflight has ${preflight.blockers.length} blockers.`);const{schemaDrafts:_legacySchemaDrafts,...collections}=clone(state.project.collections),revision=Math.max(0,...state.project.releases.map((release)=>release.revision))+1,release:ProjectRelease={id:options.id("release"),name:`Release ${revision}`,revision,createdAt:now(),snapshot:clone(collections)};const project={...state.project,collections,releases:[...state.project.releases,release],currentRelease:release.id};options.write(project);return{project,history:{undo:[],redo:[]}};}
 
 export function exportSpecificationProject(project:SpecificationProject):string{return JSON.stringify({format:"my-chrome-utilities.specification-project",version:1,project});}
 export function importSpecificationProject(serialized:string,options:{existingProjects:readonly SpecificationProject[];id:IdFactory}):{project:SpecificationProject;collisions:string[]}{const parsed=JSON.parse(serialized) as {format?:string;version?:number;project?:SpecificationProject};if(parsed.format!=="my-chrome-utilities.specification-project"||parsed.version!==1||!parsed.project)throw new Error("Unsupported Specification Project format.");const collisions=options.existingProjects.some(({id})=>id===parsed.project!.id)?[parsed.project.id]:[];return{project:clone(parsed.project),collisions};}
@@ -193,11 +195,8 @@ export function migrateLegacyLibrary(legacy:{schemas?:readonly Record<string,unk
 
 export interface ProjectSchemaDraftInput { schemaId?:string;name:string;baseRevision:number;description:string; }
 export function createProjectSchemaDraft(state:ProjectState,input:ProjectSchemaDraftInput,id:IdFactory):ProjectState{
-  return transactProject(state,`Create ${input.name} schema draft`,(project)=>{
-    const schemaId=input.schemaId?.trim()||id("schema");if(project.collections.schemaDrafts.some(({id})=>id===schemaId))throw new Error(`Schema ${schemaId} already exists.`);
-    const published={...createSchema(input.name,input.baseRevision,{type:"object",properties:{}}),id:schemaId,published:true,documentation:{description:input.description}};
-    const schema=createSchemaWorkingDraft(published);
-    return{...project,collections:{...project.collections,schemaDrafts:[...project.collections.schemaDrafts,schema as unknown as ProjectEntity]}};
+  return transactProject(state,`Create ${input.name} Shared Profile`,(project)=>{
+    const profileId=input.schemaId?.trim()||id("profile");if(project.collections.profiles.some(({id})=>id===profileId))throw new Error(`Shared Profile ${profileId} already exists.`);const profile:Profile={id:profileId,name:input.name,requirements:[],description:input.description,canonicalSchema:createCanonicalSchema({id:id("canonical-schema"),contributorId:profileId,contributorName:input.name})};return{...project,collections:{...project.collections,profiles:[...project.collections.profiles,profile]}};
   });
 }
 
@@ -211,7 +210,7 @@ function synchronizeDocument(base:unknown,current:unknown,next:unknown):unknown{
 export function adoptSavedSchema(state:ProjectState,source:SavedSchemaSource):ProjectState{
   if(!source.published)throw new Error("Only a published saved schema can be adopted.");
   return transactProject(state,`Adopt saved schema ${source.name}`,(project)=>{
-    if(project.collections.schemaDrafts.some(({id})=>id===source.id)||project.collections.profiles.some(({sourceIdentity})=>sourceIdentity===source.id))throw new Error(`Saved schema ${source.name} is already adopted.`);
+    if(project.collections.profiles.some(({sourceIdentity})=>sourceIdentity===source.id))throw new Error(`Saved schema ${source.name} is already adopted.`);
     let canonicalSequence=0;const profileId=`profile:${source.id}`,canonicalSchema=savedSchemaCanonicalDocument({id:source.id,name:source.name,version:source.version,document:clone(source.document),attachedRules:clone(source.rules??[]),...(source.documentation===undefined?{}:{documentation:clone(source.documentation) as NonNullable<SchemaDefinition["documentation"]>})},(kind)=>`${profileId}:${kind}:${++canonicalSequence}`,{id:`canonical:${source.id}`,contributorId:profileId,contributorName:source.name});canonicalSchema.sourceContent={...canonicalSchema.sourceContent!,document:clone(source.document),rules:clone(source.rules??[]) as unknown as readonly Record<string,unknown>[],documentation:clone(source.documentation??""),examples:clone(source.examples??[])};
     const profile:Profile={id:profileId,name:source.name,requirements:[],canonicalSchema,sourceIdentity:source.id,sourceRevision:source.version,adoptionProvenance:{kind:"saved-schema-library",schemaId:source.id,revision:source.version}};
     return{...project,collections:{...project.collections,profiles:[...project.collections.profiles,profile]}};
@@ -219,7 +218,7 @@ export function adoptSavedSchema(state:ProjectState,source:SavedSchemaSource):Pr
 }
 
 export function stageSavedSchemaSynchronization(state:ProjectState,source:SavedSchemaSource):SavedSchemaSynchronizationReview{
-  const adopted=state.project.collections.schemaDrafts.find(({id})=>id===source.id),lineage=adopted?.sourceLineage as {librarySchemaId?:string;synchronizedRevision?:number}|undefined;
+  const adopted=state.project.collections.profiles.find(({sourceIdentity})=>sourceIdentity===source.id),lineage=adopted?.sourceLineage as {librarySchemaId?:string;synchronizedRevision?:number}|undefined;
   if(!adopted||lineage?.librarySchemaId!==source.id)throw new Error(`Saved schema ${source.name} has not been adopted.`);
   const fromRevision=Number(lineage.synchronizedRevision),base=adopted.sourceDocument,current=(adopted.workingDraft as {document?:unknown}|undefined)?.document??adopted.document;
   if(source.version<=fromRevision)throw new Error(`Saved schema ${source.name} has no newer revision.`);
@@ -229,12 +228,12 @@ export function stageSavedSchemaSynchronization(state:ProjectState,source:SavedS
 
 export function commitSavedSchemaSynchronization(state:ProjectState,review:SavedSchemaSynchronizationReview):ProjectState{
   return transactProject(state,`Synchronize saved schema ${review.schemaId} to revision ${review.toRevision}`,(project)=>{
-    const adopted=project.collections.schemaDrafts.find(({id})=>id===review.schemaId),lineage=adopted?.sourceLineage as {synchronizedRevision?:number}|undefined;
+    const adopted=project.collections.profiles.find(({sourceIdentity})=>sourceIdentity===review.schemaId),lineage=adopted?.sourceLineage as {synchronizedRevision?:number}|undefined;
     if(!adopted||lineage?.synchronizedRevision!==review.fromRevision)throw new Error("Saved-schema synchronization review is stale.");
     const working=adopted.workingDraft as Record<string,unknown>,document=synchronizeDocument(adopted.sourceDocument,working?.document??adopted.document,review.source.document);
-    const schemaDrafts=project.collections.schemaDrafts.map((schema)=>schema.id===review.schemaId?{...schema,sourceDocument:clone(review.source.document),sourceLineage:{...(schema.sourceLineage as Record<string,unknown>),synchronizedRevision:review.toRevision},workingDraft:{...working,document,pendingChanges:[...((working.pendingChanges as string[]|undefined)??[]),`Synchronized saved schema revision ${review.toRevision}`]}}:schema);
+    const profiles=project.collections.profiles.map((schema)=>schema===adopted?{...schema,sourceDocument:clone(review.source.document),sourceLineage:{...(schema.sourceLineage as Record<string,unknown>),synchronizedRevision:review.toRevision},workingDraft:{...working,document,pendingChanges:[...((working.pendingChanges as string[]|undefined)??[]),`Synchronized saved schema revision ${review.toRevision}`]}}:schema);
     const fixtures=project.collections.fixtures.map((fixture)=>JSON.stringify(fixture).includes(review.schemaId)?{...fixture,evidenceStatus:"stale",staleReason:`Schema ${review.schemaId} synchronized to revision ${review.toRevision}`}:fixture);
-    return{...project,collections:{...project.collections,schemaDrafts,fixtures}};
+    return{...project,collections:{...project.collections,profiles,fixtures}};
   });
 }
 
@@ -251,7 +250,7 @@ function assertedEvaluation(input:{schemaId:string;evaluated:CapturedValidationR
   return{status:input.evaluated.issueDetails.length?"fail":"pass",issueCodes};
 }
 export function createFixtureFromCapturedValidation(state:ProjectState,input:CapturedValidationContinuation,id:IdFactory):ProjectState{
-  if(!state.project.collections.schemaDrafts.some(({id:schemaId})=>schemaId===input.schemaId))throw new Error(`Adopt schema ${input.schemaId} before creating its captured Fixture.`);
+  if(!state.project.collections.profiles.some(({id})=>id===input.schemaId||id===input.profileId))throw new Error(`Select a canonical contributor before creating its captured Fixture.`);
   const expected=assertedEvaluation(input),fixture={id:id("fixture"),name:input.name,mode:"event",schemaId:input.schemaId,...(input.eventId?{eventId:input.eventId}:{}),...(input.pageId?{pageId:input.pageId}:{}),...(input.flowStepId?{flowStepId:input.flowStepId}:{}),...(input.profileId?{profileIds:[input.profileId]}:{}),observations:[{sourceId:input.sourceId,eventName:input.eventName,payload:clone(input.payload)}],expected,assertions:[{field:"status",equals:expected.status},{field:"issueCodes",equals:clone(expected.issueCodes)}],evaluationResultIdentity:input.evaluated.resultIdentity,provenance:{kind:"captured-validation",captureId:input.captureId},releasePolicy:"required",evidenceStatus:"current"};
   return transactProject(state,`Create Fixture from capture ${input.captureId}`,(project)=>({...project,collections:{...project.collections,fixtures:[...project.collections.fixtures,fixture]}}));
 }
@@ -266,7 +265,7 @@ function requirementsFromSchema(document:Record<string,unknown>,prefix=""):Requi
 }
 export function capturedValidationProfileRequirements(project:SpecificationProject,input:{captureId:string;schemaId:string;evaluated:CapturedValidationResult}):Requirement[]{
   assertedEvaluation(input);
-  const schema=project.collections.schemaDrafts.find(({id})=>id===input.schemaId);if(!schema)throw new Error(`Adopt schema ${input.schemaId} before creating Profile requirements.`);
+  const schema=project.collections.profiles.find(({id})=>id===input.schemaId);if(!schema)throw new Error(`Select contributor ${input.schemaId} before creating Profile requirements.`);
   const working=schema.workingDraft as {document?:Record<string,unknown>;profileIds?:string[]}|undefined,profileIds=working?.profileIds??schema.profileIds as string[]|undefined,profiles=(profileIds??[]).map((profileId)=>project.collections.profiles.find(({id})=>id===profileId)).filter((profile):profile is Profile=>Boolean(profile)),document=working?.document??schema.document as Record<string,unknown>|undefined;
   if(!profiles.length&&!document)throw new Error(`Schema ${input.schemaId} has no evaluated document.`);
   const requirements=profiles.length?composeRequirementProfiles(profiles).requirements:requirementsFromSchema(document!);
@@ -278,16 +277,16 @@ export function applyCapturedValidationToProfile(state:ProjectState,input:{captu
   let canonical=profile.canonicalSchema??createCanonicalSchema({id:`canonical:${profile.id}`,contributorId:profile.id,contributorName:profile.name}),sequence=0;for(const requirement of proposed)canonical=canonicalSchemaWithConstraint(canonical,requirement,(kind)=>`${kind}:${profile.id}:capture:${++sequence}`);return transactProject(state,`Add evaluated capture ${input.captureId} canonical properties to ${profile.name}`,(project)=>({...project,collections:{...project.collections,profiles:project.collections.profiles.map((candidate)=>candidate.id!==profile.id?candidate:{...candidate,canonicalSchema:canonical,requirements:[]})}}));
 }
 
-export interface ProjectAssignmentInput extends Omit<ProjectEntity,"id"> { id?:string;name:string;schemaId:string;eventId?:string;eventName:string;applicabilitySetId?:string;sourceId:string;target:string;priority:number;versionPolicy:"pinned"|"follow latest";schemaRevision?:number;condition?:Condition; }
+export interface ProjectAssignmentInput extends Omit<ProjectEntity,"id"> { id?:string;name:string;targetId:string;targetKind:AssignmentTargetKind;eventId?:string;eventName:string;applicabilitySetId?:string;sourceId:string;target:string;priority:number;condition?:Condition; }
 function canonicalAssignmentCondition(project:SpecificationProject,condition:Condition|undefined):Condition|undefined{if(!condition)return undefined;if(condition.kind!=="predicate")return{...condition,conditions:condition.conditions.map((child)=>canonicalAssignmentCondition(project,child)!)};if(condition.field!=="flowId"||typeof condition.value!=="string")return clone(condition);const normalized=condition.value.trim().toLowerCase(),flow=project.collections.flows.find((candidate)=>candidate.id===condition.value||candidate.name.trim().toLowerCase()===normalized);return{...condition,...(flow?{value:flow.id}:{})};}
+function assignmentTarget(project:SpecificationProject,kind:AssignmentTargetKind,identity:string):ProjectEntity|undefined{if(kind==="Shared Profile")return project.collections.profiles.find(({id})=>id===identity);if(kind==="Page Group")return project.collections.pageGroups.find(({id})=>id===identity);if(kind==="Page")return project.collections.pages.find(({id})=>id===identity);if(kind==="Event")return project.collections.events.find(({id})=>id===identity);return Object.values(project.documentationFlowGraphs??{}).flatMap((graph)=>((graph as {pageFrames?:ProjectEntity[]}).pageFrames??[])).find(({id})=>id===identity);}
 export function saveProjectAssignment(state:ProjectState,input:ProjectAssignmentInput,id:IdFactory):ProjectState{
-  if(!input.schemaId.trim()||!input.eventName.trim()||!input.sourceId.trim()||!input.target.trim())throw new Error("Assignment routing fields must not be blank.");
-  if(input.versionPolicy==="pinned"&&!Number.isInteger(input.schemaRevision))throw new Error("Pinned assignments require a real schema revision.");
-  const schemaEntry=state.project.collections.schemaDrafts.find(({id:schemaId})=>schemaId===input.schemaId);if(!schemaEntry)throw new Error(`Schema ${input.schemaId} does not have a project working draft.`);const existing=input.id?state.project.collections.assignments.find((assignment)=>assignment.id===input.id):undefined,identity=existing?.id??id("assignment"),generatedApplicabilityId=input.applicabilitySetId??String(existing?.applicabilitySetId??id("applicability")),resolvedEventId=input.eventId??String(existing?.eventId??state.project.collections.events.find((event)=>event.eventName===input.eventName&&event.sourceId===input.sourceId)?.id??"");
-  const {condition:rawCondition,...compatible}=clone(input),condition=canonicalAssignmentCondition(state.project,rawCondition),saved:ProjectEntity={...existing,...compatible,id:identity,schemaDraftId:input.schemaId,schemaId:input.schemaId,eventId:resolvedEventId,applicabilitySetId:generatedApplicabilityId,...(input.versionPolicy==="pinned"?{schemaRevision:input.schemaRevision}:{schemaRevision:Number(schemaEntry.version??1)})};delete saved.condition;
-  return transactProject(state,`${existing?"Update":"Create"} assignment ${input.name}`,(project)=>{const applicabilitySets=condition?(project.collections.applicabilitySets.some(({id:applicabilityId})=>applicabilityId===generatedApplicabilityId)?project.collections.applicabilitySets.map((entry)=>entry.id===generatedApplicabilityId?{...entry,condition:clone(condition)}:entry):[...project.collections.applicabilitySets,{id:generatedApplicabilityId,name:`${input.name} applicability`,priority:input.priority,condition:clone(condition)}]):project.collections.applicabilitySets;if(!applicabilitySets.some(({id:applicabilityId})=>applicabilityId===generatedApplicabilityId))throw new Error(`Applicability Set ${generatedApplicabilityId} does not exist.`);return{...project,collections:{...project.collections,applicabilitySets,assignments:existing?project.collections.assignments.map((assignment)=>assignment.id===identity?saved:assignment):[...project.collections.assignments,saved]}};});
+  if(!input.targetId.trim()||!input.eventName.trim()||!input.sourceId.trim()||!input.target.trim())throw new Error("Assignment routing fields must not be blank.");if(!assignmentTarget(state.project,input.targetKind,input.targetId))throw new Error(`${input.targetKind} ${input.targetId} is unavailable.`);
+  const existing=input.id?state.project.collections.assignments.find((assignment)=>assignment.id===input.id):undefined,identity=existing?.id??id("assignment"),generatedApplicabilityId=input.applicabilitySetId??String(existing?.applicabilitySetId??id("applicability")),resolvedEventId=input.eventId??String(existing?.eventId??state.project.collections.events.find((event)=>event.eventName===input.eventName&&event.sourceId===input.sourceId)?.id??"");
+  const {condition:rawCondition,...compatible}=clone(input),condition=canonicalAssignmentCondition(state.project,rawCondition),saved:ProjectEntity={...existing,...compatible,id:identity,eventId:resolvedEventId,applicabilitySetId:generatedApplicabilityId};delete saved.condition;delete saved.schemaDraftId;delete saved.schemaId;delete saved.schemaRevision;delete saved.schemaDocument;delete saved.compiledSchema;
+  return transactProject(state,`${existing?"Update":"Create"} assignment ${input.name}`,(project)=>{const defaultCondition:Condition={kind:"all",conditions:[]},applicabilitySets=project.collections.applicabilitySets.some(({id:applicabilityId})=>applicabilityId===generatedApplicabilityId)?project.collections.applicabilitySets.map((entry)=>entry.id===generatedApplicabilityId&&condition?{...entry,condition:clone(condition)}:entry):[...project.collections.applicabilitySets,{id:generatedApplicabilityId,name:`${input.name} applicability`,priority:input.priority,condition:clone(condition??defaultCondition)}];return{...project,collections:{...project.collections,applicabilitySets,assignments:existing?project.collections.assignments.map((assignment)=>assignment.id===identity?saved:assignment):[...project.collections.assignments,saved]}};});
 }
-export function searchProjectAssignments(project:SpecificationProject,query:string):{rows:ProjectEntity[];count:number;empty:boolean;conflicts:{ids:string[];message:string}[]}{const normalized=query.trim().toLowerCase(),rows=lifecycleAssignments(project).filter((assignment)=>(assignment.schemaDraftId??assignment.schemaId)&&assignment.eventName&&assignment.sourceId&&assignment.target&&(!normalized||JSON.stringify(assignment).toLowerCase().includes(normalized))),conflicts:{ids:string[];message:string}[]=[];for(let left=0;left<rows.length;left+=1)for(let right=left+1;right<rows.length;right+=1){const a=rows[left]!,b=rows[right]!;if(a.eventId===b.eventId&&Number(a.priority)===Number(b.priority)){const applicability=(assignment:ProjectEntity)=>project.collections.applicabilitySets.find(({id})=>id===assignment.applicabilitySetId)?.condition as Condition|undefined;if(!conditionsProvablyExclusive(applicability(a),applicability(b)))conflicts.push({ids:[a.id,b.id],message:`${a.name} and ${b.name} are equal-priority candidates`});}}return{rows,count:rows.length,empty:rows.length===0,conflicts};}
+export function searchProjectAssignments(project:SpecificationProject,query:string):{rows:ProjectEntity[];count:number;empty:boolean;conflicts:{ids:string[];message:string}[]}{const normalized=query.trim().toLowerCase(),rows=lifecycleAssignments(project).filter((assignment)=>assignment.targetId&&assignment.targetKind&&assignment.eventName&&assignment.sourceId&&assignment.target&&(!normalized||JSON.stringify(assignment).toLowerCase().includes(normalized))),conflicts:{ids:string[];message:string}[]=[];for(let left=0;left<rows.length;left+=1)for(let right=left+1;right<rows.length;right+=1){const a=rows[left]!,b=rows[right]!;if(a.eventId===b.eventId&&Number(a.priority)===Number(b.priority)){const applicability=(assignment:ProjectEntity)=>project.collections.applicabilitySets.find(({id})=>id===assignment.applicabilitySetId)?.condition as Condition|undefined;if(!conditionsProvablyExclusive(applicability(a),applicability(b)))conflicts.push({ids:[a.id,b.id],message:`${a.name} and ${b.name} are equal-priority candidates`});}}return{rows,count:rows.length,empty:rows.length===0,conflicts};}
 
 export interface FlowStepInput extends Omit<ProjectEntity,"id"> { pageId?:string;eventId?:string;minimum:number;maximum:number;optional:boolean;branch?:string;transition?:{from:string;to:string}; }
 export function addFlowStep(state:ProjectState,flowId:string,input:FlowStepInput,id:IdFactory):ProjectState{if(input.minimum<0||input.maximum<input.minimum)throw new Error("Flow occurrence bounds are invalid.");const normalized={...clone(input),...(input.pageId?{pageId:input.pageId}:{}),...(input.eventId?{eventId:input.eventId}:{})};if(!input.pageId)delete normalized.pageId;if(!input.eventId)delete normalized.eventId;return transactProject(state,`Add ${input.name} flow step`,(project)=>({...project,collections:{...project.collections,flows:project.collections.flows.map((flow)=>flow.id===flowId?{...flow,steps:[...((flow.steps as ProjectEntity[]|undefined)??[]),{...normalized,id:id("flow-step")}] }:flow)}}));}
