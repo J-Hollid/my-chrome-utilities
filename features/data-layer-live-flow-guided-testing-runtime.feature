@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=49d7a88f604cca378a42bc7413acdb1f1c59537bb64b1e95b66ef1d712097dec
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-23T13:54:58.710823649Z","feature_name":"Data layer Live Flow guided testing runtime","feature_path":"features/data-layer-live-flow-guided-testing-runtime.feature","background_hash":"a452240cf847c6e9ac91c2cbbeea27d72aad80605488cd361dcbd72a1893da92","implementation_hash":"sha256:fac4d2ff182b6cf88f9a952973c8be8797287738218e7653ad0dbbbe7cf91c5c","scenarios":[{"index":3,"name":"Data layer Live Flow guided testing runtime 004","scenario_hash":"f85cc6189fd381192924af6ddb7aee0a9ab0968566ac834cd865a03196462071","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-23T13:54:58.710823649Z"},{"index":4,"name":"Data layer Live Flow guided testing runtime 005","scenario_hash":"34adad433225544964928f9f7c37dc52111f51522f94389a88d6931d8c5e8558","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-23T13:54:58.710823649Z"},{"index":5,"name":"Data layer Live Flow guided testing runtime 006","scenario_hash":"2987df31fb141a328c5b563e644031bc980e8a514bd303af5d0ada0bfb8cce1f","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-23T13:54:58.710823649Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer Live Flow guided testing runtime
 
   Background:
@@ -108,15 +103,25 @@ Feature: Data layer Live Flow guided testing runtime
     Then every installed choice references an outgoing Payment relationship and none references Cart
 
   # Data layer Live Flow guided testing runtime 008
-  Scenario: Data layer Live Flow guided testing runtime 008
-    Given production live-102 is linked to Payment add_payment_info occurrence
-    And its captured payload fails the occurrence effective schema
-    When actual controls open live-102 event details
-    Then the installed ordinary validation presentation highlights every property issue
-    And the production defect report builder contains payload, issues, target revision, and provenance
-    And report state adds Checkout journey, Payment add_payment_info, and the linked path
+  Scenario Outline: Data layer Live Flow guided testing runtime 008
+    Given production pageview event live-102 is linked to Payment frame by <link_evidence>
+    And captured /oForm/formStepName is "review" while Payment effective schema requires "payment"
+    When the installed validation issue action opens its defect report
+    Then the installed heading is "Defect report: Checkout journey · Payment · pageview"
+    And issue controls render actual "review", expected "payment", and EXPECTED_VALUE as distinct evidence
+    And expected-result controls render "Use Payment Flow-step expectation" with the effective schema revision
+    And rendered issue and assistance labels contain neither generic constraint nor manually selected Flow step
+    And the production builder retains ordinary payload, issue-selection, section, and action controls
+    And report state contains stable Checkout journey, Payment, and live-102 IDs, their link, <displayed_link_evidence>, effective target, revision, and contributor provenance
+    And persisted and clipboard representations contain an immutable snapshot of that Flow evidence
+    And generated report meaning is the observed pageview failing Payment rather than a defective or failed Checkout journey
     And production save and clipboard adapters are the same ones used by automatic-validation reports
     And failed validation leaves the linked path and outgoing Flow-step controls unchanged
+
+    Examples:
+      | link_evidence                | displayed_link_evidence |
+      | relationship Cart to Payment | path Cart to Payment     |
+      | initial selection at Payment | Started at Payment       |
 
   # Data layer Live Flow guided testing runtime 009
   Scenario: Data layer Live Flow guided testing runtime 009

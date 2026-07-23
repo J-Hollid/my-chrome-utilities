@@ -113,9 +113,29 @@ from the current step.
 ## Defects and session evidence
 
 The existing defect report builder, persistence, and clipboard paths remain
-authoritative. A report contains the same observed payload, property issues,
-effective target, revision, and provenance as ordinary automatic validation, plus
-the selected Flow, linked graph step, and path evidence.
+authoritative. Opening it from a Flow-linked validation issue identifies the
+selected Flow, linked graph step, and observed event in its heading. It retains the
+ordinary payload, issue-selection, report-section, and action controls.
+
+Each selected issue distinguishes the observed value from the expected value and
+identifies the violated rule. Expected-result assistance names the linked Flow-step
+expectation and its effective schema revision. It does not call that expectation a
+generic constraint or describe its provenance as a manually selected Flow step;
+manual linking explains how the operator selected the validation target, not where
+the constraint originated.
+
+Report evidence snapshots the stable Flow, graph-step, and observed-event
+identities; their event-to-step association; the effective target, revision, and
+contributor provenance; and either the traversed relationship path or the Page
+frame where testing started. Persistence and clipboard representations retain this
+evidence so that the defect remains understandable after the Live session or Flow
+definition changes.
+
+The report describes an observed implementation event that does not satisfy the
+linked Flow-step expectation. It does not characterize the Flow definition itself
+as defective and does not claim that the selected Flow failed or executed. Saving,
+copying, duplicate handling, and defect-library behavior remain the same as for
+automatic-schema validation.
 
 The Live session retains selected Flow context, current traversal position,
 event-to-step links, traversed relationships, effective revisions, validation
@@ -146,7 +166,7 @@ tested, but no output says Flow passed or claims the Flow executed.
 | L05 | Live Flow guided testing 005 | Page and occurrence compiler inputs plus stable target IDs | each graph-step kind uses its live effective schema |
 | L06 | Live Flow guided testing 006 | earlier and later feed-event selection with unchanged feed state | capture chronology never restricts the operator |
 | L07 | Live Flow guided testing 007 | recorded link display and unchanged traversal cursor | reviewing an older linked event does not rewind the path |
-| L08 | Live Flow guided testing 008 | ordinary issue UI and standard defect adapters with Flow context | failures use the established validation and defect workflow |
+| L08 | Live Flow guided testing 008 | Flow-aware heading, distinct actual and expected evidence, Flow-step assistance, durable report snapshot, and standard defect adapters | an observed-event failure produces a self-contained Flow-aware defect without a Flow execution or definition-failure claim |
 | L09 | Live Flow guided testing 009 | restored feed/detail evidence and domain hashes | saved sessions restore links without an execution claim |
 
 ## Terminal acceptance
@@ -163,10 +183,11 @@ The pack registers both contracts plus focused production evidence for
 active-project Flow context in the existing feed, root-first start selection,
 Page-frame and Event-occurrence effective-schema resolution, relationship-guided
 detail selections, chronology-independent operator event choice, recorded-link
-review without cursor changes, ordinary validation and defect integration, saved
-session restoration, assignment bypass, and domain immutability. It declares its
-active Flow graph and layered-schema dependencies in the pack registry rather than
-invoking additional commands.
+review without cursor changes, Flow-aware defect headings and evidence snapshots,
+distinct actual and expected issue presentation, ordinary validation and defect
+adapters, saved session restoration, assignment bypass, and domain immutability.
+It declares its active Flow graph and layered-schema dependencies in the pack
+registry rather than invoking additional commands.
 
 Production implementation, browser-runtime evidence, and property evidence form
 one candidate lineage before terminal integration. Property coverage must exercise

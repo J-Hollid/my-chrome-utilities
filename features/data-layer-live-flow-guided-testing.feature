@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=214641fbd6f5a18fc548c77012905a05f53bab435639b808d716e6e7f482fbb7
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-23T13:54:25.473238528Z","feature_name":"Data layer Live Flow guided testing","feature_path":"features/data-layer-live-flow-guided-testing.feature","background_hash":"5609233c5b54974dfd9370699b10d9d794cb8ba25a6668d48f61f22b990d761f","implementation_hash":"sha256:fd6e61db293d66b1d08d1116893eb092ecc143dc4154691854ed963940b26c32","scenarios":[{"index":3,"name":"Data layer Live Flow guided testing 004","scenario_hash":"08e09970925aac94bd9d6482e785383e4eb86189038ff2fd1fb09643a8d64ecf","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-23T13:54:25.473238528Z"},{"index":4,"name":"Data layer Live Flow guided testing 005","scenario_hash":"e98683e708cbcfd2c047c4358e129d5b4816faf97f8cf1f456378e38d27e19b4","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-23T13:54:25.473238528Z"},{"index":5,"name":"Data layer Live Flow guided testing 006","scenario_hash":"c303f5b1b7c31f911e31fa2b14c2de18cd6dedf302c87eb213f7342a7f0afce2","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-23T13:54:25.473238528Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer Live Flow guided testing
 
   Background:
@@ -109,15 +104,25 @@ Feature: Data layer Live Flow guided testing
     Then its available Flow step identities equal Payment outgoing relationship targets rather than Cart targets
 
   # Data layer Live Flow guided testing 008
-  Scenario: Data layer Live Flow guided testing 008
-    Given live-102 is linked to Payment add_payment_info occurrence
-    And its observed payload fails the occurrence effective schema
-    When the operator reviews live-102 event details
-    Then the usual validation presentation highlights every property issue
-    And the usual defect report builder contains the observed payload, issues, effective target, revision, and provenance
-    And Flow-test context adds Checkout journey, Payment add_payment_info, and the linked path
+  Scenario Outline: Data layer Live Flow guided testing 008
+    Given observed pageview event live-102 is linked to Payment Page frame by <link_evidence>
+    And its observed /oForm/formStepName is "review" while the effective Flow-step expectation is "payment"
+    When the operator opens a defect report from that validation issue
+    Then the heading is "Defect report: Checkout journey · Payment · pageview"
+    And the issue presents observed "review" separately from expected "payment" with rule EXPECTED_VALUE
+    And expected-result assistance reads "Use Payment Flow-step expectation" and identifies its effective schema revision
+    And no issue or assistance label describes the Flow-step expectation as generic or manually selected
+    And the usual builder retains its observed payload, issue selection, report sections, and actions
+    And report evidence contains stable Checkout journey, Payment, and live-102 identities, their event-to-step link, <displayed_link_evidence>, effective target, revision, and contributor provenance
+    And saved and copied representations retain that Flow evidence as a snapshot
+    And the report describes pageview failing the linked Payment expectation without calling the Flow definition defective or claiming that Checkout journey failed or executed
     And saving or copying the report behaves the same as for automatic schema validation
     And the failed validation neither changes the linked path nor blocks valid outgoing Flow-step choices
+
+    Examples:
+      | link_evidence                | displayed_link_evidence |
+      | relationship Cart to Payment | path Cart to Payment     |
+      | initial selection at Payment | Started at Payment       |
 
   # Data layer Live Flow guided testing 009
   Scenario: Data layer Live Flow guided testing 009
