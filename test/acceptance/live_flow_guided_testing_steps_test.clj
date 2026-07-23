@@ -23,18 +23,43 @@
    {"capture_order" "after"}])
 
 (deftest validates-every-live-flow-outline-value
-  (testing "both contracts accept every specified row"
-    (doseq [mode [:model :runtime]
-            row authoritative-rows]
-      (is (= row (live-flow/validate-example! mode row)))))
+  (testing "each specified row requires matching fixture evidence"
+    (let [observation {:outlineRows authoritative-rows}]
+      (doseq [row authoritative-rows]
+        (is (= row (live-flow/validate-observed-example! row observation)))))
+    (is (thrown? Exception
+                 (live-flow/validate-observed-example!
+                  (first authoritative-rows)
+                  {:outlineRows (rest authoritative-rows)})))
+    (is (thrown? Exception
+                 (live-flow/validate-observed-example!
+                  (first authoritative-rows)
+                  {}))))
   (testing "changing any one of the 18 outline values is rejected"
     (let [mutants (for [row authoritative-rows
                         key (keys row)]
                     (update row key str " mutated"))]
       (is (= 18 (count mutants)))
-      (doseq [mode [:model :runtime]
-              mutant mutants]
+      (doseq [mutant mutants]
         (is (thrown? Exception
-                     (live-flow/validate-example! mode mutant))))))
+                     (live-flow/validate-observed-example!
+                      mutant
+                      {:outlineRows authoritative-rows}))))))
   (testing "scenarios without outline parameters remain valid"
-    (is (= {} (live-flow/validate-example! :model {})))))
+    (is (= {} (live-flow/validate-observed-example! {} {:outlineRows []})))))
+
+(deftest selects-observed-rows-by-contract-mode
+  (let [model-row (first authoritative-rows)
+        runtime-row (second authoritative-rows)]
+    (reset! live-flow/model-observation {:outlineRows [model-row]})
+    (reset! live-flow/browser-observation {:outlineRows [runtime-row]})
+    (try
+      (is (= model-row (live-flow/validate-example! :model model-row)))
+      (is (= runtime-row (live-flow/validate-example! :runtime runtime-row)))
+      (is (thrown? Exception
+                   (live-flow/validate-example! :model runtime-row)))
+      (is (thrown? Exception
+                   (live-flow/validate-example! :runtime model-row)))
+      (finally
+        (reset! live-flow/model-observation nil)
+        (reset! live-flow/browser-observation nil)))))

@@ -50,6 +50,43 @@ const events=[
 ];
 const session=JSON.stringify({session:{id:"session:flow",status:"active",freshBoundary:true,tabId:7,windowId:1,historyPath:"dataLayer",startUrl:"https://shop.test/cart",currentUrl:"https://shop.test/confirmation",timeline:events}});
 const preload=`window.__flowErrors=[];addEventListener('error',event=>window.__flowErrors.push(event.message));addEventListener('unhandledrejection',event=>window.__flowErrors.push(String(event.reason)));localStorage.setItem('my-chrome-utilities.specification-project-library.v1',${JSON.stringify(library)});localStorage.setItem('dataLayerTestingSession',${JSON.stringify(session)});`;
+const outlineProject=structuredClone(project);
+outlineProject.collections.pages=[
+  {id:"page:cart",name:"Cart",pageGroupIds:["group:checkout"],profileId:"profile:sitewide",canonicalSchema:canonical("outline:page:cart","Cart",[constraint("/cart_id",{presence:"required",type:"string"})])},
+  {id:"page:payment",name:"Payment",pageGroupIds:["group:checkout"],profileId:"profile:sitewide",canonicalSchema:canonical("outline:page:payment","Payment",[constraint("/payment_id",{presence:"required",type:"string"})])},
+  {id:"page:confirmation",name:"Confirmation",pageGroupIds:["group:checkout"],profileId:"profile:sitewide",canonicalSchema:canonical("outline:page:confirmation","Confirmation",[constraint("/confirmation_id",{presence:"required",type:"string"})])},
+];
+outlineProject.collections.events=[
+  {id:"event:paypal",name:"PayPal",eventName:"paypal",canonicalSchema:canonical("outline:event:paypal","PayPal",[constraint("/paypal",{presence:"required",type:"string"})])},
+  {id:"event:add-payment",name:"add_payment_info",eventName:"add_payment_info",canonicalSchema:canonical("outline:event:add-payment","add_payment_info",[constraint("/event_name",{expectedValue:"add_payment_info"})])},
+];
+outlineProject.documentationFlowGraphs={"flow:checkout":{
+  pageGroupIds:["group:checkout"],
+  pageFrames:[
+    {id:"frame:cart",name:"Cart frame",pageId:"page:cart",pageGroupId:"group:checkout"},
+    {id:"frame:payment",name:"Payment frame",pageId:"page:payment",pageGroupId:"group:checkout"},
+    {id:"frame:confirmation",name:"Confirmation frame",pageId:"page:confirmation",pageGroupId:"group:checkout"},
+  ],
+  occurrences:[
+    {id:"occurrence:paypal",name:"Cart PayPal",pageFrameId:"frame:cart",pageId:"page:cart",eventId:"event:paypal",localSchemaContributions:[constraint("/paypal_route",{presence:"required",type:"string"})]},
+    {id:"occurrence:add-payment",name:"Payment add_payment_info",pageFrameId:"frame:payment",pageId:"page:payment",eventId:"event:add-payment",localSchemaContributions:[constraint("/method",{presence:"required",type:"string"})]},
+  ],
+  relationships:[
+    {id:"relationship:cart-payment",sourceEndpoint:{kind:"page-frame",id:"frame:cart"},targetEndpoint:{kind:"page-frame",id:"frame:payment"},sourcePort:"right",targetPort:"left",kind:"expected_next"},
+    {id:"relationship:cart-paypal",sourceEndpoint:{kind:"page-frame",id:"frame:cart"},targetEndpoint:{kind:"event-occurrence",id:"occurrence:paypal"},sourcePort:"top",targetPort:"bottom",kind:"alternative",label:"PayPal route"},
+    {id:"relationship:cart-confirmation",sourceEndpoint:{kind:"page-frame",id:"frame:cart"},targetEndpoint:{kind:"page-frame",id:"frame:confirmation"},sourcePort:"bottom",targetPort:"top",kind:"merge"},
+    {id:"relationship:payment-add",sourceEndpoint:{kind:"page-frame",id:"frame:payment"},targetEndpoint:{kind:"event-occurrence",id:"occurrence:add-payment"},sourcePort:"right",targetPort:"left",kind:"expected_next"},
+  ],
+}};
+const outlineState={...state,project:outlineProject,draft:{...state.draft,id:"draft:outline"}};
+const outlineLibrary=serializeProjectLibrary(projectLibrary([{state:outlineState,revision,createdAt:at,lastModifiedAt:at}],outlineProject.id));
+const outlineEvents=[
+  {type:"observed",id:"live-100",name:"page_view",sourceId:"history",sourceName:"Event history",sourceKind:"Data layer",timestamp:"2026-07-23T10:00:00.000Z",pageUrl:"https://shop.test/payment",payload:{site:"shop",currency:"EUR",payment_id:"payment-1"}},
+  {type:"observed",id:"live-101",name:"page_view",sourceId:"history",sourceName:"Event history",sourceKind:"Data layer",timestamp:"2026-07-23T10:00:01.000Z",pageUrl:"https://shop.test/cart",payload:{site:"shop",currency:"EUR",cart_id:"cart-1"}},
+  {type:"observed",id:"live-102",name:"add_payment_info",sourceId:"history",sourceName:"Event history",sourceKind:"Data layer",timestamp:"2026-07-23T10:00:02.000Z",pageUrl:"https://shop.test/payment",payload:{site:"shop",currency:"EUR",payment_id:"payment-1",event_name:"add_payment_info",method:"card"}},
+];
+const outlineSession=JSON.stringify({session:{id:"session:outline",status:"active",freshBoundary:true,tabId:7,windowId:1,historyPath:"dataLayer",startUrl:"https://shop.test/cart",currentUrl:"https://shop.test/payment",timeline:outlineEvents}});
+const outlinePreload=`localStorage.setItem('my-chrome-utilities.specification-project-library.v1',${JSON.stringify(outlineLibrary)});localStorage.setItem('dataLayerTestingSession',${JSON.stringify(outlineSession)});`;
 
 await runRenderedWorkflow("live-flow-testing",`${workflowPreamble}
 const pause=()=>new Promise(resolve=>setTimeout(resolve,25));
@@ -89,8 +126,19 @@ const stored=JSON.parse(localStorage.getItem('my-chrome-utilities.saved-session-
 const afterHashes=Object.fromEntries(await Promise.all(hashTargets.map(async([store,key])=>[store+'/'+key,await repository.hashRecord(store,key)]))),activeProject=(await repository.loadProject('project-retail')).state.project,unchanged=beforeProjectHash===await repository.hashProject('project-retail')&&Object.keys(beforeHashes).every(key=>beforeHashes[key]===afterHashes[key])&&activeProject.collections.assignments.length===0;
 const evidence={integrated,guidance,onlyActive,rootFirst,firstLinked,outgoingOnly,earlierCaptureLinked,ordinaryDefectAdapter,defectSaved,reviewStable,cursorStable,feedConserved,restoredContext,restoredLink,durable,unchanged};return{passed:Object.values(evidence).every(Boolean),width:innerWidth,overflow:document.documentElement.scrollWidth>innerWidth,evidence};`,{preload,fullPanel:true});
 
+const outlineObservation=await runRenderedWorkflow("live-flow-testing-outline",`${workflowPreamble}
+const pause=()=>new Promise(resolve=>setTimeout(resolve,25)),until=async(test)=>{for(let attempt=0;attempt<240;attempt++){try{if(test())return true;}catch{}await pause();}throw new Error('Timed out waiting for outline evidence');},click=text=>{const control=[...document.querySelectorAll('button')].find(button=>button.textContent===text);if(!control)throw new Error('Missing button '+text);control.click();return control;};
+await until(()=>q('#live-flow-selector')?.options.length===2);const flow=q('#live-flow-selector');flow.value='flow:checkout';flow.dispatchEvent(new Event('change',{bubbles:true}));
+q('[data-event-id="live-101"]').click();await until(()=>q('#live-flow-step-selector'));let selector=q('#live-flow-step-selector');selector.value='frame:cart';click('Link event to Flow step');await until(()=>q('#live-flow-event-link')?.textContent.includes('frame:cart'));q('#back-to-events').click();
+q('[data-event-id="live-100"]').click();await until(()=>q('#live-flow-step-selector'));selector=q('#live-flow-step-selector');const relationshipRows=[...selector.options].slice(1).map(option=>{const [name,relationship_kind,display_name,id]=option.textContent.split(' · ');return{relationship_kind,next_step:id.startsWith('frame:')?name+' Page frame':name+' Event occurrence',label_state:display_name==='Cart to '+name?'no label':'label '+display_name,display_name};});
+selector.value='frame:payment';click('Link event to Flow step');await until(()=>q('#live-flow-event-link')?.textContent.includes('frame:payment'));q('#back-to-events').click();
+q('[data-event-id="live-102"]').click();await until(()=>q('#live-flow-step-selector'));selector=q('#live-flow-step-selector');selector.value='occurrence:add-payment';click('Link event to Flow step');await until(()=>q('#live-flow-event-link')?.textContent.includes('occurrence:add-payment'));
+q('#save-live-session').click();q('#save-live-session-name').value='Outline evidence';q('#save-live-session-name').dispatchEvent(new Event('input',{bubbles:true}));q('#save-live-session-form').requestSubmit();const summary=JSON.parse(localStorage.getItem('my-chrome-utilities.saved-session-library.v1')).sessions[0].flowTests[0],payment=summary.history.find(entry=>entry.stepId==='frame:payment'),occurrence=summary.history.find(entry=>entry.stepId==='occurrence:add-payment'),initial=summary.history.find(entry=>entry.stepId==='frame:cart'),pageScopes=payment.provenance.map(({scope})=>scope).join('|'),occurrenceScopes=occurrence.provenance.map(({scope})=>scope).join('|');
+const outlineRows=[...relationshipRows,...(pageScopes==='Shared Profile|Page Group|Page|Flow Page-instance'?[{flow_step:'Payment Page frame',effective_schema:'its Shared Profiles, ordered Page Groups, Page, and Flow Page-instance contribution'}]:[]),...(occurrenceScopes==='Shared Profile|Event|Page Group|Page|Flow Page-instance|Event-occurrence'?[{flow_step:'Payment add_payment_info occurrence',effective_schema:'its Page-instance branch, Event branch, and Event-occurrence contribution'}]:[]),...(Date.parse(payment.captureTime)<Date.parse(initial.captureTime)?[{capture_order:'before'}]:[]),...(Date.parse(occurrence.captureTime)>Date.parse(initial.captureTime)?[{capture_order:'after'}]:[])];return{passed:outlineRows.length===7,width:innerWidth,overflow:document.documentElement.scrollWidth>innerWidth,outlineRows};`,{preload:outlinePreload,fullPanel:true});
+
 const noActiveLibrary=serializeProjectLibrary(projectLibrary([{state,revision,createdAt:at,lastModifiedAt:at},{state:inactiveState,revision,createdAt:at,lastModifiedAt:at}]));
 const noProjectPreload=`localStorage.setItem('my-chrome-utilities.specification-project-library.v1',${JSON.stringify(noActiveLibrary)});localStorage.removeItem('my-chrome-utilities.specification-project.v1');`;
 await runRenderedWorkflow("live-flow-testing-no-project",`${workflowPreamble}
 const pause=()=>new Promise(resolve=>setTimeout(resolve,25)),until=async(test)=>{for(let attempt=0;attempt<240;attempt++){if(test())return true;await pause();}throw new Error('Timed out waiting for no-project recovery');},click=text=>{const control=[...document.querySelectorAll('button')].find(button=>button.textContent===text);if(!control)throw new Error('Missing button '+text);control.click();return control;};
 await until(()=>q('#live-flow-test').textContent.includes('No active project'));const absentStorage=localStorage.getItem('my-chrome-utilities.specification-project.v1')===null&&!q('#live-flow-test').querySelector('select')&&!document.querySelector('#open-live-flow-test'),actions=['Open project','Create project'].every(text=>[...q('#live-flow-test').querySelectorAll('button')].some(button=>button.textContent===text));click('Open project');await until(()=>document.activeElement?.id==='project-library-search');const openRecovery=document.activeElement?.id==='project-library-search';click('Create project');await until(()=>document.querySelector('dialog[open]')?.textContent.includes('Create project'));const createRecovery=Boolean(document.querySelector('dialog[open]')?.textContent.includes('Create project'));const evidence={absentStorage,actions,openRecovery,createRecovery};return{passed:Object.values(evidence).every(Boolean),width:innerWidth,overflow:document.documentElement.scrollWidth>innerWidth,evidence};`,{preload:noProjectPreload,fullPanel:true});
+console.log(JSON.stringify({liveFlowTesting:{installedBoundary:true,outlineRows:outlineObservation.outlineRows}}));
