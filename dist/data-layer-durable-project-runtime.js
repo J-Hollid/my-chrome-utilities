@@ -7,6 +7,7 @@ const cleanState = (state) => ({ ...structuredClone(state), history: { undo: [],
 const historyLabel = (state) => state.history.undo.at(-1)?.label;
 const cleanRecord = (value) => ({ ...structuredClone(value), state: cleanState(value.state) });
 const cleanLibrary = (value) => ({ ...structuredClone(value), projects: Object.fromEntries(Object.entries(value.projects).map(([projectId, entry]) => [projectId, cleanRecord(entry)])) });
+const routeWithRetainedCollectionKinds = (previous, next) => previous && previous.collectionKind === next.collectionKind && previous.entityId === next.entityId ? { ...next, collectionKinds: [...new Set([...(previous.collectionKinds ?? []), ...(next.collectionKinds ?? [])])] } : next;
 function placeholder(metadata) {
     const state = createSpecificationProject({ name: metadata.name, site: metadata.site, id: (kind) => kind === "project" ? metadata.projectId : `placeholder:${kind}:${metadata.projectId}` });
     state.project.owner = metadata.owner;
@@ -182,7 +183,7 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
         await forceLoad(projectId);
     else
         await loadNow(projectId); projectionChanged(); };
-    const ensureProjectRoute = async (projectId, route) => { await latest; const value = await repository.loadVisibleProjectRoute(projectId, route); installLoaded(projectId, value, route); projectionChanged(); return value; };
+    const ensureProjectRoute = async (projectId, route) => { await latest; const effectiveRoute = routeWithRetainedCollectionKinds(partialRoutes.get(projectId), route), value = await repository.loadVisibleProjectRoute(projectId, effectiveRoute); installLoaded(projectId, value, effectiveRoute); projectionChanged(); return value; };
     const refreshProject = async (projectId) => { await latest; await forceLoad(projectId); projectionChanged(); };
     projectionChanged = (force = false) => { const active = currentLibrary.activeProjectId ? loaded.get(currentLibrary.activeProjectId) : undefined, signature = JSON.stringify([currentLibrary.activeProjectId, active?.draftToken, serializeProjectLibrary(currentLibrary), memory.get(LEGACY_PROJECT_KEYS.schemas)]); if (!force && signature === lastProjectionSignature)
         return; lastProjectionSignature = signature; const projection = { library: structuredClone(currentLibrary), ...(active ? { active: structuredClone(active) } : {}) }; notify("durable-project-projection-changed", projection); for (const listener of listeners)
