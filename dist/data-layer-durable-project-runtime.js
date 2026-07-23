@@ -187,7 +187,12 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
     const refreshProject = async (projectId) => { await latest; await forceLoad(projectId); projectionChanged(); };
     projectionChanged = (force = false) => { const active = currentLibrary.activeProjectId ? loaded.get(currentLibrary.activeProjectId) : undefined, signature = JSON.stringify([currentLibrary.activeProjectId, active?.draftToken, serializeProjectLibrary(currentLibrary), memory.get(LEGACY_PROJECT_KEYS.schemas)]); if (!force && signature === lastProjectionSignature)
         return; lastProjectionSignature = signature; const projection = { library: structuredClone(currentLibrary), ...(active ? { active: structuredClone(active) } : {}) }; notify("durable-project-projection-changed", projection); for (const listener of listeners)
-        listener(structuredClone(projection)); };
+        try {
+            listener(structuredClone(projection));
+        }
+        catch (error) {
+            notify("durable-project-projection-error", { error });
+        } };
     const trackFeed = (promise) => { feedInstalls.add(promise); void promise.finally(() => feedInstalls.delete(promise)); return promise; }, synchronize = (projectId, draftToken) => { if (!draftToken)
         return; const identity = `${projectId}:${draftToken}`; if (locallySavingProjects.has(projectId) || projectInstalls.has(identity))
         return; const install = trackFeed((async () => { const metadata = (await repository.listProjectMetadata()).find(candidate => candidate.projectId === projectId); if (!metadata || metadata.draftSequence <= (observedProjectSequences.get(projectId) ?? -1))

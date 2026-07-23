@@ -32,3 +32,12 @@ export function resolveSidePanelSchemaContributor(state:ProjectState,key:string)
   for(const[flowId,graph]of Object.entries(state.project.documentationFlowGraphs??{})){const typed=graph as {pageFrames?:ProjectEntity[];occurrences?:ProjectEntity[]},frame=typed.pageFrames?.find((candidate)=>key===`flowInstances:${flowId}:${candidate.id}`);if(frame)return{entity:frame,scope:"Flow Page-instance",flowId};const occurrence=typed.occurrences?.find((candidate)=>key===`occurrences:${flowId}:${candidate.id}`);if(occurrence)return{entity:occurrence,scope:"Event-occurrence",flowId};}
   return undefined;
 }
+
+export function canonicalMigrationDurablyAcknowledged(state:ProjectState,key:string,expected:CanonicalSchemaDocument):boolean{
+  const selection=resolveSidePanelSchemaContributor(state,key),entity=selection?.entity;
+  const canonicalKeys=(value:unknown):string[]=>value&&typeof value==="object"?[...new Set(Object.values(value).flatMap(canonicalKeys).concat(Object.keys(value)))].sort():[];
+  const canonicalBytes=(value:unknown)=>JSON.stringify(value,canonicalKeys(value));
+  if(!entity||canonicalBytes(entity.canonicalSchema)!==canonicalBytes(expected))return false;
+  const requirements=entity.requirements as unknown[]|undefined,schemaConstraints=entity.schemaConstraints as unknown[]|undefined,structuredDraft=entity.structuredDraft as {document?:unknown}|undefined;
+  return !requirements?.length&&!schemaConstraints?.length&&!entity.structuredSchema&&!structuredDraft?.document;
+}

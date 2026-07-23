@@ -13,8 +13,8 @@ const referencedProfileId = (state, entity) => {
     const direct = referencedId(entity, "profileId") ?? (entity.profileIds?.length === 1 ? String(entity.profileIds[0]) : undefined);
     if (direct)
         return direct;
-    const page = state.project.collections.pages.find(({ id }) => id === referencedId(entity, "pageId")), pageProfiles = page?.profileIds ?? [];
-    return pageProfiles.length === 1 ? pageProfiles[0] : state.project.collections.profiles.length === 1 ? state.project.collections.profiles[0].id : undefined;
+    const page = state.project.collections.pages.find(({ id }) => id === referencedId(entity, "pageId")), pageDirect = page && referencedId(page, "profileId"), pageProfiles = page?.profileIds ?? [];
+    return pageDirect ?? (pageProfiles.length === 1 ? pageProfiles[0] : state.project.collections.profiles.length === 1 ? state.project.collections.profiles[0].id : undefined);
 };
 const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
 function conditionMatches(condition, observation) { if (!condition)

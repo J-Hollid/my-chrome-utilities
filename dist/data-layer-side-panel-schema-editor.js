@@ -32,4 +32,13 @@ export function resolveSidePanelSchemaContributor(state, key) {
     }
     return undefined;
 }
+export function canonicalMigrationDurablyAcknowledged(state, key, expected) {
+    const selection = resolveSidePanelSchemaContributor(state, key), entity = selection?.entity;
+    const canonicalKeys = (value) => value && typeof value === "object" ? [...new Set(Object.values(value).flatMap(canonicalKeys).concat(Object.keys(value)))].sort() : [];
+    const canonicalBytes = (value) => JSON.stringify(value, canonicalKeys(value));
+    if (!entity || canonicalBytes(entity.canonicalSchema) !== canonicalBytes(expected))
+        return false;
+    const requirements = entity.requirements, schemaConstraints = entity.schemaConstraints, structuredDraft = entity.structuredDraft;
+    return !requirements?.length && !schemaConstraints?.length && !entity.structuredSchema && !structuredDraft?.document;
+}
 //# sourceMappingURL=data-layer-side-panel-schema-editor.js.map

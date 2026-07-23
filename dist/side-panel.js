@@ -73,7 +73,7 @@ import { cardinalityComparisonPasses, cardinalityMeasuredValue } from "./utiliti
 import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, createRuleConfigurationFromAttachedRule, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./utilities/data-layer/schemas.js";
 import { canonicalRulePropertyPath } from "./utilities/data-layer/schemas.js";
 import { renderSchemaSpecificationBuilder } from "./utilities/data-layer/schemas.js";
-import { applyCanonicalCommand, canonicalCommandOutcome, canonicalCommandsFromCompactProjection, canonicalPredicateText, canonicalPropertyPath, compactSchemaProjection, composedCanonicalSchema, createCanonicalSchema, hasLegacySchemaRepresentation, migrateLegacyProfile, mountCanonicalPredicateEditor, mountSidePanelLayeredProfileEditor, resolveCanonicalMigrationConflict, resolveSidePanelSchemaContributor, saveComposedCanonicalDocument, savedSchemaCanonicalDocument, savedSchemaFromCanonical, sidePanelSchemaGroups, transactProject } from "./utilities/data-layer/schemas.js";
+import { applyCanonicalCommand, canonicalCommandOutcome, canonicalCommandsFromCompactProjection, canonicalMigrationDurablyAcknowledged, canonicalPredicateText, canonicalPropertyPath, compactSchemaProjection, composedCanonicalSchema, createCanonicalSchema, hasLegacySchemaRepresentation, migrateLegacyProfile, mountCanonicalPredicateEditor, mountSidePanelLayeredProfileEditor, resolveCanonicalMigrationConflict, resolveSidePanelSchemaContributor, saveComposedCanonicalDocument, savedSchemaCanonicalDocument, savedSchemaFromCanonical, sidePanelSchemaGroups, transactProject } from "./utilities/data-layer/schemas.js";
 import { beginCompactCanonicalHistoryTransition, compactCanonicalHistoryKey, compactCanonicalHistorySettlement, completeCompactCanonicalHistoryTransition, prepareCompactCanonicalRedo, prepareCompactCanonicalUndo, recordCompactCanonicalMutation, rejectCompactCanonicalHistoryTransition } from "./utilities/data-layer/schemas.js";
 import { mountProjectLibraryUi, PROJECT_LIBRARY_STORAGE_KEY, recordProjectNavigation, serializeProjectLibrary } from "./utilities/data-layer/schemas.js";
 import { installDurableRepositoryStartupFailure, mountDurableProjectRepositoryUi, openDurableProjectRuntime } from "./utilities/data-layer/schemas.js";
@@ -3030,7 +3030,8 @@ function renderCompactCanonicalContext() {
         return;
     sidePanelLayeredProfileEditorHost.replaceChildren();
     sidePanelLayeredProfileEditorHost.hidden = true;
-    schemaEditor.querySelector('[aria-label="Compact canonical schema context"]')?.remove();
+    for (const context of Array.from(schemaEditor.querySelectorAll('[aria-label="Compact canonical schema context"]')))
+        context.remove();
     const adapter = compactCanonicalEditor;
     if (!adapter)
         return;
@@ -3207,17 +3208,17 @@ function openContributorInUnifiedEditor(key) {
     sidePanelLayeredProfileEditor?.close();
     if (schemaDetailEmpty)
         schemaDetailEmpty.hidden = true;
-    let contributorUi = {}, compatibilityCanonical, migration, migrationSavePending = false, migrationStatus = "", pendingHistoryIdentity;
+    let contributorUi = {}, compatibilityCanonical, acknowledgedMigration, migration, migrationSavePending = false, migrationStatus = "", pendingHistoryIdentity;
     const isComposed = (selected) => selected.collectionKind === "pages" || selected.collectionKind === "pageGroups";
     const withContributorUi = (document) => { const selectedPropertyId = contributorUi.selectedPropertyId && document.nodes[contributorUi.selectedPropertyId] ? contributorUi.selectedPropertyId : document.selectedPropertyId; return { ...document, ...(selectedPropertyId ? { selectedPropertyId } : {}), ...(contributorUi.view ? { view: contributorUi.view } : {}) }; };
     const documentFor = (live, selected) => { if (!isComposed(selected)) {
         if (migration)
             return withContributorUi(compatibilityCanonical ?? migration.document);
         const stored = selected.entity.canonicalSchema;
-        if (stored) {
-            compatibilityCanonical = undefined;
+        if (stored)
             return withContributorUi(stored);
-        }
+        if (acknowledgedMigration)
+            return withContributorUi(acknowledgedMigration);
         if (!compatibilityCanonical) {
             if (hasLegacySchemaRepresentation(selected.entity)) {
                 migration = migrateLegacyProfile(selected.entity, { id: (kind) => `${kind}:${crypto.randomUUID()}` });
@@ -3245,18 +3246,24 @@ function openContributorInUnifiedEditor(key) {
         schemaDetailEmpty.hidden = false; }); confirm.type = "button"; confirm.textContent = "Confirm canonical migration"; confirm.disabled = Boolean(migration.conflicts.length); confirm.addEventListener("click", () => { void (async () => { if (!migration || migration.conflicts.length)
         return; const pendingMigration = migration; migrationSavePending = true; confirm.disabled = true; cancel.disabled = true; try {
         const live = restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), selected = resolveSidePanelSchemaContributor(live, key), label = `Migrate legacy schema for ${selected.entity.name}`, failed = durableProjectRuntime.failedSave();
+        let acknowledged;
         if (failed) {
             if (failed.command.label !== label)
                 throw new Error(`A different unsaved command must be resolved first: ${failed.command.label}.`);
             await durableProjectRuntime.retryFailedSave();
+            acknowledged = (await durableProjectRuntime.repository.loadProject(live.project.id)).state;
         }
         else {
             commitUnifiedContributorState(writeUnifiedContributorCanonical(live, selected, pendingMigration.document), label);
             await durableProjectRuntime.settled("project");
+            acknowledged = restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)) ?? undefined;
         }
+        if (!acknowledged || !canonicalMigrationDurablyAcknowledged(acknowledged, key, pendingMigration.document))
+            throw new Error("The canonical migration has not been acknowledged by the settled durable project projection.");
         migrationSavePending = false;
         migration = undefined;
         compatibilityCanonical = undefined;
+        acknowledgedMigration = pendingMigration.document;
         migrationStatus = "Canonical migration committed.";
         renderCompactCanonicalEditor();
     }
@@ -6797,7 +6804,7 @@ durableProjectRuntime.subscribe(({ active }) => {
     const next = active?.state ?? restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY));
     if (!next)
         return;
-    const projectSchemas = next.project.collections.schemaDrafts, nextIds = new Set(projectSchemas.map(({ id }) => id));
+    const projectSchemas = (next.project.collections.schemaDrafts ?? []), nextIds = new Set(projectSchemas.map(({ id }) => id));
     schemas = [...schemas.filter(({ id }) => !canonicalProjectSchemaIds.has(id) && !nextIds.has(id)), ...projectSchemas];
     canonicalProjectSchemaIds = nextIds;
     if (schemaDraft && nextIds.has(schemaDraft.id)) {

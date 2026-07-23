@@ -22,7 +22,7 @@ export { compileLayeredSchema, validateLayeredObservation, type LayerConstraint 
 export { layeredContributorPath, layeredContributorsForPath } from "../../data-layer-layered-schema-project.js";
 export { canonicalPredicateLeafFromInput, canonicalPredicateOperators, canonicalPredicateText, mountCanonicalPredicateEditor, validateCanonicalPredicateTree } from "../../data-layer-canonical-predicate-editor.js";
 export { canonicalCommandsFromCompactProjection, compactConditionalPresence, compactSchemaProjection, savedSchemaCanonicalDocument, savedSchemaFromCanonical } from "../../data-layer-side-panel-unified-schema-editor.js";
-export { resolveSidePanelSchemaContributor, type SidePanelContributorSelection } from "../../data-layer-side-panel-schema-editor.js";
+export { canonicalMigrationDurablyAcknowledged, resolveSidePanelSchemaContributor, type SidePanelContributorSelection } from "../../data-layer-side-panel-schema-editor.js";
 export { redoProjectTransaction, undoProjectTransaction } from "../../data-layer-specification-project.js";
 export { adoptSavedSchema, applyCapturedValidationToProfile, capturedValidationDestinationChoices, capturedValidationProfileRequirements, compileSpecificationProject, createFixtureFromCapturedValidation, evaluateSpecificationObservation, transactProject, type IdFactory, type ProjectEntity, type ProjectState, type SpecificationProject } from "./layers/browser/schemas.js";
 export {addPageGroupMembership,confirmPageGroupMembershipMigration,inspectPageGroupMembershipRemoval,movePageGroupMembership,orderedPageGroupIds,pageGroupMembers,previewPageGroupMembershipMove,removePageGroupMembership,requiresPageGroupMembershipMigration,stagePageGroupMembershipMigration} from "../../data-layer-page-group-membership.js";

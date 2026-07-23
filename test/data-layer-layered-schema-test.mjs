@@ -137,6 +137,8 @@ assert.deepEqual(selectedPath,{profileId:"profile:selected",eventId:"event:selec
 assert.deepEqual(selectedContributors.map(({id})=>id),["profile:selected","event:selected","group:selected","page:selected","frame:selected","occurrence:selected"]);
 const selectedFrame=flowPageFrameContributor(pathState,"flow:selected","frame:selected");
 assert.deepEqual(layeredContributorPath(pathState,selectedFrame,"Flow Page-instance","flow:selected"),{profileId:"profile:selected",pageGroupId:"group:selected",pageGroupIds:["group:selected"],pageId:"page:selected",flowId:"flow:selected",pageFrameId:"frame:selected"});
+const inheritedFrameState=structuredClone(pathState);delete inheritedFrameState.project.documentationFlowGraphs["flow:selected"].pageFrames[0].profileId;
+assert.equal(layeredContributorPath(inheritedFrameState,flowPageFrameContributor(inheritedFrameState,"flow:selected","frame:selected"),"Flow Page-instance","flow:selected").profileId,"profile:selected","a Flow Page instance inherits the selected Page's singular Shared Profile reference");
 assert.deepEqual({id:selectedFrame.id,name:selectedFrame.name,canonicalSchemaId:selectedFrame.canonicalSchema.id},{id:"frame:selected",name:"Selected page instance",canonicalSchemaId:"canonical:frame"});
 assert.notEqual(selectedFrame.canonicalSchema.id,pathState.project.collections.pages[0].canonicalSchema.id);
 assert.notEqual(selectedFrame.canonicalSchema.id,pathState.project.collections.flows[0].canonicalSchema.id);
