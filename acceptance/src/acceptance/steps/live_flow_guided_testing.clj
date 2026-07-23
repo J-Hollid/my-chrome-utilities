@@ -32,10 +32,39 @@
                         "Live Flow testing browser adapter failed."
                         "test/browser-packs/live-flow-testing.mjs"))
 
+(def outline-example-rows
+  #{{"relationship_kind" "expected_next"
+     "next_step" "Payment Page frame"
+     "label_state" "no label"
+     "display_name" "Cart to Payment"}
+    {"relationship_kind" "alternative"
+     "next_step" "Cart PayPal Event occurrence"
+     "label_state" "label PayPal route"
+     "display_name" "PayPal route"}
+    {"relationship_kind" "merge"
+     "next_step" "Confirmation Page frame"
+     "label_state" "no label"
+     "display_name" "Cart to Confirmation"}
+    {"flow_step" "Payment Page frame"
+     "effective_schema" "its Shared Profiles, ordered Page Groups, Page, and Flow Page-instance contribution"}
+    {"flow_step" "Payment add_payment_info occurrence"
+     "effective_schema" "its Page-instance branch, Event branch, and Event-occurrence contribution"}
+    {"capture_order" "before"}
+    {"capture_order" "after"}})
+
+(defn validate-example! [_mode example]
+  (if (seq example)
+    (let [normalized (into {} (map (fn [[key value]] [(name key) value]) example))]
+      (support/assert! (contains? outline-example-rows normalized)
+                       "Live Flow Scenario Outline example is not an authoritative contract row."
+                       {:example normalized})
+      normalized)
+    example))
+
 (def handlers
   (support/verified-feature-mode-handlers
    feature-files entry-modes :live-flow-guided-testing-mode
-   verify-model! (fn [_mode _example] nil)
+   verify-model! validate-example!
    observe-browser!
    (fn [verified?]
      (support/assert! verified? "Installed Live Flow testing evidence is missing." {}))))
