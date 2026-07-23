@@ -345,6 +345,11 @@ drafts, or path constraints receives a deterministic migration review:
 5. Replace all editable legacy representations in one atomic Saved Draft transaction.
 6. Make one Undo restore the complete pre-migration project state.
 
+The editor reports migration as committed only after the canonical transaction is
+durably acknowledged. A conflict-free migration and a conflict-resolved migration
+use the same completion rule, and reopening the project preserves that committed
+state without another confirmation or timing-dependent status change.
+
 No data is discarded merely because it came from a superseded representation.
 
 ## Selection, export, and validation boundary
