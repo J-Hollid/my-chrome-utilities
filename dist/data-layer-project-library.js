@@ -28,15 +28,21 @@ function upgradeLegacySchemaDrafts(state) {
     const drafts = state.project.collections.schemaDrafts ?? [];
     if (!drafts.length)
         return { state: clone(state) };
-    const bytes = JSON.stringify(state), profileIds = new Set(state.project.collections.profiles.map(({ id }) => id)), profiles = [...clone(state.project.collections.profiles)];
+    const bytes = JSON.stringify(state), profileIds = new Set(state.project.collections.profiles.map(({ id }) => id)), profiles = [...clone(state.project.collections.profiles)], migratedIds = new Map();
     for (const draft of drafts) {
-        if (profileIds.has(draft.id))
-            continue;
-        const existing = draft.canonicalSchema, working = draft.workingDraft?.document, document = working ?? draft.document, canonicalSchema = existing ?? canonicalSchemaFromJsonSchema({ id: `canonical:${draft.id}`, contributorId: draft.id, contributorName: draft.name, sourceIdentity: draft.id, sourceRevision: Number(draft.version ?? 1), document: document ?? { type: "object", properties: {} }, idFactory: (kind) => `${draft.id}:${kind}` });
-        profiles.push({ id: draft.id, name: draft.name, requirements: [], canonicalSchema, ...(draft.sourceLineage ? { sourceLineage: clone(draft.sourceLineage) } : {}) });
-        profileIds.add(draft.id);
+        let profileId = draft.id, suffix = 0;
+        while (profileIds.has(profileId)) {
+            suffix += 1;
+            profileId = `${draft.id}:legacy-contributor${suffix === 1 ? "" : `-${suffix}`}`;
+        }
+        const existing = draft.canonicalSchema, working = draft.workingDraft?.document, document = working ?? draft.document;
+        let sequence = 0;
+        const canonicalSchema = existing ? { ...clone(existing), contributorId: profileId, contributorName: draft.name } : canonicalSchemaFromJsonSchema({ id: `canonical:${profileId}`, contributorId: profileId, contributorName: draft.name, sourceIdentity: draft.id, sourceRevision: Number(draft.version ?? 1), document: document ?? { type: "object", properties: {} }, idFactory: (kind) => `${profileId}:${kind}:${++sequence}` }), { workingDraft: _workingDraft, document: _document, assignments: _assignments, canonicalSchema: _canonicalSchema, ...content } = clone(draft);
+        profiles.push({ ...content, id: profileId, name: draft.name, requirements: [], canonicalSchema });
+        profileIds.add(profileId);
+        migratedIds.set(draft.id, profileId);
     }
-    const assignments = state.project.collections.assignments.map((assignment) => { const targetId = String(assignment.targetId ?? assignment.schemaDraftId ?? assignment.schemaId ?? ""); const next = clone(assignment); delete next.schemaDraftId; delete next.schemaId; delete next.schemaRevision; delete next.schemaDocument; delete next.compiledSchema; return { ...next, ...(targetId ? { targetId, targetKind: String(next.targetKind ?? "Shared Profile") } : {}) }; }), collections = { ...clone(state.project.collections), profiles, assignments };
+    const assignments = state.project.collections.assignments.map((assignment) => { const legacyTarget = String(assignment.schemaDraftId ?? assignment.schemaId ?? ""), targetId = legacyTarget ? migratedIds.get(legacyTarget) ?? legacyTarget : String(assignment.targetId ?? ""); const next = clone(assignment); delete next.schemaDraftId; delete next.schemaId; delete next.schemaRevision; delete next.schemaDocument; delete next.compiledSchema; return { ...next, ...(targetId ? { targetId, targetKind: String(next.targetKind ?? "Shared Profile") } : {}) }; }), collections = { ...clone(state.project.collections), profiles, assignments };
     delete collections.schemaDrafts;
     return { state: { ...clone(state), project: { ...clone(state.project), collections }, history: { undo: [], redo: [] } }, backup: { bytes, checksum: checksum(bytes) } };
 }

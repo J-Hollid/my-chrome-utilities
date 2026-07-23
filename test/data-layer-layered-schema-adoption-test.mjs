@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
-import {adoptSavedSchema,createSpecificationProject} from "../dist/data-layer-specification-project.js";
-import {canonicalTableRows} from "../dist/data-layer-canonical-schema.js";
+import {adoptSavedSchema,commitSavedSchemaSynchronization,createSpecificationProject,stageSavedSchemaSynchronization,transactProject} from "../dist/data-layer-specification-project.js";
+import {canonicalSchemaWithConstraint,canonicalTableRows} from "../dist/data-layer-canonical-schema.js";
 
 let sequence=0;
 const id=(kind)=>`${kind}:${++sequence}`,source={id:"schema:sitewide",name:"Sitewide",version:4,published:true,document:{type:"object",properties:{checkout:{type:"object",properties:{funnel_step:{type:"string",enum:["3a","3b"]}}}}},rules:[{name:"checkout"}],documentation:"Site contract",examples:[{checkout:{funnel_step:"3b"}}],assignments:[]},libraryBytes=JSON.stringify(source);
@@ -49,4 +49,29 @@ assert.deepEqual(articleType.rules.find(({id})=>id==="rule:required-article-type
 assert.equal(audience.rules.find(({id})=>id==="rule:supported-audiences").revision,5);
 assert.deepEqual(structuredClone(adoptedProfile.canonicalSchema).nodes,adoptedProfile.canonicalSchema.nodes,"persisted canonical facets survive a project reload without repair");
 assert.equal(JSON.stringify(openedArticle),openedArticleBytes,"lossless adoption must leave the Saved Schema Library source byte-identical");
+
+let synchronized=adoptSavedSchema(createSpecificationProject({name:"Sync",site:"shop.example",id}),{
+  id:"schema:purchase",name:"Purchase",version:3,published:true,assignments:[],
+  document:{type:"object",properties:{currency:{type:"string",enum:["EUR"]},order_id:{type:"string"}}},
+});
+const synchronizedProfile=synchronized.project.collections.profiles[0],locallyEdited=canonicalSchemaWithConstraint(
+  synchronizedProfile.canonicalSchema,
+  {path:"/currency",type:"string",allowedValues:["EUR","GBP"]},
+  (kind)=>`local:${kind}:${++sequence}`,
+);
+synchronized=transactProject(synchronized,"Keep GBP locally",(project)=>({...project,collections:{...project.collections,profiles:project.collections.profiles.map((candidate)=>candidate.id===synchronizedProfile.id?{...candidate,canonicalSchema:locallyEdited}:candidate)}}));
+const revision4={id:"schema:purchase",name:"Purchase",version:4,published:true,assignments:[],document:{type:"object",properties:{currency:{type:"string",enum:["EUR","USD"]},order_id:{type:"string"},value:{type:"number"}}}};
+const synchronizationReview=stageSavedSchemaSynchronization(synchronized,revision4);
+assert.equal(synchronizationReview.fromRevision,3);
+assert.equal(synchronizationReview.toRevision,4);
+assert.ok(synchronizationReview.localOverrides.some((path)=>path.startsWith("/properties/currency")));
+synchronized=commitSavedSchemaSynchronization(synchronized,synchronizationReview);
+const synchronizedResult=synchronized.project.collections.profiles[0],synchronizedRows=canonicalTableRows(synchronizedResult.canonicalSchema);
+assert.equal(synchronizedResult.sourceRevision,4);
+assert.equal(synchronizedResult.canonicalSchema.source.revision,4);
+assert.deepEqual(synchronizedRows.find(({path})=>path==="/currency").node.allowedValues.map(({value})=>value),["EUR","GBP"],"local canonical facets survive source synchronization");
+assert.equal(synchronizedRows.find(({path})=>path==="/value").node.type,"number","new source properties enter the active canonical contributor");
+assert.deepEqual(synchronizedResult.canonicalSchema.sourceContent.document,revision4.document,"source content advances to the immutable revision");
+assert.equal("workingDraft" in synchronizedResult,false);
+assert.equal("sourceLineage" in synchronizedResult,false);
 console.log("data-layer layered schema adoption tests passed");

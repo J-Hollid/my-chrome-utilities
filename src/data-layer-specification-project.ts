@@ -1,5 +1,5 @@
 import {canonicalConstraints,canonicalRequirements,canonicalSchemaWithConstraint,createCanonicalSchema,migrateLegacyProfile,type CanonicalMigrationPlan,type CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
-import {savedSchemaCanonicalDocument} from "./data-layer-saved-schema-canonical.js";
+import {savedSchemaCanonicalDocument,savedSchemaFromCanonical} from "./data-layer-saved-schema-canonical.js";
 
 export type ProjectEntityKind = "profiles" | "pages" | "pageGroups" | "events" | "applicabilitySets" | "flows" | "fixtures" | "assignments";
 export type AssignmentTargetKind = "Shared Profile" | "Page Group" | "Page" | "Event" | "Flow Page instance";
@@ -213,9 +213,9 @@ export function adoptSavedSchema(state:ProjectState,source:SavedSchemaSource):Pr
 }
 
 export function stageSavedSchemaSynchronization(state:ProjectState,source:SavedSchemaSource):SavedSchemaSynchronizationReview{
-  const adopted=state.project.collections.profiles.find(({sourceIdentity})=>sourceIdentity===source.id),lineage=adopted?.sourceLineage as {librarySchemaId?:string;synchronizedRevision?:number}|undefined;
-  if(!adopted||lineage?.librarySchemaId!==source.id)throw new Error(`Saved schema ${source.name} has not been adopted.`);
-  const fromRevision=Number(lineage.synchronizedRevision),base=adopted.sourceDocument,current=(adopted.workingDraft as {document?:unknown}|undefined)?.document??adopted.document;
+  const adopted=state.project.collections.profiles.find(({sourceIdentity})=>sourceIdentity===source.id),canonical=adopted?.canonicalSchema;
+  if(!adopted||!canonical||canonical.source?.identity!==source.id)throw new Error(`Saved schema ${source.name} has not been adopted.`);
+  const fromRevision=Number(adopted.sourceRevision??canonical.source.revision),base=canonical.sourceContent?.document??{},projected=savedSchemaFromCanonical({id:source.id,name:adopted.name,version:fromRevision,document:clone(base),assignments:[],attachedRules:clone(canonical.sourceContent?.rules??[]) as unknown as AttachedSchemaRule[]},canonical),current=projected.document;
   if(source.version<=fromRevision)throw new Error(`Saved schema ${source.name} has no newer revision.`);
   const changes=documentChanges(base,source.document),localOverrides=documentChanges(base,current).map(({path})=>path);
   return{schemaId:source.id,fromRevision,toRevision:source.version,changes,localOverrides,source:clone(source)};
@@ -223,11 +223,12 @@ export function stageSavedSchemaSynchronization(state:ProjectState,source:SavedS
 
 export function commitSavedSchemaSynchronization(state:ProjectState,review:SavedSchemaSynchronizationReview):ProjectState{
   return transactProject(state,`Synchronize saved schema ${review.schemaId} to revision ${review.toRevision}`,(project)=>{
-    const adopted=project.collections.profiles.find(({sourceIdentity})=>sourceIdentity===review.schemaId),lineage=adopted?.sourceLineage as {synchronizedRevision?:number}|undefined;
-    if(!adopted||lineage?.synchronizedRevision!==review.fromRevision)throw new Error("Saved-schema synchronization review is stale.");
-    const working=adopted.workingDraft as Record<string,unknown>,document=synchronizeDocument(adopted.sourceDocument,working?.document??adopted.document,review.source.document);
-    const profiles=project.collections.profiles.map((schema)=>schema===adopted?{...schema,sourceDocument:clone(review.source.document),sourceLineage:{...(schema.sourceLineage as Record<string,unknown>),synchronizedRevision:review.toRevision},workingDraft:{...working,document,pendingChanges:[...((working.pendingChanges as string[]|undefined)??[]),`Synchronized saved schema revision ${review.toRevision}`]}}:schema);
-    const fixtures=project.collections.fixtures.map((fixture)=>JSON.stringify(fixture).includes(review.schemaId)?{...fixture,evidenceStatus:"stale",staleReason:`Schema ${review.schemaId} synchronized to revision ${review.toRevision}`}:fixture);
+    const adopted=project.collections.profiles.find(({sourceIdentity})=>sourceIdentity===review.schemaId),canonical=adopted?.canonicalSchema;
+    if(!adopted||!canonical||canonical.source?.identity!==review.schemaId||Number(adopted.sourceRevision??canonical.source.revision)!==review.fromRevision)throw new Error("Saved-schema synchronization review is stale.");
+    const priorContent=canonical.sourceContent??{document:{},rules:[],documentation:{},examples:[]},projected=savedSchemaFromCanonical({id:review.schemaId,name:adopted.name,version:review.fromRevision,document:clone(priorContent.document),assignments:[],attachedRules:clone(priorContent.rules) as unknown as AttachedSchemaRule[],documentation:clone(priorContent.documentation) as NonNullable<SchemaDefinition["documentation"]>},canonical),document=synchronizeDocument(priorContent.document,projected.document,review.source.document) as Record<string,unknown>,rules=synchronizeDocument(priorContent.rules,projected.attachedRules??[],review.source.rules??[]) as AttachedSchemaRule[],documentation=synchronizeDocument(priorContent.documentation,projected.documentation??{},review.source.documentation??{}),examples=synchronizeDocument(priorContent.examples,priorContent.examples,review.source.examples??[]) as readonly unknown[];
+    let sequence=0;const synchronized=savedSchemaCanonicalDocument({id:review.schemaId,name:adopted.name,version:review.toRevision,document,attachedRules:rules,...(documentation===undefined?{}:{documentation:clone(documentation) as NonNullable<SchemaDefinition["documentation"]>})},(kind)=>`${adopted.id}:sync:${review.toRevision}:${kind}:${++sequence}`,{id:canonical.id,contributorId:adopted.id,contributorName:adopted.name});synchronized.sourceContent={...synchronized.sourceContent!,document:clone(review.source.document),rules:clone(review.source.rules??[]) as unknown as readonly Record<string,unknown>[],documentation:clone(review.source.documentation??{}),examples:clone(review.source.examples??examples)};
+    const profiles=project.collections.profiles.map((profile)=>profile===adopted?{...profile,sourceRevision:review.toRevision,adoptionProvenance:{kind:"saved-schema-library",schemaId:review.schemaId,revision:review.toRevision},canonicalSchema:synchronized}:profile);
+    const fixtures=project.collections.fixtures.map((fixture)=>fixture.contributorId===adopted.id||JSON.stringify(fixture).includes(review.schemaId)?{...fixture,evidenceStatus:"stale",staleReason:`Contributor ${adopted.id} synchronized to source revision ${review.toRevision}`}:fixture);
     return{...project,collections:{...project.collections,profiles,fixtures}};
   });
 }
