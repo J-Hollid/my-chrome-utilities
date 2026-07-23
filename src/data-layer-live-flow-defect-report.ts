@@ -53,6 +53,8 @@ export function createManualFlowDefectEvent(
   entry: LiveFlowHistoryEntry,
   event: LiveEvent,
 ): LiveEvent {
+  const observedEvent = { ...event };
+  delete observedEvent.manualFlowValidations;
   const context: LiveFlowDefectContext = {
     flowId:entry.flowId,
     flowName:entry.flowName,
@@ -71,7 +73,7 @@ export function createManualFlowDefectEvent(
     .map(({ scope, contributorName }) => `${scope} ${contributorName}`)
     .join(" → ");
   return {
-    ...event,
+    ...observedEvent,
     manualFlowContext:context,
     validation:entry.status === "Valid" ? "Valid" : `${entry.issues.length} issues`,
     validationDetails:{

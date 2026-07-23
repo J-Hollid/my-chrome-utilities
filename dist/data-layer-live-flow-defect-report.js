@@ -17,6 +17,8 @@ function linkEvidence(entry) {
     };
 }
 export function createManualFlowDefectEvent(entry, event) {
+    const observedEvent = { ...event };
+    delete observedEvent.manualFlowValidations;
     const context = {
         flowId: entry.flowId,
         flowName: entry.flowName,
@@ -35,7 +37,7 @@ export function createManualFlowDefectEvent(entry, event) {
         .map(({ scope, contributorName }) => `${scope} ${contributorName}`)
         .join(" → ");
     return {
-        ...event,
+        ...observedEvent,
         manualFlowContext: context,
         validation: entry.status === "Valid" ? "Valid" : `${entry.issues.length} issues`,
         validationDetails: {

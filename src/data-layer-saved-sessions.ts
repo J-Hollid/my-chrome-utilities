@@ -13,7 +13,7 @@ export interface SavedSessionEvent {
   destination?: string;
   validation?: import("./utilities/data-layer/capture.js").ValidationState;
   validationDetails?: import("./data-layer-live-observer.js").LiveEvent["validationDetails"];
-  manualFlowValidations?: readonly import("./data-layer-live-flow-testing.js").LiveFlowHistoryEntry[];
+  manualFlowContext?: import("./data-layer-live-observer.js").LiveEvent["manualFlowContext"];
 }
 export interface CompletedSession {
   id: string;

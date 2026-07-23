@@ -46,6 +46,16 @@ const savedEvents = Array.from({ length:18 }, (_, index) => ({
   provenance:{ adapter:"history" },
   validation:"Valid",
   validationDetails:{ schema:{ id:"checkout", name:"Checkout", version:3 }, issues:[], evaluations:[] },
+  ...(index === 17 ? { manualFlowContext:{
+    flowId:"flow:checkout",flowName:"Checkout journey",
+    selectedStepId:"frame:payment",selectedStepName:"Payment",eventId:"saved-18",
+    eventStepLink:{eventId:"saved-18",stepId:"frame:payment"},
+    path:[{stepId:"frame:payment",stepName:"Payment",eventId:"saved-18",captureTime:"2026-07-12T10:17:00Z"}],
+    linkEvidence:{kind:"start",label:"Started at Payment",pageFrameId:"frame:payment"},
+    effectiveTarget:{id:"frame:payment",name:"Payment"},
+    effectiveSchemaRevision:17,effectiveSchemaRevisionIdentity:"flow-schema:00000011",
+    provenance:[{contributorId:"frame:payment",contributorName:"Payment",scope:"Flow Page-instance"}],
+  }} : {}),
 }));
 
 const draft = createSessionSaveDraft({
@@ -74,6 +84,9 @@ assert.equal(feed.startLiveObserver, false);
 assert.equal(feed.session.id, saved.id);
 assert.notEqual(feed.session, saved);
 assert.deepEqual(feed.savedView.events.map(({ id }) => id), savedEvents.map(({ id }) => id));
+assert.deepEqual(feed.savedView.events[17].manualFlowContext, savedEvents[17].manualFlowContext);
+assert.notEqual(feed.savedView.events[17].manualFlowContext, savedEvents[17].manualFlowContext);
+assert.equal("manualFlowValidations" in feed.savedView.events[17], false);
 assert.deepEqual(feed.currentView.events.map(({ id }) => id), ["current-page", "purchase"]);
 assert.notEqual(feed.savedView.events, saved.events);
 assert.equal(feed.currentScrollTop, 480);

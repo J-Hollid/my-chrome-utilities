@@ -35,7 +35,7 @@ import { renderEventFeedQueryBuilder } from "./utilities/data-layer/live-inspect
 import { applySavedEventFeedFilter, commitSavedEventFeedFilterLibrary, createSavedEventFeedFilter, deleteSavedEventFeedFilter, renameSavedEventFeedFilter, restoreSavedEventFeedFilterLibrary, restoreSavedEventFeedWorkingView, serializeSavedEventFeedWorkingView, setDefaultSavedEventFeedFilter, updateSavedEventFeedFilter, SAVED_EVENT_FEED_FILTER_STORAGE_KEY, SAVED_EVENT_FEED_FILTER_WORKING_STORAGE_KEY, } from "./utilities/data-layer/live-inspection.js";
 import { confirmSavedSessionDeletion, cancelSavedSessionDeletion, exportSavedSession, importSavedSession, openSavedSession, requestSavedSessionDeletion, renameSavedSession, restoreSavedSessionLibrary, resumeSavedSession, searchSavedSessions, savedSessionSummary, serializeSavedSessionLibrary, } from "./utilities/data-layer/live-inspection.js";
 import { confirmSessionSave, createSessionSaveDraft, openSavedSessionLiveFeed, recordBackgroundLiveEvent, restoreSavedSessionLiveFeed, returnToCurrentLiveFeed, revalidateSavedSessionLiveFeed, SAVED_SESSION_LIBRARY_STORAGE_KEY, SAVED_SESSION_LIVE_FEED_STORAGE_KEY, serializeSavedSessionLiveFeed, updateSavedSessionLiveFeedView, } from "./utilities/data-layer/live-inspection.js";
-import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, renderValidationIssueList, setEventValidationUpdateStatus, } from "./utilities/data-layer/live-inspection.js";
+import { findLiveObserverElements, renderDataLayerView, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, setEventValidationUpdateStatus, } from "./utilities/data-layer/live-inspection.js";
 import { createLiveInspectorActions } from "./utilities/data-layer/live-inspection.js";
 import { captureLiveInspectorPresentation, restoreLiveInspectorPresentation, } from "./utilities/data-layer/live-inspection.js";
 import { createLiveDefectReportNavigation, renderDefectReportBuilder } from "./utilities/data-layer/defect-reporting.js";
@@ -696,7 +696,7 @@ const liveFlowTestingUi = mountLiveFlowTestingUi({
     events: () => liveObserverState.events,
     saveSummary: (summary) => { completedLiveFlowTests = [structuredClone(summary)]; },
     savedSummary: () => savedSessionLiveFeed?.session.flowTests?.at(-1),
-    onResult: (entry, event) => { const manual = createManualFlowDefectEvent(entry, event); liveObserverState = { ...liveObserverState, events: liveObserverState.events.map((candidate) => candidate.id === event.id ? { ...candidate, ...(manual.validation ? { validation: manual.validation } : {}), ...(manual.validationDetails ? { validationDetails: manual.validationDetails } : {}), manualFlowValidations: [...(candidate.manualFlowValidations ?? []), structuredClone(entry)] } : candidate) }; renderLiveObserver(); openLiveInspector(event.id, true); },
+    onResult: (entry, event) => { const presented = createManualFlowDefectEvent(entry, event); liveObserverState = { ...liveObserverState, events: liveObserverState.events.map((candidate) => candidate.id === event.id ? presented : candidate) }; renderLiveObserver(); openLiveInspector(event.id, true); },
     openProject: () => { showDataLayerView("Projects", true); document.querySelector("#project-library-search")?.focus({ preventScroll: true }); },
     createProject: () => { showDataLayerView("Projects", true); document.querySelector("#create-library-project")?.click(); },
 });
@@ -1679,6 +1679,8 @@ function openLiveInspector(eventId, preserveReturnSnapshot = false) {
                             if (result.added) {
                                 defectLibrary = result.library;
                                 persistDefectLibrary();
+                                if (selected.manualFlowContext)
+                                    liveFlowTestingUi.attachDefect(selected.manualFlowContext.selectedStepId, selected.manualFlowContext.eventId, defect.id);
                                 renderDefects();
                                 renderLiveObserver();
                             }
@@ -1755,58 +1757,11 @@ function openLiveInspector(eventId, preserveReturnSnapshot = false) {
             },
         }), presentation ? { showNonApplicableProperties: presentation.showNonApplicableProperties } : {});
     if (event && liveObserverElements.eventInspector)
-        appendManualFlowValidation(liveObserverElements.eventInspector, event);
-    if (event && liveObserverElements.eventInspector)
         liveFlowTestingUi.renderEventDetails(liveObserverElements.eventInspector, event.id);
     renderLiveObserver();
     restoreLiveInspectorPresentation(liveObserverElements.eventInspector, presentation);
     if (!presentation)
         backToEventsButton?.focus({ preventScroll: true });
-}
-function startManualFlowDefectReport(entry, event) {
-    if (!liveObserverElements.eventInspector)
-        return;
-    const selected = createManualFlowDefectEvent(entry, event);
-    renderDefectReportBuilder(liveObserverElements.eventInspector, selected, undefined, liveObserverState.events, createLiveDefectReportNavigation(event.id, { reopenCapturedEvent: openLiveInspector, createDefectReportAction: () => liveObserverElements.eventInspector?.querySelector(".live-flow-create-defect") ?? null, closeToLiveFeed: closeInspectorAndReturnToEvents }), {
-        save: async (report, options) => { const selectedPointers = new Set(report.evidence.validation.map(({ pointer }) => pointer)), issues = currentDefectIssues(selected).filter((issue) => selectedPointers.has(issue.concretePath)), defect = createValidationDefect({ id: `defect:${crypto.randomUUID()}`, now: new Date().toISOString(), report, issues }), result = addDefect(defectLibrary, defect, options.saveSeparately); if (result.added) {
-            defectLibrary = result.library;
-            persistDefectLibrary();
-            liveFlowTestingUi.attachDefect(entry.stepId, entry.eventId, defect.id);
-            renderDefects();
-            renderLiveObserver();
-        } if (options.copy && navigator.clipboard?.writeText)
-            await navigator.clipboard.writeText(renderJiraReport(report).text); return result.added ? { feedback: options.copy ? "Flow defect saved and copied for Jira Cloud." : "Flow defect saved." } : { feedback: "A reported defect already matches the selected Flow issue.", existing: result.existing.map((existing) => ({ id: existing.id, label: String(existing.report?.summary ?? existing.id) })) }; },
-        openExisting: (id) => openDefect(id), updateExisting: (id, report) => { defectLibrary = editDefect(defectLibrary, id, { report }, new Date().toISOString()); persistDefectLibrary(); openDefect(id); },
-    });
-}
-function appendManualFlowValidation(inspector, event) {
-    const entries = event.manualFlowValidations ?? [];
-    if (!entries.length)
-        return;
-    const section = document.createElement("section"), heading = document.createElement("h5"), list = document.createElement("ol");
-    section.id = "live-manual-flow-validation";
-    section.setAttribute("aria-label", "Manual Flow test results");
-    heading.textContent = "Manual Flow test results";
-    for (const entry of entries) {
-        const item = document.createElement("li"), summary = document.createElement("p");
-        summary.textContent = `${entry.flowName} · ${entry.stepName} · ${entry.status} · effective revision ${entry.effectiveSchemaRevision} · ${entry.selectionMode}`;
-        const provenance = document.createElement("p");
-        provenance.textContent = `Contributors: ${entry.provenance.map(({ scope, contributorName }) => `${scope} ${contributorName}`).join(" → ") || "none"}`;
-        item.append(summary, provenance);
-        if (entry.issues.length) {
-            const issues = renderValidationIssueList(entry.issues.map((issue) => ({ path: issue.path, message: issue.code, rule: issue.code, severity: issue.severity, origin: `Manual Flow test · ${issue.provenance}`, expected: JSON.stringify(issue.expected), actual: JSON.stringify(issue.actual) })));
-            issues.setAttribute("aria-label", `Validation issues for ${entry.stepName}`);
-            const defect = document.createElement("button");
-            defect.type = "button";
-            defect.className = "live-flow-create-defect";
-            defect.textContent = "Create defect report";
-            defect.addEventListener("click", () => startManualFlowDefectReport(entry, event));
-            item.append(issues, defect);
-        }
-        list.append(item);
-    }
-    section.append(heading, list);
-    inspector.append(section);
 }
 function appendOpenInLibraryAction(eventId, templateName) {
     const action = document.createElement("button");
@@ -5928,7 +5883,7 @@ function currentSessionSaveDraft() {
             ...(event.destination ? { destination: event.destination } : {}),
             ...(event.validation ? { validation: event.validation } : {}),
             ...(event.validationDetails ? { validationDetails: event.validationDetails } : {}),
-            ...(event.manualFlowValidations ? { manualFlowValidations: event.manualFlowValidations } : {}),
+            ...(event.manualFlowContext ? { manualFlowContext: event.manualFlowContext } : {}),
             provenance: event.provenance ?? {
                 source: "live-observer",
                 capturedAt: event.captureTime,

@@ -45,9 +45,14 @@ const baseEntry = {
 };
 
 function reportFor(entry) {
-  return generateReportDetails(createDefectReport(defectCapturedEvent(
-    createManualFlowDefectEvent(entry, event),
-  )));
+  const presented = createManualFlowDefectEvent(entry, {
+    ...event,
+    manualFlowValidations:[structuredClone(entry)],
+  });
+  assert.equal(presented.id, event.id, "Flow validation decorates the observed event rather than creating a parallel result");
+  assert.equal(presented.manualFlowContext.eventStepLink.eventId, event.id);
+  assert.equal("manualFlowValidations" in presented, false, "the ordinary event model does not retain a parallel Manual Flow result collection");
+  return generateReportDetails(createDefectReport(defectCapturedEvent(presented)));
 }
 
 const relationshipEntry = {

@@ -55,6 +55,7 @@ function liveEvent(event, session) {
         ...(event.destination ? { destination: event.destination } : {}),
         ...(event.validation ? { validation: event.validation } : {}),
         ...(event.validationDetails ? { validationDetails: clone(event.validationDetails) } : {}),
+        ...(event.manualFlowContext ? { manualFlowContext: clone(event.manualFlowContext) } : {}),
         ...(event.provenance === undefined ? {} : { provenance: typeof event.provenance === "string" ? event.provenance : JSON.stringify(event.provenance) }),
     };
 }

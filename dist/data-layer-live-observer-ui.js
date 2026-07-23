@@ -453,13 +453,6 @@ function renderEventLevelIssues(event, actionHandlers) {
                 state.className = "live-new-defect-state";
                 state.textContent = issueTriage.state;
                 item.append(state);
-                if (actionHandlers.startDefectReport) {
-                    const create = document.createElement("button");
-                    create.type = "button";
-                    create.textContent = "Create defect report";
-                    create.addEventListener("click", () => actionHandlers.startDefectReport?.(event));
-                    item.append(create);
-                }
             }
         } });
     section.append(heading, list);
