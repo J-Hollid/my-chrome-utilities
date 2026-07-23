@@ -1,4 +1,4 @@
-import { attachLiveFlowDefect, completeLiveFlowTest, createLiveFlowTest, liveFlowCandidateEvents, liveFlowChoices, liveFlowNextSteps, matchLiveFlowEvent, selectLiveFlow, selectLiveFlowStep, startLiveFlowPath } from "./data-layer-live-flow-testing.js";
+import { attachLiveFlowDefect, completeLiveFlowTest, createLiveFlowTest, liveFlowCandidateEvents, liveFlowChoices, liveFlowGraphNodes, matchLiveFlowEvent, selectLiveFlow, selectLiveFlowStep, startLiveFlowPath } from "./data-layer-live-flow-testing.js";
 const button = (text, run) => { const control = document.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 const option = (value, text) => { const item = document.createElement("option"); item.value = value; item.textContent = text; return item; };
 export function mountLiveFlowTestingUi(options) {
@@ -64,13 +64,20 @@ export function mountLiveFlowTestingUi(options) {
             host.append(startLabel);
         }
         if (run?.currentStepId && run.history.some(({ stepId }) => stepId === run.currentStepId)) {
-            const next = liveFlowNextSteps(run, project);
-            const nextSection = document.createElement("section"), title = document.createElement("h5");
+            const nodes = liveFlowGraphNodes(run, project), nextSection = document.createElement("section"), title = document.createElement("h5"), list = document.createElement("ul");
             title.textContent = "Choose next relationship-connected step";
-            nextSection.append(title);
-            for (const target of next)
-                nextSection.append(button(`${target.displayName} · ${target.kind}`, () => { run = selectLiveFlowStep(run, project, target.id); render(); }));
-            if (!next.length) {
+            nextSection.append(title, list);
+            for (const node of nodes) {
+                const item = document.createElement("li"), control = button(node.next ? `${node.next.displayName} · ${node.next.kind}` : `${node.name} · ${node.stepKind}`, () => { if (node.enabled) {
+                    run = selectLiveFlowStep(run, project, node.id);
+                    render();
+                } });
+                control.disabled = !node.enabled;
+                control.setAttribute("aria-label", `${node.name} · ${node.reason}`);
+                item.append(control, ` · ${node.reason}`);
+                list.append(item);
+            }
+            if (!nodes.some(({ enabled }) => enabled)) {
                 const terminal = document.createElement("p");
                 terminal.textContent = "No outgoing relationship from current step. Complete the selected path or end manually.";
                 nextSection.append(terminal);

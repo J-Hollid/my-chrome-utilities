@@ -5,6 +5,7 @@ import {
   createLiveFlowTest,
   liveFlowCandidateEvents,
   liveFlowChoices,
+  liveFlowGraphNodes,
   liveFlowNextSteps,
   matchLiveFlowEvent,
   selectLiveFlow,
@@ -81,10 +82,24 @@ assert.deepEqual(run.history[0].provenance.map(({scope})=>scope),["Shared Profil
 assert.equal("contributors" in run.history[0],false,"run evidence stores provenance rather than copied schema contributors");
 assert.equal(run.history[0].issues.length,0);
 assert.ok(run.history[0].effectiveSchemaRevision>0,"the effective revision comes from canonical contributors");
+assert.match(run.history[0].effectiveSchemaRevisionIdentity,/^flow-schema:[0-9a-f]{8}$/,"the effective revision has a stable facet-aware identity");
 assert.equal("assignment" in run.history[0],false);
 
 const next=liveFlowNextSteps(run,state);
 assert.deepEqual(next.map(({id,kind,displayName})=>({id,kind,displayName})),[{id:"occurrence:view",kind:"expected_next",displayName:"Cart to Cart page_view"}]);
+assert.deepEqual(liveFlowGraphNodes(run,state).map(({id,enabled,reason})=>({id,enabled,reason})),[
+  {id:"frame:cart",enabled:false,reason:"Current graph step"},
+  {id:"frame:confirmation-a",enabled:false,reason:"No relationship from current step"},
+  {id:"frame:confirmation-b",enabled:false,reason:"No relationship from current step"},
+  {id:"occurrence:view",enabled:true,reason:"Connected by expected_next"},
+],"every graph node remains rendered with an actionable or blocked explanation");
+const alteredFacet=structuredClone(state);
+alteredFacet.project.documentationFlowGraphs["flow:checkout"].pageFrames[0].localSchemaContributions[0].type="number";
+let alteredRun=selectLiveFlow(createLiveFlowTest("run:altered","project-retail"),alteredFacet,"flow:checkout");
+alteredRun=startLiveFlowPath(alteredRun,"frame:cart");
+alteredRun=matchLiveFlowEvent(alteredRun,alteredFacet,events,"live-101");
+assert.notEqual(alteredRun.history[0].effectiveSchemaRevisionIdentity,run.history[0].effectiveSchemaRevisionIdentity,
+  "changing an effective schema facet changes identity even when numeric contributor revisions are unchanged");
 run=selectLiveFlowStep(run,state,"occurrence:view");
 candidates=liveFlowCandidateEvents(run,state,events);
 assert.equal(candidates.find(({eventId})=>eventId==="live-100").reason,"Captured before the previous match");

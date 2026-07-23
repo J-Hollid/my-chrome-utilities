@@ -18,6 +18,17 @@ function step(state, flowId, id) {
     throw new Error(`Flow graph step ${id} is unavailable.`);
 }
 function revision(contributors) { return Math.max(0, ...contributors.map((contributor) => Number(contributor.revision ?? 0))); }
+function stableJson(value) {
+    if (Array.isArray(value))
+        return `[${value.map(stableJson).join(",")}]`;
+    if (value && typeof value === "object")
+        return `{${Object.entries(value).sort(([left], [right]) => left.localeCompare(right)).map(([key, item]) => `${JSON.stringify(key)}:${stableJson(item)}`).join(",")}}`;
+    return JSON.stringify(value) ?? "undefined";
+}
+function revisionIdentity(compiled) { let hash = 2166136261; for (const character of stableJson(compiled)) {
+    hash ^= character.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+} return `flow-schema:${(hash >>> 0).toString(16).padStart(8, "0")}`; }
 function relationshipKind(relationship) { return relationship.kind; }
 export function liveFlowChoices(activeProjectId, projects) {
     if (!activeProjectId)
@@ -43,6 +54,13 @@ export function liveFlowNextSteps(run, state) {
         return [];
     const source = step(state, run.flowId, run.currentStepId);
     return graph(state, run.flowId).relationships.filter((relationship) => relationship.sourceEndpoint?.id === run.currentStepId && Boolean(relationship.targetEndpoint?.id)).map((relationship) => { const target = step(state, run.flowId, relationship.targetEndpoint.id), label = typeof relationship.label === "string" ? relationship.label.trim() : "", displayName = label || `${source.name} to ${target.name}`; return { id: target.id, name: target.name, stepKind: target.kind, kind: relationshipKind(relationship), relationshipId: relationship.id, displayName }; });
+}
+export function liveFlowGraphNodes(run, state) {
+    if (!run.flowId || !run.currentStepId)
+        return [];
+    const current = graphs(state)[run.flowId], nextById = new Map(liveFlowNextSteps(run, state).map((next) => [next.id, next])), nodes = [...(current?.pageFrames ?? []).map((entity) => step(state, run.flowId, entity.id)), ...(current?.occurrences ?? []).map((entity) => step(state, run.flowId, entity.id))];
+    return nodes.map(({ id, name, kind: stepKind }) => { const next = nextById.get(id); if (next)
+        return { id, name, stepKind, enabled: true, reason: `Connected by ${next.kind}`, next }; return { id, name, stepKind, enabled: false, reason: id === run.currentStepId ? "Current graph step" : "No relationship from current step" }; });
 }
 export function selectLiveFlowStep(run, state, stepId) { const offered = liveFlowNextSteps(run, state).find(({ id }) => id === stepId); if (!offered)
     throw new Error("No relationship from current step."); return { ...run, currentStepId: stepId, incomingRelationshipId: offered.relationshipId }; }
@@ -77,7 +95,7 @@ export function matchLiveFlowEvent(run, state, events, eventId) {
     const candidate = liveFlowCandidateEvents(run, state, events).find((item) => item.eventId === eventId), event = events.find(({ id }) => id === eventId);
     if (!candidate?.eligible || !event)
         throw new Error(candidate?.reason ?? "Observed event is unavailable.");
-    const selected = step(state, run.flowId, run.currentStepId), path = layeredContributorPath(state, selected.entity, selected.scope, run.flowId), contributors = layeredContributorsForPath(state, path, payload(event)), compiled = compileLayeredSchema(contributors, { eventId: String(selected.entity.eventId ?? event.name), eventRole: selected.kind === "Event" ? "interaction" : "context", ...(selected.kind === "Event" ? { occurrenceId: selected.id } : {}) }), effectiveRevision = revision(contributors), validation = validateLayeredObservation({ targetId: selected.id, targetName: selected.name, revision: effectiveRevision, compiled }, payload(event)), entry = { stepId: selected.id, stepKind: selected.kind, stepName: selected.name, eventId: event.id, captureTime: event.captureTime, selectionMode: "Manual Flow test", ...(run.incomingRelationshipId ? { relationshipId: run.incomingRelationshipId } : {}), effectiveSchemaRevision: validation.effectiveSchemaRevision, issues: validation.issues, provenance: clone(validation.provenance), target: { id: selected.id, name: selected.name }, status: validation.issues.length ? "Invalid" : "Valid" };
+    const selected = step(state, run.flowId, run.currentStepId), path = layeredContributorPath(state, selected.entity, selected.scope, run.flowId), contributors = layeredContributorsForPath(state, path, payload(event)), compiled = compileLayeredSchema(contributors, { eventId: String(selected.entity.eventId ?? event.name), eventRole: selected.kind === "Event" ? "interaction" : "context", ...(selected.kind === "Event" ? { occurrenceId: selected.id } : {}) }), effectiveRevision = revision(contributors), validation = validateLayeredObservation({ targetId: selected.id, targetName: selected.name, revision: effectiveRevision, compiled }, payload(event)), entry = { stepId: selected.id, stepKind: selected.kind, stepName: selected.name, eventId: event.id, captureTime: event.captureTime, selectionMode: "Manual Flow test", ...(run.incomingRelationshipId ? { relationshipId: run.incomingRelationshipId } : {}), effectiveSchemaRevision: validation.effectiveSchemaRevision, effectiveSchemaRevisionIdentity: revisionIdentity(compiled), issues: validation.issues, provenance: clone(validation.provenance), target: { id: selected.id, name: selected.name }, status: validation.issues.length ? "Invalid" : "Valid" };
     return { ...run, history: [...run.history, entry], matchedEventIds: [...run.matchedEventIds, event.id], incomingRelationshipId: undefined, startedAt: run.startedAt ?? event.captureTime };
 }
 export function attachLiveFlowDefect(run, stepId, defectId, eventId) { return { ...run, history: run.history.map((entry) => entry.stepId === stepId && (!eventId || entry.eventId === eventId) ? { ...entry, defectId } : entry) }; }
