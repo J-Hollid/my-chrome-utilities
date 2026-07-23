@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {addEventOccurrenceToPage,addFlowPageFrame,documentaryFlowGraph,inferFlowRelationshipKind,migrateLegacyFlowRelationshipKinds,removeFlowRelationship,setFlowPageGroupLanes} from "../dist/data-layer-flow-graph.js";
+import {addEventOccurrenceToPage,addFlowPageFrame,documentaryFlowGraph,inferFlowRelationshipKind,migrateLegacyFlowContextBindings,migrateLegacyFlowRelationshipKinds,removeFlowRelationship,setFlowPageGroupLanes} from "../dist/data-layer-flow-graph.js";
 import {resetFlowPageInstanceLocalProperty,saveFlowPageInstanceLocalFacets} from "../dist/data-layer-layered-schema-project.js";
 import {addProjectEntity,createSpecificationProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
 
@@ -58,6 +58,33 @@ for(let sample=0;sample<128;sample+=1){
 
 const current={...base,project:{...base.project,documentationFlowGraphs:{[flow.id]:{...graph,relationships:[{id:"relationship:current",kind:"alternative",sourcePort:"top",targetPort:"bottom"}]}}}};
 assert.equal(migrateLegacyFlowRelationshipKinds(current,flow.id),current,"a current graph must remain an exact no-op");
+
+for(let sample=0;sample<128;sample+=1){
+  const pageId=`page:context-${sample}`,eventId=`event:context-${sample}`,bindingId=`binding:context-${sample}`,sourceFrameId=`frame:source-${sample}`,targetFrameId=`frame:target-${sample}`,sourceOccurrenceId=`occurrence:source-${sample}`,targetOccurrenceId=`occurrence:target-${sample}`,explicitEndpoints=sample%2===0,reverse=sample%3===0;
+  const sourceEndpoint={kind:"event-occurrence",id:reverse?targetOccurrenceId:sourceOccurrenceId},targetEndpoint={kind:"event-occurrence",id:reverse?sourceOccurrenceId:targetOccurrenceId};
+  const relationship={
+    id:`relationship:context-${sample}`,
+    ...(explicitEndpoints?{sourceEndpoint,targetEndpoint}:{sourceNodeId:sourceEndpoint.id,targetNodeId:targetEndpoint.id}),
+    sourcePort:sample%2?"bottom":"right",
+    targetPort:sample%2?"top":"left",
+    kind:sample%2?"merge":"expected_next",
+    group:randomText("context-group"),
+    ...(sample%3?{label:randomText("context-label")}:{}),
+    documentationCondition:randomText("context-condition"),
+    expectation:randomText("context-expectation"),
+    geometry:{bendX:Math.floor(random()*500),bendY:Math.floor(random()*500)},
+  };
+  const occurrences=[sourceOccurrenceId,targetOccurrenceId].map((id,index)=>({id,name:`Legacy context ${index}`,pageFrameId:index?targetFrameId:sourceFrameId,pageId,contextBindingId:bindingId,position:{y:80+index*40},obligation:"Required",minimum:1,maximum:1,optional:false}));
+  const project={...base.project,collections:{...base.project.collections,pages:[{id:pageId,name:"Context Page",contextEventBindings:[{id:bindingId,name:"Initial load",eventId,trigger:"initial-load"}]}],events:[{id:eventId,name:"page_view",eventName:"page_view",role:"context-setting"}]},documentationFlowGraphs:{[flow.id]:{...graph,pageFrames:[{id:sourceFrameId,pageId,position:{x:20,y:40}},{id:targetFrameId,pageId,position:{x:320,y:40}}],occurrences,relationships:[relationship]}}},state={...base,project},migrated=migrateLegacyFlowContextBindings(state,flow.id),stored=migrated.project.documentationFlowGraphs[flow.id],expectedSource=reverse?targetFrameId:sourceFrameId,expectedTarget=reverse?sourceFrameId:targetFrameId;
+  assert.deepEqual(stored.occurrences,[],`context migration sample ${sample} must absorb every primary context occurrence`);
+  assert.equal(stored.relationships.length,1,`context migration sample ${sample} must conserve relationship cardinality`);
+  assert.deepEqual(stored.relationships[0].sourceEndpoint,{kind:"page-frame",id:expectedSource},`context migration sample ${sample} must resolve the source Page frame`);
+  assert.deepEqual(stored.relationships[0].targetEndpoint,{kind:"page-frame",id:expectedTarget},`context migration sample ${sample} must resolve the target Page frame`);
+  const {sourceEndpoint:discardedSourceEndpoint,targetEndpoint:discardedTargetEndpoint,sourceNodeId:discardedSourceNodeId,targetNodeId:discardedTargetNodeId,...conserved}=stored.relationships[0],{sourceEndpoint:originalSourceEndpoint,targetEndpoint:originalTargetEndpoint,sourceNodeId:originalSourceNodeId,targetNodeId:originalTargetNodeId,...metadata}=relationship;
+  void discardedSourceEndpoint;void discardedTargetEndpoint;void discardedSourceNodeId;void discardedTargetNodeId;void originalSourceEndpoint;void originalTargetEndpoint;void originalSourceNodeId;void originalTargetNodeId;
+  assert.deepEqual(conserved,metadata,`context migration sample ${sample} must conserve identity, ports, kind, metadata, and geometry`);
+  assert.deepEqual(undoProjectTransaction(migrated).project,project,`context migration sample ${sample} must round-trip the complete project through one Undo`);
+}
 
 for(let sample=0;sample<128;sample+=1){
   const relationships=Array.from({length:2+Math.floor(random()*12)},(_,index)=>({
