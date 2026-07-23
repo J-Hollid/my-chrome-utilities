@@ -96,6 +96,11 @@ const relationshipRows=outgoing.map((choice)=>({
   display_name:choice.displayName,
 }));
 
+let beforeRun=selectLiveFlow(createLiveFlowTest("run:outline-before","project:outline"),state,"flow:checkout");
+beforeRun=linkLiveFlowEvent(beforeRun,state,initial,"frame:cart");
+beforeRun=linkLiveFlowEvent(beforeRun,state,before,"frame:payment");
+const beforeLinked=beforeRun.history.at(-1).eventId===before.id
+  && Date.parse(before.captureTime)<Date.parse(initial.captureTime);
 run=linkLiveFlowEvent(run,state,payment,"frame:payment");
 const paymentEntry=run.history.at(-1);
 const relationshipReport=generateReportDetails(createDefectReport(defectCapturedEvent(createManualFlowDefectEvent(paymentEntry,payment))));
@@ -118,7 +123,7 @@ const outlineRows=[
     flow_step:"Payment add_payment_info occurrence",
     effective_schema:"its Page-instance branch, Event branch, and Event-occurrence contribution",
   }]:[]),
-  ...(Date.parse(before.captureTime)<Date.parse(initial.captureTime)?[{capture_order:"before"}]:[]),
+  ...(beforeLinked?[{capture_order:"before"}]:[]),
   ...(Date.parse(after.captureTime)>Date.parse(initial.captureTime)?[{capture_order:"after"}]:[]),
   ...(relationshipReport.summary==="pageview does not satisfy Payment in Checkout journey"
     && relationshipReport.evidence.validation.some(({actual,constraint,rule})=>actual==="\"review\""&&constraint==="\"payment\""&&rule==="EXPECTED_VALUE")
