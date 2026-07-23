@@ -47,10 +47,10 @@ function projectParts(state) {
     const project = clone(state.project), { collections, documentationFlowGraphs, releases = [], ...rootProject } = project, parts = new Map(), projectId = project.id, add = (store, key, value) => parts.set(`${store}/${key}`, { identity: { store, key }, value: clone(value) });
     add("projectRoots", projectId, { project: rootProject, collectionKinds: Object.keys(collections), hasDocumentationFlowGraphs: documentationFlowGraphs !== undefined });
     for (const [kind, entries] of Object.entries(collections)) {
-        for (const entity of entries) {
+        for (const [index, entity] of entries.entries()) {
             const key = `${projectId}:${kind}:${entity.id}`, store = kind === "fixtures" ? "fixtures" : "projectEntities";
-            add("projectEntityMetadata", key, { projectId, kind, id: entity.id, name: entity.name });
-            add(store, key, { projectId, kind, entity });
+            add("projectEntityMetadata", key, { projectId, kind, index, id: entity.id, name: entity.name });
+            add(store, key, { projectId, kind, index, entity });
         }
     }
     for (const [flowId, graph] of Object.entries((documentationFlowGraphs ?? {})))
@@ -75,7 +75,7 @@ class MemoryBackend {
     stores = new Map(DURABLE_PROJECT_STORES.map((store) => [store, new Map()]));
     reads = [];
     writes = [];
-    async transaction(stores, mode, operation) { const working = new Map([...this.stores].map(([store, values]) => [store, new Map([...values].map(([key, value]) => [key, clone(value)]))])), read = (store, key) => { this.reads.push({ store, key, operation: "read" }); return working.get(store).get(key); }, transaction = { get: async (store, key) => { const value = read(store, key); return value === undefined ? undefined : clone(value); }, getAll: async (store) => { this.reads.push({ store, key: "*", operation: "read" }); return [...working.get(store).entries()].map(([key, value]) => ({ key, value: clone(value) })); }, getPrefix: async (store, prefix) => { this.reads.push({ store, key: `prefix:${prefix}`, operation: "read" }); return [...working.get(store).entries()].filter(([key]) => key.startsWith(prefix)).map(([key, value]) => ({ key, value: clone(value) })); }, put: async (store, key, value) => { if (mode !== "readwrite" || !stores.includes(store))
+    async transaction(stores, mode, operation) { const working = new Map([...this.stores].map(([store, values]) => [store, new Map([...values].map(([key, value]) => [key, clone(value)]))])), read = (store, key) => { this.reads.push({ store, key, operation: "read" }); return working.get(store).get(key); }, ordered = (store) => [...working.get(store).entries()].sort(([left], [right]) => left < right ? -1 : left > right ? 1 : 0), transaction = { get: async (store, key) => { const value = read(store, key); return value === undefined ? undefined : clone(value); }, getAll: async (store) => { this.reads.push({ store, key: "*", operation: "read" }); return ordered(store).map(([key, value]) => ({ key, value: clone(value) })); }, getPrefix: async (store, prefix) => { this.reads.push({ store, key: `prefix:${prefix}`, operation: "read" }); return ordered(store).filter(([key]) => key.startsWith(prefix)).map(([key, value]) => ({ key, value: clone(value) })); }, put: async (store, key, value) => { if (mode !== "readwrite" || !stores.includes(store))
             throw new Error(`Store ${store} is not writable in this transaction.`); working.get(store).set(key, clone(value)); this.writes.push({ store, key, operation: "write" }); }, delete: async (store, key) => { if (mode !== "readwrite" || !stores.includes(store))
             throw new Error(`Store ${store} is not writable in this transaction.`); working.get(store).delete(key); this.writes.push({ store, key, operation: "delete" }); } }; const result = await operation(transaction); if (mode === "readwrite")
         this.stores = working; return result; }
@@ -241,7 +241,7 @@ export class DurableProjectRepository {
             if (!metadata || !root)
                 throw new Error(`Durable project ${projectId} is unavailable.`);
             const prefix = projectPrefix(projectId), entityRecords = await transaction.getPrefix("projectEntities", prefix), fixtureRecords = await transaction.getPrefix("fixtures", prefix), graphs = await transaction.getPrefix("flowGraphs", prefix), releases = await transaction.getPrefix("releases", prefix), collections = Object.fromEntries(root.collectionKinds.map(kind => [kind, []]));
-            for (const { value } of [...entityRecords, ...fixtureRecords])
+            for (const { value } of [...entityRecords, ...fixtureRecords].sort((left, right) => (left.value.index ?? 0) - (right.value.index ?? 0)))
                 (collections[value.kind] ??= []).push(clone(value.entity));
             const project = { ...clone(root.project), collections, ...(root.hasDocumentationFlowGraphs ? { documentationFlowGraphs: Object.fromEntries(graphs.map(({ value }) => [value.flowId, clone(value.graph)])) } : {}), releases: releases.map(({ value }) => clone(value.release)) }, state = { project, ...(metadata.draft ? { draft: clone(metadata.draft) } : {}), history: { undo: [], redo: [] } };
             return { state, draftToken: metadata.draftToken, draftSequence: metadata.draftSequence ?? 0, publishedRevision: metadata.publishedRevision, lastSavedAt: metadata.lastSavedAt, ...(metadata.navigation ? { navigation: clone(metadata.navigation) } : {}) };
@@ -254,11 +254,11 @@ export class DurableProjectRepository {
             if (!metadata || !root)
                 throw new Error(`Durable project ${projectId} is unavailable.`);
             const collections = Object.fromEntries(root.collectionKinds.map(kind => [kind, []])), compact = await transaction.getPrefix("projectEntityMetadata", projectPrefix(projectId));
-            for (const { value } of compact)
+            for (const { value } of compact.sort((left, right) => (left.value.index ?? 0) - (right.value.index ?? 0)))
                 (collections[value.kind] ??= []).push({ id: value.id, name: value.name, placeholder: true });
             const kinds = [...new Set([...(route.collectionKind ? [route.collectionKind] : []), ...(route.collectionKinds ?? [])])];
             for (const kind of kinds) {
-                const store = kind === "fixtures" ? "fixtures" : "projectEntities", prefix = `${projectId}:${kind}:`, selected = route.entityId && kind === route.collectionKind ? await transaction.get(store, `${prefix}${route.entityId}`) : undefined, visible = selected ? [selected] : route.entityId && kind === route.collectionKind ? [] : (await transaction.getPrefix(store, prefix)).map(({ value }) => value), target = collections[kind] ?? [];
+                const store = kind === "fixtures" ? "fixtures" : "projectEntities", prefix = `${projectId}:${kind}:`, selected = route.entityId && kind === route.collectionKind ? await transaction.get(store, `${prefix}${route.entityId}`) : undefined, visible = selected ? [selected] : route.entityId && kind === route.collectionKind ? [] : (await transaction.getPrefix(store, prefix)).map(({ value }) => value).sort((left, right) => (left.index ?? 0) - (right.index ?? 0)), target = collections[kind] ?? [];
                 for (const value of visible) {
                     const index = target.findIndex(({ id }) => id === value.entity.id);
                     if (index >= 0)
@@ -269,7 +269,7 @@ export class DurableProjectRepository {
                 collections[kind] = target;
             }
             const graphs = route.includeFlowGraphs ? await transaction.getPrefix("flowGraphs", projectPrefix(projectId)) : [], fixtures = route.includeFixtures && !kinds.includes("fixtures") ? await transaction.getPrefix("fixtures", projectPrefix(projectId)) : [];
-            for (const { value } of fixtures) {
+            for (const { value } of fixtures.sort((left, right) => (left.value.index ?? 0) - (right.value.index ?? 0))) {
                 const target = collections[value.kind] ??= [], index = target.findIndex(({ id }) => id === value.entity.id);
                 if (index >= 0)
                     target[index] = clone(value.entity);

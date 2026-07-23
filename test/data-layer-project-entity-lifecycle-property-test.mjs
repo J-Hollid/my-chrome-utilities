@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {createMemoryDurableProjectRepository} from "../dist/data-layer-durable-project-repository.js";
 import {createSpecificationProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
 import {
   createProjectCollectionEntity as createEntity,
@@ -33,6 +34,10 @@ for(let example=0;example<120;example+=1){
     assert.equal(entity.canonicalSchema.contributorId,entity.id,`${kind} canonical ownership follows the stable entity identity`);
     assert.equal(entity.canonicalSchema.contributorName,entity.name,`${kind} canonical ownership follows the normalized human name`);
   }
+  const repository=createMemoryDurableProjectRepository({now:()=>"2026-07-24T00:00:00.000Z",token:()=>`draft:${suffix}`});
+  await repository.putProject(created,{active:true});
+  const exported=await repository.exportProject(created.project.id);
+  assert.deepEqual(exported.project.collections[kind][0],entity,`${kind} survives the production durable export adapter`);
 
   const review=inspectProjectEntityRemoval(created,kind,entity.id);
   assert.equal(review.blocked,false);
