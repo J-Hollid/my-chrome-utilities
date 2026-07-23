@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=974c07c6677f594e1612262bbdc65cf76c0a524585c982a2a77eb13f22a59c35
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-23T16:40:59.093431937Z","feature_name":"Data layer Live Flow guided testing runtime","feature_path":"features/data-layer-live-flow-guided-testing-runtime.feature","background_hash":"a452240cf847c6e9ac91c2cbbeea27d72aad80605488cd361dcbd72a1893da92","implementation_hash":"sha256:fac4d2ff182b6cf88f9a952973c8be8797287738218e7653ad0dbbbe7cf91c5c","scenarios":[{"index":3,"name":"Data layer Live Flow guided testing runtime 004","scenario_hash":"f85cc6189fd381192924af6ddb7aee0a9ab0968566ac834cd865a03196462071","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-23T16:38:49.708242212Z"},{"index":4,"name":"Data layer Live Flow guided testing runtime 005","scenario_hash":"34adad433225544964928f9f7c37dc52111f51522f94389a88d6931d8c5e8558","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-23T16:38:49.708242212Z"},{"index":5,"name":"Data layer Live Flow guided testing runtime 006","scenario_hash":"2987df31fb141a328c5b563e644031bc980e8a514bd303af5d0ada0bfb8cce1f","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-23T16:38:49.708242212Z"},{"index":7,"name":"Data layer Live Flow guided testing runtime 008","scenario_hash":"0a76f5b330928c98a36a02acfca893f52931b2a2f9b7b9b00065c4cfcf3af2a2","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-23T16:38:49.708242212Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer Live Flow guided testing runtime
 
   Background:
@@ -120,9 +115,13 @@ Feature: Data layer Live Flow guided testing runtime
     And issue controls render actual "review", expected "payment", and EXPECTED_VALUE as distinct evidence
     And expected-result controls render "Use Payment Flow-step expectation" with the effective schema revision
     And rendered issue and assistance labels contain neither generic constraint nor manually selected Flow step
+    When actual controls select Use Payment Flow-step expectation
+    Then report state expected payload contains typed string "payment" at /oForm/formStepName
+    And its correction contains operation replace, marker +, response "payment", and the Flow-step expectation response source
+    And the installed expected-result preview renders "payment" with green replacement treatment
     And the production builder retains ordinary payload, issue-selection, section, and action controls
     And report state contains stable Checkout journey, Payment, and live-102 IDs, their link, <displayed_link_evidence>, effective target, revision, and contributor provenance
-    And persisted and clipboard representations contain an immutable snapshot of that Flow evidence
+    And persisted and clipboard representations contain an immutable snapshot of that correction and Flow evidence
     And generated report meaning is the observed pageview failing Payment rather than a defective or failed Checkout journey
     And production save and clipboard adapters are the same ones used by automatic-validation reports
     And failed validation leaves the linked path and outgoing Flow-step controls unchanged

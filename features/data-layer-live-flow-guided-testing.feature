@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=4e97d342f14629259b6454e63b690aca02e18abb67dff9cbb273b4f6a12e9191
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-23T16:40:49.310652696Z","feature_name":"Data layer Live Flow guided testing","feature_path":"features/data-layer-live-flow-guided-testing.feature","background_hash":"5609233c5b54974dfd9370699b10d9d794cb8ba25a6668d48f61f22b990d761f","implementation_hash":"sha256:fd6e61db293d66b1d08d1116893eb092ecc143dc4154691854ed963940b26c32","scenarios":[{"index":3,"name":"Data layer Live Flow guided testing 004","scenario_hash":"08e09970925aac94bd9d6482e785383e4eb86189038ff2fd1fb09643a8d64ecf","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-23T16:38:16.939520946Z"},{"index":4,"name":"Data layer Live Flow guided testing 005","scenario_hash":"e98683e708cbcfd2c047c4358e129d5b4816faf97f8cf1f456378e38d27e19b4","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-23T16:38:16.939520946Z"},{"index":5,"name":"Data layer Live Flow guided testing 006","scenario_hash":"c303f5b1b7c31f911e31fa2b14c2de18cd6dedf302c87eb213f7342a7f0afce2","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-23T16:38:16.939520946Z"},{"index":7,"name":"Data layer Live Flow guided testing 008","scenario_hash":"c9105fed08aad8d7d08ddae16b796d5b87de65e66fdaa8bf584809c065cf3f5d","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-23T16:38:16.939520946Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer Live Flow guided testing
 
   Background:
@@ -121,9 +116,13 @@ Feature: Data layer Live Flow guided testing
     And the issue presents observed "review" separately from expected "payment" with rule EXPECTED_VALUE
     And expected-result assistance reads "Use Payment Flow-step expectation" and identifies its effective schema revision
     And no issue or assistance label describes the Flow-step expectation as generic or manually selected
+    When the operator selects Use Payment Flow-step expectation
+    Then the expected payload replaces /oForm/formStepName with typed string "payment"
+    And its expected difference is one green replacement rather than an unchanged generic constraint
+    And the green replacement retains the selected assistance as response provenance
     And the usual builder retains its observed payload, issue selection, report sections, and actions
     And report evidence contains stable Checkout journey, Payment, and live-102 identities, their event-to-step link, <displayed_link_evidence>, effective target, revision, and contributor provenance
-    And saved and copied representations retain that Flow evidence as a snapshot
+    And saved and copied representations retain that correction and Flow evidence as a snapshot
     And the report describes pageview failing the linked Payment expectation without calling the Flow definition defective or claiming that Checkout journey failed or executed
     And saving or copying the report behaves the same as for automatic schema validation
     And the failed validation neither changes the linked path nor blocks valid outgoing Flow-step choices

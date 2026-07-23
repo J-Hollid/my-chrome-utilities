@@ -203,13 +203,16 @@ Flow-step link remains visible in its section. A defect opened from the ordinary
 action identifies Flow, linked step, and observed event; separates actual from
 expected evidence; attributes assistance to the effective Flow-step schema; and
 snapshots stable link, path-or-start, revision, and contributor evidence in saved
-and copied representations. It reports the observed event against the linked
-expectation without declaring the Flow definition defective or the Flow failed or
-executed. Feed-event chronology is not restricted, and revisiting linked evidence
-does not rewind the current traversal position. This manual mode invokes no
-automatic assignment resolver and makes no execution claim. Any retained
-executable-step authoring is an explicitly separate Advanced function and does not
-duplicate or replace documentary graph authoring.
+and copied representations. Selecting a concrete `EXPECTED_VALUE` Flow expectation
+applies its typed value to the expected payload and renders the usual green
+add-or-replace correction with Flow-step and revision provenance. Rules without a
+concrete value remain explanatory and invent no response. The report describes the
+observed event against the linked expectation without declaring the Flow definition
+defective or the Flow failed or executed. Feed-event chronology is not restricted,
+and revisiting linked evidence does not rewind the current traversal position. This
+manual mode invokes no automatic assignment resolver and makes no execution claim.
+Any retained executable-step authoring is an explicitly separate Advanced function
+and does not duplicate or replace documentary graph authoring.
 
 The selected-Flow documentation checkpoint derives a Flow value map and Data capture
 matrix from ordered graph contexts and canonical effective schemas. It reuses the
@@ -456,11 +459,11 @@ root-first Page starts, Page and Event effective-schema resolution, directed
 relationship guidance in event details, chronology-independent operator event
 choice, linked-evidence review without traversal rewind, Flow-aware defect headings,
 distinct actual and expected evidence, durable link and schema-provenance snapshots,
-one ordinary event-detail defect action with no parallel Flow-result controls,
-ordinary validation and defect adapters, saved session restoration, assignment
-bypass, and domain immutability. It may declare `flow_graph` and `layered_schema`
-dependencies but must not invoke unrelated or archived Live and temporal-Flow
-suites.
+typed expected-payload corrections from concrete Flow expectations, one ordinary
+event-detail defect action with no parallel Flow-result controls, ordinary
+validation and defect adapters, saved session restoration, assignment bypass, and
+domain immutability. It may declare `flow_graph` and `layered_schema` dependencies
+but must not invoke unrelated or archived Live and temporal-Flow suites.
 
 The `flow_export` pack may register shared build dependencies from `flow_graph`, but
 must contain the selected-Flow export features and their production clipboard and

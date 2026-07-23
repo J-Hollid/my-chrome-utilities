@@ -131,6 +131,14 @@ generic constraint or describe its provenance as a manually selected Flow step;
 manual linking explains how the operator selected the validation target, not where
 the constraint originated.
 
+When `EXPECTED_VALUE` supplies one concrete typed value, selecting the Flow-step
+expectation applies that value to the expected payload. An existing observed value
+is replaced and a missing value is added. The expected difference uses the usual
+green addition treatment and records the Flow-step expectation plus effective
+schema revision as its response source. Saved and copied reports retain the typed
+response and correction operation. A rule that supplies no concrete value remains
+explanatory and does not invent an expected payload value.
+
 Report evidence snapshots the stable Flow, graph-step, and observed-event
 identities; their event-to-step association; the effective target, revision, and
 contributor provenance; and either the traversed relationship path or the Page
@@ -173,7 +181,7 @@ tested, but no output says Flow passed or claims the Flow executed.
 | L05 | Live Flow guided testing 005 | Page and occurrence compiler inputs plus stable target IDs | each graph-step kind uses its live effective schema |
 | L06 | Live Flow guided testing 006 | earlier and later feed-event selection with unchanged feed state | capture chronology never restricts the operator |
 | L07 | Live Flow guided testing 007 | recorded link display and unchanged traversal cursor | reviewing an older linked event does not rewind the path |
-| L08 | Live Flow guided testing 008 | one ordinary event-detail defect action, absent duplicate Flow-result controls, Flow-aware heading, distinct actual and expected evidence, Flow-step assistance, durable report snapshot, and standard defect adapters | the ordinary observed-event failure path produces a self-contained Flow-aware defect without a parallel Flow-only workflow or execution claim |
+| L08 | Live Flow guided testing 008 | one ordinary event-detail defect action, absent duplicate Flow-result controls, Flow-aware heading, distinct actual and expected evidence, concrete Flow-expectation correction, durable report snapshot, and standard defect adapters | selecting an exact Flow expectation produces a typed green correction in the self-contained ordinary defect without a parallel workflow or execution claim |
 | L09 | Live Flow guided testing 009 | restored feed/detail evidence and domain hashes | saved sessions restore links without an execution claim |
 
 ## Terminal acceptance
@@ -191,11 +199,12 @@ active-project Flow context in the existing feed, root-first start selection,
 Page-frame and Event-occurrence effective-schema resolution, relationship-guided
 detail selections, chronology-independent operator event choice, recorded-link
 review without cursor changes, Flow-aware defect headings and evidence snapshots,
-distinct actual and expected issue presentation, one ordinary event-detail defect
-action with no parallel Flow-result controls, ordinary validation and defect
-adapters, saved session restoration, assignment bypass, and domain immutability.
-It declares its active Flow graph and layered-schema dependencies in the pack
-registry rather than invoking additional commands.
+distinct actual and expected issue presentation, typed expected-payload corrections
+from concrete Flow expectations, one ordinary event-detail defect action with no
+parallel Flow-result controls, ordinary validation and defect adapters, saved
+session restoration, assignment bypass, and domain immutability. It declares its
+active Flow graph and layered-schema dependencies in the pack registry rather than
+invoking additional commands.
 
 Production implementation, browser-runtime evidence, and property evidence form
 one candidate lineage before terminal integration. Property coverage must exercise
