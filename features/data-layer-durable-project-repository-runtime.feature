@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=344cc2d048aa59b9b5443179328071a47501554e6cfa14ffcfa2228729356137
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-23T01:12:01.746134421Z","feature_name":"Data layer durable project repository runtime","feature_path":"features/data-layer-durable-project-repository-runtime.feature","background_hash":"ea1a4120468de5d4ee4a99ef8f057ae8ba167549e8835e264649c75069235b18","implementation_hash":"sha256:d0cdfe2c8e3b14f4acc9518a20fec0ca6be8fc1d83497efe7fd5848c19375ede","scenarios":[{"index":5,"name":"Data layer durable project repository runtime 006","scenario_hash":"2c66d9ae784c35eb6550ab51706de68e3f28811aec56e72d054b767a9fd2f11f","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-23T01:09:07.248650137Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer durable project repository runtime
 
   Background:

@@ -38,7 +38,18 @@
                 (every? #(all-true? (get evidence %)) runtime-keys))))
 (defn- assert-runtime! [evidence]
   (support/assert! (complete-browser-evidence? evidence) "Installed durable repository evidence is incomplete." evidence))
+(def failure-example-values
+  {"failure" #{"quota exceeded" "transaction aborted" "repository unavailable"}})
+(defn validate-example! [_mode example]
+  (support/validate-example-domain!
+   failure-example-values example
+   (filter #(support/example-value example %) (keys failure-example-values))
+   "Durable repository failure example was outside the specified contract."))
 (def handlers
   (support/verified-feature-mode-handlers feature-files entry-modes :durable-project-repository-mode
-                                          verify-model! (fn [_mode _example] true)
+                                          verify-model! validate-example!
                                           observe-browser! assert-runtime!))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-23T03:11:31.351263552+02:00", :module-hash "-1033509727", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 5, :hash "-976827486"} {:id "def/feature-files", :kind "def", :line 7, :end-line 8, :hash "-314391133"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 11, :hash "-1508472977"} {:id "form/3/defonce", :kind "defonce", :line 12, :end-line 12, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 13, :end-line 13, :hash "-1618529344"} {:id "defn-/checked!", :kind "defn-", :line 14, :end-line 17, :hash "-148274062"} {:id "defn-/verify-model!", :kind "defn-", :line 18, :end-line 23, :hash "1173849277"} {:id "defn-/observe-browser!", :kind "defn-", :line 24, :end-line 30, :hash "-1924535678"} {:id "def/runtime-keys", :kind "def", :line 31, :end-line 31, :hash "-370131229"} {:id "def/required-keys", :kind "def", :line 32, :end-line 32, :hash "-627843649"} {:id "defn-/all-true?", :kind "defn-", :line 33, :end-line 33, :hash "-1681869564"} {:id "defn/complete-browser-evidence?", :kind "defn", :line 34, :end-line 38, :hash "-2131545939"} {:id "defn-/assert-runtime!", :kind "defn-", :line 39, :end-line 40, :hash "217878866"} {:id "def/failure-example-values", :kind "def", :line 41, :end-line 42, :hash "-644280616"} {:id "defn/validate-example!", :kind "defn", :line 43, :end-line 47, :hash "1731629357"} {:id "def/handlers", :kind "def", :line 48, :end-line 51, :hash "2100359538"}]}
+;; clj-mutate-manifest-end
