@@ -39,7 +39,10 @@ assert.deepEqual(
 const add=(kind,entity)=>{state=addProjectEntity(state,kind,entity,id);return state.project.collections[kind].at(-1);};
 const checkout=add("pageGroups",{name:"Checkout"});
 const flow=add("flows",{name:"Checkout journey",steps:[]});
-state={...state,project:{...state.project,collections:{...state.project.collections,pages:state.project.collections.pages.map((page)=>({...page,pageGroupIds:[checkout.id]}))}}};
+state={...state,project:{...state.project,collections:{...state.project.collections,
+  pages:state.project.collections.pages.map((page)=>({...page,pageGroupIds:[checkout.id],schemaConstraints:[{path:page.id===cart.id?"/cart_only":"/payment_only",type:"string",presence:"required"}]})),
+  events:state.project.collections.events.map((event)=>({...event,schemaConstraints:[{path:"/interaction",type:"string"}]})),
+}}};
 state=setFlowPageGroupLanes(state,flow.id,[checkout.id]);
 state=addFlowPageFrame(state,flow.id,{pageId:cart.id,pageGroupId:checkout.id,x:40,y:40},id);
 state=addFlowPageFrame(state,flow.id,{pageId:payment.id,pageGroupId:checkout.id,x:320,y:40},id);
@@ -70,6 +73,12 @@ assert.deepEqual(documentaryFlowGraph(state.project,flow.id).relationships[0].ta
 const review=inspectOccurrencePageChange(state.project,flow.id,occurrence.id,paymentFrame.id);
 assert.equal(review.rejected,false);
 assert.match(review.message,/Cart.*Payment.*effective-schema/i);
+assert.deepEqual(review.impact.source,{pageFrameId:cartFrame.id,pageName:"Cart",status:"ready",propertyPaths:["/cart_only","/interaction"]});
+assert.deepEqual(review.impact.target,{pageFrameId:paymentFrame.id,pageName:"Payment",status:"ready",propertyPaths:["/interaction","/payment_only"]});
+assert.deepEqual(review.impact.addedPaths,["/payment_only"]);
+assert.deepEqual(review.impact.removedPaths,["/cart_only"]);
+assert.deepEqual(review.impact.changedPaths,[]);
+assert.match(review.message,/source ready.*target ready.*added.*payment_only.*removed.*cart_only/i);
 const beforeEvent=JSON.stringify(buttonClick),beforePages=JSON.stringify(state.project.collections.pages);
 state=reassignFlowOccurrencePage(state,flow.id,occurrence.id,paymentFrame.id);
 const moved=documentaryFlowGraph(state.project,flow.id).occurrences[0];
@@ -82,7 +91,8 @@ assert.equal(JSON.stringify(buttonClick),beforeEvent);
 assert.equal(JSON.stringify(state.project.collections.pages),beforePages);
 
 const pageExample=deriveFlowPageFrameExample(state.project,flow.id,paymentFrame.id);
-assert.equal(pageExample.status,"Complete");
+assert.equal(pageExample.status,"Incomplete");
 assert.deepEqual(pageExample.payload,{});
+assert.deepEqual(pageExample.issues.map(({path,code})=>({path,code})),[{path:"/payment_only",code:"REQUIRED_EXAMPLE"}]);
 
 console.log("Flow Page context-event model tests passed");
