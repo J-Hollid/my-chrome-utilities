@@ -9,8 +9,9 @@ by this program.
 
 Flow testing is a context applied to the existing Live experience. The operator
 selects one active-project Flow above the event feed, opens any observed event
-through the feed's ordinary event-details action, links it to an eligible Flow Page
-frame or Event occurrence, and receives ordinary event validation and defect
+through the feed's ordinary event-details action, links it to an eligible
+context-setting Flow Page event or nested interaction Event occurrence, and receives
+ordinary event validation and defect
 reporting against that step's effective schema.
 
 This is not automatic Assignment, temporal Flow execution, or proof that an entire
@@ -34,8 +35,10 @@ Create project.
 ## First event and start Page ordering
 
 Opening an unlinked observed event in a newly selected Flow context adds a Flow-step
-selector to its existing event details. The initial selector contains Page frames,
-not Event occurrences.
+selector to its existing event details. The initial selector contains
+context-setting Page events, not nested interaction Event occurrences. Each choice
+identifies the human Page and its observed event identity, such as
+`Cart · pageview`.
 
 Root Page frames with no incoming relationships are listed first. Remaining Page
 frames follow, so an operator can begin at a specific later context. Within both
@@ -50,8 +53,9 @@ the operator may start.
 ## Linking and ordinary event validation
 
 Selecting a Page frame links the open observed event to the selected Flow, stable
-frame identity, and current Live session. It immediately validates the observed
-payload against that Flow Page instance's live effective schema: applicable Shared
+frame identity, Page context-event identity, and current Live session. It
+immediately validates the observed Page event against that Flow Page instance's
+live effective schema: applicable Shared
 Profiles, ordered Page Groups, Page contribution, and sparse instance override.
 
 The validation appears in the same event-details presentation used when automatic
@@ -69,21 +73,25 @@ This session link is not a project Assignment and does not invoke the automatic
 assignment resolver. It creates or changes no Assignment, canonical contributor,
 Flow topology, schema payload copy, or observed-event payload.
 
-## Relationship-guided next selections
+## Page-context selections
 
-After an observed event is linked, that Flow step becomes the current traversal
-position. When the operator later opens another unlinked observed event from the
-ordinary feed, its Flow-step selector contains only direct outgoing relationship
-targets of the current step.
+After an observed event is linked to a Page frame, that Page becomes the current
+context. When the operator later opens another unlinked observed event, its selector
+offers the current Page's contained interaction Event occurrences first, followed by direct
+outgoing Page-relationship targets.
 
-Page frames and Event occurrences may both be relationship targets.
-`expected_next`, `alternative`, and `merge` remain directed documentary kinds.
-Optional relationship labels are shown when present; otherwise human source and
-target names are used. Stable graph identities remain beneath the controls.
+Only Page frames are relationship endpoints. `expected_next`, `alternative`, and
+`merge` remain directed documentary Page-relationship kinds. Optional relationship
+labels are shown when present; otherwise human Page names are used. An interaction
+occurrence is eligible because it is contained by the current Page, never because
+of an Event relationship.
 
-Selecting a target links and validates the open observed event, then makes that
-target current for the next unlinked event. A validation failure does not alter the
-linked path or disable valid outgoing targets.
+Selecting a related Page links and validates the observation, then makes that Page
+current. Selecting a contained Event occurrence validates against its full
+occurrence schema while leaving the current Page unchanged. The same occurrence may
+be selected for multiple observations; containment expresses applicability, not
+cardinality. A validation failure does not alter Page context or disable eligible
+Events or related Pages.
 
 For a Page-frame target, validation uses that frame's effective Page-instance
 schema. For an Event-occurrence target, validation uses the full effective
@@ -98,10 +106,10 @@ and link an unlinked feed event captured before or after the previously linked
 event. Flow context does not hide, disable, reorder, or automatically select feed
 rows.
 
-The relationship-guided selector constrains graph-step meaning, not which observed
-event the operator may inspect next. One observed event's existing session link is
+The Page-context selector constrains graph-step meaning, not which observed event
+the operator may inspect next. One observed event's existing session link is
 shown when that event is revisited rather than silently replacing it with the
-current traversal target.
+current Page-context choices.
 
 ## Revisiting linked events
 
@@ -110,10 +118,10 @@ with its ordinary validation result, issues, provenance, and defect actions. Thi
 display behaves as though that effective schema had been selected by automatic
 assignment, while retaining Manual Flow test as the selection provenance.
 
-Reviewing an earlier linked event does not rewind or advance the session traversal
-position. The most recently linked step remains current. Consequently, opening a
-new unlinked event after reviewing older evidence still offers outgoing targets
-from the current step.
+Reviewing an earlier linked event does not rewind or advance the session Page
+context. The most recently selected Page remains current. Consequently, opening a
+new unlinked event after reviewing older evidence still offers that Page's
+contained Events and outgoing related Pages.
 
 ## Defects and session evidence
 
@@ -152,8 +160,8 @@ as defective and does not claim that the selected Flow failed or executed. Savin
 copying, duplicate handling, and defect-library behavior remain the same as for
 automatic-schema validation.
 
-The Live session retains selected Flow context, current traversal position,
-event-to-step links, traversed relationships, effective revisions, validation
+The Live session retains selected Flow context, current Page context, event-to-step
+links, traversed Page relationships, effective revisions, validation
 results, and defect references. Reopening a saved session restores that evidence in
 the existing feed and event details. Unchosen alternatives may be identified as Not
 tested, but no output says Flow passed or claims the Flow executed.
@@ -175,14 +183,14 @@ tested, but no output says Flow passed or claims the Flow executed.
 | ID | Scenario | Required production evidence | Terminal condition |
 |---|---|---|---|
 | L01 | Live Flow guided testing 001 | integrated feed selector, unchanged feed, and absent-context UI | Flow selection sets context without opening a separate workflow |
-| L02 | Live Flow guided testing 002 | root-first Page-frame values, repeated IDs, and loop-only Flow | roots are preferred while every Page frame remains available |
-| L03 | Live Flow guided testing 003 | event-to-frame link, Page-instance compiler input, and ordinary detail UI | first selection validates inside existing event details |
-| L04 | Live Flow guided testing 004 | outgoing relationship index, labels, and current-step update | another event offers only valid directed next graph steps |
-| L05 | Live Flow guided testing 005 | Page and occurrence compiler inputs plus stable target IDs | each graph-step kind uses its live effective schema |
+| L02 | Live Flow guided testing 002 | root-first Page-event values, context event names, repeated IDs, and loop-only Flow | roots are preferred while every context-setting Page event remains available |
+| L03 | Live Flow guided testing 003 | pageview-to-frame link, Page-event compiler input, and ordinary detail UI | first selection validates the context-setting Page event inside existing event details |
+| L04 | Live Flow guided testing 004 | contained-Event index, outgoing Page relationships, repeated occurrence selection, and Page-context update | another event offers current-Page Events plus related Pages while Events do not advance context |
+| L05 | Live Flow guided testing 005 | Page and occurrence compiler inputs plus stable target IDs | each target uses its live effective schema while the Page cursor remains its containing Page |
 | L06 | Live Flow guided testing 006 | earlier and later feed-event selection with unchanged feed state | capture chronology never restricts the operator |
-| L07 | Live Flow guided testing 007 | recorded link display and unchanged traversal cursor | reviewing an older linked event does not rewind the path |
+| L07 | Live Flow guided testing 007 | recorded link display and unchanged Page cursor | reviewing an older linked event does not rewind Page context |
 | L08 | Live Flow guided testing 008 | one ordinary event-detail defect action, absent duplicate Flow-result controls, Flow-aware heading, distinct actual and expected evidence, concrete Flow-expectation correction, durable report snapshot, and standard defect adapters | selecting an exact Flow expectation produces a typed green correction in the self-contained ordinary defect without a parallel workflow or execution claim |
-| L09 | Live Flow guided testing 009 | restored feed/detail evidence and domain hashes | saved sessions restore links without an execution claim |
+| L09 | Live Flow guided testing 009 | restored Page path, repeated contained-Event links, feed/detail evidence, and domain hashes | saved sessions restore Page context and occurrence evidence without an execution claim |
 
 ## Terminal acceptance
 
@@ -196,9 +204,10 @@ node scripts/package.mjs
 
 The pack registers both contracts plus focused production evidence for
 active-project Flow context in the existing feed, root-first start selection,
-Page-frame and Event-occurrence effective-schema resolution, relationship-guided
-detail selections, chronology-independent operator event choice, recorded-link
-review without cursor changes, Flow-aware defect headings and evidence snapshots,
+Page-frame and Event-occurrence effective-schema resolution, Page-context detail
+selections from contained Events and related Pages, chronology-independent operator
+event choice, recorded-link review without cursor changes, Flow-aware defect
+headings and evidence snapshots,
 distinct actual and expected issue presentation, typed expected-payload corrections
 from concrete Flow expectations, one ordinary event-detail defect action with no
 parallel Flow-result controls, ordinary validation and defect adapters, saved
@@ -208,5 +217,5 @@ invoking additional commands.
 
 Production implementation, browser-runtime evidence, and property evidence form
 one candidate lineage before terminal integration. Property coverage must exercise
-that candidate's production serializer and traversal model; it must not substitute
+that candidate's production serializer and Page-context model; it must not substitute
 a test-only model when the candidate requires production corrections.

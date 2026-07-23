@@ -149,8 +149,10 @@ shadowed, conflicting, and provenance values are derived for every editor surfac
 
 ## Composition branches
 
-The Page and Event branches are independent until an Event occurrence is placed in
-a Page context:
+The Page and Event branches are independent until an interaction Event occurrence
+is placed in a Page context. A Page is itself a context-setting event and owns its
+observed event identity, such as `pageview`; this identity is not an Events-catalog
+definition or nested occurrence:
 
 ```text
 applicable Shared Profiles -> ordered Page Group stack -> Page -> Flow Page instance
@@ -159,13 +161,15 @@ applicable Shared Profiles -> ordered Page Group stack -> Page -> Flow Page inst
                                effective Event occurrence
 ```
 
-An Event occurrence outside Page containment compiles only applicable Shared
-Profiles, Event, and occurrence contributions. An Event occurrence inside a Flow
-Page instance combines both branches. The Page or Page instance is itself the
-context, and every Event occurrence is an interaction. Optional trigger text is
+A reusable interaction Event definition may compile its applicable Shared Profile
+and Event branches before it is placed. Every Flow Event occurrence, however, is
+contained by exactly one Page frame and combines that Page-instance branch with its
+Event and occurrence branches. The Page frame validates its own context-setting
+event without creating a nested `pageview` occurrence. Optional trigger text is
 documentation metadata and creates no separate role, binding, or composition path.
-Page or Page Group membership is never invented for an Event, and moving a canvas
-occurrence cannot alter its containing Page or Page Group contract.
+Page or Page Group membership is never invented for an Event. Changing an
+occurrence's Page through its explicit selector preserves both Pages' memberships
+and recompiles only the occurrence against the newly selected Page branch.
 
 More-specific contributions may narrow inherited allowed values, add compatible
 rules, or explicitly replace an ordinary inherited expectation at the same
@@ -470,7 +474,7 @@ feature.
 | C14 | End-to-end rich editing could still use parallel state | Authoring 013 | Adopt, nest, condition, constrain, document, table-edit, side-edit, reload, compile | All authoring and compiler boundaries | Installed terminal trace and persisted identity | E | One property definition is identical across every surface and compiler |
 | C15 | Contributor types have different authoring capabilities | Layering 001 | Identical schema actions for all six contributor kinds | Editor core, command schema, repository | Scenario-outline parity through actual controls | B, C | Contributor type changes only scope and provenance |
 | C16 | Page hierarchy needs predictable refinements | Layering 002 | Sitewide to Page Group to Page to Page-instance composition | Effective-schema compiler | Values and provenance inside and outside instance | C | Instance value 3b does not mutate Page value 3a |
-| C17 | Event definitions must be reusable and Page-Group independent | Layering 003 | Event-specific Shared Profile, Event refinement, occurrence value | Profile attachment and Event compiler branch | Contained and uncontained Event outputs | C | Uncontained Event has no invented Page Group contribution |
+| C17 | Interaction Event definitions must be reusable and Page-Group independent | Layering 003 | Event-specific Shared Profile and reusable Event refinement before a contained occurrence adds its value | Profile attachment and Event compiler branch | Reusable Event output plus one Page-contained occurrence | C | The reusable Event has no invented Page Group and no occurrence exists outside a Page |
 | C18 | Page and Event branches need one effective occurrence | Layering 004 | Combined property tree; parallel conflicts block; explicit resolution | Branch merge and conflict resolver | Blocking result and resolved provenance | C | Neither branch can silently win an incompatibility |
 | C19 | Override legality must protect inherited contracts | Layering 005 | Deterministic narrowing, invariant, condition, and named replacement rules | Compiler legality matrix | One result per example row | C | All unsafe weakenings block with explanation |
 | C20 | Contextual grouping must not become different schema models | Layering 006 | Exact Page Group, Page, Event, instance, and occurrence reach | Scope resolver and stable-reference store | Inclusion/exclusion and storage evidence | C | Each target receives exactly its contextual contributors |

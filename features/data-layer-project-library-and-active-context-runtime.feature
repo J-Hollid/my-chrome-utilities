@@ -210,3 +210,15 @@ Feature: Data layer project library and active context runtime
     And the production Inspector DOM contains no generic Add entity form, entity-kind selector, or exclusive removal action
     And the installed Studio and serialized project contain no Schemas overview, Add Schema route, or schemaDrafts collection
     And canonical project-retail storage owns every created stable ID and reference exactly once
+
+  # Data layer project library and active context runtime 017
+  Scenario: Data layer project library and active context runtime 017
+    Given production project-retail is active and its Pages and Events routes are available
+    When actual controls open Add Page
+    Then installed Create Page describes context-setting event semantics and requires Observed event name
+    And rendered controls require no Events-catalog reference, nested occurrence, or role selector
+    When actual controls create Cart with pageview
+    And create Button click from Add Event with button_click
+    Then production Pages stores Cart as context-setting pageview
+    And production Events stores Button click as interaction button_click
+    And serialized entities contain no role, context binding, or copied schema

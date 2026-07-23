@@ -1,14 +1,9 @@
-# mutation-stamp: sha256=4b0fe176445a530858e29d0fb4f8b41e40bf556120af76e9ebc2fe6e74a31f30
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-23T17:11:01.822301708Z","feature_name":"Data layer Live Flow guided testing runtime","feature_path":"features/data-layer-live-flow-guided-testing-runtime.feature","background_hash":"a452240cf847c6e9ac91c2cbbeea27d72aad80605488cd361dcbd72a1893da92","implementation_hash":"sha256:fac4d2ff182b6cf88f9a952973c8be8797287738218e7653ad0dbbbe7cf91c5c","scenarios":[{"index":3,"name":"Data layer Live Flow guided testing runtime 004","scenario_hash":"f85cc6189fd381192924af6ddb7aee0a9ab0968566ac834cd865a03196462071","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-23T17:11:01.822301708Z"},{"index":4,"name":"Data layer Live Flow guided testing runtime 005","scenario_hash":"34adad433225544964928f9f7c37dc52111f51522f94389a88d6931d8c5e8558","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-23T17:11:01.822301708Z"},{"index":5,"name":"Data layer Live Flow guided testing runtime 006","scenario_hash":"2987df31fb141a328c5b563e644031bc980e8a514bd303af5d0ada0bfb8cce1f","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-23T17:11:01.822301708Z"},{"index":7,"name":"Data layer Live Flow guided testing runtime 008","scenario_hash":"8606aa8695b51fbdc72d29dadf6c59d2df67688fe6864103a84cdb271edebfc9","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-23T17:11:01.822301708Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer Live Flow guided testing runtime
 
   Background:
     Given the installed extension has active project Retail website
     And production Live capture renders observed data-layer events in the event feed
-    And persisted Checkout journey contains connected Page-frame and Event-occurrence nodes
+    And persisted Checkout journey contains related context-setting Page events with nested interaction Event occurrences
 
   # Data layer Live Flow guided testing runtime 001
   Scenario: Data layer Live Flow guided testing runtime 001
@@ -27,10 +22,10 @@ Feature: Data layer Live Flow guided testing runtime
     And its graph-ordered Page frames are root Cart, non-root Payment, non-root Confirmation A, and non-root Confirmation B
     And the production observed event is unlinked
     When actual controls open the observed event from the event feed
-    Then the installed event details render Flow-step options Cart, Payment, Confirmation A, and Confirmation B in that order
+    Then installed event details render context-setting Page choices Cart pageview, Payment pageview, Confirmation A pageview, and Confirmation B pageview in that order
     And Cart renders root status
     And Confirmation A and Confirmation B have distinct stable control values
-    And the initial control contains no Event-occurrence value
+    And the initial control contains no interaction Event-occurrence value
     When actual controls select Returns loop whose Page frames all have incoming relationships
     Then the same production control renders every Returns loop Page frame in graph order
     And the installed guidance states that the selected Flow has no root Page frame
@@ -38,42 +33,41 @@ Feature: Data layer Live Flow guided testing runtime
   # Data layer Live Flow guided testing runtime 003
   Scenario: Data layer Live Flow guided testing runtime 003
     Given production Checkout journey is selected for Flow testing
-    And installed event details contain no recorded Flow step
+    And installed pageview event details contain no recorded Flow step
     When the operator links the open event to Cart Page frame
     Then saved Live-session evidence links live-101 to Checkout journey and the stable Cart frame ID
-    And the production validator receives Cart Flow Page-instance effective schema
+    And the production validator receives Cart context-setting Page-event effective schema
     And installed event details render the ordinary property issues and validation actions
     And the production defect report builder is available from those issues
     And result data records Manual Flow test, effective revision, issues, and provenance
     And production Assignment, contributor, Flow, and captured-payload bytes remain unchanged
 
   # Data layer Live Flow guided testing runtime 004
-  Scenario Outline: Data layer Live Flow guided testing runtime 004
-    Given Cart frame is the production current Flow step
-    And Cart has an outgoing <relationship_kind> relationship to <next_step> with <label_state>
+  Scenario: Data layer Live Flow guided testing runtime 004
+    Given the production session Page cursor identifies Cart frame
+    And production Cart contains button_click and PayPal interaction occurrences
+    And Cart has outgoing Page relationships to Payment and Confirmation
     And the production observed event is unlinked
     When actual controls open the observed event from the event feed
-    Then the installed Flow-step control renders Cart outgoing relationship targets
-    And <next_step> renders with <relationship_kind> and <display_name>
-    And controls reject a graph step absent from Cart outgoing relationship IDs
-    When the installed Flow-step control commits <next_step>
-    Then production session storage links live-102 to that stable graph-step ID
-    And current traversal state becomes <next_step>
-
-    Examples:
-      | relationship_kind | next_step                    | label_state        | display_name                 |
-      | expected_next     | Payment Page frame           | no label           | Cart to Payment              |
-      | alternative       | Cart PayPal Event occurrence | label PayPal route | PayPal route                 |
-      | merge             | Confirmation Page frame      | no label           | Cart to Confirmation         |
+    Then the installed selector renders Cart button_click and PayPal occurrences before related Payment and Confirmation frames
+    And it rejects Events outside Cart and Pages absent from Cart outgoing Page relationships
+    When the installed control links live-102 to Cart PayPal occurrence
+    Then effective compiler input contains Cart Page-instance, PayPal Event, and occurrence contributors
+    And current Page state remains Cart
+    When another unlinked event is opened
+    Then Cart PayPal remains selectable with Cart's other contained Events and related Pages
+    When actual controls link that event to Payment frame
+    Then selecting Payment changes production session context to that frame
 
   # Data layer Live Flow guided testing runtime 005
   Scenario Outline: Data layer Live Flow guided testing runtime 005
     Given production Checkout journey is selected for Flow testing
-    And the next production graph target is <flow_step>
+    And the selectable target under Payment context is <flow_step>
     When the installed Flow-step control links live-102 to that target
     Then the production validator receives <effective_schema>
     And persisted validation target is the stable identity of <flow_step>
     And result data contains selection mode Manual Flow test without an automatic assignment winner
+    And the persisted Page cursor ID equals the Payment frame ID
 
     Examples:
       | flow_step                           | effective_schema                                                                  |
@@ -82,11 +76,11 @@ Feature: Data layer Live Flow guided testing runtime
 
   # Data layer Live Flow guided testing runtime 006
   Scenario Outline: Data layer Live Flow guided testing runtime 006
-    Given Cart frame is the production current Flow step
+    Given the production session is positioned at Cart frame
     And the production observed event is unlinked
     And its capture time is <capture_order> the event linked to Cart
     When actual controls open the observed event from the event feed
-    Then the installed Flow-step control renders Cart outgoing relationship targets
+    Then the installed control renders Cart contained Events and outgoing Page targets
     And production permits linking the observed event without comparing capture order
     And feed row visibility, order, enabled state, and selection equal their pre-Flow-test values
 
@@ -98,14 +92,14 @@ Feature: Data layer Live Flow guided testing runtime
   # Data layer Live Flow guided testing runtime 007
   Scenario: Data layer Live Flow guided testing runtime 007
     Given production event details for live-101 record Cart frame
-    And production traversal continued from live-102 through Payment frame
+    And production live-102 advanced the session Page context to Payment frame
     And live-101 is under production review
     When actual controls open the observed event from the event feed
     Then the installed selector's recorded value is Cart frame
     And ordinary validation issues, provenance, and defect actions remain rendered
-    And the production traversal cursor remains Payment frame
+    And the production Page cursor remains Payment frame
     When production review switches to another event without a recorded Flow-step ID
-    Then every installed choice references an outgoing Payment relationship and none references Cart
+    Then installed choices are Payment contained occurrences plus outgoing Page targets and none belongs to Cart
 
   # Data layer Live Flow guided testing runtime 008
   Scenario Outline: Data layer Live Flow guided testing runtime 008
@@ -129,7 +123,7 @@ Feature: Data layer Live Flow guided testing runtime
     And persisted and clipboard representations contain an immutable snapshot of that correction and Flow evidence
     And generated report meaning is the observed pageview failing Payment rather than a defective or failed Checkout journey
     And production save and clipboard adapters are the same ones used by automatic-validation reports
-    And failed validation leaves the linked path and outgoing Flow-step controls unchanged
+    And failed validation leaves the linked path and Page-context controls unchanged
 
     Examples:
       | link_evidence                | displayed_link_evidence |
@@ -138,9 +132,10 @@ Feature: Data layer Live Flow guided testing runtime
 
   # Data layer Live Flow guided testing runtime 009
   Scenario: Data layer Live Flow guided testing runtime 009
-    Given production session evidence links Cart, page_view, Payment, and add_payment_info feed events along persisted relationship IDs
+    Given production evidence links Cart and Payment pageview observations along one Page relationship path
+    And repeated button_click and add_payment_info observations link under their containing Pages without advancing the Page cursor
     When actual controls save and reopen the Live session
-    Then production restores selected Checkout journey, current step, event links, schema revisions, statuses, and defect references
+    Then production restores selected Checkout journey, current Page context, event links, schema revisions, statuses, and defect references
     And the installed feed and event details remain the primary review surfaces
     And unchosen alternatives render Not tested
     And no installed result claims that Checkout journey passed or executed

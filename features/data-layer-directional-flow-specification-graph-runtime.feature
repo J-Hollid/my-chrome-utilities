@@ -1,14 +1,10 @@
-# mutation-stamp: sha256=dfb703a016389d40876ad5da15cad9fd42ee95c8cf2f79fba388d3527df19346
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-22T18:06:07.939253265Z","feature_name":"Data layer directional Flow specification graph runtime","feature_path":"features/data-layer-directional-flow-specification-graph-runtime.feature","background_hash":"d841c62b6eae057b12b924bd79261056f981b0d06095b10a64286e1ce8752ae3","implementation_hash":"3508ec9a2b","scenarios":[{"index":4,"name":"Data layer directional Flow specification graph runtime 005","scenario_hash":"3aa4a6e566757a5bd13743ae1c1977cf9615f625ee304e91d9c61d34c6134ff6","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-22T18:06:07.939253265Z"},{"index":23,"name":"Data layer directional Flow specification graph runtime 024","scenario_hash":"213298889aaad03cebec0e051b5e584626dbc2a6c10fb0e95a28c9cdd0e88687","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-22T14:52:07.704899121Z"},{"index":22,"name":"Data layer directional Flow specification graph runtime 023","scenario_hash":"5c69bf6450309296852e0e2da8af9b32413ea3c8abe33c01f19697ed969c1aa3","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-07-22T13:43:38.729708712Z"},{"index":8,"name":"Data layer directional Flow specification graph runtime 009","scenario_hash":"bdf578e52a739959f59baee7d7c10800938042136cf1932a9177a40d0bcbf197","mutation_count":20,"result":{"Total":20,"Killed":20,"Survived":0,"Errors":0},"tested_at":"2026-07-22T12:14:43.316256227Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer directional Flow specification graph runtime
 
   Background:
     Given the built extension is running with the production project repository and Specification Flow editor
     And production Shop contains Checkout, Delivery, Confirmation, Cart, Payment, Shipping, Thank you, and Landing definitions
-    And production Events include page_view, route_view, add_shipping_info, add_payment_info, and purchase
+    And production Pages identify context-setting observed events such as pageview
+    And the Events catalog contains only interactions including button_click, form_submit, add_shipping_info, add_payment_info, and purchase
 
   # Data layer directional Flow specification graph runtime 001
   Scenario: Data layer directional Flow specification graph runtime 001
@@ -48,6 +44,7 @@ Feature: Data layer directional Flow specification graph runtime
     When actual Pages search finds Cart and inserts it into Checkout
     Then one rendered Cart frame and one canonical record contain stable Checkout and Cart references
     And the installed Pages catalog labels Cart as a Checkout member
+    And the frame represents Cart's context-setting pageview event with no nested pageview occurrence
     When the Shipping component is released over the production Checkout lane
     Then the production gesture is rejected because Shipping belongs to Delivery
     And project bytes and revision remain unchanged
@@ -59,14 +56,14 @@ Feature: Data layer directional Flow specification graph runtime
     And production Event <event> has optional trigger <trigger>
     When the installed Events catalog performs <insertion>
     Then one rendered <event> occurrence appears inside <page> on the SVG canvas and synchronized outline
-    And rendered node kinds are context-setting Page <page> and interaction Event <event>
+    And rendered node kinds are context-setting Page event <page> and nested interaction Event <event>
     And canonical storage contains stable Page-frame, Page Group, Event, and occurrence IDs plus optional trigger <trigger>
     And production Event creation, Event editing, catalog insertion, and occurrence detail contain no Documentary role selector
     And serialized Event definitions and occurrences contain no role, context binding, copied schema, or lane-name key
 
     Examples:
       | page     | event             | trigger           | insertion                                                         |
-      | Cart     | page_view         | Initial load      | activate page_view from the Events catalog by pointer             |
+      | Cart     | button_click      | Continue clicked  | activate button_click from the Events catalog by pointer          |
       | Shipping | add_shipping_info | Form submitted    | drag add_shipping_info onto the visible SVG Shipping frame        |
       | Payment  | add_payment_info  | Payment submitted | activate add_payment_info from the Events catalog by keyboard     |
 
@@ -96,33 +93,36 @@ Feature: Data layer directional Flow specification graph runtime
 
   # Data layer directional Flow specification graph runtime 008
   Scenario: Data layer directional Flow specification graph runtime 008
-    Given production Cart contains page_view and add_payment_info nodes
+    Given production Cart contains button_click and add_payment_info nodes
     When actual pointer drags place both nodes side by side at distinct positions inside Cart
     Then the installed Cart frame expands without rendering a forced vertical Event list
     And reload renders both saved coordinate pairs
-    When an actual pointer drag or Arrow key moves add_payment_info across the Cart or Checkout boundary
-    Then add_payment_info returns to its last valid transform
-    And the Saved Draft plus Page Group, Page, Event, and occurrence IDs remain unchanged
-    And installed guidance says to add the predefined Event to another Page frame
+    When the installed occurrence Page selector changes add_payment_info from Cart to Payment
+    Then production impact preview names the changed Page effective-schema branch
+    When the installed impact review approves Page reassignment
+    Then production preserves the occurrence ID, Event ID, trigger, local schema contribution, and examples under Payment frame ID
+    And the compiler receives Payment Page-instance, Event, and occurrence contributors
+    And unrelated canonical entities remain byte-identical
 
   # Data layer directional Flow specification graph runtime 009
   Scenario Outline: Data layer directional Flow specification graph runtime 009
-    Given production Customer details and Payment Page frames plus page_view and add_payment_info occurrences expose left, right, top, and bottom ports
-    When actual pointer events drag from the <source> <source_port> port toward <target>
+    Given production Customer details, ID verification, Payment, and Confirmation Page frames expose four relationship ports
+    And installed Event occurrences expose no relationship port
+    When actual pointer events drag from the <source> Page <source_port> port toward <target> Page
     Then a temporary directed SVG edge follows the pointer and the <target> <target_port> port renders valid state
-    When pointerup occurs on the <target> <target_port> port
-    Then production storage contains one relationship with kind <kind> and typed stable endpoint and relationship IDs
+    When pointerup occurs on the <target> Page <target_port> port
+    Then production storage contains one relationship with kind <kind>, stable Page-frame endpoints, and relationship ID
     And production infers <kind> from the source and target ports without rendering a relationship-kind selector
     And canonical relationship storage has no label value
     And the installed canvas renders that edge without submitting a source or target form
     And a rendered inline relationship popover opens beside the edge
 
     Examples:
-      | source                            | source_port | target                            | target_port | kind          |
-      | Customer details Page             | right       | Payment Page                      | left        | expected_next |
-      | Customer details Page             | top         | Customer details add_payment_info | bottom      | alternative   |
-      | Customer details add_payment_info | bottom      | Payment Page                      | top         | merge         |
-      | Customer details page_view        | right       | Customer details add_payment_info | left        | expected_next |
+      | source           | source_port | target          | target_port | kind          |
+      | Customer details | right       | Payment         | left        | expected_next |
+      | Customer details | top         | ID verification | bottom      | alternative   |
+      | ID verification  | bottom      | Payment         | top         | merge         |
+      | Payment          | right       | Confirmation    | left        | expected_next |
 
   # Data layer directional Flow specification graph runtime 010
   Scenario: Data layer directional Flow specification graph runtime 010
@@ -135,8 +135,8 @@ Feature: Data layer directional Flow specification graph runtime
 
   # Data layer directional Flow specification graph runtime 011
   Scenario: Data layer directional Flow specification graph runtime 011
-    Given four production nodes form a fork-and-join candidate
-    When actual pointer events draw two top-to-bottom splits from page_view to the branch Events and two bottom-to-top returns from those Events to purchase
+    Given four production Page frames form a fork-and-join candidate
+    When actual pointer events draw two top-to-bottom splits from Decision to branch Pages and two bottom-to-top returns from those Pages to Confirmation
     Then the first two production relationships have inferred kind alternative and the latter two have inferred kind merge
     And installed canvas and outline render the exact two alternative branches and merge endpoints
     When actual controls label one alternative relationship Fulfilment choice and leave the other three relationships unlabelled
@@ -146,9 +146,9 @@ Feature: Data layer directional Flow specification graph runtime
 
   # Data layer directional Flow specification graph runtime 012
   Scenario: Data layer directional Flow specification graph runtime 012
-    Given actual keyboard focus is on the page_view right port
+    Given actual keyboard focus is on the Cart Page right port
     When Enter starts installed connection mode
-    And Arrow keys target add_payment_info
+    And Arrow keys target Payment Page
     And Enter commits the edge
     Then the production relationship has inferred kind expected_next
     And the production inline popover receives focus for optional label and documentation editing without a kind selector
@@ -158,9 +158,10 @@ Feature: Data layer directional Flow specification graph runtime
 
   # Data layer directional Flow specification graph runtime 013
   Scenario: Data layer directional Flow specification graph runtime 013
-    Given rendered add_payment_info and its outgoing edge remain visible with the Inspector closed
+    Given rendered add_payment_info remains nested in Cart with the Inspector closed
     When actual controls select add_payment_info
-    Then installed canvas handles and inline summary expose Move, Connect, Duplicate occurrence, Remove, and Open schema contribution
+    Then installed canvas handles and inline summary expose Move within Page, Change Page, Duplicate occurrence, Remove, and Open schema contribution
+    And production renders no Event relationship port or Connect action
     And Open schema contribution routes to the production canonical editor in the main workspace
     When actual controls return to Flow
     Then selected node, viewport, and canvas coordinates are restored
@@ -169,7 +170,7 @@ Feature: Data layer directional Flow specification graph runtime
 
   # Data layer directional Flow specification graph runtime 014
   Scenario: Data layer directional Flow specification graph runtime 014
-    Given the production rename fixture has one context-setting Page frame, two interaction Event nodes, and their directed edges
+    Given the production rename fixture has Page relationships and two contained Event interactions
     When actual collection controls rename Checkout to Basket, Cart to Basket page, and add_payment_info to payment_details_added
     Then installed canvas, catalogs, popover, and outline render the new names
     And canonical Page Group, Page, Event, occurrence, relationship, and trigger values remain byte-identical
@@ -184,10 +185,10 @@ Feature: Data layer directional Flow specification graph runtime
     And actual controls place Customer details, Payment, Summary, and Confirmation left to right
     And place ID verification above the gap between Customer details and Payment
     And actual pointer controls position multiple Event occurrences side by side in their Page frames
-    And actual ports create all four Page and Event endpoint combinations plus the identity branch and Payment merge
-    And installed controls expand the Payment Event's derived JSON example
+    And actual ports create only Page relationships including the identity branch and Payment merge
+    And installed controls expand the Payment Page and add_payment_info occurrence derived JSON examples
     And the installed extension reloads with the Inspector closed
-    Then production canvas and outline restore horizontal route, vertical branch, typed endpoints, Event coordinates, and derived JSON
+    Then production canvas and outline restore horizontal route, vertical branch, Page endpoints, Event coordinates, and both derived JSON examples
     And canonical storage contains no fixed lane, Inspector-authored item, raw selector ID, copied Event schema, stored example JSON, or executable transition
     And installed per-Event payload validation remains independent while journey expectations remain manual
 
@@ -210,13 +211,13 @@ Feature: Data layer directional Flow specification graph runtime
 
   # Data layer directional Flow specification graph runtime 017
   Scenario: Data layer directional Flow specification graph runtime 017
-    Given the production migration fixture stores Cart page_view and route_view nodes through legacy Page binding records and documentary roles
+    Given the production migration fixture binds context-setting pageview to Cart and contains button_click and form_submit nodes with documentary roles
     When the built extension opens that Checkout journey
-    Then installed migration review renders each human Page, Event, trigger, and affected occurrence without raw IDs
+    Then installed migration review renders Cart, its pageview context identity, and each interaction occurrence without raw IDs
     When actual controls confirm migration
-    Then migration preserves the complete topology and layout under the original occurrence identities
-    And the migrated canvas presents Cart as Page context and both Events as interactions
-    And migrated occurrences directly store Event IDs and optional triggers without role keys
+    Then migrated Cart storage carries observed event name pageview on its Page record and occurrence records exclude that identity
+    And migration preserves topology and layout plus the original button_click and form_submit occurrence identities
+    And migrated interaction occurrences directly store Event IDs and optional triggers without role keys
     And serialized production Page, Event, and Flow records have no contextEventBindings, contextBindingId, or documentary role key
     When actual Undo runs once
     Then production storage equals the complete pre-migration revision
@@ -298,7 +299,7 @@ Feature: Data layer directional Flow specification graph runtime
     Given production migration input contains labelled and unlabelled relationships with legacy kind parallel
     When the installed extension opens the owning Flow
     Then one repository migration changes every persisted parallel relationship to alternative
-    And production relationship IDs, typed endpoints, groups, optional labels, conditions, expectations, and coordinates equal their pre-upgrade values
+    And production relationship IDs, Page-frame endpoints, groups, optional labels, conditions, expectations, and coordinates equal their pre-upgrade values
     And no stored relationship retains the legacy kind
 
   # Data layer directional Flow specification graph runtime 023
@@ -344,3 +345,16 @@ Feature: Data layer directional Flow specification graph runtime
     Examples:
       | parent_value | approved_value | review_value  | declined_value |
       | pending      | approved       | manual_review | declined       |
+
+  # Data layer directional Flow specification graph runtime 025
+  Scenario: Data layer directional Flow specification graph runtime 025
+    Given production Payment Page frame represents context-setting pageview
+    And it has inherited and local configured examples plus one missing required page_name
+    When actual controls expand its Page example
+    Then installed status is Incomplete
+    And rendered read-only JSON contains effective page_type, form_name, form_step_name, and error_message values with contributor provenance
+    And the missing page_name repair opens the exact Payment Page-instance schema field
+    When actual controls save page_name payment on that instance
+    Then production renders Complete with page_name payment without a stored JSON payload
+    And production renders Invalid for a typed example violation and Blocked for an unresolved inherited conflict
+    And the contained Event example compiler input extends the same Page branch with Event and occurrence contributors

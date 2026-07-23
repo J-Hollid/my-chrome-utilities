@@ -1,14 +1,10 @@
-# mutation-stamp: sha256=908b1e0a0ba248d4c64e717cce102012ec19af0fc20f0a6c3dad8c931baa4f91
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-22T16:37:23.040179520Z","feature_name":"Data layer layered schema constraints runtime","feature_path":"features/data-layer-layered-schema-constraints-runtime.feature","background_hash":"8a3fb4e891f55ad01a7c07d791b29a09529f0d373a0a7c02f78f57c05171ff3b","implementation_hash":"617bdd99e4","scenarios":[{"index":0,"name":"Data layer layered schema constraints runtime 001","scenario_hash":"841b58bac0a850830dd983e58475124102f2e9e7df6f82b643fd77f719b16764","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-22T16:32:08.995505397Z"},{"index":4,"name":"Data layer layered schema constraints runtime 005","scenario_hash":"e6f9b12fb82ce881ea1a801d881cef93539989a8ae6fcdc441241974c826ece5","mutation_count":32,"result":{"Total":32,"Killed":32,"Survived":0,"Errors":0},"tested_at":"2026-07-22T16:32:08.995505397Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer layered schema constraints runtime
 
   Background:
     Given the built extension is running with the production project repository, canonical schema editor, compiler, assignment resolver, and per-Event validator
     And production Shop contains Shared Profiles Sitewide and Opened Article
     And it contains Checkout, Shipping, Article, Purchase, Article Opened, Alternative shipping, and Summer article
+    And production Shipping and Article are context-setting pageview events while Purchase and Article Opened are interaction Events
 
   # Data layer layered schema constraints runtime 001
   Scenario Outline: Data layer layered schema constraints runtime 001
@@ -58,8 +54,8 @@ Feature: Data layer layered schema constraints runtime
       | event        | required string restricted to article_opened  |
       | article_name | required string restricted to Summer sale     |
     And rendered provenance names Opened Article, Article Opened, and the Summer article occurrence
-    And canonical Article Opened storage has no Page Group membership
-    And production compilation outside Page containment uses only the Shared Profile, Event, and occurrence branches
+    And reusable Article Opened storage has no Page Group membership and compiles its Shared Profile and Event branches before placement
+    And its production occurrence exists only inside Summer article Page context
 
   # Data layer layered schema constraints runtime 004
   Scenario: Data layer layered schema constraints runtime 004
@@ -104,10 +100,10 @@ Feature: Data layer layered schema constraints runtime
       | Purchase                     | every Purchase occurrence independent of Page Group    |
       | Alternative shipping         | every Event occurrence contained by that Page instance |
       | Alternative shipping Purchase | that Event occurrence only                             |
-    When production compiles Shipping, Alternative shipping, Alternative shipping Purchase, and Purchase outside a Page
+    When production compiles Shipping Page event, Alternative shipping Page event, Alternative shipping Purchase occurrence, and reusable Purchase Event
     Then each effective schema contains exactly the contextually applicable contributions
     And rendered inclusion and exclusion evidence names contributor and scope
-    And the installed canvas cannot move an Event occurrence into different Page or Page Group containment
+    And installed Page reassignment preserves both Pages' memberships while recompiling the occurrence against its selected Page branch
     And production storage uses stable contributor, property, and occurrence references rather than names or generated paths
 
   # Data layer layered schema constraints runtime 007

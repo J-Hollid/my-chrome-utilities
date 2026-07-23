@@ -2,7 +2,7 @@ Feature: Data layer Flow table documentation export runtime
 
   Background:
     Given the built extension is running with the production Flow editor, canonical compiler, table exporter, clipboard, and download adapter
-    And production Checkout journey contains Cart page_view, Shipping add_shipping_info, Payment add_payment_info, and Confirmation purchase
+    And production Checkout journey relates context-setting Cart, Shipping, Payment, and Confirmation Page events containing interaction Event occurrences
     And production Shipping and Payment branches merge before Confirmation
 
   # Data layer Flow table documentation export runtime 001
@@ -15,31 +15,26 @@ Feature: Data layer Flow table documentation export runtime
 
   # Data layer Flow table documentation export runtime 002
   Scenario: Data layer Flow table documentation export runtime 002
-    When actual selectors include documentation columns
-      | Page         | Event             |
-      | Cart         | page_view         |
-      | Shipping     | add_shipping_info |
-      | Payment      | add_payment_info  |
-      | Confirmation | purchase          |
-    Then each rendered column heading contains Step label, Page name, and Event name
-    And production configuration stores Page-frame and Event-occurrence IDs
-    And the compiler receives combined effective Page and Event branches for every column
-    And production derives context from every Page frame and interaction semantics from every Event occurrence
-    And the DOM and serialized documentation configuration contain no documentary role selector or value
+    Given production Landing Page frame represents pageview and contains no interaction occurrence
+    When actual selectors include Cart, Landing, Shipping, Payment, and Confirmation steps
+    Then every selected Page renders as a primary context including Landing
+    And production Page primary contexts retain their context-setting observed event identities
+    And contained occurrences render as nested Page-specific subcontexts
+    And those subcontexts retain their interaction event identities
+    And production configuration stores stable Page-frame and occurrence IDs
+    And the compiler receives Page-instance branches for Page contexts and extended Event-occurrence branches for subcontexts
+    And the DOM and serialized configuration contain no Page-context binding or Event relationship
     And the installed UI exposes no raw ID as a heading or selector label
 
   # Data layer Flow table documentation export runtime 003
   Scenario: Data layer Flow table documentation export runtime 003
-    Given production selected contexts compile exact expected values
+    Given production selected Page and nested Event contexts compile exact expected values
     When actual controls preview Flow value map with Property name rows
     Then the rendered table heading is Checkout journey
-    And rendered Flow value cells are
-      | Property name  | Step 1 Cart / page_view | Step 2a Shipping / add_shipping_info | Step 2b Payment / add_payment_info | Step 3 Confirmation / purchase |
-      | page_name      | cart                    | shipping                             | payment                           | confirmation                   |
-      | form_name      | checkout                | checkout                             | checkout                          | checkout                       |
-      | form_step_name | cart                    | shipping                             | payment                           | confirmation                   |
-      | form_status    | started                 | active                               | active                            | completed                      |
-      | page_type      | checkout                | checkout                             | checkout                          | confirmation                   |
+    And rendered primary headings are Step 1 Cart, Step 2a Shipping, Step 2b Payment, and Step 3 Confirmation
+    And installed primary headings identify those Pages as context-setting pageview events
+    And occurrence headings render beneath their containing Page steps
+    And Page and occurrence cells come from their respective effective compiler targets
     And production compiler output rather than DOM-local copies supplies every expectation cell
 
   # Data layer Flow table documentation export runtime 004
@@ -69,23 +64,19 @@ Feature: Data layer Flow table documentation export runtime
 
   # Data layer Flow table documentation export runtime 006
   Scenario: Data layer Flow table documentation export runtime 006
-    Given production context schemas include page_name, form_name, transaction_id, error_message, and debug_message
+    Given production reuses error Event under Shipping and Payment with occurrence expectations "Shipping unavailable" and "Payment declined"
     When actual controls preview Data capture matrix
-    Then rendered rows are the union of effective property paths
-    And rendered matrix states are
-      | Variable       | Cart / page_view | Shipping / add_shipping_info | Payment / add_payment_info | Confirmation / purchase |
-      | page_name      | M                | M                            | M                          | M                       |
-      | form_name      | O                | M                            | M                          | O                       |
-      | transaction_id | —                | —                            | —                          | M                       |
-      | error_message  | N                | C                            | C                          | N                       |
-      | debug_message  | !                | —                            | —                          | —                       |
+    Then rendered rows union Page and occurrence effective property paths
+    And Shipping error and Payment error render as distinct nested occurrence columns
+    And parsed cells distinguish Page and occurrence M, O, C, N, —, and ! states
+    And their error_message details equal the two Page-specific values with occurrence provenance
     And the installed legend defines every symbol with its full meaning
 
   # Data layer Flow table documentation export runtime 007
   Scenario: Data layer Flow table documentation export runtime 007
     Given production Shipping error_message is Required when form_status Equals failed
     When actual controls activate its C matrix cell
-    Then rendered detail names Shipping add_shipping_info and error_message
+    Then rendered detail names Shipping Page, add_shipping_info occurrence, and error_message
     And it renders the structured condition with inherited and local provenance
     And production links open the exact effective property or contributing schema node
     And canonical condition storage remains unchanged
@@ -146,7 +137,7 @@ Feature: Data layer Flow table documentation export runtime
   # Data layer Flow table documentation export runtime 013
   Scenario: Data layer Flow table documentation export runtime 013
     Given production preview was compiled from graph revision 7 and schema revision set 12
-    When an included occurrence, relationship-topology, or schema command commits
+    When an included Page, occurrence, Page-relationship, or schema command commits
     Then the installed preview renders stale and all export actions are disabled
     And changed contexts are named
     When actual controls refresh

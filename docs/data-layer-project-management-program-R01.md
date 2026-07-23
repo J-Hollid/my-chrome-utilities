@@ -174,6 +174,13 @@ command; the new stable identity appears in the same overview and opens in its
 dedicated workspace. The Inspector contains no generic Add entity form or kind
 selector and closing it cannot affect creation.
 
+Page creation identifies the Page as a context-setting event and requires its
+observed event name, such as `pageview`. It does not select an Events-catalog record
+or create a nested Event occurrence. Event creation identifies an Events-tab entity
+as an interaction and requires its own observed event name, such as `button_click`.
+The entity kinds provide these semantics; neither creation route stores a
+documentary role or Page-context binding.
+
 Open routes to the entity's dedicated main-workspace configuration. Schema-bearing
 entities use the one canonical schema editor and effective-schema projection already
 defined by the canonical-authoring and layered-schema checkpoints. Flow creation
@@ -319,6 +326,7 @@ pair. `Portability NNN` refers to
 | P18 | Safe removal is not available from the overview | Context 013 | A named row action opens impact review, removes one entity, reports consequences, and supports identity-preserving Undo | Dependency index, project command repository, evidence invalidation, and focus adapter | Review counts, one removed ID, unaffected bytes, result, Undo identity, and focus sequence | C, E | Removing an unreferenced entity is atomic, explained, reversible, and Inspector-independent |
 | P19 | Removing a referenced entity can cascade or leave dangling state | Context 014 | Removal blocks and deep-links every human-named dependency until explicitly repaired | Cross-collection dependency index, removal guard, and entity routes | Named Flow, Assignment, and Fixture dependencies, disabled confirmation, byte equality, and enabled action after repairs | C, E | No referenced entity is deleted implicitly or leaves a dangling reference |
 | P20 | Collection lifecycle controls fail at narrow widths or keyboard operation | Context 015–016 | Deterministic focus, labelled controls, one-scroll layout, and an eight-collection installed workflow | Responsive Studio UI, accessibility tree, production repository, and reload subscriptions | Overflow measurements, accessible names, focus destinations, created IDs, restored rows, and absent Inspector form | C, E | All eight collections complete Add, Open, and Remove discovery through visible production controls |
+| P21 | Page and Event creation can blur context-setting and interaction semantics | Context 017 | Page creation requires a context-event name while Event creation produces an interaction Event | Page and Event creation routes, canonical repository, and collection projections | Cart pageview in Pages, Button click button_click in Events, absent role and binding fields | C, E | A Page is the context-setting event itself and no Page event is materialized as a nested Events-tab occurrence |
 
 ## Assumptions and deferred decisions
 
@@ -343,4 +351,6 @@ portable export, atomic remapped import, reload persistence, and no cross-projec
 entity leakage. It must also create and restore one entity through each of the eight
 collection overviews with the Inspector closed, prove the generic Inspector form is
 absent, and demonstrate safe and dependency-blocked removal through production
-commands.
+commands. Page creation must persist a context-setting observed event identity
+without a nested occurrence, while Event creation must persist an interaction
+identity without a role or Page binding.

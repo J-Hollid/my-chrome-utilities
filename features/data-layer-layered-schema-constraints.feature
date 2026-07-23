@@ -1,13 +1,9 @@
-# mutation-stamp: sha256=efd81960f7267de0a6f44258c221612dd078cfef6cf902187eefd07cb4c9c0fa
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-22T16:37:17.499474212Z","feature_name":"Data layer layered schema constraints","feature_path":"features/data-layer-layered-schema-constraints.feature","background_hash":"c5075caf7f9a4f57a5d9df74d7222c1d0fb86354e035c187aa542c32b7bd1aec","implementation_hash":"617bdd99e4","scenarios":[{"index":0,"name":"Data layer layered schema constraints 001","scenario_hash":"a5183bedc23abc0279313c0d2042eaa9a765afdc9141a0444902aed1a2a4b766","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-22T16:27:45.803995445Z"},{"index":4,"name":"Data layer layered schema constraints 005","scenario_hash":"527091a0b3f315daabfdf211aaa2ac580aa78d700a679941f48a08aded429cd2","mutation_count":32,"result":{"Total":32,"Killed":32,"Survived":0,"Errors":0},"tested_at":"2026-07-22T16:27:45.803995445Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer layered schema constraints
 
   Background:
     Given Shop project contains Shared Profiles Sitewide and Opened Article
     And it contains Page Group Checkout, Pages Shipping and Article, and Events Purchase and Article Opened
+    And Shipping and Article are context-setting pageview events while Purchase and Article Opened are interaction Events
     And the Flow instances are
       | Flow             | Page instance       | Page     | Event occurrence |
       | Checkout journey | Alternative shipping | Shipping | Purchase         |
@@ -62,8 +58,8 @@ Feature: Data layer layered schema constraints
       | event        | required string restricted to article_opened  |
       | article_name | required string restricted to Summer sale     |
     And provenance distinguishes Opened Article, Article Opened, and the Summer article occurrence
-    And Article Opened has no Page Group membership
-    And an Article Opened occurrence without Page containment compiles from the Shared Profile, Event, and occurrence branches only
+    And reusable Article Opened has no Page Group membership and compiles its Shared Profile and Event branches before placement
+    And its occurrence exists only inside Summer article Page context
 
   # Data layer layered schema constraints 004
   Scenario: Data layer layered schema constraints 004
@@ -108,10 +104,10 @@ Feature: Data layer layered schema constraints
       | Event Purchase               | every Purchase occurrence independent of Page Group    |
       | Alternative shipping         | every Event occurrence contained by that Page instance |
       | Alternative shipping Purchase | that Event occurrence only                             |
-    When effective schemas are compiled for Shipping, Alternative shipping, Alternative shipping Purchase, and Purchase outside a Page
+    When effective schemas are compiled for Shipping Page event, Alternative shipping Page event, Alternative shipping Purchase occurrence, and reusable Purchase Event
     Then each schema contains exactly the contributions whose contextual scopes include it
     And every inclusion and exclusion names the contributor and contextual scope
-    And moving an Event occurrence cannot change Page or Page Group membership
+    And changing an occurrence's containing Page preserves both Pages' memberships while recompiling against the selected Page branch
     And stable contributor, property, and occurrence references are persisted instead of names or generated paths
 
   # Data layer layered schema constraints 007

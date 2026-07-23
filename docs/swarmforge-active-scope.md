@@ -145,16 +145,22 @@ lane or a transient before-lanes or after-lanes edge region. Free placement clea
 only the frame's placement-group reference: ordered Page Group memberships,
 inheritance, and effective schema remain unchanged. Empty edge targets do not render
 as permanent lane-sized groups; compact free frames sandwich the named bands only
-where content exists. The Page frame itself is the Page context and may exist
-without any Event. Every Page is context-setting and every Event occurrence is an
-interaction; Event creation, editing, catalog insertion, occurrence detail, export,
+where content exists. The Page frame itself is both the Page context and the
+context-setting event. Every Page definition owns its observed event identity, such
+as `pageview`, without a nested Page-event occurrence or Events-catalog record.
+Every Events-tab definition is an interaction Event that may occur on a Page;
+Event creation, editing, catalog insertion, occurrence detail, export,
 and storage expose no documentary role selector or value. An optional Event trigger
 remains descriptive metadata and cannot change those fixed semantics or select a
 validation target. Events can be inserted into a Page frame by pointer activation
 after selecting the frame, pointer drop on the visible canvas frame, or keyboard
 activation. Each successful insertion appears immediately on canvas and outline.
 Event occurrences retain free, including side-by-side, coordinates inside an
-expanding Page frame and cannot leave that frame.
+expanding Page frame. An occurrence editor selects its containing Page frame by
+human name and stable identity. Changing that selection first previews the
+effective-schema impact, then preserves occurrence identity, Event reference,
+optional trigger, sparse contribution, configured examples, and position intent
+while recompiling the occurrence against the new Page-instance branch.
 
 Every Page insertion creates a new Flow Page-instance even when that Page already
 appears in the same Flow or lane. Instances retain distinct stable frame and schema-
@@ -167,11 +173,11 @@ outline entries, compilation, and selected-Flow documentation resolve the frame
 identity so repeated instances remain distinct contexts with different effective
 values.
 
-Page frames and Event occurrences both expose connection ports. Page-to-Page,
-Page-to-Event, Event-to-Page, and Event-to-Event relationships persist typed stable
-endpoints and their connected ports. Source-right to target-left infers
-expected_next, source-top to target-bottom infers alternative, and source-bottom to
-target-top infers merge.
+Only Page frames expose connection ports and only Page-to-Page relationships are
+canonical. Relationships persist stable Page-frame endpoints and connected ports.
+Source-right to target-left infers expected_next, source-top to target-bottom infers
+alternative, and source-bottom to target-top infers merge. Event availability is
+expressed by containment within a Page, never by an Event relationship.
 Alternative branches and merges are included in the first canvas release; Parallel
 is not a separate kind, relationship labels are optional, and every other port
 pairing is invalid.
@@ -181,12 +187,13 @@ documentation from the changed topology stale, and offers one page-scoped Undo t
 restores the same identity, ports, kind, optional label, and metadata. Labelled
 buttons use the label and human endpoint names; unlabelled buttons use human
 endpoint names.
-An Event node's JSON example is read-only and derived from its canonical effective
-occurrence schema, configured examples, and provenance; it is never a stored payload
-copy. Complete, Incomplete, Invalid, and Blocked states distinguish example
-readiness and deep-link exact repairs without claiming Flow execution. Graph records
-persist stable Page Group, Page, Event, occurrence, relationship, and endpoint
-references without a Page-context binding model.
+Page frames and Event nodes expose read-only JSON examples derived respectively
+from their canonical context-setting Page-event and interaction Event-occurrence effective schemas,
+configured examples, and provenance; neither is a stored payload copy. Complete,
+Incomplete, Invalid, and Blocked states distinguish example readiness and deep-link
+exact repairs without claiming Flow execution. Graph records persist stable Page
+Group, Page, Event, occurrence, relationship, and Page-endpoint references without a
+Page-context binding model.
 
 The Flow remains documentary: pointer and keyboard positioning, topology,
 optionality, conditions, and multiplicity communicate expected behavior while
@@ -194,9 +201,12 @@ per-Event payload validation remains independent and journey expectations remain
 manual. In the bounded Live Flow-test mode, selecting a Flow sets context above the
 existing event feed. Opening an observed event's existing details exposes a
 root-first but unrestricted initial Page-frame selector or, after the first link,
-the Page and Event targets of the current step's outgoing relationships. Linking a
-step applies its effective schema through the ordinary event validation and defect
-surfaces. Flow context and validation details share the observed-event presentation
+the current Page's contained Event occurrences followed by its outgoing related
+Pages. Selecting a contained Event validates against that occurrence without
+advancing Page context; selecting a related Page advances Page context. The same
+contained occurrence may be linked to multiple observations. Linking a step applies
+its effective schema through the ordinary event validation and defect surfaces.
+Flow context and validation details share the observed-event presentation
 model, leaving one ordinary validation issue presentation and one ordinary defect
 action rather than a parallel Manual Flow result and defect path. The recorded
 Flow-step link remains visible in its section. A defect opened from the ordinary
@@ -209,18 +219,23 @@ add-or-replace correction with Flow-step and revision provenance. Rules without 
 concrete value remain explanatory and invent no response. The report describes the
 observed event against the linked expectation without declaring the Flow definition
 defective or the Flow failed or executed. Feed-event chronology is not restricted,
-and revisiting linked evidence does not rewind the current traversal position. This
+and revisiting linked evidence does not rewind the current Page context. This
 manual mode invokes no automatic assignment resolver and makes no execution claim.
 Any retained executable-step authoring is an explicitly separate Advanced function
 and does not duplicate or replace documentary graph authoring.
 
 The selected-Flow documentation checkpoint derives a Flow value map and Data capture
-matrix from ordered graph contexts and canonical effective schemas. It reuses the
-side-panel specification-table configuration and supports spreadsheet clipboard,
-rich Confluence/Jira clipboard, and an offline four-sheet `.xlsx` workbook. Export
-ordering and Step labels are documentary presentation only. Incomplete Draft exports
-require explicit confirmation and retain Blocked or Incomplete cells, diagnostics,
-and a Draft — incomplete label.
+matrix from Page frames as primary ordered context-setting events and their
+contained interaction Event occurrences as nested Page-specific subcontexts. Pages
+without interaction Events remain
+selectable documentation contexts, and repeated instances of one Event under
+different Pages retain distinct occurrence schemas and columns. Page relationships
+alone determine proposed branch order; nested Events add no topology. The checkpoint
+reuses the side-panel specification-table configuration and supports spreadsheet
+clipboard, rich Confluence/Jira clipboard, and an offline four-sheet `.xlsx`
+workbook. Export ordering and Step labels are documentary presentation only.
+Incomplete Draft exports require explicit confirmation and retain Blocked or
+Incomplete cells, diagnostics, and a Draft — incomplete label.
 
 The project-management checkpoint adds a top-level Projects side-panel tab and a
 production project library that may contain multiple complete projects while zero
@@ -241,6 +256,12 @@ The contextual Inspector contains no generic Add entity form, entity-kind select
 or exclusive removal action. There is no standalone Schemas collection, Add Schema
 route, or `schemaDrafts` storage. Flow Page instances and Event occurrences remain
 created within the canvas, not as top-level collections.
+
+Create Page requires the context-setting observed event name, such as `pageview`,
+without selecting an Events-catalog definition or creating a nested occurrence.
+Create Event produces an interaction Event with its own observed event name, such as
+`button_click`. Page and Event kinds supply these fixed semantics without a stored
+documentary role or Page-context binding.
 
 The global Saved Schema Library remains usable without active project context.
 Adoption safely activates the chosen project and creates one project-owned Draft
@@ -455,9 +476,9 @@ node scripts/package.mjs
 
 The `live_flow_testing` pack must register both guided-testing contracts and focused
 production evidence for active-project Flow context in the existing feed,
-root-first Page starts, Page and Event effective-schema resolution, directed
-relationship guidance in event details, chronology-independent operator event
-choice, linked-evidence review without traversal rewind, Flow-aware defect headings,
+root-first Page starts, Page and Event effective-schema resolution, current-Page
+contained Events plus outgoing Page choices, chronology-independent operator event
+choice, linked-evidence review without Page-context rewind, Flow-aware defect headings,
 distinct actual and expected evidence, durable link and schema-provenance snapshots,
 typed expected-payload corrections from concrete Flow expectations, one ordinary
 event-detail defect action with no parallel Flow-result controls, ordinary
@@ -467,7 +488,9 @@ but must not invoke unrelated or archived Live and temporal-Flow suites.
 
 The `flow_export` pack may register shared build dependencies from `flow_graph`, but
 must contain the selected-Flow export features and their production clipboard and
-workbook evidence without invoking archived project-wide documentation suites.
+workbook evidence for Page primary contexts, nested Page-specific Event instances,
+and Page-relationship-only ordering without invoking archived project-wide
+documentation suites.
 
 The layered effective-schema checkpoint sequence is exactly:
 
@@ -501,8 +524,9 @@ through their existing focused pack rather than being duplicated.
 The `project_management` pack must register all four project-management contracts
 and focused production evidence for the project repository, side-panel Projects
 tab, Specification Studio router, all nine entity collection lifecycle routes,
-dependency-guarded removal, versioned serializer, import remapper, and legacy
-singleton migration. It may declare canonical schema dependencies in the pack
+Page context-event and Event interaction creation semantics, dependency-guarded
+removal, versioned serializer, import remapper, and legacy singleton migration. It
+may declare canonical schema dependencies in the pack
 registry but must not invoke archived project-foundation, release, or full-site
 acceptance suites.
 

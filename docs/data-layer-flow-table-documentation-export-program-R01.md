@@ -16,10 +16,12 @@ per-Event schema validation remains independent.
 An operator can turn the canonical Flow graph and its effective schemas into the two
 documentation forms already used by analytics teams:
 
-1. A Flow value map, with ordered Page/Event contexts as columns, properties as rows,
-   and effective expected values in cells.
-2. A data capture matrix, with Page/Event contexts as columns, the union of effective
-   properties as rows, and a mark describing presence expectations in each cell.
+1. A Flow value map, with ordered context-setting Page events and optional nested interaction Event
+   subcontexts as columns, properties as rows, and effective expected values in
+   cells.
+2. A data capture matrix, with context-setting Page events and optional nested interaction Event subcontexts
+   as columns, the union of effective properties as rows, and a mark describing
+   presence expectations in each cell.
 
 Both views are configurable previews over one immutable export snapshot. They reuse
 the existing side-panel specification-table interaction model and export as
@@ -31,7 +33,8 @@ workbook.
 An export snapshot contains:
 
 - selected project and Flow identity;
-- graph revision and selected Page-frame and Event-occurrence references;
+- graph revision and selected Page-frame references plus any selected contained
+  Event-occurrence references;
 - documentation column labels and ordering;
 - each selected context's canonical effective schema revision, property tree,
   expected values, conditions, validation rules, documentation, and provenance;
@@ -44,29 +47,40 @@ stale and export actions remain disabled until the operator compiles a new snaps
 
 ## Context columns
 
-Operators select columns through human Page and Event names while stable references
-are stored beneath the controls.
+Operators select context-setting Page events and their optional interaction Event
+subcontexts through human names while stable references are stored beneath the
+controls.
 
-- Every column targets one Flow Event occurrence contained by a Page frame and
-  compiles both applicable Page and Event branches.
-- Every Page frame establishes context and every Event occurrence is an interaction.
-  Optional trigger text may explain `Cart / page_view` as initial load or
-  `Cart / route_view` as an SPA change without creating a role selector, stored role,
-  distinct binding, or compiler path.
+- Every selected Page frame is a primary context-setting event, including a Page
+  with no interaction occurrence. It retains the Page's observed event identity,
+  such as `pageview`, and its column compiles Shared Profile, applicable ordered Page Groups,
+  Page, and Flow Page-instance contributions.
+- Every selected interaction Event occurrence is nested beneath exactly one containing Page and
+  extends that Page-instance branch with Event and occurrence contributions.
+- Reusing one Event under different Pages produces distinct selectable occurrence
+  subcontexts, so each Page may document a different expected schema instance for
+  that Event.
+- Page type supplies context-setting semantics and Events-catalog type supplies
+  interaction semantics. Neither uses a role selector, stored role, distinct
+  binding, or duplicate compiler path.
 
-Flow selection provides the documentary Page/Event context for export. Production
+Flow selection provides context-setting Page events and their nested interaction
+Event contexts for export. Production
 validation continues to resolve Page applicability through assignment rules and the
 observed Event; export configuration neither creates nor consults a Page-context
 binding.
 
-Column headings can include documentation Step label, Page instance, and Event. Raw
-IDs are never visible.
+Column headings identify the Page primary context and may add a nested Event
+subheading. They can include documentation Step label, Page instance, and Event.
+Raw IDs are never visible.
 
 ## Documentation order and branching
 
-The graph proposes a deterministic documentation order. A simple path receives 1,
-2, 3. Alternative branches receive labels such as 2a and 2b and remain adjacent beneath
-their branch group before the merge column.
+Page-to-Page relationships propose a deterministic documentation order. A simple
+Page path receives 1, 2, 3. Alternative Page branches receive labels such as 2a and
+2b and remain adjacent beneath their branch group before the merge context.
+Contained Event subcontexts remain immediately beneath their owning Page and never
+introduce, advance, split, or merge topology.
 
 Operators may rename Step labels and reorder documentation columns. These settings
 belong to the export configuration only. They cannot change graph coordinates,
@@ -77,13 +91,13 @@ runtime sequence.
 
 The Flow value map is a transposed effective-schema view:
 
-| Checkout journey | Step 1 Cart / page_view | Step 2a Shipping / add_shipping_info | Step 2b Payment / add_payment_info | Step 3 Confirmation / purchase |
-|---|---|---|---|---|
-| page_name | cart | shipping | payment | confirmation |
-| form_name | checkout | checkout | checkout | checkout |
-| form_step_name | cart | shipping | payment | confirmation |
-| form_status | started | active | active | completed |
-| page_type | checkout | checkout | checkout | confirmation |
+| Checkout journey | Step 1 Cart · pageview | ↳ button_click | Step 2a Shipping · pageview | ↳ error | Step 2b Payment · pageview | ↳ error |
+|---|---|---|---|---|---|---|
+| page_name | cart | cart | shipping | shipping | payment | payment |
+| form_name | checkout | checkout | checkout | checkout | checkout | checkout |
+| form_step_name | cart | cart | shipping | shipping | payment | payment |
+| error_message | — | — | — | address unavailable | — | payment declined |
+| page_type | checkout | checkout | checkout | checkout | checkout | checkout |
 
 Cell rendering is truthful:
 
@@ -135,7 +149,7 @@ The feature reuses the existing specification-table conventions:
 Flow-specific controls add:
 
 - Flow value map or Data capture matrix;
-- Page-frame and Event-occurrence selection;
+- Page-frame selection with nested contained Event-occurrence selection;
 - Step/Page/Event heading format;
 - branch label and documentation-order overrides;
 - matrix symbols and legend;
@@ -188,7 +202,7 @@ Behavior scenarios specify table semantics. Runtime scenarios must exercise the
 built extension through visible controls and prove:
 
 - actual compiler output supplies cells;
-- selectors persist stable context references;
+- selectors persist stable Page-frame and contained occurrence references;
 - clipboard adapters receive exact TSV, HTML, and fallback text;
 - the download adapter receives a valid parseable `.xlsx` file with the four sheets;
 - formula and HTML injection are neutralized;
@@ -205,8 +219,9 @@ acceptance.
 
 ### Phase A — canonical projection
 
-Create immutable export snapshots, context selectors, graph-derived branch order,
-Flow value-map cells, matrix-state classification, provenance, and stale detection.
+Create immutable export snapshots, Page and nested occurrence selectors,
+Page-relationship-derived branch order, Flow value-map cells, matrix-state
+classification, provenance, and stale detection.
 
 ### Phase B — shared preview configuration
 
@@ -232,18 +247,18 @@ feature.
 | ID | Requirement | Feature and scenario | Visible behavior | Production boundary | Evidence | Phase | Terminal pass condition |
 |---|---|---|---|---|---|---|---|
 | E01 | Export begins from the selected Flow | Export 001 | Two preview types and three output actions | Flow routing and export workspace | Rendered source identity and unchanged project | A, B | Opening export causes no canonical write |
-| E02 | Columns represent real Page/Event contexts | Export 002 | Human selectors and combined headings | Context resolver and compiler | Stored stable references and compiler targets | A | No raw ID or ambiguous Page/Event target |
-| E03 | Produce the existing checkout-style values table | Export 003 | Exact rows, columns, and values | Effective-schema projection | Expected preview and compiler evidence | A | Every cell derives from its context schema |
+| E02 | Pages are primary context events and interaction Events are nested schema instances | Export 002 | Human Page-event selectors, optional contained interaction selectors, and nested headings | Context resolver and compiler | Stable frame and occurrence references plus Page and occurrence compiler targets | A | Pages without interaction Events remain selectable and no interaction is detached from its Page |
+| E03 | Produce the existing checkout-style values table | Export 003 | Page and nested Event rows, columns, and values | Effective-schema projection | Expected preview and compiler evidence | A | Every cell derives from its Page or occurrence context schema |
 | E04 | Non-exact values remain truthful | Export 004 | Exact, allowed, missing, conditional, forbidden, conflict summaries | Cell classifier | Six decisive cases with detail provenance | A | No example or blank conceals missing semantics |
-| E05 | Branches need usable Step headings | Export 005 | 1, 2a, 2b, 3 plus export-only labels/order | Graph topology projection | Preview order and unchanged graph bytes | A, B | Documentation ordering cannot mutate topology |
-| E06 | Produce a data capture matrix | Export 006 | Union rows and M/O/C/N/—/! cells | Presence classifier | Exact matrix and legend | A | Forbidden and undeclared remain distinct |
+| E05 | Branches need usable Step headings | Export 005 | 1, 2a, 2b, 3 from Page relationships plus nested Event headings | Page topology projection | Preview order and unchanged graph bytes | A, B | Nested Events cannot mutate or imply topology |
+| E06 | Produce a data capture matrix | Export 006 | Page contexts plus Page-specific reused Event occurrences and M/O/C/N/—/! cells | Presence classifier | Distinct per-Page occurrence values, exact matrix, and legend | A | Reused Events retain Page-specific schema instances while forbidden and undeclared remain distinct |
 | E07 | Conditions and provenance remain inspectable | Export 007 | Cell detail and repair links | Schema provenance resolver | Structured condition and direct targets | A, B | Matrix summary does not discard its condition |
 | E08 | Reuse side-panel configuration | Export 008 | Selection, metadata, ordering, resets, headings, styles | Shared table configuration core | Pointer/keyboard preview and export parity | B | Export configuration causes no schema write |
 | E09 | Spreadsheet and Confluence clipboard output | Export 009 | TSV and rich HTML with optional headings | Clipboard adapters | Four exact mode cases | B, C | Clipboard output matches configured preview |
 | E10 | Real Excel export | Export 010 | Offline workbook with four named sheets | Workbook generator and download adapter | Parsed workbook structure and cells | C | Download is a valid `.xlsx`, not renamed text |
 | E11 | Exported content must be inert | Export 011 | Literal formulas, escaped HTML, stable dimensions | Cell encoder and format adapters | Parsed cells and clipboard HTML | C | Content cannot execute or alter table structure |
 | E12 | Incomplete Drafts remain useful and unmistakable | Export 012 | Blocked/Incomplete cells, confirmation, watermark, diagnostics | Compiler diagnostics and output headers | All output labels and repair links | A, C | No incomplete output appears complete |
-| E13 | Outputs must use one coherent revision snapshot | Export 013 | Stale state, disabled actions, refresh | Revision subscriptions and snapshot compiler | Before/after revisions and identical outputs | A | Mixed graph/schema revisions cannot export |
+| E13 | Outputs must use one coherent revision snapshot | Export 013 | Page, occurrence, Page-relationship, and schema staleness with disabled actions and refresh | Revision subscriptions and snapshot compiler | Before/after revisions and identical outputs | A | Mixed graph/schema revisions cannot export |
 | E14 | Terminal branched-flow proof | Export 014 | Both previews, four copies, one workbook | Built extension and all adapters | Five captured outputs and unchanged canonical bytes | D | Every format agrees and makes no execution claim |
 
 ## Terminal acceptance
@@ -251,4 +266,7 @@ feature.
 The program passes when both feature files parse and dry-check without findings, the
 focused `flow_export` acceptance pack exercises the built extension, and packaging
 consumes that same build. The pack may share registered build dependencies with
-`flow_graph`; it does not authorize full archived export or release suites.
+`flow_graph`; it does not authorize full archived export or release suites. The
+installed evidence must include a Page with no interaction Event, Page-derived primary columns,
+nested occurrence columns, one reusable Event with distinct Page-specific
+expectations, and Page-relationship-only branch ordering.

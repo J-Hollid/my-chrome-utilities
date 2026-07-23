@@ -1,7 +1,8 @@
 Feature: Data layer Flow table documentation export
 
   Background:
-    Given Checkout journey contains Cart page_view, Shipping add_shipping_info, Payment add_payment_info, and Confirmation purchase contexts
+    Given Checkout journey relates Cart, Shipping, Payment, and Confirmation context-setting Page events
+    And those Pages contain button_click, add_shipping_info, add_payment_info, and purchase interaction Event occurrences
     And Shipping and Payment are alternative branches that merge before Confirmation
     And every selected context has a canonical effective schema with property provenance
 
@@ -15,31 +16,27 @@ Feature: Data layer Flow table documentation export
 
   # Data layer Flow table documentation export 002
   Scenario: Data layer Flow table documentation export 002
-    When the operator includes documentation columns
-      | Page         | Event             |
-      | Cart         | page_view         |
-      | Shipping     | add_shipping_info |
-      | Payment      | add_payment_info  |
-      | Confirmation | purchase          |
-    Then every selected column shows its Step label, Page name, and Event name
+    Given Landing Page frame represents pageview and contains no interaction Event occurrence
+    When the operator includes Cart, Landing, Shipping, Payment, and Confirmation documentation steps
+    Then every selected Page frame is a primary context including Landing
+    And each Page primary context retains its context-setting observed event identity such as pageview
+    And each contained Event occurrence is available as a nested Page-specific subcontext
+    And each nested subcontext retains its interaction event identity such as button_click
     And human selectors persist stable Page-frame and Event-occurrence references
-    And every column compiles the effective Page and Event branches at that occurrence
-    And every Page frame establishes context while every Event occurrence is an interaction
-    And no documentation selector, heading, or stored configuration contains a documentary role
+    And a Page context composes Shared Profile, Page Groups, Page, and Flow Page-instance
+    And an Event subcontext extends its containing Page branch with Event and occurrence contributions
+    And no documentation selector or stored configuration creates a Page-context binding or Event relationship
     And raw IDs are absent from headings and selection controls
 
   # Data layer Flow table documentation export 003
   Scenario: Data layer Flow table documentation export 003
-    Given the selected contexts have exact effective expected values
+    Given selected Page contexts and nested Event subcontexts have exact effective expected values
     When Flow value map is previewed with Property name as the row heading
     Then the table heading is Checkout journey
-    And Flow value cells are
-      | Property name  | Step 1 Cart / page_view | Step 2a Shipping / add_shipping_info | Step 2b Payment / add_payment_info | Step 3 Confirmation / purchase |
-      | page_name      | cart                    | shipping                             | payment                           | confirmation                   |
-      | form_name      | checkout                | checkout                             | checkout                          | checkout                       |
-      | form_step_name | cart                    | shipping                             | payment                           | confirmation                   |
-      | form_status    | started                 | active                               | active                            | completed                      |
-      | page_type      | checkout                | checkout                             | checkout                          | confirmation                   |
+    And primary headings are Step 1 Cart, Step 2a Shipping, Step 2b Payment, and Step 3 Confirmation
+    And primary heading suffixes render observed identity pageview beside the human Page names
+    And button_click, add_shipping_info, add_payment_info, and purchase render beneath their containing Page headings
+    And Page cells use Page-instance effective values while Event cells use extended occurrence values
     And every value is derived from the selected context's effective schema rather than a copied table value
 
   # Data layer Flow table documentation export 004
@@ -70,23 +67,29 @@ Feature: Data layer Flow table documentation export
 
   # Data layer Flow table documentation export 006
   Scenario: Data layer Flow table documentation export 006
-    Given effective properties across the selected contexts include page_name, form_name, transaction_id, error_message, and debug_message
+    Given reusable error Event has Page-contained occurrence expectations
+      | Page     | expected error_message |
+      | Shipping | Shipping unavailable   |
+      | Payment  | Payment declined       |
     When Data capture matrix is previewed
-    Then the union of effective property paths forms the rows
+    Then Page and nested Event effective property paths form the rows
+    And Shipping error and Payment error remain distinct occurrence columns beneath their Page steps
     And matrix states are
-      | Variable       | Cart / page_view | Shipping / add_shipping_info | Payment / add_payment_info | Confirmation / purchase |
-      | page_name      | M                | M                            | M                          | M                       |
-      | form_name      | O                | M                            | M                          | O                       |
-      | transaction_id | —                | —                            | —                          | M                       |
-      | error_message  | N                | C                            | C                          | N                       |
-      | debug_message  | !                | —                            | —                          | —                       |
+      | Variable       | Shipping Page | Shipping / error | Payment Page | Payment / error |
+      | page_name      | M             | M                | M            | M               |
+      | form_name      | M             | M                | M            | M               |
+      | error_message  | —             | C                | —            | C               |
+      | support_note   | O             | O                | O            | O               |
+      | legacy_message | N             | N                | N            | N               |
+      | debug_message  | !             | !                | —            | —               |
+    And error_message detail retains "Shipping unavailable" and "Payment declined" with occurrence provenance
     And the visible legend defines M Mandatory, O Optional, C Conditional, N Not expected, — Not defined, and ! Blocked
 
   # Data layer Flow table documentation export 007
   Scenario: Data layer Flow table documentation export 007
     Given Shipping error_message is Required when form_status Equals failed
     When the operator activates its Conditional matrix cell
-    Then detail names Shipping add_shipping_info and property error_message
+    Then detail names Shipping Page, its add_shipping_info occurrence, and property error_message
     And it shows Required when form_status Equals failed with inherited and local provenance
     And direct actions open the exact effective property or contributing schema definition
     And the matrix remains a presence summary without discarding the structured condition
@@ -148,7 +151,7 @@ Feature: Data layer Flow table documentation export
   # Data layer Flow table documentation export 013
   Scenario: Data layer Flow table documentation export 013
     Given the preview was compiled from graph revision 7 and effective-schema revision set 12
-    When an included occurrence, relationship topology, or schema changes
+    When an included Page, contained occurrence, Page relationship, or schema changes
     Then the preview becomes stale and export actions are disabled
     And the operator sees which contexts changed
     When the operator refreshes the preview

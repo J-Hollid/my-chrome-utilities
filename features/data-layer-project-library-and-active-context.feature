@@ -207,3 +207,15 @@ Feature: Data layer project library and active context
     And the contextual Inspector contains no generic Add entity form, entity-kind selector, or exclusive removal action
     And no Schemas overview, Add Schema route, or schemaDrafts collection exists
     And one canonical project graph owns every created stable identity and reference
+
+  # Data layer project library and active context 017
+  Scenario: Data layer project library and active context 017
+    Given Retail website is active and Pages and Events overviews are openable
+    When the operator opens Add Page
+    Then Create Page identifies a Page as a context-setting event and requires its observed event name
+    And no Events-catalog choice, nested occurrence, or documentary role is required
+    When the operator creates Cart with observed event name pageview
+    And creates Button click from Add Event with observed event name button_click
+    Then Pages contains Cart identified as context-setting pageview
+    And Events contains Button click identified as interaction button_click
+    And neither canonical entity stores a role selector, Page-context binding, or duplicate schema
