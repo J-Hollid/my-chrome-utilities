@@ -359,7 +359,7 @@ import {
   type PagePushResult,
 } from "./utilities/data-layer/event-library.js";
 import { panelEmptyState } from "./panel-empty-states.js";
-import { mountLiveFlowTestingUi, type CompletedLiveFlowTest, type LiveFlowHistoryEntry } from "./utilities/data-layer/live-inspection.js";
+import { createManualFlowDefectEvent, mountLiveFlowTestingUi, type CompletedLiveFlowTest, type LiveFlowHistoryEntry } from "./utilities/data-layer/live-inspection.js";
 import {
   findPanelEmptyStateElements,
   renderPanelEmptyState,
@@ -900,7 +900,7 @@ const liveFlowTestingUi=mountLiveFlowTestingUi({
   events:()=>liveObserverState.events,
   saveSummary:(summary)=>{completedLiveFlowTests=[structuredClone(summary)];},
   savedSummary:()=>savedSessionLiveFeed?.session.flowTests?.at(-1),
-  onResult:(entry,event)=>{const manual=manualFlowDefectEvent(entry,event as LiveEvent);liveObserverState={...liveObserverState,events:liveObserverState.events.map((candidate)=>candidate.id===event.id?{...candidate,...(manual.validation?{validation:manual.validation}:{}),...(manual.validationDetails?{validationDetails:manual.validationDetails}:{}),manualFlowValidations:[...(candidate.manualFlowValidations??[]),structuredClone(entry)]}:candidate)};renderLiveObserver();openLiveInspector(event.id,true);},
+  onResult:(entry,event)=>{const manual=createManualFlowDefectEvent(entry,event as LiveEvent);liveObserverState={...liveObserverState,events:liveObserverState.events.map((candidate)=>candidate.id===event.id?{...candidate,...(manual.validation?{validation:manual.validation}:{}),...(manual.validationDetails?{validationDetails:manual.validationDetails}:{}),manualFlowValidations:[...(candidate.manualFlowValidations??[]),structuredClone(entry)]}:candidate)};renderLiveObserver();openLiveInspector(event.id,true);},
   openProject:()=>{showDataLayerView("Projects",true);document.querySelector<HTMLInputElement>("#project-library-search")?.focus({preventScroll:true});},
   createProject:()=>{showDataLayerView("Projects",true);document.querySelector<HTMLButtonElement>("#create-library-project")?.click();},
 });
@@ -1948,12 +1948,8 @@ function openLiveInspector(eventId: string, preserveReturnSnapshot = false): voi
   if (!presentation) backToEventsButton?.focus({ preventScroll: true });
 }
 
-function manualFlowDefectEvent(entry:LiveFlowHistoryEntry,event:LiveEvent):LiveEvent{
-  return{...event,manualFlowContext:{flowId:entry.flowId,flowName:entry.flowName,selectedStepId:entry.stepId,path:structuredClone(entry.matchedPath)},validation:entry.status==="Valid"?"Valid":`${entry.issues.length} issues`,validationDetails:{evaluations:[],schema:{id:entry.target.id,name:`${entry.target.name} · Flow path ${entry.stepId}`,version:entry.effectiveSchemaRevision},issues:entry.issues.map((issue)=>({instancePath:issue.path,message:`${issue.code} in manually selected Flow step ${entry.stepName}`,expected:JSON.stringify(issue.expected),actual:JSON.stringify(issue.actual),schemaName:entry.target.name,schemaVersion:entry.effectiveSchemaRevision,schemaLocation:`Flow ${entry.relationshipId??"start"} → ${entry.stepId}`,rule:issue.code,severity:issue.severity,origin:`Manual Flow test · ${issue.provenance} · ${entry.provenance.map(({scope,contributorName})=>`${scope} ${contributorName}`).join(" → ")}`}))}};
-}
-
 function startManualFlowDefectReport(entry:LiveFlowHistoryEntry,event:LiveEvent):void{
-  if(!liveObserverElements.eventInspector)return;const selected=manualFlowDefectEvent(entry,event);
+  if(!liveObserverElements.eventInspector)return;const selected=createManualFlowDefectEvent(entry,event);
   renderDefectReportBuilder(liveObserverElements.eventInspector,selected,undefined,liveObserverState.events,createLiveDefectReportNavigation(event.id,{reopenCapturedEvent:openLiveInspector,createDefectReportAction:()=>liveObserverElements.eventInspector?.querySelector<HTMLButtonElement>(".live-flow-create-defect")??null,closeToLiveFeed:closeInspectorAndReturnToEvents}),{
     save:async(report,options)=>{const selectedPointers=new Set(report.evidence.validation.map(({pointer})=>pointer)),issues=currentDefectIssues(selected).filter((issue)=>selectedPointers.has(issue.concretePath)),defect=createValidationDefect({id:`defect:${crypto.randomUUID()}`,now:new Date().toISOString(),report,issues}),result=addDefect(defectLibrary,defect,options.saveSeparately);if(result.added){defectLibrary=result.library;persistDefectLibrary();liveFlowTestingUi.attachDefect(entry.stepId,entry.eventId,defect.id);renderDefects();renderLiveObserver();}if(options.copy&&navigator.clipboard?.writeText)await navigator.clipboard.writeText(renderJiraReport(report).text);return result.added?{feedback:options.copy?"Flow defect saved and copied for Jira Cloud.":"Flow defect saved."}:{feedback:"A reported defect already matches the selected Flow issue.",existing:result.existing.map((existing)=>({id:existing.id,label:String(existing.report?.summary??existing.id)}))};},
     openExisting:(id)=>openDefect(id),updateExisting:(id,report)=>{defectLibrary=editDefect(defectLibrary,id,{report},new Date().toISOString());persistDefectLibrary();openDefect(id);},

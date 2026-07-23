@@ -101,7 +101,7 @@ import { createTemplateChangeReview } from "./utilities/data-layer/event-library
 import { renderTemplateChangeReview } from "./utilities/data-layer/event-library.js";
 import { pushPayloadInPage, } from "./utilities/data-layer/event-library.js";
 import { panelEmptyState } from "./panel-empty-states.js";
-import { mountLiveFlowTestingUi } from "./utilities/data-layer/live-inspection.js";
+import { createManualFlowDefectEvent, mountLiveFlowTestingUi } from "./utilities/data-layer/live-inspection.js";
 import { findPanelEmptyStateElements, renderPanelEmptyState, } from "./panel-empty-states-ui.js";
 import { adoptSavedSchema, applyCapturedValidationToProfile, capturedValidationDestinationChoices, capturedValidationProfileRequirements, compileSpecificationProject, commitCanonicalProjectState, createFixtureFromCapturedValidation, evaluateSpecificationObservation, recordSpecificationCapture, recordSpecificationNavigation, SPECIFICATION_PROJECT_STORAGE_KEY, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, } from "./utilities/data-layer/schemas.js";
 const PROJECT_NAME = "my-chrome-utilities";
@@ -696,7 +696,7 @@ const liveFlowTestingUi = mountLiveFlowTestingUi({
     events: () => liveObserverState.events,
     saveSummary: (summary) => { completedLiveFlowTests = [structuredClone(summary)]; },
     savedSummary: () => savedSessionLiveFeed?.session.flowTests?.at(-1),
-    onResult: (entry, event) => { const manual = manualFlowDefectEvent(entry, event); liveObserverState = { ...liveObserverState, events: liveObserverState.events.map((candidate) => candidate.id === event.id ? { ...candidate, ...(manual.validation ? { validation: manual.validation } : {}), ...(manual.validationDetails ? { validationDetails: manual.validationDetails } : {}), manualFlowValidations: [...(candidate.manualFlowValidations ?? []), structuredClone(entry)] } : candidate) }; renderLiveObserver(); openLiveInspector(event.id, true); },
+    onResult: (entry, event) => { const manual = createManualFlowDefectEvent(entry, event); liveObserverState = { ...liveObserverState, events: liveObserverState.events.map((candidate) => candidate.id === event.id ? { ...candidate, ...(manual.validation ? { validation: manual.validation } : {}), ...(manual.validationDetails ? { validationDetails: manual.validationDetails } : {}), manualFlowValidations: [...(candidate.manualFlowValidations ?? []), structuredClone(entry)] } : candidate) }; renderLiveObserver(); openLiveInspector(event.id, true); },
     openProject: () => { showDataLayerView("Projects", true); document.querySelector("#project-library-search")?.focus({ preventScroll: true }); },
     createProject: () => { showDataLayerView("Projects", true); document.querySelector("#create-library-project")?.click(); },
 });
@@ -1763,13 +1763,10 @@ function openLiveInspector(eventId, preserveReturnSnapshot = false) {
     if (!presentation)
         backToEventsButton?.focus({ preventScroll: true });
 }
-function manualFlowDefectEvent(entry, event) {
-    return { ...event, manualFlowContext: { flowId: entry.flowId, flowName: entry.flowName, selectedStepId: entry.stepId, path: structuredClone(entry.matchedPath) }, validation: entry.status === "Valid" ? "Valid" : `${entry.issues.length} issues`, validationDetails: { evaluations: [], schema: { id: entry.target.id, name: `${entry.target.name} · Flow path ${entry.stepId}`, version: entry.effectiveSchemaRevision }, issues: entry.issues.map((issue) => ({ instancePath: issue.path, message: `${issue.code} in manually selected Flow step ${entry.stepName}`, expected: JSON.stringify(issue.expected), actual: JSON.stringify(issue.actual), schemaName: entry.target.name, schemaVersion: entry.effectiveSchemaRevision, schemaLocation: `Flow ${entry.relationshipId ?? "start"} → ${entry.stepId}`, rule: issue.code, severity: issue.severity, origin: `Manual Flow test · ${issue.provenance} · ${entry.provenance.map(({ scope, contributorName }) => `${scope} ${contributorName}`).join(" → ")}` })) } };
-}
 function startManualFlowDefectReport(entry, event) {
     if (!liveObserverElements.eventInspector)
         return;
-    const selected = manualFlowDefectEvent(entry, event);
+    const selected = createManualFlowDefectEvent(entry, event);
     renderDefectReportBuilder(liveObserverElements.eventInspector, selected, undefined, liveObserverState.events, createLiveDefectReportNavigation(event.id, { reopenCapturedEvent: openLiveInspector, createDefectReportAction: () => liveObserverElements.eventInspector?.querySelector(".live-flow-create-defect") ?? null, closeToLiveFeed: closeInspectorAndReturnToEvents }), {
         save: async (report, options) => { const selectedPointers = new Set(report.evidence.validation.map(({ pointer }) => pointer)), issues = currentDefectIssues(selected).filter((issue) => selectedPointers.has(issue.concretePath)), defect = createValidationDefect({ id: `defect:${crypto.randomUUID()}`, now: new Date().toISOString(), report, issues }), result = addDefect(defectLibrary, defect, options.saveSeparately); if (result.added) {
             defectLibrary = result.library;

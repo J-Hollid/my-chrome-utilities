@@ -65,7 +65,9 @@ export function renderDefectReportBuilder(
   const feedback = document.createElement("output"); feedback.setAttribute("aria-live", "polite");
   const duplicateReview = document.createElement("section"); duplicateReview.setAttribute("aria-label", "Existing defects"); duplicateReview.hidden = true;
   const copy = document.createElement("button"); copy.type = "button"; copy.textContent = "Copy for Jira Cloud"; copy.dataset.actionVariant = "primary";
-  const title = heading("h4", `Defect report: ${event.name}`); title.tabIndex = -1;
+  const title = heading("h4", event.manualFlowContext
+    ? `Defect report: ${event.manualFlowContext.flowName} · ${event.manualFlowContext.selectedStepName} · ${event.name}`
+    : `Defect report: ${event.name}`); title.tabIndex = -1;
   const builderHeader = document.createElement("header"); builderHeader.className = "detail-view-header";
   const backToEvent = document.createElement("button"); backToEvent.type = "button"; backToEvent.textContent = "Back to captured event"; backToEvent.dataset.actionVariant = "quiet";
   const backToFeed = document.createElement("button"); backToFeed.type = "button"; backToFeed.textContent = "Back to Live feed"; backToFeed.dataset.actionVariant = "quiet";

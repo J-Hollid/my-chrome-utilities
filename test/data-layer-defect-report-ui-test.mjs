@@ -93,6 +93,12 @@ function element(root, predicate) {
   return found;
 }
 
+function visibleText(root) {
+  if (typeof root === "string") return root;
+  if (!(root instanceof FakeElement)) return "";
+  return `${root.textContent}${root.children.map(visibleText).join("")}`;
+}
+
 const payload = { page_type: "unknown", commerce: { currency: "GBP" } };
 const olderSessionEvents = Array.from({ length: 18 }, (_, index) => ({
   id: `older-${index}`,
@@ -750,6 +756,54 @@ assert.deepEqual(savedUndeclaredReports[0].expected.payload, { page_type:"produc
 assert.deepEqual(savedUndeclaredReports[0].expected.corrections.map(({ pointer, operation }) => ({ pointer, operation })), [{ pointer:"/debug", operation:"remove" }]);
 assert.deepEqual(undeclaredPayload, { page_type:"product_detail", debug:true });
 
+const flowRoot = new FakeElement("section");
+const flowEvent = {
+  id:"live-102",name:"pageview",sourceId:"history",sourceName:"Event history",
+  captureTime:"2026-07-23T10:00:02.000Z",pageUrl:"https://shop.test/payment",
+  payload:{funnel_stage:"review"},validation:"1 issues",
+  manualFlowContext:{
+    flowId:"flow:checkout",flowName:"Checkout journey",
+    selectedStepId:"frame:payment",selectedStepName:"Payment",eventId:"live-102",
+    eventStepLink:{eventId:"live-102",stepId:"frame:payment"},
+    path:[
+      {stepId:"frame:cart",stepName:"Cart",eventId:"live-101",captureTime:"2026-07-23T10:00:01.000Z"},
+      {stepId:"frame:payment",stepName:"Payment",relationshipId:"relationship:cart-payment",eventId:"live-102",captureTime:"2026-07-23T10:00:02.000Z"},
+    ],
+    linkEvidence:{kind:"path",label:"path Cart to Payment",relationshipIds:["relationship:cart-payment"]},
+    effectiveTarget:{id:"frame:payment",name:"Payment"},
+    effectiveSchemaRevision:17,effectiveSchemaRevisionIdentity:"flow-schema:00000011",
+    provenance:[{contributorId:"frame:payment",contributorName:"Payment",scope:"Flow Page-instance"}],
+  },
+  validationDetails:{
+    schema:{id:"frame:payment",name:"Payment Flow-step expectation",version:17},
+    evaluations:[],
+    issues:[{
+      instancePath:"/funnel_stage",
+      message:"Observed value does not satisfy the linked Payment Flow-step expectation",
+      expected:"\"payment\"",actual:"\"review\"",schemaName:"Payment",schemaVersion:17,
+      schemaLocation:"Flow relationship:cart-payment → frame:payment",
+      rule:"EXPECTED_VALUE",severity:"error",origin:"Manual Flow test · Payment",
+    }],
+  },
+};
+renderDefectReportBuilder(flowRoot, flowEvent);
+assert.equal(
+  element(flowRoot, ({ tagName }) => tagName === "H4").textContent,
+  "Defect report: Checkout journey · Payment · pageview",
+);
+assert.match(
+  element(flowRoot, ({ htmlFor }) => htmlFor === "defect-issue-funnel_stage").textContent,
+  /observed "review" · expected "payment" · rule EXPECTED_VALUE/,
+);
+const flowAssistance = element(flowRoot, ({ attributes }) => attributes.get("aria-label") === "funnel_stage expected-result assistance");
+assert.match(
+  visibleText(flowAssistance),
+  /Use Payment Flow-step expectation · effective schema revision 17 — [^]*"payment"/,
+);
+assert.doesNotMatch(visibleText(flowAssistance), /generic constraint|manually selected Flow step/i);
+const flowPreview = element(flowRoot, ({ attributes }) => attributes.get("aria-label") === "Final report preview");
+assert.match(flowPreview.innerHTML, /Flow test evidence[\s\S]*path Cart to Payment/);
+
 process.stdout.write(`${JSON.stringify({
   defectReportUi: {
     headings,
@@ -835,6 +889,10 @@ process.stdout.write(`${JSON.stringify({
     browserClipboardWrites: browserWrites.length + browserTextWrites.length,
     navigation: { backToCapturedEvent, focusCreateDefectReport, backToLiveFeed },
     navigationActions: [backToEvent.textContent, backToFeed.textContent],
+    flowAwareDefect: {
+      heading: element(flowRoot, ({ tagName }) => tagName === "H4").textContent,
+      assistance: visibleText(flowAssistance),
+    },
     liveFeedScrollTop,
     pageType: {
       genericSelected: pageTypeGenericSelected,

@@ -64,7 +64,7 @@
 
 (defn- assert-runtime! [observation]
   (support/assert! (and (true? (:installedBoundary observation))
-                        (= 7 (count (:outlineRows observation))))
+                        (= 9 (count (:outlineRows observation))))
                    "Installed Live Flow testing evidence is incomplete."
                    observation))
 

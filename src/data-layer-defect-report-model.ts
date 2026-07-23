@@ -28,8 +28,16 @@ export interface DefectCapturedEvent {
   schema: { name: string; version: number };
   issues: readonly DefectIssue[];
   flowContext?: {
-    flowId:string;flowName:string;selectedStepId:string;
+    flowId:string;flowName:string;selectedStepId:string;selectedStepName:string;eventId:string;
+    eventStepLink:{eventId:string;stepId:string};
     path:readonly {stepId:string;stepName:string;relationshipId?:string;eventId:string;captureTime:string}[];
+    linkEvidence:
+      | {kind:"path";label:string;relationshipIds:readonly string[]}
+      | {kind:"start";label:string;pageFrameId:string};
+    effectiveTarget:{id:string;name:string};
+    effectiveSchemaRevision:number;
+    effectiveSchemaRevisionIdentity:string;
+    provenance:readonly {contributorId:string;contributorName:string;scope:string}[];
   };
 }
 
@@ -166,6 +174,7 @@ export interface GeneratedDefectReport extends DefectReport {
       actual: unknown;
     }>;
     capture: { eventName: string; source: string; pageUrl: string; captureTime: string };
+    flow?: NonNullable<DefectCapturedEvent["flowContext"]>;
   };
 }
 

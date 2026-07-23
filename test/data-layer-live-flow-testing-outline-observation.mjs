@@ -5,6 +5,10 @@ import {
   linkLiveFlowEvent,
   selectLiveFlow,
 } from "../dist/data-layer-live-flow-testing.js";
+import { createManualFlowDefectEvent } from "../dist/data-layer-live-flow-defect-report.js";
+import { createDefectReport } from "../dist/data-layer-defect-report.js";
+import { defectCapturedEvent } from "../dist/data-layer-defect-report-browser.js";
+import { generateReportDetails, renderJiraReport } from "../dist/data-layer-defect-report-export.js";
 import {
   canonicalSchemaWithConstraint,
   createCanonicalSchema,
@@ -20,6 +24,9 @@ const canonical=(entityId,name,path)=>canonicalSchemaWithConstraint(
   {path,presence:"required",type:"string"},
   (kind)=>`${kind}:outline:${++sequence}`,
 );
+const withConstraint=(document,constraint)=>canonicalSchemaWithConstraint(
+  document,constraint,(kind)=>`${kind}:outline:${++sequence}`,
+);
 const state={project:{
   id:"project:outline",name:"Retail website",
   collections:{
@@ -27,7 +34,7 @@ const state={project:{
     pageGroups:[{id:"group:checkout",name:"Checkout",canonicalSchema:canonical("group:checkout","Checkout","/currency")}],
     pages:[
       {id:"page:cart",name:"Cart",profileId:"profile:sitewide",pageGroupIds:["group:checkout"],canonicalSchema:canonical("page:cart","Cart","/cart_id")},
-      {id:"page:payment",name:"Payment",profileId:"profile:sitewide",pageGroupIds:["group:checkout"],canonicalSchema:canonical("page:payment","Payment","/payment_id")},
+      {id:"page:payment",name:"Payment",profileId:"profile:sitewide",pageGroupIds:["group:checkout"],canonicalSchema:withConstraint(canonical("page:payment","Payment","/payment_id"),{path:"/oForm/formStepName",expectedValue:"payment"})},
       {id:"page:confirmation",name:"Confirmation",profileId:"profile:sitewide",pageGroupIds:["group:checkout"],canonicalSchema:canonical("page:confirmation","Confirmation","/confirmation_id")},
     ],
     events:[
@@ -64,9 +71,9 @@ const initial={
   payload:{site:"shop",currency:"EUR",cart_id:"cart-1"},
 };
 const before={
-  id:"live-100",name:"page_view",sourceId:"history",
+  id:"live-100",name:"pageview",sourceId:"history",
   captureTime:"2026-07-23T10:00:00.000Z",
-  payload:{site:"shop",currency:"EUR",payment_id:"payment-1"},
+  payload:{site:"shop",currency:"EUR",payment_id:"payment-1",oForm:{formStepName:"review"}},
 };
 const after={
   id:"live-102",name:"add_payment_info",sourceId:"history",
@@ -86,6 +93,12 @@ const relationshipRows=outgoing.map((choice)=>({
 
 run=linkLiveFlowEvent(run,state,before,"frame:payment");
 const paymentEntry=run.history.at(-1);
+const relationshipReport=generateReportDetails(createDefectReport(defectCapturedEvent(createManualFlowDefectEvent(paymentEntry,before))));
+const relationshipText=renderJiraReport(relationshipReport).text;
+let initialRun=selectLiveFlow(createLiveFlowTest("run:outline-initial","project:outline"),state,"flow:checkout");
+initialRun=linkLiveFlowEvent(initialRun,state,before,"frame:payment");
+const initialReport=generateReportDetails(createDefectReport(defectCapturedEvent(createManualFlowDefectEvent(initialRun.history[0],before))));
+const initialText=renderJiraReport(initialReport).text;
 run=linkLiveFlowEvent(run,state,after,"occurrence:add-payment");
 const occurrenceEntry=run.history.at(-1);
 const pageScopes=paymentEntry.provenance.map(({scope})=>scope);
@@ -102,8 +115,17 @@ const outlineRows=[
   }]:[]),
   ...(Date.parse(before.captureTime)<Date.parse(initial.captureTime)?[{capture_order:"before"}]:[]),
   ...(Date.parse(after.captureTime)>Date.parse(initial.captureTime)?[{capture_order:"after"}]:[]),
+  ...(relationshipReport.summary==="pageview does not satisfy Payment in Checkout journey"
+    && relationshipReport.evidence.validation.some(({actual,constraint,rule})=>actual==="\"review\""&&constraint==="\"payment\""&&rule==="EXPECTED_VALUE")
+    && relationshipText.includes("path Cart to Payment")
+    && relationshipText.includes("relationship:cart-payment")
+    && !/generic constraint|manually selected Flow step/i.test(relationshipText)
+    ? [{link_evidence:"relationship Cart to Payment",displayed_link_evidence:"path Cart to Payment"}] : []),
+  ...(initialReport.event.flowContext.linkEvidence.label==="Started at Payment"
+    && initialText.includes("Started at Payment")
+    ? [{link_evidence:"initial selection at Payment",displayed_link_evidence:"Started at Payment"}] : []),
 ];
 
-assert.equal(outlineRows.length,7,"the production model fixture must demonstrate every Live Flow outline row");
+assert.equal(outlineRows.length,9,"the production model fixture must demonstrate every Live Flow outline row");
 assert.equal(run.history.map(({eventId})=>eventId).join("|"),"live-101|live-100|live-102");
 console.log(JSON.stringify({liveFlowTesting:{outlineRows}}));

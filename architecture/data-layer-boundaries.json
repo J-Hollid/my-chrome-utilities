@@ -23,6 +23,10 @@
       "src/utilities/data-layer/schemas.ts"
     ]
   },
+  "src/data-layer-live-flow-defect-report.ts": {
+    "module": "live-inspection",
+    "layer": "browser"
+  },
   "src/data-layer-live-flow-testing-ui.ts": {
     "module": "live-inspection",
     "layer": "browser",

@@ -14,12 +14,15 @@ export function appendIssueControls(
   state: DefectReportBuilderState,
   selectedChoices: Map<string, ExpectedResultChoice>,
 ): void {
+  const flowContext = state.report().event.flowContext;
   for (const reportIssue of state.report().issues) {
     let hideCustomResponse = () => {};
     const row = document.createElement("div");
     const selected = document.createElement("input"); selected.type = "checkbox"; selected.checked = reportIssue.selected;
     selected.id = `defect-issue-${reportIssue.id}`;
-    const label = document.createElement("label"); label.htmlFor = selected.id; label.textContent = `${reportIssue.severity}: ${reportIssue.pointer} — ${reportIssue.constraint}${reportIssue.violation ? ` (${reportIssue.violation})` : ""}`;
+    const label = document.createElement("label"); label.htmlFor = selected.id; label.textContent = flowContext
+      ? `${reportIssue.severity}: ${reportIssue.pointer} — observed ${String(reportIssue.actual)} · expected ${reportIssue.constraint} · rule ${reportIssue.rule}`
+      : `${reportIssue.severity}: ${reportIssue.pointer} — ${reportIssue.constraint}${reportIssue.violation ? ` (${reportIssue.violation})` : ""}`;
     row.append(selected, label); issues.append(row);
 
     const group = document.createElement("fieldset");
@@ -58,13 +61,18 @@ export function appendIssueControls(
     includeCommentLabel.append(includeComment, "Include all allowed values as a comment");
     const genericLabel = document.createElement("label");
     const generic = document.createElement("input"); generic.type = "radio"; generic.name = `defect-response-${reportIssue.id}`;
-    generic.dataset.responseSource = "Use generic constraint";
+    const flowExpectationSource = flowContext
+      ? `${flowContext.selectedStepName} Flow-step expectation · effective schema revision ${flowContext.effectiveSchemaRevision}`
+      : undefined;
+    generic.dataset.responseSource = flowExpectationSource
+      ? `Use ${flowExpectationSource}`
+      : "Use generic constraint";
     if (assistance.schemaValues.length) {
       generic.checked = true;
       selectedChoices.set(reportIssue.id, {
         issueId: reportIssue.id,
         method: "keep the rule generic",
-        responseSource: "schema constraint",
+        responseSource: flowExpectationSource ?? "schema constraint",
       });
     }
     generic.addEventListener("change", () => {
@@ -72,11 +80,13 @@ export function appendIssueControls(
       selectedChoices.set(reportIssue.id, {
         issueId: reportIssue.id,
         method: "keep the rule generic",
-        responseSource: "schema constraint",
+        responseSource: flowExpectationSource ?? "schema constraint",
       });
       state.refresh();
     });
-    genericLabel.append(generic, `Use generic constraint — ${assistance.genericConstraint}`);
+    genericLabel.append(generic, flowExpectationSource
+      ? `Use ${flowExpectationSource} — ${assistance.genericConstraint}`
+      : `Use generic constraint — ${assistance.genericConstraint}`);
     group.append(genericLabel);
 
     for (const value of assistance.schemaValues) {

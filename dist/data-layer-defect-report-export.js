@@ -2,10 +2,15 @@ import { cloneValue, pointerSegments } from "./data-layer-defect-report-json.js"
 import { reportComponents } from "./data-layer-defect-report-core.js";
 export function generateReportDetails(report) {
     const selected = report.issues.filter(({ selected }) => selected);
+    const flow = report.event.flowContext;
     return {
         ...report,
-        summary: `${report.event.name} fails ${report.event.schema.name} validation`,
-        description: `${report.event.name} has ${selected.map(({ id }) => id).join(", ")} validation issue${selected.length === 1 ? "" : "s"}.`,
+        summary: flow
+            ? `${report.event.name} does not satisfy ${flow.selectedStepName} in ${flow.flowName}`
+            : `${report.event.name} fails ${report.event.schema.name} validation`,
+        description: flow
+            ? `Observed ${report.event.name} ${report.event.id} does not satisfy the linked ${flow.selectedStepName} Flow-step expectation.`
+            : `${report.event.name} has ${selected.map(({ id }) => id).join(", ")} validation issue${selected.length === 1 ? "" : "s"}.`,
         expectedExplanation: report.expected.explanations.join("; "),
         editable: ["summary", "description", "expectedExplanation"],
         evidence: {
@@ -25,6 +30,7 @@ export function generateReportDetails(report) {
                 pageUrl: report.event.pageUrl,
                 captureTime: report.event.captureTime,
             },
+            ...(flow ? { flow: structuredClone(flow) } : {}),
         },
     };
 }
@@ -138,7 +144,7 @@ function reportSections(report) {
     return [
         ["Summary", report.summary],
         ["Description", report.description],
-        ...(report.event.flowContext ? [["Manual Flow test path", JSON.stringify(report.event.flowContext, null, 2)]] : []),
+        ...(report.evidence.flow ? [["Flow test evidence", JSON.stringify(report.evidence.flow, null, 2)]] : []),
         ["Steps to reproduce", report.reproductionSteps.map(({ text }) => text).join("\n")],
         ["Actual result", JSON.stringify(report.actual.payload, null, 2)],
         ["Expected result", `${expectedNarrative}\n${expectedPresentation(report)}`.trim()],
@@ -206,7 +212,7 @@ export function renderJiraReport(report) {
             const narrative = content.slice(0, Math.max(0, content.lastIndexOf("\n" + presentation)));
             return `<h2>${heading}</h2><p>${escapeHtml(narrative).replaceAll("\n", "<br>")}</p><pre style="font-family:monospace;white-space:pre-wrap">${highlightedExpected(report)}</pre>`;
         }
-        const structured = heading === "Actual result" || heading === "Expected result" || heading === "Manual Flow test path" || heading === "Validation rules covered" || heading === "Capture metadata" || heading === "Supporting timeline";
+        const structured = heading === "Actual result" || heading === "Expected result" || heading === "Flow test evidence" || heading === "Validation rules covered" || heading === "Capture metadata" || heading === "Supporting timeline";
         return `<h2>${heading}</h2>${structured ? `<pre style="font-family:monospace;white-space:pre-wrap">${escapeHtml(content)}</pre>` : `<p>${escapeHtml(content)}</p>`}`;
     }).join("");
     const text = sections.map(([heading, content]) => `${heading}\n${content}`).join("\n\n");

@@ -4,6 +4,7 @@ import type { ValidationEvaluation } from "./utilities/data-layer/schemas.js";
 import type { ResolvedSchemaDocumentation } from "./utilities/data-layer/schemas.js";
 import { filterEventsByQuery, type EventFeedQuery } from "./data-layer-event-feed-query.js";
 import type { LiveFlowHistoryEntry } from "./data-layer-live-flow-testing.js";
+import type { LiveFlowDefectContext } from "./data-layer-live-flow-defect-report.js";
 
 export const DATA_LAYER_VIEW_STORAGE_KEY = "my-chrome-utilities.data-layer-view.v1";
 
@@ -35,10 +36,7 @@ export type LiveEvent = Pick<SourceEvent, "id" | "name" | "sourceId" | "captureT
     keyProperties?: Readonly<Record<string, unknown>>;
     defectTriage?: LiveEventDefectTriage;
     manualFlowValidations?: readonly LiveFlowHistoryEntry[];
-    manualFlowContext?: {
-      flowId:string;flowName:string;selectedStepId:string;
-      path:readonly {stepId:string;stepName:string;relationshipId?:string;eventId:string;captureTime:string}[];
-    };
+    manualFlowContext?: LiveFlowDefectContext;
     validationDetails?: {
       issues: readonly ValidationIssue[];
       evaluations: readonly ValidationEvaluation[];

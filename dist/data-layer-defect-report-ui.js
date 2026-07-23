@@ -40,7 +40,9 @@ export function renderDefectReportBuilder(root, event, clipboard = browserDefect
     copy.type = "button";
     copy.textContent = "Copy for Jira Cloud";
     copy.dataset.actionVariant = "primary";
-    const title = heading("h4", `Defect report: ${event.name}`);
+    const title = heading("h4", event.manualFlowContext
+        ? `Defect report: ${event.manualFlowContext.flowName} · ${event.manualFlowContext.selectedStepName} · ${event.name}`
+        : `Defect report: ${event.name}`);
     title.tabIndex = -1;
     const builderHeader = document.createElement("header");
     builderHeader.className = "detail-view-header";

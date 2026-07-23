@@ -820,7 +820,8 @@
     "id": "live_flow_testing",
     "source": [
       "src/data-layer-live-flow-testing.ts",
-      "src/data-layer-live-flow-testing-ui.ts"
+      "src/data-layer-live-flow-testing-ui.ts",
+      "src/data-layer-live-flow-defect-report.ts"
     ],
     "dependencies": [
       "capture",
@@ -830,6 +831,7 @@
     ],
     "unit": [
       "test/data-layer-live-flow-testing-test.mjs",
+      "test/data-layer-live-flow-defect-report-test.mjs",
       "test/data-layer-live-flow-testing-outline-observation.mjs"
     ],
     "property": [
