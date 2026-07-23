@@ -90,6 +90,10 @@ assert.throws(
   () => applyExpectedResult(report, [{ issueId: "currency", method: "enter a valid response" }]),
   /response/i,
 );
+assert.throws(
+  () => applyExpectedResult(report, [{ issueId: "currency", method: "enter a valid response", response:undefined }]),
+  /response/i,
+);
 
 const genericCurrency = applyExpectedResult(report, [{ issueId: "currency", method: "keep the rule generic" }]);
 assert.equal(genericCurrency.expected.explanations[0], "/commerce/currency must be one of EUR or USD");

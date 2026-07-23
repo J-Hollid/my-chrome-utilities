@@ -181,7 +181,7 @@ export function applyExpectedResult(report, choices) {
             explanations.push(isUndeclaredPropertyIssue(issue) ? `${issue.pointer} is removed as an undeclared property` : `${name} is absent`);
             continue;
         }
-        if (!Object.prototype.hasOwnProperty.call(choice, "response")) {
+        if (!Object.prototype.hasOwnProperty.call(choice, "response") || choice.response === undefined) {
             throw new Error(`A response is required for ${issue.id}.`);
         }
         const operation = pointerValue(payload, issue.pointer) === undefined ? "add" : "replace";
