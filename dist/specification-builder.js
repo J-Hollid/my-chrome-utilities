@@ -41,7 +41,7 @@ q("#project-assignment-applicability").required = false;
 const id = (kind) => `${kind}:${crypto.randomUUID()}`;
 const labels = { profiles: "Shared Profiles", pages: "Pages", pageGroups: "Page Groups", events: "Events", applicabilitySets: "Applicability", flows: "Flows", fixtures: "Fixtures", assignments: "Assignments" };
 let state, lastCommittedState, library = projectLibrary();
-let canonicalRevision = 0, publishedRevision = 0, pendingConflict, durableConflict, saveStatus = { kind: "idle" }, stagedBulk, selectedKind = "profiles", selectedId, projectOverview = routeParameters.get("route") === "overview", creationKind, removalReview, lifecycleStatus = "", removedFocus, pendingLifecycleFocus, stagedImport, lastInvokingControl, releasePreflight, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi;
+let canonicalRevision = 0, publishedRevision = 0, pendingConflict, durableConflict, saveStatus = { kind: "idle" }, stagedBulk, selectedKind = "profiles", selectedId, projectOverview = routeParameters.get("route") === "overview", creationKind, removalReview, lifecycleStatus = "", removedFocus, pendingLifecycleFocus, pendingWorkspaceFocus, stagedImport, lastInvokingControl, releasePreflight, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi;
 let pageGroupMembershipStatus = "";
 let pendingPageGroupMembershipReorder;
 let canonicalCommandFeedback;
@@ -565,12 +565,15 @@ else
     url.searchParams.delete("entity"); history.replaceState(null, "", url); }
 function restorePendingLifecycleFocus() { const pending = pendingLifecycleFocus; if (!pending)
     return; const target = pending.id ? document.querySelector(`[data-entity-id="${CSS.escape(pending.id)}"]`) : document.querySelector(`[data-add-kind="${pending.kind}"]`); target?.focus({ preventScroll: true }); }
+function restorePendingWorkspaceFocus() { const pending = pendingWorkspaceFocus; if (!pending || selectedKind !== pending.kind || selectedId !== pending.id)
+    return; document.querySelector(`[data-project-entity-workspace="${CSS.escape(pending.id)}"] h1`)?.focus({ preventScroll: true }); }
 function hydrateVisibleProjectRoute(kind, entityId, focus) { if (!state)
     return; const projectId = state.project.id; void durableProjectRuntime.ensureProjectRoute(projectId, durableProjectRouteForWorkspace(kind, entityId)).then((loaded) => { if (state?.project.id !== projectId || selectedKind !== kind || selectedId !== entityId)
-    return; state = { ...structuredClone(loaded.state), history: { undo: [], redo: [] } }; lastCommittedState = structuredClone(state); canonicalRevision = loaded.draftSequence; publishedRevision = loaded.publishedRevision; library = restoreProjectLibrary(projectStorage.getItem(PROJECT_LIBRARY_STORAGE_KEY)) ?? library; render(); queueMicrotask(() => focus?.()?.focus({ preventScroll: true })); }).catch((error) => { saveStatus = { kind: "failed", label: `Open ${labels[kind]}`, message: error instanceof Error ? error.message : String(error) }; render(); }); }
-function openCollectionOverview(kind, focusId) { projectOverview = false; creationKind = undefined; removalReview = undefined; selectedKind = kind; selectedId = undefined; persistNavigation(); replaceProjectRoute(kind); render(); hydrateVisibleProjectRoute(kind, undefined, () => focusId ? document.querySelector(`[data-entity-id="${CSS.escape(focusId)}"]`) : document.querySelector(`[data-add-kind="${kind}"]`)); }
-function openProjectEntityWorkspace(kind, entityId) { projectOverview = false; creationKind = undefined; removalReview = undefined; selectedKind = kind; selectedId = entityId; persistNavigation(); replaceProjectRoute(kind, entityId); render(); hydrateVisibleProjectRoute(kind, entityId, () => document.querySelector(`[data-project-entity-workspace="${CSS.escape(entityId)}"] h1`)); }
-function openProjectCollectionCreation(kind) { projectOverview = false; creationKind = kind; removalReview = undefined; selectedKind = kind; selectedId = undefined; persistNavigation(); replaceProjectRoute(kind, undefined, "add"); render(); }
+    return; state = { ...structuredClone(loaded.state), history: { undo: [], redo: [] } }; lastCommittedState = structuredClone(state); canonicalRevision = loaded.draftSequence; publishedRevision = loaded.publishedRevision; library = restoreProjectLibrary(projectStorage.getItem(PROJECT_LIBRARY_STORAGE_KEY)) ?? library; render(); queueMicrotask(() => { focus?.()?.focus({ preventScroll: true }); if (pendingWorkspaceFocus?.kind === kind && pendingWorkspaceFocus.id === entityId)
+    pendingWorkspaceFocus = undefined; }); }).catch((error) => { pendingWorkspaceFocus = undefined; saveStatus = { kind: "failed", label: `Open ${labels[kind]}`, message: error instanceof Error ? error.message : String(error) }; render(); }); }
+function openCollectionOverview(kind, focusId) { pendingWorkspaceFocus = undefined; projectOverview = false; creationKind = undefined; removalReview = undefined; selectedKind = kind; selectedId = undefined; persistNavigation(); replaceProjectRoute(kind); render(); hydrateVisibleProjectRoute(kind, undefined, () => focusId ? document.querySelector(`[data-entity-id="${CSS.escape(focusId)}"]`) : document.querySelector(`[data-add-kind="${kind}"]`)); }
+function openProjectEntityWorkspace(kind, entityId) { pendingWorkspaceFocus = { kind, id: entityId }; projectOverview = false; creationKind = undefined; removalReview = undefined; selectedKind = kind; selectedId = entityId; persistNavigation(); replaceProjectRoute(kind, entityId); render(); queueMicrotask(restorePendingWorkspaceFocus); hydrateVisibleProjectRoute(kind, entityId, () => document.querySelector(`[data-project-entity-workspace="${CSS.escape(entityId)}"] h1`)); }
+function openProjectCollectionCreation(kind) { pendingWorkspaceFocus = undefined; projectOverview = false; creationKind = kind; removalReview = undefined; selectedKind = kind; selectedId = undefined; persistNavigation(); replaceProjectRoute(kind, undefined, "add"); render(); }
 function projectCreationFieldControl(field) { if (field.key === "targetId" && state) {
     const select = document.createElement("select");
     select.name = field.key;
@@ -1225,6 +1228,7 @@ durableProjectRuntime.subscribe(({ library: incoming, active }) => {
     if (focusedMembershipId)
         queueMicrotask(() => document.querySelector(`[data-page-group-membership-id="${CSS.escape(focusedMembershipId)}"]`)?.focus());
     queueMicrotask(restorePendingLifecycleFocus);
+    queueMicrotask(restorePendingWorkspaceFocus);
     q("#project-state").textContent = `Updated to the newer Saved Draft · Published revision ${publishedRevision}`;
 });
 render();
