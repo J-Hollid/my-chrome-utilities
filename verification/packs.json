@@ -831,7 +831,9 @@
     "unit": [
       "test/data-layer-live-flow-testing-test.mjs"
     ],
-    "property": [],
+    "property": [
+      "test/data-layer-live-flow-testing-property-test.mjs"
+    ],
     "features": [
       "features/data-layer-live-flow-guided-testing.feature",
       "features/data-layer-live-flow-guided-testing-runtime.feature"
