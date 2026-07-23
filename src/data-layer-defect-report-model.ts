@@ -9,6 +9,7 @@ export interface DefectIssue {
   pointer: string;
   violation?: string;
   constraint: string;
+  expectedValue?: unknown;
   actual: unknown;
   rule: string;
   ruleVersion: number;

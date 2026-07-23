@@ -89,6 +89,9 @@ export function createManualFlowDefectEvent(
         instancePath:issue.path,
         message:`Observed value does not satisfy the linked ${entry.stepName} Flow-step expectation`,
         expected:representedValue(issue.expected),
+        ...(issue.code === "EXPECTED_VALUE"
+          ? { expectedValue:structuredClone(issue.expected) }
+          : {}),
         actual:representedValue(issue.actual),
         schemaName:entry.target.name,
         schemaVersion:entry.effectiveSchemaRevision,

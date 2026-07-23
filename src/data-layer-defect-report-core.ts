@@ -56,13 +56,10 @@ export function exactFlowExpectationChoice(
   issue: DefectIssue,
   flowContext: DefectCapturedEvent["flowContext"],
 ): ExpectedResultChoice | undefined {
-  if (!flowContext || issue.rule !== "EXPECTED_VALUE") return undefined;
-  let response: unknown;
-  try {
-    response = JSON.parse(issue.constraint) as unknown;
-  } catch {
-    return undefined;
-  }
+  if (!flowContext || issue.rule !== "EXPECTED_VALUE"
+    || !Object.prototype.hasOwnProperty.call(issue, "expectedValue")
+    || issue.expectedValue === undefined) return undefined;
+  const response = issue.expectedValue;
   return {
     issueId:issue.id,
     method:"enter a valid response",

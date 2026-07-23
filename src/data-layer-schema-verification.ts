@@ -66,7 +66,7 @@ export interface SchemaAssignment {
   conditionTarget?: AssignmentConditionTarget;
   dataConditionGroup?: AssignmentDataConditionGroup;
 }
-export interface ValidationIssue { instancePath: string; templatePath?: string; message: string; expected: string; actual: string; schemaName: string; schemaVersion: number; schemaLocation: string; rule?: string; severity?: string; origin?: string; allowedValues?: readonly (string | number | boolean | null)[]; conditionSummary?: string; }
+export interface ValidationIssue { instancePath: string; templatePath?: string; message: string; expected: string; expectedValue?: unknown; actual: string; schemaName: string; schemaVersion: number; schemaLocation: string; rule?: string; severity?: string; origin?: string; allowedValues?: readonly (string | number | boolean | null)[]; conditionSummary?: string; }
 export interface ValidationResult { state: ValidationState; issues: readonly ValidationIssue[]; evaluations?: readonly ValidationEvaluation[]; schema?: Pick<SchemaDefinition, "id" | "name" | "version">; documentation?: ResolvedSchemaDocumentation; target?: ValidationTarget; assignment?: Pick<SchemaAssignment, "id" | "name" | "sourceId" | "eventName" | "target" | "priority" | "domainCondition" | "pathnameCondition" | "versionPolicy" | "enabled" | "conditionTarget" | "dataConditionGroup">; assignmentEvidence?: AssignmentResolutionEvidence; inheritedFrom?: readonly Pick<SchemaDefinition, "id" | "name" | "version">[]; }
 export interface ValidatableEvent { sourceId: string; eventName: string; payload: unknown; rawInput: unknown; }
 export interface AssignmentCandidateEvidence {

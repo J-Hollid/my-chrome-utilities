@@ -780,7 +780,7 @@ const flowEvent = {
     issues:[{
       instancePath:"/oForm/formStepName",
       message:"Observed value does not satisfy the linked Payment Flow-step expectation",
-      expected:"\"payment\"",actual:"\"review\"",schemaName:"Payment",schemaVersion:17,
+      expected:"\"payment\"",expectedValue:"payment",actual:"\"review\"",schemaName:"Payment",schemaVersion:17,
       schemaLocation:"Flow relationship:cart-payment → frame:payment",
       rule:"EXPECTED_VALUE",severity:"error",origin:"Manual Flow test · Payment",
     }],

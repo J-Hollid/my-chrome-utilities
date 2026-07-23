@@ -174,7 +174,7 @@ for(const [sample,response] of typedExpectations.entries()){
       provenance:[{contributorId:"frame:typed",contributorName:"Typed step",scope:"Flow Page-instance"}],
     };
     const issue={
-      id:"typed",severity:"error",pointer:"/typed",constraint:JSON.stringify(response),
+      id:"typed",severity:"error",pointer:"/typed",constraint:JSON.stringify(response),expectedValue:response,
       actual:present?"observed":undefined,rule:"EXPECTED_VALUE",ruleVersion:1,
     };
     const event={
@@ -211,6 +211,16 @@ assert.equal(exactFlowExpectationChoice({
   effectiveTarget:{id:"frame:typed",name:"Typed step"},effectiveSchemaRevision:1,
   effectiveSchemaRevisionIdentity:"flow-schema:typed",provenance:[],
 }),undefined,"non-exact Flow rules never invent a response");
+assert.equal(exactFlowExpectationChoice({
+  id:"legacy-exact",severity:"error",pointer:"/typed",constraint:"\"display-only\"",
+  actual:"observed",rule:"EXPECTED_VALUE",ruleVersion:1,
+}, {
+  flowId:"flow:typed",flowName:"Typed journey",selectedStepId:"frame:typed",selectedStepName:"Typed step",
+  eventId:"typed:legacy",eventStepLink:{eventId:"typed:legacy",stepId:"frame:typed"},path:[],
+  linkEvidence:{kind:"start",label:"Started at Typed step",pageFrameId:"frame:typed"},
+  effectiveTarget:{id:"frame:typed",name:"Typed step"},effectiveSchemaRevision:1,
+  effectiveSchemaRevisionIdentity:"flow-schema:typed",provenance:[],
+}),undefined,"display-only exact rules never invent a typed response");
 
 assert.equal(restoreLiveFlowSummary("not json"),undefined);
 assert.equal(restoreLiveFlowSummary(JSON.stringify({label:"Incomplete",history:[]})),undefined);

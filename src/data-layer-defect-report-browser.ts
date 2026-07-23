@@ -114,6 +114,9 @@ export function defectCapturedEvent(event: LiveEvent): DefectCapturedEvent {
         pointer: issue.instancePath || "/",
         violation: issue.message,
         constraint: issue.expected,
+        ...(Object.prototype.hasOwnProperty.call(issue, "expectedValue")
+          ? { expectedValue:structuredClone(issue.expectedValue) }
+          : {}),
         actual: issue.actual,
         rule: issue.rule ?? issue.schemaLocation,
         ruleVersion: Number(issue.rule?.match(/ v(\d+)$/)?.[1] ?? 0),

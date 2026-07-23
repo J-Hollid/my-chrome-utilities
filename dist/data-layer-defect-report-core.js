@@ -36,15 +36,11 @@ function issueName(issue) {
     return pointerSegments(issue.pointer).at(-1) ?? issue.id;
 }
 export function exactFlowExpectationChoice(issue, flowContext) {
-    if (!flowContext || issue.rule !== "EXPECTED_VALUE")
+    if (!flowContext || issue.rule !== "EXPECTED_VALUE"
+        || !Object.prototype.hasOwnProperty.call(issue, "expectedValue")
+        || issue.expectedValue === undefined)
         return undefined;
-    let response;
-    try {
-        response = JSON.parse(issue.constraint);
-    }
-    catch {
-        return undefined;
-    }
+    const response = issue.expectedValue;
     return {
         issueId: issue.id,
         method: "enter a valid response",
