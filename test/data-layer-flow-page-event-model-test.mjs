@@ -40,7 +40,7 @@ const add=(kind,entity)=>{state=addProjectEntity(state,kind,entity,id);return st
 const checkout=add("pageGroups",{name:"Checkout"});
 const flow=add("flows",{name:"Checkout journey",steps:[]});
 state={...state,project:{...state.project,collections:{...state.project.collections,
-  pages:state.project.collections.pages.map((page)=>({...page,pageGroupIds:[checkout.id],schemaConstraints:[{path:page.id===cart.id?"/cart_only":"/payment_only",type:"string",presence:"required"}]})),
+  pages:state.project.collections.pages.map((page)=>({...page,pageGroupIds:[checkout.id],localSchemaContributions:[{path:page.id===cart.id?"/cart_only":"/payment_only",type:"string",presence:"required"}]})),
   events:state.project.collections.events.map((event)=>({...event,schemaConstraints:[{path:"/interaction",type:"string"}]})),
 }}};
 state=setFlowPageGroupLanes(state,flow.id,[checkout.id]);

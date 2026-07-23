@@ -41,7 +41,7 @@ q("#project-assignment-applicability").required = false;
 const id = (kind) => `${kind}:${crypto.randomUUID()}`;
 const labels = { profiles: "Shared Profiles", pages: "Pages", pageGroups: "Page Groups", events: "Events", applicabilitySets: "Applicability", flows: "Flows", fixtures: "Fixtures", assignments: "Assignments" };
 let state, lastCommittedState, library = projectLibrary();
-let canonicalRevision = 0, publishedRevision = 0, pendingConflict, durableConflict, saveStatus = { kind: "idle" }, stagedBulk, selectedKind = "profiles", selectedId, projectOverview = routeParameters.get("route") === "overview", creationKind, removalReview, lifecycleStatus = "", removedFocus, stagedImport, lastInvokingControl, releasePreflight, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi;
+let canonicalRevision = 0, publishedRevision = 0, pendingConflict, durableConflict, saveStatus = { kind: "idle" }, stagedBulk, selectedKind = "profiles", selectedId, projectOverview = routeParameters.get("route") === "overview", creationKind, removalReview, lifecycleStatus = "", removedFocus, pendingLifecycleFocus, stagedImport, lastInvokingControl, releasePreflight, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi;
 let pageGroupMembershipStatus = "";
 let pendingPageGroupMembershipReorder;
 let canonicalCommandFeedback;
@@ -563,6 +563,8 @@ else
     url.searchParams.set("entity", entityId);
 else
     url.searchParams.delete("entity"); history.replaceState(null, "", url); }
+function restorePendingLifecycleFocus() { const pending = pendingLifecycleFocus; if (!pending)
+    return; const target = pending.id ? document.querySelector(`[data-entity-id="${CSS.escape(pending.id)}"]`) : document.querySelector(`[data-add-kind="${pending.kind}"]`); target?.focus({ preventScroll: true }); }
 function hydrateVisibleProjectRoute(kind, entityId, focus) { if (!state)
     return; const projectId = state.project.id; void durableProjectRuntime.ensureProjectRoute(projectId, durableProjectRouteForWorkspace(kind, entityId)).then((loaded) => { if (state?.project.id !== projectId || selectedKind !== kind || selectedId !== entityId)
     return; state = { ...structuredClone(loaded.state), history: { undo: [], redo: [] } }; lastCommittedState = structuredClone(state); canonicalRevision = loaded.draftSequence; publishedRevision = loaded.publishedRevision; library = restoreProjectLibrary(projectStorage.getItem(PROJECT_LIBRARY_STORAGE_KEY)) ?? library; render(); queueMicrotask(() => focus?.()?.focus({ preventScroll: true })); }).catch((error) => { saveStatus = { kind: "failed", label: `Open ${labels[kind]}`, message: error instanceof Error ? error.message : String(error) }; render(); }); }
@@ -674,7 +676,7 @@ function renderRemovalPage(content, review) { if (!state)
     open.addEventListener("click", () => openProjectEntityWorkspace(kind, dependency.id));
     item.append(open);
     dependencies.append(item);
-} cancel.type = confirm.type = "button"; cancel.textContent = "Cancel removal"; confirm.textContent = `Remove ${review.name}`; confirm.disabled = review.blocked; cancel.addEventListener("click", () => openCollectionOverview(review.kind, review.id)); confirm.addEventListener("click", () => { const entities = state.project.collections[review.kind], index = entities.findIndex(({ id }) => id === review.id), focus = entities[index + 1]?.id ?? entities[index - 1]?.id; removedFocus = { kind: review.kind, id: review.id }; removalReview = undefined; selectedKind = review.kind; selectedId = undefined; lifecycleStatus = `Removed ${review.name}. Draft saved; dependent evidence is stale. Undo restores the same stable identity.`; persist(removeProjectCollectionEntity(state, review.kind, review.id)); persistNavigation(); replaceProjectRoute(review.kind); queueMicrotask(() => { const target = focus ? document.querySelector(`[data-entity-id="${CSS.escape(focus)}"]`) : document.querySelector(`[data-add-kind="${review.kind}"]`); target?.focus({ preventScroll: true }); }); }); actions.append(cancel, confirm); section.append(heading, summary, dependencies, actions); content.append(section); q("#project-breadcrumb").textContent = `${state.project.name} / ${definition.overview} / Remove ${review.name}`; queueMicrotask(() => heading.focus({ preventScroll: true })); }
+} cancel.type = confirm.type = "button"; cancel.textContent = "Cancel removal"; confirm.textContent = `Remove ${review.name}`; confirm.disabled = review.blocked; cancel.addEventListener("click", () => openCollectionOverview(review.kind, review.id)); confirm.addEventListener("click", () => { const entities = state.project.collections[review.kind], index = entities.findIndex(({ id }) => id === review.id), focus = entities[index + 1]?.id ?? entities[index - 1]?.id; removedFocus = { kind: review.kind, id: review.id }; pendingLifecycleFocus = { kind: review.kind, ...(focus ? { id: focus } : {}) }; removalReview = undefined; selectedKind = review.kind; selectedId = undefined; lifecycleStatus = `Removed ${review.name}. Draft saved; dependent evidence is stale. Undo restores the same stable identity.`; persist(removeProjectCollectionEntity(state, review.kind, review.id)); persistNavigation(); replaceProjectRoute(review.kind); void durableProjectRuntime.settled().then(() => queueMicrotask(() => { restorePendingLifecycleFocus(); pendingLifecycleFocus = undefined; })); }); actions.append(cancel, confirm); section.append(heading, summary, dependencies, actions); content.append(section); q("#project-breadcrumb").textContent = `${state.project.name} / ${definition.overview} / Remove ${review.name}`; queueMicrotask(() => heading.focus({ preventScroll: true })); }
 function renderProjectEntityWorkspace(content, kind, entity) { if (!state)
     return; const route = projectEntityWorkspaceRoute(kind, entity.id, entity.name), workspace = document.createElement("section"), heading = document.createElement("h1"), back = document.createElement("button"); workspace.dataset.projectEntityWorkspace = entity.id; workspace.dataset.projectEntityKind = kind; workspace.setAttribute("aria-label", route.label); heading.tabIndex = -1; heading.textContent = route.heading; back.type = "button"; back.textContent = route.backAction; back.addEventListener("click", () => openCollectionOverview(kind, entity.id)); workspace.append(heading, back); content.append(workspace); if (kind === "flows") {
     const graphHost = document.createElement("div"), inspectorHost = q("#flow-inspector-context");
@@ -786,7 +788,9 @@ function renderWorkspace() {
         open.addEventListener("click", () => openProjectEntityWorkspace(selectedKind, entity.id));
         remove.textContent = `Remove ${entity.name}`;
         remove.setAttribute("aria-label", `Remove ${definition.singular} ${entity.name}`);
-        remove.addEventListener("click", () => { removalReview = inspectProjectEntityRemoval(state, selectedKind, entity.id); selectedId = undefined; replaceProjectRoute(selectedKind); render(); });
+        remove.addEventListener("click", () => { if (!state)
+            return; const projectId = state.project.id, kind = selectedKind; remove.disabled = true; void durableProjectRuntime.ensureProject(projectId).then(() => { if (state?.project.id !== projectId)
+            return; removalReview = inspectProjectEntityRemoval(state, kind, entity.id); selectedKind = kind; selectedId = undefined; replaceProjectRoute(kind); render(); }).catch((error) => { saveStatus = { kind: "failed", label: `Review removal of ${entity.name}`, message: error instanceof Error ? error.message : String(error) }; render(); }); });
         kindText.className = "search-location";
         kindText.textContent = selectedKind === "pages" ? `Context-setting ${String(entity.eventName ?? "pageview")}` : selectedKind === "events" ? `Interaction ${String(entity.eventName ?? entity.name)}` : definition.singular;
         usage.textContent = `Used ${whereUsed(entity.id).length} times`;
@@ -895,15 +899,17 @@ q("#add-entity-form").addEventListener("submit", (event) => { event.preventDefau
     return; const kind = q("#entity-kind").value, name = q("#entity-name").value.trim(); if (!name)
     return; const next = createProjectCollectionEntity(state, kind, name, id), created = next.project.collections[kind].at(-1); selectedKind = kind; selectedId = created?.id; q("#entity-name").value = ""; persist(next); persistNavigation(); render(); });
 q("#undo-project").addEventListener("click", () => { if (!state)
-    return; const projectId = state.project.id, restored = removedFocus; void durableProjectRuntime.undo(projectId).then(() => { if (restored) {
+    return; const projectId = state.project.id, restored = removedFocus; if (restored)
+    pendingLifecycleFocus = { kind: restored.kind, id: restored.id }; void durableProjectRuntime.undo(projectId).then(() => { if (restored) {
     removedFocus = undefined;
     selectedKind = restored.kind;
     selectedId = undefined;
     lifecycleStatus = "Removal undone; the same stable identity is restored.";
     persistNavigation();
     replaceProjectRoute(restored.kind);
-    queueMicrotask(() => document.querySelector(`[data-entity-id="${CSS.escape(restored.id)}"]`)?.focus({ preventScroll: true }));
+    pendingLifecycleFocus = { kind: restored.kind, id: restored.id };
     render();
+    queueMicrotask(() => { restorePendingLifecycleFocus(); pendingLifecycleFocus = undefined; });
 } }); });
 q("#redo-project").addEventListener("click", () => { if (state)
     void durableProjectRuntime.redo(state.project.id); });
@@ -1218,6 +1224,7 @@ durableProjectRuntime.subscribe(({ library: incoming, active }) => {
     renderAssignments();
     if (focusedMembershipId)
         queueMicrotask(() => document.querySelector(`[data-page-group-membership-id="${CSS.escape(focusedMembershipId)}"]`)?.focus());
+    queueMicrotask(restorePendingLifecycleFocus);
     q("#project-state").textContent = `Updated to the newer Saved Draft · Published revision ${publishedRevision}`;
 });
 render();
