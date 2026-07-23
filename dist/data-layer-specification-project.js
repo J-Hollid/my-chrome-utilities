@@ -271,8 +271,14 @@ export function adoptSavedSchema(state, source) {
     return transactProject(state, `Adopt saved schema ${source.name}`, (project) => {
         if (project.collections.profiles.some(({ sourceIdentity }) => sourceIdentity === source.id))
             throw new Error(`Saved schema ${source.name} is already adopted.`);
+        const preferredProfileId = `profile:${source.id}`, occupiedProfileIds = new Set(project.collections.profiles.map(({ id }) => id));
+        let profileId = preferredProfileId, suffix = 0;
+        while (occupiedProfileIds.has(profileId)) {
+            suffix += 1;
+            profileId = `${preferredProfileId}:saved-schema-contributor${suffix === 1 ? "" : `-${suffix}`}`;
+        }
         let canonicalSequence = 0;
-        const profileId = `profile:${source.id}`, canonicalSchema = savedSchemaCanonicalDocument({ id: source.id, name: source.name, version: source.version, document: clone(source.document), attachedRules: clone(source.rules ?? []), ...(source.documentation === undefined ? {} : { documentation: clone(source.documentation) }) }, (kind) => `${profileId}:${kind}:${++canonicalSequence}`, { id: `canonical:${source.id}`, contributorId: profileId, contributorName: source.name });
+        const canonicalSchema = savedSchemaCanonicalDocument({ id: source.id, name: source.name, version: source.version, document: clone(source.document), attachedRules: clone(source.rules ?? []), ...(source.documentation === undefined ? {} : { documentation: clone(source.documentation) }) }, (kind) => `${profileId}:${kind}:${++canonicalSequence}`, { id: `canonical:${source.id}`, contributorId: profileId, contributorName: source.name });
         canonicalSchema.sourceContent = { ...canonicalSchema.sourceContent, document: clone(source.document), rules: clone(source.rules ?? []), documentation: clone(source.documentation ?? ""), examples: clone(source.examples ?? []) };
         const profile = { id: profileId, name: source.name, requirements: [], canonicalSchema, sourceIdentity: source.id, sourceRevision: source.version, adoptionProvenance: { kind: "saved-schema-library", schemaId: source.id, revision: source.version } };
         return { ...project, collections: { ...project.collections, profiles: [...project.collections.profiles, profile] } };

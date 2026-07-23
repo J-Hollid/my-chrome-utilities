@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {canonicalConstraints,canonicalPropertyPath} from "../dist/data-layer-canonical-schema.js";
 import {compileLayeredSchema,validateLayeredObservation} from "../dist/data-layer-layered-schema.js";
 import {savedSchemaCanonicalDocument} from "../dist/data-layer-saved-schema-canonical.js";
+import {adoptSavedSchema,createSpecificationProject} from "../dist/data-layer-specification-project.js";
 
 let seed=0x5a9ed123;
 const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/0x100000000;};
@@ -49,6 +50,39 @@ for(let sample=0;sample<128;sample+=1){
   assert.equal(valid.issues.some(({path})=>path==="/required_action"),false);
   assert.equal(notApplicable.issues.some(({path})=>path==="/required_action"),false);
   assert.equal(JSON.stringify(schema),before,`sample ${sample} must leave the immutable source unchanged`);
+
+  let projectSequence=0;
+  const projectId=(kind)=>`${kind}:conservation:${sample}:${++projectSequence}`;
+  const initial=createSpecificationProject({name:`Conservation ${sample}`,site:`site-${sample}.example`,id:projectId});
+  const collidingId=`profile:${schema.id}`,occupiedProfiles=Array.from({length:1+(sample%4)},(_,collisionIndex)=>{
+    const id=collisionIndex===0?collidingId:`${collidingId}:saved-schema-contributor${collisionIndex===1?"":`-${collisionIndex}`}`;
+    return{id,name:`Unrelated Profile ${sample}.${collisionIndex}`,requirements:[{path:`/unrelated_${sample}_${collisionIndex}`,type:"boolean",required:true}]};
+  }),referencingAssignments=occupiedProfiles.map((profile,collisionIndex)=>({
+    id:`assignment:unrelated-${sample}-${collisionIndex}`,
+    name:`Unrelated assignment ${sample}.${collisionIndex}`,
+    targetId:profile.id,
+    targetKind:"Shared Profile",
+    eventName:`unrelated_${sample}_${collisionIndex}`,
+    sourceId:`source:unrelated-${sample}-${collisionIndex}`,
+    target:"payload",
+    priority:(sample+collisionIndex)%7,
+  })),collisionState={
+    ...initial,
+    project:{...initial.project,collections:{
+      ...initial.project.collections,
+      profiles:occupiedProfiles,
+      assignments:referencingAssignments,
+    }},
+  },beforeCollections=structuredClone(collisionState.project.collections),adoptedState=adoptSavedSchema(collisionState,{...schema,published:true}),repeatAdoption=adoptSavedSchema(collisionState,{...schema,published:true}),adoptedProfile=adoptedState.project.collections.profiles.find(({sourceIdentity})=>sourceIdentity===schema.id);
+  assert.deepEqual(adoptedState.project.collections.profiles.slice(0,occupiedProfiles.length),beforeCollections.profiles,`sample ${sample} must conserve every unrelated Profile`);
+  assert.deepEqual({...adoptedState.project.collections,profiles:beforeCollections.profiles},{...beforeCollections,profiles:beforeCollections.profiles},`sample ${sample} must conserve every pre-existing collection reference`);
+  assert.ok(adoptedProfile,`sample ${sample} must make the adopted contributor independently addressable`);
+  assert.equal(occupiedProfiles.some(({id})=>id===adoptedProfile.id),false,`sample ${sample} must allocate a distinct Profile identity`);
+  assert.equal(repeatAdoption.project.collections.profiles.find(({sourceIdentity})=>sourceIdentity===schema.id).id,adoptedProfile.id,`sample ${sample} must allocate collision identities deterministically`);
+  assert.equal(adoptedProfile.sourceIdentity,schema.id);
+  assert.equal(adoptedProfile.sourceRevision,schema.version);
+  assert.equal(adoptedProfile.canonicalSchema.contributorId,adoptedProfile.id,`sample ${sample} must bind canonical content to the adopted contributor`);
+  assert.deepEqual(adoptedState.project.collections.assignments.map(({targetId})=>targetId),occupiedProfiles.map(({id})=>id),`sample ${sample} must not redirect unrelated assignments`);
 }
 
 console.log("saved-schema canonical property tests passed");
