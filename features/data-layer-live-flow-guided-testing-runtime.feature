@@ -1,98 +1,124 @@
-# mutation-stamp: sha256=fac7da58829c5e7416a5e703cbf8193668bfef6a7b575a639901d7303503eb15
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-23T11:26:03.937326144Z","feature_name":"Data layer Live Flow guided testing runtime","feature_path":"features/data-layer-live-flow-guided-testing-runtime.feature","background_hash":"fec4a146e3265a166a3fc8ed4172a3853912c9ea3c918e8a675b8ed1258d86f6","implementation_hash":"sha256:fac4d2ff182b6cf88f9a952973c8be8797287738218e7653ad0dbbbe7cf91c5c","scenarios":[{"index":4,"name":"Data layer Live Flow guided testing runtime 005","scenario_hash":"f0678d62cd93a37965a003d35f118f6d11fe60d36356ea0c0664da93dc4efac9","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-23T11:24:36.108292090Z"},{"index":5,"name":"Data layer Live Flow guided testing runtime 006","scenario_hash":"6cfc90b1c8979a3d68133f69d8940d19e5a91ff62c015e18eadf64a5d9c97589","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-23T11:24:36.108292090Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer Live Flow guided testing runtime
 
   Background:
     Given the installed extension has active project Retail website
-    And production Live capture receives data-layer events
+    And production Live capture renders observed data-layer events in the event feed
     And persisted Checkout journey contains connected Page-frame and Event-occurrence nodes
 
   # Data layer Live Flow guided testing runtime 001
   Scenario: Data layer Live Flow guided testing runtime 001
-    When actual controls open Flow test in Live
-    Then the installed Flow selector renders only project-retail Flows by human name
-    And visible guidance states that graph-step and feed-event selection is manual and assignment-free
-    And repository order, inactive projects, and prior session state select no Flow
-    When active-project storage is absent
-    Then the production control offers Open project and Create project without a project-bound query
+    When actual feed controls select Checkout journey as the Flow test context
+    Then the installed Live feed header renders Checkout journey as selected
+    And production feed rows, filters, order, selection, and event-detail actions remain mounted
+    And no separate guided-test workspace, preselected graph step, or duplicate candidate feed renders
+    And repository order, Assignment results, observed payloads, and prior session state infer no Flow
+    When actual controls close the active project
+    Then production Flow-test context is absent
+    And the installed feed offers Open project and Create project without a project-bound query
 
   # Data layer Live Flow guided testing runtime 002
   Scenario: Data layer Live Flow guided testing runtime 002
-    Given production Checkout journey has root Cart plus distinct repeated frames Confirmation A and Confirmation B
-    When production run state adopts Checkout journey as its Flow
-    Then the installed start control renders every Page frame with Page name, lane, and stable frame ID
-    And Cart renders as a recommended root while later Page frames remain selectable for partial testing
-    And Confirmation A and Confirmation B have separate control values
-    And no Event-occurrence value is present in the initial Page control
+    Given production Checkout journey is selected for Flow testing
+    And its graph-ordered Page frames are root Cart, non-root Payment, non-root Confirmation A, and non-root Confirmation B
+    And the production observed event is unlinked
+    When actual controls open the observed event from the event feed
+    Then the installed event details render Flow-step options Cart, Payment, Confirmation A, and Confirmation B in that order
+    And Cart renders root status
+    And Confirmation A and Confirmation B have distinct stable control values
+    And the initial control contains no Event-occurrence value
+    When actual controls select Returns loop whose Page frames all have incoming relationships
+    Then the same production control renders every Returns loop Page frame in graph order
+    And the installed guidance states that the selected Flow has no root Page frame
 
   # Data layer Live Flow guided testing runtime 003
   Scenario: Data layer Live Flow guided testing runtime 003
-    Given production Cart frame is selected and no Assignment targets it
-    When production commits live-101 as the start-step observation
-    Then the installed validator records selection mode Manual Flow test without calling automatic assignment
-    And compiled input is Cart frame effective schema with Shared Profile, Page Group, Page, and instance provenance
-    And stored run evidence names Checkout journey, Cart frame, live-101, effective revision, issues, and provenance
+    Given production Checkout journey is selected for Flow testing
+    And installed event details contain no recorded Flow step
+    When the operator links the open event to Cart Page frame
+    Then saved Live-session evidence links live-101 to Checkout journey and the stable Cart frame ID
+    And the production validator receives Cart Flow Page-instance effective schema
+    And installed event details render the ordinary property issues and validation actions
+    And the production defect report builder is available from those issues
+    And result data records Manual Flow test, effective revision, issues, and provenance
     And production Assignment, contributor, Flow, and captured-payload bytes remain unchanged
-    And any automatic live-101 validation record remains separately byte-identical
 
   # Data layer Live Flow guided testing runtime 004
-  Scenario: Data layer Live Flow guided testing runtime 004
-    Given production Cart page_view occurrence is selected as the next graph step
-    When production occurrence validation receives live-102
-    Then the production compiler combines Cart frame, page_view Event, and occurrence contributions
-    And persisted result target is the stable Event-occurrence identity
-    And installed feed and inspector render the ordinary property issue presentation
-    And result data contains no automatic assignment winner
+  Scenario Outline: Data layer Live Flow guided testing runtime 004
+    Given Cart frame is the production current Flow step
+    And Cart has an outgoing <relationship_kind> relationship to <next_step> with <label_state>
+    And the production observed event is unlinked
+    When actual controls open the observed event from the event feed
+    Then the installed Flow-step control renders Cart outgoing relationship targets
+    And <next_step> renders with <relationship_kind> and <display_name>
+    And controls reject a graph step absent from Cart outgoing relationship IDs
+    When the installed Flow-step control commits <next_step>
+    Then production session storage links live-102 to that stable graph-step ID
+    And current traversal state becomes <next_step>
+
+    Examples:
+      | relationship_kind | next_step                    | label_state        | display_name                 |
+      | expected_next     | Payment Page frame           | no label           | Cart to Payment              |
+      | alternative       | Cart PayPal Event occurrence | label PayPal route | PayPal route                 |
+      | merge             | Confirmation Page frame      | no label           | Cart to Confirmation         |
 
   # Data layer Live Flow guided testing runtime 005
   Scenario Outline: Data layer Live Flow guided testing runtime 005
-    Given the selected production node has an outgoing <relationship_kind> relationship to <next_step>
-    And persisted relationship label state is <label_state>
-    When its matched feed event finishes validation
-    Then the installed guide renders <next_step>, <relationship_kind>, and <display_name>
-    When the operator confirms the offered target
-    Then production Live results offer matching observed events for that Page or Event node
-    And controls reject a node absent from the current node's outgoing relationship IDs
+    Given production Checkout journey is selected for Flow testing
+    And the next production graph target is <flow_step>
+    When the installed Flow-step control links live-102 to that target
+    Then the production validator receives <effective_schema>
+    And persisted validation target is the stable identity of <flow_step>
+    And result data contains selection mode Manual Flow test without an automatic assignment winner
 
     Examples:
-      | relationship_kind | next_step                       | label_state         | display_name                                  |
-      | expected_next     | Payment Page                    | no label            | Cart to Payment                              |
-      | alternative       | Cart PayPal Event occurrence    | label PayPal route  | PayPal route                                 |
-      | merge             | Confirmation Page               | no label            | Cart PayPal to Confirmation                  |
+      | flow_step                           | effective_schema                                                                  |
+      | Payment Page frame                  | its Shared Profiles, ordered Page Groups, Page, and Flow Page-instance contribution |
+      | Payment add_payment_info occurrence | its Page-instance branch, Event branch, and Event-occurrence contribution          |
 
   # Data layer Live Flow guided testing runtime 006
   Scenario Outline: Data layer Live Flow guided testing runtime 006
-    Given live-102 is the last event persisted in production Flow-test history
-    And production matching is requested for <step_kind> node <step_name>
-    When the installed feed derives matching candidates
-    Then eligible IDs contain only unmatched events captured after live-102
-    And rendered candidate evidence uses <matching_evidence> without programmatic selection
-    And ineligible rows remain rendered with chronological, already-matched, or compatibility reasons
-    When actual controls confirm live-103
-    Then run storage links live-103 once to <step_name> and excludes it from later candidate IDs
+    Given Cart frame is the production current Flow step
+    And the production observed event is unlinked
+    And its capture time is <capture_order> the event linked to Cart
+    When actual controls open the observed event from the event feed
+    Then the installed Flow-step control renders Cart outgoing relationship targets
+    And production permits linking the observed event without comparing capture order
+    And feed row visibility, order, enabled state, and selection equal their pre-Flow-test values
 
     Examples:
-      | step_kind | step_name                 | matching_evidence                         |
-      | Page      | Payment                   | observed Page context evidence            |
-      | Event     | Payment add_payment_info  | Event identity and observation source     |
+      | capture_order |
+      | before        |
+      | after         |
 
   # Data layer Live Flow guided testing runtime 007
   Scenario: Data layer Live Flow guided testing runtime 007
-    Given production live-103 fails Payment effective-schema validation
-    When Manual Flow test validation resolves
-    Then installed validation issue actions open the standard defect report builder
-    And report state contains captured payload, issues, target revision, provenance, Flow, graph step, matched path, and capture times
-    And production save and clipboard adapters are the same ones used by automatic-validation reports
-    And failed run history remains visible while outgoing relationship controls stay enabled
+    Given production event details for live-101 record Cart frame
+    And production traversal continued from live-102 through Payment frame
+    And live-101 is under production review
+    When actual controls open the observed event from the event feed
+    Then the installed selector's recorded value is Cart frame
+    And ordinary validation issues, provenance, and defect actions remain rendered
+    And the production traversal cursor remains Payment frame
+    When production review switches to another event without a recorded Flow-step ID
+    Then every installed choice references an outgoing Payment relationship and none references Cart
 
   # Data layer Live Flow guided testing runtime 008
   Scenario: Data layer Live Flow guided testing runtime 008
-    Given production run history follows Cart, page_view, Payment, and add_payment_info through persisted relationship IDs
-    When add_payment_info has no selected outgoing relationship and actual controls complete the test
-    Then saved-session storage contains ordered graph steps, relationships, feed IDs, schema revisions, statuses, and defect references
-    And the installed summary reads Completed selected path and marks unchosen alternatives Not tested
-    And reopening that saved session restores the summary without restarting capture or event matching
-    And production Assignment, canonical contributor, and Checkout journey hashes equal their pre-run values
+    Given production live-102 is linked to Payment add_payment_info occurrence
+    And its captured payload fails the occurrence effective schema
+    When actual controls open live-102 event details
+    Then the installed ordinary validation presentation highlights every property issue
+    And the production defect report builder contains payload, issues, target revision, and provenance
+    And report state adds Checkout journey, Payment add_payment_info, and the linked path
+    And production save and clipboard adapters are the same ones used by automatic-validation reports
+    And failed validation leaves the linked path and outgoing Flow-step controls unchanged
+
+  # Data layer Live Flow guided testing runtime 009
+  Scenario: Data layer Live Flow guided testing runtime 009
+    Given production session evidence links Cart, page_view, Payment, and add_payment_info feed events along persisted relationship IDs
+    When actual controls save and reopen the Live session
+    Then production restores selected Checkout journey, current step, event links, schema revisions, statuses, and defect references
+    And the installed feed and event details remain the primary review surfaces
+    And unchosen alternatives render Not tested
+    And no installed result claims that Checkout journey passed or executed
+    And production Assignment, canonical contributor, and Checkout journey hashes equal their pre-session values

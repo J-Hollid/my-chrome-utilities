@@ -1,99 +1,125 @@
-# mutation-stamp: sha256=b1425c510f33d778b5cd23c584954c3732fac41f7196757979c82ccf7a57cdef
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-23T11:26:03.846699273Z","feature_name":"Data layer Live Flow guided testing","feature_path":"features/data-layer-live-flow-guided-testing.feature","background_hash":"0ab42716f939d6fa813a7014fa5acf81c5aa7cca197fc4c749d21622f8b4c4e3","implementation_hash":"sha256:fd6e61db293d66b1d08d1116893eb092ecc143dc4154691854ed963940b26c32","scenarios":[{"index":4,"name":"Data layer Live Flow guided testing 005","scenario_hash":"f91a74f46905f14cf7e72cac10d16d53a0557ad829c2c26ffca618180a0493b1","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-23T11:24:27.947704810Z"},{"index":5,"name":"Data layer Live Flow guided testing 006","scenario_hash":"917862ef24f63d731a2e206c60e5e63e28bb108009ad043dabe95e54f5ad98a1","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-23T11:24:27.947704810Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer Live Flow guided testing
 
   Background:
     Given Retail website is the active project
-    And Live is capturing observed data-layer events
+    And Live is capturing observed data-layer events in the event feed
     And Checkout journey contains connected Page frames and Event occurrences
 
   # Data layer Live Flow guided testing 001
   Scenario: Data layer Live Flow guided testing 001
-    When the operator opens Flow test in Live
-    Then the Flow selector lists only Retail website Flows by human name
-    And guidance explains that the operator chooses graph steps and observed events manually without automatic assignment
-    And no Flow is selected from another project, storage order, or prior Live session
-    When there is no active project
-    Then Flow test requires Open project or Create project without inventing project context
+    When the operator selects Checkout journey as the Flow test context from the Live event feed
+    Then Checkout journey is identified as the selected Flow above the existing event feed
+    And the feed retains its rows, filters, ordering, selection, and event-detail actions
+    And no separate guided-test workspace, graph-step picker, or candidate-event feed opens
+    And no Flow is inferred from repository order, an Assignment, an observed event, or a prior session
+    When Retail website is closed
+    Then the Flow test context is cleared
+    And the feed offers Open project and Create project without inventing project context
 
   # Data layer Live Flow guided testing 002
   Scenario: Data layer Live Flow guided testing 002
-    Given Checkout journey has root Page Cart and later repeated Page instances Confirmation A and Confirmation B
-    When Checkout journey becomes the run's Flow
-    Then the start selector lists every Page frame with its Page, lane, and stable frame identity
-    And Cart is identified as a recommended root while later Pages remain available for a partial-path test
-    And Confirmation A and Confirmation B remain distinct choices
-    And Event occurrences cannot be chosen as the initial Page
+    Given Checkout journey is the selected Flow test context
+    And its Page frames in graph order are root Cart, non-root Payment, non-root Confirmation A, and non-root Confirmation B
+    And the observed event is unlinked
+    When the operator opens the observed event from the event feed
+    Then its event details show the Flow step selector in order Cart, Payment, Confirmation A, and Confirmation B
+    And Cart is identified as a root Page frame
+    And the repeated Confirmation Page frames remain distinct choices
+    And no Event occurrence is offered before the first Page frame is linked
+    When Returns loop becomes the selected Flow test context
+    And each Returns loop Page frame has an incoming relationship
+    Then the same event details offer every Returns loop Page frame in graph order
+    And guidance explains that the Flow has no root Page frame
 
   # Data layer Live Flow guided testing 003
   Scenario: Data layer Live Flow guided testing 003
-    Given Cart is the selected start Page and no Assignment targets Cart
-    When live-101 is confirmed as the start-step observation
-    Then Manual Flow test validation runs without invoking the automatic assignment resolver
-    And it uses Cart Flow Page-instance effective schema from its Shared Profiles, ordered Page Groups, Page, and instance override
-    And the result records Checkout journey, Cart frame, live-101, effective schema revision, issues, and provenance
-    And no Assignment, contributor, Flow, or observed-event payload is created or changed
-    And any automatic result on live-101 remains separate and unchanged
+    Given Checkout journey is the selected Flow test context
+    And observed event live-101 is open with no Flow-step link
+    When the operator selects Cart Page frame from its event details
+    Then the Live session records Checkout journey, stable Cart frame, and live-101 as one link
+    And its ordinary event validation uses Cart Flow Page-instance effective schema
+    And event details highlight the same property issues and actions as automatic schema assignment
+    And the usual defect report builder is available from those issues
+    And the result records manual Flow selection, effective schema revision, issues, and provenance
+    And no project Assignment, contributor, Flow, or observed-event payload is created or changed
 
   # Data layer Live Flow guided testing 004
-  Scenario: Data layer Live Flow guided testing 004
-    Given Cart page_view Event occurrence is the selected next step
-    When occurrence validation is requested with live-102
-    Then validation uses the occurrence effective schema combining the Cart Page-instance branch, page_view Event branch, and occurrence override
-    And the result identifies the Event occurrence rather than only the reusable Event or containing Page
-    And the same property issue presentation used by automatic validation appears in the feed and inspector
-    And no automatic assignment winner is claimed
+  Scenario Outline: Data layer Live Flow guided testing 004
+    Given Cart Page frame is the current Flow step
+    And Cart has an outgoing <relationship_kind> relationship to <next_step> with <label_state>
+    And the observed event is unlinked
+    When the operator opens the observed event from the event feed
+    Then the Flow step selector offers the valid outgoing steps from Cart
+    And <next_step> is identified with <relationship_kind> and <display_name>
+    And graph steps without an outgoing relationship from Cart are unavailable
+    When the operator selects <next_step>
+    Then live-102 is linked to that stable Flow step
+    And <next_step> becomes the current Flow step for the next unlinked event
+
+    Examples:
+      | relationship_kind | next_step                    | label_state        | display_name                 |
+      | expected_next     | Payment Page frame           | no label           | Cart to Payment              |
+      | alternative       | Cart PayPal Event occurrence | label PayPal route | PayPal route                 |
+      | merge             | Confirmation Page frame      | no label           | Cart to Confirmation         |
 
   # Data layer Live Flow guided testing 005
   Scenario Outline: Data layer Live Flow guided testing 005
-    Given the current graph step has an outgoing <relationship_kind> relationship to <next_step>
-    And the relationship has <label_state>
-    When the current observed event has been matched and validated
-    Then <next_step> is offered as a valid next step with <relationship_kind> and <display_name>
-    When the operator confirms the offered target
-    Then the Live feed offers matching observed events for that Page or Event step
-    And unrelated graph nodes are disabled with No relationship from current step
+    Given Checkout journey is the selected Flow test context
+    And the next selectable graph target is <flow_step>
+    When the operator links live-102 to <flow_step>
+    Then ordinary event validation uses <effective_schema>
+    And the validation result identifies <flow_step> rather than only its reusable definition
+    And it records selection mode Manual Flow test without invoking the automatic assignment resolver
 
     Examples:
-      | relationship_kind | next_step                       | label_state         | display_name                                  |
-      | expected_next     | Payment Page                    | no label            | Cart to Payment                              |
-      | alternative       | Cart PayPal Event occurrence    | label PayPal route  | PayPal route                                 |
-      | merge             | Confirmation Page               | no label            | Cart PayPal to Confirmation                  |
+      | flow_step                         | effective_schema                                                                  |
+      | Payment Page frame                | its Shared Profiles, ordered Page Groups, Page, and Flow Page-instance contribution |
+      | Payment add_payment_info occurrence | its Page-instance branch, Event branch, and Event-occurrence contribution          |
 
   # Data layer Live Flow guided testing 006
   Scenario Outline: Data layer Live Flow guided testing 006
-    Given live-102 is the last matched event in the Flow test
-    And matching is requested for <step_kind> step <step_name>
-    When matching candidates are presented from the Live feed
-    Then only unmatched events captured after live-102 are eligible
-    And candidate guidance uses <matching_evidence> without selecting an event automatically
-    And earlier, already matched, and incompatible rows remain visible with their ineligible reason
-    When the operator confirms live-103
-    Then live-103 is matched once to <step_name> and cannot be reused later in the same run
+    Given Cart Page frame is the current Flow step
+    And the observed event is unlinked
+    And it was captured <capture_order> the event linked to Cart
+    When the operator opens the observed event from the event feed
+    Then the Flow step selector offers the valid outgoing steps from Cart
+    And the operator may link the observed event without a chronological restriction
+    And no feed row is disabled, hidden, reordered, or selected automatically for Flow testing
 
     Examples:
-      | step_kind | step_name                 | matching_evidence                         |
-      | Page      | Payment                   | observed Page context evidence            |
-      | Event     | Payment add_payment_info  | Event identity and observation source     |
+      | capture_order |
+      | before        |
+      | after         |
 
   # Data layer Live Flow guided testing 007
   Scenario: Data layer Live Flow guided testing 007
-    Given live-103 fails the selected Payment step effective schema
-    When Manual Flow test validation completes
-    Then the usual validation issue actions offer the standard defect report builder
-    And the report contains the observed payload, property issues, effective target and revision, provenance, Flow, selected step, matched path, and capture times
-    And saving or copying the report behaves the same as for automatic schema validation
-    And the failed step remains in run history while valid relationship-guided next steps remain selectable
+    Given event details for live-101 record Cart Page frame
+    And traversal continued from live-102 through Payment Page frame
+    And live-101 is under review
+    When the operator opens the observed event from the event feed
+    Then the recorded link identifies the stable Cart frame
+    And its ordinary validation issues, provenance, and defect actions remain visible
+    And the session traversal cursor remains Payment Page frame
+    When the operator switches review to another event without a recorded Flow step
+    Then its available Flow step identities equal Payment outgoing relationship targets rather than Cart targets
 
   # Data layer Live Flow guided testing 008
   Scenario: Data layer Live Flow guided testing 008
-    Given the operator has matched Cart, page_view, Payment, and add_payment_info along one valid relationship path
-    When add_payment_info has no selected outgoing relationship and the operator completes the test
-    Then the Live session stores an ordered run summary with each graph step, relationship, observed event, schema revision, validation status, and defect reference
-    And the result is labelled Completed selected path rather than Flow passed
+    Given live-102 is linked to Payment add_payment_info occurrence
+    And its observed payload fails the occurrence effective schema
+    When the operator reviews live-102 event details
+    Then the usual validation presentation highlights every property issue
+    And the usual defect report builder contains the observed payload, issues, effective target, revision, and provenance
+    And Flow-test context adds Checkout journey, Payment add_payment_info, and the linked path
+    And saving or copying the report behaves the same as for automatic schema validation
+    And the failed validation neither changes the linked path nor blocks valid outgoing Flow-step choices
+
+  # Data layer Live Flow guided testing 009
+  Scenario: Data layer Live Flow guided testing 009
+    Given the operator linked Cart, page_view, Payment, and add_payment_info observed events along one valid relationship path
+    When the Live session is saved and reopened
+    Then the selected Checkout journey, current Flow step, event-to-step links, schema revisions, validation results, and defect references are restored
+    And the existing event feed and event details remain the primary review surfaces
     And unchosen alternatives are identified as not tested
-    And reopening the saved Live session restores the run summary without resuming capture or automatic matching
+    And no result claims that Checkout journey passed or executed
     And project Assignments, canonical contributors, and Checkout journey remain byte-identical

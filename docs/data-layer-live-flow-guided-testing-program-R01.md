@@ -2,84 +2,133 @@
 
 ## Authority and outcome
 
-This program activates one bounded operator-driven testing slice across the active
-Flow graph, canonical effective-schema compiler, and existing Live feed. In Live for
-the active project, an operator selects a Flow, chooses a start Page frame, manually
-matches captured events to Page-frame or Event-occurrence graph steps, and follows
-only directed relationships exposed by the documentary Flow.
+This program activates one bounded operator-guided testing slice across the active
+Flow graph, canonical effective-schema compiler, and existing Live event feed and
+event details. It supersedes the separate guided-test workflow previously described
+by this program.
+
+Flow testing is a context applied to the existing Live experience. The operator
+selects one active-project Flow above the event feed, opens any observed event
+through the feed's ordinary event-details action, links it to an eligible Flow Page
+frame or Event occurrence, and receives ordinary event validation and defect
+reporting against that step's effective schema.
 
 This is not automatic Assignment, temporal Flow execution, or proof that an entire
-Flow passed. The product guides and records the operator's selected path while each
-matched event receives ordinary per-Event schema validation.
+Flow passed. The product records the operator's selected path while keeping the
+event feed and event details as the primary interaction and review surfaces.
 
-## Entry and project context
+## Flow context in the event feed
 
-`Flow test` is a visible Live action. It requires one active project and lists only
-that project's Flows by human name. No Flow is inferred from repository order,
-prior sessions, an observed event, or an Assignment. Without an active project the
-action offers Open project and Create project.
+The Live event feed owns the Flow test selector. It lists only the active project's
+Flows by human name. Selecting a Flow sets the current Live session's Flow-test
+context without replacing, filtering, reordering, or duplicating the event feed.
+The selected Flow is visible above the feed, and every existing event row retains
+its ordinary details action.
 
-After Flow selection, the start control lists every Page frame by Page name, lane,
-and stable frame identity. Root Pages without incoming relationships are recommended,
-but any Page frame may start a partial-path test. Repeated instances of the same Page
-remain separate choices. Event occurrences cannot start before a Page is selected.
+Selecting a Flow does not preselect a graph step or observed event and opens no
+separate guided-test workspace, candidate-event feed, or wizard. No Flow is inferred
+from repository order, prior sessions, observed payloads, or Assignments. Without
+an active project, Flow-test context is absent and Live offers Open project and
+Create project.
 
-## Step and relationship guidance
+## First event and start Page ordering
 
-Page frames and Event occurrences are both test steps. After a matched event is
-validated, only targets of outgoing relationships from the current stable node are
-offered next. `expected_next`, `alternative`, and `merge` remain directed traversal
-kinds; no new execution meaning or `Parallel` kind is introduced. Optional labels
-are shown when present, otherwise human source and target names are used.
+Opening an unlinked observed event in a newly selected Flow context adds a Flow-step
+selector to its existing event details. The initial selector contains Page frames,
+not Event occurrences.
 
-The operator selects the next graph step before choosing an observed event. Nodes
-without a current outgoing relationship are unavailable with an explanation.
-Validation failure does not silently change the path or block the operator from
-continuing through a defined outgoing relationship.
+Root Page frames with no incoming relationships are listed first. Remaining Page
+frames follow, so an operator can begin at a specific later context. Within both
+groups, frames retain deterministic graph order. Repeated instances of one Page
+remain distinct stable choices.
 
-## Live event matching
+A Flow containing only loops may have no root Page. In that case every Page frame
+remains available in graph order and the details explain that no root Page exists.
+Root status is a preference and presentation order, never a restriction on where
+the operator may start.
 
-Candidate feed rows remain operator-selected. They must be unmatched in this run
-and captured after the previously matched event. A Page step shows observed Page
-context evidence; an Event step shows Event identity and observation-source
-evidence. These signals guide and filter but never choose a feed row automatically.
-Earlier, reused, or incompatible events remain visible with their reason. One feed
-event can be matched only once within a run.
+## Linking and ordinary event validation
 
-The guided result is stored separately from any existing automatic validation on
-the same observed event. Flow testing neither invokes the automatic assignment
-resolver nor creates, updates, disables, or impersonates an Assignment.
+Selecting a Page frame links the open observed event to the selected Flow, stable
+frame identity, and current Live session. It immediately validates the observed
+payload against that Flow Page instance's live effective schema: applicable Shared
+Profiles, ordered Page Groups, Page contribution, and sparse instance override.
 
-## Effective schema selection
+The validation appears in the same event-details presentation used when automatic
+assignment selected a schema. Property highlighting, issue actions, provenance,
+and the usual defect report builder are reused. The result records selection mode
+Manual Flow test, Flow, graph step, observed event, effective schema revision,
+issues, and provenance.
 
-For a Page-frame step, validation uses that Flow Page instance's live effective
-schema: applicable Shared Profiles, ordered Page Groups, Page contribution, and
-sparse instance override. For an Event-occurrence step, validation uses the full
-effective occurrence schema, combining its containing Page-instance branch, Event
-branch, and occurrence override. Stable frame and occurrence identities keep
-repeated Pages and Events distinct.
+This session link is not a project Assignment and does not invoke the automatic
+assignment resolver. It creates or changes no Assignment, canonical contributor,
+Flow topology, schema payload copy, or observed-event payload.
 
-Each result records selection mode `Manual Flow test`, active project, Flow, graph
-step, observed event, effective schema revision, issues, and exact provenance. It
-claims no automatic winner and stores no copied schema payload.
+## Relationship-guided next selections
 
-## Defects and run history
+After an observed event is linked, that Flow step becomes the current traversal
+position. When the operator later opens another unlinked observed event from the
+ordinary feed, its Flow-step selector contains only direct outgoing relationship
+targets of the current step.
 
-Property issues use the existing Live feed and inspector presentation. The standard
-defect report builder, persistence, and clipboard paths remain available with the
-same payload, issues, target revision, and provenance as automatic validation, plus
-Flow, graph step, matched path, relationships, and capture times.
+Page frames and Event occurrences may both be relationship targets.
+`expected_next`, `alternative`, and `merge` remain directed documentary kinds.
+Optional relationship labels are shown when present; otherwise human source and
+target names are used. Stable graph identities remain beneath the controls.
 
-Run history records each graph step, traversed relationship, observed event,
-effective revision, validation result, and optional defect reference. Completing a
-terminal or operator-ended run produces `Completed selected path`; it never says
-`Flow passed`. Unchosen alternatives are `Not tested`. Saved Live sessions retain
-the summary for review without resuming capture or matching.
+Selecting a target links and validates the open observed event, then makes that
+target current for the next unlinked event. A validation failure does not alter the
+linked path or disable valid outgoing targets.
+
+For a Page-frame target, validation uses that frame's effective Page-instance
+schema. For an Event-occurrence target, validation uses the full effective
+occurrence schema combining its containing Page-instance branch, Event branch, and
+occurrence contribution. Repeated Pages and Events remain distinct through stable
+frame and occurrence identities.
+
+## Operator control of feed order
+
+Flow testing imposes no chronology rule on observed events. The operator may open
+and link an unlinked feed event captured before or after the previously linked
+event. Flow context does not hide, disable, reorder, or automatically select feed
+rows.
+
+The relationship-guided selector constrains graph-step meaning, not which observed
+event the operator may inspect next. One observed event's existing session link is
+shown when that event is revisited rather than silently replacing it with the
+current traversal target.
+
+## Revisiting linked events
+
+Reopening a linked event shows its recorded Flow and Flow-step selection together
+with its ordinary validation result, issues, provenance, and defect actions. This
+display behaves as though that effective schema had been selected by automatic
+assignment, while retaining Manual Flow test as the selection provenance.
+
+Reviewing an earlier linked event does not rewind or advance the session traversal
+position. The most recently linked step remains current. Consequently, opening a
+new unlinked event after reviewing older evidence still offers outgoing targets
+from the current step.
+
+## Defects and session evidence
+
+The existing defect report builder, persistence, and clipboard paths remain
+authoritative. A report contains the same observed payload, property issues,
+effective target, revision, and provenance as ordinary automatic validation, plus
+the selected Flow, linked graph step, and path evidence.
+
+The Live session retains selected Flow context, current traversal position,
+event-to-step links, traversed relationships, effective revisions, validation
+results, and defect references. Reopening a saved session restores that evidence in
+the existing feed and event details. Unchosen alternatives may be identified as Not
+tested, but no output says Flow passed or claims the Flow executed.
 
 ## Non-goals
 
-- no automatic event-to-step matching or Flow selection;
-- no creation or requirement of Assignments;
+- no separate guided-test workspace, candidate-event feed, or step-first wizard;
+- no automatic Flow, graph-step, or observed-event selection;
+- no chronological restriction on operator-selected feed events;
+- no creation or requirement of project Assignments;
 - no background Flow execution, timing engine, or sequence assertion;
 - no mutation of Flow topology, canonical contributors, or observed payloads;
 - no claim that unchosen branches or the complete Flow were validated; and
@@ -90,34 +139,36 @@ the summary for review without resuming capture or matching.
 
 | ID | Scenario | Required production evidence | Terminal condition |
 |---|---|---|---|
-| L01 | Live Flow guided testing 001 | active-project Flow query and absent-context UI | only active-project Flows can start a run |
-| L02 | Live Flow guided testing 002 | Page-frame choices, roots, and repeated identities | every Page instance is selectable and distinct |
-| L03 | Live Flow guided testing 003 | assignment bypass and Page-instance compiler input | Page validation uses live effective frame schema |
-| L04 | Live Flow guided testing 004 | occurrence compiler input and ordinary issue UI | Event validation uses full occurrence schema |
-| L05 | Live Flow guided testing 005 | outgoing relationship index and labels | only valid directed next nodes are actionable |
-| L06 | Live Flow guided testing 006 | chronological candidate IDs and match history | no event is selected automatically or reused |
-| L07 | Live Flow guided testing 007 | standard report builder, save, and clipboard adapters | Flow-scoped failures create ordinary defects |
-| L08 | Live Flow guided testing 008 | saved-session summary and domain hashes | selected path is reviewable without domain mutation |
+| L01 | Live Flow guided testing 001 | integrated feed selector, unchanged feed, and absent-context UI | Flow selection sets context without opening a separate workflow |
+| L02 | Live Flow guided testing 002 | root-first Page-frame values, repeated IDs, and loop-only Flow | roots are preferred while every Page frame remains available |
+| L03 | Live Flow guided testing 003 | event-to-frame link, Page-instance compiler input, and ordinary detail UI | first selection validates inside existing event details |
+| L04 | Live Flow guided testing 004 | outgoing relationship index, labels, and current-step update | another event offers only valid directed next graph steps |
+| L05 | Live Flow guided testing 005 | Page and occurrence compiler inputs plus stable target IDs | each graph-step kind uses its live effective schema |
+| L06 | Live Flow guided testing 006 | earlier and later feed-event selection with unchanged feed state | capture chronology never restricts the operator |
+| L07 | Live Flow guided testing 007 | recorded link display and unchanged traversal cursor | reviewing an older linked event does not rewind the path |
+| L08 | Live Flow guided testing 008 | ordinary issue UI and standard defect adapters with Flow context | failures use the established validation and defect workflow |
+| L09 | Live Flow guided testing 009 | restored feed/detail evidence and domain hashes | saved sessions restore links without an execution claim |
 
 ## Terminal acceptance
 
-Both feature files must parse and IR-dry-check with no findings. The exact checkpoint
-is:
+Both feature files must parse and IR-dry-check with no findings. The exact
+checkpoint is:
 
 ```sh
 node scripts/run-focused-acceptance.mjs --pack live_flow_testing
 node scripts/package.mjs
 ```
 
-The pack registers both contracts plus focused production evidence for active-
-project Flow selection, Page start choice, Page and Event schema resolution,
-relationship guidance, chronological manual feed matching, ordinary issue and
-defect integration, saved run summaries, assignment bypass, and domain immutability.
-It declares its active Flow graph and layered-schema dependencies in the pack
-registry rather than invoking additional commands.
+The pack registers both contracts plus focused production evidence for
+active-project Flow context in the existing feed, root-first start selection,
+Page-frame and Event-occurrence effective-schema resolution, relationship-guided
+detail selections, chronology-independent operator event choice, recorded-link
+review without cursor changes, ordinary validation and defect integration, saved
+session restoration, assignment bypass, and domain immutability. It declares its
+active Flow graph and layered-schema dependencies in the pack registry rather than
+invoking additional commands.
 
 Production implementation, browser-runtime evidence, and property evidence form
 one candidate lineage before terminal integration. Property coverage must exercise
-that candidate's production serializer and traversal model; it must not wait for
-the Live implementation to land on `master`, and it must not substitute a test-only
-model when the candidate requires production corrections.
+that candidate's production serializer and traversal model; it must not substitute
+a test-only model when the candidate requires production corrections.

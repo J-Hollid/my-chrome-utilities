@@ -191,13 +191,16 @@ references without a Page-context binding model.
 The Flow remains documentary: pointer and keyboard positioning, topology,
 optionality, conditions, and multiplicity communicate expected behavior while
 per-Event payload validation remains independent and journey expectations remain
-manual. In the bounded Live Flow-test mode, the operator selects a Flow, a start
-Page frame, each valid relationship-connected Page or Event step, and one observed
-event per step. This manual mode invokes no automatic assignment resolver and makes
-no execution claim; it uses the selected frame or occurrence effective schema for
-ordinary validation and defect reporting. Any retained executable-step authoring is
-an explicitly separate Advanced function and does not duplicate or replace
-documentary graph authoring.
+manual. In the bounded Live Flow-test mode, selecting a Flow sets context above the
+existing event feed. Opening an observed event's existing details exposes a
+root-first but unrestricted initial Page-frame selector or, after the first link,
+the Page and Event targets of the current step's outgoing relationships. Linking a
+step applies its effective schema through the ordinary event validation and defect
+surfaces. Feed-event chronology is not restricted, and revisiting linked evidence
+does not rewind the current traversal position. This manual mode invokes no
+automatic assignment resolver and makes no execution claim. Any retained
+executable-step authoring is an explicitly separate Advanced function and does not
+duplicate or replace documentary graph authoring.
 
 The selected-Flow documentation checkpoint derives a Flow value map and Data capture
 matrix from ordered graph contexts and canonical effective schemas. It reuses the
@@ -439,12 +442,13 @@ node scripts/package.mjs
 ```
 
 The `live_flow_testing` pack must register both guided-testing contracts and focused
-production evidence for active-project Flow selection, Page starts, Page and Event
-effective-schema resolution, directed relationship guidance, chronological manual
-feed matching, ordinary validation and defect integration, saved run summaries,
-assignment bypass, and domain immutability. It may declare `flow_graph` and
-`layered_schema` dependencies but must not invoke unrelated or archived Live and
-temporal-Flow suites.
+production evidence for active-project Flow context in the existing feed,
+root-first Page starts, Page and Event effective-schema resolution, directed
+relationship guidance in event details, chronology-independent operator event
+choice, linked-evidence review without traversal rewind, ordinary validation and
+defect integration, saved session restoration, assignment bypass, and domain
+immutability. It may declare `flow_graph` and `layered_schema` dependencies but must
+not invoke unrelated or archived Live and temporal-Flow suites.
 
 The `flow_export` pack may register shared build dependencies from `flow_graph`, but
 must contain the selected-Flow export features and their production clipboard and
