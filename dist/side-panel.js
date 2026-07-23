@@ -1085,6 +1085,7 @@ async function attachSelectedTarget() {
     });
     dataLayerSessionState = started.sessionState;
     liveObserverState = started.liveObserverState;
+    resetLiveFlowTestingSession();
     installDefaultSavedEventFeedFilterForNewSession();
     dataLayerSessionState = captureEntry(dataLayerSessionState, { type: "page", url: target.pageUrl });
     dataLayerObserverState = attachHistoryArrayObserver({

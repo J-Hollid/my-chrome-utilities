@@ -19,7 +19,7 @@ export function mountLiveFlowTestingUi(options) {
     if (!openControl || !host)
         throw new Error("Live Flow test controls are unavailable.");
     const now = options.now ?? (() => new Date().toISOString()), id = options.id ?? (() => `live-flow:${crypto.randomUUID()}`);
-    let project, run, completed;
+    let project, run, completed, openGeneration = 0;
     const setStatus = (text) => { const output = host.querySelector("#live-flow-test-status"); if (output)
         output.textContent = text; };
     const render = () => {
@@ -133,9 +133,10 @@ export function mountLiveFlowTestingUi(options) {
         status.setAttribute("aria-live", "polite");
         host.append(status);
     };
-    const open = async () => { completed = options.savedSummary?.(); project = completed ? undefined : await options.activeProject(); run = project ? createLiveFlowTest(id(), project.project.id) : undefined; render(); };
+    const open = async () => { const generation = ++openGeneration, nextCompleted = options.savedSummary?.(), nextProject = nextCompleted ? undefined : await options.activeProject(); if (generation !== openGeneration)
+        return; completed = nextCompleted; project = nextProject; run = project ? createLiveFlowTest(id(), project.project.id) : undefined; render(); };
     openControl.addEventListener("click", () => void open());
-    return { open, render, reset: () => { project = undefined; run = undefined; completed = undefined; host.replaceChildren(); host.hidden = true; }, attachDefect: (stepId, eventId, defectId) => { if (!run)
+    return { open, render, reset: () => { openGeneration++; project = undefined; run = undefined; completed = undefined; host.replaceChildren(); host.hidden = true; }, attachDefect: (stepId, eventId, defectId) => { if (!run)
             return; run = attachLiveFlowDefect(run, stepId, defectId, eventId); render(); }, run: () => run ? structuredClone(run) : undefined, summary: () => completed ? structuredClone(completed) : undefined };
 }
 //# sourceMappingURL=data-layer-live-flow-testing-ui.js.map

@@ -30,7 +30,7 @@ const historyItem=(entry:LiveFlowHistoryEntry):HTMLLIElement=>{
 
 export function mountLiveFlowTestingUi(options:LiveFlowTestingUiOptions):LiveFlowTestingUi{
   const openControl=options.root.querySelector<HTMLButtonElement>("#open-live-flow-test"),host=options.root.querySelector<HTMLElement>("#live-flow-test");if(!openControl||!host)throw new Error("Live Flow test controls are unavailable.");
-  const now=options.now??(()=>new Date().toISOString()),id=options.id??(()=>`live-flow:${crypto.randomUUID()}`);let project:ProjectState|undefined,run:LiveFlowTestRun|undefined,completed:CompletedLiveFlowTest|undefined;
+  const now=options.now??(()=>new Date().toISOString()),id=options.id??(()=>`live-flow:${crypto.randomUUID()}`);let project:ProjectState|undefined,run:LiveFlowTestRun|undefined,completed:CompletedLiveFlowTest|undefined,openGeneration=0;
   const setStatus=(text:string)=>{const output=host.querySelector<HTMLOutputElement>("#live-flow-test-status");if(output)output.textContent=text;};
   const render=()=>{
     host.replaceChildren();host.hidden=false;const heading=document.createElement("h4");heading.textContent="Flow test";const guidance=document.createElement("p");guidance.textContent="Manual Flow test: choose each graph step and observed feed event. No Flow, event, or Assignment is selected automatically.";host.append(heading,guidance);
@@ -43,6 +43,6 @@ export function mountLiveFlowTestingUi(options:LiveFlowTestingUiOptions):LiveFlo
     if(run?.history.length){const history=document.createElement("ol");history.id="live-flow-run-history";for(const entry of run.history){const item=historyItem(entry);if(entry.issues.length&&!entry.defectId)item.append(button("Create defect report",()=>{const event=options.events().find(({id:eventId})=>eventId===entry.eventId);if(event)options.onDefect?.(entry,event);}));history.append(item);}host.append(history,button("Complete selected path",()=>{completed=completeLiveFlowTest(run!,project!,now());options.saveSummary(completed);render();}));}
     const status=document.createElement("output");status.id="live-flow-test-status";status.setAttribute("aria-live","polite");host.append(status);
   };
-  const open=async()=>{completed=options.savedSummary?.();project=completed?undefined:await options.activeProject();run=project?createLiveFlowTest(id(),project.project.id):undefined;render();};openControl.addEventListener("click",()=>void open());
-  return{open,render,reset:()=>{project=undefined;run=undefined;completed=undefined;host.replaceChildren();host.hidden=true;},attachDefect:(stepId,eventId,defectId)=>{if(!run)return;run=attachLiveFlowDefect(run,stepId,defectId,eventId);render();},run:()=>run?structuredClone(run):undefined,summary:()=>completed?structuredClone(completed):undefined};
+  const open=async()=>{const generation=++openGeneration,nextCompleted=options.savedSummary?.(),nextProject=nextCompleted?undefined:await options.activeProject();if(generation!==openGeneration)return;completed=nextCompleted;project=nextProject;run=project?createLiveFlowTest(id(),project.project.id):undefined;render();};openControl.addEventListener("click",()=>void open());
+  return{open,render,reset:()=>{openGeneration++;project=undefined;run=undefined;completed=undefined;host.replaceChildren();host.hidden=true;},attachDefect:(stepId,eventId,defectId)=>{if(!run)return;run=attachLiveFlowDefect(run,stepId,defectId,eventId);render();},run:()=>run?structuredClone(run):undefined,summary:()=>completed?structuredClone(completed):undefined};
 }
