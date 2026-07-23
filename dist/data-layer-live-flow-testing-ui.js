@@ -79,13 +79,13 @@ export function mountLiveFlowTestingUi(options) {
         const guidance = document.createElement("p");
         guidance.textContent = selection.noRootPage
             ? "This Flow has no root Page frame. Every Page frame remains available in graph order."
-            : selection.mode === "initial" ? "Root Page frames are listed first; every Page frame remains available." : "Choose one direct outgoing relationship target from the current Flow step.";
+            : selection.mode === "initial" ? "Root Page frames are listed first; every Page frame remains available." : "Choose a contained Event or an outgoing related Page from the current Page.";
         const label = document.createElement("label"), select = document.createElement("select");
         select.id = "live-flow-step-selector";
         label.textContent = "Flow step";
         select.append(option("", "Choose Flow step"));
         for (const choice of selection.choices) {
-            const status = choice.root ? "Root Page frame" : choice.kind ? `${choice.kind} · ${choice.displayName}` : "Page frame";
+            const status = choice.root ? "Root Page frame" : choice.stepKind === "Event" ? `Contained Event · ${choice.displayName}` : choice.kind ? `${choice.kind} · ${choice.displayName}` : "Page frame";
             select.append(option(choice.id, `${choice.name} · ${status} · ${choice.id}`));
         }
         const link = button("Link event to Flow step", () => {

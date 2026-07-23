@@ -57,9 +57,7 @@ const state={project:{
     ],
     relationships:[
       {id:"relationship:cart-payment",sourceEndpoint:{kind:"page-frame",id:"frame:cart"},targetEndpoint:{kind:"page-frame",id:"frame:payment"},kind:"expected_next"},
-      {id:"relationship:cart-paypal",sourceEndpoint:{kind:"page-frame",id:"frame:cart"},targetEndpoint:{kind:"event-occurrence",id:"occurrence:paypal"},kind:"alternative",label:"PayPal route"},
       {id:"relationship:cart-confirmation",sourceEndpoint:{kind:"page-frame",id:"frame:cart"},targetEndpoint:{kind:"page-frame",id:"frame:confirmation"},kind:"merge"},
-      {id:"relationship:payment-add",sourceEndpoint:{kind:"page-frame",id:"frame:payment"},targetEndpoint:{kind:"event-occurrence",id:"occurrence:add-payment"},kind:"expected_next"},
     ],
   }},
   releases:[],publicationPolicy:{warningsBlock:false,fixturesRequired:false},namingConventions:{},
@@ -90,7 +88,7 @@ let run=selectLiveFlow(createLiveFlowTest("run:outline","project:outline"),state
 run=linkLiveFlowEvent(run,state,initial,"frame:cart");
 const outgoing=liveFlowEventStepChoices(run,state,payment.id).choices;
 assert.equal(new Set(outgoing.map(({id})=>id)).size,outgoing.length,"Live Flow choices contain each stable target once");
-const relationshipRows=outgoing.map((choice)=>({
+const relationshipRows=outgoing.filter(({stepKind})=>stepKind==="Page").map((choice)=>({
   relationship_kind:choice.kind,
   next_step:choice.stepKind==="Page"?`${choice.name} Page frame`:`${choice.name} Event occurrence`,
   label_state:choice.displayName===`Cart to ${choice.name}`?"no label":`label ${choice.displayName}`,
@@ -137,6 +135,6 @@ const outlineRows=[
     ? [{link_evidence:"initial selection at Payment",displayed_link_evidence:"Started at Payment"}] : []),
 ];
 
-assert.equal(outlineRows.length,9,"the production model fixture must demonstrate every Live Flow outline row without duplicate choices");
+assert.equal(outlineRows.length,8,"the production model fixture must demonstrate every Live Flow outline row without duplicate choices");
 assert.equal(run.history.map(({eventId})=>eventId).join("|"),"live-101|live-102|live-103");
 console.log(JSON.stringify({liveFlowTesting:{outlineRows}}));

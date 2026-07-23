@@ -33,9 +33,9 @@ const state={project:{
   id:"project:property",name:"Property project",collections:{
     profiles:[],pageGroups:[],applicabilitySets:[],assignments:[],fixtures:[],
     pages:[
-      {id:"page:start",name:"Start",pathname:"/start",canonicalSchema:canonical("page:start","Start","/journey")},
-      {id:"page:success",name:"Success",pathname:"/success",canonicalSchema:canonical("page:success","Success","/result")},
-      {id:"page:failure",name:"Failure",pathname:"/failure",canonicalSchema:canonical("page:failure","Failure","/result")},
+      {id:"page:start",name:"Start",eventName:"pageview",pathname:"/start",canonicalSchema:canonical("page:start","Start","/journey")},
+      {id:"page:success",name:"Success",eventName:"pageview",pathname:"/success",canonicalSchema:canonical("page:success","Success","/result")},
+      {id:"page:failure",name:"Failure",eventName:"pageview",pathname:"/failure",canonicalSchema:canonical("page:failure","Failure","/result")},
     ],
     events:[{id:"event:submit",name:"submit",eventName:"submit",canonicalSchema:canonical("event:submit","submit","/action")}],
     flows:[{id:"flow:branch",name:"Branch journey"}],
@@ -49,9 +49,8 @@ const state={project:{
     ],
     occurrences:[{id:"occurrence:submit",name:"Submit occurrence",pageFrameId:"frame:start",pageId:"page:start",eventId:"event:submit"}],
     relationships:[
-      {id:"relationship:start-submit",sourceEndpoint:{kind:"page-frame",id:"frame:start"},targetEndpoint:{kind:"event-occurrence",id:"occurrence:submit"},sourcePort:"right",targetPort:"left",kind:"expected_next"},
-      {id:"relationship:submit-success",sourceEndpoint:{kind:"event-occurrence",id:"occurrence:submit"},targetEndpoint:{kind:"page-frame",id:"frame:success"},sourcePort:"right",targetPort:"left",kind:"alternative"},
-      {id:"relationship:submit-failure",sourceEndpoint:{kind:"event-occurrence",id:"occurrence:submit"},targetEndpoint:{kind:"page-frame",id:"frame:failure"},sourcePort:"right",targetPort:"left",kind:"alternative"},
+      {id:"relationship:start-success",sourceEndpoint:{kind:"page-frame",id:"frame:start"},targetEndpoint:{kind:"page-frame",id:"frame:success"},sourcePort:"top",targetPort:"bottom",kind:"alternative"},
+      {id:"relationship:start-failure",sourceEndpoint:{kind:"page-frame",id:"frame:start"},targetEndpoint:{kind:"page-frame",id:"frame:failure"},sourcePort:"top",targetPort:"bottom",kind:"alternative"},
     ],
   }},releases:[],publicationPolicy:{warningsBlock:false,fixturesRequired:false},namingConventions:{},
 },draft:{status:"Draft"},history:{undo:[],redo:[]}};
@@ -111,15 +110,17 @@ for(let sample=0;sample<24;sample+=1){
   ]);
   run=linkLiveFlowEvent(run,state,chronological[2],"frame:start");
   assert.deepEqual(liveFlowEventStepChoices(run,state,chronological[1].id).choices.map(({id,relationshipId})=>({id,relationshipId})),[
-    {id:"occurrence:submit",relationshipId:"relationship:start-submit"},
+    {id:"occurrence:submit",relationshipId:undefined},
+    {id:"frame:success",relationshipId:"relationship:start-success"},
+    {id:"frame:failure",relationshipId:"relationship:start-failure"},
   ]);
   run=linkLiveFlowEvent(run,state,chronological[1],"occurrence:submit");
-  assert.deepEqual(new Set(liveFlowEventStepChoices(run,state,chronological[0].id).choices.map(({relationshipId})=>relationshipId)),new Set(["relationship:submit-success","relationship:submit-failure"]));
+  assert.deepEqual(new Set(liveFlowEventStepChoices(run,state,chronological[0].id).choices.filter(({stepKind})=>stepKind==="Page").map(({relationshipId})=>relationshipId)),new Set(["relationship:start-success","relationship:start-failure"]));
   run=linkLiveFlowEvent(run,state,chronological[0],`frame:${target}`);
   run=attachLiveFlowDefect(run,`frame:${target}`,`defect:${sample}`,chronological[0].id);
 
   assert.deepEqual(run.history.map(({stepId})=>stepId),["frame:start","occurrence:submit",`frame:${target}`]);
-  assert.deepEqual(run.history.map(({relationshipId})=>relationshipId),[undefined,"relationship:start-submit",`relationship:submit-${target}`]);
+  assert.deepEqual(run.history.map(({relationshipId})=>relationshipId),[undefined,undefined,`relationship:start-${target}`]);
   assert.deepEqual(run.history.map(({eventId})=>eventId),[chronological[2].id,chronological[1].id,chronological[0].id]);
   assert.equal(run.history.every((entry,index,history)=>index===0||Date.parse(entry.captureTime)<Date.parse(history[index-1].captureTime)),true,
     "generated traversals accept operator-selected feed evidence in reverse capture chronology");
@@ -149,7 +150,7 @@ for(let sample=0;sample<24;sample+=1){
   const completed=liveFlowSessionEvidence(run,state,`2026-07-23T10:00:04.${String(sample).padStart(3,"0")}Z`);
   assert.equal(completed.label,"Manual Flow test evidence");
   assert.equal(completed.currentStepId,`frame:${target}`);
-  assert.deepEqual(completed.unchosenAlternatives,[{relationshipId:`relationship:submit-${other}`,stepId:`frame:${other}`,status:"Not tested"}]);
+  assert.deepEqual(completed.unchosenAlternatives,[{relationshipId:`relationship:start-${other}`,stepId:`frame:${other}`,status:"Not tested"}]);
   assert.equal(completed.resumeMatching,false);
   const serialized=serializeLiveFlowSummary(completed);
   assert.equal(serialized.includes('"contributors"'),false,"saved summaries do not codify copied schema contributors");
