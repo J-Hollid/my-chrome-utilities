@@ -15,9 +15,10 @@ assert.deepEqual(Object.values(profile.canonicalSchema.nodes).map(({name,type})=
   {name:"checkout",type:"object"},{name:"funnel_step",type:"string"},
 ]);
 assert.deepEqual(Object.values(profile.canonicalSchema.nodes).find(({name})=>name==="funnel_step").allowedValues.map(({value})=>value),["3a","3b"]);
-const {definitionsByNodeId,...sourceContent}=profile.canonicalSchema.sourceContent;
+const {definitionsByNodeId,pathsByNodeId,...sourceContent}=profile.canonicalSchema.sourceContent;
 assert.deepEqual(sourceContent,{document:source.document,rules:source.rules,documentation:source.documentation,examples:source.examples});
 assert.equal(Object.keys(definitionsByNodeId).length,2,"adoption retains source definitions by stable canonical identity");
+assert.deepEqual(Object.values(pathsByNodeId).sort(),["/checkout","/checkout/funnel_step"],"adoption retains immutable source paths by canonical identity");
 assert.equal("structuredSchema" in profile,false);
 assert.equal("structuredDraft" in profile,false);
 assert.equal("schemaConstraints" in profile,false);

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
-import {canonicalConstraints,canonicalPropertyPath} from "../dist/data-layer-canonical-schema.js";
+import {applyCanonicalCommand,canonicalConstraints,canonicalPropertyPath} from "../dist/data-layer-canonical-schema.js";
 import {compileLayeredSchema,validateLayeredObservation} from "../dist/data-layer-layered-schema.js";
 import {savedSchemaCanonicalDocument} from "../dist/data-layer-saved-schema-canonical.js";
-import {adoptSavedSchema,createSpecificationProject} from "../dist/data-layer-specification-project.js";
+import {adoptSavedSchema,commitSavedSchemaSynchronization,createSpecificationProject,stageSavedSchemaSynchronization,transactProject} from "../dist/data-layer-specification-project.js";
 
 let seed=0x5a9ed123;
 const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/0x100000000;};
@@ -83,6 +83,46 @@ for(let sample=0;sample<128;sample+=1){
   assert.equal(adoptedProfile.sourceRevision,schema.version);
   assert.equal(adoptedProfile.canonicalSchema.contributorId,adoptedProfile.id,`sample ${sample} must bind canonical content to the adopted contributor`);
   assert.deepEqual(adoptedState.project.collections.assignments.map(({targetId})=>targetId),occupiedProfiles.map(({id})=>id),`sample ${sample} must not redirect unrelated assignments`);
+
+  const syncSource={
+    id:`schema:sync-${sample}`,name:`Synchronization ${sample}`,version:1,published:true,
+    document:{type:"object",properties:{trigger:{type:"string"},value:{type:"string"}}},
+    rules:[{id:`rule:required-sync-${sample}`,name:"Conditional value",version:1,propertyPath:"/value",operator:"required",severity:"error",conditionGroup:{operator:"All",predicates:[{propertyPath:"/trigger",operator:"Equals",comparison:{type:"string",value:"source"}}]}}],
+  };
+  let syncState=adoptSavedSchema(createSpecificationProject({name:`Synchronization ${sample}`,site:`sync-${sample}.example`,id:projectId}),syncSource);
+  const syncProfile=syncState.project.collections.profiles[0],triggerNode=Object.values(syncProfile.canonicalSchema.nodes).find(({name})=>name==="trigger"),valueNode=Object.values(syncProfile.canonicalSchema.nodes).find(({name})=>name==="value"),localPredicate={kind:"all",children:[{kind:"predicate",propertyId:triggerNode.id,operator:"Equals",value:`local-${sample}`}]};
+  let localResult=applyCanonicalCommand(syncProfile.canonicalSchema,{kind:"set",baseRevision:syncProfile.canonicalSchema.revision,propertyId:valueNode.id,patch:{
+    presence:{mode:"required-when",condition:localPredicate},
+    rules:valueNode.rules.map((rule)=>({...rule,condition:localPredicate})),
+    expectedValue:`expected-${sample}`,
+    enforcement:sample%2?"overridable":"invariant",
+    target:`event:sync-${sample}`,
+    overrideReferences:[triggerNode.id],
+  }});
+  assert.equal(localResult.status,"applied");
+  localResult=applyCanonicalCommand(localResult.document,{kind:"select",baseRevision:localResult.document.revision,propertyId:valueNode.id});
+  for(let token=0;token<3;token+=1)localResult=applyCanonicalCommand(localResult.document,{kind:"view",baseRevision:localResult.document.revision,view:token%2?"tree":"table"});
+  const localCanonical=localResult.document,priorChanges=structuredClone(localCanonical.changes);
+  syncState=transactProject(syncState,"Author canonical-only facets",(project)=>({...project,collections:{...project.collections,profiles:project.collections.profiles.map((profile)=>profile.id===syncProfile.id?{...profile,canonicalSchema:localCanonical}:profile)}}));
+  const nextSource={...syncSource,version:2,document:{type:"object",properties:{...syncSource.document.properties,value:{...syncSource.document.properties.value,description:`Source revision ${sample}`},new_value:{type:"string"}}},rules:[
+    {...syncSource.rules[0],version:2},
+    {id:`rule:new-sync-${sample}`,name:"New source value",version:1,propertyPath:"/new_value",operator:"exact-value",parameters:`new-${sample}`,severity:"warning"},
+  ]};
+  syncState=commitSavedSchemaSynchronization(syncState,stageSavedSchemaSynchronization(syncState,nextSource));
+  const synchronized=syncState.project.collections.profiles[0].canonicalSchema,synchronizedValue=synchronized.nodes[valueNode.id],newValue=Object.values(synchronized.nodes).find(({name})=>name==="new_value");
+  assert.equal(synchronized.revision,localCanonical.revision+1,`sample ${sample} must advance the canonical Draft token exactly once`);
+  assert.deepEqual(synchronized.changes.slice(0,priorChanges.length),priorChanges,`sample ${sample} must conserve prior canonical command history as a prefix`);
+  assert.deepEqual(synchronized.changes.at(-1),{revision:synchronized.revision,propertyIds:[newValue.id,valueNode.id].sort(),kind:"synchronize"},`sample ${sample} must record every source-affected canonical identity at the new Draft token`);
+  assert.equal(synchronized.selectedPropertyId,valueNode.id,`sample ${sample} must conserve canonical selection`);
+  assert.deepEqual(synchronizedValue.presence,{mode:"required-when",condition:localPredicate},`sample ${sample} must conserve local presence predicates`);
+  assert.deepEqual(synchronizedValue.rules.find(({id})=>id===syncSource.rules[0].id).condition,localPredicate,`sample ${sample} must conserve local rule predicates`);
+  assert.equal(synchronizedValue.rules.find(({id})=>id===syncSource.rules[0].id).revision,2,`sample ${sample} must advance an otherwise unmodified source rule facet`);
+  assert.equal(synchronizedValue.documentation.description,`Source revision ${sample}`,`sample ${sample} must advance an unmodified existing source facet`);
+  assert.equal(synchronizedValue.expectedValue,`expected-${sample}`);
+  assert.equal(synchronizedValue.enforcement,sample%2?"overridable":"invariant");
+  assert.equal(synchronizedValue.target,`event:sync-${sample}`);
+  assert.deepEqual(synchronizedValue.overrideReferences,[triggerNode.id]);
+  assert.equal(newValue.rules.find(({id})=>id===`rule:new-sync-${sample}`).name,"New source value",`sample ${sample} must merge unrelated new source rules`);
 }
 
 console.log("saved-schema canonical property tests passed");

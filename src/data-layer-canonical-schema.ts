@@ -21,8 +21,8 @@ export interface CanonicalPropertyNode {
 export interface CanonicalSchemaDocument {
   id:string;revision:number;state:"Draft";contributorId:string;contributorName:string;rootIds:string[];nodes:Record<string,CanonicalPropertyNode>;
   source?:{identity:string;revision:number;provenance:"saved-schema-library"|"project-composed-effective"};selectedPropertyId?:string;view:"tree"|"table";
-  sourceContent?:{document:Record<string,unknown>;rules:readonly Record<string,unknown>[];documentation:unknown;examples:readonly unknown[];definitionsByNodeId?:Record<string,Record<string,unknown>>};
-  changes:{revision:number;propertyIds:string[];kind:CanonicalCommand["kind"]}[];
+  sourceContent?:{document:Record<string,unknown>;rules:readonly Record<string,unknown>[];documentation:unknown;examples:readonly unknown[];definitionsByNodeId?:Record<string,Record<string,unknown>>;pathsByNodeId?:Record<string,string>};
+  changes:{revision:number;propertyIds:string[];kind:CanonicalCommand["kind"]|"synchronize"}[];
 }
 export interface CanonicalSchemaInput {id:string;contributorId:string;contributorName:string;source?:CanonicalSchemaDocument["source"];}
 export type CanonicalIdFactory=(kind:string)=>string;

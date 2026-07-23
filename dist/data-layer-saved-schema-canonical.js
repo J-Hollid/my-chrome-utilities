@@ -16,11 +16,13 @@ export function savedSchemaCanonicalDocument(schema, id, target) {
     if (schema.canonicalSchema)
         return clone(schema.canonicalSchema);
     const canonical = canonicalSchemaFromJsonSchema({ id: target?.id ?? `canonical:saved:${schema.id}`, contributorId: target?.contributorId ?? schema.id, contributorName: target?.contributorName ?? schema.name, sourceIdentity: schema.id, sourceRevision: schema.version, document: schema.document, idFactory: id }), byPath = new Map(Object.values(canonical.nodes).map((node) => [canonicalPropertyPath(canonical, node.id), node]));
-    const definitionsByNodeId = {}, sourceRules = schema.attachedRules ?? schema.rules ?? [];
-    const visit = (definition, path) => { for (const [name, child] of Object.entries(definition.properties ?? {})) {
+    const definitionsByNodeId = {}, pathsByNodeId = {}, sourceRules = schema.attachedRules ?? schema.rules ?? [];
+    const visit = (definition, path) => { for (const [index, [name, child]] of Object.entries(definition.properties ?? {}).entries()) {
         const childPath = `${path}/${name}`, node = byPath.get(childPath), documentation = schema.documentation?.properties?.[childPath], rich = child;
         if (node) {
+            node.order = index;
             definitionsByNodeId[node.id] = clone(rich);
+            pathsByNodeId[node.id] = childPath;
             if (definition.required?.includes(name))
                 node.presence = { mode: "required" };
             else if (definition.forbidden?.includes(name))
@@ -41,6 +43,9 @@ export function savedSchemaCanonicalDocument(schema, id, target) {
         visit(child, childPath);
     } };
     visit(schema.document, "");
+    canonical.rootIds = Object.values(canonical.nodes).filter(({ parentId }) => !parentId).sort((left, right) => left.order - right.order).map(({ id }) => id);
+    if (canonical.rootIds[0])
+        canonical.selectedPropertyId = canonical.rootIds[0];
     const typedRuleValue = (node, value) => { if (typeof value !== "string")
         return clone(value); if (node.type === "number" || node.type === "integer") {
         const parsed = Number(value);
@@ -70,7 +75,7 @@ export function savedSchemaCanonicalDocument(schema, id, target) {
             node.allowedValues = values.map((value, index) => ({ id: `allowed-value:${node.id}:rule:${rule.id}:${index}`, value: typedRuleValue(node, value) }));
         }
     }
-    canonical.sourceContent = { document: clone(schema.document), rules: clone(sourceRules), documentation: clone(schema.documentation ?? {}), examples: [], definitionsByNodeId };
+    canonical.sourceContent = { document: clone(schema.document), rules: clone(sourceRules), documentation: clone(schema.documentation ?? {}), examples: [], definitionsByNodeId, pathsByNodeId };
     return canonical;
 }
 const orderedChildren = (document, parentId) => Object.values(document.nodes).filter((node) => node.parentId === parentId).sort((left, right) => left.order - right.order || left.id.localeCompare(right.id));
