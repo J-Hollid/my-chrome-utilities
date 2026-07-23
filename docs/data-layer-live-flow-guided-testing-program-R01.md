@@ -115,3 +115,9 @@ relationship guidance, chronological manual feed matching, ordinary issue and
 defect integration, saved run summaries, assignment bypass, and domain immutability.
 It declares its active Flow graph and layered-schema dependencies in the pack
 registry rather than invoking additional commands.
+
+Production implementation, browser-runtime evidence, and property evidence form
+one candidate lineage before terminal integration. Property coverage must exercise
+that candidate's production serializer and traversal model; it must not wait for
+the Live implementation to land on `master`, and it must not substitute a test-only
+model when the candidate requires production corrections.
