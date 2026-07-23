@@ -56,7 +56,12 @@ const rotate=(values,count)=>values.map((_,index)=>values[(index+count)%values.l
 const contributorFacetBytes=JSON.stringify(state.project.collections);
 const assertDefectSnapshot=(entry,event,expectedKind,expectedLabel,sample)=>{
   const mutableEntry=structuredClone(entry),mutableEvent=structuredClone(event);
+  mutableEvent.manualFlowValidations=[structuredClone(entry)];
   const manualEvent=createManualFlowDefectEvent(mutableEntry,mutableEvent);
+  assert.equal(manualEvent.id,event.id,"Flow validation preserves the observed event identity");
+  assert.deepEqual(manualEvent.payload,event.payload,"Flow validation preserves the observed payload");
+  assert.equal("manualFlowValidations" in manualEvent,false,"Flow validation removes the parallel result collection");
+  assert.equal(manualEvent.manualFlowContext.eventStepLink.eventId,event.id);
   const report=generateReportDetails(createDefectReport(defectCapturedEvent(manualEvent)));
   const rendered=renderJiraReport(report);
   const reportBytes=JSON.stringify(report);
