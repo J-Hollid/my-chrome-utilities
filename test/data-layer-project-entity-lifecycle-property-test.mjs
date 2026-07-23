@@ -29,12 +29,16 @@ for(let example=0;example<120;example+=1){
   for(const [candidate,bytes] of Object.entries(untouched))assert.equal(JSON.stringify(created.project.collections[candidate]),bytes,`creation preserves ${candidate}`);
   if(kind==="flows")assert.deepEqual(entity.steps,[],"top-level Flow creation never invents executable steps");
   if(kind==="pages")assert.equal(entity.eventName,`pageview_Entity_${suffix}`,"Page creation conserves its observed event identity");
+  if(["profiles","pageGroups","pages"].includes(kind)){
+    assert.equal(entity.canonicalSchema.contributorId,entity.id,`${kind} canonical ownership follows the stable entity identity`);
+    assert.equal(entity.canonicalSchema.contributorName,entity.name,`${kind} canonical ownership follows the normalized human name`);
+  }
 
   const review=inspectProjectEntityRemoval(created,kind,entity.id);
   assert.equal(review.blocked,false);
   const removed=removeProjectCollectionEntity(created,kind,entity.id);
   assert.equal(removed.project.collections[kind].length,0);
-  assert.equal(undoProjectTransaction(removed).project.collections[kind][0].id,entity.id,"Undo restores the stable identity");
+  assert.deepEqual(undoProjectTransaction(removed).project.collections[kind][0],entity,"Undo restores the complete stable entity");
   assert.throws(()=>createProjectCollectionEntity(created,kind,`entity ${suffix}`,id),/unique/,"names are unique without case sensitivity");
 }
 
