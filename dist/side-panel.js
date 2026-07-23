@@ -1761,14 +1761,13 @@ function openLiveInspector(eventId, preserveReturnSnapshot = false) {
     if (!presentation)
         backToEventsButton?.focus({ preventScroll: true });
 }
-function manualFlowDefectEvent(entry, event, run) {
-    const through = Math.max(0, run?.history.findIndex(({ stepId, eventId }) => stepId === entry.stepId && eventId === entry.eventId) ?? 0), path = (run?.history.slice(0, through + 1) ?? [entry]).map(({ stepId, stepName, relationshipId, eventId, captureTime }) => ({ stepId, stepName, ...(relationshipId ? { relationshipId } : {}), eventId, captureTime }));
-    return { ...event, manualFlowContext: { flowId: run?.flowId ?? "unavailable", flowName: run?.flowName ?? "Unavailable Flow", selectedStepId: entry.stepId, path }, validation: entry.status === "Valid" ? "Valid" : `${entry.issues.length} issues`, validationDetails: { evaluations: [], schema: { id: entry.target.id, name: `${entry.target.name} · Flow path ${entry.stepId}`, version: entry.effectiveSchemaRevision }, issues: entry.issues.map((issue) => ({ instancePath: issue.path, message: `${issue.code} in manually selected Flow step ${entry.stepName}`, expected: JSON.stringify(issue.expected), actual: JSON.stringify(issue.actual), schemaName: entry.target.name, schemaVersion: entry.effectiveSchemaRevision, schemaLocation: `Flow ${entry.relationshipId ?? "start"} → ${entry.stepId}`, rule: issue.code, severity: issue.severity, origin: `Manual Flow test · ${issue.provenance} · ${entry.provenance.map(({ scope, contributorName }) => `${scope} ${contributorName}`).join(" → ")}` })) } };
+function manualFlowDefectEvent(entry, event) {
+    return { ...event, manualFlowContext: { flowId: entry.flowId, flowName: entry.flowName, selectedStepId: entry.stepId, path: structuredClone(entry.matchedPath) }, validation: entry.status === "Valid" ? "Valid" : `${entry.issues.length} issues`, validationDetails: { evaluations: [], schema: { id: entry.target.id, name: `${entry.target.name} · Flow path ${entry.stepId}`, version: entry.effectiveSchemaRevision }, issues: entry.issues.map((issue) => ({ instancePath: issue.path, message: `${issue.code} in manually selected Flow step ${entry.stepName}`, expected: JSON.stringify(issue.expected), actual: JSON.stringify(issue.actual), schemaName: entry.target.name, schemaVersion: entry.effectiveSchemaRevision, schemaLocation: `Flow ${entry.relationshipId ?? "start"} → ${entry.stepId}`, rule: issue.code, severity: issue.severity, origin: `Manual Flow test · ${issue.provenance} · ${entry.provenance.map(({ scope, contributorName }) => `${scope} ${contributorName}`).join(" → ")}` })) } };
 }
 function startManualFlowDefectReport(entry, event) {
     if (!liveObserverElements.eventInspector)
         return;
-    const selected = manualFlowDefectEvent(entry, event, liveFlowTestingUi.run());
+    const selected = manualFlowDefectEvent(entry, event);
     renderDefectReportBuilder(liveObserverElements.eventInspector, selected, undefined, liveObserverState.events, createLiveDefectReportNavigation(event.id, { reopenCapturedEvent: openLiveInspector, createDefectReportAction: () => liveObserverElements.eventInspector?.querySelector(".live-flow-create-defect") ?? null, closeToLiveFeed: closeInspectorAndReturnToEvents }), {
         save: async (report, options) => { const selectedPointers = new Set(report.evidence.validation.map(({ pointer }) => pointer)), issues = currentDefectIssues(selected).filter((issue) => selectedPointers.has(issue.concretePath)), defect = createValidationDefect({ id: `defect:${crypto.randomUUID()}`, now: new Date().toISOString(), report, issues }), result = addDefect(defectLibrary, defect, options.saveSeparately); if (result.added) {
             defectLibrary = result.library;
@@ -1791,7 +1790,7 @@ function appendManualFlowValidation(inspector, event) {
     heading.textContent = "Manual Flow test results";
     for (const entry of entries) {
         const item = document.createElement("li"), summary = document.createElement("p");
-        summary.textContent = `${entry.stepName} · ${entry.status} · effective revision ${entry.effectiveSchemaRevision} · ${entry.selectionMode}`;
+        summary.textContent = `${entry.flowName} · ${entry.stepName} · ${entry.status} · effective revision ${entry.effectiveSchemaRevision} · ${entry.selectionMode}`;
         const provenance = document.createElement("p");
         provenance.textContent = `Contributors: ${entry.provenance.map(({ scope, contributorName }) => `${scope} ${contributorName}`).join(" → ") || "none"}`;
         item.append(summary, provenance);

@@ -1,4 +1,4 @@
-import { attachLiveFlowDefect, completeLiveFlowTest, createLiveFlowTest, liveFlowCandidateEvents, liveFlowChoices, liveFlowGraphNodes, matchLiveFlowEvent, selectLiveFlow, selectLiveFlowStep, startLiveFlowPath } from "./data-layer-live-flow-testing.js";
+import { attachLiveFlowDefect, completeLiveFlowTest, createLiveFlowTest, liveFlowAwaitingObservation, liveFlowCandidateEvents, liveFlowChoices, liveFlowGraphNodes, matchLiveFlowEvent, selectLiveFlow, selectLiveFlowStep, startLiveFlowPath } from "./data-layer-live-flow-testing.js";
 import { renderValidationIssueList } from "./data-layer-live-observer-ui.js";
 const button = (text, run) => { const control = document.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 const option = (value, text) => { const item = document.createElement("option"); item.value = value; item.textContent = text; return item; };
@@ -42,12 +42,10 @@ export function mountLiveFlowTestingUi(options) {
                 history.append(historyItem(entry));
             summary.append(label, untested, history);
             host.append(summary);
-            if (!project) {
-                const archived = document.createElement("p");
-                archived.textContent = "Saved Flow test summary restored read-only; matching was not resumed.";
-                host.append(archived);
-                return;
-            }
+            const archived = document.createElement("p");
+            archived.textContent = project ? "Flow test completed; matching was not resumed." : "Saved Flow test summary restored read-only; matching was not resumed.";
+            host.append(archived);
+            return;
         }
         if (!project) {
             const message = document.createElement("p");
@@ -73,7 +71,7 @@ export function mountLiveFlowTestingUi(options) {
             startLabel.append(start);
             host.append(startLabel);
         }
-        if (run?.currentStepId && run.history.some(({ stepId }) => stepId === run.currentStepId)) {
+        if (run?.currentStepId && !liveFlowAwaitingObservation(run)) {
             const nodes = liveFlowGraphNodes(run, project), nextSection = document.createElement("section"), title = document.createElement("h5"), list = document.createElement("ul");
             title.textContent = "Choose next relationship-connected step";
             nextSection.append(title, list);
@@ -94,7 +92,7 @@ export function mountLiveFlowTestingUi(options) {
             }
             host.append(nextSection);
         }
-        if (run?.currentStepId && !run.history.some(({ stepId, eventId }) => stepId === run.currentStepId && run.matchedEventIds.includes(eventId))) {
+        if (run?.currentStepId && liveFlowAwaitingObservation(run)) {
             const candidates = liveFlowCandidateEvents(run, project, options.events()), section = document.createElement("section"), title = document.createElement("h5"), list = document.createElement("ul");
             title.textContent = "Choose one observed event";
             for (const candidate of candidates) {
@@ -126,7 +124,9 @@ export function mountLiveFlowTestingUi(options) {
                         options.onDefect?.(entry, event); }));
                 history.append(item);
             }
-            host.append(history, button("Complete selected path", () => { completed = completeLiveFlowTest(run, project, now()); options.saveSummary(completed); render(); }));
+            host.append(history);
+            if (!liveFlowAwaitingObservation(run))
+                host.append(button("Complete selected path", () => { completed = completeLiveFlowTest(run, project, now()); options.saveSummary(completed); render(); }));
         }
         const status = document.createElement("output");
         status.id = "live-flow-test-status";

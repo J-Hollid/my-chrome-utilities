@@ -79,6 +79,14 @@ assert.equal(candidates.some(({eventId,eligible})=>eventId==="live-101"&&eligibl
 assert.equal(candidates.every(({selected})=>selected===false),true,"candidate derivation never selects automatically");
 run=matchLiveFlowEvent(run,state,events,"live-101");
 assert.equal(run.history[0].selectionMode,"Manual Flow test");
+assert.deepEqual(
+  {projectId:run.history[0].projectId,flowId:run.history[0].flowId,flowName:run.history[0].flowName},
+  {projectId:"project-retail",flowId:"flow:checkout",flowName:"Checkout journey"},
+  "each persisted manual result retains its own active-project and Flow identity",
+);
+assert.deepEqual(run.history[0].matchedPath.map(({stepId,eventId})=>({stepId,eventId})),[
+  {stepId:"frame:cart",eventId:"live-101"},
+]);
 assert.deepEqual(run.history[0].provenance.map(({scope})=>scope),["Shared Profile","Page Group","Page","Flow Page-instance"]);
 assert.equal("contributors" in run.history[0],false,"run evidence stores provenance rather than copied schema contributors");
 assert.equal(run.history[0].issues.length,0);
@@ -110,6 +118,10 @@ assert.equal(candidates.find(({eventId})=>eventId==="live-101").reason,"Already 
 assert.equal(candidates.find(({eventId})=>eventId==="live-103").reason,"Event identity does not match page_view");
 assert.equal(candidates.find(({eventId})=>eventId==="live-102-wrong-source").reason,"Observation source does not match history");
 run=matchLiveFlowEvent(run,state,events,"live-102");
+assert.deepEqual(run.history[1].matchedPath.map(({stepId,relationshipId,eventId})=>({stepId,relationshipId,eventId})),[
+  {stepId:"frame:cart",relationshipId:undefined,eventId:"live-101"},
+  {stepId:"occurrence:view",relationshipId:"relationship:cart-view",eventId:"live-102"},
+],"each result carries the exact path prefix needed by later defect reporting");
 assert.deepEqual(run.history[1].provenance.map(({scope})=>scope),["Shared Profile","Event","Page Group","Page","Flow Page-instance","Event-occurrence"]);
 assert.equal(run.history[1].target.id,"occurrence:view");
 assert.ok(run.history[1].effectiveSchemaRevision>0);
@@ -130,5 +142,29 @@ assert.equal(completed.history.at(-1).defectId,"defect:flow-103","completed summ
 assert.equal(JSON.stringify(state.project),projectBytes);
 assert.equal(JSON.stringify(state.project.collections.assignments),assignmentBytes);
 assert.deepEqual(JSON.parse(serializeLiveFlowSummary(completed)),JSON.parse(JSON.stringify(completed)));
+
+const cyclicState=structuredClone(state);
+cyclicState.project.documentationFlowGraphs["flow:checkout"].relationships.push(
+  {id:"relationship:confirm-retry",sourceEndpoint:{kind:"page-frame",id:"frame:confirmation-a"},targetEndpoint:{kind:"event-occurrence",id:"occurrence:view"},sourcePort:"top",targetPort:"bottom",kind:"alternative",label:"Retry event"},
+);
+const cyclicEvents=[...events,{
+  id:"live-104",name:"page_view",sourceId:"history",sourceName:"Data layer",captureTime:"2026-07-23T10:00:04.000Z",pageUrl:"https://shop.example/cart",
+  payload:{site:"shop",currency:"EUR",cart_id:"c1",instance:"retail",event_name:"page_view",occurrence:true},
+}];
+let cyclicRun=selectLiveFlow(createLiveFlowTest("run:cycle","project-retail"),cyclicState,"flow:checkout");
+cyclicRun=startLiveFlowPath(cyclicRun,"frame:cart");
+cyclicRun=matchLiveFlowEvent(cyclicRun,cyclicState,cyclicEvents,"live-101");
+assert.deepEqual(liveFlowCandidateEvents(cyclicRun,cyclicState,cyclicEvents),[],"a matched step cannot consume another event until a relationship target is selected");
+assert.throws(()=>matchLiveFlowEvent(cyclicRun,cyclicState,cyclicEvents,"live-102"),/Select a Flow graph step/);
+cyclicRun=selectLiveFlowStep(cyclicRun,cyclicState,"occurrence:view");
+cyclicRun=matchLiveFlowEvent(cyclicRun,cyclicState,cyclicEvents,"live-102");
+cyclicRun=selectLiveFlowStep(cyclicRun,cyclicState,"frame:confirmation-a");
+cyclicRun=matchLiveFlowEvent(cyclicRun,cyclicState,cyclicEvents,"live-103");
+cyclicRun=selectLiveFlowStep(cyclicRun,cyclicState,"occurrence:view");
+assert.equal(liveFlowCandidateEvents(cyclicRun,cyclicState,cyclicEvents).find(({eventId})=>eventId==="live-104").eligible,true,"a revisited graph node awaits a later unmatched observation");
+cyclicRun=matchLiveFlowEvent(cyclicRun,cyclicState,cyclicEvents,"live-104");
+assert.deepEqual(cyclicRun.history.map(({stepId})=>stepId),["frame:cart","occurrence:view","frame:confirmation-a","occurrence:view"]);
+assert.deepEqual(cyclicRun.history.at(-1).matchedPath.map(({stepId})=>stepId),["frame:cart","occurrence:view","frame:confirmation-a","occurrence:view"]);
+assert.throws(()=>liveFlowCandidateEvents(cyclicRun,inactive,cyclicEvents),/project context changed/);
 
 console.log("data-layer Live Flow testing tests passed");

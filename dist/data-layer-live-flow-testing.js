@@ -5,6 +5,8 @@ const graphs = (state) => state.project.documentationFlowGraphs;
 const graph = (state, flowId) => documentaryFlowGraph(state.project, flowId);
 const capturedAfter = (candidate, prior) => Date.parse(candidate) > Date.parse(prior);
 const payload = (event) => { const value = event.payload ?? event.rawInput; return value && typeof value === "object" && !Array.isArray(value) ? value : {}; };
+function assertRunProject(run, state) { if (state.project.id !== run.projectId)
+    throw new Error("Flow test project context changed."); }
 function frameName(state, frame) { return state.project.collections.pages.find(({ id }) => id === frame.pageId)?.name ?? frame.name; }
 function occurrenceName(state, flowId, occurrence) { void flowId; return occurrence.name || (state.project.collections.events.find(({ id }) => id === occurrence.eventId)?.name ?? occurrence.id); }
 function step(state, flowId, id) {
@@ -49,13 +51,16 @@ export function selectLiveFlow(run, state, flowId) {
 }
 export function startLiveFlowPath(run, pageFrameId) { if (!run.startChoices.some(({ id }) => id === pageFrameId))
     throw new Error("A Flow test must start with a listed Page frame."); return { ...run, currentStepId: pageFrameId, startedAt: undefined }; }
+export function liveFlowAwaitingObservation(run) { return Boolean(run.currentStepId) && (run.history.length === 0 || run.incomingRelationshipId !== undefined); }
 export function liveFlowNextSteps(run, state) {
-    if (!run.flowId || !run.currentStepId || !run.history.some(({ stepId }) => stepId === run.currentStepId))
+    assertRunProject(run, state);
+    if (!run.flowId || !run.currentStepId || liveFlowAwaitingObservation(run) || run.history.at(-1)?.stepId !== run.currentStepId)
         return [];
     const source = step(state, run.flowId, run.currentStepId);
     return graph(state, run.flowId).relationships.filter((relationship) => relationship.sourceEndpoint?.id === run.currentStepId && Boolean(relationship.targetEndpoint?.id)).map((relationship) => { const target = step(state, run.flowId, relationship.targetEndpoint.id), label = typeof relationship.label === "string" ? relationship.label.trim() : "", displayName = label || `${source.name} to ${target.name}`; return { id: target.id, name: target.name, stepKind: target.kind, kind: relationshipKind(relationship), relationshipId: relationship.id, displayName }; });
 }
 export function liveFlowGraphNodes(run, state) {
+    assertRunProject(run, state);
     if (!run.flowId || !run.currentStepId)
         return [];
     const current = graphs(state)[run.flowId], nextById = new Map(liveFlowNextSteps(run, state).map((next) => [next.id, next])), nodes = [...(current?.pageFrames ?? []).map((entity) => step(state, run.flowId, entity.id)), ...(current?.occurrences ?? []).map((entity) => step(state, run.flowId, entity.id))];
@@ -79,7 +84,8 @@ function compatibility(state, flowId, stepId, event) {
     return !pathname || pathname === observed ? { compatible: true, evidence: `Observed Page context ${observed || "available"}`, reason: "Eligible observed Page context" } : { compatible: false, evidence: `Observed Page context ${observed || "unavailable"}`, reason: `Page context does not match ${pathname}` };
 }
 export function liveFlowCandidateEvents(run, state, events) {
-    if (!run.flowId || !run.currentStepId)
+    assertRunProject(run, state);
+    if (!run.flowId || !run.currentStepId || !liveFlowAwaitingObservation(run))
         return [];
     const prior = run.history.at(-1)?.captureTime, matched = new Set(run.matchedEventIds);
     return events.map((event) => { const match = compatibility(state, run.flowId, run.currentStepId, event); let eligible = true, reason = match.reason; if (matched.has(event.id)) {
@@ -94,17 +100,18 @@ export function liveFlowCandidateEvents(run, state, events) {
         eligible = false; return { eventId: event.id, name: event.name, captureTime: event.captureTime, eligible, selected: false, reason, evidence: match.evidence }; });
 }
 export function matchLiveFlowEvent(run, state, events, eventId) {
-    if (!run.flowId || !run.currentStepId)
+    assertRunProject(run, state);
+    if (!run.flowId || !run.flowName || !run.currentStepId || !liveFlowAwaitingObservation(run))
         throw new Error("Select a Flow graph step before matching an observed event.");
     const candidate = liveFlowCandidateEvents(run, state, events).find((item) => item.eventId === eventId), event = events.find(({ id }) => id === eventId);
     if (!candidate?.eligible || !event)
         throw new Error(candidate?.reason ?? "Observed event is unavailable.");
-    const selected = step(state, run.flowId, run.currentStepId), path = layeredContributorPath(state, selected.entity, selected.scope, run.flowId), contributors = layeredContributorsForPath(state, path, payload(event)), compiled = compileLayeredSchema(contributors, { eventId: String(selected.entity.eventId ?? event.name), eventRole: selected.kind === "Event" ? "interaction" : "context", ...(selected.kind === "Event" ? { occurrenceId: selected.id } : {}) }), effectiveRevision = facetRevision(compiled), validation = validateLayeredObservation({ targetId: selected.id, targetName: selected.name, revision: effectiveRevision, compiled }, payload(event)), entry = { stepId: selected.id, stepKind: selected.kind, stepName: selected.name, eventId: event.id, captureTime: event.captureTime, selectionMode: "Manual Flow test", ...(run.incomingRelationshipId ? { relationshipId: run.incomingRelationshipId } : {}), effectiveSchemaRevision: validation.effectiveSchemaRevision, effectiveSchemaRevisionIdentity: revisionIdentity(effectiveRevision), issues: validation.issues, provenance: clone(validation.provenance), target: { id: selected.id, name: selected.name }, status: validation.issues.length ? "Invalid" : "Valid" };
+    const selected = step(state, run.flowId, run.currentStepId), path = layeredContributorPath(state, selected.entity, selected.scope, run.flowId), contributors = layeredContributorsForPath(state, path, payload(event)), compiled = compileLayeredSchema(contributors, { eventId: String(selected.entity.eventId ?? event.name), eventRole: selected.kind === "Event" ? "interaction" : "context", ...(selected.kind === "Event" ? { occurrenceId: selected.id } : {}) }), effectiveRevision = facetRevision(compiled), validation = validateLayeredObservation({ targetId: selected.id, targetName: selected.name, revision: effectiveRevision, compiled }, payload(event)), pathEntry = { stepId: selected.id, stepName: selected.name, ...(run.incomingRelationshipId ? { relationshipId: run.incomingRelationshipId } : {}), eventId: event.id, captureTime: event.captureTime }, matchedPath = [...run.history.map(({ stepId, stepName, relationshipId, eventId, captureTime }) => ({ stepId, stepName, ...(relationshipId ? { relationshipId } : {}), eventId, captureTime })), pathEntry], entry = { projectId: run.projectId, flowId: run.flowId, flowName: run.flowName, stepId: selected.id, stepKind: selected.kind, stepName: selected.name, eventId: event.id, captureTime: event.captureTime, selectionMode: "Manual Flow test", ...(run.incomingRelationshipId ? { relationshipId: run.incomingRelationshipId } : {}), effectiveSchemaRevision: validation.effectiveSchemaRevision, effectiveSchemaRevisionIdentity: revisionIdentity(effectiveRevision), issues: validation.issues, provenance: clone(validation.provenance), target: { id: selected.id, name: selected.name }, status: validation.issues.length ? "Invalid" : "Valid", matchedPath };
     return { ...run, history: [...run.history, entry], matchedEventIds: [...run.matchedEventIds, event.id], incomingRelationshipId: undefined, startedAt: run.startedAt ?? event.captureTime };
 }
 export function attachLiveFlowDefect(run, stepId, defectId, eventId) { return { ...run, history: run.history.map((entry) => entry.stepId === stepId && (!eventId || entry.eventId === eventId) ? { ...entry, defectId } : entry) }; }
-export function completeLiveFlowTest(run, state, endedAt) { if (!run.flowId || !run.flowName)
-    throw new Error("Select a Flow before completing its selected path."); const traversed = new Set(run.history.map(({ relationshipId }) => relationshipId).filter(Boolean)), visited = new Set(run.history.map(({ stepId }) => stepId)), unchosenAlternatives = graph(state, run.flowId).relationships.filter(({ id, sourceEndpoint, targetEndpoint }) => Boolean(sourceEndpoint && targetEndpoint) && visited.has(sourceEndpoint.id) && !traversed.has(id)).map(({ id, targetEndpoint }) => ({ relationshipId: id, stepId: targetEndpoint.id, status: "Not tested" })); return { runId: run.id, projectId: run.projectId, flowId: run.flowId, flowName: run.flowName, label: "Completed selected path", endedAt, history: clone(run.history), unchosenAlternatives, resumeMatching: false }; }
+export function completeLiveFlowTest(run, state, endedAt) { assertRunProject(run, state); if (!run.flowId || !run.flowName || !run.history.length || liveFlowAwaitingObservation(run))
+    throw new Error("Match the selected Flow step before completing its selected path."); const traversed = new Set(run.history.map(({ relationshipId }) => relationshipId).filter(Boolean)), visited = new Set(run.history.map(({ stepId }) => stepId)), unchosenAlternatives = graph(state, run.flowId).relationships.filter(({ id, sourceEndpoint, targetEndpoint }) => Boolean(sourceEndpoint && targetEndpoint) && visited.has(sourceEndpoint.id) && !traversed.has(id)).map(({ id, targetEndpoint }) => ({ relationshipId: id, stepId: targetEndpoint.id, status: "Not tested" })); return { runId: run.id, projectId: run.projectId, flowId: run.flowId, flowName: run.flowName, label: "Completed selected path", endedAt, history: clone(run.history), unchosenAlternatives, resumeMatching: false }; }
 export function serializeLiveFlowSummary(summary) { return JSON.stringify(summary); }
 export function restoreLiveFlowSummary(serialized) { try {
     const value = JSON.parse(serialized);
