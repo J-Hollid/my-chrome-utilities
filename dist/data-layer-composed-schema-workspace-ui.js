@@ -3,7 +3,7 @@ import { renderComposedRows } from "./data-layer-composed-schema-workspace-rows.
 const button = (text, run) => { const control = document.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 export function mountComposedSchemaWorkspace(options) {
     const section = document.createElement("section"), heading = document.createElement("h2"), summary = document.createElement("p"), columns = document.createElement("div"), addControls = document.createElement("div"), choice = document.createElement("select"), add = document.createElement("button"), rows = document.createElement("div");
-    let activePath, activeSection = "definition", draft, removed = false, removedRuleIds = new Set(), originFocus, originPath;
+    let activePath, activeSection = "definition", draft, removed = false, removedRuleIds = new Set(), pendingAction, originFocus, originPath;
     section.className = "composed-schema-workspace";
     section.setAttribute("aria-label", options.model.heading);
     section.dataset.schemaStatus = options.model.status;
@@ -30,13 +30,16 @@ export function mountComposedSchemaWorkspace(options) {
     addControls.append(choice, add);
     rows.setAttribute("role", "table");
     rows.setAttribute("aria-label", `${options.model.heading} rows`);
-    const rerender = () => renderComposedRows(rows, { dom: document, model: options.model, effectiveText: options.effectiveText, onRepair: options.onRepair, rowPathDataset: options.rowPathDataset, activePath, activeSection, draft, removed, removedRuleIds, open, close, save, render: rerender, setActiveSection: (value) => { activeSection = value; } });
-    const open = (row, focus, sectionName = "definition") => { activePath = row.path; activeSection = sectionName; draft = composedFacetDraft(row.local, row.effective); removed = false; removedRuleIds = new Set(); if (focus) {
+    const rerender = () => renderComposedRows(rows, { dom: document, model: options.model, effectiveText: options.effectiveText, onRepair: options.onRepair, rowPathDataset: options.rowPathDataset, activePath, activeSection, draft, removed, removedRuleIds, pendingAction, beginAction, cancelAction, confirmAction, open, close, save, render: rerender, setActiveSection: (value) => { activeSection = value; } });
+    const open = (row, focus, sectionName = "definition") => { activePath = row.path; activeSection = sectionName; draft = composedFacetDraft(row.local, row.effective); removed = false; removedRuleIds = new Set(); pendingAction = undefined; if (focus) {
         originFocus = focus;
         originPath = row.path;
     } rerender(); };
-    const close = () => { const restorePath = originPath; activePath = undefined; draft = undefined; removed = false; removedRuleIds = new Set(); rerender(); const target = originFocus?.isConnected ? originFocus : restorePath ? rows.querySelector(`[aria-label="Property actions for ${CSS.escape(restorePath)}"]`) : undefined; originFocus = undefined; originPath = undefined; if (target)
+    const close = () => { const restorePath = originPath; activePath = undefined; draft = undefined; removed = false; removedRuleIds = new Set(); pendingAction = undefined; rerender(); const target = originFocus?.isConnected ? originFocus : restorePath ? rows.querySelector(`[aria-label="Property actions for ${CSS.escape(restorePath)}"]`) : undefined; originFocus = undefined; originPath = undefined; if (target)
         queueMicrotask(() => target.focus({ preventScroll: true })); };
+    const beginAction = (row, focus) => { open(row, focus); pendingAction = row.action === "reset" ? "reset" : "remove"; rerender(); };
+    const cancelAction = () => { pendingAction = undefined; removed = false; rerender(); };
+    const confirmAction = (row) => { pendingAction = undefined; removed = true; options.onReset(row); close(); };
     const save = (row) => { if (!draft)
         return; if (removed) {
         options.onReset(row);

@@ -17,9 +17,7 @@ function contextMenu(row, context) {
     const ownership = dom.createElement("div"), local = Object.keys(row.local).some((key) => key !== "path"), inherited = Boolean(row.inherited), actions = focusedOwnershipActions({ local, inherited, overridden: row.action === "reset", invariant: row.effective.enforcement === "invariant", conflict: row.validationState === "blocked", replaceable: row.effective.enforcement !== "invariant" });
     for (const action of actions) {
         const control = button(dom, action, () => { if (action === "Remove local" || action === "Reset to parent") {
-            context.removed = true;
-            context.setActiveSection("rules");
-            context.render();
+            context.beginAction(row);
             return;
         } if (action === "Override here" || action === "Replace here")
             context.setActiveSection("definition"); context.render(); });
@@ -38,14 +36,21 @@ function focused(row, context) {
     effective.textContent = `Inherited value and source: ${row.inherited ? context.effectiveText({ ...row, effective: row.inherited }) : "none"} · Effective result: ${context.effectiveText(row)} · validation ${row.validationState} · conflicts ${row.validationState === "blocked" ? row.message : "none"}`;
     host.setAttribute("aria-label", `${row.path} focused ${focusedPropertySectionLabels[context.activeSection]} section`);
     renderComposedFocusedSection(host, { model: context.model, dom, row, getDraft: () => context.draft, activeSection: context.activeSection, removedRuleIds: context.removedRuleIds, render: context.render });
-    actions.append(button(dom, "Cancel", context.close), button(dom, "Review changes", () => { const review = dom.createElement("p"); review.setAttribute("aria-label", "Review changes"); review.textContent = `Review changes · ${row.path} · prospective effective result ${context.effectiveText(row)} · affected consumers recompile`; actions.replaceChildren(review, button(dom, "Cancel review", context.render), button(dom, "Confirm changes", () => context.save(row))); }), button(dom, "Save property", () => context.save(row)));
+    if (context.pendingAction) {
+        const impact = dom.createElement("p");
+        impact.setAttribute("aria-label", "Property impact review");
+        impact.textContent = `${context.pendingAction === "reset" ? "Reset" : "Remove"} preview · prospective effective result ${row.inherited ? context.effectiveText({ ...row, effective: row.inherited }) : "none"} · affected Page instances recompile · outputs become stale · one Undo action remains available.`;
+        actions.append(impact, button(dom, context.pendingAction === "reset" ? "Cancel reset" : "Cancel removal", context.cancelAction), button(dom, context.pendingAction === "reset" ? "Confirm reset to parents" : "Confirm remove local property", () => context.confirmAction(row)));
+    }
+    else
+        actions.append(button(dom, "Cancel", context.close), button(dom, "Review changes", () => { const review = dom.createElement("p"); review.setAttribute("aria-label", "Review changes"); review.textContent = `Review changes · ${row.path} · prospective effective result ${context.effectiveText(row)} · affected consumers recompile`; actions.replaceChildren(review, button(dom, "Cancel review", context.render), button(dom, "Confirm changes", () => context.save(row))); }), button(dom, "Save property", () => context.save(row)));
     editor.append(heading, identity, effective, host, actions);
     return editor;
 }
 export function renderComposedRows(rows, context) {
     rows.replaceChildren();
     for (const row of context.model.rows) {
-        const article = context.dom.createElement("article"), overview = context.dom.createElement("div"), toggle = context.dom.createElement("button"), effective = context.dom.createElement("span"), source = context.dom.createElement("span"), local = context.dom.createElement("span"), validation = context.dom.createElement("span"), actions = context.dom.createElement("div"), primary = button(context.dom, actionText(row), () => context.open(row, primary)), propertyActions = button(context.dom, "Property actions", () => context.open(row, propertyActions));
+        const article = context.dom.createElement("article"), overview = context.dom.createElement("div"), toggle = context.dom.createElement("button"), effective = context.dom.createElement("span"), source = context.dom.createElement("span"), local = context.dom.createElement("span"), validation = context.dom.createElement("span"), actions = context.dom.createElement("div"), primary = button(context.dom, actionText(row), () => row.action === "override" ? context.open(row, primary) : context.beginAction(row, primary)), propertyActions = button(context.dom, "Property actions", () => context.open(row, propertyActions));
         article.className = "composed-schema-row";
         article.dataset.effectivePropertyPath = row.path;
         if (context.rowPathDataset)

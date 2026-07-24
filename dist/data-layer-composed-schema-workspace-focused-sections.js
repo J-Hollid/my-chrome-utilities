@@ -1,3 +1,4 @@
+import { typedComposedValue } from "./data-layer-composed-schema-builders.js";
 import { renderComposedFocusedCondition } from "./data-layer-composed-schema-workspace-focused-conditions.js";
 import { renderComposedFocusedRules } from "./data-layer-composed-schema-workspace-focused-rules.js";
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
@@ -9,12 +10,17 @@ export function renderComposedFocusedSection(host, context) {
         return;
     host.dataset.focusedSection = context.activeSection;
     if (context.activeSection === "definition") {
-        const type = dom.createElement("select");
+        const type = dom.createElement("select"), itemType = dom.createElement("select");
         type.name = "propertyType";
         type.append(new Option("Inherit type", ""), ...["string", "number", "integer", "boolean", "object", "array", "null"].map((entry) => new Option(entry, entry)));
         type.value = draft.type ?? "";
-        type.addEventListener("change", () => { draft.type = type.value || undefined; });
-        host.append(labeled(dom, "Type", type));
+        itemType.name = "itemType";
+        itemType.append(new Option("Inherit item type", ""), ...["string", "number", "integer", "boolean", "object", "array", "null"].map((entry) => new Option(entry, entry)));
+        itemType.value = draft.itemType ?? "";
+        itemType.disabled = draft.type !== "array";
+        type.addEventListener("change", () => { draft.type = type.value || undefined; itemType.disabled = draft.type !== "array"; });
+        itemType.addEventListener("change", () => { draft.itemType = itemType.value || undefined; });
+        host.append(labeled(dom, "Type", type), labeled(dom, "Array item type", itemType));
     }
     if (context.activeSection === "presence") {
         const presence = dom.createElement("select");
@@ -25,9 +31,21 @@ export function renderComposedFocusedSection(host, context) {
         host.append(labeled(dom, "Presence", presence));
     }
     if (context.activeSection === "values") {
-        const list = dom.createElement("div");
-        draft.allowedValues.forEach((entry, index) => { const control = dom.createElement("input"); control.value = valueText(entry); control.setAttribute("aria-label", `Allowed value ${index + 1}`); control.addEventListener("input", () => { draft.allowedValues[index] = control.value; }); list.append(labeled(dom, `Value ${index + 1}`, control), button(dom, "Remove", () => { draft.allowedValues = draft.allowedValues.filter((_, candidate) => candidate !== index); context.render(); })); });
-        host.append(list, button(dom, "Add allowed value", () => { draft.allowedValues = [...draft.allowedValues, ""]; context.render(); }));
+        const expected = dom.createElement("input"), list = dom.createElement("div");
+        expected.name = "expectedValue";
+        expected.setAttribute("aria-label", "Expected value");
+        expected.value = valueText(draft.expectedValue);
+        expected.addEventListener("input", () => { try {
+            draft.expectedValue = expected.value === "" ? undefined : typedComposedValue(draft.type ?? context.row.effective.type, expected.value);
+        }
+        catch { } });
+        draft.allowedValues.forEach((entry, index) => { const control = dom.createElement("input"); control.value = valueText(entry); control.setAttribute("aria-label", `Allowed value ${index + 1}`); control.addEventListener("input", () => { try {
+            draft.allowedValues[index] = typedComposedValue(draft.type ?? context.row.effective.type, control.value);
+        }
+        catch {
+            draft.allowedValues[index] = control.value;
+        } }); list.append(labeled(dom, `Value ${index + 1}`, control), button(dom, "Remove", () => { draft.allowedValues = draft.allowedValues.filter((_, candidate) => candidate !== index); context.render(); })); });
+        host.append(labeled(dom, "Expected value", expected), list, button(dom, "Add allowed value", () => { draft.allowedValues = [...draft.allowedValues, ""]; context.render(); }));
     }
     if (context.activeSection === "conditions")
         renderComposedFocusedCondition(host, context);
@@ -41,11 +59,22 @@ export function renderComposedFocusedSection(host, context) {
         host.append(labeled(dom, "Documentation", control));
     }
     if (context.activeSection === "example") {
-        const control = dom.createElement("input");
+        const method = dom.createElement("select"), control = dom.createElement("input");
+        method.name = "exampleMethod";
+        method.append(new Option("Blank", "blank"), new Option("Allowed value", "allowed-value"), new Option("Custom typed value", "custom"));
+        method.value = draft.exampleMethod;
         control.name = "exampleValue";
         control.value = valueText(draft.exampleValue);
-        control.addEventListener("input", () => { draft.exampleValue = control.value; });
-        host.append(labeled(dom, "Example", control));
+        method.addEventListener("change", () => { draft.exampleMethod = method.value; if (method.value === "blank")
+            draft.exampleValue = undefined; context.render(); });
+        control.addEventListener("input", () => { try {
+            draft.exampleValue = typedComposedValue(draft.type ?? context.row.effective.type, control.value);
+            draft.exampleMethod = "custom";
+        }
+        catch {
+            draft.exampleValue = control.value;
+        } });
+        host.append(labeled(dom, "Example method", method), labeled(dom, "Example value", control));
     }
     if (context.activeSection === "structure")
         host.append(Object.assign(dom.createElement("p"), { textContent: `Stable identity ${context.row.path}` }));

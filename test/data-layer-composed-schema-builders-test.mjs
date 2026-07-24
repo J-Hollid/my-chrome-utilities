@@ -21,6 +21,11 @@ let draft=composedFacetDraft({path:"/funnel_step",expectedValue:"2"},inherited);
 assert.deepEqual(draft.allowedValues,["2","3a","3b"]);
 assert.equal(draft.exampleMethod,"blank");
 
+const arrayDraft=composedFacetDraft({path:"/items",type:"array",itemType:"number",expectedValue:[1,2]},{path:"/items",type:"array",itemType:"string"});
+assert.equal(arrayDraft.itemType,"number","composed drafts retain an array item type override");
+assert.deepEqual(arrayDraft.expectedValue,[1,2],"composed drafts retain a typed expected value override");
+assert.deepEqual(sparseComposedFacets(arrayDraft,{path:"/items",type:"array",itemType:"string"}),{itemType:"number",expectedValue:[1,2]},"array item type and expected value remain sparse local facets");
+
 draft=addComposedAllowedValue(draft,"4");
 draft=moveComposedAllowedValue(draft,3,-1);
 assert.deepEqual(draft.allowedValues,["2","3a","4","3b"]);
@@ -56,8 +61,11 @@ assert.equal(typedComposedValue("integer","2"),2);
 assert.equal(typedComposedValue("boolean","false"),false);
 assert.equal(typedComposedValue("null","anything"),null);
 assert.equal(typedComposedValue("string","02"),"02");
+assert.deepEqual(typedComposedValue("array",'["2",3]'),["2",3]);
+assert.deepEqual(typedComposedValue("object",'{"step":3}'),{step:3});
 assert.throws(()=>typedComposedValue("integer","2.5"),/whole number/);
 assert.throws(()=>typedComposedValue("boolean","maybe"),/true or false/);
+assert.throws(()=>typedComposedValue("array",'{"not":"an array"}'),/array/);
 assert.throws(()=>sparseComposedFacets({...draft,exampleMethod:"allowed-value",exampleValue:undefined},inherited),/Choose an allowed-value example/);
 assert.equal(composedFacetDraft({path:"/note",allowedValues:["brief"],examples:["brief"]},{path:"/note"}).exampleMethod,"allowed-value","reload reconstructs an allowed-value example method from structured storage");
 
