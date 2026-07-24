@@ -22,7 +22,15 @@ for(let example=0;example<120;example+=1){
   const initial=createSpecificationProject({name:`Project ${suffix}`,site:`${suffix}.example`,id});
   if(kind==="assignments")initial.project.collections.profiles.push({id:`profile:${suffix}`,name:"Target profile",requirements:[]});
   const untouched=Object.fromEntries(kinds.filter((candidate)=>candidate!==kind).map((candidate)=>[candidate,JSON.stringify(initial.project.collections[candidate])]));
-  const created=createProjectCollectionEntity(initial,kind,name,id,kind==="assignments"?{targetKind:"Shared Profile",targetId:`profile:${suffix}`}:{}),entity=created.project.collections[kind][0];
+  const createdEntityState=createProjectCollectionEntity(initial,kind,name,id,kind==="assignments"?{targetKind:"Shared Profile",targetId:`profile:${suffix}`}:{}),entity=createdEntityState.project.collections[kind][0];
+  const ownedGraph={
+    pageFrames:[{id:`frame:${suffix}`,pageId:`page:${suffix}`,position:{x:example,y:Math.floor(random()*500)}}],
+    occurrences:[{id:`occurrence:${suffix}`,pageFrameId:`frame:${suffix}`,eventId:`event:${suffix}`}],
+    relationships:[],
+  };
+  const created=kind==="flows"
+    ? {...createdEntityState,project:{...createdEntityState.project,documentationFlowGraphs:{[entity.id]:ownedGraph}}}
+    : createdEntityState;
 
   assert.equal(entity.name,`Entity ${suffix}`,"creation trims the human name");
   assert.equal(created.project.collections[kind].length,1);
@@ -43,7 +51,10 @@ for(let example=0;example<120;example+=1){
   assert.equal(review.blocked,false);
   const removed=removeProjectCollectionEntity(created,kind,entity.id);
   assert.equal(removed.project.collections[kind].length,0);
-  assert.deepEqual(undoProjectTransaction(removed).project.collections[kind][0],entity,"Undo restores the complete stable entity");
+  if(kind==="flows")assert.equal(removed.project.documentationFlowGraphs[entity.id],undefined,"Flow removal conserves ownership by removing its graph");
+  const restored=undoProjectTransaction(removed);
+  assert.deepEqual(restored.project.collections[kind][0],entity,"Undo restores the complete stable entity");
+  if(kind==="flows")assert.deepEqual(restored.project.documentationFlowGraphs[entity.id],ownedGraph,"Undo restores the exact generated owned graph");
   assert.throws(()=>createProjectCollectionEntity(created,kind,`entity ${suffix}`,id),/unique/,"names are unique without case sensitivity");
 }
 
