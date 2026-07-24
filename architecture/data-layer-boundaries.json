@@ -232,6 +232,22 @@
       "src/data-layer-focused-schema-property-ui.ts"
     ]
   },
+  "src/data-layer-composed-schema-workspace-focused-conditions.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-composed-schema-builders.ts",
+      "src/data-layer-composed-schema-workspace-focused-sections.ts",
+      "src/data-layer-focused-schema-property-ui.ts"
+    ]
+  },
+  "src/data-layer-composed-schema-workspace-focused-rules.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-composed-schema-workspace-focused-sections.ts"
+    ]
+  },
   "src/data-layer-composed-schema-workspace-rows.ts": {
     "module": "schemas",
     "layer": "browser",
@@ -301,6 +317,15 @@
       "src/data-layer-focused-schema-property-ui.ts"
     ]
   },
+  "src/data-layer-canonical-schema-focused-conditions.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-canonical-schema.ts",
+      "src/data-layer-canonical-schema-focused-sections.ts",
+      "src/data-layer-focused-schema-property-ui.ts"
+    ]
+  },
   "src/data-layer-canonical-schema-focused-rules.ts": {
     "module": "schemas",
     "layer": "browser",
@@ -322,6 +347,22 @@
     "layer": "browser",
     "contracts": [
       "src/data-layer-canonical-schema.ts",
+      "src/data-layer-focused-schema-property-ui.ts"
+    ]
+  },
+  "src/data-layer-canonical-schema-focused-drafts.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-canonical-schema.ts"
+    ]
+  },
+  "src/data-layer-canonical-schema-render.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-canonical-schema.ts",
+      "src/data-layer-canonical-schema-ui.ts",
       "src/data-layer-focused-schema-property-ui.ts"
     ]
   },

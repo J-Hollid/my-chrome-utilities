@@ -283,9 +283,9 @@ Feature: Data layer layered schema constraints
     When the operator opens Cart at a viewport width of 360 pixels
     Then one vertical scroll owner presents every effective property as a compact table row
     And each row exposes property, effective definition, source, local state, validation state, and actions without horizontal page scrolling
-    When the operator expands the funnel_step row
-    Then its type, presence, expected or allowed values, conditions, rules, documentation, example, provenance, Override here, and Reset to parents controls appear as a stacked row detail
-    And closing the row restores focus to funnel_step without hiding the other property rows
+    When the operator opens funnel_step's property menu and selects Definition
+    Then its type, presence, expected or allowed values, conditions, rules, documentation, example, provenance, Override here, and Reset to parents controls appear in the focused property section
+    And closing the focused editor restores focus to funnel_step without hiding the other property rows
 
   # Data layer layered schema constraints 020
   Scenario Outline: Data layer layered schema constraints 020

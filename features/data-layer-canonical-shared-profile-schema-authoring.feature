@@ -114,8 +114,8 @@ Feature: Data layer canonical Shared Profile schema authoring
     And root, child, sibling, rename, move, duplicate, and delete commands require no separate one-property screen
     When the operator stages article_name presence and article_type example while switching focused sections
     Then both rows retain their edits and remain visible together
-    When the operator expands the article_name row
-    Then complex condition and rule builders open beneath that row while the other property rows remain available
+    When the operator opens article_name's property menu and selects Rules
+    Then the focused condition and rule builders replace the selected section while the other compact property rows remain available
     And staged edits remain visible when sections switch and appear in the documentation preview after one property save
 
   # Data layer canonical Shared Profile schema authoring 012
@@ -241,7 +241,7 @@ Feature: Data layer canonical Shared Profile schema authoring
     Then the workspace keeps compact property rows visible and exposes the same complex operations through the focused property menu
     And the standalone renderer does not replace or reconfigure the side-panel renderer
     When the operator changes metadata/category documentation through the compact side-panel control
-    And the operator changes metadata/category conditional presence through the standalone row detail
+    And the operator changes metadata/category conditional presence through the standalone focused section
     Then canonical subscription results are
       | projection          | rendered facet       | Draft token |
       | standalone table    | changed documentation | article-9   |
