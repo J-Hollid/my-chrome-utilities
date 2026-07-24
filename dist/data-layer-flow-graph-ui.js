@@ -80,8 +80,9 @@ export function installFlowGraphBuilder(options) {
     } };
     const pageFrame = (frameId) => current().graph?.pageFrames.find(({ id }) => id === frameId);
     const selectedFrameForPage = (pageId) => current().graph?.pageFrames.find((frame) => frame.pageId === pageId);
-    const saveSelection = (value) => { selected = value; const { state, flow } = current(); if (state && flow)
-        writeView(state.project.id, flow.id, value ? { selectedItem: value } : {}); render(); };
+    const saveSelection = (value) => { const expanded = Array.from(document.querySelectorAll('[data-page-example-for],[data-event-example-for]')).filter((details) => details.open).map((details) => details.dataset.pageExampleFor ? `[data-page-example-for="${CSS.escape(details.dataset.pageExampleFor)}"]` : `[data-event-example-for="${CSS.escape(details.dataset.eventExampleFor ?? "")}]`); selected = value; const { state, flow } = current(); if (state && flow)
+        writeView(state.project.id, flow.id, value ? { selectedItem: value } : {}); render(); for (const selector of expanded)
+        document.querySelector(selector)?.setAttribute("open", ""); };
     function renderInspector() {
         inspectorContext.replaceChildren();
         const { state, flow, graph } = current();
@@ -216,7 +217,7 @@ export function installFlowGraphBuilder(options) {
             item.dataset.exampleIssueCode = issue.code;
             repair.href = issue.editHref;
             repair.textContent = "Open Page-frame contribution";
-            repair.addEventListener("click", (event) => { const originFocus = document.activeElement instanceof HTMLElement ? document.activeElement : undefined; saveSelection({ kind: "page-frame", id: frameId }); if (options.openOccurrenceSchema?.(frameId, issue.path, originFocus))
+            repair.addEventListener("click", (event) => { const originFocus = document.activeElement instanceof HTMLElement ? document.activeElement : undefined; const opened = options.openOccurrenceSchema?.(frameId, issue.path, originFocus); saveSelection({ kind: "page-frame", id: frameId }); if (opened)
                 event.preventDefault(); });
             item.append(`${issue.path} · ${issue.message} `, repair);
             issues.append(item);
