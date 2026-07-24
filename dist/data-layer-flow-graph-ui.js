@@ -216,7 +216,7 @@ export function installFlowGraphBuilder(options) {
             item.dataset.exampleIssueCode = issue.code;
             repair.href = issue.editHref;
             repair.textContent = "Open Page-frame contribution";
-            repair.addEventListener("click", (event) => { if (options.openOccurrenceSchema?.(frameId, issue.path))
+            repair.addEventListener("click", (event) => { const originFocus = document.activeElement instanceof HTMLElement ? document.activeElement : undefined; saveSelection({ kind: "page-frame", id: frameId }); if (options.openOccurrenceSchema?.(frameId, issue.path, originFocus))
                 event.preventDefault(); });
             item.append(`${issue.path} · ${issue.message} `, repair);
             issues.append(item);
@@ -267,7 +267,9 @@ export function installFlowGraphBuilder(options) {
             } });
             card.append(move);
         }
-        card.append(pageExampleDetails(state, flow.id, frame.id, entityName(state.project.collections.pages, frame.pageId)), button("Open schema contribution", () => options.openOccurrenceSchema?.(frame.id)), button("Remove Page frame", () => persist(removeFlowPageFrame(current().state, flow.id, frame.id))));
+        const open = button("Open schema contribution", () => { const originFocus = document.activeElement instanceof HTMLElement ? document.activeElement : open; saveSelection({ kind: "page-frame", id: frame.id }); options.openOccurrenceSchema?.(frame.id, undefined, originFocus); });
+        open.dataset.flowSchemaContribution = "true";
+        card.append(pageExampleDetails(state, flow.id, frame.id, entityName(state.project.collections.pages, frame.pageId)), open, button("Remove Page frame", () => persist(removeFlowPageFrame(current().state, flow.id, frame.id))));
     }
     function renderFrameCards(host) {
         const { state, flow, graph } = current();

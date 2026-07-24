@@ -6,6 +6,7 @@ import {
   exportLayeredSchema,
 } from "../dist/data-layer-layered-schema.js";
 import {appendSharedProfileConstraint,canonicalLayerEditorSurface,compareLayeredRevisions,composeStructuredRules,effectivePropertySummary,layeredEventRole} from "../dist/data-layer-layered-schema-ui.js";
+import {CANONICAL_SCHEMA_EDITOR_CONTROL_INVENTORY,canonicalSchemaEditorControlInventory,canonicalSchemaEditorHasParity} from "../dist/data-layer-canonical-schema-ui.js";
 import {assignmentContributorTargets,compileAssignmentContributorTarget,flowPageFrameContributor,layeredContributionDetails,layeredContributorPath,layeredContributorsForPath} from "../dist/data-layer-layered-schema-project.js";
 import {canonicalConstraints,createCanonicalSchema} from "../dist/data-layer-canonical-schema.js";
 import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
@@ -157,6 +158,9 @@ for(const [targetKind,targetId,expected] of [
   assert.deepEqual(result.contributors.map(({id})=>id),expected,`${targetKind} compiles its live inheritance`);assert.equal(result.compiled.status,"ready");assert.equal("schemaDraftId" in assignment,false);assert.equal("schemaId" in assignment,false);
 }
 assert.equal(canonicalLayerEditorSurface("pageGroups"),"Builder");assert.equal(canonicalLayerEditorSurface("pages"),"Builder");assert.equal(canonicalLayerEditorSurface("events"),"Builder");assert.equal(canonicalLayerEditorSurface("flows"),"Flow workspace");
+assert.deepEqual(canonicalSchemaEditorControlInventory(),[...CANONICAL_SCHEMA_EDITOR_CONTROL_INVENTORY]);
+assert.equal(canonicalSchemaEditorHasParity(CANONICAL_SCHEMA_EDITOR_CONTROL_INVENTORY,[...CANONICAL_SCHEMA_EDITOR_CONTROL_INVENTORY]),true);
+assert.equal(canonicalSchemaEditorHasParity(CANONICAL_SCHEMA_EDITOR_CONTROL_INVENTORY,[...CANONICAL_SCHEMA_EDITOR_CONTROL_INVENTORY,"flow-only"]),false);
 assert.equal(layeredContributorPath(pathState,{id:"occurrence:context",name:"Context occurrence",pageGroupId:"group:selected",pageId:"page:selected",contextBindingId:"binding:selected"},"Event-occurrence","flow:selected").eventId,"event:selected");
 assert.equal(layeredEventRole({id:"occurrence:context",name:"Context occurrence",contextBindingId:"binding:selected"}),"context");
 assert.equal(effectivePropertySummary({type:"string",allowedValues:["3b"],patterns:["^[a-z]+$","shipping$"],rules:[{condition:"base"},{condition:"specific"}]}),'type string · allowed ["3b"] · patterns ["^[a-z]+$","shipping$"] · rules 2');

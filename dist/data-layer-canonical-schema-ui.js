@@ -1,6 +1,34 @@
 import { canonicalCommandOutcome, canonicalPropertyPath, canonicalTableRows, evaluateCanonicalPredicate } from "./data-layer-canonical-schema.js";
 import { mountCanonicalPredicateEditor } from "./data-layer-canonical-predicate-editor.js";
 const dom = globalThis.document;
+/**
+ * The complete editor contract is intentionally surface-independent.  The
+ * surrounding workspace may add contextual identity and secondary actions,
+ * but every canonical editor mounts this same inventory.
+ */
+export const CANONICAL_SCHEMA_EDITOR_CONTROL_INVENTORY = Object.freeze([
+    "property-search",
+    "tree-view",
+    "table-view",
+    "root-property",
+    "undo",
+    "redo",
+    "property-structure-actions",
+    "property-type",
+    "presence",
+    "conditional-presence",
+    "allowed-values",
+    "structured-rules",
+    "documentation",
+    "examples",
+    "advanced-json",
+]);
+export function canonicalSchemaEditorControlInventory() {
+    return [...CANONICAL_SCHEMA_EDITOR_CONTROL_INVENTORY];
+}
+export function canonicalSchemaEditorHasParity(left, right) {
+    return left.length === right.length && left.every((control, index) => control === right[index]);
+}
 const types = ["string", "number", "integer", "boolean", "object", "array", "null"];
 const provenanceText = (node) => node.provenance.map(({ source, contributorName, scope, state }) => contributorName ? `${scope} ${contributorName} ${state}` : source).join(" → ");
 const inheritsFromParent = (node) => node.provenance.some(({ state }) => state === "inherited" || state === "shadowed");
@@ -48,6 +76,8 @@ export function mountCanonicalSchemaEditor(options) {
         options.host.setAttribute("aria-label", `${options.surface} canonical schema editor`);
         options.host.dataset.canonicalSchemaId = document.id;
         options.host.dataset.canonicalRevision = String(document.revision);
+        options.host.dataset.canonicalEditorMode = "shared-complete";
+        options.host.dataset.canonicalEditorControlInventory = CANONICAL_SCHEMA_EDITOR_CONTROL_INVENTORY.join("|");
         const header = dom.createElement("header"), title = dom.createElement("h2"), state = dom.createElement("p"), undo = dom.createElement("button"), redo = dom.createElement("button"), baseRevision = input("commandBaseRevision", String(document.revision), "number"), search = dom.createElement("input"), filter = select("propertyFilter", ["All properties", "With conditions", "With documentation", "With issues"], "All properties"), views = dom.createElement("div"), treeView = dom.createElement("button"), tableView = dom.createElement("button"), navigator = dom.createElement("section"), results = dom.createElement("section"), editor = dom.createElement("section"), preview = dom.createElement("section"), status = dom.createElement("output"), advanced = dom.createElement("details"), advancedSummary = dom.createElement("summary"), advancedJson = dom.createElement("textarea");
         title.textContent = document.contributorName;
         state.setAttribute("aria-label", "Canonical Draft status");
