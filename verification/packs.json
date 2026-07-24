@@ -44,6 +44,7 @@
     "unit": [
       "test/data-layer-durable-project-repository-test.mjs",
       "test/data-layer-durable-project-runtime-test.mjs",
+      "test/data-layer-durable-project-runtime-canonical-companion-test.mjs",
       "test/data-layer-compact-canonical-history-test.mjs",
       "test/data-layer-saved-schema-feed-test.mjs"
     ],
@@ -854,6 +855,7 @@
   {
     "id": "layered_schema",
     "source": [
+      "src/canonical-schema-focused",
       "src/data-layer-canonical-schema.ts",
       "src/data-layer-canonical-schema-facets.ts",
       "src/data-layer-canonical-schema-commands.ts",

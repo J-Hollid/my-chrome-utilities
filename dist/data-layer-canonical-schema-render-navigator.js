@@ -1,4 +1,4 @@
-import { canonicalTableRows } from "./data-layer-canonical-schema.js";
+import { applyNavigatorView, renderNavigatorRows } from "./canonical-schema-focused/navigator-rows.js";
 const input = (dom, name, value = "", type = "text") => { const control = dom.createElement("input"); control.name = name; control.type = type; control.value = value; return control; };
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
@@ -14,36 +14,8 @@ export function renderCanonicalNavigator(context) {
     filter.name = "propertyFilter";
     filter.append(...["All properties", "With conditions", "With documentation", "With issues"].map((entry) => new Option(entry, entry)));
     tree.setAttribute("aria-label", "Canonical property search results");
-    for (const row of canonicalTableRows(document).filter(({ node }) => node.name.toLowerCase().includes(context.query.toLowerCase()))) {
-        const article = dom.createElement("article"), choose = button(dom, `${"› ".repeat(row.depth)}${row.node.name} · ${row.path} · ${row.node.type}`, () => context.openProperty(row.node, choose));
-        choose.dataset.propertyId = row.id;
-        choose.setAttribute("aria-current", String((context.activePropertyId ?? document.selectedPropertyId) === row.id));
-        article.dataset.propertyRow = "true";
-        article.dataset.propertyId = row.id;
-        const actions = button(dom, "Property actions", () => { context.setMenuPropertyId(row.id); context.openProperty(row.node, actions); });
-        actions.setAttribute("aria-label", `Property actions for ${row.path}`);
-        actions.dataset.propertyActionsPath = row.path;
-        article.append(choose, actions);
-        if (context.menuPropertyId === row.id)
-            article.append(context.renderMenu(row.node));
-        tree.append(article);
-    }
-    const body = dom.createElement("tbody");
-    for (const article of Array.from(tree.children)) {
-        const row = dom.createElement("tr"), cell = dom.createElement("td");
-        cell.append(article);
-        row.append(cell);
-        body.append(row);
-    }
-    if (document.view === "table") {
-        tree.replaceChildren(body);
-        tree.setAttribute("role", "table");
-        tree.dataset.canonicalView = "table";
-    }
-    else {
-        tree.setAttribute("role", "tree");
-        tree.dataset.canonicalView = "tree";
-    }
+    renderNavigatorRows(tree, context);
+    applyNavigatorView(tree, dom, document.view);
     navigator.append(search, filter, tree, labeled(dom, "New root property name", rootName), addRoot);
     navigator.prepend(button(dom, "Table", () => { context.command({ kind: "view", baseRevision: document.revision, view: "table" }); context.render(); }), button(dom, "Tree", () => { context.command({ kind: "view", baseRevision: document.revision, view: "tree" }); context.render(); }));
     return navigator;

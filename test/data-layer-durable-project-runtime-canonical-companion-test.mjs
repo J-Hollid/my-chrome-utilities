@@ -1,0 +1,21 @@
+import assert from "node:assert/strict";
+import {createMemoryDurableProjectRepository} from "../dist/data-layer-durable-project-repository.js";
+import {createDurableProjectRuntime} from "../dist/data-layer-durable-project-runtime.js";
+import {createProjectSchemaDraft,createSpecificationProject,transactProject} from "../dist/data-layer-specification-project.js";
+import {applyCanonicalCommand} from "../dist/data-layer-canonical-schema.js";
+import {CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY,restoreCanonicalProjectState,serializeCanonicalProjectState} from "../dist/data-layer-specification-repository.js";
+import {PROJECT_LIBRARY_STORAGE_KEY,restoreProjectLibrary,serializeProjectLibrary} from "../dist/data-layer-project-library.js";
+
+const repository=createMemoryDurableProjectRepository(),project=createSpecificationProject({name:"Companion race",site:"companion.example",id:(kind)=>kind==="project"?"project-companion":`${kind}:companion`});
+const withProfile=createProjectSchemaDraft(project,{name:"Sitewide",baseRevision:0,description:""},(kind)=>`${kind}:companion-profile`);
+await repository.putProject(withProfile,{active:true});
+const values=new Map(),legacy={getItem:(key)=>values.get(key)??null,setItem:(key,value)=>values.set(key,value),removeItem:(key)=>values.delete(key)},runtime=await createDurableProjectRuntime(repository,legacy);await runtime.ensureProject("project-companion");const library=restoreProjectLibrary(runtime.storage.getItem(PROJECT_LIBRARY_STORAGE_KEY)),before=restoreCanonicalProjectState(runtime.storage.getItem(CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY));
+const profile=before.project.collections.profiles[0],result=applyCanonicalCommand(profile.canonicalSchema,{kind:"add",baseRevision:profile.canonicalSchema.revision,parentId:undefined,name:"lineOfCustomer",type:"string",id:(kind)=>`${kind}:line`}),next=transactProject(before,"Add canonical root",(current)=>({...current,collections:{...current.collections,profiles:current.collections.profiles.map((candidate)=>candidate.id===profile.id?{...candidate,canonicalSchema:result.document,requirements:[]}:candidate)}}));
+runtime.storage.setItem(CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY,serializeCanonicalProjectState(next,1));await runtime.settled();
+const followUp=transactProject(next,"Canonical follow-up",(current)=>current);runtime.storage.setItem(CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY,serializeCanonicalProjectState(followUp,2));
+const latestLibrary=restoreProjectLibrary(runtime.storage.getItem(PROJECT_LIBRARY_STORAGE_KEY)),staleLibrary={...latestLibrary,projects:{...latestLibrary.projects,[next.project.id]:{...latestLibrary.projects[next.project.id],state:before,revision:0}}};
+runtime.storage.setItem(PROJECT_LIBRARY_STORAGE_KEY,serializeProjectLibrary(staleLibrary));
+await runtime.settled();
+const durable=await repository.loadProject(next.project.id),savedProfile=durable.state.project.collections.profiles.find(({id})=>id===profile.id);
+assert.deepEqual(Object.keys(savedProfile.canonicalSchema.nodes),["property:line"],"a stale compatibility library companion cannot erase a newer canonical schema save");
+console.log("durable canonical companion regression: ok");

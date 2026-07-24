@@ -117,7 +117,7 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
             const suppliedRaw = restoreProjectLibrary(value);
             if (!suppliedRaw)
                 return;
-            const labels = new Map(Object.entries(suppliedRaw.projects).map(([projectId, entry]) => [projectId, historyLabel(entry.state) ?? "Save project library command"])), supplied = cleanLibrary(suppliedRaw), prior = currentLibrary, next = { ...supplied, projects: { ...prior.projects, ...supplied.projects } }, canonicalCompanions = new Set(Object.entries(supplied.projects).filter(([projectId, entry]) => pendingCanonicalRevisions.get(projectId) === entry.revision).map(([projectId]) => projectId));
+            const labels = new Map(Object.entries(suppliedRaw.projects).map(([projectId, entry]) => [projectId, historyLabel(entry.state) ?? "Save project library command"])), supplied = cleanLibrary(suppliedRaw), prior = currentLibrary, next = { ...supplied, projects: { ...prior.projects, ...supplied.projects } }, canonicalCompanions = new Set(Object.entries(supplied.projects).filter(([projectId, entry]) => { const pending = pendingCanonicalRevisions.get(projectId); return pending !== undefined && entry.revision <= pending; }).map(([projectId]) => projectId));
             if (same(prior, next))
                 return;
             if (prior.activeProjectId !== next.activeProjectId)
