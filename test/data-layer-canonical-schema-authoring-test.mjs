@@ -182,6 +182,24 @@ const command=applyCanonicalCommand(document,{kind:"rename",baseRevision:documen
 assert.equal(command.status,"applied");
 assert.equal(command.document.nodes[transactionId].name,"reference");
 
+let lifecycle=createCanonicalSchema({id:"schema:lifecycle",contributorId:"profile:lifecycle",contributorName:"Lifecycle"});
+({document:lifecycle}=applyCanonicalCommand(lifecycle,{kind:"add",baseRevision:lifecycle.revision,name:"first",type:"string",id}));
+const firstId=lifecycle.selectedPropertyId;
+({document:lifecycle}=applyCanonicalCommand(lifecycle,{kind:"add",baseRevision:lifecycle.revision,name:"second",type:"object",id}));
+const secondId=lifecycle.selectedPropertyId;
+({document:lifecycle}=applyCanonicalCommand(lifecycle,{kind:"add",baseRevision:lifecycle.revision,name:"third",type:"string",id}));
+const thirdId=lifecycle.selectedPropertyId;
+const movedEarlier=applyCanonicalCommand(lifecycle,{kind:"move",baseRevision:lifecycle.revision,propertyId:thirdId,afterId:undefined});
+assert.equal(movedEarlier.status,"applied");
+assert.deepEqual(movedEarlier.document.rootIds,[thirdId,firstId,secondId],"Move exposes a deterministic first-sibling placement");
+const movedLater=applyCanonicalCommand(movedEarlier.document,{kind:"move",baseRevision:movedEarlier.document.revision,propertyId:thirdId,afterId:secondId});
+assert.equal(movedLater.status,"applied");
+assert.deepEqual(movedLater.document.rootIds,[firstId,secondId,thirdId],"Move exposes a deterministic after-sibling placement");
+const nestedMove=applyCanonicalCommand(movedLater.document,{kind:"move",baseRevision:movedLater.document.revision,propertyId:thirdId,parentId:secondId});
+assert.equal(nestedMove.status,"applied");
+assert.equal(nestedMove.document.nodes[thirdId].parentId,secondId,"Move can place a property under a selected parent");
+assert.deepEqual(nestedMove.document.rootIds,[firstId,secondId]);
+
 const adopted=canonicalSchemaFromJsonSchema({
   id:"canonical:opened-article",
   contributorId:"profile:opened-article",

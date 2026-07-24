@@ -97,13 +97,13 @@ function applyAtCurrent(document, command) {
     if (command.kind === "move") {
         if (command.parentId === command.propertyId || orderedIds(next, command.propertyId).includes(command.parentId ?? ""))
             throw new Error("A property cannot move inside itself.");
-        const oldParent = node.parentId;
+        const oldParent = node.parentId, oldSiblings = orderWithin(next, oldParent).filter(({ id }) => id !== command.propertyId), targetSiblings = orderWithin(next, command.parentId).filter(({ id }) => id !== command.propertyId), afterIndex = command.afterId ? targetSiblings.findIndex(({ id }) => id === command.afterId) : -1, insertAt = afterIndex < 0 ? 0 : afterIndex + 1;
+        oldSiblings.forEach((sibling, index) => { sibling.order = index; });
+        targetSiblings.splice(insertAt, 0, node);
+        targetSiblings.forEach((sibling, index) => { sibling.order = index; });
         delete node.parentId;
         if (command.parentId)
             node.parentId = command.parentId;
-        node.order = insertOrder(next, command.parentId, command.afterId);
-        normalizeOrders(next, oldParent);
-        normalizeOrders(next, command.parentId);
         next.rootIds = orderWithin(next).map(({ id }) => id);
         return { status: "applied", document: appendChange(next, command, [command.propertyId, ...(oldParent ? [oldParent] : []), ...(command.parentId ? [command.parentId] : [])]) };
     }
