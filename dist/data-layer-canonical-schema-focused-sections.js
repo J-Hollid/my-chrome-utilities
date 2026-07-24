@@ -5,6 +5,15 @@ const labeled = (dom, text, control) => { const label = dom.createElement("label
 const input = (dom, name, value = "", type = "text") => { const control = dom.createElement("input"); control.name = name; control.type = type; control.value = value; return control; };
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 const presenceText = (mode) => ({ optional: "Optional", required: "Required", "required-when": "Required when", forbidden: "Forbidden", "forbidden-when": "Forbidden when" })[mode];
+const applyStructure = (context, command) => { const result = context.command(command); if (result.status === "applied" || result.status === "rebased") {
+    context.select(result.document.selectedPropertyId);
+    context.setWorking(undefined);
+    context.render();
+} };
+const structuralControls = (dom, context, working) => { const document = context.current(), siblings = Object.values(document.nodes).filter(({ parentId }) => parentId === working.parentId).sort((left, right) => left.order - right.order || left.id.localeCompare(right.id)), index = siblings.findIndex(({ id }) => id === working.id), earlier = button(dom, "Move earlier", () => { if (index <= 0)
+    return; const afterId = index > 1 ? siblings[index - 2].id : undefined; applyStructure(context, { kind: "move", baseRevision: context.current().revision, propertyId: working.id, ...(working.parentId ? { parentId: working.parentId } : {}), ...(afterId ? { afterId } : {}) }); }), later = button(dom, "Move later", () => { if (index < 0 || index >= siblings.length - 1)
+    return; applyStructure(context, { kind: "move", baseRevision: context.current().revision, propertyId: working.id, ...(working.parentId ? { parentId: working.parentId } : {}), afterId: siblings[index + 1].id }); }), toRoot = button(dom, "Move to root", () => { if (!working.parentId)
+    return; applyStructure(context, { kind: "move", baseRevision: context.current().revision, propertyId: working.id }); }), duplicate = button(dom, "Duplicate", () => applyStructure(context, { kind: "duplicate", baseRevision: context.current().revision, propertyId: working.id, id: context.id })), remove = button(dom, "Delete property", () => applyStructure(context, { kind: "delete", baseRevision: context.current().revision, propertyId: working.id })); earlier.disabled = index <= 0; later.disabled = index < 0 || index >= siblings.length - 1; toRoot.disabled = !working.parentId; return [earlier, later, toRoot, duplicate, remove]; };
 export function renderCanonicalFocusedSection(host, context) {
     const { dom } = context, working = context.getWorking();
     if (!working)
@@ -36,6 +45,16 @@ export function renderCanonicalFocusedSection(host, context) {
             context.render();
         } });
         host.append(labeled(dom, "Property name", name), labeled(dom, "Type", type), rename, addChild, addSibling);
+    }
+    if (context.activeSection === "definition") {
+        const itemType = dom.createElement("select");
+        itemType.name = "itemType";
+        itemType.append(new Option("No item type", ""), ...types.map((entry) => new Option(entry, entry)));
+        itemType.value = working.itemType ?? "";
+        itemType.disabled = working.type !== "array";
+        itemType.addEventListener("change", () => { const next = context.getWorking(); if (next && next.type === "array")
+            next.itemType = itemType.value || undefined; });
+        host.append(labeled(dom, "Array item type", itemType), ...structuralControls(dom, context, working));
     }
     if (context.activeSection === "presence") {
         const presence = dom.createElement("select");
@@ -90,6 +109,6 @@ export function renderCanonicalFocusedSection(host, context) {
         host.append(labeled(dom, "Example method", method), labeled(dom, "Example value", value));
     }
     if (context.activeSection === "structure")
-        host.append(Object.assign(dom.createElement("p"), { textContent: `Stable identity ${working.id} · ${context.current().id}` }), labeled(dom, "Name", input(dom, "structureName", working.name)), button(dom, "Add child", () => { }), button(dom, "Add sibling", () => { }));
+        host.append(Object.assign(dom.createElement("p"), { textContent: `Stable identity ${working.id} · ${context.current().id}` }), labeled(dom, "Name", input(dom, "structureName", working.name)), button(dom, "Add child", () => applyStructure(context, { kind: "add", baseRevision: context.current().revision, parentId: working.id, name: "child", type: "string", id: context.id })), button(dom, "Add sibling", () => applyStructure(context, { kind: "add", baseRevision: context.current().revision, ...(working.parentId ? { parentId: working.parentId } : {}), afterId: working.id, name: "property", type: "string", id: context.id })), ...structuralControls(dom, context, working));
 }
 //# sourceMappingURL=data-layer-canonical-schema-focused-sections.js.map

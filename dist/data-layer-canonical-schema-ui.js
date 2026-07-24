@@ -60,26 +60,38 @@ export function mountCanonicalSchemaEditor(options) {
         }
         render();
     };
-    const saveFocused = () => {
+    const finishFocusedSave = () => { working = undefined; removedRuleIds = new Set(); menuPropertyId = undefined; activePropertyId = undefined; review = undefined; render(); };
+    const showImpactReview = (impact, onConfirm) => { const panel = dom.createElement("section"), heading = dom.createElement("h3"), summary = dom.createElement("p"), actions = dom.createElement("div"), cancel = button(dom, "Cancel impact review", () => { review = undefined; render(); }), confirm = button(dom, "Confirm impact", onConfirm); panel.setAttribute("aria-label", "Property impact review"); heading.textContent = "Property impact review"; summary.textContent = impact; actions.append(cancel, confirm); panel.append(heading, summary, actions); review = panel; render(); };
+    const saveFocused = (confirmedType = false) => {
         const document = current(), node = working && document.nodes[working.id], original = node ? clone(node) : undefined;
         if (!working || !original) {
             closeFocused();
             return;
         }
+        const typeChanged = working.type !== original.type || working.itemType !== original.itemType;
+        let baseDocument = document;
+        if (typeChanged) {
+            const typeResult = command({ kind: "type", baseRevision: baseDocument.revision, propertyId: working.id, type: working.type, ...(working.type === "array" && working.itemType ? { itemType: working.itemType } : {}), ...(confirmedType ? { confirmed: true } : {}) });
+            if (typeResult.status === "confirmation-required") {
+                showImpactReview(typeResult.impact, () => saveFocused(true));
+                return;
+            }
+            if (typeResult.status !== "applied" && typeResult.status !== "rebased")
+                return;
+            baseDocument = typeResult.document;
+        }
         const patch = patchFor(working, original);
+        if (typeChanged) {
+            delete patch.type;
+            delete patch.itemType;
+        }
         if (!Object.keys(patch).length) {
-            closeFocused();
+            finishFocusedSave();
             return;
         }
-        const result = command({ kind: "set", baseRevision: document.revision, propertyId: working.id, patch });
-        if (result.status === "applied" || result.status === "rebased") {
-            working = undefined;
-            removedRuleIds = new Set();
-            menuPropertyId = undefined;
-            activePropertyId = undefined;
-            review = undefined;
-            render();
-        }
+        const result = command({ kind: "set", baseRevision: baseDocument.revision, propertyId: working.id, patch });
+        if (result.status === "applied" || result.status === "rebased")
+            finishFocusedSave();
     };
     const showReview = () => {
         if (!working)
@@ -93,13 +105,14 @@ export function mountCanonicalSchemaEditor(options) {
             render();
             return;
         }
-        const panel = dom.createElement("section"), heading = dom.createElement("h3"), list = dom.createElement("ul"), prospective = dom.createElement("p"), actions = dom.createElement("div"), cancel = button(dom, "Cancel review", () => { review = undefined; render(); }), confirm = button(dom, "Confirm changes", () => saveFocused());
+        const panel = dom.createElement("section"), heading = dom.createElement("h3"), list = dom.createElement("ul"), prospective = dom.createElement("p"), impact = dom.createElement("p"), actions = dom.createElement("div"), cancel = button(dom, "Cancel review", () => { review = undefined; render(); }), confirm = button(dom, "Confirm changes", () => saveFocused());
         panel.setAttribute("aria-label", "Review changes");
         heading.textContent = "Review changes";
         changes.forEach(({ label, detail }) => { const item = dom.createElement("li"); item.textContent = `${label} · ${detail}`; list.append(item); });
         prospective.textContent = `Prospective effective result: ${working.type} · ${working.presence.mode} · ${working.rules.length} rules · affected consumers follow ${provenanceText(original)}.`;
+        impact.textContent = `Impact review: ${working.type !== original.type ? `type ${original.type} → ${working.type}; ` : ""}${working.documentation !== original.documentation ? "documentation and example consumers may change; " : ""}${working.rules.length !== original.rules.length ? `rules ${original.rules.length} → ${working.rules.length}; ` : ""}Draft status and one page-scoped Undo are retained.`;
         actions.append(cancel, confirm);
-        panel.append(heading, list, prospective, actions);
+        panel.append(heading, list, prospective, impact, actions);
         review = panel;
         render();
     };
