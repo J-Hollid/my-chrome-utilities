@@ -861,6 +861,7 @@
       "src/data-layer-canonical-schema-focused-menu.ts",
       "src/data-layer-canonical-schema-focused-editor.ts",
       "src/data-layer-canonical-schema-focused-drafts.ts",
+      "src/data-layer-canonical-schema-focused-command.ts",
       "src/data-layer-canonical-schema-render.ts",
       "src/data-layer-focused-schema-property-ui.ts",
       "src/data-layer-canonical-predicate-editor.ts",
@@ -888,7 +889,6 @@
       "test/data-layer-composed-schema-builders-test.mjs",
       "test/data-layer-composed-schema-workspace-test.mjs",
       "test/data-layer-focused-schema-property-ui-test.mjs",
-      "test/data-layer-focused-schema-property-ui-property-test.mjs",
       "test/data-layer-page-group-membership-test.mjs",
       "test/data-layer-layered-schema-test.mjs",
       "test/data-layer-layered-schema-persistence-test.mjs",
@@ -900,6 +900,7 @@
       "test/data-layer-side-panel-unified-schema-editor-property-test.mjs",
       "test/data-layer-composed-schema-builders-property-test.mjs",
       "test/data-layer-composed-schema-workspace-property-test.mjs",
+      "test/data-layer-focused-schema-property-ui-property-test.mjs",
       "test/data-layer-layered-schema-property-test.mjs"
     ],
     "features": [

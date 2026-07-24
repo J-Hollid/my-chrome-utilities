@@ -1,10 +1,11 @@
-import { canonicalCommandOutcome, canonicalPropertyPath } from "./data-layer-canonical-schema.js";
+import { canonicalPropertyPath } from "./data-layer-canonical-schema.js";
 import { focusedPropertySectionLabels } from "./data-layer-focused-schema-property-ui.js";
 import { renderCanonicalFocusedSection } from "./data-layer-canonical-schema-focused-sections.js";
 import { renderCanonicalFocusedMenu } from "./data-layer-canonical-schema-focused-menu.js";
 import { renderCanonicalFocusedEditor } from "./data-layer-canonical-schema-focused-editor.js";
 import { renderCanonicalSchemaEditor } from "./data-layer-canonical-schema-render.js";
 import { focusedPropertyPatch, focusedStagedChanges, focusedSourceState } from "./data-layer-canonical-schema-focused-drafts.js";
+import { dispatchFocusedCanonicalCommand } from "./data-layer-canonical-schema-focused-command.js";
 const clone = (value) => structuredClone(value);
 const provenanceText = (node) => node.provenance.map(({ source, contributorName, scope, state }) => contributorName ? `${scope ?? "source"} ${contributorName}${state ? ` ${state}` : ""}` : source).join(" → ") || "created";
 const presenceText = (mode) => ({ optional: "Optional", required: "Required", "required-when": "Required when", forbidden: "Forbidden", "forbidden-when": "Forbidden when" })[mode];
@@ -24,16 +25,7 @@ export function mountCanonicalSchemaEditor(options) {
     const selectedNode = (document) => activePropertyId ? document.nodes[activePropertyId] : document.selectedPropertyId ? document.nodes[document.selectedPropertyId] : undefined;
     const ensureWorking = (node) => { if (!working || working.id !== node.id)
         working = clone(node); };
-    const command = (next) => {
-        const prior = current(), result = options.dispatch(next);
-        if (result.status === "conflict")
-            feedback = result.message;
-        else if (result.status === "applied" || result.status === "rebased")
-            feedback = canonicalCommandOutcome(next, result, prior);
-        if ((canonicalDispatchRequiresLocalRender(result, options.renderAfterDispatch) || next.kind === "add" || next.kind === "select") && options.host.isConnected)
-            render();
-        return result;
-    };
+    const command = (next) => dispatchFocusedCanonicalCommand(next, { current, dispatch: options.dispatch, renderAfterDispatch: options.renderAfterDispatch, host: options.host, setFeedback: (message) => { feedback = message; }, render });
     const patchFor = (node, original) => focusedPropertyPatch(node, original, removedRuleIds);
     const closeFocused = () => {
         const restorePath = originPath;

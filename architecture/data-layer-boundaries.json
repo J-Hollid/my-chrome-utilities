@@ -357,6 +357,13 @@
       "src/data-layer-canonical-schema.ts"
     ]
   },
+  "src/data-layer-canonical-schema-focused-command.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-canonical-schema.ts"
+    ]
+  },
   "src/data-layer-canonical-schema-render.ts": {
     "module": "schemas",
     "layer": "browser",
