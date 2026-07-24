@@ -1,80 +1,177 @@
-import { mountComposedSchemaFacetBuilder } from "./data-layer-composed-schema-builders.js";
-const actionText = (row) => row.action === "override" ? "Override here" : row.action === "reset" ? "Reset to parents" : "Remove local property";
+import { composedFacetDraft, sparseComposedFacets, typedComposedValue } from "./data-layer-composed-schema-builders.js";
+import { focusedConditionLabel, focusedOwnershipActions, focusedPropertySectionLabels, focusedPropertySections } from "./data-layer-focused-schema-property-ui.js";
+const clone = (value) => structuredClone(value);
 const button = (text, run) => { const control = document.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
+const labeled = (text, control) => { const label = document.createElement("label"); label.append(text, control); return label; };
+const actionText = (row) => row.action === "override" ? "Override here" : row.action === "reset" ? "Reset to parents" : "Remove local property";
+const valueText = (value) => value === undefined ? "unset" : typeof value === "string" ? value : JSON.stringify(value);
 export function mountComposedSchemaWorkspace(options) {
-    const { model } = options, section = document.createElement("section"), heading = document.createElement("h2"), summary = document.createElement("p"), columns = document.createElement("div"), addControls = document.createElement("div"), choice = document.createElement("select"), add = document.createElement("button"), rows = document.createElement("div"), propertyChoices = model.rows.flatMap(({ path, effective }) => effective.definitionId ? [{ path, definitionId: effective.definitionId, type: effective.type }] : []);
+    const section = document.createElement("section"), heading = document.createElement("h2"), summary = document.createElement("p"), columns = document.createElement("div"), addControls = document.createElement("div"), choice = document.createElement("select"), add = document.createElement("button"), rows = document.createElement("div");
+    let activePath, activeSection = "definition", draft, removed = false, removedRuleIds = new Set(), originFocus, originPath;
     section.className = "composed-schema-workspace";
-    section.setAttribute("aria-label", model.heading);
-    section.dataset.schemaStatus = model.status;
+    section.setAttribute("aria-label", options.model.heading);
+    section.dataset.schemaStatus = options.model.status;
+    section.dataset.schemaPresentation = "focused-property";
     if (options.schemaContributorId)
         section.dataset.schemaContributorId = options.schemaContributorId;
     if (options.schemaContributorScope)
         section.dataset.schemaContributorScope = options.schemaContributorScope;
-    heading.textContent = model.heading;
+    heading.textContent = options.model.heading;
     summary.setAttribute("role", "status");
-    summary.className = model.status === "blocked" ? "error" : "status-text";
-    summary.textContent = `${model.status === "blocked" ? "Blocked" : "Ready"} · ${model.rows.length} effective properties${options.includeConflictSummary === false ? "" : ` · ${model.conflictSummary}`}`;
+    summary.className = options.model.status === "blocked" ? "error" : "status-text";
+    summary.textContent = `${options.model.status === "blocked" ? "Blocked" : "Ready"} · ${options.model.rows.length} effective properties${options.includeConflictSummary === false ? "" : ` · ${options.model.conflictSummary}`}`;
     columns.className = "composed-schema-columns";
     columns.setAttribute("aria-hidden", "true");
     for (const label of ["Property", "Effective definition", "Source", "Local state", "Validation state", "Actions"])
         columns.append(Object.assign(document.createElement("strong"), { textContent: label }));
     addControls.setAttribute("aria-label", "Add local property");
     choice.setAttribute("aria-label", "Choose inherited property to override");
-    choice.append(new Option("Choose a property", ""), ...model.rows.filter(({ inherited }) => Boolean(inherited)).map(({ path }) => new Option(path, path)));
+    choice.append(new Option("Choose a property", ""), ...options.model.rows.filter(({ inherited }) => Boolean(inherited)).map(({ path }) => new Option(path, path)));
     add.type = "button";
     add.textContent = "Add local property";
+    add.addEventListener("click", () => { const row = options.model.rows.find(({ path }) => path === choice.value) || options.model.rows.find(({ inherited }) => Boolean(inherited)); if (row)
+        open(row, add); });
     addControls.append(choice, add);
     rows.setAttribute("role", "table");
-    rows.setAttribute("aria-label", `${model.heading} rows`);
-    const rowFor = (path) => rows.querySelector(`[data-effective-property-path="${CSS.escape(path)}"]`), openDetail = (article) => { const detail = article.querySelector("[aria-label$=\"stacked row detail\"]"), toggle = article.querySelector(".composed-schema-row-toggle"); if (detail)
-        detail.hidden = false; toggle?.setAttribute("aria-expanded", "true"); detail?.querySelector("input,select,button")?.focus(); };
-    add.addEventListener("click", () => { const path = choice.value || model.rows.find(({ inherited }) => Boolean(inherited))?.path, article = path ? rowFor(path) : undefined; if (article)
-        openDetail(article); });
-    for (const row of model.rows) {
-        const article = document.createElement("article"), overview = document.createElement("div"), toggle = document.createElement("button"), effective = document.createElement("span"), source = document.createElement("span"), local = document.createElement("span"), validation = document.createElement("span"), actions = document.createElement("div"), primary = document.createElement("button"), detail = document.createElement("section"), builder = document.createElement("section"), detailAction = document.createElement("button"), provenance = document.createElement("ol"), impact = document.createElement("div");
+    rows.setAttribute("aria-label", `${options.model.heading} rows`);
+    const rowFor = (path) => options.model.rows.find(({ path: rowPath }) => rowPath === path);
+    const open = (row, focus, sectionName = "definition") => { activePath = row.path; activeSection = sectionName; draft = composedFacetDraft(row.local, row.effective); removed = false; removedRuleIds = new Set(); if (focus) {
+        originFocus = focus;
+        originPath = row.path;
+    } renderRows(); };
+    const close = () => { const restorePath = originPath; activePath = undefined; draft = undefined; removed = false; removedRuleIds = new Set(); renderRows(); const target = originFocus?.isConnected ? originFocus : restorePath ? rows.querySelector(`[aria-label="Property actions for ${CSS.escape(restorePath)}"]`) : undefined; originFocus = undefined; originPath = undefined; if (target)
+        queueMicrotask(() => target.focus({ preventScroll: true })); };
+    const save = (row) => { if (!draft)
+        return; if (removed) {
+        options.onReset(row);
+        close();
+        return;
+    } const staged = { ...draft, rules: draft.rules.filter((rule) => !removedRuleIds.has(String(rule.id ?? ""))) }; options.onSave(row, sparseComposedFacets(staged, row.inherited ?? { path: row.path })); close(); };
+    const contextMenu = (row) => { const menu = document.createElement("div"); menu.setAttribute("role", "menu"); menu.setAttribute("aria-label", `${row.path} property context menu`); menu.dataset.propertyContextMenu = "true"; for (const sectionName of focusedPropertySections) {
+        const entry = document.createElement("div"), choose = button(focusedPropertySectionLabels[sectionName], () => { activeSection = sectionName; renderRows(); }), details = document.createElement("span");
+        entry.dataset.section = sectionName;
+        details.textContent = sectionName === "values" ? `${(draft?.allowedValues ?? row.local.allowedValues ?? row.effective.allowedValues ?? []).length} allowed values` : sectionName === "rules" ? `${(draft?.rules ?? []).length} rules` : sectionName === "conditions" ? focusedConditionLabel(draft?.condition) : "View effective value";
+        entry.append(choose, details);
+        menu.append(entry);
+    } const ownership = document.createElement("div"); const local = Object.keys(row.local).some((key) => key !== "path"), inherited = Boolean(row.inherited), actions = focusedOwnershipActions({ local, inherited, overridden: row.action === "reset", invariant: row.effective.enforcement === "invariant", conflict: row.validationState === "blocked", replaceable: row.effective.enforcement !== "invariant" }); for (const action of actions) {
+        const control = button(action, () => { if (action === "Remove local" || action === "Reset to parent") {
+            removed = true;
+            activeSection = "rules";
+            renderRows();
+            return;
+        } if (action === "Override here" || action === "Replace here") {
+            activeSection = "definition";
+            renderRows();
+            return;
+        } renderRows(); });
+        control.dataset.ownershipAction = action;
+        ownership.append(control);
+    } menu.append(ownership); return menu; };
+    const renderCondition = (host) => { const summary = document.createElement("p"), tree = document.createElement("div"), controls = document.createElement("div"); summary.textContent = focusedConditionLabel(draft?.condition); tree.setAttribute("aria-label", "Readable condition tree"); const appendNode = (condition, path) => { const row = document.createElement("article"); row.dataset.conditionPath = path.join(".") || "root"; row.textContent = focusedConditionLabel(condition); row.append(button("View", () => { row.dataset.conditionState = "view"; }), button("Edit", () => { row.dataset.conditionState = "edit"; }), button("Add child", () => { }), button("Move", () => { }), button("Remove", () => { })); tree.append(row); if (condition.kind !== "predicate" && Array.isArray(condition.children))
+        condition.children.forEach((child, index) => appendNode(child, [...path, index])); }; if (draft?.condition)
+        appendNode(draft.condition, []);
+    else
+        tree.textContent = "All (empty)"; for (const kind of ["all", "any", "not"])
+        controls.append(button(`Add ${kind === "all" ? "All" : kind === "any" ? "Any" : "Not"} group`, () => { if (!draft)
+            return; draft.condition = { kind, children: [] }; renderRows(); })); const property = document.createElement("select"), operator = document.createElement("select"), value = document.createElement("input"); property.setAttribute("aria-label", "Condition property"); property.append(new Option("Search property", ""), ...options.model.rows.map(({ path, effective }) => new Option(path, effective.definitionId ?? path))); operator.setAttribute("aria-label", "Condition operator"); operator.append(...["Equals", "Does not equal", "Exists", "Does not exist", "Starts with", "Contains", "Matches pattern", "Greater than", "At least", "Less than", "At most"].map((entry) => new Option(entry, entry))); value.setAttribute("aria-label", "Condition value"); controls.append(labeled("Search property", property), labeled("Type-valid operator", operator), labeled("Typed value", value), button("Add predicate", () => { if (!draft || !property.value)
+        return; draft.condition = { kind: "all", children: [{ kind: "predicate", propertyId: property.value, operator: operator.value, ...(value.value ? { value: typedComposedValue(undefined, value.value) } : {}) }] }; renderRows(); })); host.append(summary, tree, controls); };
+    const renderRules = (host) => { const list = document.createElement("div"); list.setAttribute("aria-label", "Stable rule inventory"); const localIds = new Set((rowFor(activePath ?? "")?.local.rules ?? []).map((rule) => String(rule.id ?? ""))); (draft?.rules ?? []).forEach((rule, index) => { const row = document.createElement("article"), summary = document.createElement("p"), id = String(rule.id ?? `rule-${index}`), local = localIds.has(id), removedRule = removedRuleIds.has(id); row.dataset.ruleId = id; row.dataset.ownership = local ? "local" : "inherited"; summary.textContent = `${String(rule.name ?? rule.kind ?? "rule")} · ${String(rule.kind ?? "custom")} · ${String(rule.severity ?? "error")} · ${String(rule.message ?? "No issue message")} · ${local ? "local" : "inherited"}${removedRule ? " · Removed" : ""}`; row.append(summary, button("View", () => { row.dataset.ruleMode = "view"; })); if (local && !removedRule)
+        row.append(button("Edit", () => { row.dataset.ruleMode = "edit"; }), button("Remove local", () => { removedRuleIds.add(id); renderRows(); }));
+    else if (local)
+        row.append(button("Restore", () => { removedRuleIds.delete(id); renderRows(); }));
+    else
+        row.append(button("Override here", () => { activeSection = "definition"; renderRows(); }), button("Open source", () => { })); list.append(row); }); const addPanel = document.createElement("fieldset"), kind = document.createElement("select"), fields = document.createElement("div"); kind.name = "ruleKind"; kind.append(...["pattern", "range", "cardinality", "condition", "custom"].map((entry) => new Option(entry, entry))); const renderFields = () => { fields.replaceChildren(); const names = kind.value === "pattern" ? ["pattern", "severity", "message"] : kind.value === "range" ? ["minimum", "maximum", "severity", "message"] : kind.value === "cardinality" ? ["minItems", "maxItems", "severity", "message"] : ["severity", "message"]; for (const name of names) {
+        const control = document.createElement("input");
+        control.name = `newRule${name}`;
+        if (["minimum", "maximum", "minItems", "maxItems"].includes(name))
+            control.type = "number";
+        fields.append(labeled(name, control));
+    } }; kind.addEventListener("change", renderFields); renderFields(); addPanel.append(labeled("Rule kind", kind), fields, button("Add rule", () => { if (!draft)
+        return; const rule = { id: `rule:${crypto.randomUUID()}`, kind: kind.value, severity: "error", message: "" }; for (const control of Array.from(fields.querySelectorAll("input")))
+        if (control.value)
+            rule[control.name.replace(/^newRule/, "").replace(/^./, (letter) => letter.toLowerCase())] = ["minimum", "maximum", "minItems", "maxItems"].some((name) => control.name.endsWith(name)) ? Number(control.value) : control.value; draft.rules = [...draft.rules, rule]; renderRows(); })); host.append(list, addPanel); };
+    const renderSection = (host, row) => { if (!draft)
+        return; host.dataset.focusedSection = activeSection; if (activeSection === "definition") {
+        const type = document.createElement("select");
+        type.name = "propertyType";
+        type.append(new Option("Inherit type", ""), ...["string", "number", "integer", "boolean", "object", "array", "null"].map((entry) => new Option(entry, entry)));
+        type.value = draft.type ?? "";
+        type.addEventListener("change", () => { if (draft)
+            draft.type = type.value || undefined; });
+        host.append(labeled("Type", type));
+    } if (activeSection === "presence") {
+        const presence = document.createElement("select");
+        presence.name = "presenceMode";
+        presence.append(new Option("Inherit presence", ""), ...["required", "optional", "forbidden", "permitted"].map((entry) => new Option(entry, entry)));
+        presence.value = draft.presence ?? "";
+        presence.addEventListener("change", () => { if (draft)
+            draft.presence = presence.value || undefined; });
+        host.append(labeled("Presence", presence));
+    } if (activeSection === "values") {
+        const list = document.createElement("div");
+        (draft.allowedValues ?? []).forEach((value, index) => { const control = document.createElement("input"); control.value = valueText(value); control.setAttribute("aria-label", `Allowed value ${index + 1}`); control.addEventListener("input", () => { if (draft)
+            draft.allowedValues[index] = control.value; }); list.append(labeled(`Value ${index + 1}`, control), button("Remove", () => { if (draft) {
+            draft.allowedValues = draft.allowedValues.filter((_, candidate) => candidate !== index);
+            renderRows();
+        } })); });
+        host.append(list, button("Add allowed value", () => { if (draft) {
+            draft.allowedValues = [...draft.allowedValues, ""];
+            renderRows();
+        } }));
+    } if (activeSection === "conditions")
+        renderCondition(host); if (activeSection === "rules")
+        renderRules(host); if (activeSection === "documentation") {
+        const control = document.createElement("textarea");
+        control.name = "documentation";
+        control.value = draft.documentation;
+        control.addEventListener("input", () => { if (draft)
+            draft.documentation = control.value; });
+        host.append(labeled("Documentation", control));
+    } if (activeSection === "example") {
+        const control = document.createElement("input");
+        control.name = "exampleValue";
+        control.value = valueText(draft.exampleValue);
+        control.addEventListener("input", () => { if (draft)
+            draft.exampleValue = control.value; });
+        host.append(labeled("Example", control));
+    } if (activeSection === "structure")
+        host.append(document.createElement("p"), button("Open source", () => { })); };
+    const renderFocused = (row) => { const editor = document.createElement("section"), heading = document.createElement("h3"), identity = document.createElement("p"), effective = document.createElement("p"), host = document.createElement("section"), actions = document.createElement("div"); editor.setAttribute("aria-label", `${row.path} focused property editor`); editor.dataset.focusedPropertyEditor = "true"; heading.textContent = `Focused property · ${row.path}`; identity.textContent = `${row.path} · stable identity ${row.effective.definitionId ?? row.path}`; effective.textContent = `Inherited value and source: ${row.inherited ? options.effectiveText({ ...row, effective: row.inherited }) : "none"} · Effective result: ${options.effectiveText(row)} · validation ${row.validationState} · conflicts ${row.validationState === "blocked" ? row.message : "none"}`; host.setAttribute("aria-label", `${row.path} focused ${focusedPropertySectionLabels[activeSection]} section`); renderSection(host, row); actions.append(button("Cancel", close), button("Review changes", () => { const review = document.createElement("p"); review.setAttribute("aria-label", "Review changes"); review.textContent = `Review changes · ${row.path} · prospective effective result ${options.effectiveText(row)} · affected consumers recompile`; actions.replaceChildren(review, button("Cancel review", () => renderRows()), button("Confirm changes", () => save(row))); }), button("Save property", () => save(row))); editor.append(heading, identity, effective, host, actions); return editor; };
+    const renderRows = () => { rows.replaceChildren(); for (const row of options.model.rows) {
+        const article = document.createElement("article"), overview = document.createElement("div"), toggle = document.createElement("button"), effective = document.createElement("span"), source = document.createElement("span"), local = document.createElement("span"), validation = document.createElement("span"), actions = document.createElement("div"), primary = button(actionText(row), () => open(row, primary)), propertyActions = button("Property actions", () => open(row, propertyActions));
         article.className = "composed-schema-row";
         article.dataset.effectivePropertyPath = row.path;
         if (options.rowPathDataset)
             article.dataset[options.rowPathDataset] = row.path;
         article.dataset.validationState = row.validationState;
-        overview.className = "composed-schema-row-overview";
-        overview.setAttribute("role", "row");
-        toggle.type = primary.type = detailAction.type = "button";
+        toggle.type = "button";
         toggle.className = "composed-schema-row-toggle";
         toggle.textContent = row.path;
-        toggle.setAttribute("aria-expanded", "false");
+        toggle.setAttribute("aria-expanded", String(activePath === row.path));
+        toggle.addEventListener("click", () => activePath === row.path ? close() : open(row, toggle));
         effective.textContent = options.effectiveText(row) || "constraint";
         source.textContent = row.source;
-        local.textContent = Object.keys(row.local).length > 1 ? JSON.stringify(row.local) : "Inherited";
+        local.textContent = removed && activePath === row.path ? "Removed" : Object.keys(row.local).length > 1 ? JSON.stringify(row.local) : "Inherited";
         validation.textContent = `${row.validationState} · ${row.message}`;
         actions.className = "composed-schema-row-actions";
-        primary.textContent = actionText(row);
-        detail.className = "composed-schema-row-detail";
-        detail.hidden = true;
-        detail.setAttribute("aria-label", `${row.path} stacked row detail`);
-        detailAction.textContent = primary.textContent;
-        provenance.setAttribute("aria-label", `${row.path} provenance`);
-        provenance.append(Object.assign(document.createElement("li"), { textContent: "Provenance" }));
-        for (const origin of row.provenance)
-            provenance.append(Object.assign(document.createElement("li"), { textContent: `${origin.scope} ${origin.contributorName} · ${origin.state}` }));
+        propertyActions.setAttribute("aria-label", `Property actions for ${row.path}`);
+        actions.append(primary, propertyActions);
+        overview.append(toggle, effective, source, local, validation, actions);
+        article.append(overview);
         if (options.onRepair)
             for (const repair of row.repairs)
-                impact.append(button(repair.label, () => options.onRepair(repair)));
-        const open = () => openDetail(article);
-        toggle.addEventListener("click", () => { detail.hidden = !detail.hidden; toggle.setAttribute("aria-expanded", String(!detail.hidden)); if (detail.hidden)
-            toggle.focus(); });
-        primary.addEventListener("click", () => { if (row.action === "override") {
-            open();
-            return;
-        } impact.replaceChildren(); impact.append(`${row.action === "reset" ? "Reset" : "Remove"} preview: effective parent value ${row.inherited ? options.effectiveText({ ...row, effective: row.inherited }) : "none"}; affected Page instances will recompile; outputs become stale; one Undo action will be available. `); const confirm = button(row.action === "reset" ? "Confirm reset to parents" : "Confirm remove local property", () => options.onReset(row)); impact.append(confirm); open(); });
-        detailAction.addEventListener("click", () => primary.click());
-        actions.append(primary);
-        overview.append(toggle, effective, source, local, validation, actions);
-        detail.append(builder, detailAction, provenance, impact);
-        article.append(overview, detail);
+                article.append(button(repair.label, () => options.onRepair?.(repair)));
+        if (activePath === row.path) {
+            article.append(contextMenu(row));
+            article.append(renderFocused(row));
+        }
         rows.append(article);
-        mountComposedSchemaFacetBuilder({ host: builder, path: row.path, local: row.local, effective: row.effective, inherited: row.inherited, propertyChoices, ...(options.includeConditionEvaluation === undefined ? {} : { includeConditionEvaluation: options.includeConditionEvaluation }), onSave: (facets) => options.onSave(row, facets) });
-    }
+    } };
+    section.addEventListener("keydown", (event) => { if (event.key === "Escape" && activePath) {
+        event.preventDefault();
+        close();
+    } });
+    renderRows();
     section.append(heading, summary, columns, addControls, rows);
     options.host.append(section);
     return section;

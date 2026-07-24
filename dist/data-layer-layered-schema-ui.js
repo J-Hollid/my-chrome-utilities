@@ -2,7 +2,6 @@ import { compileLayeredSchema, exportLayeredSchema, resolveLayeredTarget, valida
 import { confirmCanonicalMigration, transactProject } from "./data-layer-specification-project.js";
 import { applyCanonicalCommand, canonicalSchemaWithConstraint, canonicalTableRows, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
-import { mountComposedSchemaFacetBuilder } from "./data-layer-composed-schema-builders.js";
 import { mountComposedSchemaWorkspace } from "./data-layer-composed-schema-workspace-ui.js";
 import { composedSchemaWorkspace, resetComposedSchemaLocalProperty, saveComposedSchemaLocalFacets } from "./data-layer-composed-schema-workspace.js";
 import { flowPageFrameContributor, layeredContributorPath, layeredContributorsForPath, resetFlowPageInstanceLocalProperty, saveFlowPageInstanceLocalFacets } from "./data-layer-layered-schema-project.js";
@@ -30,25 +29,10 @@ export function renderSidePanelComposedSchemaContext(options) {
     const state = options.load(), selection = state ? resolveSidePanelSchemaContributor(state, options.key) : undefined;
     if (!state || !selection || (selection.collectionKind !== "pages" && selection.collectionKind !== "pageGroups"))
         return;
-    const scope = selection.collectionKind === "pages" ? "Page" : "Page Group", model = composedSchemaWorkspace(state, selection.entity, scope), facets = document.createElement("section"), propertyChoices = model.rows.flatMap(({ path, effective }) => effective.definitionId ? [{ path, definitionId: effective.definitionId, type: effective.type }] : []);
-    facets.setAttribute("aria-label", "Inherited and sparse local schema facets");
-    for (const row of model.rows) {
-        const article = document.createElement("article"), summary = document.createElement("p"), builder = document.createElement("section"), reset = document.createElement("button");
-        article.dataset.sidePanelEffectivePath = row.path;
-        summary.textContent = `${row.path} · inherited ${row.inherited ? effectivePropertySummary(row.inherited) : "none"} · local ${Object.keys(row.local).length > 1 ? "present" : "none"} · effective ${effectivePropertySummary(row.effective)} · ${row.validationState} · provenance ${row.provenance.map(({ contributorName }) => contributorName).join(" → ")}`;
-        mountComposedSchemaFacetBuilder({ host: builder, path: row.path, local: row.local, effective: row.effective, inherited: row.inherited, propertyChoices, onSave: (next) => { const live = options.load(), selected = live ? resolveSidePanelSchemaContributor(live, options.key) : undefined; if (live && (selected?.collectionKind === "pages" || selected?.collectionKind === "pageGroups"))
-                options.persist(saveComposedSchemaLocalFacets(live, selected.collectionKind, selected.entity.id, row.path, next)); options.render(); } });
-        reset.type = "button";
-        reset.textContent = row.action === "override" ? "Override here" : "Reset to parents";
-        reset.addEventListener("click", () => { if (row.action === "override") {
-            builder.querySelector("input,select,button")?.focus();
-            return;
-        } const live = options.load(), selected = live ? resolveSidePanelSchemaContributor(live, options.key) : undefined; if (live && (selected?.collectionKind === "pages" || selected?.collectionKind === "pageGroups"))
-            options.persist(resetComposedSchemaLocalProperty(live, selected.collectionKind, selected.entity.id, row.path)); options.render(); });
-        article.append(summary, reset, builder);
-        facets.append(article);
-    }
-    options.host.append(facets);
+    const scope = selection.collectionKind === "pages" ? "Page" : "Page Group", model = composedSchemaWorkspace(state, selection.entity, scope);
+    mountComposedSchemaWorkspace({ host: options.host, model, effectiveText: (row) => effectivePropertySummary(row.effective), onSave: (row, facets) => { const live = options.load(), selected = live ? resolveSidePanelSchemaContributor(live, options.key) : undefined; if (live && (selected?.collectionKind === "pages" || selected?.collectionKind === "pageGroups"))
+            options.persist(saveComposedSchemaLocalFacets(live, selected.collectionKind, selected.entity.id, row.path, facets)); options.render(); }, onReset: (row) => { const live = options.load(), selected = live ? resolveSidePanelSchemaContributor(live, options.key) : undefined; if (live && (selected?.collectionKind === "pages" || selected?.collectionKind === "pageGroups"))
+            options.persist(resetComposedSchemaLocalProperty(live, selected.collectionKind, selected.entity.id, row.path)); options.render(); }, onRepair: () => options.render(), schemaContributorId: selection.entity.id, schemaContributorScope: scope, rowPathDataset: "sidePanelEffectivePath" });
 }
 export function mountSidePanelLayeredProfileEditor(options) {
     let selectedKey;
@@ -81,6 +65,10 @@ export function mountSidePanelLayeredProfileEditor(options) {
         status.textContent = `Effective ${Object.keys(compiled.properties).length} · shadowed ${Object.values(compiled.properties).reduce((count, property) => count + property.superseded.length, 0)} · conflicting ${compiled.conflicts.length}`;
         inheritance.append(order, status);
         options.host.append(heading, identity, inheritance);
+        if (selection.collectionKind === "pages" || selection.collectionKind === "pageGroups") {
+            renderSidePanelComposedSchemaContext({ host: options.host, load: options.load, key: selectedKey, persist: options.persist, render });
+            return;
+        }
         const canonical = selection.entity.canonicalSchema;
         if (!canonical) {
             const review = document.createElement("section"), summary = document.createElement("p"), confirm = document.createElement("button"), migration = selection.scope === "Shared Profile" ? migrateLegacyProfile(selection.entity, { id: (kind) => `${kind}:${crypto.randomUUID()}` }) : undefined;
@@ -98,8 +86,6 @@ export function mountSidePanelLayeredProfileEditor(options) {
         options.host.append(editorHost);
         mountCanonicalSchemaEditor({ host: editorHost, surface: "Side panel", load: () => current().selection.entity.canonicalSchema, id: (kind) => `${kind}:${crypto.randomUUID()}`, dispatch: (command) => { const live = current(), document = live.selection.entity.canonicalSchema, result = applyCanonicalCommand(document, command); if ((result.status === "applied" || result.status === "rebased") && live.state)
                 options.persist(writeSidePanelCanonical(live.state, live.selection, result.document)); return result; }, onUndo: () => options.onUndo?.(), onRedo: () => options.onRedo?.() });
-        if (selection.collectionKind === "pages" || selection.collectionKind === "pageGroups")
-            renderSidePanelComposedSchemaContext({ host: options.host, load: options.load, key: selectedKey, persist: options.persist, render });
     };
     const select = (key) => { const state = options.load(); if (!state || !resolveSidePanelSchemaContributor(state, key))
         return false; selectedKey = key; render(); return true; };
