@@ -1,5 +1,6 @@
 import { orderedPageGroupIds, requiresPageGroupMembershipMigration } from "./utilities/data-layer/page-group-membership.js";
 import { canonicalSchemaWithConstraint, compileLayeredSchema, createCanonicalSchema, layeredContributorPath, layeredContributorsForPath, migrateLegacyProfile, transactProject, validateLayeredObservation } from "./utilities/data-layer/schemas.js";
+import { duplicatePageFrameRecord } from "./data-layer-flow-graph-structural.js";
 export const FLOW_GRAPH_GEOMETRY = { eventWidth: 170, eventHeight: 94, eventMinX: 12, eventMinY: 40, pageFrameMinWidth: 190, pageFrameMinHeight: 108, pageFrameChildRightPadding: 20, pageFrameChildBottomPadding: 16 };
 const clone = (value) => structuredClone(value);
 const graphIndex = (project) => project.documentationFlowGraphs ?? {};
@@ -93,6 +94,12 @@ export function addFlowPageFrame(state, flowId, input, id) {
         return state;
     const graph = storedGraph(state.project, flowId);
     return transactProject(state, "Add Flow Page frame", (project) => { const current = storedGraph(project, flowId), frame = { id: id("flow-page-frame"), pageId: input.pageId, pageGroupId: input.pageGroupId, position: { x: Math.max(20, Math.round(input.x ?? 40 + current.pageFrames.filter(({ pageGroupId }) => pageGroupId === input.pageGroupId).length * 240)), y: Math.max(40, Math.round(input.y)) } }; return saveStoredGraph(project, flowId, { ...current, pageFrames: [...current.pageFrames, frame] }); });
+}
+export function duplicateFlowPageFrame(state, flowId, pageFrameId, id) {
+    const graph = storedGraph(state.project, flowId), source = graph.pageFrames.find(({ id: candidateId }) => candidateId === pageFrameId);
+    if (!source)
+        return state;
+    return transactProject(state, `Duplicate Flow Page frame ${pageFrameId}`, (project) => { const current = storedGraph(project, flowId), latest = current.pageFrames.find(({ id: candidateId }) => candidateId === pageFrameId) ?? source, copy = duplicatePageFrameRecord(latest, id("flow-page-frame")); return saveStoredGraph(project, flowId, { ...current, pageFrames: [...current.pageFrames, copy] }); });
 }
 export function removeFlowPageFrame(state, flowId, pageFrameId) {
     const graph = storedGraph(state.project, flowId), frame = graph.pageFrames.find(({ id }) => id === pageFrameId);

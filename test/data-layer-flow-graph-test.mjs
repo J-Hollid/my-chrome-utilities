@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {FLOW_GRAPH_GEOMETRY,addEventOccurrenceToPage,addFlowPageFrame,addFreePageFrame,addGraphOccurrence,addInteractionOccurrenceToPage,applyFlowPageGroupLaneSelection,deriveFlowOccurrenceExample,documentaryFlowGraph,flowOccurrenceEventSchema,flowOccurrenceExampleEditorRows,flowOutline,flowRelationshipText,inferFlowRelationshipKind,inspectFlowGraph,inspectFreePageEdgeMove,inspectOccurrenceContainmentMove,inspectPageFrameDrop,migrateLegacyFlowRelationshipKinds,moveFlowPageFrame,moveFreePageFrame,moveGraphOccurrence,projectFlowGraph,reassignFlowOccurrencePage,removeFlowPageFrame,removeFlowRelationship,removeGraphOccurrence,reorderFlowPageGroupLane,reorderGraphOccurrence,saveFlowViewState,saveGraphRelationship,setFlowOccurrenceExample,setFlowPageGroupLanes,updateGraphOccurrence} from "../dist/data-layer-flow-graph.js";
+import {FLOW_GRAPH_GEOMETRY,addEventOccurrenceToPage,addFlowPageFrame,addFreePageFrame,addGraphOccurrence,addInteractionOccurrenceToPage,applyFlowPageGroupLaneSelection,deriveFlowOccurrenceExample,documentaryFlowGraph,duplicateFlowPageFrame,flowOccurrenceEventSchema,flowOccurrenceExampleEditorRows,flowOutline,flowRelationshipText,inferFlowRelationshipKind,inspectFlowGraph,inspectFreePageEdgeMove,inspectOccurrenceContainmentMove,inspectPageFrameDrop,migrateLegacyFlowRelationshipKinds,moveFlowPageFrame,moveFreePageFrame,moveGraphOccurrence,projectFlowGraph,reassignFlowOccurrencePage,removeFlowPageFrame,removeFlowRelationship,removeGraphOccurrence,reorderFlowPageGroupLane,reorderGraphOccurrence,saveFlowViewState,saveGraphRelationship,setFlowOccurrenceExample,setFlowPageGroupLanes,updateGraphOccurrence} from "../dist/data-layer-flow-graph.js";
 import {consumeRelationshipDeletionFocus,contextSettingPageLabel,flowEdgeGeometry,flowViewAfterRelationshipDeletion,ownsPointerDrag,restorePointerCancellationFocus} from "../dist/data-layer-flow-graph-ui.js";
 import {compileSpecificationProject,createCanonicalProjectEnvelope} from "../dist/data-layer-specification-engine.js";
 import {addFlowStep,addProjectEntity,createSpecificationProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
@@ -150,6 +150,11 @@ canvasState=setFlowPageGroupLanes(canvasState,canvasFlow.id,[canvasCheckout.id,c
 canvasState=addFlowPageFrame(canvasState,canvasFlow.id,{pageId:cartPage.id,pageGroupId:canvasCheckout.id,y:90},canvasId);
 const cartFrame=documentaryFlowGraph(canvasState.project,canvasFlow.id).pageFrames[0];
 assert.deepEqual({pageId:cartFrame.pageId,pageGroupId:cartFrame.pageGroupId,position:cartFrame.position},{pageId:cartPage.id,pageGroupId:canvasCheckout.id,position:{x:40,y:90}});
+canvasState=duplicateFlowPageFrame(canvasState,canvasFlow.id,cartFrame.id,canvasId);
+const duplicatedFrame=documentaryFlowGraph(canvasState.project,canvasFlow.id).pageFrames.at(-1);
+assert.notEqual(duplicatedFrame.id,cartFrame.id,"duplicating a Page frame creates a distinct Flow Page-instance identity");
+assert.deepEqual({pageId:duplicatedFrame.pageId,pageGroupId:duplicatedFrame.pageGroupId},{pageId:cartFrame.pageId,pageGroupId:cartFrame.pageGroupId},"duplicated Page frames retain their Page and eligible lane references");
+assert.deepEqual(duplicatedFrame.position,{x:cartFrame.position.x+240,y:cartFrame.position.y},"duplicated Page frames receive a deterministic nearby presentation position");
 const wrongFrameBefore=canvasState;
 assert.equal(addFlowPageFrame(canvasState,canvasFlow.id,{pageId:shippingPage.id,pageGroupId:canvasCheckout.id,y:90},canvasId),wrongFrameBefore,"a wrong-group Page drop is an atomic no-op");
 assert.equal(inspectPageFrameDrop(canvasState.project,canvasFlow.id,shippingPage.id,canvasCheckout.id).rejected,true);
