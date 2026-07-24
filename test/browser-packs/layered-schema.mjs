@@ -25,7 +25,7 @@ let socket;
 try {
   const port=await new Promise((resolve,reject)=>{let output="";const timeout=setTimeout(()=>reject(new Error(`Chrome did not expose a debugging port: ${output}`)),30000);chrome.stderr.on("data",(chunk)=>{output+=chunk;const match=output.match(/ws:\/\/127\.0\.0\.1:(\d+)\//);if(match){clearTimeout(timeout);resolve(Number(match[1]));}});chrome.once("error",reject);});
   const id=await extensionId(port),pageUrl=`chrome-extension://${id}/specification-builder.html`,created=await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(pageUrl)}`,{method:"PUT"}).then((response)=>response.json());
-  const settledPage=async()=>{for(let attempt=0;attempt<120;attempt+=1){const targets=await fetch(`http://127.0.0.1:${port}/json/list`).then((response)=>response.json()),candidate=targets.find(({id:urlId,url})=>urlId===created.id&&url===pageUrl);if(candidate)return candidate;await wait(25);}throw new Error("Extension page did not settle after opening");};
+  const settledPage=async()=>{for(let attempt=0;attempt<600;attempt+=1){const targets=await fetch(`http://127.0.0.1:${port}/json/list`).then((response)=>response.json()),candidate=targets.find(({type,url})=>type==="page"&&url?.startsWith(pageUrl));if(candidate)return candidate;await wait(25);}throw new Error("Extension page did not settle after opening");};
   reconnectTarget=async()=>{const next=await settledPage(),connection=new DevtoolsSocket(next.webSocketDebuggerUrl);await connection.connect();await connection.call("Runtime.enable");await connection.call("Page.enable");await wait(100);return connection;};
   socket=await reconnectTarget();activeSocket=socket;await ready(socket,"#create-project-form");
   const evidence=await evaluate(socket,`(async()=>{try{
