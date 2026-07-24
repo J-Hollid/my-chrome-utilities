@@ -171,6 +171,19 @@ for(let sample=0;sample<24;sample+=1){
     ...sparseEntry.matchedPath.flatMap(({relationshipId})=>relationshipId?[relationshipId]:[]),
     sparseEntry.relationshipId,
   ])],"generated sparse and duplicate path snapshots conserve every relationship identity once");
+  const containedEntry=structuredClone(run.history[1]);
+  containedEntry.matchedPath=structuredClone(run.history.at(-1).matchedPath);
+  const containedContext=createManualFlowDefectEvent(containedEntry,chronological[1]).manualFlowContext;
+  assert.equal(containedContext.linkEvidence.kind,"path");
+  assert.deepEqual(containedContext.linkEvidence.relationshipIds,[`relationship:start-${target}`],
+    "a generated contained Event conserves the traversed Page relationship without owning it");
+  const startOccurrenceEntry=structuredClone(run.history[1]);
+  const startOccurrenceContext=createManualFlowDefectEvent(startOccurrenceEntry,chronological[1]).manualFlowContext;
+  assert.deepEqual(startOccurrenceContext.linkEvidence,{
+    kind:"start",
+    label:"Started at Start",
+    pageFrameId:"frame:start",
+  },"a generated contained Event keeps start evidence anchored to its initial Page");
 
   const completed=liveFlowSessionEvidence(run,state,`2026-07-23T10:00:04.${String(sample).padStart(3,"0")}Z`);
   assert.equal(completed.label,"Manual Flow test evidence");

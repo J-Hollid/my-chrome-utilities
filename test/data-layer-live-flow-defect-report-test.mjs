@@ -98,6 +98,54 @@ assert.deepEqual(sparsePathReport.event.flowContext.linkEvidence, {
   label: "path Payment",
   relationshipIds: ["relationship:cart-payment"],
 }, "a durable Flow link remains visible when a legacy path snapshot is incomplete");
+const containedOccurrenceReport = reportFor({
+  ...baseEntry,
+  stepId: "occurrence:add-payment",
+  stepKind: "Event",
+  stepName: "add_payment_info",
+  target: { id:"occurrence:add-payment", name:"add_payment_info" },
+  matchedPath: [
+    relationshipEntry.matchedPath[0],
+    relationshipEntry.matchedPath[1],
+    {
+      stepId: "occurrence:add-payment",
+      stepName: "add_payment_info",
+      eventId: event.id,
+      captureTime: event.captureTime,
+    },
+  ],
+});
+assert.deepEqual(containedOccurrenceReport.event.flowContext.linkEvidence, {
+  kind: "path",
+  label: "path Cart to Payment to add_payment_info",
+  relationshipIds: ["relationship:cart-payment"],
+}, "a contained Event retains the Page relationship path even though containment adds no relationship");
+const containedAtStartReport = reportFor({
+  ...baseEntry,
+  stepId: "occurrence:cart-click",
+  stepKind: "Event",
+  stepName: "button_click",
+  target: { id:"occurrence:cart-click", name:"button_click" },
+  matchedPath: [
+    {
+      stepId: "frame:cart",
+      stepName: "Cart",
+      eventId: "live-101",
+      captureTime: "2026-07-23T10:00:01.000Z",
+    },
+    {
+      stepId: "occurrence:cart-click",
+      stepName: "button_click",
+      eventId: event.id,
+      captureTime: event.captureTime,
+    },
+  ],
+});
+assert.deepEqual(containedAtStartReport.event.flowContext.linkEvidence, {
+  kind: "start",
+  label: "Started at Cart",
+  pageFrameId: "frame:cart",
+}, "start evidence remains anchored to the initial Page when a contained Event adds no relationship");
 assert.deepEqual(relationshipReport.event.flowContext.effectiveTarget, {
   id: "frame:payment",
   name: "Payment",

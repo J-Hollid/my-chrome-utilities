@@ -2,22 +2,23 @@ function representedValue(value) {
     return JSON.stringify(value) ?? String(value);
 }
 function linkEvidence(entry) {
-    if (!entry.relationshipId) {
-        return {
-            kind: "start",
-            label: `Started at ${entry.stepName}`,
-            pageFrameId: entry.stepId,
-        };
-    }
     const relationshipIds = [...new Set([
             ...entry.matchedPath.flatMap(({ relationshipId }) => (relationshipId ? [relationshipId] : [])),
             entry.relationshipId,
         ].filter((relationshipId) => Boolean(relationshipId)))];
-    const pathLabel = entry.matchedPath.map(({ stepName }) => stepName).join(" to ") || entry.stepName;
+    if (relationshipIds.length) {
+        const pathLabel = entry.matchedPath.map(({ stepName }) => stepName).join(" to ") || entry.stepName;
+        return {
+            kind: "path",
+            label: `path ${pathLabel}`,
+            relationshipIds,
+        };
+    }
+    const start = entry.matchedPath[0] ?? entry;
     return {
-        kind: "path",
-        label: `path ${pathLabel}`,
-        relationshipIds,
+        kind: "start",
+        label: `Started at ${start.stepName}`,
+        pageFrameId: start.stepId,
     };
 }
 export function createManualFlowDefectEvent(entry, event) {
