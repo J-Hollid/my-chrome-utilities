@@ -298,7 +298,7 @@ Feature: Data layer canonical Shared Profile schema authoring
     When a section choice is activated from the menu
     Then one focused property editor identifies /lineOfCustomer, inherited value and source, local value, effective result, validation state, and conflicts
     And only the selected section's controls are mounted while the property table remains compact
-    And switching sections retains staged values without expanding another property editor
+    And switching sections retains staged values without opening another property editor
     And closing with Escape or Cancel discards staged changes and restores focus to the originating property action
     And the menu and focused editor remain identical while parenting changes only action availability, provenance values, and the return destination
 

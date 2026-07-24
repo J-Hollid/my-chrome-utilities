@@ -1,10 +1,11 @@
-import {canonicalCommandOutcome,canonicalPropertyPath,type CanonicalCommand,type CanonicalCommandResult,type CanonicalPresenceMode,type CanonicalPropertyNode,type CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
+import {canonicalPropertyPath,type CanonicalCommand,type CanonicalCommandResult,type CanonicalPresenceMode,type CanonicalPropertyNode,type CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
 import {focusedPropertySectionLabels,type FocusedPropertySection} from "./data-layer-focused-schema-property-ui.js";
 import {renderCanonicalFocusedSection} from "./data-layer-canonical-schema-focused-sections.js";
 import {renderCanonicalFocusedMenu} from "./data-layer-canonical-schema-focused-menu.js";
 import {renderCanonicalFocusedEditor} from "./data-layer-canonical-schema-focused-editor.js";
 import {renderCanonicalSchemaEditor} from "./data-layer-canonical-schema-render.js";
 import {focusedPropertyPatch,focusedStagedChanges,focusedSourceState,type CanonicalFocusedPatch} from "./data-layer-canonical-schema-focused-drafts.js";
+import {dispatchFocusedCanonicalCommand} from "./data-layer-canonical-schema-focused-command.js";
 
 export interface CanonicalSchemaEditorOptions {
   host:HTMLElement;surface:"Builder"|"Side panel"|"Flow workspace";load:()=>CanonicalSchemaDocument;
@@ -33,13 +34,7 @@ export function mountCanonicalSchemaEditor(options:CanonicalSchemaEditorOptions)
   const current=():CanonicalSchemaDocument=>options.load();
   const selectedNode=(document:CanonicalSchemaDocument):CanonicalPropertyNode|undefined=>activePropertyId?document.nodes[activePropertyId]:document.selectedPropertyId?document.nodes[document.selectedPropertyId]:undefined;
   const ensureWorking=(node:CanonicalPropertyNode):void=>{if(!working||working.id!==node.id)working=clone(node);};
-  const command=(next:CanonicalCommand):CanonicalCommandResult=>{
-    const prior=current(),result=options.dispatch(next);
-    if(result.status==="conflict")feedback=result.message;
-    else if(result.status==="applied"||result.status==="rebased")feedback=canonicalCommandOutcome(next,result,prior);
-    if((canonicalDispatchRequiresLocalRender(result,options.renderAfterDispatch)||next.kind==="add"||next.kind==="select")&&options.host.isConnected)render();
-    return result;
-  };
+  const command=(next:CanonicalCommand):CanonicalCommandResult=>dispatchFocusedCanonicalCommand(next,{current,dispatch:options.dispatch,renderAfterDispatch:options.renderAfterDispatch,host:options.host,setFeedback:(message)=>{feedback=message;},render});
   const patchFor=(node:CanonicalPropertyNode,original:CanonicalPropertyNode):CanonicalFocusedPatch=>focusedPropertyPatch(node,original,removedRuleIds);
 
   const closeFocused=():void=>{
