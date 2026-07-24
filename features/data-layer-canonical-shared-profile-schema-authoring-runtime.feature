@@ -115,7 +115,7 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
     When actual controls stage article_name presence and article_type example while switching focused sections
     Then both rendered rows retain their edits and remain simultaneously visible
     When the installed property menu opens article_name's focused section
-    Then complex condition and rule builders render beneath that row without unmounting the other rows
+    Then focused condition and rule builders replace that selected section without unmounting the other compact rows
     And the staged edit remains visible across section changes and updates documentation after one save
 
   # Data layer canonical Shared Profile schema authoring runtime 012
@@ -242,7 +242,7 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
     Then all property rows remain compact and the focused property menu contains the same complex operations
     And reopening the side panel retains its compact renderer, selected property, and panel scroll ownership
     When actual side-panel controls change metadata/category documentation
-    And actual standalone row-detail controls change metadata/category conditional presence
+    And actual standalone focused-section controls change metadata/category conditional presence
     Then installed subscription evidence is
       | projection          | rendered facet        | opaque Draft token |
       | standalone table    | changed documentation | article-9          |
