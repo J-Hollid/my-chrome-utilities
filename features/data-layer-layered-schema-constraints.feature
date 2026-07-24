@@ -12,9 +12,9 @@ Feature: Data layer layered schema constraints
   # Data layer layered schema constraints 001
   Scenario Outline: Data layer layered schema constraints 001
     Given the operator opens the schema contribution for <contributor>
-    Then the same compact composed-property rows and focused property editor are available
+    Then the same canonical composed-property table and expandable row editors are available
     And root, child, sibling, rename, move, duplicate, and delete actions are available
-    And one property context menu exposes type, presence, condition, allowed-value, rule, documentation, example, and impact-review sections
+    And type, presence, condition, allowed-value, rule, documentation, example, and impact-review controls are available
     And inherited, local, effective, superseded, and conflicting definitions are distinguished
     And saving issues property-scoped commands against the contributor base revision
     And only the displayed contributor name, scope, applicability, and provenance differ
@@ -283,9 +283,9 @@ Feature: Data layer layered schema constraints
     When the operator opens Cart at a viewport width of 360 pixels
     Then one vertical scroll owner presents every effective property as a compact table row
     And each row exposes property, effective definition, source, local state, validation state, and actions without horizontal page scrolling
-    When the operator opens funnel_step's property menu and selects Definition
-    Then its type, presence, expected or allowed values, conditions, rules, documentation, example, provenance, Override here, and Reset to parents controls appear in the focused property section
-    And closing the focused editor restores focus to funnel_step without hiding the other property rows
+    When the operator expands the funnel_step row
+    Then its type, presence, expected or allowed values, conditions, rules, documentation, example, provenance, Override here, and Reset to parents controls appear as a stacked row detail
+    And closing the row restores focus to funnel_step without hiding the other property rows
 
   # Data layer layered schema constraints 020
   Scenario Outline: Data layer layered schema constraints 020

@@ -9,9 +9,9 @@ Feature: Data layer layered schema constraints runtime
   # Data layer layered schema constraints runtime 001
   Scenario Outline: Data layer layered schema constraints runtime 001
     Given actual controls open the schema contribution for <contributor>
-    Then the installed editor renders the same compact composed-property rows and focused property editor
+    Then the installed editor renders the same canonical composed-property table and expandable row editors
     And installed root, child, sibling, rename, move, duplicate, and delete actions are operable
-    And one installed property context menu exposes those focused sections without embedded row forms
+    And production type, presence, condition, allowed-value, rule, documentation, example, and impact-review controls are operable
     And rendered inherited, local, effective, superseded, and conflicting definitions are distinguished
     And saving sends property-scoped commands with the displayed contributor base revision
     And only rendered contributor name, scope, applicability, and provenance differ
@@ -283,9 +283,9 @@ Feature: Data layer layered schema constraints runtime
     When the installed extension opens Cart at 360 pixels
     Then one production vertical scroll owner renders every effective property as a compact table row
     And each row exposes property, effective definition, source, local state, validation state, and actions without horizontal page scrolling
-    When actual controls open funnel_step's property menu and select Definition
-    Then type, presence, expected or allowed values, conditions, rules, documentation, example, provenance, Override here, and Reset to parents render in the focused property section
-    And closing the focused editor returns focus to funnel_step while the other production rows remain mounted
+    When actual controls expand the funnel_step row
+    Then type, presence, expected or allowed values, conditions, rules, documentation, example, provenance, Override here, and Reset to parents render as stacked row detail
+    And closing the row returns focus to funnel_step while the other production rows remain mounted
 
   # Data layer layered schema constraints runtime 020
   Scenario Outline: Data layer layered schema constraints runtime 020
@@ -315,7 +315,7 @@ Feature: Data layer layered schema constraints runtime
     And no empty local-only canonical navigator or eagerly expanded per-property facet table is visible
     And an Add local property action is operable without materializing inherited definitions
     And rendered text and controls contain none of Effective documentation, Compiled effective schema and documentation, Target Event, Activation, Priority, Applicability, Test observation, Manual Flow / Page / Event, Validation payload, or developer export
-    When actual controls open only /oForm/formStepName's focused property editor and save payment-review as its local expected value
+    When actual controls expand only /oForm/formStepName and save payment-review as its local expected value
     Then one durable property-scoped command adds only that sparse facet to the selected Page-frame record
     And /oForm/formType stays collapsed while hashes for the reusable Payment Page, a sibling Payment frame, unrelated contributors, and Published revision remain unchanged
     And the installed derived JSON example changes only /oForm/formStepName to payment-review
