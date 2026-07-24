@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=c64905cee1a79f83511884abc72030226daa138a3b56cc3ed4f8e27ed3c7507e
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-24T11:18:44.299292822Z","feature_name":"Data layer layered schema constraints runtime","feature_path":"features/data-layer-layered-schema-constraints-runtime.feature","background_hash":"e3abf09522d1a7021ef5c4fddde53d634dd57d90657c227f341935b5a82edc94","implementation_hash":"sha256:bbf092d90a06dd375cc859e2a634860ead1fe0ba720bf73722ef4f8c646cf2f6","scenarios":[{"index":0,"name":"Data layer layered schema constraints runtime 001","scenario_hash":"841b58bac0a850830dd983e58475124102f2e9e7df6f82b643fd77f719b16764","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-24T11:18:44.299292822Z"},{"index":4,"name":"Data layer layered schema constraints runtime 005","scenario_hash":"e6f9b12fb82ce881ea1a801d881cef93539989a8ae6fcdc441241974c826ece5","mutation_count":32,"result":{"Total":32,"Killed":32,"Survived":0,"Errors":0},"tested_at":"2026-07-24T11:18:44.299292822Z"},{"index":19,"name":"Data layer layered schema constraints runtime 020","scenario_hash":"1d4735c775a66aaaeb64d8d2d882d91c5f770db945eceec40651d722079e715e","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-07-24T11:18:44.299292822Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer layered schema constraints runtime
 
   Background:

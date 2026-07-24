@@ -376,9 +376,10 @@ export function installFlowGraphBuilder(options) {
             const frame = graph.pageFrames.find(({ id }) => id === selected.id);
             if (!frame)
                 return;
-            const actions = document.createElement("section");
+            const actions = document.createElement("section"), openSchema = button("Open schema contribution", () => options.openOccurrenceSchema?.(frame.id, undefined, openSchema));
+            openSchema.dataset.flowSchemaContribution = "true";
             actions.setAttribute("aria-label", "Selected Page instance inline actions");
-            actions.append(button("Move", () => document.querySelector(`[data-page-frame-id="${CSS.escape(frame.id)}"]`)?.focus()), button("Connect", () => document.querySelector(`[data-output-port-for="${CSS.escape(frame.id)}"]`)?.focus()), button("Open schema contribution", () => options.openOccurrenceSchema?.(frame.id)), button("Remove", () => persist(removeFlowPageFrame(current().state, flow.id, frame.id))));
+            actions.append(button("Move", () => document.querySelector(`[data-page-frame-id="${CSS.escape(frame.id)}"]`)?.focus()), button("Connect", () => document.querySelector(`[data-output-port-for="${CSS.escape(frame.id)}"]`)?.focus()), openSchema, button("Remove", () => persist(removeFlowPageFrame(current().state, flow.id, frame.id))));
             host.append(actions);
             return;
         }

@@ -7,36 +7,6 @@ export interface CanonicalSchemaEditorOptions {
   dispatch:(command:CanonicalCommand)=>CanonicalCommandResult;id:(kind:string)=>string;onUndo?:()=>void;onRedo?:()=>void;initialFeedback?:string;
   renderAfterDispatch?:boolean;
 }
-/**
- * The complete editor contract is intentionally surface-independent.  The
- * surrounding workspace may add contextual identity and secondary actions,
- * but every canonical editor mounts this same inventory.
- */
-export const CANONICAL_SCHEMA_EDITOR_CONTROL_INVENTORY = Object.freeze([
-  "property-search",
-  "tree-view",
-  "table-view",
-  "root-property",
-  "undo",
-  "redo",
-  "property-structure-actions",
-  "property-type",
-  "presence",
-  "conditional-presence",
-  "allowed-values",
-  "structured-rules",
-  "documentation",
-  "examples",
-  "advanced-json",
-] as const);
-
-export function canonicalSchemaEditorControlInventory():string[]{
-  return [...CANONICAL_SCHEMA_EDITOR_CONTROL_INVENTORY];
-}
-
-export function canonicalSchemaEditorHasParity(left:readonly string[],right:readonly string[]):boolean{
-  return left.length===right.length&&left.every((control,index)=>control===right[index]);
-}
 const types:CanonicalPropertyType[]=["string","number","integer","boolean","object","array","null"];
 const provenanceText=(node:CanonicalPropertyNode):string=>node.provenance.map(({source,contributorName,scope,state})=>contributorName?`${scope} ${contributorName} ${state}`:source).join(" → ");
 const inheritsFromParent=(node:CanonicalPropertyNode):boolean=>node.provenance.some(({state})=>state==="inherited"||state==="shadowed");
@@ -53,7 +23,7 @@ export function mountCanonicalSchemaEditor(options:CanonicalSchemaEditorOptions)
   const propertyCommand=(document:CanonicalSchemaDocument,kind:"rename"|"delete"|"duplicate")=>{const propertyId=document.selectedPropertyId;if(!propertyId)return;if(kind==="rename"){const name=options.host.querySelector<HTMLInputElement>('[name="propertyName"]')?.value.trim();if(name)send({kind,baseRevision:document.revision,propertyId,name});}else if(kind==="duplicate")send({kind,baseRevision:document.revision,propertyId,id:options.id});else send({kind,baseRevision:document.revision,propertyId});};
   const renderPredicate=(host:HTMLElement,document:CanonicalSchemaDocument,predicate:CanonicalPredicate|undefined)=>{const fieldset=dom.createElement("fieldset"),legend=dom.createElement("legend"),group=select("predicateGroup",["all","any","not"],predicate?.kind!=="predicate"?predicate?.kind??"all":"all"),property=select("predicateProperty",Object.keys(document.nodes),predicate?.kind==="predicate"?predicate.propertyId:""),operator=select("predicateOperator",["Equals","Does not equal","Exists","Does not exist","Starts with","Contains","Matches pattern","Greater than","At least","Less than","At most"],predicate?.kind==="predicate"?predicate.operator:"Equals"),value=input("predicateValue",predicate?.kind==="predicate"?String(predicate.value??""):"");legend.textContent="Nested All / Any / Not predicate builder";for(const option of Array.from(property.options))option.textContent=document.nodes[option.value]?.name??option.value;property.prepend(new Option("Choose property",""));const summary=dom.createElement("p"),testValue=dom.createElement("textarea"),test=dom.createElement("button"),result=dom.createElement("output");summary.textContent=predicate?plainPredicate(predicate,document):"All group · add a property predicate";testValue.setAttribute("aria-label","Predicate test observation");testValue.value="{}";test.type="button";test.textContent="Test matching and non-matching observations";test.addEventListener("click",()=>{if(!predicate)return;try{const evidence=evaluateCanonicalPredicate(predicate,document,JSON.parse(testValue.value));result.textContent=`${evidence.matched?"Matched":"Did not match"} · ${evidence.branches.map((branch)=>`${branch.matched?"satisfied":"failed"}: ${branch.label}`).join(" · ")}`;}catch(error){result.textContent=error instanceof Error?error.message:String(error);}});fieldset.append(legend,labeled("Group",group),labeled("Property",property),labeled("Typed operator",operator),labeled("Typed value",value),summary,testValue,test,result);host.append(fieldset);};
   function render():void{
-    const document=options.load();options.host.replaceChildren();options.host.setAttribute("aria-label",`${options.surface} canonical schema editor`);options.host.dataset.canonicalSchemaId=document.id;options.host.dataset.canonicalRevision=String(document.revision);options.host.dataset.canonicalEditorMode="shared-complete";options.host.dataset.canonicalEditorControlInventory=CANONICAL_SCHEMA_EDITOR_CONTROL_INVENTORY.join("|");
+    const document=options.load();options.host.replaceChildren();options.host.setAttribute("aria-label",`${options.surface} canonical schema editor`);options.host.dataset.canonicalSchemaId=document.id;options.host.dataset.canonicalRevision=String(document.revision);options.host.dataset.canonicalEditorMode="shared-complete";
     const header=dom.createElement("header"),title=dom.createElement("h2"),state=dom.createElement("p"),undo=dom.createElement("button"),redo=dom.createElement("button"),baseRevision=input("commandBaseRevision",String(document.revision),"number"),search=dom.createElement("input"),filter=select("propertyFilter",["All properties","With conditions","With documentation","With issues"],"All properties"),views=dom.createElement("div"),treeView=dom.createElement("button"),tableView=dom.createElement("button"),navigator=dom.createElement("section"),results=dom.createElement("section"),editor=dom.createElement("section"),preview=dom.createElement("section"),status=dom.createElement("output"),advanced=dom.createElement("details"),advancedSummary=dom.createElement("summary"),advancedJson=dom.createElement("textarea");
     title.textContent=document.contributorName;state.setAttribute("aria-label","Canonical Draft status");state.textContent=`Draft · ${document.source?`source ${document.source.identity} revision ${document.source.revision}`:"no source revision"} · lineage ${document.source?.provenance??"project-created"} · Saved · Draft token ${document.revision}`;undo.type=redo.type="button";undo.textContent="Undo";redo.textContent="Redo";undo.disabled=!options.onUndo;redo.disabled=!options.onRedo;undo.addEventListener("click",()=>options.onUndo?.());redo.addEventListener("click",()=>options.onRedo?.());baseRevision.min="0";baseRevision.setAttribute("aria-label","Command base revision");header.append(title,state,undo,redo,labeled("Command base revision",baseRevision));
     const refreshResults=()=>{results.replaceChildren();const rows=canonicalTableRows(document).filter(({node})=>node.name.toLowerCase().includes(query.toLowerCase()));if(document.view==="tree"){const tree=dom.createElement("ul");tree.setAttribute("aria-label","Canonical property tree");for(const row of rows){const item=dom.createElement("li"),choose=dom.createElement("button");item.style.paddingInlineStart=`${row.depth*1.25}rem`;choose.type="button";choose.textContent=`${row.node.name} · ${row.path} · ${row.node.type} · ${provenanceText(row.node)}`;choose.dataset.propertyId=row.id;choose.setAttribute("aria-current",String(row.selected));choose.addEventListener("click",()=>send({kind:"select",baseRevision:document.revision,propertyId:row.id}));item.append(choose);tree.append(item);}results.append(tree);}else{
