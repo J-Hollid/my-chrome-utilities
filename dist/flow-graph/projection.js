@@ -1,14 +1,6 @@
 import { FLOW_GRAPH_GEOMETRY, clone, flowPageGroupLaneIds, inferFlowRelationshipKind, legacyBindingOccurrence, relationshipEndpoint, relationshipPorts, storedGraph } from "../data-layer-flow-graph.js";
-export function flowRelationshipText(graph, relationship) { const source = graph.connectionEndpoints.find(({ id, kind }) => id === relationship.sourceEndpoint.id && kind === relationship.sourceEndpoint.kind), target = graph.connectionEndpoints.find(({ id, kind }) => id === relationship.targetEndpoint.id && kind === relationship.targetEndpoint.kind); return [source?.name ?? "Missing endpoint", relationship.kind, target?.name ?? "Missing endpoint", relationship.group, relationship.label, relationship.documentationCondition, relationship.expectation].filter((value) => value !== undefined && value !== "").join(" · "); }
-export function inspectFlowGraph(graph, catalog) { const diagnostics = [], endpointKeys = new Set(graph.connectionEndpoints.map(({ kind, id }) => `${kind}:${id}`)); for (const node of graph.nodes) {
-    if (!catalog.events.some(({ id }) => id === node.eventId))
-        diagnostics.push({ kind: "missing-event", message: `${node.name} has no resolved Event`, nodeId: node.id });
-    if (!catalog.pages.some(({ id }) => id === node.pageId))
-        diagnostics.push({ kind: "missing-page", message: `${node.name} has no resolved Page`, nodeId: node.id });
-} for (const relationship of graph.relationships)
-    if (!endpointKeys.has(`${relationship.sourceEndpoint.kind}:${relationship.sourceEndpoint.id}`) || !endpointKeys.has(`${relationship.targetEndpoint.kind}:${relationship.targetEndpoint.id}`))
-        diagnostics.push({ kind: "dangling-relationship", message: `Relationship ${relationship.id} has a missing endpoint`, relationshipId: relationship.id }); return diagnostics; }
-export function flowOutline(graph) { return graph.nodes.map((node) => ({ nodeId: node.id, name: node.name, role: node.role, obligation: node.obligation, expectedMinimum: node.expectedMinimum, ...(node.expectedMaximum !== undefined ? { expectedMaximum: node.expectedMaximum } : {}), relationshipIds: graph.relationships.filter(({ sourceNodeId }) => sourceNodeId === node.id).map(({ id }) => id) })); }
+export { flowOutline, flowRelationshipText, inspectFlowGraph } from "./projection-inspection.js";
+import { inspectFlowGraph } from "./projection-inspection.js";
 export function projectFlowGraph(project, flowId) {
     const flow = project.collections.flows.find(({ id }) => id === flowId);
     if (!flow)

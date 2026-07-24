@@ -1,24 +1,12 @@
-import {createSpecificationProject,type ProjectState} from "../data-layer-specification-project.js";
-import {PROJECT_LIBRARY_STORAGE_KEY,restoreProjectLibrary,serializeProjectLibrary,type ProjectLibrary,type ProjectLibraryRecord} from "../data-layer-project-library.js";
+import {PROJECT_LIBRARY_STORAGE_KEY,restoreProjectLibrary,serializeProjectLibrary} from "../data-layer-project-library.js";
 import {CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY,restoreCanonicalProjectEnvelope,restoreCanonicalProjectState,serializeCanonicalProjectState} from "../data-layer-specification-repository.js";
 import {createPageProjectHistory,durableConflictSemanticField,durableDraftCommand,durablePatchField,durableProjectRouteForWorkspace,DurablePageHistoryConflict,LEGACY_PROJECT_KEYS,migrateLegacyProjectStorage,openIndexedDbProjectRepository,type DurableDraftCommand,type DurableDraftConflict,type DurableLoadedProject,type DurableProjectRepository,type DurableProjectRoute,type DurableSavedSchemaBatchResult} from "../data-layer-durable-project-repository.js";
 
 import type {DurableProjectRuntime,DurableRuntimeFailedSave,DurableRuntimeFailedSchemaSave,DurableProjectProjection} from "../data-layer-durable-project-runtime.js";
 import type {LegacyStorage,DurableSchemaBatch} from "../data-layer-durable-project-runtime.js";
-
-const same=(left:unknown,right:unknown)=>JSON.stringify(left)===JSON.stringify(right);
-const cleanState=(state:ProjectState):ProjectState=>({...structuredClone(state),history:{undo:[],redo:[]}});
-const historyLabel=(state:ProjectState):string|undefined=>state.history.undo.at(-1)?.label;
-const cleanRecord=(value:ProjectLibraryRecord):ProjectLibraryRecord=>({...structuredClone(value),state:cleanState(value.state)});
-const cleanLibrary=(value:ProjectLibrary):ProjectLibrary=>({...structuredClone(value),projects:Object.fromEntries(Object.entries(value.projects).map(([projectId,entry])=>[projectId,cleanRecord(entry)]))});
-const routeWithRetainedHydration=(previous:DurableProjectRoute|undefined,next:DurableProjectRoute):DurableProjectRoute=>previous&&previous.collectionKind===next.collectionKind&&previous.entityId===next.entityId?{...next,collectionKinds:[...new Set([...(previous.collectionKinds??[]),...(next.collectionKinds??[])])],includeFlowGraphs:Boolean(previous.includeFlowGraphs||next.includeFlowGraphs),includeFixtures:Boolean(previous.includeFixtures||next.includeFixtures),includeReleases:Boolean(previous.includeReleases||next.includeReleases)}:next;
-
-function placeholder(metadata:{projectId:string;name:string;site:string;owner:string;draftSequence:number;publishedRevision:number;lastSavedAt:string;navigation?:ProjectLibraryRecord["navigation"]}):ProjectLibraryRecord{
-  const state=createSpecificationProject({name:metadata.name,site:metadata.site,id:(kind)=>kind==="project"?metadata.projectId:`placeholder:${kind}:${metadata.projectId}`});
-  state.project.owner=metadata.owner;state.project.placeholder=true;
-  return{state:cleanState(state),revision:metadata.draftSequence??0,publishedRevision:metadata.publishedRevision,createdAt:metadata.lastSavedAt,lastModifiedAt:metadata.lastSavedAt,...(metadata.navigation?{navigation:structuredClone(metadata.navigation)}:{})};
-}
-function record(loaded:DurableLoadedProject):ProjectLibraryRecord{return{state:cleanState(loaded.state),revision:loaded.draftSequence,publishedRevision:loaded.publishedRevision,createdAt:loaded.lastSavedAt,lastModifiedAt:loaded.lastSavedAt,...(loaded.navigation?{navigation:structuredClone(loaded.navigation)}:{})};}
+import {cleanLibrary,cleanRecord,cleanState,historyLabel,placeholder,record,routeWithRetainedHydration,same} from "./runtime-helpers.js";
+import type {ProjectLibrary} from "../data-layer-project-library.js";
+import type {ProjectState} from "../data-layer-specification-project.js";
 
 export async function createDurableProjectRuntime(repository:DurableProjectRepository,legacy:LegacyStorage,startup:{projectId?:string;route?:DurableProjectRoute}={}):Promise<DurableProjectRuntime>{
   const migration=await migrateLegacyProjectStorage(repository,legacy);
@@ -56,4 +44,3 @@ export async function createDurableProjectRuntime(repository:DurableProjectRepos
   const settled=async(scope:"all"|"project"|"schema"="all")=>{await latest;await settleFeeds();if(scope!=="schema"&&failed)throw failed.error;if(scope!=="project"&&failedSchema)throw failedSchema.error;};
   return{repository,storage,ensureProject,ensureProjectRoute,refreshProject,settled,subscribe(listener){listeners.add(listener);return()=>listeners.delete(listener);},failedSave:()=>failed?structuredClone(failed):undefined,failedSchemaSave:()=>failedSchema?structuredClone(failedSchema):undefined,retryFailedSave,retryFailedSchemaSave,resolveFailedSave,exportUnsavedDraft,exportUnsavedSchemas,canUndo:projectId=>pageHistory(projectId).snapshot().undo.length>0,canRedo:projectId=>pageHistory(projectId).snapshot().redo.length>0,undo:projectId=>applyHistory(projectId,"undo"),redo:projectId=>applyHistory(projectId,"redo"),resolveMigration,migration};
 }
-

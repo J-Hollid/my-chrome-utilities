@@ -4,6 +4,7 @@ import type {ComposedSchemaRow,ComposedSchemaWorkspace} from "./data-layer-compo
 import type {FocusedPropertySection} from "./data-layer-focused-schema-property-ui.js";
 import {renderComposedFocusedCondition} from "./data-layer-composed-schema-workspace-focused-conditions.js";
 import {renderComposedFocusedRules} from "./data-layer-composed-schema-workspace-focused-rules.js";
+import type {FlowPageInstanceStructureKind} from "./flow-graph/page-instance-structure.js";
 
 export interface ComposedFocusedSectionContext {
   model:ComposedSchemaWorkspace;
@@ -15,6 +16,7 @@ export interface ComposedFocusedSectionContext {
   overriddenRuleIds:Set<string>;
   overrideRule:(index:number)=>void;
   render:()=>void;
+  onStructure?:(kind:FlowPageInstanceStructureKind,path:string,name?:string)=>void|undefined;
 }
 
 const labeled=(dom:Document,text:string,control:HTMLElement):HTMLLabelElement=>{const label=dom.createElement("label");label.append(text,control);return label;};
@@ -30,5 +32,12 @@ export function renderComposedFocusedSection(host:HTMLElement,context:ComposedFo
   if(context.activeSection==="rules")renderComposedFocusedRules(host,context);
   if(context.activeSection==="documentation"){const control=dom.createElement("textarea");control.name="documentation";control.value=draft.documentation;control.addEventListener("input",()=>{draft.documentation=control.value;});host.append(labeled(dom,"Documentation",control));}
   if(context.activeSection==="example"){const method=dom.createElement("select"),control=dom.createElement("input");method.name="exampleMethod";method.append(new Option("Blank","blank"),new Option("Allowed value","allowed-value"),new Option("Custom typed value","custom"));method.value=draft.exampleMethod;control.name="exampleValue";control.value=valueText(draft.exampleValue);method.addEventListener("change",()=>{draft.exampleMethod=method.value as ComposedFacetDraft["exampleMethod"];if(method.value==="blank")draft.exampleValue=undefined;context.render();});control.addEventListener("input",()=>{try{draft.exampleValue=typedComposedValue(draft.type??context.row.effective.type,control.value);draft.exampleMethod="custom";}catch{draft.exampleValue=control.value;}});host.append(labeled(dom,"Example method",method),labeled(dom,"Example value",control));}
-  if(context.activeSection==="structure")host.append(Object.assign(dom.createElement("p"),{textContent:`Stable identity ${context.row.path}`}));
+  if(context.activeSection==="structure"){
+    host.append(Object.assign(dom.createElement("p"),{textContent:`Stable identity ${context.row.effective.definitionId??context.row.path}`}));
+    if(context.onStructure){
+      const name=dom.createElement("input");name.name="structureName";name.value=context.row.path.split("/").at(-1)??"property";name.setAttribute("aria-label","Structure property name");
+      const invoke=(kind:FlowPageInstanceStructureKind)=>context.onStructure?.(kind,context.row.path,name.value);
+      host.append(labeled(dom,"Property name",name),button(dom,"Add child",()=>invoke("add-child")),button(dom,"Add sibling",()=>invoke("add-sibling")),button(dom,"Rename",()=>invoke("rename")),button(dom,"Move earlier",()=>invoke("move-earlier")),button(dom,"Move later",()=>invoke("move-later")),button(dom,"Move to root",()=>invoke("move-to-root")),button(dom,"Duplicate",()=>invoke("duplicate")),button(dom,"Delete property",()=>invoke("delete")));
+    }
+  }
 }

@@ -1,22 +1,8 @@
 import { addCanonicalProperty, createCanonicalSchema } from "../data-layer-canonical-schema.js";
-const clone = (value) => structuredClone(value);
+import { clone, collectStructured, definitionAtPath, explicitValues, semanticallyPopulated } from "./migration-helpers.js";
 const emptyDocumentation = () => ({ displayText: "", description: "", comments: "", example: { method: "blank" } });
 const supported = new Set(["string", "number", "integer", "boolean", "null", "object", "array"]);
 const typeOf = (value) => value === null ? "null" : Array.isArray(value) ? "array" : typeof value === "number" ? "number" : typeof value === "boolean" ? "boolean" : typeof value === "object" ? "object" : "string";
-function definitionAtPath(definitions, path, definition, provenance) { const values = definitions.get(path) ?? []; values.push({ definition, provenance }); definitions.set(path, values); }
-function collectStructured(definitions, document, source, parent = "") { const properties = document.properties, required = new Set(document.required ?? []); for (const [name, definition] of Object.entries(properties ?? {})) {
-    const path = `${parent}/${name}`, normalized = required.has(name) ? { ...definition, required: true } : definition;
-    definitionAtPath(definitions, path, normalized, { source });
-    if (definition.type === "object" || definition.properties)
-        collectStructured(definitions, definition, source, path);
-} }
-const semanticallyPopulated = (value) => { if (value === undefined || value === null)
-    return false; if (Array.isArray(value))
-    return value.some(semanticallyPopulated); if (typeof value === "string")
-    return value.trim().length > 0; if (typeof value !== "object")
-    return true; return Object.entries(value).some(([key, entry]) => { if (key === "type" && entry === "object")
-    return false; if (key === "properties" && entry && typeof entry === "object" && !Array.isArray(entry))
-    return Object.keys(entry).length > 0; return semanticallyPopulated(entry); }); };
 export function hasLegacySchemaRepresentation(profile) { return semanticallyPopulated(profile.requirements) || semanticallyPopulated(profile.structuredSchema) || semanticallyPopulated(profile.structuredDraft?.document) || semanticallyPopulated(profile.schemaConstraints); }
 export function migrateLegacyProfile(profile, options) {
     const definitions = new Map();
@@ -33,16 +19,7 @@ export function migrateLegacyProfile(profile, options) {
     let document = createCanonicalSchema({ id: options.id("canonical-schema"), contributorId: profile.id, contributorName: profile.name }), revision = 0;
     const byPath = {}, conflicts = [];
     const same = (left, right) => JSON.stringify(left) === JSON.stringify(right), shown = (value) => { const serialized = JSON.stringify(value); return serialized === undefined ? String(value) : serialized; };
-    const explicit = (defs, read) => { const values = []; for (const { definition, provenance } of defs) {
-        const value = read(definition);
-        if (value === undefined)
-            continue;
-        const prior = values.find((candidate) => same(candidate.value, value)), source = provenance.source;
-        if (prior)
-            prior.sources.push(source);
-        else
-            values.push({ value: clone(value), sources: [source] });
-    } return values; };
+    const explicit = (defs, read) => explicitValues(defs, read);
     const addConflict = (path, propertyId, facet, values) => { if (values.length < 2)
         return; conflicts.push({ id: `migration-conflict:${encodeURIComponent(path)}:${facet.replaceAll(" ", "-")}`, path, facet, propertyId, message: `Conflicting ${facet} facet from ${values.flatMap(({ sources }) => sources).join(", ")}`, choices: values.map(({ value, sources }, index) => ({ id: String(index), label: `Use ${shown(value)} from ${sources.join(" + ")}`, value: clone(value) })) }); };
     const canonicalRules = (definition, path, source) => { const given = (definition.rules ?? definition["x-rules"]) ?? [], patterns = [...definition.patterns ?? [], ...(typeof definition.pattern === "string" ? [definition.pattern] : [])], facetId = (kind, index) => `json-facet:${profile.id}:${encodeURIComponent(path)}:${source}:${kind}${index === undefined ? "" : `:${index}`}`, range = definition.minimum !== undefined || definition.maximum !== undefined ? [{ id: facetId("range"), kind: "range", severity: "error", message: "Outside migrated range", ...(typeof definition.minimum === "number" ? { minimum: definition.minimum } : {}), ...(typeof definition.maximum === "number" ? { maximum: definition.maximum } : {}) }] : [], cardinality = definition.minItems !== undefined || definition.maxItems !== undefined ? [{ id: facetId("cardinality"), kind: "cardinality", severity: "error", message: "Outside migrated cardinality", ...(typeof definition.minItems === "number" ? { minItems: definition.minItems } : {}), ...(typeof definition.maxItems === "number" ? { maxItems: definition.maxItems } : {}) }] : []; return [...given.map(clone), ...patterns.map((pattern, index) => ({ id: facetId("pattern", index), kind: "pattern", pattern, severity: "error", message: "Pattern mismatch" })), ...range, ...cardinality]; };

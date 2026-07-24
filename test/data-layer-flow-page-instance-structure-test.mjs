@@ -1,0 +1,36 @@
+import assert from "node:assert/strict";
+import {addFlowPageFrame,documentaryFlowGraph,setFlowPageGroupLanes} from "../dist/data-layer-flow-graph.js";
+import {applyFlowPageInstanceStructure} from "../dist/flow-graph/page-instance-structure.js";
+import {addProjectEntity,createSpecificationProject} from "../dist/data-layer-specification-project.js";
+
+let sequence=0;
+const id=(kind)=>`${kind}:structure-${++sequence}`;
+let state=createSpecificationProject({name:"Structure shop",site:"structure.example",id});
+const add=(kind,entity)=>{state=addProjectEntity(state,kind,entity,id);return state.project.collections[kind].at(-1);};
+const profile=add("profiles",{name:"Sitewide",schemaConstraints:[{path:"/shippingRoot",type:"object"}]});
+const group=add("pageGroups",{name:"Checkout",profileIds:[profile.id]});
+const page=add("pages",{name:"Shipping",pageGroupIds:[group.id],profileIds:[profile.id]});
+const flow=add("flows",{name:"Checkout flow",steps:[]});
+state=setFlowPageGroupLanes(state,flow.id,[group.id]);
+state=addFlowPageFrame(state,flow.id,{pageId:page.id,pageGroupId:group.id,x:30,y:40},id);
+const frame=documentaryFlowGraph(state.project,flow.id).pageFrames[0];
+
+const apply=(command)=>{state=applyFlowPageInstanceStructure(state,flow.id,frame.id,command,id);};
+apply({kind:"add-child",path:"/shippingRoot",name:"first"});
+apply({kind:"add-sibling",path:"/shippingRoot/first",name:"second"});
+let local=()=>documentaryFlowGraph(state.project,flow.id).pageFrames.find(({id:frameId})=>frameId===frame.id).localSchemaContributions;
+assert.deepEqual(local().map(({path})=>path),["/shippingRoot/first","/shippingRoot/second"],"structure additions persist as sparse Page-instance paths");
+apply({kind:"rename",path:"/shippingRoot/first",name:"renamed"});
+assert.ok(local().some(({path})=>path==="/shippingRoot/renamed"),"Rename updates the durable local path");
+apply({kind:"move-to-root",path:"/shippingRoot/renamed"});
+assert.ok(local().some(({path})=>path==="/renamed"),"Move to root clears the parent path");
+apply({kind:"duplicate",path:"/renamed",name:"copy"});
+assert.ok(local().some(({path})=>path==="/copy"),"Duplicate creates a distinct local property");
+apply({kind:"move-later",path:"/copy"});
+apply({kind:"move-earlier",path:"/copy"});
+assert.ok(local().some(({path})=>path==="/copy"),"Move controls retain the property while changing sibling order");
+apply({kind:"delete",path:"/copy"});
+assert.equal(local().some(({path})=>path==="/copy"),false,"Delete removes only the selected local property");
+assert.equal(state.project.collections.pages.find(({id})=>id===page.id).localSchemaContributions,undefined,"Page-instance structure never mutates its owning Page");
+
+console.log("Flow Page-instance structure tests passed");

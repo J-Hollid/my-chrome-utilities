@@ -30,7 +30,7 @@ export function mountComposedSchemaWorkspace(options) {
     addControls.append(choice, add);
     rows.setAttribute("role", "table");
     rows.setAttribute("aria-label", `${options.model.heading} rows`);
-    const rerender = () => renderComposedRows(rows, { dom: document, model: options.model, effectiveText: options.effectiveText, onRepair: options.onRepair, rowPathDataset: options.rowPathDataset, activePath, activeSection, draft, removed, removedRuleIds, overriddenRuleIds, overrideRule, pendingAction, beginAction, cancelAction, confirmAction, open, close, save, render: rerender, setActiveSection: (value) => { activeSection = value; } });
+    const rerender = () => renderComposedRows(rows, { dom: document, model: options.model, effectiveText: options.effectiveText, ...(options.onRepair ? { onRepair: options.onRepair } : {}), ...(options.onStructure ? { onStructure: options.onStructure } : {}), ...(options.rowPathDataset ? { rowPathDataset: options.rowPathDataset } : {}), activePath, activeSection, draft, removed, removedRuleIds, overriddenRuleIds, overrideRule, pendingAction, beginAction, cancelAction, confirmAction, open, close, save, render: rerender, setActiveSection: (value) => { activeSection = value; } });
     const overrideRule = (index) => { if (!draft)
         return; const id = `rule:${crypto.randomUUID()}`, next = overrideComposedRule(draft, index, id); if (next === draft)
         return; draft = next; overriddenRuleIds.add(id); rerender(); };

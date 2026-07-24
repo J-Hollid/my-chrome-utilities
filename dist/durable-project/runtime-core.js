@@ -1,20 +1,7 @@
-import { createSpecificationProject } from "../data-layer-specification-project.js";
 import { PROJECT_LIBRARY_STORAGE_KEY, restoreProjectLibrary, serializeProjectLibrary } from "../data-layer-project-library.js";
 import { CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, serializeCanonicalProjectState } from "../data-layer-specification-repository.js";
 import { createPageProjectHistory, durableConflictSemanticField, durableDraftCommand, durablePatchField, durableProjectRouteForWorkspace, DurablePageHistoryConflict, LEGACY_PROJECT_KEYS, migrateLegacyProjectStorage } from "../data-layer-durable-project-repository.js";
-const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
-const cleanState = (state) => ({ ...structuredClone(state), history: { undo: [], redo: [] } });
-const historyLabel = (state) => state.history.undo.at(-1)?.label;
-const cleanRecord = (value) => ({ ...structuredClone(value), state: cleanState(value.state) });
-const cleanLibrary = (value) => ({ ...structuredClone(value), projects: Object.fromEntries(Object.entries(value.projects).map(([projectId, entry]) => [projectId, cleanRecord(entry)])) });
-const routeWithRetainedHydration = (previous, next) => previous && previous.collectionKind === next.collectionKind && previous.entityId === next.entityId ? { ...next, collectionKinds: [...new Set([...(previous.collectionKinds ?? []), ...(next.collectionKinds ?? [])])], includeFlowGraphs: Boolean(previous.includeFlowGraphs || next.includeFlowGraphs), includeFixtures: Boolean(previous.includeFixtures || next.includeFixtures), includeReleases: Boolean(previous.includeReleases || next.includeReleases) } : next;
-function placeholder(metadata) {
-    const state = createSpecificationProject({ name: metadata.name, site: metadata.site, id: (kind) => kind === "project" ? metadata.projectId : `placeholder:${kind}:${metadata.projectId}` });
-    state.project.owner = metadata.owner;
-    state.project.placeholder = true;
-    return { state: cleanState(state), revision: metadata.draftSequence ?? 0, publishedRevision: metadata.publishedRevision, createdAt: metadata.lastSavedAt, lastModifiedAt: metadata.lastSavedAt, ...(metadata.navigation ? { navigation: structuredClone(metadata.navigation) } : {}) };
-}
-function record(loaded) { return { state: cleanState(loaded.state), revision: loaded.draftSequence, publishedRevision: loaded.publishedRevision, createdAt: loaded.lastSavedAt, lastModifiedAt: loaded.lastSavedAt, ...(loaded.navigation ? { navigation: structuredClone(loaded.navigation) } : {}) }; }
+import { cleanLibrary, cleanState, historyLabel, placeholder, record, routeWithRetainedHydration, same } from "./runtime-helpers.js";
 export async function createDurableProjectRuntime(repository, legacy, startup = {}) {
     const migration = await migrateLegacyProjectStorage(repository, legacy);
     const metadata = await repository.listProjectMetadata(), activeProjectId = await repository.activeProjectId(), loaded = new Map(), partialRoutes = new Map(), memory = new Map(), listeners = new Set(), schemaTokens = new Map(), projectInstalls = new Map(), locallySavingProjects = new Set(), feedInstalls = new Set(), observedProjectSequences = new Map(metadata.map(({ projectId, draftSequence }) => [projectId, draftSequence])), observedActiveTokens = new Set(), activeInstalls = new Map(), observedSchemaChanges = new Set(), pageHistories = new Map(), pendingCanonicalRevisions = new Map(), projects = Object.fromEntries(metadata.map((entry) => [entry.projectId, placeholder(entry)])), library = { format: "my-chrome-utilities.project-library", version: 1, ...(activeProjectId ? { activeProjectId } : {}), projects, singletonMigrated: true };

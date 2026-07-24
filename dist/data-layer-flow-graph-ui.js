@@ -1,14 +1,8 @@
 import { addFlowPageFrame, addFreePageFrame, addEventOccurrenceToPage, addGraphOccurrence, deriveFlowOccurrenceExample, deriveFlowPageFrameExample, documentaryFlowGraph, duplicateFlowPageFrame, flowOccurrenceExampleEditorRows, FLOW_GRAPH_GEOMETRY, flowRelationshipText, inspectOccurrencePageChange, migrateLegacyFlowContextBindings, migrateLegacyFlowRelationshipKinds, moveFlowPageFrame, moveFreePageFrame, moveGraphOccurrence, projectFlowGraph, reassignFlowOccurrencePage, reviewLegacyFlowContextMigration, removeFlowPageFrame, removeFlowRelationship, removeGraphOccurrence, reorderFlowPageGroupLane, saveGraphRelationship, setFlowOccurrenceExample, setFlowPageGroupLanes, } from "./data-layer-flow-graph.js";
 import { orderedPageGroupIds } from "./utilities/data-layer/page-group-membership.js";
 import { appendFlowPageFrameCardControls } from "./data-layer-flow-graph-ui-page-frame.js";
+import { button, elementByData, entityName, flowEdgeGeometry, flowPortPoint, nodeHeight, nodeWidth, ownsPointerDrag, q, restorePointerCancellationFocus, svg } from "./flow-graph/ui-primitives.js";
 export function contextSettingPageLabel(pageName) { return `${pageName} · Context-setting Page`; }
-const nodeWidth = FLOW_GRAPH_GEOMETRY.eventWidth, nodeHeight = FLOW_GRAPH_GEOMETRY.eventHeight;
-const q = (selector, root = document) => { const element = root.querySelector(selector); if (!element)
-    throw new Error(`Missing ${selector}`); return element; };
-const svg = (tag) => document.createElementNS("http://www.w3.org/2000/svg", tag);
-const button = (text, action) => { const control = document.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", action); return control; };
-const entityName = (entities, id, fallback = "Unknown") => entities.find((entity) => entity.id === id)?.name ?? fallback;
-const elementByData = (attribute, id) => Array.from(document.querySelectorAll(`[${attribute}]`)).find((element) => element.getAttribute(attribute) === id);
 function renderOccurrenceExampleControls(host, state, flowId, occurrenceId, persist, id) {
     host.setAttribute("aria-label", "Occurrence example controls");
     for (const row of flowOccurrenceExampleEditorRows(state.project, flowId, occurrenceId).filter(({ type }) => type !== "object" && type !== "array")) {
@@ -24,9 +18,7 @@ function renderOccurrenceExampleControls(host, state, flowId, occurrenceId, pers
         host.append(item);
     }
 }
-export const ownsPointerDrag = (activePointerId, eventPointerId) => activePointerId !== undefined && activePointerId === eventPointerId;
-export function restorePointerCancellationFocus(target, scheduleMicrotask = (callback) => queueMicrotask(callback), scheduleSettledTask = (callback) => setTimeout(callback, 0)) { const restore = () => { if (target.isConnected)
-    target.focus(); }; restore(); scheduleMicrotask(restore); scheduleSettledTask(restore); }
+export { ownsPointerDrag, restorePointerCancellationFocus, flowEdgeGeometry };
 export function flowViewAfterRelationshipDeletion(view, relationshipId) { if (view.selectedItem?.kind !== "relationship" || view.selectedItem.id !== relationshipId)
     return view; const { selectedItem, ...retained } = view; void selectedItem; return retained; }
 export function consumeRelationshipDeletionFocus(intent, relationshipRestored) { if (!intent)
@@ -34,11 +26,6 @@ export function consumeRelationshipDeletionFocus(intent, relationshipRestored) {
     return { target: "relationship" }; if (!intent.sourceFocused)
     return { target: "source", next: { ...intent, sourceFocused: true } }; return { next: intent }; }
 export function flowRelationshipDeletionAccessibleName(label, sourceName, targetName) { return `Delete relationship ${[label, `${sourceName} to ${targetName}`].filter(Boolean).join(", ")}`; }
-const flowPortPoint = (layout, size, port) => port === "left" ? { x: layout.x, y: layout.y + size.height / 2 } : port === "right" ? { x: layout.x + size.width, y: layout.y + size.height / 2 } : port === "top" ? { x: layout.x + size.width / 2, y: layout.y } : { x: layout.x + size.width / 2, y: layout.y + size.height };
-export function flowEdgeGeometry(source, target, sourceSize = { width: nodeWidth, height: nodeHeight }, targetSize = sourceSize, sourcePort = "right", targetPort = "left") {
-    const start = flowPortPoint(source, sourceSize, sourcePort), end = flowPortPoint(target, targetSize, targetPort), startX = start.x, startY = start.y, endX = end.x, endY = end.y, dx = endX - startX, dy = endY - startY, length = Math.hypot(dx, dy), unitX = length < 0.001 ? 1 : dx / length, unitY = length < 0.001 ? 0 : dy / length, baseX = endX - unitX * 12, baseY = endY - unitY * 12, normalX = -unitY * 7, normalY = unitX * 7;
-    return { startX, startY, endX, endY, arrow: `${baseX + normalX},${baseY + normalY} ${endX},${endY} ${baseX - normalX},${baseY - normalY}` };
-}
 export function installFlowGraphBuilder(options) {
     const inspector = q("#project-inspector"), advanced = q("#flow-step-editor"), inspectorContext = document.createElement("section");
     inspectorContext.id = "flow-inspector-context";
