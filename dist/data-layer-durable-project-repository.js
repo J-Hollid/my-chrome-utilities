@@ -340,7 +340,49 @@ export class DurableProjectRepository {
     async hashRecord(store, key) { const value = await this.backend.transaction([store], "readonly", transaction => transaction.get(store, key)); return checksum(JSON.stringify(value)); }
     async hashProject(projectId) { const loaded = await this.loadProject(projectId); return checksum(JSON.stringify(loaded)); }
     async storageDiagnostics(projectId, estimate, unsavedCommand) { const loaded = await this.loadProject(projectId), prefix = projectPrefix(projectId), sizes = await this.backend.transaction(["projectEntities", "flowGraphs", "fixtures", "releases", "projectRevisions", "migrationBackups"], "readonly", async (transaction) => { const selected = async (store) => (await transaction.getPrefix(store, prefix)).reduce((total, { value }) => total + bytes(value), 0); return { projectEntityBytes: await selected("projectEntities") + await selected("flowGraphs"), releaseBytes: await selected("releases") + await selected("projectRevisions"), fixtureBytes: await selected("fixtures"), migrationBackupBytes: (await transaction.getAll("migrationBackups")).reduce((total, { value }) => total + bytes(value), 0) }; }); return { lastSavedAt: loaded.lastSavedAt, publishedRevision: loaded.publishedRevision, ...(unsavedCommand ? { unsavedCommand } : {}), ...sizes, ...(estimate ? { browserEstimate: { ...estimate, label: "Browser storage estimate" } } : {}), explanation: "Unlimited storage reduces quota risk; it does not make a failed write successful or provide infinite disk." }; }
-    async migrationBackup() { return this.backend.transaction(["migrationBackups"], "readonly", async (transaction) => (await transaction.getAll("migrationBackups"))[0]?.value ?? { sources: [] }); }
+    async migrationBackup() { return this.backend.transaction(["migrationBackups"], "readonly", async (transaction) => (await transaction.get("migrationBackups", "legacy-v1")) ?? { sources: [] }); }
+    async repairOrphanFlowGraphs() {
+        const repairVersion = await this.backend.transaction(["settings"], "readonly", transaction => transaction.get("settings", "flowGraphOwnershipRepairVersion"));
+        if (repairVersion === 1)
+            return [];
+        const graphRecords = await this.backend.transaction(["flowGraphs"], "readonly", transaction => transaction.getAll("flowGraphs"));
+        const prepared = await Promise.all(graphRecords.map(async (record) => ({ ...record, sourceChecksum: await checksum(JSON.stringify(record.value)) })));
+        const receipts = await this.backend.transaction(["flowGraphs", "projectEntities", "projectMetadata", "migrationBackups", "migrationReceipts", "settings"], "readwrite", async (transaction) => {
+            const repaired = [], changedProjects = new Map();
+            for (const candidate of prepared) {
+                const graph = await transaction.get("flowGraphs", candidate.key), ownerKey = `${candidate.value.projectId}:flows:${candidate.value.flowId}`, owner = await transaction.get("projectEntities", ownerKey);
+                if (!graph || owner)
+                    continue;
+                if (!same(graph, candidate.value))
+                    throw new DOMException(`Flow graph ${candidate.key} changed during ownership repair.`, "AbortError");
+                const metadata = changedProjects.get(graph.projectId)?.metadata ?? await transaction.get("projectMetadata", graph.projectId);
+                if (!metadata)
+                    throw new DOMException(`Orphan Flow graph ${candidate.key} has no project metadata.`, "DataError");
+                const repairKey = `flow-graph-ownership:${graph.projectId}:${graph.flowId}`, deletedRecord = { store: "flowGraphs", key: candidate.key }, repairedAt = this.options.now(), draftToken = changedProjects.get(graph.projectId)?.draftToken ?? this.options.token(), receipt = { version: 1, projectId: graph.projectId, flowId: graph.flowId, sourceChecksum: candidate.sourceChecksum, deletedRecord, draftToken, verified: true, repairedAt }, backup = { version: 1, projectId: graph.projectId, flowId: graph.flowId, sourceChecksum: candidate.sourceChecksum, record: clone(graph), deletedRecord, createdAt: repairedAt };
+                await transaction.put("migrationBackups", repairKey, backup);
+                this.fail("Repair orphan Flow graph");
+                await transaction.delete("flowGraphs", candidate.key);
+                await transaction.put("migrationReceipts", repairKey, receipt);
+                if (!changedProjects.has(graph.projectId)) {
+                    const nextMetadata = { ...metadata, draftToken, draftSequence: (metadata.draftSequence ?? 0) + 1, lastSavedAt: repairedAt };
+                    await transaction.put("projectMetadata", graph.projectId, nextMetadata);
+                    changedProjects.set(graph.projectId, { metadata: nextMetadata, draftToken });
+                }
+                const verifiedBackup = await transaction.get("migrationBackups", repairKey), verifiedReceipt = await transaction.get("migrationReceipts", repairKey);
+                if (await transaction.get("flowGraphs", candidate.key) !== undefined || !same(verifiedBackup, backup) || !same(verifiedReceipt, receipt))
+                    throw new DOMException(`Flow graph repair verification failed for ${candidate.key}.`, "OperationError");
+                repaired.push(receipt);
+            }
+            for (const { key, value } of await transaction.getAll("flowGraphs"))
+                if (!await transaction.get("projectEntities", `${value.projectId}:flows:${value.flowId}`))
+                    throw new DOMException(`Flow graph ownership verification found ${key} without its Flow.`, "OperationError");
+            await transaction.put("settings", "flowGraphOwnershipRepairVersion", 1);
+            return repaired;
+        });
+        for (const receipt of receipts)
+            this.notify({ type: "durable-project-change", projectId: receipt.projectId, draftToken: receipt.draftToken, commandId: `repair:flow-graph-ownership:${receipt.flowId}`, changedRecords: [receipt.deletedRecord, { store: "projectMetadata", key: receipt.projectId }] });
+        return receipts;
+    }
     async deleteMigrationBackup(input) {
         if (input.label !== "Delete retained legacy migration backup")
             throw new Error("Migration backup deletion requires its named consequence review.");
@@ -477,7 +519,7 @@ export async function openIndexedDbProjectRepository(factory = globalThis.indexe
     throw new DOMException("IndexedDB is unavailable.", "InvalidStateError"); const request = factory.open(DURABLE_PROJECT_DATABASE, DURABLE_PROJECT_DATABASE_VERSION), database = await new Promise((resolve, reject) => { request.onupgradeneeded = () => { if (request.result.objectStoreNames.contains("changes"))
     request.result.deleteObjectStore("changes"); for (const store of DURABLE_PROJECT_STORES)
     if (!request.result.objectStoreNames.contains(store))
-        request.result.createObjectStore(store); }; request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error ?? new Error("Cannot open the durable project repository.")); request.onblocked = () => reject(new DOMException("The durable project repository upgrade is blocked.", "InvalidStateError")); }); return new DurableProjectRepository(new IndexedDbBackend(database), { now: options.now ?? (() => new Date().toISOString()), token: options.token ?? (() => `draft:${crypto.randomUUID()}`) }); }
+        request.result.createObjectStore(store); }; request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error ?? new Error("Cannot open the durable project repository.")); request.onblocked = () => reject(new DOMException("The durable project repository upgrade is blocked.", "InvalidStateError")); }); const repository = new DurableProjectRepository(new IndexedDbBackend(database), { now: options.now ?? (() => new Date().toISOString()), token: options.token ?? (() => `draft:${crypto.randomUUID()}`) }); await repository.repairOrphanFlowGraphs(); return repository; }
 export class DurablePageHistoryConflict extends DOMException {
     projectId;
     commandId;

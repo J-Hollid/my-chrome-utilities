@@ -30,5 +30,16 @@ assert.equal(review.blocked,false);assert.match(review.summary,/one Page removal
 const removed=removeProjectCollectionEntity(landingState,"pages",landing.id);assert.equal(removed.project.collections.pages.some(({id:entityId})=>entityId===landing.id),false);
 const restored=undoProjectTransaction(removed);assert.equal(restored.project.collections.pages.find(({name})=>name==="Landing").id,landing.id,"Undo restores the same identity");
 const purchase=state.project.collections.events[0],checkoutJourney=state.project.collections.flows[0],referencedState={...state,project:{...state.project,documentationFlowGraphs:{[checkoutJourney.id]:{occurrences:[{id:"occurrence:purchase",eventId:purchase.id}]}}}},blocked=inspectProjectEntityRemoval(referencedState,"events",purchase.id);assert.equal(blocked.blocked,true);assert.deepEqual(new Set(blocked.dependencies.map(({name})=>name)),new Set(["Checkout journey","Retail Purchase","Valid purchase"]));assert.throws(()=>removeProjectCollectionEntity(referencedState,"events",purchase.id),/blocked/);
+const payment=state.project.collections.pages[0],ownedGraph={pageFrames:[{id:"frame:payment",pageId:payment.id}],occurrences:[{id:"occurrence:purchase",pageFrameId:"frame:payment",eventId:purchase.id}],relationships:[]},ownedGraphState={...state,project:{...state.project,collections:{...state.project.collections,fixtures:state.project.collections.fixtures.map(({flowId,...fixture})=>fixture)},documentationFlowGraphs:{[checkoutJourney.id]:ownedGraph}}},flowReview=inspectProjectEntityRemoval(ownedGraphState,"flows",checkoutJourney.id);
+assert.equal(flowReview.blocked,false,"a Flow's owned graph is removed with it rather than blocking its removal");
+assert.deepEqual(flowReview.dependencies,[],"owned topology is not presented as an independent dependency or repair action");
+assert.match(flowReview.summary,/owned Flow topology/);
+const flowRemoved=removeProjectCollectionEntity(ownedGraphState,"flows",checkoutJourney.id);
+assert.equal(flowRemoved.project.collections.flows.some(({id:entityId})=>entityId===checkoutJourney.id),false);
+assert.equal(flowRemoved.project.documentationFlowGraphs[checkoutJourney.id],undefined,"one command removes the Flow-owned graph");
+assert.equal(inspectProjectEntityRemoval(flowRemoved,"pages",payment.id).dependencies.some(({id:dependencyId})=>dependencyId===checkoutJourney.id),false,"deleted topology cannot remain as a ghost Page dependency");
+const flowRestored=undoProjectTransaction(flowRemoved);
+assert.equal(flowRestored.project.collections.flows.find(({id:entityId})=>entityId===checkoutJourney.id).id,checkoutJourney.id);
+assert.deepEqual(flowRestored.project.documentationFlowGraphs[checkoutJourney.id],ownedGraph,"Undo restores the byte-equivalent owned graph");
 assert.throws(()=>createProjectCollectionEntity(state,"events","purchase",id),/unique/);
 console.log("project entity lifecycle unit tests passed");

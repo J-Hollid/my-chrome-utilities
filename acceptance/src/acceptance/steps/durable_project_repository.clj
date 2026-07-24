@@ -8,7 +8,9 @@
                     "features/data-layer-durable-project-repository-runtime.feature"])
 (def entry-modes
   {"the durable project repository contains active Retail website with Saved Draft and Published revision 3" :model
-   "the built extension is running with the production durable-project repository" :runtime})
+   "Retail website durably contains Flow graph flow-orphan whose owning Flow entity is absent" :model
+   "the built extension is running with the production durable-project repository" :runtime
+   "production IndexedDB has project-retail:flow-orphan in flowGraphs without a matching Flow entity" :runtime})
 (defonce model-verified? (atom false))
 (defonce browser-observation (atom nil))
 (defn- checked! [& command]
@@ -28,7 +30,7 @@
             observed (:durableProjectRepository (json/parse-string line true))]
         (support/assert! observed "Durable repository browser evidence is missing." {:out (:out result)})
         (reset! browser-observation observed))))
-(def runtime-keys (set (map #(keyword (format "runtime%03d" %)) (range 1 13))))
+(def runtime-keys (set (map #(keyword (format "runtime%03d" %)) (range 1 14))))
 (def required-keys (conj runtime-keys :installedBoundary))
 (defn- all-true? [value] (boolean (and (map? value) (seq value) (every? true? (vals value)))))
 (defn complete-browser-evidence? [evidence]

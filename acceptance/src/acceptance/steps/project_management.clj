@@ -30,7 +30,8 @@
    "the Pages overview contains Cart and unreferenced Landing"
    "Purchase Event is referenced by Checkout journey, Retail Purchase assignment, and Valid purchase fixture"
    "the Pages overview at 360 pixels contains <ordered Pages>"
-   "Retail website has empty project collections and its Inspector is closed"])
+   "Retail website has empty project collections and its Inspector is closed"
+   "Checkout journey owns a Flow graph containing Payment Page frames and nested interaction Event instances"])
 (def runtime-entries
   ["the built extension is running with the production project repository, side panel, and Specification Studio"
    "the production Projects projection reads selected identity project-retail"
@@ -53,7 +54,8 @@
    "production Pages contain Cart and unreferenced Landing"
    "production Purchase Event is referenced by Checkout journey, Retail Purchase assignment, and Valid purchase fixture"
    "the production Pages overview at 360 CSS pixels contains <ordered Pages>"
-   "canonical project-retail collections are all empty"])
+   "canonical project-retail collections are all empty"
+   "production Checkout journey owns Payment Page frames and nested interaction Event instances"])
 (def entry-modes (merge (zipmap model-entries (repeat :model))
                         (zipmap runtime-entries (repeat :runtime))))
 (defonce model-verified? (atom false))
@@ -77,7 +79,7 @@
         (reset! browser-observation observed))))
 (def runtime-paths
   (set (concat [:installedBoundary]
-               (map #(keyword (str "context" (format "%03d" %))) (range 1 18))
+               (map #(keyword (str "context" (format "%03d" %))) (range 1 19))
                (map #(keyword (str "portability" (format "%03d" %))) (range 1 6)))))
 (defn complete-browser-evidence? [evidence]
   (boolean (and (map? evidence)
