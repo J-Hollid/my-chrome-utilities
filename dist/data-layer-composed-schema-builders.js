@@ -177,17 +177,18 @@ export function mountComposedSchemaFacetBuilder(options) {
         catch (error) {
             feedback = error instanceof Error ? error.message : String(error);
         } render(); };
-        observation.setAttribute("aria-label", "Condition test observation");
+        observation.setAttribute("aria-label", "Condition observation");
         observation.value = "{}";
         testCondition.type = "button";
-        testCondition.textContent = "Test condition observation";
+        testCondition.textContent = "Evaluate condition";
         testCondition.addEventListener("click", () => { try {
             testResult.textContent = evaluateComposedCondition(draft.condition, JSON.parse(observation.value), options.propertyChoices) ? "Matched" : "Did not match";
         }
         catch (error) {
             testResult.textContent = error instanceof Error ? error.message : String(error);
         } });
-        condition.append(conditionLegend, branches, labeled("Target group", target), button("Add All group", () => addGroup("all")), button("Add Any group", () => addGroup("any")), button("Add Not group", () => addGroup("not")), labeled("Property", property), labeled("Typed operator", operator), labeled("Typed value", conditionValue), button("Add condition predicate", addPredicate), button("Clear condition", () => { draft = removeComposedConditionBranch(draft, []); render(); }), plain, labeled("Test observation", observation), testCondition, testResult);
+        const evaluationControls = options.includeConditionEvaluation === false ? [] : [labeled("Condition observation", observation), testCondition, testResult];
+        condition.append(conditionLegend, branches, labeled("Target group", target), button("Add All group", () => addGroup("all")), button("Add Any group", () => addGroup("any")), button("Add Not group", () => addGroup("not")), labeled("Property", property), labeled("Typed operator", operator), labeled("Typed value", conditionValue), button("Add condition predicate", addPredicate), button("Clear condition", () => { draft = removeComposedConditionBranch(draft, []); render(); }), plain, ...evaluationControls);
         const rules = document.createElement("fieldset"), rulesLegend = document.createElement("legend"), ruleList = document.createElement("ul"), ruleKind = document.createElement("select"), pattern = document.createElement("input"), minimum = document.createElement("input"), maximum = document.createElement("input"), minItems = document.createElement("input"), maxItems = document.createElement("input"), severity = document.createElement("select"), message = document.createElement("input"), reusable = document.createElement("input");
         rules.setAttribute("aria-label", "Composed rules builder");
         rulesLegend.textContent = "Structured rules";
