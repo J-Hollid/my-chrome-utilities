@@ -9,8 +9,10 @@ import {
   composedFacetDraft,
   evaluateComposedCondition,
   moveComposedAllowedValue,
+  moveComposedConditionBranch,
   removeComposedAllowedValue,
   removeComposedConditionBranch,
+  overrideComposedRule,
   sparseComposedFacets,
   typedComposedValue,
 } from "../dist/data-layer-composed-schema-builders.js";
@@ -45,11 +47,17 @@ assert.equal(evaluateComposedCondition(draft.condition,{customer_type:"trade",pr
 draft=removeComposedConditionBranch(draft,[1,0]);
 assert.deepEqual(draft.condition.children[1],{kind:"not",children:[]});
 draft=addComposedConditionPredicate(draft,[1],{propertyId:"/privacy_mode",operator:"Equals",value:"anonymous"});
+const movedCondition=moveComposedConditionBranch(draft,[0],1);
+assert.equal(movedCondition.condition.children[0].kind,"not","condition branches move within their parent group");
+assert.equal(moveComposedConditionBranch(draft,[],1),draft,"moving the root condition is a true no-op");
 
 draft=addComposedRule(draft,{kind:"pattern",pattern:"^[0-9a-z]+$",severity:"error",message:"Use a known step"});
 draft=addComposedRule(draft,{kind:"range",minimum:1,maximum:4,severity:"warning",message:"Review step range",reusableRuleId:"rule:step"});
 assert.equal(draft.rules.length,2);
 assert.equal(draft.rules[1].reusableRuleId,"rule:step");
+const overriddenRule=overrideComposedRule(draft,0,"rule:local");
+assert.equal(overriddenRule.rules[0].id,"rule:local","overriding an inherited rule gives it a local identity");
+assert.equal(overriddenRule.rules[0].provenance.source,"created","overriding an inherited rule records local provenance");
 assert.match(composedRuleIssue({kind:"pattern",severity:"error",message:""}),/issue message/);
 assert.match(composedRuleIssue({kind:"pattern",severity:"error",message:"Mismatch"}),/regular expression/);
 

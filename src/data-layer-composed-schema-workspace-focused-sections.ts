@@ -12,6 +12,8 @@ export interface ComposedFocusedSectionContext {
   getDraft:()=>ComposedFacetDraft|undefined;
   activeSection:FocusedPropertySection;
   removedRuleIds:Set<string>;
+  overriddenRuleIds:Set<string>;
+  overrideRule:(index:number)=>void;
   render:()=>void;
 }
 

@@ -35,7 +35,7 @@ function focused(row, context) {
     identity.textContent = `${row.path} · stable identity ${row.effective.definitionId ?? row.path}`;
     effective.textContent = `Inherited value and source: ${row.inherited ? context.effectiveText({ ...row, effective: row.inherited }) : "none"} · Effective result: ${context.effectiveText(row)} · validation ${row.validationState} · conflicts ${row.validationState === "blocked" ? row.message : "none"}`;
     host.setAttribute("aria-label", `${row.path} focused ${focusedPropertySectionLabels[context.activeSection]} section`);
-    renderComposedFocusedSection(host, { model: context.model, dom, row, getDraft: () => context.draft, activeSection: context.activeSection, removedRuleIds: context.removedRuleIds, render: context.render });
+    renderComposedFocusedSection(host, { model: context.model, dom, row, getDraft: () => context.draft, activeSection: context.activeSection, removedRuleIds: context.removedRuleIds, overriddenRuleIds: context.overriddenRuleIds, overrideRule: context.overrideRule, render: context.render });
     if (context.pendingAction) {
         const impact = dom.createElement("p");
         impact.setAttribute("aria-label", "Property impact review");

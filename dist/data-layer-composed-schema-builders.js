@@ -61,7 +61,12 @@ export function addComposedConditionPredicate(draft, path, predicate) { const co
 export function composedConditionPredicate(choice, operator, value) { return { propertyId: choice.definitionId, operator, ...(value !== undefined ? { value: clone(value) } : {}) }; }
 export function removeComposedConditionBranch(draft, path) { if (!path.length)
     return { ...draft, condition: { kind: "all", children: [] } }; const condition = clone(draft.condition), parent = groupAt(condition, path.slice(0, -1)); parent.children.splice(path.at(-1), 1); return { ...draft, condition }; }
+export function moveComposedConditionBranch(draft, path, delta) { if (!path.length)
+    return draft; const condition = clone(draft.condition), parent = groupAt(condition, path.slice(0, -1)), index = path.at(-1), target = index + delta; if (index < 0 || index >= parent.children.length || target < 0 || target >= parent.children.length)
+    return draft; [parent.children[index], parent.children[target]] = [parent.children[target], parent.children[index]]; return { ...draft, condition }; }
 export function addComposedRule(draft, rule) { return { ...draft, rules: [...draft.rules, clone(rule)] }; }
+export function overrideComposedRule(draft, index, id) { const rule = draft.rules[index]; if (!rule)
+    return draft; const replacement = clone(rule); replacement.id = id; replacement.provenance = { source: "created", state: "effective" }; return { ...draft, rules: draft.rules.map((candidate, candidateIndex) => candidateIndex === index ? replacement : candidate) }; }
 export function composedRuleIssue(rule) {
     if (!String(rule.message ?? "").trim())
         return "Enter an issue message.";
