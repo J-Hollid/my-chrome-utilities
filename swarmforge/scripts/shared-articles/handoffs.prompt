@@ -1,7 +1,9 @@
 # Handoff Rules
 
 ## Sending Handoffs
-- Write a draft handoff file with only structured headers, then run `swarm_handoff.sh <draft-file>`.
+- Write a draft handoff file with structured headers, then run
+  `swarm_handoff.sh <draft-file>`. A `note` may include the bounded detail body
+  described below; `git_handoff` remains headers-only.
 - Use only these message types:
   - `git_handoff`
   - `note`
@@ -46,12 +48,20 @@ type: note
 to: <role>[,<role>...]
 priority: NN
 message: <one line, max 80 chars>
+
+<optional consolidated details, max 4000 chars>
 ```
 
+- Keep `message` as a terse routing summary. Use the optional body only when an
+  explicit authority requires consolidated findings that cannot fit truthfully in
+  the summary. Prefer a short bullet list naming exact blockers, paths, failed
+  checks, and skipped checks with their dependencies.
 - If `swarm_handoff.sh` reports validation errors, repair the draft and rerun it.
 - After a successful send, the helper removes the draft file. If you need to
   remove a stale draft manually, use `rm <draft-file>`, not `rm -f`.
-- Do not write long handoff bodies. The helper generates the delivered payload.
+- Do not add a body to `git_handoff`. Do not use a note body for verification
+  narrative, sender process history, or information available from the referenced
+  commit.
 - Do not send tmux notifications directly.
 - Do not hand-edit, merge, stage, or commit handoff runtime state.
 
