@@ -43,7 +43,7 @@ Feature: Data layer canonical Shared Profile schema authoring
   Scenario: Data layer canonical Shared Profile schema authoring 005
     Given Opened Article is open in the wide schema workspace
     When the operator selects property article_name
-    Then the workspace shows a property navigator, the complete schema table, expandable article_name details, and effective documentation without using the Inspector as its primary editor
+    Then the workspace shows a compact property navigator, focused article_name editing, and effective documentation without using the Inspector as its primary editor
     And search, filtering, revision comparison, object, array, item-type, scalar-type, presence, allowed-value, regular-expression, range, cardinality, conditional-rule, reusable-rule, documentation, example, and impact-review actions match the side-panel schema editor
     And Tree and Table are synchronized views of the same profile revision
     And advanced JSON is optional and cannot be the only complete authoring route
@@ -110,13 +110,13 @@ Feature: Data layer canonical Shared Profile schema authoring
     When the operator switches from Tree to Table
     Then one hierarchical row per effective property remains visible in the wide workspace
     And columns show property, path, type, presence, expected or allowed values, conditions, rules, documentation, example, source, local state, validation state, and actions
-    And common type, presence, expected-value, allowed-value, documentation, example, and row actions are usable inline across multiple rows
+    And one property context menu exposes those actions while only the selected section is mounted for the focused row
     And root, child, sibling, rename, move, duplicate, and delete commands require no separate one-property screen
-    When the operator changes article_name presence and article_type example without leaving Table
+    When the operator stages article_name presence and article_type example while switching focused sections
     Then both rows retain their edits and remain visible together
     When the operator expands the article_name row
     Then complex condition and rule builders open beneath that row while the other property rows remain available
-    And an edit made in Table is immediately visible in Tree and the documentation preview
+    And staged edits remain visible when sections switch and appear in the documentation preview after one property save
 
   # Data layer canonical Shared Profile schema authoring 012
   Scenario: Data layer canonical Shared Profile schema authoring 012
@@ -238,7 +238,7 @@ Feature: Data layer canonical Shared Profile schema authoring
     And selecting metadata/category exposes valid type, conditional presence, typed allowed values, rich rules, documentation, examples, copy, move, and remove actions in stacked panel detail
     And no standalone wide table, Builder canonical editor, or second schema form is embedded inside the side-panel editor
     When the operator opens the same Opened Article Draft in the standalone workspace
-    Then the workspace keeps all property rows visible in its wide table and exposes the same complex operations in expandable row detail
+    Then the workspace keeps compact property rows visible and exposes the same complex operations through the focused property menu
     And the standalone renderer does not replace or reconfigure the side-panel renderer
     When the operator changes metadata/category documentation through the compact side-panel control
     And the operator changes metadata/category conditional presence through the standalone row detail

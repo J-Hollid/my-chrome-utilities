@@ -12,9 +12,9 @@ Feature: Data layer layered schema constraints
   # Data layer layered schema constraints 001
   Scenario Outline: Data layer layered schema constraints 001
     Given the operator opens the schema contribution for <contributor>
-    Then the same canonical composed-property table and expandable row editors are available
+    Then the same compact composed-property rows and focused property editor are available
     And root, child, sibling, rename, move, duplicate, and delete actions are available
-    And type, presence, condition, allowed-value, rule, documentation, example, and impact-review controls are available
+    And one property context menu exposes type, presence, condition, allowed-value, rule, documentation, example, and impact-review sections
     And inherited, local, effective, superseded, and conflicting definitions are distinguished
     And saving issues property-scoped commands against the contributor base revision
     And only the displayed contributor name, scope, applicability, and provenance differ

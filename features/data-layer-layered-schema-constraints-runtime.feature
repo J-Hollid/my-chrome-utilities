@@ -9,9 +9,9 @@ Feature: Data layer layered schema constraints runtime
   # Data layer layered schema constraints runtime 001
   Scenario Outline: Data layer layered schema constraints runtime 001
     Given actual controls open the schema contribution for <contributor>
-    Then the installed editor renders the same canonical composed-property table and expandable row editors
+    Then the installed editor renders the same compact composed-property rows and focused property editor
     And installed root, child, sibling, rename, move, duplicate, and delete actions are operable
-    And production type, presence, condition, allowed-value, rule, documentation, example, and impact-review controls are operable
+    And one installed property context menu exposes those focused sections without embedded row forms
     And rendered inherited, local, effective, superseded, and conflicting definitions are distinguished
     And saving sends property-scoped commands with the displayed contributor base revision
     And only rendered contributor name, scope, applicability, and provenance differ
