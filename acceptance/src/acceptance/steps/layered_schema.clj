@@ -21,7 +21,9 @@
 (def runtime-paths (set (concat [:installedBoundary :consequential :persistenceReload :sidePanelParity]
                                 (map #(keyword (str "authoring" (format "%03d" %))) (range 1 23))
                                 (map #(keyword (str "layering" (format "%03d" %))) (range 1 22))
-                                (map #(keyword (str "flowFacet" (format "%03d" %))) (range 1 5)))))
+                                (map #(keyword (str "flowFacet" (format "%03d" %))) (range 1 5))
+                                [:canonicalPresence :canonicalValues :canonicalConditions :canonicalRules :canonicalExample :canonicalPersisted
+                                 :flowStructural001 :flowStructural002 :flowStructural003])))
 (def authoritative-examples
   (set (for [feature-file feature-files
              scenario (:scenarios (gherkin/parse-file feature-file))

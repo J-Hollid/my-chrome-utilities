@@ -36,7 +36,8 @@
       "src/data-layer-durable-project-repository-ui.ts",
       "src/data-layer-durable-project-runtime.ts",
       "src/data-layer-compact-canonical-history.ts",
-      "src/utilities/data-layer/saved-schema-feed.ts"
+      "src/utilities/data-layer/saved-schema-feed.ts",
+      "src/durable-project"
     ],
     "dependencies": [
       "project_management"
@@ -763,7 +764,8 @@
       "src/data-layer-flow-graph.ts",
       "src/data-layer-flow-graph-ui.ts",
       "src/data-layer-flow-graph-structural.ts",
-      "src/data-layer-flow-graph-ui-page-frame.ts"
+      "src/data-layer-flow-graph-ui-page-frame.ts",
+      "src/flow-graph"
     ],
     "dependencies": [
       "durable_project_repository",
@@ -856,6 +858,9 @@
     "id": "layered_schema",
     "source": [
       "src/canonical-schema-focused",
+      "src/canonical-schema",
+      "src/composed-schema",
+      "src/layered-schema",
       "src/data-layer-canonical-schema.ts",
       "src/data-layer-canonical-schema-facets.ts",
       "src/data-layer-canonical-schema-commands.ts",
