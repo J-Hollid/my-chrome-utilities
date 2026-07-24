@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=1f0a65a8105fc0c3822642cc7e98a54c520ed62805d740a96f9ecec231e3aea8
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-24T11:05:09.763247578Z","feature_name":"Data layer layered schema constraints","feature_path":"features/data-layer-layered-schema-constraints.feature","background_hash":"fb0d1f404fb0f55f8682c5c7edfe59c4ef21fe314d802f1e5552e4014cacd104","implementation_hash":"sha256:b5cda08b35864b6b948204cfb8ebf7b4619552176b64474e4e542b70e69f0361","scenarios":[{"index":0,"name":"Data layer layered schema constraints 001","scenario_hash":"a5183bedc23abc0279313c0d2042eaa9a765afdc9141a0444902aed1a2a4b766","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-24T11:05:09.763247578Z"},{"index":4,"name":"Data layer layered schema constraints 005","scenario_hash":"527091a0b3f315daabfdf211aaa2ac580aa78d700a679941f48a08aded429cd2","mutation_count":32,"result":{"Total":32,"Killed":32,"Survived":0,"Errors":0},"tested_at":"2026-07-24T11:05:09.763247578Z"},{"index":19,"name":"Data layer layered schema constraints 020","scenario_hash":"3f75768023c30398e21f1b6f70fde500fee667c17b64829a9f9a69fb8100f1c2","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-07-24T11:05:09.763247578Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer layered schema constraints
 
   Background:
@@ -313,18 +308,22 @@ Feature: Data layer layered schema constraints
   # Data layer layered schema constraints 021
   Scenario: Data layer layered schema constraints 021
     Given Checkout journey shows the Checkout / Payment Page-frame card with its derived JSON example expanded
-    And Sitewide, Checkout Page Group, and Payment Page expose the shared schema-contribution workspace
+    And its effective stack provides /oForm/formStepName payment and /oForm/formType checkout from parent contributors
     When the operator invokes Open schema contribution on that Page-frame card
-    Then the main workspace presents the same canonical property navigator, Tree and Table views, composed effective-property rows, and expandable facet editors
-    And root, child, sibling, rename, move, duplicate, and delete actions are available
-    And type, presence, condition, allowed-value, rule, documentation, example, and impact-review controls are available
-    And the established Undo and Redo controls operate on the Page-frame contribution
-    And only Payment's Flow Page-instance identity, scope, inheritance, provenance, and Return to Flow navigation differ
-    And optional Flow activation or validation tools neither replace nor hide the shared contribution editor
-    When the operator changes Payment's local /oForm/formStepName expected value to payment-review
-    Then one property-scoped command updates only that Page-frame contribution
-    And the reusable Payment Page, another Payment Page frame, and unrelated contributors remain byte-identical
+    Then the same composed-schema workspace used by Page Groups and Pages is the primary authoring surface
+    And compact rows show both inherited properties with effective definition, source, local state, validation state, and Override here
+    And no advanced facet builder is expanded until its property row is selected
+    And an empty local Tree or Table is not presented as the inherited schema
+    And Add local property remains available without copying either inherited property
+    And the workspace contains no Effective documentation, Compiled effective schema and documentation, Target Event, Activation, Priority, Applicability, Test observation, Manual Flow / Page / Event, Validation payload, or developer-export panel
+    When the operator selects /oForm/formStepName and invokes Override here
+    Then one stacked advanced facet editor opens while /oForm/formType remains compact
+    When the operator saves payment-review as the local expected value
+    Then one property-scoped command stores only that sparse facet on the selected Page frame
+    And the derived JSON example uses payment-review while the reusable Payment Page, another Payment frame, and unrelated contributors remain byte-identical
+    When the operator invokes Reset to parents
+    Then the sparse local facet is deleted and the effective and derived values return to payment without copying a parent definition
     When the operator returns to Flow
     Then Checkout journey restores the selected Page frame, viewport, expanded derived example, and focus on the originating card button
     When Open schema contribution is invoked from the selected Page-frame inline actions
-    Then it resolves the same contributor identity and shared schema-contribution workspace
+    Then it resolves the same contributor identity and composed-schema workspace

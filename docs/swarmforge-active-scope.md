@@ -336,10 +336,16 @@ The layered schema checkpoint uses that same property and rule model for Shared
 Profile, Event, Page Group, Page, Flow Page-instance, and Event-occurrence
 contributions. Contributor kind changes contextual applicability and provenance,
 not authoring capabilities. A Page-frame card and its selected-frame inline action
-both open the shared complete main-workspace editor; optional Flow activation and
-validation controls remain secondary, and Return to Flow restores selection,
-viewport, expanded example state, and origin focus. Page and Event branches compose
-for a contained Event occurrence; incompatible parallel rules block until explicitly resolved. The
+both open the compact composed-schema workspace used by Page Groups and Pages.
+Inherited properties remain collapsed rows until the operator chooses an override;
+reset deletes sparse local facets. Empty local-only schema trees, eagerly expanded
+facet tables, documentation exports, activation, applicability, assignment,
+validation, and testing controls do not appear in that contribution workspace;
+their owning documentation, Assignment, guided-testing, and validation surfaces
+retain those responsibilities. Return to Flow restores selection, viewport,
+expanded example state, and origin focus. Page and Event branches compose for a
+contained Event occurrence; incompatible parallel rules block until explicitly
+resolved. The
 checkpoint supports automatic applicability, manual assignment, or explicit
 Documentation-only activation and includes only the effective-schema developer
 export for a selected context.

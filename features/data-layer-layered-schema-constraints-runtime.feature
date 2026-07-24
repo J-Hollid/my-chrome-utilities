@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=c64905cee1a79f83511884abc72030226daa138a3b56cc3ed4f8e27ed3c7507e
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-24T11:18:44.299292822Z","feature_name":"Data layer layered schema constraints runtime","feature_path":"features/data-layer-layered-schema-constraints-runtime.feature","background_hash":"e3abf09522d1a7021ef5c4fddde53d634dd57d90657c227f341935b5a82edc94","implementation_hash":"sha256:bbf092d90a06dd375cc859e2a634860ead1fe0ba720bf73722ef4f8c646cf2f6","scenarios":[{"index":0,"name":"Data layer layered schema constraints runtime 001","scenario_hash":"841b58bac0a850830dd983e58475124102f2e9e7df6f82b643fd77f719b16764","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-24T11:18:44.299292822Z"},{"index":4,"name":"Data layer layered schema constraints runtime 005","scenario_hash":"e6f9b12fb82ce881ea1a801d881cef93539989a8ae6fcdc441241974c826ece5","mutation_count":32,"result":{"Total":32,"Killed":32,"Survived":0,"Errors":0},"tested_at":"2026-07-24T11:18:44.299292822Z"},{"index":19,"name":"Data layer layered schema constraints runtime 020","scenario_hash":"1d4735c775a66aaaeb64d8d2d882d91c5f770db945eceec40651d722079e715e","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-07-24T11:18:44.299292822Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer layered schema constraints runtime
 
   Background:
@@ -313,15 +308,20 @@ Feature: Data layer layered schema constraints runtime
   # Data layer layered schema constraints runtime 021
   Scenario: Data layer layered schema constraints runtime 021
     Given the production Checkout / Payment Page-frame card has its derived JSON example open
-    And installed Sitewide, Checkout Page Group, and Payment Page routes expose the shared schema-contribution workspace
+    And production inheritance supplies payment for /oForm/formStepName and checkout for /oForm/formType
     When the Page-frame card action is activated in the installed Flow outline
-    Then one visible main-workspace editor has the same canonical navigator, Tree and Table views, composed rows, expandable facet builders, and complete action inventory
-    And only rendered Flow Page-instance identity, scope, inheritance, provenance, and Return to Flow navigation differ
-    And any production Flow activation or validation controls remain secondary to that shared editor
-    When actual shared controls save payment-review as the local /oForm/formStepName expected value
-    Then one durable property-scoped command changes only the selected Page-frame record
-    And hashes for the reusable Payment Page, a sibling Payment frame, unrelated contributors, and Published revision remain unchanged
+    Then the primary main-workspace region is the same compact composed-schema workspace rendered by production Page Group and Page routes
+    And two collapsed rows render their effective definitions, parent sources, local states, validation states, and Override here controls
+    And no empty local-only canonical navigator or eagerly expanded per-property facet table is visible
+    And an Add local property action is operable without materializing inherited definitions
+    And rendered text and controls contain none of Effective documentation, Compiled effective schema and documentation, Target Event, Activation, Priority, Applicability, Test observation, Manual Flow / Page / Event, Validation payload, or developer export
+    When actual controls expand only /oForm/formStepName and save payment-review as its local expected value
+    Then one durable property-scoped command adds only that sparse facet to the selected Page-frame record
+    And /oForm/formType stays collapsed while hashes for the reusable Payment Page, a sibling Payment frame, unrelated contributors, and Published revision remain unchanged
+    And the installed derived JSON example changes only /oForm/formStepName to payment-review
+    When actual controls invoke Reset to parents on /oForm/formStepName
+    Then production deletes the sparse facet and recompiles payment without storing an inherited snapshot
     When actual Return to Flow runs
     Then production restores the same frame selection, canvas viewport, open derived example, and focus to the originating card control
     When actual selected-frame inline actions invoke Open schema contribution
-    Then the same canonical schema ID, Flow Page-frame ID, editor landmark, and control inventory are rendered
+    Then the same Flow Page-frame ID and compact composed-schema workspace are rendered
