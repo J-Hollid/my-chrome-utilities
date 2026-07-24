@@ -12,7 +12,7 @@ const normalizedCondition = (condition) => {
 const conditionGroup = (condition) => condition && ["all", "any", "not"].includes(String(condition.kind)) ? normalizedCondition(condition) : { kind: "all", children: condition ? [normalizedCondition(condition)] : [] };
 export function composedFacetDraft(local, effective) {
     const examples = local.examples ?? effective.examples ?? [], allowedValues = clone([...(local.allowedValues ?? effective.allowedValues ?? [])]), exampleMethod = !examples.length ? "blank" : allowedValues.some((value) => same(value, examples[0])) ? "allowed-value" : "custom";
-    return { type: local.type ?? effective.type, presence: local.presence ?? effective.presence, expectedValue: Object.hasOwn(local, "expectedValue") ? clone(local.expectedValue) : clone(effective.expectedValue), allowedValues, condition: conditionGroup(local.condition ?? effective.condition), rules: clone([...(local.rules ?? effective.rules ?? [])]), documentation: String(local.documentation ?? effective.documentation ?? ""), exampleMethod, ...(examples.length ? { exampleValue: clone(examples[0]) } : {}) };
+    return { type: local.type ?? effective.type, itemType: local.itemType ?? effective.itemType, presence: local.presence ?? effective.presence, expectedValue: Object.hasOwn(local, "expectedValue") ? clone(local.expectedValue) : clone(effective.expectedValue), allowedValues, condition: conditionGroup(local.condition ?? effective.condition), rules: clone([...(local.rules ?? effective.rules ?? [])]), documentation: String(local.documentation ?? effective.documentation ?? ""), exampleMethod, ...(examples.length ? { exampleValue: clone(examples[0]) } : {}) };
 }
 export function typedComposedValue(type, text) {
     if (type === "number") {
@@ -34,6 +34,18 @@ export function typedComposedValue(type, text) {
     }
     if (type === "null")
         return null;
+    if (type === "array" || type === "object") {
+        let value;
+        try {
+            value = JSON.parse(text);
+        }
+        catch {
+            throw new Error(`Enter valid JSON for ${type}.`);
+        }
+        if (type === "array" && !Array.isArray(value) || type === "object" && (!value || typeof value !== "object" || Array.isArray(value)))
+            throw new Error(`Enter a JSON ${type}.`);
+        return value;
+    }
     return text;
 }
 export function addComposedAllowedValue(draft, value) { return { ...draft, allowedValues: [...draft.allowedValues, clone(value)] }; }
@@ -94,7 +106,7 @@ export function sparseComposedFacets(draft, inherited) {
         throw new Error(draft.exampleMethod === "allowed-value" ? "Choose an allowed-value example." : "Enter a custom typed example.");
     if (draft.exampleMethod === "allowed-value" && !draft.allowedValues.some((value) => same(value, draft.exampleValue)))
         throw new Error("Choose an example from the current allowed values.");
-    const candidate = { ...(draft.type ? { type: draft.type } : {}), ...(draft.presence ? { presence: draft.presence } : {}), ...(draft.expectedValue !== undefined ? { expectedValue: clone(draft.expectedValue) } : {}), ...(draft.allowedValues.length ? { allowedValues: clone(draft.allowedValues) } : {}), ...(draft.condition.children.length ? { condition: clone(draft.condition) } : {}), ...(draft.rules.length ? { rules: clone(draft.rules) } : {}), ...(draft.documentation ? { documentation: draft.documentation } : {}), ...(draft.exampleMethod !== "blank" ? { examples: [clone(draft.exampleValue)] } : {}) };
+    const candidate = { ...(draft.type ? { type: draft.type } : {}), ...(draft.itemType ? { itemType: draft.itemType } : {}), ...(draft.presence ? { presence: draft.presence } : {}), ...(draft.expectedValue !== undefined ? { expectedValue: clone(draft.expectedValue) } : {}), ...(draft.allowedValues.length ? { allowedValues: clone(draft.allowedValues) } : {}), ...(draft.condition.children.length ? { condition: clone(draft.condition) } : {}), ...(draft.rules.length ? { rules: clone(draft.rules) } : {}), ...(draft.documentation ? { documentation: draft.documentation } : {}), ...(draft.exampleMethod !== "blank" ? { examples: [clone(draft.exampleValue)] } : {}) };
     return Object.fromEntries(Object.entries(candidate).filter(([key, value]) => !same(value, inherited[key])));
 }
 const labeled = (text, control) => { const label = document.createElement("label"); label.append(text, control); return label; };

@@ -5,7 +5,7 @@ type ConditionGroup={kind:"all"|"any"|"not";children:ComposedCondition[]};
 type ComposedCondition=ConditionPredicate|ConditionGroup;
 export interface ComposedPropertyChoice {path:string;definitionId:string;type?:string|undefined;}
 export interface ComposedFacetDraft {
-  type?:string|undefined;presence?:LayerConstraint["presence"]|undefined;expectedValue?:unknown;allowedValues:unknown[];
+  type?:string|undefined;itemType?:string|undefined;presence?:LayerConstraint["presence"]|undefined;expectedValue?:unknown;allowedValues:unknown[];
   condition:ConditionGroup;rules:Record<string,unknown>[];documentation:string;exampleMethod:"allowed-value"|"custom"|"blank";exampleValue?:unknown;
 }
 
@@ -22,7 +22,7 @@ const conditionGroup=(condition:LayerConstraint["condition"]):ConditionGroup=>co
 
 export function composedFacetDraft(local:LayerConstraint,effective:LayerConstraint):ComposedFacetDraft{
   const examples=local.examples??effective.examples??[],allowedValues=clone([...(local.allowedValues??effective.allowedValues??[])]),exampleMethod:ComposedFacetDraft["exampleMethod"]=!examples.length?"blank":allowedValues.some((value)=>same(value,examples[0]))?"allowed-value":"custom";
-  return{type:local.type??effective.type,presence:local.presence??effective.presence,expectedValue:Object.hasOwn(local,"expectedValue")?clone(local.expectedValue):clone(effective.expectedValue),allowedValues,condition:conditionGroup(local.condition??effective.condition),rules:clone([...(local.rules??effective.rules??[])]),documentation:String(local.documentation??effective.documentation??""),exampleMethod,...(examples.length?{exampleValue:clone(examples[0])}:{})};
+  return{type:local.type??effective.type,itemType:local.itemType??effective.itemType,presence:local.presence??effective.presence,expectedValue:Object.hasOwn(local,"expectedValue")?clone(local.expectedValue):clone(effective.expectedValue),allowedValues,condition:conditionGroup(local.condition??effective.condition),rules:clone([...(local.rules??effective.rules??[])]),documentation:String(local.documentation??effective.documentation??""),exampleMethod,...(examples.length?{exampleValue:clone(examples[0])}:{})};
 }
 
 export function typedComposedValue(type:string|undefined,text:string):unknown{
@@ -30,6 +30,7 @@ export function typedComposedValue(type:string|undefined,text:string):unknown{
   if(type==="integer"){const value=Number(text);if(!Number.isInteger(value))throw new Error("Enter a whole number.");return value;}
   if(type==="boolean"){if(text!=="true"&&text!=="false")throw new Error("Enter true or false.");return text==="true";}
   if(type==="null")return null;
+  if(type==="array"||type==="object"){let value:unknown;try{value=JSON.parse(text);}catch{throw new Error(`Enter valid JSON for ${type}.`);}if(type==="array"&&!Array.isArray(value)||type==="object"&&(!value||typeof value!=="object"||Array.isArray(value)))throw new Error(`Enter a JSON ${type}.`);return value;}
   return text;
 }
 
@@ -58,7 +59,7 @@ export function evaluateComposedCondition(condition:ComposedCondition,observatio
 export function sparseComposedFacets(draft:ComposedFacetDraft,inherited:LayerConstraint):Omit<LayerConstraint,"path">{
   if(draft.exampleMethod!=="blank"&&draft.exampleValue===undefined)throw new Error(draft.exampleMethod==="allowed-value"?"Choose an allowed-value example.":"Enter a custom typed example.");
   if(draft.exampleMethod==="allowed-value"&&!draft.allowedValues.some((value)=>same(value,draft.exampleValue)))throw new Error("Choose an example from the current allowed values.");
-  const candidate:Omit<LayerConstraint,"path">={...(draft.type?{type:draft.type}:{}),...(draft.presence?{presence:draft.presence}:{}),...(draft.expectedValue!==undefined?{expectedValue:clone(draft.expectedValue)}:{}),...(draft.allowedValues.length?{allowedValues:clone(draft.allowedValues)}:{}),...(draft.condition.children.length?{condition:clone(draft.condition) as unknown as Record<string,unknown>}:{ }),...(draft.rules.length?{rules:clone(draft.rules)}:{}),...(draft.documentation?{documentation:draft.documentation}:{}),...(draft.exampleMethod!=="blank"?{examples:[clone(draft.exampleValue)]}:{})};
+  const candidate:Omit<LayerConstraint,"path">={...(draft.type?{type:draft.type}:{}),...(draft.itemType?{itemType:draft.itemType}:{}),...(draft.presence?{presence:draft.presence}:{}),...(draft.expectedValue!==undefined?{expectedValue:clone(draft.expectedValue)}:{}),...(draft.allowedValues.length?{allowedValues:clone(draft.allowedValues)}:{}),...(draft.condition.children.length?{condition:clone(draft.condition) as unknown as Record<string,unknown>}:{ }),...(draft.rules.length?{rules:clone(draft.rules)}:{}),...(draft.documentation?{documentation:draft.documentation}:{}),...(draft.exampleMethod!=="blank"?{examples:[clone(draft.exampleValue)]}:{})};
   return Object.fromEntries(Object.entries(candidate).filter(([key,value])=>!same(value,inherited[key as keyof LayerConstraint]))) as Omit<LayerConstraint,"path">;
 }
 
