@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=f8157d6c091038abc6fdda334b2bcfa463285b562ad74a490468aa470301b463
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-24T00:13:06.117187183Z","feature_name":"Data layer Flow table documentation export","feature_path":"features/data-layer-flow-table-documentation-export.feature","background_hash":"20a32b34265b51e1d4d5b265a1d45492d0d9f793c6a03f82947b5e0004b6b848","implementation_hash":"sha256:10f60b868cf9275a56354afb17565ecba8012c7418c4368ef2086a896205a8da","scenarios":[{"index":3,"name":"Data layer Flow table documentation export 004","scenario_hash":"8cbd5b3f3452cbbb01eb27760c42478a7a4d24f491597364079761ef00c1227f","mutation_count":18,"result":{"Total":18,"Killed":18,"Survived":0,"Errors":0},"tested_at":"2026-07-24T00:13:06.117187183Z"},{"index":8,"name":"Data layer Flow table documentation export 009","scenario_hash":"24647521ef7c31683a9e7fab34a5656ce64ea471cef75233795d17b0751a97c6","mutation_count":16,"result":{"Total":16,"Killed":16,"Survived":0,"Errors":0},"tested_at":"2026-07-24T00:13:06.117187183Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer Flow table documentation export
 
   Background:

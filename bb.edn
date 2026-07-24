@@ -95,6 +95,7 @@
                         [acceptance.schema-workspace-runtime-steps-test]
                         [acceptance.saved-sessions-steps-test]
                         [acceptance.live-flow-guided-testing-steps-test]
+                        [acceptance.flow-table-documentation-export-steps-test]
                         [acceptance.gherkin-mutation-metadata-test])
              :task (let [result (test/run-tests 'acceptance.pack-session-test
                                                 'acceptance.runtime-test
@@ -181,6 +182,7 @@
                                                 'acceptance.schema-workspace-runtime-steps-test
                                                 'acceptance.saved-sessions-steps-test
                                                 'acceptance.live-flow-guided-testing-steps-test
+                                                'acceptance.flow-table-documentation-export-steps-test
                                                 'acceptance.gherkin-mutation-metadata-test)
                          source-result (process/shell {:out :inherit
                                                       :err :inherit

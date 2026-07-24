@@ -16,3 +16,24 @@
   (is (applicable-handler?
        "Data layer Flow table documentation export runtime"
        "the built extension is running with the production Flow editor, canonical compiler, table exporter, clipboard, and download adapter")))
+
+(deftest flow-export-examples-conserve-approved-result-relations
+  (is (map? (flow-export/validate-example!
+             :model
+             {"definition" "fixed to checkout"
+              "display" "checkout"
+              "detail" "exact effective value and provenance"})))
+  (is (map? (flow-export/validate-example!
+             :runtime
+             {"view" "Data capture matrix"
+              "heading_setting" "cleared"
+              "copy_mode" "Rich table for Confluence or Jira"
+              "output" "semantic rich HTML and unheaded plain fallback"})))
+  (is (thrown-with-msg?
+       clojure.lang.ExceptionInfo
+       #"invalid result"
+       (flow-export/validate-example!
+        :model
+        {"definition" "fixed to checkout"
+         "display" "Checkout"
+         "detail" "exact effective value and provenance"}))))
