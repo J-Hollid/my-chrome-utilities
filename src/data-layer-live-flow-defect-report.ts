@@ -39,12 +39,16 @@ function linkEvidence(
       pageFrameId:entry.stepId,
     };
   }
-  const relationshipIds = entry.matchedPath.flatMap(({ relationshipId }) => (
-    relationshipId ? [relationshipId] : []
-  ));
+  const relationshipIds = [...new Set([
+    ...entry.matchedPath.flatMap(({ relationshipId }) => (
+      relationshipId ? [relationshipId] : []
+    )),
+    entry.relationshipId,
+  ].filter((relationshipId): relationshipId is string => Boolean(relationshipId)))];
+  const pathLabel = entry.matchedPath.map(({ stepName }) => stepName).join(" to ") || entry.stepName;
   return {
     kind:"path",
-    label:`path ${entry.matchedPath.map(({ stepName }) => stepName).join(" to ")}`,
+    label:`path ${pathLabel}`,
     relationshipIds,
   };
 }

@@ -88,6 +88,16 @@ assert.deepEqual(relationshipReport.event.flowContext.linkEvidence, {
   label: "path Cart to Payment",
   relationshipIds: ["relationship:cart-payment"],
 });
+const sparsePathReport = reportFor({
+  ...baseEntry,
+  relationshipId: "relationship:cart-payment",
+  matchedPath: [],
+});
+assert.deepEqual(sparsePathReport.event.flowContext.linkEvidence, {
+  kind: "path",
+  label: "path Payment",
+  relationshipIds: ["relationship:cart-payment"],
+}, "a durable Flow link remains visible when a legacy path snapshot is incomplete");
 assert.deepEqual(relationshipReport.event.flowContext.effectiveTarget, {
   id: "frame:payment",
   name: "Payment",
