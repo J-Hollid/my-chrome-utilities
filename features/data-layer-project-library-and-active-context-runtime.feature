@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=739f18d32600519031644ff782482b3411a04cbf3c9eb573b3c16f978610ddff
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-24T07:57:21.921520469Z","feature_name":"Data layer project library and active context runtime","feature_path":"features/data-layer-project-library-and-active-context-runtime.feature","background_hash":"15c0d61a5e2321d2d5cf9f766a3caf820e6af8b13c7b5ad796295dbb35ecc091","implementation_hash":"sha256:9eebdcf8250800274dabc9aa143d7963c57400464e1651cdb949ae8d1cbe6f19","scenarios":[{"index":10,"name":"Data layer project library and active context runtime 011","scenario_hash":"d3830546945d7ffb335655dce11ed7b4b1c0e35e36e2f7a6c653ec65951b4d3e","mutation_count":40,"result":{"Total":40,"Killed":40,"Survived":0,"Errors":0},"tested_at":"2026-07-24T07:50:01.442285322Z"},{"index":11,"name":"Data layer project library and active context runtime 012","scenario_hash":"26e55411dbdb08528fd86e31f17d70465253f1542bc8eefb3e02ff3c62c07939","mutation_count":24,"result":{"Total":24,"Killed":24,"Survived":0,"Errors":0},"tested_at":"2026-07-24T07:50:01.442285322Z"},{"index":14,"name":"Data layer project library and active context runtime 015","scenario_hash":"34a132d859838d421db79c2957af11a6af9108f5e9039e317682b3fb4abeb4c8","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-24T07:50:01.442285322Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer project library and active context runtime
 
   Background:

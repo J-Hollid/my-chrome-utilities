@@ -89,7 +89,39 @@
   (support/assert! (complete-browser-evidence? evidence)
                    "Installed project-management evidence is incomplete."
                    evidence))
+(def example-values
+  {"overview" #{"Shared Profiles" "Page Groups" "Pages" "Events"
+                "Applicability" "Flows" "Fixtures" "Assignments"}
+   "entity" #{"Sitewide" "Checkout" "Cart" "Purchase" "Retail checkout"
+              "Checkout journey" "Valid purchase" "Retail Purchase"}
+   "add action" #{"Add Shared Profile" "Add Page Group" "Add Page" "Add Event"
+                  "Add Applicability Set" "Add Flow" "Add Fixture" "Add Assignment"}
+   "creation page" #{"Create Shared Profile" "Create Page Group" "Create Page"
+                     "Create Event" "Create Applicability Set" "Create Flow"
+                     "Create Fixture" "Create Assignment"}
+   "singular" #{"Shared Profile" "Page Group" "Page" "Event"
+                "Applicability Set" "Flow" "Fixture" "Assignment"}
+   "purpose" #{"reusable schema rules and documentation"
+               "shared Page context and inherited requirements"
+               "observable Page context and specific requirements"
+               "reusable interaction schema and documentation"
+               "named observation matching and assignment eligibility"
+               "documentary journey topology"
+               "saved per-Event validation evidence"
+               "production schema selection for matching observations"}
+   "ordered Pages" #{"Alpha, Landing, Cart" "Alpha, Landing" "Landing"}
+   "removed Page" #{"Landing"}
+   "focus target" #{"Cart" "Alpha" "Add Page"}})
+(defn validate-example! [_mode example]
+  (support/validate-example-domain!
+   example-values example
+   (filter #(support/example-value example %) (keys example-values))
+   "Project-management example was outside the specified contract."))
 (def handlers
   (support/verified-feature-mode-handlers feature-files entry-modes :project-management-mode
-                                          verify-model! (fn [_mode _example] true)
+                                          verify-model! validate-example!
                                           observe-browser! assert-runtime!))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-24T09:54:18.905984451+02:00", :module-hash "121092361", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 5, :hash "-408196865"} {:id "def/feature-files", :kind "def", :line 7, :end-line 10, :hash "-441913606"} {:id "def/model-entries", :kind "def", :line 11, :end-line 34, :hash "682593259"} {:id "def/runtime-entries", :kind "def", :line 35, :end-line 58, :hash "-93359660"} {:id "def/entry-modes", :kind "def", :line 59, :end-line 60, :hash "270029399"} {:id "form/5/defonce", :kind "defonce", :line 61, :end-line 61, :hash "344781070"} {:id "form/6/defonce", :kind "defonce", :line 62, :end-line 62, :hash "-1618529344"} {:id "defn-/checked!", :kind "defn-", :line 63, :end-line 66, :hash "-148274062"} {:id "defn-/verify-model!", :kind "defn-", :line 67, :end-line 70, :hash "-1682535837"} {:id "defn-/observe-browser!", :kind "defn-", :line 71, :end-line 79, :hash "-464242976"} {:id "def/runtime-paths", :kind "def", :line 80, :end-line 83, :hash "112840918"} {:id "defn/complete-browser-evidence?", :kind "defn", :line 84, :end-line 87, :hash "-1866555812"} {:id "defn-/assert-runtime!", :kind "defn-", :line 88, :end-line 91, :hash "1764318754"} {:id "def/example-values", :kind "def", :line 92, :end-line 114, :hash "-1518530902"} {:id "defn/validate-example!", :kind "defn", :line 115, :end-line 119, :hash "1924079840"} {:id "def/handlers", :kind "def", :line 120, :end-line 123, :hash "-1692449013"}]}
+;; clj-mutate-manifest-end

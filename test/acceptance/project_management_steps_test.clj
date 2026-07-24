@@ -26,3 +26,24 @@
   (is (false? (project-management/complete-browser-evidence?
                (assoc complete-evidence :portability005 false))))
   (is (true? (project-management/complete-browser-evidence? complete-evidence))))
+
+(deftest project-management-examples-require-specified-values
+  (let [example {"overview" "Flows"
+                 "entity" "Checkout journey"
+                 "add action" "Add Flow"
+                 "creation page" "Create Flow"
+                 "singular" "Flow"}]
+    (is (= example (project-management/validate-example! :model example)))
+    (is (thrown? Exception
+                 (project-management/validate-example!
+                  :runtime
+                  (assoc example "add action" "AdD Flow")))))
+  (is (= {"ordered Pages" "Alpha, Landing"
+          "removed Page" "Landing"
+          "focus target" "Alpha"}
+         (project-management/validate-example!
+          :model
+          {"ordered Pages" "Alpha, Landing"
+           "removed Page" "Landing"
+           "focus target" "Alpha"})))
+  (is (= {} (project-management/validate-example! :runtime {}))))

@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=9c5751f898da1322328c6020a88c1e7d6e5cf70f8e56e96b9d400abab5f58340
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-24T07:57:21.764400388Z","feature_name":"Data layer project library and active context","feature_path":"features/data-layer-project-library-and-active-context.feature","background_hash":"bdf92bb0570a980743ee1aa3cbe0f21afd7727604a9de64a3fd4e3e4af51ca70","implementation_hash":"sha256:0bd5553ecf9e9732e26dff586822bfe7f201229b3ad22b39b1933ad74907a99e","scenarios":[{"index":10,"name":"Data layer project library and active context 011","scenario_hash":"7f2d2f7edc1060894d764c1f06e0c7e91e862ed551ab8eae7f98778c01634b98","mutation_count":40,"result":{"Total":40,"Killed":40,"Survived":0,"Errors":0},"tested_at":"2026-07-24T07:45:47.119471936Z"},{"index":11,"name":"Data layer project library and active context 012","scenario_hash":"79c9b23fdaf912e834a1eeaed5e9857a010c59850e7f0a56eb9dd7aadc7dcf3d","mutation_count":24,"result":{"Total":24,"Killed":24,"Survived":0,"Errors":0},"tested_at":"2026-07-24T07:45:47.119471936Z"},{"index":14,"name":"Data layer project library and active context 015","scenario_hash":"ab7a0be3a36da9455c2077cd62865b3955644d047dd26458f3f7862eaf586c0c","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-24T07:45:47.119471936Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer project library and active context
 
   Background:
