@@ -304,3 +304,22 @@ Feature: Data layer layered schema constraints
       | Page Cart                               | Sitewide, Checkout, and Cart              |
       | Event Purchase                          | Sitewide and Purchase                     |
       | Flow Page instance Alternative shipping | Sitewide, Shipping, Cart, and Alternative shipping |
+
+  # Data layer layered schema constraints 021
+  Scenario: Data layer layered schema constraints 021
+    Given Checkout journey shows the Checkout / Payment Page-frame card with its derived JSON example expanded
+    And Sitewide, Checkout Page Group, and Payment Page expose the shared schema-contribution workspace
+    When the operator invokes Open schema contribution on that Page-frame card
+    Then the main workspace presents the same canonical property navigator, Tree and Table views, composed effective-property rows, and expandable facet editors
+    And root, child, sibling, rename, move, duplicate, and delete actions are available
+    And type, presence, condition, allowed-value, rule, documentation, example, and impact-review controls are available
+    And the established Undo and Redo controls operate on the Page-frame contribution
+    And only Payment's Flow Page-instance identity, scope, inheritance, provenance, and Return to Flow navigation differ
+    And optional Flow activation or validation tools neither replace nor hide the shared contribution editor
+    When the operator changes Payment's local /oForm/formStepName expected value to payment-review
+    Then one property-scoped command updates only that Page-frame contribution
+    And the reusable Payment Page, another Payment Page frame, and unrelated contributors remain byte-identical
+    When the operator returns to Flow
+    Then Checkout journey restores the selected Page frame, viewport, expanded derived example, and focus on the originating card button
+    When Open schema contribution is invoked from the selected Page-frame inline actions
+    Then it resolves the same contributor identity and shared schema-contribution workspace

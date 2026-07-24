@@ -304,3 +304,19 @@ Feature: Data layer layered schema constraints runtime
       | Page Cart                               | Sitewide, Checkout, and Cart              |
       | Event Purchase                          | Sitewide and Purchase                     |
       | Flow Page instance Alternative shipping | Sitewide, Shipping, Cart, and Alternative shipping |
+
+  # Data layer layered schema constraints runtime 021
+  Scenario: Data layer layered schema constraints runtime 021
+    Given the production Checkout / Payment Page-frame card has its derived JSON example open
+    And installed Sitewide, Checkout Page Group, and Payment Page routes expose the shared schema-contribution workspace
+    When the Page-frame card action is activated in the installed Flow outline
+    Then one visible main-workspace editor has the same canonical navigator, Tree and Table views, composed rows, expandable facet builders, and complete action inventory
+    And only rendered Flow Page-instance identity, scope, inheritance, provenance, and Return to Flow navigation differ
+    And any production Flow activation or validation controls remain secondary to that shared editor
+    When actual shared controls save payment-review as the local /oForm/formStepName expected value
+    Then one durable property-scoped command changes only the selected Page-frame record
+    And hashes for the reusable Payment Page, a sibling Payment frame, unrelated contributors, and Published revision remain unchanged
+    When actual Return to Flow runs
+    Then production restores the same frame selection, canvas viewport, open derived example, and focus to the originating card control
+    When actual selected-frame inline actions invoke Open schema contribution
+    Then the same canonical schema ID, Flow Page-frame ID, editor landmark, and control inventory are rendered

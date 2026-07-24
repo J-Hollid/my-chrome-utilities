@@ -335,8 +335,11 @@ or composed snapshot.
 The layered schema checkpoint uses that same property and rule model for Shared
 Profile, Event, Page Group, Page, Flow Page-instance, and Event-occurrence
 contributions. Contributor kind changes contextual applicability and provenance,
-not authoring capabilities. Page and Event branches compose for a contained Event
-occurrence; incompatible parallel rules block until explicitly resolved. The
+not authoring capabilities. A Page-frame card and its selected-frame inline action
+both open the shared complete main-workspace editor; optional Flow activation and
+validation controls remain secondary, and Return to Flow restores selection,
+viewport, expanded example state, and origin focus. Page and Event branches compose
+for a contained Event occurrence; incompatible parallel rules block until explicitly resolved. The
 checkpoint supports automatic applicability, manual assignment, or explicit
 Documentation-only activation and includes only the effective-schema developer
 export for a selected context.
@@ -533,8 +536,9 @@ registry but must not invoke archived project-foundation, release, or full-site
 acceptance suites.
 
 The `layered_schema` pack must register all four canonical-authoring and layered-
-schema feature contracts and their focused production evidence. Adding the new
-contracts does not authorize extra checkpoint commands.
+schema feature contracts and their focused production evidence, including
+cross-surface control-inventory parity and exact Page-frame card routing. Adding the
+new contracts does not authorize extra checkpoint commands.
 
 Each pack command performs its registered type/build, focused unit tests, installed
 browser adapter, Gherkin generation, and focused runtime acceptance. Pack dependencies
