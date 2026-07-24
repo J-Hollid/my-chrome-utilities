@@ -146,6 +146,44 @@ for(let sample=0;sample<24;sample+=1){
     `path Start to Submit occurrence to ${chooseSuccess?"Success":"Failure"}`,
     sample,
   );
+  const sparseEntry=structuredClone(run.history.at(-1));
+  sparseEntry.matchedPath=sample%2===0?[]:[
+    {
+      stepId:`legacy:${sample}`,
+      stepName:`Legacy ${sample}`,
+      relationshipId:sample%3===0?sparseEntry.relationshipId:`relationship:prior-${sample}`,
+      eventId:`legacy-event:${sample}`,
+      captureTime:chronological[0].captureTime,
+    },
+    {
+      stepId:sparseEntry.stepId,
+      stepName:sparseEntry.stepName,
+      relationshipId:sparseEntry.relationshipId,
+      eventId:sparseEntry.eventId,
+      captureTime:sparseEntry.captureTime,
+    },
+  ];
+  const sparseContext=createManualFlowDefectEvent(sparseEntry,chronological[0]).manualFlowContext;
+  assert.equal(sparseContext.linkEvidence.label,sparseEntry.matchedPath.length
+    ?`path Legacy ${sample} to ${sparseEntry.stepName}`
+    :`path ${sparseEntry.stepName}`);
+  assert.deepEqual(sparseContext.linkEvidence.relationshipIds,[...new Set([
+    ...sparseEntry.matchedPath.flatMap(({relationshipId})=>relationshipId?[relationshipId]:[]),
+    sparseEntry.relationshipId,
+  ])],"generated sparse and duplicate path snapshots conserve every relationship identity once");
+  const containedEntry=structuredClone(run.history[1]);
+  containedEntry.matchedPath=structuredClone(run.history.at(-1).matchedPath);
+  const containedContext=createManualFlowDefectEvent(containedEntry,chronological[1]).manualFlowContext;
+  assert.equal(containedContext.linkEvidence.kind,"path");
+  assert.deepEqual(containedContext.linkEvidence.relationshipIds,[`relationship:start-${target}`],
+    "a generated contained Event conserves the traversed Page relationship without owning it");
+  const startOccurrenceEntry=structuredClone(run.history[1]);
+  const startOccurrenceContext=createManualFlowDefectEvent(startOccurrenceEntry,chronological[1]).manualFlowContext;
+  assert.deepEqual(startOccurrenceContext.linkEvidence,{
+    kind:"start",
+    label:"Started at Start",
+    pageFrameId:"frame:start",
+  },"a generated contained Event keeps start evidence anchored to its initial Page");
 
   const completed=liveFlowSessionEvidence(run,state,`2026-07-23T10:00:04.${String(sample).padStart(3,"0")}Z`);
   assert.equal(completed.label,"Manual Flow test evidence");

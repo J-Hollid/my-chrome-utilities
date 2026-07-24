@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=2ae2462bdd407bc5e76eb8a77b7dbc59b5377a867ef311e05c7b06b2253ea8bb
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-24T22:28:21.758478168Z","feature_name":"Data layer Live Flow guided testing runtime","feature_path":"features/data-layer-live-flow-guided-testing-runtime.feature","background_hash":"733b575508f890ed4de142fb05f8cd0333e66c4a098883e957e9c3fb1ce8c7a6","implementation_hash":"sha256:fac4d2ff182b6cf88f9a952973c8be8797287738218e7653ad0dbbbe7cf91c5c","scenarios":[{"index":4,"name":"Data layer Live Flow guided testing runtime 005","scenario_hash":"58c8c97d8fc64a756c3f7c8b389aa98b2fed89129bee4a481d834727b9a47edd","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-24T22:28:21.758478168Z"},{"index":5,"name":"Data layer Live Flow guided testing runtime 006","scenario_hash":"e8c39e8db81ebe3855b52267d2433590149a1e3697e76e49755a37fabec0e432","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-24T22:28:21.758478168Z"},{"index":7,"name":"Data layer Live Flow guided testing runtime 008","scenario_hash":"26dde85577905280c059e93a61a72ef1334ff97c1955d77b2010d1c1df008496","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-24T22:28:21.758478168Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer Live Flow guided testing runtime
 
   Background:
