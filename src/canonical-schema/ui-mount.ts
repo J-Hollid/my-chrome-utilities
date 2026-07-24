@@ -1,11 +1,12 @@
-import {canonicalPropertyPath,type CanonicalCommand,type CanonicalCommandResult,type CanonicalPresenceMode,type CanonicalPropertyNode,type CanonicalSchemaDocument} from "../data-layer-canonical-schema.js";
-import {focusedPropertySectionLabels,type FocusedPropertySection} from "../data-layer-focused-schema-property-ui.js";
+import {canonicalPropertyPath,type CanonicalCommand,type CanonicalCommandResult,type CanonicalPropertyNode,type CanonicalSchemaDocument} from "../data-layer-canonical-schema.js";
+import {type FocusedPropertySection} from "../data-layer-focused-schema-property-ui.js";
 import {renderCanonicalFocusedSection} from "../data-layer-canonical-schema-focused-sections.js";
 import {renderCanonicalFocusedMenu} from "../data-layer-canonical-schema-focused-menu.js";
 import {renderCanonicalFocusedEditor} from "../data-layer-canonical-schema-focused-editor.js";
 import {renderCanonicalSchemaEditor} from "../data-layer-canonical-schema-render.js";
 import {focusedPropertyPatch,focusedStagedChanges,focusedSourceState,type CanonicalFocusedPatch} from "../data-layer-canonical-schema-focused-drafts.js";
 import {dispatchFocusedCanonicalCommand} from "../data-layer-canonical-schema-focused-command.js";
+import {button,clone,presenceText,provenanceText,sectionLabel} from "./ui-mount-helpers.js";
 
 export interface CanonicalSchemaEditorOptions {
   host:HTMLElement;surface:"Builder"|"Side panel"|"Flow workspace";load:()=>CanonicalSchemaDocument;
@@ -13,11 +14,6 @@ export interface CanonicalSchemaEditorOptions {
   renderAfterDispatch?:boolean;
 }
 
-const clone=<T>(value:T):T=>structuredClone(value);
-const provenanceText=(node:CanonicalPropertyNode):string=>node.provenance.map(({source,contributorName,scope,state})=>contributorName?`${scope??"source"} ${contributorName}${state?` ${state}`:""}`:source).join(" → ")||"created";
-const presenceText=(mode:CanonicalPresenceMode):string=>({optional:"Optional",required:"Required","required-when":"Required when",forbidden:"Forbidden","forbidden-when":"Forbidden when"})[mode];
-const button=(dom:Document,text:string,run:()=>void):HTMLButtonElement=>{const control=dom.createElement("button");control.type="button";control.textContent=text;control.addEventListener("click",run);return control;};
-const sectionLabel=(section:FocusedPropertySection):string=>focusedPropertySectionLabels[section];
 
 export function bindCanonicalPropertySearch(control:Pick<HTMLInputElement,"value"|"addEventListener">,update:(query:string)=>void):void{control.addEventListener("input",()=>update(control.value));}
 export function canonicalDispatchRequiresLocalRender(result:CanonicalCommandResult,renderAfterDispatch:boolean|undefined):boolean{return renderAfterDispatch!==false||result.status==="confirmation-required";}
@@ -74,4 +70,3 @@ export function mountCanonicalSchemaEditor(options:CanonicalSchemaEditorOptions)
   options.host.addEventListener("keydown",(event)=>{if(event.key==="Escape"&&working){event.preventDefault();closeFocused();}});
   render();return{render};
 }
-

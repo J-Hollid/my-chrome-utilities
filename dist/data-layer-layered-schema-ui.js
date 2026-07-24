@@ -6,6 +6,7 @@ import { mountComposedSchemaWorkspace } from "./data-layer-composed-schema-works
 import { composedSchemaWorkspace, resetComposedSchemaLocalProperty, saveComposedSchemaLocalFacets } from "./data-layer-composed-schema-workspace.js";
 import { flowPageFrameContributor, layeredContributorPath, layeredContributorsForPath, resetFlowPageInstanceLocalProperty, saveFlowPageInstanceLocalFacets } from "./data-layer-layered-schema-project.js";
 import { resolveSidePanelSchemaContributor } from "./data-layer-side-panel-schema-editor.js";
+import { applyFlowPageInstanceStructure } from "./flow-graph/page-instance-structure.js";
 export { layeredContributionDetails, layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
 const q = (selector) => { const value = document.querySelector(selector); if (!value)
     throw new Error(`Missing ${selector}`); return value; };
@@ -130,6 +131,10 @@ export function installLayeredSchemaUi(options) {
             options.persist(next);
             queueMicrotask(renderEditor);
         } }, onReset: (row) => { const live = current(), next = live.state ? resetFlowPageInstanceLocalProperty(live.state, flowId, entity.id, row.path) : undefined; if (next) {
+            graphSelection = flowPageFrameContributor(next, flowId, entity.id);
+            options.persist(next);
+            queueMicrotask(renderEditor);
+        } }, onStructure: (kind, path, name) => { const live = current(), command = { kind, path, ...(name === undefined ? {} : { name }) }, next = live.state ? applyFlowPageInstanceStructure(live.state, flowId, entity.id, command, id) : undefined; if (next) {
             graphSelection = flowPageFrameContributor(next, flowId, entity.id);
             options.persist(next);
             queueMicrotask(renderEditor);

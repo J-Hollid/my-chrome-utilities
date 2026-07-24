@@ -1,16 +1,11 @@
 import { canonicalPropertyPath } from "../data-layer-canonical-schema.js";
-import { focusedPropertySectionLabels } from "../data-layer-focused-schema-property-ui.js";
 import { renderCanonicalFocusedSection } from "../data-layer-canonical-schema-focused-sections.js";
 import { renderCanonicalFocusedMenu } from "../data-layer-canonical-schema-focused-menu.js";
 import { renderCanonicalFocusedEditor } from "../data-layer-canonical-schema-focused-editor.js";
 import { renderCanonicalSchemaEditor } from "../data-layer-canonical-schema-render.js";
 import { focusedPropertyPatch, focusedStagedChanges, focusedSourceState } from "../data-layer-canonical-schema-focused-drafts.js";
 import { dispatchFocusedCanonicalCommand } from "../data-layer-canonical-schema-focused-command.js";
-const clone = (value) => structuredClone(value);
-const provenanceText = (node) => node.provenance.map(({ source, contributorName, scope, state }) => contributorName ? `${scope ?? "source"} ${contributorName}${state ? ` ${state}` : ""}` : source).join(" → ") || "created";
-const presenceText = (mode) => ({ optional: "Optional", required: "Required", "required-when": "Required when", forbidden: "Forbidden", "forbidden-when": "Forbidden when" })[mode];
-const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
-const sectionLabel = (section) => focusedPropertySectionLabels[section];
+import { button, clone, presenceText, provenanceText, sectionLabel } from "./ui-mount-helpers.js";
 export function bindCanonicalPropertySearch(control, update) { control.addEventListener("input", () => update(control.value)); }
 export function canonicalDispatchRequiresLocalRender(result, renderAfterDispatch) { return renderAfterDispatch !== false || result.status === "confirmation-required"; }
 /**

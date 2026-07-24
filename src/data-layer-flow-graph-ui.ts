@@ -36,6 +36,7 @@ import {
 import {orderedPageGroupIds} from "./utilities/data-layer/page-group-membership.js";
 import {type IdFactory,type ProjectEntity,type ProjectState} from "./utilities/data-layer/schemas.js";
 import {appendFlowPageFrameCardControls} from "./data-layer-flow-graph-ui-page-frame.js";
+import {button,elementByData,entityName,flowEdgeGeometry,flowPortPoint,nodeHeight,nodeWidth,ownsPointerDrag,q,restorePointerCancellationFocus,svg} from "./flow-graph/ui-primitives.js";
 
 export interface FlowGraphBuilderContext {state?:ProjectState;flowId?:string;revision?:number}
 
@@ -43,30 +44,18 @@ export function contextSettingPageLabel(pageName:string):string{return `${pageNa
 export interface FlowGraphBuilderIntegration {render():void;renderSelectors():void}
 interface IntegrationOptions {context:()=>FlowGraphBuilderContext;persist:(state:ProjectState)=>void;id:IdFactory;openOccurrenceSchema?:(occurrenceId:string,path?:string,originFocus?:HTMLElement)=>boolean}
 
-const nodeWidth=FLOW_GRAPH_GEOMETRY.eventWidth,nodeHeight=FLOW_GRAPH_GEOMETRY.eventHeight;
-const q=<T extends Element>(selector:string,root:ParentNode=document):T=>{const element=root.querySelector<T>(selector);if(!element)throw new Error(`Missing ${selector}`);return element;};
-const svg=<K extends keyof SVGElementTagNameMap>(tag:K):SVGElementTagNameMap[K]=>document.createElementNS("http://www.w3.org/2000/svg",tag);
-const button=(text:string,action:()=>void):HTMLButtonElement=>{const control=document.createElement("button");control.type="button";control.textContent=text;control.addEventListener("click",action);return control;};
-const entityName=(entities:readonly ProjectEntity[],id:unknown,fallback="Unknown"):string=>entities.find((entity)=>entity.id===id)?.name??fallback;
-const elementByData=<T extends HTMLElement|SVGElement>(attribute:string,id:string):T|undefined=>Array.from(document.querySelectorAll<T>(`[${attribute}]`)).find((element)=>element.getAttribute(attribute)===id);
 
 function renderOccurrenceExampleControls(host:HTMLElement,state:ProjectState,flowId:string,occurrenceId:string,persist:(next:ProjectState)=>void,id:IdFactory):void{
   host.setAttribute("aria-label","Occurrence example controls");for(const row of flowOccurrenceExampleEditorRows(state.project,flowId,occurrenceId).filter(({type})=>type!=="object"&&type!=="array")){const item=document.createElement("label"),value=document.createElement("input"),save=document.createElement("button");item.dataset.exampleEditorPath=row.path;item.append(`${row.path} · ${row.type??"unknown"} `);value.setAttribute("aria-label",`Example value for ${row.path}`);value.value=row.value===undefined?"":String(row.value);save.type="button";save.textContent="Save example";save.addEventListener("click",()=>persist(setFlowOccurrenceExample(state,flowId,occurrenceId,row.path,value.value,id)));item.append(value,save);host.append(item);}
 }
 
-export const ownsPointerDrag=(activePointerId:number|undefined,eventPointerId:number):boolean=>activePointerId!==undefined&&activePointerId===eventPointerId;
-export function restorePointerCancellationFocus(target:{readonly isConnected:boolean;focus():void},scheduleMicrotask:(callback:()=>void)=>unknown=(callback)=>queueMicrotask(callback),scheduleSettledTask:(callback:()=>void)=>unknown=(callback)=>setTimeout(callback,0)):void{const restore=()=>{if(target.isConnected)target.focus();};restore();scheduleMicrotask(restore);scheduleSettledTask(restore);}
+export {ownsPointerDrag,restorePointerCancellationFocus,flowEdgeGeometry};
 type SessionFlowView={selectedItem?:{kind:"page-frame"|"occurrence"|"relationship";id:string}|undefined;viewport?:{x:number;y:number;zoom:number}};
 export interface RelationshipDeletionFocusIntent{id:string;sourceKind:"page-frame";sourceId:string;sourceFocused:boolean}
 export function flowViewAfterRelationshipDeletion(view:SessionFlowView,relationshipId:string):SessionFlowView{if(view.selectedItem?.kind!=="relationship"||view.selectedItem.id!==relationshipId)return view;const{selectedItem,...retained}=view;void selectedItem;return retained;}
 export function consumeRelationshipDeletionFocus(intent:RelationshipDeletionFocusIntent|undefined,relationshipRestored:boolean):{target?:"source"|"relationship";next?:RelationshipDeletionFocusIntent}{if(!intent)return{};if(relationshipRestored)return{target:"relationship"};if(!intent.sourceFocused)return{target:"source",next:{...intent,sourceFocused:true}};return{next:intent};}
 export function flowRelationshipDeletionAccessibleName(label:string|undefined,sourceName:string,targetName:string):string{return`Delete relationship ${[label,`${sourceName} to ${targetName}`].filter(Boolean).join(", ")}`;}
 
-const flowPortPoint=(layout:{x:number;y:number},size:{width:number;height:number},port:FlowPortSide):{x:number;y:number}=>port==="left"?{x:layout.x,y:layout.y+size.height/2}:port==="right"?{x:layout.x+size.width,y:layout.y+size.height/2}:port==="top"?{x:layout.x+size.width/2,y:layout.y}:{x:layout.x+size.width/2,y:layout.y+size.height};
-export function flowEdgeGeometry(source:{x:number;y:number},target:{x:number;y:number},sourceSize:{width:number;height:number}={width:nodeWidth,height:nodeHeight},targetSize:{width:number;height:number}=sourceSize,sourcePort:FlowPortSide="right",targetPort:FlowPortSide="left"):{startX:number;startY:number;endX:number;endY:number;arrow:string}{
-  const start=flowPortPoint(source,sourceSize,sourcePort),end=flowPortPoint(target,targetSize,targetPort),startX=start.x,startY=start.y,endX=end.x,endY=end.y,dx=endX-startX,dy=endY-startY,length=Math.hypot(dx,dy),unitX=length<0.001?1:dx/length,unitY=length<0.001?0:dy/length,baseX=endX-unitX*12,baseY=endY-unitY*12,normalX=-unitY*7,normalY=unitX*7;
-  return{startX,startY,endX,endY,arrow:`${baseX+normalX},${baseY+normalY} ${endX},${endY} ${baseX-normalX},${baseY-normalY}`};
-}
 
 export function installFlowGraphBuilder(options:IntegrationOptions):FlowGraphBuilderIntegration{
   const inspector=q<HTMLElement>("#project-inspector"),advanced=q<HTMLElement>("#flow-step-editor"),inspectorContext=document.createElement("section");

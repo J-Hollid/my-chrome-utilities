@@ -76,7 +76,16 @@ export function renderComposedFocusedSection(host, context) {
         } });
         host.append(labeled(dom, "Example method", method), labeled(dom, "Example value", control));
     }
-    if (context.activeSection === "structure")
-        host.append(Object.assign(dom.createElement("p"), { textContent: `Stable identity ${context.row.path}` }));
+    if (context.activeSection === "structure") {
+        host.append(Object.assign(dom.createElement("p"), { textContent: `Stable identity ${context.row.effective.definitionId ?? context.row.path}` }));
+        if (context.onStructure) {
+            const name = dom.createElement("input");
+            name.name = "structureName";
+            name.value = context.row.path.split("/").at(-1) ?? "property";
+            name.setAttribute("aria-label", "Structure property name");
+            const invoke = (kind) => context.onStructure?.(kind, context.row.path, name.value);
+            host.append(labeled(dom, "Property name", name), button(dom, "Add child", () => invoke("add-child")), button(dom, "Add sibling", () => invoke("add-sibling")), button(dom, "Rename", () => invoke("rename")), button(dom, "Move earlier", () => invoke("move-earlier")), button(dom, "Move later", () => invoke("move-later")), button(dom, "Move to root", () => invoke("move-to-root")), button(dom, "Duplicate", () => invoke("duplicate")), button(dom, "Delete property", () => invoke("delete")));
+        }
+    }
 }
 //# sourceMappingURL=data-layer-composed-schema-workspace-focused-sections.js.map
