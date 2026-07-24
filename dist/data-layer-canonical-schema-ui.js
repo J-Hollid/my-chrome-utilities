@@ -1,6 +1,8 @@
 import { canonicalCommandOutcome, canonicalPropertyPath, canonicalTableRows } from "./data-layer-canonical-schema.js";
-import { focusedConditionLabel, focusedOwnershipActions, focusedPropertySectionLabels, focusedPropertySections } from "./data-layer-focused-schema-property-ui.js";
+import { focusedPropertySectionLabels } from "./data-layer-focused-schema-property-ui.js";
 import { renderCanonicalFocusedSection } from "./data-layer-canonical-schema-focused-sections.js";
+import { renderCanonicalFocusedMenu } from "./data-layer-canonical-schema-focused-menu.js";
+import { renderCanonicalFocusedEditor } from "./data-layer-canonical-schema-focused-editor.js";
 const clone = (value) => structuredClone(value);
 const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
 const provenanceText = (node) => node.provenance.map(({ source, contributorName, scope, state }) => contributorName ? `${scope ?? "source"} ${contributorName}${state ? ` ${state}` : ""}` : source).join(" → ") || "created";
@@ -8,7 +10,6 @@ const presenceText = (mode) => ({ optional: "Optional", required: "Required", "r
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const input = (dom, name, value = "", type = "text") => { const control = dom.createElement("input"); control.name = name; control.type = type; control.value = value; return control; };
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
-const sectionKey = (section) => section;
 const sectionLabel = (section) => focusedPropertySectionLabels[section];
 export function bindCanonicalPropertySearch(control, update) { control.addEventListener("input", () => update(control.value)); }
 export function canonicalDispatchRequiresLocalRender(result, renderAfterDispatch) { return renderAfterDispatch !== false || result.status === "confirmation-required"; }
@@ -128,63 +129,6 @@ export function mountCanonicalSchemaEditor(options) {
         review = panel;
         render();
     };
-    const contextMenu = (node) => {
-        const menu = dom.createElement("div");
-        menu.className = "focused-property-context-menu";
-        menu.setAttribute("role", "menu");
-        menu.setAttribute("aria-label", `${canonicalPropertyPath(current(), node.id)} property context menu`);
-        menu.dataset.propertyContextMenu = "true";
-        const state = sourceState(node), actions = focusedOwnershipActions({ inherited: state === "inherited", local: state === "local", overridden: state === "overridden", invariant: node.enforcement === "invariant", conflict: false, replaceable: node.enforcement !== "invariant" });
-        for (const section of focusedPropertySections) {
-            const entry = dom.createElement("div"), choose = button(dom, sectionLabel(section), () => { activeSection = section; ensureWorking(node); menuPropertyId = node.id; render(); }), summary = dom.createElement("span");
-            entry.dataset.section = sectionKey(section);
-            summary.textContent = section === "rules" ? `${node.rules.length} items` : section === "values" ? `${node.allowedValues.length} allowed values` : section === "conditions" ? focusedConditionLabel(node.presence.condition) : "View effective value";
-            choose.setAttribute("role", "menuitem");
-            entry.append(choose, summary);
-            menu.append(entry);
-        }
-        const ownership = dom.createElement("div");
-        ownership.className = "focused-property-ownership-actions";
-        for (const action of actions) {
-            const control = button(dom, action, () => { if (action === "View" || action === "View conflict" || action === "Open source" || action === "Open contributing sources") {
-                feedback = `${action}: ${canonicalPropertyPath(current(), node.id)} · ${provenanceText(node)}`;
-                render();
-                return;
-            } if (action === "Remove local" || action === "Reset to parent") {
-                if (working) {
-                    if (action === "Reset to parent")
-                        working = clone(node);
-                    else {
-                        working = { ...clone(node), rules: [] };
-                    }
-                    feedback = `Staged ${action.toLowerCase()} for ${canonicalPropertyPath(current(), node.id)}.`;
-                    activeSection = "rules";
-                    render();
-                }
-                return;
-            } activeSection = action === "Override here" || action === "Replace here" ? "definition" : activeSection; ensureWorking(node); render(); });
-            control.dataset.ownershipAction = action;
-            ownership.append(control);
-        }
-        menu.append(ownership);
-        return menu;
-    };
-    const renderFocused = (document, node) => {
-        ensureWorking(node);
-        const wrapper = dom.createElement("section"), heading = dom.createElement("h3"), identity = dom.createElement("p"), source = dom.createElement("p"), effective = dom.createElement("p"), section = dom.createElement("section"), actions = dom.createElement("div"), cancel = button(dom, "Cancel", closeFocused), reviewButton = button(dom, "Review changes", showReview), save = button(dom, "Save property", saveFocused);
-        wrapper.setAttribute("aria-label", "Focused property editor");
-        wrapper.dataset.focusedPropertyEditor = "true";
-        wrapper.dataset.focusedPropertyPath = canonicalPropertyPath(document, node.id);
-        heading.textContent = `Focused property · ${node.name}`;
-        identity.textContent = `${canonicalPropertyPath(document, node.id)} · stable identity ${node.id}`;
-        source.textContent = `Inherited value and source: ${provenanceText(node)}`;
-        effective.textContent = `Effective result: ${node.type} · ${presenceText(node.presence.mode)} · validation valid · conflicts none`;
-        section.setAttribute("aria-label", `Focused ${sectionLabel(activeSection)} section`);
-        renderCanonicalFocusedSection(section, { dom, current, node, getWorking: () => working, setWorking: (value) => { working = value; }, activeSection, setActiveSection: (value) => { activeSection = value; }, removedRuleIds, id: options.id, render, patchFor, command, select: (id) => { activePropertyId = id; }, feedback: (message) => { feedback = message; } });
-        actions.append(cancel, reviewButton, save);
-        wrapper.append(heading, identity, source, effective, section, actions);
-        return wrapper;
-    };
     const render = () => {
         const document = current();
         options.host.replaceChildren();
@@ -221,7 +165,7 @@ export function mountCanonicalSchemaEditor(options) {
             actions.dataset.propertyActionsPath = row.path;
             article.append(choose, actions);
             if (menuPropertyId === row.id)
-                article.append(contextMenu(row.node));
+                article.append(renderCanonicalFocusedMenu(row.node, { dom, current, sourceState, ensureWorking, getWorking: () => working, activeSection, setActiveSection: (value) => { activeSection = value; }, setMenuPropertyId: (value) => { menuPropertyId = value; }, render, feedback: (message) => { feedback = message; }, provenanceText }));
             tree.append(article);
         }
         navigator.append(search, filter, tree, labeled(dom, "New root property name", rootName), addRoot);
@@ -239,7 +183,8 @@ export function mountCanonicalSchemaEditor(options) {
         navigator.prepend(tableView, treeView);
         const node = selectedNode(document);
         if (node && activePropertyId === node.id) {
-            const focused = renderFocused(document, node);
+            ensureWorking(node);
+            const focused = renderCanonicalFocusedEditor(document, node, { dom, activeSection, sectionLabel, canonicalPropertyPath, provenanceText, presenceText, renderSection: (host, value) => renderCanonicalFocusedSection(host, { dom, current, node: value, getWorking: () => working, setWorking: (next) => { working = next; }, activeSection, setActiveSection: (section) => { activeSection = section; }, removedRuleIds, id: options.id, render, patchFor, command, select: (id) => { activePropertyId = id; }, feedback: (message) => { feedback = message; } }), close: closeFocused, review: showReview, save: saveFocused });
             options.host.append(focused);
             if (review) {
                 const panel = review;
