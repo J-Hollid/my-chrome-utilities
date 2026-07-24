@@ -859,6 +859,7 @@
       "src/data-layer-side-panel-unified-schema-editor.ts",
       "src/data-layer-composed-schema-builders.ts",
       "src/data-layer-composed-schema-workspace.ts",
+      "src/data-layer-composed-schema-workspace-ui.ts",
       "src/data-layer-page-group-membership.ts",
       "src/data-layer-layered-schema.ts",
       "src/data-layer-layered-schema-project.ts",

@@ -213,6 +213,15 @@
       "src/data-layer-layered-schema.ts"
     ]
   },
+  "src/data-layer-composed-schema-workspace-ui.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-composed-schema-builders.ts",
+      "src/data-layer-composed-schema-workspace.ts",
+      "src/data-layer-layered-schema.ts"
+    ]
+  },
   "src/data-layer-side-panel-schema-editor.ts": {
     "module": "schemas",
     "layer": "application",

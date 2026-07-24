@@ -8,10 +8,11 @@ import {
 import {appendSharedProfileConstraint,canonicalLayerEditorSurface,compareLayeredRevisions,composeStructuredRules,effectivePropertySummary,layeredEventRole} from "../dist/data-layer-layered-schema-ui.js";
 import {assignmentContributorTargets,compileAssignmentContributorTarget,flowPageFrameContributor,layeredContributionDetails,layeredContributorPath,layeredContributorsForPath} from "../dist/data-layer-layered-schema-project.js";
 import {canonicalConstraints,createCanonicalSchema} from "../dist/data-layer-canonical-schema.js";
-import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
+import {createSpecificationProject,transactProject} from "../dist/data-layer-specification-project.js";
 import {compileSpecificationProject,createCanonicalProjectEnvelope,evaluateSpecificationObservation} from "../dist/data-layer-specification-engine.js";
 
 const contribution=(id,name,scope,constraints)=>({id,name,scope,constraints});
+const legacyRoleState=createSpecificationProject({name:"Record-scoped transaction",site:"shop.example",id:(kind)=>`${kind}:record-scope`});legacyRoleState.project.collections.events=[{id:"event:legacy-role",name:"Legacy",eventName:"legacy",role:"interaction"}];const recordScoped=transactProject(legacyRoleState,"Update an unrelated graph",(project)=>({...project,documentationFlowGraphs:{}}));assert.equal(recordScoped.project.collections.events[0].role,"interaction","an unrelated transaction cannot perform an implicit Event migration");
 const base=contribution("profile:sitewide","Sitewide","Shared Profile",[
   {path:"/funnel_step",type:"string",allowedValues:["1","2","3a","3b"],presence:"optional",enforcement:"invariant"},
 ]);

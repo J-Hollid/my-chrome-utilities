@@ -16,7 +16,7 @@ import { effectivePropertySummary, installLayeredSchemaUi } from "./data-layer-l
 import { compileLayeredSchema } from "./data-layer-layered-schema.js";
 import { assignmentContributorTargets, layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
 import { composedSchemaWorkspace, resetComposedSchemaLocalProperty, saveComposedSchemaLocalFacets } from "./data-layer-composed-schema-workspace.js";
-import { mountComposedSchemaFacetBuilder } from "./data-layer-composed-schema-builders.js";
+import { mountComposedSchemaWorkspace } from "./data-layer-composed-schema-workspace-ui.js";
 import { installFlowDocumentationExportUi } from "./data-layer-flow-table-documentation-export-ui.js";
 import { applyCanonicalCommand, canonicalCommandOutcome, canonicalRequirements, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
@@ -112,76 +112,12 @@ function labeledControl(text, control) { const label = document.createElement("l
 function renderComposedSchemaWorkspace(host, entity, kind, scope) {
     if (!state)
         return;
-    const model = composedSchemaWorkspace(state, entity, scope), section = document.createElement("section"), heading = document.createElement("h2"), summary = document.createElement("p"), columns = document.createElement("div"), rows = document.createElement("div"), propertyChoices = model.rows.flatMap(({ path, effective }) => effective.definitionId ? [{ path, definitionId: effective.definitionId, type: effective.type }] : []);
-    section.className = "composed-schema-workspace";
-    section.setAttribute("aria-label", model.heading);
-    section.dataset.schemaStatus = model.status;
-    heading.textContent = model.heading;
-    summary.setAttribute("role", "status");
-    summary.className = model.status === "blocked" ? "error" : "status-text";
-    summary.textContent = `${model.status === "blocked" ? "Blocked" : "Ready"} · ${model.rows.length} effective properties · ${model.conflictSummary}`;
-    columns.className = "composed-schema-columns";
-    columns.setAttribute("aria-hidden", "true");
-    for (const label of ["Property", "Effective definition", "Source", "Local state", "Validation state", "Actions"])
-        columns.append(Object.assign(document.createElement("strong"), { textContent: label }));
-    rows.setAttribute("role", "table");
-    rows.setAttribute("aria-label", `${model.heading} rows`);
-    for (const row of model.rows) {
-        const wrapper = document.createElement("article"), overview = document.createElement("div"), toggle = document.createElement("button"), effective = document.createElement("span"), source = document.createElement("span"), local = document.createElement("span"), validation = document.createElement("span"), actions = document.createElement("div"), primary = document.createElement("button"), detail = document.createElement("div"), builder = document.createElement("section"), provenance = document.createElement("ol"), impact = document.createElement("div");
-        wrapper.className = "composed-schema-row";
-        wrapper.dataset.effectivePropertyPath = row.path;
-        wrapper.dataset.validationState = row.validationState;
-        overview.className = "composed-schema-row-overview";
-        overview.setAttribute("role", "row");
-        toggle.type = primary.type = "button";
-        toggle.className = "composed-schema-row-toggle";
-        toggle.textContent = row.path;
-        toggle.setAttribute("aria-expanded", "false");
-        effective.textContent = effectivePropertySummary(row.effective) || "constraint";
-        source.textContent = row.source;
-        local.textContent = Object.keys(row.local).length > 1 ? JSON.stringify(row.local) : "Inherited";
-        validation.textContent = `${row.validationState} · ${row.message}`;
-        actions.className = "composed-schema-row-actions";
-        primary.textContent = row.action === "override" ? "Override here" : row.action === "reset" ? "Reset to parents" : "Remove local property";
-        detail.className = "composed-schema-row-detail";
-        detail.hidden = true;
-        detail.setAttribute("aria-label", `${row.path} stacked row detail`);
-        provenance.setAttribute("aria-label", `${row.path} provenance`);
-        provenance.append(Object.assign(document.createElement("li"), { textContent: "Provenance" }));
-        for (const origin of row.provenance)
-            provenance.append(Object.assign(document.createElement("li"), { textContent: `${origin.scope} ${origin.contributorName} · ${origin.state}` }));
-        for (const repair of row.repairs) {
-            const control = document.createElement("button");
-            control.type = "button";
-            control.textContent = repair.label;
-            control.addEventListener("click", () => { const match = ['pages', 'pageGroups', 'profiles', 'events'].find((collection) => state.project.collections[collection].some(({ id }) => id === repair.contributorId)); if (match) {
-                selectedKind = match;
-                selectedId = repair.contributorId;
-                persistNavigation();
-                render();
-            } });
-            impact.append(control);
-        }
-        const openDetail = () => { detail.hidden = false; toggle.setAttribute("aria-expanded", "true"); builder.querySelector("input,select,button")?.focus(); };
-        toggle.addEventListener("click", () => { detail.hidden = !detail.hidden; toggle.setAttribute("aria-expanded", String(!detail.hidden)); if (detail.hidden)
-            toggle.focus(); });
-        primary.addEventListener("click", () => { if (row.action === "override") {
-            openDetail();
-            return;
-        } impact.replaceChildren(); impact.append(`${row.action === "reset" ? "Reset" : "Remove"} preview: effective parent value ${row.inherited ? effectivePropertySummary(row.inherited) : "none"}; affected Page instances will recompile; outputs become stale; one Undo action will be available. `); const confirm = document.createElement("button"); confirm.type = "button"; confirm.textContent = row.action === "reset" ? "Confirm reset to parents" : "Confirm remove local property"; confirm.addEventListener("click", () => persist(resetComposedSchemaLocalProperty(state, kind, entity.id, row.path))); impact.append(confirm); openDetail(); });
-        const detailAction = document.createElement("button");
-        detailAction.type = "button";
-        detailAction.textContent = primary.textContent;
-        detailAction.addEventListener("click", () => primary.click());
-        actions.append(primary);
-        overview.append(toggle, effective, source, local, validation, actions);
-        detail.append(builder, detailAction, provenance, impact);
-        wrapper.append(overview, detail);
-        rows.append(wrapper);
-        mountComposedSchemaFacetBuilder({ host: builder, path: row.path, local: row.local, effective: row.effective, inherited: row.inherited, propertyChoices, onSave: (facets) => persist(saveComposedSchemaLocalFacets(state, kind, entity.id, row.path, facets)) });
-    }
-    section.append(heading, summary, columns, rows);
-    host.append(section);
+    const model = composedSchemaWorkspace(state, entity, scope), section = mountComposedSchemaWorkspace({ host, model, effectiveText: (row) => effectivePropertySummary(row.effective), onSave: (row, facets) => persist(saveComposedSchemaLocalFacets(state, kind, entity.id, row.path, facets)), onReset: (row) => persist(resetComposedSchemaLocalProperty(state, kind, entity.id, row.path)), onRepair: (repair) => { const match = ['pages', 'pageGroups', 'profiles', 'events'].find((collection) => state.project.collections[collection].some(({ id }) => id === repair.contributorId)); if (match) {
+            selectedKind = match;
+            selectedId = repair.contributorId;
+            persistNavigation();
+            render();
+        } } });
     const canonical = entity.canonicalSchema;
     if (canonical) {
         const canonicalHost = document.createElement("section");
