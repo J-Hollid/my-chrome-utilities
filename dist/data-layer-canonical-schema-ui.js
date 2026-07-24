@@ -19,7 +19,8 @@ export function canonicalDispatchRequiresLocalRender(result, renderAfterDispatch
  */
 export function mountCanonicalSchemaEditor(options) {
     const dom = options.host.ownerDocument ?? globalThis.document;
-    let query = "", feedback = options.initialFeedback ?? "", activePropertyId, activeSection = "definition", working, originFocus, originPath, menuPropertyId, removedRuleIds = new Set();
+    const initialDocument = options.load();
+    let query = "", feedback = options.initialFeedback ?? "", activePropertyId = initialDocument.selectedPropertyId, activeSection = "definition", working, originFocus, originPath, menuPropertyId = initialDocument.selectedPropertyId, removedRuleIds = new Set();
     let review;
     const current = () => options.load();
     const selectedNode = (document) => activePropertyId ? document.nodes[activePropertyId] : document.selectedPropertyId ? document.nodes[document.selectedPropertyId] : undefined;

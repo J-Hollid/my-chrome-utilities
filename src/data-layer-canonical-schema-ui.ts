@@ -28,7 +28,8 @@ export function canonicalDispatchRequiresLocalRender(result:CanonicalCommandResu
  */
 export function mountCanonicalSchemaEditor(options:CanonicalSchemaEditorOptions):{render():void}{
   const dom=options.host.ownerDocument??globalThis.document;
-  let query="",feedback=options.initialFeedback??"",activePropertyId:string|undefined,activeSection:FocusedPropertySection="definition",working:CanonicalPropertyNode|undefined,originFocus:HTMLElement|undefined,originPath:string|undefined,menuPropertyId:string|undefined,removedRuleIds=new Set<string>();
+  const initialDocument=options.load();
+  let query="",feedback=options.initialFeedback??"",activePropertyId:string|undefined=initialDocument.selectedPropertyId,activeSection:FocusedPropertySection="definition",working:CanonicalPropertyNode|undefined,originFocus:HTMLElement|undefined,originPath:string|undefined,menuPropertyId:string|undefined=initialDocument.selectedPropertyId,removedRuleIds=new Set<string>();
   let review:HTMLElement|undefined;
 
   const current=():CanonicalSchemaDocument=>options.load();
