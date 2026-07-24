@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=491424de145de9875b1a17189f496fbce9b5cff5cba8c59fec56674b6361cac1
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-22T19:32:34.340765949Z","feature_name":"Data layer canonical Shared Profile schema authoring runtime","feature_path":"features/data-layer-canonical-shared-profile-schema-authoring-runtime.feature","background_hash":"472d7d719a76bf47270eb2580c2854fda6a3037551b5db5845d9adcb51ca716d","implementation_hash":"3cec440338","scenarios":[{"index":20,"name":"Data layer canonical Shared Profile schema authoring runtime 021","scenario_hash":"7402caa88c1bbed1a5f2698ef24bf9ad7de706eb85b17a2866de9c22fbc37d01","mutation_count":22,"result":{"Total":22,"Killed":22,"Survived":0,"Errors":0},"tested_at":"2026-07-22T19:32:34.340765949Z"},{"index":6,"name":"Data layer canonical Shared Profile schema authoring runtime 007","scenario_hash":"37b063e26d5b3f51440eeccbfa03c8720332deec1fa287805b3dda7a5fe56ec7","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-22T16:33:55.966483396Z"},{"index":7,"name":"Data layer canonical Shared Profile schema authoring runtime 008","scenario_hash":"b48222ab9937d34e181fb714ec94b0fca77718e5301f0f9de21bbddffb54ba97","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-22T16:33:55.966483396Z"},{"index":14,"name":"Data layer canonical Shared Profile schema authoring runtime 015","scenario_hash":"e311bdb223dc8dfd7b504fb0d42e86948438e329ff4af691abccce8ea87c7258","mutation_count":21,"result":{"Total":21,"Killed":21,"Survived":0,"Errors":0},"tested_at":"2026-07-22T16:33:55.966483396Z"},{"index":18,"name":"Data layer canonical Shared Profile schema authoring runtime 019","scenario_hash":"34c9088664aaf7f6d7033d9e9031ce864615716268bdcdffe2c0a013b7aa1fa6","mutation_count":24,"result":{"Total":24,"Killed":24,"Survived":0,"Errors":0},"tested_at":"2026-07-22T16:33:55.966483396Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer canonical Shared Profile schema authoring runtime
 
   Background:
@@ -294,3 +289,36 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
     When the installed extension reloads
     Then rendered mapped facets, rule metadata, and source provenance remain present without a repair command
     And production Saved Schema Library bytes remain unchanged
+
+  # Data layer canonical Shared Profile schema authoring runtime 023
+  Scenario: Data layer canonical Shared Profile schema authoring runtime 023
+    Given production /lineOfCustomer is reachable from all six schema contributor editors
+    When actual controls open its property actions in every editor
+    Then one common context-menu inventory renders Definition, Presence, Expected and allowed values, Conditions, Rules, Documentation, Example, and Structure
+    And DOM inspection finds menu actions and summaries but no embedded editor fields
+    When each section choice is activated from the production menu
+    Then one focused editor renders /lineOfCustomer identity, inherited source and value, local value, effective result, validation state, and conflicts
+    And only the chosen section is mounted while all property rows remain compact
+    And switching sections preserves unsaved staged values without mounting a second property editor
+    And actual Escape and Cancel each discard staging and restore focus to the exact originating action
+    And cross-surface control fingerprints are identical except for ownership actions, provenance values, and the return destination
+
+  # Data layer canonical Shared Profile schema authoring runtime 024
+  Scenario: Data layer canonical Shared Profile schema authoring runtime 024
+    Given production /lineOfCustomer has typed allowed values, an All condition tree, inherited pattern rule, and local range and cardinality rules
+    When the Rules section becomes current
+    Then stable rule rows render kind, effective summary, severity, message, source, ownership, and context-valid actions
+    And View is read-only while Edit range mounts only prefilled minimum, maximum, severity, and issue-message controls
+    When actual Add rule selects a kind
+    Then only controls applicable to that rule kind are rendered
+    And reusable-rule selection is a searchable human-named control with no raw ID input
+    When actual controls stage removal of the local cardinality rule
+    Then impact review names that rule, previews the effective result, and changes its staged state to Removed with Restore
+    When Conditions replaces the current section
+    Then rendered All, Any, and Not nodes each expose context-valid View, Edit, Add child, Move, and Remove controls
+    And editing one predicate renders a searchable property, type-valid operator, and conditionally present typed value
+    And DOM inspection finds no target-group selector, observation tester, irrelevant rule inputs, or per-section save action
+    When actual Review changes opens
+    Then it lists every staged addition, edit, removal, override, and reset with effective-result and affected-consumer evidence
+    When actual confirmation commits
+    Then one durable property command contains the staged delta and production Undo contains one action

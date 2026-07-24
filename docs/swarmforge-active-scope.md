@@ -332,6 +332,17 @@ editor inside the side-panel form. Selecting a schema role never mounts a second
 panel editor; `Reset to parents` deletes local facets rather than copying a parent
 or composed snapshot.
 
+Every schema surface uses one property context menu and focused property editor.
+The menu contains section choices and summaries but no embedded forms; only one
+Definition, Presence, Values, Conditions, Rules, Documentation, Example, or
+Structure section is mounted at a time. Facets, condition nodes, and rules remain
+compact stable-identity rows with independent View, Edit, ownership-aware removal,
+and source actions. Rule kind is selected before type-specific fields appear,
+conditions use direct All/Any/Not tree actions, and one reviewed staged session
+commits one property command and one Undo action. Cancel or Escape discards staging
+and returns focus. Inherited content is read-only until a legal override or named
+replacement is chosen; Remove always means remove local content.
+
 The layered schema checkpoint uses that same property and rule model for Shared
 Profile, Event, Page Group, Page, Flow Page-instance, and Event-occurrence
 contributions. Contributor kind changes contextual applicability and provenance,
@@ -543,8 +554,9 @@ acceptance suites.
 
 The `layered_schema` pack must register all four canonical-authoring and layered-
 schema feature contracts and their focused production evidence, including
-cross-surface control-inventory parity and exact Page-frame card routing. Adding the
-new contracts does not authorize extra checkpoint commands.
+cross-surface property-menu parity, focused facet and rule lifecycle, ownership
+action legality, and exact Page-frame card routing. Adding the new contracts does
+not authorize extra checkpoint commands.
 
 Each pack command performs its registered type/build, focused unit tests, installed
 browser adapter, Gherkin generation, and focused runtime acceptance. Pack dependencies

@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=6e61cb6d18028e9a7b9f8e3ffbd361fffec48c8754fecf59aec054581645b2bf
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-24T13:19:40.685820619Z","feature_name":"Data layer layered schema constraints","feature_path":"features/data-layer-layered-schema-constraints.feature","background_hash":"fb0d1f404fb0f55f8682c5c7edfe59c4ef21fe314d802f1e5552e4014cacd104","implementation_hash":"sha256:b5cda08b35864b6b948204cfb8ebf7b4619552176b64474e4e542b70e69f0361","scenarios":[{"index":0,"name":"Data layer layered schema constraints 001","scenario_hash":"a5183bedc23abc0279313c0d2042eaa9a765afdc9141a0444902aed1a2a4b766","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-24T13:19:40.685820619Z"},{"index":4,"name":"Data layer layered schema constraints 005","scenario_hash":"527091a0b3f315daabfdf211aaa2ac580aa78d700a679941f48a08aded429cd2","mutation_count":32,"result":{"Total":32,"Killed":32,"Survived":0,"Errors":0},"tested_at":"2026-07-24T13:19:40.685820619Z"},{"index":19,"name":"Data layer layered schema constraints 020","scenario_hash":"3f75768023c30398e21f1b6f70fde500fee667c17b64829a9f9a69fb8100f1c2","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-07-24T13:19:40.685820619Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer layered schema constraints
 
   Background:
@@ -332,3 +327,22 @@ Feature: Data layer layered schema constraints
     Then Checkout journey restores the selected Page frame, viewport, expanded derived example, and focus on the originating card button
     When Open schema contribution is invoked from the selected Page-frame inline actions
     Then it resolves the same contributor identity and composed-schema workspace
+
+  # Data layer layered schema constraints 022
+  Scenario: Data layer layered schema constraints 022
+    Given /lineOfCustomer has one inherited facet, one local facet, one local override, one inherited invariant rule, and one local rule
+    When the operator opens each facet or rule's actions
+    Then inherited content offers View, Override here where legal, and Open source but no Remove action
+    And local content offers View, Edit, and Remove local
+    And a local override offers View, Edit, and Reset to parent
+    And a conflict offers View conflict, Edit local resolution, and Open contributing sources
+    When the operator views an inherited rule
+    Then read-only detail shows its stable identity, complete definition, effective state, and source without copying it locally
+    And an inherited invariant cannot be weakened or removed
+    And a legally replaceable inherited rule offers Replace here with named replacement provenance
+    When the operator stages removal of the local facet and local rule
+    Then each item remains visible as Removed with Restore and the effective preview falls back independently to its parent or unset result
+    When the operator restores the rule but confirms the property review
+    Then one sparse property command removes only the local facet
+    And parent, sibling, unrelated-facet, and restored-rule bytes remain unchanged
+    And one Undo restores the removed local facet with its stable identity

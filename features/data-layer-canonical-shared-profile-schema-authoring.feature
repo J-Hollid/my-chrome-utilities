@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=0e84da867dec8406a7f3692294c4fe70bb23e44ff26077e21fe17e4d9f04aff4
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-22T19:28:39.497038408Z","feature_name":"Data layer canonical Shared Profile schema authoring","feature_path":"features/data-layer-canonical-shared-profile-schema-authoring.feature","background_hash":"9e8225c80de52bee679ebd2c1ee0ad618b61eb14a35a45ad9378b67a90e8c5ec","implementation_hash":"3cec440338","scenarios":[{"index":20,"name":"Data layer canonical Shared Profile schema authoring 021","scenario_hash":"2bb848324d4a767cdf888495b4488eccd957f83fc7b373b2cd80ea60f11461c6","mutation_count":22,"result":{"Total":22,"Killed":22,"Survived":0,"Errors":0},"tested_at":"2026-07-22T19:28:39.497038408Z"},{"index":6,"name":"Data layer canonical Shared Profile schema authoring 007","scenario_hash":"4e1e629613f3377678a704de7fb49aa24b7666f7d6fd8f7336c5848a2481c5e1","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-22T16:27:51.760576697Z"},{"index":7,"name":"Data layer canonical Shared Profile schema authoring 008","scenario_hash":"1f66844909f9a2d8d4fb2e63db0a5ac2dbe8c763ce946f0d7dfa416bf3d7fab8","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-22T16:27:51.760576697Z"},{"index":14,"name":"Data layer canonical Shared Profile schema authoring 015","scenario_hash":"bb47aa3c9d43d49581aefe99b5084c921b7ac3b3925f65993047d6866f42c60b","mutation_count":21,"result":{"Total":21,"Killed":21,"Survived":0,"Errors":0},"tested_at":"2026-07-22T16:27:51.760576697Z"},{"index":18,"name":"Data layer canonical Shared Profile schema authoring 019","scenario_hash":"c8f16f48f38cc55fd9a94975c60aac7d763058989e5d44c3401164eb45f1e27e","mutation_count":24,"result":{"Total":24,"Killed":24,"Survived":0,"Errors":0},"tested_at":"2026-07-22T16:27:51.760576697Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer canonical Shared Profile schema authoring
 
   Background:
@@ -293,3 +288,37 @@ Feature: Data layer canonical Shared Profile schema authoring
     When the project is reloaded
     Then the mapped facets, rule metadata, and source provenance remain visible without re-entry or migration
     And the Saved Schema Library source remains byte-identical
+
+  # Data layer canonical Shared Profile schema authoring 023
+  Scenario: Data layer canonical Shared Profile schema authoring 023
+    Given /lineOfCustomer is available in Shared Profile, Event, Page Group, Page, Flow Page-instance, and Event-occurrence schema editors
+    When the operator opens its property actions in each editor
+    Then one shared context menu offers Definition, Presence, Expected and allowed values, Conditions, Rules, Documentation, Example, and Structure
+    And the menu contains actions and summaries but no facet, condition, rule, documentation, or example form fields
+    When a section choice is activated from the menu
+    Then one focused property editor identifies /lineOfCustomer, inherited value and source, local value, effective result, validation state, and conflicts
+    And only the selected section's controls are mounted while the property table remains compact
+    And switching sections retains staged values without expanding another property editor
+    And closing with Escape or Cancel discards staged changes and restores focus to the originating property action
+    And the menu and focused editor remain identical while parenting changes only action availability, provenance values, and the return destination
+
+  # Data layer canonical Shared Profile schema authoring 024
+  Scenario: Data layer canonical Shared Profile schema authoring 024
+    Given /lineOfCustomer has typed allowed values, an All condition tree, one inherited pattern rule, and local range and cardinality rules
+    When Rules is chosen for the staged property session
+    Then each rule is one compact stable-identity row showing kind, effective summary, severity, message, source, and ownership state
+    And View opens read-only details without entering edit mode
+    And Edit on the local range rule shows only minimum, maximum, severity, and issue-message fields prefilled from that rule
+    When the operator adds a rule
+    Then rule kind is chosen before only that kind's applicable fields appear
+    And reusable rules use a searchable named selector rather than a raw identity input
+    When the operator stages removal of the local cardinality rule
+    Then a named impact confirmation previews the effective result and marks the rule Removed with Restore available
+    When the staged property session changes from Rules to Conditions
+    Then a readable All, Any, and Not tree gives each group and predicate View, Edit, Add child, Move, and Remove actions
+    And editing one predicate uses a searchable property selector, type-valid operator, and typed value only when required
+    And no target-group selector, observation tester, unrelated rule fields, or second save action is shown
+    When Review changes is invoked
+    Then added, edited, removed, overridden, and reset facets and rules are listed with the prospective effective result and affected consumers
+    When the operator confirms the review
+    Then one property-scoped command saves the complete staged session and creates one Undo action

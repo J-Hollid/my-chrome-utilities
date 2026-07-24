@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=4ace9cfe6e4295a261d273f39bee9b7bde589d3428de8bbb60186a729081209c
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-24T13:21:33.886518979Z","feature_name":"Data layer layered schema constraints runtime","feature_path":"features/data-layer-layered-schema-constraints-runtime.feature","background_hash":"e3abf09522d1a7021ef5c4fddde53d634dd57d90657c227f341935b5a82edc94","implementation_hash":"sha256:bbf092d90a06dd375cc859e2a634860ead1fe0ba720bf73722ef4f8c646cf2f6","scenarios":[{"index":0,"name":"Data layer layered schema constraints runtime 001","scenario_hash":"841b58bac0a850830dd983e58475124102f2e9e7df6f82b643fd77f719b16764","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-24T13:21:33.886518979Z"},{"index":4,"name":"Data layer layered schema constraints runtime 005","scenario_hash":"e6f9b12fb82ce881ea1a801d881cef93539989a8ae6fcdc441241974c826ece5","mutation_count":32,"result":{"Total":32,"Killed":32,"Survived":0,"Errors":0},"tested_at":"2026-07-24T13:21:33.886518979Z"},{"index":19,"name":"Data layer layered schema constraints runtime 020","scenario_hash":"1d4735c775a66aaaeb64d8d2d882d91c5f770db945eceec40651d722079e715e","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-07-24T13:21:33.886518979Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer layered schema constraints runtime
 
   Background:
@@ -330,3 +325,22 @@ Feature: Data layer layered schema constraints runtime
     Then production restores the same frame selection, canvas viewport, open derived example, and focus to the originating card control
     When actual selected-frame inline actions invoke Open schema contribution
     Then the same Flow Page-frame ID and compact composed-schema workspace are rendered
+
+  # Data layer layered schema constraints runtime 022
+  Scenario: Data layer layered schema constraints runtime 022
+    Given production /lineOfCustomer has inherited, local, overridden, invariant, and conflicting facet and rule states
+    When actual controls inspect every item menu
+    Then inherited rows render View, legal Override here, and Open source without Remove
+    And local rows render View, Edit, and Remove local
+    And locally overridden rows render View, Edit, and Reset to parent
+    And conflicting rows render View conflict, Edit local resolution, and Open contributing sources
+    When actual View opens an inherited rule
+    Then read-only production detail renders its stable ID, complete definition, effective state, and source with zero Draft writes
+    And invariant actions permit neither weakening nor removal
+    And a replaceable inherited rule exposes Replace here with named replacement provenance
+    When actual controls stage local-facet and local-rule removal
+    Then both rows remain mounted as Removed with Restore and compiled preview independently shows parent or unset fallback
+    When actual controls restore the rule and confirm the property review
+    Then one durable sparse command deletes only the local facet
+    And hashes for parent, sibling, unrelated facets, restored rule, and Published revision remain unchanged
+    And one production Undo restores the local facet under its original stable ID
