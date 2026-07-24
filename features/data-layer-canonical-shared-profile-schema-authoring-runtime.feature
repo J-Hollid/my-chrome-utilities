@@ -43,7 +43,7 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
   Scenario: Data layer canonical Shared Profile schema authoring runtime 005
     Given actual controls open Opened Article in the wide schema workspace
     When article_name is selected
-    Then the main workspace renders a compact property navigator, focused article_name editing, and effective documentation outside the Inspector
+    Then the main workspace renders a property navigator, complete schema table, expandable article_name details, and effective documentation outside the Inspector
     And production search, filtering, revision comparison, object, array, item-type, scalar-type, presence, allowed-value, regular-expression, range, cardinality, conditional-rule, reusable-rule, documentation, example, and impact-review actions match the side-panel schema editor
     And installed Tree and Table views share the selected property and canonical Saved Draft
     And complete authoring succeeds without editing advanced JSON
@@ -110,13 +110,13 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
     When actual controls switch from Tree to Table
     Then the wide workspace renders one hierarchical row for every effective property
     And headings include property, path, type, presence, expected or allowed values, conditions, rules, documentation, example, source, local state, validation state, and actions
-    And actual focused-section controls edit one selected property without embedded row forms
+    And actual inline controls edit common fields across multiple rows
     And production root, child, sibling, rename, move, duplicate, and delete commands open no separate one-property screen
-    When actual controls stage article_name presence and article_type example while switching focused sections
+    When actual controls change article_name presence and article_type example without leaving Table
     Then both rendered rows retain their edits and remain simultaneously visible
-    When the installed property menu opens article_name's focused section
-    Then focused condition and rule builders replace that selected section without unmounting the other compact rows
-    And the staged edit remains visible across section changes and updates documentation after one save
+    When the installed Table reveals article_name complex row detail
+    Then complex condition and rule builders render beneath that row without unmounting the other rows
+    And an actual Table edit immediately updates Tree and documentation preview
 
   # Data layer canonical Shared Profile schema authoring runtime 012
   Scenario: Data layer canonical Shared Profile schema authoring runtime 012
@@ -239,10 +239,10 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
     And the side-panel editor contains no standalone wide table, Builder canonical editor landmark, or nested second schema form
     And at 360 CSS pixels one measured vertical scroll owner contains every selected-property control with no horizontal page overflow
     When actual controls open the same canonical Draft in the installed standalone workspace
-    Then all property rows remain compact and the focused property menu contains the same complex operations
+    Then all property rows remain mounted in the wide table and expandable row detail contains the same complex operations
     And reopening the side panel retains its compact renderer, selected property, and panel scroll ownership
     When actual side-panel controls change metadata/category documentation
-    And actual standalone focused-section controls change metadata/category conditional presence
+    And actual standalone row-detail controls change metadata/category conditional presence
     Then installed subscription evidence is
       | projection          | rendered facet        | opaque Draft token |
       | standalone table    | changed documentation | article-9          |
