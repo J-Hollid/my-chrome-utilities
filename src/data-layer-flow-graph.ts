@@ -1,5 +1,6 @@
 import {orderedPageGroupIds,requiresPageGroupMembershipMigration} from "./utilities/data-layer/page-group-membership.js";
 import {canonicalSchemaWithConstraint,compileLayeredSchema,createCanonicalSchema,layeredContributorPath,layeredContributorsForPath,migrateLegacyProfile,transactProject,validateLayeredObservation,type CanonicalSchemaDocument,type IdFactory,type LayerConstraint,type ProjectEntity,type ProjectState,type SpecificationProject} from "./utilities/data-layer/schemas.js";
+import {duplicatePageFrameRecord} from "./data-layer-flow-graph-structural.js";
 
 export type FlowRole="context-setting"|"interaction";
 export type FlowObligation="Required"|"Optional"|"Conditional"|"Informational";
@@ -77,6 +78,10 @@ export function inspectPageFrameDrop(project:SpecificationProject,flowId:string,
 export function addFlowPageFrame(state:ProjectState,flowId:string,input:{pageId:string;pageGroupId:string;x?:number;y:number},id:IdFactory):ProjectState{
   const review=inspectPageFrameDrop(state.project,flowId,input.pageId,input.pageGroupId);if(review.rejected)return state;const graph=storedGraph(state.project,flowId);
   return transactProject(state,"Add Flow Page frame",(project)=>{const current=storedGraph(project,flowId),frame:DocumentaryPageFrameRecord={id:id("flow-page-frame"),pageId:input.pageId,pageGroupId:input.pageGroupId,position:{x:Math.max(20,Math.round(input.x??40+current.pageFrames.filter(({pageGroupId})=>pageGroupId===input.pageGroupId).length*240)),y:Math.max(40,Math.round(input.y))}};return saveStoredGraph(project,flowId,{...current,pageFrames:[...current.pageFrames,frame]});});
+}
+export function duplicateFlowPageFrame(state:ProjectState,flowId:string,pageFrameId:string,id:IdFactory):ProjectState{
+  const graph=storedGraph(state.project,flowId),source=graph.pageFrames.find(({id:candidateId})=>candidateId===pageFrameId);if(!source)return state;
+  return transactProject(state,`Duplicate Flow Page frame ${pageFrameId}`,(project)=>{const current=storedGraph(project,flowId),latest=current.pageFrames.find(({id:candidateId})=>candidateId===pageFrameId)??source,copy=duplicatePageFrameRecord(latest,id("flow-page-frame"));return saveStoredGraph(project,flowId,{...current,pageFrames:[...current.pageFrames,copy]});});
 }
 export function removeFlowPageFrame(state:ProjectState,flowId:string,pageFrameId:string):ProjectState{
   const graph=storedGraph(state.project,flowId),frame=graph.pageFrames.find(({id})=>id===pageFrameId);if(!frame)return state;const removedIds=new Set([pageFrameId,...graph.occurrences.filter((occurrence)=>occurrence.pageFrameId===pageFrameId).map(({id})=>id)]);return transactProject(state,"Remove Flow Page frame",(project)=>{const current=storedGraph(project,flowId);return saveStoredGraph(project,flowId,{...current,pageFrames:current.pageFrames.filter(({id})=>id!==pageFrameId),occurrences:current.occurrences.filter((occurrence)=>occurrence.pageFrameId!==pageFrameId),relationships:current.relationships.filter((relationship)=>!relationshipTouches(relationship,removedIds))});});

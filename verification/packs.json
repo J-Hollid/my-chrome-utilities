@@ -760,7 +760,9 @@
     "id": "flow_graph",
     "source": [
       "src/data-layer-flow-graph.ts",
-      "src/data-layer-flow-graph-ui.ts"
+      "src/data-layer-flow-graph-ui.ts",
+      "src/data-layer-flow-graph-structural.ts",
+      "src/data-layer-flow-graph-ui-page-frame.ts"
     ],
     "dependencies": [
       "durable_project_repository",
@@ -853,6 +855,7 @@
     "id": "layered_schema",
     "source": [
       "src/data-layer-canonical-schema.ts",
+      "src/data-layer-canonical-schema-facets.ts",
       "src/data-layer-canonical-schema-commands.ts",
       "src/data-layer-canonical-schema-constraints.ts",
       "src/data-layer-canonical-schema-migration.ts",
@@ -861,13 +864,18 @@
       "src/data-layer-saved-schema-canonical.ts",
       "src/data-layer-canonical-schema-ui.ts",
       "src/data-layer-canonical-schema-focused-sections.ts",
+      "src/data-layer-canonical-schema-focused-facets-ui.ts",
       "src/data-layer-canonical-schema-focused-conditions.ts",
+      "src/data-layer-canonical-schema-focused-condition-tree.ts",
       "src/data-layer-canonical-schema-focused-rules.ts",
+      "src/data-layer-canonical-schema-focused-rule-rows.ts",
+      "src/data-layer-canonical-schema-focused-rule-add.ts",
       "src/data-layer-canonical-schema-focused-menu.ts",
       "src/data-layer-canonical-schema-focused-editor.ts",
       "src/data-layer-canonical-schema-focused-drafts.ts",
       "src/data-layer-canonical-schema-focused-command.ts",
       "src/data-layer-canonical-schema-render.ts",
+      "src/data-layer-canonical-schema-render-navigator.ts",
       "src/data-layer-focused-schema-property-ui.ts",
       "src/data-layer-canonical-predicate-editor.ts",
       "src/data-layer-side-panel-unified-schema-editor.ts",

@@ -19,6 +19,8 @@ import {
 } from "../dist/data-layer-canonical-schema.js";
 import {confirmCanonicalMigration,createSpecificationProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
 import {bindCanonicalPropertySearch,canonicalDispatchRequiresLocalRender} from "../dist/data-layer-canonical-schema-ui.js";
+import {focusedOwnershipActions,focusedSparseDelta} from "../dist/data-layer-focused-schema-property-ui.js";
+import {typedCanonicalValue} from "../dist/data-layer-canonical-schema-facets.js";
 
 let sequence=0;
 const id=(kind)=>`${kind}:${++sequence}`;
@@ -90,6 +92,13 @@ assert.deepEqual(canonicalConstraints(document).map(({path,presence})=>({path,pr
   {path:"/commerce/order",presence:undefined},
   {path:"/commerce/order/transaction_id",presence:"required"},
 ]);
+assert.equal(typedCanonicalValue("number","2.5"),2.5,"canonical expected values preserve numeric types");
+assert.equal(typedCanonicalValue("boolean","false"),false,"canonical expected values preserve boolean types");
+assert.deepEqual(typedCanonicalValue("object",'{"step":3}'),{step:3},"canonical object facets retain structured values");
+assert.throws(()=>typedCanonicalValue("integer","2.5"),/whole number/);
+assert.deepEqual(focusedSparseDelta({expectedValue:"local",documentation:""},{expectedValue:"parent",documentation:""}),{expectedValue:"local"},"canonical facet deltas omit unchanged inherited values");
+assert.deepEqual(focusedOwnershipActions({inherited:true,replaceable:true}),["View","Replace here","Open source"],"replaceable inherited facets expose a legal replacement action");
+assert.deepEqual(focusedOwnershipActions({inherited:true,invariant:true}),["View","Open source"],"invariant inherited facets cannot be overridden");
 
 const impact=changeCanonicalPropertyType(document,{baseRevision:5,propertyId:commerce,type:"string"});
 assert.equal(impact.status,"confirmation-required");

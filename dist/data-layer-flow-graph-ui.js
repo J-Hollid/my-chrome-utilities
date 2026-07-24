@@ -1,5 +1,6 @@
-import { addFlowPageFrame, addFreePageFrame, addEventOccurrenceToPage, addGraphOccurrence, deriveFlowOccurrenceExample, deriveFlowPageFrameExample, documentaryFlowGraph, flowOccurrenceExampleEditorRows, FLOW_GRAPH_GEOMETRY, flowRelationshipText, inspectOccurrencePageChange, migrateLegacyFlowContextBindings, migrateLegacyFlowRelationshipKinds, moveFlowPageFrame, moveFreePageFrame, moveGraphOccurrence, projectFlowGraph, reassignFlowOccurrencePage, reviewLegacyFlowContextMigration, removeFlowPageFrame, removeFlowRelationship, removeGraphOccurrence, reorderFlowPageGroupLane, saveGraphRelationship, setFlowOccurrenceExample, setFlowPageGroupLanes, } from "./data-layer-flow-graph.js";
+import { addFlowPageFrame, addFreePageFrame, addEventOccurrenceToPage, addGraphOccurrence, deriveFlowOccurrenceExample, deriveFlowPageFrameExample, documentaryFlowGraph, duplicateFlowPageFrame, flowOccurrenceExampleEditorRows, FLOW_GRAPH_GEOMETRY, flowRelationshipText, inspectOccurrencePageChange, migrateLegacyFlowContextBindings, migrateLegacyFlowRelationshipKinds, moveFlowPageFrame, moveFreePageFrame, moveGraphOccurrence, projectFlowGraph, reassignFlowOccurrencePage, reviewLegacyFlowContextMigration, removeFlowPageFrame, removeFlowRelationship, removeGraphOccurrence, reorderFlowPageGroupLane, saveGraphRelationship, setFlowOccurrenceExample, setFlowPageGroupLanes, } from "./data-layer-flow-graph.js";
 import { orderedPageGroupIds } from "./utilities/data-layer/page-group-membership.js";
+import { appendFlowPageFrameCardControls } from "./data-layer-flow-graph-ui-page-frame.js";
 export function contextSettingPageLabel(pageName) { return `${pageName} · Context-setting Page`; }
 const nodeWidth = FLOW_GRAPH_GEOMETRY.eventWidth, nodeHeight = FLOW_GRAPH_GEOMETRY.eventHeight;
 const q = (selector, root = document) => { const element = root.querySelector(selector); if (!element)
@@ -256,22 +257,6 @@ export function installFlowGraphBuilder(options) {
     catch {
         return activeCatalogPayload;
     } }
-    function appendPageFrameCardControls(card, title, state, flow, graph, frame) {
-        card.append(title);
-        const memberships = orderedPageGroupIds(state.project, frame.pageId);
-        for (const groupId of graph.pageGroupIds.filter((id) => memberships.includes(id) && id !== frame.pageGroupId)) {
-            const group = state.project.collections.pageGroups.find(({ id }) => id === groupId), move = button(`Move to ${group?.name ?? groupId}`, () => persist(moveFlowPageFrame(current().state, flow.id, frame.id, { pageGroupId: groupId, ...(frame.position.x === undefined ? {} : { x: frame.position.x }), y: frame.position.y })));
-            move.dataset.movePageFrameTo = groupId;
-            move.addEventListener("keydown", (event) => { if (event.key === "Enter") {
-                event.preventDefault();
-                move.click();
-            } });
-            card.append(move);
-        }
-        const open = button("Open schema contribution", () => { const originFocus = document.activeElement instanceof HTMLElement ? document.activeElement : open; saveSelection({ kind: "page-frame", id: frame.id }); options.openOccurrenceSchema?.(frame.id, undefined, originFocus); });
-        open.dataset.flowSchemaContribution = "true";
-        card.append(pageExampleDetails(state, flow.id, frame.id, entityName(state.project.collections.pages, frame.pageId)), open, button("Remove Page frame", () => persist(removeFlowPageFrame(current().state, flow.id, frame.id))));
-    }
     function renderFrameCards(host) {
         const { state, flow, graph } = current();
         if (!state || !flow || !graph)
@@ -300,7 +285,7 @@ export function installFlowGraphBuilder(options) {
                 statusMessage = "A Page frame cannot contain another Page. Use its owning lane.";
                 render();
             } });
-            appendPageFrameCardControls(card, title, state, flow, graph, frame);
+            appendFlowPageFrameCardControls({ card, title, state, flow, graph, frame, entityName, pageExampleDetails, saveSelection: (value) => saveSelection(value), ...(options.openOccurrenceSchema ? { openOccurrenceSchema: options.openOccurrenceSchema } : {}), persist: (next) => persist(next), movePageFrame: (next, flowId, frameId, input) => moveFlowPageFrame(next, flowId, frameId, input), duplicatePageFrame: (next, flowId, frameId) => duplicateFlowPageFrame(next, flowId, frameId, options.id), removePageFrame: (next, flowId, frameId) => removeFlowPageFrame(next, flowId, frameId) });
             host.append(card);
         }
     }
