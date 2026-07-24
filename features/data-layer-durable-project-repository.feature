@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=af5c6ffdcee489684aa33db3003afdab0968f23628ad7b5712af7ec1f67b3a9a
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-23T01:11:52.144779873Z","feature_name":"Data layer durable project repository","feature_path":"features/data-layer-durable-project-repository.feature","background_hash":"81a3262becad324dfcecfa4f53db2a34463df2951ccf3298eab13ee4623dcda9","implementation_hash":"sha256:85b2f970ecb3b9fa9a29f030a2c6c9eefd988ce1a59bb93be52d73e9e584a4e7","scenarios":[{"index":5,"name":"Data layer durable project repository 006","scenario_hash":"3c084811a55454950e55fb908b022226efce73c45b110f820ab9abd8150f5f89","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-23T01:07:16.443712233Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer durable project repository
 
   Background:
@@ -126,3 +121,15 @@ Feature: Data layer durable project repository
     Then every project-bound surface reads and writes only the migrated durable records
     And Web Storage receives no canonical project document, full schema definition, fixture payload, release snapshot, or Undo snapshot
     And deleting the legacy backup requires a named consequence review and leaves current projects unchanged
+
+  # Data layer durable project repository 013
+  Scenario: Data layer durable project repository 013
+    Given Retail website durably contains Flow graph flow-orphan whose owning Flow entity is absent
+    And that orphan topology references Payment Page
+    When the installed repository upgrade evaluates Flow graph ownership
+    Then one atomic repair retains the orphan graph in a recoverable backup before deleting its Draft flowGraphs record
+    And a verified repair receipt identifies Retail website, flow-orphan, source checksum, and deleted record identity
+    And read-back proves that every remaining Flow graph is keyed by one live Flow in the same project
+    And dependency discovery no longer treats flow-orphan as a Payment dependency or navigable entity
+    And the Saved Draft token advances while Published revision 3 and unrelated durable records remain unchanged
+    But if backup, deletion, receipt, or read-back verification fails, the repair transaction aborts with the original orphan record intact

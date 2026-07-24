@@ -222,3 +222,17 @@ Feature: Data layer project library and active context runtime
     Then production Pages stores Cart as context-setting pageview
     And production Events stores Button click as interaction button_click
     And serialized entities contain no role, context binding, or copied schema
+
+  # Data layer project library and active context runtime 018
+  Scenario: Data layer project library and active context runtime 018
+    Given production Checkout journey owns Payment Page frames and nested interaction Event instances
+    And no production Fixture, Assignment, or other entity references Checkout journey
+    When actual controls open and confirm Remove Checkout journey from the Flows overview
+    Then the installed review treats the complete Flow topology as owned removal content rather than a dependency or Open action
+    And one production command removes the Flow record and its exact documentation Flow graph
+    And the installed Payment removal review contains neither a deleted-Flow dependency nor an Open Checkout journey control
+    When another installed surface restores the deleted Flow route
+    Then production navigation falls back to the Flows overview with no uncaught exception
+    And hashes for unrelated entities and Published revision 3 remain unchanged
+    When actual Undo runs once
+    Then production restores the same Flow ID and byte-identical Flow graph

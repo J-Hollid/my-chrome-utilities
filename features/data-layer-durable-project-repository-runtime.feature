@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=344cc2d048aa59b9b5443179328071a47501554e6cfa14ffcfa2228729356137
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-23T01:12:01.746134421Z","feature_name":"Data layer durable project repository runtime","feature_path":"features/data-layer-durable-project-repository-runtime.feature","background_hash":"ea1a4120468de5d4ee4a99ef8f057ae8ba167549e8835e264649c75069235b18","implementation_hash":"sha256:d0cdfe2c8e3b14f4acc9518a20fec0ca6be8fc1d83497efe7fd5848c19375ede","scenarios":[{"index":5,"name":"Data layer durable project repository runtime 006","scenario_hash":"2c66d9ae784c35eb6550ab51706de68e3f28811aec56e72d054b767a9fd2f11f","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-23T01:09:07.248650137Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer durable project repository runtime
 
   Background:
@@ -117,3 +112,14 @@ Feature: Data layer durable project repository runtime
     Then parsed export contains the latest durable Draft and release but no Undo, Redo, migration backup, storage estimate, or permission state
     And one import transaction creates only remapped records for the new project
     And Release 3, the source fixture, active identity, and every pre-existing project hash remain unchanged
+
+  # Data layer durable project repository runtime 013
+  Scenario: Data layer durable project repository runtime 013
+    Given production IndexedDB has project-retail:flow-orphan in flowGraphs without a matching Flow entity
+    And the orphan graph references Payment Page
+    When the installed versioned ownership repair runs
+    Then one IndexedDB transaction writes a recoverable checksummed backup, deletes project-retail:flow-orphan, and writes a verified receipt
+    And durable read-back contains no Flow graph whose key lacks a same-project Flow
+    And the installed Payment removal review contains no flow-orphan text or Open flow-orphan control
+    And the new Saved Draft token is observed without changing Published revision 3 or unrelated record hashes
+    But an injected backup, delete, receipt, or verification failure aborts all repair writes and preserves the original flowGraphs bytes

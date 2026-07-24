@@ -517,7 +517,8 @@ The `durable_project_repository` pack must register both durable-repository
 contracts and focused installed evidence for IndexedDB persistence, verified legacy
 migration, required `storage` and `unlimitedStorage` permissions, record-scoped
 Draft transactions, stale-write handling, page-scoped Undo/Redo, truthful repository
-failures, and the intentional publication boundary. It depends on
+failures, the intentional publication boundary, and the versioned recoverable repair
+of Flow-graph records whose owning Flow entity is absent. It depends on
 `project_management` so revised portability and active-context contracts execute
 through their existing focused pack rather than being duplicated.
 
@@ -525,7 +526,8 @@ The `project_management` pack must register all four project-management contract
 and focused production evidence for the project repository, side-panel Projects
 tab, Specification Studio router, all nine entity collection lifecycle routes,
 Page context-event and Event interaction creation semantics, dependency-guarded
-removal, versioned serializer, import remapper, and legacy singleton migration. It
+removal, Flow-owned topology deletion and safe stale-route fallback, versioned
+serializer, import remapper, and legacy singleton migration. It
 may declare canonical schema dependencies in the pack
 registry but must not invoke archived project-foundation, release, or full-site
 acceptance suites.

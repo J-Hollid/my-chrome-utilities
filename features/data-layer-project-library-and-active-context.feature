@@ -219,3 +219,18 @@ Feature: Data layer project library and active context
     Then Pages contains Cart identified as context-setting pageview
     And Events contains Button click identified as interaction button_click
     And neither canonical entity stores a role selector, Page-context binding, or duplicate schema
+
+  # Data layer project library and active context 018
+  Scenario: Data layer project library and active context 018
+    Given Checkout journey owns a Flow graph containing Payment Page frames and nested interaction Event instances
+    And no Fixture, Assignment, or other entity references Checkout journey
+    When the operator invokes Remove Checkout journey from the Flows overview
+    Then the impact review identifies the complete owned Flow topology as part of the removal
+    And the owned graph is not reported as an independent dependency or an Open repair action
+    When the operator commits the reviewed Flow removal
+    Then one canonical command removes Checkout journey's stable Flow identity and its complete owned Flow graph
+    And no Page removal review reports that deleted topology or offers Open Checkout journey
+    And stale navigation for Checkout journey resolves to the Flows overview without an uncaught error
+    And unrelated project entities and Published revision 3 remain unchanged
+    When the operator invokes Undo once
+    Then Checkout journey returns with its original stable identity and exact Flow graph
