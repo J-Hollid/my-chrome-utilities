@@ -287,6 +287,42 @@
       "src/data-layer-layered-schema.ts"
     ]
   },
+  "src/data-layer-canonical-schema-commands.ts": {
+    "module": "schemas",
+    "layer": "application",
+    "contracts": [
+      "src/data-layer-canonical-schema.ts"
+    ]
+  },
+  "src/data-layer-canonical-schema-constraints.ts": {
+    "module": "schemas",
+    "layer": "application",
+    "contracts": [
+      "src/data-layer-canonical-schema.ts",
+      "src/data-layer-layered-schema.ts"
+    ]
+  },
+  "src/data-layer-canonical-schema-migration.ts": {
+    "module": "schemas",
+    "layer": "application",
+    "contracts": [
+      "src/data-layer-canonical-schema.ts"
+    ]
+  },
+  "src/data-layer-canonical-schema-model.ts": {
+    "module": "schemas",
+    "layer": "application",
+    "contracts": [
+      "src/data-layer-canonical-schema.ts"
+    ]
+  },
+  "src/data-layer-canonical-schema-predicates.ts": {
+    "module": "schemas",
+    "layer": "application",
+    "contracts": [
+      "src/data-layer-canonical-schema.ts"
+    ]
+  },
   "src/data-layer-saved-schema-canonical.ts": {
     "module": "schemas",
     "layer": "application",

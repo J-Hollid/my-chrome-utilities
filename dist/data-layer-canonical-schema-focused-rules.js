@@ -29,9 +29,11 @@ export function renderCanonicalFocusedRules(host, context) {
         row.dataset.ruleId = rule.id;
         row.dataset.ownership = inherited ? "inherited" : "local";
         summary.textContent = `${ruleKindLabel(rule)} · ${rule.kind} · ${rule.severity} · ${rule.message ?? "No issue message"} · source ${rule.provenance?.contributorName ?? "local"}${removed ? " · Removed" : ""}`;
-        row.append(summary, button(dom, "View", () => { row.dataset.ruleMode = "view"; }));
+        row.append(summary, button(dom, "View", () => { row.dataset.ruleMode = "view"; const detail = dom.createElement("p"); detail.textContent = `Rule ${rule.id} · ${rule.kind} · ${rule.severity} · ${rule.message ?? "No issue message"} · source ${rule.provenance?.contributorName ?? "local"}`; row.append(detail); }));
         if (inherited)
-            row.append(button(dom, "Override here", () => { }), button(dom, "Open source", () => { }));
+            row.append(button(dom, "Override here", () => { const next = context.getWorking(); if (!next)
+                return; const index = next.rules.findIndex(({ id }) => id === rule.id); if (index < 0)
+                return; const replacement = clone(next.rules[index]); replacement.id = context.id("rule"); replacement.provenance = { source: "created", state: "effective" }; next.rules[index] = replacement; context.feedback(`Staged override of ${ruleKindLabel(rule)}.`); context.render(); }), button(dom, "Open source", () => { row.dataset.ruleMode = "source"; const source = dom.createElement("p"); source.textContent = `Source rule ${rule.id} · ${ruleKindLabel(rule)} · inherited definition is read-only.`; row.append(source); }));
         else if (removed) {
             const impact = dom.createElement("p");
             impact.textContent = `Impact review: ${ruleKindLabel(rule)} · effective result falls back to parent or unset.`;

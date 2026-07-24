@@ -1,4 +1,4 @@
-import { typedComposedValue } from "./data-layer-composed-schema-builders.js";
+import { addComposedConditionPredicate, moveComposedConditionBranch, removeComposedConditionBranch, typedComposedValue } from "./data-layer-composed-schema-builders.js";
 import { focusedConditionLabel } from "./data-layer-focused-schema-property-ui.js";
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
@@ -9,7 +9,10 @@ export function renderComposedFocusedCondition(host, context) {
     const summary = dom.createElement("p"), tree = dom.createElement("div"), controls = dom.createElement("div");
     summary.textContent = focusedConditionLabel(draft.condition);
     tree.setAttribute("aria-label", "Readable condition tree");
-    const appendNode = (condition, path) => { const row = dom.createElement("article"); row.dataset.conditionPath = path.join(".") || "root"; row.textContent = focusedConditionLabel(condition); row.append(button(dom, "View", () => { row.dataset.conditionState = "view"; }), button(dom, "Edit", () => { row.dataset.conditionState = "edit"; }), button(dom, "Add child", () => { }), button(dom, "Move", () => { }), button(dom, "Remove", () => { })); tree.append(row); if (condition.kind !== "predicate" && Array.isArray(condition.children))
+    const appendNode = (condition, path) => { const row = dom.createElement("article"); row.dataset.conditionPath = path.join(".") || "root"; row.textContent = focusedConditionLabel(condition); const detail = (mode) => { row.dataset.conditionState = mode; const description = dom.createElement("p"); description.textContent = `${mode === "view" ? "Read-only" : "Editable"} condition · ${focusedConditionLabel(condition)}`; row.append(description); }; const addChild = () => { const draft = context.getDraft(), choice = context.model.rows[0]; if (!draft || !choice || condition.kind === "predicate")
+        return; const next = addComposedConditionPredicate(draft, path, { propertyId: choice.effective.definitionId ?? choice.path, operator: "Exists" }); draft.condition = next.condition; context.render(); }; const move = () => { const draft = context.getDraft(); if (!draft || !path.length)
+        return; const delta = path.at(-1) === 0 ? 1 : -1, next = moveComposedConditionBranch(draft, path, delta); draft.condition = next.condition; context.render(); }; const remove = () => { const draft = context.getDraft(); if (!draft)
+        return; const next = removeComposedConditionBranch(draft, path); draft.condition = next.condition; context.render(); }; row.append(button(dom, "View", () => detail("view")), button(dom, "Edit", () => detail("edit")), button(dom, "Add child", addChild), button(dom, "Move", move), button(dom, "Remove", remove)); tree.append(row); if (condition.kind !== "predicate" && Array.isArray(condition.children))
         condition.children.forEach((child, index) => appendNode(child, [...path, index])); };
     if (draft.condition)
         appendNode(draft.condition, []);
