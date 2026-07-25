@@ -505,6 +505,7 @@ feature.
 | C45 | The reusable-rule search can be decorative and rule kinds can accept incomplete definitions | Authoring 025–027 | Library-backed human-name filtering, kind-specific controls, conditional-rule construction, and exact no-write validation | Reusable Rule Library query, staged rule builder, condition tree, validation, repository, and Undo | Typed query and filtered names, stable selected identity, per-kind control inventory, exact diagnostics, and unchanged Draft evidence | B, E | Search changes named library results, every kind exposes only valid controls, and invalid rules create no staged or durable change |
 | C46 | Composed editors can weaken inherited rules through a generic Override action | Layering 023–024 | Canonical and composed editors share invariant and replaceable rule action legality | Rule ownership resolver, composed editor, replacement provenance, and staged property command | Cross-surface action inventory, absent illegal actions, new local identity, named parent reference, and unchanged parent bytes | B, C, E | Invariants cannot be changed and replaceable rules use one Replace here workflow |
 | C47 | The Table became a button list that opens a detached control panel | Authoring 028 | Information-rich rows retain common cell editing while one row-anchored context menu contains advanced operations | Shared Table projection, inline facet controls, overlay host, focus adapter, property command bus, and Undo | Cross-surface column inventory, editable cell results, absent action column and below-table panel, overlay geometry, sibling-row continuity, persistence, Undo, and restored focus | B, E | Table remains the primary editor; common values are edited in place and advanced work never expands a row or mounts a detached panel |
+| C48 | Property facets leak into a long menu and conditions are detached from the rules they guard | Authoring 023–030 | A compact layered menu opens one complete Definition form or nested conditional Rules; one ordinary-value field distinguishes expected from comma-separated allowed values | Layered overlay host, canonical definition adapter, typed ordinary-value parser and formatter, conditional rule AST, compiler, validator, focus adapter, repository, and Undo | Six-surface menu fingerprints, overlay geometry and focus, one-pass definition persistence, bracket-free Table text, rule When and Then controls, three matching and non-matching examples, compatible composition, named conflicts, unchanged definitions, and reload | A, B, C, E | Operators complete ordinary property editing in one Definition form; every conditional rule owns its condition and supersedes only matching definition facets |
 
 ## Terminal acceptance
 
@@ -530,6 +531,9 @@ show:
 - direct Page and Page Group composed-schema workspaces with all effective rows
   visible, field-level provenance, common inline edits, and row-anchored advanced
   overlays without a dedicated action-button column or detached below-table panel;
+- one layered property menu whose single Definition form combines type, presence,
+  ordinary values, documentation, and examples, while each Rule combines its own
+  When condition and Then outcome;
 - Page-local ordinary overrides that warn rather than disappear when a parent is
   added, sparse reset-to-parent behavior, and readiness blocking for uncovered or
   invariant conflicts;

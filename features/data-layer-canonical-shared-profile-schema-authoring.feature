@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=87a1fa72dd2689d6e917941f9cbce97d1492c6fd36d2f9a01ff448fcd5767314
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-25T21:04:23.609564066Z","feature_name":"Data layer canonical Shared Profile schema authoring","feature_path":"features/data-layer-canonical-shared-profile-schema-authoring.feature","background_hash":"9e8225c80de52bee679ebd2c1ee0ad618b61eb14a35a45ad9378b67a90e8c5ec","implementation_hash":"sha256:2044b360fb6a279e9f0f3cacea33cb3523333d907987c9cc3b794d2f84205d7f","scenarios":[{"index":6,"name":"Data layer canonical Shared Profile schema authoring 007","scenario_hash":"4e1e629613f3377678a704de7fb49aa24b7666f7d6fd8f7336c5848a2481c5e1","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-25T21:04:23.609564066Z"},{"index":7,"name":"Data layer canonical Shared Profile schema authoring 008","scenario_hash":"1f66844909f9a2d8d4fb2e63db0a5ac2dbe8c763ce946f0d7dfa416bf3d7fab8","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-25T21:04:23.609564066Z"},{"index":14,"name":"Data layer canonical Shared Profile schema authoring 015","scenario_hash":"bb47aa3c9d43d49581aefe99b5084c921b7ac3b3925f65993047d6866f42c60b","mutation_count":21,"result":{"Total":21,"Killed":21,"Survived":0,"Errors":0},"tested_at":"2026-07-25T21:04:23.609564066Z"},{"index":18,"name":"Data layer canonical Shared Profile schema authoring 019","scenario_hash":"c8f16f48f38cc55fd9a94975c60aac7d763058989e5d44c3401164eb45f1e27e","mutation_count":24,"result":{"Total":24,"Killed":24,"Survived":0,"Errors":0},"tested_at":"2026-07-25T21:04:23.609564066Z"},{"index":20,"name":"Data layer canonical Shared Profile schema authoring 021","scenario_hash":"2bb848324d4a767cdf888495b4488eccd957f83fc7b373b2cd80ea60f11461c6","mutation_count":22,"result":{"Total":22,"Killed":22,"Survived":0,"Errors":0},"tested_at":"2026-07-25T21:04:23.609564066Z"},{"index":25,"name":"Data layer canonical Shared Profile schema authoring 026","scenario_hash":"642a48f148046aba7b5d0cee86682dfa9c396e9b7171791299e2f75f973116ec","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-07-25T21:04:23.609564066Z"},{"index":26,"name":"Data layer canonical Shared Profile schema authoring 027","scenario_hash":"7fe8417c6d73c6f6f9dd79dc260c7079c8cde65c807d09d33a498ff705159da5","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-25T21:04:23.609564066Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer canonical Shared Profile schema authoring
 
   Background:
@@ -298,31 +293,32 @@ Feature: Data layer canonical Shared Profile schema authoring
   Scenario: Data layer canonical Shared Profile schema authoring 023
     Given /lineOfCustomer is available in Shared Profile, Event, Page Group, Page, Flow Page-instance, and Event-occurrence schema editors
     When the operator opens its property actions in each editor
-    Then one shared context menu offers Definition, Presence, Expected and allowed values, Conditions, Rules, Documentation, Example, and Structure
-    And the menu contains actions and summaries but no facet, condition, rule, documentation, or example form fields
-    When a section choice is activated from the menu
-    Then one focused property editor identifies /lineOfCustomer, inherited value and source, local value, effective result, validation state, and conflicts
-    And only the selected section's controls are mounted while the property table remains compact
-    And switching sections retains staged values without expanding another property editor
-    And closing with Escape or Cancel discards staged changes and restores focus to the originating property action
-    And the menu and focused editor remain identical while parenting changes only action availability, provenance values, and the return destination
+    Then one compact first-layer overlay offers Definition, Rules, and Structure with provenance and legal ownership summaries
+    And Presence, Expected values, Allowed values, Conditions, Documentation, and Example are not separate first-layer sections
+    When Definition is activated from the first-layer menu
+    Then one adjacent child overlay keeps the first layer open and contains type, a Required or Optional or Forbidden selector, ordinary value, display text, description, comments, and example method and value
+    And one ordinary value means expected value while comma-separated ordinary values mean allowed values
+    And allowed values render as comma-separated human text without square brackets
+    And no Definition control requires another submenu, inserts controls below the property table, or requires scrolling to a detached panel
+    When Escape or Cancel closes the Definition child layer
+    Then only that layer closes and focus returns to its parent choice
+    When the operator dismisses the first layer
+    Then all staging is discarded and focus returns to the originating property action
 
   # Data layer canonical Shared Profile schema authoring 024
   Scenario: Data layer canonical Shared Profile schema authoring 024
-    Given /lineOfCustomer has typed allowed values, an All condition tree, one inherited pattern rule, and local range and cardinality rules
-    When Rules is chosen for the staged property session
-    Then each rule is one compact stable-identity row showing kind, effective summary, severity, message, source, and ownership state
+    Given /lineOfCustomer has an ordinary definition, one inherited pattern rule, and local range and cardinality rules
+    When the operator opens the Rules child overlay
+    Then each rule is one compact stable-identity row showing its When condition, Then outcome, severity, message, source, and ownership state
     And View opens read-only details without entering edit mode
-    And Edit on the local range rule shows only minimum, maximum, severity, and issue-message fields prefilled from that rule
+    And Edit opens a further overlay containing one All, Any, and Not condition tree plus only the selected outcome's fields
     When the operator adds a rule
-    Then rule kind is chosen before only that kind's applicable fields appear
+    Then the rule's When condition uses a searchable property selector, type-valid operator, and typed value only when required
+    And the rule's Then outcome is chosen before only that outcome's applicable fields appear
     And reusable rules use a searchable named selector rather than a raw identity input
+    And there is no separate property-level Conditions editor or condition rule kind
     When the operator stages removal of the local cardinality rule
     Then a named impact confirmation previews the effective result and marks the rule Removed with Restore available
-    When the staged property session changes from Rules to Conditions
-    Then a readable All, Any, and Not tree gives each group and predicate View, Edit, Add child, Move, and Remove actions
-    And editing one predicate uses a searchable property selector, type-valid operator, and typed value only when required
-    And no target-group selector, observation tester, unrelated rule fields, or second save action is shown
     When Review changes is invoked
     Then added, edited, removed, overridden, and reset facets and rules are listed with the prospective effective result and affected consumers
     When the operator confirms the review
@@ -340,32 +336,34 @@ Feature: Data layer canonical Shared Profile schema authoring
 
   # Data layer canonical Shared Profile schema authoring 026
   Scenario Outline: Data layer canonical Shared Profile schema authoring 026
-    Given Add rule has no selected kind and shows no kind-specific fields
-    When Add rule changes its kind to <rule_kind>
+    Given Add rule contains an unresolved When condition and no selected outcome
+    When the operator resolves the condition and selects <rule_outcome>
     Then the builder shows only <applicable_fields>
     And the builder does not show <irrelevant_fields>
 
     Examples:
-      | rule_kind   | applicable_fields                                          | irrelevant_fields                       |
-      | pattern     | pattern, severity, and issue message                      | range, cardinality, or condition fields |
-      | range       | minimum, maximum, severity, and issue message             | pattern, cardinality, or condition fields |
-      | cardinality | minimum items, maximum items, severity, and issue message | pattern, range, or condition fields     |
-      | condition   | condition tree, severity, and issue message               | pattern, range, or cardinality fields   |
-      | reusable    | searchable reusable-rule name                             | raw identity or unrelated rule fields   |
+      | rule_outcome | applicable_fields                                                   | irrelevant_fields                    |
+      | presence     | Required or Optional or Forbidden, severity, and issue message      | value, pattern, range, or cardinality |
+      | value        | ordinary-value field, severity, and issue message                    | presence, pattern, range, or cardinality |
+      | pattern      | pattern, severity, and issue message                                 | presence, value, range, or cardinality |
+      | range        | minimum, maximum, severity, and issue message                        | presence, value, pattern, or cardinality |
+      | cardinality  | minimum items, maximum items, severity, and issue message            | presence, value, pattern, or range    |
+      | reusable     | searchable reusable-rule name                                        | raw identity or unrelated fields      |
 
   # Data layer canonical Shared Profile schema authoring 027
   Scenario Outline: Data layer canonical Shared Profile schema authoring 027
-    Given the operator selected <rule_kind> in Add rule
+    Given the operator selected <rule_outcome> in Add rule
     When the operator enters <invalid_definition>
     Then Add rule is blocked with <diagnostic>
     And no rule, property command, Draft token, persistence write, or Undo action is created
 
     Examples:
-      | rule_kind   | invalid_definition                         | diagnostic                                      |
-      | pattern     | an empty pattern                            | Enter a regular expression                      |
-      | range       | minimum 10 and maximum 2                    | Minimum must not exceed maximum                 |
-      | cardinality | minimum items 4 and maximum items 1         | Minimum items must not exceed maximum items     |
-      | condition   | an unresolved property predicate            | Resolve the condition property                  |
+      | rule_outcome | invalid_definition                         | diagnostic                                      |
+      | presence     | an unresolved property predicate           | Resolve the When condition                      |
+      | value        | an empty ordinary value                    | Enter an expected or allowed value              |
+      | pattern      | an empty pattern                           | Enter a regular expression                      |
+      | range        | minimum 10 and maximum 2                   | Minimum must not exceed maximum                 |
+      | cardinality  | minimum items 4 and maximum items 1        | Minimum items must not exceed maximum items     |
 
   # Data layer canonical Shared Profile schema authoring 028
   Scenario: Data layer canonical Shared Profile schema authoring 028
@@ -377,7 +375,32 @@ Feature: Data layer canonical Shared Profile schema authoring
     Then the values remain editable in that row without opening a focused editor or leaving Table
     And review and confirmation create one property-scoped command and one Undo action
     When the operator opens /lineOfCustomer's context menu
-    Then an overlay anchored to that row offers advanced definition, conditional presence, conditions, rich rules, structure, provenance, and legal ownership actions
+    Then a layered overlay anchored to that row offers Definition, Rules, Structure, provenance, and legal ownership actions
     And the overlay neither inserts a control panel below the table nor expands, replaces, or hides any property row
-    When the operator dismisses the overlay with Escape or Cancel
+    When the property-action overlay is closed through either dismissal control
     Then the unchanged table remains the primary editor and focus returns to /lineOfCustomer's context-menu trigger
+
+  # Data layer canonical Shared Profile schema authoring 029
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 029
+    Given <target_property> has <ordinary_definition>
+    And one named rule says When <condition> Then <conditional_outcome>
+    When an observation has <condition_state>
+    Then <effective_result>
+    And the ordinary definition remains unchanged
+
+    Examples:
+      | target_property | ordinary_definition       | condition                                | conditional_outcome                                  | condition_state | effective_result                                      |
+      | error_message   | Optional                   | page_type Equals error                   | Required                                             | matching        | error_message is Required                             |
+      | error_message   | Optional                   | page_type Equals error                   | Required                                             | not matching    | error_message is Optional                             |
+      | form_step_name  | expected value contact     | form_type Equals checkout                | allowed values contact, delivery, payment            | matching        | form_step_name allows contact, delivery, and payment  |
+      | form_step_name  | expected value contact     | form_type Equals checkout                | allowed values contact, delivery, payment            | not matching    | form_step_name expects contact                        |
+      | aProducts       | minimum items 1            | page_name Contains multi product bundle  | minimum items 2                                     | matching        | aProducts requires at least 2 items                   |
+      | aProducts       | minimum items 1            | page_name Contains multi product bundle  | minimum items 2                                     | not matching    | aProducts requires at least 1 item                    |
+
+  # Data layer canonical Shared Profile schema authoring 030
+  Scenario: Data layer canonical Shared Profile schema authoring 030
+    Given two named rules on /form_step_name match the same observation
+    When their conditional outcomes are evaluated
+    Then compatible outcomes compose and supersede only their targeted ordinary-definition facets
+    And contradictory outcomes block with both rule names and no list-order winner
+    And when a rule condition stops matching its targeted ordinary-definition facet resumes

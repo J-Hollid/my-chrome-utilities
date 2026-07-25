@@ -105,27 +105,36 @@ together through the architect-approved `project-library-active-context` termina
 candidate and were merged to `master` at `faa1aa3a`. Single schema editor parity
 subsequently completed through its terminal candidate and was merged to `master` at
 `cd5ba21dad`. Rule builder correction subsequently completed through its terminal
-candidate and was merged to `master` at `bf0c867bd6`.
+candidate and was merged to `master` at `bf0c867bd6`. Table-first schema editor
+correction subsequently completed through its terminal candidate and was merged to
+`master` at `50fdeff2ec`.
 
 The following task lineages remain open and must now be recovered in this order:
 
-1. `table-first-schema-editor-correction`; then
+1. `conditional-rule-definition-correction`; then
 2. `durable-project-repository`; then
 3. `flow-canvas-topology-examples`.
 
-The table-first schema-editor correction is later authority for Authoring scenario
-028 and supersedes earlier clauses that permit expandable row detail or a focused
-editor inserted below the property table. Every contributor Table retains
-information-rich rows and inline editing for description, expected or allowed
-value, and example. Advanced definition, conditional presence, conditions, rich
-rules, structure, provenance, and ownership commands use one overlay anchored to a
-compact trigger beside the property identity. A dedicated action-button column,
-expanded property editor, replaced or hidden table, and detached below-table
-control panel are not acceptable. Installed evidence must exercise the common
-inline edits, compare the six contributor surfaces, inspect the absence of the
-rejected layouts, verify overlay anchoring and sibling-row continuity, persist one
-property command and Undo action, and confirm Escape and Cancel restore trigger
-focus.
+The conditional-rule definition correction is later authority for Authoring
+scenarios 023–030. It supersedes the separate Presence, Values, Conditions,
+Documentation, and Example menu sections and every clause that mounts a focused
+property editor below the table. A compact first-layer menu offers Definition,
+Rules, and Structure. Definition opens one adjacent child overlay containing type,
+Required or Optional or Forbidden presence, one ordinary-value field,
+documentation, and example controls so ordinary editing completes in one pass. A
+single ordinary value is expected; comma-separated values are allowed values and
+render in the Table as human text without square brackets.
+
+Rules open as a child layer and each rule owns a When predicate tree and a Then
+outcome. There is no separate property-level Conditions editor or condition rule
+kind. A matching rule supersedes only its targeted ordinary-definition facet; a
+non-matching rule leaves the definition effective. Compatible matching rules
+compose, while contradictory matches block with both rule names and no list-order
+winner. Installed evidence must build and validate the error_message,
+form_step_name, and aProducts examples for matching and non-matching observations,
+prove definition bytes remain unchanged, exercise nested overlay geometry and
+layer-by-layer focus restoration, and persist one reviewed property command and
+Undo action.
 
 The rejected schema candidate `143cc9d337` and Flow candidate `b8432d27e7` are not
 eligible because each introduced a vacuous `project_management` pack. Later coder
@@ -136,7 +145,7 @@ whole. Use them only as patch references while reconstructing each task from cur
 source file, test, acceptance handler, browser adapter, architecture registration,
 and non-vacuous pack entry now on `master`.
 
-Complete the rule-builder correction first, run only the `layered_schema`
+Complete the conditional-rule definition correction first, run only the `layered_schema`
 checkpoint and package command, and carry it through refactorer and architect to a
 terminal merge. Recover the durable repository from that new merged baseline, run only the
 `durable_project_repository` checkpoint and package command, and carry it through
