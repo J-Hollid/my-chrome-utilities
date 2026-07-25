@@ -16,7 +16,7 @@ export function renderCanonicalSchemaEditor(context) {
     header.append(title, status, undo, redo);
     options.host.append(header, renderCanonicalNavigator(context));
     const node = context.selectedNode(document);
-    if (node && context.activePropertyId === node.id) {
+    if (document.view !== "table" && node && context.activePropertyId === node.id) {
         context.ensureWorking(node);
         options.host.append(context.renderFocusedEditor(document, node));
         if (context.review)

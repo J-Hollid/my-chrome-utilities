@@ -2,8 +2,8 @@ import { composedFacetDraft, composedFacetDraftWithoutRemovedItems, sparseCompos
 import { renderComposedRows } from "./data-layer-composed-schema-workspace-rows.js";
 const button = (text, run) => { const control = document.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 export function mountComposedSchemaWorkspace(options) {
-    const section = document.createElement("section"), heading = document.createElement("h2"), summary = document.createElement("p"), columns = document.createElement("div"), filterControls = document.createElement("div"), filter = document.createElement("input"), sort = document.createElement("select"), addControls = document.createElement("div"), choice = document.createElement("select"), add = document.createElement("button"), rows = document.createElement("div");
-    let activePath, activeSection = "definition", draft, removed = false, confirmedAction, removedRuleIds = new Set(), removedValueIds = new Set(), restoredRuleIds = new Set(), restoredValueIds = new Set(), stagedLocalValueIds = new Set(), overriddenRuleIds = new Set(), pendingStructure = [], pendingAction, originFocus, originPath, query = "", sortMode = "path";
+    const section = document.createElement("section"), heading = document.createElement("h2"), summary = document.createElement("p"), filterControls = document.createElement("div"), filter = document.createElement("input"), sort = document.createElement("select"), addControls = document.createElement("div"), choice = document.createElement("select"), add = document.createElement("button"), rows = document.createElement("div");
+    let activePath, overlayOpen = false, activeSection = "definition", draft, removed = false, confirmedAction, removedRuleIds = new Set(), removedValueIds = new Set(), restoredRuleIds = new Set(), restoredValueIds = new Set(), stagedLocalValueIds = new Set(), overriddenRuleIds = new Set(), pendingStructure = [], pendingAction, originFocus, originPath, query = "", sortMode = "path";
     section.className = options.compact ? "composed-schema-workspace compact-schema-workspace" : "composed-schema-workspace";
     section.setAttribute("aria-label", options.model.heading);
     section.dataset.schemaStatus = options.model.status;
@@ -16,11 +16,6 @@ export function mountComposedSchemaWorkspace(options) {
     summary.setAttribute("role", "status");
     summary.className = options.model.status === "blocked" ? "error" : "status-text";
     summary.textContent = `${options.model.status === "blocked" ? "Blocked" : "Ready"} · ${options.model.rows.length} effective properties${options.includeConflictSummary === false ? "" : ` · ${options.model.conflictSummary}`}`;
-    columns.className = "composed-schema-columns";
-    columns.setAttribute("aria-hidden", "true");
-    columns.hidden = Boolean(options.compact);
-    for (const label of ["Property", "Effective definition", "Source", "Local state", "Validation state", "Actions"])
-        columns.append(Object.assign(document.createElement("strong"), { textContent: label }));
     filter.type = "search";
     filter.placeholder = "Filter properties";
     filter.setAttribute("aria-label", "Filter schema properties");
@@ -39,15 +34,39 @@ export function mountComposedSchemaWorkspace(options) {
     rows.setAttribute("role", "table");
     rows.setAttribute("aria-label", `${options.model.heading} rows`);
     const visibleModel = () => { const needle = query.trim().toLowerCase(), rows = options.model.rows.filter((row) => !needle || row.path.toLowerCase().includes(needle) || row.source.toLowerCase().includes(needle) || options.effectiveText(row).toLowerCase().includes(needle)).sort((left, right) => sortMode === "source" ? left.source.localeCompare(right.source) || left.path.localeCompare(right.path) : sortMode === "validation" ? left.validationState.localeCompare(right.validationState) || left.path.localeCompare(right.path) : left.path.localeCompare(right.path)); return { ...options.model, rows }; };
-    const rerender = () => renderComposedRows(rows, { dom: document, model: visibleModel(), effectiveText: options.effectiveText, ...(options.onRepair ? { onRepair: options.onRepair } : {}), ...(options.onStructure ? { onStructure: (kind, path, name) => { pendingStructure.push({ kind, path, ...(name === undefined ? {} : { name }) }); rerender(); } } : {}), ...(options.rowPathDataset ? { rowPathDataset: options.rowPathDataset } : {}), activePath, activeSection, draft, removed, confirmedAction, removedRuleIds, removedValueIds, restoredRuleIds, restoredValueIds, stagedLocalValueIds, overriddenRuleIds, overrideRule, pendingAction, pendingStructure, beginAction, cancelAction, confirmAction, open, close, save, render: rerender, setActiveSection: (value) => { activeSection = value; } });
+    const rerender = () => renderComposedRows(rows, { dom: document, model: visibleModel(), effectiveText: options.effectiveText, ...(options.onRepair ? { onRepair: options.onRepair } : {}), ...(options.onStructure ? { onStructure: (kind, path, name) => { pendingStructure.push({ kind, path, ...(name === undefined ? {} : { name }) }); rerender(); } } : {}), ...(options.rowPathDataset ? { rowPathDataset: options.rowPathDataset } : {}), activePath, overlayOpen, activeSection, draft, removed, confirmedAction, removedRuleIds, removedValueIds, restoredRuleIds, restoredValueIds, stagedLocalValueIds, overriddenRuleIds, overrideRule, pendingAction, pendingStructure, beginAction, cancelAction, confirmAction, open, stageInline, close, save, render: rerender, setActiveSection: (value) => { activeSection = value; } });
     const overrideRule = (sourceId) => { if (!draft)
         return; const source = options.model.rows.find(({ path }) => path === activePath)?.effective.rules?.find((rule) => String(rule.id ?? "") === sourceId); if (!source || source.enforcement === "invariant")
         return; const id = `rule:${crypto.randomUUID()}`, replacement = { ...structuredClone(source), id, replacesRuleId: sourceId, provenance: { source: "created", state: "overridden", sourceId } }; draft = { ...draft, rules: [...draft.rules, replacement] }; overriddenRuleIds.add(id); rerender(); };
-    const open = (row, focus, sectionName = "definition") => { activePath = row.path; activeSection = sectionName; draft = composedFacetDraft(row.local, row.effective); removed = false; confirmedAction = undefined; removedRuleIds = new Set(); removedValueIds = new Set(); restoredRuleIds = new Set(); restoredValueIds = new Set(); stagedLocalValueIds = new Set(); overriddenRuleIds = new Set(); pendingStructure = []; pendingAction = undefined; if (focus) {
+    const open = (row, focus, sectionName = "definition") => { if (activePath !== row.path || !draft) {
+        activePath = row.path;
+        draft = composedFacetDraft(row.local, row.effective);
+        removed = false;
+        confirmedAction = undefined;
+        removedRuleIds = new Set();
+        removedValueIds = new Set();
+        restoredRuleIds = new Set();
+        restoredValueIds = new Set();
+        stagedLocalValueIds = new Set();
+        overriddenRuleIds = new Set();
+        pendingStructure = [];
+        pendingAction = undefined;
+    } activeSection = sectionName; overlayOpen = true; if (focus) {
         originFocus = focus;
         originPath = row.path;
     } rerender(); };
-    const close = () => { const restorePath = originPath; activePath = undefined; activeSection = "definition"; draft = undefined; removed = false; confirmedAction = undefined; removedRuleIds = new Set(); removedValueIds = new Set(); restoredRuleIds = new Set(); restoredValueIds = new Set(); stagedLocalValueIds = new Set(); overriddenRuleIds = new Set(); pendingStructure = []; pendingAction = undefined; rerender(); const target = originFocus?.isConnected ? originFocus : restorePath ? rows.querySelector(`[aria-label="Property actions for ${CSS.escape(restorePath)}"]`) : undefined; originFocus = undefined; originPath = undefined; if (target)
+    const stageInline = (row, facet, value) => { if (activePath !== row.path || !draft) {
+        activePath = row.path;
+        draft = composedFacetDraft(row.local, row.effective);
+    } if (facet === "description")
+        draft.documentation = value;
+    else if (facet === "example") {
+        draft.exampleMethod = value ? "custom" : "blank";
+        draft.exampleValue = value || undefined;
+    }
+    else
+        draft.expectedValue = value || undefined; };
+    const close = () => { const restorePath = originPath; activePath = undefined; overlayOpen = false; activeSection = "definition"; draft = undefined; removed = false; confirmedAction = undefined; removedRuleIds = new Set(); removedValueIds = new Set(); restoredRuleIds = new Set(); restoredValueIds = new Set(); stagedLocalValueIds = new Set(); overriddenRuleIds = new Set(); pendingStructure = []; pendingAction = undefined; rerender(); const target = originFocus?.isConnected ? originFocus : restorePath ? rows.querySelector(`[aria-label="Property actions for ${CSS.escape(restorePath)}"]`) : undefined; originFocus = undefined; originPath = undefined; if (target)
         queueMicrotask(() => target.focus({ preventScroll: true })); };
     const beginAction = (row, focus) => { open(row, focus); pendingAction = row.action === "reset" ? "reset" : "remove"; rerender(); };
     const cancelAction = () => { pendingAction = undefined; removed = false; confirmedAction = undefined; rerender(); };
@@ -60,12 +79,12 @@ export function mountComposedSchemaWorkspace(options) {
     } const staged = composedFacetDraftWithoutRemovedItems(draft, removedRuleIds, removedValueIds); options.onSave(row, sparseComposedFacets(staged, row.inherited ?? { path: row.path }), pendingStructure); close(); };
     filter.addEventListener("input", () => { query = filter.value; rerender(); });
     sort.addEventListener("change", () => { sortMode = sort.value; rerender(); });
-    section.addEventListener("keydown", (event) => { if (event.key === "Escape" && activePath) {
+    section.addEventListener("keydown", (event) => { if (event.key === "Escape" && overlayOpen) {
         event.preventDefault();
         close();
     } });
     rerender();
-    section.append(heading, summary, filterControls, columns, addControls, rows);
+    section.append(heading, summary, filterControls, addControls, rows);
     options.host.append(section);
     return section;
 }

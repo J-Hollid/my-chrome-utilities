@@ -4,7 +4,8 @@ const labeled = (dom, text, control) => { const label = dom.createElement("label
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 export function renderCanonicalNavigator(context) {
     const { dom, document } = context, navigator = dom.createElement("section"), search = dom.createElement("input"), filter = dom.createElement("select"), sort = dom.createElement("select"), tree = dom.createElement("div"), rootName = input(dom, "newRootPropertyName", "property"), addRoot = button(dom, "Add root property", () => { const name = rootName.value.trim(); if (name)
-        context.command({ kind: "add", baseRevision: document.revision, name, type: "string", id: context.options.id }); }), refresh = () => { tree.replaceChildren(); renderNavigatorRows(tree, context); applyNavigatorView(tree, dom, document.view); };
+        context.command({ kind: "add", baseRevision: document.revision, name, type: "string", id: context.options.id }); }), refresh = () => { tree.replaceChildren(); if (document.view === "tree")
+        renderNavigatorRows(tree, context); applyNavigatorView(tree, dom, document.view, context); };
     navigator.setAttribute("aria-label", "Canonical property navigator");
     search.type = "search";
     search.setAttribute("aria-label", "Canonical property search");

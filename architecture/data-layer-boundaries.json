@@ -243,6 +243,10 @@
       "src/data-layer-layered-schema.ts"
     ]
   },
+  "src/data-layer-schema-table.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
   "src/data-layer-composed-schema-workspace-ui.ts": {
     "module": "schemas",
     "layer": "browser",
@@ -250,7 +254,8 @@
       "src/data-layer-composed-schema-builders.ts",
       "src/data-layer-composed-schema-workspace.ts",
       "src/data-layer-layered-schema.ts",
-      "src/data-layer-focused-schema-property-ui.ts"
+      "src/data-layer-focused-schema-property-ui.ts",
+      "src/data-layer-schema-table.ts"
     ]
   },
   "src/data-layer-composed-schema-workspace-focused-sections.ts": {
@@ -285,7 +290,8 @@
       "src/data-layer-composed-schema-workspace.ts",
       "src/data-layer-focused-schema-property-menu.ts",
       "src/data-layer-focused-schema-property-ui.ts",
-      "src/data-layer-composed-schema-workspace-focused-sections.ts"
+      "src/data-layer-composed-schema-workspace-focused-sections.ts",
+      "src/data-layer-schema-table.ts"
     ]
   },
   "src/data-layer-focused-schema-property-menu.ts": {
@@ -502,7 +508,8 @@
     "contracts": [
       "src/data-layer-canonical-schema.ts",
       "src/data-layer-canonical-schema-ui.ts",
-      "src/data-layer-focused-schema-property-ui.ts"
+      "src/data-layer-focused-schema-property-ui.ts",
+      "src/data-layer-schema-table.ts"
     ]
   },
   "src/data-layer-canonical-schema-render-navigator.ts": {

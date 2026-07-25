@@ -1,8 +1,8 @@
 import { renderFocusedPropertyMenu } from "./data-layer-focused-schema-property-menu.js";
 import { focusedOwnershipActions, focusedPropertySectionLabels } from "./data-layer-focused-schema-property-ui.js";
 import { renderComposedFocusedSection } from "./data-layer-composed-schema-workspace-focused-sections.js";
+import { schemaTableColumns, schemaTableExpectedOrAllowed } from "./data-layer-schema-table.js";
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
-const actionText = (row) => row.action === "override" ? "Override here" : row.action === "reset" ? "Reset to parents" : "Remove local property";
 function applyPersistedItemOwnership(host, row) {
     const overriddenValues = new Set((row.local.allowedValueProvenance ?? []).filter(({ state }) => state === "overridden").map(({ id }) => id));
     const overriddenRules = new Set((row.local.rules ?? []).filter((rule) => String(rule.provenance?.state) === "overridden").map((rule) => String(rule.id ?? "")));
@@ -86,33 +86,45 @@ function focused(row, context) {
     return editor;
 }
 export function renderComposedRows(rows, context) {
-    rows.replaceChildren();
+    const { dom } = context, table = dom.createElement("table"), head = dom.createElement("thead"), headRow = dom.createElement("tr"), body = dom.createElement("tbody");
+    for (const { label } of schemaTableColumns)
+        headRow.append(Object.assign(dom.createElement("th"), { textContent: label }));
+    head.append(headRow);
+    const editable = (row, facet, value) => { const control = dom.createElement("input"); control.type = "text"; control.value = value; control.dataset.inlineSchemaFacet = facet; control.setAttribute("aria-label", `${facet} for ${row.path}`); control.addEventListener("input", () => context.stageInline(row, facet, control.value)); return control; };
     for (const row of context.model.rows) {
-        const article = context.dom.createElement("article"), overview = context.dom.createElement("div"), toggle = context.dom.createElement("button"), effective = context.dom.createElement("span"), source = context.dom.createElement("span"), local = context.dom.createElement("span"), validation = context.dom.createElement("span"), actions = context.dom.createElement("div"), primary = button(context.dom, actionText(row), () => row.action === "override" ? context.open(row, primary) : context.beginAction(row, primary)), propertyActions = button(context.dom, "Property actions", () => context.open(row, propertyActions));
-        article.className = "composed-schema-row";
-        article.dataset.effectivePropertyPath = row.path;
+        const draft = context.activePath === row.path ? context.draft : undefined, tr = dom.createElement("tr"), identity = dom.createElement("td"), name = dom.createElement("span"), propertyActions = button(dom, "⋯", () => context.open(row, propertyActions)), effective = { ...row.effective, ...row.local }, description = draft?.documentation ?? String(effective.documentation ?? ""), expected = draft ? schemaTableExpectedOrAllowed(draft) : schemaTableExpectedOrAllowed(effective), exampleValue = draft?.exampleValue ?? (Array.isArray(effective.examples) ? effective.examples[0] : undefined);
+        tr.className = "composed-schema-row";
+        tr.dataset.effectivePropertyPath = row.path;
         if (context.rowPathDataset)
-            article.dataset[context.rowPathDataset] = row.path;
-        article.dataset.validationState = row.validationState;
-        toggle.className = "composed-schema-row-toggle";
-        toggle.textContent = row.path;
-        toggle.setAttribute("aria-expanded", String(context.activePath === row.path));
-        toggle.addEventListener("click", () => context.activePath === row.path ? context.close() : context.open(row, toggle));
-        effective.textContent = context.effectiveText(row) || "constraint";
-        source.textContent = row.source;
-        local.textContent = context.removed && context.activePath === row.path ? "Removed" : Object.keys(row.local).length > 1 ? JSON.stringify(row.local) : "Inherited";
-        validation.textContent = `${row.validationState} · ${row.message}`;
-        actions.className = "composed-schema-row-actions";
+            tr.dataset[context.rowPathDataset] = row.path;
+        tr.dataset.validationState = row.validationState;
+        identity.style.position = "relative";
+        name.textContent = row.path.split("/").filter(Boolean).at(-1) ?? row.path;
         propertyActions.setAttribute("aria-label", `Property actions for ${row.path}`);
-        actions.append(primary, propertyActions);
-        overview.append(toggle, effective, source, local, validation, actions);
-        article.append(overview);
+        propertyActions.dataset.propertyActionsPath = row.path;
+        identity.append(name, propertyActions);
         if (context.onRepair)
             for (const repair of row.repairs)
-                article.append(button(context.dom, repair.label, () => context.onRepair?.(repair)));
-        if (context.activePath === row.path)
-            article.append(contextMenu(row, context), focused(row, context));
-        rows.append(article);
+                identity.append(button(dom, repair.label, () => context.onRepair?.(repair)));
+        tr.append(identity, Object.assign(dom.createElement("td"), { textContent: row.path }), Object.assign(dom.createElement("td"), { textContent: String(draft?.type ?? effective.type ?? "constraint") }), Object.assign(dom.createElement("td"), { textContent: String(draft?.presence ?? effective.presence ?? "optional") }));
+        for (const control of [editable(row, "description", description), editable(row, "expected-or-allowed", expected), editable(row, "example", exampleValue === undefined ? "" : String(exampleValue))]) {
+            const cell = dom.createElement("td");
+            cell.append(control);
+            tr.append(cell);
+        }
+        tr.append(Object.assign(dom.createElement("td"), { textContent: row.source }), Object.assign(dom.createElement("td"), { textContent: context.removed && context.activePath === row.path ? "Removed" : Object.keys(row.local).length > 1 ? `Local · effective ${context.effectiveText(row)}` : "Inherited · effective" }), Object.assign(dom.createElement("td"), { textContent: `${row.validationState} · ${row.message}` }));
+        if (context.overlayOpen && context.activePath === row.path) {
+            const overlay = dom.createElement("section");
+            overlay.dataset.schemaRowOverlay = "true";
+            overlay.setAttribute("aria-label", `${row.path} property overlay`);
+            overlay.style.cssText = "position:absolute;left:0;top:100%;z-index:10;min-width:42rem;max-width:80vw;background:Canvas;border:1px solid ButtonBorder;padding:0.75rem;";
+            overlay.append(contextMenu(row, context), focused(row, context));
+            identity.append(overlay);
+        }
+        body.append(tr);
     }
+    table.append(head, body);
+    table.setAttribute("aria-label", `${context.model.heading} rows`);
+    rows.replaceChildren(table);
 }
 //# sourceMappingURL=data-layer-composed-schema-workspace-rows.js.map
