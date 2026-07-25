@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=e0b7c04e2fff3efa7bd3eb909756a71049f5620ba19fd46f7907b352ad18aca2
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-25T17:47:50.958646174Z","feature_name":"Data layer layered schema constraints runtime","feature_path":"features/data-layer-layered-schema-constraints-runtime.feature","background_hash":"e3abf09522d1a7021ef5c4fddde53d634dd57d90657c227f341935b5a82edc94","implementation_hash":"sha256:bbf092d90a06dd375cc859e2a634860ead1fe0ba720bf73722ef4f8c646cf2f6","scenarios":[{"index":0,"name":"Data layer layered schema constraints runtime 001","scenario_hash":"841b58bac0a850830dd983e58475124102f2e9e7df6f82b643fd77f719b16764","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-25T17:47:50.958646174Z"},{"index":4,"name":"Data layer layered schema constraints runtime 005","scenario_hash":"e6f9b12fb82ce881ea1a801d881cef93539989a8ae6fcdc441241974c826ece5","mutation_count":32,"result":{"Total":32,"Killed":32,"Survived":0,"Errors":0},"tested_at":"2026-07-25T17:47:50.958646174Z"},{"index":19,"name":"Data layer layered schema constraints runtime 020","scenario_hash":"1d4735c775a66aaaeb64d8d2d882d91c5f770db945eceec40651d722079e715e","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-07-25T17:47:50.958646174Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer layered schema constraints runtime
 
   Background:
@@ -349,3 +344,22 @@ Feature: Data layer layered schema constraints runtime
     Then one durable sparse command deletes only the local facet
     And hashes for parent, sibling, unrelated facets, restored rule, and Published revision remain unchanged
     And one production Undo restores the local facet under its original stable ID
+
+  # Data layer layered schema constraints runtime 023
+  Scenario Outline: Data layer layered schema constraints runtime 023
+    Given production canonical and composed contributor editors show the same inherited <rule_state> rule
+    When installed rule-specific action inventories are compared
+    Then both inventories contain exactly <available_actions>
+    And both inventories exclude <unavailable_actions>
+
+    Examples:
+      | rule_state | available_actions                    | unavailable_actions                      |
+      | invariant  | View and Open source                 | Override, Replace, Edit, and Remove       |
+      | replaceable | View, Replace here, and Open source | Override and Remove                       |
+
+  # Data layer layered schema constraints runtime 024
+  Scenario: Data layer layered schema constraints runtime 024
+    Given production shows a replaceable inherited rule in a composed contributor editor
+    When actual Replace here runs in a composed contributor editor
+    Then staged production state contains one new local rule identity with named replacement provenance
+    And repository inspection finds unchanged parent bytes before one reviewed property command commits

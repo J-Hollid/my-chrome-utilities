@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=01465fb44653a7d5bee8b00548c173de78aa895cedc68df3e9acf8faabc19b28
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-25T17:38:36.457299800Z","feature_name":"Data layer canonical Shared Profile schema authoring","feature_path":"features/data-layer-canonical-shared-profile-schema-authoring.feature","background_hash":"9e8225c80de52bee679ebd2c1ee0ad618b61eb14a35a45ad9378b67a90e8c5ec","implementation_hash":"sha256:2044b360fb6a279e9f0f3cacea33cb3523333d907987c9cc3b794d2f84205d7f","scenarios":[{"index":6,"name":"Data layer canonical Shared Profile schema authoring 007","scenario_hash":"4e1e629613f3377678a704de7fb49aa24b7666f7d6fd8f7336c5848a2481c5e1","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-25T17:38:36.457299800Z"},{"index":7,"name":"Data layer canonical Shared Profile schema authoring 008","scenario_hash":"1f66844909f9a2d8d4fb2e63db0a5ac2dbe8c763ce946f0d7dfa416bf3d7fab8","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-25T17:38:36.457299800Z"},{"index":14,"name":"Data layer canonical Shared Profile schema authoring 015","scenario_hash":"bb47aa3c9d43d49581aefe99b5084c921b7ac3b3925f65993047d6866f42c60b","mutation_count":21,"result":{"Total":21,"Killed":21,"Survived":0,"Errors":0},"tested_at":"2026-07-25T17:38:36.457299800Z"},{"index":18,"name":"Data layer canonical Shared Profile schema authoring 019","scenario_hash":"c8f16f48f38cc55fd9a94975c60aac7d763058989e5d44c3401164eb45f1e27e","mutation_count":24,"result":{"Total":24,"Killed":24,"Survived":0,"Errors":0},"tested_at":"2026-07-25T17:38:36.457299800Z"},{"index":20,"name":"Data layer canonical Shared Profile schema authoring 021","scenario_hash":"2bb848324d4a767cdf888495b4488eccd957f83fc7b373b2cd80ea60f11461c6","mutation_count":22,"result":{"Total":22,"Killed":22,"Survived":0,"Errors":0},"tested_at":"2026-07-25T17:38:36.457299800Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer canonical Shared Profile schema authoring
 
   Background:
@@ -327,3 +322,42 @@ Feature: Data layer canonical Shared Profile schema authoring
     Then added, edited, removed, overridden, and reset facets and rules are listed with the prospective effective result and affected consumers
     When the operator confirms the review
     Then one property-scoped command saves the complete staged session and creates one Undo action
+
+  # Data layer canonical Shared Profile schema authoring 025
+  Scenario: Data layer canonical Shared Profile schema authoring 025
+    Given the reusable Rule Library contains Postal code pattern and Customer tier range
+    And neither reusable rule is attached to /lineOfCustomer
+    When the operator chooses Add rule and searches reusable rules for Customer
+    Then the named selector offers Customer tier range and excludes Postal code pattern
+    And no raw reusable-rule identity is displayed or editable
+    When the operator clears the search and selects Customer tier range
+    Then both human-named choices return and the staged rule references Customer tier range by its stable library identity
+
+  # Data layer canonical Shared Profile schema authoring 026
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 026
+    Given Add rule has no selected kind and shows no kind-specific fields
+    When Add rule changes its kind to <rule_kind>
+    Then the builder shows only <applicable_fields>
+    And the builder does not show <irrelevant_fields>
+
+    Examples:
+      | rule_kind   | applicable_fields                                          | irrelevant_fields                       |
+      | pattern     | pattern, severity, and issue message                      | range, cardinality, or condition fields |
+      | range       | minimum, maximum, severity, and issue message             | pattern, cardinality, or condition fields |
+      | cardinality | minimum items, maximum items, severity, and issue message | pattern, range, or condition fields     |
+      | condition   | condition tree, severity, and issue message               | pattern, range, or cardinality fields   |
+      | reusable    | searchable reusable-rule name                             | raw identity or unrelated rule fields   |
+
+  # Data layer canonical Shared Profile schema authoring 027
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 027
+    Given the operator selected <rule_kind> in Add rule
+    When the operator enters <invalid_definition>
+    Then Add rule is blocked with <diagnostic>
+    And no rule, property command, Draft token, persistence write, or Undo action is created
+
+    Examples:
+      | rule_kind   | invalid_definition                         | diagnostic                                      |
+      | pattern     | an empty pattern                            | Enter a regular expression                      |
+      | range       | minimum 10 and maximum 2                    | Minimum must not exceed maximum                 |
+      | cardinality | minimum items 4 and maximum items 1         | Minimum items must not exceed maximum items     |
+      | condition   | an unresolved property predicate            | Resolve the condition property                  |

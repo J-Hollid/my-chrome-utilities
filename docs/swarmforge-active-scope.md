@@ -102,14 +102,25 @@ continues to name them.
 
 Project library, active context, and the project-entity overview lifecycle landed
 together through the architect-approved `project-library-active-context` terminal
-candidate and were merged to `master` at `faa1aa3a`. That merge, including its real
-`project_management` pack and lifecycle evidence, is the required recovery baseline.
+candidate and were merged to `master` at `faa1aa3a`. Single schema editor parity
+subsequently completed through its terminal candidate and was merged to `master` at
+`cd5ba21dad`.
 
 The following task lineages remain open and must now be recovered in this order:
 
-1. `single-schema-editor-parity`; then
+1. `rule-builder-correction`; then
 2. `durable-project-repository`; then
 3. `flow-canvas-topology-examples`.
+
+The user-approved rule-builder correction is later authority for Authoring
+scenarios 025–027 and Layering scenarios 023–024 in the four active canonical-
+authoring and layered-schema contracts. It requires real reusable Rule Library
+search, progressive kind-specific and conditional-rule controls, no-write invalid
+definition handling, and identical invariant and replaceable-rule legality in
+canonical and composed editors. Control presence alone is not acceptance evidence:
+installed evidence must type the query, verify filtered human-name results and
+stable selected identity, exercise every rule kind and invalid row, and compare the
+actual rule-specific action inventories.
 
 The rejected schema candidate `143cc9d337` and Flow candidate `b8432d27e7` are not
 eligible because each introduced a vacuous `project_management` pack. Later coder
@@ -120,9 +131,9 @@ whole. Use them only as patch references while reconstructing each task from cur
 source file, test, acceptance handler, browser adapter, architecture registration,
 and non-vacuous pack entry now on `master`.
 
-Recover schema parity first, run only the `layered_schema` checkpoint and package
-command, and carry it through refactorer and architect to a terminal merge. Recover
-the durable repository from that new merged baseline, run only the
+Complete the rule-builder correction first, run only the `layered_schema`
+checkpoint and package command, and carry it through refactorer and architect to a
+terminal merge. Recover the durable repository from that new merged baseline, run only the
 `durable_project_repository` checkpoint and package command, and carry it through
 the same terminal process. Recover Flow only from the resulting durable merged
 baseline, run only the `flow_graph` checkpoint and package command, and carry it

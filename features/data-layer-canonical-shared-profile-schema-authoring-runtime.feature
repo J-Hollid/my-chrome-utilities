@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=6b49b6da7de662c48213689621cbd58043604369c22ec19664c5eba23ab04a48
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-25T17:45:33.849972107Z","feature_name":"Data layer canonical Shared Profile schema authoring runtime","feature_path":"features/data-layer-canonical-shared-profile-schema-authoring-runtime.feature","background_hash":"472d7d719a76bf47270eb2580c2854fda6a3037551b5db5845d9adcb51ca716d","implementation_hash":"sha256:16a630b4d01aa732c0ed63d6ece7c6e19070a4c687f6751dda39ca84442c650c","scenarios":[{"index":6,"name":"Data layer canonical Shared Profile schema authoring runtime 007","scenario_hash":"37b063e26d5b3f51440eeccbfa03c8720332deec1fa287805b3dda7a5fe56ec7","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-25T17:45:33.849972107Z"},{"index":7,"name":"Data layer canonical Shared Profile schema authoring runtime 008","scenario_hash":"b48222ab9937d34e181fb714ec94b0fca77718e5301f0f9de21bbddffb54ba97","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-25T17:45:33.849972107Z"},{"index":14,"name":"Data layer canonical Shared Profile schema authoring runtime 015","scenario_hash":"e311bdb223dc8dfd7b504fb0d42e86948438e329ff4af691abccce8ea87c7258","mutation_count":21,"result":{"Total":21,"Killed":21,"Survived":0,"Errors":0},"tested_at":"2026-07-25T17:45:33.849972107Z"},{"index":18,"name":"Data layer canonical Shared Profile schema authoring runtime 019","scenario_hash":"34c9088664aaf7f6d7033d9e9031ce864615716268bdcdffe2c0a013b7aa1fa6","mutation_count":24,"result":{"Total":24,"Killed":24,"Survived":0,"Errors":0},"tested_at":"2026-07-25T17:45:33.849972107Z"},{"index":20,"name":"Data layer canonical Shared Profile schema authoring runtime 021","scenario_hash":"7402caa88c1bbed1a5f2698ef24bf9ad7de706eb85b17a2866de9c22fbc37d01","mutation_count":22,"result":{"Total":22,"Killed":22,"Survived":0,"Errors":0},"tested_at":"2026-07-25T17:45:33.849972107Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer canonical Shared Profile schema authoring runtime
 
   Background:
@@ -327,3 +322,41 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
     Then it lists every staged addition, edit, removal, override, and reset with effective-result and affected-consumer evidence
     When actual confirmation commits
     Then one durable property command contains the staged delta and production Undo contains one action
+
+  # Data layer canonical Shared Profile schema authoring runtime 025
+  Scenario: Data layer canonical Shared Profile schema authoring runtime 025
+    Given the production reusable Rule Library contains Postal code pattern and Customer tier range
+    And production /lineOfCustomer has neither reusable rule attached
+    When actual Add rule controls search reusable rules for Customer
+    Then the installed named selector renders Customer tier range and omits Postal code pattern
+    And DOM inspection finds no displayed or editable raw reusable-rule identity
+    When actual controls clear the query and select Customer tier range
+    Then both named results render and the staged rule stores Customer tier range's stable library identity
+
+  # Data layer canonical Shared Profile schema authoring runtime 026
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 026
+    Given production Add rule has no selected kind or kind-specific fields
+    When installed Add rule changes its kind to <rule_kind>
+    Then DOM inspection finds <applicable_fields> and excludes <irrelevant_fields>
+
+    Examples:
+      | rule_kind   | applicable_fields                                          | irrelevant_fields                       |
+      | pattern     | pattern, severity, and issue message                      | range, cardinality, or condition fields |
+      | range       | minimum, maximum, severity, and issue message             | pattern, cardinality, or condition fields |
+      | cardinality | minimum items, maximum items, severity, and issue message | pattern, range, or condition fields     |
+      | condition   | condition tree, severity, and issue message               | pattern, range, or cardinality fields   |
+      | reusable    | searchable reusable-rule name                             | raw identity or unrelated rule fields   |
+
+  # Data layer canonical Shared Profile schema authoring runtime 027
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 027
+    Given actual Add rule controls selected <rule_kind>
+    When the invalid rule definition is <invalid_definition>
+    Then installed Add rule is disabled with <diagnostic>
+    And repository, Draft token, project transaction, and Undo inspection show no change
+
+    Examples:
+      | rule_kind   | invalid_definition                         | diagnostic                                      |
+      | pattern     | an empty pattern                            | Enter a regular expression                      |
+      | range       | minimum 10 and maximum 2                    | Minimum must not exceed maximum                 |
+      | cardinality | minimum items 4 and maximum items 1         | Minimum items must not exceed maximum items     |
+      | condition   | an unresolved property predicate            | Resolve the condition property                  |

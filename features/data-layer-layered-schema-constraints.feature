@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=c09b1303eed0ddbeffa7146ec86a375f36ed230226d330e7ef38e22d69dcfdc9
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-25T17:45:52.980113937Z","feature_name":"Data layer layered schema constraints","feature_path":"features/data-layer-layered-schema-constraints.feature","background_hash":"fb0d1f404fb0f55f8682c5c7edfe59c4ef21fe314d802f1e5552e4014cacd104","implementation_hash":"sha256:b5cda08b35864b6b948204cfb8ebf7b4619552176b64474e4e542b70e69f0361","scenarios":[{"index":0,"name":"Data layer layered schema constraints 001","scenario_hash":"a5183bedc23abc0279313c0d2042eaa9a765afdc9141a0444902aed1a2a4b766","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-25T17:45:52.980113937Z"},{"index":4,"name":"Data layer layered schema constraints 005","scenario_hash":"527091a0b3f315daabfdf211aaa2ac580aa78d700a679941f48a08aded429cd2","mutation_count":32,"result":{"Total":32,"Killed":32,"Survived":0,"Errors":0},"tested_at":"2026-07-25T17:45:52.980113937Z"},{"index":19,"name":"Data layer layered schema constraints 020","scenario_hash":"3f75768023c30398e21f1b6f70fde500fee667c17b64829a9f9a69fb8100f1c2","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-07-25T17:45:52.980113937Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer layered schema constraints
 
   Background:
@@ -351,3 +346,22 @@ Feature: Data layer layered schema constraints
     Then one sparse property command removes only the local facet
     And parent, sibling, unrelated-facet, and restored-rule bytes remain unchanged
     And one Undo restores the removed local facet with its stable identity
+
+  # Data layer layered schema constraints 023
+  Scenario Outline: Data layer layered schema constraints 023
+    Given the same inherited <rule_state> rule appears in canonical and composed contributor editors
+    When its rule-specific action inventory is compared across those editors
+    Then the available actions are exactly <available_actions>
+    And the unavailable actions include <unavailable_actions>
+
+    Examples:
+      | rule_state | available_actions                    | unavailable_actions                      |
+      | invariant  | View and Open source                 | Override, Replace, Edit, and Remove       |
+      | replaceable | View, Replace here, and Open source | Override and Remove                       |
+
+  # Data layer layered schema constraints 024
+  Scenario: Data layer layered schema constraints 024
+    Given composed authoring displays Parent checkout pattern as replaceable
+    When the operator invokes Replace here in a composed contributor editor
+    Then one staged local rule receives a new stable identity and names the replaced parent rule
+    And the inherited rule remains byte-identical until the reviewed property command is confirmed
