@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {focusedConditionLabel,focusedOwnershipActions,focusedPropertySections,focusedRuleFields,focusedSparseDelta} from "../dist/data-layer-focused-schema-property-ui.js";
 import {applyCanonicalCommand,canonicalPredicateIds,canonicalPredicateWithStableIds,createCanonicalSchema} from "../dist/data-layer-canonical-schema.js";
+import {canonicalNavigatorRows} from "../dist/canonical-schema-focused/navigator-rows.js";
 
 assert.deepEqual(focusedPropertySections,["definition","presence","values","conditions","rules","documentation","example","structure"]);
 assert.deepEqual(focusedOwnershipActions({inherited:true}),["View","Override here","Open source"]);
@@ -41,4 +42,10 @@ assert.equal(structural.status,"applied");
 assert.equal(structural.document.revision,1,"a focused structural session commits one revision");
 assert.equal(structural.document.changes.length,1,"a focused structural session produces one Undo entry");
 assert.ok(Object.values(structural.document.nodes).some(({name})=>name==="child"),"the same atomic command includes staged additions");
+const navigatorDocument={...withProperty,rootIds:[property.id,"property:documented","property:conditioned"],nodes:{...withProperty.nodes,"property:documented":{...property,id:"property:documented",name:"alpha",order:1,type:"number",documentation:{...property.documentation,description:"Documented"}},"property:conditioned":{...property,id:"property:conditioned",name:"zeta",order:2,presence:{mode:"required-when",condition:{id:"condition:navigator",kind:"predicate",propertyId:property.id,operator:"Exists"}}}}};
+const navigator=(query="",propertyFilter="all",propertySort="tree")=>canonicalNavigatorRows({document:navigatorDocument,query,propertyFilter,propertySort});
+assert.deepEqual(navigator("ALP").map(({node})=>node.name),["alpha"],"canonical search filters by multiple characters without requiring a semantic render");
+assert.deepEqual(navigator("","documentation").map(({node})=>node.name),["alpha"],"canonical facet filtering is functional");
+assert.deepEqual(navigator("","conditions").map(({node})=>node.name),["zeta"],"canonical condition filtering is functional");
+assert.deepEqual(navigator("","all","name").map(({node})=>node.name),["alpha","lineOfCustomer","zeta"],"canonical property sorting changes the visible order");
 console.log("focused schema property UI tests passed");

@@ -15,7 +15,7 @@ export { commitCanonicalProjectState, restoreCanonicalProjectEnvelope, restoreCa
 export {beginCompactCanonicalHistoryTransition,compactCanonicalHistoryKey,compactCanonicalHistorySettlement,compactCanonicalPageHistory,completeCompactCanonicalHistoryTransition,prepareCompactCanonicalRedo,prepareCompactCanonicalUndo,recordCompactCanonicalMutation,rejectCompactCanonicalHistoryTransition} from "./layers/browser/schemas.js";
 export type {CompactCanonicalHistoryTransitionIdentity,CompactCanonicalPageHistory} from "./layers/browser/schemas.js";
 export { appendSharedProfileConstraint, mountSidePanelLayeredProfileEditor, sharedProfilePropertyPaths } from "./layers/browser/schemas.js";
-export { composedCanonicalSchema, saveComposedCanonicalDocument } from "./layers/browser/schemas.js";
+export { composedCanonicalSchema, saveComposedCanonicalDocument, saveComposedEventCanonicalDocument, saveEventOccurrenceCanonicalDocument, saveFlowPageInstanceCanonicalDocument } from "./layers/browser/schemas.js";
 export { applyCanonicalCommand, canonicalCommandOutcome, canonicalPropertyPath, canonicalSchemaWithConstraint, createCanonicalSchema, evaluateCanonicalPredicate, hasLegacySchemaRepresentation, migrateLegacyProfile, resolveCanonicalMigrationConflict, type CanonicalPredicate, type CanonicalPredicateOperator, type CanonicalSchemaDocument } from "../../data-layer-canonical-schema.js";
 export { compileLayeredSchema, validateLayeredObservation, type LayerConstraint, type LayerContributor, type LayerScope } from "../../data-layer-layered-schema.js";
 export { layeredContributorPath, layeredContributorsForPath } from "../../data-layer-layered-schema-project.js";

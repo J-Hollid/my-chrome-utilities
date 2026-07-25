@@ -73,7 +73,7 @@ import { cardinalityComparisonPasses, cardinalityMeasuredValue } from "./utiliti
 import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, createRuleConfigurationFromAttachedRule, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./utilities/data-layer/schemas.js";
 import { canonicalRulePropertyPath } from "./utilities/data-layer/schemas.js";
 import { renderSchemaSpecificationBuilder } from "./utilities/data-layer/schemas.js";
-import { applyCanonicalCommand, canonicalCommandOutcome, canonicalCommandsFromCompactProjection, canonicalMigrationDurablyAcknowledged, canonicalPredicateText, canonicalPropertyPath, compactSchemaProjection, composedCanonicalSchema, createCanonicalSchema, hasLegacySchemaRepresentation, migrateLegacyProfile, mountCanonicalPredicateEditor, mountCanonicalSchemaEditor, mountSidePanelLayeredProfileEditor, resolveCanonicalMigrationConflict, resolveSidePanelSchemaContributor, saveComposedCanonicalDocument, savedSchemaCanonicalDocument, savedSchemaFromCanonical, sidePanelSchemaGroups, transactProject } from "./utilities/data-layer/schemas.js";
+import { applyCanonicalCommand, canonicalCommandOutcome, canonicalCommandsFromCompactProjection, canonicalMigrationDurablyAcknowledged, canonicalPredicateText, canonicalPropertyPath, compactSchemaProjection, composedCanonicalSchema, createCanonicalSchema, hasLegacySchemaRepresentation, migrateLegacyProfile, mountCanonicalPredicateEditor, mountSidePanelLayeredProfileEditor, resolveCanonicalMigrationConflict, resolveSidePanelSchemaContributor, saveComposedCanonicalDocument, saveComposedEventCanonicalDocument, saveEventOccurrenceCanonicalDocument, saveFlowPageInstanceCanonicalDocument, savedSchemaCanonicalDocument, savedSchemaFromCanonical, sidePanelSchemaGroups, transactProject } from "./utilities/data-layer/schemas.js";
 import { beginCompactCanonicalHistoryTransition, compactCanonicalHistoryKey, compactCanonicalHistorySettlement, completeCompactCanonicalHistoryTransition, prepareCompactCanonicalRedo, prepareCompactCanonicalUndo, recordCompactCanonicalMutation, rejectCompactCanonicalHistoryTransition } from "./utilities/data-layer/schemas.js";
 import { mountProjectLibraryUi, PROJECT_LIBRARY_STORAGE_KEY, recordProjectNavigation, serializeProjectLibrary } from "./utilities/data-layer/schemas.js";
 import { installDurableRepositoryStartupFailure, mountDurableProjectRepositoryUi, openDurableProjectRuntime } from "./utilities/data-layer/schemas.js";
@@ -253,11 +253,6 @@ const schemaEditor = document.querySelector("#schema-editor");
 const schemaDetail = document.querySelector("#schema-detail");
 if (sidePanelLayeredProfileEditorHost && schemaDetail && !schemaDetail.contains(sidePanelLayeredProfileEditorHost))
     schemaDetail.prepend(sidePanelLayeredProfileEditorHost);
-const compactCanonicalFocusedHost = document.createElement("section");
-compactCanonicalFocusedHost.hidden = true;
-compactCanonicalFocusedHost.dataset.schemaPresentation = "compact-panel";
-compactCanonicalFocusedHost.className = "compact-canonical-focused-editor";
-schemaDetail?.append(compactCanonicalFocusedHost);
 const schemaDetailEmpty = document.querySelector("#schema-detail-empty");
 const schemaEditorName = document.querySelector("#schema-editor-name");
 const schemaEditorNameAssistance = document.createElement("output");
@@ -772,7 +767,6 @@ let guidedPropertyReturn;
 let schemaDraft;
 let savedCanonicalDocument;
 let compactCanonicalEditor;
-let compactCanonicalFocusedMount;
 let compactCanonicalPendingCommand;
 let compactCanonicalPendingBase;
 let compactCanonicalReviewVisible = false;
@@ -3029,26 +3023,6 @@ async function dispatchCompactCanonicalCommand(command) {
     }
     return true;
 }
-function dispatchCompactCanonicalFocusedCommand(command) {
-    const adapter = compactCanonicalEditor;
-    if (!adapter)
-        throw new Error("The compact canonical editor is unavailable.");
-    if (compactCanonicalSettlementPending || compactCanonicalHistoryState.pending)
-        return { status: "conflict", document: adapter.load(), message: "Resolve the current durable schema save before making another semantic change." };
-    const base = compactCanonicalRevisionSnapshots.get(command.baseRevision), result = adapter.dispatch(command);
-    if (result.status !== "applied" && result.status !== "rebased")
-        return result;
-    const outcome = canonicalCommandOutcome(command, result, base ?? result.document), settlement = adapter.settle && (adapter.settles?.(command) ?? true) ? ++compactCanonicalSettlementSequence : undefined, settlementTarget = adapter.settlementTarget ?? "durable Saved Draft";
-    compactCanonicalCommandFeedback = settlement ? `Saving ${outcome.replace(/^(Saved|Rebased) /, "").replace(/\.$/, "")} to the ${settlementTarget}…` : outcome;
-    compactCanonicalSettlementPending = Boolean(settlement);
-    queueMicrotask(() => { if (compactCanonicalEditor === adapter)
-        renderCompactCanonicalEditor(); });
-    if (settlement && adapter.settle)
-        void adapter.settle().then(() => { adapter.onSettlementCommitted?.(); if (compactCanonicalEditor !== adapter || compactCanonicalSettlementSequence !== settlement)
-            return; compactCanonicalSettlementPending = false; compactCanonicalCommandFeedback = `${outcome} ${settlementTarget.charAt(0).toUpperCase()}${settlementTarget.slice(1)} committed.`; renderCompactCanonicalEditor(); }, (error) => { if (compactCanonicalEditor !== adapter || compactCanonicalSettlementSequence !== settlement)
-            return; compactCanonicalSettlementPending = false; compactCanonicalCommandFeedback = `Not saved to the ${settlementTarget}; the exact change remains available for Retry, Reject, or export. ${error instanceof Error ? error.message : String(error)}`; renderCompactCanonicalEditor(); });
-    return result;
-}
 function compactCanonicalCommandScope(command, document) {
     if (command.kind === "add")
         return `${command.name}${command.parentId && document.nodes[command.parentId] ? ` under ${canonicalPropertyPath(document, command.parentId)}` : " at root"}`;
@@ -3127,41 +3101,36 @@ function renderCompactCanonicalEditor() {
     const adapter = compactCanonicalEditor;
     if (!adapter)
         return;
-    const canonical = adapter.load();
+    const canonical = adapter.load(), selected = canonical.selectedPropertyId && canonical.nodes[canonical.selectedPropertyId];
+    schemaDraft = compactCanonicalProjection(adapter, canonical);
     compactCanonicalRevisionSnapshots.set(canonical.revision, structuredClone(canonical));
-    schemaDraft = undefined;
+    if (selected)
+        selectedSchemaPropertyPath = canonicalPropertyPath(canonical, selected.id).slice(1).replaceAll("/", ".");
     if (schemaEditor) {
-        schemaEditor.hidden = true;
-        delete schemaEditor.dataset.schemaPresentation;
-        delete schemaEditor.dataset.canonicalRevision;
-        delete schemaEditor.dataset.canonicalSchemaId;
-        schemaEditor.removeAttribute("aria-label");
+        schemaEditor.hidden = false;
+        schemaEditor.dataset.schemaPresentation = "compact-panel";
+        schemaEditor.dataset.canonicalRevision = String(canonical.revision);
+        schemaEditor.dataset.canonicalSchemaId = canonical.id;
+        schemaEditor.setAttribute("aria-label", "Side panel canonical schema editor");
     }
     if (schemaDetail) {
         schemaDetail.hidden = false;
         schemaDetail.setAttribute("aria-label", "Side panel schema editor region");
     }
-    compactCanonicalFocusedHost.hidden = false;
-    compactCanonicalFocusedHost.dataset.schemaPresentation = "compact-panel";
-    compactCanonicalFocusedHost.dataset.canonicalRevision = String(canonical.revision);
-    compactCanonicalFocusedHost.dataset.canonicalSchemaId = canonical.id;
-    compactCanonicalFocusedHost.setAttribute("aria-busy", String(compactCanonicalSettlementPending || Boolean(compactCanonicalHistoryState.pending)));
-    if (!compactCanonicalFocusedMount || compactCanonicalFocusedMount.key !== adapter.key) {
-        compactCanonicalFocusedHost.replaceChildren();
-        compactCanonicalFocusedMount = { key: adapter.key, editor: mountCanonicalSchemaEditor({ host: compactCanonicalFocusedHost, surface: "Side panel", load: adapter.load, id: (kind) => `${kind}:${crypto.randomUUID()}`, dispatch: dispatchCompactCanonicalFocusedCommand, renderAfterDispatch: false, ...(adapter.onUndo ? { onUndo: adapter.onUndo } : {}), ...(adapter.onRedo ? { onRedo: adapter.onRedo } : {}), ...(compactCanonicalCommandFeedback ? { initialFeedback: compactCanonicalCommandFeedback } : {}) }) };
+    renderCompactCanonicalContext();
+    renderSchemaDraft();
+    if (schemaEditor) {
+        const unavailable = compactCanonicalSettlementPending || Boolean(compactCanonicalHistoryState.pending);
+        schemaEditor.setAttribute("aria-busy", String(unavailable));
+        for (const control of Array.from(schemaEditor.querySelectorAll("button,input,select,textarea")))
+            control.disabled = unavailable;
     }
-    else
-        compactCanonicalFocusedMount.editor.render();
-    const unavailable = compactCanonicalSettlementPending || Boolean(compactCanonicalHistoryState.pending);
-    for (const control of Array.from(compactCanonicalFocusedHost.querySelectorAll("button,input,select,textarea")))
-        control.disabled = unavailable;
 }
 function openCompactCanonicalEditor(adapter) {
     sidePanelLayeredProfileEditor?.close();
     compactCanonicalSettlementSequence += 1;
     compactCanonicalSettlementPending = false;
     compactCanonicalEditor = adapter;
-    compactCanonicalFocusedMount = undefined;
     compactCanonicalPendingCommand = undefined;
     compactCanonicalPendingBase = undefined;
     compactCanonicalReviewVisible = false;
@@ -3176,9 +3145,6 @@ function closeCompactCanonicalEditor() {
     compactCanonicalEditor = undefined;
     schemaDraft = undefined;
     savedCanonicalDocument = undefined;
-    compactCanonicalFocusedMount = undefined;
-    compactCanonicalFocusedHost.hidden = true;
-    compactCanonicalFocusedHost.replaceChildren();
     compactCanonicalPendingCommand = undefined;
     compactCanonicalPendingBase = undefined;
     compactCanonicalReviewVisible = false;
@@ -3251,26 +3217,20 @@ function openContributorInUnifiedEditor(key) {
     if (schemaDetailEmpty)
         schemaDetailEmpty.hidden = true;
     let contributorUi = {}, compatibilityCanonical, acknowledgedMigration, migration, migrationSavePending = false, migrationStatus = "", pendingHistoryIdentity;
-    const isComposed = (selected) => selected.collectionKind === "pages" || selected.collectionKind === "pageGroups";
+    const isComposed = (selected) => selected.scope !== "Shared Profile";
     const withContributorUi = (document) => { const selectedPropertyId = contributorUi.selectedPropertyId && document.nodes[contributorUi.selectedPropertyId] ? contributorUi.selectedPropertyId : document.selectedPropertyId; return { ...document, ...(selectedPropertyId ? { selectedPropertyId } : {}), ...(contributorUi.view ? { view: contributorUi.view } : {}) }; };
-    const documentFor = (live, selected) => { if (!isComposed(selected)) {
-        if (migration)
-            return withContributorUi(compatibilityCanonical ?? migration.document);
-        const stored = selected.entity.canonicalSchema;
-        if (stored)
-            return withContributorUi(stored);
-        if (acknowledgedMigration)
-            return withContributorUi(acknowledgedMigration);
-        if (!compatibilityCanonical) {
-            if (hasLegacySchemaRepresentation(selected.entity)) {
-                migration = migrateLegacyProfile(selected.entity, { id: (kind) => `${kind}:${crypto.randomUUID()}` });
-                compatibilityCanonical = migration.document;
-            }
-            else
-                compatibilityCanonical = createCanonicalSchema({ id: `canonical:${selected.entity.id}`, contributorId: selected.entity.id, contributorName: selected.entity.name });
+    const documentFor = (live, selected) => { if (isComposed(selected))
+        return withContributorUi(composedCanonicalSchema(live, selected.entity, selected.scope, selected.flowId)); if (migration)
+        return withContributorUi(compatibilityCanonical ?? migration.document); const stored = selected.entity.canonicalSchema; if (stored)
+        return withContributorUi(stored); if (acknowledgedMigration)
+        return withContributorUi(acknowledgedMigration); if (!compatibilityCanonical) {
+        if (hasLegacySchemaRepresentation(selected.entity)) {
+            migration = migrateLegacyProfile(selected.entity, { id: (kind) => `${kind}:${crypto.randomUUID()}` });
+            compatibilityCanonical = migration.document;
         }
-        return withContributorUi(compatibilityCanonical);
-    } return withContributorUi(composedCanonicalSchema(live, selected.entity, selected.collectionKind === "pages" ? "Page" : "Page Group")); };
+        else
+            compatibilityCanonical = createCanonicalSchema({ id: `canonical:${selected.entity.id}`, contributorId: selected.entity.id, contributorName: selected.entity.name });
+    } return withContributorUi(compatibilityCanonical); };
     const renderMigrationReview = (host) => { if (!migration)
         return; const review = document.createElement("section"), heading = document.createElement("h3"), summary = document.createElement("p"), list = document.createElement("ul"), actions = document.createElement("p"), cancel = document.createElement("button"), confirm = document.createElement("button"), status = document.createElement("p"), sourceDefinitions = Object.values(migration.document.nodes).reduce((count, node) => count + node.provenance.length, 0), deduplicated = sourceDefinitions - Object.keys(migration.document.nodes).length; review.setAttribute("aria-label", "Canonical schema migration review"); review.dataset.migrationState = migration.conflicts.length ? "unresolved" : "ready"; heading.textContent = "Review legacy schema migration"; summary.textContent = `${Object.keys(migration.document.nodes).length} properties mapped · ${deduplicated} repeated semantic entries deduplicated with all source provenance · rules, documentation, examples, constraints, and provenance mapped · ${migration.conflicts.length} unresolved path/facet conflicts · canonical mutations are blocked and every legacy field remains unchanged until confirmation.`; for (const conflict of migration.conflicts) {
         const item = document.createElement("li"), resolution = document.createElement("select");
@@ -3317,7 +3277,7 @@ function openContributorInUnifiedEditor(key) {
         renderCompactCanonicalEditor();
     } })(); }); status.setAttribute("role", "status"); status.textContent = migrationStatus; actions.append(cancel, confirm); review.append(heading, summary, list, actions, status); host.append(review); };
     const migrationBlocked = (document) => { migrationStatus = migration?.conflicts.length ? `Resolve ${migration.conflicts.length} canonical migration path/facet conflict${migration.conflicts.length === 1 ? "" : "s"} before editing.` : "Confirm or cancel canonical migration before editing."; renderCompactCanonicalContext(); return { status: "conflict", document, message: migrationStatus }; };
-    const contributorState = (live, selected, document) => isComposed(selected) ? saveComposedCanonicalDocument(live, selected.collectionKind, selected.entity.id, document) : writeUnifiedContributorCanonical(live, selected, document), historyKey = (projectId) => compactCanonicalHistoryKey(projectId, key);
+    const contributorState = (live, selected, document) => selected.collectionKind === "pages" || selected.collectionKind === "pageGroups" ? saveComposedCanonicalDocument(live, selected.collectionKind, selected.entity.id, document) : selected.collectionKind === "events" ? saveComposedEventCanonicalDocument(live, selected.entity.id, document) : selected.scope === "Flow Page-instance" ? saveFlowPageInstanceCanonicalDocument(live, selected.flowId, selected.entity.id, document) : selected.scope === "Event-occurrence" ? saveEventOccurrenceCanonicalDocument(live, selected.flowId, selected.entity.id, document) : writeUnifiedContributorCanonical(live, selected, document), historyKey = (projectId) => compactCanonicalHistoryKey(projectId, key);
     const stepHistory = async (direction) => { if (compactCanonicalSettlementPending || compactCanonicalHistoryState.pending) {
         compactCanonicalCommandFeedback = "Resolve the current durable schema save through Retry or Reject before changing history. Export may preserve a recovery copy first.";
         renderCompactCanonicalContext();
@@ -3329,7 +3289,7 @@ function openContributorInUnifiedEditor(key) {
     } const current = documentFor(live, selected), scopedHistoryKey = historyKey(live.project.id); if (migration) {
         migrationBlocked(current);
         return;
-    } const step = direction === "Undo" ? prepareCompactCanonicalUndo(compactCanonicalHistoryState.history, scopedHistoryKey, current, isComposed(selected)) : prepareCompactCanonicalRedo(compactCanonicalHistoryState.history, scopedHistoryKey, current, isComposed(selected)); if (step.status !== "ready") {
+    } const step = direction === "Undo" ? prepareCompactCanonicalUndo(compactCanonicalHistoryState.history, scopedHistoryKey, current) : prepareCompactCanonicalRedo(compactCanonicalHistoryState.history, scopedHistoryKey, current); if (step.status !== "ready") {
         compactCanonicalCommandFeedback = step.message;
         renderCompactCanonicalContext();
         return;
@@ -3360,7 +3320,8 @@ function openContributorInUnifiedEditor(key) {
         label: `${selection.entity.name} · Role ${selection.scope} · scope ${selection.scope} · provenance ${selection.entity.id}`,
         load: () => { const live = restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), selected = resolveSidePanelSchemaContributor(live, key); return documentFor(live, selected); },
         dispatch: (command) => { const live = restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), selected = resolveSidePanelSchemaContributor(live, key), document = documentFor(live, selected); if (migration)
-            return migrationBlocked(document); const result = applyCanonicalCommand(document, command), mutation = command.kind !== "select" && command.kind !== "view"; if (result.status === "applied" || result.status === "rebased") {
+            return migrationBlocked(document); if (isComposed(selected) && command.baseRevision !== document.revision)
+            return { status: "conflict", document, message: `This contributor changed from opaque Draft token ${command.baseRevision} to ${document.revision}; compare this command with the latest property before retrying.` }; const result = applyCanonicalCommand(document, command), mutation = command.kind !== "select" && command.kind !== "view"; if (result.status === "applied" || result.status === "rebased") {
             if (!mutation)
                 contributorUi = { ...(result.document.selectedPropertyId ? { selectedPropertyId: result.document.selectedPropertyId } : {}), view: result.document.view };
             if (mutation) {

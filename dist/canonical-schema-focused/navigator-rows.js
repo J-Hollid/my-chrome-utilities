@@ -1,8 +1,17 @@
-import { canonicalTableRows } from "../data-layer-canonical-schema.js";
+import { canonicalPropertyPath, canonicalTableRows } from "../data-layer-canonical-schema.js";
 import { button } from "./dom.js";
+export function canonicalNavigatorRows(context) {
+    const query = context.query.trim().toLowerCase(), matches = (node) => !query || node.name.toLowerCase().includes(query) || canonicalPropertyPath(context.document, node.id).toLowerCase().includes(query), facet = (node) => context.propertyFilter === "all" || context.propertyFilter === "conditions" && Boolean(node.presence.condition) || context.propertyFilter === "documentation" && Boolean(node.documentation.displayText || node.documentation.description || node.documentation.comments) || context.propertyFilter === "issues" && node.provenance.some(({ state }) => state === "shadowed");
+    const rows = canonicalTableRows(context.document).filter(({ node }) => matches(node) && facet(node));
+    if (context.propertySort === "name")
+        rows.sort((left, right) => left.node.name.localeCompare(right.node.name) || left.path.localeCompare(right.path));
+    else if (context.propertySort === "type")
+        rows.sort((left, right) => left.node.type.localeCompare(right.node.type) || left.path.localeCompare(right.path));
+    return rows;
+}
 export function renderNavigatorRows(tree, context) {
-    const { dom, document } = context, filteredRows = canonicalTableRows(document).filter(({ node }) => node.name.toLowerCase().includes(context.query.toLowerCase()));
-    for (const row of filteredRows) {
+    const { dom, document } = context;
+    for (const row of canonicalNavigatorRows(context)) {
         const article = dom.createElement("article"), choose = button(dom, `${"› ".repeat(row.depth)}${row.node.name} · ${row.path} · ${row.node.type}`, () => context.openProperty(row.node, choose));
         choose.dataset.propertyId = row.id;
         choose.setAttribute("aria-current", String((context.activePropertyId ?? document.selectedPropertyId) === row.id));
