@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=403a2f8755137a961ac31695b080b3a6968b7b36378699081eaf070835bec927
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-25T18:53:09.001691970Z","feature_name":"Data layer canonical Shared Profile schema authoring runtime","feature_path":"features/data-layer-canonical-shared-profile-schema-authoring-runtime.feature","background_hash":"472d7d719a76bf47270eb2580c2854fda6a3037551b5db5845d9adcb51ca716d","implementation_hash":"sha256:16a630b4d01aa732c0ed63d6ece7c6e19070a4c687f6751dda39ca84442c650c","scenarios":[{"index":6,"name":"Data layer canonical Shared Profile schema authoring runtime 007","scenario_hash":"37b063e26d5b3f51440eeccbfa03c8720332deec1fa287805b3dda7a5fe56ec7","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-25T18:53:09.001691970Z"},{"index":7,"name":"Data layer canonical Shared Profile schema authoring runtime 008","scenario_hash":"b48222ab9937d34e181fb714ec94b0fca77718e5301f0f9de21bbddffb54ba97","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-25T18:53:09.001691970Z"},{"index":14,"name":"Data layer canonical Shared Profile schema authoring runtime 015","scenario_hash":"e311bdb223dc8dfd7b504fb0d42e86948438e329ff4af691abccce8ea87c7258","mutation_count":21,"result":{"Total":21,"Killed":21,"Survived":0,"Errors":0},"tested_at":"2026-07-25T18:53:09.001691970Z"},{"index":18,"name":"Data layer canonical Shared Profile schema authoring runtime 019","scenario_hash":"34c9088664aaf7f6d7033d9e9031ce864615716268bdcdffe2c0a013b7aa1fa6","mutation_count":24,"result":{"Total":24,"Killed":24,"Survived":0,"Errors":0},"tested_at":"2026-07-25T18:53:09.001691970Z"},{"index":20,"name":"Data layer canonical Shared Profile schema authoring runtime 021","scenario_hash":"7402caa88c1bbed1a5f2698ef24bf9ad7de706eb85b17a2866de9c22fbc37d01","mutation_count":22,"result":{"Total":22,"Killed":22,"Survived":0,"Errors":0},"tested_at":"2026-07-25T18:53:09.001691970Z"},{"index":25,"name":"Data layer canonical Shared Profile schema authoring runtime 026","scenario_hash":"d7b41f15d65cf48908dccb9cd08f2f8b8a12c7bca25ab9d038c952c00b6c2836","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-07-25T18:53:09.001691970Z"},{"index":26,"name":"Data layer canonical Shared Profile schema authoring runtime 027","scenario_hash":"de571fc7327c4dc984ef3ae7a590fb43d42a8a9114aa00534dbaae3d9087cd12","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-25T18:53:09.001691970Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer canonical Shared Profile schema authoring runtime
 
   Background:
@@ -114,13 +109,13 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
     Given production Opened Article contains nested article metadata and article_name properties
     When actual controls switch from Tree to Table
     Then the wide workspace renders one hierarchical row for every effective property
-    And headings include property, path, type, presence, expected or allowed values, conditions, rules, documentation, example, source, local state, validation state, and actions
-    And actual inline controls edit common fields across multiple rows
-    And production root, child, sibling, rename, move, duplicate, and delete commands open no separate one-property screen
-    When actual controls change article_name presence and article_type example without leaving Table
+    And columns show property, path, type, presence, description, expected or allowed value, example, source, local or effective state, and validation state
+    And actual inline controls edit type, presence, description, expected value, allowed value, and example across multiple rows
+    And one context-menu trigger beside each property identity provides root, child, sibling, rename, move, duplicate, and delete commands without a dedicated actions column
+    When actual controls change article_name description and article_type example without leaving Table
     Then both rendered rows retain their edits and remain simultaneously visible
-    When the installed Table reveals article_name complex row detail
-    Then complex condition and rule builders render beneath that row without unmounting the other rows
+    When the installed Table opens article_name advanced actions
+    Then complex condition and rule builders render in a row-anchored overlay without changing the table or its other property rows
     And an actual Table edit immediately updates Tree and documentation preview
 
   # Data layer canonical Shared Profile schema authoring runtime 012
@@ -365,3 +360,18 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
       | range       | minimum 10 and maximum 2                    | Minimum must not exceed maximum                 |
       | cardinality | minimum items 4 and maximum items 1         | Minimum items must not exceed maximum items     |
       | condition   | an unresolved property predicate            | Resolve the condition property                  |
+
+  # Data layer canonical Shared Profile schema authoring runtime 028
+  Scenario: Data layer canonical Shared Profile schema authoring runtime 028
+    Given production /lineOfCustomer has type string, Required presence, description Customer classification, expected value retail, example retail, inherited source Sitewide, and a local rule
+    When actual controls open Table in all six schema contributor editors
+    Then columns show property, path, type, presence, description, expected or allowed value, example, source, local or effective state, and validation state
+    And DOM inspection finds one context-menu trigger beside each property identity and no dedicated column of facet or ownership action buttons
+    When actual table cells change /lineOfCustomer description, expected value, and example
+    Then those controls stay in the same row without mounting a focused editor or leaving Table
+    And actual review and confirmation persist one property-scoped command and add one production Undo action
+    When the installed /lineOfCustomer context-menu trigger is activated
+    Then one row-anchored overlay renders advanced definition, conditional presence, conditions, rich rules, structure, provenance, and context-legal ownership actions
+    And bounding-box and DOM inspection show no below-table control panel, expanded property row, replaced table, or hidden sibling row
+    When actual Escape and Cancel dismiss the overlay
+    Then Table remains the primary editor and focus returns to the exact /lineOfCustomer context-menu trigger

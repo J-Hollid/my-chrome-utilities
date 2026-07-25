@@ -504,6 +504,7 @@ feature.
 | C44 | Facets, conditions, and rules are difficult to view, edit, or remove safely | Authoring 024; Layering 022 | Compact stable-identity item rows use progressive type-specific editors, readable condition trees, ownership-aware actions, staged removal and restore, and one reviewed save | Facet and rule projections, condition-tree editor, parenting resolver, legality guard, staged command builder, repository, and Undo | Rule and condition inventories, visible fields, absent irrelevant controls, read-only views, ownership action matrix, removal preview, restore, sparse delta, hashes, and Undo identity | A, B, C, E | Every item is independently understandable and editable while inherited content cannot be silently deleted or weakened |
 | C45 | The reusable-rule search can be decorative and rule kinds can accept incomplete definitions | Authoring 025–027 | Library-backed human-name filtering, kind-specific controls, conditional-rule construction, and exact no-write validation | Reusable Rule Library query, staged rule builder, condition tree, validation, repository, and Undo | Typed query and filtered names, stable selected identity, per-kind control inventory, exact diagnostics, and unchanged Draft evidence | B, E | Search changes named library results, every kind exposes only valid controls, and invalid rules create no staged or durable change |
 | C46 | Composed editors can weaken inherited rules through a generic Override action | Layering 023–024 | Canonical and composed editors share invariant and replaceable rule action legality | Rule ownership resolver, composed editor, replacement provenance, and staged property command | Cross-surface action inventory, absent illegal actions, new local identity, named parent reference, and unchanged parent bytes | B, C, E | Invariants cannot be changed and replaceable rules use one Replace here workflow |
+| C47 | The Table became a button list that opens a detached control panel | Authoring 028 | Information-rich rows retain common cell editing while one row-anchored context menu contains advanced operations | Shared Table projection, inline facet controls, overlay host, focus adapter, property command bus, and Undo | Cross-surface column inventory, editable cell results, absent action column and below-table panel, overlay geometry, sibling-row continuity, persistence, Undo, and restored focus | B, E | Table remains the primary editor; common values are edited in place and advanced work never expands a row or mounts a detached panel |
 
 ## Terminal acceptance
 
@@ -527,7 +528,8 @@ show:
 - optional Assignment targeting for all five eligible contributor kinds, with live
   effective compilation, no synthesized assignments, and no schemaDrafts model;
 - direct Page and Page Group composed-schema workspaces with all effective rows
-  visible, field-level provenance, inline edits, and expandable complex builders;
+  visible, field-level provenance, common inline edits, and row-anchored advanced
+  overlays without a dedicated action-button column or detached below-table panel;
 - Page-local ordinary overrides that warn rather than disappear when a parent is
   added, sparse reset-to-parent behavior, and readiness blocking for uncovered or
   invariant conflicts;

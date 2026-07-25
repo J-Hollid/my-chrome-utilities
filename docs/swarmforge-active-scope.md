@@ -104,23 +104,28 @@ Project library, active context, and the project-entity overview lifecycle lande
 together through the architect-approved `project-library-active-context` terminal
 candidate and were merged to `master` at `faa1aa3a`. Single schema editor parity
 subsequently completed through its terminal candidate and was merged to `master` at
-`cd5ba21dad`.
+`cd5ba21dad`. Rule builder correction subsequently completed through its terminal
+candidate and was merged to `master` at `bf0c867bd6`.
 
 The following task lineages remain open and must now be recovered in this order:
 
-1. `rule-builder-correction`; then
+1. `table-first-schema-editor-correction`; then
 2. `durable-project-repository`; then
 3. `flow-canvas-topology-examples`.
 
-The user-approved rule-builder correction is later authority for Authoring
-scenarios 025–027 and Layering scenarios 023–024 in the four active canonical-
-authoring and layered-schema contracts. It requires real reusable Rule Library
-search, progressive kind-specific and conditional-rule controls, no-write invalid
-definition handling, and identical invariant and replaceable-rule legality in
-canonical and composed editors. Control presence alone is not acceptance evidence:
-installed evidence must type the query, verify filtered human-name results and
-stable selected identity, exercise every rule kind and invalid row, and compare the
-actual rule-specific action inventories.
+The table-first schema-editor correction is later authority for Authoring scenario
+028 and supersedes earlier clauses that permit expandable row detail or a focused
+editor inserted below the property table. Every contributor Table retains
+information-rich rows and inline editing for description, expected or allowed
+value, and example. Advanced definition, conditional presence, conditions, rich
+rules, structure, provenance, and ownership commands use one overlay anchored to a
+compact trigger beside the property identity. A dedicated action-button column,
+expanded property editor, replaced or hidden table, and detached below-table
+control panel are not acceptable. Installed evidence must exercise the common
+inline edits, compare the six contributor surfaces, inspect the absence of the
+rejected layouts, verify overlay anchoring and sibling-row continuity, persist one
+property command and Undo action, and confirm Escape and Cancel restore trigger
+focus.
 
 The rejected schema candidate `143cc9d337` and Flow candidate `b8432d27e7` are not
 eligible because each introduced a vacuous `project_management` pack. Later coder
