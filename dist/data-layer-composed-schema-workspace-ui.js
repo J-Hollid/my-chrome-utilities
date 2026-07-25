@@ -1,4 +1,4 @@
-import { composedFacetDraft, composedFacetDraftWithoutRemovedItems, overrideComposedRule, sparseComposedFacets } from "./data-layer-composed-schema-builders.js";
+import { composedFacetDraft, composedFacetDraftWithoutRemovedItems, sparseComposedFacets } from "./data-layer-composed-schema-builders.js";
 import { renderComposedRows } from "./data-layer-composed-schema-workspace-rows.js";
 const button = (text, run) => { const control = document.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 export function mountComposedSchemaWorkspace(options) {
@@ -40,9 +40,9 @@ export function mountComposedSchemaWorkspace(options) {
     rows.setAttribute("aria-label", `${options.model.heading} rows`);
     const visibleModel = () => { const needle = query.trim().toLowerCase(), rows = options.model.rows.filter((row) => !needle || row.path.toLowerCase().includes(needle) || row.source.toLowerCase().includes(needle) || options.effectiveText(row).toLowerCase().includes(needle)).sort((left, right) => sortMode === "source" ? left.source.localeCompare(right.source) || left.path.localeCompare(right.path) : sortMode === "validation" ? left.validationState.localeCompare(right.validationState) || left.path.localeCompare(right.path) : left.path.localeCompare(right.path)); return { ...options.model, rows }; };
     const rerender = () => renderComposedRows(rows, { dom: document, model: visibleModel(), effectiveText: options.effectiveText, ...(options.onRepair ? { onRepair: options.onRepair } : {}), ...(options.onStructure ? { onStructure: (kind, path, name) => { pendingStructure.push({ kind, path, ...(name === undefined ? {} : { name }) }); rerender(); } } : {}), ...(options.rowPathDataset ? { rowPathDataset: options.rowPathDataset } : {}), activePath, activeSection, draft, removed, confirmedAction, removedRuleIds, removedValueIds, restoredRuleIds, restoredValueIds, stagedLocalValueIds, overriddenRuleIds, overrideRule, pendingAction, pendingStructure, beginAction, cancelAction, confirmAction, open, close, save, render: rerender, setActiveSection: (value) => { activeSection = value; } });
-    const overrideRule = (index) => { if (!draft)
-        return; const id = `rule:${crypto.randomUUID()}`, next = overrideComposedRule(draft, index, id); if (next === draft)
-        return; draft = next; overriddenRuleIds.add(id); rerender(); };
+    const overrideRule = (sourceId) => { if (!draft)
+        return; const source = options.model.rows.find(({ path }) => path === activePath)?.effective.rules?.find((rule) => String(rule.id ?? "") === sourceId); if (!source)
+        return; const id = `rule:${crypto.randomUUID()}`, replacement = { ...structuredClone(source), id, provenance: { source: "created", state: "effective" } }; draft = { ...draft, rules: [...draft.rules, replacement] }; overriddenRuleIds.add(id); rerender(); };
     const open = (row, focus, sectionName = "definition") => { activePath = row.path; activeSection = sectionName; draft = composedFacetDraft(row.local, row.effective); removed = false; confirmedAction = undefined; removedRuleIds = new Set(); removedValueIds = new Set(); restoredRuleIds = new Set(); restoredValueIds = new Set(); stagedLocalValueIds = new Set(); overriddenRuleIds = new Set(); pendingStructure = []; pendingAction = undefined; if (focus) {
         originFocus = focus;
         originPath = row.path;

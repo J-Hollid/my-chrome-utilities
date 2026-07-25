@@ -18,7 +18,7 @@ export interface ComposedFocusedSectionContext {
   restoredValueIds:Set<string>;
   stagedLocalValueIds:Set<string>;
   overriddenRuleIds:Set<string>;
-  overrideRule:(index:number)=>void;
+  overrideRule:(id:string)=>void;
   render:()=>void;
   onStructure?:(kind:FlowPageInstanceStructureKind,path:string,name?:string)=>void|undefined;
 }

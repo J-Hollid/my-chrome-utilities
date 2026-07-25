@@ -1,4 +1,4 @@
-import { addComposedConditionPredicate, moveComposedConditionBranch, removeComposedConditionBranch, typedComposedValue } from "./data-layer-composed-schema-builders.js";
+import { addComposedConditionGroup, addComposedConditionPredicate, moveComposedConditionBranch, removeComposedConditionBranch, typedComposedValue } from "./data-layer-composed-schema-builders.js";
 import { focusedConditionLabel } from "./data-layer-focused-schema-property-ui.js";
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
@@ -61,7 +61,12 @@ export function renderComposedFocusedCondition(host, context) {
     else
         tree.textContent = "All (empty)";
     for (const kind of ["all", "any", "not"])
-        controls.append(button(dom, `Add ${kind === "all" ? "All" : kind === "any" ? "Any" : "Not"} group`, () => { draft.condition = ensureComposedConditionIds({ kind, children: [] }); context.render(); }));
+        controls.append(button(dom, `Add ${kind === "all" ? "All" : kind === "any" ? "Any" : "Not"} group`, () => { try {
+            const next = addComposedConditionGroup(draft, [], kind);
+            draft.condition = ensureComposedConditionIds(next.condition);
+            context.render();
+        }
+        catch { } }));
     const search = dom.createElement("input"), property = dom.createElement("select"), operator = dom.createElement("select"), valueHost = dom.createElement("span");
     search.type = "search";
     search.placeholder = "Search properties";

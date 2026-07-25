@@ -33,6 +33,20 @@ assert.deepEqual(overriddenValueDraft.allowedValues,["2","3a","3b"],"overriding 
 assert.deepEqual(overriddenValueDraft.allowedValueIds,["parent:2","local:funnel-step:3a","parent:3b"],"an overridden value gets exactly one local identity in place");
 assert.equal(overriddenValueDraft.allowedValueProvenance.find(({id})=>id==="local:funnel-step:3a").state,"overridden");
 assert.deepEqual(sparseComposedFacets(overriddenValueDraft,{path:"/funnel_step",allowedValues:["2","3a","3b"],allowedValueIds:["parent:2","parent:3a","parent:3b"]}),{allowedValueIds:["parent:2","local:funnel-step:3a","parent:3b"],allowedValueProvenance:[{id:"local:funnel-step:3a",state:"overridden",source:"focused-editor"}]},"same-value overrides retain their local ownership identity");
+const inheritedRuleDraft=composedFacetDraft({path:"/note",rules:[{id:"local:l",kind:"pattern",pattern:"^l"}]},{path:"/note",rules:[{id:"parent:p",kind:"pattern",pattern:"^p"}]});
+assert.deepEqual(inheritedRuleDraft.rules,[{id:"local:l",kind:"pattern",pattern:"^l"}],"composed drafts stage only local rule deltas");
+const effectiveRules=compileLayeredSchema([
+  {id:"profile:rules",name:"Profile",scope:"Shared Profile",constraints:[{path:"/note",rules:[{id:"parent:p",kind:"pattern",pattern:"^p"}]}]},
+  {id:"page:rules",name:"Page",scope:"Page",constraints:[{path:"/note",rules:[{id:"local:l",kind:"pattern",pattern:"^l"}]}]},
+],{eventId:"event:rules",eventRole:"interaction"}).properties["/note"].rules;
+assert.equal(effectiveRules.filter(({id})=>id==="parent:p").length,1,"inherited rules remain singular after composition");
+assert.equal(effectiveRules.filter(({id})=>id==="local:l").length,1,"local rule deltas compose exactly once");
+const overriddenAllowedValue=compileLayeredSchema([
+  {id:"profile:values",name:"Profile",scope:"Shared Profile",constraints:[{path:"/code",allowedValues:["a"],allowedValueIds:["parent:a"]}]},
+  {id:"page:values",name:"Page",scope:"Page",constraints:[{path:"/code",allowedValueIds:["local:a"],allowedValueProvenance:[{id:"local:a",state:"overridden",source:"test"}]}]},
+],{eventId:"event:values",eventRole:"interaction"}).properties["/code"];
+assert.deepEqual(overriddenAllowedValue.allowedValueIds,["local:a"],"value identity overrides replace inherited identities");
+assert.equal(overriddenAllowedValue.allowedValueProvenance?.[0]?.id,"local:a","value provenance follows the local identity");
 assert.equal(draft.exampleMethod,"blank");
 
 const arrayDraft=composedFacetDraft({path:"/items",type:"array",itemType:"number",expectedValue:[1,2]},{path:"/items",type:"array",itemType:"string"});
@@ -62,6 +76,10 @@ draft=addComposedConditionPredicate(draft,[1],{propertyId:"/privacy_mode",operat
 const movedCondition=moveComposedConditionBranch(draft,[0],1);
 assert.equal(movedCondition.condition.children[0].kind,"not","condition branches move within their parent group");
 assert.equal(moveComposedConditionBranch(draft,[],1),draft,"moving the root condition is a true no-op");
+let nestedGroupDraft=composedFacetDraft({path:"/nested"},{path:"/nested"});
+nestedGroupDraft=addComposedConditionPredicate(nestedGroupDraft,[],{propertyId:"/first",operator:"Exists"});
+nestedGroupDraft=addComposedConditionGroup(nestedGroupDraft,[] ,"any");
+assert.deepEqual(nestedGroupDraft.condition.children.map(({kind})=>kind),["predicate","any"],"condition group actions append without replacing the existing tree");
 
 draft=addComposedRule(draft,{kind:"pattern",pattern:"^[0-9a-z]+$",severity:"error",message:"Use a known step"});
 draft=addComposedRule(draft,{kind:"range",minimum:1,maximum:4,severity:"warning",message:"Review step range",reusableRuleId:"rule:step"});
