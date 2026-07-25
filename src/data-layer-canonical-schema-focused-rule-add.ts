@@ -1,5 +1,5 @@
 import type {CanonicalPredicate,CanonicalPropertyNode,CanonicalRule} from "./data-layer-canonical-schema.js";
-import {filterFocusedReusableRules,focusedRuleFields,focusedRuleIssue,readFocusedReusableRules} from "./data-layer-focused-schema-property-ui.js";
+import {filterFocusedReusableRules,focusedReusableOutcome,focusedRuleFields,focusedRuleIssue,readFocusedReusableRules} from "./data-layer-focused-schema-property-ui.js";
 import {renderSharedConditionTree} from "./data-layer-shared-condition-tree-editor.js";
 import {schemaTableStageExpectedOrAllowed} from "./data-layer-schema-table.js";
 
@@ -25,7 +25,7 @@ export function renderCanonicalRuleAddPanel(host:HTMLElement,context:CanonicalFo
     const ordinary=fields.querySelector<HTMLInputElement>("[name=\"newRuleOrdinaryValue\"]");if(ordinary?.value)Object.assign(rule,schemaTableStageExpectedOrAllowed({},ordinary.value));
     if(condition)rule.condition=condition;
     const reusable=fields.querySelector<HTMLSelectElement>("[name=\"newRuleReusableRuleId\"]");
-    if(reusable?.value){rule.reusableRuleId=reusable.value;const name=reusable.selectedOptions[0]?.textContent;if(name)rule.name=name;}
+    if(reusable?.value){rule.reusableRuleId=reusable.value;const source=readFocusedReusableRules().find(({id})=>id===reusable.value),name=source?.name??reusable.selectedOptions[0]?.textContent,outcome=source&&focusedReusableOutcome(source);if(name)rule.name=name;if(outcome)rule.reusableOutcome=outcome;}
     return rule;
   };
   const validate=()=>{const issue=candidate()?focusedRuleIssue(candidate() as unknown as Record<string,unknown>):undefined;addRule.disabled=!kind.value||Boolean(issue);status.textContent=issue??"";};

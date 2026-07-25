@@ -61,8 +61,12 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
     }
     if (constraint.condition)
         next.condition = clone(constraint.condition);
-    if (constraint.documentation)
+    if (constraint.displayText !== undefined)
+        next.displayText = constraint.displayText;
+    if (constraint.documentation !== undefined)
         next.documentation = constraint.documentation;
+    if (constraint.comments !== undefined)
+        next.comments = constraint.comments;
     if (constraint.examples)
         next.examples = clone(constraint.examples);
     if (constraint.definitionId)

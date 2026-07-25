@@ -1,4 +1,4 @@
-import { filterFocusedReusableRules, focusedRuleFields, focusedRuleIssue, readFocusedReusableRules } from "./data-layer-focused-schema-property-ui.js";
+import { filterFocusedReusableRules, focusedReusableOutcome, focusedRuleFields, focusedRuleIssue, readFocusedReusableRules } from "./data-layer-focused-schema-property-ui.js";
 import { renderSharedConditionTree } from "./data-layer-shared-condition-tree-editor.js";
 import { schemaTableStageExpectedOrAllowed } from "./data-layer-schema-table.js";
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
@@ -35,9 +35,11 @@ export function renderCanonicalRuleAddPanel(host, context) {
         const reusable = fields.querySelector("[name=\"newRuleReusableRuleId\"]");
         if (reusable?.value) {
             rule.reusableRuleId = reusable.value;
-            const name = reusable.selectedOptions[0]?.textContent;
+            const source = readFocusedReusableRules().find(({ id }) => id === reusable.value), name = source?.name ?? reusable.selectedOptions[0]?.textContent, outcome = source && focusedReusableOutcome(source);
             if (name)
                 rule.name = name;
+            if (outcome)
+                rule.reusableOutcome = outcome;
         }
         return rule;
     };

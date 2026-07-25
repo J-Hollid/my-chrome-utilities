@@ -1,4 +1,4 @@
-import { filterFocusedReusableRules, focusedOwnershipActions, focusedRuleFields, focusedRuleIssue, readFocusedReusableRules } from "./data-layer-focused-schema-property-ui.js";
+import { filterFocusedReusableRules, focusedOwnershipActions, focusedReusableOutcome, focusedRuleFields, focusedRuleIssue, readFocusedReusableRules } from "./data-layer-focused-schema-property-ui.js";
 import { renderSharedConditionTree } from "./data-layer-shared-condition-tree-editor.js";
 import { schemaTableExpectedOrAllowed, schemaTableStageExpectedOrAllowed } from "./data-layer-schema-table.js";
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
@@ -119,7 +119,10 @@ function renderAddPanel(host, context) {
         const reusable = fields.querySelector("[name=\"newRuleReusableRuleId\"]");
         if (reusable?.value) {
             rule.reusableRuleId = reusable.value;
-            rule.name = reusable.selectedOptions[0]?.textContent ?? undefined;
+            const source = readFocusedReusableRules().find(({ id }) => id === reusable.value), outcome = source && focusedReusableOutcome(source);
+            rule.name = source?.name ?? reusable.selectedOptions[0]?.textContent ?? undefined;
+            if (outcome)
+                rule.reusableOutcome = outcome;
         }
         return rule;
     };

@@ -42,7 +42,7 @@ export function focusedOwnershipActions(input:FocusedOwnershipInput):string[] {
   return ["View","Edit"];
 }
 
-export interface FocusedReusableRule {id:string;name:string;kind?:string;enabled?:boolean;}
+export interface FocusedReusableRule {id:string;name:string;kind?:string;enabled?:boolean;outcome?:Record<string,unknown>;[field:string]:unknown;}
 export const focusedReusableRuleStorageKey = "my-chrome-utilities.schema-rule-library.v1";
 
 export function filterFocusedReusableRules(rules:readonly FocusedReusableRule[],query:string):FocusedReusableRule[] {
@@ -59,6 +59,15 @@ export function readFocusedReusableRules(storage?:Pick<Storage,"getItem">):Focus
     return Array.isArray(parsed)?parsed.filter((entry):entry is FocusedReusableRule=>Boolean(entry)&&typeof entry.id==="string"&&typeof entry.name==="string"):[];
   } catch{return[];}
 }
+
+export function focusedReusableOutcome(rule:FocusedReusableRule):Record<string,unknown>|undefined {
+  const source=rule.outcome&&typeof rule.outcome==="object"?rule.outcome:rule;
+  const kind=String(source.kind??"");if(!["presence","value","pattern","range","cardinality","condition","custom"].includes(kind))return undefined;
+  const outcome=cloneReusable(source);delete outcome.id;delete outcome.name;delete outcome.enabled;delete outcome.condition;delete outcome.outcome;
+  return outcome;
+}
+
+const cloneReusable=(value:Record<string,unknown>):Record<string,unknown>=>structuredClone(value);
 
 export function focusedRuleFields(kind:string):string[] {
   switch(kind) {

@@ -1,4 +1,4 @@
-import {filterFocusedReusableRules,focusedOwnershipActions,focusedRuleFields,focusedRuleIssue,readFocusedReusableRules} from "./data-layer-focused-schema-property-ui.js";
+import {filterFocusedReusableRules,focusedOwnershipActions,focusedReusableOutcome,focusedRuleFields,focusedRuleIssue,readFocusedReusableRules} from "./data-layer-focused-schema-property-ui.js";
 import type {ComposedFocusedSectionContext} from "./data-layer-composed-schema-workspace-focused-sections.js";
 import {renderSharedConditionTree} from "./data-layer-shared-condition-tree-editor.js";
 import {schemaTableExpectedOrAllowed,schemaTableStageExpectedOrAllowed} from "./data-layer-schema-table.js";
@@ -56,7 +56,7 @@ function renderAddPanel(host:HTMLElement,context:ComposedFocusedSectionContext):
     const presence=fields.querySelector<HTMLSelectElement>("[name=\"newRulePresence\"]");if(presence?.value)rule.presence=presence.value;
     const ordinary=fields.querySelector<HTMLInputElement>("[name=\"newRuleOrdinaryValue\"]");if(ordinary?.value)Object.assign(rule,schemaTableStageExpectedOrAllowed({},ordinary.value));
     if(condition)rule.condition=condition;
-    const reusable=fields.querySelector<HTMLSelectElement>("[name=\"newRuleReusableRuleId\"]");if(reusable?.value){rule.reusableRuleId=reusable.value;rule.name=reusable.selectedOptions[0]?.textContent??undefined;}
+    const reusable=fields.querySelector<HTMLSelectElement>("[name=\"newRuleReusableRuleId\"]");if(reusable?.value){rule.reusableRuleId=reusable.value;const source=readFocusedReusableRules().find(({id})=>id===reusable.value),outcome=source&&focusedReusableOutcome(source);rule.name=source?.name??reusable.selectedOptions[0]?.textContent??undefined;if(outcome)rule.reusableOutcome=outcome;}
     return rule;
   };
   const validate=()=>{const issue=candidate()?focusedRuleIssue(candidate()!):undefined;add.disabled=!kind.value||Boolean(issue);status.textContent=issue??"";};

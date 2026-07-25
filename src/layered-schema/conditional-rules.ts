@@ -31,7 +31,22 @@ export const layeredConditionMatches=(condition:Record<string,unknown>|undefined
 };
 
 const named=(rule:Record<string,unknown>):string=>String(rule.name??rule.id??rule.kind??"Unnamed rule");
-const conditional=(property:EffectiveProperty,payload:Record<string,unknown>,paths:ReadonlyMap<string,string>):Record<string,unknown>[]=>((property.rules??[]) as Record<string,unknown>[]).filter((rule)=>rule.enabled!==false&&Boolean(rule.condition)&&layeredConditionMatches(rule.condition as Record<string,unknown>,payload,paths));
+export const layeredPropertyPaths=(compiled:CompiledLayeredSchema):Map<string,string>=>{
+  const paths=new Map<string,string>();
+  for(const[path,property]of Object.entries(compiled.properties)){paths.set(path,path);if(property.definitionId)paths.set(property.definitionId,path);}
+  return paths;
+};
+const reusableOutcome=(property:EffectiveProperty,rule:Record<string,unknown>):Record<string,unknown>|undefined=>{
+  const embedded=rule.reusableOutcome;
+  if(embedded&&typeof embedded==="object"&&!Array.isArray(embedded))return embedded as Record<string,unknown>;
+  return (property.reusableRules??[]).find((candidate)=>String(candidate.id??"")===String(rule.reusableRuleId??"")) as Record<string,unknown>|undefined;
+};
+const executable=(property:EffectiveProperty,rule:Record<string,unknown>):Record<string,unknown>|undefined=>{
+  if(rule.kind!=="reusable")return rule;
+  const outcome=reusableOutcome(property,rule);if(!outcome)return undefined;
+  return{...clone(outcome),id:rule.id,name:rule.name??outcome.name,condition:rule.condition,enabled:rule.enabled,severity:rule.severity??outcome.severity,message:rule.message??outcome.message};
+};
+const conditional=(property:EffectiveProperty,payload:Record<string,unknown>,paths:ReadonlyMap<string,string>):Record<string,unknown>[]=>((property.rules??[]) as Record<string,unknown>[]).flatMap((rule)=>{const outcome=executable(property,rule);return outcome&&outcome.enabled!==false&&Boolean(outcome.condition)&&layeredConditionMatches(outcome.condition as Record<string,unknown>,payload,paths)?[outcome]:[];});
 const differing=(rules:Record<string,unknown>[],read:(rule:Record<string,unknown>)=>unknown):boolean=>new Set(rules.map((rule)=>JSON.stringify(read(rule)))).size>1;
 const conflictFor=(path:string,facet:string,rules:Record<string,unknown>[]):LayerConflict=>({path,message:`conditional ${facet} outcomes contradict`,contributors:rules.map(named)});
 
@@ -58,7 +73,7 @@ function resolveProperty(property:EffectiveProperty,payload:Record<string,unknow
 }
 
 export function resolveConditionalLayeredSchema(compiled:CompiledLayeredSchema,payload:Record<string,unknown>):CompiledLayeredSchema {
-  const paths=new Map(Object.entries(compiled.properties).flatMap(([path,property])=>property.definitionId?[[property.definitionId,path] as const]:[])),properties:Record<string,EffectiveProperty>={},conflicts=[...compiled.conflicts];
+  const paths=layeredPropertyPaths(compiled),properties:Record<string,EffectiveProperty>={},conflicts=[...compiled.conflicts];
   for(const [path,property] of Object.entries(compiled.properties)){const resolved=resolveProperty(property,payload,paths);properties[path]=resolved.property;conflicts.push(...resolved.conflicts);}
   return{...compiled,status:conflicts.length?"blocked":"ready",properties,conflicts};
 }

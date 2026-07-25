@@ -1,11 +1,19 @@
 import assert from "node:assert/strict";
-import {focusedPropertySections,focusedRuleFields} from "../dist/data-layer-focused-schema-property-ui.js";
-import {resolveConditionalLayeredSchema,validateLayeredObservation} from "../dist/data-layer-layered-schema.js";
+import {canonicalPropertyPath} from "../dist/data-layer-canonical-schema.js";
+import {composedCanonicalSchema,saveComposedCanonicalDocument} from "../dist/data-layer-composed-schema-workspace.js";
+import {focusedPropertySections,focusedReusableOutcome,focusedRuleFields} from "../dist/data-layer-focused-schema-property-ui.js";
+import {compileLayeredSchema,resolveConditionalLayeredSchema,validateLayeredObservation} from "../dist/data-layer-layered-schema.js";
 import {schemaTableExpectedOrAllowed,schemaTableStageExpectedOrAllowed} from "../dist/data-layer-schema-table.js";
+import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
 
 assert.deepEqual(focusedPropertySections,["definition","rules","structure"],"property actions expose one compact first layer");
 assert.deepEqual(focusedRuleFields("presence"),["condition","presence","severity","message"]);
 assert.deepEqual(focusedRuleFields("value"),["condition","ordinaryValue","severity","message"]);
+assert.deepEqual(
+  focusedReusableOutcome({id:"library:required",name:"Required",kind:"presence",presence:"required",severity:"error",condition:{kind:"predicate"}}),
+  {kind:"presence",presence:"required",severity:"error"},
+  "a reusable attachment snapshots only the executable outcome and keeps its own condition",
+);
 assert.equal(schemaTableExpectedOrAllowed({allowedValues:["contact","delivery","payment"]}),"contact, delivery, payment");
 assert.deepEqual(
   schemaTableStageExpectedOrAllowed({expectedValue:"contact",allowedValues:[]},"contact, delivery, payment"),
@@ -71,5 +79,63 @@ assert.equal(blocked.properties["/form_step_name"].expectedValue,"contact","a co
 const blockedValidation=validateLayeredObservation({targetId:"target:blocked",targetName:"Blocked",revision:1,compiled:contradictory},{form_type:"checkout",form_step_name:"contact"});
 assert.equal(blockedValidation.status,"blocked");
 assert.deepEqual(blockedValidation.conflicts.at(-1).contributors,["Checkout steps","Checkout contact only"]);
+
+const pathCompiled=compileLayeredSchema([{
+  id:"profile:path-fallback",name:"Path fallback",scope:"Shared Profile",constraints:[
+    {path:"/flag",type:"boolean"},
+    {path:"/path_target",presence:"optional",rules:[{id:"rule:path",name:"Path predicate",kind:"presence",presence:"required",condition:{kind:"predicate",propertyId:"/flag",operator:"Equals",value:true}}]},
+  ],
+}],{eventId:"event:path",eventRole:"interaction"});
+assert.deepEqual(
+  validateLayeredObservation({targetId:"target:path",targetName:"Path",revision:1,compiled:pathCompiled},{flag:true}).issues.map(({code,path})=>({code,path})),
+  [{code:"REQUIRED",path:"/path_target"}],
+  "compiled rules match a canonical path when the referenced property has no definition identity",
+);
+assert.deepEqual(validateLayeredObservation({targetId:"target:path",targetName:"Path",revision:1,compiled:pathCompiled},{flag:false}).issues,[]);
+
+const reusableCompiled=structuredClone(pathCompiled);
+reusableCompiled.properties["/path_target"].rules=[{
+  id:"rule:reusable-attachment",name:"Required when flagged",kind:"reusable",
+  condition:{kind:"predicate",propertyId:"/flag",operator:"Equals",value:true},
+  reusableRuleId:"library:required",reusableOutcome:{id:"library:required",name:"Library required",kind:"presence",presence:"required",severity:"error",message:"Required by library"},
+}];
+assert.deepEqual(
+  validateLayeredObservation({targetId:"target:reusable",targetName:"Reusable",revision:1,compiled:reusableCompiled},{flag:true}).issues.map(({code})=>code),
+  ["REQUIRED"],
+  "a matching reusable attachment executes its persisted library outcome",
+);
+assert.deepEqual(validateLayeredObservation({targetId:"target:reusable",targetName:"Reusable",revision:1,compiled:reusableCompiled},{flag:false}).issues,[]);
+
+const metadataCompiled=compileLayeredSchema([
+  {id:"profile:metadata",name:"Metadata parent",scope:"Shared Profile",constraints:[{path:"/metadata",type:"string",displayText:"Parent label",comments:"Parent comment"}]},
+  {id:"page:metadata",name:"Metadata page",scope:"Page",constraints:[{path:"/metadata",displayText:"Page label",comments:"Page comment"}]},
+],{eventId:"event:metadata",eventRole:"context"});
+assert.equal(metadataCompiled.properties["/metadata"].displayText,"Page label");
+assert.equal(metadataCompiled.properties["/metadata"].comments,"Page comment");
+
+const projectionState=createSpecificationProject({name:"Conditional projection",site:"projection.example",id:(kind)=>`${kind}:projection`});
+projectionState.project.collections.profiles.push({id:"profile:projection",name:"Projection profile",schemaConstraints:[{path:"/flag",type:"boolean"},{path:"/target",type:"string",displayText:"Inherited display",comments:"Inherited comments"}]});
+const projectedRule={
+  id:"rule:projection",name:"Projection required",kind:"presence",presence:"required",enabled:false,enforcement:"overridable",replacesRuleId:"rule:parent",
+  condition:{kind:"predicate",id:"condition:projection",propertyId:"/flag",operator:"Equals",value:true},severity:"warning",message:"Projection issue",
+};
+projectionState.project.collections.pages.push({id:"page:projection",name:"Projection page",profileId:"profile:projection",pageGroupIds:[],localSchemaContributions:[{path:"/target",displayText:"Local display",comments:"Local comments",rules:[projectedRule]}]});
+const projection=composedCanonicalSchema(projectionState,projectionState.project.collections.pages[0],"Page");
+const projectedTarget=Object.values(projection.nodes).find((node)=>canonicalPropertyPath(projection,node.id)==="/target");
+assert.equal(projectedTarget.documentation.displayText,"Local display");
+assert.equal(projectedTarget.documentation.comments,"Local comments");
+assert.deepEqual(
+  Object.fromEntries(["id","name","kind","presence","enabled","enforcement","replacesRuleId","condition","severity","message"].map((key)=>[key,projectedTarget.rules[0][key]])),
+  Object.fromEntries(["id","name","kind","presence","enabled","enforcement","replacesRuleId","condition","severity","message"].map((key)=>[key,projectedRule[key]])),
+  "composed canonical projection preserves the complete conditional rule AST",
+);
+const projectionRoundTrip=saveComposedCanonicalDocument(projectionState,"pages","page:projection",projection),storedProjection=projectionRoundTrip.project.collections.pages[0].localSchemaContributions.find(({path})=>path==="/target");
+assert.equal(storedProjection.displayText,"Local display");
+assert.equal(storedProjection.comments,"Local comments");
+assert.deepEqual(
+  Object.fromEntries(["id","name","kind","presence","enabled","enforcement","replacesRuleId","condition","severity","message"].map((key)=>[key,storedProjection.rules[0][key]])),
+  Object.fromEntries(["id","name","kind","presence","enabled","enforcement","replacesRuleId","condition","severity","message"].map((key)=>[key,projectedRule[key]])),
+  "composed save and reload retain the complete local rule without materializing parents",
+);
 
 console.log("conditional rule definition tests passed");

@@ -1,4 +1,4 @@
-import { layeredConditionMatches, resolveConditionalLayeredSchema } from "./conditional-rules.js";
+import { layeredConditionMatches, layeredPropertyPaths, resolveConditionalLayeredSchema } from "./conditional-rules.js";
 const clone = (value) => structuredClone(value);
 const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
 const valueAt = (payload, path) => path.split("/").filter(Boolean).reduce((value, key) => value && typeof value === "object" ? value[key] : undefined, payload);
@@ -20,6 +20,6 @@ const validateProperty = (issues, targetName, path, property, payload, pathsByDe
     pushIssue(issues, targetName, path, property, actual, "MIN_ITEMS", property.minItems); if (typeof property.maxItems === "number" && Array.isArray(actual) && actual.length > property.maxItems)
     pushIssue(issues, targetName, path, property, actual, "MAX_ITEMS", property.maxItems); if (property.expectedValue !== undefined && !same(actual, property.expectedValue))
     pushIssue(issues, targetName, path, property, actual, "EXPECTED_VALUE", property.expectedValue); };
-export function validateLayeredObservation(target, payload) { const effective = resolveConditionalLayeredSchema(target.compiled, payload), issues = [], pathsByDefinition = new Map(Object.entries(effective.properties).flatMap(([path, property]) => property.definitionId ? [[property.definitionId, path]] : [])); for (const [path, property] of Object.entries(effective.properties))
+export function validateLayeredObservation(target, payload) { const effective = resolveConditionalLayeredSchema(target.compiled, payload), issues = [], pathsByDefinition = layeredPropertyPaths(effective); for (const [path, property] of Object.entries(effective.properties))
     validateProperty(issues, target.targetName, path, property, payload, pathsByDefinition); return { selectedTargetId: target.targetId, selectedTargetName: target.targetName, effectiveSchemaRevision: target.revision, status: effective.status, conflicts: effective.conflicts, issues, provenance: effective.provenance }; }
 //# sourceMappingURL=validation.js.map
