@@ -6,7 +6,7 @@ export type AssignmentTargetKind = "Shared Profile" | "Page Group" | "Page" | "E
 export type IdFactory = (kind: string) => string;
 
 export interface Requirement { path: string; type?: string; required?: boolean; forbidden?: boolean; allowedValues?: readonly unknown[]; description?:string; examples?:readonly unknown[]; rules?:readonly Record<string,unknown>[]; introducedIn?:string; origin?: string; evaluationResultIdentity?:string; }
-export interface ProjectEntity { id: string; name: string; [key: string]: unknown; }
+export interface ProjectEntity { id: string; name: string; placeholder?:boolean; [key: string]: unknown; }
 export interface Profile extends ProjectEntity { requirements: Requirement[]; canonicalSchema?:CanonicalSchemaDocument; }
 export interface Predicate { kind: "predicate"; field: string; operator: string; value?: unknown; values?: readonly unknown[]; pattern?: string; valuePath?: string; }
 export interface ConditionGroup { kind: "all" | "any" | "not"; conditions: Condition[]; }

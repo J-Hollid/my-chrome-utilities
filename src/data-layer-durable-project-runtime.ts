@@ -14,6 +14,7 @@ export interface DurableProjectRuntime{
   repository:DurableProjectRepository;
   storage:LegacyStorage;
   ensureProject(projectId:string):Promise<void>;
+  prepareProjectRoute(projectId:string,route:DurableProjectRoute):void;
   ensureProjectRoute(projectId:string,route:DurableProjectRoute):Promise<DurableLoadedProject>;
   refreshProject(projectId:string):Promise<void>;
   settled(scope?:"all"|"project"|"schema"):Promise<void>;

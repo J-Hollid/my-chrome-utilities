@@ -4,7 +4,7 @@ import { createPageProjectHistory, durableConflictSemanticField, durableDraftCom
 import { cleanLibrary, cleanState, historyLabel, placeholder, record, routeWithRetainedHydration, same } from "./runtime-helpers.js";
 export async function createDurableProjectRuntime(repository, legacy, startup = {}) {
     const migration = await migrateLegacyProjectStorage(repository, legacy);
-    const metadata = await repository.listProjectMetadata(), activeProjectId = await repository.activeProjectId(), loaded = new Map(), partialRoutes = new Map(), memory = new Map(), listeners = new Set(), schemaTokens = new Map(), projectInstalls = new Map(), locallySavingProjects = new Set(), feedInstalls = new Set(), observedProjectSequences = new Map(metadata.map(({ projectId, draftSequence }) => [projectId, draftSequence])), observedActiveTokens = new Set(), activeInstalls = new Map(), observedSchemaChanges = new Set(), pageHistories = new Map(), pendingCanonicalRevisions = new Map(), projects = Object.fromEntries(metadata.map((entry) => [entry.projectId, placeholder(entry)])), library = { format: "my-chrome-utilities.project-library", version: 1, ...(activeProjectId ? { activeProjectId } : {}), projects, singletonMigrated: true };
+    const metadata = await repository.listProjectMetadata(), activeProjectId = await repository.activeProjectId(), loaded = new Map(), partialRoutes = new Map(), routeGenerations = new Map(), memory = new Map(), listeners = new Set(), schemaTokens = new Map(), projectInstalls = new Map(), locallySavingProjects = new Set(), feedInstalls = new Set(), observedProjectSequences = new Map(metadata.map(({ projectId, draftSequence }) => [projectId, draftSequence])), observedActiveTokens = new Set(), activeInstalls = new Map(), observedSchemaChanges = new Set(), pageHistories = new Map(), pendingCanonicalRevisions = new Map(), projects = Object.fromEntries(metadata.map((entry) => [entry.projectId, placeholder(entry)])), library = { format: "my-chrome-utilities.project-library", version: 1, ...(activeProjectId ? { activeProjectId } : {}), projects, singletonMigrated: true };
     let currentLibrary = library, tail = Promise.resolve(), latest = tail, failed, failedSchema, deferredActiveContext, projectionChanged = (_force = false) => { }, lastProjectionSignature = "";
     const pageHistory = (projectId) => { let value = pageHistories.get(projectId); if (!value) {
         value = createPageProjectHistory();
@@ -30,12 +30,14 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
     const notify = (type, detail) => { if (typeof globalThis.dispatchEvent === "function" && typeof CustomEvent !== "undefined")
         globalThis.dispatchEvent(new CustomEvent(type, { detail })); };
     const enqueue = (label, operation) => { notify("durable-project-saving", { label }); const pending = tail.then(operation); latest = pending; tail = pending.catch(() => { }); void pending.then(() => { projectionChanged(); notify("durable-project-saved", { label }); }, error => notify("durable-project-save-failed", { label, error })); };
-    const expandPartial = async (projectId, pending) => { const route = partialRoutes.get(projectId), installed = loaded.get(projectId), latest = route ? await repository.loadProject(projectId) : installed ?? await repository.loadProject(projectId), base = route && installed ? { ...latest, draftToken: installed.draftToken, draftSequence: installed.draftSequence } : latest, next = cleanState(pending); if (!route)
-        return { base, next }; const merged = cleanState(latest.state), { collections: nextCollections, documentationFlowGraphs, releases: nextReleases, ...nextRoot } = next.project; merged.project = { ...merged.project, ...nextRoot, collections: merged.project.collections, documentationFlowGraphs: route.includeFlowGraphs ? structuredClone(documentationFlowGraphs) : merged.project.documentationFlowGraphs, releases: route.includeReleases ? structuredClone(nextReleases) : merged.project.releases }; for (const kind of new Set([...(route.collectionKind ? [route.collectionKind] : []), ...(route.collectionKinds ?? [])])) {
-        const pendingEntries = nextCollections[kind]?.filter(entity => !entity.placeholder) ?? [], current = merged.project.collections[kind] ?? [];
+    const expandPartial = async (projectId, pending, route = partialRoutes.get(projectId)) => { const installed = loaded.get(projectId), latest = route ? await repository.loadProject(projectId) : installed ?? await repository.loadProject(projectId), base = route && installed ? { ...latest, draftToken: installed.draftToken, draftSequence: installed.draftSequence } : latest, next = cleanState(pending); if (!route)
+        return { base, next }; const merged = cleanState(latest.state), { collections: nextCollections, documentationFlowGraphs, releases: nextReleases, ...nextRoot } = next.project; merged.project = { ...merged.project, ...nextRoot, collections: merged.project.collections, documentationFlowGraphs: route.includeFlowGraphs ? structuredClone(documentationFlowGraphs) : merged.project.documentationFlowGraphs, releases: route.includeReleases ? structuredClone(nextReleases) : merged.project.releases }; for (const kind of route.collectionKind ? [route.collectionKind] : []) {
+        const rawEntries = nextCollections[kind] ?? [], pendingEntries = rawEntries.filter(entity => !entity.placeholder || entity.id === route.entityId), current = merged.project.collections[kind] ?? [];
         if (route.entityId && kind === route.collectionKind) {
-            const selected = pendingEntries.find(({ id }) => id === route.entityId), others = pendingEntries.filter(({ id }) => id !== route.entityId && !current.some(entity => entity.id === id)), withoutSelected = current.filter(entity => entity.id !== route.entityId);
-            merged.project.collections[kind] = [...withoutSelected, ...(selected ? [structuredClone(selected)] : []), ...structuredClone(others)];
+            const selected = pendingEntries.find(({ id }) => id === route.entityId), currentSelected = current.find(({ id }) => id === route.entityId), others = pendingEntries.filter(({ id }) => id !== route.entityId && !current.some(entity => entity.id === id)), withoutSelected = current.filter(entity => entity.id !== route.entityId), mergedSelected = selected ? { ...structuredClone(currentSelected ?? {}), ...structuredClone(selected) } : undefined;
+            if (mergedSelected)
+                delete mergedSelected.placeholder;
+            merged.project.collections[kind] = [...withoutSelected, ...(mergedSelected ? [mergedSelected] : []), ...structuredClone(others)];
         }
         else
             merged.project.collections[kind] = structuredClone(pendingEntries);
@@ -62,9 +64,9 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
         projectionChanged();
         throw error;
     } };
-    const persistState = async (projectId, pending, label = "Project edit", retrying = false, recordHistory = true) => { if (failed && !retrying)
-        throw failed.error; const expanded = await expandPartial(projectId, pending), base = expanded.base, next = expanded.next; if (same(base.state.project, next.project) && same(base.state.draft, next.draft))
-        return; const command = durableDraftCommand(base, next, { commandId: `projection:${crypto.randomUUID()}`, label }), route = partialRoutes.get(projectId); locallySavingProjects.add(projectId); try {
+    const persistState = async (projectId, pending, label = "Project edit", retrying = false, recordHistory = true, commandRoute = partialRoutes.get(projectId)) => { if (failed && !retrying)
+        throw failed.error; const expanded = await expandPartial(projectId, pending, commandRoute), base = expanded.base, next = expanded.next; if (same(base.state.project, next.project) && same(base.state.draft, next.draft))
+        return; const command = durableDraftCommand(base, next, { commandId: `projection:${crypto.randomUUID()}`, label }); locallySavingProjects.add(projectId); try {
         const result = await repository.saveDraft(command);
         if (result.status === "conflict") {
             const error = new DOMException(`${result.label} conflicts at ${result.conflictingFields.join(", ")}.`, "AbortError");
@@ -74,7 +76,7 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
         failed = undefined;
         if (recordHistory)
             pageHistory(projectId).push(command);
-        await installCurrent(projectId, route);
+        await installCurrent(projectId, partialRoutes.get(projectId));
     }
     catch (error) {
         if (!failed)
@@ -104,7 +106,7 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
             const suppliedRaw = restoreProjectLibrary(value);
             if (!suppliedRaw)
                 return;
-            const labels = new Map(Object.entries(suppliedRaw.projects).map(([projectId, entry]) => [projectId, historyLabel(entry.state) ?? "Save project library command"])), supplied = cleanLibrary(suppliedRaw), prior = currentLibrary, next = { ...supplied, projects: { ...prior.projects, ...supplied.projects } }, canonicalCompanions = new Set(Object.entries(supplied.projects).filter(([projectId, entry]) => { const pending = pendingCanonicalRevisions.get(projectId); return pending !== undefined && entry.revision <= pending; }).map(([projectId]) => projectId));
+            const labels = new Map(Object.entries(suppliedRaw.projects).map(([projectId, entry]) => [projectId, historyLabel(entry.state) ?? "Save project library command"])), routes = new Map(Object.keys(suppliedRaw.projects).map((projectId) => [projectId, structuredClone(partialRoutes.get(projectId))])), supplied = cleanLibrary(suppliedRaw), prior = currentLibrary, next = { ...supplied, projects: { ...prior.projects, ...supplied.projects } }, canonicalCompanions = new Set(Object.entries(supplied.projects).filter(([projectId, entry]) => { const pending = pendingCanonicalRevisions.get(projectId); return pending !== undefined && entry.revision <= pending; }).map(([projectId]) => projectId));
             if (same(prior, next))
                 return;
             if (prior.activeProjectId !== next.activeProjectId)
@@ -125,7 +127,7 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
                     continue;
                 }
                 if (!canonicalCompanions.has(projectId) && loaded.has(projectId) && (!same(priorEntry.state.project, entry.state.project) || !same(priorEntry.state.draft, entry.state.draft)))
-                    await persistState(projectId, entry.state, labels.get(projectId));
+                    await persistState(projectId, entry.state, labels.get(projectId), false, true, routes.get(projectId));
                 if (!same(priorEntry.navigation, entry.navigation))
                     await repository.setProjectNavigation(projectId, entry.navigation);
             } if (next.activeProjectId && next.activeProjectId !== prior.activeProjectId) {
@@ -141,10 +143,10 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
             const state = raw ? cleanState(raw) : undefined, revision = envelope?.revision ?? 0;
             memory.set(key, state ? serializeCanonicalProjectState(state, revision) : value);
             if (state) {
-                const label = envelope?.commands.at(-1)?.label ?? historyLabel(raw) ?? "Save project Draft";
+                const label = envelope?.commands.at(-1)?.label ?? historyLabel(raw) ?? "Save project Draft", route = structuredClone(partialRoutes.get(state.project.id));
                 pendingCanonicalRevisions.set(state.project.id, revision);
                 enqueue(label, async () => { try {
-                    await persistState(state.project.id, state, label);
+                    await persistState(state.project.id, state, label, false, true, route);
                 }
                 finally {
                     if (pendingCanonicalRevisions.get(state.project.id) === revision)
@@ -170,7 +172,8 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
         await forceLoad(projectId);
     else
         await loadNow(projectId); projectionChanged(); };
-    const ensureProjectRoute = async (projectId, route) => { await latest; const effectiveRoute = routeWithRetainedHydration(partialRoutes.get(projectId), route), value = await repository.loadVisibleProjectRoute(projectId, effectiveRoute); installLoaded(projectId, value, effectiveRoute); projectionChanged(); return value; };
+    const prepareProjectRoute = (projectId, route) => { partialRoutes.set(projectId, structuredClone(route)); routeGenerations.set(projectId, (routeGenerations.get(projectId) ?? 0) + 1); };
+    const ensureProjectRoute = async (projectId, route) => { const generation = routeGenerations.get(projectId) ?? 0; await latest; const currentGeneration = routeGenerations.get(projectId) ?? 0, effectiveRoute = generation === currentGeneration ? routeWithRetainedHydration(partialRoutes.get(projectId), route) : partialRoutes.get(projectId) ?? route, value = await repository.loadVisibleProjectRoute(projectId, effectiveRoute); installLoaded(projectId, value, effectiveRoute); projectionChanged(); return value; };
     const refreshProject = async (projectId) => { await latest; await forceLoad(projectId); projectionChanged(); };
     projectionChanged = (force = false) => { const active = currentLibrary.activeProjectId ? loaded.get(currentLibrary.activeProjectId) : undefined, signature = JSON.stringify([currentLibrary.activeProjectId, active?.draftToken, serializeProjectLibrary(currentLibrary), memory.get(LEGACY_PROJECT_KEYS.schemas)]); if (!force && signature === lastProjectionSignature)
         return; lastProjectionSignature = signature; const projection = { library: structuredClone(currentLibrary), ...(active ? { active: structuredClone(active) } : {}) }; notify("durable-project-projection-changed", projection); for (const listener of listeners)
@@ -277,6 +280,6 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
     const settled = async (scope = "all") => { await latest; await settleFeeds(); if (scope !== "schema" && failed)
         throw failed.error; if (scope !== "project" && failedSchema)
         throw failedSchema.error; };
-    return { repository, storage, ensureProject, ensureProjectRoute, refreshProject, settled, subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); }, failedSave: () => failed ? structuredClone(failed) : undefined, failedSchemaSave: () => failedSchema ? structuredClone(failedSchema) : undefined, retryFailedSave, retryFailedSchemaSave, resolveFailedSave, exportUnsavedDraft, exportUnsavedSchemas, canUndo: projectId => pageHistory(projectId).snapshot().undo.length > 0, canRedo: projectId => pageHistory(projectId).snapshot().redo.length > 0, undo: projectId => applyHistory(projectId, "undo"), redo: projectId => applyHistory(projectId, "redo"), resolveMigration, migration };
+    return { repository, storage, ensureProject, prepareProjectRoute, ensureProjectRoute, refreshProject, settled, subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); }, failedSave: () => failed ? structuredClone(failed) : undefined, failedSchemaSave: () => failedSchema ? structuredClone(failedSchema) : undefined, retryFailedSave, retryFailedSchemaSave, resolveFailedSave, exportUnsavedDraft, exportUnsavedSchemas, canUndo: projectId => pageHistory(projectId).snapshot().undo.length > 0, canRedo: projectId => pageHistory(projectId).snapshot().redo.length > 0, undo: projectId => applyHistory(projectId, "undo"), redo: projectId => applyHistory(projectId, "redo"), resolveMigration, migration };
 }
 //# sourceMappingURL=runtime-core.js.map

@@ -4,7 +4,9 @@ import {
   composedSchemaWorkspace,
   resetComposedSchemaLocalProperty,
   saveComposedCanonicalDocument,
+  saveComposedEventCanonicalDocument,
   saveComposedSchemaLocalFacets,
+  saveComposedSchemaLocalFacetsAndStructures,
 } from "../dist/data-layer-composed-schema-workspace.js";
 import {applyCanonicalCommand,canonicalPropertyPath} from "../dist/data-layer-canonical-schema.js";
 import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
@@ -64,6 +66,21 @@ assert.equal(composedSchemaWorkspace(saved,saved.project.collections.pages[0],"P
 const inheritedAgain=saveComposedSchemaLocalFacets(saved,"pages","page:cart","/funnel_step",{});
 assert.deepEqual(inheritedAgain.project.collections.pages[0].localSchemaContributions,[],"an empty sparse override does not persist a path-only local contribution");
 assert.equal(composedSchemaWorkspace(inheritedAgain,inheritedAgain.project.collections.pages[0],"Page").rows.find(({path})=>path==="/funnel_step").action,"override");
+
+const structuredPage=saveComposedSchemaLocalFacetsAndStructures(inheritedAgain,"pages","page:cart","/page_name",{},[{kind:"add-child",path:"/page_name",name:"locale"}],(kind)=>`${kind}:workspace`);
+assert.deepEqual(structuredPage.project.collections.pages[0].localSchemaContributions,[{path:"/page_name/locale",type:"string",definitionId:"property:workspace"}],"Page structure changes are stored as sparse local contributions");
+assert.ok(composedSchemaWorkspace(structuredPage,structuredPage.project.collections.pages[0],"Page").rows.some(({path})=>path==="/page_name/locale"),"Page structure changes immediately reproject into the composed workspace");
+
+const eventState=structuredClone(inheritedAgain);
+eventState.project.collections.events.push({id:"event:purchase",name:"Purchase",profileId:"profile:sitewide",canonicalSchema:{id:"canonical:event",contributorId:"event:purchase",contributorName:"Purchase",revision:0,rootIds:[],nodes:{},changes:[],source:{identity:"event:purchase",revision:0,provenance:"project"}}});
+const purchase=eventState.project.collections.events[0],eventDocument=composedCanonicalSchema(eventState,purchase,"Event"),eventPageName=Object.values(eventDocument.nodes).find((node)=>canonicalPropertyPath(eventDocument,node.id)==="/page_name");
+assert.ok(eventPageName,"the Event canonical editor projection includes inherited properties");
+const eventRuleResult=applyCanonicalCommand(eventDocument,{kind:"set",baseRevision:eventDocument.revision,propertyId:eventPageName.id,patch:{documentation:{...eventPageName.documentation,description:"Purchase page name"}}});
+assert.equal(eventRuleResult.status,"applied");
+const savedEvent=saveComposedEventCanonicalDocument(eventState,purchase.id,eventRuleResult.document);
+assert.equal(savedEvent.project.collections.events.length,1);
+assert.deepEqual(savedEvent.project.collections.events[0].localSchemaContributions,[{path:"/page_name",documentation:"Purchase page name"}],"an inherited Event edit persists only its sparse local difference");
+assert.ok(savedEvent.project.collections.events[0].canonicalSchema,"the Event retains its canonical editor identity after saving a composed projection");
 
 const effectiveDocument=composedCanonicalSchema(inheritedAgain,inheritedAgain.project.collections.pages[0],"Page"),effectiveStep=Object.values(effectiveDocument.nodes).find((node)=>canonicalPropertyPath(effectiveDocument,node.id)==="/funnel_step");
 assert.equal(effectiveDocument.source.provenance,"project-composed-effective");
