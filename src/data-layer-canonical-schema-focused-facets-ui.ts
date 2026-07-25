@@ -13,7 +13,7 @@ export function renderCanonicalFacetSection(host:HTMLElement,context:CanonicalFo
   if(context.activeSection==="presence"){renderPresenceFacet(host,context,working);if(working.presence.condition)renderCanonicalFocusedCondition(host,context);return;}
   if(context.activeSection==="values"){renderValuesFacet(host,context,working);return;}
   if(context.activeSection==="conditions"){renderCanonicalFocusedCondition(host,context);return;}
-  if(context.activeSection==="rules"){renderCanonicalFocusedRules(host,{...context,invariant:working.enforcement==="invariant"});return;}
+  if(context.activeSection==="rules"){renderCanonicalFocusedRules(host,{...context,properties:()=>Object.values(context.current().nodes).map(({id,name,type})=>({id,name,type})),invariant:working.enforcement==="invariant"});return;}
   if(context.activeSection==="documentation"){renderDocumentationFacet(host,context,working);return;}
   if(context.activeSection==="example"){renderExampleFacet(host,context,working);return;}
   if(context.activeSection==="structure"){renderStructureFacet(host,context,working);return;}

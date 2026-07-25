@@ -8,6 +8,7 @@ import {
 } from "../dist/data-layer-composed-schema-workspace.js";
 import {applyCanonicalCommand,canonicalPropertyPath} from "../dist/data-layer-canonical-schema.js";
 import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
+import {composedReviewFacetDelta} from "../dist/data-layer-composed-schema-workspace-rows.js";
 
 const state=createSpecificationProject({name:"Composed schemas",site:"shop.example",id:(kind)=>`${kind}:workspace`});
 state.project.collections.profiles.push({id:"profile:sitewide",name:"Sitewide",schemaConstraints:[
@@ -39,6 +40,13 @@ assert.deepEqual(step.provenance.map(({contributorName,state})=>({contributorNam
   {contributorName:"Retail Checkout",state:"shadowed"},
   {contributorName:"Cart",state:"effective"},
 ]);
+const reviewDelta=composedReviewFacetDelta(step,{type:"number",itemType:undefined,presence:"required",expectedValue:"3b",allowedValues:[],condition:{kind:"all",children:[]},rules:[],documentation:"changed",exampleMethod:"custom",exampleValue:"3b"});
+assert.ok(reviewDelta.some(({label})=>label==="Edited type"));
+assert.ok(reviewDelta.some(({label})=>label==="Edited presence"));
+assert.ok(reviewDelta.some(({label})=>label==="Edited expected value"));
+assert.ok(reviewDelta.some(({label})=>label==="Edited condition"));
+assert.ok(reviewDelta.some(({label})=>label==="Edited documentation"));
+assert.ok(reviewDelta.some(({label})=>label==="Edited example"));
 assert.equal(workspace.rows.find(({path})=>path==="/page_name").action,"override");
 
 const reset=resetComposedSchemaLocalProperty(state,"pages","page:cart","/funnel_step");

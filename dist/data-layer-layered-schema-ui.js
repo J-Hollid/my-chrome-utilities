@@ -3,7 +3,7 @@ import { confirmCanonicalMigration, transactProject } from "./data-layer-specifi
 import { applyCanonicalCommand, canonicalSchemaWithConstraint, canonicalTableRows, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
 import { mountComposedSchemaWorkspace } from "./data-layer-composed-schema-workspace-ui.js";
-import { composedSchemaWorkspace, resetComposedSchemaLocalProperty, saveComposedSchemaLocalFacets, saveComposedSchemaLocalFacetsAndStructures } from "./data-layer-composed-schema-workspace.js";
+import { composedSchemaWorkspace } from "./data-layer-composed-schema-workspace.js";
 import { flowPageFrameContributor, layeredContributorPath, layeredContributorsForPath, resetFlowPageInstanceLocalProperty, saveFlowPageInstanceLocalFacets, saveFlowPageInstanceLocalFacetsAndStructures } from "./data-layer-layered-schema-project.js";
 import { resolveSidePanelSchemaContributor } from "./data-layer-side-panel-schema-editor.js";
 export { layeredContributionDetails, layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
@@ -25,23 +25,6 @@ const writeSidePanelCanonical = (state, selection, canonical) => transactProject
     const collection = project.collections[selection.collectionKind];
     return { ...project, collections: { ...project.collections, [selection.collectionKind]: collection.map((candidate) => candidate.id === selection.entity.id ? { ...candidate, canonicalSchema: canonical, ...(selection.collectionKind === "profiles" ? { requirements: [] } : {}) } : candidate) } };
 } const graphs = project.documentationFlowGraphs, graph = graphs[selection.flowId], key = selection.scope === "Flow Page-instance" ? "pageFrames" : "occurrences", entries = graph[key] ?? []; return { ...project, documentationFlowGraphs: { ...graphs, [selection.flowId]: { ...graph, [key]: entries.map((candidate) => candidate.id === selection.entity.id ? { ...candidate, canonicalSchema: canonical } : candidate) } } }; });
-export function renderSidePanelComposedSchemaContext(options) {
-    const state = options.load(), selection = state ? resolveSidePanelSchemaContributor(state, options.key) : undefined;
-    if (!state || !selection || (selection.collectionKind !== "pages" && selection.collectionKind !== "pageGroups"))
-        return;
-    const scope = selection.collectionKind === "pages" ? "Page" : "Page Group", model = composedSchemaWorkspace(state, selection.entity, scope);
-    renderCompactSidePanelComposedSchemaContext({ ...options, model, selection, scope });
-}
-function renderCompactSidePanelComposedSchemaContext(options) {
-    const kind = options.selection.collectionKind;
-    if (kind !== "pages" && kind !== "pageGroups")
-        return;
-    const section = mountComposedSchemaWorkspace({ host: options.host, model: options.model, effectiveText: (row) => effectivePropertySummary(row.effective), schemaContributorId: options.selection.entity.id, schemaContributorScope: options.scope, rowPathDataset: "sidePanelEffectivePath", compact: true, onSave: (row, facets, structures = []) => { const live = options.load(), selected = live ? resolveSidePanelSchemaContributor(live, options.key) : undefined; if (!live || !selected || (selected.collectionKind !== "pages" && selected.collectionKind !== "pageGroups"))
-            return; const next = structures.length ? saveComposedSchemaLocalFacetsAndStructures(live, kind, selected.entity.id, row.path, facets, structures, (type) => `${type}:${crypto.randomUUID()}`) : saveComposedSchemaLocalFacets(live, kind, selected.entity.id, row.path, facets); options.persist(next); options.render(); }, onReset: (row) => { const live = options.load(), selected = live ? resolveSidePanelSchemaContributor(live, options.key) : undefined; if (!live || !selected || (selected.collectionKind !== "pages" && selected.collectionKind !== "pageGroups"))
-            return; options.persist(resetComposedSchemaLocalProperty(live, kind, selected.entity.id, row.path)); options.render(); }, onStructure: () => { } });
-    section.dataset.schemaPresentation = "compact-side-panel";
-    section.setAttribute("aria-label", "Compact inherited and local schema editor");
-}
 export function mountSidePanelLayeredProfileEditor(options) {
     let selectedKey;
     const current = () => { const state = options.load(), selection = state && selectedKey ? resolveSidePanelSchemaContributor(state, selectedKey) : undefined; return { state, selection }; };

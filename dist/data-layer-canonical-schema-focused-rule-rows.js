@@ -1,4 +1,5 @@
 import { focusedRuleFields } from "./data-layer-focused-schema-property-ui.js";
+import { renderSharedConditionTree } from "./data-layer-shared-condition-tree-editor.js";
 const clone = (value) => structuredClone(value);
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const input = (dom, name, value = "", type = "text") => { const control = dom.createElement("input"); control.name = name; control.type = type; control.value = value; return control; };
@@ -9,17 +10,14 @@ function editRule(row, rule, context) {
     legend.textContent = `Edit ${ruleKindLabel(rule)}`;
     for (const field of focusedRuleFields(rule.kind)) {
         if (field === "condition") {
-            const tree = dom.createElement("div");
-            tree.setAttribute("aria-label", "Editable rule condition tree");
-            const condition = rule.condition ?? { kind: "all", children: [] }, summary = dom.createElement("p"), property = input(dom, "ruleConditionProperty", condition.kind === "predicate" ? condition.propertyId : ""), operator = dom.createElement("select"), value = input(dom, "ruleConditionValue", condition.kind === "predicate" ? String(condition.value ?? "") : "");
-            summary.textContent = rule.condition ? `${condition.kind} condition tree · editable` : `No condition configured`;
-            operator.append(new Option("Exists", "Exists"), new Option("Equals", "Equals"));
-            operator.value = condition.kind === "predicate" ? condition.operator : "Exists";
-            const apply = button(dom, "Apply predicate", () => { const working = context.getWorking(); if (!working)
-                return; const index = working.rules.findIndex(({ id }) => id === rule.id); if (index < 0)
-                return; const next = clone(working.rules[index]); next.condition = { kind: "predicate", id: condition.id ?? context.id("condition"), propertyId: property.value, operator: operator.value, ...(operator.value === "Exists" ? {} : { value: value.value }) }; working.rules[index] = next; context.render(); });
-            tree.append(summary, labeled(dom, "Property", property), labeled(dom, "Operator", operator), labeled(dom, "Value", value), apply);
-            editor.append(labeled(dom, "Condition tree", tree));
+            const tree = dom.createElement("div"), properties = context.properties?.() ?? [];
+            renderSharedConditionTree(tree, { dom, ...(rule.condition ? { condition: rule.condition } : {}), properties: () => properties, id: context.id, onChange: (condition) => { const working = context.getWorking(); if (!working)
+                    return; const index = working.rules.findIndex(({ id }) => id === rule.id); if (index < 0)
+                    return; const next = clone(working.rules[index]); if (condition)
+                    next.condition = condition;
+                else
+                    delete next.condition; working.rules[index] = next; context.render(); } });
+            editor.append(labeled(dom, "Shared condition tree", tree));
             continue;
         }
         const value = String(rule[field] ?? ""), control = input(dom, `editRule${field[0].toUpperCase() + field.slice(1)}`, value, ["minimum", "maximum", "minItems", "maxItems"].includes(field) ? "number" : "text");

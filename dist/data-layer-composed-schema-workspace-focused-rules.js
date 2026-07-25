@@ -1,4 +1,5 @@
 import { focusedRuleFields } from "./data-layer-focused-schema-property-ui.js";
+import { renderSharedConditionTree } from "./data-layer-shared-condition-tree-editor.js";
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 const numericFields = new Set(["minimum", "maximum", "minItems", "maxItems"]);
@@ -9,23 +10,11 @@ function renderRuleEditor(row, rule, index, context) {
     for (const field of focusedRuleFields(String(rule.kind ?? "custom"))) {
         if (field === "condition") {
             const condition = dom.createElement("div");
-            condition.setAttribute("aria-label", "Editable rule condition tree");
-            const current = rule.condition ?? { kind: "all", children: [] };
-            const summary = dom.createElement("p");
-            summary.textContent = rule.condition ? `${String(current.kind ?? "condition")} condition tree · editable` : "No condition configured";
-            const property = dom.createElement("input");
-            property.setAttribute("aria-label", "Rule condition property");
-            property.value = String(current.propertyId ?? "");
-            const operator = dom.createElement("select");
-            operator.setAttribute("aria-label", "Rule condition operator");
-            operator.append(new Option("Exists", "Exists"), new Option("Equals", "Equals"));
-            operator.value = String(current.operator ?? "Exists");
-            const value = dom.createElement("input");
-            value.setAttribute("aria-label", "Rule condition value");
-            value.value = String(current.value ?? "");
-            const apply = button(dom, "Apply predicate", () => { rule.condition = { kind: "predicate", id: String(current.id ?? `condition:${crypto.randomUUID()}`), propertyId: property.value, operator: operator.value, ...(operator.value === "Exists" ? {} : { value: value.value }) }; context.render(); });
-            condition.append(summary, labeled(dom, "Property", property), labeled(dom, "Operator", operator), labeled(dom, "Value", value), apply);
-            editor.append(labeled(dom, "Condition tree", condition));
+            renderSharedConditionTree(condition, { dom, ...(rule.condition ? { condition: rule.condition } : {}), properties: () => context.model.rows.map(({ path, effective }) => ({ id: effective.definitionId ?? path, name: path, ...(effective.type ? { type: effective.type } : {}) })), id: (kind) => `${kind}:${crypto.randomUUID()}`, onChange: (next) => { if (next)
+                    rule.condition = next;
+                else
+                    delete rule.condition; context.render(); } });
+            editor.append(labeled(dom, "Shared condition tree", condition));
             continue;
         }
         const control = field === "severity" ? dom.createElement("select") : dom.createElement("input");

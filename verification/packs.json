@@ -875,6 +875,7 @@
       "src/data-layer-canonical-schema-focused-facets-ui.ts",
       "src/data-layer-canonical-schema-focused-conditions.ts",
       "src/data-layer-canonical-schema-focused-condition-tree.ts",
+      "src/data-layer-shared-condition-tree-editor.ts",
       "src/data-layer-canonical-schema-focused-rules.ts",
       "src/data-layer-canonical-schema-focused-rule-rows.ts",
       "src/data-layer-canonical-schema-focused-rule-add.ts",
