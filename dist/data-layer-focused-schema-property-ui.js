@@ -36,12 +36,62 @@ export function focusedOwnershipActions(input) {
         return ["View", ...(input.replaceable ? ["Replace here"] : ["Override here"]), "Open source"];
     return ["View", "Edit"];
 }
+export const focusedReusableRuleStorageKey = "my-chrome-utilities.schema-rule-library.v1";
+export function filterFocusedReusableRules(rules, query) {
+    const needle = query.trim().toLocaleLowerCase();
+    return rules.filter(({ enabled, name }) => enabled !== false && (!needle || name.toLocaleLowerCase().includes(needle)));
+}
+export function readFocusedReusableRules(storage) {
+    let source = storage;
+    if (!source)
+        try {
+            source = globalThis.localStorage;
+        }
+        catch {
+            return [];
+        }
+    if (!source)
+        return [];
+    try {
+        const parsed = JSON.parse(source.getItem(focusedReusableRuleStorageKey) ?? "[]");
+        return Array.isArray(parsed) ? parsed.filter((entry) => Boolean(entry) && typeof entry.id === "string" && typeof entry.name === "string") : [];
+    }
+    catch {
+        return [];
+    }
+}
+const unresolvedConditionProperty = (condition) => {
+    if (!condition || typeof condition !== "object")
+        return true;
+    const value = condition;
+    if (value.kind === "predicate")
+        return !String(value.propertyId ?? "").trim();
+    return Array.isArray(value.children) ? value.children.some(unresolvedConditionProperty) : true;
+};
+export function focusedRuleIssue(rule) {
+    if (rule.kind === "pattern" && !String(rule.pattern ?? "").trim())
+        return "Enter a regular expression.";
+    if (rule.kind === "range" && rule.minimum !== undefined && rule.maximum !== undefined && Number(rule.minimum) > Number(rule.maximum))
+        return "Minimum must not exceed maximum.";
+    if (rule.kind === "range" && rule.minimum === undefined && rule.maximum === undefined)
+        return "Enter a minimum or maximum.";
+    if (rule.kind === "cardinality" && rule.minItems !== undefined && rule.maxItems !== undefined && Number(rule.minItems) > Number(rule.maxItems))
+        return "Minimum items must not exceed maximum items.";
+    if (rule.kind === "cardinality" && rule.minItems === undefined && rule.maxItems === undefined)
+        return "Enter minimum or maximum items.";
+    if (rule.kind === "condition" && unresolvedConditionProperty(rule.condition))
+        return "Resolve the condition property.";
+    if (rule.kind === "reusable" && !String(rule.reusableRuleId ?? "").trim())
+        return "Choose a reusable rule.";
+    return undefined;
+}
 export function focusedRuleFields(kind) {
     switch (kind) {
         case "pattern": return ["pattern", "severity", "message"];
         case "range": return ["minimum", "maximum", "severity", "message"];
         case "cardinality": return ["minItems", "maxItems", "severity", "message"];
         case "condition": return ["condition", "severity", "message"];
+        case "reusable": return ["reusableRuleId"];
         case "custom": return ["severity", "message", "reusableRuleId"];
         default: return ["severity", "message"];
     }

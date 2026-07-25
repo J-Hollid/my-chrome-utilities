@@ -1,3 +1,4 @@
+import { focusedRuleIssue } from "../data-layer-focused-schema-property-ui.js";
 const clone = (value) => structuredClone(value);
 const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
 const normalizedCondition = (condition) => { if (condition.kind === "predicate")
@@ -20,13 +21,8 @@ export function composedFacetDraftWithoutRemovedItems(draft, removedRuleIds = ne
     return { ...draft, allowedValues: keptValues.map(({ value }) => clone(value)), ...(valueIds ? { allowedValueIds: keptValues.map(({ id }) => id).filter(Boolean) } : {}), rules: draft.rules.filter((rule) => !removedRuleIds.has(String(rule.id ?? ""))) };
 }
 export function overrideComposedRule(draft, index, id) { const rule = draft.rules[index]; if (!rule)
-    return draft; const replacement = clone(rule); replacement.id = id; replacement.provenance = { source: "created", state: "effective" }; return { ...draft, rules: draft.rules.map((candidate, candidateIndex) => candidateIndex === index ? replacement : candidate) }; }
-export function composedRuleIssue(rule) { if (!String(rule.message ?? "").trim())
-    return "Enter an issue message."; if (rule.kind === "pattern" && !String(rule.pattern ?? "").trim())
-    return "Enter a regular expression."; if (rule.kind === "range" && rule.minimum === undefined && rule.maximum === undefined)
-    return "Enter a minimum or maximum."; if (rule.kind === "cardinality" && rule.minItems === undefined && rule.maxItems === undefined)
-    return "Enter minimum or maximum items."; if (rule.kind === "condition" && !rule.condition)
-    return "Build a condition before adding a condition rule."; return undefined; }
+    return draft; const replacement = clone(rule), sourceId = String(rule.id ?? ""); replacement.id = id; replacement.replacesRuleId = sourceId; replacement.provenance = { source: "created", state: "overridden", sourceId }; return { ...draft, rules: draft.rules.map((candidate, candidateIndex) => candidateIndex === index ? replacement : candidate) }; }
+export const composedRuleIssue = focusedRuleIssue;
 export function sparseComposedFacets(draft, inherited) { if (draft.exampleMethod !== "blank" && draft.exampleValue === undefined)
     throw new Error(draft.exampleMethod === "allowed-value" ? "Choose an allowed-value example." : "Enter a custom typed example."); if (draft.exampleMethod === "allowed-value" && !draft.allowedValues.some((value) => same(value, draft.exampleValue)))
     throw new Error("Choose an example from the current allowed values."); const localValueOwnership = draft.allowedValueProvenance?.some(({ state }) => state !== "inherited") === true, candidate = { ...(draft.type ? { type: draft.type } : {}), ...(draft.itemType ? { itemType: draft.itemType } : {}), ...(draft.presence ? { presence: draft.presence } : {}), ...(draft.expectedValue !== undefined ? { expectedValue: clone(draft.expectedValue) } : {}), ...(draft.allowedValues.length ? { allowedValues: clone(draft.allowedValues), ...(draft.allowedValueIds ? { allowedValueIds: clone(draft.allowedValueIds) } : {}), ...(draft.allowedValueProvenance ? { allowedValueProvenance: clone(draft.allowedValueProvenance) } : {}) } : {}), ...(draft.condition.children.length ? { condition: persistedCondition(draft.condition) } : {}), ...(draft.rules.length ? { rules: clone(draft.rules) } : {}), ...(draft.documentation ? { documentation: draft.documentation } : {}), ...(draft.exampleMethod !== "blank" ? { examples: [clone(draft.exampleValue)] } : {}) }; return Object.fromEntries(Object.entries(candidate).filter(([key, value]) => localValueOwnership && (key === "allowedValues" || key === "allowedValueIds" || key === "allowedValueProvenance") || !same(value, inherited[key]))); }

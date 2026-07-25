@@ -19,6 +19,11 @@ import {
 } from "../dist/data-layer-composed-schema-builders.js";
 import {compileLayeredSchema,validateLayeredObservation} from "../dist/data-layer-layered-schema.js";
 import {sharedConditionOperators,sharedConditionValueMounted,sharedTypedConditionValue} from "../dist/data-layer-shared-condition-tree-editor.js";
+import {
+  filterFocusedReusableRules,
+  focusedRuleFields,
+  focusedOwnershipActions,
+} from "../dist/data-layer-focused-schema-property-ui.js";
 
 const inherited={path:"/funnel_step",type:"string",presence:"required",allowedValues:["2","3a","3b"],documentation:"Checkout step"};
 assert.equal(sharedConditionValueMounted("Exists"),false,"Exists edits unmount the comparison input");
@@ -81,15 +86,30 @@ nestedGroupDraft=addComposedConditionPredicate(nestedGroupDraft,[],{propertyId:"
 nestedGroupDraft=addComposedConditionGroup(nestedGroupDraft,[] ,"any");
 assert.deepEqual(nestedGroupDraft.condition.children.map(({kind})=>kind),["predicate","any"],"condition group actions append without replacing the existing tree");
 
-draft=addComposedRule(draft,{kind:"pattern",pattern:"^[0-9a-z]+$",severity:"error",message:"Use a known step"});
+draft=addComposedRule(draft,{id:"rule:parent",kind:"pattern",pattern:"^[0-9a-z]+$",severity:"error",message:"Use a known step"});
 draft=addComposedRule(draft,{kind:"range",minimum:1,maximum:4,severity:"warning",message:"Review step range",reusableRuleId:"rule:step"});
 assert.equal(draft.rules.length,2);
 assert.equal(draft.rules[1].reusableRuleId,"rule:step");
 const overriddenRule=overrideComposedRule(draft,0,"rule:local");
 assert.equal(overriddenRule.rules[0].id,"rule:local","overriding an inherited rule gives it a local identity");
 assert.equal(overriddenRule.rules[0].provenance.source,"created","overriding an inherited rule records local provenance");
-assert.match(composedRuleIssue({kind:"pattern",severity:"error",message:""}),/issue message/);
-assert.match(composedRuleIssue({kind:"pattern",severity:"error",message:"Mismatch"}),/regular expression/);
+assert.equal(overriddenRule.rules[0].replacesRuleId,draft.rules[0].id,"a replacement names the inherited rule it replaces");
+assert.deepEqual(draft.rules[0],{id:"rule:parent",kind:"pattern",pattern:"^[0-9a-z]+$",severity:"error",message:"Use a known step"},"staging a replacement leaves the inherited rule byte-identical");
+assert.equal(composedRuleIssue({kind:"pattern",severity:"error",message:""}),"Enter a regular expression.");
+assert.equal(composedRuleIssue({kind:"range",minimum:10,maximum:2,severity:"error"}),"Minimum must not exceed maximum.");
+assert.equal(composedRuleIssue({kind:"cardinality",minItems:4,maxItems:1,severity:"error"}),"Minimum items must not exceed maximum items.");
+assert.equal(composedRuleIssue({kind:"condition",condition:{kind:"predicate",propertyId:"",operator:"Equals"}}),"Resolve the condition property.");
+assert.equal(composedRuleIssue({kind:"pattern",pattern:"^ok$",severity:"error"}),undefined,"an issue message remains optional");
+
+const reusableRules=[
+  {id:"rule:postal",name:"Postal code pattern"},
+  {id:"rule:customer-tier",name:"Customer tier range"},
+];
+assert.deepEqual(filterFocusedReusableRules(reusableRules,"Customer"),[reusableRules[1]],"reusable-rule search filters human names");
+assert.deepEqual(filterFocusedReusableRules(reusableRules,""),reusableRules,"clearing reusable-rule search restores the library");
+assert.deepEqual(focusedRuleFields("reusable"),["reusableRuleId"],"reusable rules expose only their named library selector");
+assert.deepEqual(focusedOwnershipActions({inherited:true,invariant:true}),["View","Open source"],"invariant rule actions are shared");
+assert.deepEqual(focusedOwnershipActions({inherited:true,replaceable:true}),["View","Replace here","Open source"],"replaceable rule actions are shared");
 
 draft={...draft,exampleMethod:"allowed-value",exampleValue:"3a"};
 const sparse=sparseComposedFacets(draft,inherited);

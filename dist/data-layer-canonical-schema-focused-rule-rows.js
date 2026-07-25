@@ -1,4 +1,4 @@
-import { focusedRuleFields } from "./data-layer-focused-schema-property-ui.js";
+import { focusedOwnershipActions, focusedRuleFields } from "./data-layer-focused-schema-property-ui.js";
 import { renderSharedConditionTree } from "./data-layer-shared-condition-tree-editor.js";
 const clone = (value) => structuredClone(value);
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
@@ -41,7 +41,13 @@ export function renderCanonicalRuleRows(host, context) {
         summary.textContent = `${ruleKindLabel(rule)} · ${rule.kind} · ${rule.severity} · ${rule.message ?? "No issue message"} · source ${rule.provenance?.contributorName ?? "local"}${removed ? " · Removed" : ""}`;
         row.append(summary, button(dom, "View", () => { row.dataset.ruleMode = "view"; const detail = dom.createElement("p"); detail.textContent = `Rule ${rule.id} · definition ${JSON.stringify(rule)} · effective ${rule.enabled === false ? "disabled" : "enabled"} · source ${rule.provenance?.contributorName ?? "local"}`; row.append(detail); }));
         if (inherited) {
-            row.append(...(invariant ? [] : [button(dom, "Replace here", () => replaceInheritedRule(rule, context))]), button(dom, "Open source", () => { row.dataset.ruleMode = "source"; const source = dom.createElement("p"); source.textContent = `Source rule ${rule.id} · ${ruleKindLabel(rule)} · inherited definition is read-only.`; row.append(source); }));
+            const actions = focusedOwnershipActions({ inherited: true, invariant: rule.enforcement === "invariant" || invariant, replaceable: rule.enforcement === "overridable" && !invariant });
+            if (actions.includes("Replace here"))
+                row.append(button(dom, "Replace here", () => replaceInheritedRule(rule, context)));
+            if (actions.includes("Override here"))
+                row.append(button(dom, "Override here", () => replaceInheritedRule(rule, context)));
+            if (actions.includes("Open source"))
+                row.append(button(dom, "Open source", () => { row.dataset.ruleMode = "source"; const source = dom.createElement("p"); source.textContent = `Source rule ${rule.id} · ${ruleKindLabel(rule)} · inherited definition is read-only.`; row.append(source); }));
         }
         else if (removed) {
             const impact = dom.createElement("p");
@@ -55,6 +61,6 @@ export function renderCanonicalRuleRows(host, context) {
     host.append(list);
 }
 function replaceInheritedRule(rule, context) { const next = context.getWorking(); if (!next)
-    return; const index = next.rules.findIndex(({ id }) => id === rule.id); if (index < 0)
-    return; const replacement = clone(next.rules[index]); replacement.id = context.id("rule"); replacement.provenance = { source: "created", state: "effective" }; next.rules[index] = replacement; context.feedback(`Staged replacement of ${ruleKindLabel(rule)}.`); context.render(); }
+    return; const inherited = next.rules.find(({ id }) => id === rule.id); if (!inherited)
+    return; const replacement = clone(inherited); replacement.id = context.id("rule"); replacement.replacesRuleId = inherited.id; replacement.provenance = { source: "created", state: "overridden", sourceId: inherited.id }; next.rules = [...next.rules, replacement]; context.feedback(`Staged replacement of ${ruleKindLabel(rule)}.`); context.render(); }
 //# sourceMappingURL=data-layer-canonical-schema-focused-rule-rows.js.map
