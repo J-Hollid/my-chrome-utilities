@@ -8,8 +8,19 @@ function editRule(row, rule, context) {
     const { dom } = context, editor = dom.createElement("fieldset"), legend = dom.createElement("legend");
     legend.textContent = `Edit ${ruleKindLabel(rule)}`;
     for (const field of focusedRuleFields(rule.kind)) {
-        if (field === "condition")
+        if (field === "condition") {
+            const control = dom.createElement("textarea");
+            control.name = "editRuleCondition";
+            control.value = rule.condition ? JSON.stringify(rule.condition) : "";
+            control.addEventListener("input", () => { const working = context.getWorking(); if (!working)
+                return; const index = working.rules.findIndex(({ id }) => id === rule.id); if (index < 0)
+                return; const next = clone(working.rules[index]); try {
+                next.condition = control.value ? JSON.parse(control.value) : undefined;
+            }
+            catch { } working.rules[index] = next; });
+            editor.append(labeled(dom, "condition", control));
             continue;
+        }
         const value = String(rule[field] ?? ""), control = input(dom, `editRule${field[0].toUpperCase() + field.slice(1)}`, value, ["minimum", "maximum", "minItems", "maxItems"].includes(field) ? "number" : "text");
         control.addEventListener("input", () => { const working = context.getWorking(); if (!working)
             return; const index = working.rules.findIndex(({ id }) => id === rule.id); if (index < 0)
@@ -25,11 +36,11 @@ export function renderCanonicalRuleRows(host, context) {
     const list = dom.createElement("div");
     list.setAttribute("aria-label", "Stable rule inventory");
     for (const rule of working.rules) {
-        const row = dom.createElement("article"), summary = dom.createElement("p"), inherited = rule.provenance?.state === "inherited" || rule.provenance?.state === "shadowed" || working.provenance.some(({ state }) => state === "inherited" || state === "shadowed"), removed = removedRuleIds.has(rule.id);
+        const row = dom.createElement("article"), summary = dom.createElement("p"), inherited = rule.provenance?.state === "inherited" || rule.provenance?.state === "shadowed", removed = removedRuleIds.has(rule.id);
         row.dataset.ruleId = rule.id;
         row.dataset.ownership = inherited ? "inherited" : "local";
         summary.textContent = `${ruleKindLabel(rule)} · ${rule.kind} · ${rule.severity} · ${rule.message ?? "No issue message"} · source ${rule.provenance?.contributorName ?? "local"}${removed ? " · Removed" : ""}`;
-        row.append(summary, button(dom, "View", () => { row.dataset.ruleMode = "view"; const detail = dom.createElement("p"); detail.textContent = `Rule ${rule.id} · ${rule.kind} · ${rule.severity} · ${rule.message ?? "No issue message"} · source ${rule.provenance?.contributorName ?? "local"}`; row.append(detail); }));
+        row.append(summary, button(dom, "View", () => { row.dataset.ruleMode = "view"; const detail = dom.createElement("p"); detail.textContent = `Rule ${rule.id} · definition ${JSON.stringify(rule)} · effective ${rule.enabled === false ? "disabled" : "enabled"} · source ${rule.provenance?.contributorName ?? "local"}`; row.append(detail); }));
         if (inherited) {
             row.append(...(invariant ? [] : [button(dom, "Replace here", () => replaceInheritedRule(rule, context))]), button(dom, "Open source", () => { row.dataset.ruleMode = "source"; const source = dom.createElement("p"); source.textContent = `Source rule ${rule.id} · ${ruleKindLabel(rule)} · inherited definition is read-only.`; row.append(source); }));
         }

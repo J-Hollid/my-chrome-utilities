@@ -1,5 +1,38 @@
+import { focusedRuleFields } from "./data-layer-focused-schema-property-ui.js";
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
+const numericFields = new Set(["minimum", "maximum", "minItems", "maxItems"]);
+const clone = (value) => structuredClone(value);
+function renderRuleEditor(row, rule, index, context) {
+    const { dom } = context, editor = dom.createElement("fieldset");
+    editor.setAttribute("aria-label", `Edit rule ${String(rule.id ?? index)}`);
+    for (const field of focusedRuleFields(String(rule.kind ?? "custom"))) {
+        if (field === "condition") {
+            const condition = dom.createElement("textarea");
+            condition.name = "editRuleCondition";
+            condition.value = rule.condition ? JSON.stringify(rule.condition) : "";
+            condition.setAttribute("aria-label", "Condition definition");
+            condition.addEventListener("input", () => { try {
+                rule.condition = condition.value ? JSON.parse(condition.value) : undefined;
+            }
+            catch { } });
+            editor.append(labeled(dom, "Condition definition", condition));
+            continue;
+        }
+        const control = field === "severity" ? dom.createElement("select") : dom.createElement("input");
+        control.name = `editRule${field[0].toUpperCase() + field.slice(1)}`;
+        if (control instanceof HTMLSelectElement)
+            control.append(new Option("error", "error"), new Option("warning", "warning"));
+        else if (numericFields.has(field))
+            control.type = "number";
+        control.value = String(rule[field] ?? "");
+        control.addEventListener("input", () => { const draft = context.getDraft(); if (!draft)
+            return; const next = clone(draft.rules[index]); next[field] = control.value === "" ? undefined : numericFields.has(field) ? Number(control.value) : control.value; draft.rules[index] = next; });
+        editor.append(labeled(dom, field, control));
+    }
+    editor.append(button(dom, "Apply rule changes", () => context.render()));
+    row.append(editor);
+}
 export function renderComposedFocusedRules(host, context) {
     const { dom } = context, draft = context.getDraft();
     if (!draft)
@@ -7,8 +40,8 @@ export function renderComposedFocusedRules(host, context) {
     const list = dom.createElement("div");
     list.setAttribute("aria-label", "Stable rule inventory");
     const localIds = new Set((context.row.local.rules ?? []).map((rule) => String(rule.id ?? "")));
-    draft.rules.forEach((rule, index) => { const row = dom.createElement("article"), summary = dom.createElement("p"), id = String(rule.id ?? `rule-${index}`), local = localIds.has(id) || context.overriddenRuleIds.has(id), removed = context.removedRuleIds.has(id); row.dataset.ruleId = id; row.dataset.ownership = local ? "local" : "inherited"; summary.textContent = `${String(rule.name ?? rule.kind ?? "rule")} · ${String(rule.kind ?? "custom")} · ${String(rule.severity ?? "error")} · ${String(rule.message ?? "No issue message")} · ${local ? "local" : "inherited"}${removed ? " · Removed" : ""}`; row.append(summary, button(dom, "View", () => { row.dataset.ruleMode = "view"; const detail = dom.createElement("p"); detail.textContent = `Rule ${id} · ${String(rule.kind ?? "custom")} · ${String(rule.message ?? "No issue message")} · ${local ? "local" : "inherited"}`; row.append(detail); })); if (local && !removed)
-        row.append(button(dom, "Edit", () => { row.dataset.ruleMode = "edit"; }), button(dom, "Remove local", () => { context.removedRuleIds.add(id); context.render(); }));
+    draft.rules.forEach((rule, index) => { const row = dom.createElement("article"), summary = dom.createElement("p"), id = String(rule.id ?? `rule-${index}`), local = localIds.has(id) || context.overriddenRuleIds.has(id), removed = context.removedRuleIds.has(id); row.dataset.ruleId = id; row.dataset.ownership = local ? "local" : "inherited"; summary.textContent = `${String(rule.name ?? rule.kind ?? "rule")} · ${String(rule.kind ?? "custom")} · ${String(rule.severity ?? "error")} · ${String(rule.message ?? "No issue message")} · ${local ? "local" : "inherited"}${removed ? " · Removed" : ""}`; row.append(summary, button(dom, "View", () => { row.dataset.ruleMode = "view"; const detail = dom.createElement("p"); detail.textContent = `Rule ${id} · definition ${JSON.stringify(rule)} · effective ${rule.enabled === false ? "disabled" : "enabled"} · source ${local ? "local" : "inherited"}`; row.append(detail); })); if (local && !removed)
+        row.append(button(dom, "Edit", () => { row.dataset.ruleMode = "edit"; renderRuleEditor(row, rule, index, context); }), button(dom, "Remove local", () => { context.removedRuleIds.add(id); context.render(); }));
     else if (local)
         row.append(button(dom, "Restore", () => { context.removedRuleIds.delete(id); context.render(); }));
     else
@@ -16,7 +49,7 @@ export function renderComposedFocusedRules(host, context) {
     const addPanel = dom.createElement("fieldset"), kind = dom.createElement("select"), fields = dom.createElement("div");
     kind.name = "ruleKind";
     kind.append(...["pattern", "range", "cardinality", "condition", "custom"].map((entry) => new Option(entry, entry)));
-    const renderFields = () => { fields.replaceChildren(); const names = kind.value === "pattern" ? ["pattern", "severity", "message"] : kind.value === "range" ? ["minimum", "maximum", "severity", "message"] : kind.value === "cardinality" ? ["minItems", "maxItems", "severity", "message"] : ["severity", "message", "reusableRuleId"]; for (const name of names) {
+    const renderFields = () => { fields.replaceChildren(); const names = focusedRuleFields(kind.value).filter((name) => name !== "condition"); for (const name of names) {
         if (name === "reusableRuleId") {
             const search = dom.createElement("input");
             search.name = "reusableRuleSearch";
@@ -28,17 +61,19 @@ export function renderComposedFocusedRules(host, context) {
             fields.append(labeled(dom, "Search reusable rules", search), labeled(dom, "Reusable rule", reusable));
             continue;
         }
-        const control = dom.createElement("input");
+        const control = name === "severity" ? dom.createElement("select") : dom.createElement("input");
         control.name = `newRule${name}`;
-        if (["minimum", "maximum", "minItems", "maxItems"].includes(name))
+        if (control instanceof HTMLSelectElement)
+            control.append(new Option("error", "error"), new Option("warning", "warning"));
+        else if (numericFields.has(name))
             control.type = "number";
         fields.append(labeled(dom, name, control));
     } };
     kind.addEventListener("change", renderFields);
     renderFields();
-    addPanel.append(labeled(dom, "Rule kind", kind), fields, button(dom, "Add rule", () => { const rule = { id: `rule:${crypto.randomUUID()}`, kind: kind.value, severity: "error", message: "" }; for (const control of Array.from(fields.querySelectorAll("input")))
+    addPanel.append(labeled(dom, "Rule kind", kind), fields, button(dom, "Add rule", () => { const rule = { id: `rule:${crypto.randomUUID()}`, kind: kind.value, severity: "error", message: "" }; for (const control of Array.from(fields.querySelectorAll("input,select")))
         if (control.value)
-            rule[control.name.replace(/^newRule/, "").replace(/^./, (letter) => letter.toLowerCase())] = ["minimum", "maximum", "minItems", "maxItems"].some((name) => control.name.endsWith(name)) ? Number(control.value) : control.value; const reusable = fields.querySelector("[name=\"reusableRuleId\"]"); if (reusable?.value)
+            rule[control.name.replace(/^newRule/, "").replace(/^./, (letter) => letter.toLowerCase())] = numericFields.has(control.name.replace(/^newRule/, "")) ? Number(control.value) : control.value; const reusable = fields.querySelector("[name=\"reusableRuleId\"]"); if (reusable?.value)
         rule.reusableRuleId = reusable.value; draft.rules = [...draft.rules, rule]; context.render(); }));
     host.append(list, addPanel);
 }

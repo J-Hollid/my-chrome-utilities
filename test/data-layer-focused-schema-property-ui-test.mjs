@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import {focusedConditionLabel,focusedOwnershipActions,focusedPropertySections,focusedRuleFields,focusedSparseDelta} from "../dist/data-layer-focused-schema-property-ui.js";
+import {applyCanonicalCommand,createCanonicalSchema} from "../dist/data-layer-canonical-schema.js";
 
 assert.deepEqual(focusedPropertySections,["definition","presence","values","conditions","rules","documentation","example","structure"]);
 assert.deepEqual(focusedOwnershipActions({inherited:true}),["View","Override here","Open source"]);
@@ -11,4 +12,26 @@ assert.deepEqual(focusedRuleFields("range"),["minimum","maximum","severity","mes
 assert.deepEqual(focusedRuleFields("pattern"),["pattern","severity","message"]);
 assert.equal(focusedConditionLabel({kind:"all",children:[{kind:"predicate",propertyId:"/page_type",operator:"Equals",value:"trade"}]}),"All (/page_type Equals trade)");
 assert.deepEqual(focusedSparseDelta({type:"string",presence:"required",documentation:"new"},{type:"string",presence:"optional",documentation:"old"}),{presence:"required",documentation:"new"});
+const source=createCanonicalSchema({id:"schema:focused",contributorId:"profile:focused",contributorName:"Focused"});
+const property={id:"property:line",name:"lineOfCustomer",order:0,type:"string",presence:{mode:"optional"},allowedValues:[],rules:[],documentation:{displayText:"",description:"",comments:"",example:{method:"blank"}},provenance:[{source:"created"}],overrideReferences:[]};
+const withProperty={...source,rootIds:[property.id],nodes:{[property.id]:property}};
+const selected=applyCanonicalCommand(withProperty,{kind:"select",baseRevision:0,propertyId:property.id});
+assert.equal(selected.status,"applied");
+assert.equal(selected.document.revision,0,"opening a property is transient and must not advance the Draft");
+assert.deepEqual(selected.document.changes,[],"selection must not append a durable change");
+const viewed=applyCanonicalCommand(withProperty,{kind:"view",baseRevision:0,view:"table"});
+assert.equal(viewed.status,"applied");
+assert.equal(viewed.document.revision,0,"switching Tree/Table is transient and must not advance the Draft");
+const saved=applyCanonicalCommand(withProperty,{kind:"set",baseRevision:0,propertyId:property.id,patch:{type:"number",documentation:{...property.documentation,description:"atomic"}}});
+assert.equal(saved.status,"applied");
+assert.equal(saved.document.revision,1,"focused review must commit one property command");
+assert.equal(saved.document.changes.length,1,"focused review must produce one Undo/change entry");
+const child={...property,id:"property:child",name:"child",parentId:property.id,order:0};
+const objectDocument={...withProperty,nodes:{[property.id]:{...property,type:"object"},[child.id]:child}};
+const impact=applyCanonicalCommand(objectDocument,{kind:"set",baseRevision:0,propertyId:property.id,patch:{type:"string"}});
+assert.equal(impact.status,"confirmation-required");
+const confirmed=applyCanonicalCommand(objectDocument,{kind:"set",baseRevision:0,propertyId:property.id,patch:{type:"string"},confirmed:true});
+assert.equal(confirmed.status,"applied");
+assert.equal(Object.hasOwn(confirmed.document.nodes,child.id),false,"confirmed destructive type change removes descendants atomically");
+assert.equal(confirmed.document.changes.length,1);
 console.log("focused schema property UI tests passed");

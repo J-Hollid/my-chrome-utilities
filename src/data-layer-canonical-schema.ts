@@ -32,7 +32,7 @@ export type CanonicalCommand=
   |{kind:"move";baseRevision:number;propertyId:string;parentId?:string;afterId?:string}
   |{kind:"duplicate";baseRevision:number;propertyId:string;id:CanonicalIdFactory}
   |{kind:"delete";baseRevision:number;propertyId:string}
-  |{kind:"set";baseRevision:number;propertyId:string;patch:Partial<Omit<CanonicalPropertyNode,"id"|"parentId"|"order"|"provenance">>}
+  |{kind:"set";baseRevision:number;propertyId:string;patch:Partial<Omit<CanonicalPropertyNode,"id"|"parentId"|"order"|"provenance">>;confirmed?:boolean}
   |{kind:"type";baseRevision:number;propertyId:string;type:CanonicalPropertyType;itemType?:CanonicalPropertyType;confirmed?:boolean}
   |{kind:"select";baseRevision:number;propertyId:string}
   |{kind:"view";baseRevision:number;view:"tree"|"table"};

@@ -5,7 +5,7 @@ import {renderDefinitionSection} from "./canonical-schema-focused/definition.js"
 
 export interface CanonicalFocusedSectionContext {
   dom:Document;current:()=>CanonicalSchemaDocument;node:CanonicalPropertyNode;getWorking:()=>CanonicalPropertyNode|undefined;setWorking:(value:CanonicalPropertyNode|undefined)=>void;
-  activeSection:FocusedPropertySection;setActiveSection:(value:FocusedPropertySection)=>void;removedRuleIds:Set<string>;id:(kind:string)=>string;render:()=>void;
+  activeSection:FocusedPropertySection;setActiveSection:(value:FocusedPropertySection)=>void;removedRuleIds:Set<string>;removedValueIds:Set<string>;id:(kind:string)=>string;render:()=>void;
   patchFor:(node:CanonicalPropertyNode,original:CanonicalPropertyNode)=>Partial<Omit<CanonicalPropertyNode,"id"|"parentId"|"order"|"provenance">>;command:(command:CanonicalCommand)=>CanonicalCommandResult;select:(id:string|undefined)=>void;feedback:(message:string)=>void;
 }
 export function renderCanonicalFocusedSection(host:HTMLElement,context:CanonicalFocusedSectionContext):void {

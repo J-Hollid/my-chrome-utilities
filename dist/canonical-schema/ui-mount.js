@@ -15,18 +15,20 @@ export function canonicalDispatchRequiresLocalRender(result, renderAfterDispatch
 export function mountCanonicalSchemaEditor(options) {
     const dom = options.host.ownerDocument ?? globalThis.document;
     const initialDocument = options.load();
-    let query = "", feedback = options.initialFeedback ?? "", activePropertyId = initialDocument.selectedPropertyId, activeSection = "definition", working, originFocus, originPath, menuPropertyId = initialDocument.selectedPropertyId, removedRuleIds = new Set();
+    let query = "", feedback = options.initialFeedback ?? "", activePropertyId = initialDocument.selectedPropertyId, activeSection = "definition", working, originFocus, originPath, menuPropertyId = initialDocument.selectedPropertyId, removedRuleIds = new Set(), removedValueIds = new Set(), transientView;
     let review;
-    const current = () => options.load();
+    const current = () => { const document = options.load(); return transientView ? { ...document, view: transientView } : document; };
     const selectedNode = (document) => activePropertyId ? document.nodes[activePropertyId] : document.selectedPropertyId ? document.nodes[document.selectedPropertyId] : undefined;
     const ensureWorking = (node) => { if (!working || working.id !== node.id)
         working = clone(node); };
-    const command = (next) => dispatchFocusedCanonicalCommand(next, { current, dispatch: options.dispatch, renderAfterDispatch: options.renderAfterDispatch, host: options.host, setFeedback: (message) => { feedback = message; }, render });
-    const patchFor = (node, original) => focusedPropertyPatch(node, original, removedRuleIds);
+    const command = (next) => { if (next.kind === "view")
+        transientView = next.view; return dispatchFocusedCanonicalCommand(next, { current, dispatch: options.dispatch, renderAfterDispatch: options.renderAfterDispatch, host: options.host, setFeedback: (message) => { feedback = message; }, render }); };
+    const patchFor = (node, original) => focusedPropertyPatch(node, original, removedRuleIds, removedValueIds);
     const closeFocused = () => {
         const restorePath = originPath;
         working = undefined;
         removedRuleIds = new Set();
+        removedValueIds = new Set();
         menuPropertyId = undefined;
         activePropertyId = undefined;
         review = undefined;
@@ -43,19 +45,15 @@ export function mountCanonicalSchemaEditor(options) {
         activeSection = section;
         menuPropertyId = node.id;
         removedRuleIds = new Set();
+        removedValueIds = new Set();
         ensureWorking(node);
         if (focus) {
             originFocus = focus;
             originPath = canonicalPropertyPath(document, node.id);
         }
-        if (options.dispatch) {
-            const result = options.dispatch({ kind: "select", baseRevision: document.revision, propertyId: node.id });
-            if (result.status !== "applied" && result.status !== "rebased")
-                feedback = result.status === "conflict" ? result.message : feedback;
-        }
         render();
     };
-    const finishFocusedSave = () => { working = undefined; removedRuleIds = new Set(); menuPropertyId = undefined; activePropertyId = undefined; review = undefined; render(); };
+    const finishFocusedSave = () => { working = undefined; removedRuleIds = new Set(); removedValueIds = new Set(); menuPropertyId = undefined; activePropertyId = undefined; review = undefined; render(); };
     const showImpactReview = (impact, onConfirm) => { const panel = dom.createElement("section"), heading = dom.createElement("h3"), summary = dom.createElement("p"), actions = dom.createElement("div"), cancel = button(dom, "Cancel impact review", () => { review = undefined; render(); }), confirm = button(dom, "Confirm impact", onConfirm); panel.setAttribute("aria-label", "Property impact review"); heading.textContent = "Property impact review"; summary.textContent = impact; actions.append(cancel, confirm); panel.append(heading, summary, actions); review = panel; render(); };
     const saveFocused = (confirmedType = false) => {
         const document = current(), node = working && document.nodes[working.id], original = node ? clone(node) : undefined;
@@ -63,28 +61,16 @@ export function mountCanonicalSchemaEditor(options) {
             closeFocused();
             return;
         }
-        const typeChanged = working.type !== original.type || working.itemType !== original.itemType;
-        let baseDocument = document;
-        if (typeChanged) {
-            const typeResult = command({ kind: "type", baseRevision: baseDocument.revision, propertyId: working.id, type: working.type, ...(working.type === "array" && working.itemType ? { itemType: working.itemType } : {}), ...(confirmedType ? { confirmed: true } : {}) });
-            if (typeResult.status === "confirmation-required") {
-                showImpactReview(typeResult.impact, () => saveFocused(true));
-                return;
-            }
-            if (typeResult.status !== "applied" && typeResult.status !== "rebased")
-                return;
-            baseDocument = typeResult.document;
-        }
         const patch = patchFor(working, original);
-        if (typeChanged) {
-            delete patch.type;
-            delete patch.itemType;
-        }
         if (!Object.keys(patch).length) {
             finishFocusedSave();
             return;
         }
-        const result = command({ kind: "set", baseRevision: baseDocument.revision, propertyId: working.id, patch });
+        const result = command({ kind: "set", baseRevision: document.revision, propertyId: working.id, patch, ...(confirmedType ? { confirmed: true } : {}) });
+        if (result.status === "confirmation-required") {
+            showImpactReview(result.impact, () => saveFocused(true));
+            return;
+        }
         if (result.status === "applied" || result.status === "rebased")
             finishFocusedSave();
     };
@@ -94,7 +80,7 @@ export function mountCanonicalSchemaEditor(options) {
         const document = current(), original = document.nodes[working.id];
         if (!original)
             return;
-        const changes = focusedStagedChanges(working, original, removedRuleIds, canonicalPropertyPath(current(), working.id));
+        const changes = focusedStagedChanges(working, original, removedRuleIds, canonicalPropertyPath(current(), working.id), removedValueIds);
         if (!changes.length) {
             feedback = "No staged changes to review.";
             render();
@@ -111,7 +97,7 @@ export function mountCanonicalSchemaEditor(options) {
         review = panel;
         render();
     };
-    const render = () => renderCanonicalSchemaEditor({ dom, options, document: current(), query, feedback, activePropertyId, activeSection, menuPropertyId, working, review, current, setQuery: (value) => { query = value; }, setFeedback: (value) => { feedback = value; }, setMenuPropertyId: (value) => { menuPropertyId = value; }, ensureWorking, selectedNode, openProperty, command, render, renderMenu: (node) => renderCanonicalFocusedMenu(node, { dom, current, sourceState: focusedSourceState, ensureWorking, getWorking: () => working, activeSection, setActiveSection: (value) => { activeSection = value; }, setMenuPropertyId: (value) => { menuPropertyId = value; }, render, feedback: (message) => { feedback = message; }, provenanceText }), renderFocusedEditor: (document, node) => renderCanonicalFocusedEditor(document, node, { dom, activeSection, sectionLabel, canonicalPropertyPath, provenanceText, presenceText, renderSection: (host, value) => renderCanonicalFocusedSection(host, { dom, current, node: value, getWorking: () => working, setWorking: (next) => { working = next; }, activeSection, setActiveSection: (section) => { activeSection = section; }, removedRuleIds, id: options.id, render, patchFor, command, select: (id) => { activePropertyId = id; }, feedback: (message) => { feedback = message; } }), close: closeFocused, review: showReview, save: saveFocused }) });
+    const render = () => renderCanonicalSchemaEditor({ dom, options, document: current(), query, feedback, activePropertyId, activeSection, menuPropertyId, working, review, current, setQuery: (value) => { query = value; }, setFeedback: (value) => { feedback = value; }, setMenuPropertyId: (value) => { menuPropertyId = value; }, ensureWorking, selectedNode, openProperty, command, render, renderMenu: (node) => renderCanonicalFocusedMenu(node, { dom, current, sourceState: focusedSourceState, ensureWorking, getWorking: () => working, activeSection, setActiveSection: (value) => { activeSection = value; }, setMenuPropertyId: (value) => { menuPropertyId = value; }, render, feedback: (message) => { feedback = message; }, provenanceText }), renderFocusedEditor: (document, node) => renderCanonicalFocusedEditor(document, node, { dom, activeSection, sectionLabel, canonicalPropertyPath, provenanceText, presenceText, renderSection: (host, value) => renderCanonicalFocusedSection(host, { dom, current, node: value, getWorking: () => working, setWorking: (next) => { working = next; }, activeSection, setActiveSection: (section) => { activeSection = section; }, removedRuleIds, removedValueIds, id: options.id, render, patchFor, command, select: (id) => { activePropertyId = id; }, feedback: (message) => { feedback = message; } }), close: closeFocused, review: showReview, save: saveFocused }) });
     options.host.addEventListener("keydown", (event) => { if (event.key === "Escape" && working) {
         event.preventDefault();
         closeFocused();

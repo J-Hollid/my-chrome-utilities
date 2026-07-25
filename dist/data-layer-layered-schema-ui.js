@@ -31,9 +31,33 @@ export function renderSidePanelComposedSchemaContext(options) {
     if (!state || !selection || (selection.collectionKind !== "pages" && selection.collectionKind !== "pageGroups"))
         return;
     const scope = selection.collectionKind === "pages" ? "Page" : "Page Group", model = composedSchemaWorkspace(state, selection.entity, scope);
-    mountComposedSchemaWorkspace({ host: options.host, model, effectiveText: (row) => effectivePropertySummary(row.effective), onSave: (row, facets) => { const live = options.load(), selected = live ? resolveSidePanelSchemaContributor(live, options.key) : undefined; if (live && (selected?.collectionKind === "pages" || selected?.collectionKind === "pageGroups"))
-            options.persist(saveComposedSchemaLocalFacets(live, selected.collectionKind, selected.entity.id, row.path, facets)); options.render(); }, onReset: (row) => { const live = options.load(), selected = live ? resolveSidePanelSchemaContributor(live, options.key) : undefined; if (live && (selected?.collectionKind === "pages" || selected?.collectionKind === "pageGroups"))
-            options.persist(resetComposedSchemaLocalProperty(live, selected.collectionKind, selected.entity.id, row.path)); options.render(); }, onRepair: () => options.render(), schemaContributorId: selection.entity.id, schemaContributorScope: scope, rowPathDataset: "sidePanelEffectivePath" });
+    renderCompactSidePanelComposedSchemaContext({ ...options, model, selection, scope });
+}
+function renderCompactSidePanelComposedSchemaContext(options) {
+    const section = document.createElement("section"), heading = document.createElement("h5"), summary = document.createElement("p"), list = document.createElement("div");
+    section.setAttribute("aria-label", "Compact inherited and local schema facets");
+    section.dataset.schemaPresentation = "compact-side-panel";
+    heading.textContent = "Inherited and local facets";
+    summary.textContent = `${options.model.status === "blocked" ? "Blocked" : "Ready"} · ${options.model.rows.length} effective properties · focused edits open in the complete builder.`;
+    for (const row of options.model.rows) {
+        const item = document.createElement("article"), title = document.createElement("p"), details = document.createElement("p"), action = document.createElement("button");
+        item.dataset.sidePanelEffectivePath = row.path;
+        title.textContent = `${row.path} · ${effectivePropertySummary(row.effective)} · ${row.source}`;
+        details.textContent = `Local ${Object.keys(row.local).length > 1 ? "override present" : "inherited"} · ${row.validationState} · ${row.message}`;
+        action.type = "button";
+        action.textContent = row.action === "override" ? "Override here" : "Reset to parents";
+        action.addEventListener("click", () => { const live = options.load(), selected = live ? resolveSidePanelSchemaContributor(live, options.key) : undefined; if (!live || !selected || (selected.collectionKind !== "pages" && selected.collectionKind !== "pageGroups"))
+            return; if (row.action === "override") {
+            const facets = row.effective.type ? { type: row.effective.type } : {};
+            options.persist(saveComposedSchemaLocalFacets(live, selected.collectionKind, selected.entity.id, row.path, facets));
+        }
+        else
+            options.persist(resetComposedSchemaLocalProperty(live, selected.collectionKind, selected.entity.id, row.path)); options.render(); });
+        item.append(title, details, action);
+        list.append(item);
+    }
+    section.append(heading, summary, list);
+    options.host.append(section);
 }
 export function mountSidePanelLayeredProfileEditor(options) {
     let selectedKey;

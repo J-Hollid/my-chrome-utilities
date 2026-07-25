@@ -1,4 +1,5 @@
 import { focusedConditionLabel } from "./data-layer-focused-schema-property-ui.js";
+import { typedCanonicalValue } from "./data-layer-canonical-schema-facets.js";
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const input = (dom, name, value = "") => { const control = dom.createElement("input"); control.name = name; control.value = value; return control; };
@@ -6,22 +7,23 @@ const conditionAt = (root, path) => path.reduce((condition, index) => condition.
 const replaceCondition = (root, path, replacement) => { if (!path.length)
     return replacement; const parent = conditionAt(root, path.slice(0, -1)); if (parent.kind !== "predicate")
     parent.children[path.at(-1)] = replacement; return root; };
-const operators = ["Equals", "Does not equal", "Exists", "Does not exist", "Starts with", "Contains", "Matches pattern", "Greater than", "At least", "Less than", "At most"];
+const existence = ["Exists", "Does not exist"];
+const operatorsFor = (type) => type === "number" || type === "integer" ? [...existence, "Equals", "Does not equal", "Greater than", "At least", "Less than", "At most"] : type === "boolean" || type === "null" ? [...existence, "Equals", "Does not equal"] : [...existence, "Equals", "Does not equal", "Starts with", "Contains", "Matches pattern"];
 function editPredicate(row, condition, path, context) {
     if (condition.kind !== "predicate")
         return;
     const { dom } = context, editor = dom.createElement("fieldset"), property = dom.createElement("select"), operator = dom.createElement("select"), value = input(dom, "conditionEditValue", condition.value === undefined ? "" : String(condition.value));
     editor.setAttribute("aria-label", "Condition predicate editor");
     property.append(...Object.values(context.current().nodes).map((candidate) => new Option(candidate.name, candidate.id)));
-    operator.append(...operators.map((entry) => new Option(entry, entry)));
     property.value = condition.propertyId;
-    operator.value = condition.operator;
+    const renderOperators = () => { const selected = context.current().nodes[property.value]; operator.replaceChildren(...operatorsFor(selected?.type).map((entry) => new Option(entry, entry))); operator.value = condition.operator; value.hidden = existence.includes(operator.value); };
+    renderOperators();
     const update = (patch) => { const next = context.getWorking(); if (next?.presence.condition)
         replaceCondition(next.presence.condition, path, { ...condition, ...patch }); };
-    property.addEventListener("change", () => { update({ propertyId: property.value }); context.render(); });
-    operator.addEventListener("change", () => { update({ operator: operator.value }); context.render(); });
-    value.addEventListener("input", () => update({ value: value.value }));
-    editor.append(labeled(dom, "Property", property), labeled(dom, "Operator", operator), labeled(dom, "Value", value), button(dom, "Apply condition", () => context.render()));
+    property.addEventListener("change", () => { condition.propertyId = property.value; condition.value = undefined; renderOperators(); update({ propertyId: property.value, value: undefined }); context.render(); });
+    operator.addEventListener("change", () => { condition.operator = operator.value; condition.value = undefined; update({ operator: operator.value, value: undefined }); value.hidden = existence.includes(operator.value); });
+    value.addEventListener("input", () => { const selected = context.current().nodes[property.value]; const typed = selected ? typedCanonicalValue(selected.type, value.value) : value.value; update({ value: typed }); });
+    editor.append(labeled(dom, "Property", property), labeled(dom, "Type-valid operator", operator), labeled(dom, "Typed value", value), button(dom, "Apply condition", () => context.render()));
     row.append(editor);
 }
 function appendCondition(rowParent, condition, path, context) {

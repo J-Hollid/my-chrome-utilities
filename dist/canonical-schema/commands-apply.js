@@ -25,19 +25,27 @@ export function applyCanonicalAtCurrent(document, command) {
         return { status: "applied", document: appendChange(next, command, [propertyId, ...(command.parentId ? [command.parentId] : [])]) };
     }
     if (command.kind === "view")
-        return { status: "applied", document: appendChange({ ...next, view: command.view }, command, []) };
+        return { status: "applied", document: { ...next, view: command.view } };
     const propertyId = "propertyId" in command ? command.propertyId : undefined, node = propertyId ? next.nodes[propertyId] : undefined;
     if (propertyId && !node)
         throw new Error(`Canonical property ${propertyId} is unavailable.`);
     if (command.kind === "select")
-        return { status: "applied", document: appendChange({ ...next, selectedPropertyId: command.propertyId }, command, [command.propertyId]) };
+        return { status: "applied", document: { ...next, selectedPropertyId: command.propertyId } };
     if (command.kind === "rename") {
         node.name = command.name.trim() || node.name;
         return { status: "applied", document: appendChange(next, command, [command.propertyId]) };
     }
     if (command.kind === "set") {
+        const descendants = orderedIds(next, command.propertyId), nextType = command.patch.type ?? node.type, destructive = node.type === "object" && nextType !== "object" && descendants.length > 0, itemChange = node.type === "array" && nextType === "array" && node.itemType !== command.patch.itemType;
+        if ((destructive || itemChange) && !command.confirmed)
+            return { status: "confirmation-required", document, propertyId: command.propertyId, impact: destructive ? "child definitions and documentation removed; destructive confirmation required" : `every item changes from ${node.itemType ?? "unspecified"} to ${command.patch.itemType ?? "unspecified"}` };
+        if (destructive)
+            for (const id of descendants)
+                delete next.nodes[id];
         Object.assign(node, clone(command.patch));
-        return { status: "applied", document: appendChange(next, command, [command.propertyId]) };
+        if (nextType !== "array")
+            delete node.itemType;
+        return { status: "applied", document: appendChange(next, command, [command.propertyId, ...(destructive ? descendants : [])]) };
     }
     if (command.kind === "type") {
         const descendants = orderedIds(next, command.propertyId), destructive = node.type === "object" && command.type !== "object" && descendants.length > 0, itemChange = node.type === "array" && command.type === "array" && node.itemType !== command.itemType;

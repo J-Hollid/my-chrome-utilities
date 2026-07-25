@@ -39,12 +39,15 @@ export function renderComposedFocusedSection(host, context) {
             draft.expectedValue = expected.value === "" ? undefined : typedComposedValue(draft.type ?? context.row.effective.type, expected.value);
         }
         catch { } });
-        draft.allowedValues.forEach((entry, index) => { const control = dom.createElement("input"); control.value = valueText(entry); control.setAttribute("aria-label", `Allowed value ${index + 1}`); control.addEventListener("input", () => { try {
-            draft.allowedValues[index] = typedComposedValue(draft.type ?? context.row.effective.type, control.value);
+        const inheritedValues = context.row.effective.allowedValues ?? [], values = [...draft.allowedValues];
+        inheritedValues.forEach((entry) => { if (!values.some((candidate) => JSON.stringify(candidate) === JSON.stringify(entry)))
+            values.push(entry); });
+        values.forEach((entry, index) => { const valueId = `allowed-value:${context.row.path}:${index}`, removed = context.removedValueIds.has(valueId), control = dom.createElement("input"); control.value = valueText(entry); control.setAttribute("aria-label", `Allowed value ${index + 1}`); control.disabled = removed; control.addEventListener("input", () => { try {
+            const current = draft.allowedValues.findIndex((candidate) => JSON.stringify(candidate) === JSON.stringify(entry));
+            if (current >= 0)
+                draft.allowedValues[current] = typedComposedValue(draft.type ?? context.row.effective.type, control.value);
         }
-        catch {
-            draft.allowedValues[index] = control.value;
-        } }); list.append(labeled(dom, `Value ${index + 1}`, control), button(dom, "Remove", () => { draft.allowedValues = draft.allowedValues.filter((_, candidate) => candidate !== index); context.render(); })); });
+        catch { } }); const row = dom.createElement("article"); row.dataset.valueId = valueId; row.dataset.ownership = context.row.local.allowedValues ? "local" : "inherited"; row.append(labeled(dom, `Value ${index + 1}`, control), button(dom, "View", () => { row.dataset.valueMode = "view"; const detail = dom.createElement("p"); detail.textContent = `Value ${valueId} · ${valueText(entry)} · ${row.dataset.ownership}`; row.append(detail); }), removed ? button(dom, "Restore", () => { context.removedValueIds.delete(valueId); draft.allowedValues = [...draft.allowedValues, entry]; context.render(); }) : button(dom, "Edit", () => { control.focus(); }), removed ? Object.assign(dom.createElement("span"), { textContent: " Removed" }) : button(dom, "Remove local", () => { context.removedValueIds.add(valueId); draft.allowedValues = draft.allowedValues.filter((candidate) => JSON.stringify(candidate) !== JSON.stringify(entry)); context.render(); })); list.append(row); });
         host.append(labeled(dom, "Expected value", expected), list, button(dom, "Add allowed value", () => { draft.allowedValues = [...draft.allowedValues, ""]; context.render(); }));
     }
     if (context.activeSection === "conditions")

@@ -12,17 +12,14 @@ export function renderValuesFacet(host, context, working) {
         expected.setCustomValidity("Value does not match the property type.");
     } });
     const list = dom.createElement("div");
-    working.allowedValues.forEach((entry, index) => { const row = dom.createElement("div"), value = input(dom, `allowedValue-${entry.id}`, canonicalFacetText(entry.value)); value.setAttribute("aria-label", `Allowed value ${index + 1}`); value.addEventListener("input", () => { const next = context.getWorking(); if (!next)
+    working.allowedValues.forEach((entry, index) => { const row = dom.createElement("article"), value = input(dom, `allowedValue-${entry.id}`, canonicalFacetText(entry.value)), removed = context.removedValueIds.has(entry.id); row.dataset.valueId = entry.id; row.dataset.ownership = working.provenance.some(({ state }) => state === "inherited" || state === "shadowed") ? "inherited" : "local"; value.setAttribute("aria-label", `Allowed value ${index + 1}`); value.disabled = removed; value.addEventListener("input", () => { const next = context.getWorking(); if (!next)
         return; try {
         next.allowedValues[index] = { ...entry, value: typedCanonicalValue(next.type, value.value) };
         value.setCustomValidity("");
     }
     catch {
         value.setCustomValidity("Value does not match the property type.");
-    } }); row.append(labeled(dom, `Value ${index + 1}`, value), button(dom, "Remove", () => { const next = context.getWorking(); if (next) {
-        next.allowedValues.splice(index, 1);
-        context.render();
-    } })); list.append(row); });
+    } }); row.append(labeled(dom, `Value ${index + 1}`, value), button(dom, "View", () => { row.dataset.valueMode = "view"; const detail = dom.createElement("p"); detail.textContent = `Value ${entry.id} · ${canonicalFacetText(entry.value)} · ${row.dataset.ownership}`; row.append(detail); }), removed ? button(dom, "Restore", () => { context.removedValueIds.delete(entry.id); context.render(); }) : button(dom, "Edit", () => { value.focus(); }), removed ? Object.assign(dom.createElement("span"), { textContent: " Removed" }) : button(dom, "Remove local", () => { context.removedValueIds.add(entry.id); context.render(); })); list.append(row); });
     host.append(labeled(dom, "Expected value", expected), list, button(dom, "Add allowed value", () => { const next = context.getWorking(); if (next) {
         next.allowedValues.push({ id: context.id("allowed-value"), value: next.type === "number" || next.type === "integer" ? 0 : next.type === "boolean" ? false : next.type === "null" ? null : "" });
         context.render();
