@@ -9,6 +9,7 @@ const clone=<T>(value:T):T=>structuredClone(value);
 const cleanName=(name:string|undefined,fallback:string):string=>{const value=String(name??fallback).trim().replace(/^\/+|\/+$/g,"");if(!value||value.includes("/"))throw new Error("Property names must be one path segment.");return value;};
 const parentPath=(path:string):string=>{const index=path.lastIndexOf("/");return index<=0?"":path.slice(0,index);};
 const subtree=(path:string,candidate:string):boolean=>candidate===path||candidate.startsWith(`${path}/`);
+export const structureDeletesPath=(commands:readonly FlowPageInstanceStructureCommand[],path:string):boolean=>commands.some((command)=>command.kind==="delete"&&subtree(command.path,path));
 const replacePath=(path:string,from:string,to:string):string=>path===from?to:path.startsWith(`${from}/`)?`${to}${path.slice(from.length)}`:path;
 const suffixName=(path:string,name:string):string=>{const parent=parentPath(path);return `${parent}/${name}`;};
 const frameFor=(state:ProjectState,flowId:string,frameId:string):ProjectEntity=>{const graph=(state.project.documentationFlowGraphs as Record<string,FlowGraph>)[flowId],frame=graph?.pageFrames?.find(({id})=>id===frameId);if(!graph||!frame)throw new Error(`Flow Page instance ${frameId} is unavailable.`);return frame;};

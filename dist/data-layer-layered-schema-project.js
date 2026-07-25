@@ -2,7 +2,7 @@ import { canonicalConstraints } from "./data-layer-canonical-schema.js";
 import { compileLayeredSchema } from "./data-layer-layered-schema.js";
 import { orderedPageGroupIds } from "./data-layer-page-group-membership.js";
 import { transactProject } from "./data-layer-specification-project.js";
-import { applyLayerConstraintStructures } from "./flow-graph/page-instance-structure.js";
+import { applyLayerConstraintStructures, structureDeletesPath } from "./flow-graph/page-instance-structure.js";
 const contributionFor = (entity, scope) => {
     const canonical = entity.canonicalSchema;
     const requirements = (entity.requirements ?? []).map((requirement) => ({ ...requirement, ...(requirement.required ? { presence: "required" } : requirement.forbidden ? { presence: "forbidden" } : {}) }));
@@ -88,9 +88,9 @@ export function saveFlowPageInstanceLocalFacetsAndStructures(state, flowId, page
     const graph = state.project.documentationFlowGraphs[flowId], frame = graph?.pageFrames?.find(({ id: frameId }) => frameId === pageFrameId);
     if (!frame)
         throw new Error(`Flow Page instance ${pageFrameId} is unavailable.`);
-    const sparse = Object.fromEntries(Object.entries(facets).filter(([, value]) => value !== undefined && value !== ""));
+    const sparse = Object.fromEntries(Object.entries(facets).filter(([, value]) => value !== undefined && value !== "")), retainFocusedFacets = !structureDeletesPath(commands, path) && Object.keys(sparse).length > 0;
     return transactProject(state, `Save ${commands.length + 1} Flow Page-instance schema changes`, (project) => { const graphs = project.documentationFlowGraphs, current = graphs[flowId], frames = current.pageFrames ?? []; return { ...project, documentationFlowGraphs: { ...graphs, [flowId]: { ...current, pageFrames: frames.map((candidate) => { if (candidate.id !== pageFrameId)
-                    return candidate; const structured = applyLayerConstraintStructures(candidate.localSchemaContributions ?? [], commands, id), next = [...structured.filter((constraint) => constraint.path !== path), ...(Object.keys(sparse).length ? [{ path, ...structuredClone(sparse) }] : [])]; return { ...candidate, localSchemaContributions: next, compiledTargetsStale: true }; }) } } }; });
+                    return candidate; const structured = applyLayerConstraintStructures(candidate.localSchemaContributions ?? [], commands, id), next = [...structured.filter((constraint) => constraint.path !== path), ...(retainFocusedFacets ? [{ path, ...structuredClone(sparse) }] : [])]; return { ...candidate, localSchemaContributions: next, compiledTargetsStale: true }; }) } } }; });
 }
 export function resetFlowPageInstanceLocalProperty(state, flowId, pageFrameId, path) {
     const graph = state.project.documentationFlowGraphs[flowId], frame = graph?.pageFrames?.find(({ id }) => id === pageFrameId);

@@ -4,6 +4,7 @@ const cleanName = (name, fallback) => { const value = String(name ?? fallback).t
     throw new Error("Property names must be one path segment."); return value; };
 const parentPath = (path) => { const index = path.lastIndexOf("/"); return index <= 0 ? "" : path.slice(0, index); };
 const subtree = (path, candidate) => candidate === path || candidate.startsWith(`${path}/`);
+export const structureDeletesPath = (commands, path) => commands.some((command) => command.kind === "delete" && subtree(command.path, path));
 const replacePath = (path, from, to) => path === from ? to : path.startsWith(`${from}/`) ? `${to}${path.slice(from.length)}` : path;
 const suffixName = (path, name) => { const parent = parentPath(path); return `${parent}/${name}`; };
 const frameFor = (state, flowId, frameId) => { const graph = state.project.documentationFlowGraphs[flowId], frame = graph?.pageFrames?.find(({ id }) => id === frameId); if (!graph || !frame)

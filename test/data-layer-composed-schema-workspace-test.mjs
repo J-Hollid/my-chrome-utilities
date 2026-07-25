@@ -12,6 +12,7 @@ import {applyCanonicalCommand,canonicalPropertyPath} from "../dist/data-layer-ca
 import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
 import {composedReviewFacetDelta,composedReviewLifecycleInventory} from "../dist/data-layer-composed-schema-workspace-rows.js";
 import {composedFacetDraft} from "../dist/data-layer-composed-schema-builders.js";
+import {saveFlowPageInstanceLocalFacetsAndStructures} from "../dist/data-layer-layered-schema-project.js";
 
 const state=createSpecificationProject({name:"Composed schemas",site:"shop.example",id:(kind)=>`${kind}:workspace`});
 state.project.collections.profiles.push({id:"profile:sitewide",name:"Sitewide",schemaConstraints:[
@@ -70,6 +71,12 @@ assert.equal(composedSchemaWorkspace(inheritedAgain,inheritedAgain.project.colle
 const structuredPage=saveComposedSchemaLocalFacetsAndStructures(inheritedAgain,"pages","page:cart","/page_name",{},[{kind:"add-child",path:"/page_name",name:"locale"}],(kind)=>`${kind}:workspace`);
 assert.deepEqual(structuredPage.project.collections.pages[0].localSchemaContributions,[{path:"/page_name/locale",type:"string",definitionId:"property:workspace"}],"Page structure changes are stored as sparse local contributions");
 assert.ok(composedSchemaWorkspace(structuredPage,structuredPage.project.collections.pages[0],"Page").rows.some(({path})=>path==="/page_name/locale"),"Page structure changes immediately reproject into the composed workspace");
+const deletePageState=structuredClone(inheritedAgain),deletePage=deletePageState.project.collections.pages[0];deletePage.localSchemaContributions=[{path:"/local",type:"string"},{path:"/local/child",type:"number"},{path:"/keep",type:"boolean"}];const deletePageHistory=deletePageState.history.undo.length,deletedPageProperty=saveComposedSchemaLocalFacetsAndStructures(deletePageState,"pages","page:cart","/local",{type:"string",documentation:"staged focused-row value"},[{kind:"delete",path:"/local"}],(kind)=>`${kind}:workspace`);
+assert.deepEqual(deletedPageProperty.project.collections.pages[0].localSchemaContributions,[{path:"/keep",type:"boolean"}],"a reviewed Page delete suppresses the ordinary focused-row facet save for the deleted property and its subtree");
+assert.equal(deletedPageProperty.history.undo.length,deletePageHistory+1,"a Page structure delete and focused-row save remain one project command");
+const deleteFrameState=structuredClone(inheritedAgain);deleteFrameState.project.documentationFlowGraphs={"flow:delete":{pageFrames:[{id:"frame:delete",name:"Delete frame",localSchemaContributions:[{path:"/local",type:"string"},{path:"/local/child",type:"number"},{path:"/keep",type:"boolean"}]}]}};const deleteFrameHistory=deleteFrameState.history.undo.length,deletedFrameProperty=saveFlowPageInstanceLocalFacetsAndStructures(deleteFrameState,"flow:delete","frame:delete","/local",{type:"string",documentation:"staged focused-row value"},[{kind:"delete",path:"/local"}],(kind)=>`${kind}:workspace`);
+assert.deepEqual(deletedFrameProperty.project.documentationFlowGraphs["flow:delete"].pageFrames[0].localSchemaContributions,[{path:"/keep",type:"boolean"}],"a reviewed Flow Page-instance delete suppresses the ordinary focused-row facet save for the deleted property and its subtree");
+assert.equal(deletedFrameProperty.history.undo.length,deleteFrameHistory+1,"a Flow Page-instance structure delete and focused-row save remain one project command");
 
 const eventState=structuredClone(inheritedAgain);
 eventState.project.collections.events.push({id:"event:purchase",name:"Purchase",profileId:"profile:sitewide",canonicalSchema:{id:"canonical:event",contributorId:"event:purchase",contributorName:"Purchase",revision:0,rootIds:[],nodes:{},changes:[],source:{identity:"event:purchase",revision:0,provenance:"project"}}});
