@@ -26,6 +26,7 @@ export interface DurableProjectRuntime{
   resolveFailedSave(strategy:"reject"|"reapply"|"merge",pendingFields?:readonly string[]):Promise<void>;
   exportUnsavedDraft():string;
   exportUnsavedSchemas():string;
+  historyInspection(projectId:string):{undo:{commandId:string;label:string}[];redo:{commandId:string;label:string}[]};
   canUndo(projectId:string):boolean;
   canRedo(projectId:string):boolean;
   undo(projectId:string):Promise<void>;
