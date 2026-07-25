@@ -12,7 +12,7 @@ export interface CanonicalPredicateEvidence {matched:boolean;branches:{label:str
 export interface CanonicalAllowedValue {id:string;value:unknown;label?:string;provenance?:CanonicalProvenance[];}
 export interface CanonicalRule {id:string;kind:"pattern"|"range"|"cardinality"|"condition"|"custom";pattern?:string;minimum?:number;maximum?:number;minItems?:number;maxItems?:number;condition?:CanonicalPredicate;severity:"error"|"warning";message?:string;enabled?:boolean;reusableRuleId?:string;name?:string;revision?:number;operator?:string;provenance?:CanonicalProvenance;}
 export interface CanonicalDocumentation {displayText:string;description:string;comments:string;example:{method:"allowed-value"|"custom"|"blank";value?:unknown};}
-export interface CanonicalProvenance {source:"created"|"saved-schema"|"requirements"|"structured-schema"|"structured-draft"|"path-constraint";sourceId?:string;revision?:number;contributorId?:string;contributorName?:string;scope?:LayerScope;state?:"inherited"|"shadowed"|"effective"|"local"|"overridden";}
+export interface CanonicalProvenance {source:"created"|"saved-schema"|"requirements"|"structured-schema"|"structured-draft"|"path-constraint";sourceId?:string;revision?:number;contributorId?:string;contributorName?:string;scope?:LayerScope;state?:"inherited"|"shadowed"|"effective"|"local"|"overridden"|"conflict";}
 export interface CanonicalPropertyNode {
   id:string;name:string;parentId?:string;order:number;type:CanonicalPropertyType;itemType?:CanonicalPropertyType;
   presence:{mode:CanonicalPresenceMode;condition?:CanonicalPredicate};allowedValues:CanonicalAllowedValue[];rules:CanonicalRule[];

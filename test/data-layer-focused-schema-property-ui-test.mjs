@@ -2,13 +2,16 @@ import assert from "node:assert/strict";
 import {focusedConditionLabel,focusedOwnershipActions,focusedPropertySections,focusedRuleFields,focusedSparseDelta} from "../dist/data-layer-focused-schema-property-ui.js";
 import {applyCanonicalCommand,canonicalPredicateIds,canonicalPredicateWithStableIds,createCanonicalSchema} from "../dist/data-layer-canonical-schema.js";
 import {canonicalNavigatorRows} from "../dist/canonical-schema-focused/navigator-rows.js";
+import {focusedSourceState} from "../dist/data-layer-canonical-schema-focused-drafts.js";
 
 assert.deepEqual(focusedPropertySections,["definition","presence","values","conditions","rules","documentation","example","structure"]);
 assert.deepEqual(focusedOwnershipActions({inherited:true}),["View","Override here","Open source"]);
+assert.deepEqual(focusedOwnershipActions({inherited:true,replaceable:true}),["View","Replace here","Open source"]);
 assert.deepEqual(focusedOwnershipActions({local:true}),["View","Edit","Remove local"]);
 assert.deepEqual(focusedOwnershipActions({overridden:true}),["View","Edit","Reset to parent"]);
 assert.deepEqual(focusedOwnershipActions({invariant:true}),["View","Open source"]);
 assert.deepEqual(focusedOwnershipActions({conflict:true}),["View conflict","Edit local resolution","Open contributing sources"]);
+assert.equal(focusedSourceState({provenance:[{state:"conflict"}]}),"conflict");
 assert.deepEqual(focusedRuleFields("range"),["minimum","maximum","severity","message"]);
 assert.deepEqual(focusedRuleFields("pattern"),["pattern","severity","message"]);
 assert.equal(focusedConditionLabel({kind:"all",children:[{kind:"predicate",propertyId:"/page_type",operator:"Equals",value:"trade"}]}),"All (/page_type Equals trade)");

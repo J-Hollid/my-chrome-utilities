@@ -5,6 +5,7 @@ const same=(left:unknown,right:unknown):boolean=>JSON.stringify(left)===JSON.str
 export type CanonicalFocusedPatch=Partial<Omit<CanonicalPropertyNode,"id"|"parentId"|"order"|"provenance">>;
 
 export function focusedSourceState(node:CanonicalPropertyNode):"inherited"|"local"|"overridden"|"conflict" {
+  if(node.provenance.some(({state})=>state==="conflict"))return "conflict";
   if(node.provenance.some(({state})=>state==="shadowed"))return "overridden";
   if(node.provenance.some(({state})=>state==="inherited"))return "inherited";
   return "local";

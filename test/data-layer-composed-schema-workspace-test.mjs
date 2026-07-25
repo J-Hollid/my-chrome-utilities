@@ -13,7 +13,7 @@ import {
 import {applyCanonicalCommand,canonicalPropertyPath} from "../dist/data-layer-canonical-schema.js";
 import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
 import {composedReviewFacetDelta,composedReviewLifecycleInventory} from "../dist/data-layer-composed-schema-workspace-rows.js";
-import {composedFacetDraft} from "../dist/data-layer-composed-schema-builders.js";
+import {composedFacetDraft,sparseComposedFacets} from "../dist/data-layer-composed-schema-builders.js";
 import {saveFlowPageInstanceLocalFacetsAndStructures} from "../dist/data-layer-layered-schema-project.js";
 
 const state=createSpecificationProject({name:"Composed schemas",site:"shop.example",id:(kind)=>`${kind}:workspace`});
@@ -55,6 +55,10 @@ assert.ok(reviewDelta.some(({label})=>label==="Edited documentation"));
 assert.ok(reviewDelta.some(({label})=>label==="Edited example"));
 assert.deepEqual(composedReviewFacetDelta(step,composedFacetDraft(step.local,step.effective)),[],"unchanged normalized condition and example facets do not appear as edits");
 assert.deepEqual(composedReviewLifecycleInventory(true,"reset",new Set(["rule:restored"]),new Set(["value:restored"])),["Reset to parents","Restored rule rule:restored","Restored value value:restored"],"Review inventories reset and restored lifecycle transitions explicitly");
+const inheritedOwnedValue={type:"string",allowedValues:["retail"],allowedValueIds:["value:parent"],allowedValueProvenance:[{id:"value:parent",state:"inherited"}]};
+const overriddenOwnedValue={type:"string",allowedValues:["retail"],allowedValueIds:["value:local"],allowedValueProvenance:[{id:"value:local",state:"overridden",source:"focused-editor"}],condition:{kind:"all",children:[{kind:"any",children:[],id:"condition:any"}],id:"condition:root"},rules:[],documentation:"",exampleMethod:"blank"};
+assert.deepEqual(sparseComposedFacets(overriddenOwnedValue,inheritedOwnedValue),{allowedValues:["retail"],allowedValueIds:["value:local"],allowedValueProvenance:[{id:"value:local",state:"overridden",source:"focused-editor"}],condition:{kind:"all",children:[{kind:"any",children:[],id:"condition:any"}],id:"condition:root"}},"a same-valued override retains the local identity, ownership, payload, and condition item bytes");
+assert.equal(JSON.stringify(composedFacetDraft({condition:overriddenOwnedValue.condition},overriddenOwnedValue).condition),JSON.stringify(overriddenOwnedValue.condition),"condition group identity and property order survive draft reconstruction");
 assert.equal(workspace.rows.find(({path})=>path==="/page_name").action,"override");
 
 const reset=resetComposedSchemaLocalProperty(state,"pages","page:cart","/funnel_step");

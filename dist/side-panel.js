@@ -774,6 +774,10 @@ const compactCanonicalRevisionSnapshots = new Map();
 let compactCanonicalCommandFeedback = "";
 let compactCanonicalSettlementSequence = 0;
 let compactCanonicalSettlementPending = false;
+let compactCanonicalReopenSelection;
+const compactCanonicalScrollByKey = new Map();
+schemaDetail?.addEventListener("scroll", () => { if (compactCanonicalEditor && schemaDetail.scrollTop > 0)
+    compactCanonicalScrollByKey.set(compactCanonicalEditor.key, schemaDetail.scrollTop); });
 let compactCanonicalHistoryState = compactCanonicalHistorySettlement(), compactCanonicalPendingHistoryLabel;
 let compactCanonicalPresenceDraft;
 let pendingManualPropertyCanonicalBase;
@@ -2092,7 +2096,8 @@ function renderSchemas() {
             open.textContent = "Open schema";
             studio.textContent = "Open schema in Specification Studio";
             studio.setAttribute("aria-label", `Open ${entry.name} schema in Specification Studio`);
-            open.addEventListener("click", () => openContributorInUnifiedEditor(entry.key));
+            open.addEventListener("click", () => { const retainedScroll = compactCanonicalEditor?.key === entry.key ? schemaDetail?.scrollTop : undefined; openContributorInUnifiedEditor(entry.key); if (schemaDetail && retainedScroll !== undefined)
+                schemaDetail.scrollTop = retainedScroll; });
             studio.addEventListener("click", () => { if (!project)
                 return; const separator = entry.key.indexOf(":"), kind = entry.key.slice(0, separator), entityId = entry.key.slice(separator + 1); globalThis.open(`specification-builder.html?project=${encodeURIComponent(project.project.id)}&kind=${encodeURIComponent(kind)}&entity=${encodeURIComponent(entityId)}`, "_blank"); });
             item.append(open, studio);
@@ -2287,6 +2292,7 @@ function renderSchemaDraft() {
     schemaPropertyEmptyMessage.textContent = propertyRows.length ? "" : `No properties match ${schemaPropertyFilter.value.trim()}`;
     const propertyTreeScrollTop = schemaPropertyTree.scrollTop;
     const schemaEditorScrollTop = schemaEditor?.scrollTop ?? 0;
+    const schemaDetailScrollTop = schemaDetail?.scrollTop ?? 0;
     const propertyItems = propertyRows.map((propertyRow) => {
         const path = propertyRow.displayPath;
         const item = document.createElement("li");
@@ -2726,6 +2732,8 @@ function renderSchemaDraft() {
     schemaPropertyTree.scrollTop = propertyTreeScrollTop;
     if (schemaEditor)
         schemaEditor.scrollTop = schemaEditorScrollTop;
+    if (schemaDetail)
+        schemaDetail.scrollTop = schemaDetailScrollTop;
     const existing = schemas.find((schema) => schema.id === draft.id);
     const candidate = { ...draft, id: existing?.id ?? createSchema(draft.name, 1, draft.document).id };
     if (schemaEditorParent) {
@@ -3104,7 +3112,9 @@ function renderCompactCanonicalEditor() {
     const canonical = adapter.load(), selected = canonical.selectedPropertyId && canonical.nodes[canonical.selectedPropertyId];
     schemaDraft = compactCanonicalProjection(adapter, canonical);
     compactCanonicalRevisionSnapshots.set(canonical.revision, structuredClone(canonical));
-    if (selected)
+    if (compactCanonicalReopenSelection)
+        selectedSchemaPropertyPath = compactCanonicalReopenSelection;
+    else if (selected)
         selectedSchemaPropertyPath = canonicalPropertyPath(canonical, selected.id).slice(1).replaceAll("/", ".");
     if (schemaEditor) {
         schemaEditor.hidden = false;
@@ -3128,6 +3138,8 @@ function renderCompactCanonicalEditor() {
 }
 function openCompactCanonicalEditor(adapter) {
     sidePanelLayeredProfileEditor?.close();
+    compactCanonicalReopenSelection = compactCanonicalEditor?.key === adapter.key ? selectedSchemaPropertyPath : undefined;
+    const retainedScroll = compactCanonicalEditor?.key === adapter.key ? compactCanonicalScrollByKey.get(adapter.key) : undefined;
     compactCanonicalSettlementSequence += 1;
     compactCanonicalSettlementPending = false;
     compactCanonicalEditor = adapter;
@@ -3138,6 +3150,9 @@ function openCompactCanonicalEditor(adapter) {
     compactCanonicalRevisionSnapshots.clear();
     compactCanonicalCommandFeedback = "";
     renderCompactCanonicalEditor();
+    if (schemaDetail && retainedScroll !== undefined)
+        schemaDetail.scrollTop = retainedScroll;
+    compactCanonicalReopenSelection = undefined;
 }
 function closeCompactCanonicalEditor() {
     compactCanonicalSettlementSequence += 1;

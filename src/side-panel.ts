@@ -926,6 +926,9 @@ const compactCanonicalRevisionSnapshots=new Map<number,CanonicalSchemaDocument>(
 let compactCanonicalCommandFeedback="";
 let compactCanonicalSettlementSequence=0;
 let compactCanonicalSettlementPending=false;
+let compactCanonicalReopenSelection:string|undefined;
+const compactCanonicalScrollByKey=new Map<string,number>();
+schemaDetail?.addEventListener("scroll",()=>{if(compactCanonicalEditor&&schemaDetail.scrollTop>0)compactCanonicalScrollByKey.set(compactCanonicalEditor.key,schemaDetail.scrollTop);});
 let compactCanonicalHistoryState=compactCanonicalHistorySettlement(),compactCanonicalPendingHistoryLabel:string|undefined;
 let compactCanonicalPresenceDraft:{propertyId:string;baseRevision:number;mode:CanonicalSchemaDocument["nodes"][string]["presence"]["mode"]}|undefined;
 let pendingManualPropertyCanonicalBase:CanonicalSchemaDocument|undefined;
@@ -2145,7 +2148,7 @@ function renderSchemas(): void {
     }); item.append(revise, duplicate, adopt, build, exportCurrent, reportMissing, remove); return item;
   }));}
   if(!project){const item=document.createElement("li"),open=document.createElement("button"),create=document.createElement("button");item.setAttribute("role","status");item.textContent="No active project. ";open.type=create.type="button";open.textContent="Open project";create.textContent="Create project";open.addEventListener("click",()=>showDataLayerView("Projects",true));create.addEventListener("click",()=>{showDataLayerView("Projects",true);document.querySelector<HTMLButtonElement>("#create-library-project")?.click();});item.append(open,create);nodes.push(item);}
-  for(const group of groups.filter(({name})=>name!=="Saved schemas")){nodes.push(heading(group.name));for(const entry of group.entries){const item=document.createElement("li"),open=document.createElement("button"),studio=document.createElement("button");item.dataset.schemaEntryKey=entry.key;item.dataset.schemaRole=entry.role;item.textContent=`${entry.name} · role ${entry.role} · scope ${entry.scope} · lineage ${entry.lineage} · revision ${entry.revision} · ${entry.state}. `;open.type=studio.type="button";open.textContent="Open schema";studio.textContent="Open schema in Specification Studio";studio.setAttribute("aria-label",`Open ${entry.name} schema in Specification Studio`);open.addEventListener("click",()=>openContributorInUnifiedEditor(entry.key));studio.addEventListener("click",()=>{if(!project)return;const separator=entry.key.indexOf(":"),kind=entry.key.slice(0,separator),entityId=entry.key.slice(separator+1);globalThis.open(`specification-builder.html?project=${encodeURIComponent(project.project.id)}&kind=${encodeURIComponent(kind)}&entity=${encodeURIComponent(entityId)}`,"_blank");});item.append(open,studio);nodes.push(item);}}
+  for(const group of groups.filter(({name})=>name!=="Saved schemas")){nodes.push(heading(group.name));for(const entry of group.entries){const item=document.createElement("li"),open=document.createElement("button"),studio=document.createElement("button");item.dataset.schemaEntryKey=entry.key;item.dataset.schemaRole=entry.role;item.textContent=`${entry.name} · role ${entry.role} · scope ${entry.scope} · lineage ${entry.lineage} · revision ${entry.revision} · ${entry.state}. `;open.type=studio.type="button";open.textContent="Open schema";studio.textContent="Open schema in Specification Studio";studio.setAttribute("aria-label",`Open ${entry.name} schema in Specification Studio`);open.addEventListener("click",()=>{const retainedScroll=compactCanonicalEditor?.key===entry.key?schemaDetail?.scrollTop:undefined;openContributorInUnifiedEditor(entry.key);if(schemaDetail&&retainedScroll!==undefined)schemaDetail.scrollTop=retainedScroll;});studio.addEventListener("click",()=>{if(!project)return;const separator=entry.key.indexOf(":"),kind=entry.key.slice(0,separator),entityId=entry.key.slice(separator+1);globalThis.open(`specification-builder.html?project=${encodeURIComponent(project.project.id)}&kind=${encodeURIComponent(kind)}&entity=${encodeURIComponent(entityId)}`,"_blank");});item.append(open,studio);nodes.push(item);}}
   schemaList?.replaceChildren(...nodes);
 }
 
@@ -2311,6 +2314,7 @@ function renderSchemaDraft(): void {
   schemaPropertyEmptyMessage.textContent = propertyRows.length ? "" : `No properties match ${schemaPropertyFilter.value.trim()}`;
   const propertyTreeScrollTop = schemaPropertyTree.scrollTop;
   const schemaEditorScrollTop = schemaEditor?.scrollTop ?? 0;
+  const schemaDetailScrollTop = schemaDetail?.scrollTop ?? 0;
   const propertyItems = propertyRows.map((propertyRow) => {
     const path = propertyRow.displayPath;
     const item = document.createElement("li");
@@ -2538,6 +2542,7 @@ function renderSchemaDraft(): void {
   schemaPropertyTree.replaceChildren(...roots);
   schemaPropertyTree.scrollTop = propertyTreeScrollTop;
   if (schemaEditor) schemaEditor.scrollTop = schemaEditorScrollTop;
+  if (schemaDetail) schemaDetail.scrollTop = schemaDetailScrollTop;
   const existing = schemas.find((schema) => schema.id === draft.id);
   const candidate = { ...draft, id: existing?.id ?? createSchema(draft.name, 1, draft.document).id };
   if (schemaEditorParent) {
@@ -2805,7 +2810,8 @@ function renderCompactCanonicalEditor():void{
   const canonical=adapter.load(),selected=canonical.selectedPropertyId&&canonical.nodes[canonical.selectedPropertyId];
   schemaDraft=compactCanonicalProjection(adapter,canonical);
   compactCanonicalRevisionSnapshots.set(canonical.revision,structuredClone(canonical));
-  if(selected)selectedSchemaPropertyPath=canonicalPropertyPath(canonical,selected.id).slice(1).replaceAll("/",".");
+  if(compactCanonicalReopenSelection)selectedSchemaPropertyPath=compactCanonicalReopenSelection;
+  else if(selected)selectedSchemaPropertyPath=canonicalPropertyPath(canonical,selected.id).slice(1).replaceAll("/",".");
   if(schemaEditor){schemaEditor.hidden=false;schemaEditor.dataset.schemaPresentation="compact-panel";schemaEditor.dataset.canonicalRevision=String(canonical.revision);schemaEditor.dataset.canonicalSchemaId=canonical.id;schemaEditor.setAttribute("aria-label","Side panel canonical schema editor");}
   if(schemaDetail){schemaDetail.hidden=false;schemaDetail.setAttribute("aria-label","Side panel schema editor region");}
   renderCompactCanonicalContext();renderSchemaDraft();
@@ -2814,7 +2820,11 @@ function renderCompactCanonicalEditor():void{
 
 function openCompactCanonicalEditor(adapter:CompactCanonicalEditorAdapter):void{
   sidePanelLayeredProfileEditor?.close();
+  compactCanonicalReopenSelection=compactCanonicalEditor?.key===adapter.key?selectedSchemaPropertyPath:undefined;
+  const retainedScroll=compactCanonicalEditor?.key===adapter.key?compactCanonicalScrollByKey.get(adapter.key):undefined;
   compactCanonicalSettlementSequence+=1;compactCanonicalSettlementPending=false;compactCanonicalEditor=adapter;compactCanonicalPendingCommand=undefined;compactCanonicalPendingBase=undefined;compactCanonicalReviewVisible=false;compactCanonicalPresenceDraft=undefined;compactCanonicalRevisionSnapshots.clear();compactCanonicalCommandFeedback="";renderCompactCanonicalEditor();
+  if(schemaDetail&&retainedScroll!==undefined)schemaDetail.scrollTop=retainedScroll;
+  compactCanonicalReopenSelection=undefined;
 }
 
 function closeCompactCanonicalEditor():void{

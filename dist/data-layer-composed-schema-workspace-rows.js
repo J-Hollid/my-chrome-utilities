@@ -3,6 +3,19 @@ import { focusedOwnershipActions, focusedPropertySectionLabels } from "./data-la
 import { renderComposedFocusedSection } from "./data-layer-composed-schema-workspace-focused-sections.js";
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 const actionText = (row) => row.action === "override" ? "Override here" : row.action === "reset" ? "Reset to parents" : "Remove local property";
+function applyPersistedItemOwnership(host, row) {
+    const overriddenValues = new Set((row.local.allowedValueProvenance ?? []).filter(({ state }) => state === "overridden").map(({ id }) => id));
+    const overriddenRules = new Set((row.local.rules ?? []).filter((rule) => String(rule.provenance?.state) === "overridden").map((rule) => String(rule.id ?? "")));
+    for (const item of Array.from(host.querySelectorAll("[data-value-id],[data-rule-id]"))) {
+        const id = item.dataset.valueId ?? item.dataset.ruleId;
+        if (!id || !overriddenValues.has(id) && !overriddenRules.has(id))
+            continue;
+        item.dataset.ownership = "overridden";
+        const remove = Array.from(item.querySelectorAll("button")).find(({ textContent }) => textContent?.trim() === "Remove local");
+        if (remove)
+            remove.textContent = "Reset to parent";
+    }
+}
 export function composedReviewLifecycleInventory(removed, confirmedAction, restoredRuleIds, restoredValueIds) { const entries = []; if (removed)
     entries.push(confirmedAction === "reset" ? "Reset to parents" : "Remove local property"); for (const id of restoredRuleIds)
     entries.push(`Restored rule ${id}`); for (const id of restoredValueIds)
@@ -15,7 +28,7 @@ const reviewCondition = (value) => { if (!value || typeof value !== "object")
 } return value; };
 export function composedReviewFacetDelta(row, draft) { const baseline = { ...row.inherited, ...row.local }, baselineExample = Array.isArray(baseline.examples) ? baseline.examples[0] : undefined, next = { type: draft.type, itemType: draft.itemType, presence: draft.presence, expectedValue: draft.expectedValue, condition: reviewCondition(draft.condition), documentation: draft.documentation || undefined, exampleValue: draft.exampleMethod === "blank" ? undefined : draft.exampleValue }; const previous = { ...baseline, condition: reviewCondition(baseline.condition), documentation: baseline.documentation || undefined, exampleValue: baselineExample }; return ["type", "itemType", "presence", "expectedValue", "condition", "documentation", "exampleValue"].filter((key) => JSON.stringify(next[key]) !== JSON.stringify(previous[key])).map((key) => ({ label: key === "expectedValue" ? "Edited expected value" : key === "exampleValue" ? "Edited example" : `Edited ${key}`, detail: `${row.path} · prospective result ${JSON.stringify(next[key])} · consumers recompile` })); }
 function contextMenu(row, context) {
-    const local = Object.keys(row.local).some((key) => key !== "path"), inherited = Boolean(row.inherited), actions = focusedOwnershipActions({ local, inherited, overridden: row.action === "reset", invariant: row.effective.enforcement === "invariant", conflict: row.validationState === "blocked", replaceable: row.effective.enforcement !== "invariant" });
+    const local = Object.keys(row.local).some((key) => key !== "path"), inherited = Boolean(row.inherited), actions = focusedOwnershipActions({ local, inherited, overridden: row.action === "reset", invariant: row.effective.enforcement === "invariant", conflict: row.validationState === "blocked", replaceable: row.effective.enforcement === "overridable" });
     return renderFocusedPropertyMenu({ dom: context.dom, path: row.path, actions, sectionsDisabled: context.removed, sectionSummary: (section) => section === "values" ? `${(context.draft?.allowedValues ?? row.local.allowedValues ?? row.effective.allowedValues ?? []).length} allowed values` : section === "rules" ? `${(context.draft?.rules ?? []).length} rules` : "View effective value", selectSection: (section) => { context.setActiveSection(section); context.render(); }, runAction: (action) => { if (action === "Remove local" || action === "Reset to parent") {
             context.beginAction(row);
             return;
@@ -33,8 +46,10 @@ function focused(row, context) {
     const focusedContext = { model: context.model, dom, row, getDraft: () => context.draft, activeSection: context.activeSection, removedRuleIds: context.removedRuleIds, removedValueIds: context.removedValueIds, restoredRuleIds: context.restoredRuleIds, restoredValueIds: context.restoredValueIds, stagedLocalValueIds: context.stagedLocalValueIds, overriddenRuleIds: context.overriddenRuleIds, overrideRule: context.overrideRule, render: context.render, ...(context.onStructure ? { onStructure: context.onStructure } : {}) };
     if (context.removed)
         host.append(Object.assign(dom.createElement("p"), { textContent: "Whole-property lifecycle staged. Facet and structure controls are unavailable until this reset or removal is cancelled." }));
-    else
+    else {
         renderComposedFocusedSection(host, focusedContext);
+        applyPersistedItemOwnership(host, row);
+    }
     if (context.pendingAction) {
         const impact = dom.createElement("p");
         impact.setAttribute("aria-label", "Property impact review");

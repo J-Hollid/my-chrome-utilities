@@ -1,6 +1,8 @@
 const clone = (value) => structuredClone(value);
 const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
 export function focusedSourceState(node) {
+    if (node.provenance.some(({ state }) => state === "conflict"))
+        return "conflict";
     if (node.provenance.some(({ state }) => state === "shadowed"))
         return "overridden";
     if (node.provenance.some(({ state }) => state === "inherited"))
