@@ -3,10 +3,9 @@ import { confirmCanonicalMigration, transactProject } from "./data-layer-specifi
 import { applyCanonicalCommand, canonicalSchemaWithConstraint, canonicalTableRows, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
 import { mountComposedSchemaWorkspace } from "./data-layer-composed-schema-workspace-ui.js";
-import { composedSchemaWorkspace, resetComposedSchemaLocalProperty, saveComposedSchemaLocalFacets } from "./data-layer-composed-schema-workspace.js";
-import { flowPageFrameContributor, layeredContributorPath, layeredContributorsForPath, resetFlowPageInstanceLocalProperty, saveFlowPageInstanceLocalFacets } from "./data-layer-layered-schema-project.js";
+import { composedSchemaWorkspace, resetComposedSchemaLocalProperty, saveComposedSchemaLocalFacets, saveComposedSchemaLocalFacetsAndStructures } from "./data-layer-composed-schema-workspace.js";
+import { flowPageFrameContributor, layeredContributorPath, layeredContributorsForPath, resetFlowPageInstanceLocalProperty, saveFlowPageInstanceLocalFacets, saveFlowPageInstanceLocalFacetsAndStructures } from "./data-layer-layered-schema-project.js";
 import { resolveSidePanelSchemaContributor } from "./data-layer-side-panel-schema-editor.js";
-import { applyFlowPageInstanceStructure } from "./flow-graph/page-instance-structure.js";
 export { layeredContributionDetails, layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
 const q = (selector) => { const value = document.querySelector(selector); if (!value)
     throw new Error(`Missing ${selector}`); return value; };
@@ -34,30 +33,14 @@ export function renderSidePanelComposedSchemaContext(options) {
     renderCompactSidePanelComposedSchemaContext({ ...options, model, selection, scope });
 }
 function renderCompactSidePanelComposedSchemaContext(options) {
-    const section = document.createElement("section"), heading = document.createElement("h5"), summary = document.createElement("p"), list = document.createElement("div");
-    section.setAttribute("aria-label", "Compact inherited and local schema facets");
+    const kind = options.selection.collectionKind;
+    if (kind !== "pages" && kind !== "pageGroups")
+        return;
+    const section = mountComposedSchemaWorkspace({ host: options.host, model: options.model, effectiveText: (row) => effectivePropertySummary(row.effective), schemaContributorId: options.selection.entity.id, schemaContributorScope: options.scope, rowPathDataset: "sidePanelEffectivePath", compact: true, onSave: (row, facets, structures = []) => { const live = options.load(), selected = live ? resolveSidePanelSchemaContributor(live, options.key) : undefined; if (!live || !selected || (selected.collectionKind !== "pages" && selected.collectionKind !== "pageGroups"))
+            return; const next = structures.length ? saveComposedSchemaLocalFacetsAndStructures(live, kind, selected.entity.id, row.path, facets, structures, (type) => `${type}:${crypto.randomUUID()}`) : saveComposedSchemaLocalFacets(live, kind, selected.entity.id, row.path, facets); options.persist(next); options.render(); }, onReset: (row) => { const live = options.load(), selected = live ? resolveSidePanelSchemaContributor(live, options.key) : undefined; if (!live || !selected || (selected.collectionKind !== "pages" && selected.collectionKind !== "pageGroups"))
+            return; options.persist(resetComposedSchemaLocalProperty(live, kind, selected.entity.id, row.path)); options.render(); }, onStructure: () => { } });
     section.dataset.schemaPresentation = "compact-side-panel";
-    heading.textContent = "Inherited and local facets";
-    summary.textContent = `${options.model.status === "blocked" ? "Blocked" : "Ready"} · ${options.model.rows.length} effective properties · focused edits open in the complete builder.`;
-    for (const row of options.model.rows) {
-        const item = document.createElement("article"), title = document.createElement("p"), details = document.createElement("p"), action = document.createElement("button");
-        item.dataset.sidePanelEffectivePath = row.path;
-        title.textContent = `${row.path} · ${effectivePropertySummary(row.effective)} · ${row.source}`;
-        details.textContent = `Local ${Object.keys(row.local).length > 1 ? "override present" : "inherited"} · ${row.validationState} · ${row.message}`;
-        action.type = "button";
-        action.textContent = row.action === "override" ? "Override here" : "Reset to parents";
-        action.addEventListener("click", () => { const live = options.load(), selected = live ? resolveSidePanelSchemaContributor(live, options.key) : undefined; if (!live || !selected || (selected.collectionKind !== "pages" && selected.collectionKind !== "pageGroups"))
-            return; if (row.action === "override") {
-            const facets = row.effective.type ? { type: row.effective.type } : {};
-            options.persist(saveComposedSchemaLocalFacets(live, selected.collectionKind, selected.entity.id, row.path, facets));
-        }
-        else
-            options.persist(resetComposedSchemaLocalProperty(live, selected.collectionKind, selected.entity.id, row.path)); options.render(); });
-        item.append(title, details, action);
-        list.append(item);
-    }
-    section.append(heading, summary, list);
-    options.host.append(section);
+    section.setAttribute("aria-label", "Compact inherited and local schema editor");
 }
 export function mountSidePanelLayeredProfileEditor(options) {
     let selectedKey;
@@ -150,7 +133,7 @@ export function installLayeredSchemaUi(options) {
             example.open = saved.expandedExample.open;
     } if (graph && saved.viewBox && graph.getAttribute("viewBox") !== saved.viewBox)
         graph.setAttribute("viewBox", saved.viewBox); const focus = saved.originSelector ? document.querySelector(saved.originSelector) : undefined; const target = focus ?? (returnFocus?.isConnected ? returnFocus : undefined); target?.focus({ preventScroll: true }); }; apply(); queueMicrotask(apply); setTimeout(apply, 0); setTimeout(apply, 50); };
-    const renderFlowComposedSchemaWorkspace = (state, entity, flowId) => { const model = composedSchemaWorkspace(state, entity, "Flow Page-instance", undefined, flowId), identity = document.createElement("p"), back = document.createElement("button"); identity.textContent = `Contributor: ${entity.name} · Flow Page-instance`; editor.append(identity); mountComposedSchemaWorkspace({ host: editor, model, effectiveText: (row) => effectivePropertySummary(row.effective), schemaContributorId: entity.id, schemaContributorScope: "Flow Page-instance", rowPathDataset: "flowInstanceEffectivePath", includeConditionEvaluation: false, includeConflictSummary: false, onSave: (row, facets) => { const live = current(), next = live.state ? saveFlowPageInstanceLocalFacets(live.state, flowId, entity.id, row.path, facets) : undefined; if (next) {
+    const renderFlowComposedSchemaWorkspace = (state, entity, flowId) => { const model = composedSchemaWorkspace(state, entity, "Flow Page-instance", undefined, flowId), identity = document.createElement("p"), back = document.createElement("button"); identity.textContent = `Contributor: ${entity.name} · Flow Page-instance`; editor.append(identity); mountComposedSchemaWorkspace({ host: editor, model, effectiveText: (row) => effectivePropertySummary(row.effective), schemaContributorId: entity.id, schemaContributorScope: "Flow Page-instance", rowPathDataset: "flowInstanceEffectivePath", includeConditionEvaluation: false, includeConflictSummary: false, onSave: (row, facets, structures = []) => { const live = current(), next = live.state ? (structures.length ? saveFlowPageInstanceLocalFacetsAndStructures(live.state, flowId, entity.id, row.path, facets, structures, id) : saveFlowPageInstanceLocalFacets(live.state, flowId, entity.id, row.path, facets)) : undefined; if (next) {
             graphSelection = flowPageFrameContributor(next, flowId, entity.id);
             options.persist(next);
             queueMicrotask(renderEditor);
@@ -158,11 +141,7 @@ export function installLayeredSchemaUi(options) {
             graphSelection = flowPageFrameContributor(next, flowId, entity.id);
             options.persist(next);
             queueMicrotask(renderEditor);
-        } }, onStructure: (kind, path, name) => { const live = current(), command = { kind, path, ...(name === undefined ? {} : { name }) }, next = live.state ? applyFlowPageInstanceStructure(live.state, flowId, entity.id, command, id) : undefined; if (next) {
-            graphSelection = flowPageFrameContributor(next, flowId, entity.id);
-            options.persist(next);
-            queueMicrotask(renderEditor);
-        } } }); back.type = "button"; back.textContent = "Return to Flow"; back.addEventListener("click", () => { editor.hidden = true; editorHost.hidden = true; workspace.hidden = false; restoreFlowReturn(); }); editor.append(back); return true; };
+        } }, onStructure: () => { } }); back.type = "button"; back.textContent = "Return to Flow"; back.addEventListener("click", () => { editor.hidden = true; editorHost.hidden = true; workspace.hidden = false; restoreFlowReturn(); }); editor.append(back); return true; };
     const renderCanonicalLayerEditor = (state, entity, scope) => { const flowId = options.context().kind === "flows" ? options.context().entityId : undefined; if (scope === "Flow Page-instance" && flowId)
         return renderFlowComposedSchemaWorkspace(state, entity, flowId); const canonical = entity.canonicalSchema; if (!canonical)
         return false; const title = document.createElement("h2"), identity = document.createElement("p"), areas = document.createElement("nav"), host = document.createElement("section"), back = document.createElement("button"), compiled = compileLayeredSchema(layeredContributorsForPath(state, layeredContributorPath(state, entity, scope, flowId)), { eventId: String(entity.eventId ?? entity.id), eventRole: layeredEventRole(entity), occurrenceId: entity.id }); host.dataset.schemaContributorId = entity.id; host.dataset.schemaContributorScope = scope; title.tabIndex = -1; title.textContent = "Shared canonical schema editor"; identity.textContent = `Contributor: ${entity.name} · Scope: ${scope}`; areas.textContent = `Inherited constraints · Local contributions · Effective results · Blocking conflicts (${compiled.conflicts.length})`; back.type = "button"; back.textContent = "Return to Flow"; back.addEventListener("click", () => { editor.hidden = true; editorHost.hidden = true; workspace.hidden = false; restoreFlowReturn(); }); editor.append(title, identity, areas, host, renderRuntimeControls(state, entity, scope, compiled)); mountCanonicalSchemaEditor({ host, surface: canonicalLayerEditorSurface(options.context().kind), load: () => current().entity.canonicalSchema, id, dispatch: (command) => { const live = current(), document = live.entity.canonicalSchema, result = applyCanonicalCommand(document, command); if ((result.status === "applied" || result.status === "rebased") && live.state) {

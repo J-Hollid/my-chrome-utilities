@@ -8,6 +8,70 @@ const insertOrder = (document, parentId, afterId) => { const siblings = orderWit
     return siblings.length; const index = siblings.findIndex(({ id }) => id === afterId); return index < 0 ? siblings.length : index + 1; };
 const normalizeOrders = (document, parentId) => { orderWithin(document, parentId).forEach((node, index) => { node.order = index; }); };
 const orderedIds = (document, parentId) => orderWithin(document, parentId).flatMap((node) => [node.id, ...orderedIds(document, node.id)]);
+function applyStructuralOperation(document, operation) {
+    if (operation.kind === "add") {
+        if (operation.parentId && !document.nodes[operation.parentId])
+            throw new Error(`Parent property ${operation.parentId} is unavailable.`);
+        const propertyId = operation.id("property"), node = { id: propertyId, name: operation.name.trim() || "property", ...(operation.parentId ? { parentId: operation.parentId } : {}), order: insertOrder(document, operation.parentId, operation.afterId), type: operation.type, presence: { mode: "optional" }, allowedValues: [], rules: [], documentation: emptyDocumentation(), provenance: [{ source: "created" }], overrideReferences: [] };
+        for (const sibling of orderWithin(document, operation.parentId))
+            if (sibling.order >= node.order)
+                sibling.order += 1;
+        document.nodes[propertyId] = node;
+        document.rootIds = orderWithin(document).map(({ id }) => id);
+        document.selectedPropertyId = propertyId;
+        return [propertyId, ...(operation.parentId ? [operation.parentId] : [])];
+    }
+    const node = document.nodes[operation.propertyId];
+    if (!node)
+        throw new Error(`Canonical property ${operation.propertyId} is unavailable.`);
+    if (operation.kind === "rename") {
+        node.name = operation.name.trim() || node.name;
+        return [operation.propertyId];
+    }
+    if (operation.kind === "delete") {
+        const descendants = [operation.propertyId, ...orderedIds(document, operation.propertyId)], parentId = node.parentId;
+        for (const id of descendants)
+            delete document.nodes[id];
+        normalizeOrders(document, parentId);
+        document.rootIds = orderWithin(document).map(({ id }) => id);
+        if (descendants.includes(document.selectedPropertyId ?? ""))
+            delete document.selectedPropertyId;
+        return descendants;
+    }
+    if (operation.kind === "move") {
+        if (operation.parentId === operation.propertyId || orderedIds(document, operation.propertyId).includes(operation.parentId ?? ""))
+            throw new Error("A property cannot move inside itself.");
+        const oldParent = node.parentId, oldSiblings = orderWithin(document, oldParent).filter(({ id }) => id !== operation.propertyId), targetSiblings = orderWithin(document, operation.parentId).filter(({ id }) => id !== operation.propertyId), afterIndex = operation.afterId ? targetSiblings.findIndex(({ id }) => id === operation.afterId) : -1, insertAt = afterIndex < 0 ? 0 : afterIndex + 1;
+        oldSiblings.forEach((sibling, index) => { sibling.order = index; });
+        targetSiblings.splice(insertAt, 0, node);
+        targetSiblings.forEach((sibling, index) => { sibling.order = index; });
+        delete node.parentId;
+        if (operation.parentId)
+            node.parentId = operation.parentId;
+        document.rootIds = orderWithin(document).map(({ id }) => id);
+        return [operation.propertyId, ...(oldParent ? [oldParent] : []), ...(operation.parentId ? [operation.parentId] : [])];
+    }
+    const copies = new Map(), source = node;
+    for (const sourceId of [operation.propertyId, ...orderedIds(document, operation.propertyId)]) {
+        const copyId = operation.id("property");
+        copies.set(sourceId, copyId);
+        const original = document.nodes[sourceId], copy = clone(original);
+        copy.id = copyId;
+        copy.name = sourceId === operation.propertyId ? `${original.name} copy` : original.name;
+        const copyParent = sourceId === operation.propertyId ? original.parentId : copies.get(original.parentId);
+        delete copy.parentId;
+        if (copyParent)
+            copy.parentId = copyParent;
+        copy.provenance = [...copy.provenance, { source: "created" }];
+        document.nodes[copyId] = copy;
+    }
+    const rootCopy = copies.get(operation.propertyId);
+    document.nodes[rootCopy].order = source.order + 1;
+    normalizeOrders(document, source.parentId);
+    document.rootIds = orderWithin(document).map(({ id }) => id);
+    document.selectedPropertyId = rootCopy;
+    return [...copies.values()];
+}
 export function applyCanonicalAtCurrent(document, command) {
     assertBase(document, command.baseRevision);
     const next = clone(document);
@@ -45,7 +109,11 @@ export function applyCanonicalAtCurrent(document, command) {
         Object.assign(node, clone(command.patch));
         if (nextType !== "array")
             delete node.itemType;
-        return { status: "applied", document: appendChange(next, command, [command.propertyId, ...(destructive ? descendants : [])]) };
+        const affected = new Set([command.propertyId, ...(destructive ? descendants : [])]);
+        for (const operation of command.operations ?? [])
+            for (const id of applyStructuralOperation(next, operation))
+                affected.add(id);
+        return { status: "applied", document: appendChange(next, command, [...affected]) };
     }
     if (command.kind === "type") {
         const descendants = orderedIds(next, command.propertyId), destructive = node.type === "object" && command.type !== "object" && descendants.length > 0, itemChange = node.type === "array" && command.type === "array" && node.itemType !== command.itemType;

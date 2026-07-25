@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {addFlowPageFrame,documentaryFlowGraph,setFlowPageGroupLanes} from "../dist/data-layer-flow-graph.js";
-import {applyFlowPageInstanceStructure} from "../dist/flow-graph/page-instance-structure.js";
+import {applyFlowPageInstanceStructure,applyFlowPageInstanceStructures} from "../dist/flow-graph/page-instance-structure.js";
 import {addProjectEntity,createSpecificationProject} from "../dist/data-layer-specification-project.js";
 
 let sequence=0;
@@ -31,6 +31,10 @@ apply({kind:"move-earlier",path:"/copy"});
 assert.ok(local().some(({path})=>path==="/copy"),"Move controls retain the property while changing sibling order");
 apply({kind:"delete",path:"/copy"});
 assert.equal(local().some(({path})=>path==="/copy"),false,"Delete removes only the selected local property");
+const undoCount=state.history.undo.length;
+state=applyFlowPageInstanceStructures(state,flow.id,frame.id,[{kind:"add-child",path:"/shippingRoot",name:"batched-first"},{kind:"add-sibling",path:"/shippingRoot/batched-first",name:"batched-second"}],id);
+assert.equal(state.history.undo.length,undoCount+1,"one focused structure review creates one Undo entry for multiple operations");
+assert.deepEqual(local().filter(({path})=>path.startsWith("/shippingRoot/batched")).map(({path})=>path),["/shippingRoot/batched-first","/shippingRoot/batched-second"]);
 assert.equal(state.project.collections.pages.find(({id})=>id===page.id).localSchemaContributions,undefined,"Page-instance structure never mutates its owning Page");
 
 console.log("Flow Page-instance structure tests passed");

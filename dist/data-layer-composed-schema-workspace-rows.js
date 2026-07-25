@@ -44,7 +44,13 @@ function focused(row, context) {
         actions.append(impact, button(dom, context.pendingAction === "reset" ? "Cancel reset" : "Cancel removal", context.cancelAction), button(dom, context.pendingAction === "reset" ? "Confirm reset to parents" : "Confirm remove local property", () => context.confirmAction(row)));
     }
     else
-        actions.append(button(dom, "Cancel", context.close), button(dom, "Review changes", () => { const review = dom.createElement("p"); review.setAttribute("aria-label", "Review changes"); review.textContent = `Review changes · ${row.path} · prospective effective result ${context.effectiveText(row)} · affected consumers recompile`; actions.replaceChildren(review, button(dom, "Cancel review", context.render), button(dom, "Confirm changes", () => context.save(row))); }));
+        actions.append(button(dom, "Cancel", context.close), button(dom, "Review changes", () => { const review = dom.createElement("section"), list = dom.createElement("ul"); review.setAttribute("aria-label", "Review changes"); const baselineRules = (row.local.rules ?? row.effective.rules ?? []), draftRules = (context.draft?.rules ?? []), draftValues = context.draft?.allowedValues ?? []; for (const rule of draftRules) {
+            const state = baselineRules.some((candidate) => JSON.stringify(candidate) === JSON.stringify(rule)) ? "Edited" : "Added";
+            list.append(Object.assign(dom.createElement("li"), { textContent: `${state} rule · prospective result ${JSON.stringify(rule)} · consumers recompile` }));
+        } for (const value of draftValues)
+            list.append(Object.assign(dom.createElement("li"), { textContent: `Allowed value · prospective result ${JSON.stringify(value)} · consumers recompile` })); for (const operation of context.pendingStructure)
+            list.append(Object.assign(dom.createElement("li"), { textContent: `Structure ${operation.kind} · ${operation.path} · consumers recompile` })); if (!list.children.length)
+            list.append(Object.assign(dom.createElement("li"), { textContent: `Edited facets · prospective effective result ${context.effectiveText(row)} · consumers recompile` })); review.append(Object.assign(dom.createElement("p"), { textContent: `Review changes · ${row.path} · one confirmation creates one Undo entry.` }), list); actions.replaceChildren(review, button(dom, "Cancel review", context.render), button(dom, "Confirm changes", () => context.save(row))); }));
     editor.append(heading, identity, effective, host, actions);
     return editor;
 }

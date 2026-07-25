@@ -10,13 +10,12 @@ export function renderDefinitionSection(host, context, working) {
         next.name = name.value; });
     type.addEventListener("change", () => { const next = context.getWorking(); if (next)
         next.type = type.value; });
-    const rename = button(dom, "Rename", () => { const next = context.getWorking(), original = next && context.current().nodes[next.id]; if (!next || !original)
-        return; const result = context.command({ kind: "set", baseRevision: context.current().revision, propertyId: next.id, patch: context.patchFor(next, original) }); if (result.status === "applied" || result.status === "rebased") {
-        context.setWorking(undefined);
+    const rename = button(dom, "Rename", () => { const next = context.getWorking(); if (next) {
+        context.feedback(`Staged rename for ${next.name}. Review changes to confirm.`);
         context.render();
     } }), addChild = button(dom, "Add child", () => { const next = context.getWorking(); if (!next)
-        return; applyDefinition(context, { kind: "add", baseRevision: context.current().revision, parentId: next.id, name: "child", type: "string", id: context.id }); }), addSibling = button(dom, "Add sibling", () => { const next = context.getWorking(); if (!next)
-        return; applyDefinition(context, { kind: "add", baseRevision: context.current().revision, ...(next.parentId ? { parentId: next.parentId } : {}), afterId: next.id, name: "property", type: "string", id: context.id }); });
+        return; context.stageStructure({ kind: "add", propertyId: next.id, parentId: next.id, name: "child", type: "string", id: context.id }); }), addSibling = button(dom, "Add sibling", () => { const next = context.getWorking(); if (!next)
+        return; context.stageStructure({ kind: "add", propertyId: next.id, ...(next.parentId ? { parentId: next.parentId } : {}), afterId: next.id, name: "property", type: "string", id: context.id }); });
     itemType.name = "itemType";
     itemType.append(new Option("No item type", ""), ...types.map((entry) => new Option(entry, entry)));
     itemType.value = working.itemType ?? "";
@@ -25,6 +24,4 @@ export function renderDefinitionSection(host, context, working) {
         next.itemType = itemType.value || undefined; });
     host.append(labeled(dom, "Property name", name), labeled(dom, "Type", type), labeled(dom, "Array item type", itemType), rename, addChild, addSibling, ...renderCanonicalStructuralControls(dom, context, working));
 }
-const applyDefinition = (context, command) => { const result = context.command(command); if (result.status !== "applied" && result.status !== "rebased")
-    return; const selected = result.document.selectedPropertyId ? result.document.nodes[result.document.selectedPropertyId] : undefined; context.select(result.document.selectedPropertyId); context.setWorking(selected ? structuredClone(selected) : undefined); context.render(); };
 //# sourceMappingURL=definition.js.map

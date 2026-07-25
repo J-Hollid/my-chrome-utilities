@@ -21,7 +21,7 @@ const moveBlock = (constraints, path, delta) => {
 const remapSubtree = (constraints, from, to, id) => constraints.map((constraint, index) => { if (!subtree(from, constraint.path))
     return constraint; const next = { ...constraint, path: replacePath(constraint.path, from, to) }; if (index === constraints.findIndex(({ path }) => path === from))
     next.definitionId = next.definitionId ?? id("property"); return next; });
-function editConstraints(constraints, command, id) {
+export function editConstraints(constraints, command, id) {
     const target = constraints.find(({ path }) => path === command.path);
     if (command.kind === "add-child" || command.kind === "add-sibling") {
         const name = cleanName(command.name, command.kind === "add-child" ? "child" : "property"), path = command.kind === "add-child" ? `${command.path}/${name}` : suffixName(command.path, name);
@@ -56,8 +56,19 @@ function editConstraints(constraints, command, id) {
     }
     return moveBlock(constraints, command.path, command.kind === "move-earlier" ? -1 : 1);
 }
-export function applyFlowPageInstanceStructure(state, flowId, pageFrameId, command, id) {
+export function applyLayerConstraintStructures(constraints, commands, id) {
+    let next = clone([...constraints]);
+    for (const command of commands)
+        next = editConstraints(next, command, id);
+    return next;
+}
+export function applyFlowPageInstanceStructures(state, flowId, pageFrameId, commands, id) {
+    if (!commands.length)
+        return state;
     frameFor(state, flowId, pageFrameId);
-    return transactProject(state, `${command.kind} Flow Page-instance property ${command.path}`, (project) => { const graphs = project.documentationFlowGraphs, graph = graphs[flowId], frames = graph.pageFrames ?? []; return { ...project, documentationFlowGraphs: { ...graphs, [flowId]: { ...graph, pageFrames: frames.map((frame) => frame.id !== pageFrameId ? frame : { ...frame, localSchemaContributions: editConstraints(constraintsFor(frame), command, id), compiledTargetsStale: true }) } } }; });
+    return transactProject(state, `Save ${commands.length} Flow Page-instance structure changes`, (project) => { const graphs = project.documentationFlowGraphs, graph = graphs[flowId], frames = graph.pageFrames ?? []; return { ...project, documentationFlowGraphs: { ...graphs, [flowId]: { ...graph, pageFrames: frames.map((frame) => frame.id !== pageFrameId ? frame : { ...frame, localSchemaContributions: applyLayerConstraintStructures(constraintsFor(frame), commands, id), compiledTargetsStale: true }) } } }; });
+}
+export function applyFlowPageInstanceStructure(state, flowId, pageFrameId, command, id) {
+    return applyFlowPageInstanceStructures(state, flowId, pageFrameId, [command], id);
 }
 //# sourceMappingURL=page-instance-structure.js.map

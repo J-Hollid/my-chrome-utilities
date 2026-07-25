@@ -862,6 +862,7 @@
       "src/composed-schema",
       "src/layered-schema",
       "src/data-layer-canonical-schema.ts",
+      "src/data-layer-canonical-predicate-identity.ts",
       "src/data-layer-canonical-schema-facets.ts",
       "src/data-layer-canonical-schema-commands.ts",
       "src/data-layer-canonical-schema-constraints.ts",

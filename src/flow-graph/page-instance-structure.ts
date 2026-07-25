@@ -22,7 +22,7 @@ const moveBlock=(constraints:LayerConstraint[],path:string,delta:number):LayerCo
 };
 const remapSubtree=(constraints:LayerConstraint[],from:string,to:string,id:(kind:string)=>string):LayerConstraint[]=>constraints.map((constraint,index)=>{if(!subtree(from,constraint.path))return constraint;const next={...constraint,path:replacePath(constraint.path,from,to)};if(index===constraints.findIndex(({path})=>path===from))next.definitionId=next.definitionId??id("property");return next;});
 
-function editConstraints(constraints:LayerConstraint[],command:FlowPageInstanceStructureCommand,id:(kind:string)=>string):LayerConstraint[]{
+export function editConstraints(constraints:LayerConstraint[],command:FlowPageInstanceStructureCommand,id:(kind:string)=>string):LayerConstraint[]{
   const target=constraints.find(({path})=>path===command.path);
   if(command.kind==="add-child"||command.kind==="add-sibling"){
     const name=cleanName(command.name,command.kind==="add-child"?"child":"property"),path=command.kind==="add-child"?`${command.path}/${name}`:suffixName(command.path,name);
@@ -49,7 +49,18 @@ function editConstraints(constraints:LayerConstraint[],command:FlowPageInstanceS
   return moveBlock(constraints,command.path,command.kind==="move-earlier"?-1:1);
 }
 
-export function applyFlowPageInstanceStructure(state:ProjectState,flowId:string,pageFrameId:string,command:FlowPageInstanceStructureCommand,id:(kind:string)=>string):ProjectState{
+export function applyLayerConstraintStructures(constraints:readonly LayerConstraint[],commands:readonly FlowPageInstanceStructureCommand[],id:(kind:string)=>string):LayerConstraint[]{
+  let next:LayerConstraint[]=clone([...constraints]);
+  for(const command of commands)next=editConstraints(next,command,id);
+  return next;
+}
+
+export function applyFlowPageInstanceStructures(state:ProjectState,flowId:string,pageFrameId:string,commands:readonly FlowPageInstanceStructureCommand[],id:(kind:string)=>string):ProjectState{
+  if(!commands.length)return state;
   frameFor(state,flowId,pageFrameId);
-  return transactProject(state,`${command.kind} Flow Page-instance property ${command.path}`,(project)=>{const graphs=project.documentationFlowGraphs as Record<string,FlowGraph>,graph=graphs[flowId]!,frames=graph.pageFrames??[];return{...project,documentationFlowGraphs:{...graphs,[flowId]:{...graph,pageFrames:frames.map((frame)=>frame.id!==pageFrameId?frame:{...frame,localSchemaContributions:editConstraints(constraintsFor(frame),command,id),compiledTargetsStale:true})}}};});
+  return transactProject(state,`Save ${commands.length} Flow Page-instance structure changes`,(project)=>{const graphs=project.documentationFlowGraphs as Record<string,FlowGraph>,graph=graphs[flowId]!,frames=graph.pageFrames??[];return{...project,documentationFlowGraphs:{...graphs,[flowId]:{...graph,pageFrames:frames.map((frame)=>frame.id!==pageFrameId?frame:{...frame,localSchemaContributions:applyLayerConstraintStructures(constraintsFor(frame),commands,id),compiledTargetsStale:true})}}};});
+}
+
+export function applyFlowPageInstanceStructure(state:ProjectState,flowId:string,pageFrameId:string,command:FlowPageInstanceStructureCommand,id:(kind:string)=>string):ProjectState{
+  return applyFlowPageInstanceStructures(state,flowId,pageFrameId,[command],id);
 }

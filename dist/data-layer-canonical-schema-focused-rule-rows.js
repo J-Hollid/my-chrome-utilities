@@ -9,16 +9,13 @@ function editRule(row, rule, context) {
     legend.textContent = `Edit ${ruleKindLabel(rule)}`;
     for (const field of focusedRuleFields(rule.kind)) {
         if (field === "condition") {
-            const control = dom.createElement("textarea");
-            control.name = "editRuleCondition";
-            control.value = rule.condition ? JSON.stringify(rule.condition) : "";
-            control.addEventListener("input", () => { const working = context.getWorking(); if (!working)
-                return; const index = working.rules.findIndex(({ id }) => id === rule.id); if (index < 0)
-                return; const next = clone(working.rules[index]); try {
-                next.condition = control.value ? JSON.parse(control.value) : undefined;
-            }
-            catch { } working.rules[index] = next; });
-            editor.append(labeled(dom, "condition", control));
+            const tree = dom.createElement("div");
+            tree.setAttribute("aria-label", "Shared rule condition tree");
+            const render = (condition, path) => { if (!condition)
+                return; const item = dom.createElement("article"); item.dataset.conditionId = condition.id ?? `rule-condition:${rule.id}:${path}`; item.textContent = condition.kind === "predicate" ? `${condition.propertyId} ${condition.operator}${condition.value === undefined ? "" : ` ${String(condition.value)}`}` : `${condition.kind} (${condition.children.length})`; tree.append(item); if (condition.kind !== "predicate")
+                condition.children.forEach((child, index) => render(child, `${path}.${index}`)); };
+            render(rule.condition, "root");
+            editor.append(labeled(dom, "Condition tree", tree));
             continue;
         }
         const value = String(rule[field] ?? ""), control = input(dom, `editRule${field[0].toUpperCase() + field.slice(1)}`, value, ["minimum", "maximum", "minItems", "maxItems"].includes(field) ? "number" : "text");

@@ -348,6 +348,13 @@
       "src/data-layer-canonical-schema.ts"
     ]
   },
+  "src/data-layer-canonical-predicate-identity.ts": {
+    "module": "schemas",
+    "layer": "application",
+    "contracts": [
+      "src/data-layer-canonical-schema.ts"
+    ]
+  },
   "src/data-layer-saved-schema-canonical.ts": {
     "module": "schemas",
     "layer": "application",

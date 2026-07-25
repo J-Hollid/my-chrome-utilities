@@ -9,12 +9,14 @@ export function renderCanonicalRuleAddPanel(host, context) {
     const panel = dom.createElement("fieldset"), legend = dom.createElement("legend"), kind = dom.createElement("select"), fields = dom.createElement("div");
     legend.textContent = "Add rule";
     kind.name = "ruleKind";
-    kind.append(...["pattern", "range", "cardinality", "condition", "custom"].map((entry) => new Option(entry, entry)));
-    const renderFields = () => { fields.replaceChildren(); for (const field of focusedRuleFields(kind.value)) {
+    kind.append(new Option("Choose rule kind", ""), ...["pattern", "range", "cardinality", "condition", "custom"].map((entry) => new Option(entry, entry)));
+    const renderFields = () => { fields.replaceChildren(); if (!kind.value)
+        return; for (const field of focusedRuleFields(kind.value)) {
         if (field === "condition")
             continue;
         if (field === "reusableRuleId") {
             const search = input(dom, "reusableRuleSearch");
+            search.type = "search";
             search.placeholder = "Search reusable rules by name";
             const reusable = dom.createElement("select");
             reusable.name = "newRuleReusableRuleId";
@@ -27,7 +29,7 @@ export function renderCanonicalRuleAddPanel(host, context) {
     } };
     kind.addEventListener("change", renderFields);
     renderFields();
-    panel.append(legend, labeled(dom, "Rule kind", kind), fields, button(dom, "Add rule", () => { const next = context.getWorking(); if (!next)
+    panel.append(legend, labeled(dom, "Rule kind", kind), fields, button(dom, "Add rule", () => { const next = context.getWorking(); if (!next || !kind.value)
         return; const rule = { id: context.id("rule"), kind: kind.value, severity: "error", message: "" }; for (const field of ["pattern", "minimum", "maximum", "minItems", "maxItems"]) {
         const control = fields.querySelector(`[name="newRule${field[0].toUpperCase() + field.slice(1)}"]`);
         if (control?.value)

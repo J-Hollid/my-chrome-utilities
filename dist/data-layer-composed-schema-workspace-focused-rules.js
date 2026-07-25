@@ -8,15 +8,10 @@ function renderRuleEditor(row, rule, index, context) {
     editor.setAttribute("aria-label", `Edit rule ${String(rule.id ?? index)}`);
     for (const field of focusedRuleFields(String(rule.kind ?? "custom"))) {
         if (field === "condition") {
-            const condition = dom.createElement("textarea");
-            condition.name = "editRuleCondition";
-            condition.value = rule.condition ? JSON.stringify(rule.condition) : "";
-            condition.setAttribute("aria-label", "Condition definition");
-            condition.addEventListener("input", () => { try {
-                rule.condition = condition.value ? JSON.parse(condition.value) : undefined;
-            }
-            catch { } });
-            editor.append(labeled(dom, "Condition definition", condition));
+            const condition = dom.createElement("div");
+            condition.setAttribute("aria-label", "Shared rule condition tree");
+            condition.textContent = rule.condition ? `${String(rule.condition.kind ?? "condition")} condition tree` : "No condition configured";
+            editor.append(labeled(dom, "Condition tree", condition));
             continue;
         }
         const control = field === "severity" ? dom.createElement("select") : dom.createElement("input");
@@ -30,7 +25,6 @@ function renderRuleEditor(row, rule, index, context) {
             return; const next = clone(draft.rules[index]); next[field] = control.value === "" ? undefined : numericFields.has(field) ? Number(control.value) : control.value; draft.rules[index] = next; });
         editor.append(labeled(dom, field, control));
     }
-    editor.append(button(dom, "Apply rule changes", () => context.render()));
     row.append(editor);
 }
 export function renderComposedFocusedRules(host, context) {
@@ -48,10 +42,12 @@ export function renderComposedFocusedRules(host, context) {
         row.append(button(dom, "Override here", () => context.overrideRule(index)), button(dom, "Open source", () => { row.dataset.ruleMode = "source"; const detail = dom.createElement("p"); detail.textContent = `Source rule ${id} · inherited definition is read-only.`; row.append(detail); })); list.append(row); });
     const addPanel = dom.createElement("fieldset"), kind = dom.createElement("select"), fields = dom.createElement("div");
     kind.name = "ruleKind";
-    kind.append(...["pattern", "range", "cardinality", "condition", "custom"].map((entry) => new Option(entry, entry)));
-    const renderFields = () => { fields.replaceChildren(); const names = focusedRuleFields(kind.value).filter((name) => name !== "condition"); for (const name of names) {
+    kind.append(new Option("Choose rule kind", ""), ...["pattern", "range", "cardinality", "condition", "custom"].map((entry) => new Option(entry, entry)));
+    const renderFields = () => { fields.replaceChildren(); if (!kind.value)
+        return; const names = focusedRuleFields(kind.value).filter((name) => name !== "condition"); for (const name of names) {
         if (name === "reusableRuleId") {
             const search = dom.createElement("input");
+            search.type = "search";
             search.name = "reusableRuleSearch";
             search.placeholder = "Search reusable rules by name";
             const reusable = dom.createElement("select");

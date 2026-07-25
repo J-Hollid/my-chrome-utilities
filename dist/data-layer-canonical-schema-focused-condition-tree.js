@@ -12,23 +12,30 @@ const operatorsFor = (type) => type === "number" || type === "integer" ? [...exi
 function editPredicate(row, condition, path, context) {
     if (condition.kind !== "predicate")
         return;
-    const { dom } = context, editor = dom.createElement("fieldset"), property = dom.createElement("select"), operator = dom.createElement("select"), value = input(dom, "conditionEditValue", condition.value === undefined ? "" : String(condition.value));
+    const { dom } = context, editor = dom.createElement("fieldset"), search = dom.createElement("input"), property = dom.createElement("select"), operator = dom.createElement("select"), value = input(dom, "conditionEditValue", condition.value === undefined ? "" : String(condition.value));
     editor.setAttribute("aria-label", "Condition predicate editor");
-    property.append(...Object.values(context.current().nodes).map((candidate) => new Option(candidate.name, candidate.id)));
+    search.type = "search";
+    search.placeholder = "Search properties";
+    search.setAttribute("aria-label", "Search condition properties");
+    const allProperties = () => Object.values(context.current().nodes);
+    const renderProperties = () => { const query = search.value.trim().toLowerCase(), selected = property.value; property.replaceChildren(...allProperties().filter((candidate) => !query || candidate.name.toLowerCase().includes(query)).map((candidate) => new Option(candidate.name, candidate.id))); property.value = selected || condition.propertyId; };
+    renderProperties();
     property.value = condition.propertyId;
     const renderOperators = () => { const selected = context.current().nodes[property.value]; operator.replaceChildren(...operatorsFor(selected?.type).map((entry) => new Option(entry, entry))); operator.value = condition.operator; value.hidden = existence.includes(operator.value); };
     renderOperators();
+    search.addEventListener("input", renderProperties);
     const update = (patch) => { const next = context.getWorking(); if (next?.presence.condition)
         replaceCondition(next.presence.condition, path, { ...condition, ...patch }); };
     property.addEventListener("change", () => { condition.propertyId = property.value; condition.value = undefined; renderOperators(); update({ propertyId: property.value, value: undefined }); context.render(); });
     operator.addEventListener("change", () => { condition.operator = operator.value; condition.value = undefined; update({ operator: operator.value, value: undefined }); value.hidden = existence.includes(operator.value); });
     value.addEventListener("input", () => { const selected = context.current().nodes[property.value]; const typed = selected ? typedCanonicalValue(selected.type, value.value) : value.value; update({ value: typed }); });
-    editor.append(labeled(dom, "Property", property), labeled(dom, "Type-valid operator", operator), labeled(dom, "Typed value", value), button(dom, "Apply condition", () => context.render()));
+    editor.append(labeled(dom, "Search properties", search), labeled(dom, "Property", property), labeled(dom, "Type-valid operator", operator), labeled(dom, "Typed value", value));
     row.append(editor);
 }
 function appendCondition(rowParent, condition, path, context) {
     const { dom } = context, row = dom.createElement("div");
     row.dataset.conditionPath = path.join(".") || "root";
+    row.dataset.conditionId = condition.id ?? `condition:${path.join(".") || "root"}`;
     row.textContent = focusedConditionLabel(condition);
     const detail = (mode) => { row.dataset.conditionState = mode; const description = dom.createElement("p"); description.textContent = `${mode === "view" ? "Read-only" : "Editable"} condition · ${focusedConditionLabel(condition)}`; row.append(description); };
     const addChild = () => { const next = context.getWorking(); if (!next)

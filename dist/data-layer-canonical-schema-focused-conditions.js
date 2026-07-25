@@ -16,25 +16,30 @@ export function renderCanonicalFocusedCondition(host, context) {
     for (const kind of ["all", "any", "not"])
         actions.append(button(dom, `Add ${kind === "all" ? "All" : kind === "any" ? "Any" : "Not"} group`, () => { const next = context.getWorking(); if (!next)
             return; const current = next.presence.condition; if (!current)
-            next.presence = { mode: next.presence.mode, condition: { kind, children: [] } };
+            next.presence = { mode: next.presence.mode, condition: { id: context.id("condition"), kind, children: [] } };
         else if (current.kind !== "predicate" && !(current.kind === "not" && current.children.length))
-            current.children.push({ kind, children: [] }); context.render(); }));
-    const property = dom.createElement("select"), operator = dom.createElement("select"), value = dom.createElement("input");
+            current.children.push({ id: context.id("condition"), kind, children: [] }); context.render(); }));
+    const search = dom.createElement("input"), property = dom.createElement("select"), operator = dom.createElement("select"), value = dom.createElement("input");
+    search.type = "search";
+    search.placeholder = "Search properties";
+    search.setAttribute("aria-label", "Search condition properties");
     property.setAttribute("aria-label", "Condition property");
-    property.append(new Option("Choose property", ""), ...Object.values(context.current().nodes).map((candidate) => new Option(candidate.name, candidate.id)));
+    const renderProperties = () => { const query = search.value.trim().toLowerCase(), selected = property.value; property.replaceChildren(new Option("Choose property", ""), ...Object.values(context.current().nodes).filter((candidate) => !query || candidate.name.toLowerCase().includes(query)).map((candidate) => new Option(candidate.name, candidate.id))); property.value = selected; };
+    renderProperties();
     operator.setAttribute("aria-label", "Type-valid operator");
     value.setAttribute("aria-label", "Typed value");
     const selected = () => context.current().nodes[property.value], renderOperators = () => { operator.replaceChildren(...operatorsFor(selected()?.type).map((entry) => new Option(entry, entry))); value.hidden = existence.includes(operator.value); };
-    property.addEventListener("change", () => { renderOperators(); });
+    search.addEventListener("input", renderProperties);
+    property.addEventListener("change", renderOperators);
     operator.addEventListener("change", () => { value.hidden = existence.includes(operator.value); });
     renderOperators();
-    actions.append(labeled(dom, "Search property", property), labeled(dom, "Type-valid operator", operator), labeled(dom, "Typed value", value), button(dom, "Add predicate", () => { const next = context.getWorking(), candidate = selected(); if (!next || !candidate || !operator.value)
-        return; const typed = existence.includes(operator.value) ? undefined : typedCanonicalValue(candidate.type, value.value); const leaf = { kind: "predicate", propertyId: property.value, operator: operator.value, ...(typed === undefined ? {} : { value: typed }) }; const current = next.presence.condition; if (!current)
-        next.presence = { mode: next.presence.mode, condition: { kind: "all", children: [leaf] } };
+    actions.append(labeled(dom, "Search property", search), labeled(dom, "Condition property", property), labeled(dom, "Type-valid operator", operator), labeled(dom, "Typed value", value), button(dom, "Add predicate", () => { const next = context.getWorking(), candidate = selected(); if (!next || !candidate || !operator.value)
+        return; const typed = existence.includes(operator.value) ? undefined : typedCanonicalValue(candidate.type, value.value), leaf = { id: context.id("condition"), kind: "predicate", propertyId: property.value, operator: operator.value, ...(typed === undefined ? {} : { value: typed }) }; const current = next.presence.condition; if (!current)
+        next.presence = { mode: next.presence.mode, condition: { id: context.id("condition"), kind: "all", children: [leaf] } };
     else if (current.kind !== "predicate")
         current.children.push(leaf);
     else
-        next.presence = { mode: next.presence.mode, condition: { kind: "all", children: [current, leaf] } }; context.render(); }));
+        next.presence = { mode: next.presence.mode, condition: { id: context.id("condition"), kind: "all", children: [current, leaf] } }; context.render(); }));
     host.append(summary, treeHost, actions);
 }
 //# sourceMappingURL=data-layer-canonical-schema-focused-conditions.js.map

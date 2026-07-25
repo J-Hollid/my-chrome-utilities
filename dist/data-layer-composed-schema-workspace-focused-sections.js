@@ -39,16 +39,18 @@ export function renderComposedFocusedSection(host, context) {
             draft.expectedValue = expected.value === "" ? undefined : typedComposedValue(draft.type ?? context.row.effective.type, expected.value);
         }
         catch { } });
-        const inheritedValues = context.row.effective.allowedValues ?? [], values = [...draft.allowedValues];
-        inheritedValues.forEach((entry) => { if (!values.some((candidate) => JSON.stringify(candidate) === JSON.stringify(entry)))
-            values.push(entry); });
-        values.forEach((entry, index) => { const valueId = `allowed-value:${context.row.path}:${index}`, removed = context.removedValueIds.has(valueId), control = dom.createElement("input"); control.value = valueText(entry); control.setAttribute("aria-label", `Allowed value ${index + 1}`); control.disabled = removed; control.addEventListener("input", () => { try {
+        const inheritedValues = context.row.effective.allowedValues ?? [], values = [...draft.allowedValues], ids = [...(draft.allowedValueIds ?? [])];
+        inheritedValues.forEach((entry, index) => { if (!values.some((candidate) => JSON.stringify(candidate) === JSON.stringify(entry))) {
+            values.push(entry);
+            ids.push(context.row.effective.allowedValueIds?.[index] ?? `allowed-value:${context.row.path}:${index}`);
+        } });
+        values.forEach((entry, index) => { const valueId = ids[index] ?? `allowed-value:${context.row.path}:${index}`, removed = context.removedValueIds.has(valueId), isLocal = Boolean(context.row.local.allowedValueIds?.includes(valueId)) || index < draft.allowedValues.length && !context.row.inherited?.allowedValueIds?.includes(valueId), control = dom.createElement("input"); control.value = valueText(entry); control.setAttribute("aria-label", `Allowed value ${index + 1}`); control.disabled = removed || !isLocal; control.addEventListener("input", () => { try {
             const current = draft.allowedValues.findIndex((candidate) => JSON.stringify(candidate) === JSON.stringify(entry));
             if (current >= 0)
                 draft.allowedValues[current] = typedComposedValue(draft.type ?? context.row.effective.type, control.value);
         }
-        catch { } }); const row = dom.createElement("article"); row.dataset.valueId = valueId; row.dataset.ownership = context.row.local.allowedValues ? "local" : "inherited"; row.append(labeled(dom, `Value ${index + 1}`, control), button(dom, "View", () => { row.dataset.valueMode = "view"; const detail = dom.createElement("p"); detail.textContent = `Value ${valueId} · ${valueText(entry)} · ${row.dataset.ownership}`; row.append(detail); }), removed ? button(dom, "Restore", () => { context.removedValueIds.delete(valueId); draft.allowedValues = [...draft.allowedValues, entry]; context.render(); }) : button(dom, "Edit", () => { control.focus(); }), removed ? Object.assign(dom.createElement("span"), { textContent: " Removed" }) : button(dom, "Remove local", () => { context.removedValueIds.add(valueId); draft.allowedValues = draft.allowedValues.filter((candidate) => JSON.stringify(candidate) !== JSON.stringify(entry)); context.render(); })); list.append(row); });
-        host.append(labeled(dom, "Expected value", expected), list, button(dom, "Add allowed value", () => { draft.allowedValues = [...draft.allowedValues, ""]; context.render(); }));
+        catch { } }); const row = dom.createElement("article"); row.dataset.valueId = valueId; row.dataset.ownership = isLocal ? "local" : "inherited"; const lifecycle = isLocal ? (removed ? button(dom, "Restore", () => { context.removedValueIds.delete(valueId); context.render(); }) : button(dom, "Remove local", () => { context.removedValueIds.add(valueId); context.render(); })) : button(dom, "Override here", () => { draft.allowedValues.push(entry); draft.allowedValueIds = [...(draft.allowedValueIds ?? []), valueId]; context.render(); }); row.append(labeled(dom, `Value ${index + 1}`, control), button(dom, "View", () => { row.dataset.valueMode = "view"; const detail = dom.createElement("p"); detail.textContent = `Value ${valueId} · ${valueText(entry)} · ${row.dataset.ownership}`; row.append(detail); }), isLocal ? button(dom, "Edit", () => { control.focus(); }) : button(dom, "Open source", () => { row.dataset.valueMode = "source"; }), lifecycle); list.append(row); });
+        host.append(labeled(dom, "Expected value", expected), list, button(dom, "Add allowed value", () => { draft.allowedValues = [...draft.allowedValues, ""]; draft.allowedValueIds = [...(draft.allowedValueIds ?? []), `allowed-value:${crypto.randomUUID()}`]; context.render(); }));
     }
     if (context.activeSection === "conditions")
         renderComposedFocusedCondition(host, context);

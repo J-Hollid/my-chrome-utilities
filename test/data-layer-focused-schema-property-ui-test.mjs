@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {focusedConditionLabel,focusedOwnershipActions,focusedPropertySections,focusedRuleFields,focusedSparseDelta} from "../dist/data-layer-focused-schema-property-ui.js";
-import {applyCanonicalCommand,createCanonicalSchema} from "../dist/data-layer-canonical-schema.js";
+import {applyCanonicalCommand,canonicalPredicateIds,canonicalPredicateWithStableIds,createCanonicalSchema} from "../dist/data-layer-canonical-schema.js";
 
 assert.deepEqual(focusedPropertySections,["definition","presence","values","conditions","rules","documentation","example","structure"]);
 assert.deepEqual(focusedOwnershipActions({inherited:true}),["View","Override here","Open source"]);
@@ -34,4 +34,11 @@ const confirmed=applyCanonicalCommand(objectDocument,{kind:"set",baseRevision:0,
 assert.equal(confirmed.status,"applied");
 assert.equal(Object.hasOwn(confirmed.document.nodes,child.id),false,"confirmed destructive type change removes descendants atomically");
 assert.equal(confirmed.document.changes.length,1);
+const predicate=canonicalPredicateWithStableIds({kind:"all",children:[{kind:"predicate",propertyId:property.id,operator:"Exists"}]},(kind)=>`stable:${kind}`);
+assert.deepEqual(canonicalPredicateIds(predicate),["stable:condition-root","stable:condition-root.0"],"canonical predicates retain deterministic item identities");
+const structural=applyCanonicalCommand(withProperty,{kind:"set",baseRevision:0,propertyId:property.id,patch:{},operations:[{kind:"rename",propertyId:property.id,name:"renamed"},{kind:"add",id:(kind)=>`added:${kind}`,propertyId:property.id,name:"child",parentId:property.id,type:"string"}]});
+assert.equal(structural.status,"applied");
+assert.equal(structural.document.revision,1,"a focused structural session commits one revision");
+assert.equal(structural.document.changes.length,1,"a focused structural session produces one Undo entry");
+assert.ok(Object.values(structural.document.nodes).some(({name})=>name==="child"),"the same atomic command includes staged additions");
 console.log("focused schema property UI tests passed");
