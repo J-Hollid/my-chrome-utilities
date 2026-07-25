@@ -32,7 +32,7 @@ const overriddenValueDraft=overrideComposedAllowedValue(inheritedValueDraft,1,"l
 assert.deepEqual(overriddenValueDraft.allowedValues,["2","3a","3b"],"overriding an inherited value does not duplicate its effective entry");
 assert.deepEqual(overriddenValueDraft.allowedValueIds,["parent:2","local:funnel-step:3a","parent:3b"],"an overridden value gets exactly one local identity in place");
 assert.equal(overriddenValueDraft.allowedValueProvenance.find(({id})=>id==="local:funnel-step:3a").state,"overridden");
-assert.deepEqual(sparseComposedFacets(overriddenValueDraft,{path:"/funnel_step",allowedValues:["2","3a","3b"],allowedValueIds:["parent:2","parent:3a","parent:3b"]}),{allowedValueIds:["parent:2","local:funnel-step:3a","parent:3b"],allowedValueProvenance:[{id:"local:funnel-step:3a",state:"overridden",source:"focused-editor"}]},"same-value overrides retain their local ownership identity");
+assert.deepEqual(sparseComposedFacets(overriddenValueDraft,{path:"/funnel_step",allowedValues:["2","3a","3b"],allowedValueIds:["parent:2","parent:3a","parent:3b"]}),{allowedValues:["2","3a","3b"],allowedValueIds:["parent:2","local:funnel-step:3a","parent:3b"],allowedValueProvenance:[{id:"local:funnel-step:3a",state:"overridden",source:"focused-editor"}]},"same-value overrides retain their local ownership identity and payload");
 const inheritedRuleDraft=composedFacetDraft({path:"/note",rules:[{id:"local:l",kind:"pattern",pattern:"^l"}]},{path:"/note",rules:[{id:"parent:p",kind:"pattern",pattern:"^p"}]});
 assert.deepEqual(inheritedRuleDraft.rules,[{id:"local:l",kind:"pattern",pattern:"^l"}],"composed drafts stage only local rule deltas");
 const effectiveRules=compileLayeredSchema([
