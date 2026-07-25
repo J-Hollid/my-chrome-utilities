@@ -10,6 +10,7 @@ export const schemaTableColumns = [
     { key: "local-effective-state", label: "Local/effective state" },
     { key: "validation-state", label: "Validation state" },
 ];
+export const schemaTableCellMetadata = schemaTableColumns.map(({ key, label }) => ({ key, label }));
 export const schemaTableEditableFacets = ["description", "expected-or-allowed", "example"];
 export function schemaTableOverlayTransition(state, event) {
     if (event.kind === "open")

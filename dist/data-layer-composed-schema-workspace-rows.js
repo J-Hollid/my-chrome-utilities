@@ -1,7 +1,7 @@
 import { renderFocusedPropertyMenu } from "./data-layer-focused-schema-property-menu.js";
 import { focusedOwnershipActions, focusedPropertySectionLabels } from "./data-layer-focused-schema-property-ui.js";
 import { renderComposedFocusedSection } from "./data-layer-composed-schema-workspace-focused-sections.js";
-import { schemaTableColumns, schemaTableExpectedOrAllowed } from "./data-layer-schema-table.js";
+import { schemaTableCellMetadata, schemaTableColumns, schemaTableExpectedOrAllowed } from "./data-layer-schema-table.js";
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 function applyPersistedItemOwnership(host, row) {
     const overriddenValues = new Set((row.local.allowedValueProvenance ?? []).filter(({ state }) => state === "overridden").map(({ id }) => id));
@@ -89,12 +89,14 @@ function focused(row, context) {
 }
 export function renderComposedRows(rows, context) {
     const { dom } = context, table = rows.querySelector(":scope > table") ?? dom.createElement("table"), head = dom.createElement("thead"), headRow = dom.createElement("tr"), body = dom.createElement("tbody");
+    const cell = (index, text) => { const value = dom.createElement("td"), metadata = schemaTableCellMetadata[index]; value.dataset.schemaTableCell = metadata.key; value.dataset.schemaTableLabel = metadata.label; if (text !== undefined)
+        value.textContent = text; return value; };
     for (const { label } of schemaTableColumns)
         headRow.append(Object.assign(dom.createElement("th"), { textContent: label }));
     head.append(headRow);
     const editable = (row, facet, value) => { const control = dom.createElement("input"); control.type = "text"; control.value = value; control.dataset.inlineSchemaFacet = facet; control.setAttribute("aria-label", `${facet} for ${row.path}`); control.addEventListener("input", () => context.stageInline(row, facet, control.value)); return control; };
     for (const row of context.model.rows) {
-        const draft = context.activePath === row.path ? context.draft : undefined, tr = dom.createElement("tr"), identity = dom.createElement("td"), name = dom.createElement("span"), propertyActions = button(dom, "⋯", () => context.open(row, propertyActions)), effective = { ...row.effective, ...row.local }, description = draft?.documentation ?? String(effective.documentation ?? ""), expected = draft ? schemaTableExpectedOrAllowed(draft) : schemaTableExpectedOrAllowed(effective), exampleValue = draft?.exampleValue ?? (Array.isArray(effective.examples) ? effective.examples[0] : undefined);
+        const draft = context.activePath === row.path ? context.draft : undefined, tr = dom.createElement("tr"), identity = cell(0), name = dom.createElement("span"), propertyActions = button(dom, "⋯", () => context.open(row, propertyActions)), effective = { ...row.effective, ...row.local }, description = draft?.documentation ?? String(effective.documentation ?? ""), expected = draft ? schemaTableExpectedOrAllowed(draft) : schemaTableExpectedOrAllowed(effective), exampleValue = draft?.exampleValue ?? (Array.isArray(effective.examples) ? effective.examples[0] : undefined);
         tr.className = "composed-schema-row";
         tr.dataset.effectivePropertyPath = row.path;
         if (context.rowPathDataset)
@@ -108,13 +110,13 @@ export function renderComposedRows(rows, context) {
         if (context.onRepair)
             for (const repair of row.repairs)
                 identity.append(button(dom, repair.label, () => context.onRepair?.(repair)));
-        tr.append(identity, Object.assign(dom.createElement("td"), { textContent: row.path }), Object.assign(dom.createElement("td"), { textContent: String(draft?.type ?? effective.type ?? "constraint") }), Object.assign(dom.createElement("td"), { textContent: String(draft?.presence ?? effective.presence ?? "optional") }));
-        for (const control of [editable(row, "description", description), editable(row, "expected-or-allowed", expected), editable(row, "example", exampleValue === undefined ? "" : String(exampleValue))]) {
-            const cell = dom.createElement("td");
-            cell.append(control);
-            tr.append(cell);
+        tr.append(identity, cell(1, row.path), cell(2, String(draft?.type ?? effective.type ?? "constraint")), cell(3, String(draft?.presence ?? effective.presence ?? "optional")));
+        for (const [offset, control] of [editable(row, "description", description), editable(row, "expected-or-allowed", expected), editable(row, "example", exampleValue === undefined ? "" : String(exampleValue))].entries()) {
+            const valueCell = cell(offset + 4);
+            valueCell.append(control);
+            tr.append(valueCell);
         }
-        tr.append(Object.assign(dom.createElement("td"), { textContent: row.source }), Object.assign(dom.createElement("td"), { textContent: context.removed && context.activePath === row.path ? "Removed" : Object.keys(row.local).length > 1 ? `Local · effective ${context.effectiveText(row)}` : "Inherited · effective" }), Object.assign(dom.createElement("td"), { textContent: `${row.validationState} · ${row.message}` }));
+        tr.append(cell(7, row.source), cell(8, context.removed && context.activePath === row.path ? "Removed" : Object.keys(row.local).length > 1 ? `Local · effective ${context.effectiveText(row)}` : "Inherited · effective"), cell(9, `${row.validationState} · ${row.message}`));
         if (context.overlayOpen && context.activePath === row.path) {
             const overlay = dom.createElement("section");
             overlay.dataset.schemaRowOverlay = "true";

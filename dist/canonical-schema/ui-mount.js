@@ -16,7 +16,7 @@ export function canonicalDispatchRequiresLocalRender(result, renderAfterDispatch
 export function mountCanonicalSchemaEditor(options) {
     const dom = options.host.ownerDocument ?? globalThis.document;
     const initialDocument = options.load();
-    let query = "", propertyFilter = "all", propertySort = "tree", feedback = options.initialFeedback ?? "", activePropertyId = initialDocument.selectedPropertyId, activeSection = "definition", working, originFocus, originPath, menuPropertyId = initialDocument.selectedPropertyId, focusedPropertyId, removedRuleIds = new Set(), removedValueIds = new Set(), stagedOperations = [], transientView;
+    let query = "", propertyFilter = "all", propertySort = "tree", feedback = options.initialFeedback ?? "", activePropertyId = initialDocument.selectedPropertyId, activeSection = "definition", working, originFocus, originPath, menuPropertyId, focusedPropertyId, removedRuleIds = new Set(), removedValueIds = new Set(), stagedOperations = [], transientView;
     let overlayState = { phase: "closed" };
     let review;
     const current = () => { const document = options.load(); return transientView ? { ...document, view: transientView } : document; };

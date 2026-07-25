@@ -10,6 +10,7 @@ export const schemaTableColumns=[
   {key:"local-effective-state",label:"Local/effective state"},
   {key:"validation-state",label:"Validation state"},
 ] as const;
+export const schemaTableCellMetadata=schemaTableColumns.map(({key,label})=>({key,label}));
 
 export const schemaTableEditableFacets=["description","expected-or-allowed","example"] as const;
 export type SchemaTableEditableFacet=typeof schemaTableEditableFacets[number];
