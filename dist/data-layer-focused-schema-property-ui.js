@@ -2,12 +2,7 @@ export { focusedRuleIssue } from "./data-layer-focused-rule-policy.js";
 /** The deliberately small vocabulary shared by every schema contributor editor. */
 export const focusedPropertySections = [
     "definition",
-    "presence",
-    "values",
-    "conditions",
     "rules",
-    "documentation",
-    "example",
     "structure",
 ];
 export const focusedPropertySectionLabels = {
@@ -63,12 +58,13 @@ export function readFocusedReusableRules(storage) {
 }
 export function focusedRuleFields(kind) {
     switch (kind) {
-        case "pattern": return ["pattern", "severity", "message"];
-        case "range": return ["minimum", "maximum", "severity", "message"];
-        case "cardinality": return ["minItems", "maxItems", "severity", "message"];
-        case "condition": return ["condition", "severity", "message"];
-        case "reusable": return ["reusableRuleId"];
-        case "custom": return ["severity", "message", "reusableRuleId"];
+        case "presence": return ["condition", "presence", "severity", "message"];
+        case "value": return ["condition", "ordinaryValue", "severity", "message"];
+        case "pattern": return ["condition", "pattern", "severity", "message"];
+        case "range": return ["condition", "minimum", "maximum", "severity", "message"];
+        case "cardinality": return ["condition", "minItems", "maxItems", "severity", "message"];
+        case "reusable": return ["condition", "reusableRuleId"];
+        case "custom": return ["condition", "severity", "message", "reusableRuleId"];
         default: return ["severity", "message"];
     }
 }

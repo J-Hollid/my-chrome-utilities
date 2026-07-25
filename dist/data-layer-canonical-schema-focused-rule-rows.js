@@ -1,5 +1,6 @@
 import { focusedOwnershipActions, focusedRuleFields } from "./data-layer-focused-schema-property-ui.js";
 import { renderSharedConditionTree } from "./data-layer-shared-condition-tree-editor.js";
+import { schemaTableExpectedOrAllowed, schemaTableStageExpectedOrAllowed } from "./data-layer-schema-table.js";
 const clone = (value) => structuredClone(value);
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const input = (dom, name, value = "", type = "text") => { const control = dom.createElement("input"); control.name = name; control.type = type; control.value = value; return control; };
@@ -8,22 +9,49 @@ const ruleKindLabel = (rule) => rule.name ?? rule.kind;
 function editRule(row, rule, context) {
     const { dom } = context, editor = dom.createElement("fieldset"), legend = dom.createElement("legend");
     legend.textContent = `Edit ${ruleKindLabel(rule)}`;
+    const update = (change) => { const working = context.getWorking(); if (!working)
+        return; const index = working.rules.findIndex(({ id }) => id === rule.id); if (index < 0)
+        return; const next = clone(working.rules[index]); change(next); working.rules[index] = next; };
     for (const field of focusedRuleFields(rule.kind)) {
         if (field === "condition") {
             const tree = dom.createElement("div"), properties = context.properties?.() ?? [];
-            renderSharedConditionTree(tree, { dom, ...(rule.condition ? { condition: rule.condition } : {}), properties: () => properties, id: context.id, onChange: (condition) => { const working = context.getWorking(); if (!working)
-                    return; const index = working.rules.findIndex(({ id }) => id === rule.id); if (index < 0)
-                    return; const next = clone(working.rules[index]); if (condition)
+            renderSharedConditionTree(tree, { dom, ...(rule.condition ? { condition: rule.condition } : {}), properties: () => properties, id: context.id, onChange: (condition) => update((next) => { if (condition)
                     next.condition = condition;
                 else
-                    delete next.condition; working.rules[index] = next; } });
-            editor.append(labeled(dom, "Shared condition tree", tree));
+                    delete next.condition; }) });
+            editor.append(labeled(dom, "When condition", tree));
             continue;
         }
-        const value = String(rule[field] ?? ""), control = input(dom, `editRule${field[0].toUpperCase() + field.slice(1)}`, value, ["minimum", "maximum", "minItems", "maxItems"].includes(field) ? "number" : "text");
-        control.addEventListener("input", () => { const working = context.getWorking(); if (!working)
-            return; const index = working.rules.findIndex(({ id }) => id === rule.id); if (index < 0)
-            return; const next = clone(working.rules[index]); next[field] = control.value === "" ? undefined : ["minimum", "maximum", "minItems", "maxItems"].includes(field) ? Number(control.value) : control.value; working.rules[index] = next; });
+        if (field === "reusableRuleId")
+            continue;
+        if (field === "presence") {
+            const control = dom.createElement("select");
+            control.name = "editRulePresence";
+            control.append(new Option("Required", "required"), new Option("Optional", "optional"), new Option("Forbidden", "forbidden"));
+            control.value = rule.presence ?? "required";
+            control.addEventListener("change", () => update((next) => { next.presence = control.value; }));
+            editor.append(labeled(dom, "Then presence", control));
+            continue;
+        }
+        if (field === "ordinaryValue") {
+            const control = input(dom, "editRuleOrdinaryValue", schemaTableExpectedOrAllowed(rule));
+            control.addEventListener("input", () => update((next) => { const staged = schemaTableStageExpectedOrAllowed(next, control.value); if (staged.expectedValue === undefined)
+                delete next.expectedValue;
+            else
+                next.expectedValue = staged.expectedValue; if (staged.allowedValues === undefined)
+                delete next.allowedValues;
+            else
+                next.allowedValues = staged.allowedValues; }));
+            editor.append(labeled(dom, "Then ordinary value", control));
+            continue;
+        }
+        const numeric = ["minimum", "maximum", "minItems", "maxItems"].includes(field), control = field === "severity" ? dom.createElement("select") : input(dom, `editRule${field[0].toUpperCase() + field.slice(1)}`, String(rule[field] ?? ""), numeric ? "number" : "text");
+        control.name = `editRule${field[0].toUpperCase() + field.slice(1)}`;
+        if (control instanceof HTMLSelectElement) {
+            control.append(new Option("error", "error"), new Option("warning", "warning"));
+            control.value = rule.severity;
+        }
+        control.addEventListener("input", () => update((next) => { next[field] = control.value === "" ? undefined : numeric ? Number(control.value) : control.value; }));
         editor.append(labeled(dom, field, control));
     }
     row.append(editor);
@@ -38,7 +66,7 @@ export function renderCanonicalRuleRows(host, context) {
         const row = dom.createElement("article"), summary = dom.createElement("p"), inherited = rule.provenance?.state === "inherited" || rule.provenance?.state === "shadowed", removed = removedRuleIds.has(rule.id);
         row.dataset.ruleId = rule.id;
         row.dataset.ownership = inherited ? "inherited" : "local";
-        summary.textContent = `${ruleKindLabel(rule)} · ${rule.kind} · ${rule.severity} · ${rule.message ?? "No issue message"} · source ${rule.provenance?.contributorName ?? "local"}${removed ? " · Removed" : ""}`;
+        summary.textContent = `${ruleKindLabel(rule)} · When ${rule.condition ? "configured" : "unresolved"} · Then ${rule.kind} · ${rule.severity} · ${rule.message ?? "No issue message"} · source ${rule.provenance?.contributorName ?? "local"} · ${inherited ? "inherited" : "local"}${removed ? " · Removed" : ""}`;
         row.append(summary, button(dom, "View", () => { row.dataset.ruleMode = "view"; const detail = dom.createElement("p"); detail.textContent = `Rule ${rule.id} · definition ${JSON.stringify(rule)} · effective ${rule.enabled === false ? "disabled" : "enabled"} · source ${rule.provenance?.contributorName ?? "local"}`; row.append(detail); }));
         if (inherited) {
             const actions = focusedOwnershipActions({ inherited: true, invariant: rule.enforcement === "invariant" || invariant, replaceable: rule.enforcement === "overridable" && !invariant });

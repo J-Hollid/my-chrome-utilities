@@ -37,7 +37,7 @@ export type SchemaTableValueFacet=
 export function schemaTableValueFacet(value:{expectedValue?:unknown;allowedValues?:readonly unknown[]}):SchemaTableValueFacet {
   if(value.expectedValue!==undefined)return{kind:"expected",text:String(value.expectedValue),value:value.expectedValue};
   const values=value.allowedValues??[];
-  return{kind:"allowed",text:JSON.stringify(values),values};
+  return{kind:"allowed",text:values.map(String).join(", "),values};
 }
 
 export function schemaTableExpectedOrAllowed(value:{expectedValue?:unknown;allowedValues?:readonly unknown[]}):string {
@@ -51,8 +51,8 @@ const parsedScalar=(text:string,previous:unknown):unknown=>{
 
 export function schemaTableStageExpectedOrAllowed<T extends {expectedValue?:unknown;allowedValues?:readonly unknown[]}>(source:T,text:string):T {
   const facet=schemaTableValueFacet(source);
-  if(facet.kind==="expected")return{...source,expectedValue:parsedScalar(text,facet.value)};
-  let allowedValues:unknown[];
-  try{const parsed=JSON.parse(text) as unknown;allowedValues=Array.isArray(parsed)?parsed:[parsed];}catch{allowedValues=[text];}
-  return{...source,allowedValues};
+  const entries=text.split(",").map((entry)=>entry.trim()).filter(Boolean),{expectedValue:_,allowedValues:__,...rest}=source;
+  if(entries.length>1)return{...rest,allowedValues:entries.map((entry)=>parsedScalar(entry,facet.kind==="expected"?facet.value:facet.values[0]))} as unknown as T;
+  if(!entries.length)return{...rest,allowedValues:[]} as unknown as T;
+  return{...rest,expectedValue:parsedScalar(entries[0]!,facet.kind==="expected"?facet.value:facet.values[0])} as unknown as T;
 }

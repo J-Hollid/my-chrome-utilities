@@ -1,4 +1,5 @@
 import { overrideComposedAllowedValue, typedComposedValue } from "./data-layer-composed-schema-builders.js";
+import { schemaTableExpectedOrAllowed, schemaTableStageExpectedOrAllowed } from "./data-layer-schema-table.js";
 import { renderComposedFocusedCondition } from "./data-layer-composed-schema-workspace-focused-conditions.js";
 import { renderComposedFocusedRules } from "./data-layer-composed-schema-workspace-focused-rules.js";
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
@@ -14,7 +15,7 @@ export function renderComposedFocusedSection(host, context) {
         return;
     host.dataset.focusedSection = context.activeSection;
     if (context.activeSection === "definition") {
-        const type = dom.createElement("select"), itemType = dom.createElement("select");
+        const type = dom.createElement("select"), itemType = dom.createElement("select"), presence = dom.createElement("select"), ordinary = dom.createElement("input"), displayText = dom.createElement("input"), description = dom.createElement("textarea"), comments = dom.createElement("textarea"), method = dom.createElement("select"), example = dom.createElement("input");
         type.name = "propertyType";
         type.append(new Option("Inherit type", ""), ...["string", "number", "integer", "boolean", "object", "array", "null"].map((entry) => new Option(entry, entry)));
         type.value = draft.type ?? "";
@@ -22,9 +23,42 @@ export function renderComposedFocusedSection(host, context) {
         itemType.append(new Option("Inherit item type", ""), ...["string", "number", "integer", "boolean", "object", "array", "null"].map((entry) => new Option(entry, entry)));
         itemType.value = draft.itemType ?? "";
         itemType.disabled = draft.type !== "array";
+        presence.name = "presenceMode";
+        presence.append(new Option("Required", "required"), new Option("Optional", "optional"), new Option("Forbidden", "forbidden"));
+        presence.value = draft.presence === "required" ? "required" : draft.presence === "forbidden" ? "forbidden" : "optional";
+        ordinary.name = "ordinaryValue";
+        ordinary.value = schemaTableExpectedOrAllowed(draft);
+        displayText.name = "displayText";
+        displayText.value = draft.displayText;
+        description.name = "description";
+        description.value = draft.documentation;
+        comments.name = "comments";
+        comments.value = draft.comments;
+        method.name = "exampleMethod";
+        method.append(new Option("Blank", "blank"), new Option("Allowed value", "allowed-value"), new Option("Custom typed value", "custom"));
+        method.value = draft.exampleMethod;
+        example.name = "exampleValue";
+        example.value = valueText(draft.exampleValue);
         type.addEventListener("change", () => { draft.type = type.value || undefined; itemType.disabled = draft.type !== "array"; });
         itemType.addEventListener("change", () => { draft.itemType = itemType.value || undefined; });
-        host.append(labeled(dom, "Type", type), labeled(dom, "Array item type", itemType));
+        presence.addEventListener("change", () => { draft.presence = presence.value; });
+        ordinary.addEventListener("input", () => { Object.assign(draft, schemaTableStageExpectedOrAllowed(draft, ordinary.value)); if (ordinary.value.includes(","))
+            delete draft.expectedValue;
+        else
+            draft.allowedValues = []; });
+        displayText.addEventListener("input", () => { draft.displayText = displayText.value; });
+        description.addEventListener("input", () => { draft.documentation = description.value; });
+        comments.addEventListener("input", () => { draft.comments = comments.value; });
+        method.addEventListener("change", () => { draft.exampleMethod = method.value; if (method.value === "blank")
+            draft.exampleValue = undefined; });
+        example.addEventListener("input", () => { try {
+            draft.exampleValue = typedComposedValue(draft.type ?? context.row.effective.type, example.value);
+            draft.exampleMethod = "custom";
+        }
+        catch {
+            draft.exampleValue = example.value;
+        } });
+        host.append(labeled(dom, "Type", type), labeled(dom, "Array item type", itemType), labeled(dom, "Presence", presence), labeled(dom, "Ordinary value", ordinary), labeled(dom, "Display text", displayText), labeled(dom, "Description", description), labeled(dom, "Comments", comments), labeled(dom, "Example method", method), labeled(dom, "Example value", example));
     }
     if (context.activeSection === "presence") {
         const presence = dom.createElement("select");

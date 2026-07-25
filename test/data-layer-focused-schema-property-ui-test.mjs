@@ -5,7 +5,7 @@ import {canonicalNavigatorRows} from "../dist/canonical-schema-focused/navigator
 import {focusedSourceState} from "../dist/data-layer-canonical-schema-focused-drafts.js";
 import {schemaTableCellMetadata,schemaTableColumns,schemaTableEditableFacets,schemaTableExpectedOrAllowed,schemaTableOverlayStyle,schemaTableValueFacet} from "../dist/data-layer-schema-table.js";
 
-assert.deepEqual(focusedPropertySections,["definition","presence","values","conditions","rules","documentation","example","structure"]);
+assert.deepEqual(focusedPropertySections,["definition","rules","structure"]);
 assert.deepEqual(schemaTableColumns.map(({label})=>label),["Property","Path","Type","Presence","Description","Expected or allowed value","Example","Source","Local/effective state","Validation state"],"every contributor table exposes the same information-rich columns");
 assert.deepEqual(schemaTableCellMetadata,schemaTableColumns.map(({key,label})=>({key,label})),"every narrow stacked cell retains its visible column identity");
 assert.equal(new Set(schemaTableCellMetadata.map(({key})=>key)).size,schemaTableColumns.length,"stacked cell identities remain unique");
@@ -13,8 +13,8 @@ assert.match(schemaTableOverlayStyle,/position:absolute/,"the row overlay stays 
 assert.doesNotMatch(schemaTableOverlayStyle,/position:static/,"the row overlay never opts into row layout");
 assert.deepEqual(schemaTableEditableFacets,["description","expected-or-allowed","example"],"the three frequent facets are editable without opening an advanced editor");
 assert.equal(schemaTableExpectedOrAllowed({expectedValue:"retail",allowedValues:["retail","business"]}),"retail","expected value takes precedence in the summary cell");
-assert.equal(schemaTableExpectedOrAllowed({allowedValues:["retail","business"]}),'["retail","business"]',"allowed values use a typed, editable representation when there is no single expectation");
-assert.deepEqual(schemaTableValueFacet({allowedValues:["retail",2,true]}),{kind:"allowed",text:'["retail",2,true]',values:["retail",2,true]});
+assert.equal(schemaTableExpectedOrAllowed({allowedValues:["retail","business"]}),"retail, business","allowed values render as editable human text when there is no single expectation");
+assert.deepEqual(schemaTableValueFacet({allowedValues:["retail",2,true]}),{kind:"allowed",text:"retail, 2, true",values:["retail",2,true]});
 assert.deepEqual(focusedOwnershipActions({inherited:true}),["View","Override here","Open source"]);
 assert.deepEqual(focusedOwnershipActions({inherited:true,replaceable:true}),["View","Replace here","Open source"]);
 assert.deepEqual(focusedOwnershipActions({local:true}),["View","Edit","Remove local"]);
@@ -22,8 +22,8 @@ assert.deepEqual(focusedOwnershipActions({overridden:true}),["View","Edit","Rese
 assert.deepEqual(focusedOwnershipActions({invariant:true}),["View","Open source"]);
 assert.deepEqual(focusedOwnershipActions({conflict:true}),["View conflict","Edit local resolution","Open contributing sources"]);
 assert.equal(focusedSourceState({provenance:[{state:"conflict"}]}),"conflict");
-assert.deepEqual(focusedRuleFields("range"),["minimum","maximum","severity","message"]);
-assert.deepEqual(focusedRuleFields("pattern"),["pattern","severity","message"]);
+assert.deepEqual(focusedRuleFields("range"),["condition","minimum","maximum","severity","message"]);
+assert.deepEqual(focusedRuleFields("pattern"),["condition","pattern","severity","message"]);
 assert.equal(focusedConditionLabel({kind:"all",children:[{kind:"predicate",propertyId:"/page_type",operator:"Equals",value:"trade"}]}),"All (/page_type Equals trade)");
 assert.deepEqual(focusedSparseDelta({type:"string",presence:"required",documentation:"new"},{type:"string",presence:"optional",documentation:"old"}),{presence:"required",documentation:"new"});
 const source=createCanonicalSchema({id:"schema:focused",contributorId:"profile:focused",contributorName:"Focused"});

@@ -7,6 +7,7 @@ export function renderFocusedPropertyMenu(options) {
     menu.setAttribute("role", "menu");
     menu.setAttribute("aria-label", `${options.path} property context menu`);
     menu.dataset.propertyContextMenu = "true";
+    menu.dataset.schemaOverlayLayer = "parent";
     for (const section of focusedPropertySections) {
         const entry = dom.createElement("div"), choose = button(dom, focusedPropertySectionLabels[section], () => options.selectSection(section)), summary = dom.createElement("span");
         entry.dataset.section = section;

@@ -8,6 +8,12 @@ const unresolvedConditionProperty = (condition) => {
 };
 /** Validate a staged rule without depending on a browser or persistence adapter. */
 export function focusedRuleIssue(rule) {
+    if (["presence", "value", "pattern", "range", "cardinality", "reusable"].includes(String(rule.kind)) && unresolvedConditionProperty(rule.condition))
+        return "Resolve the When condition.";
+    if (rule.kind === "presence" && !["required", "optional", "forbidden"].includes(String(rule.presence ?? "")))
+        return "Choose Required, Optional, or Forbidden.";
+    if (rule.kind === "value" && rule.expectedValue === undefined && !(Array.isArray(rule.allowedValues) && rule.allowedValues.length))
+        return "Enter an expected or allowed value.";
     if (rule.kind === "pattern" && !String(rule.pattern ?? "").trim())
         return "Enter a regular expression.";
     if (rule.kind === "range" && rule.minimum !== undefined && rule.maximum !== undefined && Number(rule.minimum) > Number(rule.maximum))
@@ -18,8 +24,6 @@ export function focusedRuleIssue(rule) {
         return "Minimum items must not exceed maximum items.";
     if (rule.kind === "cardinality" && rule.minItems === undefined && rule.maxItems === undefined)
         return "Enter minimum or maximum items.";
-    if (rule.kind === "condition" && unresolvedConditionProperty(rule.condition))
-        return "Resolve the condition property.";
     if (rule.kind === "reusable" && !String(rule.reusableRuleId ?? "").trim())
         return "Choose a reusable rule.";
     return undefined;

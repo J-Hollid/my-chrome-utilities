@@ -4,6 +4,7 @@ export function renderCanonicalFocusedEditor(document, node, context) {
     const inherited = node.provenance.filter(({ state }) => state === "inherited" || state === "shadowed"), local = node.provenance.filter(({ state }) => state !== "inherited" && state !== "shadowed"), conflicts = node.provenance.filter(({ state }) => state === "shadowed"), validation = conflicts.length ? "warning" : "valid";
     wrapper.setAttribute("aria-label", "Focused property editor");
     wrapper.dataset.focusedPropertyEditor = "true";
+    wrapper.dataset.schemaOverlayLayer = "child";
     wrapper.dataset.focusedPropertyPath = context.canonicalPropertyPath(document, node.id);
     heading.textContent = `Focused property · ${node.name}`;
     identity.textContent = `${context.canonicalPropertyPath(document, node.id)} · stable identity ${node.id}`;

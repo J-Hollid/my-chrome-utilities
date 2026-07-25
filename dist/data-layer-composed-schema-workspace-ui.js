@@ -36,7 +36,7 @@ export function mountComposedSchemaWorkspace(options) {
     rows.setAttribute("role", "table");
     rows.setAttribute("aria-label", `${options.model.heading} rows`);
     const visibleModel = () => { const needle = query.trim().toLowerCase(), rows = options.model.rows.filter((row) => !needle || row.path.toLowerCase().includes(needle) || row.source.toLowerCase().includes(needle) || options.effectiveText(row).toLowerCase().includes(needle)).sort((left, right) => sortMode === "source" ? left.source.localeCompare(right.source) || left.path.localeCompare(right.path) : sortMode === "validation" ? left.validationState.localeCompare(right.validationState) || left.path.localeCompare(right.path) : left.path.localeCompare(right.path)); return { ...options.model, rows }; };
-    const rerender = () => renderComposedRows(rows, { dom: document, model: visibleModel(), effectiveText: options.effectiveText, ...(options.onRepair ? { onRepair: options.onRepair } : {}), ...(options.onStructure ? { onStructure: (kind, path, name) => { pendingStructure.push({ kind, path, ...(name === undefined ? {} : { name }) }); rerender(); } } : {}), ...(options.rowPathDataset ? { rowPathDataset: options.rowPathDataset } : {}), activePath, overlayOpen, focusedOpen, activeSection, draft, removed, confirmedAction, removedRuleIds, removedValueIds, restoredRuleIds, restoredValueIds, stagedLocalValueIds, overriddenRuleIds, overrideRule, pendingAction, pendingStructure, beginAction, cancelAction, confirmAction, open, stageInline, close, save, render: rerender, selectSection: (value) => { activeSection = value; focusedOpen = true; overlayState = schemaTableOverlayTransition(overlayState, { kind: "focus" }); rerender(); } });
+    const rerender = () => renderComposedRows(rows, { dom: document, model: visibleModel(), effectiveText: options.effectiveText, ...(options.onRepair ? { onRepair: options.onRepair } : {}), ...(options.onStructure ? { onStructure: (kind, path, name) => { pendingStructure.push({ kind, path, ...(name === undefined ? {} : { name }) }); rerender(); } } : {}), ...(options.rowPathDataset ? { rowPathDataset: options.rowPathDataset } : {}), activePath, overlayOpen, focusedOpen, activeSection, draft, removed, confirmedAction, removedRuleIds, removedValueIds, restoredRuleIds, restoredValueIds, stagedLocalValueIds, overriddenRuleIds, overrideRule, pendingAction, pendingStructure, beginAction, cancelAction, confirmAction, open, stageInline, close, closeChild, save, render: rerender, selectSection: (value) => { activeSection = value; focusedOpen = true; overlayState = schemaTableOverlayTransition(overlayState, { kind: "focus" }); rerender(); } });
     const overrideRule = (sourceId) => { if (!draft)
         return; const source = options.model.rows.find(({ path }) => path === activePath)?.effective.rules?.find((rule) => String(rule.id ?? "") === sourceId); if (!source || source.enforcement === "invariant")
         return; const id = `rule:${crypto.randomUUID()}`, replacement = { ...structuredClone(source), id, replacesRuleId: sourceId, provenance: { source: "created", state: "overridden", sourceId } }; draft = { ...draft, rules: [...draft.rules, replacement] }; overriddenRuleIds.add(id); rerender(); };
@@ -70,6 +70,8 @@ export function mountComposedSchemaWorkspace(options) {
         draft = Object.assign(draft, schemaTableStageExpectedOrAllowed(draft, value)); };
     const close = (reason = "cancel") => { overlayState = schemaTableOverlayTransition(overlayState, { kind: reason }); const restorePath = ("restorePath" in overlayState ? overlayState.restorePath : undefined) ?? originPath; activePath = undefined; overlayOpen = false; focusedOpen = false; activeSection = "definition"; draft = undefined; removed = false; confirmedAction = undefined; removedRuleIds = new Set(); removedValueIds = new Set(); restoredRuleIds = new Set(); restoredValueIds = new Set(); stagedLocalValueIds = new Set(); overriddenRuleIds = new Set(); pendingStructure = []; pendingAction = undefined; rerender(); const target = originFocus?.isConnected ? originFocus : restorePath ? rows.querySelector(`[aria-label="Property actions for ${CSS.escape(restorePath)}"]`) : undefined; originFocus = undefined; originPath = undefined; if (target)
         queueMicrotask(() => target.focus({ preventScroll: true })); };
+    const closeChild = () => { focusedOpen = false; overlayState = activePath ? { phase: "menu", path: activePath } : { phase: "closed" }; rerender(); const target = rows.querySelector(`[data-property-context-menu="true"] [data-section="${activeSection}"] button`); if (target)
+        queueMicrotask(() => target.focus({ preventScroll: true })); };
     const beginAction = (row, focus) => { open(row, focus); focusedOpen = true; pendingAction = row.action === "reset" ? "reset" : "remove"; rerender(); };
     const cancelAction = () => { pendingAction = undefined; removed = false; confirmedAction = undefined; rerender(); };
     const confirmAction = (_row) => { confirmedAction = pendingAction; pendingAction = undefined; removed = true; rerender(); };
@@ -83,7 +85,10 @@ export function mountComposedSchemaWorkspace(options) {
     sort.addEventListener("change", () => { sortMode = sort.value; rerender(); });
     section.addEventListener("keydown", (event) => { if (event.key === "Escape" && overlayOpen) {
         event.preventDefault();
-        close("escape");
+        if (focusedOpen)
+            closeChild();
+        else
+            close("escape");
     } });
     rerender();
     section.append(heading, summary, filterControls, addControls, rows);

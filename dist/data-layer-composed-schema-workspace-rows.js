@@ -41,6 +41,7 @@ function focused(row, context) {
     const { dom } = context, editor = dom.createElement("section"), heading = dom.createElement("h3"), identity = dom.createElement("p"), effective = dom.createElement("p"), host = dom.createElement("section"), actions = dom.createElement("div");
     editor.setAttribute("aria-label", `${row.path} focused property editor`);
     editor.dataset.focusedPropertyEditor = "true";
+    editor.dataset.schemaOverlayLayer = "child";
     heading.textContent = `Focused property · ${row.path}`;
     identity.textContent = `${row.path} · stable identity ${row.effective.definitionId ?? row.path}`;
     effective.textContent = `Inherited value and source: ${row.inherited ? context.effectiveText({ ...row, effective: row.inherited }) : "none"} · Local value: ${Object.keys(row.local).length > 1 ? context.effectiveText({ ...row, effective: row.local }) : "none"} · Effective result: ${context.effectiveText(row)} · Validation state: ${row.validationState} · Conflicts: ${row.validationState === "blocked" ? row.message : "none"}`;
@@ -59,7 +60,7 @@ function focused(row, context) {
         actions.append(impact, button(dom, context.pendingAction === "reset" ? "Cancel reset" : "Cancel removal", context.cancelAction), button(dom, context.pendingAction === "reset" ? "Confirm reset to parents" : "Confirm remove local property", () => context.confirmAction(row)));
     }
     else
-        actions.append(button(dom, "Cancel", context.close), button(dom, "Review changes", () => { const review = dom.createElement("section"), list = dom.createElement("ul"); review.setAttribute("aria-label", "Review changes"); const baselineRules = (row.local.rules ?? []), effectiveRules = (row.effective.rules ?? []), draftRules = (context.draft?.rules ?? []), draftValues = context.draft?.allowedValues ?? []; for (const inheritedRule of effectiveRules)
+        actions.append(button(dom, "Cancel", context.closeChild), button(dom, "Review changes", () => { const review = dom.createElement("section"), list = dom.createElement("ul"); review.setAttribute("aria-label", "Review changes"); const baselineRules = (row.local.rules ?? []), effectiveRules = (row.effective.rules ?? []), draftRules = (context.draft?.rules ?? []), draftValues = context.draft?.allowedValues ?? []; for (const inheritedRule of effectiveRules)
             if (!draftRules.some((candidate) => String(candidate.id ?? "") === String(inheritedRule.id ?? "")))
                 list.append(Object.assign(dom.createElement("li"), { textContent: `Inherited rule ${String(inheritedRule.id ?? "(unidentified)")} · prospective result ${JSON.stringify(inheritedRule)} · consumers recompile` })); for (const lifecycle of composedReviewLifecycleInventory(context.removed, context.confirmedAction, context.restoredRuleIds, context.restoredValueIds))
             list.append(Object.assign(dom.createElement("li"), { textContent: `${lifecycle} · prospective effective result ${row.inherited ? context.effectiveText({ ...row, effective: row.inherited }) : "none"} · local lifecycle is explicit and affected consumers recompile` })); if (!context.removed) {

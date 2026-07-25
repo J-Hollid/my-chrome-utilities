@@ -69,6 +69,8 @@ export function mountCanonicalSchemaEditor(options) {
         if (target)
             queueMicrotask(() => target.focus({ preventScroll: true }));
     };
+    const closeChild = () => { focusedPropertyId = undefined; review = undefined; overlayState = activePropertyId ? { phase: "menu", path: canonicalPropertyPath(current(), activePropertyId) } : { phase: "closed" }; render(); const target = options.host.querySelector(`[data-property-context-menu="true"] [data-section="${activeSection}"] button`); if (target)
+        queueMicrotask(() => target.focus({ preventScroll: true })); };
     const openProperty = (node, focus, section = "definition") => {
         const document = current(), path = canonicalPropertyPath(document, node.id);
         overlayState = schemaTableOverlayTransition(overlayState, { kind: "open", path });
@@ -135,10 +137,13 @@ export function mountCanonicalSchemaEditor(options) {
         render();
     };
     const stageStructure = (operation) => { stagedOperations = [...stagedOperations, operation]; feedback = `Staged ${operation.kind} for review.`; render(); };
-    const render = () => renderCanonicalSchemaEditor({ dom, options, document: current(), query, propertyFilter, propertySort, feedback, activePropertyId, activeSection, menuPropertyId, focusedPropertyId, working, review, current, setQuery: (value) => { query = value; }, setPropertyFilter: (value) => { propertyFilter = value; }, setPropertySort: (value) => { propertySort = value; }, setFeedback: (value) => { feedback = value; }, setMenuPropertyId: (value) => { menuPropertyId = value; }, ensureWorking, stageInline, selectedNode, openProperty, command, render, renderMenu: (node) => renderCanonicalFocusedMenu(node, { dom, current, sourceState: focusedSourceState, ensureWorking, getWorking: () => working, activeSection, setActiveSection: (value) => { activeSection = value; focusedPropertyId = node.id; overlayState = schemaTableOverlayTransition(overlayState, { kind: "focus" }); }, setMenuPropertyId: (value) => { menuPropertyId = value; }, render, close: closeFocused, feedback: (message) => { feedback = message; }, provenanceText }), renderFocusedEditor: (document, node) => renderCanonicalFocusedEditor(document, node, { dom, activeSection, sectionLabel, canonicalPropertyPath, provenanceText, presenceText, renderSection: (host, value) => renderCanonicalFocusedSection(host, { dom, current, node: value, getWorking: () => working, setWorking: (next) => { working = next; }, activeSection, setActiveSection: (section) => { activeSection = section; }, removedRuleIds, removedValueIds, id: options.id, stageStructure, render, patchFor, command, select: (id) => { activePropertyId = id; }, feedback: (message) => { feedback = message; } }), close: closeFocused, review: showReview, save: saveFocused }) });
+    const render = () => renderCanonicalSchemaEditor({ dom, options, document: current(), query, propertyFilter, propertySort, feedback, activePropertyId, activeSection, menuPropertyId, focusedPropertyId, working, review, current, setQuery: (value) => { query = value; }, setPropertyFilter: (value) => { propertyFilter = value; }, setPropertySort: (value) => { propertySort = value; }, setFeedback: (value) => { feedback = value; }, setMenuPropertyId: (value) => { menuPropertyId = value; }, ensureWorking, stageInline, selectedNode, openProperty, command, render, renderMenu: (node) => renderCanonicalFocusedMenu(node, { dom, current, sourceState: focusedSourceState, ensureWorking, getWorking: () => working, activeSection, setActiveSection: (value) => { activeSection = value; focusedPropertyId = node.id; overlayState = schemaTableOverlayTransition(overlayState, { kind: "focus" }); }, setMenuPropertyId: (value) => { menuPropertyId = value; }, render, close: closeFocused, feedback: (message) => { feedback = message; }, provenanceText }), renderFocusedEditor: (document, node) => renderCanonicalFocusedEditor(document, node, { dom, activeSection, sectionLabel, canonicalPropertyPath, provenanceText, presenceText, renderSection: (host, value) => renderCanonicalFocusedSection(host, { dom, current, node: value, getWorking: () => working, setWorking: (next) => { working = next; }, activeSection, setActiveSection: (section) => { activeSection = section; }, removedRuleIds, removedValueIds, id: options.id, stageStructure, render, patchFor, command, select: (id) => { activePropertyId = id; }, feedback: (message) => { feedback = message; } }), close: closeChild, review: showReview, save: saveFocused }) });
     options.host.addEventListener("keydown", (event) => { if (event.key === "Escape" && working) {
         event.preventDefault();
-        closeFocused("escape");
+        if (focusedPropertyId)
+            closeChild();
+        else
+            closeFocused("escape");
     } });
     render();
     return { render };
