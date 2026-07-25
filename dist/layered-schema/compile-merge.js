@@ -18,6 +18,10 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
         }
         else
             next.allowedValues = clone(constraint.allowedValues);
+        if (constraint.allowedValueIds)
+            next.allowedValueIds = clone(constraint.allowedValueIds);
+        if (constraint.allowedValueProvenance)
+            next.allowedValueProvenance = clone(constraint.allowedValueProvenance);
     }
     if (prior.presence === "required" && constraint.presence === "optional")
         conflict(constraint.path, "required cannot be silently relaxed", [prior.origins.at(-1).contributorName, contributor.name]);

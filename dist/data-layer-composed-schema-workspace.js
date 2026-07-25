@@ -10,7 +10,7 @@ const sparseFacetKeys = (constraint) => Object.fromEntries(Object.entries(constr
 const sparseAgainst = (constraint, inherited) => { const result = { path: constraint.path }, parent = inherited ? sparseFacetKeys(inherited) : {}; for (const [key, value] of Object.entries(sparseFacetKeys(constraint))) {
     if (key === "definitionId" && inherited && !inherited.definitionId)
         continue;
-    if (key === "allowedValueIds" && inherited && !inherited.allowedValueIds && JSON.stringify(constraint.allowedValues) === JSON.stringify(inherited.allowedValues))
+    if (key === "allowedValueIds" && inherited && !inherited.allowedValueIds && JSON.stringify(constraint.allowedValues) === JSON.stringify(inherited.allowedValues) && !(constraint.allowedValueProvenance ?? []).some(({ state }) => state !== "inherited"))
         continue;
     if (key === "target" && inherited && value === "all" && parent.target === undefined)
         continue;

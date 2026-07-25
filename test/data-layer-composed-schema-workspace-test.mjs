@@ -8,7 +8,8 @@ import {
 } from "../dist/data-layer-composed-schema-workspace.js";
 import {applyCanonicalCommand,canonicalPropertyPath} from "../dist/data-layer-canonical-schema.js";
 import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
-import {composedReviewFacetDelta} from "../dist/data-layer-composed-schema-workspace-rows.js";
+import {composedReviewFacetDelta,composedReviewLifecycleInventory} from "../dist/data-layer-composed-schema-workspace-rows.js";
+import {composedFacetDraft} from "../dist/data-layer-composed-schema-builders.js";
 
 const state=createSpecificationProject({name:"Composed schemas",site:"shop.example",id:(kind)=>`${kind}:workspace`});
 state.project.collections.profiles.push({id:"profile:sitewide",name:"Sitewide",schemaConstraints:[
@@ -40,13 +41,15 @@ assert.deepEqual(step.provenance.map(({contributorName,state})=>({contributorNam
   {contributorName:"Retail Checkout",state:"shadowed"},
   {contributorName:"Cart",state:"effective"},
 ]);
-const reviewDelta=composedReviewFacetDelta(step,{type:"number",itemType:undefined,presence:"required",expectedValue:"3b",allowedValues:[],condition:{kind:"all",children:[]},rules:[],documentation:"changed",exampleMethod:"custom",exampleValue:"3b"});
+const reviewDelta=composedReviewFacetDelta(step,{type:"number",itemType:undefined,presence:"required",expectedValue:"3b",allowedValues:[],condition:{kind:"all",children:[{kind:"predicate",propertyId:"/page_type",operator:"Exists"}]},rules:[],documentation:"changed",exampleMethod:"custom",exampleValue:"3b"});
 assert.ok(reviewDelta.some(({label})=>label==="Edited type"));
 assert.ok(reviewDelta.some(({label})=>label==="Edited presence"));
 assert.ok(reviewDelta.some(({label})=>label==="Edited expected value"));
 assert.ok(reviewDelta.some(({label})=>label==="Edited condition"));
 assert.ok(reviewDelta.some(({label})=>label==="Edited documentation"));
 assert.ok(reviewDelta.some(({label})=>label==="Edited example"));
+assert.deepEqual(composedReviewFacetDelta(step,composedFacetDraft(step.local,step.effective)),[],"unchanged normalized condition and example facets do not appear as edits");
+assert.deepEqual(composedReviewLifecycleInventory(true,"reset",new Set(["rule:restored"]),new Set(["value:restored"])),["Reset to parents","Restored rule rule:restored","Restored value value:restored"],"Review inventories reset and restored lifecycle transitions explicitly");
 assert.equal(workspace.rows.find(({path})=>path==="/page_name").action,"override");
 
 const reset=resetComposedSchemaLocalProperty(state,"pages","page:cart","/funnel_step");

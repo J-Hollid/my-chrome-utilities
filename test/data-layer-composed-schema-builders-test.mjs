@@ -13,14 +13,26 @@ import {
   removeComposedAllowedValue,
   removeComposedConditionBranch,
   overrideComposedRule,
+  overrideComposedAllowedValue,
   sparseComposedFacets,
   typedComposedValue,
 } from "../dist/data-layer-composed-schema-builders.js";
 import {compileLayeredSchema,validateLayeredObservation} from "../dist/data-layer-layered-schema.js";
+import {sharedConditionOperators,sharedConditionValueMounted,sharedTypedConditionValue} from "../dist/data-layer-shared-condition-tree-editor.js";
 
 const inherited={path:"/funnel_step",type:"string",presence:"required",allowedValues:["2","3a","3b"],documentation:"Checkout step"};
+assert.equal(sharedConditionValueMounted("Exists"),false,"Exists edits unmount the comparison input");
+assert.equal(sharedConditionValueMounted("Equals"),true,"comparison edits mount the typed input");
+assert.ok(sharedConditionOperators("number").includes("Greater than")&&!sharedConditionOperators("number").includes("Contains"),"predicate operators follow the selected property type");
+assert.equal(sharedTypedConditionValue("number","2.5"),2.5,"predicate edits retain numeric types");
 let draft=composedFacetDraft({path:"/funnel_step",expectedValue:"2"},inherited);
 assert.deepEqual(draft.allowedValues,["2","3a","3b"]);
+const inheritedValueDraft=composedFacetDraft({path:"/funnel_step"},{path:"/funnel_step",allowedValues:["2","3a","3b"],allowedValueIds:["parent:2","parent:3a","parent:3b"]});
+const overriddenValueDraft=overrideComposedAllowedValue(inheritedValueDraft,1,"local:funnel-step:3a");
+assert.deepEqual(overriddenValueDraft.allowedValues,["2","3a","3b"],"overriding an inherited value does not duplicate its effective entry");
+assert.deepEqual(overriddenValueDraft.allowedValueIds,["parent:2","local:funnel-step:3a","parent:3b"],"an overridden value gets exactly one local identity in place");
+assert.equal(overriddenValueDraft.allowedValueProvenance.find(({id})=>id==="local:funnel-step:3a").state,"overridden");
+assert.deepEqual(sparseComposedFacets(overriddenValueDraft,{path:"/funnel_step",allowedValues:["2","3a","3b"],allowedValueIds:["parent:2","parent:3a","parent:3b"]}),{allowedValueIds:["parent:2","local:funnel-step:3a","parent:3b"],allowedValueProvenance:[{id:"local:funnel-step:3a",state:"overridden",source:"focused-editor"}]},"same-value overrides retain their local ownership identity");
 assert.equal(draft.exampleMethod,"blank");
 
 const arrayDraft=composedFacetDraft({path:"/items",type:"array",itemType:"number",expectedValue:[1,2]},{path:"/items",type:"array",itemType:"string"});

@@ -2,7 +2,17 @@ import { focusedOwnershipActions, focusedPropertySectionLabels, focusedPropertyS
 import { renderComposedFocusedSection } from "./data-layer-composed-schema-workspace-focused-sections.js";
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 const actionText = (row) => row.action === "override" ? "Override here" : row.action === "reset" ? "Reset to parents" : "Remove local property";
-export function composedReviewFacetDelta(row, draft) { const baseline = { ...row.inherited, ...row.local }, next = { type: draft.type, itemType: draft.itemType, presence: draft.presence, expectedValue: draft.expectedValue, condition: draft.condition, documentation: draft.documentation, exampleValue: draft.exampleValue, exampleMethod: draft.exampleMethod }; return ["type", "itemType", "presence", "expectedValue", "condition", "documentation", "exampleValue", "exampleMethod"].filter((key) => JSON.stringify(next[key]) !== JSON.stringify(baseline[key])).map((key) => ({ label: key === "expectedValue" ? "Edited expected value" : key === "exampleValue" || key === "exampleMethod" ? "Edited example" : `Edited ${key}`, detail: `${row.path} · prospective result ${JSON.stringify(next[key])} · consumers recompile` })); }
+export function composedReviewLifecycleInventory(removed, confirmedAction, restoredRuleIds, restoredValueIds) { const entries = []; if (removed)
+    entries.push(confirmedAction === "reset" ? "Reset to parents" : "Remove local property"); for (const id of restoredRuleIds)
+    entries.push(`Restored rule ${id}`); for (const id of restoredValueIds)
+    entries.push(`Restored value ${id}`); return entries; }
+const reviewCondition = (value) => { if (!value || typeof value !== "object")
+    return value; const condition = value; if (condition.kind === "predicate")
+    return { kind: "predicate", propertyId: condition.propertyId, operator: condition.operator, ...(condition.value !== undefined ? { value: condition.value } : {}) }; if (condition.kind === "all" || condition.kind === "any" || condition.kind === "not") {
+    const children = Array.isArray(condition.children) ? condition.children.map(reviewCondition) : [];
+    return condition.kind === "all" && !children.length ? undefined : { kind: condition.kind, children };
+} return value; };
+export function composedReviewFacetDelta(row, draft) { const baseline = { ...row.inherited, ...row.local }, baselineExample = Array.isArray(baseline.examples) ? baseline.examples[0] : undefined, next = { type: draft.type, itemType: draft.itemType, presence: draft.presence, expectedValue: draft.expectedValue, condition: reviewCondition(draft.condition), documentation: draft.documentation || undefined, exampleValue: draft.exampleMethod === "blank" ? undefined : draft.exampleValue }; const previous = { ...baseline, condition: reviewCondition(baseline.condition), documentation: baseline.documentation || undefined, exampleValue: baselineExample }; return ["type", "itemType", "presence", "expectedValue", "condition", "documentation", "exampleValue"].filter((key) => JSON.stringify(next[key]) !== JSON.stringify(previous[key])).map((key) => ({ label: key === "expectedValue" ? "Edited expected value" : key === "exampleValue" ? "Edited example" : `Edited ${key}`, detail: `${row.path} · prospective result ${JSON.stringify(next[key])} · consumers recompile` })); }
 function contextMenu(row, context) {
     const { dom } = context, menu = dom.createElement("div");
     menu.setAttribute("role", "menu");
@@ -36,7 +46,7 @@ function focused(row, context) {
     identity.textContent = `${row.path} · stable identity ${row.effective.definitionId ?? row.path}`;
     effective.textContent = `Inherited value and source: ${row.inherited ? context.effectiveText({ ...row, effective: row.inherited }) : "none"} · Local value: ${Object.keys(row.local).length > 1 ? context.effectiveText({ ...row, effective: row.local }) : "none"} · Effective result: ${context.effectiveText(row)} · Validation state: ${row.validationState} · Conflicts: ${row.validationState === "blocked" ? row.message : "none"}`;
     host.setAttribute("aria-label", `${row.path} focused ${focusedPropertySectionLabels[context.activeSection]} section`);
-    const focusedContext = { model: context.model, dom, row, getDraft: () => context.draft, activeSection: context.activeSection, removedRuleIds: context.removedRuleIds, removedValueIds: context.removedValueIds, stagedLocalValueIds: context.stagedLocalValueIds, overriddenRuleIds: context.overriddenRuleIds, overrideRule: context.overrideRule, render: context.render, ...(context.onStructure ? { onStructure: context.onStructure } : {}) };
+    const focusedContext = { model: context.model, dom, row, getDraft: () => context.draft, activeSection: context.activeSection, removedRuleIds: context.removedRuleIds, removedValueIds: context.removedValueIds, restoredRuleIds: context.restoredRuleIds, restoredValueIds: context.restoredValueIds, stagedLocalValueIds: context.stagedLocalValueIds, overriddenRuleIds: context.overriddenRuleIds, overrideRule: context.overrideRule, render: context.render, ...(context.onStructure ? { onStructure: context.onStructure } : {}) };
     renderComposedFocusedSection(host, focusedContext);
     if (context.pendingAction) {
         const impact = dom.createElement("p");
@@ -45,14 +55,15 @@ function focused(row, context) {
         actions.append(impact, button(dom, context.pendingAction === "reset" ? "Cancel reset" : "Cancel removal", context.cancelAction), button(dom, context.pendingAction === "reset" ? "Confirm reset to parents" : "Confirm remove local property", () => context.confirmAction(row)));
     }
     else
-        actions.append(button(dom, "Cancel", context.close), button(dom, "Review changes", () => { const review = dom.createElement("section"), list = dom.createElement("ul"); review.setAttribute("aria-label", "Review changes"); const baselineRules = (row.local.rules ?? []), effectiveRules = (row.effective.rules ?? []), draftRules = (context.draft?.rules ?? []), draftValues = context.draft?.allowedValues ?? []; for (const change of composedReviewFacetDelta(row, context.draft))
+        actions.append(button(dom, "Cancel", context.close), button(dom, "Review changes", () => { const review = dom.createElement("section"), list = dom.createElement("ul"); review.setAttribute("aria-label", "Review changes"); const baselineRules = (row.local.rules ?? []), effectiveRules = (row.effective.rules ?? []), draftRules = (context.draft?.rules ?? []), draftValues = context.draft?.allowedValues ?? []; for (const lifecycle of composedReviewLifecycleInventory(context.removed, context.confirmedAction, context.restoredRuleIds, context.restoredValueIds))
+            list.append(Object.assign(dom.createElement("li"), { textContent: `${lifecycle} · prospective effective result ${row.inherited ? context.effectiveText({ ...row, effective: row.inherited }) : "none"} · local lifecycle is explicit and affected consumers recompile` })); for (const change of composedReviewFacetDelta(row, context.draft))
             list.append(Object.assign(dom.createElement("li"), { textContent: `${change.label} · ${change.detail}` })); for (const rule of draftRules) {
             const id = String(rule.id ?? "");
             const baseline = baselineRules.find((candidate) => String(candidate.id ?? "") === id);
             const state = baseline ? JSON.stringify(baseline) === JSON.stringify(rule) ? "Unchanged" : "Edited" : effectiveRules.some((candidate) => String(candidate.id ?? "") === id) ? "Inherited" : "Added";
             list.append(Object.assign(dom.createElement("li"), { textContent: `${state} rule ${id || "(unidentified)"} · prospective result ${JSON.stringify(rule)} · consumers recompile` }));
-        } for (const value of draftValues) {
-            const valueId = context.draft?.allowedValueIds?.[draftValues.indexOf(value)];
+        } for (const [index, value] of draftValues.entries()) {
+            const valueId = context.draft?.allowedValueIds?.[index];
             list.append(Object.assign(dom.createElement("li"), { textContent: `${context.removedValueIds.has(String(valueId)) ? "Removed" : context.stagedLocalValueIds.has(String(valueId)) ? "Overridden" : "Allowed"} value ${valueId ?? "(unidentified)"} · prospective result ${JSON.stringify(value)} · consumers recompile` }));
         } for (const id of context.removedRuleIds)
             list.append(Object.assign(dom.createElement("li"), { textContent: `Removed rule ${id} · prospective result falls back to inherited definition` })); for (const id of context.removedValueIds)

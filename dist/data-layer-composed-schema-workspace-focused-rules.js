@@ -38,9 +38,9 @@ export function renderComposedFocusedRules(host, context) {
     list.setAttribute("aria-label", "Stable rule inventory");
     const localIds = new Set((context.row.local.rules ?? []).map((rule) => String(rule.id ?? "")));
     draft.rules.forEach((rule, index) => { const row = dom.createElement("article"), summary = dom.createElement("p"), id = String(rule.id ?? `rule-${index}`), local = localIds.has(id) || context.overriddenRuleIds.has(id), removed = context.removedRuleIds.has(id); row.dataset.ruleId = id; row.dataset.ownership = local ? "local" : "inherited"; summary.textContent = `${String(rule.name ?? rule.kind ?? "rule")} · ${String(rule.kind ?? "custom")} · ${String(rule.severity ?? "error")} · ${String(rule.message ?? "No issue message")} · ${local ? "local" : "inherited"}${removed ? " · Removed" : ""}`; row.append(summary, button(dom, "View", () => { row.dataset.ruleMode = "view"; const detail = dom.createElement("p"); detail.textContent = `Rule ${id} · definition ${JSON.stringify(rule)} · effective ${rule.enabled === false ? "disabled" : "enabled"} · source ${local ? "local" : "inherited"}`; row.append(detail); })); if (local && !removed)
-        row.append(button(dom, "Edit", () => { row.dataset.ruleMode = "edit"; renderRuleEditor(row, rule, index, context); }), button(dom, "Remove local", () => { context.removedRuleIds.add(id); context.render(); }));
+        row.append(button(dom, "Edit", () => { row.dataset.ruleMode = "edit"; renderRuleEditor(row, rule, index, context); }), button(dom, "Remove local", () => { context.restoredRuleIds.delete(id); context.removedRuleIds.add(id); context.render(); }));
     else if (local)
-        row.append(button(dom, "Restore", () => { context.removedRuleIds.delete(id); context.render(); }));
+        row.append(button(dom, "Restore", () => { context.removedRuleIds.delete(id); context.restoredRuleIds.add(id); context.render(); }));
     else
         row.append(button(dom, "Override here", () => context.overrideRule(index)), button(dom, "Open source", () => { row.dataset.ruleMode = "source"; const detail = dom.createElement("p"); detail.textContent = `Source rule ${id} · inherited definition is read-only.`; row.append(detail); })); list.append(row); });
     const addPanel = dom.createElement("fieldset"), kind = dom.createElement("select"), fields = dom.createElement("div");
