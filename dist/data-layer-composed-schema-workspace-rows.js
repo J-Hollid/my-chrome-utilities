@@ -29,11 +29,13 @@ const reviewCondition = (value) => { if (!value || typeof value !== "object")
 export function composedReviewFacetDelta(row, draft) { const baseline = { ...row.inherited, ...row.local }, baselineExample = Array.isArray(baseline.examples) ? baseline.examples[0] : undefined, next = { type: draft.type, itemType: draft.itemType, presence: draft.presence, expectedValue: draft.expectedValue, condition: reviewCondition(draft.condition), documentation: draft.documentation || undefined, exampleValue: draft.exampleMethod === "blank" ? undefined : draft.exampleValue }; const previous = { ...baseline, condition: reviewCondition(baseline.condition), documentation: baseline.documentation || undefined, exampleValue: baselineExample }; return ["type", "itemType", "presence", "expectedValue", "condition", "documentation", "exampleValue"].filter((key) => JSON.stringify(next[key]) !== JSON.stringify(previous[key])).map((key) => ({ label: key === "expectedValue" ? "Edited expected value" : key === "exampleValue" ? "Edited example" : `Edited ${key}`, detail: `${row.path} · prospective result ${JSON.stringify(next[key])} · consumers recompile` })); }
 function contextMenu(row, context) {
     const local = Object.keys(row.local).some((key) => key !== "path"), inherited = Boolean(row.inherited), actions = focusedOwnershipActions({ local, inherited, overridden: row.action === "reset", invariant: row.effective.enforcement === "invariant", conflict: row.validationState === "blocked", replaceable: row.effective.enforcement === "overridable" });
-    return renderFocusedPropertyMenu({ dom: context.dom, path: row.path, actions, sectionsDisabled: context.removed, sectionSummary: (section) => section === "values" ? `${(context.draft?.allowedValues ?? row.local.allowedValues ?? row.effective.allowedValues ?? []).length} allowed values` : section === "rules" ? `${(context.draft?.rules ?? []).length} rules` : "View effective value", selectSection: (section) => { context.setActiveSection(section); context.render(); }, runAction: (action) => { if (action === "Remove local" || action === "Reset to parent") {
+    return renderFocusedPropertyMenu({ dom: context.dom, path: row.path, actions, sectionsDisabled: context.removed, close: context.close, sectionSummary: (section) => section === "values" ? `${(context.draft?.allowedValues ?? row.local.allowedValues ?? row.effective.allowedValues ?? []).length} allowed values` : section === "rules" ? `${(context.draft?.rules ?? []).length} rules` : "View effective value", selectSection: context.selectSection, runAction: (action) => { if (action === "Remove local" || action === "Reset to parent") {
             context.beginAction(row);
             return;
-        } if (action === "Override here" || action === "Replace here")
-            context.setActiveSection("definition"); context.render(); } });
+        } if (action === "Override here" || action === "Replace here" || action === "Edit")
+            context.selectSection("definition");
+        else
+            context.render(); } });
 }
 function focused(row, context) {
     const { dom } = context, editor = dom.createElement("section"), heading = dom.createElement("h3"), identity = dom.createElement("p"), effective = dom.createElement("p"), host = dom.createElement("section"), actions = dom.createElement("div");
@@ -86,7 +88,7 @@ function focused(row, context) {
     return editor;
 }
 export function renderComposedRows(rows, context) {
-    const { dom } = context, table = dom.createElement("table"), head = dom.createElement("thead"), headRow = dom.createElement("tr"), body = dom.createElement("tbody");
+    const { dom } = context, table = rows.querySelector(":scope > table") ?? dom.createElement("table"), head = dom.createElement("thead"), headRow = dom.createElement("tr"), body = dom.createElement("tbody");
     for (const { label } of schemaTableColumns)
         headRow.append(Object.assign(dom.createElement("th"), { textContent: label }));
     head.append(headRow);
@@ -117,13 +119,15 @@ export function renderComposedRows(rows, context) {
             const overlay = dom.createElement("section");
             overlay.dataset.schemaRowOverlay = "true";
             overlay.setAttribute("aria-label", `${row.path} property overlay`);
-            overlay.style.cssText = "position:absolute;left:0;top:100%;z-index:10;min-width:42rem;max-width:80vw;background:Canvas;border:1px solid ButtonBorder;padding:0.75rem;";
-            overlay.append(contextMenu(row, context), focused(row, context));
+            overlay.style.cssText = "position:absolute;left:0;top:100%;z-index:10;width:min(42rem,calc(100vw - 2rem));max-width:calc(100vw - 2rem);box-sizing:border-box;overflow:auto;background:Canvas;border:1px solid ButtonBorder;padding:0.75rem;";
+            overlay.append(contextMenu(row, context));
+            if (context.focusedOpen)
+                overlay.append(focused(row, context));
             identity.append(overlay);
         }
         body.append(tr);
     }
-    table.append(head, body);
+    table.replaceChildren(head, body);
     table.setAttribute("aria-label", `${context.model.heading} rows`);
     rows.replaceChildren(table);
 }

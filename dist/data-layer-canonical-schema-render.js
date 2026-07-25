@@ -1,7 +1,11 @@
 import { renderCanonicalNavigator } from "./data-layer-canonical-schema-render-navigator.js";
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 export function renderCanonicalSchemaEditor(context) {
-    const { dom, options, document } = context;
+    const { dom, options, document } = context, retainedTable = document.view === "table" ? options.host.querySelector('table[data-canonical-view="table"]') : null;
+    if (retainedTable)
+        context.tableElement = retainedTable;
+    else
+        delete context.tableElement;
     options.host.replaceChildren();
     options.host.setAttribute("aria-label", `${options.surface} canonical schema editor`);
     options.host.dataset.canonicalSchemaId = document.id;
@@ -16,7 +20,7 @@ export function renderCanonicalSchemaEditor(context) {
     header.append(title, status, undo, redo);
     options.host.append(header, renderCanonicalNavigator(context));
     const node = context.selectedNode(document);
-    if (document.view !== "table" && node && context.activePropertyId === node.id) {
+    if (document.view !== "table" && node && context.focusedPropertyId === node.id) {
         context.ensureWorking(node);
         options.host.append(context.renderFocusedEditor(document, node));
         if (context.review)

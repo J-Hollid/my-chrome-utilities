@@ -24,6 +24,8 @@ export function renderFocusedPropertyMenu(options) {
         ownership.append(control);
     }
     menu.append(ownership);
+    if (options.close)
+        menu.append(button(dom, "Cancel", options.close));
     return menu;
 }
 //# sourceMappingURL=data-layer-focused-schema-property-menu.js.map

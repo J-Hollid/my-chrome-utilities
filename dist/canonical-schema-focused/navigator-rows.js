@@ -28,9 +28,9 @@ export function renderNavigatorRows(tree, context) {
     }
 }
 const editableCell = (context, node, facet, value) => { const control = context.dom.createElement("input"); control.type = "text"; control.value = value; control.dataset.inlineSchemaFacet = facet; control.setAttribute("aria-label", `${facet} for ${canonicalPropertyPath(context.document, node.id)}`); control.addEventListener("input", () => context.stageInline(node, facet, control.value)); return control; };
-const sourceText = (node) => node.provenance.map(({ contributorName, source, state }) => contributorName ?? state ?? source).join(", ") || "Created here";
+const sourceText = (node, fallback) => node.provenance.map(({ contributorName, source, state }) => contributorName ?? state ?? (source === "created" ? fallback : source)).join(", ") || fallback;
 function renderTable(tree, context) {
-    const { dom } = context, table = dom.createElement("table"), head = dom.createElement("thead"), headRow = dom.createElement("tr"), body = dom.createElement("tbody");
+    const { dom } = context, table = context.tableElement ?? dom.createElement("table"), head = dom.createElement("thead"), headRow = dom.createElement("tr"), body = dom.createElement("tbody");
     for (const { label } of schemaTableColumns)
         headRow.append(Object.assign(dom.createElement("th"), { textContent: label }));
     head.append(headRow);
@@ -49,20 +49,23 @@ function renderTable(tree, context) {
             cell.append(control);
             tr.append(cell);
         }
-        tr.append(Object.assign(dom.createElement("td"), { textContent: sourceText(node) }), Object.assign(dom.createElement("td"), { textContent: states.join(", ") || "local" }), Object.assign(dom.createElement("td"), { textContent: states.includes("conflict") || states.includes("shadowed") ? "Needs attention" : "Ready" }));
+        tr.append(Object.assign(dom.createElement("td"), { textContent: sourceText(node, context.document.contributorName) }), Object.assign(dom.createElement("td"), { textContent: states.join(", ") || "local" }), Object.assign(dom.createElement("td"), { textContent: states.includes("conflict") || states.includes("shadowed") ? "Needs attention" : "Ready" }));
         if (context.menuPropertyId === row.id) {
             const overlay = dom.createElement("section");
             overlay.dataset.schemaRowOverlay = "true";
             overlay.setAttribute("aria-label", `${row.path} property overlay`);
-            overlay.style.cssText = "position:absolute;left:0;top:100%;z-index:10;min-width:42rem;max-width:80vw;background:Canvas;border:1px solid ButtonBorder;padding:0.75rem;";
-            overlay.append(context.renderMenu(row.node), context.renderFocusedEditor(context.document, row.node));
-            if (context.review)
-                overlay.append(context.review);
+            overlay.style.cssText = "position:absolute;left:0;top:100%;z-index:10;width:min(42rem,calc(100vw - 2rem));max-width:calc(100vw - 2rem);box-sizing:border-box;overflow:auto;background:Canvas;border:1px solid ButtonBorder;padding:0.75rem;";
+            overlay.append(context.renderMenu(row.node));
+            if (context.focusedPropertyId === row.id) {
+                overlay.append(context.renderFocusedEditor(context.document, row.node));
+                if (context.review)
+                    overlay.append(context.review);
+            }
             identity.append(overlay);
         }
         body.append(tr);
     }
-    table.append(head, body);
+    table.replaceChildren(head, body);
     table.setAttribute("aria-label", "Canonical property table");
     table.dataset.canonicalView = "table";
     tree.replaceChildren(table);
