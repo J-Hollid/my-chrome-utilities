@@ -30,21 +30,31 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
     const notify = (type, detail) => { if (typeof globalThis.dispatchEvent === "function" && typeof CustomEvent !== "undefined")
         globalThis.dispatchEvent(new CustomEvent(type, { detail })); };
     const enqueue = (label, operation) => { notify("durable-project-saving", { label }); const pending = tail.then(operation); latest = pending; tail = pending.catch(() => { }); void pending.then(() => { projectionChanged(); notify("durable-project-saved", { label }); }, error => notify("durable-project-save-failed", { label, error })); };
-    const expandPartial = async (projectId, pending, route = partialRoutes.get(projectId)) => { const installed = loaded.get(projectId), latest = route ? await repository.loadProject(projectId) : installed ?? await repository.loadProject(projectId), base = route && installed ? { ...latest, draftToken: installed.draftToken, draftSequence: installed.draftSequence } : latest, next = cleanState(pending); if (!route)
-        return { base, next }; const merged = cleanState(latest.state), { collections: nextCollections, documentationFlowGraphs, releases: nextReleases, ...nextRoot } = next.project; merged.project = { ...merged.project, ...nextRoot, collections: merged.project.collections, documentationFlowGraphs: route.includeFlowGraphs ? structuredClone(documentationFlowGraphs) : merged.project.documentationFlowGraphs, releases: route.includeReleases ? structuredClone(nextReleases) : merged.project.releases }; for (const kind of route.collectionKind ? [route.collectionKind] : []) {
-        const rawEntries = nextCollections[kind] ?? [], pendingEntries = rawEntries.filter(entity => !entity.placeholder || entity.id === route.entityId), current = merged.project.collections[kind] ?? [];
-        if (route.entityId && kind === route.collectionKind) {
-            const selected = pendingEntries.find(({ id }) => id === route.entityId), currentSelected = current.find(({ id }) => id === route.entityId), others = pendingEntries.filter(({ id }) => id !== route.entityId && !current.some(entity => entity.id === id)), withoutSelected = current.filter(entity => entity.id !== route.entityId), mergedSelected = selected ? { ...structuredClone(currentSelected ?? {}), ...structuredClone(selected) } : undefined;
-            if (mergedSelected)
-                delete mergedSelected.placeholder;
-            merged.project.collections[kind] = [...withoutSelected, ...(mergedSelected ? [mergedSelected] : []), ...structuredClone(others)];
+    const expandPartial = async (projectId, pending, route = partialRoutes.get(projectId)) => {
+        const installed = loaded.get(projectId), latest = route ? await repository.loadProject(projectId) : installed ?? await repository.loadProject(projectId), base = route && installed ? { ...latest, draftToken: installed.draftToken, draftSequence: installed.draftSequence } : latest, next = cleanState(pending);
+        if (!route)
+            return { base, next };
+        const merged = cleanState(latest.state), { collections: nextCollections, documentationFlowGraphs, releases: nextReleases, ...nextRoot } = next.project, collections = merged.project.collections, pendingCollections = nextCollections;
+        merged.project = { ...merged.project, ...nextRoot, collections: merged.project.collections, documentationFlowGraphs: route.includeFlowGraphs ? structuredClone(documentationFlowGraphs) : merged.project.documentationFlowGraphs, releases: route.includeReleases ? structuredClone(nextReleases) : merged.project.releases };
+        for (const kind of new Set([...(route.collectionKind ? [route.collectionKind] : []), ...(route.collectionKinds ?? [])])) {
+            const rawEntries = pendingCollections[kind] ?? [], pendingEntries = rawEntries.filter(entity => !entity.placeholder || entity.id === route.entityId), current = collections[kind] ?? [];
+            if (route.entityId && kind === route.collectionKind) {
+                const selected = pendingEntries.find(({ id }) => id === route.entityId), currentSelected = current.find(({ id }) => id === route.entityId), others = pendingEntries.filter(({ id }) => id !== route.entityId && !current.some(entity => entity.id === id)), withoutSelected = current.filter(entity => entity.id !== route.entityId), mergedSelected = selected ? { ...structuredClone(currentSelected ?? {}), ...structuredClone(selected) } : undefined;
+                if (mergedSelected)
+                    delete mergedSelected.placeholder;
+                collections[kind] = [...withoutSelected, ...(mergedSelected ? [mergedSelected] : []), ...structuredClone(others)];
+            }
+            else {
+                const changed = new Map(pendingEntries.filter((entry) => !same(entry, current.find(({ id }) => id === entry.id))).map((entry) => [entry.id, entry])), retained = current.map((entry) => changed.has(entry.id) ? structuredClone(changed.get(entry.id)) : entry), added = pendingEntries.filter((entry) => !current.some(({ id }) => id === entry.id));
+                collections[kind] = [...retained, ...structuredClone(added)];
+            }
         }
+        if (next.draft)
+            merged.draft = structuredClone(next.draft);
         else
-            merged.project.collections[kind] = structuredClone(pendingEntries);
-    } if (next.draft)
-        merged.draft = structuredClone(next.draft);
-    else
-        delete merged.draft; return { base, next: merged }; };
+            delete merged.draft;
+        return { base, next: merged };
+    };
     const installCurrent = async (projectId, route) => installLoaded(projectId, route ? await repository.loadVisibleProjectRoute(projectId, route) : await repository.loadProject(projectId), route);
     const commitSchemaBatch = async (batch, retrying = false) => { if (failedSchema && !retrying)
         throw failedSchema.error; try {
