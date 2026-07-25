@@ -1,4 +1,4 @@
-import {composedFacetDraft,overrideComposedRule,sparseComposedFacets,type ComposedFacetDraft} from "./data-layer-composed-schema-builders.js";
+import {composedFacetDraft,composedFacetDraftWithoutRemovedItems,overrideComposedRule,sparseComposedFacets,type ComposedFacetDraft} from "./data-layer-composed-schema-builders.js";
 import type {ComposedSchemaRepair,ComposedSchemaRow,ComposedSchemaWorkspace} from "./data-layer-composed-schema-workspace.js";
 import type {FocusedPropertySection} from "./data-layer-focused-schema-property-ui.js";
 import {renderComposedRows} from "./data-layer-composed-schema-workspace-rows.js";
@@ -24,6 +24,6 @@ export function mountComposedSchemaWorkspace(options:ComposedSchemaWorkspaceUiOp
   const beginAction=(row:ComposedSchemaRow,focus?:HTMLElement):void=>{open(row,focus);pendingAction=row.action==="reset"?"reset":"remove";rerender();};
   const cancelAction=():void=>{pendingAction=undefined;removed=false;rerender();};
   const confirmAction=(_row:ComposedSchemaRow):void=>{pendingAction=undefined;removed=true;rerender();};
-  const save=(row:ComposedSchemaRow):void=>{if(!draft)return;if(removed){options.onReset(row);close();return;}const staged={...draft,rules:draft.rules.filter((rule)=>!removedRuleIds.has(String(rule.id??"")))};options.onSave(row,sparseComposedFacets(staged,row.inherited??{path:row.path}),pendingStructure);close();};
+  const save=(row:ComposedSchemaRow):void=>{if(!draft)return;if(removed){options.onReset(row);close();return;}const staged=composedFacetDraftWithoutRemovedItems(draft,removedRuleIds,removedValueIds);options.onSave(row,sparseComposedFacets(staged,row.inherited??{path:row.path}),pendingStructure);close();};
   filter.addEventListener("input",()=>{query=filter.value;rerender();});sort.addEventListener("change",()=>{sortMode=sort.value;rerender();});section.addEventListener("keydown",(event)=>{if(event.key==="Escape"&&activePath){event.preventDefault();close();}});rerender();section.append(heading,summary,filterControls,columns,addControls,rows);options.host.append(section);return section;
 }

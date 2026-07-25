@@ -3,10 +3,13 @@ import {
   addComposedConditionPredicate,
   composedConditionPredicate,
   composedFacetDraft,
+  composedFacetDraftWithoutRemovedItems,
   evaluateComposedCondition,
   moveComposedAllowedValue,
+  moveComposedConditionBranch,
   sparseComposedFacets,
 } from "../dist/data-layer-composed-schema-builders.js";
+import {ensureComposedConditionIds} from "../dist/data-layer-composed-schema-workspace-focused-conditions.js";
 import {compileLayeredSchema,validateLayeredObservation} from "../dist/data-layer-layered-schema.js";
 
 let seed=0x6275696c;
@@ -24,6 +27,13 @@ for(let example=0;example<150;example+=1){
   const compiled=compileLayeredSchema([{id:`page:${example}`,name:`Page ${example}`,scope:"Page",constraints:[{path,definitionId,type:"string"},{path:"/required_value",definitionId:`definition:required:${example}`,...facets}]}],{eventId:`event:${example}`,eventRole:"interaction"}),validate=(payload)=>validateLayeredObservation({targetId:`target:${example}`,targetName:`Page ${example}`,revision:1,compiled},payload).issues;
   assert.deepEqual(validate({[propertyName]:matchingValue}).map(({path:issuePath,code})=>({path:issuePath,code})),[{path:"/required_value",code:"REQUIRED"}]);
   assert.deepEqual(validate({[propertyName]:token("different")}),[]);
+
+  const identityDraft=ensureComposedConditionIds({kind:"all",children:[{kind:"predicate",propertyId:path,operator:"Exists"},{kind:"predicate",propertyId:path,operator:"Equals",value:matchingValue}]},(kind)=>`${kind}:${token("identity")}`),beforeIds=identityDraft.children.map(({id})=>id);
+  const movedIdentity=moveComposedConditionBranch({condition:identityDraft,allowedValues:[],rules:[],documentation:"",exampleMethod:"blank"},[0],1).condition;
+  assert.deepEqual(movedIdentity.children.map(({id})=>id),[beforeIds[1],beforeIds[0]],"condition identity is conserved when branches move");
+  const removed=composedFacetDraftWithoutRemovedItems({...conditionDraft,allowedValues:["a","b"],allowedValueIds:["value:a","value:b"],rules:[{id:"rule:a"},{id:"rule:b"}]},new Set(["rule:a"]),new Set(["value:b"]));
+  assert.deepEqual(removed.allowedValues,["a"],"removed value IDs are excluded from sparse drafts");
+  assert.deepEqual(removed.rules,[{id:"rule:b"}],"removed rule IDs are excluded from sparse drafts");
 }
 
 console.log("data-layer composed schema builder property tests passed");

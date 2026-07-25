@@ -74,7 +74,12 @@ export function mountSidePanelLayeredProfileEditor(options) {
         inheritance.append(order, status);
         options.host.append(heading, identity, inheritance);
         if (selection.collectionKind === "pages" || selection.collectionKind === "pageGroups") {
-            renderSidePanelComposedSchemaContext({ host: options.host, load: options.load, key: selectedKey, persist: options.persist, render });
+            if (options.openUnifiedContributor) {
+                if (options.legacyEditor)
+                    options.legacyEditor.hidden = false;
+                options.openUnifiedContributor(selectedKey);
+                return;
+            }
             return;
         }
         const canonical = selection.entity.canonicalSchema;

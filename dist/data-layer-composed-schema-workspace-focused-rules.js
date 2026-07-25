@@ -9,8 +9,22 @@ function renderRuleEditor(row, rule, index, context) {
     for (const field of focusedRuleFields(String(rule.kind ?? "custom"))) {
         if (field === "condition") {
             const condition = dom.createElement("div");
-            condition.setAttribute("aria-label", "Shared rule condition tree");
-            condition.textContent = rule.condition ? `${String(rule.condition.kind ?? "condition")} condition tree` : "No condition configured";
+            condition.setAttribute("aria-label", "Editable rule condition tree");
+            const current = rule.condition ?? { kind: "all", children: [] };
+            const summary = dom.createElement("p");
+            summary.textContent = rule.condition ? `${String(current.kind ?? "condition")} condition tree · editable` : "No condition configured";
+            const property = dom.createElement("input");
+            property.setAttribute("aria-label", "Rule condition property");
+            property.value = String(current.propertyId ?? "");
+            const operator = dom.createElement("select");
+            operator.setAttribute("aria-label", "Rule condition operator");
+            operator.append(new Option("Exists", "Exists"), new Option("Equals", "Equals"));
+            operator.value = String(current.operator ?? "Exists");
+            const value = dom.createElement("input");
+            value.setAttribute("aria-label", "Rule condition value");
+            value.value = String(current.value ?? "");
+            const apply = button(dom, "Apply predicate", () => { rule.condition = { kind: "predicate", id: String(current.id ?? `condition:${crypto.randomUUID()}`), propertyId: property.value, operator: operator.value, ...(operator.value === "Exists" ? {} : { value: value.value }) }; context.render(); });
+            condition.append(summary, labeled(dom, "Property", property), labeled(dom, "Operator", operator), labeled(dom, "Value", value), apply);
             editor.append(labeled(dom, "Condition tree", condition));
             continue;
         }

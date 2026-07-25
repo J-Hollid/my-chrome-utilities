@@ -1,6 +1,10 @@
 import { canonicalPropertyPath, canonicalSchemaFromJsonSchema } from "./data-layer-canonical-schema.js";
 const pointer = (path) => `/${path.split(/[./]/).filter(Boolean).join("/")}`;
 const clone = (value) => structuredClone(value);
+const stableValueIdentity = (owner, value) => { let hash = 2166136261; for (const char of JSON.stringify(value)) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+} return `allowed-value:${owner}:${(hash >>> 0).toString(16)}`; };
 const jsonFacetRule = (schemaId, nodeId, kind) => `json-facet:${schemaId}:${nodeId}:${kind}`;
 const canonicalOperator = (operator) => ({ "Equal": "Equals", "Is greater than": "Greater than", "Is at least": "At least", "Is less than": "Less than", "Is at most": "At most" }[operator] ?? operator);
 function canonicalRuleCondition(document, group) {
@@ -29,7 +33,7 @@ export function savedSchemaCanonicalDocument(schema, id, target) {
                 node.presence = { mode: "forbidden" };
             if (node.type === "array" && rich.items && typeof rich.items === "object" && typeof rich.items.type === "string")
                 node.itemType = rich.items.type;
-            node.allowedValues = node.allowedValues.map((entry, index) => ({ ...entry, id: `allowed-value:${node.id}:${index}` }));
+            node.allowedValues = node.allowedValues.map((entry) => ({ ...entry, id: entry.id ?? stableValueIdentity(node.id, entry.value) }));
             if (documentation)
                 node.documentation = { displayText: documentation.displayName, description: documentation.description || node.documentation.description, comments: documentation.comments ?? "", example: documentation.example ? { method: documentation.example.selectionMethod === "allowed value" ? "allowed-value" : "custom", value: clone(documentation.example.value) } : node.documentation.example };
             const minimum = typeof rich.minimum === "number" ? rich.minimum : undefined, maximum = typeof rich.maximum === "number" ? rich.maximum : undefined, minItems = typeof rich.minItems === "number" ? rich.minItems : undefined, maxItems = typeof rich.maxItems === "number" ? rich.maxItems : undefined;
@@ -72,7 +76,7 @@ export function savedSchemaCanonicalDocument(schema, id, target) {
             node.expectedValue = typedRuleValue(node, rule.parameters);
         if (operator === "allowed-values") {
             const values = rule.allowedValues ?? bounds.map((value) => value.trim()).filter(Boolean);
-            node.allowedValues = values.map((value, index) => ({ id: `allowed-value:${node.id}:rule:${rule.id}:${index}`, value: typedRuleValue(node, value) }));
+            node.allowedValues = values.map((value) => { const typed = typedRuleValue(node, value); return { id: stableValueIdentity(`${node.id}:rule:${rule.id}`, typed), value: typed }; });
         }
     }
     canonical.sourceContent = { document: clone(schema.document), rules: clone(sourceRules), documentation: clone(schema.documentation ?? {}), examples: [], definitionsByNodeId, pathsByNodeId };

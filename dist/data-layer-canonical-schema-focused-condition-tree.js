@@ -12,7 +12,7 @@ const operatorsFor = (type) => type === "number" || type === "integer" ? [...exi
 function editPredicate(row, condition, path, context) {
     if (condition.kind !== "predicate")
         return;
-    const { dom } = context, editor = dom.createElement("fieldset"), search = dom.createElement("input"), property = dom.createElement("select"), operator = dom.createElement("select"), value = input(dom, "conditionEditValue", condition.value === undefined ? "" : String(condition.value));
+    const { dom } = context, editor = dom.createElement("fieldset"), search = dom.createElement("input"), property = dom.createElement("select"), operator = dom.createElement("select"), valueHost = dom.createElement("span");
     editor.setAttribute("aria-label", "Condition predicate editor");
     search.type = "search";
     search.placeholder = "Search properties";
@@ -21,15 +21,16 @@ function editPredicate(row, condition, path, context) {
     const renderProperties = () => { const query = search.value.trim().toLowerCase(), selected = property.value; property.replaceChildren(...allProperties().filter((candidate) => !query || candidate.name.toLowerCase().includes(query)).map((candidate) => new Option(candidate.name, candidate.id))); property.value = selected || condition.propertyId; };
     renderProperties();
     property.value = condition.propertyId;
-    const renderOperators = () => { const selected = context.current().nodes[property.value]; operator.replaceChildren(...operatorsFor(selected?.type).map((entry) => new Option(entry, entry))); operator.value = condition.operator; value.hidden = existence.includes(operator.value); };
+    const renderValue = () => { valueHost.replaceChildren(); if (existence.includes(operator.value))
+        return; const value = input(dom, "conditionEditValue", condition.value === undefined ? "" : String(condition.value)); value.addEventListener("input", () => { const selected = context.current().nodes[property.value]; const typed = selected ? typedCanonicalValue(selected.type, value.value) : value.value; update({ value: typed }); }); valueHost.append(value); };
+    const renderOperators = () => { const selected = context.current().nodes[property.value]; operator.replaceChildren(...operatorsFor(selected?.type).map((entry) => new Option(entry, entry))); operator.value = condition.operator; renderValue(); };
     renderOperators();
     search.addEventListener("input", renderProperties);
     const update = (patch) => { const next = context.getWorking(); if (next?.presence.condition)
         replaceCondition(next.presence.condition, path, { ...condition, ...patch }); };
     property.addEventListener("change", () => { condition.propertyId = property.value; condition.value = undefined; renderOperators(); update({ propertyId: property.value, value: undefined }); context.render(); });
-    operator.addEventListener("change", () => { condition.operator = operator.value; condition.value = undefined; update({ operator: operator.value, value: undefined }); value.hidden = existence.includes(operator.value); });
-    value.addEventListener("input", () => { const selected = context.current().nodes[property.value]; const typed = selected ? typedCanonicalValue(selected.type, value.value) : value.value; update({ value: typed }); });
-    editor.append(labeled(dom, "Search properties", search), labeled(dom, "Property", property), labeled(dom, "Type-valid operator", operator), labeled(dom, "Typed value", value));
+    operator.addEventListener("change", () => { condition.operator = operator.value; condition.value = undefined; update({ operator: operator.value, value: undefined }); renderValue(); });
+    editor.append(labeled(dom, "Search properties", search), labeled(dom, "Property", property), labeled(dom, "Type-valid operator", operator), labeled(dom, "Typed value", valueHost));
     row.append(editor);
 }
 function appendCondition(rowParent, condition, path, context) {
@@ -40,11 +41,11 @@ function appendCondition(rowParent, condition, path, context) {
     const detail = (mode) => { row.dataset.conditionState = mode; const description = dom.createElement("p"); description.textContent = `${mode === "view" ? "Read-only" : "Editable"} condition · ${focusedConditionLabel(condition)}`; row.append(description); };
     const addChild = () => { const next = context.getWorking(); if (!next)
         return; const firstProperty = Object.keys(context.current().nodes)[0] ?? ""; if (condition.kind === "predicate") {
-        const replacement = { kind: "all", children: [condition, { kind: "predicate", propertyId: firstProperty, operator: "Exists" }] };
+        const replacement = { kind: "all", id: condition.id ?? context.id("condition"), children: [condition, { kind: "predicate", id: context.id("condition"), propertyId: firstProperty, operator: "Exists" }] };
         next.presence.condition = replaceCondition(next.presence.condition, path, replacement);
     }
     else if (condition.kind !== "not" || condition.children.length === 0)
-        condition.children.push({ kind: "predicate", propertyId: firstProperty, operator: "Exists" }); context.render(); };
+        condition.children.push({ kind: "predicate", id: context.id("condition"), propertyId: firstProperty, operator: "Exists" }); context.render(); };
     row.append(button(dom, "View", () => detail("view")), button(dom, "Edit", () => { detail("edit"); editPredicate(row, condition, path, context); }), button(dom, "Add child", addChild), button(dom, "Move", () => { const next = context.getWorking(); if (!next || !path.length)
         return; const parent = conditionAt(next.presence.condition, path.slice(0, -1)); if (parent.kind === "predicate")
         return; const index = path.at(-1), target = index === 0 ? 1 : index - 1; if (target < 0 || target >= parent.children.length)
@@ -61,7 +62,9 @@ function appendCondition(rowParent, condition, path, context) {
         condition.children.forEach((child, index) => appendCondition(row, child, [...path, index], context));
 }
 export function renderCanonicalConditionTree(host, context) { const { dom } = context, working = context.getWorking(); if (!working)
-    return; const tree = dom.createElement("div"); tree.setAttribute("aria-label", "Readable condition tree"); if (working.presence.condition)
+    return; const ensure = (condition) => { const next = { ...condition, id: condition.id ?? context.id("condition") }; if (next.kind !== "predicate")
+    next.children = next.children.map(ensure); return next; }; if (working.presence.condition)
+    working.presence.condition = ensure(working.presence.condition); const tree = dom.createElement("div"); tree.setAttribute("aria-label", "Readable condition tree"); if (working.presence.condition)
     appendCondition(tree, working.presence.condition, [], context);
 else
     tree.textContent = "No condition; presence is unconditional."; host.append(tree); }

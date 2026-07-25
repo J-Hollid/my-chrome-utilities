@@ -4,6 +4,10 @@ import { renderComposedFocusedRules } from "./data-layer-composed-schema-workspa
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 const valueText = (value) => value === undefined ? "unset" : typeof value === "string" ? value : JSON.stringify(value);
+const stableValueId = (owner, value) => { let hash = 2166136261; for (const char of JSON.stringify(value)) {
+    hash ^= char.charCodeAt(0);
+    hash = Math.imul(hash, 16777619);
+} return `allowed-value:${owner}:${(hash >>> 0).toString(16)}`; };
 export function renderComposedFocusedSection(host, context) {
     const { dom } = context, draft = context.getDraft();
     if (!draft)
@@ -39,12 +43,17 @@ export function renderComposedFocusedSection(host, context) {
             draft.expectedValue = expected.value === "" ? undefined : typedComposedValue(draft.type ?? context.row.effective.type, expected.value);
         }
         catch { } });
-        const inheritedValues = context.row.effective.allowedValues ?? [], values = [...draft.allowedValues], ids = [...(draft.allowedValueIds ?? [])];
+        const inheritedValues = context.row.effective.allowedValues ?? [], values = [...draft.allowedValues], ids = [...(draft.allowedValueIds ?? [])], localIds = new Set(context.row.local.allowedValueIds ?? (context.row.local.allowedValues ?? []).map((value) => stableValueId(`${context.row.path}:local`, value)));
+        for (let index = 0; index < values.length; index++)
+            if (!ids[index])
+                ids[index] = stableValueId(`${context.row.path}:local`, values[index]);
         inheritedValues.forEach((entry, index) => { if (!values.some((candidate) => JSON.stringify(candidate) === JSON.stringify(entry))) {
             values.push(entry);
-            ids.push(context.row.effective.allowedValueIds?.[index] ?? `allowed-value:${context.row.path}:${index}`);
+            ids.push(context.row.effective.allowedValueIds?.[index] ?? stableValueId(`${context.row.path}:inherited`, entry));
         } });
-        values.forEach((entry, index) => { const valueId = ids[index] ?? `allowed-value:${context.row.path}:${index}`, removed = context.removedValueIds.has(valueId), isLocal = Boolean(context.row.local.allowedValueIds?.includes(valueId)) || index < draft.allowedValues.length && !context.row.inherited?.allowedValueIds?.includes(valueId), control = dom.createElement("input"); control.value = valueText(entry); control.setAttribute("aria-label", `Allowed value ${index + 1}`); control.disabled = removed || !isLocal; control.addEventListener("input", () => { try {
+        if (draft.allowedValueIds?.length !== ids.length)
+            draft.allowedValueIds = ids.slice(0, draft.allowedValues.length);
+        values.forEach((entry, index) => { const valueId = ids[index] ?? stableValueId(`${context.row.path}:inherited`, entry), removed = context.removedValueIds.has(valueId), isLocal = localIds.has(valueId), control = dom.createElement("input"); control.value = valueText(entry); control.setAttribute("aria-label", `Allowed value ${index + 1}`); control.disabled = removed || !isLocal; control.addEventListener("input", () => { try {
             const current = draft.allowedValues.findIndex((candidate) => JSON.stringify(candidate) === JSON.stringify(entry));
             if (current >= 0)
                 draft.allowedValues[current] = typedComposedValue(draft.type ?? context.row.effective.type, control.value);

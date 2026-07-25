@@ -10,11 +10,15 @@ function editRule(row, rule, context) {
     for (const field of focusedRuleFields(rule.kind)) {
         if (field === "condition") {
             const tree = dom.createElement("div");
-            tree.setAttribute("aria-label", "Shared rule condition tree");
-            const render = (condition, path) => { if (!condition)
-                return; const item = dom.createElement("article"); item.dataset.conditionId = condition.id ?? `rule-condition:${rule.id}:${path}`; item.textContent = condition.kind === "predicate" ? `${condition.propertyId} ${condition.operator}${condition.value === undefined ? "" : ` ${String(condition.value)}`}` : `${condition.kind} (${condition.children.length})`; tree.append(item); if (condition.kind !== "predicate")
-                condition.children.forEach((child, index) => render(child, `${path}.${index}`)); };
-            render(rule.condition, "root");
+            tree.setAttribute("aria-label", "Editable rule condition tree");
+            const condition = rule.condition ?? { kind: "all", children: [] }, summary = dom.createElement("p"), property = input(dom, "ruleConditionProperty", condition.kind === "predicate" ? condition.propertyId : ""), operator = dom.createElement("select"), value = input(dom, "ruleConditionValue", condition.kind === "predicate" ? String(condition.value ?? "") : "");
+            summary.textContent = rule.condition ? `${condition.kind} condition tree · editable` : `No condition configured`;
+            operator.append(new Option("Exists", "Exists"), new Option("Equals", "Equals"));
+            operator.value = condition.kind === "predicate" ? condition.operator : "Exists";
+            const apply = button(dom, "Apply predicate", () => { const working = context.getWorking(); if (!working)
+                return; const index = working.rules.findIndex(({ id }) => id === rule.id); if (index < 0)
+                return; const next = clone(working.rules[index]); next.condition = { kind: "predicate", id: condition.id ?? context.id("condition"), propertyId: property.value, operator: operator.value, ...(operator.value === "Exists" ? {} : { value: value.value }) }; working.rules[index] = next; context.render(); });
+            tree.append(summary, labeled(dom, "Property", property), labeled(dom, "Operator", operator), labeled(dom, "Value", value), apply);
             editor.append(labeled(dom, "Condition tree", tree));
             continue;
         }

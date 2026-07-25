@@ -1,4 +1,4 @@
-import { composedFacetDraft, overrideComposedRule, sparseComposedFacets } from "./data-layer-composed-schema-builders.js";
+import { composedFacetDraft, composedFacetDraftWithoutRemovedItems, overrideComposedRule, sparseComposedFacets } from "./data-layer-composed-schema-builders.js";
 import { renderComposedRows } from "./data-layer-composed-schema-workspace-rows.js";
 const button = (text, run) => { const control = document.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 export function mountComposedSchemaWorkspace(options) {
@@ -57,7 +57,7 @@ export function mountComposedSchemaWorkspace(options) {
         options.onReset(row);
         close();
         return;
-    } const staged = { ...draft, rules: draft.rules.filter((rule) => !removedRuleIds.has(String(rule.id ?? ""))) }; options.onSave(row, sparseComposedFacets(staged, row.inherited ?? { path: row.path }), pendingStructure); close(); };
+    } const staged = composedFacetDraftWithoutRemovedItems(draft, removedRuleIds, removedValueIds); options.onSave(row, sparseComposedFacets(staged, row.inherited ?? { path: row.path }), pendingStructure); close(); };
     filter.addEventListener("input", () => { query = filter.value; rerender(); });
     sort.addEventListener("change", () => { sortMode = sort.value; rerender(); });
     section.addEventListener("keydown", (event) => { if (event.key === "Escape" && activePath) {
