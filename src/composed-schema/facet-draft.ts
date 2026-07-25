@@ -1,5 +1,5 @@
 import type {LayerConstraint} from "../data-layer-layered-schema.js";
-import {focusedRuleIssue} from "../data-layer-focused-schema-property-ui.js";
+import {focusedRuleIssue} from "../data-layer-focused-rule-policy.js";
 import type {ComposedFacetDraft,ComposedCondition,ConditionGroup} from "./builder-types.js";
 const clone=<T>(value:T):T=>structuredClone(value);
 const same=(left:unknown,right:unknown):boolean=>JSON.stringify(left)===JSON.stringify(right);

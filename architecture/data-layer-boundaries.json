@@ -8,6 +8,18 @@
       "src/data-layer-flow-graph-structural.ts"
     ]
   },
+  "src/data-layer-focused-rule-policy.ts": {
+    "module": "schemas",
+    "layer": "core"
+  },
+  "src/composed-schema/facet-draft.ts": {
+    "module": "schemas",
+    "layer": "application",
+    "contracts": [
+      "src/data-layer-layered-schema.ts",
+      "src/data-layer-focused-rule-policy.ts"
+    ]
+  },
   "src/data-layer-flow-graph-ui.ts": {
     "module": "flow-graph",
     "layer": "browser",

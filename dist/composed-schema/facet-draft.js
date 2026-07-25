@@ -1,4 +1,4 @@
-import { focusedRuleIssue } from "../data-layer-focused-schema-property-ui.js";
+import { focusedRuleIssue } from "../data-layer-focused-rule-policy.js";
 const clone = (value) => structuredClone(value);
 const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
 const normalizedCondition = (condition) => { if (condition.kind === "predicate")

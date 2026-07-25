@@ -1,4 +1,5 @@
 import type {LayerConstraint} from "./data-layer-layered-schema.js";
+export {focusedRuleIssue} from "./data-layer-focused-rule-policy.js";
 
 /** The deliberately small vocabulary shared by every schema contributor editor. */
 export const focusedPropertySections = [
@@ -62,23 +63,6 @@ export function readFocusedReusableRules(storage?:Pick<Storage,"getItem">):Focus
     const parsed=JSON.parse(source.getItem(focusedReusableRuleStorageKey)??"[]");
     return Array.isArray(parsed)?parsed.filter((entry):entry is FocusedReusableRule=>Boolean(entry)&&typeof entry.id==="string"&&typeof entry.name==="string"):[];
   } catch{return[];}
-}
-
-const unresolvedConditionProperty=(condition:unknown):boolean=>{
-  if(!condition||typeof condition!=="object")return true;
-  const value=condition as Record<string,unknown>;
-  if(value.kind==="predicate")return!String(value.propertyId??"").trim();
-  return Array.isArray(value.children)?value.children.some(unresolvedConditionProperty):true;
-};
-export function focusedRuleIssue(rule:Record<string,unknown>):string|undefined {
-  if(rule.kind==="pattern"&&!String(rule.pattern??"").trim())return"Enter a regular expression.";
-  if(rule.kind==="range"&&rule.minimum!==undefined&&rule.maximum!==undefined&&Number(rule.minimum)>Number(rule.maximum))return"Minimum must not exceed maximum.";
-  if(rule.kind==="range"&&rule.minimum===undefined&&rule.maximum===undefined)return"Enter a minimum or maximum.";
-  if(rule.kind==="cardinality"&&rule.minItems!==undefined&&rule.maxItems!==undefined&&Number(rule.minItems)>Number(rule.maxItems))return"Minimum items must not exceed maximum items.";
-  if(rule.kind==="cardinality"&&rule.minItems===undefined&&rule.maxItems===undefined)return"Enter minimum or maximum items.";
-  if(rule.kind==="condition"&&unresolvedConditionProperty(rule.condition))return"Resolve the condition property.";
-  if(rule.kind==="reusable"&&!String(rule.reusableRuleId??"").trim())return"Choose a reusable rule.";
-  return undefined;
 }
 
 export function focusedRuleFields(kind:string):string[] {
