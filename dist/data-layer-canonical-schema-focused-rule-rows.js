@@ -16,7 +16,7 @@ function editRule(row, rule, context) {
                     return; const next = clone(working.rules[index]); if (condition)
                     next.condition = condition;
                 else
-                    delete next.condition; working.rules[index] = next; context.render(); } });
+                    delete next.condition; working.rules[index] = next; } });
             editor.append(labeled(dom, "Shared condition tree", tree));
             continue;
         }

@@ -19,7 +19,8 @@ export function renderCanonicalFocusedCondition(host, context) {
             next.presence = { mode: next.presence.mode, condition: { id: context.id("condition"), kind, children: [] } };
         else if (current.kind !== "predicate" && !(current.kind === "not" && current.children.length))
             current.children.push({ id: context.id("condition"), kind, children: [] }); context.render(); }));
-    const search = dom.createElement("input"), property = dom.createElement("select"), operator = dom.createElement("select"), value = dom.createElement("input");
+    const search = dom.createElement("input"), property = dom.createElement("select"), operator = dom.createElement("select"), valueHost = dom.createElement("span");
+    let value;
     search.type = "search";
     search.placeholder = "Search properties";
     search.setAttribute("aria-label", "Search condition properties");
@@ -27,14 +28,15 @@ export function renderCanonicalFocusedCondition(host, context) {
     const renderProperties = () => { const query = search.value.trim().toLowerCase(), selected = property.value; property.replaceChildren(new Option("Choose property", ""), ...Object.values(context.current().nodes).filter((candidate) => !query || candidate.name.toLowerCase().includes(query)).map((candidate) => new Option(candidate.name, candidate.id))); property.value = selected; };
     renderProperties();
     operator.setAttribute("aria-label", "Type-valid operator");
-    value.setAttribute("aria-label", "Typed value");
-    const selected = () => context.current().nodes[property.value], renderOperators = () => { operator.replaceChildren(...operatorsFor(selected()?.type).map((entry) => new Option(entry, entry))); value.hidden = existence.includes(operator.value); };
+    const renderValue = () => { valueHost.replaceChildren(); value = undefined; if (existence.includes(operator.value))
+        return; value = dom.createElement("input"); value.setAttribute("aria-label", "Typed value"); valueHost.append(value); };
+    const selected = () => context.current().nodes[property.value], renderOperators = () => { operator.replaceChildren(...operatorsFor(selected()?.type).map((entry) => new Option(entry, entry))); renderValue(); };
     search.addEventListener("input", renderProperties);
     property.addEventListener("change", renderOperators);
-    operator.addEventListener("change", () => { value.hidden = existence.includes(operator.value); });
+    operator.addEventListener("change", renderValue);
     renderOperators();
-    actions.append(labeled(dom, "Search property", search), labeled(dom, "Condition property", property), labeled(dom, "Type-valid operator", operator), labeled(dom, "Typed value", value), button(dom, "Add predicate", () => { const next = context.getWorking(), candidate = selected(); if (!next || !candidate || !operator.value)
-        return; const typed = existence.includes(operator.value) ? undefined : typedCanonicalValue(candidate.type, value.value), leaf = { id: context.id("condition"), kind: "predicate", propertyId: property.value, operator: operator.value, ...(typed === undefined ? {} : { value: typed }) }; const current = next.presence.condition; if (!current)
+    actions.append(labeled(dom, "Search property", search), labeled(dom, "Condition property", property), labeled(dom, "Type-valid operator", operator), labeled(dom, "Typed value", valueHost), button(dom, "Add predicate", () => { const next = context.getWorking(), candidate = selected(); if (!next || !candidate || !operator.value)
+        return; const typed = existence.includes(operator.value) ? undefined : typedCanonicalValue(candidate.type, value?.value ?? ""), leaf = { id: context.id("condition"), kind: "predicate", propertyId: property.value, operator: operator.value, ...(typed === undefined ? {} : { value: typed }) }; const current = next.presence.condition; if (!current)
         next.presence = { mode: next.presence.mode, condition: { id: context.id("condition"), kind: "all", children: [leaf] } };
     else if (current.kind !== "predicate")
         current.children.push(leaf);

@@ -271,8 +271,16 @@
     "layer": "browser",
     "contracts": [
       "src/data-layer-composed-schema-workspace.ts",
+      "src/data-layer-focused-schema-property-menu.ts",
       "src/data-layer-focused-schema-property-ui.ts",
       "src/data-layer-composed-schema-workspace-focused-sections.ts"
+    ]
+  },
+  "src/data-layer-focused-schema-property-menu.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-focused-schema-property-ui.ts"
     ]
   },
   "src/data-layer-focused-schema-property-ui.ts": {
@@ -426,6 +434,7 @@
     "layer": "browser",
     "contracts": [
       "src/data-layer-canonical-schema.ts",
+      "src/data-layer-focused-schema-property-menu.ts",
       "src/data-layer-focused-schema-property-ui.ts"
     ]
   },

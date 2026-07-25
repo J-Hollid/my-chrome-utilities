@@ -20,6 +20,7 @@ export { applyCanonicalCommand, canonicalCommandOutcome, canonicalPropertyPath, 
 export { compileLayeredSchema, validateLayeredObservation, type LayerConstraint, type LayerContributor, type LayerScope } from "../../data-layer-layered-schema.js";
 export { layeredContributorPath, layeredContributorsForPath } from "../../data-layer-layered-schema-project.js";
 export { canonicalPredicateLeafFromInput, canonicalPredicateOperators, canonicalPredicateText, mountCanonicalPredicateEditor, validateCanonicalPredicateTree } from "../../data-layer-canonical-predicate-editor.js";
+export {mountCanonicalSchemaEditor} from "../../data-layer-canonical-schema-ui.js";
 export { canonicalCommandsFromCompactProjection, compactConditionalPresence, compactSchemaProjection, savedSchemaCanonicalDocument, savedSchemaFromCanonical } from "../../data-layer-side-panel-unified-schema-editor.js";
 export { canonicalMigrationDurablyAcknowledged, resolveSidePanelSchemaContributor, type SidePanelContributorSelection } from "../../data-layer-side-panel-schema-editor.js";
 export { redoProjectTransaction, undoProjectTransaction } from "../../data-layer-specification-project.js";

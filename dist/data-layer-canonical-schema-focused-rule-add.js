@@ -27,16 +27,19 @@ export function renderCanonicalRuleAddPanel(host, context) {
         }
         fields.append(labeled(dom, field, input(dom, `newRule${field[0].toUpperCase() + field.slice(1)}`, "", ["minimum", "maximum", "minItems", "maxItems"].includes(field) ? "number" : "text")));
     } };
-    kind.addEventListener("change", renderFields);
-    renderFields();
-    panel.append(legend, labeled(dom, "Rule kind", kind), fields, button(dom, "Add rule", () => { const next = context.getWorking(); if (!next || !kind.value)
+    const addRule = button(dom, "Add rule", () => { const next = context.getWorking(); if (!next || !kind.value)
         return; const rule = { id: context.id("rule"), kind: kind.value, severity: "error", message: "" }; for (const field of ["pattern", "minimum", "maximum", "minItems", "maxItems"]) {
         const control = fields.querySelector(`[name="newRule${field[0].toUpperCase() + field.slice(1)}"]`);
         if (control?.value)
             Object.assign(rule, { [field]: field.includes("Items") || ["minimum", "maximum"].includes(field) ? Number(control.value) : control.value });
     } const message = fields.querySelector("[name=\"newRuleMessage\"]"); if (message)
         rule.message = message.value; const reusable = fields.querySelector("[name=\"newRuleReusableRuleId\"]"); if (reusable?.value)
-        rule.reusableRuleId = reusable.value; next.rules = [...next.rules, rule]; context.feedback("Staged rule addition."); context.render(); }));
+        rule.reusableRuleId = reusable.value; next.rules = [...next.rules, rule]; context.feedback("Staged rule addition."); context.render(); });
+    addRule.disabled = true;
+    kind.required = true;
+    kind.addEventListener("change", () => { renderFields(); addRule.disabled = !kind.value; });
+    renderFields();
+    panel.append(legend, labeled(dom, "Rule kind", kind), fields, addRule);
     host.append(panel);
 }
 //# sourceMappingURL=data-layer-canonical-schema-focused-rule-add.js.map

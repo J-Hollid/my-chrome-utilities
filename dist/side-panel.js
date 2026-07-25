@@ -73,7 +73,7 @@ import { cardinalityComparisonPasses, cardinalityMeasuredValue } from "./utiliti
 import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, createRuleConfigurationFromAttachedRule, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./utilities/data-layer/schemas.js";
 import { canonicalRulePropertyPath } from "./utilities/data-layer/schemas.js";
 import { renderSchemaSpecificationBuilder } from "./utilities/data-layer/schemas.js";
-import { applyCanonicalCommand, canonicalCommandOutcome, canonicalCommandsFromCompactProjection, canonicalMigrationDurablyAcknowledged, canonicalPredicateText, canonicalPropertyPath, compactSchemaProjection, composedCanonicalSchema, createCanonicalSchema, hasLegacySchemaRepresentation, migrateLegacyProfile, mountCanonicalPredicateEditor, mountSidePanelLayeredProfileEditor, resolveCanonicalMigrationConflict, resolveSidePanelSchemaContributor, saveComposedCanonicalDocument, savedSchemaCanonicalDocument, savedSchemaFromCanonical, sidePanelSchemaGroups, transactProject } from "./utilities/data-layer/schemas.js";
+import { applyCanonicalCommand, canonicalCommandOutcome, canonicalCommandsFromCompactProjection, canonicalMigrationDurablyAcknowledged, canonicalPredicateText, canonicalPropertyPath, compactSchemaProjection, composedCanonicalSchema, createCanonicalSchema, hasLegacySchemaRepresentation, migrateLegacyProfile, mountCanonicalPredicateEditor, mountCanonicalSchemaEditor, mountSidePanelLayeredProfileEditor, resolveCanonicalMigrationConflict, resolveSidePanelSchemaContributor, saveComposedCanonicalDocument, savedSchemaCanonicalDocument, savedSchemaFromCanonical, sidePanelSchemaGroups, transactProject } from "./utilities/data-layer/schemas.js";
 import { beginCompactCanonicalHistoryTransition, compactCanonicalHistoryKey, compactCanonicalHistorySettlement, completeCompactCanonicalHistoryTransition, prepareCompactCanonicalRedo, prepareCompactCanonicalUndo, recordCompactCanonicalMutation, rejectCompactCanonicalHistoryTransition } from "./utilities/data-layer/schemas.js";
 import { mountProjectLibraryUi, PROJECT_LIBRARY_STORAGE_KEY, recordProjectNavigation, serializeProjectLibrary } from "./utilities/data-layer/schemas.js";
 import { installDurableRepositoryStartupFailure, mountDurableProjectRepositoryUi, openDurableProjectRuntime } from "./utilities/data-layer/schemas.js";
@@ -253,6 +253,11 @@ const schemaEditor = document.querySelector("#schema-editor");
 const schemaDetail = document.querySelector("#schema-detail");
 if (sidePanelLayeredProfileEditorHost && schemaDetail && !schemaDetail.contains(sidePanelLayeredProfileEditorHost))
     schemaDetail.prepend(sidePanelLayeredProfileEditorHost);
+const compactCanonicalFocusedHost = document.createElement("section");
+compactCanonicalFocusedHost.hidden = true;
+compactCanonicalFocusedHost.dataset.schemaPresentation = "compact-panel";
+compactCanonicalFocusedHost.className = "compact-canonical-focused-editor";
+schemaDetail?.append(compactCanonicalFocusedHost);
 const schemaDetailEmpty = document.querySelector("#schema-detail-empty");
 const schemaEditorName = document.querySelector("#schema-editor-name");
 const schemaEditorNameAssistance = document.createElement("output");
@@ -767,6 +772,7 @@ let guidedPropertyReturn;
 let schemaDraft;
 let savedCanonicalDocument;
 let compactCanonicalEditor;
+let compactCanonicalFocusedMount;
 let compactCanonicalPendingCommand;
 let compactCanonicalPendingBase;
 let compactCanonicalReviewVisible = false;
@@ -3023,6 +3029,26 @@ async function dispatchCompactCanonicalCommand(command) {
     }
     return true;
 }
+function dispatchCompactCanonicalFocusedCommand(command) {
+    const adapter = compactCanonicalEditor;
+    if (!adapter)
+        throw new Error("The compact canonical editor is unavailable.");
+    if (compactCanonicalSettlementPending || compactCanonicalHistoryState.pending)
+        return { status: "conflict", document: adapter.load(), message: "Resolve the current durable schema save before making another semantic change." };
+    const base = compactCanonicalRevisionSnapshots.get(command.baseRevision), result = adapter.dispatch(command);
+    if (result.status !== "applied" && result.status !== "rebased")
+        return result;
+    const outcome = canonicalCommandOutcome(command, result, base ?? result.document), settlement = adapter.settle && (adapter.settles?.(command) ?? true) ? ++compactCanonicalSettlementSequence : undefined, settlementTarget = adapter.settlementTarget ?? "durable Saved Draft";
+    compactCanonicalCommandFeedback = settlement ? `Saving ${outcome.replace(/^(Saved|Rebased) /, "").replace(/\.$/, "")} to the ${settlementTarget}…` : outcome;
+    compactCanonicalSettlementPending = Boolean(settlement);
+    queueMicrotask(() => { if (compactCanonicalEditor === adapter)
+        renderCompactCanonicalEditor(); });
+    if (settlement && adapter.settle)
+        void adapter.settle().then(() => { adapter.onSettlementCommitted?.(); if (compactCanonicalEditor !== adapter || compactCanonicalSettlementSequence !== settlement)
+            return; compactCanonicalSettlementPending = false; compactCanonicalCommandFeedback = `${outcome} ${settlementTarget.charAt(0).toUpperCase()}${settlementTarget.slice(1)} committed.`; renderCompactCanonicalEditor(); }, (error) => { if (compactCanonicalEditor !== adapter || compactCanonicalSettlementSequence !== settlement)
+            return; compactCanonicalSettlementPending = false; compactCanonicalCommandFeedback = `Not saved to the ${settlementTarget}; the exact change remains available for Retry, Reject, or export. ${error instanceof Error ? error.message : String(error)}`; renderCompactCanonicalEditor(); });
+    return result;
+}
 function compactCanonicalCommandScope(command, document) {
     if (command.kind === "add")
         return `${command.name}${command.parentId && document.nodes[command.parentId] ? ` under ${canonicalPropertyPath(document, command.parentId)}` : " at root"}`;
@@ -3101,35 +3127,41 @@ function renderCompactCanonicalEditor() {
     const adapter = compactCanonicalEditor;
     if (!adapter)
         return;
-    const canonical = adapter.load(), selected = canonical.selectedPropertyId && canonical.nodes[canonical.selectedPropertyId];
-    schemaDraft = compactCanonicalProjection(adapter, canonical);
+    const canonical = adapter.load();
     compactCanonicalRevisionSnapshots.set(canonical.revision, structuredClone(canonical));
-    if (selected)
-        selectedSchemaPropertyPath = canonicalPropertyPath(canonical, selected.id).slice(1).replaceAll("/", ".");
+    schemaDraft = undefined;
     if (schemaEditor) {
-        schemaEditor.dataset.schemaPresentation = "compact-panel";
-        schemaEditor.dataset.canonicalRevision = String(canonical.revision);
-        schemaEditor.dataset.canonicalSchemaId = canonical.id;
-        schemaEditor.setAttribute("aria-label", "Side panel canonical schema editor");
+        schemaEditor.hidden = true;
+        delete schemaEditor.dataset.schemaPresentation;
+        delete schemaEditor.dataset.canonicalRevision;
+        delete schemaEditor.dataset.canonicalSchemaId;
+        schemaEditor.removeAttribute("aria-label");
     }
     if (schemaDetail) {
         schemaDetail.hidden = false;
         schemaDetail.setAttribute("aria-label", "Side panel schema editor region");
     }
-    renderCompactCanonicalContext();
-    renderSchemaDraft();
-    if (schemaEditor) {
-        const unavailable = compactCanonicalSettlementPending || Boolean(compactCanonicalHistoryState.pending);
-        schemaEditor.setAttribute("aria-busy", String(unavailable));
-        for (const control of Array.from(schemaEditor.querySelectorAll("button,input,select,textarea")))
-            control.disabled = unavailable;
+    compactCanonicalFocusedHost.hidden = false;
+    compactCanonicalFocusedHost.dataset.schemaPresentation = "compact-panel";
+    compactCanonicalFocusedHost.dataset.canonicalRevision = String(canonical.revision);
+    compactCanonicalFocusedHost.dataset.canonicalSchemaId = canonical.id;
+    compactCanonicalFocusedHost.setAttribute("aria-busy", String(compactCanonicalSettlementPending || Boolean(compactCanonicalHistoryState.pending)));
+    if (!compactCanonicalFocusedMount || compactCanonicalFocusedMount.key !== adapter.key) {
+        compactCanonicalFocusedHost.replaceChildren();
+        compactCanonicalFocusedMount = { key: adapter.key, editor: mountCanonicalSchemaEditor({ host: compactCanonicalFocusedHost, surface: "Side panel", load: adapter.load, id: (kind) => `${kind}:${crypto.randomUUID()}`, dispatch: dispatchCompactCanonicalFocusedCommand, renderAfterDispatch: false, ...(adapter.onUndo ? { onUndo: adapter.onUndo } : {}), ...(adapter.onRedo ? { onRedo: adapter.onRedo } : {}), ...(compactCanonicalCommandFeedback ? { initialFeedback: compactCanonicalCommandFeedback } : {}) }) };
     }
+    else
+        compactCanonicalFocusedMount.editor.render();
+    const unavailable = compactCanonicalSettlementPending || Boolean(compactCanonicalHistoryState.pending);
+    for (const control of Array.from(compactCanonicalFocusedHost.querySelectorAll("button,input,select,textarea")))
+        control.disabled = unavailable;
 }
 function openCompactCanonicalEditor(adapter) {
     sidePanelLayeredProfileEditor?.close();
     compactCanonicalSettlementSequence += 1;
     compactCanonicalSettlementPending = false;
     compactCanonicalEditor = adapter;
+    compactCanonicalFocusedMount = undefined;
     compactCanonicalPendingCommand = undefined;
     compactCanonicalPendingBase = undefined;
     compactCanonicalReviewVisible = false;
@@ -3144,6 +3176,9 @@ function closeCompactCanonicalEditor() {
     compactCanonicalEditor = undefined;
     schemaDraft = undefined;
     savedCanonicalDocument = undefined;
+    compactCanonicalFocusedMount = undefined;
+    compactCanonicalFocusedHost.hidden = true;
+    compactCanonicalFocusedHost.replaceChildren();
     compactCanonicalPendingCommand = undefined;
     compactCanonicalPendingBase = undefined;
     compactCanonicalReviewVisible = false;
@@ -3294,7 +3329,7 @@ function openContributorInUnifiedEditor(key) {
     } const current = documentFor(live, selected), scopedHistoryKey = historyKey(live.project.id); if (migration) {
         migrationBlocked(current);
         return;
-    } const step = direction === "Undo" ? prepareCompactCanonicalUndo(compactCanonicalHistoryState.history, scopedHistoryKey, current) : prepareCompactCanonicalRedo(compactCanonicalHistoryState.history, scopedHistoryKey, current); if (step.status !== "ready") {
+    } const step = direction === "Undo" ? prepareCompactCanonicalUndo(compactCanonicalHistoryState.history, scopedHistoryKey, current, isComposed(selected)) : prepareCompactCanonicalRedo(compactCanonicalHistoryState.history, scopedHistoryKey, current, isComposed(selected)); if (step.status !== "ready") {
         compactCanonicalCommandFeedback = step.message;
         renderCompactCanonicalContext();
         return;
@@ -3329,10 +3364,10 @@ function openContributorInUnifiedEditor(key) {
             if (!mutation)
                 contributorUi = { ...(result.document.selectedPropertyId ? { selectedPropertyId: result.document.selectedPropertyId } : {}), view: result.document.view };
             if (mutation) {
-                const label = `${command.kind} ${isComposed(selected) ? "sparse canonical facet" : "canonical property"} in ${selected.entity.name}`, nextHistory = recordCompactCanonicalMutation(compactCanonicalHistoryState.history, historyKey(live.project.id), document, result.document);
+                const label = `${command.kind} ${isComposed(selected) ? "sparse canonical facet" : "canonical property"} in ${selected.entity.name}`, nextState = contributorState(live, selected, result.document), nextSelection = resolveSidePanelSchemaContributor(nextState, key), historyAfter = isComposed(selected) && nextSelection ? documentFor(nextState, nextSelection) : result.document, nextHistory = recordCompactCanonicalMutation(compactCanonicalHistoryState.history, historyKey(live.project.id), document, historyAfter);
                 pendingHistoryIdentity = beginCompactCanonicalPendingHistory(live.project.id, key, label, nextHistory);
                 try {
-                    commitUnifiedContributorState(contributorState(live, selected, result.document), label);
+                    commitUnifiedContributorState(nextState, label);
                 }
                 catch (error) {
                     rejectCompactCanonicalPendingHistory(pendingHistoryIdentity);

@@ -14,7 +14,7 @@ export function renderValuesFacet(host, context, working) {
     } });
     const list = dom.createElement("div");
     working.allowedValues.forEach((entry, index) => {
-        const row = dom.createElement("article"), value = input(dom, `allowedValue-${entry.id}`, canonicalFacetText(entry.value)), removed = context.removedValueIds.has(entry.id), inherited = entry.provenance?.some(({ state }) => state === "inherited" || state === "shadowed") ?? working.provenance.some(({ state }) => state === "inherited" || state === "shadowed"), overridden = Boolean(entry.provenance?.some(({ state }) => state === "effective") && inherited);
+        const row = dom.createElement("article"), value = input(dom, `allowedValue-${entry.id}`, canonicalFacetText(entry.value)), removed = context.removedValueIds.has(entry.id), inherited = entry.provenance?.some(({ state }) => state === "inherited" || state === "shadowed") ?? working.provenance.some(({ state }) => state === "inherited" || state === "shadowed"), overridden = Boolean(entry.provenance?.some(({ state }) => state === "overridden"));
         row.dataset.valueId = entry.id;
         row.dataset.ownership = overridden ? "overridden" : inherited ? "inherited" : "local";
         value.setAttribute("aria-label", `Allowed value ${index + 1}`);
@@ -38,5 +38,5 @@ export function renderValuesFacet(host, context, working) {
     } }));
 }
 function nextOverride(context, entry) { const next = context.getWorking(); if (!next)
-    return; next.allowedValues = next.allowedValues.map((candidate) => candidate.id === entry.id ? { ...candidate, provenance: [{ source: "created", state: "effective" }] } : candidate); context.feedback(`Staged override for allowed value ${entry.id}.`); context.render(); }
+    return; next.allowedValues = next.allowedValues.map((candidate) => candidate.id === entry.id ? { ...candidate, provenance: [{ source: "created", state: "overridden" }] } : candidate); context.feedback(`Staged override for allowed value ${entry.id}.`); context.render(); }
 //# sourceMappingURL=values.js.map

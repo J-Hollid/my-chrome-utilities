@@ -13,7 +13,7 @@ function renderRuleEditor(row, rule, index, context) {
             renderSharedConditionTree(condition, { dom, ...(rule.condition ? { condition: rule.condition } : {}), properties: () => context.model.rows.map(({ path, effective }) => ({ id: effective.definitionId ?? path, name: path, ...(effective.type ? { type: effective.type } : {}) })), id: (kind) => `${kind}:${crypto.randomUUID()}`, onChange: (next) => { if (next)
                     rule.condition = next;
                 else
-                    delete rule.condition; context.render(); } });
+                    delete rule.condition; } });
             editor.append(labeled(dom, "Shared condition tree", condition));
             continue;
         }
@@ -73,12 +73,16 @@ export function renderComposedFocusedRules(host, context) {
             control.type = "number";
         fields.append(labeled(dom, name, control));
     } };
-    kind.addEventListener("change", renderFields);
-    renderFields();
-    addPanel.append(labeled(dom, "Rule kind", kind), fields, button(dom, "Add rule", () => { const rule = { id: `rule:${crypto.randomUUID()}`, kind: kind.value, severity: "error", message: "" }; for (const control of Array.from(fields.querySelectorAll("input,select")))
+    const addRule = button(dom, "Add rule", () => { if (!kind.value)
+        return; const rule = { id: `rule:${crypto.randomUUID()}`, kind: kind.value, severity: "error", message: "" }; for (const control of Array.from(fields.querySelectorAll("input,select")))
         if (control.value)
             rule[control.name.replace(/^newRule/, "").replace(/^./, (letter) => letter.toLowerCase())] = numericFields.has(control.name.replace(/^newRule/, "")) ? Number(control.value) : control.value; const reusable = fields.querySelector("[name=\"reusableRuleId\"]"); if (reusable?.value)
-        rule.reusableRuleId = reusable.value; draft.rules = [...draft.rules, rule]; context.render(); }));
+        rule.reusableRuleId = reusable.value; draft.rules = [...draft.rules, rule]; context.render(); });
+    addRule.disabled = true;
+    kind.required = true;
+    kind.addEventListener("change", () => { renderFields(); addRule.disabled = !kind.value; });
+    renderFields();
+    addPanel.append(labeled(dom, "Rule kind", kind), fields, addRule);
     host.append(list, addPanel);
 }
 //# sourceMappingURL=data-layer-composed-schema-workspace-focused-rules.js.map

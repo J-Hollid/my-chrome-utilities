@@ -7,10 +7,16 @@ export { composedSchemaWorkspace, composedCanonicalSchema };
 const clone = (value) => structuredClone(value);
 function updateEntity(state, kind, entityId, label, update) { return transactProject(state, label, (project) => ({ ...project, collections: { ...project.collections, [kind]: project.collections[kind].map((entity) => entity.id === entityId ? update(entity) : entity) } })); }
 const sparseFacetKeys = (constraint) => Object.fromEntries(Object.entries(constraint).filter(([key]) => !["path", "origins", "superseded", "expectedContributor"].includes(key)));
-const sparseAgainst = (constraint, inherited) => { const result = { path: constraint.path }, parent = inherited ? sparseFacetKeys(inherited) : {}; for (const [key, value] of Object.entries(sparseFacetKeys(constraint))) {
+const sparseAgainst = (constraint, inherited) => { const result = { path: constraint.path }, parent = inherited ? sparseFacetKeys(inherited) : {}, rules = (constraint.rules ?? []).filter((rule) => { const state = rule.provenance?.state; return state === "local" || state === "effective" || state === "overridden" || (!state && !(inherited?.rules ?? []).some((candidate) => String(candidate.id ?? "") === String(rule.id ?? ""))); }), localValueOwnership = (constraint.allowedValueProvenance ?? []).filter(({ state }) => state !== "inherited"), candidate = { ...constraint }; if (rules.length)
+    candidate.rules = rules;
+else
+    delete candidate.rules; if (localValueOwnership.length)
+    candidate.allowedValueProvenance = localValueOwnership;
+else
+    delete candidate.allowedValueProvenance; for (const [key, value] of Object.entries(sparseFacetKeys(candidate))) {
     if (key === "definitionId" && inherited && !inherited.definitionId)
         continue;
-    if (key === "allowedValueIds" && inherited && !inherited.allowedValueIds && JSON.stringify(constraint.allowedValues) === JSON.stringify(inherited.allowedValues) && !(constraint.allowedValueProvenance ?? []).some(({ state }) => state !== "inherited"))
+    if ((key === "allowedValues" || key === "allowedValueIds") && inherited && JSON.stringify(constraint.allowedValues) === JSON.stringify(inherited.allowedValues) && !localValueOwnership.length)
         continue;
     if (key === "target" && inherited && value === "all" && parent.target === undefined)
         continue;
