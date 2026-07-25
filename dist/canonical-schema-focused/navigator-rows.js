@@ -1,5 +1,5 @@
 import { canonicalPropertyPath, canonicalTableRows } from "../data-layer-canonical-schema.js";
-import { schemaTableCellMetadata, schemaTableColumns, schemaTableExpectedOrAllowed } from "../data-layer-schema-table.js";
+import { schemaTableCellMetadata, schemaTableColumns, schemaTableExpectedOrAllowed, schemaTableOverlayStyle } from "../data-layer-schema-table.js";
 import { button } from "./dom.js";
 export function canonicalNavigatorRows(context) {
     const query = context.query.trim().toLowerCase(), matches = (node) => !query || node.name.toLowerCase().includes(query) || canonicalPropertyPath(context.document, node.id).toLowerCase().includes(query), facet = (node) => context.propertyFilter === "all" || context.propertyFilter === "conditions" && Boolean(node.presence.condition) || context.propertyFilter === "documentation" && Boolean(node.documentation.displayText || node.documentation.description || node.documentation.comments) || context.propertyFilter === "issues" && node.provenance.some(({ state }) => state === "shadowed");
@@ -56,7 +56,7 @@ function renderTable(tree, context) {
             const overlay = dom.createElement("section");
             overlay.dataset.schemaRowOverlay = "true";
             overlay.setAttribute("aria-label", `${row.path} property overlay`);
-            overlay.style.cssText = "position:absolute;left:0;top:100%;z-index:10;width:min(42rem,calc(100vw - 2rem));max-width:calc(100vw - 2rem);box-sizing:border-box;overflow:auto;background:Canvas;border:1px solid ButtonBorder;padding:0.75rem;";
+            overlay.style.cssText = schemaTableOverlayStyle;
             overlay.append(context.renderMenu(row.node));
             if (context.focusedPropertyId === row.id) {
                 overlay.append(context.renderFocusedEditor(context.document, row.node));

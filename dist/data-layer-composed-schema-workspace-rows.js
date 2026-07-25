@@ -1,7 +1,7 @@
 import { renderFocusedPropertyMenu } from "./data-layer-focused-schema-property-menu.js";
 import { focusedOwnershipActions, focusedPropertySectionLabels } from "./data-layer-focused-schema-property-ui.js";
 import { renderComposedFocusedSection } from "./data-layer-composed-schema-workspace-focused-sections.js";
-import { schemaTableCellMetadata, schemaTableColumns, schemaTableExpectedOrAllowed } from "./data-layer-schema-table.js";
+import { schemaTableCellMetadata, schemaTableColumns, schemaTableExpectedOrAllowed, schemaTableOverlayStyle } from "./data-layer-schema-table.js";
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 function applyPersistedItemOwnership(host, row) {
     const overriddenValues = new Set((row.local.allowedValueProvenance ?? []).filter(({ state }) => state === "overridden").map(({ id }) => id));
@@ -121,7 +121,7 @@ export function renderComposedRows(rows, context) {
             const overlay = dom.createElement("section");
             overlay.dataset.schemaRowOverlay = "true";
             overlay.setAttribute("aria-label", `${row.path} property overlay`);
-            overlay.style.cssText = "position:absolute;left:0;top:100%;z-index:10;width:min(42rem,calc(100vw - 2rem));max-width:calc(100vw - 2rem);box-sizing:border-box;overflow:auto;background:Canvas;border:1px solid ButtonBorder;padding:0.75rem;";
+            overlay.style.cssText = schemaTableOverlayStyle;
             overlay.append(contextMenu(row, context));
             if (context.focusedOpen)
                 overlay.append(focused(row, context));

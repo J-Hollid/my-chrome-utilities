@@ -11,6 +11,7 @@ export const schemaTableColumns=[
   {key:"validation-state",label:"Validation state"},
 ] as const;
 export const schemaTableCellMetadata=schemaTableColumns.map(({key,label})=>({key,label}));
+export const schemaTableOverlayStyle="position:absolute;left:0;top:100%;z-index:10;width:min(42rem,calc(100vw - 3rem));max-width:calc(100vw - 3rem);box-sizing:border-box;overflow:auto;background:Canvas;border:1px solid ButtonBorder;padding:0.75rem;";
 
 export const schemaTableEditableFacets=["description","expected-or-allowed","example"] as const;
 export type SchemaTableEditableFacet=typeof schemaTableEditableFacets[number];
