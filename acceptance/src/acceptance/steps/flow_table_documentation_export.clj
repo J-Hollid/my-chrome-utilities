@@ -6,10 +6,14 @@
 
 (def feature-files
   ["features/data-layer-flow-table-documentation-export.feature"
-   "features/data-layer-flow-table-documentation-export-runtime.feature"])
+   "features/data-layer-flow-table-documentation-export-runtime.feature"
+   "features/data-layer-project-documentation-workspace.feature"
+   "features/data-layer-project-documentation-workspace-runtime.feature"])
 (def entry-modes
   {"Checkout journey relates Cart, Shipping, Payment, and Confirmation context-setting Page events" :model
-   "the built extension is running with the production Flow editor, canonical compiler, table exporter, clipboard, and download adapter" :runtime})
+   "the built extension is running with the production Flow editor, canonical compiler, table exporter, clipboard, and download adapter" :runtime
+   "Shop contains Checkout journey and Article journey Flows" :model
+   "the built extension is running with the production project repository, canonical compiler, documentation renderer, clipboard, and Excel adapter" :runtime})
 (defonce model-verified? (atom false))
 (defonce browser-observation (atom nil))
 
@@ -21,7 +25,7 @@
 (defn- verify-model! []
   (when-not @model-verified?
     (checked! "Flow documentation export model verification failed."
-              "node" "test/data-layer-flow-table-documentation-export-test.mjs")
+              "node" "test/data-layer-project-documentation-workspace-test.mjs")
     (reset! model-verified? true)))
 
 (defn- observe-browser! []

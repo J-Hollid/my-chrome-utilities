@@ -103,9 +103,7 @@ export function installFlowDocumentationExportUi(options:Options):{render():void
   }
 
   function render():void {
-    const {state,flowId,revision}=current();if(!state||!flowId)return;if(open){renderWorkspace();return;}
-    const toolbar=document.querySelector<HTMLElement>('[aria-label="Flow component catalogs"]');if(!toolbar||toolbar.querySelector("[data-flow-documentation-export]"))return;
-    const control=createButton("Open Documentation export",()=>{open=true;fresh(state,flowId,revision);renderWorkspace();});control.dataset.flowDocumentationExport="true";toolbar.append(control);
+    document.querySelectorAll("[data-flow-documentation-export]").forEach((control)=>control.remove());
   }
   return{render};
 }
