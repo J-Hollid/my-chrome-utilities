@@ -53,6 +53,8 @@ const predicateCases = [
   [{ value:1, exists:true }, { propertyPath:"/trigger", operator:"Equals", comparison:typedComparisonValue("1") }, false],
   [{ value:undefined, exists:false }, { propertyPath:"/trigger", operator:"Does not equal", comparison:typedComparisonValue("internal") }, false],
   [{ value:"checkout", exists:true }, { propertyPath:"/trigger", operator:"Is one of", comparisons:[typedComparisonValue("page"), typedComparisonValue("checkout")] }, true],
+  [{ value:"product_detail", exists:true }, { propertyPath:"/trigger", operator:"Starts with", comparison:typedComparisonValue("product_") }, true],
+  [{ value:"product_detail", exists:true }, { propertyPath:"/trigger", operator:"Contains", comparison:typedComparisonValue("_detail") }, true],
   [{ value:"product_detail", exists:true }, { propertyPath:"/trigger", operator:"Matches pattern", comparison:typedComparisonValue("^product_") }, true],
   [{ value:6, exists:true }, { propertyPath:"/trigger", operator:"Is greater than", comparison:typedComparisonValue(5) }, true],
   [{ value:5, exists:true }, { propertyPath:"/trigger", operator:"Is at least", comparison:typedComparisonValue(5) }, true],
@@ -64,7 +66,7 @@ for (const [observed, predicate, expected] of predicateCases) {
   assert.equal(evaluateConditionPredicate(observed, predicate), expected);
 }
 
-assert.deepEqual(operatorsForConditionType("string"), ["Exists", "Does not exist", "Equals", "Does not equal", "Is one of", "Matches pattern"]);
+assert.deepEqual(operatorsForConditionType("string"), ["Exists", "Does not exist", "Equals", "Does not equal", "Is one of", "Starts with", "Contains", "Matches pattern"]);
 assert.deepEqual(operatorsForConditionType("number"), ["Exists", "Does not exist", "Equals", "Does not equal", "Is one of", "Is greater than", "Is at least", "Is less than", "Is at most"]);
 
 for (const [operator, results, expected] of [

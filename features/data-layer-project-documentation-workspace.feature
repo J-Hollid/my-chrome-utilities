@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=0bd139980a3b0a7ba1e97f5a73c5f9a693068b41546106988a31f873b7ca4bbf
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-26T15:21:48.347536960Z","feature_name":"Data layer project documentation workspace","feature_path":"features/data-layer-project-documentation-workspace.feature","background_hash":"6e9a3622de99090815714fa5d2fbae827c8feda287a062680b2f0de443e8da1f","implementation_hash":"sha256:0a3578f4d6e5792fd6e2585b2df27b332745538c05c362e047a22aa85096e6d3","scenarios":[{"index":14,"name":"Data layer project documentation workspace 015","scenario_hash":"4a89e82941719a62bee409628fb4f7d19c8c0bfb1e83a2ddec2cbe93f631eb0d","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-26T15:21:48.347536960Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer project documentation workspace
 
   Background:
@@ -126,3 +131,17 @@ Feature: Data layer project documentation workspace
     Then cell content remains literal and cannot create formulas, unintended rows, columns, or markup
     And deterministic human sheet names are unique and valid without exposing raw identities
     And wrapping, column widths, headings, and theme styling preserve readable tables
+
+  # Data layer project documentation workspace 015
+  Scenario Outline: Data layer project documentation workspace 015
+    Given Client specification has a fresh preview for <export_scope>
+    When the operator downloads the <export_scope> Excel workbook
+    Then the download is an OOXML .xlsx workbook rather than a differently formatted file with an .xlsx name
+    And Microsoft Excel opens it without a file-format error or repair warning
+    And its sheets in order are <expected_sheets>
+
+    Examples:
+      | export_scope                              | expected_sheets                                                                                         |
+      | current Checkout journey section          | Checkout journey                                                                                        |
+      | selected Checkout journey and Sitewide sections | Checkout journey, Sitewide                                                                         |
+      | complete Documentation Set                | Overview, Checkout journey, Article journey, Data capture matrix, Sitewide, Opened Article              |

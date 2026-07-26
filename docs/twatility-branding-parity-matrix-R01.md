@@ -159,13 +159,13 @@ checks.
 
 | Surface or workflow | Production owner | Production controls | Mock destination | Classification | Preserve contract | Proposed migration | Risk tier | Verification | Master collision risk | Decision and status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Utility directory | O-SHELL | `#utility-directory`; active utility; Commands entry | control map / shell; side-panel masthead | Branding/layout parity | Utility registry ownership, namespaced lifecycle, accessible active state | Brand the header and directory without renaming utility hooks | V1 | T-SHELL, T-A11Y | C-SHELL | approved — Slice 2 |
-| Workspace tabs | O-SHELL | `#workspace-tab-data-layer`, `#workspace-tab-hotkeys`; tab/tabpanel and roving `tabindex` | side-panel workspace tabs | Branding/layout parity | `role=tab`, `aria-controls`, selected state, keyboard arrows/Home/End | Restyle existing tabs as primary utility choices | V1 | T-SHELL, T-A11Y | C-SHELL | approved — Slice 2 |
-| Data Layer view tabs | O-SHELL | `#data-layer-view-live/projects/library/sessions/defects/schemas`; authoritative `hidden` panel ownership | side-panel view rail | Branding/layout parity | Every peer view, selected state, stable IDs and keyboard targets | Contained branded subnavigation with wrap-safe labels | V1 | T-SHELL, T-A11Y | C-SHELL | approved — Slice 2 |
+| Utility directory | O-SHELL | `#utility-directory`; active utility; Commands entry | control map / shell; side-panel masthead | Branding/layout parity | Utility registry ownership, namespaced lifecycle, accessible active state | Brand the header and directory without renaming utility hooks | V1 | T-SHELL, T-A11Y | C-SHELL | implemented and verified — Slice 2 |
+| Workspace tabs | O-SHELL | `#workspace-tab-data-layer`, `#workspace-tab-hotkeys`; tab/tabpanel and roving `tabindex` | side-panel workspace tabs | Branding/layout parity | `role=tab`, `aria-controls`, selected state, keyboard arrows/Home/End | Restyle existing tabs as primary utility choices | V1 | T-SHELL, T-A11Y | C-SHELL | implemented and verified — Slice 2 |
+| Data Layer view tabs | O-SHELL | `#data-layer-view-live/projects/library/sessions/defects/schemas`; authoritative `hidden` panel ownership | side-panel view rail | Branding/layout parity | Every peer view, selected state, stable IDs and keyboard targets | Contained branded subnavigation with wrap-safe labels | V1 | T-SHELL, T-A11Y | C-SHELL | implemented and verified — Slice 2 |
 | Active project context | O-PROJECTS | `#active-project-header`; stable ID, name, Saved Draft, Published revision | project ribbon/context card | Branding/layout parity | No implied active project; atomic cross-surface identity | Turn existing summary into restrained project ribbon | V1 | T-PROJECTS | C-SHELL, C-PERSIST | approved — Slices 2–3 |
-| Command palette | O-SHELL | `#open-palette`, `#palette`, `#palette-filter`, `#palette-results`; dialog/listbox | side-panel command palette | Brush-on styling | Filtering, command execution, Escape, selected option, focus return | Apply dialog/card tokens only | V0 | T-SHELL, T-A11Y | C-SHELL | approved — Slice 2 |
+| Command palette | O-SHELL | `#open-palette`, `#palette`, `#palette-filter`, `#palette-results`; dialog/listbox | side-panel command palette | Brush-on styling | Filtering, command execution, Escape, selected option, focus return | Apply dialog/card tokens only | V0 | T-SHELL, T-A11Y | C-SHELL | implemented and verified — Slice 2 |
 | Status and action feedback | O-SHELL | polite/assertive outputs, command log, saving/saved/failed and disabled reasons | state gallery / system feedback | Brush-on styling | Truthful message, live-region priority, `aria-describedby`, state owner | Shared notice, status-chip and disabled-reason styles | V0 | T-SHELL, T-A11Y | C-LOW | approved — Slices 1–2 |
-| Responsive master/detail navigation | O-LIVE, O-SHELL | back-to-list, inspector close/back, stable origin focus | Live inspector and responsive mock | Branding/layout parity | Connected focused control, master/detail state and focus restoration | Reflow existing regions; never replace or overlay essential controls | V1 | T-SHELL, T-LIVE, T-A11Y | C-SHELL | approved — Slice 2 |
+| Responsive master/detail navigation | O-LIVE, O-SHELL | back-to-list, inspector close/back, stable origin focus | Live inspector and responsive mock | Branding/layout parity | Connected focused control, master/detail state and focus restoration | Reflow existing regions; never replace or overlay essential controls | V1 | T-SHELL, T-LIVE, T-A11Y | C-SHELL | shell layout implemented and verified — Slice 2; deeper Live workflow evidence retained for Slice 6 |
 
 ## Live capture, inspection, and guided validation
 
@@ -252,10 +252,10 @@ checks.
 | Assignment Library | O-CANON, O-LIFECYCLE | search/create/list/conflict/open/remove | Assignments | Branding/layout parity | Project-scoped stable target; no standalone schema copy | Branded overview/list | V1 | T-CANON, T-STUDIO | C-CANON, C-STUDIO | approved — Slice 6 |
 | Assignment editor | O-CANON, O-CONDITION | name; contributor kind/target; Event; applicability/condition; source/target/priority | mock Inspector assignment form | Preserve implementation | Top-level lifecycle owns Add; Inspector has no exclusive generic Add; live effective target | Style production route; do not copy mock Inspector ownership | V2 | T-CANON, T-STUDIO | C-CANON, C-STUDIO | preserve — Slices 5–6 |
 | Canonical migration & removal impact | O-CANON, O-DURABLE | migration choices; property/entity dependency repair; confirm/cancel | migration and impact dialogs | Preserve implementation | Atomic migration; source bytes; stable identity; blocked dependencies; focus return | Shared impact/migration review styling | V2 | T-CANON, T-PROJECTS | C-CANON, C-PERSIST | preserve — Slice 6 |
-| Hotkey search | O-HOTKEYS | command filter and result count | Hotkeys search | Brush-on styling | Search/catalog semantics and connected focus | Token/field styling | V0 | T-SHELL, T-A11Y | C-SHELL | approved — Slice 2 |
-| Binding editor | O-HOTKEYS | display/capture/reset/clear/conflict | Hotkeys editor | Branding/layout parity | Key capture, conflict resolution, command identity, keyboard access | Branded binding rows | V1 | T-SHELL, T-A11Y | C-SHELL | approved — Slice 2 |
-| Keymap files | O-HOTKEYS | Create/Update/Load; hidden file input; result | Hotkeys keymap | Preserve implementation | Real file effects, validation, persisted keymap namespace | Restyle existing actions; no mock fake file operation | V1 | T-SHELL | C-SHELL | preserve — Slice 2 |
-| Command catalogue parity | O-HOTKEYS, O-SHELL | same command identities in palette and Hotkeys | control-map command parity | Preserve implementation | No missing/renamed command and same executable action | Visual parity only | V1 | T-SHELL | C-SHELL | preserve — Slice 2 |
+| Hotkey search | O-HOTKEYS | command filter and result count | Hotkeys search | Brush-on styling | Search/catalog semantics and connected focus | Token/field styling | V0 | T-SHELL, T-A11Y | C-SHELL | implemented and verified — Slice 2 |
+| Binding editor | O-HOTKEYS | display/capture/reset/clear/conflict | Hotkeys editor | Branding/layout parity | Key capture, conflict resolution, command identity, keyboard access | Branded binding rows | V1 | T-SHELL, T-A11Y | C-SHELL | implemented and verified — Slice 2 |
+| Keymap files | O-HOTKEYS | Create/Update/Load; hidden file input; result | Hotkeys keymap | Preserve implementation | Real file effects, validation, persisted keymap namespace | Restyle existing actions; no mock fake file operation | V1 | T-SHELL | C-SHELL | preserved and verified — Slice 2 |
+| Command catalogue parity | O-HOTKEYS, O-SHELL | same command identities in palette and Hotkeys | control-map command parity | Preserve implementation | No missing/renamed command and same executable action | Visual parity only | V1 | T-SHELL | C-SHELL | preserved and verified — Slice 2 |
 
 ## Specification Studio shell and entity lifecycle
 
@@ -452,6 +452,7 @@ accessible relationships, focus, and recovery remain authoritative.
 | Slice 1 opening fetch | 2026-07-26T13:11:21Z | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | none | none | User-approved structural decisions recorded; no upstream reclassification or source merge required |
 | Slice 1 closing fetch | 2026-07-26T13:36:40Z | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | none | none | No controls, states, routes, persistence contracts, active-scope requirements, or test owners changed upstream; no reclassification or merge required |
 | Slice 2 opening fetch | 2026-07-26T13:48:16Z | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | `6be109256c058330f3f7c2badc65f4224d3f31a7` | 13 commits: Quick Table save and Project Documentation workspace lineages | New direct Table commit/focus behavior; first-in-tree Documentation route and progressive workspace; Draft/portable Set/theme records; stale/incomplete/preflight/export states; removed eager dialog; expanded `layered_schema` and `flow_export` ownership | Added/updated the exact Quick Table, Project tree/route, Documentation configuration/theme/preview/export, More, obsolete-dialog, owner, and verification rows before merge; merged as `1f83b0f6` and verified at the finite cutoff |
+| Slice 2 closing fetch | 2026-07-26T15:46:17.9825140Z | `6be109256c058330f3f7c2badc65f4224d3f31a7` | `7edae41131a4e6a282d80f67a2fbcfbada52beb3` | 5 commits: Excel workbook compatibility and mutation assurance | No controls, routes, UI states, project persistence schema, commands, side effects, or Undo/Redo boundaries changed. The existing Excel export output contract now requires a standards-correct root OOXML relationship, exact scope-dependent sheets/order, complete package parts/relationships, independent reader compatibility without repair, read-only mutation assurance, and durable range/cardinality rule observation in `layered_schema`. `flow_export` owns the workbook changes; `layered_schema` owns the durable-wait repair. | Existing Project Documentation Excel export and verification rows tightened before merge; merged into the Slice 2 feature branch as `4d57dde6` and verified at the finite cutoff |
 
 Every later slice boundary must append a row even when the merge is clean. Any
 master delta must list controls, states, routes, persistence contracts, active
@@ -525,6 +526,65 @@ authority, and verification ownership before implementation continues.
 - A source rebuild after staging produced no working-tree delta against the
   staged generated `dist`, proving deterministic tracked output for this
   boundary.
+
+### Slice 2 closing master-delta inventory
+
+- **Controls, routes, and visible states:** no new or changed production
+  controls, navigation routes, focus relationships, accessibility semantics,
+  responsive states, or client-theme behavior. No new state-gallery or
+  control-map entry is required.
+- **Excel output contract:** Download Excel workbook remains the existing
+  control and a read-only operation. Its `.xlsx` output must use the OOXML
+  workbook MIME, have a complete ZIP central directory, resolve every declared
+  internal relationship, and use the standards-correct root
+  `officeDocument` relationship so an independent Excel-compatible reader opens
+  it without a format error or repair.
+- **Scope identity and order:** current scope for Checkout produces
+  `Checkout journey`; selected scope for Checkout plus Sitewide produces
+  `Checkout journey`, `Sitewide`; complete scope produces `Overview`,
+  `Checkout journey`, `Article journey`, `Data capture matrix`, `Sitewide`,
+  `Opened Article`, in that order.
+- **Persistence and mutations:** no project persistence contract changes.
+  Workbook generation remains mutation-free. The layered-schema browser owner
+  now waits for both the draft sequence and the expected durable `range` and
+  `cardinality` rules, so persistence evidence cannot pass on a token advance
+  alone.
+- **Authority and test ownership:** the existing Project Documentation export
+  row remains preserve-production-behavior with mock presentation-only
+  authority. `flow_export` adds runtime checkpoint `export015` plus unit,
+  property, browser, acceptance, and mutation assurance for compatibility.
+  `layered_schema` owns only its strengthened durable-wait synchronization.
+  Packaging remains owned by `node scripts/package.mjs`.
+- **Merge contract:** merge `origin/master` only into the Slice 2 feature
+  branch. Preserve the feature branch's portable Chrome executable resolution
+  and branded Studio readiness guards while taking master's Excel
+  compatibility assertions and durable-rule wait. Resolve source, rebuild
+  tracked `dist`, and do not modify or push master.
+
+### Slice 2 closing merge verification
+
+- `origin/master` at `7edae41131a4e6a282d80f67a2fbcfbada52beb3`
+  is an ancestor of feature merge `4d57dde6`. Master was not checked out,
+  modified, merged into, or pushed.
+- Git auto-merged the two anticipated browser-test overlaps. Inspection
+  confirmed that portable Chrome discovery and branded Studio initialization
+  guards remain alongside master's `export015`, independent-reader workbook
+  compatibility assertions, exact current/selected/complete sheet order, and
+  durable `range` plus `cardinality` wait.
+- `node scripts/run-focused-acceptance.mjs --pack flow_export` passed
+  uninterrupted and ended with `acceptance passed`, including its `flow_graph`
+  and `layered_schema` dependency closure.
+- `node test/twatility-brand-foundation-test.mjs`,
+  `node test/twatility-brand-foundation-browser-test.mjs`, and
+  `node test/twatility-side-panel-shell-browser-test.mjs` passed against the
+  packaged extension.
+- The Slice 2 browser evidence verifies 360×760, 420×900, and 512×900 with no
+  document, body, or workspace horizontal overflow; named and connected
+  controls; stable control identity with and without branding; all six Data
+  Layer routes; Hotkeys; command-palette Escape/focus return; arrow-key tab
+  focus; transparent local assets; and contained long text.
+- `node scripts/package.mjs` produced
+  `build/package/my-chrome-utilities.zip`.
 
 ## Slice 0 baseline and known-red checks
 

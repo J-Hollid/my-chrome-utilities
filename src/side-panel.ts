@@ -973,9 +973,9 @@ function newDataLayerSessionId(tabId: number): string {
   return `tab-${tabId}-session-${unique}`;
 }
 
-if (app) {
-  app.textContent = PROJECT_NAME;
-}
+// The authored header owns the branded wordmark and accessible name. Keep
+// PROJECT_NAME for established export filenames and internal contracts.
+if (app) app.setAttribute("aria-label", "TWAtility Belt");
 
 function renderHistoryPath(path: string, fieldValue = path, status: TargetPathStatus = "Selection required"): void {
   if (historyPathInput) {

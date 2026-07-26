@@ -49,7 +49,11 @@
     :rows #{["Flow value map" "selected" "Spreadsheet" "headed tab-separated plain text"]
             ["Flow value map" "cleared" "Spreadsheet" "unheaded tab-separated plain text"]
             ["Data capture matrix" "selected" "Rich table for Confluence or Jira" "semantic rich HTML and headed plain fallback"]
-            ["Data capture matrix" "cleared" "Rich table for Confluence or Jira" "semantic rich HTML and unheaded plain fallback"]}}])
+            ["Data capture matrix" "cleared" "Rich table for Confluence or Jira" "semantic rich HTML and unheaded plain fallback"]}}
+   {:keys ["export_scope" "expected_sheets"]
+    :rows #{["current Checkout journey section" "Checkout journey"]
+            ["selected Checkout journey and Sitewide sections" "Checkout journey, Sitewide"]
+            ["complete Documentation Set" "Overview, Checkout journey, Article journey, Data capture matrix, Sitewide, Opened Article"]}}])
 
 (defn validate-example! [_mode example]
   (support/validate-example-relations!
@@ -58,7 +62,7 @@
 
 (def runtime-paths
   (set (concat [:installedBoundary]
-               (map #(keyword (str "export" (format "%03d" %))) (range 1 15)))))
+               (map #(keyword (str "export" (format "%03d" %))) (range 1 16)))))
 
 (defn- assert-runtime! [evidence]
   (support/assert! (and (= runtime-paths (set (keys evidence)))
@@ -73,5 +77,5 @@
    observe-browser! assert-runtime!))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-24T02:12:36.645489728+02:00", :module-hash "-238953540", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 5, :hash "-1271057094"} {:id "def/feature-files", :kind "def", :line 7, :end-line 9, :hash "2122027433"} {:id "def/entry-modes", :kind "def", :line 10, :end-line 12, :hash "-769878090"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/checked!", :kind "defn-", :line 16, :end-line 19, :hash "938963528"} {:id "defn-/verify-model!", :kind "defn-", :line 21, :end-line 25, :hash "-1344676620"} {:id "defn-/observe-browser!", :kind "defn-", :line 27, :end-line 34, :hash "1213556044"} {:id "def/flow-export-example-relations", :kind "def", :line 36, :end-line 48, :hash "564215971"} {:id "defn/validate-example!", :kind "defn", :line 50, :end-line 53, :hash "1985321309"} {:id "def/runtime-paths", :kind "def", :line 55, :end-line 57, :hash "4462164"} {:id "defn-/assert-runtime!", :kind "defn-", :line 59, :end-line 63, :hash "234435999"} {:id "def/handlers", :kind "def", :line 65, :end-line 69, :hash "-915256383"}]}
+;; {:version 1, :tested-at "2026-07-26T17:20:21.972060884+02:00", :module-hash "1605790536", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 5, :hash "-1271057094"} {:id "def/feature-files", :kind "def", :line 7, :end-line 11, :hash "-335733992"} {:id "def/entry-modes", :kind "def", :line 12, :end-line 16, :hash "210832218"} {:id "form/3/defonce", :kind "defonce", :line 17, :end-line 17, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 18, :end-line 18, :hash "-1618529344"} {:id "defn-/checked!", :kind "defn-", :line 20, :end-line 23, :hash "938963528"} {:id "defn-/verify-model!", :kind "defn-", :line 25, :end-line 29, :hash "1417475058"} {:id "defn-/observe-browser!", :kind "defn-", :line 31, :end-line 38, :hash "1213556044"} {:id "def/flow-export-example-relations", :kind "def", :line 40, :end-line 56, :hash "1553178239"} {:id "defn/validate-example!", :kind "defn", :line 58, :end-line 61, :hash "1985321309"} {:id "def/runtime-paths", :kind "def", :line 63, :end-line 65, :hash "776310823"} {:id "defn-/assert-runtime!", :kind "defn-", :line 67, :end-line 71, :hash "234435999"} {:id "def/handlers", :kind "def", :line 73, :end-line 77, :hash "-915256383"}]}
 ;; clj-mutate-manifest-end

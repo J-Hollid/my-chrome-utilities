@@ -1021,7 +1021,8 @@
     ],
     "browserAdapters": [
       "test/browser-packs/shell.mjs",
-      "test/twatility-brand-foundation-browser-test.mjs"
+      "test/twatility-brand-foundation-browser-test.mjs",
+      "test/twatility-side-panel-shell-browser-test.mjs"
     ]
   }
 ]

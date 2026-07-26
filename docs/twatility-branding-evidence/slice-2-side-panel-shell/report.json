@@ -1,0 +1,316 @@
+{
+  "viewports": [
+    {
+      "viewport": {
+        "width": 360,
+        "height": 760
+      },
+      "foundation": {
+        "bodyClasses": [
+          "twatility-theme",
+          "twatility-side-panel"
+        ],
+        "sheets": [
+          "side-panel.css",
+          "layered-schema.css",
+          "twatility-brand.css",
+          "side-panel-brand.css"
+        ],
+        "ink": "#17130e",
+        "overflow": false,
+        "unnamed": [],
+        "broken": [],
+        "equivalent": true,
+        "belt": {
+          "transparent": true,
+          "opaque": true
+        },
+        "analyst": {
+          "transparent": true,
+          "opaque": true
+        }
+      },
+      "shell": {
+        "width": 360,
+        "height": 760,
+        "brandName": "TWAtility Belt",
+        "brandText": "TWAtility Belt",
+        "utilityCount": 3,
+        "dataTabs": [
+          "Live",
+          "Projects",
+          "Library",
+          "Sessions",
+          "Defects",
+          "Schemas"
+        ],
+        "expected": [
+          "Live",
+          "Projects",
+          "Library",
+          "Sessions",
+          "Defects",
+          "Schemas"
+        ],
+        "visits": [
+          {
+            "tab": "Live",
+            "selected": "true",
+            "panel": "data-layer-panel-live",
+            "visible": true
+          },
+          {
+            "tab": "Projects",
+            "selected": "true",
+            "panel": "data-layer-panel-projects",
+            "visible": true
+          },
+          {
+            "tab": "Library",
+            "selected": "true",
+            "panel": "data-layer-panel-library",
+            "visible": true
+          },
+          {
+            "tab": "Sessions",
+            "selected": "true",
+            "panel": "data-layer-panel-sessions",
+            "visible": true
+          },
+          {
+            "tab": "Defects",
+            "selected": "true",
+            "panel": "data-layer-panel-defects",
+            "visible": true
+          },
+          {
+            "tab": "Schemas",
+            "selected": "true",
+            "panel": "data-layer-panel-schemas",
+            "visible": true
+          }
+        ],
+        "hotkeysVisible": true,
+        "keyboardReturned": true,
+        "longTextContained": true,
+        "overflow": {
+          "document": 0,
+          "body": 0,
+          "workspace": 0
+        },
+        "palette": {
+          "hidden": true,
+          "focus": "open-palette"
+        }
+      }
+    },
+    {
+      "viewport": {
+        "width": 420,
+        "height": 900
+      },
+      "foundation": {
+        "bodyClasses": [
+          "twatility-theme",
+          "twatility-side-panel"
+        ],
+        "sheets": [
+          "side-panel.css",
+          "layered-schema.css",
+          "twatility-brand.css",
+          "side-panel-brand.css"
+        ],
+        "ink": "#17130e",
+        "overflow": false,
+        "unnamed": [],
+        "broken": [],
+        "equivalent": true,
+        "belt": {
+          "transparent": true,
+          "opaque": true
+        },
+        "analyst": {
+          "transparent": true,
+          "opaque": true
+        }
+      },
+      "shell": {
+        "width": 420,
+        "height": 900,
+        "brandName": "TWAtility Belt",
+        "brandText": "TWAtility Belt",
+        "utilityCount": 3,
+        "dataTabs": [
+          "Live",
+          "Projects",
+          "Library",
+          "Sessions",
+          "Defects",
+          "Schemas"
+        ],
+        "expected": [
+          "Live",
+          "Projects",
+          "Library",
+          "Sessions",
+          "Defects",
+          "Schemas"
+        ],
+        "visits": [
+          {
+            "tab": "Live",
+            "selected": "true",
+            "panel": "data-layer-panel-live",
+            "visible": true
+          },
+          {
+            "tab": "Projects",
+            "selected": "true",
+            "panel": "data-layer-panel-projects",
+            "visible": true
+          },
+          {
+            "tab": "Library",
+            "selected": "true",
+            "panel": "data-layer-panel-library",
+            "visible": true
+          },
+          {
+            "tab": "Sessions",
+            "selected": "true",
+            "panel": "data-layer-panel-sessions",
+            "visible": true
+          },
+          {
+            "tab": "Defects",
+            "selected": "true",
+            "panel": "data-layer-panel-defects",
+            "visible": true
+          },
+          {
+            "tab": "Schemas",
+            "selected": "true",
+            "panel": "data-layer-panel-schemas",
+            "visible": true
+          }
+        ],
+        "hotkeysVisible": true,
+        "keyboardReturned": true,
+        "longTextContained": true,
+        "overflow": {
+          "document": 0,
+          "body": 0,
+          "workspace": 0
+        },
+        "palette": {
+          "hidden": true,
+          "focus": "open-palette"
+        }
+      }
+    },
+    {
+      "viewport": {
+        "width": 512,
+        "height": 900
+      },
+      "foundation": {
+        "bodyClasses": [
+          "twatility-theme",
+          "twatility-side-panel"
+        ],
+        "sheets": [
+          "side-panel.css",
+          "layered-schema.css",
+          "twatility-brand.css",
+          "side-panel-brand.css"
+        ],
+        "ink": "#17130e",
+        "overflow": false,
+        "unnamed": [],
+        "broken": [],
+        "equivalent": true,
+        "belt": {
+          "transparent": true,
+          "opaque": true
+        },
+        "analyst": {
+          "transparent": true,
+          "opaque": true
+        }
+      },
+      "shell": {
+        "width": 512,
+        "height": 900,
+        "brandName": "TWAtility Belt",
+        "brandText": "TWAtility Belt",
+        "utilityCount": 3,
+        "dataTabs": [
+          "Live",
+          "Projects",
+          "Library",
+          "Sessions",
+          "Defects",
+          "Schemas"
+        ],
+        "expected": [
+          "Live",
+          "Projects",
+          "Library",
+          "Sessions",
+          "Defects",
+          "Schemas"
+        ],
+        "visits": [
+          {
+            "tab": "Live",
+            "selected": "true",
+            "panel": "data-layer-panel-live",
+            "visible": true
+          },
+          {
+            "tab": "Projects",
+            "selected": "true",
+            "panel": "data-layer-panel-projects",
+            "visible": true
+          },
+          {
+            "tab": "Library",
+            "selected": "true",
+            "panel": "data-layer-panel-library",
+            "visible": true
+          },
+          {
+            "tab": "Sessions",
+            "selected": "true",
+            "panel": "data-layer-panel-sessions",
+            "visible": true
+          },
+          {
+            "tab": "Defects",
+            "selected": "true",
+            "panel": "data-layer-panel-defects",
+            "visible": true
+          },
+          {
+            "tab": "Schemas",
+            "selected": "true",
+            "panel": "data-layer-panel-schemas",
+            "visible": true
+          }
+        ],
+        "hotkeysVisible": true,
+        "keyboardReturned": true,
+        "longTextContained": true,
+        "overflow": {
+          "document": 0,
+          "body": 0,
+          "workspace": 0
+        },
+        "palette": {
+          "hidden": true,
+          "focus": "open-palette"
+        }
+      }
+    }
+  ]
+}

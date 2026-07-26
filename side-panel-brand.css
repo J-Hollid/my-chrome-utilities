@@ -1,7 +1,8 @@
 /*
- * TWAtility Belt side-panel foundation.
- * Structural side-panel work remains in Slice 2; this file supplies only the
- * scoped theme boundary and shared production component treatment.
+ * TWAtility Belt side-panel shell.
+ * This layer is deliberately presentation-only: production markup, stable
+ * identities, state ownership, focus handling, and side effects remain in the
+ * existing side-panel implementation.
  */
 
 body.twatility-side-panel {
@@ -28,13 +29,20 @@ body.twatility-side-panel {
   min-width: 0;
 }
 
+.twatility-side-panel #side-panel-content {
+  background:
+    linear-gradient(180deg, transparent 0 8rem, #071b30 8rem 100%);
+}
+
 .twatility-side-panel #application-header {
   position: relative;
-  min-height: 5rem;
+  min-height: 5.25rem;
   overflow: hidden;
   border-block-end: 0.2rem solid var(--twa-mustard);
+  padding: 0.65rem 0.75rem;
   background:
     linear-gradient(105deg, var(--twa-navy-deep) 0 62%, #0f3d67 100%);
+  box-shadow: 0 0.3rem 0.9rem #020b1488;
   isolation: isolate;
 }
 
@@ -52,7 +60,9 @@ body.twatility-side-panel {
 
 .twatility-side-panel #app {
   flex: 0 0 auto;
+  margin: 0;
   color: var(--twa-paper-raised);
+  font-size: clamp(1.12rem, 4vw, 1.42rem);
   text-shadow: 0.1rem 0.1rem 0 var(--twa-ink);
 }
 
@@ -61,6 +71,7 @@ body.twatility-side-panel {
   min-width: 0;
   flex: 1 1 10rem;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 0.3rem;
   margin: 0;
   padding: 0;
@@ -69,14 +80,68 @@ body.twatility-side-panel {
 
 .twatility-side-panel #utility-directory li {
   max-width: none;
-  padding: 0;
-  border: 0;
+  padding: 0.2rem 0.45rem;
+  border: 0.08rem solid #d7c9a866;
+  background: #06182b99;
+  color: var(--twa-paper);
 }
 
-.twatility-side-panel :is(#workspace-tabs, #data-layer-views) {
+.twatility-side-panel #open-palette {
+  flex: 0 0 auto;
+  border-color: var(--twa-mustard);
+  background: var(--twa-paper-raised);
+  color: var(--twa-navy-deep);
+  font-weight: 800;
+}
+
+.twatility-side-panel #workspace-tabs {
+  position: relative;
+  z-index: 3;
+  gap: 0.4rem;
+  padding: 0.45rem 0.75rem;
+  overflow-x: auto;
   border-block-end-color: var(--line);
   background: #0a223b;
   scrollbar-color: var(--twa-mustard) transparent;
+  box-shadow: 0 0.2rem 0.55rem #020b1466;
+}
+
+.twatility-side-panel #workspace-tabs [role="tab"] {
+  min-width: 7rem;
+  border-radius: var(--twa-radius-small);
+  font-size: 0.95rem;
+}
+
+.twatility-side-panel :is(#workspace-panel-data-layer, #workspace-panel-hotkeys) {
+  width: min(100%, 72rem);
+  min-width: 0;
+  padding: 0.75rem;
+  scrollbar-color: var(--twa-paper-shadow) transparent;
+}
+
+.twatility-side-panel :is(#workspace-panel-data-layer, #workspace-panel-hotkeys) > h2 {
+  margin: 0 0 0.55rem;
+  color: var(--twa-paper-raised);
+  font-size: clamp(1.28rem, 5vw, 1.7rem);
+  letter-spacing: 0.02em;
+}
+
+.twatility-side-panel #data-layer-views {
+  top: -0.75rem;
+  gap: 0.18rem;
+  margin-inline: -0.75rem;
+  padding: 0.42rem 0.75rem 0.52rem;
+  border-block: 0.08rem solid var(--line);
+  background: color-mix(in srgb, var(--twa-navy-deep) 92%, transparent);
+  scrollbar-color: var(--twa-mustard) transparent;
+  box-shadow: 0 0.3rem 0.55rem #020b1444;
+}
+
+.twatility-side-panel #data-layer-views [role="tab"] {
+  min-height: 2.45rem;
+  padding: 0.28rem 0.52rem;
+  border-radius: 999px;
+  white-space: nowrap;
 }
 
 .twatility-side-panel [role="tab"] {
@@ -90,18 +155,66 @@ body.twatility-side-panel {
   box-shadow: var(--twa-shadow-small);
 }
 
-.twatility-side-panel :is(#workspace-panel-data-layer, #workspace-panel-hotkeys) {
-  scrollbar-color: var(--twa-paper-shadow) transparent;
-}
-
 .twatility-side-panel #active-project-header {
-  margin-block: 0.4rem 0.65rem;
-  padding: 0.5rem 0.65rem;
+  margin-block: 0.65rem;
+  padding: 0.6rem 0.72rem;
   border: 0.1rem solid var(--line);
   border-inline-start: 0.32rem solid var(--twa-mustard);
   border-radius: var(--twa-radius-small);
   background: color-mix(in srgb, var(--surface) 84%, var(--twa-navy));
   color: var(--twa-paper);
+}
+
+.twatility-side-panel [id^="data-layer-panel-"] {
+  min-width: 0;
+  max-width: 100%;
+  padding: clamp(0.62rem, 2.6vw, 1rem);
+  overflow-x: hidden;
+  border: 0.08rem solid #957a4288;
+  border-radius: var(--twa-radius-medium);
+  background:
+    linear-gradient(155deg, #132f4cf2, #0d253df2 68%),
+    var(--surface);
+  box-shadow: var(--twa-shadow-small);
+}
+
+.twatility-side-panel [id^="data-layer-panel-"] > :is(h3, header h3) {
+  margin-block: 0 0.65rem;
+  color: var(--twa-paper-raised);
+  font-size: clamp(1.08rem, 4vw, 1.35rem);
+}
+
+.twatility-side-panel
+  :is(
+    #live-session-summary,
+    #active-project-card,
+    #durable-project-repository,
+    #event-template-master,
+    #saved-session-master,
+    #schema-master,
+    #schema-detail,
+    #sequence-library,
+    .panel-empty-state
+  ) {
+  min-width: 0;
+  max-width: 100%;
+  border: 0.08rem solid var(--line);
+  border-radius: var(--twa-radius-medium);
+  background: color-mix(in srgb, var(--surface) 92%, black);
+  box-shadow: 0.12rem 0.12rem 0 #020b1466;
+}
+
+.twatility-side-panel
+  :is(
+    #active-project-card,
+    #durable-project-repository,
+    #event-template-master,
+    #saved-session-master,
+    #schema-master,
+    #schema-detail,
+    #sequence-library
+  ) {
+  padding: 0.65rem;
 }
 
 .twatility-side-panel :is(button, input, textarea, select) {
@@ -122,6 +235,11 @@ body.twatility-side-panel {
 .twatility-side-panel button:not(:disabled):hover {
   background: var(--twa-mustard);
   color: var(--twa-navy-deep);
+}
+
+.twatility-side-panel button:not(:disabled):active {
+  translate: 0.06rem 0.06rem;
+  box-shadow: none;
 }
 
 .twatility-side-panel
@@ -146,10 +264,39 @@ body.twatility-side-panel {
   color: #fff8e8;
 }
 
-.twatility-side-panel :is(.panel-empty-state, #live-session-summary) {
-  border: 0.1rem solid var(--line);
-  border-radius: var(--twa-radius-medium);
-  background: color-mix(in srgb, var(--surface) 92%, black);
+.twatility-side-panel :is(output, [role="status"], [aria-live]) {
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.twatility-side-panel
+  :is(
+    code,
+    pre,
+    textarea,
+    dd,
+    .operator-metadata,
+    [id$="-url"],
+    [id$="-path"],
+    [id$="-identity"]
+  ) {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.twatility-side-panel :is(pre, textarea) {
+  overflow: auto;
+}
+
+.twatility-side-panel .panel-empty-state {
+  border-inline-start: 0.32rem solid var(--twa-mustard);
+  padding: 0.75rem;
+}
+
+.twatility-side-panel .panel-empty-state :is(h4, h5) {
+  color: var(--twa-paper-raised);
 }
 
 .twatility-side-panel :is(#live-event-inspector, #event-property-editor) {
@@ -177,10 +324,45 @@ body.twatility-side-panel {
   color: var(--twa-ink);
 }
 
+.twatility-side-panel :is(dialog, [role="dialog"]) {
+  max-width: min(34rem, calc(100vw - 1.5rem));
+  max-height: min(88vh, 46rem);
+  overflow: auto;
+  border: 0.12rem solid var(--twa-mustard);
+  border-radius: var(--twa-radius-medium);
+  background: var(--twa-navy-deep);
+  color: var(--twa-paper-raised);
+  box-shadow: 0.35rem 0.4rem 0 #020b14aa;
+}
+
+.twatility-side-panel dialog::backdrop {
+  background: #020b14cc;
+}
+
 .twatility-side-panel :is(dialog, [role="dialog"]) button {
   background: var(--twa-paper-raised);
   color: var(--twa-navy-deep);
   box-shadow: var(--twa-shadow-small);
+}
+
+@media (max-width: 512px) {
+  .twatility-side-panel #application-header {
+    align-items: center;
+  }
+
+  .twatility-side-panel #utility-directory {
+    justify-content: flex-start;
+  }
+
+  .twatility-side-panel :is(#workspace-panel-data-layer, #workspace-panel-hotkeys) {
+    padding: 0.6rem;
+  }
+
+  .twatility-side-panel #data-layer-views {
+    top: -0.6rem;
+    margin-inline: -0.6rem;
+    padding-inline: 0.6rem;
+  }
 }
 
 @media (max-width: 420px) {
@@ -197,6 +379,38 @@ body.twatility-side-panel {
   .twatility-side-panel #utility-directory {
     order: 3;
     flex-basis: 100%;
+  }
+
+  .twatility-side-panel #utility-directory li {
+    white-space: normal;
+  }
+
+  .twatility-side-panel #workspace-tabs [role="tab"] {
+    flex: 1 1 8rem;
+  }
+
+  .twatility-side-panel [id^="data-layer-panel-"] {
+    padding: 0.58rem;
+  }
+}
+
+@media (max-width: 360px) {
+  .twatility-side-panel #application-header {
+    gap: 0.4rem;
+    padding: 0.55rem 0.6rem;
+  }
+
+  .twatility-side-panel #app {
+    font-size: 1.08rem;
+  }
+
+  .twatility-side-panel #open-palette {
+    min-height: 2.75rem;
+    padding-inline: 0.48rem;
+  }
+
+  .twatility-side-panel :is(#workspace-tabs, #data-layer-views) {
+    scrollbar-width: thin;
   }
 }
 
