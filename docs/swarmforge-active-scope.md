@@ -5,8 +5,8 @@
 The active specification cycles are the interactive directional Flow graph review,
 focused canonical authoring and layered effective-schema, selected-Flow
 documentation export, operator-guided Live Flow testing, project-management,
-project-scoped event transport, and durable-project repository checkpoints. Their
-contracts are:
+project-scoped event transport, the side-panel schema relationship tree, and
+durable-project repository checkpoints. Their contracts are:
 
 - `features/data-layer-directional-flow-specification-graph.feature`
 - `features/data-layer-directional-flow-specification-graph-runtime.feature`
@@ -26,6 +26,8 @@ contracts are:
 - `features/data-layer-project-portability-and-upgrade-runtime.feature`
 - `features/data-layer-project-event-transport-settings.feature`
 - `features/data-layer-project-event-transport-settings-runtime.feature`
+- `features/data-layer-side-panel-schema-relationship-tree.feature`
+- `features/data-layer-side-panel-schema-relationship-tree-runtime.feature`
 - `features/data-layer-durable-project-repository.feature`
 - `features/data-layer-durable-project-repository-runtime.feature`
 
@@ -43,6 +45,8 @@ The program for project library, active context, and portability is
 `docs/data-layer-project-management-program-R01.md`.
 The program for active-project observation and push routing is
 `docs/data-layer-project-event-transport-settings-program-R01.md`.
+The program for the relationship-derived side-panel Schema tree is
+`docs/data-layer-side-panel-schema-relationship-tree-program-R01.md`.
 The correction program for durable project storage, page-scoped Undo/Redo, and
 intentional publication revisions is
 `docs/data-layer-durable-project-repository-program-R01.md`.
@@ -62,6 +66,13 @@ project-owned observation and default push paths, active-context switching,
 portable transport settings, direct-push defaults, and global Library destination
 precedence. They do not reactivate archived Live execution, sequence replay, or
 release behavior.
+
+The side-panel schema relationship-tree contracts are later user-approved
+authority for the one in-panel Schema list, relationship-derived contributor
+categories, repeated canonical references, hierarchy filtering and search, and
+project-scoped tree view state. They do not create a tagging model or change
+schema inheritance, Flow ownership, project collections, or Saved Schema Library
+ownership.
 
 ## Scope and lineage processing invariant
 
@@ -115,7 +126,8 @@ continues to name them.
 
 ## Current delivery and recovery queue
 
-The project-event-transport-settings cycle is the current later user-approved
+The project-event-transport-settings cycle completed at `edc47b29e1`. The
+side-panel-schema-relationship-tree cycle is the current later user-approved
 specification task and proceeds before the remaining durable-repository and Flow
 recovery tasks resume. It does not close, replace, or deactivate either recovery
 lineage.
@@ -637,6 +649,13 @@ node scripts/run-focused-acceptance.mjs --pack project_event_transport
 node scripts/package.mjs
 ```
 
+The side-panel schema relationship-tree checkpoint sequence is exactly:
+
+```sh
+node scripts/run-focused-acceptance.mjs --pack schema_relationship_tree
+node scripts/package.mjs
+```
+
 The durable-project repository checkpoint sequence is exactly:
 
 ```sh
@@ -671,6 +690,15 @@ explicit Library destination precedence, no-project behavior, and truthful
 invalid-path blocking. It may depend on `project_management` and the existing
 focused capture and Library components, but must not invoke archived Live,
 sequence-replay, release, or full-site suites.
+
+The `schema_relationship_tree` pack must register both side-panel schema
+relationship-tree contracts and focused production evidence for derived
+contributor categories, repeated Page and Event references, stable canonical
+routing, category filtering, hierarchy search and breadcrumbs, live relationship
+updates, project-scoped view restoration, no-project behavior, one-editor reuse,
+keyboard operation, and 360px geometry. It may depend on `layered_schema`,
+`project_management`, and `flow_graph`, but must not invoke unrelated authoring,
+Live, documentation, release, or full-site suites.
 
 The `layered_schema` pack must register all four canonical-authoring and layered-
 schema feature contracts and their focused production evidence, including
