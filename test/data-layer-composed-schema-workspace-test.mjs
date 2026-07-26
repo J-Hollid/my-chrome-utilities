@@ -15,6 +15,7 @@ import {createSpecificationProject} from "../dist/data-layer-specification-proje
 import {composedReviewFacetDelta,composedReviewLifecycleInventory} from "../dist/data-layer-composed-schema-workspace-rows.js";
 import {composedFacetDraft,sparseComposedFacets} from "../dist/data-layer-composed-schema-builders.js";
 import {saveFlowPageInstanceLocalFacetsAndStructures} from "../dist/data-layer-layered-schema-project.js";
+import {composedTableQuickEditFacets} from "../dist/data-layer-composed-schema-workspace-ui.js";
 
 const state=createSpecificationProject({name:"Composed schemas",site:"shop.example",id:(kind)=>`${kind}:workspace`});
 state.project.collections.profiles.push({id:"profile:sitewide",name:"Sitewide",schemaConstraints:[
@@ -31,6 +32,10 @@ state.project.collections.pages.push({id:"page:cart",name:"Cart",profileId:"prof
 
 const cart=state.project.collections.pages[0];
 const workspace=composedSchemaWorkspace(state,cart,"Page");
+const quickStep=workspace.rows.find(({path})=>path==="/page_name");
+assert.deepEqual(composedTableQuickEditFacets(quickStep,"description","Cart step"),{documentation:"Cart step"},"an inherited composed Description edit creates only its sparse local facet");
+assert.deepEqual(composedTableQuickEditFacets(quickStep,"expected-or-allowed","cart, guest"),{allowedValues:["cart","guest"]},"an inherited composed Allowed values edit does not copy parent facets");
+assert.deepEqual(composedTableQuickEditFacets(quickStep,"example","cart"),{examples:["cart"]},"an inherited composed Example edit creates only its typed example facet");
 assert.equal(workspace.heading,"Effective schema at Cart");
 assert.equal(workspace.status,"ready");
 assert.deepEqual(workspace.rows.map(({path})=>path),["/funnel_name","/funnel_step","/page_name","/page_type"]);

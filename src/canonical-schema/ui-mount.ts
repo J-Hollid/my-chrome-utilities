@@ -1,4 +1,4 @@
-import {canonicalPropertyPath,type CanonicalCommand,type CanonicalCommandResult,type CanonicalPropertyNode,type CanonicalSchemaDocument,type CanonicalStructuralOperation} from "../data-layer-canonical-schema.js";
+import {canonicalPropertyPath,type CanonicalCommand,type CanonicalCommandResult,type CanonicalIdFactory,type CanonicalPropertyNode,type CanonicalSchemaDocument,type CanonicalStructuralOperation} from "../data-layer-canonical-schema.js";
 import {type FocusedPropertySection} from "../data-layer-focused-schema-property-ui.js";
 import {renderCanonicalFocusedSection} from "../data-layer-canonical-schema-focused-sections.js";
 import {renderCanonicalFocusedMenu} from "../data-layer-canonical-schema-focused-menu.js";
@@ -6,8 +6,9 @@ import {renderCanonicalFocusedEditor} from "../data-layer-canonical-schema-focus
 import {renderCanonicalSchemaEditor} from "../data-layer-canonical-schema-render.js";
 import {focusedPropertyPatch,focusedStagedChanges,focusedSourceState,type CanonicalFocusedPatch} from "../data-layer-canonical-schema-focused-drafts.js";
 import {dispatchFocusedCanonicalCommand} from "../data-layer-canonical-schema-focused-command.js";
+import {typedCanonicalValue} from "../data-layer-canonical-schema-facets.js";
 import {button,clone,presenceText,provenanceText,sectionLabel} from "./ui-mount-helpers.js";
-import {schemaTableOverlayTransition,schemaTableStageAllowedValues,type SchemaTableEditableFacet,type SchemaTableOverlayState} from "../data-layer-schema-table.js";
+import {schemaTableOverlayTransition,schemaTableStageAllowedValues,type SchemaTableEditableFacet,type SchemaTableOverlayState,type SchemaTableQuickEditResult} from "../data-layer-schema-table.js";
 
 export interface CanonicalSchemaEditorOptions {
   host:HTMLElement;surface:"Builder"|"Side panel"|"Flow workspace";load:()=>CanonicalSchemaDocument;
@@ -18,6 +19,13 @@ export interface CanonicalSchemaEditorOptions {
 
 export function bindCanonicalPropertySearch(control:Pick<HTMLInputElement,"value"|"addEventListener">,update:(query:string)=>void):void{control.addEventListener("input",()=>update(control.value));}
 export function canonicalDispatchRequiresLocalRender(result:CanonicalCommandResult,renderAfterDispatch:boolean|undefined):boolean{return renderAfterDispatch!==false||result.status==="confirmation-required";}
+export function canonicalTableQuickEditPatch(original:CanonicalPropertyNode,facet:SchemaTableEditableFacet,value:string,id:CanonicalIdFactory):CanonicalFocusedPatch {
+  const next=clone(original);
+  if(facet==="description")next.documentation={...next.documentation,description:value};
+  else if(facet==="example")next.documentation={...next.documentation,example:value===""?{method:"blank"}:{method:"custom",value:typedCanonicalValue(next.type,value)}};
+  else{const values=schemaTableStageAllowedValues(next.allowedValues.map(({value:allowed})=>allowed),value,next.type);delete next.expectedValue;next.allowedValues=values.map((allowed,index)=>({...next.allowedValues[index]??{id:id("allowed-value")},value:allowed}));}
+  return focusedPropertyPatch(next,original,new Set(),new Set());
+}
 
 /**
  * Mount the one shared schema property workspace.  Property rows are intentionally
@@ -33,9 +41,16 @@ export function mountCanonicalSchemaEditor(options:CanonicalSchemaEditorOptions)
   const current=():CanonicalSchemaDocument=>{const document=options.load();return transientView?{...document,view:transientView}:document;};
   const selectedNode=(document:CanonicalSchemaDocument):CanonicalPropertyNode|undefined=>activePropertyId?document.nodes[activePropertyId]:document.selectedPropertyId?document.nodes[document.selectedPropertyId]:undefined;
   const ensureWorking=(node:CanonicalPropertyNode):void=>{if(!working||working.id!==node.id)working=clone(node);};
-  const stageInline=(node:CanonicalPropertyNode,facet:SchemaTableEditableFacet,value:string):void=>{ensureWorking(node);if(!working)return;if(facet==="description")working={...working,documentation:{...working.documentation,description:value}};else if(facet==="example")working={...working,documentation:{...working.documentation,example:{method:value?"custom":"blank",...(value?{value}: {})}}};else{const values=schemaTableStageAllowedValues(working.allowedValues.map(({value:allowed})=>allowed),value,working.type),{expectedValue:_,...withoutExpected}=working;working={...withoutExpected,allowedValues:values.map((allowed,index)=>({...working!.allowedValues[index]??{id:options.id("allowed-value")},value:allowed}))};}activePropertyId=node.id;};
   const command=(next:CanonicalCommand):CanonicalCommandResult=>{if(next.kind==="view"){transientView=next.view;menuPropertyId=undefined;focusedPropertyId=undefined;feedback=`Viewing ${next.view} projection; no Saved Draft write.`;render();return{status:"applied",document:{...current(),view:next.view}};}if(next.kind==="select"){activePropertyId=next.propertyId;menuPropertyId=next.propertyId;focusedPropertyId=undefined;feedback=`Selected ${next.propertyId}; no Saved Draft write.`;render();return{status:"applied",document:{...current(),selectedPropertyId:next.propertyId}};}return dispatchFocusedCanonicalCommand(next,{current,dispatch:options.dispatch,renderAfterDispatch:options.renderAfterDispatch,host:options.host,setFeedback:(message)=>{feedback=message;},render});};
   const patchFor=(node:CanonicalPropertyNode,original:CanonicalPropertyNode):CanonicalFocusedPatch=>focusedPropertyPatch(node,original,removedRuleIds,removedValueIds);
+  const commitInline=(node:CanonicalPropertyNode,facet:SchemaTableEditableFacet,value:string):SchemaTableQuickEditResult=>{
+    const document=current(),original=document.nodes[node.id];if(!original)return{status:"invalid",diagnostic:"This property is no longer available."};
+    try{
+      const patch=canonicalTableQuickEditPatch(original,facet,value,options.id);if(!Object.keys(patch).length)return{status:"unchanged"};
+      const result=command({kind:"set",baseRevision:document.revision,propertyId:original.id,patch});
+      return result.status==="applied"||result.status==="rebased"?{status:"committed"}:{status:"invalid",diagnostic:result.status==="conflict"?result.message:"Review the affected property before saving."};
+    }catch(error){return{status:"invalid",diagnostic:error instanceof Error?error.message:String(error)};}
+  };
 
   const closeFocused=(reason:"cancel"|"escape"="cancel"):void=>{
     overlayState=schemaTableOverlayTransition(overlayState,{kind:reason});const restorePath=("restorePath" in overlayState?overlayState.restorePath:undefined)??originPath;working=undefined;removedRuleIds=new Set();removedValueIds=new Set();stagedOperations=[];menuPropertyId=undefined;focusedPropertyId=undefined;activePropertyId=undefined;review=undefined;
@@ -67,7 +82,8 @@ export function mountCanonicalSchemaEditor(options:CanonicalSchemaEditorOptions)
     panel.setAttribute("aria-label","Review changes");heading.textContent="Review changes";changes.forEach(({label,detail})=>{const item=dom.createElement("li");item.textContent=`${label} · ${detail}`;list.append(item);});prospective.textContent=`Prospective effective result: ${working.type} · ${working.presence.mode} · ${working.rules.length} rules · affected consumers follow ${provenanceText(original)}.`;impact.textContent=`Impact review: ${working.type!==original.type?`type ${original.type} → ${working.type}; `:""}${working.documentation!==original.documentation?"documentation and example consumers may change; ":""}${working.rules.length!==original.rules.length?`rules ${original.rules.length} → ${working.rules.length}; `:""}Draft status and one page-scoped Undo are retained.`;actions.append(cancel,confirm);panel.append(heading,list,prospective,impact,actions);review=panel;render();
   };
   const stageStructure=(operation:CanonicalStructuralOperation):void=>{stagedOperations=[...stagedOperations,operation];feedback=`Staged ${operation.kind} for review.`;render();};
-  const render=():void=>renderCanonicalSchemaEditor({dom,options,document:current(),query,propertyFilter,propertySort,feedback,activePropertyId,activeSection,menuPropertyId,focusedPropertyId,working,review,current,setQuery:(value)=>{query=value;},setPropertyFilter:(value)=>{propertyFilter=value;},setPropertySort:(value)=>{propertySort=value;},setFeedback:(value)=>{feedback=value;},setMenuPropertyId:(value)=>{menuPropertyId=value;},ensureWorking,stageInline,selectedNode,openProperty,command,render,renderMenu:(node)=>renderCanonicalFocusedMenu(node,{dom,current,sourceState:focusedSourceState,ensureWorking,getWorking:()=>working,activeSection,setActiveSection:(value)=>{activeSection=value;focusedPropertyId=node.id;overlayState=schemaTableOverlayTransition(overlayState,{kind:"focus"});},setMenuPropertyId:(value)=>{menuPropertyId=value;},render,close:closeFocused,feedback:(message)=>{feedback=message;},provenanceText}),renderFocusedEditor:(document,node)=>renderCanonicalFocusedEditor(document,node,{dom,activeSection,sectionLabel,canonicalPropertyPath,provenanceText,presenceText,renderSection:(host,value)=>renderCanonicalFocusedSection(host,{dom,current,node:value,getWorking:()=>working,setWorking:(next)=>{working=next;},activeSection,setActiveSection:(section)=>{activeSection=section;},removedRuleIds,removedValueIds,id:options.id,stageStructure,render,patchFor,command,select:(id)=>{activePropertyId=id;},feedback:(message)=>{feedback=message;}}),close:closeChild,review:showReview,save:saveFocused})});
+  const quickEditRoot=():ParentNode=>Array.from(dom.querySelectorAll<HTMLElement>(`[data-canonical-schema-id="${CSS.escape(initialDocument.id)}"]`)).find((candidate)=>candidate.getAttribute("aria-label")===`${options.surface} canonical schema editor`)??options.host;
+  const render=():void=>renderCanonicalSchemaEditor({dom,options,document:current(),query,propertyFilter,propertySort,feedback,activePropertyId,activeSection,menuPropertyId,focusedPropertyId,working,review,current,setQuery:(value)=>{query=value;},setPropertyFilter:(value)=>{propertyFilter=value;},setPropertySort:(value)=>{propertySort=value;},setFeedback:(value)=>{feedback=value;},setMenuPropertyId:(value)=>{menuPropertyId=value;},ensureWorking,commitInline,cancelInline:()=>{},inlineDiagnostic:(message)=>{feedback=message;const output=quickEditRoot().querySelector<HTMLOutputElement>('[aria-label="Canonical command result"]');if(output)output.textContent=message;},quickEditRoot,quickEditScope:`canonical:${initialDocument.id}:${options.surface}`,selectedNode,openProperty,command,render,renderMenu:(node)=>renderCanonicalFocusedMenu(node,{dom,current,sourceState:focusedSourceState,ensureWorking,getWorking:()=>working,activeSection,setActiveSection:(value)=>{activeSection=value;focusedPropertyId=node.id;overlayState=schemaTableOverlayTransition(overlayState,{kind:"focus"});},setMenuPropertyId:(value)=>{menuPropertyId=value;},render,close:closeFocused,feedback:(message)=>{feedback=message;},provenanceText}),renderFocusedEditor:(document,node)=>renderCanonicalFocusedEditor(document,node,{dom,activeSection,sectionLabel,canonicalPropertyPath,provenanceText,presenceText,renderSection:(host,value)=>renderCanonicalFocusedSection(host,{dom,current,node:value,getWorking:()=>working,setWorking:(next)=>{working=next;},activeSection,setActiveSection:(section)=>{activeSection=section;},removedRuleIds,removedValueIds,id:options.id,stageStructure,render,patchFor,command,select:(id)=>{activePropertyId=id;},feedback:(message)=>{feedback=message;}}),close:closeChild,review:showReview,save:saveFocused})});
   options.host.addEventListener("keydown",(event)=>{if(event.key==="Escape"&&working){event.preventDefault();if(focusedPropertyId)closeChild();else closeFocused("escape");}});
   render();return{render};
 }

@@ -11,6 +11,8 @@ durable-project repository checkpoints. Their contracts are:
 - `features/data-layer-directional-flow-specification-graph-runtime.feature`
 - `features/data-layer-flow-table-documentation-export.feature`
 - `features/data-layer-flow-table-documentation-export-runtime.feature`
+- `features/data-layer-project-documentation-workspace.feature`
+- `features/data-layer-project-documentation-workspace-runtime.feature`
 - `features/data-layer-live-flow-guided-testing.feature`
 - `features/data-layer-live-flow-guided-testing-runtime.feature`
 - `features/data-layer-canonical-shared-profile-schema-authoring.feature`
@@ -30,6 +32,8 @@ The correction program for the Flow graph contracts is
 `docs/data-layer-canvas-first-flow-authoring-correction-program-R01.md`.
 The program for selected-Flow table documentation is
 `docs/data-layer-flow-table-documentation-export-program-R01.md`.
+The later project-level documentation program is
+`docs/data-layer-project-documentation-workspace-program-R01.md`.
 The program for operator-guided Live Flow testing is
 `docs/data-layer-live-flow-guided-testing-program-R01.md`.
 The program for project library, active context, and portability is
@@ -109,16 +113,41 @@ candidate and was merged to `master` at `bf0c867bd6`. Table-first schema editor
 correction subsequently completed through its terminal candidate and was merged to
 `master` at `50fdeff2ec`. Conditional-rule definition correction subsequently
 completed through its terminal candidate and was merged to `master` at
-`1dfaa1bc76`.
+`1dfaa1bc76`. Rule-condition and example-usability correction subsequently
+completed through its terminal candidate and was merged to `master` at
+`e4d36277a4`.
+Quick Table cell save subsequently completed through its terminal candidate and was
+merged to `master` at `0db53c75b2`.
 
 The following task lineages remain open and must now be recovered in this order:
 
-1. `rule-condition-example-usability-correction`; then
+1. `project-documentation-workspace`; then
 2. `durable-project-repository`; then
 3. `flow-canvas-topology-examples`.
 
-The rule-condition and example-usability correction is later authority for
-Authoring scenarios 023–034. It retains the compact Definition, Rules, and
+The project Documentation workspace is later authority for the two project-
+documentation contracts and program. It supersedes the Flow-page export entry
+point, every per-Flow capture matrix, exported diagnostics and provenance, HTML-file
+export, plain spreadsheet-copy action, and the current eagerly mounted export
+configuration form. The project-level tab saves named Documentation Sets and
+project-local structured themes in the Draft and portability data. Selected Flows
+create value-map sheets only. One
+independent project capture matrix selects Page, Event, Flow Page-instance, and
+Event-occurrence effective contexts from across the project. Selected Site Profiles
+receive dedicated property sheets and never matrix columns.
+
+Complete Excel output contains optional Overview, one sheet per selected Flow, one
+Data capture matrix sheet, and one sheet per selected Site Profile. Rich copy may
+contain the current, selected, or complete configured tables. No HTML-file or PDF
+action is present. Tool diagnostics remain in preflight only. Confirmed incomplete
+output contains the concise Draft — incomplete label and no diagnostic, provenance,
+identity, hash, or repair detail. Installed evidence must prove saved and portable
+set and theme records, progressive contextual controls, exact workbook sheets,
+project-wide matrix columns, Profile columns, theme fingerprints, rich clipboard
+fallback, stale refresh, sanitization, and read-only generation.
+
+The quick Table-save correction is later authority for Authoring scenarios 023–036.
+It retains the compact Definition, Rules, and
 Structure menu but supersedes the ordinary-value field, mandatory When tree, inert
 example-value input, current condition-node action model, and overlays that open
 outside the viewport. Definition contains Allowed values supporting zero, one, or
@@ -140,8 +169,16 @@ expose no View, Edit, or Add child mechanics. Search, selector, value, and actio
 controls remain inside the overlay at 360 pixels. Opening or growing a layer near
 the viewport edge minimally scrolls the page until that complete layer is visible.
 
-Every inline Table edit enters the same staged property review, base-Draft-token
-comparison, property-scoped command, persistence, and Undo flow as Definition.
+Keystrokes in Description, Allowed values, and Example Table cells remain transient
+until Enter, Tab, Shift+Tab, or blur commits that cell directly. A commit performs base-Draft-token
+comparison, one property-scoped command, persistence, subscription update, and one
+Undo action without opening property actions, Definition, or Review changes. Escape
+before commit restores the saved effective value with no repository or Undo change.
+Tab commits once and advances through Description, Allowed values, and Example into
+the next property row; Shift+Tab commits once and traverses that order in reverse.
+Read-only cells and context-menu triggers are skipped. Unchanged cells create no
+command, invalid cells retain focus with a diagnostic, and subscription rerendering
+restores the intended cell without a duplicate blur commit.
 Editing a parent contributor immediately updates every inheriting child. Editing an
 inherited facet on a child automatically creates only that sparse local facet with
 child provenance; the parent and siblings remain unchanged. Later parent edits
@@ -169,14 +206,14 @@ whole. Use them only as patch references while reconstructing each task from cur
 source file, test, acceptance handler, browser adapter, architecture registration,
 and non-vacuous pack entry now on `master`.
 
-Complete the rule-condition and example-usability correction first, run only the `layered_schema`
+Complete the project Documentation workspace first, run only the `flow_export`
 checkpoint and package command, and carry it through refactorer and architect to a
-terminal merge. Recover the durable repository from that new merged baseline, run only the
-`durable_project_repository` checkpoint and package command, and carry it through
-the same terminal process. Recover Flow only from the resulting durable merged
-baseline, run only the `flow_graph` checkpoint and package command, and carry it
-through the same terminal process. A later specification does not replace or
-deactivate an earlier task. Rejected candidates do not satisfy or close a task
+terminal merge. Recover the durable repository from that new merged baseline, run
+only the `durable_project_repository` checkpoint and package command, and carry it
+through the same terminal process. Recover Flow only from the resulting durable
+merged baseline, run only the `flow_graph` checkpoint and package command, and
+carry it through the same terminal process. A later specification does not replace
+or deactivate an earlier task. Rejected candidates do not satisfy or close a task
 lineage, and unrelated implementation branches must not be merged wholesale.
 
 The Flow checkpoint is canvas-first. Searchable Page Group, Page, and Event catalogs,
@@ -273,18 +310,18 @@ manual mode invokes no automatic assignment resolver and makes no execution clai
 Any retained executable-step authoring is an explicitly separate Advanced function
 and does not duplicate or replace documentary graph authoring.
 
-The selected-Flow documentation checkpoint derives a Flow value map and Data capture
-matrix from Page frames as primary ordered context-setting events and their
-contained interaction Event occurrences as nested Page-specific subcontexts. Pages
-without interaction Events remain
-selectable documentation contexts, and repeated instances of one Event under
-different Pages retain distinct occurrence schemas and columns. Page relationships
-alone determine proposed branch order; nested Events add no topology. The checkpoint
-reuses the side-panel specification-table configuration and supports spreadsheet
-clipboard, rich Confluence/Jira clipboard, and an offline four-sheet `.xlsx`
-workbook. Export ordering and Step labels are documentary presentation only.
-Incomplete Draft exports require explicit confirmation and retain Blocked or
-Incomplete cells, diagnostics, and a Draft — incomplete label.
+The project Documentation checkpoint reuses selected-Flow value-map semantics:
+Page frames remain primary ordered context-setting events, contained interaction
+Event occurrences remain nested Page-specific subcontexts, Pages without
+interaction Events remain selectable, repeated Event instances remain distinct,
+and Page relationships alone propose branch order. Each selected Flow contributes
+only its configured value-map sheet. The independent project capture matrix may
+select Page, Event, Flow Page-instance, and Event-occurrence effective contexts
+from any Flow. The checkpoint supports only rich clipboard output and offline
+`.xlsx` workbooks. Export ordering and Step labels are documentary presentation
+only. Incomplete Draft exports require explicit confirmation and shared output
+contains only the Draft — incomplete status label, never tool diagnostics or
+provenance.
 
 The project-management checkpoint adds a top-level Projects side-panel tab and a
 production project library that may contain multiple complete projects while zero
@@ -451,7 +488,7 @@ per-Event validator plus Flow selection restoration. These requirements are not 
 general Assignment or resolver redesign. Top-level Fixture and Assignment overview
 creation, opening, and guarded removal are active only as project-entity lifecycle;
 fixture execution and resolver semantics beyond contributor targeting are not.
-Project-wide batch documentation export, coverage, preflight, release assurance,
+Coverage and release assurance,
 automatic or temporal Flow execution, Live behavior beyond operator-guided Flow
 testing, and cross-surface concurrency beyond canonical Draft concurrency and
 durable repository subscriptions are not active work. The minimal intentional Publish boundary above
@@ -529,7 +566,7 @@ node scripts/run-focused-acceptance.mjs --pack flow_graph
 node scripts/package.mjs
 ```
 
-The selected-Flow documentation checkpoint sequence is exactly:
+The project Documentation checkpoint sequence is exactly:
 
 ```sh
 node scripts/run-focused-acceptance.mjs --pack flow_export
@@ -556,10 +593,12 @@ domain immutability. It may declare `flow_graph` and `layered_schema` dependenci
 but must not invoke unrelated or archived Live and temporal-Flow suites.
 
 The `flow_export` pack may register shared build dependencies from `flow_graph`, but
-must contain the selected-Flow export features and their production clipboard and
-workbook evidence for Page primary contexts, nested Page-specific Event instances,
-and Page-relationship-only ordering without invoking archived project-wide
-documentation suites.
+must contain both project Documentation contracts and focused production evidence
+for saved portable sets and themes, Flow value-map sheets, the one project-wide
+matrix, Site Profile sheets, rich clipboard output, and Excel output. It retains
+evidence for Page primary contexts, nested Page-specific Event instances, and
+Page-relationship-only ordering without invoking unrelated archived documentation
+suites.
 
 The layered effective-schema checkpoint sequence is exactly:
 

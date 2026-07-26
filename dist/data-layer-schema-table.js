@@ -1,4 +1,5 @@
 import { typedCanonicalValue } from "./data-layer-canonical-schema-facets.js";
+export { bindSchemaTableQuickEdit, schemaTableEditableFacets, schemaTableQuickEditDestination, schemaTableQuickEditIntent } from "./data-layer-schema-table-quick-edit.js";
 export const schemaTableColumns = [
     { key: "property", label: "Property" },
     { key: "path", label: "Path" },
@@ -16,7 +17,6 @@ export const schemaTableOverlayStyle = "position:absolute;left:0;top:100%;z-inde
 export function revealSchemaTableOverlay(layer) {
     queueMicrotask(() => layer.scrollIntoView({ block: "nearest", inline: "nearest" }));
 }
-export const schemaTableEditableFacets = ["description", "expected-or-allowed", "example"];
 export function schemaTableOverlayTransition(state, event) {
     if (event.kind === "open")
         return { phase: "menu", path: event.path };

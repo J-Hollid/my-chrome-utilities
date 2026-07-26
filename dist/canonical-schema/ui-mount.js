@@ -5,10 +5,24 @@ import { renderCanonicalFocusedEditor } from "../data-layer-canonical-schema-foc
 import { renderCanonicalSchemaEditor } from "../data-layer-canonical-schema-render.js";
 import { focusedPropertyPatch, focusedStagedChanges, focusedSourceState } from "../data-layer-canonical-schema-focused-drafts.js";
 import { dispatchFocusedCanonicalCommand } from "../data-layer-canonical-schema-focused-command.js";
+import { typedCanonicalValue } from "../data-layer-canonical-schema-facets.js";
 import { button, clone, presenceText, provenanceText, sectionLabel } from "./ui-mount-helpers.js";
 import { schemaTableOverlayTransition, schemaTableStageAllowedValues } from "../data-layer-schema-table.js";
 export function bindCanonicalPropertySearch(control, update) { control.addEventListener("input", () => update(control.value)); }
 export function canonicalDispatchRequiresLocalRender(result, renderAfterDispatch) { return renderAfterDispatch !== false || result.status === "confirmation-required"; }
+export function canonicalTableQuickEditPatch(original, facet, value, id) {
+    const next = clone(original);
+    if (facet === "description")
+        next.documentation = { ...next.documentation, description: value };
+    else if (facet === "example")
+        next.documentation = { ...next.documentation, example: value === "" ? { method: "blank" } : { method: "custom", value: typedCanonicalValue(next.type, value) } };
+    else {
+        const values = schemaTableStageAllowedValues(next.allowedValues.map(({ value: allowed }) => allowed), value, next.type);
+        delete next.expectedValue;
+        next.allowedValues = values.map((allowed, index) => ({ ...next.allowedValues[index] ?? { id: id("allowed-value") }, value: allowed }));
+    }
+    return focusedPropertyPatch(next, original, new Set(), new Set());
+}
 /**
  * Mount the one shared schema property workspace.  Property rows are intentionally
  * compact: forms live only in the focused section editor, never in every row.
@@ -23,15 +37,6 @@ export function mountCanonicalSchemaEditor(options) {
     const selectedNode = (document) => activePropertyId ? document.nodes[activePropertyId] : document.selectedPropertyId ? document.nodes[document.selectedPropertyId] : undefined;
     const ensureWorking = (node) => { if (!working || working.id !== node.id)
         working = clone(node); };
-    const stageInline = (node, facet, value) => { ensureWorking(node); if (!working)
-        return; if (facet === "description")
-        working = { ...working, documentation: { ...working.documentation, description: value } };
-    else if (facet === "example")
-        working = { ...working, documentation: { ...working.documentation, example: { method: value ? "custom" : "blank", ...(value ? { value } : {}) } } };
-    else {
-        const values = schemaTableStageAllowedValues(working.allowedValues.map(({ value: allowed }) => allowed), value, working.type), { expectedValue: _, ...withoutExpected } = working;
-        working = { ...withoutExpected, allowedValues: values.map((allowed, index) => ({ ...working.allowedValues[index] ?? { id: options.id("allowed-value") }, value: allowed })) };
-    } activePropertyId = node.id; };
     const command = (next) => { if (next.kind === "view") {
         transientView = next.view;
         menuPropertyId = undefined;
@@ -48,6 +53,21 @@ export function mountCanonicalSchemaEditor(options) {
         return { status: "applied", document: { ...current(), selectedPropertyId: next.propertyId } };
     } return dispatchFocusedCanonicalCommand(next, { current, dispatch: options.dispatch, renderAfterDispatch: options.renderAfterDispatch, host: options.host, setFeedback: (message) => { feedback = message; }, render }); };
     const patchFor = (node, original) => focusedPropertyPatch(node, original, removedRuleIds, removedValueIds);
+    const commitInline = (node, facet, value) => {
+        const document = current(), original = document.nodes[node.id];
+        if (!original)
+            return { status: "invalid", diagnostic: "This property is no longer available." };
+        try {
+            const patch = canonicalTableQuickEditPatch(original, facet, value, options.id);
+            if (!Object.keys(patch).length)
+                return { status: "unchanged" };
+            const result = command({ kind: "set", baseRevision: document.revision, propertyId: original.id, patch });
+            return result.status === "applied" || result.status === "rebased" ? { status: "committed" } : { status: "invalid", diagnostic: result.status === "conflict" ? result.message : "Review the affected property before saving." };
+        }
+        catch (error) {
+            return { status: "invalid", diagnostic: error instanceof Error ? error.message : String(error) };
+        }
+    };
     const closeFocused = (reason = "cancel") => {
         overlayState = schemaTableOverlayTransition(overlayState, { kind: reason });
         const restorePath = ("restorePath" in overlayState ? overlayState.restorePath : undefined) ?? originPath;
@@ -134,7 +154,9 @@ export function mountCanonicalSchemaEditor(options) {
         render();
     };
     const stageStructure = (operation) => { stagedOperations = [...stagedOperations, operation]; feedback = `Staged ${operation.kind} for review.`; render(); };
-    const render = () => renderCanonicalSchemaEditor({ dom, options, document: current(), query, propertyFilter, propertySort, feedback, activePropertyId, activeSection, menuPropertyId, focusedPropertyId, working, review, current, setQuery: (value) => { query = value; }, setPropertyFilter: (value) => { propertyFilter = value; }, setPropertySort: (value) => { propertySort = value; }, setFeedback: (value) => { feedback = value; }, setMenuPropertyId: (value) => { menuPropertyId = value; }, ensureWorking, stageInline, selectedNode, openProperty, command, render, renderMenu: (node) => renderCanonicalFocusedMenu(node, { dom, current, sourceState: focusedSourceState, ensureWorking, getWorking: () => working, activeSection, setActiveSection: (value) => { activeSection = value; focusedPropertyId = node.id; overlayState = schemaTableOverlayTransition(overlayState, { kind: "focus" }); }, setMenuPropertyId: (value) => { menuPropertyId = value; }, render, close: closeFocused, feedback: (message) => { feedback = message; }, provenanceText }), renderFocusedEditor: (document, node) => renderCanonicalFocusedEditor(document, node, { dom, activeSection, sectionLabel, canonicalPropertyPath, provenanceText, presenceText, renderSection: (host, value) => renderCanonicalFocusedSection(host, { dom, current, node: value, getWorking: () => working, setWorking: (next) => { working = next; }, activeSection, setActiveSection: (section) => { activeSection = section; }, removedRuleIds, removedValueIds, id: options.id, stageStructure, render, patchFor, command, select: (id) => { activePropertyId = id; }, feedback: (message) => { feedback = message; } }), close: closeChild, review: showReview, save: saveFocused }) });
+    const quickEditRoot = () => Array.from(dom.querySelectorAll(`[data-canonical-schema-id="${CSS.escape(initialDocument.id)}"]`)).find((candidate) => candidate.getAttribute("aria-label") === `${options.surface} canonical schema editor`) ?? options.host;
+    const render = () => renderCanonicalSchemaEditor({ dom, options, document: current(), query, propertyFilter, propertySort, feedback, activePropertyId, activeSection, menuPropertyId, focusedPropertyId, working, review, current, setQuery: (value) => { query = value; }, setPropertyFilter: (value) => { propertyFilter = value; }, setPropertySort: (value) => { propertySort = value; }, setFeedback: (value) => { feedback = value; }, setMenuPropertyId: (value) => { menuPropertyId = value; }, ensureWorking, commitInline, cancelInline: () => { }, inlineDiagnostic: (message) => { feedback = message; const output = quickEditRoot().querySelector('[aria-label="Canonical command result"]'); if (output)
+            output.textContent = message; }, quickEditRoot, quickEditScope: `canonical:${initialDocument.id}:${options.surface}`, selectedNode, openProperty, command, render, renderMenu: (node) => renderCanonicalFocusedMenu(node, { dom, current, sourceState: focusedSourceState, ensureWorking, getWorking: () => working, activeSection, setActiveSection: (value) => { activeSection = value; focusedPropertyId = node.id; overlayState = schemaTableOverlayTransition(overlayState, { kind: "focus" }); }, setMenuPropertyId: (value) => { menuPropertyId = value; }, render, close: closeFocused, feedback: (message) => { feedback = message; }, provenanceText }), renderFocusedEditor: (document, node) => renderCanonicalFocusedEditor(document, node, { dom, activeSection, sectionLabel, canonicalPropertyPath, provenanceText, presenceText, renderSection: (host, value) => renderCanonicalFocusedSection(host, { dom, current, node: value, getWorking: () => working, setWorking: (next) => { working = next; }, activeSection, setActiveSection: (section) => { activeSection = section; }, removedRuleIds, removedValueIds, id: options.id, stageStructure, render, patchFor, command, select: (id) => { activePropertyId = id; }, feedback: (message) => { feedback = message; } }), close: closeChild, review: showReview, save: saveFocused }) });
     options.host.addEventListener("keydown", (event) => { if (event.key === "Escape" && working) {
         event.preventDefault();
         if (focusedPropertyId)

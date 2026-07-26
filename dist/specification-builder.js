@@ -1,4 +1,4 @@
-import { addProjectEntity, adoptSavedSchema, buildReleaseReview, commitStagedProjectImport, commitSavedSchemaReview, confirmCanonicalMigration, exportDocumentation, exportSpecificationProjectState, restoreReleaseAsDraft, saveProjectAssignment, searchProjectAssignments, stageProjectImport, stageSavedSchemaSynchronization, transactProject, } from "./data-layer-specification-project.js";
+import { addProjectEntity, adoptSavedSchema, buildReleaseReview, commitStagedProjectImport, commitSavedSchemaReview, confirmCanonicalMigration, exportSpecificationProjectState, restoreReleaseAsDraft, saveProjectAssignment, searchProjectAssignments, stageProjectImport, stageSavedSchemaSynchronization, transactProject, } from "./data-layer-specification-project.js";
 import { openDurableProjectRuntime } from "./data-layer-durable-project-runtime.js";
 import { durableConflictSemanticField, durableProjectRouteForWorkspace } from "./data-layer-durable-project-repository.js";
 import { applyStagedBulkAction, commitStagedBulkRequirements, stageBulkRequirements } from "./data-layer-specification-bulk.js";
@@ -18,6 +18,7 @@ import { assignmentContributorTargets, layeredContributorPath, layeredContributo
 import { composedSchemaWorkspace, resetComposedSchemaLocalProperty, saveComposedSchemaLocalFacetsAndStructures } from "./data-layer-composed-schema-workspace.js";
 import { mountComposedSchemaWorkspace } from "./data-layer-composed-schema-workspace-ui.js";
 import { installFlowDocumentationExportUi } from "./data-layer-flow-table-documentation-export-ui.js";
+import { installProjectDocumentationWorkspaceUi } from "./data-layer-project-documentation-workspace-ui.js";
 import { applyCanonicalCommand, canonicalCommandOutcome, canonicalRequirements, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
 import { createProjectCollectionEntity, hasSavedSchemaAdoptionActions, inspectProjectEntityRemoval, projectCollectionCreationFields, projectCollectionCreationRoute, projectCollectionDefinitions, projectEntityWorkspaceRoute, projectInspectorTogglePresentation, removeProjectCollectionEntity } from "./data-layer-project-entity-lifecycle.js";
@@ -41,7 +42,7 @@ q("#project-assignment-applicability").required = false;
 const id = (kind) => `${kind}:${crypto.randomUUID()}`;
 const labels = { profiles: "Shared Profiles", pages: "Pages", pageGroups: "Page Groups", events: "Events", applicabilitySets: "Applicability", flows: "Flows", fixtures: "Fixtures", assignments: "Assignments" };
 let state, lastCommittedState, library = projectLibrary();
-let canonicalRevision = 0, publishedRevision = 0, pendingConflict, durableConflict, saveStatus = { kind: "idle" }, stagedBulk, selectedKind = "profiles", selectedId, projectOverview = routeParameters.get("route") === "overview", creationKind, removalReview, lifecycleStatus = "", removedFocus, pendingLifecycleFocus, pendingWorkspaceFocus, stagedImport, lastInvokingControl, releasePreflight, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi;
+let canonicalRevision = 0, publishedRevision = 0, pendingConflict, durableConflict, saveStatus = { kind: "idle" }, stagedBulk, selectedKind = "profiles", selectedId, projectOverview = routeParameters.get("route") === "overview", documentationOpen = routeParameters.get("view") === "documentation", creationKind, removalReview, lifecycleStatus = "", removedFocus, pendingLifecycleFocus, pendingWorkspaceFocus, stagedImport, lastInvokingControl, releasePreflight, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi, projectDocumentationWorkspaceUi;
 let pageGroupMembershipStatus = "";
 let pendingPageGroupMembershipReorder;
 let canonicalCommandFeedback;
@@ -445,12 +446,12 @@ catch (error) {
     return; const { id: ignored, ...copy } = entity; persist(addProjectEntity(state, selectedKind, { ...structuredClone(copy), name: `${entity.name} copy` }, id)); }); section.append(heading, form); content.append(section); if (selectedKind === "profiles")
     renderCanonicalEntityEditor(content, selectedKind, entity); }
 function renderTree() { const tree = q("#project-tree"); tree.replaceChildren(); if (!state)
-    return; for (const kind of Object.keys(labels)) {
+    return; const documentation = document.createElement("li"), documentationButton = document.createElement("button"); documentationButton.type = "button"; documentationButton.textContent = `Documentation (${state.project.documentation?.sets.length ?? 0})`; documentationButton.dataset.kind = "documentation"; documentationButton.setAttribute("aria-current", String(documentationOpen)); documentationButton.addEventListener("click", () => { documentationOpen = true; projectOverview = false; selectedId = undefined; const url = new URL(location.href); url.searchParams.set("project", state.project.id); url.searchParams.set("view", "documentation"); url.searchParams.delete("kind"); url.searchParams.delete("entity"); history.replaceState(null, "", url); render(); }); documentation.append(documentationButton); tree.append(documentation); for (const kind of Object.keys(labels)) {
     const item = document.createElement("li"), button = document.createElement("button"), count = kind === "assignments" ? searchProjectAssignments(state.project, "").count : state.project.collections[kind].length;
     button.type = "button";
     button.textContent = `${labels[kind]} (${count})`;
     button.dataset.kind = kind;
-    button.setAttribute("aria-current", String(!projectOverview && kind === selectedKind));
+    button.setAttribute("aria-current", String(!documentationOpen && !projectOverview && kind === selectedKind));
     button.addEventListener("click", () => openCollectionOverview(kind));
     item.append(button);
     tree.append(item);
@@ -507,7 +508,7 @@ function hydrateVisibleProjectRoute(kind, entityId, focus) { if (!state)
     return; const projectId = state.project.id; void durableProjectRuntime.ensureProjectRoute(projectId, durableProjectRouteForWorkspace(kind, entityId)).then((loaded) => { if (state?.project.id !== projectId || selectedKind !== kind || selectedId !== entityId)
     return; state = { ...structuredClone(loaded.state), history: { undo: [], redo: [] } }; lastCommittedState = structuredClone(state); canonicalRevision = loaded.draftSequence; publishedRevision = loaded.publishedRevision; library = restoreProjectLibrary(projectStorage.getItem(PROJECT_LIBRARY_STORAGE_KEY)) ?? library; if (pendingWorkspaceFocus?.kind === kind && pendingWorkspaceFocus.id === entityId)
     pendingWorkspaceFocus = undefined; render(); queueMicrotask(() => focus?.()?.focus({ preventScroll: true })); }).catch((error) => { pendingWorkspaceFocus = undefined; saveStatus = { kind: "failed", label: `Open ${labels[kind]}`, message: error instanceof Error ? error.message : String(error) }; render(); }); }
-function openCollectionOverview(kind, focusId) { pendingWorkspaceFocus = undefined; projectOverview = false; creationKind = undefined; removalReview = undefined; selectedKind = kind; selectedId = undefined; persistNavigation(); replaceProjectRoute(kind); render(); hydrateVisibleProjectRoute(kind, undefined, () => focusId ? document.querySelector(`[data-entity-id="${CSS.escape(focusId)}"]`) : document.querySelector(`[data-add-kind="${kind}"]`)); }
+function openCollectionOverview(kind, focusId) { pendingWorkspaceFocus = undefined; documentationOpen = false; projectOverview = false; creationKind = undefined; removalReview = undefined; selectedKind = kind; selectedId = undefined; persistNavigation(); replaceProjectRoute(kind); render(); hydrateVisibleProjectRoute(kind, undefined, () => focusId ? document.querySelector(`[data-entity-id="${CSS.escape(focusId)}"]`) : document.querySelector(`[data-add-kind="${kind}"]`)); }
 function openProjectEntityWorkspace(kind, entityId) { pendingWorkspaceFocus = { kind, id: entityId }; projectOverview = false; creationKind = undefined; removalReview = undefined; selectedKind = kind; selectedId = entityId; durableProjectRuntime.prepareProjectRoute(state.project.id, durableProjectRouteForWorkspace(kind, entityId)); persistNavigation(); replaceProjectRoute(kind, entityId); render(); queueMicrotask(restorePendingWorkspaceFocus); hydrateVisibleProjectRoute(kind, entityId, () => document.querySelector(`[data-project-entity-workspace="${CSS.escape(entityId)}"] h1`)); }
 function openProjectCollectionCreation(kind) { pendingWorkspaceFocus = undefined; projectOverview = false; creationKind = kind; removalReview = undefined; selectedKind = kind; selectedId = undefined; persistNavigation(); replaceProjectRoute(kind, undefined, "add"); render(); }
 function projectCreationFieldControl(field) { if (field.key === "targetId" && state) {
@@ -642,6 +643,12 @@ function renderWorkspace() {
     content.replaceChildren();
     if (!state)
         return;
+    if (documentationOpen) {
+        q("#project-breadcrumb").textContent = `${state.project.name} / Documentation`;
+        q("#inspector-context").textContent = "Project-level Documentation Sets, themes, previews, and export.";
+        projectDocumentationWorkspaceUi?.render(content);
+        return;
+    }
     if (projectOverview) {
         const heading = document.createElement("h1"), identity = document.createElement("p"), metadata = document.createElement("dl"), openSchemas = document.createElement("button"), details = [["Purpose", state.project.description], ["Website", state.project.site], ["Owner", String(state.project.owner ?? "")], ["Notes", String(state.project.notes ?? "")]];
         heading.textContent = "Project overview";
@@ -771,9 +778,6 @@ function renderCoverage(offset = 0) { if (!state)
     item.append(open, origin, status);
     rows.append(item);
 } content.replaceChildren(heading, summary, controls, rows); }
-function documentationResult() { if (!state)
-    throw new Error("No project"); const fields = ["path", "type", ...Array.from(document.querySelectorAll(".documentation-field:checked"), ({ value }) => value)]; return exportDocumentation(state.project, { fields, include: { applicability: q("#documentation-applicability").checked, flows: q("#documentation-flows").checked, fixtures: q("#documentation-fixtures").checked, releases: q("#documentation-releases").checked } }); }
-function refreshDocumentation() { q("#documentation-preview").textContent = documentationResult().preview; }
 function download(name, text, type = "application/json") { const blob = new Blob([`${text}\n`], { type }), url = URL.createObjectURL(blob), link = document.createElement("a"); link.href = url; link.download = name; link.click(); URL.revokeObjectURL(url); }
 function replaceOptions(select, entities, placeholder) { const value = select.value, empty = document.createElement("option"); empty.value = ""; empty.textContent = placeholder; select.replaceChildren(empty, ...entities.map((entity) => { const option = document.createElement("option"); option.value = entity.id; option.textContent = entity.name; return option; })); select.value = value; }
 function renderReferenceSelectors() { if (!state)
@@ -958,15 +962,6 @@ q("#run-preflight").addEventListener("click", () => { if (!state)
     list.append(item);
 } section.append(title, summary, list); content.prepend(section); });
 q("#show-coverage").addEventListener("click", () => renderCoverage());
-const documentationDialog = q("#documentation-export");
-q("#generate-documentation").addEventListener("click", (event) => { if (!state)
-    return; lastInvokingControl = event.currentTarget; refreshDocumentation(); documentationDialog.showModal(); documentationDialog.querySelector("h2")?.focus(); });
-document.querySelectorAll("#documentation-export input").forEach((field) => field.addEventListener("change", refreshDocumentation));
-q("#copy-documentation").addEventListener("click", async () => { const result = documentationResult(), html = `<pre>${result.preview.replaceAll("&", "&amp;").replaceAll("<", "&lt;")}</pre>`; if (globalThis.ClipboardItem && navigator.clipboard.write)
-    await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([result.clipboard], { type: "text/plain" }) })]);
-else
-    await navigator.clipboard.writeText(result.clipboard); q("#documentation-result").textContent = "Documentation table copied once."; });
-q("#close-documentation").addEventListener("click", () => { documentationDialog.close(); lastInvokingControl?.focus(); });
 const releaseDialog = q("#release-review");
 q("#publish-project").addEventListener("click", (event) => { if (!state)
     return; lastInvokingControl = event.currentTarget; const projectId = state.project.id, releaseSummary = q("#release-summary"); q("#project-state").textContent = `Preparing the current Saved Draft for publication · Published revision ${publishedRevision}`; releaseSummary.textContent = "Preparing the current Saved Draft for publication…"; q("#confirm-release").disabled = true; q("#confirm-release-close").disabled = true; if (!releaseDialog.open)
@@ -1093,6 +1088,21 @@ else {
     builderRecoveryDialog.querySelector("h2")?.focus();
 } render(); });
 const flowBuilderContext = () => ({ ...state ? { state } : {}, revision: canonicalRevision, ...(selectedKind === "flows" && selectedId ? { flowId: selectedId } : {}) });
+projectDocumentationWorkspaceUi = installProjectDocumentationWorkspaceUi({ state: () => state, revision: () => canonicalRevision, save: (documentation, label) => { if (!state)
+        return; persist(transactProject(state, label, (project) => ({ ...project, documentation: structuredClone(documentation) }))); }, openRepair: (target) => { documentationOpen = false; openProjectEntityWorkspace(target.kind, target.id); if (target.path) {
+        const route = new URL(location.href);
+        route.searchParams.set("kind", target.kind);
+        route.searchParams.set("entity", target.id);
+        route.searchParams.set("field", target.path);
+        history.replaceState(null, "", route);
+        const focusPath = (attempt = 0) => { const candidate = document.querySelector(`[data-property-id="${CSS.escape(target.path)}"],[data-flow-instance-effective-path="${CSS.escape(target.path)}"]`); if (candidate) {
+            candidate.click();
+            candidate.focus({ preventScroll: true });
+            return;
+        } if (attempt < 8)
+            setTimeout(() => focusPath(attempt + 1), 25); };
+        queueMicrotask(focusPath);
+    } } });
 flowGraphBuilder = installFlowGraphBuilder({ context: flowBuilderContext, persist, id, openOccurrenceSchema: (occurrenceId, path, originFocus) => layeredSchemaUi?.openGraphOccurrenceSchema(occurrenceId, path, originFocus) ?? false });
 flowDocumentationExportUi = installFlowDocumentationExportUi({ context: flowBuilderContext, renderFlow: () => { flowGraphBuilder?.render(); flowDocumentationExportUi?.render(); }, openRepair: (contextId, path, repair) => { const selectPath = () => setTimeout(() => Array.from(document.querySelectorAll("[data-property-id]")).find((candidate) => candidate.dataset.propertyId === path || candidate.textContent?.includes(path))?.click(), 0); if (repair.startsWith("Open contributing schema ")) {
         const name = repair.slice("Open contributing schema ".length), match = ["profiles", "events", "pageGroups", "pages", "flows"].flatMap((kind) => state.project.collections[kind].map((entity) => ({ kind, entity }))).find(({ entity }) => entity.name === name);
@@ -1110,7 +1120,7 @@ layeredSchemaUi = installLayeredSchemaUi({ context: () => ({ ...state ? { state 
         void durableProjectRuntime.undo(state.project.id); }, onRedo: () => { if (state)
         void durableProjectRuntime.redo(state.project.id); } });
 const synchronizeActiveProjectContext = (serialized) => { const change = activeProjectContextChange(serialized, state?.project.id, canonicalRevision); if (!change.changed)
-    return; library = change.library; pendingConflict = undefined; durableConflict = undefined; saveStatus = { kind: "idle" }; const active = change.active; state = active ? { ...structuredClone(active.state), history: { undo: [], redo: [] } } : undefined; lastCommittedState = state ? structuredClone(state) : undefined; canonicalRevision = active?.revision ?? 0; publishedRevision = active?.publishedRevision ?? Math.max(0, ...(active?.state.project.releases.map(({ revision }) => revision) ?? [0])); selectedKind = "profiles"; selectedId = undefined; creationKind = undefined; projectOverview = Boolean(active); if (active) {
+    return; library = change.library; pendingConflict = undefined; durableConflict = undefined; saveStatus = { kind: "idle" }; const active = change.active; state = active ? { ...structuredClone(active.state), history: { undo: [], redo: [] } } : undefined; lastCommittedState = state ? structuredClone(state) : undefined; canonicalRevision = active?.revision ?? 0; publishedRevision = active?.publishedRevision ?? Math.max(0, ...(active?.state.project.releases.map(({ revision }) => revision) ?? [0])); selectedKind = "profiles"; selectedId = undefined; creationKind = undefined; documentationOpen = false; projectOverview = Boolean(active); if (active) {
     const navigation = resolveProjectNavigation(library, active.state.project.id);
     if (navigation) {
         projectOverview = false;
@@ -1170,6 +1180,7 @@ durableProjectRuntime.subscribe(({ library: incoming, active }) => {
 render();
 renderAssignments();
 const applyRequestedRoute = () => { const deepKind = routeParameters.get("kind"), deepId = routeParameters.get("entity"), requestedAction = routeParameters.get("route"); if (deepKind && deepKind in labels) {
+    documentationOpen = false;
     projectOverview = false;
     selectedKind = deepKind;
     creationKind = requestedAction === "add" ? deepKind : undefined;
@@ -1180,8 +1191,11 @@ const applyRequestedRoute = () => { const deepKind = routeParameters.get("kind")
         target.tabIndex = -1;
         target.focus({ preventScroll: true });
     } });
-} if (routeParameters.get("view") === "documentation" && state)
-    q("#generate-documentation").click(); };
+} if (routeParameters.get("view") === "documentation" && state) {
+    documentationOpen = true;
+    projectOverview = false;
+    render();
+} };
 const requestedProject = routeParameters.get("project");
 if (requestedProject && requestedProject !== library.activeProjectId) {
     const target = library.projects[requestedProject], dialog = document.createElement("dialog"), heading = document.createElement("h2"), summary = document.createElement("p"), confirm = document.createElement("button"), cancel = document.createElement("button");

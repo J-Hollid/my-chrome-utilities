@@ -1,6 +1,6 @@
-# mutation-stamp: sha256=0f26b97bd51be1ef355eaecb67b2fe5e44c9406a3128ca0b9db9c47a48b38a46
+# mutation-stamp: sha256=1d413656f35037a7c16fd28c0215f150a2a074bfa451432215523e165a00dd59
 # acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-26T04:40:47.167525537Z","feature_name":"Data layer canonical Shared Profile schema authoring runtime","feature_path":"features/data-layer-canonical-shared-profile-schema-authoring-runtime.feature","background_hash":"472d7d719a76bf47270eb2580c2854fda6a3037551b5db5845d9adcb51ca716d","implementation_hash":"sha256:16a630b4d01aa732c0ed63d6ece7c6e19070a4c687f6751dda39ca84442c650c","scenarios":[{"index":6,"name":"Data layer canonical Shared Profile schema authoring runtime 007","scenario_hash":"37b063e26d5b3f51440eeccbfa03c8720332deec1fa287805b3dda7a5fe56ec7","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-26T04:40:47.167525537Z"},{"index":7,"name":"Data layer canonical Shared Profile schema authoring runtime 008","scenario_hash":"b48222ab9937d34e181fb714ec94b0fca77718e5301f0f9de21bbddffb54ba97","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-26T04:40:47.167525537Z"},{"index":14,"name":"Data layer canonical Shared Profile schema authoring runtime 015","scenario_hash":"e311bdb223dc8dfd7b504fb0d42e86948438e329ff4af691abccce8ea87c7258","mutation_count":21,"result":{"Total":21,"Killed":21,"Survived":0,"Errors":0},"tested_at":"2026-07-26T04:40:47.167525537Z"},{"index":18,"name":"Data layer canonical Shared Profile schema authoring runtime 019","scenario_hash":"34c9088664aaf7f6d7033d9e9031ce864615716268bdcdffe2c0a013b7aa1fa6","mutation_count":24,"result":{"Total":24,"Killed":24,"Survived":0,"Errors":0},"tested_at":"2026-07-26T04:40:47.167525537Z"},{"index":20,"name":"Data layer canonical Shared Profile schema authoring runtime 021","scenario_hash":"7402caa88c1bbed1a5f2698ef24bf9ad7de706eb85b17a2866de9c22fbc37d01","mutation_count":22,"result":{"Total":22,"Killed":22,"Survived":0,"Errors":0},"tested_at":"2026-07-26T04:40:47.167525537Z"},{"index":25,"name":"Data layer canonical Shared Profile schema authoring runtime 026","scenario_hash":"1b1b4b365bfff745ac9dfd1329542003c1fbfd640c7e1850b0bd65ac50d6eb94","mutation_count":18,"result":{"Total":18,"Killed":18,"Survived":0,"Errors":0},"tested_at":"2026-07-26T04:40:47.167525537Z"},{"index":26,"name":"Data layer canonical Shared Profile schema authoring runtime 027","scenario_hash":"0b9f66254abf52641925fc1705e834044f3e1b0d802f2e2c94060d81fdd8fa1a","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-07-26T04:40:47.167525537Z"},{"index":28,"name":"Data layer canonical Shared Profile schema authoring runtime 029","scenario_hash":"197839f2cff06311cbf8e91343a0bc10d6f826626f9beb79afc4a7ceef137b4c","mutation_count":36,"result":{"Total":36,"Killed":36,"Survived":0,"Errors":0},"tested_at":"2026-07-26T04:40:47.167525537Z"},{"index":31,"name":"Data layer canonical Shared Profile schema authoring runtime 032","scenario_hash":"f3124b8823c3b969360c4ad818eb22c818806058f91bfd30727827019df783eb","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-26T04:40:47.167525537Z"}]}
+# {"version":1,"tested_at":"2026-07-26T08:53:01.982887710Z","feature_name":"Data layer canonical Shared Profile schema authoring runtime","feature_path":"features/data-layer-canonical-shared-profile-schema-authoring-runtime.feature","background_hash":"472d7d719a76bf47270eb2580c2854fda6a3037551b5db5845d9adcb51ca716d","implementation_hash":"sha256:16a630b4d01aa732c0ed63d6ece7c6e19070a4c687f6751dda39ca84442c650c","scenarios":[{"index":6,"name":"Data layer canonical Shared Profile schema authoring runtime 007","scenario_hash":"37b063e26d5b3f51440eeccbfa03c8720332deec1fa287805b3dda7a5fe56ec7","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-26T08:53:01.982887710Z"},{"index":7,"name":"Data layer canonical Shared Profile schema authoring runtime 008","scenario_hash":"b48222ab9937d34e181fb714ec94b0fca77718e5301f0f9de21bbddffb54ba97","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-26T08:53:01.982887710Z"},{"index":14,"name":"Data layer canonical Shared Profile schema authoring runtime 015","scenario_hash":"e311bdb223dc8dfd7b504fb0d42e86948438e329ff4af691abccce8ea87c7258","mutation_count":21,"result":{"Total":21,"Killed":21,"Survived":0,"Errors":0},"tested_at":"2026-07-26T08:53:01.982887710Z"},{"index":18,"name":"Data layer canonical Shared Profile schema authoring runtime 019","scenario_hash":"34c9088664aaf7f6d7033d9e9031ce864615716268bdcdffe2c0a013b7aa1fa6","mutation_count":24,"result":{"Total":24,"Killed":24,"Survived":0,"Errors":0},"tested_at":"2026-07-26T08:53:01.982887710Z"},{"index":20,"name":"Data layer canonical Shared Profile schema authoring runtime 021","scenario_hash":"7402caa88c1bbed1a5f2698ef24bf9ad7de706eb85b17a2866de9c22fbc37d01","mutation_count":22,"result":{"Total":22,"Killed":22,"Survived":0,"Errors":0},"tested_at":"2026-07-26T08:53:01.982887710Z"},{"index":25,"name":"Data layer canonical Shared Profile schema authoring runtime 026","scenario_hash":"1b1b4b365bfff745ac9dfd1329542003c1fbfd640c7e1850b0bd65ac50d6eb94","mutation_count":18,"result":{"Total":18,"Killed":18,"Survived":0,"Errors":0},"tested_at":"2026-07-26T08:53:01.982887710Z"},{"index":26,"name":"Data layer canonical Shared Profile schema authoring runtime 027","scenario_hash":"0b9f66254abf52641925fc1705e834044f3e1b0d802f2e2c94060d81fdd8fa1a","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-07-26T08:53:01.982887710Z"},{"index":28,"name":"Data layer canonical Shared Profile schema authoring runtime 029","scenario_hash":"197839f2cff06311cbf8e91343a0bc10d6f826626f9beb79afc4a7ceef137b4c","mutation_count":36,"result":{"Total":36,"Killed":36,"Survived":0,"Errors":0},"tested_at":"2026-07-26T08:53:01.982887710Z"},{"index":31,"name":"Data layer canonical Shared Profile schema authoring runtime 032","scenario_hash":"f3124b8823c3b969360c4ad818eb22c818806058f91bfd30727827019df783eb","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-26T08:53:01.982887710Z"},{"index":34,"name":"Data layer canonical Shared Profile schema authoring runtime 035","scenario_hash":"287ff86d4e01d4a480307617bd5383b45e64317f29f84792b518c0c9a754269b","mutation_count":18,"result":{"Total":18,"Killed":18,"Survived":0,"Errors":0},"tested_at":"2026-07-26T08:53:01.982887710Z"},{"index":35,"name":"Data layer canonical Shared Profile schema authoring runtime 036","scenario_hash":"b4315546ff1799a0ae40fe85d2d6ab4cfd0fad27ff493535048a7ff35c0731b6","mutation_count":25,"result":{"Total":25,"Killed":25,"Survived":0,"Errors":0},"tested_at":"2026-07-26T08:53:01.982887710Z"}]}
 # acceptance-mutation-manifest-end
 
 Feature: Data layer canonical Shared Profile schema authoring runtime
@@ -378,8 +378,9 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
     And DOM inspection finds one context-menu trigger beside each property identity and no dedicated column of facet or ownership action buttons
     When actual table cells change /lineOfCustomer description, allowed values, and example
     Then those controls stay in the same row without mounting a focused editor or leaving Table
-    And the edits enter the same installed staged review used by Definition
-    And actual confirmation persists one property-scoped command with the displayed base Draft token and adds one production Undo action
+    And each changed cell commits directly on actual Enter, Tab, Shift+Tab, or blur without mounting property review
+    And each commit persists one property-scoped command with the displayed base Draft token and adds one production Undo action
+    And actual Escape before commit restores the saved effective cell with unchanged repository and Undo state
     When the installed /lineOfCustomer context-menu trigger is activated
     Then one compact first-layer overlay renders Definition, Rules, and Structure with provenance and context-legal ownership summaries
     And bounding-box and DOM inspection show no below-table control panel, expanded property row, replaced table, or hidden sibling row
@@ -451,11 +452,11 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
   Scenario: Data layer canonical Shared Profile schema authoring runtime 034
     Given production Sitewide defines /lineOfCustomer description Customer classification
     And production Cart and Checkout inherit it while Retail Cart stores local description Retail classification
-    When actual Sitewide Table controls change description to Customer segment and confirm property review
+    When actual Sitewide Table controls change description to Customer segment and dispatch blur
     Then repository inspection finds one Sitewide property command and the next Draft token
     And installed Cart and Checkout rows render inherited Customer segment with Sitewide provenance
     And installed Retail Cart retains local Retail classification with updated parent provenance
-    When installed Table stages inherited Cart description as Cart customer segment and confirms it
+    When installed Table changes inherited Cart description to Cart customer segment and dispatches Enter
     Then repository bytes contain one sparse Cart local description override
     And Sitewide, Checkout, and Retail Cart hashes remain unchanged
     When a later production Sitewide command changes description to Customer audience
@@ -464,3 +465,38 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
     Then repository bytes remove only Cart's local description facet and installed Cart renders Customer audience
     When production Undo runs once
     Then the same Cart local description override and provenance return without any copied parent facet
+
+  # Data layer canonical Shared Profile schema authoring runtime 035
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 035
+    Given production Sitewide defines <facet> as <parent_value> and Cart inherits it
+    When <parent_commit> commits <new_parent_value> through the installed Sitewide <facet> cell
+    Then installed Sitewide shows Saved at the next Draft token and Cart immediately renders inherited <new_parent_value>
+    When <child_commit> commits <child_value> through Cart's inherited <facet> cell
+    Then Cart's persisted contributor record has local provenance for only <facet>
+    And hashes for Sitewide and another inheriting child remain unchanged
+    When actual navigation leaves Cart and returns after an installed reload
+    Then Cart renders <child_value> while the other child renders inherited <new_parent_value>
+    And DOM inspection and command evidence find no opened property actions, Definition, or Review changes
+
+    Examples:
+      | facet          | parent_value            | new_parent_value         | parent_commit | child_value            | child_commit |
+      | description    | Customer classification | Customer segment         | blur          | Cart customer segment  | Enter        |
+      | allowed values | retail                   | retail, wholesale        | Tab           | cart, guest            | blur         |
+      | example        | retail                   | wholesale                | blur          | cart                    | Enter        |
+
+  # Data layer canonical Shared Profile schema authoring runtime 036
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 036
+    Given installed Table activeElement is <origin_cell>
+    When actual controls enter <edit_state> and dispatch <navigation_key>
+    Then installed keyboard transaction evidence is <command_result>
+    And activeElement is <destination_cell>
+    And traversal skipped every read-only cell and property context-menu trigger
+    And command evidence finds no duplicate blur commit after each repository rerender
+
+    Examples:
+      | origin_cell                            | edit_state          | navigation_key | command_result                                      | destination_cell                         |
+      | the first property's Description cell | a changed value      | Tab            | command and Undo counts each increase once          | the same property's Allowed values cell  |
+      | the first property's Allowed values cell | its unchanged value | Tab            | command and Undo counts remain unchanged            | the same property's Example cell         |
+      | the first property's Example cell     | a changed value      | Tab            | command and Undo counts each increase once          | the next property's Description cell     |
+      | the next property's Description cell  | a changed value      | Shift+Tab       | command and Undo counts each increase once          | the previous property's Example cell     |
+      | an Allowed values cell                 | an invalid value     | Tab            | counts remain unchanged and an exact diagnostic renders | the same Allowed values cell          |
