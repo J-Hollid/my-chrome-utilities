@@ -1009,6 +1009,20 @@
     ]
   },
   {
+    "id": "branding_polish",
+    "source": [],
+    "dependencies": [],
+    "unit": [
+      "test/twatility-brand-polish-test.mjs"
+    ],
+    "property": [],
+    "features": [],
+    "handlers": [],
+    "browserAdapters": [
+      "test/twatility-workflow-polish-browser-test.mjs"
+    ]
+  },
+  {
     "id": "shell",
     "source": [
       "src/active-page",
