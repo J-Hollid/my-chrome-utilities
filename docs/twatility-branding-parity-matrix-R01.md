@@ -12,11 +12,13 @@ mock's own coverage claim.
 - Frozen mock commit: `92d9c2d39b2724f85154be05328594c727368099`
 - Integration branch: `feature/twatility-branding`
 - Integration program commit: `6e77e4c3791f67c42bb3fe1db36f792a865ef5e2`
-- Previous master base: `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242`
-- Current master base: `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242`
-- First master-boundary result: no upstream commit or file delta
+- Previous master base: `7edae41131a4e6a282d80f67a2fbcfbada52beb3`
+- Current master base: `452deaba03279a95c20dd25c90862de338ae0c64`
+- Slice 6 opening master-boundary result: 15 upstream commits adding
+  project-scoped event transport, nullable active-project context, and the
+  relationship-derived side-panel Schema tree
 - Current authority: fetched `origin/master` version of
-  `docs/swarmforge-active-scope.md`, its six named programs, and all 16 active
+  `docs/swarmforge-active-scope.md`, its nine named programs, and all 22 active
   behavior/runtime contracts
 - Production baseline evidence:
   `docs/twatility-branding-evidence/slice-0-baseline/`
@@ -55,6 +57,12 @@ checks.
   `src/data-layer-observation-*.ts`, `src/data-layer-event-feed-*.ts`,
   `src/data-layer-workflow-focus-ui.ts`, `src/data-layer-live-flow-testing*.ts`,
   `src/data-layer-live-flow-defect-report.ts`
+- **O-TRANSPORT** — `side-panel.html`, `src/side-panel.ts`,
+  `src/data-layer-project-event-transport.ts`,
+  `src/data-layer-specification-project.ts`,
+  `src/data-layer-event-library-editor.ts`,
+  `src/data-layer-live-inspector-actions.ts`,
+  `src/data-layer-selected-target-push*.ts`
 - **O-PROJECTS** — `side-panel.html`,
   `src/data-layer-project-library.ts`,
   `src/data-layer-project-library-ui.ts`,
@@ -80,6 +88,8 @@ checks.
   `src/canonical-schema-focused/`,
   `src/data-layer-canonical-schema-focused-*.ts`,
   `src/data-layer-focused-schema-property-*.ts`
+- **O-SCHEMA-TREE** — `side-panel.html`, `side-panel.css`,
+  `src/side-panel.ts`, `src/schema-relationship-tree.ts`
 - **O-CONDITION** — `src/data-layer-shared-condition-tree-editor.ts`,
   `src/data-layer-canonical-schema-focused-condition*.ts`,
   `src/data-layer-canonical-schema-focused-rule*.ts`,
@@ -117,6 +127,11 @@ checks.
 - **T-LIVE** — touched Live unit/property tests; applicable capture browser
   adapter; `live_flow_testing` checkpoint when Flow behavior overlaps; saved
   session, target, feed, validation, defect, dialog, focus-return, and 360px checks
+- **T-TRANSPORT** — project transport unit/property tests; packaged
+  `test/browser-packs/project-event-transport.mjs`;
+  `project_event_transport` checkpoint; independent observation/push paths,
+  project switch, portability, no-project, explicit Library destination, invalid
+  path, focus, and packaged-Chrome checks
 - **T-PROJECTS** — project library unit/property tests;
   `test/browser-packs/project-management.mjs`;
   `test/browser-packs/project-entity-lifecycle.mjs`; durable renderer adapter;
@@ -127,6 +142,11 @@ checks.
   `layered_schema` checkpoint; save/reload/inheritance/sparse override/reset/Undo,
   IME/caret, overlay geometry, Escape, focus-return, direct Table-cell commit,
   Tab/Shift+Tab traversal, blur deduplication, and invalid-cell checks
+- **T-SCHEMA-TREE** — relationship-tree unit/property tests; packaged
+  `test/browser-packs/schema-relationship-tree.mjs`;
+  `schema_relationship_tree` checkpoint; repeated references, stable canonical
+  routing, filtering/search/breadcrumbs, project-scoped view restoration,
+  keyboard/focus, and 360/520px geometry
 - **T-STUDIO** — project-management/entity-lifecycle/durable-renderer browser
   adapters; route, collection, Documentation-first tree order, Inspector, focus,
   and 1280/1440/1720/200% checks
@@ -186,14 +206,15 @@ checks.
 | Guided validation | O-LIVE, O-CANON | destination/schema/property/rule; nested path; issue; expected/conditions; back/continue/finish | control-map claim; incomplete mock destination | Preserve implementation | Production step state, canonical commands, continuation, no fake result | Style the actual guided drawer only; mock structure is insufficient | V1 | T-LIVE, T-CANON | C-SHELL, C-CANON | preserve — Slice 6 |
 | Manual Flow testing | O-LIVE, O-FLOW | Flow selector above existing feed; root Page, contained Event, outgoing Page linking; ordinary validation/defect | control-map claim; absent actual mock journey | Preserve implementation | Feed order unchanged; no auto Assignment; Page context; stable links; no execution claim | Brand existing feed/detail integration; do not create mock wizard/pass-fail system | V2 | T-LIVE, T-FLOW | C-FLOW | preserve — Slice 6 |
 | Observation settings | O-LIVE | Browse tabs; history path/status; restart; warning; detach review | settings and permission/path gallery | Branding/layout parity | Optional permissions, active tab, path recovery, detach semantics | Branded settings section and review dialog | V1 | T-LIVE, T-A11Y | C-SHELL | approved — Slice 6 |
+| Project event transport settings | O-TRANSPORT, O-LIVE, O-PROJECTS, O-DURABLE | project context; separately labelled Observation history path and Default push path; saving/saved/conflict/failure and readiness outputs | settings and path-state gallery | Preserve implementation | Project Draft owns both independent paths; observation requires an array, push requires callable `push`; no cross-path fallback or implied project; switch/export/import preserve exact project values | Brand the existing project-bound settings card without combining controls, rewriting paths, or weakening disabled reasons | V2 | T-TRANSPORT, T-LIVE, T-PROJECTS, T-A11Y, T-PACKAGE | C-SHELL, C-PERSIST | merged from master, classified and checkpoint-verified — Slice 6 |
 | Target picker | O-LIVE | target search/count/list/select; permission state; Close/recovery | target-picker dialog | Branding/layout parity | Chrome tab permission/access, result ownership, focus trap/return | Shared target-list/dialog styling | V1 | T-LIVE, T-A11Y | C-SHELL | approved — Slice 6 |
 
 ## Projects and durable repository
 
 | Surface or workflow | Production owner | Production controls | Mock destination | Classification | Preserve contract | Proposed migration | Risk tier | Verification | Master collision risk | Decision and status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| Active project card | O-PROJECTS | Open Studio; Edit details; Export; human metadata | Projects active card | Branding/layout parity | Stable active identity, real metadata, project-name accessible actions | Branded active card with no fictional logo | V1 | T-PROJECTS | C-SHELL, C-PERSIST | implemented and verified — Slice 3 |
-| No-active and repository-unavailable states | O-PROJECTS, O-DURABLE | Open project; Create project; disabled project controls; recovery-only guidance | Projects/no-active and recovery gallery | Preserve implementation | Never infer first/recent/only project; global Saved Schemas remain available; failed mount never presents a false empty library or Web Storage fallback | Style the authoritative empty/recovery projection without fabricating context | V2 | T-PROJECTS, T-A11Y | C-PERSIST | preserved and verified — Slice 3 |
+| Active project card | O-PROJECTS | Open Studio; Edit details; Export; Close project; human metadata | Projects active card | Branding/layout parity | Stable active identity, real metadata, project-name accessible actions; Close clears only nullable active context/projection after blockers clear and preserves durable project bytes | Branded active card with no fictional logo; retain exact Close project reason and focus | V2 | T-PROJECTS, T-TRANSPORT, T-A11Y | C-SHELL, C-PERSIST | Slice 3 styling retained; Close project merged, classified and checkpoint-verified — Slice 6 |
+| No-active and repository-unavailable states | O-PROJECTS, O-DURABLE, O-TRANSPORT, O-SCHEMA-TREE | Open project; Create project; disabled project transport controls; global Saved schemas branch; recovery-only guidance | Projects/no-active and recovery gallery | Preserve implementation | Never infer first/recent/only project; global Saved schemas remain available; transport is unavailable; failed mount never presents a false empty library or Web Storage fallback | Style the authoritative empty/recovery projection without fabricating context | V2 | T-PROJECTS, T-TRANSPORT, T-SCHEMA-TREE, T-A11Y | C-PERSIST, C-SHELL | Slice 3 behavior retained; nullable-context transport/tree states merged and checkpoint-verified — Slice 6 |
 | Project library query | O-PROJECTS | search; Name/Last saved sort; result count | Projects library | Branding/layout parity | Query/sort state and compact metadata reads only | Responsive query toolbar | V1 | T-PROJECTS | C-SHELL | implemented and verified — Slice 3 |
 | Project rows | O-PROJECTS | Active/Switch; Edit; Export; saved/published metadata | project rows | Branding/layout parity | Name in accessible actions; no implicit activation; pending writes block switch | Branded rows/cards preserving exact action set | V1 | T-PROJECTS, T-A11Y | C-SHELL, C-PERSIST | implemented and verified — Slice 3 |
 | Metadata-only library and selective route loading | O-PROJECTS, O-DURABLE | library search/sort/open; active metadata projection | project library | Preserve implementation | Browse 100-project metadata without loading bodies; open only the selected project/visible route; inactive projects gain no subscription | Presentation may group metadata but must not add body hydration or selectable-card activation | V2 | T-PROJECTS | C-PERSIST | preserved and verified — Slice 3 |
@@ -201,7 +222,7 @@ checks.
 | Edit project metadata | O-PROJECTS | same fields; Save; page-scoped Undo; Close | edit-project dialog | Branding/layout parity | Draft token, record-scoped save, exact Undo, focus return | Restyle production form and result | V1 | T-PROJECTS | C-PERSIST | implemented and verified — Slice 3 |
 | Page-scoped Undo/Redo and conflicts | O-DURABLE | Undo; Redo; Retry/Reject conflict; disabled/history state | edit and recovery states | Preserve implementation | Forward/inverse patches stay only in the open project page; reload/project replacement clears history; stale overlap cannot overwrite the newer Draft; Published revision does not advance | State/action hierarchy only; never promise persisted history | V2 | T-PROJECTS | C-PERSIST | preserved and verified — Slice 3 |
 | Switch review | O-PROJECTS, O-DURABLE | named impact; pending Merge/Reject/Retry; Confirm/Cancel | switch review gallery | Preserve implementation | Atomic side-panel/Studio subscription; stale/failed writes block before activation | Branded impact review with truthful disabled reason | V2 | T-PROJECTS | C-PERSIST | preserved and verified — Slice 3 |
-| Cross-window active-context convergence | O-PROJECTS, O-DURABLE | active header; safe switch/deep-link review; project-scoped route restoration | cross-window context gallery | Preserve implementation | One nullable durable active identity; activation commits before subscriptions/entity lookup; identity/token notifications carry no full project payload; per-project location fallback remains valid | Highlight the shared context without duplicating or hardcoding it | V2 | T-PROJECTS | C-PERSIST | preserved and verified — Slice 3 |
+| Cross-window active-context convergence | O-PROJECTS, O-DURABLE, O-TRANSPORT, O-SCHEMA-TREE | active header; safe switch/close/deep-link review; project transport replacement; project-scoped tree/route restoration | cross-window context gallery | Preserve implementation | One nullable durable active identity; activation/clearing commits before subscriptions/entity lookup; identity/token notifications carry no full project payload; per-project location and tree-view fallback remain valid | Highlight the shared context without duplicating or hardcoding it | V2 | T-PROJECTS, T-TRANSPORT, T-SCHEMA-TREE | C-PERSIST, C-SHELL | Slice 3 convergence retained; close/transport/tree convergence merged and checkpoint-verified — Slice 6 |
 | Project export | O-PROJECTS, O-DURABLE | Export active/library project; download/result | active card and project rows | Preserve implementation | Read latest fully persisted Draft; no mutation/context change; include complete project graph and immutable publication content; exclude permissions, Live, cache, UI, history, backups, and diagnostics | Style the existing download action/result; no mock toast or alternate format | V2 | T-PROJECTS, T-PACKAGE | C-PERSIST | preserved and verified — Slice 3 |
 | Project import | O-PROJECTS, O-DURABLE | file; staged summary; unique name; Import as new; invalid/blocked | side-panel import gallery | Preserve implementation | Versioned atomic import, remapped owned IDs/refs, inactive until opened | Style existing staged review; no mock file behavior | V2 | T-PROJECTS, T-PACKAGE | C-PERSIST | preserved and verified — Slice 3 |
 | Repository status | O-DURABLE | opening/ready/saving/failed; project counts | Projects durable storage | Brush-on styling | IndexedDB is canonical; mount read-only unless verified migration | Shared storage status panel | V0 | T-PROJECTS | C-PERSIST | implemented and verified — Slice 3 |
@@ -220,6 +241,7 @@ checks.
 | Library import review | O-LIBRARY | Append/Replace/Cancel; staged counts/errors | schema/template import dialogs | Preserve implementation | Atomic strategy, destructive replacement review, no mock file shortcut | Shared staged-import styling | V1 | T-LIVE, T-A11Y | C-SHELL | preserve — Slice 6 |
 | Library clear/delete review | O-LIBRARY | clear/delete request, impact, confirm/cancel | clear/delete dialogs | Preserve implementation | Dependency and destructive impact; focus return | Shared danger-dialog styling | V1 | T-LIVE, T-A11Y | C-SHELL | preserve — Slice 6 |
 | Template identity | O-LIBRARY | stable ID/name/event/source/destination/revision | template editor | Brush-on styling | Identity, source lineage and destination semantics | Field/metadata tokens only | V0 | T-LIVE | C-SHELL | approved — Slice 6 |
+| Project-default destination seeding and explicit destination precedence | O-LIBRARY, O-TRANSPORT, O-LIVE, O-PROJECTS | new/captured event Destination seed; saved explicit Destination; push and unavailable-destination reason | template destination and push states | Preserve implementation | Active project default seeds only creation/capture; saved Library destination is global and byte-stable, always wins, is never rewritten on project change/switch/import, and blocks truthfully when unavailable instead of falling back | Style the installed Destination field/status and push action only; do not create a live project reference | V2 | T-TRANSPORT, T-LIVE, T-PACKAGE | C-SHELL, C-PERSIST | merged from master, classified and checkpoint-verified — Slice 6 |
 | Template properties | O-LIBRARY | structured property rows/add/edit/remove | template editor | Branding/layout parity | JSON/property round trip, path/type semantics | Responsive structured-property cards | V1 | T-LIVE | C-SHELL | approved — Slice 6 |
 | Advanced template data | O-LIBRARY | JSON editor; invalid JSON; destination errors | advanced editor | Brush-on styling | Exact bytes, validation association, local horizontal overflow | Monospace/code surface and error styling | V0 | T-LIVE, T-A11Y | C-SHELL | approved — Slice 6 |
 | Template actions | O-LIBRARY | Save revision; Push draft; Save copy; Discard; return | editor actions | Preserve implementation | Revision, selected-target, file/storage side effects and disabled reasons | Restyle existing hierarchy | V1 | T-LIVE | C-SHELL | preserve — Slice 6 |
@@ -243,6 +265,7 @@ checks.
 | Schema subnavigation | O-CANON | Schemas; Rule Library; Assignments tabs | Schemas subtabs | Branding/layout parity | All installed destinations, selected state and stable hooks | Branded secondary tabs | V1 | T-CANON, T-A11Y | C-SHELL, C-CANON | approved — Slice 6 |
 | Schema library toolbar | O-CANON | documentation; search; import/export; recheck | schema toolbar | Branding/layout parity | Global Saved Schema Library works without active project | Responsive toolbar | V1 | T-CANON | C-SHELL | approved — Slice 6 |
 | Schema rows & evidence | O-CANON | grouped Saved/Profile/Page Group/Page/Event/Flow instance/occurrence list; validation evidence | schema rows | Preserve implementation | One compact editor, stable contributor identity, no embedded Studio editor | Style grouped production list; ignore mock omissions | V1 | T-CANON | C-CANON | preserve — Slice 6 |
+| Relationship-derived Schema Library tree | O-SCHEMA-TREE, O-CANON, O-PROJECTS, O-FLOW, O-DURABLE | Saved schemas and Project branches; derived category filter; hierarchy search/result count; expand/collapse; repeated contributor references; one established editor | mock Schema library/tree presentation | Structural improvement already landed on master; preserve implementation | Categories derive from roles/relationships and are never tags; repeated paths share one stable canonical target; search uses human names/roles/breadcrumbs; per-project query/filter/expansion/scroll is ephemeral view state; live updates, no-project Saved branch, exact invoking-reference focus, tree semantics, and one vertical scroll owner at 360/520px | Apply scoped tree/card tokens without changing DOM IDs, relationship keys, canonical routing, persistence ownership, keyboard model, or local containment | V2 | T-SCHEMA-TREE, T-CANON, T-PROJECTS, T-FLOW, T-A11Y | C-SHELL, C-CANON, C-PERSIST, C-FLOW | merged from master, classified and checkpoint-verified — Slice 6 |
 | Schema identity & inheritance | O-CANON, O-COMPOSED | name/target/description/parents/provenance/declared-only | mock schema identity | Preserve implementation | Native sparse inheritance, contributor roles, canonical Draft tokens | Branded metadata and provenance tags | V1 | T-CANON | C-CANON | preserve — Slices 5–6 |
 | Property navigation | O-CANON | filter/sort/tree; Add property; stable property rows | property navigation | Branding/layout parity | Search caret/IME stays in same connected control; no write/Undo | Responsive tree/table navigation | V1 | T-CANON | C-CANON | implemented and verified — Slice 5 |
 | Property definition | O-CANON | focused Definition fields; type/presence/allowed values/docs/example | property definition | Structural improvement | One staged property command and Undo; valid typed values; stable focus | Consolidate presentation under current Definition child layer | V2 | T-CANON | C-CANON | implemented and verified — Slice 5 |
@@ -347,6 +370,8 @@ mock cannot prove.
 | Empty Live feed | O-LIVE | no events; Choose target/help recovery | No captured events yet | Branding/layout parity | Visible route to capture/repair; no fake count | Shared guided empty state | V1 | T-LIVE | C-SHELL | approved — Slice 6 |
 | Unsaved-command block | O-DURABLE | Switch/Publish disabled; reason; recovery | Actions blocked by unsaved command | Preserve implementation | Exact command retained; actions blocked until recovery | Shared blocked notice and reason association | V1 | T-PROJECTS, T-A11Y | C-PERSIST | preserve — Slices 3, 6 |
 | Target ready/permission/path variants | O-LIVE | connected; permission denied; queue/path absent; ready | target access gallery | Preserve implementation | Chrome permission/path truth and direct recovery | Consistent status/notice cards | V1 | T-LIVE | C-SHELL | preserve — Slice 6 |
+| Project transport invalid-path variants | O-TRANSPORT, O-LIVE, O-LIBRARY | Waiting for observation path; Push path is not push-capable; unavailable explicit Destination; other path remains unused | path error gallery | Preserve implementation | Only the affected operation blocks; unsafe/missing/incompatible paths never execute and the other project path is never a fallback | Shared truthful status/blocked styling with the existing repair control | V2 | T-TRANSPORT, T-LIVE, T-A11Y | C-SHELL, C-PERSIST | merged from master, classified and checkpoint-verified — Slice 6 |
+| Close project blocked by pending/failed Draft | O-PROJECTS, O-DURABLE | disabled Close project; exact Merge/Reject/Retry or failed-save recovery reason | blocked project review | Preserve implementation | Active identity and canonical projection remain until the exact blocker clears; durable project bytes are never deleted by Close | Style the installed blocker/recovery relationship; do not add a destructive project-delete meaning | V2 | T-PROJECTS, T-TRANSPORT, T-A11Y | C-PERSIST | merged from master, classified and checkpoint-verified — Slice 6 |
 | Capture paused/current/saved variants | O-LIVE, O-SESSIONS | paused count; current capture; historical comparison | Live errors/gallery | Preserve implementation | Session bytes/state and correct available lifecycle actions | State-colored mast/cards | V1 | T-LIVE | C-SHELL | preserve — Slice 6 |
 | Save/restart/end reviews | O-LIVE, O-SESSIONS | three dialogs and all confirm/cancel paths | session review gallery | Preserve implementation | Destructive distinctions and exact focus return | Shared review-dialog family | V1 | T-LIVE, T-A11Y | C-SHELL | preserve — Slice 6 |
 | Project switch/import variants | O-PROJECTS, O-DURABLE | impact, staged file, invalid/blocked, confirm/cancel | project storage gallery | Preserve implementation | Atomicity, inactive import, current state unchanged on cancel/failure | Shared review family | V2 | T-PROJECTS | C-PERSIST | preserved and verified — Slice 3 |
@@ -466,10 +491,71 @@ accessible relationships, focus, and recovery remain authoritative.
 | Slice 4 closing fetch | 2026-07-26T17:11:18.4017331Z | `7edae41131a4e6a282d80f67a2fbcfbada52beb3` | `7edae41131a4e6a282d80f67a2fbcfbada52beb3` | none | No controls, states, routes, persistence contracts, active-scope authorities, test owners, build inputs, or package inputs changed upstream during Slice 4. | No merge, conflict resolution, or parity reclassification required before the finite Slice 4 terminal gate |
 | Slice 5 opening fetch | 2026-07-26T17:55:20.7165647Z | `7edae41131a4e6a282d80f67a2fbcfbada52beb3` | `7edae41131a4e6a282d80f67a2fbcfbada52beb3` | none | No controls, states, routes, persistence contracts, active-scope authorities, canonical command contracts, test owners, build inputs, or package inputs changed upstream. | No merge or parity reclassification required; Slice 5 starts from approved integration commit `9b2c0cb0` with the same finite master cutoff |
 | Slice 5 closing fetch | 2026-07-26T18:43:47.7269678Z | `7edae41131a4e6a282d80f67a2fbcfbada52beb3` | `7edae41131a4e6a282d80f67a2fbcfbada52beb3` | none | No controls, states, routes, persistence contracts, active-scope authorities, canonical command contracts, test owners, build inputs, or package inputs changed upstream during Slice 5. | No merge, conflict resolution, or parity reclassification required before the finite Slice 5 terminal gate |
+| Slice 6 opening fetch | 2026-07-26T20:13:01Z | `7edae41131a4e6a282d80f67a2fbcfbada52beb3` | `452deaba03279a95c20dd25c90862de338ae0c64` | 15 commits: project event transport settings, nullable active-project context, and side-panel schema relationship tree | Adds separately editable project Observation history and Default push paths; explicit no-project and invalid-path reasons; new/captured Library destination seeding with explicit saved-destination precedence; Close project and nullable cross-window context; one relationship-derived Schema tree with category filter, hierarchy search/breadcrumbs, repeated stable canonical references, project-scoped ephemeral view state, keyboard/focus and 360/520px geometry. No new top-level route. Project Draft gains portable `eventTransport`; tree state remains non-portable view data. Active scope adds two programs/four contracts and exact `project_event_transport`/`schema_relationship_tree` pack ownership. | Added transport, Library precedence, Close/no-project/convergence, relationship-tree, invalid-path, owner and verification rows before Slice 6 implementation. Merged only into the branding feature lineage; source/test conflicts were behaviorally combined and generated maps rebuilt. Both exact overlap packs and `node scripts/package.mjs` passed. |
 
 Every later slice boundary must append a row even when the merge is clean. Any
 master delta must list controls, states, routes, persistence contracts, active
 authority, and verification ownership before implementation continues.
+
+### Slice 6 opening master-delta inventory
+
+- **Controls:** Data Layer Settings now names the active project and exposes
+  separately labelled Observation history path and Default push path fields with
+  saving/readiness output. The Projects active card adds Close project. The one
+  side-panel Schema Library adds a derived contributor-category filter,
+  hierarchy search/result count, Saved schemas and Project branches,
+  expand/collapse tree items, and repeated human-path references that open the
+  existing single canonical editor.
+- **States and recovery:** no-project disables project transport with Open
+  project guidance while keeping global Saved schemas. Observation requires an
+  array; push requires a callable `push`; missing/incompatible paths block only
+  the affected operation with exact status and no fallback. Transport save
+  exposes saving, saved, stale-Draft conflict, and unchanged-on-failure states.
+  Close project remains blocked by pending or failed Draft recovery. Tree
+  filtering/search restores valid per-project expansion, scroll, query and
+  category state; stale relationship references disappear through current
+  repair behavior.
+- **Routes, identity, focus, and accessibility:** no top-level route was added.
+  Repeated tree appearances carry relationship paths but resolve the same stable
+  contributor, Flow-frame, or occurrence identity through one editor. Tree
+  roles expose level, expanded, selected, count and path-qualified names with
+  arrow/Home/End keyboard traversal. Closing the editor or a project review
+  restores a connected invoking action after subscription rerenders. The tree
+  retains one vertical scroll owner and no document overflow at 360 and 520 CSS
+  pixels.
+- **Persistence and portability:** `project.eventTransport` is ordinary
+  project-root Draft data and survives switching, reload, durable migration,
+  export and import. Observation and push paths are independent. The active
+  project default seeds a new or captured Library draft once; an existing
+  explicit global Library Destination remains byte-identical and always wins.
+  Tree query/filter/expansion/scroll is project-scoped local view state only,
+  never canonical project, publication, or portable data. Closing a project
+  clears only the nullable active identity and canonical projection, not its
+  durable bytes.
+- **Authority and verification ownership:** latest active scope adds
+  `docs/data-layer-project-event-transport-settings-program-R01.md`,
+  `docs/data-layer-side-panel-schema-relationship-tree-program-R01.md`, and
+  their four behavior/runtime contracts. `project_event_transport` owns the
+  transport module, focused unit/property tests, acceptance handler and
+  packaged adapter, with project-management/capture/Library dependencies.
+  `schema_relationship_tree` owns the projection module, focused unit/property
+  tests, handler and packaged adapter.
+- **Collision resolution:** the merge combined master’s active-projection,
+  Close project and async prepare semantics with the branded connected-focus
+  contract in `src/data-layer-project-library-ui.ts`; combined the newer
+  lifecycle waits/scroll normalization with branded Inspector robustness; took
+  master’s current capture adapter; and regenerated both conflicted source maps
+  from source. The new transport adapter now uses the established portable
+  Chrome resolver. No generated JavaScript or source map was hand-edited.
+- **Boundary verification:** `npm run build`,
+  `node scripts/run-focused-acceptance.mjs --pack project_event_transport`,
+  `node scripts/run-focused-acceptance.mjs --pack schema_relationship_tree`,
+  and `node scripts/package.mjs` passed. The first transport run exposed and
+  drove correction of a duplicate Draft-sequence integration error; the second
+  exposed disconnected focus after master’s async project refresh; a later run
+  reached the new adapter and exposed its Windows-only `google-chrome` launch
+  assumption. All were corrected without weakening product assertions, and
+  the uninterrupted final checkpoint ended with `acceptance passed`.
 
 ### Slice 2 opening master-delta inventory
 

@@ -71,11 +71,11 @@ export function openPropertyEditor(template) {
         dirty: false,
     };
 }
-export function createNewEventEditor() {
+export function createNewEventEditor(defaultDestination = "") {
     return {
         template: {
             id: "new-event", name: "", eventName: "", sourceId: "", sourceName: "",
-            destination: "", tags: [], validation: "Not checked", payload: {}, version: 0,
+            destination: defaultDestination, tags: [], validation: "Not checked", payload: {}, version: 0,
             provenance: "library-created",
         },
         revisions: [], draft: {}, jsonDraft: "{}", dirty: false, isNew: true,

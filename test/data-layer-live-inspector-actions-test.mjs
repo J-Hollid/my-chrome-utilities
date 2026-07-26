@@ -33,6 +33,7 @@ const inspectorActions = createLiveInspectorActions({
     await clipboardPending;
   },
   storeTemplate: (template) => { storedTemplates.push(template); },
+  defaultDestination: () => "queue",
   createSchema: (event) => { schemaSources.push(event.id); },
   validationAvailable: () => false,
   validationState: () => "2 issues",
@@ -67,7 +68,13 @@ await runLiveInspectorAction(
 );
 assert.equal(storedTemplates.length, 1);
 assert.equal(storedTemplates[0].originatingEventId, selectedEvent.id);
+assert.equal(storedTemplates[0].destination,"queue",
+  "a captured event snapshots the project push default instead of its observation source");
 assert.equal(saveFeedback.at(-1), "Save to Library completed for purchase.");
+
+await inspectorActions.saveToLibrary({...selectedEvent,id:"purchase-2",destination:undefined});
+assert.equal(storedTemplates.at(-1).destination,"queue",
+  "a captured event without a destination inherits the active project default once");
 
 const schemaFeedback = [];
 await runLiveInspectorAction(

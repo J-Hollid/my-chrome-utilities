@@ -19,7 +19,7 @@ export function createLiveInspectorActions(effects) {
                 provenance: event.provenance ?? "live",
             }, {
                 name: event.name,
-                destination: event.destination ?? "event.history",
+                destination: effects.defaultDestination?.() ?? event.destination ?? "",
                 sourceName: event.sourceName ?? event.sourceId,
             });
             effects.storeTemplate(template);

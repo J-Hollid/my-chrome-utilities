@@ -124,6 +124,8 @@ else if (choice === "retry") {
 export function activateProject(library, projectId, _now = () => new Date().toISOString()) { const target = library.projects[projectId]; if (!target)
     throw new Error(`Unknown project ${projectId}.`); const current = library.activeProjectId ? library.projects[library.activeProjectId] : undefined; if (current?.pendingWrite)
     throw new Error(`A pending write blocks switching: ${current.pendingWrite.label}. Merge, reject, or retry the exact command first.`); return { ...clone(library), activeProjectId: projectId }; }
+export function deactivateProject(library) { const current = library.activeProjectId ? library.projects[library.activeProjectId] : undefined; if (current?.pendingWrite)
+    throw new Error(`A pending write blocks closing: ${current.pendingWrite.label}. Merge, reject, or retry the exact command first.`); const next = clone(library); delete next.activeProjectId; return next; }
 export function recordProjectNavigation(library, projectId, navigation) { const record = library.projects[projectId]; if (!record)
     throw new Error(`Unknown project ${projectId}.`); if (!validNavigation(record.state, navigation))
     throw new Error(`Navigation ${navigation.id ?? navigation.kind} is outside project ${projectId}.`); return { ...clone(library), projects: { ...clone(library.projects), [projectId]: { ...clone(record), navigation: clone(navigation) } } }; }

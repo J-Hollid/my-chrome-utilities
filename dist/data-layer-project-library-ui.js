@@ -1,4 +1,4 @@
-import { activateProject, createProjectInLibrary, migrateSingletonProject, projectMetadata, replayProjectCommand, resolveProjectWrite, restoreProjectLibrary, saveProjectState, serializeProjectLibrary, stageProjectImport, updateProjectMetadata, PROJECT_LIBRARY_STORAGE_KEY } from "./data-layer-project-library.js";
+import { activateProject, createProjectInLibrary, deactivateProject, migrateSingletonProject, projectMetadata, replayProjectCommand, resolveProjectWrite, restoreProjectLibrary, saveProjectState, serializeProjectLibrary, stageProjectImport, updateProjectMetadata, PROJECT_LIBRARY_STORAGE_KEY } from "./data-layer-project-library.js";
 import { restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, serializeCanonicalProjectState } from "./data-layer-specification-repository.js";
 const q = (root, selector) => { const value = root.querySelector(selector); if (!value)
     throw new Error(`Missing ${selector}`); return value; };
@@ -39,7 +39,7 @@ export function mountProjectLibraryUi(options) {
         status.textContent = "Opening the current Saved Draft in Specification Studio…";
         void Promise.resolve(options.settled?.()).then(() => options.openStudio(`specification-builder.html?project=${encodeURIComponent(projectId)}&route=${encodeURIComponent(route)}`), error => { status.textContent = `Specification Studio was not opened because the pending durable save failed. ${error instanceof Error ? error.message : String(error)}`; });
         return;
-    } void prepare(projectId).then(() => { persist(activateProject(library, projectId, now)); return options.settled?.(); }).then(() => options.openStudio(`specification-builder.html?project=${encodeURIComponent(projectId)}&route=${encodeURIComponent(route)}`), error => { status.textContent = `Project switch was not committed. ${error instanceof Error ? error.message : String(error)}`; }); };
+    } void prepare(projectId).then(() => { persist(activateProject(library, projectId, now), true); return options.settled?.(); }).then(() => options.openStudio(`specification-builder.html?project=${encodeURIComponent(projectId)}&route=${encodeURIComponent(route)}`), error => { status.textContent = `Project switch was not committed. ${error instanceof Error ? error.message : String(error)}`; }); };
     const download = async (projectId) => { const record = library.projects[projectId]; status.textContent = `Preparing durable export for ${record.state.project.name}…`; try {
         const serialized = await options.exportProject(projectId), link = document.createElement("a");
         link.href = URL.createObjectURL(new Blob([serialized], { type: "application/json" }));
@@ -75,16 +75,16 @@ export function mountProjectLibraryUi(options) {
     catch (error) {
         heading.textContent = `Undo was not applied. ${error instanceof Error ? error.message : String(error)}`;
     } })(); }), cancel = button("Close", "Close project details", () => closeDialog(dialog)); heading.textContent = `Edit ${record.state.project.name} details`; undo.hidden = true; form.addEventListener("submit", (event) => event.preventDefault()); form.append(save, undo, cancel); dialog.append(heading, form); document.body.append(dialog); dialog.addEventListener("close", restoreFocus, { once: true }); dialog.showModal(); fields.name.focus(); };
-    const switchReview = (projectId, returnFocus) => { const target = library.projects[projectId], current = active(), dialog = document.createElement("dialog"), heading = document.createElement("h4"), summary = document.createElement("p"), confirm = button(`Switch to ${target.state.project.name}`, `Confirm switch to ${target.state.project.name}`, () => { try {
+    const switchReview = (projectId, returnFocus) => { const target = library.projects[projectId], current = active(), dialog = document.createElement("dialog"), heading = document.createElement("h4"), summary = document.createElement("p"), restoreFocus = () => { const scope = list.querySelector(`[data-project-id="${CSS.escape(projectId)}"]`), control = Array.from(scope?.querySelectorAll("button") ?? []).find(({ textContent }) => textContent === "Switch"); (control ?? returnFocus).focus(); }, confirm = button(`Switch to ${target.state.project.name}`, `Confirm switch to ${target.state.project.name}`, () => { try {
         if (blocked())
             throw new Error("A failed durable Draft still blocks project switching.");
-        persist(activateProject(library, projectId, now));
+        persist(activateProject(library, projectId, now), true);
         closeDialog(dialog);
         queueMicrotask(() => list.querySelector(`[data-project-id="${CSS.escape(projectId)}"]`)?.focus());
     }
     catch (error) {
         summary.textContent = error instanceof Error ? error.message : String(error);
-    } }), cancel = button("Cancel switch", `Cancel switch to ${target.state.project.name}`, () => { closeDialog(dialog); returnFocus.focus(); }); heading.textContent = `Review switch to ${target.state.project.name}`; summary.textContent = blocked() ? "A failed durable Draft blocks this switch until its exact Retry succeeds." : `${current?.state.project.name ?? "No active project"} (${library.activeProjectId ?? "none"}) → ${target.state.project.name} (${projectId}). Schema, Pages, Page Groups, Events, Flows, documentation, assignments, and Specification Studio will replace context atomically. Current Draft ${current?.pendingWrite ? "has a pending write" : "is saved"}.`; confirm.disabled = blocked(); dialog.append(heading, summary); if (current?.pendingWrite) {
+    } }), cancel = button("Cancel switch", `Cancel switch to ${target.state.project.name}`, () => { closeDialog(dialog); restoreFocus(); }); heading.textContent = `Review switch to ${target.state.project.name}`; summary.textContent = blocked() ? "A failed durable Draft blocks this switch until its exact Retry succeeds." : `${current?.state.project.name ?? "No active project"} (${library.activeProjectId ?? "none"}) → ${target.state.project.name} (${projectId}). Schema, Pages, Page Groups, Events, Flows, documentation, assignments, and Specification Studio will replace context atomically. Current Draft ${current?.pendingWrite ? "has a pending write" : "is saved"}.`; confirm.disabled = blocked(); dialog.append(heading, summary); if (current?.pendingWrite) {
         confirm.disabled = true;
         for (const choice of ["merge", "reject", "retry"])
             dialog.append(button(`${choice[0].toUpperCase()}${choice.slice(1)} ${current.pendingWrite.label}`, `${choice} pending command ${current.pendingWrite.label}`, () => { try {
@@ -144,11 +144,16 @@ export function mountProjectLibraryUi(options) {
         activeHeader.textContent = record ? `Active project: ${record.state.project.name} · ${record.state.project.id} · Saved Draft · Published revision ${publishedRevision(record)}` : "No active project · Open project or Create project";
         activeCard.replaceChildren();
         if (record) {
-            const heading = document.createElement("h4"), summary = document.createElement("p"), openButton = button("Open in Specification Studio", `Open ${record.state.project.name} in Specification Studio`, () => open(record.state.project.id)), editButton = button("Edit details", `Edit details for ${record.state.project.name}`, () => void prepare(record.state.project.id).then(() => edit(record.state.project.id, editButton)));
-            openButton.disabled = blocked();
+            const heading = document.createElement("h4"), summary = document.createElement("p"), openButton = button("Open in Specification Studio", `Open ${record.state.project.name} in Specification Studio`, () => open(record.state.project.id)), editButton = button("Edit details", `Edit details for ${record.state.project.name}`, () => void prepare(record.state.project.id).then(() => edit(record.state.project.id, editButton))), closeButton = button("Close project", `Close active project ${record.state.project.name}`, () => { try {
+                persist(deactivateProject(library), true);
+            }
+            catch (error) {
+                status.textContent = error instanceof Error ? error.message : String(error);
+            } });
+            openButton.disabled = editButton.disabled = closeButton.disabled = blocked();
             heading.textContent = record.state.project.name;
             summary.textContent = `${record.state.project.site} · Saved Draft · last saved ${record.lastModifiedAt} · Published revision ${publishedRevision(record)}`;
-            activeCard.append(heading, summary, openButton, editButton, button("Export", `Export ${record.state.project.name}`, () => void download(record.state.project.id)));
+            activeCard.append(heading, summary, openButton, editButton, button("Export", `Export ${record.state.project.name}`, () => void download(record.state.project.id)), closeButton);
         }
         else {
             const message = document.createElement("p"), openProject = button("Open project", "Open a project", () => search.focus()), createProject = button("Create project", "Create project", () => creation(createProject));
@@ -167,7 +172,7 @@ export function mountProjectLibraryUi(options) {
                 item.append(button("Active", `${entry.state.project.name} Active`, () => { }));
             else {
                 const switchButton = button("Switch", `Switch to ${entry.state.project.name}`, function () { if (blocked())
-                    return; switchReview(projectId, this); });
+                    return; const control = this; control.disabled = true; void prepare(projectId).then(() => { control.disabled = false; switchReview(projectId, control); }, error => { control.disabled = false; status.textContent = `Project switch could not load its Saved Draft. ${error instanceof Error ? error.message : String(error)}`; }); });
                 switchButton.disabled = blocked();
                 item.append(switchButton);
             }
@@ -200,7 +205,7 @@ export function mountProjectLibraryUi(options) {
     const captureActiveProject = (state, revision) => { if (library.activeProjectId !== state.project.id)
         return; library = saveProjectState(library, state.project.id, { ...structuredClone(state), history: { undo: [], redo: [] } }, revision, now); options.storage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library)); render(); };
     const activate = (projectId) => { if (blocked())
-        throw new Error("A failed durable Draft blocks project switching."); persist(activateProject(library, projectId, now)); };
+        throw new Error("A failed durable Draft blocks project switching."); persist(activateProject(library, projectId, now), true); };
     return { render, library: () => cloneLibrary(library), activate, syncActiveProject: projectProjection, captureActiveProject };
 }
 const cloneLibrary = (library) => structuredClone(library);

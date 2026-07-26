@@ -25,6 +25,10 @@ export interface SpecificationCollections {
   assignments: ProjectEntity[];
 }
 export interface ProjectRelease extends ProjectEntity { revision: number; createdAt: string; snapshot: SpecificationCollections; }
+export interface ProjectEventTransportSettings {
+  observationHistoryPath: string;
+  defaultPushPath: string;
+}
 export interface SpecificationProject extends ProjectEntity {
   description: string;
   site: string;
@@ -35,6 +39,7 @@ export interface SpecificationProject extends ProjectEntity {
   releases: ProjectRelease[];
   currentRelease?: string;
   documentation?:ProjectDocumentationDraft;
+  eventTransport?:ProjectEventTransportSettings;
   compatibility?: { legacySnapshot: string };
 }
 export interface ProjectState {
@@ -52,6 +57,7 @@ export function createSpecificationProject(input: { name: string; description?: 
     environments:[...(input.environments ?? ["Production"])],
     namingConventions:{ property:"snake_case", event:"snake_case" },
     publicationPolicy:{ warningsBlock:false, fixturesRequired:true },
+    eventTransport:{ observationHistoryPath:"queue.history", defaultPushPath:"dataLayer" },
     collections:{ profiles:[], pages:[], pageGroups:[], events:[], applicabilitySets:[], flows:[], fixtures:[], assignments:[] },
     releases:[],
   };

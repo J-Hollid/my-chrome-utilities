@@ -4,7 +4,8 @@
 
 The active specification cycles are the interactive directional Flow graph review,
 focused canonical authoring and layered effective-schema, selected-Flow
-documentation export, operator-guided Live Flow testing, project-management, and
+documentation export, operator-guided Live Flow testing, project-management,
+project-scoped event transport, the side-panel schema relationship tree, and
 durable-project repository checkpoints. Their contracts are:
 
 - `features/data-layer-directional-flow-specification-graph.feature`
@@ -23,6 +24,10 @@ durable-project repository checkpoints. Their contracts are:
 - `features/data-layer-project-library-and-active-context-runtime.feature`
 - `features/data-layer-project-portability-and-upgrade.feature`
 - `features/data-layer-project-portability-and-upgrade-runtime.feature`
+- `features/data-layer-project-event-transport-settings.feature`
+- `features/data-layer-project-event-transport-settings-runtime.feature`
+- `features/data-layer-side-panel-schema-relationship-tree.feature`
+- `features/data-layer-side-panel-schema-relationship-tree-runtime.feature`
 - `features/data-layer-durable-project-repository.feature`
 - `features/data-layer-durable-project-repository-runtime.feature`
 
@@ -38,6 +43,10 @@ The program for operator-guided Live Flow testing is
 `docs/data-layer-live-flow-guided-testing-program-R01.md`.
 The program for project library, active context, and portability is
 `docs/data-layer-project-management-program-R01.md`.
+The program for active-project observation and push routing is
+`docs/data-layer-project-event-transport-settings-program-R01.md`.
+The program for the relationship-derived side-panel Schema tree is
+`docs/data-layer-side-panel-schema-relationship-tree-program-R01.md`.
 The correction program for durable project storage, page-scoped Undo/Redo, and
 intentional publication revisions is
 `docs/data-layer-durable-project-repository-program-R01.md`.
@@ -51,6 +60,19 @@ The project-management contracts are likewise later user-approved authority only
 for the named project library, active context, Studio routing, top-level project-
 entity collection lifecycle, portability, and singleton migration behavior. They
 do not reactivate the archived project-foundation or release specifications.
+
+The project event transport contracts are later user-approved authority for
+project-owned observation and default push paths, active-context switching,
+portable transport settings, direct-push defaults, and global Library destination
+precedence. They do not reactivate archived Live execution, sequence replay, or
+release behavior.
+
+The side-panel schema relationship-tree contracts are later user-approved
+authority for the one in-panel Schema list, relationship-derived contributor
+categories, repeated canonical references, hierarchy filtering and search, and
+project-scoped tree view state. They do not create a tagging model or change
+schema inheritance, Flow ownership, project collections, or Saved Schema Library
+ownership.
 
 ## Scope and lineage processing invariant
 
@@ -103,6 +125,12 @@ program and all four active project-management feature contracts while this file
 continues to name them.
 
 ## Current delivery and recovery queue
+
+The project-event-transport-settings cycle completed at `edc47b29e1`. The
+side-panel-schema-relationship-tree cycle is the current later user-approved
+specification task and proceeds before the remaining durable-repository and Flow
+recovery tasks resume. It does not close, replace, or deactivate either recovery
+lineage.
 
 Project library, active context, and the project-entity overview lifecycle landed
 together through the architect-approved `project-library-active-context` terminal
@@ -614,6 +642,20 @@ node scripts/run-focused-acceptance.mjs --pack project_management
 node scripts/package.mjs
 ```
 
+The project event transport checkpoint sequence is exactly:
+
+```sh
+node scripts/run-focused-acceptance.mjs --pack project_event_transport
+node scripts/package.mjs
+```
+
+The side-panel schema relationship-tree checkpoint sequence is exactly:
+
+```sh
+node scripts/run-focused-acceptance.mjs --pack schema_relationship_tree
+node scripts/package.mjs
+```
+
 The durable-project repository checkpoint sequence is exactly:
 
 ```sh
@@ -639,6 +681,24 @@ serializer, import remapper, and legacy singleton migration. It
 may declare canonical schema dependencies in the pack
 registry but must not invoke archived project-foundation, release, or full-site
 acceptance suites.
+
+The `project_event_transport` pack must register both project event transport
+contracts and focused production evidence for project-owned observation and
+default push paths, three distinct project configurations, active-context
+switching, portable settings, direct-push routing, new-Library-event defaulting,
+explicit Library destination precedence, no-project behavior, and truthful
+invalid-path blocking. It may depend on `project_management` and the existing
+focused capture and Library components, but must not invoke archived Live,
+sequence-replay, release, or full-site suites.
+
+The `schema_relationship_tree` pack must register both side-panel schema
+relationship-tree contracts and focused production evidence for derived
+contributor categories, repeated Page and Event references, stable canonical
+routing, category filtering, hierarchy search and breadcrumbs, live relationship
+updates, project-scoped view restoration, no-project behavior, one-editor reuse,
+keyboard operation, and 360px geometry. It may depend on `layered_schema`,
+`project_management`, and `flow_graph`, but must not invoke unrelated authoring,
+Live, documentation, release, or full-site suites.
 
 The `layered_schema` pack must register all four canonical-authoring and layered-
 schema feature contracts and their focused production evidence, including

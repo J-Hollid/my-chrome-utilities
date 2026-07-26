@@ -6,7 +6,10 @@ import {
   setPushDestination,
 } from "../dist/data-layer-event-library-editor.js";
 import { pushTemplateToSelectedTarget } from "../dist/data-layer-selected-target-push.js";
-import { pushPayloadInPage } from "../dist/data-layer-selected-target-push-page.js";
+import {
+  pushPayloadInPage,
+  pushPathCapabilityInPage,
+} from "../dist/data-layer-selected-target-push-page.js";
 
 const template = createEditableTemplate({
   id: "event-1", sessionId: "session-1", sourceId: "history", sourceKind: "page",
@@ -32,6 +35,15 @@ assert.deepEqual(calls, [{ tabId: 42, destination: "dataLayer", eventName: "purc
 assert.deepEqual(editor.draft, { transaction_id: "test-123" });
 
 const selectedPage = { dataLayer: [], analytics: { queue: [] } };
+assert.deepEqual(pushPathCapabilityInPage("dataLayer", selectedPage), { success: true });
+assert.deepEqual(
+  pushPathCapabilityInPage("analytics.value", { analytics: { value: 2 } }),
+  { success: false, result: "Push path is not push-capable" },
+);
+assert.deepEqual(
+  pushPathCapabilityInPage("missing.queue", selectedPage),
+  { success: false, result: "Destination missing.queue is unavailable." },
+);
 assert.deepEqual(
   pushPayloadInPage("dataLayer", "purchase", { transaction_id: "test-123" }, selectedPage),
   { success: true },

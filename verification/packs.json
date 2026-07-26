@@ -352,6 +352,33 @@
     ]
   },
   {
+    "id": "project_event_transport",
+    "source": [
+      "src/data-layer-project-event-transport.ts"
+    ],
+    "dependencies": [
+      "project_management",
+      "capture",
+      "event-library"
+    ],
+    "unit": [
+      "test/data-layer-project-event-transport-test.mjs"
+    ],
+    "property": [
+      "test/data-layer-project-event-transport-property-test.mjs"
+    ],
+    "features": [
+      "features/data-layer-project-event-transport-settings.feature",
+      "features/data-layer-project-event-transport-settings-runtime.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/project_event_transport.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/project-event-transport.mjs"
+    ]
+  },
+  {
     "id": "schemas",
     "source": [
       "src/data-layer-allowed-value-expansion-ui.ts",
@@ -956,6 +983,29 @@
       "test/data-layer-canonical-migration-browser-test.mjs",
       "test/browser-packs/layered-schema.mjs",
       "test/twatility-rules-conditions-browser-test.mjs"
+    ]
+  },
+  {
+    "id": "schema_relationship_tree",
+    "source": [
+      "src/schema-relationship-tree.ts"
+    ],
+    "dependencies": [],
+    "unit": [
+      "test/data-layer-schema-relationship-tree-test.mjs"
+    ],
+    "property": [
+      "test/data-layer-schema-relationship-tree-property-test.mjs"
+    ],
+    "features": [
+      "features/data-layer-side-panel-schema-relationship-tree.feature",
+      "features/data-layer-side-panel-schema-relationship-tree-runtime.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/schema_relationship_tree.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/schema-relationship-tree.mjs"
     ]
   },
   {

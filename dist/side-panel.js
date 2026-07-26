@@ -11,7 +11,7 @@ import { allowedValuesRuleLibraryMetadata, allowedValuesRuleLibrarySearchText, n
 import { tabPageObservation, } from "./active-page-observation.js";
 import { attachedObservationTarget, attachSelectedObservationTarget, createObservationTarget, createObservationTargetState, findObservationTargets, navigateObservationTarget, refreshDiscoveredObservationTargets, registerObservationTarget, restoreAttachedObservationTarget, selectObservationTarget, selectedObservationTarget, updateObservationTargetAccess, } from "./utilities/data-layer/capture.js";
 import { closeDetachTargetConfirmation, closeObservationTargetPicker, findObservationTargetElements, handleObservationTargetDialogKeydown, handleObservationTargetListKeydown, handleObservationTargetSearchKeydown, renderObservationTargetPicker as renderObservationTargetPickerUi, setObservationTargetResult as setObservationTargetResultUi, showDetachTargetConfirmation, showObservationTargetPicker, } from "./utilities/data-layer/capture.js";
-import { getHistoryArrayPath, samplePageObject, setHistoryArrayPath, } from "./utilities/data-layer/capture.js";
+import { samplePageObject } from "./utilities/data-layer/capture.js";
 import { appendObservedHistoryEntry, attachHistoryArrayObserver, attachHistoryArraySnapshot, stopHistoryArrayObserver, } from "./utilities/data-layer/capture.js";
 import { beginObservedPageLoad, initialObservationRefreshState, markObservationRefreshPageEntryCaptured, nextObservationRefreshAttempt, observationRefreshDelay, observationRefreshRequestForPageLoad, observationRefreshRequestIsCurrent, shouldRetryObservationRefresh, } from "./utilities/data-layer/capture.js";
 import { initialObservationActivationState, nextObservationActivation, observationActivationIsCurrent, } from "./utilities/data-layer/capture.js";
@@ -52,7 +52,7 @@ import { restoreInspectorReturnUi } from "./utilities/data-layer/live-inspection
 import { createNewEventEditor, discardDraft, openPropertyEditor, saveAsTemplateCopy, saveDraftRevision, searchEventTemplates, restoreEventTemplateLibrary, serializeEventTemplateLibrary, setPushDestination, setNewEventField, setTemplateIdentity, setTemplateSchemaAttachment, templateIdentityValidation, saveNewEvent, updateDraftJson, EVENT_TEMPLATE_LIBRARY_STORAGE_KEY, } from "./utilities/data-layer/event-library.js";
 import { appendImportedTemplates, eventLibraryExport, eventLibraryImport, replaceImportedTemplates, } from "./utilities/data-layer/event-library.js";
 import { clearEventLibrary, deleteEventTemplate } from "./utilities/data-layer/event-library.js";
-import { assignableSchemas, createSchema, createSchemaLibraryExport, discardSchemaWorkingDraft, duplicateSchemaRevision, importSchema, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, restoreSchemaRevisionDraft, schemaInheritanceConflict, schemaInheritanceError, schemaRevision, schemaRevisionChoices, searchSchemas, serializeSchemaLibrary, restoreSchemaLibrary, updateSchemaWorkingDraft, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY } from "./utilities/data-layer/schemas.js";
+import { assignableSchemas, createSchema, createSchemaLibraryExport, discardSchemaWorkingDraft, duplicateSchemaRevision, importSchema, inspectSchemaRename, proposeSchemaWorkingDraftName, publishSchemaWorkingDraft, restoreSchemaRevisionDraft, schemaInheritanceConflict, schemaInheritanceError, schemaRevision, schemaRevisionChoices, serializeSchemaLibrary, restoreSchemaLibrary, updateSchemaWorkingDraft, validateEvent, validateWithSchema, SCHEMA_LIBRARY_STORAGE_KEY } from "./utilities/data-layer/schemas.js";
 import { createExtensionSchemaPackage, exportJsonSchemaBundle, exportJsonSchemaResource, inspectJsonSchemaExport } from "./utilities/data-layer/schemas.js";
 import { revalidateCurrentLiveSession } from "./utilities/data-layer/schemas.js";
 import { applyAllowedValueExpansion, reviewAllowedValueExpansion } from "./utilities/data-layer/schemas.js";
@@ -73,7 +73,8 @@ import { cardinalityComparisonPasses, cardinalityMeasuredValue } from "./utiliti
 import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, createRuleConfigurationFromAttachedRule, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./utilities/data-layer/schemas.js";
 import { canonicalRulePropertyPath } from "./utilities/data-layer/schemas.js";
 import { renderSchemaSpecificationBuilder } from "./utilities/data-layer/schemas.js";
-import { applyCanonicalCommand, canonicalCommandOutcome, canonicalCommandsFromCompactProjection, canonicalMigrationDurablyAcknowledged, canonicalPredicateText, canonicalPropertyPath, compactSchemaProjection, composedCanonicalSchema, createCanonicalSchema, hasLegacySchemaRepresentation, migrateLegacyProfile, mountCanonicalPredicateEditor, mountSidePanelLayeredProfileEditor, resolveCanonicalMigrationConflict, resolveSidePanelSchemaContributor, saveComposedCanonicalDocument, saveComposedEventCanonicalDocument, saveEventOccurrenceCanonicalDocument, saveFlowPageInstanceCanonicalDocument, savedSchemaCanonicalDocument, savedSchemaFromCanonical, sidePanelSchemaGroups, transactProject } from "./utilities/data-layer/schemas.js";
+import { applyCanonicalCommand, canonicalCommandOutcome, canonicalCommandsFromCompactProjection, canonicalMigrationDurablyAcknowledged, canonicalPredicateText, canonicalPropertyPath, compactSchemaProjection, composedCanonicalSchema, createCanonicalSchema, hasLegacySchemaRepresentation, migrateLegacyProfile, mountCanonicalPredicateEditor, mountSidePanelLayeredProfileEditor, resolveCanonicalMigrationConflict, resolveSidePanelSchemaContributor, saveComposedCanonicalDocument, saveComposedEventCanonicalDocument, saveEventOccurrenceCanonicalDocument, saveFlowPageInstanceCanonicalDocument, savedSchemaCanonicalDocument, savedSchemaFromCanonical, transactProject } from "./utilities/data-layer/schemas.js";
+import { filterSchemaRelationshipTree, projectSchemaRelationshipTree, restoreSchemaRelationshipTreeView, saveSchemaRelationshipTreeView } from "./utilities/data-layer/schemas.js";
 import { beginCompactCanonicalHistoryTransition, compactCanonicalHistoryKey, compactCanonicalHistorySettlement, completeCompactCanonicalHistoryTransition, prepareCompactCanonicalRedo, prepareCompactCanonicalUndo, recordCompactCanonicalMutation, rejectCompactCanonicalHistoryTransition } from "./utilities/data-layer/schemas.js";
 import { mountProjectLibraryUi, PROJECT_LIBRARY_STORAGE_KEY, recordProjectNavigation, serializeProjectLibrary } from "./utilities/data-layer/schemas.js";
 import { installDurableRepositoryStartupFailure, mountDurableProjectRepositoryUi, openDurableProjectRuntime } from "./utilities/data-layer/schemas.js";
@@ -99,11 +100,11 @@ import { createPushDraftReview, } from "./utilities/data-layer/event-library.js"
 import { findPushDraftReviewElements, renderPushDraftReview, } from "./utilities/data-layer/event-library.js";
 import { createTemplateChangeReview } from "./utilities/data-layer/event-library.js";
 import { renderTemplateChangeReview } from "./utilities/data-layer/event-library.js";
-import { pushPayloadInPage, } from "./utilities/data-layer/event-library.js";
+import { pushPathCapabilityInPage, pushPayloadInPage, } from "./utilities/data-layer/event-library.js";
 import { panelEmptyState } from "./panel-empty-states.js";
 import { createManualFlowDefectEvent, mountLiveFlowTestingUi } from "./utilities/data-layer/live-inspection.js";
 import { findPanelEmptyStateElements, renderPanelEmptyState, } from "./panel-empty-states-ui.js";
-import { adoptSavedSchema, applyCapturedValidationToProfile, capturedValidationDestinationChoices, capturedValidationProfileRequirements, compileSpecificationProject, commitCanonicalProjectState, createFixtureFromCapturedValidation, evaluateSpecificationObservation, recordSpecificationCapture, recordSpecificationNavigation, SPECIFICATION_PROJECT_STORAGE_KEY, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, } from "./utilities/data-layer/schemas.js";
+import { adoptSavedSchema, applyCapturedValidationToProfile, capturedValidationDestinationChoices, capturedValidationProfileRequirements, compileSpecificationProject, commitCanonicalProjectState, configureProjectEventTransport, createFixtureFromCapturedValidation, evaluateSpecificationObservation, recordSpecificationCapture, recordSpecificationNavigation, projectEventTransport, seedLibraryDestination, SPECIFICATION_PROJECT_STORAGE_KEY, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, } from "./utilities/data-layer/schemas.js";
 const PROJECT_NAME = "my-chrome-utilities";
 const app = document.querySelector("#app");
 const panelRoot = document.querySelector("#side-panel-root");
@@ -154,6 +155,10 @@ const endTestingButton = document.querySelector("#end-data-layer-testing");
 const historyPathInput = document.querySelector("#history-path");
 const historyPathDisplay = document.querySelector("#history-path-display");
 const historyPathStatus = document.querySelector("#history-path-status");
+const defaultPushPathInput = document.querySelector("#default-push-path");
+const defaultPushPathStatus = document.querySelector("#default-push-path-status");
+const projectTransportContext = document.querySelector("#project-transport-context");
+const projectTransportGuidance = document.querySelector("#project-transport-guidance");
 const sessionHistoryPath = document.querySelector("#session-history-path");
 const sessionWarning = document.querySelector("#session-warning");
 const restartObservationButton = document.querySelector("#restart-observation");
@@ -245,6 +250,7 @@ const schemaEmptyState = document.querySelector("#schema-empty-state");
 const sequenceEmptyState = document.querySelector("#sequence-empty-state");
 const { search: eventTemplateSearch, addNewButton, templateName: eventTemplateName, eventName: eventTemplateEventName, source: eventTemplateSource, json: eventTemplateJson, pushDestination: eventTemplatePushDestination, saveRevisionButton: saveTemplateRevisionButton, saveCopyButton: saveTemplateCopyButton, pushDraftButton: pushTemplateDraftButton, discardDraftButton: discardTemplateDraftButton, closeEditorButton: closeTemplateEditorButton, backToCapturedEventButton, } = eventLibraryEditorElements;
 const schemaSearch = document.querySelector("#schema-search");
+const schemaCategoryFilter = document.querySelector("#schema-category-filter");
 const sidePanelLayeredProfileEditorHost = document.querySelector("#side-panel-layered-profile-editor");
 const liveEventQuery = document.querySelector("#live-event-query");
 const schemaSubviews = Array.from(document.querySelectorAll("#schema-subviews [role=tab]"));
@@ -612,6 +618,8 @@ buildHistoricalSpecificationButton.id = "build-historical-specification";
 restoreSchemaRevisionButton?.after(buildHistoricalSpecificationButton);
 const schemaCount = document.querySelector("#schema-count");
 const schemaList = document.querySelector("#schema-list");
+const schemaTreeScrollOwner = document.querySelector("#workspace-panel-data-layer");
+const schemaPanel = document.querySelector("#data-layer-panel-schemas");
 const schemaResult = document.querySelector("#schema-result");
 const schemaExportChoices = document.createElement("dialog");
 schemaExportChoices.id = "schema-export-choices";
@@ -677,6 +685,8 @@ const SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY = "my-chrome-utilities.saved-through
 let savedThroughEventCount = Math.max(0, Number(dataLayerStorage.getItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY)) || 0);
 let eventTemplates = restoreEventTemplateLibrary(dataLayerStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
 let propertyEditorState;
+let pushPathReadiness;
+let pushPathReadinessRequest = 0;
 let pendingPushDraftReview;
 let pendingRevisionChangeReview;
 let pendingTemplateRename;
@@ -688,7 +698,71 @@ let savedInspectorTemplateId;
 const storedSchemaLibrary = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
 let schemas = restoreSchemaLibrary(storedSchemaLibrary);
 let sidePanelLayeredProfileEditor;
-const projectLibraryUi = mountProjectLibraryUi({ root: document, storage: projectStorage, prepareProject: durableProjectRuntime.ensureProject, settled: durableProjectRuntime.settled, undoProject: durableProjectRuntime.undo, subscribe: (listener) => durableProjectRuntime.subscribe(({ library }) => listener(library)), blocked: () => Boolean(durableProjectRuntime.failedSave()), exportProject: async (projectId) => JSON.stringify(await durableProjectRuntime.repository.exportProject(projectId)), importProject: async (serialized, input) => { await durableProjectRuntime.repository.importProject(JSON.parse(serialized), input); }, projectStorageKey: SPECIFICATION_PROJECT_STORAGE_KEY, navigationStorageKey: "my-chrome-utilities.specification-project-navigation.v1", openStudio: (url) => { globalThis.open(url, "_blank"); }, onChange: renderSchemas });
+let projectTransportSavePending = false;
+const projectLibraryUi = mountProjectLibraryUi({ root: document, storage: projectStorage, prepareProject: durableProjectRuntime.ensureProject, settled: durableProjectRuntime.settled, undoProject: durableProjectRuntime.undo, subscribe: (listener) => durableProjectRuntime.subscribe(({ library }) => listener(library)), blocked: () => Boolean(durableProjectRuntime.failedSave()), exportProject: async (projectId) => JSON.stringify(await durableProjectRuntime.repository.exportProject(projectId)), importProject: async (serialized, input) => { await durableProjectRuntime.repository.importProject(JSON.parse(serialized), input); }, projectStorageKey: SPECIFICATION_PROJECT_STORAGE_KEY, navigationStorageKey: "my-chrome-utilities.specification-project-navigation.v1", openStudio: (url) => { globalThis.open(url, "_blank"); }, onChange: () => { renderProjectEventTransport(); renderSchemas(); } });
+function activeTransportProject() {
+    const activeId = projectLibraryUi.library().activeProjectId;
+    if (!activeId)
+        return undefined;
+    const state = restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY));
+    return state?.project.id === activeId && !state.project.placeholder ? state : undefined;
+}
+function currentObservationHistoryPath() {
+    const state = activeTransportProject();
+    return state ? projectEventTransport(state.project).observationHistoryPath : "";
+}
+function renderProjectEventTransport() {
+    const state = activeTransportProject(), available = Boolean(state), settings = state ? projectEventTransport(state.project) : undefined;
+    if (projectTransportContext)
+        projectTransportContext.textContent = state ? `Project context: ${state.project.name}` : "No active project";
+    if (projectTransportGuidance)
+        projectTransportGuidance.hidden = available;
+    if (historyPathInput) {
+        historyPathInput.disabled = !available;
+        historyPathInput.value = settings?.observationHistoryPath ?? "";
+    }
+    if (defaultPushPathInput) {
+        defaultPushPathInput.disabled = !available;
+        defaultPushPathInput.value = settings?.defaultPushPath ?? "";
+    }
+    if (defaultPushPathStatus)
+        defaultPushPathStatus.textContent = available
+            ? projectTransportSavePending ? "Saving project Draft…" : "Saved in project Draft"
+            : "Open project";
+    renderHistoryPath(settings?.observationHistoryPath ?? "", settings?.observationHistoryPath ?? "", available ? currentTargetPathStatus : "Selection required");
+    if (available && selectedObservationTarget(observationTargetState)) {
+        queueMicrotask(refreshSelectedTargetPathStatus);
+    }
+}
+async function saveProjectEventTransport() {
+    const state = activeTransportProject();
+    if (!state)
+        return renderProjectEventTransport();
+    const serialized = projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY), envelope = restoreCanonicalProjectEnvelope(serialized);
+    if (!envelope)
+        throw new Error("The active project Draft is unavailable.");
+    projectTransportSavePending = true;
+    if (defaultPushPathStatus)
+        defaultPushPathStatus.textContent = "Saving project Draft…";
+    try {
+        const next = configureProjectEventTransport(state, { observationHistoryPath: historyPathInput?.value ?? "", defaultPushPath: defaultPushPathInput?.value ?? "" });
+        const result = commitCanonicalProjectState(projectStorage, next, { expectedRevision: envelope.revision, pendingLabel: "Save project event transport settings", base: state });
+        if (result.status === "conflict")
+            throw new Error("Project transport settings changed in a newer Draft.");
+        projectLibraryUi.captureActiveProject(next, result.revision);
+        await durableProjectRuntime.settled();
+        projectTransportSavePending = false;
+        if (defaultPushPathStatus)
+            defaultPushPathStatus.textContent = "Saved in project Draft";
+    }
+    catch (error) {
+        projectTransportSavePending = false;
+        if (defaultPushPathStatus)
+            defaultPushPathStatus.textContent =
+                `Save failed; project Draft is unchanged. ${error instanceof Error ? error.message : String(error)}`;
+        throw error;
+    }
+}
 const liveFlowTestingUi = mountLiveFlowTestingUi({
     root: document,
     activeProject: async () => { const activeProjectId = projectLibraryUi.library().activeProjectId; if (!activeProjectId)
@@ -849,7 +923,9 @@ function renderHistoryPath(path, fieldValue = path, status = "Selection required
         historyPathDisplay.textContent = path;
     }
     if (historyPathStatus) {
-        historyPathStatus.textContent = status;
+        historyPathStatus.textContent = status === "Waiting for path"
+            ? "Waiting for observation path"
+            : status;
     }
 }
 function restoredObservationTargetState() {
@@ -1070,14 +1146,14 @@ async function attachSelectedTarget() {
         setObservationTargetResult("End current session before attaching selected target");
         return;
     }
-    const observation = await tabPageObservation(target.tabId, target.pageUrl, getHistoryArrayPath(dataLayerStorage), observationPageLoadId(target.tabId));
+    const observation = await tabPageObservation(target.tabId, target.pageUrl, currentObservationHistoryPath(), observationPageLoadId(target.tabId));
     if (observation.pageAccessStatus !== "page access available") {
         observationTargetState = updateObservationTargetAccess(observationTargetState, target.id, "Permission required");
         setObservationTargetResult("Permission required");
         renderObservationTargetContext();
         return;
     }
-    currentTargetPathStatus = targetPathStatusForObservation(observation, getHistoryArrayPath(dataLayerStorage));
+    currentTargetPathStatus = targetPathStatusForObservation(observation, currentObservationHistoryPath());
     observationTargetState = decision.state;
     const started = beginDataLayerTestingSession(dataLayerSessionState, liveObserverState, {
         id: newDataLayerSessionId(target.tabId),
@@ -1086,7 +1162,7 @@ async function attachSelectedTarget() {
         url: target.pageUrl,
         targetTitle: target.title,
         targetOrigin: target.origin,
-        historyPath: getHistoryArrayPath(dataLayerStorage),
+        historyPath: currentObservationHistoryPath(),
     });
     dataLayerSessionState = started.sessionState;
     liveObserverState = started.liveObserverState;
@@ -1145,9 +1221,11 @@ function showDataLayerView(view, focus = false) {
     }
     dataLayerStorage.setItem("my-chrome-utilities.data-layer-view.v1", view);
     renderDataLayerView(liveObserverElements, view, focus);
-    if (view === "Schemas")
+    if (view === "Schemas") {
+        restorePendingSchemaTreeScroll();
         void hydrateActiveProjectForSchemas().catch((error) => { if (schemaResult)
             schemaResult.textContent = `Schema contributors are unavailable. ${error instanceof Error ? error.message : String(error)}`; });
+    }
     if (view === "Live" && liveObserverState.inspectorEventId)
         restoreLiveInspectorPresentation(liveObserverElements.eventInspector, liveInspectorPresentation.get(liveObserverState.inspectorEventId));
     if (view === "Defects")
@@ -1455,7 +1533,7 @@ function currentLiveSessionSummary() {
         observerStatus: canonicalLiveObserverStatus(observerAttachmentStatus(dataLayerSessionState, dataLayerObserverState)),
         targetPage: session?.targetTitle ?? target?.title ?? "No target selected",
         pageUrl: session?.currentUrl ?? target?.pageUrl ?? "",
-        observerPath: session?.historyPath ?? getHistoryArrayPath(dataLayerStorage),
+        observerPath: session?.historyPath ?? currentObservationHistoryPath(),
         capturedEventCount: liveObserverState.events.length,
         connectedSourceCount: liveObserverState.sources.filter(({ status }) => status === "Connected").length,
     });
@@ -1643,6 +1721,7 @@ function openLiveInspector(eventId, preserveReturnSnapshot = false) {
                 persistEventTemplateLibrary();
                 renderEventTemplateLibrary();
             },
+            defaultDestination: () => seedLibraryDestination(activeTransportProject()?.project),
             onTemplateSaved: (template) => {
                 savedInspectorTemplateId = template.id;
                 appendOpenInLibraryAction(event.id, template.name);
@@ -1824,6 +1903,7 @@ function renderEventTemplateLibrary() {
             label: "Library template",
         }),
     });
+    refreshPushPathReadiness();
     const editor = propertyEditorState;
     const selectable = Boolean(editor && !editor.isNew);
     libraryDraftSchemaSelector.hidden = refreshLibraryDraftValidationButton.hidden = !selectable;
@@ -1832,6 +1912,54 @@ function renderEventTemplateLibrary() {
         libraryDraftSchemaSelector.replaceChildren(Object.assign(document.createElement("option"), { value: "", textContent: "Automatic schema" }), ...assignableSchemas(schemas).map((schema) => Object.assign(document.createElement("option"), { value: schema.id, textContent: `${schema.name} v${schema.version}` })));
         libraryDraftSchemaSelector.value = selected;
     }
+}
+function refreshPushPathReadiness() {
+    const editor = propertyEditorState;
+    const target = selectedObservationTarget(observationTargetState);
+    if (!editor || !target || target.accessState !== "Ready") {
+        pushPathReadiness = undefined;
+        return;
+    }
+    const destination = editor.template.destination.trim();
+    const key = `${target.id}:${destination}`;
+    if (pushPathReadiness?.key === key) {
+        if (pushPathReadiness.status !== "ready" && pushTemplateDraftButton) {
+            pushTemplateDraftButton.disabled = true;
+            pushTemplateDraftButton.setAttribute("aria-disabled", "true");
+            const reason = document.querySelector("#push-template-draft-reason");
+            if (reason)
+                reason.textContent = pushPathReadiness.message;
+            if (pushPathReadiness.status === "blocked") {
+                setEventLibraryResult(eventLibraryEditorElements, pushPathReadiness.message);
+            }
+        }
+        return;
+    }
+    const request = ++pushPathReadinessRequest;
+    pushPathReadiness = { key, status: "checking", message: "Checking selected-page push path." };
+    if (pushTemplateDraftButton) {
+        pushTemplateDraftButton.disabled = true;
+        pushTemplateDraftButton.setAttribute("aria-disabled", "true");
+    }
+    void chrome.scripting.executeScript({
+        target: { tabId: target.tabId },
+        world: "MAIN",
+        args: [destination],
+        func: pushPathCapabilityInPage,
+    }).then(([injection]) => {
+        if (request !== pushPathReadinessRequest)
+            return;
+        const result = injection?.result;
+        pushPathReadiness = result?.success
+            ? { key, status: "ready", message: "Selected-page push path is ready." }
+            : { key, status: "blocked", message: result?.result ?? "Push path is not push-capable" };
+        renderEventTemplateLibrary();
+    }, () => {
+        if (request !== pushPathReadinessRequest)
+            return;
+        pushPathReadiness = { key, status: "blocked", message: "Push path is not push-capable" };
+        renderEventTemplateLibrary();
+    });
 }
 libraryDraftSchemaSelector.addEventListener("change", () => {
     const editor = propertyEditorState;
@@ -2016,96 +2144,145 @@ function reviewSavedSchemaAdoption(schema, trigger) {
     dialog.showModal();
     confirm.focus({ preventScroll: true });
 }
+let schemaTreeProjectId, schemaTreeExpandedKeys = new Set(), schemaTreeInvokingReference, schemaTreeRestoringScroll = false, schemaTreePendingScroll;
+const schemaTreeStorage = globalThis.localStorage;
+function restorePendingSchemaTreeScroll() {
+    if (schemaTreePendingScroll === undefined || !schemaTreeScrollOwner)
+        return;
+    const scrollTop = schemaTreePendingScroll;
+    schemaTreeRestoringScroll = true;
+    queueMicrotask(() => { schemaTreeScrollOwner.scrollTop = scrollTop; schemaTreePendingScroll = undefined; requestAnimationFrame(() => { schemaTreeRestoringScroll = false; }); });
+}
+function persistSchemaTreeView(projectId) {
+    saveSchemaRelationshipTreeView(schemaTreeStorage, projectId, { query: schemaSearch?.value ?? "", category: (schemaCategoryFilter?.value ?? "All"), expandedKeys: [...schemaTreeExpandedKeys], scrollTop: schemaTreeScrollOwner?.scrollTop ?? 0 });
+}
 function renderSchemas() {
-    const query = (schemaSearch?.value ?? "").trim().toLowerCase(), visible = searchSchemas(schemas, query), project = restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), groups = sidePanelSchemaGroups(project, visible).map((group) => ({ ...group, entries: group.name === "Saved schemas" ? group.entries : group.entries.filter((entry) => [entry.name, entry.role, entry.scope, entry.lineage, entry.state].some((value) => String(value).toLowerCase().includes(query))) })).filter(({ entries }) => entries.length), count = groups.reduce((total, { entries }) => total + entries.length, 0), nodes = [];
-    if (schemaEmptyState)
-        schemaEmptyState.hidden = count > 0;
-    if (schemaCount)
-        schemaCount.textContent = `${count} schemas and contributors`;
-    const heading = (name) => { const item = document.createElement("li"); item.dataset.schemaGroup = name; item.setAttribute("role", "heading"); item.textContent = name; return item; };
-    if (visible.length) {
-        nodes.push(heading("Saved schemas"), ...visible.map((schema) => {
-            const item = document.createElement("li");
-            const revise = document.createElement("button");
-            const duplicate = document.createElement("button");
-            const adopt = document.createElement("button");
-            const build = document.createElement("button");
-            const exportCurrent = document.createElement("button");
-            const reportMissing = document.createElement("button");
-            const remove = document.createElement("button");
-            const parent = schema.parentSchemaId ? schemas.find((candidate) => candidate.id === schema.parentSchemaId) : undefined;
-            const pending = schema.workingDraft?.pendingChanges.length ?? 0;
-            const history = schemaRevisionChoices(schema).length;
-            item.dataset.schemaEntryKey = `saved:${schema.id}`;
-            item.dataset.schemaRole = "Saved schema";
-            item.textContent = schema.published === false
-                ? `${schema.name} · role Saved schema · scope Library · lineage ${parent?.name ?? "Library root"} · revision ${schema.version} · Draft · ${pending} pending changes. `
-                : `${schema.name} · current revision ${schema.version} · role Saved schema · scope Library · lineage ${parent?.name ?? "Library root"} · saved · ${pending} pending draft changes · ${history} historical revisions · ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
-            revise.type = duplicate.type = adopt.type = build.type = exportCurrent.type = reportMissing.type = remove.type = "button";
-            revise.textContent = "Edit working draft";
-            duplicate.textContent = "Duplicate";
-            adopt.textContent = "Add saved schema to project";
-            build.textContent = "Build documentation table";
-            exportCurrent.textContent = "Export";
-            reportMissing.textContent = "Report missing event";
-            remove.textContent = "Delete";
-            revise.addEventListener("click", () => openSavedSchemaInUnifiedEditor(schema));
-            duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchemaRevision(schema, schema.version, schemas)]; persistSchemaLibrary(); renderSchemas(); });
-            adopt.addEventListener("click", () => reviewSavedSchemaAdoption(schema, adopt));
-            build.addEventListener("click", () => openSchemaSpecification(schema, `published:${schema.version}`, build));
-            exportCurrent.addEventListener("click", () => openSchemaExportChoices(exportCurrent, schema));
-            reportMissing.addEventListener("click", () => openMissingEventBuilder("schema row actions", schema.id));
-            remove.addEventListener("click", () => {
-                const children = schemas.filter((candidate) => candidate.parentSchemaId === schema.id);
-                if (children.length) {
-                    if (schemaResult)
-                        schemaResult.textContent = `Cannot delete ${schema.name}: it is the parent of ${children.map(({ name }) => name).join(", ")}.`;
-                    return;
-                }
-                pendingSchemaDeletion = schema;
-                if (schemaDeleteReviewSummary)
-                    schemaDeleteReviewSummary.textContent = `${schema.name} v${schema.version} and its assignments will be removed.`;
-                if (schemaDeleteReview) {
-                    schemaDeleteReview.hidden = false;
-                    schemaDeleteReview.showModal();
-                }
-            });
-            item.append(revise, duplicate, adopt, build, exportCurrent, reportMissing, remove);
-            return item;
-        }));
+    const project = restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), projectId = project?.project.id ?? "no-project", fullTree = projectSchemaRelationshipTree(project, schemas), allNodes = (nodes) => nodes.flatMap((node) => [node, ...allNodes(node.children)]), validNodes = allNodes(fullTree), validKeys = new Set(validNodes.map(({ key }) => key));
+    if (schemaTreeProjectId !== projectId) {
+        schemaTreeProjectId = projectId;
+        const restored = restoreSchemaRelationshipTreeView(schemaTreeStorage, projectId, validKeys);
+        schemaTreeExpandedKeys = new Set(restored.expandedKeys.length ? restored.expandedKeys : validNodes.filter(({ children }) => children.length).map(({ key }) => key));
+        if (schemaSearch)
+            schemaSearch.value = restored.query;
+        if (schemaCategoryFilter)
+            schemaCategoryFilter.value = restored.category;
+        schemaTreePendingScroll = restored.scrollTop;
+        if (!schemaPanel?.hidden)
+            restorePendingSchemaTreeScroll();
     }
+    else
+        schemaTreeExpandedKeys = new Set([...schemaTreeExpandedKeys].filter((key) => validKeys.has(key)));
+    const query = schemaSearch?.value ?? "", category = (schemaCategoryFilter?.value ?? "All"), filtered = filterSchemaRelationshipTree(fullTree, { query, category }), rows = [];
+    const savedRow = (node, level) => {
+        const schema = schemas.find(({ id }) => `saved:${id}` === node.targetKey);
+        if (!schema)
+            return;
+        const item = document.createElement("li"), revise = document.createElement("button"), duplicate = document.createElement("button"), adopt = document.createElement("button"), build = document.createElement("button"), exportCurrent = document.createElement("button"), reportMissing = document.createElement("button"), remove = document.createElement("button"), parent = schema.parentSchemaId ? schemas.find((candidate) => candidate.id === schema.parentSchemaId) : undefined, pending = schema.workingDraft?.pendingChanges.length ?? 0, history = schemaRevisionChoices(schema).length;
+        item.dataset.schemaEntryKey = node.targetKey;
+        item.dataset.schemaReferenceKey = node.key;
+        item.dataset.schemaRole = node.role;
+        item.setAttribute("role", "treeitem");
+        item.setAttribute("aria-level", String(level));
+        item.setAttribute("aria-selected", String(compactCanonicalEditor?.key === node.targetKey));
+        item.textContent = schema.published === false ? `${schema.name} · role Saved schema · path ${node.relationshipPath} · revision ${schema.version} · Draft · ${pending} pending changes. ` : `${schema.name} · current revision ${schema.version} · role Saved schema · path ${node.relationshipPath} · saved · ${pending} pending draft changes · ${history} historical revisions · ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
+        revise.type = duplicate.type = adopt.type = build.type = exportCurrent.type = reportMissing.type = remove.type = "button";
+        revise.textContent = "Edit working draft";
+        duplicate.textContent = "Duplicate";
+        adopt.textContent = "Add saved schema to project";
+        build.textContent = "Build documentation table";
+        exportCurrent.textContent = "Export";
+        reportMissing.textContent = "Report missing event";
+        remove.textContent = "Delete";
+        revise.setAttribute("aria-label", `Edit ${schema.name}; ${node.relationshipPath}`);
+        revise.addEventListener("click", () => { schemaTreeInvokingReference = node.key; openSavedSchemaInUnifiedEditor(schema); });
+        duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchemaRevision(schema, schema.version, schemas)]; persistSchemaLibrary(); renderSchemas(); });
+        adopt.addEventListener("click", () => reviewSavedSchemaAdoption(schema, adopt));
+        build.addEventListener("click", () => openSchemaSpecification(schema, `published:${schema.version}`, build));
+        exportCurrent.addEventListener("click", () => openSchemaExportChoices(exportCurrent, schema));
+        reportMissing.addEventListener("click", () => openMissingEventBuilder("schema row actions", schema.id));
+        remove.addEventListener("click", () => { const children = schemas.filter((candidate) => candidate.parentSchemaId === schema.id); if (children.length) {
+            if (schemaResult)
+                schemaResult.textContent = `Cannot delete ${schema.name}: it is the parent of ${children.map(({ name }) => name).join(", ")}.`;
+            return;
+        } pendingSchemaDeletion = schema; if (schemaDeleteReviewSummary)
+            schemaDeleteReviewSummary.textContent = `${schema.name} v${schema.version} and its assignments will be removed.`; if (schemaDeleteReview) {
+            schemaDeleteReview.hidden = false;
+            schemaDeleteReview.showModal();
+        } });
+        item.append(revise, duplicate, adopt, build, exportCurrent, reportMissing, remove);
+        return item;
+    };
+    const visit = (node, level) => {
+        if (node.targetKey?.startsWith("saved:")) {
+            const item = savedRow(node, level);
+            if (item)
+                rows.push(item);
+            return;
+        }
+        const item = document.createElement("li");
+        item.dataset.schemaReferenceKey = node.key;
+        item.setAttribute("role", "treeitem");
+        item.setAttribute("aria-level", String(level));
+        item.style.setProperty("--schema-tree-level", String(level));
+        if (node.targetKey) {
+            const open = document.createElement("button"), studio = document.createElement("button");
+            item.dataset.schemaEntryKey = node.targetKey;
+            item.dataset.schemaRole = node.role;
+            item.setAttribute("aria-selected", String(compactCanonicalEditor?.key === node.targetKey));
+            item.textContent = `${node.name} · role ${node.role} · path ${node.relationshipPath}. `;
+            open.type = studio.type = "button";
+            open.textContent = "Open schema";
+            open.setAttribute("aria-label", `Open ${node.name}; ${node.relationshipPath}`);
+            studio.textContent = "Open schema in Specification Studio";
+            studio.setAttribute("aria-label", `Open ${node.name} in Specification Studio; ${node.relationshipPath}`);
+            open.addEventListener("click", () => { schemaTreeInvokingReference = node.key; const retainedScroll = compactCanonicalEditor?.key === node.targetKey ? schemaDetail?.scrollTop : undefined; openContributorInUnifiedEditor(node.targetKey); if (schemaDetail && retainedScroll !== undefined)
+                schemaDetail.scrollTop = retainedScroll; renderSchemas(); });
+            studio.addEventListener("click", () => { if (!project)
+                return; const separator = node.targetKey.indexOf(":"), kind = node.targetKey.slice(0, separator), entityId = node.targetKey.slice(separator + 1); globalThis.open(`specification-builder.html?project=${encodeURIComponent(project.project.id)}&kind=${encodeURIComponent(kind)}&entity=${encodeURIComponent(entityId)}`, "_blank"); });
+            item.append(open, studio);
+        }
+        else {
+            const toggle = document.createElement("button"), expanded = node.expanded || schemaTreeExpandedKeys.has(node.key);
+            item.dataset.schemaGroup = node.name;
+            item.setAttribute("aria-expanded", String(expanded));
+            item.setAttribute("aria-selected", "false");
+            toggle.type = "button";
+            toggle.textContent = node.name;
+            toggle.setAttribute("aria-label", `${expanded ? "Collapse" : "Expand"} ${node.relationshipPath}`);
+            toggle.addEventListener("click", () => { if (expanded)
+                schemaTreeExpandedKeys.delete(node.key);
+            else
+                schemaTreeExpandedKeys.add(node.key); persistSchemaTreeView(projectId); renderSchemas(); });
+            item.append(toggle);
+        }
+        rows.push(item);
+        const expanded = node.expanded || schemaTreeExpandedKeys.has(node.key);
+        if (node.children.length && (node.targetKey || expanded))
+            for (const child of node.children)
+                visit(child, level + 1);
+    };
+    for (const root of filtered)
+        visit(root, 1);
     if (!project) {
         const item = document.createElement("li"), open = document.createElement("button"), create = document.createElement("button");
         item.setAttribute("role", "status");
-        item.textContent = "No active project. ";
+        item.textContent = "No active project. Open a project to see relationship-derived contributors. ";
         open.type = create.type = "button";
         open.textContent = "Open project";
         create.textContent = "Create project";
         open.addEventListener("click", () => showDataLayerView("Projects", true));
         create.addEventListener("click", () => { showDataLayerView("Projects", true); document.querySelector("#create-library-project")?.click(); });
         item.append(open, create);
-        nodes.push(item);
+        rows.push(item);
     }
-    for (const group of groups.filter(({ name }) => name !== "Saved schemas")) {
-        nodes.push(heading(group.name));
-        for (const entry of group.entries) {
-            const item = document.createElement("li"), open = document.createElement("button"), studio = document.createElement("button");
-            item.dataset.schemaEntryKey = entry.key;
-            item.dataset.schemaRole = entry.role;
-            item.textContent = `${entry.name} · role ${entry.role} · scope ${entry.scope} · lineage ${entry.lineage} · revision ${entry.revision} · ${entry.state}. `;
-            open.type = studio.type = "button";
-            open.textContent = "Open schema";
-            studio.textContent = "Open schema in Specification Studio";
-            studio.setAttribute("aria-label", `Open ${entry.name} schema in Specification Studio`);
-            open.addEventListener("click", () => { const retainedScroll = compactCanonicalEditor?.key === entry.key ? schemaDetail?.scrollTop : undefined; openContributorInUnifiedEditor(entry.key); if (schemaDetail && retainedScroll !== undefined)
-                schemaDetail.scrollTop = retainedScroll; });
-            studio.addEventListener("click", () => { if (!project)
-                return; const separator = entry.key.indexOf(":"), kind = entry.key.slice(0, separator), entityId = entry.key.slice(separator + 1); globalThis.open(`specification-builder.html?project=${encodeURIComponent(project.project.id)}&kind=${encodeURIComponent(kind)}&entity=${encodeURIComponent(entityId)}`, "_blank"); });
-            item.append(open, studio);
-            nodes.push(item);
-        }
+    const resultCount = rows.filter(({ dataset }) => Boolean(dataset.schemaEntryKey)).length;
+    if (schemaEmptyState)
+        schemaEmptyState.hidden = resultCount > 0;
+    if (schemaCount) {
+        schemaCount.textContent = `${resultCount} relationship-tree results`;
+        schemaCount.setAttribute("aria-label", `${resultCount} schema relationship-tree results`);
     }
-    schemaList?.replaceChildren(...nodes);
+    schemaList?.replaceChildren(...rows);
 }
 function showSchemaSubview(id) {
     schemaPanels.forEach((panel) => { panel.hidden = panel.id !== id; });
@@ -3181,6 +3358,11 @@ function closeCompactCanonicalEditor() {
     renderCompactCanonicalContext();
     if (schemaDetailEmpty)
         schemaDetailEmpty.hidden = false;
+    renderSchemas();
+    if (schemaTreeInvokingReference) {
+        document.querySelector(`#schema-list [data-schema-reference-key="${CSS.escape(schemaTreeInvokingReference)}"] button`)?.focus({ preventScroll: true });
+        schemaTreeInvokingReference = undefined;
+    }
 }
 function persistSchemaEditorDraft(change) {
     if (!schemaDraft)
@@ -3333,7 +3515,7 @@ function openContributorInUnifiedEditor(key) {
     } };
     openCompactCanonicalEditor({
         key,
-        label: `${selection.entity.name} · Role ${selection.scope} · scope ${selection.scope} · provenance ${selection.entity.id}`,
+        label: `${selection.entity.name} · Role ${selection.scope} · scope ${selection.scope} · provenance ${selection.flowId ? `${selection.flowId} · ` : ""}${selection.entity.id}`,
         load: () => { const live = restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), selected = resolveSidePanelSchemaContributor(live, key); return documentFor(live, selected); },
         dispatch: (command) => { const live = restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), selected = resolveSidePanelSchemaContributor(live, key), document = documentFor(live, selected); if (migration)
             return migrationBlocked(document); if (isComposed(selected) && command.baseRevision !== document.revision)
@@ -3363,6 +3545,7 @@ function openContributorInUnifiedEditor(key) {
         onUndo: () => { void stepHistory("Undo"); },
         onRedo: () => { void stepHistory("Redo"); },
         renderContext: renderMigrationReview,
+        actions: [{ label: "Close editor", run: closeCompactCanonicalEditor }],
     });
 }
 function writeUnifiedContributorCanonical(state, selection, canonical) {
@@ -5051,7 +5234,7 @@ function openTemplateEditor(template) {
 }
 function openNewEventEditor() {
     templateEditorReturnTemplateId = undefined;
-    propertyEditorState = createNewEventEditor();
+    propertyEditorState = createNewEventEditor(seedLibraryDestination(activeTransportProject()?.project));
     resetTemplateEditorDisclosures();
     setEventLibraryResult(eventLibraryEditorElements, "");
     renderEventTemplateLibrary();
@@ -5185,7 +5368,9 @@ async function pushPayloadToSelectedTargetPage(request) {
     });
     const result = injection?.result;
     if (!result?.success) {
-        throw new Error(result?.result ?? "Selected-page push failed.");
+        throw new Error(result?.result?.includes("cannot accept payload")
+            ? "Push path is not push-capable"
+            : result?.result ?? "Selected-page push failed.");
     }
 }
 async function pushCurrentTemplateDraft(editor = propertyEditorState, target = selectedObservationTarget(observationTargetState)) {
@@ -5319,7 +5504,7 @@ function startLinkedCaptureFromSavedSession(session) {
             status: "active",
             tabId: previousSession?.tabId ?? 0,
             ...(previousSession?.windowId === undefined ? {} : { windowId: previousSession.windowId }),
-            historyPath: previousSession?.historyPath ?? getHistoryArrayPath(dataLayerStorage),
+            historyPath: previousSession?.historyPath ?? currentObservationHistoryPath(),
             startUrl: resumed.activeSession.pageUrl,
             currentUrl: resumed.activeSession.pageUrl,
             targetTitle: previousSession?.targetTitle ?? resumed.activeSession.pageUrl,
@@ -6061,7 +6246,32 @@ templateEmptyRecovery?.addEventListener("click", () => {
         showDataLayerView("Live");
     }
 });
-schemaSearch?.addEventListener("input", renderSchemas);
+schemaSearch?.addEventListener("input", () => { if (schemaTreeProjectId)
+    persistSchemaTreeView(schemaTreeProjectId); renderSchemas(); });
+schemaCategoryFilter?.addEventListener("change", () => { if (schemaTreeProjectId)
+    persistSchemaTreeView(schemaTreeProjectId); renderSchemas(); });
+schemaTreeScrollOwner?.addEventListener("scroll", () => { if (schemaTreeProjectId && !schemaTreeRestoringScroll && schemaTreePendingScroll === undefined && !schemaPanel?.hidden)
+    persistSchemaTreeView(schemaTreeProjectId); }, { passive: true });
+schemaList?.addEventListener("keydown", (event) => {
+    const target = event.target instanceof HTMLButtonElement ? event.target : undefined, controls = Array.from(schemaList.querySelectorAll("li[role=treeitem] > button:first-of-type")), current = target ? controls.indexOf(target) : -1;
+    if (current < 0 || !target)
+        return;
+    if (event.key === "ArrowDown" || event.key === "ArrowUp" || event.key === "Home" || event.key === "End") {
+        event.preventDefault();
+        const next = event.key === "Home" ? 0 : event.key === "End" ? controls.length - 1 : Math.max(0, Math.min(controls.length - 1, current + (event.key === "ArrowDown" ? 1 : -1)));
+        controls[next]?.focus({ preventScroll: false });
+    }
+    if (event.key === "ArrowRight" || event.key === "ArrowLeft") {
+        const row = target.closest('[role="treeitem"][aria-expanded]');
+        if (!row)
+            return;
+        const expanded = row.getAttribute("aria-expanded") === "true";
+        if ((event.key === "ArrowRight" && !expanded) || (event.key === "ArrowLeft" && expanded)) {
+            event.preventDefault();
+            target.click();
+        }
+    }
+});
 schemaSubviews.forEach((tab) => tab.addEventListener("click", () => showSchemaSubview(tab.getAttribute("aria-controls"))));
 schemaEditorName?.addEventListener("input", () => {
     if (!schemaDraft)
@@ -6705,16 +6915,15 @@ const targetPathStatusController = createTargetPathStatusController({
     },
 });
 function refreshSelectedTargetPathStatus() {
-    const path = getHistoryArrayPath(dataLayerStorage);
+    const path = currentObservationHistoryPath();
     void targetPathStatusController.configure(path, historyPathInput?.value ?? path);
 }
-historyPathInput?.addEventListener("input", () => {
-    const typedPath = historyPathInput.value;
-    const path = setHistoryArrayPath(typedPath, dataLayerStorage);
-    void targetPathStatusController.configure(path, typedPath);
-});
+historyPathInput?.addEventListener("change", () => { void saveProjectEventTransport().then(refreshSelectedTargetPathStatus).catch((error) => { if (historyPathStatus)
+    historyPathStatus.textContent = error instanceof Error ? error.message : String(error); }); });
+defaultPushPathInput?.addEventListener("change", () => { void saveProjectEventTransport().catch((error) => { if (defaultPushPathStatus)
+    defaultPushPathStatus.textContent = error instanceof Error ? error.message : String(error); }); });
 restartObservationButton?.addEventListener("click", () => {
-    void currentTargetObservation(getHistoryArrayPath(dataLayerStorage)).then((observation) => {
+    void currentTargetObservation(currentObservationHistoryPath()).then((observation) => {
         if (!observation)
             return;
         dataLayerObserverState = restartObservation(dataLayerSessionState, dataLayerObserverState, observation);
@@ -6826,6 +7035,7 @@ if (typeof chrome !== "undefined" && chrome.permissions?.onRemoved) {
 }
 durableProjectRuntime.subscribe(({ active }) => {
     const next = active?.state ?? restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY));
+    renderProjectEventTransport();
     if (!next)
         return;
     renderSchemas();
@@ -6834,7 +7044,7 @@ durableProjectRuntime.subscribe(({ active }) => {
         renderCompactCanonicalEditor();
     sidePanelLayeredProfileEditor?.render();
 });
-renderHistoryPath(getHistoryArrayPath(dataLayerStorage));
+renderProjectEventTransport();
 renderObservationTargetContext();
 if (!savedSessionLiveFeed)
     void recoverAttachedObservationTarget();

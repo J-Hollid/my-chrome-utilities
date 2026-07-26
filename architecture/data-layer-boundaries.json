@@ -1,4 +1,11 @@
 {
+  "src/data-layer-project-event-transport.ts": {
+    "module": "schemas",
+    "layer": "application",
+    "contracts": [
+      "src/data-layer-specification-project.ts"
+    ]
+  },
   "src/data-layer-flow-graph.ts": {
     "module": "flow-graph",
     "layer": "application",
