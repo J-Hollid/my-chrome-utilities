@@ -328,6 +328,23 @@ try {
     returnFocus: true,
   });
 
+  await evaluate(
+    side,
+    `(async()=>{
+      const database=await new Promise((resolve,reject)=>{const request=indexedDB.open("my-chrome-utilities.project-repository");request.onsuccess=()=>resolve(request.result);request.onerror=()=>reject(request.error);});
+      const transaction=database.transaction("projectMetadata","readwrite"),store=transaction.objectStore("projectMetadata"),request=(method,...input)=>new Promise((resolve,reject)=>{const operation=store[method](...input);operation.onsuccess=()=>resolve(operation.result);operation.onerror=()=>reject(operation.error);});
+      for(const [projectId,lastSavedAt] of [["project-retail","2026-07-26T12:00:00.000Z"],["project-trade","2026-07-26T11:00:00.000Z"],["project-agency","2026-07-26T10:00:00.000Z"]]){const metadata=await request("get",projectId);metadata.lastSavedAt=lastSavedAt;await request("put",metadata,projectId);}
+      await new Promise((resolve,reject)=>{transaction.oncomplete=()=>resolve();transaction.onerror=()=>reject(transaction.error);transaction.onabort=()=>reject(transaction.error);});
+      location.reload();
+      return true;
+    })()`,
+  );
+  await waitForProjects(side);
+  await evaluate(
+    side,
+    `document.getElementById("data-layer-view-projects").click()`,
+  );
+
   const viewports = [
     { width: 360, height: 760 },
     { width: 420, height: 900 },
