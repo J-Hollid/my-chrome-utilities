@@ -845,13 +845,17 @@ body.twatility-side-panel {
 }
 
 .twatility-side-panel #data-layer-settings > h4 {
-  margin: 0;
+  margin: 0 0 0.18rem;
+  padding-block-end: 0.38rem;
+  border-block-end: 0.08rem solid color-mix(in srgb, var(--twa-mustard) 52%, transparent);
   color: var(--twa-paper-raised);
   font-family: var(--twa-font-display);
+  line-height: 1.35;
 }
 
 .twatility-side-panel
   :is(#project-transport-context, #project-transport-guidance) {
+  display: block;
   margin: 0;
   padding: 0.48rem 0.58rem;
   border-inline-start: 0.24rem solid var(--twa-mustard);
