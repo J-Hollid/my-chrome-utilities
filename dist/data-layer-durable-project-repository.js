@@ -175,6 +175,13 @@ export class DurableProjectRepository {
         channel.close();
     } if (typeof chrome !== "undefined" && chrome.runtime?.id)
         void chrome.runtime.sendMessage(notification).catch(() => { }); }
+    notifyActive(notification) { for (const listener of this.activeListeners)
+        listener(clone(notification)); if (typeof BroadcastChannel !== "undefined") {
+        const channel = new BroadcastChannel("my-chrome-utilities.durable-active-context");
+        channel.postMessage(notification);
+        channel.close();
+    } if (typeof chrome !== "undefined" && chrome.runtime?.id)
+        void chrome.runtime.sendMessage(notification).catch(() => { }); }
     async putProjectMetadataOnly(state, input = {}) {
         const projectId = state.project.id, draftToken = input.draftToken ?? this.options.token(), lastSavedAt = this.options.now(), parts = projectParts(state), publishedRevision = input.publishedRevision ?? 0, declaredRelease = state.project.releases.find(release => release.revision === publishedRevision), publishedProject = input.publishedProject ?? (declaredRelease ? { ...clone(state.project), collections: clone(declaredRelease.snapshot), releases: state.project.releases.filter(candidate => candidate.revision <= publishedRevision), currentRelease: declaredRelease.id } : undefined);
         if (publishedRevision > 0 && (!declaredRelease || !publishedProject))
@@ -223,13 +230,8 @@ export class DurableProjectRepository {
         channel.close();
     } }
     async setActiveProject(projectId) { const token = this.options.token(), notification = { type: "durable-active-context-change", projectId, token }; await this.backend.transaction(["projectMetadata", "settings"], "readwrite", async (transaction) => { if (!await transaction.get("projectMetadata", projectId))
-        throw new Error(`Unknown durable project ${projectId}.`); await transaction.put("settings", "activeProjectId", projectId); await transaction.put("settings", "activeProjectChange", { projectId, token, at: this.options.now() }); }); for (const listener of this.activeListeners)
-        listener(clone(notification)); if (typeof BroadcastChannel !== "undefined") {
-        const channel = new BroadcastChannel("my-chrome-utilities.durable-active-context");
-        channel.postMessage(notification);
-        channel.close();
-    } if (typeof chrome !== "undefined" && chrome.runtime?.id)
-        void chrome.runtime.sendMessage(notification).catch(() => { }); return notification; }
+        throw new Error(`Unknown durable project ${projectId}.`); await transaction.put("settings", "activeProjectId", projectId); await transaction.put("settings", "activeProjectChange", { projectId, token, at: this.options.now() }); }); this.notifyActive(notification); return notification; }
+    async clearActiveProject() { const token = this.options.token(), notification = { type: "durable-active-context-change", token }; await this.backend.transaction(["settings"], "readwrite", async (transaction) => { await transaction.delete("settings", "activeProjectId"); await transaction.put("settings", "activeProjectChange", { token, at: this.options.now() }); }); this.notifyActive(notification); return notification; }
     async deleteProject(input) { this.fail(input.label); await this.backend.transaction(allStores, "readwrite", async (transaction) => { const active = await transaction.get("settings", "activeProjectId"), metadata = await transaction.get("projectMetadata", input.projectId); if (!metadata)
         throw new Error(`Unknown durable project ${input.projectId}.`); if (active === input.projectId)
         throw new Error("Switch to another project before deleting the active project."); if (metadata.draftToken !== input.baseToken)
