@@ -1,0 +1,180 @@
+/*
+ * TWAtility Belt Specification Studio foundation.
+ * Pane and route restructuring remains in Slice 4.
+ */
+
+body.twatility-studio {
+  color-scheme: light;
+  --border: #88724c;
+  --border-color: #88724c;
+  --accent: var(--twa-navy);
+  min-width: 0;
+  background:
+    radial-gradient(circle at 0.08rem 0.08rem, #17130e0d 0 0.05rem, transparent 0.06rem)
+      0 0 / 0.58rem 0.58rem,
+    var(--twa-paper);
+  color: var(--twa-ink);
+}
+
+.twatility-studio .project-bar {
+  min-height: 4rem;
+  align-items: center;
+  border-block-end: 0.22rem solid var(--twa-mustard);
+  background:
+    linear-gradient(100deg, var(--twa-navy-deep), var(--twa-navy) 72%, #164d7a);
+  color: var(--twa-paper-raised);
+  box-shadow: 0 0.2rem 0 var(--twa-ink);
+}
+
+.twatility-studio .twatility-studio-lockup {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.8rem;
+}
+
+.twatility-studio .project-bar span,
+.twatility-studio .twatility-studio-lockup span {
+  margin-inline-start: 0;
+}
+
+.twatility-studio .twatility-surface-name {
+  color: var(--twa-mustard);
+  font-family: var(--twa-font-display);
+  font-size: 0.86rem;
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.twatility-studio #project-context {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.twatility-studio #project-workspace > nav {
+  padding-block-end: 7rem;
+  border-inline-end: 0.14rem solid var(--border);
+  background:
+    url("assets/brand/technical-analyst.png") right 0.8rem bottom 0.7rem / 5.2rem auto
+      no-repeat,
+    linear-gradient(var(--twa-paper-raised), var(--twa-paper));
+}
+
+.twatility-studio #project-tree button {
+  color: var(--twa-navy-deep);
+}
+
+.twatility-studio #project-tree button[aria-current="true"] {
+  border-color: var(--twa-navy);
+  background: var(--twa-mustard);
+  color: var(--twa-navy-deep);
+  box-shadow: var(--twa-shadow-small);
+}
+
+.twatility-studio #workspace-pane {
+  background:
+    linear-gradient(
+      90deg,
+      color-mix(in srgb, var(--twa-paper) 82%, white),
+      color-mix(in srgb, var(--twa-paper-raised) 92%, white)
+    );
+}
+
+.twatility-studio .sticky-tools {
+  border-block-end: 0.14rem solid var(--border);
+  background:
+    linear-gradient(
+      color-mix(in srgb, var(--twa-paper-raised) 96%, white),
+      var(--twa-paper)
+    );
+}
+
+.twatility-studio #project-inspector {
+  border-inline-start: 0.14rem solid var(--border);
+  background: var(--twa-paper-raised);
+}
+
+.twatility-studio :is(input, textarea, select) {
+  border-color: var(--border);
+}
+
+.twatility-studio button {
+  border-color: var(--twa-navy-deep);
+}
+
+.twatility-studio
+  :is(
+    button#publish-project,
+    button[type="submit"],
+    #confirm-release,
+    .primary-continue,
+    .primary-action
+  ) {
+  border-color: var(--twa-navy-deep);
+  background: var(--twa-navy);
+  color: var(--twa-paper-raised);
+}
+
+.twatility-studio
+  :is(
+    button#publish-project,
+    button[type="submit"],
+    #confirm-release,
+    .primary-continue,
+    .primary-action
+  ):not(:disabled):hover {
+  background: var(--twa-mustard);
+  color: var(--twa-navy-deep);
+}
+
+.twatility-studio
+  :is(
+    .contextual-editor,
+    .entity-row,
+    .coverage-row,
+    .project-guidance,
+    .collection-lifecycle-page
+  ) {
+  border-color: var(--border);
+  background: var(--twa-paper-raised);
+  box-shadow: 0.12rem 0.12rem 0 color-mix(in srgb, var(--twa-ink) 65%, transparent);
+}
+
+.twatility-studio .entity-row[aria-selected="true"] {
+  border-color: var(--twa-navy);
+  background: color-mix(in srgb, var(--twa-blue-soft) 58%, var(--twa-paper-raised));
+}
+
+.twatility-studio :is(dialog, [role="dialog"]) {
+  border-color: var(--twa-ink);
+}
+
+.twatility-studio .error {
+  color: var(--twa-danger);
+}
+
+@media (max-width: 760px) {
+  .twatility-studio .project-bar {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .twatility-studio #project-workspace > nav {
+    background-image: none;
+    padding-block-end: 1rem;
+  }
+}
+
+@media (forced-colors: active) {
+  .twatility-studio .project-bar,
+  .twatility-studio :is(.sticky-tools, #project-inspector, #project-workspace > nav) {
+    border-color: CanvasText;
+  }
+
+  .twatility-studio #project-tree button[aria-current="true"] {
+    border-color: Highlight;
+    background: Highlight;
+    color: HighlightText;
+  }
+}

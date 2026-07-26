@@ -1,10 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "my-chrome-utilities",
+  "name": "TWAtility Belt",
   "version": "0.1.0",
-  "description": "Small Chrome utility extension.",
+  "description": "Technical Web Analyst utilities for observing, specifying, and validating data layers.",
   "action": {
-    "default_title": "my-chrome-utilities"
+    "default_title": "Open TWAtility Belt"
   },
   "background": {
     "service_worker": "background.js",

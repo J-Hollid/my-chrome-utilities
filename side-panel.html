@@ -3,16 +3,18 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>my-chrome-utilities</title>
+    <title>TWAtility Belt</title>
     <link rel="stylesheet" href="side-panel.css" />
     <link rel="stylesheet" href="layered-schema.css" />
+    <link rel="stylesheet" href="twatility-brand.css" />
+    <link rel="stylesheet" href="side-panel-brand.css" />
     <script type="module" src="side-panel-bootstrap.js"></script>
   </head>
-  <body>
+  <body class="twatility-theme twatility-side-panel">
     <main id="side-panel-root" tabindex="-1">
       <div id="side-panel-content">
       <header id="application-header">
-        <h1 id="app">my-chrome-utilities</h1>
+        <h1 id="app" class="twatility-wordmark" aria-label="TWAtility Belt"><span aria-hidden="true"><span class="twatility-wordmark__twa">TWA</span>tility Belt</span></h1>
         <ul id="utility-directory" aria-label="Available utilities"></ul>
         <button id="open-palette" type="button" aria-haspopup="dialog" aria-controls="palette">Commands</button>
       </header>

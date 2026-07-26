@@ -1,0 +1,238 @@
+/*
+ * Shared TWAtility Belt presentation foundation.
+ *
+ * The production behavior styles load first. These rules are deliberately
+ * scoped to an explicit body theme so existing IDs, hidden-state ownership,
+ * renderers, focus contracts, and unthemed documents remain untouched.
+ */
+
+.twatility-theme {
+  --twa-ink: #17130e;
+  --twa-ink-soft: #40362a;
+  --twa-paper: #f8efd8;
+  --twa-paper-raised: #fff8e8;
+  --twa-paper-deep: #e8d5a5;
+  --twa-paper-shadow: #c2a979;
+  --twa-navy: #0c3158;
+  --twa-navy-deep: #071d35;
+  --twa-blue: #195f9b;
+  --twa-blue-soft: #dbeaf4;
+  --twa-red: #c63e27;
+  --twa-red-deep: #7b2118;
+  --twa-orange: #dd6a29;
+  --twa-mustard: #f2bd36;
+  --twa-green: #3f7b41;
+  --twa-green-soft: #dfead2;
+  --twa-focus: #00a7d8;
+  --twa-danger: #a52d22;
+  --twa-warning: #9b5b05;
+  --twa-muted: #746752;
+  --twa-radius-small: 0.25rem;
+  --twa-radius-medium: 0.45rem;
+  --twa-radius-large: 0.8rem;
+  --twa-shadow-small: 0.18rem 0.18rem 0 var(--twa-ink);
+  --twa-shadow-panel: 0.28rem 0.28rem 0 color-mix(in srgb, var(--twa-ink) 78%, transparent);
+  --twa-font-display: "Arial Black", Impact, "Franklin Gothic Heavy", sans-serif;
+  --twa-font-body: "Trebuchet MS", "Segoe UI", system-ui, sans-serif;
+  --twa-font-mono: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+  --twa-control-height: 2.75rem;
+  font-family: var(--twa-font-body);
+  accent-color: var(--twa-blue);
+}
+
+.twatility-theme :is(h1, h2, h3, h4, legend, .twatility-display) {
+  font-family: var(--twa-font-display);
+  letter-spacing: -0.018em;
+  text-wrap: balance;
+}
+
+.twatility-theme :is(code, pre, samp, kbd, .operator-metadata) {
+  font-family: var(--twa-font-mono);
+}
+
+.twatility-wordmark {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 0;
+  margin: 0;
+  font-family: var(--twa-font-display);
+  font-size: clamp(1.05rem, 1rem + 1vw, 1.6rem);
+  font-style: italic;
+  font-weight: 900;
+  letter-spacing: -0.07em;
+  line-height: 0.95;
+  white-space: nowrap;
+}
+
+.twatility-wordmark__twa {
+  color: var(--twa-red);
+}
+
+.twatility-theme :is(button, input, textarea, select) {
+  min-height: var(--twa-control-height);
+  border-width: 0.125rem;
+  border-color: currentColor;
+  border-radius: var(--twa-radius-medium);
+  font: inherit;
+}
+
+.twatility-theme :is(input, textarea, select) {
+  background: var(--twa-paper-raised);
+  color: var(--twa-ink);
+}
+
+.twatility-theme :is(input, textarea)::placeholder {
+  color: color-mix(in srgb, var(--twa-ink-soft) 75%, transparent);
+  opacity: 1;
+}
+
+.twatility-theme button {
+  background: var(--twa-paper-raised);
+  color: var(--twa-navy-deep);
+  font-weight: 800;
+  box-shadow: 0.12rem 0.12rem 0 currentColor;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease,
+    box-shadow 120ms ease,
+    transform 120ms ease;
+}
+
+.twatility-theme button:not(:disabled):hover {
+  background: var(--twa-mustard);
+}
+
+.twatility-theme button:not(:disabled):active {
+  box-shadow: none;
+  transform: translate(0.1rem, 0.1rem);
+}
+
+.twatility-theme
+  :is(
+    button,
+    input,
+    textarea,
+    select,
+    summary,
+    a[href],
+    [role="tab"],
+    [tabindex]:not([tabindex="-1"])
+  ):focus-visible {
+  outline: 0.2rem solid var(--twa-focus);
+  outline-offset: 0.16rem;
+}
+
+.twatility-theme :is(button, input, textarea, select):disabled,
+.twatility-theme [aria-disabled="true"] {
+  cursor: not-allowed;
+  filter: saturate(0.45);
+  opacity: 0.68;
+}
+
+.twatility-theme label,
+.twatility-theme dt {
+  color: inherit;
+  font-weight: 800;
+}
+
+.twatility-theme fieldset {
+  border: 0.125rem solid currentColor;
+  border-radius: var(--twa-radius-medium);
+}
+
+.twatility-theme legend {
+  padding-inline: 0.3rem;
+}
+
+.twatility-theme summary {
+  cursor: pointer;
+  font-weight: 800;
+}
+
+.twatility-theme :is(pre, .code-surface) {
+  border: 0.125rem solid currentColor;
+  border-radius: var(--twa-radius-small);
+  background: color-mix(in srgb, var(--twa-paper-raised) 88%, var(--twa-blue-soft));
+  color: var(--twa-ink);
+  overflow: auto;
+}
+
+.twatility-theme :is(dialog, [role="dialog"]) {
+  border: 0.16rem solid var(--twa-ink);
+  border-radius: var(--twa-radius-large);
+  background: var(--twa-paper-raised);
+  color: var(--twa-ink);
+  box-shadow: var(--twa-shadow-panel);
+}
+
+.twatility-theme dialog::backdrop {
+  background:
+    radial-gradient(circle at 0.12rem 0.12rem, #fff3 0 0.06rem, transparent 0.07rem)
+      0 0 / 0.5rem 0.5rem,
+    color-mix(in srgb, var(--twa-navy-deep) 82%, transparent);
+}
+
+.twatility-theme :is(.panel, .contextual-editor, .panel-empty-state) {
+  border-color: var(--twa-ink);
+  border-radius: var(--twa-radius-medium);
+}
+
+.twatility-theme :is([data-state="error"], [data-status="error"], .error) {
+  color: var(--twa-danger);
+}
+
+.twatility-theme :is([data-state="success"], [data-status="success"]) {
+  color: var(--twa-green);
+}
+
+.twatility-theme :is([data-state="warning"], [data-status="warning"]) {
+  color: var(--twa-warning);
+}
+
+.twatility-theme ::selection {
+  background: var(--twa-mustard);
+  color: var(--twa-ink);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .twatility-theme *,
+  .twatility-theme *::before,
+  .twatility-theme *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.001ms !important;
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+@media (forced-colors: active) {
+  .twatility-theme {
+    --twa-shadow-small: none;
+    --twa-shadow-panel: none;
+  }
+
+  .twatility-theme *,
+  .twatility-theme *::before,
+  .twatility-theme *::after {
+    background-image: none !important;
+    box-shadow: none !important;
+  }
+
+  .twatility-theme :is(button, input, textarea, select, dialog, fieldset, [role="dialog"]) {
+    border-color: CanvasText;
+  }
+
+  .twatility-theme
+    :is(
+      button,
+      input,
+      textarea,
+      select,
+      summary,
+      a[href],
+      [role="tab"],
+      [tabindex]:not([tabindex="-1"])
+    ):focus-visible {
+    outline-color: Highlight;
+  }
+}
