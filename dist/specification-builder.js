@@ -21,6 +21,7 @@ import { installFlowDocumentationExportUi } from "./data-layer-flow-table-docume
 import { installProjectDocumentationWorkspaceUi } from "./data-layer-project-documentation-workspace-ui.js";
 import { applyCanonicalCommand, canonicalCommandOutcome, canonicalRequirements, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
+import { mountProjectConditionEditor, projectConditionEditorValue } from "./data-layer-project-condition-editor.js";
 import { createProjectCollectionEntity, hasSavedSchemaAdoptionActions, inspectProjectEntityRemoval, projectCollectionCreationFields, projectCollectionCreationRoute, projectCollectionDefinitions, projectEntityWorkspaceRoute, projectInspectorTogglePresentation, removeProjectCollectionEntity } from "./data-layer-project-entity-lifecycle.js";
 const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, START_PATH_KEY = "my-chrome-utilities.specification-project-start.v1", routeParameters = new URLSearchParams(location.search), startupProjectId = routeParameters.get("project") ?? undefined, startupKind = routeParameters.get("kind") ?? undefined, startupEntityId = routeParameters.get("entity") ?? undefined, startupRoute = startupKind ? durableProjectRouteForWorkspace(startupKind, startupEntityId) : undefined;
 const durableProjectRuntime = await openDurableProjectRuntime(globalThis.localStorage, globalThis.indexedDB, { ...(startupProjectId ? { projectId: startupProjectId } : {}), ...(startupRoute ? { route: startupRoute } : {}) }).catch((error) => { const status = document.querySelector("#project-state"); if (status)
@@ -411,40 +412,114 @@ function editorValue(field, control) { if (control instanceof HTMLFieldSetElemen
     return control.checked; if (field.type === "number")
     return Number(control.value); if (field.type === "json")
     return JSON.parse(control.value || "{}"); return control.value; }
+function productionFieldControl(field, entity) {
+    if (field.type !== "condition")
+        return fieldControl(field, entity);
+    const group = document.createElement("fieldset");
+    group.name = field.key;
+    mountProjectConditionEditor(group, entity[field.key]);
+    return group;
+}
+function productionEditorValue(field, control) {
+    if (control instanceof HTMLFieldSetElement && field.type === "condition") {
+        return projectConditionEditorValue(control);
+    }
+    return editorValue(field, control);
+}
 function renderFixtureExecution(form, fixture) { const section = document.createElement("section"), heading = document.createElement("h3"), evidence = document.createElement("p"), run = document.createElement("button"), result = document.createElement("output"); section.setAttribute("aria-label", "Fixture execution"); heading.textContent = "Production evaluator replay"; const observations = fixture.observations ?? [], expected = fixture.expected ?? {}; evidence.textContent = `Captured observation: ${observations.map(({ eventName }) => String(eventName ?? "unnamed")).join(", ") || "none"} · Proposed assertions: status ${String(expected.status ?? "not set")}; issueCodes ${JSON.stringify(expected.issueCodes ?? [])}`; run.type = "button"; run.textContent = "Run Fixture"; result.id = "fixture-run-result"; result.setAttribute("aria-live", "polite"); run.addEventListener("click", () => { if (!state)
     return; const compiled = compileSpecificationProject({ ...createCanonicalProjectEnvelope(state.project, state.draft?.id ?? "published"), revision: canonicalRevision }); if (compiled.status === "blocked") {
     result.textContent = `Run blocked: ${compiled.diagnostics.map(({ field }) => field).join(", ")}`;
     return;
 } const execution = runProductionFixture(compiled.plan, fixture), last = execution.steps.at(-1), capturedIdentity = String(fixture.evaluationResultIdentity ?? "not recorded"), replayIdentity = last?.actual.resultIdentity ?? "not evaluated", differences = execution.steps.flatMap((step) => step.differences); result.textContent = `${execution.status.toUpperCase()} · captured evaluator result ${capturedIdentity} · replay result ${replayIdentity} · ${differences.length ? differences.join("; ") : "status and issueCodes assertions matched"}`; }); section.append(heading, evidence, run, result); form.append(section); }
-function renderSelectedEntityEditor(content, entity) { if (!state)
-    return; const section = document.createElement("section"), heading = document.createElement("h2"), form = document.createElement("form"), nameLabel = document.createElement("label"), name = document.createElement("input"), actions = document.createElement("div"), save = document.createElement("button"), duplicate = document.createElement("button"), usage = document.createElement("p"); section.className = "contextual-editor"; heading.textContent = `Edit ${labels[selectedKind].replace(/s$/, "")}`; name.name = "name"; name.required = true; name.value = entity.name; nameLabel.textContent = "Name"; nameLabel.append(name); form.append(nameLabel); for (const field of editorFields[selectedKind]) {
-    const label = document.createElement("label"), control = fieldControl(field, selectedKind === "flows" && field.key === "pageGroupIds" ? { ...entity, pageGroupIds: flowPageGroupLaneIds(state.project, entity.id) } : entity);
-    if (selectedKind === "pages" && field.key === "eventName")
-        control.setAttribute("required", "");
-    label.textContent = field.label;
-    label.append(control);
-    form.append(label);
-} if (selectedKind === "fixtures")
-    renderFixtureExecution(form, entity); save.type = "submit"; save.textContent = "Save complete entity"; duplicate.type = "button"; duplicate.textContent = "Duplicate"; usage.textContent = `Where used: ${whereUsed(entity.id).join(", ") || "None"}`; actions.className = "editor-actions"; actions.append(save, duplicate); form.append(actions, usage); form.addEventListener("submit", (event) => { event.preventDefault(); if (!state)
-    return; try {
-    const update = { name: name.value.trim() };
-    for (const field of editorFields[selectedKind])
-        update[field.key] = editorValue(field, form.elements.namedItem(field.key));
-    if (selectedKind === "pages" && !String(update.eventName ?? "").trim())
-        throw new Error("Observed context event name is required for a Page.");
-    const laneIds = selectedKind === "flows" ? update.pageGroupIds : undefined;
-    if (laneIds)
-        delete update.pageGroupIds;
-    const edited = transactProject(state, `Edit ${entity.name}`, (project) => ({ ...project, collections: { ...project.collections, [selectedKind]: project.collections[selectedKind].map((candidate) => { if (candidate.id !== entity.id)
-                return candidate; const merged = { ...candidate, ...update }; if (selectedKind === "flows")
-                delete merged.pageGroupIds; return merged; }) } }));
-    persist(selectedKind === "flows" ? applyFlowPageGroupLaneSelection(edited, entity.id, laneIds) : edited);
+function renderSelectedEntityEditor(content, entity) {
+    if (!state)
+        return;
+    const section = document.createElement("section");
+    const heading = document.createElement("h2");
+    const form = document.createElement("form");
+    const nameLabel = document.createElement("label");
+    const name = document.createElement("input");
+    const actions = document.createElement("div");
+    const save = document.createElement("button");
+    const duplicate = document.createElement("button");
+    const usage = document.createElement("p");
+    section.className = "contextual-editor";
+    heading.textContent = `Edit ${labels[selectedKind].replace(/s$/, "")}`;
+    name.name = "name";
+    name.required = true;
+    name.value = entity.name;
+    nameLabel.textContent = "Name";
+    nameLabel.append(name);
+    form.append(nameLabel);
+    for (const field of editorFields[selectedKind]) {
+        const label = document.createElement("label");
+        const control = productionFieldControl(field, selectedKind === "flows" && field.key === "pageGroupIds"
+            ? { ...entity, pageGroupIds: flowPageGroupLaneIds(state.project, entity.id) }
+            : entity);
+        if (selectedKind === "pages" && field.key === "eventName")
+            control.setAttribute("required", "");
+        label.textContent = field.label;
+        label.append(control);
+        form.append(label);
+    }
+    if (selectedKind === "fixtures")
+        renderFixtureExecution(form, entity);
+    save.type = "submit";
+    save.textContent = "Save complete entity";
+    duplicate.type = "button";
+    duplicate.textContent = "Duplicate";
+    usage.textContent = `Where used: ${whereUsed(entity.id).join(", ") || "None"}`;
+    actions.className = "editor-actions";
+    actions.append(save, duplicate);
+    form.append(actions, usage);
+    form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        if (!state)
+            return;
+        try {
+            const update = { name: name.value.trim() };
+            for (const field of editorFields[selectedKind]) {
+                update[field.key] = productionEditorValue(field, form.elements.namedItem(field.key));
+            }
+            if (selectedKind === "pages" && !String(update.eventName ?? "").trim()) {
+                throw new Error("Observed context event name is required for a Page.");
+            }
+            const laneIds = selectedKind === "flows" ? update.pageGroupIds : undefined;
+            if (laneIds)
+                delete update.pageGroupIds;
+            const edited = transactProject(state, `Edit ${entity.name}`, (project) => ({
+                ...project,
+                collections: {
+                    ...project.collections,
+                    [selectedKind]: project.collections[selectedKind].map((candidate) => {
+                        if (candidate.id !== entity.id)
+                            return candidate;
+                        const merged = { ...candidate, ...update };
+                        if (selectedKind === "flows")
+                            delete merged.pageGroupIds;
+                        return merged;
+                    }),
+                },
+            }));
+            persist(selectedKind === "flows"
+                ? applyFlowPageGroupLaneSelection(edited, entity.id, laneIds)
+                : edited);
+        }
+        catch (error) {
+            q("#project-state").textContent = error instanceof Error ? error.message : String(error);
+        }
+    });
+    duplicate.addEventListener("click", () => {
+        if (!state)
+            return;
+        const { id: ignored, ...copy } = entity;
+        persist(addProjectEntity(state, selectedKind, { ...structuredClone(copy), name: `${entity.name} copy` }, id));
+    });
+    section.append(heading, form);
+    content.append(section);
+    if (selectedKind === "profiles")
+        renderCanonicalEntityEditor(content, selectedKind, entity);
 }
-catch (error) {
-    q("#project-state").textContent = error instanceof Error ? error.message : String(error);
-} }); duplicate.addEventListener("click", () => { if (!state)
-    return; const { id: ignored, ...copy } = entity; persist(addProjectEntity(state, selectedKind, { ...structuredClone(copy), name: `${entity.name} copy` }, id)); }); section.append(heading, form); content.append(section); if (selectedKind === "profiles")
-    renderCanonicalEntityEditor(content, selectedKind, entity); }
 function renderTree() { const tree = q("#project-tree"); tree.replaceChildren(); if (!state)
     return; const documentation = document.createElement("li"), documentationButton = document.createElement("button"); documentationButton.type = "button"; documentationButton.textContent = `Documentation (${state.project.documentation?.sets.length ?? 0})`; documentationButton.dataset.kind = "documentation"; documentationButton.setAttribute("aria-current", String(documentationOpen)); documentationButton.addEventListener("click", () => { documentationOpen = true; projectOverview = false; selectedId = undefined; const url = new URL(location.href); url.searchParams.set("project", state.project.id); url.searchParams.set("view", "documentation"); url.searchParams.delete("route"); url.searchParams.delete("kind"); url.searchParams.delete("entity"); history.replaceState(null, "", url); render(); }); documentation.append(documentationButton); tree.append(documentation); const overview = document.createElement("li"), overviewButton = document.createElement("button"); overviewButton.type = "button"; overviewButton.textContent = "Project overview"; overviewButton.dataset.kind = "overview"; overviewButton.setAttribute("aria-current", String(projectOverview)); overviewButton.addEventListener("click", openProjectOverview); overview.append(overviewButton); tree.append(overview); for (const kind of Object.keys(labels)) {
     const item = document.createElement("li"), button = document.createElement("button"), count = kind === "assignments" ? searchProjectAssignments(state.project, "").count : state.project.collections[kind].length;
