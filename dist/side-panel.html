@@ -111,8 +111,11 @@
         </section>
         <aside id="live-event-inspector" aria-label="Event inspector" hidden><button id="back-to-events" type="button" hidden>Back to events</button></aside>
         <section id="guided-validation-flow" aria-label="Guided validation" hidden></section>
-        <details id="data-layer-settings" aria-label="Data layer testing settings">
-          <summary>Settings</summary>
+        <details id="data-layer-settings" aria-label="Data Layer Settings">
+          <summary>Data Layer Settings</summary>
+          <h4>Project event transport</h4>
+          <output id="project-transport-context" aria-live="polite"></output>
+          <p id="project-transport-guidance" hidden>Open a project to configure observation and push paths.</p>
           <section id="observation-target-controls" aria-label="Observation target controls">
             <button id="browse-observation-targets" type="button" data-action-variant="secondary">Browse all tabs</button>
             <output id="observation-target-result" aria-live="polite"></output>
@@ -122,11 +125,14 @@
               <button id="confirm-detach-observation-target" type="button">Detach target</button>
             </section>
           </section>
-          <label for="history-path">History array path</label>
+          <label for="history-path">Observation history path</label>
           <input id="history-path" type="text" value="queue.history" aria-describedby="history-path-status" />
           <output id="history-path-display">queue.history</output>
           <output id="history-path-status" aria-live="polite">ready</output>
           <output id="session-history-path"></output>
+          <label for="default-push-path">Default push path</label>
+          <input id="default-push-path" type="text" value="dataLayer" aria-describedby="default-push-path-status" />
+          <output id="default-push-path-status" aria-live="polite"></output>
           <button id="restart-observation" type="button">Restart observation</button>
           <output id="session-warning" aria-live="polite"></output>
         </details>

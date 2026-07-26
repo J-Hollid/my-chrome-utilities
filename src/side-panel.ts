@@ -55,11 +55,7 @@ import {
   showDetachTargetConfirmation,
   showObservationTargetPicker,
 } from "./utilities/data-layer/capture.js";
-import {
-  getHistoryArrayPath,
-  samplePageObject,
-  setHistoryArrayPath,
-} from "./utilities/data-layer/capture.js";
+import { samplePageObject } from "./utilities/data-layer/capture.js";
 import {
   appendObservedHistoryEntry,
   attachHistoryArrayObserver,
@@ -370,10 +366,13 @@ import {
   capturedValidationProfileRequirements,
   compileSpecificationProject,
   commitCanonicalProjectState,
+  configureProjectEventTransport,
   createFixtureFromCapturedValidation,
   evaluateSpecificationObservation,
   recordSpecificationCapture,
   recordSpecificationNavigation,
+  projectEventTransport,
+  seedLibraryDestination,
   SPECIFICATION_PROJECT_STORAGE_KEY,
   restoreCanonicalProjectEnvelope,
   restoreCanonicalProjectState,
@@ -427,6 +426,10 @@ const historyPathDisplay = document.querySelector<HTMLElement>(
 const historyPathStatus = document.querySelector<HTMLElement>(
   "#history-path-status",
 );
+const defaultPushPathInput = document.querySelector<HTMLInputElement>("#default-push-path");
+const defaultPushPathStatus = document.querySelector<HTMLElement>("#default-push-path-status");
+const projectTransportContext = document.querySelector<HTMLElement>("#project-transport-context");
+const projectTransportGuidance = document.querySelector<HTMLElement>("#project-transport-guidance");
 const sessionHistoryPath = document.querySelector<HTMLElement>(
   "#session-history-path",
 );
@@ -893,6 +896,36 @@ const storedSchemaLibrary = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY)
 let schemas: SchemaDefinition[] = restoreSchemaLibrary(storedSchemaLibrary);
 let sidePanelLayeredProfileEditor:ReturnType<typeof mountSidePanelLayeredProfileEditor>|undefined;
 const projectLibraryUi=mountProjectLibraryUi({root:document,storage:projectStorage,prepareProject:durableProjectRuntime.ensureProject,settled:durableProjectRuntime.settled,undoProject:durableProjectRuntime.undo,subscribe:(listener)=>durableProjectRuntime.subscribe(({library})=>listener(library)),blocked:()=>Boolean(durableProjectRuntime.failedSave()),exportProject:async(projectId)=>JSON.stringify(await durableProjectRuntime.repository.exportProject(projectId)),importProject:async(serialized,input)=>{await durableProjectRuntime.repository.importProject(JSON.parse(serialized) as Record<string,unknown>,input);},projectStorageKey:SPECIFICATION_PROJECT_STORAGE_KEY,navigationStorageKey:"my-chrome-utilities.specification-project-navigation.v1",openStudio:(url)=>{globalThis.open(url,"_blank");},onChange:renderSchemas});
+function activeTransportProject() {
+  const activeId=projectLibraryUi.library().activeProjectId;
+  if(!activeId)return undefined;
+  const state=restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY));
+  return state?.project.id===activeId&&!state.project.placeholder?state:undefined;
+}
+function currentObservationHistoryPath():string {
+  const state=activeTransportProject();
+  return state?projectEventTransport(state.project).observationHistoryPath:"";
+}
+function renderProjectEventTransport():void {
+  const state=activeTransportProject(),available=Boolean(state),settings=state?projectEventTransport(state.project):undefined;
+  if(projectTransportContext)projectTransportContext.textContent=state?`Project context: ${state.project.name}`:"No active project";
+  if(projectTransportGuidance)projectTransportGuidance.hidden=available;
+  if(historyPathInput){historyPathInput.disabled=!available;historyPathInput.value=settings?.observationHistoryPath??"";}
+  if(defaultPushPathInput){defaultPushPathInput.disabled=!available;defaultPushPathInput.value=settings?.defaultPushPath??"";}
+  if(defaultPushPathStatus)defaultPushPathStatus.textContent=available?"Saved in project Draft":"Open project";
+  renderHistoryPath(settings?.observationHistoryPath??"",settings?.observationHistoryPath??"","Selection required");
+}
+async function saveProjectEventTransport():Promise<void> {
+  const state=activeTransportProject();
+  if(!state)return renderProjectEventTransport();
+  const serialized=projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY),envelope=restoreCanonicalProjectEnvelope(serialized);
+  if(!envelope)throw new Error("The active project Draft is unavailable.");
+  const next=configureProjectEventTransport(state,{observationHistoryPath:historyPathInput?.value??"",defaultPushPath:defaultPushPathInput?.value??""});
+  const result=commitCanonicalProjectState(projectStorage,next,{expectedRevision:envelope.revision,pendingLabel:"Save project event transport settings",base:state});
+  if(result.status==="conflict")throw new Error("Project transport settings changed in a newer Draft.");
+  projectLibraryUi.captureActiveProject(next,result.revision);
+  if(defaultPushPathStatus)defaultPushPathStatus.textContent="Saved in project Draft";
+}
 const liveFlowTestingUi=mountLiveFlowTestingUi({
   root:document,
   activeProject:async()=>{const activeProjectId=projectLibraryUi.library().activeProjectId;if(!activeProjectId)return;await durableProjectRuntime.settled();await durableProjectRuntime.ensureProject(activeProjectId);await durableProjectRuntime.settled();const project=restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY));return project?.project.id===activeProjectId&&!project.project.placeholder?project:undefined;},
@@ -1263,7 +1296,7 @@ async function attachSelectedTarget(): Promise<void> {
   const observation = await tabPageObservation(
     target.tabId,
     target.pageUrl,
-    getHistoryArrayPath(dataLayerStorage),
+    currentObservationHistoryPath(),
     observationPageLoadId(target.tabId),
   );
   if (observation.pageAccessStatus !== "page access available") {
@@ -1274,7 +1307,7 @@ async function attachSelectedTarget(): Promise<void> {
   }
   currentTargetPathStatus = targetPathStatusForObservation(
     observation,
-    getHistoryArrayPath(dataLayerStorage),
+    currentObservationHistoryPath(),
   );
   observationTargetState = decision.state;
   const started = beginDataLayerTestingSession(dataLayerSessionState, liveObserverState, {
@@ -1284,7 +1317,7 @@ async function attachSelectedTarget(): Promise<void> {
     url: target.pageUrl,
     targetTitle: target.title,
     targetOrigin: target.origin,
-    historyPath: getHistoryArrayPath(dataLayerStorage),
+    historyPath: currentObservationHistoryPath(),
   });
   dataLayerSessionState = started.sessionState;
   liveObserverState = started.liveObserverState;
@@ -1641,7 +1674,7 @@ function currentLiveSessionSummary() {
     ),
     targetPage: session?.targetTitle ?? target?.title ?? "No target selected",
     pageUrl: session?.currentUrl ?? target?.pageUrl ?? "",
-    observerPath: session?.historyPath ?? getHistoryArrayPath(dataLayerStorage),
+    observerPath: session?.historyPath ?? currentObservationHistoryPath(),
     capturedEventCount: liveObserverState.events.length,
     connectedSourceCount: liveObserverState.sources.filter(({ status }) => status === "Connected").length,
   });
@@ -1826,6 +1859,7 @@ function openLiveInspector(eventId: string, preserveReturnSnapshot = false): voi
       persistEventTemplateLibrary();
       renderEventTemplateLibrary();
     },
+    defaultDestination:()=>seedLibraryDestination(activeTransportProject()?.project),
     onTemplateSaved: (template) => {
       savedInspectorTemplateId = template.id;
       appendOpenInLibraryAction(event.id, template.name);
@@ -4173,7 +4207,7 @@ function openTemplateEditor(template: EditableEventTemplate): void {
 
 function openNewEventEditor(): void {
   templateEditorReturnTemplateId = undefined;
-  propertyEditorState = createNewEventEditor();
+  propertyEditorState = createNewEventEditor(seedLibraryDestination(activeTransportProject()?.project));
   resetTemplateEditorDisclosures();
   setEventLibraryResult(eventLibraryEditorElements, "");
   renderEventTemplateLibrary();
@@ -4453,7 +4487,7 @@ function startLinkedCaptureFromSavedSession(session: SavedSessionLibrary["sessio
       status:"active",
       tabId:previousSession?.tabId ?? 0,
       ...(previousSession?.windowId === undefined ? {} : { windowId:previousSession.windowId }),
-      historyPath:previousSession?.historyPath ?? getHistoryArrayPath(dataLayerStorage),
+      historyPath:previousSession?.historyPath ?? currentObservationHistoryPath(),
       startUrl:resumed.activeSession.pageUrl,
       currentUrl:resumed.activeSession.pageUrl,
       targetTitle:previousSession?.targetTitle ?? resumed.activeSession.pageUrl,
@@ -5803,18 +5837,15 @@ const targetPathStatusController = createTargetPathStatusController({
 });
 
 function refreshSelectedTargetPathStatus(): void {
-  const path = getHistoryArrayPath(dataLayerStorage);
+  const path = currentObservationHistoryPath();
   void targetPathStatusController.configure(path, historyPathInput?.value ?? path);
 }
 
-historyPathInput?.addEventListener("input", () => {
-  const typedPath = historyPathInput.value;
-  const path = setHistoryArrayPath(typedPath, dataLayerStorage);
-  void targetPathStatusController.configure(path, typedPath);
-});
+historyPathInput?.addEventListener("change",()=>{void saveProjectEventTransport().then(refreshSelectedTargetPathStatus).catch((error)=>{if(historyPathStatus)historyPathStatus.textContent=error instanceof Error?error.message:String(error);});});
+defaultPushPathInput?.addEventListener("change",()=>{void saveProjectEventTransport().catch((error)=>{if(defaultPushPathStatus)defaultPushPathStatus.textContent=error instanceof Error?error.message:String(error);});});
 
 restartObservationButton?.addEventListener("click", () => {
-  void currentTargetObservation(getHistoryArrayPath(dataLayerStorage)).then((observation) => {
+  void currentTargetObservation(currentObservationHistoryPath()).then((observation) => {
     if (!observation) return;
     dataLayerObserverState = restartObservation(
       dataLayerSessionState,
@@ -5958,10 +5989,11 @@ if (typeof chrome !== "undefined" && chrome.permissions?.onRemoved) {
 }
 
 durableProjectRuntime.subscribe(({active})=>{
-  const next=active?.state??restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY));if(!next)return;
+  const next=active?.state??restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY));
+  renderProjectEventTransport();if(!next)return;
   renderSchemas();renderSchemaWorkflowRows();if(compactCanonicalEditor)renderCompactCanonicalEditor();sidePanelLayeredProfileEditor?.render();
 });
-renderHistoryPath(getHistoryArrayPath(dataLayerStorage));
+renderProjectEventTransport();
 renderObservationTargetContext();
 if (!savedSessionLiveFeed) void recoverAttachedObservationTarget();
 renderSessionState();

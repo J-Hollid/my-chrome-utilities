@@ -20,6 +20,7 @@ assert.deepEqual(newEventValidation(editor), {
   source: "Select an event source",
   destination: "Enter a destination path",
 });
+assert.equal(createNewEventEditor("queue").template.destination,"queue");
 
 editor = setNewEventField(editor, "name", "Scroll milestone");
 editor = setNewEventField(editor, "eventName", "scroll");

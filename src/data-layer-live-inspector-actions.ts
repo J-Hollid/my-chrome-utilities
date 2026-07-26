@@ -40,6 +40,7 @@ export interface LiveInspectorActionEffects {
   currentPageUrl(): string;
   writeClipboard(text: string): Promise<void>;
   storeTemplate(template: EditableEventTemplate): void;
+  defaultDestination?():string;
   createSchema?(event: LiveEvent): void;
   createValidation?(event: LiveEvent): void;
   addPropertyValidation?(event: LiveEvent, path: string, trigger: HTMLButtonElement): void;
@@ -82,7 +83,7 @@ export function createLiveInspectorActions(
         provenance: event.provenance ?? "live",
       }, {
         name: event.name,
-        destination: event.destination ?? "event.history",
+        destination: effects.defaultDestination?.() ?? event.destination ?? "",
         sourceName: event.sourceName ?? event.sourceId,
       });
       effects.storeTemplate(template);

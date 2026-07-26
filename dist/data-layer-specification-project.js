@@ -8,6 +8,7 @@ export function createSpecificationProject(input) {
         environments: [...(input.environments ?? ["Production"])],
         namingConventions: { property: "snake_case", event: "snake_case" },
         publicationPolicy: { warningsBlock: false, fixturesRequired: true },
+        eventTransport: { observationHistoryPath: "queue.history", defaultPushPath: "dataLayer" },
         collections: { profiles: [], pages: [], pageGroups: [], events: [], applicabilitySets: [], flows: [], fixtures: [], assignments: [] },
         releases: [],
     };

@@ -350,6 +350,31 @@
     ]
   },
   {
+    "id": "project_event_transport",
+    "source": [
+      "src/data-layer-project-event-transport.ts"
+    ],
+    "dependencies": [
+      "project_management",
+      "capture",
+      "event-library"
+    ],
+    "unit": [
+      "test/data-layer-project-event-transport-test.mjs"
+    ],
+    "property": [],
+    "features": [
+      "features/data-layer-project-event-transport-settings.feature",
+      "features/data-layer-project-event-transport-settings-runtime.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/project_event_transport.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/project-event-transport.mjs"
+    ]
+  },
+  {
     "id": "schemas",
     "source": [
       "src/data-layer-allowed-value-expansion-ui.ts",
