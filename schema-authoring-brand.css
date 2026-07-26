@@ -144,6 +144,9 @@
     [aria-label="Shared editable project condition tree"]
   ) {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  inline-size: 100%;
+  max-inline-size: 100%;
   min-inline-size: 0;
   gap: var(--twatility-space-3);
   padding: var(--twatility-space-3);
@@ -298,6 +301,14 @@
   min-inline-size: 0;
   padding: 0;
   border: 0;
+}
+
+.twatility-studio
+  .contextual-editor
+  form
+  > label:has(> [data-condition-builder="true"][data-condition-presentation="shared"]) {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
 }
 
 .twatility-theme
