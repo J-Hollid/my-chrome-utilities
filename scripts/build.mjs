@@ -48,6 +48,7 @@ const staticFiles = [
   "specification-builder-guidance.css",
   "layered-schema.css",
   "twatility-brand.css",
+  "schema-authoring-brand.css",
   "side-panel-brand.css",
   "specification-builder-brand.css",
 ];

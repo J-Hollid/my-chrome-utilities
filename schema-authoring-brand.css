@@ -1,0 +1,374 @@
+/*
+ * Shared canonical authoring presentation.
+ *
+ * The canonical model, commands, persistence, focus adapters, and surface-
+ * specific renderers remain authoritative. These selectors are deliberately
+ * rooted in production schema/condition hooks.
+ */
+
+.twatility-theme {
+  --twatility-accent: var(--twa-blue);
+  --twatility-accent-soft: var(--twa-blue-soft);
+  --twatility-info: var(--twa-blue);
+  --twatility-info-soft: var(--twa-blue-soft);
+  --twatility-warning: var(--twa-warning);
+  --twatility-warning-soft: var(--twa-paper-deep);
+  --twatility-line: var(--twa-paper-shadow);
+  --twatility-surface: var(--twa-paper-raised);
+  --twatility-surface-raised: var(--twa-paper-raised);
+  --twatility-ink: var(--twa-ink);
+  --twatility-ink-strong: var(--twa-navy-deep);
+  --twatility-ink-muted: var(--twa-ink-soft);
+  --twatility-focus: var(--twa-focus);
+  --twatility-radius-md: var(--twa-radius-medium);
+  --twatility-radius-lg: var(--twa-radius-large);
+  --twatility-shadow-lg: var(--twa-shadow-panel);
+  --twatility-font-display: var(--twa-font-display);
+  --twatility-space-1: 0.2rem;
+  --twatility-space-2: 0.4rem;
+  --twatility-space-3: 0.65rem;
+  --twatility-space-4: 0.9rem;
+  --twatility-text-xs: 0.75rem;
+  --twatility-text-sm: 0.875rem;
+  --twatility-text-xl: 1.15rem;
+}
+
+.twatility-theme
+  :is(
+    [aria-label$="canonical schema editor"],
+    .composed-schema-workspace,
+    [data-schema-presentation="compact-panel"]
+  )
+  :is([data-property-context-menu="true"], [data-focused-property-editor="true"]) {
+  border: 1px solid color-mix(in srgb, var(--twatility-accent) 38%, var(--twatility-line));
+  border-radius: var(--twatility-radius-lg);
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--twatility-accent-soft) 68%, var(--twatility-surface)) 0,
+      var(--twatility-surface) 9rem
+    );
+  box-shadow: var(--twatility-shadow-lg);
+}
+
+.twatility-theme
+  :is(
+    [aria-label$="canonical schema editor"],
+    .composed-schema-workspace
+  )
+  [data-schema-row-overlay="true"] {
+  border-radius: var(--twatility-radius-lg);
+  scrollbar-gutter: stable;
+}
+
+.twatility-theme [data-property-context-menu="true"] {
+  display: grid;
+  gap: var(--twatility-space-3);
+  padding: var(--twatility-space-4);
+}
+
+.twatility-theme [data-property-context-menu="true"] > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--twatility-space-2);
+}
+
+.twatility-theme [data-property-context-menu="true"] [data-section] {
+  flex: 1 1 8rem;
+  min-inline-size: 0;
+  text-align: start;
+}
+
+.twatility-theme [data-focused-property-editor="true"] {
+  display: grid;
+  min-inline-size: 0;
+  gap: var(--twatility-space-4);
+  margin-block-start: var(--twatility-space-3);
+  padding: var(--twatility-space-4);
+}
+
+.twatility-theme [data-focused-property-editor="true"] > h3 {
+  margin: 0;
+  color: var(--twatility-ink-strong);
+  font-family: var(--twatility-font-display);
+  font-size: var(--twatility-text-xl);
+}
+
+.twatility-theme [data-focused-property-editor="true"] > p {
+  margin: 0;
+  color: var(--twatility-ink-muted);
+  overflow-wrap: anywhere;
+}
+
+.twatility-theme [aria-label="Stable rule inventory"] {
+  display: grid;
+  gap: var(--twatility-space-3);
+}
+
+.twatility-theme [aria-label="Stable rule inventory"] > [data-rule-id] {
+  display: grid;
+  min-inline-size: 0;
+  gap: var(--twatility-space-2);
+  padding: var(--twatility-space-3);
+  border: 1px solid var(--twatility-line);
+  border-inline-start: 4px solid var(--twatility-accent);
+  border-radius: var(--twatility-radius-md);
+  background: var(--twatility-surface);
+}
+
+.twatility-theme
+  [aria-label="Stable rule inventory"]
+  > [data-rule-id][data-ownership="inherited"] {
+  border-inline-start-color: var(--twatility-info);
+  background: color-mix(in srgb, var(--twatility-info-soft) 42%, var(--twatility-surface));
+}
+
+.twatility-theme
+  [aria-label="Stable rule inventory"]
+  > [data-rule-id][data-ownership="overridden"] {
+  border-inline-start-color: var(--twatility-warning);
+  background: color-mix(in srgb, var(--twatility-warning-soft) 42%, var(--twatility-surface));
+}
+
+.twatility-theme [aria-label="Stable rule inventory"] > [data-rule-id] > p {
+  margin: 0;
+  color: var(--twatility-ink);
+  font-size: var(--twatility-text-sm);
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.twatility-theme
+  :is(
+    [aria-label="Shared editable condition tree"],
+    [aria-label="Shared editable project condition tree"]
+  ) {
+  display: grid;
+  min-inline-size: 0;
+  gap: var(--twatility-space-3);
+  padding: var(--twatility-space-3);
+  border: 1px solid color-mix(in srgb, var(--twatility-accent) 28%, var(--twatility-line));
+  border-radius: var(--twatility-radius-md);
+  background: color-mix(in srgb, var(--twatility-accent-soft) 28%, var(--twatility-surface));
+}
+
+.twatility-theme
+  :is(
+    [aria-label="Empty When builder"],
+    [aria-label="Empty project condition builder"]
+  ) {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--twatility-space-2);
+}
+
+.twatility-theme
+  :is(
+    [aria-label="Shared editable condition tree"],
+    [aria-label="Shared editable project condition tree"]
+  )
+  [data-condition-kind] {
+  min-inline-size: 0;
+  border-radius: var(--twatility-radius-md);
+}
+
+.twatility-theme
+  :is(
+    [aria-label="Shared editable condition tree"],
+    [aria-label="Shared editable project condition tree"]
+  )
+  [data-condition-kind="group"] {
+  display: grid;
+  gap: var(--twatility-space-3);
+  padding: var(--twatility-space-3);
+  border: 1px solid var(--twatility-line);
+  border-inline-start: 4px solid var(--twatility-accent);
+  background: var(--twatility-surface);
+}
+
+.twatility-theme
+  :is(
+    [aria-label="Shared editable condition tree"],
+    [aria-label="Shared editable project condition tree"]
+  )
+  [data-condition-kind="group"]
+  > div:first-child {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: var(--twatility-space-2);
+}
+
+.twatility-theme
+  :is(
+    [aria-label="Shared editable condition tree"],
+    [aria-label="Shared editable project condition tree"]
+  )
+  [data-condition-kind="group"]
+  > div:last-child {
+  display: grid;
+  gap: var(--twatility-space-3);
+  min-inline-size: 0;
+  padding-inline-start: var(--twatility-space-3);
+}
+
+.twatility-theme
+  :is(
+    [aria-label="Shared editable condition tree"],
+    [aria-label="Shared editable project condition tree"]
+  )
+  [data-condition-kind="predicate"] {
+  display: grid;
+  grid-template-columns:
+    minmax(9rem, 1.2fr)
+    minmax(9rem, 1fr)
+    minmax(8rem, 0.9fr)
+    minmax(8rem, 1fr)
+    auto;
+  align-items: end;
+  gap: var(--twatility-space-2);
+  padding: var(--twatility-space-3);
+  border: 1px solid var(--twatility-line);
+  border-inline-start: 4px solid var(--twatility-info);
+  background: var(--twatility-surface);
+}
+
+.twatility-theme
+  [aria-label="Shared editable project condition tree"]
+  [data-condition-kind="predicate"] {
+  grid-template-columns:
+    minmax(9rem, 1.2fr)
+    minmax(9rem, 1fr)
+    minmax(8rem, 0.9fr)
+    minmax(8rem, 1fr)
+    auto;
+}
+
+.twatility-theme
+  :is(
+    [aria-label="Shared editable condition tree"],
+    [aria-label="Shared editable project condition tree"]
+  )
+  label {
+  display: grid;
+  min-inline-size: 0;
+  gap: var(--twatility-space-1);
+  color: var(--twatility-ink-muted);
+  font-size: var(--twatility-text-xs);
+  font-weight: 700;
+  letter-spacing: 0.015em;
+}
+
+.twatility-theme
+  :is(
+    [aria-label="Shared editable condition tree"],
+    [aria-label="Shared editable project condition tree"]
+  )
+  :is(input, select, button) {
+  min-inline-size: 0;
+  max-inline-size: 100%;
+}
+
+.twatility-theme
+  :is(
+    [aria-label^="Nested conditional presence"],
+    [aria-label^="Nested rule predicate"]
+  )[data-condition-presentation="shared"] {
+  display: grid;
+  min-inline-size: 0;
+  gap: var(--twatility-space-3);
+  padding: var(--twatility-space-3);
+  border: 1px solid var(--twatility-line);
+  border-radius: var(--twatility-radius-md);
+  background: var(--twatility-surface-raised);
+}
+
+.twatility-theme
+  :is(
+    [aria-label^="Nested conditional presence"],
+    [aria-label^="Nested rule predicate"]
+  )[data-condition-presentation="shared"]
+  > :is(h4, output) {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.twatility-theme [data-condition-builder="true"][data-condition-presentation="shared"] {
+  min-inline-size: 0;
+  padding: 0;
+  border: 0;
+}
+
+.twatility-theme
+  :is(
+    [aria-label="Shared editable condition tree"],
+    [aria-label="Shared editable project condition tree"]
+  )
+  :focus-visible {
+  outline: 3px solid var(--twatility-focus);
+  outline-offset: 2px;
+}
+
+@media (max-width: 960px) {
+  .twatility-theme
+    :is(
+      [aria-label="Shared editable condition tree"],
+      [aria-label="Shared editable project condition tree"]
+    )
+    [data-condition-kind="predicate"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .twatility-theme
+    :is(
+      [aria-label="Shared editable condition tree"],
+      [aria-label="Shared editable project condition tree"]
+    )
+    [data-condition-kind="predicate"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .twatility-theme
+    :is(
+      [aria-label="Shared editable condition tree"],
+      [aria-label="Shared editable project condition tree"]
+    )
+    [data-condition-kind="group"]
+    > div:first-child {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .twatility-theme
+    :is(
+      [aria-label="Shared editable condition tree"],
+      [aria-label="Shared editable project condition tree"]
+    )
+    [data-condition-kind="group"]
+    > div:last-child {
+    padding-inline-start: var(--twatility-space-2);
+  }
+
+  .twatility-theme
+    :is(
+      [aria-label="Shared editable condition tree"],
+      [aria-label="Shared editable project condition tree"]
+    )
+    :is(button, select, input) {
+    inline-size: 100%;
+  }
+}
+
+@media (forced-colors: active) {
+  .twatility-theme
+    :is(
+      [aria-label="Shared editable condition tree"],
+      [aria-label="Shared editable project condition tree"]
+    )
+    [data-condition-kind] {
+    border-color: CanvasText;
+  }
+}
