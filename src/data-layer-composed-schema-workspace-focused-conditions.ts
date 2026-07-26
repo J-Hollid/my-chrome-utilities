@@ -3,6 +3,23 @@ import {focusedConditionLabel} from "./data-layer-focused-schema-property-ui.js"
 import {renderSharedConditionTree} from "./data-layer-shared-condition-tree-editor.js";
 import type {ComposedFocusedSectionContext} from "./data-layer-composed-schema-workspace-focused-sections.js";
 
+/** Assign missing identities once; subsequent structural moves retain them. */
+export const ensureComposedConditionIds=(
+  condition:Record<string,unknown>,
+  id:(kind:string)=>string=()=>`condition:${crypto.randomUUID()}`,
+):Record<string,unknown>=>{
+  const withId:Record<string,unknown>={
+    ...condition,
+    id:String(condition.id??id("condition")),
+  };
+  if(withId.kind!=="predicate") {
+    withId.children=(Array.isArray(withId.children)?withId.children:[]).map(
+      (child:unknown)=>ensureComposedConditionIds(child as Record<string,unknown>,id),
+    );
+  }
+  return withId;
+};
+
 export function renderComposedFocusedCondition(
   host:HTMLElement,
   context:ComposedFocusedSectionContext,
