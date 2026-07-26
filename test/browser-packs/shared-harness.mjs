@@ -6,7 +6,7 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 
-const wait=(ms)=>new Promise((resolve)=>setTimeout(resolve,ms));
+export const wait=(ms)=>new Promise((resolve)=>setTimeout(resolve,ms));
 const chromeAdapterSource=`(()=>{const calls=[];globalThis.__chromeAdapter={calls};const event=(name)=>({addListener(listener){calls.push('listen:'+name);globalThis.__chromeAdapter[name]=listener;}});globalThis.chrome={runtime:{onMessage:event('runtime.onMessage')},tabs:{async query(){calls.push('tabs.query');return [{id:7,windowId:1,active:true,title:'Fixture tab',url:'https://example.test/checkout'}];},async get(id){calls.push('tabs.get:'+id);return {id,windowId:1,title:'Fixture tab',url:'https://example.test/checkout'};},onUpdated:event('tabs.onUpdated'),onRemoved:event('tabs.onRemoved')},permissions:{async contains(){calls.push('permissions.contains');return true;},async request(){calls.push('permissions.request');return true;},onRemoved:event('permissions.onRemoved')},windows:{async getCurrent(){calls.push('windows.getCurrent');return {id:1};}},scripting:{async executeScript(){calls.push('scripting.executeScript');return [{result:{success:true,result:'pushed'}}];}}};})()`;
 const dataLayerPanelByPack={capture:"data-layer-panel-live","live-flow-testing":"data-layer-panel-live","event-library":"data-layer-panel-library",schemas:"data-layer-panel-schemas",defects:"data-layer-panel-defects",replay:"data-layer-panel-library"};
 function isolationScope(id){

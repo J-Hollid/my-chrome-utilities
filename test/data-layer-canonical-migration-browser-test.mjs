@@ -5,8 +5,8 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import {headlessChromeArguments,stopHeadlessChrome} from "./support/headless-chrome.mjs";
+import {wait} from "./browser-packs/shared-harness.mjs";
 
-const wait=(milliseconds)=>new Promise(resolve=>setTimeout(resolve,milliseconds));
 class DevtoolsSocket{
   constructor(url){this.url=new URL(url);this.nextId=1;this.pending=new Map();this.buffer=Buffer.alloc(0);}
   async connect(){await new Promise((resolve,reject)=>{this.socket=net.createConnection({host:this.url.hostname,port:Number(this.url.port)});this.socket.once("error",reject);this.socket.once("connect",()=>{const key=Buffer.from(String(Math.random())).toString("base64");this.socket.write([`GET ${this.url.pathname}${this.url.search} HTTP/1.1`,`Host: ${this.url.host}`,"Upgrade: websocket","Connection: Upgrade",`Sec-WebSocket-Key: ${key}`,"Sec-WebSocket-Version: 13","\r\n"].join("\r\n"));});let handshake="";const receive=(chunk)=>{handshake+=chunk.toString("binary");const end=handshake.indexOf("\r\n\r\n");if(end<0)return;this.socket.off("data",receive);if(!handshake.startsWith("HTTP/1.1 101"))return reject(new Error("DevTools WebSocket upgrade failed"));this.socket.on("data",data=>this.receive(data));resolve();};this.socket.on("data",receive);});}

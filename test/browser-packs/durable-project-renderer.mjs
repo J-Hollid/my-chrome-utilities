@@ -9,8 +9,8 @@ import {createSpecificationProject} from "../../dist/data-layer-specification-pr
 import {projectLibrary,serializeProjectLibrary} from "../../dist/data-layer-project-library.js";
 import {serializeCanonicalProjectState} from "../../dist/data-layer-specification-repository.js";
 import {headlessChromeArguments,stopHeadlessChrome} from "../support/headless-chrome.mjs";
+import {wait} from "./shared-harness.mjs";
 
-const wait=milliseconds=>new Promise(resolve=>setTimeout(resolve,milliseconds));
 const phase=(name,state="start")=>console.error(`[renderer-target] ${name} ${state}`);
 class Socket{
   constructor(url){this.url=new URL(url);this.id=0;this.pending=new Map();this.buffer=Buffer.alloc(0);}
