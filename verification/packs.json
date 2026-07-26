@@ -988,7 +988,9 @@
     "unit": [
       "test/data-layer-schema-relationship-tree-test.mjs"
     ],
-    "property": [],
+    "property": [
+      "test/data-layer-schema-relationship-tree-property-test.mjs"
+    ],
     "features": [
       "features/data-layer-side-panel-schema-relationship-tree.feature",
       "features/data-layer-side-panel-schema-relationship-tree-runtime.feature"
