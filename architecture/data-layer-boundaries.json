@@ -252,6 +252,13 @@
   },
   "src/data-layer-schema-table.ts": {
     "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-schema-table-quick-edit.ts"
+    ]
+  },
+  "src/data-layer-schema-table-quick-edit.ts": {
+    "module": "schemas",
     "layer": "browser"
   },
   "src/data-layer-composed-schema-workspace-ui.ts": {
