@@ -1,0 +1,118 @@
+{
+  "interactionReport": {
+    "filtered": [
+      "Trade portal"
+    ],
+    "nameOrder": [
+      "Agency platform",
+      "Retail website",
+      "Trade portal"
+    ],
+    "savedOrder": [
+      "Agency platform",
+      "Trade portal",
+      "Retail website"
+    ],
+    "namedActions": true,
+    "switchReview": {
+      "heading": true,
+      "impact": true,
+      "focus": true,
+      "confirm": true,
+      "cancel": true,
+      "returnFocus": true
+    },
+    "createFields": true,
+    "createReview": true,
+    "createReturnFocus": true,
+    "importReview": true,
+    "importReturnFocus": true,
+    "logoFree": true
+  },
+  "metadataReport": {
+    "save": true,
+    "undo": true,
+    "returnFocus": true
+  },
+  "viewports": [
+    {
+      "viewport": {
+        "width": 360,
+        "height": 760
+      },
+      "report": {
+        "width": 360,
+        "height": 760,
+        "active": "Retail websiteretail.example.com · Saved Draft · last saved 2026-07-26T16:27:11.673Z · Published revision 3Open in Specification StudioEdit detailsExport",
+        "projects": 3,
+        "named": true,
+        "unnamed": [],
+        "broken": [],
+        "equivalent": true,
+        "overflow": {
+          "document": 0,
+          "body": 0,
+          "workspace": 0,
+          "panel": 0
+        },
+        "oneScrollOwner": true,
+        "logoFree": true
+      }
+    },
+    {
+      "viewport": {
+        "width": 420,
+        "height": 900
+      },
+      "report": {
+        "width": 420,
+        "height": 900,
+        "active": "Retail websiteretail.example.com · Saved Draft · last saved 2026-07-26T16:27:11.673Z · Published revision 3Open in Specification StudioEdit detailsExport",
+        "projects": 3,
+        "named": true,
+        "unnamed": [],
+        "broken": [],
+        "equivalent": true,
+        "overflow": {
+          "document": 0,
+          "body": 0,
+          "workspace": 0,
+          "panel": 0
+        },
+        "oneScrollOwner": true,
+        "logoFree": true
+      }
+    },
+    {
+      "viewport": {
+        "width": 512,
+        "height": 900
+      },
+      "report": {
+        "width": 512,
+        "height": 900,
+        "active": "Retail websiteretail.example.com · Saved Draft · last saved 2026-07-26T16:27:11.673Z · Published revision 3Open in Specification StudioEdit detailsExport",
+        "projects": 3,
+        "named": true,
+        "unnamed": [],
+        "broken": [],
+        "equivalent": true,
+        "overflow": {
+          "document": 0,
+          "body": 0,
+          "workspace": 0,
+          "panel": 0
+        },
+        "oneScrollOwner": true,
+        "logoFree": true
+      }
+    }
+  ],
+  "recovery": {
+    "open": true,
+    "controls": true,
+    "heading": true,
+    "oneScrollOwner": true,
+    "overflow": true
+  }
+}
