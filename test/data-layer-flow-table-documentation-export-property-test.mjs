@@ -34,11 +34,12 @@ assert.match(copy.html,/&lt;strong&gt;<br>line/);assert.doesNotMatch(copy.html,/
 assert.deepEqual(snapshot.contexts.map(({id})=>id),["context:a","context:b","context:c","context:d"]);
 
 for(let index=0;index<100;index+=1){
+  const inputLogo=index%4===0?"data:image/png;base64,AA==":index%4===1?"https://example.test/logo.png":"javascript:unsafe";
   const theme=createProjectDocumentationTheme({
     id:` theme:${index}\u0000 `,
     name:` Theme ${index} `,
     clientName:index%2?" Client ":"",
-    logo:index%3===0?"https://example.test/logo.png":"javascript:unsafe",
+    logo:inputLogo,
     colors:{heading:index%2?"#123abc":"invalid",accent:"#336699",stripe:"#f4f4f4"},
     typography:{family:index%4?" Inter ":"",headingSize:index-20,bodySize:30-index},
     density:index%2?"compact":"comfortable",
@@ -49,6 +50,7 @@ for(let index=0;index<100;index+=1){
     headerText:` Header ${index} `,
     footerText:` Footer ${index} `,
   });
+  assert.equal(theme.logo,inputLogo.startsWith("data:image/")?inputLogo:"");
   assert.deepEqual(createProjectDocumentationTheme(theme),theme);
   assert.equal(themeFingerprint(createProjectDocumentationTheme(theme)),themeFingerprint(theme));
   assert.equal(Object.isFrozen(theme)&&Object.isFrozen(theme.colors)&&Object.isFrozen(theme.typography),true);

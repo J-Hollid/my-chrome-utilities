@@ -27,6 +27,7 @@ assert.doesNotMatch(JSON.stringify(theme),/(<style|javascript:|workbookCode)/i);
 const hostileTheme=createProjectDocumentationTheme({...theme,id:"theme:hostile",typography:{...theme.typography,family:'Arial";background:url(javascript:alert(1))'},logo:"data:image/svg+xml,<svg onload=alert(1)>"});
 assert.equal(hostileTheme.typography.family,"Arial");
 assert.equal(hostileTheme.logo,"");
+assert.equal(createProjectDocumentationTheme({...theme,id:"theme:https-logo",logo:"https://example.test/client.png"}).logo,"");
 const copiedTheme=parseProjectDocumentationTheme(serializeProjectDocumentationTheme(theme),{id:"theme:copied",name:"Acme copy"});
 assert.equal(copiedTheme.id,"theme:copied");
 assert.equal(copiedTheme.name,"Acme copy");
