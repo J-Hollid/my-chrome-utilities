@@ -98,6 +98,12 @@ checks.
 - **O-FLOW** — `src/data-layer-flow-graph*.ts`, `src/flow-graph/`
 - **O-FLOW-EXPORT** — `src/data-layer-flow-table-documentation-export.ts`,
   `src/data-layer-flow-table-documentation-export-ui.ts`
+- **O-PROJECT-DOC** — `src/data-layer-flow-documentation-snapshot.ts`,
+  `src/data-layer-project-documentation-compiler.ts`,
+  `src/data-layer-project-documentation-records.ts`,
+  `src/data-layer-project-documentation-workspace.ts`,
+  `src/data-layer-project-documentation-workspace-ui.ts`,
+  `src/specification-builder.ts`
 - **O-ASSURANCE** — `src/data-layer-specification-assurance.ts`,
   `src/data-layer-specification-project.ts`, `src/specification-builder.ts`
 - **O-BUILD** — `scripts/build.mjs`, `scripts/package.mjs`, `manifest.json`,
@@ -119,14 +125,18 @@ checks.
 - **T-CANON** — focused canonical/rule/condition unit and property tests;
   conditional-rule and composed-schema tests; installed layered-schema adapter;
   `layered_schema` checkpoint; save/reload/inheritance/sparse override/reset/Undo,
-  IME/caret, overlay geometry, Escape, and focus-return checks
+  IME/caret, overlay geometry, Escape, focus-return, direct Table-cell commit,
+  Tab/Shift+Tab traversal, blur deduplication, and invalid-cell checks
 - **T-STUDIO** — project-management/entity-lifecycle/durable-renderer browser
-  adapters; route, collection, Inspector, focus, and 1280/1440/1720/200% checks
+  adapters; route, collection, Documentation-first tree order, Inspector, focus,
+  and 1280/1440/1720/200% checks
 - **T-FLOW** — Flow graph unit/persistence/property tests; Flow graph browser
   adapter; `flow_graph` checkpoint; pointer/keyboard, identity, example,
   topology, deletion/Undo, and viewport-restoration checks
-- **T-EXPORT** — Flow export unit/property/browser evidence; `flow_export`
-  checkpoint; TSV, rich clipboard, XLSX, stale/incomplete, immutability checks
+- **T-EXPORT** — selected-Flow value-map and project Documentation
+  unit/property/browser evidence; `flow_export` checkpoint; portable named sets
+  and themes, progressive configuration, rich clipboard fallback, XLSX,
+  stale/incomplete/preflight/repair, sanitization, and immutability checks
 - **T-A11Y** — keyboard traversal, visible focus, accessible names/descriptions,
   dialog focus return, 200% zoom, contrast, reduced motion, forced colors
 - **T-PACKAGE** — source rebuild; HTML-reference completeness; `node
@@ -254,12 +264,13 @@ checks.
 | Project starting paths | O-STUDIO | template/import/JSON/schema/spreadsheet/adopt start paths | Studio start screen | Preserve implementation | Installed start behavior remains, but Projects is authoritative project entry | Style current no-project recovery without expanding stale semantics | V1 | T-STUDIO | C-STUDIO | preserve — Slice 4 |
 | Blank project form | O-STUDIO | `#create-project-form`; name/description/site/Create | Studio start screen | Preserve implementation | Real project create and validation; no hardcoded project | Style only; keep as recovery path | V1 | T-STUDIO | C-STUDIO | preserve — Slice 4 |
 | Project status bar | O-STUDIO, O-DURABLE | `#project-context`, `#project-state`, `#retry-save`; Saved/Published/failure | Studio project bar | Branding/layout parity | Stable project identity, Draft token state, truthful save failure | Branded masthead/project bar | V1 | T-STUDIO, T-PROJECTS | C-STUDIO, C-PERSIST | approved — Slice 4 |
-| Project tree | O-STUDIO, O-LIFECYCLE | Project overview; eight collections; installed Releases recovery | Studio collection rail | Branding/layout parity | Stable routes, counts, project isolation, no Schemas collection | Branded tree/rail; retain installed release route without expanding it | V1 | T-STUDIO | C-STUDIO | approved — Slice 4 |
+| Project tree | O-STUDIO, O-LIFECYCLE, O-PROJECT-DOC | Documentation; Project overview; eight collections; installed Releases recovery | Studio collection rail | Branding/layout parity | Documentation remains first, then stable collection routes/counts; project isolation; no Schemas collection | Branded tree/rail; retain Documentation-first order and installed release route without expanding it | V1 | T-STUDIO, T-EXPORT | C-STUDIO | approved — Slice 4 |
 | Breadcrumb & global search | O-STUDIO | `#project-breadcrumb`, `#project-search` | Studio tools | Branding/layout parity | Route identity, search state and focus | Branded sticky tools and wrap-safe breadcrumbs | V1 | T-STUDIO, T-A11Y | C-STUDIO | approved — Slice 4 |
 | Inspector layout | O-STUDIO | toggle with `aria-controls/expanded`; contextual `#project-inspector` | mock responsive inspector | Branding/layout parity | User choice, valid focus destination, no exclusive Add/Open/Remove/Flow command | Three-pane push/collapsed/in-flow narrow layout | V1 | T-STUDIO, T-A11Y | C-STUDIO | approved — Slice 4 |
 | Validate toolbar | O-STUDIO, O-ASSURANCE | Run preflight; Coverage matrix | mock Validate menu | Preserve implementation | Installed behavior remains; archived scope is not reactivated | Style existing controls; do not create new assurance semantics | V1 | T-STUDIO | C-STUDIO | preserve — Slice 4 |
 | Release toolbar | O-STUDIO, O-DURABLE | Publish release / intentional revision | mock Release menu | Preserve implementation | Only intentional Publish advances immutable revision; blockers truthful | Emphasize current publish boundary without mock release claims | V2 | T-STUDIO, T-PROJECTS | C-STUDIO, C-PERSIST | preserve — Slice 4 |
-| More actions | O-STUDIO | Undo/Redo; documentation; full export; JSON schema; import | mock More menu | Branding/layout parity | Every installed action/effect, enabled reason, page-memory Undo/Redo | Branded disclosure/action menu | V1 | T-STUDIO, T-A11Y | C-STUDIO | approved — Slice 4 |
+| More actions | O-STUDIO | Undo/Redo; full export; JSON schema; import | mock More menu | Branding/layout parity | Every current installed action/effect, enabled reason, page-memory Undo/Redo; no obsolete Generate documentation action | Branded disclosure/action menu; Documentation is a top-level project route | V1 | T-STUDIO, T-A11Y | C-STUDIO | approved — Slice 4 |
+| Project Documentation route | O-STUDIO, O-PROJECT-DOC, O-DURABLE | first tree button `data-kind=documentation`; `?view=documentation`; Set/Content/Configure/Theme/Preview/Export | mock Studio documentation surfaces | Preserve implementation | `aria-current`, breadcrumb/Inspector context, entity-route exit, active-project reset, repair deep links; opening is read-only | Brand as a first-class Studio workspace without restoring the removed dialog or Flow-owned form | V2 | T-EXPORT, T-STUDIO, T-A11Y | C-STUDIO, C-PERSIST | preserve — Slices 4 and 6 |
 | Collection overviews | O-LIFECYCLE, O-STUDIO | Add; search; Open `<name>`; Remove `<name>`; empty state for eight kinds | Studio collection routes | Branding/layout parity | Type-specific route, named actions, Inspector-independent access, stable focus | Shared overview/card/list patterns | V1 | T-STUDIO, T-A11Y | C-STUDIO | approved — Slice 4 |
 | Entity creation | O-LIFECYCLE, O-STUDIO | guided type-specific Create/Cancel main-workspace route | mock Add routes | Branding/layout parity | Project-scoped ID, validation, saved Draft, focus and back route | Shared guided creation layout | V1 | T-STUDIO | C-STUDIO | approved — Slice 4 |
 | Shared Profile fields | O-LIFECYCLE, O-CANON | name; canonical contribution; source lineage | Shared Profile route | Preserve implementation | Contributor role, canonical model, no second schema type/editor | Brand current workspace; do not use mock duplicate editor | V2 | T-STUDIO, T-CANON | C-STUDIO, C-CANON | preserve — Slices 4–5 |
@@ -279,7 +290,8 @@ checks.
 | Surface or workflow | Production owner | Production controls | Mock destination | Classification | Preserve contract | Proposed migration | Risk tier | Verification | Master collision risk | Decision and status |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | Canonical draft header | O-CANON, O-DURABLE | contributor/source/Draft token/provenance; Undo/Redo | canonical header | Branding/layout parity | Opaque token not operator revision; stable identity; page-memory history | Branded context/status bar | V1 | T-CANON | C-CANON | approved — Slice 5 |
-| Property table/tree | O-CANON, O-COMPOSED | all properties; inline common facets; local overflow; tree | property table/tree | Branding/layout parity | Same canonical model; all effective rows; one vertical owner at 360px | Responsive table/compact-row presentation | V1 | T-CANON | C-CANON | approved — Slice 5 |
+| Property table/tree | O-CANON, O-COMPOSED | all properties; inline Description/Allowed values/Example; local overflow; tree | property table/tree | Branding/layout parity | Same canonical model; all effective rows; datasets/labels and editable-cell DOM order; one vertical owner at 360px | Responsive table/compact-row presentation that does not replace or reorder direct-edit cells | V2 | T-CANON | C-CANON | approved — Slice 5 |
+| Quick Table cell transactions | O-CANON, O-COMPOSED | Enter; Tab; Shift+Tab; blur; Escape; inline diagnostic | no mock authority | Preserve implementation | One property command/Undo only on changed valid commit; unchanged no-op; invalid refocus; no duplicate blur; sparse inherited override; parent propagation; focus survives rerender | Style visible editable cells and diagnostics only; preserve `data-inline-schema-facet/path`, scope, and traversal order | V2 | T-CANON, T-A11Y | C-CANON | preserve — Slice 5 |
 | Property actions menu | O-CANON | Definition/Rules/Structure; source/override/reset/remove | property menu | Preserve implementation | One focused menu, ownership legality, exact origin focus | Restyle current menu/layers; omit stale extra first-level tabs | V2 | T-CANON | C-CANON | preserve — Slice 5 |
 | Definition editing | O-CANON | type; presence; comma-separated Allowed values; docs; example method/value | Definition layer | Structural improvement | Blank/Allowed value/Custom mount rules; typed validation; one command/Undo | Clearer progressive disclosure inside authoritative Definition layer | V2 | T-CANON | C-CANON | approved — Slice 5 |
 | Rule inventory | O-CANON, O-CONDITION | stable rows; When/Then/severity/message/source/ownership; named actions | Rules layer | Structural improvement | Stable identity and legal View/Edit/Remove/Replace/Open source actions | Apply compact hierarchy and summaries without flattening | V2 | T-CANON | C-CANON | approved — Slice 5 |
@@ -297,8 +309,9 @@ checks.
 | Relationship editor | O-FLOW | optional label/condition/expectation; Delete and Undo | mock relationship form | Preserve implementation | Kind inferred from ports; no Parallel/operator kind selector; delete exact identity; focus return | Style production popover; omit mock kind/reverse controls | V2 | T-FLOW | C-FLOW | preserve — Slice 6 |
 | Derived examples | O-FLOW, O-COMPOSED | Page/Event read-only JSON; Complete/Incomplete/Invalid/Blocked; repair links | Flow examples | Preserve implementation | Derived from effective schemas; never stored payload copy; exact deep links | Branded code/status panels | V1 | T-FLOW, T-CANON | C-FLOW, C-CANON | preserve — Slice 6 |
 | Advanced executable steps | O-STUDIO | explicitly separate advanced disclosure | mock Advanced steps | Preserve implementation | Must not duplicate/replace documentary graph; current installed behavior only | Style disclosure with clear advanced boundary | V1 | T-STUDIO | C-STUDIO | preserve — Slice 6 |
-| Flow documentation setup | O-FLOW-EXPORT | value map/matrix; property/context selection; ordering; headings/styles/metadata/preview | mock Flow export | Preserve implementation | Page primary contexts; nested Event subcontexts; stable IDs; no graph mutation | Brand actual configuration; omit stale CSV/category model | V2 | T-EXPORT | C-FLOW | preserve — Slice 6 |
-| Flow documentation delivery | O-FLOW-EXPORT | TSV clipboard; rich HTML/text; offline four-sheet XLSX; incomplete confirmation | gallery documentation export | Preserve implementation | Formula/HTML safety; stale disables; Draft-incomplete truth; immutability | Shared export/review styling | V2 | T-EXPORT, T-PACKAGE | C-FLOW | preserve — Slice 6 |
+| Documentation Set, Content, and Configure | O-PROJECT-DOC, O-DURABLE | named Set/theme creation; Set selector; reorderable outline; Flow/Profile search; Overview/Flow/matrix/Profile selection; relevant-only configuration | mock documentation workspace | Preserve implementation | Draft-owned stable section identities/order/config/theme reference; exactly one matrix; independent Flow/matrix/Profile choices; hidden order retained; no eager all-section form | Style progressive regions and ordered controls without moving ownership back to Flow pages | V2 | T-EXPORT, T-STUDIO | C-STUDIO, C-PERSIST | preserve — Slice 6 |
+| Project Documentation theme and preview | O-PROJECT-DOC | project-local structured theme; Brand/Typography/Table/Header-footer details; Save/Preview/Copy/Paste; sample; Refresh preview | mock theme/preview | Preserve implementation | Sanitized local data-image logo only; no executable CSS; supported fingerprint shared by preview/XLSX/rich copy; TWAtility product theme must not alter client output semantics | Contain client-themed preview inside branded Studio chrome; preserve progressive details and stale alert | V2 | T-EXPORT, T-A11Y | C-STUDIO, C-PERSIST | preserve — Slice 6 |
+| Project Documentation export and preflight | O-PROJECT-DOC, O-FLOW-EXPORT | current/selected/complete scope; per-section selection; Confirm incomplete; Copy rich documentation; Download Excel; repair links | gallery documentation export | Preserve implementation | Rich HTML plus plain fallback and `.xlsx` only; stale/blocked disables; concise Draft-incomplete truth; formula/HTML/sheet-name safety; generation read-only | Shared export/status/preflight styling; no TSV, plain spreadsheet, HTML-file, PDF, diagnostics, provenance, raw identities, or repair detail in shared output | V2 | T-EXPORT, T-PACKAGE, T-A11Y | C-STUDIO, C-PERSIST | preserve — Slice 6 |
 | Fixture execution | O-ASSURANCE | installed fixture execution/results | mock fixture runner | Preserve implementation | Not active expansion scope; do not invent mock run results | Style current installed states only | V1 | T-STUDIO | C-STUDIO | preserve — Slice 6 |
 
 ## Assurance, import/export, conflict, and cross-window surfaces
@@ -309,7 +322,7 @@ checks.
 | Coverage matrix | O-ASSURANCE | coverage view/cells/deep links | coverage gallery | Preserve implementation | Installed behavior only; local table overflow; exact repairs | Branded table/status presentation | V1 | T-STUDIO | C-STUDIO | preserve — Slice 6 |
 | Release review | O-ASSURANCE, O-DURABLE | diff/blockers; Publish/Publish and close/Restore/Cancel | release review gallery | Preserve implementation | Only intentional Publish advances revision; real evidence and focus return | Shared publication-review styling | V2 | T-STUDIO, T-PROJECTS | C-STUDIO, C-PERSIST | preserve — Slice 6 |
 | Release collection | O-ASSURANCE | installed release history/restore | mock Releases collection | Preserve implementation | Do not delete installed capability; do not expand archived release program | Style current list only | V1 | T-STUDIO | C-STUDIO | preserve — Slice 6 |
-| Project documentation export | O-ASSURANCE | installed project documentation action/options | mock documentation dialog | Preserve implementation | Do not substitute selected-Flow export or activate archived batch scope | Style installed action only | V1 | T-STUDIO | C-STUDIO | preserve — Slice 6 |
+| Superseded project documentation dialog | O-STUDIO, O-PROJECT-DOC | removed `#generate-documentation` and `#documentation-export` controls | mock documentation dialog | Intentional omission | Current master replaced the eager dialog with the top-level persistent Documentation workspace | Do not restore obsolete provenance/where-used/applicability/Flow/fixture/release checkboxes or Copy table action | V1 | T-EXPORT, T-STUDIO | C-STUDIO | superseded by master — Slice 6 |
 | Project export | O-DURABLE, O-STUDIO | full-fidelity export; standard JSON schema + manifest | mock More/export | Preserve implementation | Complete Draft graph; exclude permissions, Live, cache, UI, Undo; real download | Branded export actions/results | V2 | T-PROJECTS, T-PACKAGE | C-PERSIST, C-STUDIO | preserve — Slice 6 |
 | Staged Studio import | O-DURABLE, O-STUDIO | file; collision; remap; Commit/Cancel | Studio import dialog | Preserve implementation | Atomic import/remap, current project unchanged until commit | Shared staged-import styling | V2 | T-PROJECTS, T-STUDIO | C-PERSIST, C-STUDIO | preserve — Slice 6 |
 | Concurrent conflict review | O-DURABLE, O-STUDIO | Reload; Reapply; Merge selected; newer/pending comparison | conflict dialog | Preserve implementation | Opaque token conflict, selected-field legality, no newer overwrite, deterministic focus | Shared conflict-review styling | V2 | T-PROJECTS, T-STUDIO | C-PERSIST, C-STUDIO | preserve — Slice 6 |
@@ -402,7 +415,7 @@ accessible relationships, focus, and recovery remain authoritative.
 | `state-gallery.html#defect-report-dialog` | Production ordinary defect builder | Preserve implementation | Unified validation report builder |
 | `state-gallery.html#delete-backup-dialog` | Production retained-backup deletion review | Preserve implementation | Migration-backup deletion |
 | `state-gallery.html#detach-target-dialog` | Production target detach review | Preserve implementation | Observation settings |
-| `state-gallery.html#documentation-export-dialog` | Production export surfaces | Preserve implementation | Flow documentation delivery / project export remain distinct |
+| `state-gallery.html#documentation-export-dialog` | Superseded eager export dialog | Intentional omission | Use current project Documentation workspace/preflight; do not restore removed controls |
 | `state-gallery.html#end-testing-dialog` | Production end-testing review | Preserve implementation | Save/restart/end reviews |
 | `state-gallery.html#fresh-session-dialog` | Production fresh-session review | Brush-on styling | Fresh-session confirmation |
 | `state-gallery.html#legacy-migration-dialog` | Production equal-generation migration review | Preserve implementation | Legacy migration review |
@@ -422,7 +435,7 @@ accessible relationships, focus, and recovery remain authoritative.
 | `state-gallery.html#switch-project-dialog` | Production atomic switch review | Preserve implementation | Switch review |
 | `state-gallery.html#target-picker-dialog` | Production Chrome target picker | Branding/layout parity | Target picker |
 | `state-gallery.html#validation-detail-dialog` | Production validation issue detail | Preserve implementation | Validation issue detail |
-| `studio.html#documentation-export` | Production selected-Flow/project export owners | Preserve implementation | Flow documentation setup/delivery; do not merge semantics |
+| `studio.html#documentation-export` | Superseded Flow-owned/dialog presentation | Intentional omission | Use current project-level Documentation route and selected-Flow value-map sections |
 | `studio.html#import-review` | Production Studio import review | Preserve implementation | Staged Studio import |
 | `studio.html#project-conflict-review` | Production durable conflict review | Preserve implementation | Concurrent conflict review |
 | `studio.html#release-review` | Installed publication boundary | Preserve implementation | Release review |
@@ -438,10 +451,46 @@ accessible relationships, focus, and recovery remain authoritative.
 | Slice 0 closing fetch | 2026-07-26T12:44:26Z | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | none | none | No reclassification or merge required before review gate |
 | Slice 1 opening fetch | 2026-07-26T13:11:21Z | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | none | none | User-approved structural decisions recorded; no upstream reclassification or source merge required |
 | Slice 1 closing fetch | 2026-07-26T13:36:40Z | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | none | none | No controls, states, routes, persistence contracts, active-scope requirements, or test owners changed upstream; no reclassification or merge required |
+| Slice 2 opening fetch | 2026-07-26T13:48:16Z | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | `6be109256c058330f3f7c2badc65f4224d3f31a7` | 13 commits: Quick Table save and Project Documentation workspace lineages | New direct Table commit/focus behavior; first-in-tree Documentation route and progressive workspace; Draft/portable Set/theme records; stale/incomplete/preflight/export states; removed eager dialog; expanded `layered_schema` and `flow_export` ownership | Added/updated the exact Quick Table, Project tree/route, Documentation configuration/theme/preview/export, More, obsolete-dialog, owner, and verification rows before merge |
 
 Every later slice boundary must append a row even when the merge is clean. Any
 master delta must list controls, states, routes, persistence contracts, active
 authority, and verification ownership before implementation continues.
+
+### Slice 2 opening master-delta inventory
+
+- **Controls:** direct Description, Allowed values, and Example Table cells now
+  commit on Enter, Tab, Shift+Tab, or blur and cancel on Escape. Studio adds a
+  first-in-tree Documentation button; named Set/theme creation; Set selection
+  and outline reorder; Flow/Profile searches and section toggles; contextual
+  Flow/matrix/Profile configuration; structured client theme controls; preview
+  refresh; export scope/section selection; incomplete confirmation; rich copy;
+  Excel download; and preflight repair links.
+- **States and focus:** unchanged and invalid Table edits, sparse inherited
+  overrides, parent propagation, inline diagnostics, rerender focus restoration,
+  unavailable Flow/Profile configuration, stale preview alert, blocked export,
+  incomplete confirmation, immutable snapshot, and feedback states are active.
+  Entity and active-project changes exit Documentation; deep repairs preserve
+  kind/entity/field destinations.
+- **Routes:** `?project=<id>&view=documentation` is the authoritative
+  project-level entry. The old More-menu Generate documentation action and
+  `#documentation-export` dialog are removed. Flow pages retain value-map
+  semantics but own no documentation configuration workspace.
+- **Persistence:** `project.documentation` now stores project-Draft-owned named
+  Documentation Sets and sanitized structured themes, survives reload and
+  portability, and participates in ordinary project commands/Undo. Preview,
+  rich copy, and workbook generation are read-only and create no publication.
+- **Authority and tests:** active scope adds both Project Documentation
+  contracts and its R01 program. `flow_export` now owns the compiler, records,
+  workspace/UI, focused unit/property/browser evidence, and both new contracts;
+  it depends on `flow_graph` and `layered_schema`. Canonical authoring scenarios
+  035–036 and layered-schema evidence own Quick Table transactions.
+- **Collision resolution contract:** retain master’s complete rewritten
+  Documentation behavior and HTML removals; retain Slice 1 brand links/classes/
+  lockup and portable Chrome resolver; resolve source only, then rebuild tracked
+  `dist`. Side-panel source has no direct master collision, but Slice 2 CSS must
+  not replace quick-edit inputs, datasets, accessible labels, traversal order,
+  or the single vertical scroll owner.
 
 ## Slice 0 baseline and known-red checks
 
