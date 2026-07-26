@@ -139,6 +139,33 @@
 }
 
 .twatility-theme
+  [aria-label="Stable rule inventory"]
+  > [data-rule-id]
+  > fieldset {
+  min-inline-size: 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(12rem, 100%), 1fr));
+}
+
+.twatility-theme
+  [aria-label="Stable rule inventory"]
+  > [data-rule-id]
+  > fieldset
+  > div:first-of-type {
+  grid-column: 1 / -1;
+  min-inline-size: 0;
+}
+
+.twatility-theme
+  [aria-label="Stable rule inventory"]
+  > [data-rule-id]
+  > fieldset
+  > label {
+  display: grid;
+  align-items: stretch;
+  min-inline-size: 0;
+}
+
+.twatility-theme
   :is(
     [aria-label="Shared editable condition tree"],
     [aria-label="Shared editable project condition tree"]
