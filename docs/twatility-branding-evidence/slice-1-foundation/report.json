@@ -1,0 +1,54 @@
+{
+  "side": {
+    "bodyClasses": [
+      "twatility-theme",
+      "twatility-side-panel"
+    ],
+    "sheets": [
+      "side-panel.css",
+      "layered-schema.css",
+      "twatility-brand.css",
+      "side-panel-brand.css"
+    ],
+    "ink": "#17130e",
+    "overflow": false,
+    "unnamed": [],
+    "broken": [],
+    "equivalent": true,
+    "belt": {
+      "transparent": true,
+      "opaque": true
+    },
+    "analyst": {
+      "transparent": true,
+      "opaque": true
+    }
+  },
+  "studio": {
+    "bodyClasses": [
+      "twatility-theme",
+      "twatility-studio"
+    ],
+    "sheets": [
+      "specification-builder.css",
+      "specification-builder-guidance.css",
+      "layered-schema.css",
+      "twatility-brand.css",
+      "specification-builder-brand.css",
+      "(inline)"
+    ],
+    "ink": "#17130e",
+    "overflow": false,
+    "unnamed": [],
+    "broken": [],
+    "equivalent": true,
+    "belt": {
+      "transparent": true,
+      "opaque": true
+    },
+    "analyst": {
+      "transparent": true,
+      "opaque": true
+    }
+  }
+}

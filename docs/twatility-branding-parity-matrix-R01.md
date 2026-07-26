@@ -437,6 +437,7 @@ accessible relationships, focus, and recovery remain authoritative.
 | Slice 0 initial fetch | 2026-07-26T12:22Z | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | none | none | Initial full authority and parity inventory recorded |
 | Slice 0 closing fetch | 2026-07-26T12:44:26Z | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | none | none | No reclassification or merge required before review gate |
 | Slice 1 opening fetch | 2026-07-26T13:11:21Z | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | none | none | User-approved structural decisions recorded; no upstream reclassification or source merge required |
+| Slice 1 closing fetch | 2026-07-26T13:36:40Z | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | none | none | No controls, states, routes, persistence contracts, active-scope requirements, or test owners changed upstream; no reclassification or merge required |
 
 Every later slice boundary must append a row even when the merge is clean. Any
 master delta must list controls, states, routes, persistence contracts, active
@@ -516,3 +517,27 @@ rows are brush-on, layout parity, preservation, or explicit omission.
 
 Approval closes the Slice 0 review gate and permits the remaining implementation
 slices to proceed. Slice 0 itself is not the terminal program deliverable.
+
+## Slice 1 foundation completion
+
+Slice 1 completed the cross-cutting presentation and packaging foundation used by
+every matrix row:
+
+- explicit scoped theme activation on the side panel and Specification Studio;
+- shared red, navy, cream, mustard, status, focus, contrast, spacing, radius,
+  shadow, and display/body/monospace tokens;
+- accessible code-native TWAtility Belt wordmarks;
+- packaged genuine-alpha belt and technical-analyst illustrations;
+- base controls, fields, labels, panels, dialogs, focus-visible,
+  reduced-motion, and forced-colours treatment;
+- portable locked TypeScript compiler invocation and deterministic inline-source
+  maps;
+- the previously missing `specification-builder-guidance.css`;
+- recursive local asset packaging and built-HTML reference validation; and
+- portable Chrome discovery for all existing browser verification owners.
+
+The installed-extension equivalence check demonstrated that enabling or
+disabling only the branding stylesheets leaves each control's tag, ID, type,
+role, hidden/disabled state, and ARIA relationships unchanged. The control rows
+retain their approved Slice 2–6 owners; Slice 1 does not claim completion of
+those later layout or structural decisions.
