@@ -350,6 +350,7 @@ import {
 import { createTemplateChangeReview, type TemplateChangeReview } from "./utilities/data-layer/event-library.js";
 import { renderTemplateChangeReview } from "./utilities/data-layer/event-library.js";
 import {
+  pushPathCapabilityInPage,
   pushPayloadInPage,
   type PagePushResult,
 } from "./utilities/data-layer/event-library.js";
@@ -884,6 +885,12 @@ const SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY = "my-chrome-utilities.saved-through
 let savedThroughEventCount = Math.max(0, Number(dataLayerStorage.getItem(SAVED_THROUGH_EVENT_COUNT_STORAGE_KEY)) || 0);
 let eventTemplates: EditableEventTemplate[] = restoreEventTemplateLibrary(dataLayerStorage.getItem(EVENT_TEMPLATE_LIBRARY_STORAGE_KEY));
 let propertyEditorState: PropertyEditorState | undefined;
+let pushPathReadiness: {
+  key: string;
+  status: "checking" | "ready" | "blocked";
+  message: string;
+} | undefined;
+let pushPathReadinessRequest = 0;
 let pendingPushDraftReview: PushDraftReview | undefined;
 let pendingRevisionChangeReview: { editor: PropertyEditorState; review: TemplateChangeReview } | undefined;
 let pendingTemplateRename: { editor: PropertyEditorState; draft: TemplateRenameDraft; templateId: string } | undefined;
@@ -2061,6 +2068,7 @@ function renderEventTemplateLibrary(): void {
       }),
     },
   );
+  refreshPushPathReadiness();
   const editor = propertyEditorState;
   const selectable = Boolean(editor && !editor.isNew);
   libraryDraftSchemaSelector.hidden = refreshLibraryDraftValidationButton.hidden = !selectable;
@@ -2069,6 +2077,52 @@ function renderEventTemplateLibrary(): void {
     libraryDraftSchemaSelector.replaceChildren(Object.assign(document.createElement("option"), { value:"", textContent:"Automatic schema" }), ...assignableSchemas(schemas).map((schema) => Object.assign(document.createElement("option"), { value:schema.id, textContent:`${schema.name} v${schema.version}` })));
     libraryDraftSchemaSelector.value = selected;
   }
+}
+
+function refreshPushPathReadiness(): void {
+  const editor = propertyEditorState;
+  const target = selectedObservationTarget(observationTargetState);
+  if (!editor || !target || target.accessState !== "Ready") {
+    pushPathReadiness = undefined;
+    return;
+  }
+  const destination = editor.template.destination.trim();
+  const key = `${target.id}:${destination}`;
+  if (pushPathReadiness?.key === key) {
+    if (pushPathReadiness.status !== "ready" && pushTemplateDraftButton) {
+      pushTemplateDraftButton.disabled = true;
+      pushTemplateDraftButton.setAttribute("aria-disabled", "true");
+      const reason = document.querySelector<HTMLElement>("#push-template-draft-reason");
+      if (reason) reason.textContent = pushPathReadiness.message;
+      if (pushPathReadiness.status === "blocked") {
+        setEventLibraryResult(eventLibraryEditorElements, pushPathReadiness.message);
+      }
+    }
+    return;
+  }
+  const request = ++pushPathReadinessRequest;
+  pushPathReadiness = { key, status:"checking", message:"Checking selected-page push path." };
+  if (pushTemplateDraftButton) {
+    pushTemplateDraftButton.disabled = true;
+    pushTemplateDraftButton.setAttribute("aria-disabled", "true");
+  }
+  void chrome.scripting.executeScript({
+    target:{tabId:target.tabId},
+    world:"MAIN",
+    args:[destination],
+    func:pushPathCapabilityInPage,
+  }).then(([injection]) => {
+    if (request !== pushPathReadinessRequest) return;
+    const result = injection?.result as PagePushResult | undefined;
+    pushPathReadiness = result?.success
+      ? { key, status:"ready", message:"Selected-page push path is ready." }
+      : { key, status:"blocked", message:result?.result ?? "Push path is not push-capable" };
+    renderEventTemplateLibrary();
+  }, () => {
+    if (request !== pushPathReadinessRequest) return;
+    pushPathReadiness = { key, status:"blocked", message:"Push path is not push-capable" };
+    renderEventTemplateLibrary();
+  });
 }
 
 libraryDraftSchemaSelector.addEventListener("change", () => {
@@ -4371,10 +4425,6 @@ async function pushCurrentTemplateDraft(
     pushPayloadToSelectedTargetPage,
   );
   setPushDestinationValidation(eventLibraryEditorElements, record.fieldError ?? "");
-  if (!record.success && record.result === "Push path is not push-capable" && pushTemplateDraftButton) {
-    pushTemplateDraftButton.disabled = true;
-    pushTemplateDraftButton.setAttribute("aria-disabled", "true");
-  }
   if (record.fieldError) setEventLibraryValidation(eventLibraryEditorElements, record.fieldError);
   setEventLibraryResult(eventLibraryEditorElements, record.summary);
 }
