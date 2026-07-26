@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {filterFocusedReusableRules,focusedConditionLabel,focusedOwnershipActions,focusedPropertySections,focusedRuleFields,focusedSparseDelta} from "../dist/data-layer-focused-schema-property-ui.js";
-import {schemaTableAllowedValues,schemaTableExampleControl,schemaTableOverlayTransition,schemaTableStageAllowedValues,schemaTableStageExpectedOrAllowed,schemaTableValueFacet} from "../dist/data-layer-schema-table.js";
+import {schemaTableAllowedValues,schemaTableEditableFacets,schemaTableExampleControl,schemaTableOverlayTransition,schemaTableQuickEditDestination,schemaTableStageAllowedValues,schemaTableStageExpectedOrAllowed,schemaTableValueFacet} from "../dist/data-layer-schema-table.js";
 
 const expectedSections=["definition","rules","structure"];
 assert.deepEqual(focusedPropertySections,expectedSections,"every focused editor shares the same ordered section vocabulary");
@@ -52,5 +52,17 @@ for(let index=0;index<100;index+=1){
   for(const kind of ["cancel","escape"]){
     assert.deepEqual(schemaTableOverlayTransition(review,{kind}),{phase:"closed",restorePath:path},`${kind} closes the overlay and restores its exact invoking row path`);
   }
+}
+for(let example=0;example<100;example+=1){
+  const rowCount=1+Math.floor(random()*20),cells=Array.from({length:rowCount},(_,row)=>schemaTableEditableFacets.map((facet)=>({path:`/generated-${example}/row-${row}`,facet}))).flat();
+  for(const [index,cell] of cells.entries()){
+    const next=schemaTableQuickEditDestination(cells,cell,1),previous=schemaTableQuickEditDestination(cells,cell,-1);
+    assert.deepEqual(next,cells[index+1],"forward quick-edit traversal preserves the generated editable-cell order");
+    assert.deepEqual(previous,cells[index-1],"reverse quick-edit traversal preserves the generated editable-cell order");
+    if(next)assert.deepEqual(schemaTableQuickEditDestination(cells,next,-1),cell,"forward then reverse traversal restores the exact path and facet");
+    if(previous)assert.deepEqual(schemaTableQuickEditDestination(cells,previous,1),cell,"reverse then forward traversal restores the exact path and facet");
+  }
+  const absent={path:`/absent-${example}`,facet:schemaTableEditableFacets[example%schemaTableEditableFacets.length]};
+  assert.equal(schemaTableQuickEditDestination(cells,absent,example%2?1:-1),undefined,"a stale cell identity cannot redirect focus to an unrelated editable cell");
 }
 console.log("focused schema property UI property tests passed");
