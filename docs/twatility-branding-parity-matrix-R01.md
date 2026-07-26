@@ -29,7 +29,8 @@ clipboard actions, and illustrative project data are never behavior authority.
 
 - **Structural improvement** — production presentation structure changes while
   retaining the authoritative model, command, identity, focus, persistence, and
-  Undo semantics. Rows marked `revise — review gate` require user agreement.
+  Undo semantics. The proposed structural rows were approved by the user on
+  2026-07-26.
 - **Branding/layout parity** — existing controls are wrapped or regrouped without
   changing behavior or state ownership.
 - **Brush-on styling** — tokens, typography, color, border, shadow, spacing,
@@ -227,9 +228,9 @@ checks.
 | Schema rows & evidence | O-CANON | grouped Saved/Profile/Page Group/Page/Event/Flow instance/occurrence list; validation evidence | schema rows | Preserve implementation | One compact editor, stable contributor identity, no embedded Studio editor | Style grouped production list; ignore mock omissions | V1 | T-CANON | C-CANON | preserve — Slice 6 |
 | Schema identity & inheritance | O-CANON, O-COMPOSED | name/target/description/parents/provenance/declared-only | mock schema identity | Preserve implementation | Native sparse inheritance, contributor roles, canonical Draft tokens | Branded metadata and provenance tags | V1 | T-CANON | C-CANON | preserve — Slices 5–6 |
 | Property navigation | O-CANON | filter/sort/tree; Add property; stable property rows | property navigation | Branding/layout parity | Search caret/IME stays in same connected control; no write/Undo | Responsive tree/table navigation | V1 | T-CANON | C-CANON | approved — Slice 5 |
-| Property definition | O-CANON | focused Definition fields; type/presence/allowed values/docs/example | property definition | Structural improvement | One staged property command and Undo; valid typed values; stable focus | Consolidate presentation under current Definition child layer | V2 | T-CANON | C-CANON | revise — review gate |
+| Property definition | O-CANON | focused Definition fields; type/presence/allowed values/docs/example | property definition | Structural improvement | One staged property command and Undo; valid typed values; stable focus | Consolidate presentation under current Definition child layer | V2 | T-CANON | C-CANON | approved — Slice 5 |
 | Focused property facets | O-CANON | property menu and one mounted Definition/Rules/Structure section | focused property editors | Preserve implementation | No competing Presence/Values/Conditions first layer; Cancel/Escape discards stage | Style existing layered overlay; do not restore stale mock tabs | V2 | T-CANON | C-CANON | preserve — Slice 5 |
-| Rules & conditions | O-CONDITION | stable rule rows; Then; optional When; shared nested condition tree | mock Rules and conditional disclosure | Structural improvement | Rule defaults Always; required Then; Add condition/group; typed All/Any/Not; stable IDs; one Undo | Unify clearer row hierarchy around authoritative shared renderer | V2 | T-CANON | C-CANON | revise — review gate |
+| Rules & conditions | O-CONDITION | stable rule rows; Then; optional When; shared nested condition tree | mock Rules and conditional disclosure | Structural improvement | Rule defaults Always; required Then; Add condition/group; typed All/Any/Not; stable IDs; one Undo | Unify clearer row hierarchy around authoritative shared renderer | V2 | T-CANON | C-CANON | approved — Slice 5 |
 | Structure operations | O-CANON | children/cardinality/order/type/duplicate/remove | Structure editor | Branding/layout parity | Tree-derived paths, stable identities, impact review and Undo | Style rows and controls; preserve renderer | V1 | T-CANON | C-CANON | approved — Slice 5 |
 | Ownership & provenance | O-CANON, O-COMPOSED | View/Edit/Remove local/Reset/Open source/Replace/conflict actions | ownership and provenance | Preserve implementation | Action legality by ownership; inherited bytes immutable; sparse reset | Status/provenance treatment only | V1 | T-CANON | C-CANON | preserve — Slice 5 |
 | Schema supporting panels | O-CANON | validation examples; assignments; generated document; revision history | supporting accordions | Preserve implementation | Existing routes and evidence, no mock fake output | Apply consistent disclosures and code surfaces | V1 | T-CANON | C-CANON | preserve — Slice 6 |
@@ -265,7 +266,7 @@ checks.
 | Page fields | O-LIFECYCLE, O-COMPOSED | name; observed context event; memberships; effective schema | Page routes | Preserve implementation | Page is context-setting event; no Events-catalog binding/role; sparse contribution | Style real Page editor and effective-schema workspace | V2 | T-STUDIO, T-CANON | C-STUDIO, C-CANON | preserve — Slices 4–5 |
 | Page Group fields | O-LIFECYCLE, O-COMPOSED | name; derived members; contribution; effective schema | Page Group routes | Preserve implementation | Ordered membership semantics, derived members, sparse contribution | Style real workspace/table | V2 | T-STUDIO, T-CANON | C-STUDIO, C-CANON | preserve — Slices 4–5 |
 | Event fields | O-LIFECYCLE, O-CANON | name; interaction observed event; source/target/trigger | Event routes | Preserve implementation | Catalog Events are interactions; no documentary role or Page-context binding | Omit mock role selector; style fixed production semantics | V2 | T-STUDIO, T-CANON | C-STUDIO | preserve — Slice 4 |
-| Applicability editor | O-LIFECYCLE, O-CONDITION | name; priority/fallback; nested production predicate model | mock applicability form | Structural improvement | Shared typed All/Any/Not tree, stable IDs, persistence and focus | Replace remaining flat Studio presentation with shared renderer, not mock rows | V2 | T-CANON, T-STUDIO | C-STUDIO, C-CANON | revise — review gate |
+| Applicability editor | O-LIFECYCLE, O-CONDITION | name; priority/fallback; nested production predicate model | mock applicability form | Structural improvement | Shared typed All/Any/Not tree, stable IDs, persistence and focus | Replace remaining flat Studio presentation with shared renderer, not mock rows | V2 | T-CANON, T-STUDIO | C-STUDIO, C-CANON | approved — Slice 5 |
 | Fixture fields | O-LIFECYCLE, O-ASSURANCE | entity identity, event/page/flow refs, expected evidence | Fixture routes | Preserve implementation | Active scope covers lifecycle only; installed execution is not expanded | Style installed fields and states without adding mock execution semantics | V1 | T-STUDIO | C-STUDIO | preserve — Slice 6 |
 | Assignment fields | O-LIFECYCLE, O-CONDITION | contributor kind/ID; Event; applicability; source/target/priority | Assignment routes | Preserve implementation | Live effective target, no compiled/schema copy, top-level lifecycle | Style main workspace; shared condition presentation where mounted | V2 | T-CANON, T-STUDIO | C-STUDIO, C-CANON | preserve — Slices 5–6 |
 | Entity removal review | O-LIFECYCLE | named dependency list/repair; Cancel/Remove; Undo | removal review | Preserve implementation | No cascade; blocked dependencies; next/previous/Add focus; stable-ID Undo | Shared impact-review styling | V2 | T-STUDIO, T-A11Y | C-STUDIO | preserve — Slice 4 |
@@ -280,10 +281,10 @@ checks.
 | Canonical draft header | O-CANON, O-DURABLE | contributor/source/Draft token/provenance; Undo/Redo | canonical header | Branding/layout parity | Opaque token not operator revision; stable identity; page-memory history | Branded context/status bar | V1 | T-CANON | C-CANON | approved — Slice 5 |
 | Property table/tree | O-CANON, O-COMPOSED | all properties; inline common facets; local overflow; tree | property table/tree | Branding/layout parity | Same canonical model; all effective rows; one vertical owner at 360px | Responsive table/compact-row presentation | V1 | T-CANON | C-CANON | approved — Slice 5 |
 | Property actions menu | O-CANON | Definition/Rules/Structure; source/override/reset/remove | property menu | Preserve implementation | One focused menu, ownership legality, exact origin focus | Restyle current menu/layers; omit stale extra first-level tabs | V2 | T-CANON | C-CANON | preserve — Slice 5 |
-| Definition editing | O-CANON | type; presence; comma-separated Allowed values; docs; example method/value | Definition layer | Structural improvement | Blank/Allowed value/Custom mount rules; typed validation; one command/Undo | Clearer progressive disclosure inside authoritative Definition layer | V2 | T-CANON | C-CANON | revise — review gate |
-| Rule inventory | O-CANON, O-CONDITION | stable rows; When/Then/severity/message/source/ownership; named actions | Rules layer | Structural improvement | Stable identity and legal View/Edit/Remove/Replace/Open source actions | Apply compact hierarchy and summaries without flattening | V2 | T-CANON | C-CANON | revise — review gate |
-| Add/edit rule | O-CONDITION | kind-first; required Then; optional Add When; review/save/cancel | mock rule builder | Structural improvement | Always default; invalid no-op; nested typed tree; focus restoration | Shared production builder with clearer row/layer presentation | V2 | T-CANON | C-CANON | revise — review gate |
-| Allowed values | O-CANON | zero/one/many typed comma-separated values | mock Allowed values | Structural improvement | No expected-vs-allowed distinction; legacy exact projects as one without mutation | Align all mounts with current Definition presentation | V2 | T-CANON | C-CANON | revise — review gate |
+| Definition editing | O-CANON | type; presence; comma-separated Allowed values; docs; example method/value | Definition layer | Structural improvement | Blank/Allowed value/Custom mount rules; typed validation; one command/Undo | Clearer progressive disclosure inside authoritative Definition layer | V2 | T-CANON | C-CANON | approved — Slice 5 |
+| Rule inventory | O-CANON, O-CONDITION | stable rows; When/Then/severity/message/source/ownership; named actions | Rules layer | Structural improvement | Stable identity and legal View/Edit/Remove/Replace/Open source actions | Apply compact hierarchy and summaries without flattening | V2 | T-CANON | C-CANON | approved — Slice 5 |
+| Add/edit rule | O-CONDITION | kind-first; required Then; optional Add When; review/save/cancel | mock rule builder | Structural improvement | Always default; invalid no-op; nested typed tree; focus restoration | Shared production builder with clearer row/layer presentation | V2 | T-CANON | C-CANON | approved — Slice 5 |
+| Allowed values | O-CANON | zero/one/many typed comma-separated values | mock Allowed values | Structural improvement | No expected-vs-allowed distinction; legacy exact projects as one without mutation | Align all mounts with current Definition presentation | V2 | T-CANON | C-CANON | approved — Slice 5 |
 | Structure editor | O-CANON | container/item/cardinality/unique/undeclared child/reorder | Structure layer | Branding/layout parity | Stable tree identity, valid structural commands and Undo | Branded structured rows | V1 | T-CANON | C-CANON | approved — Slice 5 |
 | Composed contributor rows | O-COMPOSED | inherited/local/effective/shadowed/conflict/provenance; override/reset | composed workspace | Preserve implementation | Sparse facet ownership, live parent updates, conflict blocking | Style status/provenance and row hierarchy; keep production model | V2 | T-CANON | C-CANON | preserve — Slice 5 |
 | Effective documentation | O-COMPOSED | developer export/readiness/diagnostics for selected context | effective documentation | Preserve implementation | Blocked/incomplete truth; no assignment/validation controls moved here | Style existing output and diagnostics | V1 | T-CANON | C-CANON | preserve — Slice 6 |
@@ -348,7 +349,7 @@ mock cannot prove.
 | Studio save failure | O-DURABLE, O-STUDIO | retry/export/backup/diagnostics; block switch/publish | Studio save not committed | Preserve implementation | Last Saved Draft unchanged; exact unsaved command | Shared recovery dialog | V2 | T-PROJECTS, T-A11Y | C-PERSIST | preserve — Slice 6 |
 | Empty collections and no active project | O-PROJECTS, O-LIFECYCLE | Open/Create project; guided Add per collection | incomplete mock coverage | Branding/layout parity | Same real route/action; no active inference; stable focus | Shared guided empty-state pattern | V1 | T-PROJECTS, T-STUDIO | C-SHELL, C-STUDIO | approved — Slices 3–4 |
 | Canonical search IME/caret | O-CANON | same connected search input through typing/composition/clear | not represented in mock | Preserve implementation | No canonical command, persistence write, token or Undo | Styling must not remount or steal focus | V2 | T-CANON, T-A11Y | C-CANON | preserve — Slice 5 |
-| Nested overlay edge geometry | O-CONDITION | complete active layer at 360px; minimal nearest scroll; layer focus return | not represented in mock | Structural improvement | Every control remains in viewport; Escape closes one layer | Apply viewport-safe shared overlay presentation | V2 | T-CANON, T-A11Y | C-CANON | revise — review gate |
+| Nested overlay edge geometry | O-CONDITION | complete active layer at 360px; minimal nearest scroll; layer focus return | not represented in mock | Structural improvement | Every control remains in viewport; Escape closes one layer | Apply viewport-safe shared overlay presentation | V2 | T-CANON, T-A11Y | C-CANON | approved — Slice 5 |
 
 ## Explicit mock-only exclusions
 
@@ -435,6 +436,7 @@ accessible relationships, focus, and recovery remain authoritative.
 | --- | --- | --- | --- | --- | --- | --- |
 | Slice 0 initial fetch | 2026-07-26T12:22Z | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | none | none | Initial full authority and parity inventory recorded |
 | Slice 0 closing fetch | 2026-07-26T12:44:26Z | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | none | none | No reclassification or merge required before review gate |
+| Slice 1 opening fetch | 2026-07-26T13:11:21Z | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | none | none | User-approved structural decisions recorded; no upstream reclassification or source merge required |
 
 Every later slice boundary must append a row even when the merge is clean. Any
 master delta must list controls, states, routes, persistence contracts, active
@@ -495,9 +497,10 @@ authority, and verification ownership before implementation continues.
 - The production Flow route correctly exposes no fallback lanes and says to add
   a Page Group; this stronger behavior overrides the mock's lane examples.
 
-## Structural classification review gate
+## Approved structural classification
 
-The proposed structural rows are deliberately narrow:
+The user approved the following deliberately narrow structural rows on
+2026-07-26:
 
 1. Property Definition presentation under the existing focused layer.
 2. Rule inventory and Add/Edit presentation over the shared production rule
@@ -511,5 +514,5 @@ These proposals do **not** authorize a new schema model, flat condition format,
 mock behavior, Inspector-owned lifecycle, or changes to durable state. All other
 rows are brush-on, layout parity, preservation, or explicit omission.
 
-Broad production implementation must wait for user review of these five
-structural decisions. Slice 0 itself is not the terminal program deliverable.
+Approval closes the Slice 0 review gate and permits the remaining implementation
+slices to proceed. Slice 0 itself is not the terminal program deliverable.
