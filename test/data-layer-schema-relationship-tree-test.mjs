@@ -40,6 +40,10 @@ const purchaseOccurrences=nodes.filter(({targetKey})=>targetKey?.startsWith("occ
 assert.equal(purchaseOccurrences.length,4,"each occurrence appears below its Event and owning Flow Page instance");
 assert.equal(new Set(purchaseOccurrences.map(({targetKey})=>targetKey)).size,2,"repeated occurrence references preserve stable targets");
 
+const ordinaryTree=filterSchemaRelationshipTree(tree,{category:"All",query:""});
+assert.equal(flatten(ordinaryTree).filter(({expanded})=>expanded).length,0,"blank-query filtering leaves expansion under operator control");
+assert.deepEqual(flatten(filterSchemaRelationshipTree(tree,{category:"Pages",query:""})).filter(({targetKey})=>targetKey).map(({targetKey})=>targetKey),["pages:page:cart"],"category filters expose canonical results from their relationship branch");
+
 const pageGroupSearch=filterSchemaRelationshipTree(tree,{category:"Page Groups",query:"cart"});
 const pageGroupNodes=flatten(pageGroupSearch);
 assert.deepEqual(pageGroupNodes.filter(({targetKey})=>targetKey==="pages:page:cart").map(({relationshipPath})=>relationshipPath),[

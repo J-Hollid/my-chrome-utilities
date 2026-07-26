@@ -43,11 +43,25 @@ export function projectSchemaRelationshipTree(state, savedSchemas) {
     }));
     return [saved, branch(`project:${project.id}`, `Project ${project.name}`, [], [shared, pageGroups, pages, events, flows])];
 }
-function clonePruned(node, children, match = false) {
-    return { ...node, children, ...(children.length ? { expanded: true } : {}), ...(match ? { match: true } : {}) };
+function clonePruned(node, children, expanded = false, match = false) {
+    const { expanded: _expanded, match: _match, ...base } = node;
+    return { ...base, children, ...(expanded && children.length ? { expanded: true } : {}), ...(match ? { match: true } : {}) };
 }
 export function filterSchemaRelationshipTree(tree, view) {
     const query = view.query.trim().toLocaleLowerCase(), category = view.category;
+    const categoryBranch = (node) => {
+        if (node.key.endsWith(":shared"))
+            return "Shared Profiles";
+        if (node.key.endsWith(":page-groups"))
+            return "Page Groups";
+        if (node.key.endsWith(":pages"))
+            return "Pages";
+        if (node.key.endsWith(":events"))
+            return "Events";
+        if (node.key.endsWith(":flows"))
+            return category === "Event occurrences" ? "Event occurrences" : "Flow Page instances";
+        return undefined;
+    };
     const relevantRoot = (node) => {
         if (category === "All")
             return true;
@@ -71,19 +85,26 @@ export function filterSchemaRelationshipTree(tree, view) {
         return node.category === category;
     };
     const visit = (node) => {
+        const branchCategory = categoryBranch(node);
+        if (category !== "All" && category !== "Saved schemas" && branchCategory && branchCategory !== category)
+            return undefined;
         const haystack = `${node.name} ${node.role} ${node.relationshipPath}`.toLocaleLowerCase(), selfMatches = !query || haystack.includes(query);
         const children = node.children.map(visit).filter((child) => Boolean(child));
         if (!allowed(node) && node.kind !== "branch") {
             if (!children.length)
                 return undefined;
-            const { targetKey: _targetKey, category: _category, ...ancestor } = clonePruned(node, children);
+            const { targetKey: _targetKey, category: _category, ...ancestor } = clonePruned(node, children, Boolean(query));
             return { ...ancestor, kind: "branch" };
         }
         if (query && !selfMatches && !children.length)
             return undefined;
         if (!query && node.kind === "branch" && !children.length)
             return undefined;
-        return clonePruned(node, children, Boolean(query && selfMatches && node.targetKey));
+        if (query && !selfMatches && children.length && node.targetKey) {
+            const { targetKey: _targetKey, category: _category, ...ancestor } = clonePruned(node, children, true);
+            return { ...ancestor, kind: "branch" };
+        }
+        return clonePruned(node, children, Boolean(query), Boolean(query && selfMatches && node.targetKey));
     };
     return tree.filter(relevantRoot).map(visit).filter((node) => Boolean(node));
 }
