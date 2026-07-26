@@ -4,8 +4,9 @@
 
 The active specification cycles are the interactive directional Flow graph review,
 focused canonical authoring and layered effective-schema, selected-Flow
-documentation export, operator-guided Live Flow testing, project-management, and
-durable-project repository checkpoints. Their contracts are:
+documentation export, operator-guided Live Flow testing, project-management,
+project-scoped event transport, and durable-project repository checkpoints. Their
+contracts are:
 
 - `features/data-layer-directional-flow-specification-graph.feature`
 - `features/data-layer-directional-flow-specification-graph-runtime.feature`
@@ -23,6 +24,8 @@ durable-project repository checkpoints. Their contracts are:
 - `features/data-layer-project-library-and-active-context-runtime.feature`
 - `features/data-layer-project-portability-and-upgrade.feature`
 - `features/data-layer-project-portability-and-upgrade-runtime.feature`
+- `features/data-layer-project-event-transport-settings.feature`
+- `features/data-layer-project-event-transport-settings-runtime.feature`
 - `features/data-layer-durable-project-repository.feature`
 - `features/data-layer-durable-project-repository-runtime.feature`
 
@@ -38,6 +41,8 @@ The program for operator-guided Live Flow testing is
 `docs/data-layer-live-flow-guided-testing-program-R01.md`.
 The program for project library, active context, and portability is
 `docs/data-layer-project-management-program-R01.md`.
+The program for active-project observation and push routing is
+`docs/data-layer-project-event-transport-settings-program-R01.md`.
 The correction program for durable project storage, page-scoped Undo/Redo, and
 intentional publication revisions is
 `docs/data-layer-durable-project-repository-program-R01.md`.
@@ -51,6 +56,12 @@ The project-management contracts are likewise later user-approved authority only
 for the named project library, active context, Studio routing, top-level project-
 entity collection lifecycle, portability, and singleton migration behavior. They
 do not reactivate the archived project-foundation or release specifications.
+
+The project event transport contracts are later user-approved authority for
+project-owned observation and default push paths, active-context switching,
+portable transport settings, direct-push defaults, and global Library destination
+precedence. They do not reactivate archived Live execution, sequence replay, or
+release behavior.
 
 ## Scope and lineage processing invariant
 
@@ -103,6 +114,11 @@ program and all four active project-management feature contracts while this file
 continues to name them.
 
 ## Current delivery and recovery queue
+
+The project-event-transport-settings cycle is the current later user-approved
+specification task and proceeds before the remaining durable-repository and Flow
+recovery tasks resume. It does not close, replace, or deactivate either recovery
+lineage.
 
 Project library, active context, and the project-entity overview lifecycle landed
 together through the architect-approved `project-library-active-context` terminal
@@ -614,6 +630,13 @@ node scripts/run-focused-acceptance.mjs --pack project_management
 node scripts/package.mjs
 ```
 
+The project event transport checkpoint sequence is exactly:
+
+```sh
+node scripts/run-focused-acceptance.mjs --pack project_event_transport
+node scripts/package.mjs
+```
+
 The durable-project repository checkpoint sequence is exactly:
 
 ```sh
@@ -639,6 +662,15 @@ serializer, import remapper, and legacy singleton migration. It
 may declare canonical schema dependencies in the pack
 registry but must not invoke archived project-foundation, release, or full-site
 acceptance suites.
+
+The `project_event_transport` pack must register both project event transport
+contracts and focused production evidence for project-owned observation and
+default push paths, three distinct project configurations, active-context
+switching, portable settings, direct-push routing, new-Library-event defaulting,
+explicit Library destination precedence, no-project behavior, and truthful
+invalid-path blocking. It may depend on `project_management` and the existing
+focused capture and Library components, but must not invoke archived Live,
+sequence-replay, release, or full-site suites.
 
 The `layered_schema` pack must register all four canonical-authoring and layered-
 schema feature contracts and their focused production evidence, including
