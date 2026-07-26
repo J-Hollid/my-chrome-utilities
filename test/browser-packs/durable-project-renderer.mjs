@@ -8,7 +8,7 @@ import {canonicalSchemaWithConstraint,createCanonicalSchema} from "../../dist/da
 import {createSpecificationProject} from "../../dist/data-layer-specification-project.js";
 import {projectLibrary,serializeProjectLibrary} from "../../dist/data-layer-project-library.js";
 import {serializeCanonicalProjectState} from "../../dist/data-layer-specification-repository.js";
-import {headlessChromeArguments,stopHeadlessChrome} from "../support/headless-chrome.mjs";
+import {headlessChromeArguments,resolveChromeExecutable,stopHeadlessChrome} from "../support/headless-chrome.mjs";
 import {wait} from "./shared-harness.mjs";
 
 const phase=(name,state="start")=>console.error(`[renderer-target] ${name} ${state}`);
@@ -179,7 +179,7 @@ const record={state,revision:14,createdAt:"2026-07-21T00:00:00.000Z",lastModifie
 assert.ok(library.includes("/page_type")&&active.includes("/page_type"));
 const preload=`if(location.protocol==='chrome-extension:'&&!sessionStorage.getItem('renderer-seeded')){localStorage.setItem('my-chrome-utilities.specification-project-library.v1',${JSON.stringify(library)});localStorage.setItem('my-chrome-utilities.specification-project.v1',${JSON.stringify(active)});localStorage.setItem('my-chrome-utilities.specification-project-navigation.v1',${JSON.stringify(navigation)});sessionStorage.setItem('renderer-seeded','1');}`;
 const probe=`if(location.protocol==='chrome-extension:'){addEventListener('DOMContentLoaded',()=>{const root=document.documentElement;window.__rendererProbe={renders:0};new MutationObserver(records=>{if(records.some(record=>record.type==='childList'&&(record.target.closest?.('#workspace-content,[data-schema-presentation="compact-panel"]')||[...record.addedNodes,...record.removedNodes].some(node=>node.nodeType===1&&(node.id==='workspace-content'||node.matches?.('[data-schema-presentation="compact-panel"]')||node.querySelector?.('#workspace-content,[data-schema-presentation="compact-panel"]'))))))window.__rendererProbe.renders+=1;}).observe(root,{subtree:true,childList:true});});}`;
-const profile=await mkdtemp(path.join(os.tmpdir(),"durable-renderer-")),root=path.resolve("dist"),arguments_=headlessChromeArguments(profile,root);arguments_.splice(-1,0,`--load-extension=${root}`);const chrome=spawn("google-chrome",arguments_,{stdio:["ignore","ignore","pipe"]});let side,builder;
+const profile=await mkdtemp(path.join(os.tmpdir(),"durable-renderer-")),root=path.resolve("dist"),arguments_=headlessChromeArguments(profile,root);arguments_.splice(-1,0,`--load-extension=${root}`);const chrome=spawn(resolveChromeExecutable(),arguments_,{stdio:["ignore","ignore","pipe"]});let side,builder;
 try{
   phase("chrome startup");
   const port=await new Promise((resolve,reject)=>{let output="";const timeout=setTimeout(()=>reject(new Error(`Chrome debugging timeout: ${output}`)),15000);chrome.stderr.on("data",chunk=>{output+=chunk;const match=output.match(/ws:\/\/127\.0\.0\.1:(\d+)\//);if(match){clearTimeout(timeout);resolve(Number(match[1]));}});chrome.once("error",reject);}),targets=async()=>fetch(`http://127.0.0.1:${port}/json/list`).then(response=>response.json());let worker;for(let attempt=0;attempt<160&&!worker;attempt+=1){worker=(await targets()).find(({type,url})=>type==="service_worker"&&url.endsWith("/background.js"));if(!worker)await wait(25);}assert.ok(worker);const base=`chrome-extension://${new URL(worker.url).hostname}/`;

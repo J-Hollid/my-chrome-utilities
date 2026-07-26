@@ -17,7 +17,7 @@ import {
   canonicalTableRows,
   createCanonicalSchema,
 } from "../../dist/data-layer-canonical-schema.js";
-import {headlessChromeArguments,stopHeadlessChrome} from "../support/headless-chrome.mjs";
+import {headlessChromeArguments,resolveChromeExecutable,stopHeadlessChrome} from "../support/headless-chrome.mjs";
 
 let identity=0;
 const id=(kind)=>`${kind}:flow-export-${++identity}`;
@@ -70,7 +70,7 @@ async function evaluate(socket,expression){try{new vm.Script(expression);}catch(
 async function ready(socket){for(let attempt=0;attempt<240;attempt+=1){if(await evaluate(socket,"document.readyState==='complete'&&Boolean(document.querySelector('#create-project-form'))"))return;await wait(25);}throw new Error("Installed Specification Builder did not become ready");}
 async function extensionId(port){for(let attempt=0;attempt<120;attempt+=1){const targets=await fetch(`http://127.0.0.1:${port}/json/list`).then((response)=>response.json()),worker=targets.find(({type,url})=>type==="service_worker"&&url.startsWith("chrome-extension://")&&new URL(url).pathname==="/background.js");if(worker)return new URL(worker.url).hostname;await wait(25);}throw new Error("Unpacked extension did not load");}
 
-const profileDirectory=await mkdtemp(path.join(os.tmpdir(),"flow-documentation-export-")),extensionRoot=path.resolve("dist"),chromeArguments=headlessChromeArguments(profileDirectory,extensionRoot);chromeArguments.splice(-1,0,`--load-extension=${extensionRoot}`);const chrome=spawn("google-chrome",chromeArguments,{stdio:["ignore","ignore","pipe"]});
+const profileDirectory=await mkdtemp(path.join(os.tmpdir(),"flow-documentation-export-")),extensionRoot=path.resolve("dist"),chromeArguments=headlessChromeArguments(profileDirectory,extensionRoot);chromeArguments.splice(-1,0,`--load-extension=${extensionRoot}`);const chrome=spawn(resolveChromeExecutable(),chromeArguments,{stdio:["ignore","ignore","pipe"]});
 const debuggingPort=()=>new Promise((resolve,reject)=>{let output="";const timeout=setTimeout(()=>reject(new Error(`Chrome did not expose a debugging port: ${output}`)),15000);chrome.stderr.on("data",(chunk)=>{output+=chunk;const match=output.match(/ws:\/\/127\.0\.0\.1:(\d+)\//);if(match){clearTimeout(timeout);resolve(Number(match[1]));}});chrome.once("error",reject);});
 let socket;
 try {

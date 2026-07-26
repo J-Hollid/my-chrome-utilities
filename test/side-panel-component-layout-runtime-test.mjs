@@ -6,7 +6,7 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import Ajv2020 from "ajv/dist/2020.js";
-import { headlessChromeArguments, stopHeadlessChrome } from "./support/headless-chrome.mjs";
+import { headlessChromeArguments, resolveChromeExecutable, stopHeadlessChrome } from "./support/headless-chrome.mjs";
 
 const schemaWorkspaceAdapterObservations = [];
 let guidedValidationObservation;
@@ -161,7 +161,7 @@ const assetServer = createServer(async (request, response) => {
 });
 await new Promise((resolve) => assetServer.listen(0, "127.0.0.1", resolve));
 const assetPort = assetServer.address().port;
-const chrome = spawn("google-chrome", headlessChromeArguments(chromeProfile,path.resolve("dist")),
+const chrome = spawn(resolveChromeExecutable(), headlessChromeArguments(chromeProfile,path.resolve("dist")),
   { stdio: ["ignore", "ignore", "pipe"] });
 
 const wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds));

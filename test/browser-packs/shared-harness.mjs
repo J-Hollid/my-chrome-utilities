@@ -5,6 +5,7 @@ import { createServer } from "node:http";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
+import { resolveChromeExecutable } from "../support/headless-chrome.mjs";
 
 export const wait=(ms)=>new Promise((resolve)=>setTimeout(resolve,ms));
 const chromeAdapterSource=`(()=>{const calls=[];globalThis.__chromeAdapter={calls};const event=(name)=>({addListener(listener){calls.push('listen:'+name);globalThis.__chromeAdapter[name]=listener;}});globalThis.chrome={runtime:{onMessage:event('runtime.onMessage')},tabs:{async query(){calls.push('tabs.query');return [{id:7,windowId:1,active:true,title:'Fixture tab',url:'https://example.test/checkout'}];},async get(id){calls.push('tabs.get:'+id);return {id,windowId:1,title:'Fixture tab',url:'https://example.test/checkout'};},onUpdated:event('tabs.onUpdated'),onRemoved:event('tabs.onRemoved')},permissions:{async contains(){calls.push('permissions.contains');return true;},async request(){calls.push('permissions.request');return true;},onRemoved:event('permissions.onRemoved')},windows:{async getCurrent(){calls.push('windows.getCurrent');return {id:1};}},scripting:{async executeScript(){calls.push('scripting.executeScript');return [{result:{success:true,result:'pushed'}}];}}};})()`;
@@ -47,7 +48,7 @@ export async function runRenderedWorkflow(id,workflow,options={}){
   const profile=await mkdtemp(path.join(os.tmpdir(),`${id}-browser-pack-`));
   const server=createServer(async(request,response)=>{const pathname=new URL(request.url??"/","http://browser-pack.local").pathname;const requested=pathname==="/"?"side-panel.html":pathname.slice(1);const file=path.resolve("dist",requested);if(!file.startsWith(path.resolve("dist")+path.sep)){response.writeHead(404).end();return;}try{const content=await readFile(file);response.writeHead(200,{"Content-Type":file.endsWith(".js")?"text/javascript":file.endsWith(".css")?"text/css":"text/html"}).end(content);}catch{response.writeHead(404).end();}});
   await new Promise((resolve)=>server.listen(0,"127.0.0.1",resolve));
-  const chrome=spawn("google-chrome",["--headless=new","--disable-gpu","--no-first-run","--no-default-browser-check","--remote-debugging-port=0",`--user-data-dir=${profile}`,"about:blank"],{stdio:["ignore","ignore","pipe"]});
+  const chrome=spawn(resolveChromeExecutable(),["--headless=new","--disable-gpu","--no-first-run","--no-default-browser-check","--remote-debugging-port=0",`--user-data-dir=${profile}`,"about:blank"],{stdio:["ignore","ignore","pipe"]});
   let socket;
   try{
     const port=await new Promise((resolve,reject)=>{let output="";const timeout=setTimeout(()=>reject(new Error("Chrome did not expose a debugging port")),10000);chrome.stderr.on("data",(chunk)=>{output+=chunk;const match=output.match(/ws:\/\/127\.0\.0\.1:(\d+)\//);if(match){clearTimeout(timeout);resolve(Number(match[1]));}});chrome.once("error",reject);});
