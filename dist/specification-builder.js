@@ -30,7 +30,7 @@ const q = (selector) => { const element = document.querySelector(selector); if (
 const projectInspector = q("#project-inspector"), projectInspectorToggle = q("#toggle-project-inspector"), projectWorkspace = q("#project-workspace");
 const setProjectInspectorOpen = (open) => { const presentation = projectInspectorTogglePresentation(open); projectInspector.hidden = !open; projectInspectorToggle.textContent = presentation.label; projectInspectorToggle.setAttribute("aria-expanded", presentation.expanded); projectWorkspace.dataset.inspectorOpen = String(open); };
 projectInspectorToggle.addEventListener("click", () => setProjectInspectorOpen(projectInspector.hidden));
-setProjectInspectorOpen(true);
+setProjectInspectorOpen(globalThis.matchMedia("(min-width: 1600px)").matches);
 for (const fieldId of ["project-assignment-path", "project-assignment-value", "project-assignment-not-path", "project-assignment-not-value"]) {
     const input = document.createElement("input");
     input.id = fieldId;
@@ -446,7 +446,7 @@ catch (error) {
     return; const { id: ignored, ...copy } = entity; persist(addProjectEntity(state, selectedKind, { ...structuredClone(copy), name: `${entity.name} copy` }, id)); }); section.append(heading, form); content.append(section); if (selectedKind === "profiles")
     renderCanonicalEntityEditor(content, selectedKind, entity); }
 function renderTree() { const tree = q("#project-tree"); tree.replaceChildren(); if (!state)
-    return; const documentation = document.createElement("li"), documentationButton = document.createElement("button"); documentationButton.type = "button"; documentationButton.textContent = `Documentation (${state.project.documentation?.sets.length ?? 0})`; documentationButton.dataset.kind = "documentation"; documentationButton.setAttribute("aria-current", String(documentationOpen)); documentationButton.addEventListener("click", () => { documentationOpen = true; projectOverview = false; selectedId = undefined; const url = new URL(location.href); url.searchParams.set("project", state.project.id); url.searchParams.set("view", "documentation"); url.searchParams.delete("kind"); url.searchParams.delete("entity"); history.replaceState(null, "", url); render(); }); documentation.append(documentationButton); tree.append(documentation); for (const kind of Object.keys(labels)) {
+    return; const documentation = document.createElement("li"), documentationButton = document.createElement("button"); documentationButton.type = "button"; documentationButton.textContent = `Documentation (${state.project.documentation?.sets.length ?? 0})`; documentationButton.dataset.kind = "documentation"; documentationButton.setAttribute("aria-current", String(documentationOpen)); documentationButton.addEventListener("click", () => { documentationOpen = true; projectOverview = false; selectedId = undefined; const url = new URL(location.href); url.searchParams.set("project", state.project.id); url.searchParams.set("view", "documentation"); url.searchParams.delete("route"); url.searchParams.delete("kind"); url.searchParams.delete("entity"); history.replaceState(null, "", url); render(); }); documentation.append(documentationButton); tree.append(documentation); const overview = document.createElement("li"), overviewButton = document.createElement("button"); overviewButton.type = "button"; overviewButton.textContent = "Project overview"; overviewButton.dataset.kind = "overview"; overviewButton.setAttribute("aria-current", String(projectOverview)); overviewButton.addEventListener("click", openProjectOverview); overview.append(overviewButton); tree.append(overview); for (const kind of Object.keys(labels)) {
     const item = document.createElement("li"), button = document.createElement("button"), count = kind === "assignments" ? searchProjectAssignments(state.project, "").count : state.project.collections[kind].length;
     button.type = "button";
     button.textContent = `${labels[kind]} (${count})`;
@@ -493,13 +493,16 @@ function renderCollectionGuidance(content) { if (!state)
 } if (section.childElementCount)
     content.append(section); }
 function replaceProjectRoute(kind, entityId, action) { if (!state)
-    return; const url = new URL(location.href); url.searchParams.set("project", state.project.id); if (action)
+    return; const url = new URL(location.href); url.searchParams.set("project", state.project.id); url.searchParams.delete("view"); if (action)
     url.searchParams.set("route", action);
 else
     url.searchParams.delete("route"); url.searchParams.set("kind", kind); if (entityId)
     url.searchParams.set("entity", entityId);
 else
     url.searchParams.delete("entity"); history.replaceState(null, "", url); }
+function openProjectOverview() { if (!state)
+    return; pendingWorkspaceFocus = undefined; documentationOpen = false; projectOverview = true; creationKind = undefined; removalReview = undefined; selectedId = undefined; const url = new URL(location.href); url.searchParams.set("project", state.project.id); url.searchParams.set("route", "overview"); url.searchParams.delete("view"); url.searchParams.delete("kind"); url.searchParams.delete("entity"); history.replaceState(null, "", url); render(); queueMicrotask(() => q("#workspace-content h1").focus({ preventScroll: true })); }
+function focusCurrentStudioContext() { const target = projectInspector.hidden ? document.querySelector("#workspace-content h1, #workspace-content [data-add-kind], #workspace-pane") : projectInspector; target?.focus({ preventScroll: true }); }
 function restorePendingLifecycleFocus() { const pending = pendingLifecycleFocus; if (!pending)
     return; const target = pending.id ? document.querySelector(`[data-entity-id="${CSS.escape(pending.id)}"]`) : document.querySelector(`[data-add-kind="${pending.kind}"]`); target?.focus({ preventScroll: true }); }
 function restorePendingWorkspaceFocus() { const pending = pendingWorkspaceFocus; if (!pending || selectedKind !== pending.kind || selectedId !== pending.id)
@@ -651,6 +654,9 @@ function renderWorkspace() {
     }
     if (projectOverview) {
         const heading = document.createElement("h1"), identity = document.createElement("p"), metadata = document.createElement("dl"), openSchemas = document.createElement("button"), details = [["Purpose", state.project.description], ["Website", state.project.site], ["Owner", String(state.project.owner ?? "")], ["Notes", String(state.project.notes ?? "")]];
+        q("#project-breadcrumb").textContent = `${state.project.name} / Project overview`;
+        q("#inspector-context").textContent = `${state.project.name} project context and collection entry points.`;
+        heading.tabIndex = -1;
         heading.textContent = "Project overview";
         identity.textContent = `${state.project.name} · stable identity ${state.project.id} · Saved Draft · Published revision ${publishedRevision}`;
         for (const [label, value] of details) {
@@ -1047,15 +1053,15 @@ q("#commit-import").addEventListener("click", () => { if (!state || !stagedImpor
 q("#cancel-import").addEventListener("click", () => { stagedImport = undefined; importDialog.close(); q("#import-project").focus(); });
 const conflictDialog = q("#project-conflict-review"), restoreDurableProjection = () => { restore(); library = restoreProjectLibrary(projectStorage.getItem(PROJECT_LIBRARY_STORAGE_KEY)) ?? library; };
 function completeConflict(strategy) { const fields = Array.from(q("#project-conflict-fields").querySelectorAll('input:checked'), ({ value }) => value); if (durableConflict) {
-    void durableProjectRuntime.resolveFailedSave(strategy, fields).then(() => { durableConflict = undefined; saveStatus = { kind: "idle" }; restoreDurableProjection(); conflictDialog.close(); render(); q("#project-inspector").focus(); });
+    void durableProjectRuntime.resolveFailedSave(strategy, fields).then(() => { durableConflict = undefined; saveStatus = { kind: "idle" }; restoreDurableProjection(); conflictDialog.close(); render(); focusCurrentStudioContext(); });
     return;
 } if (!pendingConflict)
-    return; const resolved = resolveCanonicalProjectConflict(pendingConflict, { strategy, ...(strategy === "merge" ? { pendingFields: fields } : {}) }); conflictDialog.close(); pendingConflict = undefined; persist(resolved); q("#project-inspector").focus(); }
+    return; const resolved = resolveCanonicalProjectConflict(pendingConflict, { strategy, ...(strategy === "merge" ? { pendingFields: fields } : {}) }); conflictDialog.close(); pendingConflict = undefined; persist(resolved); focusCurrentStudioContext(); }
 q("#reload-project-conflict").addEventListener("click", () => { if (durableConflict) {
-    void durableProjectRuntime.resolveFailedSave("reject").then(() => { durableConflict = undefined; saveStatus = { kind: "idle" }; restoreDurableProjection(); conflictDialog.close(); render(); q("#project-inspector").focus(); });
+    void durableProjectRuntime.resolveFailedSave("reject").then(() => { durableConflict = undefined; saveStatus = { kind: "idle" }; restoreDurableProjection(); conflictDialog.close(); render(); focusCurrentStudioContext(); });
     return;
 } if (!pendingConflict)
-    return; state = resolveCanonicalProjectConflict(pendingConflict, { strategy: "reload" }); lastCommittedState = structuredClone(state); pendingConflict = undefined; conflictDialog.close(); q("#retry-save").hidden = true; render(); q("#project-inspector").focus(); });
+    return; state = resolveCanonicalProjectConflict(pendingConflict, { strategy: "reload" }); lastCommittedState = structuredClone(state); pendingConflict = undefined; conflictDialog.close(); q("#retry-save").hidden = true; render(); focusCurrentStudioContext(); });
 q("#reapply-project-conflict").addEventListener("click", () => completeConflict("reapply"));
 q("#merge-project-conflict").addEventListener("click", () => completeConflict("merge"));
 q("#retry-save").addEventListener("click", () => { if (pendingConflict || durableConflict) {
@@ -1187,7 +1193,7 @@ const applyRequestedRoute = () => { const deepKind = routeParameters.get("kind")
     selectedId = creationKind ? undefined : deepId && state && state.project.collections[deepKind].some(({ id }) => id === deepId) ? deepId : undefined;
     persistNavigation();
     render();
-    queueMicrotask(() => { const target = creationKind ? document.querySelector(`[data-creation-kind="${deepKind}"] h1`) : selectedId ? document.querySelector(`[data-project-entity-workspace="${CSS.escape(selectedId)}"] h1`) : q("#project-inspector"); if (target) {
+    queueMicrotask(() => { const target = creationKind ? document.querySelector(`[data-creation-kind="${deepKind}"] h1`) : selectedId ? document.querySelector(`[data-project-entity-workspace="${CSS.escape(selectedId)}"] h1`) : document.querySelector(`[data-add-kind="${deepKind}"], #workspace-content h1, #workspace-pane`); if (target) {
         target.tabIndex = -1;
         target.focus({ preventScroll: true });
     } });
