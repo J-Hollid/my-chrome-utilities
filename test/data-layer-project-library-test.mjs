@@ -6,6 +6,7 @@ import {
   activeProjectContextChange,
   commitProjectImport,
   createProjectInLibrary,
+  deactivateProject,
   exportProjectBundle,
   migrateSingletonProject,
   projectLibrary,
@@ -97,6 +98,10 @@ assert.equal(library.projects["project-retail"].pendingWrite,undefined);
 library=activateProject(library,"project-trade",clock);
 assert.equal(library.activeProjectId,"project-trade");
 assert.equal(library.projects["project-retail"].revision,15);
+const closed=deactivateProject(library);
+assert.equal(closed.activeProjectId,undefined,"closing the active project preserves a no-project library context");
+assert.deepEqual(closed.projects,library.projects,"closing does not delete or rewrite any saved project");
+assert.throws(()=>deactivateProject(setProjectPendingWrite(library,"project-trade",{label:"Pending close blocker",baseRevision:7,fields:["/notes"],command:{kind:"set-project-value",path:"/notes",value:"pending"}})),/pending.*Pending close blocker/i,"an unresolved Draft blocks closing the active project");
 assert.equal(projectRecordNeedsSynchronization(library.projects["project-retail"],library.projects["project-retail"].state,15),false,"an identical singleton projection must not rewrite project-library bytes");
 const externalRetailEdit=structuredClone(library.projects["project-retail"].state);externalRetailEdit.project.notes="External edit";
 assert.equal(projectRecordNeedsSynchronization(library.projects["project-retail"],externalRetailEdit,15),true);assert.equal(projectRecordNeedsSynchronization(library.projects["project-retail"],library.projects["project-retail"].state,16),true);

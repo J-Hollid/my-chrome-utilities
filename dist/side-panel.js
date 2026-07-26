@@ -618,6 +618,8 @@ buildHistoricalSpecificationButton.id = "build-historical-specification";
 restoreSchemaRevisionButton?.after(buildHistoricalSpecificationButton);
 const schemaCount = document.querySelector("#schema-count");
 const schemaList = document.querySelector("#schema-list");
+const schemaTreeScrollOwner = document.querySelector("#workspace-panel-data-layer");
+const schemaPanel = document.querySelector("#data-layer-panel-schemas");
 const schemaResult = document.querySelector("#schema-result");
 const schemaExportChoices = document.createElement("dialog");
 schemaExportChoices.id = "schema-export-choices";
@@ -1218,9 +1220,11 @@ function showDataLayerView(view, focus = false) {
     }
     dataLayerStorage.setItem("my-chrome-utilities.data-layer-view.v1", view);
     renderDataLayerView(liveObserverElements, view, focus);
-    if (view === "Schemas")
+    if (view === "Schemas") {
+        restorePendingSchemaTreeScroll();
         void hydrateActiveProjectForSchemas().catch((error) => { if (schemaResult)
             schemaResult.textContent = `Schema contributors are unavailable. ${error instanceof Error ? error.message : String(error)}`; });
+    }
     if (view === "Live" && liveObserverState.inspectorEventId)
         restoreLiveInspectorPresentation(liveObserverElements.eventInspector, liveInspectorPresentation.get(liveObserverState.inspectorEventId));
     if (view === "Defects")
@@ -2139,10 +2143,17 @@ function reviewSavedSchemaAdoption(schema, trigger) {
     dialog.showModal();
     confirm.focus({ preventScroll: true });
 }
-let schemaTreeProjectId, schemaTreeExpandedKeys = new Set(), schemaTreeInvokingReference, schemaTreeRestoringScroll = false;
+let schemaTreeProjectId, schemaTreeExpandedKeys = new Set(), schemaTreeInvokingReference, schemaTreeRestoringScroll = false, schemaTreePendingScroll;
 const schemaTreeStorage = globalThis.localStorage;
+function restorePendingSchemaTreeScroll() {
+    if (schemaTreePendingScroll === undefined || !schemaTreeScrollOwner)
+        return;
+    const scrollTop = schemaTreePendingScroll;
+    schemaTreeRestoringScroll = true;
+    queueMicrotask(() => { schemaTreeScrollOwner.scrollTop = scrollTop; schemaTreePendingScroll = undefined; requestAnimationFrame(() => { schemaTreeRestoringScroll = false; }); });
+}
 function persistSchemaTreeView(projectId) {
-    saveSchemaRelationshipTreeView(schemaTreeStorage, projectId, { query: schemaSearch?.value ?? "", category: (schemaCategoryFilter?.value ?? "All"), expandedKeys: [...schemaTreeExpandedKeys], scrollTop: schemaList?.scrollTop ?? 0 });
+    saveSchemaRelationshipTreeView(schemaTreeStorage, projectId, { query: schemaSearch?.value ?? "", category: (schemaCategoryFilter?.value ?? "All"), expandedKeys: [...schemaTreeExpandedKeys], scrollTop: schemaTreeScrollOwner?.scrollTop ?? 0 });
 }
 function renderSchemas() {
     const project = restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), projectId = project?.project.id ?? "no-project", fullTree = projectSchemaRelationshipTree(project, schemas), allNodes = (nodes) => nodes.flatMap((node) => [node, ...allNodes(node.children)]), validNodes = allNodes(fullTree), validKeys = new Set(validNodes.map(({ key }) => key));
@@ -2154,11 +2165,9 @@ function renderSchemas() {
             schemaSearch.value = restored.query;
         if (schemaCategoryFilter)
             schemaCategoryFilter.value = restored.category;
-        if (restored.scrollTop > 0) {
-            schemaTreeRestoringScroll = true;
-            queueMicrotask(() => { if (schemaList)
-                schemaList.scrollTop = restored.scrollTop; requestAnimationFrame(() => { schemaTreeRestoringScroll = false; }); });
-        }
+        schemaTreePendingScroll = restored.scrollTop;
+        if (!schemaPanel?.hidden)
+            restorePendingSchemaTreeScroll();
     }
     else
         schemaTreeExpandedKeys = new Set([...schemaTreeExpandedKeys].filter((key) => validKeys.has(key)));
@@ -2226,7 +2235,7 @@ function renderSchemas() {
             studio.textContent = "Open schema in Specification Studio";
             studio.setAttribute("aria-label", `Open ${node.name} in Specification Studio; ${node.relationshipPath}`);
             open.addEventListener("click", () => { schemaTreeInvokingReference = node.key; const retainedScroll = compactCanonicalEditor?.key === node.targetKey ? schemaDetail?.scrollTop : undefined; openContributorInUnifiedEditor(node.targetKey); if (schemaDetail && retainedScroll !== undefined)
-                schemaDetail.scrollTop = retainedScroll; });
+                schemaDetail.scrollTop = retainedScroll; renderSchemas(); });
             studio.addEventListener("click", () => { if (!project)
                 return; const separator = node.targetKey.indexOf(":"), kind = node.targetKey.slice(0, separator), entityId = node.targetKey.slice(separator + 1); globalThis.open(`specification-builder.html?project=${encodeURIComponent(project.project.id)}&kind=${encodeURIComponent(kind)}&entity=${encodeURIComponent(entityId)}`, "_blank"); });
             item.append(open, studio);
@@ -3505,7 +3514,7 @@ function openContributorInUnifiedEditor(key) {
     } };
     openCompactCanonicalEditor({
         key,
-        label: `${selection.entity.name} · Role ${selection.scope} · scope ${selection.scope} · provenance ${selection.entity.id}`,
+        label: `${selection.entity.name} · Role ${selection.scope} · scope ${selection.scope} · provenance ${selection.flowId ? `${selection.flowId} · ` : ""}${selection.entity.id}`,
         load: () => { const live = restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), selected = resolveSidePanelSchemaContributor(live, key); return documentFor(live, selected); },
         dispatch: (command) => { const live = restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), selected = resolveSidePanelSchemaContributor(live, key), document = documentFor(live, selected); if (migration)
             return migrationBlocked(document); if (isComposed(selected) && command.baseRevision !== document.revision)
@@ -6240,7 +6249,7 @@ schemaSearch?.addEventListener("input", () => { if (schemaTreeProjectId)
     persistSchemaTreeView(schemaTreeProjectId); renderSchemas(); });
 schemaCategoryFilter?.addEventListener("change", () => { if (schemaTreeProjectId)
     persistSchemaTreeView(schemaTreeProjectId); renderSchemas(); });
-schemaList?.addEventListener("scroll", () => { if (schemaTreeProjectId && !schemaTreeRestoringScroll)
+schemaTreeScrollOwner?.addEventListener("scroll", () => { if (schemaTreeProjectId && !schemaTreeRestoringScroll && schemaTreePendingScroll === undefined && !schemaPanel?.hidden)
     persistSchemaTreeView(schemaTreeProjectId); }, { passive: true });
 schemaList?.addEventListener("keydown", (event) => {
     const target = event.target instanceof HTMLButtonElement ? event.target : undefined, controls = Array.from(schemaList.querySelectorAll("li[role=treeitem] > button:first-of-type")), current = target ? controls.indexOf(target) : -1;

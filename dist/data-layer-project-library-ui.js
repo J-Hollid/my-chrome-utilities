@@ -1,4 +1,4 @@
-import { activateProject, createProjectInLibrary, migrateSingletonProject, projectMetadata, replayProjectCommand, resolveProjectWrite, restoreProjectLibrary, saveProjectState, serializeProjectLibrary, stageProjectImport, updateProjectMetadata, PROJECT_LIBRARY_STORAGE_KEY } from "./data-layer-project-library.js";
+import { activateProject, createProjectInLibrary, deactivateProject, migrateSingletonProject, projectMetadata, replayProjectCommand, resolveProjectWrite, restoreProjectLibrary, saveProjectState, serializeProjectLibrary, stageProjectImport, updateProjectMetadata, PROJECT_LIBRARY_STORAGE_KEY } from "./data-layer-project-library.js";
 import { restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, serializeCanonicalProjectState } from "./data-layer-specification-repository.js";
 const q = (root, selector) => { const value = root.querySelector(selector); if (!value)
     throw new Error(`Missing ${selector}`); return value; };
@@ -144,11 +144,16 @@ export function mountProjectLibraryUi(options) {
         activeHeader.textContent = record ? `Active project: ${record.state.project.name} · ${record.state.project.id} · Saved Draft · Published revision ${publishedRevision(record)}` : "No active project · Open project or Create project";
         activeCard.replaceChildren();
         if (record) {
-            const heading = document.createElement("h4"), summary = document.createElement("p"), openButton = button("Open in Specification Studio", `Open ${record.state.project.name} in Specification Studio`, () => open(record.state.project.id)), editButton = button("Edit details", `Edit details for ${record.state.project.name}`, () => void prepare(record.state.project.id).then(() => edit(record.state.project.id, editButton)));
-            openButton.disabled = blocked();
+            const heading = document.createElement("h4"), summary = document.createElement("p"), openButton = button("Open in Specification Studio", `Open ${record.state.project.name} in Specification Studio`, () => open(record.state.project.id)), editButton = button("Edit details", `Edit details for ${record.state.project.name}`, () => void prepare(record.state.project.id).then(() => edit(record.state.project.id, editButton))), closeButton = button("Close project", `Close active project ${record.state.project.name}`, () => { try {
+                persist(deactivateProject(library), true);
+            }
+            catch (error) {
+                status.textContent = error instanceof Error ? error.message : String(error);
+            } });
+            openButton.disabled = editButton.disabled = closeButton.disabled = blocked();
             heading.textContent = record.state.project.name;
             summary.textContent = `${record.state.project.site} · Saved Draft · last saved ${record.lastModifiedAt} · Published revision ${publishedRevision(record)}`;
-            activeCard.append(heading, summary, openButton, editButton, button("Export", `Export ${record.state.project.name}`, () => void download(record.state.project.id)));
+            activeCard.append(heading, summary, openButton, editButton, button("Export", `Export ${record.state.project.name}`, () => void download(record.state.project.id)), closeButton);
         }
         else {
             const message = document.createElement("p"), openProject = button("Open project", "Open a project", () => search.focus()), createProject = button("Create project", "Create project", creation);
