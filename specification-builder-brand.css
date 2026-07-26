@@ -554,6 +554,19 @@ body.twatility-studio {
   scrollbar-color: var(--twa-mustard-dark) transparent;
 }
 
+@media (min-width: 761px) {
+  .twatility-studio .actions {
+    position: relative;
+  }
+
+  .twatility-studio .actions > details[open] {
+    position: absolute;
+    inset-block-start: calc(100% + 0.35rem);
+    inset-inline-end: 0;
+    width: min(18rem, calc(100vw - 2rem));
+  }
+}
+
 @media (max-width: 1180px) {
   .twatility-studio .actions > [role="group"] {
     flex: 1 1 15rem;
