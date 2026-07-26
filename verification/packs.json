@@ -980,7 +980,8 @@
       "test/panel-empty-states-ui-test.mjs",
       "test/side-panel-action-hierarchy-test.mjs",
       "test/side-panel-action-hierarchy-ui-test.mjs",
-      "test/side-panel-component-layout-runtime-test.mjs"
+      "test/side-panel-component-layout-runtime-test.mjs",
+      "test/twatility-brand-foundation-test.mjs"
     ],
     "property": [
       "test/workspace-tabs-property-test.mjs"
@@ -1019,7 +1020,8 @@
       "acceptance/src/acceptance/steps/timeline_presentations.clj"
     ],
     "browserAdapters": [
-      "test/browser-packs/shell.mjs"
+      "test/browser-packs/shell.mjs",
+      "test/twatility-brand-foundation-browser-test.mjs"
     ]
   }
 ]

@@ -163,7 +163,31 @@ async function compactAuthoring020SettlementCheck(side,builder,projectId,profile
   return{deleted:!deleted.exists&&deleted.revision>before.revision,restored:restored.exists&&restored.propertyId===before.propertyId&&restored.revision>deleted.revision,builder:builderRevision>builderBase,retried:retried.presence==='forbidden'&&retried.comment==='Builder authoring020 concurrent'&&retried.revision>builderRevision};
 }
 async function blankSocket(port){const target=await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent("about:blank")}`,{method:"PUT"}).then(response=>response.json()),socket=new Socket(target.webSocketDebuggerUrl);await socket.connect();await socket.call("Runtime.enable");await socket.call("Page.enable");await socket.call("Performance.enable");await socket.call("HeapProfiler.enable");return socket;}
-async function rendererRss(rootPid){const child=spawn("ps",["-eo","pid=,ppid=,rss=,args="],{stdio:["ignore","pipe","ignore"]}),chunks=[];child.stdout.on("data",chunk=>chunks.push(chunk));await new Promise(resolve=>child.once("exit",resolve));const rows=Buffer.concat(chunks).toString().split("\n").map(line=>line.trim().match(/^(\d+)\s+(\d+)\s+(\d+)\s+(.*)$/)).filter(Boolean).map(([,pid,ppid,rss,args])=>({pid:Number(pid),ppid:Number(ppid),rss:Number(rss),args})),descendants=new Set([rootPid]);let changed=true;while(changed){changed=false;for(const row of rows)if(descendants.has(row.ppid)&&!descendants.has(row.pid)){descendants.add(row.pid);changed=true;}}return Math.max(0,...rows.filter(row=>descendants.has(row.pid)&&row.args.includes("--type=renderer")).map(row=>row.rss));}
+async function processRows(){
+  const windows=process.platform==="win32";
+  const executable=windows?"powershell.exe":"ps";
+  const arguments_=windows
+    ?["-NoLogo","-NoProfile","-NonInteractive","-Command","Get-CimInstance Win32_Process | Select-Object ProcessId,ParentProcessId,WorkingSetSize,CommandLine | ConvertTo-Json -Compress"]
+    :["-eo","pid=,ppid=,rss=,args="];
+  const child=spawn(executable,arguments_,{stdio:["ignore","pipe","pipe"]}),chunks=[],errors=[];
+  child.stdout.on("data",chunk=>chunks.push(chunk));
+  child.stderr.on("data",chunk=>errors.push(chunk));
+  const code=await new Promise((resolve,reject)=>{child.once("error",reject);child.once("exit",resolve);});
+  assert.equal(code,0,`${executable} process inventory failed: ${Buffer.concat(errors).toString().trim()}`);
+  const output=Buffer.concat(chunks).toString().trim();
+  if(!output)return[];
+  if(windows){
+    const records=JSON.parse(output);
+    return(Array.isArray(records)?records:[records]).map(record=>({
+      pid:Number(record.ProcessId),
+      ppid:Number(record.ParentProcessId),
+      rss:Number(record.WorkingSetSize)/1024,
+      args:String(record.CommandLine??"")
+    }));
+  }
+  return output.split("\n").map(line=>line.trim().match(/^(\d+)\s+(\d+)\s+(\d+)\s+(.*)$/)).filter(Boolean).map(([,pid,ppid,rss,args])=>({pid:Number(pid),ppid:Number(ppid),rss:Number(rss),args}));
+}
+async function rendererRss(rootPid){const rows=await processRows(),descendants=new Set([rootPid]);let changed=true;while(changed){changed=false;for(const row of rows)if(descendants.has(row.ppid)&&!descendants.has(row.pid)){descendants.add(row.pid);changed=true;}}return Math.max(0,...rows.filter(row=>descendants.has(row.pid)&&row.args.includes("--type=renderer")).map(row=>row.rss));}
 async function snapshot(socket){const metrics=await bounded(socket.call("Performance.getMetrics"),"Performance.getMetrics"),values=Object.fromEntries(metrics.metrics.map(({name,value})=>[name,value])),dom=await evaluate(socket,"({probe:window.__rendererProbe,liveNodes:document.getElementsByTagName('*').length,activity:{ready:document.readyState,projectState:document.querySelector('#project-state')?.textContent??'',recoveryOpen:Boolean(document.querySelector('#builder-storage-recovery')?.open)}})");return{probe:dom.probe,liveNodes:dom.liveNodes,heap:values.JSHeapUsedSize??0,nodes:values.Nodes??0,activity:dom.activity};}
 async function quiescentSnapshots(socket,count=4){const samples=[];for(let index=0;index<count;index+=1){await wait(250);await bounded(socket.call("HeapProfiler.collectGarbage"),"HeapProfiler.collectGarbage");samples.push(await snapshot(socket));}return samples;}
 async function monitored(label,socket,chromePid,action){phase(label);let running=true,pending,maxHeartbeat=0,peakRendererRss=0,heartbeats=0;const loop=(async()=>{while(running){const started=performance.now();try{await evaluate(socket,"document.readyState==='complete'");maxHeartbeat=Math.max(maxHeartbeat,performance.now()-started);heartbeats+=1;peakRendererRss=Math.max(peakRendererRss,await rendererRss(chromePid));}catch{if(running)throw new Error(`${label} renderer heartbeat failed`);}await wait(40);}})();try{pending=action();await bounded(pending,`${label} action`,30000);}finally{running=false;}await loop;const samples=await quiescentSnapshots(socket),first=samples[0],stable=samples.at(-1),heaps=samples.map(({heap})=>heap);peakRendererRss=Math.max(peakRendererRss,await rendererRss(chromePid));phase(label,`settle ${JSON.stringify({samples})}`);assert.ok(samples.every(({probe})=>probe.renders===first.probe.renders),`${label} render count settles`);assert.ok(samples.every(({liveNodes})=>liveNodes===first.liveNodes),`${label} connected DOM node count settles`);assert.ok(samples.every(({activity})=>activity.ready==="complete"&&!activity.recoveryOpen&&!activity.projectState.startsWith("Saving ")),`${label} has no pending visible save or recovery activity`);assert.ok(Math.max(...heaps)<=Math.min(...heaps)*1.05+2_000_000,`${label} retained heap stays bounded after collection`);assert.ok(maxHeartbeat<10000,`${label} CDP heartbeat remains under ten seconds`);assert.ok(peakRendererRss<1_500_000,`${label} renderer stays below runaway RSS`);const result={maxHeartbeat:Math.round(maxHeartbeat),peakRendererRssKiB:peakRendererRss,renders:stable.probe.renders,liveNodes:stable.liveNodes,performanceNodes:stable.nodes,heapSamples:heaps.map(Math.round),heartbeats};phase(label,`end ${JSON.stringify(result)}`);return result;}
