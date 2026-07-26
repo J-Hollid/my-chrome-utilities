@@ -49,7 +49,11 @@
     :rows #{["Flow value map" "selected" "Spreadsheet" "headed tab-separated plain text"]
             ["Flow value map" "cleared" "Spreadsheet" "unheaded tab-separated plain text"]
             ["Data capture matrix" "selected" "Rich table for Confluence or Jira" "semantic rich HTML and headed plain fallback"]
-            ["Data capture matrix" "cleared" "Rich table for Confluence or Jira" "semantic rich HTML and unheaded plain fallback"]}}])
+            ["Data capture matrix" "cleared" "Rich table for Confluence or Jira" "semantic rich HTML and unheaded plain fallback"]}}
+   {:keys ["export_scope" "expected_sheets"]
+    :rows #{["current Checkout journey section" "Checkout journey"]
+            ["selected Checkout journey and Sitewide sections" "Checkout journey, Sitewide"]
+            ["complete Documentation Set" "Overview, Checkout journey, Article journey, Data capture matrix, Sitewide, Opened Article"]}}])
 
 (defn validate-example! [_mode example]
   (support/validate-example-relations!
@@ -58,7 +62,7 @@
 
 (def runtime-paths
   (set (concat [:installedBoundary]
-               (map #(keyword (str "export" (format "%03d" %))) (range 1 15)))))
+               (map #(keyword (str "export" (format "%03d" %))) (range 1 16)))))
 
 (defn- assert-runtime! [evidence]
   (support/assert! (and (= runtime-paths (set (keys evidence)))

@@ -97,6 +97,25 @@ assert.match(clipboard.html,/width:28ch/);
 const workbook=writeProjectDocumentationWorkbook(snapshot,{scope:"complete"});
 const binary=new TextDecoder().decode(workbook);
 const unzipStored=(bytes)=>{const files=new Map(),view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let offset=0;while(offset+30<=bytes.length&&view.getUint32(offset,true)===0x04034b50){const size=view.getUint32(offset+18,true),nameLength=view.getUint16(offset+26,true),extraLength=view.getUint16(offset+28,true),name=new TextDecoder().decode(bytes.slice(offset+30,offset+30+nameLength)),start=offset+30+nameLength+extraLength;files.set(name,bytes.slice(start,start+size));offset=start+size;}return files;};
+const workbookSheetNames=(bytes)=>[...new TextDecoder().decode(unzipStored(bytes).get("xl/workbook.xml")).matchAll(/<sheet name="([^"]+)"/gu)].map((match)=>match[1]);
+const assertExcelCompatiblePackage=(bytes,expectedSheets)=>{
+  const files=unzipStored(bytes),rootRelationships=new TextDecoder().decode(files.get("_rels/.rels"));
+  assert.match(rootRelationships,/Type="http:\/\/schemas\.openxmlformats\.org\/officeDocument\/2006\/relationships\/officeDocument"/);
+  assert.match(rootRelationships,/Target="xl\/workbook\.xml"/);
+  assert.equal(files.has("[Content_Types].xml"),true);
+  assert.equal(files.has("xl/workbook.xml"),true);
+  assert.equal(files.has("xl/_rels/workbook.xml.rels"),true);
+  assert.deepEqual(workbookSheetNames(bytes),expectedSheets);
+};
+assertExcelCompatiblePackage(
+  writeProjectDocumentationWorkbook(snapshot,{scope:"current",currentSectionId:"section:checkout"}),
+  ["Checkout journey"],
+);
+assertExcelCompatiblePackage(
+  writeProjectDocumentationWorkbook(snapshot,{scope:"selected",selectedSectionIds:["section:checkout","section:sitewide"]}),
+  ["Checkout journey","Sitewide"],
+);
+assertExcelCompatiblePackage(workbook,["Overview","Checkout journey","Article journey","Data capture matrix","Sitewide","Opened Article"]);
 const workbookFiles=unzipStored(workbook),workbookText=(name)=>new TextDecoder().decode(workbookFiles.get(name));
 for(const name of ["Overview","Checkout journey","Article journey","Data capture matrix","Sitewide","Opened Article"])assert.match(binary,new RegExp(name));
 for(const forbidden of ["diagnostic","provenance","revision hash","repair action"])assert.doesNotMatch(binary,new RegExp(forbidden,"i"));
