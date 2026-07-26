@@ -11,7 +11,9 @@ import {
   compileProjectDocumentationSnapshot,
   createProjectDocumentationSet,
   createProjectDocumentationTheme,
+  parseProjectDocumentationTheme,
   selectProjectDocumentationTables,
+  serializeProjectDocumentationTheme,
   themeFingerprint,
 } from "../dist/data-layer-project-documentation-workspace.js";
 
@@ -50,6 +52,8 @@ for(let index=0;index<100;index+=1){
   assert.deepEqual(createProjectDocumentationTheme(theme),theme);
   assert.equal(themeFingerprint(createProjectDocumentationTheme(theme)),themeFingerprint(theme));
   assert.equal(Object.isFrozen(theme)&&Object.isFrozen(theme.colors)&&Object.isFrozen(theme.typography),true);
+  const copiedTheme=parseProjectDocumentationTheme(serializeProjectDocumentationTheme(theme),{id:`copied-theme:${index}`,name:theme.name});
+  assert.deepEqual({...copiedTheme,id:theme.id},theme);
 
   const sections=[
     {id:`overview:${index}`,kind:"overview",name:"Overview",selected:true},

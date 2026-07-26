@@ -4,12 +4,15 @@ import {
   compileProjectDocumentationSnapshot,
   createProjectDocumentationSet,
   createProjectDocumentationTheme,
+  parseProjectDocumentationTheme,
   projectDocumentationSnapshotStale,
   renderProjectDocumentationClipboard,
+  serializeProjectDocumentationTheme,
   selectProjectDocumentationTables,
   themeFingerprint,
   writeProjectDocumentationWorkbook,
 } from "../dist/data-layer-project-documentation-workspace.js";
+import {compileProjectDocumentation,projectDocumentationSources} from "../dist/data-layer-project-documentation-compiler.js";
 import {createSpecificationProject,exportSpecificationProject,importSpecificationProject,transactProject} from "../dist/data-layer-specification-project.js";
 
 const theme=createProjectDocumentationTheme({
@@ -21,6 +24,13 @@ const theme=createProjectDocumentationTheme({
 });
 assert.equal(theme.id,"theme:acme");
 assert.doesNotMatch(JSON.stringify(theme),/(<style|javascript:|workbookCode)/i);
+const hostileTheme=createProjectDocumentationTheme({...theme,id:"theme:hostile",typography:{...theme.typography,family:'Arial";background:url(javascript:alert(1))'},logo:"data:image/svg+xml,<svg onload=alert(1)>"});
+assert.equal(hostileTheme.typography.family,"Arial");
+assert.equal(hostileTheme.logo,"");
+const copiedTheme=parseProjectDocumentationTheme(serializeProjectDocumentationTheme(theme),{id:"theme:copied",name:"Acme copy"});
+assert.equal(copiedTheme.id,"theme:copied");
+assert.equal(copiedTheme.name,"Acme copy");
+assert.deepEqual({...copiedTheme,id:theme.id,name:theme.name},theme);
 
 const set=createProjectDocumentationSet({
   id:"documentation-set:client",name:"Client specification",themeId:theme.id,
@@ -35,6 +45,8 @@ const set=createProjectDocumentationSet({
 });
 assert.deepEqual(set.sections.map(({kind})=>kind),["overview","flow","flow","matrix","profile","profile"]);
 assert.deepEqual(set.sections.find(({kind})=>kind==="matrix").configuration.contextIds,["page:cart","event:purchase","frame:cart","occurrence:opened"]);
+assert.throws(()=>createProjectDocumentationSet({...set,sections:set.sections.filter(({kind})=>kind!=="matrix")}),/exactly one/i);
+assert.throws(()=>createProjectDocumentationSet({...set,sections:[...set.sections,{...set.sections.find(({kind})=>kind==="matrix"),id:"matrix:duplicate"}]}),/exactly one/i);
 
 const table=(id,title,headings,rows)=>({id,title,headings,rows});
 const source={
@@ -72,12 +84,19 @@ const clipboard=renderProjectDocumentationClipboard(snapshot,{scope:"selected",s
 assert.equal((clipboard.html.match(/<table/g)??[]).length,2);
 assert.match(clipboard.html,/data-theme-fingerprint="/);
 assert.match(clipboard.plain,/Checkout journey[\s\S]*Data capture matrix/);
+for(const shared of ["Acme","Client specification","Internal"])assert.match(clipboard.html+clipboard.plain,new RegExp(shared));
+assert.match(clipboard.html,/<img[^>]+data:image\/png/);
+assert.match(clipboard.html,/width:28ch/);
 
 const workbook=writeProjectDocumentationWorkbook(snapshot,{scope:"complete"});
 const binary=new TextDecoder().decode(workbook);
 for(const name of ["Overview","Checkout journey","Article journey","Data capture matrix","Sitewide","Opened Article"])assert.match(binary,new RegExp(name));
 for(const forbidden of ["diagnostic","provenance","revision hash","repair action"])assert.doesNotMatch(binary,new RegExp(forbidden,"i"));
 assert.doesNotMatch(binary,/<f>/);
+assert.match(binary,/data-theme-fingerprint=/);
+assert.match(binary,/wrapText="1"/);
+assert.match(binary,/oddHeader>Acme · Client specification · Logo/);
+assert.match(binary,/oddFooter>Internal/);
 
 const unsafe=compileProjectDocumentationSnapshot({...source,set:{...set,name:"=Client<script>",sections:set.sections.map((section,index)=>({...section,name:index<2?"A/B*?":"A:B"}))},diagnostics:[{sectionId:"section:article",message:"Blocked identity profile:article",repair:"Open raw revision hash"}]});
 assert.equal(unsafe.incomplete,true);
@@ -98,5 +117,40 @@ assert.equal(savedState.history.undo.at(-1).label,"Save Documentation Set");
 const portableProject=importSpecificationProject(exportSpecificationProject(savedState.project),{existingProjects:[],id:(kind)=>`${kind}:imported`}).project;
 assert.deepEqual(portableProject.documentation,{sets:[set],themes:[theme]});
 assert.equal(portableProject.releases.length,0);
+
+const compilerState={
+  project:{
+    id:"project:compiler",name:"Compiler Shop",description:"Configured documentation",site:"compiler.example",environments:["Production"],namingConventions:{property:"snake_case",event:"snake_case"},publicationPolicy:{warningsBlock:false,fixturesRequired:false},releases:[],
+    collections:{
+      profiles:[{id:"profile:compiler",name:"Compiler Sitewide",requirements:[{path:"/site_id",type:"string",required:true,description:"Site",examples:["shop"]},{path:"/locale",type:"string",description:"Locale"}]}],
+      pageGroups:[{id:"group:compiler",name:"Checkout",pageIds:["page:compiler"],schemaConstraints:[{path:"/currency",type:"string",allowedValues:["EUR"]}]}],
+      pages:[{id:"page:compiler",name:"Cart",eventName:"pageview",profileIds:["profile:compiler"],pageGroupIds:["group:compiler"],schemaConstraints:[{path:"/page_name",type:"string",presence:"required",documentation:"Page"}]}],
+      events:[{id:"event:compiler",name:"Purchase",eventName:"purchase",schemaConstraints:[{path:"/purchase_id",type:"string",presence:"required"}]}],
+      flows:[{id:"flow:compiler",name:"Checkout compiler journey"}],applicabilitySets:[],fixtures:[],assignments:[],
+    },
+    documentationFlowGraphs:{"flow:compiler":{pageGroupIds:["group:compiler"],pageFrames:[{id:"frame:compiler",name:"Cart instance",pageId:"page:compiler",pageGroupId:"group:compiler",localSchemaContributions:[{path:"/instance_only",type:"string"}]}],occurrences:[{id:"occurrence:compiler",name:"Purchase occurrence",pageFrameId:"frame:compiler",pageId:"page:compiler",pageGroupId:"group:compiler",eventId:"event:compiler",localSchemaContributions:[{path:"/occurrence_only",type:"string",presence:"forbidden"}]}],relationships:[]}},
+    releases:[],
+  },
+  draft:{id:"draft:compiler",status:"Saved",updatedAt:"2026-07-26T00:00:00.000Z"},history:{undo:[],redo:[]},
+};
+const compilerSources=projectDocumentationSources(compilerState,"2026-07-26T00:00:00.000Z",4);
+assert.deepEqual([...new Set(compilerSources.matrixContexts.map(({kind})=>kind))],["page-definition","event-definition","page-instance","event-occurrence"]);
+assert.equal(compilerSources.matrixContexts.find(({kind})=>kind==="page-instance").groupLabel,"Checkout compiler journey");
+assert.equal(compilerSources.matrixContexts.find(({kind})=>kind==="event-occurrence").parentLabel,"Cart");
+const contextByKind=Object.fromEntries(compilerSources.matrixContexts.map((context)=>[context.kind,context.id])),compilerTheme=createProjectDocumentationTheme({...theme,id:"theme:compiler"}),compilerSet=createProjectDocumentationSet({id:"set:compiler",name:"Configured",themeId:compilerTheme.id,sections:[
+  {id:"flow-section",kind:"flow",name:"Checkout configured",targetId:"flow:compiler",selected:true,configuration:{contextIds:[contextByKind["event-occurrence"],contextByKind["page-instance"]],paths:["/purchase_id","/page_name"],columns:["description"],labels:{[contextByKind["event-occurrence"]]:"Purchase label"}}},
+  {id:"matrix-section",kind:"matrix",name:"Data capture matrix",selected:true,configuration:{contextIds:[contextByKind["page-definition"],contextByKind["event-definition"],contextByKind["page-instance"],contextByKind["event-occurrence"]]}},
+  {id:"profile-section",kind:"profile",name:"Compiler Sitewide",targetId:"profile:compiler",selected:true,configuration:{paths:["/locale","/site_id"],columns:["Property","Required","Description"]}},
+]});
+const compiledProject=compileProjectDocumentation({state:compilerState,set:compilerSet,theme:compilerTheme,revision:4,generatedAt:"2026-07-26T00:00:00.000Z"});
+assert.deepEqual(compiledProject.tables.map(({title})=>title),["Checkout configured","Data capture matrix","Compiler Sitewide"]);
+assert.deepEqual(compiledProject.tables[0].rows.map(([path])=>path),["/purchase_id","/page_name"]);
+assert.equal(compiledProject.tables[0].headings[1],"Description");
+assert.match(compiledProject.tables[0].headings.join("|"),/Purchase label/);
+assert.deepEqual(compiledProject.tables[1].headings.slice(1),compilerSources.matrixContexts.map(({label})=>label));
+assert.equal(new Set(compiledProject.tables[1].rows.flatMap((row)=>row.slice(1))).size>=3,true);
+assert.deepEqual(compiledProject.tables[2].headings,["Property","Required","Description"]);
+assert.deepEqual(compiledProject.tables[2].rows.map(([path])=>path),["/locale","/site_id"]);
+assert.equal(compiledProject.tables[1].headings.some((value)=>value.includes("Compiler Sitewide")),false);
 
 console.log("Project documentation workspace tests passed");

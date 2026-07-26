@@ -1,0 +1,103 @@
+export type ProjectDocumentationSectionKind="overview"|"flow"|"matrix"|"profile";
+export type ProjectDocumentationMetadataColumn="description"|"type"|"allowedValues"|"example"|"comments";
+export type ProjectDocumentationProfileColumn="Property"|"Description"|"Required"|"Allowed values"|"Example"|"Comments";
+
+export interface ProjectDocumentationSectionConfiguration {
+  paths?:readonly string[];
+  contextIds?:readonly string[];
+  columns?:readonly string[];
+  labels?:Readonly<Record<string,string>>;
+}
+export interface ProjectDocumentationSection {
+  id:string;
+  kind:ProjectDocumentationSectionKind;
+  name:string;
+  targetId?:string;
+  selected:boolean;
+  configuration?:ProjectDocumentationSectionConfiguration;
+}
+export interface ProjectDocumentationSet {
+  id:string;
+  name:string;
+  themeId:string;
+  sections:readonly ProjectDocumentationSection[];
+}
+export interface ProjectDocumentationTheme {
+  id:string;
+  name:string;
+  clientName:string;
+  logo:string;
+  colors:{heading:string;accent:string;stripe:string};
+  typography:{family:string;headingSize:number;bodySize:number};
+  density:"compact"|"comfortable";
+  borders:boolean;
+  striping:boolean;
+  highlightedHeadings:boolean;
+  columnWidths:Readonly<Record<string,number>>;
+  headerText:string;
+  footerText:string;
+}
+export interface ProjectDocumentationDraft {
+  sets:ProjectDocumentationSet[];
+  themes:ProjectDocumentationTheme[];
+}
+
+const clone=<T>(value:T):T=>structuredClone(value);
+const freeze=<T>(value:T):T=>{if(value&&typeof value==="object"&&!Object.isFrozen(value)){Object.freeze(value);for(const child of Object.values(value as Record<string,unknown>))freeze(child);}return value;};
+export const projectDocumentationSafeText=(value:unknown):string=>String(value??"").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/gu,"").trim();
+const safeColor=(value:unknown,fallback:string):string=>/^#[0-9a-f]{6}$/iu.test(String(value))?String(value).toLowerCase():fallback;
+const safeFamily=(value:unknown):string=>{const candidate=projectDocumentationSafeText(value);return/^[\p{L}\p{N}][\p{L}\p{N} .-]{0,63}$/u.test(candidate)?candidate:"Arial";};
+const safeLogo=(value:unknown):string=>{const candidate=projectDocumentationSafeText(value);if(/^https:\/\/[^\s"'<>]{1,2000}$/iu.test(candidate))return candidate;if(/^data:image\/(?:png|jpeg|gif);base64,[a-z0-9+/]+={0,2}$/iu.test(candidate)&&candidate.length<=250_000)return candidate;return"";};
+const safeId=(value:unknown,label:string):string=>{const candidate=projectDocumentationSafeText(value);if(!candidate)throw new Error(`${label} needs a stable identity.`);return candidate;};
+const safeList=(value:readonly string[]|undefined):string[]|undefined=>value?[...new Set(value.map(projectDocumentationSafeText).filter(Boolean))]:undefined;
+
+export function createProjectDocumentationTheme(input:ProjectDocumentationTheme):ProjectDocumentationTheme {
+  const widths=Object.fromEntries(Object.entries(input.columnWidths??{}).flatMap(([key,value])=>Number.isFinite(value)&&value>0?[[projectDocumentationSafeText(key),Math.min(120,Math.max(4,Number(value)))]]:[]));
+  return freeze({
+    id:safeId(input.id,"Documentation theme"),
+    name:projectDocumentationSafeText(input.name)||"Project theme",
+    clientName:projectDocumentationSafeText(input.clientName),
+    logo:safeLogo(input.logo),
+    colors:{heading:safeColor(input.colors?.heading,"#222222"),accent:safeColor(input.colors?.accent,"#666666"),stripe:safeColor(input.colors?.stripe,"#f4f4f4")},
+    typography:{family:safeFamily(input.typography?.family),headingSize:Math.min(32,Math.max(8,Number(input.typography?.headingSize)||16)),bodySize:Math.min(24,Math.max(7,Number(input.typography?.bodySize)||11))},
+    density:input.density==="compact"?"compact":"comfortable",
+    borders:Boolean(input.borders),
+    striping:Boolean(input.striping),
+    highlightedHeadings:Boolean(input.highlightedHeadings),
+    columnWidths:widths,
+    headerText:projectDocumentationSafeText(input.headerText),
+    footerText:projectDocumentationSafeText(input.footerText),
+  });
+}
+
+export function createProjectDocumentationSet(input:ProjectDocumentationSet):ProjectDocumentationSet {
+  const seen=new Set<string>(),sections=input.sections.map((raw):ProjectDocumentationSection=>{const section=clone(raw),id=safeId(section.id,"Documentation section");if(seen.has(id))throw new Error(`Duplicate documentation section ${id}.`);seen.add(id);if(section.kind!=="overview"&&section.kind!=="matrix"&&!section.targetId)throw new Error(`${section.kind} section ${id} needs a stable target.`);const paths=safeList(section.configuration?.paths),contextIds=safeList(section.configuration?.contextIds),columns=safeList(section.configuration?.columns),labels=section.configuration?.labels?Object.fromEntries(Object.entries(section.configuration.labels).map(([key,value])=>[projectDocumentationSafeText(key),projectDocumentationSafeText(value)]).filter(([key])=>Boolean(key))) as Record<string,string>:undefined,configuration=section.configuration?{...(paths?{paths}:{}),...(contextIds?{contextIds}:{}),...(columns?{columns}:{}),...(labels?{labels}:{})}:undefined;return{id,kind:section.kind,name:projectDocumentationSafeText(section.name),...(section.targetId?{targetId:projectDocumentationSafeText(section.targetId)}:{}),selected:Boolean(section.selected),...(configuration?{configuration}:{})};});
+  if(sections.filter(({kind})=>kind==="matrix").length!==1)throw new Error("A Documentation Set needs exactly one project capture matrix.");
+  return freeze({id:safeId(input.id,"Documentation Set"),name:projectDocumentationSafeText(input.name)||"Documentation Set",themeId:safeId(input.themeId,"Documentation theme reference"),sections});
+}
+
+export function serializeProjectDocumentationTheme(theme:ProjectDocumentationTheme):string {
+  const safe=createProjectDocumentationTheme(theme),{id:_id,...values}=safe;
+  return JSON.stringify({format:"my-chrome-utilities.documentation-theme",version:1,theme:values},null,2);
+}
+
+export function parseProjectDocumentationTheme(serialized:string,input:{id:string;name?:string}):ProjectDocumentationTheme {
+  const parsed=JSON.parse(serialized) as {format?:unknown;version?:unknown;theme?:Partial<ProjectDocumentationTheme>};
+  if(parsed.format!=="my-chrome-utilities.documentation-theme"||parsed.version!==1||!parsed.theme)throw new Error("Paste a version 1 structured Documentation theme.");
+  const source=parsed.theme;
+  return createProjectDocumentationTheme({
+    id:input.id,
+    name:input.name??String(source.name??"Copied theme"),
+    clientName:String(source.clientName??""),
+    logo:String(source.logo??""),
+    colors:{heading:String(source.colors?.heading??""),accent:String(source.colors?.accent??""),stripe:String(source.colors?.stripe??"")},
+    typography:{family:String(source.typography?.family??""),headingSize:Number(source.typography?.headingSize),bodySize:Number(source.typography?.bodySize)},
+    density:source.density==="compact"?"compact":"comfortable",
+    borders:Boolean(source.borders),
+    striping:Boolean(source.striping),
+    highlightedHeadings:Boolean(source.highlightedHeadings),
+    columnWidths:typeof source.columnWidths==="object"&&source.columnWidths?source.columnWidths:{},
+    headerText:String(source.headerText??""),
+    footerText:String(source.footerText??""),
+  });
+}

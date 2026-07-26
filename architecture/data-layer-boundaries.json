@@ -75,20 +75,50 @@
     "module": "schemas",
     "layer": "application"
   },
+  "src/data-layer-flow-documentation-snapshot.ts": {
+    "module": "schemas",
+    "layer": "application",
+    "contracts": [
+      "src/data-layer-flow-table-documentation-export.ts",
+      "src/data-layer-layered-schema-project.ts",
+      "src/data-layer-layered-schema.ts",
+      "src/utilities/data-layer/flow-graph.ts",
+      "src/utilities/data-layer/schemas.ts"
+    ]
+  },
+  "src/data-layer-project-documentation-records.ts": {
+    "module": "schemas",
+    "layer": "core"
+  },
   "src/data-layer-project-documentation-workspace.ts": {
     "module": "schemas",
     "layer": "application",
     "contracts": [
-      "src/data-layer-flow-table-documentation-export.ts"
+      "src/data-layer-flow-table-documentation-export.ts",
+      "src/data-layer-project-documentation-records.ts"
+    ]
+  },
+  "src/data-layer-project-documentation-compiler.ts": {
+    "module": "schemas",
+    "layer": "application",
+    "contracts": [
+      "src/data-layer-canonical-schema.ts",
+      "src/data-layer-flow-documentation-snapshot.ts",
+      "src/data-layer-flow-table-documentation-export.ts",
+      "src/data-layer-layered-schema-project.ts",
+      "src/data-layer-layered-schema.ts",
+      "src/data-layer-project-documentation-records.ts",
+      "src/data-layer-project-documentation-workspace.ts",
+      "src/data-layer-specification-project.ts"
     ]
   },
   "src/data-layer-project-documentation-workspace-ui.ts": {
     "module": "schemas",
     "layer": "browser",
     "contracts": [
-      "src/data-layer-canonical-schema.ts",
       "src/data-layer-flow-table-documentation-export.ts",
-      "src/data-layer-flow-table-documentation-export-ui.ts",
+      "src/data-layer-project-documentation-compiler.ts",
+      "src/data-layer-project-documentation-records.ts",
       "src/data-layer-project-documentation-workspace.ts",
       "src/data-layer-specification-project.ts"
     ]
@@ -97,7 +127,8 @@
     "module": "schemas",
     "layer": "browser",
     "contracts": [
-      "src/utilities/data-layer/flow-graph.ts",
+      "src/data-layer-flow-documentation-snapshot.ts",
+      "src/data-layer-flow-table-documentation-export.ts",
       "src/utilities/data-layer/schemas.ts"
     ]
   },
@@ -1019,7 +1050,7 @@
     "layer": "application",
     "contracts": [
       "src/data-layer-canonical-schema.ts",
-      "src/data-layer-project-documentation-workspace.ts",
+      "src/data-layer-project-documentation-records.ts",
       "src/data-layer-saved-schema-canonical.ts"
     ]
   },

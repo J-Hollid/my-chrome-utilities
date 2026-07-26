@@ -1089,7 +1089,8 @@ else {
 } render(); });
 const flowBuilderContext = () => ({ ...state ? { state } : {}, revision: canonicalRevision, ...(selectedKind === "flows" && selectedId ? { flowId: selectedId } : {}) });
 projectDocumentationWorkspaceUi = installProjectDocumentationWorkspaceUi({ state: () => state, revision: () => canonicalRevision, save: (documentation, label) => { if (!state)
-        return; persist(transactProject(state, label, (project) => ({ ...project, documentation: structuredClone(documentation) }))); } });
+        return; persist(transactProject(state, label, (project) => ({ ...project, documentation: structuredClone(documentation) }))); }, openRepair: (target) => { documentationOpen = false; openProjectEntityWorkspace(target.kind, target.id); if (target.path)
+        queueMicrotask(() => document.querySelector(`[data-property-id="${CSS.escape(target.path)}"],[data-flow-instance-effective-path="${CSS.escape(target.path)}"]`)?.click()); } });
 flowGraphBuilder = installFlowGraphBuilder({ context: flowBuilderContext, persist, id, openOccurrenceSchema: (occurrenceId, path, originFocus) => layeredSchemaUi?.openGraphOccurrenceSchema(occurrenceId, path, originFocus) ?? false });
 flowDocumentationExportUi = installFlowDocumentationExportUi({ context: flowBuilderContext, renderFlow: () => { flowGraphBuilder?.render(); flowDocumentationExportUi?.render(); }, openRepair: (contextId, path, repair) => { const selectPath = () => setTimeout(() => Array.from(document.querySelectorAll("[data-property-id]")).find((candidate) => candidate.dataset.propertyId === path || candidate.textContent?.includes(path))?.click(), 0); if (repair.startsWith("Open contributing schema ")) {
         const name = repair.slice("Open contributing schema ".length), match = ["profiles", "events", "pageGroups", "pages", "flows"].flatMap((kind) => state.project.collections[kind].map((entity) => ({ kind, entity }))).find(({ entity }) => entity.name === name);

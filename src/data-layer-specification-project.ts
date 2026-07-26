@@ -1,6 +1,6 @@
 import {canonicalConstraints,canonicalPropertyPath,canonicalRequirements,canonicalSchemaWithConstraint,createCanonicalSchema,migrateLegacyProfile,type CanonicalMigrationPlan,type CanonicalPredicate,type CanonicalPropertyNode,type CanonicalRule,type CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
 import {savedSchemaCanonicalDocument,savedSchemaFromCanonical} from "./data-layer-saved-schema-canonical.js";
-import type {ProjectDocumentationSet,ProjectDocumentationTheme} from "./data-layer-project-documentation-workspace.js";
+import type {ProjectDocumentationDraft} from "./data-layer-project-documentation-records.js";
 
 export type ProjectEntityKind = "profiles" | "pages" | "pageGroups" | "events" | "applicabilitySets" | "flows" | "fixtures" | "assignments";
 export type AssignmentTargetKind = "Shared Profile" | "Page Group" | "Page" | "Event" | "Flow Page instance";
@@ -34,7 +34,7 @@ export interface SpecificationProject extends ProjectEntity {
   collections: SpecificationCollections;
   releases: ProjectRelease[];
   currentRelease?: string;
-  documentation?:{sets:ProjectDocumentationSet[];themes:ProjectDocumentationTheme[]};
+  documentation?:ProjectDocumentationDraft;
   compatibility?: { legacySnapshot: string };
 }
 export interface ProjectState {
