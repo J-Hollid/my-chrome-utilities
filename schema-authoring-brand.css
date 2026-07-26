@@ -328,7 +328,7 @@
       [aria-label="Shared editable project condition tree"]
     )
     [data-condition-kind="predicate"] {
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .twatility-theme
@@ -339,7 +339,7 @@
     [data-condition-kind="group"]
     > div:first-child {
     display: grid;
-    grid-template-columns: minmax(0, 1fr);
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .twatility-theme
@@ -359,6 +359,24 @@
     )
     :is(button, select, input) {
     inline-size: 100%;
+  }
+}
+
+@media (max-width: 320px) {
+  .twatility-theme
+    :is(
+      [aria-label="Shared editable condition tree"],
+      [aria-label="Shared editable project condition tree"]
+    )
+    [data-condition-kind="predicate"],
+  .twatility-theme
+    :is(
+      [aria-label="Shared editable condition tree"],
+      [aria-label="Shared editable project condition tree"]
+    )
+    [data-condition-kind="group"]
+    > div:first-child {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
