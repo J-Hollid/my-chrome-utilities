@@ -26,7 +26,8 @@
     ],
     "browserAdapters": [
       "test/browser-packs/project-management.mjs",
-      "test/browser-packs/project-entity-lifecycle.mjs"
+      "test/browser-packs/project-entity-lifecycle.mjs",
+      "test/twatility-projects-browser-test.mjs"
     ]
   },
   {
