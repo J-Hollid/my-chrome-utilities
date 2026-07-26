@@ -902,6 +902,7 @@ let savedInspectorTemplateId: string | undefined;
 const storedSchemaLibrary = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
 let schemas: SchemaDefinition[] = restoreSchemaLibrary(storedSchemaLibrary);
 let sidePanelLayeredProfileEditor:ReturnType<typeof mountSidePanelLayeredProfileEditor>|undefined;
+let projectTransportSavePending=false;
 const projectLibraryUi=mountProjectLibraryUi({root:document,storage:projectStorage,prepareProject:durableProjectRuntime.ensureProject,settled:durableProjectRuntime.settled,undoProject:durableProjectRuntime.undo,subscribe:(listener)=>durableProjectRuntime.subscribe(({library})=>listener(library)),blocked:()=>Boolean(durableProjectRuntime.failedSave()),exportProject:async(projectId)=>JSON.stringify(await durableProjectRuntime.repository.exportProject(projectId)),importProject:async(serialized,input)=>{await durableProjectRuntime.repository.importProject(JSON.parse(serialized) as Record<string,unknown>,input);},projectStorageKey:SPECIFICATION_PROJECT_STORAGE_KEY,navigationStorageKey:"my-chrome-utilities.specification-project-navigation.v1",openStudio:(url)=>{globalThis.open(url,"_blank");},onChange:()=>{renderProjectEventTransport();renderSchemas();}});
 function activeTransportProject() {
   const activeId=projectLibraryUi.library().activeProjectId;
@@ -919,7 +920,9 @@ function renderProjectEventTransport():void {
   if(projectTransportGuidance)projectTransportGuidance.hidden=available;
   if(historyPathInput){historyPathInput.disabled=!available;historyPathInput.value=settings?.observationHistoryPath??"";}
   if(defaultPushPathInput){defaultPushPathInput.disabled=!available;defaultPushPathInput.value=settings?.defaultPushPath??"";}
-  if(defaultPushPathStatus)defaultPushPathStatus.textContent=available?"Saved in project Draft":"Open project";
+  if(defaultPushPathStatus)defaultPushPathStatus.textContent=available
+    ? projectTransportSavePending?"Saving project Draft…":"Saved in project Draft"
+    :"Open project";
   renderHistoryPath(
     settings?.observationHistoryPath??"",
     settings?.observationHistoryPath??"",
@@ -934,11 +937,22 @@ async function saveProjectEventTransport():Promise<void> {
   if(!state)return renderProjectEventTransport();
   const serialized=projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY),envelope=restoreCanonicalProjectEnvelope(serialized);
   if(!envelope)throw new Error("The active project Draft is unavailable.");
-  const next=configureProjectEventTransport(state,{observationHistoryPath:historyPathInput?.value??"",defaultPushPath:defaultPushPathInput?.value??""});
-  const result=commitCanonicalProjectState(projectStorage,next,{expectedRevision:envelope.revision,pendingLabel:"Save project event transport settings",base:state});
-  if(result.status==="conflict")throw new Error("Project transport settings changed in a newer Draft.");
-  projectLibraryUi.captureActiveProject(next,result.revision);
-  if(defaultPushPathStatus)defaultPushPathStatus.textContent="Saved in project Draft";
+  projectTransportSavePending=true;
+  if(defaultPushPathStatus)defaultPushPathStatus.textContent="Saving project Draft…";
+  try {
+    const next=configureProjectEventTransport(state,{observationHistoryPath:historyPathInput?.value??"",defaultPushPath:defaultPushPathInput?.value??""});
+    const result=commitCanonicalProjectState(projectStorage,next,{expectedRevision:envelope.revision,pendingLabel:"Save project event transport settings",base:state});
+    if(result.status==="conflict")throw new Error("Project transport settings changed in a newer Draft.");
+    projectLibraryUi.captureActiveProject(next,result.revision);
+    await durableProjectRuntime.settled();
+    projectTransportSavePending=false;
+    if(defaultPushPathStatus)defaultPushPathStatus.textContent="Saved in project Draft";
+  } catch(error) {
+    projectTransportSavePending=false;
+    if(defaultPushPathStatus)defaultPushPathStatus.textContent=
+      `Save failed; project Draft is unchanged. ${error instanceof Error?error.message:String(error)}`;
+    throw error;
+  }
 }
 const liveFlowTestingUi=mountLiveFlowTestingUi({
   root:document,
