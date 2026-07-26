@@ -47,6 +47,11 @@ assert.deepEqual(set.sections.map(({kind})=>kind),["overview","flow","flow","mat
 assert.deepEqual(set.sections.find(({kind})=>kind==="matrix").configuration.contextIds,["page:cart","event:purchase","frame:cart","occurrence:opened"]);
 assert.throws(()=>createProjectDocumentationSet({...set,sections:set.sections.filter(({kind})=>kind!=="matrix")}),/exactly one/i);
 assert.throws(()=>createProjectDocumentationSet({...set,sections:[...set.sections,{...set.sections.find(({kind})=>kind==="matrix"),id:"matrix:duplicate"}]}),/exactly one/i);
+const optionalOverviewSet=createProjectDocumentationSet({
+  id:"documentation-set:no-overview",name:"No overview",themeId:theme.id,
+  sections:[{id:"section:only-matrix",kind:"matrix",name:"Data capture matrix",selected:true,configuration:{contextIds:[]}}],
+});
+assert.equal(optionalOverviewSet.sections.some(({kind})=>kind==="overview"),false);
 
 const table=(id,title,headings,rows)=>({id,title,headings,rows});
 const source={
@@ -90,13 +95,24 @@ assert.match(clipboard.html,/width:28ch/);
 
 const workbook=writeProjectDocumentationWorkbook(snapshot,{scope:"complete"});
 const binary=new TextDecoder().decode(workbook);
+const unzipStored=(bytes)=>{const files=new Map(),view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let offset=0;while(offset+30<=bytes.length&&view.getUint32(offset,true)===0x04034b50){const size=view.getUint32(offset+18,true),nameLength=view.getUint16(offset+26,true),extraLength=view.getUint16(offset+28,true),name=new TextDecoder().decode(bytes.slice(offset+30,offset+30+nameLength)),start=offset+30+nameLength+extraLength;files.set(name,bytes.slice(start,start+size));offset=start+size;}return files;};
+const workbookFiles=unzipStored(workbook),workbookText=(name)=>new TextDecoder().decode(workbookFiles.get(name));
 for(const name of ["Overview","Checkout journey","Article journey","Data capture matrix","Sitewide","Opened Article"])assert.match(binary,new RegExp(name));
 for(const forbidden of ["diagnostic","provenance","revision hash","repair action"])assert.doesNotMatch(binary,new RegExp(forbidden,"i"));
 assert.doesNotMatch(binary,/<f>/);
 assert.match(binary,/data-theme-fingerprint=/);
 assert.match(binary,/wrapText="1"/);
-assert.match(binary,/oddHeader>Acme · Client specification · Logo/);
+assert.match(binary,/oddHeader>Acme · Client specification/);
+assert.doesNotMatch(binary,/oddHeader>[^<]*Logo/);
 assert.match(binary,/oddFooter>Internal/);
+assert.deepEqual(workbookFiles.get("xl/media/documentation-logo.png"),Uint8Array.from([0]));
+for(let index=1;index<=set.sections.length;index+=1){
+  assert.match(workbookText(`xl/worksheets/sheet${index}.xml`),/<drawing r:id="rId1"\/>/);
+  assert.match(workbookText(`xl/worksheets/_rels/sheet${index}.xml.rels`),new RegExp(`Target="../drawings/drawing${index}\\.xml"`));
+  assert.match(workbookText(`xl/drawings/drawing${index}.xml`),/<xdr:pic>/);
+  assert.match(workbookText(`xl/drawings/_rels/drawing${index}.xml.rels`),/Target="\.\.\/media\/documentation-logo\.png"/);
+}
+assert.match(workbookText("[Content_Types].xml"),/ContentType="image\/png"/);
 
 const unsafe=compileProjectDocumentationSnapshot({...source,set:{...set,name:"=Client<script>",sections:set.sections.map((section,index)=>({...section,name:index<2?"A/B*?":"A:B"}))},diagnostics:[{sectionId:"section:article",message:"Blocked identity profile:article",repair:"Open raw revision hash"}]});
 assert.equal(unsafe.incomplete,true);

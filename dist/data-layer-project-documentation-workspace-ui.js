@@ -284,8 +284,9 @@ export function installProjectDocumentationWorkspaceUi(options) {
             return;
         }
         selectedSetId = set.id;
-        if (!selectedSectionId || !set.sections.some(({ id }) => id === selectedSectionId))
-            selectedSectionId = set.sections[0]?.id ?? "";
+        const selectedSections = set.sections.filter(({ selected }) => selected);
+        if (!selectedSectionId || !selectedSections.some(({ id }) => id === selectedSectionId))
+            selectedSectionId = selectedSections[0]?.id ?? "";
         const available = sources(state), setRegion = document.createElement("section"), content = document.createElement("section"), configure = document.createElement("section"), themeRegion = document.createElement("section"), preview = document.createElement("section"), exportRegion = document.createElement("section");
         for (const [region, title] of [[setRegion, "Set"], [content, "Content"], [configure, "Configure"], [preview, "Preview"], [exportRegion, "Export"]])
             region.append(heading(2, title));
@@ -297,11 +298,11 @@ export function installProjectDocumentationWorkspaceUi(options) {
         setChoice.addEventListener("change", () => { selectedSetId = setChoice.value; snapshot = undefined; render(host); });
         const outline = document.createElement("ol");
         outline.setAttribute("aria-label", "Documentation section outline");
-        for (const section of set.sections) {
+        for (const section of selectedSections) {
             const item = document.createElement("li"), select = button(`${section.name} · ${section.kind}`, () => { selectedSectionId = section.id; render(host); }), earlier = button("Move earlier", () => saveSet(createProjectDocumentationSet({ ...set, sections: move(set.sections, section, -1) }), `Reorder ${section.name}`)), later = button("Move later", () => saveSet(createProjectDocumentationSet({ ...set, sections: move(set.sections, section, 1) }), `Reorder ${section.name}`));
             select.setAttribute("aria-current", String(section.id === selectedSectionId));
-            earlier.disabled = set.sections.indexOf(section) === 0;
-            later.disabled = set.sections.indexOf(section) === set.sections.length - 1;
+            earlier.disabled = selectedSections.indexOf(section) === 0;
+            later.disabled = selectedSections.indexOf(section) === selectedSections.length - 1;
             item.dataset.sectionKind = section.kind;
             item.append(select, earlier, later);
             outline.append(item);
@@ -310,7 +311,12 @@ export function installProjectDocumentationWorkspaceUi(options) {
         const flowSearch = controlInput("flowSearch", "", "search"), profileSearch = controlInput("profileSearch", "", "search");
         flowSearch.setAttribute("aria-label", "Search Flows");
         profileSearch.setAttribute("aria-label", "Search Site Profiles");
-        const flowChoices = document.createElement("fieldset"), profileChoices = document.createElement("fieldset");
+        const projectChoices = document.createElement("fieldset"), flowChoices = document.createElement("fieldset"), profileChoices = document.createElement("fieldset"), overview = set.sections.find(({ kind }) => kind === "overview"), overviewCheck = document.createElement("input");
+        projectChoices.append(Object.assign(document.createElement("legend"), { textContent: "Project sections" }));
+        overviewCheck.type = "checkbox";
+        overviewCheck.checked = Boolean(overview?.selected);
+        overviewCheck.addEventListener("change", () => { const sections = overview ? set.sections.map((section) => section.id === overview.id ? { ...section, selected: overviewCheck.checked } : section) : [{ id: `${set.id}:overview`, kind: "overview", name: "Overview", selected: true }, ...set.sections]; saveSet(createProjectDocumentationSet({ ...set, sections }), `${overviewCheck.checked ? "Select" : "Remove"} Overview`); });
+        projectChoices.append(labelled("Overview", overviewCheck));
         flowChoices.append(Object.assign(document.createElement("legend"), { textContent: "Flow value-map sections" }));
         profileChoices.append(Object.assign(document.createElement("legend"), { textContent: "Site Profile property-table sections" }));
         const drawContent = () => { flowChoices.querySelectorAll("label").forEach((value) => value.remove()); profileChoices.querySelectorAll("label").forEach((value) => value.remove()); for (const { entity } of available.flows.filter(({ entity }) => entity.name.toLowerCase().includes(flowSearch.value.toLowerCase()))) {
@@ -329,7 +335,7 @@ export function installProjectDocumentationWorkspaceUi(options) {
         flowSearch.addEventListener("input", drawContent);
         profileSearch.addEventListener("input", drawContent);
         drawContent();
-        content.append(flowSearch, flowChoices, profileSearch, profileChoices);
+        content.append(projectChoices, flowSearch, flowChoices, profileSearch, profileChoices);
         const selectedSection = set.sections.find(({ id }) => id === selectedSectionId);
         configure.setAttribute("aria-label", "Selected documentation section configuration");
         if (selectedSection?.kind === "flow")
@@ -348,12 +354,19 @@ export function installProjectDocumentationWorkspaceUi(options) {
             if (live.stale)
                 preview.append(Object.assign(document.createElement("p"), { textContent: `Preview stale — changed sources: ${live.changedSources.join(", ")}.`, role: "alert" }));
             for (const table of selectProjectDocumentationTables(snapshot, { scope: "complete" })) {
-                const sectionHost = document.createElement("section");
+                const sectionHost = document.createElement("section"), identity = [theme.clientName, theme.headerText].filter(Boolean).join(" · ");
                 sectionHost.dataset.previewSection = table.id;
                 sectionHost.dataset.themeFingerprint = themeFingerprint(theme);
-                sectionHost.append(heading(3, table.title), renderTable(table, theme));
+                if (theme.logo)
+                    sectionHost.append(Object.assign(document.createElement("img"), { src: theme.logo, alt: `${theme.clientName || theme.name} logo` }));
+                sectionHost.append(heading(3, table.title));
+                if (identity)
+                    sectionHost.append(Object.assign(document.createElement("p"), { textContent: identity }));
+                sectionHost.append(renderTable(table, theme));
                 if (table.legend)
                     sectionHost.append(Object.assign(document.createElement("p"), { textContent: table.legend }));
+                if (theme.footerText)
+                    sectionHost.append(Object.assign(document.createElement("footer"), { textContent: theme.footerText }));
                 preview.append(sectionHost);
             }
             if (snapshot.diagnostics.length) {
@@ -381,7 +394,7 @@ export function installProjectDocumentationWorkspaceUi(options) {
         scope.append(new Option("Current section", "current"), new Option("Selected sections", "selected"), new Option("Complete Documentation Set", "complete"));
         scope.value = exportScope;
         scope.addEventListener("change", () => { exportScope = scope.value; });
-        for (const section of set.sections) {
+        for (const section of selectedSections) {
             const check = document.createElement("input");
             check.type = "checkbox";
             check.checked = selectedExportIds.has(section.id);

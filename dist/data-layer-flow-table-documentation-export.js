@@ -128,7 +128,7 @@ const crcTable = Array.from({ length: 256 }, (_, n) => { let c = n; for (let k =
 const crc32 = (bytes) => { let crc = 0xffffffff; for (const byte of bytes)
     crc = crcTable[(crc ^ byte) & 255] ^ (crc >>> 8); return (crc ^ 0xffffffff) >>> 0; };
 export function zipDocumentationFiles(files) { const encoder = new TextEncoder(), locals = [], centrals = []; let offset = 0; for (const file of files) {
-    const name = encoder.encode(file.name), data = encoder.encode(file.content), crc = crc32(data), local = concat(u32(0x04034b50), u16(20), u16(0), u16(0), u16(0), u16(0), u32(crc), u32(data.length), u32(data.length), u16(name.length), u16(0), name), central = concat(u32(0x02014b50), u16(20), u16(20), u16(0), u16(0), u16(0), u16(0), u32(crc), u32(data.length), u32(data.length), u16(name.length), u16(0), u16(0), u16(0), u16(0), u32(0), u32(offset), name);
+    const name = encoder.encode(file.name), data = typeof file.content === "string" ? encoder.encode(file.content) : file.content, crc = crc32(data), local = concat(u32(0x04034b50), u16(20), u16(0), u16(0), u16(0), u16(0), u32(crc), u32(data.length), u32(data.length), u16(name.length), u16(0), name), central = concat(u32(0x02014b50), u16(20), u16(20), u16(0), u16(0), u16(0), u16(0), u32(crc), u32(data.length), u32(data.length), u16(name.length), u16(0), u16(0), u16(0), u16(0), u32(0), u32(offset), name);
     locals.push(local, data);
     centrals.push(central);
     offset += local.length + data.length;
