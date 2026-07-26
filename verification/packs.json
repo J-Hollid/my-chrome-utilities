@@ -980,6 +980,27 @@
     ]
   },
   {
+    "id": "schema_relationship_tree",
+    "source": [
+      "src/schema-relationship-tree.ts"
+    ],
+    "dependencies": [],
+    "unit": [
+      "test/data-layer-schema-relationship-tree-test.mjs"
+    ],
+    "property": [],
+    "features": [
+      "features/data-layer-side-panel-schema-relationship-tree.feature",
+      "features/data-layer-side-panel-schema-relationship-tree-runtime.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/schema_relationship_tree.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/schema-relationship-tree.mjs"
+    ]
+  },
+  {
     "id": "shell",
     "source": [
       "src/active-page",

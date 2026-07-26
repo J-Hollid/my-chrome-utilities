@@ -23,6 +23,7 @@ export { inspectSpecificIndexRuleTarget } from "../../../../data-layer-schema-ne
 export { appendSharedProfileConstraint, mountSidePanelLayeredProfileEditor, sharedProfilePropertyPaths } from "../../../../data-layer-layered-schema-ui.js";
 export { composedCanonicalSchema, saveComposedCanonicalDocument, saveComposedEventCanonicalDocument, saveEventOccurrenceCanonicalDocument, saveFlowPageInstanceCanonicalDocument } from "../../../../data-layer-composed-schema-workspace.js";
 export { sidePanelSchemaGroups } from "../../../../data-layer-side-panel-schema-editor.js";
+export { filterSchemaRelationshipTree, projectSchemaRelationshipTree, restoreSchemaRelationshipTreeView, saveSchemaRelationshipTreeView, type SchemaRelationshipCategory, type SchemaRelationshipTreeNode } from "../../../../schema-relationship-tree.js";
 export { mountProjectLibraryUi } from "../../../../data-layer-project-library-ui.js";
 export type { ProjectLibraryUi } from "../../../../data-layer-project-library-ui.js";
 export { PROJECT_LIBRARY_STORAGE_KEY, activateProject, commitProjectImport, createProjectInLibrary, exportProjectBundle, migrateSingletonProject, projectLibrary, projectMetadata, recordProjectNavigation, replaceActiveProjectState, resolveProjectNavigation, resolveProjectWrite, restoreProjectLibrary, saveProjectState, serializeProjectLibrary, setProjectPendingWrite, stageProjectImport, updateProjectMetadata } from "../../../../data-layer-project-library.js";

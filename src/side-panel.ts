@@ -293,6 +293,7 @@ import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRule
 import { canonicalRulePropertyPath } from "./utilities/data-layer/schemas.js";
 import { renderSchemaSpecificationBuilder } from "./utilities/data-layer/schemas.js";
 import { applyCanonicalCommand, canonicalCommandOutcome, canonicalCommandsFromCompactProjection, canonicalMigrationDurablyAcknowledged, canonicalPredicateText, canonicalPropertyPath, compactSchemaProjection, composedCanonicalSchema, createCanonicalSchema, hasLegacySchemaRepresentation, migrateLegacyProfile, mountCanonicalPredicateEditor, mountSidePanelLayeredProfileEditor, resolveCanonicalMigrationConflict, resolveSidePanelSchemaContributor, saveComposedCanonicalDocument, saveComposedEventCanonicalDocument, saveEventOccurrenceCanonicalDocument, saveFlowPageInstanceCanonicalDocument, savedSchemaCanonicalDocument, savedSchemaFromCanonical, sidePanelSchemaGroups, transactProject, type CanonicalSchemaDocument, type ProjectEntity, type ProjectState, type SidePanelContributorSelection } from "./utilities/data-layer/schemas.js";
+import {filterSchemaRelationshipTree,projectSchemaRelationshipTree,restoreSchemaRelationshipTreeView,saveSchemaRelationshipTreeView,type SchemaRelationshipCategory,type SchemaRelationshipTreeNode} from "./utilities/data-layer/schemas.js";
 import {beginCompactCanonicalHistoryTransition,compactCanonicalHistoryKey,compactCanonicalHistorySettlement,completeCompactCanonicalHistoryTransition,prepareCompactCanonicalRedo,prepareCompactCanonicalUndo,recordCompactCanonicalMutation,rejectCompactCanonicalHistoryTransition,type CompactCanonicalHistoryTransitionIdentity,type CompactCanonicalPageHistory} from "./utilities/data-layer/schemas.js";
 import { mountProjectLibraryUi, PROJECT_LIBRARY_STORAGE_KEY, recordProjectNavigation, serializeProjectLibrary } from "./utilities/data-layer/schemas.js";
 import { installDurableRepositoryStartupFailure, mountDurableProjectRepositoryUi, openDurableProjectRuntime } from "./utilities/data-layer/schemas.js";
@@ -564,6 +565,7 @@ const {
   backToCapturedEventButton,
 } = eventLibraryEditorElements;
 const schemaSearch = document.querySelector<HTMLInputElement>("#schema-search");
+const schemaCategoryFilter = document.querySelector<HTMLSelectElement>("#schema-category-filter");
 const sidePanelLayeredProfileEditorHost = document.querySelector<HTMLElement>("#side-panel-layered-profile-editor");
 const liveEventQuery = document.querySelector<HTMLElement>("#live-event-query");
 const schemaSubviews = Array.from(document.querySelectorAll<HTMLButtonElement>("#schema-subviews [role=tab]"));
@@ -2229,38 +2231,45 @@ function reviewSavedSchemaAdoption(schema:SchemaDefinition,trigger:HTMLButtonEle
   cancel.addEventListener("click",()=>{dialog.close();dialog.remove();trigger.focus({preventScroll:true});});dialog.append(heading,summary,picker,confirm,cancel);document.body.append(dialog);dialog.showModal();confirm.focus({preventScroll:true});
 }
 
+let schemaTreeProjectId:string|undefined,schemaTreeExpandedKeys=new Set<string>(),schemaTreeInvokingReference:string|undefined,schemaTreeRestoringScroll=false;
+const schemaTreeStorage=globalThis.localStorage;
+function persistSchemaTreeView(projectId:string):void{
+  saveSchemaRelationshipTreeView(schemaTreeStorage,projectId,{query:schemaSearch?.value??"",category:(schemaCategoryFilter?.value??"All") as SchemaRelationshipCategory,expandedKeys:[...schemaTreeExpandedKeys],scrollTop:schemaList?.scrollTop??0});
+}
 function renderSchemas(): void {
-  const query=(schemaSearch?.value??"").trim().toLowerCase(),visible=searchSchemas(schemas,query),project=restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)),groups=sidePanelSchemaGroups(project,visible).map((group)=>({...group,entries:group.name==="Saved schemas"?group.entries:group.entries.filter((entry)=>[entry.name,entry.role,entry.scope,entry.lineage,entry.state].some((value)=>String(value).toLowerCase().includes(query)))})).filter(({entries})=>entries.length),count=groups.reduce((total,{entries})=>total+entries.length,0),nodes:HTMLElement[]=[];
-  if (schemaEmptyState) schemaEmptyState.hidden = count > 0;
-  if (schemaCount) schemaCount.textContent = `${count} schemas and contributors`;
-  const heading=(name:string)=>{const item=document.createElement("li");item.dataset.schemaGroup=name;item.setAttribute("role","heading");item.textContent=name;return item;};
-  if(visible.length){nodes.push(heading("Saved schemas"),...visible.map((schema) => {
-    const item = document.createElement("li"); const revise = document.createElement("button"); const duplicate = document.createElement("button"); const adopt = document.createElement("button"); const build = document.createElement("button"); const exportCurrent = document.createElement("button"); const reportMissing = document.createElement("button"); const remove = document.createElement("button");
-    const parent = schema.parentSchemaId ? schemas.find((candidate) => candidate.id === schema.parentSchemaId) : undefined;
-    const pending = schema.workingDraft?.pendingChanges.length ?? 0;
-    const history = schemaRevisionChoices(schema).length;
-    item.dataset.schemaEntryKey=`saved:${schema.id}`;item.dataset.schemaRole="Saved schema";
-    item.textContent = schema.published === false
-      ? `${schema.name} · role Saved schema · scope Library · lineage ${parent?.name??"Library root"} · revision ${schema.version} · Draft · ${pending} pending changes. `
-      : `${schema.name} · current revision ${schema.version} · role Saved schema · scope Library · lineage ${parent?.name??"Library root"} · saved · ${pending} pending draft changes · ${history} historical revisions · ${schema.assignments.map((assignment) => `${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ") || "unassigned"}. `;
-    revise.type = duplicate.type = adopt.type = build.type = exportCurrent.type = reportMissing.type = remove.type = "button"; revise.textContent = "Edit working draft"; duplicate.textContent = "Duplicate"; adopt.textContent = "Add saved schema to project"; build.textContent = "Build documentation table"; exportCurrent.textContent = "Export"; reportMissing.textContent = "Report missing event"; remove.textContent = "Delete";
-    revise.addEventListener("click", () => openSavedSchemaInUnifiedEditor(schema));
-    duplicate.addEventListener("click", () => { schemas = [...schemas, duplicateSchemaRevision(schema, schema.version, schemas)]; persistSchemaLibrary(); renderSchemas(); });
-    adopt.addEventListener("click",()=>reviewSavedSchemaAdoption(schema,adopt));
-    build.addEventListener("click", () => openSchemaSpecification(schema, `published:${schema.version}`, build));
-    exportCurrent.addEventListener("click", () => openSchemaExportChoices(exportCurrent, schema));
-    reportMissing.addEventListener("click", () => openMissingEventBuilder("schema row actions", schema.id));
-    remove.addEventListener("click", () => {
-      const children = schemas.filter((candidate) => candidate.parentSchemaId === schema.id);
-      if (children.length) { if (schemaResult) schemaResult.textContent = `Cannot delete ${schema.name}: it is the parent of ${children.map(({ name }) => name).join(", ")}.`; return; }
-      pendingSchemaDeletion = schema;
-      if (schemaDeleteReviewSummary) schemaDeleteReviewSummary.textContent = `${schema.name} v${schema.version} and its assignments will be removed.`;
-      if (schemaDeleteReview) { schemaDeleteReview.hidden = false; schemaDeleteReview.showModal(); }
-    }); item.append(revise, duplicate, adopt, build, exportCurrent, reportMissing, remove); return item;
-  }));}
-  if(!project){const item=document.createElement("li"),open=document.createElement("button"),create=document.createElement("button");item.setAttribute("role","status");item.textContent="No active project. ";open.type=create.type="button";open.textContent="Open project";create.textContent="Create project";open.addEventListener("click",()=>showDataLayerView("Projects",true));create.addEventListener("click",()=>{showDataLayerView("Projects",true);document.querySelector<HTMLButtonElement>("#create-library-project")?.click();});item.append(open,create);nodes.push(item);}
-  for(const group of groups.filter(({name})=>name!=="Saved schemas")){nodes.push(heading(group.name));for(const entry of group.entries){const item=document.createElement("li"),open=document.createElement("button"),studio=document.createElement("button");item.dataset.schemaEntryKey=entry.key;item.dataset.schemaRole=entry.role;item.textContent=`${entry.name} · role ${entry.role} · scope ${entry.scope} · lineage ${entry.lineage} · revision ${entry.revision} · ${entry.state}. `;open.type=studio.type="button";open.textContent="Open schema";studio.textContent="Open schema in Specification Studio";studio.setAttribute("aria-label",`Open ${entry.name} schema in Specification Studio`);open.addEventListener("click",()=>{const retainedScroll=compactCanonicalEditor?.key===entry.key?schemaDetail?.scrollTop:undefined;openContributorInUnifiedEditor(entry.key);if(schemaDetail&&retainedScroll!==undefined)schemaDetail.scrollTop=retainedScroll;});studio.addEventListener("click",()=>{if(!project)return;const separator=entry.key.indexOf(":"),kind=entry.key.slice(0,separator),entityId=entry.key.slice(separator+1);globalThis.open(`specification-builder.html?project=${encodeURIComponent(project.project.id)}&kind=${encodeURIComponent(kind)}&entity=${encodeURIComponent(entityId)}`,"_blank");});item.append(open,studio);nodes.push(item);}}
-  schemaList?.replaceChildren(...nodes);
+  const project=restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)),projectId=project?.project.id??"no-project",fullTree=projectSchemaRelationshipTree(project,schemas),allNodes=(nodes:readonly SchemaRelationshipTreeNode[]):SchemaRelationshipTreeNode[]=>nodes.flatMap((node)=>[node,...allNodes(node.children)]),validNodes=allNodes(fullTree),validKeys=new Set(validNodes.map(({key})=>key));
+  if(schemaTreeProjectId!==projectId){
+    schemaTreeProjectId=projectId;
+    const restored=restoreSchemaRelationshipTreeView(schemaTreeStorage,projectId,validKeys);
+    schemaTreeExpandedKeys=new Set(restored.expandedKeys.length?restored.expandedKeys:validNodes.filter(({children})=>children.length).map(({key})=>key));
+    if(schemaSearch)schemaSearch.value=restored.query;
+    if(schemaCategoryFilter)schemaCategoryFilter.value=restored.category;
+    if(restored.scrollTop>0){schemaTreeRestoringScroll=true;queueMicrotask(()=>{if(schemaList)schemaList.scrollTop=restored.scrollTop;requestAnimationFrame(()=>{schemaTreeRestoringScroll=false;});});}
+  }else schemaTreeExpandedKeys=new Set([...schemaTreeExpandedKeys].filter((key)=>validKeys.has(key)));
+  const query=schemaSearch?.value??"",category=(schemaCategoryFilter?.value??"All") as SchemaRelationshipCategory,filtered=filterSchemaRelationshipTree(fullTree,{query,category}),rows:HTMLElement[]=[];
+  const savedRow=(node:SchemaRelationshipTreeNode,level:number):HTMLLIElement|undefined=>{
+    const schema=schemas.find(({id})=>`saved:${id}`===node.targetKey);if(!schema)return;
+    const item=document.createElement("li"),revise=document.createElement("button"),duplicate=document.createElement("button"),adopt=document.createElement("button"),build=document.createElement("button"),exportCurrent=document.createElement("button"),reportMissing=document.createElement("button"),remove=document.createElement("button"),parent=schema.parentSchemaId?schemas.find((candidate)=>candidate.id===schema.parentSchemaId):undefined,pending=schema.workingDraft?.pendingChanges.length??0,history=schemaRevisionChoices(schema).length;
+    item.dataset.schemaEntryKey=node.targetKey;item.dataset.schemaReferenceKey=node.key;item.dataset.schemaRole=node.role;item.setAttribute("role","treeitem");item.setAttribute("aria-level",String(level));item.setAttribute("aria-selected",String(compactCanonicalEditor?.key===node.targetKey));item.textContent=schema.published===false?`${schema.name} · role Saved schema · path ${node.relationshipPath} · revision ${schema.version} · Draft · ${pending} pending changes. `:`${schema.name} · current revision ${schema.version} · role Saved schema · path ${node.relationshipPath} · saved · ${pending} pending draft changes · ${history} historical revisions · ${schema.assignments.map((assignment)=>`${assignment.sourceId}/${assignment.eventName}/${assignment.target}`).join(", ")||"unassigned"}. `;
+    revise.type=duplicate.type=adopt.type=build.type=exportCurrent.type=reportMissing.type=remove.type="button";revise.textContent="Edit working draft";duplicate.textContent="Duplicate";adopt.textContent="Add saved schema to project";build.textContent="Build documentation table";exportCurrent.textContent="Export";reportMissing.textContent="Report missing event";remove.textContent="Delete";revise.setAttribute("aria-label",`Edit ${schema.name}; ${node.relationshipPath}`);
+    revise.addEventListener("click",()=>{schemaTreeInvokingReference=node.key;openSavedSchemaInUnifiedEditor(schema);});duplicate.addEventListener("click",()=>{schemas=[...schemas,duplicateSchemaRevision(schema,schema.version,schemas)];persistSchemaLibrary();renderSchemas();});adopt.addEventListener("click",()=>reviewSavedSchemaAdoption(schema,adopt));build.addEventListener("click",()=>openSchemaSpecification(schema,`published:${schema.version}`,build));exportCurrent.addEventListener("click",()=>openSchemaExportChoices(exportCurrent,schema));reportMissing.addEventListener("click",()=>openMissingEventBuilder("schema row actions",schema.id));remove.addEventListener("click",()=>{const children=schemas.filter((candidate)=>candidate.parentSchemaId===schema.id);if(children.length){if(schemaResult)schemaResult.textContent=`Cannot delete ${schema.name}: it is the parent of ${children.map(({name})=>name).join(", ")}.`;return;}pendingSchemaDeletion=schema;if(schemaDeleteReviewSummary)schemaDeleteReviewSummary.textContent=`${schema.name} v${schema.version} and its assignments will be removed.`;if(schemaDeleteReview){schemaDeleteReview.hidden=false;schemaDeleteReview.showModal();}});
+    item.append(revise,duplicate,adopt,build,exportCurrent,reportMissing,remove);return item;
+  };
+  const visit=(node:SchemaRelationshipTreeNode,level:number):void=>{
+    if(node.targetKey?.startsWith("saved:")){const item=savedRow(node,level);if(item)rows.push(item);return;}
+    const item=document.createElement("li");item.dataset.schemaReferenceKey=node.key;item.setAttribute("role","treeitem");item.setAttribute("aria-level",String(level));item.style.setProperty("--schema-tree-level",String(level));
+    if(node.targetKey){
+      const open=document.createElement("button"),studio=document.createElement("button");item.dataset.schemaEntryKey=node.targetKey;item.dataset.schemaRole=node.role;item.setAttribute("aria-selected",String(compactCanonicalEditor?.key===node.targetKey));item.textContent=`${node.name} · role ${node.role} · path ${node.relationshipPath}. `;open.type=studio.type="button";open.textContent="Open schema";open.setAttribute("aria-label",`Open ${node.name}; ${node.relationshipPath}`);studio.textContent="Open schema in Specification Studio";studio.setAttribute("aria-label",`Open ${node.name} in Specification Studio; ${node.relationshipPath}`);open.addEventListener("click",()=>{schemaTreeInvokingReference=node.key;const retainedScroll=compactCanonicalEditor?.key===node.targetKey?schemaDetail?.scrollTop:undefined;openContributorInUnifiedEditor(node.targetKey!);if(schemaDetail&&retainedScroll!==undefined)schemaDetail.scrollTop=retainedScroll;});studio.addEventListener("click",()=>{if(!project)return;const separator=node.targetKey!.indexOf(":"),kind=node.targetKey!.slice(0,separator),entityId=node.targetKey!.slice(separator+1);globalThis.open(`specification-builder.html?project=${encodeURIComponent(project.project.id)}&kind=${encodeURIComponent(kind)}&entity=${encodeURIComponent(entityId)}`,"_blank");});item.append(open,studio);
+    }else{
+      const toggle=document.createElement("button"),expanded=node.expanded||schemaTreeExpandedKeys.has(node.key);item.dataset.schemaGroup=node.name;item.setAttribute("aria-expanded",String(expanded));item.setAttribute("aria-selected","false");toggle.type="button";toggle.textContent=node.name;toggle.setAttribute("aria-label",`${expanded?"Collapse":"Expand"} ${node.relationshipPath}`);toggle.addEventListener("click",()=>{if(expanded)schemaTreeExpandedKeys.delete(node.key);else schemaTreeExpandedKeys.add(node.key);persistSchemaTreeView(projectId);renderSchemas();});item.append(toggle);
+    }
+    rows.push(item);
+    const expanded=node.expanded||schemaTreeExpandedKeys.has(node.key);
+    if(node.children.length&&(node.targetKey||expanded))for(const child of node.children)visit(child,level+1);
+  };
+  for(const root of filtered)visit(root,1);
+  if(!project){const item=document.createElement("li"),open=document.createElement("button"),create=document.createElement("button");item.setAttribute("role","status");item.textContent="No active project. Open a project to see relationship-derived contributors. ";open.type=create.type="button";open.textContent="Open project";create.textContent="Create project";open.addEventListener("click",()=>showDataLayerView("Projects",true));create.addEventListener("click",()=>{showDataLayerView("Projects",true);document.querySelector<HTMLButtonElement>("#create-library-project")?.click();});item.append(open,create);rows.push(item);}
+  const resultCount=rows.filter(({dataset})=>Boolean(dataset.schemaEntryKey)).length;if(schemaEmptyState)schemaEmptyState.hidden=resultCount>0;if(schemaCount){schemaCount.textContent=`${resultCount} relationship-tree results`;schemaCount.setAttribute("aria-label",`${resultCount} schema relationship-tree results`);}schemaList?.replaceChildren(...rows);
 }
 
 function showSchemaSubview(id: "schema-master" | "schema-rule-library" | "schema-assignments"): void {
@@ -2944,6 +2953,8 @@ function closeCompactCanonicalEditor():void{
   if(schemaEditor){delete schemaEditor.dataset.schemaPresentation;delete schemaEditor.dataset.canonicalRevision;delete schemaEditor.dataset.canonicalSchemaId;schemaEditor.removeAttribute("aria-label");schemaEditor.hidden=true;}
   if(schemaDetail){schemaDetail.hidden=true;schemaDetail.setAttribute("aria-label","Schema detail");}
   renderCompactCanonicalContext();if(schemaDetailEmpty)schemaDetailEmpty.hidden=false;
+  renderSchemas();
+  if(schemaTreeInvokingReference){document.querySelector<HTMLElement>(`#schema-list [data-schema-reference-key="${CSS.escape(schemaTreeInvokingReference)}"] button`)?.focus({preventScroll:true});schemaTreeInvokingReference=undefined;}
 }
 
 function persistSchemaEditorDraft(change?: string): void {
@@ -2996,6 +3007,7 @@ function openContributorInUnifiedEditor(key:string):void{
     onUndo:()=>{void stepHistory("Undo");},
     onRedo:()=>{void stepHistory("Redo");},
     renderContext:renderMigrationReview,
+    actions:[{label:"Close editor",run:closeCompactCanonicalEditor}],
   });
 }
 
@@ -5443,7 +5455,14 @@ templateEmptyRecovery?.addEventListener("click", () => {
     showDataLayerView("Live");
   }
 });
-schemaSearch?.addEventListener("input", renderSchemas);
+schemaSearch?.addEventListener("input",()=>{if(schemaTreeProjectId)persistSchemaTreeView(schemaTreeProjectId);renderSchemas();});
+schemaCategoryFilter?.addEventListener("change",()=>{if(schemaTreeProjectId)persistSchemaTreeView(schemaTreeProjectId);renderSchemas();});
+schemaList?.addEventListener("scroll",()=>{if(schemaTreeProjectId&&!schemaTreeRestoringScroll)persistSchemaTreeView(schemaTreeProjectId);},{passive:true});
+schemaList?.addEventListener("keydown",(event)=>{
+  const target=event.target instanceof HTMLButtonElement?event.target:undefined,controls=Array.from(schemaList.querySelectorAll<HTMLButtonElement>("li[role=treeitem] > button:first-of-type")),current=target?controls.indexOf(target):-1;if(current<0||!target)return;
+  if(event.key==="ArrowDown"||event.key==="ArrowUp"||event.key==="Home"||event.key==="End"){event.preventDefault();const next=event.key==="Home"?0:event.key==="End"?controls.length-1:Math.max(0,Math.min(controls.length-1,current+(event.key==="ArrowDown"?1:-1)));controls[next]?.focus({preventScroll:false});}
+  if(event.key==="ArrowRight"||event.key==="ArrowLeft"){const row=target.closest<HTMLElement>('[role="treeitem"][aria-expanded]');if(!row)return;const expanded=row.getAttribute("aria-expanded")==="true";if((event.key==="ArrowRight"&&!expanded)||(event.key==="ArrowLeft"&&expanded)){event.preventDefault();target.click();}}
+});
 schemaSubviews.forEach((tab) => tab.addEventListener("click", () => showSchemaSubview(tab.getAttribute("aria-controls") as "schema-master" | "schema-rule-library" | "schema-assignments")));
 schemaEditorName?.addEventListener("input", () => {
   if (!schemaDraft) return;
