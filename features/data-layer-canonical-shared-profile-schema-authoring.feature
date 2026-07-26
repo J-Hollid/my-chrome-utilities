@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=4eca4db5e0b98039c64eb0d80adb92815fa54a0549f59ac9d0505026582c39ff
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-26T04:40:46.515115746Z","feature_name":"Data layer canonical Shared Profile schema authoring","feature_path":"features/data-layer-canonical-shared-profile-schema-authoring.feature","background_hash":"9e8225c80de52bee679ebd2c1ee0ad618b61eb14a35a45ad9378b67a90e8c5ec","implementation_hash":"sha256:2044b360fb6a279e9f0f3cacea33cb3523333d907987c9cc3b794d2f84205d7f","scenarios":[{"index":6,"name":"Data layer canonical Shared Profile schema authoring 007","scenario_hash":"4e1e629613f3377678a704de7fb49aa24b7666f7d6fd8f7336c5848a2481c5e1","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-26T04:40:46.515115746Z"},{"index":7,"name":"Data layer canonical Shared Profile schema authoring 008","scenario_hash":"1f66844909f9a2d8d4fb2e63db0a5ac2dbe8c763ce946f0d7dfa416bf3d7fab8","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-26T04:40:46.515115746Z"},{"index":14,"name":"Data layer canonical Shared Profile schema authoring 015","scenario_hash":"bb47aa3c9d43d49581aefe99b5084c921b7ac3b3925f65993047d6866f42c60b","mutation_count":21,"result":{"Total":21,"Killed":21,"Survived":0,"Errors":0},"tested_at":"2026-07-26T04:40:46.515115746Z"},{"index":18,"name":"Data layer canonical Shared Profile schema authoring 019","scenario_hash":"c8f16f48f38cc55fd9a94975c60aac7d763058989e5d44c3401164eb45f1e27e","mutation_count":24,"result":{"Total":24,"Killed":24,"Survived":0,"Errors":0},"tested_at":"2026-07-26T04:40:46.515115746Z"},{"index":20,"name":"Data layer canonical Shared Profile schema authoring 021","scenario_hash":"2bb848324d4a767cdf888495b4488eccd957f83fc7b373b2cd80ea60f11461c6","mutation_count":22,"result":{"Total":22,"Killed":22,"Survived":0,"Errors":0},"tested_at":"2026-07-26T04:40:46.515115746Z"},{"index":25,"name":"Data layer canonical Shared Profile schema authoring 026","scenario_hash":"3367fa819cd09553a8c985c20a7930360075211ceef18988757c09f07e3efef5","mutation_count":18,"result":{"Total":18,"Killed":18,"Survived":0,"Errors":0},"tested_at":"2026-07-26T04:40:46.515115746Z"},{"index":26,"name":"Data layer canonical Shared Profile schema authoring 027","scenario_hash":"b2514f5d922dddd13a16fe3c0c9fd7b36223c304b6e931286443b7c66f86e522","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-07-26T04:40:46.515115746Z"},{"index":28,"name":"Data layer canonical Shared Profile schema authoring 029","scenario_hash":"78c200ba60e56b94881b73c84215cc931c8673ae81b4d104758dcef01a0e7176","mutation_count":36,"result":{"Total":36,"Killed":36,"Survived":0,"Errors":0},"tested_at":"2026-07-26T04:40:46.515115746Z"},{"index":31,"name":"Data layer canonical Shared Profile schema authoring 032","scenario_hash":"e87e6f94f9f00898d765e7ba20b9f2edbef3131f2d8ca00c18517e762aeb2cd9","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-26T04:40:46.515115746Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer canonical Shared Profile schema authoring
 
   Background:
@@ -379,8 +374,9 @@ Feature: Data layer canonical Shared Profile schema authoring
     And each row has one compact context-menu trigger beside its property identity and no dedicated column of facet or ownership action buttons
     When the operator changes /lineOfCustomer description, allowed values, and example in their table cells
     Then the values remain editable in that row without opening a focused editor or leaving Table
-    And the edits enter the same staged review used by Definition
-    And confirmation creates one property-scoped command with the displayed base Draft token and one Undo action
+    And each changed cell commits directly on Enter, Tab, Shift+Tab, or blur without opening property review
+    And each commit creates one property-scoped command with the displayed base Draft token and one Undo action
+    And Escape before commit restores that cell's saved effective value with no command
     When the operator opens /lineOfCustomer's context menu
     Then a layered overlay anchored to that row offers Definition, Rules, Structure, provenance, and legal ownership actions
     And the overlay neither inserts a control panel below the table nor expands, replaces, or hides any property row
@@ -452,11 +448,11 @@ Feature: Data layer canonical Shared Profile schema authoring
   Scenario: Data layer canonical Shared Profile schema authoring 034
     Given Sitewide defines /lineOfCustomer description Customer classification
     And Cart and Checkout inherit that description while Retail Cart has local description Retail classification
-    When the operator edits Sitewide description to Customer segment in Table and confirms its property review
+    When the operator edits Sitewide description to Customer segment in Table and leaves the cell
     Then one Sitewide property-scoped command advances its Draft token
     And Cart and Checkout immediately show inherited description Customer segment with Sitewide provenance
     And Retail Cart retains local description Retail classification while its parent provenance updates
-    When inherited Cart description is staged as Cart customer segment through Table and confirmed
+    When inherited Cart description is changed to Cart customer segment and committed with Enter
     Then one sparse local description override is created automatically on Cart
     And Sitewide, Checkout, and Retail Cart remain unchanged
     When Sitewide description later changes to Customer audience
@@ -465,3 +461,38 @@ Feature: Data layer canonical Shared Profile schema authoring
     Then only Cart's local description facet is removed and Cart immediately inherits Customer audience
     When the operator invokes Undo
     Then the same Cart local description override is restored without copying another parent facet
+
+  # Data layer canonical Shared Profile schema authoring 035
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 035
+    Given Sitewide defines <facet> as <parent_value> and Cart inherits it
+    When the operator changes Sitewide <facet> to <new_parent_value> in Table and commits with <parent_commit>
+    Then Sitewide shows Saved at the next Draft token and Cart immediately inherits <new_parent_value>
+    When inherited Cart receives <child_value> in its <facet> cell and <child_commit> commits it
+    Then Cart stores only a sparse local <facet> override and shows local provenance
+    And Sitewide plus another inheriting child remain byte-identical
+    When the operator leaves Cart and later returns after reload
+    Then Cart still shows <child_value> while the other child inherits <new_parent_value>
+    And neither edit required opening property actions, Definition, or Review changes
+
+    Examples:
+      | facet          | parent_value            | new_parent_value         | parent_commit | child_value            | child_commit |
+      | description    | Customer classification | Customer segment         | blur          | Cart customer segment  | Enter        |
+      | allowed values | retail                   | retail, wholesale        | Tab           | cart, guest            | blur         |
+      | example        | retail                   | wholesale                | blur          | cart                    | Enter        |
+
+  # Data layer canonical Shared Profile schema authoring 036
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 036
+    Given quick-edit origin is <origin_cell>
+    When the cell receives <edit_state> followed by <navigation_key>
+    Then the keyboard transaction result is <command_result>
+    And active quick-edit destination is <destination_cell>
+    And read-only cells and the property context-menu trigger are skipped
+    And repository rerendering creates no duplicate blur commit
+
+    Examples:
+      | origin_cell                            | edit_state          | navigation_key | command_result                             | destination_cell                         |
+      | the first property's Description cell | a changed value      | Tab            | that cell commits one property command     | the same property's Allowed values cell  |
+      | the first property's Allowed values cell | its unchanged value | Tab            | no property command is created             | the same property's Example cell         |
+      | the first property's Example cell     | a changed value      | Tab            | that cell commits one property command     | the next property's Description cell     |
+      | the next property's Description cell  | a changed value      | Shift+Tab       | that cell commits one property command     | the previous property's Example cell     |
+      | an Allowed values cell                 | an invalid value     | Tab            | no command is created and a diagnostic renders | the same Allowed values cell          |

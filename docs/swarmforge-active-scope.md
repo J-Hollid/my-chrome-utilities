@@ -109,16 +109,18 @@ candidate and was merged to `master` at `bf0c867bd6`. Table-first schema editor
 correction subsequently completed through its terminal candidate and was merged to
 `master` at `50fdeff2ec`. Conditional-rule definition correction subsequently
 completed through its terminal candidate and was merged to `master` at
-`1dfaa1bc76`.
+`1dfaa1bc76`. Rule-condition and example-usability correction subsequently
+completed through its terminal candidate and was merged to `master` at
+`e4d36277a4`.
 
 The following task lineages remain open and must now be recovered in this order:
 
-1. `rule-condition-example-usability-correction`; then
+1. `quick-table-cell-save-correction`; then
 2. `durable-project-repository`; then
 3. `flow-canvas-topology-examples`.
 
-The rule-condition and example-usability correction is later authority for
-Authoring scenarios 023–034. It retains the compact Definition, Rules, and
+The quick Table-save correction is later authority for Authoring scenarios 023–036.
+It retains the compact Definition, Rules, and
 Structure menu but supersedes the ordinary-value field, mandatory When tree, inert
 example-value input, current condition-node action model, and overlays that open
 outside the viewport. Definition contains Allowed values supporting zero, one, or
@@ -140,8 +142,16 @@ expose no View, Edit, or Add child mechanics. Search, selector, value, and actio
 controls remain inside the overlay at 360 pixels. Opening or growing a layer near
 the viewport edge minimally scrolls the page until that complete layer is visible.
 
-Every inline Table edit enters the same staged property review, base-Draft-token
-comparison, property-scoped command, persistence, and Undo flow as Definition.
+Keystrokes in Description, Allowed values, and Example Table cells remain transient
+until Enter, Tab, Shift+Tab, or blur commits that cell directly. A commit performs base-Draft-token
+comparison, one property-scoped command, persistence, subscription update, and one
+Undo action without opening property actions, Definition, or Review changes. Escape
+before commit restores the saved effective value with no repository or Undo change.
+Tab commits once and advances through Description, Allowed values, and Example into
+the next property row; Shift+Tab commits once and traverses that order in reverse.
+Read-only cells and context-menu triggers are skipped. Unchanged cells create no
+command, invalid cells retain focus with a diagnostic, and subscription rerendering
+restores the intended cell without a duplicate blur commit.
 Editing a parent contributor immediately updates every inheriting child. Editing an
 inherited facet on a child automatically creates only that sparse local facet with
 child provenance; the parent and siblings remain unchanged. Later parent edits
