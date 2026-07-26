@@ -107,27 +107,51 @@ subsequently completed through its terminal candidate and was merged to `master`
 `cd5ba21dad`. Rule builder correction subsequently completed through its terminal
 candidate and was merged to `master` at `bf0c867bd6`. Table-first schema editor
 correction subsequently completed through its terminal candidate and was merged to
-`master` at `50fdeff2ec`.
+`master` at `50fdeff2ec`. Conditional-rule definition correction subsequently
+completed through its terminal candidate and was merged to `master` at
+`1dfaa1bc76`.
 
 The following task lineages remain open and must now be recovered in this order:
 
-1. `conditional-rule-definition-correction`; then
+1. `rule-condition-example-usability-correction`; then
 2. `durable-project-repository`; then
 3. `flow-canvas-topology-examples`.
 
-The conditional-rule definition correction is later authority for Authoring
-scenarios 023–030. It supersedes the separate Presence, Values, Conditions,
-Documentation, and Example menu sections and every clause that mounts a focused
-property editor below the table. A compact first-layer menu offers Definition,
-Rules, and Structure. Definition opens one adjacent child overlay containing type,
-Required or Optional or Forbidden presence, one ordinary-value field,
-documentation, and example controls so ordinary editing completes in one pass. A
-single ordinary value is expected; comma-separated values are allowed values and
-render in the Table as human text without square brackets.
+The rule-condition and example-usability correction is later authority for
+Authoring scenarios 023–034. It retains the compact Definition, Rules, and
+Structure menu but supersedes the ordinary-value field, mandatory When tree, inert
+example-value input, current condition-node action model, and overlays that open
+outside the viewport. Definition contains Allowed values supporting zero, one, or
+many comma-separated typed values; there is no expected-versus-allowed distinction
+for new authoring and Table text contains no square brackets. Legacy exact values
+project as one allowed value without mutating their source.
 
-Rules open as a child layer and each rule owns a When predicate tree and a Then
-outcome. There is no separate property-level Conditions editor or condition rule
-kind. A matching rule supersedes only its targeted ordinary-definition facet; a
+Example method controls the mounted value editor. Blank mounts none, Allowed value
+mounts a selector populated from the property's typed allowed values, and Custom
+value mounts a type-valid input. A rule defaults to Always and saves with no When
+condition. Adding When creates concise human predicate summaries such as
+`pageType exists` without the target path or stable IDs.
+
+The condition builder starts with Add condition and Add group. Predicate rows
+directly expose property, operator, optional value, and Remove. Add group then asks
+for All, Any, or Not; group rows expose relation, Add condition, Add group, and
+Remove. All and Any accept multiple children, Not exactly one, and predicates
+expose no View, Edit, or Add child mechanics. Search, selector, value, and action
+controls remain inside the overlay at 360 pixels. Opening or growing a layer near
+the viewport edge minimally scrolls the page until that complete layer is visible.
+
+Every inline Table edit enters the same staged property review, base-Draft-token
+comparison, property-scoped command, persistence, and Undo flow as Definition.
+Editing a parent contributor immediately updates every inheriting child. Editing an
+inherited facet on a child automatically creates only that sparse local facet with
+child provenance; the parent and siblings remain unchanged. Later parent edits
+continue to flow to non-overridden children and cannot replace the child override.
+Reset to parent deletes only the local facet and resumes the current live parent;
+Undo restores that exact local override.
+
+Rules open as a child layer and each rule owns a required Then outcome plus an
+optional When predicate tree. There is no separate property-level Conditions editor
+or condition rule kind. A matching rule supersedes only its targeted definition facet; a
 non-matching rule leaves the definition effective. Compatible matching rules
 compose, while contradictory matches block with both rule names and no list-order
 winner. Installed evidence must build and validate the error_message,
@@ -145,7 +169,7 @@ whole. Use them only as patch references while reconstructing each task from cur
 source file, test, acceptance handler, browser adapter, architecture registration,
 and non-vacuous pack entry now on `master`.
 
-Complete the conditional-rule definition correction first, run only the `layered_schema`
+Complete the rule-condition and example-usability correction first, run only the `layered_schema`
 checkpoint and package command, and carry it through refactorer and architect to a
 terminal merge. Recover the durable repository from that new merged baseline, run only the
 `durable_project_repository` checkpoint and package command, and carry it through
