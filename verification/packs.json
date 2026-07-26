@@ -954,7 +954,8 @@
     ],
     "browserAdapters": [
       "test/data-layer-canonical-migration-browser-test.mjs",
-      "test/browser-packs/layered-schema.mjs"
+      "test/browser-packs/layered-schema.mjs",
+      "test/twatility-rules-conditions-browser-test.mjs"
     ]
   },
   {

@@ -11,6 +11,7 @@ const staticFiles = [
   "specification-builder-guidance.css",
   "layered-schema.css",
   "twatility-brand.css",
+  "schema-authoring-brand.css",
   "side-panel-brand.css",
   "specification-builder-brand.css",
 ];
@@ -28,6 +29,7 @@ const expectedStylesheets = {
     "side-panel.css",
     "layered-schema.css",
     "twatility-brand.css",
+    "schema-authoring-brand.css",
     "side-panel-brand.css",
   ],
   "specification-builder.html": [
@@ -35,6 +37,7 @@ const expectedStylesheets = {
     "specification-builder-guidance.css",
     "layered-schema.css",
     "twatility-brand.css",
+    "schema-authoring-brand.css",
     "specification-builder-brand.css",
   ],
 };
@@ -74,6 +77,7 @@ assert.ok(manifest.permissions.includes("unlimitedStorage"));
 
 const brandCssNames = [
   "twatility-brand.css",
+  "schema-authoring-brand.css",
   "side-panel-brand.css",
   "specification-builder-brand.css",
 ];
