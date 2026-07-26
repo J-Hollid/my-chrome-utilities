@@ -452,6 +452,7 @@ accessible relationships, focus, and recovery remain authoritative.
 | Slice 1 opening fetch | 2026-07-26T13:11:21Z | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | none | none | User-approved structural decisions recorded; no upstream reclassification or source merge required |
 | Slice 1 closing fetch | 2026-07-26T13:36:40Z | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | none | none | No controls, states, routes, persistence contracts, active-scope requirements, or test owners changed upstream; no reclassification or merge required |
 | Slice 2 opening fetch | 2026-07-26T13:48:16Z | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | `6be109256c058330f3f7c2badc65f4224d3f31a7` | 13 commits: Quick Table save and Project Documentation workspace lineages | New direct Table commit/focus behavior; first-in-tree Documentation route and progressive workspace; Draft/portable Set/theme records; stale/incomplete/preflight/export states; removed eager dialog; expanded `layered_schema` and `flow_export` ownership | Added/updated the exact Quick Table, Project tree/route, Documentation configuration/theme/preview/export, More, obsolete-dialog, owner, and verification rows before merge; merged as `1f83b0f6` and verified at the finite cutoff |
+| Slice 2 closing fetch | 2026-07-26T15:46:17.9825140Z | `6be109256c058330f3f7c2badc65f4224d3f31a7` | `7edae41131a4e6a282d80f67a2fbcfbada52beb3` | 5 commits: Excel workbook compatibility and mutation assurance | No controls, routes, UI states, project persistence schema, commands, side effects, or Undo/Redo boundaries changed. The existing Excel export output contract now requires a standards-correct root OOXML relationship, exact scope-dependent sheets/order, complete package parts/relationships, independent reader compatibility without repair, read-only mutation assurance, and durable range/cardinality rule observation in `layered_schema`. `flow_export` owns the workbook changes; `layered_schema` owns the durable-wait repair. | Existing Project Documentation Excel export and verification rows tightened before merge; merge pending |
 
 Every later slice boundary must append a row even when the merge is clean. Any
 master delta must list controls, states, routes, persistence contracts, active
@@ -525,6 +526,40 @@ authority, and verification ownership before implementation continues.
 - A source rebuild after staging produced no working-tree delta against the
   staged generated `dist`, proving deterministic tracked output for this
   boundary.
+
+### Slice 2 closing master-delta inventory
+
+- **Controls, routes, and visible states:** no new or changed production
+  controls, navigation routes, focus relationships, accessibility semantics,
+  responsive states, or client-theme behavior. No new state-gallery or
+  control-map entry is required.
+- **Excel output contract:** Download Excel workbook remains the existing
+  control and a read-only operation. Its `.xlsx` output must use the OOXML
+  workbook MIME, have a complete ZIP central directory, resolve every declared
+  internal relationship, and use the standards-correct root
+  `officeDocument` relationship so an independent Excel-compatible reader opens
+  it without a format error or repair.
+- **Scope identity and order:** current scope for Checkout produces
+  `Checkout journey`; selected scope for Checkout plus Sitewide produces
+  `Checkout journey`, `Sitewide`; complete scope produces `Overview`,
+  `Checkout journey`, `Article journey`, `Data capture matrix`, `Sitewide`,
+  `Opened Article`, in that order.
+- **Persistence and mutations:** no project persistence contract changes.
+  Workbook generation remains mutation-free. The layered-schema browser owner
+  now waits for both the draft sequence and the expected durable `range` and
+  `cardinality` rules, so persistence evidence cannot pass on a token advance
+  alone.
+- **Authority and test ownership:** the existing Project Documentation export
+  row remains preserve-production-behavior with mock presentation-only
+  authority. `flow_export` adds runtime checkpoint `export015` plus unit,
+  property, browser, acceptance, and mutation assurance for compatibility.
+  `layered_schema` owns only its strengthened durable-wait synchronization.
+  Packaging remains owned by `node scripts/package.mjs`.
+- **Merge contract:** merge `origin/master` only into the Slice 2 feature
+  branch. Preserve the feature branch's portable Chrome executable resolution
+  and branded Studio readiness guards while taking master's Excel
+  compatibility assertions and durable-rule wait. Resolve source, rebuild
+  tracked `dist`, and do not modify or push master.
 
 ## Slice 0 baseline and known-red checks
 
