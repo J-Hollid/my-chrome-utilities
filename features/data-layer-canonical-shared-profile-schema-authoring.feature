@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=26aafcef53b9f542f794f2c7d1bcaa46593d0ff8a20daec5075ada097452d4b4
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-26T08:53:01.159866961Z","feature_name":"Data layer canonical Shared Profile schema authoring","feature_path":"features/data-layer-canonical-shared-profile-schema-authoring.feature","background_hash":"9e8225c80de52bee679ebd2c1ee0ad618b61eb14a35a45ad9378b67a90e8c5ec","implementation_hash":"sha256:2044b360fb6a279e9f0f3cacea33cb3523333d907987c9cc3b794d2f84205d7f","scenarios":[{"index":6,"name":"Data layer canonical Shared Profile schema authoring 007","scenario_hash":"4e1e629613f3377678a704de7fb49aa24b7666f7d6fd8f7336c5848a2481c5e1","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-26T08:53:01.159866961Z"},{"index":7,"name":"Data layer canonical Shared Profile schema authoring 008","scenario_hash":"1f66844909f9a2d8d4fb2e63db0a5ac2dbe8c763ce946f0d7dfa416bf3d7fab8","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-26T08:53:01.159866961Z"},{"index":14,"name":"Data layer canonical Shared Profile schema authoring 015","scenario_hash":"bb47aa3c9d43d49581aefe99b5084c921b7ac3b3925f65993047d6866f42c60b","mutation_count":21,"result":{"Total":21,"Killed":21,"Survived":0,"Errors":0},"tested_at":"2026-07-26T08:53:01.159866961Z"},{"index":18,"name":"Data layer canonical Shared Profile schema authoring 019","scenario_hash":"c8f16f48f38cc55fd9a94975c60aac7d763058989e5d44c3401164eb45f1e27e","mutation_count":24,"result":{"Total":24,"Killed":24,"Survived":0,"Errors":0},"tested_at":"2026-07-26T08:53:01.159866961Z"},{"index":20,"name":"Data layer canonical Shared Profile schema authoring 021","scenario_hash":"2bb848324d4a767cdf888495b4488eccd957f83fc7b373b2cd80ea60f11461c6","mutation_count":22,"result":{"Total":22,"Killed":22,"Survived":0,"Errors":0},"tested_at":"2026-07-26T08:53:01.159866961Z"},{"index":25,"name":"Data layer canonical Shared Profile schema authoring 026","scenario_hash":"3367fa819cd09553a8c985c20a7930360075211ceef18988757c09f07e3efef5","mutation_count":18,"result":{"Total":18,"Killed":18,"Survived":0,"Errors":0},"tested_at":"2026-07-26T08:53:01.159866961Z"},{"index":26,"name":"Data layer canonical Shared Profile schema authoring 027","scenario_hash":"b2514f5d922dddd13a16fe3c0c9fd7b36223c304b6e931286443b7c66f86e522","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-07-26T08:53:01.159866961Z"},{"index":28,"name":"Data layer canonical Shared Profile schema authoring 029","scenario_hash":"78c200ba60e56b94881b73c84215cc931c8673ae81b4d104758dcef01a0e7176","mutation_count":36,"result":{"Total":36,"Killed":36,"Survived":0,"Errors":0},"tested_at":"2026-07-26T08:53:01.159866961Z"},{"index":31,"name":"Data layer canonical Shared Profile schema authoring 032","scenario_hash":"e87e6f94f9f00898d765e7ba20b9f2edbef3131f2d8ca00c18517e762aeb2cd9","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-26T08:53:01.159866961Z"},{"index":34,"name":"Data layer canonical Shared Profile schema authoring 035","scenario_hash":"d821dd72a56deb7395b8879f8bf834907a0dac4c97d997f5ec877722332618cb","mutation_count":18,"result":{"Total":18,"Killed":18,"Survived":0,"Errors":0},"tested_at":"2026-07-26T08:53:01.159866961Z"},{"index":35,"name":"Data layer canonical Shared Profile schema authoring 036","scenario_hash":"16abc6da2934f7b58ffafc6a9bba7b57482d7c85aceaf8f3639d93ac3373451a","mutation_count":25,"result":{"Total":25,"Killed":25,"Survived":0,"Errors":0},"tested_at":"2026-07-26T08:53:01.159866961Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer canonical Shared Profile schema authoring
 
   Background:
@@ -295,10 +290,13 @@ Feature: Data layer canonical Shared Profile schema authoring
     And the Saved Schema Library source remains byte-identical
 
   # Data layer canonical Shared Profile schema authoring 023
-  Scenario: Data layer canonical Shared Profile schema authoring 023
-    Given /lineOfCustomer is available in Shared Profile, Event, Page Group, Page, Flow Page-instance, and Event-occurrence schema editors
-    When the operator opens its property actions in each editor
-    Then one compact first-layer overlay offers Definition, Rules, and Structure with provenance and legal ownership summaries
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 023
+    Given /lineOfCustomer is available for <contributor> in the <surface> schema editor
+    When the operator opens its property actions
+    Then one compact top-level blocking overlay opens beside the invoking property action
+    And the overlay offers Definition, Rules, and Structure with provenance and legal ownership summaries
+    And the editor behind the overlay cannot receive pointer, keyboard, or scrolling interaction
+    And the surface scroll region does not clip or constrain the overlay
     And Presence, Expected values, Allowed values, Conditions, Documentation, and Example are not separate first-layer sections
     When Definition is activated from the first-layer menu
     Then one adjacent child overlay keeps the first layer open and contains type, a Required or Optional or Forbidden selector, Allowed values, display text, description, comments, and example method
@@ -309,6 +307,21 @@ Feature: Data layer canonical Shared Profile schema authoring
     Then only that layer closes and focus returns to its parent choice
     When the operator dismisses the first layer
     Then all staging is discarded and focus returns to the originating property action
+
+    Examples:
+      | contributor       | surface        |
+      | Shared Profile    | standalone     |
+      | Page Group        | standalone     |
+      | Page              | standalone     |
+      | Event             | standalone     |
+      | Flow Page-instance | Flow workspace |
+      | Event occurrence  | Flow workspace |
+      | Shared Profile    | in-panel       |
+      | Page Group        | in-panel       |
+      | Page              | in-panel       |
+      | Event             | in-panel       |
+      | Flow Page-instance | in-panel       |
+      | Event occurrence  | in-panel       |
 
   # Data layer canonical Shared Profile schema authoring 024
   Scenario: Data layer canonical Shared Profile schema authoring 024
@@ -383,7 +396,8 @@ Feature: Data layer canonical Shared Profile schema authoring
     And each commit creates one property-scoped command with the displayed base Draft token and one Undo action
     And Escape before commit restores that cell's saved effective value with no command
     When the operator opens /lineOfCustomer's context menu
-    Then a layered overlay anchored to that row offers Definition, Rules, Structure, provenance, and legal ownership actions
+    Then advanced property operations block above the editor beside that row
+    And the overlay is not clipped or height-constrained by the property table or editor scroll region
     And the overlay neither inserts a control panel below the table nor expands, replaces, or hides any property row
     When the property-action overlay is closed through either dismissal control
     Then the unchanged table remains the primary editor and focus returns to /lineOfCustomer's context-menu trigger
@@ -437,17 +451,29 @@ Feature: Data layer canonical Shared Profile schema authoring
       | Custom value   | one type-valid custom input                         | the entered typed custom value        |
 
   # Data layer canonical Shared Profile schema authoring 033
-  Scenario: Data layer canonical Shared Profile schema authoring 033
-    Given the bottom visible Table row opens a rule editor near the viewport edge
-    When the active overlay layer opens or grows
-    Then the page scrolls by the minimum amount that brings the complete active layer into view
-    And property search, condition property, operator, value, and action controls remain within the overlay and viewport at 360 pixels
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 033
+    Given the <editor> Table contains <property_count> property rows in an editor scroll region shorter than the Rules child overlay
+    And the bottom property action is near the browser viewport edge
+    When the operator opens the Rules child overlay
+    Then the blocking overlay stack remains visually anchored beside that property action
+    And every overlay layer is outside the editor scroll region and uses the browser viewport as its placement boundary
+    And the editor scroll position and row geometry remain unchanged
+    And the complete active layer is visible without an editor scrollbar when its content fits the browser viewport
+    And only the active layer gains vertical scrolling when its content exceeds the browser viewport
+    And focus remains inside the blocking overlay stack
     When Add condition is activated inside the empty When builder
     Then one directly editable property, operator, optional value, and Remove row appears
     When the operator adds a group and chooses All, Any, or Not
     Then one group row exposes its relation, Add condition, Add group, and Remove actions
     And All and Any accept multiple predicate or group children while Not accepts exactly one child
     And predicate rows expose no View, Edit, or Add child actions
+    When the operator closes the overlay stack
+    Then focus returns to the invoking property action without changing the editor scroll position
+
+    Examples:
+      | editor             | property_count |
+      | Shared Profile     | 2              |
+      | Flow Page-instance | 3              |
 
   # Data layer canonical Shared Profile schema authoring 034
   Scenario: Data layer canonical Shared Profile schema authoring 034

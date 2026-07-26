@@ -195,7 +195,13 @@ for All, Any, or Not; group rows expose relation, Add condition, Add group, and
 Remove. All and Any accept multiple children, Not exactly one, and predicates
 expose no View, Edit, or Add child mechanics. Search, selector, value, and action
 controls remain inside the overlay at 360 pixels. Opening or growing a layer near
-the viewport edge minimally scrolls the page until that complete layer is visible.
+the viewport edge uses a top-level blocking overlay stack outside the editor scroll
+region. The stack remains visually anchored beside the invoking property action,
+uses the browser viewport for placement, and scrolls only an active layer whose
+content exceeds that viewport. The editor behind it remains inert and retains its
+scroll position. This applies to Shared Profile, Page Group, Page, Event, Flow
+Page-instance, and Event-occurrence editors in standalone, Flow-workspace, and
+established in-panel projections.
 
 Keystrokes in Description, Allowed values, and Example Table cells remain transient
 until Enter, Tab, Shift+Tab, or blur commits that cell directly. A commit performs base-Draft-token
