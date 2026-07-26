@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=432220d71c361a9564317be7ddeaa3bdad33ccb13741d7b96319dbc5a1148b23
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-26T19:17:15.867399104Z","feature_name":"Data layer side-panel schema relationship tree","feature_path":"features/data-layer-side-panel-schema-relationship-tree.feature","background_hash":"bca4bfc5e8cbc0fe76931b0cf7a79f0556fd6bafbe0b0c13679e64da4ab0a7d1","implementation_hash":"sha256:4f39f09fcfd5af1c8d0875ab90e93230905a6199aaa91c1541320ca651de08c0","scenarios":[{"index":3,"name":"Data layer side-panel schema relationship tree 004","scenario_hash":"300bdc329acdbbb314b1a3b7fc4b74b17ea48b7c3722548146ec892f50415d85","mutation_count":14,"result":{"Total":14,"Killed":14,"Survived":0,"Errors":0},"tested_at":"2026-07-26T19:17:15.867399104Z"},{"index":4,"name":"Data layer side-panel schema relationship tree 005","scenario_hash":"9aa52fc9d9731c5116720e30bb667032512196220f01b5d0477fb2a5e2bad4eb","mutation_count":16,"result":{"Total":16,"Killed":16,"Survived":0,"Errors":0},"tested_at":"2026-07-26T19:17:15.867399104Z"},{"index":8,"name":"Data layer side-panel schema relationship tree 009","scenario_hash":"ee448d3675cd5a600844e0cc3f0e16e37ae45437a448ff8ab520c814ee9f7623","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-26T19:17:15.867399104Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer side-panel schema relationship tree
 
   Background:
