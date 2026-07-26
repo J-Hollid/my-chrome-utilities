@@ -1,6 +1,6 @@
 import {canonicalPropertyPath,canonicalTableRows} from "../data-layer-canonical-schema.js";
 import type {CanonicalSchemaRenderContext} from "../data-layer-canonical-schema-render.js";
-import {revealSchemaTableOverlay,schemaTableAllowedValues,schemaTableCellMetadata,schemaTableColumns,schemaTableOverlayStyle,type SchemaTableEditableFacet} from "../data-layer-schema-table.js";
+import {bindSchemaTableQuickEdit,revealSchemaTableOverlay,schemaTableAllowedValues,schemaTableCellMetadata,schemaTableColumns,schemaTableOverlayStyle,type SchemaTableEditableFacet} from "../data-layer-schema-table.js";
 import {button} from "./dom.js";
 
 export function canonicalNavigatorRows(context:Pick<CanonicalSchemaRenderContext,"document"|"query"|"propertyFilter"|"propertySort">):ReturnType<typeof canonicalTableRows>{
@@ -13,7 +13,7 @@ export function renderNavigatorRows(tree:HTMLElement,context:CanonicalSchemaRend
   for(const row of canonicalNavigatorRows(context)){const article=dom.createElement("article"),choose=button(dom,`${"› ".repeat(row.depth)}${row.node.name} · ${row.path} · ${row.node.type}`,()=>context.openProperty(row.node,choose));choose.dataset.propertyId=row.id;choose.setAttribute("aria-current",String((context.activePropertyId??document.selectedPropertyId)===row.id));article.dataset.propertyRow="true";article.dataset.propertyId=row.id;const actions=button(dom,"Property actions",()=>{context.setMenuPropertyId(row.id);context.openProperty(row.node,actions);});actions.setAttribute("aria-label",`Property actions for ${row.path}`);actions.dataset.propertyActionsPath=row.path;article.append(choose,actions);if(context.menuPropertyId===row.id)article.append(context.renderMenu(row.node));tree.append(article);}
 }
 
-const editableCell=(context:CanonicalSchemaRenderContext,node:ReturnType<typeof canonicalNavigatorRows>[number]["node"],facet:SchemaTableEditableFacet,value:string):HTMLInputElement=>{const control=context.dom.createElement("input");control.type="text";control.value=value;control.dataset.inlineSchemaFacet=facet;control.setAttribute("aria-label",`${facet} for ${canonicalPropertyPath(context.document,node.id)}`);control.addEventListener("input",()=>context.stageInline(node,facet,control.value));return control;};
+const editableCell=(context:CanonicalSchemaRenderContext,node:ReturnType<typeof canonicalNavigatorRows>[number]["node"],facet:SchemaTableEditableFacet,value:string):HTMLInputElement=>{const control=context.dom.createElement("input"),path=canonicalPropertyPath(context.document,node.id);control.type="text";control.value=value;control.dataset.inlineSchemaFacet=facet;control.dataset.inlineSchemaPath=path;control.setAttribute("aria-label",`${facet} for ${path}`);bindSchemaTableQuickEdit(control,{root:context.quickEditRoot,scope:context.quickEditScope,path,facet,savedValue:value,commit:(next)=>context.commitInline(node,facet,next),cancel:context.cancelInline,diagnostic:context.inlineDiagnostic});return control;};
 const sourceText=(node:ReturnType<typeof canonicalNavigatorRows>[number]["node"],fallback:string):string=>node.provenance.map(({contributorName,source,state})=>contributorName??state??(source==="created"?fallback:source)).join(", ")||fallback;
 
 function renderTable(tree:HTMLElement,context:CanonicalSchemaRenderContext):void {

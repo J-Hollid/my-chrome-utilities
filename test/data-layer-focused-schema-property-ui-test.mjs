@@ -3,7 +3,7 @@ import {focusedConditionLabel,focusedOwnershipActions,focusedPropertySections,fo
 import {applyCanonicalCommand,canonicalPredicateIds,canonicalPredicateWithStableIds,createCanonicalSchema} from "../dist/data-layer-canonical-schema.js";
 import {canonicalNavigatorRows} from "../dist/canonical-schema-focused/navigator-rows.js";
 import {focusedSourceState} from "../dist/data-layer-canonical-schema-focused-drafts.js";
-import {schemaTableCellMetadata,schemaTableColumns,schemaTableEditableFacets,schemaTableExpectedOrAllowed,schemaTableOverlayStyle,schemaTableValueFacet} from "../dist/data-layer-schema-table.js";
+import {schemaTableCellMetadata,schemaTableColumns,schemaTableEditableFacets,schemaTableExpectedOrAllowed,schemaTableOverlayStyle,schemaTableQuickEditDestination,schemaTableQuickEditIntent,schemaTableValueFacet} from "../dist/data-layer-schema-table.js";
 
 assert.deepEqual(focusedPropertySections,["definition","rules","structure"]);
 assert.deepEqual(schemaTableColumns.map(({label})=>label),["Property","Path","Type","Presence","Description","Allowed values","Example","Source","Local/effective state","Validation state"],"every contributor table exposes the same information-rich columns");
@@ -12,6 +12,19 @@ assert.equal(new Set(schemaTableCellMetadata.map(({key})=>key)).size,schemaTable
 assert.match(schemaTableOverlayStyle,/position:absolute/,"the row overlay stays out of flow instead of expanding its property row");
 assert.doesNotMatch(schemaTableOverlayStyle,/position:static/,"the row overlay never opts into row layout");
 assert.deepEqual(schemaTableEditableFacets,["description","expected-or-allowed","example"],"the three frequent facets are editable without opening an advanced editor");
+assert.deepEqual(schemaTableQuickEditIntent("Enter",false),{kind:"commit"},"Enter commits without leaving the current cell");
+assert.deepEqual(schemaTableQuickEditIntent("Tab",false),{kind:"commit",direction:1},"Tab commits and advances");
+assert.deepEqual(schemaTableQuickEditIntent("Tab",true),{kind:"commit",direction:-1},"Shift+Tab commits and reverses");
+assert.deepEqual(schemaTableQuickEditIntent("Escape",false),{kind:"cancel"},"Escape cancels the transient cell edit");
+assert.equal(schemaTableQuickEditIntent("ArrowRight",false),undefined,"ordinary editing keys remain native");
+const quickCells=[
+  {path:"/first",facet:"description"},{path:"/first",facet:"expected-or-allowed"},{path:"/first",facet:"example"},
+  {path:"/second",facet:"description"},{path:"/second",facet:"expected-or-allowed"},{path:"/second",facet:"example"},
+];
+assert.deepEqual(schemaTableQuickEditDestination(quickCells,quickCells[0],1),quickCells[1],"forward traversal stays within the editable facet order");
+assert.deepEqual(schemaTableQuickEditDestination(quickCells,quickCells[2],1),quickCells[3],"forward traversal crosses into the next property");
+assert.deepEqual(schemaTableQuickEditDestination(quickCells,quickCells[3],-1),quickCells[2],"reverse traversal crosses into the previous property");
+assert.equal(schemaTableQuickEditDestination(quickCells,quickCells.at(-1),1),undefined,"traversal stops when no editable cell remains");
 assert.equal(schemaTableExpectedOrAllowed({expectedValue:"retail",allowedValues:["retail","business"]}),"retail","expected value takes precedence in the summary cell");
 assert.equal(schemaTableExpectedOrAllowed({allowedValues:["retail","business"]}),"retail, business","allowed values render as editable human text when there is no single expectation");
 assert.deepEqual(schemaTableValueFacet({allowedValues:["retail",2,true]}),{kind:"allowed",text:"retail, 2, true",values:["retail",2,true]});

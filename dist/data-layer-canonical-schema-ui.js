@@ -1,2 +1,2 @@
-export { bindCanonicalPropertySearch, canonicalDispatchRequiresLocalRender, mountCanonicalSchemaEditor } from "./canonical-schema/ui-mount.js";
+export { bindCanonicalPropertySearch, canonicalDispatchRequiresLocalRender, canonicalTableQuickEditPatch, mountCanonicalSchemaEditor } from "./canonical-schema/ui-mount.js";
 //# sourceMappingURL=data-layer-canonical-schema-ui.js.map
