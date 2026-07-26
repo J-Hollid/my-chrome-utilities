@@ -155,6 +155,15 @@ body.twatility-studio {
 }
 
 @media (max-width: 760px) {
+  body.twatility-studio {
+    /*
+     * The production narrow workspace deliberately delegates vertical
+     * scrolling to the document. Avoid turning body into a second clipping
+     * scrollport through the base overflow-x rule.
+     */
+    overflow: visible;
+  }
+
   .twatility-studio .project-bar {
     align-items: flex-start;
     flex-direction: column;
