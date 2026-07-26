@@ -21,15 +21,21 @@
     result))
 
 (defn- verify-model! []
-  (when-not @model-verified?
-    (checked! "node" "test/data-layer-project-event-transport-test.mjs")
-    (reset! model-verified? true)))
+  (support/cached-command-verification!
+   model-verified?
+   "Project event transport model verification failed. "
+   "node" "test/data-layer-project-event-transport-test.mjs"))
+
+(defn- browser-evidence [output]
+  (let [payload-line (->> (str/split-lines output)
+                          (filter #(str/starts-with? % "{"))
+                          last)]
+    (:projectEventTransport (json/parse-string payload-line true))))
 
 (defn- observe-browser! []
   (or @browser-observation
       (let [result (checked! "node" "test/browser-packs/project-event-transport.mjs")
-            line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result))))
-            observed (:projectEventTransport (json/parse-string line true))]
+            observed (browser-evidence (:out result))]
         (support/assert! observed "Project event transport browser evidence is missing."
                          {:out (:out result)})
         (reset! browser-observation observed))))
@@ -66,10 +72,9 @@
    "observed_target" #{"missing" "a scalar"}
    "status" #{"Waiting for observation path" "Push path is not push-capable"}})
 
-(defn validate-example! [_mode example]
-  (support/validate-example-domain!
-   example-values example
-   (filter #(support/example-value example %) (keys example-values))
+(defn validate-example! [mode example]
+  (support/validate-mode-example-domain!
+   mode example-values example-values example
    "Project event transport example was outside the specified contract."))
 
 (def handlers
@@ -77,3 +82,7 @@
    feature-files entry-modes :project-event-transport-mode
    verify-model! validate-example!
    observe-browser! assert-runtime!))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-26T19:11:10.703665809+02:00", :module-hash "-213533590", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 5, :hash "1161658571"} {:id "def/feature-files", :kind "def", :line 7, :end-line 9, :hash "1304307325"} {:id "def/entry-modes", :kind "def", :line 11, :end-line 13, :hash "588498899"} {:id "form/3/defonce", :kind "defonce", :line 15, :end-line 15, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 16, :end-line 16, :hash "-1618529344"} {:id "defn-/checked!", :kind "defn-", :line 18, :end-line 21, :hash "-148274062"} {:id "defn-/verify-model!", :kind "defn-", :line 23, :end-line 27, :hash "909766936"} {:id "defn-/browser-evidence", :kind "defn-", :line 29, :end-line 33, :hash "200272881"} {:id "defn-/observe-browser!", :kind "defn-", :line 35, :end-line 41, :hash "-768731034"} {:id "def/runtime-paths", :kind "def", :line 43, :end-line 45, :hash "-1666993000"} {:id "defn-/assert-runtime!", :kind "defn-", :line 47, :end-line 51, :hash "-228036445"} {:id "def/example-values", :kind "def", :line 53, :end-line 73, :hash "-832753933"} {:id "defn/validate-example!", :kind "defn", :line 75, :end-line 78, :hash "97038699"} {:id "def/handlers", :kind "def", :line 80, :end-line 84, :hash "814749181"}]}
+;; clj-mutate-manifest-end
