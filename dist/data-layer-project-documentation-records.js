@@ -7,9 +7,7 @@ const freeze = (value) => { if (value && typeof value === "object" && !Object.is
 export const projectDocumentationSafeText = (value) => String(value ?? "").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/gu, "").trim();
 const safeColor = (value, fallback) => /^#[0-9a-f]{6}$/iu.test(String(value)) ? String(value).toLowerCase() : fallback;
 const safeFamily = (value) => { const candidate = projectDocumentationSafeText(value); return /^[\p{L}\p{N}][\p{L}\p{N} .-]{0,63}$/u.test(candidate) ? candidate : "Arial"; };
-const safeLogo = (value) => { const candidate = projectDocumentationSafeText(value); if (/^https:\/\/[^\s"'<>]{1,2000}$/iu.test(candidate))
-    return candidate; if (/^data:image\/(?:png|jpeg|gif);base64,[a-z0-9+/]+={0,2}$/iu.test(candidate) && candidate.length <= 250_000)
-    return candidate; return ""; };
+const safeLogo = (value) => { const candidate = projectDocumentationSafeText(value); return /^data:image\/(?:png|jpeg|gif);base64,[a-z0-9+/]+={0,2}$/iu.test(candidate) && candidate.length <= 250_000 ? candidate : ""; };
 const safeId = (value, label) => { const candidate = projectDocumentationSafeText(value); if (!candidate)
     throw new Error(`${label} needs a stable identity.`); return candidate; };
 const safeList = (value) => value ? [...new Set(value.map(projectDocumentationSafeText).filter(Boolean))] : undefined;

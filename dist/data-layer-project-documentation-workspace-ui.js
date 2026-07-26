@@ -19,6 +19,8 @@ const heading = (level, text) => Object.assign(document.createElement(`h${level}
 const defaultTheme = (id, name = "Project theme") => createProjectDocumentationTheme({ id, name, clientName: "", logo: "", colors: { heading: "#222222", accent: "#336699", stripe: "#f4f4f4" }, typography: { family: "Arial", headingSize: 16, bodySize: 11 }, density: "comfortable", borders: true, striping: true, highlightedHeadings: true, columnWidths: { Property: 28, Description: 48 }, headerText: "", footerText: "" });
 const move = (items, item, direction) => { const index = items.indexOf(item), target = index + direction; if (index < 0 || target < 0 || target >= items.length)
     return [...items]; const next = [...items]; [next[index], next[target]] = [next[target], next[index]]; return next; };
+const moveVisible = (items, item, direction, visible) => { const projected = items.filter(visible), index = projected.indexOf(item), target = index + direction; if (index < 0 || target < 0 || target >= projected.length)
+    return [...items]; const targetItem = projected[target], sourceIndex = items.indexOf(item), targetIndex = items.indexOf(targetItem), next = [...items]; [next[sourceIndex], next[targetIndex]] = [next[targetIndex], next[sourceIndex]]; return next; };
 const checkedOrder = (all, configured) => configured ? [...configured] : [...all];
 const setChecked = (current, id, checked) => checked ? [...current.filter((candidate) => candidate !== id), id] : current.filter((candidate) => candidate !== id);
 const controlInput = (name, value, type = "text") => { const input = document.createElement("input"); input.name = name; input.type = type; input.value = value; return input; };
@@ -215,8 +217,8 @@ export function installProjectDocumentationWorkspaceUi(options) {
         }
         const client = controlInput("clientName", theme.clientName), logo = controlInput("logo", theme.logo), headingColor = controlInput("headingColor", theme.colors.heading, "color"), accent = controlInput("accentColor", theme.colors.accent, "color"), stripe = controlInput("stripeColor", theme.colors.stripe, "color");
         client.setAttribute("aria-label", "Theme client name");
-        logo.setAttribute("aria-label", "Theme logo");
-        groups.Brand.append(labelled("Client name", client), labelled("HTTPS or raster data logo", logo), labelled("Heading color", headingColor), labelled("Accent color", accent), labelled("Stripe color", stripe));
+        logo.setAttribute("aria-label", "Theme raster data-image logo");
+        groups.Brand.append(labelled("Client name", client), labelled("PNG, JPEG, or GIF data-image logo", logo), labelled("Heading color", headingColor), labelled("Accent color", accent), labelled("Stripe color", stripe));
         const family = controlInput("family", theme.typography.family), headingSize = controlInput("headingSize", String(theme.typography.headingSize), "number"), bodySize = controlInput("bodySize", String(theme.typography.bodySize), "number");
         family.setAttribute("aria-label", "Theme font family");
         groups.Typography.append(labelled("Font family", family), labelled("Heading size", headingSize), labelled("Body size", bodySize));
@@ -299,7 +301,7 @@ export function installProjectDocumentationWorkspaceUi(options) {
         const outline = document.createElement("ol");
         outline.setAttribute("aria-label", "Documentation section outline");
         for (const section of selectedSections) {
-            const item = document.createElement("li"), select = button(`${section.name} · ${section.kind}`, () => { selectedSectionId = section.id; render(host); }), earlier = button("Move earlier", () => saveSet(createProjectDocumentationSet({ ...set, sections: move(set.sections, section, -1) }), `Reorder ${section.name}`)), later = button("Move later", () => saveSet(createProjectDocumentationSet({ ...set, sections: move(set.sections, section, 1) }), `Reorder ${section.name}`));
+            const item = document.createElement("li"), select = button(`${section.name} · ${section.kind}`, () => { selectedSectionId = section.id; render(host); }), earlier = button("Move earlier", () => saveSet(createProjectDocumentationSet({ ...set, sections: moveVisible(set.sections, section, -1, ({ selected }) => selected) }), `Reorder ${section.name}`)), later = button("Move later", () => saveSet(createProjectDocumentationSet({ ...set, sections: moveVisible(set.sections, section, 1, ({ selected }) => selected) }), `Reorder ${section.name}`));
             select.setAttribute("aria-current", String(section.id === selectedSectionId));
             earlier.disabled = selectedSections.indexOf(section) === 0;
             later.disabled = selectedSections.indexOf(section) === selectedSections.length - 1;
