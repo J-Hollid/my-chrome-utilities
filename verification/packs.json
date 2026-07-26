@@ -800,6 +800,9 @@
     "source": [
       "src/data-layer-flow-table-documentation-export.ts",
       "src/data-layer-flow-table-documentation-export-ui.ts",
+      "src/data-layer-flow-documentation-snapshot.ts",
+      "src/data-layer-project-documentation-compiler.ts",
+      "src/data-layer-project-documentation-records.ts",
       "src/data-layer-project-documentation-workspace.ts",
       "src/data-layer-project-documentation-workspace-ui.ts"
     ],

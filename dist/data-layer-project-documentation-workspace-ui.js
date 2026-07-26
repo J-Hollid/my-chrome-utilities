@@ -1,101 +1,282 @@
-import { canonicalRequirements } from "./data-layer-canonical-schema.js";
-import { compileLayeredSchema } from "./data-layer-layered-schema.js";
-import { layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
-import { configureFlowDocumentationTable } from "./data-layer-flow-table-documentation-export.js";
-import { flowDocumentationSnapshotFromState } from "./data-layer-flow-table-documentation-export-ui.js";
-import { compileProjectDocumentationSnapshot, createProjectDocumentationSet, createProjectDocumentationTheme, projectDocumentationSnapshotStale, renderProjectDocumentationClipboard, selectProjectDocumentationTables, themeFingerprint, writeProjectDocumentationWorkbook, } from "./data-layer-project-documentation-workspace.js";
+import { flowDocumentationPropertyPaths } from "./data-layer-flow-table-documentation-export.js";
+import { compileProjectDocumentation, projectDocumentationProfileColumns, projectDocumentationProfilePaths, projectDocumentationSources } from "./data-layer-project-documentation-compiler.js";
+import { createProjectDocumentationSet, createProjectDocumentationTheme, parseProjectDocumentationTheme, serializeProjectDocumentationTheme, } from "./data-layer-project-documentation-records.js";
+import { projectDocumentationSnapshotStale, renderProjectDocumentationClipboard, selectProjectDocumentationTables, themeFingerprint, writeProjectDocumentationWorkbook, } from "./data-layer-project-documentation-workspace.js";
+const defaultPorts = () => ({
+    writePlain: async (value) => navigator.clipboard.writeText(value),
+    writeRich: async (html, plain) => {
+        if (globalThis.ClipboardItem && navigator.clipboard.write) {
+            await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([plain], { type: "text/plain" }) })]);
+            return;
+        }
+        await navigator.clipboard.writeText(plain);
+    },
+    download: (name, bytes, type) => { const url = URL.createObjectURL(new Blob([Uint8Array.from(bytes).buffer], { type })), link = document.createElement("a"); link.href = url; link.download = name; link.click(); URL.revokeObjectURL(url); },
+});
 const button = (text, action) => { const value = document.createElement("button"); value.type = "button"; value.textContent = text; value.addEventListener("click", action); return value; };
 const labelled = (text, control) => { const value = document.createElement("label"); value.append(control, ` ${text}`); return value; };
-const stableRevision = (value) => { let hash = 2166136261; for (const byte of new TextEncoder().encode(JSON.stringify(value)))
-    hash = Math.imul(hash ^ byte, 16777619); return hash >>> 0; };
-const defaultPorts = () => ({ writePlain: async (value) => navigator.clipboard.writeText(value), writeRich: async (html, plain) => { if (globalThis.ClipboardItem && navigator.clipboard.write) {
-        await navigator.clipboard.write([new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([plain], { type: "text/plain" }) })]);
-        return;
-    } await navigator.clipboard.writeText(plain); }, download: (name, bytes, type) => { const url = URL.createObjectURL(new Blob([Uint8Array.from(bytes).buffer], { type })), link = document.createElement("a"); link.href = url; link.download = name; link.click(); URL.revokeObjectURL(url); } });
+const heading = (level, text) => Object.assign(document.createElement(`h${level}`), { textContent: text });
 const defaultTheme = (id, name = "Project theme") => createProjectDocumentationTheme({ id, name, clientName: "", logo: "", colors: { heading: "#222222", accent: "#336699", stripe: "#f4f4f4" }, typography: { family: "Arial", headingSize: 16, bodySize: 11 }, density: "comfortable", borders: true, striping: true, highlightedHeadings: true, columnWidths: { Property: 28, Description: 48 }, headerText: "", footerText: "" });
-const profileTable = (section, profile) => {
-    const requirements = profile.canonicalSchema ? canonicalRequirements(profile.canonicalSchema) : profile.requirements;
-    return { id: section.id, title: section.name, headings: ["Property", "Description", "Required", "Allowed values", "Example", "Comments"], rows: requirements.map((item) => [item.path, item.description ?? "", item.forbidden ? "Not expected" : item.required ? "Yes" : "No", item.allowedValues?.map(String).join(", ") ?? "", item.examples?.map(String).join(", ") ?? "", ""]) };
-};
-const contextHeading = (context) => `${context.pageName} / ${context.eventName}`;
-const flowSourceRevision = (snapshot) => stableRevision({ graphRevision: snapshot.graphRevision, contexts: snapshot.contexts.map(({ id, effectiveRevision }) => ({ id, effectiveRevision })) });
-const matrixState = (context, path) => {
-    if (context.compiled.conflicts.some((conflict) => conflict.path === path))
-        return "Blocked";
-    const property = context.compiled.properties[path];
-    if (!property)
-        return "Not defined";
-    if (property.presence === "forbidden")
-        return "Not expected";
-    if (property.condition)
-        return "Conditional";
-    return property.presence === "required" ? "Mandatory" : "Optional";
-};
+const move = (items, item, direction) => { const index = items.indexOf(item), target = index + direction; if (index < 0 || target < 0 || target >= items.length)
+    return [...items]; const next = [...items]; [next[index], next[target]] = [next[target], next[index]]; return next; };
+const checkedOrder = (all, configured) => configured ? [...configured] : [...all];
+const setChecked = (current, id, checked) => checked ? [...current.filter((candidate) => candidate !== id), id] : current.filter((candidate) => candidate !== id);
+const controlInput = (name, value, type = "text") => { const input = document.createElement("input"); input.name = name; input.type = type; input.value = value; return input; };
+function applyThemeToTable(table, theme) {
+    table.dataset.themeFingerprint = themeFingerprint(theme);
+    table.dataset.density = theme.density;
+    table.style.borderCollapse = "collapse";
+    table.style.fontFamily = theme.typography.family;
+    table.style.fontSize = `${theme.typography.bodySize}pt`;
+    table.style.color = theme.colors.accent;
+    const cells = Array.from(table.querySelectorAll("th,td")), padding = theme.density === "compact" ? "2px 4px" : "5px 7px";
+    for (const cell of cells) {
+        cell.style.padding = padding;
+        cell.style.whiteSpace = "pre-wrap";
+        cell.style.overflowWrap = "anywhere";
+        if (theme.borders)
+            cell.style.border = "1px solid #666";
+    }
+    for (const cell of Array.from(table.querySelectorAll("th"))) {
+        cell.style.fontSize = `${theme.typography.headingSize}pt`;
+        if (theme.highlightedHeadings) {
+            cell.style.backgroundColor = theme.colors.heading;
+            cell.style.color = "#fff";
+        }
+    }
+    if (theme.striping)
+        for (const [index, row] of Array.from(table.querySelectorAll("tbody tr")).entries())
+            if (index % 2 === 1)
+                row.style.backgroundColor = theme.colors.stripe;
+    for (const [index, name] of Array.from(table.querySelectorAll("th")).map(({ textContent }) => textContent ?? "").entries()) {
+        const width = theme.columnWidths[name];
+        if (width) {
+            const column = document.createElement("col");
+            column.style.width = `${width}ch`;
+            let group = table.querySelector("colgroup");
+            if (!group) {
+                group = document.createElement("colgroup");
+                table.prepend(group);
+            }
+            while (group.children.length < index)
+                group.append(document.createElement("col"));
+            group.append(column);
+        }
+    }
+}
+function renderTable(value, theme) {
+    const table = document.createElement("table"), head = document.createElement("thead"), headRow = document.createElement("tr"), body = document.createElement("tbody");
+    headRow.append(...value.headings.map((cell) => Object.assign(document.createElement("th"), { textContent: cell })));
+    head.append(headRow);
+    for (const sourceRow of value.rows) {
+        const row = document.createElement("tr");
+        row.append(...sourceRow.map((cell) => Object.assign(document.createElement("td"), { textContent: cell })));
+        body.append(row);
+    }
+    table.append(head, body);
+    applyThemeToTable(table, theme);
+    return table;
+}
 export function installProjectDocumentationWorkspaceUi(options) {
     const ports = options.ports ?? defaultPorts();
     let selectedSetId = "", selectedSectionId = "", selectedExportIds = new Set(), snapshot, feedback = "", confirmedIncomplete = false, exportScope = "current";
-    const currentDocumentation = () => options.state()?.project.documentation ?? { sets: [], themes: [] };
-    const persist = (documentation, label) => { options.save(documentation, label); };
-    const replaceSet = (next, label) => { const documentation = currentDocumentation(); persist({ ...documentation, sets: documentation.sets.some(({ id }) => id === next.id) ? documentation.sets.map((value) => value.id === next.id ? next : value) : [...documentation.sets, next] }, label); };
-    const replaceTheme = (next, label) => { const documentation = currentDocumentation(); persist({ ...documentation, themes: documentation.themes.some(({ id }) => id === next.id) ? documentation.themes.map((value) => value.id === next.id ? next : value) : [...documentation.themes, next] }, label); };
-    const active = () => { const documentation = currentDocumentation(), set = documentation.sets.find(({ id }) => id === selectedSetId) ?? documentation.sets[0], theme = set ? documentation.themes.find(({ id }) => id === set.themeId) : undefined; return { documentation, set, theme }; };
-    const sources = () => { const state = options.state(); if (!state)
-        return { flows: [], matrixContexts: [] }; const flows = state.project.collections.flows.map((entity) => ({ entity, snapshot: flowDocumentationSnapshotFromState(state, entity.id, new Date().toISOString(), options.revision()) })), direct = (entities, scope) => entities.map((entity) => { const contributors = layeredContributorsForPath(state, layeredContributorPath(state, entity, scope)), compiled = compileLayeredSchema(contributors, { eventId: entity.id, eventRole: scope === "Page" ? "context" : "interaction" }), label = `${scope} ${scope === "Event" ? String(entity.eventName ?? entity.name) : entity.name}`; return { id: `context:${scope.toLowerCase()}:${entity.id}`, label, searchText: label, effectiveRevision: stableRevision({ entity, compiled }), compiled, sourceId: entity.id }; }), instances = flows.flatMap(({ entity, snapshot }) => snapshot.contexts.map((context) => ({ id: context.id, label: `${context.kind === "page-instance" ? "Flow Page instance" : "Event occurrence"} ${entity.name} / ${contextHeading(context)}`, searchText: `${entity.name} ${context.pageName} ${context.eventName}`, effectiveRevision: context.effectiveRevision, compiled: context.compiled, sourceId: entity.id, flowSnapshot: snapshot }))); return { flows, matrixContexts: [...direct(state.project.collections.pages, "Page"), ...direct(state.project.collections.events, "Event"), ...instances] }; };
-    const compile = () => {
-        const state = options.state(), { set, theme } = active();
-        if (!state || !set || !theme)
-            return;
-        const available = sources(), tables = [], diagnostics = [], revisions = { project: options.revision(), [set.id]: stableRevision(set), [theme.id]: stableRevision(theme) };
-        for (const section of set.sections.filter(({ selected }) => selected)) {
-            if (section.kind === "overview") {
-                tables.push({ id: section.id, title: section.name, headings: ["Project", "Value"], rows: [["Name", state.project.name], ["Purpose", state.project.description], ["Website", state.project.site]] });
-                continue;
+    const documentation = () => options.state()?.project.documentation ?? { sets: [], themes: [] };
+    const active = () => { const records = documentation(), set = records.sets.find(({ id }) => id === selectedSetId) ?? records.sets[0], theme = set ? records.themes.find(({ id }) => id === set.themeId) : undefined; return { records, set, theme }; };
+    const persist = (records, label) => options.save(records, label);
+    const saveSet = (next, label) => { const records = documentation(); persist({ ...records, sets: records.sets.some(({ id }) => id === next.id) ? records.sets.map((item) => item.id === next.id ? next : item) : [...records.sets, next] }, label); };
+    const saveTheme = (next, label) => { const records = documentation(); persist({ ...records, themes: records.themes.some(({ id }) => id === next.id) ? records.themes.map((item) => item.id === next.id ? next : item) : [...records.themes, next] }, label); };
+    const mutateSection = (set, sectionId, update, label) => saveSet(createProjectDocumentationSet({ ...set, sections: set.sections.map((section) => section.id === sectionId ? update(section) : section) }), label);
+    const sources = (state) => projectDocumentationSources(state, new Date().toISOString(), options.revision());
+    const compile = () => { const state = options.state(), { set, theme } = active(); return state && set && theme ? compileProjectDocumentation({ state, set, theme, revision: options.revision(), generatedAt: new Date().toISOString() }) : undefined; };
+    const stale = () => snapshot ? projectDocumentationSnapshotStale(snapshot, compile()?.sourceRevisions ?? {}) : { stale: false, changedSources: [] };
+    const selection = () => { const { set } = active(), fallback = set?.sections[0]?.id ?? ""; return exportScope === "current" ? { scope: "current", currentSectionId: selectedSectionId || fallback } : exportScope === "selected" ? { scope: "selected", selectedSectionIds: [...selectedExportIds] } : { scope: "complete" }; };
+    function renderOrderedChoices(host, input) {
+        const selected = new Set(input.selected), list = document.createElement("ol");
+        list.setAttribute("aria-label", `${input.name} order`);
+        for (const item of input.all) {
+            const row = document.createElement("li"), check = document.createElement("input");
+            check.type = "checkbox";
+            check.checked = selected.has(item.id);
+            check.addEventListener("change", () => input.onChange(setChecked(input.selected, item.id, check.checked)));
+            row.append(labelled(item.label, check));
+            if (check.checked) {
+                const earlier = button("Move earlier", () => input.onChange(move(input.selected, item.id, -1))), later = button("Move later", () => input.onChange(move(input.selected, item.id, 1)));
+                earlier.disabled = input.selected.indexOf(item.id) === 0;
+                later.disabled = input.selected.indexOf(item.id) === input.selected.length - 1;
+                row.append(earlier, later);
             }
-            if (section.kind === "flow") {
-                const source = available.flows.find(({ entity }) => entity.id === section.targetId);
-                if (!source) {
-                    diagnostics.push({ sectionId: section.id, message: `Flow ${section.name} is unavailable.`, repair: "Select an available Flow" });
-                    continue;
-                }
-                revisions[source.entity.id] = flowSourceRevision(source.snapshot);
-                tables.push({ ...configureFlowDocumentationTable(source.snapshot, "values", section.configuration?.paths ? { selectedPaths: section.configuration.paths } : {}), id: section.id, title: section.name });
-                diagnostics.push(...source.snapshot.diagnostics.map((item) => ({ sectionId: section.id, message: `${item.contextName}: ${item.issue}`, repair: item.repair })));
-                continue;
-            }
-            if (section.kind === "profile") {
-                const profile = state.project.collections.profiles.find(({ id }) => id === section.targetId);
-                if (!profile) {
-                    diagnostics.push({ sectionId: section.id, message: `Site Profile ${section.name} is unavailable.`, repair: "Select an available Site Profile" });
-                    continue;
-                }
-                revisions[profile.id] = stableRevision(profile);
-                tables.push(profileTable(section, profile));
-                continue;
-            }
-            const ids = section.configuration?.contextIds ?? [], byId = new Map(available.matrixContexts.map((context) => [context.id, context])), selected = ids.flatMap((id) => byId.has(id) ? [byId.get(id)] : []), paths = [...new Set(selected.flatMap(({ compiled }) => [...Object.keys(compiled.properties), ...compiled.conflicts.map(({ path }) => path)]))];
-            for (const context of selected)
-                revisions[context.sourceId] = context.flowSnapshot ? flowSourceRevision(context.flowSnapshot) : context.effectiveRevision;
-            tables.push({ id: section.id, title: "Data capture matrix", headings: ["Property", ...selected.map(({ label }) => label)], rows: paths.map((path) => [path, ...selected.map((context) => matrixState(context, path))]), legend: "Mandatory · Optional · Conditional · Not expected · Not defined · Blocked" });
+            list.append(row);
         }
-        return compileProjectDocumentationSnapshot({ projectId: state.project.id, projectName: state.project.name, set, theme, sourceRevisions: revisions, generatedAt: new Date().toISOString(), tables, diagnostics });
-    };
-    const selection = (scope) => { const { set } = active(), fallback = set?.sections[0]?.id ?? ""; return scope === "current" ? { scope: "current", currentSectionId: selectedSectionId || fallback } : scope === "selected" ? { scope: "selected", selectedSectionIds: [...selectedExportIds] } : { scope: "complete" }; };
-    const mutateSection = (sectionId, update, label) => { const { set } = active(); if (!set)
-        return; replaceSet(createProjectDocumentationSet({ ...set, sections: set.sections.map((section) => section.id === sectionId ? update(section) : section) }), label); };
+        host.append(list);
+    }
+    function renderFlowConfiguration(host, set, section, available) {
+        const source = available.flows.find(({ entity }) => entity.id === section.targetId);
+        host.dataset.configurationKind = "flow";
+        host.append(heading(3, `Configure Flow value map · ${section.name}`));
+        if (!source) {
+            host.append("Flow unavailable.");
+            return;
+        }
+        const contexts = source.snapshot.contexts.map(({ id, pageName, eventName }) => ({ id, label: `${pageName} / ${eventName}` })), contextIds = checkedOrder(contexts.map(({ id }) => id), section.configuration?.contextIds), paths = checkedOrder(flowDocumentationPropertyPaths(source.snapshot), section.configuration?.paths), metadata = (section.configuration?.columns ?? []);
+        const contextGroup = document.createElement("fieldset");
+        contextGroup.append(Object.assign(document.createElement("legend"), { textContent: "Value-map contexts and ordering" }));
+        renderOrderedChoices(contextGroup, { all: contexts, selected: contextIds, name: "Flow contexts", onChange: (next) => mutateSection(set, section.id, (value) => ({ ...value, configuration: { ...value.configuration, contextIds: next } }), "Configure Flow contexts") });
+        const labels = document.createElement("div");
+        labels.setAttribute("aria-label", "Flow documentation labels");
+        for (const context of contexts.filter(({ id }) => contextIds.includes(id))) {
+            const input = controlInput(`label:${context.id}`, section.configuration?.labels?.[context.id] ?? "");
+            input.setAttribute("aria-label", `Documentation label for ${context.label}`);
+            input.addEventListener("change", () => mutateSection(set, section.id, (value) => ({ ...value, configuration: { ...value.configuration, labels: { ...value.configuration?.labels, [context.id]: input.value } } }), `Label ${context.label}`));
+            labels.append(labelled(context.label, input));
+        }
+        contextGroup.append(labels);
+        const pathGroup = document.createElement("fieldset");
+        pathGroup.append(Object.assign(document.createElement("legend"), { textContent: "Property rows and ordering" }));
+        renderOrderedChoices(pathGroup, { all: flowDocumentationPropertyPaths(source.snapshot).map((path) => ({ id: path, label: path })), selected: paths, name: "Flow property rows", onChange: (next) => mutateSection(set, section.id, (value) => ({ ...value, configuration: { ...value.configuration, paths: next } }), "Configure Flow property rows") });
+        const metadataGroup = document.createElement("fieldset");
+        metadataGroup.append(Object.assign(document.createElement("legend"), { textContent: "Metadata columns" }));
+        for (const [id, label] of [["description", "Description"], ["type", "Type"], ["allowedValues", "Allowed values"], ["example", "Example"], ["comments", "Comments"]]) {
+            const check = document.createElement("input");
+            check.type = "checkbox";
+            check.checked = metadata.includes(id);
+            check.addEventListener("change", () => mutateSection(set, section.id, (value) => ({ ...value, configuration: { ...value.configuration, columns: setChecked(metadata, id, check.checked) } }), `Configure Flow metadata ${label}`));
+            metadataGroup.append(labelled(label, check));
+        }
+        host.append(contextGroup, pathGroup, metadataGroup);
+    }
+    function renderMatrixHierarchy(host, set, section, available) {
+        host.dataset.configurationKind = "matrix";
+        host.append(heading(3, "Configure project capture matrix"));
+        const search = controlInput("matrixSearch", "", "search"), tree = document.createElement("div"), selected = section.configuration?.contextIds ?? [];
+        search.setAttribute("aria-label", "Search capture-matrix hierarchy");
+        const draw = () => { tree.replaceChildren(); const matches = available.matrixContexts.filter(({ searchText, label }) => `${searchText} ${label}`.toLowerCase().includes(search.value.trim().toLowerCase())), groups = new Map(); for (const context of matches) {
+            const parents = groups.get(context.groupLabel) ?? new Map(), items = parents.get(context.parentLabel) ?? [];
+            items.push(context);
+            parents.set(context.parentLabel, items);
+            groups.set(context.groupLabel, parents);
+        } for (const [group, parents] of groups) {
+            const groupSet = document.createElement("fieldset");
+            groupSet.dataset.matrixGroup = group;
+            groupSet.append(Object.assign(document.createElement("legend"), { textContent: group }));
+            for (const [parent, contexts] of parents) {
+                const sectionHost = document.createElement("section");
+                sectionHost.dataset.matrixParent = parent;
+                sectionHost.append(heading(4, parent));
+                for (const context of contexts) {
+                    const check = document.createElement("input");
+                    check.type = "checkbox";
+                    check.checked = selected.includes(context.id);
+                    check.dataset.matrixContextId = context.id;
+                    check.dataset.matrixContextKind = context.kind;
+                    check.addEventListener("change", () => mutateSection(set, section.id, (value) => ({ ...value, configuration: { ...value.configuration, contextIds: setChecked(selected, context.id, check.checked) } }), `Configure matrix ${context.label}`));
+                    sectionHost.append(labelled(context.label, check));
+                }
+                groupSet.append(sectionHost);
+            }
+            tree.append(groupSet);
+        } };
+        search.addEventListener("input", draw);
+        draw();
+        host.append(search, tree);
+        const order = document.createElement("fieldset");
+        order.append(Object.assign(document.createElement("legend"), { textContent: "Selected matrix column order" }));
+        renderOrderedChoices(order, { all: available.matrixContexts.filter(({ id }) => selected.includes(id)).map(({ id, label }) => ({ id, label })), selected, name: "Matrix columns", onChange: (next) => mutateSection(set, section.id, (value) => ({ ...value, configuration: { ...value.configuration, contextIds: next } }), "Reorder matrix columns") });
+        host.append(order);
+    }
+    function renderProfileConfiguration(host, set, section, available) {
+        host.dataset.configurationKind = "profile";
+        host.append(heading(3, `Configure Site Profile · ${section.name}`));
+        const profile = available.profiles.find(({ id }) => id === section.targetId);
+        if (!profile) {
+            host.append("Site Profile unavailable.");
+            return;
+        }
+        const allPaths = projectDocumentationProfilePaths(profile), paths = checkedOrder(allPaths, section.configuration?.paths), columns = checkedOrder(projectDocumentationProfileColumns(), section.configuration?.columns);
+        const rows = document.createElement("fieldset");
+        rows.append(Object.assign(document.createElement("legend"), { textContent: "Profile property rows and ordering" }));
+        renderOrderedChoices(rows, { all: allPaths.map((path) => ({ id: path, label: path })), selected: paths, name: `${section.name} property rows`, onChange: (next) => mutateSection(set, section.id, (value) => ({ ...value, configuration: { ...value.configuration, paths: next } }), `Configure ${section.name} rows`) });
+        const columnHost = document.createElement("fieldset");
+        columnHost.append(Object.assign(document.createElement("legend"), { textContent: "Profile columns and ordering" }));
+        renderOrderedChoices(columnHost, { all: projectDocumentationProfileColumns().map((column) => ({ id: column, label: column })), selected: columns, name: `${section.name} columns`, onChange: (next) => mutateSection(set, section.id, (value) => ({ ...value, configuration: { ...value.configuration, columns: next } }), `Configure ${section.name} columns`) });
+        host.append(rows, columnHost);
+    }
+    function renderTheme(host, set, theme) {
+        host.append(heading(2, "Theme"));
+        const name = controlInput("themeName", theme.name), copyOutput = document.createElement("output"), paste = document.createElement("textarea");
+        name.setAttribute("aria-label", "Project-local theme name");
+        paste.setAttribute("aria-label", "Structured theme values");
+        const groups = {};
+        for (const title of ["Brand", "Typography", "Table", "Header and footer"]) {
+            const details = document.createElement("details");
+            details.dataset.themeGroup = title;
+            details.append(Object.assign(document.createElement("summary"), { textContent: title }));
+            groups[title] = details;
+            host.append(details);
+        }
+        const client = controlInput("clientName", theme.clientName), logo = controlInput("logo", theme.logo), headingColor = controlInput("headingColor", theme.colors.heading, "color"), accent = controlInput("accentColor", theme.colors.accent, "color"), stripe = controlInput("stripeColor", theme.colors.stripe, "color");
+        client.setAttribute("aria-label", "Theme client name");
+        logo.setAttribute("aria-label", "Theme logo");
+        groups.Brand.append(labelled("Client name", client), labelled("HTTPS or raster data logo", logo), labelled("Heading color", headingColor), labelled("Accent color", accent), labelled("Stripe color", stripe));
+        const family = controlInput("family", theme.typography.family), headingSize = controlInput("headingSize", String(theme.typography.headingSize), "number"), bodySize = controlInput("bodySize", String(theme.typography.bodySize), "number");
+        family.setAttribute("aria-label", "Theme font family");
+        groups.Typography.append(labelled("Font family", family), labelled("Heading size", headingSize), labelled("Body size", bodySize));
+        const density = document.createElement("select");
+        density.name = "density";
+        density.append(new Option("Comfortable", "comfortable"), new Option("Compact", "compact"));
+        density.value = theme.density;
+        const borders = document.createElement("input"), striping = document.createElement("input"), highlighted = document.createElement("input"), widths = document.createElement("textarea");
+        for (const check of [borders, striping, highlighted])
+            check.type = "checkbox";
+        borders.name = "borders";
+        striping.name = "striping";
+        highlighted.name = "highlightedHeadings";
+        borders.checked = theme.borders;
+        striping.checked = theme.striping;
+        highlighted.checked = theme.highlightedHeadings;
+        widths.value = Object.entries(theme.columnWidths).map(([column, width]) => `${column}=${width}`).join("\n");
+        widths.setAttribute("aria-label", "Theme column widths");
+        groups.Table.append(labelled("Density", density), labelled("Borders", borders), labelled("Striping", striping), labelled("Highlighted headings", highlighted), labelled("Column widths", widths));
+        const header = controlInput("headerText", theme.headerText), footer = controlInput("footerText", theme.footerText);
+        header.setAttribute("aria-label", "Theme header text");
+        footer.setAttribute("aria-label", "Theme footer text");
+        groups["Header and footer"].append(labelled("Header text", header), labelled("Footer text", footer));
+        const read = () => createProjectDocumentationTheme({ id: theme.id, name: name.value, clientName: client.value, logo: logo.value, colors: { heading: headingColor.value, accent: accent.value, stripe: stripe.value }, typography: { family: family.value, headingSize: Number(headingSize.value), bodySize: Number(bodySize.value) }, density: density.value === "compact" ? "compact" : "comfortable", borders: borders.checked, striping: striping.checked, highlightedHeadings: highlighted.checked, columnWidths: Object.fromEntries(widths.value.split(/\r?\n/u).flatMap((line) => { const [column, raw] = line.split("="); return column && Number(raw) > 0 ? [[column.trim(), Number(raw)]] : []; })), headerText: header.value, footerText: footer.value });
+        const sampleHost = document.createElement("section"), drawSample = (sampleTheme) => { sampleHost.replaceChildren(); sampleHost.dataset.themeSample = "true"; if (sampleTheme.logo)
+            sampleHost.append(Object.assign(document.createElement("img"), { src: sampleTheme.logo, alt: `${sampleTheme.clientName || sampleTheme.name} logo` })); sampleHost.append(Object.assign(document.createElement("p"), { textContent: [sampleTheme.clientName, sampleTheme.headerText].filter(Boolean).join(" · ") }), renderTable({ id: "theme-sample", title: "Theme sample", headings: ["Property", "Description"], rows: [["page_name", "Page name"], ["event_name", "Observed event"]] }, sampleTheme), Object.assign(document.createElement("p"), { textContent: sampleTheme.footerText })); };
+        drawSample(theme);
+        const save = button("Save theme", () => { try {
+            saveTheme(read(), "Save project documentation theme");
+        }
+        catch (error) {
+            copyOutput.textContent = error instanceof Error ? error.message : String(error);
+        } }), preview = button("Preview theme changes", () => { try {
+            drawSample(read());
+        }
+        catch (error) {
+            copyOutput.textContent = error instanceof Error ? error.message : String(error);
+        } }), copy = button("Copy structured theme values", () => { void ports.writePlain(serializeProjectDocumentationTheme(read())).then(() => copyOutput.textContent = "Structured theme values copied."); }), pasteButton = button("Paste as new project-local theme", () => { try {
+            const next = parseProjectDocumentationTheme(paste.value, { id: `documentation-theme:${crypto.randomUUID()}`, name: `${theme.name} copy` }), records = documentation(), nextSet = createProjectDocumentationSet({ ...set, themeId: next.id });
+            persist({ sets: records.sets.map((candidate) => candidate.id === set.id ? nextSet : candidate), themes: [...records.themes, next] }, "Paste project-local documentation theme");
+        }
+        catch (error) {
+            copyOutput.textContent = error instanceof Error ? error.message : String(error);
+        } });
+        host.prepend(name);
+        host.append(save, preview, copy, paste, pasteButton, copyOutput, sampleHost);
+    }
     function render(host) {
-        const state = options.state(), { documentation, set, theme } = active();
+        const state = options.state(), { records, set, theme } = active();
         host.replaceChildren();
-        const root = document.createElement("section"), heading = document.createElement("h1");
+        const root = document.createElement("section");
         root.setAttribute("aria-label", "Project Documentation workspace");
-        heading.textContent = "Documentation";
-        root.append(heading);
+        root.append(Object.assign(document.createElement("h1"), { textContent: "Documentation" }));
         if (!state) {
             root.append("Open a project to create documentation.");
             host.append(root);
             return;
         }
         if (!set || !theme) {
-            const name = document.createElement("input"), themeName = document.createElement("input"), create = button("Create Documentation Set", () => { const themeId = `documentation-theme:${crypto.randomUUID()}`, setId = `documentation-set:${crypto.randomUUID()}`, nextTheme = defaultTheme(themeId, themeName.value.trim() || "Project theme"), nextSet = createProjectDocumentationSet({ id: setId, name: name.value.trim() || "Client specification", themeId, sections: [{ id: `${setId}:overview`, kind: "overview", name: "Overview", selected: true }, { id: `${setId}:matrix`, kind: "matrix", name: "Data capture matrix", selected: true, configuration: { contextIds: [] } }] }); selectedSetId = setId; selectedSectionId = nextSet.sections[0].id; persist({ sets: [...documentation.sets, nextSet], themes: [...documentation.themes, nextTheme] }, "Create Documentation Set"); });
+            const name = controlInput("setName", ""), themeName = controlInput("newThemeName", ""), create = button("Create Documentation Set", () => { const themeId = `documentation-theme:${crypto.randomUUID()}`, setId = `documentation-set:${crypto.randomUUID()}`, nextTheme = defaultTheme(themeId, themeName.value.trim() || "Project theme"), nextSet = createProjectDocumentationSet({ id: setId, name: name.value.trim() || "Client specification", themeId, sections: [{ id: `${setId}:overview`, kind: "overview", name: "Overview", selected: true }, { id: `${setId}:matrix`, kind: "matrix", name: "Data capture matrix", selected: true, configuration: { contextIds: [] } }] }); selectedSetId = setId; selectedSectionId = nextSet.sections[0].id; persist({ sets: [...records.sets, nextSet], themes: [...records.themes, nextTheme] }, "Create Documentation Set"); });
             name.setAttribute("aria-label", "Documentation Set name");
             themeName.setAttribute("aria-label", "Theme name");
             root.append(labelled("Set name", name), labelled("Theme name", themeName), create);
@@ -105,101 +286,93 @@ export function installProjectDocumentationWorkspaceUi(options) {
         selectedSetId = set.id;
         if (!selectedSectionId || !set.sections.some(({ id }) => id === selectedSectionId))
             selectedSectionId = set.sections[0]?.id ?? "";
-        const available = sources();
-        const setRegion = document.createElement("section"), content = document.createElement("section"), configure = document.createElement("section"), themeRegion = document.createElement("section"), preview = document.createElement("section"), exportRegion = document.createElement("section");
-        for (const [region, title] of [[setRegion, "Set"], [content, "Content"], [configure, "Configure"], [themeRegion, "Theme"], [preview, "Preview"], [exportRegion, "Export"]])
-            region.append(Object.assign(document.createElement("h2"), { textContent: title }));
+        const available = sources(state), setRegion = document.createElement("section"), content = document.createElement("section"), configure = document.createElement("section"), themeRegion = document.createElement("section"), preview = document.createElement("section"), exportRegion = document.createElement("section");
+        for (const [region, title] of [[setRegion, "Set"], [content, "Content"], [configure, "Configure"], [preview, "Preview"], [exportRegion, "Export"]])
+            region.append(heading(2, title));
         const setChoice = document.createElement("select");
         setChoice.setAttribute("aria-label", "Documentation Set");
-        for (const candidate of documentation.sets)
+        for (const candidate of records.sets)
             setChoice.append(new Option(candidate.name, candidate.id));
         setChoice.value = set.id;
         setChoice.addEventListener("change", () => { selectedSetId = setChoice.value; snapshot = undefined; render(host); });
-        setRegion.append(setChoice);
         const outline = document.createElement("ol");
         outline.setAttribute("aria-label", "Documentation section outline");
         for (const section of set.sections) {
-            const item = document.createElement("li"), choose = button(`${section.name} · ${section.kind}`, () => { selectedSectionId = section.id; render(host); });
-            choose.setAttribute("aria-current", String(section.id === selectedSectionId));
-            item.append(choose, button("Move earlier", () => { const index = set.sections.findIndex(({ id }) => id === section.id); if (index <= 0)
-                return; const sections = [...set.sections]; [sections[index - 1], sections[index]] = [sections[index], sections[index - 1]]; replaceSet(createProjectDocumentationSet({ ...set, sections }), `Reorder ${section.name}`); }), button("Move later", () => { const index = set.sections.findIndex(({ id }) => id === section.id); if (index < 0 || index === set.sections.length - 1)
-                return; const sections = [...set.sections]; [sections[index], sections[index + 1]] = [sections[index + 1], sections[index]]; replaceSet(createProjectDocumentationSet({ ...set, sections }), `Reorder ${section.name}`); }));
+            const item = document.createElement("li"), select = button(`${section.name} · ${section.kind}`, () => { selectedSectionId = section.id; render(host); }), earlier = button("Move earlier", () => saveSet(createProjectDocumentationSet({ ...set, sections: move(set.sections, section, -1) }), `Reorder ${section.name}`)), later = button("Move later", () => saveSet(createProjectDocumentationSet({ ...set, sections: move(set.sections, section, 1) }), `Reorder ${section.name}`));
+            select.setAttribute("aria-current", String(section.id === selectedSectionId));
+            earlier.disabled = set.sections.indexOf(section) === 0;
+            later.disabled = set.sections.indexOf(section) === set.sections.length - 1;
+            item.dataset.sectionKind = section.kind;
+            item.append(select, earlier, later);
             outline.append(item);
         }
-        setRegion.append(outline);
-        const flowSearch = document.createElement("input"), profileSearch = document.createElement("input"), contextSearch = document.createElement("input");
-        flowSearch.type = profileSearch.type = contextSearch.type = "search";
+        setRegion.append(setChoice, outline);
+        const flowSearch = controlInput("flowSearch", "", "search"), profileSearch = controlInput("profileSearch", "", "search");
         flowSearch.setAttribute("aria-label", "Search Flows");
         profileSearch.setAttribute("aria-label", "Search Site Profiles");
-        contextSearch.setAttribute("aria-label", "Search capture-matrix schema contexts");
-        content.append(flowSearch, profileSearch, contextSearch);
-        const selectors = document.createElement("div");
-        const refreshSelectors = () => { selectors.replaceChildren(); for (const { entity } of available.flows.filter(({ entity }) => entity.name.toLowerCase().includes(flowSearch.value.toLowerCase()))) {
+        const flowChoices = document.createElement("fieldset"), profileChoices = document.createElement("fieldset");
+        flowChoices.append(Object.assign(document.createElement("legend"), { textContent: "Flow value-map sections" }));
+        profileChoices.append(Object.assign(document.createElement("legend"), { textContent: "Site Profile property-table sections" }));
+        const drawContent = () => { flowChoices.querySelectorAll("label").forEach((value) => value.remove()); profileChoices.querySelectorAll("label").forEach((value) => value.remove()); for (const { entity } of available.flows.filter(({ entity }) => entity.name.toLowerCase().includes(flowSearch.value.toLowerCase()))) {
             const existing = set.sections.find((section) => section.kind === "flow" && section.targetId === entity.id), check = document.createElement("input");
             check.type = "checkbox";
             check.checked = Boolean(existing);
-            check.addEventListener("change", () => { const sections = check.checked ? [...set.sections, { id: `section:flow:${entity.id}`, kind: "flow", name: entity.name, targetId: entity.id, selected: true }] : set.sections.filter(({ id }) => id !== existing?.id); replaceSet(createProjectDocumentationSet({ ...set, sections }), `${check.checked ? "Select" : "Remove"} Flow ${entity.name}`); });
-            selectors.append(labelled(`Flow value map ${entity.name}`, check));
-        } for (const profile of state.project.collections.profiles.filter(({ name }) => name.toLowerCase().includes(profileSearch.value.toLowerCase()))) {
+            check.addEventListener("change", () => { const sections = check.checked ? [...set.sections, { id: `section:flow:${entity.id}`, kind: "flow", name: entity.name, targetId: entity.id, selected: true }] : set.sections.filter(({ id }) => id !== existing?.id); saveSet(createProjectDocumentationSet({ ...set, sections }), `${check.checked ? "Select" : "Remove"} Flow ${entity.name}`); });
+            flowChoices.append(labelled(entity.name, check));
+        } for (const profile of available.profiles.filter(({ name }) => name.toLowerCase().includes(profileSearch.value.toLowerCase()))) {
             const existing = set.sections.find((section) => section.kind === "profile" && section.targetId === profile.id), check = document.createElement("input");
             check.type = "checkbox";
             check.checked = Boolean(existing);
-            check.addEventListener("change", () => { const sections = check.checked ? [...set.sections, { id: `section:profile:${profile.id}`, kind: "profile", name: profile.name, targetId: profile.id, selected: true }] : set.sections.filter(({ id }) => id !== existing?.id); replaceSet(createProjectDocumentationSet({ ...set, sections }), `${check.checked ? "Select" : "Remove"} Site Profile ${profile.name}`); });
-            selectors.append(labelled(`Site Profile ${profile.name}`, check));
-        } const matrix = set.sections.find(({ kind }) => kind === "matrix"); for (const context of available.matrixContexts.filter(({ searchText }) => searchText.toLowerCase().includes(contextSearch.value.toLowerCase()))) {
-            const check = document.createElement("input");
-            check.type = "checkbox";
-            check.checked = matrix?.configuration?.contextIds?.includes(context.id) ?? false;
-            check.addEventListener("change", () => { if (!matrix)
-                return; const current = matrix.configuration?.contextIds ?? [], contextIds = check.checked ? [...current, context.id] : current.filter((id) => id !== context.id); mutateSection(matrix.id, (section) => ({ ...section, configuration: { ...section.configuration, contextIds } }), `${check.checked ? "Select" : "Remove"} matrix context ${context.label}`); });
-            selectors.append(labelled(`Matrix context ${context.label}`, check));
+            check.addEventListener("change", () => { const sections = check.checked ? [...set.sections, { id: `section:profile:${profile.id}`, kind: "profile", name: profile.name, targetId: profile.id, selected: true }] : set.sections.filter(({ id }) => id !== existing?.id); saveSet(createProjectDocumentationSet({ ...set, sections }), `${check.checked ? "Select" : "Remove"} Site Profile ${profile.name}`); });
+            profileChoices.append(labelled(profile.name, check));
         } };
-        for (const input of [flowSearch, profileSearch, contextSearch])
-            input.addEventListener("input", refreshSelectors);
-        refreshSelectors();
-        content.append(selectors);
+        flowSearch.addEventListener("input", drawContent);
+        profileSearch.addEventListener("input", drawContent);
+        drawContent();
+        content.append(flowSearch, flowChoices, profileSearch, profileChoices);
         const selectedSection = set.sections.find(({ id }) => id === selectedSectionId);
-        if (selectedSection) {
-            configure.append(Object.assign(document.createElement("h3"), { textContent: `Configure ${selectedSection.name}` }), Object.assign(document.createElement("p"), { textContent: selectedSection.kind === "flow" ? "Flow value-map contexts, property rows, metadata columns, documentation labels, and ordering." : selectedSection.kind === "matrix" ? "Project-wide Page, Event, Flow Page-instance, and Event-occurrence columns." : selectedSection.kind === "profile" ? "Property order and Property, Description, Required, Allowed values, Example, Comments columns." : "Project name, purpose, and website." }));
-        }
-        const themeName = document.createElement("input"), clientName = document.createElement("input");
-        themeName.value = theme.name;
-        clientName.value = theme.clientName;
-        themeName.setAttribute("aria-label", "Project-local theme name");
-        clientName.setAttribute("aria-label", "Theme client name");
-        const saveTheme = button("Save theme", () => replaceTheme(createProjectDocumentationTheme({ ...theme, name: themeName.value, clientName: clientName.value }), "Save project documentation theme"));
-        themeRegion.append(themeName, clientName);
-        for (const group of ["Brand", "Typography", "Table", "Header and footer"]) {
-            const details = document.createElement("details"), summary = document.createElement("summary");
-            summary.textContent = group;
-            details.append(summary, Object.assign(document.createElement("p"), { textContent: `${group} settings for preview, Excel, and rich clipboard output.` }));
-            themeRegion.append(details);
-        }
-        const sample = document.createElement("table");
-        sample.dataset.themeFingerprint = themeFingerprint(theme);
-        sample.innerHTML = "<thead><tr><th>Property</th><th>Description</th></tr></thead><tbody><tr><td>page_name</td><td>Page name</td></tr></tbody>";
-        themeRegion.append(saveTheme, sample);
-        const refresh = button("Refresh preview", () => { snapshot = compile(); feedback = snapshot ? `Preview refreshed · ${snapshot.snapshotHash}` : "Preview unavailable"; render(host); });
+        configure.setAttribute("aria-label", "Selected documentation section configuration");
+        if (selectedSection?.kind === "flow")
+            renderFlowConfiguration(configure, set, selectedSection, available);
+        else if (selectedSection?.kind === "matrix")
+            renderMatrixHierarchy(configure, set, selectedSection, available);
+        else if (selectedSection?.kind === "profile")
+            renderProfileConfiguration(configure, set, selectedSection, available);
+        else
+            configure.append(heading(3, "Configure Overview"), Object.assign(document.createElement("p"), { textContent: "Overview derives the project name, purpose, and website." }));
+        renderTheme(themeRegion, set, theme);
+        const refresh = button("Refresh preview", () => { snapshot = compile(); feedback = snapshot ? `Preview refreshed · immutable snapshot ${snapshot.snapshotHash}` : "Preview unavailable"; render(host); });
         preview.append(refresh);
         if (snapshot) {
-            const stale = projectDocumentationSnapshotStale(snapshot, compile()?.sourceRevisions ?? {});
-            if (stale.stale)
-                preview.append(Object.assign(document.createElement("p"), { textContent: `Preview stale — changed sources: ${stale.changedSources.join(", ")}.`, role: "alert" }));
-            const selected = selectProjectDocumentationTables(snapshot, { scope: "complete" });
-            for (const table of selected) {
-                const tableElement = document.createElement("table");
-                tableElement.dataset.themeFingerprint = themeFingerprint(theme);
-                const header = document.createElement("tr");
-                header.append(...table.headings.map((value) => Object.assign(document.createElement("th"), { textContent: value })));
-                const body = table.rows.map((row) => { const value = document.createElement("tr"); value.append(...row.map((cell) => Object.assign(document.createElement("td"), { textContent: cell }))); return value; });
-                tableElement.append(header, ...body);
-                preview.append(Object.assign(document.createElement("h3"), { textContent: table.title }), tableElement);
+            const live = stale();
+            if (live.stale)
+                preview.append(Object.assign(document.createElement("p"), { textContent: `Preview stale — changed sources: ${live.changedSources.join(", ")}.`, role: "alert" }));
+            for (const table of selectProjectDocumentationTables(snapshot, { scope: "complete" })) {
+                const sectionHost = document.createElement("section");
+                sectionHost.dataset.previewSection = table.id;
+                sectionHost.dataset.themeFingerprint = themeFingerprint(theme);
+                sectionHost.append(heading(3, table.title), renderTable(table, theme));
+                if (table.legend)
+                    sectionHost.append(Object.assign(document.createElement("p"), { textContent: table.legend }));
+                preview.append(sectionHost);
             }
             if (snapshot.diagnostics.length) {
                 const diagnostics = document.createElement("ul");
                 diagnostics.setAttribute("aria-label", "Documentation export preflight");
-                for (const issue of snapshot.diagnostics)
-                    diagnostics.append(Object.assign(document.createElement("li"), { textContent: `${issue.message} · ${issue.repair}` }));
+                for (const issue of snapshot.diagnostics) {
+                    const item = document.createElement("li");
+                    item.append(`${issue.message} · `);
+                    if (issue.repairTarget) {
+                        const link = document.createElement("a"), query = new URLSearchParams({ kind: issue.repairTarget.kind, entity: issue.repairTarget.id, ...(issue.repairTarget.path ? { field: issue.repairTarget.path } : {}) });
+                        link.href = `?${query}`;
+                        link.textContent = issue.repair;
+                        link.addEventListener("click", (event) => { event.preventDefault(); options.openRepair?.(issue.repairTarget); });
+                        item.append(link);
+                    }
+                    else
+                        item.append(issue.repair);
+                    diagnostics.append(item);
+                }
                 preview.append(diagnostics);
             }
         }
@@ -218,27 +391,25 @@ export function installProjectDocumentationWorkspaceUi(options) {
         const confirm = document.createElement("input");
         confirm.type = "checkbox";
         confirm.checked = confirmedIncomplete;
-        const liveStale = snapshot ? projectDocumentationSnapshotStale(snapshot, compile()?.sourceRevisions ?? {}).stale : false, blocked = !snapshot || liveStale || (snapshot.incomplete && !confirmedIncomplete), copy = button("Copy rich documentation", () => { if (!snapshot) {
-            feedback = "Refresh preview before export.";
-            render(host);
-            return;
-        } const stale = projectDocumentationSnapshotStale(snapshot, compile()?.sourceRevisions ?? {}); if (stale.stale) {
+        const liveStale = stale().stale, blocked = !snapshot || liveStale || (snapshot.incomplete && !confirmedIncomplete), copy = button("Copy rich documentation", () => { if (!snapshot)
+            return; const live = stale(); if (live.stale) {
             feedback = "Refresh the stale preview before export.";
             render(host);
             return;
         } try {
-            const value = renderProjectDocumentationClipboard(snapshot, { ...selection(exportScope), confirmIncomplete: confirmedIncomplete });
+            const value = renderProjectDocumentationClipboard(snapshot, { ...selection(), confirmIncomplete: confirmedIncomplete });
             void ports.writeRich(value.html, value.plain).then(() => { feedback = "Rich documentation copied with plain-text fallback."; render(host); });
         }
         catch (error) {
             feedback = error instanceof Error ? error.message : String(error);
             render(host);
-        } }), download = button("Download Excel workbook", () => { if (!snapshot) {
-            feedback = "Refresh preview before export.";
+        } }), download = button("Download Excel workbook", () => { if (!snapshot)
+            return; const live = stale(); if (live.stale) {
+            feedback = "Refresh the stale preview before export.";
             render(host);
             return;
         } try {
-            const bytes = writeProjectDocumentationWorkbook(snapshot, { ...selection(exportScope), confirmIncomplete: confirmedIncomplete });
+            const bytes = writeProjectDocumentationWorkbook(snapshot, { ...selection(), confirmIncomplete: confirmedIncomplete });
             ports.download(`${set.name.toLowerCase().replace(/[^a-z0-9]+/gu, "-")}.xlsx`, bytes, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
             feedback = "Excel workbook downloaded.";
             render(host);
