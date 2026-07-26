@@ -126,3 +126,17 @@ Feature: Data layer project documentation workspace
     Then cell content remains literal and cannot create formulas, unintended rows, columns, or markup
     And deterministic human sheet names are unique and valid without exposing raw identities
     And wrapping, column widths, headings, and theme styling preserve readable tables
+
+  # Data layer project documentation workspace 015
+  Scenario Outline: Data layer project documentation workspace 015
+    Given Client specification has a fresh preview for <export_scope>
+    When the operator downloads the <export_scope> Excel workbook
+    Then the download is an OOXML .xlsx workbook rather than a differently formatted file with an .xlsx name
+    And Microsoft Excel opens it without a file-format error or repair warning
+    And its sheets in order are <expected_sheets>
+
+    Examples:
+      | export_scope                              | expected_sheets                                                                                         |
+      | current Checkout journey section          | Checkout journey                                                                                        |
+      | selected Checkout journey and Sitewide sections | Checkout journey, Sitewide                                                                         |
+      | complete Documentation Set                | Overview, Checkout journey, Article journey, Data capture matrix, Sitewide, Opened Article              |

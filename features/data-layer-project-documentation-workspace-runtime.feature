@@ -125,3 +125,18 @@ Feature: Data layer project documentation workspace runtime
     Then parsed cells remain literal and create no formulas, unintended rows, columns, or markup
     And generated human sheet names are deterministic, unique, and valid without raw identities
     And parsed wrapping, widths, headings, and styles match the configured readable theme
+
+  # Data layer project documentation workspace runtime 015
+  Scenario Outline: Data layer project documentation workspace runtime 015
+    Given the production Client specification has a fresh preview for <export_scope>
+    When actual controls download the <export_scope> Excel workbook
+    Then the download adapter receives an .xlsx file with the OOXML workbook media type
+    And independent package validation finds a complete OOXML workbook whose declared parts and relationships resolve
+    And an independent Excel-compatible reader opens it without a file-format error or repair
+    And parsed sheet names in order are <expected_sheets>
+
+    Examples:
+      | export_scope                              | expected_sheets                                                                                         |
+      | current Checkout journey section          | Checkout journey                                                                                        |
+      | selected Checkout journey and Sitewide sections | Checkout journey, Sitewide                                                                         |
+      | complete Documentation Set                | Overview, Checkout journey, Article journey, Data capture matrix, Sitewide, Opened Article              |
