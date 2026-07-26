@@ -187,3 +187,510 @@ body.twatility-studio {
     color: HighlightText;
   }
 }
+
+/*
+ * Slice 4: Specification Studio shell and navigation.
+ * These selectors stay under the explicit production theme class. Route
+ * renderers, control identities, state text, and local wide-surface scroll
+ * ownership remain production-owned.
+ */
+
+body.twatility-studio {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  width: 100%;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.twatility-studio .project-bar {
+  position: relative;
+  top: auto;
+  z-index: 6;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(12rem, auto);
+  gap: 0.75rem 1.5rem;
+  min-height: 4.45rem;
+  padding: 0.72rem clamp(0.85rem, 2vw, 1.5rem);
+}
+
+.twatility-studio .project-bar > div:last-child {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 0.65rem;
+  text-align: end;
+}
+
+.twatility-studio .project-bar [role="status"] {
+  max-width: 42rem;
+  padding: 0.28rem 0.55rem;
+  border: 0.08rem solid color-mix(in srgb, var(--twa-mustard) 58%, transparent);
+  border-radius: var(--twa-radius-small);
+  background: color-mix(in srgb, var(--twa-navy-deep) 72%, transparent);
+  color: var(--twa-paper-raised);
+  overflow-wrap: anywhere;
+}
+
+.twatility-studio #retry-save:not([hidden]) {
+  border-color: var(--twa-danger);
+  background: var(--twa-paper-raised);
+  color: var(--twa-danger);
+}
+
+.twatility-studio #project-workspace {
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  grid-template-columns:
+    clamp(14rem, 18vw, 18.5rem)
+    minmax(0, 1fr)
+    clamp(16rem, 20vw, 21rem);
+  background: var(--twa-paper);
+}
+
+.twatility-studio #project-workspace[data-inspector-open="false"] {
+  grid-template-columns: clamp(14rem, 18vw, 18.5rem) minmax(0, 1fr);
+}
+
+.twatility-studio #project-workspace > nav {
+  position: relative;
+  min-width: 0;
+  padding: 1rem 0.9rem 7.5rem;
+  scrollbar-color: var(--twa-mustard) transparent;
+}
+
+.twatility-studio #project-workspace > nav::before {
+  display: block;
+  width: 2.9rem;
+  height: 0.34rem;
+  margin-block-end: 0.55rem;
+  border-radius: 999px;
+  background: var(--twa-red);
+  content: "";
+}
+
+.twatility-studio #tree-project-name {
+  margin: 0 0 0.8rem;
+  padding-block-end: 0.7rem;
+  border-block-end: 0.14rem solid var(--twa-mustard);
+  color: var(--twa-navy-deep);
+  font-size: clamp(1.05rem, 1.5vw, 1.3rem);
+  overflow-wrap: anywhere;
+}
+
+.twatility-studio #project-tree {
+  display: grid;
+  gap: 0.38rem;
+  margin: 0;
+}
+
+.twatility-studio #project-tree li {
+  min-width: 0;
+}
+
+.twatility-studio #project-tree button {
+  min-height: 2.55rem;
+  padding: 0.48rem 0.62rem;
+  border: 0.08rem solid transparent;
+  border-radius: var(--twa-radius-small);
+  background: color-mix(in srgb, var(--twa-paper-raised) 80%, transparent);
+  font-weight: 700;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+
+.twatility-studio #project-tree button:hover {
+  border-color: var(--twa-mustard-dark);
+  background: var(--twa-paper-raised);
+}
+
+.twatility-studio #project-tree button[data-kind="documentation"] {
+  border-color: color-mix(in srgb, var(--twa-red) 45%, var(--border));
+}
+
+.twatility-studio #project-tree button[data-kind="overview"] {
+  border-color: color-mix(in srgb, var(--twa-navy) 35%, var(--border));
+}
+
+.twatility-studio #project-tree button[aria-current="true"] {
+  border-inline-start: 0.3rem solid var(--twa-red);
+  padding-inline-start: 0.4rem;
+  box-shadow:
+    inset 0 -0.12rem 0 color-mix(in srgb, var(--twa-navy) 30%, transparent),
+    var(--twa-shadow-small);
+}
+
+.twatility-studio #workspace-pane {
+  min-height: 0;
+  padding: 0 clamp(0.8rem, 1.8vw, 1.5rem) 2.5rem;
+  scrollbar-color: var(--twa-mustard-dark) transparent;
+}
+
+.twatility-studio .sticky-tools {
+  display: grid;
+  grid-template-columns: minmax(12rem, 1fr);
+  gap: 0.62rem;
+  margin-inline: calc(clamp(0.8rem, 1.8vw, 1.5rem) * -1);
+  padding: 0.75rem clamp(0.8rem, 1.8vw, 1.5rem) 0.85rem;
+  border-block-end: 0.18rem solid var(--twa-mustard);
+  box-shadow: 0 0.22rem 0.5rem color-mix(in srgb, var(--twa-ink) 16%, transparent);
+}
+
+.twatility-studio #project-breadcrumb {
+  min-width: 0;
+  padding: 0.42rem 0.62rem;
+  border-inline-start: 0.28rem solid var(--twa-red);
+  background: color-mix(in srgb, var(--twa-blue-soft) 32%, var(--twa-paper-raised));
+  color: var(--twa-navy-deep);
+  font-family: var(--twa-font-display);
+  font-size: 0.92rem;
+  overflow-wrap: anywhere;
+}
+
+.twatility-studio .actions {
+  display: flex;
+  align-items: stretch;
+  gap: 0.42rem;
+  margin: 0;
+}
+
+.twatility-studio .actions > button,
+.twatility-studio .actions > details > summary,
+.twatility-studio .actions > [role="group"] {
+  min-height: 2.55rem;
+  border: 0.08rem solid var(--border);
+  border-radius: var(--twa-radius-small);
+  background: var(--twa-paper-raised);
+}
+
+.twatility-studio .actions > button {
+  flex: 0 0 auto;
+}
+
+.twatility-studio .actions > [role="group"] {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  padding: 0.25rem;
+}
+
+.twatility-studio .actions > [role="group"] > strong {
+  align-self: center;
+  padding-inline: 0.35rem;
+  color: var(--twa-navy-deep);
+  font-family: var(--twa-font-display);
+  font-size: 0.75rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.twatility-studio .actions > details {
+  position: relative;
+  flex: 0 0 auto;
+}
+
+.twatility-studio .actions > details > summary {
+  display: flex;
+  min-width: 5.3rem;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  font-weight: 800;
+  list-style-position: inside;
+}
+
+.twatility-studio .actions > details[open] {
+  z-index: 7;
+  padding-block-end: 0.35rem;
+  border: 0.08rem solid var(--twa-navy-deep);
+  border-radius: var(--twa-radius-small);
+  background: var(--twa-paper-raised);
+  box-shadow: var(--twa-shadow-medium);
+}
+
+.twatility-studio .actions > details[open] > summary {
+  border: 0;
+  border-block-end: 0.12rem solid var(--twa-mustard);
+  border-radius: 0;
+}
+
+.twatility-studio .actions > details > button {
+  display: block;
+  width: calc(100% - 0.7rem);
+  margin: 0.35rem 0.35rem 0;
+  text-align: start;
+}
+
+.twatility-studio .action-description {
+  margin: 0;
+  color: var(--twa-muted);
+  font-size: 0.84rem;
+}
+
+.twatility-studio .sticky-tools > label {
+  display: grid;
+  grid-template-columns: auto minmax(11rem, 1fr);
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0;
+  color: var(--twa-navy-deep);
+  font-weight: 800;
+}
+
+.twatility-studio #project-search {
+  width: 100%;
+  min-width: 0;
+  background: var(--twa-paper-raised);
+}
+
+.twatility-studio #workspace-content {
+  width: min(100%, 92rem);
+  margin-inline: auto;
+  padding-block: clamp(1rem, 2vw, 1.8rem);
+}
+
+.twatility-studio #workspace-content > h1,
+.twatility-studio #workspace-content > section > h1 {
+  padding-block-end: 0.55rem;
+  border-block-end: 0.16rem solid var(--twa-mustard);
+  color: var(--twa-navy-deep);
+}
+
+.twatility-studio #workspace-content > dl {
+  display: grid;
+  grid-template-columns: minmax(7rem, 0.28fr) minmax(0, 1fr);
+  gap: 0;
+  max-width: 62rem;
+  margin-block: 1.2rem;
+  border: 0.08rem solid var(--border);
+  border-radius: var(--twa-radius-medium);
+  background: var(--twa-paper-raised);
+  box-shadow: var(--twa-shadow-small);
+  overflow: hidden;
+}
+
+.twatility-studio #workspace-content > dl :is(dt, dd) {
+  min-width: 0;
+  margin: 0;
+  padding: 0.68rem 0.8rem;
+  border-block-end: 0.06rem solid color-mix(in srgb, var(--border) 55%, transparent);
+  overflow-wrap: anywhere;
+}
+
+.twatility-studio #workspace-content > dl dt {
+  background: color-mix(in srgb, var(--twa-blue-soft) 42%, var(--twa-paper-raised));
+  color: var(--twa-navy-deep);
+  font-weight: 800;
+}
+
+.twatility-studio #workspace-content > dl :is(dt, dd):nth-last-child(-n + 2) {
+  border-block-end: 0;
+}
+
+.twatility-studio :is(.entity-grid, .coverage-grid) {
+  gap: 0.65rem;
+}
+
+.twatility-studio .entity-row {
+  border-inline-start: 0.25rem solid var(--twa-mustard);
+}
+
+.twatility-studio .project-guidance {
+  border-color: color-mix(in srgb, var(--twa-navy) 45%, var(--border));
+  background:
+    linear-gradient(
+      115deg,
+      color-mix(in srgb, var(--twa-blue-soft) 48%, var(--twa-paper-raised)),
+      var(--twa-paper-raised)
+    );
+}
+
+.twatility-studio #project-inspector {
+  min-width: 0;
+  padding: 1rem;
+  scrollbar-color: var(--twa-mustard-dark) transparent;
+}
+
+.twatility-studio #project-inspector > h2 {
+  margin-block-start: 0;
+  padding-block-end: 0.62rem;
+  border-block-end: 0.16rem solid var(--twa-mustard);
+  color: var(--twa-navy-deep);
+}
+
+.twatility-studio #inspector-context {
+  padding: 0.65rem;
+  border-inline-start: 0.25rem solid var(--twa-red);
+  background: color-mix(in srgb, var(--twa-blue-soft) 38%, var(--twa-paper-raised));
+  overflow-wrap: anywhere;
+}
+
+.twatility-studio #project-inspector > details {
+  margin-block: 0.62rem;
+  border: 0.08rem solid var(--border);
+  border-radius: var(--twa-radius-small);
+  background: var(--twa-paper);
+}
+
+.twatility-studio #project-inspector > details > summary {
+  padding: 0.62rem;
+  color: var(--twa-navy-deep);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.twatility-studio #project-inspector > details > :not(summary) {
+  margin-inline: 0.62rem;
+}
+
+.twatility-studio dialog {
+  max-width: min(44rem, calc(100vw - 2rem));
+  max-height: min(44rem, calc(100dvh - 2rem));
+  overflow: auto;
+  scrollbar-color: var(--twa-mustard-dark) transparent;
+}
+
+@media (min-width: 761px) {
+  .twatility-studio .actions {
+    position: relative;
+  }
+
+  .twatility-studio .actions > details[open] {
+    position: absolute;
+    inset-block-start: calc(100% + 0.35rem);
+    inset-inline-end: 0;
+    width: min(18rem, calc(100vw - 2rem));
+  }
+}
+
+@media (max-width: 1180px) {
+  .twatility-studio .actions > [role="group"] {
+    flex: 1 1 15rem;
+  }
+
+  .twatility-studio .sticky-tools > label {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  body.twatility-studio {
+    display: block;
+    width: 100%;
+    height: auto;
+    min-height: 100dvh;
+    overflow: visible;
+  }
+
+  .twatility-studio .project-bar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .twatility-studio .project-bar > div:last-child {
+    align-items: flex-start;
+    justify-content: flex-start;
+    text-align: start;
+  }
+
+  .twatility-studio #project-workspace:not([hidden]) {
+    display: flex;
+    height: auto;
+    min-height: 0;
+    flex-direction: column;
+    overflow: visible;
+  }
+
+  .twatility-studio #project-workspace > nav {
+    display: block;
+    max-height: none;
+    padding: 0.85rem;
+    border: 0;
+    border-block-end: 0.14rem solid var(--border);
+    background-image: none;
+    overflow: visible;
+  }
+
+  .twatility-studio #project-tree {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .twatility-studio #workspace-pane {
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    padding: 0 0.75rem 1.5rem;
+    overflow: visible;
+  }
+
+  .twatility-studio .sticky-tools {
+    position: static;
+    margin-inline: -0.75rem;
+    padding-inline: 0.75rem;
+  }
+
+  .twatility-studio .actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .twatility-studio .actions > :is(button, [role="group"], details) {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .twatility-studio .actions > [role="group"] {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .twatility-studio .actions > details > summary {
+    width: 100%;
+  }
+
+  .twatility-studio #project-inspector:not([hidden]) {
+    display: block;
+    max-height: none;
+    border: 0;
+    border-block-start: 0.14rem solid var(--border);
+    overflow: visible;
+  }
+
+  .twatility-studio #workspace-content > dl {
+    grid-template-columns: 1fr;
+  }
+
+  .twatility-studio #workspace-content > dl dt {
+    border-block-end: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .twatility-studio #project-tree,
+  .twatility-studio .actions {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .twatility-studio :is(#project-tree button, .actions button, .actions summary) {
+    scroll-behavior: auto;
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .twatility-studio #project-tree button,
+  .twatility-studio :is(#project-breadcrumb, #inspector-context),
+  .twatility-studio .actions > :is(button, [role="group"], details),
+  .twatility-studio #workspace-content > dl {
+    border-color: CanvasText;
+  }
+
+  .twatility-studio #project-tree button[aria-current="true"] {
+    border-inline-start-color: Highlight;
+  }
+}
