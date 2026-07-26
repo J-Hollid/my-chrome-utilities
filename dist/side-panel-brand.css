@@ -1,0 +1,213 @@
+/*
+ * TWAtility Belt side-panel foundation.
+ * Structural side-panel work remains in Slice 2; this file supplies only the
+ * scoped theme boundary and shared production component treatment.
+ */
+
+body.twatility-side-panel {
+  color-scheme: dark;
+  --bg: var(--twa-navy-deep);
+  --surface: #102943;
+  --text: var(--twa-paper-raised);
+  --muted: #d7c9a8;
+  --line: #957a42;
+  --accent: var(--twa-mustard);
+  --danger: #ff8f7f;
+  --ok: #9fd49f;
+  --focus: var(--twa-focus);
+  min-width: 0;
+  background:
+    radial-gradient(circle at 0.08rem 0.08rem, #fff1 0 0.055rem, transparent 0.065rem)
+      0 0 / 0.55rem 0.55rem,
+    var(--twa-navy-deep);
+  color: var(--text);
+}
+
+.twatility-side-panel #side-panel-root,
+.twatility-side-panel #side-panel-content {
+  min-width: 0;
+}
+
+.twatility-side-panel #application-header {
+  position: relative;
+  min-height: 5rem;
+  overflow: hidden;
+  border-block-end: 0.2rem solid var(--twa-mustard);
+  background:
+    linear-gradient(105deg, var(--twa-navy-deep) 0 62%, #0f3d67 100%);
+  isolation: isolate;
+}
+
+.twatility-side-panel #application-header::after {
+  position: absolute;
+  z-index: -1;
+  inset-block: 0.25rem;
+  inset-inline-end: 3.9rem;
+  width: min(9rem, 28vw);
+  background: url("assets/brand/twatility-belt.png") center / contain no-repeat;
+  content: "";
+  opacity: 0.24;
+  pointer-events: none;
+}
+
+.twatility-side-panel #app {
+  flex: 0 0 auto;
+  color: var(--twa-paper-raised);
+  text-shadow: 0.1rem 0.1rem 0 var(--twa-ink);
+}
+
+.twatility-side-panel #utility-directory {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 10rem;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.twatility-side-panel #utility-directory li {
+  max-width: none;
+  padding: 0;
+  border: 0;
+}
+
+.twatility-side-panel :is(#workspace-tabs, #data-layer-views) {
+  border-block-end-color: var(--line);
+  background: #0a223b;
+  scrollbar-color: var(--twa-mustard) transparent;
+}
+
+.twatility-side-panel [role="tab"] {
+  color: var(--twa-paper);
+}
+
+.twatility-side-panel [role="tab"][aria-selected="true"] {
+  border-color: var(--twa-mustard);
+  background: var(--twa-mustard);
+  color: var(--twa-navy-deep);
+  box-shadow: var(--twa-shadow-small);
+}
+
+.twatility-side-panel :is(#workspace-panel-data-layer, #workspace-panel-hotkeys) {
+  scrollbar-color: var(--twa-paper-shadow) transparent;
+}
+
+.twatility-side-panel #active-project-header {
+  margin-block: 0.4rem 0.65rem;
+  padding: 0.5rem 0.65rem;
+  border: 0.1rem solid var(--line);
+  border-inline-start: 0.32rem solid var(--twa-mustard);
+  border-radius: var(--twa-radius-small);
+  background: color-mix(in srgb, var(--surface) 84%, var(--twa-navy));
+  color: var(--twa-paper);
+}
+
+.twatility-side-panel :is(button, input, textarea, select) {
+  border-color: var(--line);
+}
+
+.twatility-side-panel :is(input, textarea, select) {
+  background: #fdf6e5;
+  color: var(--twa-ink);
+}
+
+.twatility-side-panel button {
+  background: #132f4c;
+  color: var(--twa-paper-raised);
+  box-shadow: 0.12rem 0.12rem 0 var(--twa-paper-shadow);
+}
+
+.twatility-side-panel button:not(:disabled):hover {
+  background: var(--twa-mustard);
+  color: var(--twa-navy-deep);
+}
+
+.twatility-side-panel
+  :is(
+    button[data-action-variant="primary"],
+    button[type="submit"],
+    .primary-action
+  ) {
+  border-color: var(--twa-mustard);
+  background: var(--twa-mustard);
+  color: var(--twa-navy-deep);
+}
+
+.twatility-side-panel
+  :is(
+    button[data-action-variant="destructive"],
+    .destructive,
+    .destructive-action-group button
+  ) {
+  border-color: #ff9b8e;
+  background: var(--twa-red-deep);
+  color: #fff8e8;
+}
+
+.twatility-side-panel :is(.panel-empty-state, #live-session-summary) {
+  border: 0.1rem solid var(--line);
+  border-radius: var(--twa-radius-medium);
+  background: color-mix(in srgb, var(--surface) 92%, black);
+}
+
+.twatility-side-panel :is(#live-event-inspector, #event-property-editor) {
+  border-width: 0.14rem;
+  border-color: var(--twa-mustard);
+  background: var(--surface);
+  box-shadow: var(--twa-shadow-small);
+}
+
+.twatility-side-panel #palette {
+  background:
+    radial-gradient(circle at 0.08rem 0.08rem, #fff2 0 0.05rem, transparent 0.06rem)
+      0 0 / 0.5rem 0.5rem,
+    color-mix(in srgb, var(--twa-navy-deep) 90%, transparent);
+}
+
+.twatility-side-panel #palette-results {
+  border-color: var(--twa-mustard);
+  background: var(--twa-paper-raised);
+  color: var(--twa-ink);
+}
+
+.twatility-side-panel #palette-results li[data-selected="true"] {
+  background: var(--twa-mustard);
+  color: var(--twa-ink);
+}
+
+.twatility-side-panel :is(dialog, [role="dialog"]) button {
+  background: var(--twa-paper-raised);
+  color: var(--twa-navy-deep);
+  box-shadow: var(--twa-shadow-small);
+}
+
+@media (max-width: 420px) {
+  .twatility-side-panel #application-header {
+    min-height: 0;
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .twatility-side-panel #application-header::after {
+    display: none;
+  }
+
+  .twatility-side-panel #utility-directory {
+    order: 3;
+    flex-basis: 100%;
+  }
+}
+
+@media (forced-colors: active) {
+  .twatility-side-panel #application-header {
+    border-color: CanvasText;
+  }
+
+  .twatility-side-panel [role="tab"][aria-selected="true"] {
+    border-color: Highlight;
+    background: Highlight;
+    color: HighlightText;
+  }
+}

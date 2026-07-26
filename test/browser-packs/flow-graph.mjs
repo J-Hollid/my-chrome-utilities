@@ -5,7 +5,7 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import vm from "node:vm";
-import {headlessChromeArguments,stopHeadlessChrome} from "../support/headless-chrome.mjs";
+import {headlessChromeArguments,resolveChromeExecutable,stopHeadlessChrome} from "../support/headless-chrome.mjs";
 import {flowEvidenceFailures,flowInterruptionReport} from "../support/flow-evidence-reporter.mjs";
 import {wait} from "./shared-harness.mjs";
 
@@ -23,7 +23,7 @@ const profile=await mkdtemp(path.join(os.tmpdir(),"canvas-first-flow-"));
 const extensionRoot=path.resolve("dist");
 const chromeArguments=headlessChromeArguments(profile,extensionRoot);
 chromeArguments.splice(-1,0,`--load-extension=${extensionRoot}`);
-const chrome=spawn("google-chrome",chromeArguments,{stdio:["ignore","ignore","pipe"]});
+const chrome=spawn(resolveChromeExecutable(),chromeArguments,{stdio:["ignore","ignore","pipe"]});
 
 async function debuggingPort(){return new Promise((resolve,reject)=>{let output="";const timeout=setTimeout(()=>reject(new Error(`Chrome did not expose a debugging port: ${output}`)),15000);chrome.stderr.on("data",(chunk)=>{output+=chunk;const match=output.match(/ws:\/\/127\.0\.0\.1:(\d+)\//);if(match){clearTimeout(timeout);resolve(Number(match[1]));}});chrome.once("error",reject);});}
 async function extensionId(port){for(let attempt=0;attempt<100;attempt+=1){const targets=await fetch(`http://127.0.0.1:${port}/json/list`).then((response)=>response.json()),worker=targets.find(({type,url})=>type==="service_worker"&&url.startsWith("chrome-extension://")&&new URL(url).pathname==="/background.js");if(worker)return new URL(worker.url).hostname;await wait(20);}throw new Error("Unpacked extension did not load");}
