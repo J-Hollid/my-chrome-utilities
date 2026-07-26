@@ -15,9 +15,13 @@ import {
   selectProjectDocumentationTables,
   serializeProjectDocumentationTheme,
   themeFingerprint,
+  writeProjectDocumentationWorkbook,
 } from "../dist/data-layer-project-documentation-workspace.js";
 
 const permutations=(values)=>values.length<2?[values]:values.flatMap((value,index)=>permutations(values.filter((_,candidate)=>candidate!==index)).map((rest)=>[value,...rest]));
+const unzipStored=(bytes)=>{const files=new Map(),view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let offset=0;while(offset+30<=bytes.length&&view.getUint32(offset,true)===0x04034b50){const size=view.getUint32(offset+18,true),nameLength=view.getUint16(offset+26,true),extraLength=view.getUint16(offset+28,true),name=new TextDecoder().decode(bytes.slice(offset+30,offset+30+nameLength)),start=offset+30+nameLength+extraLength;files.set(name,new TextDecoder().decode(bytes.slice(start,start+size)));offset=start+size;}return files;};
+const workbookSheetNames=(files)=>[...files.get("xl/workbook.xml").matchAll(/<sheet name="([^"]+)"/gu)].map((match)=>match[1]);
+const assertWorkbookPackage=(bytes,expectedSheets)=>{const files=unzipStored(bytes);assert.match(files.get("_rels/.rels"),/Type="http:\/\/schemas\.openxmlformats\.org\/officeDocument\/2006\/relationships\/officeDocument"/);assert.deepEqual(workbookSheetNames(files),expectedSheets);};
 const occurrences=[{id:"cart",pageGroupId:"checkout"},{id:"shipping",pageGroupId:"shipping"},{id:"payment",pageGroupId:"payment"},{id:"confirmation",pageGroupId:"confirmation"}];
 const relationships=[{sourceNodeId:"cart",targetNodeId:"shipping",kind:"alternative"},{sourceNodeId:"cart",targetNodeId:"payment",kind:"alternative"},{sourceNodeId:"shipping",targetNodeId:"confirmation",kind:"merge"},{sourceNodeId:"payment",targetNodeId:"confirmation",kind:"merge"}];
 for(const shuffledOccurrences of permutations(occurrences))for(const shuffledRelationships of permutations(relationships))assert.deepEqual(orderFlowDocumentationOccurrenceIds(shuffledOccurrences,shuffledRelationships,["checkout","shipping","payment","confirmation"]),{ids:["cart","shipping","payment","confirmation"],labels:{cart:"1",shipping:"2a",payment:"2b",confirmation:"3"}});
@@ -70,6 +74,15 @@ for(let index=0;index<100;index+=1){
   const requested=sections.map(({id})=>id).reverse();
   assert.deepEqual(selectProjectDocumentationTables(projectSnapshot,{scope:"selected",selectedSectionIds:requested}).map(({id})=>id),sections.map(({id})=>id));
   assert.deepEqual(selectProjectDocumentationTables(projectSnapshot,{scope:"complete"}).map(({id})=>id),sections.filter(({selected})=>selected).map(({id})=>id));
+  const selection=index%3===0
+    ?{scope:"current",currentSectionId:sections[index%sections.length].id}
+    :index%3===1
+      ?{scope:"selected",selectedSectionIds:requested.filter((_,candidate)=>candidate%2===0)}
+      :{scope:"complete"};
+  assertWorkbookPackage(
+    writeProjectDocumentationWorkbook(projectSnapshot,selection),
+    selectProjectDocumentationTables(projectSnapshot,selection).map(({title})=>title),
+  );
 }
 
 console.log("Flow table documentation export property tests passed");

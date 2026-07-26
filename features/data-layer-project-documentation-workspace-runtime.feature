@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=ee1dae337b5fa6cb8c594c78436d0ee335d4b16b52a181bb5fd21a4dba0ebaca
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-26T15:21:54.588573152Z","feature_name":"Data layer project documentation workspace runtime","feature_path":"features/data-layer-project-documentation-workspace-runtime.feature","background_hash":"f9d1fefd5e548fd8f09cd46b438977b308e72ef8198e23d2f0d73530911ea2e9","implementation_hash":"sha256:7ee30a580d1c19231c00ebb6a4d0c724295b3d06c7eb1a801bc194231a5b4126","scenarios":[{"index":14,"name":"Data layer project documentation workspace runtime 015","scenario_hash":"583c1c4ab7b42a4fc78239c4ae455b638f03bae3ef8d3907205c50100f9bc360","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-26T15:21:54.588573152Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer project documentation workspace runtime
 
   Background:
@@ -125,3 +130,18 @@ Feature: Data layer project documentation workspace runtime
     Then parsed cells remain literal and create no formulas, unintended rows, columns, or markup
     And generated human sheet names are deterministic, unique, and valid without raw identities
     And parsed wrapping, widths, headings, and styles match the configured readable theme
+
+  # Data layer project documentation workspace runtime 015
+  Scenario Outline: Data layer project documentation workspace runtime 015
+    Given the production Client specification has a fresh preview for <export_scope>
+    When actual controls download the <export_scope> Excel workbook
+    Then the download adapter receives an .xlsx file with the OOXML workbook media type
+    And independent package validation finds a complete OOXML workbook whose declared parts and relationships resolve
+    And an independent Excel-compatible reader opens it without a file-format error or repair
+    And parsed sheet names in order are <expected_sheets>
+
+    Examples:
+      | export_scope                              | expected_sheets                                                                                         |
+      | current Checkout journey section          | Checkout journey                                                                                        |
+      | selected Checkout journey and Sitewide sections | Checkout journey, Sitewide                                                                         |
+      | complete Documentation Set                | Overview, Checkout journey, Article journey, Data capture matrix, Sitewide, Opened Article              |
