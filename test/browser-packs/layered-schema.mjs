@@ -4,7 +4,7 @@ import {mkdtemp,rm} from "node:fs/promises";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
-import {headlessChromeArguments,stopHeadlessChrome} from "../support/headless-chrome.mjs";
+import {headlessChromeArguments,resolveChromeExecutable,stopHeadlessChrome} from "../support/headless-chrome.mjs";
 import {wait} from "./shared-harness.mjs";
 import {authoring031Expression,authoring032Expression,authoring033Expression,authoring034Expression,authoring035And036Expression} from "../support/layered-schema-usability-probes.mjs";
 
@@ -21,7 +21,7 @@ async function evaluate(socket,expression){for(let attempt=0;attempt<4;attempt+=
 async function ready(socket,selector){for(let attempt=0;attempt<240;attempt+=1){if(await evaluate(socket,`document.readyState==='complete'&&Boolean(document.querySelector(${JSON.stringify(selector)}))`))return;await wait(25);}throw new Error(`Installed extension did not render ${selector}`);}
 async function extensionId(port){for(let attempt=0;attempt<120;attempt+=1){const targets=await fetch(`http://127.0.0.1:${port}/json/list`).then((response)=>response.json()),worker=targets.find(({type,url})=>type==="service_worker"&&url.startsWith("chrome-extension://")&&new URL(url).pathname==="/background.js");if(worker)return new URL(worker.url).hostname;await wait(25);}throw new Error("Unpacked extension did not load");}
 
-const profile=await mkdtemp(path.join(os.tmpdir(),"focused-layered-schema-")),extensionRoot=path.resolve("dist"),chromeArguments=headlessChromeArguments(profile,extensionRoot);chromeArguments.splice(-1,0,"--disable-crash-reporter",`--load-extension=${extensionRoot}`);const chrome=spawn("google-chrome",chromeArguments,{stdio:["ignore","ignore","pipe"]});
+const profile=await mkdtemp(path.join(os.tmpdir(),"focused-layered-schema-")),extensionRoot=path.resolve("dist"),chromeArguments=headlessChromeArguments(profile,extensionRoot);chromeArguments.splice(-1,0,"--disable-crash-reporter",`--load-extension=${extensionRoot}`);const chrome=spawn(resolveChromeExecutable(),chromeArguments,{stdio:["ignore","ignore","pipe"]});
 let socket;
 try {
   const port=await new Promise((resolve,reject)=>{let output="";const timeout=setTimeout(()=>reject(new Error(`Chrome did not expose a debugging port: ${output}`)),30000);chrome.stderr.on("data",(chunk)=>{output+=chunk;const match=output.match(/ws:\/\/127\.0\.0\.1:(\d+)\//);if(match){clearTimeout(timeout);resolve(Number(match[1]));}});chrome.once("error",reject);});

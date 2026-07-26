@@ -1,0 +1,164 @@
+{
+  "projectId": "project-rules-brand",
+  "masterCutoff": "7edae41131a4e6a282d80f67a2fbcfbada52beb3",
+  "sharedMounts": [
+    "canonical Rules",
+    "composed Rules",
+    "compact side-panel predicate",
+    "Studio project Condition adapter"
+  ],
+  "nested": {
+    "groups": [
+      "root",
+      "1",
+      "1.1"
+    ],
+    "predicates": [
+      {
+        "path": "0",
+        "field": "flowId",
+        "operator": "equals"
+      },
+      {
+        "path": "1.0",
+        "field": "payload.market",
+        "operator": "is one of"
+      },
+      {
+        "path": "1.1.0",
+        "field": "payload.path",
+        "operator": "matches pattern"
+      }
+    ]
+  },
+  "persistence": {
+    "before": {
+      "condition": {
+        "kind": "all",
+        "conditions": [
+          {
+            "kind": "predicate",
+            "field": "flowId",
+            "operator": "equals",
+            "value": "flow:checkout"
+          },
+          {
+            "kind": "any",
+            "conditions": [
+              {
+                "kind": "predicate",
+                "field": "payload.market",
+                "operator": "is one of",
+                "values": [
+                  "retail",
+                  "trade"
+                ]
+              },
+              {
+                "kind": "not",
+                "conditions": [
+                  {
+                    "kind": "predicate",
+                    "field": "payload.path",
+                    "operator": "matches pattern",
+                    "pattern": "^/internal"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "sequence": 5,
+      "published": 2
+    },
+    "restored": {
+      "condition": {
+        "kind": "all",
+        "conditions": [
+          {
+            "kind": "predicate",
+            "field": "flowId",
+            "operator": "equals",
+            "value": "flow:checkout"
+          },
+          {
+            "kind": "any",
+            "conditions": [
+              {
+                "kind": "predicate",
+                "field": "payload.market",
+                "operator": "is one of",
+                "values": [
+                  "retail",
+                  "trade"
+                ]
+              },
+              {
+                "kind": "not",
+                "conditions": [
+                  {
+                    "kind": "predicate",
+                    "field": "payload.path",
+                    "operator": "matches pattern",
+                    "pattern": "^/internal"
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "published": 2
+    },
+    "oneCommand": true,
+    "undoRestored": true
+  },
+  "viewports": [
+    {
+      "equivalent": true,
+      "unnamed": [],
+      "broken": [],
+      "horizontalOut": [],
+      "localTreeOut": [],
+      "overflow": false,
+      "width": 1280,
+      "height": 900,
+      "controls": 39
+    },
+    {
+      "equivalent": true,
+      "unnamed": [],
+      "broken": [],
+      "horizontalOut": [],
+      "localTreeOut": [],
+      "overflow": false,
+      "width": 360,
+      "height": 800,
+      "controls": 39
+    },
+    {
+      "equivalent": true,
+      "unnamed": [],
+      "broken": [],
+      "horizontalOut": [],
+      "localTreeOut": [],
+      "overflow": false,
+      "width": 1280,
+      "height": 900,
+      "controls": 30
+    },
+    {
+      "equivalent": true,
+      "unnamed": [],
+      "broken": [],
+      "horizontalOut": [],
+      "localTreeOut": [],
+      "overflow": false,
+      "width": 360,
+      "height": 800,
+      "controls": 81
+    }
+  ],
+  "runtimeErrors": 0
+}

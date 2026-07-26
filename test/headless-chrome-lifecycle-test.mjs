@@ -1,12 +1,55 @@
 import assert from "node:assert/strict";
 import { EventEmitter } from "node:events";
-import { headlessChromeArguments, stopHeadlessChrome } from "./support/headless-chrome.mjs";
+import {
+  chromeExecutableCandidates,
+  headlessChromeArguments,
+  resolveChromeExecutable,
+  stopHeadlessChrome,
+} from "./support/headless-chrome.mjs";
 
 const args = headlessChromeArguments("/tmp/profile");
 assert.ok(args.includes("--disable-background-networking"));
 assert.ok(args.includes("--disable-component-update"));
 assert.ok(args.includes("--disable-sync"));
 assert.ok(args.includes("--user-data-dir=/tmp/profile"));
+
+assert.equal(
+  resolveChromeExecutable({
+    env: { CHROME_PATH: "/custom/chrome", PATH: "" },
+    platform: "linux",
+    exists: (candidate) => candidate === "/custom/chrome",
+  }),
+  "/custom/chrome",
+);
+assert.deepEqual(
+  chromeExecutableCandidates({
+    env: {
+      PROGRAMFILES: "C:\\Program Files",
+      LOCALAPPDATA: "C:\\Users\\Analyst\\AppData\\Local",
+      PATH: "",
+    },
+    platform: "win32",
+  }),
+  [
+    "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+    "C:\\Users\\Analyst\\AppData\\Local\\Google\\Chrome\\Application\\chrome.exe",
+  ],
+);
+assert.ok(
+  chromeExecutableCandidates({
+    env: { PATH: "/usr/bin" },
+    platform: "linux",
+  }).includes("/usr/bin/google-chrome"),
+);
+assert.throws(
+  () =>
+    resolveChromeExecutable({
+      env: { PATH: "" },
+      platform: "linux",
+      exists: () => false,
+    }),
+  /CHROME_PATH/u,
+);
 
 class FakeChrome extends EventEmitter {
   exitCode = null;

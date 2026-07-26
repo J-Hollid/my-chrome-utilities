@@ -385,6 +385,14 @@
       "src/data-layer-canonical-schema.ts"
     ]
   },
+  "src/data-layer-project-condition-editor.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-shared-condition-tree-editor.ts",
+      "src/data-layer-specification-project.ts"
+    ]
+  },
   "src/data-layer-side-panel-schema-editor.ts": {
     "module": "schemas",
     "layer": "application",

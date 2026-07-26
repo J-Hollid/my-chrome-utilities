@@ -4,7 +4,7 @@ import {mkdtemp,rm} from "node:fs/promises";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
-import {headlessChromeArguments,stopHeadlessChrome} from "./support/headless-chrome.mjs";
+import {headlessChromeArguments,resolveChromeExecutable,stopHeadlessChrome} from "./support/headless-chrome.mjs";
 import {wait} from "./browser-packs/shared-harness.mjs";
 
 class DevtoolsSocket{
@@ -20,7 +20,7 @@ const ready=async(socket,expression)=>{for(let attempt=0;attempt<240;attempt+=1)
 const enable=async(socket,method)=>{for(let attempt=0;attempt<40;attempt+=1){try{return await socket.call(method);}catch(error){if(error.message!=="Inspected target navigated or closed"||attempt===39)throw error;await wait(25);}}};
 const extensionId=async(port)=>{for(let attempt=0;attempt<120;attempt+=1){const targets=await fetch(`http://127.0.0.1:${port}/json/list`).then(response=>response.json()),worker=targets.find(({type,url})=>type==="service_worker"&&url.startsWith("chrome-extension://")&&new URL(url).pathname==="/background.js");if(worker)return new URL(worker.url).hostname;await wait(25);}throw new Error("Extension did not load");};
 
-const profile=await mkdtemp(path.join(os.tmpdir(),"canonical-migration-focused-")),root=path.resolve("dist"),args=headlessChromeArguments(profile,root);args.splice(-1,0,`--load-extension=${root}`);const chrome=spawn("google-chrome",args,{stdio:["ignore","ignore","pipe"]});let builder,side;
+const profile=await mkdtemp(path.join(os.tmpdir(),"canonical-migration-focused-")),root=path.resolve("dist"),args=headlessChromeArguments(profile,root);args.splice(-1,0,`--load-extension=${root}`);const chrome=spawn(resolveChromeExecutable(),args,{stdio:["ignore","ignore","pipe"]});let builder,side;
 try{
   const port=await new Promise((resolve,reject)=>{let output="";chrome.stderr.on("data",chunk=>{output+=chunk;const match=output.match(/ws:\/\/127\.0\.0\.1:(\d+)\//);if(match)resolve(Number(match[1]));});chrome.once("error",reject);}),id=await extensionId(port);
   const open=async(page)=>{const target=await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(`chrome-extension://${id}/${page}`)}`,{method:"PUT"}).then(response=>response.json()),socket=new DevtoolsSocket(target.webSocketDebuggerUrl);await socket.connect();await enable(socket,"Runtime.enable");await enable(socket,"Page.enable");return socket;};

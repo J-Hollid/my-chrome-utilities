@@ -2,6 +2,27 @@ export { EventFeedQuery, InspectorReturnSnapshot, SAVED_EVENT_FEED_FILTER_STORAG
 export { type CompletedSession, saveCompletedSession } from "../../data-layer-saved-sessions.js";
 export { type LiveStatus, resetLiveObserverForSession } from "../../data-layer-live-observer.js";
 export { ArchivedSession, DataLayerView, LiveEvent, LiveInspectorPresentationSnapshot, LiveObserverState, SAVED_SESSION_LIBRARY_STORAGE_KEY, SAVED_SESSION_LIVE_FEED_STORAGE_KEY, SavedSessionLibrary, SavedSessionLiveFeed, SessionSaveDraft, cancelSavedSessionDeletion, captureLiveInspectorPresentation, closeLiveInspector, confirmSavedSessionDeletion, confirmSessionSave, createLiveInspectorActions, createLiveObserverState, createSavedSessionLibrary, createSessionSaveDraft, dataLayerViewForNavigationKey, dataLayerViews, exportSavedSession, findLiveObserverElements, importSavedSession, openSavedSession, openSavedSessionLiveFeed, pauseCapture, recordBackgroundLiveEvent, recordLiveEvent, renameSavedSession, renderDataLayerView, renderEventFeedQueryBuilder, renderLiveInspector, renderLiveObserverState, renderLiveSessionMessage, renderValidationIssueList, requestSavedSessionDeletion, restoreInspectorReturnUi, restoreLiveInspectorPresentation, restoreSavedSessionLibrary, restoreSavedSessionLiveFeed, resumeCapture, resumeSavedSession, returnToCurrentLiveFeed, revalidateSavedSessionLiveFeed, savedSessionSummary, searchSavedSessions, selectLiveEvent, serializeSavedSessionLibrary, serializeSavedSessionLiveFeed, setEventValidationUpdateStatus, setLiveQuery, updateLiveSourceStatus, updateSavedSessionLiveFeedView } from "./layers/browser/live-inspection.js";
-export * from "../../data-layer-live-flow-testing.js";
+export {
+  attachLiveFlowDefect,
+  createLiveFlowTest,
+  linkLiveFlowEvent,
+  liveFlowChoices,
+  liveFlowEventLink,
+  liveFlowEventStepChoices,
+  liveFlowSessionEvidence,
+  restoreLiveFlowSummary,
+  selectLiveFlow,
+  serializeLiveFlowSummary,
+  type CompletedLiveFlowTest,
+  type LiveFlowChoice,
+  type LiveFlowEvent,
+  type LiveFlowEventStepChoice,
+  type LiveFlowEventStepSelection,
+  type LiveFlowHistoryEntry,
+  type LiveFlowMatchedPathEntry,
+  type LiveFlowStartChoice,
+  type LiveFlowStepKind,
+  type LiveFlowTestRun,
+} from "../../data-layer-live-flow-testing.js";
 export { createManualFlowDefectEvent, type LiveFlowDefectContext } from "../../data-layer-live-flow-defect-report.js";
 export { mountLiveFlowTestingUi, type LiveFlowTestingUi, type LiveFlowTestingUiOptions } from "../../data-layer-live-flow-testing-ui.js";

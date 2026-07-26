@@ -26,7 +26,9 @@
     ],
     "browserAdapters": [
       "test/browser-packs/project-management.mjs",
-      "test/browser-packs/project-entity-lifecycle.mjs"
+      "test/browser-packs/project-entity-lifecycle.mjs",
+      "test/twatility-projects-browser-test.mjs",
+      "test/twatility-studio-shell-browser-test.mjs"
     ]
   },
   {
@@ -911,6 +913,7 @@
       "src/data-layer-canonical-schema-focused-conditions.ts",
       "src/data-layer-canonical-schema-focused-condition-tree.ts",
       "src/data-layer-shared-condition-tree-editor.ts",
+      "src/data-layer-project-condition-editor.ts",
       "src/data-layer-canonical-schema-focused-rules.ts",
       "src/data-layer-canonical-schema-focused-rule-rows.ts",
       "src/data-layer-canonical-schema-focused-rule-add.ts",
@@ -949,6 +952,7 @@
       "test/data-layer-composed-schema-builders-test.mjs",
       "test/data-layer-composed-schema-workspace-test.mjs",
       "test/data-layer-focused-schema-property-ui-test.mjs",
+      "test/data-layer-shared-condition-tree-editor-test.mjs",
       "test/data-layer-conditional-rule-definition-test.mjs",
       "test/data-layer-flow-page-instance-structure-test.mjs",
       "test/data-layer-page-group-membership-test.mjs",
@@ -963,6 +967,7 @@
       "test/data-layer-composed-schema-builders-property-test.mjs",
       "test/data-layer-composed-schema-workspace-property-test.mjs",
       "test/data-layer-focused-schema-property-ui-property-test.mjs",
+      "test/data-layer-shared-condition-tree-editor-property-test.mjs",
       "test/data-layer-layered-schema-property-test.mjs"
     ],
     "features": [
@@ -976,7 +981,8 @@
     ],
     "browserAdapters": [
       "test/data-layer-canonical-migration-browser-test.mjs",
-      "test/browser-packs/layered-schema.mjs"
+      "test/browser-packs/layered-schema.mjs",
+      "test/twatility-rules-conditions-browser-test.mjs"
     ]
   },
   {
@@ -1000,6 +1006,20 @@
     ],
     "browserAdapters": [
       "test/browser-packs/schema-relationship-tree.mjs"
+    ]
+  },
+  {
+    "id": "branding_polish",
+    "source": [],
+    "dependencies": [],
+    "unit": [
+      "test/twatility-brand-polish-test.mjs"
+    ],
+    "property": [],
+    "features": [],
+    "handlers": [],
+    "browserAdapters": [
+      "test/twatility-workflow-polish-browser-test.mjs"
     ]
   },
   {
@@ -1030,7 +1050,8 @@
       "test/panel-empty-states-ui-test.mjs",
       "test/side-panel-action-hierarchy-test.mjs",
       "test/side-panel-action-hierarchy-ui-test.mjs",
-      "test/side-panel-component-layout-runtime-test.mjs"
+      "test/side-panel-component-layout-runtime-test.mjs",
+      "test/twatility-brand-foundation-test.mjs"
     ],
     "property": [
       "test/workspace-tabs-property-test.mjs"
@@ -1069,7 +1090,9 @@
       "acceptance/src/acceptance/steps/timeline_presentations.clj"
     ],
     "browserAdapters": [
-      "test/browser-packs/shell.mjs"
+      "test/browser-packs/shell.mjs",
+      "test/twatility-brand-foundation-browser-test.mjs",
+      "test/twatility-side-panel-shell-browser-test.mjs"
     ]
   }
 ]

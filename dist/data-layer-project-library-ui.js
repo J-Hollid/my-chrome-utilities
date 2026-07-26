@@ -52,7 +52,7 @@ export function mountProjectLibraryUi(options) {
         status.textContent = `Project export failed. ${error instanceof Error ? error.message : String(error)}`;
     } };
     const closeDialog = (dialog) => { dialog.close(); dialog.remove(); };
-    const edit = (projectId, returnFocus) => { const record = library.projects[projectId], dialog = document.createElement("dialog"), heading = document.createElement("h4"), form = document.createElement("form"), fields = metadataFields(form, projectMetadata(library, projectId)), save = button("Save project details", `Save details for ${record.state.project.name}`, () => { try {
+    const edit = (projectId, returnFocus) => { const record = library.projects[projectId], dialog = document.createElement("dialog"), heading = document.createElement("h4"), form = document.createElement("form"), fields = metadataFields(form, projectMetadata(library, projectId)), restoreFocus = () => { const scope = projectId === library.activeProjectId ? activeCard : list.querySelector(`[data-project-id="${CSS.escape(projectId)}"]`), current = Array.from(scope?.querySelectorAll("button") ?? []).find(({ textContent }) => textContent === "Edit details"); (current ?? returnFocus).focus(); }, save = button("Save project details", `Save details for ${record.state.project.name}`, () => { try {
         persist(updateProjectMetadata(library, projectId, readMetadata(fields), now));
         heading.textContent = `Saving durable Draft for ${library.projects[projectId].state.project.name}. Stable identity ${projectId}; Published revision ${publishedRevision(library.projects[projectId])}.`;
         undo.hidden = false;
@@ -74,8 +74,8 @@ export function mountProjectLibraryUi(options) {
     }
     catch (error) {
         heading.textContent = `Undo was not applied. ${error instanceof Error ? error.message : String(error)}`;
-    } })(); }), cancel = button("Close", "Close project details", () => { closeDialog(dialog); returnFocus.focus(); }); heading.textContent = `Edit ${record.state.project.name} details`; undo.hidden = true; form.addEventListener("submit", (event) => event.preventDefault()); form.append(save, undo, cancel); dialog.append(heading, form); document.body.append(dialog); dialog.addEventListener("close", () => returnFocus.focus(), { once: true }); dialog.showModal(); fields.name.focus(); };
-    const switchReview = (projectId, returnFocus) => { const target = library.projects[projectId], current = active(), dialog = document.createElement("dialog"), heading = document.createElement("h4"), summary = document.createElement("p"), confirm = button(`Switch to ${target.state.project.name}`, `Confirm switch to ${target.state.project.name}`, () => { try {
+    } })(); }), cancel = button("Close", "Close project details", () => closeDialog(dialog)); heading.textContent = `Edit ${record.state.project.name} details`; undo.hidden = true; form.addEventListener("submit", (event) => event.preventDefault()); form.append(save, undo, cancel); dialog.append(heading, form); document.body.append(dialog); dialog.addEventListener("close", restoreFocus, { once: true }); dialog.showModal(); fields.name.focus(); };
+    const switchReview = (projectId, returnFocus) => { const target = library.projects[projectId], current = active(), dialog = document.createElement("dialog"), heading = document.createElement("h4"), summary = document.createElement("p"), restoreFocus = () => { const scope = list.querySelector(`[data-project-id="${CSS.escape(projectId)}"]`), control = Array.from(scope?.querySelectorAll("button") ?? []).find(({ textContent }) => textContent === "Switch"); (control ?? returnFocus).focus(); }, confirm = button(`Switch to ${target.state.project.name}`, `Confirm switch to ${target.state.project.name}`, () => { try {
         if (blocked())
             throw new Error("A failed durable Draft still blocks project switching.");
         persist(activateProject(library, projectId, now), true);
@@ -84,7 +84,7 @@ export function mountProjectLibraryUi(options) {
     }
     catch (error) {
         summary.textContent = error instanceof Error ? error.message : String(error);
-    } }), cancel = button("Cancel switch", `Cancel switch to ${target.state.project.name}`, () => { closeDialog(dialog); returnFocus.focus(); }); heading.textContent = `Review switch to ${target.state.project.name}`; summary.textContent = blocked() ? "A failed durable Draft blocks this switch until its exact Retry succeeds." : `${current?.state.project.name ?? "No active project"} (${library.activeProjectId ?? "none"}) → ${target.state.project.name} (${projectId}). Schema, Pages, Page Groups, Events, Flows, documentation, assignments, and Specification Studio will replace context atomically. Current Draft ${current?.pendingWrite ? "has a pending write" : "is saved"}.`; confirm.disabled = blocked(); dialog.append(heading, summary); if (current?.pendingWrite) {
+    } }), cancel = button("Cancel switch", `Cancel switch to ${target.state.project.name}`, () => { closeDialog(dialog); restoreFocus(); }); heading.textContent = `Review switch to ${target.state.project.name}`; summary.textContent = blocked() ? "A failed durable Draft blocks this switch until its exact Retry succeeds." : `${current?.state.project.name ?? "No active project"} (${library.activeProjectId ?? "none"}) → ${target.state.project.name} (${projectId}). Schema, Pages, Page Groups, Events, Flows, documentation, assignments, and Specification Studio will replace context atomically. Current Draft ${current?.pendingWrite ? "has a pending write" : "is saved"}.`; confirm.disabled = blocked(); dialog.append(heading, summary); if (current?.pendingWrite) {
         confirm.disabled = true;
         for (const choice of ["merge", "reject", "retry"])
             dialog.append(button(`${choice[0].toUpperCase()}${choice.slice(1)} ${current.pendingWrite.label}`, `${choice} pending command ${current.pendingWrite.label}`, () => { try {
@@ -99,7 +99,7 @@ export function mountProjectLibraryUi(options) {
                 summary.textContent = error instanceof Error ? error.message : String(error);
             } }));
     } dialog.append(confirm, cancel); document.body.append(dialog); dialog.showModal(); heading.tabIndex = -1; heading.focus(); };
-    const creation = () => { const dialog = document.createElement("dialog"), heading = document.createElement("h4"), form = document.createElement("form"), fields = metadataFields(form, { name: "", purpose: "", website: "", owner: "", notes: "" }), review = document.createElement("p"), confirm = button("Confirm create project", "Confirm create project", () => { try {
+    const creation = (returnFocus = create) => { const dialog = document.createElement("dialog"), heading = document.createElement("h4"), form = document.createElement("form"), fields = metadataFields(form, { name: "", purpose: "", website: "", owner: "", notes: "" }), review = document.createElement("p"), confirm = button("Confirm create project", "Confirm create project", () => { try {
         const next = createProjectInLibrary(library, readMetadata(fields), { id, now });
         persist(next);
         review.textContent = `${next.projects[next.activeProjectId].state.project.name} is active. Recommended next action: Open in Specification Studio.`;
@@ -120,8 +120,8 @@ export function mountProjectLibraryUi(options) {
         review.textContent = error instanceof Error ? error.message : String(error);
         confirm.disabled = true;
     } }), openStudio = button("Open in Specification Studio", "Open new project in Specification Studio", () => { if (library.activeProjectId)
-        open(library.activeProjectId); }), cancel = button("Close", "Close create project", () => closeDialog(dialog)); heading.textContent = "Create project"; confirm.disabled = true; form.addEventListener("submit", (event) => event.preventDefault()); form.append(prepare, review, confirm, openStudio, cancel); dialog.append(heading, form); document.body.append(dialog); dialog.showModal(); fields.name.focus(); };
-    const importReview = (serialized) => { let staged = stageProjectImport(serialized, library, { id: (oldId) => `import:${crypto.randomUUID()}:${oldId.split(":")[0]}`, now }), dialog = document.createElement("dialog"), heading = document.createElement("h4"), summary = document.createElement("p"), name = document.createElement("input"), commit = button("Import as new project", "Import as new project", () => { void (async () => { try {
+        open(library.activeProjectId); }), cancel = button("Close", "Close create project", () => closeDialog(dialog)); heading.textContent = "Create project"; confirm.disabled = true; form.addEventListener("submit", (event) => event.preventDefault()); form.append(prepare, review, confirm, openStudio, cancel); dialog.append(heading, form); document.body.append(dialog); dialog.addEventListener("close", () => returnFocus.focus(), { once: true }); dialog.showModal(); fields.name.focus(); };
+    const importReview = (serialized, returnFocus = importControl) => { let staged = stageProjectImport(serialized, library, { id: (oldId) => `import:${crypto.randomUUID()}:${oldId.split(":")[0]}`, now }), dialog = document.createElement("dialog"), heading = document.createElement("h4"), summary = document.createElement("p"), name = document.createElement("input"), commit = button("Import as new project", "Import as new project", () => { void (async () => { try {
         const nextName = name.value.trim();
         if (!nextName)
             throw new Error("Enter a unique target project name.");
@@ -137,7 +137,7 @@ export function mountProjectLibraryUi(options) {
     catch (error) {
         commit.disabled = false;
         summary.textContent = `Import was not committed. ${error instanceof Error ? error.message : String(error)}`;
-    } })(); }), cancel = button("Close import review", "Close import review", () => closeDialog(dialog)); heading.textContent = "Review project import"; name.value = staged.targetName; name.setAttribute("aria-label", "Unique target project name"); summary.textContent = staged.blockers.length ? staged.blockers.map(({ section, message }) => `${section}: ${message}`).join(" · ") : `Format version 1 · source ${staged.sourceName} · Saved Draft · entity counts ${JSON.stringify(staged.entityCounts)} · reference integrity ${staged.referenceIntegrity} · migrations ${staged.migrations.join(", ") || "none"} · unique target name ${staged.targetName} · Import as new project.`; commit.disabled = Boolean(staged.blockers.length); dialog.append(heading, summary, name, commit, cancel); document.body.append(dialog); dialog.showModal(); heading.tabIndex = -1; heading.focus(); };
+    } })(); }), cancel = button("Close import review", "Close import review", () => closeDialog(dialog)); heading.textContent = "Review project import"; name.value = staged.targetName; name.setAttribute("aria-label", "Unique target project name"); summary.textContent = staged.blockers.length ? staged.blockers.map(({ section, message }) => `${section}: ${message}`).join(" · ") : `Format version 1 · source ${staged.sourceName} · Saved Draft · entity counts ${JSON.stringify(staged.entityCounts)} · reference integrity ${staged.referenceIntegrity} · migrations ${staged.migrations.join(", ") || "none"} · unique target name ${staged.targetName} · Import as new project.`; commit.disabled = Boolean(staged.blockers.length); dialog.append(heading, summary, name, commit, cancel); document.body.append(dialog); dialog.addEventListener("close", () => returnFocus.focus(), { once: true }); dialog.showModal(); heading.tabIndex = -1; heading.focus(); };
     function render() {
         const record = active(), term = search.value.trim().toLowerCase();
         create.disabled = blocked();
@@ -156,7 +156,7 @@ export function mountProjectLibraryUi(options) {
             activeCard.append(heading, summary, openButton, editButton, button("Export", `Export ${record.state.project.name}`, () => void download(record.state.project.id)), closeButton);
         }
         else {
-            const message = document.createElement("p"), openProject = button("Open project", "Open a project", () => search.focus()), createProject = button("Create project", "Create project", creation);
+            const message = document.createElement("p"), openProject = button("Open project", "Open a project", () => search.focus()), createProject = button("Create project", "Create project", () => creation(createProject));
             message.textContent = "No active project";
             activeCard.append(message, openProject, createProject);
         }
@@ -182,11 +182,11 @@ export function mountProjectLibraryUi(options) {
     }
     search.addEventListener("input", render);
     sort?.addEventListener("change", render);
-    create.addEventListener("click", creation);
+    create.addEventListener("click", () => creation(create));
     importControl.addEventListener("click", () => file.click());
     file.addEventListener("change", async () => { const selected = file.files?.[0]; if (selected)
         try {
-            importReview(await selected.text());
+            importReview(await selected.text(), importControl);
         }
         catch (error) {
             const dialog = document.createElement("dialog"), heading = document.createElement("h4"), summary = document.createElement("p"), commit = button("Import as new project", "Import invalid project", () => { }), close = button("Close import review", "Close import review", () => closeDialog(dialog));
@@ -195,6 +195,7 @@ export function mountProjectLibraryUi(options) {
             commit.disabled = true;
             dialog.append(heading, summary, commit, close);
             document.body.append(dialog);
+            dialog.addEventListener("close", () => importControl.focus(), { once: true });
             dialog.showModal();
             heading.tabIndex = -1;
             heading.focus();

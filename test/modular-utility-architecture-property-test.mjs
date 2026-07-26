@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
+import path from "node:path";
 
 import { architectureViolations } from "../scripts/check-architecture.mjs";
 import { executeAcceptancePlan, planVerification } from "../scripts/verification-packs.mjs";
@@ -46,12 +47,18 @@ const declaredBoundaries = JSON.parse(await readFile(
   new URL("../architecture/data-layer-boundaries.json", import.meta.url),
   "utf8",
 ));
-const importSource = (target) => `import "./${target.slice("src/".length).replace(/\.ts$/, ".js")}";`;
+const importDependency = (file, target) => {
+  const relative = path.posix
+    .relative(path.posix.dirname(file), target)
+    .replace(/\.ts$/, ".js");
+  return relative.startsWith(".") ? relative : `./${relative}`;
+};
+const importSource = (file, target) => `import "${importDependency(file, target)}";`;
 const declaredContracts = Object.entries(declaredBoundaries).flatMap(([file, boundary]) =>
   (boundary.contracts ?? []).map((target) => ({ file, target }))
 );
 for (const { file, target } of declaredContracts) {
-  assert.deepEqual(architectureViolations(new Map([[file, importSource(target)]])), []);
+  assert.deepEqual(architectureViolations(new Map([[file, importSource(file, target)]])), []);
 }
 
 const directCrossModulePairs = Object.entries(declaredBoundaries).flatMap(([file, boundary]) =>
@@ -65,9 +72,9 @@ const directCrossModulePairs = Object.entries(declaredBoundaries).flatMap(([file
 ).slice(0, 100);
 assert.equal(directCrossModulePairs.length, 100);
 for (const { file, target } of directCrossModulePairs) {
-  assert.deepEqual(architectureViolations(new Map([[file, importSource(target)]])), [{
+  assert.deepEqual(architectureViolations(new Map([[file, importSource(file, target)]])), [{
     file,
-    dependency:`./${target.slice("src/".length).replace(/\.ts$/, ".js")}`,
+    dependency:importDependency(file, target),
     reason:"cross-module import must use the module public API",
   }]);
 }
@@ -81,9 +88,9 @@ const undeclaredContractPairs = Object.entries(declaredBoundaries).flatMap(([fil
 ).slice(0, 100);
 assert.equal(undeclaredContractPairs.length, 100);
 for (const { file, target } of undeclaredContractPairs) {
-  assert.deepEqual(architectureViolations(new Map([[file, importSource(target)]])), [{
+  assert.deepEqual(architectureViolations(new Map([[file, importSource(file, target)]])), [{
     file,
-    dependency:`./${target.slice("src/".length).replace(/\.ts$/, ".js")}`,
+    dependency:importDependency(file, target),
     reason:"cross-module import requires a declared contract",
   }]);
 }

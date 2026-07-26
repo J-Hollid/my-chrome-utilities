@@ -21,6 +21,7 @@ import { installFlowDocumentationExportUi } from "./data-layer-flow-table-docume
 import { installProjectDocumentationWorkspaceUi } from "./data-layer-project-documentation-workspace-ui.js";
 import { applyCanonicalCommand, canonicalCommandOutcome, canonicalRequirements, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
+import { mountProjectConditionEditor, projectConditionEditorValue } from "./data-layer-project-condition-editor.js";
 import { createProjectCollectionEntity, hasSavedSchemaAdoptionActions, inspectProjectEntityRemoval, projectCollectionCreationFields, projectCollectionCreationRoute, projectCollectionDefinitions, projectEntityWorkspaceRoute, projectInspectorTogglePresentation, removeProjectCollectionEntity } from "./data-layer-project-entity-lifecycle.js";
 const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, START_PATH_KEY = "my-chrome-utilities.specification-project-start.v1", routeParameters = new URLSearchParams(location.search), startupProjectId = routeParameters.get("project") ?? undefined, startupKind = routeParameters.get("kind") ?? undefined, startupEntityId = routeParameters.get("entity") ?? undefined, startupRoute = startupKind ? durableProjectRouteForWorkspace(startupKind, startupEntityId) : undefined;
 const durableProjectRuntime = await openDurableProjectRuntime(globalThis.localStorage, globalThis.indexedDB, { ...(startupProjectId ? { projectId: startupProjectId } : {}), ...(startupRoute ? { route: startupRoute } : {}) }).catch((error) => { const status = document.querySelector("#project-state"); if (status)
@@ -30,7 +31,7 @@ const q = (selector) => { const element = document.querySelector(selector); if (
 const projectInspector = q("#project-inspector"), projectInspectorToggle = q("#toggle-project-inspector"), projectWorkspace = q("#project-workspace");
 const setProjectInspectorOpen = (open) => { const presentation = projectInspectorTogglePresentation(open); projectInspector.hidden = !open; projectInspectorToggle.textContent = presentation.label; projectInspectorToggle.setAttribute("aria-expanded", presentation.expanded); projectWorkspace.dataset.inspectorOpen = String(open); };
 projectInspectorToggle.addEventListener("click", () => setProjectInspectorOpen(projectInspector.hidden));
-setProjectInspectorOpen(true);
+setProjectInspectorOpen(globalThis.matchMedia("(min-width: 1600px)").matches);
 for (const fieldId of ["project-assignment-path", "project-assignment-value", "project-assignment-not-path", "project-assignment-not-value"]) {
     const input = document.createElement("input");
     input.id = fieldId;
@@ -411,42 +412,116 @@ function editorValue(field, control) { if (control instanceof HTMLFieldSetElemen
     return control.checked; if (field.type === "number")
     return Number(control.value); if (field.type === "json")
     return JSON.parse(control.value || "{}"); return control.value; }
+function productionFieldControl(field, entity) {
+    if (field.type !== "condition")
+        return fieldControl(field, entity);
+    const group = document.createElement("fieldset");
+    group.name = field.key;
+    mountProjectConditionEditor(group, entity[field.key]);
+    return group;
+}
+function productionEditorValue(field, control) {
+    if (control instanceof HTMLFieldSetElement && field.type === "condition") {
+        return projectConditionEditorValue(control);
+    }
+    return editorValue(field, control);
+}
 function renderFixtureExecution(form, fixture) { const section = document.createElement("section"), heading = document.createElement("h3"), evidence = document.createElement("p"), run = document.createElement("button"), result = document.createElement("output"); section.setAttribute("aria-label", "Fixture execution"); heading.textContent = "Production evaluator replay"; const observations = fixture.observations ?? [], expected = fixture.expected ?? {}; evidence.textContent = `Captured observation: ${observations.map(({ eventName }) => String(eventName ?? "unnamed")).join(", ") || "none"} · Proposed assertions: status ${String(expected.status ?? "not set")}; issueCodes ${JSON.stringify(expected.issueCodes ?? [])}`; run.type = "button"; run.textContent = "Run Fixture"; result.id = "fixture-run-result"; result.setAttribute("aria-live", "polite"); run.addEventListener("click", () => { if (!state)
     return; const compiled = compileSpecificationProject({ ...createCanonicalProjectEnvelope(state.project, state.draft?.id ?? "published"), revision: canonicalRevision }); if (compiled.status === "blocked") {
     result.textContent = `Run blocked: ${compiled.diagnostics.map(({ field }) => field).join(", ")}`;
     return;
 } const execution = runProductionFixture(compiled.plan, fixture), last = execution.steps.at(-1), capturedIdentity = String(fixture.evaluationResultIdentity ?? "not recorded"), replayIdentity = last?.actual.resultIdentity ?? "not evaluated", differences = execution.steps.flatMap((step) => step.differences); result.textContent = `${execution.status.toUpperCase()} · captured evaluator result ${capturedIdentity} · replay result ${replayIdentity} · ${differences.length ? differences.join("; ") : "status and issueCodes assertions matched"}`; }); section.append(heading, evidence, run, result); form.append(section); }
-function renderSelectedEntityEditor(content, entity) { if (!state)
-    return; const section = document.createElement("section"), heading = document.createElement("h2"), form = document.createElement("form"), nameLabel = document.createElement("label"), name = document.createElement("input"), actions = document.createElement("div"), save = document.createElement("button"), duplicate = document.createElement("button"), usage = document.createElement("p"); section.className = "contextual-editor"; heading.textContent = `Edit ${labels[selectedKind].replace(/s$/, "")}`; name.name = "name"; name.required = true; name.value = entity.name; nameLabel.textContent = "Name"; nameLabel.append(name); form.append(nameLabel); for (const field of editorFields[selectedKind]) {
-    const label = document.createElement("label"), control = fieldControl(field, selectedKind === "flows" && field.key === "pageGroupIds" ? { ...entity, pageGroupIds: flowPageGroupLaneIds(state.project, entity.id) } : entity);
-    if (selectedKind === "pages" && field.key === "eventName")
-        control.setAttribute("required", "");
-    label.textContent = field.label;
-    label.append(control);
-    form.append(label);
-} if (selectedKind === "fixtures")
-    renderFixtureExecution(form, entity); save.type = "submit"; save.textContent = "Save complete entity"; duplicate.type = "button"; duplicate.textContent = "Duplicate"; usage.textContent = `Where used: ${whereUsed(entity.id).join(", ") || "None"}`; actions.className = "editor-actions"; actions.append(save, duplicate); form.append(actions, usage); form.addEventListener("submit", (event) => { event.preventDefault(); if (!state)
-    return; try {
-    const update = { name: name.value.trim() };
-    for (const field of editorFields[selectedKind])
-        update[field.key] = editorValue(field, form.elements.namedItem(field.key));
-    if (selectedKind === "pages" && !String(update.eventName ?? "").trim())
-        throw new Error("Observed context event name is required for a Page.");
-    const laneIds = selectedKind === "flows" ? update.pageGroupIds : undefined;
-    if (laneIds)
-        delete update.pageGroupIds;
-    const edited = transactProject(state, `Edit ${entity.name}`, (project) => ({ ...project, collections: { ...project.collections, [selectedKind]: project.collections[selectedKind].map((candidate) => { if (candidate.id !== entity.id)
-                return candidate; const merged = { ...candidate, ...update }; if (selectedKind === "flows")
-                delete merged.pageGroupIds; return merged; }) } }));
-    persist(selectedKind === "flows" ? applyFlowPageGroupLaneSelection(edited, entity.id, laneIds) : edited);
+function renderSelectedEntityEditor(content, entity) {
+    if (!state)
+        return;
+    const section = document.createElement("section");
+    const heading = document.createElement("h2");
+    const form = document.createElement("form");
+    const nameLabel = document.createElement("label");
+    const name = document.createElement("input");
+    const actions = document.createElement("div");
+    const save = document.createElement("button");
+    const duplicate = document.createElement("button");
+    const usage = document.createElement("p");
+    section.className = "contextual-editor";
+    heading.textContent = `Edit ${labels[selectedKind].replace(/s$/, "")}`;
+    name.name = "name";
+    name.required = true;
+    name.value = entity.name;
+    nameLabel.textContent = "Name";
+    nameLabel.append(name);
+    form.append(nameLabel);
+    for (const field of editorFields[selectedKind]) {
+        const label = document.createElement("label");
+        const control = productionFieldControl(field, selectedKind === "flows" && field.key === "pageGroupIds"
+            ? { ...entity, pageGroupIds: flowPageGroupLaneIds(state.project, entity.id) }
+            : entity);
+        if (selectedKind === "pages" && field.key === "eventName")
+            control.setAttribute("required", "");
+        label.textContent = field.label;
+        label.append(control);
+        form.append(label);
+    }
+    if (selectedKind === "fixtures")
+        renderFixtureExecution(form, entity);
+    save.type = "submit";
+    save.textContent = "Save complete entity";
+    duplicate.type = "button";
+    duplicate.textContent = "Duplicate";
+    usage.textContent = `Where used: ${whereUsed(entity.id).join(", ") || "None"}`;
+    actions.className = "editor-actions";
+    actions.append(save, duplicate);
+    form.append(actions, usage);
+    form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        if (!state)
+            return;
+        try {
+            const update = { name: name.value.trim() };
+            for (const field of editorFields[selectedKind]) {
+                update[field.key] = productionEditorValue(field, form.elements.namedItem(field.key));
+            }
+            if (selectedKind === "pages" && !String(update.eventName ?? "").trim()) {
+                throw new Error("Observed context event name is required for a Page.");
+            }
+            const laneIds = selectedKind === "flows" ? update.pageGroupIds : undefined;
+            if (laneIds)
+                delete update.pageGroupIds;
+            const edited = transactProject(state, `Edit ${entity.name}`, (project) => ({
+                ...project,
+                collections: {
+                    ...project.collections,
+                    [selectedKind]: project.collections[selectedKind].map((candidate) => {
+                        if (candidate.id !== entity.id)
+                            return candidate;
+                        const merged = { ...candidate, ...update };
+                        if (selectedKind === "flows")
+                            delete merged.pageGroupIds;
+                        return merged;
+                    }),
+                },
+            }));
+            persist(selectedKind === "flows"
+                ? applyFlowPageGroupLaneSelection(edited, entity.id, laneIds)
+                : edited);
+        }
+        catch (error) {
+            q("#project-state").textContent = error instanceof Error ? error.message : String(error);
+        }
+    });
+    duplicate.addEventListener("click", () => {
+        if (!state)
+            return;
+        const { id: ignored, ...copy } = entity;
+        persist(addProjectEntity(state, selectedKind, { ...structuredClone(copy), name: `${entity.name} copy` }, id));
+    });
+    section.append(heading, form);
+    content.append(section);
+    if (selectedKind === "profiles")
+        renderCanonicalEntityEditor(content, selectedKind, entity);
 }
-catch (error) {
-    q("#project-state").textContent = error instanceof Error ? error.message : String(error);
-} }); duplicate.addEventListener("click", () => { if (!state)
-    return; const { id: ignored, ...copy } = entity; persist(addProjectEntity(state, selectedKind, { ...structuredClone(copy), name: `${entity.name} copy` }, id)); }); section.append(heading, form); content.append(section); if (selectedKind === "profiles")
-    renderCanonicalEntityEditor(content, selectedKind, entity); }
 function renderTree() { const tree = q("#project-tree"); tree.replaceChildren(); if (!state)
-    return; const documentation = document.createElement("li"), documentationButton = document.createElement("button"); documentationButton.type = "button"; documentationButton.textContent = `Documentation (${state.project.documentation?.sets.length ?? 0})`; documentationButton.dataset.kind = "documentation"; documentationButton.setAttribute("aria-current", String(documentationOpen)); documentationButton.addEventListener("click", () => { documentationOpen = true; projectOverview = false; selectedId = undefined; const url = new URL(location.href); url.searchParams.set("project", state.project.id); url.searchParams.set("view", "documentation"); url.searchParams.delete("kind"); url.searchParams.delete("entity"); history.replaceState(null, "", url); render(); }); documentation.append(documentationButton); tree.append(documentation); for (const kind of Object.keys(labels)) {
+    return; const documentation = document.createElement("li"), documentationButton = document.createElement("button"); documentationButton.type = "button"; documentationButton.textContent = `Documentation (${state.project.documentation?.sets.length ?? 0})`; documentationButton.dataset.kind = "documentation"; documentationButton.setAttribute("aria-current", String(documentationOpen)); documentationButton.addEventListener("click", () => { documentationOpen = true; projectOverview = false; selectedId = undefined; const url = new URL(location.href); url.searchParams.set("project", state.project.id); url.searchParams.set("view", "documentation"); url.searchParams.delete("route"); url.searchParams.delete("kind"); url.searchParams.delete("entity"); history.replaceState(null, "", url); render(); }); documentation.append(documentationButton); tree.append(documentation); const overview = document.createElement("li"), overviewButton = document.createElement("button"); overviewButton.type = "button"; overviewButton.textContent = "Project overview"; overviewButton.dataset.kind = "overview"; overviewButton.setAttribute("aria-current", String(projectOverview)); overviewButton.addEventListener("click", openProjectOverview); overview.append(overviewButton); tree.append(overview); for (const kind of Object.keys(labels)) {
     const item = document.createElement("li"), button = document.createElement("button"), count = kind === "assignments" ? searchProjectAssignments(state.project, "").count : state.project.collections[kind].length;
     button.type = "button";
     button.textContent = `${labels[kind]} (${count})`;
@@ -493,13 +568,16 @@ function renderCollectionGuidance(content) { if (!state)
 } if (section.childElementCount)
     content.append(section); }
 function replaceProjectRoute(kind, entityId, action) { if (!state)
-    return; const url = new URL(location.href); url.searchParams.set("project", state.project.id); if (action)
+    return; const url = new URL(location.href); url.searchParams.set("project", state.project.id); url.searchParams.delete("view"); if (action)
     url.searchParams.set("route", action);
 else
     url.searchParams.delete("route"); url.searchParams.set("kind", kind); if (entityId)
     url.searchParams.set("entity", entityId);
 else
     url.searchParams.delete("entity"); history.replaceState(null, "", url); }
+function openProjectOverview() { if (!state)
+    return; pendingWorkspaceFocus = undefined; documentationOpen = false; projectOverview = true; creationKind = undefined; removalReview = undefined; selectedId = undefined; const url = new URL(location.href); url.searchParams.set("project", state.project.id); url.searchParams.set("route", "overview"); url.searchParams.delete("view"); url.searchParams.delete("kind"); url.searchParams.delete("entity"); history.replaceState(null, "", url); render(); queueMicrotask(() => q("#workspace-content h1").focus({ preventScroll: true })); }
+function focusCurrentStudioContext() { const target = projectInspector.hidden ? document.querySelector("#workspace-content h1, #workspace-content [data-add-kind], #workspace-pane") : projectInspector; target?.focus({ preventScroll: true }); }
 function restorePendingLifecycleFocus() { const pending = pendingLifecycleFocus; if (!pending)
     return; const target = pending.id ? document.querySelector(`[data-entity-id="${CSS.escape(pending.id)}"]`) : document.querySelector(`[data-add-kind="${pending.kind}"]`); target?.focus({ preventScroll: true }); }
 function restorePendingWorkspaceFocus() { const pending = pendingWorkspaceFocus; if (!pending || selectedKind !== pending.kind || selectedId !== pending.id)
@@ -651,6 +729,9 @@ function renderWorkspace() {
     }
     if (projectOverview) {
         const heading = document.createElement("h1"), identity = document.createElement("p"), metadata = document.createElement("dl"), openSchemas = document.createElement("button"), details = [["Purpose", state.project.description], ["Website", state.project.site], ["Owner", String(state.project.owner ?? "")], ["Notes", String(state.project.notes ?? "")]];
+        q("#project-breadcrumb").textContent = `${state.project.name} / Project overview`;
+        q("#inspector-context").textContent = `${state.project.name} project context and collection entry points.`;
+        heading.tabIndex = -1;
         heading.textContent = "Project overview";
         identity.textContent = `${state.project.name} · stable identity ${state.project.id} · Saved Draft · Published revision ${publishedRevision}`;
         for (const [label, value] of details) {
@@ -1047,15 +1128,15 @@ q("#commit-import").addEventListener("click", () => { if (!state || !stagedImpor
 q("#cancel-import").addEventListener("click", () => { stagedImport = undefined; importDialog.close(); q("#import-project").focus(); });
 const conflictDialog = q("#project-conflict-review"), restoreDurableProjection = () => { restore(); library = restoreProjectLibrary(projectStorage.getItem(PROJECT_LIBRARY_STORAGE_KEY)) ?? library; };
 function completeConflict(strategy) { const fields = Array.from(q("#project-conflict-fields").querySelectorAll('input:checked'), ({ value }) => value); if (durableConflict) {
-    void durableProjectRuntime.resolveFailedSave(strategy, fields).then(() => { durableConflict = undefined; saveStatus = { kind: "idle" }; restoreDurableProjection(); conflictDialog.close(); render(); q("#project-inspector").focus(); });
+    void durableProjectRuntime.resolveFailedSave(strategy, fields).then(() => { durableConflict = undefined; saveStatus = { kind: "idle" }; restoreDurableProjection(); conflictDialog.close(); render(); focusCurrentStudioContext(); });
     return;
 } if (!pendingConflict)
-    return; const resolved = resolveCanonicalProjectConflict(pendingConflict, { strategy, ...(strategy === "merge" ? { pendingFields: fields } : {}) }); conflictDialog.close(); pendingConflict = undefined; persist(resolved); q("#project-inspector").focus(); }
+    return; const resolved = resolveCanonicalProjectConflict(pendingConflict, { strategy, ...(strategy === "merge" ? { pendingFields: fields } : {}) }); conflictDialog.close(); pendingConflict = undefined; persist(resolved); focusCurrentStudioContext(); }
 q("#reload-project-conflict").addEventListener("click", () => { if (durableConflict) {
-    void durableProjectRuntime.resolveFailedSave("reject").then(() => { durableConflict = undefined; saveStatus = { kind: "idle" }; restoreDurableProjection(); conflictDialog.close(); render(); q("#project-inspector").focus(); });
+    void durableProjectRuntime.resolveFailedSave("reject").then(() => { durableConflict = undefined; saveStatus = { kind: "idle" }; restoreDurableProjection(); conflictDialog.close(); render(); focusCurrentStudioContext(); });
     return;
 } if (!pendingConflict)
-    return; state = resolveCanonicalProjectConflict(pendingConflict, { strategy: "reload" }); lastCommittedState = structuredClone(state); pendingConflict = undefined; conflictDialog.close(); q("#retry-save").hidden = true; render(); q("#project-inspector").focus(); });
+    return; state = resolveCanonicalProjectConflict(pendingConflict, { strategy: "reload" }); lastCommittedState = structuredClone(state); pendingConflict = undefined; conflictDialog.close(); q("#retry-save").hidden = true; render(); focusCurrentStudioContext(); });
 q("#reapply-project-conflict").addEventListener("click", () => completeConflict("reapply"));
 q("#merge-project-conflict").addEventListener("click", () => completeConflict("merge"));
 q("#retry-save").addEventListener("click", () => { if (pendingConflict || durableConflict) {
@@ -1187,7 +1268,7 @@ const applyRequestedRoute = () => { const deepKind = routeParameters.get("kind")
     selectedId = creationKind ? undefined : deepId && state && state.project.collections[deepKind].some(({ id }) => id === deepId) ? deepId : undefined;
     persistNavigation();
     render();
-    queueMicrotask(() => { const target = creationKind ? document.querySelector(`[data-creation-kind="${deepKind}"] h1`) : selectedId ? document.querySelector(`[data-project-entity-workspace="${CSS.escape(selectedId)}"] h1`) : q("#project-inspector"); if (target) {
+    queueMicrotask(() => { const target = creationKind ? document.querySelector(`[data-creation-kind="${deepKind}"] h1`) : selectedId ? document.querySelector(`[data-project-entity-workspace="${CSS.escape(selectedId)}"] h1`) : document.querySelector(`[data-add-kind="${deepKind}"], #workspace-content h1, #workspace-pane`); if (target) {
         target.tabIndex = -1;
         target.focus({ preventScroll: true });
     } });

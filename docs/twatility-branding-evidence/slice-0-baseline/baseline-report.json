@@ -1,0 +1,119 @@
+{
+  "chromeExecutable": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+  "extensionRoot": "C:\\Users\\J-Hol\\my-chrome-utilities-twatility-branding\\dist",
+  "capturedAtUtc": "2026-07-26T12:33:05.717Z",
+  "screenshots": [
+    {
+      "name": "side-panel-projects",
+      "width": 360,
+      "height": 760,
+      "title": "my-chrome-utilities",
+      "url": "chrome-extension://fnlcmlphpjglfgmebbjffcmldlkllpea/side-panel.html",
+      "viewportWidth": 360,
+      "scrollWidth": 360,
+      "viewportHeight": 760,
+      "scrollHeight": 760,
+      "active": "data-layer-view-projects"
+    },
+    {
+      "name": "side-panel-projects",
+      "width": 420,
+      "height": 900,
+      "title": "my-chrome-utilities",
+      "url": "chrome-extension://fnlcmlphpjglfgmebbjffcmldlkllpea/side-panel.html",
+      "viewportWidth": 420,
+      "scrollWidth": 420,
+      "viewportHeight": 900,
+      "scrollHeight": 900,
+      "active": "data-layer-view-projects"
+    },
+    {
+      "name": "side-panel-projects",
+      "width": 512,
+      "height": 900,
+      "title": "my-chrome-utilities",
+      "url": "chrome-extension://fnlcmlphpjglfgmebbjffcmldlkllpea/side-panel.html",
+      "viewportWidth": 512,
+      "scrollWidth": 512,
+      "viewportHeight": 900,
+      "scrollHeight": 900,
+      "active": "data-layer-view-projects"
+    },
+    {
+      "name": "side-panel-live",
+      "width": 420,
+      "height": 900,
+      "title": "my-chrome-utilities",
+      "url": "chrome-extension://fnlcmlphpjglfgmebbjffcmldlkllpea/side-panel.html",
+      "viewportWidth": 420,
+      "scrollWidth": 420,
+      "viewportHeight": 900,
+      "scrollHeight": 900,
+      "active": "data-layer-view-live"
+    },
+    {
+      "name": "studio-overview",
+      "width": 1280,
+      "height": 900,
+      "title": "Specification Studio · Retail & Trade baseline · project-twatility-baseline",
+      "url": "chrome-extension://fnlcmlphpjglfgmebbjffcmldlkllpea/specification-builder.html?project=project-twatility-baseline&route=overview",
+      "viewportWidth": 1280,
+      "scrollWidth": 1280,
+      "viewportHeight": 900,
+      "scrollHeight": 900,
+      "active": "Specification StudioRetail & Trade baseline · project-twatility-baseline · Produ"
+    },
+    {
+      "name": "studio-pages",
+      "width": 1440,
+      "height": 900,
+      "title": "Specification Studio · Retail & Trade baseline · project-twatility-baseline",
+      "url": "chrome-extension://fnlcmlphpjglfgmebbjffcmldlkllpea/specification-builder.html?project=project-twatility-baseline&kind=pages",
+      "viewportWidth": 1440,
+      "scrollWidth": 1440,
+      "viewportHeight": 900,
+      "scrollHeight": 900,
+      "active": "project-inspector"
+    },
+    {
+      "name": "studio-flow",
+      "width": 1720,
+      "height": 960,
+      "title": "Specification Studio · Retail & Trade baseline · project-twatility-baseline",
+      "url": "chrome-extension://fnlcmlphpjglfgmebbjffcmldlkllpea/specification-builder.html?project=project-twatility-baseline&kind=flows&entity=flow%3Atwatility%3A11",
+      "viewportWidth": 1720,
+      "scrollWidth": 1720,
+      "viewportHeight": 960,
+      "scrollHeight": 960,
+      "active": "Specification StudioRetail & Trade baseline · project-twatility-baseline · Produ"
+    }
+  ],
+  "runtimeExceptions": [],
+  "logErrors": [
+    {
+      "level": "error",
+      "text": "Failed to load resource: net::ERR_FILE_NOT_FOUND",
+      "url": "chrome-extension://fnlcmlphpjglfgmebbjffcmldlkllpea/specification-builder-guidance.css"
+    },
+    {
+      "level": "error",
+      "text": "Failed to load resource: net::ERR_FILE_NOT_FOUND",
+      "url": "chrome-extension://fnlcmlphpjglfgmebbjffcmldlkllpea/specification-builder-guidance.css"
+    },
+    {
+      "level": "error",
+      "text": "Failed to load resource: net::ERR_FILE_NOT_FOUND",
+      "url": "chrome-extension://fnlcmlphpjglfgmebbjffcmldlkllpea/specification-builder-guidance.css"
+    }
+  ],
+  "failedRequests": [
+    {
+      "errorText": "net::ERR_FILE_NOT_FOUND",
+      "canceled": false
+    },
+    {
+      "errorText": "net::ERR_FILE_NOT_FOUND",
+      "canceled": false
+    }
+  ]
+}
