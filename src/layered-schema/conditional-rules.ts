@@ -46,7 +46,12 @@ const executable=(property:EffectiveProperty,rule:Record<string,unknown>):Record
   const outcome=reusableOutcome(property,rule);if(!outcome)return undefined;
   return{...clone(outcome),id:rule.id,name:rule.name??outcome.name,condition:rule.condition,enabled:rule.enabled,severity:rule.severity??outcome.severity,message:rule.message??outcome.message};
 };
-const conditional=(property:EffectiveProperty,payload:Record<string,unknown>,paths:ReadonlyMap<string,string>):Record<string,unknown>[]=>((property.rules??[]) as Record<string,unknown>[]).flatMap((rule)=>{const outcome=executable(property,rule);return outcome&&outcome.enabled!==false&&Boolean(outcome.condition)&&layeredConditionMatches(outcome.condition as Record<string,unknown>,payload,paths)?[outcome]:[];});
+const conditional=(property:EffectiveProperty,payload:Record<string,unknown>,paths:ReadonlyMap<string,string>):Record<string,unknown>[]=>((property.rules??[]) as Record<string,unknown>[]).flatMap((rule)=>{
+  const outcome=executable(property,rule);
+  if(!outcome||outcome.enabled===false)return[];
+  const alreadyProjected=!outcome.condition&&rule.kind!=="reusable"&&["pattern","range","cardinality"].includes(String(outcome.kind));
+  return!alreadyProjected&&layeredConditionMatches(outcome.condition as Record<string,unknown>|undefined,payload,paths)?[outcome]:[];
+});
 const differing=(rules:Record<string,unknown>[],read:(rule:Record<string,unknown>)=>unknown):boolean=>new Set(rules.map((rule)=>JSON.stringify(read(rule)))).size>1;
 const conflictFor=(path:string,facet:string,rules:Record<string,unknown>[]):LayerConflict=>({path,message:`conditional ${facet} outcomes contradict`,contributors:rules.map(named)});
 

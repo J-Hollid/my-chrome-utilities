@@ -72,7 +72,13 @@ const executable = (property, rule) => {
         return undefined;
     return { ...clone(outcome), id: rule.id, name: rule.name ?? outcome.name, condition: rule.condition, enabled: rule.enabled, severity: rule.severity ?? outcome.severity, message: rule.message ?? outcome.message };
 };
-const conditional = (property, payload, paths) => (property.rules ?? []).flatMap((rule) => { const outcome = executable(property, rule); return outcome && outcome.enabled !== false && Boolean(outcome.condition) && layeredConditionMatches(outcome.condition, payload, paths) ? [outcome] : []; });
+const conditional = (property, payload, paths) => (property.rules ?? []).flatMap((rule) => {
+    const outcome = executable(property, rule);
+    if (!outcome || outcome.enabled === false)
+        return [];
+    const alreadyProjected = !outcome.condition && rule.kind !== "reusable" && ["pattern", "range", "cardinality"].includes(String(outcome.kind));
+    return !alreadyProjected && layeredConditionMatches(outcome.condition, payload, paths) ? [outcome] : [];
+});
 const differing = (rules, read) => new Set(rules.map((rule) => JSON.stringify(read(rule)))).size > 1;
 const conflictFor = (path, facet, rules) => ({ path, message: `conditional ${facet} outcomes contradict`, contributors: rules.map(named) });
 function resolveProperty(property, payload, paths) {

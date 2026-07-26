@@ -68,6 +68,30 @@ assert.deepEqual(matchingValidation.issues.map(({code})=>code).sort(),["MIN_ITEM
 const ordinaryValidation=validateLayeredObservation({targetId:"target:ordinary",targetName:"Ordinary",revision:1,compiled},{page_type:"article",form_type:"lead",form_step_name:"contact",page_name:"single",aProducts:["one"]});
 assert.deepEqual(ordinaryValidation.issues,[]);
 
+const always=structuredClone(compiled);
+always.properties["/error_message"].rules=[{id:"rule:always-required",name:"Always required",kind:"presence",presence:"required"}];
+always.properties["/form_step_name"].rules=[{id:"rule:always-steps",name:"Always steps",kind:"value",allowedValues:["contact","delivery"]}];
+const alwaysResolved=resolveConditionalLayeredSchema(always,{});
+assert.equal(alwaysResolved.properties["/error_message"].presence,"required","conditionless presence rules apply Always");
+assert.deepEqual(alwaysResolved.properties["/form_step_name"].allowedValues,["contact","delivery"],"conditionless value rules apply Always");
+assert.deepEqual(
+  validateLayeredObservation({targetId:"target:always",targetName:"Always",revision:1,compiled:always},{}).issues.map(({path,code})=>({path,code})),
+  [{path:"/error_message",code:"REQUIRED"}],
+  "conditionless outcomes participate in production validation",
+);
+const projectedAlways=compileLayeredSchema([{
+  id:"profile:always-projected",name:"Always projected",scope:"Shared Profile",constraints:[{
+    path:"/items",type:"array",itemType:"string",patterns:["^direct$"],minItems:3,
+    rules:[
+      {id:"rule:always-pattern",name:"Always pattern",kind:"pattern",pattern:"^rule$"},
+      {id:"rule:always-cardinality",name:"Always cardinality",kind:"cardinality",minItems:2},
+    ],
+  }],
+}],{eventId:"event:always-projected",eventRole:"interaction"});
+const projectedAlwaysResolved=resolveConditionalLayeredSchema(projectedAlways,{});
+assert.deepEqual(projectedAlwaysResolved.properties["/items"].patterns,["^direct$","^rule$"],"runtime resolution retains patterns already projected at compilation");
+assert.equal(projectedAlwaysResolved.properties["/items"].minItems,3,"runtime resolution retains the strongest cardinality already projected at compilation");
+
 const contradictory=structuredClone(compiled);
 contradictory.properties["/form_step_name"].rules.push({
   id:"rule:checkout-contact",
