@@ -188,7 +188,7 @@ checks.
 | Active project context | O-PROJECTS | `#active-project-header`; stable ID, name, Saved Draft, Published revision | project ribbon/context card | Branding/layout parity | No implied active project; atomic cross-surface identity | Turn existing summary into restrained project ribbon | V1 | T-PROJECTS | C-SHELL, C-PERSIST | implemented and verified — Slices 2–3 |
 | Command palette | O-SHELL | `#open-palette`, `#palette`, `#palette-filter`, `#palette-results`; dialog/listbox | side-panel command palette | Brush-on styling | Filtering, command execution, Escape, selected option, focus return | Apply dialog/card tokens only | V0 | T-SHELL, T-A11Y | C-SHELL | implemented and verified — Slice 2 |
 | Status and action feedback | O-SHELL | polite/assertive outputs, command log, saving/saved/failed and disabled reasons | state gallery / system feedback | Brush-on styling | Truthful message, live-region priority, `aria-describedby`, state owner | Shared notice, status-chip and disabled-reason styles | V0 | T-SHELL, T-A11Y | C-LOW | approved — Slices 1–2 |
-| Responsive master/detail navigation | O-LIVE, O-SHELL | back-to-list, inspector close/back, stable origin focus | Live inspector and responsive mock | Branding/layout parity | Connected focused control, master/detail state and focus restoration | Reflow existing regions; never replace or overlay essential controls | V1 | T-SHELL, T-LIVE, T-A11Y | C-SHELL | shell layout implemented and verified — Slice 2; deeper Live workflow evidence retained for Slice 6 |
+| Responsive master/detail navigation | O-LIVE, O-SHELL | back-to-list, inspector close/back, stable origin focus | Live inspector and responsive mock | Branding/layout parity | Connected focused control, master/detail state and focus restoration | Reflow existing regions; never replace or overlay essential controls | V1 | T-SHELL, T-LIVE, T-A11Y | C-SHELL | implemented and verified — Slices 2 and 6 |
 
 ## Live capture, inspection, and guided validation
 
@@ -303,7 +303,7 @@ checks.
 | Validate toolbar | O-STUDIO, O-ASSURANCE | Run preflight; Coverage matrix | mock Validate menu | Preserve implementation | Installed behavior remains; archived scope is not reactivated | Style existing controls; do not create new assurance semantics | V1 | T-STUDIO | C-STUDIO | preserved and verified — Slice 4 |
 | Release toolbar | O-STUDIO, O-DURABLE | Publish release / intentional revision | mock Release menu | Preserve implementation | Only intentional Publish advances immutable revision; blockers truthful | Emphasize current publish boundary without mock release claims | V2 | T-STUDIO, T-PROJECTS | C-STUDIO, C-PERSIST | preserved and verified — Slice 4 |
 | More actions | O-STUDIO | Undo/Redo; full export; JSON schema; import | mock More menu | Branding/layout parity | Every current installed action/effect, enabled reason, page-memory Undo/Redo; no obsolete Generate documentation action | Branded disclosure/action menu; Documentation is a top-level project route | V1 | T-STUDIO, T-A11Y | C-STUDIO | implemented and verified — Slice 4 |
-| Project Documentation route | O-STUDIO, O-PROJECT-DOC, O-DURABLE | first tree button `data-kind=documentation`; `?view=documentation`; Set/Content/Configure/Theme/Preview/Export | mock Studio documentation surfaces | Preserve implementation | `aria-current`, breadcrumb/Inspector context, entity-route exit, active-project reset, repair deep links; opening is read-only | Brand as a first-class Studio workspace without restoring the removed dialog or Flow-owned form | V2 | T-EXPORT, T-STUDIO, T-A11Y | C-STUDIO, C-PERSIST | preserved and verified for the Slice 4 shell; Slice 6 content polish pending |
+| Project Documentation route | O-STUDIO, O-PROJECT-DOC, O-DURABLE | first tree button `data-kind=documentation`; `?view=documentation`; Set/Content/Configure/Theme/Preview/Export | mock Studio documentation surfaces | Preserve implementation | `aria-current`, breadcrumb/Inspector context, entity-route exit, active-project reset, repair deep links; opening is read-only | Brand as a first-class Studio workspace without restoring the removed dialog or Flow-owned form | V2 | T-EXPORT, T-STUDIO, T-A11Y | C-STUDIO, C-PERSIST | preserved and verified — Slices 4 and 6 |
 | Collection overviews | O-LIFECYCLE, O-STUDIO | Add; search; Open `<name>`; Remove `<name>`; empty state for eight kinds | Studio collection routes | Branding/layout parity | Type-specific route, named actions, Inspector-independent access, stable focus | Shared overview/card/list patterns | V1 | T-STUDIO, T-A11Y | C-STUDIO | implemented and verified — Slice 4 |
 | Entity creation | O-LIFECYCLE, O-STUDIO | guided type-specific Create/Cancel main-workspace route | mock Add routes | Branding/layout parity | Project-scoped ID, validation, saved Draft, focus and back route | Shared guided creation layout | V1 | T-STUDIO | C-STUDIO | implemented and verified — Slice 4 |
 | Shared Profile fields | O-LIFECYCLE, O-CANON | name; canonical contribution; source lineage | Shared Profile route | Preserve implementation | Contributor role, canonical model, no second schema type/editor | Brand current workspace; do not use mock duplicate editor | V2 | T-STUDIO, T-CANON | C-STUDIO, C-CANON | preserved and verified — Slices 4–5 |
@@ -940,3 +940,42 @@ the program terminal gate: after user review, the program still requires a new
 `FINAL_MASTER_BASE` fetch/timestamp, finite final master-delta audit and merge,
 and the full terminal validation suite before the integration branch can be
 reported merge-ready.
+
+## Final finite-cutoff reconciliation
+
+Slice 6 was approved and the terminal gate began with a fresh master fetch.
+
+- `PRE_FINAL_MASTER`: `452deaba03279a95c20dd25c90862de338ae0c64`
+- `FINAL_MASTER_BASE`: `452deaba03279a95c20dd25c90862de338ae0c64`
+- `FINAL_MASTER_BASE_UTC`: `2026-07-26T21:26:59.1734315Z`
+- post-cutoff observation: `2026-07-26T22:12:31.9082894Z`
+- post-cutoff `origin/master`: `452deaba03279a95c20dd25c90862de338ae0c64`
+
+The old and new master bases are identical. The mandatory delta inventory
+therefore found zero added or changed controls, states, routes, persistence
+contracts, accessible relationships, focus contracts, or test owners. Merging
+the recorded finite cutoff returned `Already up to date`, and the final
+merge-base remains the exact `FINAL_MASTER_BASE`. There are no post-cutoff
+master commits to list.
+
+Final reconciliation resolves all 94 named stable control IDs and all 27
+retained semantic renderer seams. The obsolete branding-only
+`.flow-empty-state` selector was removed because no installed renderer emits
+that seam. The compact side-panel schema editor again retains its production
+`#schema-detail` vertical scroll owner at narrow widths; no branding wrapper
+owns or replaces its state. The flow browser adapter now establishes inspector
+state before testing its toggle and observes drag edge targets after the trusted
+pointer lifecycle creates them, eliminating launch-timing and stale-transient
+assumptions without weakening any production assertion.
+
+The dedicated terminal evidence is stored under
+`docs/twatility-branding-evidence/final/`. It covers the required side-panel and
+Studio widths, the 200%-equivalent constrained Studio viewport, all installed
+workspaces and representative Studio routes, control and ARIA equivalence,
+keyboard and focus return, overflow and local scroll ownership, reduced motion,
+forced colours, contrast, runtime/load errors, and the create/edit/save/Undo/
+import/export/recovery/condition/project/cross-window workflows. The terminal
+package, targeted branding checks, all 18 registry-owned browser packs, and the
+packaged Chrome adapters pass. The separately documented `npm test` failures
+reproduce on the exact `FINAL_MASTER_BASE` and remain upstream baseline defects;
+they are not counted as branding passes.

@@ -1,0 +1,117 @@
+{
+  "live": {
+    "present": true,
+    "context": "Project context: Retail measurement operations",
+    "values": [
+      "event.history",
+      "dataLayer"
+    ],
+    "equivalent": true,
+    "overflow": [
+      0,
+      0,
+      0
+    ],
+    "broken": []
+  },
+  "library": {
+    "editor": true,
+    "contained": true,
+    "widths": {
+      "editor": [
+        368,
+        370,
+        378
+      ],
+      "master": [
+        365,
+        370,
+        365
+      ]
+    },
+    "overflow": [
+      0,
+      0,
+      1
+    ],
+    "wide": [],
+    "controls": true
+  },
+  "tree": {
+    "categories": [
+      "All",
+      "Saved schemas",
+      "Shared Profiles",
+      "Page Groups",
+      "Pages",
+      "Events",
+      "Flow Page instances",
+      "Event occurrences"
+    ],
+    "rows": 17,
+    "levels": true,
+    "selected": true,
+    "contained": true,
+    "firstText": "Saved schemas"
+  },
+  "treeKeyboard": true,
+  "documentation": {
+    "set": true,
+    "regions": true,
+    "contained": true,
+    "overflow": [
+      0,
+      0
+    ]
+  },
+  "flow": {
+    "canvas": true,
+    "localOwner": true,
+    "documentOverflow": 0
+  },
+  "zoom": {
+    "overflow": [
+      0,
+      0
+    ],
+    "controls": true
+  },
+  "reduced": {
+    "matches": true,
+    "durations": [
+      "1e-06s",
+      "1e-06s",
+      "1e-06s",
+      "1e-06s",
+      "1e-06s",
+      "1e-06s",
+      "1e-06s",
+      "1e-06s",
+      "1e-06s"
+    ]
+  },
+  "forced": {
+    "matches": true,
+    "count": 3,
+    "borders": [
+      [
+        "1px",
+        "1px",
+        "1px",
+        "1px"
+      ],
+      [
+        "1px",
+        "1px",
+        "1px",
+        "1px"
+      ],
+      [
+        "1px",
+        "1px",
+        "1px",
+        "4px"
+      ]
+    ]
+  }
+}
