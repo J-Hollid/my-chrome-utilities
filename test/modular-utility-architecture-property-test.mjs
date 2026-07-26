@@ -215,8 +215,8 @@ for (let sample = 0; sample < 100; sample += 1) {
   assert.ok(plan.commands.indexOf(generateCommands.at(-1)) < plan.commands.indexOf(executeCommands[0]));
   const executionOrder = [];
   await executeAcceptancePlan(plan, { runCommand:async(command) => executionOrder.push(command) });
-  assert.deepEqual(executionOrder, [...plan.preparationCommands, ...plan.acceptanceCommands],
-    "generated acceptance execution must build before parsing and pack sessions");
+  assert.deepEqual(executionOrder, plan.commands,
+    "generated acceptance execution must run each registered leaf once before sequential acceptance");
 
   const changedFeature = packs[ownerIndex].features[0];
   const featurePlan = planVerification(packs, { changedPaths:[changedFeature] });

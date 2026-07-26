@@ -30,10 +30,12 @@ export function mountCanonicalSchemaEditor(options) {
         working = { ...working, documentation: { ...working.documentation, example: { method: value ? "custom" : "blank", ...(value ? { value } : {}) } } };
     else {
         const source = { expectedValue: working.expectedValue, allowedValues: working.allowedValues.map(({ value: allowed }) => allowed) }, staged = schemaTableStageExpectedOrAllowed(source, value);
-        if (source.expectedValue !== undefined)
-            working = { ...working, expectedValue: staged.expectedValue };
-        else
-            working = { ...working, allowedValues: (staged.allowedValues ?? []).map((allowed, index) => ({ ...working.allowedValues[index] ?? { id: options.id("allowed-value") }, value: allowed })) };
+        if (staged.expectedValue !== undefined)
+            working = { ...working, expectedValue: staged.expectedValue, allowedValues: [] };
+        else {
+            const { expectedValue: _, ...withoutExpected } = working;
+            working = { ...withoutExpected, allowedValues: (staged.allowedValues ?? []).map((allowed, index) => ({ ...working.allowedValues[index] ?? { id: options.id("allowed-value") }, value: allowed })) };
+        }
     } activePropertyId = node.id; };
     const command = (next) => { if (next.kind === "view") {
         transientView = next.view;

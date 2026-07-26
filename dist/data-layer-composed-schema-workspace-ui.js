@@ -2,6 +2,13 @@ import { composedFacetDraft, composedFacetDraftWithoutRemovedItems, sparseCompos
 import { renderComposedRows } from "./data-layer-composed-schema-workspace-rows.js";
 import { schemaTableOverlayTransition, schemaTableStageExpectedOrAllowed } from "./data-layer-schema-table.js";
 const button = (text, run) => { const control = document.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
+export function stageComposedExpectedOrAllowed(draft, text) {
+    const staged = schemaTableStageExpectedOrAllowed(draft, text);
+    if (staged.expectedValue === undefined)
+        return staged;
+    const { allowedValueIds: _, allowedValueProvenance: __, ...expected } = staged;
+    return { ...expected, allowedValues: [], exampleMethod: expected.exampleMethod === "allowed-value" ? "custom" : expected.exampleMethod };
+}
 export function mountComposedSchemaWorkspace(options) {
     const section = document.createElement("section"), heading = document.createElement("h2"), summary = document.createElement("p"), filterControls = document.createElement("div"), filter = document.createElement("input"), sort = document.createElement("select"), addControls = document.createElement("div"), choice = document.createElement("select"), add = document.createElement("button"), rows = document.createElement("div");
     let activePath, overlayOpen = false, focusedOpen = false, activeSection = "definition", draft, removed = false, confirmedAction, removedRuleIds = new Set(), removedValueIds = new Set(), restoredRuleIds = new Set(), restoredValueIds = new Set(), stagedLocalValueIds = new Set(), overriddenRuleIds = new Set(), pendingStructure = [], pendingAction, originFocus, originPath, query = "", sortMode = "path";
@@ -67,7 +74,7 @@ export function mountComposedSchemaWorkspace(options) {
         draft.exampleValue = value || undefined;
     }
     else
-        draft = Object.assign(draft, schemaTableStageExpectedOrAllowed(draft, value)); };
+        draft = stageComposedExpectedOrAllowed(draft, value); };
     const close = (reason = "cancel") => { overlayState = schemaTableOverlayTransition(overlayState, { kind: reason }); const restorePath = ("restorePath" in overlayState ? overlayState.restorePath : undefined) ?? originPath; activePath = undefined; overlayOpen = false; focusedOpen = false; activeSection = "definition"; draft = undefined; removed = false; confirmedAction = undefined; removedRuleIds = new Set(); removedValueIds = new Set(); restoredRuleIds = new Set(); restoredValueIds = new Set(); stagedLocalValueIds = new Set(); overriddenRuleIds = new Set(); pendingStructure = []; pendingAction = undefined; rerender(); const target = originFocus?.isConnected ? originFocus : restorePath ? rows.querySelector(`[aria-label="Property actions for ${CSS.escape(restorePath)}"]`) : undefined; originFocus = undefined; originPath = undefined; if (target)
         queueMicrotask(() => target.focus({ preventScroll: true })); };
     const closeChild = () => { focusedOpen = false; overlayState = activePath ? { phase: "menu", path: activePath } : { phase: "closed" }; rerender(); const target = rows.querySelector(`[data-property-context-menu="true"] [data-section="${activeSection}"] button`); if (target)

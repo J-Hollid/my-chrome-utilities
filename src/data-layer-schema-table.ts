@@ -34,10 +34,15 @@ export type SchemaTableValueFacet=
   |{kind:"expected";text:string;value:unknown}
   |{kind:"allowed";text:string;values:readonly unknown[]};
 
+const formattedOrdinaryValue=(value:unknown):string=>{
+  if(typeof value!=="string")return JSON.stringify(value);
+  return value===""||value.trim()!==value||/[,\\"[\]{}]/.test(value)?JSON.stringify(value):value;
+};
+
 export function schemaTableValueFacet(value:{expectedValue?:unknown;allowedValues?:readonly unknown[]}):SchemaTableValueFacet {
-  if(value.expectedValue!==undefined)return{kind:"expected",text:String(value.expectedValue),value:value.expectedValue};
+  if(value.expectedValue!==undefined)return{kind:"expected",text:formattedOrdinaryValue(value.expectedValue),value:value.expectedValue};
   const values=value.allowedValues??[];
-  return{kind:"allowed",text:values.map(String).join(", "),values};
+  return{kind:"allowed",text:values.map(formattedOrdinaryValue).join(", "),values};
 }
 
 export function schemaTableExpectedOrAllowed(value:{expectedValue?:unknown;allowedValues?:readonly unknown[]}):string {
@@ -45,14 +50,27 @@ export function schemaTableExpectedOrAllowed(value:{expectedValue?:unknown;allow
 }
 
 const parsedScalar=(text:string,previous:unknown):unknown=>{
-  if(typeof previous==="string")return text;
+  if(typeof previous==="string"){try{const parsed=JSON.parse(text) as unknown;return typeof parsed==="string"?parsed:text;}catch{return text;}}
   try{return JSON.parse(text) as unknown;}catch{return text;}
+};
+
+const ordinaryEntries=(text:string):string[]=>{
+  const entries:string[]=[];let start=0,depth=0,quote=false,escaped=false;
+  for(let index=0;index<text.length;index+=1){
+    const character=text[index]!;
+    if(quote){if(escaped)escaped=false;else if(character==="\\")escaped=true;else if(character==='"')quote=false;continue;}
+    if(character==='"'){quote=true;continue;}
+    if(character==="["||character==="{")depth+=1;
+    else if(character==="]"||character==="}")depth=Math.max(0,depth-1);
+    else if(character===","&&depth===0){entries.push(text.slice(start,index).trim());start=index+1;}
+  }
+  entries.push(text.slice(start).trim());return entries.filter((entry)=>entry.length>0);
 };
 
 export function schemaTableStageExpectedOrAllowed<T extends {expectedValue?:unknown;allowedValues?:readonly unknown[]}>(source:T,text:string):T {
   const facet=schemaTableValueFacet(source);
-  const entries=text.split(",").map((entry)=>entry.trim()).filter(Boolean),{expectedValue:_,allowedValues:__,...rest}=source;
-  if(entries.length>1)return{...rest,allowedValues:entries.map((entry)=>parsedScalar(entry,facet.kind==="expected"?facet.value:facet.values[0]))} as unknown as T;
+  const entries=ordinaryEntries(text),{expectedValue:_,allowedValues:__,...rest}=source,previous=facet.kind==="expected"?facet.value:facet.values[0];
+  if(entries.length>1)return{...rest,allowedValues:entries.map((entry)=>parsedScalar(entry,previous))} as unknown as T;
   if(!entries.length)return{...rest,allowedValues:[]} as unknown as T;
-  return{...rest,expectedValue:parsedScalar(entries[0]!,facet.kind==="expected"?facet.value:facet.values[0])} as unknown as T;
+  return{...rest,expectedValue:parsedScalar(entries[0]!,previous)} as unknown as T;
 }

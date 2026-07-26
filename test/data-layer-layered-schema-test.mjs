@@ -32,7 +32,7 @@ const occurrence=contribution("occurrence:purchase","Alternative shipping Purcha
 
 const ready=compileLayeredSchema([base,checkout,shipping,alternative,occurrence],{eventId:"event:purchase",eventRole:"interaction",occurrenceId:"occurrence:purchase"});
 assert.equal(ready.status,"ready");
-assert.deepEqual(ready.properties["/funnel_step"].allowedValues,["1","2","3a","3b"]);
+assert.equal(ready.properties["/funnel_step"].allowedValues,undefined,"a more-specific expected value replaces the inherited allowed-value facet");
 assert.equal(ready.properties["/funnel_step"].presence,"required");
 assert.equal(ready.properties["/funnel_step"].expectedValue,"3b");
 assert.deepEqual(ready.properties["/funnel_step"].superseded.map(({contributorName})=>contributorName),["Shipping"]);

@@ -5,6 +5,11 @@ import {focusedPropertySections,focusedReusableOutcome,focusedRuleFields} from "
 import {compileLayeredSchema,resolveConditionalLayeredSchema,validateLayeredObservation} from "../dist/data-layer-layered-schema.js";
 import {schemaTableExpectedOrAllowed,schemaTableStageExpectedOrAllowed} from "../dist/data-layer-schema-table.js";
 import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
+import {executeAcceptancePlan} from "../scripts/verification-packs.mjs";
+
+const scheduled=["npm run build","node test/unit-a.mjs","node test/property-a.mjs","node test/browser-a.mjs","bb gherkin-parser feature","bb acceptance-pack-runner layered_schema generated"];
+const executed=[];await executeAcceptancePlan({preparationCommands:[scheduled[0]],acceptanceCommands:scheduled.slice(-2),commands:scheduled},{runCommand:async(command)=>executed.push(command)});
+assert.deepEqual(executed,scheduled,"the focused checkpoint executes every registered leaf exactly once in planned order");
 
 assert.deepEqual(focusedPropertySections,["definition","rules","structure"],"property actions expose one compact first layer");
 assert.deepEqual(focusedRuleFields("presence"),["condition","presence","severity","message"]);
@@ -112,6 +117,19 @@ const metadataCompiled=compileLayeredSchema([
 ],{eventId:"event:metadata",eventRole:"context"});
 assert.equal(metadataCompiled.properties["/metadata"].displayText,"Page label");
 assert.equal(metadataCompiled.properties["/metadata"].comments,"Page comment");
+
+const expectedToAllowedCompiled=compileLayeredSchema([
+  {id:"profile:ordinary",name:"Ordinary parent",scope:"Shared Profile",constraints:[{path:"/ordinary",expectedValue:"retail"}]},
+  {id:"page:ordinary",name:"Ordinary page",scope:"Page",constraints:[{path:"/ordinary",allowedValues:["retail","business"]}]},
+],{eventId:"event:ordinary",eventRole:"context"});
+assert.equal(expectedToAllowedCompiled.properties["/ordinary"].expectedValue,undefined,"a more-specific allowed list replaces the ordinary expectation facet");
+assert.deepEqual(expectedToAllowedCompiled.properties["/ordinary"].allowedValues,["retail","business"]);
+const allowedToExpectedCompiled=compileLayeredSchema([
+  {id:"profile:ordinary",name:"Ordinary parent",scope:"Shared Profile",constraints:[{path:"/ordinary",allowedValues:["retail","business"]}]},
+  {id:"page:ordinary",name:"Ordinary page",scope:"Page",constraints:[{path:"/ordinary",expectedValue:"business"}]},
+],{eventId:"event:ordinary",eventRole:"context"});
+assert.equal(allowedToExpectedCompiled.properties["/ordinary"].allowedValues,undefined,"a more-specific expectation replaces the ordinary allowed-list facet");
+assert.equal(allowedToExpectedCompiled.properties["/ordinary"].expectedValue,"business");
 
 const projectionState=createSpecificationProject({name:"Conditional projection",site:"projection.example",id:(kind)=>`${kind}:projection`});
 projectionState.project.collections.profiles.push({id:"profile:projection",name:"Projection profile",schemaConstraints:[{path:"/flag",type:"boolean"},{path:"/target",type:"string",displayText:"Inherited display",comments:"Inherited comments"}]});

@@ -17,6 +17,7 @@ import {
   sparseComposedFacets,
   typedComposedValue,
 } from "../dist/data-layer-composed-schema-builders.js";
+import {stageComposedExpectedOrAllowed} from "../dist/data-layer-composed-schema-workspace-ui.js";
 import {compileLayeredSchema,validateLayeredObservation} from "../dist/data-layer-layered-schema.js";
 import {sharedConditionOperators,sharedConditionValueMounted,sharedTypedConditionValue} from "../dist/data-layer-shared-condition-tree-editor.js";
 import {
@@ -26,6 +27,15 @@ import {
 } from "../dist/data-layer-focused-schema-property-ui.js";
 
 const inherited={path:"/funnel_step",type:"string",presence:"required",allowedValues:["2","3a","3b"],documentation:"Checkout step"};
+const allowedExampleDraft=composedFacetDraft(
+  {path:"/customer_type",allowedValues:["retail","business"],examples:["retail"]},
+  {path:"/customer_type",type:"string",allowedValues:["retail","business"],examples:["retail"]},
+);
+const expectedExampleDraft=stageComposedExpectedOrAllowed(allowedExampleDraft,"enterprise");
+assert.equal(expectedExampleDraft.expectedValue,"enterprise");
+assert.deepEqual(expectedExampleDraft.allowedValues,[]);
+assert.equal(expectedExampleDraft.exampleMethod,"custom","an allowed-value example becomes a preserved custom example when the allowed list is replaced");
+assert.equal(expectedExampleDraft.exampleValue,"retail");
 assert.equal(sharedConditionValueMounted("Exists"),false,"Exists edits unmount the comparison input");
 assert.equal(sharedConditionValueMounted("Equals"),true,"comparison edits mount the typed input");
 assert.ok(sharedConditionOperators("number").includes("Greater than")&&!sharedConditionOperators("number").includes("Contains"),"predicate operators follow the selected property type");
@@ -95,11 +105,12 @@ assert.equal(overriddenRule.rules[0].id,"rule:local","overriding an inherited ru
 assert.equal(overriddenRule.rules[0].provenance.source,"created","overriding an inherited rule records local provenance");
 assert.equal(overriddenRule.rules[0].replacesRuleId,draft.rules[0].id,"a replacement names the inherited rule it replaces");
 assert.deepEqual(draft.rules[0],{id:"rule:parent",kind:"pattern",pattern:"^[0-9a-z]+$",severity:"error",message:"Use a known step"},"staging a replacement leaves the inherited rule byte-identical");
-assert.equal(composedRuleIssue({kind:"pattern",severity:"error",message:""}),"Enter a regular expression.");
-assert.equal(composedRuleIssue({kind:"range",minimum:10,maximum:2,severity:"error"}),"Minimum must not exceed maximum.");
-assert.equal(composedRuleIssue({kind:"cardinality",minItems:4,maxItems:1,severity:"error"}),"Minimum items must not exceed maximum items.");
-assert.equal(composedRuleIssue({kind:"condition",condition:{kind:"predicate",propertyId:"",operator:"Equals"}}),"Resolve the condition property.");
-assert.equal(composedRuleIssue({kind:"pattern",pattern:"^ok$",severity:"error"}),undefined,"an issue message remains optional");
+const validWhen={kind:"predicate",propertyId:"/customer_type",operator:"Equals",value:"retail"};
+assert.equal(composedRuleIssue({kind:"pattern",condition:validWhen,severity:"error",message:""}),"Enter a regular expression.");
+assert.equal(composedRuleIssue({kind:"range",condition:validWhen,minimum:10,maximum:2,severity:"error"}),"Minimum must not exceed maximum.");
+assert.equal(composedRuleIssue({kind:"cardinality",condition:validWhen,minItems:4,maxItems:1,severity:"error"}),"Minimum items must not exceed maximum items.");
+assert.equal(composedRuleIssue({kind:"pattern",condition:{kind:"predicate",propertyId:"",operator:"Equals"},pattern:"^ok$"}),"Resolve the When condition.");
+assert.equal(composedRuleIssue({kind:"pattern",condition:validWhen,pattern:"^ok$",severity:"error"}),undefined,"an issue message remains optional");
 
 const reusableRules=[
   {id:"rule:postal",name:"Postal code pattern"},
@@ -107,7 +118,7 @@ const reusableRules=[
 ];
 assert.deepEqual(filterFocusedReusableRules(reusableRules,"Customer"),[reusableRules[1]],"reusable-rule search filters human names");
 assert.deepEqual(filterFocusedReusableRules(reusableRules,""),reusableRules,"clearing reusable-rule search restores the library");
-assert.deepEqual(focusedRuleFields("reusable"),["reusableRuleId"],"reusable rules expose only their named library selector");
+assert.deepEqual(focusedRuleFields("reusable"),["condition","reusableRuleId"],"reusable rules expose their When condition and named library selector");
 assert.deepEqual(focusedOwnershipActions({inherited:true,invariant:true}),["View","Open source"],"invariant rule actions are shared");
 assert.deepEqual(focusedOwnershipActions({inherited:true,replaceable:true}),["View","Replace here","Open source"],"replaceable rule actions are shared");
 

@@ -18,6 +18,8 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
         }
         else
             next.allowedValues = clone(constraint.allowedValues);
+        delete next.expectedValue;
+        delete next.expectedContributor;
         if (constraint.allowedValueIds)
             next.allowedValueIds = clone(constraint.allowedValueIds);
         if (constraint.allowedValueProvenance)
@@ -55,6 +57,9 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
             else
                 next.superseded.push({ contributorId: prior.origins.at(-1).contributorId, contributorName: prior.expectedContributor ?? prior.origins.at(-1).contributorName, value: clone(prior.expectedValue) });
         }
+        delete next.allowedValues;
+        delete next.allowedValueIds;
+        delete next.allowedValueProvenance;
         next.expectedValue = clone(constraint.expectedValue);
         next.expectedContributor = contributor.name;
         next.enforcement = constraint.enforcement ?? "overridable";

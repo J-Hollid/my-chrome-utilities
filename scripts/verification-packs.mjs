@@ -283,7 +283,7 @@ export async function executeAcceptancePlan(plan, { runCommand } = {}) {
   if (typeof runCommand !== "function") {
     throw new Error("Provide an acceptance command runner");
   }
-  const commands = [
+  const commands = plan.commands ?? [
     ...(plan.preparationCommands ?? ["npm run build"]),
     ...plan.acceptanceCommands,
   ];
