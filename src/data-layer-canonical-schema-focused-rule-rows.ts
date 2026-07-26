@@ -1,7 +1,7 @@
 import type {CanonicalPropertyNode,CanonicalRule} from "./data-layer-canonical-schema.js";
 import {focusedOwnershipActions,focusedRuleFields} from "./data-layer-focused-schema-property-ui.js";
 import {renderSharedConditionTree} from "./data-layer-shared-condition-tree-editor.js";
-import {schemaTableExpectedOrAllowed,schemaTableRuleConditionSummary,schemaTableRuleOutcomeSummary,schemaTableStageExpectedOrAllowed} from "./data-layer-schema-table.js";
+import {schemaTableAllowedValues,schemaTableRuleConditionSummary,schemaTableRuleOutcomeSummary,schemaTableStageAllowedValues} from "./data-layer-schema-table.js";
 
 export interface CanonicalFocusedRuleRowsContext {dom:Document;getWorking:()=>CanonicalPropertyNode|undefined;properties?:()=>readonly {id:string;name:string;type?:string}[];removedRuleIds:Set<string>;invariant:boolean;id:(kind:string)=>string;render:()=>void;feedback:(message:string)=>void;}
 const clone=<T>(value:T):T=>structuredClone(value);
@@ -18,7 +18,7 @@ function editRule(row:HTMLElement,rule:CanonicalRule,context:CanonicalFocusedRul
     if(field==="condition")continue;
     if(field==="reusableRuleId")continue;
     if(field==="presence"){const control=dom.createElement("select");control.name="editRulePresence";control.append(new Option("Required","required"),new Option("Optional","optional"),new Option("Forbidden","forbidden"));control.value=rule.presence??"required";control.addEventListener("change",()=>update((next)=>{next.presence=control.value as NonNullable<CanonicalRule["presence"]>;}));editor.append(labeled(dom,"Then presence",control));continue;}
-    if(field==="ordinaryValue"){const control=input(dom,"editRuleOrdinaryValue",schemaTableExpectedOrAllowed(rule));control.addEventListener("input",()=>update((next)=>{const staged=schemaTableStageExpectedOrAllowed(next,control.value);if(staged.expectedValue===undefined)delete next.expectedValue;else next.expectedValue=staged.expectedValue;if(staged.allowedValues===undefined)delete next.allowedValues;else next.allowedValues=staged.allowedValues;}));editor.append(labeled(dom,"Then ordinary value",control));continue;}
+    if(field==="ordinaryValue"){const control=input(dom,"editRuleOrdinaryValue",schemaTableAllowedValues(rule));control.addEventListener("input",()=>update((next)=>{delete next.expectedValue;next.allowedValues=schemaTableStageAllowedValues(next.allowedValues??[],control.value,context.getWorking()?.type);}));editor.append(labeled(dom,"Then allowed values",control));continue;}
     const numeric=["minimum","maximum","minItems","maxItems"].includes(field),control=field==="severity"?dom.createElement("select"):input(dom,`editRule${field[0]!.toUpperCase()+field.slice(1)}`,String((rule as any)[field]??""),numeric?"number":"text");
     control.name=`editRule${field[0]!.toUpperCase()+field.slice(1)}`;if(control instanceof HTMLSelectElement){control.append(new Option("error","error"),new Option("warning","warning"));control.value=rule.severity;}control.addEventListener("input",()=>update((next)=>{(next as any)[field]=control.value===""?undefined:numeric?Number(control.value):control.value;}));editor.append(labeled(dom,field,control));
   }

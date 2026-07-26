@@ -1,6 +1,6 @@
 import { filterFocusedReusableRules, focusedOwnershipActions, focusedReusableOutcome, focusedRuleFields, focusedRuleIssue, readFocusedReusableRules } from "./data-layer-focused-schema-property-ui.js";
 import { renderSharedConditionTree } from "./data-layer-shared-condition-tree-editor.js";
-import { schemaTableExpectedOrAllowed, schemaTableReplaceExpectedOrAllowed, schemaTableRuleConditionSummary, schemaTableRuleOutcomeSummary, schemaTableStageExpectedOrAllowed } from "./data-layer-schema-table.js";
+import { schemaTableAllowedValues, schemaTableRuleConditionSummary, schemaTableRuleOutcomeSummary, schemaTableStageAllowedValues } from "./data-layer-schema-table.js";
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 const numericFields = new Set(["minimum", "maximum", "minItems", "maxItems"]);
@@ -39,10 +39,10 @@ function renderRuleEditor(row, rule, index, context) {
         if (field === "ordinaryValue") {
             const control = dom.createElement("input");
             control.name = "editRuleOrdinaryValue";
-            control.value = schemaTableExpectedOrAllowed(rule);
+            control.value = schemaTableAllowedValues(rule);
             control.addEventListener("input", () => { const draft = context.getDraft(); if (!draft)
-                return; draft.rules[index] = schemaTableReplaceExpectedOrAllowed(clone(draft.rules[index]), control.value); });
-            editor.append(labeled(dom, "Then ordinary value", control));
+                return; const next = clone(draft.rules[index]); delete next.expectedValue; next.allowedValues = schemaTableStageAllowedValues(Array.isArray(next.allowedValues) ? next.allowedValues : [], control.value, (draft.type ?? context.row.effective.type)); draft.rules[index] = next; });
+            editor.append(labeled(dom, "Then allowed values", control));
             continue;
         }
         const control = field === "severity" ? dom.createElement("select") : dom.createElement("input");
@@ -117,7 +117,7 @@ function renderAddPanel(host, context) {
             rule.presence = presence.value;
         const ordinary = fields.querySelector("[name=\"newRuleOrdinaryValue\"]");
         if (ordinary?.value)
-            Object.assign(rule, schemaTableStageExpectedOrAllowed({}, ordinary.value));
+            rule.allowedValues = schemaTableStageAllowedValues([], ordinary.value, (draft.type ?? context.row.effective.type));
         if (condition)
             rule.condition = condition;
         const reusable = fields.querySelector("[name=\"newRuleReusableRuleId\"]");
@@ -183,7 +183,7 @@ function renderAddPanel(host, context) {
             else if (numericFields.has(field))
                 control.type = "number";
             control.addEventListener("input", validate);
-            fields.append(labeled(dom, field === "ordinaryValue" ? "Then ordinary value" : field, control));
+            fields.append(labeled(dom, field === "ordinaryValue" ? "Then allowed values" : field, control));
         }
         validate();
     };

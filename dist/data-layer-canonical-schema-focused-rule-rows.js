@@ -1,6 +1,6 @@
 import { focusedOwnershipActions, focusedRuleFields } from "./data-layer-focused-schema-property-ui.js";
 import { renderSharedConditionTree } from "./data-layer-shared-condition-tree-editor.js";
-import { schemaTableExpectedOrAllowed, schemaTableRuleConditionSummary, schemaTableRuleOutcomeSummary, schemaTableStageExpectedOrAllowed } from "./data-layer-schema-table.js";
+import { schemaTableAllowedValues, schemaTableRuleConditionSummary, schemaTableRuleOutcomeSummary, schemaTableStageAllowedValues } from "./data-layer-schema-table.js";
 const clone = (value) => structuredClone(value);
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const input = (dom, name, value = "", type = "text") => { const control = dom.createElement("input"); control.name = name; control.type = type; control.value = value; return control; };
@@ -39,15 +39,9 @@ function editRule(row, rule, context) {
             continue;
         }
         if (field === "ordinaryValue") {
-            const control = input(dom, "editRuleOrdinaryValue", schemaTableExpectedOrAllowed(rule));
-            control.addEventListener("input", () => update((next) => { const staged = schemaTableStageExpectedOrAllowed(next, control.value); if (staged.expectedValue === undefined)
-                delete next.expectedValue;
-            else
-                next.expectedValue = staged.expectedValue; if (staged.allowedValues === undefined)
-                delete next.allowedValues;
-            else
-                next.allowedValues = staged.allowedValues; }));
-            editor.append(labeled(dom, "Then ordinary value", control));
+            const control = input(dom, "editRuleOrdinaryValue", schemaTableAllowedValues(rule));
+            control.addEventListener("input", () => update((next) => { delete next.expectedValue; next.allowedValues = schemaTableStageAllowedValues(next.allowedValues ?? [], control.value, context.getWorking()?.type); }));
+            editor.append(labeled(dom, "Then allowed values", control));
             continue;
         }
         const numeric = ["minimum", "maximum", "minItems", "maxItems"].includes(field), control = field === "severity" ? dom.createElement("select") : input(dom, `editRule${field[0].toUpperCase() + field.slice(1)}`, String(rule[field] ?? ""), numeric ? "number" : "text");

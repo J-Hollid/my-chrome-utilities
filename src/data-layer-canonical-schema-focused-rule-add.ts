@@ -1,7 +1,7 @@
 import type {CanonicalPredicate,CanonicalPropertyNode,CanonicalRule} from "./data-layer-canonical-schema.js";
 import {filterFocusedReusableRules,focusedReusableOutcome,focusedRuleFields,focusedRuleIssue,readFocusedReusableRules} from "./data-layer-focused-schema-property-ui.js";
 import {renderSharedConditionTree} from "./data-layer-shared-condition-tree-editor.js";
-import {schemaTableStageExpectedOrAllowed} from "./data-layer-schema-table.js";
+import {schemaTableStageAllowedValues} from "./data-layer-schema-table.js";
 
 export interface CanonicalFocusedRuleAddContext {dom:Document;getWorking:()=>CanonicalPropertyNode|undefined;properties?:()=>readonly {id:string;name:string;type?:string}[];id:(kind:string)=>string;render:()=>void;feedback:(message:string)=>void;}
 const labeled=(dom:Document,text:string,control:HTMLElement):HTMLLabelElement=>{const label=dom.createElement("label");label.append(text,control);return label;};
@@ -22,7 +22,7 @@ export function renderCanonicalRuleAddPanel(host:HTMLElement,context:CanonicalFo
       if(control&&control.value!=="")Object.assign(rule,{[field]:numericFields.has(field)?Number(control.value):control.value});
     }
     const presence=fields.querySelector<HTMLSelectElement>("[name=\"newRulePresence\"]");if(presence?.value)rule.presence=presence.value as NonNullable<CanonicalRule["presence"]>;
-    const ordinary=fields.querySelector<HTMLInputElement>("[name=\"newRuleOrdinaryValue\"]");if(ordinary?.value)Object.assign(rule,schemaTableStageExpectedOrAllowed({},ordinary.value));
+    const ordinary=fields.querySelector<HTMLInputElement>("[name=\"newRuleOrdinaryValue\"]");if(ordinary?.value)rule.allowedValues=schemaTableStageAllowedValues([],ordinary.value,working.type);
     if(condition)rule.condition=condition;
     const reusable=fields.querySelector<HTMLSelectElement>("[name=\"newRuleReusableRuleId\"]");
     if(reusable?.value){rule.reusableRuleId=reusable.value;const source=readFocusedReusableRules().find(({id})=>id===reusable.value),name=source?.name??reusable.selectedOptions[0]?.textContent,outcome=source&&focusedReusableOutcome(source);if(name)rule.name=name;if(outcome)rule.reusableOutcome=outcome;}
@@ -40,7 +40,7 @@ export function renderCanonicalRuleAddPanel(host:HTMLElement,context:CanonicalFo
         search.addEventListener("input",renderChoices);reusable.addEventListener("change",validate);renderChoices();fields.append(labeled(dom,"Search reusable rules",search),labeled(dom,"Reusable rule",reusable));continue;
       }
       if(field==="presence"){const control=dom.createElement("select");control.name="newRulePresence";control.append(new Option("Choose presence",""),new Option("Required","required"),new Option("Optional","optional"),new Option("Forbidden","forbidden"));control.addEventListener("change",validate);fields.append(labeled(dom,"Then presence",control));continue;}
-      const control=field==="severity"?dom.createElement("select"):input(dom,`newRule${field[0]!.toUpperCase()+field.slice(1)}`,"",numericFields.has(field)?"number":"text");control.name=`newRule${field[0]!.toUpperCase()+field.slice(1)}`;if(control instanceof HTMLSelectElement)control.append(new Option("error","error"),new Option("warning","warning"));control.addEventListener("input",validate);fields.append(labeled(dom,field==="ordinaryValue"?"Then ordinary value":field,control));
+      const control=field==="severity"?dom.createElement("select"):input(dom,`newRule${field[0]!.toUpperCase()+field.slice(1)}`,"",numericFields.has(field)?"number":"text");control.name=`newRule${field[0]!.toUpperCase()+field.slice(1)}`;if(control instanceof HTMLSelectElement)control.append(new Option("error","error"),new Option("warning","warning"));control.addEventListener("input",validate);fields.append(labeled(dom,field==="ordinaryValue"?"Then allowed values":field,control));
     }
     validate();
   };

@@ -1,6 +1,6 @@
 import { filterFocusedReusableRules, focusedReusableOutcome, focusedRuleFields, focusedRuleIssue, readFocusedReusableRules } from "./data-layer-focused-schema-property-ui.js";
 import { renderSharedConditionTree } from "./data-layer-shared-condition-tree-editor.js";
-import { schemaTableStageExpectedOrAllowed } from "./data-layer-schema-table.js";
+import { schemaTableStageAllowedValues } from "./data-layer-schema-table.js";
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const input = (dom, name, value = "", type = "text") => { const control = dom.createElement("input"); control.name = name; control.type = type; control.value = value; return control; };
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
@@ -29,7 +29,7 @@ export function renderCanonicalRuleAddPanel(host, context) {
             rule.presence = presence.value;
         const ordinary = fields.querySelector("[name=\"newRuleOrdinaryValue\"]");
         if (ordinary?.value)
-            Object.assign(rule, schemaTableStageExpectedOrAllowed({}, ordinary.value));
+            rule.allowedValues = schemaTableStageAllowedValues([], ordinary.value, working.type);
         if (condition)
             rule.condition = condition;
         const reusable = fields.querySelector("[name=\"newRuleReusableRuleId\"]");
@@ -92,7 +92,7 @@ export function renderCanonicalRuleAddPanel(host, context) {
             if (control instanceof HTMLSelectElement)
                 control.append(new Option("error", "error"), new Option("warning", "warning"));
             control.addEventListener("input", validate);
-            fields.append(labeled(dom, field === "ordinaryValue" ? "Then ordinary value" : field, control));
+            fields.append(labeled(dom, field === "ordinaryValue" ? "Then allowed values" : field, control));
         }
         validate();
     };

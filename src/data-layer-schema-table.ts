@@ -1,3 +1,6 @@
+import type {CanonicalPredicate,CanonicalPropertyType} from "./data-layer-canonical-schema.js";
+import {typedCanonicalValue} from "./data-layer-canonical-schema-facets.js";
+
 export const schemaTableColumns=[
   {key:"property",label:"Property"},
   {key:"path",label:"Path"},
@@ -150,5 +153,3 @@ export function schemaTableReplaceExpectedOrAllowed<T extends {
   const {allowedValueIds:_,allowedValueProvenance:__,...expected}=staged;
   return{...expected,allowedValues:[]} as unknown as T;
 }
-import type {CanonicalPredicate,CanonicalPropertyType} from "./data-layer-canonical-schema.js";
-import {typedCanonicalValue} from "./data-layer-canonical-schema-facets.js";

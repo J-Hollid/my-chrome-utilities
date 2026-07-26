@@ -115,7 +115,7 @@ export function renderSharedConditionTree(host, options) {
         empty.setAttribute("aria-label", "Empty When builder");
         empty.append(button(dom, "Add condition", () => insert(undefined, emptyPredicate())), groupChoice(undefined));
         host.append(empty);
-    } };
+    } queueMicrotask(() => { const layer = host.closest("[data-schema-row-overlay=\"true\"]"); (layer ?? host).scrollIntoView({ block: "nearest", inline: "nearest" }); }); };
     render();
 }
 //# sourceMappingURL=data-layer-shared-condition-tree-editor.js.map

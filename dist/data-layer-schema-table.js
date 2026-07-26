@@ -1,3 +1,4 @@
+import { typedCanonicalValue } from "./data-layer-canonical-schema-facets.js";
 export const schemaTableColumns = [
     { key: "property", label: "Property" },
     { key: "path", label: "Path" },
@@ -149,5 +150,4 @@ export function schemaTableReplaceExpectedOrAllowed(source, text) {
     const { allowedValueIds: _, allowedValueProvenance: __, ...expected } = staged;
     return { ...expected, allowedValues: [] };
 }
-import { typedCanonicalValue } from "./data-layer-canonical-schema-facets.js";
 //# sourceMappingURL=data-layer-schema-table.js.map

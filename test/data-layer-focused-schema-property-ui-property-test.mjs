@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {filterFocusedReusableRules,focusedConditionLabel,focusedOwnershipActions,focusedPropertySections,focusedRuleFields,focusedSparseDelta} from "../dist/data-layer-focused-schema-property-ui.js";
-import {schemaTableOverlayTransition,schemaTableStageExpectedOrAllowed,schemaTableValueFacet} from "../dist/data-layer-schema-table.js";
+import {schemaTableAllowedValues,schemaTableExampleControl,schemaTableOverlayTransition,schemaTableStageAllowedValues,schemaTableStageExpectedOrAllowed,schemaTableValueFacet} from "../dist/data-layer-schema-table.js";
 
 const expectedSections=["definition","rules","structure"];
 assert.deepEqual(focusedPropertySections,expectedSections,"every focused editor shares the same ordered section vocabulary");
@@ -29,6 +29,18 @@ for(const type of ["string","number","integer","boolean","null","object","array"
   assert.equal(allowedProjection.kind,"allowed");
   assert.notEqual(allowedProjection.text,JSON.stringify([first,second]),"the allowed-value set has no enclosing JSON brackets");
   assert.deepEqual(schemaTableStageExpectedOrAllowed(allowedSource,allowedProjection.text),allowedSource,`${type} allowed values round-trip in order without losing types`);
+}
+for(const type of ["string","number","integer","boolean","null","object","array"])for(let index=0;index<100;index+=1){
+  const values=[generatedValue(type,index),generatedValue(type,index+100)],source={allowedValues:values,untouched:`metadata-${type}-${index}`},before=structuredClone(source),text=schemaTableAllowedValues(source);
+  assert.notEqual(text,JSON.stringify(values),`${type} allowed values use comma-separated authoring text rather than an enclosing collection`);
+  assert.deepEqual(schemaTableStageAllowedValues(values,text,type),values,`${type} allowed values round-trip without changing order or types`);
+  assert.deepEqual(source,before,`${type} allowed-value projection conserves its source object`);
+  const legacy={expectedValue:values[0],untouched:`legacy-${index}`},legacyBefore=structuredClone(legacy);
+  assert.deepEqual(schemaTableStageAllowedValues([],schemaTableAllowedValues(legacy),type),[values[0]],`${type} legacy exact values project as one typed allowed value`);
+  assert.deepEqual(legacy,legacyBefore,`${type} legacy exact projection does not mutate its source`);
+  assert.deepEqual(schemaTableExampleControl("blank",values),{kind:"none"});
+  assert.deepEqual(schemaTableExampleControl("allowed-value",values),{kind:"select",values});
+  assert.deepEqual(schemaTableExampleControl("custom",values),{kind:"input"});
 }
 assert.deepEqual(schemaTableStageExpectedOrAllowed({expectedValue:{first:1,second:2}},'{"first":3,"second":4}'),{expectedValue:{first:3,second:4}});
 assert.deepEqual(schemaTableStageExpectedOrAllowed({expectedValue:"contact"},'contact, delivery, payment'),{allowedValues:["contact","delivery","payment"]});
