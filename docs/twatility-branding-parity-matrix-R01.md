@@ -17,6 +17,9 @@ mock's own coverage claim.
 - Slice 6 opening master-boundary result: 15 upstream commits adding
   project-scoped event transport, nullable active-project context, and the
   relationship-derived side-panel Schema tree
+- Slice 6 closing master-boundary result: no upstream delta through
+  `2026-07-26T20:52:49.0487554Z`; the finite cutoff remains
+  `452deaba03279a95c20dd25c90862de338ae0c64`
 - Current authority: fetched `origin/master` version of
   `docs/swarmforge-active-scope.md`, its nine named programs, and all 22 active
   behavior/runtime contracts
@@ -492,6 +495,7 @@ accessible relationships, focus, and recovery remain authoritative.
 | Slice 5 opening fetch | 2026-07-26T17:55:20.7165647Z | `7edae41131a4e6a282d80f67a2fbcfbada52beb3` | `7edae41131a4e6a282d80f67a2fbcfbada52beb3` | none | No controls, states, routes, persistence contracts, active-scope authorities, canonical command contracts, test owners, build inputs, or package inputs changed upstream. | No merge or parity reclassification required; Slice 5 starts from approved integration commit `9b2c0cb0` with the same finite master cutoff |
 | Slice 5 closing fetch | 2026-07-26T18:43:47.7269678Z | `7edae41131a4e6a282d80f67a2fbcfbada52beb3` | `7edae41131a4e6a282d80f67a2fbcfbada52beb3` | none | No controls, states, routes, persistence contracts, active-scope authorities, canonical command contracts, test owners, build inputs, or package inputs changed upstream during Slice 5. | No merge, conflict resolution, or parity reclassification required before the finite Slice 5 terminal gate |
 | Slice 6 opening fetch | 2026-07-26T20:13:01Z | `7edae41131a4e6a282d80f67a2fbcfbada52beb3` | `452deaba03279a95c20dd25c90862de338ae0c64` | 15 commits: project event transport settings, nullable active-project context, and side-panel schema relationship tree | Adds separately editable project Observation history and Default push paths; explicit no-project and invalid-path reasons; new/captured Library destination seeding with explicit saved-destination precedence; Close project and nullable cross-window context; one relationship-derived Schema tree with category filter, hierarchy search/breadcrumbs, repeated stable canonical references, project-scoped ephemeral view state, keyboard/focus and 360/520px geometry. No new top-level route. Project Draft gains portable `eventTransport`; tree state remains non-portable view data. Active scope adds two programs/four contracts and exact `project_event_transport`/`schema_relationship_tree` pack ownership. | Added transport, Library precedence, Close/no-project/convergence, relationship-tree, invalid-path, owner and verification rows before Slice 6 implementation. Merged only into the branding feature lineage; source/test conflicts were behaviorally combined and generated maps rebuilt. Both exact overlap packs and `node scripts/package.mjs` passed. |
+| Slice 6 closing fetch | 2026-07-26T20:52:49.0487554Z | `452deaba03279a95c20dd25c90862de338ae0c64` | `452deaba03279a95c20dd25c90862de338ae0c64` | none | No controls, states, routes, persistence contracts, active-scope authorities, verification owners, build inputs, or package inputs changed upstream during Slice 6. | No merge, conflict resolution, or parity reclassification was required after the opening master integration. The finite Slice 6 gate ran against the same audited cutoff. |
 
 Every later slice boundary must append a row even when the merge is clean. Any
 master delta must list controls, states, routes, persistence contracts, active
@@ -877,3 +881,62 @@ modified, committed to, merged into, or pushed. The remaining workflow/state
 coverage, dialogs, assurance, import/export, conflict/recovery, accessibility
 polish, adapter cleanup, final control-map reconciliation, and final screenshot
 set retain Slice 6 ownership.
+
+## Slice 6 remaining workflows and polish completion
+
+Slice 6 completes the migration decisions recorded throughout this matrix.
+Every row assigned to Slice 6 is implemented as scoped presentation over the
+installed production renderer or intentionally preserved/omitted according to
+its existing decision. No mock behavior, fake result, fictional logo, archived
+scope, or alternate persistence boundary was introduced.
+
+The final side-panel layer covers Live summary/setup/lifecycle/source/query/
+timeline/inspector/guided/settings states; separate project Observation and
+push-path transport; Library toolbar/rows/editor/reviews/sequences; Sessions;
+Defects; the relationship-derived Schema tree; Rule Library; Assignments; and
+their empty, blocked, warning, error, detail, review, and recovery projections.
+The tree keeps production-owned `tree`/`treeitem` identity, level, expanded,
+selected, first-button keyboard authority, project-local view state, and the
+outer Data Layer vertical scroll owner.
+
+The final Studio layer covers all eight entity collection/list/create/edit/
+remove routes, contextual forms, Page and Page Group composition, Events,
+Applicability, Fixtures, Assignments, the Flow canvas and its local two-axis
+scroll owner, project Documentation Set/Content/Configure/Theme/Preview/Export,
+preflight and coverage, publication, adoption, import, stale-write conflict,
+and failed-save recovery reviews. Existing desktop nav/workspace/inspector
+scroll ownership and narrow document scroll ownership remain unchanged.
+
+Final control-map reconciliation confirmed:
+
+- branding disabled/enabled leaves inspected tag, ID, type, role, hidden,
+  disabled, and ARIA-reference state identical;
+- every named Slice 6 stable ID and semantic renderer seam remains installed;
+- project transport and relationship-tree controls from the opening master
+  delta are present and covered by their exact production packs;
+- no obsolete mock selector, mock JavaScript adapter, eager documentation
+  dialog, fictional action, or broad unscoped Slice 6 selector was added; and
+- generated `dist/` CSS was rebuilt from the verified source.
+
+The packaged real-extension evidence lives in
+`docs/twatility-branding-evidence/slice-6-workflows/` and covers 360/420/512/520
+side-panel widths, 1280/1440/1720 Studio widths, and a 640×450 CSS viewport as
+the 200%-equivalent check. It records no document/body overflow, no broken
+inspected ARIA reference, no branding control-equivalence change, successful
+native Schema-tree End traversal, effective reduced-motion timing, retained
+forced-colours boundaries, and no runtime/load error.
+
+The closing focused tier passed:
+
+- `node scripts/run-focused-acceptance.mjs --pack branding_polish`;
+- `node scripts/run-focused-acceptance.mjs --pack project_event_transport`;
+- `node scripts/run-focused-acceptance.mjs --pack schema_relationship_tree`;
+- `node scripts/package.mjs`.
+
+The Slice 6 closing fetch found no upstream change after the opening merge.
+`origin/master` remains `452deaba03279a95c20dd25c90862de338ae0c64` at the
+recorded finite cutoff. This completes the six implementation slices but is not
+the program terminal gate: after user review, the program still requires a new
+`FINAL_MASTER_BASE` fetch/timestamp, finite final master-delta audit and merge,
+and the full terminal validation suite before the integration branch can be
+reported merge-ready.
