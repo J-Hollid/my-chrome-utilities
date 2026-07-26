@@ -7,6 +7,13 @@ import {
   renderFlowDocumentationClipboard,
   writeFlowDocumentationWorkbook,
 } from "../dist/data-layer-flow-table-documentation-export.js";
+import {
+  compileProjectDocumentationSnapshot,
+  createProjectDocumentationSet,
+  createProjectDocumentationTheme,
+  selectProjectDocumentationTables,
+  themeFingerprint,
+} from "../dist/data-layer-project-documentation-workspace.js";
 
 const permutations=(values)=>values.length<2?[values]:values.flatMap((value,index)=>permutations(values.filter((_,candidate)=>candidate!==index)).map((rest)=>[value,...rest]));
 const occurrences=[{id:"cart",pageGroupId:"checkout"},{id:"shipping",pageGroupId:"shipping"},{id:"payment",pageGroupId:"payment"},{id:"confirmation",pageGroupId:"confirmation"}];
@@ -23,5 +30,40 @@ const configured=configureFlowDocumentationSnapshot(snapshot,{contextOrder:["con
 for(const prefix of ["'=SUM(1,2)","'+1","'-2","'@name"])assert.equal(renderFlowDocumentationClipboard(configureFlowDocumentationTable(snapshot,"values",{selectedPaths:["/unsafe"]})).plain.includes(prefix),true);
 assert.match(copy.html,/&lt;strong&gt;<br>line/);assert.doesNotMatch(copy.html,/<strong>/);assert.doesNotMatch(binary,/<f>/);assert.match(binary,/Checkout · Published/);
 assert.deepEqual(snapshot.contexts.map(({id})=>id),["context:a","context:b","context:c","context:d"]);
+
+for(let index=0;index<100;index+=1){
+  const theme=createProjectDocumentationTheme({
+    id:` theme:${index}\u0000 `,
+    name:` Theme ${index} `,
+    clientName:index%2?" Client ":"",
+    logo:index%3===0?"https://example.test/logo.png":"javascript:unsafe",
+    colors:{heading:index%2?"#123abc":"invalid",accent:"#336699",stripe:"#f4f4f4"},
+    typography:{family:index%4?" Inter ":"",headingSize:index-20,bodySize:30-index},
+    density:index%2?"compact":"comfortable",
+    borders:index%3===0,
+    striping:index%5===0,
+    highlightedHeadings:index%7===0,
+    columnWidths:{Property:index-10,Description:20+index},
+    headerText:` Header ${index} `,
+    footerText:` Footer ${index} `,
+  });
+  assert.deepEqual(createProjectDocumentationTheme(theme),theme);
+  assert.equal(themeFingerprint(createProjectDocumentationTheme(theme)),themeFingerprint(theme));
+  assert.equal(Object.isFrozen(theme)&&Object.isFrozen(theme.colors)&&Object.isFrozen(theme.typography),true);
+
+  const sections=[
+    {id:`overview:${index}`,kind:"overview",name:"Overview",selected:true},
+    {id:`flow:${index}`,kind:"flow",name:"Flow",targetId:`flow-target:${index}`,selected:index%2===0},
+    {id:`matrix:${index}`,kind:"matrix",name:"Matrix",selected:true},
+    {id:`profile:${index}`,kind:"profile",name:"Profile",targetId:`profile-target:${index}`,selected:true},
+  ];
+  const set=createProjectDocumentationSet({id:`set:${index}`,name:`Set ${index}`,themeId:theme.id,sections});
+  assert.deepEqual(createProjectDocumentationSet(set),set);
+  const tables=sections.map(({id,name})=>({id,title:name,headings:["Property"],rows:[[id]]}));
+  const projectSnapshot=compileProjectDocumentationSnapshot({projectId:"project",projectName:"Shop",set,theme,sourceRevisions:{project:index},generatedAt:"2026-07-26T00:00:00.000Z",tables,diagnostics:[]});
+  const requested=sections.map(({id})=>id).reverse();
+  assert.deepEqual(selectProjectDocumentationTables(projectSnapshot,{scope:"selected",selectedSectionIds:requested}).map(({id})=>id),sections.map(({id})=>id));
+  assert.deepEqual(selectProjectDocumentationTables(projectSnapshot,{scope:"complete"}).map(({id})=>id),sections.filter(({selected})=>selected).map(({id})=>id));
+}
 
 console.log("Flow table documentation export property tests passed");
