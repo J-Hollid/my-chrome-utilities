@@ -174,7 +174,6 @@ try{
     return (await repository.activeProjectId())===${JSON.stringify(projectId)};
   })()`);
   assert.equal(seeded,true);
-  studio.events.length=0;
 
   const route=(kind)=>`${base}specification-builder.html?project=${projectId}&kind=${kind}`;
   const openNamed=async(kind,name)=>{
@@ -188,7 +187,12 @@ try{
       if(!await evaluate(studio,"document.querySelector('[aria-label=\"Shared editable condition tree\"]')?.isConnected")){
         await evaluate(studio,`(()=>{const root=document.querySelector('[aria-label="Builder canonical schema editor"]');let rule=root.querySelector('[data-rule-id="rule:retail-code"]');if(!rule){root.querySelector('[data-property-id] [aria-label^="Property actions"]').click();[...root.querySelectorAll('[data-property-context-menu="true"] button')].find(({textContent})=>textContent.trim()==='Rules').click();rule=root.querySelector('[data-rule-id="rule:retail-code"]');}const edit=[...rule.querySelectorAll('button')].find(({textContent})=>textContent.trim()==='Edit');edit.click();})()`);
       }
-      await ready(studio,"document.querySelector('[aria-label=\"Shared editable condition tree\"]')?.isConnected","canonical shared condition");
+      let connected=false;
+      for(let poll=0;poll<80;poll+=1){
+        if(await evaluate(studio,"document.querySelector('[aria-label=\"Shared editable condition tree\"]')?.isConnected")){connected=true;break;}
+        await wait(25);
+      }
+      if(!connected)continue;
       await wait(100);
       if(await evaluate(studio,"document.querySelector('[aria-label=\"Shared editable condition tree\"]')?.isConnected"))return;
     }
@@ -201,12 +205,14 @@ try{
     sheet.disabled=true;const unbranded=fingerprint();sheet.disabled=false;
     const unnamed=controls.filter((control)=>!((control.getAttribute('aria-label')||control.textContent||control.value||'').trim())&&!control.labels?.length).map(({tagName})=>tagName);
     const broken=[...root.querySelectorAll('[aria-controls],[aria-labelledby],[aria-describedby]')].flatMap((element)=>['aria-controls','aria-labelledby','aria-describedby'].flatMap((name)=>(element.getAttribute(name)||'').split(/\\s+/).filter(Boolean).filter((id)=>!document.getElementById(id)).map((id)=>name+':'+id)));
-    const rect=root.getBoundingClientRect(),horizontalOut=[...root.querySelectorAll('[data-condition-kind],button,input,select,textarea')].filter((element)=>{const bounds=element.getBoundingClientRect();return bounds.width&&bounds.left<-.5||bounds.right>innerWidth+.5;}).map((element)=>element.getAttribute('aria-label')||element.textContent?.trim()||element.tagName);
-    return{equivalent:JSON.stringify(branded)===JSON.stringify(unbranded),unnamed,broken,horizontalOut,overflow:document.documentElement.scrollWidth>innerWidth+1||rect.left<-.5||rect.right>innerWidth+.5||horizontalOut.length>0,width:innerWidth,height:innerHeight,controls:controls.length};
+    const rect=root.getBoundingClientRect(),horizontalOut=[...root.querySelectorAll('[data-condition-kind],button,input,select,textarea')].filter((element)=>{const bounds=element.getBoundingClientRect();return bounds.width&&(bounds.left<-.5||bounds.right>innerWidth+.5);}).map((element)=>element.getAttribute('aria-label')||element.textContent?.trim()||element.tagName);
+    const localTreeOut=[...root.querySelectorAll('[aria-label="Shared editable condition tree"],[aria-label="Shared editable project condition tree"]')].flatMap((tree)=>{const container=tree.getBoundingClientRect();return[...tree.querySelectorAll('[data-condition-kind],button,input,select,textarea,label')].filter((element)=>{const bounds=element.getBoundingClientRect();return bounds.width&&(bounds.left<container.left-.5||bounds.right>container.right+.5);}).map((element)=>element.getAttribute('aria-label')||element.textContent?.trim()||element.tagName);});
+    return{equivalent:JSON.stringify(branded)===JSON.stringify(unbranded),unnamed,broken,horizontalOut,localTreeOut,overflow:document.documentElement.scrollWidth>innerWidth+1||rect.left<-.5||rect.right>innerWidth+.5||horizontalOut.length>0||localTreeOut.length>0,width:innerWidth,height:innerHeight,controls:controls.length};
   })()`);
 
   await openNamed("profiles","Commerce foundation");
   await ready(studio,"document.querySelector('[aria-label=\"Builder canonical schema editor\"] [data-property-id]')?.isConnected","canonical property");
+  studio.events.length=0;
   await openCanonicalRuleTree();
   const canonical1280=await inspect(studio,'[aria-label="Builder canonical schema editor"]');
   assert.equal(await evaluate(studio,"Boolean(document.querySelector('[data-rule-id=\"rule:retail-code\"] [data-condition-kind=\"group\"]')&&document.querySelector('[data-rule-id=\"rule:retail-code\"] [data-condition-kind=\"predicate\"]')&&!document.querySelector('[data-rule-id=\"rule:retail-code\"] button:is([aria-label=\"View\"],[aria-label=\"Add child\"])'))"),true);
@@ -260,6 +266,7 @@ try{
     assert.equal(result.equivalent,true,`${result.width}px control equivalence`);
     assert.deepEqual(result.unnamed,[],`${result.width}px accessible control names`);
     assert.deepEqual(result.broken,[],`${result.width}px ARIA references`);
+    assert.deepEqual(result.localTreeOut,[],`${result.width}px local condition-tree containment`);
     assert.equal(result.overflow,false,`${result.width}px rules viewport overflow`);
   }
   const runtimeErrors=[...studio.events,...sidePanel.events].filter(({method,params})=>method==="Runtime.exceptionThrown"||(method==="Log.entryAdded"&&params.entry.level==="error")||(method==="Network.loadingFailed"&&!params.canceled));
