@@ -362,7 +362,9 @@
     "unit": [
       "test/data-layer-project-event-transport-test.mjs"
     ],
-    "property": [],
+    "property": [
+      "test/data-layer-project-event-transport-property-test.mjs"
+    ],
     "features": [
       "features/data-layer-project-event-transport-settings.feature",
       "features/data-layer-project-event-transport-settings-runtime.feature"
