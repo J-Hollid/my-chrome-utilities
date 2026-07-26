@@ -694,3 +694,578 @@ body.twatility-studio {
     border-inline-start-color: Highlight;
   }
 }
+
+/*
+ * Slice 6: production entity, Flow, documentation, assurance, transfer, and
+ * recovery surfaces. Renderers and contracts remain behavior authority.
+ */
+.twatility-studio #project-empty {
+  min-width: 0;
+  padding: clamp(1rem, 4vw, 3rem);
+  background:
+    linear-gradient(115deg, #f4e7c9ee, #fffaf0ee),
+    var(--twa-paper);
+}
+
+.twatility-studio .start-screen {
+  width: min(100%, 66rem);
+  padding: clamp(1rem, 3vw, 2rem);
+  border: 0.1rem solid var(--border);
+  border-block-start: 0.42rem solid var(--twa-mustard);
+  border-radius: var(--twa-radius-large);
+  background:
+    url("assets/brand/technical-analyst.png") right 1rem bottom 1rem / min(11rem, 22vw)
+      auto no-repeat,
+    var(--twa-paper-raised);
+  box-shadow: var(--twa-shadow-large);
+}
+
+.twatility-studio .start-screen > h1 {
+  margin-block-start: 0;
+  color: var(--twa-navy-deep);
+}
+
+.twatility-studio .start-paths {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr));
+  gap: 0.58rem;
+  margin-block: 1rem;
+}
+
+.twatility-studio .start-paths button {
+  min-width: 0;
+  min-height: 6rem;
+  border-inline-start: 0.28rem solid var(--twa-mustard);
+  background: color-mix(in srgb, var(--twa-blue-soft) 42%, var(--twa-paper-raised));
+  color: var(--twa-navy-deep);
+  text-align: start;
+}
+
+.twatility-studio .start-paths button span {
+  display: block;
+  margin-block-start: 0.32rem;
+  color: var(--twa-muted);
+  font-size: 0.84rem;
+  font-weight: 500;
+}
+
+.twatility-studio #create-project-form {
+  width: min(100%, 38rem);
+  padding: 0.85rem;
+  border: 0.08rem solid var(--border);
+  border-radius: var(--twa-radius-medium);
+  background: #fffaf0dd;
+}
+
+.twatility-studio
+  :is(
+    [data-project-entity-workspace],
+    [data-creation-kind],
+    [data-removal-kind],
+    [aria-label="Project Documentation workspace"]
+  ) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.twatility-studio
+  :is(
+    [data-project-entity-workspace],
+    [data-creation-kind],
+    [data-removal-kind],
+    [aria-label="Project Documentation workspace"]
+  )
+  > h1 {
+  padding-block-end: 0.55rem;
+  border-block-end: 0.18rem solid var(--twa-mustard);
+  color: var(--twa-navy-deep);
+}
+
+.twatility-studio :is(.entity-row, .coverage-row) {
+  min-width: 0;
+  border-inline-start: 0.25rem solid var(--twa-mustard);
+  background:
+    linear-gradient(105deg, #fffaf0, var(--twa-paper-raised)),
+    var(--twa-paper-raised);
+}
+
+.twatility-studio :is(.entity-row, .coverage-row) > * {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.twatility-studio .entity-row > button:first-child,
+.twatility-studio .coverage-row > button:first-child {
+  color: var(--twa-navy-deep);
+  text-align: start;
+}
+
+.twatility-studio .entity-row > button:last-child {
+  border-color: color-mix(in srgb, var(--twa-danger) 62%, var(--border));
+  color: var(--twa-danger);
+}
+
+.twatility-studio .status-text {
+  max-width: 100%;
+  padding: 0.48rem 0.62rem;
+  border-inline-start: 0.26rem solid var(--twa-status-info);
+  background: color-mix(in srgb, var(--twa-blue-soft) 35%, var(--twa-paper-raised));
+  overflow-wrap: anywhere;
+}
+
+.twatility-studio .project-guidance {
+  max-width: none;
+  border-inline-start: 0.3rem solid var(--twa-mustard);
+}
+
+.twatility-studio
+  :is(.task-entry-points, .editor-actions, .membership-row-actions) {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.48rem;
+}
+
+.twatility-studio .specification-map {
+  display: grid;
+  gap: 0.38rem;
+  padding-inline-start: 1.3rem;
+}
+
+.twatility-studio .collection-lifecycle-page {
+  padding: clamp(0.8rem, 2vw, 1.2rem);
+  border-inline-start: 0.3rem solid var(--twa-red);
+  background: var(--twa-paper-raised);
+}
+
+.twatility-studio .collection-lifecycle-page > div {
+  padding-block-start: 0.65rem;
+  border-block-start: 0.08rem solid var(--border);
+}
+
+.twatility-studio .contextual-editor {
+  border-block-start: 0.26rem solid var(--twa-mustard);
+  background:
+    linear-gradient(140deg, #fffaf0ee, var(--twa-paper-raised)),
+    var(--twa-paper-raised);
+  box-shadow: var(--twa-shadow-small);
+}
+
+.twatility-studio .contextual-editor :is(input, textarea, select) {
+  min-width: 0;
+  max-width: 100%;
+  background: #fffdf8;
+}
+
+.twatility-studio .contextual-editor :is(table, pre) {
+  scrollbar-color: var(--twa-mustard-dark) transparent;
+}
+
+.twatility-studio :is(.composed-schema-workspace, #bulk-stage-review) {
+  border-color: var(--border);
+  border-block-start: 0.24rem solid var(--twa-mustard);
+  background: var(--twa-paper-raised);
+  box-shadow: var(--twa-shadow-small);
+}
+
+.twatility-studio #flow-graph-workspace {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.twatility-studio .flow-projections {
+  min-width: 0;
+  gap: 0.85rem;
+}
+
+.twatility-studio .flow-projections > section {
+  border-color: var(--border);
+  background: color-mix(in srgb, var(--twa-blue-soft) 24%, var(--twa-paper-raised));
+  box-shadow: 0.1rem 0.12rem 0 color-mix(in srgb, var(--twa-ink) 16%, transparent);
+}
+
+.twatility-studio .documentary-flow {
+  min-width: 0;
+  padding: 0.78rem;
+  border: 0.1rem solid var(--border);
+  border-block-start: 0.3rem solid var(--twa-mustard);
+  border-radius: var(--twa-radius-medium);
+  background: var(--twa-paper-raised);
+}
+
+.twatility-studio
+  .documentary-flow
+  > [aria-label="Flow component catalogs"] {
+  min-width: 0;
+}
+
+.twatility-studio
+  .documentary-flow
+  > :is(
+    [aria-label$=" catalog"],
+    [aria-label="Page Group lane controls"],
+    [aria-label="Flow Page frames"],
+    [aria-label="Selected node inline actions"],
+    [aria-label="Inline relationship popover"]
+  ) {
+  min-width: 0;
+  border-color: var(--border);
+  border-inline-start: 0.22rem solid var(--twa-mustard);
+  background: #fffaf0;
+}
+
+.twatility-studio .flow-canvas-scroll {
+  min-width: 0;
+  max-width: 100%;
+  border-radius: var(--twa-radius-medium);
+  scrollbar-color: var(--twa-mustard-dark) var(--twa-paper);
+}
+
+.twatility-studio .flow-graph-canvas {
+  border-width: 0.12rem;
+  border-color: var(--twa-navy);
+  background:
+    radial-gradient(circle at 0.08rem 0.08rem, #0b31551a 0 0.05rem, transparent 0.06rem)
+      0 0 / 0.62rem 0.62rem,
+    #fffdf8;
+}
+
+.twatility-studio .flow-node rect {
+  fill: #fffaf0;
+  stroke: var(--twa-navy);
+}
+
+.twatility-studio .flow-node:focus rect,
+.twatility-studio .flow-edge.is-selected line {
+  stroke: var(--twa-red);
+}
+
+.twatility-studio .flow-edge.is-selected polygon {
+  fill: var(--twa-red);
+}
+
+.twatility-studio .flow-empty-state {
+  border-color: var(--twa-mustard-dark);
+  background: #fffaf0;
+}
+
+.twatility-studio #flow-step-editor {
+  border-inline-start: 0.24rem solid var(--twa-red);
+}
+
+.twatility-studio
+  [aria-label="Project Documentation workspace"] {
+  display: grid;
+  gap: 0.72rem;
+}
+
+.twatility-studio
+  [aria-label="Project Documentation workspace"]
+  > :is(nav, section, form, fieldset, div) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.twatility-studio
+  [aria-label="Project Documentation workspace"]
+  :is(
+    [aria-label="Documentation section outline"],
+    [data-configuration-kind],
+    [data-theme-group],
+    [aria-label="Documentation preview"],
+    [aria-label="Documentation export"]
+  ) {
+  min-width: 0;
+  padding: 0.7rem;
+  border: 0.08rem solid var(--border);
+  border-inline-start: 0.25rem solid var(--twa-mustard);
+  border-radius: var(--twa-radius-small);
+  background: var(--twa-paper-raised);
+}
+
+.twatility-studio
+  [aria-label="Project Documentation workspace"]
+  [aria-label="Documentation section outline"] {
+  display: grid;
+  gap: 0.32rem;
+  margin: 0;
+  padding-inline-start: 2rem;
+}
+
+.twatility-studio
+  [aria-label="Project Documentation workspace"]
+  :is([data-configuration-kind], [data-theme-group]) {
+  overflow: hidden;
+}
+
+.twatility-studio
+  [aria-label="Project Documentation workspace"]
+  :is(input:not([type="checkbox"]), select, textarea) {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.twatility-studio
+  [aria-label="Project Documentation workspace"]
+  :is([data-preview-section], [data-matrix-group], [data-matrix-parent]) {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.twatility-studio
+  [aria-label="Project Documentation workspace"]
+  table {
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  overflow: auto;
+  border-collapse: collapse;
+  scrollbar-color: var(--twa-mustard-dark) transparent;
+}
+
+.twatility-studio
+  [aria-label="Project Documentation workspace"]
+  :is(th, td) {
+  min-width: 7rem;
+  padding: 0.45rem;
+  border: 0.06rem solid var(--border);
+  text-align: start;
+  overflow-wrap: anywhere;
+}
+
+.twatility-studio
+  [aria-label="Project Documentation workspace"]
+  th {
+  background: var(--twa-navy);
+  color: var(--twa-paper-raised);
+}
+
+.twatility-studio
+  [aria-label="Project Documentation workspace"]
+  [data-theme-sample] {
+  max-width: 100%;
+  overflow: auto;
+}
+
+.twatility-studio .coverage-grid {
+  min-width: 0;
+}
+
+.twatility-studio .coverage-row {
+  grid-template-columns: minmax(12rem, 1fr) minmax(10rem, 1.2fr) auto;
+}
+
+.twatility-studio [aria-label="Coverage row window"] {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 0.48rem;
+  padding: 0.58rem;
+  border: 0.08rem solid var(--border);
+  border-radius: var(--twa-radius-small);
+  background: var(--twa-paper-raised);
+}
+
+.twatility-studio [aria-label="Coverage row window"] label {
+  min-width: min(100%, 12rem);
+}
+
+.twatility-studio .preflight-list {
+  display: grid;
+  gap: 0.42rem;
+}
+
+.twatility-studio .preflight-list .error {
+  padding: 0.48rem;
+  border-inline-start: 0.26rem solid var(--twa-danger);
+  background: color-mix(in srgb, var(--twa-danger) 8%, var(--twa-paper-raised));
+}
+
+.twatility-studio
+  :is(
+    #release-review,
+    #saved-schema-review,
+    #import-review,
+    #project-conflict-review,
+    #builder-storage-recovery
+  ) {
+  min-width: 0;
+  border-block-start: 0.35rem solid var(--twa-mustard);
+  background:
+    linear-gradient(140deg, #fffaf0, var(--twa-paper-raised)),
+    var(--twa-paper-raised);
+  box-shadow: var(--twa-shadow-large);
+}
+
+.twatility-studio
+  :is(
+    #release-review,
+    #saved-schema-review,
+    #import-review,
+    #project-conflict-review,
+    #builder-storage-recovery
+  )
+  > h2 {
+  margin-block-start: 0;
+  color: var(--twa-navy-deep);
+}
+
+.twatility-studio
+  :is(
+    #release-summary,
+    #saved-schema-review-summary,
+    #import-summary,
+    #project-conflict-summary,
+    #builder-recovery-summary,
+    #builder-recovery-result
+  ) {
+  max-width: 100%;
+  padding: 0.52rem;
+  border-inline-start: 0.24rem solid var(--twa-status-info);
+  background: color-mix(in srgb, var(--twa-blue-soft) 32%, var(--twa-paper-raised));
+  overflow-wrap: anywhere;
+}
+
+.twatility-studio #project-conflict-fields {
+  min-width: 0;
+  border-color: var(--twa-status-warning);
+  background: color-mix(in srgb, var(--twa-status-warning) 9%, var(--twa-paper-raised));
+}
+
+.twatility-studio #builder-storage-recovery > div {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
+.twatility-studio #release-diff,
+.twatility-studio #saved-schema-review-changes {
+  display: grid;
+  gap: 0.35rem;
+  padding-inline-start: 1.25rem;
+}
+
+.twatility-studio #project-inspector :is(form, fieldset, details) {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.twatility-studio #project-inspector :is(input, textarea, select) {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.twatility-studio
+  :is(#schema-draft-editor, #assignment-editor, #bulk-property-editor) {
+  border-inline-start: 0.24rem solid var(--twa-mustard);
+}
+
+@media (max-width: 1180px) {
+  .twatility-studio .flow-projections {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .twatility-studio .documentary-flow {
+    grid-column: auto;
+  }
+
+  .twatility-studio
+    .documentary-flow
+    > [aria-label="Flow component catalogs"] {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .twatility-studio .start-screen {
+    background-image: none;
+  }
+
+  .twatility-studio
+    .documentary-flow
+    > [aria-label="Flow component catalogs"] {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .twatility-studio .coverage-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .twatility-studio
+    [aria-label="Project Documentation workspace"]
+    table {
+    width: 100%;
+    min-width: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .twatility-studio #project-empty {
+    padding: 0.6rem;
+  }
+
+  .twatility-studio .start-screen {
+    padding: 0.78rem;
+  }
+
+  .twatility-studio
+    :is(
+      .task-entry-points,
+      .editor-actions,
+      .membership-row-actions,
+      #builder-storage-recovery > div,
+      [aria-label="Coverage row window"]
+    )
+    > * {
+    flex: 1 1 100%;
+    min-width: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .twatility-studio
+    :is(
+      .entity-row button,
+      .coverage-row button,
+      .start-paths button,
+      .documentary-flow button,
+      dialog button
+    ) {
+    scroll-behavior: auto;
+    transition: none;
+  }
+}
+
+@media (forced-colors: active) {
+  .twatility-studio
+    :is(
+      .start-screen,
+      .start-paths button,
+      .entity-row,
+      .coverage-row,
+      .collection-lifecycle-page,
+      .contextual-editor,
+      .documentary-flow,
+      .documentary-flow > [aria-label$=" catalog"],
+      [aria-label="Project Documentation workspace"] > section,
+      [aria-label="Project Documentation workspace"] [data-configuration-kind],
+      [aria-label="Project Documentation workspace"] [data-theme-group],
+      [aria-label="Coverage row window"],
+      #release-review,
+      #saved-schema-review,
+      #import-review,
+      #project-conflict-review,
+      #builder-storage-recovery
+    ) {
+    border-color: CanvasText;
+  }
+
+  .twatility-studio .flow-node:focus rect,
+  .twatility-studio .flow-edge.is-selected line {
+    stroke: Highlight;
+  }
+}
