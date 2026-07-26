@@ -5831,7 +5831,7 @@ try {
           labels:["Command palette","Hotkeys","Data layer"],
           visible:true,
         },
-        panelOwnership:{count:8,commandPalette:"command-palette",hotkeys:"hotkeys",dataLayer:"data-layer"},
+        panelOwnership:{count:9,commandPalette:"command-palette",hotkeys:"hotkeys",dataLayer:"data-layer"},
         afterActivation:{
           dataLayerHidden:true,
           hotkeysHidden:false,
@@ -5965,7 +5965,7 @@ try {
         searchNames:{
           name:guidedSchemaPickerObservation.searches.name.names,
           version:guidedSchemaPickerObservation.searches.version.names,
-          property:guidedSchemaPickerObservation.searches.property.names,
+          property:guidedSchemaPickerObservation.searches.property.names.toSorted(),
           domain:guidedSchemaPickerObservation.searches.domain.names,
           path:guidedSchemaPickerObservation.searches.path.names,
         },
@@ -5979,7 +5979,7 @@ try {
       }, {
         closed:[true,true],
         opened:{ modal:true, searchFocused:true, resultCount:50, count:"50 of 50 schemas", listScrolls:true, dialogBounded:true, flowUnexpanded:true, backgroundExcluded:true },
-        searchNames:{ name:["Product listing version 3"], version:["Product archive version 4"], property:["Product listing version 3", "Numeric page types version 1"], domain:["Product listing version 3"], path:["Product listing version 3"] },
+        searchNames:{ name:["Product listing version 3"], version:["Product archive version 4"], property:["Numeric page types version 1", "Product listing version 3"], domain:["Product listing version 3"], path:["Product listing version 3"] },
         targetOnly:true,
         empty:["No schemas match the current search.", null, "50 of 50 schemas"],
         presentation:[true,true],
