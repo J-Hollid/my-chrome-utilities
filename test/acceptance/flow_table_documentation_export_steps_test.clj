@@ -29,6 +29,10 @@
               "heading_setting" "cleared"
               "copy_mode" "Rich table for Confluence or Jira"
               "output" "semantic rich HTML and unheaded plain fallback"})))
+  (is (map? (flow-export/validate-example!
+             :runtime
+             {"export_scope" "selected Checkout journey and Sitewide sections"
+              "expected_sheets" "Checkout journey, Sitewide"})))
   (is (thrown-with-msg?
        clojure.lang.ExceptionInfo
        #"invalid result"
@@ -37,3 +41,10 @@
         {"definition" "fixed to checkout"
          "display" "Checkout"
          "detail" "exact effective value and provenance"}))))
+
+(deftest flow-export-runtime-evidence-includes-excel-compatibility
+  (let [evidence (into {:installedBoundary true}
+                       (map (fn [index]
+                              [(keyword (str "export" (format "%03d" index))) true])
+                            (range 1 16)))]
+    (is (nil? (#'flow-export/assert-runtime! evidence)))))
