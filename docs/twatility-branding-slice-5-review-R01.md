@@ -34,6 +34,10 @@ persistence, focus, commands, and Undo/Redo.
 - `fd9282d2` — Preserve composed condition identity helper
 - `c221159a` — Regenerate Slice 5 extension output
 - `c68095c7` — Refresh verified Slice 5 compact evidence
+- `4b470dae` — Contain canonical rule condition fields
+- `70e8fb14` — Assert local condition tree containment
+- `e2c89c48` — Regenerate contained rule editor output
+- `796d2bd4` — Refresh contained rule editor evidence
 
 The closing boundary, completed parity classifications, and this review record
 are committed separately. The slice branch and non-master integration branch
@@ -187,6 +191,29 @@ were test/fixture or presentation corrections, not weakened product assertions.
   DOM, action, accessibility, and control-equivalence assertions directly cover
   the nested editor below the panel fold.
 - Reduced-motion and forced-colours rules remain scoped.
+
+## Review-feedback correction
+
+The first review of `canonical-rules-1280x900.png` identified that the canonical
+When tree occupied one auto-fit fieldset column while its predicate grid
+continued into the adjacent pattern, severity, and message columns. This was a
+local-container overflow even though every control remained inside the outer
+viewport, so the original viewport-only geometry assertion did not report it.
+
+The corrected rule editor gives the When host the full fieldset row, constrains
+all rule-editor grid tracks to the available inline size, and stacks outcome
+labels above their controls. The refreshed desktop image shows the complete
+condition tree inside its own card with pattern, severity, and message in a
+separate contained row beneath it.
+
+The packaged adapter now compares every condition node and control with its
+nearest shared-tree boundary and records `localTreeOut`; all four mounted
+viewport results are empty. The focused packaged rules/conditions adapter,
+authoritative layered-schema browser adapter, foundation static/browser guards,
+build, and package command pass after the correction. Runtime observation now
+starts after the seeded project is visibly open, excluding only the expected
+pre-seed empty-library startup, and the focused-layer retry reacquires the real
+production editor without weakening any product assertion.
 
 ## Master collisions and resolution
 
