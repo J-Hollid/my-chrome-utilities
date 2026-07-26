@@ -1,17 +1,46 @@
-import type {CanonicalPredicate,CanonicalPredicateLeaf} from "./data-layer-canonical-schema.js";
+import type {CanonicalPredicate} from "./data-layer-canonical-schema.js";
 import {focusedConditionLabel} from "./data-layer-focused-schema-property-ui.js";
-import {renderCanonicalConditionTree} from "./data-layer-canonical-schema-focused-condition-tree.js";
-import {typedCanonicalValue} from "./data-layer-canonical-schema-facets.js";
+import {renderSharedConditionTree} from "./data-layer-shared-condition-tree-editor.js";
 import type {CanonicalFocusedSectionContext} from "./data-layer-canonical-schema-focused-sections.js";
 
-const existence=["Exists","Does not exist"] as const;
-const operatorsFor=(type:string|undefined):CanonicalPredicateLeaf["operator"][]=>type==="number"||type==="integer"?[...existence,"Equals","Does not equal","Greater than","At least","Less than","At most"]:type==="boolean"||type==="null"?[...existence,"Equals","Does not equal"]:[...existence,"Equals","Does not equal","Starts with","Contains","Matches pattern"];
-const labeled=(dom:Document,text:string,control:HTMLElement):HTMLLabelElement=>{const label=dom.createElement("label");label.append(text,control);return label;};
-const button=(dom:Document,text:string,run:()=>void):HTMLButtonElement=>{const control=dom.createElement("button");control.type="button";control.textContent=text;control.addEventListener("click",run);return control;};
+export function renderCanonicalFocusedCondition(
+  host:HTMLElement,
+  context:CanonicalFocusedSectionContext,
+):void {
+  const {dom}=context;
+  const working=context.getWorking();
+  if(!working) return;
 
-export function renderCanonicalFocusedCondition(host:HTMLElement,context:CanonicalFocusedSectionContext):void {
-  const {dom}=context,working=context.getWorking();if(!working)return;const summary=dom.createElement("p"),treeHost=dom.createElement("div"),actions=dom.createElement("div");summary.setAttribute("aria-label","Condition tree summary");summary.textContent=focusedConditionLabel(working.presence.condition as unknown as Record<string,unknown>|undefined);renderCanonicalConditionTree(treeHost,context);
-  for(const kind of ["all","any","not"] as const)actions.append(button(dom,`Add ${kind==="all"?"All":kind==="any"?"Any":"Not"} group`,()=>{const next=context.getWorking();if(!next)return;const current=next.presence.condition as unknown as CanonicalPredicate|undefined;if(!current)next.presence={mode:next.presence.mode,condition:{id:context.id("condition"),kind,children:[]}};else if(current.kind!=="predicate"&&!(current.kind==="not"&&current.children.length))current.children.push({id:context.id("condition"),kind,children:[]});context.render();}));
-  const search=dom.createElement("input"),property=dom.createElement("select"),operator=dom.createElement("select"),valueHost=dom.createElement("span");let value:HTMLInputElement|undefined;search.type="search";search.placeholder="Search properties";search.setAttribute("aria-label","Search condition properties");property.setAttribute("aria-label","Condition property");const renderProperties=()=>{const query=search.value.trim().toLowerCase(),selected=property.value;property.replaceChildren(new Option("Choose property",""),...Object.values(context.current().nodes).filter((candidate)=>!query||candidate.name.toLowerCase().includes(query)).map((candidate)=>new Option(candidate.name,candidate.id)));property.value=selected;};renderProperties();operator.setAttribute("aria-label","Type-valid operator");const renderValue=()=>{valueHost.replaceChildren();value=undefined;if(existence.includes(operator.value as typeof existence[number]))return;value=dom.createElement("input");value.setAttribute("aria-label","Typed value");valueHost.append(value);};const selected=()=>context.current().nodes[property.value],renderOperators=()=>{operator.replaceChildren(...operatorsFor(selected()?.type).map((entry)=>new Option(entry,entry)));renderValue();};search.addEventListener("input",renderProperties);property.addEventListener("change",renderOperators);operator.addEventListener("change",renderValue);renderOperators();
-  actions.append(labeled(dom,"Search property",search),labeled(dom,"Condition property",property),labeled(dom,"Type-valid operator",operator),labeled(dom,"Typed value",valueHost),button(dom,"Add predicate",()=>{const next=context.getWorking(),candidate=selected();if(!next||!candidate||!operator.value)return;const typed=existence.includes(operator.value as typeof existence[number])?undefined:typedCanonicalValue(candidate.type,value?.value??""),leaf:CanonicalPredicateLeaf={id:context.id("condition"),kind:"predicate",propertyId:property.value,operator:operator.value as CanonicalPredicateLeaf["operator"],...(typed===undefined?{}:{value:typed})};const current=next.presence.condition as unknown as CanonicalPredicate|undefined;if(!current)next.presence={mode:next.presence.mode,condition:{id:context.id("condition"),kind:"all",children:[leaf]}};else if(current.kind!=="predicate")current.children.push(leaf);else next.presence={mode:next.presence.mode,condition:{id:context.id("condition"),kind:"all",children:[current,leaf]}};context.render();}));host.append(summary,treeHost,actions);
+  const summary=dom.createElement("p");
+  const tree=dom.createElement("div");
+  summary.setAttribute("aria-label","Condition tree summary");
+  summary.textContent=focusedConditionLabel(
+    working.presence.condition as unknown as Record<string,unknown>|undefined,
+  );
+
+  renderSharedConditionTree(tree,{
+    dom,
+    ...(working.presence.condition
+      ? {condition:working.presence.condition as unknown as CanonicalPredicate}
+      : {}),
+    properties:()=>Object.values(context.current().nodes).map(({id,name,type})=>({
+      id,
+      name,
+      type,
+    })),
+    id:context.id,
+    onChange:(condition)=>{
+      if(condition) {
+        working.presence={...working.presence,condition};
+      } else {
+        const {condition:_condition,...presence}=working.presence;
+        working.presence=presence;
+      }
+      summary.textContent=focusedConditionLabel(
+        condition as unknown as Record<string,unknown>|undefined,
+      );
+    },
+  });
+
+  host.append(summary,tree);
 }

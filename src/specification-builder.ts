@@ -54,6 +54,7 @@ import {installFlowDocumentationExportUi} from "./data-layer-flow-table-document
 import {installProjectDocumentationWorkspaceUi} from "./data-layer-project-documentation-workspace-ui.js";
 import {applyCanonicalCommand,canonicalCommandOutcome,canonicalRequirements,createCanonicalSchema,migrateLegacyProfile,type CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
 import {mountCanonicalSchemaEditor} from "./data-layer-canonical-schema-ui.js";
+import {mountProjectConditionEditor,projectConditionEditorValue} from "./data-layer-project-condition-editor.js";
 import {createProjectCollectionEntity,hasSavedSchemaAdoptionActions,inspectProjectEntityRemoval,projectCollectionCreationFields,projectCollectionCreationRoute,projectCollectionDefinitions,projectEntityWorkspaceRoute,projectInspectorTogglePresentation,removeProjectCollectionEntity,type ProjectCollectionCreationField,type ProjectEntityRemovalReview} from "./data-layer-project-entity-lifecycle.js";
 
 const STORAGE_KEY=CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY,START_PATH_KEY="my-chrome-utilities.specification-project-start.v1",routeParameters=new URLSearchParams(location.search),startupProjectId=routeParameters.get("project")??undefined,startupKind=routeParameters.get("kind")??undefined,startupEntityId=routeParameters.get("entity")??undefined,startupRoute=startupKind?durableProjectRouteForWorkspace(startupKind,startupEntityId):undefined;
@@ -129,8 +130,119 @@ const editorFields:Record<ProjectEntityKind,EditorField[]>={
 };
 function fieldControl(field:EditorField,entity:ProjectEntity):HTMLInputElement|HTMLTextAreaElement|HTMLSelectElement|HTMLFieldSetElement{if(field.type==="flow-role"){const select=document.createElement("select");select.name=field.key;select.append(new Option("Interaction","interaction"),new Option("Context-setting","context-setting"));select.value=entity[field.key]==="context-setting"?"context-setting":"interaction";return select;}if(field.collection&&state){const select=document.createElement("select");select.name=field.key;select.multiple=Boolean(field.multiple);for(const optionEntity of state.project.collections[field.collection] as ProjectEntity[]){if(optionEntity.id===entity.id)continue;const option=document.createElement("option");option.value=optionEntity.id;option.textContent=optionEntity.name;option.selected=field.multiple?(entity[field.key] as string[]|undefined)?.includes(optionEntity.id)??false:entity[field.key]===optionEntity.id;select.append(option);}return select;}if(field.type==="condition"){const group=document.createElement("fieldset"),operator=document.createElement("select"),rows=document.createElement("div"),add=document.createElement("button"),condition=entity[field.key] as Condition|undefined;group.name=field.key;group.dataset.conditionBuilder="true";operator.dataset.groupOperator="true";for(const value of["all","any","not"]){const option=document.createElement("option");option.value=value;option.textContent=value==="all"?"All conditions":value==="any"?"Any condition":"Not";operator.append(option);}operator.value=condition&&condition.kind!=="predicate"?condition.kind:"all";const appendPredicate=(predicate?:{field?:string;operator?:string;value?:unknown;values?:readonly unknown[];pattern?:string},negated=false)=>{const row=document.createElement("div"),not=document.createElement("input"),path=document.createElement("input"),comparison=document.createElement("select"),value=document.createElement("input");row.dataset.predicate="true";not.type="checkbox";not.checked=negated;not.setAttribute("aria-label","Negate predicate");path.value=predicate?.field??"";path.placeholder="Context field";path.setAttribute("aria-label","Predicate field");for(const name of["exists","does not exist","equals","does not equal","is one of","matches pattern","greater than","at least","less than","at most","contains","glob","regex"]){const option=document.createElement("option");option.value=name;option.textContent=name;comparison.append(option);}comparison.value=predicate?.operator??"equals";comparison.setAttribute("aria-label","Predicate operator");value.value=predicate?.values?.join(", ")??predicate?.pattern??String(predicate?.value??"");value.setAttribute("aria-label","Predicate value");row.append(not,path,comparison,value);rows.append(row);};const visit=(node:Condition|undefined,negated=false):void=>{if(!node)return;if(node.kind==="predicate")appendPredicate(node,negated);else for(const child of node.conditions)visit(child,node.kind==="not"?!negated:negated);};visit(condition);if(!rows.children.length)appendPredicate();add.type="button";add.textContent="Add predicate";add.addEventListener("click",()=>appendPredicate());group.append(operator,rows,add);return group;}if(field.type==="textarea"||field.type==="json"){const textarea=document.createElement("textarea");textarea.name=field.key;textarea.rows=field.type==="json"?6:3;textarea.value=field.type==="json"?JSON.stringify(entity[field.key]??(field.key==="observations"?[]:{}),null,2):String(entity[field.key]??"");return textarea;}const input=document.createElement("input");input.name=field.key;input.type=field.type??"text";if(field.type==="checkbox")input.checked=Boolean(entity[field.key]);else input.value=String(entity[field.key]??"");return input;}
 function editorValue(field:EditorField,control:Element):unknown{if(control instanceof HTMLFieldSetElement&&field.type==="condition"){const kind=control.querySelector<HTMLSelectElement>("[data-group-operator]")!.value as "all"|"any"|"not",conditions=Array.from(control.querySelectorAll<HTMLElement>("[data-predicate]"),(row)=>{const inputs=row.querySelectorAll<HTMLInputElement>("input"),operator=row.querySelector("select")!.value,text=inputs[2]!.value.trim(),predicate:Condition={kind:"predicate",field:inputs[1]!.value.trim(),operator,...(operator==="is one of"?{values:text.split(",").map((entry)=>entry.trim()).filter(Boolean)}:operator==="matches pattern"?{pattern:text}:!["exists","does not exist"].includes(operator)?{value:["greater than","at least","less than","at most"].includes(operator)?Number(text):text}:{})};return inputs[0]!.checked?{kind:"not" as const,conditions:[predicate]}:predicate;}).filter((condition)=>condition.kind!=="predicate"||Boolean(condition.field));return{kind,conditions};}if(control instanceof HTMLSelectElement)return field.multiple?Array.from(control.selectedOptions,({value})=>value):control.value;if(control instanceof HTMLInputElement&&field.type==="checkbox")return control.checked;if(field.type==="number")return Number((control as HTMLInputElement).value);if(field.type==="json")return JSON.parse((control as HTMLTextAreaElement).value||"{}");return(control as HTMLInputElement|HTMLTextAreaElement).value;}
+function productionFieldControl(field:EditorField,entity:ProjectEntity):HTMLInputElement|HTMLTextAreaElement|HTMLSelectElement|HTMLFieldSetElement {
+  if(field.type!=="condition") return fieldControl(field,entity);
+  const group=document.createElement("fieldset");
+  group.name=field.key;
+  mountProjectConditionEditor(group,entity[field.key] as Condition|undefined);
+  return group;
+}
+function productionEditorValue(field:EditorField,control:Element):unknown {
+  if(control instanceof HTMLFieldSetElement&&field.type==="condition") {
+    return projectConditionEditorValue(control);
+  }
+  return editorValue(field,control);
+}
+
 function renderFixtureExecution(form:HTMLFormElement,fixture:ProjectEntity):void{const section=document.createElement("section"),heading=document.createElement("h3"),evidence=document.createElement("p"),run=document.createElement("button"),result=document.createElement("output");section.setAttribute("aria-label","Fixture execution");heading.textContent="Production evaluator replay";const observations=(fixture.observations as Record<string,unknown>[]|undefined)??[],expected=(fixture.expected as Record<string,unknown>|undefined)??{};evidence.textContent=`Captured observation: ${observations.map(({eventName})=>String(eventName??"unnamed")).join(", ")||"none"} · Proposed assertions: status ${String(expected.status??"not set")}; issueCodes ${JSON.stringify(expected.issueCodes??[])}`;run.type="button";run.textContent="Run Fixture";result.id="fixture-run-result";result.setAttribute("aria-live","polite");run.addEventListener("click",()=>{if(!state)return;const compiled=compileSpecificationProject({...createCanonicalProjectEnvelope(state.project,state.draft?.id??"published"),revision:canonicalRevision});if(compiled.status==="blocked"){result.textContent=`Run blocked: ${compiled.diagnostics.map(({field})=>field).join(", ")}`;return;}const execution=runProductionFixture(compiled.plan,fixture),last=execution.steps.at(-1),capturedIdentity=String(fixture.evaluationResultIdentity??"not recorded"),replayIdentity=last?.actual.resultIdentity??"not evaluated",differences=execution.steps.flatMap((step)=>step.differences);result.textContent=`${execution.status.toUpperCase()} · captured evaluator result ${capturedIdentity} · replay result ${replayIdentity} · ${differences.length?differences.join("; "):"status and issueCodes assertions matched"}`;});section.append(heading,evidence,run,result);form.append(section);}
-function renderSelectedEntityEditor(content:HTMLElement,entity:ProjectEntity):void{if(!state)return;const section=document.createElement("section"),heading=document.createElement("h2"),form=document.createElement("form"),nameLabel=document.createElement("label"),name=document.createElement("input"),actions=document.createElement("div"),save=document.createElement("button"),duplicate=document.createElement("button"),usage=document.createElement("p");section.className="contextual-editor";heading.textContent=`Edit ${labels[selectedKind].replace(/s$/,"")}`;name.name="name";name.required=true;name.value=entity.name;nameLabel.textContent="Name";nameLabel.append(name);form.append(nameLabel);for(const field of editorFields[selectedKind]){const label=document.createElement("label"),control=fieldControl(field,selectedKind==="flows"&&field.key==="pageGroupIds"?{...entity,pageGroupIds:flowPageGroupLaneIds(state.project,entity.id)}:entity);if(selectedKind==="pages"&&field.key==="eventName")control.setAttribute("required","");label.textContent=field.label;label.append(control);form.append(label);}if(selectedKind==="fixtures")renderFixtureExecution(form,entity);save.type="submit";save.textContent="Save complete entity";duplicate.type="button";duplicate.textContent="Duplicate";usage.textContent=`Where used: ${whereUsed(entity.id).join(", ")||"None"}`;actions.className="editor-actions";actions.append(save,duplicate);form.append(actions,usage);form.addEventListener("submit",(event)=>{event.preventDefault();if(!state)return;try{const update:Record<string,unknown>={name:name.value.trim()};for(const field of editorFields[selectedKind])update[field.key]=editorValue(field,form.elements.namedItem(field.key) as Element);if(selectedKind==="pages"&&!String(update.eventName??"").trim())throw new Error("Observed context event name is required for a Page.");const laneIds=selectedKind==="flows"?update.pageGroupIds as string[]:undefined;if(laneIds)delete update.pageGroupIds;const edited=transactProject(state,`Edit ${entity.name}`,(project)=>({...project,collections:{...project.collections,[selectedKind]:(project.collections[selectedKind] as ProjectEntity[]).map((candidate)=>{if(candidate.id!==entity.id)return candidate;const merged={...candidate,...update};if(selectedKind==="flows")delete merged.pageGroupIds;return merged;})}} as typeof project));persist(selectedKind==="flows"?applyFlowPageGroupLaneSelection(edited,entity.id,laneIds):edited);}catch(error){q("#project-state").textContent=error instanceof Error?error.message:String(error);}});duplicate.addEventListener("click",()=>{if(!state)return;const{id:ignored,...copy}=entity;persist(addProjectEntity(state,selectedKind,{...structuredClone(copy),name:`${entity.name} copy`},id));});section.append(heading,form);content.append(section);if(selectedKind==="profiles")renderCanonicalEntityEditor(content,selectedKind,entity);}
+function renderSelectedEntityEditor(content:HTMLElement,entity:ProjectEntity):void {
+  if(!state) return;
+  const section=document.createElement("section");
+  const heading=document.createElement("h2");
+  const form=document.createElement("form");
+  const nameLabel=document.createElement("label");
+  const name=document.createElement("input");
+  const actions=document.createElement("div");
+  const save=document.createElement("button");
+  const duplicate=document.createElement("button");
+  const usage=document.createElement("p");
+  section.className="contextual-editor";
+  heading.textContent=`Edit ${labels[selectedKind].replace(/s$/,"")}`;
+  name.name="name";
+  name.required=true;
+  name.value=entity.name;
+  nameLabel.textContent="Name";
+  nameLabel.append(name);
+  form.append(nameLabel);
+  for(const field of editorFields[selectedKind]) {
+    const label=document.createElement("label");
+    const control=productionFieldControl(
+      field,
+      selectedKind==="flows"&&field.key==="pageGroupIds"
+        ? {...entity,pageGroupIds:flowPageGroupLaneIds(state.project,entity.id)}
+        : entity,
+    );
+    if(selectedKind==="pages"&&field.key==="eventName") control.setAttribute("required","");
+    label.textContent=field.label;
+    label.append(control);
+    form.append(label);
+  }
+  if(selectedKind==="fixtures") renderFixtureExecution(form,entity);
+  save.type="submit";
+  save.textContent="Save complete entity";
+  duplicate.type="button";
+  duplicate.textContent="Duplicate";
+  usage.textContent=`Where used: ${whereUsed(entity.id).join(", ")||"None"}`;
+  actions.className="editor-actions";
+  actions.append(save,duplicate);
+  form.append(actions,usage);
+  form.addEventListener("submit",(event)=>{
+    event.preventDefault();
+    if(!state) return;
+    try {
+      const update:Record<string,unknown>={name:name.value.trim()};
+      for(const field of editorFields[selectedKind]) {
+        update[field.key]=productionEditorValue(
+          field,
+          form.elements.namedItem(field.key) as Element,
+        );
+      }
+      if(selectedKind==="pages"&&!String(update.eventName??"").trim()) {
+        throw new Error("Observed context event name is required for a Page.");
+      }
+      const laneIds=selectedKind==="flows"?update.pageGroupIds as string[]:undefined;
+      if(laneIds) delete update.pageGroupIds;
+      const edited=transactProject(
+        state,
+        `Edit ${entity.name}`,
+        (project)=>({
+          ...project,
+          collections:{
+            ...project.collections,
+            [selectedKind]:(project.collections[selectedKind] as ProjectEntity[]).map(
+              (candidate)=>{
+                if(candidate.id!==entity.id) return candidate;
+                const merged={...candidate,...update};
+                if(selectedKind==="flows") delete merged.pageGroupIds;
+                return merged;
+              },
+            ),
+          },
+        } as typeof project),
+      );
+      persist(
+        selectedKind==="flows"
+          ? applyFlowPageGroupLaneSelection(edited,entity.id,laneIds)
+          : edited,
+      );
+    } catch(error) {
+      q("#project-state").textContent=error instanceof Error?error.message:String(error);
+    }
+  });
+  duplicate.addEventListener("click",()=>{
+    if(!state) return;
+    const{id:ignored,...copy}=entity;
+    persist(addProjectEntity(
+      state,
+      selectedKind,
+      {...structuredClone(copy),name:`${entity.name} copy`},
+      id,
+    ));
+  });
+  section.append(heading,form);
+  content.append(section);
+  if(selectedKind==="profiles") renderCanonicalEntityEditor(content,selectedKind,entity);
+}
 
 function renderTree():void{const tree=q<HTMLUListElement>("#project-tree");tree.replaceChildren();if(!state)return;const documentation=document.createElement("li"),documentationButton=document.createElement("button");documentationButton.type="button";documentationButton.textContent=`Documentation (${state.project.documentation?.sets.length??0})`;documentationButton.dataset.kind="documentation";documentationButton.setAttribute("aria-current",String(documentationOpen));documentationButton.addEventListener("click",()=>{documentationOpen=true;projectOverview=false;selectedId=undefined;const url=new URL(location.href);url.searchParams.set("project",state!.project.id);url.searchParams.set("view","documentation");url.searchParams.delete("route");url.searchParams.delete("kind");url.searchParams.delete("entity");history.replaceState(null,"",url);render();});documentation.append(documentationButton);tree.append(documentation);const overview=document.createElement("li"),overviewButton=document.createElement("button");overviewButton.type="button";overviewButton.textContent="Project overview";overviewButton.dataset.kind="overview";overviewButton.setAttribute("aria-current",String(projectOverview));overviewButton.addEventListener("click",openProjectOverview);overview.append(overviewButton);tree.append(overview);for(const kind of Object.keys(labels) as ProjectEntityKind[]){const item=document.createElement("li"),button=document.createElement("button"),count=kind==="assignments"?searchProjectAssignments(state.project,"").count:state.project.collections[kind].length;button.type="button";button.textContent=`${labels[kind]} (${count})`;button.dataset.kind=kind;button.setAttribute("aria-current",String(!documentationOpen&&!projectOverview&&kind===selectedKind));button.addEventListener("click",()=>openCollectionOverview(kind));item.append(button);tree.append(item);}const release=document.createElement("li"),button=document.createElement("button");button.type="button";button.textContent=`Releases (${state.project.releases.length})`;button.dataset.kind="releases";release.append(button);tree.append(release);}
 

@@ -886,6 +886,7 @@
       "src/data-layer-canonical-schema-focused-conditions.ts",
       "src/data-layer-canonical-schema-focused-condition-tree.ts",
       "src/data-layer-shared-condition-tree-editor.ts",
+      "src/data-layer-project-condition-editor.ts",
       "src/data-layer-canonical-schema-focused-rules.ts",
       "src/data-layer-canonical-schema-focused-rule-rows.ts",
       "src/data-layer-canonical-schema-focused-rule-add.ts",
@@ -924,6 +925,7 @@
       "test/data-layer-composed-schema-builders-test.mjs",
       "test/data-layer-composed-schema-workspace-test.mjs",
       "test/data-layer-focused-schema-property-ui-test.mjs",
+      "test/data-layer-shared-condition-tree-editor-test.mjs",
       "test/data-layer-conditional-rule-definition-test.mjs",
       "test/data-layer-flow-page-instance-structure-test.mjs",
       "test/data-layer-page-group-membership-test.mjs",
@@ -938,6 +940,7 @@
       "test/data-layer-composed-schema-builders-property-test.mjs",
       "test/data-layer-composed-schema-workspace-property-test.mjs",
       "test/data-layer-focused-schema-property-ui-property-test.mjs",
+      "test/data-layer-shared-condition-tree-editor-property-test.mjs",
       "test/data-layer-layered-schema-property-test.mjs"
     ],
     "features": [

@@ -1,29 +1,45 @@
-import {addComposedConditionGroup,addComposedConditionPredicate,moveComposedConditionBranch,removeComposedConditionBranch,typedComposedValue} from "./data-layer-composed-schema-builders.js";
+import type {CanonicalPredicate} from "./data-layer-canonical-schema.js";
 import {focusedConditionLabel} from "./data-layer-focused-schema-property-ui.js";
+import {renderSharedConditionTree} from "./data-layer-shared-condition-tree-editor.js";
 import type {ComposedFocusedSectionContext} from "./data-layer-composed-schema-workspace-focused-sections.js";
 
-const labeled=(dom:Document,text:string,control:HTMLElement):HTMLLabelElement=>{const label=dom.createElement("label");label.append(text,control);return label;};
-const button=(dom:Document,text:string,run:()=>void):HTMLButtonElement=>{const control=dom.createElement("button");control.type="button";control.textContent=text;control.addEventListener("click",run);return control;};
-const existsOperators=["Exists","Does not exist"] as const;
-const operatorsFor=(type:string|undefined):string[]=>{const base=[...existsOperators];if(type==="number"||type==="integer")return [...base,"Equals","Does not equal","Greater than","At least","Less than","At most"];if(type==="boolean"||type==="null")return [...base,"Equals","Does not equal"];return [...base,"Equals","Does not equal","Starts with","Contains","Matches pattern"];};
-const propertyChoice=(context:ComposedFocusedSectionContext,value:string):{path:string;id:string;type:string}|undefined=>{const row=context.model.rows.find((candidate)=>candidate.path===value||candidate.effective.definitionId===value);return row?{path:row.path,id:row.effective.definitionId??row.path,type:row.effective.type??"string"}:undefined;};
+export function renderComposedFocusedCondition(
+  host:HTMLElement,
+  context:ComposedFocusedSectionContext,
+):void {
+  const {dom}=context;
+  const draft=context.getDraft();
+  if(!draft) return;
 
-/** Assign missing identities once; subsequent renders and structural moves retain them. */
-export const ensureComposedConditionIds=(condition:Record<string,unknown>,id:(kind:string)=>string=()=>`condition:${crypto.randomUUID()}`):Record<string,unknown>=>{const withId:Record<string,unknown>={...condition,id:String(condition.id??id("condition"))};if(withId.kind!=="predicate")withId.children=(Array.isArray(withId.children)?withId.children:[]).map((child:unknown)=>ensureComposedConditionIds(child as Record<string,unknown>,id));return withId;};
+  const summary=dom.createElement("p");
+  const tree=dom.createElement("div");
+  summary.setAttribute("aria-label","Condition tree summary");
+  summary.textContent=focusedConditionLabel(
+    draft.condition as unknown as Record<string,unknown>|undefined,
+  );
 
-function renderPredicateEditor(row:HTMLElement,condition:Record<string,unknown>,context:ComposedFocusedSectionContext):void {
-  const {dom}=context,draft=context.getDraft();if(!draft)return;const editor=dom.createElement("fieldset"),search=dom.createElement("input"),property=dom.createElement("select"),operator=dom.createElement("select"),valueHost=dom.createElement("span");editor.setAttribute("aria-label","Condition predicate editor");search.type="search";search.placeholder="Search properties";search.setAttribute("aria-label","Search condition properties");property.setAttribute("aria-label","Condition property");operator.setAttribute("aria-label","Type-valid operator");
-  const renderProperties=():void=>{const query=search.value.trim().toLowerCase(),selected=property.value;property.replaceChildren(new Option("Choose property",""),...context.model.rows.filter(({path})=>!query||path.toLowerCase().includes(query)).map(({path})=>new Option(path,path)));property.value=selected||String(condition.propertyId??"");};
-  const selected=():{path:string;id:string;type:string}|undefined=>propertyChoice(context,property.value);
-  const renderValue=():void=>{valueHost.replaceChildren();if(existsOperators.includes(operator.value as typeof existsOperators[number]))return;const value=dom.createElement("input");value.setAttribute("aria-label","Typed value");value.value=condition.value===undefined?"":String(condition.value);value.addEventListener("input",()=>{try{const choice=selected();condition.value=choice?typedComposedValue(choice.type,value.value):value.value;}catch{condition.value=value.value;}});valueHost.append(value);};
-  const renderOperators=():void=>{operator.replaceChildren(...operatorsFor(selected()?.type).map((entry)=>new Option(entry,entry)));operator.value=String(condition.operator??operator.options[0]?.value??"");renderValue();};
-  renderProperties();renderOperators();search.addEventListener("input",renderProperties);property.addEventListener("change",()=>{condition.propertyId=selected()?.id??property.value;delete condition.value;renderOperators();});operator.addEventListener("change",()=>{condition.operator=operator.value;if(existsOperators.includes(operator.value as typeof existsOperators[number]))delete condition.value;renderValue();});editor.append(labeled(dom,"Search properties",search),labeled(dom,"Condition property",property),labeled(dom,"Type-valid operator",operator),labeled(dom,"Typed value",valueHost));row.append(editor);
-}
+  renderSharedConditionTree(tree,{
+    dom,
+    ...(draft.condition
+      ? {condition:draft.condition as unknown as CanonicalPredicate}
+      : {}),
+    properties:()=>context.model.rows.map(({path,effective})=>({
+      id:effective.definitionId??path,
+      name:path.split("/").filter(Boolean).at(-1)??path,
+      ...(effective.type?{type:effective.type}:{}),
+    })),
+    id:(kind)=>`${kind}:${crypto.randomUUID()}`,
+    onChange:(condition)=>{
+      if(condition) {
+        draft.condition=condition as typeof draft.condition;
+      } else {
+        draft.condition={kind:"all",children:[]};
+      }
+      summary.textContent=focusedConditionLabel(
+        condition as unknown as Record<string,unknown>|undefined,
+      );
+    },
+  });
 
-export function renderComposedFocusedCondition(host:HTMLElement,context:ComposedFocusedSectionContext):void {
-  const {dom}=context,draft=context.getDraft();if(!draft)return;if(draft.condition)draft.condition=ensureComposedConditionIds(draft.condition as unknown as Record<string,unknown>) as typeof draft.condition;const summary=dom.createElement("p"),tree=dom.createElement("div"),controls=dom.createElement("div");summary.textContent=focusedConditionLabel(draft.condition as unknown as Record<string,unknown>);tree.setAttribute("aria-label","Readable condition tree");
-  const appendNode=(condition:Record<string,unknown>,path:number[]):void=>{const row=dom.createElement("article");row.dataset.conditionPath=path.join(".")||"root";row.dataset.conditionId=String(condition.id);row.append(Object.assign(dom.createElement("p"),{textContent:focusedConditionLabel(condition)}));const detail=(mode:string):void=>{row.dataset.conditionState=mode;const description=dom.createElement("p");description.textContent=`${mode==="view"?"Read-only":"Editable"} condition · ${focusedConditionLabel(condition)}`;row.append(description);};const addChild=():void=>{const current=context.getDraft(),choice=context.model.rows[0];if(!current||!choice||condition.kind==="predicate")return;const next=addComposedConditionPredicate(current,path,{propertyId:choice.effective.definitionId??choice.path,operator:"Exists"});current.condition=ensureComposedConditionIds(next.condition as unknown as Record<string,unknown>) as typeof current.condition;context.render();};const move=():void=>{const current=context.getDraft();if(!current||!path.length)return;current.condition=moveComposedConditionBranch(current,path,path.at(-1)===0?1:-1).condition;context.render();};const remove=():void=>{const current=context.getDraft();if(!current)return;current.condition=removeComposedConditionBranch(current,path).condition;context.render();};row.append(button(dom,"View",()=>detail("view")),button(dom,"Edit",()=>{detail("edit");if(condition.kind==="predicate")renderPredicateEditor(row,condition,context);}),button(dom,"Add child",addChild),button(dom,"Move",move),button(dom,"Remove",remove));tree.append(row);if(condition.kind!=="predicate"&&Array.isArray(condition.children))(condition.children as Record<string,unknown>[]).forEach((child,index)=>appendNode(child,[...path,index]));};
-  if(draft.condition)appendNode(draft.condition as unknown as Record<string,unknown>,[]);else tree.textContent="All (empty)";
-  for(const kind of ["all","any","not"] as const)controls.append(button(dom,`Add ${kind==="all"?"All":kind==="any"?"Any":"Not"} group`,()=>{try{const next=addComposedConditionGroup(draft,[],kind);draft.condition=ensureComposedConditionIds(next.condition as unknown as Record<string,unknown>) as typeof draft.condition;context.render();}catch{}}));
-  const search=dom.createElement("input"),property=dom.createElement("select"),operator=dom.createElement("select"),valueHost=dom.createElement("span");search.type="search";search.placeholder="Search properties";search.setAttribute("aria-label","Search condition properties");property.setAttribute("aria-label","Condition property");operator.setAttribute("aria-label","Type-valid operator");const renderProperties=():void=>{const query=search.value.trim().toLowerCase(),selected=property.value;property.replaceChildren(new Option("Choose property",""),...context.model.rows.filter(({path})=>!query||path.toLowerCase().includes(query)).map(({path,effective})=>new Option(path,effective.definitionId??path)));property.value=selected;};const selected=():{path:string;id:string;type:string}|undefined=>propertyChoice(context,property.value);const renderValue=():void=>{valueHost.replaceChildren();if(existsOperators.includes(operator.value as typeof existsOperators[number]))return;const value=dom.createElement("input");value.setAttribute("aria-label","Typed value");valueHost.append(value);};const renderOperators=():void=>{operator.replaceChildren(...operatorsFor(selected()?.type).map((entry)=>new Option(entry,entry)));renderValue();};renderProperties();renderOperators();search.addEventListener("input",renderProperties);property.addEventListener("change",renderOperators);operator.addEventListener("change",renderValue);controls.append(labeled(dom,"Search properties",search),labeled(dom,"Condition property",property),labeled(dom,"Type-valid operator",operator),labeled(dom,"Typed value",valueHost),button(dom,"Add predicate",()=>{const choice=selected();if(!choice)return;try{const value=valueHost.querySelector<HTMLInputElement>('input[aria-label="Typed value"]');const typed=existsOperators.includes(operator.value as typeof existsOperators[number])?undefined:typedComposedValue(choice.type,value?.value??"");const next=addComposedConditionPredicate(draft,[],{propertyId:choice.id,operator:operator.value,value:typed});draft.condition=ensureComposedConditionIds(next.condition as unknown as Record<string,unknown>) as typeof draft.condition;context.render();}catch{valueHost.querySelector<HTMLInputElement>("input")?.setCustomValidity("Value does not match the selected property type.");}}));host.append(summary,tree,controls);
+  host.append(summary,tree);
 }
