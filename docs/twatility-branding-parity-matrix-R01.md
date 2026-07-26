@@ -434,6 +434,7 @@ accessible relationships, focus, and recovery remain authoritative.
 | Boundary | Observed UTC | Previous base | New base | Commit delta | Controls/states/routes/persistence/tests added or changed | Matrix action |
 | --- | --- | --- | --- | --- | --- | --- |
 | Slice 0 initial fetch | 2026-07-26T12:22Z | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | none | none | Initial full authority and parity inventory recorded |
+| Slice 0 closing fetch | 2026-07-26T12:44:26Z | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | none | none | No reclassification or merge required before review gate |
 
 Every later slice boundary must append a row even when the merge is clean. Any
 master delta must list controls, states, routes, persistence contracts, active
