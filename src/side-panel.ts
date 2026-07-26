@@ -895,7 +895,7 @@ let savedInspectorTemplateId: string | undefined;
 const storedSchemaLibrary = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
 let schemas: SchemaDefinition[] = restoreSchemaLibrary(storedSchemaLibrary);
 let sidePanelLayeredProfileEditor:ReturnType<typeof mountSidePanelLayeredProfileEditor>|undefined;
-const projectLibraryUi=mountProjectLibraryUi({root:document,storage:projectStorage,prepareProject:durableProjectRuntime.ensureProject,settled:durableProjectRuntime.settled,undoProject:durableProjectRuntime.undo,subscribe:(listener)=>durableProjectRuntime.subscribe(({library})=>listener(library)),blocked:()=>Boolean(durableProjectRuntime.failedSave()),exportProject:async(projectId)=>JSON.stringify(await durableProjectRuntime.repository.exportProject(projectId)),importProject:async(serialized,input)=>{await durableProjectRuntime.repository.importProject(JSON.parse(serialized) as Record<string,unknown>,input);},projectStorageKey:SPECIFICATION_PROJECT_STORAGE_KEY,navigationStorageKey:"my-chrome-utilities.specification-project-navigation.v1",openStudio:(url)=>{globalThis.open(url,"_blank");},onChange:renderSchemas});
+const projectLibraryUi=mountProjectLibraryUi({root:document,storage:projectStorage,prepareProject:durableProjectRuntime.ensureProject,settled:durableProjectRuntime.settled,undoProject:durableProjectRuntime.undo,subscribe:(listener)=>durableProjectRuntime.subscribe(({library})=>listener(library)),blocked:()=>Boolean(durableProjectRuntime.failedSave()),exportProject:async(projectId)=>JSON.stringify(await durableProjectRuntime.repository.exportProject(projectId)),importProject:async(serialized,input)=>{await durableProjectRuntime.repository.importProject(JSON.parse(serialized) as Record<string,unknown>,input);},projectStorageKey:SPECIFICATION_PROJECT_STORAGE_KEY,navigationStorageKey:"my-chrome-utilities.specification-project-navigation.v1",openStudio:(url)=>{globalThis.open(url,"_blank");},onChange:()=>{renderProjectEventTransport();renderSchemas();}});
 function activeTransportProject() {
   const activeId=projectLibraryUi.library().activeProjectId;
   if(!activeId)return undefined;
@@ -913,7 +913,14 @@ function renderProjectEventTransport():void {
   if(historyPathInput){historyPathInput.disabled=!available;historyPathInput.value=settings?.observationHistoryPath??"";}
   if(defaultPushPathInput){defaultPushPathInput.disabled=!available;defaultPushPathInput.value=settings?.defaultPushPath??"";}
   if(defaultPushPathStatus)defaultPushPathStatus.textContent=available?"Saved in project Draft":"Open project";
-  renderHistoryPath(settings?.observationHistoryPath??"",settings?.observationHistoryPath??"","Selection required");
+  renderHistoryPath(
+    settings?.observationHistoryPath??"",
+    settings?.observationHistoryPath??"",
+    available ? currentTargetPathStatus : "Selection required",
+  );
+  if (available && selectedObservationTarget(observationTargetState)) {
+    queueMicrotask(refreshSelectedTargetPathStatus);
+  }
 }
 async function saveProjectEventTransport():Promise<void> {
   const state=activeTransportProject();
@@ -1020,7 +1027,9 @@ function renderHistoryPath(path: string, fieldValue = path, status: TargetPathSt
   }
 
   if (historyPathStatus) {
-    historyPathStatus.textContent = status;
+    historyPathStatus.textContent = status === "Waiting for path"
+      ? "Waiting for observation path"
+      : status;
   }
 }
 
@@ -4345,7 +4354,9 @@ async function pushPayloadToSelectedTargetPage(
   });
   const result = injection?.result as PagePushResult | undefined;
   if (!result?.success) {
-    throw new Error(result?.result ?? "Selected-page push failed.");
+    throw new Error(result?.result?.includes("cannot accept payload")
+      ? "Push path is not push-capable"
+      : result?.result ?? "Selected-page push failed.");
   }
 }
 
@@ -4360,6 +4371,10 @@ async function pushCurrentTemplateDraft(
     pushPayloadToSelectedTargetPage,
   );
   setPushDestinationValidation(eventLibraryEditorElements, record.fieldError ?? "");
+  if (!record.success && record.result === "Push path is not push-capable" && pushTemplateDraftButton) {
+    pushTemplateDraftButton.disabled = true;
+    pushTemplateDraftButton.setAttribute("aria-disabled", "true");
+  }
   if (record.fieldError) setEventLibraryValidation(eventLibraryEditorElements, record.fieldError);
   setEventLibraryResult(eventLibraryEditorElements, record.summary);
 }

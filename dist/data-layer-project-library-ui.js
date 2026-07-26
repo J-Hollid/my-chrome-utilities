@@ -39,7 +39,7 @@ export function mountProjectLibraryUi(options) {
         status.textContent = "Opening the current Saved Draft in Specification Studio…";
         void Promise.resolve(options.settled?.()).then(() => options.openStudio(`specification-builder.html?project=${encodeURIComponent(projectId)}&route=${encodeURIComponent(route)}`), error => { status.textContent = `Specification Studio was not opened because the pending durable save failed. ${error instanceof Error ? error.message : String(error)}`; });
         return;
-    } void prepare(projectId).then(() => { persist(activateProject(library, projectId, now)); return options.settled?.(); }).then(() => options.openStudio(`specification-builder.html?project=${encodeURIComponent(projectId)}&route=${encodeURIComponent(route)}`), error => { status.textContent = `Project switch was not committed. ${error instanceof Error ? error.message : String(error)}`; }); };
+    } void prepare(projectId).then(() => { persist(activateProject(library, projectId, now), true); return options.settled?.(); }).then(() => options.openStudio(`specification-builder.html?project=${encodeURIComponent(projectId)}&route=${encodeURIComponent(route)}`), error => { status.textContent = `Project switch was not committed. ${error instanceof Error ? error.message : String(error)}`; }); };
     const download = async (projectId) => { const record = library.projects[projectId]; status.textContent = `Preparing durable export for ${record.state.project.name}…`; try {
         const serialized = await options.exportProject(projectId), link = document.createElement("a");
         link.href = URL.createObjectURL(new Blob([serialized], { type: "application/json" }));
@@ -78,7 +78,7 @@ export function mountProjectLibraryUi(options) {
     const switchReview = (projectId, returnFocus) => { const target = library.projects[projectId], current = active(), dialog = document.createElement("dialog"), heading = document.createElement("h4"), summary = document.createElement("p"), confirm = button(`Switch to ${target.state.project.name}`, `Confirm switch to ${target.state.project.name}`, () => { try {
         if (blocked())
             throw new Error("A failed durable Draft still blocks project switching.");
-        persist(activateProject(library, projectId, now));
+        persist(activateProject(library, projectId, now), true);
         closeDialog(dialog);
         queueMicrotask(() => list.querySelector(`[data-project-id="${CSS.escape(projectId)}"]`)?.focus());
     }
@@ -167,7 +167,7 @@ export function mountProjectLibraryUi(options) {
                 item.append(button("Active", `${entry.state.project.name} Active`, () => { }));
             else {
                 const switchButton = button("Switch", `Switch to ${entry.state.project.name}`, function () { if (blocked())
-                    return; switchReview(projectId, this); });
+                    return; const control = this; control.disabled = true; void prepare(projectId).then(() => { control.disabled = false; switchReview(projectId, control); }, error => { control.disabled = false; status.textContent = `Project switch could not load its Saved Draft. ${error instanceof Error ? error.message : String(error)}`; }); });
                 switchButton.disabled = blocked();
                 item.append(switchButton);
             }
@@ -199,7 +199,7 @@ export function mountProjectLibraryUi(options) {
     const captureActiveProject = (state, revision) => { if (library.activeProjectId !== state.project.id)
         return; library = saveProjectState(library, state.project.id, { ...structuredClone(state), history: { undo: [], redo: [] } }, revision, now); options.storage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library)); render(); };
     const activate = (projectId) => { if (blocked())
-        throw new Error("A failed durable Draft blocks project switching."); persist(activateProject(library, projectId, now)); };
+        throw new Error("A failed durable Draft blocks project switching."); persist(activateProject(library, projectId, now), true); };
     return { render, library: () => cloneLibrary(library), activate, syncActiveProject: projectProjection, captureActiveProject };
 }
 const cloneLibrary = (library) => structuredClone(library);
