@@ -1,5 +1,5 @@
 import { canonicalPropertyPath, canonicalTableRows } from "../data-layer-canonical-schema.js";
-import { schemaTableCellMetadata, schemaTableColumns, schemaTableExpectedOrAllowed, schemaTableOverlayStyle } from "../data-layer-schema-table.js";
+import { revealSchemaTableOverlay, schemaTableAllowedValues, schemaTableCellMetadata, schemaTableColumns, schemaTableOverlayStyle } from "../data-layer-schema-table.js";
 import { button } from "./dom.js";
 export function canonicalNavigatorRows(context) {
     const query = context.query.trim().toLowerCase(), matches = (node) => !query || node.name.toLowerCase().includes(query) || canonicalPropertyPath(context.document, node.id).toLowerCase().includes(query), facet = (node) => context.propertyFilter === "all" || context.propertyFilter === "conditions" && Boolean(node.presence.condition) || context.propertyFilter === "documentation" && Boolean(node.documentation.displayText || node.documentation.description || node.documentation.comments) || context.propertyFilter === "issues" && node.provenance.some(({ state }) => state === "shadowed");
@@ -46,7 +46,7 @@ function renderTable(tree, context) {
         trigger.dataset.propertyActionsPath = row.path;
         identity.append(name, trigger);
         tr.append(identity, cell(1, row.path), cell(2, node.type), cell(3, node.presence.mode));
-        for (const [offset, control] of [editableCell(context, row.node, "description", node.documentation.description), editableCell(context, row.node, "expected-or-allowed", schemaTableExpectedOrAllowed({ expectedValue: node.expectedValue, allowedValues: node.allowedValues.map(({ value }) => value) })), editableCell(context, row.node, "example", example === undefined ? "" : String(example))].entries()) {
+        for (const [offset, control] of [editableCell(context, row.node, "description", node.documentation.description), editableCell(context, row.node, "expected-or-allowed", schemaTableAllowedValues({ expectedValue: node.expectedValue, allowedValues: node.allowedValues.map(({ value }) => value) })), editableCell(context, row.node, "example", example === undefined ? "" : String(example))].entries()) {
             const valueCell = cell(offset + 4);
             valueCell.append(control);
             tr.append(valueCell);
@@ -64,6 +64,7 @@ function renderTable(tree, context) {
                     overlay.append(context.review);
             }
             identity.append(overlay);
+            revealSchemaTableOverlay(overlay.lastElementChild);
         }
         body.append(tr);
     }

@@ -10,7 +10,7 @@ export function renderCanonicalRuleAddPanel(host, context) {
     if (!working)
         return;
     const panel = dom.createElement("fieldset"), legend = dom.createElement("legend"), kind = dom.createElement("select"), fields = dom.createElement("div"), status = dom.createElement("p");
-    let condition;
+    let condition, whenEnabled = false;
     legend.textContent = "Add rule";
     status.setAttribute("role", "status");
     kind.name = "ruleKind";
@@ -43,10 +43,11 @@ export function renderCanonicalRuleAddPanel(host, context) {
         }
         return rule;
     };
-    const validate = () => { const issue = candidate() ? focusedRuleIssue(candidate()) : undefined; addRule.disabled = !kind.value || Boolean(issue); status.textContent = issue ?? ""; };
+    const validate = () => { const issue = whenEnabled && !condition ? "Resolve or remove the When condition." : candidate() ? focusedRuleIssue(candidate()) : undefined; addRule.disabled = !kind.value || Boolean(issue); status.textContent = issue ?? ""; };
     const renderFields = () => {
         fields.replaceChildren();
         condition = undefined;
+        whenEnabled = false;
         if (!kind.value) {
             validate();
             return;
@@ -54,13 +55,15 @@ export function renderCanonicalRuleAddPanel(host, context) {
         const name = input(dom, "newRuleName");
         name.addEventListener("input", validate);
         fields.append(labeled(dom, "Rule name", name));
+        const when = dom.createElement("div"), renderWhen = () => { when.replaceChildren(); if (!whenEnabled) {
+            when.append(button(dom, "Add When", () => { whenEnabled = true; renderWhen(); validate(); }));
+            return;
+        } const tree = dom.createElement("div"); renderSharedConditionTree(tree, { dom, ...(condition ? { condition } : {}), properties: () => context.properties?.() ?? [], id: context.id, onChange: (next) => { condition = next; validate(); } }); when.append(tree, button(dom, "Remove When", () => { whenEnabled = false; condition = undefined; renderWhen(); validate(); })); };
+        renderWhen();
+        fields.append(when);
         for (const field of focusedRuleFields(kind.value)) {
-            if (field === "condition") {
-                const tree = dom.createElement("div");
-                renderSharedConditionTree(tree, { dom, properties: () => context.properties?.() ?? [], id: context.id, onChange: (next) => { condition = next; validate(); } });
-                fields.append(labeled(dom, "Condition tree", tree));
+            if (field === "condition")
                 continue;
-            }
             if (field === "reusableRuleId") {
                 const search = input(dom, "reusableRuleSearch");
                 search.type = "search";

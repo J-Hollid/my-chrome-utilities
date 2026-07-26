@@ -12,7 +12,7 @@ const numericFields=new Set(["minimum","maximum","minItems","maxItems"]);
 export function renderCanonicalRuleAddPanel(host:HTMLElement,context:CanonicalFocusedRuleAddContext):void {
   const {dom}=context,working=context.getWorking();if(!working)return;
   const panel=dom.createElement("fieldset"),legend=dom.createElement("legend"),kind=dom.createElement("select"),fields=dom.createElement("div"),status=dom.createElement("p");
-  let condition:CanonicalPredicate|undefined;
+  let condition:CanonicalPredicate|undefined,whenEnabled=false;
   legend.textContent="Add rule";status.setAttribute("role","status");kind.name="ruleKind";kind.append(new Option("Choose outcome",""),...(["presence","value","pattern","range","cardinality","reusable"] as const).map((entry)=>new Option(entry,entry)));
   const candidate=():CanonicalRule|undefined=>{
     if(!kind.value)return undefined;
@@ -28,11 +28,11 @@ export function renderCanonicalRuleAddPanel(host:HTMLElement,context:CanonicalFo
     if(reusable?.value){rule.reusableRuleId=reusable.value;const source=readFocusedReusableRules().find(({id})=>id===reusable.value),name=source?.name??reusable.selectedOptions[0]?.textContent,outcome=source&&focusedReusableOutcome(source);if(name)rule.name=name;if(outcome)rule.reusableOutcome=outcome;}
     return rule;
   };
-  const validate=()=>{const issue=candidate()?focusedRuleIssue(candidate() as unknown as Record<string,unknown>):undefined;addRule.disabled=!kind.value||Boolean(issue);status.textContent=issue??"";};
+  const validate=()=>{const issue=whenEnabled&&!condition?"Resolve or remove the When condition.":candidate()?focusedRuleIssue(candidate() as unknown as Record<string,unknown>):undefined;addRule.disabled=!kind.value||Boolean(issue);status.textContent=issue??"";};
   const renderFields=()=>{
-    fields.replaceChildren();condition=undefined;if(!kind.value){validate();return;}const name=input(dom,"newRuleName");name.addEventListener("input",validate);fields.append(labeled(dom,"Rule name",name));
+    fields.replaceChildren();condition=undefined;whenEnabled=false;if(!kind.value){validate();return;}const name=input(dom,"newRuleName");name.addEventListener("input",validate);fields.append(labeled(dom,"Rule name",name));const when=dom.createElement("div"),renderWhen=()=>{when.replaceChildren();if(!whenEnabled){when.append(button(dom,"Add When",()=>{whenEnabled=true;renderWhen();validate();}));return;}const tree=dom.createElement("div");renderSharedConditionTree(tree,{dom,...(condition?{condition}:{}),properties:()=>context.properties?.()??[],id:context.id,onChange:(next)=>{condition=next as CanonicalPredicate|undefined;validate();}});when.append(tree,button(dom,"Remove When",()=>{whenEnabled=false;condition=undefined;renderWhen();validate();}));};renderWhen();fields.append(when);
     for(const field of focusedRuleFields(kind.value)){
-      if(field==="condition"){const tree=dom.createElement("div");renderSharedConditionTree(tree,{dom,properties:()=>context.properties?.()??[],id:context.id,onChange:(next)=>{condition=next as CanonicalPredicate|undefined;validate();}});fields.append(labeled(dom,"Condition tree",tree));continue;}
+      if(field==="condition")continue;
       if(field==="reusableRuleId"){
         const search=input(dom,"reusableRuleSearch");search.type="search";search.placeholder="Search reusable rules by name";
         const reusable=dom.createElement("select");reusable.name="newRuleReusableRuleId";reusable.setAttribute("aria-label","Reusable rule name");

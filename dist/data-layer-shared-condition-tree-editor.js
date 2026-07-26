@@ -13,91 +13,109 @@ export const sharedTypedConditionValue = (type, text) => typedValue(type, text);
 export function renderSharedConditionTree(host, options) {
     const { dom } = options;
     let condition = options.condition ? withIds(clone(options.condition), options.id) : undefined;
-    const render = () => {
-        host.replaceChildren();
-        host.setAttribute("aria-label", "Shared editable condition tree");
-        const tree = dom.createElement("div"), controls = dom.createElement("fieldset"), search = dom.createElement("input"), property = dom.createElement("select"), operator = dom.createElement("select"), valueHost = dom.createElement("span");
-        const properties = () => options.properties();
-        const selected = () => properties().find(({ id, name }) => id === property.value || name === property.value);
-        const emit = () => options.onChange(condition ? clone(condition) : undefined);
-        const renderValue = (target = undefined) => { valueHost.replaceChildren(); if (existence.includes(operator.value))
-            return; const value = target ?? dom.createElement("input"); value.setAttribute("aria-label", "Typed condition value"); value.value = valueText(condition && condition.kind === "predicate" ? condition.value : undefined); value.addEventListener("input", () => { const choice = selected(); try {
-            const typed = typedValue(choice?.type, value.value);
-            if (condition?.kind === "predicate") {
-                condition.value = typed;
-                value.setCustomValidity("");
-                emit();
-            }
+    const properties = () => options.properties();
+    const emptyPredicate = () => ({ kind: "predicate", id: options.id("condition"), propertyId: properties()[0]?.id ?? "", operator: "Exists" });
+    const group = (kind) => ({ kind, id: options.id("condition"), children: [] });
+    const emit = () => options.onChange(condition ? clone(condition) : undefined);
+    const parentAt = (path) => {
+        const node = path.reduce((candidate, index) => candidate && candidate.kind !== "predicate" ? candidate.children[index] : undefined, condition);
+        return node?.kind === "predicate" ? undefined : node;
+    };
+    const insert = (path, node) => {
+        if (path) {
+            const parent = parentAt(path);
+            if (!parent || parent.kind === "not" && parent.children.length)
+                return;
+            parent.children.push(node);
         }
-        catch (error) {
-            value.setCustomValidity(error instanceof Error ? error.message : String(error));
-        } }); valueHost.append(value); };
-        const renderProperties = () => { const query = search.value.trim().toLowerCase(), prior = property.value; property.replaceChildren(new Option("Choose property", ""), ...properties().filter(({ name, id }) => !query || name.toLowerCase().includes(query) || id.toLowerCase().includes(query)).map(({ name, id }) => new Option(name, id))); property.value = prior; };
-        const renderOperators = () => { operator.replaceChildren(...operators(selected()?.type).map((entry) => new Option(entry, entry))); operator.value = condition?.kind === "predicate" && operators(selected()?.type).includes(condition.operator) ? condition.operator : operator.options[0]?.value ?? "Exists"; renderValue(); };
-        const renderPredicateEditor = (row, node) => { row.replaceChildren(); const editor = dom.createElement("fieldset"), editSearch = dom.createElement("input"), editProperty = dom.createElement("select"), editOperator = dom.createElement("select"), editValueHost = dom.createElement("span"); editor.setAttribute("aria-label", "Progressive condition predicate editor"); editSearch.type = "search"; editSearch.placeholder = "Search condition properties"; editSearch.setAttribute("aria-label", "Search condition properties"); editProperty.setAttribute("aria-label", "Condition property"); editOperator.setAttribute("aria-label", "Type-valid operator"); const chosen = () => properties().find(({ id, name }) => id === editProperty.value || name === editProperty.value); const emitNode = () => options.onChange(condition ? clone(condition) : undefined); const renderEditProperties = () => { const query = editSearch.value.trim().toLowerCase(), prior = editProperty.value; editProperty.replaceChildren(new Option("Choose property", ""), ...properties().filter(({ name, id }) => !query || name.toLowerCase().includes(query) || id.toLowerCase().includes(query)).map(({ name, id }) => new Option(name, id))); editProperty.value = prior || node.propertyId; }; const renderEditValue = () => { editValueHost.replaceChildren(); if (existence.includes(editOperator.value))
-            return; const input = dom.createElement("input"); input.setAttribute("aria-label", "Typed condition value"); input.value = valueText(node.value); input.addEventListener("input", () => { try {
-            node.value = typedValue(chosen()?.type, input.value);
-            input.setCustomValidity("");
-            emitNode();
-        }
-        catch (error) {
-            input.setCustomValidity(error instanceof Error ? error.message : String(error));
-        } }); editValueHost.append(input); }; const renderEditOperators = () => { editOperator.replaceChildren(...operators(chosen()?.type).map((entry) => new Option(entry, entry))); editOperator.value = operators(chosen()?.type).includes(node.operator) ? node.operator : "Exists"; renderEditValue(); }; renderEditProperties(); renderEditOperators(); editSearch.addEventListener("input", renderEditProperties); editProperty.addEventListener("change", () => { node.propertyId = editProperty.value; node.operator = "Exists"; delete node.value; renderEditOperators(); emitNode(); }); editOperator.addEventListener("change", () => { node.operator = editOperator.value; if (existence.includes(node.operator))
-            delete node.value; renderEditValue(); emitNode(); }); editor.append(labeled(dom, "Search properties", editSearch), labeled(dom, "Condition property", editProperty), labeled(dom, "Type-valid operator", editOperator), labeled(dom, "Typed value", editValueHost)); row.append(editor); };
-        const append = (node, path) => { const row = dom.createElement("article"); row.dataset.conditionId = node.id ?? ""; row.dataset.conditionPath = path.join(".") || "root"; row.append(Object.assign(dom.createElement("p"), { textContent: node.kind === "predicate" ? `${node.propertyId} ${node.operator}${node.value === undefined ? "" : ` ${String(node.value)}`}` : `${node.kind} (${node.children.length})` })); const replace = (next) => { if (!path.length) {
-            condition = next;
-            emit();
-            render();
-            return;
-        } const parent = path.slice(0, -1).reduce((candidate, index) => candidate && candidate.kind !== "predicate" ? candidate.children[index] : undefined, condition); if (!parent || parent.kind === "predicate")
-            return; if (next)
-            parent.children[path.at(-1)] = next;
+        else if (!condition)
+            condition = node;
+        else if (condition.kind === "predicate")
+            condition = { kind: "all", id: options.id("condition"), children: [condition, node] };
+        else if (condition.kind !== "not" || !condition.children.length)
+            condition.children.push(node);
+        emit();
+        render();
+    };
+    const remove = (path) => {
+        if (!path.length)
+            condition = undefined;
         else
-            parent.children.splice(path.at(-1), 1); emit(); render(); }; row.append(button(dom, "View", () => { row.dataset.conditionMode = "view"; }), button(dom, "Edit", () => { row.dataset.conditionMode = "edit"; if (node.kind === "predicate")
-            renderPredicateEditor(row, node); }), button(dom, "Add child", () => { if (node.kind === "predicate")
-            return; node.children.push({ kind: "predicate", id: options.id("condition"), propertyId: properties()[0]?.id ?? "", operator: "Exists" }); emit(); render(); }), button(dom, "Move", () => { if (!path.length)
-            return; const parent = path.slice(0, -1).reduce((candidate, index) => candidate && candidate.kind !== "predicate" ? candidate.children[index] : undefined, condition); if (!parent || parent.kind === "predicate")
-            return; const index = path.at(-1); const target = index === 0 ? 1 : index - 1; if (target < 0 || target >= parent.children.length)
-            return; [parent.children[index], parent.children[target]] = [parent.children[target], parent.children[index]]; emit(); render(); }), button(dom, "Remove", () => replace(undefined))); tree.append(row); if (node.kind !== "predicate")
-            node.children.forEach((child, index) => append(child, [...path, index])); };
-        if (condition)
-            append(condition, []);
-        else
-            tree.textContent = "No condition configured.";
+            parentAt(path.slice(0, -1))?.children.splice(path.at(-1), 1);
+        emit();
+        render();
+    };
+    const groupChoice = (path) => {
+        const controls = dom.createElement("span"), relation = dom.createElement("select");
+        relation.setAttribute("aria-label", "Condition group relation");
+        for (const kind of ["all", "any", "not"])
+            relation.append(new Option(kind === "all" ? "All" : kind === "any" ? "Any" : "Not", kind));
+        controls.append(relation, button(dom, "Add group", () => insert(path, group(relation.value))));
+        return controls;
+    };
+    const renderPredicate = (node, path) => {
+        const row = dom.createElement("article"), search = dom.createElement("input"), property = dom.createElement("select"), operator = dom.createElement("select"), valueHost = dom.createElement("span");
+        row.dataset.conditionId = node.id ?? "";
+        row.dataset.conditionPath = path.join(".") || "root";
+        row.dataset.conditionKind = "predicate";
         search.type = "search";
         search.placeholder = "Search condition properties";
         search.setAttribute("aria-label", "Search condition properties");
         property.setAttribute("aria-label", "Condition property");
         operator.setAttribute("aria-label", "Type-valid operator");
-        search.addEventListener("input", renderProperties);
-        property.addEventListener("change", () => { renderOperators(); });
-        operator.addEventListener("change", () => renderValue());
-        renderProperties();
-        renderOperators();
-        controls.append(labeled(dom, "Search properties", search), labeled(dom, "Condition property", property), labeled(dom, "Type-valid operator", operator), labeled(dom, "Typed value", valueHost), button(dom, "Add predicate", () => { const choice = selected(); if (!choice)
-            return; try {
-            const op = operator.value, next = { kind: "predicate", id: options.id("condition"), propertyId: choice.id, operator: op, ...(existence.includes(op) ? {} : { value: typedValue(choice.type, valueHost.querySelector("input")?.value ?? "") }) };
-            if (!condition)
-                condition = { kind: "all", id: options.id("condition"), children: [next] };
-            else if (condition.kind === "predicate")
-                condition = { kind: "all", ...(condition.id ? { id: condition.id } : {}), children: [condition, next] };
-            else
-                condition.children.push(next);
+        const selected = () => properties().find(({ id, name }) => id === property.value || name === property.value);
+        const renderProperties = () => { const query = search.value.trim().toLowerCase(), prior = property.value || node.propertyId; property.replaceChildren(new Option("Choose property", ""), ...properties().filter(({ name, id }) => !query || name.toLowerCase().includes(query) || id.toLowerCase().includes(query)).map(({ name, id }) => new Option(name, id))); property.value = prior; };
+        const renderValue = () => { valueHost.replaceChildren(); if (existence.includes(node.operator))
+            return; const value = dom.createElement("input"); value.setAttribute("aria-label", "Typed condition value"); value.value = valueText(node.value); value.addEventListener("input", () => { try {
+            node.value = typedValue(selected()?.type, value.value);
+            value.setCustomValidity("");
             emit();
-            render();
         }
         catch (error) {
-            valueHost.querySelector("input")?.setCustomValidity(error instanceof Error ? error.message : String(error));
-        } }));
-        for (const kind of ["all", "any", "not"])
-            controls.append(button(dom, `Add ${kind.toUpperCase()} group`, () => { const next = { kind, id: options.id("condition"), children: [] }; if (!condition)
-                condition = next;
-            else if (condition.kind === "predicate")
-                condition = { kind: "all", id: options.id("condition"), children: [condition, next] };
-            else
-                condition.children.push(next); options.onChange(condition); render(); }));
-        host.append(tree, controls);
+            value.setCustomValidity(error instanceof Error ? error.message : String(error));
+        } }); valueHost.append(value); };
+        const renderOperators = () => { const available = operators(selected()?.type); operator.replaceChildren(...available.map((entry) => new Option(entry, entry))); if (!available.includes(node.operator))
+            node.operator = "Exists"; operator.value = node.operator; renderValue(); };
+        renderProperties();
+        renderOperators();
+        search.addEventListener("input", renderProperties);
+        property.addEventListener("change", () => { node.propertyId = property.value; node.operator = "Exists"; delete node.value; renderOperators(); emit(); });
+        operator.addEventListener("change", () => { node.operator = operator.value; if (existence.includes(node.operator))
+            delete node.value; renderValue(); emit(); });
+        row.append(labeled(dom, "Search properties", search), labeled(dom, "Property", property), labeled(dom, "Operator", operator), labeled(dom, "Value", valueHost), button(dom, "Remove", () => remove(path)));
+        return row;
     };
+    const renderGroup = (node, path) => {
+        const row = dom.createElement("article"), header = dom.createElement("div"), relation = dom.createElement("select"), children = dom.createElement("div");
+        row.dataset.conditionId = node.id ?? "";
+        row.dataset.conditionPath = path.join(".") || "root";
+        row.dataset.conditionKind = "group";
+        relation.setAttribute("aria-label", "Condition group relation");
+        for (const kind of ["all", "any", "not"])
+            relation.append(new Option(kind === "all" ? "All" : kind === "any" ? "Any" : "Not", kind));
+        relation.value = node.kind;
+        relation.addEventListener("change", () => { const replacement = { ...node, kind: relation.value, children: relation.value === "not" ? node.children.slice(0, 1) : node.children }; if (!path.length)
+            condition = replacement;
+        else {
+            const parent = parentAt(path.slice(0, -1));
+            if (parent)
+                parent.children[path.at(-1)] = replacement;
+        } emit(); render(); });
+        header.append(labeled(dom, "Relation", relation), button(dom, "Add condition", () => insert(path, emptyPredicate())), groupChoice(path), button(dom, "Remove", () => remove(path)));
+        for (const [index, child] of node.children.entries())
+            children.append(renderNode(child, [...path, index]));
+        row.append(header, children);
+        return row;
+    };
+    const renderNode = (node, path) => node.kind === "predicate" ? renderPredicate(node, path) : renderGroup(node, path);
+    const render = () => { host.replaceChildren(); host.setAttribute("aria-label", "Shared editable condition tree"); if (condition)
+        host.append(renderNode(condition, []));
+    else {
+        const empty = dom.createElement("div");
+        empty.setAttribute("aria-label", "Empty When builder");
+        empty.append(button(dom, "Add condition", () => insert(undefined, emptyPredicate())), groupChoice(undefined));
+        host.append(empty);
+    } };
     render();
 }
 //# sourceMappingURL=data-layer-shared-condition-tree-editor.js.map

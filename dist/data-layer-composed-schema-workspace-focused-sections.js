@@ -1,5 +1,5 @@
 import { overrideComposedAllowedValue, typedComposedValue } from "./data-layer-composed-schema-builders.js";
-import { schemaTableExpectedOrAllowed, schemaTableReplaceExpectedOrAllowed } from "./data-layer-schema-table.js";
+import { schemaTableAllowedValues, schemaTableExampleControl, schemaTableStageAllowedValues } from "./data-layer-schema-table.js";
 import { renderComposedFocusedCondition } from "./data-layer-composed-schema-workspace-focused-conditions.js";
 import { renderComposedFocusedRules } from "./data-layer-composed-schema-workspace-focused-rules.js";
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
@@ -15,7 +15,7 @@ export function renderComposedFocusedSection(host, context) {
         return;
     host.dataset.focusedSection = context.activeSection;
     if (context.activeSection === "definition") {
-        const type = dom.createElement("select"), itemType = dom.createElement("select"), presence = dom.createElement("select"), ordinary = dom.createElement("input"), displayText = dom.createElement("input"), description = dom.createElement("textarea"), comments = dom.createElement("textarea"), method = dom.createElement("select"), example = dom.createElement("input");
+        const type = dom.createElement("select"), itemType = dom.createElement("select"), presence = dom.createElement("select"), allowed = dom.createElement("input"), displayText = dom.createElement("input"), description = dom.createElement("textarea"), comments = dom.createElement("textarea"), method = dom.createElement("select"), exampleHost = dom.createElement("span");
         type.name = "propertyType";
         type.append(new Option("Inherit type", ""), ...["string", "number", "integer", "boolean", "object", "array", "null"].map((entry) => new Option(entry, entry)));
         type.value = draft.type ?? "";
@@ -26,8 +26,9 @@ export function renderComposedFocusedSection(host, context) {
         presence.name = "presenceMode";
         presence.append(new Option("Required", "required"), new Option("Optional", "optional"), new Option("Forbidden", "forbidden"));
         presence.value = draft.presence === "required" ? "required" : draft.presence === "forbidden" ? "forbidden" : "optional";
-        ordinary.name = "ordinaryValue";
-        ordinary.value = schemaTableExpectedOrAllowed(draft);
+        allowed.name = "ordinaryValue";
+        allowed.value = schemaTableAllowedValues(draft);
+        allowed.dataset.allowedValues = "true";
         displayText.name = "displayText";
         displayText.value = draft.displayText;
         description.name = "description";
@@ -35,28 +36,39 @@ export function renderComposedFocusedSection(host, context) {
         comments.name = "comments";
         comments.value = draft.comments;
         method.name = "exampleMethod";
-        method.append(new Option("Blank", "blank"), new Option("Allowed value", "allowed-value"), new Option("Custom typed value", "custom"));
+        method.append(new Option("Blank", "blank"), new Option("Allowed value", "allowed-value"), new Option("Custom value", "custom"));
         method.value = draft.exampleMethod;
-        example.name = "exampleValue";
-        example.value = valueText(draft.exampleValue);
         type.addEventListener("change", () => { draft.type = type.value || undefined; itemType.disabled = draft.type !== "array"; });
         itemType.addEventListener("change", () => { draft.itemType = itemType.value || undefined; });
         presence.addEventListener("change", () => { draft.presence = presence.value; });
-        ordinary.addEventListener("input", () => { const staged = schemaTableReplaceExpectedOrAllowed(draft, ordinary.value); delete draft.expectedValue; delete draft.allowedValueIds; delete draft.allowedValueProvenance; draft.allowedValues = []; Object.assign(draft, staged); if (staged.expectedValue !== undefined && draft.exampleMethod === "allowed-value")
-            draft.exampleMethod = "custom"; });
+        const renderExample = () => { exampleHost.replaceChildren(); const projection = schemaTableExampleControl(draft.exampleMethod, draft.allowedValues); if (projection.kind === "none")
+            return; if (projection.kind === "select") {
+            const select = dom.createElement("select");
+            select.name = "exampleValue";
+            for (const value of projection.values)
+                select.append(new Option(valueText(value), valueText(value)));
+            select.value = draft.exampleValue === undefined ? "" : valueText(draft.exampleValue);
+            select.addEventListener("change", () => { draft.exampleValue = typedComposedValue(draft.type ?? context.row.effective.type, select.value); });
+            exampleHost.append(select);
+            return;
+        } const input = dom.createElement("input"); input.name = "exampleValue"; input.value = draft.exampleValue === undefined ? "" : valueText(draft.exampleValue); if (draft.type === "number" || draft.type === "integer")
+            input.type = "number"; input.addEventListener("input", () => { try {
+            draft.exampleValue = typedComposedValue(draft.type ?? context.row.effective.type, input.value);
+        }
+        catch {
+            draft.exampleValue = input.value;
+        } }); exampleHost.append(input); };
+        allowed.addEventListener("input", () => { draft.allowedValues = schemaTableStageAllowedValues(draft.allowedValues, allowed.value, (draft.type ?? context.row.effective.type)); delete draft.expectedValue; delete draft.allowedValueIds; delete draft.allowedValueProvenance; if (draft.exampleMethod === "allowed-value" && !draft.allowedValues.some((value) => JSON.stringify(value) === JSON.stringify(draft.exampleValue)))
+            draft.exampleValue = draft.allowedValues[0]; renderExample(); });
         displayText.addEventListener("input", () => { draft.displayText = displayText.value; });
         description.addEventListener("input", () => { draft.documentation = description.value; });
         comments.addEventListener("input", () => { draft.comments = comments.value; });
         method.addEventListener("change", () => { draft.exampleMethod = method.value; if (method.value === "blank")
-            draft.exampleValue = undefined; });
-        example.addEventListener("input", () => { try {
-            draft.exampleValue = typedComposedValue(draft.type ?? context.row.effective.type, example.value);
-            draft.exampleMethod = "custom";
-        }
-        catch {
-            draft.exampleValue = example.value;
-        } });
-        host.append(labeled(dom, "Type", type), labeled(dom, "Array item type", itemType), labeled(dom, "Presence", presence), labeled(dom, "Ordinary value", ordinary), labeled(dom, "Display text", displayText), labeled(dom, "Description", description), labeled(dom, "Comments", comments), labeled(dom, "Example method", method), labeled(dom, "Example value", example));
+            draft.exampleValue = undefined;
+        else if (method.value === "allowed-value")
+            draft.exampleValue = draft.allowedValues[0]; renderExample(); });
+        renderExample();
+        host.append(labeled(dom, "Type", type), labeled(dom, "Array item type", itemType), labeled(dom, "Presence", presence), labeled(dom, "Allowed values", allowed), labeled(dom, "Display text", displayText), labeled(dom, "Description", description), labeled(dom, "Comments", comments), labeled(dom, "Example method", method), labeled(dom, "Example value", exampleHost));
     }
     if (context.activeSection === "presence") {
         const presence = dom.createElement("select");

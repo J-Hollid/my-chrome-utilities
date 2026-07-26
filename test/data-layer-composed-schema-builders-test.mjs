@@ -21,12 +21,29 @@ import {stageComposedExpectedOrAllowed} from "../dist/data-layer-composed-schema
 import {compileLayeredSchema,validateLayeredObservation} from "../dist/data-layer-layered-schema.js";
 import {sharedConditionOperators,sharedConditionValueMounted,sharedTypedConditionValue} from "../dist/data-layer-shared-condition-tree-editor.js";
 import {
+  schemaTableAllowedValues,
+  schemaTableExampleControl,
+  schemaTableRuleConditionSummary,
+  schemaTableRuleOutcomeSummary,
+  schemaTableStageAllowedValues,
+} from "../dist/data-layer-schema-table.js";
+import {
   filterFocusedReusableRules,
   focusedRuleFields,
   focusedOwnershipActions,
 } from "../dist/data-layer-focused-schema-property-ui.js";
 
 const inherited={path:"/funnel_step",type:"string",presence:"required",allowedValues:["2","3a","3b"],documentation:"Checkout step"};
+assert.deepEqual(schemaTableStageAllowedValues([], "", "string"),[],"blank Definition supports zero allowed values");
+assert.deepEqual(schemaTableStageAllowedValues([], "retail", "string"),["retail"],"one Definition value remains an allowed value");
+assert.deepEqual(schemaTableStageAllowedValues([], "retail, wholesale", "string"),["retail","wholesale"],"Definition parses multiple typed allowed values");
+assert.equal(schemaTableAllowedValues({expectedValue:"legacy"}),"legacy","a legacy exact value projects as one allowed value");
+assert.deepEqual(schemaTableExampleControl("blank",["retail","wholesale"]),{kind:"none"},"Blank mounts no example-value control");
+assert.deepEqual(schemaTableExampleControl("allowed-value",["retail","wholesale"]),{kind:"select",values:["retail","wholesale"]},"Allowed value mounts the typed choices");
+assert.deepEqual(schemaTableExampleControl("custom",["retail","wholesale"]),{kind:"input"},"Custom mounts a type-valid input");
+assert.equal(schemaTableRuleConditionSummary(undefined,[]),"Always","a rule without When is unconditional");
+assert.equal(schemaTableRuleConditionSummary({kind:"predicate",propertyId:"definition:page-type",operator:"Exists"},[{id:"definition:page-type",name:"pageType"}]),"pageType exists","predicate summaries use human names without stable IDs");
+assert.equal(schemaTableRuleOutcomeSummary({kind:"cardinality",minItems:2}),"minimum items 2","rule summaries name the concrete Then outcome");
 const allowedExampleDraft=composedFacetDraft(
   {path:"/customer_type",allowedValues:["retail","business"],examples:["retail"]},
   {path:"/customer_type",type:"string",allowedValues:["retail","business"],examples:["retail"]},

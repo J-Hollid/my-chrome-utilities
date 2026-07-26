@@ -6,7 +6,7 @@ import {focusedSourceState} from "../dist/data-layer-canonical-schema-focused-dr
 import {schemaTableCellMetadata,schemaTableColumns,schemaTableEditableFacets,schemaTableExpectedOrAllowed,schemaTableOverlayStyle,schemaTableValueFacet} from "../dist/data-layer-schema-table.js";
 
 assert.deepEqual(focusedPropertySections,["definition","rules","structure"]);
-assert.deepEqual(schemaTableColumns.map(({label})=>label),["Property","Path","Type","Presence","Description","Expected or allowed value","Example","Source","Local/effective state","Validation state"],"every contributor table exposes the same information-rich columns");
+assert.deepEqual(schemaTableColumns.map(({label})=>label),["Property","Path","Type","Presence","Description","Allowed values","Example","Source","Local/effective state","Validation state"],"every contributor table exposes the same information-rich columns");
 assert.deepEqual(schemaTableCellMetadata,schemaTableColumns.map(({key,label})=>({key,label})),"every narrow stacked cell retains its visible column identity");
 assert.equal(new Set(schemaTableCellMetadata.map(({key})=>key)).size,schemaTableColumns.length,"stacked cell identities remain unique");
 assert.match(schemaTableOverlayStyle,/position:absolute/,"the row overlay stays out of flow instead of expanding its property row");

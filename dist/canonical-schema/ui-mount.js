@@ -6,7 +6,7 @@ import { renderCanonicalSchemaEditor } from "../data-layer-canonical-schema-rend
 import { focusedPropertyPatch, focusedStagedChanges, focusedSourceState } from "../data-layer-canonical-schema-focused-drafts.js";
 import { dispatchFocusedCanonicalCommand } from "../data-layer-canonical-schema-focused-command.js";
 import { button, clone, presenceText, provenanceText, sectionLabel } from "./ui-mount-helpers.js";
-import { schemaTableOverlayTransition, schemaTableStageExpectedOrAllowed } from "../data-layer-schema-table.js";
+import { schemaTableOverlayTransition, schemaTableStageAllowedValues } from "../data-layer-schema-table.js";
 export function bindCanonicalPropertySearch(control, update) { control.addEventListener("input", () => update(control.value)); }
 export function canonicalDispatchRequiresLocalRender(result, renderAfterDispatch) { return renderAfterDispatch !== false || result.status === "confirmation-required"; }
 /**
@@ -29,13 +29,8 @@ export function mountCanonicalSchemaEditor(options) {
     else if (facet === "example")
         working = { ...working, documentation: { ...working.documentation, example: { method: value ? "custom" : "blank", ...(value ? { value } : {}) } } };
     else {
-        const source = { expectedValue: working.expectedValue, allowedValues: working.allowedValues.map(({ value: allowed }) => allowed) }, staged = schemaTableStageExpectedOrAllowed(source, value);
-        if (staged.expectedValue !== undefined)
-            working = { ...working, expectedValue: staged.expectedValue, allowedValues: [] };
-        else {
-            const { expectedValue: _, ...withoutExpected } = working;
-            working = { ...withoutExpected, allowedValues: (staged.allowedValues ?? []).map((allowed, index) => ({ ...working.allowedValues[index] ?? { id: options.id("allowed-value") }, value: allowed })) };
-        }
+        const values = schemaTableStageAllowedValues(working.allowedValues.map(({ value: allowed }) => allowed), value, working.type), { expectedValue: _, ...withoutExpected } = working;
+        working = { ...withoutExpected, allowedValues: values.map((allowed, index) => ({ ...working.allowedValues[index] ?? { id: options.id("allowed-value") }, value: allowed })) };
     } activePropertyId = node.id; };
     const command = (next) => { if (next.kind === "view") {
         transientView = next.view;

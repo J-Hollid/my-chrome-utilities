@@ -1,6 +1,6 @@
 import { focusedOwnershipActions, focusedRuleFields } from "./data-layer-focused-schema-property-ui.js";
 import { renderSharedConditionTree } from "./data-layer-shared-condition-tree-editor.js";
-import { schemaTableExpectedOrAllowed, schemaTableStageExpectedOrAllowed } from "./data-layer-schema-table.js";
+import { schemaTableExpectedOrAllowed, schemaTableRuleConditionSummary, schemaTableRuleOutcomeSummary, schemaTableStageExpectedOrAllowed } from "./data-layer-schema-table.js";
 const clone = (value) => structuredClone(value);
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const input = (dom, name, value = "", type = "text") => { const control = dom.createElement("input"); control.name = name; control.type = type; control.value = value; return control; };
@@ -12,16 +12,21 @@ function editRule(row, rule, context) {
     const update = (change) => { const working = context.getWorking(); if (!working)
         return; const index = working.rules.findIndex(({ id }) => id === rule.id); if (index < 0)
         return; const next = clone(working.rules[index]); change(next); working.rules[index] = next; };
+    const properties = context.properties?.() ?? [], when = dom.createElement("div"), renderWhen = () => { when.replaceChildren(); if (!rule.condition) {
+        when.append(button(dom, "Add When", () => { const tree = dom.createElement("div"); renderSharedConditionTree(tree, { dom, properties: () => properties, id: context.id, onChange: (condition) => update((next) => { if (condition)
+                next.condition = condition;
+            else
+                delete next.condition; }) }); when.replaceChildren(tree, button(dom, "Remove When", () => { update((next) => { delete next.condition; }); renderWhen(); })); }));
+        return;
+    } const tree = dom.createElement("div"); renderSharedConditionTree(tree, { dom, condition: rule.condition, properties: () => properties, id: context.id, onChange: (condition) => update((next) => { if (condition)
+            next.condition = condition;
+        else
+            delete next.condition; }) }); when.append(tree, button(dom, "Remove When", () => { update((next) => { delete next.condition; }); renderWhen(); })); };
+    renderWhen();
+    editor.append(legend, when);
     for (const field of focusedRuleFields(rule.kind)) {
-        if (field === "condition") {
-            const tree = dom.createElement("div"), properties = context.properties?.() ?? [];
-            renderSharedConditionTree(tree, { dom, ...(rule.condition ? { condition: rule.condition } : {}), properties: () => properties, id: context.id, onChange: (condition) => update((next) => { if (condition)
-                    next.condition = condition;
-                else
-                    delete next.condition; }) });
-            editor.append(labeled(dom, "When condition", tree));
+        if (field === "condition")
             continue;
-        }
         if (field === "reusableRuleId")
             continue;
         if (field === "presence") {
@@ -60,13 +65,13 @@ export function renderCanonicalRuleRows(host, context) {
     const { dom, removedRuleIds, invariant } = context, working = context.getWorking();
     if (!working)
         return;
-    const list = dom.createElement("div");
+    const list = dom.createElement("div"), properties = context.properties?.() ?? [];
     list.setAttribute("aria-label", "Stable rule inventory");
     for (const rule of working.rules) {
         const row = dom.createElement("article"), summary = dom.createElement("p"), inherited = rule.provenance?.state === "inherited" || rule.provenance?.state === "shadowed", removed = removedRuleIds.has(rule.id);
         row.dataset.ruleId = rule.id;
         row.dataset.ownership = inherited ? "inherited" : "local";
-        summary.textContent = `${ruleKindLabel(rule)} · When ${rule.condition ? "configured" : "unresolved"} · Then ${rule.kind} · ${rule.severity} · ${rule.message ?? "No issue message"} · source ${rule.provenance?.contributorName ?? "local"} · ${inherited ? "inherited" : "local"}${removed ? " · Removed" : ""}`;
+        summary.textContent = `${ruleKindLabel(rule)} · ${schemaTableRuleConditionSummary(rule.condition, properties)} · Then ${schemaTableRuleOutcomeSummary(rule)} · ${rule.severity} · ${rule.message ?? "No issue message"} · source ${rule.provenance?.contributorName ?? "local"} · ${inherited ? "inherited" : "local"}${removed ? " · Removed" : ""}`;
         row.append(summary, button(dom, "View", () => { row.dataset.ruleMode = "view"; const detail = dom.createElement("p"); detail.textContent = `Rule ${rule.id} · definition ${JSON.stringify(rule)} · effective ${rule.enabled === false ? "disabled" : "enabled"} · source ${rule.provenance?.contributorName ?? "local"}`; row.append(detail); }));
         if (inherited) {
             const actions = focusedOwnershipActions({ inherited: true, invariant: rule.enforcement === "invariant" || invariant, replaceable: rule.enforcement === "overridable" && !invariant });

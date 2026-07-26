@@ -1,7 +1,7 @@
 import { renderFocusedPropertyMenu } from "./data-layer-focused-schema-property-menu.js";
 import { focusedOwnershipActions, focusedPropertySectionLabels } from "./data-layer-focused-schema-property-ui.js";
 import { renderComposedFocusedSection } from "./data-layer-composed-schema-workspace-focused-sections.js";
-import { schemaTableCellMetadata, schemaTableColumns, schemaTableExpectedOrAllowed, schemaTableOverlayStyle } from "./data-layer-schema-table.js";
+import { revealSchemaTableOverlay, schemaTableAllowedValues, schemaTableCellMetadata, schemaTableColumns, schemaTableOverlayStyle } from "./data-layer-schema-table.js";
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 function applyPersistedItemOwnership(host, row) {
     const overriddenValues = new Set((row.local.allowedValueProvenance ?? []).filter(({ state }) => state === "overridden").map(({ id }) => id));
@@ -97,7 +97,7 @@ export function renderComposedRows(rows, context) {
     head.append(headRow);
     const editable = (row, facet, value) => { const control = dom.createElement("input"); control.type = "text"; control.value = value; control.dataset.inlineSchemaFacet = facet; control.setAttribute("aria-label", `${facet} for ${row.path}`); control.addEventListener("input", () => context.stageInline(row, facet, control.value)); return control; };
     for (const row of context.model.rows) {
-        const draft = context.activePath === row.path ? context.draft : undefined, tr = dom.createElement("tr"), identity = cell(0), name = dom.createElement("span"), propertyActions = button(dom, "⋯", () => context.open(row, propertyActions)), effective = { ...row.effective, ...row.local }, description = draft?.documentation ?? String(effective.documentation ?? ""), expected = draft ? schemaTableExpectedOrAllowed(draft) : schemaTableExpectedOrAllowed(effective), exampleValue = draft?.exampleValue ?? (Array.isArray(effective.examples) ? effective.examples[0] : undefined);
+        const draft = context.activePath === row.path ? context.draft : undefined, tr = dom.createElement("tr"), identity = cell(0), name = dom.createElement("span"), propertyActions = button(dom, "⋯", () => context.open(row, propertyActions)), effective = { ...row.effective, ...row.local }, description = draft?.documentation ?? String(effective.documentation ?? ""), expected = draft ? schemaTableAllowedValues(draft) : schemaTableAllowedValues(effective), exampleValue = draft?.exampleValue ?? (Array.isArray(effective.examples) ? effective.examples[0] : undefined);
         tr.className = "composed-schema-row";
         tr.dataset.effectivePropertyPath = row.path;
         if (context.rowPathDataset)
@@ -127,6 +127,7 @@ export function renderComposedRows(rows, context) {
             if (context.focusedOpen)
                 overlay.append(focused(row, context));
             identity.append(overlay);
+            revealSchemaTableOverlay(overlay.lastElementChild);
         }
         body.append(tr);
     }

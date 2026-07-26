@@ -4,14 +4,18 @@ export const schemaTableColumns=[
   {key:"type",label:"Type"},
   {key:"presence",label:"Presence"},
   {key:"description",label:"Description"},
-  {key:"expected-or-allowed",label:"Expected or allowed value"},
+  {key:"expected-or-allowed",label:"Allowed values"},
   {key:"example",label:"Example"},
   {key:"source",label:"Source"},
   {key:"local-effective-state",label:"Local/effective state"},
   {key:"validation-state",label:"Validation state"},
 ] as const;
 export const schemaTableCellMetadata=schemaTableColumns.map(({key,label})=>({key,label}));
-export const schemaTableOverlayStyle="position:absolute;left:0;top:100%;z-index:10;width:min(42rem,calc(100vw - 3rem));max-width:calc(100vw - 3rem);box-sizing:border-box;overflow:auto;background:Canvas;border:1px solid ButtonBorder;padding:0.75rem;";
+export const schemaTableOverlayStyle="position:absolute;left:0;top:100%;z-index:10;width:min(42rem,calc(100vw - 1rem));max-width:calc(100vw - 1rem);max-height:calc(100vh - 1rem);box-sizing:border-box;overflow:auto;background:Canvas;border:1px solid ButtonBorder;padding:0.75rem;";
+
+export function revealSchemaTableOverlay(layer:HTMLElement):void {
+  queueMicrotask(()=>layer.scrollIntoView({block:"nearest",inline:"nearest"}));
+}
 
 export const schemaTableEditableFacets=["description","expected-or-allowed","example"] as const;
 export type SchemaTableEditableFacet=typeof schemaTableEditableFacets[number];
@@ -67,6 +71,66 @@ const ordinaryEntries=(text:string):string[]=>{
   entries.push(text.slice(start).trim());return entries.filter((entry)=>entry.length>0);
 };
 
+export function schemaTableAllowedValues(value:{expectedValue?:unknown;allowedValues?:readonly unknown[]}):string {
+  const values=value.allowedValues?.length?value.allowedValues:value.expectedValue===undefined?[]:[value.expectedValue];
+  return values.map(formattedOrdinaryValue).join(", ");
+}
+
+export function schemaTableStageAllowedValues(
+  previous:readonly unknown[],
+  text:string,
+  type:CanonicalPropertyType|undefined,
+):unknown[] {
+  const entries=ordinaryEntries(text);
+  return entries.map((entry,index)=>{
+    if(type==="string"||type===undefined)return parsedScalar(entry,typeof previous[index]==="string"?previous[index]:"");
+    return typedCanonicalValue(type,entry);
+  });
+}
+
+export type SchemaTableExampleControl=
+  |{kind:"none"}
+  |{kind:"select";values:readonly unknown[]}
+  |{kind:"input"};
+
+export function schemaTableExampleControl(
+  method:"blank"|"allowed-value"|"custom",
+  allowedValues:readonly unknown[],
+):SchemaTableExampleControl {
+  if(method==="blank")return{kind:"none"};
+  if(method==="allowed-value")return{kind:"select",values:allowedValues};
+  return{kind:"input"};
+}
+
+export function schemaTableRuleConditionSummary(
+  condition:CanonicalPredicate|undefined,
+  properties:readonly {id:string;name:string}[],
+):string {
+  if(!condition)return"Always";
+  if(condition.kind==="predicate"){
+    const property=properties.find(({id,name})=>id===condition.propertyId||name===condition.propertyId)?.name??condition.propertyId;
+    const operator=condition.operator==="Exists"?"exists":condition.operator==="Does not exist"?"does not exist":condition.operator.toLowerCase();
+    return`${property} ${operator}${condition.value===undefined?"":` ${formattedOrdinaryValue(condition.value)}`}`;
+  }
+  const relation=condition.kind==="all"?"All":condition.kind==="any"?"Any":"Not";
+  return`${relation}: ${condition.children.map((child)=>schemaTableRuleConditionSummary(child,properties)).join(condition.kind==="any"?" or ":" and ")}`;
+}
+
+export function schemaTableRuleOutcomeSummary(rule:Record<string,unknown>):string {
+  if(rule.kind==="cardinality"){
+    const parts=[rule.minItems===undefined?"":`minimum items ${rule.minItems}`,rule.maxItems===undefined?"":`maximum items ${rule.maxItems}`].filter(Boolean);
+    return parts.join(", ")||"cardinality";
+  }
+  if(rule.kind==="range"){
+    const parts=[rule.minimum===undefined?"":`minimum ${rule.minimum}`,rule.maximum===undefined?"":`maximum ${rule.maximum}`].filter(Boolean);
+    return parts.join(", ")||"range";
+  }
+  if(rule.kind==="presence")return String(rule.presence??"presence");
+  if(rule.kind==="pattern")return`pattern ${String(rule.pattern??"")}`.trim();
+  if(rule.kind==="value")return`allowed values ${schemaTableAllowedValues(rule)}`.trim();
+  return String(rule.name??rule.kind??"reusable rule");
+}
+
 export function schemaTableStageExpectedOrAllowed<T extends {expectedValue?:unknown;allowedValues?:readonly unknown[]}>(source:T,text:string):T {
   const facet=schemaTableValueFacet(source);
   const entries=ordinaryEntries(text),{expectedValue:_,allowedValues:__,...rest}=source,previous=facet.kind==="expected"?facet.value:facet.values[0];
@@ -86,3 +150,5 @@ export function schemaTableReplaceExpectedOrAllowed<T extends {
   const {allowedValueIds:_,allowedValueProvenance:__,...expected}=staged;
   return{...expected,allowedValues:[]} as unknown as T;
 }
+import type {CanonicalPredicate,CanonicalPropertyType} from "./data-layer-canonical-schema.js";
+import {typedCanonicalValue} from "./data-layer-canonical-schema-facets.js";

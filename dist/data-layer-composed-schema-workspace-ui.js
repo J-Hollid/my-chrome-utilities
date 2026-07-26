@@ -1,6 +1,6 @@
 import { composedFacetDraft, composedFacetDraftWithoutRemovedItems, sparseComposedFacets } from "./data-layer-composed-schema-builders.js";
 import { renderComposedRows } from "./data-layer-composed-schema-workspace-rows.js";
-import { schemaTableOverlayTransition, schemaTableReplaceExpectedOrAllowed } from "./data-layer-schema-table.js";
+import { schemaTableOverlayTransition, schemaTableReplaceExpectedOrAllowed, schemaTableStageAllowedValues } from "./data-layer-schema-table.js";
 const button = (text, run) => { const control = document.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 export function stageComposedExpectedOrAllowed(draft, text) {
     const staged = schemaTableReplaceExpectedOrAllowed(draft, text);
@@ -72,8 +72,12 @@ export function mountComposedSchemaWorkspace(options) {
         draft.exampleMethod = value ? "custom" : "blank";
         draft.exampleValue = value || undefined;
     }
-    else
-        draft = stageComposedExpectedOrAllowed(draft, value); };
+    else {
+        draft.allowedValues = schemaTableStageAllowedValues(draft.allowedValues, value, (draft.type ?? row.effective.type));
+        delete draft.expectedValue;
+        delete draft.allowedValueIds;
+        delete draft.allowedValueProvenance;
+    } };
     const close = (reason = "cancel") => { overlayState = schemaTableOverlayTransition(overlayState, { kind: reason }); const restorePath = ("restorePath" in overlayState ? overlayState.restorePath : undefined) ?? originPath; activePath = undefined; overlayOpen = false; focusedOpen = false; activeSection = "definition"; draft = undefined; removed = false; confirmedAction = undefined; removedRuleIds = new Set(); removedValueIds = new Set(); restoredRuleIds = new Set(); restoredValueIds = new Set(); stagedLocalValueIds = new Set(); overriddenRuleIds = new Set(); pendingStructure = []; pendingAction = undefined; rerender(); const target = originFocus?.isConnected ? originFocus : restorePath ? rows.querySelector(`[aria-label="Property actions for ${CSS.escape(restorePath)}"]`) : undefined; originFocus = undefined; originPath = undefined; if (target)
         queueMicrotask(() => target.focus({ preventScroll: true })); };
     const closeChild = () => { focusedOpen = false; overlayState = activePath ? { phase: "menu", path: activePath } : { phase: "closed" }; rerender(); const target = rows.querySelector(`[data-property-context-menu="true"] [data-section="${activeSection}"] button`); if (target)
