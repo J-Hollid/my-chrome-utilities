@@ -4,16 +4,15 @@ import type {FocusedPropertySection} from "./data-layer-focused-schema-property-
 import {renderComposedRows} from "./data-layer-composed-schema-workspace-rows.js";
 import type {LayerConstraint} from "./data-layer-layered-schema.js";
 import type {FlowPageInstanceStructureCommand,FlowPageInstanceStructureKind} from "./flow-graph/page-instance-structure.js";
-import {schemaTableOverlayTransition,schemaTableStageExpectedOrAllowed,type SchemaTableEditableFacet,type SchemaTableOverlayState} from "./data-layer-schema-table.js";
+import {schemaTableOverlayTransition,schemaTableReplaceExpectedOrAllowed,type SchemaTableEditableFacet,type SchemaTableOverlayState} from "./data-layer-schema-table.js";
 
 interface ComposedSchemaWorkspaceUiOptions {host:HTMLElement;model:ComposedSchemaWorkspace;effectiveText:(row:ComposedSchemaRow)=>string;onSave:(row:ComposedSchemaRow,facets:Omit<LayerConstraint,"path">,structure?:readonly FlowPageInstanceStructureCommand[])=>void;onReset:(row:ComposedSchemaRow)=>void;onRepair?:(repair:ComposedSchemaRepair)=>void;onStructure?:(kind:FlowPageInstanceStructureKind,path:string,name?:string)=>void;includeConditionEvaluation?:boolean;includeConflictSummary?:boolean;schemaContributorId?:string;schemaContributorScope?:string;rowPathDataset?:string;compact?:boolean;}
 const button=(text:string,run:()=>void):HTMLButtonElement=>{const control=document.createElement("button");control.type="button";control.textContent=text;control.addEventListener("click",run);return control;};
 
 export function stageComposedExpectedOrAllowed(draft:ComposedFacetDraft,text:string):ComposedFacetDraft{
-  const staged=schemaTableStageExpectedOrAllowed(draft,text);
+  const staged=schemaTableReplaceExpectedOrAllowed(draft,text);
   if(staged.expectedValue===undefined)return staged;
-  const {allowedValueIds:_,allowedValueProvenance:__,...expected}=staged;
-  return{...expected,allowedValues:[],exampleMethod:expected.exampleMethod==="allowed-value"?"custom":expected.exampleMethod};
+  return{...staged,exampleMethod:staged.exampleMethod==="allowed-value"?"custom":staged.exampleMethod};
 }
 
 export function mountComposedSchemaWorkspace(options:ComposedSchemaWorkspaceUiOptions):HTMLElement {

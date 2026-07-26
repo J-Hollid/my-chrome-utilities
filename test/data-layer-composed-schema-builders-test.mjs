@@ -36,6 +36,15 @@ assert.equal(expectedExampleDraft.expectedValue,"enterprise");
 assert.deepEqual(expectedExampleDraft.allowedValues,[]);
 assert.equal(expectedExampleDraft.exampleMethod,"custom","an allowed-value example becomes a preserved custom example when the allowed list is replaced");
 assert.equal(expectedExampleDraft.exampleValue,"retail");
+const quotedCommaDraft=stageComposedExpectedOrAllowed({
+  ...allowedExampleDraft,
+  allowedValueIds:["allowed:retail","allowed:business"],
+  allowedValueProvenance:[{id:"allowed:retail",state:"inherited"},{id:"allowed:business",state:"inherited"}],
+},'"last, first"');
+assert.equal(quotedCommaDraft.expectedValue,"last, first","a quoted comma remains one ordinary expected value");
+assert.deepEqual(quotedCommaDraft.allowedValues,[]);
+assert.equal(quotedCommaDraft.allowedValueIds,undefined,"replacing an allowed list clears its stale identities");
+assert.equal(quotedCommaDraft.allowedValueProvenance,undefined,"replacing an allowed list clears its stale provenance");
 assert.equal(sharedConditionValueMounted("Exists"),false,"Exists edits unmount the comparison input");
 assert.equal(sharedConditionValueMounted("Equals"),true,"comparison edits mount the typed input");
 assert.ok(sharedConditionOperators("number").includes("Greater than")&&!sharedConditionOperators("number").includes("Contains"),"predicate operators follow the selected property type");

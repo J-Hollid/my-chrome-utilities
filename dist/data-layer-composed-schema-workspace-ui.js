@@ -1,13 +1,12 @@
 import { composedFacetDraft, composedFacetDraftWithoutRemovedItems, sparseComposedFacets } from "./data-layer-composed-schema-builders.js";
 import { renderComposedRows } from "./data-layer-composed-schema-workspace-rows.js";
-import { schemaTableOverlayTransition, schemaTableStageExpectedOrAllowed } from "./data-layer-schema-table.js";
+import { schemaTableOverlayTransition, schemaTableReplaceExpectedOrAllowed } from "./data-layer-schema-table.js";
 const button = (text, run) => { const control = document.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 export function stageComposedExpectedOrAllowed(draft, text) {
-    const staged = schemaTableStageExpectedOrAllowed(draft, text);
+    const staged = schemaTableReplaceExpectedOrAllowed(draft, text);
     if (staged.expectedValue === undefined)
         return staged;
-    const { allowedValueIds: _, allowedValueProvenance: __, ...expected } = staged;
-    return { ...expected, allowedValues: [], exampleMethod: expected.exampleMethod === "allowed-value" ? "custom" : expected.exampleMethod };
+    return { ...staged, exampleMethod: staged.exampleMethod === "allowed-value" ? "custom" : staged.exampleMethod };
 }
 export function mountComposedSchemaWorkspace(options) {
     const section = document.createElement("section"), heading = document.createElement("h2"), summary = document.createElement("p"), filterControls = document.createElement("div"), filter = document.createElement("input"), sort = document.createElement("select"), addControls = document.createElement("div"), choice = document.createElement("select"), add = document.createElement("button"), rows = document.createElement("div");

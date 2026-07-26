@@ -1,7 +1,7 @@
 import {filterFocusedReusableRules,focusedOwnershipActions,focusedReusableOutcome,focusedRuleFields,focusedRuleIssue,readFocusedReusableRules} from "./data-layer-focused-schema-property-ui.js";
 import type {ComposedFocusedSectionContext} from "./data-layer-composed-schema-workspace-focused-sections.js";
 import {renderSharedConditionTree} from "./data-layer-shared-condition-tree-editor.js";
-import {schemaTableExpectedOrAllowed,schemaTableStageExpectedOrAllowed} from "./data-layer-schema-table.js";
+import {schemaTableExpectedOrAllowed,schemaTableReplaceExpectedOrAllowed,schemaTableStageExpectedOrAllowed} from "./data-layer-schema-table.js";
 
 const labeled=(dom:Document,text:string,control:HTMLElement):HTMLLabelElement=>{const label=dom.createElement("label");label.append(text,control);return label;};
 const button=(dom:Document,text:string,run:()=>void):HTMLButtonElement=>{const control=dom.createElement("button");control.type="button";control.textContent=text;control.addEventListener("click",run);return control;};
@@ -16,7 +16,7 @@ function renderRuleEditor(row:HTMLElement,rule:Record<string,unknown>,index:numb
     }
     if(field==="reusableRuleId")continue;
     if(field==="presence"){const control=dom.createElement("select");control.name="editRulePresence";control.append(new Option("Required","required"),new Option("Optional","optional"),new Option("Forbidden","forbidden"));control.value=String(rule.presence??"required");control.addEventListener("change",()=>{const draft=context.getDraft();if(!draft)return;const next=clone(draft.rules[index] as Record<string,unknown>);next.presence=control.value;draft.rules[index]=next;});editor.append(labeled(dom,"Then presence",control));continue;}
-    if(field==="ordinaryValue"){const control=dom.createElement("input");control.name="editRuleOrdinaryValue";control.value=schemaTableExpectedOrAllowed(rule);control.addEventListener("input",()=>{const draft=context.getDraft();if(!draft)return;const next=clone(draft.rules[index] as Record<string,unknown>);Object.assign(next,schemaTableStageExpectedOrAllowed(next,control.value));if(control.value.includes(","))delete next.expectedValue;else next.allowedValues=[];draft.rules[index]=next;});editor.append(labeled(dom,"Then ordinary value",control));continue;}
+    if(field==="ordinaryValue"){const control=dom.createElement("input");control.name="editRuleOrdinaryValue";control.value=schemaTableExpectedOrAllowed(rule);control.addEventListener("input",()=>{const draft=context.getDraft();if(!draft)return;draft.rules[index]=schemaTableReplaceExpectedOrAllowed(clone(draft.rules[index] as Record<string,unknown>),control.value);});editor.append(labeled(dom,"Then ordinary value",control));continue;}
     const control=field==="severity"?dom.createElement("select"):dom.createElement("input");control.name=`editRule${field[0]!.toUpperCase()+field.slice(1)}`;if(control instanceof HTMLSelectElement)control.append(new Option("error","error"),new Option("warning","warning"));else if(numericFields.has(field))control.type="number";control.value=String(rule[field]??"");control.addEventListener("input",()=>{const draft=context.getDraft();if(!draft)return;const next=clone(draft.rules[index] as Record<string,unknown>);next[field]=control.value===""?undefined:numericFields.has(field)?Number(control.value):control.value;draft.rules[index]=next;});editor.append(labeled(dom,field,control));
   }
   row.append(editor);

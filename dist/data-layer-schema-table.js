@@ -92,4 +92,11 @@ export function schemaTableStageExpectedOrAllowed(source, text) {
         return { ...rest, allowedValues: [] };
     return { ...rest, expectedValue: parsedScalar(entries[0], previous) };
 }
+export function schemaTableReplaceExpectedOrAllowed(source, text) {
+    const staged = schemaTableStageExpectedOrAllowed(source, text);
+    if (staged.expectedValue === undefined)
+        return staged;
+    const { allowedValueIds: _, allowedValueProvenance: __, ...expected } = staged;
+    return { ...expected, allowedValues: [] };
+}
 //# sourceMappingURL=data-layer-schema-table.js.map

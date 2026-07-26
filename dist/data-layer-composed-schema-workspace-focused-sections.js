@@ -1,5 +1,5 @@
 import { overrideComposedAllowedValue, typedComposedValue } from "./data-layer-composed-schema-builders.js";
-import { schemaTableExpectedOrAllowed, schemaTableStageExpectedOrAllowed } from "./data-layer-schema-table.js";
+import { schemaTableExpectedOrAllowed, schemaTableReplaceExpectedOrAllowed } from "./data-layer-schema-table.js";
 import { renderComposedFocusedCondition } from "./data-layer-composed-schema-workspace-focused-conditions.js";
 import { renderComposedFocusedRules } from "./data-layer-composed-schema-workspace-focused-rules.js";
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
@@ -42,10 +42,8 @@ export function renderComposedFocusedSection(host, context) {
         type.addEventListener("change", () => { draft.type = type.value || undefined; itemType.disabled = draft.type !== "array"; });
         itemType.addEventListener("change", () => { draft.itemType = itemType.value || undefined; });
         presence.addEventListener("change", () => { draft.presence = presence.value; });
-        ordinary.addEventListener("input", () => { Object.assign(draft, schemaTableStageExpectedOrAllowed(draft, ordinary.value)); if (ordinary.value.includes(","))
-            delete draft.expectedValue;
-        else
-            draft.allowedValues = []; });
+        ordinary.addEventListener("input", () => { const staged = schemaTableReplaceExpectedOrAllowed(draft, ordinary.value); delete draft.expectedValue; delete draft.allowedValueIds; delete draft.allowedValueProvenance; draft.allowedValues = []; Object.assign(draft, staged); if (staged.expectedValue !== undefined && draft.exampleMethod === "allowed-value")
+            draft.exampleMethod = "custom"; });
         displayText.addEventListener("input", () => { draft.displayText = displayText.value; });
         description.addEventListener("input", () => { draft.documentation = description.value; });
         comments.addEventListener("input", () => { draft.comments = comments.value; });

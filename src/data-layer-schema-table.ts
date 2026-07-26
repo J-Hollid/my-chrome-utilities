@@ -74,3 +74,15 @@ export function schemaTableStageExpectedOrAllowed<T extends {expectedValue?:unkn
   if(!entries.length)return{...rest,allowedValues:[]} as unknown as T;
   return{...rest,expectedValue:parsedScalar(entries[0]!,previous)} as unknown as T;
 }
+
+export function schemaTableReplaceExpectedOrAllowed<T extends {
+  expectedValue?:unknown;
+  allowedValues?:readonly unknown[];
+  allowedValueIds?:readonly string[];
+  allowedValueProvenance?:readonly unknown[];
+}>(source:T,text:string):T {
+  const staged=schemaTableStageExpectedOrAllowed(source,text);
+  if(staged.expectedValue===undefined)return staged;
+  const {allowedValueIds:_,allowedValueProvenance:__,...expected}=staged;
+  return{...expected,allowedValues:[]} as unknown as T;
+}

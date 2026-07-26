@@ -1,6 +1,6 @@
 import { filterFocusedReusableRules, focusedOwnershipActions, focusedReusableOutcome, focusedRuleFields, focusedRuleIssue, readFocusedReusableRules } from "./data-layer-focused-schema-property-ui.js";
 import { renderSharedConditionTree } from "./data-layer-shared-condition-tree-editor.js";
-import { schemaTableExpectedOrAllowed, schemaTableStageExpectedOrAllowed } from "./data-layer-schema-table.js";
+import { schemaTableExpectedOrAllowed, schemaTableReplaceExpectedOrAllowed, schemaTableStageExpectedOrAllowed } from "./data-layer-schema-table.js";
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 const numericFields = new Set(["minimum", "maximum", "minItems", "maxItems"]);
@@ -35,10 +35,7 @@ function renderRuleEditor(row, rule, index, context) {
             control.name = "editRuleOrdinaryValue";
             control.value = schemaTableExpectedOrAllowed(rule);
             control.addEventListener("input", () => { const draft = context.getDraft(); if (!draft)
-                return; const next = clone(draft.rules[index]); Object.assign(next, schemaTableStageExpectedOrAllowed(next, control.value)); if (control.value.includes(","))
-                delete next.expectedValue;
-            else
-                next.allowedValues = []; draft.rules[index] = next; });
+                return; draft.rules[index] = schemaTableReplaceExpectedOrAllowed(clone(draft.rules[index]), control.value); });
             editor.append(labeled(dom, "Then ordinary value", control));
             continue;
         }
