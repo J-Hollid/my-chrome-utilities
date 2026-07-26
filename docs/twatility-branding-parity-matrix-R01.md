@@ -451,7 +451,7 @@ accessible relationships, focus, and recovery remain authoritative.
 | Slice 0 closing fetch | 2026-07-26T12:44:26Z | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | none | none | No reclassification or merge required before review gate |
 | Slice 1 opening fetch | 2026-07-26T13:11:21Z | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | none | none | User-approved structural decisions recorded; no upstream reclassification or source merge required |
 | Slice 1 closing fetch | 2026-07-26T13:36:40Z | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | none | none | No controls, states, routes, persistence contracts, active-scope requirements, or test owners changed upstream; no reclassification or merge required |
-| Slice 2 opening fetch | 2026-07-26T13:48:16Z | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | `6be109256c058330f3f7c2badc65f4224d3f31a7` | 13 commits: Quick Table save and Project Documentation workspace lineages | New direct Table commit/focus behavior; first-in-tree Documentation route and progressive workspace; Draft/portable Set/theme records; stale/incomplete/preflight/export states; removed eager dialog; expanded `layered_schema` and `flow_export` ownership | Added/updated the exact Quick Table, Project tree/route, Documentation configuration/theme/preview/export, More, obsolete-dialog, owner, and verification rows before merge |
+| Slice 2 opening fetch | 2026-07-26T13:48:16Z | `e4d36277a4113d2999c26ac6ba8ae13c5c6b0242` | `6be109256c058330f3f7c2badc65f4224d3f31a7` | 13 commits: Quick Table save and Project Documentation workspace lineages | New direct Table commit/focus behavior; first-in-tree Documentation route and progressive workspace; Draft/portable Set/theme records; stale/incomplete/preflight/export states; removed eager dialog; expanded `layered_schema` and `flow_export` ownership | Added/updated the exact Quick Table, Project tree/route, Documentation configuration/theme/preview/export, More, obsolete-dialog, owner, and verification rows before merge; merged as `1f83b0f6` and verified at the finite cutoff |
 
 Every later slice boundary must append a row even when the merge is clean. Any
 master delta must list controls, states, routes, persistence contracts, active
@@ -491,6 +491,40 @@ authority, and verification ownership before implementation continues.
   `dist`. Side-panel source has no direct master collision, but Slice 2 CSS must
   not replace quick-edit inputs, datasets, accessible labels, traversal order,
   or the single vertical scroll owner.
+
+### Slice 2 opening merge verification
+
+- `origin/master` at `6be109256c058330f3f7c2badc65f4224d3f31a7`
+  is an ancestor of feature merge `1f83b0f6`. Master was not checked out,
+  modified, or pushed.
+- Verification-pack ownership now assigns the Slice 1 static and packaged
+  branding tests to `shell`, satisfying the repository-wide exactly-one-owner
+  invariant introduced by the merged master.
+- The merged durable-renderer RSS probe now uses the native Windows process
+  inventory and preserves the Unix `ps` path. Its installed 501-property,
+  persistence, Undo/Redo, recovery, isolation, heartbeat, heap, and RSS
+  evidence passes.
+- The Flow and Project Documentation browser adapters now wait for production
+  module initialization and reacquire live stable-identity nodes around
+  rerenders. This removes test-only navigation, stale-node, and geometry races
+  without weakening any asserted product behavior.
+- The branded narrow Studio restores the production single vertical scroll
+  owner. The complete layered-schema browser adapter passes at 360 pixels,
+  including table facets, inline quick edits, overlays, conditions, focus,
+  persistence, and side-panel parity.
+- `node scripts/run-focused-acceptance.mjs --pack flow_export` passed
+  uninterrupted with Babashka 1.12.218 from a SHA-256-verified portable
+  temporary tool directory. The run covered the pack dependency closure,
+  packaged Chrome adapters, generated Gherkin entrypoints, and ended with
+  `acceptance passed`.
+- `node scripts/package.mjs` produced
+  `build/package/my-chrome-utilities.zip`.
+- `node test/twatility-brand-foundation-test.mjs`,
+  `node test/twatility-brand-foundation-browser-test.mjs`, and
+  `node test/headless-chrome-lifecycle-test.mjs` passed.
+- A source rebuild after staging produced no working-tree delta against the
+  staged generated `dist`, proving deterministic tracked output for this
+  boundary.
 
 ## Slice 0 baseline and known-red checks
 
