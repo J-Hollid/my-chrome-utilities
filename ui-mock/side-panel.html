@@ -1,0 +1,2704 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="A static, click-through side-panel design concept for TWAtility Belt."
+    />
+    <title>TWAtility Belt — Side-panel mock</title>
+    <link rel="stylesheet" href="assets/mock.css" />
+    <script src="assets/mock.js" defer></script>
+  </head>
+  <body class="mock-page mock-page--side-panel side-panel-page">
+    <a class="skip-link" href="#main-content">Skip to the workbench</a>
+
+    <div class="extension-shell side-shell">
+      <header class="utility-bar side-header">
+        <a class="mini-brand" href="side-panel.html" aria-label="TWAtility Belt home">
+          <span class="brand-wordmark brand-wordmark--compact" aria-hidden="true">
+            <span class="brand-wordmark__name">
+              <span class="brand-wordmark__twa">TWA</span><span class="brand-wordmark__wink">t</span><span class="brand-wordmark__rest">ility</span>
+            </span>
+            <span class="brand-wordmark__belt">Belt</span>
+          </span>
+          <small>Utilities for Technical Web Analysts</small>
+        </a>
+
+        <nav class="utility-nav global-nav" aria-label="Utility shortcuts">
+          <button
+            class="button button--quiet"
+            type="button"
+            data-dialog-open="command-palette"
+            data-control="open-palette"
+          >
+            Palette
+          </button>
+          <button
+            class="button button--quiet"
+            type="button"
+            data-tab-target="workspace-hotkeys"
+            data-tab-group="workspace"
+          >
+            Hotkeys
+          </button>
+          <button
+            class="button button--quiet"
+            type="button"
+            data-tab-target="workspace-data-layer"
+            data-tab-group="workspace"
+          >
+            Data layer
+          </button>
+          <button
+            class="button button--quiet"
+            type="button"
+            data-dialog-open="command-palette"
+          >
+            Commands
+          </button>
+        </nav>
+      </header>
+
+      <main id="main-content" class="workbench side-content" tabindex="-1" data-tab-scope>
+        <nav class="workspace-tabs tab-list" role="tablist" aria-label="Workspace">
+          <button
+            id="workspace-data-layer-tab"
+            class="tab"
+            type="button"
+            role="tab"
+            aria-selected="true"
+            aria-controls="workspace-data-layer"
+            data-tab-target="workspace-data-layer"
+            data-tab-group="workspace"
+            data-control="workspace-tab-data-layer"
+          >
+            Data Layer
+          </button>
+          <button
+            id="workspace-hotkeys-tab"
+            class="tab"
+            type="button"
+            role="tab"
+            aria-selected="false"
+            aria-controls="workspace-hotkeys"
+            data-tab-target="workspace-hotkeys"
+            data-tab-group="workspace"
+            data-control="workspace-tab-hotkeys"
+          >
+            Hotkeys
+          </button>
+          <span class="workspace-tabs__spacer"></span>
+          <button
+            class="icon-button"
+            type="button"
+            aria-label="Open command palette"
+            title="Open command palette"
+            data-dialog-open="command-palette"
+          >
+            ⌘
+          </button>
+        </nav>
+
+        <section
+          id="workspace-data-layer"
+          class="workspace-panel"
+          role="tabpanel"
+          aria-labelledby="workspace-data-layer-tab"
+          data-tab-panel="workspace-data-layer"
+          data-tab-group="workspace"
+          data-view-scope
+        >
+          <header class="section-heading section-heading--compact">
+            <div>
+              <p class="eyebrow">Measurement shed</p>
+              <h2>Data Layer</h2>
+            </div>
+            <span class="status-pill status-pill--success">
+              <span class="status-dot" aria-hidden="true"></span>
+              Retail &amp; Trade active
+            </span>
+          </header>
+
+          <nav class="view-tabs tab-list" role="tablist" aria-label="Data Layer views">
+            <button
+              id="view-live-tab"
+              class="tab"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="view-live"
+              data-view-target="view-live"
+              data-tab-group="data-layer"
+              data-control="data-layer-view-live"
+            >
+              Live
+              <span class="count-badge" aria-label="3 events">3</span>
+            </button>
+            <button
+              id="view-projects-tab"
+              class="tab"
+              type="button"
+              role="tab"
+              aria-selected="true"
+              aria-controls="view-projects"
+              data-view-target="view-projects"
+              data-tab-group="data-layer"
+              data-control="data-layer-view-projects"
+            >
+              Projects
+            </button>
+            <button
+              id="view-library-tab"
+              class="tab"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="view-library"
+              data-view-target="view-library"
+              data-tab-group="data-layer"
+              data-control="data-layer-view-library"
+            >
+              Library
+              <span class="count-badge" aria-label="8 templates">8</span>
+            </button>
+            <button
+              id="view-sessions-tab"
+              class="tab"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="view-sessions"
+              data-view-target="view-sessions"
+              data-tab-group="data-layer"
+              data-control="data-layer-view-sessions"
+            >
+              Sessions
+              <span class="count-badge" aria-label="4 sessions">4</span>
+            </button>
+            <button
+              id="view-defects-tab"
+              class="tab"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="view-defects"
+              data-view-target="view-defects"
+              data-tab-group="data-layer"
+              data-control="data-layer-view-defects"
+            >
+              Defects
+              <span class="count-badge count-badge--alert" aria-label="2 open defects">2</span>
+            </button>
+            <button
+              id="view-schemas-tab"
+              class="tab"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="view-schemas"
+              data-view-target="view-schemas"
+              data-tab-group="data-layer"
+              data-control="data-layer-view-schemas"
+            >
+              Schemas
+              <span class="count-badge" aria-label="6 schemas">6</span>
+            </button>
+          </nav>
+
+          <aside class="project-ribbon" aria-label="Active project">
+            <div class="project-ribbon__copy">
+              <span class="eyebrow">Active project</span>
+              <strong>Retail &amp; Trade · UK storefront</strong>
+              <small>Saved Draft · r12 · saved 2m ago</small>
+            </div>
+            <a class="button button--primary" href="studio.html">Open Studio</a>
+          </aside>
+
+          <section
+            id="view-projects"
+            class="view-panel panel"
+            role="tabpanel"
+            aria-labelledby="view-projects-tab"
+            data-view="view-projects"
+            data-tab-group="data-layer"
+          >
+            <header class="panel-heading">
+              <div>
+                <p class="comic-kicker">Project cupboard</p>
+                <h3>Projects</h3>
+                <p>Keep a storefront’s measurement plan, releases and working notes in one tidy case.</p>
+              </div>
+              <div class="button-group">
+                <button
+                  class="button button--secondary"
+                  type="button"
+                  data-dialog-open="import-project-dialog"
+                  data-control="import-library-project"
+                >
+                  Import project
+                </button>
+                <button
+                  class="button button--primary"
+                  type="button"
+                  data-dialog-open="create-project-dialog"
+                  data-control="create-library-project"
+                >
+                  Create project
+                </button>
+              </div>
+            </header>
+
+            <article class="feature-card feature-card--active">
+              <div class="feature-card__flag">On the belt</div>
+              <div class="feature-card__body">
+                <div class="card-heading">
+                  <div>
+                    <p class="eyebrow">Active · Saved Draft</p>
+                    <h4>Retail &amp; Trade · UK storefront</h4>
+                  </div>
+                  <span class="status-pill status-pill--success">All changes saved</span>
+                </div>
+                <p>
+                  Measurement design for browse, basket, checkout, loyalty and assisted-sale journeys
+                  across <strong>brassandborough.co.uk</strong>.
+                </p>
+                <dl class="metric-strip">
+                  <div><dt>Events</dt><dd>28</dd></div>
+                  <div><dt>Profiles</dt><dd>5</dd></div>
+                  <div><dt>Flows</dt><dd>7</dd></div>
+                  <div><dt>Coverage</dt><dd>91%</dd></div>
+                  <div><dt>Release</dt><dd>v12</dd></div>
+                </dl>
+                <div class="card-actions">
+                  <a
+                    class="button button--primary"
+                    href="studio.html"
+                    data-control="open-specification-studio"
+                  >
+                    Open in Specification Studio
+                  </a>
+                  <button
+                    class="button button--secondary"
+                    type="button"
+                    data-dialog-open="edit-project-dialog"
+                    data-control="edit-project"
+                  >
+                    Edit details
+                  </button>
+                  <button
+                    class="button button--secondary"
+                    type="button"
+                    data-toast="Project export prepared — entirely pretend, naturally."
+                    data-control="export-project"
+                  >
+                    Export
+                  </button>
+                </div>
+              </div>
+            </article>
+
+            <div class="toolbar" aria-label="Project filters">
+              <label class="search-field">
+                <span>Search projects</span>
+                <input
+                  type="search"
+                  placeholder="Name, domain or description…"
+                  data-control="project-library-search"
+                />
+              </label>
+              <label class="select-field">
+                <span>Sort</span>
+                <select data-control="project-library-sort">
+                  <option>Name</option>
+                  <option>Last saved</option>
+                </select>
+              </label>
+            </div>
+
+            <div class="stack" aria-label="Project library">
+              <article class="list-card">
+                <div class="list-card__main">
+                  <div class="card-heading">
+                    <div>
+                      <h4>Retail &amp; Trade · UK storefront</h4>
+                      <p>brassandborough.co.uk · Saved Draft · active</p>
+                    </div>
+                    <span class="status-pill status-pill--success">Active</span>
+                  </div>
+                  <p class="meta">Published revision 12 · last saved 2 minutes ago</p>
+                  <div class="inline-actions">
+                    <a class="text-action" href="studio.html">Open Studio</a>
+                    <button class="text-action" type="button" data-dialog-open="edit-project-dialog">
+                      Edit details
+                    </button>
+                    <button class="text-action" type="button" data-toast="Mock export ready.">
+                      Export
+                    </button>
+                  </div>
+                </div>
+              </article>
+
+              <article class="list-card">
+                <div class="list-card__main">
+                  <div class="card-heading">
+                    <div>
+                      <h4>Brass &amp; Borough · Assisted sale</h4>
+                      <p>Tablet tills, product lookup and endless aisle</p>
+                    </div>
+                    <span class="status-pill">Saved Draft</span>
+                  </div>
+                  <p class="meta">Published revision 5 · last saved yesterday at 16:42</p>
+                  <div class="inline-actions">
+                    <button class="text-action" type="button" data-toast="Assisted sale is now active.">
+                      Make active
+                    </button>
+                    <button class="text-action" type="button" data-dialog-open="edit-project-dialog">
+                      Edit details
+                    </button>
+                    <button class="text-action" type="button" data-toast="Mock export ready.">
+                      Export
+                    </button>
+                  </div>
+                </div>
+              </article>
+
+              <article class="list-card">
+                <div class="list-card__main">
+                  <div class="card-heading">
+                    <div>
+                      <h4>European storefront rollout</h4>
+                      <p>Localised commerce for NL, DE and FR</p>
+                    </div>
+                    <span class="status-pill status-pill--warning">Draft only</span>
+                  </div>
+                  <p class="meta">No published revision · last saved 18 July 2026</p>
+                  <div class="inline-actions">
+                    <button class="text-action" type="button" data-toast="EU rollout is now active.">
+                      Make active
+                    </button>
+                    <button class="text-action" type="button" data-dialog-open="edit-project-dialog">
+                      Edit details
+                    </button>
+                    <button class="text-action" type="button" data-toast="Mock export ready.">
+                      Export
+                    </button>
+                  </div>
+                </div>
+              </article>
+            </div>
+
+            <section class="storage-card" aria-labelledby="storage-title">
+              <div>
+                <p class="comic-kicker">The safe bit</p>
+                <h4 id="storage-title">Durable project storage</h4>
+                <p>
+                  Ready · 3 projects · active Retail &amp; Trade · most recent backup today at 09:32
+                </p>
+              </div>
+              <div class="button-group">
+                <a class="button button--secondary" href="state-gallery.html#project-storage">
+                  Storage &amp; recovery
+                </a>
+                <a class="button button--quiet" href="state-gallery.html#legacy-migration-dialog">
+                  Migration review
+                </a>
+              </div>
+            </section>
+          </section>
+
+          <section
+            id="view-live"
+            class="view-panel panel"
+            role="tabpanel"
+            aria-labelledby="view-live-tab"
+            data-view="view-live"
+            data-tab-group="data-layer"
+            hidden
+          >
+            <header class="panel-heading">
+              <div>
+                <p class="comic-kicker">Live wire</p>
+                <h3>Live observation</h3>
+                <p>Watch the data layer, validate the useful bits and politely point at the nonsense.</p>
+              </div>
+              <span class="status-pill status-pill--success">
+                <span class="status-dot status-dot--pulse" aria-hidden="true"></span>
+                Capturing
+              </span>
+            </header>
+
+            <section class="session-console" aria-labelledby="live-session-title">
+              <div class="session-console__summary">
+                <div class="session-console__icon" aria-hidden="true">⚡</div>
+                <div>
+                  <p class="eyebrow">Current observation target</p>
+                  <h4 id="live-session-title">Product detail · Harris Tweed Holdall</h4>
+                  <p>https://www.brassandborough.co.uk/products/harris-tweed-holdall</p>
+                </div>
+                <button
+                  class="button button--quiet"
+                  type="button"
+                  data-toast="Page URL copied."
+                  data-control="copy-live-page-url"
+                >
+                  Copy URL
+                </button>
+              </div>
+
+              <dl class="metric-strip">
+                <div><dt>Session</dt><dd>06:42</dd></div>
+                <div><dt>Captured</dt><dd>3</dd></div>
+                <div><dt>Valid</dt><dd>2</dd></div>
+                <div><dt>Issues</dt><dd>1</dd></div>
+                <div><dt>Sources</dt><dd>2 / 2</dd></div>
+              </dl>
+
+              <ol class="stepper" aria-label="Live setup steps">
+                <li class="stepper__step stepper__step--complete">
+                  <span>1</span>
+                  <div><strong>Target chosen</strong><small>Chrome tab 184</small></div>
+                </li>
+                <li class="stepper__step stepper__step--complete">
+                  <span>2</span>
+                  <div><strong>Access confirmed</strong><small>dataLayer ready</small></div>
+                </li>
+                <li class="stepper__step stepper__step--active">
+                  <span>3</span>
+                  <div><strong>Testing</strong><small>Capturing now</small></div>
+                </li>
+              </ol>
+
+              <div class="action-bar">
+                <button
+                  class="button button--primary"
+                  type="button"
+                  data-toast="Capture paused for dramatic effect."
+                  data-control="pause-capture"
+                >
+                  Pause capture
+                </button>
+                <button
+                  class="button button--secondary"
+                  type="button"
+                  data-dialog-open="observation-target-dialog"
+                  data-control="choose-observation-target"
+                >
+                  Change target
+                </button>
+                <button
+                  class="button button--secondary"
+                  type="button"
+                  data-dialog-open="save-session-dialog"
+                  data-control="save-live-session"
+                >
+                  Save session
+                </button>
+                <button
+                  class="button button--secondary"
+                  type="button"
+                  data-dialog-open="missing-event-dialog"
+                  data-control="report-missing-event"
+                >
+                  Report missing event
+                </button>
+                <button
+                  class="button button--danger button--push-right"
+                  type="button"
+                  data-dialog-open="end-session-dialog"
+                  data-control="end-data-layer-testing"
+                >
+                  End testing
+                </button>
+              </div>
+            </section>
+
+            <div class="source-strip" aria-label="Observation sources">
+              <span><i class="status-dot"></i> dataLayer · connected</span>
+              <span><i class="status-dot"></i> queue.history · connected</span>
+              <span class="meta">Last activity just now</span>
+            </div>
+
+            <section class="panel panel--flush" aria-labelledby="events-title">
+              <header class="panel-heading panel-heading--bordered">
+                <div>
+                  <p class="eyebrow">Observed feed</p>
+                  <h4 id="events-title">Events</h4>
+                </div>
+                <button
+                  class="button button--quiet"
+                  type="button"
+                  data-toast="Fresh mock session started."
+                  data-control="start-fresh-session"
+                >
+                  Start fresh
+                </button>
+              </header>
+
+              <div class="filter-grid" aria-label="Event feed filters">
+                <label class="search-field filter-grid__wide">
+                  <span>Search payloads</span>
+                  <input type="search" placeholder="Event, property or value…" />
+                </label>
+                <label>
+                  <span>Event</span>
+                  <select>
+                    <option>All events</option>
+                    <option>view_item</option>
+                    <option>add_to_cart</option>
+                    <option>view_promotion</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Source</span>
+                  <select>
+                    <option>All sources</option>
+                    <option>dataLayer</option>
+                    <option>queue.history</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Validation</span>
+                  <select>
+                    <option>All states</option>
+                    <option>Valid</option>
+                    <option>Issues</option>
+                    <option>Not checked</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Time</span>
+                  <select>
+                    <option>Entire session</option>
+                    <option>Last minute</option>
+                    <option>Last 5 minutes</option>
+                  </select>
+                </label>
+                <button class="button button--quiet filter-grid__action" type="button" data-toast="Filters cleared.">
+                  Clear
+                </button>
+              </div>
+
+              <div class="event-feed">
+                <article class="event-row event-row--selected">
+                  <time datetime="2026-07-26T10:41:32">10:41:32.448</time>
+                  <div class="event-row__main">
+                    <div class="card-heading">
+                      <h5>add_to_cart</h5>
+                      <span class="status-pill status-pill--danger">2 issues</span>
+                    </div>
+                    <p>
+                      Harris Tweed Holdall · GBP 149.00 · quantity 1
+                      <span class="source-tag">dataLayer</span>
+                    </p>
+                  </div>
+                  <button class="text-action" type="button" data-toast="Event inspector opened below.">
+                    Inspect
+                  </button>
+                </article>
+                <article class="event-row">
+                  <time datetime="2026-07-26T10:41:27">10:41:27.103</time>
+                  <div class="event-row__main">
+                    <div class="card-heading">
+                      <h5>select_item</h5>
+                      <span class="status-pill status-pill--success">Valid</span>
+                    </div>
+                    <p>Product gallery · Harris Tweed Holdall <span class="source-tag">dataLayer</span></p>
+                  </div>
+                  <button class="text-action" type="button" data-toast="Selected select_item.">Inspect</button>
+                </article>
+                <article class="event-row">
+                  <time datetime="2026-07-26T10:41:08">10:41:08.912</time>
+                  <div class="event-row__main">
+                    <div class="card-heading">
+                      <h5>view_item</h5>
+                      <span class="status-pill status-pill--success">Valid</span>
+                    </div>
+                    <p>Menswear / Accessories · GBP 149.00 <span class="source-tag">queue.history</span></p>
+                  </div>
+                  <button class="text-action" type="button" data-toast="Selected view_item.">Inspect</button>
+                </article>
+              </div>
+            </section>
+
+            <aside class="inspector-card" aria-labelledby="event-inspector-title">
+              <header class="card-heading">
+                <div>
+                  <p class="comic-kicker">Caught in the act</p>
+                  <h4 id="event-inspector-title">add_to_cart</h4>
+                </div>
+                <button class="icon-button" type="button" aria-label="Close event inspector" data-toast="Inspector tucked away.">
+                  ×
+                </button>
+              </header>
+              <div class="inspector-card__grid">
+                <section>
+                  <h5>Validation</h5>
+                  <ul class="issue-list">
+                    <li>
+                      <span class="issue-marker issue-marker--error">!</span>
+                      <div>
+                        <strong>items[0].item_brand is required</strong>
+                        <code>/ecommerce/items/0/item_brand</code>
+                      </div>
+                      <button class="text-action" type="button" data-toast="Guided validation opened.">Review</button>
+                    </li>
+                    <li>
+                      <span class="issue-marker issue-marker--warning">?</span>
+                      <div>
+                        <strong>coupon is not declared</strong>
+                        <code>/ecommerce/coupon</code>
+                      </div>
+                      <button class="text-action" type="button" data-dialog-open="missing-event-dialog">
+                        Save defect
+                      </button>
+                    </li>
+                  </ul>
+                </section>
+                <section>
+                  <h5>Payload</h5>
+                  <pre><code>{
+  "event": "add_to_cart",
+  "ecommerce": {
+    "currency": "GBP",
+    "value": 149,
+    "items": [{ "item_id": "HB-1948" }]
+  }
+}</code></pre>
+                  <div class="inline-actions">
+                    <button class="text-action" type="button" data-toast="Payload copied.">Copy payload</button>
+                    <button class="text-action" type="button" data-dialog-open="event-template-editor">
+                      Save as template
+                    </button>
+                  </div>
+                </section>
+              </div>
+            </aside>
+
+            <details class="settings-card" data-control="data-layer-settings">
+              <summary>Observation settings</summary>
+              <div class="settings-grid">
+                <label>
+                  <span>History array path</span>
+                  <input type="text" value="queue.history" data-control="history-path" />
+                  <small>Ready · path found on the selected page</small>
+                </label>
+                <div>
+                  <span class="field-label">Observation target</span>
+                  <p>Chrome tab 184 · brassandborough.co.uk</p>
+                  <button
+                    class="button button--secondary"
+                    type="button"
+                    data-dialog-open="observation-target-dialog"
+                    data-control="browse-observation-targets"
+                  >
+                    Browse all tabs
+                  </button>
+                </div>
+                <button
+                  class="button button--secondary"
+                  type="button"
+                  data-toast="Observation restarted. Nothing exploded."
+                  data-control="restart-observation"
+                >
+                  Restart observation
+                </button>
+                <a class="button button--quiet" href="state-gallery.html#live-errors">
+                  View connection &amp; empty states
+                </a>
+              </div>
+            </details>
+          </section>
+
+          <section
+            id="view-library"
+            class="view-panel panel"
+            role="tabpanel"
+            aria-labelledby="view-library-tab"
+            data-view="view-library"
+            data-tab-group="data-layer"
+            hidden
+          >
+            <header class="panel-heading">
+              <div>
+                <p class="comic-kicker">The good stuff drawer</p>
+                <h3>Event Library</h3>
+                <p>Reusable examples for testing journeys without retyping the whole blessed payload.</p>
+              </div>
+              <div class="button-group">
+                <button
+                  class="button button--secondary"
+                  type="button"
+                  data-dialog-open="import-library-dialog"
+                  data-control="import-event-library"
+                >
+                  Import
+                </button>
+                <button
+                  class="button button--secondary"
+                  type="button"
+                  data-toast="Library export prepared."
+                  data-control="export-event-library"
+                >
+                  Export
+                </button>
+                <button
+                  class="button button--primary"
+                  type="button"
+                  data-dialog-open="event-template-editor"
+                  data-control="add-new-event"
+                >
+                  Add event
+                </button>
+              </div>
+            </header>
+
+            <div class="toolbar">
+              <label class="search-field toolbar__grow">
+                <span>Search templates</span>
+                <input
+                  type="search"
+                  placeholder="Template, event or source…"
+                  data-control="event-template-search"
+                />
+              </label>
+              <span class="result-count">8 templates</span>
+              <button
+                class="button button--danger-quiet"
+                type="button"
+                data-dialog-open="clear-library-dialog"
+                data-control="clear-event-library"
+              >
+                Clear Library
+              </button>
+            </div>
+
+            <div class="template-grid">
+              <article class="template-card">
+                <header>
+                  <span class="source-tag">Checkout</span>
+                  <span class="status-pill status-pill--success">Revision 7</span>
+                </header>
+                <h4>Purchase · standard delivery</h4>
+                <p><code>purchase</code> · 2 items · GBP 207.00</p>
+                <dl>
+                  <div><dt>Source</dt><dd>event-history</dd></div>
+                  <div><dt>Updated</dt><dd>Today, 09:12</dd></div>
+                </dl>
+                <div class="card-actions">
+                  <button class="button button--primary" type="button" data-dialog-open="push-review-dialog">
+                    Push draft
+                  </button>
+                  <button class="button button--secondary" type="button" data-dialog-open="event-template-editor">
+                    Edit
+                  </button>
+                  <button class="icon-button" type="button" aria-label="More actions" data-dialog-open="template-actions-dialog">
+                    ···
+                  </button>
+                </div>
+              </article>
+
+              <article class="template-card">
+                <header>
+                  <span class="source-tag">Basket</span>
+                  <span class="status-pill">Revision 4</span>
+                </header>
+                <h4>Add Harris Tweed Holdall</h4>
+                <p><code>add_to_cart</code> · 1 item · GBP 149.00</p>
+                <dl>
+                  <div><dt>Source</dt><dd>event-history</dd></div>
+                  <div><dt>Updated</dt><dd>Yesterday</dd></div>
+                </dl>
+                <div class="card-actions">
+                  <button class="button button--primary" type="button" data-dialog-open="push-review-dialog">
+                    Push draft
+                  </button>
+                  <button class="button button--secondary" type="button" data-dialog-open="event-template-editor">
+                    Edit
+                  </button>
+                  <button class="icon-button" type="button" aria-label="More actions" data-dialog-open="template-actions-dialog">
+                    ···
+                  </button>
+                </div>
+              </article>
+
+              <article class="template-card">
+                <header>
+                  <span class="source-tag">Loyalty</span>
+                  <span class="status-pill">Revision 3</span>
+                </header>
+                <h4>Join the Borough Club</h4>
+                <p><code>sign_up</code> · email consent · member tier</p>
+                <dl>
+                  <div><dt>Source</dt><dd>dataLayer</dd></div>
+                  <div><dt>Updated</dt><dd>22 July</dd></div>
+                </dl>
+                <div class="card-actions">
+                  <button class="button button--primary" type="button" data-dialog-open="push-review-dialog">
+                    Push draft
+                  </button>
+                  <button class="button button--secondary" type="button" data-dialog-open="event-template-editor">
+                    Edit
+                  </button>
+                  <button class="icon-button" type="button" aria-label="More actions" data-dialog-open="template-actions-dialog">
+                    ···
+                  </button>
+                </div>
+              </article>
+            </div>
+
+            <section class="panel sequence-panel" aria-labelledby="sequence-title">
+              <header class="panel-heading panel-heading--bordered">
+                <div>
+                  <p class="eyebrow">Saved test recipes</p>
+                  <h4 id="sequence-title">Test sequences</h4>
+                </div>
+                <button class="button button--secondary" type="button" data-toast="New sequence draft opened.">
+                  Create sequence
+                </button>
+              </header>
+              <div class="sequence-row">
+                <span class="sequence-row__number">01</span>
+                <div>
+                  <strong>Guest checkout · standard delivery</strong>
+                  <p>view_item → add_to_cart → begin_checkout → add_shipping_info → purchase</p>
+                </div>
+                <span class="status-pill status-pill--success">5 steps</span>
+                <button class="button button--primary" type="button" data-toast="Mock sequence started.">
+                  Run sequence
+                </button>
+                <button class="button button--quiet" type="button" data-toast="Sequence editor opened.">
+                  Edit
+                </button>
+              </div>
+              <div class="sequence-row">
+                <span class="sequence-row__number">02</span>
+                <div>
+                  <strong>Loyal member · click &amp; collect</strong>
+                  <p>login → select_item → add_to_cart → select_store → purchase</p>
+                </div>
+                <span class="status-pill">5 steps</span>
+                <button class="button button--primary" type="button" data-toast="Mock sequence started.">
+                  Run sequence
+                </button>
+                <button class="button button--quiet" type="button" data-toast="Sequence editor opened.">
+                  Edit
+                </button>
+              </div>
+            </section>
+          </section>
+
+          <section
+            id="view-sessions"
+            class="view-panel panel"
+            role="tabpanel"
+            aria-labelledby="view-sessions-tab"
+            data-view="view-sessions"
+            data-tab-group="data-layer"
+            hidden
+          >
+            <header class="panel-heading">
+              <div>
+                <p class="comic-kicker">Case notes</p>
+                <h3>Saved Sessions</h3>
+                <p>Captured evidence, neatly labelled before somebody asks whether it happened in production.</p>
+              </div>
+              <button
+                class="button button--secondary"
+                type="button"
+                data-dialog-open="import-session-dialog"
+                data-control="import-saved-session"
+              >
+                Import session
+              </button>
+            </header>
+
+            <div class="master-detail">
+              <section class="master-list" aria-label="Saved session library">
+                <div class="toolbar toolbar--stackable">
+                  <label class="search-field toolbar__grow">
+                    <span>Search sessions</span>
+                    <input
+                      type="search"
+                      placeholder="Name, page or event…"
+                      data-control="saved-session-search"
+                    />
+                  </label>
+                  <span class="result-count">4 saved</span>
+                </div>
+
+                <button class="session-card session-card--selected" type="button">
+                  <span class="session-card__status" aria-hidden="true"></span>
+                  <span>
+                    <strong>Guest checkout smoke test</strong>
+                    <small>Today, 10:46 · 18 events · 12m 08s</small>
+                  </span>
+                  <span class="status-pill status-pill--danger">3 issues</span>
+                </button>
+                <button class="session-card" type="button">
+                  <span class="session-card__status" aria-hidden="true"></span>
+                  <span>
+                    <strong>Product listing filters</strong>
+                    <small>25 July · 11 events · 05m 41s</small>
+                  </span>
+                  <span class="status-pill status-pill--success">Valid</span>
+                </button>
+                <button class="session-card" type="button">
+                  <span class="session-card__status" aria-hidden="true"></span>
+                  <span>
+                    <strong>Member sign-up</strong>
+                    <small>24 July · 9 events · 07m 19s</small>
+                  </span>
+                  <span class="status-pill status-pill--warning">1 warning</span>
+                </button>
+                <button class="session-card" type="button">
+                  <span class="session-card__status" aria-hidden="true"></span>
+                  <span>
+                    <strong>Click &amp; collect regression</strong>
+                    <small>22 July · 22 events · 16m 52s</small>
+                  </span>
+                  <span class="status-pill status-pill--success">Valid</span>
+                </button>
+              </section>
+
+              <aside class="detail-panel" aria-labelledby="saved-session-detail-title">
+                <header class="card-heading">
+                  <div>
+                    <p class="eyebrow">Saved session</p>
+                    <h4 id="saved-session-detail-title">Guest checkout smoke test</h4>
+                  </div>
+                  <span class="status-pill">Current schemas</span>
+                </header>
+                <p class="meta">
+                  brassandborough.co.uk/checkout · captured today at 10:34 · queue.history
+                </p>
+                <dl class="metric-strip metric-strip--compact">
+                  <div><dt>Events</dt><dd>18</dd></div>
+                  <div><dt>Issues</dt><dd>3</dd></div>
+                  <div><dt>Duration</dt><dd>12:08</dd></div>
+                </dl>
+                <div class="card-actions">
+                  <button
+                    class="button button--primary"
+                    type="button"
+                    data-toast="Saved session loaded in Live view."
+                  >
+                    Review in Live
+                  </button>
+                  <button
+                    class="button button--secondary"
+                    type="button"
+                    data-toast="Session revalidated against current schemas."
+                  >
+                    Revalidate
+                  </button>
+                  <button class="button button--secondary" type="button" data-toast="Session export prepared.">
+                    Export
+                  </button>
+                </div>
+                <hr />
+                <h5>Captured journey</h5>
+                <ol class="timeline">
+                  <li><span>10:34:02</span><strong>begin_checkout</strong><small>Valid</small></li>
+                  <li><span>10:35:18</span><strong>add_shipping_info</strong><small>1 issue</small></li>
+                  <li><span>10:38:44</span><strong>add_payment_info</strong><small>Valid</small></li>
+                  <li><span>10:46:10</span><strong>purchase</strong><small>2 issues</small></li>
+                </ol>
+                <div class="inline-actions">
+                  <button class="text-action" type="button" data-toast="Sequence created from this session.">
+                    Create test sequence
+                  </button>
+                  <button
+                    class="text-action text-action--danger"
+                    type="button"
+                    data-dialog-open="delete-session-dialog"
+                  >
+                    Delete session
+                  </button>
+                </div>
+              </aside>
+            </div>
+          </section>
+
+          <section
+            id="view-defects"
+            class="view-panel panel"
+            role="tabpanel"
+            aria-labelledby="view-defects-tab"
+            data-view="view-defects"
+            data-tab-group="data-layer"
+            hidden
+          >
+            <header class="panel-heading">
+              <div>
+                <p class="comic-kicker">The naughty list</p>
+                <h3>Defect Library</h3>
+                <p>Evidence-backed measurement defects, with considerably less shouting in spreadsheets.</p>
+              </div>
+              <button
+                class="button button--primary"
+                type="button"
+                data-dialog-open="missing-event-dialog"
+              >
+                Report missing event
+              </button>
+            </header>
+
+            <div class="filter-grid" aria-label="Defect filters">
+              <label class="search-field filter-grid__wide">
+                <span>Search defects</span>
+                <input
+                  type="search"
+                  placeholder="Summary or evidence…"
+                  data-control="defect-library-search"
+                />
+              </label>
+              <label>
+                <span>Status</span>
+                <select data-control="defect-library-status">
+                  <option>All statuses</option>
+                  <option selected>Reported</option>
+                  <option>Resolved</option>
+                  <option>Archived</option>
+                </select>
+              </label>
+              <label>
+                <span>Type</span>
+                <select data-control="defect-library-type">
+                  <option>All types</option>
+                  <option>Validation issue</option>
+                  <option>Missing event</option>
+                </select>
+              </label>
+              <label>
+                <span>Event</span>
+                <input type="search" placeholder="e.g. purchase" data-control="defect-library-event" />
+              </label>
+              <label>
+                <span>Schema</span>
+                <input
+                  type="search"
+                  placeholder="e.g. Commerce Core"
+                  data-control="defect-library-schema"
+                />
+              </label>
+              <label>
+                <span>Path</span>
+                <input
+                  type="search"
+                  placeholder="/ecommerce/items…"
+                  data-control="defect-library-path"
+                />
+              </label>
+              <button class="button button--quiet filter-grid__action" type="button" data-toast="Defect filters cleared.">
+                Clear
+              </button>
+            </div>
+
+            <div class="master-detail">
+              <section class="master-list" aria-label="Saved defects">
+                <p class="result-count">2 reported · 7 total</p>
+                <button class="defect-card defect-card--selected" type="button">
+                  <span class="issue-marker issue-marker--error">!</span>
+                  <span>
+                    <small>DL-024 · Validation issue</small>
+                    <strong>Purchase is missing transaction affiliation</strong>
+                    <code>purchase · /ecommerce/affiliation</code>
+                  </span>
+                  <span class="status-pill status-pill--danger">Reported</span>
+                </button>
+                <button class="defect-card" type="button">
+                  <span class="issue-marker issue-marker--warning">?</span>
+                  <span>
+                    <small>DL-023 · Missing event</small>
+                    <strong>select_promotion does not fire from hero</strong>
+                    <code>Summer tailoring hero · homepage</code>
+                  </span>
+                  <span class="status-pill status-pill--danger">Reported</span>
+                </button>
+                <button class="defect-card" type="button">
+                  <span class="issue-marker issue-marker--success">✓</span>
+                  <span>
+                    <small>DL-019 · Validation issue</small>
+                    <strong>item_variant used product name</strong>
+                    <code>add_to_cart · /items/0/item_variant</code>
+                  </span>
+                  <span class="status-pill status-pill--success">Resolved</span>
+                </button>
+              </section>
+
+              <aside class="detail-panel" aria-labelledby="defect-detail-title">
+                <header class="card-heading">
+                  <div>
+                    <p class="eyebrow">DL-024 · Validation issue</p>
+                    <h4 id="defect-detail-title">Purchase is missing transaction affiliation</h4>
+                  </div>
+                  <span class="status-pill status-pill--danger">Reported</span>
+                </header>
+                <dl class="definition-grid">
+                  <div><dt>Event</dt><dd><code>purchase</code></dd></div>
+                  <div><dt>Schema</dt><dd>Commerce Core v12</dd></div>
+                  <div><dt>Path</dt><dd><code>/ecommerce/affiliation</code></dd></div>
+                  <div><dt>Page</dt><dd>Order confirmation</dd></div>
+                  <div><dt>Observed</dt><dd>Today, 10:46</dd></div>
+                  <div><dt>Severity</dt><dd>Error</dd></div>
+                </dl>
+                <section class="evidence-box">
+                  <h5>Expected</h5>
+                  <p><code>affiliation: "Brass &amp; Borough Online"</code></p>
+                  <h5>Observed</h5>
+                  <p>Property absent from the purchase payload.</p>
+                </section>
+                <label>
+                  <span>Analyst notes</span>
+                  <textarea rows="4">Reproduced on guest and member checkout. Order total and item data are otherwise correct.</textarea>
+                </label>
+                <div class="card-actions">
+                  <button class="button button--primary" type="button" data-toast="Defect marked resolved.">
+                    Mark resolved
+                  </button>
+                  <button class="button button--secondary" type="button" data-toast="Defect details copied.">
+                    Copy report
+                  </button>
+                  <button class="button button--secondary" type="button" data-toast="Defect archived.">
+                    Archive
+                  </button>
+                  <button
+                    class="button button--danger-quiet"
+                    type="button"
+                    data-dialog-open="delete-defect-dialog"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </aside>
+            </div>
+          </section>
+
+          <section
+            id="view-schemas"
+            class="view-panel panel"
+            role="tabpanel"
+            aria-labelledby="view-schemas-tab"
+            data-view="view-schemas"
+            data-tab-group="data-layer"
+            data-panel-scope
+            hidden
+          >
+            <header class="panel-heading">
+              <div>
+                <p class="comic-kicker">Rules of engagement</p>
+                <h3>Schemas</h3>
+                <p>Define what “good” means once, then let the belt do the tutting.</p>
+              </div>
+              <div class="button-group">
+                <a class="button button--secondary" href="studio.html#documentation-export">
+                  Generate documentation
+                </a>
+                <a class="button button--quiet" href="studio.html#profile">Open profile editor</a>
+              </div>
+            </header>
+
+            <nav class="subtabs tab-list" role="tablist" aria-label="Schema views">
+              <button
+                id="schemas-library-tab"
+                class="tab"
+                type="button"
+                role="tab"
+                aria-selected="true"
+                aria-controls="schemas-library"
+                data-panel-target="schemas-library"
+                data-tab-group="schema-views"
+                data-control="schema-subview-schemas"
+              >
+                Schemas
+              </button>
+              <button
+                id="rules-library-tab"
+                class="tab"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                aria-controls="rules-library"
+                data-panel-target="rules-library"
+                data-tab-group="schema-views"
+                data-control="schema-subview-rules"
+              >
+                Rule Library
+              </button>
+              <button
+                id="assignments-library-tab"
+                class="tab"
+                type="button"
+                role="tab"
+                aria-selected="false"
+                aria-controls="assignments-library"
+                data-panel-target="assignments-library"
+                data-tab-group="schema-views"
+                data-control="schema-subview-assignments"
+              >
+                Assignments
+              </button>
+            </nav>
+
+            <section
+              id="schemas-library"
+              class="subview-panel"
+              role="tabpanel"
+              aria-labelledby="schemas-library-tab"
+              data-panel="schemas-library"
+              data-tab-group="schema-views"
+            >
+              <div class="toolbar toolbar--wrap">
+                <label class="search-field toolbar__grow">
+                  <span>Search schemas</span>
+                  <input type="search" placeholder="Name, event or property…" data-control="schema-search" />
+                </label>
+                <button
+                  class="button button--secondary"
+                  type="button"
+                  data-dialog-open="import-schema-dialog"
+                  data-control="import-schema"
+                >
+                  Import
+                </button>
+                <button
+                  class="button button--secondary"
+                  type="button"
+                  data-toast="Schema Library export prepared."
+                  data-control="export-schema"
+                >
+                  Export
+                </button>
+                <button
+                  class="button button--secondary"
+                  type="button"
+                  data-toast="Captured events rechecked against current schemas."
+                  data-control="recheck-schema-validation"
+                >
+                  Recheck events
+                </button>
+                <button
+                  class="button button--primary"
+                  type="button"
+                  data-dialog-open="schema-editor-dialog"
+                  data-control="create-schema"
+                >
+                  Create schema
+                </button>
+              </div>
+
+              <div class="master-detail">
+                <section class="master-list" aria-label="Schema Library">
+                  <p class="result-count">6 schemas · 1 draft</p>
+                  <button class="schema-card schema-card--selected" type="button">
+                    <span class="schema-card__version">v12</span>
+                    <span>
+                      <strong>Commerce Core</strong>
+                      <small>view_item, add_to_cart, purchase + 8 more</small>
+                    </span>
+                    <span class="status-pill status-pill--success">Published</span>
+                  </button>
+                  <button class="schema-card" type="button">
+                    <span class="schema-card__version">v6</span>
+                    <span>
+                      <strong>Customer &amp; Consent</strong>
+                      <small>login, sign_up, consent_update</small>
+                    </span>
+                    <span class="status-pill status-pill--success">Published</span>
+                  </button>
+                  <button class="schema-card" type="button">
+                    <span class="schema-card__version">v4</span>
+                    <span>
+                      <strong>Store &amp; Fulfilment</strong>
+                      <small>select_store, stock_check, collect_order</small>
+                    </span>
+                    <span class="status-pill status-pill--success">Published</span>
+                  </button>
+                  <button class="schema-card" type="button">
+                    <span class="schema-card__version">—</span>
+                    <span>
+                      <strong>Trade account</strong>
+                      <small>quote_request, trade_login</small>
+                    </span>
+                    <span class="status-pill status-pill--warning">Draft</span>
+                  </button>
+                </section>
+
+                <aside class="detail-panel" aria-labelledby="schema-detail-title">
+                  <header class="card-heading">
+                    <div>
+                      <p class="eyebrow">Published · revision 12</p>
+                      <h4 id="schema-detail-title">Commerce Core</h4>
+                    </div>
+                    <span class="status-pill status-pill--success">In use</span>
+                  </header>
+                  <p>
+                    Core retail event requirements aligned to GA4 ecommerce, with Brass &amp; Borough
+                    product and order conventions.
+                  </p>
+                  <dl class="definition-grid">
+                    <div><dt>Target</dt><dd>Payload</dd></div>
+                    <div><dt>Parent</dt><dd>Retail Foundation v8</dd></div>
+                    <div><dt>Properties</dt><dd>34 declared</dd></div>
+                    <div><dt>Assignments</dt><dd>11 enabled</dd></div>
+                  </dl>
+                  <section class="provenance-callout">
+                    <strong>Inheritance</strong>
+                    <p>26 local rules · 8 inherited · 2 local overrides</p>
+                  </section>
+                  <div class="card-actions">
+                    <button
+                      class="button button--primary"
+                      type="button"
+                      data-dialog-open="schema-editor-dialog"
+                    >
+                      Edit schema
+                    </button>
+                    <button class="button button--secondary" type="button" data-toast="Schema duplicated.">
+                      Duplicate
+                    </button>
+                    <button class="button button--secondary" type="button" data-toast="Revision history opened.">
+                      Revision history
+                    </button>
+                    <button
+                      class="button button--danger-quiet"
+                      type="button"
+                      data-dialog-open="delete-schema-dialog"
+                    >
+                      Delete
+                    </button>
+                  </div>
+                  <hr />
+                  <h5>Recent validation</h5>
+                  <ul class="issue-list">
+                    <li>
+                      <span class="issue-marker issue-marker--error">!</span>
+                      <div><strong>purchase · affiliation missing</strong><small>Today, 10:46</small></div>
+                    </li>
+                    <li>
+                      <span class="issue-marker issue-marker--warning">?</span>
+                      <div><strong>add_to_cart · coupon undeclared</strong><small>Today, 10:41</small></div>
+                    </li>
+                  </ul>
+                  <a class="text-action" href="state-gallery.html#schema-lifecycle">
+                    Review import, publication and close states
+                  </a>
+                </aside>
+              </div>
+            </section>
+
+            <section
+              id="rules-library"
+              class="subview-panel"
+              role="tabpanel"
+              aria-labelledby="rules-library-tab"
+              data-panel="rules-library"
+              data-tab-group="schema-views"
+              hidden
+            >
+              <div class="toolbar">
+                <label class="search-field toolbar__grow">
+                  <span>Search reusable rules</span>
+                  <input type="search" placeholder="Name, kind or attachment…" data-control="schema-rule-search" />
+                </label>
+                <button
+                  class="button button--secondary"
+                  type="button"
+                  data-toast="Reusable rules export prepared."
+                  data-control="export-schema-rules"
+                >
+                  Export rules
+                </button>
+                <button
+                  class="button button--primary"
+                  type="button"
+                  data-dialog-open="rule-editor-dialog"
+                  data-control="create-schema-rule"
+                >
+                  Create rule
+                </button>
+              </div>
+              <div class="data-list">
+                <article class="rule-row">
+                  <span class="rule-kind">Required</span>
+                  <div>
+                    <h4>Every item needs a stable product ID</h4>
+                    <p><code>items[*].item_id</code> · Error · attached to 3 schemas</p>
+                  </div>
+                  <span class="status-pill status-pill--success">v5</span>
+                  <button class="button button--secondary" type="button" data-dialog-open="rule-editor-dialog">
+                    Edit
+                  </button>
+                  <button class="icon-button" type="button" aria-label="Delete rule" data-dialog-open="delete-rule-dialog">
+                    ×
+                  </button>
+                </article>
+                <article class="rule-row">
+                  <span class="rule-kind rule-kind--values">Values</span>
+                  <div>
+                    <h4>Currency must be an enabled trading currency</h4>
+                    <p><code>currency</code> · GBP, EUR · Error · attached to 4 schemas</p>
+                  </div>
+                  <span class="status-pill status-pill--success">v3</span>
+                  <button class="button button--secondary" type="button" data-dialog-open="rule-editor-dialog">
+                    Edit
+                  </button>
+                  <button class="icon-button" type="button" aria-label="Delete rule" data-dialog-open="delete-rule-dialog">
+                    ×
+                  </button>
+                </article>
+                <article class="rule-row">
+                  <span class="rule-kind rule-kind--regex">Regex</span>
+                  <div>
+                    <h4>Order IDs use the web trading format</h4>
+                    <p><code>transaction_id</code> · <code>^WEB-GB-\d{8}$</code> · Warning</p>
+                  </div>
+                  <span class="status-pill">v2</span>
+                  <button class="button button--secondary" type="button" data-dialog-open="rule-editor-dialog">
+                    Edit
+                  </button>
+                  <button class="icon-button" type="button" aria-label="Delete rule" data-dialog-open="delete-rule-dialog">
+                    ×
+                  </button>
+                </article>
+              </div>
+              <a class="text-action" href="state-gallery.html#rule-upgrade-dialog">
+                View pinned attachment upgrade review
+              </a>
+            </section>
+
+            <section
+              id="assignments-library"
+              class="subview-panel"
+              role="tabpanel"
+              aria-labelledby="assignments-library-tab"
+              data-panel="assignments-library"
+              data-tab-group="schema-views"
+              hidden
+            >
+              <div class="toolbar">
+                <label class="search-field toolbar__grow">
+                  <span>Search assignments</span>
+                  <input
+                    type="search"
+                    placeholder="Schema, source, event or route…"
+                    data-control="schema-assignment-search"
+                  />
+                </label>
+                <button
+                  class="button button--primary"
+                  type="button"
+                  data-dialog-open="assignment-editor-dialog"
+                  data-control="create-schema-assignment"
+                >
+                  Create assignment
+                </button>
+              </div>
+              <div class="notice notice--success">
+                <strong>11 enabled assignments</strong>
+                <span>No priority conflicts. Quite civilised.</span>
+              </div>
+              <div class="data-table-wrap assignment-table-wrap">
+                <table class="data-table assignment-table">
+                  <thead>
+                    <tr>
+                      <th>Event match</th>
+                      <th>Schema</th>
+                      <th>Route condition</th>
+                      <th>Policy</th>
+                      <th>Priority</th>
+                      <th>Status</th>
+                      <th><span class="visually-hidden">Actions</span></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td data-label="Event match"><code>purchase</code><small>event-history</small></td>
+                      <td data-label="Schema">Commerce Core v12</td>
+                      <td data-label="Route"><code>/order-confirmation*</code></td>
+                      <td data-label="Policy">Pinned</td>
+                      <td data-label="Priority">10</td>
+                      <td data-label="Status"><span class="status-pill status-pill--success">Enabled</span></td>
+                      <td data-label="Actions">
+                        <button class="text-action" type="button" data-dialog-open="assignment-editor-dialog">
+                          Edit
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td data-label="Event match"><code>add_to_cart</code><small>dataLayer</small></td>
+                      <td data-label="Schema">Commerce Core latest</td>
+                      <td data-label="Route">Any route</td>
+                      <td data-label="Policy">Follow latest</td>
+                      <td data-label="Priority">20</td>
+                      <td data-label="Status"><span class="status-pill status-pill--success">Enabled</span></td>
+                      <td data-label="Actions">
+                        <button class="text-action" type="button" data-dialog-open="assignment-editor-dialog">
+                          Edit
+                        </button>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td data-label="Event match"><code>select_store</code><small>event-history</small></td>
+                      <td data-label="Schema">Store &amp; Fulfilment v4</td>
+                      <td data-label="Route"><code>/stores*</code></td>
+                      <td data-label="Policy">Pinned</td>
+                      <td data-label="Priority">30</td>
+                      <td data-label="Status"><span class="status-pill">Disabled</span></td>
+                      <td data-label="Actions">
+                        <button class="text-action" type="button" data-dialog-open="assignment-editor-dialog">
+                          Edit
+                        </button>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <a class="text-action" href="state-gallery.html#schema-lifecycle">
+                View assignment conflict state
+              </a>
+            </section>
+          </section>
+        </section>
+
+        <section
+          id="workspace-hotkeys"
+          class="workspace-panel panel"
+          role="tabpanel"
+          aria-labelledby="workspace-hotkeys-tab"
+          data-tab-panel="workspace-hotkeys"
+          data-tab-group="workspace"
+          hidden
+        >
+          <header class="panel-heading">
+            <div>
+              <p class="comic-kicker">Finger gymnastics</p>
+              <h2>Hotkeys</h2>
+              <p>Keep the common commands close and the obscure ones where you can find them.</p>
+            </div>
+            <button class="button button--secondary" type="button" data-toast="All hotkeys reset to defaults.">
+              Reset all
+            </button>
+          </header>
+
+          <label class="search-field hotkey-search">
+            <span>Search hotkeys</span>
+            <input
+              type="search"
+              placeholder="Command or shortcut…"
+              data-control="hotkey-editor-filter"
+            />
+          </label>
+
+          <section class="hotkey-section" aria-labelledby="hotkey-capture-title">
+            <header>
+              <h3 id="hotkey-capture-title">Capture &amp; observation</h3>
+              <span>4 commands</span>
+            </header>
+            <div class="hotkey-row">
+              <div><strong>Start or pause capture</strong><small>Toggle the current Live session</small></div>
+              <button class="key-chord" type="button" aria-label="Change shortcut Control Shift P">
+                <kbd>Ctrl</kbd><span>+</span><kbd>Shift</kbd><span>+</span><kbd>P</kbd>
+              </button>
+              <button class="text-action" type="button" data-toast="Shortcut reset.">Reset</button>
+              <button class="icon-button" type="button" aria-label="Clear shortcut" data-toast="Shortcut cleared.">×</button>
+            </div>
+            <div class="hotkey-row">
+              <div><strong>Choose observation target</strong><small>Browse matching browser tabs</small></div>
+              <button class="key-chord" type="button" aria-label="Change shortcut Control Shift T">
+                <kbd>Ctrl</kbd><span>+</span><kbd>Shift</kbd><span>+</span><kbd>T</kbd>
+              </button>
+              <button class="text-action" type="button" data-toast="Shortcut reset.">Reset</button>
+              <button class="icon-button" type="button" aria-label="Clear shortcut" data-toast="Shortcut cleared.">×</button>
+            </div>
+            <div class="hotkey-row">
+              <div><strong>Save current session</strong><small>Open the session snapshot dialog</small></div>
+              <button class="key-chord" type="button" aria-label="Change shortcut Control Shift S">
+                <kbd>Ctrl</kbd><span>+</span><kbd>Shift</kbd><span>+</span><kbd>S</kbd>
+              </button>
+              <button class="text-action" type="button" data-toast="Shortcut reset.">Reset</button>
+              <button class="icon-button" type="button" aria-label="Clear shortcut" data-toast="Shortcut cleared.">×</button>
+            </div>
+          </section>
+
+          <section class="hotkey-section" aria-labelledby="hotkey-navigation-title">
+            <header>
+              <h3 id="hotkey-navigation-title">Navigation &amp; tools</h3>
+              <span>4 commands</span>
+            </header>
+            <div class="hotkey-row">
+              <div><strong>Open command palette</strong><small>Search every available command</small></div>
+              <button class="key-chord" type="button" aria-label="Change shortcut Control K">
+                <kbd>Ctrl</kbd><span>+</span><kbd>K</kbd>
+              </button>
+              <button class="text-action" type="button" data-toast="Shortcut reset.">Reset</button>
+              <button class="icon-button" type="button" aria-label="Clear shortcut" data-toast="Shortcut cleared.">×</button>
+            </div>
+            <div class="hotkey-row">
+              <div><strong>Open Specification Studio</strong><small>Open the active project in a full page</small></div>
+              <button class="key-chord" type="button" aria-label="Record a shortcut">
+                <span class="key-chord__empty">Not set</span>
+              </button>
+              <button class="text-action" type="button" data-toast="Shortcut reset.">Reset</button>
+              <button class="icon-button" type="button" aria-label="Clear shortcut" data-toast="Shortcut cleared.">×</button>
+            </div>
+          </section>
+
+          <details class="settings-card" open data-control="keymap-files">
+            <summary>Keymap files</summary>
+            <div class="settings-grid">
+              <div>
+                <strong>Analyst-defaults.json</strong>
+                <p class="meta">7 shortcuts · last updated 20 July 2026</p>
+              </div>
+              <button
+                class="button button--primary"
+                type="button"
+                data-toast="Mock keymap created."
+                data-control="create-keymap"
+              >
+                Create keymap
+              </button>
+              <button
+                class="button button--secondary"
+                type="button"
+                data-toast="Mock keymap updated."
+                data-control="update-keymap"
+              >
+                Update keymap
+              </button>
+              <button
+                class="button button--secondary"
+                type="button"
+                data-dialog-open="load-keymap-dialog"
+                data-control="load-keymap"
+              >
+                Load keymap
+              </button>
+            </div>
+          </details>
+        </section>
+      </main>
+
+    </div>
+
+    <dialog id="command-palette" class="mock-dialog mock-dialog--palette" aria-labelledby="command-palette-title">
+      <div class="dialog-card">
+        <header class="dialog-heading">
+          <div>
+            <p class="eyebrow">Quick, before the kettle boils</p>
+            <h2 id="command-palette-title">Command palette</h2>
+          </div>
+          <button class="icon-button" type="button" aria-label="Close command palette" data-dialog-close>
+            ×
+          </button>
+        </header>
+        <label class="search-field">
+          <span class="visually-hidden">Filter commands</span>
+          <input type="search" placeholder="Type a command…" autofocus data-control="palette-filter" />
+        </label>
+        <div class="command-list" role="listbox" aria-label="Matching commands">
+          <a href="side-panel.html#view-live" role="option">
+            <span>⚡</span><strong>Go to Live observation</strong><kbd>G then L</kbd>
+          </a>
+          <a href="side-panel.html#view-projects" role="option">
+            <span>▣</span><strong>Open Projects</strong><kbd>G then P</kbd>
+          </a>
+          <button type="button" role="option" data-dialog-open="save-session-dialog">
+            <span>↓</span><strong>Save current session</strong><kbd>Ctrl Shift S</kbd>
+          </button>
+          <button type="button" role="option" data-dialog-open="missing-event-dialog">
+            <span>!</span><strong>Report missing event</strong><kbd>R then M</kbd>
+          </button>
+          <a href="studio.html" role="option"><span>✎</span><strong>Open Specification Studio</strong><kbd>↵</kbd></a>
+        </div>
+        <footer class="dialog-footer dialog-footer--hint">
+          <span><kbd>↑</kbd><kbd>↓</kbd> Navigate</span>
+          <span><kbd>Enter</kbd> Open</span>
+          <span><kbd>Esc</kbd> Close</span>
+        </footer>
+      </div>
+    </dialog>
+
+    <dialog id="observation-target-dialog" class="mock-dialog" aria-labelledby="observation-target-title">
+      <div class="dialog-card dialog-card--wide">
+        <header class="dialog-heading">
+          <div>
+            <p class="eyebrow">Choose your quarry</p>
+            <h2 id="observation-target-title">Browse observation targets</h2>
+          </div>
+          <button class="icon-button" type="button" aria-label="Close target picker" data-dialog-close>×</button>
+        </header>
+        <label class="search-field">
+          <span>Search browser tabs</span>
+          <input
+            type="search"
+            placeholder="Title, domain or URL…"
+            data-control="observation-target-search"
+          />
+        </label>
+        <p class="result-count">3 matching tabs</p>
+        <div class="target-list">
+          <button class="target-card target-card--selected" type="button" data-dialog-close data-toast="Product detail selected.">
+            <span class="target-card__favicon" aria-hidden="true">B</span>
+            <span>
+              <strong>Harris Tweed Holdall | Brass &amp; Borough</strong>
+              <small>brassandborough.co.uk/products/harris-tweed-holdall</small>
+            </span>
+            <span class="status-pill status-pill--success">Current</span>
+          </button>
+          <button class="target-card" type="button" data-dialog-close data-toast="Basket selected.">
+            <span class="target-card__favicon" aria-hidden="true">B</span>
+            <span>
+              <strong>Your Basket | Brass &amp; Borough</strong>
+              <small>brassandborough.co.uk/basket</small>
+            </span>
+            <span class="status-pill">Tab 191</span>
+          </button>
+          <button class="target-card" type="button" data-dialog-close data-toast="Staging checkout selected.">
+            <span class="target-card__favicon" aria-hidden="true">S</span>
+            <span>
+              <strong>Checkout | Staging</strong>
+              <small>staging.brassandborough.co.uk/checkout</small>
+            </span>
+            <span class="status-pill status-pill--warning">Restricted</span>
+          </button>
+        </div>
+        <footer class="dialog-footer">
+          <p>Only tabs this extension can access are shown.</p>
+          <button class="button button--secondary" type="button" data-dialog-close>Cancel</button>
+        </footer>
+      </div>
+    </dialog>
+
+    <dialog id="save-session-dialog" class="mock-dialog" aria-labelledby="save-session-title">
+      <div class="dialog-card">
+        <header class="dialog-heading">
+          <div>
+            <p class="eyebrow">Pin it to the case file</p>
+            <h2 id="save-session-title">Save session snapshot</h2>
+          </div>
+          <button class="icon-button" type="button" aria-label="Close save dialog" data-dialog-close>×</button>
+        </header>
+        <label>
+          <span>Session name</span>
+          <input type="text" value="Product detail and basket smoke test" data-control="save-live-session-name" />
+        </label>
+        <div class="summary-box">
+          <strong>3 captured events</strong>
+          <span>Product detail · 06m 42s · 1 validation issue</span>
+        </div>
+        <label>
+          <span>Analyst note <small>(optional)</small></span>
+          <textarea rows="3" placeholder="Anything worth remembering?">Reproduced the missing item_brand issue.</textarea>
+        </label>
+        <footer class="dialog-footer">
+          <button class="button button--secondary" type="button" data-dialog-close>Cancel</button>
+          <button
+            class="button button--primary"
+            type="button"
+            data-dialog-close
+            data-toast="Session snapshot saved in the mock."
+            data-control="confirm-save-live-session"
+          >
+            Save snapshot
+          </button>
+        </footer>
+      </div>
+    </dialog>
+
+    <dialog id="missing-event-dialog" class="mock-dialog" aria-labelledby="missing-event-title">
+      <div class="dialog-card dialog-card--wide">
+        <header class="dialog-heading">
+          <div>
+            <p class="eyebrow">Something gone walkabout?</p>
+            <h2 id="missing-event-title">Report a missing event</h2>
+          </div>
+          <button class="icon-button" type="button" aria-label="Close report" data-dialog-close>×</button>
+        </header>
+        <div class="form-grid">
+          <label>
+            <span>Expected event</span>
+            <input type="text" value="select_promotion" />
+          </label>
+          <label>
+            <span>Expected after</span>
+            <select>
+              <option>Click or activation</option>
+              <option>Page load</option>
+              <option>Form submission</option>
+              <option>State change</option>
+            </select>
+          </label>
+          <label class="form-grid__wide">
+            <span>Page or component</span>
+            <input type="text" value="Homepage · Summer tailoring hero" />
+          </label>
+          <label>
+            <span>Schema</span>
+            <select>
+              <option>Commerce Core v12</option>
+              <option>Customer &amp; Consent v6</option>
+              <option>No schema</option>
+            </select>
+          </label>
+          <label>
+            <span>Severity</span>
+            <select>
+              <option>Error</option>
+              <option>Warning</option>
+              <option>Information</option>
+            </select>
+          </label>
+          <label class="form-grid__wide">
+            <span>Steps and evidence</span>
+            <textarea rows="5">Open the homepage and click the “Shop summer tailoring” hero. Navigation occurs, but select_promotion is not observed.</textarea>
+          </label>
+        </div>
+        <label class="checkbox-field">
+          <input type="checkbox" checked />
+          <span>Include current page URL and the previous 10 captured events</span>
+        </label>
+        <footer class="dialog-footer">
+          <button class="button button--secondary" type="button" data-dialog-close>Cancel</button>
+          <button class="button button--primary" type="button" data-dialog-close data-toast="Missing-event defect saved.">
+            Save defect
+          </button>
+        </footer>
+      </div>
+    </dialog>
+
+    <dialog id="end-session-dialog" class="mock-dialog" aria-labelledby="end-session-title">
+      <div class="dialog-card">
+        <header class="dialog-heading">
+          <div>
+            <p class="eyebrow">Easy there, tiger</p>
+            <h2 id="end-session-title">End this testing session?</h2>
+          </div>
+          <button class="icon-button" type="button" aria-label="Close confirmation" data-dialog-close>×</button>
+        </header>
+        <p>You have 3 captured events and 1 unresolved validation issue.</p>
+        <footer class="dialog-footer dialog-footer--stack">
+          <button
+            class="button button--primary"
+            type="button"
+            data-dialog-close
+            data-toast="Session saved and ended."
+            data-control="save-and-start-fresh-session"
+          >
+            Save snapshot &amp; end
+          </button>
+          <button
+            class="button button--danger"
+            type="button"
+            data-dialog-close
+            data-toast="Session discarded in the mock."
+            data-control="discard-and-start-fresh-session"
+          >
+            Discard &amp; end
+          </button>
+          <button class="button button--quiet" type="button" data-dialog-close>Keep testing</button>
+        </footer>
+      </div>
+    </dialog>
+
+    <dialog id="create-project-dialog" class="mock-dialog" aria-labelledby="create-project-title">
+      <div class="dialog-card dialog-card--wide">
+        <header class="dialog-heading">
+          <div>
+            <p class="eyebrow">New bit of kit</p>
+            <h2 id="create-project-title">Create project</h2>
+          </div>
+          <button class="icon-button" type="button" aria-label="Close create project dialog" data-dialog-close>×</button>
+        </header>
+        <div class="form-grid">
+          <label>
+            <span>Project name</span>
+            <input type="text" placeholder="e.g. Trade portal rollout" />
+          </label>
+          <label>
+            <span>Primary domain</span>
+            <input type="url" placeholder="https://trade.example.co.uk" />
+          </label>
+          <label class="form-grid__wide">
+            <span>Description</span>
+            <textarea rows="3" placeholder="Scope, channels and useful context…"></textarea>
+          </label>
+          <label>
+            <span>Starting point</span>
+            <select>
+              <option>Blank project</option>
+              <option>Retail &amp; Trade starter</option>
+              <option>Copy active project</option>
+            </select>
+          </label>
+          <label>
+            <span>Default locale</span>
+            <select>
+              <option>United Kingdom (en-GB)</option>
+              <option>Netherlands (nl-NL)</option>
+              <option>Germany (de-DE)</option>
+            </select>
+          </label>
+        </div>
+        <label class="checkbox-field">
+          <input type="checkbox" checked />
+          <span>Make this the active project</span>
+        </label>
+        <footer class="dialog-footer">
+          <button class="button button--secondary" type="button" data-dialog-close>Cancel</button>
+          <button class="button button--primary" type="button" data-dialog-close data-toast="Project created in the mock.">
+            Create project
+          </button>
+        </footer>
+      </div>
+    </dialog>
+
+    <dialog id="edit-project-dialog" class="mock-dialog" aria-labelledby="edit-project-title">
+      <div class="dialog-card dialog-card--wide">
+        <header class="dialog-heading">
+          <div>
+            <p class="eyebrow">Polish the label</p>
+            <h2 id="edit-project-title">Edit project details</h2>
+          </div>
+          <button class="icon-button" type="button" aria-label="Close edit project dialog" data-dialog-close>×</button>
+        </header>
+        <div class="form-grid">
+          <label>
+            <span>Project name</span>
+            <input type="text" value="Retail &amp; Trade · UK storefront" />
+          </label>
+          <label>
+            <span>Primary domain</span>
+            <input type="url" value="https://www.brassandborough.co.uk" />
+          </label>
+          <label class="form-grid__wide">
+            <span>Description</span>
+            <textarea rows="4">Measurement design for browse, basket, checkout, loyalty and assisted-sale journeys.</textarea>
+          </label>
+        </div>
+        <div class="danger-zone">
+          <div>
+            <strong>Delete project</strong>
+            <p>Review the destructive state and retained backups in the gallery.</p>
+          </div>
+          <a class="button button--danger-quiet" href="state-gallery.html#project-storage">Review deletion</a>
+        </div>
+        <footer class="dialog-footer">
+          <button class="button button--secondary" type="button" data-dialog-close>Cancel</button>
+          <button class="button button--primary" type="button" data-dialog-close data-toast="Project details saved.">
+            Save details
+          </button>
+        </footer>
+      </div>
+    </dialog>
+
+    <dialog id="import-project-dialog" class="mock-dialog" aria-labelledby="import-project-title">
+      <div class="dialog-card">
+        <header class="dialog-heading">
+          <div>
+            <p class="eyebrow">Open the travelling case</p>
+            <h2 id="import-project-title">Import project</h2>
+          </div>
+          <button class="icon-button" type="button" aria-label="Close import dialog" data-dialog-close>×</button>
+        </header>
+        <div class="drop-zone" role="button" tabindex="0">
+          <span class="drop-zone__icon" aria-hidden="true">↓</span>
+          <strong>Choose a project JSON file</strong>
+          <small>Static mock — no file will actually be read</small>
+        </div>
+        <label>
+          <span>Or paste a project preview</span>
+          <textarea rows="4" placeholder="{ &quot;project&quot;: { … } }"></textarea>
+        </label>
+        <footer class="dialog-footer">
+          <button class="button button--secondary" type="button" data-dialog-close>Cancel</button>
+          <button class="button button--primary" type="button" data-dialog-close data-toast="Mock import review opened.">
+            Review import
+          </button>
+        </footer>
+      </div>
+    </dialog>
+
+    <dialog id="import-library-dialog" class="mock-dialog" aria-labelledby="import-library-title">
+      <div class="dialog-card">
+        <header class="dialog-heading">
+          <div>
+            <p class="eyebrow">Mind the existing payloads</p>
+            <h2 id="import-library-title">Import Event Library</h2>
+          </div>
+          <button class="icon-button" type="button" aria-label="Close import dialog" data-dialog-close>×</button>
+        </header>
+        <div class="drop-zone" role="button" tabindex="0">
+          <span class="drop-zone__icon" aria-hidden="true">↓</span>
+          <strong>Choose a Library JSON file</strong>
+          <small>Static mock — files remain firmly unmolested</small>
+        </div>
+        <fieldset>
+          <legend>How should existing templates be handled?</legend>
+          <label class="radio-field"><input type="radio" name="library-import" checked /><span>Append new templates</span></label>
+          <label class="radio-field"><input type="radio" name="library-import" /><span>Replace the entire Library</span></label>
+        </fieldset>
+        <footer class="dialog-footer">
+          <button class="button button--secondary" type="button" data-dialog-close>Cancel</button>
+          <button class="button button--primary" type="button" data-dialog-close data-toast="Mock Library imported.">
+            Import Library
+          </button>
+        </footer>
+      </div>
+    </dialog>
+
+    <dialog id="clear-library-dialog" class="mock-dialog" aria-labelledby="clear-library-title">
+      <div class="dialog-card">
+        <header class="dialog-heading">
+          <div>
+            <p class="eyebrow">Steady on</p>
+            <h2 id="clear-library-title">Clear all 8 Library events?</h2>
+          </div>
+          <button class="icon-button" type="button" aria-label="Close confirmation" data-dialog-close>×</button>
+        </header>
+        <p>This removes every saved event template. Projects, schemas and captured sessions stay put.</p>
+        <footer class="dialog-footer">
+          <button class="button button--secondary" type="button" data-dialog-close>Keep Library</button>
+          <button class="button button--danger" type="button" data-dialog-close data-toast="No templates were harmed.">
+            Clear Library
+          </button>
+        </footer>
+      </div>
+    </dialog>
+
+    <dialog id="event-template-editor" class="mock-dialog" aria-labelledby="event-template-title">
+      <div class="dialog-card dialog-card--xwide">
+        <header class="dialog-heading">
+          <div>
+            <p class="eyebrow">Event property editor · revision 4</p>
+            <h2 id="event-template-title">Add Harris Tweed Holdall</h2>
+          </div>
+          <button
+            class="icon-button"
+            type="button"
+            aria-label="Close template editor"
+            data-dialog-close
+            data-control="close-template-editor"
+          >
+            ×
+          </button>
+        </header>
+        <div class="form-grid">
+          <label>
+            <span>Template name</span>
+            <input type="text" value="Add Harris Tweed Holdall" data-control="event-template-name" />
+          </label>
+          <label>
+            <span>Event name</span>
+            <input type="text" value="add_to_cart" data-control="event-template-event-name" />
+          </label>
+          <label>
+            <span>Source</span>
+            <select data-control="event-template-source">
+              <option>Event history</option>
+              <option>dataLayer</option>
+              <option>No source selected</option>
+            </select>
+          </label>
+          <label>
+            <span>Push destination path</span>
+            <input type="text" value="dataLayer" data-control="push-destination-path" />
+          </label>
+        </div>
+        <div class="editor-split">
+          <section>
+            <header class="minor-heading">
+              <div><h3>Properties</h3><p>6 fields · structured summary</p></div>
+              <button class="button button--secondary" type="button" data-toast="Property row added.">
+                Add property
+              </button>
+            </header>
+            <div class="property-list">
+              <div><code>event</code><span>string</span><strong>add_to_cart</strong><button type="button">Edit</button></div>
+              <div><code>ecommerce.currency</code><span>string</span><strong>GBP</strong><button type="button">Edit</button></div>
+              <div><code>ecommerce.value</code><span>number</span><strong>149</strong><button type="button">Edit</button></div>
+              <div><code>ecommerce.items[0].item_id</code><span>string</span><strong>HB-1948</strong><button type="button">Edit</button></div>
+              <div><code>ecommerce.items[0].item_name</code><span>string</span><strong>Harris Tweed Holdall</strong><button type="button">Edit</button></div>
+            </div>
+          </section>
+          <section>
+            <label>
+              <span>JSON draft</span>
+              <small>Edit the structured properties or use JSON for advanced changes.</small>
+              <textarea class="code-editor" rows="15" spellcheck="false" data-control="event-template-json">{
+  "event": "add_to_cart",
+  "ecommerce": {
+    "currency": "GBP",
+    "value": 149,
+    "items": [{
+      "item_id": "HB-1948",
+      "item_name": "Harris Tweed Holdall"
+    }]
+  }
+}</textarea>
+            </label>
+            <p class="validation-message validation-message--success">Valid JSON · 6 properties</p>
+          </section>
+        </div>
+        <details class="revision-details" data-control="event-template-revision-history-section">
+          <summary>Revision history</summary>
+          <ol>
+            <li><strong>Revision 4</strong><span>Added item_category2 · yesterday</span></li>
+            <li><strong>Revision 3</strong><span>Updated price to 149.00 · 20 July</span></li>
+          </ol>
+        </details>
+        <footer class="dialog-footer dialog-footer--split">
+          <div>
+            <button
+              class="button button--danger-quiet"
+              type="button"
+              data-toast="Draft changes discarded."
+              data-control="discard-template-draft"
+            >
+              Discard changes
+            </button>
+            <button class="button button--quiet" type="button" data-toast="Returned to captured event.">
+              Back to captured event
+            </button>
+          </div>
+          <div>
+            <button
+              class="button button--secondary"
+              type="button"
+              data-toast="Template copy saved."
+              data-control="save-template-copy"
+            >
+              Save as copy
+            </button>
+            <button
+              class="button button--secondary"
+              type="button"
+              data-dialog-open="push-review-dialog"
+              data-control="push-template-draft"
+            >
+              Push draft
+            </button>
+            <button
+              class="button button--primary"
+              type="button"
+              data-dialog-close
+              data-toast="Template revision saved."
+              data-control="save-template-revision"
+            >
+              Save revision
+            </button>
+          </div>
+        </footer>
+      </div>
+    </dialog>
+
+    <dialog id="push-review-dialog" class="mock-dialog" aria-labelledby="push-review-title">
+      <div class="dialog-card">
+        <header class="dialog-heading">
+          <div>
+            <p class="eyebrow">One last squint</p>
+            <h2 id="push-review-title">Review push</h2>
+          </div>
+          <button class="icon-button" type="button" aria-label="Close push review" data-dialog-close>×</button>
+        </header>
+        <dl class="definition-grid">
+          <div><dt>Destination</dt><dd><code>window.dataLayer</code></dd></div>
+          <div><dt>Target</dt><dd>Harris Tweed Holdall tab</dd></div>
+          <div><dt>Event</dt><dd><code>add_to_cart</code></dd></div>
+          <div><dt>Properties</dt><dd>6</dd></div>
+        </dl>
+        <div class="notice notice--warning">
+          <strong>This will alter the selected page’s data layer.</strong>
+          <span>The real product requires explicit confirmation; this mock does nothing.</span>
+        </div>
+        <footer class="dialog-footer">
+          <button class="button button--secondary" type="button" data-dialog-close>Cancel</button>
+          <button
+            class="button button--primary"
+            type="button"
+            data-dialog-close
+            data-toast="Mock payload pushed nowhere at all."
+            data-control="confirm-push-draft"
+          >
+            Confirm push
+          </button>
+        </footer>
+      </div>
+    </dialog>
+
+    <dialog id="template-actions-dialog" class="mock-dialog mock-dialog--menu" aria-label="Template actions">
+      <div class="dialog-card">
+        <header class="dialog-heading">
+          <h2>Template actions</h2>
+          <button class="icon-button" type="button" aria-label="Close actions" data-dialog-close>×</button>
+        </header>
+        <div class="menu-list">
+          <button type="button" data-dialog-close data-toast="Template duplicated.">Duplicate template</button>
+          <button type="button" data-dialog-close data-toast="Template export prepared.">Export template</button>
+          <button type="button" data-dialog-close data-toast="Revision history opened.">Revision history</button>
+          <button class="menu-list__danger" type="button" data-dialog-close data-toast="No template was deleted.">
+            Delete template
+          </button>
+        </div>
+      </div>
+    </dialog>
+
+    <dialog id="import-session-dialog" class="mock-dialog" aria-labelledby="import-session-title">
+      <div class="dialog-card">
+        <header class="dialog-heading">
+          <div>
+            <p class="eyebrow">Reopen the case</p>
+            <h2 id="import-session-title">Import saved session</h2>
+          </div>
+          <button class="icon-button" type="button" aria-label="Close import" data-dialog-close>×</button>
+        </header>
+        <div class="drop-zone" role="button" tabindex="0">
+          <span class="drop-zone__icon" aria-hidden="true">↓</span>
+          <strong>Choose a saved-session JSON file</strong>
+          <small>Static mock — no file will actually be read</small>
+        </div>
+        <footer class="dialog-footer">
+          <button class="button button--secondary" type="button" data-dialog-close>Cancel</button>
+          <button class="button button--primary" type="button" data-dialog-close data-toast="Session imported in the mock.">
+            Import session
+          </button>
+        </footer>
+      </div>
+    </dialog>
+
+    <dialog id="delete-session-dialog" class="mock-dialog" aria-labelledby="delete-session-title">
+      <div class="dialog-card">
+        <header class="dialog-heading">
+          <h2 id="delete-session-title">Delete “Guest checkout smoke test”?</h2>
+          <button class="icon-button" type="button" aria-label="Close confirmation" data-dialog-close>×</button>
+        </header>
+        <p>The captured archive will be removed. Defects created from it remain in the Defect Library.</p>
+        <footer class="dialog-footer">
+          <button class="button button--secondary" type="button" data-dialog-close>Cancel</button>
+          <button class="button button--danger" type="button" data-dialog-close data-toast="No session was deleted.">
+            Delete session
+          </button>
+        </footer>
+      </div>
+    </dialog>
+
+    <dialog id="delete-defect-dialog" class="mock-dialog" aria-labelledby="delete-defect-title">
+      <div class="dialog-card">
+        <header class="dialog-heading">
+          <h2 id="delete-defect-title">Delete defect DL-024?</h2>
+          <button class="icon-button" type="button" aria-label="Close confirmation" data-dialog-close>×</button>
+        </header>
+        <p>This removes the saved report, analyst notes and captured evidence.</p>
+        <footer class="dialog-footer">
+          <button class="button button--secondary" type="button" data-dialog-close>Cancel</button>
+          <button class="button button--danger" type="button" data-dialog-close data-toast="No defect was deleted.">
+            Delete defect
+          </button>
+        </footer>
+      </div>
+    </dialog>
+
+    <dialog id="import-schema-dialog" class="mock-dialog" aria-labelledby="import-schema-title">
+      <div class="dialog-card">
+        <header class="dialog-heading">
+          <div>
+            <p class="eyebrow">Measure twice, import once</p>
+            <h2 id="import-schema-title">Import Schema Library</h2>
+          </div>
+          <button class="icon-button" type="button" aria-label="Close import" data-dialog-close>×</button>
+        </header>
+        <div class="drop-zone" role="button" tabindex="0">
+          <span class="drop-zone__icon" aria-hidden="true">↓</span>
+          <strong>Choose a schema-library JSON file</strong>
+          <small>Static mock — no file will actually be read</small>
+        </div>
+        <fieldset>
+          <legend>Import mode</legend>
+          <label class="radio-field"><input type="radio" name="schema-import" checked /><span>Append compatible schemas</span></label>
+          <label class="radio-field"><input type="radio" name="schema-import" /><span>Replace the entire Schema Library</span></label>
+        </fieldset>
+        <footer class="dialog-footer">
+          <button class="button button--secondary" type="button" data-dialog-close>Cancel</button>
+          <a class="button button--primary" href="state-gallery.html#schema-import-dialog">Review import</a>
+        </footer>
+      </div>
+    </dialog>
+
+    <dialog id="schema-editor-dialog" class="mock-dialog" aria-labelledby="schema-editor-title">
+      <div class="dialog-card dialog-card--xwide">
+        <header class="dialog-heading">
+          <div>
+            <p class="eyebrow">Working Draft · unsaved changes</p>
+            <h2 id="schema-editor-title">Commerce Core</h2>
+          </div>
+          <button
+            class="icon-button"
+            type="button"
+            aria-label="Close schema editor"
+            data-dialog-close
+            data-control="close-schema-editor"
+          >
+            ×
+          </button>
+        </header>
+        <div class="form-grid">
+          <label>
+            <span>Name</span>
+            <input type="text" value="Commerce Core" data-control="schema-editor-name" />
+          </label>
+          <label>
+            <span>Validation target</span>
+            <select data-control="schema-editor-target">
+              <option>Payload</option>
+              <option>Raw input</option>
+            </select>
+          </label>
+          <label class="form-grid__wide">
+            <span>Description</span>
+            <textarea rows="3" data-control="schema-editor-description">Core retail event requirements aligned to GA4 ecommerce, with Brass &amp; Borough product and order conventions.</textarea>
+          </label>
+          <label>
+            <span>Parent schema</span>
+            <select data-control="schema-editor-parent">
+              <option>Retail Foundation v8</option>
+              <option>No parent</option>
+            </select>
+          </label>
+          <div>
+            <span class="field-label">Inheritance provenance</span>
+            <p class="provenance-chip">26 local · 8 inherited · 2 overridden</p>
+          </div>
+        </div>
+        <div class="editor-split editor-split--schema">
+          <section>
+            <header class="minor-heading">
+              <div><h3>Property rules</h3><p>34 declared · showing 6</p></div>
+              <button
+                class="button button--primary"
+                type="button"
+                data-toast="Property rule added."
+                data-control="add-schema-property"
+              >
+                Add property
+              </button>
+            </header>
+            <div class="property-rule-list">
+              <button class="property-rule property-rule--selected" type="button">
+                <code>event</code><span>string · required</span><i class="status-dot"></i>
+              </button>
+              <button class="property-rule" type="button">
+                <code>ecommerce.currency</code><span>string · required · allowed values</span><i class="status-dot"></i>
+              </button>
+              <button class="property-rule" type="button">
+                <code>ecommerce.value</code><span>number · required</span><i class="status-dot"></i>
+              </button>
+              <button class="property-rule" type="button">
+                <code>ecommerce.transaction_id</code><span>string · conditional</span><i class="status-dot"></i>
+              </button>
+              <button class="property-rule" type="button">
+                <code>ecommerce.items</code><span>array · min 1 item</span><i class="status-dot"></i>
+              </button>
+            </div>
+          </section>
+          <section class="rule-inspector">
+            <header class="minor-heading">
+              <div><p class="eyebrow">Local property</p><h3><code>event</code></h3></div>
+              <button class="icon-button" type="button" aria-label="Delete property rule">×</button>
+            </header>
+            <div class="form-grid">
+              <label>
+                <span>Path</span>
+                <input type="text" value="/event" />
+              </label>
+              <label>
+                <span>Value type</span>
+                <select><option>String</option><option>Number</option><option>Boolean</option><option>Object</option><option>Array</option></select>
+              </label>
+              <label>
+                <span>Presence</span>
+                <select><option>Required</option><option>Optional</option><option>Forbidden</option><option>Conditional</option></select>
+              </label>
+              <label>
+                <span>Severity</span>
+                <select><option>Error</option><option>Warning</option></select>
+              </label>
+              <label class="form-grid__wide">
+                <span>Description</span>
+                <textarea rows="2">The event name used to select a matching assignment.</textarea>
+              </label>
+              <label class="form-grid__wide">
+                <span>Allowed values</span>
+                <input type="text" value="view_item, add_to_cart, begin_checkout, purchase" />
+              </label>
+              <label>
+                <span>Example</span>
+                <input type="text" value="purchase" />
+              </label>
+              <label>
+                <span>Reusable rule</span>
+                <select><option>No attachment</option><option>Every event has a name v3</option></select>
+              </label>
+            </div>
+            <label class="checkbox-field">
+              <input type="checkbox" />
+              <span>Override inherited rule locally</span>
+            </label>
+          </section>
+        </div>
+        <div class="accordion-row">
+          <details>
+            <summary>Inherited rule overrides <span>2</span></summary>
+            <p>currency severity and transaction_id format are overridden locally.</p>
+          </details>
+          <details>
+            <summary>General rules</summary>
+            <label class="checkbox-field">
+              <input type="checkbox" checked data-control="schema-only-declared-properties" />
+              <span>Only allow declared properties</span>
+            </label>
+          </details>
+          <details><summary>Validation examples <span>4</span></summary><p>Valid and invalid example payloads.</p></details>
+          <details><summary>Assignments <span>11</span></summary><p>Matching events and route conditions.</p></details>
+          <details><summary>Generated schema document</summary><pre><code>{ "$schema": "https://json-schema.org/…" }</code></pre></details>
+          <details data-control="schema-revision-history">
+            <summary>Revision history <span>12</span></summary>
+            <label><span>Historical revision</span><select><option>Revision 12 · current</option><option>Revision 11</option><option>Revision 10</option></select></label>
+            <div class="inline-actions">
+              <button class="text-action" type="button" data-toast="Revision duplicated.">Duplicate from revision</button>
+              <button class="text-action" type="button" data-toast="Revision restoration review opened.">Restore this revision</button>
+            </div>
+          </details>
+        </div>
+        <footer class="dialog-footer dialog-footer--split">
+          <div>
+            <button
+              class="button button--danger-quiet"
+              type="button"
+              data-toast="Working Draft discarded."
+              data-control="discard-working-schema-draft"
+            >
+              Discard draft
+            </button>
+            <button class="button button--secondary" type="button" data-toast="Schema description saved.">
+              Save description
+            </button>
+          </div>
+          <div>
+            <button class="button button--secondary" type="button" data-dialog-close>
+              Keep as Draft
+            </button>
+            <a class="button button--primary" href="state-gallery.html#schema-publication-dialog" data-control="save-schema">
+              Review &amp; publish
+            </a>
+          </div>
+        </footer>
+      </div>
+    </dialog>
+
+    <dialog id="rule-editor-dialog" class="mock-dialog" aria-labelledby="rule-editor-title">
+      <div class="dialog-card dialog-card--wide">
+        <header class="dialog-heading">
+          <div>
+            <p class="eyebrow">Reusable rule · revision 5</p>
+            <h2 id="rule-editor-title">Every item needs a stable product ID</h2>
+          </div>
+          <button class="icon-button" type="button" aria-label="Close rule editor" data-dialog-close>×</button>
+        </header>
+        <div class="form-grid">
+          <label class="form-grid__wide">
+            <span>Rule name</span>
+            <input
+              type="text"
+              value="Every item needs a stable product ID"
+              data-control="schema-rule-name"
+            />
+          </label>
+          <label>
+            <span>Rule kind</span>
+            <select data-control="schema-rule-kind">
+              <option>Required</option>
+              <option>Allowed values</option>
+              <option>Regular expression</option>
+            </select>
+          </label>
+          <label>
+            <span>Value type</span>
+            <select data-control="schema-rule-types"><option>String</option><option>Number</option></select>
+          </label>
+          <label>
+            <span>Operator</span>
+            <select data-control="schema-rule-operator"><option>Required</option><option>Allowed values</option></select>
+          </label>
+          <label>
+            <span>Severity</span>
+            <select data-control="schema-rule-severity"><option>Error</option><option>Warning</option></select>
+          </label>
+          <label class="form-grid__wide">
+            <span>Parameters</span>
+            <input type="text" value="path=items[*].item_id" data-control="schema-rule-parameters" />
+          </label>
+          <label class="form-grid__wide">
+            <span>Validation message</span>
+            <input
+              type="text"
+              value="Each ecommerce item must include item_id."
+              data-control="schema-rule-message"
+            />
+          </label>
+          <label class="form-grid__wide">
+            <span>Examples</span>
+            <input type="text" value="HB-1948, SH-2204-BRN" data-control="schema-rule-examples" />
+          </label>
+          <label class="form-grid__wide">
+            <span>Attached schemas</span>
+            <select multiple size="3" data-control="schema-rule-attachments">
+              <option selected>Commerce Core v12</option>
+              <option selected>Store &amp; Fulfilment v4</option>
+              <option>Trade account Draft</option>
+            </select>
+          </label>
+        </div>
+        <label class="checkbox-field">
+          <input type="checkbox" data-control="update-schema-rule-attachments" />
+          <span>Update pinned schema attachments to this revision</span>
+        </label>
+        <footer class="dialog-footer">
+          <button class="button button--secondary" type="button" data-dialog-close>Cancel</button>
+          <button
+            class="button button--primary"
+            type="button"
+            data-dialog-close
+            data-toast="Reusable rule saved."
+            data-control="save-schema-rule"
+          >
+            Save rule
+          </button>
+        </footer>
+      </div>
+    </dialog>
+
+    <dialog id="assignment-editor-dialog" class="mock-dialog" aria-labelledby="assignment-editor-title">
+      <div class="dialog-card dialog-card--wide">
+        <header class="dialog-heading">
+          <div>
+            <p class="eyebrow">Matching instruction</p>
+            <h2 id="assignment-editor-title">Edit schema assignment</h2>
+          </div>
+          <button class="icon-button" type="button" aria-label="Close assignment editor" data-dialog-close>×</button>
+        </header>
+        <div class="form-grid">
+          <label>
+            <span>Schema</span>
+            <select data-control="schema-assignment-schema"><option>Commerce Core v12</option><option>Customer &amp; Consent v6</option></select>
+          </label>
+          <label>
+            <span>Source</span>
+            <input type="text" value="event-history" data-control="schema-assignment-source" />
+          </label>
+          <label>
+            <span>Event name</span>
+            <input type="text" value="purchase" data-control="schema-assignment-event" />
+          </label>
+          <label>
+            <span>Validation target</span>
+            <select data-control="schema-assignment-target"><option>Payload</option><option>Raw input</option></select>
+          </label>
+          <label>
+            <span>Domain condition</span>
+            <input type="text" value="*.brassandborough.co.uk" data-control="schema-assignment-domain" />
+          </label>
+          <label>
+            <span>Pathname condition</span>
+            <input type="text" value="/order-confirmation*" data-control="schema-assignment-pathname" />
+          </label>
+          <label>
+            <span>Priority</span>
+            <input type="number" value="10" data-control="schema-assignment-priority" />
+          </label>
+          <label>
+            <span>Version policy</span>
+            <select data-control="schema-assignment-version-policy"><option>Pinned</option><option>Follow latest</option></select>
+          </label>
+        </div>
+        <label class="checkbox-field">
+          <input type="checkbox" checked data-control="schema-assignment-enabled" />
+          <span>Assignment enabled</span>
+        </label>
+        <footer class="dialog-footer">
+          <button class="button button--danger-quiet" type="button" data-toast="Assignment delete review opened.">
+            Delete assignment
+          </button>
+          <span class="dialog-footer__spacer"></span>
+          <button class="button button--secondary" type="button" data-dialog-close>Cancel</button>
+          <button
+            class="button button--primary"
+            type="button"
+            data-dialog-close
+            data-toast="Assignment saved."
+            data-control="save-schema-assignment"
+          >
+            Save assignment
+          </button>
+        </footer>
+      </div>
+    </dialog>
+
+    <dialog id="delete-schema-dialog" class="mock-dialog" aria-labelledby="delete-schema-title">
+      <div class="dialog-card">
+        <header class="dialog-heading">
+          <h2 id="delete-schema-title">Delete Commerce Core?</h2>
+          <button class="icon-button" type="button" aria-label="Close confirmation" data-dialog-close>×</button>
+        </header>
+        <p>This schema has 11 enabled assignments and 4 published revisions that require review.</p>
+        <footer class="dialog-footer">
+          <button class="button button--secondary" type="button" data-dialog-close>Cancel</button>
+          <a class="button button--danger" href="state-gallery.html#schema-delete-dialog">Review impact</a>
+        </footer>
+      </div>
+    </dialog>
+
+    <dialog id="delete-rule-dialog" class="mock-dialog" aria-labelledby="delete-rule-title">
+      <div class="dialog-card">
+        <header class="dialog-heading">
+          <h2 id="delete-rule-title">Delete reusable rule?</h2>
+          <button class="icon-button" type="button" aria-label="Close confirmation" data-dialog-close>×</button>
+        </header>
+        <p>Attached schemas keep their pinned snapshot; they will no longer receive upgrades.</p>
+        <footer class="dialog-footer">
+          <button class="button button--secondary" type="button" data-dialog-close>Cancel</button>
+          <button class="button button--danger" type="button" data-dialog-close data-toast="No rule was deleted.">
+            Delete rule
+          </button>
+        </footer>
+      </div>
+    </dialog>
+
+    <dialog id="load-keymap-dialog" class="mock-dialog" aria-labelledby="load-keymap-title">
+      <div class="dialog-card">
+        <header class="dialog-heading">
+          <div>
+            <p class="eyebrow">New finger choreography</p>
+            <h2 id="load-keymap-title">Load keymap</h2>
+          </div>
+          <button class="icon-button" type="button" aria-label="Close keymap dialog" data-dialog-close>×</button>
+        </header>
+        <div class="drop-zone" role="button" tabindex="0">
+          <span class="drop-zone__icon" aria-hidden="true">↓</span>
+          <strong>Choose a keymap JSON file</strong>
+          <small>Static mock — no file will actually be read</small>
+        </div>
+        <footer class="dialog-footer">
+          <button class="button button--secondary" type="button" data-dialog-close>Cancel</button>
+          <button class="button button--primary" type="button" data-dialog-close data-toast="Mock keymap loaded.">
+            Load keymap
+          </button>
+        </footer>
+      </div>
+    </dialog>
+
+    <div class="toast-region" aria-live="polite" aria-atomic="true"></div>
+  </body>
+</html>

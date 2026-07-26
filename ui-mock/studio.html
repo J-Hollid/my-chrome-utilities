@@ -1,0 +1,1625 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#173963">
+  <title>TWAtility Belt — Specification Studio</title>
+  <link rel="stylesheet" href="assets/mock.css">
+</head>
+<body class="mock-shell studio-page">
+  <a class="skip-link" href="#studio-workspace">Skip to the workbench</a>
+
+  <header class="brand-lockup studio-brand">
+    <a class="brand-home" href="side-panel.html" aria-label="TWAtility Belt side panel">
+      <span class="brand-wordmark brand-wordmark--studio" aria-hidden="true">
+        <span class="brand-wordmark__name">
+          <span class="brand-wordmark__twa">TWA</span><span class="brand-wordmark__wink">t</span><span class="brand-wordmark__rest">ility</span>
+        </span>
+        <span class="brand-wordmark__belt">Belt</span>
+      </span>
+    </a>
+    <div class="brand-copy">
+      <p class="comic-kicker">Technical Web Analysts</p>
+      <p>Keeping the web honest, one spec at a time.</p>
+    </div>
+    <div class="brand-sticker" aria-label="Current project">
+      <span>Case file</span>
+      <strong>Brass &amp; Borough</strong>
+    </div>
+  </header>
+
+  <div class="project-bar" aria-label="Project status">
+    <div class="project-identity">
+      <span class="eyebrow">Specification Studio</span>
+      <strong>Retail &amp; Trade · UK storefront</strong>
+      <span class="muted">www.brassandborough.co.uk</span>
+    </div>
+    <div class="save-state">
+      <span class="status-chip status-good"><span aria-hidden="true">●</span> Saved Draft</span>
+      <span>Published revision 3</span>
+      <button type="button" class="button-quiet" data-dialog-open="storage-recovery">Storage &amp; recovery</button>
+    </div>
+  </div>
+
+  <main class="workspace-shell" id="studio-workspace">
+    <nav class="studio-tree" aria-label="Project collections">
+      <div class="tree-heading">
+        <span class="comic-kicker">Spec workbench</span>
+        <h1>Retail &amp; Trade</h1>
+        <p>Rich retail &amp; trade implementation plan</p>
+      </div>
+
+      <button type="button" class="tree-overview" data-route-target="project-overview">
+        <span aria-hidden="true">⌂</span>
+        Project overview
+      </button>
+
+      <ul class="collection-tree">
+        <li>
+          <button type="button" class="is-active" data-route-target="profile" aria-current="page">
+            <span>Shared Profiles</span><strong>3</strong>
+          </button>
+          <ul>
+            <li><button type="button" data-route-target="profile"><span>Commerce Core</span><span class="status-dot status-good" title="Ready"></span></button></li>
+            <li><button type="button" data-route-target="profile"><span>UK Retail Customer</span><span class="status-dot status-good" title="Ready"></span></button></li>
+            <li><button type="button" data-route-target="profile"><span>Trade Account</span><span class="status-dot status-warn" title="One warning"></span></button></li>
+          </ul>
+        </li>
+        <li><button type="button" data-route-target="pages"><span>Pages</span><strong>5</strong></button></li>
+        <li><button type="button" data-route-target="page-groups"><span>Page Groups</span><strong>3</strong></button></li>
+        <li><button type="button" data-route-target="events"><span>Events</span><strong>7</strong></button></li>
+        <li><button type="button" data-route-target="applicability"><span>Applicability</span><strong>4</strong></button></li>
+        <li>
+          <button type="button" data-route-target="flows"><span>Flows</span><strong>2</strong></button>
+          <ul>
+            <li><button type="button" data-route-target="flows">Customer checkout</button></li>
+            <li><button type="button" data-route-target="flows">Trade quote to order</button></li>
+          </ul>
+        </li>
+        <li><button type="button" data-route-target="fixtures"><span>Fixtures</span><strong>4</strong></button></li>
+        <li><button type="button" data-route-target="assignments"><span>Assignments</span><strong>11</strong></button></li>
+        <li><button type="button" data-route-target="releases"><span>Releases</span><strong>3</strong></button></li>
+      </ul>
+
+      <div class="tree-footer">
+        <div class="speech-bubble">
+          <strong>Right then.</strong>
+          <span>Three checks left before this lot is fit for release.</span>
+        </div>
+        <img src="assets/analyst-mascot-transparent.png" alt="" aria-hidden="true">
+      </div>
+    </nav>
+
+    <section class="studio-main" id="studio-main" tabindex="-1">
+      <header class="studio-tools">
+        <nav class="breadcrumbs" aria-label="Breadcrumb">
+          <button type="button" data-route-target="project-overview">Retail &amp; Trade</button>
+          <span aria-hidden="true">/</span>
+          <button type="button" data-route-target="profile">Shared Profiles</button>
+          <span aria-hidden="true">/</span>
+          <strong>Commerce Core</strong>
+        </nav>
+
+        <div class="tool-row">
+          <button
+            type="button"
+            class="button-quiet"
+            data-inspector-toggle
+            aria-controls="studio-inspector"
+            aria-expanded="true"
+          >Hide inspector</button>
+          <button type="button" data-toast="Draft validated: 28 ready, 1 warning.">Validate</button>
+          <button type="button" data-route-target="preflight">Run preflight</button>
+          <button type="button" data-route-target="coverage">Coverage matrix</button>
+          <button type="button" data-route-target="releases">Releases</button>
+          <button type="button" class="button-primary comic-button" data-dialog-open="release-review">Publish release</button>
+          <details class="more-menu">
+            <summary>More</summary>
+            <div class="menu-popover">
+              <button type="button" data-toast="Undid “Update /ecommerce/value”.">Undo <kbd>Ctrl</kbd>+<kbd>Z</kbd></button>
+              <button type="button" disabled>Redo</button>
+              <button type="button" data-dialog-open="documentation-export">Generate documentation table</button>
+              <button type="button" data-toast="Full-fidelity project export prepared.">Export full project</button>
+              <button type="button" data-toast="JSON Schema and manifest prepared.">Export JSON Schema + manifest</button>
+              <button type="button" data-dialog-open="import-review">Import project</button>
+              <a href="state-gallery.html#studio-recovery">Migration &amp; recovery states</a>
+            </div>
+          </details>
+        </div>
+
+        <div class="tool-guidance">
+          <p>The main action edits what is selected. Validate checks the Draft; Release publishes an immutable plan. Very official.</p>
+          <label class="global-search">
+            <span class="visually-hidden">Global search</span>
+            <input type="search" value="" placeholder="Search properties, profiles, pages, flows…" aria-label="Global search">
+            <span aria-hidden="true">⌕</span>
+          </label>
+        </div>
+      </header>
+
+      <div class="route-stack">
+        <section class="route-view" data-route="project-overview" id="project-overview" hidden>
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">Project overview</p>
+              <h2>Retail &amp; Trade · UK storefront</h2>
+              <p>A single measurement specification for consumer retail and logged-in trade journeys across the UK storefront.</p>
+            </div>
+            <span class="status-chip status-good">Saved Draft</span>
+          </div>
+
+          <div class="summary-grid">
+            <article class="panel metric-card">
+              <span>Entities</span><strong>39</strong><small>Across 8 collections</small>
+            </article>
+            <article class="panel metric-card">
+              <span>Effective requirements</span><strong>28</strong><small>24 proven by fixtures</small>
+            </article>
+            <article class="panel metric-card">
+              <span>Coverage</span><strong>86%</strong><small>4 cells need a proper look</small>
+            </article>
+            <article class="panel metric-card">
+              <span>Published</span><strong>r3</strong><small>18 July 2026</small>
+            </article>
+          </div>
+
+          <section class="panel">
+            <div class="card-heading">
+              <div><p class="eyebrow">Recommended next job</p><h3>Prove the trade checkout exception</h3></div>
+              <span class="comic-kicker">Make it so!</span>
+            </div>
+            <p>The <strong>Trade net-30 purchase</strong> fixture has not yet proved <code>/customer/vat_number</code> on the purchase step.</p>
+            <div class="button-row">
+              <button type="button" class="button-primary" data-route-target="fixtures">Open fixture</button>
+              <button type="button" data-route-target="coverage">See missing coverage</button>
+            </div>
+          </section>
+
+          <section class="panel">
+            <div class="card-heading"><h3>Build map</h3><span>Linked, not linear</span></div>
+            <ol class="journey-map">
+              <li class="is-complete"><button type="button" data-route-target="profile"><span>1</span><strong>Profiles</strong><small>Define the shared truth</small></button></li>
+              <li class="is-complete"><button type="button" data-route-target="pages"><span>2</span><strong>Pages &amp; Events</strong><small>Give it context</small></button></li>
+              <li class="is-complete"><button type="button" data-route-target="flows"><span>3</span><strong>Flows</strong><small>Draw the journey</small></button></li>
+              <li class="is-current"><button type="button" data-route-target="fixtures"><span>4</span><strong>Fixtures</strong><small>Prove the evaluator</small></button></li>
+              <li><button type="button" data-route-target="releases"><span>5</span><strong>Release</strong><small>Publish the plan</small></button></li>
+            </ol>
+          </section>
+
+          <section class="panel">
+            <div class="card-heading"><h3>Project details</h3><button type="button" data-toast="Project details staged for review.">Edit details</button></div>
+            <dl class="definition-list">
+              <div><dt>Website</dt><dd>www.brassandborough.co.uk</dd></div>
+              <div><dt>Environment</dt><dd>production</dd></div>
+              <div><dt>Owner</dt><dd>Digital Analytics · UK Commerce</dd></div>
+              <div><dt>Purpose</dt><dd>Retail and trade ecommerce measurement specification</dd></div>
+            </dl>
+          </section>
+        </section>
+
+        <section class="route-view is-active" data-route="profile" id="studio-profile">
+          <div class="page-heading">
+            <div>
+              <p class="eyebrow">Shared Profile</p>
+              <h2>Commerce Core</h2>
+              <p>Canonical ecommerce requirements shared by every retail and trade purchase event.</p>
+            </div>
+            <div class="heading-badges">
+              <span class="status-chip status-draft">Draft r12</span>
+              <span class="status-chip status-good">28 ready</span>
+              <span class="status-chip status-warn">1 warning</span>
+            </div>
+          </div>
+
+          <section class="panel entity-identity">
+            <div class="card-heading">
+              <h3>Edit Shared Profile</h3>
+              <span class="comic-kicker">The common sense bit</span>
+            </div>
+            <div class="field-grid">
+              <label>
+                <span>Name</span>
+                <input type="text" value="Commerce Core">
+              </label>
+              <label>
+                <span>Description</span>
+                <input type="text" value="Baseline ecommerce contract for retail and trade">
+              </label>
+              <label>
+                <span>Source lineage</span>
+                <select>
+                  <option>Project-created</option>
+                  <option>Saved Schema Library · Ecommerce Core r8</option>
+                </select>
+              </label>
+            </div>
+            <div class="button-row">
+              <button type="button" class="button-primary" data-toast="Commerce Core staged as one complete entity edit.">Save complete entity</button>
+              <button type="button" data-toast="Created “Commerce Core copy” as a Draft.">Duplicate</button>
+              <button type="button" data-dialog-open="saved-schema-review">Review library revision</button>
+              <span class="muted">Where used: 5 Pages · 7 Events · 2 Flows</span>
+            </div>
+          </section>
+
+          <section class="panel schema-workspace" aria-labelledby="schema-heading">
+            <div class="card-heading">
+              <div>
+                <p class="eyebrow">Canonical property tree</p>
+                <h3 id="schema-heading">Commerce Core schema</h3>
+                <p>Inherited and local facets are composed into one effective contract.</p>
+              </div>
+              <div class="button-row compact">
+                <button type="button" data-toast="Compared source revision 8 with current Draft 12.">Compare revisions</button>
+                <button type="button" data-toast="Effective schema copied as JSON.">Copy schema</button>
+              </div>
+            </div>
+
+            <div class="schema-meta">
+              <span>Source revision 8</span>
+              <span>Draft revision 12</span>
+              <span>4 local overrides</span>
+              <span>0 conflicts</span>
+            </div>
+
+            <div class="schema-controls">
+              <div class="segmented-control" role="group" aria-label="Schema view">
+                <button type="button" class="is-active" data-view-target="schema-table" aria-pressed="true">Table</button>
+                <button type="button" data-view-target="schema-tree" aria-pressed="false">Tree</button>
+              </div>
+              <label class="search-field">
+                <span class="visually-hidden">Search properties</span>
+                <input type="search" placeholder="Search properties…" value="">
+              </label>
+              <label>
+                <span class="visually-hidden">Filter properties</span>
+                <select aria-label="Filter properties">
+                  <option>All properties</option>
+                  <option>Local overrides</option>
+                  <option>Inherited</option>
+                  <option>Warnings</option>
+                  <option>Required only</option>
+                </select>
+              </label>
+              <label>
+                <span class="visually-hidden">Property order</span>
+                <select aria-label="Property order">
+                  <option>Tree order</option>
+                  <option>Property A–Z</option>
+                  <option>Validation state</option>
+                  <option>Source layer</option>
+                </select>
+              </label>
+              <button type="button" data-toast="Undid the last local property change.">Undo</button>
+              <button type="button" disabled>Redo</button>
+            </div>
+
+            <div data-view="schema-table" id="schema-table" class="schema-view">
+              <div class="table-scroll">
+                <table class="data-table schema-table">
+                  <caption class="visually-hidden">Canonical properties for Commerce Core</caption>
+                  <thead>
+                    <tr>
+                      <th scope="col"><span class="visually-hidden">Select</span></th>
+                      <th scope="col">Property</th>
+                      <th scope="col">Path</th>
+                      <th scope="col">Type</th>
+                      <th scope="col">Presence</th>
+                      <th scope="col">Description</th>
+                      <th scope="col">Allowed values</th>
+                      <th scope="col">Example</th>
+                      <th scope="col">Source</th>
+                      <th scope="col">Local / effective</th>
+                      <th scope="col">Validation</th>
+                      <th scope="col"><span class="visually-hidden">Actions</span></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><button type="button" class="drag-handle" aria-label="Reorder event property">⋮⋮</button></td>
+                      <th scope="row"><button type="button" class="property-link" data-view-target="property-definition">event</button></th>
+                      <td><code>/event</code></td>
+                      <td><span class="type-pill">string</span></td>
+                      <td>required</td>
+                      <td>Canonical event name</td>
+                      <td><code>purchase</code>, <code>refund</code></td>
+                      <td><code>purchase</code></td>
+                      <td>Commerce Core</td>
+                      <td><span class="status-chip status-local">local</span></td>
+                      <td><span class="status-chip status-good">Ready</span></td>
+                      <td><button type="button" aria-label="Open actions for event" data-view-target="property-actions">•••</button></td>
+                    </tr>
+                    <tr>
+                      <td><button type="button" class="drag-handle" aria-label="Reorder ecommerce object">⋮⋮</button></td>
+                      <th scope="row"><button type="button" class="property-link" data-view-target="property-structure">ecommerce</button></th>
+                      <td><code>/ecommerce</code></td>
+                      <td><span class="type-pill">object</span></td>
+                      <td>required</td>
+                      <td>Commerce payload container</td>
+                      <td>—</td>
+                      <td><code>{…}</code></td>
+                      <td>Commerce Core</td>
+                      <td><span class="status-chip status-local">local</span></td>
+                      <td><span class="status-chip status-good">Ready</span></td>
+                      <td><button type="button" aria-label="Open actions for ecommerce" data-view-target="property-actions">•••</button></td>
+                    </tr>
+                    <tr class="is-selected">
+                      <td><button type="button" class="drag-handle" aria-label="Reorder transaction id">⋮⋮</button></td>
+                      <th scope="row"><button type="button" class="property-link" data-view-target="property-definition">↳ transaction_id</button></th>
+                      <td><code>/ecommerce/transaction_id</code></td>
+                      <td><span class="type-pill">string</span></td>
+                      <td>required</td>
+                      <td>Unique order reference</td>
+                      <td>—</td>
+                      <td><code>WEB-104928</code></td>
+                      <td>Commerce Core</td>
+                      <td><span class="status-chip status-local">local</span></td>
+                      <td><span class="status-chip status-good">Ready</span></td>
+                      <td class="action-cell">
+                        <button type="button" class="is-active" aria-label="Close actions for transaction id" data-view-target="property-actions">•••</button>
+                        <div class="property-menu" data-view="property-actions" id="property-actions">
+                          <p class="eyebrow">Property actions</p>
+                          <strong>transaction_id</strong>
+                          <button type="button" data-view-target="property-definition"><span>Definition</span><small>Type, presence &amp; documentation</small></button>
+                          <button type="button" data-view-target="property-rules"><span>Rules</span><small>Constraints &amp; conditions</small></button>
+                          <button type="button" data-view-target="property-structure"><span>Structure</span><small>Children, arrays &amp; order</small></button>
+                          <hr>
+                          <button type="button" data-toast="A child property row is ready for its name.">Add child property</button>
+                          <button type="button" data-toast="A sibling property row is ready for its name.">Add sibling property</button>
+                          <button type="button" data-toast="Duplicated /ecommerce/transaction_id as a local Draft.">Duplicate property</button>
+                          <button type="button" data-toast="Copied property definition.">Copy definition</button>
+                          <button type="button" data-toast="Local facets reset; effective inherited value restored.">Reset local override</button>
+                          <button type="button" class="danger-text" data-dialog-open="remove-property-review">Remove property…</button>
+                        </div>
+                      </td>
+                    </tr>
+                    <tr>
+                      <td><button type="button" class="drag-handle" aria-label="Reorder value">⋮⋮</button></td>
+                      <th scope="row"><button type="button" class="property-link" data-view-target="property-rules">↳ value</button></th>
+                      <td><code>/ecommerce/value</code></td>
+                      <td><span class="type-pill">number</span></td>
+                      <td>required</td>
+                      <td>Gross order value</td>
+                      <td>≥ 0</td>
+                      <td><code>149.95</code></td>
+                      <td>Commerce Core</td>
+                      <td><span class="status-chip status-edited">overridden</span></td>
+                      <td><span class="status-chip status-warn">Review</span></td>
+                      <td><button type="button" aria-label="Open actions for value" data-view-target="property-actions">•••</button></td>
+                    </tr>
+                    <tr>
+                      <td><button type="button" class="drag-handle" aria-label="Reorder currency">⋮⋮</button></td>
+                      <th scope="row"><button type="button" class="property-link" data-view-target="property-definition">↳ currency</button></th>
+                      <td><code>/ecommerce/currency</code></td>
+                      <td><span class="type-pill">string</span></td>
+                      <td>required</td>
+                      <td>ISO 4217 currency</td>
+                      <td><code>GBP</code>, <code>EUR</code></td>
+                      <td><code>GBP</code></td>
+                      <td>Commerce Core</td>
+                      <td><span class="status-chip status-inherited">effective</span></td>
+                      <td><span class="status-chip status-good">Ready</span></td>
+                      <td><button type="button" aria-label="Open actions for currency" data-view-target="property-actions">•••</button></td>
+                    </tr>
+                    <tr>
+                      <td><button type="button" class="drag-handle" aria-label="Reorder items">⋮⋮</button></td>
+                      <th scope="row"><button type="button" class="property-link" data-view-target="property-structure">↳ items</button></th>
+                      <td><code>/ecommerce/items</code></td>
+                      <td><span class="type-pill">array</span></td>
+                      <td>required</td>
+                      <td>Purchased line items</td>
+                      <td>min 1 item</td>
+                      <td><code>[{…}]</code></td>
+                      <td>Commerce Core</td>
+                      <td><span class="status-chip status-local">local</span></td>
+                      <td><span class="status-chip status-good">Ready</span></td>
+                      <td><button type="button" aria-label="Open actions for items" data-view-target="property-actions">•••</button></td>
+                    </tr>
+                    <tr>
+                      <td><button type="button" class="drag-handle" aria-label="Reorder item id">⋮⋮</button></td>
+                      <th scope="row"><button type="button" class="property-link" data-view-target="property-definition">　↳ item_id</button></th>
+                      <td><code>/ecommerce/items/*/item_id</code></td>
+                      <td><span class="type-pill">string</span></td>
+                      <td>required</td>
+                      <td>Stable SKU</td>
+                      <td>—</td>
+                      <td><code>BB-WAX-001</code></td>
+                      <td>Commerce Core</td>
+                      <td><span class="status-chip status-inherited">effective</span></td>
+                      <td><span class="status-chip status-good">Ready</span></td>
+                      <td><button type="button" aria-label="Open actions for item id" data-view-target="property-actions">•••</button></td>
+                    </tr>
+                    <tr>
+                      <td><button type="button" class="drag-handle" aria-label="Reorder customer">⋮⋮</button></td>
+                      <th scope="row"><button type="button" class="property-link" data-view-target="property-structure">customer</button></th>
+                      <td><code>/customer</code></td>
+                      <td><span class="type-pill">object</span></td>
+                      <td>optional</td>
+                      <td>Known customer context</td>
+                      <td>—</td>
+                      <td><code>{…}</code></td>
+                      <td>Trade Account</td>
+                      <td><span class="status-chip status-inherited">inherited</span></td>
+                      <td><span class="status-chip status-good">Ready</span></td>
+                      <td><button type="button" aria-label="Open actions for customer" data-view-target="property-actions">•••</button></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <form class="inline-add" aria-label="Add root property">
+                <label>
+                  <span>New root property name</span>
+                  <input type="text" placeholder="e.g. consent">
+                </label>
+                <button type="button" class="button-primary" data-toast="New root property staged. Add its definition next.">Add root property</button>
+              </form>
+            </div>
+
+            <div data-view="schema-tree" class="schema-view" hidden>
+              <div class="tree-editor">
+                <ol>
+                  <li><button type="button" data-view-target="property-definition"><strong>event</strong> <span>string · required · Ready</span></button></li>
+                  <li class="is-expanded">
+                    <button type="button" data-view-target="property-structure"><strong>ecommerce</strong> <span>object · required · Ready</span></button>
+                    <ol>
+                      <li><button type="button" data-view-target="property-definition"><strong>transaction_id</strong> <span>string · required · Ready</span></button></li>
+                      <li><button type="button" data-view-target="property-rules"><strong>value</strong> <span>number · required · Review</span></button></li>
+                      <li><button type="button" data-view-target="property-definition"><strong>currency</strong> <span>string · required · Ready</span></button></li>
+                      <li class="is-expanded">
+                        <button type="button" data-view-target="property-structure"><strong>items</strong> <span>array · required · Ready</span></button>
+                        <ol><li><button type="button" data-view-target="property-definition"><strong>item_id</strong> <span>string · required · Ready</span></button></li></ol>
+                      </li>
+                    </ol>
+                  </li>
+                  <li><button type="button" data-view-target="property-structure"><strong>customer</strong> <span>object · optional · inherited</span></button></li>
+                </ol>
+              </div>
+            </div>
+
+            <section class="property-editor" data-view="property-definition" id="property-definition" hidden>
+              <div class="property-editor-heading">
+                <div><p class="eyebrow">Property / Definition</p><h4><code>/ecommerce/transaction_id</code></h4></div>
+                <button type="button" aria-label="Close property editor" data-view-target="schema-table">×</button>
+              </div>
+              <nav class="property-tabs" aria-label="Property editor">
+                <button type="button" class="is-active" data-view-target="property-definition">Definition</button>
+                <button type="button" data-view-target="property-rules">Rules</button>
+                <button type="button" data-view-target="property-structure">Structure</button>
+              </nav>
+              <div class="notice notice-info">
+                <strong>Local definition</strong>
+                <span>Effective from Commerce Core. Used by 7 events and 2 release fixtures.</span>
+              </div>
+              <div class="field-grid">
+                <label><span>Property name</span><input type="text" value="transaction_id"></label>
+                <label><span>Path</span><input type="text" value="/ecommerce/transaction_id" readonly></label>
+                <label>
+                  <span>Type</span>
+                  <select>
+                    <option selected>string</option><option>number</option><option>integer</option><option>boolean</option><option>object</option><option>array</option><option>null</option>
+                  </select>
+                </label>
+                <label>
+                  <span>Presence</span>
+                  <select><option selected>required</option><option>optional</option><option>forbidden</option><option>conditional</option></select>
+                </label>
+                <label class="field-span-2"><span>Description</span><textarea rows="3">Unique order reference generated after payment authorisation. Must remain stable across duplicate purchase pushes.</textarea></label>
+                <label><span>Allowed values</span><input type="text" placeholder="Comma-separated" value=""></label>
+                <label><span>Example method</span><select><option selected>Custom</option><option>First allowed value</option><option>Generated</option><option>Blank</option></select></label>
+                <label><span>Example value</span><input type="text" value="WEB-104928"></label>
+                <label><span>Documentation title</span><input type="text" value="Transaction ID"></label>
+                <label class="field-span-2"><span>Implementation notes</span><textarea rows="2">Use the commerce platform order number, not the payment provider reference.</textarea></label>
+              </div>
+              <div class="button-row">
+                <button type="button" class="button-primary" data-toast="Definition staged. The effective preview is up to date.">Save definition</button>
+                <button type="button" data-toast="Definition reset to its inherited effective value.">Reset local facets</button>
+                <button type="button" data-view-target="schema-table">Cancel</button>
+              </div>
+            </section>
+
+            <section class="property-editor" data-view="property-rules" id="property-rules" hidden>
+              <div class="property-editor-heading">
+                <div><p class="eyebrow">Property / Rules</p><h4><code>/ecommerce/value</code></h4></div>
+                <button type="button" aria-label="Close property editor" data-view-target="schema-table">×</button>
+              </div>
+              <nav class="property-tabs" aria-label="Property editor">
+                <button type="button" data-view-target="property-definition">Definition</button>
+                <button type="button" class="is-active" data-view-target="property-rules">Rules</button>
+                <button type="button" data-view-target="property-structure">Structure</button>
+              </nav>
+
+              <div class="rule-list">
+                <article class="rule-card">
+                  <div><span class="status-chip status-local">local</span><strong>Value cannot be negative</strong><p>number · at least · <code>0</code></p></div>
+                  <div class="button-row compact"><button type="button" data-toast="Rule moved earlier.">↑</button><button type="button" data-toast="Rule moved later.">↓</button><button type="button" data-toast="Rule editor opened below.">Edit</button><button type="button" class="danger-text" data-toast="Rule removal staged.">Remove</button></div>
+                </article>
+                <article class="rule-card">
+                  <div><span class="status-chip status-inherited">reusable r4</span><strong>Money has two decimal places</strong><p>number · decimal precision · <code>2</code></p></div>
+                  <div class="button-row compact"><button type="button" data-toast="Reusable rule source opened.">Open source</button><button type="button" data-toast="Pinned reusable rule revision 4.">Pin revision</button></div>
+                </article>
+              </div>
+
+              <fieldset class="rule-builder">
+                <legend>Add or edit rule</legend>
+                <div class="field-grid">
+                  <label><span>Rule source</span><select><option>Built-in rule</option><option>Reusable rule library</option><option>Custom predicate</option></select></label>
+                  <label><span>Rule</span><select><option>Minimum value</option><option>Maximum value</option><option>Pattern</option><option>Length</option><option>Allowed values</option><option>Required</option><option>Custom</option></select></label>
+                  <label><span>Operator</span><select><option>at least</option><option>greater than</option><option>equals</option><option>does not equal</option><option>is one of</option><option>matches pattern</option></select></label>
+                  <label><span>Expected value</span><input type="text" value="0"></label>
+                  <label><span>Severity</span><select><option>Error</option><option selected>Warning</option><option>Information</option></select></label>
+                  <label><span>Rule name</span><input type="text" value="Value cannot be negative"></label>
+                  <label class="field-span-2"><span>Validation message</span><input type="text" value="Order value should be zero or greater. Check refunds are sent as refund events."></label>
+                </div>
+                <details class="condition-builder" open>
+                  <summary>Apply conditionally</summary>
+                  <div class="condition-row">
+                    <label><span>Group</span><select><option>All conditions</option><option>Any condition</option><option>Not</option></select></label>
+                    <label class="checkbox-label"><input type="checkbox"><span>Negate</span></label>
+                    <label><span>Context field</span><input type="text" value="event"></label>
+                    <label><span>Operator</span><select><option selected>equals</option><option>does not equal</option><option>exists</option><option>is one of</option><option>glob</option><option>regex</option></select></label>
+                    <label><span>Value</span><input type="text" value="purchase"></label>
+                    <button type="button" aria-label="Remove condition" data-toast="Predicate removed.">×</button>
+                  </div>
+                  <button type="button" data-toast="Blank predicate added.">Add predicate</button>
+                  <button type="button" data-toast="Nested condition group added.">Add nested group</button>
+                </details>
+                <div class="button-row">
+                  <button type="button" class="button-primary" data-toast="Rule staged with its condition and message.">Save rule</button>
+                  <button type="button" data-toast="Rule staged for the reusable library.">Promote to reusable rule</button>
+                  <button type="button" data-view-target="schema-table">Cancel</button>
+                </div>
+              </fieldset>
+            </section>
+
+            <section class="property-editor" data-view="property-structure" id="property-structure" hidden>
+              <div class="property-editor-heading">
+                <div><p class="eyebrow">Property / Structure</p><h4><code>/ecommerce/items</code></h4></div>
+                <button type="button" aria-label="Close property editor" data-view-target="schema-table">×</button>
+              </div>
+              <nav class="property-tabs" aria-label="Property editor">
+                <button type="button" data-view-target="property-definition">Definition</button>
+                <button type="button" data-view-target="property-rules">Rules</button>
+                <button type="button" class="is-active" data-view-target="property-structure">Structure</button>
+              </nav>
+              <div class="field-grid">
+                <label><span>Container type</span><select><option>array</option><option>object</option></select></label>
+                <label><span>Array item type</span><select><option>object</option><option>string</option><option>number</option><option>integer</option><option>boolean</option><option>Reference another property</option></select></label>
+                <label><span>Minimum items</span><input type="number" value="1" min="0"></label>
+                <label><span>Maximum items</span><input type="number" placeholder="No maximum"></label>
+                <label class="checkbox-label"><input type="checkbox" checked><span>Require unique items</span></label>
+                <label class="checkbox-label"><input type="checkbox"><span>Allow undeclared child properties</span></label>
+              </div>
+
+              <div class="structure-list">
+                <div class="card-heading"><h5>Child properties</h5><button type="button" data-toast="Blank child property staged under items.">Add child property</button></div>
+                <ol>
+                  <li><button type="button" class="drag-handle" aria-label="Reorder item id">⋮⋮</button><code>item_id</code><span>string · required</span><button type="button" data-view-target="property-definition">Edit</button><button type="button" data-toast="item_id duplicated.">Duplicate</button></li>
+                  <li><button type="button" class="drag-handle" aria-label="Reorder item name">⋮⋮</button><code>item_name</code><span>string · required</span><button type="button" data-view-target="property-definition">Edit</button><button type="button" data-toast="item_name duplicated.">Duplicate</button></li>
+                  <li><button type="button" class="drag-handle" aria-label="Reorder item category">⋮⋮</button><code>item_category</code><span>string · optional</span><button type="button" data-view-target="property-definition">Edit</button><button type="button" data-toast="item_category duplicated.">Duplicate</button></li>
+                  <li><button type="button" class="drag-handle" aria-label="Reorder price">⋮⋮</button><code>price</code><span>number · required</span><button type="button" data-view-target="property-rules">Edit</button><button type="button" data-toast="price duplicated.">Duplicate</button></li>
+                  <li><button type="button" class="drag-handle" aria-label="Reorder quantity">⋮⋮</button><code>quantity</code><span>integer · required</span><button type="button" data-view-target="property-rules">Edit</button><button type="button" data-toast="quantity duplicated.">Duplicate</button></li>
+                </ol>
+              </div>
+
+              <div class="button-row">
+                <button type="button" class="button-primary" data-toast="Structure staged with five ordered child properties.">Save structure</button>
+                <button type="button" data-toast="Structure reset to the inherited effective value.">Reset local structure</button>
+                <button type="button" data-view-target="schema-table">Cancel</button>
+              </div>
+            </section>
+          </section>
+
+          <section class="panel effective-documentation">
+            <div class="card-heading"><h3>Effective documentation</h3><button type="button" data-dialog-open="documentation-export">Generate table</button></div>
+            <p>Commerce Core contributes 28 effective property definitions to 7 Events. Requirement provenance and where-used links are current for Draft revision 12.</p>
+          </section>
+        </section>
+
+        <section class="route-view" data-route="preflight" id="studio-preflight" hidden>
+          <div class="page-heading">
+            <div><p class="eyebrow">Validate / Production evaluator</p><h2>Preflight report</h2><p>Compiled from the current Saved Draft and all current fixture evidence.</p></div>
+            <span class="status-chip status-warn">1 blocker · 2 warnings</span>
+          </div>
+          <section class="panel preflight-summary">
+            <div class="card-heading"><h3>Release readiness</h3><span class="comic-kicker">Nearly there, chief</span></div>
+            <dl class="definition-list">
+              <div><dt>Content identity</dt><dd><code>preflight:9f31c2a</code></dd></div>
+              <div><dt>Compiled plan</dt><dd>39 entities · 11 assignments</dd></div>
+              <div><dt>Fixture evidence</dt><dd>3 passed · 1 failed</dd></div>
+              <div><dt>Coverage</dt><dd>24 of 28 cells proven</dd></div>
+            </dl>
+          </section>
+          <section class="panel">
+            <div class="card-heading"><h3>Blockers</h3><span class="status-chip status-bad">Must fix</span></div>
+            <ul class="finding-list">
+              <li class="finding-bad">
+                <div><strong>fixture-failed</strong><p>Trade net-30 purchase does not prove <code>/customer/vat_number</code> on the purchase step.</p><small>Fixture · Trade net-30 purchase · expected</small></div>
+                <button type="button" data-route-target="fixtures">Open fixture</button>
+              </li>
+            </ul>
+          </section>
+          <section class="panel">
+            <div class="card-heading"><h3>Warnings</h3><span class="status-chip status-warn">Worth a squint</span></div>
+            <ul class="finding-list">
+              <li><div><strong>Unpinned reusable rule</strong><p><code>/ecommerce/value</code> follows the latest “Money has two decimal places” rule.</p></div><button type="button" data-route-target="profile">Review rule</button></li>
+              <li><div><strong>Optional refund fixture is stale</strong><p>The fixture last ran against compiled schema revision 11.</p></div><button type="button" data-route-target="fixtures">Run fixture</button></li>
+            </ul>
+          </section>
+          <div class="button-row">
+            <button type="button" class="button-primary" data-toast="Preflight rerun against the same mocked Draft.">Run preflight again</button>
+            <button type="button" data-route-target="coverage">Open coverage matrix</button>
+            <button type="button" disabled>Publish release</button>
+          </div>
+        </section>
+
+        <section class="route-view" data-route="pages" id="studio-pages" hidden>
+          <div class="page-heading">
+            <div><p class="eyebrow">Collection</p><h2>Pages</h2><p>Context-setting views where interactions take place.</p></div>
+            <button type="button" class="button-primary" data-view-target="page-create">Add Page</button>
+          </div>
+
+          <section class="panel collection-toolbar">
+            <label class="search-field"><span class="visually-hidden">Search Pages</span><input type="search" placeholder="Search Pages…"></label>
+            <label><span class="visually-hidden">Filter environment</span><select aria-label="Filter environment"><option>All environments</option><option>production</option><option>staging</option></select></label>
+            <span class="muted">5 of 5 Pages</span>
+          </section>
+
+          <section class="panel entity-list" data-view="page-list">
+            <div class="entity-list-heading"><span>Name</span><span>Observed context event</span><span>Page Groups</span><span>Where used</span><span></span></div>
+            <article class="entity-row">
+              <button type="button" data-view-target="page-edit"><strong>Product detail</strong><small>/products/*</small></button>
+              <span>page_<wbr>view</span><span>Shopping journey</span><span>3 flows/events</span>
+              <button type="button" aria-label="Page actions for Product detail" data-toast="Page actions opened.">•••</button>
+            </article>
+            <article class="entity-row">
+              <button type="button" data-view-target="page-edit"><strong>Basket</strong><small>/basket</small></button>
+              <span>view_<wbr>cart</span><span>Shopping journey</span><span>4 flows/events</span>
+              <button type="button" aria-label="Page actions for Basket" data-toast="Page actions opened.">•••</button>
+            </article>
+            <article class="entity-row is-selected">
+              <button type="button" data-view-target="page-edit"><strong>Checkout</strong><small>/checkout/*</small></button>
+              <span>begin_<wbr>checkout</span><span>Shopping journey → Transaction</span><span>8 flows/events</span>
+              <button type="button" aria-label="Page actions for Checkout" data-toast="Page actions opened.">•••</button>
+            </article>
+            <article class="entity-row">
+              <button type="button" data-view-target="page-edit"><strong>Order confirmation</strong><small>/order/confirmation</small></button>
+              <span>purchase_<wbr>confirmation</span><span>Transaction pages</span><span>5 flows/events</span>
+              <button type="button" aria-label="Page actions for Order confirmation" data-toast="Page actions opened.">•••</button>
+            </article>
+            <article class="entity-row">
+              <button type="button" data-view-target="page-edit"><strong>Trade account</strong><small>/trade/account/*</small></button>
+              <span>trade_<wbr>account_<wbr>view</span><span>Trade portal</span><span>2 flows/events</span>
+              <button type="button" aria-label="Page actions for Trade account" data-toast="Page actions opened.">•••</button>
+            </article>
+          </section>
+
+          <section class="panel contextual-editor" data-view="page-edit" hidden>
+            <div class="card-heading"><div><p class="eyebrow">Edit Page</p><h3>Checkout</h3></div><button type="button" data-view-target="page-list" aria-label="Close Page editor">×</button></div>
+            <div class="field-grid">
+              <label><span>Name</span><input type="text" value="Checkout"></label>
+              <label><span>Observed context event name</span><input type="text" value="begin_checkout" required></label>
+              <label><span>Environment</span><select><option selected>production</option><option>staging</option><option>all</option></select></label>
+              <label><span>Host matcher</span><input type="text" value="www.brassandborough.co.uk"></label>
+              <label><span>Path matcher</span><input type="text" value="/checkout/**"></label>
+              <label><span>Query matcher</span><input type="text" placeholder="Any query"></label>
+              <label><span>Hash matcher</span><input type="text" placeholder="Any hash"></label>
+              <label class="checkbox-label"><input type="checkbox" checked><span>SPA route</span></label>
+              <label><span>Expected interaction Events</span><select multiple size="4"><option selected>add_shipping_info</option><option selected>add_payment_info</option><option selected>purchase</option><option>refund</option></select></label>
+              <label><span>Requirement profiles</span><select multiple size="4"><option selected>Commerce Core</option><option selected>UK Retail Customer</option><option>Trade Account</option></select></label>
+              <label><span>Applicability Set</span><select><option selected>UK storefront</option><option>Retail customer</option><option>Trade account</option></select></label>
+            </div>
+            <div class="button-row"><button type="button" class="button-primary" data-toast="Checkout saved as one complete entity.">Save complete entity</button><button type="button" data-toast="Checkout duplicated.">Duplicate</button><span class="muted">Where used: Customer checkout · 5 Events</span></div>
+
+            <section class="membership-editor">
+              <div class="card-heading"><h4>Page Group rule stack</h4><button type="button" data-toast="Page Group picker opened.">Add to Page Group</button></div>
+              <p>Rules apply top to bottom, general to specific. Later groups may only make guarded refinements.</p>
+              <ol>
+                <li><span><strong>1. Shopping journey</strong><small>Always · 6 effective contributions</small></span><div class="button-row compact"><button type="button">Open Page Group</button><button type="button" disabled>Move earlier</button><button type="button" data-toast="Impact preview: Transaction Pages would become first.">Move later</button><button type="button" data-toast="Removal impact review opened.">Remove</button></div></li>
+                <li><span><strong>2. Transaction pages</strong><small>Checkout routes · 4 effective contributions</small></span><div class="button-row compact"><button type="button">Open Page Group</button><button type="button" data-toast="Impact preview: Transaction Pages would become first.">Move earlier</button><button type="button" disabled>Move later</button><button type="button" data-toast="Removal impact review opened.">Remove</button></div></li>
+              </ol>
+              <div class="field-grid">
+                <label><span>Applicability observation</span><select><option>Retail observation</option><option>Trade observation</option><option>Overlapping observation</option></select></label>
+                <label><span>Proposed schema change</span><select><option>Stored contributions</option><option>Retail unsafe type number</option><option>Retail unsafe allowed value</option></select></label>
+              </div>
+              <button type="button" data-toast="Effective stack compiled: Shopping journey → Transaction pages.">Evaluate effective Page Group schema</button>
+            </section>
+          </section>
+
+          <section class="panel contextual-editor" data-view="page-create" hidden>
+            <div class="card-heading"><h3>Add Page</h3><button type="button" data-view-target="page-list" aria-label="Close Add Page">×</button></div>
+            <div class="field-grid">
+              <label><span>Name</span><input type="text" placeholder="e.g. Search results"></label>
+              <label><span>Observed context event name</span><input type="text" placeholder="page_view" required></label>
+              <label><span>Environment</span><select><option>production</option><option>staging</option><option>all</option></select></label>
+              <label><span>Path matcher</span><input type="text" placeholder="/search/**"></label>
+            </div>
+            <div class="button-row"><button type="button" class="button-primary" data-toast="New Page Draft added.">Add Page</button><button type="button" data-view-target="page-list">Cancel</button></div>
+          </section>
+        </section>
+
+        <section class="route-view" data-route="page-groups" id="studio-page-groups" hidden>
+          <div class="page-heading">
+            <div><p class="eyebrow">Collection</p><h2>Page Groups</h2><p>Ordered context layers shared by related Pages.</p></div>
+            <button type="button" class="button-primary" data-toast="Blank Page Group editor opened.">Add Page Group</button>
+          </div>
+          <section class="panel entity-list">
+            <div class="entity-list-heading"><span>Name</span><span>Matcher</span><span>Pages</span><span>Schema</span><span></span></div>
+            <article class="entity-row"><button type="button"><strong>Shopping journey</strong><small>General retail browsing</small></button><span><code>/products/**|/basket</code></span><span>3</span><span>6 properties</span><button type="button" data-toast="Page Group actions opened.">•••</button></article>
+            <article class="entity-row is-selected"><button type="button"><strong>Transaction pages</strong><small>Checkout and confirmation</small></button><span><code>/checkout/**|/order/**</code></span><span>2</span><span>4 properties</span><button type="button" data-toast="Page Group actions opened.">•••</button></article>
+            <article class="entity-row"><button type="button"><strong>Trade portal</strong><small>Logged-in trade area</small></button><span><code>/trade/**</code></span><span>1</span><span>7 properties</span><button type="button" data-toast="Page Group actions opened.">•••</button></article>
+          </section>
+          <section class="panel contextual-editor">
+            <div class="card-heading"><div><p class="eyebrow">Edit Page Group</p><h3>Transaction pages</h3></div><span class="status-chip status-good">2 Pages</span></div>
+            <div class="field-grid">
+              <label><span>Name</span><input type="text" value="Transaction pages"></label>
+              <label><span>Environment</span><select><option selected>production</option><option>all</option></select></label>
+              <label><span>Membership matcher</span><input type="text" value="/checkout/**|/order/**"></label>
+              <label><span>Requirement profiles</span><select multiple size="3"><option selected>Commerce Core</option><option>UK Retail Customer</option><option>Trade Account</option></select></label>
+              <label><span>Applicability Set</span><select><option>UK storefront</option><option selected>Purchase pages</option></select></label>
+            </div>
+            <div class="button-row"><button type="button" class="button-primary" data-toast="Transaction pages saved.">Save complete entity</button><button type="button" data-toast="Transaction pages duplicated.">Duplicate</button><span class="muted">Where used: Checkout · Order confirmation · Customer checkout</span></div>
+            <div class="notice notice-info"><strong>Composed schema workspace</strong><span>This Page Group contributes <code>/checkout/step</code>, consent state and payment context. Open the shared table-first editor to inspect local and effective facets.</span><button type="button" data-route-target="profile">Open schema workspace</button></div>
+          </section>
+        </section>
+
+        <section class="route-view" data-route="events" id="studio-events" hidden>
+          <div class="page-heading">
+            <div><p class="eyebrow">Collection</p><h2>Events</h2><p>Interaction events with independently validated payload contracts.</p></div>
+            <button type="button" class="button-primary" data-toast="Blank Event editor opened.">Add Event</button>
+          </div>
+          <section class="panel collection-toolbar">
+            <label class="search-field"><span class="visually-hidden">Search Events</span><input type="search" placeholder="Search Events…"></label>
+            <label><span class="visually-hidden">Filter role</span><select aria-label="Filter role"><option>All roles</option><option>Interaction</option><option>Context-setting</option></select></label>
+            <span class="muted">7 Events</span>
+          </section>
+          <section class="panel entity-list">
+            <div class="entity-list-heading"><span>Name</span><span>Canonical name</span><span>Trigger</span><span>Target</span><span></span></div>
+            <article class="entity-row"><button type="button"><strong>Product viewed</strong><small>Interaction Event</small></button><span><code>view_item</code></span><span>Product visible</span><span>payload</span><button type="button" data-toast="Event actions opened.">•••</button></article>
+            <article class="entity-row"><button type="button"><strong>Added to basket</strong><small>Interaction Event</small></button><span><code>add_to_cart</code></span><span>Add button succeeds</span><span>payload</span><button type="button" data-toast="Event actions opened.">•••</button></article>
+            <article class="entity-row"><button type="button"><strong>Checkout begun</strong><small>Interaction Event</small></button><span><code>begin_checkout</code></span><span>Checkout opens</span><span>payload</span><button type="button" data-toast="Event actions opened.">•••</button></article>
+            <article class="entity-row is-selected"><button type="button"><strong>Purchase</strong><small>Interaction Event</small></button><span><code>purchase</code></span><span>Confirmation renders</span><span>payload</span><button type="button" data-toast="Event actions opened.">•••</button></article>
+            <article class="entity-row"><button type="button"><strong>Refund</strong><small>Back-office Event</small></button><span><code>refund</code></span><span>Refund accepted</span><span>raw input</span><button type="button" data-toast="Event actions opened.">•••</button></article>
+          </section>
+          <section class="panel contextual-editor">
+            <div class="card-heading"><div><p class="eyebrow">Edit Event</p><h3>Purchase</h3></div><span class="status-chip status-good">Ready</span></div>
+            <div class="field-grid">
+              <label><span>Name</span><input type="text" value="Purchase"></label>
+              <label><span>Source</span><input type="text" value="dataLayer"></label>
+              <label><span>Canonical event name</span><input type="text" value="purchase"></label>
+              <label><span>Default documentary trigger</span><input type="text" value="Order confirmation renders"></label>
+              <label><span>Validation target</span><select><option selected>payload</option><option>raw input</option></select></label>
+              <label><span>Occurrence policy</span><select><option selected>Once per transaction_id</option><option>Once per page</option><option>Multiple</option></select></label>
+              <label><span>Requirement profiles</span><select multiple size="3"><option selected>Commerce Core</option><option selected>UK Retail Customer</option><option>Trade Account</option></select></label>
+              <label><span>Applicability Set</span><select><option>UK storefront</option><option selected>Purchase events</option></select></label>
+            </div>
+            <div class="button-row"><button type="button" class="button-primary" data-toast="Purchase saved as one complete entity.">Save complete entity</button><button type="button" data-toast="Purchase duplicated.">Duplicate</button><span class="muted">Where used: 2 Flows · 4 Assignments · 3 Fixtures</span></div>
+            <div class="notice notice-info"><strong>Integrated canonical schema</strong><span>Commerce Core → Transaction pages → Purchase contributes 31 effective properties.</span><button type="button" data-route-target="profile">Open composed schema</button></div>
+          </section>
+        </section>
+
+        <section class="route-view" data-route="applicability" id="studio-applicability" hidden>
+          <div class="page-heading">
+            <div><p class="eyebrow">Collection</p><h2>Applicability Sets</h2><p>Named conditions that decide which contributors apply to an observation.</p></div>
+            <button type="button" class="button-primary" data-toast="Blank Applicability Set editor opened.">Add Applicability Set</button>
+          </div>
+          <section class="panel entity-list">
+            <div class="entity-list-heading"><span>Name</span><span>Priority</span><span>Condition</span><span>Where used</span><span></span></div>
+            <article class="entity-row"><button type="button"><strong>UK storefront</strong></button><span>10</span><span><code>host = shop…co.uk</code></span><span>14</span><button type="button" data-toast="Applicability actions opened.">•••</button></article>
+            <article class="entity-row"><button type="button"><strong>Retail customer</strong></button><span>20</span><span><code>customer.type = retail</code></span><span>6</span><button type="button" data-toast="Applicability actions opened.">•••</button></article>
+            <article class="entity-row is-selected"><button type="button"><strong>Trade account</strong></button><span>30</span><span><code>customer.type = trade</code></span><span>7</span><button type="button" data-toast="Applicability actions opened.">•••</button></article>
+            <article class="entity-row"><button type="button"><strong>Fallback</strong></button><span>0</span><span>Always</span><span>3</span><button type="button" data-toast="Applicability actions opened.">•••</button></article>
+          </section>
+          <section class="panel contextual-editor">
+            <div class="card-heading"><div><p class="eyebrow">Edit Applicability Set</p><h3>Trade account</h3></div><span class="status-chip status-good">No tie</span></div>
+            <div class="field-grid">
+              <label><span>Name</span><input type="text" value="Trade account"></label>
+              <label><span>Priority</span><input type="number" value="30"></label>
+              <label class="checkbox-label"><input type="checkbox"><span>Fallback set</span></label>
+            </div>
+            <fieldset class="condition-builder">
+              <legend>Nested All / Any / Not condition</legend>
+              <label><span>Group operator</span><select><option selected>All conditions</option><option>Any condition</option><option>Not</option></select></label>
+              <div class="condition-row">
+                <label class="checkbox-label"><input type="checkbox"><span>Negate</span></label>
+                <label><span>Context field</span><input type="text" value="customer.type"></label>
+                <label><span>Operator</span><select><option selected>equals</option><option>does not equal</option><option>exists</option><option>does not exist</option><option>is one of</option><option>matches pattern</option><option>contains</option><option>glob</option><option>regex</option></select></label>
+                <label><span>Value</span><input type="text" value="trade"></label>
+                <button type="button" aria-label="Remove predicate" data-toast="Predicate removed.">×</button>
+              </div>
+              <div class="condition-row">
+                <label class="checkbox-label"><input type="checkbox"><span>Negate</span></label>
+                <label><span>Context field</span><input type="text" value="user.logged_in"></label>
+                <label><span>Operator</span><select><option selected>equals</option><option>exists</option></select></label>
+                <label><span>Value</span><input type="text" value="true"></label>
+                <button type="button" aria-label="Remove predicate" data-toast="Predicate removed.">×</button>
+              </div>
+              <div class="button-row"><button type="button" data-toast="Predicate added.">Add predicate</button><button type="button" data-toast="Nested group added.">Add nested group</button></div>
+            </fieldset>
+            <div class="button-row"><button type="button" class="button-primary" data-toast="Trade account applicability saved.">Save complete entity</button><button type="button" data-toast="Trade account set duplicated.">Duplicate</button><span class="muted">Where used: Trade Account · Trade quote to order · 3 Assignments</span></div>
+          </section>
+        </section>
+
+        <section class="route-view" data-route="flows" id="studio-flows" hidden>
+          <div class="page-heading">
+            <div><p class="eyebrow">Flow</p><h2>Customer checkout</h2><p>Documentary journey canvas plus an independently executable runtime sequence.</p></div>
+            <div class="heading-badges"><span class="status-chip status-draft">Draft</span><span class="status-chip status-good">5 Pages · 7 Events</span></div>
+          </div>
+
+          <section class="panel entity-identity">
+            <div class="card-heading">
+              <h3>Edit Flow</h3>
+              <span class="comic-kicker">Follow the arrows, guv</span>
+            </div>
+            <div class="field-grid">
+              <label><span>Name</span><input type="text" value="Customer checkout"></label>
+              <label><span>Timeout minutes</span><input type="number" value="45"></label>
+              <label><span>Correlation field</span><input type="text" value="session.id"></label>
+              <label><span>Requirement profiles</span><select multiple size="3"><option selected>Commerce Core</option><option selected>UK Retail Customer</option><option>Trade Account</option></select></label>
+              <label><span>Applicability Set</span><select><option selected>Retail customer</option><option>UK storefront</option><option>Trade account</option></select></label>
+            </div>
+            <div class="flow-condition-grid">
+              <fieldset class="condition-builder">
+                <legend>Entry condition</legend>
+                <label><span>Group</span><select><option>All conditions</option><option>Any condition</option><option>Not</option></select></label>
+                <div class="condition-row condensed">
+                  <label class="checkbox-label"><input type="checkbox"><span>Negate</span></label>
+                  <label><span>Context field</span><input type="text" value="event"></label>
+                  <label><span>Operator</span><select><option selected>equals</option><option>is one of</option><option>exists</option></select></label>
+                  <label><span>Value</span><input type="text" value="view_item"></label>
+                </div>
+                <button type="button" data-toast="Entry predicate added.">Add predicate</button>
+              </fieldset>
+              <fieldset class="condition-builder">
+                <legend>Exit condition</legend>
+                <label><span>Group</span><select><option>Any condition</option><option>All conditions</option><option>Not</option></select></label>
+                <div class="condition-row condensed">
+                  <label class="checkbox-label"><input type="checkbox"><span>Negate</span></label>
+                  <label><span>Context field</span><input type="text" value="event"></label>
+                  <label><span>Operator</span><select><option selected>is one of</option><option>equals</option><option>exists</option></select></label>
+                  <label><span>Value</span><input type="text" value="purchase, checkout_abandoned"></label>
+                </div>
+                <button type="button" data-toast="Exit predicate added.">Add predicate</button>
+              </fieldset>
+            </div>
+            <div class="button-row">
+              <button type="button" class="button-primary" data-toast="Customer checkout saved as one complete entity.">Save complete entity</button>
+              <button type="button" data-toast="Customer checkout duplicated.">Duplicate</button>
+              <span class="muted">Where used: 3 Fixtures · release r3</span>
+            </div>
+          </section>
+
+          <section class="panel flow-builder">
+            <div class="card-heading">
+              <div><p class="eyebrow">Documentary Flow</p><h3>Canvas-first directional journey</h3><p>Each Event payload schema validates independently; the canvas records the expected human journey.</p></div>
+              <div class="button-row compact">
+                <button type="button" data-toast="Canvas inspector opened.">Open canvas inspector</button>
+                <button type="button" data-toast="Canvas fitted to the available view.">Fit canvas</button>
+              </div>
+            </div>
+
+            <div class="component-catalogs" aria-label="Flow component catalogs">
+              <details open>
+                <summary>Page Groups <span>3</span></summary>
+                <label><span class="visually-hidden">Search Page Groups</span><input type="search" placeholder="Search Page Groups…"></label>
+                <div class="catalog-list">
+                  <button type="button" data-toast="Shopping journey lane already exists."><span>Shopping journey</span><small>3 Pages</small></button>
+                  <button type="button" data-toast="Transaction pages lane already exists."><span>Transaction pages</span><small>2 Pages</small></button>
+                  <button type="button" data-toast="Trade portal lane added to the canvas."><span>Trade portal</span><small>1 Page</small></button>
+                </div>
+              </details>
+              <details open>
+                <summary>Pages <span>5</span></summary>
+                <label><span class="visually-hidden">Search Pages</span><input type="search" placeholder="Search Pages…"></label>
+                <div class="catalog-list">
+                  <button type="button" data-toast="Product detail Page frame added."><span>Product detail</span><small>Shopping journey</small></button>
+                  <button type="button" data-toast="Basket Page frame added."><span>Basket</span><small>Shopping journey</small></button>
+                  <button type="button" data-toast="Checkout Page frame added."><span>Checkout</span><small>Transaction pages</small></button>
+                  <button type="button" data-toast="Order confirmation Page frame added."><span>Order confirmation</span><small>Transaction pages</small></button>
+                </div>
+              </details>
+              <details open>
+                <summary>Events <span>7</span></summary>
+                <label><span class="visually-hidden">Search Events</span><input type="search" placeholder="Search Events…"></label>
+                <div class="catalog-list">
+                  <button type="button" data-toast="view_item occurrence added to the selected Page."><span>Product viewed</span><small>view_item</small></button>
+                  <button type="button" data-toast="add_to_cart occurrence added to the selected Page."><span>Added to basket</span><small>add_to_cart</small></button>
+                  <button type="button" data-toast="purchase occurrence added to the selected Page."><span>Purchase</span><small>purchase</small></button>
+                </div>
+              </details>
+            </div>
+
+            <div class="flow-lane-controls" aria-label="Page Group lane controls">
+              <strong>Lane order</strong>
+              <span class="lane-chip"><button type="button" class="drag-handle" aria-label="Reorder Shopping journey">⋮⋮</button> Shopping journey <button type="button" aria-label="Remove Shopping journey lane" data-toast="Lane removal review opened.">×</button></span>
+              <span class="lane-chip"><button type="button" class="drag-handle" aria-label="Reorder Transaction pages">⋮⋮</button> Transaction pages <button type="button" aria-label="Remove Transaction pages lane" data-toast="Lane removal review opened.">×</button></span>
+              <button type="button" data-toast="Lane height reset.">Reset lanes</button>
+            </div>
+
+            <div class="flow-frame-cards" aria-label="Flow Page frames">
+              <article><span class="status-dot status-good"></span><strong>Product detail</strong><small>Shopping journey · 2 Events</small><button type="button" data-toast="Product detail frame selected.">Select</button></article>
+              <article><span class="status-dot status-good"></span><strong>Basket</strong><small>Shopping journey · 2 Events</small><button type="button" data-toast="Basket frame selected.">Select</button></article>
+              <article class="is-selected"><span class="status-dot status-good"></span><strong>Checkout</strong><small>Transaction pages · 2 Events</small><button type="button" data-toast="Checkout frame selected.">Select</button></article>
+              <article><span class="status-dot status-good"></span><strong>Order confirmation</strong><small>Transaction pages · 1 Event</small><button type="button" data-toast="Order confirmation frame selected.">Select</button></article>
+            </div>
+
+            <div class="canvas-toolbar">
+              <span class="status-chip status-good">Directional graph valid</span>
+              <span>Draw between matching ports, or press Enter on a port.</span>
+              <div class="button-row compact">
+                <button type="button" aria-label="Zoom out" data-toast="Canvas zoomed out.">−</button>
+                <button type="button" data-toast="Canvas zoom reset to 100%.">100%</button>
+                <button type="button" aria-label="Zoom in" data-toast="Canvas zoomed in.">+</button>
+              </div>
+            </div>
+
+            <div class="flow-projections">
+              <div class="flow-canvas-wrap" id="flow-canvas">
+                <svg class="flow-canvas" viewBox="0 0 1120 510" role="img" aria-labelledby="flow-canvas-title flow-canvas-desc">
+                  <title id="flow-canvas-title">Customer checkout directional flow</title>
+                  <desc id="flow-canvas-desc">Four Page frames and seven Event nodes connected from product view to purchase across two Page Group lanes.</desc>
+                  <defs>
+                    <marker id="flow-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+                      <path d="M 0 0 L 10 5 L 0 10 z"></path>
+                    </marker>
+                    <filter id="paper-shadow"><feDropShadow dx="0" dy="3" stdDeviation="3" flood-opacity=".18"></feDropShadow></filter>
+                  </defs>
+
+                  <g class="canvas-lane">
+                    <rect x="18" y="40" width="1080" height="204" rx="18"></rect>
+                    <text x="38" y="70">SHOPPING JOURNEY</text>
+                  </g>
+                  <g class="canvas-lane">
+                    <rect x="18" y="262" width="1080" height="220" rx="18"></rect>
+                    <text x="38" y="292">TRANSACTION PAGES</text>
+                  </g>
+
+                  <g class="canvas-edge">
+                    <path d="M 254 139 C 290 139, 296 139, 326 139" marker-end="url(#flow-arrow)"></path>
+                    <text x="270" y="126">add</text>
+                  </g>
+                  <g class="canvas-edge">
+                    <path d="M 520 139 C 590 139, 600 368, 652 368" marker-end="url(#flow-arrow)"></path>
+                    <text x="557" y="244">checkout</text>
+                  </g>
+                  <g class="canvas-edge is-selected">
+                    <path d="M 844 368 C 880 368, 890 368, 924 368" marker-end="url(#flow-arrow)"></path>
+                    <text x="862" y="354">success</text>
+                  </g>
+
+                  <g class="page-frame" transform="translate(86 90)" tabindex="0" role="button" aria-label="Product detail Page frame">
+                    <rect width="168" height="106" rx="14"></rect>
+                    <circle class="port" cx="0" cy="53" r="7"></circle>
+                    <circle class="port" cx="168" cy="53" r="7"></circle>
+                    <text class="frame-role" x="16" y="26">PAGE</text>
+                    <text class="frame-title" x="16" y="51">Product detail</text>
+                    <g class="event-node" transform="translate(16 66)">
+                      <rect width="136" height="28" rx="8"></rect>
+                      <text x="10" y="19">view_item</text>
+                    </g>
+                  </g>
+
+                  <g class="page-frame" transform="translate(352 90)" tabindex="0" role="button" aria-label="Basket Page frame">
+                    <rect width="168" height="106" rx="14"></rect>
+                    <circle class="port" cx="0" cy="53" r="7"></circle>
+                    <circle class="port" cx="168" cy="53" r="7"></circle>
+                    <text class="frame-role" x="16" y="26">PAGE</text>
+                    <text class="frame-title" x="16" y="51">Basket</text>
+                    <g class="event-node" transform="translate(16 66)">
+                      <rect width="136" height="28" rx="8"></rect>
+                      <text x="10" y="19">add_to_cart</text>
+                    </g>
+                  </g>
+
+                  <g class="page-frame is-selected" transform="translate(652 312)" tabindex="0" role="button" aria-label="Checkout Page frame, selected">
+                    <rect width="192" height="120" rx="14"></rect>
+                    <circle class="port" cx="0" cy="56" r="7"></circle>
+                    <circle class="port" cx="192" cy="56" r="7"></circle>
+                    <circle class="port" cx="96" cy="0" r="7"></circle>
+                    <circle class="port" cx="96" cy="120" r="7"></circle>
+                    <text class="frame-role" x="16" y="27">PAGE · SELECTED</text>
+                    <text class="frame-title" x="16" y="53">Checkout</text>
+                    <g class="event-node" transform="translate(16 68)">
+                      <rect width="160" height="32" rx="8"></rect>
+                      <text x="10" y="21">add_payment_info</text>
+                    </g>
+                  </g>
+
+                  <g class="page-frame" transform="translate(924 312)" tabindex="0" role="button" aria-label="Order confirmation Page frame">
+                    <rect width="168" height="120" rx="14"></rect>
+                    <circle class="port" cx="0" cy="56" r="7"></circle>
+                    <circle class="port" cx="168" cy="56" r="7"></circle>
+                    <text class="frame-role" x="16" y="27">PAGE</text>
+                    <text class="frame-title" x="16" y="53">Confirmation</text>
+                    <g class="event-node status-good" transform="translate(16 68)">
+                      <rect width="136" height="32" rx="8"></rect>
+                      <text x="10" y="21">purchase</text>
+                    </g>
+                  </g>
+                </svg>
+              </div>
+
+              <section class="flow-outline">
+                <div class="card-heading"><h4>Editable Flow outline</h4><button type="button" data-toast="Outline collapsed.">Collapse all</button></div>
+                <ol>
+                  <li><button type="button"><strong>Product detail</strong><small>view_item</small></button></li>
+                  <li><button type="button"><strong>Basket</strong><small>add_to_cart</small></button></li>
+                  <li class="is-selected"><button type="button"><strong>Checkout</strong><small>begin_checkout · add_payment_info</small></button></li>
+                  <li><button type="button"><strong>Order confirmation</strong><small>purchase</small></button></li>
+                </ol>
+              </section>
+            </div>
+
+            <section class="inline-actions" aria-label="Selected node inline actions">
+              <div><p class="eyebrow">Selected Page frame</p><strong>Checkout</strong><span>Transaction pages · position 3</span></div>
+              <div class="button-row">
+                <button type="button" data-toast="Checkout title editor opened.">Rename</button>
+                <button type="button" data-toast="Checkout frame duplicated.">Duplicate frame</button>
+                <button type="button" data-route-target="profile">Edit Page schema</button>
+                <button type="button" data-toast="Connection mode started from Checkout.">Draw relationship</button>
+                <button type="button" class="danger-text" data-toast="Page frame removal review opened.">Remove frame</button>
+              </div>
+            </section>
+
+            <section class="relationship-popover" aria-label="Inline relationship popover">
+              <div class="card-heading"><div><p class="eyebrow">Selected relationship</p><h4>Checkout → Order confirmation</h4></div><span class="status-chip status-good">Directed</span></div>
+              <div class="field-grid">
+                <label><span>Label</span><input type="text" value="success"></label>
+                <label><span>Kind</span><select><option>continues to</option><option selected>success</option><option>failure</option><option>alternative</option></select></label>
+                <label><span>Source port</span><select><option selected>right</option><option>top</option><option>bottom</option><option>left</option></select></label>
+                <label><span>Target port</span><select><option selected>left</option><option>top</option><option>bottom</option><option>right</option></select></label>
+              </div>
+              <div class="button-row"><button type="button" class="button-primary" data-toast="Relationship details staged.">Save relationship</button><button type="button" data-toast="Relationship direction reversed.">Reverse direction</button><button type="button" class="danger-text" data-toast="Relationship removal review opened.">Remove relationship</button></div>
+            </section>
+          </section>
+
+          <section class="panel executable-flow">
+            <details open>
+              <summary>
+                <span><strong>Advanced executable steps</strong><small>Runtime sequence semantics, independent of documentary expectations</small></span>
+                <span class="status-chip status-good">4 steps</span>
+              </summary>
+              <form class="inline-add" aria-label="Add executable step">
+                <label><span>Executable step name</span><input type="text" placeholder="e.g. Payment accepted"></label>
+                <button type="button" class="button-primary" data-toast="Executable step added.">Add executable step</button>
+              </form>
+              <ol class="step-list" aria-label="Executable runtime sequence">
+                <li><button type="button" class="drag-handle" aria-label="Reorder Browse">⋮⋮</button><strong>1. Browse</strong><span>min 1 · max ∞ · required</span><label><span>Event</span><select><option>view_item</option></select></label><button type="button" data-toast="Browse step editor opened.">Edit</button><button type="button" class="danger-text" data-toast="Step removal review opened.">Remove</button></li>
+                <li><button type="button" class="drag-handle" aria-label="Reorder Basket">⋮⋮</button><strong>2. Basket</strong><span>min 1 · max ∞ · required</span><label><span>Event</span><select><option>add_to_cart</option></select></label><button type="button" data-toast="Basket step editor opened.">Edit</button><button type="button" class="danger-text" data-toast="Step removal review opened.">Remove</button></li>
+                <li><button type="button" class="drag-handle" aria-label="Reorder Checkout">⋮⋮</button><strong>3. Checkout</strong><span>min 1 · max 1 · required</span><label><span>Event</span><select><option>begin_checkout</option></select></label><button type="button" data-toast="Checkout step editor opened.">Edit</button><button type="button" class="danger-text" data-toast="Step removal review opened.">Remove</button></li>
+                <li><button type="button" class="drag-handle" aria-label="Reorder Purchase">⋮⋮</button><strong>4. Purchase</strong><span>min 0 · max 1 · optional</span><label><span>Event</span><select><option>purchase</option></select></label><button type="button" data-toast="Purchase step editor opened.">Edit</button><button type="button" class="danger-text" data-toast="Step removal review opened.">Remove</button></li>
+              </ol>
+              <div class="step-detail">
+                <div class="card-heading"><h4>Edit executable step: Purchase</h4><span>Step 4</span></div>
+                <div class="field-grid">
+                  <label><span>Name</span><input type="text" value="Purchase"></label>
+                  <label><span>Event</span><select><option selected>Purchase · purchase</option><option>Refund · refund</option></select></label>
+                  <label><span>Minimum occurrences</span><input type="number" value="0" min="0"></label>
+                  <label><span>Maximum occurrences</span><input type="number" value="1" min="1"></label>
+                  <label class="checkbox-label"><input type="checkbox" checked><span>Optional step</span></label>
+                  <label><span>Page</span><select><option selected>Order confirmation</option><option>Checkout</option></select></label>
+                  <label><span>Transition on success</span><select><option selected>Complete Flow</option><option>Checkout</option><option>Purchase</option></select></label>
+                  <label><span>Transition on failure</span><select><option selected>Remain on Purchase</option><option>Complete Flow</option><option>Checkout</option></select></label>
+                </div>
+                <div class="button-row"><button type="button" class="button-primary" data-toast="Executable step staged.">Save step</button><button type="button" data-toast="Transition added.">Add transition</button><button type="button">Cancel</button></div>
+              </div>
+            </details>
+          </section>
+
+          <section class="panel">
+            <div class="card-heading"><div><p class="eyebrow">Documentation projection</p><h3>Flow table export</h3></div><button type="button" data-toast="Flow documentation table copied.">Copy table</button></div>
+            <div class="button-row">
+              <label class="checkbox-label"><input type="checkbox" checked><span>Page Groups</span></label>
+              <label class="checkbox-label"><input type="checkbox" checked><span>Pages</span></label>
+              <label class="checkbox-label"><input type="checkbox" checked><span>Events</span></label>
+              <label class="checkbox-label"><input type="checkbox" checked><span>Relationships</span></label>
+              <button type="button" data-toast="Flow table regenerated.">Refresh preview</button>
+              <button type="button" data-toast="Flow CSV export prepared.">Export CSV</button>
+            </div>
+          </section>
+        </section>
+
+        <section class="route-view" data-route="fixtures" id="studio-fixtures" hidden>
+          <div class="page-heading">
+            <div><p class="eyebrow">Fixtures</p><h2>Prove the production evaluator</h2><p>Replay captured observations against explicit expected winners, steps, schemas and issues.</p></div>
+            <button type="button" class="button-primary" data-view-target="fixture-edit">Add Fixture</button>
+          </div>
+
+          <div class="summary-grid">
+            <article class="panel metric-card"><span>Passing</span><strong>3</strong><small>Current compiled revision</small></article>
+            <article class="panel metric-card"><span>Failing</span><strong>1</strong><small>Blocks publication</small></article>
+            <article class="panel metric-card"><span>Stale</span><strong>1</strong><small>Optional evidence</small></article>
+            <article class="panel metric-card"><span>Assertions</span><strong>42</strong><small>Across 4 fixtures</small></article>
+          </div>
+
+          <section class="panel entity-list fixture-list">
+            <div class="entity-list-heading"><span>Name</span><span>Mode</span><span>Evidence</span><span>Release policy</span><span></span></div>
+            <article class="entity-row"><button type="button" data-view-target="fixture-edit"><strong>Retail card purchase</strong><small>4 ordered observations</small></button><span>Flow replay</span><span class="status-chip status-good">Pass</span><span>required</span><button type="button" data-toast="Retail card purchase reran: PASS.">Run</button></article>
+            <article class="entity-row is-selected"><button type="button" data-view-target="fixture-edit"><strong>Trade net-30 purchase</strong><small>5 ordered observations</small></button><span>Flow replay</span><span class="status-chip status-bad">Fail</span><span>required</span><button type="button" data-toast="Trade net-30 purchase reran: FAIL, one difference.">Run</button></article>
+            <article class="entity-row"><button type="button" data-view-target="fixture-edit"><strong>Basket abandonment</strong><small>3 ordered observations</small></button><span>Flow replay</span><span class="status-chip status-good">Pass</span><span>required</span><button type="button" data-toast="Basket abandonment reran: PASS.">Run</button></article>
+            <article class="entity-row"><button type="button" data-view-target="fixture-edit"><strong>Partial refund</strong><small>1 observation</small></button><span>Single event</span><span class="status-chip status-warn">Stale</span><span>optional</span><button type="button" data-toast="Partial refund reran: PASS.">Run</button></article>
+          </section>
+
+          <section class="panel contextual-editor" data-view="fixture-edit">
+            <div class="card-heading">
+              <div><p class="eyebrow">Edit Fixture</p><h3>Trade net-30 purchase</h3></div>
+              <span class="status-chip status-bad">1 difference</span>
+            </div>
+            <div class="field-grid">
+              <label><span>Name</span><input type="text" value="Trade net-30 purchase"></label>
+              <label><span>Fixture mode</span><select><option selected>Flow replay</option><option>Single event</option><option>Assignment probe</option></select></label>
+              <label><span>Release policy</span><select><option selected>required</option><option>optional</option><option>excluded</option></select></label>
+              <label><span>Flow</span><select><option>Customer checkout</option><option selected>Trade quote to order</option></select></label>
+              <label class="field-span-2"><span>Context (JSON)</span><textarea rows="5">{
+  "host": "www.brassandborough.co.uk",
+  "customer": { "type": "trade", "logged_in": true },
+  "environment": "production"
+}</textarea></label>
+              <label class="field-span-2"><span>Ordered observations (JSON)</span><textarea rows="9">[
+  { "event": "view_item", "ecommerce": { "items": [{ "item_id": "BB-WAX-001" }] } },
+  { "event": "add_to_cart", "ecommerce": { "value": 149.95, "currency": "GBP" } },
+  { "event": "begin_checkout" },
+  { "event": "add_payment_info", "payment_type": "net_30" },
+  { "event": "purchase", "ecommerce": { "transaction_id": "TRD-72041", "value": 149.95, "currency": "GBP" } }
+]</textarea></label>
+              <label class="field-span-2"><span>Fallback payload (JSON)</span><textarea rows="4">{
+  "customer": { "type": "trade", "account_id": "AC-00814" }
+}</textarea></label>
+              <label class="field-span-2"><span>Expected winner, step, schema and issues (JSON)</span><textarea rows="7">{
+  "status": "valid",
+  "assignment": "Trade purchase payload",
+  "activeStep": "Purchase",
+  "schemaRevision": 12,
+  "issueCodes": []
+}</textarea></label>
+            </div>
+            <div class="button-row">
+              <button type="button" class="button-primary" data-toast="Trade net-30 purchase saved as one complete entity.">Save complete entity</button>
+              <button type="button" data-toast="Trade net-30 purchase duplicated.">Duplicate</button>
+              <button type="button" data-toast="Fixture replay complete: FAIL.">Run Fixture</button>
+              <span class="muted">Where used: Coverage · preflight · release policy</span>
+            </div>
+
+            <section class="fixture-result" aria-label="Fixture execution">
+              <div class="card-heading"><div><p class="eyebrow">Production evaluator replay</p><h4>FAIL · compiled revision 12</h4></div><span class="status-chip status-bad">1 mismatch</span></div>
+              <ol class="replay-steps">
+                <li class="is-pass"><strong>1. view_item</strong><span>Browse</span><span>Retail/Trade assignment matched</span><span>Pass</span></li>
+                <li class="is-pass"><strong>2. add_to_cart</strong><span>Basket</span><span>Commerce Core r12</span><span>Pass</span></li>
+                <li class="is-pass"><strong>3. begin_checkout</strong><span>Checkout</span><span>Trade account applicability active</span><span>Pass</span></li>
+                <li class="is-pass"><strong>4. add_payment_info</strong><span>Payment</span><span>net_30 accepted</span><span>Pass</span></li>
+                <li class="is-fail"><strong>5. purchase</strong><span>Purchase</span><span><code>/customer/vat_number</code> expected string, actual missing</span><span>Fail</span></li>
+              </ol>
+              <div class="button-row"><button type="button" data-route-target="profile">Open requirement</button><button type="button" data-route-target="assignments">Open winning assignment</button><button type="button" data-toast="Replay evidence copied.">Copy evidence</button></div>
+            </section>
+          </section>
+        </section>
+
+        <section class="route-view" data-route="assignments" id="studio-assignments" hidden>
+          <div class="page-heading">
+            <div><p class="eyebrow">Assignments</p><h2>Truthful contributor routing</h2><p>Choose which schema contributor validates each Event under each applicability condition.</p></div>
+            <button type="button" class="button-primary" data-toast="Blank Assignment editor opened in the inspector.">Add Assignment</button>
+          </div>
+          <section class="panel collection-toolbar">
+            <label class="search-field"><span class="visually-hidden">Search assignments</span><input type="search" placeholder="Search assignments…"></label>
+            <label><span class="visually-hidden">Filter target</span><select aria-label="Filter target"><option>All contributor kinds</option><option>Shared Profile</option><option>Page Group</option><option>Page</option><option>Event</option><option>Flow Page instance</option></select></label>
+            <span class="status-chip status-good">11 assignments · no priority ties</span>
+          </section>
+          <section class="panel entity-list assignment-list">
+            <div class="entity-list-heading"><span>Name</span><span>Contributor</span><span>Event</span><span>Applicability / priority</span><span></span></div>
+            <article class="entity-row"><button type="button"><strong>Retail purchase payload</strong><small>payload · event-history</small></button><span>Shared Profile · Commerce Core</span><span>purchase</span><span>Retail customer · 20</span><button type="button" data-toast="Retail purchase assignment loaded in inspector.">Edit</button></article>
+            <article class="entity-row is-selected"><button type="button"><strong>Trade purchase payload</strong><small>payload · event-history</small></button><span>Shared Profile · Trade Account</span><span>purchase</span><span>Trade account · 30</span><button type="button" data-toast="Trade purchase assignment loaded in inspector.">Edit</button></article>
+            <article class="entity-row"><button type="button"><strong>Checkout context</strong><small>raw input · event-history</small></button><span>Page · Checkout</span><span>begin_checkout</span><span>UK storefront · 10</span><button type="button" data-toast="Checkout assignment loaded in inspector.">Edit</button></article>
+            <article class="entity-row"><button type="button"><strong>Confirmation purchase</strong><small>payload · event-history</small></button><span>Flow Page instance · Confirmation</span><span>purchase</span><span>UK storefront · 15</span><button type="button" data-toast="Confirmation assignment loaded in inspector.">Edit</button></article>
+          </section>
+          <section class="panel">
+            <div class="card-heading"><h3>Assignment evaluation probe</h3><span class="comic-kicker">No queue-jumping</span></div>
+            <div class="field-grid">
+              <label><span>Event</span><select><option selected>Purchase · purchase</option><option>Checkout begun · begin_checkout</option></select></label>
+              <label><span>Observation context</span><select><option>Retail observation</option><option selected>Trade observation</option><option>Overlapping observation</option></select></label>
+              <label class="field-span-2"><span>Probe JSON</span><textarea rows="4">{ "customer": { "type": "trade", "logged_in": true }, "event": "purchase" }</textarea></label>
+            </div>
+            <div class="button-row"><button type="button" class="button-primary" data-toast="Winner: Trade purchase payload, priority 30.">Evaluate winner</button><span class="status-chip status-good">Winner: Trade purchase payload · priority 30</span></div>
+          </section>
+        </section>
+
+        <section class="route-view" data-route="coverage" id="studio-coverage" hidden>
+          <div class="page-heading">
+            <div><p class="eyebrow">Assurance</p><h2>Effective requirement coverage</h2><p>Page × Event × Flow step × effective requirement cells, backed by fixture evidence.</p></div>
+            <span class="status-chip status-warn">24 of 28 covered</span>
+          </div>
+          <section class="panel coverage-toolbar">
+            <div class="coverage-progress"><span style="width:86%"></span></div>
+            <strong>86% proven</strong>
+            <label><span>Status</span><select><option>All states</option><option selected>Missing and stale</option><option>Covered</option><option>Waived</option></select></label>
+            <label><span>Flow</span><select><option>All Flows</option><option>Customer checkout</option><option selected>Trade quote to order</option></select></label>
+            <label><span>Search requirement</span><input type="search" placeholder="/path or fixture…"></label>
+          </section>
+          <section class="panel">
+            <div class="card-heading"><div><h3>Coverage cells</h3><p>Rows 1–8 of 28</p></div><button type="button" data-toast="Coverage CSV prepared.">Export coverage</button></div>
+            <div class="table-scroll">
+              <table class="data-table coverage-table">
+                <thead><tr><th>Requirement</th><th>Page</th><th>Event</th><th>Flow / step</th><th>Schema</th><th>Proving fixture</th><th>State</th><th></th></tr></thead>
+                <tbody>
+                  <tr><th><code>/ecommerce/transaction_id</code></th><td>Confirmation</td><td>purchase</td><td>Customer checkout / Purchase</td><td>r12 · Commerce Core</td><td>Retail card purchase</td><td><span class="status-chip status-good">covered</span></td><td><button type="button" data-route-target="fixtures">Open</button></td></tr>
+                  <tr><th><code>/ecommerce/value</code></th><td>Confirmation</td><td>purchase</td><td>Trade quote / Purchase</td><td>r12 · Commerce Core</td><td>Trade net-30 purchase</td><td><span class="status-chip status-bad">missing</span></td><td><button type="button" data-route-target="fixtures">Repair</button></td></tr>
+                  <tr><th><code>/customer/vat_number</code></th><td>Confirmation</td><td>purchase</td><td>Trade quote / Purchase</td><td>r12 · Trade Account</td><td>Trade net-30 purchase</td><td><span class="status-chip status-bad">missing</span></td><td><button type="button" data-route-target="fixtures">Repair</button></td></tr>
+                  <tr><th><code>/payment_type</code></th><td>Checkout</td><td>add_payment_info</td><td>Trade quote / Payment</td><td>r12 · Transaction pages</td><td>Trade net-30 purchase</td><td><span class="status-chip status-good">covered</span></td><td><button type="button" data-route-target="fixtures">Open</button></td></tr>
+                  <tr><th><code>/ecommerce/items/*/item_id</code></th><td>Product detail</td><td>view_item</td><td>Customer checkout / Browse</td><td>r12 · Commerce Core</td><td>Retail card purchase</td><td><span class="status-chip status-good">covered</span></td><td><button type="button" data-route-target="fixtures">Open</button></td></tr>
+                  <tr><th><code>/refund/value</code></th><td>Back office</td><td>refund</td><td>Refund / Complete</td><td>r11 · Commerce Core</td><td>Partial refund</td><td><span class="status-chip status-warn">stale</span></td><td><button type="button" data-route-target="fixtures">Rerun</button></td></tr>
+                  <tr><th><code>/consent/analytics</code></th><td>Checkout</td><td>begin_checkout</td><td>Customer checkout / Checkout</td><td>r12 · UK Retail</td><td>—</td><td><span class="status-chip status-muted">waived</span></td><td><button type="button" data-toast="Waiver details opened.">Open</button></td></tr>
+                  <tr><th><code>/ecommerce/currency</code></th><td>Confirmation</td><td>purchase</td><td>Customer checkout / Purchase</td><td>r12 · Commerce Core</td><td>Retail card purchase</td><td><span class="status-chip status-good">covered</span></td><td><button type="button" data-route-target="fixtures">Open</button></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <nav class="pagination" aria-label="Coverage row window">
+              <button type="button" disabled>Previous 40</button>
+              <span>Page 1 of 1</span>
+              <button type="button" disabled>Next 40</button>
+              <label><span>Go to coverage row</span><input type="number" value="1" min="1" max="28"></label>
+              <button type="button" data-toast="Coverage row window opened.">Open row window</button>
+            </nav>
+          </section>
+        </section>
+
+        <section class="route-view" data-route="releases" id="studio-releases" hidden>
+          <div class="page-heading">
+            <div><p class="eyebrow">Releases</p><h2>Immutable publication history</h2><p>Each release pins its reviewed project graph, executable plan and fixture evidence.</p></div>
+            <button type="button" class="button-primary comic-button" data-dialog-open="release-review">Publish release</button>
+          </div>
+          <section class="panel release-current">
+            <div class="card-heading"><div><p class="eyebrow">Current Saved Draft</p><h3>Candidate release 4</h3></div><span class="status-chip status-bad">Blocked by 1 fixture</span></div>
+            <dl class="definition-list">
+              <div><dt>Draft token</dt><dd><code>draft:2026-07-26:12</code></dd></div>
+              <div><dt>Structured changes</dt><dd>9 since release 3</dd></div>
+              <div><dt>Preflight</dt><dd><button type="button" data-route-target="preflight">1 blocker · 2 warnings</button></dd></div>
+              <div><dt>Coverage</dt><dd><button type="button" data-route-target="coverage">24 / 28 proven</button></dd></div>
+            </dl>
+            <div class="button-row"><button type="button" data-route-target="preflight">Run preflight</button><button type="button" data-dialog-open="release-review" disabled>Publish release 4</button></div>
+          </section>
+          <ol class="release-timeline">
+            <li class="panel">
+              <div class="release-marker">r3</div>
+              <div><div class="card-heading"><h3>Checkout schema alignment</h3><span class="status-chip status-good">Published</span></div><p>18 July 2026 · 39 entities · 11 assignments · 3 passing required fixtures</p><small>Publication <code>release:3:7d8c</code> · preflight <code>f129a</code></small></div>
+              <div class="button-row"><button type="button" data-toast="Release 3 diff opened.">View diff</button><button type="button" data-toast="Release 3 executable plan opened.">Open plan</button><button type="button" data-toast="Release 3 restored as a new Draft.">Restore as Draft</button><button type="button" data-toast="Release 3 export prepared.">Export</button></div>
+            </li>
+            <li class="panel">
+              <div class="release-marker">r2</div>
+              <div><div class="card-heading"><h3>Trade account rollout</h3><span class="status-chip status-good">Published</span></div><p>4 July 2026 · Added Trade Account Profile, Flow and fixtures</p><small>Publication <code>release:2:b421</code> · preflight <code>e8c0d</code></small></div>
+              <div class="button-row"><button type="button" data-toast="Release 2 diff opened.">View diff</button><button type="button" data-toast="Release 2 restored as a new Draft.">Restore as Draft</button><button type="button" data-toast="Release 2 export prepared.">Export</button></div>
+            </li>
+            <li class="panel">
+              <div class="release-marker">r1</div>
+              <div><div class="card-heading"><h3>Initial retail baseline</h3><span class="status-chip status-good">Published</span></div><p>20 June 2026 · Retail checkout baseline and first fixture evidence</p><small>Publication <code>release:1:a918</code> · preflight <code>c512b</code></small></div>
+              <div class="button-row"><button type="button" data-toast="Release 1 diff opened.">View diff</button><button type="button" data-toast="Release 1 restored as a new Draft.">Restore as Draft</button><button type="button" data-toast="Release 1 export prepared.">Export</button></div>
+            </li>
+          </ol>
+        </section>
+      </div>
+    </section>
+
+    <aside class="studio-inspector" id="studio-inspector" aria-label="Contextual inspector">
+      <div class="inspector-heading">
+        <span class="comic-kicker">Inspector</span>
+        <button
+          type="button"
+          aria-label="Close inspector"
+          data-inspector-toggle
+          aria-controls="studio-inspector"
+          aria-expanded="true"
+        >×</button>
+      </div>
+
+      <section class="inspector-context">
+        <p class="eyebrow">Selected property</p>
+        <h2>transaction_id</h2>
+        <code>/ecommerce/transaction_id</code>
+        <div class="heading-badges">
+          <span class="status-chip status-local">local</span>
+          <span class="status-chip status-good">Ready</span>
+        </div>
+      </section>
+
+      <nav class="inspector-tabs" aria-label="Inspector tabs">
+        <button type="button" class="is-active" data-view-target="inspector-details">Details</button>
+        <button type="button" data-view-target="inspector-tools">Tools</button>
+        <button type="button" data-view-target="inspector-history">History</button>
+      </nav>
+
+      <div data-view="inspector-details">
+        <section class="inspector-section">
+          <div class="card-heading"><h3>Effective definition</h3><button type="button" data-view-target="property-definition">Edit</button></div>
+          <dl class="definition-list compact">
+            <div><dt>Type</dt><dd>string</dd></div>
+            <div><dt>Presence</dt><dd>required</dd></div>
+            <div><dt>Example</dt><dd><code>WEB-104928</code></dd></div>
+            <div><dt>Rules</dt><dd>2 effective</dd></div>
+          </dl>
+        </section>
+        <section class="inspector-section">
+          <h3>Inheritance &amp; provenance</h3>
+          <ol class="provenance-stack">
+            <li><span>Project root</span><small>container</small></li>
+            <li><span>Commerce Core</span><small>local and effective · r12</small></li>
+          </ol>
+          <button type="button" data-toast="Source revision 8 compared with Draft revision 12.">Compare revisions</button>
+        </section>
+        <section class="inspector-section">
+          <h3>Where used</h3>
+          <ul class="link-list">
+            <li><button type="button" data-route-target="events">Purchase Event</button><span>payload</span></li>
+            <li><button type="button" data-route-target="flows">Customer checkout</button><span>Purchase step</span></li>
+            <li><button type="button" data-route-target="fixtures">Retail card purchase</button><span>assertion</span></li>
+            <li><button type="button" data-route-target="releases">Release 3</button><span>pinned</span></li>
+          </ul>
+        </section>
+      </div>
+
+      <div data-view="inspector-tools" hidden>
+        <section class="inspector-section">
+          <h3>Quick actions</h3>
+          <div class="button-stack">
+            <button type="button" data-view-target="property-definition">Edit definition</button>
+            <button type="button" data-view-target="property-rules">Edit rules</button>
+            <button type="button" data-view-target="property-structure">Edit structure</button>
+            <button type="button" data-toast="Definition copied.">Copy definition</button>
+            <button type="button" data-toast="Property duplicated.">Duplicate property</button>
+            <button type="button" data-toast="Local override reset.">Reset local override</button>
+          </div>
+        </section>
+        <details class="inspector-section" open>
+          <summary>Integrated schema draft</summary>
+          <label>
+            <span>Saved Schema Library</span>
+            <select>
+              <option>Choose a published saved schema</option>
+              <option>Ecommerce Core · revision 8</option>
+              <option>Consent Context · revision 4</option>
+              <option>Customer Identity · revision 6</option>
+            </select>
+          </label>
+          <button type="button" data-dialog-open="saved-schema-review">Add saved schema to project</button>
+          <p class="muted">Adoption preserves source lineage and creates a project-owned Draft.</p>
+        </details>
+      </div>
+
+      <div data-view="inspector-history" hidden>
+        <section class="inspector-section">
+          <div class="card-heading"><h3>Property history</h3><button type="button" data-toast="Revision comparison opened.">Compare</button></div>
+          <ol class="history-list">
+            <li><strong>Draft r12</strong><span>Description clarified</span><small>26 Jul · J. Analyst</small></li>
+            <li><strong>Draft r10</strong><span>Made required</span><small>21 Jul · J. Analyst</small></li>
+            <li><strong>Source r8</strong><span>Adopted from library</span><small>12 Jul · Schema Library</small></li>
+          </ol>
+        </section>
+      </div>
+
+      <details class="inspector-section bulk-editor" id="bulk-authoring">
+        <summary>Bulk property authoring</summary>
+        <p>Stage a grid first. The project stays put until the reviewed rows are committed.</p>
+        <label>
+          <span>Input format</span>
+          <select>
+            <option>Path and type rows</option>
+            <option>JSON</option>
+            <option>JSON Schema</option>
+            <option>Spreadsheet paste</option>
+          </select>
+        </label>
+        <label>
+          <span>Properties</span>
+          <textarea rows="6">/customer/type,string
+/customer/account_id,string
+/customer/vat_number,string</textarea>
+        </label>
+        <button type="button" data-toast="3 rows staged; project unchanged.">Stage properties</button>
+        <div class="bulk-review">
+          <p><strong>3 staged rows</strong> · 0 fields need repair</p>
+          <label class="checkbox-label"><input type="checkbox" checked><span>/customer/type · string</span></label>
+          <label class="checkbox-label"><input type="checkbox" checked><span>/customer/account_id · string</span></label>
+          <label class="checkbox-label"><input type="checkbox" checked><span>/customer/vat_number · string</span></label>
+          <div class="button-row">
+            <button type="button" data-toast="Selected rows marked required.">Mark selected required</button>
+            <button type="button" class="button-primary" data-toast="3 properties committed in one mocked revision.">Commit staged rows</button>
+          </div>
+        </div>
+      </details>
+
+      <details class="inspector-section assignment-editor">
+        <summary>Truthful Assignment editor</summary>
+        <label><span>Search saved assignments</span><input type="search" value="Trade purchase"></label>
+        <output>1 of 11 assignments</output>
+        <button type="button">Trade purchase payload · Shared Profile · purchase</button>
+        <div class="field-stack">
+          <label><span>Assignment name</span><input type="text" value="Trade purchase payload"></label>
+          <label><span>Contributor kind</span><select><option>Shared Profile</option><option>Page Group</option><option>Page</option><option>Event</option><option>Flow Page instance</option></select></label>
+          <label><span>Contributor target</span><select><option selected>Trade Account</option><option>Commerce Core</option><option>Checkout</option></select></label>
+          <label><span>Event</span><select><option selected>Purchase · purchase</option><option>Checkout begun · begin_checkout</option></select></label>
+          <label><span>Applicability Set</span><select><option selected>Trade account</option><option>Retail customer</option><option>Fallback</option></select></label>
+          <label><span>Source</span><input type="text" value="event-history"></label>
+          <label><span>Target</span><select><option selected>payload</option><option>raw input</option></select></label>
+          <label><span>Priority</span><input type="number" value="30"></label>
+          <button type="button" class="button-primary" data-toast="Assignment Draft saved.">Save assignment draft</button>
+        </div>
+      </details>
+
+      <details class="inspector-section">
+        <summary>Advanced Flow canvas inspector</summary>
+        <label><span>Selected node</span><select><option>Checkout Page frame</option><option>Purchase occurrence</option><option>success relationship</option></select></label>
+        <div class="field-grid compact">
+          <label><span>X</span><input type="number" value="652"></label>
+          <label><span>Y</span><input type="number" value="312"></label>
+        </div>
+        <div class="button-row"><button type="button" data-toast="Selected node centred.">Centre</button><button type="button" data-toast="Node position reset.">Reset position</button></div>
+      </details>
+
+      <a class="inspector-footer-link" href="state-gallery.html">Rare states, migrations &amp; recovery →</a>
+    </aside>
+  </main>
+
+  <dialog id="release-review" aria-labelledby="release-review-title">
+    <div class="dialog-heading">
+      <div><p class="comic-kicker">Final inspection</p><h2 id="release-review-title">Review project release</h2></div>
+      <button type="button" aria-label="Close release review" data-dialog-close="release-review">×</button>
+    </div>
+    <div class="notice notice-bad">
+      <strong>Release 4 is not ready yet</strong>
+      <span>One required Fixture fails. The current Saved Draft and release 3 remain safe and sound.</span>
+    </div>
+    <dl class="definition-list">
+      <div><dt>Preflight identity</dt><dd><code>preflight:9f31c2a</code></dd></div>
+      <div><dt>Executable plan</dt><dd>39 entities · 11 assignments · revision 12</dd></div>
+      <div><dt>Fixtures</dt><dd>3 pass · 1 fail</dd></div>
+      <div><dt>Coverage</dt><dd>24 / 28 proven</dd></div>
+    </dl>
+    <section>
+      <h3>Structured changes since release 3</h3>
+      <ul class="diff-list">
+        <li><span class="diff-add">Added</span> Profile / Trade Account: <code>/customer/vat_number</code></li>
+        <li><span class="diff-change">Changed</span> Profile / Commerce Core: <code>/ecommerce/value</code> rule</li>
+        <li><span class="diff-add">Added</span> Fixture / Trade net-30 purchase</li>
+        <li><span class="diff-change">Changed</span> Flow / Trade quote to order: Purchase step</li>
+      </ul>
+    </section>
+    <div class="button-row dialog-actions">
+      <button type="button" class="button-primary" disabled>Publish</button>
+      <button type="button" disabled>Publish and close</button>
+      <button type="button" data-toast="Release 3 restored as a new Draft." data-dialog-close="release-review">Restore release 3 as Draft</button>
+      <button type="button" data-dialog-close="release-review">Cancel</button>
+    </div>
+    <p><a href="state-gallery.html#assurance-release">View the ready, blocked and failed publication variants</a></p>
+  </dialog>
+
+  <dialog id="documentation-export" aria-labelledby="documentation-title">
+    <div class="dialog-heading">
+      <div><p class="comic-kicker">Paperwork, but useful</p><h2 id="documentation-title">Generate documentation table</h2></div>
+      <button type="button" aria-label="Close documentation export" data-dialog-close="documentation-export">×</button>
+    </div>
+    <fieldset>
+      <legend>Selected semantics</legend>
+      <div class="choice-grid">
+        <label class="checkbox-label"><input type="checkbox" checked><span>Requirement provenance</span></label>
+        <label class="checkbox-label"><input type="checkbox" checked><span>Where used</span></label>
+        <label class="checkbox-label"><input type="checkbox" checked><span>Applicability</span></label>
+        <label class="checkbox-label"><input type="checkbox" checked><span>Flows</span></label>
+        <label class="checkbox-label"><input type="checkbox" checked><span>Fixtures</span></label>
+        <label class="checkbox-label"><input type="checkbox" checked><span>Release metadata</span></label>
+      </div>
+    </fieldset>
+    <label><span>Format</span><select><option>Markdown table</option><option>HTML table</option><option>Plain text</option></select></label>
+    <pre class="documentation-preview" tabindex="0">Path                            Type    Presence  Source
+/event                          string  required  Commerce Core
+/ecommerce/transaction_id       string  required  Commerce Core
+/ecommerce/value                number  required  Commerce Core
+/customer/vat_number            string  required  Trade Account</pre>
+    <div class="button-row dialog-actions">
+      <button type="button" class="button-primary" data-toast="Documentation table copied once.">Copy documentation table</button>
+      <button type="button" data-toast="Documentation CSV prepared.">Export CSV</button>
+      <button type="button" data-dialog-close="documentation-export">Close</button>
+    </div>
+  </dialog>
+
+  <dialog id="import-review" aria-labelledby="import-title">
+    <div class="dialog-heading">
+      <div><p class="comic-kicker">Mind the collisions</p><h2 id="import-title">Review staged project import</h2></div>
+      <button type="button" aria-label="Close import review" data-dialog-close="import-review">×</button>
+    </div>
+    <label class="file-drop">
+      <span>Choose complete Specification Project JSON</span>
+      <input type="file" accept="application/json">
+      <small>Nothing is changed until this entire review is committed.</small>
+    </label>
+    <div class="notice notice-warn"><strong>1 project identity collision</strong><span>42 linked changes staged · current project unchanged</span></div>
+    <ul class="diff-list">
+      <li><span class="diff-add">Add</span> 1 Shared Profile, 2 Events, 1 Fixture</li>
+      <li><span class="diff-change">Update</span> 3 existing entities by stable identity</li>
+      <li><span class="diff-bad">Collision</span> Project ID <code>project:brass-borough-2026</code></li>
+    </ul>
+    <div class="button-row dialog-actions">
+      <button type="button" data-toast="Colliding project ID remapped; 42 linked changes ready.">Remap colliding project ID</button>
+      <button type="button" class="button-primary" disabled>Commit complete import</button>
+      <button type="button" data-dialog-close="import-review">Cancel</button>
+    </div>
+    <p><a href="state-gallery.html#studio-recovery">See import migration, collision and validation variants</a></p>
+  </dialog>
+
+  <dialog id="project-conflict-review" aria-labelledby="conflict-title">
+    <div class="dialog-heading">
+      <div><p class="comic-kicker">Two analysts enter…</p><h2 id="conflict-title">Resolve concurrent project edits</h2></div>
+      <button type="button" aria-label="Close conflict review" data-dialog-close="project-conflict-review">×</button>
+    </div>
+    <p>A newer Saved Draft and this window both changed <code>/ecommerce/value</code>. Choose which pending values to keep.</p>
+    <fieldset>
+      <legend>Conflicting fields</legend>
+      <label class="conflict-choice"><input type="checkbox" checked><span><strong>Use pending description</strong><small>Current: “Order value” · Pending: “Gross order value”</small></span></label>
+      <label class="conflict-choice"><input type="checkbox"><span><strong>Use pending minimum rule</strong><small>Current: at least 0 · Pending: greater than 0</small></span></label>
+    </fieldset>
+    <div class="button-row dialog-actions">
+      <button type="button" data-toast="Newer Saved Draft reloaded." data-dialog-close="project-conflict-review">Reload newer Saved Draft</button>
+      <button type="button" data-toast="Pending edit reapplied for review." data-dialog-close="project-conflict-review">Reapply pending edit</button>
+      <button type="button" class="button-primary" data-toast="Selected fields merged into a new Saved Draft." data-dialog-close="project-conflict-review">Merge selected fields</button>
+    </div>
+  </dialog>
+
+  <dialog id="saved-schema-review" aria-labelledby="saved-schema-title">
+    <div class="dialog-heading">
+      <div><p class="comic-kicker">Borrow responsibly</p><h2 id="saved-schema-title">Review saved-schema adoption</h2></div>
+      <button type="button" aria-label="Close saved schema review" data-dialog-close="saved-schema-review">×</button>
+    </div>
+    <p>Synchronise <strong>Ecommerce Core</strong> from library revision 8 to revision 9. Four project-local fields remain unchanged.</p>
+    <ul class="diff-list">
+      <li><span class="diff-add">Add</span> <code>/ecommerce/shipping_tier</code> as optional string</li>
+      <li><span class="diff-change">Update</span> ISO currency rule to reusable revision 5</li>
+      <li><span class="diff-safe">Preserve</span> Local <code>/ecommerce/value</code> description and minimum rule</li>
+    </ul>
+    <div class="button-row dialog-actions">
+      <button type="button" class="button-primary" data-toast="Reviewed saved-schema revision synchronised." data-dialog-close="saved-schema-review">Commit reviewed synchronisation</button>
+      <button type="button" data-dialog-close="saved-schema-review">Cancel</button>
+    </div>
+  </dialog>
+
+  <dialog id="remove-property-review" aria-labelledby="remove-property-title">
+    <div class="dialog-heading">
+      <div><p class="comic-kicker">Steady on</p><h2 id="remove-property-title">Remove transaction_id?</h2></div>
+      <button type="button" aria-label="Close remove property review" data-dialog-close="remove-property-review">×</button>
+    </div>
+    <div class="notice notice-bad"><strong>Used in 6 current places</strong><span>Two Assignments, three Fixtures and published release 3 reference this path.</span></div>
+    <ul>
+      <li>Retail purchase payload Assignment</li>
+      <li>Trade purchase payload Assignment</li>
+      <li>Retail card purchase and Trade net-30 purchase Fixtures</li>
+      <li>Release 3 remains immutable and retains its pinned definition</li>
+    </ul>
+    <label><span>Removal note</span><textarea rows="3" placeholder="Why is this requirement being removed?"></textarea></label>
+    <div class="button-row dialog-actions">
+      <button type="button" class="button-danger" data-toast="Property removal staged in the Draft." data-dialog-close="remove-property-review">Remove from Draft</button>
+      <button type="button" data-dialog-close="remove-property-review">Cancel</button>
+    </div>
+  </dialog>
+
+  <dialog id="storage-recovery" aria-labelledby="storage-title">
+    <div class="dialog-heading">
+      <div><p class="comic-kicker">Emergency compartment</p><h2 id="storage-title">Storage &amp; recovery</h2></div>
+      <button type="button" aria-label="Close storage and recovery" data-dialog-close="storage-recovery">×</button>
+    </div>
+    <div class="notice notice-good"><strong>Durable project storage is ready</strong><span>Last Saved Draft: 26 July 2026, 10:42 · Published revision 3</span></div>
+    <dl class="definition-list">
+      <div><dt>Project graph</dt><dd>184 KB</dd></div>
+      <div><dt>Release snapshots</dt><dd>412 KB</dd></div>
+      <div><dt>Fixture evidence</dt><dd>96 KB</dd></div>
+      <div><dt>Migration backup</dt><dd>None required</dd></div>
+    </dl>
+    <output tabindex="-1">No failed save is waiting for recovery.</output>
+    <div class="button-row dialog-actions">
+      <button type="button" disabled>Retry exact unsaved command</button>
+      <button type="button" disabled>Export unsaved Draft</button>
+      <button type="button" data-toast="Repository recovery bundle prepared.">Export repository backup</button>
+      <button type="button" data-toast="Storage diagnostics refreshed.">Refresh diagnostics</button>
+      <button type="button" data-dialog-close="storage-recovery">Close</button>
+    </div>
+    <p><a href="state-gallery.html#studio-storage-recovery">See save-failure and recovery variants</a></p>
+  </dialog>
+
+  <div class="toast-region" aria-live="polite" aria-atomic="true"></div>
+  <script src="assets/mock.js" defer></script>
+</body>
+</html>

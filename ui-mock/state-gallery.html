@@ -1,0 +1,1230 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Presentation-only TWAtility Belt state gallery for rare and conditional extension workflows."
+    />
+    <title>State Gallery · TWAtility Belt</title>
+    <link rel="stylesheet" href="assets/mock.css" />
+    <script src="assets/mock.js" defer></script>
+  </head>
+  <body class="mock-page mock-shell">
+    <a class="skip-link" href="#main-content">Skip to state gallery</a>
+
+    <header class="site-header">
+      <a class="brand-lockup" href="side-panel.html" aria-label="TWAtility Belt mock home">
+        <span class="brand-mark" aria-hidden="true">TWA</span>
+        <span>
+          <strong>TWAtility Belt</strong>
+          <small>Technical Web Analyst utilities</small>
+        </span>
+      </a>
+      <nav class="global-nav" aria-label="Mock pages">
+        <a href="index.html">Tour desk</a>
+        <a href="side-panel.html">Side panel</a>
+        <a href="studio.html">Specification Studio</a>
+        <a href="state-gallery.html" aria-current="page">State gallery</a>
+        <a href="control-map.html">Control map</a>
+      </nav>
+      <span class="status-chip status-chip--warning">Mock data only</span>
+    </header>
+
+    <main id="main-content">
+      <section class="page-hero comic-strip" aria-labelledby="gallery-title">
+        <div>
+          <p class="eyebrow">The awkward-cupboard collection</p>
+          <h1 id="gallery-title">Rare states, without the rare panic</h1>
+          <p>
+            A reference board for reviews, blockers, recovery and destructive choices across the
+            side panel and Specification Studio. Every control here is a prop: convincing, clickable
+            and entirely incapable of ruining Tuesday.
+          </p>
+          <div class="button-row">
+            <a class="button button--primary" href="#system-states">Browse the states</a>
+            <a class="button button--secondary" href="control-map.html">Check control coverage</a>
+          </div>
+        </div>
+        <aside class="speech-bubble">
+          <p class="comic-kicker">BELT &amp; BRACES!</p>
+          <p>Review first. Commit second. Pop the kettle on somewhere in between.</p>
+        </aside>
+      </section>
+
+      <nav class="section-nav panel" aria-label="State gallery sections">
+        <a href="#system-states">System</a>
+        <a href="#target-access">Targets</a>
+        <a href="#session-reviews">Sessions</a>
+        <a href="#project-storage">Projects &amp; storage</a>
+        <a href="#validation-defects">Validation &amp; defects</a>
+        <a href="#schema-lifecycle">Schemas &amp; rules</a>
+        <a href="#assurance-release">Assurance &amp; release</a>
+        <a href="#studio-recovery">Studio recovery</a>
+      </nav>
+
+      <section id="system-states" class="gallery-section" aria-labelledby="system-title">
+        <div class="section-heading">
+          <p class="eyebrow">01 · Baseline feedback</p>
+          <h2 id="system-title">Loading, empty and unavailable</h2>
+          <p>Calm explanations, visible next steps and no mystery meat spinners.</p>
+        </div>
+
+        <div class="state-grid">
+          <article class="state-card" aria-busy="true">
+            <header class="card-heading">
+              <span class="status-chip status-chip--info">Loading</span>
+              <h3>Opening durable project storage</h3>
+            </header>
+            <div class="skeleton-stack" aria-hidden="true">
+              <span></span><span></span><span></span>
+            </div>
+            <p>Checking the Saved Draft, releases, fixtures and retained recovery backup…</p>
+          </article>
+
+          <article class="state-card">
+            <header class="card-heading">
+              <span class="status-chip">Empty</span>
+              <h3>No captured events yet</h3>
+            </header>
+            <p>
+              Choose a browser target and start testing. New observations will appear here in
+              chronological order.
+            </p>
+            <div class="button-row">
+              <button type="button">Choose target</button>
+              <button type="button" class="button--quiet">Open setup help</button>
+            </div>
+            <small>Nothing suspicious. The queue is simply having a quiet one.</small>
+          </article>
+
+          <article class="state-card">
+            <header class="card-heading">
+              <span class="status-chip status-chip--danger">Unavailable</span>
+              <h3>Actions blocked by an unsaved command</h3>
+            </header>
+            <p class="notice notice--danger" role="status">
+              Project switching and publication stay blocked until “Edit Checkout schema” is
+              retried, exported or explicitly rejected.
+            </p>
+            <div class="button-row">
+              <button type="button" disabled aria-describedby="blocked-switch-reason">
+                Switch project
+              </button>
+              <button type="button" disabled aria-describedby="blocked-switch-reason">
+                Publish release
+              </button>
+              <button type="button" data-dialog-open="studio-storage-recovery">
+                Open recovery
+              </button>
+            </div>
+            <small id="blocked-switch-reason">Disabled to protect the last Saved Draft.</small>
+          </article>
+        </div>
+      </section>
+
+      <section id="target-access" class="gallery-section" aria-labelledby="target-title">
+        <span id="live-errors" class="anchor-target" aria-hidden="true"></span>
+        <div class="section-heading">
+          <p class="eyebrow">02 · Live observation</p>
+          <h2 id="target-title">Target access and permissions</h2>
+          <p>The browser gets a vote. The analyst gets a useful explanation.</p>
+        </div>
+
+        <div class="state-grid">
+          <article class="state-card">
+            <header class="card-heading">
+              <span class="status-chip status-chip--success">Ready</span>
+              <h3>Checkout · Brass &amp; Borough</h3>
+            </header>
+            <dl class="definition-list">
+              <div><dt>Tab</dt><dd>Checkout | Brass &amp; Borough</dd></div>
+              <div><dt>Origin</dt><dd>https://www.brassandborough.co.uk</dd></div>
+              <div><dt>History path</dt><dd><code>dataLayer.history</code></dd></div>
+              <div><dt>Access</dt><dd>Granted for this origin</dd></div>
+            </dl>
+            <div class="button-row">
+              <button type="button" data-dialog-open="target-picker-dialog">Browse all tabs</button>
+              <button type="button" data-dialog-open="detach-target-dialog" class="button--quiet">
+                Detach target
+              </button>
+            </div>
+          </article>
+
+          <article class="state-card">
+            <header class="card-heading">
+              <span class="status-chip status-chip--danger">Permission needed</span>
+              <h3>Trade portal cannot be inspected</h3>
+            </header>
+            <p class="notice notice--warning">
+              Access to <strong>trade.brassandborough.co.uk</strong> was not granted. Capturing remains
+              stopped; no fallback tab will be used.
+            </p>
+            <ol class="compact-steps">
+              <li>Open the target tab.</li>
+              <li>Grant this extension access to the site.</li>
+              <li>Return here and check again.</li>
+            </ol>
+            <div class="button-row">
+              <button type="button">Request site access</button>
+              <button type="button">Check again</button>
+              <button type="button" class="button--quiet">Choose another tab</button>
+            </div>
+          </article>
+
+          <article class="state-card">
+            <header class="card-heading">
+              <span class="status-chip status-chip--warning">Path not found</span>
+              <h3>Target connected, queue absent</h3>
+            </header>
+            <label for="gallery-history-path">History array path</label>
+            <div class="input-action">
+              <input id="gallery-history-path" value="dataLayer.history" />
+              <button type="button">Restart observation</button>
+            </div>
+            <p class="notice">Try <code>dataLayer</code> or inspect the page’s implementation notes.</p>
+          </article>
+
+          <article class="state-card">
+            <header class="card-heading">
+              <span class="status-chip status-chip--info">Ready to begin</span>
+              <h3>Target and path checks passed</h3>
+            </header>
+            <ol class="compact-steps">
+              <li class="is-complete">Choose target</li>
+              <li class="is-complete">Confirm access and path</li>
+              <li>Start testing</li>
+            </ol>
+            <div class="button-row">
+              <button type="button" class="button--primary">Start testing</button>
+              <button type="button">Choose target</button>
+            </div>
+          </article>
+
+          <article class="state-card">
+            <header class="card-heading">
+              <span class="status-chip status-chip--warning">Capture paused</span>
+              <h3>18 events retained</h3>
+            </header>
+            <p>The observer remains attached, but new queue entries are not being added to this session.</p>
+            <div class="button-row">
+              <button type="button" class="button--primary">Resume capture</button>
+              <button type="button" data-dialog-open="end-testing-dialog" class="button--danger">
+                End testing
+              </button>
+            </div>
+          </article>
+
+          <article class="state-card">
+            <header class="card-heading">
+              <span class="status-chip status-chip--info">Saved session mode</span>
+              <h3>Retail checkout · release candidate</h3>
+            </header>
+            <p>Viewing 26 archived events from 26 July. Background observation remains connected.</p>
+            <p class="notice">2 historical issues · 1 issue under the current schemas.</p>
+            <div class="button-row">
+              <button type="button" class="button--primary">Return to current Live feed</button>
+              <button type="button">Revalidate with current schemas</button>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="session-reviews" class="gallery-section" aria-labelledby="session-title">
+        <div class="section-heading">
+          <p class="eyebrow">03 · Session boundaries</p>
+          <h2 id="session-title">Save, restart and end reviews</h2>
+          <p>Data loss deserves a sentence, not a surprise.</p>
+        </div>
+
+        <div class="state-grid">
+          <article class="state-card">
+            <header class="card-heading">
+              <span class="status-chip status-chip--info">Snapshot</span>
+              <h3>Save the current session</h3>
+            </header>
+            <p>26 captured events · 3 validation issues · Checkout journey · 18 minutes.</p>
+            <button type="button" data-dialog-open="save-session-dialog">Review snapshot</button>
+          </article>
+
+          <article class="state-card">
+            <header class="card-heading">
+              <span class="status-chip status-chip--warning">Unsaved capture</span>
+              <h3>Start a fresh session</h3>
+            </header>
+            <p>The current capture has not been saved. Choose whether to retain or discard it.</p>
+            <button type="button" data-dialog-open="fresh-session-dialog">Review fresh start</button>
+          </article>
+
+          <article class="state-card">
+            <header class="card-heading">
+              <span class="status-chip status-chip--danger">Destructive</span>
+              <h3>End testing</h3>
+            </header>
+            <p>Observation will disconnect. The captured feed remains available until a fresh session starts.</p>
+            <button type="button" data-dialog-open="end-testing-dialog">Review ending test</button>
+          </article>
+        </div>
+      </section>
+
+      <section id="project-storage" class="gallery-section" aria-labelledby="project-title">
+        <div class="section-heading">
+          <p class="eyebrow">04 · Durable projects</p>
+          <h2 id="project-title">Switching, importing and recovery</h2>
+          <p>Atomically replacing context, with all the dull but vital details visible.</p>
+        </div>
+
+        <div class="state-grid">
+          <article class="state-card">
+            <header class="card-heading">
+              <span class="status-chip status-chip--warning">Context change</span>
+              <h3>Switch to Brass &amp; Borough · Assisted sale</h3>
+            </header>
+            <p>Schema, pages, flows, fixtures, assignments and Studio context will change together.</p>
+            <button type="button" data-dialog-open="switch-project-dialog">Review project switch</button>
+          </article>
+
+          <article class="state-card">
+            <header class="card-heading">
+              <span class="status-chip status-chip--info">Staged import</span>
+              <h3>Retail measurement plan</h3>
+            </header>
+            <p>Format v1 · 84 entities · references valid · imported as an inactive project.</p>
+            <button type="button" data-dialog-open="project-import-dialog">Review side-panel import</button>
+          </article>
+
+          <article class="state-card">
+            <header class="card-heading">
+              <span class="status-chip status-chip--warning">Legacy migration</span>
+              <h3>Two sources claim to be authoritative</h3>
+            </header>
+            <p>
+              A project-library source and an active-projection source were found. Export both before
+              choosing which one becomes the durable Saved Draft.
+            </p>
+            <fieldset>
+              <legend>Migration source</legend>
+              <label><input type="radio" name="migration-source" checked /> Project library · 09:42</label>
+              <label><input type="radio" name="migration-source" /> Active projection · 09:39</label>
+            </fieldset>
+            <div class="button-row">
+              <button type="button">Export both sources</button>
+              <button type="button" data-dialog-open="legacy-migration-dialog">Review migration</button>
+            </div>
+          </article>
+
+          <article class="state-card">
+            <header class="card-heading">
+              <span class="status-chip status-chip--danger">Save failed</span>
+              <h3>Exact command retained for recovery</h3>
+            </header>
+            <p>
+              “Reorder Checkout page groups” was not committed. The last Saved Draft and Published
+              revision 12 remain unchanged.
+            </p>
+            <div class="button-row">
+              <button type="button" data-dialog-open="storage-recovery-dialog">Storage &amp; recovery</button>
+              <button type="button" data-dialog-open="delete-backup-dialog" class="button--danger">
+                Review backup deletion
+              </button>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="validation-defects" class="gallery-section" aria-labelledby="validation-title">
+        <div class="section-heading">
+          <p class="eyebrow">05 · Evidence and reporting</p>
+          <h2 id="validation-title">Validation and defect flows</h2>
+          <p>Enough context for engineering to reproduce the problem, without a scavenger hunt.</p>
+        </div>
+
+        <div class="state-grid">
+          <article class="state-card">
+            <header class="card-heading">
+              <span class="status-chip status-chip--danger">3 issues</span>
+              <h3><code>purchase</code> failed Checkout v8</h3>
+            </header>
+            <ul class="issue-list">
+              <li><strong>Error</strong> · <code>/transaction_id</code> is required</li>
+              <li><strong>Error</strong> · <code>/value</code> expected number, received string</li>
+              <li><strong>Warning</strong> · <code>/coupon</code> is undeclared</li>
+            </ul>
+            <div class="button-row">
+              <button type="button" data-dialog-open="validation-detail-dialog">Inspect validation</button>
+              <button type="button" data-dialog-open="defect-report-dialog">Build defect report</button>
+            </div>
+          </article>
+
+          <article class="state-card">
+            <header class="card-heading">
+              <span class="status-chip status-chip--warning">Missing event</span>
+              <h3>Expected <code>add_payment_info</code></h3>
+            </header>
+            <p>
+              The Checkout journey reached Payment but no matching event was observed within 30
+              seconds.
+            </p>
+            <dl class="definition-list">
+              <div><dt>Expected after</dt><dd>begin_checkout</dd></div>
+              <div><dt>Target page</dt><dd>/checkout/payment</dd></div>
+              <div><dt>Observed instead</dt><dd>form_interaction</dd></div>
+            </dl>
+            <button type="button" data-dialog-open="missing-event-dialog">Report missing event</button>
+          </article>
+
+          <article class="state-card">
+            <header class="card-heading">
+              <span class="status-chip status-chip--success">Report ready</span>
+              <h3>TWA-184 · Purchase value has wrong type</h3>
+            </header>
+            <p>Expected result, actual payload, timeline, reproduction and provenance are complete.</p>
+            <div class="button-row">
+              <button type="button">Copy report</button>
+              <button type="button">Download JSON</button>
+              <button type="button">Save to Defect Library</button>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section id="schema-lifecycle" class="gallery-section" aria-labelledby="schema-title">
+        <div class="section-heading">
+          <p class="eyebrow">06 · Canonical governance</p>
+          <h2 id="schema-title">Schema, rule and property reviews</h2>
+          <p>Source lineage remains visible when a local decision changes the effective contract.</p>
+        </div>
+
+        <div class="state-grid">
+          <article class="state-card">
+            <header class="card-heading">
+              <span class="status-chip status-chip--info">Draft revision 9</span>
+              <h3>Publish Checkout Event</h3>
+            </header>
+            <p>4 properties changed · 2 assignments will revalidate · no blocking issues.</p>
+            <button type="button" data-dialog-open="schema-publication-dialog">Review publication</button>
+          </article>
+
+          <article class="state-card">
+            <header class="card-heading">
+              <span class="status-chip status-chip--warning">Pinned rule</span>
+              <h3>Currency code · v2 → v3</h3>
+            </header>
+            <p>Three schema snapshots remain pinned until this upgrade is explicitly reviewed.</p>
+            <div class="button-row">
+              <button type="button" data-dialog-open="rule-upgrade-dialog">Review upgrade</button>
+              <button type="button" data-dialog-open="rule-delete-dialog" class="button--danger">
+                Review rule deletion
+              </button>
+            </div>
+          </article>
+
+          <article class="state-card">
+            <header class="card-heading">
+              <span class="status-chip status-chip--warning">Canonical migration</span>
+              <h3>Move legacy constraints into one tree</h3>
+            </header>
+            <p>42 properties mapped · 8 repeated entries deduplicated · 1 type conflict to resolve.</p>
+            <button type="button" data-dialog-open="canonical-migration-dialog">
+              Resolve migration conflict
+            </button>
+          </article>
+
+          <article class="state-card">
+            <header class="card-heading">
+              <span class="status-chip status-chip--danger">Impact review</span>
+              <h3>Remove <code>/customer_type</code></h3>
+            </header>
+            <p>Used by 2 applicability sets, 3 assignments, 1 Flow context and 4 documentation cells.</p>
+            <div class="button-row">
+              <button type="button" data-dialog-open="property-impact-dialog">Review impact</button>
+              <button type="button" data-dialog-open="schema-delete-dialog">Review schema deletion</button>
+            </div>
+          </article>
+
+          <article class="state-card">
+            <header class="card-heading">
+              <span class="status-chip status-chip--info">Library import</span>
+              <h3>Schema Library bundle</h3>
+            </header>
+            <p>6 incoming schemas · 2 matching identities · 4 new schemas.</p>
+            <button type="button" data-dialog-open="schema-import-dialog">Review Schema Library import</button>
+          </article>
+        </div>
+      </section>
+
+      <section id="assurance-release" class="gallery-section" aria-labelledby="assurance-title">
+        <div class="section-heading">
+          <p class="eyebrow">07 · Production assurance</p>
+          <h2 id="assurance-title">Preflight, coverage and release</h2>
+          <p>The immutable bit only happens after the boring bits have done their job.</p>
+        </div>
+
+        <div class="state-grid">
+          <article class="state-card">
+            <header class="card-heading">
+              <span class="status-chip status-chip--danger">Blocked</span>
+              <h3>Production evaluator preflight</h3>
+            </header>
+            <p class="notice notice--danger">Plan <code>spc_8d2a</code> · 2 blockers · 7 fixtures evaluated.</p>
+            <ul class="issue-list">
+              <li><button type="button">FIXTURE_FAILED: Trade purchase expected no issues</button></li>
+              <li><button type="button">UNASSIGNED_EVENT: add_shipping_info has no winner</button></li>
+            </ul>
+          </article>
+
+          <article class="state-card">
+            <header class="card-heading">
+              <span class="status-chip status-chip--success">Ready</span>
+              <h3>Production evaluator preflight</h3>
+            </header>
+            <p class="notice notice--success">
+              Plan <code>spc_8d31</code> · ready to publish · 9 fixtures passed · assignments unambiguous.
+            </p>
+            <button type="button" data-dialog-open="release-review-dialog">Review release 13</button>
+          </article>
+        </div>
+
+        <article class="panel coverage-panel" aria-labelledby="coverage-title">
+          <header class="card-heading">
+            <div>
+              <span class="status-chip status-chip--warning">92% covered</span>
+              <h3 id="coverage-title">Effective requirement coverage</h3>
+            </div>
+            <div class="button-row">
+              <button type="button">Only gaps</button>
+              <button type="button">All requirements</button>
+              <button type="button" data-dialog-open="documentation-export-dialog">
+                Documentation export
+              </button>
+            </div>
+          </header>
+          <div class="table-scroll">
+            <table class="data-table">
+              <caption>Coverage by effective requirement and production evidence</caption>
+              <thead>
+                <tr>
+                  <th scope="col">Requirement</th>
+                  <th scope="col">Contexts</th>
+                  <th scope="col">Assignments</th>
+                  <th scope="col">Fixtures</th>
+                  <th scope="col">Status</th>
+                  <th scope="col">Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th scope="row"><code>/transaction_id</code></th>
+                  <td>Retail purchase, Trade purchase</td>
+                  <td>2</td>
+                  <td>4</td>
+                  <td><span class="status-chip status-chip--success">Covered</span></td>
+                  <td><button type="button" class="button--quiet">Inspect evidence</button></td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>/shipping_tier</code></th>
+                  <td>Retail shipping</td>
+                  <td>1</td>
+                  <td>0</td>
+                  <td><span class="status-chip status-chip--danger">Fixture gap</span></td>
+                  <td><button type="button">Create fixture</button></td>
+                </tr>
+                <tr>
+                  <th scope="row"><code>/trade_account_id</code></th>
+                  <td>Trade purchase</td>
+                  <td>1</td>
+                  <td>1</td>
+                  <td><span class="status-chip status-chip--success">Covered</span></td>
+                  <td><button type="button" class="button--quiet">Open assignment</button></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </article>
+      </section>
+
+      <section id="studio-recovery" class="gallery-section" aria-labelledby="studio-recovery-title">
+        <div class="section-heading">
+          <p class="eyebrow">08 · Specification Studio</p>
+          <h2 id="studio-recovery-title">Import, conflict and recovery</h2>
+          <p>Concurrent edits are awkward. Pretending they did not happen would be more awkward.</p>
+        </div>
+
+        <div class="state-grid">
+          <article class="state-card">
+            <header class="card-heading">
+              <span class="status-chip status-chip--warning">ID collision</span>
+              <h3>Staged full-project import</h3>
+            </header>
+            <p>The incoming project ID already exists locally. Linked identities remain staged.</p>
+            <button type="button" data-dialog-open="studio-import-dialog">Resolve import collision</button>
+          </article>
+
+          <article class="state-card">
+            <header class="card-heading">
+              <span class="status-chip status-chip--danger">Concurrent edit</span>
+              <h3>Checkout page changed elsewhere</h3>
+            </header>
+            <p>Select pending values, reload the newer Saved Draft or replay the complete edit.</p>
+            <button type="button" data-dialog-open="conflict-dialog">Resolve field conflict</button>
+          </article>
+
+          <article class="state-card">
+            <header class="card-heading">
+              <span class="status-chip status-chip--danger">Storage failure</span>
+              <h3>Studio save was not committed</h3>
+            </header>
+            <p>The exact pending command remains in memory. Export before rejecting if in doubt.</p>
+            <button type="button" data-dialog-open="studio-storage-recovery">Open Studio recovery</button>
+          </article>
+        </div>
+      </section>
+
+      <section class="comic-strip closing-strip">
+        <p class="comic-kicker">MAKE IT SO!</p>
+        <p>
+          This gallery demonstrates presentation and click-through states only. It does not inspect
+          tabs, write storage, publish revisions, copy data or download files.
+        </p>
+        <a class="button button--primary" href="control-map.html">Audit every control family</a>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <p>TWAtility Belt · a slightly ridiculous companion for serious measurement work.</p>
+      <nav aria-label="Footer links">
+        <a href="side-panel.html">Side panel</a>
+        <a href="studio.html">Studio</a>
+        <a href="control-map.html">Control map</a>
+      </nav>
+    </footer>
+
+    <dialog id="target-picker-dialog" class="dialog-card" aria-labelledby="target-picker-title">
+      <header>
+        <div>
+          <p class="eyebrow">Observation target</p>
+          <h2 id="target-picker-title" tabindex="-1">Browse open tabs</h2>
+        </div>
+        <button type="button" class="icon-button" data-dialog-close aria-label="Close target picker">×</button>
+      </header>
+      <label for="target-search">Search targets</label>
+      <input id="target-search" type="search" placeholder="Title, domain or tab ID" />
+      <p role="status">3 matching targets</p>
+      <ul class="choice-list">
+        <li>
+          <label>
+            <input type="radio" name="target" checked />
+            <span><strong>Checkout | Brass &amp; Borough</strong><small>brassandborough.co.uk/checkout · Ready</small></span>
+          </label>
+        </li>
+        <li>
+          <label>
+            <input type="radio" name="target" />
+            <span><strong>Brass &amp; Borough Trade Portal</strong><small>trade.brassandborough.co.uk · Permission needed</small></span>
+          </label>
+        </li>
+        <li>
+          <label>
+            <input type="radio" name="target" />
+            <span><strong>Order confirmation</strong><small>brassandborough.co.uk/order-confirmation · Background tab</small></span>
+          </label>
+        </li>
+      </ul>
+      <div class="button-row dialog-actions">
+        <button type="button" class="button--primary" data-dialog-close>Use selected target</button>
+        <button type="button" class="button--quiet" data-dialog-close>Cancel</button>
+      </div>
+    </dialog>
+
+    <dialog id="detach-target-dialog" class="dialog-card" aria-labelledby="detach-target-title">
+      <header>
+        <span class="status-chip status-chip--warning">Confirm detach</span>
+        <h2 id="detach-target-title" tabindex="-1">Stop observing Checkout?</h2>
+      </header>
+      <p>
+        The target will disconnect and the current path status will reset. The captured feed remains
+        in this session.
+      </p>
+      <div class="button-row dialog-actions">
+        <button type="button" data-dialog-close>Keep target</button>
+        <button type="button" class="button--danger" data-dialog-close>Detach target</button>
+      </div>
+    </dialog>
+
+    <dialog id="save-session-dialog" class="dialog-card" aria-labelledby="save-session-title">
+      <form>
+        <header>
+          <span class="status-chip status-chip--info">Session snapshot</span>
+          <h2 id="save-session-title" tabindex="-1">Save captured checkout session</h2>
+        </header>
+        <div class="field-grid">
+          <label>
+            Session name
+            <input value="Retail checkout · release candidate" />
+          </label>
+          <label>
+            Notes
+            <textarea rows="3">Guest checkout on Chrome; consent accepted before capture.</textarea>
+          </label>
+        </div>
+        <p class="notice">26 events, source metadata and current validation records will be retained.</p>
+        <div class="button-row dialog-actions">
+          <button type="button" class="button--primary" data-dialog-close>Save snapshot</button>
+          <button type="button" class="button--quiet" data-dialog-close>Cancel</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="fresh-session-dialog" class="dialog-card" aria-labelledby="fresh-session-title">
+      <header>
+        <span class="status-chip status-chip--warning">Unsaved capture</span>
+        <h2 id="fresh-session-title" tabindex="-1">Start a fresh session?</h2>
+      </header>
+      <p>
+        The current 26-event feed will be replaced. Saving creates a named snapshot; discarding cannot
+        be undone.
+      </p>
+      <div class="button-row dialog-actions">
+        <button type="button" class="button--primary" data-dialog-close>Save and start fresh</button>
+        <button type="button" class="button--danger" data-dialog-close>Discard and start fresh</button>
+        <button type="button" class="button--quiet" data-dialog-close>Cancel</button>
+      </div>
+    </dialog>
+
+    <dialog id="end-testing-dialog" class="dialog-card" aria-labelledby="end-testing-title">
+      <header>
+        <span class="status-chip status-chip--danger">End live testing</span>
+        <h2 id="end-testing-title" tabindex="-1">Disconnect from Checkout?</h2>
+      </header>
+      <p>Capture will stop after 26 events. The current feed remains available for inspection and reporting.</p>
+      <label><input type="checkbox" checked /> Keep the selected target ready for the next session</label>
+      <div class="button-row dialog-actions">
+        <button type="button" class="button--danger" data-dialog-close>End testing</button>
+        <button type="button" data-dialog-close>Continue testing</button>
+      </div>
+    </dialog>
+
+    <dialog id="switch-project-dialog" class="dialog-card" aria-labelledby="switch-project-title">
+      <header>
+        <span class="status-chip status-chip--warning">Active context</span>
+        <h2 id="switch-project-title" tabindex="-1">Review switch to Assisted sale</h2>
+      </header>
+      <div class="context-switch" aria-label="Project context change">
+        <div><small>Current</small><strong>Retail &amp; Trade · UK storefront</strong><span>Saved Draft · revision 41</span></div>
+        <span aria-hidden="true">→</span>
+        <div><small>Next</small><strong>Brass &amp; Borough · Assisted sale</strong><span>Saved Draft · revision 18</span></div>
+      </div>
+      <p>
+        Schemas, Pages, Page Groups, Events, Flows, documentation, assignments and Studio will replace
+        context atomically.
+      </p>
+      <div class="button-row dialog-actions">
+        <button type="button" class="button--primary" data-dialog-close>Switch to Assisted sale</button>
+        <button type="button" class="button--quiet" data-dialog-close>Cancel switch</button>
+      </div>
+    </dialog>
+
+    <dialog id="project-import-dialog" class="dialog-card dialog-card--wide" aria-labelledby="project-import-title">
+      <form>
+        <header>
+          <span class="status-chip status-chip--info">Import as new</span>
+          <h2 id="project-import-title" tabindex="-1">Review project import</h2>
+        </header>
+        <dl class="definition-list definition-list--grid">
+          <div><dt>Format</dt><dd>Durable Specification Project v1</dd></div>
+          <div><dt>Source</dt><dd>Retail &amp; Trade · UK storefront</dd></div>
+          <div><dt>Integrity</dt><dd>All references resolve</dd></div>
+          <div><dt>Entities</dt><dd>84 across 8 collections</dd></div>
+          <div><dt>Migrations</dt><dd>Canonical property tree v3</dd></div>
+          <div><dt>Activation</dt><dd>Imported inactive</dd></div>
+        </dl>
+        <label>
+          Unique target project name
+          <input value="Retail &amp; Trade · imported review" />
+        </label>
+        <p class="notice notice--success">No blockers. The Published snapshot will receive a new local immutable identity.</p>
+        <div class="button-row dialog-actions">
+          <button type="button" class="button--primary" data-dialog-close>Import as new project</button>
+          <button type="button" class="button--quiet" data-dialog-close>Close import review</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="legacy-migration-dialog" class="dialog-card" aria-labelledby="legacy-migration-title">
+      <header>
+        <span class="status-chip status-chip--warning">Legacy storage</span>
+        <h2 id="legacy-migration-title" tabindex="-1">Use project library source?</h2>
+      </header>
+      <p>
+        The selected source contains 3 projects and the most recent Draft token. Both original source
+        byte sets will be retained as one recovery backup.
+      </p>
+      <ul class="check-list">
+        <li>Stable project identities preserved</li>
+        <li>Published revisions preserved</li>
+        <li>Fixtures and releases migrated together</li>
+        <li>Original bytes retained until explicitly deleted</li>
+      </ul>
+      <div class="button-row dialog-actions">
+        <button type="button" class="button--primary" data-dialog-close>Confirm migration</button>
+        <button type="button" data-dialog-close>Go back</button>
+      </div>
+    </dialog>
+
+    <dialog id="storage-recovery-dialog" class="dialog-card dialog-card--wide" aria-labelledby="storage-recovery-title">
+      <header>
+        <span class="status-chip status-chip--danger">Save not committed</span>
+        <h2 id="storage-recovery-title" tabindex="-1">Storage and recovery</h2>
+      </header>
+      <dl class="definition-list definition-list--grid">
+        <div><dt>Last Saved Draft</dt><dd>26 Jul 2026, 10:14:38</dd></div>
+        <div><dt>Published revision</dt><dd>12</dd></div>
+        <div><dt>Unsaved command</dt><dd>Reorder Checkout page groups</dd></div>
+        <div><dt>Project data</dt><dd>1.8 MB</dd></div>
+        <div><dt>Releases</dt><dd>714 KB</dd></div>
+        <div><dt>Fixtures</dt><dd>286 KB</dd></div>
+        <div><dt>Migration backup</dt><dd>940 KB</dd></div>
+        <div><dt>Browser storage</dt><dd>3.9 MB of 2 GB</dd></div>
+      </dl>
+      <p class="notice">
+        Retry replays the exact command against the latest Draft token. Reject discards only that
+        unsaved command.
+      </p>
+      <div class="button-row dialog-actions">
+        <button type="button" class="button--primary" data-dialog-close>Retry save</button>
+        <button type="button">Export unsaved Draft</button>
+        <button type="button">Export repository backup</button>
+        <button type="button">Open storage diagnostics</button>
+        <button type="button" class="button--danger" data-dialog-close>Reject unsaved command</button>
+        <button type="button" class="button--quiet" data-dialog-close>Close</button>
+      </div>
+    </dialog>
+
+    <dialog id="delete-backup-dialog" class="dialog-card" aria-labelledby="delete-backup-title">
+      <header>
+        <span class="status-chip status-chip--danger">Permanent deletion</span>
+        <h2 id="delete-backup-title" tabindex="-1">Delete retained migration backup?</h2>
+      </header>
+      <p>
+        Current projects, saved schemas, fixtures, releases and Published revisions stay unchanged.
+        The original legacy source bytes will no longer be available for recovery.
+      </p>
+      <label class="confirm-phrase">
+        Type <strong>delete backup</strong> to continue
+        <input autocomplete="off" placeholder="delete backup" />
+      </label>
+      <div class="button-row dialog-actions">
+        <button type="button" data-dialog-close>Cancel and retain backup</button>
+        <button type="button" class="button--danger" data-dialog-close>Delete only the migration backup</button>
+      </div>
+    </dialog>
+
+    <dialog id="validation-detail-dialog" class="dialog-card dialog-card--wide" aria-labelledby="validation-detail-title">
+      <header>
+        <span class="status-chip status-chip--danger">Validation record</span>
+        <h2 id="validation-detail-title" tabindex="-1">purchase · Checkout v8</h2>
+      </header>
+      <div class="split-review">
+        <section>
+          <h3>Observed payload</h3>
+          <pre><code>{
+  "event": "purchase",
+  "value": "129.00",
+  "currency": "GBP",
+  "coupon": "TEA10"
+}</code></pre>
+        </section>
+        <section>
+          <h3>Effective contributors</h3>
+          <ol>
+            <li>Sitewide Commerce · inherited</li>
+            <li>Checkout Page Group · guarded</li>
+            <li>Purchase Event · local</li>
+          </ol>
+          <button type="button">Open contributing schema</button>
+        </section>
+      </div>
+      <fieldset>
+        <legend>Issue actions</legend>
+        <label><input type="checkbox" checked /> Missing <code>/transaction_id</code></label>
+        <label><input type="checkbox" checked /> Wrong type at <code>/value</code></label>
+        <label><input type="checkbox" /> Undeclared <code>/coupon</code></label>
+      </fieldset>
+      <div class="button-row dialog-actions">
+        <button type="button" data-dialog-open="defect-report-dialog" data-dialog-close>
+          Build report from selected issues
+        </button>
+        <button type="button">Declare coupon locally</button>
+        <button type="button" data-dialog-close>Close</button>
+      </div>
+    </dialog>
+
+    <dialog id="defect-report-dialog" class="dialog-card dialog-card--wide" aria-labelledby="defect-report-title">
+      <form>
+        <header>
+          <span class="status-chip status-chip--warning">Draft report</span>
+          <h2 id="defect-report-title" tabindex="-1">Build validation defect report</h2>
+        </header>
+        <div class="field-grid field-grid--two">
+          <label>
+            Summary
+            <input value="Purchase value is sent as a string and transaction_id is missing" />
+          </label>
+          <label>
+            Severity
+            <select>
+              <option selected>Major</option>
+              <option>Critical</option>
+              <option>Minor</option>
+            </select>
+          </label>
+          <label>
+            Component
+            <select>
+              <option selected>Checkout data layer</option>
+              <option>Trade portal</option>
+              <option>Consent integration</option>
+            </select>
+          </label>
+          <label>
+            Destination
+            <select>
+              <option selected>Clipboard / manual delivery</option>
+              <option>Defect Library only</option>
+            </select>
+          </label>
+        </div>
+        <label>
+          Expected result
+          <textarea rows="3">purchase includes a string transaction_id and numeric value in GBP.</textarea>
+        </label>
+        <label>
+          Reproduction
+          <textarea rows="4">1. Add one item. 2. Continue as guest. 3. Complete card payment. 4. Inspect purchase.</textarea>
+        </label>
+        <fieldset>
+          <legend>Report components</legend>
+          <label><input type="checkbox" checked /> Actual payload</label>
+          <label><input type="checkbox" checked /> Validation differences</label>
+          <label><input type="checkbox" checked /> Event timeline</label>
+          <label><input type="checkbox" checked /> Schema and rule provenance</label>
+          <label><input type="checkbox" checked /> Browser and page context</label>
+          <label><input type="checkbox" /> Include undeclared coupon removal suggestion</label>
+        </fieldset>
+        <div class="button-row dialog-actions">
+          <button type="button" class="button--primary" data-dialog-close>Save report to Defect Library</button>
+          <button type="button">Copy preview</button>
+          <button type="button" class="button--quiet" data-dialog-close>Cancel</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="missing-event-dialog" class="dialog-card dialog-card--wide" aria-labelledby="missing-event-title">
+      <form>
+        <header>
+          <span class="status-chip status-chip--warning">Missing event</span>
+          <h2 id="missing-event-title" tabindex="-1">Report add_payment_info</h2>
+        </header>
+        <div class="field-grid field-grid--two">
+          <label>
+            Expected event
+            <input value="add_payment_info" />
+          </label>
+          <label>
+            Expected after
+            <select><option selected>begin_checkout</option></select>
+          </label>
+          <label>
+            Page
+            <select><option selected>Checkout · Payment</option></select>
+          </label>
+          <label>
+            Wait window
+            <input type="number" value="30" />
+          </label>
+        </div>
+        <label>
+          Expected payload
+          <textarea rows="6">{"event":"add_payment_info","currency":"GBP","value":129,"payment_type":"card"}</textarea>
+        </label>
+        <p class="notice">The report will distinguish “not observed” from an event observed with an invalid payload.</p>
+        <div class="button-row dialog-actions">
+          <button type="button" class="button--primary" data-dialog-close>Save missing-event report</button>
+          <button type="button" data-dialog-close>Cancel</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="schema-publication-dialog" class="dialog-card dialog-card--wide" aria-labelledby="schema-publication-title">
+      <header>
+        <span class="status-chip status-chip--info">Publication review</span>
+        <h2 id="schema-publication-title" tabindex="-1">Publish Checkout Event revision 9</h2>
+      </header>
+      <table class="data-table">
+        <caption>Changes from published revision 8</caption>
+        <thead><tr><th scope="col">Path</th><th scope="col">Change</th><th scope="col">Impact</th></tr></thead>
+        <tbody>
+          <tr><th scope="row"><code>/transaction_id</code></th><td>Optional → Required</td><td>14 captured events rechecked</td></tr>
+          <tr><th scope="row"><code>/value</code></th><td>Type string → number</td><td>2 fixtures updated</td></tr>
+          <tr><th scope="row"><code>/coupon</code></th><td>New optional string</td><td>No breaking impact</td></tr>
+        </tbody>
+      </table>
+      <label><input type="checkbox" checked /> Revalidate captured events after publication</label>
+      <div class="button-row dialog-actions">
+        <button type="button" class="button--primary" data-dialog-close>Publish schema</button>
+        <button type="button" data-dialog-close>Cancel</button>
+      </div>
+    </dialog>
+
+    <dialog id="rule-upgrade-dialog" class="dialog-card" aria-labelledby="rule-upgrade-title">
+      <header>
+        <span class="status-chip status-chip--warning">Pinned upgrade</span>
+        <h2 id="rule-upgrade-title" tabindex="-1">Upgrade Currency code to v3?</h2>
+      </header>
+      <p>Saving updates pinned snapshots in these schemas:</p>
+      <ul>
+        <li>Sitewide Commerce v12</li>
+        <li>Purchase Event v8</li>
+        <li>Refund Event v4</li>
+      </ul>
+      <p class="notice">v3 adds GBX as a forbidden test value and changes the issue message.</p>
+      <div class="button-row dialog-actions">
+        <button type="button" class="button--primary" data-dialog-close>Continue upgrade</button>
+        <button type="button" data-dialog-close>Keep pinned versions</button>
+      </div>
+    </dialog>
+
+    <dialog id="rule-delete-dialog" class="dialog-card" aria-labelledby="rule-delete-title">
+      <header>
+        <span class="status-chip status-chip--danger">Reusable rule</span>
+        <h2 id="rule-delete-title" tabindex="-1">Delete Currency code?</h2>
+      </header>
+      <p>
+        The library rule will be removed. Three pinned schema snapshots keep their current embedded
+        definition, but can no longer follow future revisions.
+      </p>
+      <div class="button-row dialog-actions">
+        <button type="button" data-dialog-close>Cancel</button>
+        <button type="button" class="button--danger" data-dialog-close>Delete rule</button>
+      </div>
+    </dialog>
+
+    <dialog id="canonical-migration-dialog" class="dialog-card" aria-labelledby="canonical-migration-title">
+      <form>
+        <header>
+          <span class="status-chip status-chip--warning">1 conflict</span>
+          <h2 id="canonical-migration-title" tabindex="-1">Resolve canonical property migration</h2>
+        </header>
+        <p>
+          <code>/value</code> is defined as a string in the legacy requirements table and a number in
+          the structured draft.
+        </p>
+        <label>
+          Resolution
+          <select>
+            <option>Choose resolution</option>
+            <option selected>Use number from structured draft</option>
+            <option>Use string from legacy requirements</option>
+            <option>Use object</option>
+          </select>
+        </label>
+        <label>
+          Migration note
+          <textarea rows="3">Number matches production evaluator and fixture examples.</textarea>
+        </label>
+        <div class="button-row dialog-actions">
+          <button type="button" class="button--primary" data-dialog-close>Confirm canonical migration</button>
+          <button type="button" data-dialog-close>Cancel</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="property-impact-dialog" class="dialog-card dialog-card--wide" aria-labelledby="property-impact-title">
+      <header>
+        <span class="status-chip status-chip--danger">Canonical impact</span>
+        <h2 id="property-impact-title" tabindex="-1">Remove /customer_type?</h2>
+      </header>
+      <p>
+        This local property is part of effective matching logic. Removing it falls back to no parent
+        definition and makes dependent evidence stale.
+      </p>
+      <table class="data-table">
+        <thead><tr><th scope="col">Consumer</th><th scope="col">Use</th><th scope="col">Repair</th></tr></thead>
+        <tbody>
+          <tr><th scope="row">Retail customer applicability</th><td>equals “retail”</td><td><button type="button">Open condition</button></td></tr>
+          <tr><th scope="row">Trade customer applicability</th><td>equals “trade”</td><td><button type="button">Open condition</button></td></tr>
+          <tr><th scope="row">Checkout flow</th><td>Documentation context</td><td><button type="button">Open Flow</button></td></tr>
+          <tr><th scope="row">3 assignments</th><td>Winner selection</td><td><button type="button">Open assignments</button></td></tr>
+        </tbody>
+      </table>
+      <div class="button-row dialog-actions">
+        <button type="button" data-dialog-close>Keep property</button>
+        <button type="button" class="button--danger" data-dialog-close>Remove local property</button>
+      </div>
+    </dialog>
+
+    <dialog id="schema-delete-dialog" class="dialog-card" aria-labelledby="schema-delete-title">
+      <header>
+        <span class="status-chip status-chip--danger">Schema deletion</span>
+        <h2 id="schema-delete-title" tabindex="-1">Delete Checkout Event?</h2>
+      </header>
+      <p>
+        The working schema and revision history will be removed from the library. Existing defect and
+        validation records keep a read-only schema identity.
+      </p>
+      <p class="notice notice--danger">2 active assignments must be removed or reassigned first.</p>
+      <div class="button-row dialog-actions">
+        <button type="button">Open assignments</button>
+        <button type="button" class="button--danger" disabled>Delete schema</button>
+        <button type="button" data-dialog-close>Cancel</button>
+      </div>
+    </dialog>
+
+    <dialog id="schema-import-dialog" class="dialog-card" aria-labelledby="schema-import-title">
+      <header>
+        <span class="status-chip status-chip--info">Schema Library import</span>
+        <h2 id="schema-import-title" tabindex="-1">Choose import strategy</h2>
+      </header>
+      <p>6 incoming schemas · 4 new identities · 2 matching identities with newer revisions.</p>
+      <dl class="definition-list">
+        <div><dt>Append</dt><dd>Add new schemas and retain existing matching identities.</dd></div>
+        <div><dt>Replace</dt><dd>Replace the complete library after one destructive review.</dd></div>
+      </dl>
+      <div class="button-row dialog-actions">
+        <button type="button" class="button--primary" data-dialog-close>Append to Library</button>
+        <button type="button" class="button--danger" data-dialog-close>Replace entire Library</button>
+        <button type="button" data-dialog-close>Cancel</button>
+      </div>
+    </dialog>
+
+    <dialog id="release-review-dialog" class="dialog-card dialog-card--wide" aria-labelledby="release-review-title">
+      <header>
+        <span class="status-chip status-chip--success">Ready to publish</span>
+        <h2 id="release-review-title" tabindex="-1">Review Retail &amp; Trade release 13</h2>
+      </header>
+      <dl class="definition-list definition-list--grid">
+        <div><dt>Content identity</dt><dd>spc_8d31</dd></div>
+        <div><dt>Saved Draft token</dt><dd>42</dd></div>
+        <div><dt>Fixtures</dt><dd>9 passed</dd></div>
+        <div><dt>Coverage</dt><dd>92% · 1 optional gap</dd></div>
+      </dl>
+      <ul class="change-list">
+        <li><strong>Changed</strong> Purchase Event · 3 property definitions</li>
+        <li><strong>Added</strong> Trade checkout assignment</li>
+        <li><strong>Changed</strong> Checkout Flow · 1 relationship expectation</li>
+        <li><strong>Added</strong> 2 fixture evidence records</li>
+      </ul>
+      <p class="notice">
+        Publication creates one immutable executable plan. The Saved Draft remains editable afterward.
+      </p>
+      <div class="button-row dialog-actions">
+        <button type="button" class="button--primary" data-dialog-close>Publish</button>
+        <button type="button" class="button--primary" data-dialog-close>Publish and close</button>
+        <button type="button">Restore release 12 as Draft</button>
+        <button type="button" data-dialog-close>Cancel</button>
+      </div>
+    </dialog>
+
+    <dialog id="documentation-export-dialog" class="dialog-card dialog-card--wide" aria-labelledby="documentation-export-title">
+      <form>
+        <header>
+          <span class="status-chip status-chip--info">Documentation</span>
+          <h2 id="documentation-export-title" tabindex="-1">Generate Checkout documentation table</h2>
+        </header>
+        <div class="field-grid field-grid--two">
+          <fieldset>
+            <legend>Selected semantics</legend>
+            <label><input type="checkbox" checked /> Requirement provenance</label>
+            <label><input type="checkbox" checked /> Where used</label>
+            <label><input type="checkbox" checked /> Applicability</label>
+            <label><input type="checkbox" checked /> Flows</label>
+            <label><input type="checkbox" checked /> Fixtures</label>
+            <label><input type="checkbox" checked /> Release metadata</label>
+          </fieldset>
+          <fieldset>
+            <legend>Table presentation</legend>
+            <label>View <select><option>Data capture matrix</option><option>Flow value map</option></select></label>
+            <label>Style <select><option>Bordered with highlighted headings</option><option>Plain</option></select></label>
+            <label>Property labels <select><option>Display name</option><option>Canonical path</option></select></label>
+          </fieldset>
+        </div>
+        <pre tabindex="0"><code>| Step | Event | Transaction ID | Value | Currency |
+| Checkout | begin_checkout | — | 129.00 | GBP |
+| Payment | add_payment_info | — | 129.00 | GBP |
+| Confirmation | purchase | Required | 129.00 | GBP |</code></pre>
+        <div class="button-row dialog-actions">
+          <button type="button">Copy documentation table</button>
+          <button type="button">Rich table for Confluence or Jira</button>
+          <button type="button">Download Excel workbook</button>
+          <button type="button" data-dialog-close>Close</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="studio-import-dialog" class="dialog-card" aria-labelledby="studio-import-title">
+      <header>
+        <span class="status-chip status-chip--warning">Blocking collision</span>
+        <h2 id="studio-import-title" tabindex="-1">Review staged project import</h2>
+      </header>
+      <p>
+        Incoming project <code>project:brass-borough-retail</code> collides with the active project. All
+        84 linked changes remain staged and the current project is unchanged.
+      </p>
+      <div class="button-row dialog-actions">
+        <button type="button" class="button--primary">Remap colliding project ID</button>
+        <button type="button" disabled>Commit complete import</button>
+        <button type="button" data-dialog-close>Cancel</button>
+      </div>
+    </dialog>
+
+    <dialog id="conflict-dialog" class="dialog-card dialog-card--wide" aria-labelledby="conflict-title">
+      <form>
+        <header>
+          <span class="status-chip status-chip--danger">Saved Draft conflict</span>
+          <h2 id="conflict-title" tabindex="-1">Resolve concurrent project edits</h2>
+        </header>
+        <p>
+          Checkout Page changed after this window loaded. Choose the pending values to merge, replay
+          the complete edit, or reload revision 43.
+        </p>
+        <fieldset>
+          <legend>Pending values to keep</legend>
+          <label><input type="checkbox" checked /> Path matcher: <code>/checkout/*</code></label>
+          <label><input type="checkbox" /> Page Groups: Checkout → Logged-in customers</label>
+          <label><input type="checkbox" checked /> SPA route: enabled</label>
+        </fieldset>
+        <div class="comparison-grid">
+          <section><h3>Saved revision 43</h3><p>Path <code>/checkout/:step</code> · 1 Page Group · SPA enabled</p></section>
+          <section><h3>Pending edit</h3><p>Path <code>/checkout/*</code> · 2 Page Groups · SPA enabled</p></section>
+        </div>
+        <div class="button-row dialog-actions">
+          <button type="button" data-dialog-close>Reload newer Saved Draft</button>
+          <button type="button" data-dialog-close>Reapply pending edit</button>
+          <button type="button" class="button--primary" data-dialog-close>Merge selected fields</button>
+        </div>
+      </form>
+    </dialog>
+
+    <dialog id="studio-storage-recovery" class="dialog-card dialog-card--wide" aria-labelledby="studio-storage-title">
+      <header>
+        <span class="status-chip status-chip--danger">Studio recovery</span>
+        <h2 id="studio-storage-title" tabindex="-1">Saved Draft write failed</h2>
+      </header>
+      <p>
+        Save failed for Retail &amp; Trade · UK storefront: Edit Checkout schema. The last Saved Draft is unchanged;
+        switching and publication remain blocked.
+      </p>
+      <output tabindex="-1" class="notice" aria-live="polite">
+        Retry, export the exact unsaved Draft, export the repository backup or inspect storage diagnostics.
+      </output>
+      <div class="button-row dialog-actions">
+        <button type="button" class="button--primary" data-dialog-close>Retry save</button>
+        <button type="button">Export unsaved Draft</button>
+        <button type="button">Export repository backup</button>
+        <button type="button">Open storage diagnostics</button>
+        <button type="button" class="button--quiet" data-dialog-close>Close</button>
+      </div>
+    </dialog>
+  </body>
+</html>

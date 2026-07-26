@@ -1,0 +1,559 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Traceability map from current TWAtility Belt extension control families to the presentation-only design mock."
+    />
+    <title>Control Map · TWAtility Belt</title>
+    <link rel="stylesheet" href="assets/mock.css" />
+    <script src="assets/mock.js" defer></script>
+  </head>
+  <body class="mock-page control-map-page">
+    <a class="skip-link" href="#main">Skip to the control map</a>
+
+    <header class="comic-masthead compact-masthead mock-shell" aria-labelledby="brand-title">
+      <div class="brand-lockup">
+        <p class="eyebrow">Technical Web Analysts present</p>
+        <p id="brand-title" class="compact-brand"><span class="brand-twa">TWA</span>tility Belt</p>
+        <p class="brand-strapline">Every lever labelled. Even the peculiar one at the back.</p>
+      </div>
+      <div class="comic-burst" aria-label="Control coverage">All present!</div>
+    </header>
+
+    <nav class="global-nav mock-shell" aria-label="Mock pages">
+      <a href="index.html">Tour desk</a>
+      <a href="side-panel.html">Side panel</a>
+      <a href="studio.html">Specification Studio</a>
+      <a href="state-gallery.html">State gallery</a>
+      <a href="control-map.html" aria-current="page">Control map</a>
+    </nav>
+
+    <main id="main" class="mock-shell">
+      <section class="page-hero comic-strip" aria-labelledby="map-title">
+        <div>
+          <p class="comic-kicker">Nothing up the sleeve</p>
+          <h1 id="map-title">Production-to-mock control map</h1>
+          <p class="lede">
+            This checklist maps every audited control family in the current side panel and
+            Specification Studio to an equivalent place in the redesign. Families are grouped where
+            the production UI generates repeated controls from data, but no capability is intentionally
+            dropped.
+          </p>
+          <div class="trace-summary" aria-label="Coverage summary">
+            <span><strong>2</strong> production surfaces</span>
+            <span><strong>12</strong> grouped audits</span>
+            <span><strong>100%</strong> families represented</span>
+            <span><strong>0</strong> real writes</span>
+          </div>
+        </div>
+        <aside class="speech-bubble">
+          <p>“Equivalent” means the real behaviour has a clear home—not that this static mock performs it.</p>
+        </aside>
+      </section>
+
+      <aside class="notice notice--warning" role="note">
+        <strong>Presentation-only boundary.</strong> Mock buttons may navigate, swap a hardcoded panel
+        or open a hardcoded dialog. They do not call Chrome APIs, inspect tabs, read or write storage,
+        import or export files, copy to the clipboard, validate payloads, publish revisions or deliver defects.
+      </aside>
+
+      <nav class="section-nav panel" aria-label="Control map groups">
+        <a href="#shell-map">Shell</a>
+        <a href="#live-map">Live</a>
+        <a href="#projects-map">Projects</a>
+        <a href="#library-map">Library</a>
+        <a href="#sessions-defects-map">Sessions &amp; defects</a>
+        <a href="#schemas-map">Schemas</a>
+        <a href="#hotkeys-map">Hotkeys</a>
+        <a href="#studio-shell-map">Studio shell</a>
+        <a href="#studio-entities-map">Entities</a>
+        <a href="#canonical-map">Canonical schema</a>
+        <a href="#flow-map">Flow &amp; evidence</a>
+        <a href="#assurance-map">Assurance</a>
+      </nav>
+
+      <section id="shell-map" class="coverage-group" aria-labelledby="shell-map-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Side panel · global</p>
+            <h2 id="shell-map-title">Application shell and navigation</h2>
+          </div>
+          <span class="status-chip good">Covered</span>
+        </div>
+        <div class="table-scroll panel">
+          <table class="data-table control-table">
+            <thead>
+              <tr><th scope="col">Current control family</th><th scope="col">Controls retained</th><th scope="col">Mock destination</th><th scope="col">Mock behaviour</th></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <th scope="row">Utility directory</th>
+                <td>Available utilities, active utility and top-level Commands entry.</td>
+                <td><a href="side-panel.html#workspace-data-layer">Side panel · utility header</a></td>
+                <td>Static active utility; links change mock views.</td>
+              </tr>
+              <tr>
+                <th scope="row">Workspace tabs</th>
+                <td>Data Layer and Hotkeys tab selection, selected state and keyboard-sized targets.</td>
+                <td><a href="side-panel.html#workspace-data-layer">Data Layer</a> · <a href="side-panel.html#workspace-hotkeys">Hotkeys</a></td>
+                <td>Click-through panel swap only.</td>
+              </tr>
+              <tr>
+                <th scope="row">Data Layer view tabs</th>
+                <td>Live, Projects, Library, Sessions, Defects and Schemas.</td>
+                <td><a href="side-panel.html#view-projects">Side panel · view rail</a></td>
+                <td>Click-through panel swap with hardcoded content.</td>
+              </tr>
+              <tr>
+                <th scope="row">Active project context</th>
+                <td>Project identity, Saved Draft state and Published revision summary.</td>
+                <td><a href="side-panel.html#view-projects">Projects · context card</a></td>
+                <td>Fixed Brass &amp; Borough Retail &amp; Trade context.</td>
+              </tr>
+              <tr>
+                <th scope="row">Command palette</th>
+                <td><code>open-palette</code>, filter, matching result list and command selection.</td>
+                <td><a href="side-panel.html#command-palette">Side panel · command palette</a></td>
+                <td>Dialog and hardcoded filtering/selection; no command execution.</td>
+              </tr>
+              <tr>
+                <th scope="row">Status and action feedback</th>
+                <td>Command log, polite/assertive outputs, saving/saved/failed states and disabled reasons.</td>
+                <td><a href="state-gallery.html#system-states">State gallery · system feedback</a></td>
+                <td>Static announcements and reason text.</td>
+              </tr>
+              <tr>
+                <th scope="row">Responsive master/detail navigation</th>
+                <td>Back-to-list controls, inspector close/back and narrow-screen card equivalents.</td>
+                <td><a href="side-panel.html#view-live">Side panel · Live inspector</a></td>
+                <td>Presentation-only panel navigation.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="live-map" class="coverage-group" aria-labelledby="live-map-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Side panel · Live</p>
+            <h2 id="live-map-title">Capture, inspection and guided validation</h2>
+          </div>
+          <span class="status-chip good">Covered</span>
+        </div>
+        <div class="table-scroll panel">
+          <table class="data-table control-table">
+            <thead><tr><th scope="col">Current control family</th><th scope="col">Controls retained</th><th scope="col">Mock destination</th><th scope="col">Mock behaviour</th></tr></thead>
+            <tbody>
+              <tr>
+                <th scope="row">Saved-session banner</th>
+                <td>Return to current Live feed, revalidate with current schemas and validation comparison.</td>
+                <td><a href="state-gallery.html#live-errors">Gallery · alternate Live states</a></td>
+                <td>Static saved/current comparison.</td>
+              </tr>
+              <tr>
+                <th scope="row">Session summary</th>
+                <td>Ended/running, observer connection, target page, event count, URL/path/source details and Copy page URL.</td>
+                <td><a href="side-panel.html#view-live">Live · session mast</a></td>
+                <td>Hardcoded active-capture metadata; copy is illustrative.</td>
+              </tr>
+              <tr>
+                <th scope="row">Setup checklist</th>
+                <td>Choose target, confirm access/path, start testing and disabled start reason.</td>
+                <td><a href="state-gallery.html#target-access">Gallery · target readiness</a></td>
+                <td>Static ready, permission and missing-path variants.</td>
+              </tr>
+              <tr>
+                <th scope="row">Capture lifecycle</th>
+                <td>Start testing, Pause capture, Resume capture and End testing.</td>
+                <td><a href="side-panel.html#view-live">Active capture</a> · <a href="state-gallery.html#live-errors">alternate states</a></td>
+                <td>Buttons open or display mocked lifecycle states only.</td>
+              </tr>
+              <tr>
+                <th scope="row">Session boundary actions</th>
+                <td>Save session, Start fresh session and Report missing event.</td>
+                <td><a href="state-gallery.html#session-reviews">Gallery · session reviews</a></td>
+                <td>Accessible dialogs; no snapshot or report is saved.</td>
+              </tr>
+              <tr>
+                <th scope="row">Save snapshot review</th>
+                <td>Session name, captured summary, Save snapshot and Cancel; disabled-until-valid state.</td>
+                <td><a href="state-gallery.html#session-reviews">Gallery · Save snapshot</a></td>
+                <td>Hardcoded form and close action.</td>
+              </tr>
+              <tr>
+                <th scope="row">Fresh-session confirmation</th>
+                <td>Save and start fresh, Discard and start fresh, Cancel.</td>
+                <td><a href="state-gallery.html#session-reviews">Gallery · fresh start</a></td>
+                <td>Review dialog only.</td>
+              </tr>
+              <tr>
+                <th scope="row">Observation source status</th>
+                <td>Connected/disconnected/error sources, reconnect guidance and source count.</td>
+                <td><a href="side-panel.html#view-live">Live · source health</a> · <a href="state-gallery.html#live-errors">errors</a></td>
+                <td>Static status chips.</td>
+              </tr>
+              <tr>
+                <th scope="row">Event-feed query</th>
+                <td>Search/filter criteria, saved feed filters, clear/reset and result count.</td>
+                <td><a href="side-panel.html#view-live">Live · observed event feed</a></td>
+                <td>Hardcoded query controls; may filter mock rows only.</td>
+              </tr>
+              <tr>
+                <th scope="row">Event timeline</th>
+                <td>Event selection, nested tuple/property expansion, source/provenance display and empty/error states.</td>
+                <td><a href="side-panel.html#view-live">Live · timeline</a></td>
+                <td>Static event cards and expanders.</td>
+              </tr>
+              <tr>
+                <th scope="row">Event inspector</th>
+                <td>Back to events, property tree, raw payload, validation issues and contextual actions.</td>
+                <td><a href="side-panel.html#view-live">Live · event detail</a></td>
+                <td>Master/detail click-through.</td>
+              </tr>
+              <tr>
+                <th scope="row">Captured-event actions</th>
+                <td>Validate, report issue, create/update event template, declare schema property and push selected target.</td>
+                <td><a href="side-panel.html#view-live">Live · inspector actions</a> · <a href="state-gallery.html#validation-defects">report review</a></td>
+                <td>Routes to mock editors/reviews; no payload mutation.</td>
+              </tr>
+              <tr>
+                <th scope="row">Guided validation</th>
+                <td>Destination/schema/property/rule pickers, nested path, issue selection, expected values, conditions, continue/back/finish.</td>
+                <td><a href="side-panel.html#view-live">Live · guided validation drawer</a></td>
+                <td>Static stepper and hardcoded choices.</td>
+              </tr>
+              <tr>
+                <th scope="row">Manual Flow testing</th>
+                <td>Flow picker, start/end, expected step, pass/fail, missing-event and validation-defect actions.</td>
+                <td><a href="side-panel.html#view-live">Live · Flow test context</a></td>
+                <td>Hardcoded journey progress.</td>
+              </tr>
+              <tr>
+                <th scope="row">Observation settings</th>
+                <td>Browse all tabs, history array path, path status/display, restart observation, warning and detach confirmation.</td>
+                <td><a href="side-panel.html#observation-target-dialog">Target picker</a> · <a href="state-gallery.html#target-access">permission/path states</a></td>
+                <td>Dialog and static settings; no tab access.</td>
+              </tr>
+              <tr>
+                <th scope="row">Target picker</th>
+                <td>Close, target search, result count, tab selection, permission state and recovery.</td>
+                <td><a href="side-panel.html#observation-target-dialog">Side panel · target dialog</a></td>
+                <td>Hardcoded targets only.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="projects-map" class="coverage-group" aria-labelledby="projects-map-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Side panel · Projects</p>
+            <h2 id="projects-map-title">Project library and durable repository</h2>
+          </div>
+          <span class="status-chip good">Covered</span>
+        </div>
+        <div class="table-scroll panel">
+          <table class="data-table control-table">
+            <thead><tr><th scope="col">Current control family</th><th scope="col">Controls retained</th><th scope="col">Mock destination</th><th scope="col">Mock behaviour</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Active project card</th><td>Open in Specification Studio, Edit details and Export.</td><td><a href="side-panel.html#view-projects">Projects · active card</a></td><td>Studio link and mock dialogs; export does not download.</td></tr>
+              <tr><th scope="row">Project library query</th><td>Search projects, sort by Name/Last saved and matching list count.</td><td><a href="side-panel.html#view-projects">Projects · library</a></td><td>Hardcoded list filtering/sorting if enabled by mock script.</td></tr>
+              <tr><th scope="row">Project rows</th><td>Active indicator, Switch, Edit details, Export and last-saved/Published metadata.</td><td><a href="side-panel.html#view-projects">Projects · rows</a></td><td>Static records with review entry points.</td></tr>
+              <tr><th scope="row">Create project</th><td>Name, purpose, website, owner, notes, Review create, Confirm create, Open Studio and Close.</td><td><a href="side-panel.html#create-project-dialog">Create project dialog</a></td><td>Form review only; project list remains mock data.</td></tr>
+              <tr><th scope="row">Edit project metadata</th><td>Same metadata fields, Save project details, Undo metadata edit and Close.</td><td><a href="side-panel.html#edit-project-dialog">Edit details dialog</a></td><td>Temporary visual state only.</td></tr>
+              <tr><th scope="row">Switch review</th><td>Atomic context summary, pending-write Merge/Reject/Retry, Confirm switch and Cancel.</td><td><a href="state-gallery.html#project-storage">Gallery · project switch</a></td><td>Review dialog closes without changing storage.</td></tr>
+              <tr><th scope="row">Project import</th><td>File picker, staged bundle summary, unique target name, Import as new and Close; invalid/blocked variants.</td><td><a href="state-gallery.html#project-storage">Gallery · project import</a></td><td>Hardcoded file metadata; no file read.</td></tr>
+              <tr><th scope="row">Repository status</th><td>Opening/ready/saving/failed summary and project counts.</td><td><a href="side-panel.html#view-projects">Projects · durable storage</a></td><td>Static ready state plus linked failure gallery.</td></tr>
+              <tr><th scope="row">Legacy migration review</th><td>Export both sources, choose project-library or active-projection source and migration result.</td><td><a href="state-gallery.html#project-storage">Gallery · legacy migration</a></td><td>Static source choice and confirmation.</td></tr>
+              <tr><th scope="row">Storage &amp; recovery</th><td>Diagnostics, Retry save, Reject command, export unsaved Draft/repository backup and close.</td><td><a href="state-gallery.html#project-storage">Gallery · durable recovery</a></td><td>No diagnostics, persistence or downloads.</td></tr>
+              <tr><th scope="row">Migration-backup deletion</th><td>Review, cancel/retain and delete only retained legacy bytes.</td><td><a href="state-gallery.html#project-storage">Gallery · destructive backup review</a></td><td>Confirmation closes without deleting.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="library-map" class="coverage-group" aria-labelledby="library-map-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Side panel · Library</p>
+            <h2 id="library-map-title">Event templates and test sequences</h2>
+          </div>
+          <span class="status-chip good">Covered</span>
+        </div>
+        <div class="table-scroll panel">
+          <table class="data-table control-table">
+            <thead><tr><th scope="col">Current control family</th><th scope="col">Controls retained</th><th scope="col">Mock destination</th><th scope="col">Mock behaviour</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Template library toolbar</th><td>Search, Add new event, Export Library, Import Library, Clear Library and template count.</td><td><a href="side-panel.html#view-library">Library · toolbar</a></td><td>Mock filtering and dialog entry; no file transfer.</td></tr>
+              <tr><th scope="row">Template rows</th><td>Select/open, duplicate/copy, delete, revision/source summary and direct push entry.</td><td><a href="side-panel.html#view-library">Library · template list</a></td><td>Hardcoded selection and editor routing.</td></tr>
+              <tr><th scope="row">Library import review</th><td>Replace entire Library, Append to Library and Cancel.</td><td><a href="side-panel.html#import-library-dialog">Library · import review</a></td><td>Exact review controls; no file read.</td></tr>
+              <tr><th scope="row">Library clear/delete review</th><td>Impact summary, Delete and Cancel.</td><td><a href="side-panel.html#clear-library-dialog">Library · clear review</a></td><td>Confirmation-only reference.</td></tr>
+              <tr><th scope="row">Template identity</th><td>Template name, canonical event name and observation source.</td><td><a href="side-panel.html#event-template-editor">Event template editor</a></td><td>Hardcoded form values.</td></tr>
+              <tr><th scope="row">Template properties</th><td>Structured property rows, add/edit/remove, types, required state, examples and nested values.</td><td><a href="side-panel.html#event-template-editor">Editor · Properties</a></td><td>Visual editable controls only.</td></tr>
+              <tr><th scope="row">Advanced template data</th><td>Revision history, JSON draft, validation output and push destination path.</td><td><a href="side-panel.html#event-template-editor">Editor · progressive sections</a></td><td>Details disclose static data; JSON is not parsed.</td></tr>
+              <tr><th scope="row">Template actions</th><td>Save revision, Push draft, Save as copy, Discard changes, Back to captured event and Close.</td><td><a href="side-panel.html#event-template-editor">Editor · action bar</a></td><td>Review routing and visual feedback only.</td></tr>
+              <tr><th scope="row">Template reviews</th><td>Unsaved-close choices, revision diff and push destination/payload confirmation.</td><td><a href="side-panel.html#template-actions-dialog">Unsaved/revision review</a> · <a href="side-panel.html#push-review-dialog">push review</a></td><td>Hardcoded review content.</td></tr>
+              <tr><th scope="row">Test sequences</th><td>Empty recovery, saved sequence list, run/replay result and row actions.</td><td><a href="side-panel.html#view-library">Library · Test sequences</a></td><td>Static run result; no tab replay.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="sessions-defects-map" class="coverage-group" aria-labelledby="sessions-defects-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Side panel · Sessions &amp; Defects</p>
+            <h2 id="sessions-defects-title">Saved evidence and issue library</h2>
+          </div>
+          <span class="status-chip good">Covered</span>
+        </div>
+        <div class="table-scroll panel">
+          <table class="data-table control-table">
+            <thead><tr><th scope="col">Current control family</th><th scope="col">Controls retained</th><th scope="col">Mock destination</th><th scope="col">Mock behaviour</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Saved-session library</th><td>Search, Import session, count, list selection and empty state.</td><td><a href="side-panel.html#view-sessions">Sessions · library</a></td><td>Hardcoded archives; import does not read a file.</td></tr>
+              <tr><th scope="row">Session row actions</th><td>Open in Live, export, create/replay sequence and request deletion.</td><td><a href="side-panel.html#view-sessions">Sessions · row menu</a></td><td>Routes to static detail/current-feed variants.</td></tr>
+              <tr><th scope="row">Session detail</th><td>Capture metadata, source summary, event archive, validation comparison and replay options.</td><td><a href="side-panel.html#view-sessions">Sessions · detail</a></td><td>Static evidence.</td></tr>
+              <tr><th scope="row">Session deletion</th><td>Assertive confirmation, Confirm deletion and Cancel deletion.</td><td><a href="side-panel.html#delete-session-dialog">Sessions · delete review</a></td><td>No archive is removed.</td></tr>
+              <tr><th scope="row">Defect filters</th><td>Search, status, type, event, schema and property-path filters plus result count.</td><td><a href="side-panel.html#view-defects">Defects · filter bar</a></td><td>May filter hardcoded rows only.</td></tr>
+              <tr><th scope="row">Defect rows</th><td>Select/open, status/type/event/path metadata and empty state.</td><td><a href="side-panel.html#view-defects">Defects · list</a></td><td>Static master/detail selection.</td></tr>
+              <tr><th scope="row">Defect detail</th><td>Expected/actual, semantic differences, payload, timeline, reproduction, provenance and delivery summary.</td><td><a href="state-gallery.html#validation-defects">Gallery · report flow</a></td><td>Hardcoded report preview.</td></tr>
+              <tr><th scope="row">Defect actions</th><td>Copy/download/export, save to library, status transitions and delete request.</td><td><a href="state-gallery.html#validation-defects">Gallery · completed report</a> · <a href="side-panel.html#delete-defect-dialog">delete review</a></td><td>No clipboard, file or persistent status update.</td></tr>
+              <tr><th scope="row">Unified validation report builder</th><td>Issue choices, summary, severity, component, expected result, reproduction and include/exclude sections.</td><td><a href="state-gallery.html#validation-defects">Gallery · defect builder</a></td><td>Accessible form dialog; no delivery.</td></tr>
+              <tr><th scope="row">Missing-event report builder</th><td>Expected event, position/page, wait window, expected payload, actual timeline and save/cancel.</td><td><a href="state-gallery.html#validation-defects">Gallery · missing event</a></td><td>Static report form.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="schemas-map" class="coverage-group" aria-labelledby="schemas-map-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Side panel · Schemas</p>
+            <h2 id="schemas-map-title">Schema, reusable rule and assignment libraries</h2>
+          </div>
+          <span class="status-chip good">Covered</span>
+        </div>
+        <div class="table-scroll panel">
+          <table class="data-table control-table">
+            <thead><tr><th scope="col">Current control family</th><th scope="col">Controls retained</th><th scope="col">Mock destination</th><th scope="col">Mock behaviour</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Schema subnavigation</th><td>Schemas, Rule Library and Assignments tabs; Generate documentation table link.</td><td><a href="side-panel.html#view-schemas">Schemas · subviews</a></td><td>Click-through subview swap and Studio link.</td></tr>
+              <tr><th scope="row">Schema library toolbar</th><td>Search, Create schema, Import/Export Schema Library, Recheck captured events and count.</td><td><a href="side-panel.html#schemas-library">Schemas · library toolbar</a></td><td>Mock filtering/review entry; no file or validation work.</td></tr>
+              <tr><th scope="row">Schema rows &amp; evidence</th><td>Select, edit, duplicate/delete, revision state, validation issues and saved validation records.</td><td><a href="side-panel.html#schemas-library">Schemas · rows and evidence</a></td><td>Hardcoded selection and issue records.</td></tr>
+              <tr><th scope="row">Schema identity &amp; inheritance</th><td>Name, description/save description, validation target, parent schema, provenance and only-declared-properties.</td><td><a href="side-panel.html#schema-editor-dialog">Schema editor · Overview</a></td><td>Static form controls.</td></tr>
+              <tr><th scope="row">Property navigation</th><td>Table/Tree views, search, All/conditions/documentation/issues filter, tree/name/type sort and add root property.</td><td><a href="studio.html#schema-table">Studio · canonical property table</a></td><td>Hardcoded property selection/filtering.</td></tr>
+              <tr><th scope="row">Property definition</th><td>Name/path, type, array item type, presence, description, allowed values, example method/value and save.</td><td><a href="studio.html#property-definition">Studio · focused Definition</a></td><td>Visual inputs; no canonical command dispatch.</td></tr>
+              <tr><th scope="row">Focused property facets</th><td>Definition, Rules and Structure primary sections plus Presence, Values, Conditions, Documentation and Example facets.</td><td><a href="studio.html#schema-table">Studio · Property actions</a></td><td>Click-through focused editor.</td></tr>
+              <tr><th scope="row">Rules &amp; conditions</th><td>Presence/value/pattern/range/cardinality/reusable rules, All/Any/Not tree, predicates, severity, messages and parameters.</td><td><a href="studio.html#property-rules">Studio · focused Rules</a></td><td>Hardcoded nested rule editor.</td></tr>
+              <tr><th scope="row">Structure operations</th><td>Add child, move, reorder, reparent, copy/duplicate, rename/path change and nested container defaults.</td><td><a href="studio.html#property-structure">Studio · focused Structure</a></td><td>Staged visual preview only.</td></tr>
+              <tr><th scope="row">Ownership &amp; provenance</th><td>View/Edit, Override/Replace here, Reset to parent, Remove local, Open source/conflict/contributors and inherited rule overrides.</td><td><a href="studio.html#property-definition">Studio · property context menu</a></td><td>Static ownership states and impact reviews.</td></tr>
+              <tr><th scope="row">Schema supporting panels</th><td>Validation examples, assignments, generated schema document, revision selector/comparison, Duplicate and Restore revision.</td><td><a href="side-panel.html#schema-editor-dialog">Schema editor · supporting details</a></td><td>Expandable static sections.</td></tr>
+              <tr><th scope="row">Schema draft lifecycle</th><td>Publish schema, Close, Publish and close, Discard draft and disabled reason.</td><td><a href="state-gallery.html#schema-lifecycle">Gallery · publication and delete states</a></td><td>Accessible reviews; no revision is written.</td></tr>
+              <tr><th scope="row">Schema reviews</th><td>Publication diff, unsaved close, append/replace import and schema deletion.</td><td><a href="state-gallery.html#schema-lifecycle">Gallery · schema lifecycle</a></td><td>Hardcoded review dialogs.</td></tr>
+              <tr><th scope="row">Reusable Rule Library</th><td>Search, Create, Export, list/open and empty state.</td><td><a href="side-panel.html#rules-library">Rule Library</a></td><td>Static list and editor dialog.</td></tr>
+              <tr><th scope="row">Reusable rule editor</th><td>Name, kind, attached schemas, update pinned attachments, parameters, type/operator/severity/message, examples and Save rule.</td><td><a href="side-panel.html#rule-editor-dialog">Rule editor</a></td><td>Form-only mock.</td></tr>
+              <tr><th scope="row">Rule lifecycle reviews</th><td>Pinned upgrade Continue/Keep pinned and reusable-rule Delete/Cancel.</td><td><a href="state-gallery.html#schema-lifecycle">Gallery · rule upgrade/delete</a></td><td>No schema snapshots or rules change.</td></tr>
+              <tr><th scope="row">Assignment Library</th><td>Search, Create, count, conflict output, list selection and empty state.</td><td><a href="side-panel.html#assignments-library">Assignments</a></td><td>Hardcoded records.</td></tr>
+              <tr><th scope="row">Assignment editor</th><td>Schema, source, event, payload/raw target, domain/path conditions, priority, version policy, enabled and Save.</td><td><a href="side-panel.html#assignment-editor-dialog">Assignment editor</a></td><td>Static form and conflict note.</td></tr>
+              <tr><th scope="row">Canonical migration &amp; removal impact</th><td>Conflict resolutions, Confirm migration, property removal consumers, repairs, keep/remove.</td><td><a href="state-gallery.html#schema-lifecycle">Gallery · canonical reviews</a></td><td>Review-only impact evidence.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="hotkeys-map" class="coverage-group" aria-labelledby="hotkeys-map-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Side panel · Hotkeys &amp; commands</p>
+            <h2 id="hotkeys-map-title">Operator shortcuts</h2>
+          </div>
+          <span class="status-chip good">Covered</span>
+        </div>
+        <div class="table-scroll panel">
+          <table class="data-table control-table">
+            <thead><tr><th scope="col">Current control family</th><th scope="col">Controls retained</th><th scope="col">Mock destination</th><th scope="col">Mock behaviour</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Hotkey search</th><td>Search commands and grouped command inventory.</td><td><a href="side-panel.html#workspace-hotkeys">Hotkeys · command list</a></td><td>May filter hardcoded commands only.</td></tr>
+              <tr><th scope="row">Binding editor</th><td>Current binding, capture/rebind, clear/reset and duplicate/conflict feedback.</td><td><a href="side-panel.html#workspace-hotkeys">Hotkeys · binding rows</a></td><td>Visual binding capture; browser shortcuts unchanged.</td></tr>
+              <tr><th scope="row">Keymap files</th><td>Create keymap, Update keymap, Load keymap/file chooser, status and warning.</td><td><a href="side-panel.html#workspace-hotkeys">Hotkeys · Keymap files</a></td><td>No file generation or reading.</td></tr>
+              <tr><th scope="row">Command catalogue parity</th><td>Palette and Hotkeys expose the same registered commands and availability reasons.</td><td><a href="side-panel.html#command-palette">Command palette</a></td><td>Hardcoded shared catalogue.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="studio-shell-map" class="coverage-group" aria-labelledby="studio-shell-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Specification Studio · shell</p>
+            <h2 id="studio-shell-title">Starting paths, workspace and global tools</h2>
+          </div>
+          <span class="status-chip good">Covered</span>
+        </div>
+        <div class="table-scroll panel">
+          <table class="data-table control-table">
+            <thead><tr><th scope="col">Current control family</th><th scope="col">Controls retained</th><th scope="col">Mock destination</th><th scope="col">Mock behaviour</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Project starting paths</th><td>Retail template, full import, JSON/JSON Schema, spreadsheet, adopt schemas and blank project.</td><td><a href="studio.html">Studio · start-screen pattern represented by populated project</a></td><td>Primary mock opens a rich project; start choices are traced here and in gallery imports.</td></tr>
+              <tr><th scope="row">Blank project form</th><td>Project name, description, site and Create blank project.</td><td><a href="side-panel.html#create-project-dialog">Project creation equivalent</a></td><td>Presentation-only form.</td></tr>
+              <tr><th scope="row">Project status bar</th><td>Active project context, Ready/Saving/Saved/Failed status and Retry save.</td><td><a href="studio.html">Studio · project bar</a> · <a href="state-gallery.html#studio-recovery">failed state</a></td><td>Static status plus recovery dialog.</td></tr>
+              <tr><th scope="row">Project tree</th><td>Shared Profiles, Pages, Page Groups, Events, Applicability, Flows, Fixtures, Assignments and Releases with counts.</td><td><a href="studio.html">Studio · collection rail</a></td><td>Click-through collection selection.</td></tr>
+              <tr><th scope="row">Breadcrumb &amp; global search</th><td>Project/entity breadcrumb and cross-collection property/entity search.</td><td><a href="studio.html">Studio · sticky workbench tools</a></td><td>Hardcoded search/filtering.</td></tr>
+              <tr><th scope="row">Inspector layout</th><td>Show/Hide Inspector, contextual summary, where-used and quick actions.</td><td><a href="studio.html#studio-inspector">Studio · Inspector</a></td><td>Click toggles mock layout only.</td></tr>
+              <tr><th scope="row">Validate toolbar</th><td>Run preflight and Coverage matrix.</td><td><a href="studio.html#studio-coverage">Studio · assurance tools</a> · <a href="state-gallery.html#assurance-release">state variants</a></td><td>Routes to hardcoded assurance views.</td></tr>
+              <tr><th scope="row">Release toolbar</th><td>Publish release and release review entry.</td><td><a href="state-gallery.html#assurance-release">Gallery · release review</a></td><td>No immutable plan is created.</td></tr>
+              <tr><th scope="row">More actions</th><td>Undo, Redo, Generate documentation, full-fidelity export, JSON Schema + manifest export and Import project.</td><td><a href="studio.html">Studio · More menu</a></td><td>Dialogs/navigation only; no history/files.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="studio-entities-map" class="coverage-group" aria-labelledby="studio-entities-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Specification Studio · authoring</p>
+            <h2 id="studio-entities-title">Collection and entity lifecycle</h2>
+          </div>
+          <span class="status-chip good">Covered</span>
+        </div>
+        <div class="table-scroll panel">
+          <table class="data-table control-table">
+            <thead><tr><th scope="col">Current control family</th><th scope="col">Controls retained</th><th scope="col">Mock destination</th><th scope="col">Mock behaviour</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Collection overviews</th><td>Add action, purpose/prerequisites/consumers guidance, search result count, Open entity and Remove entity.</td><td><a href="studio.html">Studio · collection rail/workspace</a></td><td>Hardcoded collections and navigation.</td></tr>
+              <tr><th scope="row">Entity creation</th><td>Name plus kind-specific fields, Create and Back/Cancel for all eight collection kinds.</td><td><a href="studio.html">Studio · contextual Add flow</a></td><td>Representative editor structure; no entity is appended.</td></tr>
+              <tr><th scope="row">Shared Profile fields</th><td>Name, purpose, Save complete entity, Duplicate and canonical schema contribution.</td><td><a href="studio.html#studio-profile">Studio · Shared Profile</a></td><td>Primary showcase form.</td></tr>
+              <tr><th scope="row">Page fields</th><td>Observed event, environment/host/path/query/hash matchers, SPA, expected events, profiles, applicability and Page Groups.</td><td><a href="studio.html#studio-pages">Studio · Page context pattern</a></td><td>Equivalent form placement in workbench/Inspector.</td></tr>
+              <tr><th scope="row">Page Group fields</th><td>Environment, membership matcher, profiles, applicability and local schema contribution.</td><td><a href="studio.html#studio-page-groups">Studio · Page Group context</a></td><td>Hardcoded Retail/Trade group examples.</td></tr>
+              <tr><th scope="row">Event fields</th><td>Source, canonical name, trigger, target, occurrence policy, profiles and applicability.</td><td><a href="studio.html#studio-events">Studio · Event context</a></td><td>Equivalent editor pattern.</td></tr>
+              <tr><th scope="row">Applicability editor</th><td>Priority, fallback and nested All/Any/Not predicates.</td><td><a href="studio.html#studio-applicability">Studio · Applicability</a></td><td>Static condition-tree editor.</td></tr>
+              <tr><th scope="row">Fixture fields</th><td>Mode, Event/Page/Flow, context, ordered observations, payload, expected result, release policy and production run.</td><td><a href="studio.html#studio-fixtures">Studio · Fixture/coverage journey</a></td><td>Hardcoded fixture result.</td></tr>
+              <tr><th scope="row">Assignment fields</th><td>Name, contributor kind/target, Event, Applicability, source, target, priority and Save draft.</td><td><a href="studio.html#studio-assignments">Studio · Assignments Inspector</a></td><td>Static form and conflict examples.</td></tr>
+              <tr><th scope="row">Entity removal review</th><td>Dependency list/Open consumer, blocked state, Cancel removal, Remove and Undo-stable-identity feedback.</td><td><a href="state-gallery.html#schema-lifecycle">Gallery · impact review pattern</a></td><td>No entity removal; dependencies remain visible.</td></tr>
+              <tr><th scope="row">Saved-schema adoption</th><td>Saved Schema picker, Add/review, adopt vs synchronise diff, Commit and Cancel.</td><td><a href="studio.html#saved-schema-review">Studio · Shared Profile source lineage</a></td><td>Hardcoded adoption/synchronisation review.</td></tr>
+              <tr><th scope="row">Bulk property authoring</th><td>Paste/CSV/JSON/JSON Schema/template formats, stage, select/repair rows, Mark Required and Commit all.</td><td><a href="studio.html#bulk-authoring">Studio · bulk authoring Inspector</a></td><td>Static staging-grid representation.</td></tr>
+              <tr><th scope="row">Page Group membership</th><td>Search/add, open, move earlier/later, remove, confirm reorder, ordered migration and effective-schema evaluation.</td><td><a href="studio.html#studio-page-groups">Studio · Page Group stack</a> · <a href="state-gallery.html#schema-lifecycle">impact states</a></td><td>Hardcoded ordering and migration evidence.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="canonical-map" class="coverage-group" aria-labelledby="canonical-map-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Specification Studio · schema workspace</p>
+            <h2 id="canonical-map-title">Canonical and composed property authoring</h2>
+          </div>
+          <span class="status-chip good">Covered</span>
+        </div>
+        <div class="table-scroll panel">
+          <table class="data-table control-table">
+            <thead><tr><th scope="col">Current control family</th><th scope="col">Controls retained</th><th scope="col">Mock destination</th><th scope="col">Mock behaviour</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Canonical draft header</th><td>Draft/source/lineage/revision status, Undo and Redo.</td><td><a href="studio.html#studio-profile">Studio · schema header</a></td><td>Hardcoded lineage and history states.</td></tr>
+              <tr><th scope="row">Property table/tree</th><td>Row selection/reorder, presence/type/description/values/example/source/effective/validation columns.</td><td><a href="studio.html#schema-table">Studio · Shared Profile property workspace</a></td><td>Primary populated click-through.</td></tr>
+              <tr><th scope="row">Property actions menu</th><td>Definition, Rules, Structure summaries and ownership actions.</td><td><a href="studio.html#schema-table">Studio · Property actions</a></td><td>Switches focused hardcoded forms.</td></tr>
+              <tr><th scope="row">Definition editing</th><td>Type/item type/presence, allowed values, example method/value and documentation summary.</td><td><a href="studio.html#property-definition">Studio · focused Definition</a></td><td>Form values are not saved.</td></tr>
+              <tr><th scope="row">Rule inventory</th><td>View/edit/restore/remove/override, stable identities, enabled state, enforcement and source.</td><td><a href="studio.html#property-rules">Studio · focused Rules</a></td><td>Static inventory.</td></tr>
+              <tr><th scope="row">Add/edit rule</th><td>Outcome kind, When condition, presence/value/pattern/range/cardinality, reusable picker, severity, message and Add.</td><td><a href="studio.html#property-rules">Studio · focused Rules</a></td><td>Nested form demonstration.</td></tr>
+              <tr><th scope="row">Allowed values</th><td>Expected value, value rows, add/view/edit/remove/restore/override and ownership state.</td><td><a href="studio.html#property-definition">Studio · Definition</a> / <a href="studio.html#property-rules">Rules</a></td><td>Hardcoded value chips/rows.</td></tr>
+              <tr><th scope="row">Structure editor</th><td>Add child/root, relationship/parent, move/reorder/reparent and staged structural review.</td><td><a href="studio.html#property-structure">Studio · focused Structure</a></td><td>Preview-only operations.</td></tr>
+              <tr><th scope="row">Composed contributor rows</th><td>Filter/sort, choose inherited property, Add local property, edit/reset local facets and Open repair source.</td><td><a href="studio.html#studio-pages">Studio · composed Page</a> / <a href="studio.html#studio-page-groups">Page Group pattern</a></td><td>Representative inherited/local states.</td></tr>
+              <tr><th scope="row">Effective documentation</th><td>Display text, description/comments/example, generated effective summary and command feedback.</td><td><a href="studio.html#studio-profile">Studio · effective documentation</a></td><td>Hardcoded preview.</td></tr>
+              <tr><th scope="row">Migration &amp; impact</th><td>Legacy canonical conversion, conflict resolution, property consumer review and destructive confirmation.</td><td><a href="state-gallery.html#schema-lifecycle">Gallery · canonical governance</a></td><td>Review-only dialogs.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="flow-map" class="coverage-group" aria-labelledby="flow-map-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Specification Studio · Flow &amp; evidence</p>
+            <h2 id="flow-map-title">Journey topology, examples and documentation</h2>
+          </div>
+          <span class="status-chip good">Covered</span>
+        </div>
+        <div class="table-scroll panel">
+          <table class="data-table control-table">
+            <thead><tr><th scope="col">Current control family</th><th scope="col">Controls retained</th><th scope="col">Mock destination</th><th scope="col">Mock behaviour</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Flow identity fields</th><td>Name, entry/exit conditions, timeout, correlation field, profiles and applicability.</td><td><a href="studio.html#studio-flows">Studio · Checkout Flow</a></td><td>Hardcoded Flow context.</td></tr>
+              <tr><th scope="row">Component catalogues</th><td>Search Page Groups, Pages and Events; draggable/addable component choices.</td><td><a href="studio.html#studio-flows">Studio · Flow catalogues</a></td><td>Selection and visual mock positioning only.</td></tr>
+              <tr><th scope="row">Lane &amp; Page-frame controls</th><td>Lane order, page placement before/in/after lanes, move/reassign/open schema/remove and keyboard equivalents.</td><td><a href="studio.html#flow-canvas">Studio · Flow canvas</a></td><td>Hardcoded topology; no graph write.</td></tr>
+              <tr><th scope="row">Occurrence controls</th><td>Insert/select Event occurrence, move/connect/open schema/remove and outline equivalent.</td><td><a href="studio.html#flow-canvas">Studio · Flow canvas/outline</a></td><td>Static nodes and selected state.</td></tr>
+              <tr><th scope="row">Connections</th><td>Input/output/top/bottom ports, keyboard target cycling, directed relationship selection and cancel.</td><td><a href="studio.html#flow-canvas">Studio · directional graph</a></td><td>Visual connection affordances only.</td></tr>
+              <tr><th scope="row">Relationship editor</th><td>Group, optional label, documentation condition, expectation, Save, Cancel and Delete relationship.</td><td><a href="studio.html#flow-canvas">Studio · relationship popover</a></td><td>Static inline form.</td></tr>
+              <tr><th scope="row">Derived examples</th><td>Read-only JSON, provenance, issue repair links, per-path example value and Save example.</td><td><a href="studio.html#flow-canvas">Studio · occurrence detail</a></td><td>Hardcoded JSON/provenance.</td></tr>
+              <tr><th scope="row">Advanced executable steps</th><td>Executable step name, Add step and ordered runtime sequence.</td><td><a href="studio.html#studio-inspector">Studio · Flow Inspector</a></td><td>Form-only sequence mock.</td></tr>
+              <tr><th scope="row">Flow documentation setup</th><td>Value map/matrix, style, path labels, property/context selection/order, step labels, metadata/headings and reset.</td><td><a href="state-gallery.html#assurance-release">Gallery · documentation export</a></td><td>Hardcoded setup and preview.</td></tr>
+              <tr><th scope="row">Flow documentation delivery</th><td>Cell detail/repair, refresh stale preview, copy spreadsheet/rich table, Excel download and close.</td><td><a href="state-gallery.html#assurance-release">Gallery · documentation actions</a></td><td>No clipboard/download; static feedback only.</td></tr>
+              <tr><th scope="row">Fixture execution</th><td>Run production fixture, expected/actual evaluator outcome and linked repair.</td><td><a href="state-gallery.html#assurance-release">Gallery · preflight/coverage evidence</a></td><td>Predetermined pass/fail records.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section id="assurance-map" class="coverage-group" aria-labelledby="assurance-map-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Specification Studio · assurance &amp; repository</p>
+            <h2 id="assurance-map-title">Preflight, release, import and recovery</h2>
+          </div>
+          <span class="status-chip good">Covered</span>
+        </div>
+        <div class="table-scroll panel">
+          <table class="data-table control-table">
+            <thead><tr><th scope="col">Current control family</th><th scope="col">Controls retained</th><th scope="col">Mock destination</th><th scope="col">Mock behaviour</th></tr></thead>
+            <tbody>
+              <tr><th scope="row">Preflight</th><td>Content identity, fixture count, ready/blocked summary, blocker list and Open offending entity.</td><td><a href="state-gallery.html#assurance-release">Gallery · blocked/ready preflight</a></td><td>Hardcoded assurance outcomes.</td></tr>
+              <tr><th scope="row">Coverage matrix</th><td>Effective requirement, contexts, assignments, fixtures, covered/gap status and repair actions.</td><td><a href="state-gallery.html#assurance-release">Gallery · coverage table</a></td><td>Static evidence matrix.</td></tr>
+              <tr><th scope="row">Release review</th><td>Diff, blockers, Publish, Publish and close, Restore as Draft and Cancel.</td><td><a href="state-gallery.html#assurance-release">Gallery · release 13 review</a></td><td>No publication or restoration.</td></tr>
+              <tr><th scope="row">Release collection</th><td>Published revisions, immutable identity/metadata, open detail and restore-as-Draft route.</td><td><a href="studio.html#studio-releases">Studio · Releases</a></td><td>Hardcoded release history.</td></tr>
+              <tr><th scope="row">Project documentation export</th><td>Semantics checkboxes, generated preview, Copy documentation table and Close.</td><td><a href="state-gallery.html#assurance-release">Gallery · documentation export</a></td><td>No clipboard write.</td></tr>
+              <tr><th scope="row">Project export</th><td>Full-fidelity Specification Project and Standard JSON Schema + manifest.</td><td><a href="studio.html">Studio · More menu</a></td><td>No files generated.</td></tr>
+              <tr><th scope="row">Staged Studio import</th><td>Summary, ID-collision blocker, Remap ID, Commit complete import and Cancel.</td><td><a href="state-gallery.html#studio-recovery">Gallery · Studio import</a></td><td>No project graph read or commit.</td></tr>
+              <tr><th scope="row">Concurrent conflict review</th><td>Per-field choices, Reload newer Draft, Reapply pending edit and Merge selected fields.</td><td><a href="state-gallery.html#studio-recovery">Gallery · conflict resolution</a></td><td>Review closes; storage remains untouched.</td></tr>
+              <tr><th scope="row">Studio storage recovery</th><td>Retry, export exact unsaved Draft, repository backup, diagnostics and Close.</td><td><a href="state-gallery.html#studio-recovery">Gallery · Studio recovery</a></td><td>No persistence, diagnostics or downloads.</td></tr>
+              <tr><th scope="row">Cross-window active context</th><td>Confirm requested project context and continue, Cancel, and live synchronisation status.</td><td><a href="state-gallery.html#project-storage">Gallery · context-switch review</a></td><td>Static cross-window hand-off pattern.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="principle-strip" aria-labelledby="boundary-title">
+        <div>
+          <p class="eyebrow">Implementation hand-off</p>
+          <h2 id="boundary-title">The redesign may regroup controls; it must not thin them out.</h2>
+        </div>
+        <ul>
+          <li><strong>Keep stable behaviour names.</strong> Production actions can map to new component placement without losing intent.</li>
+          <li><strong>Keep conditional reasons visible.</strong> A disabled action needs the same truthful gate and recovery route.</li>
+          <li><strong>Keep reviews atomic.</strong> Import, publication, migration, conflict and destruction remain explicit boundaries.</li>
+          <li><strong>Keep provenance near decisions.</strong> Canonical ownership, source lineage and where-used evidence stay inspectable.</li>
+        </ul>
+      </section>
+
+      <section class="comic-strip closing-strip">
+        <p class="comic-kicker">AUDIT COMPLETE!</p>
+        <p>All current control families have a redesign destination. The mock deliberately supplies none of their real side effects.</p>
+        <div class="button-row">
+          <a class="button primary" href="side-panel.html">Inspect the side panel</a>
+          <a class="button secondary" href="studio.html">Inspect Specification Studio</a>
+          <a class="button secondary" href="state-gallery.html">Inspect rare states</a>
+        </div>
+      </section>
+    </main>
+
+    <footer class="mock-footer mock-shell">
+      <p><strong>TWAtility Belt</strong> · keeping markup tight and requirements tighter.</p>
+      <p>Static design reference · no Chrome APIs · no storage · no persistence</p>
+    </footer>
+  </body>
+</html>
