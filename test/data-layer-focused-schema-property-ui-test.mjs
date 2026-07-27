@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {focusedConditionLabel,focusedDefinitionFieldLabels,focusedOwnershipActionTarget,focusedOwnershipActions,focusedPropertyLayerSequence,focusedPropertyLifecycleOperation,focusedPropertyProvenanceSummary,focusedPropertySections,focusedRuleFields,focusedSectionOwnershipActions,focusedSparseDelta} from "../dist/data-layer-focused-schema-property-ui.js";
+import {activateFocusedOwnershipSection,focusedConditionLabel,focusedDefinitionFieldLabels,focusedOwnershipActionTarget,focusedOwnershipActions,focusedOwnershipControlEditable,focusedOwnershipSectionEditable,focusedPropertyLayerSequence,focusedPropertyLifecycleOperation,focusedPropertyProvenanceSummary,focusedPropertySections,focusedRuleFields,focusedSectionOwnershipActions,focusedSparseDelta} from "../dist/data-layer-focused-schema-property-ui.js";
 import {applyCanonicalCommand,canonicalPredicateIds,canonicalPredicateWithStableIds,createCanonicalSchema} from "../dist/data-layer-canonical-schema.js";
 import {canonicalFlatPredicateIssue} from "../dist/canonical-schema/predicate-policy.js";
 import {canonicalNavigatorRows} from "../dist/canonical-schema-focused/navigator-rows.js";
@@ -73,7 +73,7 @@ assert.equal(schemaTableExpectedOrAllowed({expectedValue:"retail",allowedValues:
 assert.equal(schemaTableExpectedOrAllowed({allowedValues:["retail","business"]}),"retail, business","allowed values render as editable human text when there is no single expectation");
 assert.deepEqual(schemaTableValueFacet({allowedValues:["retail",2,true]}),{kind:"allowed",text:"retail, 2, true",values:["retail",2,true]});
 assert.equal(schemaTableRuleConditionSummary({kind:"predicate",propertyId:"line"},[]), "line choose operator", "an incomplete inherited rule remains inspectable instead of crashing the focused inventory");
-assert.deepEqual(focusedOwnershipActions({inherited:true}),["View","Override here","Open source"]);
+assert.deepEqual(focusedOwnershipActions({inherited:true}),["View","Open source"]);
 assert.deepEqual(focusedOwnershipActions({inherited:true,replaceable:true}),["View","Replace here","Open source"]);
 assert.deepEqual(focusedOwnershipActions({local:true}),["View","Edit","Remove local"]);
 assert.deepEqual(focusedOwnershipActions({overridden:true}),["View","Edit","Reset to parent"]);
@@ -86,8 +86,13 @@ assert.deepEqual(
 );
 assert.deepEqual(
   focusedSectionOwnershipActions({inherited:true}),
-  {definition:["View","Override here","Open source"],rules:["View","Override here","Open source"],structure:[]},
-  "an inherited property exposes no local Structure lifecycle action and retains exact facet and rule ownership actions",
+  {definition:[],rules:["View","Open source"],structure:["Override here"]},
+  "ordinary inherited Definition fields need no ownership action while Structure retains its named identity transition",
+);
+assert.deepEqual(
+  focusedSectionOwnershipActions({inherited:true,replaceable:true}),
+  {definition:[],rules:["View","Replace here","Open source"],structure:["Override here"]},
+  "replaceable inherited rule identity is the only inherited rule editing transition",
 );
 assert.deepEqual(
   focusedSectionOwnershipActions({overridden:true}),
@@ -120,6 +125,25 @@ assert.deepEqual(
   "canonical Remove local stages removal of only the identified local property",
 );
 assert.equal(focusedPropertyLifecycleOperation("View","property:line"),undefined,"non-lifecycle ownership actions never stage deletion");
+
+const inheritedOwnership={inherited:true,local:false,activated:[]};
+assert.equal(focusedOwnershipSectionEditable(inheritedOwnership,"definition"),true,"ordinary inherited Definition fields start enabled");
+assert.equal(focusedOwnershipSectionEditable(inheritedOwnership,"structure"),false,"inherited structure starts unavailable");
+assert.deepEqual(activateFocusedOwnershipSection(inheritedOwnership,"definition","View"),inheritedOwnership,"viewing does not establish ownership");
+assert.equal(focusedOwnershipSectionEditable({...inheritedOwnership,invariant:true},"definition"),true,"ordinary fields remain editable when the same Definition contains invariant facets");
+assert.equal(focusedOwnershipControlEditable({...inheritedOwnership,invariant:true},"definition","propertyType"),false,"an inherited invariant Type facet remains read-only");
+assert.equal(focusedOwnershipControlEditable({...inheritedOwnership,invariant:true},"definition","presenceMode"),false,"an inherited invariant Presence facet remains read-only");
+assert.equal(focusedOwnershipControlEditable({...inheritedOwnership,invariant:true},"definition","description"),true,"ordinary inherited Description remains editable beside invariant facets");
+assert.equal(focusedOwnershipControlEditable(inheritedOwnership,"structure","Add child"),true,"adding a child creates local structure without overriding inherited identity");
+assert.equal(focusedOwnershipControlEditable(inheritedOwnership,"structure","Add sibling"),true,"adding a sibling creates local structure without overriding inherited identity");
+assert.equal(focusedOwnershipControlEditable(inheritedOwnership,"structure","Duplicate"),true,"duplicating creates local structure without overriding inherited identity");
+assert.equal(focusedOwnershipControlEditable(inheritedOwnership,"structure","Rename"),false,"renaming inherited identity requires ownership");
+assert.equal(focusedOwnershipControlEditable(inheritedOwnership,"structure","Move earlier"),false,"moving inherited identity requires ownership");
+assert.equal(focusedOwnershipControlEditable(inheritedOwnership,"structure","Delete property"),false,"inherited structure cannot be deleted");
+const activatedOwnership=activateFocusedOwnershipSection(inheritedOwnership,"structure","Override here");
+assert.equal(focusedOwnershipSectionEditable(activatedOwnership,"structure"),true,"Override here establishes structural identity ownership");
+assert.equal(focusedOwnershipControlEditable(activatedOwnership,"structure","Rename"),true,"owned structure can be renamed");
+assert.equal(focusedOwnershipControlEditable(activatedOwnership,"structure","Delete property"),false,"an inherited property remains undeletable after structural ownership activation");
 assert.equal(focusedSourceState({provenance:[{state:"conflict"}]}),"conflict");
 assert.deepEqual(focusedRuleFields("range"),["condition","minimum","maximum","severity","message"]);
 assert.deepEqual(focusedRuleFields("pattern"),["condition","pattern","severity","message"]);

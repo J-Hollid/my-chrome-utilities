@@ -73,7 +73,7 @@ import { cardinalityComparisonPasses, cardinalityMeasuredValue } from "./utiliti
 import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, createRuleConfigurationFromAttachedRule, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./utilities/data-layer/schemas.js";
 import { canonicalRulePropertyPath } from "./utilities/data-layer/schemas.js";
 import { renderSchemaSpecificationBuilder } from "./utilities/data-layer/schemas.js";
-import { applyCanonicalCommand, canonicalCommandOutcome, canonicalCommandsFromCompactProjection, canonicalMigrationDurablyAcknowledged, canonicalPredicateText, canonicalPropertyPath, clearSchemaTableOverlay, compactSchemaProjection, composedCanonicalSchema, createCanonicalSchema, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions, focusedSourceState, focusedStagedChanges, hasLegacySchemaRepresentation, migrateLegacyProfile, mountCanonicalPredicateEditor, mountSchemaTableOverlay, mountSidePanelLayeredProfileEditor, renderCanonicalFocusedSection, renderFocusedPropertyMenu, resolveCanonicalMigrationConflict, resolveSidePanelSchemaContributor, saveComposedCanonicalDocument, saveComposedEventCanonicalDocument, saveEventOccurrenceCanonicalDocument, saveFlowPageInstanceCanonicalDocument, savedSchemaCanonicalDocument, savedSchemaFromCanonical, transactProject } from "./utilities/data-layer/schemas.js";
+import { activateFocusedOwnershipSection, applyCanonicalCommand, canonicalCommandOutcome, canonicalCommandsFromCompactProjection, canonicalMigrationDurablyAcknowledged, canonicalPredicateText, canonicalPropertyPath, clearSchemaTableOverlay, compactSchemaProjection, composedCanonicalSchema, createCanonicalSchema, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions, focusedSourceState, focusedStagedChanges, gateFocusedOwnershipSection, hasLegacySchemaRepresentation, migrateLegacyProfile, mountCanonicalPredicateEditor, mountSchemaTableOverlay, mountSidePanelLayeredProfileEditor, renderCanonicalFocusedSection, renderFocusedPropertyMenu, resolveCanonicalMigrationConflict, resolveSidePanelSchemaContributor, saveComposedCanonicalDocument, saveComposedEventCanonicalDocument, saveEventOccurrenceCanonicalDocument, saveFlowPageInstanceCanonicalDocument, savedSchemaCanonicalDocument, savedSchemaFromCanonical, transactProject } from "./utilities/data-layer/schemas.js";
 import { filterSchemaRelationshipTree, projectSchemaRelationshipTree, restoreSchemaRelationshipTreeView, saveSchemaRelationshipTreeView } from "./utilities/data-layer/schemas.js";
 import { beginCompactCanonicalHistoryTransition, compactCanonicalHistoryKey, compactCanonicalHistorySettlement, completeCompactCanonicalHistoryTransition, prepareCompactCanonicalRedo, prepareCompactCanonicalUndo, recordCompactCanonicalMutation, rejectCompactCanonicalHistoryTransition } from "./utilities/data-layer/schemas.js";
 import { mountProjectLibraryUi, PROJECT_LIBRARY_STORAGE_KEY, recordProjectNavigation, serializeProjectLibrary } from "./utilities/data-layer/schemas.js";
@@ -3423,6 +3423,7 @@ function persistSchemaEditorDraft(change) {
     renderSchemas();
 }
 function openContributorInUnifiedEditor(key) {
+    let pendingDurableRevision;
     schemaDraft = undefined;
     savedCanonicalDocument = undefined;
     const state = restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)), selection = state && resolveSidePanelSchemaContributor(state, key);
@@ -3431,7 +3432,7 @@ function openContributorInUnifiedEditor(key) {
     sidePanelLayeredProfileEditor?.close();
     if (schemaDetailEmpty)
         schemaDetailEmpty.hidden = true;
-    let contributorUi = {}, compatibilityCanonical, acknowledgedMigration, migration, migrationSavePending = false, migrationStatus = "", pendingMutationHistoryIdentity, pendingStepHistoryIdentity, pendingDurableRevision;
+    let contributorUi = {}, compatibilityCanonical, acknowledgedMigration, migration, migrationSavePending = false, migrationStatus = "", pendingMutationHistoryIdentity, pendingStepHistoryIdentity;
     const contributorSnapshots = new Map(), isComposed = (selected) => selected.scope !== "Shared Profile";
     const withContributorUi = (document) => { const selectedPropertyId = contributorUi.selectedPropertyId && document.nodes[contributorUi.selectedPropertyId] ? contributorUi.selectedPropertyId : document.selectedPropertyId; return { ...document, ...(selectedPropertyId ? { selectedPropertyId } : {}), ...(contributorUi.view ? { view: contributorUi.view } : {}) }; };
     const documentFor = (live, selected) => { if (isComposed(selected))
@@ -3608,17 +3609,12 @@ function transplantUnifiedContributorEntity(state, selection, entity, label) {
         return { ...project, collections: { ...project.collections, [selection.collectionKind]: collection.map((candidate) => candidate.id === selection.entity.id ? structuredClone(entity) : candidate) } };
     } const graphs = project.documentationFlowGraphs, graph = graphs[selection.flowId], field = selection.scope === "Flow Page-instance" ? "pageFrames" : "occurrences", entries = graph[field] ?? []; return { ...project, documentationFlowGraphs: { ...graphs, [selection.flowId]: { ...graph, [field]: entries.map((candidate) => candidate.id === selection.entity.id ? structuredClone(entity) : candidate) } } }; });
 }
+const unifiedContributorCommandLabels = new Map();
 async function settleUnifiedContributorRevision(projectId, revision) {
-    for (let attempt = 0; attempt < 400; attempt += 1) {
-        const failed = durableProjectRuntime.failedSave();
-        if (failed?.projectId === projectId)
-            throw failed.error;
-        const loaded = await durableProjectRuntime.repository.loadProject(projectId);
-        if (loaded.draftSequence >= revision)
-            return;
-        await new Promise((resolve) => setTimeout(resolve, 10));
-    }
-    throw new Error(`Saved Draft revision ${revision} was not acknowledged by durable storage.`);
+    const label = unifiedContributorCommandLabels.get(revision);
+    if (!label)
+        throw new Error(`Saved Draft command ${revision} has no durable acknowledgement identity.`);
+    await durableProjectRuntime.settledProjectCommand(projectId, label);
 }
 function commitUnifiedContributorState(next, label) {
     const serialized = projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY), envelope = restoreCanonicalProjectEnvelope(serialized), base = restoreCanonicalProjectState(serialized);
@@ -3627,6 +3623,7 @@ function commitUnifiedContributorState(next, label) {
     const result = commitCanonicalProjectState(projectStorage, next, { expectedRevision: envelope.revision, pendingLabel: label, base });
     if (result.status === "conflict")
         throw new Error(`Schema contributor changed in a newer Saved Draft; review the canonical command again.`);
+    unifiedContributorCommandLabels.set(result.revision, label);
     projectLibraryUi.captureActiveProject(next, result.revision);
     return result;
 }
@@ -4245,6 +4242,7 @@ function openCompactCanonicalPropertyActions(path, trigger) {
     if (!adapter || !documentModel || !original || !owner)
         return false;
     let working = structuredClone(original), activeSection, feedbackText = "", stagedOwnershipAction = "";
+    let ownershipSession = { inherited: focusedSourceState(original) === "inherited", local: ["local", "overridden"].includes(focusedSourceState(original)), invariant: original.enforcement === "invariant", activated: [] };
     const removedRuleIds = new Set(), removedValueIds = new Set(), stagedOperations = [];
     const state = focusedSourceState(original), sectionOwnership = focusedSectionOwnershipActions({ inherited: state === "inherited", local: state === "local", overridden: state === "overridden", invariant: original.enforcement === "invariant", conflict: state === "conflict", replaceable: original.enforcement === "overridable" });
     const close = () => { clearSchemaTableOverlay(owner); trigger.focus({ preventScroll: true }); };
@@ -4311,7 +4309,8 @@ function openCompactCanonicalPropertyActions(path, trigger) {
                 control.dataset.ownershipAction = action;
                 control.dataset.ownershipTarget = target.label;
                 control.setAttribute("aria-label", `${action} · ${target.label}`);
-                control.addEventListener("click", () => { feedbackText = `${action} targets ${target.label}.`; const operation = focusedPropertyLifecycleOperation(action, original.id); if (operation) {
+                control.addEventListener("click", () => { feedbackText = `${action} targets ${target.label}.`; ownershipSession = activateFocusedOwnershipSection(ownershipSession, section, action); if (action === "Override here" || action === "Replace here")
+                    stagedOwnershipAction = action; const operation = focusedPropertyLifecycleOperation(action, original.id); if (operation) {
                     stagedOwnershipAction = action;
                     if (!stagedOperations.some((candidate) => candidate.kind === "delete" && candidate.propertyId === original.id))
                         stagedOperations.push(operation);
@@ -4319,6 +4318,7 @@ function openCompactCanonicalPropertyActions(path, trigger) {
                 group.append(control);
             }
         }
+        gateFocusedOwnershipSection(body, ownershipSession, section);
         status.setAttribute("role", "status");
         status.textContent = feedbackText;
         cancel.type = "button";

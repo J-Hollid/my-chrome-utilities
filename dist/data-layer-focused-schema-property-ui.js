@@ -19,6 +19,42 @@ export const focusedPropertySectionLabels = {
     example: "Example",
     structure: "Structure",
 };
+export function focusedOwnershipSectionEditable(session, section) {
+    if (section === "rules")
+        return true;
+    if (section === "definition")
+        return true;
+    return session.local || !session.inherited || session.activated.includes(section);
+}
+export function activateFocusedOwnershipSection(session, section, action) {
+    if (action !== "Override here" && action !== "Replace here" || session.activated.includes(section))
+        return session;
+    return { ...session, activated: [...session.activated, section] };
+}
+const localStructureActions = new Set(["Add child", "Add sibling", "Duplicate"]);
+export function focusedOwnershipControlEditable(session, section, label) {
+    if (section === "definition")
+        return !session.invariant || !["propertyType", "itemType", "presenceMode"].includes(label);
+    if (section !== "structure")
+        return focusedOwnershipSectionEditable(session, section);
+    if (!session.inherited)
+        return true;
+    if (localStructureActions.has(label))
+        return true;
+    if (label === "Delete property")
+        return false;
+    return focusedOwnershipSectionEditable(session, section);
+}
+export function gateFocusedOwnershipSection(host, session, section) {
+    host.dataset.ownershipEditable = String(focusedOwnershipSectionEditable(session, section));
+    for (const control of Array.from(host.querySelectorAll("input,select,textarea,button"))) {
+        if (control.dataset.ownershipAction)
+            continue;
+        const label = control instanceof HTMLButtonElement ? control.textContent?.trim() ?? "" : control.getAttribute("aria-label") ?? control.getAttribute("name") ?? "";
+        if (!focusedOwnershipControlEditable(session, section, label))
+            control.disabled = true;
+    }
+}
 export function focusedOwnershipActionTarget(section, kind, id) {
     return { section, kind, id, label: `${section} ${kind} ${id}` };
 }
@@ -43,15 +79,15 @@ export function focusedOwnershipActions(input) {
     if (input.local)
         return ["View", "Edit", "Remove local"];
     if (input.inherited)
-        return ["View", ...(input.replaceable ? ["Replace here"] : ["Override here"]), "Open source"];
+        return ["View", ...(input.replaceable ? ["Replace here"] : []), "Open source"];
     return ["View", "Edit"];
 }
 export function focusedSectionOwnershipActions(input) {
     const actions = focusedOwnershipActions(input), lifecycle = new Set(["Remove local", "Reset to parent"]);
     return {
-        definition: actions.filter((action) => !lifecycle.has(action)),
+        definition: input.inherited && !input.local ? [] : actions.filter((action) => !lifecycle.has(action) && action !== "Replace here"),
         rules: [...actions],
-        structure: actions.filter((action) => lifecycle.has(action)),
+        structure: input.inherited && !input.local ? ["Override here"] : actions.filter((action) => lifecycle.has(action)),
     };
 }
 export const focusedReusableRuleStorageKey = "my-chrome-utilities.schema-rule-library.v1";

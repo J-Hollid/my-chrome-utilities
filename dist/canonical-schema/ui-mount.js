@@ -1,5 +1,5 @@
 import { canonicalPropertyPath } from "../data-layer-canonical-schema.js";
-import { focusedOwnershipActions, focusedPropertyLifecycleOperation } from "../data-layer-focused-schema-property-ui.js";
+import { activateFocusedOwnershipSection, focusedPropertyLifecycleOperation, focusedSectionOwnershipActions } from "../data-layer-focused-schema-property-ui.js";
 import { renderCanonicalFocusedSection } from "../data-layer-canonical-schema-focused-sections.js";
 import { renderCanonicalFocusedMenu } from "../data-layer-canonical-schema-focused-menu.js";
 import { renderCanonicalFocusedEditor } from "../data-layer-canonical-schema-focused-editor.js";
@@ -34,6 +34,7 @@ export function mountCanonicalSchemaEditor(options) {
     let query = "", propertyFilter = "all", propertySort = "tree", feedback = options.initialFeedback ?? "", activePropertyId = initialDocument.selectedPropertyId, activeSection = "definition", working, originFocus, originPath, menuPropertyId, focusedPropertyId, removedRuleIds = new Set(), removedValueIds = new Set(), stagedOperations = [], transientView;
     let overlayState = { phase: "closed" };
     let review;
+    let ownershipSession = { inherited: false, local: true, activated: [] };
     const current = () => { const document = options.load(); return transientView ? { ...document, view: transientView } : document; };
     const selectedNode = (document) => activePropertyId ? document.nodes[activePropertyId] : document.selectedPropertyId ? document.nodes[document.selectedPropertyId] : undefined;
     const ensureWorking = (node) => { if (!working || working.id !== node.id)
@@ -80,6 +81,7 @@ export function mountCanonicalSchemaEditor(options) {
         focusedPropertyId = undefined;
         activePropertyId = undefined;
         review = undefined;
+        ownershipSession = { inherited: false, local: true, activated: [] };
         render();
         const target = originFocus?.isConnected ? originFocus : restorePath ? options.host.querySelector(`[data-property-actions-path="${CSS.escape(restorePath)}"]`) : undefined;
         originFocus = undefined;
@@ -90,7 +92,7 @@ export function mountCanonicalSchemaEditor(options) {
     const closeChild = () => { focusedPropertyId = undefined; review = undefined; overlayState = activePropertyId ? { phase: "menu", path: canonicalPropertyPath(current(), activePropertyId) } : { phase: "closed" }; render(); const target = schemaTableOverlayTarget(options.host, `[data-property-context-menu="true"] [data-section="${activeSection}"] button`); if (target)
         queueMicrotask(() => target.focus({ preventScroll: true })); };
     const openProperty = (node, focus, section = "definition") => {
-        const document = current(), path = canonicalPropertyPath(document, node.id);
+        const document = current(), path = canonicalPropertyPath(document, node.id), source = focusedSourceState(node);
         overlayState = schemaTableOverlayTransition(overlayState, { kind: "open", path });
         activePropertyId = node.id;
         activeSection = section;
@@ -99,6 +101,7 @@ export function mountCanonicalSchemaEditor(options) {
         removedRuleIds = new Set();
         removedValueIds = new Set();
         stagedOperations = [];
+        ownershipSession = { inherited: source === "inherited", local: source === "local" || source === "overridden", invariant: node.enforcement === "invariant", activated: [] };
         ensureWorking(node);
         if (focus) {
             originFocus = focus;
@@ -160,7 +163,7 @@ export function mountCanonicalSchemaEditor(options) {
             output.textContent = message; }, quickEditRoot, quickEditScope: `canonical:${initialDocument.id}:${options.surface}`, selectedNode, openProperty, dismissOverlay: () => { if (focusedPropertyId)
             closeChild();
         else
-            closeFocused("escape"); }, command, render, renderMenu: (node) => renderCanonicalFocusedMenu(node, { dom, current, sourceState: focusedSourceState, ensureWorking, getWorking: () => working, activeSection, setActiveSection: (value) => { activeSection = value; focusedPropertyId = node.id; overlayState = schemaTableOverlayTransition(overlayState, { kind: "focus" }); }, setMenuPropertyId: (value) => { menuPropertyId = value; }, render, close: closeFocused, feedback: (message) => { feedback = message; }, provenanceText }), renderFocusedEditor: (document, node) => { const state = focusedSourceState(node), ownershipActions = focusedOwnershipActions({ inherited: state === "inherited", local: state === "local", overridden: state === "overridden", invariant: node.enforcement === "invariant", conflict: state === "conflict", replaceable: node.enforcement === "overridable" }); return renderCanonicalFocusedEditor(document, node, { dom, activeSection, sectionLabel, canonicalPropertyPath, provenanceText, presenceText, ownershipActions, runOwnershipAction: (action, targetLabel) => { ensureWorking(node); const operation = focusedPropertyLifecycleOperation(action, node.id); feedback = `${action} targets ${targetLabel}.`; if (operation)
+            closeFocused("escape"); }, command, render, renderMenu: (node) => renderCanonicalFocusedMenu(node, { dom, current, sourceState: focusedSourceState, ensureWorking, getWorking: () => working, activeSection, setActiveSection: (value) => { activeSection = value; focusedPropertyId = node.id; overlayState = schemaTableOverlayTransition(overlayState, { kind: "focus" }); }, setMenuPropertyId: (value) => { menuPropertyId = value; }, render, close: closeFocused, feedback: (message) => { feedback = message; }, provenanceText }), renderFocusedEditor: (document, node) => { const state = focusedSourceState(node), primary = activeSection, ownershipActions = focusedSectionOwnershipActions({ inherited: state === "inherited", local: state === "local", overridden: state === "overridden", invariant: node.enforcement === "invariant", conflict: state === "conflict", replaceable: node.enforcement === "overridable" })[primary]; return renderCanonicalFocusedEditor(document, node, { dom, activeSection, sectionLabel, canonicalPropertyPath, provenanceText, presenceText, ownershipActions, ownershipSession, runOwnershipAction: (action, targetLabel) => { ensureWorking(node); ownershipSession = activateFocusedOwnershipSection(ownershipSession, primary, action); const operation = focusedPropertyLifecycleOperation(action, node.id); feedback = `${action} targets ${targetLabel}.`; if (operation)
                 stagedOperations = [...stagedOperations, operation]; render(); }, renderSection: (host, value) => renderCanonicalFocusedSection(host, { dom, current, node: value, getWorking: () => working, setWorking: (next) => { working = next; }, activeSection, setActiveSection: (section) => { activeSection = section; }, removedRuleIds, removedValueIds, id: options.id, stageStructure, render, patchFor, command, select: (id) => { activePropertyId = id; }, feedback: (message) => { feedback = message; } }), close: closeChild, review: showReview, save: saveFocused }); } });
     options.host.addEventListener("keydown", (event) => { if (event.key === "Escape" && working) {
         event.preventDefault();

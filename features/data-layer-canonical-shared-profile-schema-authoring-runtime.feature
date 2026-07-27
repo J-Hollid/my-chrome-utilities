@@ -667,3 +667,57 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
       | Event             | in-panel       |
       | Flow Page-instance | in-panel       |
       | Event occurrence  | in-panel       |
+
+  # Data layer canonical Shared Profile schema authoring runtime 043
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 043
+    Given installed <contributor> inherits ordinary property /lineOfCustomer in the <surface> schema editor
+    When Definition is selected for that inherited property
+    Then every legally editable inherited Definition control is enabled and renders its effective value
+    And DOM inspection finds no required preliminary Override here, Edit, or ownership control
+    And focus, blur, and unchanged input leave staged state and the contributor record byte-identical
+    When actual controls change only Description to Checkout customer classification
+    Then staged state adds local ownership for only Description
+    And installed Review changes renders inherited, local, prospective effective, and source values
+    When actual confirmation commits
+    Then one durable property command stores only the local Description facet with <contributor> provenance
+    And parent, sibling, unrelated-facet, and Published hashes remain unchanged
+
+    Examples:
+      | contributor       | surface        |
+      | Page Group        | standalone     |
+      | Page              | standalone     |
+      | Event             | standalone     |
+      | Flow Page-instance | Flow workspace |
+      | Event occurrence  | Flow workspace |
+      | Page Group        | in-panel       |
+      | Page              | in-panel       |
+      | Event             | in-panel       |
+      | Flow Page-instance | in-panel       |
+      | Event occurrence  | in-panel       |
+
+  # Data layer canonical Shared Profile schema authoring runtime 044
+  Scenario: Data layer canonical Shared Profile schema authoring runtime 044
+    Given one installed focused property has ordinary and invariant inherited Definition facets, ordinary and replaceable inherited rules, and inherited structure
+    When actual controls inspect Definition, Rules, and Structure ownership activation
+    Then ordinary Definition controls are enabled while invariant controls are read-only with source guidance
+    And an ordinary inherited rule renders View and Open source without Edit, Remove, or Override here
+    And a replaceable inherited rule requires Replace here before an edit control is mounted
+    And actual Replace here stages a new local rule ID with the source rule ID while the inherited rule hash remains unchanged
+    And Add child, Add sibling, and Duplicate stage new local structure with no preceding property override command
+    And inherited Rename, Move earlier, Move later, and Move to root remain unavailable until Override here establishes structural ownership
+    And inherited Delete property remains unavailable while every local structure operation is directly operable
+    And DOM inspection finds no Structure-level Replace here control
+
+  # Data layer canonical Shared Profile schema authoring runtime 045
+  Scenario: Data layer canonical Shared Profile schema authoring runtime 045
+    Given installed Cart inherits Description Customer classification and Allowed values retail from Sitewide
+    When focused Definition changes Description to Cart customer classification
+    Then repository and Undo counts remain unchanged until installed Review changes is confirmed
+    When Enter commits cart, guest from Cart's Allowed values quick-edit cell
+    Then one direct property command commits without mounting the focused editor or Review changes
+    And repository inspection finds two sparse Cart-owned facets with the same provenance rules
+    When actual Cart controls invoke Reset to parent for description
+    Then only Cart's local Description bytes are deleted and current Sitewide Description renders
+    When production Undo and then Redo run
+    Then Undo restores the exact local Description patch and Redo removes it again
+    And the hash ledger records zero writes to Cart Allowed values, Sitewide, siblings, unrelated facets, and Published state during reset history
