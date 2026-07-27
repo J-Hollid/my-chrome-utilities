@@ -10,9 +10,14 @@ const insertOrder = (document, parentId, afterId) => { const siblings = orderWit
 const normalizeOrders = (document, parentId) => { orderWithin(document, parentId).forEach((node, index) => { node.order = index; }); };
 const orderedIds = (document, parentId) => orderWithin(document, parentId).flatMap((node) => [node.id, ...orderedIds(document, node.id)]);
 const itemSchema = (propertyId, itemType) => ({ id: `item:${propertyId}`, type: itemType });
-const transition = (node, nextType, nextItemType, descendants, document) => {
-    const itemChanged = node.type === "array" && nextType === "array" && node.itemType !== nextItemType, arrayBoundaryRemoved = node.type === "array" && nextType !== "array" && Boolean(node.itemSchema ?? node.itemType ?? descendants.length), objectChildrenRemoved = node.type === "object" && nextType !== "object" && descendants.length > 0, removeDescendants = descendants.length > 0 && (objectChildrenRemoved || arrayBoundaryRemoved || itemChanged), names = descendants.map((id) => document.nodes[id]?.name).filter(Boolean).join(", ");
-    const impact = objectChildrenRemoved ? `child definitions and documentation removed; destructive confirmation required` : arrayBoundaryRemoved ? `item boundary${names ? ` and item fields ${names}` : ""} removed when type changes from Array to ${nextType}` : itemChanged ? `${names ? `item fields ${names} removed when ` : ""}every item changes from ${node.itemType ?? "unspecified"} to ${nextItemType ?? "unspecified"}` : undefined;
+const itemTypes = (schema, fallback) => { const values = []; let current = schema; if (!current && fallback)
+    values.push(fallback); while (current?.type) {
+    values.push(current.type);
+    current = current.items;
+} return values; };
+const transition = (node, nextType, nextItemType, nextItemSchema, descendants, document) => {
+    const itemChanged = node.type === "array" && nextType === "array" && node.itemType !== nextItemType, recursiveItemChanged = node.type === "array" && nextType === "array" && !itemChanged && JSON.stringify(itemTypes(node.itemSchema, node.itemType)) !== JSON.stringify(itemTypes(nextItemSchema, nextItemType)), arrayBoundaryRemoved = node.type === "array" && nextType !== "array" && Boolean(node.itemSchema ?? node.itemType ?? descendants.length), objectChildrenRemoved = node.type === "object" && nextType !== "object" && descendants.length > 0, removeDescendants = descendants.length > 0 && (objectChildrenRemoved || arrayBoundaryRemoved || itemChanged || recursiveItemChanged), names = descendants.map((id) => document.nodes[id]?.name).filter(Boolean).join(", ");
+    const impact = objectChildrenRemoved ? `child definitions and documentation removed; destructive confirmation required` : arrayBoundaryRemoved ? `item boundary${names ? ` and item fields ${names}` : ""} removed when type changes from Array to ${nextType}` : recursiveItemChanged ? `item boundary${names ? ` and item fields ${names}` : ""} removed when recursive item shape changes from ${itemTypes(node.itemSchema, node.itemType).join(" → ")} to ${itemTypes(nextItemSchema, nextItemType).join(" → ")}` : itemChanged ? `${names ? `item fields ${names} removed when ` : ""}every item changes from ${node.itemType ?? "unspecified"} to ${nextItemType ?? "unspecified"}` : undefined;
     return { confirmationRequired: Boolean(impact), removeDescendants, impact };
 };
 function applyStructuralOperation(document, operation) {
@@ -115,7 +120,7 @@ export function applyCanonicalAtCurrent(document, command) {
         return { status: "applied", document: appendChange(next, command, [command.propertyId]) };
     }
     if (command.kind === "set") {
-        const descendants = orderedIds(next, command.propertyId), nextType = command.patch.type ?? node.type, nextItemType = nextType === "array" ? (Object.hasOwn(command.patch, "itemType") ? command.patch.itemType : node.itemType) : undefined, change = transition(node, nextType, nextItemType, descendants, next);
+        const descendants = orderedIds(next, command.propertyId), nextType = command.patch.type ?? node.type, nextItemType = nextType === "array" ? (Object.hasOwn(command.patch, "itemType") ? command.patch.itemType : node.itemType) : undefined, nextItemSchema = nextType === "array" ? (Object.hasOwn(command.patch, "itemSchema") ? command.patch.itemSchema : node.itemSchema) : undefined, change = transition(node, nextType, nextItemType, nextItemSchema, descendants, next);
         if (change.confirmationRequired && !command.confirmed)
             return { status: "confirmation-required", document, propertyId: command.propertyId, impact: change.impact };
         if (change.removeDescendants)
@@ -135,7 +140,7 @@ export function applyCanonicalAtCurrent(document, command) {
         return { status: "applied", document: appendChange(next, command, [...affected]) };
     }
     if (command.kind === "type") {
-        const descendants = orderedIds(next, command.propertyId), change = transition(node, command.type, command.itemType, descendants, next);
+        const descendants = orderedIds(next, command.propertyId), nextItemSchema = command.type === "array" && command.itemType ? itemSchema(node.id, command.itemType) : undefined, change = transition(node, command.type, command.itemType, nextItemSchema, descendants, next);
         if (change.confirmationRequired && !command.confirmed)
             return { status: "confirmation-required", document, propertyId: command.propertyId, impact: change.impact };
         if (change.removeDescendants)
@@ -144,7 +149,7 @@ export function applyCanonicalAtCurrent(document, command) {
         node.type = command.type;
         if (command.type === "array" && command.itemType) {
             node.itemType = command.itemType;
-            node.itemSchema = itemSchema(node.id, command.itemType);
+            node.itemSchema = nextItemSchema;
         }
         else {
             delete node.itemType;
