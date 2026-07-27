@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {focusedConditionLabel,focusedOwnershipActions,focusedPropertySections,focusedRuleFields,focusedSparseDelta} from "../dist/data-layer-focused-schema-property-ui.js";
+import {focusedConditionLabel,focusedOwnershipActionTarget,focusedOwnershipActions,focusedPropertySections,focusedRuleFields,focusedSparseDelta} from "../dist/data-layer-focused-schema-property-ui.js";
 import {applyCanonicalCommand,canonicalPredicateIds,canonicalPredicateWithStableIds,createCanonicalSchema} from "../dist/data-layer-canonical-schema.js";
 import {canonicalFlatPredicateIssue} from "../dist/canonical-schema/predicate-policy.js";
 import {canonicalNavigatorRows} from "../dist/canonical-schema-focused/navigator-rows.js";
@@ -74,6 +74,16 @@ assert.deepEqual(focusedOwnershipActions({local:true}),["View","Edit","Remove lo
 assert.deepEqual(focusedOwnershipActions({overridden:true}),["View","Edit","Reset to parent"]);
 assert.deepEqual(focusedOwnershipActions({invariant:true}),["View","Open source"]);
 assert.deepEqual(focusedOwnershipActions({conflict:true}),["View conflict","Edit local resolution","Open contributing sources"]);
+assert.deepEqual(
+  focusedOwnershipActionTarget("Rules","rule","rule:customer-tier"),
+  {section:"Rules",kind:"rule",id:"rule:customer-tier",label:"Rules rule rule:customer-tier"},
+  "a section-local ownership control identifies its exact item before it stages a change",
+);
+assert.deepEqual(
+  focusedOwnershipActionTarget("Structure","property","property:line"),
+  {section:"Structure",kind:"property",id:"property:line",label:"Structure property property:line"},
+  "property lifecycle controls identify the structural item they affect",
+);
 assert.equal(focusedSourceState({provenance:[{state:"conflict"}]}),"conflict");
 assert.deepEqual(focusedRuleFields("range"),["condition","minimum","maximum","severity","message"]);
 assert.deepEqual(focusedRuleFields("pattern"),["condition","pattern","severity","message"]);

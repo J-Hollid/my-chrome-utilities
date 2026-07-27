@@ -29,6 +29,21 @@ export interface FocusedOwnershipInput {
   replaceable?:boolean;
 }
 
+export interface FocusedOwnershipActionTarget {
+  section:"Definition"|"Rules"|"Structure";
+  kind:"facet"|"rule"|"property";
+  id:string;
+  label:string;
+}
+
+export function focusedOwnershipActionTarget(
+  section:FocusedOwnershipActionTarget["section"],
+  kind:FocusedOwnershipActionTarget["kind"],
+  id:string,
+):FocusedOwnershipActionTarget {
+  return {section,kind,id,label:`${section} ${kind} ${id}`};
+}
+
 /**
  * Keep ownership legality in one place.  The UI may present an inherited item,
  * but it must never accidentally turn a parent item into a local deletion.

@@ -15,6 +15,9 @@ export const focusedPropertySectionLabels = {
     example: "Example",
     structure: "Structure",
 };
+export function focusedOwnershipActionTarget(section, kind, id) {
+    return { section, kind, id, label: `${section} ${kind} ${id}` };
+}
 /**
  * Keep ownership legality in one place.  The UI may present an inherited item,
  * but it must never accidentally turn a parent item into a local deletion.

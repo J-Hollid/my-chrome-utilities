@@ -17,14 +17,6 @@ export function renderFocusedPropertyMenu(options) {
         entry.append(choose, summary);
         menu.append(entry);
     }
-    const ownership = dom.createElement("div");
-    ownership.className = "focused-property-ownership-actions";
-    for (const action of options.actions) {
-        const control = button(dom, action, () => options.runAction(action));
-        control.dataset.ownershipAction = action;
-        ownership.append(control);
-    }
-    menu.append(ownership);
     if (options.close)
         menu.append(button(dom, "Cancel", options.close));
     return menu;
