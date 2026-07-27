@@ -1,10 +1,10 @@
 import { canonicalPropertyPath } from "../data-layer-canonical-schema.js";
-import { activateFocusedOwnershipSection, focusedPropertyLifecycleOperation, focusedSectionOwnershipActions } from "../data-layer-focused-schema-property-ui.js";
+import { activateFocusedOwnershipSection, focusedOwnershipState, focusedPropertyLifecycleOperation, focusedSectionOwnershipActions as sharedFocusedSectionOwnershipActions } from "../data-layer-focused-schema-property-ui.js";
 import { renderCanonicalFocusedSection } from "../data-layer-canonical-schema-focused-sections.js";
 import { renderCanonicalFocusedMenu } from "../data-layer-canonical-schema-focused-menu.js";
 import { renderCanonicalFocusedEditor } from "../data-layer-canonical-schema-focused-editor.js";
 import { renderCanonicalSchemaEditor } from "../data-layer-canonical-schema-render.js";
-import { focusedPropertyPatch, focusedStagedChanges, focusedSourceState, focusedStructureOwned } from "../data-layer-canonical-schema-focused-drafts.js";
+import { focusedCanonicalOwnershipInput, focusedPropertyPatch, focusedStagedChanges, focusedSourceState } from "../data-layer-canonical-schema-focused-drafts.js";
 import { dispatchFocusedCanonicalCommand } from "../data-layer-canonical-schema-focused-command.js";
 import { typedCanonicalValue } from "../data-layer-canonical-schema-facets.js";
 import { button, clone, presenceText, provenanceText, sectionLabel } from "./ui-mount-helpers.js";
@@ -35,6 +35,7 @@ export function mountCanonicalSchemaEditor(options) {
     let overlayState = { phase: "closed" };
     let review;
     let ownershipSession = { inherited: false, local: true, structureOwned: true, activated: [] };
+    const focusedSectionOwnershipActions = (input) => sharedFocusedSectionOwnershipActions({ ...input, inherited: ownershipSession.inherited, local: ownershipSession.local, structureOwned: ownershipSession.structureOwned });
     const current = () => { const document = options.load(); return transientView ? { ...document, view: transientView } : document; };
     const selectedNode = (document) => activePropertyId ? document.nodes[activePropertyId] : document.selectedPropertyId ? document.nodes[document.selectedPropertyId] : undefined;
     const ensureWorking = (node) => { if (!working || working.id !== node.id)
@@ -92,7 +93,7 @@ export function mountCanonicalSchemaEditor(options) {
     const closeChild = () => { focusedPropertyId = undefined; review = undefined; overlayState = activePropertyId ? { phase: "menu", path: canonicalPropertyPath(current(), activePropertyId) } : { phase: "closed" }; render(); const target = schemaTableOverlayTarget(options.host, `[data-property-context-menu="true"] [data-section="${activeSection}"] button`); if (target)
         queueMicrotask(() => target.focus({ preventScroll: true })); };
     const openProperty = (node, focus, section = "definition") => {
-        const document = current(), path = canonicalPropertyPath(document, node.id), source = focusedSourceState(node);
+        const document = current(), path = canonicalPropertyPath(document, node.id);
         overlayState = schemaTableOverlayTransition(overlayState, { kind: "open", path });
         activePropertyId = node.id;
         activeSection = section;
@@ -101,7 +102,7 @@ export function mountCanonicalSchemaEditor(options) {
         removedRuleIds = new Set();
         removedValueIds = new Set();
         stagedOperations = [];
-        ownershipSession = { inherited: !focusedStructureOwned(node) || source === "inherited" || source === "overridden", local: source === "local" || source === "overridden", structureOwned: focusedStructureOwned(node), invariant: node.enforcement === "invariant", activated: [] };
+        ownershipSession = focusedOwnershipState(focusedCanonicalOwnershipInput(node)).session;
         ensureWorking(node);
         if (focus) {
             originFocus = focus;

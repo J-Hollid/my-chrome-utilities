@@ -1,5 +1,6 @@
 import { canonicalFacetText, typedCanonicalValue } from "../data-layer-canonical-schema-facets.js";
 import { schemaTableAllowedValues, schemaTableExampleControl, schemaTableStageAllowedValues } from "../data-layer-schema-table.js";
+import { focusedDefinitionFacetOwnershipActions } from "../data-layer-focused-schema-property-ui.js";
 import { input, labeled } from "./dom.js";
 const types = ["string", "number", "integer", "boolean", "object", "array", "null"];
 export function renderDefinitionSection(host, context, working) {
@@ -55,6 +56,20 @@ export function renderDefinitionSection(host, context, working) {
         renderExample();
     } });
     renderExample();
-    host.append(labeled(dom, "Type", type), labeled(dom, "Array item type", itemType), labeled(dom, "Presence", presence), labeled(dom, "Allowed values", allowed), labeled(dom, "Display text", displayText), labeled(dom, "Description", description), labeled(dom, "Comments", comments), labeled(dom, "Example method", exampleMethod), labeled(dom, "Example value", exampleHost));
+    const descriptionFacet = dom.createElement("article"), descriptionTarget = "Definition facet Description";
+    descriptionFacet.dataset.definitionFacet = "description";
+    descriptionFacet.append(labeled(dom, "Description", description));
+    for (const action of focusedDefinitionFacetOwnershipActions({ inherited: Boolean(working.inheritedDefinition), local: working.localDefinitionFacets?.includes("documentation") ?? false })) {
+        const reset = dom.createElement("button");
+        reset.type = "button";
+        reset.textContent = action;
+        reset.dataset.ownershipAction = action;
+        reset.dataset.ownershipTarget = descriptionTarget;
+        reset.setAttribute("aria-label", `${action} · ${descriptionTarget}`);
+        reset.addEventListener("click", () => { const next = context.getWorking(); if (next)
+            next.documentation = { ...next.documentation, description: next.inheritedDefinition?.description ?? "" }; context.render(); });
+        descriptionFacet.append(reset);
+    }
+    host.append(labeled(dom, "Type", type), labeled(dom, "Array item type", itemType), labeled(dom, "Presence", presence), labeled(dom, "Allowed values", allowed), labeled(dom, "Display text", displayText), descriptionFacet, labeled(dom, "Comments", comments), labeled(dom, "Example method", exampleMethod), labeled(dom, "Example value", exampleHost));
 }
 //# sourceMappingURL=definition.js.map

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {activateFocusedOwnershipSection,focusedConditionLabel,focusedDefinitionFieldLabels,focusedOwnershipActionTarget,focusedOwnershipActions,focusedOwnershipControlEditable,focusedOwnershipSectionEditable,focusedPropertyLayerSequence,focusedPropertyLifecycleOperation,focusedPropertyProvenanceSummary,focusedPropertySections,focusedRuleFields,focusedSectionOwnershipActions,focusedSparseDelta} from "../dist/data-layer-focused-schema-property-ui.js";
+import {activateFocusedOwnershipSection,focusedConditionLabel,focusedDefinitionFacetOwnershipActions,focusedDefinitionFieldLabels,focusedOwnershipActionTarget,focusedOwnershipActions,focusedOwnershipControlEditable,focusedOwnershipSectionEditable,focusedPropertyLayerSequence,focusedPropertyLifecycleOperation,focusedPropertyProvenanceSummary,focusedPropertySections,focusedRuleFields,focusedSectionOwnershipActions,focusedSparseDelta} from "../dist/data-layer-focused-schema-property-ui.js";
 import {applyCanonicalCommand,canonicalPredicateIds,canonicalPredicateWithStableIds,createCanonicalSchema} from "../dist/data-layer-canonical-schema.js";
 import {canonicalFlatPredicateIssue} from "../dist/canonical-schema/predicate-policy.js";
 import {canonicalNavigatorRows} from "../dist/canonical-schema-focused/navigator-rows.js";
@@ -81,29 +81,32 @@ assert.deepEqual(focusedOwnershipActions({invariant:true}),["View","Open source"
 assert.deepEqual(focusedOwnershipActions({conflict:true}),["View conflict","Edit local resolution","Open contributing sources"]);
 assert.deepEqual(
   focusedSectionOwnershipActions({local:true,structureOwned:true}),
-  {definition:["View","Edit"],rules:["View","Edit","Remove local"],structure:["Remove local"]},
-  "a local property exposes the exact legal actions at its Definition facet, local Rules, and Structure lifecycle targets",
+  {definition:["View","Edit"],rules:[],structure:["Remove local"]},
+  "a local property leaves Rules ownership to stable rule rows while retaining Definition and Structure actions",
 );
 assert.deepEqual(
   focusedSectionOwnershipActions({inherited:true,local:true,structureOwned:false}),
-  {definition:["View","Edit"],rules:["View","Edit","Remove local"],structure:["Override here"]},
+  {definition:["View","Edit"],rules:[],structure:["Override here"]},
   "a sparse local Definition facet does not establish ownership of inherited structural identity",
 );
 assert.deepEqual(
   focusedSectionOwnershipActions({inherited:true}),
-  {definition:[],rules:["View","Open source"],structure:["Override here"]},
+  {definition:[],rules:[],structure:["Override here"]},
   "ordinary inherited Definition fields need no ownership action while Structure retains its named identity transition",
 );
 assert.deepEqual(
   focusedSectionOwnershipActions({inherited:true,replaceable:true}),
-  {definition:[],rules:["View","Replace here","Open source"],structure:["Override here"]},
+  {definition:[],rules:[],structure:["Override here"]},
   "replaceable inherited rule identity is the only inherited rule editing transition",
 );
 assert.deepEqual(
   focusedSectionOwnershipActions({overridden:true}),
-  {definition:["View","Edit"],rules:["View","Edit","Reset to parent"],structure:["Reset to parent"]},
-  "an overridden property localizes Reset to parent to owned rules and the whole-property Structure target",
+  {definition:["View","Edit"],rules:[],structure:["Reset to parent"]},
+  "an overridden property leaves rule lifecycle on item rows and localizes whole-property Reset to Structure",
 );
+assert.deepEqual(focusedDefinitionFacetOwnershipActions({inherited:true,local:true}),["Reset to parent"],"a sparse local Definition facet exposes an explicit item-local reset");
+assert.deepEqual(focusedDefinitionFacetOwnershipActions({inherited:true,local:false}),[],"an unchanged inherited Definition facet has nothing local to reset");
+assert.deepEqual(focusedDefinitionFacetOwnershipActions({inherited:false,local:true}),[],"a locally created property has no parent facet to reset to");
 assert.deepEqual(
   focusedOwnershipActionTarget("Rules","rule","rule:customer-tier"),
   {section:"Rules",kind:"rule",id:"rule:customer-tier",label:"Rules rule rule:customer-tier"},

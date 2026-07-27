@@ -1,5 +1,6 @@
 import { composedFacetDraft, composedFacetDraftWithoutRemovedItems, sparseComposedFacets } from "./data-layer-composed-schema-builders.js";
-import { activateFocusedOwnershipSection } from "./data-layer-focused-schema-property-ui.js";
+import { composedSchemaRowOwnershipInput } from "./data-layer-composed-schema-ownership.js";
+import { activateFocusedOwnershipSection, focusedOwnershipState } from "./data-layer-focused-schema-property-ui.js";
 import { renderComposedRows } from "./data-layer-composed-schema-workspace-rows.js";
 import { typedCanonicalValue } from "./data-layer-canonical-schema-facets.js";
 import { schemaTableOverlayTarget, schemaTableOverlayTransition, schemaTableReplaceExpectedOrAllowed, schemaTableStageAllowedValues } from "./data-layer-schema-table.js";
@@ -80,7 +81,7 @@ export function mountComposedSchemaWorkspace(options) {
         overriddenRuleIds = new Set();
         pendingStructure = [];
         pendingAction = undefined;
-        ownershipSession = { inherited: Boolean(row.inherited), local: Object.keys(row.local).some((key) => key !== "path"), structureOwned: !row.inherited || Boolean(row.local.definitionId), invariant: row.effective.enforcement === "invariant", activated: [] };
+        ownershipSession = focusedOwnershipState(composedSchemaRowOwnershipInput(row)).session;
     } overlayState = schemaTableOverlayTransition(overlayState, { kind: "open", path: row.path }); activeSection = sectionName; overlayOpen = true; focusedOpen = false; if (focus) {
         originFocus = focus;
         originPath = row.path;

@@ -16,6 +16,7 @@ import {composedReviewFacetDelta,composedReviewLifecycleInventory} from "../dist
 import {composedFacetDraft,sparseComposedFacets} from "../dist/data-layer-composed-schema-builders.js";
 import {saveFlowPageInstanceLocalFacetsAndStructures} from "../dist/data-layer-layered-schema-project.js";
 import {composedTableQuickEditFacets} from "../dist/data-layer-composed-schema-workspace-ui.js";
+import {resetComposedDefinitionFacet} from "../dist/data-layer-composed-schema-workspace-focused-sections.js";
 import {focusedStructureOwned} from "../dist/data-layer-canonical-schema-focused-drafts.js";
 
 const state=createSpecificationProject({name:"Composed schemas",site:"shop.example",id:(kind)=>`${kind}:workspace`});
@@ -65,6 +66,9 @@ const inheritedOwnedValue={type:"string",allowedValues:["retail"],allowedValueId
 const overriddenOwnedValue={type:"string",allowedValues:["retail"],allowedValueIds:["value:local"],allowedValueProvenance:[{id:"value:local",state:"overridden",source:"focused-editor"}],condition:{kind:"all",children:[{kind:"any",children:[],id:"condition:any"}],id:"condition:root"},rules:[],documentation:"",exampleMethod:"blank"};
 assert.deepEqual(sparseComposedFacets(overriddenOwnedValue,inheritedOwnedValue),{allowedValues:["retail"],allowedValueIds:["value:local"],allowedValueProvenance:[{id:"value:local",state:"overridden",source:"focused-editor"}],condition:{kind:"all",children:[{kind:"any",children:[],id:"condition:any"}],id:"condition:root"}},"a same-valued override retains the local identity, ownership, payload, and condition item bytes");
 assert.equal(JSON.stringify(composedFacetDraft({condition:overriddenOwnedValue.condition},overriddenOwnedValue).condition),JSON.stringify(overriddenOwnedValue.condition),"condition group identity and property order survive draft reconstruction");
+const parentDefinition={path:"/customer",type:"string",allowedValues:["retail"],documentation:"Parent description"},localDefinition={path:"/customer",allowedValues:["retail","business"],documentation:"Local description"},definitionDraft=composedFacetDraft(localDefinition,{...parentDefinition,...localDefinition}),resetDescription=resetComposedDefinitionFacet(definitionDraft,parentDefinition,"description");
+assert.deepEqual(sparseComposedFacets(resetDescription,parentDefinition),{allowedValues:["retail","business"]},"resetting Description deletes only that sparse facet while preserving local Allowed values");
+assert.deepEqual(composedFacetDraft(localDefinition,parentDefinition).allowedValues,["retail","business"],"draft reconstruction prefers the explicit local Allowed facet over a stale effective projection");
 assert.equal(workspace.rows.find(({path})=>path==="/page_name").action,"override");
 
 const reset=resetComposedSchemaLocalProperty(state,"pages","page:cart","/funnel_step");
@@ -83,9 +87,15 @@ assert.deepEqual(structureOverride.project.collections.pages[0].localSchemaContr
 const structureProjection=composedCanonicalSchema(structureOverride,structureOverride.project.collections.pages[0],"Page"),ownedStep=Object.values(structureProjection.nodes).find((node)=>canonicalPropertyPath(structureProjection,node.id)==="/checkout_step");
 assert.equal(focusedStructureOwned(ownedStep),true,"the explicit structural identity remains owned after save and reopen");
 
+const movedOverride=saveComposedSchemaLocalFacetsAndStructures(saved,"pages","page:cart","/funnel_step",{expectedValue:"2"},[{kind:"move-later",path:"/funnel_step"}],(kind)=>`${kind}:moved`);
+assert.deepEqual(movedOverride.project.collections.pages[0].localSchemaContributions,[{path:"/funnel_step",expectedValue:"2",definitionId:"property:moved"}],"Override plus Move establishes durable local structural identity even without a local sibling");
+const movedProjection=composedCanonicalSchema(movedOverride,movedOverride.project.collections.pages[0],"Page"),movedStep=Object.values(movedProjection.nodes).find((node)=>canonicalPropertyPath(movedProjection,node.id)==="/funnel_step");
+assert.equal(focusedStructureOwned(movedStep),true,"Move-established structural identity remains owned after save and reopen");
 const inheritedAgain=saveComposedSchemaLocalFacets(saved,"pages","page:cart","/funnel_step",{});
 assert.deepEqual(inheritedAgain.project.collections.pages[0].localSchemaContributions,[],"an empty sparse override does not persist a path-only local contribution");
 assert.equal(composedSchemaWorkspace(inheritedAgain,inheritedAgain.project.collections.pages[0],"Page").rows.find(({path})=>path==="/funnel_step").action,"override");
+const identityOnlyMove=saveComposedSchemaLocalFacetsAndStructures(inheritedAgain,"pages","page:cart","/page_name",{},[{kind:"move-later",path:"/page_name"}],(kind)=>`${kind}:identity-only`);
+assert.deepEqual(identityOnlyMove.project.collections.pages[0].localSchemaContributions,[{path:"/page_name",definitionId:"property:identity-only"}],"Override plus Move retains an identity-only local structural record");
 
 const structuredPage=saveComposedSchemaLocalFacetsAndStructures(inheritedAgain,"pages","page:cart","/page_name",{},[{kind:"add-child",path:"/page_name",name:"locale"}],(kind)=>`${kind}:workspace`);
 assert.deepEqual(structuredPage.project.collections.pages[0].localSchemaContributions,[{path:"/page_name/locale",type:"string",definitionId:"property:workspace"}],"Page structure changes are stored as sparse local contributions");

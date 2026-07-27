@@ -1,4 +1,5 @@
 import { overrideComposedAllowedValue, typedComposedValue } from "./data-layer-composed-schema-builders.js";
+import { focusedDefinitionFacetOwnershipActions } from "./data-layer-focused-schema-property-ui.js";
 import { schemaTableAllowedValues, schemaTableExampleControl, schemaTableStageAllowedValues } from "./data-layer-schema-table.js";
 import { renderComposedFocusedCondition } from "./data-layer-composed-schema-workspace-focused-conditions.js";
 import { renderComposedFocusedRules } from "./data-layer-composed-schema-workspace-focused-rules.js";
@@ -9,6 +10,7 @@ const stableValueId = (owner, value) => { let hash = 2166136261; for (const char
     hash ^= char.charCodeAt(0);
     hash = Math.imul(hash, 16777619);
 } return `allowed-value:${owner}:${(hash >>> 0).toString(16)}`; };
+export const resetComposedDefinitionFacet = (draft, inherited, facet) => facet === "description" ? { ...draft, documentation: inherited?.documentation ?? "" } : draft;
 export function renderComposedFocusedSection(host, context) {
     const { dom } = context, draft = context.getDraft();
     if (!draft)
@@ -68,7 +70,21 @@ export function renderComposedFocusedSection(host, context) {
         else if (method.value === "allowed-value")
             draft.exampleValue = draft.allowedValues[0]; renderExample(); });
         renderExample();
-        host.append(labeled(dom, "Type", type), labeled(dom, "Array item type", itemType), labeled(dom, "Presence", presence), labeled(dom, "Allowed values", allowed), labeled(dom, "Display text", displayText), labeled(dom, "Description", description), labeled(dom, "Comments", comments), labeled(dom, "Example method", method), labeled(dom, "Example value", exampleHost));
+        const facet = (label, control, local, reset) => { const item = dom.createElement("article"), target = `Definition facet ${label}`; item.dataset.definitionFacet = label.toLowerCase().replaceAll(" ", "-"); item.append(labeled(dom, label, control)); for (const action of focusedDefinitionFacetOwnershipActions({ inherited: Boolean(context.row.inherited), local })) {
+            const resetControl = button(dom, action, () => { reset(); context.render(); });
+            resetControl.dataset.ownershipAction = action;
+            resetControl.dataset.ownershipTarget = target;
+            resetControl.setAttribute("aria-label", `${action} · ${target}`);
+            item.append(resetControl);
+        } return item; };
+        const inherited = context.row.inherited;
+        host.append(facet("Type", type, context.row.local.type !== undefined, () => { draft.type = inherited?.type; }), facet("Array item type", itemType, context.row.local.itemType !== undefined, () => { draft.itemType = inherited?.itemType; }), facet("Presence", presence, context.row.local.presence !== undefined, () => { draft.presence = inherited?.presence; }), facet("Allowed values", allowed, context.row.local.allowedValues !== undefined || context.row.local.expectedValue !== undefined, () => { draft.allowedValues = [...(inherited?.allowedValues ?? [])]; if (inherited?.allowedValueIds)
+            draft.allowedValueIds = [...inherited.allowedValueIds];
+        else
+            delete draft.allowedValueIds; if (inherited?.allowedValueProvenance)
+            draft.allowedValueProvenance = [...inherited.allowedValueProvenance];
+        else
+            delete draft.allowedValueProvenance; draft.expectedValue = inherited?.expectedValue; }), facet("Display text", displayText, context.row.local.displayText !== undefined, () => { draft.displayText = inherited?.displayText ?? ""; }), facet("Description", description, context.row.local.documentation !== undefined, () => { Object.assign(draft, resetComposedDefinitionFacet(draft, inherited, "description")); }), facet("Comments", comments, context.row.local.comments !== undefined, () => { draft.comments = inherited?.comments ?? ""; }), labeled(dom, "Example method", method), labeled(dom, "Example value", exampleHost));
     }
     if (context.activeSection === "presence") {
         const presence = dom.createElement("select");
