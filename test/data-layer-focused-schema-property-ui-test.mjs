@@ -1,10 +1,10 @@
 import assert from "node:assert/strict";
-import {focusedConditionLabel,focusedDefinitionFieldLabels,focusedOwnershipActionTarget,focusedOwnershipActions,focusedPropertyLayerSequence,focusedPropertyLifecycleOperation,focusedPropertyProvenanceSummary,focusedPropertySections,focusedRuleFields,focusedSparseDelta} from "../dist/data-layer-focused-schema-property-ui.js";
+import {focusedConditionLabel,focusedDefinitionFieldLabels,focusedOwnershipActionTarget,focusedOwnershipActions,focusedPropertyLayerSequence,focusedPropertyLifecycleOperation,focusedPropertyProvenanceSummary,focusedPropertySections,focusedRuleFields,focusedSectionOwnershipActions,focusedSparseDelta} from "../dist/data-layer-focused-schema-property-ui.js";
 import {applyCanonicalCommand,canonicalPredicateIds,canonicalPredicateWithStableIds,createCanonicalSchema} from "../dist/data-layer-canonical-schema.js";
 import {canonicalFlatPredicateIssue} from "../dist/canonical-schema/predicate-policy.js";
 import {canonicalNavigatorRows} from "../dist/canonical-schema-focused/navigator-rows.js";
 import {focusedSourceState} from "../dist/data-layer-canonical-schema-focused-drafts.js";
-import {schemaTableCellMetadata,schemaTableColumns,schemaTableEditableFacets,schemaTableExpectedOrAllowed,schemaTableOverlayPlacement,schemaTableOverlayStyle,schemaTableQuickEditDestination,schemaTableQuickEditIntent,schemaTableValueFacet} from "../dist/data-layer-schema-table.js";
+import {schemaTableCellMetadata,schemaTableColumns,schemaTableEditableFacets,schemaTableExpectedOrAllowed,schemaTableOverlayPlacement,schemaTableOverlayStyle,schemaTableQuickEditDestination,schemaTableQuickEditIntent,schemaTableRuleConditionSummary,schemaTableValueFacet} from "../dist/data-layer-schema-table.js";
 import {sharedConditionOperators,sharedFlatConditionResult,sharedFlatConditionRows} from "../dist/data-layer-shared-condition-tree-editor.js";
 
 assert.deepEqual(focusedPropertySections,["definition","rules","structure"]);
@@ -72,12 +72,28 @@ assert.equal(schemaTableQuickEditDestination(quickCells,quickCells.at(-1),1),und
 assert.equal(schemaTableExpectedOrAllowed({expectedValue:"retail",allowedValues:["retail","business"]}),"retail","expected value takes precedence in the summary cell");
 assert.equal(schemaTableExpectedOrAllowed({allowedValues:["retail","business"]}),"retail, business","allowed values render as editable human text when there is no single expectation");
 assert.deepEqual(schemaTableValueFacet({allowedValues:["retail",2,true]}),{kind:"allowed",text:"retail, 2, true",values:["retail",2,true]});
+assert.equal(schemaTableRuleConditionSummary({kind:"predicate",propertyId:"line"},[]), "line choose operator", "an incomplete inherited rule remains inspectable instead of crashing the focused inventory");
 assert.deepEqual(focusedOwnershipActions({inherited:true}),["View","Override here","Open source"]);
 assert.deepEqual(focusedOwnershipActions({inherited:true,replaceable:true}),["View","Replace here","Open source"]);
 assert.deepEqual(focusedOwnershipActions({local:true}),["View","Edit","Remove local"]);
 assert.deepEqual(focusedOwnershipActions({overridden:true}),["View","Edit","Reset to parent"]);
 assert.deepEqual(focusedOwnershipActions({invariant:true}),["View","Open source"]);
 assert.deepEqual(focusedOwnershipActions({conflict:true}),["View conflict","Edit local resolution","Open contributing sources"]);
+assert.deepEqual(
+  focusedSectionOwnershipActions({local:true}),
+  {definition:["View","Edit"],rules:["View","Edit","Remove local"],structure:["Remove local"]},
+  "a local property exposes the exact legal actions at its Definition facet, local Rules, and Structure lifecycle targets",
+);
+assert.deepEqual(
+  focusedSectionOwnershipActions({inherited:true}),
+  {definition:["View","Override here","Open source"],rules:["View","Override here","Open source"],structure:[]},
+  "an inherited property exposes no local Structure lifecycle action and retains exact facet and rule ownership actions",
+);
+assert.deepEqual(
+  focusedSectionOwnershipActions({overridden:true}),
+  {definition:["View","Edit"],rules:["View","Edit","Reset to parent"],structure:["Reset to parent"]},
+  "an overridden property localizes Reset to parent to owned rules and the whole-property Structure target",
+);
 assert.deepEqual(
   focusedOwnershipActionTarget("Rules","rule","rule:customer-tier"),
   {section:"Rules",kind:"rule",id:"rule:customer-tier",label:"Rules rule rule:customer-tier"},

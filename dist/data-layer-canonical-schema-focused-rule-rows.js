@@ -1,4 +1,4 @@
-import { focusedOwnershipActions, focusedRuleFields, focusedRuleIssue } from "./data-layer-focused-schema-property-ui.js";
+import { focusedOwnershipActionTarget, focusedOwnershipActions, focusedRuleFields, focusedRuleIssue } from "./data-layer-focused-schema-property-ui.js";
 import { renderSharedConditionTree } from "./data-layer-shared-condition-tree-editor.js";
 import { schemaTableAllowedValues, schemaTableRuleConditionSummary, schemaTableRuleOutcomeSummary, schemaTableStageAllowedValues } from "./data-layer-schema-table.js";
 const clone = (value) => structuredClone(value);
@@ -90,29 +90,35 @@ export function renderCanonicalRuleRows(host, context) {
     const list = dom.createElement("div"), properties = context.properties?.() ?? [];
     list.setAttribute("aria-label", "Stable rule inventory");
     for (const rule of working.rules) {
-        const row = dom.createElement("article"), summary = dom.createElement("p"), inherited = rule.provenance?.state === "inherited" || rule.provenance?.state === "shadowed", removed = removedRuleIds.has(rule.id);
+        const row = dom.createElement("article"), summary = dom.createElement("p"), provenanceState = rule.provenance?.state, inherited = provenanceState === "inherited" || provenanceState === "shadowed", overridden = provenanceState === "overridden", removed = removedRuleIds.has(rule.id), ownershipState = inherited ? "inherited" : overridden ? "overridden" : "local", target = focusedOwnershipActionTarget("Rules", "rule", rule.id), legal = focusedOwnershipActions({ inherited, overridden, local: !inherited && !overridden, invariant: rule.enforcement === "invariant" || invariant, replaceable: rule.enforcement === "overridable" && !invariant });
         row.dataset.ruleId = rule.id;
-        row.dataset.ownership = inherited ? "inherited" : "local";
-        summary.textContent = `${ruleKindLabel(rule)} · ${schemaTableRuleConditionSummary(rule.condition, properties)} · Then ${schemaTableRuleOutcomeSummary(rule)} · ${rule.severity} · ${rule.message ?? "No issue message"} · source ${rule.provenance?.contributorName ?? "local"} · ${inherited ? "inherited" : "local"}${removed ? " · Removed" : ""}`;
-        row.append(summary, button(dom, "View", () => { row.dataset.ruleMode = "view"; const detail = dom.createElement("p"); detail.textContent = `Rule ${rule.id} · definition ${JSON.stringify(rule)} · effective ${rule.enabled === false ? "disabled" : "enabled"} · source ${rule.provenance?.contributorName ?? "local"}`; row.append(detail); }));
-        if (inherited) {
-            const actions = focusedOwnershipActions({ inherited: true, invariant: rule.enforcement === "invariant" || invariant, replaceable: rule.enforcement === "overridable" && !invariant });
-            if (actions.includes("Replace here"))
-                row.append(button(dom, "Replace here", () => replaceInheritedRule(rule, context)));
-            if (actions.includes("Override here"))
-                row.append(button(dom, "Override here", () => replaceInheritedRule(rule, context)));
-            if (actions.includes("Open source"))
-                row.append(button(dom, "Open source", () => { row.dataset.ruleMode = "source"; const source = dom.createElement("p"); source.textContent = `Source rule ${rule.id} · ${ruleKindLabel(rule)} · inherited definition is read-only.`; row.append(source); }));
-        }
-        else if (removed) {
+        row.dataset.ownership = ownershipState;
+        row.dataset.sectionOwnershipActions = "true";
+        row.dataset.ownershipTarget = target.label;
+        row.dataset.legalOwnershipActions = legal.join("|");
+        summary.textContent = `${ruleKindLabel(rule)} · ${schemaTableRuleConditionSummary(rule.condition, properties)} · Then ${schemaTableRuleOutcomeSummary(rule)} · ${rule.severity} · ${rule.message ?? "No issue message"} · source ${rule.provenance?.contributorName ?? "local"} · ${ownershipState}${removed ? " · Removed" : ""}`;
+        const ownershipButton = (action, run) => { const control = button(dom, action, run); control.dataset.ownershipAction = action; control.dataset.ownershipTarget = target.label; control.setAttribute("aria-label", `${action} · ${target.label}`); return control; }, view = () => { row.dataset.ruleMode = "view"; const detail = dom.createElement("p"); detail.textContent = `Rule ${rule.id} · definition ${JSON.stringify(rule)} · effective ${rule.enabled === false ? "disabled" : "enabled"} · source ${rule.provenance?.contributorName ?? "local"}`; row.append(detail); }, openSource = () => { row.dataset.ruleMode = "source"; const source = dom.createElement("p"); source.textContent = `Source rule ${rule.id} · ${ruleKindLabel(rule)} · inherited definition is read-only.`; row.append(source); };
+        row.append(summary);
+        if (removed) {
             const impact = dom.createElement("p");
             impact.textContent = `Impact review: ${ruleKindLabel(rule)} · effective result falls back to parent or unset.`;
             row.append(impact, button(dom, "Restore", () => { removedRuleIds.delete(rule.id); context.render(); }));
         }
-        else {
-            const edit = button(dom, "Edit", () => { row.dataset.ruleMode = "edit"; editRule(row, rule, context, edit); });
-            row.append(edit, button(dom, "Remove local", () => { removedRuleIds.add(rule.id); context.feedback(`Staged removal of ${ruleKindLabel(rule)}.`); context.render(); }));
-        }
+        else
+            for (const action of legal) {
+                if (action === "View" || action === "View conflict")
+                    row.append(ownershipButton(action, view));
+                else if (action === "Replace here" || action === "Override here")
+                    row.append(ownershipButton(action, () => replaceInheritedRule(rule, context)));
+                else if (action === "Open source" || action === "Open contributing sources")
+                    row.append(ownershipButton(action, openSource));
+                else if (action === "Edit" || action === "Edit local resolution") {
+                    const edit = ownershipButton(action, () => { row.dataset.ruleMode = "edit"; editRule(row, rule, context, edit); });
+                    row.append(edit);
+                }
+                else if (action === "Remove local" || action === "Reset to parent")
+                    row.append(ownershipButton(action, () => { removedRuleIds.add(rule.id); context.feedback(`Staged removal of ${ruleKindLabel(rule)}.`); context.render(); }));
+            }
         list.append(row);
     }
     host.append(list);

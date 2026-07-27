@@ -79,6 +79,15 @@ export function focusedOwnershipActions(input:FocusedOwnershipInput):string[] {
   return ["View","Edit"];
 }
 
+export function focusedSectionOwnershipActions(input:FocusedOwnershipInput):Record<FocusedPropertyPrimarySection,string[]> {
+  const actions=focusedOwnershipActions(input),lifecycle=new Set(["Remove local","Reset to parent"]);
+  return {
+    definition:actions.filter((action)=>!lifecycle.has(action)),
+    rules:[...actions],
+    structure:actions.filter((action)=>lifecycle.has(action)),
+  };
+}
+
 export interface FocusedReusableRule {id:string;name:string;kind?:string;enabled?:boolean;outcome?:Record<string,unknown>;[field:string]:unknown;}
 export const focusedReusableRuleStorageKey = "my-chrome-utilities.schema-rule-library.v1";
 

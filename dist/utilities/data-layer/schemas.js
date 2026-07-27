@@ -19,7 +19,7 @@ export { canonicalPredicateLeafFromInput, canonicalPredicateOperators, canonical
 export { mountCanonicalSchemaEditor } from "../../data-layer-canonical-schema-ui.js";
 export { renderCanonicalFocusedRules } from "../../data-layer-canonical-schema-focused-rules.js";
 export { renderFocusedPropertyMenu } from "../../data-layer-focused-schema-property-menu.js";
-export { focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedOwnershipActions, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyProvenanceSummary } from "../../data-layer-focused-schema-property-ui.js";
+export { focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedOwnershipActions, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions } from "../../data-layer-focused-schema-property-ui.js";
 export { focusedPropertyPatch, focusedSourceState, focusedStagedChanges } from "../../data-layer-canonical-schema-focused-drafts.js";
 export { renderCanonicalFocusedSection } from "../../data-layer-canonical-schema-focused-sections.js";
 export { clearSchemaTableOverlay, mountSchemaTableOverlay } from "../../data-layer-schema-table.js";

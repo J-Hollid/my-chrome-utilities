@@ -73,7 +73,7 @@ import { cardinalityComparisonPasses, cardinalityMeasuredValue } from "./utiliti
 import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, createRuleConfigurationFromAttachedRule, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./utilities/data-layer/schemas.js";
 import { canonicalRulePropertyPath } from "./utilities/data-layer/schemas.js";
 import { renderSchemaSpecificationBuilder } from "./utilities/data-layer/schemas.js";
-import { applyCanonicalCommand, canonicalCommandOutcome, canonicalCommandsFromCompactProjection, canonicalMigrationDurablyAcknowledged, canonicalPredicateText, canonicalPropertyPath, clearSchemaTableOverlay, compactSchemaProjection, composedCanonicalSchema, createCanonicalSchema, durableDraftCommand, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedOwnershipActions, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSourceState, focusedStagedChanges, hasLegacySchemaRepresentation, migrateLegacyProfile, mountCanonicalPredicateEditor, mountSchemaTableOverlay, mountSidePanelLayeredProfileEditor, renderCanonicalFocusedSection, renderFocusedPropertyMenu, resolveCanonicalMigrationConflict, resolveSidePanelSchemaContributor, saveComposedCanonicalDocument, saveComposedEventCanonicalDocument, saveEventOccurrenceCanonicalDocument, saveFlowPageInstanceCanonicalDocument, savedSchemaCanonicalDocument, savedSchemaFromCanonical, transactProject } from "./utilities/data-layer/schemas.js";
+import { applyCanonicalCommand, canonicalCommandOutcome, canonicalCommandsFromCompactProjection, canonicalMigrationDurablyAcknowledged, canonicalPredicateText, canonicalPropertyPath, clearSchemaTableOverlay, compactSchemaProjection, composedCanonicalSchema, createCanonicalSchema, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions, focusedSourceState, focusedStagedChanges, hasLegacySchemaRepresentation, migrateLegacyProfile, mountCanonicalPredicateEditor, mountSchemaTableOverlay, mountSidePanelLayeredProfileEditor, renderCanonicalFocusedSection, renderFocusedPropertyMenu, resolveCanonicalMigrationConflict, resolveSidePanelSchemaContributor, saveComposedCanonicalDocument, saveComposedEventCanonicalDocument, saveEventOccurrenceCanonicalDocument, saveFlowPageInstanceCanonicalDocument, savedSchemaCanonicalDocument, savedSchemaFromCanonical, transactProject } from "./utilities/data-layer/schemas.js";
 import { filterSchemaRelationshipTree, projectSchemaRelationshipTree, restoreSchemaRelationshipTreeView, saveSchemaRelationshipTreeView } from "./utilities/data-layer/schemas.js";
 import { beginCompactCanonicalHistoryTransition, compactCanonicalHistoryKey, compactCanonicalHistorySettlement, completeCompactCanonicalHistoryTransition, prepareCompactCanonicalRedo, prepareCompactCanonicalUndo, recordCompactCanonicalMutation, rejectCompactCanonicalHistoryTransition } from "./utilities/data-layer/schemas.js";
 import { mountProjectLibraryUi, PROJECT_LIBRARY_STORAGE_KEY, recordProjectNavigation, serializeProjectLibrary } from "./utilities/data-layer/schemas.js";
@@ -3526,26 +3526,19 @@ function openContributorInUnifiedEditor(key) {
         compactCanonicalCommandFeedback = step.message;
         renderCompactCanonicalContext();
         return;
-    } const settlement = ++compactCanonicalSettlementSequence, label = `${direction} canonical schema edit in ${selected.entity.name ?? selected.entity.id}`; pendingStepHistoryIdentity = beginCompactCanonicalPendingHistory(live.project.id, key, label, step.history); compactCanonicalSettlementPending = true; compactCanonicalCommandFeedback = `${direction} is restoring ${selected.entity.name ?? selected.entity.id} in the durable Saved Draft…`; renderCompactCanonicalEditor(); try {
-        let nextState = contributorState(live, selected, step.document);
-        if (JSON.stringify(nextState.project) === JSON.stringify(live.project)) {
-            const snapshot = direction === "Undo" ? contributorSnapshots.get(current.revision) : [...contributorSnapshots.values()].find(({ beforeRevision }) => beforeRevision === current.revision), entity = direction === "Undo" ? snapshot?.before : snapshot?.after;
-            if (entity)
-                nextState = transplantUnifiedContributorEntity(live, selected, entity, label);
-        }
-        if (selected.scope === "Flow Page-instance") {
-            const result = await durableProjectRuntime.repository.saveDraft(durableDraftCommand(durableLive, nextState, { commandId: `compact-history:${crypto.randomUUID()}`, label }));
-            if (result.status === "conflict")
-                throw new Error(`${direction} conflicts at ${result.conflictingFields.join(", ")}.`);
-            pendingDurableRevision = result.draftSequence;
-        }
-        else
-            pendingDurableRevision = commitUnifiedContributorState(nextState, label).revision;
+    } ++compactCanonicalSettlementSequence; const label = `${direction} canonical schema edit in ${selected.entity.name ?? selected.entity.id}`; pendingStepHistoryIdentity = beginCompactCanonicalPendingHistory(live.project.id, key, label, step.history); compactCanonicalSettlementPending = true; compactCanonicalCommandFeedback = `${direction} is restoring ${selected.entity.name ?? selected.entity.id} in the durable Saved Draft…`; renderCompactCanonicalContext(); if (schemaEditor) {
+        schemaEditor.setAttribute("aria-busy", "true");
+        for (const control of Array.from(schemaEditor.querySelectorAll("button,input,select,textarea")))
+            control.disabled = true;
+    } try {
+        const snapshot = direction === "Undo" ? contributorSnapshots.get(current.revision) : [...contributorSnapshots.values()].find(({ beforeRevision }) => beforeRevision === current.revision), entity = direction === "Undo" ? snapshot?.before : snapshot?.after;
+        if (selected.scope === "Flow Page-instance" && !entity)
+            throw new Error(`${direction} cannot locate the exact reviewed Flow Page-instance contributor snapshot.`);
+        const nextState = entity ? transplantUnifiedContributorEntity(live, selected, entity, label) : contributorState(live, selected, step.document);
+        pendingDurableRevision = commitUnifiedContributorState(nextState, label).revision;
         await settleUnifiedContributorRevision(live.project.id, pendingDurableRevision);
         completeCompactCanonicalPendingHistory(pendingStepHistoryIdentity);
         pendingStepHistoryIdentity = undefined;
-        if (compactCanonicalEditor !== adapter || compactCanonicalSettlementSequence !== settlement)
-            return;
         compactCanonicalSettlementPending = false;
         compactCanonicalCommandFeedback = `${direction} restored ${selected.entity.name ?? selected.entity.id} in the Saved Draft.`;
         renderCompactCanonicalEditor();
@@ -3555,11 +3548,11 @@ function openContributorInUnifiedEditor(key) {
             rejectCompactCanonicalPendingHistory(pendingStepHistoryIdentity);
             pendingStepHistoryIdentity = undefined;
         }
-        if (compactCanonicalEditor !== adapter || compactCanonicalSettlementSequence !== settlement)
-            return;
         compactCanonicalSettlementPending = false;
         compactCanonicalCommandFeedback = `${direction} was not saved to the durable Saved Draft; the history action remains available for Retry, Reject, or export. ${error instanceof Error ? error.message : String(error)}`;
-        renderCompactCanonicalEditor();
+        renderCompactCanonicalContext();
+        if (schemaEditor)
+            schemaEditor.setAttribute("aria-busy", "false");
     } };
     openCompactCanonicalEditor({
         key,
@@ -4253,7 +4246,7 @@ function openCompactCanonicalPropertyActions(path, trigger) {
         return false;
     let working = structuredClone(original), activeSection, feedbackText = "", stagedOwnershipAction = "";
     const removedRuleIds = new Set(), removedValueIds = new Set(), stagedOperations = [];
-    const state = focusedSourceState(original), ownership = focusedOwnershipActions({ inherited: state === "inherited", local: state === "local", overridden: state === "overridden", invariant: original.enforcement === "invariant", conflict: state === "conflict", replaceable: original.enforcement === "overridable" }), lifecycle = new Set(["Remove local", "Reset to parent"]);
+    const state = focusedSourceState(original), sectionOwnership = focusedSectionOwnershipActions({ inherited: state === "inherited", local: state === "local", overridden: state === "overridden", invariant: original.enforcement === "invariant", conflict: state === "conflict", replaceable: original.enforcement === "overridable" }), lifecycle = new Set(["Remove local", "Reset to parent"]);
     const close = () => { clearSchemaTableOverlay(owner); trigger.focus({ preventScroll: true }); };
     const restoreFocus = (label) => queueMicrotask(() => Array.from(owner.ownerDocument.querySelectorAll('[data-schema-row-overlay="true"] button')).find(({ textContent, ariaLabel }) => textContent?.trim() === label || ariaLabel === label)?.focus({ preventScroll: true }));
     const menu = () => renderFocusedPropertyMenu({ dom: document, path, provenance: focusedPropertyProvenanceSummary(original.provenance), close, sectionSummary: (name) => name === "rules" ? `${working.rules.length} rules` : name === "structure" ? "Stable property identity" : "Effective definition facets", selectSection: (name) => showSection(name) });
@@ -4306,9 +4299,10 @@ function openCompactCanonicalPropertyActions(path, trigger) {
         renderCanonicalFocusedSection(body, sectionContext(section, render));
         if (section === "definition")
             body.dataset.definitionFields = focusedDefinitionFieldLabels.join("|");
-        const target = focusedOwnershipActionTarget(section === "structure" ? "Structure" : section === "rules" ? "Rules" : "Definition", section === "structure" ? "property" : section === "rules" ? "rule" : "facet", section === "structure" ? original.id : section === "rules" ? `${original.id}:rules` : `${original.id}:definition`), visible = ownership.filter((action) => section === "definition" ? !lifecycle.has(action) : section === "structure" && lifecycle.has(action));
+        const target = focusedOwnershipActionTarget(section === "structure" ? "Structure" : section === "rules" ? "Rules" : "Definition", section === "structure" ? "property" : section === "rules" ? "rule" : "facet", section === "structure" ? original.id : section === "rules" ? `${original.id}:rules` : `${original.id}:definition`), visible = section === "rules" ? [] : sectionOwnership[section];
         if (visible.length) {
             group.dataset.sectionOwnershipActions = "true";
+            group.dataset.ownershipState = state;
             group.dataset.ownershipTarget = target.label;
             for (const action of visible) {
                 const control = document.createElement("button");

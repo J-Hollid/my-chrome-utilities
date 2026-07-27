@@ -46,6 +46,14 @@ export function focusedOwnershipActions(input) {
         return ["View", ...(input.replaceable ? ["Replace here"] : ["Override here"]), "Open source"];
     return ["View", "Edit"];
 }
+export function focusedSectionOwnershipActions(input) {
+    const actions = focusedOwnershipActions(input), lifecycle = new Set(["Remove local", "Reset to parent"]);
+    return {
+        definition: actions.filter((action) => !lifecycle.has(action)),
+        rules: [...actions],
+        structure: actions.filter((action) => lifecycle.has(action)),
+    };
+}
 export const focusedReusableRuleStorageKey = "my-chrome-utilities.schema-rule-library.v1";
 export function filterFocusedReusableRules(rules, query) {
     const needle = query.trim().toLocaleLowerCase();

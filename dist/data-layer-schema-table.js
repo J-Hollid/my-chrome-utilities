@@ -206,7 +206,7 @@ export function schemaTableRuleConditionSummary(condition, properties) {
         return "Always";
     if (condition.kind === "predicate") {
         const property = properties.find(({ id, name }) => id === condition.propertyId || name === condition.propertyId)?.name ?? condition.propertyId;
-        const operator = condition.operator === "Exists" ? "exists" : condition.operator === "Does not exist" ? "does not exist" : condition.operator.toLowerCase();
+        const operator = !condition.operator ? "choose operator" : condition.operator === "Exists" ? "exists" : condition.operator === "Does not exist" ? "does not exist" : condition.operator.toLowerCase();
         return `${property} ${operator}${condition.value === undefined ? "" : ` ${formattedOrdinaryValue(condition.value)}`}`;
     }
     const relation = condition.kind === "all" ? "All" : condition.kind === "any" ? "Any" : "Not";
