@@ -73,7 +73,7 @@ import { cardinalityComparisonPasses, cardinalityMeasuredValue } from "./utiliti
 import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, createRuleConfigurationFromAttachedRule, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./utilities/data-layer/schemas.js";
 import { canonicalRulePropertyPath } from "./utilities/data-layer/schemas.js";
 import { renderSchemaSpecificationBuilder } from "./utilities/data-layer/schemas.js";
-import { applyCanonicalCommand, canonicalCommandOutcome, canonicalCommandsFromCompactProjection, canonicalMigrationDurablyAcknowledged, canonicalPredicateText, canonicalPropertyPath, compactSchemaProjection, composedCanonicalSchema, createCanonicalSchema, hasLegacySchemaRepresentation, migrateLegacyProfile, mountCanonicalPredicateEditor, mountSidePanelLayeredProfileEditor, resolveCanonicalMigrationConflict, resolveSidePanelSchemaContributor, saveComposedCanonicalDocument, saveComposedEventCanonicalDocument, saveEventOccurrenceCanonicalDocument, saveFlowPageInstanceCanonicalDocument, savedSchemaCanonicalDocument, savedSchemaFromCanonical, transactProject } from "./utilities/data-layer/schemas.js";
+import { applyCanonicalCommand, canonicalCommandOutcome, canonicalCommandsFromCompactProjection, canonicalMigrationDurablyAcknowledged, canonicalPredicateText, canonicalPropertyPath, compactSchemaProjection, composedCanonicalSchema, createCanonicalSchema, focusedOwnershipActionTarget, focusedOwnershipActions, focusedPropertyProvenanceSummary, focusedSourceState, hasLegacySchemaRepresentation, migrateLegacyProfile, mountCanonicalPredicateEditor, mountSidePanelLayeredProfileEditor, renderFocusedPropertyMenu, resolveCanonicalMigrationConflict, resolveSidePanelSchemaContributor, saveComposedCanonicalDocument, saveComposedEventCanonicalDocument, saveEventOccurrenceCanonicalDocument, saveFlowPageInstanceCanonicalDocument, savedSchemaCanonicalDocument, savedSchemaFromCanonical, transactProject } from "./utilities/data-layer/schemas.js";
 import { filterSchemaRelationshipTree, projectSchemaRelationshipTree, restoreSchemaRelationshipTreeView, saveSchemaRelationshipTreeView } from "./utilities/data-layer/schemas.js";
 import { beginCompactCanonicalHistoryTransition, compactCanonicalHistoryKey, compactCanonicalHistorySettlement, completeCompactCanonicalHistoryTransition, prepareCompactCanonicalRedo, prepareCompactCanonicalUndo, recordCompactCanonicalMutation, rejectCompactCanonicalHistoryTransition } from "./utilities/data-layer/schemas.js";
 import { mountProjectLibraryUi, PROJECT_LIBRARY_STORAGE_KEY, recordProjectNavigation, serializeProjectLibrary } from "./utilities/data-layer/schemas.js";
@@ -2492,6 +2492,13 @@ function renderSchemaDraft() {
         if (compactCanonicalEditor)
             label.textContent = `${path} · ${persistedPath}`;
         const compactNode = compactNodesByPath.get(persistedPath);
+        const compactPropertyActions = compactNode && compactCanonicalEditor ? document.createElement("button") : undefined;
+        if (compactPropertyActions) {
+            compactPropertyActions.type = "button";
+            compactPropertyActions.textContent = "⋯";
+            compactPropertyActions.setAttribute("aria-label", `Property actions for ${persistedPath}`);
+            compactPropertyActions.addEventListener("click", () => openCompactCanonicalPropertyActions(persistedPath, compactPropertyActions));
+        }
         if (compactNode)
             metadata.textContent += ` · ${compactNode.provenance.map(({ contributorName }) => contributorName).join(" · ")}`;
         if (compactNode) {
@@ -2500,7 +2507,7 @@ function renderSchemaDraft() {
                 return; void dispatchCompactCanonicalCommand({ kind: "select", baseRevision: compactDocument.revision, propertyId: compactNode.id }); });
         }
         if (compactCanonicalEditor && !selectedRow) {
-            item.append(label, metadata);
+            item.append(label, metadata, ...(compactPropertyActions ? [compactPropertyActions] : []));
             return item;
         }
         const owningSchema = inherited ? schemaPropertyTypeOwner(draft, persistedPath, schemas) : undefined;
@@ -2870,7 +2877,7 @@ function renderSchemaDraft() {
             view.append(row);
         }
         if (compactCanonicalEditor) {
-            item.append(label, metadata);
+            item.append(label, metadata, ...(compactPropertyActions ? [compactPropertyActions] : []));
             if (selectedRow) {
                 const stackedDetail = document.createElement("section"), facets = compactDocument && compactNode ? document.createElement("p") : undefined;
                 stackedDetail.setAttribute("aria-label", `Stacked property detail for ${persistedPath}`);
@@ -4178,6 +4185,56 @@ function defineSchemaProperty(document, path) {
 function schemaPropertyType(path) {
     const property = schemaDraft && schemaPropertyAt(schemaDraft.document, path, schemaParentDocuments());
     return property?.type === "number" || property?.type === "array" || property?.type === "object" || property?.type === "boolean" ? property.type : "string";
+}
+function openCompactCanonicalPropertyActions(path, trigger) {
+    const adapter = compactCanonicalEditor, documentModel = adapter?.load(), node = documentModel && Object.values(documentModel.nodes).find((candidate) => canonicalPropertyPath(documentModel, candidate.id) === path);
+    if (!adapter || !documentModel || !node)
+        return false;
+    const state = focusedSourceState(node), ownership = focusedOwnershipActions({ inherited: state === "inherited", local: state === "local", overridden: state === "overridden", invariant: node.enforcement === "invariant", conflict: state === "conflict", replaceable: node.enforcement === "overridable" }), lifecycle = new Set(["Remove local", "Reset to parent"]);
+    const close = () => { if (schemaPropertyRulePicker.open)
+        schemaPropertyRulePicker.close(); schemaPropertyRulePicker.replaceChildren(); trigger.focus({ preventScroll: true }); };
+    const section = (name) => {
+        const host = document.createElement("section"), heading = document.createElement("h3"), identity = document.createElement("p"), target = focusedOwnershipActionTarget(name, name === "Structure" ? "property" : "facet", name === "Structure" ? node.id : `${node.id}:definition`), group = document.createElement("div"), status = document.createElement("p"), actions = ownership.filter((action) => name === "Definition" ? !lifecycle.has(action) : lifecycle.has(action));
+        host.dataset.focusedPropertyEditor = "true";
+        host.dataset.focusedSection = name.toLowerCase();
+        host.setAttribute("aria-label", `${path} focused ${name} section`);
+        heading.textContent = name;
+        identity.textContent = `${path} · stable identity ${node.id} · ${focusedPropertyProvenanceSummary(node.provenance)}`;
+        group.dataset.sectionOwnershipActions = "true";
+        group.dataset.ownershipTarget = target.label;
+        status.setAttribute("role", "status");
+        for (const action of actions) {
+            const control = document.createElement("button");
+            control.type = "button";
+            control.textContent = action;
+            control.dataset.ownershipAction = action;
+            control.dataset.ownershipTarget = target.label;
+            control.setAttribute("aria-label", `${action} · ${target.label}`);
+            control.addEventListener("click", () => { status.textContent = `${action} targets ${target.label}.`; if (!lifecycle.has(action))
+                return; const review = document.createElement("section"), summary = document.createElement("p"), reviewActions = document.createElement("div"), cancel = document.createElement("button"), confirm = document.createElement("button"); review.setAttribute("aria-label", "Review changes"); summary.textContent = `Review changes · ${action} · ${target.label} · only this sparse local property will be removed; no durable write occurs before confirmation.`; cancel.type = "button"; cancel.textContent = "Cancel review"; cancel.addEventListener("click", () => section(name)); confirm.type = "button"; confirm.textContent = "Confirm changes"; confirm.addEventListener("click", () => { void dispatchCompactCanonicalCommand({ kind: "delete", baseRevision: adapter.load().revision, propertyId: node.id }).then((result) => { if (result)
+                close(); }); }); reviewActions.append(cancel, confirm); review.append(summary, reviewActions); schemaPropertyRulePicker.replaceChildren(review); });
+            group.append(control);
+        }
+        const cancel = document.createElement("button");
+        cancel.type = "button";
+        cancel.textContent = "Cancel";
+        cancel.addEventListener("click", showMenu);
+        group.append(status);
+        host.append(heading, identity, group, cancel);
+        schemaPropertyRulePicker.replaceChildren(host);
+    };
+    const showMenu = () => {
+        const menu = renderFocusedPropertyMenu({ dom: document, path, provenance: focusedPropertyProvenanceSummary(node.provenance), close, sectionSummary: (name) => name === "rules" ? `${node.rules.length} rules` : name === "structure" ? "Stable property identity" : "Effective definition facets", selectSection: (name) => { if (name === "rules") {
+                schemaPropertyRulePicker.close();
+                openCompactCanonicalRuleEditor(path, trigger);
+                return;
+            } section(name === "structure" ? "Structure" : "Definition"); } });
+        schemaPropertyRulePicker.replaceChildren(menu);
+    };
+    showMenu();
+    schemaPropertyRulePicker.showModal();
+    schemaPropertyRulePicker.querySelector('[role="menuitem"]')?.focus({ preventScroll: true });
+    return true;
 }
 function closeSchemaPropertyRulePicker() {
     if (schemaPropertyRulePicker.open)

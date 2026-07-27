@@ -1,7 +1,7 @@
 import type {ComposedFacetDraft} from "./data-layer-composed-schema-builders.js";
 import type {ComposedSchemaRepair,ComposedSchemaRow,ComposedSchemaWorkspace} from "./data-layer-composed-schema-workspace.js";
 import {renderFocusedPropertyMenu} from "./data-layer-focused-schema-property-menu.js";
-import {focusedOwnershipActionTarget,focusedOwnershipActions,focusedPropertySectionLabels,type FocusedPropertySection} from "./data-layer-focused-schema-property-ui.js";
+import {focusedOwnershipActionTarget,focusedOwnershipActions,focusedPropertyProvenanceSummary,focusedPropertySectionLabels,type FocusedPropertySection} from "./data-layer-focused-schema-property-ui.js";
 import {renderComposedFocusedSection} from "./data-layer-composed-schema-workspace-focused-sections.js";
 import type {FlowPageInstanceStructureCommand,FlowPageInstanceStructureKind} from "./flow-graph/page-instance-structure.js";
 import {bindSchemaTableQuickEdit,clearSchemaTableOverlay,mountSchemaTableOverlay,schemaTableAllowedValues,schemaTableCellMetadata,schemaTableColumns,type SchemaTableEditableFacet,type SchemaTableQuickEditResult} from "./data-layer-schema-table.js";
@@ -24,7 +24,7 @@ const reviewCondition=(value:unknown):unknown=>{if(!value||typeof value!=="objec
 export function composedReviewFacetDelta(row:ComposedSchemaRow,draft:ComposedFacetDraft):{label:string;detail:string}[]{const baseline:Record<string,unknown>={...row.inherited,...row.local},baselineExample=Array.isArray(baseline.examples)?baseline.examples[0]:undefined,next:Record<string,unknown>={type:draft.type,itemType:draft.itemType,presence:draft.presence,expectedValue:draft.expectedValue,condition:reviewCondition(draft.condition),documentation:draft.documentation||undefined,exampleValue:draft.exampleMethod==="blank"?undefined:draft.exampleValue};const previous:Record<string,unknown>={...baseline,condition:reviewCondition(baseline.condition),documentation:baseline.documentation||undefined,exampleValue:baselineExample};return ["type","itemType","presence","expectedValue","condition","documentation","exampleValue"].filter((key)=>JSON.stringify(next[key])!==JSON.stringify(previous[key])).map((key)=>({label:key==="expectedValue"?"Edited expected value":key==="exampleValue"?"Edited example":`Edited ${key}`,detail:`${row.path} · prospective result ${JSON.stringify(next[key])} · consumers recompile`}));}
 
 function contextMenu(row:ComposedSchemaRow,context:ComposedRowsContext):HTMLElement {
-  return renderFocusedPropertyMenu({dom:context.dom,path:row.path,sectionsDisabled:context.removed,close:context.close,sectionSummary:(section)=>section==="values"?`${(context.draft?.allowedValues??row.local.allowedValues??row.effective.allowedValues??[]).length} allowed values`:section==="rules"?`${(context.draft?.rules??[]).length} rules`:"View effective value",selectSection:context.selectSection});
+  return renderFocusedPropertyMenu({dom:context.dom,path:row.path,provenance:focusedPropertyProvenanceSummary(row.provenance),sectionsDisabled:context.removed,close:context.close,sectionSummary:(section)=>section==="values"?`${(context.draft?.allowedValues??row.local.allowedValues??row.effective.allowedValues??[]).length} allowed values`:section==="rules"?`${(context.draft?.rules??[]).length} rules`:"View effective value",selectSection:context.selectSection});
 }
 
 function renderComposedSectionOwnership(host:HTMLElement,row:ComposedSchemaRow,context:ComposedRowsContext):void {

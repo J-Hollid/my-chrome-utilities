@@ -3,6 +3,7 @@ import {focusedPropertySectionLabels,focusedPropertySections,type FocusedPropert
 export interface FocusedPropertyMenuOptions {
   dom:Document;
   path:string;
+  provenance:string;
   sectionSummary:(section:FocusedPropertySection)=>string;
   selectSection:(section:FocusedPropertySection)=>void;
   sectionsDisabled?:boolean;
@@ -13,7 +14,7 @@ const button=(dom:Document,text:string,run:()=>void):HTMLButtonElement=>{const c
 
 /** The single menu boundary shared by canonical and composed focused-property editors. */
 export function renderFocusedPropertyMenu(options:FocusedPropertyMenuOptions):HTMLElement {
-  const {dom}=options,menu=dom.createElement("div");menu.className="focused-property-context-menu";menu.setAttribute("role","menu");menu.setAttribute("aria-label",`${options.path} property context menu`);menu.dataset.propertyContextMenu="true";menu.dataset.schemaOverlayLayer="parent";
+  const {dom}=options,menu=dom.createElement("div"),provenance=dom.createElement("p");menu.className="focused-property-context-menu";menu.setAttribute("role","menu");menu.setAttribute("aria-label",`${options.path} property context menu`);menu.dataset.propertyContextMenu="true";menu.dataset.schemaOverlayLayer="parent";provenance.dataset.propertyMenuProvenance="true";provenance.textContent=options.provenance;menu.append(provenance);
   for(const section of focusedPropertySections){const entry=dom.createElement("div"),choose=button(dom,focusedPropertySectionLabels[section],()=>options.selectSection(section)),summary=dom.createElement("span");entry.dataset.section=section;choose.disabled=Boolean(options.sectionsDisabled);choose.setAttribute("role","menuitem");summary.textContent=options.sectionSummary(section);entry.append(choose,summary);menu.append(entry);}
   if(options.close)menu.append(button(dom,"Cancel",options.close));return menu;
 }

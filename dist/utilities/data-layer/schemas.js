@@ -18,6 +18,9 @@ export { layeredContributorPath, layeredContributorsForPath } from "../../data-l
 export { canonicalPredicateLeafFromInput, canonicalPredicateOperators, canonicalPredicateText, mountCanonicalPredicateEditor, validateCanonicalPredicateTree } from "../../data-layer-canonical-predicate-editor.js";
 export { mountCanonicalSchemaEditor } from "../../data-layer-canonical-schema-ui.js";
 export { renderCanonicalFocusedRules } from "../../data-layer-canonical-schema-focused-rules.js";
+export { renderFocusedPropertyMenu } from "../../data-layer-focused-schema-property-menu.js";
+export { focusedOwnershipActionTarget, focusedOwnershipActions, focusedPropertyProvenanceSummary } from "../../data-layer-focused-schema-property-ui.js";
+export { focusedSourceState } from "../../data-layer-canonical-schema-focused-drafts.js";
 export { canonicalCommandsFromCompactProjection, compactConditionalPresence, compactSchemaProjection, savedSchemaCanonicalDocument, savedSchemaFromCanonical } from "../../data-layer-side-panel-unified-schema-editor.js";
 export { canonicalMigrationDurablyAcknowledged, resolveSidePanelSchemaContributor } from "../../data-layer-side-panel-schema-editor.js";
 export { redoProjectTransaction, undoProjectTransaction } from "../../data-layer-specification-project.js";

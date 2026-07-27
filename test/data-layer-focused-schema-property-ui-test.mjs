@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {focusedConditionLabel,focusedOwnershipActionTarget,focusedOwnershipActions,focusedPropertySections,focusedRuleFields,focusedSparseDelta} from "../dist/data-layer-focused-schema-property-ui.js";
+import {focusedConditionLabel,focusedOwnershipActionTarget,focusedOwnershipActions,focusedPropertyLifecycleOperation,focusedPropertyProvenanceSummary,focusedPropertySections,focusedRuleFields,focusedSparseDelta} from "../dist/data-layer-focused-schema-property-ui.js";
 import {applyCanonicalCommand,canonicalPredicateIds,canonicalPredicateWithStableIds,createCanonicalSchema} from "../dist/data-layer-canonical-schema.js";
 import {canonicalFlatPredicateIssue} from "../dist/canonical-schema/predicate-policy.js";
 import {canonicalNavigatorRows} from "../dist/canonical-schema-focused/navigator-rows.js";
@@ -84,6 +84,22 @@ assert.deepEqual(
   {section:"Structure",kind:"property",id:"property:line",label:"Structure property property:line"},
   "property lifecycle controls identify the structural item they affect",
 );
+assert.equal(
+  focusedPropertyProvenanceSummary([{contributorName:"Sitewide",state:"inherited"},{contributorName:"Checkout",state:"effective"}]),
+  "Provenance · Sitewide · inherited → Checkout · effective",
+  "the first property-menu layer names contributor provenance without ownership controls",
+);
+assert.deepEqual(
+  focusedPropertyLifecycleOperation("Reset to parent","property:line"),
+  {kind:"delete",propertyId:"property:line"},
+  "canonical Reset to parent stages removal of the sparse local property",
+);
+assert.deepEqual(
+  focusedPropertyLifecycleOperation("Remove local","property:line"),
+  {kind:"delete",propertyId:"property:line"},
+  "canonical Remove local stages removal of only the identified local property",
+);
+assert.equal(focusedPropertyLifecycleOperation("View","property:line"),undefined,"non-lifecycle ownership actions never stage deletion");
 assert.equal(focusedSourceState({provenance:[{state:"conflict"}]}),"conflict");
 assert.deepEqual(focusedRuleFields("range"),["condition","minimum","maximum","severity","message"]);
 assert.deepEqual(focusedRuleFields("pattern"),["condition","pattern","severity","message"]);

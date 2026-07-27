@@ -18,6 +18,13 @@ export const focusedPropertySectionLabels = {
 export function focusedOwnershipActionTarget(section, kind, id) {
     return { section, kind, id, label: `${section} ${kind} ${id}` };
 }
+export function focusedPropertyProvenanceSummary(entries) {
+    const chain = entries.map(({ contributorName, source, state }) => `${contributorName ?? source ?? "Unknown source"}${state ? ` · ${state}` : ""}`);
+    return `Provenance · ${chain.length ? chain.join(" → ") : "local contributor"}`;
+}
+export function focusedPropertyLifecycleOperation(action, propertyId) {
+    return action === "Remove local" || action === "Reset to parent" ? { kind: "delete", propertyId } : undefined;
+}
 /**
  * Keep ownership legality in one place.  The UI may present an inherited item,
  * but it must never accidentally turn a parent item into a local deletion.
