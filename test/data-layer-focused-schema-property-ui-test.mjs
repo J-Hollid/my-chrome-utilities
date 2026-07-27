@@ -29,6 +29,26 @@ assert.deepEqual(
   {left:8,top:92,width:344,height:700,maxHeight:784},
   "an edge overlay is clamped to the viewport without moving its editor",
 );
+const compactOverlay=schemaTableOverlayPlacement(
+  {left:300,right:324,top:680,bottom:704,width:24,height:24},
+  {width:320,height:160},
+  {width:800,height:800},
+);
+const grownOverlay=schemaTableOverlayPlacement(
+  {left:300,right:324,top:680,bottom:704,width:24,height:24},
+  {width:320,height:300},
+  {width:800,height:800},
+);
+assert.ok(grownOverlay.top<compactOverlay.top,"a growing open layer reflows upward to remain associated with its property action");
+assert.deepEqual(
+  schemaTableOverlayPlacement(
+    {left:300,right:324,top:680,bottom:704,width:24,height:24},
+    {width:320,height:900},
+    {width:800,height:800},
+  ),
+  {left:332,top:8,width:320,height:784,maxHeight:784},
+  "a layer taller than the viewport receives only the available viewport height",
+);
 assert.deepEqual(schemaTableEditableFacets,["description","expected-or-allowed","example"],"the three frequent facets are editable without opening an advanced editor");
 assert.deepEqual(schemaTableQuickEditIntent("Enter",false),{kind:"commit"},"Enter commits without leaving the current cell");
 assert.deepEqual(schemaTableQuickEditIntent("Tab",false),{kind:"commit",direction:1},"Tab commits and advances");

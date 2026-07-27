@@ -28,6 +28,9 @@ export function clearSchemaTableOverlay(owner) {
     if (!mounted)
         return;
     mounted.abort.abort();
+    mounted.resizeObserver?.disconnect();
+    if (mounted.resizeFrame !== undefined)
+        owner.ownerDocument.defaultView?.cancelAnimationFrame(mounted.resizeFrame);
     if (mounted.dialog.open)
         mounted.dialog.close();
     mounted.dialog.remove();
@@ -86,7 +89,22 @@ export function mountSchemaTableOverlay(owner, trigger, path, layers, onCancel) 
             dialog.showModal();
         place();
         restoreScroll();
-        dom.defaultView?.requestAnimationFrame(() => { place(); restoreScroll(); });
+        const view = dom.defaultView, schedulePlace = () => {
+            if (!view)
+                return;
+            if (mounted.resizeFrame !== undefined)
+                view.cancelAnimationFrame(mounted.resizeFrame);
+            mounted.resizeFrame = view.requestAnimationFrame(() => { delete mounted.resizeFrame; place(); restoreScroll(); });
+        };
+        schedulePlace();
+        if (view?.ResizeObserver) {
+            mounted.resizeObserver = new view.ResizeObserver(schedulePlace);
+            mounted.resizeObserver.observe(dialog);
+            mounted.resizeObserver.observe(stack);
+            const active = layers.at(-1);
+            if (active)
+                mounted.resizeObserver.observe(active);
+        }
         const active = layers.at(-1), focus = active?.querySelector("button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex='-1'])");
         focus?.focus({ preventScroll: true });
     });

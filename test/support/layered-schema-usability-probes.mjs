@@ -108,6 +108,23 @@ export const authoring033Expression=String.raw`(async()=>{
   const evidence={authoring033:Boolean(stacksOk&&canonicalParentFocus&&composedParentFocus&&canonicalRestored&&composedRestored&&emptyDirect&&directPredicate&&bounded&&groupControls&&allMultiple&&notSingle),viewport:innerWidth,stacks,canonicalParentFocus,composedParentFocus,canonicalRestored,composedRestored,emptyDirect,directPredicate,bounded,groupControls,allMultiple,notSingle};if(!evidence.authoring033)throw new Error('authoring033 evidence '+JSON.stringify(evidence));return evidence;
 })()`;
 
+export const authoring037Expression=String.raw`(async()=>{
+  const pause=(ms=80)=>new Promise((resolve)=>setTimeout(resolve,ms));
+  const {clearSchemaTableOverlay,mountSchemaTableOverlay}=await import('/data-layer-schema-table.js');
+  const root=document.createElement('section'),owner=document.createElement('div'),trigger=document.createElement('button'),inactive=document.createElement('section'),active=document.createElement('section'),last=document.createElement('button');
+  root.dataset.schemaEditorScrollRegion='true';root.style.cssText='position:fixed;left:0;top:0;width:180px;height:140px;overflow:auto;z-index:1';owner.style.height='600px';trigger.textContent='Property actions';trigger.style.cssText='position:fixed;left:280px;top:calc(100vh - 80px)';inactive.dataset.schemaOverlayLayer='menu';inactive.style.width='150px';inactive.innerHTML='<div style="height:240px"></div>';active.dataset.schemaOverlayLayer='rules';active.style.width='280px';active.innerHTML='<div data-base style="height:120px">Rules</div>';last.textContent='Review changes';active.append(last);owner.append(trigger);root.append(owner);document.body.append(root);root.scrollTop=320;inactive.scrollTop=40;
+  const documentScroll=document.scrollingElement.scrollTop,editorScroll=root.scrollTop,inactiveScroll=inactive.scrollTop;
+  const dialog=mountSchemaTableOverlay(owner,trigger,'/event',[inactive,active],()=>clearSchemaTableOverlay(owner));await pause();
+  const initial=dialog.getBoundingClientRect(),growth=document.createElement('div');growth.style.height='180px';active.insertBefore(growth,last);await pause(180);
+  const grown=dialog.getBoundingClientRect(),standaloneGrowth=grown.top<initial.top-20&&grown.bottom<=innerHeight-7&&active.scrollHeight<=active.clientHeight+1;
+  const oversized=document.createElement('div');oversized.style.height=innerHeight+'px';active.insertBefore(oversized,last);await pause(180);active.scrollTop=active.scrollHeight;last.scrollIntoView({block:'nearest'});await pause();
+  const tall=dialog.getBoundingClientRect(),lastBox=last.getBoundingClientRect(),eventOverflow=active.scrollHeight>active.clientHeight+1&&tall.top>=7&&tall.bottom<=innerHeight-7&&lastBox.top>=tall.top&&lastBox.bottom<=tall.bottom+1&&getComputedStyle(inactive).overflowY==='hidden'&&getComputedStyle(active).overflowY==='auto';
+  growth.remove();oversized.remove();await pause(180);const shrunk=dialog.getBoundingClientRect(),flowResize=shrunk.top>tall.top+20&&active.scrollHeight<=active.clientHeight+1;
+  const scrollRetained=document.scrollingElement.scrollTop===documentScroll&&root.scrollTop===editorScroll&&inactive.scrollTop===inactiveScroll,associated=Math.abs(shrunk.top-Math.min(Math.max(trigger.getBoundingClientRect().top,8),innerHeight-8-shrunk.height))<=2;
+  clearSchemaTableOverlay(owner);root.remove();
+  const evidence={authoring037:Boolean(standaloneGrowth&&flowResize&&eventOverflow&&scrollRetained&&associated),standaloneGrowth,flowResize,eventOverflow,scrollRetained,associated};if(!evidence.authoring037)throw new Error('authoring037 evidence '+JSON.stringify(evidence));return evidence;
+})()`;
+
 export const authoring034Expression=String.raw`(async()=>{
   const pause=(ms=45)=>new Promise((resolve)=>setTimeout(resolve,ms));
   const waitFor=async(read,label)=>{for(let attempt=0;attempt<360;attempt+=1){const value=await read();if(value)return value;await pause();}throw new Error('authoring034: '+label);};

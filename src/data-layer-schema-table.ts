@@ -32,13 +32,13 @@ export function schemaTableOverlayPlacement(anchor:OverlayRectangle,size:Overlay
   return{left:clamp(preferredLeft,overlayPadding,viewport.width-overlayPadding-width),top:clamp(anchor.top,overlayPadding,viewport.height-overlayPadding-height),width,height,maxHeight};
 }
 
-type MountedSchemaTableOverlay={owner:HTMLElement;dialog:HTMLDialogElement;abort:AbortController};
+type MountedSchemaTableOverlay={owner:HTMLElement;dialog:HTMLDialogElement;abort:AbortController;resizeObserver?:ResizeObserver;resizeFrame?:number};
 const mountedSchemaTableOverlays=new WeakMap<HTMLElement,MountedSchemaTableOverlay>();
 const mountedSchemaTableOverlayInventory=new Set<MountedSchemaTableOverlay>();
 
 export function clearSchemaTableOverlay(owner:HTMLElement):void {
   const mounted=mountedSchemaTableOverlays.get(owner);if(!mounted)return;
-  mounted.abort.abort();if(mounted.dialog.open)mounted.dialog.close();mounted.dialog.remove();const owned=(owner.getAttribute("aria-owns")??"").split(/\s+/).filter((id)=>id&&id!==mounted.dialog.id);if(owned.length)owner.setAttribute("aria-owns",owned.join(" "));else owner.removeAttribute("aria-owns");mountedSchemaTableOverlays.delete(owner);mountedSchemaTableOverlayInventory.delete(mounted);
+  mounted.abort.abort();mounted.resizeObserver?.disconnect();if(mounted.resizeFrame!==undefined)owner.ownerDocument.defaultView?.cancelAnimationFrame(mounted.resizeFrame);if(mounted.dialog.open)mounted.dialog.close();mounted.dialog.remove();const owned=(owner.getAttribute("aria-owns")??"").split(/\s+/).filter((id)=>id&&id!==mounted.dialog.id);if(owned.length)owner.setAttribute("aria-owns",owned.join(" "));else owner.removeAttribute("aria-owns");mountedSchemaTableOverlays.delete(owner);mountedSchemaTableOverlayInventory.delete(mounted);
 }
 
 export function schemaTableOverlayTarget<T extends HTMLElement=HTMLElement>(owner:HTMLElement,selector:string):T|undefined {
@@ -53,7 +53,7 @@ export function mountSchemaTableOverlay(owner:HTMLElement,trigger:HTMLElement,pa
   dialog.dataset.schemaRowOverlay="true";dialog.dataset.schemaPropertyOverlayHost="true";dialog.dataset.schemaOverlayOwner=ownerId;dialog.setAttribute("aria-label",`${path} property overlay`);dialog.style.cssText=schemaTableOverlayStyle;
   stack.dataset.schemaOverlayStack="true";stack.style.cssText="display:flex;align-items:flex-start;gap:0.5rem;max-width:100%;overflow:hidden;";
   layers.forEach((layer,index)=>{layer.style.boxSizing="border-box";layer.style.minWidth="0";layer.style.maxWidth=layers.length===1?"min(42rem,calc(100vw - 2.5rem))":`calc((100vw - ${1.5+0.5*(layers.length-1)}rem) / ${layers.length})`;layer.style.maxHeight="calc(100vh - 2.5rem)";layer.style.overflowY=index===layers.length-1?"auto":"hidden";layer.style.overscrollBehavior="contain";});
-  stack.append(...layers);dialog.append(stack);dom.body.append(dialog);owner.setAttribute("aria-owns",owner.getAttribute("aria-owns")?[owner.getAttribute("aria-owns"),dialogId].join(" "):dialogId);const mounted={owner,dialog,abort};mountedSchemaTableOverlays.set(owner,mounted);mountedSchemaTableOverlayInventory.add(mounted);
+  stack.append(...layers);dialog.append(stack);dom.body.append(dialog);owner.setAttribute("aria-owns",owner.getAttribute("aria-owns")?[owner.getAttribute("aria-owns"),dialogId].join(" "):dialogId);const mounted:MountedSchemaTableOverlay={owner,dialog,abort};mountedSchemaTableOverlays.set(owner,mounted);mountedSchemaTableOverlayInventory.add(mounted);
   const place=():void=>{
     if(!dialog.isConnected||!trigger.isConnected)return;
     const anchor=trigger.getBoundingClientRect(),bounds=dialog.getBoundingClientRect(),view=dom.defaultView,placement=schemaTableOverlayPlacement(anchor,bounds,{width:view?.innerWidth??dom.documentElement.clientWidth,height:view?.innerHeight??dom.documentElement.clientHeight});
@@ -67,7 +67,18 @@ export function mountSchemaTableOverlay(owner:HTMLElement,trigger:HTMLElement,pa
     if(!dialog.open)dialog.showModal();
     place();
     restoreScroll();
-    dom.defaultView?.requestAnimationFrame(()=>{place();restoreScroll();});
+    const view=dom.defaultView,schedulePlace=():void=>{
+      if(!view)return;
+      if(mounted.resizeFrame!==undefined)view.cancelAnimationFrame(mounted.resizeFrame);
+      mounted.resizeFrame=view.requestAnimationFrame(()=>{delete mounted.resizeFrame;place();restoreScroll();});
+    };
+    schedulePlace();
+    if(view?.ResizeObserver){
+      mounted.resizeObserver=new view.ResizeObserver(schedulePlace);
+      mounted.resizeObserver.observe(dialog);
+      mounted.resizeObserver.observe(stack);
+      const active=layers.at(-1);if(active)mounted.resizeObserver.observe(active);
+    }
     const active=layers.at(-1),focus=active?.querySelector<HTMLElement>("button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex='-1'])");
     focus?.focus({preventScroll:true});
   });

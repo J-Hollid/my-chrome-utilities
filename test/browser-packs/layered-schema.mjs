@@ -6,7 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import {headlessChromeArguments,resolveChromeExecutable,stopHeadlessChrome} from "../support/headless-chrome.mjs";
 import {wait} from "./shared-harness.mjs";
-import {authoring031Expression,authoring032Expression,authoring033Expression,authoring034Expression,authoring035And036Expression} from "../support/layered-schema-usability-probes.mjs";
+import {authoring031Expression,authoring032Expression,authoring033Expression,authoring034Expression,authoring035And036Expression,authoring037Expression} from "../support/layered-schema-usability-probes.mjs";
 
 class DevtoolsSocket{
   constructor(url){this.url=new URL(url);this.nextId=1;this.pending=new Map();this.buffer=Buffer.alloc(0);}
@@ -353,6 +353,8 @@ layeringEvidence.layering022=sidePanelParity;return{installedBoundary:location.p
     evidence.authoring031=authoring031Evidence.authoring031;
     evidence.authoring032=authoring032Evidence.authoring032;
     evidence.authoring033=authoring033Evidence.authoring033;
+    const authoring037Evidence=await evaluate(socket,authoring037Expression);
+    evidence.authoring037=authoring037Evidence.authoring037;
     const authoring034Evidence=await evaluate(socket,authoring034Expression);
     evidence.authoring034=Boolean(authoring034Evidence.authoring034&&authoringCorrectionEvidence.surfaces.every(({cancelFocus,escapeFocus})=>cancelFocus&&escapeFocus));
     const quickTableEvidence=await evaluate(socket,authoring035And036Expression);
