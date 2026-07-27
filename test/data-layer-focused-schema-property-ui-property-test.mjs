@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {filterFocusedReusableRules,focusedConditionLabel,focusedOwnershipActions,focusedPropertySections,focusedRuleFields,focusedSparseDelta} from "../dist/data-layer-focused-schema-property-ui.js";
-import {schemaTableAllowedValues,schemaTableEditableFacets,schemaTableExampleControl,schemaTableOverlayTransition,schemaTableQuickEditDestination,schemaTableStageAllowedValues,schemaTableStageExpectedOrAllowed,schemaTableValueFacet} from "../dist/data-layer-schema-table.js";
+import {schemaTableAllowedValues,schemaTableEditableFacets,schemaTableExampleControl,schemaTableOverlayPlacement,schemaTableOverlayTransition,schemaTableQuickEditDestination,schemaTableStageAllowedValues,schemaTableStageExpectedOrAllowed,schemaTableValueFacet} from "../dist/data-layer-schema-table.js";
 
 const expectedSections=["definition","rules","structure"];
 assert.deepEqual(focusedPropertySections,expectedSections,"every focused editor shares the same ordered section vocabulary");
@@ -52,6 +52,19 @@ for(let index=0;index<100;index+=1){
   for(const kind of ["cancel","escape"]){
     assert.deepEqual(schemaTableOverlayTransition(review,{kind}),{phase:"closed",restorePath:path},`${kind} closes the overlay and restores its exact invoking row path`);
   }
+}
+for(let example=0;example<200;example+=1){
+  const viewport={width:64+Math.floor(random()*1200),height:64+Math.floor(random()*900)},anchorWidth=8+Math.floor(random()*48),anchorHeight=8+Math.floor(random()*48),left=Math.floor(random()*(viewport.width-anchorWidth)),top=Math.floor(random()*(viewport.height-anchorHeight)),anchor={left,right:left+anchorWidth,top,bottom:top+anchorHeight,width:anchorWidth,height:anchorHeight},width=16+Math.floor(random()*viewport.width),compactHeight=8+Math.floor(random()*viewport.height),growth=1+Math.floor(random()*viewport.height),compact=schemaTableOverlayPlacement(anchor,{width,height:compactHeight},viewport),grown=schemaTableOverlayPlacement(anchor,{width,height:compactHeight+growth},viewport);
+  for(const placement of [compact,grown]){
+    assert.ok(placement.left>=8&&placement.top>=8,"generated overlays retain the viewport padding");
+    assert.ok(placement.left+placement.width<=viewport.width-8,"generated overlays remain horizontally contained");
+    assert.ok(placement.top+placement.height<=viewport.height-8,"generated overlays remain vertically contained");
+    assert.ok(placement.width<=viewport.width-16&&placement.height<=viewport.height-16,"generated overlays use no more than the available viewport");
+    assert.equal(placement.maxHeight,viewport.height-16,"generated overlays expose the exact available scroll height");
+  }
+  assert.ok(grown.top<=compact.top,"growing an open overlay reflows only upward or remains clamped");
+  assert.equal(grown.left,compact.left,"vertical content growth conserves horizontal association");
+  assert.equal(grown.width,compact.width,"vertical content growth conserves overlay width");
 }
 for(let example=0;example<100;example+=1){
   const rowCount=1+Math.floor(random()*20),cells=Array.from({length:rowCount},(_,row)=>schemaTableEditableFacets.map((facet)=>({path:`/generated-${example}/row-${row}`,facet}))).flat();
