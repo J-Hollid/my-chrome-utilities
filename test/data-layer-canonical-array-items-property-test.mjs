@@ -33,13 +33,18 @@ for(let depth=1;depth<=8;depth+=1){
   assert.equal(canonicalPropertyPath(imported,importedCode.id),`/matrix${stars}/code`);
   const scopeBoundaries=canonicalArrayBoundaries(document,code).map(({propertyId},index)=>({propertyId,mode:index===depth-1?"position":"every",...(index===depth-1?{position:1}:{})}));
   const compiled=compileLayeredSchema([{id:`profile:scope:${depth}`,name:"Scope",scope:"Shared Profile",constraints:[
-    {path:"/matrix",type:"array",itemType:itemSchema.type,definitionId:matrix},
+    {path:"/matrix",type:"array",itemType:itemSchema.type,itemSchema,definitionId:matrix},
     {path:`/matrix${stars}/code`,type:"string",definitionId:code,rules:[{id:`rule:scope:${depth}`,kind:"pattern",pattern:"^OK$",severity:"error",condition:{kind:"predicate",propertyId:code,operator:"Exists"},arrayScope:{boundaries:scopeBoundaries}}]},
   ]}],{eventId:`event:scope:${depth}`,eventRole:"interaction"});
   const nested=(remaining)=>remaining===1?[{code:"BAD"},{code:"OK"}]:[nested(remaining-1)];
   const issues=validateLayeredObservation({targetId:`target:scope:${depth}`,targetName:"Scope",revision:1,compiled},{matrix:nested(depth)}).issues;
   assert.deepEqual(issues.map(({path,canonicalPath,code:issueCode})=>({path,canonicalPath,code:issueCode})),[
     {path:`/matrix${"/0".repeat(depth)}/code`,canonicalPath:`/matrix${stars}/code`,code:"PATTERN"},
+  ]);
+  const invalidAt=(remaining)=>remaining===1?["scalar"]:[invalidAt(remaining-1)];
+  const invalid=validateLayeredObservation({targetId:`target:scope:${depth}`,targetName:"Scope",revision:1,compiled},{matrix:invalidAt(depth)}).issues.filter(({code})=>code==="TYPE");
+  assert.deepEqual(invalid.map(({path,canonicalPath,expected})=>({path,canonicalPath,expected})),[
+    {path:`/matrix${"/0".repeat(depth)}`,canonicalPath:`/matrix${"/*".repeat(depth)}`,expected:"object"},
   ]);
 }
 

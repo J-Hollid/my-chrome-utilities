@@ -8,6 +8,10 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
         conflict(constraint.path, "type cannot change", [prior.origins.at(-1).contributorName, contributor.name]);
     else if (!parallelPair && constraint.type)
         next.type = constraint.type;
+    if (constraint.itemType)
+        next.itemType = constraint.itemType;
+    if (constraint.itemSchema)
+        next.itemSchema = clone(constraint.itemSchema);
     if (constraint.allowedValues) {
         if (prior.allowedValues) {
             const narrowed = constraint.allowedValues.filter((value) => prior.allowedValues.some((base) => same(base, value)));

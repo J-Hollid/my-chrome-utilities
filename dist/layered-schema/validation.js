@@ -16,6 +16,16 @@ const contextualPaths = (pathsByDefinition, path, canonicalPath) => {
     const actual = path.split("/").filter(Boolean), canonical = canonicalPath.split("/").filter(Boolean), indices = canonical.flatMap((segment, index) => segment === "*" ? [actual[index]] : []);
     return new Map([...pathsByDefinition].map(([id, template]) => { let ordinal = 0; return [id, `/${template.split("/").filter(Boolean).map((segment) => segment === "*" ? (indices[ordinal++] ?? segment) : segment).join("/")}`]; }));
 };
+const validateItemShape = (issues, targetName, path, canonicalPath, property, actual, schema) => {
+    if (!schema.type)
+        return;
+    if (!typeMatches(actual, schema.type)) {
+        pushIssue(issues, targetName, path, canonicalPath, property, actual, "TYPE", schema.type);
+        return;
+    }
+    if (schema.type === "array" && Array.isArray(actual) && schema.items)
+        actual.forEach((item, index) => validateItemShape(issues, targetName, `${path}/${index}`, `${canonicalPath}/*`, property, item, schema.items));
+};
 const validateScopedRules = (issues, targetName, path, canonicalPath, property, actual, payload, pathsByDefinition) => {
     for (const rule of property.rules ?? []) {
         const scoped = Boolean(rule.arrayScope?.boundaries?.length);
@@ -51,7 +61,11 @@ const validateProperty = (issues, targetName, path, canonicalPath, property, pay
     return;
 } validateScopedRules(issues, targetName, path, canonicalPath, property, actual, payload, pathsByDefinition); if (actual === undefined)
     return; if (property.type && !typeMatches(actual, String(property.type)))
-    pushIssue(issues, targetName, path, canonicalPath, property, actual, "TYPE", property.type); if (Array.isArray(property.allowedValues) && !property.allowedValues.some((candidate) => same(candidate, actual)))
+    pushIssue(issues, targetName, path, canonicalPath, property, actual, "TYPE", property.type); if (property.type === "array" && Array.isArray(actual)) {
+    const schema = property.itemSchema, itemType = typeof property.itemType === "string" ? property.itemType : undefined, itemSchema = schema ?? (itemType ? { id: `item:${canonicalPath}`, type: itemType } : undefined);
+    if (itemSchema)
+        actual.forEach((item, index) => validateItemShape(issues, targetName, `${path}/${index}`, `${canonicalPath}/*`, property, item, itemSchema));
+} if (Array.isArray(property.allowedValues) && !property.allowedValues.some((candidate) => same(candidate, actual)))
     pushIssue(issues, targetName, path, canonicalPath, property, actual, "ALLOWED_VALUE", property.allowedValues); if (Array.isArray(property.patterns) && !property.patterns.every((pattern) => new RegExp(String(pattern)).test(String(actual))))
     pushIssue(issues, targetName, path, canonicalPath, property, actual, "PATTERN", property.patterns); if (typeof property.minimum === "number" && typeof actual === "number" && actual < property.minimum)
     pushIssue(issues, targetName, path, canonicalPath, property, actual, "MINIMUM", property.minimum); if (typeof property.maximum === "number" && typeof actual === "number" && actual > property.maximum)

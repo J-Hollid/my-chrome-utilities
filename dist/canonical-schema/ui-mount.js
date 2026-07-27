@@ -1,4 +1,4 @@
-import { canonicalPropertyPath } from "../data-layer-canonical-schema.js";
+import { canonicalArrayBoundaries, canonicalPropertyPath } from "../data-layer-canonical-schema.js";
 import { activateFocusedOwnershipSection, focusedOwnershipState, focusedPropertyLifecycleOperation, focusedSectionOwnershipActions as sharedFocusedSectionOwnershipActions } from "../data-layer-focused-schema-property-ui.js";
 import { renderCanonicalFocusedSection } from "../data-layer-canonical-schema-focused-sections.js";
 import { renderCanonicalFocusedMenu } from "../data-layer-canonical-schema-focused-menu.js";
@@ -141,7 +141,7 @@ export function mountCanonicalSchemaEditor(options) {
         const propertyId = working.id;
         const changes = focusedStagedChanges(working, original, removedRuleIds, canonicalPropertyPath(current(), propertyId), removedValueIds);
         if (stagedOperations.length)
-            changes.push(...stagedOperations.map((operation) => ({ label: `Structure · ${operation.kind}`, detail: `${"propertyId" in operation ? operation.propertyId : propertyId} staged for review` })));
+            changes.push(...stagedOperations.map((operation) => ({ label: `Structure · ${operation.kind}`, detail: `${operation.kind === "add" ? `${operation.name} · ${operation.type} · ` : ""}${"propertyId" in operation ? operation.propertyId : propertyId} staged for review` })));
         if (!changes.length) {
             feedback = "No staged changes to review.";
             render();
@@ -165,7 +165,7 @@ export function mountCanonicalSchemaEditor(options) {
             closeChild();
         else
             closeFocused("escape"); }, command, render, renderMenu: (node) => renderCanonicalFocusedMenu(node, { dom, current, sourceState: focusedSourceState, ensureWorking, getWorking: () => working, activeSection, setActiveSection: (value) => { activeSection = value; focusedPropertyId = node.id; overlayState = schemaTableOverlayTransition(overlayState, { kind: "focus" }); }, setMenuPropertyId: (value) => { menuPropertyId = value; }, render, close: closeFocused, feedback: (message) => { feedback = message; }, provenanceText }), renderFocusedEditor: (document, node) => { const state = focusedSourceState(node), primary = activeSection, ownershipActions = focusedSectionOwnershipActions({ inherited: state === "inherited", local: state === "local", overridden: state === "overridden", invariant: node.enforcement === "invariant", conflict: state === "conflict", replaceable: node.enforcement === "overridable" })[primary]; return renderCanonicalFocusedEditor(document, node, { dom, activeSection, sectionLabel, canonicalPropertyPath, provenanceText, presenceText, ownershipActions, ownershipSession, runOwnershipAction: (action, targetLabel) => { ensureWorking(node); ownershipSession = activateFocusedOwnershipSection(ownershipSession, primary, action); const operation = focusedPropertyLifecycleOperation(action, node.id); feedback = `${action} targets ${targetLabel}.`; if (operation)
-                stagedOperations = [...stagedOperations, operation]; render(); }, renderSection: (host, value) => renderCanonicalFocusedSection(host, { dom, current, node: value, getWorking: () => working, setWorking: (next) => { working = next; }, activeSection, setActiveSection: (section) => { activeSection = section; }, removedRuleIds, removedValueIds, id: options.id, stageStructure, render, patchFor, command, select: (id) => { activePropertyId = id; }, feedback: (message) => { feedback = message; } }), close: closeChild, review: showReview, save: saveFocused }); } });
+                stagedOperations = [...stagedOperations, operation]; render(); }, renderSection: (host, value) => renderCanonicalFocusedSection(host, { dom, current, node: value, getWorking: () => working, setWorking: (next) => { working = next; }, properties: () => Object.values(current().nodes).map((property) => ({ id: property.id, name: property.name, type: property.type, allowedValues: property.allowedValues.map(({ value }) => value), arrayBoundaries: canonicalArrayBoundaries(current(), property.id) })), activeSection, setActiveSection: (section) => { activeSection = section; }, removedRuleIds, removedValueIds, id: options.id, stageStructure, render, patchFor, command, select: (id) => { activePropertyId = id; }, feedback: (message) => { feedback = message; } }), close: closeChild, review: showReview, save: saveFocused }); } });
     options.host.addEventListener("keydown", (event) => { if (event.key === "Escape" && working) {
         event.preventDefault();
         if (focusedPropertyId)

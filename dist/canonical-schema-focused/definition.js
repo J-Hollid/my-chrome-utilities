@@ -3,6 +3,17 @@ import { schemaTableAllowedValues, schemaTableExampleControl, schemaTableStageAl
 import { focusedDefinitionFacetOwnershipActions } from "../data-layer-focused-schema-property-ui.js";
 import { input, labeled } from "./dom.js";
 const types = ["string", "number", "integer", "boolean", "object", "array", "null"];
+export function setCanonicalNestedItemType(root, arrayItemId, type, id) {
+    let current = root;
+    while (current && current.id !== arrayItemId)
+        current = current.items;
+    if (!current || current.type !== "array")
+        return;
+    if (type)
+        current.items = { id: current.items?.id ?? id("item"), type };
+    else
+        delete current.items;
+}
 export function renderDefinitionSection(host, context, working) {
     const { dom } = context, type = dom.createElement("select"), itemType = dom.createElement("select"), items = dom.createElement("section"), presence = dom.createElement("select"), allowed = input(dom, "ordinaryValue", schemaTableAllowedValues({ ...(working.expectedValue === undefined ? {} : { expectedValue: working.expectedValue }), allowedValues: working.allowedValues.map(({ value }) => value) })), displayText = input(dom, "displayText", working.documentation.displayText), description = dom.createElement("textarea"), comments = dom.createElement("textarea"), exampleMethod = dom.createElement("select"), exampleHost = dom.createElement("span");
     allowed.dataset.allowedValues = "true";
@@ -10,16 +21,13 @@ export function renderDefinitionSection(host, context, working) {
     items.dataset.arrayItems = "true";
     const renderItems = () => { const next = context.getWorking(); items.replaceChildren(); items.hidden = next?.type !== "array"; const heading = dom.createElement("h3"); heading.textContent = "Items"; itemType.replaceChildren(new Option("Choose item type", ""), ...types.map((entry) => new Option(entry, entry))); itemType.value = next?.itemSchema?.type ?? next?.itemType ?? ""; itemType.required = next?.type === "array"; items.append(heading, labeled(dom, "Array item type", itemType)); if (!next || next.type !== "array")
         return; let schema = next.itemSchema; while (schema?.type === "array") {
-        const nested = dom.createElement("section"), nestedHeading = dom.createElement("h4"), selector = dom.createElement("select");
+        const schemaId = schema.id, nested = dom.createElement("section"), nestedHeading = dom.createElement("h4"), selector = dom.createElement("select");
         nestedHeading.textContent = "Items";
         selector.append(new Option("Choose item type", ""), ...types.map((entry) => new Option(entry, entry)));
         selector.value = schema.items?.type ?? "";
         selector.required = true;
         selector.addEventListener("change", () => { const current = context.getWorking()?.itemSchema; if (!current)
-            return; if (selector.value)
-            current.items = { id: current.items?.id ?? context.id("item"), type: selector.value };
-        else
-            delete current.items; renderItems(); });
+            return; setCanonicalNestedItemType(current, schemaId, selector.value ? selector.value : undefined, context.id); renderItems(); });
         nested.append(nestedHeading, labeled(dom, "Item type", selector));
         items.append(nested);
         schema = schema.items;
