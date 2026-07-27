@@ -6,7 +6,7 @@ import {compileSpecificationProject,createCanonicalProjectEnvelope,evaluateSpeci
 let seed=0x51a7e;
 const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/0x100000000;};
 const pickSubset=(values)=>values.filter(()=>random()>=0.5);
-let nestedRequiredConserved=true,eventTargetsIsolated=true;
+let nestedRequiredConserved=true,eventTargetsIsolated=true,definedFieldsPolicyConserved=true;
 
 for(let iteration=0;iteration<200;iteration+=1){
   const universe=Array.from({length:2+Math.floor(random()*7)},(_,index)=>`value-${iteration}-${index}`),selected=pickSubset(universe),narrowed=selected.length?selected:[universe[0]];
@@ -19,6 +19,12 @@ for(let iteration=0;iteration<200;iteration+=1){
   assert.deepEqual(first.properties["/choice"].allowedValues,narrowed,"a valid specific subset is conserved exactly");
   assert.equal("/excluded" in first.properties,false,"a non-targeted contribution never leaks into the effective schema");
   assert.deepEqual(roundTrip,first,"JSON persistence preserves deterministic compilation");
+
+  const closed=random()>=0.5,policyCompiled=compileLayeredSchema([
+    {id:`policy-base:${iteration}`,name:"Policy base",scope:"Shared Profile",constraints:[{path:"/declared",type:"object"},{path:"/declared/value",type:"string"}],onlyDefinedFields:!closed},
+    {id:`policy-local:${iteration}`,name:"Policy local",scope:"Event",constraints:[],onlyDefinedFields:closed},
+  ],context),policyIssues=validateLayeredObservation({targetId:`policy:${iteration}`,targetName:"Policy",revision:iteration,compiled:policyCompiled},{declared:{value:"kept",extra:"unknown"},rootExtra:true}).issues.filter(({code})=>code==="UNDECLARED_PROPERTY");
+  definedFieldsPolicyConserved&&=policyCompiled.onlyDefinedFields===closed&&(closed?policyIssues.map(({path})=>path).sort().join("|")==="/declared/extra|/rootExtra":policyIssues.length===0);
 
   const priority=1+Math.floor(random()*50),compiled=first,automatic={id:`auto:${iteration}`,name:"Automatic",activation:"automatic",priority,applicability:[],compiled},lower={...automatic,id:`lower:${iteration}`,name:"Lower",priority:priority-1},documentation={...automatic,id:`docs:${iteration}`,name:"Docs",activation:"documentation-only",priority:priority+100},resolution=resolveLayeredTarget([lower,documentation,automatic],{});
   assert.equal(resolution.winner?.id,automatic.id,"the unique highest automatic priority wins");
@@ -51,6 +57,10 @@ for(let iteration=0;iteration<200;iteration+=1){
   eventTargetsIsolated&&=alpha.issueDetails.length===0&&beta.issueDetails.length===0;
 }
 
-assert.deepEqual({nestedRequiredConserved,eventTargetsIsolated},{nestedRequiredConserved:true,eventTargetsIsolated:true},"project-plan compilation conserves nested presence and event-specific target schemas");
+assert.deepEqual(
+  {nestedRequiredConserved,eventTargetsIsolated,definedFieldsPolicyConserved},
+  {nestedRequiredConserved:true,eventTargetsIsolated:true,definedFieldsPolicyConserved:true},
+  "project-plan compilation conserves nested presence, event-specific targets, and the most-specific defined-fields policy",
+);
 
 console.log("data-layer layered schema property tests passed");

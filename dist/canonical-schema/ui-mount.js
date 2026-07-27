@@ -69,6 +69,16 @@ export function mountCanonicalSchemaEditor(options) {
             if (!Object.keys(patch).length)
                 return { status: "unchanged" };
             const result = command({ kind: "set", baseRevision: document.revision, propertyId: original.id, patch });
+            if (result.status === "confirmation-required") {
+                showImpactReview(result.impact, () => {
+                    const live = current(), confirmed = command({ kind: "set", baseRevision: live.revision, propertyId: original.id, patch, confirmed: true });
+                    if (confirmed.status === "applied" || confirmed.status === "rebased") {
+                        review = undefined;
+                        render();
+                    }
+                });
+                return { status: "committed" };
+            }
             return result.status === "applied" || result.status === "rebased" ? { status: "committed" } : { status: "invalid", diagnostic: result.status === "conflict" ? result.message : "Review the affected property before saving." };
         }
         catch (error) {

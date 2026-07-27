@@ -26,6 +26,8 @@ export function renderCanonicalSchemaEditor(context) {
     policyLabel.append(policy, "Only defined fields");
     header.append(title, status, policyLabel, undo, redo);
     options.host.append(header, renderCanonicalNavigator(context));
+    if (document.view === "table" && context.review)
+        options.host.append(context.review);
     const node = context.selectedNode(document);
     if (document.view !== "table" && node && context.focusedPropertyId === node.id) {
         context.ensureWorking(node);
