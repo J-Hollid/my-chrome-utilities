@@ -47,6 +47,7 @@ export function editConstraints(constraints:LayerConstraint[],command:FlowPageIn
     if(existingPath(constraints,to,command.path))throw new Error(`Property ${to} already exists.`);
     return remapSubtree(constraints,command.path,to,id);
   }
+  target.definitionId=target.definitionId??id("property");
   return moveBlock(constraints,command.path,command.kind==="move-earlier"?-1:1);
 }
 

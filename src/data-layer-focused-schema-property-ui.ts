@@ -53,6 +53,11 @@ export interface FocusedOwnershipSession {
   activated:readonly FocusedPropertyPrimarySection[];
 }
 
+export function focusedOwnershipState(input:FocusedOwnershipInput):{input:FocusedOwnershipInput;session:FocusedOwnershipSession} {
+  const normalized:FocusedOwnershipInput={...input,inherited:Boolean(input.inherited),local:Boolean(input.local),structureOwned:Boolean(input.structureOwned)};
+  return{input:normalized,session:{inherited:Boolean(normalized.inherited),local:Boolean(normalized.local),structureOwned:Boolean(normalized.structureOwned),...(normalized.invariant?{invariant:true}:{}),activated:[]}};
+}
+
 export function focusedOwnershipSectionEditable(session:FocusedOwnershipSession,section:FocusedPropertyPrimarySection):boolean {
   if(section==="rules")return true;
   if(section==="definition")return true;
@@ -122,9 +127,13 @@ export function focusedSectionOwnershipActions(input:FocusedOwnershipInput):Reco
   const actions=focusedOwnershipActions(input),lifecycle=new Set(["Remove local","Reset to parent"]);
   return {
     definition:input.inherited&&!input.local?[]:actions.filter((action)=>!lifecycle.has(action)&&action!=="Replace here"),
-    rules:[...actions],
+    rules:[],
     structure:input.inherited&&!input.structureOwned?["Override here"]:actions.filter((action)=>lifecycle.has(action)),
   };
+}
+
+export function focusedDefinitionFacetOwnershipActions(input:Pick<FocusedOwnershipInput,"inherited"|"local">):string[] {
+  return input.inherited&&input.local?["Reset to parent"]:[];
 }
 
 export interface FocusedReusableRule {id:string;name:string;kind?:string;enabled?:boolean;outcome?:Record<string,unknown>;[field:string]:unknown;}

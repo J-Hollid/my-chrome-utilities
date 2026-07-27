@@ -930,6 +930,7 @@
       "src/data-layer-canonical-predicate-editor.ts",
       "src/data-layer-side-panel-unified-schema-editor.ts",
       "src/data-layer-composed-schema-builders.ts",
+      "src/data-layer-composed-schema-ownership.ts",
       "src/data-layer-composed-schema-workspace.ts",
       "src/data-layer-composed-schema-workspace-ui.ts",
       "src/data-layer-composed-schema-workspace-focused-sections.ts",

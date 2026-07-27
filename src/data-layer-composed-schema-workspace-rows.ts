@@ -1,5 +1,6 @@
 import type {ComposedFacetDraft} from "./data-layer-composed-schema-builders.js";
 import type {ComposedSchemaRepair,ComposedSchemaRow,ComposedSchemaWorkspace} from "./data-layer-composed-schema-workspace.js";
+import {composedSchemaRowOwnershipInput} from "./data-layer-composed-schema-ownership.js";
 import {renderFocusedPropertyMenu} from "./data-layer-focused-schema-property-menu.js";
 import {focusedOwnershipActionTarget,focusedSectionOwnershipActions,focusedPropertyProvenanceSummary,focusedPropertySectionLabels,gateFocusedOwnershipSection,type FocusedOwnershipSession,type FocusedPropertyPrimarySection,type FocusedPropertySection} from "./data-layer-focused-schema-property-ui.js";
 import {renderComposedFocusedSection} from "./data-layer-composed-schema-workspace-focused-sections.js";
@@ -29,7 +30,7 @@ function contextMenu(row:ComposedSchemaRow,context:ComposedRowsContext):HTMLElem
 }
 
 function renderComposedSectionOwnership(host:HTMLElement,row:ComposedSchemaRow,context:ComposedRowsContext):void {
-  const local=Object.keys(row.local).some((key)=>key!=="path"),inherited=Boolean(row.inherited),structureOwned=!row.inherited||Boolean(row.local.definitionId),visible=focusedSectionOwnershipActions({local,inherited,structureOwned,overridden:row.action==="reset",invariant:row.effective.enforcement==="invariant",conflict:row.validationState==="blocked",replaceable:row.effective.enforcement==="overridable"})[context.activeSection as FocusedPropertyPrimarySection],lifecycle=new Set(["Remove local","Reset to parent"]);
+  const visible=focusedSectionOwnershipActions(composedSchemaRowOwnershipInput(row))[context.activeSection as FocusedPropertyPrimarySection],lifecycle=new Set(["Remove local","Reset to parent"]);
   if(!visible.length)return;
   const target=focusedOwnershipActionTarget(context.activeSection==="structure"?"Structure":"Definition",context.activeSection==="structure"?"property":"facet",context.activeSection==="structure"?row.effective.definitionId??row.path:`${row.effective.definitionId??row.path}:definition`),group=context.dom.createElement("div"),status=context.dom.createElement("p");
   group.dataset.sectionOwnershipActions="true";group.dataset.ownershipTarget=target.label;status.setAttribute("role","status");status.dataset.ownershipTargetReport="true";

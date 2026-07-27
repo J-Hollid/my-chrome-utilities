@@ -12,6 +12,10 @@ export function focusedSourceState(node) {
 export function focusedStructureOwned(node) {
     return node.structureOwned ?? !node.provenance.some(({ state }) => state === "inherited" || state === "shadowed");
 }
+export function focusedCanonicalOwnershipInput(node) {
+    const state = focusedSourceState(node), structureOwned = focusedStructureOwned(node);
+    return { inherited: !structureOwned || state === "inherited" || state === "overridden", local: state === "local" || state === "overridden", structureOwned, overridden: state === "overridden", invariant: node.enforcement === "invariant", conflict: state === "conflict", replaceable: node.enforcement === "overridable" };
+}
 export function focusedPropertyPatch(node, original, removedRuleIds, removedValueIds = new Set()) {
     const patch = {};
     for (const key of ["name", "type", "itemType", "presence", "allowedValues", "documentation", "overrideReferences", "expectedValue", "enforcement", "target"])

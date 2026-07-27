@@ -1,4 +1,5 @@
 import type {CanonicalPropertyNode} from "./data-layer-canonical-schema.js";
+import type {FocusedOwnershipInput} from "./data-layer-focused-schema-property-ui.js";
 
 const clone=<T>(value:T):T=>structuredClone(value);
 const same=(left:unknown,right:unknown):boolean=>JSON.stringify(left)===JSON.stringify(right);
@@ -13,6 +14,11 @@ export function focusedSourceState(node:CanonicalPropertyNode):"inherited"|"loca
 
 export function focusedStructureOwned(node:CanonicalPropertyNode):boolean {
   return node.structureOwned??!node.provenance.some(({state})=>state==="inherited"||state==="shadowed");
+}
+
+export function focusedCanonicalOwnershipInput(node:CanonicalPropertyNode):FocusedOwnershipInput {
+  const state=focusedSourceState(node),structureOwned=focusedStructureOwned(node);
+  return{inherited:!structureOwned||state==="inherited"||state==="overridden",local:state==="local"||state==="overridden",structureOwned,overridden:state==="overridden",invariant:node.enforcement==="invariant",conflict:state==="conflict",replaceable:node.enforcement==="overridable"};
 }
 
 export function focusedPropertyPatch(node:CanonicalPropertyNode,original:CanonicalPropertyNode,removedRuleIds:Set<string>,removedValueIds:Set<string>=new Set()):CanonicalFocusedPatch {
