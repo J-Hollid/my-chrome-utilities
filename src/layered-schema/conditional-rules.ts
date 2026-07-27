@@ -50,7 +50,7 @@ const executable=(property:EffectiveProperty,rule:Record<string,unknown>):Record
 };
 const conditional=(property:EffectiveProperty,payload:Record<string,unknown>,paths:ReadonlyMap<string,string>):Record<string,unknown>[]=>((property.rules??[]) as Record<string,unknown>[]).flatMap((rule)=>{
   const outcome=executable(property,rule);
-  if(!outcome||outcome.enabled===false)return[];
+  if(!outcome||outcome.enabled===false||((outcome.arrayScope as {boundaries?:unknown[]}|undefined)?.boundaries?.length))return[];
   const alreadyProjected=!outcome.condition&&rule.kind!=="reusable"&&["pattern","range","cardinality"].includes(String(outcome.kind));
   return!alreadyProjected&&layeredConditionMatches(outcome.condition as Record<string,unknown>|undefined,payload,paths)?[outcome]:[];
 });

@@ -30,12 +30,32 @@ export function canonicalArrayScopeSummary(boundaries:readonly (CanonicalArraySc
 export function canonicalArrayBoundaries(document:CanonicalSchemaDocument,propertyId:string):{propertyId:string;name:string}[]{
   const ancestors:CanonicalPropertyNode[]=[];let node=document.nodes[propertyId];
   while(node?.parentId){node=document.nodes[node.parentId];if(node)ancestors.unshift(node);}
-  return ancestors.flatMap((ancestor)=>ancestor.type==="array"?[{propertyId:ancestor.id,name:ancestor.name.replace(/s$/,"")}]:[]);
+  return ancestors.flatMap((ancestor)=>{
+    if(ancestor.type!=="array")return[];
+    const name=ancestor.name.replace(/s$/,""),boundaries=[{propertyId:ancestor.id,name}];
+    let item=ancestor.itemSchema;
+    while(item?.type==="array"){
+      boundaries.push({propertyId:item.id,name:`${name}${" item".repeat(boundaries.length)}`});
+      item=item.items;
+    }
+    return boundaries;
+  });
 }
 
 const orderedChildren=(document:CanonicalSchemaDocument,parentId?:string):CanonicalPropertyNode[]=>Object.values(document.nodes)
   .filter((node)=>node.parentId===parentId)
   .sort((left,right)=>left.order-right.order||left.id.localeCompare(right.id));
+
+const itemSchemaDefinition=(item:NonNullable<CanonicalPropertyNode["itemSchema"]>,children:readonly CanonicalPropertyNode[],document:CanonicalSchemaDocument):Record<string,unknown>=>{
+  const definition:Record<string,unknown>={...(item.type?{type:item.type}:{})};
+  if(item.type==="array"&&item.items)definition.items=itemSchemaDefinition(item.items,children,document);
+  if(item.type==="object"&&children.length){
+    definition.properties=Object.fromEntries(children.map((child)=>[child.name,schemaForNode(document,child)]));
+    const required=children.filter(({presence})=>presence.mode.startsWith("required")).map(({name})=>name);
+    if(required.length)definition.required=required;
+  }
+  return definition;
+};
 
 const schemaForNode=(document:CanonicalSchemaDocument,node:CanonicalPropertyNode):Record<string,unknown>=>{
   const children=orderedChildren(document,node.id);
@@ -44,9 +64,7 @@ const schemaForNode=(document:CanonicalSchemaDocument,node:CanonicalPropertyNode
   if(node.type==="array"){
     const itemType=node.itemSchema?.type??node.itemType;
     if(itemType){
-      let items:Record<string,unknown>={type:itemType};
-      if(itemType==="array"&&node.itemSchema?.items)items={type:"array",items:itemSchemaDefinition(node.itemSchema.items)};
-      if(itemType==="object"&&children.length)items.properties=Object.fromEntries(children.map((child)=>[child.name,schemaForNode(document,child)]));
+      const items=node.itemSchema?itemSchemaDefinition(node.itemSchema,children,document):itemSchemaDefinition({id:`item:${node.id}`,type:itemType},children,document);
       definition.items=items;
     }
   }
@@ -60,11 +78,6 @@ const schemaForNode=(document:CanonicalSchemaDocument,node:CanonicalPropertyNode
   }
   return definition;
 };
-
-const itemSchemaDefinition=(item:NonNullable<CanonicalPropertyNode["itemSchema"]>):Record<string,unknown>=>({
-  ...(item.type?{type:item.type}:{}),
-  ...(item.type==="array"&&item.items?{items:itemSchemaDefinition(item.items)}:{}),
-});
 
 export function canonicalJsonSchemaDocument(document:CanonicalSchemaDocument):Record<string,unknown>{
   const roots=orderedChildren(document);

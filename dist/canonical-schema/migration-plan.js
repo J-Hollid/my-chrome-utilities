@@ -3,6 +3,18 @@ import { clone, collectStructured, definitionAtPath, explicitValues, semanticall
 const emptyDocumentation = () => ({ displayText: "", description: "", comments: "", example: { method: "blank" } });
 const supported = new Set(["string", "number", "integer", "boolean", "null", "object", "array"]);
 const typeOf = (value) => value === null ? "null" : Array.isArray(value) ? "array" : typeof value === "number" ? "number" : typeof value === "boolean" ? "boolean" : typeof value === "object" ? "object" : "string";
+const itemSchemaFrom = (propertyId, definition) => {
+    const build = (value, depth) => {
+        if (!value || typeof value !== "object" || Array.isArray(value))
+            return undefined;
+        const record = value, type = String(record.type ?? "");
+        if (!supported.has(type))
+            return undefined;
+        const items = type === "array" ? build(record.items, depth + 1) : undefined;
+        return { id: depth === 0 ? `item:${propertyId}` : `item:${propertyId}:${depth}`, type: type, ...(items ? { items } : {}) };
+    };
+    return build(definition.items, 0);
+};
 export function hasLegacySchemaRepresentation(profile) { return semanticallyPopulated(profile.requirements) || semanticallyPopulated(profile.structuredSchema) || semanticallyPopulated(profile.structuredDraft?.document) || semanticallyPopulated(profile.schemaConstraints); }
 export function migrateLegacyProfile(profile, options) {
     const definitions = new Map();
@@ -58,7 +70,7 @@ export function migrateLegacyProfile(profile, options) {
                 node.documentation = { displayText: displayTexts[0]?.value ?? "", description: descriptions[0]?.value ?? "", comments: comments[0]?.value ?? "", example: examples[0]?.value ?? { method: "blank" } };
                 if (itemTypes[0]) {
                     node.itemType = itemTypes[0].value;
-                    node.itemSchema = { id: `item:${node.id}`, type: itemTypes[0].value };
+                    node.itemSchema = defs.map(({ definition }) => itemSchemaFrom(node.id, definition)).find(Boolean) ?? { id: `item:${node.id}`, type: itemTypes[0].value };
                 }
                 if (expected[0])
                     node.expectedValue = clone(expected[0].value);

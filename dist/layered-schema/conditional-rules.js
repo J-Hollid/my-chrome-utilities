@@ -78,7 +78,7 @@ const executable = (property, rule) => {
 };
 const conditional = (property, payload, paths) => (property.rules ?? []).flatMap((rule) => {
     const outcome = executable(property, rule);
-    if (!outcome || outcome.enabled === false)
+    if (!outcome || outcome.enabled === false || (outcome.arrayScope?.boundaries?.length))
         return [];
     const alreadyProjected = !outcome.condition && rule.kind !== "reusable" && ["pattern", "range", "cardinality"].includes(String(outcome.kind));
     return !alreadyProjected && layeredConditionMatches(outcome.condition, payload, paths) ? [outcome] : [];
