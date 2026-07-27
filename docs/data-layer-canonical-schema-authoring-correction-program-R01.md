@@ -81,6 +81,29 @@ node generates the path. Operators do not need to construct JSON Pointer text to
 create a valid nested property. Stable identities, rather than generated paths,
 anchor rules, conditions, documentation, selection, references, and Undo.
 
+An array owns one explicit item schema. Definition shows an `Items` section after
+the array type is chosen. Scalar items choose a scalar type without child controls;
+object items expose an `Each item · Object` structure and `Add item property`;
+array items recursively expose another Items section. The item schema is not a
+literal property named `items`, `0`, `[x]`, or `*`. Tree displays the item boundary,
+Table keeps one row per real property, friendly paths use `products[].name`,
+canonical paths use `/products/*/name`, and observed issues use concrete indexes
+such as `/products/1/name`. Compilation and JSON Schema round-trip the same
+structure through `items.properties`.
+
+Rules attached to a property beneath an array expose an `Applies to` scope before
+`When`: `Every item`, selected by default, or `Item at position`. Positions are
+positive, one-based labels for operators, so `1` means the first item; operators
+never enter bracket, wildcard, or zero-based path syntax. Scope is orthogonal to
+the rule's single flat All or Any condition list. `Every item` evaluates that list
+independently in each applicable item context. A rule beneath nested arrays may
+make exactly one array boundary position-specific; every other boundary remains
+`Every item`. Thus the builder supports “every product's first detail code,”
+conceptually `products[x].details[0].code`, but never two fixed positions such as
+`products[2].details[0].code`. Array cardinality governs whether a selected item
+must exist. One linear scope sentence replaces raw paths, nested item groups, and
+multiple position selectors.
+
 `requirements`, if retained for compatibility or reporting, is a read-only
 projection of the canonical tree. It is never an independently writable schema.
 Advanced JSON may be a round-trip-safe optional view, but it cannot be the only
@@ -522,6 +545,8 @@ feature.
 | C52 | Repository rerendering breaks keyboard quick-edit traversal | Authoring 028 and 036 | Tab and Shift+Tab commit once and traverse only editable cells across rows; unchanged or invalid cells create no command | Table keyboard adapter, cell-order projection, validation, command deduplication, subscription rerender, and focus restoration | Forward and reverse activeElement sequence, changed and unchanged command counts, blur deduplication, skipped controls, invalid diagnostic, repository state, and Undo count | B, E | An operator can edit continuously by keyboard without opening menus, losing focus, duplicating commands, or persisting invalid values |
 | C53 | Add Rule is visually unordered, overflows its modal, overlaps controls, and exposes nested logic | Authoring 038–041 | One accessible vertical Rule details, When, Then, Severity and message, and Rule actions flow uses flat All or Any conditions, progressive typed rows, deterministic sole-row clearing, contained searchable comboboxes, local Add or Save actions, readable section hierarchy, and responsive normal-flow reflow | Shared rule editor, flat rule-condition model, typed operator and value projection, anchored combobox, responsive grid and flex form layout, focus adapter, and staged property session | Twelve contributor-surface flows; DOM order, headings, style fingerprints, and landmarks; add/edit/cancel identity; row add/remove/sole-clear states; six typed value controls; listbox geometry, scrolling, flipping, and keyboard choice; 1280px and 360px geometry; retained values; visible local actions; normal-flow computed styles and center-point hit tests; absent overlap, horizontal overflow, and nested groups | B, C, E | A user can read and complete a rule from top to bottom, every control and local action remains visible and operable, and the stored rule has exactly one match mode, flat conditions, and one outcome |
 | C54 | Inherited editing is ambiguous about whether a preliminary ownership action is required | Authoring 043–045; Layering 021–024 | Ordinary inherited Definition fields start enabled and a changed value itself creates one sparse local facet; inherited rule identities and structural identity changes keep explicit ownership and replacement gates | Focused Definition editor, Table quick-edit adapter, facet delta builder, rule ownership resolver, structure legality guard, repository, provenance projector, Reset, Undo, and Redo | Ten descendant contributor-surface flows; initial enabled state; absent preliminary action; no-op state; focused staging versus Table commit; rule and structure action inventories; sparse bytes and provenance; current-parent reset; Undo and Redo; parent, sibling, unrelated-facet, and Published hashes | B, C, E | Editing an inherited ordinary field is convenient and safe, while replacing a rule or changing inherited structural identity remains deliberate and cannot mutate its parent |
+| C55 | Arrays of objects cannot be authored as item fields and compile as ordinary object children | Authoring 046–051 | One recursive Items editor distinguishes the array property, its implicit item schema, and real item properties; human, canonical, JSON Schema, and observed paths remain explicit and lossless | Canonical item-schema model, Definition and Structure projections, recursive item editor, path projector, compiler, validator, importer/exporter, inheritance projector, impact review, and Undo | Twelve contributor-surface flows; array and item controls; inline item-property creation; Tree and Table hierarchy; friendly, wildcard, and indexed paths; two-level nested arrays; four item-type states; exact JSON Schema; valid and invalid payloads; destructive-change inventory; identity-restoring Undo; sparse descendant additions and facet overrides; reload round-trip | A, B, C, D, E | Users build `products[].name` and deeper patterns without entering wildcard syntax, while compilation validates every object item and never mistakes an array field for an ordinary object child |
+| C56 | Array-item rules cannot distinguish every item from one position without exposing raw or nested index paths | Authoring 052–053 | Rule details add one human-readable Applies to scope before the existing flat When section; every array boundary defaults to Every item and at most one selected boundary may use Item at position, where position 1 means first item | Focused rule editor, stable item and array-boundary targeting, linear array-scope projector, rule compiler, validator, issue projector, and Undo | Every-item pattern rule; first-item value rule; every-product first-detail rule; independent per-context conditions; concrete issue paths; one-based position and boundary controls; absent raw paths and second fixed-position selector; invalid position blocking; missing-position cardinality boundary; stable rename reference; reload and Undo | A, B, C, E | Operators express “all product IDs,” “the first product type,” and “every product's first detail code” directly while the builder remains flat and cannot encode two fixed array positions |
 
 ## Terminal acceptance
 

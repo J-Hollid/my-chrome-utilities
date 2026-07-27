@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=204be8e575707f3afc2bd44b1054570227fd44dbaebf1c07eeceae6449ba1527
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-27T18:33:01.654377877Z","feature_name":"Data layer canonical Shared Profile schema authoring","feature_path":"features/data-layer-canonical-shared-profile-schema-authoring.feature","background_hash":"9e8225c80de52bee679ebd2c1ee0ad618b61eb14a35a45ad9378b67a90e8c5ec","implementation_hash":"0298a366e7","scenarios":[{"index":22,"name":"Data layer canonical Shared Profile schema authoring 023","scenario_hash":"e715ecd6fca688cde41cb4b233bfe41e2799d875b477a17af991119166bcd64a","mutation_count":24,"result":{"Total":24,"Killed":24,"Survived":0,"Errors":0},"tested_at":"2026-07-27T18:33:01.654377877Z"},{"index":41,"name":"Data layer canonical Shared Profile schema authoring 042","scenario_hash":"0a445f4f78bed1787736b4744eafa905d078cf7291e6ffbaefe3d878e670e05a","mutation_count":24,"result":{"Total":24,"Killed":24,"Survived":0,"Errors":0},"tested_at":"2026-07-27T18:33:01.654377877Z"},{"index":42,"name":"Data layer canonical Shared Profile schema authoring 043","scenario_hash":"fc04f8c642ea1d3e5058d6821c84378a6e78f4c3292b68301322a8f1f9f3e1c9","mutation_count":20,"result":{"Total":20,"Killed":20,"Survived":0,"Errors":0},"tested_at":"2026-07-27T18:33:01.654377877Z"},{"index":6,"name":"Data layer canonical Shared Profile schema authoring 007","scenario_hash":"4e1e629613f3377678a704de7fb49aa24b7666f7d6fd8f7336c5848a2481c5e1","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-27T11:56:02.547874666Z"},{"index":7,"name":"Data layer canonical Shared Profile schema authoring 008","scenario_hash":"1f66844909f9a2d8d4fb2e63db0a5ac2dbe8c763ce946f0d7dfa416bf3d7fab8","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-27T11:56:02.547874666Z"},{"index":14,"name":"Data layer canonical Shared Profile schema authoring 015","scenario_hash":"bb47aa3c9d43d49581aefe99b5084c921b7ac3b3925f65993047d6866f42c60b","mutation_count":21,"result":{"Total":21,"Killed":21,"Survived":0,"Errors":0},"tested_at":"2026-07-27T11:56:02.547874666Z"},{"index":18,"name":"Data layer canonical Shared Profile schema authoring 019","scenario_hash":"c8f16f48f38cc55fd9a94975c60aac7d763058989e5d44c3401164eb45f1e27e","mutation_count":24,"result":{"Total":24,"Killed":24,"Survived":0,"Errors":0},"tested_at":"2026-07-27T11:56:02.547874666Z"},{"index":20,"name":"Data layer canonical Shared Profile schema authoring 021","scenario_hash":"2bb848324d4a767cdf888495b4488eccd957f83fc7b373b2cd80ea60f11461c6","mutation_count":22,"result":{"Total":22,"Killed":22,"Survived":0,"Errors":0},"tested_at":"2026-07-27T11:56:02.547874666Z"},{"index":25,"name":"Data layer canonical Shared Profile schema authoring 026","scenario_hash":"2bf8a05ad3ce4ef0d21a45550c8827dfb7f71ce7a194dd0636768e712608f19e","mutation_count":18,"result":{"Total":18,"Killed":18,"Survived":0,"Errors":0},"tested_at":"2026-07-27T11:56:02.547874666Z"},{"index":26,"name":"Data layer canonical Shared Profile schema authoring 027","scenario_hash":"b44ff2f81e881946669300a214f493d942c72cf3b740b5e25f453665ebcc7284","mutation_count":18,"result":{"Total":18,"Killed":18,"Survived":0,"Errors":0},"tested_at":"2026-07-27T11:56:02.547874666Z"},{"index":28,"name":"Data layer canonical Shared Profile schema authoring 029","scenario_hash":"78c200ba60e56b94881b73c84215cc931c8673ae81b4d104758dcef01a0e7176","mutation_count":36,"result":{"Total":36,"Killed":36,"Survived":0,"Errors":0},"tested_at":"2026-07-27T11:56:02.547874666Z"},{"index":31,"name":"Data layer canonical Shared Profile schema authoring 032","scenario_hash":"e87e6f94f9f00898d765e7ba20b9f2edbef3131f2d8ca00c18517e762aeb2cd9","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-27T11:56:02.547874666Z"},{"index":32,"name":"Data layer canonical Shared Profile schema authoring 033","scenario_hash":"d08bf239844795ea894c275fb8c3279e9bab5a2a504843565c0fe2742b9ece49","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-27T11:56:02.547874666Z"},{"index":34,"name":"Data layer canonical Shared Profile schema authoring 035","scenario_hash":"d821dd72a56deb7395b8879f8bf834907a0dac4c97d997f5ec877722332618cb","mutation_count":18,"result":{"Total":18,"Killed":18,"Survived":0,"Errors":0},"tested_at":"2026-07-27T11:56:02.547874666Z"},{"index":35,"name":"Data layer canonical Shared Profile schema authoring 036","scenario_hash":"16abc6da2934f7b58ffafc6a9bba7b57482d7c85aceaf8f3639d93ac3373451a","mutation_count":25,"result":{"Total":25,"Killed":25,"Survived":0,"Errors":0},"tested_at":"2026-07-27T11:56:02.547874666Z"},{"index":36,"name":"Data layer canonical Shared Profile schema authoring 037","scenario_hash":"2d362af31a7b4ebd9ff9f7f4a1720059ed67153336777b021b363ce5c3ff1cd6","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-27T11:56:02.547874666Z"},{"index":37,"name":"Data layer canonical Shared Profile schema authoring 038","scenario_hash":"f414c4410c3089894062aa1926eb0cae71da5252587196431ac852c4d932328b","mutation_count":24,"result":{"Total":24,"Killed":24,"Survived":0,"Errors":0},"tested_at":"2026-07-27T11:56:02.547874666Z"},{"index":38,"name":"Data layer canonical Shared Profile schema authoring 039","scenario_hash":"9c0432dfe32135c32f51ac5d44d01757d3abf1517539db7384162f0b88239967","mutation_count":18,"result":{"Total":18,"Killed":18,"Survived":0,"Errors":0},"tested_at":"2026-07-27T11:56:02.547874666Z"},{"index":40,"name":"Data layer canonical Shared Profile schema authoring 041","scenario_hash":"e124b129a012efcbfd8802e5d7ff32769d9f8163b86b7665b5fc7e1d1554409d","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-27T11:56:02.547874666Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer canonical Shared Profile schema authoring
 
   Background:
@@ -721,3 +716,142 @@ Feature: Data layer canonical Shared Profile schema authoring
     When Undo and then Redo are invoked
     Then Undo restores the exact Cart Description override and Redo removes it again
     And Cart Allowed values, Sitewide, siblings, unrelated facets, and Published bytes remain unchanged throughout
+
+  # Data layer canonical Shared Profile schema authoring 046
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 046
+    Given <contributor> has no products property in the <surface> schema editor
+    When the operator adds root property products and chooses Type Array
+    Then Definition reveals an Items section with a required Item type selector
+    When Item type is set to Object
+    Then Structure shows one non-property boundary labelled Each item · Object and an Add item property action
+    When Add item property creates complete rows named name and id with type String
+    Then both rows appear beneath Each item without a placeholder property, second modal, or free-text path input
+    And Review changes lists products, name, and id in one structural change set
+    When the operator confirms the review
+    Then one reviewed command stores the array item schema and two stable item-property identities
+    And one Undo removes that complete addition
+
+    Examples:
+      | contributor       | surface        |
+      | Shared Profile    | standalone     |
+      | Page Group        | standalone     |
+      | Page              | standalone     |
+      | Event             | standalone     |
+      | Flow Page-instance | Flow workspace |
+      | Event occurrence  | Flow workspace |
+      | Shared Profile    | in-panel       |
+      | Page Group        | in-panel       |
+      | Page              | in-panel       |
+      | Event             | in-panel       |
+      | Flow Page-instance | in-panel       |
+      | Event occurrence  | in-panel       |
+
+  # Data layer canonical Shared Profile schema authoring 047
+  Scenario: Data layer canonical Shared Profile schema authoring 047
+    Given products is an array whose object items require string properties name and id
+    When Tree, Table, developer export, and JSON Schema are compared
+    Then Tree shows products, Each item · Object, name, and id in that hierarchy
+    And Table has rows for products, products[].name, and products[].id but no fake row for Each item
+    And the stable canonical paths are /products, /products/*/name, and /products/*/id
+    And JSON Schema contains products type array with object items whose properties are name and id
+    And no projection stores a literal property named items, *, 0, [x], or []
+    When validation receives products with one complete item and one item missing id
+    Then only the second item fails at observed path /products/1/id against canonical path /products/*/id
+    When JSON Schema export is imported again
+    Then item types, required membership, stable field references, rules, documentation, and examples round-trip without flattening
+
+  # Data layer canonical Shared Profile schema authoring 048
+  Scenario: Data layer canonical Shared Profile schema authoring 048
+    Given orders has Type Array and Item type Object
+    When the operator adds item property products with Type Array and Item type Object
+    And adds required string item property id beneath products
+    Then the same recursive Items editor shows orders, Each item, products, Each item, and id
+    And the friendly path is orders[].products[].id
+    And the canonical path is /orders/*/products/*/id
+    And JSON Schema nests both array item schemas before property id
+    And valid and missing-id observations are evaluated at their concrete array indexes
+
+  # Data layer canonical Shared Profile schema authoring 049
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 049
+    Given property values has Type Array with <item_definition>
+    When its Items section renders
+    Then it shows <item_controls>
+    And Structure offers <structure_action>
+
+    Examples:
+      | item_definition | item_controls                                      | structure_action                                      |
+      | no item type    | Choose item type guidance                          | no item-child action                                  |
+      | String          | one scalar String item summary                     | no item-child action                                  |
+      | Object          | one Each item Object boundary                      | Add item property                                     |
+      | Array           | one nested Items section with its own type selector | no item property until the nested item type is Object |
+
+  # Data layer canonical Shared Profile schema authoring 050
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 050
+    Given local property products has array-object item fields name and id with documentation, rules, and stable identities
+    When the operator requests <type_change>
+    Then the impact review reports <impact>
+    And no schema or history change occurs before explicit confirmation
+    When the operator confirms removal of the incompatible item structure
+    Then <effective_result>
+    When Undo is invoked
+    Then the exact item schema, field identities, documentation, rules, selection, and paths are restored
+
+    Examples:
+      | type_change                    | impact                                     | effective_result                           |
+      | Item type from Object to String | name and id item fields                    | products becomes an array of String        |
+      | Type from Array to Object       | the item boundary plus name and id fields  | products becomes an empty Object property  |
+      | Type from Array to String       | the complete array item schema             | products becomes a String property         |
+
+  # Data layer canonical Shared Profile schema authoring 051
+  Scenario: Data layer canonical Shared Profile schema authoring 051
+    Given Cart inherits products[].name and products[].id from Sitewide
+    When Cart adds local item property sku and directly edits inherited name Description
+    Then Cart stages new path /products/*/sku and only the Description facet for /products/*/name
+    And no structural Override here is required to add sku
+    When the operator confirms Review changes and reloads the project
+    Then Cart retains products[].sku and its name description override with Cart provenance
+    And Sitewide, a sibling Page, inherited id, and Published bytes remain unchanged
+    When Cart removes local sku and resets name Description to parent
+    Then current Sitewide item structure and description become effective without a copied parent subtree
+    And one Undo restores both local changes with their stable identities
+
+  # Data layer canonical Shared Profile schema authoring 052
+  Scenario: Data layer canonical Shared Profile schema authoring 052
+    Given products is an array of objects with string item properties id and product_type
+    When Add rule opens for products[].id
+    Then Rule details shows Applies to before When with Every item selected and Item at position available
+    When the operator names the rule Six-character product IDs
+    And keeps Every item, adds condition id Exists, and chooses Pattern with exactly six characters
+    Then the summary says For every product item When id exists Then require exactly six characters
+    And each product item evaluates the flat condition and outcome independently
+    When products contains ids ABC123, BAD, and ZXCVBN
+    Then only observed path /products/1/id violates rule target /products/*/id
+    When Add rule opens for products[].product_type
+    And the operator chooses Item at position 1, adds condition product_type Exists, and allows only tariff
+    Then the summary says For the first product item When product_type exists Then allow tariff
+    When the first product_type is retail and the second product_type is wholesale
+    Then only /products/0/product_type violates the position-scoped rule
+    And changing the second product_type to tariff does not satisfy or violate that rule
+
+  # Data layer canonical Shared Profile schema authoring 053
+  Scenario: Data layer canonical Shared Profile schema authoring 053
+    Given products[].id is beneath one array boundary and products[].details[].code is beneath two
+    When the operator edits the Applies to scope for products[].id
+    Then Item at position accepts positive whole positions and explains that 1 means the first item
+    And no free-text bracket, wildcard, zero-based index, or property-path control is present
+    When position is empty, zero, negative, or fractional
+    Then Add rule is blocked with Enter a whole position of 1 or greater and no staged change is created
+    When the selected position does not exist in an observation
+    Then the rule produces no issue and array cardinality remains responsible for requiring that item
+    When Add rule opens for products[].details[].code
+    Then the linear scope reads Every product item and Every item in details
+    When the operator changes details to Item at position 1
+    Then the summary says For every product item use the first item in details
+    And the stored scope targets /products/*/details/0/code without a raw path entered by the operator
+    When two products have invalid first detail codes and valid later detail codes
+    Then issues occur at /products/0/details/0/code and /products/1/details/0/code only
+    And the builder offers no way to also fix the products position
+    And no nested condition group, second position selector, or target such as products[2].details[0].code is accepted
+    When products item property id is renamed while its Every item rule exists
+    Then the rule retains the same stable property identity and follows the generated friendly and canonical paths
+    And Review changes, reload, Undo, inheritance, and issue projection preserve the selected array scope

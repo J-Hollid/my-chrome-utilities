@@ -461,6 +461,26 @@ allowed values, rich rules, documentation, examples, flat rule conditions with o
 All or Any mode, opaque Draft-token comparison, and synchronized Tree and Table views. Existing
 profile data migrates atomically without loss. Command-scoped patches, base Draft
 tokens, and subscriptions prevent stale whole-profile overwrites.
+Array properties own a recursive item schema. Definition exposes an Items section;
+object items expose `Each item · Object` with `Add item property`, scalar items have
+no child-property action, and array items expose another Items section. Operators
+enter property names such as `name` and `id`, never `[x]`, `0`, `*`, or a literal
+`items` property. Tree shows the implicit item boundary, Table retains rows only for
+real properties, friendly paths render `products[].name`, stable canonical paths
+render `/products/*/name`, and validation issues use the observed index. The
+compiler, validator, JSON Schema import/export, inheritance, rules, documentation,
+reload, and Undo all preserve that same item structure and its stable identities.
+For a property beneath an array, Rule details adds an `Applies to` scope before
+`When`. Every array boundary defaults to `Every item`; the operator may change at
+most one selected boundary to `Item at position`. Position labels are positive and
+one-based, so `1` means the first item; operators never enter raw indexes or
+wildcard paths. Scope does not add condition nesting: the existing one All or Any
+mode still applies to one flat condition list and is evaluated independently in
+each applicable item context. A nested target may therefore mean “every product's
+first detail code,” conceptually `products[x].details[0].code`, while a second
+fixed position such as `products[2].details[0].code` is unavailable. Cardinality
+on each array determines whether its selected item must exist. One linear scope
+sentence replaces nested groups and multiple position selectors.
 Canonical property search is transient UI state shared across contributor editors;
 typing, caret edits, input-method composition, and clearing retain focus in the same
 connected control and perform no canonical command or persistence write at desktop
