@@ -24,7 +24,7 @@ export {mountCanonicalSchemaEditor} from "../../data-layer-canonical-schema-ui.j
 export {renderCanonicalFocusedRules} from "../../data-layer-canonical-schema-focused-rules.js";
 export {renderFocusedPropertyMenu} from "../../data-layer-focused-schema-property-menu.js";
 export {activateFocusedOwnershipSection,focusedDefinitionFieldLabels,focusedOwnershipActionTarget,focusedOwnershipActions,focusedOwnershipSectionEditable,focusedPropertyLayerSequence,focusedPropertyLifecycleOperation,focusedPropertyProvenanceSummary,focusedSectionOwnershipActions,gateFocusedOwnershipSection} from "../../data-layer-focused-schema-property-ui.js";
-export {focusedPropertyPatch,focusedSourceState,focusedStagedChanges} from "../../data-layer-canonical-schema-focused-drafts.js";
+export {focusedPropertyPatch,focusedSourceState,focusedStagedChanges,focusedStructureOwned} from "../../data-layer-canonical-schema-focused-drafts.js";
 export {renderCanonicalFocusedSection} from "../../data-layer-canonical-schema-focused-sections.js";
 export {clearSchemaTableOverlay,mountSchemaTableOverlay} from "../../data-layer-schema-table.js";
 export { canonicalCommandsFromCompactProjection, compactConditionalPresence, compactSchemaProjection, savedSchemaCanonicalDocument, savedSchemaFromCanonical } from "../../data-layer-side-panel-unified-schema-editor.js";

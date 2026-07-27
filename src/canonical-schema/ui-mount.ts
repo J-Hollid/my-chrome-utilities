@@ -4,7 +4,7 @@ import {renderCanonicalFocusedSection} from "../data-layer-canonical-schema-focu
 import {renderCanonicalFocusedMenu} from "../data-layer-canonical-schema-focused-menu.js";
 import {renderCanonicalFocusedEditor} from "../data-layer-canonical-schema-focused-editor.js";
 import {renderCanonicalSchemaEditor} from "../data-layer-canonical-schema-render.js";
-import {focusedPropertyPatch,focusedStagedChanges,focusedSourceState,type CanonicalFocusedPatch} from "../data-layer-canonical-schema-focused-drafts.js";
+import {focusedPropertyPatch,focusedStagedChanges,focusedSourceState,focusedStructureOwned,type CanonicalFocusedPatch} from "../data-layer-canonical-schema-focused-drafts.js";
 import {dispatchFocusedCanonicalCommand} from "../data-layer-canonical-schema-focused-command.js";
 import {typedCanonicalValue} from "../data-layer-canonical-schema-facets.js";
 import {button,clone,presenceText,provenanceText,sectionLabel} from "./ui-mount-helpers.js";
@@ -37,7 +37,7 @@ export function mountCanonicalSchemaEditor(options:CanonicalSchemaEditorOptions)
   let query="",propertyFilter:"all"|"conditions"|"documentation"|"issues"="all",propertySort:"tree"|"name"|"type"="tree",feedback=options.initialFeedback??"",activePropertyId:string|undefined=initialDocument.selectedPropertyId,activeSection:FocusedPropertySection="definition",working:CanonicalPropertyNode|undefined,originFocus:HTMLElement|undefined,originPath:string|undefined,menuPropertyId:string|undefined,focusedPropertyId:string|undefined,removedRuleIds=new Set<string>(),removedValueIds=new Set<string>(),stagedOperations:CanonicalStructuralOperation[]=[],transientView:CanonicalSchemaDocument["view"]|undefined;
   let overlayState:SchemaTableOverlayState={phase:"closed"};
   let review:HTMLElement|undefined;
-  let ownershipSession:FocusedOwnershipSession={inherited:false,local:true,activated:[]};
+  let ownershipSession:FocusedOwnershipSession={inherited:false,local:true,structureOwned:true,activated:[]};
 
   const current=():CanonicalSchemaDocument=>{const document=options.load();return transientView?{...document,view:transientView}:document;};
   const selectedNode=(document:CanonicalSchemaDocument):CanonicalPropertyNode|undefined=>activePropertyId?document.nodes[activePropertyId]:document.selectedPropertyId?document.nodes[document.selectedPropertyId]:undefined;
@@ -54,13 +54,13 @@ export function mountCanonicalSchemaEditor(options:CanonicalSchemaEditorOptions)
   };
 
   const closeFocused=(reason:"cancel"|"escape"="cancel"):void=>{
-    overlayState=schemaTableOverlayTransition(overlayState,{kind:reason});const restorePath=("restorePath" in overlayState?overlayState.restorePath:undefined)??originPath;working=undefined;removedRuleIds=new Set();removedValueIds=new Set();stagedOperations=[];menuPropertyId=undefined;focusedPropertyId=undefined;activePropertyId=undefined;review=undefined;ownershipSession={inherited:false,local:true,activated:[]};
+    overlayState=schemaTableOverlayTransition(overlayState,{kind:reason});const restorePath=("restorePath" in overlayState?overlayState.restorePath:undefined)??originPath;working=undefined;removedRuleIds=new Set();removedValueIds=new Set();stagedOperations=[];menuPropertyId=undefined;focusedPropertyId=undefined;activePropertyId=undefined;review=undefined;ownershipSession={inherited:false,local:true,structureOwned:true,activated:[]};
     render();
     const target=originFocus?.isConnected?originFocus:restorePath?options.host.querySelector<HTMLElement>(`[data-property-actions-path="${CSS.escape(restorePath)}"]`):undefined;originFocus=undefined;originPath=undefined;if(target)queueMicrotask(()=>target.focus({preventScroll:true}));
   };
   const closeChild=():void=>{focusedPropertyId=undefined;review=undefined;overlayState=activePropertyId?{phase:"menu",path:canonicalPropertyPath(current(),activePropertyId)}:{phase:"closed"};render();const target=schemaTableOverlayTarget(options.host,`[data-property-context-menu="true"] [data-section="${activeSection}"] button`);if(target)queueMicrotask(()=>target.focus({preventScroll:true}));};
   const openProperty=(node:CanonicalPropertyNode,focus?:HTMLElement,section:FocusedPropertySection="definition"):void=>{
-    const document=current(),path=canonicalPropertyPath(document,node.id),source=focusedSourceState(node);overlayState=schemaTableOverlayTransition(overlayState,{kind:"open",path});activePropertyId=node.id;activeSection=section;menuPropertyId=node.id;focusedPropertyId=undefined;removedRuleIds=new Set();removedValueIds=new Set();stagedOperations=[];ownershipSession={inherited:source==="inherited",local:source==="local"||source==="overridden",invariant:node.enforcement==="invariant",activated:[]};ensureWorking(node);if(focus){originFocus=focus;originPath=path;}
+    const document=current(),path=canonicalPropertyPath(document,node.id),source=focusedSourceState(node);overlayState=schemaTableOverlayTransition(overlayState,{kind:"open",path});activePropertyId=node.id;activeSection=section;menuPropertyId=node.id;focusedPropertyId=undefined;removedRuleIds=new Set();removedValueIds=new Set();stagedOperations=[];ownershipSession={inherited:!focusedStructureOwned(node)||source==="inherited"||source==="overridden",local:source==="local"||source==="overridden",structureOwned:focusedStructureOwned(node),invariant:node.enforcement==="invariant",activated:[]};ensureWorking(node);if(focus){originFocus=focus;originPath=path;}
     render();
   };
   const finishFocusedSave=():void=>{working=undefined;removedRuleIds=new Set();removedValueIds=new Set();stagedOperations=[];menuPropertyId=undefined;focusedPropertyId=undefined;activePropertyId=undefined;review=undefined;render();};

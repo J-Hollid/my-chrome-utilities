@@ -11,6 +11,10 @@ export function focusedSourceState(node:CanonicalPropertyNode):"inherited"|"loca
   return "local";
 }
 
+export function focusedStructureOwned(node:CanonicalPropertyNode):boolean {
+  return node.structureOwned??!node.provenance.some(({state})=>state==="inherited"||state==="shadowed");
+}
+
 export function focusedPropertyPatch(node:CanonicalPropertyNode,original:CanonicalPropertyNode,removedRuleIds:Set<string>,removedValueIds:Set<string>=new Set()):CanonicalFocusedPatch {
   const patch:CanonicalFocusedPatch={};
   for(const key of ["name","type","itemType","presence","allowedValues","documentation","overrideReferences","expectedValue","enforcement","target"] as const)if(!same(node[key],original[key]))Object.assign(patch,{[key]:clone(node[key])});

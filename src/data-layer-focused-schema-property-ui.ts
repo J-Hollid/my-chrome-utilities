@@ -31,6 +31,7 @@ export const focusedPropertySectionLabels:Record<FocusedPropertySection,string> 
 export interface FocusedOwnershipInput {
   inherited?:boolean;
   local?:boolean;
+  structureOwned?:boolean;
   overridden?:boolean;
   invariant?:boolean;
   conflict?:boolean;
@@ -47,6 +48,7 @@ export interface FocusedOwnershipActionTarget {
 export interface FocusedOwnershipSession {
   inherited:boolean;
   local:boolean;
+  structureOwned:boolean;
   invariant?:boolean;
   activated:readonly FocusedPropertyPrimarySection[];
 }
@@ -54,7 +56,7 @@ export interface FocusedOwnershipSession {
 export function focusedOwnershipSectionEditable(session:FocusedOwnershipSession,section:FocusedPropertyPrimarySection):boolean {
   if(section==="rules")return true;
   if(section==="definition")return true;
-  return session.local||!session.inherited||session.activated.includes(section);
+  return session.structureOwned||!session.inherited||session.activated.includes(section);
 }
 
 export function activateFocusedOwnershipSection(session:FocusedOwnershipSession,section:FocusedPropertyPrimarySection,action:string):FocusedOwnershipSession {
@@ -121,7 +123,7 @@ export function focusedSectionOwnershipActions(input:FocusedOwnershipInput):Reco
   return {
     definition:input.inherited&&!input.local?[]:actions.filter((action)=>!lifecycle.has(action)&&action!=="Replace here"),
     rules:[...actions],
-    structure:input.inherited&&!input.local?["Override here"]:actions.filter((action)=>lifecycle.has(action)),
+    structure:input.inherited&&!input.structureOwned?["Override here"]:actions.filter((action)=>lifecycle.has(action)),
   };
 }
 
