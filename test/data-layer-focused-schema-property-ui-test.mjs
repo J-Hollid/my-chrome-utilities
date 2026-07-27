@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {focusedConditionLabel,focusedOwnershipActionTarget,focusedOwnershipActions,focusedPropertyLifecycleOperation,focusedPropertyProvenanceSummary,focusedPropertySections,focusedRuleFields,focusedSparseDelta} from "../dist/data-layer-focused-schema-property-ui.js";
+import {focusedConditionLabel,focusedDefinitionFieldLabels,focusedOwnershipActionTarget,focusedOwnershipActions,focusedPropertyLayerSequence,focusedPropertyLifecycleOperation,focusedPropertyProvenanceSummary,focusedPropertySections,focusedRuleFields,focusedSparseDelta} from "../dist/data-layer-focused-schema-property-ui.js";
 import {applyCanonicalCommand,canonicalPredicateIds,canonicalPredicateWithStableIds,createCanonicalSchema} from "../dist/data-layer-canonical-schema.js";
 import {canonicalFlatPredicateIssue} from "../dist/canonical-schema/predicate-policy.js";
 import {canonicalNavigatorRows} from "../dist/canonical-schema-focused/navigator-rows.js";
@@ -8,6 +8,10 @@ import {schemaTableCellMetadata,schemaTableColumns,schemaTableEditableFacets,sch
 import {sharedConditionOperators,sharedFlatConditionResult,sharedFlatConditionRows} from "../dist/data-layer-shared-condition-tree-editor.js";
 
 assert.deepEqual(focusedPropertySections,["definition","rules","structure"]);
+assert.deepEqual(focusedDefinitionFieldLabels,["Type","Array item type","Presence","Allowed values","Display text","Description","Comments","Example method","Example value"],"the in-panel Definition child exposes the complete canonical definition capability");
+assert.deepEqual(focusedPropertyLayerSequence(),["menu"],"opening property actions mounts only the first menu layer");
+assert.deepEqual(focusedPropertyLayerSequence("definition"),["menu","definition"],"opening Definition retains the first menu beside its child");
+assert.deepEqual(focusedPropertyLayerSequence("rules","review"),["menu","rules","review"],"Review remains nested after the retained menu and Rules child");
 assert.deepEqual(schemaTableColumns.map(({label})=>label),["Property","Path","Type","Presence","Description","Allowed values","Example","Source","Local/effective state","Validation state"],"every contributor table exposes the same information-rich columns");
 assert.deepEqual(schemaTableCellMetadata,schemaTableColumns.map(({key,label})=>({key,label})),"every narrow stacked cell retains its visible column identity");
 assert.equal(new Set(schemaTableCellMetadata.map(({key})=>key)).size,schemaTableColumns.length,"stacked cell identities remain unique");

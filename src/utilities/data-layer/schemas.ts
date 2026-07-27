@@ -23,8 +23,10 @@ export { canonicalPredicateLeafFromInput, canonicalPredicateOperators, canonical
 export {mountCanonicalSchemaEditor} from "../../data-layer-canonical-schema-ui.js";
 export {renderCanonicalFocusedRules} from "../../data-layer-canonical-schema-focused-rules.js";
 export {renderFocusedPropertyMenu} from "../../data-layer-focused-schema-property-menu.js";
-export {focusedOwnershipActionTarget,focusedOwnershipActions,focusedPropertyProvenanceSummary} from "../../data-layer-focused-schema-property-ui.js";
-export {focusedSourceState} from "../../data-layer-canonical-schema-focused-drafts.js";
+export {focusedDefinitionFieldLabels,focusedOwnershipActionTarget,focusedOwnershipActions,focusedPropertyLayerSequence,focusedPropertyLifecycleOperation,focusedPropertyProvenanceSummary} from "../../data-layer-focused-schema-property-ui.js";
+export {focusedPropertyPatch,focusedSourceState,focusedStagedChanges} from "../../data-layer-canonical-schema-focused-drafts.js";
+export {renderCanonicalFocusedSection} from "../../data-layer-canonical-schema-focused-sections.js";
+export {clearSchemaTableOverlay,mountSchemaTableOverlay} from "../../data-layer-schema-table.js";
 export { canonicalCommandsFromCompactProjection, compactConditionalPresence, compactSchemaProjection, savedSchemaCanonicalDocument, savedSchemaFromCanonical } from "../../data-layer-side-panel-unified-schema-editor.js";
 export { canonicalMigrationDurablyAcknowledged, resolveSidePanelSchemaContributor, type SidePanelContributorSelection } from "../../data-layer-side-panel-schema-editor.js";
 export { redoProjectTransaction, undoProjectTransaction } from "../../data-layer-specification-project.js";
@@ -36,5 +38,6 @@ export type { PendingProjectWrite, ProjectLibrary, ProjectLibraryRecord, Project
 export { mountProjectLibraryUi } from "./layers/browser/schemas.js";
 export type { ProjectLibraryUi } from "./layers/browser/schemas.js";
 export {openIndexedDbProjectRepository} from "../../data-layer-durable-project-repository.js";
+export {durableDraftCommand} from "../../data-layer-durable-project-repository.js";
 export {installDurableRepositoryStartupFailure,mountDurableProjectRepositoryUi} from "../../data-layer-durable-project-repository-ui.js";
 export {openDurableProjectRuntime} from "../../data-layer-durable-project-runtime.js";

@@ -5,6 +5,10 @@ export const focusedPropertySections = [
     "rules",
     "structure",
 ];
+export const focusedDefinitionFieldLabels = ["Type", "Array item type", "Presence", "Allowed values", "Display text", "Description", "Comments", "Example method", "Example value"];
+export function focusedPropertyLayerSequence(section, terminal) {
+    return ["menu", ...(section ? [section] : []), ...(terminal ? [terminal] : [])];
+}
 export const focusedPropertySectionLabels = {
     definition: "Definition",
     presence: "Presence",

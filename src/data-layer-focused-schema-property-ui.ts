@@ -8,6 +8,14 @@ export const focusedPropertySections = [
   "structure",
 ] as const;
 export type FocusedPropertySection = typeof focusedPropertySections[number]|"presence"|"values"|"conditions"|"documentation"|"example";
+export const focusedDefinitionFieldLabels=["Type","Array item type","Presence","Allowed values","Display text","Description","Comments","Example method","Example value"] as const;
+export type FocusedPropertyPrimarySection=typeof focusedPropertySections[number];
+export function focusedPropertyLayerSequence(
+  section?:FocusedPropertyPrimarySection,
+  terminal?:"review",
+):("menu"|FocusedPropertyPrimarySection|"review")[] {
+  return ["menu",...(section?[section]:[]),...(terminal?[terminal]:[])];
+}
 
 export const focusedPropertySectionLabels:Record<FocusedPropertySection,string> = {
   definition:"Definition",
