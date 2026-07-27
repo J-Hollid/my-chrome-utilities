@@ -70,24 +70,26 @@ export function mountSchemaTableOverlay(owner, trigger, path, layers, onCancel) 
     const mounted = { owner, dialog, abort };
     mountedSchemaTableOverlays.set(owner, mounted);
     mountedSchemaTableOverlayInventory.add(mounted);
-    const place = () => {
+    const place = (remeasureWidth = false) => {
         if (!dialog.isConnected || !trigger.isConnected)
             return;
-        const anchor = trigger.getBoundingClientRect(), bounds = dialog.getBoundingClientRect(), view = dom.defaultView, placement = schemaTableOverlayPlacement(anchor, bounds, { width: view?.innerWidth ?? dom.documentElement.clientWidth, height: view?.innerHeight ?? dom.documentElement.clientHeight });
+        if (remeasureWidth)
+            dialog.style.removeProperty("width");
+        const anchor = trigger.getBoundingClientRect(), bounds = dialog.getBoundingClientRect(), view = dom.defaultView, placement = schemaTableOverlayPlacement(anchor, { width: bounds.width, height: Math.max(bounds.height, dialog.scrollHeight) }, { width: Math.min(view?.innerWidth ?? dom.documentElement.clientWidth, dom.documentElement.clientWidth), height: Math.min(view?.innerHeight ?? dom.documentElement.clientHeight, dom.documentElement.clientHeight) });
         dialog.style.left = `${placement.left}px`;
         dialog.style.top = `${placement.top}px`;
         dialog.style.width = `${placement.width}px`;
         dialog.style.maxHeight = `${placement.maxHeight}px`;
     };
     dialog.addEventListener("cancel", (event) => { event.preventDefault(); onCancel(); }, { signal: abort.signal });
-    dom.defaultView?.addEventListener("resize", place, { signal: abort.signal });
+    dom.defaultView?.addEventListener("resize", () => place(true), { signal: abort.signal });
     queueMicrotask(() => {
         if (!dialog.isConnected || !trigger.isConnected)
             return;
         const scrollNodes = [dom.scrollingElement, ...Array.from(owner.querySelectorAll("[data-schema-editor-scroll-region]"))].filter((node) => Boolean(node)), scrollState = scrollNodes.map((node) => ({ node, top: node.scrollTop, left: node.scrollLeft })), restoreScroll = () => scrollState.forEach(({ node, top, left }) => { node.scrollTop = top; node.scrollLeft = left; });
         if (!dialog.open)
             dialog.showModal();
-        place();
+        place(true);
         restoreScroll();
         const view = dom.defaultView, schedulePlace = () => {
             if (!view)

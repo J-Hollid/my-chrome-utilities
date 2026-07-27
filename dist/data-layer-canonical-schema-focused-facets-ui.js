@@ -22,7 +22,7 @@ export function renderCanonicalFacetSection(host, context, working) {
         return;
     }
     if (context.activeSection === "rules") {
-        renderCanonicalFocusedRules(host, { ...context, properties: () => Object.values(context.current().nodes).map(({ id, name, type }) => ({ id, name, type })), invariant: working.enforcement === "invariant" });
+        renderCanonicalFocusedRules(host, { ...context, properties: () => Object.values(context.current().nodes).map(({ id, name, type, allowedValues }) => ({ id, name, type, allowedValues: allowedValues.map(({ value }) => value) })), invariant: working.enforcement === "invariant" });
         return;
     }
     if (context.activeSection === "documentation") {

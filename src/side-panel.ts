@@ -304,6 +304,7 @@ import { filterAndSortSchemaPropertyRows, type SchemaPropertySortOrder } from ".
 import { inspectSchemaPropertyRemoval, removeSchemaProperty, undoSchemaPropertyRemoval, type SchemaPropertyRemoval } from "./utilities/data-layer/schemas.js";
 import { schemaPropertyCopySource, undoSchemaPropertyCopy, type AppliedSchemaPropertyCopy } from "./utilities/data-layer/schemas.js";
 import { renderSchemaPropertyCopyReview } from "./utilities/data-layer/schemas.js";
+import {renderCanonicalFocusedRules} from "./utilities/data-layer/schemas.js";
 import { assignmentConditionSuggestions, assignmentDataConditionSummary, duplicateSchemaAssignment, validateAssignmentDataConditions, type AssignmentConditionTarget, type AssignmentDataConditionGroup } from "./utilities/data-layer/schemas.js";
 import { renderAssignmentDataConditionEditor, type AssignmentDataConditionEditorState } from "./utilities/data-layer/schemas.js";
 import { canonicalDocumentationPath, resolveEffectiveSchemaDocumentation, setPropertyDocumentation, setSchemaDescription, type SchemaPropertyDocumentation, type SchemaPropertyExample } from "./utilities/data-layer/schemas.js";
@@ -3557,6 +3558,20 @@ function closeSchemaPropertyRulePicker(): void {
   editingAttachedLocalRule = undefined;
 }
 
+function openCompactCanonicalRuleEditor(path:string,trigger:HTMLButtonElement):boolean{
+  const adapter=compactCanonicalEditor,base=adapter?.load(),node=base&&Object.values(base.nodes).find((candidate)=>canonicalPropertyPath(base,candidate.id)===canonicalRulePropertyPath(path));if(!adapter||!base||!node)return false;
+  let working=structuredClone(node),feedbackText="";const removedRuleIds=new Set<string>(),properties=()=>Object.values(base.nodes).map(({id,name,type,allowedValues})=>({id,name,type,allowedValues:allowedValues.map(({value})=>value)}));
+  const button=(text:string,run:()=>void)=>{const control=document.createElement("button");control.type="button";control.textContent=text;control.addEventListener("click",run);return control;};
+  const render=()=>{
+    const focused=document.createElement("section"),heading=document.createElement("h3"),identity=document.createElement("p"),rules=document.createElement("section"),actions=document.createElement("section"),feedback=document.createElement("output");focused.dataset.focusedPropertyEditor="true";focused.dataset.focusedSection="rules";focused.setAttribute("aria-label",`${path} focused Rules section`);heading.textContent="Rules";identity.textContent=`${path} · stable identity ${node.id} · Local value and effective result remain staged until Review changes.`;rules.setAttribute("aria-label","Compact staged rule editor");actions.setAttribute("aria-label","Property actions");feedback.setAttribute("role","status");feedback.textContent=feedbackText;
+    const context={dom:document,getWorking:()=>working,properties,removedRuleIds,invariant:working.enforcement==="invariant",id:(kind:string)=>`${kind}:${crypto.randomUUID()}`,render,feedback:(message:string)=>{feedbackText=message;}};
+    renderCanonicalFocusedRules(rules,context);
+    const cancel=button("Cancel",closeSchemaPropertyRulePicker),review=button("Review changes",()=>{const reviewPanel=document.createElement("section"),summary=document.createElement("p"),reviewActions=document.createElement("section"),stagedRules=working.rules.filter(({id})=>!removedRuleIds.has(id));reviewPanel.setAttribute("aria-label","Review changes");summary.textContent=`Review changes · ${path} · ${stagedRules.length} staged rules · one property command and one Undo action.`;reviewActions.setAttribute("aria-label","Property review actions");reviewActions.append(button("Cancel review",render),button("Confirm changes",()=>{void(async()=>{const current=adapter.load(),result=await dispatchCompactCanonicalCommand({kind:"set",baseRevision:current.revision,propertyId:node.id,patch:{rules:structuredClone(stagedRules)}});if(result)closeSchemaPropertyRulePicker();})();}));reviewPanel.append(summary,reviewActions);schemaPropertyRulePicker.replaceChildren(reviewPanel);});
+    actions.append(feedback,cancel,review);focused.append(heading,identity,rules,actions);schemaPropertyRulePicker.replaceChildren(focused);
+  };
+  schemaRulePickerPath=path;schemaRulePickerTrigger=trigger;schemaRuleConfiguration=undefined;editingAttachedLocalRule=undefined;render();schemaPropertyRulePicker.showModal();schemaPropertyRulePicker.querySelector<HTMLButtonElement>('[aria-label="Compact staged rule editor"] > button')?.focus({preventScroll:true});return true;
+}
+
 function configuredRuleInput(control: ReturnType<typeof ruleConfigurationControls>[number], configuration: RuleConfiguration, updateValidation: () => void): HTMLElement {
   const label = document.createElement("label");
   const input = control.inputType === "select" ? document.createElement("select") : document.createElement("input");
@@ -3886,6 +3901,7 @@ function renderSchemaPropertyRulePicker(): void {
 }
 
 function openSchemaPropertyRulePicker(path: string, trigger: HTMLButtonElement): void {
+  if(compactCanonicalEditor&&openCompactCanonicalRuleEditor(path,trigger))return;
   selectedSchemaPropertyPath = schemaRulePickerPath = path; schemaRulePickerTrigger = trigger; schemaRuleConfiguration = undefined; editingAttachedLocalRule = undefined;
   renderSchemaPropertyRulePicker(); schemaPropertyRulePicker.showModal();
   schemaPropertyRulePicker.querySelector<HTMLInputElement>("#schema-property-rule-search")?.focus({ preventScroll:true });

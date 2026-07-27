@@ -2,12 +2,19 @@ import assert from "node:assert/strict";
 import {evaluateCanonicalPredicate} from "../dist/data-layer-canonical-schema-predicates.js";
 import {evaluateComposedCondition} from "../dist/composed-schema/facet-conditions.js";
 import {
+  sharedConditionOperators,
   sharedFlatConditionResult,
   sharedFlatConditionRows,
 } from "../dist/data-layer-shared-condition-tree-editor.js";
 import {projectConditionEditorDraft} from "../dist/data-layer-project-condition-editor.js";
 import {conditionMatches} from "../dist/data-layer-specification-project.js";
 import {layeredConditionMatches} from "../dist/layered-schema/conditional-rules.js";
+
+assert.deepEqual(
+  sharedConditionOperators("string",["retail","trade"]),
+  ["Exists","Does not exist","Equals","Does not equal","Is one of"],
+  "typed allowed values expose enum operators without inventing a canonical enum type",
+);
 
 let state=0x51ce5eed;
 const random=()=>((state=Math.imul(state,1664525)+1013904223>>>0)/0x100000000);

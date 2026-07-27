@@ -54,18 +54,19 @@ export function mountSchemaTableOverlay(owner:HTMLElement,trigger:HTMLElement,pa
   stack.dataset.schemaOverlayStack="true";stack.style.cssText="display:flex;align-items:flex-start;gap:0.5rem;max-width:100%;overflow:hidden;";
   layers.forEach((layer,index)=>{layer.style.boxSizing="border-box";layer.style.minWidth="0";layer.style.maxWidth=layers.length===1?"min(42rem,calc(100vw - 2.5rem))":`calc((100vw - ${1.5+0.5*(layers.length-1)}rem) / ${layers.length})`;layer.style.maxHeight="calc(100vh - 2.5rem)";layer.style.overflowY=index===layers.length-1?"auto":"hidden";layer.style.overscrollBehavior="contain";});
   stack.append(...layers);dialog.append(stack);dom.body.append(dialog);owner.setAttribute("aria-owns",owner.getAttribute("aria-owns")?[owner.getAttribute("aria-owns"),dialogId].join(" "):dialogId);const mounted:MountedSchemaTableOverlay={owner,dialog,abort};mountedSchemaTableOverlays.set(owner,mounted);mountedSchemaTableOverlayInventory.add(mounted);
-  const place=():void=>{
+  const place=(remeasureWidth=false):void=>{
     if(!dialog.isConnected||!trigger.isConnected)return;
-    const anchor=trigger.getBoundingClientRect(),bounds=dialog.getBoundingClientRect(),view=dom.defaultView,placement=schemaTableOverlayPlacement(anchor,bounds,{width:view?.innerWidth??dom.documentElement.clientWidth,height:view?.innerHeight??dom.documentElement.clientHeight});
+    if(remeasureWidth)dialog.style.removeProperty("width");
+    const anchor=trigger.getBoundingClientRect(),bounds=dialog.getBoundingClientRect(),view=dom.defaultView,placement=schemaTableOverlayPlacement(anchor,{width:bounds.width,height:Math.max(bounds.height,dialog.scrollHeight)},{width:Math.min(view?.innerWidth??dom.documentElement.clientWidth,dom.documentElement.clientWidth),height:Math.min(view?.innerHeight??dom.documentElement.clientHeight,dom.documentElement.clientHeight)});
     dialog.style.left=`${placement.left}px`;dialog.style.top=`${placement.top}px`;dialog.style.width=`${placement.width}px`;dialog.style.maxHeight=`${placement.maxHeight}px`;
   };
   dialog.addEventListener("cancel",(event)=>{event.preventDefault();onCancel();},{signal:abort.signal});
-  dom.defaultView?.addEventListener("resize",place,{signal:abort.signal});
+  dom.defaultView?.addEventListener("resize",()=>place(true),{signal:abort.signal});
   queueMicrotask(()=>{
     if(!dialog.isConnected||!trigger.isConnected)return;
     const scrollNodes=[dom.scrollingElement,...Array.from(owner.querySelectorAll<HTMLElement>("[data-schema-editor-scroll-region]"))].filter((node):node is Element&{scrollTop:number;scrollLeft:number}=>Boolean(node)),scrollState=scrollNodes.map((node)=>({node,top:node.scrollTop,left:node.scrollLeft})),restoreScroll=():void=>scrollState.forEach(({node,top,left})=>{node.scrollTop=top;node.scrollLeft=left;});
     if(!dialog.open)dialog.showModal();
-    place();
+    place(true);
     restoreScroll();
     const view=dom.defaultView,schedulePlace=():void=>{
       if(!view)return;

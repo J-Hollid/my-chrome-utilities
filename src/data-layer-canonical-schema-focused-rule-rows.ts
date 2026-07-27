@@ -3,7 +3,7 @@ import {focusedOwnershipActions,focusedRuleFields,focusedRuleIssue} from "./data
 import {renderSharedConditionTree} from "./data-layer-shared-condition-tree-editor.js";
 import {schemaTableAllowedValues,schemaTableRuleConditionSummary,schemaTableRuleOutcomeSummary,schemaTableStageAllowedValues} from "./data-layer-schema-table.js";
 
-export interface CanonicalFocusedRuleRowsContext {dom:Document;getWorking:()=>CanonicalPropertyNode|undefined;properties?:()=>readonly {id:string;name:string;type?:string}[];removedRuleIds:Set<string>;invariant:boolean;id:(kind:string)=>string;render:()=>void;feedback:(message:string)=>void;}
+export interface CanonicalFocusedRuleRowsContext {dom:Document;getWorking:()=>CanonicalPropertyNode|undefined;properties?:()=>readonly {id:string;name:string;type?:string;allowedValues?:readonly unknown[]}[];removedRuleIds:Set<string>;invariant:boolean;id:(kind:string)=>string;render:()=>void;feedback:(message:string)=>void;}
 const clone=<T>(value:T):T=>structuredClone(value);
 const labeled=(dom:Document,text:string,control:HTMLElement):HTMLLabelElement=>{const label=dom.createElement("label");label.append(text,control);return label;};
 const input=(dom:Document,name:string,value="",type="text"):HTMLInputElement=>{const control=dom.createElement("input");control.name=name;control.type=type;control.value=value;return control;};

@@ -9,7 +9,7 @@ const button=(dom:Document,text:string,run:()=>void):HTMLButtonElement=>{const c
 const numericFields=new Set(["minimum","maximum","minItems","maxItems"]);
 const fieldLabel=(field:string):string=>({pattern:"Regular expression",minimum:"Minimum",maximum:"Maximum",minItems:"Minimum items",maxItems:"Maximum items",severity:"Severity",message:"Message"}[field]??field);
 const clone=<T>(value:T):T=>structuredClone(value);
-const properties=(context:ComposedFocusedSectionContext)=>()=>context.model.rows.map(({path,effective})=>({id:effective.definitionId??path,name:path.split("/").filter(Boolean).at(-1)??path,...(effective.type?{type:effective.type}:{})}));
+const properties=(context:ComposedFocusedSectionContext)=>()=>context.model.rows.map(({path,effective})=>({id:effective.definitionId??path,name:path.split("/").filter(Boolean).at(-1)??path,...(effective.type?{type:effective.type}:{}),...(effective.allowedValues?.length?{allowedValues:effective.allowedValues}:{})}));
 const section=(dom:Document,title:string):HTMLElement=>{const host=dom.createElement("section"),heading=dom.createElement("h3");heading.textContent=title;host.append(heading);return host;};
 
 function renderRuleEditor(row:HTMLElement,rule:Record<string,unknown>,index:number,context:ComposedFocusedSectionContext,invoker:HTMLButtonElement):void {

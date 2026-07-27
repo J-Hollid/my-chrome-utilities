@@ -3,7 +3,7 @@ import {filterFocusedReusableRules,focusedReusableOutcome,focusedRuleFields,focu
 import {renderSharedConditionTree} from "./data-layer-shared-condition-tree-editor.js";
 import {schemaTableStageAllowedValues} from "./data-layer-schema-table.js";
 
-export interface CanonicalFocusedRuleAddContext {dom:Document;getWorking:()=>CanonicalPropertyNode|undefined;properties?:()=>readonly {id:string;name:string;type?:string}[];id:(kind:string)=>string;render:()=>void;feedback:(message:string)=>void;}
+export interface CanonicalFocusedRuleAddContext {dom:Document;getWorking:()=>CanonicalPropertyNode|undefined;properties?:()=>readonly {id:string;name:string;type?:string;allowedValues?:readonly unknown[]}[];id:(kind:string)=>string;render:()=>void;feedback:(message:string)=>void;}
 const labeled=(dom:Document,text:string,control:HTMLElement):HTMLLabelElement=>{const label=dom.createElement("label");label.append(text,control);return label;};
 const input=(dom:Document,name:string,value="",type="text"):HTMLInputElement=>{const control=dom.createElement("input");control.name=name;control.type=type;control.value=value;return control;};
 const button=(dom:Document,text:string,run:()=>void):HTMLButtonElement=>{const control=dom.createElement("button");control.type="button";control.textContent=text;control.addEventListener("click",run);return control;};

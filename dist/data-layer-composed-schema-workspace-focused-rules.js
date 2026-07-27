@@ -6,7 +6,7 @@ const button = (dom, text, run) => { const control = dom.createElement("button")
 const numericFields = new Set(["minimum", "maximum", "minItems", "maxItems"]);
 const fieldLabel = (field) => ({ pattern: "Regular expression", minimum: "Minimum", maximum: "Maximum", minItems: "Minimum items", maxItems: "Maximum items", severity: "Severity", message: "Message" }[field] ?? field);
 const clone = (value) => structuredClone(value);
-const properties = (context) => () => context.model.rows.map(({ path, effective }) => ({ id: effective.definitionId ?? path, name: path.split("/").filter(Boolean).at(-1) ?? path, ...(effective.type ? { type: effective.type } : {}) }));
+const properties = (context) => () => context.model.rows.map(({ path, effective }) => ({ id: effective.definitionId ?? path, name: path.split("/").filter(Boolean).at(-1) ?? path, ...(effective.type ? { type: effective.type } : {}), ...(effective.allowedValues?.length ? { allowedValues: effective.allowedValues } : {}) }));
 const section = (dom, title) => { const host = dom.createElement("section"), heading = dom.createElement("h3"); heading.textContent = title; host.append(heading); return host; };
 function renderRuleEditor(row, rule, index, context, invoker) {
     const { dom } = context, draftRule = clone(rule), editor = dom.createElement("fieldset"), details = section(dom, "Rule details"), when = section(dom, "When"), then = section(dom, "Then"), severity = section(dom, "Severity and message"), actions = section(dom, "Rule actions"), status = dom.createElement("p");

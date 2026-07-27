@@ -1,12 +1,13 @@
 import { typedCanonicalValue } from "./data-layer-canonical-schema-facets.js";
 const existence = ["Exists", "Does not exist"];
+const conditionType = (type, allowedValues = []) => type !== "array" && allowedValues.length ? "enum" : type;
 const operators = (type) => type === "number" || type === "integer" ? [...existence, "Equals", "Does not equal", "Greater than", "At least", "Less than", "At most"] : type === "boolean" || type === "null" ? [...existence, "Equals", "Does not equal"] : type === "array" ? [...existence, "Contains", "Contains any of"] : type === "enum" ? [...existence, "Equals", "Does not equal", "Is one of"] : [...existence, "Equals", "Does not equal", "Is one of", "Starts with", "Contains", "Matches pattern"];
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const clone = (value) => structuredClone(value);
 const valueText = (value) => value === undefined ? "" : typeof value === "string" ? value : JSON.stringify(value) ?? String(value);
 const typedValue = (type, text) => typedCanonicalValue(type, text);
-export const sharedConditionOperators = (type) => operators(type);
+export const sharedConditionOperators = (type, allowedValues = []) => operators(conditionType(type, allowedValues));
 export const sharedConditionValueMounted = (operator) => !existence.includes(operator);
 export const sharedTypedConditionValue = (type, text) => typedValue(type, text);
 const predicateRows = (condition) => {
@@ -31,7 +32,7 @@ export function renderSharedConditionTree(host, options) {
     if (!dom.getElementById("flat-rule-builder-responsive-style")) {
         const style = dom.createElement("style");
         style.id = "flat-rule-builder-responsive-style";
-        style.textContent = `[data-rule-editor-mode]{display:grid;grid-template-columns:minmax(0,1fr)!important;box-sizing:border-box;min-width:0;max-width:100%}[data-rule-editor-mode] *{box-sizing:border-box;max-width:100%}[data-rule-editor-mode] label{display:grid;gap:.2rem;min-width:0}[data-rule-editor-mode] input,[data-rule-editor-mode] select{box-sizing:border-box;max-width:100%;min-width:0;width:100%}[data-rule-editor-mode] select{overflow:hidden;text-overflow:ellipsis}[data-rule-editor-mode] section{display:grid;gap:.5rem;min-width:0}[data-rule-field-grid="true"]{grid-template-columns:repeat(2,minmax(0,1fr))}[data-rule-field-grid="true"]>h3{grid-column:1/-1}[data-rule-editor-mode] [aria-label="Rule actions"]{position:sticky;bottom:0;z-index:1;background:Canvas;padding:.5rem 0}[data-rule-editor-mode] h3,[data-condition-layout="responsive"] h4{margin:.4rem 0 .1rem}@media(max-width:600px){[data-condition-layout="responsive"] [data-condition-kind="predicate"],[data-rule-field-grid="true"]{grid-template-columns:minmax(0,1fr)!important}[data-condition-kind="predicate"]>button{min-width:0;width:100%}}`;
+        style.textContent = `[data-rule-editor-mode]{display:grid;grid-template-columns:minmax(0,1fr)!important;box-sizing:border-box;min-width:0;max-width:100%}[data-rule-editor-mode] *{box-sizing:border-box;max-width:100%}[data-rule-editor-mode] label{display:grid;gap:.2rem;min-width:0}[data-rule-editor-mode] input,[data-rule-editor-mode] select{box-sizing:border-box;max-width:100%;min-width:0;width:100%}[data-rule-editor-mode] select{overflow:hidden;text-overflow:ellipsis}[data-rule-editor-mode] section{display:grid;gap:.5rem;min-width:0}[data-rule-field-grid="true"]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}[data-rule-field-grid="true"]>h3{grid-column:1/-1}[data-rule-editor-mode] [aria-label="Rule actions"]{position:sticky;bottom:0;z-index:1;background:Canvas;padding:.5rem 0}[data-rule-editor-mode] [aria-label="Rule actions"] [role="status"]{min-height:3em;margin:.25rem 0}[data-rule-editor-mode] h3,[data-condition-layout="responsive"] h4{margin:.4rem 0 .1rem}@media(max-width:600px){[data-condition-layout="responsive"] [data-condition-kind="predicate"],[data-rule-field-grid="true"]{grid-template-columns:minmax(0,1fr)!important}[data-condition-kind="predicate"]>button{min-width:0;width:100%}}`;
         dom.head.append(style);
     }
     let focusRowId;
@@ -67,7 +68,7 @@ export function renderSharedConditionTree(host, options) {
             listbox.dataset.conditionPropertyListbox = "true";
             listbox.setAttribute("role", "listbox");
             listbox.setAttribute("aria-label", "Matching condition properties");
-            listbox.style.cssText = "position:absolute;z-index:2147483647;box-sizing:border-box;overflow-y:auto;overflow-x:hidden;background:Canvas;border:1px solid ButtonBorder;padding:0.25rem;";
+            listbox.style.cssText = "position:absolute;z-index:2147483647;box-sizing:border-box;max-width:none;overflow-y:auto;overflow-x:hidden;background:Canvas;border:1px solid ButtonBorder;padding:0.25rem;";
             let activeIndex = -1;
             const close = () => { property.setAttribute("aria-expanded", "false"); listbox.hidden = true; };
             const editorElement = host.closest("[data-rule-editor-mode]") ?? host;
@@ -85,10 +86,10 @@ export function renderSharedConditionTree(host, options) {
                 option.addEventListener("click", () => chooseProperty(row, entry, property, operator, listbox));
                 option.setAttribute("aria-selected", String(index === activeIndex));
                 listbox.append(option);
-            } listbox.hidden = false; property.setAttribute("aria-expanded", "true"); requestAnimationFrame(() => { const field = property.getBoundingClientRect(), editor = editorElement.getBoundingClientRect(), viewportWidth = dom.defaultView?.innerWidth ?? editor.right, viewportHeight = dom.defaultView?.innerHeight ?? editor.bottom, leftEdge = Math.max(0, editor.left), rightEdge = Math.min(viewportWidth, editor.left + editorElement.clientWidth), topEdge = Math.max(0, editor.top), bottomEdge = Math.min(viewportHeight, editor.top + editorElement.clientHeight), width = Math.max(1, Math.min(Math.max(field.width, 180), rightEdge - leftEdge)), left = Math.max(leftEdge, Math.min(field.left, rightEdge - width)), below = bottomEdge - field.bottom, above = field.top - topEdge, flip = below < 160 && above > below, maxHeight = Math.max(1, Math.min(240, (flip ? above : below) - 8)), popupTop = flip ? Math.max(topEdge, field.top - Math.min(listbox.scrollHeight, maxHeight)) : field.bottom, absoluteLeft = left - editor.left + editorElement.scrollLeft, absoluteTop = popupTop - editor.top + editorElement.scrollTop; listbox.style.left = `${absoluteLeft}px`; listbox.style.width = `${width}px`; listbox.style.maxHeight = `${maxHeight}px`; listbox.style.top = `${absoluteTop}px`; requestAnimationFrame(() => { if (!listbox.isConnected)
+            } listbox.hidden = false; property.setAttribute("aria-expanded", "true"); requestAnimationFrame(() => { const field = property.getBoundingClientRect(), editor = editorElement.getBoundingClientRect(), viewportWidth = dom.defaultView?.innerWidth ?? editor.right, viewportHeight = dom.defaultView?.innerHeight ?? editor.bottom, leftEdge = Math.max(0, editor.left), rightEdge = Math.min(viewportWidth, editor.left + editorElement.clientWidth), topEdge = Math.max(0, editor.top), bottomEdge = Math.min(viewportHeight, editor.top + editorElement.clientHeight), width = Math.max(1, Math.min(Math.max(field.width, 180), rightEdge - leftEdge)), left = Math.max(leftEdge, Math.min(field.left, rightEdge - width)), below = bottomEdge - field.bottom, above = field.top - topEdge, desiredHeight = Math.min(240, Math.max(1, listbox.scrollHeight)), flip = below < desiredHeight + 8 && above > below, maxHeight = Math.max(1, Math.min(240, (flip ? above : below) - 8)), popupTop = flip ? Math.max(topEdge, field.top - Math.min(listbox.scrollHeight, maxHeight)) : field.bottom, absoluteLeft = left - editor.left + editorElement.scrollLeft, absoluteTop = popupTop - editor.top + editorElement.scrollTop; listbox.style.left = `${absoluteLeft}px`; listbox.style.width = `${width}px`; listbox.style.maxHeight = `${maxHeight}px`; listbox.style.top = `${absoluteTop}px`; requestAnimationFrame(() => { if (!listbox.isConnected)
                 return; const currentField = property.getBoundingClientRect(), currentPopup = listbox.getBoundingClientRect(), desiredTop = flip ? currentField.top - currentPopup.height : currentField.bottom; listbox.style.top = `${Number.parseFloat(listbox.style.top) + (desiredTop - currentPopup.top)}px`; }); }); };
             property.addEventListener("focus", open);
-            property.addEventListener("input", () => { row.propertyId = ""; row.operator = ""; delete row.value; activeIndex = -1; renderOperators(row, operator); emit(); open(); });
+            property.addEventListener("input", () => { row.propertyId = ""; activeIndex = -1; emit(); open(); });
             property.addEventListener("keydown", (event) => { const choices = Array.from(listbox.querySelectorAll('[role="option"]')); if (event.key === "ArrowDown") {
                 event.preventDefault();
                 activeIndex = Math.min(activeIndex + 1, Math.max(0, choices.length - 1));
@@ -124,9 +125,17 @@ export function renderSharedConditionTree(host, options) {
                 valueHost.textContent = "No value required";
                 return valueHost;
             }
-            const multi = row.operator === "Is one of" || row.operator === "Contains any of", control = entry.type === "boolean" ? dom.createElement("select") : dom.createElement("input");
+            const multi = row.operator === "Is one of" || row.operator === "Contains any of", enumValues = entry.type !== "array" && entry.allowedValues?.length ? entry.allowedValues : undefined, control = entry.type === "boolean" || multi && enumValues ? dom.createElement("select") : dom.createElement("input");
             control.setAttribute("aria-label", "Typed condition value");
-            if (control instanceof HTMLSelectElement) {
+            if (control instanceof HTMLSelectElement && multi && enumValues) {
+                control.multiple = true;
+                for (const [index, value] of enumValues.entries()) {
+                    const choice = new Option(String(value), String(index));
+                    choice.selected = Array.isArray(row.value) && row.value.some((selected) => JSON.stringify(selected) === JSON.stringify(value));
+                    control.append(choice);
+                }
+            }
+            else if (control instanceof HTMLSelectElement) {
                 control.append(new Option("Choose True or False", ""), new Option("True", "true"), new Option("False", "false"));
                 control.value = row.value === true ? "true" : row.value === false ? "false" : "";
             }
@@ -137,7 +146,9 @@ export function renderSharedConditionTree(host, options) {
             }
             const update = () => { try {
                 const text = control.value;
-                if (control instanceof HTMLSelectElement)
+                if (control instanceof HTMLSelectElement && control.multiple && enumValues)
+                    row.value = Array.from(control.selectedOptions).map(({ value }) => clone(enumValues[Number(value)]));
+                else if (control instanceof HTMLSelectElement)
                     row.value = text === "" ? undefined : text === "true";
                 else if (multi)
                     row.value = text.split(",").map((value) => value.trim()).filter(Boolean).map((value) => typedValue(entry.type === "array" ? "string" : entry.type, value));
@@ -155,7 +166,7 @@ export function renderSharedConditionTree(host, options) {
             valueHost.append(control);
             return valueHost;
         };
-        const renderOperators = (row, operator) => { const entry = selected(row), available = entry ? operators(entry.type) : []; operator.disabled = !entry; operator.replaceChildren(new Option("Choose operator", ""), ...available.map((name) => new Option(name, name))); if (row.operator && available.includes(row.operator))
+        const renderOperators = (row, operator) => { const entry = selected(row), available = entry ? operators(conditionType(entry.type, entry.allowedValues)) : []; operator.disabled = !entry; operator.replaceChildren(new Option("Choose operator", ""), ...available.map((name) => new Option(name, name))); if (row.operator && available.includes(row.operator))
             operator.value = row.operator;
         else {
             row.operator = "";

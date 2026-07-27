@@ -17,6 +17,7 @@ export { compileLayeredSchema, validateLayeredObservation } from "../../data-lay
 export { layeredContributorPath, layeredContributorsForPath } from "../../data-layer-layered-schema-project.js";
 export { canonicalPredicateLeafFromInput, canonicalPredicateOperators, canonicalPredicateText, mountCanonicalPredicateEditor, validateCanonicalPredicateTree } from "../../data-layer-canonical-predicate-editor.js";
 export { mountCanonicalSchemaEditor } from "../../data-layer-canonical-schema-ui.js";
+export { renderCanonicalFocusedRules } from "../../data-layer-canonical-schema-focused-rules.js";
 export { canonicalCommandsFromCompactProjection, compactConditionalPresence, compactSchemaProjection, savedSchemaCanonicalDocument, savedSchemaFromCanonical } from "../../data-layer-side-panel-unified-schema-editor.js";
 export { canonicalMigrationDurablyAcknowledged, resolveSidePanelSchemaContributor } from "../../data-layer-side-panel-schema-editor.js";
 export { redoProjectTransaction, undoProjectTransaction } from "../../data-layer-specification-project.js";
