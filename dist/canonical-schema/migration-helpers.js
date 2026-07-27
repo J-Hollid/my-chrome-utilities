@@ -10,7 +10,12 @@ export const definitionAtPath = (definitions, path, definition, provenance) => {
 export const collectStructured = (definitions, document, source, parent = "") => { const properties = document.properties, required = new Set(document.required ?? []); for (const [name, definition] of Object.entries(properties ?? {})) {
     const path = `${parent}/${name}`, normalized = required.has(name) ? { ...definition, required: true } : definition;
     definitionAtPath(definitions, path, normalized, { source });
-    if (definition.type === "object" || definition.properties)
+    if (definition.type === "array" && definition.items && typeof definition.items === "object") {
+        const items = definition.items;
+        if (items.type === "object" || items.properties)
+            collectStructured(definitions, items, source, path);
+    }
+    else if (definition.type === "object" || definition.properties)
         collectStructured(definitions, definition, source, path);
 } };
 export const explicitValues = (defs, read) => { const values = []; for (const { definition, provenance } of defs) {

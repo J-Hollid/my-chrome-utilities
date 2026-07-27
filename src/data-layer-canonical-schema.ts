@@ -10,11 +10,14 @@ export interface CanonicalPredicateGroup {kind:"all"|"any"|"not";id?:string;chil
 export type CanonicalPredicate=CanonicalPredicateLeaf|CanonicalPredicateGroup;
 export interface CanonicalPredicateEvidence {matched:boolean;branches:{label:string;matched:boolean;propertyId?:string}[];}
 export interface CanonicalAllowedValue {id:string;value:unknown;label?:string;provenance?:CanonicalProvenance[];}
-export interface CanonicalRule {id:string;kind:"presence"|"value"|"pattern"|"range"|"cardinality"|"condition"|"reusable"|"custom";presence?:CanonicalPresenceMode;expectedValue?:unknown;allowedValues?:unknown[];pattern?:string;minimum?:number;maximum?:number;minItems?:number;maxItems?:number;condition?:CanonicalPredicate;severity:"error"|"warning";message?:string;enabled?:boolean;reusableRuleId?:string;reusableOutcome?:Record<string,unknown>;replacesRuleId?:string;enforcement?:"invariant"|"overridable";name?:string;revision?:number;operator?:string;provenance?:CanonicalProvenance;}
+export interface CanonicalArrayScopeBoundary {propertyId:string;mode:"every"|"position";position?:number;}
+export interface CanonicalArrayScope {boundaries:CanonicalArrayScopeBoundary[];}
+export interface CanonicalRule {id:string;kind:"presence"|"value"|"pattern"|"range"|"cardinality"|"condition"|"reusable"|"custom";presence?:CanonicalPresenceMode;expectedValue?:unknown;allowedValues?:unknown[];pattern?:string;minimum?:number;maximum?:number;minItems?:number;maxItems?:number;condition?:CanonicalPredicate;arrayScope?:CanonicalArrayScope;severity:"error"|"warning";message?:string;enabled?:boolean;reusableRuleId?:string;reusableOutcome?:Record<string,unknown>;replacesRuleId?:string;enforcement?:"invariant"|"overridable";name?:string;revision?:number;operator?:string;provenance?:CanonicalProvenance;}
 export interface CanonicalDocumentation {displayText:string;description:string;comments:string;example:{method:"allowed-value"|"custom"|"blank";value?:unknown};}
 export interface CanonicalProvenance {source:"created"|"saved-schema"|"requirements"|"structured-schema"|"structured-draft"|"path-constraint";sourceId?:string;revision?:number;contributorId?:string;contributorName?:string;scope?:LayerScope;state?:"inherited"|"shadowed"|"effective"|"local"|"overridden"|"conflict";}
+export interface CanonicalItemSchema {id:string;type?:CanonicalPropertyType;items?:CanonicalItemSchema;}
 export interface CanonicalPropertyNode {
-  id:string;name:string;parentId?:string;order:number;type:CanonicalPropertyType;itemType?:CanonicalPropertyType;
+  id:string;name:string;parentId?:string;order:number;type:CanonicalPropertyType;itemType?:CanonicalPropertyType;itemSchema?:CanonicalItemSchema;
   presence:{mode:CanonicalPresenceMode;condition?:CanonicalPredicate};allowedValues:CanonicalAllowedValue[];rules:CanonicalRule[];
   documentation:CanonicalDocumentation;provenance:CanonicalProvenance[];overrideReferences:string[];structureOwned?:boolean;localDefinitionFacets?:readonly string[];inheritedDefinition?:{description?:string};expectedValue?:unknown;enforcement?:"invariant"|"overridable";target?:string;
 }
@@ -50,6 +53,8 @@ export type CanonicalCommandResult=
 export {canonicalCommandOutcome,applyCanonicalCommand,addCanonicalProperty,renameCanonicalProperty,setCanonicalProperty,changeCanonicalPropertyType,createCanonicalRepository} from "./data-layer-canonical-schema-commands.js";
 
 export {createCanonicalSchema,canonicalPropertyPath,canonicalTableRows} from "./data-layer-canonical-schema-model.js";
+export {canonicalFriendlyPropertyPath,canonicalJsonSchemaDocument} from "./data-layer-canonical-schema-model.js";
+export {canonicalArrayBoundaries} from "./data-layer-canonical-array-items.js";
 export {evaluateCanonicalPredicate} from "./data-layer-canonical-schema-predicates.js";
 export {canonicalPredicateWithStableIds,canonicalPredicateIds} from "./data-layer-canonical-predicate-identity.js";
 export {canonicalConstraints,canonicalSchemaWithConstraint,canonicalRequirements} from "./data-layer-canonical-schema-constraints.js";
