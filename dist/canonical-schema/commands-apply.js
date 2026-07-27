@@ -1,3 +1,4 @@
+import { canonicalFlatPredicateIssue } from "./predicate-policy.js";
 const clone = (value) => structuredClone(value);
 const orderWithin = (document, parentId) => Object.values(document.nodes).filter((node) => node.parentId === parentId).sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
 const appendChange = (document, command, propertyIds) => ({ ...document, revision: document.revision + 1, changes: [...document.changes, { revision: document.revision + 1, propertyIds, kind: command.kind }] });
@@ -74,6 +75,14 @@ function applyStructuralOperation(document, operation) {
 }
 export function applyCanonicalAtCurrent(document, command) {
     assertBase(document, command.baseRevision);
+    if (command.kind === "set") {
+        const conditions = [
+            ...(command.patch.presence && Object.hasOwn(command.patch.presence, "condition") ? [command.patch.presence.condition] : []),
+            ...(command.patch.rules ?? []).flatMap((rule) => Object.hasOwn(rule, "condition") ? [rule.condition] : []),
+        ], issue = conditions.map(canonicalFlatPredicateIssue).find(Boolean);
+        if (issue)
+            return { status: "conflict", document, propertyId: command.propertyId, message: `Canonical condition write blocked: ${issue}` };
+    }
     const next = clone(document);
     if (command.kind === "add") {
         if (command.parentId && !next.nodes[command.parentId])

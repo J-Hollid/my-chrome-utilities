@@ -1,4 +1,5 @@
 import type {CanonicalCommand,CanonicalCommandResult,CanonicalDocumentation,CanonicalPropertyNode,CanonicalSchemaDocument,CanonicalStructuralOperation} from "../data-layer-canonical-schema.js";
+import {canonicalFlatPredicateIssue} from "./predicate-policy.js";
 
 const clone=<T>(value:T):T=>structuredClone(value);
 const orderWithin=(document:CanonicalSchemaDocument,parentId?:string):CanonicalPropertyNode[]=>Object.values(document.nodes).filter((node)=>node.parentId===parentId).sort((a,b)=>a.order-b.order||a.id.localeCompare(b.id));
@@ -29,7 +30,15 @@ function applyStructuralOperation(document:CanonicalSchemaDocument,operation:Can
 }
 
 export function applyCanonicalAtCurrent(document:CanonicalSchemaDocument,command:CanonicalCommand):CanonicalCommandResult {
-  assertBase(document,command.baseRevision);const next=clone(document);
+  assertBase(document,command.baseRevision);
+  if(command.kind==="set"){
+    const conditions=[
+      ...(command.patch.presence&&Object.hasOwn(command.patch.presence,"condition")?[command.patch.presence.condition]:[]),
+      ...(command.patch.rules??[]).flatMap((rule)=>Object.hasOwn(rule,"condition")?[rule.condition]:[]),
+    ],issue=conditions.map(canonicalFlatPredicateIssue).find(Boolean);
+    if(issue)return{status:"conflict",document,propertyId:command.propertyId,message:`Canonical condition write blocked: ${issue}`};
+  }
+  const next=clone(document);
   if(command.kind==="add"){if(command.parentId&&!next.nodes[command.parentId])throw new Error(`Parent property ${command.parentId} is unavailable.`);const propertyId=command.id("property"),node:CanonicalPropertyNode={id:propertyId,name:command.name.trim()||"property",...(command.parentId?{parentId:command.parentId}:{}),order:insertOrder(next,command.parentId,command.afterId),type:command.type,presence:{mode:"optional"},allowedValues:[],rules:[],documentation:emptyDocumentation(),provenance:[{source:"created"}],overrideReferences:[]};for(const sibling of orderWithin(next,command.parentId))if(sibling.order>=node.order)sibling.order+=1;next.nodes[propertyId]=node;if(!command.parentId)next.rootIds=orderWithin(next).map(({id})=>id);next.selectedPropertyId=propertyId;return{status:"applied",document:appendChange(next,command,[propertyId,...(command.parentId?[command.parentId]:[])])};}
   if(command.kind==="view")return{status:"applied",document:{...next,view:command.view}};
   const propertyId="propertyId" in command?command.propertyId:undefined,node=propertyId?next.nodes[propertyId]:undefined;if(propertyId&&!node)throw new Error(`Canonical property ${propertyId} is unavailable.`);

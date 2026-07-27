@@ -85,10 +85,14 @@ const predicate={kind:"all",children:[
   ]},
   {kind:"not",children:[{kind:"predicate",propertyId:transactionId,operator:"Equals",value:"denied"}]},
 ]};
+const flatPredicate={kind:"all",children:[
+  {kind:"predicate",propertyId:transactionId,operator:"Equals",value:"A-1"},
+  {kind:"predicate",propertyId:commerce,operator:"Exists"},
+]};
 ({document}=setCanonicalProperty(document,{baseRevision:4,propertyId:transactionId,patch:{
-  presence:{mode:"required-when",condition:predicate},
+  presence:{mode:"required-when",condition:flatPredicate},
   allowedValues:[{id:"value:one",value:"A-1"},{id:"value:two",value:"A-2"}],
-  rules:[{id:"rule:one",kind:"pattern",pattern:"^A-",severity:"error",message:"Use an order identifier",condition:predicate,reusableRuleId:"rule:identifier"}],
+  rules:[{id:"rule:one",kind:"pattern",pattern:"^A-",severity:"error",message:"Use an order identifier",condition:flatPredicate,reusableRuleId:"rule:identifier"}],
   documentation:{displayText:"Transaction ID",description:"Order identifier",comments:"Owned by commerce",example:{method:"allowed-value",value:"A-1"}},
 }}));
 const evidence=evaluateCanonicalPredicate(predicate,document,{[transactionId]:"A-1",[commerce]:{}});

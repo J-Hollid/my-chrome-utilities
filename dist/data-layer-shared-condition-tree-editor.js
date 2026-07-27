@@ -1,4 +1,5 @@
 import { typedCanonicalValue } from "./data-layer-canonical-schema-facets.js";
+import { canonicalFlatPredicateIssue } from "./canonical-schema/predicate-policy.js";
 const existence = ["Exists", "Does not exist"];
 const conditionType = (type, allowedValues = []) => type !== "array" && allowedValues.length ? "enum" : type;
 const operators = (type) => type === "number" || type === "integer" ? [...existence, "Equals", "Does not equal", "Greater than", "At least", "Less than", "At most"] : type === "boolean" || type === "null" ? [...existence, "Equals", "Does not equal"] : type === "array" ? [...existence, "Contains", "Contains any of"] : type === "enum" ? [...existence, "Equals", "Does not equal", "Is one of"] : [...existence, "Equals", "Does not equal", "Is one of", "Starts with", "Contains", "Matches pattern"];
@@ -11,14 +12,17 @@ export const sharedConditionOperators = (type, allowedValues = []) => operators(
 export const sharedConditionValueMounted = (operator) => !existence.includes(operator);
 export const sharedTypedConditionValue = (type, text) => typedValue(type, text);
 export const sharedUnresolvedConditionRow = (row) => ({ ...(row.id ? { id: row.id } : {}), propertyId: "", operator: "" });
-const predicateRows = (condition) => {
+export const sharedFlatConditionRows = (condition) => {
+    const issue = canonicalFlatPredicateIssue(condition);
+    if (issue)
+        throw new Error(issue);
     if (!condition)
         return [];
     if (condition.kind === "predicate")
-        return [clone(condition)];
-    return condition.children.flatMap(predicateRows);
+        throw new Error("A rule condition requires one top-level All or Any match mode.");
+    return condition.children.map((child) => { if (child.kind !== "predicate")
+        throw new Error("Nested condition reached the flat-row adapter."); const { id, propertyId, operator, value } = child; return { ...(id ? { id } : {}), propertyId, operator, ...(value !== undefined ? { value } : {}) }; });
 };
-export const sharedFlatConditionRows = (condition) => predicateRows(condition).map(({ id, propertyId, operator, value }) => ({ ...(id ? { id } : {}), propertyId, operator, ...(value !== undefined ? { value } : {}) }));
 const completeConditionValue = (value) => value !== undefined && !(typeof value === "string" && !value.trim()) && !(Array.isArray(value) && !value.length);
 export const sharedFlatConditionResult = (mode, rows) => {
     if (!rows.length || rows.some(({ propertyId, operator, value }) => !propertyId.trim() || !operator || !existence.includes(operator) && !completeConditionValue(value)))
@@ -26,7 +30,17 @@ export const sharedFlatConditionResult = (mode, rows) => {
     return { kind: mode, children: rows.map(({ id, propertyId, operator, value }) => ({ kind: "predicate", ...(id ? { id } : {}), propertyId, operator: operator, ...(existence.includes(operator) ? {} : { value }) })) };
 };
 export function renderSharedConditionTree(host, options) {
-    const { dom } = options, initial = options.condition;
+    const { dom } = options, initial = options.condition, migrationIssue = canonicalFlatPredicateIssue(initial);
+    if (migrationIssue) {
+        const heading = dom.createElement("h4"), message = dom.createElement("p");
+        host.replaceChildren();
+        host.setAttribute("aria-label", "Legacy When condition migration required");
+        heading.textContent = "When";
+        message.setAttribute("role", "alert");
+        message.textContent = `${migrationIssue} The persisted condition is preserved unchanged.`;
+        host.append(heading, message);
+        return;
+    }
     let mode = initial?.kind === "any" ? "any" : "all", rows = sharedFlatConditionRows(initial).map((row) => ({ ...row, id: row.id ?? options.id("condition") }));
     if (!rows.length)
         rows = [{ id: options.id("condition"), propertyId: "", operator: "" }];
