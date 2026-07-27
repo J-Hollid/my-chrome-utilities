@@ -46,6 +46,19 @@ for(let depth=1;depth<=8;depth+=1){
   assert.deepEqual(invalid.map(({path,canonicalPath,expected})=>({path,canonicalPath,expected})),[
     {path:`/matrix${"/0".repeat(depth)}`,canonicalPath:`/matrix${"/*".repeat(depth)}`,expected:"object"},
   ]);
+  const scalarItems=structuredClone(itemSchema);
+  let terminal=scalarItems;
+  while(terminal.items)terminal=terminal.items;
+  terminal.type="string";
+  const destructive=applyCanonicalCommand(document,{kind:"set",baseRevision:document.revision,propertyId:matrix,patch:{itemSchema:scalarItems}});
+  assert.equal(destructive.status,"confirmation-required",`depth ${depth} recursive type change requires confirmation`);
+  assert.deepEqual(destructive.document,document,`depth ${depth} pre-confirmation result preserves the document`);
+  const confirmed=applied(applyCanonicalCommand(document,{kind:"set",baseRevision:document.revision,propertyId:matrix,patch:{itemSchema:scalarItems},confirmed:true}));
+  assert.equal(confirmed.nodes[code],undefined,`depth ${depth} confirmation removes incompatible descendants`);
+  let confirmedTerminal=confirmed.nodes[matrix].itemSchema;
+  while(confirmedTerminal.items)confirmedTerminal=confirmedTerminal.items;
+  assert.equal(confirmedTerminal.type,"string");
+  assert.equal(document.nodes[code].id,code,`depth ${depth} prior state retains the stable child identity for Undo`);
 }
 
 for(let position=-3;position<=12;position+=0.5){
