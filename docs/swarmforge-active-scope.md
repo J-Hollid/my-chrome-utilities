@@ -487,16 +487,24 @@ compact stable-identity rows with independent View, Edit, ownership-aware remova
 and source actions. Rule type is selected before type-specific outcome fields
 appear, conditions use one flat All or Any mode with no groups, and one reviewed staged session
 commits one property command and one Undo action. Cancel or Escape discards staging
-and returns focus. Inherited content is read-only until a legal override or named
-replacement is chosen; Remove always means remove local content.
+and returns focus. Ordinary inherited Definition fields are enabled and prefilled
+with their effective values; changing one is itself the legal override and stages
+only that sparse local facet without a preliminary `Override here` action. Merely
+opening, focusing, or leaving an inherited value unchanged creates no local
+ownership. Invariant facets and identity-bearing inherited rules remain read-only.
+A replaceable inherited rule requires `Replace here`, which creates a new local
+rule identity with named replacement provenance before editing. Remove always means
+remove local content.
 
 The layered schema checkpoint uses that same property and rule model for Shared
 Profile, Event, Page Group, Page, Flow Page-instance, and Event-occurrence
 contributions. Contributor kind changes contextual applicability and provenance,
 not authoring capabilities. A Page-frame card and its selected-frame inline action
 both open the compact composed-schema workspace used by Page Groups and Pages.
-Inherited properties remain collapsed rows until the operator chooses an override;
-reset deletes sparse local facets. Empty local-only schema trees, eagerly expanded
+Inherited properties remain collapsed rows until the operator selects one; its
+ordinary Definition fields can then be edited directly to create sparse local
+facets, while identity-bearing rule and structure operations retain their explicit
+ownership gates. Reset deletes sparse local facets. Empty local-only schema trees, eagerly expanded
 facet tables, documentation exports, activation, applicability, assignment,
 validation, and testing controls do not appear in that contribution workspace;
 their owning documentation, Assignment, guided-testing, and validation surfaces
@@ -535,11 +543,16 @@ shadowed, conflicting, and provenance values. At 360px the same model uses compa
 rows and stacked detail with one vertical scroll owner and no horizontal page
 scroll.
 
-`Override here` stores only the locally changed property facets. A Page-local facet
-wins an ordinary difference on that same facet after its ordered Page Group stack
-and produces a non-blocking warning with shadowed-parent provenance. `Reset to
-parents` deletes that sparse local contribution and recompiles from the live parent
-stack; local-only properties use `Remove local property`. Adding a Page Group always
+Editing an ordinary inherited Definition field directly stores only the locally
+changed property facet. `Override here` is reserved for operations that must first
+establish local item or structural ownership; it is not a prerequisite for ordinary
+Definition-field editing. `Replace here` is reserved for an explicitly replaceable
+inherited rule and creates a new local rule identity that names its source rule.
+A Page-local facet wins an ordinary difference on that same facet after its ordered
+Page Group stack and produces a non-blocking warning with shadowed-parent
+provenance. `Reset to parents` deletes that sparse local contribution and recompiles
+from the live parent stack; local-only properties use `Remove local property`.
+Adding a Page Group always
 persists the Draft membership change. Uncovered illegal differences and inherited
 invariants block effective-schema readiness, validation, and developer export with
 direct repairs, but do not roll back the membership or hide the configuration.
