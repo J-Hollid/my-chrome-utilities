@@ -6,7 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import {headlessChromeArguments,resolveChromeExecutable,stopHeadlessChrome} from "../support/headless-chrome.mjs";
 import {wait} from "./shared-harness.mjs";
-import {authoring031Expression,authoring032Expression,authoring033Expression,authoring034Expression,authoring035And036Expression,authoring037Expression} from "../support/layered-schema-usability-probes.mjs";
+import {authoring031Expression,authoring032Expression,authoring033Expression,authoring034Expression,authoring035And036Expression,authoring037FlowConstrainedExpression,authoring037FlowRestoredExpression,authoring037FlowSetupExpression,authoring037GrowthExpression} from "../support/layered-schema-usability-probes.mjs";
 
 class DevtoolsSocket{
   constructor(url){this.url=new URL(url);this.nextId=1;this.pending=new Map();this.buffer=Buffer.alloc(0);}
@@ -353,8 +353,19 @@ layeringEvidence.layering022=sidePanelParity;return{installedBoundary:location.p
     evidence.authoring031=authoring031Evidence.authoring031;
     evidence.authoring032=authoring032Evidence.authoring032;
     evidence.authoring033=authoring033Evidence.authoring033;
-    const authoring037Evidence=await evaluate(socket,authoring037Expression);
-    evidence.authoring037=authoring037Evidence.authoring037;
+    const authoring037Growth=await evaluate(socket,authoring037GrowthExpression);
+    await viewportTarget.call("Emulation.setDeviceMetricsOverride",{width:360,height:800,deviceScaleFactor:1,mobile:false});
+    let authoring037FlowSetup,authoring037FlowConstrained,authoring037FlowRestored;
+    try{
+      authoring037FlowSetup=await evaluate(socket,authoring037FlowSetupExpression);
+      await viewportTarget.call("Emulation.setDeviceMetricsOverride",{width:360,height:480,deviceScaleFactor:1,mobile:false});
+      authoring037FlowConstrained=await evaluate(socket,authoring037FlowConstrainedExpression);
+      await viewportTarget.call("Emulation.setDeviceMetricsOverride",{width:360,height:800,deviceScaleFactor:1,mobile:false});
+      authoring037FlowRestored=await evaluate(socket,authoring037FlowRestoredExpression);
+    }finally{await viewportTarget.call("Emulation.clearDeviceMetricsOverride");}
+    const constrainedKeys=["viewportResized","viewportContainment","upward","flowStillFits","finalReachable","scrollRetained","associated"],restoredKeys=["viewportRestored","overflowRemoved","returnedDown","viewportContainment","scrollRetained"];
+    evidence.authoring037=Boolean(authoring037Growth.growthAndOverflow&&authoring037FlowSetup.flowWorkspace&&constrainedKeys.every((key)=>authoring037FlowConstrained[key]===true)&&restoredKeys.every((key)=>authoring037FlowRestored[key]===true));
+    if(!evidence.authoring037)throw new Error(`authoring037 viewport evidence ${JSON.stringify({authoring037Growth,authoring037FlowSetup,authoring037FlowConstrained,authoring037FlowRestored})}`);
     const authoring034Evidence=await evaluate(socket,authoring034Expression);
     evidence.authoring034=Boolean(authoring034Evidence.authoring034&&authoringCorrectionEvidence.surfaces.every(({cancelFocus,escapeFocus})=>cancelFocus&&escapeFocus));
     const quickTableEvidence=await evaluate(socket,authoring035And036Expression);

@@ -108,7 +108,7 @@ export const authoring033Expression=String.raw`(async()=>{
   const evidence={authoring033:Boolean(stacksOk&&canonicalParentFocus&&composedParentFocus&&canonicalRestored&&composedRestored&&emptyDirect&&directPredicate&&bounded&&groupControls&&allMultiple&&notSingle),viewport:innerWidth,stacks,canonicalParentFocus,composedParentFocus,canonicalRestored,composedRestored,emptyDirect,directPredicate,bounded,groupControls,allMultiple,notSingle};if(!evidence.authoring033)throw new Error('authoring033 evidence '+JSON.stringify(evidence));return evidence;
 })()`;
 
-export const authoring037Expression=String.raw`(async()=>{
+export const authoring037GrowthExpression=String.raw`(async()=>{
   const pause=(ms=80)=>new Promise((resolve)=>setTimeout(resolve,ms));
   const {clearSchemaTableOverlay,mountSchemaTableOverlay}=await import('/data-layer-schema-table.js');
   const root=document.createElement('section'),owner=document.createElement('div'),trigger=document.createElement('button'),inactive=document.createElement('section'),active=document.createElement('section'),last=document.createElement('button');
@@ -119,10 +119,37 @@ export const authoring037Expression=String.raw`(async()=>{
   const grown=dialog.getBoundingClientRect(),standaloneGrowth=grown.top<initial.top-20&&grown.bottom<=innerHeight-7&&active.scrollHeight<=active.clientHeight+1;
   const oversized=document.createElement('div');oversized.style.height=innerHeight+'px';active.insertBefore(oversized,last);await pause(180);active.scrollTop=active.scrollHeight;last.scrollIntoView({block:'nearest'});await pause();
   const tall=dialog.getBoundingClientRect(),lastBox=last.getBoundingClientRect(),eventOverflow=active.scrollHeight>active.clientHeight+1&&tall.top>=7&&tall.bottom<=innerHeight-7&&lastBox.top>=tall.top&&lastBox.bottom<=tall.bottom+1&&getComputedStyle(inactive).overflowY==='hidden'&&getComputedStyle(active).overflowY==='auto';
-  growth.remove();oversized.remove();await pause(180);const shrunk=dialog.getBoundingClientRect(),flowResize=shrunk.top>tall.top+20&&active.scrollHeight<=active.clientHeight+1;
+  growth.remove();oversized.remove();await pause(180);const shrunk=dialog.getBoundingClientRect(),overflowRemoved=shrunk.top>tall.top+20&&active.scrollHeight<=active.clientHeight+1;
   const scrollRetained=document.scrollingElement.scrollTop===documentScroll&&root.scrollTop===editorScroll&&inactive.scrollTop===inactiveScroll,associated=Math.abs(shrunk.top-Math.min(Math.max(trigger.getBoundingClientRect().top,8),innerHeight-8-shrunk.height))<=2;
   clearSchemaTableOverlay(owner);root.remove();
-  const evidence={authoring037:Boolean(standaloneGrowth&&flowResize&&eventOverflow&&scrollRetained&&associated),standaloneGrowth,flowResize,eventOverflow,scrollRetained,associated};if(!evidence.authoring037)throw new Error('authoring037 evidence '+JSON.stringify(evidence));return evidence;
+  const evidence={growthAndOverflow:Boolean(standaloneGrowth&&overflowRemoved&&eventOverflow&&scrollRetained&&associated),standaloneGrowth,overflowRemoved,eventOverflow,scrollRetained,associated};if(!evidence.growthAndOverflow)throw new Error('authoring037 growth evidence '+JSON.stringify(evidence));return evidence;
+})()`;
+
+export const authoring037FlowSetupExpression=String.raw`(async()=>{
+  const pause=(ms=50)=>new Promise((resolve)=>setTimeout(resolve,ms)),waitFor=async(read,label)=>{for(let attempt=0;attempt<300;attempt+=1){const value=read();if(value)return value;await pause();}throw new Error('authoring037 flow setup: '+label);},buttons=(root=document)=>[...root.querySelectorAll('button')];
+  for(let layer=0;layer<3&&document.querySelector(':modal');layer+=1){document.querySelector(':modal').dispatchEvent(new Event('cancel',{cancelable:true}));await pause();}
+  document.querySelector('#project-tree button[data-kind="flows"]')?.click();const route=await waitFor(()=>[...document.querySelectorAll('#workspace-content .entity-row button')].find(({textContent})=>textContent.trim().startsWith('Checkout journey')),'Flow route');route.click();
+  const frame=await waitFor(()=>document.querySelector('[data-page-frame-id]'),'Flow Page card');frame.querySelector('button')?.click();await pause();const open=await waitFor(()=>document.querySelector('[data-page-frame-id] [data-flow-schema-contribution="true"]'),'Flow Page-instance schema action');open.click();
+  const editor=await waitFor(()=>[...document.querySelectorAll('[aria-label="Shared schema constraints editor"]')].find(({hidden})=>!hidden),'Flow workspace editor'),workspace=await waitFor(()=>editor.querySelector('.composed-schema-workspace'),'Flow composed workspace'),region=workspace.querySelector('[data-schema-editor-scroll-region="true"]');if(!region)throw new Error('authoring037 flow setup: editor scroll region');
+  region.scrollTop=region.scrollHeight;await pause();const row=[...workspace.querySelectorAll('[data-effective-property-path]')].at(-1),trigger=row?.querySelector('[aria-label^="Property actions"]');if(!row||!trigger)throw new Error('authoring037 flow setup: invoking property action');const rowBox=row.getBoundingClientRect(),documentScroll=document.scrollingElement.scrollTop,editorScroll=region.scrollTop;trigger.click();
+  const menu=await waitFor(()=>document.querySelector(':modal [data-property-context-menu="true"]'),'property menu'),rules=buttons(menu).find(({textContent})=>textContent.trim()==='Rules');rules?.click();const active=await waitFor(()=>document.querySelector(':modal [data-focused-property-editor="true"]'),'Rules layer'),dialog=active.closest('dialog'),layers=[...dialog.querySelectorAll('[data-schema-overlay-layer]')],inactive=layers.at(-2);await pause(180);
+  const initial=dialog.getBoundingClientRect(),triggerBox=trigger.getBoundingClientRect(),last=buttons(active).find(({textContent})=>textContent.trim()==='Review changes');if(!last)throw new Error('authoring037 flow setup: final Rules action');
+  globalThis.__authoring037Flow={dialog,active,inactive,region,trigger,last,editor,documentScroll,editorScroll,inactiveScroll:inactive?.scrollTop??0,row,rowBox,initial,viewportHeight:innerHeight};
+  return{flowWorkspace:Boolean(editor&&workspace&&dialog.matches(':modal')),initialHeight:innerHeight,initial:{top:initial.top,bottom:initial.bottom,height:initial.height},trigger:{top:triggerBox.top}};
+})()`;
+
+export const authoring037FlowConstrainedExpression=String.raw`(async()=>{
+  const pause=(ms=50)=>new Promise((resolve)=>setTimeout(resolve,ms));await pause(240);const state=globalThis.__authoring037Flow;if(!state?.dialog?.isConnected)throw new Error('authoring037 constrained: open Flow overlay state unavailable');
+  const {dialog,active,inactive,region,trigger,last}=state,box=dialog.getBoundingClientRect(),triggerBox=trigger.getBoundingClientRect();last.scrollIntoView({block:'nearest'});await pause();const lastBox=last.getBoundingClientRect(),expectedTop=Math.min(Math.max(triggerBox.top,8),innerHeight-8-box.height);
+  const viewportContainment=box.left>=7&&box.top>=7&&box.right<=innerWidth-7&&box.bottom<=innerHeight-7,upward=box.top<state.initial.top-20,flowStillFits=active.scrollHeight<=active.clientHeight+1&&getComputedStyle(active).overflowY==='auto'&&getComputedStyle(inactive).overflowY==='hidden',finalReachable=lastBox.top>=box.top&&lastBox.bottom<=box.bottom+1,scrollRetained=document.scrollingElement.scrollTop===state.documentScroll&&region.scrollTop===state.editorScroll&&(inactive?.scrollTop??0)===state.inactiveScroll,associated=Math.abs(box.top-expectedTop)<=10;
+  state.constrainedTop=box.top;return{viewportResized:innerHeight<state.viewportHeight,viewportContainment,upward,flowStillFits,finalReachable,scrollRetained,associated,metrics:{innerHeight,boxTop:box.top,boxBottom:box.bottom,boxHeight:box.height,triggerTop:triggerBox.top,expectedTop,activeScrollHeight:active.scrollHeight,activeClientHeight:active.clientHeight}};
+})()`;
+
+export const authoring037FlowRestoredExpression=String.raw`(async()=>{
+  const pause=(ms=50)=>new Promise((resolve)=>setTimeout(resolve,ms));await pause(240);const state=globalThis.__authoring037Flow;if(!state?.dialog?.isConnected)throw new Error('authoring037 restored: open Flow overlay state unavailable');
+  const {dialog,active,inactive,region,editor}=state,box=dialog.getBoundingClientRect(),overflowRemoved=active.scrollHeight<=active.clientHeight+1,returnedDown=box.top>state.constrainedTop+20,viewportContainment=box.top>=7&&box.bottom<=innerHeight-7,scrollRetained=document.scrollingElement.scrollTop===state.documentScroll&&region.scrollTop===state.editorScroll&&(inactive?.scrollTop??0)===state.inactiveScroll;
+  dialog.dispatchEvent(new Event('cancel',{cancelable:true}));await pause();document.querySelector(':modal')?.dispatchEvent(new Event('cancel',{cancelable:true}));await pause();[...editor.querySelectorAll('button')].find(({textContent})=>textContent.trim()==='Return to Flow')?.click();await pause(120);delete globalThis.__authoring037Flow;
+  return{viewportRestored:innerHeight>=state.viewportHeight,overflowRemoved,returnedDown,viewportContainment,scrollRetained};
 })()`;
 
 export const authoring034Expression=String.raw`(async()=>{
