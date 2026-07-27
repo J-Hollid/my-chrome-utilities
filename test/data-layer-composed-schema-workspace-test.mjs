@@ -16,6 +16,7 @@ import {composedReviewFacetDelta,composedReviewLifecycleInventory} from "../dist
 import {composedFacetDraft,sparseComposedFacets} from "../dist/data-layer-composed-schema-builders.js";
 import {saveFlowPageInstanceLocalFacetsAndStructures} from "../dist/data-layer-layered-schema-project.js";
 import {composedTableQuickEditFacets} from "../dist/data-layer-composed-schema-workspace-ui.js";
+import {focusedStructureOwned} from "../dist/data-layer-canonical-schema-focused-drafts.js";
 
 const state=createSpecificationProject({name:"Composed schemas",site:"shop.example",id:(kind)=>`${kind}:workspace`});
 state.project.collections.profiles.push({id:"profile:sitewide",name:"Sitewide",schemaConstraints:[
@@ -74,6 +75,13 @@ assert.match(reset.history.undo.at(-1).label,/Reset \/funnel_step to parents/);
 const saved=saveComposedSchemaLocalFacets(reset,"pages","page:cart","/funnel_step",{expectedValue:"2"});
 assert.deepEqual(saved.project.collections.pages[0].localSchemaContributions,[{path:"/funnel_step",expectedValue:"2"}],"only the changed local facet is stored");
 assert.equal(composedSchemaWorkspace(saved,saved.project.collections.pages[0],"Page").rows.find(({path})=>path==="/funnel_step").effective.expectedValue,"2");
+const sparseProjection=composedCanonicalSchema(saved,saved.project.collections.pages[0],"Page"),sparseStep=Object.values(sparseProjection.nodes).find((node)=>canonicalPropertyPath(sparseProjection,node.id)==="/funnel_step");
+assert.equal(focusedStructureOwned(sparseStep),false,"a saved sparse Definition override remains structurally inherited when the canonical editor reopens");
+
+const structureOverride=saveComposedSchemaLocalFacetsAndStructures(saved,"pages","page:cart","/funnel_step",{expectedValue:"2"},[{kind:"rename",path:"/funnel_step",name:"checkout_step"}],(kind)=>`${kind}:owned`);
+assert.deepEqual(structureOverride.project.collections.pages[0].localSchemaContributions,[{path:"/checkout_step",expectedValue:"2",definitionId:"property:owned"}],"an explicit structural transition establishes a local definition identity");
+const structureProjection=composedCanonicalSchema(structureOverride,structureOverride.project.collections.pages[0],"Page"),ownedStep=Object.values(structureProjection.nodes).find((node)=>canonicalPropertyPath(structureProjection,node.id)==="/checkout_step");
+assert.equal(focusedStructureOwned(ownedStep),true,"the explicit structural identity remains owned after save and reopen");
 
 const inheritedAgain=saveComposedSchemaLocalFacets(saved,"pages","page:cart","/funnel_step",{});
 assert.deepEqual(inheritedAgain.project.collections.pages[0].localSchemaContributions,[],"an empty sparse override does not persist a path-only local contribution");

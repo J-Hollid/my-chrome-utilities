@@ -80,9 +80,14 @@ assert.deepEqual(focusedOwnershipActions({overridden:true}),["View","Edit","Rese
 assert.deepEqual(focusedOwnershipActions({invariant:true}),["View","Open source"]);
 assert.deepEqual(focusedOwnershipActions({conflict:true}),["View conflict","Edit local resolution","Open contributing sources"]);
 assert.deepEqual(
-  focusedSectionOwnershipActions({local:true}),
+  focusedSectionOwnershipActions({local:true,structureOwned:true}),
   {definition:["View","Edit"],rules:["View","Edit","Remove local"],structure:["Remove local"]},
   "a local property exposes the exact legal actions at its Definition facet, local Rules, and Structure lifecycle targets",
+);
+assert.deepEqual(
+  focusedSectionOwnershipActions({inherited:true,local:true,structureOwned:false}),
+  {definition:["View","Edit"],rules:["View","Edit","Remove local"],structure:["Override here"]},
+  "a sparse local Definition facet does not establish ownership of inherited structural identity",
 );
 assert.deepEqual(
   focusedSectionOwnershipActions({inherited:true}),
@@ -126,7 +131,7 @@ assert.deepEqual(
 );
 assert.equal(focusedPropertyLifecycleOperation("View","property:line"),undefined,"non-lifecycle ownership actions never stage deletion");
 
-const inheritedOwnership={inherited:true,local:false,activated:[]};
+const inheritedOwnership={inherited:true,local:false,structureOwned:false,activated:[]};
 assert.equal(focusedOwnershipSectionEditable(inheritedOwnership,"definition"),true,"ordinary inherited Definition fields start enabled");
 assert.equal(focusedOwnershipSectionEditable(inheritedOwnership,"structure"),false,"inherited structure starts unavailable");
 assert.deepEqual(activateFocusedOwnershipSection(inheritedOwnership,"definition","View"),inheritedOwnership,"viewing does not establish ownership");
@@ -144,6 +149,17 @@ const activatedOwnership=activateFocusedOwnershipSection(inheritedOwnership,"str
 assert.equal(focusedOwnershipSectionEditable(activatedOwnership,"structure"),true,"Override here establishes structural identity ownership");
 assert.equal(focusedOwnershipControlEditable(activatedOwnership,"structure","Rename"),true,"owned structure can be renamed");
 assert.equal(focusedOwnershipControlEditable(activatedOwnership,"structure","Delete property"),false,"an inherited property remains undeletable after structural ownership activation");
+const sparseDefinitionOwnership={inherited:true,local:true,structureOwned:false,activated:[]};
+assert.equal(focusedOwnershipSectionEditable(sparseDefinitionOwnership,"structure"),false,"a sparse inherited Definition edit leaves Structure locked after save and reopen");
+assert.equal(focusedOwnershipControlEditable(sparseDefinitionOwnership,"structure","Rename"),false,"a sparse inherited Description never unlocks Rename");
+assert.equal(focusedOwnershipControlEditable(sparseDefinitionOwnership,"structure","Move later"),false,"a sparse inherited allowed value never unlocks Move");
+assert.deepEqual(focusedSectionOwnershipActions(sparseDefinitionOwnership).structure,["Override here"],"the cross-facet transition remains explicit");
+const sparseDefinitionActivated=activateFocusedOwnershipSection(sparseDefinitionOwnership,"structure","Override here");
+assert.equal(focusedOwnershipControlEditable(sparseDefinitionActivated,"structure","Rename"),true,"explicit Structure activation unlocks Rename for the current staged session");
+assert.equal(focusedOwnershipControlEditable(sparseDefinitionActivated,"structure","Move later"),true,"explicit Structure activation unlocks Move for the current staged session");
+const createdOwnership={inherited:false,local:true,structureOwned:true,activated:[]};
+assert.equal(focusedOwnershipSectionEditable(createdOwnership,"structure"),true,"a locally created property retains direct structural editing");
+assert.equal(focusedOwnershipControlEditable(createdOwnership,"structure","Delete property"),true,"a locally created property retains direct deletion");
 assert.equal(focusedSourceState({provenance:[{state:"conflict"}]}),"conflict");
 assert.deepEqual(focusedRuleFields("range"),["condition","minimum","maximum","severity","message"]);
 assert.deepEqual(focusedRuleFields("pattern"),["condition","pattern","severity","message"]);

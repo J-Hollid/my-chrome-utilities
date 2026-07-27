@@ -9,6 +9,9 @@ export function focusedSourceState(node) {
         return "inherited";
     return "local";
 }
+export function focusedStructureOwned(node) {
+    return node.structureOwned ?? !node.provenance.some(({ state }) => state === "inherited" || state === "shadowed");
+}
 export function focusedPropertyPatch(node, original, removedRuleIds, removedValueIds = new Set()) {
     const patch = {};
     for (const key of ["name", "type", "itemType", "presence", "allowedValues", "documentation", "overrideReferences", "expectedValue", "enforcement", "target"])

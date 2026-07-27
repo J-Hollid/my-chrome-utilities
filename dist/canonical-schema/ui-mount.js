@@ -4,7 +4,7 @@ import { renderCanonicalFocusedSection } from "../data-layer-canonical-schema-fo
 import { renderCanonicalFocusedMenu } from "../data-layer-canonical-schema-focused-menu.js";
 import { renderCanonicalFocusedEditor } from "../data-layer-canonical-schema-focused-editor.js";
 import { renderCanonicalSchemaEditor } from "../data-layer-canonical-schema-render.js";
-import { focusedPropertyPatch, focusedStagedChanges, focusedSourceState } from "../data-layer-canonical-schema-focused-drafts.js";
+import { focusedPropertyPatch, focusedStagedChanges, focusedSourceState, focusedStructureOwned } from "../data-layer-canonical-schema-focused-drafts.js";
 import { dispatchFocusedCanonicalCommand } from "../data-layer-canonical-schema-focused-command.js";
 import { typedCanonicalValue } from "../data-layer-canonical-schema-facets.js";
 import { button, clone, presenceText, provenanceText, sectionLabel } from "./ui-mount-helpers.js";
@@ -34,7 +34,7 @@ export function mountCanonicalSchemaEditor(options) {
     let query = "", propertyFilter = "all", propertySort = "tree", feedback = options.initialFeedback ?? "", activePropertyId = initialDocument.selectedPropertyId, activeSection = "definition", working, originFocus, originPath, menuPropertyId, focusedPropertyId, removedRuleIds = new Set(), removedValueIds = new Set(), stagedOperations = [], transientView;
     let overlayState = { phase: "closed" };
     let review;
-    let ownershipSession = { inherited: false, local: true, activated: [] };
+    let ownershipSession = { inherited: false, local: true, structureOwned: true, activated: [] };
     const current = () => { const document = options.load(); return transientView ? { ...document, view: transientView } : document; };
     const selectedNode = (document) => activePropertyId ? document.nodes[activePropertyId] : document.selectedPropertyId ? document.nodes[document.selectedPropertyId] : undefined;
     const ensureWorking = (node) => { if (!working || working.id !== node.id)
@@ -81,7 +81,7 @@ export function mountCanonicalSchemaEditor(options) {
         focusedPropertyId = undefined;
         activePropertyId = undefined;
         review = undefined;
-        ownershipSession = { inherited: false, local: true, activated: [] };
+        ownershipSession = { inherited: false, local: true, structureOwned: true, activated: [] };
         render();
         const target = originFocus?.isConnected ? originFocus : restorePath ? options.host.querySelector(`[data-property-actions-path="${CSS.escape(restorePath)}"]`) : undefined;
         originFocus = undefined;
@@ -101,7 +101,7 @@ export function mountCanonicalSchemaEditor(options) {
         removedRuleIds = new Set();
         removedValueIds = new Set();
         stagedOperations = [];
-        ownershipSession = { inherited: source === "inherited", local: source === "local" || source === "overridden", invariant: node.enforcement === "invariant", activated: [] };
+        ownershipSession = { inherited: !focusedStructureOwned(node) || source === "inherited" || source === "overridden", local: source === "local" || source === "overridden", structureOwned: focusedStructureOwned(node), invariant: node.enforcement === "invariant", activated: [] };
         ensureWorking(node);
         if (focus) {
             originFocus = focus;

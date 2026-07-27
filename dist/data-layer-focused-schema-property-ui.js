@@ -24,7 +24,7 @@ export function focusedOwnershipSectionEditable(session, section) {
         return true;
     if (section === "definition")
         return true;
-    return session.local || !session.inherited || session.activated.includes(section);
+    return session.structureOwned || !session.inherited || session.activated.includes(section);
 }
 export function activateFocusedOwnershipSection(session, section, action) {
     if (action !== "Override here" && action !== "Replace here" || session.activated.includes(section))
@@ -87,7 +87,7 @@ export function focusedSectionOwnershipActions(input) {
     return {
         definition: input.inherited && !input.local ? [] : actions.filter((action) => !lifecycle.has(action) && action !== "Replace here"),
         rules: [...actions],
-        structure: input.inherited && !input.local ? ["Override here"] : actions.filter((action) => lifecycle.has(action)),
+        structure: input.inherited && !input.structureOwned ? ["Override here"] : actions.filter((action) => lifecycle.has(action)),
     };
 }
 export const focusedReusableRuleStorageKey = "my-chrome-utilities.schema-rule-library.v1";
