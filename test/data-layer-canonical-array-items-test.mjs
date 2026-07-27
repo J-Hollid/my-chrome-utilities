@@ -3,6 +3,7 @@ import {
   applyCanonicalCommand,
   canonicalFriendlyPropertyPath,
   canonicalArrayBoundaries,
+  canonicalConstraints,
   canonicalJsonSchemaDocument,
   canonicalPropertyPath,
   canonicalSchemaFromJsonSchema,
@@ -13,6 +14,8 @@ import {
   canonicalArrayScopeIssue,
   canonicalArrayScopeSummary,
 } from "../dist/data-layer-canonical-array-items.js";
+import {setCanonicalNestedItemType} from "../dist/canonical-schema-focused/definition.js";
+import {focusedPropertyPatch} from "../dist/data-layer-canonical-schema-focused-drafts.js";
 import {
   compileLayeredSchema,
   validateLayeredObservation,
@@ -105,6 +108,16 @@ assert.deepEqual(canonicalArrayBoundaries(matrix,matrixCode),[
 assert.deepEqual(canonicalJsonSchemaDocument(matrix),{
   type:"object",properties:{matrix:{type:"array",items:{type:"array",items:{type:"object",properties:{code:{type:"string"}}}}}},
 });
+assert.equal(canonicalConstraints(matrix).find(({path})=>path==="/matrix").itemSchema.items.type,"object");
+const editableItems=structuredClone(matrix.nodes[matrixId].itemSchema);
+setCanonicalNestedItemType(editableItems,editableItems.id,"array",id);
+const retainedNestedId=editableItems.items.id;
+setCanonicalNestedItemType(editableItems,retainedNestedId,"string",id);
+assert.equal(editableItems.type,"array");
+assert.equal(editableItems.items.id,retainedNestedId);
+assert.equal(editableItems.items.type,"array");
+assert.equal(editableItems.items.items.type,"string","a deeper selector updates its own represented item schema");
+assert.deepEqual(focusedPropertyPatch({...matrix.nodes[matrixId],itemSchema:editableItems},matrix.nodes[matrixId],new Set()),{itemSchema:editableItems},"the reviewed command persists a nested item-schema edit");
 
 const constraints=[
   {path:"/products",type:"array",itemType:"object",definitionId:products},
@@ -157,3 +170,11 @@ const conditionalIssues=validateLayeredObservation({targetId:"target:conditional
 assert.deepEqual(conditionalIssues.map(({path,code})=>({path,code})),[
   {path:"/products/1/id",code:"PATTERN"},
 ],"Every-item conditions evaluate inside each matching item and disabled positioned rules do not run");
+
+const recursiveCompiled=compileLayeredSchema([{id:"profile:matrix",name:"Matrix",scope:"Shared Profile",constraints:canonicalConstraints(matrix)}],{eventId:"event:matrix",eventRole:"interaction"});
+assert.deepEqual(validateLayeredObservation({targetId:"target:matrix",targetName:"Matrix",revision:1,compiled:recursiveCompiled},{matrix:[{code:"x"}]}).issues.map(({path,canonicalPath,code,expected})=>({path,canonicalPath,code,expected})),[
+  {path:"/matrix/0",canonicalPath:"/matrix/*",code:"TYPE",expected:"array"},
+]);
+assert.deepEqual(validateLayeredObservation({targetId:"target:matrix",targetName:"Matrix",revision:1,compiled:recursiveCompiled},{matrix:[["scalar"]]}).issues.map(({path,canonicalPath,code,expected})=>({path,canonicalPath,code,expected})),[
+  {path:"/matrix/0/0",canonicalPath:"/matrix/*/*",code:"TYPE",expected:"object"},
+]);
