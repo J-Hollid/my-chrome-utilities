@@ -80,7 +80,7 @@ export function mountComposedSchemaWorkspace(options) {
         overriddenRuleIds = new Set();
         pendingStructure = [];
         pendingAction = undefined;
-        ownershipSession = { inherited: Boolean(row.inherited), local: Object.keys(row.local).some((key) => key !== "path"), activated: [] };
+        ownershipSession = { inherited: Boolean(row.inherited), local: Object.keys(row.local).some((key) => key !== "path"), invariant: row.effective.enforcement === "invariant", activated: [] };
     } overlayState = schemaTableOverlayTransition(overlayState, { kind: "open", path: row.path }); activeSection = sectionName; overlayOpen = true; focusedOpen = false; if (focus) {
         originFocus = focus;
         originPath = row.path;

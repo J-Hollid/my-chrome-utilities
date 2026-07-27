@@ -1,5 +1,5 @@
 import { renderFocusedPropertyMenu } from "./data-layer-focused-schema-property-menu.js";
-import { focusedOwnershipActionTarget, focusedOwnershipActions, focusedOwnershipSectionEditable, focusedPropertyProvenanceSummary, focusedPropertySectionLabels, gateFocusedOwnershipSection } from "./data-layer-focused-schema-property-ui.js";
+import { focusedOwnershipActionTarget, focusedSectionOwnershipActions, focusedPropertyProvenanceSummary, focusedPropertySectionLabels, gateFocusedOwnershipSection } from "./data-layer-focused-schema-property-ui.js";
 import { renderComposedFocusedSection } from "./data-layer-composed-schema-workspace-focused-sections.js";
 import { bindSchemaTableQuickEdit, clearSchemaTableOverlay, mountSchemaTableOverlay, schemaTableAllowedValues, schemaTableCellMetadata, schemaTableColumns } from "./data-layer-schema-table.js";
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
@@ -31,8 +31,7 @@ function contextMenu(row, context) {
     return renderFocusedPropertyMenu({ dom: context.dom, path: row.path, provenance: focusedPropertyProvenanceSummary(row.provenance), sectionsDisabled: context.removed, close: context.close, sectionSummary: (section) => section === "values" ? `${(context.draft?.allowedValues ?? row.local.allowedValues ?? row.effective.allowedValues ?? []).length} allowed values` : section === "rules" ? `${(context.draft?.rules ?? []).length} rules` : "View effective value", selectSection: context.selectSection });
 }
 function renderComposedSectionOwnership(host, row, context) {
-    const local = Object.keys(row.local).some((key) => key !== "path"), inherited = Boolean(row.inherited), actions = focusedOwnershipActions({ local, inherited, overridden: row.action === "reset", invariant: row.effective.enforcement === "invariant", conflict: row.validationState === "blocked", replaceable: row.effective.enforcement === "overridable" }), lifecycle = new Set(["Remove local", "Reset to parent"]), activation = new Set(["Override here", "Replace here"]);
-    const visible = actions.filter((action) => context.activeSection === "definition" ? !lifecycle.has(action) : context.activeSection === "structure" && (lifecycle.has(action) || activation.has(action)));
+    const local = Object.keys(row.local).some((key) => key !== "path"), inherited = Boolean(row.inherited), visible = focusedSectionOwnershipActions({ local, inherited, overridden: row.action === "reset", invariant: row.effective.enforcement === "invariant", conflict: row.validationState === "blocked", replaceable: row.effective.enforcement === "overridable" })[context.activeSection], lifecycle = new Set(["Remove local", "Reset to parent"]);
     if (!visible.length)
         return;
     const target = focusedOwnershipActionTarget(context.activeSection === "structure" ? "Structure" : "Definition", context.activeSection === "structure" ? "property" : "facet", context.activeSection === "structure" ? row.effective.definitionId ?? row.path : `${row.effective.definitionId ?? row.path}:definition`), group = context.dom.createElement("div"), status = context.dom.createElement("p");
@@ -67,7 +66,7 @@ function focused(row, context) {
         renderComposedFocusedSection(host, focusedContext);
         applyPersistedItemOwnership(host, row);
         renderComposedSectionOwnership(host, row, context);
-        gateFocusedOwnershipSection(host, focusedOwnershipSectionEditable(context.ownershipSession, context.activeSection));
+        gateFocusedOwnershipSection(host, context.ownershipSession, context.activeSection);
     }
     if (context.pendingAction) {
         const impact = dom.createElement("p");

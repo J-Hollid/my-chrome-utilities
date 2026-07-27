@@ -47,24 +47,37 @@ export interface FocusedOwnershipActionTarget {
 export interface FocusedOwnershipSession {
   inherited:boolean;
   local:boolean;
+  invariant?:boolean;
   activated:readonly FocusedPropertyPrimarySection[];
 }
 
 export function focusedOwnershipSectionEditable(session:FocusedOwnershipSession,section:FocusedPropertyPrimarySection):boolean {
-  return section==="rules"||session.local||!session.inherited||session.activated.includes(section);
+  if(section==="rules")return true;
+  if(section==="definition")return true;
+  return session.local||!session.inherited||session.activated.includes(section);
 }
 
 export function activateFocusedOwnershipSection(session:FocusedOwnershipSession,section:FocusedPropertyPrimarySection,action:string):FocusedOwnershipSession {
   if(action!=="Override here"&&action!=="Replace here"||session.activated.includes(section))return session;
-  return{...session,activated:[...focusedPropertySections]};
+  return{...session,activated:[...session.activated,section]};
 }
 
-export function gateFocusedOwnershipSection(host:HTMLElement,editable:boolean):void {
-  host.dataset.ownershipEditable=String(editable);
-  if(editable)return;
+const localStructureActions=new Set(["Add child","Add sibling","Duplicate"]);
+export function focusedOwnershipControlEditable(session:FocusedOwnershipSession,section:FocusedPropertyPrimarySection,label:string):boolean {
+  if(section==="definition")return !session.invariant||!["propertyType","itemType","presenceMode"].includes(label);
+  if(section!=="structure")return focusedOwnershipSectionEditable(session,section);
+  if(!session.inherited)return true;
+  if(localStructureActions.has(label))return true;
+  if(label==="Delete property")return false;
+  return focusedOwnershipSectionEditable(session,section);
+}
+
+export function gateFocusedOwnershipSection(host:HTMLElement,session:FocusedOwnershipSession,section:FocusedPropertyPrimarySection):void {
+  host.dataset.ownershipEditable=String(focusedOwnershipSectionEditable(session,section));
   for(const control of Array.from(host.querySelectorAll<HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement|HTMLButtonElement>("input,select,textarea,button"))){
     if(control.dataset.ownershipAction)continue;
-    control.disabled=true;
+    const label=control instanceof HTMLButtonElement?control.textContent?.trim()??"":control.getAttribute("aria-label")??control.getAttribute("name")??"";
+    if(!focusedOwnershipControlEditable(session,section,label))control.disabled=true;
   }
 }
 
@@ -99,16 +112,16 @@ export function focusedOwnershipActions(input:FocusedOwnershipInput):string[] {
   if(input.invariant) return ["View","Open source"];
   if(input.overridden) return ["View","Edit","Reset to parent"];
   if(input.local) return ["View","Edit","Remove local"];
-  if(input.inherited) return ["View",...(input.replaceable?["Replace here"]:["Override here"]),"Open source"];
+  if(input.inherited) return ["View",...(input.replaceable?["Replace here"]:[]),"Open source"];
   return ["View","Edit"];
 }
 
 export function focusedSectionOwnershipActions(input:FocusedOwnershipInput):Record<FocusedPropertyPrimarySection,string[]> {
-  const actions=focusedOwnershipActions(input),lifecycle=new Set(["Remove local","Reset to parent"]),activation=new Set(["Override here","Replace here"]);
+  const actions=focusedOwnershipActions(input),lifecycle=new Set(["Remove local","Reset to parent"]);
   return {
-    definition:actions.filter((action)=>!lifecycle.has(action)),
+    definition:input.inherited&&!input.local?[]:actions.filter((action)=>!lifecycle.has(action)&&action!=="Replace here"),
     rules:[...actions],
-    structure:actions.filter((action)=>lifecycle.has(action)||activation.has(action)),
+    structure:input.inherited&&!input.local?["Override here"]:actions.filter((action)=>lifecycle.has(action)),
   };
 }
 

@@ -27,7 +27,7 @@ export function renderCanonicalFocusedEditor(document, node, context) {
         }
         section.append(group);
     }
-    gateFocusedOwnershipSection(section, context.ownershipEditable);
+    gateFocusedOwnershipSection(section, context.ownershipSession, context.activeSection);
     actions.append(button(dom, "Cancel", context.close), button(dom, "Review changes", context.review));
     wrapper.append(heading, identity, source, effective, section, actions);
     return wrapper;

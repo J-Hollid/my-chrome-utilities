@@ -1,9 +1,9 @@
 import type {CanonicalPropertyNode,CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
-import {focusedOwnershipActionTarget,gateFocusedOwnershipSection,type FocusedPropertySection} from "./data-layer-focused-schema-property-ui.js";
+import {focusedOwnershipActionTarget,gateFocusedOwnershipSection,type FocusedOwnershipSession,type FocusedPropertyPrimarySection,type FocusedPropertySection} from "./data-layer-focused-schema-property-ui.js";
 
 export interface CanonicalFocusedEditorContext {
   dom:Document;activeSection:FocusedPropertySection;sectionLabel:(section:FocusedPropertySection)=>string;canonicalPropertyPath:(document:CanonicalSchemaDocument,id:string)=>string;provenanceText:(node:CanonicalPropertyNode)=>string;presenceText:(mode:CanonicalPropertyNode["presence"]["mode"])=>string;
-  ownershipActions:readonly string[];ownershipEditable:boolean;runOwnershipAction:(action:string,targetLabel:string)=>void;
+  ownershipActions:readonly string[];ownershipSession:FocusedOwnershipSession;runOwnershipAction:(action:string,targetLabel:string)=>void;
   renderSection:(host:HTMLElement,node:CanonicalPropertyNode)=>void;close:()=>void;review:()=>void;save:()=>void;
 }
 const button=(dom:Document,text:string,run:()=>void):HTMLButtonElement=>{const control=dom.createElement("button");control.type="button";control.textContent=text;control.addEventListener("click",run);return control;};
@@ -13,6 +13,6 @@ export function renderCanonicalFocusedEditor(document:CanonicalSchemaDocument,no
   wrapper.setAttribute("aria-label","Focused property editor");wrapper.dataset.focusedPropertyEditor="true";wrapper.dataset.schemaOverlayLayer="child";wrapper.dataset.focusedPropertyPath=context.canonicalPropertyPath(document,node.id);heading.textContent=`Focused property · ${node.name}`;identity.textContent=`${context.canonicalPropertyPath(document,node.id)} · stable identity ${node.id}`;source.textContent=`Inherited value and source: ${inherited.map(({contributorName,source})=>contributorName??source).join(" → ")||"none"}`;effective.textContent=`Local value: ${local.length?`${node.type} · ${context.presenceText(node.presence.mode)}`:"none"} · Effective result: ${node.type} · ${context.presenceText(node.presence.mode)} · validation ${validation} · Validation state: ${validation} · Conflicts: ${conflicts.length?conflicts.map(({contributorName})=>contributorName??"shadowed parent").join(", "):"none"}`;section.setAttribute("aria-label",`Focused ${context.sectionLabel(context.activeSection)} section`);context.renderSection(section,node);
   const lifecycle=new Set(["Remove local","Reset to parent"]),activation=new Set(["Override here","Replace here"]),visible=context.ownershipActions.filter((action)=>context.activeSection==="definition"?!lifecycle.has(action):context.activeSection==="structure"&&(lifecycle.has(action)||activation.has(action)));
   if(visible.length){const target=focusedOwnershipActionTarget(context.activeSection==="structure"?"Structure":"Definition",context.activeSection==="structure"?"property":"facet",context.activeSection==="structure"?node.id:`${node.id}:definition`),group=dom.createElement("div");group.dataset.sectionOwnershipActions="true";group.dataset.ownershipTarget=target.label;for(const action of visible){const control=button(dom,action,()=>context.runOwnershipAction(action,target.label));control.dataset.ownershipAction=action;control.dataset.ownershipTarget=target.label;control.setAttribute("aria-label",`${action} · ${target.label}`);group.append(control);}section.append(group);}
-  gateFocusedOwnershipSection(section,context.ownershipEditable);
+  gateFocusedOwnershipSection(section,context.ownershipSession,context.activeSection as FocusedPropertyPrimarySection);
   actions.append(button(dom,"Cancel",context.close),button(dom,"Review changes",context.review));wrapper.append(heading,identity,source,effective,section,actions);return wrapper;
 }

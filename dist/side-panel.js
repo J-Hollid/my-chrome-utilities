@@ -73,7 +73,7 @@ import { cardinalityComparisonPasses, cardinalityMeasuredValue } from "./utiliti
 import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, createRuleConfigurationFromAttachedRule, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration } from "./utilities/data-layer/schemas.js";
 import { canonicalRulePropertyPath } from "./utilities/data-layer/schemas.js";
 import { renderSchemaSpecificationBuilder } from "./utilities/data-layer/schemas.js";
-import { activateFocusedOwnershipSection, applyCanonicalCommand, canonicalCommandOutcome, canonicalCommandsFromCompactProjection, canonicalMigrationDurablyAcknowledged, canonicalPredicateText, canonicalPropertyPath, clearSchemaTableOverlay, compactSchemaProjection, composedCanonicalSchema, createCanonicalSchema, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedOwnershipSectionEditable, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions, focusedSourceState, focusedStagedChanges, gateFocusedOwnershipSection, hasLegacySchemaRepresentation, migrateLegacyProfile, mountCanonicalPredicateEditor, mountSchemaTableOverlay, mountSidePanelLayeredProfileEditor, renderCanonicalFocusedSection, renderFocusedPropertyMenu, resolveCanonicalMigrationConflict, resolveSidePanelSchemaContributor, saveComposedCanonicalDocument, saveComposedEventCanonicalDocument, saveEventOccurrenceCanonicalDocument, saveFlowPageInstanceCanonicalDocument, savedSchemaCanonicalDocument, savedSchemaFromCanonical, transactProject } from "./utilities/data-layer/schemas.js";
+import { activateFocusedOwnershipSection, applyCanonicalCommand, canonicalCommandOutcome, canonicalCommandsFromCompactProjection, canonicalMigrationDurablyAcknowledged, canonicalPredicateText, canonicalPropertyPath, clearSchemaTableOverlay, compactSchemaProjection, composedCanonicalSchema, createCanonicalSchema, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions, focusedSourceState, focusedStagedChanges, gateFocusedOwnershipSection, hasLegacySchemaRepresentation, migrateLegacyProfile, mountCanonicalPredicateEditor, mountSchemaTableOverlay, mountSidePanelLayeredProfileEditor, renderCanonicalFocusedSection, renderFocusedPropertyMenu, resolveCanonicalMigrationConflict, resolveSidePanelSchemaContributor, saveComposedCanonicalDocument, saveComposedEventCanonicalDocument, saveEventOccurrenceCanonicalDocument, saveFlowPageInstanceCanonicalDocument, savedSchemaCanonicalDocument, savedSchemaFromCanonical, transactProject } from "./utilities/data-layer/schemas.js";
 import { filterSchemaRelationshipTree, projectSchemaRelationshipTree, restoreSchemaRelationshipTreeView, saveSchemaRelationshipTreeView } from "./utilities/data-layer/schemas.js";
 import { beginCompactCanonicalHistoryTransition, compactCanonicalHistoryKey, compactCanonicalHistorySettlement, completeCompactCanonicalHistoryTransition, prepareCompactCanonicalRedo, prepareCompactCanonicalUndo, recordCompactCanonicalMutation, rejectCompactCanonicalHistoryTransition } from "./utilities/data-layer/schemas.js";
 import { mountProjectLibraryUi, PROJECT_LIBRARY_STORAGE_KEY, recordProjectNavigation, serializeProjectLibrary } from "./utilities/data-layer/schemas.js";
@@ -3432,7 +3432,7 @@ function openContributorInUnifiedEditor(key) {
     sidePanelLayeredProfileEditor?.close();
     if (schemaDetailEmpty)
         schemaDetailEmpty.hidden = true;
-    let contributorUi = {}, compatibilityCanonical, acknowledgedMigration, migration, migrationSavePending = false, migrationStatus = "", pendingMutationHistoryIdentity, pendingStepHistoryIdentity, pendingDurableLabel;
+    let contributorUi = {}, compatibilityCanonical, acknowledgedMigration, migration, migrationSavePending = false, migrationStatus = "", pendingMutationHistoryIdentity, pendingStepHistoryIdentity;
     const contributorSnapshots = new Map(), isComposed = (selected) => selected.scope !== "Shared Profile";
     const withContributorUi = (document) => { const selectedPropertyId = contributorUi.selectedPropertyId && document.nodes[contributorUi.selectedPropertyId] ? contributorUi.selectedPropertyId : document.selectedPropertyId; return { ...document, ...(selectedPropertyId ? { selectedPropertyId } : {}), ...(contributorUi.view ? { view: contributorUi.view } : {}) }; };
     const documentFor = (live, selected) => { if (isComposed(selected))
@@ -4241,7 +4241,8 @@ function openCompactCanonicalPropertyActions(path, trigger) {
     const adapter = compactCanonicalEditor, documentModel = adapter?.load(), original = documentModel && Object.values(documentModel.nodes).find((candidate) => canonicalPropertyPath(documentModel, candidate.id) === path), owner = schemaEditor;
     if (!adapter || !documentModel || !original || !owner)
         return false;
-    let working = structuredClone(original), activeSection, feedbackText = "", stagedOwnershipAction = "", ownershipSession = { inherited: focusedSourceState(original) === "inherited", local: ["local", "overridden"].includes(focusedSourceState(original)), activated: [] };
+    let working = structuredClone(original), activeSection, feedbackText = "", stagedOwnershipAction = "";
+    let ownershipSession = { inherited: focusedSourceState(original) === "inherited", local: ["local", "overridden"].includes(focusedSourceState(original)), invariant: original.enforcement === "invariant", activated: [] };
     const removedRuleIds = new Set(), removedValueIds = new Set(), stagedOperations = [];
     const state = focusedSourceState(original), sectionOwnership = focusedSectionOwnershipActions({ inherited: state === "inherited", local: state === "local", overridden: state === "overridden", invariant: original.enforcement === "invariant", conflict: state === "conflict", replaceable: original.enforcement === "overridable" });
     const close = () => { clearSchemaTableOverlay(owner); trigger.focus({ preventScroll: true }); };
@@ -4317,7 +4318,7 @@ function openCompactCanonicalPropertyActions(path, trigger) {
                 group.append(control);
             }
         }
-        gateFocusedOwnershipSection(body, focusedOwnershipSectionEditable(ownershipSession, section));
+        gateFocusedOwnershipSection(body, ownershipSession, section);
         status.setAttribute("role", "status");
         status.textContent = feedbackText;
         cancel.type = "button";
