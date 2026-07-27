@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {focusedConditionLabel,focusedDefinitionFieldLabels,focusedOwnershipActionTarget,focusedOwnershipActions,focusedPropertyLayerSequence,focusedPropertyLifecycleOperation,focusedPropertyProvenanceSummary,focusedPropertySections,focusedRuleFields,focusedSectionOwnershipActions,focusedSparseDelta} from "../dist/data-layer-focused-schema-property-ui.js";
+import {activateFocusedOwnershipSection,focusedConditionLabel,focusedDefinitionFieldLabels,focusedOwnershipActionTarget,focusedOwnershipActions,focusedOwnershipSectionEditable,focusedPropertyLayerSequence,focusedPropertyLifecycleOperation,focusedPropertyProvenanceSummary,focusedPropertySections,focusedRuleFields,focusedSectionOwnershipActions,focusedSparseDelta} from "../dist/data-layer-focused-schema-property-ui.js";
 import {applyCanonicalCommand,canonicalPredicateIds,canonicalPredicateWithStableIds,createCanonicalSchema} from "../dist/data-layer-canonical-schema.js";
 import {canonicalFlatPredicateIssue} from "../dist/canonical-schema/predicate-policy.js";
 import {canonicalNavigatorRows} from "../dist/canonical-schema-focused/navigator-rows.js";
@@ -86,8 +86,8 @@ assert.deepEqual(
 );
 assert.deepEqual(
   focusedSectionOwnershipActions({inherited:true}),
-  {definition:["View","Override here","Open source"],rules:["View","Override here","Open source"],structure:[]},
-  "an inherited property exposes no local Structure lifecycle action and retains exact facet and rule ownership actions",
+  {definition:["View","Override here","Open source"],rules:["View","Override here","Open source"],structure:["Override here"]},
+  "an inherited property exposes the named Structure ownership transition",
 );
 assert.deepEqual(
   focusedSectionOwnershipActions({overridden:true}),
@@ -120,6 +120,14 @@ assert.deepEqual(
   "canonical Remove local stages removal of only the identified local property",
 );
 assert.equal(focusedPropertyLifecycleOperation("View","property:line"),undefined,"non-lifecycle ownership actions never stage deletion");
+
+const inheritedOwnership={inherited:true,local:false,activated:[]};
+assert.equal(focusedOwnershipSectionEditable(inheritedOwnership,"definition"),false,"an inherited definition starts read-only");
+assert.equal(focusedOwnershipSectionEditable(inheritedOwnership,"structure"),false,"inherited structure starts unavailable");
+assert.deepEqual(activateFocusedOwnershipSection(inheritedOwnership,"definition","View"),inheritedOwnership,"viewing does not establish ownership");
+const activatedOwnership=activateFocusedOwnershipSection(inheritedOwnership,"definition","Override here");
+assert.equal(focusedOwnershipSectionEditable(activatedOwnership,"definition"),true,"Override here establishes section-local ownership");
+assert.equal(focusedOwnershipSectionEditable(activatedOwnership,"structure"),true,"the named property override establishes ownership for Structure authoring too");
 assert.equal(focusedSourceState({provenance:[{state:"conflict"}]}),"conflict");
 assert.deepEqual(focusedRuleFields("range"),["condition","minimum","maximum","severity","message"]);
 assert.deepEqual(focusedRuleFields("pattern"),["condition","pattern","severity","message"]);

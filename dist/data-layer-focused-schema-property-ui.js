@@ -19,6 +19,24 @@ export const focusedPropertySectionLabels = {
     example: "Example",
     structure: "Structure",
 };
+export function focusedOwnershipSectionEditable(session, section) {
+    return section === "rules" || session.local || !session.inherited || session.activated.includes(section);
+}
+export function activateFocusedOwnershipSection(session, section, action) {
+    if (action !== "Override here" && action !== "Replace here" || session.activated.includes(section))
+        return session;
+    return { ...session, activated: [...focusedPropertySections] };
+}
+export function gateFocusedOwnershipSection(host, editable) {
+    host.dataset.ownershipEditable = String(editable);
+    if (editable)
+        return;
+    for (const control of Array.from(host.querySelectorAll("input,select,textarea,button"))) {
+        if (control.dataset.ownershipAction)
+            continue;
+        control.disabled = true;
+    }
+}
 export function focusedOwnershipActionTarget(section, kind, id) {
     return { section, kind, id, label: `${section} ${kind} ${id}` };
 }
@@ -47,11 +65,11 @@ export function focusedOwnershipActions(input) {
     return ["View", "Edit"];
 }
 export function focusedSectionOwnershipActions(input) {
-    const actions = focusedOwnershipActions(input), lifecycle = new Set(["Remove local", "Reset to parent"]);
+    const actions = focusedOwnershipActions(input), lifecycle = new Set(["Remove local", "Reset to parent"]), activation = new Set(["Override here", "Replace here"]);
     return {
         definition: actions.filter((action) => !lifecycle.has(action)),
         rules: [...actions],
-        structure: actions.filter((action) => lifecycle.has(action)),
+        structure: actions.filter((action) => lifecycle.has(action) || activation.has(action)),
     };
 }
 export const focusedReusableRuleStorageKey = "my-chrome-utilities.schema-rule-library.v1";

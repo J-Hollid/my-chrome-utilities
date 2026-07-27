@@ -18,6 +18,7 @@ export interface DurableProjectRuntime{
   ensureProjectRoute(projectId:string,route:DurableProjectRoute):Promise<DurableLoadedProject>;
   refreshProject(projectId:string):Promise<void>;
   settled(scope?:"all"|"project"|"schema"):Promise<void>;
+  settledProjectCommand(projectId:string,label:string):Promise<void>;
   subscribe(listener:(projection:DurableProjectProjection)=>void):()=>void;
   failedSave():DurableRuntimeFailedSave|undefined;
   failedSchemaSave():DurableRuntimeFailedSchemaSave|undefined;
