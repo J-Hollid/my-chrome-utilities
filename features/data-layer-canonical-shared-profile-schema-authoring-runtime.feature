@@ -301,7 +301,8 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
     Given production /lineOfCustomer is reachable for <contributor> in the installed <surface> schema editor
     When actual controls open its property actions
     Then one compact top-level blocking overlay renders beside the invoking property action
-    And it contains Definition, Rules, and Structure with provenance and context-legal ownership summaries
+    And it contains Definition, Rules, and Structure with provenance and ownership summaries
+    And DOM inspection finds no global View, Edit, Remove, Reset, Override, Replace, or source control in that first layer
     And pointer, keyboard, and scrolling events cannot reach the editor behind it
     And DOM geometry places the overlay outside that surface's scroll region without clipping
     And DOM inspection finds no separate Presence, Expected values, Allowed values, Conditions, Documentation, or Example first-layer section
@@ -639,3 +640,30 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
       | viewport_width | condition_layout                                      | secondary_layout                          |
       | 1280           | one aligned four-column row per condition             | outcome and severity may use two columns  |
       | 360            | one labelled vertical block per condition             | outcome and severity stack vertically     |
+
+  # Data layer canonical Shared Profile schema authoring runtime 042
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 042
+    Given installed <contributor> property /lineOfCustomer has local, inherited, overridden, replaceable, and conflicting content in the <surface> schema editor
+    When actual controls open its property actions
+    Then its left-side menu renders only Definition, Rules, and Structure navigation with provenance and summaries
+    And DOM inspection finds no focused-property-ownership-actions group
+    And no View, Edit, Remove local, Reset to parent, Override here, Replace here, Open source, or conflict-action control is a descendant of that menu
+    When actual controls open each installed Definition, Rules, and Structure view
+    Then every legal ownership control is a descendant of the row or item identified by that view
+    And activating a section-local control reports the exact target before the staged model changes
+    And staging removal of one local item leaves unrelated property bytes unchanged in Review changes
+
+    Examples:
+      | contributor       | surface        |
+      | Shared Profile    | standalone     |
+      | Page Group        | standalone     |
+      | Page              | standalone     |
+      | Event             | standalone     |
+      | Flow Page-instance | Flow workspace |
+      | Event occurrence  | Flow workspace |
+      | Shared Profile    | in-panel       |
+      | Page Group        | in-panel       |
+      | Page              | in-panel       |
+      | Event             | in-panel       |
+      | Flow Page-instance | in-panel       |
+      | Event occurrence  | in-panel       |

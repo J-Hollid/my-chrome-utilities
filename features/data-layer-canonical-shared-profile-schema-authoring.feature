@@ -300,7 +300,8 @@ Feature: Data layer canonical Shared Profile schema authoring
     Given /lineOfCustomer is available for <contributor> in the <surface> schema editor
     When the operator opens its property actions
     Then one compact top-level blocking overlay opens beside the invoking property action
-    And the overlay offers Definition, Rules, and Structure with provenance and legal ownership summaries
+    And the overlay offers Definition, Rules, and Structure with provenance and ownership summaries
+    And its first layer contains no global View, Edit, Remove, Reset, Override, Replace, or source action
     And the editor behind the overlay cannot receive pointer, keyboard, or scrolling interaction
     And the surface scroll region does not clip or constrain the overlay
     And Presence, Expected values, Allowed values, Conditions, Documentation, and Example are not separate first-layer sections
@@ -639,3 +640,30 @@ Feature: Data layer canonical Shared Profile schema authoring
       | viewport_width | condition_layout                                      | secondary_layout                          |
       | 1280           | each condition uses one aligned four-column row       | outcome and severity may use two columns  |
       | 360            | each condition uses one labelled vertical block       | outcome and severity stack vertically     |
+
+  # Data layer canonical Shared Profile schema authoring 042
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 042
+    Given <contributor> property /lineOfCustomer has local, inherited, overridden, replaceable, and conflicting content in the <surface> schema editor
+    When the operator opens its property actions
+    Then the left-side menu contains only Definition, Rules, and Structure navigation with provenance and summaries
+    And no focused-property ownership-action group is rendered
+    And View, Edit, Remove local, Reset to parent, Override here, Replace here, Open source, and conflict actions are absent from that top-level menu
+    When the operator opens each particular Definition, Rules, and Structure view
+    Then each legal ownership action is shown only beside the specific facet, rule, or structural item it affects
+    And activating a section-local action identifies its target before staging any change
+    And removing one local item leaves unrelated property content unchanged for Review changes
+
+    Examples:
+      | contributor       | surface        |
+      | Shared Profile    | standalone     |
+      | Page Group        | standalone     |
+      | Page              | standalone     |
+      | Event             | standalone     |
+      | Flow Page-instance | Flow workspace |
+      | Event occurrence  | Flow workspace |
+      | Shared Profile    | in-panel       |
+      | Page Group        | in-panel       |
+      | Page              | in-panel       |
+      | Event             | in-panel       |
+      | Flow Page-instance | in-panel       |
+      | Event occurrence  | in-panel       |

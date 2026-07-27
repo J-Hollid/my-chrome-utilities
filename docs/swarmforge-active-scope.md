@@ -477,7 +477,10 @@ panel editor; `Reset to parents` deletes local facets rather than copying a pare
 or composed snapshot.
 
 Every schema surface uses one property context menu and focused property editor.
-The menu contains section choices and summaries but no embedded forms; only one
+The menu contains section choices, provenance, and summaries but no embedded forms
+or global property-ownership action strip; View, Edit, Remove local, Reset to
+parent, Override here, Replace here, and source actions appear only inside the
+specific Definition, Rules, or Structure view beside the item they affect. Only one
 Definition, Presence, Values, Conditions, Rules, Documentation, Example, or
 Structure section is mounted at a time. Facets, condition rows, and rules remain
 compact stable-identity rows with independent View, Edit, ownership-aware removal,
