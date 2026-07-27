@@ -23,6 +23,20 @@ export function renderNavigatorRows(tree, context) {
         actions.dataset.propertyActionsPath = row.path;
         article.append(choose, actions);
         tree.append(article);
+        if (row.node.type === "array") {
+            let item = row.node.itemSchema ?? (row.node.itemType ? { id: `item:${row.node.id}`, type: row.node.itemType } : undefined), level = row.depth + 1;
+            while (item?.type) {
+                const boundary = dom.createElement("article");
+                boundary.dataset.itemBoundary = "true";
+                boundary.setAttribute("role", "treeitem");
+                boundary.textContent = `${"› ".repeat(level)}Each item · ${item.type[0].toUpperCase() + item.type.slice(1)}`;
+                tree.append(boundary);
+                if (item.type !== "array")
+                    break;
+                item = item.items;
+                level += 1;
+            }
+        }
         if (context.menuPropertyId === row.id) {
             const layers = [context.renderMenu(row.node)];
             if (context.focusedPropertyId === row.id) {
@@ -53,7 +67,7 @@ function renderTable(tree, context) {
         trigger.setAttribute("aria-label", `Property actions for ${row.path}`);
         trigger.dataset.propertyActionsPath = row.path;
         identity.append(name, trigger);
-        tr.append(identity, cell(1, row.path), cell(2, node.type), cell(3, node.presence.mode));
+        tr.append(identity, cell(1, row.friendlyPath), cell(2, node.type), cell(3, node.presence.mode));
         for (const [offset, control] of [editableCell(context, row.node, "description", node.documentation.description), editableCell(context, row.node, "expected-or-allowed", schemaTableAllowedValues({ expectedValue: node.expectedValue, allowedValues: node.allowedValues.map(({ value }) => value) })), editableCell(context, row.node, "example", example === undefined ? "" : String(example))].entries()) {
             const valueCell = cell(offset + 4);
             valueCell.append(control);

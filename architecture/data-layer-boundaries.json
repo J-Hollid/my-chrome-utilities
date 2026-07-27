@@ -462,6 +462,13 @@
       "src/data-layer-canonical-schema.ts"
     ]
   },
+  "src/data-layer-canonical-array-items.ts": {
+    "module": "schemas",
+    "layer": "application",
+    "contracts": [
+      "src/data-layer-canonical-schema.ts"
+    ]
+  },
   "src/data-layer-canonical-schema-predicates.ts": {
     "module": "schemas",
     "layer": "application",

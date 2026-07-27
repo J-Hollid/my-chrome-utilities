@@ -1,6 +1,7 @@
 import type {CanonicalPropertyNode,CanonicalPresenceMode} from "./data-layer-canonical-schema.js";
 import {renderCanonicalFocusedCondition} from "./data-layer-canonical-schema-focused-conditions.js";
 import {renderCanonicalFocusedRules} from "./data-layer-canonical-schema-focused-rules.js";
+import {canonicalArrayBoundaries} from "./data-layer-canonical-schema.js";
 import type {CanonicalFocusedSectionContext} from "./data-layer-canonical-schema-focused-sections.js";
 import {renderDocumentationFacet} from "./canonical-schema-focused/documentation.js";
 import {renderExampleFacet} from "./canonical-schema-focused/example.js";
@@ -13,7 +14,7 @@ export function renderCanonicalFacetSection(host:HTMLElement,context:CanonicalFo
   if(context.activeSection==="presence"){renderPresenceFacet(host,context,working);if(working.presence.condition)renderCanonicalFocusedCondition(host,context);return;}
   if(context.activeSection==="values"){renderValuesFacet(host,context,working);return;}
   if(context.activeSection==="conditions"){renderCanonicalFocusedCondition(host,context);return;}
-  if(context.activeSection==="rules"){renderCanonicalFocusedRules(host,{...context,properties:()=>Object.values(context.current().nodes).map(({id,name,type,allowedValues})=>({id,name,type,allowedValues:allowedValues.map(({value})=>value)})),invariant:working.enforcement==="invariant"});return;}
+  if(context.activeSection==="rules"){renderCanonicalFocusedRules(host,{...context,properties:()=>Object.values(context.current().nodes).map(({id,name,type,allowedValues})=>({id,name,type,allowedValues:allowedValues.map(({value})=>value),arrayBoundaries:canonicalArrayBoundaries(context.current(),id)})),invariant:working.enforcement==="invariant"});return;}
   if(context.activeSection==="documentation"){renderDocumentationFacet(host,context,working);return;}
   if(context.activeSection==="example"){renderExampleFacet(host,context,working);return;}
   if(context.activeSection==="structure"){renderStructureFacet(host,context,working);return;}

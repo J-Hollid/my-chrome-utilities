@@ -56,8 +56,10 @@ export function migrateLegacyProfile(profile, options) {
                 node.presence = presences[0]?.value ?? { mode: "optional" };
                 node.allowedValues = (allowed[0]?.value ?? []).map((value) => ({ id: options.id("allowed-value"), value: clone(value) }));
                 node.documentation = { displayText: displayTexts[0]?.value ?? "", description: descriptions[0]?.value ?? "", comments: comments[0]?.value ?? "", example: examples[0]?.value ?? { method: "blank" } };
-                if (itemTypes[0])
+                if (itemTypes[0]) {
                     node.itemType = itemTypes[0].value;
+                    node.itemSchema = { id: `item:${node.id}`, type: itemTypes[0].value };
+                }
                 if (expected[0])
                     node.expectedValue = clone(expected[0].value);
                 if (enforcement[0])

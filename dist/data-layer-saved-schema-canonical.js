@@ -94,12 +94,13 @@ function jsonDefinition(document, node) {
     else
         delete definition.items;
     if (children.length) {
-        definition.properties = Object.fromEntries(children.map((child) => [child.name, jsonDefinition(document, child)]));
+        const container = node.type === "array" && node.itemType === "object" ? definition.items : definition;
+        container.properties = Object.fromEntries(children.map((child) => [child.name, jsonDefinition(document, child)]));
         const required = children.filter(({ presence }) => presence.mode.startsWith("required")).map(({ name }) => name), forbidden = children.filter(({ presence }) => presence.mode.startsWith("forbidden")).map(({ name }) => name);
         if (required.length)
-            definition.required = required;
+            container.required = required;
         if (forbidden.length)
-            definition.forbidden = forbidden;
+            container.forbidden = forbidden;
     }
     if (node.allowedValues.length)
         definition.enum = node.allowedValues.map(({ value }) => clone(value));

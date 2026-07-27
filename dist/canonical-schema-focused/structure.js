@@ -6,9 +6,11 @@ export const renderCanonicalStructuralControls = (dom, context, working) => { co
     return; applyStructure(context, { kind: "move", propertyId: working.id }); }), duplicate = button(dom, "Duplicate", () => applyStructure(context, { kind: "duplicate", propertyId: working.id, id: context.id })), remove = button(dom, "Delete property", () => applyStructure(context, { kind: "delete", propertyId: working.id })); earlier.disabled = index <= 0; later.disabled = index < 0 || index >= siblings.length - 1; toRoot.disabled = !working.parentId; return [earlier, later, toRoot, duplicate, remove]; };
 export function renderStructureFacet(host, context, working) {
     const { dom } = context;
-    const name = input(dom, "structureName", working.name);
+    const name = input(dom, "structureName", working.name), terminalItem = (() => { let item = working.itemSchema; while (item?.type === "array")
+        item = item.items; return item?.type ?? working.itemType; })();
     name.addEventListener("input", () => { const next = context.getWorking(); if (next)
         next.name = name.value; });
-    host.append(Object.assign(dom.createElement("p"), { textContent: `Stable identity ${working.id} · ${context.current().id}` }), labeled(dom, "Name", name), button(dom, "Add child", () => applyStructure(context, { kind: "add", propertyId: working.id, parentId: working.id, name: "child", type: "string", id: context.id })), button(dom, "Add sibling", () => applyStructure(context, { kind: "add", propertyId: working.id, ...(working.parentId ? { parentId: working.parentId } : {}), afterId: working.id, name: "property", type: "string", id: context.id })), ...renderCanonicalStructuralControls(dom, context, working));
+    const childAction = working.type === "array" ? terminalItem === "object" ? button(dom, "Add item property", () => applyStructure(context, { kind: "add", propertyId: working.id, parentId: working.id, name: "property", type: "string", id: context.id })) : undefined : button(dom, "Add child", () => applyStructure(context, { kind: "add", propertyId: working.id, parentId: working.id, name: "child", type: "string", id: context.id }));
+    host.append(Object.assign(dom.createElement("p"), { textContent: `Stable identity ${working.id} · ${context.current().id}` }), labeled(dom, "Name", name), ...(childAction ? [childAction] : []), button(dom, "Add sibling", () => applyStructure(context, { kind: "add", propertyId: working.id, ...(working.parentId ? { parentId: working.parentId } : {}), afterId: working.id, name: "property", type: "string", id: context.id })), ...renderCanonicalStructuralControls(dom, context, working));
 }
 //# sourceMappingURL=structure.js.map
