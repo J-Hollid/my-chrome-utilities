@@ -4246,7 +4246,7 @@ function openCompactCanonicalPropertyActions(path, trigger) {
         return false;
     let working = structuredClone(original), activeSection, feedbackText = "", stagedOwnershipAction = "";
     const removedRuleIds = new Set(), removedValueIds = new Set(), stagedOperations = [];
-    const state = focusedSourceState(original), sectionOwnership = focusedSectionOwnershipActions({ inherited: state === "inherited", local: state === "local", overridden: state === "overridden", invariant: original.enforcement === "invariant", conflict: state === "conflict", replaceable: original.enforcement === "overridable" }), lifecycle = new Set(["Remove local", "Reset to parent"]);
+    const state = focusedSourceState(original), sectionOwnership = focusedSectionOwnershipActions({ inherited: state === "inherited", local: state === "local", overridden: state === "overridden", invariant: original.enforcement === "invariant", conflict: state === "conflict", replaceable: original.enforcement === "overridable" });
     const close = () => { clearSchemaTableOverlay(owner); trigger.focus({ preventScroll: true }); };
     const restoreFocus = (label) => queueMicrotask(() => Array.from(owner.ownerDocument.querySelectorAll('[data-schema-row-overlay="true"] button')).find(({ textContent, ariaLabel }) => textContent?.trim() === label || ariaLabel === label)?.focus({ preventScroll: true }));
     const menu = () => renderFocusedPropertyMenu({ dom: document, path, provenance: focusedPropertyProvenanceSummary(original.provenance), close, sectionSummary: (name) => name === "rules" ? `${working.rules.length} rules` : name === "structure" ? "Stable property identity" : "Effective definition facets", selectSection: (name) => showSection(name) });
