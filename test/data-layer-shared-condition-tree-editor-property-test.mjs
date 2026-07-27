@@ -10,6 +10,7 @@ import {
 import {projectConditionEditorDraft} from "../dist/data-layer-project-condition-editor.js";
 import {conditionMatches} from "../dist/data-layer-specification-project.js";
 import {layeredConditionMatches} from "../dist/layered-schema/conditional-rules.js";
+import {canonicalFlatPredicateIssue} from "../dist/canonical-schema/predicate-policy.js";
 
 assert.deepEqual(
   sharedConditionOperators("string",["retail","trade"]),
@@ -20,6 +21,22 @@ assert.deepEqual(
   sharedUnresolvedConditionRow({id:"condition:stable",propertyId:"property:number",operator:"Greater than",value:3}),
   {id:"condition:stable",propertyId:"",operator:""},
   "an unresolved property query preserves row identity but removes stale typed operator and value state",
+);
+assert.equal(
+  canonicalFlatPredicateIssue({kind:"all",children:[
+    {kind:"predicate",propertyId:"property:a",operator:"Exists"},
+    {kind:"not",children:[{kind:"predicate",propertyId:"property:b",operator:"Exists"}]},
+  ]}),
+  "Nested All, Any, or Not conditions require explicit migration before this rule can be edited.",
+  "legacy nested condition semantics are detected instead of projected into flat rows",
+);
+assert.throws(
+  ()=>sharedFlatConditionRows({kind:"all",children:[{kind:"any",children:[
+    {kind:"predicate",propertyId:"property:a",operator:"Exists"},
+    {kind:"predicate",propertyId:"property:b",operator:"Exists"},
+  ]}]}),
+  /explicit migration/,
+  "the flat-row adapter cannot silently discard nested grouping",
 );
 
 let state=0x51ce5eed;

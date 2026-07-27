@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {focusedConditionLabel,focusedOwnershipActions,focusedPropertySections,focusedRuleFields,focusedSparseDelta} from "../dist/data-layer-focused-schema-property-ui.js";
 import {applyCanonicalCommand,canonicalPredicateIds,canonicalPredicateWithStableIds,createCanonicalSchema} from "../dist/data-layer-canonical-schema.js";
+import {canonicalFlatPredicateIssue} from "../dist/canonical-schema/predicate-policy.js";
 import {canonicalNavigatorRows} from "../dist/canonical-schema-focused/navigator-rows.js";
 import {focusedSourceState} from "../dist/data-layer-canonical-schema-focused-drafts.js";
 import {schemaTableCellMetadata,schemaTableColumns,schemaTableEditableFacets,schemaTableExpectedOrAllowed,schemaTableOverlayPlacement,schemaTableOverlayStyle,schemaTableQuickEditDestination,schemaTableQuickEditIntent,schemaTableValueFacet} from "../dist/data-layer-schema-table.js";
@@ -101,6 +102,21 @@ const saved=applyCanonicalCommand(withProperty,{kind:"set",baseRevision:0,proper
 assert.equal(saved.status,"applied");
 assert.equal(saved.document.revision,1,"focused review must commit one property command");
 assert.equal(saved.document.changes.length,1,"focused review must produce one Undo/change entry");
+const nestedCondition={kind:"all",children:[
+  {kind:"any",children:[
+    {kind:"predicate",propertyId:property.id,operator:"Equals",value:"retail"},
+    {kind:"predicate",propertyId:property.id,operator:"Equals",value:"trade"},
+  ]},
+  {kind:"predicate",propertyId:property.id,operator:"Exists"},
+]};
+assert.match(canonicalFlatPredicateIssue(nestedCondition),/nested/i,"nested persisted semantics require explicit migration");
+const nestedRule={id:"rule:nested",name:"Nested legacy rule",kind:"presence",presence:"required",condition:nestedCondition,severity:"error"};
+const rejectedNestedSave=applyCanonicalCommand(withProperty,{kind:"set",baseRevision:0,propertyId:property.id,patch:{rules:[nestedRule]}});
+assert.equal(rejectedNestedSave.status,"conflict","the canonical command boundary rejects a nested rule write");
+assert.deepEqual(rejectedNestedSave.document,withProperty,"a rejected nested rule write preserves the stored document byte-for-byte");
+const flatRule={...nestedRule,condition:{kind:"any",children:nestedCondition.children[0].children}};
+const acceptedFlatSave=applyCanonicalCommand(withProperty,{kind:"set",baseRevision:0,propertyId:property.id,patch:{rules:[flatRule]}});
+assert.equal(acceptedFlatSave.status,"applied","the canonical command boundary accepts one-level All or Any rules");
 const child={...property,id:"property:child",name:"child",parentId:property.id,order:0};
 const objectDocument={...withProperty,nodes:{[property.id]:{...property,type:"object"},[child.id]:child}};
 const impact=applyCanonicalCommand(objectDocument,{kind:"set",baseRevision:0,propertyId:property.id,patch:{type:"string"}});

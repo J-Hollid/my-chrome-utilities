@@ -1,5 +1,6 @@
 import {typedCanonicalValue} from "./data-layer-canonical-schema-facets.js";
 import type {CanonicalPredicate,CanonicalPredicateOperator,CanonicalPropertyType} from "./data-layer-canonical-schema.js";
+import {canonicalFlatPredicateIssue} from "./canonical-schema/predicate-policy.js";
 
 export interface SharedConditionProperty {id:string;name:string;type?:string;allowedValues?:readonly unknown[];}
 export interface SharedConditionTreeOptions {dom:Document;condition?:CanonicalPredicate;properties:()=>readonly SharedConditionProperty[];id:(kind:string)=>string;onChange:(condition:CanonicalPredicate|undefined)=>void;}
@@ -18,12 +19,12 @@ export const sharedUnresolvedConditionRow=(row:SharedFlatConditionDraft):SharedF
 
 export type SharedFlatMatchMode="all"|"any";
 export interface SharedFlatConditionDraft {id?:string;propertyId:string;operator:CanonicalPredicateOperator|"";value?:unknown;}
-const predicateRows=(condition:CanonicalPredicate|undefined):Extract<CanonicalPredicate,{kind:"predicate"}>[]=>{
+export const sharedFlatConditionRows=(condition:CanonicalPredicate|undefined):SharedFlatConditionDraft[]=>{
+  const issue=canonicalFlatPredicateIssue(condition);if(issue)throw new Error(issue);
   if(!condition)return[];
-  if(condition.kind==="predicate")return[clone(condition)];
-  return condition.children.flatMap(predicateRows);
+  if(condition.kind==="predicate")throw new Error("A rule condition requires one top-level All or Any match mode.");
+  return condition.children.map((child)=>{if(child.kind!=="predicate")throw new Error("Nested condition reached the flat-row adapter.");const{id,propertyId,operator,value}=child;return{...(id?{id}:{}),propertyId,operator,...(value!==undefined?{value}: {})};});
 };
-export const sharedFlatConditionRows=(condition:CanonicalPredicate|undefined):SharedFlatConditionDraft[]=>predicateRows(condition).map(({id,propertyId,operator,value})=>({...(id?{id}:{}),propertyId,operator,...(value!==undefined?{value}: {})}));
 const completeConditionValue=(value:unknown):boolean=>value!==undefined&&!(typeof value==="string"&&!value.trim())&&!(Array.isArray(value)&&!value.length);
 export const sharedFlatConditionResult=(mode:SharedFlatMatchMode,rows:readonly SharedFlatConditionDraft[]):CanonicalPredicate|undefined=>{
   if(!rows.length||rows.some(({propertyId,operator,value})=>!propertyId.trim()||!operator||!existence.includes(operator)&&!completeConditionValue(value)))return undefined;
@@ -31,7 +32,9 @@ export const sharedFlatConditionResult=(mode:SharedFlatMatchMode,rows:readonly S
 };
 
 export function renderSharedConditionTree(host:HTMLElement,options:SharedConditionTreeOptions):void {
-  const {dom}=options,initial=options.condition;let mode:SharedFlatMatchMode=initial?.kind==="any"?"any":"all",rows:SharedFlatConditionDraft[]=sharedFlatConditionRows(initial).map((row)=>({...row,id:row.id??options.id("condition")}));if(!rows.length)rows=[{id:options.id("condition"),propertyId:"",operator:""}];
+  const {dom}=options,initial=options.condition,migrationIssue=canonicalFlatPredicateIssue(initial);
+  if(migrationIssue){const heading=dom.createElement("h4"),message=dom.createElement("p");host.replaceChildren();host.setAttribute("aria-label","Legacy When condition migration required");heading.textContent="When";message.setAttribute("role","alert");message.textContent=`${migrationIssue} The persisted condition is preserved unchanged.`;host.append(heading,message);return;}
+  let mode:SharedFlatMatchMode=initial?.kind==="any"?"any":"all",rows:SharedFlatConditionDraft[]=sharedFlatConditionRows(initial).map((row)=>({...row,id:row.id??options.id("condition")}));if(!rows.length)rows=[{id:options.id("condition"),propertyId:"",operator:""}];
   if(!dom.getElementById("flat-rule-builder-responsive-style")){const style=dom.createElement("style");style.id="flat-rule-builder-responsive-style";style.textContent=`[data-rule-editor-mode]{display:grid;grid-template-columns:minmax(0,1fr)!important;box-sizing:border-box;min-width:0;max-width:100%}[data-rule-editor-mode] *{box-sizing:border-box;max-width:100%}[data-rule-editor-mode] label{display:grid;gap:.2rem;min-width:0}[data-rule-editor-mode] input,[data-rule-editor-mode] select{box-sizing:border-box;max-width:100%;min-width:0;width:100%}[data-rule-editor-mode] select{overflow:hidden;text-overflow:ellipsis}[data-rule-editor-mode] section{display:grid;gap:.5rem;min-width:0}[data-rule-field-grid="true"]{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}[data-rule-field-grid="true"]>h3,[data-rule-message-field="true"]{grid-column:1/-1}[data-rule-editor-mode] [aria-label="Condition value"]{min-height:2.25rem}[data-rule-editor-mode] [aria-label="Rule actions"]{position:sticky;bottom:0;z-index:1;background:Canvas;padding:.5rem 0}[data-rule-editor-mode] [aria-label="Rule actions"] [role="status"]{min-height:3em;margin:.25rem 0}[data-rule-editor-mode] h3,[data-condition-layout="responsive"] h4{margin:.4rem 0 .1rem;font-size:1.1em;font-weight:600}@media(max-width:600px){[data-condition-layout="responsive"] [data-condition-kind="predicate"],[data-rule-field-grid="true"]{grid-template-columns:minmax(0,1fr)!important}[data-condition-kind="predicate"]>button{min-width:0;width:100%}}`;dom.head.append(style);}
   let focusRowId:string|undefined;
   const properties=()=>options.properties(),selected=(row:SharedFlatConditionDraft)=>properties().find(({id})=>id===row.propertyId);

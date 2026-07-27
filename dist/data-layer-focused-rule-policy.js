@@ -1,3 +1,4 @@
+import { canonicalFlatPredicateIssue } from "./canonical-schema/predicate-policy.js";
 const existenceOperators = new Set(["Exists", "Does not exist"]);
 const incompleteConditionPredicate = (condition) => {
     if (!condition || typeof condition !== "object")
@@ -23,6 +24,9 @@ const flatConditionIssue = (condition) => {
 export function focusedRuleIssue(rule) {
     if (["presence", "value", "pattern", "range", "cardinality", "reusable"].includes(String(rule.kind)) && !String(rule.name ?? "").trim())
         return "Enter a rule name.";
+    const migrationIssue = canonicalFlatPredicateIssue(rule.condition);
+    if (migrationIssue)
+        return migrationIssue;
     if (["presence", "value", "pattern", "range", "cardinality", "reusable"].includes(String(rule.kind)) && flatConditionIssue(rule.condition))
         return "Complete or remove the condition.";
     if (rule.kind === "presence" && !["required", "optional", "forbidden"].includes(String(rule.presence ?? "")))
