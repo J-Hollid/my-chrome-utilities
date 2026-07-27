@@ -1,11 +1,13 @@
 import { renderCanonicalNavigator } from "./data-layer-canonical-schema-render-navigator.js";
+import { clearSchemaTableOverlay } from "./data-layer-schema-table.js";
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 export function renderCanonicalSchemaEditor(context) {
-    const { dom, options, document } = context, retainedTable = document.view === "table" ? options.host.querySelector('table[data-canonical-view="table"]') : null;
+    const { dom, options, document } = context, priorScroll = options.host.querySelector("[data-schema-editor-scroll-region]"), retainedScroll = priorScroll ? { top: priorScroll.scrollTop, left: priorScroll.scrollLeft } : undefined, retainedTable = document.view === "table" ? options.host.querySelector('table[data-canonical-view="table"]') : null;
     if (retainedTable)
         context.tableElement = retainedTable;
     else
         delete context.tableElement;
+    clearSchemaTableOverlay(options.host);
     options.host.replaceChildren();
     options.host.setAttribute("aria-label", `${options.surface} canonical schema editor`);
     options.host.dataset.canonicalSchemaId = document.id;
@@ -34,5 +36,12 @@ export function renderCanonicalSchemaEditor(context) {
     feedbackOutput.setAttribute("aria-label", "Canonical command result");
     feedbackOutput.textContent = context.feedback;
     options.host.append(preview, feedbackOutput);
+    if (retainedScroll) {
+        const next = options.host.querySelector("[data-schema-editor-scroll-region]");
+        if (next) {
+            next.scrollTop = retainedScroll.top;
+            next.scrollLeft = retainedScroll.left;
+        }
+    }
 }
 //# sourceMappingURL=data-layer-canonical-schema-render.js.map

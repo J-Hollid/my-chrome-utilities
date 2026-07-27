@@ -3,14 +3,32 @@ import {focusedConditionLabel,focusedOwnershipActions,focusedPropertySections,fo
 import {applyCanonicalCommand,canonicalPredicateIds,canonicalPredicateWithStableIds,createCanonicalSchema} from "../dist/data-layer-canonical-schema.js";
 import {canonicalNavigatorRows} from "../dist/canonical-schema-focused/navigator-rows.js";
 import {focusedSourceState} from "../dist/data-layer-canonical-schema-focused-drafts.js";
-import {schemaTableCellMetadata,schemaTableColumns,schemaTableEditableFacets,schemaTableExpectedOrAllowed,schemaTableOverlayStyle,schemaTableQuickEditDestination,schemaTableQuickEditIntent,schemaTableValueFacet} from "../dist/data-layer-schema-table.js";
+import {schemaTableCellMetadata,schemaTableColumns,schemaTableEditableFacets,schemaTableExpectedOrAllowed,schemaTableOverlayPlacement,schemaTableOverlayStyle,schemaTableQuickEditDestination,schemaTableQuickEditIntent,schemaTableValueFacet} from "../dist/data-layer-schema-table.js";
 
 assert.deepEqual(focusedPropertySections,["definition","rules","structure"]);
 assert.deepEqual(schemaTableColumns.map(({label})=>label),["Property","Path","Type","Presence","Description","Allowed values","Example","Source","Local/effective state","Validation state"],"every contributor table exposes the same information-rich columns");
 assert.deepEqual(schemaTableCellMetadata,schemaTableColumns.map(({key,label})=>({key,label})),"every narrow stacked cell retains its visible column identity");
 assert.equal(new Set(schemaTableCellMetadata.map(({key})=>key)).size,schemaTableColumns.length,"stacked cell identities remain unique");
-assert.match(schemaTableOverlayStyle,/position:absolute/,"the row overlay stays out of flow instead of expanding its property row");
-assert.doesNotMatch(schemaTableOverlayStyle,/position:static/,"the row overlay never opts into row layout");
+assert.match(schemaTableOverlayStyle,/position:fixed/,"the property overlay is placed against the browser viewport");
+assert.doesNotMatch(schemaTableOverlayStyle,/position:absolute/,"the property overlay is never positioned by a property row");
+assert.deepEqual(
+  schemaTableOverlayPlacement(
+    {left:40,right:64,top:120,bottom:144,width:24,height:24},
+    {width:280,height:220},
+    {width:800,height:600},
+  ),
+  {left:72,top:120,width:280,height:220,maxHeight:584},
+  "the overlay opens beside its invoking property action when the viewport has room",
+);
+assert.deepEqual(
+  schemaTableOverlayPlacement(
+    {left:336,right:356,top:760,bottom:780,width:20,height:20},
+    {width:540,height:700},
+    {width:360,height:800},
+  ),
+  {left:8,top:92,width:344,height:700,maxHeight:784},
+  "an edge overlay is clamped to the viewport without moving its editor",
+);
 assert.deepEqual(schemaTableEditableFacets,["description","expected-or-allowed","example"],"the three frequent facets are editable without opening an advanced editor");
 assert.deepEqual(schemaTableQuickEditIntent("Enter",false),{kind:"commit"},"Enter commits without leaving the current cell");
 assert.deepEqual(schemaTableQuickEditIntent("Tab",false),{kind:"commit",direction:1},"Tab commits and advances");

@@ -1,5 +1,5 @@
 import { canonicalPropertyPath, canonicalTableRows } from "../data-layer-canonical-schema.js";
-import { bindSchemaTableQuickEdit, revealSchemaTableOverlay, schemaTableAllowedValues, schemaTableCellMetadata, schemaTableColumns, schemaTableOverlayStyle } from "../data-layer-schema-table.js";
+import { bindSchemaTableQuickEdit, mountSchemaTableOverlay, schemaTableAllowedValues, schemaTableCellMetadata, schemaTableColumns } from "../data-layer-schema-table.js";
 import { button } from "./dom.js";
 export function canonicalNavigatorRows(context) {
     const query = context.query.trim().toLowerCase(), matches = (node) => !query || node.name.toLowerCase().includes(query) || canonicalPropertyPath(context.document, node.id).toLowerCase().includes(query), facet = (node) => context.propertyFilter === "all" || context.propertyFilter === "conditions" && Boolean(node.presence.condition) || context.propertyFilter === "documentation" && Boolean(node.documentation.displayText || node.documentation.description || node.documentation.comments) || context.propertyFilter === "issues" && node.provenance.some(({ state }) => state === "shadowed");
@@ -22,15 +22,23 @@ export function renderNavigatorRows(tree, context) {
         actions.setAttribute("aria-label", `Property actions for ${row.path}`);
         actions.dataset.propertyActionsPath = row.path;
         article.append(choose, actions);
-        if (context.menuPropertyId === row.id)
-            article.append(context.renderMenu(row.node));
         tree.append(article);
+        if (context.menuPropertyId === row.id) {
+            const layers = [context.renderMenu(row.node)];
+            if (context.focusedPropertyId === row.id) {
+                layers.push(context.renderFocusedEditor(context.document, row.node));
+                if (context.review)
+                    layers.push(context.review);
+            }
+            mountSchemaTableOverlay(context.options.host, actions, row.path, layers, context.dismissOverlay);
+        }
     }
 }
 const editableCell = (context, node, facet, value) => { const control = context.dom.createElement("input"), path = canonicalPropertyPath(context.document, node.id); control.type = "text"; control.value = value; control.dataset.inlineSchemaFacet = facet; control.dataset.inlineSchemaPath = path; control.setAttribute("aria-label", `${facet} for ${path}`); bindSchemaTableQuickEdit(control, { root: context.quickEditRoot, scope: context.quickEditScope, path, facet, savedValue: value, commit: (next) => context.commitInline(node, facet, next), cancel: context.cancelInline, diagnostic: context.inlineDiagnostic }); return control; };
 const sourceText = (node, fallback) => node.provenance.map(({ contributorName, source, state }) => contributorName ?? state ?? (source === "created" ? fallback : source)).join(", ") || fallback;
 function renderTable(tree, context) {
     const { dom } = context, table = context.tableElement ?? dom.createElement("table"), head = dom.createElement("thead"), headRow = dom.createElement("tr"), body = dom.createElement("tbody");
+    let pendingOverlay;
     const cell = (index, text) => { const value = dom.createElement("td"), metadata = schemaTableCellMetadata[index]; value.dataset.schemaTableCell = metadata.key; value.dataset.schemaTableLabel = metadata.label; if (text !== undefined)
         value.textContent = text; return value; };
     for (const { label } of schemaTableColumns)
@@ -53,18 +61,13 @@ function renderTable(tree, context) {
         }
         tr.append(cell(7, sourceText(node, context.document.contributorName)), cell(8, states.join(", ") || "local"), cell(9, states.includes("conflict") || states.includes("shadowed") ? "Needs attention" : "Ready"));
         if (context.menuPropertyId === row.id) {
-            const overlay = dom.createElement("section");
-            overlay.dataset.schemaRowOverlay = "true";
-            overlay.setAttribute("aria-label", `${row.path} property overlay`);
-            overlay.style.cssText = schemaTableOverlayStyle;
-            overlay.append(context.renderMenu(row.node));
+            const layers = [context.renderMenu(row.node)];
             if (context.focusedPropertyId === row.id) {
-                overlay.append(context.renderFocusedEditor(context.document, row.node));
+                layers.push(context.renderFocusedEditor(context.document, row.node));
                 if (context.review)
-                    overlay.append(context.review);
+                    layers.push(context.review);
             }
-            identity.append(overlay);
-            revealSchemaTableOverlay(overlay.lastElementChild);
+            pendingOverlay = { trigger, path: row.path, layers };
         }
         body.append(tr);
     }
@@ -73,6 +76,8 @@ function renderTable(tree, context) {
     table.dataset.canonicalView = "table";
     tree.replaceChildren(table);
     tree.dataset.canonicalView = "table";
+    if (pendingOverlay)
+        mountSchemaTableOverlay(context.options.host, pendingOverlay.trigger, pendingOverlay.path, pendingOverlay.layers, context.dismissOverlay);
 }
 export function applyNavigatorView(tree, dom, view, context) {
     if (view === "table" && context) {

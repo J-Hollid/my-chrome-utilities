@@ -13,9 +13,81 @@ export const schemaTableColumns = [
     { key: "validation-state", label: "Validation state" },
 ];
 export const schemaTableCellMetadata = schemaTableColumns.map(({ key, label }) => ({ key, label }));
-export const schemaTableOverlayStyle = "position:absolute;left:0;top:100%;z-index:10;width:min(42rem,calc(100vw - 1rem));max-width:calc(100vw - 1rem);max-height:calc(100vh - 1rem);box-sizing:border-box;overflow:auto;background:Canvas;border:1px solid ButtonBorder;padding:0.75rem;";
-export function revealSchemaTableOverlay(layer) {
-    queueMicrotask(() => layer.scrollIntoView({ block: "nearest", inline: "nearest" }));
+export const schemaTableOverlayStyle = "position:fixed;right:auto;bottom:auto;margin:0;box-sizing:border-box;max-width:calc(100vw - 1rem);max-height:calc(100vh - 1rem);overflow:hidden;background:Canvas;border:1px solid ButtonBorder;padding:0.75rem;";
+const overlayPadding = 8, overlayGap = 8;
+const clamp = (value, minimum, maximum) => Math.min(Math.max(value, minimum), Math.max(minimum, maximum));
+export function schemaTableOverlayPlacement(anchor, size, viewport) {
+    const maxWidth = Math.max(0, viewport.width - overlayPadding * 2), maxHeight = Math.max(0, viewport.height - overlayPadding * 2), width = Math.min(size.width, maxWidth), height = Math.min(size.height, maxHeight), right = anchor.right + overlayGap, left = anchor.left - overlayGap - width;
+    const preferredLeft = right + width <= viewport.width - overlayPadding ? right : left >= overlayPadding ? left : anchor.left;
+    return { left: clamp(preferredLeft, overlayPadding, viewport.width - overlayPadding - width), top: clamp(anchor.top, overlayPadding, viewport.height - overlayPadding - height), width, height, maxHeight };
+}
+const mountedSchemaTableOverlays = new WeakMap();
+const mountedSchemaTableOverlayInventory = new Set();
+export function clearSchemaTableOverlay(owner) {
+    const mounted = mountedSchemaTableOverlays.get(owner);
+    if (!mounted)
+        return;
+    mounted.abort.abort();
+    if (mounted.dialog.open)
+        mounted.dialog.close();
+    mounted.dialog.remove();
+    const owned = (owner.getAttribute("aria-owns") ?? "").split(/\s+/).filter((id) => id && id !== mounted.dialog.id);
+    if (owned.length)
+        owner.setAttribute("aria-owns", owned.join(" "));
+    else
+        owner.removeAttribute("aria-owns");
+    mountedSchemaTableOverlays.delete(owner);
+    mountedSchemaTableOverlayInventory.delete(mounted);
+}
+export function mountSchemaTableOverlay(owner, trigger, path, layers, onCancel) {
+    for (const mounted of Array.from(mountedSchemaTableOverlayInventory))
+        if (mounted.owner !== owner)
+            clearSchemaTableOverlay(mounted.owner);
+    clearSchemaTableOverlay(owner);
+    const dom = owner.ownerDocument, dialog = dom.createElement("dialog"), stack = dom.createElement("section"), abort = new AbortController();
+    const ownerId = owner.id || `schema-overlay-owner-${crypto.randomUUID()}`, dialogId = `schema-property-overlay-${crypto.randomUUID()}`;
+    if (!owner.id)
+        owner.id = ownerId;
+    dialog.id = dialogId;
+    dialog.dataset.schemaRowOverlay = "true";
+    dialog.dataset.schemaPropertyOverlayHost = "true";
+    dialog.dataset.schemaOverlayOwner = ownerId;
+    dialog.setAttribute("aria-label", `${path} property overlay`);
+    dialog.style.cssText = schemaTableOverlayStyle;
+    stack.dataset.schemaOverlayStack = "true";
+    stack.style.cssText = "display:flex;align-items:flex-start;gap:0.5rem;max-width:100%;overflow:hidden;";
+    layers.forEach((layer, index) => { layer.style.boxSizing = "border-box"; layer.style.minWidth = "0"; layer.style.maxWidth = layers.length === 1 ? "min(42rem,calc(100vw - 2.5rem))" : `calc((100vw - ${1.5 + 0.5 * (layers.length - 1)}rem) / ${layers.length})`; layer.style.maxHeight = "calc(100vh - 2.5rem)"; layer.style.overflowY = index === layers.length - 1 ? "auto" : "hidden"; layer.style.overscrollBehavior = "contain"; });
+    stack.append(...layers);
+    dialog.append(stack);
+    dom.body.append(dialog);
+    owner.setAttribute("aria-owns", owner.getAttribute("aria-owns") ? [owner.getAttribute("aria-owns"), dialogId].join(" ") : dialogId);
+    const mounted = { owner, dialog, abort };
+    mountedSchemaTableOverlays.set(owner, mounted);
+    mountedSchemaTableOverlayInventory.add(mounted);
+    const place = () => {
+        if (!dialog.isConnected || !trigger.isConnected)
+            return;
+        const anchor = trigger.getBoundingClientRect(), bounds = dialog.getBoundingClientRect(), view = dom.defaultView, placement = schemaTableOverlayPlacement(anchor, bounds, { width: view?.innerWidth ?? dom.documentElement.clientWidth, height: view?.innerHeight ?? dom.documentElement.clientHeight });
+        dialog.style.left = `${placement.left}px`;
+        dialog.style.top = `${placement.top}px`;
+        dialog.style.width = `${placement.width}px`;
+        dialog.style.maxHeight = `${placement.maxHeight}px`;
+    };
+    dialog.addEventListener("cancel", (event) => { event.preventDefault(); onCancel(); }, { signal: abort.signal });
+    dom.defaultView?.addEventListener("resize", place, { signal: abort.signal });
+    queueMicrotask(() => {
+        if (!dialog.isConnected || !trigger.isConnected)
+            return;
+        const scrollNodes = [dom.scrollingElement, ...Array.from(owner.querySelectorAll("[data-schema-editor-scroll-region]"))].filter((node) => Boolean(node)), scrollState = scrollNodes.map((node) => ({ node, top: node.scrollTop, left: node.scrollLeft })), restoreScroll = () => scrollState.forEach(({ node, top, left }) => { node.scrollTop = top; node.scrollLeft = left; });
+        if (!dialog.open)
+            dialog.showModal();
+        place();
+        restoreScroll();
+        dom.defaultView?.requestAnimationFrame(() => { place(); restoreScroll(); });
+        const active = layers.at(-1), focus = active?.querySelector("button:not(:disabled),input:not(:disabled),select:not(:disabled),textarea:not(:disabled),[tabindex]:not([tabindex='-1'])");
+        focus?.focus({ preventScroll: true });
+    });
+    return dialog;
 }
 export function schemaTableOverlayTransition(state, event) {
     if (event.kind === "open")

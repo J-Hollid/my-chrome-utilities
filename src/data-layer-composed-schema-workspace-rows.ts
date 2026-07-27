@@ -4,10 +4,10 @@ import {renderFocusedPropertyMenu} from "./data-layer-focused-schema-property-me
 import {focusedOwnershipActions,focusedPropertySectionLabels,type FocusedPropertySection} from "./data-layer-focused-schema-property-ui.js";
 import {renderComposedFocusedSection} from "./data-layer-composed-schema-workspace-focused-sections.js";
 import type {FlowPageInstanceStructureCommand,FlowPageInstanceStructureKind} from "./flow-graph/page-instance-structure.js";
-import {bindSchemaTableQuickEdit,revealSchemaTableOverlay,schemaTableAllowedValues,schemaTableCellMetadata,schemaTableColumns,schemaTableOverlayStyle,type SchemaTableEditableFacet,type SchemaTableQuickEditResult} from "./data-layer-schema-table.js";
+import {bindSchemaTableQuickEdit,clearSchemaTableOverlay,mountSchemaTableOverlay,schemaTableAllowedValues,schemaTableCellMetadata,schemaTableColumns,type SchemaTableEditableFacet,type SchemaTableQuickEditResult} from "./data-layer-schema-table.js";
 
 export interface ComposedRowsContext {
-  dom:Document;model:ComposedSchemaWorkspace;effectiveText:(row:ComposedSchemaRow)=>string;onRepair?:((repair:ComposedSchemaRepair)=>void)|undefined;rowPathDataset?:string|undefined;
+  dom:Document;overlayHost:HTMLElement;model:ComposedSchemaWorkspace;effectiveText:(row:ComposedSchemaRow)=>string;onRepair?:((repair:ComposedSchemaRepair)=>void)|undefined;rowPathDataset?:string|undefined;
   activePath:string|undefined;overlayOpen:boolean;focusedOpen:boolean;activeSection:FocusedPropertySection;draft:ComposedFacetDraft|undefined;removed:boolean;confirmedAction:"reset"|"remove"|undefined;removedRuleIds:Set<string>;removedValueIds:Set<string>;restoredRuleIds:Set<string>;restoredValueIds:Set<string>;stagedLocalValueIds:Set<string>;overriddenRuleIds:Set<string>;overrideRule:(id:string)=>void;
   pendingAction:"reset"|"remove"|undefined;pendingStructure:readonly FlowPageInstanceStructureCommand[];beginAction:(row:ComposedSchemaRow,focus?:HTMLElement)=>void;cancelAction:()=>void;confirmAction:(row:ComposedSchemaRow)=>void;
   open:(row:ComposedSchemaRow,focus?:HTMLElement,section?:FocusedPropertySection)=>void;commitInline:(row:ComposedSchemaRow,facet:SchemaTableEditableFacet,value:string)=>SchemaTableQuickEditResult;cancelInline:()=>void;inlineDiagnostic:(message:string)=>void;quickEditRoot:()=>ParentNode;quickEditScope:string;close:()=>void;closeChild:()=>void;save:(row:ComposedSchemaRow)=>void;render:()=>void;selectSection:(section:FocusedPropertySection)=>void;
@@ -33,7 +33,8 @@ function focused(row:ComposedSchemaRow,context:ComposedRowsContext):HTMLElement 
 }
 
 export function renderComposedRows(rows:HTMLElement,context:ComposedRowsContext):void {
-  const {dom}=context,table=rows.querySelector<HTMLTableElement>(":scope > table")??dom.createElement("table"),head=dom.createElement("thead"),headRow=dom.createElement("tr"),body=dom.createElement("tbody");
+  clearSchemaTableOverlay(context.overlayHost);
+  const {dom}=context,table=rows.querySelector<HTMLTableElement>(":scope > table")??dom.createElement("table"),head=dom.createElement("thead"),headRow=dom.createElement("tr"),body=dom.createElement("tbody");let pendingOverlay:{trigger:HTMLElement;path:string;layers:HTMLElement[]}|undefined;
   const cell=(index:number,text?:string):HTMLTableCellElement=>{const value=dom.createElement("td"),metadata=schemaTableCellMetadata[index]!;value.dataset.schemaTableCell=metadata.key;value.dataset.schemaTableLabel=metadata.label;if(text!==undefined)value.textContent=text;return value;};
   for(const {label} of schemaTableColumns)headRow.append(Object.assign(dom.createElement("th"),{textContent:label}));
   head.append(headRow);
@@ -41,8 +42,8 @@ export function renderComposedRows(rows:HTMLElement,context:ComposedRowsContext)
   for(const row of context.model.rows){const draft=context.activePath===row.path?context.draft:undefined,tr=dom.createElement("tr"),identity=cell(0),name=dom.createElement("span"),propertyActions=button(dom,"⋯",()=>context.open(row,propertyActions)),effective={...row.effective,...row.local},description=draft?.documentation??String(effective.documentation??""),expected=draft?schemaTableAllowedValues(draft):schemaTableAllowedValues(effective),exampleValue=draft?.exampleValue??(Array.isArray(effective.examples)?effective.examples[0]:undefined);tr.className="composed-schema-row";tr.dataset.effectivePropertyPath=row.path;if(context.rowPathDataset)tr.dataset[context.rowPathDataset]=row.path;tr.dataset.validationState=row.validationState;identity.style.position="relative";name.textContent=row.path.split("/").filter(Boolean).at(-1)??row.path;propertyActions.setAttribute("aria-label",`Property actions for ${row.path}`);propertyActions.dataset.propertyActionsPath=row.path;identity.append(name,propertyActions);if(context.onRepair)for(const repair of row.repairs)identity.append(button(dom,repair.label,()=>context.onRepair?.(repair)));tr.append(identity,cell(1,row.path),cell(2,String(draft?.type??effective.type??"constraint")),cell(3,String(draft?.presence??effective.presence??"optional")));
     for(const [offset,control] of [editable(row,"description",description),editable(row,"expected-or-allowed",expected),editable(row,"example",exampleValue===undefined?"":String(exampleValue))].entries()){const valueCell=cell(offset+4);valueCell.append(control);tr.append(valueCell);}
     tr.append(cell(7,row.source),cell(8,context.removed&&context.activePath===row.path?"Removed":Object.keys(row.local).length>1?`Local · effective ${context.effectiveText(row)}`:"Inherited · effective"),cell(9,`${row.validationState} · ${row.message}`));
-    if(context.overlayOpen&&context.activePath===row.path){const overlay=dom.createElement("section");overlay.dataset.schemaRowOverlay="true";overlay.setAttribute("aria-label",`${row.path} property overlay`);overlay.style.cssText=schemaTableOverlayStyle;overlay.append(contextMenu(row,context));if(context.focusedOpen)overlay.append(focused(row,context));identity.append(overlay);revealSchemaTableOverlay(overlay.lastElementChild as HTMLElement);}
+    if(context.overlayOpen&&context.activePath===row.path){const layers=[contextMenu(row,context)];if(context.focusedOpen)layers.push(focused(row,context));pendingOverlay={trigger:propertyActions,path:row.path,layers};}
     body.append(tr);
   }
-  table.replaceChildren(head,body);table.setAttribute("aria-label",`${context.model.heading} rows`);rows.replaceChildren(table);
+  table.replaceChildren(head,body);table.setAttribute("aria-label",`${context.model.heading} rows`);rows.replaceChildren(table);if(pendingOverlay)mountSchemaTableOverlay(context.overlayHost,pendingOverlay.trigger,pendingOverlay.path,pendingOverlay.layers,()=>{if(context.focusedOpen)context.closeChild();else context.close();});
 }

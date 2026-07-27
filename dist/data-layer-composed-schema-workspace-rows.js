@@ -1,7 +1,7 @@
 import { renderFocusedPropertyMenu } from "./data-layer-focused-schema-property-menu.js";
 import { focusedOwnershipActions, focusedPropertySectionLabels } from "./data-layer-focused-schema-property-ui.js";
 import { renderComposedFocusedSection } from "./data-layer-composed-schema-workspace-focused-sections.js";
-import { bindSchemaTableQuickEdit, revealSchemaTableOverlay, schemaTableAllowedValues, schemaTableCellMetadata, schemaTableColumns, schemaTableOverlayStyle } from "./data-layer-schema-table.js";
+import { bindSchemaTableQuickEdit, clearSchemaTableOverlay, mountSchemaTableOverlay, schemaTableAllowedValues, schemaTableCellMetadata, schemaTableColumns } from "./data-layer-schema-table.js";
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 function applyPersistedItemOwnership(host, row) {
     const overriddenValues = new Set((row.local.allowedValueProvenance ?? []).filter(({ state }) => state === "overridden").map(({ id }) => id));
@@ -89,7 +89,9 @@ function focused(row, context) {
     return editor;
 }
 export function renderComposedRows(rows, context) {
+    clearSchemaTableOverlay(context.overlayHost);
     const { dom } = context, table = rows.querySelector(":scope > table") ?? dom.createElement("table"), head = dom.createElement("thead"), headRow = dom.createElement("tr"), body = dom.createElement("tbody");
+    let pendingOverlay;
     const cell = (index, text) => { const value = dom.createElement("td"), metadata = schemaTableCellMetadata[index]; value.dataset.schemaTableCell = metadata.key; value.dataset.schemaTableLabel = metadata.label; if (text !== undefined)
         value.textContent = text; return value; };
     for (const { label } of schemaTableColumns)
@@ -119,20 +121,20 @@ export function renderComposedRows(rows, context) {
         }
         tr.append(cell(7, row.source), cell(8, context.removed && context.activePath === row.path ? "Removed" : Object.keys(row.local).length > 1 ? `Local · effective ${context.effectiveText(row)}` : "Inherited · effective"), cell(9, `${row.validationState} · ${row.message}`));
         if (context.overlayOpen && context.activePath === row.path) {
-            const overlay = dom.createElement("section");
-            overlay.dataset.schemaRowOverlay = "true";
-            overlay.setAttribute("aria-label", `${row.path} property overlay`);
-            overlay.style.cssText = schemaTableOverlayStyle;
-            overlay.append(contextMenu(row, context));
+            const layers = [contextMenu(row, context)];
             if (context.focusedOpen)
-                overlay.append(focused(row, context));
-            identity.append(overlay);
-            revealSchemaTableOverlay(overlay.lastElementChild);
+                layers.push(focused(row, context));
+            pendingOverlay = { trigger: propertyActions, path: row.path, layers };
         }
         body.append(tr);
     }
     table.replaceChildren(head, body);
     table.setAttribute("aria-label", `${context.model.heading} rows`);
     rows.replaceChildren(table);
+    if (pendingOverlay)
+        mountSchemaTableOverlay(context.overlayHost, pendingOverlay.trigger, pendingOverlay.path, pendingOverlay.layers, () => { if (context.focusedOpen)
+            context.closeChild();
+        else
+            context.close(); });
 }
 //# sourceMappingURL=data-layer-composed-schema-workspace-rows.js.map

@@ -23,6 +23,7 @@ export function renderCanonicalNavigator(context) {
     sort.value = context.propertySort;
     sort.addEventListener("change", () => { context.setPropertySort(sort.value); refresh(); });
     tree.setAttribute("aria-label", "Canonical property search results");
+    tree.dataset.schemaEditorScrollRegion = "true";
     refresh();
     navigator.append(search, filter, sort, tree, labeled(dom, "New root property name", rootName), addRoot);
     navigator.prepend(button(dom, "Table", () => { context.command({ kind: "view", baseRevision: document.revision, view: "table" }); context.render(); }), button(dom, "Tree", () => { context.command({ kind: "view", baseRevision: document.revision, view: "tree" }); context.render(); }));

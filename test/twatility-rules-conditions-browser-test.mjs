@@ -185,7 +185,7 @@ try{
   const openCanonicalRuleTree=async()=>{
     for(let attempt=0;attempt<3;attempt+=1){
       if(!await evaluate(studio,"document.querySelector('[aria-label=\"Shared editable condition tree\"]')?.isConnected")){
-        await evaluate(studio,`(()=>{const root=document.querySelector('[aria-label="Builder canonical schema editor"]');let rule=root.querySelector('[data-rule-id="rule:retail-code"]');if(!rule){root.querySelector('[data-property-id] [aria-label^="Property actions"]').click();[...root.querySelectorAll('[data-property-context-menu="true"] button')].find(({textContent})=>textContent.trim()==='Rules').click();rule=root.querySelector('[data-rule-id="rule:retail-code"]');}const edit=[...rule.querySelectorAll('button')].find(({textContent})=>textContent.trim()==='Edit');edit.click();})()`);
+        await evaluate(studio,`(()=>{const root=document.querySelector('[aria-label="Builder canonical schema editor"]');let rule=[...document.querySelectorAll('[data-rule-id="rule:retail-code"]')].at(-1);if(!rule){root.querySelector('[data-property-id] [aria-label^="Property actions"]').click();[...document.querySelectorAll('[data-property-context-menu="true"] button')].find(({textContent})=>textContent.trim()==='Rules').click();rule=[...document.querySelectorAll('[data-rule-id="rule:retail-code"]')].at(-1);}const edit=[...rule.querySelectorAll('button')].find(({textContent})=>textContent.trim()==='Edit');edit.click();})()`);
       }
       let connected=false;
       for(let poll=0;poll<80;poll+=1){
