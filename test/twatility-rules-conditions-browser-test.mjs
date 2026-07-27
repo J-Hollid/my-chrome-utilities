@@ -184,17 +184,17 @@ try{
   };
   const openCanonicalRuleTree=async()=>{
     for(let attempt=0;attempt<3;attempt+=1){
-      if(!await evaluate(studio,"document.querySelector('[aria-label=\"Shared editable condition tree\"]')?.isConnected")){
+      if(!await evaluate(studio,"document.querySelector('[aria-label=\"Flat When condition list\"]')?.isConnected")){
         await evaluate(studio,`(()=>{const root=document.querySelector('[aria-label="Builder canonical schema editor"]');let rule=[...document.querySelectorAll('[data-rule-id="rule:retail-code"]')].at(-1);if(!rule){root.querySelector('[data-property-id] [aria-label^="Property actions"]').click();[...document.querySelectorAll('[data-property-context-menu="true"] button')].find(({textContent})=>textContent.trim()==='Rules').click();rule=[...document.querySelectorAll('[data-rule-id="rule:retail-code"]')].at(-1);}const edit=[...rule.querySelectorAll('button')].find(({textContent})=>textContent.trim()==='Edit');edit.click();})()`);
       }
       let connected=false;
       for(let poll=0;poll<80;poll+=1){
-        if(await evaluate(studio,"document.querySelector('[aria-label=\"Shared editable condition tree\"]')?.isConnected")){connected=true;break;}
+        if(await evaluate(studio,"document.querySelector('[aria-label=\"Flat When condition list\"]')?.isConnected")){connected=true;break;}
         await wait(25);
       }
       if(!connected)continue;
       await wait(100);
-      if(await evaluate(studio,"document.querySelector('[aria-label=\"Shared editable condition tree\"]')?.isConnected"))return;
+      if(await evaluate(studio,"document.querySelector('[aria-label=\"Flat When condition list\"]')?.isConnected"))return;
     }
     throw new Error("Canonical shared condition tree did not settle");
   };
@@ -206,7 +206,7 @@ try{
     const unnamed=controls.filter((control)=>!((control.getAttribute('aria-label')||control.textContent||control.value||'').trim())&&!control.labels?.length).map(({tagName})=>tagName);
     const broken=[...root.querySelectorAll('[aria-controls],[aria-labelledby],[aria-describedby]')].flatMap((element)=>['aria-controls','aria-labelledby','aria-describedby'].flatMap((name)=>(element.getAttribute(name)||'').split(/\\s+/).filter(Boolean).filter((id)=>!document.getElementById(id)).map((id)=>name+':'+id)));
     const rect=root.getBoundingClientRect(),horizontalOut=[...root.querySelectorAll('[data-condition-kind],button,input,select,textarea')].filter((element)=>{const bounds=element.getBoundingClientRect();return bounds.width&&(bounds.left<-.5||bounds.right>innerWidth+.5);}).map((element)=>element.getAttribute('aria-label')||element.textContent?.trim()||element.tagName);
-    const localTreeOut=[...root.querySelectorAll('[aria-label="Shared editable condition tree"],[aria-label="Shared editable project condition tree"]')].flatMap((tree)=>{const container=tree.getBoundingClientRect();return[...tree.querySelectorAll('[data-condition-kind],button,input,select,textarea,label')].filter((element)=>{const bounds=element.getBoundingClientRect();return bounds.width&&(bounds.left<container.left-.5||bounds.right>container.right+.5);}).map((element)=>element.getAttribute('aria-label')||element.textContent?.trim()||element.tagName);});
+    const localTreeOut=[...root.querySelectorAll('[aria-label="Flat When condition list"],[aria-label="Shared editable condition tree"],[aria-label="Shared editable project condition tree"]')].flatMap((tree)=>{const container=tree.getBoundingClientRect();return[...tree.querySelectorAll('[data-condition-kind],button,input,select,textarea,label')].filter((element)=>{const bounds=element.getBoundingClientRect();return bounds.width&&(bounds.left<container.left-.5||bounds.right>container.right+.5);}).map((element)=>element.getAttribute('aria-label')||element.textContent?.trim()||element.tagName);});
     return{equivalent:JSON.stringify(branded)===JSON.stringify(unbranded),unnamed,broken,horizontalOut,localTreeOut,overflow:document.documentElement.scrollWidth>innerWidth+1||rect.left<-.5||rect.right>innerWidth+.5||horizontalOut.length>0||localTreeOut.length>0,width:innerWidth,height:innerHeight,controls:controls.length};
   })()`);
 
@@ -214,19 +214,19 @@ try{
   await ready(studio,"document.querySelector('[aria-label=\"Builder canonical schema editor\"] [data-property-id]')?.isConnected","canonical property");
   studio.events.length=0;
   await openCanonicalRuleTree();
-  const canonical1280=await inspect(studio,'[aria-label="Builder canonical schema editor"]');
-  assert.equal(await evaluate(studio,"Boolean(document.querySelector('[data-rule-id=\"rule:retail-code\"] [data-condition-kind=\"group\"]')&&document.querySelector('[data-rule-id=\"rule:retail-code\"] [data-condition-kind=\"predicate\"]')&&!document.querySelector('[data-rule-id=\"rule:retail-code\"] button:is([aria-label=\"View\"],[aria-label=\"Add child\"])'))"),true);
-  await evaluate(studio,"document.querySelector('[aria-label=\"Shared editable condition tree\"]').scrollIntoView({block:'center'})");
+  const canonical1280=await inspect(studio,':modal [data-focused-property-editor="true"]');
+  assert.equal(await evaluate(studio,"Boolean(document.querySelector('[data-rule-id=\"rule:retail-code\"] [aria-label=\"Rule match mode\"]')?.value==='all'&&document.querySelector('[data-rule-id=\"rule:retail-code\"] [data-condition-kind=\"predicate\"]')&&!document.querySelector('[data-rule-id=\"rule:retail-code\"] button:is([aria-label=\"View\"],[aria-label=\"Add child\"])'))"),true);
+  await evaluate(studio,"document.querySelector('[aria-label=\"Flat When condition list\"]').scrollIntoView({block:'center'})");
   await wait(50);
   await screenshot(studio,path.join(evidenceDirectory,"canonical-rules-1280x900.png"));
-  const focusBefore=await evaluate(studio,"(()=>{const control=document.querySelector('[aria-label=\"Shared editable condition tree\"] [aria-label=\"Condition group relation\"]');control.focus();return control===document.activeElement;})()");
+  const focusBefore=await evaluate(studio,"(()=>{const control=document.querySelector('[aria-label=\"Flat When condition list\"] [aria-label=\"Rule match mode\"]');control.focus();return control===document.activeElement;})()");
   assert.equal(focusBefore,true);await nativeTab(studio);
-  assert.equal(await evaluate(studio,"document.activeElement?.getAttribute('aria-label')!=='Condition group relation'"),true,"native Tab advances within the installed shared tree");
+  assert.equal(await evaluate(studio,"document.activeElement?.getAttribute('aria-label')!=='Rule match mode'"),true,"native Tab advances within the installed flat condition list");
   await metrics(studio,360,800);
   await openCanonicalRuleTree();
-  await evaluate(studio,"document.querySelector('[aria-label=\"Shared editable condition tree\"]').scrollIntoView({block:'center'})");
+  await evaluate(studio,"document.querySelector('[aria-label=\"Flat When condition list\"]').scrollIntoView({block:'center'})");
   await wait(50);
-  const canonical360=await inspect(studio,'[aria-label="Builder canonical schema editor"]');
+  const canonical360=await inspect(studio,':modal [data-focused-property-editor="true"]');
   await screenshot(studio,path.join(evidenceDirectory,"canonical-rules-360x800.png"));
 
   await openNamed("applicabilitySets","Retail eligibility");
@@ -256,8 +256,8 @@ try{
   await evaluate(sidePanel,"(()=>{const entry=document.querySelector('[data-schema-entry-key^=\"profiles:\"]'),open=[...entry.querySelectorAll('button')].find(({textContent})=>textContent.trim()==='Open schema');open.click();})()");
   await ready(sidePanel,"document.querySelector('[data-schema-presentation=\"compact-panel\"] [data-schema-property-canonical-path=\"/customer_type\"]')?.isConnected","compact canonical property");
   await evaluate(sidePanel,"document.querySelector('[data-schema-property-canonical-path=\"/customer_type\"]').click()");
-  await ready(sidePanel,"document.querySelector('[aria-label^=\"Nested rule predicate\"] [aria-label=\"Shared editable condition tree\"]')?.isConnected","compact shared rule condition");
-  await evaluate(sidePanel,"document.querySelector('[aria-label^=\"Nested rule predicate\"] [aria-label=\"Shared editable condition tree\"]').scrollIntoView({block:'center'})");
+  await ready(sidePanel,"document.querySelector('[aria-label^=\"Nested rule predicate\"] [aria-label=\"Flat When condition list\"]')?.isConnected","compact shared rule condition");
+  await evaluate(sidePanel,"document.querySelector('[aria-label^=\"Nested rule predicate\"] [aria-label=\"Flat When condition list\"]').scrollIntoView({block:'center'})");
   await wait(50);
   const side360=await inspect(sidePanel,'[data-schema-presentation="compact-panel"]');
   await screenshot(sidePanel,path.join(evidenceDirectory,"side-panel-rules-360x800.png"));

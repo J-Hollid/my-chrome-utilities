@@ -17,8 +17,9 @@ const predicateRows = (condition) => {
     return condition.children.flatMap(predicateRows);
 };
 export const sharedFlatConditionRows = (condition) => predicateRows(condition).map(({ id, propertyId, operator, value }) => ({ ...(id ? { id } : {}), propertyId, operator, ...(value !== undefined ? { value } : {}) }));
+const completeConditionValue = (value) => value !== undefined && !(typeof value === "string" && !value.trim()) && !(Array.isArray(value) && !value.length);
 export const sharedFlatConditionResult = (mode, rows) => {
-    if (!rows.length || rows.some(({ propertyId, operator, value }) => !propertyId || !operator || !existence.includes(operator) && value === undefined))
+    if (!rows.length || rows.some(({ propertyId, operator, value }) => !propertyId.trim() || !operator || !existence.includes(operator) && !completeConditionValue(value)))
         return undefined;
     return { kind: mode, children: rows.map(({ id, propertyId, operator, value }) => ({ kind: "predicate", ...(id ? { id } : {}), propertyId, operator: operator, ...(existence.includes(operator) ? {} : { value }) })) };
 };
@@ -30,13 +31,14 @@ export function renderSharedConditionTree(host, options) {
     if (!dom.getElementById("flat-rule-builder-responsive-style")) {
         const style = dom.createElement("style");
         style.id = "flat-rule-builder-responsive-style";
-        style.textContent = `[data-rule-editor-mode]{box-sizing:border-box;min-width:0;max-width:100%;overflow-x:hidden}[data-rule-editor-mode] *{box-sizing:border-box;max-width:100%}[data-condition-layout="responsive"] label{display:grid;gap:.2rem;min-width:0}[data-condition-layout="responsive"] input,[data-condition-layout="responsive"] select{box-sizing:border-box;max-width:100%;width:100%}[data-rule-editor-mode] section{display:grid;gap:.5rem;min-width:0}[data-rule-editor-mode] [aria-label="Rule actions"]{position:sticky;bottom:0;z-index:1;background:Canvas;padding:.5rem 0}[data-rule-editor-mode] h3,[data-condition-layout="responsive"] h4{margin:.4rem 0 .1rem}@media(max-width:600px){[data-condition-layout="responsive"] [data-condition-kind="predicate"]{grid-template-columns:minmax(0,1fr)!important}}`;
+        style.textContent = `[data-rule-editor-mode]{display:grid;grid-template-columns:minmax(0,1fr)!important;box-sizing:border-box;min-width:0;max-width:100%}[data-rule-editor-mode] *{box-sizing:border-box;max-width:100%}[data-rule-editor-mode] label{display:grid;gap:.2rem;min-width:0}[data-rule-editor-mode] input,[data-rule-editor-mode] select{box-sizing:border-box;max-width:100%;min-width:0;width:100%}[data-rule-editor-mode] select{overflow:hidden;text-overflow:ellipsis}[data-rule-editor-mode] section{display:grid;gap:.5rem;min-width:0}[data-rule-field-grid="true"]{grid-template-columns:repeat(2,minmax(0,1fr))}[data-rule-field-grid="true"]>h3{grid-column:1/-1}[data-rule-editor-mode] [aria-label="Rule actions"]{position:sticky;bottom:0;z-index:1;background:Canvas;padding:.5rem 0}[data-rule-editor-mode] h3,[data-condition-layout="responsive"] h4{margin:.4rem 0 .1rem}@media(max-width:600px){[data-condition-layout="responsive"] [data-condition-kind="predicate"],[data-rule-field-grid="true"]{grid-template-columns:minmax(0,1fr)!important}[data-condition-kind="predicate"]>button{min-width:0;width:100%}}`;
         dom.head.append(style);
     }
     let focusRowId;
     const properties = () => options.properties(), selected = (row) => properties().find(({ id }) => id === row.propertyId);
     const emit = () => options.onChange(sharedFlatConditionResult(mode, rows));
     const render = () => {
+        host.closest("[data-rule-editor-mode]")?.querySelectorAll("[data-condition-property-listbox]").forEach((popup) => popup.remove());
         host.replaceChildren();
         host.setAttribute("aria-label", "Flat When condition list");
         host.dataset.conditionLayout = "responsive";
@@ -48,7 +50,7 @@ export function renderSharedConditionTree(host, options) {
         match.addEventListener("change", () => { mode = match.value; emit(); });
         list.setAttribute("role", "list");
         list.setAttribute("aria-label", "Condition rows");
-        const chooseProperty = (row, entry, property, operator, listbox) => { row.propertyId = entry.id; row.operator = ""; delete row.value; property.value = entry.name; property.setAttribute("aria-expanded", "false"); listbox.remove(); renderOperators(row, operator); emit(); operator.focus({ preventScroll: true }); };
+        const chooseProperty = (row, entry, property, operator, listbox) => { row.propertyId = entry.id; row.operator = ""; delete row.value; property.value = entry.name; property.setAttribute("aria-expanded", "false"); listbox.hidden = true; renderOperators(row, operator); emit(); operator.focus({ preventScroll: true }); };
         const propertyControl = (row, operator) => {
             const wrapper = dom.createElement("span"), property = dom.createElement("input"), listbox = dom.createElement("div"), listboxId = `condition-property-list-${crypto.randomUUID()}`;
             wrapper.style.cssText = "position:relative;min-width:0;";
@@ -61,11 +63,17 @@ export function renderSharedConditionTree(host, options) {
             property.setAttribute("aria-controls", listboxId);
             property.setAttribute("aria-expanded", "false");
             listbox.id = listboxId;
+            listbox.hidden = true;
+            listbox.dataset.conditionPropertyListbox = "true";
             listbox.setAttribute("role", "listbox");
             listbox.setAttribute("aria-label", "Matching condition properties");
-            listbox.style.cssText = "position:fixed;z-index:2147483647;box-sizing:border-box;overflow-y:auto;overflow-x:hidden;background:Canvas;border:1px solid ButtonBorder;padding:0.25rem;";
-            let activeIndex = 0;
-            const close = () => { property.setAttribute("aria-expanded", "false"); listbox.remove(); };
+            listbox.style.cssText = "position:absolute;z-index:2147483647;box-sizing:border-box;overflow-y:auto;overflow-x:hidden;background:Canvas;border:1px solid ButtonBorder;padding:0.25rem;";
+            let activeIndex = -1;
+            const close = () => { property.setAttribute("aria-expanded", "false"); listbox.hidden = true; };
+            const editorElement = host.closest("[data-rule-editor-mode]") ?? host;
+            if (getComputedStyle(editorElement).position === "static")
+                editorElement.style.position = "relative";
+            editorElement.append(listbox);
             const open = () => { const query = property.value.trim().toLocaleLowerCase(), choices = properties().filter(({ id, name }) => !query || name.toLocaleLowerCase().includes(query) || id.toLocaleLowerCase().includes(query)); listbox.replaceChildren(); for (const [index, entry] of choices.entries()) {
                 const option = dom.createElement("div");
                 option.setAttribute("role", "option");
@@ -75,19 +83,21 @@ export function renderSharedConditionTree(host, options) {
                 option.style.cssText = "padding:0.35rem 0.5rem;cursor:pointer;";
                 option.addEventListener("mousedown", (event) => event.preventDefault());
                 option.addEventListener("click", () => chooseProperty(row, entry, property, operator, listbox));
-                if (index === activeIndex)
-                    option.setAttribute("aria-selected", "true");
+                option.setAttribute("aria-selected", String(index === activeIndex));
                 listbox.append(option);
-            } if (!listbox.isConnected)
-                dom.body.append(listbox); property.setAttribute("aria-expanded", "true"); requestAnimationFrame(() => { const field = property.getBoundingClientRect(), editor = host.closest("[data-focused-property-editor]")?.getBoundingClientRect(), left = Math.max(editor?.left ?? 8, Math.min(field.left, (editor?.right ?? innerWidth - 8) - Math.max(field.width, 180))), below = (editor?.bottom ?? innerHeight - 8) - field.bottom, above = field.top - (editor?.top ?? 8), flip = below < 160 && above > below, maxHeight = Math.max(80, Math.min(240, (flip ? above : below) - 8)); listbox.style.left = `${left}px`; listbox.style.width = `${Math.max(field.width, 180)}px`; listbox.style.maxHeight = `${maxHeight}px`; listbox.style.top = flip ? `${Math.max(editor?.top ?? 8, field.top - Math.min(listbox.scrollHeight, maxHeight))}px` : `${field.bottom}px`; }); };
-            Object.defineProperty(property, "options", { configurable: true, get: () => properties().map(({ id, name }) => new Option(name, id)) });
+            } listbox.hidden = false; property.setAttribute("aria-expanded", "true"); requestAnimationFrame(() => { const field = property.getBoundingClientRect(), editor = editorElement.getBoundingClientRect(), viewportWidth = dom.defaultView?.innerWidth ?? editor.right, viewportHeight = dom.defaultView?.innerHeight ?? editor.bottom, leftEdge = Math.max(0, editor.left), rightEdge = Math.min(viewportWidth, editor.left + editorElement.clientWidth), topEdge = Math.max(0, editor.top), bottomEdge = Math.min(viewportHeight, editor.top + editorElement.clientHeight), width = Math.max(1, Math.min(Math.max(field.width, 180), rightEdge - leftEdge)), left = Math.max(leftEdge, Math.min(field.left, rightEdge - width)), below = bottomEdge - field.bottom, above = field.top - topEdge, flip = below < 160 && above > below, maxHeight = Math.max(1, Math.min(240, (flip ? above : below) - 8)), popupTop = flip ? Math.max(topEdge, field.top - Math.min(listbox.scrollHeight, maxHeight)) : field.bottom, absoluteLeft = left - editor.left + editorElement.scrollLeft, absoluteTop = popupTop - editor.top + editorElement.scrollTop; listbox.style.left = `${absoluteLeft}px`; listbox.style.width = `${width}px`; listbox.style.maxHeight = `${maxHeight}px`; listbox.style.top = `${absoluteTop}px`; requestAnimationFrame(() => { if (!listbox.isConnected)
+                return; const currentField = property.getBoundingClientRect(), currentPopup = listbox.getBoundingClientRect(), desiredTop = flip ? currentField.top - currentPopup.height : currentField.bottom; listbox.style.top = `${Number.parseFloat(listbox.style.top) + (desiredTop - currentPopup.top)}px`; }); }); };
             property.addEventListener("focus", open);
-            property.addEventListener("input", () => { row.propertyId = ""; row.operator = ""; delete row.value; activeIndex = 0; renderOperators(row, operator); emit(); open(); });
-            property.addEventListener("change", () => { const entry = properties().find(({ id, name }) => id === property.value || name === property.value); if (entry)
-                chooseProperty(row, entry, property, operator, listbox); });
+            property.addEventListener("input", () => { row.propertyId = ""; row.operator = ""; delete row.value; activeIndex = -1; renderOperators(row, operator); emit(); open(); });
             property.addEventListener("keydown", (event) => { const choices = Array.from(listbox.querySelectorAll('[role="option"]')); if (event.key === "ArrowDown") {
                 event.preventDefault();
                 activeIndex = Math.min(activeIndex + 1, Math.max(0, choices.length - 1));
+                choices.forEach((choice, index) => choice.setAttribute("aria-selected", String(index === activeIndex)));
+                choices[activeIndex]?.scrollIntoView({ block: "nearest" });
+            }
+            else if (event.key === "ArrowUp") {
+                event.preventDefault();
+                activeIndex = Math.max(0, activeIndex < 0 ? choices.length - 1 : activeIndex - 1);
                 choices.forEach((choice, index) => choice.setAttribute("aria-selected", String(index === activeIndex)));
                 choices[activeIndex]?.scrollIntoView({ block: "nearest" });
             }
@@ -132,7 +142,7 @@ export function renderSharedConditionTree(host, options) {
                 else if (multi)
                     row.value = text.split(",").map((value) => value.trim()).filter(Boolean).map((value) => typedValue(entry.type === "array" ? "string" : entry.type, value));
                 else
-                    row.value = typedValue(entry.type, text);
+                    row.value = text.trim() === "" ? undefined : typedValue(entry.type, text);
                 control.setCustomValidity("");
                 emit();
             }

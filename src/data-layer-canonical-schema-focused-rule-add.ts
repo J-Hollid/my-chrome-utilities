@@ -8,6 +8,7 @@ const labeled=(dom:Document,text:string,control:HTMLElement):HTMLLabelElement=>{
 const input=(dom:Document,name:string,value="",type="text"):HTMLInputElement=>{const control=dom.createElement("input");control.name=name;control.type=type;control.value=value;return control;};
 const button=(dom:Document,text:string,run:()=>void):HTMLButtonElement=>{const control=dom.createElement("button");control.type="button";control.textContent=text;control.addEventListener("click",run);return control;};
 const numericFields=new Set(["minimum","maximum","minItems","maxItems"]);
+const fieldLabel=(field:string):string=>({ordinaryValue:"Allowed values",pattern:"Regular expression",minimum:"Minimum",maximum:"Maximum",minItems:"Minimum items",maxItems:"Maximum items",severity:"Severity",message:"Message"}[field]??field);
 const section=(dom:Document,title:string):HTMLElement=>{const value=dom.createElement("section"),heading=dom.createElement("h3");heading.textContent=title;value.append(heading);return value;};
 
 export function renderCanonicalRuleAddPanel(host:HTMLElement,context:CanonicalFocusedRuleAddContext):void {
@@ -19,7 +20,7 @@ export function renderCanonicalRuleAddPanel(host:HTMLElement,context:CanonicalFo
     opener.remove();
     const panel=dom.createElement("fieldset"),legend=dom.createElement("legend"),details=section(dom,"Rule details"),when=section(dom,"When"),then=section(dom,"Then"),severitySection=section(dom,"Severity and message"),actions=section(dom,"Rule actions"),kind=dom.createElement("select"),fields=dom.createElement("div"),status=dom.createElement("p"),name=input(dom,"newRuleName");
     let condition:CanonicalPredicate|undefined;
-    panel.dataset.ruleEditorMode="add";panel.setAttribute("aria-label","Add rule editor");legend.textContent="Add rule";status.setAttribute("role","status");kind.name="ruleKind";kind.required=true;kind.append(new Option("Choose rule type",""),...(["presence","value","pattern","range","cardinality","reusable"] as const).map((entry)=>new Option(entry,entry)));
+    panel.dataset.ruleEditorMode="add";fields.dataset.ruleFieldGrid="true";severitySection.dataset.ruleFieldGrid="true";panel.setAttribute("aria-label","Add rule editor");legend.textContent="Add rule";status.setAttribute("role","status");kind.name="ruleKind";kind.required=true;kind.append(new Option("Choose rule type",""),...(["presence","value","pattern","range","cardinality","reusable"] as const).map((entry)=>new Option(entry,entry)));
     details.append(labeled(dom,"Rule name",name),labeled(dom,"Rule type",kind));
     const conditionHost=dom.createElement("div");when.append(conditionHost);
     const candidate=():CanonicalRule|undefined=>{
@@ -47,7 +48,7 @@ export function renderCanonicalRuleAddPanel(host:HTMLElement,context:CanonicalFo
           search.addEventListener("input",renderChoices);reusable.addEventListener("change",validate);renderChoices();fields.append(labeled(dom,"Search reusable rules",search),labeled(dom,"Reusable rule",reusable));continue;
         }
         if(field==="presence"){const control=dom.createElement("select");control.name="newRulePresence";control.append(new Option("Choose presence",""),new Option("Required","required"),new Option("Optional","optional"),new Option("Forbidden","forbidden"));control.addEventListener("change",validate);fields.append(labeled(dom,"Presence",control));continue;}
-        const control=input(dom,`newRule${field[0]!.toUpperCase()+field.slice(1)}`,"",numericFields.has(field)?"number":"text");control.addEventListener("input",validate);fields.append(labeled(dom,field==="ordinaryValue"?"Allowed values":field,control));
+        const control=input(dom,`newRule${field[0]!.toUpperCase()+field.slice(1)}`,"",numericFields.has(field)?"number":"text");control.addEventListener("input",validate);fields.append(labeled(dom,fieldLabel(field),control));
       }
       validate();
     };

@@ -6,11 +6,14 @@ const labeled = (dom, text, control) => { const label = dom.createElement("label
 const input = (dom, name, value = "", type = "text") => { const control = dom.createElement("input"); control.name = name; control.type = type; control.value = value; return control; };
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 const ruleKindLabel = (rule) => rule.name ?? rule.kind;
+const fieldLabel = (field) => ({ pattern: "Regular expression", minimum: "Minimum", maximum: "Maximum", minItems: "Minimum items", maxItems: "Maximum items", severity: "Severity", message: "Message" }[field] ?? field);
 function editRule(row, rule, context, invoker) {
     const { dom } = context, editor = dom.createElement("fieldset"), legend = dom.createElement("legend"), draft = clone(rule), status = dom.createElement("p"), details = dom.createElement("section"), when = dom.createElement("section"), then = dom.createElement("section"), severitySection = dom.createElement("section"), actions = dom.createElement("section");
     let save;
     const headed = (host, text) => { const heading = dom.createElement("h3"); heading.textContent = text; host.append(heading); };
     editor.dataset.ruleEditorMode = "edit";
+    then.dataset.ruleFieldGrid = "true";
+    severitySection.dataset.ruleFieldGrid = "true";
     editor.setAttribute("aria-label", `Edit rule ${rule.id}`);
     legend.textContent = `Edit ${ruleKindLabel(rule)}`;
     status.setAttribute("role", "status");
@@ -64,7 +67,7 @@ function editRule(row, rule, context, invoker) {
             control.value = draft.severity;
         }
         control.addEventListener("input", () => { draft[field] = control.value === "" ? undefined : numeric ? Number(control.value) : control.value; validate(); });
-        (field === "severity" || field === "message" ? severitySection : then).append(labeled(dom, field, control));
+        (field === "severity" || field === "message" ? severitySection : then).append(labeled(dom, fieldLabel(field), control));
     }
     save = button(dom, "Save rule", () => { const working = context.getWorking(); if (!working)
         return; const index = working.rules.findIndex(({ id }) => id === rule.id); if (index < 0)

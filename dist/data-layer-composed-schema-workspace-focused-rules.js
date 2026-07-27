@@ -4,6 +4,7 @@ import { schemaTableAllowedValues, schemaTableRuleConditionSummary, schemaTableR
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 const numericFields = new Set(["minimum", "maximum", "minItems", "maxItems"]);
+const fieldLabel = (field) => ({ pattern: "Regular expression", minimum: "Minimum", maximum: "Maximum", minItems: "Minimum items", maxItems: "Maximum items", severity: "Severity", message: "Message" }[field] ?? field);
 const clone = (value) => structuredClone(value);
 const properties = (context) => () => context.model.rows.map(({ path, effective }) => ({ id: effective.definitionId ?? path, name: path.split("/").filter(Boolean).at(-1) ?? path, ...(effective.type ? { type: effective.type } : {}) }));
 const section = (dom, title) => { const host = dom.createElement("section"), heading = dom.createElement("h3"); heading.textContent = title; host.append(heading); return host; };
@@ -11,6 +12,8 @@ function renderRuleEditor(row, rule, index, context, invoker) {
     const { dom } = context, draftRule = clone(rule), editor = dom.createElement("fieldset"), details = section(dom, "Rule details"), when = section(dom, "When"), then = section(dom, "Then"), severity = section(dom, "Severity and message"), actions = section(dom, "Rule actions"), status = dom.createElement("p");
     let save;
     editor.dataset.ruleEditorMode = "edit";
+    then.dataset.ruleFieldGrid = "true";
+    severity.dataset.ruleFieldGrid = "true";
     editor.setAttribute("aria-label", `Edit rule ${String(rule.id ?? index)}`);
     actions.setAttribute("aria-label", "Rule actions");
     status.setAttribute("role", "status");
@@ -64,7 +67,7 @@ function renderRuleEditor(row, rule, index, context, invoker) {
             delete draftRule[field];
         else
             draftRule[field] = numericFields.has(field) ? Number(control.value) : control.value; validate(); });
-        (field === "severity" || field === "message" ? severity : then).append(labeled(dom, field, control));
+        (field === "severity" || field === "message" ? severity : then).append(labeled(dom, fieldLabel(field), control));
     }
     save = button(dom, "Save rule", () => { const draft = context.getDraft(), issue = focusedRuleIssue(draftRule); if (!draft)
         return; if (issue) {
@@ -123,6 +126,8 @@ function renderAddPanel(host, context) {
         const panel = dom.createElement("fieldset"), details = section(dom, "Rule details"), when = section(dom, "When"), then = section(dom, "Then"), severity = section(dom, "Severity and message"), actions = section(dom, "Rule actions"), kind = dom.createElement("select"), name = dom.createElement("input"), fields = dom.createElement("div"), status = dom.createElement("p");
         let condition;
         panel.dataset.ruleEditorMode = "add";
+        fields.dataset.ruleFieldGrid = "true";
+        severity.dataset.ruleFieldGrid = "true";
         panel.setAttribute("aria-label", "Add rule editor");
         actions.setAttribute("aria-label", "Rule actions");
         status.setAttribute("role", "status");
@@ -178,7 +183,7 @@ function renderAddPanel(host, context) {
             if (numericFields.has(field))
                 control.type = "number";
             control.addEventListener("input", validate);
-            fields.append(labeled(dom, field === "ordinaryValue" ? "Allowed values" : field, control));
+            fields.append(labeled(dom, field === "ordinaryValue" ? "Allowed values" : fieldLabel(field), control));
         } validate(); };
         const tree = dom.createElement("div");
         when.append(tree);

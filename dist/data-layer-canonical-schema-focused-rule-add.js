@@ -5,6 +5,7 @@ const labeled = (dom, text, control) => { const label = dom.createElement("label
 const input = (dom, name, value = "", type = "text") => { const control = dom.createElement("input"); control.name = name; control.type = type; control.value = value; return control; };
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 const numericFields = new Set(["minimum", "maximum", "minItems", "maxItems"]);
+const fieldLabel = (field) => ({ ordinaryValue: "Allowed values", pattern: "Regular expression", minimum: "Minimum", maximum: "Maximum", minItems: "Minimum items", maxItems: "Maximum items", severity: "Severity", message: "Message" }[field] ?? field);
 const section = (dom, title) => { const value = dom.createElement("section"), heading = dom.createElement("h3"); heading.textContent = title; value.append(heading); return value; };
 export function renderCanonicalRuleAddPanel(host, context) {
     const { dom } = context;
@@ -18,6 +19,8 @@ export function renderCanonicalRuleAddPanel(host, context) {
         const panel = dom.createElement("fieldset"), legend = dom.createElement("legend"), details = section(dom, "Rule details"), when = section(dom, "When"), then = section(dom, "Then"), severitySection = section(dom, "Severity and message"), actions = section(dom, "Rule actions"), kind = dom.createElement("select"), fields = dom.createElement("div"), status = dom.createElement("p"), name = input(dom, "newRuleName");
         let condition;
         panel.dataset.ruleEditorMode = "add";
+        fields.dataset.ruleFieldGrid = "true";
+        severitySection.dataset.ruleFieldGrid = "true";
         panel.setAttribute("aria-label", "Add rule editor");
         legend.textContent = "Add rule";
         status.setAttribute("role", "status");
@@ -88,7 +91,7 @@ export function renderCanonicalRuleAddPanel(host, context) {
                 }
                 const control = input(dom, `newRule${field[0].toUpperCase() + field.slice(1)}`, "", numericFields.has(field) ? "number" : "text");
                 control.addEventListener("input", validate);
-                fields.append(labeled(dom, field === "ordinaryValue" ? "Allowed values" : field, control));
+                fields.append(labeled(dom, fieldLabel(field), control));
             }
             validate();
         };

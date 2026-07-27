@@ -1,19 +1,25 @@
-const unresolvedConditionProperty=(condition:unknown):boolean=>{
+const existenceOperators=new Set(["Exists","Does not exist"]);
+const incompleteConditionPredicate=(condition:unknown):boolean=>{
   if(!condition||typeof condition!=="object")return true;
   const value=condition as Record<string,unknown>;
-  if(value.kind==="predicate")return!String(value.propertyId??"").trim();
-  return Array.isArray(value.children)?value.children.some(unresolvedConditionProperty):true;
+  if(value.kind==="predicate"){
+    const operator=String(value.operator??"").trim();
+    if(!String(value.propertyId??"").trim()||!operator)return true;
+    return!existenceOperators.has(operator)&&(value.value===undefined||typeof value.value==="string"&&!value.value.trim()||Array.isArray(value.value)&&!value.value.length);
+  }
+  return Array.isArray(value.children)?value.children.some(incompleteConditionPredicate):true;
 };
 const flatConditionIssue=(condition:unknown):boolean=>{
   if(!condition||typeof condition!=="object")return true;
   const value=condition as Record<string,unknown>;
   if(!["all","any"].includes(String(value.kind))||!Array.isArray(value.children)||!value.children.length)return true;
-  return value.children.some((child)=>!child||typeof child!=="object"||(child as Record<string,unknown>).kind!=="predicate"||unresolvedConditionProperty(child));
+  return value.children.some((child)=>!child||typeof child!=="object"||(child as Record<string,unknown>).kind!=="predicate"||incompleteConditionPredicate(child));
 };
 
 /** Validate a staged rule without depending on a browser or persistence adapter. */
 export function focusedRuleIssue(rule:Record<string,unknown>):string|undefined {
-  if(["presence","value","pattern","range","cardinality","reusable"].includes(String(rule.kind))&&flatConditionIssue(rule.condition))return"Add at least one complete condition.";
+  if(["presence","value","pattern","range","cardinality","reusable"].includes(String(rule.kind))&&!String(rule.name??"").trim())return"Enter a rule name.";
+  if(["presence","value","pattern","range","cardinality","reusable"].includes(String(rule.kind))&&flatConditionIssue(rule.condition))return"Complete or remove the condition.";
   if(rule.kind==="presence"&&!["required","optional","forbidden"].includes(String(rule.presence??"")))return"Choose Required, Optional, or Forbidden.";
   if(rule.kind==="value"&&!(Array.isArray(rule.allowedValues)&&rule.allowedValues.length))return"Enter at least one allowed value.";
   if(rule.kind==="pattern"&&!String(rule.pattern??"").trim())return"Enter a regular expression.";
