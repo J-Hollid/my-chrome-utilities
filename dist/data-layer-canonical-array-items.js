@@ -30,11 +30,33 @@ export function canonicalArrayBoundaries(document, propertyId) {
         if (node)
             ancestors.unshift(node);
     }
-    return ancestors.flatMap((ancestor) => ancestor.type === "array" ? [{ propertyId: ancestor.id, name: ancestor.name.replace(/s$/, "") }] : []);
+    return ancestors.flatMap((ancestor) => {
+        if (ancestor.type !== "array")
+            return [];
+        const name = ancestor.name.replace(/s$/, ""), boundaries = [{ propertyId: ancestor.id, name }];
+        let item = ancestor.itemSchema;
+        while (item?.type === "array") {
+            boundaries.push({ propertyId: item.id, name: `${name}${" item".repeat(boundaries.length)}` });
+            item = item.items;
+        }
+        return boundaries;
+    });
 }
 const orderedChildren = (document, parentId) => Object.values(document.nodes)
     .filter((node) => node.parentId === parentId)
     .sort((left, right) => left.order - right.order || left.id.localeCompare(right.id));
+const itemSchemaDefinition = (item, children, document) => {
+    const definition = { ...(item.type ? { type: item.type } : {}) };
+    if (item.type === "array" && item.items)
+        definition.items = itemSchemaDefinition(item.items, children, document);
+    if (item.type === "object" && children.length) {
+        definition.properties = Object.fromEntries(children.map((child) => [child.name, schemaForNode(document, child)]));
+        const required = children.filter(({ presence }) => presence.mode.startsWith("required")).map(({ name }) => name);
+        if (required.length)
+            definition.required = required;
+    }
+    return definition;
+};
 const schemaForNode = (document, node) => {
     const children = orderedChildren(document, node.id);
     const definition = { type: node.type };
@@ -43,11 +65,7 @@ const schemaForNode = (document, node) => {
     if (node.type === "array") {
         const itemType = node.itemSchema?.type ?? node.itemType;
         if (itemType) {
-            let items = { type: itemType };
-            if (itemType === "array" && node.itemSchema?.items)
-                items = { type: "array", items: itemSchemaDefinition(node.itemSchema.items) };
-            if (itemType === "object" && children.length)
-                items.properties = Object.fromEntries(children.map((child) => [child.name, schemaForNode(document, child)]));
+            const items = node.itemSchema ? itemSchemaDefinition(node.itemSchema, children, document) : itemSchemaDefinition({ id: `item:${node.id}`, type: itemType }, children, document);
             definition.items = items;
         }
     }
@@ -63,10 +81,6 @@ const schemaForNode = (document, node) => {
     }
     return definition;
 };
-const itemSchemaDefinition = (item) => ({
-    ...(item.type ? { type: item.type } : {}),
-    ...(item.type === "array" && item.items ? { items: itemSchemaDefinition(item.items) } : {}),
-});
 export function canonicalJsonSchemaDocument(document) {
     const roots = orderedChildren(document);
     const result = { type: "object", properties: Object.fromEntries(roots.map((node) => [node.name, schemaForNode(document, node)])) };

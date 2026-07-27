@@ -11,7 +11,9 @@ export const collectStructured = (definitions, document, source, parent = "") =>
     const path = `${parent}/${name}`, normalized = required.has(name) ? { ...definition, required: true } : definition;
     definitionAtPath(definitions, path, normalized, { source });
     if (definition.type === "array" && definition.items && typeof definition.items === "object") {
-        const items = definition.items;
+        let items = definition.items;
+        while (items.type === "array" && items.items && typeof items.items === "object")
+            items = items.items;
         if (items.type === "object" || items.properties)
             collectStructured(definitions, items, source, path);
     }

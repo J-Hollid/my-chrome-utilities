@@ -10,6 +10,11 @@ const insertOrder = (document, parentId, afterId) => { const siblings = orderWit
 const normalizeOrders = (document, parentId) => { orderWithin(document, parentId).forEach((node, index) => { node.order = index; }); };
 const orderedIds = (document, parentId) => orderWithin(document, parentId).flatMap((node) => [node.id, ...orderedIds(document, node.id)]);
 const itemSchema = (propertyId, itemType) => ({ id: `item:${propertyId}`, type: itemType });
+const transition = (node, nextType, nextItemType, descendants, document) => {
+    const itemChanged = node.type === "array" && nextType === "array" && node.itemType !== nextItemType, arrayBoundaryRemoved = node.type === "array" && nextType !== "array" && Boolean(node.itemSchema ?? node.itemType ?? descendants.length), objectChildrenRemoved = node.type === "object" && nextType !== "object" && descendants.length > 0, removeDescendants = descendants.length > 0 && (objectChildrenRemoved || arrayBoundaryRemoved || itemChanged), names = descendants.map((id) => document.nodes[id]?.name).filter(Boolean).join(", ");
+    const impact = objectChildrenRemoved ? `child definitions and documentation removed; destructive confirmation required` : arrayBoundaryRemoved ? `item boundary${names ? ` and item fields ${names}` : ""} removed when type changes from Array to ${nextType}` : itemChanged ? `${names ? `item fields ${names} removed when ` : ""}every item changes from ${node.itemType ?? "unspecified"} to ${nextItemType ?? "unspecified"}` : undefined;
+    return { confirmationRequired: Boolean(impact), removeDescendants, impact };
+};
 function applyStructuralOperation(document, operation) {
     if (operation.kind === "add") {
         if (operation.parentId && !document.nodes[operation.parentId])
@@ -110,10 +115,10 @@ export function applyCanonicalAtCurrent(document, command) {
         return { status: "applied", document: appendChange(next, command, [command.propertyId]) };
     }
     if (command.kind === "set") {
-        const descendants = orderedIds(next, command.propertyId), nextType = command.patch.type ?? node.type, destructive = node.type === "object" && nextType !== "object" && descendants.length > 0, itemChange = node.type === "array" && nextType === "array" && node.itemType !== command.patch.itemType, itemDestructive = itemChange && descendants.length > 0;
-        if ((destructive || itemChange) && !command.confirmed)
-            return { status: "confirmation-required", document, propertyId: command.propertyId, impact: destructive ? "child definitions and documentation removed; destructive confirmation required" : itemDestructive ? `item fields ${descendants.map((id) => next.nodes[id]?.name).filter(Boolean).join(", ")} removed when every item changes from ${node.itemType ?? "unspecified"} to ${command.patch.itemType ?? "unspecified"}` : `every item changes from ${node.itemType ?? "unspecified"} to ${command.patch.itemType ?? "unspecified"}` };
-        if (destructive || itemDestructive)
+        const descendants = orderedIds(next, command.propertyId), nextType = command.patch.type ?? node.type, nextItemType = nextType === "array" ? (Object.hasOwn(command.patch, "itemType") ? command.patch.itemType : node.itemType) : undefined, change = transition(node, nextType, nextItemType, descendants, next);
+        if (change.confirmationRequired && !command.confirmed)
+            return { status: "confirmation-required", document, propertyId: command.propertyId, impact: change.impact };
+        if (change.removeDescendants)
             for (const id of descendants)
                 delete next.nodes[id];
         Object.assign(node, clone(command.patch));
@@ -121,19 +126,19 @@ export function applyCanonicalAtCurrent(document, command) {
             delete node.itemType;
             delete node.itemSchema;
         }
-        else if (node.itemType)
+        else if (Object.hasOwn(command.patch, "itemType") && node.itemType && !Object.hasOwn(command.patch, "itemSchema"))
             node.itemSchema = itemSchema(node.id, node.itemType);
-        const affected = new Set([command.propertyId, ...(destructive ? descendants : [])]);
+        const affected = new Set([command.propertyId, ...(change.removeDescendants ? descendants : [])]);
         for (const operation of command.operations ?? [])
             for (const id of applyStructuralOperation(next, operation))
                 affected.add(id);
         return { status: "applied", document: appendChange(next, command, [...affected]) };
     }
     if (command.kind === "type") {
-        const descendants = orderedIds(next, command.propertyId), destructive = node.type === "object" && command.type !== "object" && descendants.length > 0, itemChange = node.type === "array" && command.type === "array" && node.itemType !== command.itemType, itemDestructive = itemChange && descendants.length > 0;
-        if ((destructive || itemChange) && !command.confirmed)
-            return { status: "confirmation-required", document, propertyId: command.propertyId, impact: destructive ? "child definitions and documentation removed; destructive confirmation required" : itemDestructive ? `item fields ${descendants.map((id) => next.nodes[id]?.name).filter(Boolean).join(", ")} removed when every item changes from ${node.itemType ?? "unspecified"} to ${command.itemType ?? "unspecified"}` : `every item changes from ${node.itemType ?? "unspecified"} to ${command.itemType ?? "unspecified"}` };
-        if (destructive || itemDestructive)
+        const descendants = orderedIds(next, command.propertyId), change = transition(node, command.type, command.itemType, descendants, next);
+        if (change.confirmationRequired && !command.confirmed)
+            return { status: "confirmation-required", document, propertyId: command.propertyId, impact: change.impact };
+        if (change.removeDescendants)
             for (const id of descendants)
                 delete next.nodes[id];
         node.type = command.type;
