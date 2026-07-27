@@ -5,44 +5,52 @@ const labeled = (dom, text, control) => { const label = dom.createElement("label
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 const numericFields = new Set(["minimum", "maximum", "minItems", "maxItems"]);
 const clone = (value) => structuredClone(value);
-function renderRuleEditor(row, rule, index, context) {
-    const { dom } = context, editor = dom.createElement("fieldset");
+const properties = (context) => () => context.model.rows.map(({ path, effective }) => ({ id: effective.definitionId ?? path, name: path.split("/").filter(Boolean).at(-1) ?? path, ...(effective.type ? { type: effective.type } : {}) }));
+const section = (dom, title) => { const host = dom.createElement("section"), heading = dom.createElement("h3"); heading.textContent = title; host.append(heading); return host; };
+function renderRuleEditor(row, rule, index, context, invoker) {
+    const { dom } = context, draftRule = clone(rule), editor = dom.createElement("fieldset"), details = section(dom, "Rule details"), when = section(dom, "When"), then = section(dom, "Then"), severity = section(dom, "Severity and message"), actions = section(dom, "Rule actions"), status = dom.createElement("p");
+    let save;
+    editor.dataset.ruleEditorMode = "edit";
     editor.setAttribute("aria-label", `Edit rule ${String(rule.id ?? index)}`);
-    const properties = () => context.model.rows.map(({ path, effective }) => ({ id: effective.definitionId ?? path, name: path.split("/").filter(Boolean).at(-1) ?? path, ...(effective.type ? { type: effective.type } : {}) })), when = dom.createElement("div");
-    const renderWhen = () => { when.replaceChildren(); if (!rule.condition) {
-        when.append(button(dom, "Add When", () => { const tree = dom.createElement("div"); renderSharedConditionTree(tree, { dom, properties, id: (kind) => `${kind}:${crypto.randomUUID()}`, onChange: (next) => { if (next)
-                rule.condition = next;
-            else
-                delete rule.condition; } }); when.replaceChildren(tree, button(dom, "Remove When", () => { delete rule.condition; renderWhen(); })); }));
-        return;
-    } const tree = dom.createElement("div"); renderSharedConditionTree(tree, { dom, condition: rule.condition, properties, id: (kind) => `${kind}:${crypto.randomUUID()}`, onChange: (next) => { if (next)
-            rule.condition = next;
+    actions.setAttribute("aria-label", "Rule actions");
+    status.setAttribute("role", "status");
+    const validate = () => { const issue = focusedRuleIssue(draftRule); if (save)
+        save.disabled = Boolean(issue); status.textContent = issue ?? ""; };
+    const name = dom.createElement("input"), kind = dom.createElement("select");
+    name.name = "editRuleName";
+    name.value = String(draftRule.name ?? "");
+    kind.name = "editRuleKind";
+    kind.disabled = true;
+    kind.append(new Option(String(draftRule.kind ?? "rule"), String(draftRule.kind ?? "rule")));
+    name.addEventListener("input", () => { if (name.value.trim())
+        draftRule.name = name.value.trim();
+    else
+        delete draftRule.name; validate(); });
+    details.append(labeled(dom, "Rule name", name), labeled(dom, "Rule type", kind));
+    const tree = dom.createElement("div");
+    renderSharedConditionTree(tree, { dom, ...(draftRule.condition ? { condition: draftRule.condition } : {}), properties: properties(context), id: (kindName) => `${kindName}:${crypto.randomUUID()}`, onChange: (next) => { if (next)
+            draftRule.condition = next;
         else
-            delete rule.condition; } }); when.append(tree, button(dom, "Remove When", () => { delete rule.condition; renderWhen(); })); };
-    renderWhen();
-    editor.append(when);
-    for (const field of focusedRuleFields(String(rule.kind ?? "reusable"))) {
-        if (field === "condition")
-            continue;
-        if (field === "reusableRuleId")
+            delete draftRule.condition; validate(); } });
+    when.append(tree);
+    for (const field of focusedRuleFields(String(draftRule.kind ?? "reusable"))) {
+        if (field === "condition" || field === "reusableRuleId")
             continue;
         if (field === "presence") {
             const control = dom.createElement("select");
             control.name = "editRulePresence";
             control.append(new Option("Required", "required"), new Option("Optional", "optional"), new Option("Forbidden", "forbidden"));
-            control.value = String(rule.presence ?? "required");
-            control.addEventListener("change", () => { const draft = context.getDraft(); if (!draft)
-                return; const next = clone(draft.rules[index]); next.presence = control.value; draft.rules[index] = next; });
-            editor.append(labeled(dom, "Then presence", control));
+            control.value = String(draftRule.presence ?? "required");
+            control.addEventListener("change", () => { draftRule.presence = control.value; validate(); });
+            then.append(labeled(dom, "Presence", control));
             continue;
         }
         if (field === "ordinaryValue") {
             const control = dom.createElement("input");
             control.name = "editRuleOrdinaryValue";
-            control.value = schemaTableAllowedValues(rule);
-            control.addEventListener("input", () => { const draft = context.getDraft(); if (!draft)
-                return; const next = clone(draft.rules[index]); delete next.expectedValue; next.allowedValues = schemaTableStageAllowedValues(Array.isArray(next.allowedValues) ? next.allowedValues : [], control.value, (draft.type ?? context.row.effective.type)); draft.rules[index] = next; });
-            editor.append(labeled(dom, "Then allowed values", control));
+            control.value = schemaTableAllowedValues(draftRule);
+            control.addEventListener("input", () => { delete draftRule.expectedValue; draftRule.allowedValues = schemaTableStageAllowedValues(Array.isArray(draftRule.allowedValues) ? draftRule.allowedValues : [], control.value, (context.getDraft()?.type ?? context.row.effective.type)); validate(); });
+            then.append(labeled(dom, "Allowed values", control));
             continue;
         }
         const control = field === "severity" ? dom.createElement("select") : dom.createElement("input");
@@ -51,19 +59,28 @@ function renderRuleEditor(row, rule, index, context) {
             control.append(new Option("error", "error"), new Option("warning", "warning"));
         else if (numericFields.has(field))
             control.type = "number";
-        control.value = String(rule[field] ?? "");
-        control.addEventListener("input", () => { const draft = context.getDraft(); if (!draft)
-            return; const next = clone(draft.rules[index]); next[field] = control.value === "" ? undefined : numericFields.has(field) ? Number(control.value) : control.value; draft.rules[index] = next; });
-        editor.append(labeled(dom, field, control));
+        control.value = String(draftRule[field] ?? "");
+        control.addEventListener("input", () => { if (control.value === "")
+            delete draftRule[field];
+        else
+            draftRule[field] = numericFields.has(field) ? Number(control.value) : control.value; validate(); });
+        (field === "severity" || field === "message" ? severity : then).append(labeled(dom, field, control));
     }
+    save = button(dom, "Save rule", () => { const draft = context.getDraft(), issue = focusedRuleIssue(draftRule); if (!draft)
+        return; if (issue) {
+        status.textContent = issue;
+        return;
+    } draft.rules[index] = clone(draftRule); context.render(); });
+    actions.append(status, button(dom, "Cancel", () => { editor.remove(); row.dataset.ruleMode = "view"; invoker.focus({ preventScroll: true }); }), save);
+    editor.append(details, when, then, severity, actions);
     row.append(editor);
+    validate();
 }
 function renderRuleInventory(host, context) {
     const { dom } = context, draft = context.getDraft();
     if (!draft)
         return;
-    const properties = context.model.rows.map(({ path, effective }) => ({ id: effective.definitionId ?? path, name: path.split("/").filter(Boolean).at(-1) ?? path }));
-    const list = dom.createElement("div");
+    const names = properties(context)(), list = dom.createElement("div");
     list.setAttribute("aria-label", "Stable rule inventory");
     const localIds = new Set((context.row.local.rules ?? []).map((rule) => String(rule.id ?? ""))), displayedById = new Map();
     for (const rule of context.row.effective.rules ?? [])
@@ -74,93 +91,73 @@ function renderRuleInventory(host, context) {
         const row = dom.createElement("article"), summary = dom.createElement("p"), id = String(rule.id ?? `rule-${index}`), localIndex = draft.rules.findIndex((candidate) => String(candidate.id ?? "") === id), local = localIndex >= 0 || localIds.has(id) || context.overriddenRuleIds.has(id), removed = context.removedRuleIds.has(id);
         row.dataset.ruleId = id;
         row.dataset.ownership = local ? "local" : "inherited";
-        summary.textContent = `${String(rule.name ?? rule.kind ?? "rule")} · ${schemaTableRuleConditionSummary(rule.condition, properties)} · Then ${schemaTableRuleOutcomeSummary(rule)} · ${String(rule.severity ?? "error")} · ${String(rule.message ?? "No issue message")} · source ${local ? "local" : context.row.source} · ${local ? "local" : "inherited"}${removed ? " · Removed" : ""}`;
+        summary.textContent = `${String(rule.name ?? rule.kind ?? "rule")} · ${schemaTableRuleConditionSummary(rule.condition, names)} · Then ${schemaTableRuleOutcomeSummary(rule)} · ${String(rule.severity ?? "error")} · ${String(rule.message ?? "No issue message")} · source ${local ? "local" : context.row.source} · ${local ? "local" : "inherited"}${removed ? " · Removed" : ""}`;
         row.append(summary, button(dom, "View", () => { row.dataset.ruleMode = "view"; const detail = dom.createElement("p"); detail.textContent = `Rule ${id} · definition ${JSON.stringify(rule)} · effective ${rule.enabled === false ? "disabled" : "enabled"} · source ${local ? "local" : "inherited"}`; row.append(detail); }));
-        if (local && !removed)
-            row.append(button(dom, "Edit", () => { row.dataset.ruleMode = "edit"; renderRuleEditor(row, rule, localIndex, context); }), button(dom, "Remove local", () => { context.restoredRuleIds.delete(id); context.removedRuleIds.add(id); context.render(); }));
+        if (local && !removed) {
+            const edit = button(dom, "Edit", () => { row.dataset.ruleMode = "edit"; renderRuleEditor(row, rule, localIndex, context, edit); });
+            row.append(edit, button(dom, "Remove local", () => { context.restoredRuleIds.delete(id); context.removedRuleIds.add(id); context.render(); }));
+        }
         else if (local)
             row.append(button(dom, "Restore", () => { context.removedRuleIds.delete(id); context.restoredRuleIds.add(id); context.render(); }));
         else {
-            const actions = focusedOwnershipActions({ inherited: true, invariant: rule.enforcement === "invariant", replaceable: rule.enforcement === "overridable" });
-            if (actions.includes("Replace here"))
+            const choices = focusedOwnershipActions({ inherited: true, invariant: rule.enforcement === "invariant", replaceable: rule.enforcement === "overridable" });
+            if (choices.includes("Replace here"))
                 row.append(button(dom, "Replace here", () => context.overrideRule(id)));
-            if (actions.includes("Override here"))
+            if (choices.includes("Override here"))
                 row.append(button(dom, "Override here", () => context.overrideRule(id)));
-            if (actions.includes("Open source"))
-                row.append(button(dom, "Open source", () => { row.dataset.ruleMode = "source"; const detail = dom.createElement("p"); detail.textContent = `Source rule ${id} · inherited definition is read-only.`; row.append(detail); }));
+            if (choices.includes("Open source"))
+                row.append(button(dom, "Open source", () => { row.dataset.ruleMode = "source"; }));
         }
         list.append(row);
     });
     host.append(list);
 }
 function renderAddPanel(host, context) {
-    const { dom } = context, draft = context.getDraft();
-    if (!draft)
-        return;
-    const panel = dom.createElement("fieldset"), legend = dom.createElement("legend"), kind = dom.createElement("select"), fields = dom.createElement("div"), status = dom.createElement("p");
-    let condition, whenEnabled = false;
-    legend.textContent = "Add rule";
-    status.setAttribute("role", "status");
-    kind.name = "ruleKind";
-    kind.append(new Option("Choose outcome", ""), ...["presence", "value", "pattern", "range", "cardinality", "reusable"].map((entry) => new Option(entry, entry)));
-    const candidate = () => {
-        if (!kind.value)
-            return undefined;
-        const name = fields.querySelector("[name=\"newRuleName\"]")?.value.trim(), rule = { id: "staged-rule", kind: kind.value, severity: "error", ...(name ? { name } : {}) };
-        for (const field of ["pattern", "minimum", "maximum", "minItems", "maxItems", "message"]) {
-            const control = fields.querySelector(`[name="newRule${field[0].toUpperCase() + field.slice(1)}"]`);
-            if (control && control.value !== "")
+    const { dom } = context, opener = button(dom, "Add rule", () => open());
+    host.append(opener);
+    const open = () => {
+        const draft = context.getDraft();
+        if (!draft)
+            return;
+        opener.remove();
+        const panel = dom.createElement("fieldset"), details = section(dom, "Rule details"), when = section(dom, "When"), then = section(dom, "Then"), severity = section(dom, "Severity and message"), actions = section(dom, "Rule actions"), kind = dom.createElement("select"), name = dom.createElement("input"), fields = dom.createElement("div"), status = dom.createElement("p");
+        let condition;
+        panel.dataset.ruleEditorMode = "add";
+        panel.setAttribute("aria-label", "Add rule editor");
+        actions.setAttribute("aria-label", "Rule actions");
+        status.setAttribute("role", "status");
+        kind.name = "ruleKind";
+        kind.append(new Option("Choose rule type", ""), ...["presence", "value", "pattern", "range", "cardinality", "reusable"].map((entry) => new Option(entry, entry)));
+        name.name = "newRuleName";
+        details.append(labeled(dom, "Rule name", name), labeled(dom, "Rule type", kind));
+        const candidate = () => { if (!kind.value)
+            return undefined; const rule = { id: "staged-rule", kind: kind.value, severity: severity.querySelector("[name=\"newRuleSeverity\"]")?.value ?? "error", ...(name.value.trim() ? { name: name.value.trim() } : {}), ...(condition ? { condition } : {}) }; for (const field of ["pattern", "minimum", "maximum", "minItems", "maxItems", "message"]) {
+            const control = panel.querySelector(`[name="newRule${field[0].toUpperCase() + field.slice(1)}"]`);
+            if (control?.value)
                 rule[field] = numericFields.has(field) ? Number(control.value) : control.value;
-        }
-        const presence = fields.querySelector("[name=\"newRulePresence\"]");
-        if (presence?.value)
-            rule.presence = presence.value;
-        const ordinary = fields.querySelector("[name=\"newRuleOrdinaryValue\"]");
-        if (ordinary?.value)
-            rule.allowedValues = schemaTableStageAllowedValues([], ordinary.value, (draft.type ?? context.row.effective.type));
-        if (condition)
-            rule.condition = condition;
-        const reusable = fields.querySelector("[name=\"newRuleReusableRuleId\"]");
-        if (reusable?.value) {
+        } const presence = panel.querySelector("[name=\"newRulePresence\"]"); if (presence?.value)
+            rule.presence = presence.value; const ordinary = panel.querySelector("[name=\"newRuleOrdinaryValue\"]"); if (ordinary?.value)
+            rule.allowedValues = schemaTableStageAllowedValues([], ordinary.value, (draft.type ?? context.row.effective.type)); const reusable = panel.querySelector("[name=\"newRuleReusableRuleId\"]"); if (reusable?.value) {
             rule.reusableRuleId = reusable.value;
             const source = readFocusedReusableRules().find(({ id }) => id === reusable.value), outcome = source && focusedReusableOutcome(source);
-            rule.name = source?.name ?? reusable.selectedOptions[0]?.textContent ?? undefined;
+            rule.name = source?.name ?? reusable.selectedOptions[0]?.textContent;
             if (outcome)
                 rule.reusableOutcome = outcome;
-        }
-        return rule;
-    };
-    const validate = () => { const issue = whenEnabled && !condition ? "Resolve or remove the When condition." : candidate() ? focusedRuleIssue(candidate()) : undefined; add.disabled = !kind.value || Boolean(issue); status.textContent = issue ?? ""; };
-    const renderFields = () => {
-        fields.replaceChildren();
-        condition = undefined;
-        whenEnabled = false;
-        if (!kind.value) {
-            validate();
+        } return rule; };
+        const add = button(dom, "Add rule", () => { const rule = candidate(), issue = rule && focusedRuleIssue(rule); if (!rule)
+            return; if (issue) {
+            status.textContent = issue;
             return;
-        }
-        const name = dom.createElement("input");
-        name.name = "newRuleName";
-        name.addEventListener("input", validate);
-        fields.append(labeled(dom, "Rule name", name));
-        const when = dom.createElement("div"), properties = () => context.model.rows.map(({ path, effective }) => ({ id: effective.definitionId ?? path, name: path.split("/").filter(Boolean).at(-1) ?? path, ...(effective.type ? { type: effective.type } : {}) }));
-        const renderWhen = () => { when.replaceChildren(); if (!whenEnabled) {
-            when.append(button(dom, "Add When", () => { whenEnabled = true; renderWhen(); validate(); }));
-            return;
-        } const tree = dom.createElement("div"); renderSharedConditionTree(tree, { dom, ...(condition ? { condition: condition } : {}), properties, id: (prefix) => `${prefix}:${crypto.randomUUID()}`, onChange: (next) => { condition = next; validate(); } }); when.append(tree, button(dom, "Remove When", () => { whenEnabled = false; condition = undefined; renderWhen(); validate(); })); };
-        renderWhen();
-        fields.append(when);
-        for (const field of focusedRuleFields(kind.value)) {
-            if (field === "condition")
+        } rule.id = `rule:${crypto.randomUUID()}`; draft.rules = [...draft.rules, rule]; context.render(); }), validate = () => { const rule = candidate(), issue = rule ? focusedRuleIssue(rule) : "Choose a rule type."; add.disabled = Boolean(issue); status.textContent = issue ?? ""; };
+        const renderFields = () => { fields.replaceChildren(); for (const field of focusedRuleFields(kind.value)) {
+            if (["condition", "severity", "message"].includes(field))
                 continue;
             if (field === "reusableRuleId") {
                 const search = dom.createElement("input"), select = dom.createElement("select");
                 search.type = "search";
                 search.name = "reusableRuleSearch";
-                search.placeholder = "Search reusable rules by name";
                 select.name = "newRuleReusableRuleId";
-                select.setAttribute("aria-label", "Reusable rule name");
-                const choices = () => { const selected = select.value, rules = filterFocusedReusableRules(readFocusedReusableRules(), search.value); select.replaceChildren(new Option("Choose reusable rule", ""), ...rules.map(({ id, name }) => new Option(name, id))); if (rules.some(({ id }) => id === selected))
+                const choices = () => { const selected = select.value, rules = filterFocusedReusableRules(readFocusedReusableRules(), search.value); select.replaceChildren(new Option("Choose reusable rule", ""), ...rules.map(({ id, name: ruleName }) => new Option(ruleName, id))); if (rules.some(({ id }) => id === selected))
                     select.value = selected; validate(); };
                 search.addEventListener("input", choices);
                 select.addEventListener("change", validate);
@@ -173,34 +170,35 @@ function renderAddPanel(host, context) {
                 control.name = "newRulePresence";
                 control.append(new Option("Choose presence", ""), new Option("Required", "required"), new Option("Optional", "optional"), new Option("Forbidden", "forbidden"));
                 control.addEventListener("change", validate);
-                fields.append(labeled(dom, "Then presence", control));
+                fields.append(labeled(dom, "Presence", control));
                 continue;
             }
-            const control = field === "severity" ? dom.createElement("select") : dom.createElement("input");
+            const control = dom.createElement("input");
             control.name = `newRule${field[0].toUpperCase() + field.slice(1)}`;
-            if (control instanceof HTMLSelectElement)
-                control.append(new Option("error", "error"), new Option("warning", "warning"));
-            else if (numericFields.has(field))
+            if (numericFields.has(field))
                 control.type = "number";
             control.addEventListener("input", validate);
-            fields.append(labeled(dom, field === "ordinaryValue" ? "Then allowed values" : field, control));
-        }
-        validate();
+            fields.append(labeled(dom, field === "ordinaryValue" ? "Allowed values" : field, control));
+        } validate(); };
+        const tree = dom.createElement("div");
+        when.append(tree);
+        then.append(fields);
+        const severityControl = dom.createElement("select"), message = dom.createElement("input");
+        severityControl.name = "newRuleSeverity";
+        severityControl.append(new Option("error", "error"), new Option("warning", "warning"));
+        message.name = "newRuleMessage";
+        severity.append(labeled(dom, "Severity", severityControl), labeled(dom, "Message", message));
+        actions.append(status, button(dom, "Cancel", () => { panel.remove(); host.prepend(opener); opener.focus({ preventScroll: true }); }), add);
+        panel.append(details, when, then, severity, actions);
+        host.append(panel);
+        renderSharedConditionTree(tree, { dom, properties: properties(context), id: (prefix) => `${prefix}:${crypto.randomUUID()}`, onChange: (next) => { condition = next; validate(); } });
+        name.addEventListener("input", validate);
+        kind.addEventListener("change", renderFields);
+        severityControl.addEventListener("change", validate);
+        message.addEventListener("input", validate);
+        renderFields();
+        name.focus({ preventScroll: true });
     };
-    const add = button(dom, "Add rule", () => { const rule = candidate(); if (!rule)
-        return; const issue = focusedRuleIssue(rule); if (issue) {
-        status.textContent = issue;
-        return;
-    } rule.id = `rule:${crypto.randomUUID()}`; draft.rules = [...draft.rules, rule]; context.render(); });
-    add.disabled = true;
-    kind.required = true;
-    kind.addEventListener("change", renderFields);
-    renderFields();
-    panel.append(legend, labeled(dom, "Rule kind", kind), fields, status, add);
-    host.append(panel);
 }
-export function renderComposedFocusedRules(host, context) {
-    renderRuleInventory(host, context);
-    renderAddPanel(host, context);
-}
+export function renderComposedFocusedRules(host, context) { renderRuleInventory(host, context); renderAddPanel(host, context); }
 //# sourceMappingURL=data-layer-composed-schema-workspace-focused-rules.js.map

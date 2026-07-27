@@ -1,121 +1,168 @@
 import { typedCanonicalValue } from "./data-layer-canonical-schema-facets.js";
 const existence = ["Exists", "Does not exist"];
-const operators = (type) => type === "number" || type === "integer" ? [...existence, "Equals", "Does not equal", "Greater than", "At least", "Less than", "At most"] : type === "boolean" || type === "null" ? [...existence, "Equals", "Does not equal"] : [...existence, "Equals", "Does not equal", "Starts with", "Contains", "Matches pattern"];
+const operators = (type) => type === "number" || type === "integer" ? [...existence, "Equals", "Does not equal", "Greater than", "At least", "Less than", "At most"] : type === "boolean" || type === "null" ? [...existence, "Equals", "Does not equal"] : type === "array" ? [...existence, "Contains", "Contains any of"] : type === "enum" ? [...existence, "Equals", "Does not equal", "Is one of"] : [...existence, "Equals", "Does not equal", "Is one of", "Starts with", "Contains", "Matches pattern"];
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const clone = (value) => structuredClone(value);
-const withIds = (condition, id) => condition.kind === "predicate" ? { ...condition, id: condition.id ?? id("condition") } : { ...condition, id: condition.id ?? id("condition"), children: condition.children.map((child) => withIds(child, id)) };
 const valueText = (value) => value === undefined ? "" : typeof value === "string" ? value : JSON.stringify(value) ?? String(value);
 const typedValue = (type, text) => typedCanonicalValue(type, text);
 export const sharedConditionOperators = (type) => operators(type);
 export const sharedConditionValueMounted = (operator) => !existence.includes(operator);
 export const sharedTypedConditionValue = (type, text) => typedValue(type, text);
+const predicateRows = (condition) => {
+    if (!condition)
+        return [];
+    if (condition.kind === "predicate")
+        return [clone(condition)];
+    return condition.children.flatMap(predicateRows);
+};
+export const sharedFlatConditionRows = (condition) => predicateRows(condition).map(({ id, propertyId, operator, value }) => ({ ...(id ? { id } : {}), propertyId, operator, ...(value !== undefined ? { value } : {}) }));
+export const sharedFlatConditionResult = (mode, rows) => {
+    if (!rows.length || rows.some(({ propertyId, operator, value }) => !propertyId || !operator || !existence.includes(operator) && value === undefined))
+        return undefined;
+    return { kind: mode, children: rows.map(({ id, propertyId, operator, value }) => ({ kind: "predicate", ...(id ? { id } : {}), propertyId, operator: operator, ...(existence.includes(operator) ? {} : { value }) })) };
+};
 export function renderSharedConditionTree(host, options) {
-    const { dom } = options;
-    let condition = options.condition ? withIds(clone(options.condition), options.id) : undefined;
-    const properties = () => options.properties();
-    const emptyPredicate = () => ({ kind: "predicate", id: options.id("condition"), propertyId: properties()[0]?.id ?? "", operator: "Exists" });
-    const group = (kind) => ({ kind, id: options.id("condition"), children: [] });
-    const emit = () => options.onChange(condition ? clone(condition) : undefined);
-    const parentAt = (path) => {
-        const node = path.reduce((candidate, index) => candidate && candidate.kind !== "predicate" ? candidate.children[index] : undefined, condition);
-        return node?.kind === "predicate" ? undefined : node;
-    };
-    const insert = (path, node) => {
-        if (path) {
-            const parent = parentAt(path);
-            if (!parent || parent.kind === "not" && parent.children.length)
-                return;
-            parent.children.push(node);
-        }
-        else if (!condition)
-            condition = node;
-        else if (condition.kind === "predicate")
-            condition = { kind: "all", id: options.id("condition"), children: [condition, node] };
-        else if (condition.kind !== "not" || !condition.children.length)
-            condition.children.push(node);
-        emit();
-        render();
-    };
-    const remove = (path) => {
-        if (!path.length)
-            condition = undefined;
-        else
-            parentAt(path.slice(0, -1))?.children.splice(path.at(-1), 1);
-        emit();
-        render();
-    };
-    const groupChoice = (path) => {
-        const controls = dom.createElement("span"), relation = dom.createElement("select");
-        relation.setAttribute("aria-label", "Condition group relation");
-        for (const kind of ["all", "any", "not"])
-            relation.append(new Option(kind === "all" ? "All" : kind === "any" ? "Any" : "Not", kind));
-        controls.append(relation, button(dom, "Add group", () => insert(path, group(relation.value))));
-        return controls;
-    };
-    const renderPredicate = (node, path) => {
-        const row = dom.createElement("article"), search = dom.createElement("input"), property = dom.createElement("select"), operator = dom.createElement("select"), valueHost = dom.createElement("span");
-        row.dataset.conditionId = node.id ?? "";
-        row.dataset.conditionPath = path.join(".") || "root";
-        row.dataset.conditionKind = "predicate";
-        search.type = "search";
-        search.placeholder = "Search condition properties";
-        search.setAttribute("aria-label", "Search condition properties");
-        property.setAttribute("aria-label", "Condition property");
-        operator.setAttribute("aria-label", "Type-valid operator");
-        const selected = () => properties().find(({ id, name }) => id === property.value || name === property.value);
-        const renderProperties = () => { const query = search.value.trim().toLowerCase(), prior = property.value || node.propertyId; property.replaceChildren(new Option("Choose property", ""), ...properties().filter(({ name, id }) => !query || name.toLowerCase().includes(query) || id.toLowerCase().includes(query)).map(({ name, id }) => new Option(name, id))); property.value = prior; };
-        const renderValue = () => { valueHost.replaceChildren(); if (existence.includes(node.operator))
-            return; const value = dom.createElement("input"); value.setAttribute("aria-label", "Typed condition value"); value.value = valueText(node.value); value.addEventListener("input", () => { try {
-            node.value = typedValue(selected()?.type, value.value);
-            value.setCustomValidity("");
-            emit();
-        }
-        catch (error) {
-            value.setCustomValidity(error instanceof Error ? error.message : String(error));
-        } }); valueHost.append(value); };
-        const renderOperators = () => { const available = operators(selected()?.type); operator.replaceChildren(...available.map((entry) => new Option(entry, entry))); if (!available.includes(node.operator))
-            node.operator = "Exists"; operator.value = node.operator; renderValue(); };
-        renderProperties();
-        renderOperators();
-        search.addEventListener("input", renderProperties);
-        property.addEventListener("change", () => { node.propertyId = property.value; node.operator = "Exists"; delete node.value; renderOperators(); emit(); });
-        operator.addEventListener("change", () => { node.operator = operator.value; if (existence.includes(node.operator))
-            delete node.value; renderValue(); emit(); });
-        row.append(labeled(dom, "Search properties", search), labeled(dom, "Property", property), labeled(dom, "Operator", operator), labeled(dom, "Value", valueHost), button(dom, "Remove", () => remove(path)));
-        return row;
-    };
-    const renderGroup = (node, path) => {
-        const row = dom.createElement("article"), header = dom.createElement("div"), relation = dom.createElement("select"), children = dom.createElement("div");
-        row.dataset.conditionId = node.id ?? "";
-        row.dataset.conditionPath = path.join(".") || "root";
-        row.dataset.conditionKind = "group";
-        relation.setAttribute("aria-label", "Condition group relation");
-        for (const kind of ["all", "any", "not"])
-            relation.append(new Option(kind === "all" ? "All" : kind === "any" ? "Any" : "Not", kind));
-        relation.value = node.kind;
-        relation.addEventListener("change", () => { const replacement = { ...node, kind: relation.value, children: relation.value === "not" ? node.children.slice(0, 1) : node.children }; if (!path.length)
-            condition = replacement;
+    const { dom } = options, initial = options.condition;
+    let mode = initial?.kind === "any" ? "any" : "all", rows = sharedFlatConditionRows(initial).map((row) => ({ ...row, id: row.id ?? options.id("condition") }));
+    if (!rows.length)
+        rows = [{ id: options.id("condition"), propertyId: "", operator: "" }];
+    if (!dom.getElementById("flat-rule-builder-responsive-style")) {
+        const style = dom.createElement("style");
+        style.id = "flat-rule-builder-responsive-style";
+        style.textContent = `[data-rule-editor-mode]{box-sizing:border-box;min-width:0;max-width:100%;overflow-x:hidden}[data-rule-editor-mode] *{box-sizing:border-box;max-width:100%}[data-condition-layout="responsive"] label{display:grid;gap:.2rem;min-width:0}[data-condition-layout="responsive"] input,[data-condition-layout="responsive"] select{box-sizing:border-box;max-width:100%;width:100%}[data-rule-editor-mode] section{display:grid;gap:.5rem;min-width:0}[data-rule-editor-mode] [aria-label="Rule actions"]{position:sticky;bottom:0;z-index:1;background:Canvas;padding:.5rem 0}[data-rule-editor-mode] h3,[data-condition-layout="responsive"] h4{margin:.4rem 0 .1rem}@media(max-width:600px){[data-condition-layout="responsive"] [data-condition-kind="predicate"]{grid-template-columns:minmax(0,1fr)!important}}`;
+        dom.head.append(style);
+    }
+    let focusRowId;
+    const properties = () => options.properties(), selected = (row) => properties().find(({ id }) => id === row.propertyId);
+    const emit = () => options.onChange(sharedFlatConditionResult(mode, rows));
+    const render = () => {
+        host.replaceChildren();
+        host.setAttribute("aria-label", "Flat When condition list");
+        host.dataset.conditionLayout = "responsive";
+        const heading = dom.createElement("h4"), match = dom.createElement("select"), list = dom.createElement("div");
+        heading.textContent = "Match conditions";
+        match.setAttribute("aria-label", "Rule match mode");
+        match.append(new Option("All of these conditions", "all"), new Option("Any of these conditions", "any"));
+        match.value = mode;
+        match.addEventListener("change", () => { mode = match.value; emit(); });
+        list.setAttribute("role", "list");
+        list.setAttribute("aria-label", "Condition rows");
+        const chooseProperty = (row, entry, property, operator, listbox) => { row.propertyId = entry.id; row.operator = ""; delete row.value; property.value = entry.name; property.setAttribute("aria-expanded", "false"); listbox.remove(); renderOperators(row, operator); emit(); operator.focus({ preventScroll: true }); };
+        const propertyControl = (row, operator) => {
+            const wrapper = dom.createElement("span"), property = dom.createElement("input"), listbox = dom.createElement("div"), listboxId = `condition-property-list-${crypto.randomUUID()}`;
+            wrapper.style.cssText = "position:relative;min-width:0;";
+            property.type = "search";
+            property.value = selected(row)?.name ?? "";
+            property.placeholder = "Search properties";
+            property.setAttribute("role", "combobox");
+            property.setAttribute("aria-label", "Condition property");
+            property.setAttribute("aria-autocomplete", "list");
+            property.setAttribute("aria-controls", listboxId);
+            property.setAttribute("aria-expanded", "false");
+            listbox.id = listboxId;
+            listbox.setAttribute("role", "listbox");
+            listbox.setAttribute("aria-label", "Matching condition properties");
+            listbox.style.cssText = "position:fixed;z-index:2147483647;box-sizing:border-box;overflow-y:auto;overflow-x:hidden;background:Canvas;border:1px solid ButtonBorder;padding:0.25rem;";
+            let activeIndex = 0;
+            const close = () => { property.setAttribute("aria-expanded", "false"); listbox.remove(); };
+            const open = () => { const query = property.value.trim().toLocaleLowerCase(), choices = properties().filter(({ id, name }) => !query || name.toLocaleLowerCase().includes(query) || id.toLocaleLowerCase().includes(query)); listbox.replaceChildren(); for (const [index, entry] of choices.entries()) {
+                const option = dom.createElement("div");
+                option.setAttribute("role", "option");
+                option.tabIndex = -1;
+                option.textContent = entry.name;
+                option.dataset.propertyId = entry.id;
+                option.style.cssText = "padding:0.35rem 0.5rem;cursor:pointer;";
+                option.addEventListener("mousedown", (event) => event.preventDefault());
+                option.addEventListener("click", () => chooseProperty(row, entry, property, operator, listbox));
+                if (index === activeIndex)
+                    option.setAttribute("aria-selected", "true");
+                listbox.append(option);
+            } if (!listbox.isConnected)
+                dom.body.append(listbox); property.setAttribute("aria-expanded", "true"); requestAnimationFrame(() => { const field = property.getBoundingClientRect(), editor = host.closest("[data-focused-property-editor]")?.getBoundingClientRect(), left = Math.max(editor?.left ?? 8, Math.min(field.left, (editor?.right ?? innerWidth - 8) - Math.max(field.width, 180))), below = (editor?.bottom ?? innerHeight - 8) - field.bottom, above = field.top - (editor?.top ?? 8), flip = below < 160 && above > below, maxHeight = Math.max(80, Math.min(240, (flip ? above : below) - 8)); listbox.style.left = `${left}px`; listbox.style.width = `${Math.max(field.width, 180)}px`; listbox.style.maxHeight = `${maxHeight}px`; listbox.style.top = flip ? `${Math.max(editor?.top ?? 8, field.top - Math.min(listbox.scrollHeight, maxHeight))}px` : `${field.bottom}px`; }); };
+            Object.defineProperty(property, "options", { configurable: true, get: () => properties().map(({ id, name }) => new Option(name, id)) });
+            property.addEventListener("focus", open);
+            property.addEventListener("input", () => { row.propertyId = ""; row.operator = ""; delete row.value; activeIndex = 0; renderOperators(row, operator); emit(); open(); });
+            property.addEventListener("change", () => { const entry = properties().find(({ id, name }) => id === property.value || name === property.value); if (entry)
+                chooseProperty(row, entry, property, operator, listbox); });
+            property.addEventListener("keydown", (event) => { const choices = Array.from(listbox.querySelectorAll('[role="option"]')); if (event.key === "ArrowDown") {
+                event.preventDefault();
+                activeIndex = Math.min(activeIndex + 1, Math.max(0, choices.length - 1));
+                choices.forEach((choice, index) => choice.setAttribute("aria-selected", String(index === activeIndex)));
+                choices[activeIndex]?.scrollIntoView({ block: "nearest" });
+            }
+            else if (event.key === "Enter" && choices[activeIndex]) {
+                event.preventDefault();
+                const entry = properties().find(({ id }) => id === choices[activeIndex].dataset.propertyId);
+                if (entry)
+                    chooseProperty(row, entry, property, operator, listbox);
+            }
+            else if (event.key === "Escape")
+                close(); });
+            property.addEventListener("blur", () => setTimeout(close, 0));
+            wrapper.append(property);
+            return wrapper;
+        };
+        const valueControl = (row) => {
+            const entry = selected(row), valueHost = dom.createElement("span");
+            valueHost.setAttribute("aria-label", "Condition value");
+            if (!entry || !row.operator) {
+                valueHost.textContent = "Choose property and operator";
+                return valueHost;
+            }
+            if (existence.includes(row.operator)) {
+                valueHost.textContent = "No value required";
+                return valueHost;
+            }
+            const multi = row.operator === "Is one of" || row.operator === "Contains any of", control = entry.type === "boolean" ? dom.createElement("select") : dom.createElement("input");
+            control.setAttribute("aria-label", "Typed condition value");
+            if (control instanceof HTMLSelectElement) {
+                control.append(new Option("Choose True or False", ""), new Option("True", "true"), new Option("False", "false"));
+                control.value = row.value === true ? "true" : row.value === false ? "false" : "";
+            }
+            else {
+                control.type = entry.type === "number" || entry.type === "integer" ? "number" : "text";
+                control.value = multi && Array.isArray(row.value) ? row.value.join(", ") : valueText(row.value);
+                control.placeholder = multi ? "Comma-separated values" : "";
+            }
+            const update = () => { try {
+                const text = control.value;
+                if (control instanceof HTMLSelectElement)
+                    row.value = text === "" ? undefined : text === "true";
+                else if (multi)
+                    row.value = text.split(",").map((value) => value.trim()).filter(Boolean).map((value) => typedValue(entry.type === "array" ? "string" : entry.type, value));
+                else
+                    row.value = typedValue(entry.type, text);
+                control.setCustomValidity("");
+                emit();
+            }
+            catch (error) {
+                control.setCustomValidity(error instanceof Error ? error.message : String(error));
+                emit();
+            } };
+            control.addEventListener("input", update);
+            control.addEventListener("change", update);
+            valueHost.append(control);
+            return valueHost;
+        };
+        const renderOperators = (row, operator) => { const entry = selected(row), available = entry ? operators(entry.type) : []; operator.disabled = !entry; operator.replaceChildren(new Option("Choose operator", ""), ...available.map((name) => new Option(name, name))); if (row.operator && available.includes(row.operator))
+            operator.value = row.operator;
         else {
-            const parent = parentAt(path.slice(0, -1));
-            if (parent)
-                parent.children[path.at(-1)] = replacement;
-        } emit(); render(); });
-        header.append(labeled(dom, "Relation", relation), button(dom, "Add condition", () => insert(path, emptyPredicate())), groupChoice(path), button(dom, "Remove", () => remove(path)));
-        for (const [index, child] of node.children.entries())
-            children.append(renderNode(child, [...path, index]));
-        row.append(header, children);
-        return row;
+            row.operator = "";
+            delete row.value;
+        } };
+        rows.forEach((row, index) => { const item = dom.createElement("article"), operator = dom.createElement("select"), valueSlot = dom.createElement("span"), remove = button(dom, "Remove condition", () => { if (rows.length === 1)
+            rows = [{ ...(row.id ? { id: row.id } : {}), propertyId: "", operator: "" }];
+        else
+            rows.splice(index, 1); focusRowId = rows[Math.min(index, rows.length - 1)]?.id; emit(); render(); }); item.dataset.conditionId = row.id ?? ""; item.dataset.conditionPath = String(index); item.dataset.conditionKind = "predicate"; item.setAttribute("role", "listitem"); item.style.cssText = "display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:0.5rem;align-items:end;min-width:0;"; operator.setAttribute("aria-label", "Type-valid operator"); renderOperators(row, operator); operator.addEventListener("change", () => { row.operator = operator.value; delete row.value; emit(); render(); }); valueSlot.append(valueControl(row)); item.append(labeled(dom, "Property", propertyControl(row, operator)), labeled(dom, "Operator", operator), labeled(dom, "Value", valueSlot), remove); list.append(item); });
+        const add = button(dom, "Add condition", () => { const row = { id: options.id("condition"), propertyId: "", operator: "" }; rows.push(row); focusRowId = row.id; emit(); render(); });
+        host.append(heading, labeled(dom, "Match", match), list, add);
+        emit();
+        queueMicrotask(() => { if (focusRowId) {
+            host.querySelector(`[data-condition-id="${CSS.escape(focusRowId)}"] [aria-label="Condition property"]`)?.focus({ preventScroll: true });
+            focusRowId = undefined;
+        } const layer = host.closest("[data-schema-row-overlay=\"true\"]"); (layer ?? host).scrollIntoView({ block: "nearest", inline: "nearest" }); });
     };
-    const renderNode = (node, path) => node.kind === "predicate" ? renderPredicate(node, path) : renderGroup(node, path);
-    const render = () => { host.replaceChildren(); host.setAttribute("aria-label", "Shared editable condition tree"); if (condition)
-        host.append(renderNode(condition, []));
-    else {
-        const empty = dom.createElement("div");
-        empty.setAttribute("aria-label", "Empty When builder");
-        empty.append(button(dom, "Add condition", () => insert(undefined, emptyPredicate())), groupChoice(undefined));
-        host.append(empty);
-    } queueMicrotask(() => { const layer = host.closest("[data-schema-row-overlay=\"true\"]"); (layer ?? host).scrollIntoView({ block: "nearest", inline: "nearest" }); }); };
     render();
 }
 const projectOperators = [

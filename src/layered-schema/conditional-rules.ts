@@ -11,6 +11,8 @@ const predicateMatches=(operator:string,actual:unknown,expected:unknown):boolean
   if(operator==="Does not exist")return actual===undefined;
   if(operator==="Starts with")return String(actual??"").startsWith(String(expected??""));
   if(operator==="Contains")return String(actual??"").includes(String(expected??""));
+  if(operator==="Is one of")return(Array.isArray(expected)?expected:[expected]).some((choice)=>same(actual,choice));
+  if(operator==="Contains any of")return(Array.isArray(expected)?expected:[expected]).some((choice)=>Array.isArray(actual)?actual.some((entry)=>same(entry,choice)):String(actual??"").includes(String(choice??"")));
   if(operator==="Matches pattern")try{return new RegExp(String(expected??"")).test(String(actual??""));}catch{return false;}
   if(operator==="Greater than")return Number(actual)>Number(expected);
   if(operator==="At least")return Number(actual)>=Number(expected);

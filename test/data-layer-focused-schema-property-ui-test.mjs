@@ -4,6 +4,7 @@ import {applyCanonicalCommand,canonicalPredicateIds,canonicalPredicateWithStable
 import {canonicalNavigatorRows} from "../dist/canonical-schema-focused/navigator-rows.js";
 import {focusedSourceState} from "../dist/data-layer-canonical-schema-focused-drafts.js";
 import {schemaTableCellMetadata,schemaTableColumns,schemaTableEditableFacets,schemaTableExpectedOrAllowed,schemaTableOverlayPlacement,schemaTableOverlayStyle,schemaTableQuickEditDestination,schemaTableQuickEditIntent,schemaTableValueFacet} from "../dist/data-layer-schema-table.js";
+import {sharedConditionOperators,sharedFlatConditionResult,sharedFlatConditionRows} from "../dist/data-layer-shared-condition-tree-editor.js";
 
 assert.deepEqual(focusedPropertySections,["definition","rules","structure"]);
 assert.deepEqual(schemaTableColumns.map(({label})=>label),["Property","Path","Type","Presence","Description","Allowed values","Example","Source","Local/effective state","Validation state"],"every contributor table exposes the same information-rich columns");
@@ -76,6 +77,15 @@ assert.equal(focusedSourceState({provenance:[{state:"conflict"}]}),"conflict");
 assert.deepEqual(focusedRuleFields("range"),["condition","minimum","maximum","severity","message"]);
 assert.deepEqual(focusedRuleFields("pattern"),["condition","pattern","severity","message"]);
 assert.equal(focusedConditionLabel({kind:"all",children:[{kind:"predicate",propertyId:"/page_type",operator:"Equals",value:"trade"}]}),"All (/page_type Equals trade)");
+const flatRows=[
+  {id:"condition:platform",propertyId:"property:platform",operator:"Is one of",value:["web","app"]},
+  {id:"condition:category",propertyId:"property:category",operator:"Starts with",value:"checkout"},
+];
+assert.deepEqual(sharedFlatConditionResult("all",flatRows),{kind:"all",children:flatRows.map((row)=>({kind:"predicate",...row}))},"a rule stores one top-level match mode and flat condition rows");
+assert.deepEqual(sharedFlatConditionRows(sharedFlatConditionResult("all",flatRows)),flatRows,"flat persisted conditions retain their stable row order");
+assert.equal(sharedFlatConditionResult("any",[{id:"condition:empty",propertyId:"",operator:""}]),undefined,"an incomplete sole row cannot become a stored rule condition");
+assert.ok(sharedConditionOperators("string").includes("Is one of"),"string conditions expose the direct alternative operator");
+assert.ok(sharedConditionOperators("array").includes("Contains any of"),"array conditions expose the direct multi-value operator");
 assert.deepEqual(focusedSparseDelta({type:"string",presence:"required",documentation:"new"},{type:"string",presence:"optional",documentation:"old"}),{presence:"required",documentation:"new"});
 const source=createCanonicalSchema({id:"schema:focused",contributorId:"profile:focused",contributorName:"Focused"});
 const property={id:"property:line",name:"lineOfCustomer",order:0,type:"string",presence:{mode:"optional"},allowedValues:[],rules:[],documentation:{displayText:"",description:"",comments:"",example:{method:"blank"}},provenance:[{source:"created"}],overrideReferences:[]};

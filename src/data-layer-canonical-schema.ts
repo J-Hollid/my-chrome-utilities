@@ -3,7 +3,7 @@ import type {LayerConstraint,LayerScope} from "./data-layer-layered-schema.js";
 export type CanonicalScalarType="string"|"number"|"integer"|"boolean"|"null";
 export type CanonicalPropertyType=CanonicalScalarType|"object"|"array";
 export type CanonicalPresenceMode="optional"|"required"|"required-when"|"forbidden"|"forbidden-when";
-export type CanonicalPredicateOperator="Equals"|"Does not equal"|"Exists"|"Does not exist"|"Starts with"|"Contains"|"Matches pattern"|"Greater than"|"At least"|"Less than"|"At most";
+export type CanonicalPredicateOperator="Equals"|"Does not equal"|"Exists"|"Does not exist"|"Starts with"|"Contains"|"Is one of"|"Contains any of"|"Matches pattern"|"Greater than"|"At least"|"Less than"|"At most";
 
 export interface CanonicalPredicateLeaf {kind:"predicate";id?:string;propertyId:string;operator:CanonicalPredicateOperator;value?:unknown;}
 export interface CanonicalPredicateGroup {kind:"all"|"any"|"not";id?:string;children:CanonicalPredicate[];}

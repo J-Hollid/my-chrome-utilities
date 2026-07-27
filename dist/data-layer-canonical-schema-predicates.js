@@ -1,5 +1,11 @@
 import { canonicalPropertyPath } from "./data-layer-canonical-schema.js";
 function actualFor(document, observation, propertyId) { return Object.hasOwn(observation, propertyId) ? observation[propertyId] : canonicalPropertyPath(document, propertyId).split("/").filter(Boolean).reduce((value, key) => value && typeof value === "object" ? value[key] : undefined, observation); }
+function includesAny(actual, expected) {
+    const choices = Array.isArray(expected) ? expected : [expected];
+    if (Array.isArray(actual))
+        return choices.some((choice) => actual.some((entry) => Object.is(entry, choice)));
+    return choices.some((choice) => String(actual ?? "").includes(String(choice ?? "")));
+}
 function leafMatches(leaf, document, observation) { const actual = actualFor(document, observation, leaf.propertyId), expected = leaf.value; switch (leaf.operator) {
     case "Equals": return Object.is(actual, expected);
     case "Does not equal": return !Object.is(actual, expected);
@@ -7,6 +13,8 @@ function leafMatches(leaf, document, observation) { const actual = actualFor(doc
     case "Does not exist": return actual === undefined;
     case "Starts with": return String(actual ?? "").startsWith(String(expected ?? ""));
     case "Contains": return String(actual ?? "").includes(String(expected ?? ""));
+    case "Is one of": return (Array.isArray(expected) ? expected : [expected]).some((choice) => Object.is(actual, choice));
+    case "Contains any of": return includesAny(actual, expected);
     case "Matches pattern": try {
         return new RegExp(String(expected ?? "")).test(String(actual ?? ""));
     }

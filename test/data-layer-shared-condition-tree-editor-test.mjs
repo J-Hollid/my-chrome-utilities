@@ -9,9 +9,10 @@ import {conditionMatches} from "../dist/data-layer-specification-project.js";
 
 assert.deepEqual(
   sharedConditionOperators("string"),
-  ["Exists","Does not exist","Equals","Does not equal","Starts with","Contains","Matches pattern"],
+  ["Exists","Does not exist","Equals","Does not equal","Is one of","Starts with","Contains","Matches pattern"],
   "string predicates expose only compatible operators",
 );
+assert.ok(sharedConditionOperators("array").includes("Contains any of"));
 assert.deepEqual(
   sharedConditionOperators("number"),
   ["Exists","Does not exist","Equals","Does not equal","Greater than","At least","Less than","At most"],

@@ -14,6 +14,7 @@ export function moveComposedConditionBranch(draft, path, delta) { if (!path.leng
     return draft; const condition = clone(draft.condition), parent = groupAt(condition, path.slice(0, -1)), index = path.at(-1), target = index + delta; if (index < 0 || index >= parent.children.length || target < 0 || target >= parent.children.length)
     return draft; [parent.children[index], parent.children[target]] = [parent.children[target], parent.children[index]]; return { ...draft, condition }; }
 const valueAt = (observation, path) => path.split("/").filter(Boolean).reduce((value, key) => value && typeof value === "object" ? value[key] : undefined, observation);
+const includesAny = (actual, expected) => (Array.isArray(expected) ? expected : [expected]).some((choice) => Array.isArray(actual) ? actual.some((entry) => same(entry, choice)) : String(actual ?? "").includes(String(choice ?? "")));
 export function evaluateComposedCondition(condition, observation, propertyChoices = []) { if (condition.kind !== "predicate") {
     if (condition.kind === "all")
         return condition.children.every((child) => evaluateComposedCondition(child, observation, propertyChoices));
@@ -27,6 +28,8 @@ export function evaluateComposedCondition(condition, observation, propertyChoice
     case "Does not exist": return actual === undefined;
     case "Starts with": return String(actual ?? "").startsWith(String(expected ?? ""));
     case "Contains": return String(actual ?? "").includes(String(expected ?? ""));
+    case "Is one of": return (Array.isArray(expected) ? expected : [expected]).some((choice) => same(actual, choice));
+    case "Contains any of": return includesAny(actual, expected);
     case "Matches pattern": try {
         return new RegExp(String(expected ?? "")).test(String(actual ?? ""));
     }
