@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=d0d542b0d565d0f770ed971d3ffe3a0d78a9a800705638c32a0b6db367fa091a
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-27T07:17:03.992996698Z","feature_name":"Data layer canonical Shared Profile schema authoring","feature_path":"features/data-layer-canonical-shared-profile-schema-authoring.feature","background_hash":"9e8225c80de52bee679ebd2c1ee0ad618b61eb14a35a45ad9378b67a90e8c5ec","implementation_hash":"40e42bedf2e38249eb36fde167a9e2f11d5a4c19","scenarios":[{"index":6,"name":"Data layer canonical Shared Profile schema authoring 007","scenario_hash":"4e1e629613f3377678a704de7fb49aa24b7666f7d6fd8f7336c5848a2481c5e1","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-27T07:17:03.992996698Z"},{"index":7,"name":"Data layer canonical Shared Profile schema authoring 008","scenario_hash":"1f66844909f9a2d8d4fb2e63db0a5ac2dbe8c763ce946f0d7dfa416bf3d7fab8","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-27T07:17:03.992996698Z"},{"index":14,"name":"Data layer canonical Shared Profile schema authoring 015","scenario_hash":"bb47aa3c9d43d49581aefe99b5084c921b7ac3b3925f65993047d6866f42c60b","mutation_count":21,"result":{"Total":21,"Killed":21,"Survived":0,"Errors":0},"tested_at":"2026-07-27T07:17:03.992996698Z"},{"index":18,"name":"Data layer canonical Shared Profile schema authoring 019","scenario_hash":"c8f16f48f38cc55fd9a94975c60aac7d763058989e5d44c3401164eb45f1e27e","mutation_count":24,"result":{"Total":24,"Killed":24,"Survived":0,"Errors":0},"tested_at":"2026-07-27T07:17:03.992996698Z"},{"index":20,"name":"Data layer canonical Shared Profile schema authoring 021","scenario_hash":"2bb848324d4a767cdf888495b4488eccd957f83fc7b373b2cd80ea60f11461c6","mutation_count":22,"result":{"Total":22,"Killed":22,"Survived":0,"Errors":0},"tested_at":"2026-07-27T07:17:03.992996698Z"},{"index":22,"name":"Data layer canonical Shared Profile schema authoring 023","scenario_hash":"cb74c844801399f7f57582c379ff9c6be48641081d00109c71199970ef1df45e","mutation_count":24,"result":{"Total":24,"Killed":24,"Survived":0,"Errors":0},"tested_at":"2026-07-27T07:17:03.992996698Z"},{"index":25,"name":"Data layer canonical Shared Profile schema authoring 026","scenario_hash":"3367fa819cd09553a8c985c20a7930360075211ceef18988757c09f07e3efef5","mutation_count":18,"result":{"Total":18,"Killed":18,"Survived":0,"Errors":0},"tested_at":"2026-07-27T07:17:03.992996698Z"},{"index":26,"name":"Data layer canonical Shared Profile schema authoring 027","scenario_hash":"b2514f5d922dddd13a16fe3c0c9fd7b36223c304b6e931286443b7c66f86e522","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-07-27T07:17:03.992996698Z"},{"index":28,"name":"Data layer canonical Shared Profile schema authoring 029","scenario_hash":"78c200ba60e56b94881b73c84215cc931c8673ae81b4d104758dcef01a0e7176","mutation_count":36,"result":{"Total":36,"Killed":36,"Survived":0,"Errors":0},"tested_at":"2026-07-27T07:17:03.992996698Z"},{"index":31,"name":"Data layer canonical Shared Profile schema authoring 032","scenario_hash":"e87e6f94f9f00898d765e7ba20b9f2edbef3131f2d8ca00c18517e762aeb2cd9","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-27T07:17:03.992996698Z"},{"index":32,"name":"Data layer canonical Shared Profile schema authoring 033","scenario_hash":"6994baac3702d74acd6150ab0f6582ebe86279a9b98c87899c46eb56b5a244f6","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-27T07:17:03.992996698Z"},{"index":34,"name":"Data layer canonical Shared Profile schema authoring 035","scenario_hash":"d821dd72a56deb7395b8879f8bf834907a0dac4c97d997f5ec877722332618cb","mutation_count":18,"result":{"Total":18,"Killed":18,"Survived":0,"Errors":0},"tested_at":"2026-07-27T07:17:03.992996698Z"},{"index":35,"name":"Data layer canonical Shared Profile schema authoring 036","scenario_hash":"16abc6da2934f7b58ffafc6a9bba7b57482d7c85aceaf8f3639d93ac3373451a","mutation_count":25,"result":{"Total":25,"Killed":25,"Survived":0,"Errors":0},"tested_at":"2026-07-27T07:17:03.992996698Z"},{"index":36,"name":"Data layer canonical Shared Profile schema authoring 037","scenario_hash":"2d362af31a7b4ebd9ff9f7f4a1720059ed67153336777b021b363ce5c3ff1cd6","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-27T07:17:03.992996698Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer canonical Shared Profile schema authoring
 
   Background:
@@ -144,14 +139,15 @@ Feature: Data layer canonical Shared Profile schema authoring
 
   # Data layer canonical Shared Profile schema authoring 014
   Scenario: Data layer canonical Shared Profile schema authoring 014
-    Given Opened Article contains article_type, pathname, and consent_state properties
-    When the operator builds an All group containing Any of article_type Equals News or pathname Starts with /news/ and Not consent_state Equals denied
-    Then nested group controls render the condition in plain language
-    And property selectors, type-compatible operators, and typed values persist stable references in a structured predicate tree
-    And the same predicate builder is available for conditional presence, validation rules, and applicability
+    Given pageType has string properties platformType, pageCategory, and environment plus Boolean property consentRequired
+    When the operator builds rule Require pageType for checkout experiences with match mode All
+    And adds platformType Is one of web and app, pageCategory Starts with checkout, environment Does not equal development, and consentRequired Equals true
+    Then one flat ordered condition list stores four stable property references, type-compatible operators, and typed values
+    And the rule model stores one top-level All match mode with no nested condition group
+    And no Add group, nested All, nested Any, or Not-group action is available
     When the operator tests matching and non-matching observations in the builder
-    Then each result identifies the satisfied and failed predicate branches
-    And unresolved properties or type-incompatible values block saving at the exact predicate control
+    Then each result identifies the satisfied and failed condition rows
+    And unresolved properties or type-incompatible values block saving at the exact condition control
 
   # Data layer canonical Shared Profile schema authoring 015
   Scenario Outline: Data layer canonical Shared Profile schema authoring 015
@@ -334,11 +330,11 @@ Feature: Data layer canonical Shared Profile schema authoring
     When the operator opens the Rules child overlay
     Then each rule is one compact stable-identity row showing its When condition, Then outcome, severity, message, source, and ownership state
     And View opens read-only details without entering edit mode
-    And Edit opens a further overlay containing optional When controls plus only the selected outcome's fields
+    And Edit opens a further overlay containing the rule name, rule type, flat When controls, type-specific Then outcome, severity, optional message, and local actions
     When the operator adds a rule
-    Then the rule initially applies Always and can be saved without a When condition
-    And adding When uses a searchable property selector, type-valid operator, and typed value only when required
-    And the rule's Then outcome is chosen before only that outcome's applicable fields appear
+    Then one empty condition row is present and the rule cannot be saved until at least one condition is complete
+    And the rule type is chosen before only that type's Then outcome fields appear
+    And the flat When builder uses one All or Any mode, searchable property selectors, type-valid operators, and typed values only when required
     And reusable rules use a searchable named selector rather than a raw identity input
     And there is no separate property-level Conditions editor or condition rule kind
     When the operator stages removal of the local cardinality rule
@@ -360,13 +356,13 @@ Feature: Data layer canonical Shared Profile schema authoring
 
   # Data layer canonical Shared Profile schema authoring 026
   Scenario Outline: Data layer canonical Shared Profile schema authoring 026
-    Given Add rule applies Always and has no selected outcome
-    When Add rule outcome changes to <rule_outcome>
+    Given Add rule has a name and one complete condition but no selected rule type
+    When Rule type changes to <rule_type>
     Then the builder shows only <applicable_fields>
     And the builder does not show <irrelevant_fields>
 
     Examples:
-      | rule_outcome | applicable_fields                                                   | irrelevant_fields                    |
+      | rule_type    | applicable_fields                                                   | irrelevant_fields                    |
       | presence     | Required or Optional or Forbidden, severity, and issue message      | value, pattern, range, or cardinality |
       | value        | allowed-values field, severity, and issue message                    | presence, pattern, range, or cardinality |
       | pattern      | pattern, severity, and issue message                                 | presence, value, range, or cardinality |
@@ -376,14 +372,15 @@ Feature: Data layer canonical Shared Profile schema authoring
 
   # Data layer canonical Shared Profile schema authoring 027
   Scenario Outline: Data layer canonical Shared Profile schema authoring 027
-    Given the operator selected <rule_outcome> in Add rule
+    Given Add rule currently has type <rule_type>
     When the operator enters <invalid_definition>
     Then Add rule is blocked with <diagnostic>
     And no rule, property command, Draft token, persistence write, or Undo action is created
 
     Examples:
-      | rule_outcome | invalid_definition                         | diagnostic                                      |
-      | presence     | an enabled When with unresolved predicate  | Resolve or remove the When condition             |
+      | rule_type    | invalid_definition                         | diagnostic                                      |
+      | presence     | no rule name                               | Enter a rule name                                |
+      | presence     | an empty condition row                     | Complete or remove the condition                 |
       | value        | an empty allowed-values field              | Enter at least one allowed value                 |
       | pattern      | an empty pattern                           | Enter a regular expression                      |
       | range        | minimum 10 and maximum 2                   | Minimum must not exceed maximum                 |
@@ -435,12 +432,14 @@ Feature: Data layer canonical Shared Profile schema authoring
   # Data layer canonical Shared Profile schema authoring 031
   Scenario: Data layer canonical Shared Profile schema authoring 031
     Given /aProducts has no conditional rules
-    When the operator adds cardinality minimum items 2 without adding When
-    Then the rule summary says Always Then minimum items 2
-    And the rule applies to every observation
-    When the operator adds When pageType Exists
-    Then the summary says pageType exists without /aProducts, a stable identity, or a schema path prefix
-    And removing When returns the same rule to Always without changing its cardinality outcome
+    When the operator adds named cardinality rule Product collection with match mode All
+    And adds pageType Exists and pageCategory Is one of checkout and payment
+    And sets minimum items to 2
+    Then the summary says When all pageType exists and pageCategory is one of checkout or payment Then minimum items 2
+    And the stored rule has one All match mode, two conditions, and one cardinality outcome
+    When the operator changes its match mode to Any
+    Then the same two conditions and outcome remain while either condition may activate the rule
+    And the editor offers no nested group or unconditional Always representation
 
   # Data layer canonical Shared Profile schema authoring 032
   Scenario Outline: Data layer canonical Shared Profile schema authoring 032
@@ -466,12 +465,18 @@ Feature: Data layer canonical Shared Profile schema authoring
     And the complete active layer is visible without an editor scrollbar when its content fits the browser viewport
     And only the active layer gains vertical scrolling when its content exceeds the browser viewport
     And focus remains inside the blocking overlay stack
-    When Add condition is activated inside the empty When builder
-    Then one directly editable property, operator, optional value, and Remove row appears
-    When the operator adds a group and chooses All, Any, or Not
-    Then one group row exposes its relation, Add condition, Add group, and Remove actions
-    And All and Any accept multiple predicate or group children while Not accepts exactly one child
-    And predicate rows expose no View, Edit, or Add child actions
+    Given the flat When list already contains pageType Equals checkout
+    When Add condition is activated beneath the condition list
+    Then one complete empty Property, Operator, Value, and Remove row appears immediately after the existing conditions
+    And focus moves to its empty searchable Property combobox
+    And Operator is disabled until a property is selected while Value is unavailable until its property and operator determine a control
+    When pageCategory and Starts with are selected
+    Then Operator becomes type-compatible, a text Value control receives focus, and no second modal or floating condition panel opens
+    When that condition is removed
+    Then the remaining rows close the gap and preserve their values, order, alignment, and automatic numbering
+    And the only remaining condition never leaves detached Property, Operator, or Value controls
+    When Remove condition is invoked on the only remaining row
+    Then that row stays in place with an empty Property, disabled Operator, unavailable Value, and disabled Add rule action
     When the operator closes the overlay stack
     Then focus returns to the invoking property action without changing the editor scroll position
 
@@ -550,3 +555,82 @@ Feature: Data layer canonical Shared Profile schema authoring
       | Shared Profile    | standalone     | nested conditions and rules grow but still fit       | the complete active layer is visible without a vertical scrollbar       |
       | Flow Page-instance | Flow workspace | the browser viewport shrinks but still fits the layer | the complete active layer is visible without a vertical scrollbar       |
       | Event             | in-panel       | nested conditions and rules become taller than the viewport | the stack uses the available viewport and only the active layer scrolls |
+
+  # Data layer canonical Shared Profile schema authoring 038
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 038
+    Given <contributor> property pageType is open in the <surface> Rules section
+    When the Rules-section Add rule action is activated
+    Then one vertical editor presents Rule details, When, Then, Severity and message, and Rule actions in that order
+    And Rule details contains full-width Rule name followed by Rule type
+    And When reads Match All or Any of these conditions above one aligned condition list and Add condition
+    And Then uses direct language for the selected rule type
+    And When and Then are visually stronger section headings than routine field labels without obscuring restrained inputs
+    And Severity is labelled above an optional full-width Message field
+    And a distinct rule-action area keeps Cancel and Add rule separate from the property's Review changes action
+    When a complete rule is added
+    Then Add rule stages it in the Rules list and closes only the Add rule editor
+    When the operator edits that staged rule
+    Then the same flow ends with Cancel and Save rule without changing its stable identity
+    When Cancel is invoked during add or edit
+    Then only the rule-local draft is discarded, existing property staging remains unchanged, and focus returns to the invoking rule action
+
+    Examples:
+      | contributor       | surface        |
+      | Shared Profile    | standalone     |
+      | Page Group        | standalone     |
+      | Page              | standalone     |
+      | Event             | standalone     |
+      | Flow Page-instance | Flow workspace |
+      | Event occurrence  | Flow workspace |
+      | Shared Profile    | in-panel       |
+      | Page Group        | in-panel       |
+      | Page              | in-panel       |
+      | Event             | in-panel       |
+      | Flow Page-instance | in-panel       |
+      | Event occurrence  | in-panel       |
+
+  # Data layer canonical Shared Profile schema authoring 039
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 039
+    Given Add rule has a new condition row with selected <property_type> property
+    When the new condition's Operator is set to <operator>
+    Then the Value column shows <value_control>
+    And the row retains the same Property, Operator, Value, and Remove structure
+
+    Examples:
+      | property_type | operator         | value_control                                  |
+      | string        | Starts with      | one text input                                 |
+      | number        | Greater than     | one number input                               |
+      | Boolean       | Equals           | one True or False selector                     |
+      | enum          | Is one of        | one typed multi-value selector                 |
+      | array         | Contains any of  | one typed multi-value input                    |
+      | string        | Exists           | aligned No value required text and no input    |
+
+  # Data layer canonical Shared Profile schema authoring 040
+  Scenario: Data layer canonical Shared Profile schema authoring 040
+    Given Add rule contains enough properties for its Property combobox results to exceed the available space below the field
+    When the operator opens the Property combobox and searches for page
+    Then one results popup is anchored to that field, is at least as wide as it, and contains only matching property choices
+    And the popup scrolls internally without resizing the rule form or covering unrelated controls unpredictably
+    And it repositions above the field when necessary while remaining inside the rule editor and browser viewport
+    When keyboard navigation selects pageCategory
+    Then the popup closes, pageCategory remains selected, and focus advances to its enabled Operator control
+
+  # Data layer canonical Shared Profile schema authoring 041
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 041
+    Given Add rule contains four complete conditions at <viewport_width> pixels
+    When the rule editor renders
+    Then condition composition is <condition_layout>
+    And outcome and severity composition is <secondary_layout>
+    And labels remain directly associated with their controls
+    And Remove condition remains visible and operable
+    And the rule editor has vertical overflow only when needed and no horizontal overflow
+    And form sections and controls remain in normal grid or flex flow without overlap or manually positioned field coordinates
+    And its rule-action area remains visible at the bottom while the modal body scrolls
+    And every field, combobox, Remove, Add condition, Cancel, and primary rule action is unobscured and pointer-operable
+    When the viewport crosses between wide and narrow layouts
+    Then every entered condition, match mode, outcome, severity, and message remains unchanged
+
+    Examples:
+      | viewport_width | condition_layout                                      | secondary_layout                          |
+      | 1280           | each condition uses one aligned four-column row       | outcome and severity may use two columns  |
+      | 360            | each condition uses one labelled vertical block       | outcome and severity stack vertically     |

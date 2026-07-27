@@ -174,7 +174,9 @@ set and theme records, progressive contextual controls, exact workbook sheets,
 project-wide matrix columns, Profile columns, theme fingerprints, rich clipboard
 fallback, stale refresh, sanitization, and read-only generation.
 
-The quick Table-save correction is later authority for Authoring scenarios 023–036.
+The rule-builder correction is later authority for Authoring scenarios 014, 024,
+026, 027, 031, 033, and 038–041. The quick Table-save correction remains later
+authority for Authoring scenarios 023–037 where it is not superseded below.
 It retains the compact Definition, Rules, and
 Structure menu but supersedes the ordinary-value field, mandatory When tree, inert
 example-value input, current condition-node action model, and overlays that open
@@ -185,16 +187,33 @@ project as one allowed value without mutating their source.
 
 Example method controls the mounted value editor. Blank mounts none, Allowed value
 mounts a selector populated from the property's typed allowed values, and Custom
-value mounts a type-valid input. A rule defaults to Always and saves with no When
-condition. Adding When creates concise human predicate summaries such as
-`pageType exists` without the target path or stable IDs.
+value mounts a type-valid input.
 
-The condition builder starts with Add condition and Add group. Predicate rows
-directly expose property, operator, optional value, and Remove. Add group then asks
-for All, Any, or Not; group rows expose relation, Add condition, Add group, and
-Remove. All and Any accept multiple children, Not exactly one, and predicates
-expose no View, Edit, or Add child mechanics. Search, selector, value, and action
-controls remain inside the overlay at 360 pixels. Opening or growing a layer near
+Add Rule is one readable vertical flow: Rule details, When, Then, Severity and
+message, and Rule actions. Rule details contains the human rule name followed by
+Rule type, which determines the direct-language outcome controls. Every rule owns
+one top-level All or Any match mode and one or more flat condition rows. It has no
+unconditional Always state, nested All/Any/Not group, or Add group action. Operators
+such as Is one of and Contains any of express alternatives without nested groups.
+Each condition is one Property, Operator, Value, and Remove row. Add condition
+inserts one complete empty row in place, focuses its searchable Property combobox,
+and progressively enables a type-compatible operator and value control. Existence
+operators require no value. Removing a row leaves no detached controls; removing
+the sole row clears it in place and keeps Add rule disabled.
+
+The Property combobox uses a field-anchored listbox with internal scrolling,
+keyboard operation, and above-or-below placement contained by the rule editor and
+browser viewport. Add rule and Save rule share the same editor and are paired with
+local Cancel actions distinct from property Review changes. At wide widths condition
+fields may share a row; at narrow widths they become labelled vertical blocks
+without losing entered values. The rule body may scroll vertically but never
+horizontally. Form sections and fields remain in normal grid or flex flow without
+overlap or manually positioned field coordinates, and the local actions remain
+visible at the bottom while the body scrolls. When and Then have stronger readable
+section hierarchy than routine labels, while every input and action remains
+unobscured and pointer-operable.
+Search, selector, value, and action controls remain inside the overlay at 360
+pixels. Opening or growing a layer near
 the viewport edge uses a top-level blocking overlay stack outside the editor scroll
 region. The stack remains visually anchored beside the invoking property action,
 uses the browser viewport for placement, and scrolls only an active layer whose
@@ -225,9 +244,9 @@ continue to flow to non-overridden children and cannot replace the child overrid
 Reset to parent deletes only the local facet and resumes the current live parent;
 Undo restores that exact local override.
 
-Rules open as a child layer and each rule owns a required Then outcome plus an
-optional When predicate tree. There is no separate property-level Conditions editor
-or condition rule kind. A matching rule supersedes only its targeted definition facet; a
+Rules open as a child layer and each rule owns a required flat When condition list
+plus one required Then outcome. There is no separate property-level Conditions
+editor or condition rule kind. A matching rule supersedes only its targeted definition facet; a
 non-matching rule leaves the definition effective. Compatible matching rules
 compose, while contradictory matches block with both rule names and no list-order
 winner. Installed evidence must build and validate the error_message,
@@ -438,8 +457,8 @@ panel keeps its pre-existing panel-oriented renderer; Builder and standalone
 entity workspaces reproduce its complete capabilities in their wider renderer.
 All surfaces use the same canonical model, property-scoped commands, and results,
 including structural nested authoring, typed properties, conditional presence,
-allowed values, rich rules, documentation, examples, nested All/Any/Not predicate
-building, opaque Draft-token comparison, and synchronized Tree and Table views. Existing
+allowed values, rich rules, documentation, examples, flat rule conditions with one
+All or Any mode, opaque Draft-token comparison, and synchronized Tree and Table views. Existing
 profile data migrates atomically without loss. Command-scoped patches, base Draft
 tokens, and subscriptions prevent stale whole-profile overwrites.
 Canonical property search is transient UI state shared across contributor editors;
@@ -460,10 +479,10 @@ or composed snapshot.
 Every schema surface uses one property context menu and focused property editor.
 The menu contains section choices and summaries but no embedded forms; only one
 Definition, Presence, Values, Conditions, Rules, Documentation, Example, or
-Structure section is mounted at a time. Facets, condition nodes, and rules remain
+Structure section is mounted at a time. Facets, condition rows, and rules remain
 compact stable-identity rows with independent View, Edit, ownership-aware removal,
-and source actions. Rule kind is selected before type-specific fields appear,
-conditions use direct All/Any/Not tree actions, and one reviewed staged session
+and source actions. Rule type is selected before type-specific outcome fields
+appear, conditions use one flat All or Any mode with no groups, and one reviewed staged session
 commits one property command and one Undo action. Cancel or Escape discards staging
 and returns focus. Inherited content is read-only until a legal override or named
 replacement is chosen; Remove always means remove local content.

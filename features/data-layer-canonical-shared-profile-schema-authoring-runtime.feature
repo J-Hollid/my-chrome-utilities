@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=a62d9962ffb556a7eb76c2bd7ba30a8d5bd086052cd4607072532314f24e3ce9
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-27T07:17:04.031893918Z","feature_name":"Data layer canonical Shared Profile schema authoring runtime","feature_path":"features/data-layer-canonical-shared-profile-schema-authoring-runtime.feature","background_hash":"472d7d719a76bf47270eb2580c2854fda6a3037551b5db5845d9adcb51ca716d","implementation_hash":"40e42bedf2e38249eb36fde167a9e2f11d5a4c19","scenarios":[{"index":6,"name":"Data layer canonical Shared Profile schema authoring runtime 007","scenario_hash":"37b063e26d5b3f51440eeccbfa03c8720332deec1fa287805b3dda7a5fe56ec7","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-27T07:17:04.031893918Z"},{"index":7,"name":"Data layer canonical Shared Profile schema authoring runtime 008","scenario_hash":"b48222ab9937d34e181fb714ec94b0fca77718e5301f0f9de21bbddffb54ba97","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-27T07:17:04.031893918Z"},{"index":14,"name":"Data layer canonical Shared Profile schema authoring runtime 015","scenario_hash":"e311bdb223dc8dfd7b504fb0d42e86948438e329ff4af691abccce8ea87c7258","mutation_count":21,"result":{"Total":21,"Killed":21,"Survived":0,"Errors":0},"tested_at":"2026-07-27T07:17:04.031893918Z"},{"index":18,"name":"Data layer canonical Shared Profile schema authoring runtime 019","scenario_hash":"34c9088664aaf7f6d7033d9e9031ce864615716268bdcdffe2c0a013b7aa1fa6","mutation_count":24,"result":{"Total":24,"Killed":24,"Survived":0,"Errors":0},"tested_at":"2026-07-27T07:17:04.031893918Z"},{"index":20,"name":"Data layer canonical Shared Profile schema authoring runtime 021","scenario_hash":"7402caa88c1bbed1a5f2698ef24bf9ad7de706eb85b17a2866de9c22fbc37d01","mutation_count":22,"result":{"Total":22,"Killed":22,"Survived":0,"Errors":0},"tested_at":"2026-07-27T07:17:04.031893918Z"},{"index":22,"name":"Data layer canonical Shared Profile schema authoring runtime 023","scenario_hash":"906e3447317e154259b569d51aff98deee9a6740c15eaf45096f3b88ca4eb38c","mutation_count":24,"result":{"Total":24,"Killed":24,"Survived":0,"Errors":0},"tested_at":"2026-07-27T07:17:04.031893918Z"},{"index":25,"name":"Data layer canonical Shared Profile schema authoring runtime 026","scenario_hash":"1b1b4b365bfff745ac9dfd1329542003c1fbfd640c7e1850b0bd65ac50d6eb94","mutation_count":18,"result":{"Total":18,"Killed":18,"Survived":0,"Errors":0},"tested_at":"2026-07-27T07:17:04.031893918Z"},{"index":26,"name":"Data layer canonical Shared Profile schema authoring runtime 027","scenario_hash":"0b9f66254abf52641925fc1705e834044f3e1b0d802f2e2c94060d81fdd8fa1a","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-07-27T07:17:04.031893918Z"},{"index":28,"name":"Data layer canonical Shared Profile schema authoring runtime 029","scenario_hash":"197839f2cff06311cbf8e91343a0bc10d6f826626f9beb79afc4a7ceef137b4c","mutation_count":36,"result":{"Total":36,"Killed":36,"Survived":0,"Errors":0},"tested_at":"2026-07-27T07:17:04.031893918Z"},{"index":31,"name":"Data layer canonical Shared Profile schema authoring runtime 032","scenario_hash":"f3124b8823c3b969360c4ad818eb22c818806058f91bfd30727827019df783eb","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-27T07:17:04.031893918Z"},{"index":32,"name":"Data layer canonical Shared Profile schema authoring runtime 033","scenario_hash":"a8fc17c4ca768e38a3152ace3838074467d29b661c06c9206c940a9112c8bb32","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-27T07:17:04.031893918Z"},{"index":34,"name":"Data layer canonical Shared Profile schema authoring runtime 035","scenario_hash":"287ff86d4e01d4a480307617bd5383b45e64317f29f84792b518c0c9a754269b","mutation_count":18,"result":{"Total":18,"Killed":18,"Survived":0,"Errors":0},"tested_at":"2026-07-27T07:17:04.031893918Z"},{"index":35,"name":"Data layer canonical Shared Profile schema authoring runtime 036","scenario_hash":"b4315546ff1799a0ae40fe85d2d6ab4cfd0fad27ff493535048a7ff35c0731b6","mutation_count":25,"result":{"Total":25,"Killed":25,"Survived":0,"Errors":0},"tested_at":"2026-07-27T07:17:04.031893918Z"},{"index":36,"name":"Data layer canonical Shared Profile schema authoring runtime 037","scenario_hash":"994099dd169b854291274c200da000c9c830db22f4b1e21058111cddd7b3b3b9","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-27T07:17:04.031893918Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer canonical Shared Profile schema authoring runtime
 
   Background:
@@ -144,14 +139,15 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
 
   # Data layer canonical Shared Profile schema authoring runtime 014
   Scenario: Data layer canonical Shared Profile schema authoring runtime 014
-    Given production Opened Article contains article_type, pathname, and consent_state properties
-    When actual controls build an All group containing Any of article_type Equals News or pathname Starts with /news/ and Not consent_state Equals denied
-    Then installed nested group controls render the predicate in plain language
-    And canonical storage contains stable property references, typed operators, and typed values in one structured predicate tree
-    And production conditional presence, validation rules, and applicability use the same predicate commands
-    When actual controls test matching and non-matching observations
-    Then rendered evidence identifies satisfied and failed predicate branches
-    And unresolved properties or type-incompatible values block the production command at the exact predicate control
+    Given production pageType has string properties platformType, pageCategory, and environment plus Boolean property consentRequired
+    When actual controls build rule Require pageType for checkout experiences with match mode All
+    And add platformType Is one of web and app, pageCategory Starts with checkout, environment Does not equal development, and consentRequired Equals true
+    Then repository bytes contain one flat ordered list with four stable property references, type-compatible operators, and typed values
+    And the rule record contains one top-level All match mode with no nested condition node
+    And DOM inspection finds no Add group, nested All, nested Any, or Not-group action
+    When actual controls evaluate matching and non-matching observations
+    Then installed results identify satisfied and failed condition rows
+    And unresolved properties or type-incompatible values disable save at the exact condition controls
 
   # Data layer canonical Shared Profile schema authoring runtime 015
   Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 015
@@ -334,11 +330,11 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
     Given production /lineOfCustomer has an ordinary definition, inherited pattern rule, and local range and cardinality rules
     When actual controls open the Rules child overlay
     Then stable rule rows render When condition, Then outcome, severity, message, source, ownership, and context-valid actions
-    And View is read-only while Edit opens a further overlay with optional When controls and only the selected outcome's fields
+    And View is read-only while Edit opens a further overlay with rule name, rule type, flat When controls, type-specific Then outcome, severity, optional message, and local actions
     When actual Add rule selects a kind
-    Then the staged rule defaults to Always and remains valid without a When condition
-    And adding When renders a searchable property, type-valid operator, and conditionally present typed value
-    And its Then controls render only fields applicable to the selected outcome
+    Then one empty condition row is mounted and Add rule remains disabled until at least one condition is complete
+    And actual Rule type selection precedes and mounts only that type's Then outcome fields
+    And the flat When builder exposes one All or Any mode, searchable property selectors, type-valid operators, and typed values only when required
     And reusable-rule selection is a searchable human-named control with no raw ID input
     And DOM inspection finds no separate property-level Conditions editor or condition rule kind
     When actual controls stage removal of the local cardinality rule
@@ -360,12 +356,12 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
 
   # Data layer canonical Shared Profile schema authoring runtime 026
   Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 026
-    Given production Add rule applies Always and has no selected outcome
-    When the installed rule builder changes outcome to <rule_outcome>
+    Given production Add rule has a name and one complete condition but no selected rule type
+    When the installed Rule type changes to <rule_type>
     Then DOM inspection finds <applicable_fields> and excludes <irrelevant_fields>
 
     Examples:
-      | rule_outcome | applicable_fields                                                   | irrelevant_fields                    |
+      | rule_type    | applicable_fields                                                   | irrelevant_fields                    |
       | presence     | Required or Optional or Forbidden, severity, and issue message      | value, pattern, range, or cardinality |
       | value        | allowed-values field, severity, and issue message                    | presence, pattern, range, or cardinality |
       | pattern      | pattern, severity, and issue message                                 | presence, value, range, or cardinality |
@@ -375,14 +371,15 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
 
   # Data layer canonical Shared Profile schema authoring runtime 027
   Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 027
-    Given actual Add rule controls selected <rule_outcome>
+    Given a draft of type <rule_type> is present in the rule-local editor
     When the invalid rule definition is <invalid_definition>
     Then installed Add rule is disabled with <diagnostic>
     And repository, Draft token, project transaction, and Undo inspection show no change
 
     Examples:
-      | rule_outcome | invalid_definition                         | diagnostic                                      |
-      | presence     | an enabled When with unresolved predicate  | Resolve or remove the When condition             |
+      | rule_type    | invalid_definition                         | diagnostic                                      |
+      | presence     | no rule name                               | Enter a rule name                                |
+      | presence     | an empty condition row                     | Complete or remove the condition                 |
       | value        | an empty allowed-values field              | Enter at least one allowed value                 |
       | pattern      | an empty pattern                           | Enter a regular expression                      |
       | range        | minimum 10 and maximum 2                   | Minimum must not exceed maximum                 |
@@ -434,12 +431,14 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
   # Data layer canonical Shared Profile schema authoring runtime 031
   Scenario: Data layer canonical Shared Profile schema authoring runtime 031
     Given production /aProducts has no conditional rules
-    When actual controls add cardinality minimum items 2 without adding When
-    Then the installed summary renders Always Then minimum items 2
-    And production validation applies the rule to every observation
-    When actual controls add When pageType Exists
-    Then rendered summary text is pageType exists without /aProducts, a stable identity, or a schema path prefix
-    And removing When restores Always without changing the persisted cardinality outcome
+    When actual controls add named cardinality rule Product collection with match mode All
+    And add pageType Exists and pageCategory Is one of checkout and payment
+    And set minimum items to 2
+    Then the installed summary renders When all pageType exists and pageCategory is one of checkout or payment Then minimum items 2
+    And repository bytes contain one All match mode, two conditions, and one cardinality outcome
+    When actual controls change its match mode to Any
+    Then repository bytes retain the same two conditions and outcome while either matching condition activates the rule
+    And DOM and repository inspection find no nested group or unconditional Always representation
 
   # Data layer canonical Shared Profile schema authoring runtime 032
   Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 032
@@ -465,12 +464,18 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
     And the complete active-layer bounding box fits the browser viewport without an editor scrollbar when its content fits
     And only the active layer has vertical overflow when its content exceeds the browser viewport
     And document focus cannot leave the blocking overlay stack
-    When Add condition is activated in the installed empty When builder
-    Then one directly editable property, operator, conditionally mounted value, and Remove row renders
-    When actual controls add a group and select All, Any, or Not
-    Then one group row renders relation, Add condition, Add group, and Remove controls
-    And All and Any accept multiple predicate or group children while Not accepts exactly one child
-    And DOM inspection finds no predicate View, Edit, or Add child control
+    Given the installed flat When list already contains pageType Equals checkout
+    When Add condition is activated beneath the installed condition list
+    Then one complete empty Property, Operator, Value, and Remove row renders immediately after the existing conditions
+    And activeElement is its empty searchable Property combobox
+    And Operator is disabled while Value is unavailable
+    When the new row receives property pageCategory and operator Starts with
+    Then Operator is type-compatible, a text Value control receives focus, and no second dialog or floating condition panel exists
+    When actual controls remove that condition
+    Then remaining row bounding boxes close the gap while values, order, alignment, and automatic numbering persist
+    And DOM inspection finds no detached Property, Operator, or Value control
+    When the only remaining row's Remove condition button is activated
+    Then that row remains with empty Property, disabled Operator, unavailable Value, and disabled Add rule controls
     When actual controls close every overlay layer
     Then document focus returns to the invoking property action with the original editor scroll offset
 
@@ -550,3 +555,82 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
       | Shared Profile    | standalone     | actual nested controls grow but still fit             | the complete layer stays viewport-contained with scrollHeight equal to clientHeight |
       | Flow Page-instance | Flow workspace | the installed browser viewport shrinks but still fits | the complete layer stays viewport-contained with scrollHeight equal to clientHeight |
       | Event             | in-panel       | actual nested controls become taller than the viewport | the layer uses the available viewport with scrollHeight greater than clientHeight |
+
+  # Data layer canonical Shared Profile schema authoring runtime 038
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 038
+    Given installed <contributor> property pageType is open in the <surface> Rules section
+    When the Rules-section Add rule button is activated
+    Then DOM order is Rule details, When, Then, Severity and message, and Rule actions
+    And Rule details renders full-width Rule name before Rule type
+    And When renders Match All or Any of these conditions above one aligned condition list and Add condition
+    And Then uses direct language for the selected rule type
+    And heading semantics and style fingerprints distinguish When and Then from routine labels without obscuring inputs
+    And labelled Severity precedes one optional full-width Message field
+    And the rule-action landmark contains Cancel and Add rule outside the property Review changes landmark
+    When the rule-local Add rule button submits a complete rule
+    Then it appears staged in the installed Rules list and only the Add rule editor closes
+    When actual controls edit that staged rule
+    Then the same installed flow ends with Cancel and Save rule while repository identity evidence remains unchanged
+    When the rule-local Cancel button is activated during add or edit
+    Then only that draft disappears, existing property staging is byte-identical, and activeElement returns to the invoking rule action
+
+    Examples:
+      | contributor       | surface        |
+      | Shared Profile    | standalone     |
+      | Page Group        | standalone     |
+      | Page              | standalone     |
+      | Event             | standalone     |
+      | Flow Page-instance | Flow workspace |
+      | Event occurrence  | Flow workspace |
+      | Shared Profile    | in-panel       |
+      | Page Group        | in-panel       |
+      | Page              | in-panel       |
+      | Event             | in-panel       |
+      | Flow Page-instance | in-panel       |
+      | Event occurrence  | in-panel       |
+
+  # Data layer canonical Shared Profile schema authoring runtime 039
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 039
+    Given installed Add rule has a new condition row with selected <property_type> property
+    When the condition Operator is set to <operator>
+    Then the Value cell renders <value_control>
+    And measured row structure remains Property, Operator, Value, and Remove
+
+    Examples:
+      | property_type | operator         | value_control                                  |
+      | string        | Starts with      | one text input                                 |
+      | number        | Greater than     | one number input                               |
+      | Boolean       | Equals           | one True or False selector                     |
+      | enum          | Is one of        | one typed multi-value selector                 |
+      | array         | Contains any of  | one typed multi-value input                    |
+      | string        | Exists           | aligned No value required text and no input    |
+
+  # Data layer canonical Shared Profile schema authoring runtime 040
+  Scenario: Data layer canonical Shared Profile schema authoring runtime 040
+    Given installed Add rule has enough properties for its Property combobox results to exceed the space below the field
+    When actual controls open the Property combobox and type page
+    Then one listbox bounding box is anchored to that field, is at least its width, and contains only matching options
+    And listbox scrollHeight exceeds clientHeight without changing rule-form geometry or unpredictably covering unrelated controls
+    And placement flips above the field when needed while every listbox edge remains inside the rule editor and browser viewport
+    When ArrowDown and Enter choose pageCategory from the listbox
+    Then the listbox closes, pageCategory remains selected, and activeElement advances to its enabled Operator control
+
+  # Data layer canonical Shared Profile schema authoring runtime 041
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 041
+    Given installed Add rule contains four complete conditions at <viewport_width> pixels
+    When the rule editor renders
+    Then measured condition composition is <condition_layout>
+    And measured outcome and severity composition is <secondary_layout>
+    And label associations remain valid
+    And Remove condition bounding boxes remain visible and operable
+    And the modal body has vertical overflow only when needed and no horizontal overflow
+    And computed form-section styles use normal grid or flex flow with no overlapping or absolutely positioned field controls
+    And the rule-action landmark remains visible at the modal bottom while its body scrolls
+    And center-point hit testing reaches every field, combobox, Remove, Add condition, Cancel, and primary rule action without an overlapping element
+    When the installed viewport crosses between wide and narrow layouts
+    Then control values retain every condition, match mode, outcome, severity, and message
+
+    Examples:
+      | viewport_width | condition_layout                                      | secondary_layout                          |
+      | 1280           | one aligned four-column row per condition             | outcome and severity may use two columns  |
+      | 360            | one labelled vertical block per condition             | outcome and severity stack vertically     |
