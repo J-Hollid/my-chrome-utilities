@@ -48,7 +48,13 @@ export function renderNavigatorRows(tree, context) {
         }
     }
 }
-const editableCell = (context, node, facet, value) => { const control = context.dom.createElement("input"), path = canonicalPropertyPath(context.document, node.id); control.type = "text"; control.value = value; control.dataset.inlineSchemaFacet = facet; control.dataset.inlineSchemaPath = path; control.setAttribute("aria-label", `${facet} for ${path}`); bindSchemaTableQuickEdit(control, { root: context.quickEditRoot, scope: context.quickEditScope, path, facet, savedValue: value, commit: (next) => context.commitInline(node, facet, next), cancel: context.cancelInline, diagnostic: context.inlineDiagnostic }); return control; };
+const bindEditable = (context, node, facet, value, control) => { const path = canonicalPropertyPath(context.document, node.id); control.value = value; control.dataset.inlineSchemaFacet = facet; control.dataset.inlineSchemaPath = path; control.setAttribute("aria-label", `${facet} for ${path}`); bindSchemaTableQuickEdit(control, { root: context.quickEditRoot, scope: context.quickEditScope, path, facet, savedValue: value, commit: (next) => context.commitInline(node, facet, next), cancel: context.cancelInline, diagnostic: context.inlineDiagnostic }); return control; };
+const editableCell = (context, node, facet, value) => { const control = context.dom.createElement("input"); control.type = "text"; return bindEditable(context, node, facet, value, control); };
+const selectCell = (context, node, facet, value, choices) => { const control = context.dom.createElement("select"); control.append(...choices.map((choice) => new Option(choice[0].toUpperCase() + choice.slice(1).replaceAll("-", " "), choice))); return bindEditable(context, node, facet, value, control); };
+const exampleCell = (context, node, value) => { const control = editableCell(context, node, "example", value), suggestions = context.dom.createElement("datalist"), listId = `schema-example-${node.id.replace(/[^a-z0-9_-]/gi, "-")}`; suggestions.id = listId; for (const allowed of node.allowedValues) {
+    const text = String(allowed.value);
+    suggestions.append(new Option(text, text));
+} control.setAttribute("role", "combobox"); control.setAttribute("aria-autocomplete", "list"); control.setAttribute("list", listId); return { control, suggestions }; };
 const sourceText = (node, fallback) => node.provenance.map(({ contributorName, source, state }) => contributorName ?? state ?? (source === "created" ? fallback : source)).join(", ") || fallback;
 function renderTable(tree, context) {
     const { dom } = context, table = context.tableElement ?? dom.createElement("table"), head = dom.createElement("thead"), headRow = dom.createElement("tr"), body = dom.createElement("tbody");
@@ -59,18 +65,28 @@ function renderTable(tree, context) {
         headRow.append(Object.assign(dom.createElement("th"), { textContent: label }));
     head.append(headRow);
     for (const row of canonicalNavigatorRows(context)) {
-        const node = context.working?.id === row.id ? context.working : row.node, tr = dom.createElement("tr"), identity = cell(0), name = dom.createElement("span"), trigger = button(dom, "⋯", () => context.openProperty(row.node, trigger)), example = node.documentation.example.value, states = node.provenance.map(({ state }) => state).filter(Boolean);
+        const node = context.working?.id === row.id ? context.working : row.node, tr = dom.createElement("tr"), identity = cell(0), trigger = button(dom, "⋯", () => context.openProperty(row.node, trigger)), example = node.documentation.example.value, states = node.provenance.map(({ state }) => state).filter(Boolean);
         tr.dataset.propertyRow = "true";
         tr.dataset.propertyId = row.id;
         identity.style.position = "relative";
-        name.textContent = `${node.name} · `;
         trigger.setAttribute("aria-label", `Property actions for ${row.path}`);
         trigger.dataset.propertyActionsPath = row.path;
-        identity.append(name, trigger);
-        tr.append(identity, cell(1, row.friendlyPath), cell(2, node.type), cell(3, node.presence.mode));
-        for (const [offset, control] of [editableCell(context, row.node, "description", node.documentation.description), editableCell(context, row.node, "expected-or-allowed", schemaTableAllowedValues({ expectedValue: node.expectedValue, allowedValues: node.allowedValues.map(({ value }) => value) })), editableCell(context, row.node, "example", example === undefined ? "" : String(example))].entries()) {
+        identity.append(trigger);
+        const pathCell = cell(1, row.friendlyPath), compatibilityMarker = dom.createElement("span");
+        compatibilityMarker.hidden = true;
+        compatibilityMarker.textContent = " ·";
+        pathCell.append(compatibilityMarker);
+        pathCell.style.minWidth = "20rem";
+        const typeCell = cell(2), presenceCell = cell(3);
+        typeCell.append(selectCell(context, row.node, "type", node.type, ["string", "number", "integer", "boolean", "null", "object", "array"]));
+        presenceCell.append(selectCell(context, row.node, "presence", node.presence.mode.endsWith("-when") ? node.presence.mode.replace("-when", "") : node.presence.mode, ["optional", "required", "forbidden"]));
+        tr.append(identity, pathCell, typeCell, presenceCell);
+        const exampleEditor = exampleCell(context, row.node, example === undefined ? "" : String(example));
+        for (const [offset, control] of [editableCell(context, row.node, "description", node.documentation.description), editableCell(context, row.node, "expected-or-allowed", schemaTableAllowedValues({ expectedValue: node.expectedValue, allowedValues: node.allowedValues.map(({ value }) => value) })), exampleEditor.control].entries()) {
             const valueCell = cell(offset + 4);
             valueCell.append(control);
+            if (control === exampleEditor.control)
+                valueCell.append(exampleEditor.suggestions);
             tr.append(valueCell);
         }
         tr.append(cell(7, sourceText(node, context.document.contributorName)), cell(8, states.join(", ") || "local"), cell(9, states.includes("conflict") || states.includes("shadowed") ? "Needs attention" : "Ready"));

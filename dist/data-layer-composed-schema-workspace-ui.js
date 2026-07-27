@@ -13,7 +13,11 @@ export function stageComposedExpectedOrAllowed(draft, text) {
 }
 export function composedTableQuickEditFacets(row, facet, value) {
     const next = composedFacetDraft(row.local, row.effective);
-    if (facet === "description")
+    if (facet === "type")
+        next.type = value;
+    else if (facet === "presence")
+        next.presence = value;
+    else if (facet === "description")
         next.documentation = value;
     else if (facet === "example") {
         next.exampleMethod = value ? "custom" : "blank";
@@ -28,7 +32,7 @@ export function composedTableQuickEditFacets(row, facet, value) {
     return sparseComposedFacets(next, row.inherited ?? { path: row.path });
 }
 export function mountComposedSchemaWorkspace(options) {
-    const section = document.createElement("section"), heading = document.createElement("h2"), summary = document.createElement("p"), quickEditFeedback = document.createElement("output"), filterControls = document.createElement("div"), filter = document.createElement("input"), sort = document.createElement("select"), addControls = document.createElement("div"), choice = document.createElement("select"), add = document.createElement("button"), rows = document.createElement("div");
+    const section = document.createElement("section"), heading = document.createElement("h2"), summary = document.createElement("p"), policy = document.createElement("input"), policyLabel = document.createElement("label"), quickEditFeedback = document.createElement("output"), filterControls = document.createElement("div"), filter = document.createElement("input"), sort = document.createElement("select"), addControls = document.createElement("div"), choice = document.createElement("select"), add = document.createElement("button"), rows = document.createElement("div");
     let activePath, overlayOpen = false, focusedOpen = false, activeSection = "definition", draft, removed = false, confirmedAction, removedRuleIds = new Set(), removedValueIds = new Set(), restoredRuleIds = new Set(), restoredValueIds = new Set(), stagedLocalValueIds = new Set(), overriddenRuleIds = new Set(), pendingStructure = [], pendingAction, originFocus, originPath, query = "", sortMode = "path";
     let overlayState = { phase: "closed" };
     let ownershipSession = { inherited: false, local: true, structureOwned: true, activated: [] };
@@ -44,6 +48,11 @@ export function mountComposedSchemaWorkspace(options) {
     summary.setAttribute("role", "status");
     summary.className = options.model.status === "blocked" ? "error" : "status-text";
     summary.textContent = `${options.model.status === "blocked" ? "Blocked" : "Ready"} · ${options.model.rows.length} effective properties${options.includeConflictSummary === false ? "" : ` · ${options.model.conflictSummary}`}`;
+    policy.type = "checkbox";
+    policy.checked = options.onlyDefinedFields === true;
+    policy.setAttribute("aria-label", "Only defined fields");
+    policy.addEventListener("change", () => options.onOnlyDefinedFields?.(policy.checked));
+    policyLabel.append(policy, "Only defined fields");
     quickEditFeedback.setAttribute("aria-label", "Table cell diagnostic");
     filter.type = "search";
     filter.placeholder = "Filter properties";
@@ -118,7 +127,7 @@ export function mountComposedSchemaWorkspace(options) {
             close("escape");
     } });
     rerender();
-    section.append(heading, summary, quickEditFeedback, filterControls, addControls, rows);
+    section.append(heading, summary, policyLabel, quickEditFeedback, filterControls, addControls, rows);
     options.host.append(section);
     return section;
 }

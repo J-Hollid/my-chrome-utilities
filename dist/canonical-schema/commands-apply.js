@@ -95,6 +95,10 @@ export function applyCanonicalAtCurrent(document, command) {
             return { status: "conflict", document, propertyId: command.propertyId, message: `Canonical condition write blocked: ${issue}` };
     }
     const next = clone(document);
+    if (command.kind === "policy") {
+        next.onlyDefinedFields = command.onlyDefinedFields;
+        return { status: "applied", document: appendChange(next, command, []) };
+    }
     if (command.kind === "add") {
         if (command.parentId && !next.nodes[command.parentId])
             throw new Error(`Parent property ${command.parentId} is unavailable.`);

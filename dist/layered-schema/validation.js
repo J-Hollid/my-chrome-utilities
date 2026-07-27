@@ -75,5 +75,19 @@ const validateProperty = (issues, targetName, path, canonicalPath, property, pay
     pushIssue(issues, targetName, path, canonicalPath, property, actual, "EXPECTED_VALUE", property.expectedValue); };
 export function validateLayeredObservation(target, payload) { const effective = resolveConditionalLayeredSchema(target.compiled, payload), issues = [], pathsByDefinition = layeredPropertyPaths(effective); for (const [canonicalPath, property] of Object.entries(effective.properties))
     for (const path of concretePaths(payload, canonicalPath))
-        validateProperty(issues, target.targetName, path, canonicalPath, property, payload, pathsByDefinition); return { selectedTargetId: target.targetId, selectedTargetName: target.targetName, effectiveSchemaRevision: target.revision, status: effective.status, conflicts: effective.conflicts, issues, provenance: effective.provenance }; }
+        validateProperty(issues, target.targetName, path, canonicalPath, property, payload, pathsByDefinition); if (effective.onlyDefinedFields) {
+    const declared = new Set(Object.keys(effective.properties)), provenance = effective.provenance.at(-1)?.contributorName ?? target.targetName, encoded = (key) => key.replaceAll("~", "~0").replaceAll("/", "~1"), walk = (value, actual, canonical) => { if (Array.isArray(value)) {
+        value.forEach((item, index) => walk(item, [...actual, String(index)], [...canonical, "*"]));
+        return;
+    } if (!value || typeof value !== "object")
+        return; for (const [key, child] of Object.entries(value)) {
+        const segment = encoded(key), actualPath = `/${[...actual, segment].join("/")}`, canonicalParts = [...canonical, segment], canonicalPath = `/${canonicalParts.join("/")}`;
+        if (!declared.has(canonicalPath)) {
+            issues.push({ path: actualPath, canonicalPath, code: "UNDECLARED_PROPERTY", message: "Undeclared property", severity: "error", expected: "declared property", actual: clone(child), provenance });
+            continue;
+        }
+        walk(child, [...actual, segment], canonicalParts);
+    } };
+    walk(payload, [], []);
+} return { selectedTargetId: target.targetId, selectedTargetName: target.targetName, effectiveSchemaRevision: target.revision, status: effective.status, conflicts: effective.conflicts, issues, provenance: effective.provenance }; }
 //# sourceMappingURL=validation.js.map

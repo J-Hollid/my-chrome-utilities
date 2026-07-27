@@ -81,7 +81,7 @@ const schemaForNode=(document:CanonicalSchemaDocument,node:CanonicalPropertyNode
 
 export function canonicalJsonSchemaDocument(document:CanonicalSchemaDocument):Record<string,unknown>{
   const roots=orderedChildren(document);
-  const result:Record<string,unknown>={type:"object",properties:Object.fromEntries(roots.map((node)=>[node.name,schemaForNode(document,node)]))};
+  const result:Record<string,unknown>={type:"object",properties:Object.fromEntries(roots.map((node)=>[node.name,schemaForNode(document,node)])),...(document.onlyDefinedFields?{additionalProperties:false}:{})};
   const required=roots.filter(({presence})=>presence.mode.startsWith("required")).map(({name})=>name);
   if(required.length)result.required=required;
   return result;

@@ -6,6 +6,7 @@ import {
   canonicalConstraints,
   canonicalPropertyPath,
   canonicalSchemaFromJsonSchema,
+  canonicalJsonSchemaDocument,
   canonicalTableRows,
   changeCanonicalPropertyType,
   createCanonicalRepository,
@@ -31,6 +32,8 @@ assert.deepEqual(document.rootIds,[]);
 const visibleProperty={id:"property:visible",name:"article_type",order:0,type:"string",presence:{mode:"optional"},allowedValues:[],rules:[],documentation:{displayText:"",description:"",comments:"",example:{method:"blank"}},provenance:[{source:"created"}],overrideReferences:[]};
 const visibleBaseDocument={...document,rootIds:[visibleProperty.id],nodes:{[visibleProperty.id]:visibleProperty}};
 assert.deepEqual(canonicalTableQuickEditPatch(visibleProperty,"description","Quick description",id),{documentation:{...visibleProperty.documentation,description:"Quick description"}},"a Description cell produces only its property-scoped documentation patch");
+assert.deepEqual(canonicalTableQuickEditPatch(visibleProperty,"type","number",id),{type:"number"},"a Type cell produces only its property-scoped type patch");
+assert.deepEqual(canonicalTableQuickEditPatch(visibleProperty,"presence","required",id),{presence:{mode:"required"}},"an ordinary Presence cell does not rewrite conditional rules");
 const quickLegacy={...visibleProperty,expectedValue:"retail"};
 const quickAllowed=canonicalTableQuickEditPatch(quickLegacy,"expected-or-allowed","retail, wholesale",id);
 assert.deepEqual(quickAllowed.allowedValues.map(({value})=>value),["retail","wholesale"],"an Allowed values cell parses every typed entry");
@@ -38,6 +41,10 @@ assert.equal(Object.hasOwn(quickAllowed,"expectedValue"),true,"new Table authori
 assert.equal(quickAllowed.expectedValue,undefined);
 assert.deepEqual(canonicalTableQuickEditPatch({...visibleProperty,type:"boolean"},"example","false",id),{documentation:{...visibleProperty.documentation,example:{method:"custom",value:false}}},"an Example cell retains the canonical property type");
 assert.throws(()=>canonicalTableQuickEditPatch({...visibleProperty,type:"integer"},"expected-or-allowed","2.5",id),/whole number/,"invalid quick edits fail before a command can be created");
+const closedDocument=applyCanonicalCommand(visibleBaseDocument,{kind:"policy",baseRevision:0,onlyDefinedFields:true});
+assert.equal(closedDocument.status,"applied");
+assert.equal(closedDocument.document.onlyDefinedFields,true,"Only defined fields is stored as one schema-scoped canonical command");
+assert.equal(canonicalJsonSchemaDocument(closedDocument.document).additionalProperties,false,"canonical JSON Schema export preserves the closed-field policy");
 const visibleCommandDocument={...visibleBaseDocument,revision:1,nodes:{[visibleProperty.id]:{...visibleProperty,presence:{mode:"forbidden"}}},changes:[{revision:1,propertyIds:[visibleProperty.id],kind:"set"}]};
 assert.equal(
   canonicalCommandOutcome(

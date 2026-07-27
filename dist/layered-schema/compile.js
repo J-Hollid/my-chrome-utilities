@@ -31,6 +31,7 @@ export function compileLayeredSchema(contributors, context) {
             const prior = properties[constraint.path], parallelPair = Boolean(prior && resolvedParallel.has(constraint.path) && new Set([branch(prior.origins.at(-1).scope), branch(contributor.scope)]).has("page") && new Set([branch(prior.origins.at(-1).scope), branch(contributor.scope)]).has("event"));
             properties[constraint.path] = mergeLayeredProperty(prior, constraint, contributor, parallelPair, conflict);
         }
-    return { status: conflicts.length ? "blocked" : "ready", properties, conflicts, provenance, exclusions };
+    const onlyDefinedFields = [...activeContributors].reverse().find((contributor) => contributor.onlyDefinedFields !== undefined)?.onlyDefinedFields;
+    return { status: conflicts.length ? "blocked" : "ready", properties, conflicts, provenance, exclusions, ...(onlyDefinedFields !== undefined ? { onlyDefinedFields } : {}) };
 }
 //# sourceMappingURL=compile.js.map

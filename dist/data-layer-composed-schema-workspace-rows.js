@@ -113,29 +113,46 @@ export function renderComposedRows(rows, context) {
     for (const { label } of schemaTableColumns)
         headRow.append(Object.assign(dom.createElement("th"), { textContent: label }));
     head.append(headRow);
-    const editable = (row, facet, value) => { const control = dom.createElement("input"); control.type = "text"; control.value = value; control.dataset.inlineSchemaFacet = facet; control.dataset.inlineSchemaPath = row.path; control.setAttribute("aria-label", `${facet} for ${row.path}`); bindSchemaTableQuickEdit(control, { root: context.quickEditRoot, scope: context.quickEditScope, path: row.path, facet, savedValue: value, commit: (next) => context.commitInline(row, facet, next), cancel: context.cancelInline, diagnostic: context.inlineDiagnostic }); return control; };
+    const bindEditable = (row, facet, value, control) => { control.value = value; control.dataset.inlineSchemaFacet = facet; control.dataset.inlineSchemaPath = row.path; control.setAttribute("aria-label", `${facet} for ${row.path}`); bindSchemaTableQuickEdit(control, { root: context.quickEditRoot, scope: context.quickEditScope, path: row.path, facet, savedValue: value, commit: (next) => context.commitInline(row, facet, next), cancel: context.cancelInline, diagnostic: context.inlineDiagnostic }); return control; };
+    const editable = (row, facet, value) => { const control = dom.createElement("input"); control.type = "text"; return bindEditable(row, facet, value, control); };
+    const select = (row, facet, value, choices) => { const control = dom.createElement("select"); control.append(...choices.map((choice) => new Option(choice[0].toUpperCase() + choice.slice(1).replaceAll("-", " "), choice))); return bindEditable(row, facet, value, control); };
     for (const row of context.model.rows) {
-        const draft = context.activePath === row.path ? context.draft : undefined, tr = dom.createElement("tr"), identity = cell(0), name = dom.createElement("span"), propertyActions = button(dom, "⋯", () => context.open(row, propertyActions)), effective = { ...row.effective, ...row.local }, description = draft?.documentation ?? String(effective.documentation ?? ""), expected = draft ? schemaTableAllowedValues(draft) : schemaTableAllowedValues(effective), exampleValue = draft?.exampleValue ?? (Array.isArray(effective.examples) ? effective.examples[0] : undefined);
+        const draft = context.activePath === row.path ? context.draft : undefined, tr = dom.createElement("tr"), identity = cell(0), propertyActions = button(dom, "⋯", () => context.open(row, propertyActions)), effective = { ...row.effective, ...row.local }, description = draft?.documentation ?? String(effective.documentation ?? ""), expected = draft ? schemaTableAllowedValues(draft) : schemaTableAllowedValues(effective), exampleValue = draft?.exampleValue ?? (Array.isArray(effective.examples) ? effective.examples[0] : undefined);
         tr.className = "composed-schema-row";
         tr.dataset.effectivePropertyPath = row.path;
         if (context.rowPathDataset)
             tr.dataset[context.rowPathDataset] = row.path;
         tr.dataset.validationState = row.validationState;
         identity.style.position = "relative";
-        name.textContent = row.path.split("/").filter(Boolean).at(-1) ?? row.path;
         propertyActions.setAttribute("aria-label", `Property actions for ${row.path}`);
         propertyActions.dataset.propertyActionsPath = row.path;
-        identity.append(name, propertyActions);
-        if (context.onRepair)
-            for (const repair of row.repairs)
-                identity.append(button(dom, repair.label, () => context.onRepair?.(repair)));
-        tr.append(identity, cell(1, row.path), cell(2, String(draft?.type ?? effective.type ?? "constraint")), cell(3, String(draft?.presence ?? effective.presence ?? "optional")));
-        for (const [offset, control] of [editable(row, "description", description), editable(row, "expected-or-allowed", expected), editable(row, "example", exampleValue === undefined ? "" : String(exampleValue))].entries()) {
+        identity.append(propertyActions);
+        const pathCell = cell(1, row.path), typeCell = cell(2), presenceCell = cell(3);
+        pathCell.style.minWidth = "20rem";
+        typeCell.append(select(row, "type", String(draft?.type ?? effective.type ?? "string"), ["string", "number", "integer", "boolean", "null", "object", "array"]));
+        presenceCell.append(select(row, "presence", String(draft?.presence ?? effective.presence ?? "optional"), ["optional", "required", "forbidden"]));
+        tr.append(identity, pathCell, typeCell, presenceCell);
+        const example = editable(row, "example", exampleValue === undefined ? "" : String(exampleValue)), suggestions = dom.createElement("datalist"), listId = `schema-example-${row.path.replace(/[^a-z0-9_-]/gi, "-")}`;
+        suggestions.id = listId;
+        for (const value of (draft?.allowedValues ?? effective.allowedValues ?? [])) {
+            const text = String(value);
+            suggestions.append(new Option(text, text));
+        }
+        example.setAttribute("role", "combobox");
+        example.setAttribute("aria-autocomplete", "list");
+        example.setAttribute("list", listId);
+        for (const [offset, control] of [editable(row, "description", description), editable(row, "expected-or-allowed", expected), example].entries()) {
             const valueCell = cell(offset + 4);
             valueCell.append(control);
+            if (control === example)
+                valueCell.append(suggestions);
             tr.append(valueCell);
         }
-        tr.append(cell(7, row.source), cell(8, context.removed && context.activePath === row.path ? "Removed" : Object.keys(row.local).length > 1 ? `Local · effective ${context.effectiveText(row)}` : "Inherited · effective"), cell(9, `${row.validationState} · ${row.message}`));
+        const validation = cell(9, `${row.validationState} · ${row.message}`);
+        if (context.onRepair)
+            for (const repair of row.repairs)
+                validation.append(button(dom, repair.label, () => context.onRepair?.(repair)));
+        tr.append(cell(7, row.source), cell(8, context.removed && context.activePath === row.path ? "Removed" : Object.keys(row.local).length > 1 ? `Local · effective ${context.effectiveText(row)}` : "Inherited · effective"), validation);
         if (context.overlayOpen && context.activePath === row.path) {
             const layers = [contextMenu(row, context)];
             if (context.focusedOpen)

@@ -1,4 +1,4 @@
-export const schemaTableEditableFacets=["description","expected-or-allowed","example"] as const;
+export const schemaTableEditableFacets=["type","presence","description","expected-or-allowed","example"] as const;
 export type SchemaTableEditableFacet=typeof schemaTableEditableFacets[number];
 
 export interface SchemaTableQuickEditCell {path:string;facet:SchemaTableEditableFacet;}
@@ -32,8 +32,9 @@ export interface SchemaTableQuickEditBinding {
   diagnostic:(message:string)=>void;
 }
 
-const quickEditControls=(root:ParentNode):HTMLInputElement[]=>Array.from(root.querySelectorAll<HTMLInputElement>("input[data-inline-schema-facet][data-inline-schema-path]"));
-const quickEditCell=(control:HTMLInputElement):SchemaTableQuickEditCell=>({path:control.dataset.inlineSchemaPath!,facet:control.dataset.inlineSchemaFacet as SchemaTableEditableFacet});
+type SchemaTableQuickEditControl=HTMLInputElement|HTMLSelectElement;
+const quickEditControls=(root:ParentNode):SchemaTableQuickEditControl[]=>Array.from(root.querySelectorAll<SchemaTableQuickEditControl>("input[data-inline-schema-facet][data-inline-schema-path],select[data-inline-schema-facet][data-inline-schema-path]"));
+const quickEditCell=(control:SchemaTableQuickEditControl):SchemaTableQuickEditCell=>({path:control.dataset.inlineSchemaPath!,facet:control.dataset.inlineSchemaFacet as SchemaTableEditableFacet});
 const quickEditFocusGeneration=new WeakMap<Document,number>();
 const pendingQuickEditFocus=new WeakMap<Document,{scope:string;cell:SchemaTableQuickEditCell;expires:number}>();
 const focusQuickEditCell=(binding:SchemaTableQuickEditBinding,cell:SchemaTableQuickEditCell):void=>{
@@ -52,7 +53,7 @@ const restoreQuickEditFocus=(binding:SchemaTableQuickEditBinding,cell:SchemaTabl
   for(const delay of [0,25,75,150,300,600])setTimeout(restore,delay);
 };
 
-export function bindSchemaTableQuickEdit(control:HTMLInputElement,binding:SchemaTableQuickEditBinding):void {
+export function bindSchemaTableQuickEdit(control:SchemaTableQuickEditControl,binding:SchemaTableQuickEditBinding):void {
   const origin={path:binding.path,facet:binding.facet},destination=(direction:1|-1):SchemaTableQuickEditCell|undefined=>schemaTableQuickEditDestination(quickEditControls(control.closest("table")??binding.root()).map(quickEditCell),origin,direction);
   let settled=false;
   const pending=pendingQuickEditFocus.get(control.ownerDocument);
@@ -77,7 +78,8 @@ export function bindSchemaTableQuickEdit(control:HTMLInputElement,binding:Schema
   };
   control.addEventListener("input",()=>{settled=false;});
   control.addEventListener("focus",()=>{const document=control.ownerDocument,current=pendingQuickEditFocus.get(document);quickEditFocusGeneration.set(document,(quickEditFocusGeneration.get(document)??0)+1);if(current&&(current.scope!==binding.scope||current.cell.path!==origin.path||current.cell.facet!==origin.facet))pendingQuickEditFocus.delete(document);});
-  control.addEventListener("keydown",(event)=>{
+  control.addEventListener("keydown",(rawEvent)=>{
+    const event=rawEvent as KeyboardEvent;
     const intent=schemaTableQuickEditIntent(event.key,event.shiftKey);if(!intent)return;
     event.preventDefault();
     if(intent.kind==="cancel"){

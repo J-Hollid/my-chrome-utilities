@@ -8,6 +8,7 @@ import {
   saveEventOccurrenceCanonicalDocument,
   saveFlowPageInstanceCanonicalDocument,
   saveComposedSchemaLocalFacets,
+  saveComposedSchemaPolicy,
   saveComposedSchemaLocalFacetsAndStructures,
 } from "../dist/data-layer-composed-schema-workspace.js";
 import {applyCanonicalCommand,canonicalPropertyPath} from "../dist/data-layer-canonical-schema.js";
@@ -33,9 +34,14 @@ state.project.collections.pageGroups.push(
 state.project.collections.pages.push({id:"page:cart",name:"Cart",profileId:"profile:sitewide",pageGroupIds:["group:checkout","group:retail"],schemaConstraints:[{path:"/funnel_step",expectedValue:"2"}]});
 
 const cart=state.project.collections.pages[0];
+const closedCart=saveComposedSchemaPolicy(state,"pages",cart.id,true);
+assert.equal(closedCart.project.collections.pages[0].onlyDefinedFields,true,"a composed schema policy persists independently from property contributions");
+assert.deepEqual(closedCart.project.collections.pages[0].schemaConstraints,cart.schemaConstraints,"the schema policy command does not rewrite property definitions");
 const workspace=composedSchemaWorkspace(state,cart,"Page");
 const quickStep=workspace.rows.find(({path})=>path==="/page_name");
 assert.deepEqual(composedTableQuickEditFacets(quickStep,"description","Cart step"),{documentation:"Cart step"},"an inherited composed Description edit creates only its sparse local facet");
+assert.deepEqual(composedTableQuickEditFacets(quickStep,"type","number"),{type:"number"},"an inherited composed Type edit creates only its sparse local facet");
+assert.deepEqual(composedTableQuickEditFacets(quickStep,"presence","required"),{presence:"required"},"an inherited composed Presence edit creates only its sparse local facet");
 assert.deepEqual(composedTableQuickEditFacets(quickStep,"expected-or-allowed","cart, guest"),{allowedValues:["cart","guest"]},"an inherited composed Allowed values edit does not copy parent facets");
 assert.deepEqual(composedTableQuickEditFacets(quickStep,"example","cart"),{examples:["cart"]},"an inherited composed Example edit creates only its typed example facet");
 assert.equal(workspace.heading,"Effective schema at Cart");

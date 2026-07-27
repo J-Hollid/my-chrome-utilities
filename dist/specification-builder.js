@@ -15,7 +15,7 @@ import { PROJECT_LIBRARY_STORAGE_KEY, activateProject, activeProjectContextChang
 import { effectivePropertySummary, installLayeredSchemaUi } from "./data-layer-layered-schema-ui.js";
 import { compileLayeredSchema } from "./data-layer-layered-schema.js";
 import { assignmentContributorTargets, layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
-import { composedSchemaWorkspace, resetComposedSchemaLocalProperty, saveComposedSchemaLocalFacetsAndStructures } from "./data-layer-composed-schema-workspace.js";
+import { composedSchemaWorkspace, resetComposedSchemaLocalProperty, saveComposedSchemaLocalFacetsAndStructures, saveComposedSchemaPolicy } from "./data-layer-composed-schema-workspace.js";
 import { mountComposedSchemaWorkspace } from "./data-layer-composed-schema-workspace-ui.js";
 import { installFlowDocumentationExportUi } from "./data-layer-flow-table-documentation-export-ui.js";
 import { installProjectDocumentationWorkspaceUi } from "./data-layer-project-documentation-workspace-ui.js";
@@ -114,7 +114,7 @@ function labeledControl(text, control) { const label = document.createElement("l
 function renderComposedSchemaWorkspace(host, entity, kind, scope) {
     if (!state)
         return;
-    const workspaceState = state, persistComposed = (next) => { durableProjectRuntime.prepareProjectRoute(next.project.id, { collectionKind: kind, entityId: entity.id }); persist(next); }, model = composedSchemaWorkspace(workspaceState, entity, scope), section = mountComposedSchemaWorkspace({ host, model, effectiveText: (row) => effectivePropertySummary(row.effective), onSave: (row, facets, structures = []) => persistComposed(saveComposedSchemaLocalFacetsAndStructures(workspaceState, kind, entity.id, row.path, facets, structures, id)), onReset: (row) => persistComposed(resetComposedSchemaLocalProperty(workspaceState, kind, entity.id, row.path)), onStructure: () => { }, onRepair: (repair) => { const match = ['pages', 'pageGroups', 'profiles', 'events'].find((collection) => state.project.collections[collection].some(({ id }) => id === repair.contributorId)); if (match) {
+    const workspaceState = state, persistComposed = (next) => { durableProjectRuntime.prepareProjectRoute(next.project.id, { collectionKind: kind, entityId: entity.id }); persist(next); }, model = composedSchemaWorkspace(workspaceState, entity, scope), section = mountComposedSchemaWorkspace({ host, model, effectiveText: (row) => effectivePropertySummary(row.effective), onlyDefinedFields: entity.onlyDefinedFields === true, onOnlyDefinedFields: (value) => persistComposed(saveComposedSchemaPolicy(workspaceState, kind, entity.id, value)), onSave: (row, facets, structures = []) => persistComposed(saveComposedSchemaLocalFacetsAndStructures(workspaceState, kind, entity.id, row.path, facets, structures, id)), onReset: (row) => persistComposed(resetComposedSchemaLocalProperty(workspaceState, kind, entity.id, row.path)), onStructure: () => { }, onRepair: (repair) => { const match = ['pages', 'pageGroups', 'profiles', 'events'].find((collection) => state.project.collections[collection].some(({ id }) => id === repair.contributorId)); if (match) {
             selectedKind = match;
             selectedId = repair.contributorId;
             persistNavigation();

@@ -13,7 +13,11 @@ export function bindCanonicalPropertySearch(control, update) { control.addEventL
 export function canonicalDispatchRequiresLocalRender(result, renderAfterDispatch) { return renderAfterDispatch !== false || result.status === "confirmation-required"; }
 export function canonicalTableQuickEditPatch(original, facet, value, id) {
     const next = clone(original);
-    if (facet === "description")
+    if (facet === "type")
+        next.type = value;
+    else if (facet === "presence")
+        next.presence = { ...next.presence, mode: value };
+    else if (facet === "description")
         next.documentation = { ...next.documentation, description: value };
     else if (facet === "example")
         next.documentation = { ...next.documentation, example: value === "" ? { method: "blank" } : { method: "custom", value: typedCanonicalValue(next.type, value) } };

@@ -38,6 +38,11 @@ assert.equal(ready.properties["/funnel_step"].expectedValue,"3b");
 assert.deepEqual(ready.properties["/funnel_step"].superseded.map(({contributorName})=>contributorName),["Shipping"]);
 assert.deepEqual(ready.provenance.map(({scope})=>scope),["Shared Profile","Page Group","Page","Flow Page-instance","Event-occurrence"]);
 assert.equal(ready.properties["/order_id"].presence,"required");
+const closed=compileLayeredSchema([{...base,onlyDefinedFields:true}],{eventId:"event:purchase",eventRole:"interaction"});
+assert.equal(closed.onlyDefinedFields,true,"the effective closed-field policy is inherited with the contributor chain");
+assert.deepEqual(validateLayeredObservation({targetId:"closed",targetName:"Closed",revision:1,compiled:closed},{funnel_step:"2",debug:true}).issues.map(({path,code})=>({path,code})),[{path:"/debug",code:"UNDECLARED_PROPERTY"}]);
+const reopened=compileLayeredSchema([{...base,onlyDefinedFields:true},{...shipping,onlyDefinedFields:false}],{eventId:"event:purchase",eventRole:"interaction"});
+assert.equal(validateLayeredObservation({targetId:"open",targetName:"Open",revision:1,compiled:reopened},{debug:true}).issues.some(({code})=>code==="UNDECLARED_PROPERTY"),false,"a more-specific disabled policy permits an otherwise undeclared field");
 
 const compilePair=(baseConstraint,specificConstraint)=>compileLayeredSchema([
   contribution("base","Sitewide","Shared Profile",[{path:"/value",...baseConstraint}]),

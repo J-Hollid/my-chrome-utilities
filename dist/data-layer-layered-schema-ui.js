@@ -3,7 +3,7 @@ import { confirmCanonicalMigration, transactProject } from "./data-layer-specifi
 import { applyCanonicalCommand, canonicalSchemaWithConstraint, canonicalTableRows, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
 import { mountComposedSchemaWorkspace } from "./data-layer-composed-schema-workspace-ui.js";
-import { composedCanonicalSchema, composedSchemaWorkspace, saveComposedEventCanonicalDocument } from "./data-layer-composed-schema-workspace.js";
+import { composedCanonicalSchema, composedSchemaWorkspace, saveComposedEventCanonicalDocument, saveFlowPageInstanceSchemaPolicy } from "./data-layer-composed-schema-workspace.js";
 import { flowPageFrameContributor, layeredContributorPath, layeredContributorsForPath, resetFlowPageInstanceLocalProperty, saveFlowPageInstanceLocalFacets, saveFlowPageInstanceLocalFacetsAndStructures } from "./data-layer-layered-schema-project.js";
 import { resolveSidePanelSchemaContributor } from "./data-layer-side-panel-schema-editor.js";
 export { layeredContributionDetails, layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
@@ -121,7 +121,11 @@ export function installLayeredSchemaUi(options) {
             example.open = saved.expandedExample.open;
     } if (graph && saved.viewBox && graph.getAttribute("viewBox") !== saved.viewBox)
         graph.setAttribute("viewBox", saved.viewBox); const focus = saved.originSelector ? document.querySelector(saved.originSelector) : undefined; const target = focus ?? (returnFocus?.isConnected ? returnFocus : undefined); target?.focus({ preventScroll: true }); }; apply(); queueMicrotask(apply); setTimeout(apply, 0); setTimeout(apply, 50); };
-    const renderFlowComposedSchemaWorkspace = (state, entity, flowId) => { const model = composedSchemaWorkspace(state, entity, "Flow Page-instance", undefined, flowId), identity = document.createElement("p"), back = document.createElement("button"); identity.textContent = `Contributor: ${entity.name} · Flow Page-instance`; editor.append(identity); mountComposedSchemaWorkspace({ host: editor, model, effectiveText: (row) => effectivePropertySummary(row.effective), schemaContributorId: entity.id, schemaContributorScope: "Flow Page-instance", rowPathDataset: "flowInstanceEffectivePath", includeConditionEvaluation: false, includeConflictSummary: false, onSave: (row, facets, structures = []) => { const live = current(), next = live.state ? (structures.length ? saveFlowPageInstanceLocalFacetsAndStructures(live.state, flowId, entity.id, row.path, facets, structures, id) : saveFlowPageInstanceLocalFacets(live.state, flowId, entity.id, row.path, facets)) : undefined; if (next) {
+    const renderFlowComposedSchemaWorkspace = (state, entity, flowId) => { const model = composedSchemaWorkspace(state, entity, "Flow Page-instance", undefined, flowId), identity = document.createElement("p"), back = document.createElement("button"); identity.textContent = `Contributor: ${entity.name} · Flow Page-instance`; editor.append(identity); mountComposedSchemaWorkspace({ host: editor, model, effectiveText: (row) => effectivePropertySummary(row.effective), schemaContributorId: entity.id, schemaContributorScope: "Flow Page-instance", rowPathDataset: "flowInstanceEffectivePath", includeConditionEvaluation: false, includeConflictSummary: false, onlyDefinedFields: entity.onlyDefinedFields === true, onOnlyDefinedFields: (value) => { const live = current(), next = live.state ? saveFlowPageInstanceSchemaPolicy(live.state, flowId, entity.id, value) : undefined; if (next) {
+            graphSelection = flowPageFrameContributor(next, flowId, entity.id);
+            options.persist(next);
+            queueMicrotask(renderEditor);
+        } }, onSave: (row, facets, structures = []) => { const live = current(), next = live.state ? (structures.length ? saveFlowPageInstanceLocalFacetsAndStructures(live.state, flowId, entity.id, row.path, facets, structures, id) : saveFlowPageInstanceLocalFacets(live.state, flowId, entity.id, row.path, facets)) : undefined; if (next) {
             graphSelection = flowPageFrameContributor(next, flowId, entity.id);
             options.persist(next);
             queueMicrotask(renderEditor);

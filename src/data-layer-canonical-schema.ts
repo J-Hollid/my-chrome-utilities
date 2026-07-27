@@ -24,6 +24,7 @@ export interface CanonicalPropertyNode {
 export interface CanonicalSchemaDocument {
   id:string;revision:number;state:"Draft";contributorId:string;contributorName:string;rootIds:string[];nodes:Record<string,CanonicalPropertyNode>;
   source?:{identity:string;revision:number;provenance:"saved-schema-library"|"project-composed-effective"};selectedPropertyId?:string;view:"tree"|"table";
+  onlyDefinedFields?:boolean;
   sourceContent?:{document:Record<string,unknown>;rules:readonly Record<string,unknown>[];documentation:unknown;examples:readonly unknown[];definitionsByNodeId?:Record<string,Record<string,unknown>>;pathsByNodeId?:Record<string,string>};
   changes:{revision:number;propertyIds:string[];kind:CanonicalCommand["kind"]|"synchronize"}[];
 }
@@ -44,6 +45,7 @@ export type CanonicalCommand=
   |{kind:"set";baseRevision:number;propertyId:string;patch:Partial<Omit<CanonicalPropertyNode,"id"|"parentId"|"order"|"provenance">>;operations?:CanonicalStructuralOperation[];confirmed?:boolean}
   |{kind:"type";baseRevision:number;propertyId:string;type:CanonicalPropertyType;itemType?:CanonicalPropertyType;confirmed?:boolean}
   |{kind:"select";baseRevision:number;propertyId:string}
+  |{kind:"policy";baseRevision:number;onlyDefinedFields:boolean}
   |{kind:"view";baseRevision:number;view:"tree"|"table"};
 export type CanonicalCommandResult=
   |{status:"applied"|"rebased";document:CanonicalSchemaDocument}

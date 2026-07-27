@@ -128,10 +128,12 @@ function jsonDefinition(document, node) {
 }
 export function savedSchemaFromCanonical(schema, canonical) {
     const roots = orderedChildren(canonical), root = clone(canonical.sourceContent?.document ?? {});
-    for (const key of ["properties", "required", "forbidden"])
+    for (const key of ["properties", "required", "forbidden", "additionalProperties"])
         delete root[key];
     root.type = "object";
     root.properties = Object.fromEntries(roots.map((node) => [node.name, jsonDefinition(canonical, node)]));
+    if (canonical.onlyDefinedFields)
+        root.additionalProperties = false;
     const rootRequired = roots.filter(({ presence }) => presence.mode.startsWith("required")).map(({ name }) => name), rootForbidden = roots.filter(({ presence }) => presence.mode.startsWith("forbidden")).map(({ name }) => name);
     if (rootRequired.length)
         root.required = rootRequired;

@@ -42,7 +42,7 @@ export function resolveCanonicalMigrationConflict(plan, conflictId, choiceId) {
     next.conflicts = next.conflicts.filter(({ id }) => id !== conflictId);
     return next;
 }
-export function canonicalSchemaFromJsonSchema(input) { const profile = { id: input.contributorId, name: input.contributorName, structuredSchema: input.document }, plan = migrateLegacyProfile(profile, { id: input.idFactory }), firstRootId = plan.document.rootIds[0], document = { ...plan.document, id: input.id, source: { identity: input.sourceIdentity, revision: input.sourceRevision, provenance: "saved-schema-library" }, ...(firstRootId ? { selectedPropertyId: firstRootId } : {}) }; for (const node of Object.values(document.nodes)) {
+export function canonicalSchemaFromJsonSchema(input) { const profile = { id: input.contributorId, name: input.contributorName, structuredSchema: input.document }, plan = migrateLegacyProfile(profile, { id: input.idFactory }), firstRootId = plan.document.rootIds[0], document = { ...plan.document, id: input.id, source: { identity: input.sourceIdentity, revision: input.sourceRevision, provenance: "saved-schema-library" }, ...(input.document.additionalProperties === false ? { onlyDefinedFields: true } : {}), ...(firstRootId ? { selectedPropertyId: firstRootId } : {}) }; for (const node of Object.values(document.nodes)) {
     const presenceCondition = canonicalPredicateWithStableIds(node.presence.condition, input.idFactory);
     node.presence = presenceCondition ? { ...node.presence, condition: presenceCondition } : { ...node.presence };
     node.rules = node.rules.map((rule) => { const condition = canonicalPredicateWithStableIds(rule.condition, input.idFactory); return condition ? { ...rule, condition } : { ...rule }; });

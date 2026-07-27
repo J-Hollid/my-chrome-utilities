@@ -13,13 +13,18 @@ export function renderCanonicalSchemaEditor(context) {
     options.host.dataset.canonicalSchemaId = document.id;
     options.host.dataset.canonicalRevision = String(document.revision);
     options.host.dataset.canonicalEditorMode = "focused-property";
-    const header = dom.createElement("header"), title = dom.createElement("h2"), status = dom.createElement("p"), undo = button(dom, "Undo", () => options.onUndo?.()), redo = button(dom, "Redo", () => options.onRedo?.());
+    const header = dom.createElement("header"), title = dom.createElement("h2"), status = dom.createElement("p"), undo = button(dom, "Undo", () => options.onUndo?.()), redo = button(dom, "Redo", () => options.onRedo?.()), policy = dom.createElement("input"), policyLabel = dom.createElement("label");
     title.textContent = document.contributorName;
     status.setAttribute("aria-label", "Canonical Draft status");
     status.textContent = `Draft · ${document.source ? `source ${document.source.identity} revision ${document.source.revision}` : "no source revision"} · lineage ${document.source?.provenance ?? "project-created"} · Saved · Draft token ${document.revision}`;
     undo.disabled = !options.onUndo;
     redo.disabled = !options.onRedo;
-    header.append(title, status, undo, redo);
+    policy.type = "checkbox";
+    policy.checked = document.onlyDefinedFields === true;
+    policy.setAttribute("aria-label", "Only defined fields");
+    policy.addEventListener("change", () => context.command({ kind: "policy", baseRevision: document.revision, onlyDefinedFields: policy.checked }));
+    policyLabel.append(policy, "Only defined fields");
+    header.append(title, status, policyLabel, undo, redo);
     options.host.append(header, renderCanonicalNavigator(context));
     const node = context.selectedNode(document);
     if (document.view !== "table" && node && context.focusedPropertyId === node.id) {

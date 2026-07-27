@@ -1,4 +1,4 @@
-export const schemaTableEditableFacets = ["description", "expected-or-allowed", "example"];
+export const schemaTableEditableFacets = ["type", "presence", "description", "expected-or-allowed", "example"];
 export function schemaTableQuickEditIntent(key, shiftKey) {
     if (key === "Escape")
         return { kind: "cancel" };
@@ -12,7 +12,7 @@ export function schemaTableQuickEditDestination(cells, origin, direction) {
     const index = cells.findIndex(({ path, facet }) => path === origin.path && facet === origin.facet);
     return index < 0 ? undefined : cells[index + direction];
 }
-const quickEditControls = (root) => Array.from(root.querySelectorAll("input[data-inline-schema-facet][data-inline-schema-path]"));
+const quickEditControls = (root) => Array.from(root.querySelectorAll("input[data-inline-schema-facet][data-inline-schema-path],select[data-inline-schema-facet][data-inline-schema-path]"));
 const quickEditCell = (control) => ({ path: control.dataset.inlineSchemaPath, facet: control.dataset.inlineSchemaFacet });
 const quickEditFocusGeneration = new WeakMap();
 const pendingQuickEditFocus = new WeakMap();
@@ -69,7 +69,8 @@ export function bindSchemaTableQuickEdit(control, binding) {
     control.addEventListener("input", () => { settled = false; });
     control.addEventListener("focus", () => { const document = control.ownerDocument, current = pendingQuickEditFocus.get(document); quickEditFocusGeneration.set(document, (quickEditFocusGeneration.get(document) ?? 0) + 1); if (current && (current.scope !== binding.scope || current.cell.path !== origin.path || current.cell.facet !== origin.facet))
         pendingQuickEditFocus.delete(document); });
-    control.addEventListener("keydown", (event) => {
+    control.addEventListener("keydown", (rawEvent) => {
+        const event = rawEvent;
         const intent = schemaTableQuickEditIntent(event.key, event.shiftKey);
         if (!intent)
             return;

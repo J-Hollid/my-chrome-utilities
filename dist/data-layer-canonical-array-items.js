@@ -83,7 +83,7 @@ const schemaForNode = (document, node) => {
 };
 export function canonicalJsonSchemaDocument(document) {
     const roots = orderedChildren(document);
-    const result = { type: "object", properties: Object.fromEntries(roots.map((node) => [node.name, schemaForNode(document, node)])) };
+    const result = { type: "object", properties: Object.fromEntries(roots.map((node) => [node.name, schemaForNode(document, node)])), ...(document.onlyDefinedFields ? { additionalProperties: false } : {}) };
     const required = roots.filter(({ presence }) => presence.mode.startsWith("required")).map(({ name }) => name);
     if (required.length)
         result.required = required;

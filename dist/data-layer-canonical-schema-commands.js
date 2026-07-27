@@ -4,7 +4,7 @@ const clone = (value) => structuredClone(value);
 const affectedPropertyIds = (command) => "propertyId" in command ? [command.propertyId] : command.kind === "add" && command.parentId ? [command.parentId] : [];
 export function canonicalCommandOutcome(command, result, prior) {
     const label = (() => { if (command.kind !== "set")
-        return { add: "property addition", rename: "name", move: "position", duplicate: "property duplication", delete: "property removal", type: "type", select: "selection", view: "view" }[command.kind]; const facets = Object.keys(command.patch), names = { allowedValues: "allowed values", expectedValue: "expected value", overrideReferences: "override references" }; return facets.length === 1 ? (names[facets[0]] ?? facets[0]) : "property facets"; })();
+        return { add: "property addition", rename: "name", move: "position", duplicate: "property duplication", delete: "property removal", type: "type", policy: "defined-fields policy", select: "selection", view: "view" }[command.kind]; const facets = Object.keys(command.patch), names = { allowedValues: "allowed values", expectedValue: "expected value", overrideReferences: "override references" }; return facets.length === 1 ? (names[facets[0]] ?? facets[0]) : "property facets"; })();
     const propertyId = "propertyId" in command ? command.propertyId : command.kind === "add" ? [...result.document.changes].reverse().find(({ revision }) => revision === result.document.revision)?.propertyIds.find((id) => Boolean(result.document.nodes[id])) : undefined, path = propertyId ? (() => { const source = result.document.nodes[propertyId] ? result.document : prior; try {
         return canonicalPropertyPath(source, propertyId);
     }
