@@ -198,10 +198,15 @@ controls remain inside the overlay at 360 pixels. Opening or growing a layer nea
 the viewport edge uses a top-level blocking overlay stack outside the editor scroll
 region. The stack remains visually anchored beside the invoking property action,
 uses the browser viewport for placement, and scrolls only an active layer whose
-content exceeds that viewport. The editor behind it remains inert and retains its
-scroll position. This applies to Shared Profile, Page Group, Page, Event, Flow
-Page-instance, and Event-occurrence editors in standalone, Flow-workspace, and
-established in-panel projections.
+content exceeds that viewport. Content growth and browser resizing remeasure the
+open stack immediately and reposition it upward to use available space before any
+vertical overflow is introduced. If the complete active layer still cannot fit,
+the stack uses the available viewport height and only that layer scrolls so every
+control and final action remains reachable. When the layer fits again, unnecessary
+overflow is removed. The document and editor behind it remain inert and retain
+their scroll positions. This applies to Shared Profile, Page Group, Page, Event,
+Flow Page-instance, and Event-occurrence editors in standalone, Flow-workspace,
+and established in-panel projections.
 
 Keystrokes in Description, Allowed values, and Example Table cells remain transient
 until Enter, Tab, Shift+Tab, or blur commits that cell directly. A commit performs base-Draft-token
