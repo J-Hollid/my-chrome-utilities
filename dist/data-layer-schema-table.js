@@ -39,6 +39,9 @@ export function clearSchemaTableOverlay(owner) {
     mountedSchemaTableOverlays.delete(owner);
     mountedSchemaTableOverlayInventory.delete(mounted);
 }
+export function schemaTableOverlayTarget(owner, selector) {
+    return mountedSchemaTableOverlays.get(owner)?.dialog.querySelector(selector) ?? undefined;
+}
 export function mountSchemaTableOverlay(owner, trigger, path, layers, onCancel) {
     for (const mounted of Array.from(mountedSchemaTableOverlayInventory))
         if (mounted.owner !== owner)

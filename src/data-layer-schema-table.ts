@@ -41,6 +41,10 @@ export function clearSchemaTableOverlay(owner:HTMLElement):void {
   mounted.abort.abort();if(mounted.dialog.open)mounted.dialog.close();mounted.dialog.remove();const owned=(owner.getAttribute("aria-owns")??"").split(/\s+/).filter((id)=>id&&id!==mounted.dialog.id);if(owned.length)owner.setAttribute("aria-owns",owned.join(" "));else owner.removeAttribute("aria-owns");mountedSchemaTableOverlays.delete(owner);mountedSchemaTableOverlayInventory.delete(mounted);
 }
 
+export function schemaTableOverlayTarget<T extends HTMLElement=HTMLElement>(owner:HTMLElement,selector:string):T|undefined {
+  return mountedSchemaTableOverlays.get(owner)?.dialog.querySelector<T>(selector)??undefined;
+}
+
 export function mountSchemaTableOverlay(owner:HTMLElement,trigger:HTMLElement,path:string,layers:readonly HTMLElement[],onCancel:()=>void):HTMLDialogElement {
   for(const mounted of Array.from(mountedSchemaTableOverlayInventory))if(mounted.owner!==owner)clearSchemaTableOverlay(mounted.owner);
   clearSchemaTableOverlay(owner);

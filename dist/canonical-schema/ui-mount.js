@@ -7,7 +7,7 @@ import { focusedPropertyPatch, focusedStagedChanges, focusedSourceState } from "
 import { dispatchFocusedCanonicalCommand } from "../data-layer-canonical-schema-focused-command.js";
 import { typedCanonicalValue } from "../data-layer-canonical-schema-facets.js";
 import { button, clone, presenceText, provenanceText, sectionLabel } from "./ui-mount-helpers.js";
-import { schemaTableOverlayTransition, schemaTableStageAllowedValues } from "../data-layer-schema-table.js";
+import { schemaTableOverlayTarget, schemaTableOverlayTransition, schemaTableStageAllowedValues } from "../data-layer-schema-table.js";
 export function bindCanonicalPropertySearch(control, update) { control.addEventListener("input", () => update(control.value)); }
 export function canonicalDispatchRequiresLocalRender(result, renderAfterDispatch) { return renderAfterDispatch !== false || result.status === "confirmation-required"; }
 export function canonicalTableQuickEditPatch(original, facet, value, id) {
@@ -86,7 +86,7 @@ export function mountCanonicalSchemaEditor(options) {
         if (target)
             queueMicrotask(() => target.focus({ preventScroll: true }));
     };
-    const closeChild = () => { focusedPropertyId = undefined; review = undefined; overlayState = activePropertyId ? { phase: "menu", path: canonicalPropertyPath(current(), activePropertyId) } : { phase: "closed" }; render(); const target = options.host.querySelector(`[data-property-context-menu="true"] [data-section="${activeSection}"] button`); if (target)
+    const closeChild = () => { focusedPropertyId = undefined; review = undefined; overlayState = activePropertyId ? { phase: "menu", path: canonicalPropertyPath(current(), activePropertyId) } : { phase: "closed" }; render(); const target = schemaTableOverlayTarget(options.host, `[data-property-context-menu="true"] [data-section="${activeSection}"] button`); if (target)
         queueMicrotask(() => target.focus({ preventScroll: true })); };
     const openProperty = (node, focus, section = "definition") => {
         const document = current(), path = canonicalPropertyPath(document, node.id);

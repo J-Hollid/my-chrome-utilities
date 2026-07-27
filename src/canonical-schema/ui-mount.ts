@@ -8,7 +8,7 @@ import {focusedPropertyPatch,focusedStagedChanges,focusedSourceState,type Canoni
 import {dispatchFocusedCanonicalCommand} from "../data-layer-canonical-schema-focused-command.js";
 import {typedCanonicalValue} from "../data-layer-canonical-schema-facets.js";
 import {button,clone,presenceText,provenanceText,sectionLabel} from "./ui-mount-helpers.js";
-import {schemaTableOverlayTransition,schemaTableStageAllowedValues,type SchemaTableEditableFacet,type SchemaTableOverlayState,type SchemaTableQuickEditResult} from "../data-layer-schema-table.js";
+import {schemaTableOverlayTarget,schemaTableOverlayTransition,schemaTableStageAllowedValues,type SchemaTableEditableFacet,type SchemaTableOverlayState,type SchemaTableQuickEditResult} from "../data-layer-schema-table.js";
 
 export interface CanonicalSchemaEditorOptions {
   host:HTMLElement;surface:"Builder"|"Side panel"|"Flow workspace";load:()=>CanonicalSchemaDocument;
@@ -57,7 +57,7 @@ export function mountCanonicalSchemaEditor(options:CanonicalSchemaEditorOptions)
     render();
     const target=originFocus?.isConnected?originFocus:restorePath?options.host.querySelector<HTMLElement>(`[data-property-actions-path="${CSS.escape(restorePath)}"]`):undefined;originFocus=undefined;originPath=undefined;if(target)queueMicrotask(()=>target.focus({preventScroll:true}));
   };
-  const closeChild=():void=>{focusedPropertyId=undefined;review=undefined;overlayState=activePropertyId?{phase:"menu",path:canonicalPropertyPath(current(),activePropertyId)}:{phase:"closed"};render();const target=options.host.querySelector<HTMLElement>(`[data-property-context-menu="true"] [data-section="${activeSection}"] button`);if(target)queueMicrotask(()=>target.focus({preventScroll:true}));};
+  const closeChild=():void=>{focusedPropertyId=undefined;review=undefined;overlayState=activePropertyId?{phase:"menu",path:canonicalPropertyPath(current(),activePropertyId)}:{phase:"closed"};render();const target=schemaTableOverlayTarget(options.host,`[data-property-context-menu="true"] [data-section="${activeSection}"] button`);if(target)queueMicrotask(()=>target.focus({preventScroll:true}));};
   const openProperty=(node:CanonicalPropertyNode,focus?:HTMLElement,section:FocusedPropertySection="definition"):void=>{
     const document=current(),path=canonicalPropertyPath(document,node.id);overlayState=schemaTableOverlayTransition(overlayState,{kind:"open",path});activePropertyId=node.id;activeSection=section;menuPropertyId=node.id;focusedPropertyId=undefined;removedRuleIds=new Set();removedValueIds=new Set();stagedOperations=[];ensureWorking(node);if(focus){originFocus=focus;originPath=path;}
     render();
