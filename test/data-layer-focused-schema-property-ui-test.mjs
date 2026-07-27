@@ -145,6 +145,8 @@ assert.equal(focusedOwnershipControlEditable({...inheritedOwnership,invariant:tr
 assert.equal(focusedOwnershipControlEditable(inheritedOwnership,"structure","Add child"),true,"adding a child creates local structure without overriding inherited identity");
 assert.equal(focusedOwnershipControlEditable(inheritedOwnership,"structure","Add sibling"),true,"adding a sibling creates local structure without overriding inherited identity");
 assert.equal(focusedOwnershipControlEditable(inheritedOwnership,"structure","Duplicate"),true,"duplicating creates local structure without overriding inherited identity");
+assert.equal(focusedOwnershipControlEditable(inheritedOwnership,"structure","New local property name"),true,"local structure creation accepts a name without overriding inherited identity");
+assert.equal(focusedOwnershipControlEditable(inheritedOwnership,"structure","Remove local sku"),true,"a related local property can be removed without overriding the focused inherited identity");
 assert.equal(focusedOwnershipControlEditable(inheritedOwnership,"structure","Rename"),false,"renaming inherited identity requires ownership");
 assert.equal(focusedOwnershipControlEditable(inheritedOwnership,"structure","Move earlier"),false,"moving inherited identity requires ownership");
 assert.equal(focusedOwnershipControlEditable(inheritedOwnership,"structure","Delete property"),false,"inherited structure cannot be deleted");

@@ -153,12 +153,29 @@ export function renderComposedFocusedSection(host, context) {
     if (context.activeSection === "structure") {
         host.append(Object.assign(dom.createElement("p"), { textContent: `Stable identity ${context.row.effective.definitionId ?? context.row.path}` }));
         if (context.onStructure) {
-            const name = dom.createElement("input");
+            const name = dom.createElement("input"), newName = dom.createElement("input");
             name.name = "structureName";
             name.value = context.row.path.split("/").at(-1) ?? "property";
             name.setAttribute("aria-label", "Structure property name");
+            newName.name = "newStructureName";
+            newName.value = "property";
+            newName.setAttribute("aria-label", "New local property name");
             const invoke = (kind) => context.onStructure?.(kind, context.row.path, name.value);
-            host.append(labeled(dom, "Property name", name), button(dom, "Add child", () => invoke("add-child")), button(dom, "Add sibling", () => invoke("add-sibling")), button(dom, "Rename", () => invoke("rename")), button(dom, "Move earlier", () => invoke("move-earlier")), button(dom, "Move later", () => invoke("move-later")), button(dom, "Move to root", () => invoke("move-to-root")), button(dom, "Duplicate", () => invoke("duplicate")), button(dom, "Delete property", () => invoke("delete")));
+            const create = (kind) => context.onStructure?.(kind, context.row.path, newName.value);
+            host.append(labeled(dom, "Property name", name), labeled(dom, "New local property name", newName), button(dom, "Add child", () => create("add-child")), button(dom, "Add sibling", () => create("add-sibling")), button(dom, "Rename", () => invoke("rename")), button(dom, "Move earlier", () => invoke("move-earlier")), button(dom, "Move later", () => invoke("move-later")), button(dom, "Move to root", () => invoke("move-to-root")), button(dom, "Duplicate", () => invoke("duplicate")), button(dom, "Delete property", () => invoke("delete")));
+            const parent = context.row.path.slice(0, context.row.path.lastIndexOf("/")), related = context.model.rows.filter(({ path, local }) => path !== context.row.path && path.slice(0, path.lastIndexOf("/")) === parent && Boolean(local.definitionId));
+            if (related.length) {
+                const inventory = dom.createElement("section");
+                inventory.setAttribute("aria-label", "Local related properties");
+                inventory.append(Object.assign(dom.createElement("h4"), { textContent: "Local related properties" }));
+                for (const item of related) {
+                    const label = item.path.split("/").at(-1) ?? item.path, entry = dom.createElement("article");
+                    entry.dataset.localRelatedPath = item.path;
+                    entry.append(Object.assign(dom.createElement("span"), { textContent: `${label} · ${item.path} · stable identity ${item.local.definitionId}` }), button(dom, `Remove local ${label}`, () => context.onStructure?.("delete", item.path)));
+                    inventory.append(entry);
+                }
+                host.append(inventory);
+            }
         }
     }
 }

@@ -74,7 +74,7 @@ export function focusedOwnershipControlEditable(session:FocusedOwnershipSession,
   if(section==="definition")return !session.invariant||!["propertyType","itemType","presenceMode"].includes(label);
   if(section!=="structure")return focusedOwnershipSectionEditable(session,section);
   if(!session.inherited)return true;
-  if(localStructureActions.has(label))return true;
+  if(localStructureActions.has(label)||label==="New local property name"||label.startsWith("Remove local "))return true;
   if(label==="Delete property")return false;
   return focusedOwnershipSectionEditable(session,section);
 }

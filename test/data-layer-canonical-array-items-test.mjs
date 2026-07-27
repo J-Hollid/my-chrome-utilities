@@ -118,6 +118,15 @@ assert.equal(editableItems.items.id,retainedNestedId);
 assert.equal(editableItems.items.type,"array");
 assert.equal(editableItems.items.items.type,"string","a deeper selector updates its own represented item schema");
 assert.deepEqual(focusedPropertyPatch({...matrix.nodes[matrixId],itemSchema:editableItems},matrix.nodes[matrixId],new Set()),{itemSchema:editableItems},"the reviewed command persists a nested item-schema edit");
+const scalarMatrixItems={...structuredClone(matrix.nodes[matrixId].itemSchema),items:{...structuredClone(matrix.nodes[matrixId].itemSchema.items),type:"string"}};
+const nestedDestructive=applyCanonicalCommand(matrix,{kind:"set",baseRevision:matrix.revision,propertyId:matrixId,patch:{itemSchema:scalarMatrixItems}});
+assert.equal(nestedDestructive.status,"confirmation-required","changing a terminal recursive Object item requires impact review");
+assert.match(nestedDestructive.impact,/item boundary.*code/);
+assert.equal(matrix.nodes[matrixCode].id,matrixCode,"cancelling nested impact review leaves the document unchanged");
+const scalarMatrix=applied(applyCanonicalCommand(matrix,{kind:"set",baseRevision:matrix.revision,propertyId:matrixId,patch:{itemSchema:scalarMatrixItems},confirmed:true}));
+assert.equal(scalarMatrix.nodes[matrixCode],undefined);
+assert.equal(scalarMatrix.nodes[matrixId].itemSchema.items.type,"string");
+assert.equal(matrix.nodes[matrixCode].id,matrixCode,"Undo can restore the exact pre-command child identity");
 
 const constraints=[
   {path:"/products",type:"array",itemType:"object",definitionId:products},

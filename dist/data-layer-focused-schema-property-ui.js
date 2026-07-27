@@ -43,7 +43,7 @@ export function focusedOwnershipControlEditable(session, section, label) {
         return focusedOwnershipSectionEditable(session, section);
     if (!session.inherited)
         return true;
-    if (localStructureActions.has(label))
+    if (localStructureActions.has(label) || label === "New local property name" || label.startsWith("Remove local "))
         return true;
     if (label === "Delete property")
         return false;
