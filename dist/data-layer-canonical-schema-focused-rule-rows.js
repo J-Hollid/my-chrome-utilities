@@ -67,7 +67,10 @@ function editRule(row, rule, context, invoker) {
             control.value = draft.severity;
         }
         control.addEventListener("input", () => { draft[field] = control.value === "" ? undefined : numeric ? Number(control.value) : control.value; validate(); });
-        (field === "severity" || field === "message" ? severitySection : then).append(labeled(dom, fieldLabel(field), control));
+        const label = labeled(dom, fieldLabel(field), control);
+        if (field === "message")
+            label.dataset.ruleMessageField = "true";
+        (field === "severity" || field === "message" ? severitySection : then).append(label);
     }
     save = button(dom, "Save rule", () => { const working = context.getWorking(); if (!working)
         return; const index = working.rules.findIndex(({ id }) => id === rule.id); if (index < 0)

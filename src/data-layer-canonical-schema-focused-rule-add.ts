@@ -52,7 +52,7 @@ export function renderCanonicalRuleAddPanel(host:HTMLElement,context:CanonicalFo
       }
       validate();
     };
-    const severity=dom.createElement("select"),message=input(dom,"newRuleMessage");severity.name="newRuleSeverity";severity.append(new Option("error","error"),new Option("warning","warning"));severity.addEventListener("change",validate);message.addEventListener("input",validate);severitySection.append(labeled(dom,"Severity",severity),labeled(dom,"Message",message));
+    const severity=dom.createElement("select"),message=input(dom,"newRuleMessage"),severityLabel=labeled(dom,"Severity",severity),messageLabel=labeled(dom,"Message",message);severity.name="newRuleSeverity";messageLabel.dataset.ruleMessageField="true";severity.append(new Option("error","error"),new Option("warning","warning"));severity.addEventListener("change",validate);message.addEventListener("input",validate);severitySection.append(severityLabel,messageLabel);
     name.addEventListener("input",validate);kind.addEventListener("change",renderOutcome);
     actions.setAttribute("aria-label","Rule actions");actions.append(status,button(dom,"Cancel",()=>{panel.remove();host.prepend(opener);opener.focus({preventScroll:true});}),add);
     then.append(fields);panel.append(legend,details,when,then,severitySection,actions);host.append(panel);

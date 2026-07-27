@@ -5,6 +5,7 @@ import {
   sharedConditionOperators,
   sharedFlatConditionResult,
   sharedFlatConditionRows,
+  sharedUnresolvedConditionRow,
 } from "../dist/data-layer-shared-condition-tree-editor.js";
 import {projectConditionEditorDraft} from "../dist/data-layer-project-condition-editor.js";
 import {conditionMatches} from "../dist/data-layer-specification-project.js";
@@ -14,6 +15,11 @@ assert.deepEqual(
   sharedConditionOperators("string",["retail","trade"]),
   ["Exists","Does not exist","Equals","Does not equal","Is one of"],
   "typed allowed values expose enum operators without inventing a canonical enum type",
+);
+assert.deepEqual(
+  sharedUnresolvedConditionRow({id:"condition:stable",propertyId:"property:number",operator:"Greater than",value:3}),
+  {id:"condition:stable",propertyId:"",operator:""},
+  "an unresolved property query preserves row identity but removes stale typed operator and value state",
 );
 
 let state=0x51ce5eed;

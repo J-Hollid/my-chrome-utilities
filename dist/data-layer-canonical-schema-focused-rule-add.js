@@ -95,12 +95,13 @@ export function renderCanonicalRuleAddPanel(host, context) {
             }
             validate();
         };
-        const severity = dom.createElement("select"), message = input(dom, "newRuleMessage");
+        const severity = dom.createElement("select"), message = input(dom, "newRuleMessage"), severityLabel = labeled(dom, "Severity", severity), messageLabel = labeled(dom, "Message", message);
         severity.name = "newRuleSeverity";
+        messageLabel.dataset.ruleMessageField = "true";
         severity.append(new Option("error", "error"), new Option("warning", "warning"));
         severity.addEventListener("change", validate);
         message.addEventListener("input", validate);
-        severitySection.append(labeled(dom, "Severity", severity), labeled(dom, "Message", message));
+        severitySection.append(severityLabel, messageLabel);
         name.addEventListener("input", validate);
         kind.addEventListener("change", renderOutcome);
         actions.setAttribute("aria-label", "Rule actions");

@@ -67,7 +67,10 @@ function renderRuleEditor(row, rule, index, context, invoker) {
             delete draftRule[field];
         else
             draftRule[field] = numericFields.has(field) ? Number(control.value) : control.value; validate(); });
-        (field === "severity" || field === "message" ? severity : then).append(labeled(dom, fieldLabel(field), control));
+        const label = labeled(dom, fieldLabel(field), control);
+        if (field === "message")
+            label.dataset.ruleMessageField = "true";
+        (field === "severity" || field === "message" ? severity : then).append(label);
     }
     save = button(dom, "Save rule", () => { const draft = context.getDraft(), issue = focusedRuleIssue(draftRule); if (!draft)
         return; if (issue) {
@@ -188,11 +191,12 @@ function renderAddPanel(host, context) {
         const tree = dom.createElement("div");
         when.append(tree);
         then.append(fields);
-        const severityControl = dom.createElement("select"), message = dom.createElement("input");
+        const severityControl = dom.createElement("select"), message = dom.createElement("input"), severityLabel = labeled(dom, "Severity", severityControl), messageLabel = labeled(dom, "Message", message);
         severityControl.name = "newRuleSeverity";
         severityControl.append(new Option("error", "error"), new Option("warning", "warning"));
         message.name = "newRuleMessage";
-        severity.append(labeled(dom, "Severity", severityControl), labeled(dom, "Message", message));
+        messageLabel.dataset.ruleMessageField = "true";
+        severity.append(severityLabel, messageLabel);
         actions.append(status, button(dom, "Cancel", () => { panel.remove(); host.prepend(opener); opener.focus({ preventScroll: true }); }), add);
         panel.append(details, when, then, severity, actions);
         host.append(panel);
