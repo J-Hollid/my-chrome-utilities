@@ -251,7 +251,8 @@ Feature: Data layer layered schema constraints
     When the operator opens Cart from the Pages overview
     Then Cart opens as a full main-workspace configuration page with applicability, ordered memberships, and Effective schema at Cart
     And all four effective properties remain visible with their Shared Profile, Checkout, and Cart contribution stack
-    And inherited rows offer Override here while the locally adjusted funnel_step row offers Reset to parents
+    And inherited rows open directly editable ordinary Definition fields while item-specific Override here remains available only for structural ownership
+    And the locally adjusted funnel_step row offers Reset to parents
     And the Inspector remains an optional summary and link to this same workspace rather than a different editor
 
   # Data layer layered schema constraints 017
@@ -316,14 +317,15 @@ Feature: Data layer layered schema constraints
     And its effective stack provides /oForm/formStepName payment and /oForm/formType checkout from parent contributors
     When the operator invokes Open schema contribution on that Page-frame card
     Then the same composed-schema workspace used by Page Groups and Pages is the primary authoring surface
-    And compact rows show both inherited properties with effective definition, source, local state, validation state, and Override here
+    And compact rows show both inherited properties with effective definition, source, local state, validation state, and item-specific structural ownership actions
     And no advanced facet builder is expanded until its property row is selected
     And an empty local Tree or Table is not presented as the inherited schema
     And Add local property remains available without copying either inherited property
     And the workspace contains no Effective documentation, Compiled effective schema and documentation, Target Event, Activation, Priority, Applicability, Test observation, Manual Flow / Page / Event, Validation payload, or developer-export panel
-    When the operator selects /oForm/formStepName and invokes Override here
-    Then one stacked advanced facet editor opens while /oForm/formType remains compact
-    When the operator saves payment-review as the local expected value
+    When the operator selects /oForm/formStepName and opens Definition
+    Then one stacked advanced facet editor opens with inherited ordinary fields enabled while /oForm/formType remains compact
+    And no preliminary Override here action is required
+    When the operator changes the inherited ordinary value to payment-review and confirms Review changes
     Then one property-scoped command stores only that sparse facet on the selected Page frame
     And the derived JSON example uses payment-review while the reusable Payment Page, another Payment frame, and unrelated contributors remain byte-identical
     When the operator invokes Reset to parents
@@ -337,7 +339,8 @@ Feature: Data layer layered schema constraints
   Scenario: Data layer layered schema constraints 022
     Given /lineOfCustomer has one inherited facet, one local facet, one local override, one inherited invariant rule, and one local rule
     When the operator opens each facet or rule's actions
-    Then inherited content offers View, Override here where legal, and Open source but no Remove action
+    Then ordinary inherited Definition fields are directly editable with no preliminary Override here action
+    And identity-bearing inherited items offer View, a legal item-specific ownership action, and Open source but no Remove action
     And local content offers View, Edit, and Remove local
     And a local override offers View, Edit, and Reset to parent
     And a conflict offers View conflict, Edit local resolution, and Open contributing sources
@@ -360,9 +363,10 @@ Feature: Data layer layered schema constraints
     And the unavailable actions include <unavailable_actions>
 
     Examples:
-      | rule_state | available_actions                    | unavailable_actions                      |
-      | invariant  | View and Open source                 | Override, Replace, Edit, and Remove       |
-      | replaceable | View, Replace here, and Open source | Override and Remove                       |
+      | rule_state  | available_actions                    | unavailable_actions                      |
+      | ordinary    | View and Open source                 | Override, Replace, Edit, and Remove       |
+      | invariant   | View and Open source                 | Override, Replace, Edit, and Remove       |
+      | replaceable | View, Replace here, and Open source | Override, Edit, and Remove                |
 
   # Data layer layered schema constraints 024
   Scenario: Data layer layered schema constraints 024

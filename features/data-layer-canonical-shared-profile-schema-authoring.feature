@@ -667,3 +667,57 @@ Feature: Data layer canonical Shared Profile schema authoring
       | Event             | in-panel       |
       | Flow Page-instance | in-panel       |
       | Event occurrence  | in-panel       |
+
+  # Data layer canonical Shared Profile schema authoring 043
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 043
+    Given <contributor> inherits ordinary property /lineOfCustomer in the <surface> schema editor
+    When the operator opens its Definition view
+    Then each legally editable inherited Definition field is enabled and prefilled with its effective value
+    And no preliminary Override here, Edit, or ownership action is required
+    And opening, focusing, and leaving a field unchanged creates no local facet or staged change
+    When the operator changes only Description to Checkout customer classification
+    Then the change itself stages local ownership of only Description
+    And Review changes identifies the inherited value, local value, prospective effective value, and source contributor
+    When the operator confirms the review
+    Then one property-scoped command stores only the sparse local Description facet with <contributor> provenance
+    And parent, sibling, unrelated-facet, and Published bytes remain unchanged
+
+    Examples:
+      | contributor       | surface        |
+      | Page Group        | standalone     |
+      | Page              | standalone     |
+      | Event             | standalone     |
+      | Flow Page-instance | Flow workspace |
+      | Event occurrence  | Flow workspace |
+      | Page Group        | in-panel       |
+      | Page              | in-panel       |
+      | Event             | in-panel       |
+      | Flow Page-instance | in-panel       |
+      | Event occurrence  | in-panel       |
+
+  # Data layer canonical Shared Profile schema authoring 044
+  Scenario: Data layer canonical Shared Profile schema authoring 044
+    Given one focused property contains ordinary and invariant inherited Definition facets, ordinary and replaceable inherited rules, and inherited structure
+    When the operator compares ownership activation in Definition, Rules, and Structure
+    Then ordinary Definition fields are directly editable and invariant Definition fields are read-only with source guidance
+    And an ordinary inherited rule offers View and Open source but no direct Edit, Remove, or generic Override here
+    And a replaceable inherited rule requires Replace here before editing
+    And Replace here creates a new local stable rule identity naming the inherited rule while leaving that source rule unchanged
+    And Add child, Add sibling, and Duplicate create new local structure without first overriding the inherited property
+    And Rename, Move earlier, Move later, and Move to root require Override here before changing inherited structural identity
+    And Delete property is unavailable for inherited structure, while local structure can be renamed, moved, duplicated, or deleted directly
+    And no Structure operation uses Replace here
+
+  # Data layer canonical Shared Profile schema authoring 045
+  Scenario: Data layer canonical Shared Profile schema authoring 045
+    Given Cart inherits Description Customer classification and Allowed values retail from Sitewide
+    When focused Definition changes Description to Cart customer classification
+    Then the edit remains staged until Review changes is confirmed
+    When Table changes Allowed values to cart, guest and commits with Enter
+    Then Table directly creates one property command without opening the focused editor or Review changes
+    And both paths produce sparse Cart-owned facets with the same provenance rules
+    When the operator activates Reset to parent for Cart description
+    Then only the local Description facet is deleted and Cart derives the current Sitewide Description
+    When Undo and then Redo are invoked
+    Then Undo restores the exact Cart Description override and Redo removes it again
+    And Cart Allowed values, Sitewide, siblings, unrelated facets, and Published bytes remain unchanged throughout

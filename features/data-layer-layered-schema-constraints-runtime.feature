@@ -251,7 +251,8 @@ Feature: Data layer layered schema constraints runtime
     When Cart is activated from the installed Pages overview
     Then the installed Page route renders applicability, ordered memberships, and Effective schema at Cart in the main workspace
     And four production rows remain mounted with Shared Profile, Checkout, and Cart contribution stacks
-    And inherited rows render Override here while local funnel_step renders Reset to parents
+    And inherited rows open enabled ordinary Definition controls while Override here is limited to structural ownership
+    And local funnel_step renders Reset to parents
     And opening the optional Inspector shows a summary linking to the same route without mounting another editor model
 
   # Data layer layered schema constraints runtime 017
@@ -316,11 +317,13 @@ Feature: Data layer layered schema constraints runtime
     And production inheritance supplies payment for /oForm/formStepName and checkout for /oForm/formType
     When the Page-frame card action is activated in the installed Flow outline
     Then the primary main-workspace region is the same compact composed-schema workspace rendered by production Page Group and Page routes
-    And two collapsed rows render their effective definitions, parent sources, local states, validation states, and Override here controls
+    And two collapsed rows render their effective definitions, parent sources, local states, validation states, and item-specific structural ownership controls
     And no empty local-only canonical navigator or eagerly expanded per-property facet table is visible
     And an Add local property action is operable without materializing inherited definitions
     And rendered text and controls contain none of Effective documentation, Compiled effective schema and documentation, Target Event, Activation, Priority, Applicability, Test observation, Manual Flow / Page / Event, Validation payload, or developer export
-    When actual controls expand only /oForm/formStepName and save payment-review as its local expected value
+    When actual controls expand only /oForm/formStepName and open Definition
+    Then ordinary inherited Definition controls are enabled without a preliminary Override here action
+    When actual controls change the ordinary value to payment-review and confirm Review changes
     Then one durable property-scoped command adds only that sparse facet to the selected Page-frame record
     And /oForm/formType stays collapsed while hashes for the reusable Payment Page, a sibling Payment frame, unrelated contributors, and Published revision remain unchanged
     And the installed derived JSON example changes only /oForm/formStepName to payment-review
@@ -335,7 +338,8 @@ Feature: Data layer layered schema constraints runtime
   Scenario: Data layer layered schema constraints runtime 022
     Given production /lineOfCustomer has inherited, local, overridden, invariant, and conflicting facet and rule states
     When actual controls inspect every item menu
-    Then inherited rows render View, legal Override here, and Open source without Remove
+    Then ordinary inherited Definition controls are enabled without a preliminary Override here action
+    And identity-bearing inherited rows render View, one legal item-specific ownership action, and Open source without Remove
     And local rows render View, Edit, and Remove local
     And locally overridden rows render View, Edit, and Reset to parent
     And conflicting rows render View conflict, Edit local resolution, and Open contributing sources
@@ -358,9 +362,10 @@ Feature: Data layer layered schema constraints runtime
     And both inventories exclude <unavailable_actions>
 
     Examples:
-      | rule_state | available_actions                    | unavailable_actions                      |
-      | invariant  | View and Open source                 | Override, Replace, Edit, and Remove       |
-      | replaceable | View, Replace here, and Open source | Override and Remove                       |
+      | rule_state  | available_actions                    | unavailable_actions                      |
+      | ordinary    | View and Open source                 | Override, Replace, Edit, and Remove       |
+      | invariant   | View and Open source                 | Override, Replace, Edit, and Remove       |
+      | replaceable | View, Replace here, and Open source | Override, Edit, and Remove                |
 
   # Data layer layered schema constraints runtime 024
   Scenario: Data layer layered schema constraints runtime 024
