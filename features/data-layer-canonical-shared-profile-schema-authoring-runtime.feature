@@ -860,3 +860,131 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
     When actual controls rename products item property id with its Every item rule installed
     Then repository inspection retains the same property ID and regenerates its friendly and canonical paths
     And installed Review changes, reload, Undo, inheritance, and issue projection preserve the scope bytes
+
+  # Data layer canonical Shared Profile schema authoring runtime 054
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 054
+    Given the installed <contributor> schema is open in <surface> Table view
+    When the production property table renders
+    Then DOM header indexes equal
+      | index | text                     |
+      | 1     | Property editor          |
+      | 2     | Path                     |
+      | 3     | Type                     |
+      | 4     | Presence                 |
+      | 5     | Description              |
+      | 6     | Allowed values           |
+      | 7     | Example                  |
+      | 8     | Source                   |
+      | 9     | Local or effective state |
+      | 10    | Validation state         |
+    And each Property editor cell contains only its property-action control
+    And each Path cell renders the complete friendly path with no separate leaf-name cell
+    And measured Path width equals the former Property and Path allocation
+    And Type and Presence cells contain labelled select controls
+    And Description and Allowed values cells contain text controls
+    And Example contains an editable combobox
+
+    Examples:
+      | contributor        | surface        |
+      | Shared Profile     | standalone     |
+      | Page Group         | standalone     |
+      | Page               | standalone     |
+      | Event              | standalone     |
+      | Flow Page-instance | Flow workspace |
+      | Event occurrence   | Flow workspace |
+      | Shared Profile     | in-panel       |
+      | Page Group         | in-panel       |
+      | Page               | in-panel       |
+      | Event              | in-panel       |
+      | Flow Page-instance | in-panel       |
+      | Event occurrence   | in-panel       |
+
+  # Data layer canonical Shared Profile schema authoring runtime 055
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 055
+    Given production Cart inherits <facet> <parent_value> for /lineOfCustomer
+    When actual Table controls change <control> to <local_value>
+    Then no property menu, Definition layer, Review changes layer, or ownership confirmation is mounted
+    And durable Cart bytes contain only the local <facet> override with Cart provenance
+    And the write ledger contains no Sitewide, sibling, other-facet, or Published target
+    And the property-operation ledger gains one command with one inverse
+    When the reset control adjacent to the changed select is activated
+    Then Cart's durable <facet> entry is absent and the installed row renders the current parent value
+
+    Examples:
+      | facet    | parent_value | control           | local_value |
+      | type     | String       | Type dropdown     | Number      |
+      | presence | Optional     | Presence dropdown | Required    |
+      | presence | Required     | Presence dropdown | Forbidden   |
+
+  # Data layer canonical Shared Profile schema authoring runtime 056
+  Scenario: Data layer canonical Shared Profile schema authoring runtime 056
+    Given production Cart /lineOfCustomer has ordinary Presence Optional
+    And persisted rule Require customer line makes Presence Required when page_type Equals checkout
+    When production compilation receives non-matching and matching observations
+    Then effective Presence is respectively Optional and Required
+    And canonical ordinary Presence remains Optional
+    When the ordinary Presence select emits Forbidden
+    Then durable Cart stores sparse ordinary Presence Forbidden
+    And persisted Require customer line rule bytes remain unchanged and independently editable
+
+  # Data layer canonical Shared Profile schema authoring runtime 057
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 057
+    Given installed /exampleField is <property_type> with suggestion source <allowed_values>
+    When actual focus opens its Table Example combobox
+    Then listbox options are <allowed_values> in configured order
+    When actual input enters <custom_value> outside those options and commits
+    Then durable canonical bytes store typed custom example <stored_value>
+    And allowed-value bytes remain <allowed_values>
+    And production example validation uses <property_type>
+
+    Examples:
+      | property_type | allowed_values    | custom_value | stored_value |
+      | String        | retail, wholesale | partner      | partner      |
+      | Number        | 1, 2              | 3            | number 3     |
+      | Boolean       | true              | false        | Boolean false |
+
+  # Data layer canonical Shared Profile schema authoring runtime 058
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 058
+    Given the first editable Table row initially focuses <origin>
+    When actual keyboard input commits with <key>
+    Then a changed value increments command count exactly once
+    And document focus resolves to <destination>
+    And one row-major sequence contains the installed dropdowns, text fields, and comboboxes
+    And the computed field order excludes action cells, display-only cells, and menu triggers
+    And subscription rerendering produces no duplicate command or focus loss
+
+    Examples:
+      | origin               | key       | destination                         |
+      | Type dropdown        | Tab       | Presence dropdown                   |
+      | Presence dropdown    | Tab       | Description field                   |
+      | Description field    | Tab       | Allowed values field                |
+      | Allowed values field | Tab       | Example combobox                    |
+      | Example combobox     | Tab       | next row Type dropdown              |
+      | Example combobox     | Shift+Tab | same row Allowed values field       |
+      | Type dropdown        | Shift+Tab | previous row Example combobox       |
+
+  # Data layer canonical Shared Profile schema authoring runtime 059
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 059
+    Given production <contributor> schema in <surface> declares /page_type and omits /debug
+    When actual top-level controls enable Only defined fields
+    Then one schema-scoped durable command stores the closed-field policy without changing property bytes
+    And production validation reports /debug as Undeclared property while accepting /page_type
+    And compiler output, JSON Schema export, inheritance, reload, and project portability retain the policy
+    When the installed top-level toggle returns to off
+    Then production validation does not reject /debug merely because it is undeclared
+    And property, rule, documentation, example, and stable-identity hashes remain unchanged
+
+    Examples:
+      | contributor        | surface        |
+      | Shared Profile     | standalone     |
+      | Page Group         | standalone     |
+      | Page               | standalone     |
+      | Event              | standalone     |
+      | Flow Page-instance | Flow workspace |
+      | Event occurrence   | Flow workspace |
+      | Shared Profile     | in-panel       |
+      | Page Group         | in-panel       |
+      | Page               | in-panel       |
+      | Event              | in-panel       |
+      | Flow Page-instance | in-panel       |
+      | Event occurrence   | in-panel       |

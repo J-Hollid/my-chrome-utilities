@@ -147,6 +147,21 @@ completed through its terminal candidate and was merged to `master` at
 Quick Table cell save subsequently completed through its terminal candidate and was
 merged to `master` at `0db53c75b2`.
 
+The current Table editing specification is later authority for Authoring scenarios
+054–059. Every canonical schema Table uses a far-left `Property editor` action
+column and combines the former Property and Path allocation into one wider `Path`
+column containing the complete friendly path. Type and ordinary Presence are
+labelled dropdowns that commit directly; changing an inherited value creates only
+the sparse local facet without a property menu, Definition layer, Review changes,
+or ownership confirmation. Conditional rules remain able to derive effective
+Presence independently of the ordinary Presence definition. Example is an editable
+typed combobox that suggests allowed values but accepts a custom type-valid value.
+Tab and Shift+Tab traverse Type, Presence, Description, Allowed values, and Example
+in row-major order, skipping actions and read-only cells. Every canonical schema
+editor exposes top-level `Only defined fields`, whose inheritable closed-field
+policy is preserved by compilation, validation, JSON Schema export, reload, and
+project portability.
+
 The following task lineages remain open and must now be recovered in this order:
 
 1. `project-documentation-workspace`; then
@@ -243,6 +258,11 @@ child provenance; the parent and siblings remain unchanged. Later parent edits
 continue to flow to non-overridden children and cannot replace the child override.
 Reset to parent deletes only the local facet and resumes the current live parent;
 Undo restores that exact local override.
+The later Authoring 054–059 contract extends this direct traversal and commit model
+to the Type and Presence dropdowns and replaces the Example input with an editable
+combobox. Its Property editor and combined Path columns, independent conditional
+presence semantics, and top-level Only defined fields policy supersede older Table
+layout or control inventories where they differ.
 
 Rules open as a child layer and each rule owns a required flat When condition list
 plus one required Then outcome. There is no separate property-level Conditions

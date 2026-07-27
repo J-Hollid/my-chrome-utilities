@@ -860,3 +860,131 @@ Feature: Data layer canonical Shared Profile schema authoring
     When products item property id is renamed while its Every item rule exists
     Then the rule retains the same stable property identity and follows the generated friendly and canonical paths
     And Review changes, reload, Undo, inheritance, and issue projection preserve the selected array scope
+
+  # Data layer canonical Shared Profile schema authoring 054
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 054
+    Given the <contributor> schema is open in <surface> Table view
+    When the property table renders
+    Then the ordered header map is
+      | ordinal | heading                  |
+      | 1       | Property editor          |
+      | 2       | Path                     |
+      | 3       | Type                     |
+      | 4       | Presence                 |
+      | 5       | Description              |
+      | 6       | Allowed values           |
+      | 7       | Example                  |
+      | 8       | Source                   |
+      | 9       | Local or effective state |
+      | 10      | Validation state         |
+    And Property editor contains only the property action for that row
+    And Path shows the complete friendly property path without a separate leaf-name column
+    And Path receives the combined width formerly used by Property and Path
+    And Type and Presence are labelled inline dropdowns
+    And Description and Allowed values are inline text fields
+    And Example is an inline editable combobox
+
+    Examples:
+      | contributor        | surface        |
+      | Shared Profile     | standalone     |
+      | Page Group         | standalone     |
+      | Page               | standalone     |
+      | Event              | standalone     |
+      | Flow Page-instance | Flow workspace |
+      | Event occurrence   | Flow workspace |
+      | Shared Profile     | in-panel       |
+      | Page Group         | in-panel       |
+      | Page               | in-panel       |
+      | Event              | in-panel       |
+      | Flow Page-instance | in-panel       |
+      | Event occurrence   | in-panel       |
+
+  # Data layer canonical Shared Profile schema authoring 055
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 055
+    Given Cart inherits <facet> <parent_value> for /lineOfCustomer
+    When <local_value> is selected in its Table <control>
+    Then the change commits directly without opening property actions, Definition, Review changes, or an ownership confirmation
+    And Cart-owned bytes add exactly <facet> <local_value> with local provenance
+    And the complete write set excludes Sitewide, sibling contributors, every other facet, and Published state
+    And history gains exactly one reversible property operation
+    When Reset to parent is chosen beside the changed dropdown
+    Then Cart's <facet> contribution is absent and its row derives the current parent value
+
+    Examples:
+      | facet    | parent_value | control           | local_value |
+      | type     | String       | Type dropdown     | Number      |
+      | presence | Optional     | Presence dropdown | Required    |
+      | presence | Required     | Presence dropdown | Forbidden   |
+
+  # Data layer canonical Shared Profile schema authoring 056
+  Scenario: Data layer canonical Shared Profile schema authoring 056
+    Given Cart Table shows /lineOfCustomer with ordinary Presence Optional
+    And named rule Require customer line makes Presence Required when page_type Equals checkout
+    When compilation evaluates page_type article and page_type checkout
+    Then effective Presence is respectively Optional and Required
+    And the ordinary definition remains Optional after both evaluations
+    When Forbidden is chosen from the ordinary Presence selector
+    Then Forbidden becomes the sparse ordinary Cart presence definition
+    And the named conditional rule remains independently editable and unchanged
+
+  # Data layer canonical Shared Profile schema authoring 057
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 057
+    Given /exampleField uses <property_type> with configured suggestions <allowed_values>
+    When the operator focuses its Table Example combobox
+    Then the suggestions are <allowed_values> in their configured order
+    When the operator enters <custom_value> outside those suggestions and commits the field
+    Then the typed custom example <stored_value> is saved
+    And Allowed values remain <allowed_values>
+    And validation of the custom example uses <property_type>
+
+    Examples:
+      | property_type | allowed_values    | custom_value | stored_value |
+      | String        | retail, wholesale | partner      | partner      |
+      | Number        | 1, 2              | 3            | number 3     |
+      | Boolean       | true              | false        | Boolean false |
+
+  # Data layer canonical Shared Profile schema authoring 058
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 058
+    Given keyboard focus is on <origin> in the first editable Table row
+    When the operator commits its value with <key>
+    Then exactly one property command is created when its value changed
+    And focus moves to <destination>
+    And dropdowns, text fields, and comboboxes participate in one row-major editing order
+    And the ordered editing sequence contains no action cell, display-only cell, or menu trigger
+    And focus restoration after repository notification preserves exactly one commit and the intended destination
+
+    Examples:
+      | origin            | key       | destination                         |
+      | Type dropdown     | Tab       | Presence dropdown                   |
+      | Presence dropdown | Tab       | Description field                   |
+      | Description field | Tab       | Allowed values field                |
+      | Allowed values field | Tab    | Example combobox                    |
+      | Example combobox  | Tab       | next row Type dropdown              |
+      | Example combobox  | Shift+Tab | same row Allowed values field       |
+      | Type dropdown     | Shift+Tab | previous row Example combobox       |
+
+  # Data layer canonical Shared Profile schema authoring 059
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 059
+    Given the <contributor> schema in <surface> declares /page_type and does not declare /debug
+    When the operator enables top-level Only defined fields
+    Then one schema-scoped command stores the closed-field policy without changing any property definition
+    And payload property /debug produces an Undeclared property issue while /page_type remains valid
+    And compiler, validator, JSON Schema export, inheritance, reload, and project portability preserve the policy
+    When the same top-level control is returned to off
+    Then /debug is not rejected merely because it is undeclared
+    And property definitions, rules, documentation, examples, and stable identities remain unchanged
+
+    Examples:
+      | contributor        | surface        |
+      | Shared Profile     | standalone     |
+      | Page Group         | standalone     |
+      | Page               | standalone     |
+      | Event              | standalone     |
+      | Flow Page-instance | Flow workspace |
+      | Event occurrence   | Flow workspace |
+      | Shared Profile     | in-panel       |
+      | Page Group         | in-panel       |
+      | Page               | in-panel       |
+      | Event              | in-panel       |
+      | Flow Page-instance | in-panel       |
+      | Event occurrence   | in-panel       |

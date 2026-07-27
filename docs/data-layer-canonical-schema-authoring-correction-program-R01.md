@@ -327,6 +327,37 @@ conditions, reusable rules, documentation, examples, property lifecycle actions,
 impact review, and page-scoped Undo/Redo must round-trip both directions without raw JSON or a
 surface-specific stored schema.
 
+The later Table quick-edit contract replaces the separate Property and Path
+columns with a far-left `Property editor` action column followed by one wider
+`Path` column. Path renders the complete generated friendly path and receives the
+combined width previously allocated to Property and Path. Type and ordinary
+Presence are labelled inline dropdowns; Description and Allowed values remain
+inline text fields; Example is an editable combobox whose suggestions are the
+typed allowed values in configured order. Suggestions do not constrain the
+operator: a custom type-valid example outside that list remains saveable.
+
+Changing inherited Type or ordinary Presence directly in Table creates the same
+sparse contributor-owned facet as any other direct ordinary-field edit, without
+opening property actions, Definition, Review changes, or a preliminary ownership
+confirmation. Type changes that discard incompatible structure still require the
+existing impact review. Ordinary Presence remains the definition fallback;
+matching conditional rules may derive a different effective presence without
+rewriting that ordinary value or being rewritten by a Table presence edit.
+
+The row-major keyboard order is Type, Presence, Description, Allowed values, and
+Example, followed by Type in the next editable row. Tab commits and advances;
+Shift+Tab commits and reverses through the same sequence. The Property editor
+action, read-only cells, and context-menu triggers are not part of editable-field
+traversal. Repository rerendering restores the intended destination without a
+duplicate command.
+
+Every canonical schema editor also exposes top-level `Only defined fields`.
+Enabling it stores one schema-scoped closed-field policy, equivalent at the JSON
+Schema boundary to disallowing additional properties. The policy participates in
+inheritance, compilation, validation, export, reload, and project portability
+without changing property definitions. Disabling it permits an undeclared
+property unless another rule rejects that property.
+
 ## Direct Page and Page Group schema workspaces
 
 Opening a Page or Page Group from its overview routes directly to its complete
@@ -547,6 +578,10 @@ feature.
 | C54 | Inherited editing is ambiguous about whether a preliminary ownership action is required | Authoring 043–045; Layering 021–024 | Ordinary inherited Definition fields start enabled and a changed value itself creates one sparse local facet; inherited rule identities and structural identity changes keep explicit ownership and replacement gates | Focused Definition editor, Table quick-edit adapter, facet delta builder, rule ownership resolver, structure legality guard, repository, provenance projector, Reset, Undo, and Redo | Ten descendant contributor-surface flows; initial enabled state; absent preliminary action; no-op state; focused staging versus Table commit; rule and structure action inventories; sparse bytes and provenance; current-parent reset; Undo and Redo; parent, sibling, unrelated-facet, and Published hashes | B, C, E | Editing an inherited ordinary field is convenient and safe, while replacing a rule or changing inherited structural identity remains deliberate and cannot mutate its parent |
 | C55 | Arrays of objects cannot be authored as item fields and compile as ordinary object children | Authoring 046–051 | One recursive Items editor distinguishes the array property, its implicit item schema, and real item properties; human, canonical, JSON Schema, and observed paths remain explicit and lossless | Canonical item-schema model, Definition and Structure projections, recursive item editor, path projector, compiler, validator, importer/exporter, inheritance projector, impact review, and Undo | Twelve contributor-surface flows; array and item controls; inline item-property creation; Tree and Table hierarchy; friendly, wildcard, and indexed paths; two-level nested arrays; four item-type states; exact JSON Schema; valid and invalid payloads; destructive-change inventory; identity-restoring Undo; sparse descendant additions and facet overrides; reload round-trip | A, B, C, D, E | Users build `products[].name` and deeper patterns without entering wildcard syntax, while compilation validates every object item and never mistakes an array field for an ordinary object child |
 | C56 | Array-item rules cannot distinguish every item from one position without exposing raw or nested index paths | Authoring 052–053 | Rule details add one human-readable Applies to scope before the existing flat When section; every array boundary defaults to Every item and at most one selected boundary may use Item at position, where position 1 means first item | Focused rule editor, stable item and array-boundary targeting, linear array-scope projector, rule compiler, validator, issue projector, and Undo | Every-item pattern rule; first-item value rule; every-product first-detail rule; independent per-context conditions; concrete issue paths; one-based position and boundary controls; absent raw paths and second fixed-position selector; invalid position blocking; missing-position cardinality boundary; stable rename reference; reload and Undo | A, B, C, E | Operators express “all product IDs,” “the first product type,” and “every product's first detail code” directly while the builder remains flat and cannot encode two fixed array positions |
+| C57 | Table wastes width on redundant Property and Path columns and hides Type and Presence behind another editor | Authoring 054–056 | One far-left Property editor action column precedes a full-width friendly Path; Type and ordinary Presence are direct dropdowns that create sparse inherited overrides without ownership confirmation while conditional presence remains independent | Shared Table projection, inline select adapter, sparse facet command bus, rule compiler, provenance projector, Reset, and Undo | Twelve contributor-surface layouts; exact column order and width; labelled controls; absent intermediate layers; sparse bytes; parent and sibling isolation; ordinary and conditional presence outcomes; reset and Undo | B, C, E | Every schema Table exposes compact direct editing without redundant path text, and an inherited Type or Presence change persists exactly one local facet |
+| C58 | Example choice is either inert or restricted to predefined values | Authoring 057 | Example is an editable typed combobox that suggests allowed values in order and also accepts a custom type-valid value | Shared Table example combobox, typed value adapter, canonical property repository, and validation | String, Number, and Boolean suggestions; custom input; stored typed value; unchanged allowed-value bytes | B, C, E | Suggestions accelerate common entry without turning Allowed values into an exhaustive input restriction |
+| C59 | Keyboard quick editing excludes dropdowns and cannot traverse the complete editable row | Authoring 058 | Tab and Shift+Tab commit once and traverse Type, Presence, Description, Allowed values, and Example in row-major order while skipping non-field controls | Table keyboard adapter, select and combobox adapters, command deduplication, subscription rerender, and focus restoration | Forward and reverse activeElement sequence, one command per changed value, skipped Property editor and read-only cells, and no rerender duplication | B, E | An operator can work through every editable Table field in either direction without leaving the keyboard flow |
+| C60 | Canonical editors omit the schema-level closed-field policy available in the legacy editor | Authoring 059 | Top-level Only defined fields stores an inheritable schema-scoped closed-field policy and rejects otherwise undeclared payload properties | Canonical schema repository, compiler, validator, JSON Schema adapter, inheritance projector, reload, and project portability | Toggle commands; undeclared and declared payload results; export and reload; property-byte isolation; disabled-policy result | A, B, C, D, E | Every schema editor can opt into defined fields only and the same policy governs installed validation and portable output |
 
 ## Terminal acceptance
 
@@ -571,8 +606,13 @@ show:
   effective compilation, no synthesized assignments, and no schemaDrafts model;
 - direct Page and Page Group composed-schema workspaces with all effective rows
   visible, field-level provenance, common inline edits, and viewport-level blocking
-  advanced overlays that remain anchored to their invoking row without a dedicated
-  action-button column, detached below-table panel, or editor-scroll constraint;
+  advanced overlays that remain anchored to the far-left Property editor action
+  for their row, without a detached below-table panel or editor-scroll constraint;
+- one wide Path column in place of redundant Property and Path columns, direct Type
+  and ordinary Presence dropdowns, an allowed-value-suggesting editable Example
+  combobox, and Tab/Shift+Tab traversal across every editable field;
+- top-level Only defined fields in every canonical schema editor, preserved through
+  inheritance, compilation, validation, JSON Schema export, reload, and portability;
 - one layered property menu whose single Definition form combines type, presence,
   zero-to-many Allowed values, documentation, and method-dependent examples, while
   each Rule has a name, type, one All or Any flat condition list, one direct Then
