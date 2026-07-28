@@ -68,7 +68,7 @@ export const authoring045Expression=`(async()=>{
         .find((candidate)=>!candidate.closest('[hidden]')),
       'review',
     );
-    buttons(review.closest('[data-focused-property-editor="true"]'))
+    buttons(review)
       .find(({textContent})=>textContent.trim()==='Confirm changes').click();
     await pause();
   };
@@ -236,7 +236,7 @@ export const flowFacet003Expression=`(async()=>{
     ()=>[...document.querySelectorAll(':modal [aria-label="Review changes"]')].at(-1),
     'review',
   );
-  const confirm=buttons(review.closest('[data-focused-property-editor="true"]'))
+  const confirm=buttons(review)
     .find(({textContent})=>textContent.trim()==='Confirm changes');
   confirm?.click();
   const saved=await waitFor(async()=>{

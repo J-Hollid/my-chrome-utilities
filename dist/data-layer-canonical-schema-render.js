@@ -32,12 +32,6 @@ export function renderCanonicalSchemaEditor(context) {
     if (document.view === "table" && context.review)
         options.host.append(context.review);
     const node = context.selectedNode(document);
-    if (document.view !== "table" && node && context.focusedPropertyId === node.id) {
-        context.ensureWorking(node);
-        options.host.append(context.renderFocusedEditor(document, node));
-        if (context.review)
-            options.host.append(context.review);
-    }
     const preview = dom.createElement("section"), previewHeading = dom.createElement("h3"), previewText = dom.createElement("p"), feedbackOutput = dom.createElement("output");
     preview.setAttribute("aria-label", "Effective documentation preview");
     previewHeading.textContent = "Effective documentation";

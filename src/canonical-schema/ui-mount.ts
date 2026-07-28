@@ -25,7 +25,7 @@ export function canonicalTableQuickEditPatch(original:CanonicalPropertyNode,face
   else if(facet==="type")next.type=value as CanonicalPropertyNode["type"];
   else if(facet==="presence")next.presence={...next.presence,mode:value as CanonicalPropertyNode["presence"]["mode"]};
   else if(facet==="description")next.documentation={...next.documentation,description:value};
-  else if(facet==="example")next.documentation={...next.documentation,example:value===""?{method:"blank"}:{method:"custom",value:typedCanonicalValue(next.type,value)}};
+  else if(facet==="example")next.documentation={...next.documentation,example:value===""?{method:"blank"}:{method:"custom",value:typedCanonicalValue(next.type,value,next.itemSchema)}};
   else{const values=schemaTableStageAllowedValues(next.allowedValues.map(({value:allowed})=>allowed),value,next.type);delete next.expectedValue;next.allowedValues=values.map((allowed,index)=>({...next.allowedValues[index]??{id:id("allowed-value")},value:allowed}));}
   return focusedPropertyPatch(next,original,new Set(),new Set());
 }

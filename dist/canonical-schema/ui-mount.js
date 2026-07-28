@@ -27,7 +27,7 @@ export function canonicalTableQuickEditPatch(original, facet, value, id) {
     else if (facet === "description")
         next.documentation = { ...next.documentation, description: value };
     else if (facet === "example")
-        next.documentation = { ...next.documentation, example: value === "" ? { method: "blank" } : { method: "custom", value: typedCanonicalValue(next.type, value) } };
+        next.documentation = { ...next.documentation, example: value === "" ? { method: "blank" } : { method: "custom", value: typedCanonicalValue(next.type, value, next.itemSchema) } };
     else {
         const values = schemaTableStageAllowedValues(next.allowedValues.map(({ value: allowed }) => allowed), value, next.type);
         delete next.expectedValue;

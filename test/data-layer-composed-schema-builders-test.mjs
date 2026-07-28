@@ -47,9 +47,9 @@ assert.equal(schemaTableRuleConditionSummary({kind:"predicate",propertyId:"defin
 assert.equal(schemaTableRuleOutcomeSummary({kind:"cardinality",minItems:2}),"minimum items 2","rule summaries name the concrete Then outcome");
 const flatWhen={kind:"all",children:[{kind:"predicate",propertyId:"property:customer",operator:"Exists"}]};
 assert.equal(focusedRuleIssue({kind:"value",name:"Customer tier",condition:flatWhen,allowedValues:["retail"]}),undefined,"a named value rule is valid with one allowed value and one flat When row");
-assert.equal(focusedRuleIssue({kind:"value",condition:flatWhen,allowedValues:["retail"]}),"Enter a rule name.","every locally-authored rule requires a human name");
+assert.equal(focusedRuleIssue({kind:"value",condition:flatWhen,allowedValues:["retail"]}),"Enter a rule name","every locally-authored rule requires a human name");
 assert.equal(focusedRuleIssue({kind:"presence",name:"Required customer",condition:{kind:"all",children:[{kind:"predicate",propertyId:"",operator:""}]},presence:"required"}),"Complete or remove the condition.","an incomplete flat row has the contract diagnostic");
-assert.equal(focusedRuleIssue({kind:"value",name:"Legacy value",condition:flatWhen,expectedValue:"legacy"}),"Enter at least one allowed value.","new value-rule authoring does not create exact-value outcomes");
+assert.equal(focusedRuleIssue({kind:"value",name:"Legacy value",condition:flatWhen,expectedValue:"legacy"}),"Enter at least one allowed value","new value-rule authoring does not create exact-value outcomes");
 const allowedExampleDraft=composedFacetDraft(
   {path:"/customer_type",allowedValues:["retail","business"],examples:["retail"]},
   {path:"/customer_type",type:"string",allowedValues:["retail","business"],examples:["retail"]},
@@ -138,7 +138,7 @@ assert.equal(overriddenRule.rules[0].provenance.source,"created","overriding an 
 assert.equal(overriddenRule.rules[0].replacesRuleId,draft.rules[0].id,"a replacement names the inherited rule it replaces");
 assert.deepEqual(draft.rules[0],{id:"rule:parent",kind:"pattern",pattern:"^[0-9a-z]+$",severity:"error",message:"Use a known step"},"staging a replacement leaves the inherited rule byte-identical");
 const validWhen={kind:"all",children:[{kind:"predicate",propertyId:"/customer_type",operator:"Equals",value:"retail"}]};
-assert.equal(composedRuleIssue({kind:"pattern",name:"Customer pattern",condition:validWhen,severity:"error",message:""}),"Enter a regular expression.");
+assert.equal(composedRuleIssue({kind:"pattern",name:"Customer pattern",condition:validWhen,severity:"error",message:""}),"Enter a regular expression");
 assert.equal(composedRuleIssue({kind:"range",name:"Customer range",condition:validWhen,minimum:10,maximum:2,severity:"error"}),"Minimum must not exceed maximum.");
 assert.equal(composedRuleIssue({kind:"cardinality",name:"Customer count",condition:validWhen,minItems:4,maxItems:1,severity:"error"}),"Minimum items must not exceed maximum items.");
 assert.equal(composedRuleIssue({kind:"pattern",name:"Customer pattern",condition:{kind:"all",children:[{kind:"predicate",propertyId:"",operator:"Equals"}]},pattern:"^ok$"}),"Complete or remove the condition.");

@@ -23,6 +23,8 @@ const validateItemShape = (issues, targetName, path, canonicalPath, property, ac
         pushIssue(issues, targetName, path, canonicalPath, property, actual, "TYPE", schema.type);
         return;
     }
+    if (schema.allowedValues?.length && !schema.allowedValues.some((candidate) => same(candidate, actual)))
+        pushIssue(issues, targetName, path, canonicalPath, property, actual, "ALLOWED_VALUE", schema.allowedValues);
     if (schema.type === "array" && Array.isArray(actual) && schema.items)
         actual.forEach((item, index) => validateItemShape(issues, targetName, `${path}/${index}`, `${canonicalPath}/*`, property, item, schema.items));
 };

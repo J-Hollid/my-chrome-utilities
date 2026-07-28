@@ -46,7 +46,7 @@ const orderedChildren = (document, parentId) => Object.values(document.nodes)
     .filter((node) => node.parentId === parentId)
     .sort((left, right) => left.order - right.order || left.id.localeCompare(right.id));
 const itemSchemaDefinition = (item, children, document) => {
-    const definition = { ...(item.type ? { type: item.type } : {}) };
+    const definition = { ...(item.type ? { type: item.type } : {}), ...(item.allowedValues?.length ? { enum: structuredClone(item.allowedValues) } : {}) };
     if (item.type === "array" && item.items)
         definition.items = itemSchemaDefinition(item.items, children, document);
     if (item.type === "object" && children.length) {

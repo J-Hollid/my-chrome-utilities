@@ -4,7 +4,7 @@ import {applyCanonicalCommand,canonicalPredicateIds,canonicalPredicateWithStable
 import {canonicalFlatPredicateIssue} from "../dist/canonical-schema/predicate-policy.js";
 import {canonicalNavigatorRows} from "../dist/canonical-schema-focused/navigator-rows.js";
 import {focusedSourceState} from "../dist/data-layer-canonical-schema-focused-drafts.js";
-import {schemaTableCellMetadata,schemaTableColumns,schemaTableEditableFacets,schemaTableExpectedOrAllowed,schemaTableOverlayPlacement,schemaTableOverlayStyle,schemaTableQuickEditCommitsOnChange,schemaTableQuickEditDestination,schemaTableQuickEditFocusGenerationAfterFocus,schemaTableQuickEditIntent,schemaTableRuleConditionSummary,schemaTableSortComparison,schemaTableSortOptions,schemaTableValueFacet} from "../dist/data-layer-schema-table.js";
+import {schemaTableAllowedValues,schemaTableCellMetadata,schemaTableColumns,schemaTableEditableFacets,schemaTableExpectedOrAllowed,schemaTableOverlayPlacement,schemaTableOverlayStyle,schemaTableQuickEditCommitsOnChange,schemaTableQuickEditDestination,schemaTableQuickEditFocusGenerationAfterFocus,schemaTableQuickEditIntent,schemaTableRuleConditionSummary,schemaTableSortComparison,schemaTableSortOptions,schemaTableStageAllowedValues,schemaTableValueFacet} from "../dist/data-layer-schema-table.js";
 import {sharedConditionOperators,sharedFlatConditionResult,sharedFlatConditionRows} from "../dist/data-layer-shared-condition-tree-editor.js";
 
 assert.deepEqual(focusedPropertySections,["definition","rules","structure"]);
@@ -87,6 +87,16 @@ assert.equal(schemaTableQuickEditFocusGenerationAfterFocus(7,pendingDestination,
 assert.equal(schemaTableExpectedOrAllowed({expectedValue:"retail",allowedValues:["retail","business"]}),"retail","expected value takes precedence in the summary cell");
 assert.equal(schemaTableExpectedOrAllowed({allowedValues:["retail","business"]}),"retail, business","allowed values render as editable human text when there is no single expectation");
 assert.deepEqual(schemaTableValueFacet({allowedValues:["retail",2,true]}),{kind:"allowed",text:"retail, 2, true",values:["retail",2,true]});
+assert.deepEqual(
+  schemaTableStageAllowedValues([],`"home, in-store", pickup, "", "say \\"hello\\"", "C:\\\\Temp"`,"string"),
+  ["home, in-store","pickup","","say \"hello\"","C:\\Temp"],
+  "Allowed values split commas only outside JSON strings and preserve escaped String literals",
+);
+assert.equal(
+  schemaTableAllowedValues({allowedValues:["home, in-store","pickup","","say \"hello\"","C:\\Temp","line\nbreak"]}),
+  `"home, in-store", pickup, "", "say \\"hello\\"", "C:\\\\Temp", "line\\nbreak"`,
+  "Allowed values render an unambiguous round-trippable literal list",
+);
 assert.equal(schemaTableRuleConditionSummary({kind:"predicate",propertyId:"line"},[]), "line choose operator", "an incomplete inherited rule remains inspectable instead of crashing the focused inventory");
 assert.deepEqual(focusedOwnershipActions({inherited:true}),["View","Open source"]);
 assert.deepEqual(focusedOwnershipActions({inherited:true,replaceable:true}),["View","Replace here","Open source"]);

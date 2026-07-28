@@ -17,7 +17,7 @@ export function renderComposedFocusedSection(host, context) {
         return;
     host.dataset.focusedSection = context.activeSection;
     if (context.activeSection === "definition") {
-        const concept = dom.createElement("input"), type = dom.createElement("select"), itemType = dom.createElement("select"), presence = dom.createElement("select"), allowed = dom.createElement("input"), displayText = dom.createElement("input"), description = dom.createElement("textarea"), comments = dom.createElement("textarea"), method = dom.createElement("select"), exampleHost = dom.createElement("span");
+        const concept = dom.createElement("input"), type = dom.createElement("select"), itemType = dom.createElement("select"), itemAllowedValues = dom.createElement("input"), presence = dom.createElement("select"), allowed = dom.createElement("input"), displayText = dom.createElement("input"), description = dom.createElement("textarea"), comments = dom.createElement("textarea"), method = dom.createElement("select"), exampleHost = dom.createElement("span");
         const concepts = dom.createElement("datalist"), conceptHost = dom.createElement("span"), conceptListId = `focused-concepts-${context.row.path.replace(/[^a-z0-9_-]/gi, "-")}`;
         concepts.id = conceptListId;
         for (const value of context.conceptSuggestions?.() ?? [])
@@ -34,8 +34,11 @@ export function renderComposedFocusedSection(host, context) {
         type.value = draft.type ?? "";
         itemType.name = "itemType";
         itemType.append(new Option("Inherit item type", ""), ...["string", "number", "integer", "boolean", "object", "array", "null"].map((entry) => new Option(entry, entry)));
-        itemType.value = draft.itemType ?? "";
+        itemType.value = draft.itemSchema?.type ?? draft.itemType ?? "";
         itemType.disabled = draft.type !== "array";
+        itemAllowedValues.name = "itemAllowedValues";
+        itemAllowedValues.value = schemaTableAllowedValues({ allowedValues: draft.itemSchema?.allowedValues ?? [] });
+        itemAllowedValues.hidden = !itemType.value || ["array", "object"].includes(itemType.value);
         presence.name = "presenceMode";
         presence.append(new Option("Required", "required"), new Option("Optional", "optional"), new Option("Forbidden", "forbidden"));
         presence.value = draft.presence === "required" ? "required" : draft.presence === "forbidden" ? "forbidden" : "optional";
@@ -51,8 +54,16 @@ export function renderComposedFocusedSection(host, context) {
         method.name = "exampleMethod";
         method.append(new Option("Blank", "blank"), new Option("Allowed value", "allowed-value"), new Option("Custom value", "custom"));
         method.value = draft.exampleMethod;
-        type.addEventListener("change", () => { draft.type = type.value || undefined; itemType.disabled = draft.type !== "array"; });
-        itemType.addEventListener("change", () => { draft.itemType = itemType.value || undefined; });
+        type.addEventListener("change", () => { draft.type = type.value || undefined; itemType.disabled = draft.type !== "array"; if (draft.type !== "array") {
+            delete draft.itemType;
+            delete draft.itemSchema;
+        } itemAllowedValues.hidden = true; });
+        itemType.addEventListener("change", () => { draft.itemType = itemType.value || undefined; if (itemType.value)
+            draft.itemSchema = { id: draft.itemSchema?.id ?? `item:${crypto.randomUUID()}`, type: itemType.value };
+        else
+            delete draft.itemSchema; itemAllowedValues.hidden = !itemType.value || ["array", "object"].includes(itemType.value); });
+        itemAllowedValues.addEventListener("input", () => { if (draft.itemSchema?.type)
+            draft.itemSchema.allowedValues = schemaTableStageAllowedValues(draft.itemSchema.allowedValues ?? [], itemAllowedValues.value, draft.itemSchema.type); });
         presence.addEventListener("change", () => { draft.presence = presence.value; });
         const renderExample = () => { exampleHost.replaceChildren(); const projection = schemaTableExampleControl(draft.exampleMethod, draft.allowedValues); if (projection.kind === "none")
             return; if (projection.kind === "select") {
@@ -61,12 +72,12 @@ export function renderComposedFocusedSection(host, context) {
             for (const value of projection.values)
                 select.append(new Option(valueText(value), valueText(value)));
             select.value = draft.exampleValue === undefined ? "" : valueText(draft.exampleValue);
-            select.addEventListener("change", () => { draft.exampleValue = typedComposedValue(draft.type ?? context.row.effective.type, select.value); });
+            select.addEventListener("change", () => { draft.exampleValue = typedComposedValue(draft.type ?? context.row.effective.type, select.value, draft.itemSchema); });
             exampleHost.append(select);
             return;
         } const input = dom.createElement("input"); input.name = "exampleValue"; input.value = draft.exampleValue === undefined ? "" : valueText(draft.exampleValue); if (draft.type === "number" || draft.type === "integer")
             input.type = "number"; input.addEventListener("input", () => { try {
-            draft.exampleValue = typedComposedValue(draft.type ?? context.row.effective.type, input.value);
+            draft.exampleValue = typedComposedValue(draft.type ?? context.row.effective.type, input.value, draft.itemSchema);
         }
         catch {
             draft.exampleValue = input.value;
@@ -89,7 +100,7 @@ export function renderComposedFocusedSection(host, context) {
             item.append(resetControl);
         } return item; };
         const inherited = context.row.inherited;
-        host.append(facet("Concept", conceptHost, context.row.local.concept !== undefined, () => { draft.concept = inherited?.concept; }), facet("Type", type, context.row.local.type !== undefined, () => { draft.type = inherited?.type; }), facet("Array item type", itemType, context.row.local.itemType !== undefined, () => { draft.itemType = inherited?.itemType; }), facet("Presence", presence, context.row.local.presence !== undefined, () => { draft.presence = inherited?.presence; }), facet("Allowed values", allowed, context.row.local.allowedValues !== undefined || context.row.local.expectedValue !== undefined, () => { draft.allowedValues = [...(inherited?.allowedValues ?? [])]; if (inherited?.allowedValueIds)
+        host.append(facet("Concept", conceptHost, context.row.local.concept !== undefined, () => { draft.concept = inherited?.concept; }), facet("Type", type, context.row.local.type !== undefined, () => { draft.type = inherited?.type; }), facet("Array item type", itemType, context.row.local.itemType !== undefined, () => { draft.itemType = inherited?.itemType; }), labeled(dom, "Item Allowed values", itemAllowedValues), facet("Presence", presence, context.row.local.presence !== undefined, () => { draft.presence = inherited?.presence; }), facet("Allowed values", allowed, context.row.local.allowedValues !== undefined || context.row.local.expectedValue !== undefined, () => { draft.allowedValues = [...(inherited?.allowedValues ?? [])]; if (inherited?.allowedValueIds)
             draft.allowedValueIds = [...inherited.allowedValueIds];
         else
             delete draft.allowedValueIds; if (inherited?.allowedValueProvenance)
@@ -153,7 +164,7 @@ export function renderComposedFocusedSection(host, context) {
         method.addEventListener("change", () => { draft.exampleMethod = method.value; if (method.value === "blank")
             draft.exampleValue = undefined; context.render(); });
         control.addEventListener("input", () => { try {
-            draft.exampleValue = typedComposedValue(draft.type ?? context.row.effective.type, control.value);
+            draft.exampleValue = typedComposedValue(draft.type ?? context.row.effective.type, control.value, draft.itemSchema);
             draft.exampleMethod = "custom";
         }
         catch {

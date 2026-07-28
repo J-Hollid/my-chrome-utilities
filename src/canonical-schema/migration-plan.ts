@@ -11,7 +11,8 @@ const itemSchemaFrom=(propertyId:string,definition:Record<string,unknown>):Canon
     const record=value as Record<string,unknown>,type=String(record.type??"");
     if(!supported.has(type as CanonicalPropertyType))return undefined;
     const items=type==="array"?build(record.items,depth+1):undefined;
-    return{id:depth===0?`item:${propertyId}`:`item:${propertyId}:${depth}`,type:type as CanonicalPropertyType,...(items?{items}:{})};
+    const allowedValues=Array.isArray(record.enum)?clone(record.enum):undefined;
+    return{id:depth===0?`item:${propertyId}`:`item:${propertyId}:${depth}`,type:type as CanonicalPropertyType,...(items?{items}:{}),...(allowedValues?.length?{allowedValues}:{})};
   };
   return build(definition.items,0);
 };

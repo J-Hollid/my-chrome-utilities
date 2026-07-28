@@ -148,7 +148,7 @@ export function schemaTableOverlayTransition(state, event) {
 const formattedOrdinaryValue = (value) => {
     if (typeof value !== "string")
         return JSON.stringify(value);
-    return value === "" || value.trim() !== value || /[,\\"[\]{}]/.test(value) ? JSON.stringify(value) : value;
+    return value === "" || value.trim() !== value || /[,\\"[\]{}\u0000-\u001f]/.test(value) ? JSON.stringify(value) : value;
 };
 export function schemaTableValueFacet(value) {
     if (value.expectedValue !== undefined)

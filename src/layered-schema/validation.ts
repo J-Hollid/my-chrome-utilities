@@ -19,6 +19,7 @@ const contextualPaths=(pathsByDefinition:ReadonlyMap<string,string>,path:string,
 const validateItemShape=(issues:LayerValidationIssue[],targetName:string,path:string,canonicalPath:string,property:Record<string,unknown>,actual:unknown,schema:LayerItemSchema):void=>{
   if(!schema.type)return;
   if(!typeMatches(actual,schema.type)){pushIssue(issues,targetName,path,canonicalPath,property,actual,"TYPE",schema.type);return;}
+  if(schema.allowedValues?.length&&!schema.allowedValues.some((candidate)=>same(candidate,actual)))pushIssue(issues,targetName,path,canonicalPath,property,actual,"ALLOWED_VALUE",schema.allowedValues);
   if(schema.type==="array"&&Array.isArray(actual)&&schema.items)actual.forEach((item,index)=>validateItemShape(issues,targetName,`${path}/${index}`,`${canonicalPath}/*`,property,item,schema.items!));
 };
 const validateScopedRules=(issues:LayerValidationIssue[],targetName:string,path:string,canonicalPath:string,property:Record<string,unknown>,actual:unknown,payload:Record<string,unknown>,pathsByDefinition:ReadonlyMap<string,string>):void=>{

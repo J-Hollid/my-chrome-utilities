@@ -76,33 +76,41 @@ function focused(row, context) {
         actions.append(impact, button(dom, context.pendingAction === "reset" ? "Cancel reset" : "Cancel removal", context.cancelAction), button(dom, context.pendingAction === "reset" ? "Confirm reset to parents" : "Confirm remove local property", () => context.confirmAction(row)));
     }
     else
-        actions.append(button(dom, "Cancel", context.closeChild), button(dom, "Review changes", () => { const review = dom.createElement("section"), list = dom.createElement("ul"); review.setAttribute("aria-label", "Review changes"); const baselineRules = (row.local.rules ?? []), effectiveRules = (row.effective.rules ?? []), draftRules = (context.draft?.rules ?? []), draftValues = context.draft?.allowedValues ?? []; for (const inheritedRule of effectiveRules)
-            if (!draftRules.some((candidate) => String(candidate.id ?? "") === String(inheritedRule.id ?? "")))
-                list.append(Object.assign(dom.createElement("li"), { textContent: `Inherited rule ${String(inheritedRule.id ?? "(unidentified)")} · prospective result ${JSON.stringify(inheritedRule)} · consumers recompile` })); for (const lifecycle of composedReviewLifecycleInventory(context.removed, context.confirmedAction, context.restoredRuleIds, context.restoredValueIds))
-            list.append(Object.assign(dom.createElement("li"), { textContent: `${lifecycle} · prospective effective result ${row.inherited ? context.effectiveText({ ...row, effective: row.inherited }) : "none"} · local lifecycle is explicit and affected consumers recompile` })); if (!context.removed) {
-            for (const change of composedReviewFacetDelta(row, context.draft))
-                list.append(Object.assign(dom.createElement("li"), { textContent: `${change.label} · ${change.detail}` }));
-            for (const rule of draftRules) {
-                const id = String(rule.id ?? "");
-                const baseline = baselineRules.find((candidate) => String(candidate.id ?? "") === id);
-                const state = baseline ? JSON.stringify(baseline) === JSON.stringify(rule) ? "Unchanged" : "Edited" : effectiveRules.some((candidate) => String(candidate.id ?? "") === id) ? "Inherited" : "Added";
-                list.append(Object.assign(dom.createElement("li"), { textContent: `${state} rule ${id || "(unidentified)"} · prospective result ${JSON.stringify(rule)} · consumers recompile` }));
-            }
-            for (const [index, value] of draftValues.entries()) {
-                const valueId = context.draft?.allowedValueIds?.[index];
-                list.append(Object.assign(dom.createElement("li"), { textContent: `${context.removedValueIds.has(String(valueId)) ? "Removed" : context.stagedLocalValueIds.has(String(valueId)) ? "Overridden" : "Allowed"} value ${valueId ?? "(unidentified)"} · prospective result ${JSON.stringify(value)} · consumers recompile` }));
-            }
-            for (const id of context.removedRuleIds)
-                list.append(Object.assign(dom.createElement("li"), { textContent: `Removed rule ${id} · prospective result falls back to inherited definition` }));
-            for (const id of context.removedValueIds)
-                if (!draftValues.some((_, index) => context.draft?.allowedValueIds?.[index] === id))
-                    list.append(Object.assign(dom.createElement("li"), { textContent: `Removed value ${id} · prospective result falls back to inherited value` }));
-            for (const operation of context.pendingStructure)
-                list.append(Object.assign(dom.createElement("li"), { textContent: `Structure ${operation.kind} · ${operation.path} · prospective structural result is applied atomically · consumers recompile` }));
-        } if (!list.children.length)
-            list.append(Object.assign(dom.createElement("li"), { textContent: `Unchanged facets · prospective effective result ${context.effectiveText(row)} · consumers recompile` })); review.append(Object.assign(dom.createElement("p"), { textContent: `Review changes · ${row.path} · one confirmation creates one Undo entry; no durable write occurs before confirmation.` }), list); actions.replaceChildren(review, button(dom, "Cancel review", context.render), button(dom, "Confirm changes", () => context.save(row))); }));
+        actions.append(button(dom, "Cancel", context.closeChild), button(dom, "Review changes", context.beginReview));
     editor.append(heading, identity, effective, host, actions);
     return editor;
+}
+function composedReviewLayer(row, context) {
+    const { dom } = context, review = dom.createElement("section"), list = dom.createElement("ul"), baselineRules = (row.local.rules ?? []), effectiveRules = (row.effective.rules ?? []), draftRules = (context.draft?.rules ?? []), draftValues = context.draft?.allowedValues ?? [];
+    review.setAttribute("aria-label", "Review changes");
+    review.dataset.schemaOverlayLayer = "review";
+    for (const inheritedRule of effectiveRules)
+        if (!draftRules.some((candidate) => String(candidate.id ?? "") === String(inheritedRule.id ?? "")))
+            list.append(Object.assign(dom.createElement("li"), { textContent: `Inherited rule ${String(inheritedRule.id ?? "(unidentified)")} · prospective result ${JSON.stringify(inheritedRule)} · consumers recompile` }));
+    for (const lifecycle of composedReviewLifecycleInventory(context.removed, context.confirmedAction, context.restoredRuleIds, context.restoredValueIds))
+        list.append(Object.assign(dom.createElement("li"), { textContent: `${lifecycle} · prospective effective result ${row.inherited ? context.effectiveText({ ...row, effective: row.inherited }) : "none"} · local lifecycle is explicit and affected consumers recompile` }));
+    if (!context.removed) {
+        for (const change of composedReviewFacetDelta(row, context.draft))
+            list.append(Object.assign(dom.createElement("li"), { textContent: `${change.label} · ${change.detail}` }));
+        for (const rule of draftRules) {
+            const id = String(rule.id ?? ""), baseline = baselineRules.find((candidate) => String(candidate.id ?? "") === id), state = baseline ? JSON.stringify(baseline) === JSON.stringify(rule) ? "Unchanged" : "Edited" : effectiveRules.some((candidate) => String(candidate.id ?? "") === id) ? "Inherited" : "Added";
+            list.append(Object.assign(dom.createElement("li"), { textContent: `${state} rule ${id || "(unidentified)"} · prospective result ${JSON.stringify(rule)} · consumers recompile` }));
+        }
+        for (const [index, value] of draftValues.entries()) {
+            const valueId = context.draft?.allowedValueIds?.[index];
+            list.append(Object.assign(dom.createElement("li"), { textContent: `${context.removedValueIds.has(String(valueId)) ? "Removed" : context.stagedLocalValueIds.has(String(valueId)) ? "Overridden" : "Allowed"} value ${valueId ?? "(unidentified)"} · prospective result ${JSON.stringify(value)} · consumers recompile` }));
+        }
+        for (const id of context.removedRuleIds)
+            list.append(Object.assign(dom.createElement("li"), { textContent: `Removed rule ${id} · prospective result falls back to inherited definition` }));
+        for (const operation of context.pendingStructure)
+            list.append(Object.assign(dom.createElement("li"), { textContent: `Structure ${operation.kind} · ${operation.path} · prospective structural result is applied atomically · consumers recompile` }));
+    }
+    if (!list.children.length)
+        list.append(Object.assign(dom.createElement("li"), { textContent: `Unchanged facets · prospective effective result ${context.effectiveText(row)} · consumers recompile` }));
+    const confirm = button(dom, "Confirm changes", () => context.save(row));
+    confirm.disabled = false;
+    review.append(Object.assign(dom.createElement("p"), { textContent: `Review changes · ${row.path} · one confirmation creates one Undo entry; no durable write occurs before confirmation.` }), list, button(dom, "Cancel review", context.cancelReview), confirm);
+    return review;
 }
 export function renderComposedRows(rows, context) {
     clearSchemaTableOverlay(context.overlayHost);
@@ -181,6 +189,8 @@ export function renderComposedRows(rows, context) {
             const layers = [contextMenu(row, context)];
             if (context.focusedOpen)
                 layers.push(focused(row, context));
+            if (context.reviewOpen)
+                layers.push(composedReviewLayer(row, context));
             pendingOverlay = { trigger: propertyActions, path: row.path, layers };
         }
         body.append(tr);

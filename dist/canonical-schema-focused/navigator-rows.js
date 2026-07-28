@@ -1,6 +1,7 @@
 import { canonicalPropertyPath, canonicalTableRows } from "../data-layer-canonical-schema.js";
 import { applySchemaTablePathAllocation, bindSchemaTableQuickEdit, mountSchemaTableOverlay, schemaTableAllowedValues, schemaTableCellMetadata, schemaTableColumns, schemaTableSortComparison } from "../data-layer-schema-table.js";
 import { button } from "./dom.js";
+import { canonicalFacetText } from "../data-layer-canonical-schema-facets.js";
 export function canonicalNavigatorRows(context) {
     const query = context.query.trim().toLowerCase(), matches = (node) => !query || String(node.name ?? "").toLowerCase().includes(query) || canonicalPropertyPath(context.document, node.id).toLowerCase().includes(query), facet = (node) => context.propertyFilter === "all" || context.propertyFilter === "conditions" && Boolean(node.presence.condition) || context.propertyFilter === "documentation" && Boolean(node.documentation.displayText || node.documentation.description || node.documentation.comments) || context.propertyFilter === "issues" && node.provenance.some(({ state }) => state === "shadowed");
     const source = (node) => node.provenance.map(({ contributorName, source, state }) => contributorName ?? state ?? source).join(", ") || context.document.contributorName, rows = canonicalTableRows(context.document).filter(({ node }) => matches(node) && facet(node)), ordered = rows.map((row, order) => ({ row, order }));
@@ -98,7 +99,7 @@ function renderTable(tree, context) {
         presenceCell.append(selectCell(context, row.node, "presence", node.presence.mode.endsWith("-when") ? node.presence.mode.replace("-when", "") : node.presence.mode, ["optional", "required", "forbidden"]));
         appendReset(presenceCell, "presence", "Presence", node.inheritedDefinition?.presence);
         tr.append(identity, pathCell, concept, typeCell, presenceCell);
-        const exampleEditor = exampleCell(context, row.node, example === undefined ? "" : String(example));
+        const exampleEditor = exampleCell(context, row.node, canonicalFacetText(example));
         for (const [offset, control] of [editableCell(context, row.node, "description", node.documentation.description), editableCell(context, row.node, "expected-or-allowed", schemaTableAllowedValues({ expectedValue: node.expectedValue, allowedValues: node.allowedValues.map(({ value }) => value) })), exampleEditor.control].entries()) {
             const valueCell = cell(offset + 5);
             valueCell.append(control);

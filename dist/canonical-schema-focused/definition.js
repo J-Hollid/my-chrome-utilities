@@ -14,6 +14,8 @@ export function setCanonicalNestedItemType(root, arrayItemId, type, id) {
     else
         delete current.items;
 }
+const terminalItemSchema = (root) => { let item = root; while (item?.type === "array")
+    item = item.items; return item; };
 export function renderDefinitionSection(host, context, working) {
     const { dom } = context, concept = input(dom, "concept", working.concept ?? ""), concepts = dom.createElement("datalist"), type = dom.createElement("select"), itemType = dom.createElement("select"), items = dom.createElement("section"), presence = dom.createElement("select"), allowed = input(dom, "ordinaryValue", schemaTableAllowedValues({ ...(working.expectedValue === undefined ? {} : { expectedValue: working.expectedValue }), allowedValues: working.allowedValues.map(({ value }) => value) })), displayText = input(dom, "displayText", working.documentation.displayText), description = dom.createElement("textarea"), comments = dom.createElement("textarea"), exampleMethod = dom.createElement("select"), exampleHost = dom.createElement("span"), installedSuggestions = Array.from(dom.querySelectorAll('datalist[id^="schema-concept-"] option')).map(({ value }) => value), fallbackSuggestions = [...new Set(Object.values(context.current().nodes).map(({ concept }) => concept?.trim()).filter(Boolean))];
     concepts.id = `focused-concepts-${working.id.replace(/[^a-z0-9_-]/gi, "-")}`;
@@ -43,6 +45,11 @@ export function renderDefinitionSection(host, context, working) {
         nested.append(nestedHeading, labeled(dom, "Item type", selector));
         items.append(nested);
         schema = schema.items;
+    } const scalar = terminalItemSchema(next.itemSchema); if (scalar?.type && scalar.type !== "array" && scalar.type !== "object") {
+        const allowedItems = input(dom, "itemAllowedValues", schemaTableAllowedValues({ allowedValues: scalar.allowedValues ?? [] }));
+        allowedItems.addEventListener("input", () => { const current = terminalItemSchema(context.getWorking()?.itemSchema); if (current)
+            current.allowedValues = schemaTableStageAllowedValues(current.allowedValues ?? [], allowedItems.value, current.type); });
+        items.append(labeled(dom, "Item Allowed values", allowedItems));
     } };
     type.name = "propertyType";
     type.append(...types.map((entry) => new Option(entry, entry)));
@@ -91,11 +98,11 @@ export function renderDefinitionSection(host, context, working) {
             select.append(new Option(canonicalFacetText(value), canonicalFacetText(value)));
         select.value = canonicalFacetText(next.documentation.example.value);
         select.addEventListener("change", () => { const current = context.getWorking(); if (current)
-            current.documentation = { ...current.documentation, example: { method: "allowed-value", value: typedCanonicalValue(current.type, select.value) } }; });
+            current.documentation = { ...current.documentation, example: { method: "allowed-value", value: typedCanonicalValue(current.type, select.value, current.itemSchema) } }; });
         exampleHost.append(select);
         return;
     } const control = input(dom, "exampleValue", canonicalFacetText(next.documentation.example.value), next.type === "number" || next.type === "integer" ? "number" : "text"); control.addEventListener("input", () => { const current = context.getWorking(); if (current)
-        current.documentation = { ...current.documentation, example: { method: "custom", value: typedCanonicalValue(current.type, control.value) } }; }); exampleHost.append(control); };
+        current.documentation = { ...current.documentation, example: { method: "custom", value: typedCanonicalValue(current.type, control.value, current.itemSchema) } }; }); exampleHost.append(control); };
     exampleMethod.name = "exampleMethod";
     exampleMethod.append(new Option("Blank", "blank"), new Option("Allowed value", "allowed-value"), new Option("Custom value", "custom"));
     exampleMethod.value = working.documentation.example.method;

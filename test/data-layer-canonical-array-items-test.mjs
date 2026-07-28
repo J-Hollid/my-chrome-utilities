@@ -128,6 +128,20 @@ assert.equal(scalarMatrix.nodes[matrixCode],undefined);
 assert.equal(scalarMatrix.nodes[matrixId].itemSchema.items.type,"string");
 assert.equal(matrix.nodes[matrixCode].id,matrixCode,"Undo can restore the exact pre-command child identity");
 
+let allowedItems=createCanonicalSchema({id:"schema:allowed-items",contributorId:"profile:allowed-items",contributorName:"Allowed items"});
+allowedItems=add(allowedItems,"quantities","array");
+const quantities=allowedItems.selectedPropertyId;
+allowedItems=applied(applyCanonicalCommand(allowedItems,{kind:"set",baseRevision:allowedItems.revision,propertyId:quantities,patch:{
+  type:"array",itemType:"number",itemSchema:{id:"item:quantities",type:"number",allowedValues:[123,1234]},
+},confirmed:true}));
+assert.deepEqual(canonicalJsonSchemaDocument(allowedItems),{
+  type:"object",properties:{quantities:{type:"array",items:{type:"number",enum:[123,1234]}}},
+},"scalar Items Allowed values export on the homogeneous item schema rather than as complete-array combinations");
+const allowedItemsCompiled=compileLayeredSchema([{id:"profile:allowed-items",name:"Allowed items",scope:"Shared Profile",constraints:canonicalConstraints(allowedItems)}],{eventId:"event:allowed-items",eventRole:"interaction"});
+assert.deepEqual(validateLayeredObservation({targetId:"target:allowed-items",targetName:"Allowed items",revision:1,compiled:allowedItemsCompiled},{quantities:[123,999]}).issues.map(({path,code,expected})=>({path,code,expected})),[
+  {path:"/quantities/1",code:"ALLOWED_VALUE",expected:[123,1234]},
+],"scalar Items Allowed values validate each observed item independently");
+
 const constraints=[
   {path:"/products",type:"array",itemType:"object",definitionId:products},
   {path:"/products/*/id",type:"string",presence:"required",definitionId:productId,rules:[

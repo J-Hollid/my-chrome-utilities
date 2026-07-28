@@ -133,7 +133,7 @@ export type SchemaTableValueFacet=
 
 const formattedOrdinaryValue=(value:unknown):string=>{
   if(typeof value!=="string")return JSON.stringify(value);
-  return value===""||value.trim()!==value||/[,\\"[\]{}]/.test(value)?JSON.stringify(value):value;
+  return value===""||value.trim()!==value||/[,\\"[\]{}\u0000-\u001f]/.test(value)?JSON.stringify(value):value;
 };
 
 export function schemaTableValueFacet(value:{expectedValue?:unknown;allowedValues?:readonly unknown[]}):SchemaTableValueFacet {

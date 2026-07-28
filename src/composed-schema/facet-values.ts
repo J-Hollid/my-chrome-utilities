@@ -1,13 +1,8 @@
 import type {ComposedFacetDraft} from "./builder-types.js";
+import type {LayerItemSchema} from "../data-layer-layered-schema.js";
+import {typedCanonicalValue} from "../data-layer-canonical-schema-facets.js";
 const clone=<T>(value:T):T=>structuredClone(value);
-export function typedComposedValue(type:string|undefined,text:string):unknown{
-  if(type==="number"){const value=Number(text);if(!Number.isFinite(value))throw new Error("Enter a number.");return value;}
-  if(type==="integer"){const value=Number(text);if(!Number.isInteger(value))throw new Error("Enter a whole number.");return value;}
-  if(type==="boolean"){if(text!=="true"&&text!=="false")throw new Error("Enter true or false.");return text==="true";}
-  if(type==="null")return null;
-  if(type==="array"||type==="object"){let value:unknown;try{value=JSON.parse(text);}catch{throw new Error(`Enter valid JSON for ${type}.`);}if(type==="array"&&!Array.isArray(value)||type==="object"&&(!value||typeof value!=="object"||Array.isArray(value)))throw new Error(`Enter a JSON ${type}.`);return value;}
-  return text;
-}
+export function typedComposedValue(type:string|undefined,text:string,itemSchema?:LayerItemSchema):unknown{return typedCanonicalValue(type as Parameters<typeof typedCanonicalValue>[0],text,itemSchema as Parameters<typeof typedCanonicalValue>[2]);}
 export function addComposedAllowedValue(draft:ComposedFacetDraft,value:unknown):ComposedFacetDraft{return{...draft,allowedValues:[...draft.allowedValues,clone(value)],...(draft.allowedValueIds?{allowedValueIds:[...draft.allowedValueIds,`allowed-value:${crypto.randomUUID()}`]}:{})};}
 export function removeComposedAllowedValue(draft:ComposedFacetDraft,index:number):ComposedFacetDraft{return{...draft,allowedValues:draft.allowedValues.filter((_,candidate)=>candidate!==index),...(draft.allowedValueIds?{allowedValueIds:draft.allowedValueIds.filter((_,candidate)=>candidate!==index)}:{})};}
 export function moveComposedAllowedValue(draft:ComposedFacetDraft,index:number,delta:number):ComposedFacetDraft{const target=index+delta;if(target<0||target>=draft.allowedValues.length)return draft;const allowedValues=clone(draft.allowedValues);[allowedValues[index],allowedValues[target]]=[allowedValues[target]!,allowedValues[index]!];if(!draft.allowedValueIds)return{...draft,allowedValues};const allowedValueIds=[...draft.allowedValueIds];[allowedValueIds[index],allowedValueIds[target]]=[allowedValueIds[target]!,allowedValueIds[index]!];return{...draft,allowedValues,allowedValueIds};}

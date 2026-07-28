@@ -113,7 +113,26 @@ assert.deepEqual(canonicalConstraints(document).map(({path,presence})=>({path,pr
 ]);
 assert.equal(typedCanonicalValue("number","2.5"),2.5,"canonical expected values preserve numeric types");
 assert.equal(typedCanonicalValue("boolean","false"),false,"canonical expected values preserve boolean types");
+assert.equal(typedCanonicalValue("string",`"home, in-store"`),"home, in-store","quoted custom String values use the shared JSON literal language");
+assert.equal(typedCanonicalValue("string",`"say \\"hello\\""`),'say "hello"',"custom String values decode JSON quotation escapes");
+assert.equal(typedCanonicalValue("string",`"C:\\\\Temp"`),"C:\\Temp","custom String values decode JSON backslash escapes");
+assert.equal(typedCanonicalValue("string",`""`),"","the shared literal language represents an empty String explicitly");
 assert.deepEqual(typedCanonicalValue("object",'{"step":3}'),{step:3},"canonical object facets retain structured values");
+assert.deepEqual(
+  typedCanonicalValue("array","[123, 1234]",{id:"item:number",type:"number"}),
+  [123,1234],
+  "a custom Array example is one complete JSON array validated against its homogeneous Items definition",
+);
+assert.throws(
+  ()=>typedCanonicalValue("array",'[123, "1234"]',{id:"item:number",type:"number"}),
+  /Item 2: Expected Number/,
+  "a mixed custom Array example identifies the first item that violates the homogeneous Items definition",
+);
+assert.deepEqual(
+  typedCanonicalValue("array",'[["home"], ["pickup"]]',{id:"item:array",type:"array",items:{id:"item:string",type:"string"}}),
+  [["home"],["pickup"]],
+  "custom Array examples validate recursive homogeneous Items definitions",
+);
 assert.throws(()=>typedCanonicalValue("integer","2.5"),/whole number/);
 assert.deepEqual(focusedSparseDelta({expectedValue:"local",documentation:""},{expectedValue:"parent",documentation:""}),{expectedValue:"local"},"canonical facet deltas omit unchanged inherited values");
 assert.deepEqual(focusedOwnershipActions({inherited:true,replaceable:true}),["View","Replace here","Open source"],"replaceable inherited facets expose a legal replacement action");

@@ -47,7 +47,7 @@ const orderedChildren=(document:CanonicalSchemaDocument,parentId?:string):Canoni
   .sort((left,right)=>left.order-right.order||left.id.localeCompare(right.id));
 
 const itemSchemaDefinition=(item:NonNullable<CanonicalPropertyNode["itemSchema"]>,children:readonly CanonicalPropertyNode[],document:CanonicalSchemaDocument):Record<string,unknown>=>{
-  const definition:Record<string,unknown>={...(item.type?{type:item.type}:{})};
+  const definition:Record<string,unknown>={...(item.type?{type:item.type}:{}),...(item.allowedValues?.length?{enum:structuredClone(item.allowedValues)}:{})};
   if(item.type==="array"&&item.items)definition.items=itemSchemaDefinition(item.items,children,document);
   if(item.type==="object"&&children.length){
     definition.properties=Object.fromEntries(children.map((child)=>[child.name,schemaForNode(document,child)]));

@@ -15,7 +15,7 @@ export interface CanonicalArrayScope {boundaries:CanonicalArrayScopeBoundary[];}
 export interface CanonicalRule {id:string;kind:"presence"|"value"|"pattern"|"range"|"cardinality"|"condition"|"reusable"|"custom";presence?:CanonicalPresenceMode;expectedValue?:unknown;allowedValues?:unknown[];pattern?:string;minimum?:number;maximum?:number;minItems?:number;maxItems?:number;condition?:CanonicalPredicate;arrayScope?:CanonicalArrayScope;severity:"error"|"warning";message?:string;enabled?:boolean;reusableRuleId?:string;reusableOutcome?:Record<string,unknown>;replacesRuleId?:string;enforcement?:"invariant"|"overridable";name?:string;revision?:number;operator?:string;provenance?:CanonicalProvenance;}
 export interface CanonicalDocumentation {displayText:string;description:string;comments:string;example:{method:"allowed-value"|"custom"|"blank";value?:unknown};}
 export interface CanonicalProvenance {source:"created"|"saved-schema"|"requirements"|"structured-schema"|"structured-draft"|"path-constraint";sourceId?:string;revision?:number;contributorId?:string;contributorName?:string;scope?:LayerScope;state?:"inherited"|"shadowed"|"effective"|"local"|"overridden"|"conflict";}
-export interface CanonicalItemSchema {id:string;type?:CanonicalPropertyType;items?:CanonicalItemSchema;}
+export interface CanonicalItemSchema {id:string;type?:CanonicalPropertyType;items?:CanonicalItemSchema;allowedValues?:unknown[];}
 export interface CanonicalPropertyNode {
   id:string;name:string;parentId?:string;order:number;type:CanonicalPropertyType;itemType?:CanonicalPropertyType;itemSchema?:CanonicalItemSchema;
   concept?:string;

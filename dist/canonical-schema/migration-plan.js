@@ -11,7 +11,8 @@ const itemSchemaFrom = (propertyId, definition) => {
         if (!supported.has(type))
             return undefined;
         const items = type === "array" ? build(record.items, depth + 1) : undefined;
-        return { id: depth === 0 ? `item:${propertyId}` : `item:${propertyId}:${depth}`, type: type, ...(items ? { items } : {}) };
+        const allowedValues = Array.isArray(record.enum) ? clone(record.enum) : undefined;
+        return { id: depth === 0 ? `item:${propertyId}` : `item:${propertyId}:${depth}`, type: type, ...(items ? { items } : {}), ...(allowedValues?.length ? { allowedValues } : {}) };
     };
     return build(definition.items, 0);
 };
