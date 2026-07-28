@@ -31,6 +31,13 @@ export function composedTableQuickEditFacets(row, facet, value) {
     }
     return sparseComposedFacets(next, row.inherited ?? { path: row.path });
 }
+export function composedTableResetFacet(row, facet) {
+    const { path: _, ...local } = structuredClone(row.local);
+    delete local[facet];
+    if (facet === "type")
+        delete local.itemType;
+    return local;
+}
 export function mountComposedSchemaWorkspace(options) {
     const section = document.createElement("section"), heading = document.createElement("h2"), summary = document.createElement("p"), policy = document.createElement("input"), policyLabel = document.createElement("label"), quickEditFeedback = document.createElement("output"), filterControls = document.createElement("div"), filter = document.createElement("input"), sort = document.createElement("select"), addControls = document.createElement("div"), choice = document.createElement("select"), add = document.createElement("button"), rows = document.createElement("div");
     let activePath, overlayOpen = false, focusedOpen = false, activeSection = "definition", draft, removed = false, confirmedAction, removedRuleIds = new Set(), removedValueIds = new Set(), restoredRuleIds = new Set(), restoredValueIds = new Set(), stagedLocalValueIds = new Set(), overriddenRuleIds = new Set(), pendingStructure = [], pendingAction, originFocus, originPath, query = "", sortMode = "path";
@@ -73,7 +80,7 @@ export function mountComposedSchemaWorkspace(options) {
     rows.setAttribute("aria-label", `${options.model.heading} rows`);
     rows.dataset.schemaEditorScrollRegion = "true";
     const visibleModel = () => { const needle = query.trim().toLowerCase(), rows = options.model.rows.filter((row) => !needle || row.path.toLowerCase().includes(needle) || row.source.toLowerCase().includes(needle) || options.effectiveText(row).toLowerCase().includes(needle)).sort((left, right) => sortMode === "source" ? left.source.localeCompare(right.source) || left.path.localeCompare(right.path) : sortMode === "validation" ? left.validationState.localeCompare(right.validationState) || left.path.localeCompare(right.path) : left.path.localeCompare(right.path)); return { ...options.model, rows }; };
-    const rerender = () => renderComposedRows(rows, { dom: document, overlayHost: section, model: visibleModel(), effectiveText: options.effectiveText, ...(options.onRepair ? { onRepair: options.onRepair } : {}), ...(options.onStructure ? { onStructure: (kind, path, name) => { pendingStructure.push({ kind, path, ...(name === undefined ? {} : { name }) }); rerender(); } } : {}), ...(options.rowPathDataset ? { rowPathDataset: options.rowPathDataset } : {}), activePath, overlayOpen, focusedOpen, activeSection, draft, removed, confirmedAction, removedRuleIds, removedValueIds, restoredRuleIds, restoredValueIds, stagedLocalValueIds, overriddenRuleIds, overrideRule, pendingAction, pendingStructure, ownershipSession, activateOwnership: (action) => { ownershipSession = activateFocusedOwnershipSection(ownershipSession, activeSection, action); rerender(); }, beginAction, cancelAction, confirmAction, open, commitInline, cancelInline: () => { }, inlineDiagnostic: (message) => { quickEditFeedback.textContent = message; }, quickEditRoot: () => options.host, quickEditScope: `composed:${options.schemaContributorId ?? options.model.heading}`, close, closeChild, save, render: rerender, selectSection: (value) => { activeSection = value; focusedOpen = true; overlayState = schemaTableOverlayTransition(overlayState, { kind: "focus" }); rerender(); } });
+    const rerender = () => renderComposedRows(rows, { dom: document, overlayHost: section, model: visibleModel(), effectiveText: options.effectiveText, ...(options.onRepair ? { onRepair: options.onRepair } : {}), ...(options.onStructure ? { onStructure: (kind, path, name) => { pendingStructure.push({ kind, path, ...(name === undefined ? {} : { name }) }); rerender(); } } : {}), ...(options.rowPathDataset ? { rowPathDataset: options.rowPathDataset } : {}), activePath, overlayOpen, focusedOpen, activeSection, draft, removed, confirmedAction, removedRuleIds, removedValueIds, restoredRuleIds, restoredValueIds, stagedLocalValueIds, overriddenRuleIds, overrideRule, pendingAction, pendingStructure, ownershipSession, activateOwnership: (action) => { ownershipSession = activateFocusedOwnershipSection(ownershipSession, activeSection, action); rerender(); }, beginAction, cancelAction, confirmAction, open, commitInline, resetInline, cancelInline: () => { }, inlineDiagnostic: (message) => { quickEditFeedback.textContent = message; }, quickEditRoot: () => options.host, quickEditScope: `composed:${options.schemaContributorId ?? options.model.heading}`, close, closeChild, save, render: rerender, selectSection: (value) => { activeSection = value; focusedOpen = true; overlayState = schemaTableOverlayTransition(overlayState, { kind: "focus" }); rerender(); } });
     const overrideRule = (sourceId) => { if (!draft)
         return; const source = options.model.rows.find(({ path }) => path === activePath)?.effective.rules?.find((rule) => String(rule.id ?? "") === sourceId); if (!source || source.enforcement === "invariant")
         return; const id = `rule:${crypto.randomUUID()}`, replacement = { ...structuredClone(source), id, replacesRuleId: sourceId, provenance: { source: "created", state: "overridden", sourceId } }; draft = { ...draft, rules: [...draft.rules, replacement] }; overriddenRuleIds.add(id); rerender(); };
@@ -98,6 +105,15 @@ export function mountComposedSchemaWorkspace(options) {
     const commitInline = (row, facet, value) => {
         try {
             options.onSave(row, composedTableQuickEditFacets(row, facet, value));
+            return { status: "committed" };
+        }
+        catch (error) {
+            return { status: "invalid", diagnostic: error instanceof Error ? error.message : String(error) };
+        }
+    };
+    const resetInline = (row, facet) => {
+        try {
+            options.onSave(row, composedTableResetFacet(row, facet));
             return { status: "committed" };
         }
         catch (error) {

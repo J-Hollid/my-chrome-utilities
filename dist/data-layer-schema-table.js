@@ -1,5 +1,5 @@
 import { typedCanonicalValue } from "./data-layer-canonical-schema-facets.js";
-export { bindSchemaTableQuickEdit, schemaTableEditableFacets, schemaTableQuickEditDestination, schemaTableQuickEditIntent } from "./data-layer-schema-table-quick-edit.js";
+export { bindSchemaTableQuickEdit, schemaTableEditableFacets, schemaTableQuickEditCommitsOnChange, schemaTableQuickEditDestination, schemaTableQuickEditIntent } from "./data-layer-schema-table-quick-edit.js";
 export const schemaTableColumns = [
     { key: "property-editor", label: "Property editor" },
     { key: "path", label: "Path" },

@@ -77,9 +77,13 @@ function renderTable(tree, context) {
         compatibilityMarker.textContent = " ·";
         pathCell.append(compatibilityMarker);
         pathCell.style.minWidth = "20rem";
-        const typeCell = cell(2), presenceCell = cell(3);
+        const typeCell = cell(2), presenceCell = cell(3), appendReset = (host, facet, label, value) => { if (value === undefined || !node.localDefinitionFacets?.includes(facet))
+            return; const reset = button(dom, `Reset ${label} to parent`, () => { const result = context.commitInline(row.node, facet, value); if (result.status === "invalid")
+            context.inlineDiagnostic(result.diagnostic); }); reset.setAttribute("aria-label", `Reset ${label} to parent for ${row.path}`); reset.dataset.inlineFacetReset = facet; host.append(reset); };
         typeCell.append(selectCell(context, row.node, "type", node.type, ["string", "number", "integer", "boolean", "null", "object", "array"]));
+        appendReset(typeCell, "type", "Type", node.inheritedDefinition?.type);
         presenceCell.append(selectCell(context, row.node, "presence", node.presence.mode.endsWith("-when") ? node.presence.mode.replace("-when", "") : node.presence.mode, ["optional", "required", "forbidden"]));
+        appendReset(presenceCell, "presence", "Presence", node.inheritedDefinition?.presence);
         tr.append(identity, pathCell, typeCell, presenceCell);
         const exampleEditor = exampleCell(context, row.node, example === undefined ? "" : String(example));
         for (const [offset, control] of [editableCell(context, row.node, "description", node.documentation.description), editableCell(context, row.node, "expected-or-allowed", schemaTableAllowedValues({ expectedValue: node.expectedValue, allowedValues: node.allowedValues.map(({ value }) => value) })), exampleEditor.control].entries()) {

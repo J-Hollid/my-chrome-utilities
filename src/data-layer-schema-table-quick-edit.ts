@@ -12,6 +12,10 @@ export function schemaTableQuickEditIntent(key:string,shiftKey:boolean):SchemaTa
   return undefined;
 }
 
+export function schemaTableQuickEditCommitsOnChange(control:Pick<Element,"tagName">):boolean {
+  return control.tagName.toUpperCase()==="SELECT";
+}
+
 export function schemaTableQuickEditDestination(
   cells:readonly SchemaTableQuickEditCell[],
   origin:SchemaTableQuickEditCell,
@@ -77,6 +81,7 @@ export function bindSchemaTableQuickEdit(control:SchemaTableQuickEditControl,bin
     if(target)restoreQuickEditFocus(binding,target);
   };
   control.addEventListener("input",()=>{settled=false;});
+  if(schemaTableQuickEditCommitsOnChange(control))control.addEventListener("change",()=>commit());
   control.addEventListener("focus",()=>{const document=control.ownerDocument,current=pendingQuickEditFocus.get(document);quickEditFocusGeneration.set(document,(quickEditFocusGeneration.get(document)??0)+1);if(current&&(current.scope!==binding.scope||current.cell.path!==origin.path||current.cell.facet!==origin.facet))pendingQuickEditFocus.delete(document);});
   control.addEventListener("keydown",(rawEvent)=>{
     const event=rawEvent as KeyboardEvent;

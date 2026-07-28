@@ -24,7 +24,10 @@ export function renderCanonicalSchemaEditor(context) {
     policy.setAttribute("aria-label", "Only defined fields");
     policy.addEventListener("change", () => context.command({ kind: "policy", baseRevision: document.revision, onlyDefinedFields: policy.checked }));
     policyLabel.append(policy, "Only defined fields");
-    header.append(title, status, policyLabel, undo, redo);
+    header.append(title, status);
+    if (options.showOnlyDefinedFields !== false)
+        header.append(policyLabel);
+    header.append(undo, redo);
     options.host.append(header, renderCanonicalNavigator(context));
     if (document.view === "table" && context.review)
         options.host.append(context.review);

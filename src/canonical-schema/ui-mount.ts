@@ -13,7 +13,7 @@ import {schemaTableOverlayTarget,schemaTableOverlayTransition,schemaTableStageAl
 export interface CanonicalSchemaEditorOptions {
   host:HTMLElement;surface:"Builder"|"Side panel"|"Flow workspace";load:()=>CanonicalSchemaDocument;
   dispatch:(command:CanonicalCommand)=>CanonicalCommandResult;id:(kind:string)=>string;onUndo?:()=>void;onRedo?:()=>void;initialFeedback?:string;
-  renderAfterDispatch?:boolean;
+  renderAfterDispatch?:boolean;showOnlyDefinedFields?:boolean;
 }
 
 

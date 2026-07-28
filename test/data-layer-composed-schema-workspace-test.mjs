@@ -16,7 +16,7 @@ import {createSpecificationProject} from "../dist/data-layer-specification-proje
 import {composedReviewFacetDelta,composedReviewLifecycleInventory} from "../dist/data-layer-composed-schema-workspace-rows.js";
 import {composedFacetDraft,sparseComposedFacets} from "../dist/data-layer-composed-schema-builders.js";
 import {saveFlowPageInstanceLocalFacetsAndStructures} from "../dist/data-layer-layered-schema-project.js";
-import {composedTableQuickEditFacets} from "../dist/data-layer-composed-schema-workspace-ui.js";
+import {composedTableQuickEditFacets,composedTableResetFacet} from "../dist/data-layer-composed-schema-workspace-ui.js";
 import {resetComposedDefinitionFacet} from "../dist/data-layer-composed-schema-workspace-focused-sections.js";
 import {focusedStructureOwned} from "../dist/data-layer-canonical-schema-focused-drafts.js";
 
@@ -37,6 +37,11 @@ const cart=state.project.collections.pages[0];
 const closedCart=saveComposedSchemaPolicy(state,"pages",cart.id,true);
 assert.equal(closedCart.project.collections.pages[0].onlyDefinedFields,true,"a composed schema policy persists independently from property contributions");
 assert.deepEqual(closedCart.project.collections.pages[0].schemaConstraints,cart.schemaConstraints,"the schema policy command does not rewrite property definitions");
+const canonicalPolicyState=structuredClone(state),canonicalPolicyPage=canonicalPolicyState.project.collections.pages[0];canonicalPolicyPage.canonicalSchema={id:"canonical:page-policy",contributorId:canonicalPolicyPage.id,contributorName:canonicalPolicyPage.name,revision:0,rootIds:[],nodes:{},changes:[]};canonicalPolicyPage.onlyDefinedFields=false;
+const canonicalClosed=saveComposedSchemaPolicy(canonicalPolicyState,"pages",canonicalPolicyPage.id,true),storedCanonicalPolicy=canonicalClosed.project.collections.pages[0];
+assert.equal(storedCanonicalPolicy.canonicalSchema.onlyDefinedFields,true,"Page policy persists through its canonical schema boundary");
+assert.equal(storedCanonicalPolicy.canonicalSchema.revision,1,"the policy toggle records one canonical schema-scoped command");
+assert.equal(Object.hasOwn(storedCanonicalPolicy,"onlyDefinedFields"),false,"a canonical Page never retains a competing entity-level policy");
 const workspace=composedSchemaWorkspace(state,cart,"Page");
 const quickStep=workspace.rows.find(({path})=>path==="/page_name");
 assert.deepEqual(composedTableQuickEditFacets(quickStep,"description","Cart step"),{documentation:"Cart step"},"an inherited composed Description edit creates only its sparse local facet");
@@ -44,6 +49,8 @@ assert.deepEqual(composedTableQuickEditFacets(quickStep,"type","number"),{type:"
 assert.deepEqual(composedTableQuickEditFacets(quickStep,"presence","required"),{presence:"required"},"an inherited composed Presence edit creates only its sparse local facet");
 assert.deepEqual(composedTableQuickEditFacets(quickStep,"expected-or-allowed","cart, guest"),{allowedValues:["cart","guest"]},"an inherited composed Allowed values edit does not copy parent facets");
 assert.deepEqual(composedTableQuickEditFacets(quickStep,"example","cart"),{examples:["cart"]},"an inherited composed Example edit creates only its typed example facet");
+assert.deepEqual(composedTableResetFacet({...quickStep,local:{path:"/page_name",type:"number",presence:"required",documentation:"keep"}},"type"),{presence:"required",documentation:"keep"},"adjacent Type reset removes only the local Type facet");
+assert.deepEqual(composedTableResetFacet({...quickStep,local:{path:"/page_name",type:"number",presence:"required",condition:{kind:"predicate"}}},"presence"),{type:"number",condition:{kind:"predicate"}},"adjacent Presence reset leaves Type and conditional Presence rules independent");
 assert.equal(workspace.heading,"Effective schema at Cart");
 assert.equal(workspace.status,"ready");
 assert.deepEqual(workspace.rows.map(({path})=>path),["/funnel_name","/funnel_step","/page_name","/page_type"]);
@@ -154,6 +161,7 @@ assert.deepEqual(pageOwned.rules.map(({id,provenance})=>({id,state:provenance?.s
 assert.deepEqual(pageOwned.allowedValues.map(({id,provenance})=>({id,state:provenance?.[0]?.state,contributorId:provenance?.[0]?.contributorId})),[{id:"value:group",state:"inherited",contributorId:"group:ownership"}],"Page compact projection rebases parent-local value ownership to inherited without changing identity or origin");
 const ownershipRoundTrip=saveComposedCanonicalDocument(ownershipState,"pages",ownershipPage.id,pageProjection),storedOwnership=ownershipRoundTrip.project.collections.pages[0].localSchemaContributions;
 assert.deepEqual(storedOwnership.map(({path,rules,allowedValues})=>({path,ruleIds:rules?.map(({id})=>id),ruleStates:rules?.map(({provenance})=>provenance?.state),allowedValues})),[{path:"/owned",ruleIds:["rule:page"],ruleStates:["local"],allowedValues:undefined}],"unchanged compact persistence stores only locally owned items and never materializes inherited rules or values");
+assert.equal(storedOwnership[0].definitionId,undefined,"facet-only compact persistence does not accidentally claim inherited structure ownership");
 const sameCountEdit=structuredClone(ownershipState);sameCountEdit.project.collections.pages[0].localSchemaContributions[0].rules[0].message="Changed in the same sparse row";assert.notEqual(composedCanonicalSchema(sameCountEdit,sameCountEdit.project.collections.pages[0],"Page").revision,pageProjection.revision,"opaque composed tokens change when an existing local facet changes without changing contribution count");
 const unrelatedEdit=structuredClone(ownershipState);unrelatedEdit.project.collections.events.push({id:"event:unrelated-token",name:"Unrelated token"});assert.equal(composedCanonicalSchema(unrelatedEdit,unrelatedEdit.project.collections.pages[0],"Page").revision,pageProjection.revision,"opaque composed tokens ignore unrelated contributors");
 const parentEdit=structuredClone(ownershipState);parentEdit.project.collections.profiles[0].schemaConstraints[0].documentation="Parent token changed";assert.notEqual(composedCanonicalSchema(parentEdit,parentEdit.project.collections.pages[0],"Page").revision,pageProjection.revision,"opaque composed tokens change with a parent in the live contributor path");

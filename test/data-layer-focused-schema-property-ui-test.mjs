@@ -4,7 +4,7 @@ import {applyCanonicalCommand,canonicalPredicateIds,canonicalPredicateWithStable
 import {canonicalFlatPredicateIssue} from "../dist/canonical-schema/predicate-policy.js";
 import {canonicalNavigatorRows} from "../dist/canonical-schema-focused/navigator-rows.js";
 import {focusedSourceState} from "../dist/data-layer-canonical-schema-focused-drafts.js";
-import {schemaTableCellMetadata,schemaTableColumns,schemaTableEditableFacets,schemaTableExpectedOrAllowed,schemaTableOverlayPlacement,schemaTableOverlayStyle,schemaTableQuickEditDestination,schemaTableQuickEditIntent,schemaTableRuleConditionSummary,schemaTableValueFacet} from "../dist/data-layer-schema-table.js";
+import {schemaTableCellMetadata,schemaTableColumns,schemaTableEditableFacets,schemaTableExpectedOrAllowed,schemaTableOverlayPlacement,schemaTableOverlayStyle,schemaTableQuickEditCommitsOnChange,schemaTableQuickEditDestination,schemaTableQuickEditIntent,schemaTableRuleConditionSummary,schemaTableValueFacet} from "../dist/data-layer-schema-table.js";
 import {sharedConditionOperators,sharedFlatConditionResult,sharedFlatConditionRows} from "../dist/data-layer-shared-condition-tree-editor.js";
 
 assert.deepEqual(focusedPropertySections,["definition","rules","structure"]);
@@ -61,6 +61,8 @@ assert.deepEqual(schemaTableQuickEditIntent("Tab",false),{kind:"commit",directio
 assert.deepEqual(schemaTableQuickEditIntent("Tab",true),{kind:"commit",direction:-1},"Shift+Tab commits and reverses");
 assert.deepEqual(schemaTableQuickEditIntent("Escape",false),{kind:"cancel"},"Escape cancels the transient cell edit");
 assert.equal(schemaTableQuickEditIntent("ArrowRight",false),undefined,"ordinary editing keys remain native");
+assert.equal(schemaTableQuickEditCommitsOnChange({tagName:"SELECT"}),true,"pointer selection commits a Type or Presence dropdown immediately");
+assert.equal(schemaTableQuickEditCommitsOnChange({tagName:"INPUT"}),false,"text and combobox inputs remain transient until their ordinary commit boundary");
 const quickCells=[
   {path:"/first",facet:"description"},{path:"/first",facet:"expected-or-allowed"},{path:"/first",facet:"example"},
   {path:"/second",facet:"description"},{path:"/second",facet:"expected-or-allowed"},{path:"/second",facet:"example"},

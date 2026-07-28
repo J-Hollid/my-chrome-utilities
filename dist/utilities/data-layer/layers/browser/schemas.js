@@ -21,7 +21,7 @@ export { guidedAttachedRule } from "../../../../data-layer-guided-rule-parameter
 export { guidedPropertyDocument, mergeGuidedDocument } from "../../../../data-layer-guided-nested-property-merge.js";
 export { inspectSpecificIndexRuleTarget } from "../../../../data-layer-schema-nested-path.js";
 export { appendSharedProfileConstraint, mountSidePanelLayeredProfileEditor, sharedProfilePropertyPaths } from "../../../../data-layer-layered-schema-ui.js";
-export { composedCanonicalSchema, saveComposedCanonicalDocument, saveComposedEventCanonicalDocument, saveEventOccurrenceCanonicalDocument, saveFlowPageInstanceCanonicalDocument } from "../../../../data-layer-composed-schema-workspace.js";
+export { composedCanonicalSchema, saveComposedCanonicalDocument, saveComposedEntitySchemaPolicy, saveComposedEventCanonicalDocument, saveEventOccurrenceCanonicalDocument, saveFlowContributorSchemaPolicy, saveFlowPageInstanceCanonicalDocument } from "../../../../data-layer-composed-schema-workspace.js";
 export { sidePanelSchemaGroups } from "../../../../data-layer-side-panel-schema-editor.js";
 export { filterSchemaRelationshipTree, projectSchemaRelationshipTree, restoreSchemaRelationshipTreeView, saveSchemaRelationshipTreeView } from "../../../../schema-relationship-tree.js";
 export { mountProjectLibraryUi } from "../../../../data-layer-project-library-ui.js";

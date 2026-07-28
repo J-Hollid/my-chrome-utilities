@@ -127,10 +127,14 @@ export function renderComposedRows(rows, context) {
         propertyActions.setAttribute("aria-label", `Property actions for ${row.path}`);
         propertyActions.dataset.propertyActionsPath = row.path;
         identity.append(propertyActions);
-        const pathCell = cell(1, row.path), typeCell = cell(2), presenceCell = cell(3);
+        const pathCell = cell(1, row.path), typeCell = cell(2), presenceCell = cell(3), appendReset = (host, facet, label) => { if (!row.inherited || !Object.hasOwn(row.local, facet))
+            return; const reset = button(dom, `Reset ${label} to parent`, () => { const result = context.resetInline(row, facet); if (result.status === "invalid")
+            context.inlineDiagnostic(result.diagnostic); }); reset.setAttribute("aria-label", `Reset ${label} to parent for ${row.path}`); reset.dataset.inlineFacetReset = facet; host.append(reset); };
         pathCell.style.minWidth = "20rem";
         typeCell.append(select(row, "type", String(draft?.type ?? effective.type ?? "string"), ["string", "number", "integer", "boolean", "null", "object", "array"]));
+        appendReset(typeCell, "type", "Type");
         presenceCell.append(select(row, "presence", String(draft?.presence ?? effective.presence ?? "optional"), ["optional", "required", "forbidden"]));
+        appendReset(presenceCell, "presence", "Presence");
         tr.append(identity, pathCell, typeCell, presenceCell);
         const example = editable(row, "example", exampleValue === undefined ? "" : String(exampleValue)), suggestions = dom.createElement("datalist"), listId = `schema-example-${row.path.replace(/[^a-z0-9_-]/gi, "-")}`;
         suggestions.id = listId;

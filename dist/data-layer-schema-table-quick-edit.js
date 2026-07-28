@@ -8,6 +8,9 @@ export function schemaTableQuickEditIntent(key, shiftKey) {
         return { kind: "commit", direction: shiftKey ? -1 : 1 };
     return undefined;
 }
+export function schemaTableQuickEditCommitsOnChange(control) {
+    return control.tagName.toUpperCase() === "SELECT";
+}
 export function schemaTableQuickEditDestination(cells, origin, direction) {
     const index = cells.findIndex(({ path, facet }) => path === origin.path && facet === origin.facet);
     return index < 0 ? undefined : cells[index + direction];
@@ -67,6 +70,8 @@ export function bindSchemaTableQuickEdit(control, binding) {
             restoreQuickEditFocus(binding, target);
     };
     control.addEventListener("input", () => { settled = false; });
+    if (schemaTableQuickEditCommitsOnChange(control))
+        control.addEventListener("change", () => commit());
     control.addEventListener("focus", () => { const document = control.ownerDocument, current = pendingQuickEditFocus.get(document); quickEditFocusGeneration.set(document, (quickEditFocusGeneration.get(document) ?? 0) + 1); if (current && (current.scope !== binding.scope || current.cell.path !== origin.path || current.cell.facet !== origin.facet))
         pendingQuickEditFocus.delete(document); });
     control.addEventListener("keydown", (rawEvent) => {

@@ -1,6 +1,6 @@
 import type {CanonicalPredicate,CanonicalPropertyType} from "./data-layer-canonical-schema.js";
 import {typedCanonicalValue} from "./data-layer-canonical-schema-facets.js";
-export {bindSchemaTableQuickEdit,schemaTableEditableFacets,schemaTableQuickEditDestination,schemaTableQuickEditIntent} from "./data-layer-schema-table-quick-edit.js";
+export {bindSchemaTableQuickEdit,schemaTableEditableFacets,schemaTableQuickEditCommitsOnChange,schemaTableQuickEditDestination,schemaTableQuickEditIntent} from "./data-layer-schema-table-quick-edit.js";
 export type {SchemaTableEditableFacet,SchemaTableQuickEditBinding,SchemaTableQuickEditCell,SchemaTableQuickEditIntent,SchemaTableQuickEditResult} from "./data-layer-schema-table-quick-edit.js";
 
 export const schemaTableColumns=[

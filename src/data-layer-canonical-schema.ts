@@ -19,7 +19,7 @@ export interface CanonicalItemSchema {id:string;type?:CanonicalPropertyType;item
 export interface CanonicalPropertyNode {
   id:string;name:string;parentId?:string;order:number;type:CanonicalPropertyType;itemType?:CanonicalPropertyType;itemSchema?:CanonicalItemSchema;
   presence:{mode:CanonicalPresenceMode;condition?:CanonicalPredicate};allowedValues:CanonicalAllowedValue[];rules:CanonicalRule[];
-  documentation:CanonicalDocumentation;provenance:CanonicalProvenance[];overrideReferences:string[];structureOwned?:boolean;localDefinitionFacets?:readonly string[];inheritedDefinition?:{description?:string};expectedValue?:unknown;enforcement?:"invariant"|"overridable";target?:string;
+  documentation:CanonicalDocumentation;provenance:CanonicalProvenance[];overrideReferences:string[];structureOwned?:boolean;localDefinitionFacets?:readonly string[];inheritedDefinition?:{type?:CanonicalPropertyType;presence?:"required"|"optional"|"forbidden";description?:string};expectedValue?:unknown;enforcement?:"invariant"|"overridable";target?:string;
 }
 export interface CanonicalSchemaDocument {
   id:string;revision:number;state:"Draft";contributorId:string;contributorName:string;rootIds:string[];nodes:Record<string,CanonicalPropertyNode>;
