@@ -5,8 +5,9 @@
 The active specification cycles are the interactive directional Flow graph review,
 focused canonical authoring and layered effective-schema, selected-Flow
 documentation export, operator-guided Live Flow testing, project-management,
-project-scoped event transport, the side-panel schema relationship tree, and
-durable-project repository checkpoints. Their contracts are:
+project-scoped event transport, project-assurance severity, the side-panel schema
+relationship tree, and durable-project repository checkpoints. Their contracts
+are:
 
 - `features/data-layer-directional-flow-specification-graph.feature`
 - `features/data-layer-directional-flow-specification-graph-runtime.feature`
@@ -26,6 +27,8 @@ durable-project repository checkpoints. Their contracts are:
 - `features/data-layer-project-portability-and-upgrade-runtime.feature`
 - `features/data-layer-project-event-transport-settings.feature`
 - `features/data-layer-project-event-transport-settings-runtime.feature`
+- `features/data-layer-project-assurance-severity.feature`
+- `features/data-layer-project-assurance-severity-runtime.feature`
 - `features/data-layer-side-panel-schema-relationship-tree.feature`
 - `features/data-layer-side-panel-schema-relationship-tree-runtime.feature`
 - `features/data-layer-durable-project-repository.feature`
@@ -45,6 +48,8 @@ The program for project library, active context, and portability is
 `docs/data-layer-project-management-program-R01.md`.
 The program for active-project observation and push routing is
 `docs/data-layer-project-event-transport-settings-program-R01.md`.
+The program for non-blocking Fixture, Assignment, and Coverage assurance is
+`docs/data-layer-project-assurance-severity-program-R01.md`.
 The program for the relationship-derived side-panel Schema tree is
 `docs/data-layer-side-panel-schema-relationship-tree-program-R01.md`.
 The correction program for durable project storage, page-scoped Undo/Redo, and
@@ -146,6 +151,17 @@ completed through its terminal candidate and was merged to `master` at
 `e4d36277a4`.
 Quick Table cell save subsequently completed through its terminal candidate and was
 merged to `master` at `0db53c75b2`.
+
+The current project-assurance severity specification is later authority only for
+preflight classification and operation gating. Missing, incomplete, failed,
+ambiguous, unusable, uncovered, or stale Fixture, Assignment, and Coverage states
+are warnings and never block validation, developer export, release confirmation,
+or publication. Only canonical-schema, effective-schema, and submitted-data
+validation failures are blocking issues. Legacy `fixturesRequired` and
+`warningsBlock` values cannot promote optional assurance. The exact checkpoint is
+the `project_assurance_severity` verification pack followed by `npm run package`.
+On approval this cycle proceeds before the open project-documentation,
+durable-repository, and Flow recovery lineages resume.
 
 The current Table editing specification is later authority for Authoring scenarios
 054–059. Every canonical schema Table uses a far-left `Property editor` action
@@ -602,12 +618,14 @@ per-Event validator plus Flow selection restoration. These requirements are not 
 general Assignment or resolver redesign. Top-level Fixture and Assignment overview
 creation, opening, and guarded removal are active only as project-entity lifecycle;
 fixture execution and resolver semantics beyond contributor targeting are not.
-Coverage and release assurance,
+Except for the later project-assurance severity contract above, Coverage and release assurance,
 automatic or temporal Flow execution, Live behavior beyond operator-guided Flow
 testing, and cross-surface concurrency beyond canonical Draft concurrency and
 durable repository subscriptions are not active work. The minimal intentional Publish boundary above
-exists only to create immutable project revisions; it does not activate the archived
-preflight, review, release-gate, Live, or publication-assurance programs. Agent
+exists only to create immutable project revisions. The severity contract activates
+only warning/blocker classification and gating in installed preflight and release
+review; it does not activate the archived Fixture execution, Coverage matrix,
+release-gate, Live, or broader publication-assurance programs. Agent
 role-playing without source knowledge and facilitated Windows usability are not
 acceptance gates. A future slice requires product-owner review, a new approved
 specification cycle, and a new file-based SwarmForge handoff.
