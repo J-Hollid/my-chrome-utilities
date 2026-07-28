@@ -1033,6 +1033,16 @@ bulkRequire.addEventListener("click", () => { if (!stagedBulk)
 bulkConfirm.addEventListener("click", () => { if (!state || !selectedId || !stagedBulk)
     return; persist(commitStagedBulkRequirements(state, selectedId, stagedBulk)); q("#bulk-assistance").textContent = `Committed ${stagedBulk.rows.length} requirements in one revision and one Undo transaction.`; stagedBulk = undefined; renderBulkStage(); });
 function renderAssuranceFindings(host, result) {
+    const repairRoute = (finding) => {
+        const fieldMatch = finding.field.match(/^collections\.(profiles|pageGroups|pages|events|flows|assignments|fixtures)(?:\/([^/]+))?/), fieldKind = fieldMatch?.[1];
+        if (fieldKind)
+            return { kind: fieldKind, ...(fieldMatch?.[2] ? { id: fieldMatch[2] } : {}) };
+        if (state)
+            for (const kind of Object.keys(state.project.collections))
+                if (state.project.collections[kind].some(({ id }) => id === finding.entityId))
+                    return { kind, id: finding.entityId };
+        return { kind: selectedKind };
+    };
     const region = (label, findings) => {
         const section = document.createElement("section"), heading = document.createElement("h3"), list = document.createElement("ul"), severity = label === "Warnings" ? "warning" : "error", headingId = `${host.id || "preflight"}-${severity}-heading`;
         section.className = "assurance-region";
@@ -1048,7 +1058,10 @@ function renderAssuranceFindings(host, result) {
             item.setAttribute("role", severity === "warning" ? "status" : "alert");
             open.type = "button";
             open.textContent = `${finding.code}: ${finding.message}`;
-            open.addEventListener("click", () => { selectedId = finding.entityId; history.replaceState(null, "", `?entity=${encodeURIComponent(finding.entityId)}&field=${encodeURIComponent(finding.field)}`); render(); });
+            open.dataset.repairKind = repairRoute(finding).kind;
+            open.dataset.repairEntity = repairRoute(finding).id ?? "";
+            open.addEventListener("click", () => { const route = repairRoute(finding), dialog = q("#release-review"); if (dialog.open)
+                dialog.close(); projectOverview = false; selectedKind = route.kind; selectedId = route.id; persistNavigation(); replaceProjectRoute(route.kind, route.id); render(); const workspace = q("#workspace-pane"); workspace.dataset.repairField = finding.field; workspace.focus(); });
             item.append(open);
             list.append(item);
         }

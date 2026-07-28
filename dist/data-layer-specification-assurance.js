@@ -77,6 +77,24 @@ export function specificationPreflight(envelope) {
         const blockers = compiled.diagnostics.map((diagnostic) => ({ code: diagnostic.code, message: `Repair ${diagnostic.field}: ${diagnostic.referenceId}.`, entityId: diagnostic.entityId, field: diagnostic.field }));
         return { contentIdentity: evidenceIdentity("preflight", { revision: envelope.revision, warnings, blockers }), blockers, warnings, fixtures: [] };
     }
+    const probes = new Map();
+    for (const assignment of compiled.plan.assignments) {
+        const key = `${assignment.eventId}:${assignment.priority}:${assignment.applicabilitySetId}`, ids = probes.get(key) ?? [];
+        ids.push(assignment.assignmentId);
+        probes.set(key, ids);
+    }
+    const ambiguous = new Set();
+    for (const ids of probes.values())
+        if (ids.length > 1) {
+            ids.forEach((assignmentId) => ambiguous.add(assignmentId));
+            warnings.push({ code: "assignment-tie", message: `Equal candidates ${ids.join(", ")}. Repair assignment priority or applicability.`, entityId: ids[0], field: `collections.assignments/${ids[0]}/priority` });
+        }
+    if (ambiguous.size) {
+        const project = { ...envelope.project, collections: { ...envelope.project.collections, assignments: envelope.project.collections.assignments.filter(({ id }) => !ambiguous.has(id)) } };
+        compiled = compileSpecificationProject({ ...envelope, project });
+        if (compiled.status === "blocked")
+            throw new Error("Excluding ambiguous optional Assignments unexpectedly blocked the production plan.");
+    }
     const fixtures = envelope.project.collections.fixtures.map((fixture) => runProductionFixture(compiled.plan, fixture)), blockers = independentSchemaBlockers(envelope.project);
     for (const fixture of fixtures)
         if (fixture.status !== "pass") {
@@ -84,15 +102,6 @@ export function specificationPreflight(envelope) {
             if (fixture.steps.some(({ differences }) => differences.some((difference) => difference.startsWith("resultIdentity:"))))
                 warnings.push({ code: "stale-coverage", message: `Fixture ${fixture.fixtureId} evidence was captured against an older schema. Rerun the Fixture.`, entityId: fixture.fixtureId, field: `collections.fixtures/${fixture.fixtureId}/evaluationResultIdentity` });
         }
-    const probes = new Map();
-    for (const assignment of compiled.plan.assignments) {
-        const key = `${assignment.eventId}:${assignment.priority}:${assignment.applicabilitySetId}`, ids = probes.get(key) ?? [];
-        ids.push(assignment.assignmentId);
-        probes.set(key, ids);
-    }
-    for (const ids of probes.values())
-        if (ids.length > 1)
-            warnings.push({ code: "assignment-tie", message: `Equal candidates ${ids.join(", ")}. Repair assignment priority or applicability.`, entityId: ids[0], field: `collections.assignments/${ids[0]}/priority` });
     const proving = envelope.project.collections.fixtures.map((fixture, index) => ({ fixture, result: fixtures[index] })).filter(({ result }) => result.status === "pass"), coverage = buildEffectiveRequirementCoverage(compiled.plan, proving, { offset: 0, limit: Number.MAX_SAFE_INTEGER });
     if (!proving.length)
         warnings.push({ code: "zero-proving-evidence", message: "No current assertion-bearing passing Fixture. Add or repair optional evidence.", entityId: envelope.project.id, field: "collections.fixtures" });

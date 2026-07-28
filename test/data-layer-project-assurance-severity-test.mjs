@@ -90,10 +90,21 @@ assert.equal(finding(staleResult, "stale-coverage").entityId, staleFixture.id);
 
 const tied = structuredClone(engineTestProject);
 tied.collections.assignments.push({...tied.collections.assignments[0], id:"assignment:tie"});
+const untied = specificationPreflight(envelope(engineTestProject));
 const tieResult = specificationPreflight(envelope(tied));
 assert.equal(tieResult.blockers.length, 0);
 assert.equal(finding(tieResult, "assignment-tie").entityId, "assignment:retail");
 assert.ok(finding(tieResult, "uncovered-requirement"));
+assert.deepEqual(
+  tieResult.plan.assignments.map(({assignmentId}) => assignmentId),
+  ["assignment:trade"],
+  "all ambiguous candidates are absent from production evaluation",
+);
+assert.deepEqual(
+  tieResult.plan.schemas["assignment:trade"],
+  untied.plan.schemas["assignment:trade"],
+  "excluding a tie leaves an unrelated effective schema byte-for-byte unchanged",
+);
 assert.doesNotThrow(()=>assertDeveloperSchemaExportAvailable(tieResult),
   "optional-assurance warnings cannot block developer export");
 
