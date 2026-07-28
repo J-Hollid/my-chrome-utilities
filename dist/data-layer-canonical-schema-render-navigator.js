@@ -1,4 +1,5 @@
 import { applyNavigatorView, renderNavigatorRows } from "./canonical-schema-focused/navigator-rows.js";
+import { schemaTableSortOptions } from "./data-layer-schema-table.js";
 const input = (dom, name, value = "", type = "text") => { const control = dom.createElement("input"); control.name = name; control.type = type; control.value = value; return control; };
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
@@ -19,7 +20,7 @@ export function renderCanonicalNavigator(context) {
     filter.addEventListener("change", () => { const value = filter.value; context.setPropertyFilter(value); refresh({ propertyFilter: value }); });
     sort.name = "propertySort";
     sort.setAttribute("aria-label", "Sort schema properties");
-    sort.append(new Option("Tree order", "tree"), new Option("Concept", "concept"), new Option("Name", "name"), new Option("Type", "type"));
+    sort.append(...schemaTableSortOptions.map(({ label, value }) => new Option(label, value)));
     sort.value = context.propertySort;
     sort.addEventListener("change", () => { const value = sort.value; context.setPropertySort(value); refresh({ propertySort: value }); });
     tree.setAttribute("aria-label", "Canonical property search results");

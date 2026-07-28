@@ -42,7 +42,7 @@ export function canonicalTableQuickEditPatch(original, facet, value, id) {
 export function mountCanonicalSchemaEditor(options) {
     const dom = options.host.ownerDocument ?? globalThis.document;
     const initialDocument = options.load();
-    let query = "", propertyFilter = "all", propertySort = "tree", feedback = options.initialFeedback ?? "", activePropertyId = initialDocument.selectedPropertyId, activeSection = "definition", working, originFocus, originPath, menuPropertyId, focusedPropertyId, removedRuleIds = new Set(), removedValueIds = new Set(), stagedOperations = [], transientView;
+    let query = "", propertyFilter = "all", propertySort = "path", feedback = options.initialFeedback ?? "", activePropertyId = initialDocument.selectedPropertyId, activeSection = "definition", working, originFocus, originPath, menuPropertyId, focusedPropertyId, removedRuleIds = new Set(), removedValueIds = new Set(), stagedOperations = [], transientView;
     let overlayState = { phase: "closed" };
     let review;
     let ownershipSession = { inherited: false, local: true, structureOwned: true, activated: [] };

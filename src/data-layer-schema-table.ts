@@ -16,6 +16,25 @@ export const schemaTableColumns=[
   {key:"local-effective-state",label:"State"},
 ] as const;
 export const schemaTableCellMetadata=schemaTableColumns.map(({key,label})=>({key,label}));
+export const schemaTableSortOptions=[
+  {label:"Tree order",value:"path"},
+  {label:"Concept",value:"concept"},
+  {label:"Source",value:"source"},
+] as const;
+export type SchemaTableSortMode=typeof schemaTableSortOptions[number]["value"];
+export function schemaTableSortComparison(
+  left:{path:string;concept?:string|undefined;source?:string|undefined},
+  right:{path:string;concept?:string|undefined;source?:string|undefined},
+  mode:SchemaTableSortMode,
+):number {
+  if(mode==="concept"){
+    const leftConcept=left.concept?.trim(),rightConcept=right.concept?.trim();
+    if(Boolean(leftConcept)!==Boolean(rightConcept))return leftConcept?-1:1;
+    return(leftConcept??"").localeCompare(rightConcept??"",undefined,{sensitivity:"base"})||left.path.localeCompare(right.path);
+  }
+  if(mode==="source")return String(left.source??"").localeCompare(String(right.source??""),undefined,{sensitivity:"base"})||left.path.localeCompare(right.path);
+  return left.path.localeCompare(right.path);
+}
 export const schemaTableFormerPropertyPathAllocation="20rem";
 export function applySchemaTablePathAllocation(cell:HTMLElement):void {
   cell.dataset.formerPropertyPathAllocation=schemaTableFormerPropertyPathAllocation;

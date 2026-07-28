@@ -80,8 +80,8 @@ assert.deepEqual(groupProjectDocumentationConceptRows(documentationSet,[
 const theme={id:"theme:concept",name:"Concept theme",clientName:"",logo:"",colors:{heading:"#222222",accent:"#666666",stripe:"#f4f4f4"},typography:{family:"Arial",headingSize:16,bodySize:11},density:"comfortable",borders:true,striping:false,highlightedHeadings:true,columnWidths:{},headerText:"",footerText:""};
 const snapshot=compileProjectDocumentationSnapshot({projectId:"project:concept",projectName:"Concept project",set:documentationSet,theme,sourceRevisions:{},generatedAt:"2026-07-28T00:00:00.000Z",diagnostics:[],tables:[{id:"section:matrix",title:"Data capture matrix",headings:["Property","Page"],rows:[["/a","Mandatory"],["/b","Optional"],["/u","Optional"]],conceptGroups:[{name:"Commerce",start:0,count:2},{name:"Ungrouped",start:2,count:1}]}]});
 const rich=renderProjectDocumentationClipboard(snapshot,{scope:"complete"});
-assert.match(rich.html,/<th[^>]+scope="rowgroup"[^>]*>Commerce<\/th>/);
-assert.match(rich.plain,/Commerce\t*\n\/a\tMandatory/);
+assert.match(rich.html,/<th[^>]+scope="rowgroup"[^>]*>COMMERCE<\/th>/);
+assert.match(rich.plain,/COMMERCE\t*\nProperty\tPage\n\/a\tMandatory/);
 assert.match(new TextDecoder().decode(writeProjectDocumentationWorkbook(snapshot,{scope:"complete"})),/<mergeCell ref="A3:B3"\/>/);
 
 console.log("schema property concept model tests passed");

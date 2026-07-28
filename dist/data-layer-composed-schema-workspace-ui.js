@@ -3,7 +3,7 @@ import { composedSchemaRowOwnershipInput } from "./data-layer-composed-schema-ow
 import { activateFocusedOwnershipSection, focusedOwnershipState } from "./data-layer-focused-schema-property-ui.js";
 import { renderComposedRows } from "./data-layer-composed-schema-workspace-rows.js";
 import { typedCanonicalValue } from "./data-layer-canonical-schema-facets.js";
-import { schemaTableOverlayTarget, schemaTableOverlayTransition, schemaTableReplaceExpectedOrAllowed, schemaTableStageAllowedValues } from "./data-layer-schema-table.js";
+import { schemaTableOverlayTarget, schemaTableOverlayTransition, schemaTableReplaceExpectedOrAllowed, schemaTableSortComparison, schemaTableSortOptions, schemaTableStageAllowedValues } from "./data-layer-schema-table.js";
 const button = (text, run) => { const control = document.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 export function stageComposedExpectedOrAllowed(draft, text) {
     const staged = schemaTableReplaceExpectedOrAllowed(draft, text);
@@ -67,7 +67,7 @@ export function mountComposedSchemaWorkspace(options) {
     filter.placeholder = "Filter properties";
     filter.setAttribute("aria-label", "Filter schema properties");
     sort.setAttribute("aria-label", "Sort schema properties");
-    sort.append(new Option("Tree order", "path"), new Option("Source", "source"), new Option("Validation", "validation"));
+    sort.append(...schemaTableSortOptions.map(({ label, value }) => new Option(label, value)));
     filterControls.setAttribute("aria-label", "Schema property navigation controls");
     filterControls.append(filter, sort);
     addControls.setAttribute("aria-label", "Add local property");
@@ -81,7 +81,7 @@ export function mountComposedSchemaWorkspace(options) {
     rows.setAttribute("role", "table");
     rows.setAttribute("aria-label", `${options.model.heading} rows`);
     rows.dataset.schemaEditorScrollRegion = "true";
-    const visibleModel = () => { const needle = query.trim().toLowerCase(), rows = options.model.rows.filter((row) => !needle || row.path.toLowerCase().includes(needle) || String(row.source ?? "").toLowerCase().includes(needle) || options.effectiveText(row).toLowerCase().includes(needle)).sort((left, right) => sortMode === "source" ? String(left.source ?? "").localeCompare(String(right.source ?? "")) || left.path.localeCompare(right.path) : sortMode === "validation" ? left.validationState.localeCompare(right.validationState) || left.path.localeCompare(right.path) : left.path.localeCompare(right.path)); return { ...options.model, rows }; };
+    const visibleModel = () => { const needle = query.trim().toLowerCase(), rows = options.model.rows.filter((row) => !needle || row.path.toLowerCase().includes(needle) || String(row.source ?? "").toLowerCase().includes(needle) || options.effectiveText(row).toLowerCase().includes(needle)).sort((left, right) => schemaTableSortComparison({ path: left.path, concept: left.effective.concept, source: left.source }, { path: right.path, concept: right.effective.concept, source: right.source }, sortMode)); return { ...options.model, rows }; };
     const rerender = () => renderComposedRows(rows, { dom: document, overlayHost: section, model: visibleModel(), effectiveText: options.effectiveText, conceptSuggestions: options.conceptSuggestions, ...(options.onRepair ? { onRepair: options.onRepair } : {}), ...(options.onStructure ? { onStructure: (kind, path, name) => { pendingStructure.push({ kind, path, ...(name === undefined ? {} : { name }) }); rerender(); } } : {}), ...(options.rowPathDataset ? { rowPathDataset: options.rowPathDataset } : {}), activePath, overlayOpen, focusedOpen, activeSection, draft, removed, confirmedAction, removedRuleIds, removedValueIds, restoredRuleIds, restoredValueIds, stagedLocalValueIds, overriddenRuleIds, overrideRule, pendingAction, pendingStructure, ownershipSession, activateOwnership: (action) => { ownershipSession = activateFocusedOwnershipSection(ownershipSession, activeSection, action); rerender(); }, beginAction, cancelAction, confirmAction, open, commitInline, resetInline, cancelInline: () => { }, inlineDiagnostic: (message) => { quickEditFeedback.textContent = message; }, quickEditRoot: () => options.host, quickEditScope: `composed:${options.schemaContributorId ?? options.model.heading}`, close, closeChild, save, render: rerender, selectSection: (value) => { activeSection = value; focusedOpen = true; overlayState = schemaTableOverlayTransition(overlayState, { kind: "focus" }); rerender(); } });
     const overrideRule = (sourceId) => { if (!draft)
         return; const source = options.model.rows.find(({ path }) => path === activePath)?.effective.rules?.find((rule) => String(rule.id ?? "") === sourceId); if (!source || source.enforcement === "invariant")

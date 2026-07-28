@@ -37,7 +37,7 @@ export function canonicalTableQuickEditPatch(original:CanonicalPropertyNode,face
 export function mountCanonicalSchemaEditor(options:CanonicalSchemaEditorOptions):{render():void}{
   const dom=options.host.ownerDocument??globalThis.document;
   const initialDocument=options.load();
-  let query="",propertyFilter:"all"|"conditions"|"documentation"|"issues"="all",propertySort:"tree"|"concept"|"name"|"type"="tree",feedback=options.initialFeedback??"",activePropertyId:string|undefined=initialDocument.selectedPropertyId,activeSection:FocusedPropertySection="definition",working:CanonicalPropertyNode|undefined,originFocus:HTMLElement|undefined,originPath:string|undefined,menuPropertyId:string|undefined,focusedPropertyId:string|undefined,removedRuleIds=new Set<string>(),removedValueIds=new Set<string>(),stagedOperations:CanonicalStructuralOperation[]=[],transientView:CanonicalSchemaDocument["view"]|undefined;
+  let query="",propertyFilter:"all"|"conditions"|"documentation"|"issues"="all",propertySort:"path"|"concept"|"source"="path",feedback=options.initialFeedback??"",activePropertyId:string|undefined=initialDocument.selectedPropertyId,activeSection:FocusedPropertySection="definition",working:CanonicalPropertyNode|undefined,originFocus:HTMLElement|undefined,originPath:string|undefined,menuPropertyId:string|undefined,focusedPropertyId:string|undefined,removedRuleIds=new Set<string>(),removedValueIds=new Set<string>(),stagedOperations:CanonicalStructuralOperation[]=[],transientView:CanonicalSchemaDocument["view"]|undefined;
   let overlayState:SchemaTableOverlayState={phase:"closed"};
   let review:HTMLElement|undefined;
   let ownershipSession:FocusedOwnershipSession={inherited:false,local:true,structureOwned:true,activated:[]};

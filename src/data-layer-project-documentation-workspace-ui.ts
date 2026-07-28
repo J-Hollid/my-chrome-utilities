@@ -23,6 +23,7 @@ import {
   type ProjectDocumentationSnapshot,
   type ProjectDocumentationTable,
 } from "./data-layer-project-documentation-workspace.js";
+import {conceptSectionHeading} from "./data-layer-flow-table-documentation-export.js";
 import type {ProjectState} from "./data-layer-specification-project.js";
 
 interface Options {
@@ -61,7 +62,7 @@ function applyThemeToTable(table:HTMLTableElement,theme:ProjectDocumentationThem
 }
 
 function renderTable(value:ProjectDocumentationTable,theme:ProjectDocumentationTheme):HTMLTableElement {
-  const table=document.createElement("table"),head=document.createElement("thead"),headRow=document.createElement("tr"),body=document.createElement("tbody"),groups=new Map(value.conceptGroups?.map((group)=>[group.start,group])??[]);headRow.append(...value.headings.map((cell)=>Object.assign(document.createElement("th"),{textContent:cell})));head.append(headRow);for(const [index,sourceRow] of value.rows.entries()){const group=groups.get(index);if(group){const headingRow=document.createElement("tr"),cell=document.createElement("th");headingRow.dataset.conceptHeading=group.name;cell.colSpan=value.headings.length;cell.scope="rowgroup";cell.textContent=group.name;headingRow.append(cell);body.append(headingRow);}const row=document.createElement("tr");row.append(...sourceRow.map((cell)=>Object.assign(document.createElement("td"),{textContent:cell})));body.append(row);}table.append(head,body);applyThemeToTable(table,theme);return table;
+  const table=document.createElement("table"),head=document.createElement("thead"),headRow=document.createElement("tr"),body=document.createElement("tbody"),groups=new Map(value.conceptGroups?.map((group)=>[group.start,group])??[]),columns=()=>value.headings.map((text)=>{const cell=document.createElement("th");cell.scope="col";cell.textContent=text;return cell;});headRow.append(...columns());head.append(headRow);for(const [index,sourceRow] of value.rows.entries()){const group=groups.get(index);if(group){const headingRow=document.createElement("tr"),cell=document.createElement("th"),columnRow=document.createElement("tr");headingRow.dataset.conceptHeading=group.name;cell.colSpan=value.headings.length;cell.scope="rowgroup";cell.textContent=conceptSectionHeading(group.name);headingRow.append(cell);columnRow.dataset.conceptColumns="true";columnRow.append(...columns());body.append(headingRow,columnRow);}const row=document.createElement("tr");row.append(...sourceRow.map((cell)=>Object.assign(document.createElement("td"),{textContent:cell})));body.append(row);}table.append(head,body);applyThemeToTable(table,theme);return table;
 }
 
 export function installProjectDocumentationWorkspaceUi(options:Options):{render(host:HTMLElement):void}{

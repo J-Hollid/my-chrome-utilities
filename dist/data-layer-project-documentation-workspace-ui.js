@@ -3,6 +3,7 @@ import { compileProjectDocumentation, projectDocumentationProfileColumns, projec
 import { projectCanonicalConcepts } from "./data-layer-layered-schema-project.js";
 import { createProjectDocumentationSet, createProjectDocumentationTheme, parseProjectDocumentationTheme, serializeProjectDocumentationTheme, } from "./data-layer-project-documentation-records.js";
 import { projectDocumentationSnapshotStale, renderProjectDocumentationClipboard, selectProjectDocumentationTables, themeFingerprint, writeProjectDocumentationWorkbook, } from "./data-layer-project-documentation-workspace.js";
+import { conceptSectionHeading } from "./data-layer-flow-table-documentation-export.js";
 const defaultPorts = () => ({
     writePlain: async (value) => navigator.clipboard.writeText(value),
     writeRich: async (html, plain) => {
@@ -68,19 +69,21 @@ function applyThemeToTable(table, theme) {
     }
 }
 function renderTable(value, theme) {
-    const table = document.createElement("table"), head = document.createElement("thead"), headRow = document.createElement("tr"), body = document.createElement("tbody"), groups = new Map(value.conceptGroups?.map((group) => [group.start, group]) ?? []);
-    headRow.append(...value.headings.map((cell) => Object.assign(document.createElement("th"), { textContent: cell })));
+    const table = document.createElement("table"), head = document.createElement("thead"), headRow = document.createElement("tr"), body = document.createElement("tbody"), groups = new Map(value.conceptGroups?.map((group) => [group.start, group]) ?? []), columns = () => value.headings.map((text) => { const cell = document.createElement("th"); cell.scope = "col"; cell.textContent = text; return cell; });
+    headRow.append(...columns());
     head.append(headRow);
     for (const [index, sourceRow] of value.rows.entries()) {
         const group = groups.get(index);
         if (group) {
-            const headingRow = document.createElement("tr"), cell = document.createElement("th");
+            const headingRow = document.createElement("tr"), cell = document.createElement("th"), columnRow = document.createElement("tr");
             headingRow.dataset.conceptHeading = group.name;
             cell.colSpan = value.headings.length;
             cell.scope = "rowgroup";
-            cell.textContent = group.name;
+            cell.textContent = conceptSectionHeading(group.name);
             headingRow.append(cell);
-            body.append(headingRow);
+            columnRow.dataset.conceptColumns = "true";
+            columnRow.append(...columns());
+            body.append(headingRow, columnRow);
         }
         const row = document.createElement("tr");
         row.append(...sourceRow.map((cell) => Object.assign(document.createElement("td"), { textContent: cell })));

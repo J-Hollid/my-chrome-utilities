@@ -4,7 +4,7 @@ import {applyCanonicalCommand,canonicalPredicateIds,canonicalPredicateWithStable
 import {canonicalFlatPredicateIssue} from "../dist/canonical-schema/predicate-policy.js";
 import {canonicalNavigatorRows} from "../dist/canonical-schema-focused/navigator-rows.js";
 import {focusedSourceState} from "../dist/data-layer-canonical-schema-focused-drafts.js";
-import {schemaTableCellMetadata,schemaTableColumns,schemaTableEditableFacets,schemaTableExpectedOrAllowed,schemaTableOverlayPlacement,schemaTableOverlayStyle,schemaTableQuickEditCommitsOnChange,schemaTableQuickEditDestination,schemaTableQuickEditIntent,schemaTableRuleConditionSummary,schemaTableValueFacet} from "../dist/data-layer-schema-table.js";
+import {schemaTableCellMetadata,schemaTableColumns,schemaTableEditableFacets,schemaTableExpectedOrAllowed,schemaTableOverlayPlacement,schemaTableOverlayStyle,schemaTableQuickEditCommitsOnChange,schemaTableQuickEditDestination,schemaTableQuickEditIntent,schemaTableRuleConditionSummary,schemaTableSortComparison,schemaTableSortOptions,schemaTableValueFacet} from "../dist/data-layer-schema-table.js";
 import {sharedConditionOperators,sharedFlatConditionResult,sharedFlatConditionRows} from "../dist/data-layer-shared-condition-tree-editor.js";
 
 assert.deepEqual(focusedPropertySections,["definition","rules","structure"]);
@@ -56,6 +56,15 @@ assert.deepEqual(
   "a layer taller than the viewport receives only the available viewport height",
 );
 assert.deepEqual(schemaTableEditableFacets,["concept","type","presence","description","expected-or-allowed","example"],"the complete ordinary row is editable without opening an advanced editor");
+assert.deepEqual(schemaTableSortOptions,[{label:"Tree order",value:"path"},{label:"Concept",value:"concept"},{label:"Source",value:"source"}],"every canonical Table shares the specified sort inventory without Validation");
+const conceptSortRows=[
+  {path:"/z",concept:undefined,source:"Sitewide"},
+  {path:"/ecommerce/b",concept:" ecommerce ",source:"Page"},
+  {path:"/page",concept:"Page",source:"Event"},
+  {path:"/ecommerce/a",concept:"ECOMMERCE",source:"Page"},
+];
+assert.deepEqual([...conceptSortRows].sort((left,right)=>schemaTableSortComparison(left,right,"concept")).map(({path})=>path),["/ecommerce/a","/ecommerce/b","/page","/z"],"Concept sort is case-insensitive, retains path order within a group, and puts Ungrouped last");
+assert.deepEqual([...conceptSortRows].sort((left,right)=>schemaTableSortComparison(left,right,"source")).map(({path})=>path),["/page","/ecommerce/a","/ecommerce/b","/z"],"Source sort retains path order within a source");
 assert.deepEqual(schemaTableQuickEditIntent("Enter",false),{kind:"commit"},"Enter commits without leaving the current cell");
 assert.deepEqual(schemaTableQuickEditIntent("Tab",false),{kind:"commit",direction:1},"Tab commits and advances");
 assert.deepEqual(schemaTableQuickEditIntent("Tab",true),{kind:"commit",direction:-1},"Shift+Tab commits and reverses");

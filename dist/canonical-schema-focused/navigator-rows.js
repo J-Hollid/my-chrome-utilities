@@ -1,16 +1,10 @@
 import { canonicalPropertyPath, canonicalTableRows } from "../data-layer-canonical-schema.js";
-import { applySchemaTablePathAllocation, bindSchemaTableQuickEdit, mountSchemaTableOverlay, schemaTableAllowedValues, schemaTableCellMetadata, schemaTableColumns } from "../data-layer-schema-table.js";
+import { applySchemaTablePathAllocation, bindSchemaTableQuickEdit, mountSchemaTableOverlay, schemaTableAllowedValues, schemaTableCellMetadata, schemaTableColumns, schemaTableSortComparison } from "../data-layer-schema-table.js";
 import { button } from "./dom.js";
 export function canonicalNavigatorRows(context) {
     const query = context.query.trim().toLowerCase(), matches = (node) => !query || String(node.name ?? "").toLowerCase().includes(query) || canonicalPropertyPath(context.document, node.id).toLowerCase().includes(query), facet = (node) => context.propertyFilter === "all" || context.propertyFilter === "conditions" && Boolean(node.presence.condition) || context.propertyFilter === "documentation" && Boolean(node.documentation.displayText || node.documentation.description || node.documentation.comments) || context.propertyFilter === "issues" && node.provenance.some(({ state }) => state === "shadowed");
-    const rows = canonicalTableRows(context.document).filter(({ node }) => matches(node) && facet(node));
-    if (context.propertySort === "concept")
-        rows.sort((left, right) => { const leftConcept = left.node.concept?.trim(), rightConcept = right.node.concept?.trim(); if (Boolean(leftConcept) !== Boolean(rightConcept))
-            return leftConcept ? -1 : 1; return (leftConcept ?? "").localeCompare(rightConcept ?? "", undefined, { sensitivity: "base" }) || left.path.localeCompare(right.path); });
-    else if (context.propertySort === "name")
-        rows.sort((left, right) => left.node.name.localeCompare(right.node.name) || left.path.localeCompare(right.path));
-    else if (context.propertySort === "type")
-        rows.sort((left, right) => left.node.type.localeCompare(right.node.type) || left.path.localeCompare(right.path));
+    const source = (node) => node.provenance.map(({ contributorName, source, state }) => contributorName ?? state ?? source).join(", ") || context.document.contributorName, rows = canonicalTableRows(context.document).filter(({ node }) => matches(node) && facet(node));
+    rows.sort((left, right) => schemaTableSortComparison({ path: left.path, concept: left.node.concept, source: source(left.node) }, { path: right.path, concept: right.node.concept, source: source(right.node) }, context.propertySort));
     return rows;
 }
 export function renderNavigatorRows(tree, context) {

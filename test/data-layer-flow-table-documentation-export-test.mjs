@@ -9,6 +9,7 @@ import {
   flowDocumentationSnapshotStale,
   flowValueMapTable,
   orderFlowDocumentationOccurrenceIds,
+  documentationWorksheet,
   renderFlowDocumentationClipboard,
   writeFlowDocumentationWorkbook,
 } from "../dist/data-layer-flow-table-documentation-export.js";
@@ -94,6 +95,27 @@ assert.equal(spreadsheet.plain.split("\n").every((row)=>row.split("\t").length==
 assert.match(spreadsheet.plain,/'=2\+2 <script> next/);
 const rich=renderFlowDocumentationClipboard(values,{includeHeadings:true,style:"highlighted"});
 assert.match(rich.html,/^<table/);assert.match(rich.html,/&lt;script&gt;/);assert.doesNotMatch(rich.html,/<script>/);assert.match(rich.html,/<br>/);
+const groupedTable={title:"Concept table",headings:["Property","Description"],rows:[["/page","Page"],["/ecommerce/a","Commerce A"],["/ecommerce/b","Commerce B"],["/visitor","Visitor"]],conceptGroups:[{name:"page",start:0,count:1},{name:"ecommerce",start:1,count:2},{name:"Ungrouped",start:3,count:1}]};
+const groupedCopy=renderFlowDocumentationClipboard(groupedTable,{includeHeadings:true,style:"highlighted"});
+assert.deepEqual(groupedCopy.plain.split("\n"),[
+  "Property\tDescription",
+  "PAGE\t",
+  "Property\tDescription",
+  "/page\tPage",
+  "ECOMMERCE\t",
+  "Property\tDescription",
+  "/ecommerce/a\tCommerce A",
+  "/ecommerce/b\tCommerce B",
+  "UNGROUPED\t",
+  "Property\tDescription",
+  "/visitor\tVisitor",
+],"plain grouped copy presents uppercase sections and repeats the standard header before every path-ordered group");
+assert.equal((groupedCopy.html.match(/scope="rowgroup"/gu)??[]).length,3,"rich copy emits one semantic heading for each non-empty concept");
+assert.equal((groupedCopy.html.match(/data-concept-columns="true"/gu)??[]).length,3,"rich copy repeats the standard column headings for each concept");
+const groupedWorksheet=documentationWorksheet(groupedTable);
+assert.equal((groupedWorksheet.match(/data-concept-heading="true"/gu)??[]).length,3,"Excel emits one merged concept row per non-empty group");
+assert.equal((groupedWorksheet.match(/data-concept-columns="true"/gu)??[]).length,3,"Excel repeats the standard column headings after each concept row");
+assert.match(groupedWorksheet,/PAGE/);assert.match(groupedWorksheet,/ECOMMERCE/);assert.match(groupedWorksheet,/UNGROUPED/);
 const incompleteCopy=renderFlowDocumentationClipboard(values,{documentTitle:snapshot.title});
 assert.match(incompleteCopy.plain,/^Checkout journey · Draft — incomplete/);
 assert.match(incompleteCopy.html,/<caption>Checkout journey · Draft — incomplete<\/caption>/);
