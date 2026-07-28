@@ -10,6 +10,7 @@ import {
 } from "../dist/data-layer-canonical-schema.js";
 import {canonicalTableQuickEditPatch} from "../dist/data-layer-canonical-schema-ui.js";
 import {schemaTableColumns,schemaTableEditableFacets} from "../dist/data-layer-schema-table.js";
+import {canonicalLayerConceptSuggestions} from "../dist/data-layer-layered-schema-ui.js";
 import {createProjectDocumentationSet} from "../dist/data-layer-project-documentation-records.js";
 import {groupProjectDocumentationConceptRows,reconcileProjectDocumentationConcepts} from "../dist/data-layer-project-documentation-compiler.js";
 import {compileProjectDocumentationSnapshot,renderProjectDocumentationClipboard,writeProjectDocumentationWorkbook} from "../dist/data-layer-project-documentation-workspace.js";
@@ -29,6 +30,11 @@ const document={
   rootIds:[page.id,commerce.id,ungrouped.id],
   nodes:{[page.id]:page,[commerce.id]:commerce,[child.id]:child,[ungrouped.id]:ungrouped},
 };
+let layeredState={project:{collections:{profiles:[{canonicalSchema:document}]},documentationFlowGraphs:{}}};
+const layeredSuggestions=canonicalLayerConceptSuggestions(()=>layeredState);
+assert.deepEqual(layeredSuggestions(),["ecommerce","Page"],"the production canonical-layer adapter provides normalized project-wide concepts");
+layeredState={project:{...layeredState.project,collections:{profiles:[{canonicalSchema:{...document,nodes:{...document.nodes,[ungrouped.id]:{...ungrouped,concept:" Checkout "}}}}]}}};
+assert.deepEqual(layeredSuggestions(),["Checkout","ecommerce","Page"],"the canonical-layer adapter reads live project state after contributor persistence");
 
 assert.deepEqual(
   canonicalConceptIndex([
