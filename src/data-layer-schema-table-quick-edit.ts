@@ -25,6 +25,15 @@ export function schemaTableQuickEditDestination(
   return index<0?undefined:cells[index+direction];
 }
 
+export function schemaTableQuickEditFocusGenerationAfterFocus(
+  generation:number,
+  pending:{scope:string;cell:SchemaTableQuickEditCell}|undefined,
+  scope:string,
+  focused:SchemaTableQuickEditCell,
+):number {
+  return pending?.scope===scope&&pending.cell.path===focused.path&&pending.cell.facet===focused.facet?generation:generation+1;
+}
+
 export interface SchemaTableQuickEditBinding {
   root:()=>ParentNode;
   scope:string;
@@ -53,6 +62,7 @@ const rememberQuickEditFocus=(binding:SchemaTableQuickEditBinding,cell:SchemaTab
 const restoreQuickEditFocus=(binding:SchemaTableQuickEditBinding,cell:SchemaTableQuickEditCell):void=>{
   const document=quickEditDocument(binding),generation=(quickEditFocusGeneration.get(document)??0)+1;quickEditFocusGeneration.set(document,generation);rememberQuickEditFocus(binding,cell);
   const restore=()=>{if(quickEditFocusGeneration.get(document)===generation)focusQuickEditCell(binding,cell);};
+  restore();
   queueMicrotask(restore);
   for(const delay of [0,25,75,150,300,600])setTimeout(restore,delay);
 };
@@ -82,7 +92,7 @@ export function bindSchemaTableQuickEdit(control:SchemaTableQuickEditControl,bin
   };
   control.addEventListener("input",()=>{settled=false;});
   if(schemaTableQuickEditCommitsOnChange(control))control.addEventListener("change",()=>commit());
-  control.addEventListener("focus",()=>{const document=control.ownerDocument,current=pendingQuickEditFocus.get(document);quickEditFocusGeneration.set(document,(quickEditFocusGeneration.get(document)??0)+1);if(current&&(current.scope!==binding.scope||current.cell.path!==origin.path||current.cell.facet!==origin.facet))pendingQuickEditFocus.delete(document);});
+  control.addEventListener("focus",()=>{settled=false;const document=control.ownerDocument,current=pendingQuickEditFocus.get(document),generation=quickEditFocusGeneration.get(document)??0,nextGeneration=schemaTableQuickEditFocusGenerationAfterFocus(generation,current,binding.scope,origin);quickEditFocusGeneration.set(document,nextGeneration);if(current&&nextGeneration!==generation)pendingQuickEditFocus.delete(document);});
   control.addEventListener("keydown",(rawEvent)=>{
     const event=rawEvent as KeyboardEvent;
     const intent=schemaTableQuickEditIntent(event.key,event.shiftKey);if(!intent)return;

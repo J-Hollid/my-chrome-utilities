@@ -4,7 +4,7 @@ import {applyCanonicalCommand,canonicalPredicateIds,canonicalPredicateWithStable
 import {canonicalFlatPredicateIssue} from "../dist/canonical-schema/predicate-policy.js";
 import {canonicalNavigatorRows} from "../dist/canonical-schema-focused/navigator-rows.js";
 import {focusedSourceState} from "../dist/data-layer-canonical-schema-focused-drafts.js";
-import {schemaTableCellMetadata,schemaTableColumns,schemaTableEditableFacets,schemaTableExpectedOrAllowed,schemaTableOverlayPlacement,schemaTableOverlayStyle,schemaTableQuickEditCommitsOnChange,schemaTableQuickEditDestination,schemaTableQuickEditIntent,schemaTableRuleConditionSummary,schemaTableSortComparison,schemaTableSortOptions,schemaTableValueFacet} from "../dist/data-layer-schema-table.js";
+import {schemaTableCellMetadata,schemaTableColumns,schemaTableEditableFacets,schemaTableExpectedOrAllowed,schemaTableOverlayPlacement,schemaTableOverlayStyle,schemaTableQuickEditCommitsOnChange,schemaTableQuickEditDestination,schemaTableQuickEditFocusGenerationAfterFocus,schemaTableQuickEditIntent,schemaTableRuleConditionSummary,schemaTableSortComparison,schemaTableSortOptions,schemaTableValueFacet} from "../dist/data-layer-schema-table.js";
 import {sharedConditionOperators,sharedFlatConditionResult,sharedFlatConditionRows} from "../dist/data-layer-shared-condition-tree-editor.js";
 
 assert.deepEqual(focusedPropertySections,["definition","rules","structure"]);
@@ -81,6 +81,9 @@ assert.deepEqual(schemaTableQuickEditDestination(quickCells,quickCells[0],1),qui
 assert.deepEqual(schemaTableQuickEditDestination(quickCells,quickCells[2],1),quickCells[3],"forward traversal crosses into the next property");
 assert.deepEqual(schemaTableQuickEditDestination(quickCells,quickCells[3],-1),quickCells[2],"reverse traversal crosses into the previous property");
 assert.equal(schemaTableQuickEditDestination(quickCells,quickCells.at(-1),1),undefined,"traversal stops when no editable cell remains");
+const pendingDestination={scope:"canonical:cart:Builder",cell:{path:"/products",facet:"type"}};
+assert.equal(schemaTableQuickEditFocusGenerationAfterFocus(7,pendingDestination,"canonical:cart:Builder",pendingDestination.cell),7,"focusing the intended destination preserves delayed retry eligibility when a later canonical rerender replaces that control");
+assert.equal(schemaTableQuickEditFocusGenerationAfterFocus(7,pendingDestination,"canonical:cart:Builder",{path:"/products",facet:"presence"}),8,"moving to another quick-edit cell cancels stale destination retries");
 assert.equal(schemaTableExpectedOrAllowed({expectedValue:"retail",allowedValues:["retail","business"]}),"retail","expected value takes precedence in the summary cell");
 assert.equal(schemaTableExpectedOrAllowed({allowedValues:["retail","business"]}),"retail, business","allowed values render as editable human text when there is no single expectation");
 assert.deepEqual(schemaTableValueFacet({allowedValues:["retail",2,true]}),{kind:"allowed",text:"retail, 2, true",values:["retail",2,true]});

@@ -180,7 +180,10 @@ export function mountCanonicalSchemaEditor(options) {
         render();
     };
     const stageStructure = (operation) => { stagedOperations = [...stagedOperations, operation]; feedback = `Staged ${operation.kind} for review.`; render(); };
-    const quickEditRoot = () => Array.from(dom.querySelectorAll(`[data-canonical-schema-id="${CSS.escape(initialDocument.id)}"]`)).find((candidate) => candidate.getAttribute("aria-label") === `${options.surface} canonical schema editor`) ?? options.host;
+    const quickEditRoot = () => {
+        const selector = `[data-canonical-schema-id="${CSS.escape(initialDocument.id)}"][aria-label="${CSS.escape(`${options.surface} canonical schema editor`)}"]`;
+        return (options.host.matches(selector) ? options.host : options.host.querySelector(selector)) ?? options.host;
+    };
     const render = () => renderCanonicalSchemaEditor({ dom, options, document: current(), query, propertyFilter, propertySort, feedback, activePropertyId, activeSection, menuPropertyId, focusedPropertyId, working, review, current, setQuery: (value) => { query = value; }, setPropertyFilter: (value) => { propertyFilter = value; }, setPropertySort: (value) => { propertySort = value; }, setFeedback: (value) => { feedback = value; }, setMenuPropertyId: (value) => { menuPropertyId = value; }, ensureWorking, commitInline, cancelInline: () => { }, inlineDiagnostic: (message) => { feedback = message; const output = quickEditRoot().querySelector('[aria-label="Canonical command result"]'); if (output)
             output.textContent = message; }, quickEditRoot, quickEditScope: `canonical:${initialDocument.id}:${options.surface}`, selectedNode, openProperty, dismissOverlay: () => { if (focusedPropertyId)
             closeChild();

@@ -15,6 +15,9 @@ export function schemaTableQuickEditDestination(cells, origin, direction) {
     const index = cells.findIndex(({ path, facet }) => path === origin.path && facet === origin.facet);
     return index < 0 ? undefined : cells[index + direction];
 }
+export function schemaTableQuickEditFocusGenerationAfterFocus(generation, pending, scope, focused) {
+    return pending?.scope === scope && pending.cell.path === focused.path && pending.cell.facet === focused.facet ? generation : generation + 1;
+}
 const quickEditControls = (root) => Array.from(root.querySelectorAll("input[data-inline-schema-facet][data-inline-schema-path],select[data-inline-schema-facet][data-inline-schema-path]"));
 const quickEditCell = (control) => ({ path: control.dataset.inlineSchemaPath, facet: control.dataset.inlineSchemaFacet });
 const quickEditFocusGeneration = new WeakMap();
@@ -34,6 +37,7 @@ const restoreQuickEditFocus = (binding, cell) => {
     rememberQuickEditFocus(binding, cell);
     const restore = () => { if (quickEditFocusGeneration.get(document) === generation)
         focusQuickEditCell(binding, cell); };
+    restore();
     queueMicrotask(restore);
     for (const delay of [0, 25, 75, 150, 300, 600])
         setTimeout(restore, delay);
@@ -72,7 +76,7 @@ export function bindSchemaTableQuickEdit(control, binding) {
     control.addEventListener("input", () => { settled = false; });
     if (schemaTableQuickEditCommitsOnChange(control))
         control.addEventListener("change", () => commit());
-    control.addEventListener("focus", () => { const document = control.ownerDocument, current = pendingQuickEditFocus.get(document); quickEditFocusGeneration.set(document, (quickEditFocusGeneration.get(document) ?? 0) + 1); if (current && (current.scope !== binding.scope || current.cell.path !== origin.path || current.cell.facet !== origin.facet))
+    control.addEventListener("focus", () => { settled = false; const document = control.ownerDocument, current = pendingQuickEditFocus.get(document), generation = quickEditFocusGeneration.get(document) ?? 0, nextGeneration = schemaTableQuickEditFocusGenerationAfterFocus(generation, current, binding.scope, origin); quickEditFocusGeneration.set(document, nextGeneration); if (current && nextGeneration !== generation)
         pendingQuickEditFocus.delete(document); });
     control.addEventListener("keydown", (rawEvent) => {
         const event = rawEvent;
