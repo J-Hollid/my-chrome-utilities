@@ -12,6 +12,12 @@ export const sharedConditionOperators = (type, allowedValues = []) => operators(
 export const sharedConditionValueMounted = (operator) => !existence.includes(operator);
 export const sharedTypedConditionValue = (type, text) => typedValue(type, text);
 export const sharedUnresolvedConditionRow = (row) => ({ ...(row.id ? { id: row.id } : {}), propertyId: "", operator: "" });
+export const sharedConditionPropertyMatches = (properties, query) => {
+    const normalized = query.trim().toLocaleLowerCase(), compare = (left, right) => left < right ? -1 : left > right ? 1 : 0, sortKey = (name) => name.toLocaleLowerCase().replace(/[^a-z0-9]+/g, (separator) => `\uffff${separator}`);
+    return properties
+        .filter(({ id, name }) => !normalized || name.toLocaleLowerCase().includes(normalized) || id.toLocaleLowerCase().includes(normalized))
+        .sort((left, right) => compare(sortKey(left.name), sortKey(right.name)) || compare(left.name, right.name) || compare(left.id, right.id));
+};
 export const sharedFlatConditionRows = (condition) => {
     const issue = canonicalFlatPredicateIssue(condition);
     if (issue)
@@ -90,7 +96,7 @@ export function renderSharedConditionTree(host, options) {
             if (getComputedStyle(editorElement).position === "static")
                 editorElement.style.position = "relative";
             editorElement.append(listbox);
-            const open = () => { const query = property.value.trim().toLocaleLowerCase(), choices = properties().filter(({ id, name }) => !query || name.toLocaleLowerCase().includes(query) || id.toLocaleLowerCase().includes(query)); listbox.replaceChildren(); for (const [index, entry] of choices.entries()) {
+            const open = () => { const choices = sharedConditionPropertyMatches(properties(), property.value); listbox.replaceChildren(); for (const [index, entry] of choices.entries()) {
                 const option = dom.createElement("div");
                 option.setAttribute("role", "option");
                 option.tabIndex = -1;

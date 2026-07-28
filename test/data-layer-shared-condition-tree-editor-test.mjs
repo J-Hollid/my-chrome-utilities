@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   sharedConditionOperators,
+  sharedConditionPropertyMatches,
   sharedConditionValueMounted,
   sharedTypedConditionValue,
 } from "../dist/data-layer-shared-condition-tree-editor.js";
@@ -22,6 +23,15 @@ assert.equal(sharedConditionValueMounted("Exists"),false);
 assert.equal(sharedConditionValueMounted("Equals"),true);
 assert.equal(sharedTypedConditionValue("integer","7"),7);
 assert.equal(sharedTypedConditionValue("boolean","true"),true);
+assert.deepEqual(
+  sharedConditionPropertyMatches([
+    {id:"property:page-type",name:"page_type"},
+    {id:"property:page-category",name:"pageCategory"},
+    {id:"property:page-count",name:"pageCount"},
+  ],"page").map(({name})=>name),
+  ["pageCategory","pageCount","page_type"],
+  "filtered property matches have deterministic human-name order independent of insertion",
+);
 
 const nested={
   kind:"all",
