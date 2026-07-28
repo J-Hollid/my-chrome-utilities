@@ -118,6 +118,17 @@ assertExcelCompatiblePackage(
 assertExcelCompatiblePackage(workbook,["Overview","Checkout journey","Article journey","Data capture matrix","Sitewide","Opened Article"]);
 const workbookFiles=unzipStored(workbook),workbookText=(name)=>new TextDecoder().decode(workbookFiles.get(name));
 for(const name of ["Overview","Checkout journey","Article journey","Data capture matrix","Sitewide","Opened Article"])assert.match(binary,new RegExp(name));
+const groupedSnapshot=compileProjectDocumentationSnapshot({
+  ...source,
+  tables:[{
+    ...source.tables.find(({id})=>id==="section:sitewide"),
+    rows:[["/commerce/b","Commerce B","No","","",""],["/commerce/a","Commerce A","No","","",""],["/visitor","Visitor","No","","",""]],
+    conceptGroups:[{name:"Commerce",start:0,count:2},{name:"Ungrouped",start:2,count:1}],
+  }],
+});
+const groupedWorkbook=writeProjectDocumentationWorkbook(groupedSnapshot,{scope:"complete"}),groupedFiles=unzipStored(groupedWorkbook),groupedSheet=new TextDecoder().decode(groupedFiles.get("xl/worksheets/sheet1.xml")),repeatedColumnRows=[...groupedSheet.matchAll(/<row[^>]*data-concept-columns="true"[^>]*>([\s\S]*?)<\/row>/gu)].map((match)=>match[1]);
+assert.equal(repeatedColumnRows.length,2,"the workbook retains one repeated standard column row after every concept heading");
+assert.equal(repeatedColumnRows.every((row)=>(row.match(/<c /gu)??[]).length>0&&(row.match(/<c s="1" /gu)??[]).length===(row.match(/<c /gu)??[]).length),true,"every repeated concept column cell uses the standard workbook heading style");
 for(const forbidden of ["diagnostic","provenance","revision hash","repair action"])assert.doesNotMatch(binary,new RegExp(forbidden,"i"));
 assert.doesNotMatch(binary,/<f>/);
 assert.match(binary,/data-theme-fingerprint=/);

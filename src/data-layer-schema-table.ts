@@ -23,17 +23,18 @@ export const schemaTableSortOptions=[
 ] as const;
 export type SchemaTableSortMode=typeof schemaTableSortOptions[number]["value"];
 export function schemaTableSortComparison(
-  left:{path:string;concept?:string|undefined;source?:string|undefined},
-  right:{path:string;concept?:string|undefined;source?:string|undefined},
+  left:{path:string;concept?:string|undefined;source?:string|undefined;order?:number|undefined},
+  right:{path:string;concept?:string|undefined;source?:string|undefined;order?:number|undefined},
   mode:SchemaTableSortMode,
 ):number {
+  const order=()=>left.order!==undefined&&right.order!==undefined?left.order-right.order:left.path.localeCompare(right.path);
   if(mode==="concept"){
     const leftConcept=left.concept?.trim(),rightConcept=right.concept?.trim();
     if(Boolean(leftConcept)!==Boolean(rightConcept))return leftConcept?-1:1;
-    return(leftConcept??"").localeCompare(rightConcept??"",undefined,{sensitivity:"base"})||left.path.localeCompare(right.path);
+    return(leftConcept??"").localeCompare(rightConcept??"",undefined,{sensitivity:"base"})||order();
   }
-  if(mode==="source")return String(left.source??"").localeCompare(String(right.source??""),undefined,{sensitivity:"base"})||left.path.localeCompare(right.path);
-  return left.path.localeCompare(right.path);
+  if(mode==="source")return String(left.source??"").localeCompare(String(right.source??""),undefined,{sensitivity:"base"})||order();
+  return order();
 }
 export const schemaTableFormerPropertyPathAllocation="20rem";
 export function applySchemaTablePathAllocation(cell:HTMLElement):void {

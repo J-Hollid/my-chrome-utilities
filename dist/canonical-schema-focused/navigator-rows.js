@@ -3,9 +3,9 @@ import { applySchemaTablePathAllocation, bindSchemaTableQuickEdit, mountSchemaTa
 import { button } from "./dom.js";
 export function canonicalNavigatorRows(context) {
     const query = context.query.trim().toLowerCase(), matches = (node) => !query || String(node.name ?? "").toLowerCase().includes(query) || canonicalPropertyPath(context.document, node.id).toLowerCase().includes(query), facet = (node) => context.propertyFilter === "all" || context.propertyFilter === "conditions" && Boolean(node.presence.condition) || context.propertyFilter === "documentation" && Boolean(node.documentation.displayText || node.documentation.description || node.documentation.comments) || context.propertyFilter === "issues" && node.provenance.some(({ state }) => state === "shadowed");
-    const source = (node) => node.provenance.map(({ contributorName, source, state }) => contributorName ?? state ?? source).join(", ") || context.document.contributorName, rows = canonicalTableRows(context.document).filter(({ node }) => matches(node) && facet(node));
-    rows.sort((left, right) => schemaTableSortComparison({ path: left.path, concept: left.node.concept, source: source(left.node) }, { path: right.path, concept: right.node.concept, source: source(right.node) }, context.propertySort));
-    return rows;
+    const source = (node) => node.provenance.map(({ contributorName, source, state }) => contributorName ?? state ?? source).join(", ") || context.document.contributorName, rows = canonicalTableRows(context.document).filter(({ node }) => matches(node) && facet(node)), ordered = rows.map((row, order) => ({ row, order }));
+    ordered.sort((left, right) => schemaTableSortComparison({ path: left.row.path, concept: left.row.node.concept, source: source(left.row.node), order: left.order }, { path: right.row.path, concept: right.row.node.concept, source: source(right.row.node), order: right.order }, context.propertySort));
+    return ordered.map(({ row }) => row);
 }
 export function renderNavigatorRows(tree, context) {
     const { dom, document } = context;

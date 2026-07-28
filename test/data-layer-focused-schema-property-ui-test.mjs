@@ -58,13 +58,14 @@ assert.deepEqual(
 assert.deepEqual(schemaTableEditableFacets,["concept","type","presence","description","expected-or-allowed","example"],"the complete ordinary row is editable without opening an advanced editor");
 assert.deepEqual(schemaTableSortOptions,[{label:"Tree order",value:"path"},{label:"Concept",value:"concept"},{label:"Source",value:"source"}],"every canonical Table shares the specified sort inventory without Validation");
 const conceptSortRows=[
-  {path:"/z",concept:undefined,source:"Sitewide"},
-  {path:"/ecommerce/b",concept:" ecommerce ",source:"Page"},
-  {path:"/page",concept:"Page",source:"Event"},
-  {path:"/ecommerce/a",concept:"ECOMMERCE",source:"Page"},
+  {path:"/z",concept:undefined,source:"Sitewide",order:3},
+  {path:"/ecommerce/b",concept:" ecommerce ",source:"Page",order:0},
+  {path:"/page",concept:"Page",source:"Event",order:2},
+  {path:"/ecommerce/a",concept:"ECOMMERCE",source:"Page",order:1},
 ];
-assert.deepEqual([...conceptSortRows].sort((left,right)=>schemaTableSortComparison(left,right,"concept")).map(({path})=>path),["/ecommerce/a","/ecommerce/b","/page","/z"],"Concept sort is case-insensitive, retains path order within a group, and puts Ungrouped last");
-assert.deepEqual([...conceptSortRows].sort((left,right)=>schemaTableSortComparison(left,right,"source")).map(({path})=>path),["/page","/ecommerce/a","/ecommerce/b","/z"],"Source sort retains path order within a source");
+assert.deepEqual([...conceptSortRows].sort((left,right)=>schemaTableSortComparison(left,right,"path")).map(({path})=>path),["/ecommerce/b","/ecommerce/a","/page","/z"],"Tree order uses a canonical traversal index when one is supplied");
+assert.deepEqual([...conceptSortRows].sort((left,right)=>schemaTableSortComparison(left,right,"concept")).map(({path})=>path),["/ecommerce/b","/ecommerce/a","/page","/z"],"Concept sort is case-insensitive, retains canonical tree order within a group, and puts Ungrouped last");
+assert.deepEqual([...conceptSortRows].sort((left,right)=>schemaTableSortComparison(left,right,"source")).map(({path})=>path),["/page","/ecommerce/b","/ecommerce/a","/z"],"Source sort retains canonical tree order within a source");
 assert.deepEqual(schemaTableQuickEditIntent("Enter",false),{kind:"commit"},"Enter commits without leaving the current cell");
 assert.deepEqual(schemaTableQuickEditIntent("Tab",false),{kind:"commit",direction:1},"Tab commits and advances");
 assert.deepEqual(schemaTableQuickEditIntent("Tab",true),{kind:"commit",direction:-1},"Shift+Tab commits and reverses");
@@ -235,9 +236,26 @@ assert.equal(structural.document.revision,1,"a focused structural session commit
 assert.equal(structural.document.changes.length,1,"a focused structural session produces one Undo entry");
 assert.ok(Object.values(structural.document.nodes).some(({name})=>name==="child"),"the same atomic command includes staged additions");
 const navigatorDocument={...withProperty,rootIds:[property.id,"property:documented","property:conditioned"],nodes:{...withProperty.nodes,"property:documented":{...property,id:"property:documented",name:"alpha",order:1,type:"number",documentation:{...property.documentation,description:"Documented"}},"property:conditioned":{...property,id:"property:conditioned",name:"zeta",order:2,presence:{mode:"required-when",condition:{id:"condition:navigator",kind:"predicate",propertyId:property.id,operator:"Exists"}}}}};
-const navigator=(query="",propertyFilter="all",propertySort="tree")=>canonicalNavigatorRows({document:navigatorDocument,query,propertyFilter,propertySort});
+const navigator=(query="",propertyFilter="all",propertySort="path")=>canonicalNavigatorRows({document:navigatorDocument,query,propertyFilter,propertySort});
 assert.deepEqual(navigator("ALP").map(({node})=>node.name),["alpha"],"canonical search filters by multiple characters without requiring a semantic render");
 assert.deepEqual(navigator("","documentation").map(({node})=>node.name),["alpha"],"canonical facet filtering is functional");
 assert.deepEqual(navigator("","conditions").map(({node})=>node.name),["zeta"],"canonical condition filtering is functional");
-assert.deepEqual(navigator("","all","name").map(({node})=>node.name),["alpha","lineOfCustomer","zeta"],"canonical property sorting changes the visible order");
+const orderedChildren=[
+  {...property,id:"property:z-child",name:"z-child",parentId:"property:conditioned",order:0,concept:"Commerce"},
+  {...property,id:"property:a-child",name:"a-child",parentId:"property:conditioned",order:1,concept:"Commerce"},
+];
+const {[property.id]:_omittedRoot,...treeNodes}=navigatorDocument.nodes;
+const arbitraryTreeDocument={
+  ...navigatorDocument,
+  rootIds:["property:conditioned","property:documented"],
+  nodes:{
+    ...treeNodes,
+    "property:conditioned":{...navigatorDocument.nodes["property:conditioned"],order:0,concept:"Commerce"},
+    "property:documented":{...navigatorDocument.nodes["property:documented"],order:1,concept:"Commerce"},
+    ...Object.fromEntries(orderedChildren.map((node)=>[node.id,node])),
+  },
+};
+const arbitraryRows=(propertySort)=>canonicalNavigatorRows({document:arbitraryTreeDocument,query:"",propertyFilter:"all",propertySort});
+assert.deepEqual(arbitraryRows("path").map(({node})=>node.name),["zeta","z-child","a-child","alpha"],"Tree order preserves arbitrary root and sibling traversal instead of sorting paths lexically");
+assert.deepEqual(arbitraryRows("concept").map(({node})=>node.name),["zeta","z-child","a-child","alpha"],"Concept ties preserve arbitrary canonical root and sibling traversal");
 console.log("focused schema property UI tests passed");
