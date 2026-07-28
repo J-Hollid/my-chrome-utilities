@@ -97,7 +97,7 @@ state = redoProjectTransaction(state);
 
 const fixture = add("fixtures",{name:"Retail confirmation passes",flowId:retailFlow.id,context:{pathname:"/checkout/confirmation",eventName:"purchase",flowId:"retail"},payload:{page_type:"confirmation",property_1:"one",property_2:"two",ecommerce:{value:12},currency:"EUR"},profileIds:[sitewide.id,commerce.id,retail.id],expect:"pass"});
 assert.equal(runProjectFixture(state.project,fixture).status,"fail");
-assert.ok(projectPreflight(state.project).blockers.some(({kind})=>kind==="ambiguous-applicability"));
+assert.ok(projectPreflight(state.project).warnings.some(({kind})=>kind==="ambiguous-applicability"));
 state = transactProject(state,"remove ambiguity",(project)=>({...project,collections:{...project.collections,applicabilitySets:project.collections.applicabilitySets.filter(({id:matcherId})=>matcherId!==ambiguous.id)}}));
 assert.equal(runProjectFixture(state.project,fixture).status,"pass");
 assert.equal(projectPreflight(state.project).blockers.length,0);

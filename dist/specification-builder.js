@@ -1031,17 +1031,39 @@ bulkRequire.addEventListener("click", () => { if (!stagedBulk)
     return; stagedBulk = applyStagedBulkAction(stagedBulk, stagedBulk.rows.filter(({ selected }) => selected).map(({ id }) => id), { required: true }); renderBulkStage(); });
 bulkConfirm.addEventListener("click", () => { if (!state || !selectedId || !stagedBulk)
     return; persist(commitStagedBulkRequirements(state, selectedId, stagedBulk)); q("#bulk-assistance").textContent = `Committed ${stagedBulk.rows.length} requirements in one revision and one Undo transaction.`; stagedBulk = undefined; renderBulkStage(); });
+function renderAssuranceFindings(host, result) {
+    const region = (label, findings) => {
+        const section = document.createElement("section"), heading = document.createElement("h3"), list = document.createElement("ul"), severity = label === "Warnings" ? "warning" : "error", headingId = `${host.id || "preflight"}-${severity}-heading`;
+        section.className = "assurance-region";
+        section.dataset.assuranceSeverity = severity;
+        section.setAttribute("aria-labelledby", headingId);
+        heading.id = headingId;
+        heading.textContent = `${label} (${findings.length})`;
+        list.className = "preflight-list";
+        list.setAttribute("aria-label", label);
+        for (const finding of findings) {
+            const item = document.createElement("li"), open = document.createElement("button");
+            item.className = severity;
+            item.setAttribute("role", severity === "warning" ? "status" : "alert");
+            open.type = "button";
+            open.textContent = `${finding.code}: ${finding.message}`;
+            open.addEventListener("click", () => { selectedId = finding.entityId; history.replaceState(null, "", `?entity=${encodeURIComponent(finding.entityId)}&field=${encodeURIComponent(finding.field)}`); render(); });
+            item.append(open);
+            list.append(item);
+        }
+        section.append(heading, list);
+        return section;
+    };
+    host.replaceChildren(region("Warnings", result.warnings), region("Blocking issues", result.blockers));
+}
 q("#run-preflight").addEventListener("click", () => { if (!state)
-    return; releasePreflight = projectPreflight(state, canonicalRevision); const result = releasePreflight, content = q("#workspace-content"), section = document.createElement("section"), title = document.createElement("h2"), summary = document.createElement("p"), list = document.createElement("ul"); title.textContent = "Production evaluator preflight"; summary.className = "status-text"; summary.textContent = result.blockers.length ? `${result.contentIdentity} · ${result.blockers.length} blockers · ${result.fixtures.length} fixtures evaluated` : `${result.contentIdentity} · Ready to publish from the compiled production plan`; list.className = "preflight-list"; for (const blocker of result.blockers) {
-    const item = document.createElement("li"), open = document.createElement("button");
-    item.className = "error";
-    open.type = "button";
-    open.textContent = `${blocker.code}: ${blocker.message}`;
-    open.addEventListener("click", () => { selectedId = blocker.entityId; history.replaceState(null, "", `?entity=${encodeURIComponent(blocker.entityId)}&field=${encodeURIComponent(blocker.field)}`); render(); });
-    item.append(open);
-    list.append(item);
-} section.append(title, summary, list); content.prepend(section); });
+    return; releasePreflight = projectPreflight(state, canonicalRevision); const result = releasePreflight, content = q("#workspace-content"), section = document.createElement("section"), title = document.createElement("h2"), summary = document.createElement("p"), findings = document.createElement("div"); title.textContent = "Production evaluator preflight"; summary.className = "status-text"; summary.textContent = result.blockers.length ? `${result.contentIdentity} · ${result.warnings.length} warnings · ${result.blockers.length} blocking issues · ${result.fixtures.length} fixtures evaluated` : `${result.contentIdentity} · Ready to publish from the compiled production plan · ${result.warnings.length} warnings · 0 blocking issues`; findings.id = "preflight-assurance"; findings.setAttribute("aria-label", "Project assurance"); renderAssuranceFindings(findings, result); section.append(title, summary, findings); content.prepend(section); });
 q("#show-coverage").addEventListener("click", () => renderCoverage());
+q("#publish-project").addEventListener("click", () => { releasePreflight = undefined; const renderReviewedAssurance = (attempt = 0) => { if (releasePreflight) {
+    renderAssuranceFindings(q("#release-assurance"), releasePreflight);
+    return;
+} if (attempt < 200)
+    setTimeout(() => renderReviewedAssurance(attempt + 1), 10); }; setTimeout(() => renderReviewedAssurance(), 0); });
 const releaseDialog = q("#release-review");
 q("#publish-project").addEventListener("click", (event) => { if (!state)
     return; lastInvokingControl = event.currentTarget; const projectId = state.project.id, releaseSummary = q("#release-summary"); q("#project-state").textContent = `Preparing the current Saved Draft for publication · Published revision ${publishedRevision}`; releaseSummary.textContent = "Preparing the current Saved Draft for publication…"; q("#confirm-release").disabled = true; q("#confirm-release-close").disabled = true; if (!releaseDialog.open)

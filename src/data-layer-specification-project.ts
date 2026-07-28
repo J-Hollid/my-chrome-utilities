@@ -24,7 +24,7 @@ export interface SpecificationCollections {
   schemaDrafts?: ProjectEntity[];
   assignments: ProjectEntity[];
 }
-export interface ProjectRelease extends ProjectEntity { revision: number; createdAt: string; snapshot: SpecificationCollections; }
+export interface ProjectRelease extends ProjectEntity { revision: number; createdAt: string; snapshot: SpecificationCollections; preflightWarnings?:readonly unknown[]; preflightBlockers?:readonly unknown[]; }
 export interface ProjectEventTransportSettings {
   observationHistoryPath: string;
   defaultPushPath: string;
@@ -161,12 +161,12 @@ export function runProjectFixture(project: SpecificationProject, fixture: Projec
 function conditionConstraints(condition:Condition|undefined,negated=false):{equals:Map<string,string>;notEquals:Map<string,Set<string>>}{const equals=new Map<string,string>(),notEquals=new Map<string,Set<string>>();if(!condition)return{equals,notEquals};if(condition.kind==="predicate"&&condition.operator==="equals"){const value=String(condition.value);if(negated){const values=notEquals.get(condition.field)??new Set<string>();values.add(value);notEquals.set(condition.field,values);}else equals.set(condition.field,value);return{equals,notEquals};}if(condition.kind==="all"||condition.kind==="not")for(const item of condition.conditions){const child=conditionConstraints(item,condition.kind==="not"?!negated:negated);for(const[field,value]of child.equals)equals.set(field,value);for(const[field,values]of child.notEquals){const current=notEquals.get(field)??new Set<string>();for(const value of values)current.add(value);notEquals.set(field,current);}}return{equals,notEquals};}
 function conditionsProvablyExclusive(left:Condition|undefined,right:Condition|undefined):boolean{const a=conditionConstraints(left),b=conditionConstraints(right);for(const[field,value]of a.equals){if(b.equals.has(field)&&b.equals.get(field)!==value)return true;if(b.notEquals.get(field)?.has(value))return true;}for(const[field,value]of b.equals)if(a.notEquals.get(field)?.has(value))return true;return false;}
 export function projectPreflight(project: SpecificationProject): { blockers:{kind:string;message:string;ids:string[]}[]; warnings:{kind:string;message:string;ids:string[]}[] } {
-  const blockers:{kind:string;message:string;ids:string[]}[]=[];
-  for(const conflict of searchProjectAssignments(project,"").conflicts)blockers.push({kind:"assignment-ambiguity",message:conflict.message,ids:conflict.ids});
+  const blockers:{kind:string;message:string;ids:string[]}[]=[],warnings:{kind:string;message:string;ids:string[]}[]=[];
+  for(const conflict of searchProjectAssignments(project,"").conflicts)warnings.push({kind:"assignment-ambiguity",message:conflict.message,ids:conflict.ids});
   const sets=project.collections.applicabilitySets;
-  for(let left=0;left<sets.length;left+=1)for(let right=left+1;right<sets.length;right+=1){const a=sets[left]!,b=sets[right]!;if(Number(a.priority??0)!==Number(b.priority??0))continue;if(!conditionsProvablyExclusive(a.condition as Condition|undefined,b.condition as Condition|undefined))blockers.push({kind:"ambiguous-applicability",message:`${a.name} and ${b.name} can tie`,ids:[a.id,b.id]});}
-  for(const fixture of project.collections.fixtures){const result=runProjectFixture(project,fixture),expected=fixture.expect??"pass";if(result.status!==expected)blockers.push({kind:"fixture-outcome",message:`${fixture.name} was ${result.status}, expected ${expected}`,ids:[fixture.id]});}
-  return {blockers,warnings:[]};
+  for(let left=0;left<sets.length;left+=1)for(let right=left+1;right<sets.length;right+=1){const a=sets[left]!,b=sets[right]!;if(Number(a.priority??0)!==Number(b.priority??0))continue;if(!conditionsProvablyExclusive(a.condition as Condition|undefined,b.condition as Condition|undefined))warnings.push({kind:"ambiguous-applicability",message:`${a.name} and ${b.name} can tie`,ids:[a.id,b.id]});}
+  for(const fixture of project.collections.fixtures){const result=runProjectFixture(project,fixture),expected=fixture.expect??"pass";if(result.status!==expected)warnings.push({kind:"fixture-outcome",message:`${fixture.name} was ${result.status}, expected ${expected}`,ids:[fixture.id]});}
+  return {blockers,warnings};
 }
 
 const supportedTypes=new Set(["string","number","boolean","object","array"]);

@@ -1013,6 +1013,27 @@
     ]
   },
   {
+    "id": "project_assurance_severity",
+    "source": [],
+    "dependencies": [
+      "schemas"
+    ],
+    "unit": [
+      "test/data-layer-project-assurance-severity-test.mjs"
+    ],
+    "property": [],
+    "features": [
+      "features/data-layer-project-assurance-severity.feature",
+      "features/data-layer-project-assurance-severity-runtime.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/project_assurance_severity.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/project-assurance-severity.mjs"
+    ]
+  },
+  {
     "id": "branding_polish",
     "source": [],
     "dependencies": [],

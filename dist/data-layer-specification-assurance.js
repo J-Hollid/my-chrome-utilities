@@ -29,31 +29,54 @@ function evidenceIdentity(prefix, value) { let hash = 2166136261; for (const cha
     hash ^= character.charCodeAt(0);
     hash = Math.imul(hash, 16777619);
 } return `${prefix}:${(hash >>> 0).toString(16).padStart(8, "0")}`; }
-export function specificationPreflight(envelope) { const compiled = compileSpecificationProject(envelope); if (compiled.status === "blocked") {
-    const blockers = compiled.diagnostics.map((diagnostic) => ({ code: diagnostic.code, message: `${diagnostic.field}: ${diagnostic.referenceId}`, entityId: diagnostic.entityId, field: diagnostic.field }));
-    return { contentIdentity: evidenceIdentity("preflight", { revision: envelope.revision, blockers }), blockers, warnings: [], fixtures: [] };
-} const fixtures = envelope.project.collections.fixtures.map((fixture) => runProductionFixture(compiled.plan, fixture)), blockers = []; for (const fixture of fixtures)
-    if (fixture.status !== "pass" && envelope.project.collections.fixtures.find(({ id }) => id === fixture.fixtureId)?.releasePolicy !== "optional")
-        blockers.push({ code: fixture.status === "blocked" ? "fixture-incomplete" : "fixture-failed", message: fixture.blockers?.join(" ") ?? `Fixture ${fixture.fixtureId} does not match production evaluation.`, entityId: fixture.fixtureId, field: fixture.status === "blocked" ? "observations" : "expected" }); const probes = new Map(); for (const assignment of compiled.plan.assignments) {
-    const key = `${assignment.eventId}:${assignment.priority}:${assignment.applicabilitySetId}`, ids = probes.get(key) ?? [];
-    ids.push(assignment.assignmentId);
-    probes.set(key, ids);
-} for (const ids of probes.values())
-    if (ids.length > 1)
-        blockers.push({ code: "assignment-tie", message: `Equal candidates ${ids.join(", ")}.`, entityId: ids[0], field: "priority" }); if (envelope.project.publicationPolicy.fixturesRequired) {
+export function specificationPreflight(envelope) {
+    const warnings = [], assignmentIds = new Set(envelope.project.collections.assignments.map(({ id }) => id));
+    let compiled = compileSpecificationProject(envelope);
+    if (compiled.status === "blocked") {
+        const unresolved = compiled.diagnostics.filter(({ entityId }) => assignmentIds.has(entityId));
+        for (const diagnostic of unresolved)
+            warnings.push({ code: "assignment-unresolved", message: `Assignment ${diagnostic.entityId} cannot be evaluated. Repair ${diagnostic.field}: ${diagnostic.referenceId}.`, entityId: diagnostic.entityId, field: `collections.assignments/${diagnostic.entityId}/${diagnostic.field}` });
+        if (unresolved.length) {
+            const rejected = new Set(unresolved.map(({ entityId }) => entityId)), project = { ...envelope.project, collections: { ...envelope.project.collections, assignments: envelope.project.collections.assignments.filter(({ id }) => !rejected.has(id)) } };
+            compiled = compileSpecificationProject({ ...envelope, project });
+        }
+    }
+    if (compiled.status === "blocked") {
+        const blockers = compiled.diagnostics.map((diagnostic) => ({ code: diagnostic.code, message: `Repair ${diagnostic.field}: ${diagnostic.referenceId}.`, entityId: diagnostic.entityId, field: diagnostic.field }));
+        return { contentIdentity: evidenceIdentity("preflight", { revision: envelope.revision, warnings, blockers }), blockers, warnings, fixtures: [] };
+    }
+    const fixtures = envelope.project.collections.fixtures.map((fixture) => runProductionFixture(compiled.plan, fixture)), blockers = [];
+    if (!fixtures.length)
+        warnings.push({ code: "no-fixtures", message: "No Fixtures. Add a Fixture to provide optional evaluation evidence.", entityId: envelope.project.id, field: "collections.fixtures" });
+    for (const fixture of fixtures)
+        if (fixture.status !== "pass") {
+            warnings.push({ code: fixture.status === "blocked" ? "fixture-incomplete" : "fixture-failed", message: fixture.blockers?.join(" ") ?? `Fixture ${fixture.fixtureId} does not match production evaluation. Repair its expected result.`, entityId: fixture.fixtureId, field: `collections.fixtures/${fixture.fixtureId}/${fixture.status === "blocked" ? "observations" : "expected"}` });
+            if (fixture.steps.some(({ differences }) => differences.some((difference) => difference.startsWith("resultIdentity:"))))
+                warnings.push({ code: "stale-coverage", message: `Fixture ${fixture.fixtureId} evidence was captured against an older schema. Rerun the Fixture.`, entityId: fixture.fixtureId, field: `collections.fixtures/${fixture.fixtureId}/evaluationResultIdentity` });
+        }
     if (!compiled.plan.assignments.length)
-        blockers.push({ code: "zero-canonical-assignments", message: "Release has no canonical Assignment to evaluate.", entityId: envelope.project.id, field: "collections.assignments" });
-    const proving = envelope.project.collections.fixtures.map((fixture, index) => ({ fixture, result: fixtures[index] })).filter(({ result }) => result.status === "pass");
+        warnings.push({ code: "no-assignments", message: "No Assignments. Add one when routing this schema is useful.", entityId: envelope.project.id, field: "collections.assignments" });
+    const probes = new Map();
+    for (const assignment of compiled.plan.assignments) {
+        const key = `${assignment.eventId}:${assignment.priority}:${assignment.applicabilitySetId}`, ids = probes.get(key) ?? [];
+        ids.push(assignment.assignmentId);
+        probes.set(key, ids);
+    }
+    for (const ids of probes.values())
+        if (ids.length > 1)
+            warnings.push({ code: "assignment-tie", message: `Equal candidates ${ids.join(", ")}. Repair assignment priority or applicability.`, entityId: ids[0], field: `collections.assignments/${ids[0]}/priority` });
+    const proving = envelope.project.collections.fixtures.map((fixture, index) => ({ fixture, result: fixtures[index] })).filter(({ result }) => result.status === "pass"), coverage = buildEffectiveRequirementCoverage(compiled.plan, proving, { offset: 0, limit: Number.MAX_SAFE_INTEGER });
     if (!proving.length)
-        blockers.push({ code: "zero-proving-evidence", message: "Release has no current assertion-bearing passing Fixture.", entityId: envelope.project.id, field: "collections.fixtures" });
-    const coverage = buildEffectiveRequirementCoverage(compiled.plan, proving, { offset: 0, limit: Number.MAX_SAFE_INTEGER });
+        warnings.push({ code: "zero-proving-evidence", message: "No current assertion-bearing passing Fixture. Add or repair optional evidence.", entityId: envelope.project.id, field: "collections.fixtures" });
     if (!coverage.totalRows)
-        blockers.push({ code: "zero-effective-coverage", message: "Release has zero executable Page × Event × Flow step × requirement cells.", entityId: envelope.project.id, field: "collections.assignments" });
+        warnings.push({ code: "no-coverage", message: "No Coverage. Add an Assignment, Flow step, or Fixture to create optional evidence cells.", entityId: envelope.project.id, field: "collections.assignments" });
     for (const row of coverage.rows)
         if (row.state === "missing")
-            blockers.push({ code: "uncovered-requirement", message: `${row.requirementPath} is not proven for ${row.flowId}/${row.stepId}.`, entityId: row.flowId, field: row.stepId });
-} const contentIdentity = evidenceIdentity("preflight", { plan: compiled.plan.contentIdentity, fixtures: fixtures.map(({ fixtureId, status, steps, blockers: fixtureBlockers }) => ({ fixtureId, status, results: steps.map(({ actual }) => actual.resultIdentity), blockers: fixtureBlockers })), blockers }); return { contentIdentity, blockers, warnings: [], plan: compiled.plan, fixtures }; }
-export function publishCompiledRelease(state, options) { const nextRevision = Math.max(0, ...state.project.releases.map((release) => release.revision)) + 1, envelope = { format: "my-chrome-utilities.canonical-specification-project", version: 2, revision: nextRevision, draftId: state.draft?.id ?? "release", project: state.project, entityRevisions: {} }, current = compileSpecificationProject(envelope), preflight = options.preflight ?? specificationPreflight(envelope); if (options.preflight && (current.status !== "compiled" || current.plan.contentIdentity !== preflight.plan?.contentIdentity))
+            warnings.push({ code: "uncovered-requirement", message: `${row.requirementPath} is not proven for ${row.flowId}/${row.stepId}. Add Fixture evidence.`, entityId: row.flowId, field: `collections.flows/${row.flowId}/steps/${row.stepId}` });
+    const fixtureBytes = fixtures.map(({ fixtureId, status, steps, blockers: fixtureBlockers }) => ({ fixtureId, status, results: steps.map(({ actual }) => actual.resultIdentity), blockers: fixtureBlockers })), contentIdentity = evidenceIdentity("preflight", { plan: compiled.plan.contentIdentity, fixtures: fixtureBytes, warnings, blockers });
+    return { contentIdentity, blockers, warnings, plan: compiled.plan, fixtures };
+}
+export function publishCompiledRelease(state, options) { const nextRevision = Math.max(0, ...state.project.releases.map((release) => release.revision)) + 1, envelope = { format: "my-chrome-utilities.canonical-specification-project", version: 2, revision: nextRevision, draftId: state.draft?.id ?? "release", project: state.project, entityRevisions: {} }, current = specificationPreflight(envelope), preflight = options.preflight ?? current; if (options.preflight && current.contentIdentity !== preflight.contentIdentity)
     throw new Error("The reviewed preflight is stale; run preflight again before publication."); if (preflight.blockers.length || !preflight.plan)
-    throw new Error(`Production preflight has ${preflight.blockers.length} blockers.`); const published = publishProjectRelease(state, { id: options.id, write: () => { } }), release = published.project.releases.at(-1), pinnedPlan = { ...structuredClone(preflight.plan), releaseId: release.id }, pinnedRelease = { ...release, preflightContentIdentity: preflight.contentIdentity, executablePlan: pinnedPlan, fixtureResults: structuredClone(preflight.fixtures) }, project = { ...published.project, releases: [...published.project.releases.slice(0, -1), pinnedRelease] }; options.write(project); return { project, history: { undo: [], redo: [] } }; }
+    throw new Error(`Production preflight has ${preflight.blockers.length} blockers.`); const published = publishProjectRelease(state, { id: options.id, write: () => { } }), release = published.project.releases.at(-1), pinnedPlan = { ...structuredClone(preflight.plan), releaseId: release.id }, pinnedRelease = { ...release, preflightContentIdentity: preflight.contentIdentity, preflightWarnings: structuredClone(preflight.warnings), preflightBlockers: structuredClone(preflight.blockers), executablePlan: pinnedPlan, fixtureResults: structuredClone(preflight.fixtures) }, project = { ...published.project, releases: [...published.project.releases.slice(0, -1), pinnedRelease] }; options.write(project); return { project, history: { undo: [], redo: [] } }; }
 //# sourceMappingURL=data-layer-specification-assurance.js.map

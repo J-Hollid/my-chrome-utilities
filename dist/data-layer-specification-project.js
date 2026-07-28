@@ -186,9 +186,9 @@ function conditionsProvablyExclusive(left, right) { const a = conditionConstrain
     if (a.notEquals.get(field)?.has(value))
         return true; return false; }
 export function projectPreflight(project) {
-    const blockers = [];
+    const blockers = [], warnings = [];
     for (const conflict of searchProjectAssignments(project, "").conflicts)
-        blockers.push({ kind: "assignment-ambiguity", message: conflict.message, ids: conflict.ids });
+        warnings.push({ kind: "assignment-ambiguity", message: conflict.message, ids: conflict.ids });
     const sets = project.collections.applicabilitySets;
     for (let left = 0; left < sets.length; left += 1)
         for (let right = left + 1; right < sets.length; right += 1) {
@@ -196,14 +196,14 @@ export function projectPreflight(project) {
             if (Number(a.priority ?? 0) !== Number(b.priority ?? 0))
                 continue;
             if (!conditionsProvablyExclusive(a.condition, b.condition))
-                blockers.push({ kind: "ambiguous-applicability", message: `${a.name} and ${b.name} can tie`, ids: [a.id, b.id] });
+                warnings.push({ kind: "ambiguous-applicability", message: `${a.name} and ${b.name} can tie`, ids: [a.id, b.id] });
         }
     for (const fixture of project.collections.fixtures) {
         const result = runProjectFixture(project, fixture), expected = fixture.expect ?? "pass";
         if (result.status !== expected)
-            blockers.push({ kind: "fixture-outcome", message: `${fixture.name} was ${result.status}, expected ${expected}`, ids: [fixture.id] });
+            warnings.push({ kind: "fixture-outcome", message: `${fixture.name} was ${result.status}, expected ${expected}`, ids: [fixture.id] });
     }
-    return { blockers, warnings: [] };
+    return { blockers, warnings };
 }
 const supportedTypes = new Set(["string", "number", "boolean", "object", "array"]);
 export function commitBulkProperties(state, profileId, properties) {
