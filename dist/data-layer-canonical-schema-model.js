@@ -19,5 +19,13 @@ export function canonicalTableRows(document) { return orderedIds(document).map((
     depth += 1;
     parent = document.nodes[parent]?.parentId;
 } return { id, node, path: canonicalPropertyPath(document, id), friendlyPath: canonicalFriendlyPropertyPath(document, id), depth, selected: id === document.selectedPropertyId, condition: node.presence.condition, validationState: "valid" }; }); }
+export function canonicalConceptIndex(documents) { const values = new Map(); for (const document of documents)
+    for (const { concept } of Object.values(document.nodes)) {
+        const display = concept?.trim();
+        if (display && !values.has(display.toLocaleLowerCase()))
+            values.set(display.toLocaleLowerCase(), display);
+    } return [...values.values()].sort((left, right) => left.localeCompare(right, undefined, { sensitivity: "base" })); }
+export function canonicalConceptSortedRows(document) { return canonicalTableRows(document).sort((left, right) => { const leftConcept = left.node.concept?.trim(), rightConcept = right.node.concept?.trim(); if (Boolean(leftConcept) !== Boolean(rightConcept))
+    return leftConcept ? -1 : 1; return (leftConcept ?? "").localeCompare(rightConcept ?? "", undefined, { sensitivity: "base" }) || left.path.localeCompare(right.path); }); }
 export { canonicalJsonSchemaDocument } from "./data-layer-canonical-array-items.js";
 //# sourceMappingURL=data-layer-canonical-schema-model.js.map

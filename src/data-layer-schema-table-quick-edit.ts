@@ -1,4 +1,4 @@
-export const schemaTableEditableFacets=["type","presence","description","expected-or-allowed","example"] as const;
+export const schemaTableEditableFacets=["concept","type","presence","description","expected-or-allowed","example"] as const;
 export type SchemaTableEditableFacet=typeof schemaTableEditableFacets[number];
 
 export interface SchemaTableQuickEditCell {path:string;facet:SchemaTableEditableFacet;}

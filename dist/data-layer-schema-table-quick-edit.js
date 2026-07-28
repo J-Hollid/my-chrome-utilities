@@ -1,4 +1,4 @@
-export const schemaTableEditableFacets = ["type", "presence", "description", "expected-or-allowed", "example"];
+export const schemaTableEditableFacets = ["concept", "type", "presence", "description", "expected-or-allowed", "example"];
 export function schemaTableQuickEditIntent(key, shiftKey) {
     if (key === "Escape")
         return { kind: "cancel" };

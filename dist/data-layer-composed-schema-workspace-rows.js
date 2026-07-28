@@ -60,7 +60,7 @@ function focused(row, context) {
     identity.textContent = `${row.path} · stable identity ${row.effective.definitionId ?? row.path}`;
     effective.textContent = `Inherited value and source: ${row.inherited ? context.effectiveText({ ...row, effective: row.inherited }) : "none"} · Local value: ${Object.keys(row.local).length > 1 ? context.effectiveText({ ...row, effective: row.local }) : "none"} · Effective result: ${context.effectiveText(row)} · Validation state: ${row.validationState} · Conflicts: ${row.validationState === "blocked" ? row.message : "none"}`;
     host.setAttribute("aria-label", `${row.path} focused ${focusedPropertySectionLabels[context.activeSection]} section`);
-    const focusedContext = { model: context.model, dom, row, getDraft: () => context.draft, activeSection: context.activeSection, removedRuleIds: context.removedRuleIds, removedValueIds: context.removedValueIds, restoredRuleIds: context.restoredRuleIds, restoredValueIds: context.restoredValueIds, stagedLocalValueIds: context.stagedLocalValueIds, overriddenRuleIds: context.overriddenRuleIds, overrideRule: context.overrideRule, render: context.render, ...(context.onStructure ? { onStructure: context.onStructure } : {}) };
+    const focusedContext = { model: context.model, dom, row, conceptSuggestions: context.conceptSuggestions, getDraft: () => context.draft, activeSection: context.activeSection, removedRuleIds: context.removedRuleIds, removedValueIds: context.removedValueIds, restoredRuleIds: context.restoredRuleIds, restoredValueIds: context.restoredValueIds, stagedLocalValueIds: context.stagedLocalValueIds, overriddenRuleIds: context.overriddenRuleIds, overrideRule: context.overrideRule, render: context.render, ...(context.onStructure ? { onStructure: context.onStructure } : {}) };
     if (context.removed)
         host.append(Object.assign(dom.createElement("p"), { textContent: "Whole-property lifecycle staged. Facet and structure controls are unavailable until this reset or removal is cancelled." }));
     else {
@@ -110,8 +110,15 @@ export function renderComposedRows(rows, context) {
     let pendingOverlay;
     const cell = (index, text) => { const value = dom.createElement("td"), metadata = schemaTableCellMetadata[index]; value.dataset.schemaTableCell = metadata.key; value.dataset.schemaTableLabel = metadata.label; if (text !== undefined)
         value.textContent = text; return value; };
-    for (const { label } of schemaTableColumns)
-        headRow.append(Object.assign(dom.createElement("th"), { textContent: label }));
+    for (const [index, { label }] of schemaTableColumns.entries()) {
+        const heading = Object.assign(dom.createElement("th"), { textContent: label });
+        if (index === 0) {
+            heading.setAttribute("aria-label", "Property editor");
+            heading.style.width = "1%";
+            heading.style.whiteSpace = "nowrap";
+        }
+        headRow.append(heading);
+    }
     head.append(headRow);
     const bindEditable = (row, facet, value, control) => { control.value = value; control.dataset.inlineSchemaFacet = facet; control.dataset.inlineSchemaPath = row.path; control.setAttribute("aria-label", `${facet} for ${row.path}`); bindSchemaTableQuickEdit(control, { root: context.quickEditRoot, scope: context.quickEditScope, path: row.path, facet, savedValue: value, commit: (next) => context.commitInline(row, facet, next), cancel: context.cancelInline, diagnostic: context.inlineDiagnostic }); return control; };
     const editable = (row, facet, value) => { const control = dom.createElement("input"); control.type = "text"; return bindEditable(row, facet, value, control); };
@@ -123,19 +130,32 @@ export function renderComposedRows(rows, context) {
         if (context.rowPathDataset)
             tr.dataset[context.rowPathDataset] = row.path;
         tr.dataset.validationState = row.validationState;
+        if (row.validationState === "blocked") {
+            tr.classList.add("invalid");
+            tr.setAttribute("aria-label", `${row.path}: Needs attention; open Property editor for issue summary and repair actions.`);
+        }
         identity.style.position = "relative";
-        propertyActions.setAttribute("aria-label", `Property actions for ${row.path}`);
+        propertyActions.setAttribute("aria-label", `Property actions for ${row.path}${row.validationState === "blocked" ? "; Needs attention" : ""}`);
         propertyActions.dataset.propertyActionsPath = row.path;
         identity.append(propertyActions);
-        const pathCell = cell(1, row.path), typeCell = cell(2), presenceCell = cell(3), appendReset = (host, facet, label) => { if (!row.inherited || !Object.hasOwn(row.local, facet))
+        const pathCell = cell(1, row.path), conceptCell = cell(2), typeCell = cell(3), presenceCell = cell(4), appendReset = (host, facet, label) => { if (!row.inherited || !Object.hasOwn(row.local, facet))
             return; const reset = button(dom, `Reset ${label} to parent`, () => { const result = context.resetInline(row, facet); if (result.status === "invalid")
             context.inlineDiagnostic(result.diagnostic); }); reset.setAttribute("aria-label", `Reset ${label} to parent for ${row.path}`); reset.dataset.inlineFacetReset = facet; host.append(reset); };
         applySchemaTablePathAllocation(pathCell);
+        const concept = editable(row, "concept", String(draft?.concept ?? effective.concept ?? "")), conceptList = dom.createElement("datalist"), conceptListId = `schema-concept-${row.path.replace(/[^a-z0-9_-]/gi, "-")}`;
+        conceptList.id = conceptListId;
+        for (const value of context.conceptSuggestions?.() ?? [])
+            conceptList.append(new Option(value, value));
+        concept.setAttribute("role", "combobox");
+        concept.setAttribute("aria-autocomplete", "list");
+        concept.setAttribute("list", conceptListId);
+        conceptCell.append(concept, conceptList);
+        appendReset(conceptCell, "concept", "Concept");
         typeCell.append(select(row, "type", String(draft?.type ?? effective.type ?? "string"), ["string", "number", "integer", "boolean", "null", "object", "array"]));
         appendReset(typeCell, "type", "Type");
         presenceCell.append(select(row, "presence", String(draft?.presence ?? effective.presence ?? "optional"), ["optional", "required", "forbidden"]));
         appendReset(presenceCell, "presence", "Presence");
-        tr.append(identity, pathCell, typeCell, presenceCell);
+        tr.append(identity, pathCell, conceptCell, typeCell, presenceCell);
         const example = editable(row, "example", exampleValue === undefined ? "" : String(exampleValue)), suggestions = dom.createElement("datalist"), listId = `schema-example-${row.path.replace(/[^a-z0-9_-]/gi, "-")}`;
         suggestions.id = listId;
         for (const value of (draft?.allowedValues ?? effective.allowedValues ?? [])) {
@@ -146,17 +166,17 @@ export function renderComposedRows(rows, context) {
         example.setAttribute("aria-autocomplete", "list");
         example.setAttribute("list", listId);
         for (const [offset, control] of [editable(row, "description", description), editable(row, "expected-or-allowed", expected), example].entries()) {
-            const valueCell = cell(offset + 4);
+            const valueCell = cell(offset + 5);
             valueCell.append(control);
             if (control === example)
                 valueCell.append(suggestions);
             tr.append(valueCell);
         }
-        const validation = cell(9, `${row.validationState} · ${row.message}`);
-        if (context.onRepair)
+        const state = cell(9, context.removed && context.activePath === row.path ? "Removed" : Object.keys(row.local).length > 1 ? `Local · effective ${context.effectiveText(row)}` : `Inherited · effective ${context.effectiveText(row)}`);
+        if (row.validationState === "blocked" && context.onRepair)
             for (const repair of row.repairs)
-                validation.append(button(dom, repair.label, () => context.onRepair?.(repair)));
-        tr.append(cell(7, row.source), cell(8, context.removed && context.activePath === row.path ? "Removed" : Object.keys(row.local).length > 1 ? `Local · effective ${context.effectiveText(row)}` : "Inherited · effective"), validation);
+                state.append(button(dom, repair.label, () => context.onRepair?.(repair)));
+        tr.append(cell(8, row.source), state);
         if (context.overlayOpen && context.activePath === row.path) {
             const layers = [contextMenu(row, context)];
             if (context.focusedOpen)

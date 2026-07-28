@@ -949,6 +949,7 @@
     ],
     "unit": [
       "test/data-layer-canonical-schema-authoring-test.mjs",
+      "test/data-layer-schema-property-concepts-test.mjs",
       "test/data-layer-canonical-array-items-test.mjs",
       "test/data-layer-canonical-migration-acknowledgement-test.mjs",
       "test/data-layer-side-panel-unified-schema-editor-test.mjs",

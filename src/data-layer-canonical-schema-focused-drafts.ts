@@ -23,7 +23,7 @@ export function focusedCanonicalOwnershipInput(node:CanonicalPropertyNode):Focus
 
 export function focusedPropertyPatch(node:CanonicalPropertyNode,original:CanonicalPropertyNode,removedRuleIds:Set<string>,removedValueIds:Set<string>=new Set()):CanonicalFocusedPatch {
   const patch:CanonicalFocusedPatch={};
-  for(const key of ["name","type","itemType","itemSchema","presence","allowedValues","documentation","overrideReferences","expectedValue","enforcement","target"] as const)if(!same(node[key],original[key]))Object.assign(patch,{[key]:clone(node[key])});
+  for(const key of ["name","concept","type","itemType","itemSchema","presence","allowedValues","documentation","overrideReferences","expectedValue","enforcement","target"] as const)if(!same(node[key],original[key]))Object.assign(patch,{[key]:clone(node[key])});
   const nextRules=node.rules.filter(({id})=>!removedRuleIds.has(id));if(!same(nextRules,original.rules)||removedRuleIds.size)patch.rules=clone(nextRules);
   const nextValues=node.allowedValues.filter(({id})=>!removedValueIds.has(id));if(!same(nextValues,original.allowedValues)||removedValueIds.size)patch.allowedValues=clone(nextValues);
   return patch;

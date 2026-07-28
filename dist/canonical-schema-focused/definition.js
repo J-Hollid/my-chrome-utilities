@@ -15,7 +15,19 @@ export function setCanonicalNestedItemType(root, arrayItemId, type, id) {
         delete current.items;
 }
 export function renderDefinitionSection(host, context, working) {
-    const { dom } = context, type = dom.createElement("select"), itemType = dom.createElement("select"), items = dom.createElement("section"), presence = dom.createElement("select"), allowed = input(dom, "ordinaryValue", schemaTableAllowedValues({ ...(working.expectedValue === undefined ? {} : { expectedValue: working.expectedValue }), allowedValues: working.allowedValues.map(({ value }) => value) })), displayText = input(dom, "displayText", working.documentation.displayText), description = dom.createElement("textarea"), comments = dom.createElement("textarea"), exampleMethod = dom.createElement("select"), exampleHost = dom.createElement("span");
+    const { dom } = context, concept = input(dom, "concept", working.concept ?? ""), concepts = dom.createElement("datalist"), type = dom.createElement("select"), itemType = dom.createElement("select"), items = dom.createElement("section"), presence = dom.createElement("select"), allowed = input(dom, "ordinaryValue", schemaTableAllowedValues({ ...(working.expectedValue === undefined ? {} : { expectedValue: working.expectedValue }), allowedValues: working.allowedValues.map(({ value }) => value) })), displayText = input(dom, "displayText", working.documentation.displayText), description = dom.createElement("textarea"), comments = dom.createElement("textarea"), exampleMethod = dom.createElement("select"), exampleHost = dom.createElement("span"), installedSuggestions = Array.from(dom.querySelectorAll('datalist[id^="schema-concept-"] option')).map(({ value }) => value), fallbackSuggestions = [...new Set(Object.values(context.current().nodes).map(({ concept }) => concept?.trim()).filter(Boolean))];
+    concepts.id = `focused-concepts-${working.id.replace(/[^a-z0-9_-]/gi, "-")}`;
+    for (const value of context.conceptSuggestions?.() ?? (installedSuggestions.length ? installedSuggestions : fallbackSuggestions))
+        concepts.append(new Option(value, value));
+    concept.setAttribute("role", "combobox");
+    concept.setAttribute("aria-autocomplete", "list");
+    concept.setAttribute("list", concepts.id);
+    concept.addEventListener("input", () => { const next = context.getWorking(), value = concept.value.trim(); if (next) {
+        if (value)
+            next.concept = value;
+        else
+            delete next.concept;
+    } });
     allowed.dataset.allowedValues = "true";
     items.setAttribute("aria-label", "Items");
     items.dataset.arrayItems = "true";
@@ -107,6 +119,6 @@ export function renderDefinitionSection(host, context, working) {
         descriptionFacet.append(reset);
     }
     renderItems();
-    host.append(labeled(dom, "Type", type), items, labeled(dom, "Presence", presence), labeled(dom, "Allowed values", allowed), labeled(dom, "Display text", displayText), descriptionFacet, labeled(dom, "Comments", comments), labeled(dom, "Example method", exampleMethod), labeled(dom, "Example value", exampleHost));
+    host.append(labeled(dom, "Concept", concept), concepts, labeled(dom, "Type", type), items, labeled(dom, "Presence", presence), labeled(dom, "Allowed values", allowed), labeled(dom, "Display text", displayText), descriptionFacet, labeled(dom, "Comments", comments), labeled(dom, "Example method", exampleMethod), labeled(dom, "Example value", exampleHost));
 }
 //# sourceMappingURL=definition.js.map

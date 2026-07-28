@@ -34,7 +34,7 @@ export function composedCanonicalSchema(state:ProjectState,entity:ProjectEntity,
     node.structureOwned=!row.inherited||Boolean(row.local.definitionId);
     node.localDefinitionFacets=Object.keys(row.local).filter((key)=>!["path","definitionId","rules","reusableRules","overrideReferences"].includes(key));
     if(row.inherited)node.inheritedDefinition={...(row.inherited.type?{type:row.inherited.type as CanonicalPropertyType}:{}),...(row.inherited.presence?{presence:row.inherited.presence as "required"|"optional"|"forbidden"}:{}),description:row.inherited.documentation??""};
-    document.nodes[id]=node;byPath.set(row.path,id);
+    if(row.effective.concept)node.concept=row.effective.concept;if(row.inherited?.concept)node.inheritedDefinition={...node.inheritedDefinition,concept:row.inherited.concept};document.nodes[id]=node;byPath.set(row.path,id);
   }
   document.rootIds=Object.values(document.nodes).filter(({parentId})=>!parentId).sort((left,right)=>left.order-right.order).map(({id})=>id);document.revision=opaqueRevision(contributors.map(({id,name,scope:contributorScope,revision,constraints,onlyDefinedFields})=>({id,name,scope:contributorScope,revision,constraints,onlyDefinedFields})));document.changes=[];document.source={identity:entity.id,revision:document.revision,provenance:"project-composed-effective"};const onlyDefinedFields=[...contributors].reverse().find((contributor)=>contributor.onlyDefinedFields!==undefined)?.onlyDefinedFields;if(onlyDefinedFields!==undefined)document.onlyDefinedFields=onlyDefinedFields;if(document.rootIds[0])document.selectedPropertyId=document.rootIds[0];return document;
 }

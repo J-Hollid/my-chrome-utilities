@@ -4,7 +4,7 @@ import {renderCanonicalFacetSection} from "./data-layer-canonical-schema-focused
 import {renderDefinitionSection} from "./canonical-schema-focused/definition.js";
 
 export interface CanonicalFocusedSectionContext {
-  dom:Document;current:()=>CanonicalSchemaDocument;node:CanonicalPropertyNode;getWorking:()=>CanonicalPropertyNode|undefined;setWorking:(value:CanonicalPropertyNode|undefined)=>void;properties?:()=>readonly {id:string;name:string;type?:string}[];
+  dom:Document;current:()=>CanonicalSchemaDocument;node:CanonicalPropertyNode;getWorking:()=>CanonicalPropertyNode|undefined;setWorking:(value:CanonicalPropertyNode|undefined)=>void;properties?:()=>readonly {id:string;name:string;type?:string}[];conceptSuggestions?:()=>readonly string[];
   activeSection:FocusedPropertySection;setActiveSection:(value:FocusedPropertySection)=>void;removedRuleIds:Set<string>;removedValueIds:Set<string>;id:(kind:string)=>string;stageStructure:(operation:CanonicalStructuralOperation)=>void;render:()=>void;
   patchFor:(node:CanonicalPropertyNode,original:CanonicalPropertyNode)=>Partial<Omit<CanonicalPropertyNode,"id"|"parentId"|"order"|"provenance">>;command:(command:CanonicalCommand)=>CanonicalCommandResult;select:(id:string|undefined)=>void;feedback:(message:string)=>void;
 }

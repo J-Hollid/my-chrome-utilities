@@ -1,3 +1,4 @@
+import { canonicalTableRows } from "./data-layer-canonical-schema.js";
 import { migrateLegacyProfile } from "./canonical-schema/migration-plan.js";
 export { hasLegacySchemaRepresentation, migrateLegacyProfile } from "./canonical-schema/migration-plan.js";
 import { canonicalPredicateWithStableIds } from "./data-layer-canonical-predicate-identity.js";
@@ -47,6 +48,13 @@ export function canonicalSchemaFromJsonSchema(input) { const profile = { id: inp
     node.presence = presenceCondition ? { ...node.presence, condition: presenceCondition } : { ...node.presence };
     node.rules = node.rules.map((rule) => { const condition = canonicalPredicateWithStableIds(rule.condition, input.idFactory); return condition ? { ...rule, condition } : { ...rule }; });
     node.provenance = node.provenance.map(() => ({ source: "saved-schema", sourceId: input.sourceIdentity, revision: input.sourceRevision }));
+} for (const row of canonicalTableRows(document)) {
+    let definition = input.document;
+    for (const segment of row.path.split("/").filter((value) => value && value !== "*"))
+        definition = (definition.properties?.[segment] ?? definition.items ?? {});
+    const concept = typeof definition["x-concept"] === "string" ? definition["x-concept"].trim() : "";
+    if (concept)
+        row.node.concept = concept;
 } return document; }
 export function canonicalNodeFromValue(name, value, input) { return { id: input.id("property"), name, ...(input.parentId ? { parentId: input.parentId } : {}), order: input.order, type: typeOf(value), presence: { mode: "optional" }, allowedValues: [], rules: [], documentation: emptyDocumentation(), provenance: [{ source: "created" }], overrideReferences: [] }; }
 //# sourceMappingURL=data-layer-canonical-schema-migration.js.map

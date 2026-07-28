@@ -1,5 +1,6 @@
 import { flowDocumentationPropertyPaths } from "./data-layer-flow-table-documentation-export.js";
-import { compileProjectDocumentation, projectDocumentationProfileColumns, projectDocumentationProfilePaths, projectDocumentationSources } from "./data-layer-project-documentation-compiler.js";
+import { compileProjectDocumentation, projectDocumentationProfileColumns, projectDocumentationProfilePaths, projectDocumentationSources, reconcileProjectDocumentationConcepts } from "./data-layer-project-documentation-compiler.js";
+import { projectCanonicalConcepts } from "./data-layer-layered-schema-project.js";
 import { createProjectDocumentationSet, createProjectDocumentationTheme, parseProjectDocumentationTheme, serializeProjectDocumentationTheme, } from "./data-layer-project-documentation-records.js";
 import { projectDocumentationSnapshotStale, renderProjectDocumentationClipboard, selectProjectDocumentationTables, themeFingerprint, writeProjectDocumentationWorkbook, } from "./data-layer-project-documentation-workspace.js";
 const defaultPorts = () => ({
@@ -67,10 +68,20 @@ function applyThemeToTable(table, theme) {
     }
 }
 function renderTable(value, theme) {
-    const table = document.createElement("table"), head = document.createElement("thead"), headRow = document.createElement("tr"), body = document.createElement("tbody");
+    const table = document.createElement("table"), head = document.createElement("thead"), headRow = document.createElement("tr"), body = document.createElement("tbody"), groups = new Map(value.conceptGroups?.map((group) => [group.start, group]) ?? []);
     headRow.append(...value.headings.map((cell) => Object.assign(document.createElement("th"), { textContent: cell })));
     head.append(headRow);
-    for (const sourceRow of value.rows) {
+    for (const [index, sourceRow] of value.rows.entries()) {
+        const group = groups.get(index);
+        if (group) {
+            const headingRow = document.createElement("tr"), cell = document.createElement("th");
+            headingRow.dataset.conceptHeading = group.name;
+            cell.colSpan = value.headings.length;
+            cell.scope = "rowgroup";
+            cell.textContent = group.name;
+            headingRow.append(cell);
+            body.append(headingRow);
+        }
         const row = document.createElement("tr");
         row.append(...sourceRow.map((cell) => Object.assign(document.createElement("td"), { textContent: cell })));
         body.append(row);
@@ -266,6 +277,30 @@ export function installProjectDocumentationWorkspaceUi(options) {
         host.prepend(name);
         host.append(save, preview, copy, paste, pasteButton, copyOutput, sampleHost);
     }
+    function renderConceptConfiguration(set, state) {
+        const region = document.createElement("section"), list = document.createElement("ol"), concepts = reconcileProjectDocumentationConcepts(set, projectCanonicalConcepts(state)), headings = document.createElement("input");
+        region.setAttribute("aria-label", "Documentation concept configuration");
+        region.append(heading(2, "Concept grouping"));
+        list.setAttribute("aria-label", "Ordered documentation concepts");
+        for (const [index, concept] of concepts.entries()) {
+            const item = document.createElement("li"), include = document.createElement("input"), earlier = button("Move concept earlier", () => { if (index < 1)
+                return; const next = [...concepts], [value] = next.splice(index, 1); next.splice(index - 1, 0, value); saveSet(createProjectDocumentationSet({ ...set, concepts: next }), `Move concept ${concept.name} earlier`); }), later = button("Move concept later", () => { if (index >= concepts.length - 1)
+                return; const next = [...concepts], [value] = next.splice(index, 1); next.splice(index + 1, 0, value); saveSet(createProjectDocumentationSet({ ...set, concepts: next }), `Move concept ${concept.name} later`); });
+            include.type = "checkbox";
+            include.checked = concept.included;
+            include.addEventListener("change", () => saveSet(createProjectDocumentationSet({ ...set, concepts: concepts.map((candidate) => candidate.name === concept.name ? { ...candidate, included: include.checked } : candidate) }), `${include.checked ? "Include" : "Exclude"} concept ${concept.name}`));
+            earlier.disabled = index === 0;
+            later.disabled = index === concepts.length - 1;
+            item.dataset.documentationConcept = concept.name;
+            item.append(labelled(concept.name, include), earlier, later);
+            list.append(item);
+        }
+        headings.type = "checkbox";
+        headings.checked = set.includeConceptSubheadings === true;
+        headings.addEventListener("change", () => saveSet(createProjectDocumentationSet({ ...set, concepts, includeConceptSubheadings: headings.checked }), `${headings.checked ? "Include" : "Hide"} concept subheadings`));
+        region.append(list, labelled("Include concept subheadings", headings));
+        return region;
+    }
     function render(host) {
         const state = options.state(), { records, set, theme } = active();
         host.replaceChildren();
@@ -436,7 +471,7 @@ export function installProjectDocumentationWorkspaceUi(options) {
         confirm.addEventListener("change", () => { confirmedIncomplete = confirm.checked; copy.disabled = download.disabled = !snapshot || liveStale || (snapshot.incomplete && !confirmedIncomplete); });
         copy.disabled = download.disabled = blocked;
         exportRegion.append(scope, labelled("Confirm incomplete export", confirm), copy, download, Object.assign(document.createElement("output"), { textContent: feedback }));
-        root.append(setRegion, content, configure, themeRegion, preview, exportRegion);
+        root.append(setRegion, renderConceptConfiguration(set, state), content, configure, themeRegion, preview, exportRegion);
         host.append(root);
     }
     return { render };

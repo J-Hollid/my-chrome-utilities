@@ -59,7 +59,7 @@ const itemSchemaDefinition=(item:NonNullable<CanonicalPropertyNode["itemSchema"]
 
 const schemaForNode=(document:CanonicalSchemaDocument,node:CanonicalPropertyNode):Record<string,unknown>=>{
   const children=orderedChildren(document,node.id);
-  const definition:Record<string,unknown>={type:node.type};
+  const definition:Record<string,unknown>={type:node.type,...(node.concept?.trim()?{"x-concept":node.concept.trim()}:{})};
   if(node.type==="object"&&children.length)definition.properties=Object.fromEntries(children.map((child)=>[child.name,schemaForNode(document,child)]));
   if(node.type==="array"){
     const itemType=node.itemSchema?.type??node.itemType;

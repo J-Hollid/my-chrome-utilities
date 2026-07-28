@@ -11,6 +11,7 @@ export interface ComposedFocusedSectionContext {
   model:ComposedSchemaWorkspace;
   dom:Document;
   row:ComposedSchemaRow;
+  conceptSuggestions?:(()=>readonly string[])|undefined;
   getDraft:()=>ComposedFacetDraft|undefined;
   activeSection:FocusedPropertySection;
   removedRuleIds:Set<string>;
@@ -33,7 +34,8 @@ export const resetComposedDefinitionFacet=(draft:ComposedFacetDraft,inherited:Co
 export function renderComposedFocusedSection(host:HTMLElement,context:ComposedFocusedSectionContext):void {
   const {dom}=context,draft=context.getDraft();if(!draft)return;host.dataset.focusedSection=context.activeSection;
   if(context.activeSection==="definition"){
-    const type=dom.createElement("select"),itemType=dom.createElement("select"),presence=dom.createElement("select"),allowed=dom.createElement("input"),displayText=dom.createElement("input"),description=dom.createElement("textarea"),comments=dom.createElement("textarea"),method=dom.createElement("select"),exampleHost=dom.createElement("span");
+    const concept=dom.createElement("input"),type=dom.createElement("select"),itemType=dom.createElement("select"),presence=dom.createElement("select"),allowed=dom.createElement("input"),displayText=dom.createElement("input"),description=dom.createElement("textarea"),comments=dom.createElement("textarea"),method=dom.createElement("select"),exampleHost=dom.createElement("span");
+    const concepts=dom.createElement("datalist"),conceptHost=dom.createElement("span"),conceptListId=`focused-concepts-${context.row.path.replace(/[^a-z0-9_-]/gi,"-")}`;concepts.id=conceptListId;for(const value of context.conceptSuggestions?.()??[])concepts.append(new Option(value,value));concept.name="concept";concept.value=draft.concept??"";concept.setAttribute("role","combobox");concept.setAttribute("aria-autocomplete","list");concept.setAttribute("list",conceptListId);concept.addEventListener("input",()=>{draft.concept=concept.value.trim()||undefined;});conceptHost.append(concept,concepts);
     type.name="propertyType";type.append(new Option("Inherit type",""),...["string","number","integer","boolean","object","array","null"].map((entry)=>new Option(entry,entry)));type.value=draft.type??"";
     itemType.name="itemType";itemType.append(new Option("Inherit item type",""),...["string","number","integer","boolean","object","array","null"].map((entry)=>new Option(entry,entry)));itemType.value=draft.itemType??"";itemType.disabled=draft.type!=="array";
     presence.name="presenceMode";presence.append(new Option("Required","required"),new Option("Optional","optional"),new Option("Forbidden","forbidden"));presence.value=draft.presence==="required"?"required":draft.presence==="forbidden"?"forbidden":"optional";
@@ -46,6 +48,7 @@ export function renderComposedFocusedSection(host:HTMLElement,context:ComposedFo
     const facet=(label:string,control:HTMLElement,local:boolean,reset:()=>void):HTMLElement=>{const item=dom.createElement("article"),target=`Definition facet ${label}`;item.dataset.definitionFacet=label.toLowerCase().replaceAll(" ","-");item.append(labeled(dom,label,control));for(const action of focusedDefinitionFacetOwnershipActions({inherited:Boolean(context.row.inherited),local})){const resetControl=button(dom,action,()=>{reset();context.render();});resetControl.dataset.ownershipAction=action;resetControl.dataset.ownershipTarget=target;resetControl.setAttribute("aria-label",`${action} · ${target}`);item.append(resetControl);}return item;};
     const inherited=context.row.inherited;
     host.append(
+      facet("Concept",conceptHost,context.row.local.concept!==undefined,()=>{draft.concept=inherited?.concept;}),
       facet("Type",type,context.row.local.type!==undefined,()=>{draft.type=inherited?.type;}),
       facet("Array item type",itemType,context.row.local.itemType!==undefined,()=>{draft.itemType=inherited?.itemType;}),
       facet("Presence",presence,context.row.local.presence!==undefined,()=>{draft.presence=inherited?.presence;}),

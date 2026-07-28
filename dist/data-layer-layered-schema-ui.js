@@ -4,7 +4,7 @@ import { applyCanonicalCommand, canonicalSchemaWithConstraint, canonicalTableRow
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
 import { mountComposedSchemaWorkspace } from "./data-layer-composed-schema-workspace-ui.js";
 import { composedCanonicalSchema, composedSchemaWorkspace, saveComposedEventCanonicalDocument, saveFlowPageInstanceSchemaPolicy } from "./data-layer-composed-schema-workspace.js";
-import { flowPageFrameContributor, layeredContributorPath, layeredContributorsForPath, resetFlowPageInstanceLocalProperty, saveFlowPageInstanceLocalFacets, saveFlowPageInstanceLocalFacetsAndStructures } from "./data-layer-layered-schema-project.js";
+import { flowPageFrameContributor, layeredContributorPath, layeredContributorsForPath, projectCanonicalConcepts, resetFlowPageInstanceLocalProperty, saveFlowPageInstanceLocalFacets, saveFlowPageInstanceLocalFacetsAndStructures } from "./data-layer-layered-schema-project.js";
 import { resolveSidePanelSchemaContributor } from "./data-layer-side-panel-schema-editor.js";
 export { layeredContributionDetails, layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
 const q = (selector) => { const value = document.querySelector(selector); if (!value)
@@ -80,7 +80,7 @@ export function mountSidePanelLayeredProfileEditor(options) {
         }
         const editorHost = document.createElement("section");
         options.host.append(editorHost);
-        mountCanonicalSchemaEditor({ host: editorHost, surface: "Side panel", load: () => current().selection.entity.canonicalSchema, id: (kind) => `${kind}:${crypto.randomUUID()}`, dispatch: (command) => { const live = current(), document = live.selection.entity.canonicalSchema, result = applyCanonicalCommand(document, command); if ((result.status === "applied" || result.status === "rebased") && live.state)
+        mountCanonicalSchemaEditor({ host: editorHost, surface: "Side panel", conceptSuggestions: () => projectCanonicalConcepts(current().state), load: () => current().selection.entity.canonicalSchema, id: (kind) => `${kind}:${crypto.randomUUID()}`, dispatch: (command) => { const live = current(), document = live.selection.entity.canonicalSchema, result = applyCanonicalCommand(document, command); if ((result.status === "applied" || result.status === "rebased") && live.state)
                 options.persist(writeSidePanelCanonical(live.state, live.selection, result.document)); return result; }, onUndo: () => options.onUndo?.(), onRedo: () => options.onRedo?.() });
     };
     const select = (key) => { const state = options.load(); if (!state || !resolveSidePanelSchemaContributor(state, key))
@@ -121,7 +121,7 @@ export function installLayeredSchemaUi(options) {
             example.open = saved.expandedExample.open;
     } if (graph && saved.viewBox && graph.getAttribute("viewBox") !== saved.viewBox)
         graph.setAttribute("viewBox", saved.viewBox); const focus = saved.originSelector ? document.querySelector(saved.originSelector) : undefined; const target = focus ?? (returnFocus?.isConnected ? returnFocus : undefined); target?.focus({ preventScroll: true }); }; apply(); queueMicrotask(apply); setTimeout(apply, 0); setTimeout(apply, 50); };
-    const renderFlowComposedSchemaWorkspace = (state, entity, flowId) => { const model = composedSchemaWorkspace(state, entity, "Flow Page-instance", undefined, flowId), identity = document.createElement("p"), back = document.createElement("button"); identity.textContent = `Contributor: ${entity.name} · Flow Page-instance`; editor.append(identity); mountComposedSchemaWorkspace({ host: editor, model, effectiveText: (row) => effectivePropertySummary(row.effective), schemaContributorId: entity.id, schemaContributorScope: "Flow Page-instance", rowPathDataset: "flowInstanceEffectivePath", includeConditionEvaluation: false, includeConflictSummary: false, onlyDefinedFields: entity.onlyDefinedFields === true, onOnlyDefinedFields: (value) => { const live = current(), next = live.state ? saveFlowPageInstanceSchemaPolicy(live.state, flowId, entity.id, value) : undefined; if (next) {
+    const renderFlowComposedSchemaWorkspace = (state, entity, flowId) => { const model = composedSchemaWorkspace(state, entity, "Flow Page-instance", undefined, flowId), identity = document.createElement("p"), back = document.createElement("button"); identity.textContent = `Contributor: ${entity.name} · Flow Page-instance`; editor.append(identity); mountComposedSchemaWorkspace({ host: editor, model, effectiveText: (row) => effectivePropertySummary(row.effective), conceptSuggestions: () => projectCanonicalConcepts(current().state), schemaContributorId: entity.id, schemaContributorScope: "Flow Page-instance", rowPathDataset: "flowInstanceEffectivePath", includeConditionEvaluation: false, includeConflictSummary: false, onlyDefinedFields: entity.onlyDefinedFields === true, onOnlyDefinedFields: (value) => { const live = current(), next = live.state ? saveFlowPageInstanceSchemaPolicy(live.state, flowId, entity.id, value) : undefined; if (next) {
             graphSelection = flowPageFrameContributor(next, flowId, entity.id);
             options.persist(next);
             queueMicrotask(renderEditor);

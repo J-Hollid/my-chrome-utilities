@@ -1,8 +1,12 @@
-import { canonicalConstraints } from "./data-layer-canonical-schema.js";
+import { canonicalConceptIndex, canonicalConstraints } from "./data-layer-canonical-schema.js";
 import { compileLayeredSchema } from "./data-layer-layered-schema.js";
 import { orderedPageGroupIds } from "./data-layer-page-group-membership.js";
 import { transactProject } from "./data-layer-specification-project.js";
 import { applyLayerConstraintStructures, structureDeletesPath } from "./flow-graph/page-instance-structure.js";
+export function projectCanonicalConcepts(state) {
+    const entities = [...Object.values(state.project.collections).flat(), ...Object.values(state.project.documentationFlowGraphs ?? {}).flatMap((graph) => [...(graph.pageFrames ?? []), ...(graph.occurrences ?? [])])], documents = entities.flatMap(({ canonicalSchema }) => canonicalSchema ? [canonicalSchema] : []), constraintConcepts = entities.flatMap((entity) => [...(entity.schemaConstraints ?? []), ...(entity.localSchemaContributions ?? [])].map(({ concept }) => concept).filter((value) => typeof value === "string"));
+    return canonicalConceptIndex([...documents, ...(constraintConcepts.length ? [{ nodes: Object.fromEntries(constraintConcepts.map((concept, index) => [String(index), { concept }])) }] : [])]);
+}
 const contributionFor = (entity, scope) => {
     const canonical = entity.canonicalSchema;
     const requirements = (entity.requirements ?? []).map((requirement) => ({ ...requirement, ...(requirement.required ? { presence: "required" } : requirement.forbidden ? { presence: "forbidden" } : {}) }));

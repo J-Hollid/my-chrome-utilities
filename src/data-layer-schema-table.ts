@@ -4,16 +4,16 @@ export {bindSchemaTableQuickEdit,schemaTableEditableFacets,schemaTableQuickEditC
 export type {SchemaTableEditableFacet,SchemaTableQuickEditBinding,SchemaTableQuickEditCell,SchemaTableQuickEditIntent,SchemaTableQuickEditResult} from "./data-layer-schema-table-quick-edit.js";
 
 export const schemaTableColumns=[
-  {key:"property-editor",label:"Property editor"},
+  {key:"property-editor",label:""},
   {key:"path",label:"Path"},
+  {key:"concept",label:"Concept"},
   {key:"type",label:"Type"},
   {key:"presence",label:"Presence"},
   {key:"description",label:"Description"},
   {key:"expected-or-allowed",label:"Allowed values"},
   {key:"example",label:"Example"},
   {key:"source",label:"Source"},
-  {key:"local-effective-state",label:"Local or effective state"},
-  {key:"validation-state",label:"Validation state"},
+  {key:"local-effective-state",label:"State"},
 ] as const;
 export const schemaTableCellMetadata=schemaTableColumns.map(({key,label})=>({key,label}));
 export const schemaTableFormerPropertyPathAllocation="20rem";

@@ -18,8 +18,9 @@ export interface CanonicalProvenance {source:"created"|"saved-schema"|"requireme
 export interface CanonicalItemSchema {id:string;type?:CanonicalPropertyType;items?:CanonicalItemSchema;}
 export interface CanonicalPropertyNode {
   id:string;name:string;parentId?:string;order:number;type:CanonicalPropertyType;itemType?:CanonicalPropertyType;itemSchema?:CanonicalItemSchema;
+  concept?:string;
   presence:{mode:CanonicalPresenceMode;condition?:CanonicalPredicate};allowedValues:CanonicalAllowedValue[];rules:CanonicalRule[];
-  documentation:CanonicalDocumentation;provenance:CanonicalProvenance[];overrideReferences:string[];structureOwned?:boolean;localDefinitionFacets?:readonly string[];inheritedDefinition?:{type?:CanonicalPropertyType;presence?:"required"|"optional"|"forbidden";description?:string};expectedValue?:unknown;enforcement?:"invariant"|"overridable";target?:string;
+  documentation:CanonicalDocumentation;provenance:CanonicalProvenance[];overrideReferences:string[];structureOwned?:boolean;localDefinitionFacets?:readonly string[];inheritedDefinition?:{concept?:string;type?:CanonicalPropertyType;presence?:"required"|"optional"|"forbidden";description?:string};expectedValue?:unknown;enforcement?:"invariant"|"overridable";target?:string;
 }
 export interface CanonicalSchemaDocument {
   id:string;revision:number;state:"Draft";contributorId:string;contributorName:string;rootIds:string[];nodes:Record<string,CanonicalPropertyNode>;
@@ -54,7 +55,7 @@ export type CanonicalCommandResult=
 
 export {canonicalCommandOutcome,applyCanonicalCommand,addCanonicalProperty,renameCanonicalProperty,setCanonicalProperty,changeCanonicalPropertyType,createCanonicalRepository} from "./data-layer-canonical-schema-commands.js";
 
-export {createCanonicalSchema,canonicalPropertyPath,canonicalTableRows} from "./data-layer-canonical-schema-model.js";
+export {createCanonicalSchema,canonicalConceptIndex,canonicalConceptSortedRows,canonicalPropertyPath,canonicalTableRows} from "./data-layer-canonical-schema-model.js";
 export {canonicalFriendlyPropertyPath,canonicalJsonSchemaDocument} from "./data-layer-canonical-schema-model.js";
 export {canonicalArrayBoundaries} from "./data-layer-canonical-array-items.js";
 export {evaluateCanonicalPredicate} from "./data-layer-canonical-schema-predicates.js";

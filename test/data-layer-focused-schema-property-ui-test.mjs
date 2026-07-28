@@ -12,7 +12,7 @@ assert.deepEqual(focusedDefinitionFieldLabels,["Type","Array item type","Presenc
 assert.deepEqual(focusedPropertyLayerSequence(),["menu"],"opening property actions mounts only the first menu layer");
 assert.deepEqual(focusedPropertyLayerSequence("definition"),["menu","definition"],"opening Definition retains the first menu beside its child");
 assert.deepEqual(focusedPropertyLayerSequence("rules","review"),["menu","rules","review"],"Review remains nested after the retained menu and Rules child");
-assert.deepEqual(schemaTableColumns.map(({label})=>label),["Property editor","Path","Type","Presence","Description","Allowed values","Example","Source","Local or effective state","Validation state"],"every contributor table exposes the compact direct-editing columns");
+assert.deepEqual(schemaTableColumns.map(({label})=>label),["","Path","Concept","Type","Presence","Description","Allowed values","Example","Source","State"],"every contributor table exposes the compact direct-editing columns");
 assert.deepEqual(schemaTableCellMetadata,schemaTableColumns.map(({key,label})=>({key,label})),"every narrow stacked cell retains its visible column identity");
 assert.equal(new Set(schemaTableCellMetadata.map(({key})=>key)).size,schemaTableColumns.length,"stacked cell identities remain unique");
 assert.match(schemaTableOverlayStyle,/position:fixed/,"the property overlay is placed against the browser viewport");
@@ -55,7 +55,7 @@ assert.deepEqual(
   {left:332,top:8,width:320,height:784,maxHeight:784},
   "a layer taller than the viewport receives only the available viewport height",
 );
-assert.deepEqual(schemaTableEditableFacets,["type","presence","description","expected-or-allowed","example"],"the complete ordinary row is editable without opening an advanced editor");
+assert.deepEqual(schemaTableEditableFacets,["concept","type","presence","description","expected-or-allowed","example"],"the complete ordinary row is editable without opening an advanced editor");
 assert.deepEqual(schemaTableQuickEditIntent("Enter",false),{kind:"commit"},"Enter commits without leaving the current cell");
 assert.deepEqual(schemaTableQuickEditIntent("Tab",false),{kind:"commit",direction:1},"Tab commits and advances");
 assert.deepEqual(schemaTableQuickEditIntent("Tab",true),{kind:"commit",direction:-1},"Shift+Tab commits and reverses");

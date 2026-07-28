@@ -13,7 +13,14 @@ export function bindCanonicalPropertySearch(control, update) { control.addEventL
 export function canonicalDispatchRequiresLocalRender(result, renderAfterDispatch) { return renderAfterDispatch !== false || result.status === "confirmation-required"; }
 export function canonicalTableQuickEditPatch(original, facet, value, id) {
     const next = clone(original);
-    if (facet === "type")
+    if (facet === "concept") {
+        const concept = value.trim();
+        if (concept)
+            next.concept = concept;
+        else
+            delete next.concept;
+    }
+    else if (facet === "type")
         next.type = value;
     else if (facet === "presence")
         next.presence = { ...next.presence, mode: value };

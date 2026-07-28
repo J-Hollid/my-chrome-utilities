@@ -17,7 +17,18 @@ export function renderComposedFocusedSection(host, context) {
         return;
     host.dataset.focusedSection = context.activeSection;
     if (context.activeSection === "definition") {
-        const type = dom.createElement("select"), itemType = dom.createElement("select"), presence = dom.createElement("select"), allowed = dom.createElement("input"), displayText = dom.createElement("input"), description = dom.createElement("textarea"), comments = dom.createElement("textarea"), method = dom.createElement("select"), exampleHost = dom.createElement("span");
+        const concept = dom.createElement("input"), type = dom.createElement("select"), itemType = dom.createElement("select"), presence = dom.createElement("select"), allowed = dom.createElement("input"), displayText = dom.createElement("input"), description = dom.createElement("textarea"), comments = dom.createElement("textarea"), method = dom.createElement("select"), exampleHost = dom.createElement("span");
+        const concepts = dom.createElement("datalist"), conceptHost = dom.createElement("span"), conceptListId = `focused-concepts-${context.row.path.replace(/[^a-z0-9_-]/gi, "-")}`;
+        concepts.id = conceptListId;
+        for (const value of context.conceptSuggestions?.() ?? [])
+            concepts.append(new Option(value, value));
+        concept.name = "concept";
+        concept.value = draft.concept ?? "";
+        concept.setAttribute("role", "combobox");
+        concept.setAttribute("aria-autocomplete", "list");
+        concept.setAttribute("list", conceptListId);
+        concept.addEventListener("input", () => { draft.concept = concept.value.trim() || undefined; });
+        conceptHost.append(concept, concepts);
         type.name = "propertyType";
         type.append(new Option("Inherit type", ""), ...["string", "number", "integer", "boolean", "object", "array", "null"].map((entry) => new Option(entry, entry)));
         type.value = draft.type ?? "";
@@ -78,7 +89,7 @@ export function renderComposedFocusedSection(host, context) {
             item.append(resetControl);
         } return item; };
         const inherited = context.row.inherited;
-        host.append(facet("Type", type, context.row.local.type !== undefined, () => { draft.type = inherited?.type; }), facet("Array item type", itemType, context.row.local.itemType !== undefined, () => { draft.itemType = inherited?.itemType; }), facet("Presence", presence, context.row.local.presence !== undefined, () => { draft.presence = inherited?.presence; }), facet("Allowed values", allowed, context.row.local.allowedValues !== undefined || context.row.local.expectedValue !== undefined, () => { draft.allowedValues = [...(inherited?.allowedValues ?? [])]; if (inherited?.allowedValueIds)
+        host.append(facet("Concept", conceptHost, context.row.local.concept !== undefined, () => { draft.concept = inherited?.concept; }), facet("Type", type, context.row.local.type !== undefined, () => { draft.type = inherited?.type; }), facet("Array item type", itemType, context.row.local.itemType !== undefined, () => { draft.itemType = inherited?.itemType; }), facet("Presence", presence, context.row.local.presence !== undefined, () => { draft.presence = inherited?.presence; }), facet("Allowed values", allowed, context.row.local.allowedValues !== undefined || context.row.local.expectedValue !== undefined, () => { draft.allowedValues = [...(inherited?.allowedValues ?? [])]; if (inherited?.allowedValueIds)
             draft.allowedValueIds = [...inherited.allowedValueIds];
         else
             delete draft.allowedValueIds; if (inherited?.allowedValueProvenance)

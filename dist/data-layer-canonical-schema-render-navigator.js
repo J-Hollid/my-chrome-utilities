@@ -18,8 +18,8 @@ export function renderCanonicalNavigator(context) {
     filter.value = context.propertyFilter;
     filter.addEventListener("change", () => { context.setPropertyFilter(filter.value); refresh(); });
     sort.name = "propertySort";
-    sort.setAttribute("aria-label", "Sort canonical properties");
-    sort.append(new Option("Tree order", "tree"), new Option("Name", "name"), new Option("Type", "type"));
+    sort.setAttribute("aria-label", "Sort schema properties");
+    sort.append(new Option("Tree order", "tree"), new Option("Concept", "concept"), new Option("Name", "name"), new Option("Type", "type"));
     sort.value = context.propertySort;
     sort.addEventListener("change", () => { context.setPropertySort(sort.value); refresh(); });
     tree.setAttribute("aria-label", "Canonical property search results");

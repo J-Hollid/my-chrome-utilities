@@ -54,6 +54,10 @@ export function composedCanonicalSchema(state, entity, scope, flowId) {
         node.localDefinitionFacets = Object.keys(row.local).filter((key) => !["path", "definitionId", "rules", "reusableRules", "overrideReferences"].includes(key));
         if (row.inherited)
             node.inheritedDefinition = { ...(row.inherited.type ? { type: row.inherited.type } : {}), ...(row.inherited.presence ? { presence: row.inherited.presence } : {}), description: row.inherited.documentation ?? "" };
+        if (row.effective.concept)
+            node.concept = row.effective.concept;
+        if (row.inherited?.concept)
+            node.inheritedDefinition = { ...node.inheritedDefinition, concept: row.inherited.concept };
         document.nodes[id] = node;
         byPath.set(row.path, id);
     }

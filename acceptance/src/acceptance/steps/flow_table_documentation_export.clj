@@ -62,7 +62,7 @@
 
 (def runtime-paths
   (set (concat [:installedBoundary]
-               (map #(keyword (str "export" (format "%03d" %))) (range 1 16)))))
+               (map #(keyword (str "export" (format "%03d" %))) (range 1 21)))))
 
 (defn- assert-runtime! [evidence]
   (support/assert! (and (= runtime-paths (set (keys evidence)))

@@ -1,4 +1,4 @@
-import {canonicalConstraints,type CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
+import {canonicalConceptIndex,canonicalConstraints,type CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
 import {compileLayeredSchema,type CompiledLayeredSchema,type LayerConstraint,type LayerContributor,type LayerContext,type LayerScope} from "./data-layer-layered-schema.js";
 import {orderedPageGroupIds} from "./data-layer-page-group-membership.js";
 import {transactProject,type Condition,type ProjectEntity,type ProjectState} from "./data-layer-specification-project.js";
@@ -7,6 +7,10 @@ import {applyLayerConstraintStructures,structureDeletesPath,type FlowPageInstanc
 export interface LayeredContributorPath {profileId?:string;eventId?:string;pageGroupId?:string;pageGroupIds?:string[];pageId?:string;flowId?:string;pageFrameId?:string;occurrenceId?:string;}
 export type AssignmentContributorKind="Shared Profile"|"Page Group"|"Page"|"Event"|"Flow Page instance";
 export interface AssignmentContributorTarget {id:string;name:string;kind:AssignmentContributorKind;flowId?:string;}
+export function projectCanonicalConcepts(state:ProjectState):string[]{
+  const entities=[...(Object.values(state.project.collections) as ProjectEntity[][]).flat(),...Object.values(state.project.documentationFlowGraphs??{}).flatMap((graph)=>[...((graph as {pageFrames?:ProjectEntity[]}).pageFrames??[]),...((graph as {occurrences?:ProjectEntity[]}).occurrences??[])])],documents=entities.flatMap(({canonicalSchema})=>canonicalSchema?[canonicalSchema as CanonicalSchemaDocument]:[]),constraintConcepts=entities.flatMap((entity)=>[...((entity.schemaConstraints as LayerConstraint[]|undefined)??[]),...((entity.localSchemaContributions as LayerConstraint[]|undefined)??[])].map(({concept})=>concept).filter((value):value is string=>typeof value==="string"));
+  return canonicalConceptIndex([...documents,...(constraintConcepts.length?[{nodes:Object.fromEntries(constraintConcepts.map((concept,index)=>[String(index),{concept}]))} as unknown as CanonicalSchemaDocument]:[])]);
+}
 
 const contributionFor=(entity:ProjectEntity,scope:LayerScope):LayerContributor=>{
   const canonical=entity.canonicalSchema as CanonicalSchemaDocument|undefined;

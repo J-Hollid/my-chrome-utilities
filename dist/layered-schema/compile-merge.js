@@ -68,6 +68,8 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
         next.expectedContributor = contributor.name;
         next.enforcement = constraint.enforcement ?? "overridable";
     }
+    if (constraint.concept !== undefined)
+        next.concept = constraint.concept;
     if (constraint.condition)
         next.condition = clone(constraint.condition);
     if (constraint.displayText !== undefined)
