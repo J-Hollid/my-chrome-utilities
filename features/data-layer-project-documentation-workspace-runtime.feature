@@ -145,3 +145,60 @@ Feature: Data layer project documentation workspace runtime
       | current Checkout journey section          | Checkout journey                                                                                        |
       | selected Checkout journey and Sitewide sections | Checkout journey, Sitewide                                                                         |
       | complete Documentation Set                | Overview, Checkout journey, Article journey, Data capture matrix, Sitewide, Opened Article              |
+
+  # Data layer project documentation workspace runtime 016
+  Scenario: Data layer project documentation workspace runtime 016
+    Given production Client specification includes literal Sitewide, Opened Article, Flows, and the matrix
+    When actual controls configure concept documentation
+    Then the installed Set controls render one ordered project-wide concept checklist plus Ungrouped
+    And every checklist row has an independent Include control
+    And a separate Include concept subheadings control is rendered
+    And those controls target only literal Sitewide and the Data capture matrix
+    And DOM inspection finds no concept configuration in Flow or Opened Article Profile sections
+
+  # Data layer project documentation workspace runtime 017
+  Scenario Outline: Data layer project documentation workspace runtime 017
+    Given production concept configuration includes ecommerce, page, and Ungrouped but excludes technical
+    And Include concept subheadings is <headings>
+    When actual preview, Excel, and rich-copy adapters render Sitewide and the matrix
+    Then parsed output contains no technical property row
+    And parsed output retains ecommerce, page, and Ungrouped rows
+    And parsed concept headings are <heading_result>
+    And row identities follow configured concept order and path order within each concept
+    And Excel, rich HTML, and plain-text fallback have equivalent row sets and order
+
+    Examples:
+      | headings | heading_result                                |
+      | on       | one heading for each non-empty included group |
+      | off      | no headings                                   |
+
+  # Data layer project documentation workspace runtime 018
+  Scenario: Data layer project documentation workspace runtime 018
+    Given durable concept order is page, ecommerce, and Ungrouped
+    And production Sitewide and matrix rows occupy all three groups
+    When actual controls request grouped concept output
+    Then installed previews parse as PAGE, ECOMMERCE, and UNGROUPED sections in order
+    And every section repeats its standard table header before path-ordered property rows
+    And no zero-row section exists
+    And workbook parsing finds one merged styled concept row spanning each table width
+    And clipboard parsing finds semantic concept headings and an equivalent plain-text fallback
+
+  # Data layer project documentation workspace runtime 019
+  Scenario: Data layer project documentation workspace runtime 019
+    Given durable concept configuration orders ecommerce, page, and Ungrouped
+    When production canonical properties add Acquisition and ACQUISITION with whitespace variations
+    Then installed controls append one Acquisition entry after page and before Ungrouped
+    And existing durable inclusion and order values remain unchanged
+    When actual controls move Acquisition before ecommerce, exclude it, and save
+    Then repository bytes store normalized identity, display spelling, order, and inclusion
+    And reload, Undo, portability import, preview, workbook, and clipboard adapters retain that configuration
+    And source or configuration revision changes invalidate the snapshot until actual refresh
+    And a saved zero-row concept emits no output heading while its configuration bytes remain
+
+  # Data layer project documentation workspace runtime 020
+  Scenario: Data layer project documentation workspace runtime 020
+    Given production technical concept is excluded and subheadings are enabled
+    When actual controls generate the complete Documentation Set
+    Then parsed Sitewide and matrix output omit technical rows and contain included concept groups
+    And Flow and non-Sitewide Profile content hashes equal their hashes with no concept configuration
+    And current, selected, and complete output manifests apply concept configuration only to literal Sitewide and the matrix

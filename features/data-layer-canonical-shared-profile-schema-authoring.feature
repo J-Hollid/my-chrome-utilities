@@ -865,24 +865,27 @@ Feature: Data layer canonical Shared Profile schema authoring
   Scenario Outline: Data layer canonical Shared Profile schema authoring 054
     Given the <contributor> schema is open in <surface> Table view
     When the property table renders
-    Then the ordered header map is
-      | ordinal | heading                  |
-      | 1       | Property editor          |
-      | 2       | Path                     |
-      | 3       | Type                     |
-      | 4       | Presence                 |
-      | 5       | Description              |
-      | 6       | Allowed values           |
-      | 7       | Example                  |
-      | 8       | Source                   |
-      | 9       | Local or effective state |
-      | 10      | Validation state         |
-    And Property editor contains only the property action for that row
+    Then the first column has no visible heading, has accessible name Property editor, and is only wide enough for its row action
+    And the remaining ordered visible headings are
+      | ordinal | heading        |
+      | 2       | Path           |
+      | 3       | Concept        |
+      | 4       | Type           |
+      | 5       | Presence       |
+      | 6       | Description    |
+      | 7       | Allowed values |
+      | 8       | Example        |
+      | 9       | Source         |
+      | 10      | State          |
     And Path shows the complete friendly property path without a separate leaf-name column
     And Path receives the combined width formerly used by Property and Path
+    And Concept is an editable input immediately to the left of Type
     And Type and Presence are labelled inline dropdowns
     And Description and Allowed values are inline text fields
     And Example is an inline editable combobox
+    And no Validation state column is rendered
+    And invalid rows retain an accessible invalid style and concise issue summary
+    And validation status and repair actions are available from Property editor and the focused property panel
 
     Examples:
       | contributor        | surface        |
@@ -954,14 +957,15 @@ Feature: Data layer canonical Shared Profile schema authoring
     And focus restoration after repository notification preserves exactly one commit and the intended destination
 
     Examples:
-      | origin            | key       | destination                         |
-      | Type dropdown     | Tab       | Presence dropdown                   |
-      | Presence dropdown | Tab       | Description field                   |
-      | Description field | Tab       | Allowed values field                |
-      | Allowed values field | Tab    | Example combobox                    |
-      | Example combobox  | Tab       | next row Type dropdown              |
-      | Example combobox  | Shift+Tab | same row Allowed values field       |
-      | Type dropdown     | Shift+Tab | previous row Example combobox       |
+      | origin               | key       | destination                         |
+      | Concept combobox     | Tab       | Type dropdown                       |
+      | Type dropdown        | Tab       | Presence dropdown                   |
+      | Presence dropdown    | Tab       | Description field                   |
+      | Description field    | Tab       | Allowed values field                |
+      | Allowed values field | Tab       | Example combobox                    |
+      | Example combobox     | Tab       | next row Concept combobox           |
+      | Example combobox     | Shift+Tab | same row Allowed values field       |
+      | Concept combobox     | Shift+Tab | previous row Example combobox       |
 
   # Data layer canonical Shared Profile schema authoring 059
   Scenario Outline: Data layer canonical Shared Profile schema authoring 059
@@ -988,3 +992,79 @@ Feature: Data layer canonical Shared Profile schema authoring
       | Event              | in-panel       |
       | Flow Page-instance | in-panel       |
       | Event occurrence   | in-panel       |
+
+  # Data layer canonical Shared Profile schema authoring 060
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 060
+    Given the <contributor> schema is open in <surface>
+    And project properties effectively use concepts ecommerce, Page, and page with surrounding whitespace variations
+    When the operator focuses Concept in Table or Definition in the focused property editor
+    Then an editable combobox suggests ecommerce and Page once each
+    And suggestions derive from effective canonical properties across the project, including inherited properties
+    And matching, trimming, and duplicate grouping are case-insensitive
+    And the first stored spelling remains the display spelling until the configured value is edited
+    When the operator enters Acquisition outside the suggestions
+    Then Acquisition remains a valid custom concept value
+    And a later Concept combobox offers Acquisition
+    When Concept is cleared
+    Then the property stores no concept and downstream grouping treats it as Ungrouped
+
+    Examples:
+      | contributor        | surface        |
+      | Shared Profile     | standalone     |
+      | Page Group         | standalone     |
+      | Page               | standalone     |
+      | Event              | standalone     |
+      | Flow Page-instance | Flow workspace |
+      | Event occurrence   | Flow workspace |
+      | Shared Profile     | in-panel       |
+      | Page Group         | in-panel       |
+      | Page               | in-panel       |
+      | Event              | in-panel       |
+      | Flow Page-instance | in-panel       |
+      | Event occurrence   | in-panel       |
+
+  # Data layer canonical Shared Profile schema authoring 061
+  Scenario: Data layer canonical Shared Profile schema authoring 061
+    Given Cart inherits concept ecommerce for /products and has no local concept facet
+    When the Table Concept input is changed to checkout
+    Then the change commits directly without opening property actions, Definition, Review changes, or an ownership confirmation
+    And Cart stores only a sparse local concept checkout with local provenance
+    And Sitewide, sibling contributors, other facets, and Published state remain unchanged
+    When Reset to parent is chosen for Concept
+    Then Cart's concept contribution is absent and current parent concept ecommerce is effective
+    When the same inherited Concept is edited in focused Definition
+    Then the changed value is staged with the other Definition fields until Review changes
+    And Cancel creates no local concept while Review changes creates the same sparse concept command
+
+  # Data layer canonical Shared Profile schema authoring 062
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 062
+    Given Table rows use concepts ecommerce, page, Acquisition, and no concept
+    When the operator selects Sort by Concept
+    Then rows are grouped alphabetically by case-insensitive concept display value
+    And properties retain tree and path order within each concept
+    And Ungrouped is last
+    And Tree order and Source remain available while Validation sort is absent
+    Given keyboard focus is on <origin>
+    When the operator commits with <key>
+    Then focus moves to <destination> in the row-major editable sequence
+    And Concept, Type, Presence, Description, Allowed values, and Example all participate
+    And action and read-only cells are skipped
+    And repository rerendering produces exactly one command for a changed value
+
+    Examples:
+      | origin                    | key       | destination                      |
+      | Concept combobox          | Tab       | same row Type dropdown           |
+      | Type dropdown             | Shift+Tab | same row Concept combobox        |
+      | previous row Example      | Tab       | next row Concept combobox        |
+      | Concept combobox          | Shift+Tab | previous row Example combobox    |
+
+  # Data layer canonical Shared Profile schema authoring 063
+  Scenario: Data layer canonical Shared Profile schema authoring 063
+    Given /products has concept ecommerce and child /products/id has no concept
+    When the canonical schema is compiled and validated
+    Then concept remains a property-level documentation annotation
+    And /products/id is Ungrouped rather than inheriting ecommerce through property hierarchy
+    And concept changes neither property identity, validation outcome, presence, nor effective value
+    When JSON Schema is exported, imported, reloaded, and moved through project portability
+    Then /products contains extension keyword x-concept with value ecommerce
+    And the same concept, absence, stable property identities, and sparse contributor ownership return

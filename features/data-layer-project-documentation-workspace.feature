@@ -145,3 +145,62 @@ Feature: Data layer project documentation workspace
       | current Checkout journey section          | Checkout journey                                                                                        |
       | selected Checkout journey and Sitewide sections | Checkout journey, Sitewide                                                                         |
       | complete Documentation Set                | Overview, Checkout journey, Article journey, Data capture matrix, Sitewide, Opened Article              |
+
+  # Data layer project documentation workspace 016
+  Scenario: Data layer project documentation workspace 016
+    Given Client specification includes literal Sitewide, Opened Article, Flows, and the Data capture matrix
+    When the operator configures concept documentation
+    Then the Documentation Set offers one ordered checklist of project-wide concepts plus virtual Ungrouped
+    And each entry independently controls whether its property rows are included
+    And Include concept subheadings independently controls whether group headings are rendered
+    And these controls apply only to literal Sitewide and the Data capture matrix
+    And Flow sections and every other Site Profile including Opened Article expose no concept grouping or filtering control
+
+  # Data layer project documentation workspace 017
+  Scenario Outline: Data layer project documentation workspace 017
+    Given the concept checklist includes ecommerce, page, technical, and Ungrouped
+    And ecommerce, page, and Ungrouped are included while technical is excluded
+    And Include concept subheadings is <headings>
+    When literal Sitewide and the Data capture matrix are previewed or exported
+    Then technical property rows are absent
+    And ecommerce, page, and Ungrouped property rows remain
+    And visible concept subheadings are <heading_result>
+    And included rows follow configured concept order and path order within each concept
+    And Excel and rich document copy apply the same filtering and ordering
+
+    Examples:
+      | headings | heading_result                                  |
+      | on       | rendered once before each non-empty concept     |
+      | off      | absent while concept filtering remains active   |
+
+  # Data layer project documentation workspace 018
+  Scenario: Data layer project documentation workspace 018
+    Given Client specification orders included concepts page, ecommerce, and Ungrouped
+    And literal Sitewide and the Data capture matrix contain rows in all three concepts
+    When the operator requests grouped concept output
+    Then each table renders PAGE, ECOMMERCE, and UNGROUPED sections in that order
+    And each concept heading spans the complete table width
+    And each heading is followed by the standard column headings and that concept's property rows in path order
+    And no empty concept heading is emitted
+    And Excel uses merged styled concept rows across the table width
+    And rich document copy uses semantic concept headings with equivalent plain-text fallback
+
+  # Data layer project documentation workspace 019
+  Scenario: Data layer project documentation workspace 019
+    Given Client specification has saved concept order ecommerce, page, and Ungrouped
+    When canonical properties add Acquisition and ACQUISITION with whitespace variations
+    Then the checklist contains one Acquisition entry after page and before Ungrouped
+    And existing inclusion choices and order remain unchanged
+    When Acquisition is moved before ecommerce and excluded
+    Then the Documentation Set stores its normalized identity, display spelling, order, and inclusion choice
+    And reload, Undo, project portability, preview, Excel, and rich document copy preserve that configuration
+    And a source or concept-configuration change marks the preview stale until refreshed
+    And a configured concept with no current exported rows emits no empty heading but retains its saved choice
+
+  # Data layer project documentation workspace 020
+  Scenario: Data layer project documentation workspace 020
+    Given technical is excluded and concept subheadings are enabled
+    When the complete Documentation Set is generated
+    Then literal Sitewide and the Data capture matrix omit technical rows and render included concept groups
+    And every Flow sheet and non-Sitewide Profile sheet is byte-equivalent to output without concept configuration
+    And current, selected, and complete export scopes apply concept configuration only when they contain literal Sitewide or the Data capture matrix

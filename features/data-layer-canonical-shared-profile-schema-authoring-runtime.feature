@@ -865,24 +865,27 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
   Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 054
     Given the installed <contributor> schema is open in <surface> Table view
     When the production property table renders
-    Then DOM header indexes equal
-      | index | text                     |
-      | 1     | Property editor          |
-      | 2     | Path                     |
-      | 3     | Type                     |
-      | 4     | Presence                 |
-      | 5     | Description              |
-      | 6     | Allowed values           |
-      | 7     | Example                  |
-      | 8     | Source                   |
-      | 9     | Local or effective state |
-      | 10    | Validation state         |
-    And each Property editor cell contains only its property-action control
+    Then the first header has no visible text, accessible name Property editor, and measured action-button width
+    And the remaining DOM header indexes equal
+      | index | text           |
+      | 2     | Path           |
+      | 3     | Concept        |
+      | 4     | Type           |
+      | 5     | Presence       |
+      | 6     | Description    |
+      | 7     | Allowed values |
+      | 8     | Example        |
+      | 9     | Source         |
+      | 10    | State          |
     And each Path cell renders the complete friendly path with no separate leaf-name cell
     And measured Path width equals the former Property and Path allocation
+    And Concept contains an editable input immediately before the Type select
     And Type and Presence cells contain labelled select controls
     And Description and Allowed values cells contain text controls
     And Example contains an editable combobox
+    And DOM inspection finds no Validation state column
+    And an invalid row exposes invalid styling and an accessible concise issue summary
+    And actual Property editor and focused-property controls expose its validation status and repair actions
 
     Examples:
       | contributor        | surface        |
@@ -955,13 +958,14 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
 
     Examples:
       | origin               | key       | destination                         |
+      | Concept combobox     | Tab       | Type dropdown                       |
       | Type dropdown        | Tab       | Presence dropdown                   |
       | Presence dropdown    | Tab       | Description field                   |
       | Description field    | Tab       | Allowed values field                |
       | Allowed values field | Tab       | Example combobox                    |
-      | Example combobox     | Tab       | next row Type dropdown              |
+      | Example combobox     | Tab       | next row Concept combobox           |
       | Example combobox     | Shift+Tab | same row Allowed values field       |
-      | Type dropdown        | Shift+Tab | previous row Example combobox       |
+      | Concept combobox     | Shift+Tab | previous row Example combobox       |
 
   # Data layer canonical Shared Profile schema authoring runtime 059
   Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 059
@@ -988,3 +992,76 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
       | Event              | in-panel       |
       | Flow Page-instance | in-panel       |
       | Event occurrence   | in-panel       |
+
+  # Data layer canonical Shared Profile schema authoring runtime 060
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 060
+    Given the installed <contributor> schema is open in <surface>
+    And production effective properties use concepts ecommerce, Page, and page with whitespace variations
+    When actual focus opens Concept in Table and focused Definition
+    Then each installed editable combobox lists ecommerce and Page once
+    And option-source evidence includes effective inherited canonical properties across the project
+    And filtering, trimming, and option keys are case-insensitive
+    And serialized display spelling retains the first stored spelling until that value is edited
+    When actual input commits custom concept Acquisition
+    Then durable canonical bytes store Acquisition and later listboxes include it
+    When actual input clears Concept
+    Then durable property bytes omit concept and the grouping projection returns Ungrouped
+
+    Examples:
+      | contributor        | surface        |
+      | Shared Profile     | standalone     |
+      | Page Group         | standalone     |
+      | Page               | standalone     |
+      | Event              | standalone     |
+      | Flow Page-instance | Flow workspace |
+      | Event occurrence   | Flow workspace |
+      | Shared Profile     | in-panel       |
+      | Page Group         | in-panel       |
+      | Page               | in-panel       |
+      | Event              | in-panel       |
+      | Flow Page-instance | in-panel       |
+      | Event occurrence   | in-panel       |
+
+  # Data layer canonical Shared Profile schema authoring runtime 061
+  Scenario: Data layer canonical Shared Profile schema authoring runtime 061
+    Given production Cart inherits concept ecommerce for /products without a local concept entry
+    When actual Table input commits concept checkout
+    Then no property menu, Definition layer, Review changes layer, or ownership confirmation is mounted
+    And durable Cart bytes contain only sparse concept checkout with Cart provenance
+    And write-ledger hashes exclude Sitewide, siblings, other facets, and Published state
+    When the adjacent Reset to parent control is activated
+    Then Cart concept bytes are absent and the installed row renders current parent ecommerce
+    When actual focused Definition changes the inherited Concept
+    Then repository bytes remain unchanged until Review changes
+    And Cancel leaves concept absent while Review changes emits the same sparse concept command
+
+  # Data layer canonical Shared Profile schema authoring runtime 062
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 062
+    Given production Table rows use ecommerce, page, Acquisition, and absent concepts
+    When actual controls select Sort by Concept
+    Then parsed row groups are Acquisition, ecommerce, page, and Ungrouped
+    And property IDs retain tree and path order within each group
+    And installed sort options include Tree order and Source but exclude Validation
+    Given document focus is on <origin>
+    When actual keyboard input commits with <key>
+    Then activeElement resolves to <destination>
+    And the computed row-major field order includes Concept, Type, Presence, Description, Allowed values, and Example
+    And it excludes action and read-only cells
+    And subscription and command ledgers record exactly one command for a changed value
+
+    Examples:
+      | origin               | key       | destination                   |
+      | Concept combobox     | Tab       | same row Type dropdown        |
+      | Type dropdown        | Shift+Tab | same row Concept combobox     |
+      | previous row Example | Tab       | next row Concept combobox     |
+      | Concept combobox     | Shift+Tab | previous row Example combobox |
+
+  # Data layer canonical Shared Profile schema authoring runtime 063
+  Scenario: Data layer canonical Shared Profile schema authoring runtime 063
+    Given production /products has concept ecommerce and /products/id omits concept
+    When production compilation and validation run
+    Then the child grouping projection is Ungrouped
+    And identity, validation, presence, and effective-value hashes are unchanged by concept
+    When actual JSON Schema export, import, reload, and project portability complete
+    Then exported /products has x-concept ecommerce
+    And repository inspection restores the same concept, absence, stable property IDs, and sparse contributor ownership

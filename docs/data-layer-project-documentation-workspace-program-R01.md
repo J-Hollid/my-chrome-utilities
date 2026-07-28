@@ -40,6 +40,30 @@ The top-level Documentation tab contains:
 Configuration is progressive. Unselected sections and advanced theme groups are
 not eagerly mounted into one long form.
 
+## Concept grouping configuration
+
+Each Documentation Set owns one ordered concept checklist derived from effective
+canonical properties across the project. Matching trims whitespace and deduplicates
+case-insensitively while retaining the configured display spelling. The virtual
+`Ungrouped` entry represents properties with no stored concept. Every entry has an
+independent inclusion choice, and a separate `Include concept subheadings` choice
+controls presentation only. Exclusion always removes that concept's property rows,
+even when subheadings are hidden.
+
+Concept configuration applies only to the literal `Sitewide` Profile sheet and the
+one Data capture matrix. It does not apply to Flow value maps or to another Site
+Profile such as `Opened Article`. New concepts append after configured concepts and
+before Ungrouped. Operators may reorder and include or exclude them. Configuration
+survives reload, Undo, and project portability. A configured concept with no current
+rows retains its choice but emits no empty output heading.
+
+Within an included concept, rows retain stable path order. When subheadings are
+hidden, rows still follow configured concept-group order in one ordinary table.
+When enabled, each non-empty concept begins with a full-width concept heading,
+followed by the table's standard headings and that concept's rows. This order and
+filtering are identical in preview, Excel, semantic rich clipboard HTML, and the
+plain-text fallback.
+
 ## Output contract
 
 The first release supports:
@@ -54,6 +78,11 @@ one Data capture matrix sheet, and one sheet per Site Profile. The Profile defau
 columns are Property, Description, Required, Allowed values, Example, and Comments.
 Diagnostics and provenance remain tool-only preflight information and never appear
 as sheets, columns, identities, hashes, or repair details in shared output.
+
+For literal Sitewide and the matrix, enabled concept subheadings are merged styled
+rows spanning the complete Excel table width. Rich document copy emits semantic
+concept headings suitable for Jira or Confluence; this is the existing rich-copy
+path, not a new Jira API or export type.
 
 Incomplete output requires confirmation and contains only the concise
 `Draft — incomplete` label.
@@ -80,4 +109,7 @@ tab, persist and port a named set and theme, configure two Flow sheets, configur
 one independent matrix across project contexts, configure two Profile sheets,
 parse current and combined workbooks, inspect rich clipboard output, compare theme
 fingerprints, confirm incomplete export, and prove project and publication bytes
-remain unchanged.
+remain unchanged. It must additionally prove the project-wide concept checklist,
+independent inclusion and heading controls, custom order, new-concept append
+behavior, stale refresh, identical preview/Excel/rich-copy row sets, and strict
+isolation to literal Sitewide and the Data capture matrix.

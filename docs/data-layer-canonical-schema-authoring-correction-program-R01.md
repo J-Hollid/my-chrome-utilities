@@ -328,28 +328,53 @@ impact review, and page-scoped Undo/Redo must round-trip both directions without
 surface-specific stored schema.
 
 The later Table quick-edit contract replaces the separate Property and Path
-columns with a far-left `Property editor` action column followed by one wider
-`Path` column. Path renders the complete generated friendly path and receives the
-combined width previously allocated to Property and Path. Type and ordinary
-Presence are labelled inline dropdowns; Description and Allowed values remain
-inline text fields; Example is an editable combobox whose suggestions are the
-typed allowed values in configured order. Suggestions do not constrain the
+columns with a far-left property-action column followed by one wider `Path`
+column. Its visible heading is empty, its accessible name is `Property editor`,
+and its width is intrinsic to the action button. Path renders the complete
+generated friendly path and receives the combined width previously allocated to
+Property and Path. The remaining headings are `Concept`, `Type`, `Presence`,
+`Description`, `Allowed values`, `Example`, `Source`, and `State`. The visible
+`Validation state` column is removed; invalid-row styling and an accessible issue
+summary remain, while status and repair actions live in Property editor and the
+focused property panel.
+
+Concept is an optional property-level Definition facet used to group related
+properties for documentation. Table and focused Definition expose it as an
+editable combobox immediately before Type. Suggestions are the trimmed,
+case-insensitively deduplicated set of effective concepts on canonical properties
+across the project, including inherited properties. The stored/configured spelling
+is used for display, and a custom value outside the suggestions is valid. Absence
+stores no facet and projects as the virtual group `Ungrouped`; a parent property's
+concept never propagates down the property tree.
+
+Type and ordinary Presence are labelled inline dropdowns; Description and Allowed
+values remain inline text fields; Example is an editable combobox whose suggestions
+are the typed allowed values in configured order. Suggestions do not constrain the
 operator: a custom type-valid example outside that list remains saveable.
 
-Changing inherited Type or ordinary Presence directly in Table creates the same
-sparse contributor-owned facet as any other direct ordinary-field edit, without
-opening property actions, Definition, Review changes, or a preliminary ownership
-confirmation. Type changes that discard incompatible structure still require the
-existing impact review. Ordinary Presence remains the definition fallback;
-matching conditional rules may derive a different effective presence without
-rewriting that ordinary value or being rewritten by a Table presence edit.
+Changing inherited Concept, Type, or ordinary Presence directly in Table creates
+the same sparse contributor-owned facet as any other direct ordinary-field edit,
+without opening property actions, Definition, Review changes, or a preliminary
+ownership confirmation. Focused Definition continues to stage these changes until
+Review changes. Reset to parent removes the sparse local facet. Type changes that
+discard incompatible structure still require the existing impact review. Ordinary
+Presence remains the definition fallback; matching conditional rules may derive a
+different effective presence without rewriting that ordinary value or being
+rewritten by a Table presence edit.
 
-The row-major keyboard order is Type, Presence, Description, Allowed values, and
-Example, followed by Type in the next editable row. Tab commits and advances;
-Shift+Tab commits and reverses through the same sequence. The Property editor
-action, read-only cells, and context-menu triggers are not part of editable-field
-traversal. Repository rerendering restores the intended destination without a
-duplicate command.
+The row-major keyboard order is Concept, Type, Presence, Description, Allowed
+values, and Example, followed by Concept in the next editable row. Tab commits and
+advances; Shift+Tab commits and reverses through the same sequence. The Property
+editor action, read-only cells, and context-menu triggers are not part of
+editable-field traversal. Repository rerendering restores the intended destination
+without a duplicate command.
+
+`Sort by Concept` orders concept groups case-insensitively, retains tree/path order
+within each group, and places Ungrouped last. Tree order and Source remain available;
+the removed validation column has no Validation sort. Concept is annotation-only:
+it changes no property identity or validation semantics. JSON Schema round-trip
+uses extension keyword `x-concept`, and reload, inheritance, and project portability
+preserve sparse ownership and absence.
 
 Every canonical schema editor also exposes top-level `Only defined fields`.
 Enabling it stores one schema-scoped closed-field policy, equivalent at the JSON
@@ -578,10 +603,14 @@ feature.
 | C54 | Inherited editing is ambiguous about whether a preliminary ownership action is required | Authoring 043–045; Layering 021–024 | Ordinary inherited Definition fields start enabled and a changed value itself creates one sparse local facet; inherited rule identities and structural identity changes keep explicit ownership and replacement gates | Focused Definition editor, Table quick-edit adapter, facet delta builder, rule ownership resolver, structure legality guard, repository, provenance projector, Reset, Undo, and Redo | Ten descendant contributor-surface flows; initial enabled state; absent preliminary action; no-op state; focused staging versus Table commit; rule and structure action inventories; sparse bytes and provenance; current-parent reset; Undo and Redo; parent, sibling, unrelated-facet, and Published hashes | B, C, E | Editing an inherited ordinary field is convenient and safe, while replacing a rule or changing inherited structural identity remains deliberate and cannot mutate its parent |
 | C55 | Arrays of objects cannot be authored as item fields and compile as ordinary object children | Authoring 046–051 | One recursive Items editor distinguishes the array property, its implicit item schema, and real item properties; human, canonical, JSON Schema, and observed paths remain explicit and lossless | Canonical item-schema model, Definition and Structure projections, recursive item editor, path projector, compiler, validator, importer/exporter, inheritance projector, impact review, and Undo | Twelve contributor-surface flows; array and item controls; inline item-property creation; Tree and Table hierarchy; friendly, wildcard, and indexed paths; two-level nested arrays; four item-type states; exact JSON Schema; valid and invalid payloads; destructive-change inventory; identity-restoring Undo; sparse descendant additions and facet overrides; reload round-trip | A, B, C, D, E | Users build `products[].name` and deeper patterns without entering wildcard syntax, while compilation validates every object item and never mistakes an array field for an ordinary object child |
 | C56 | Array-item rules cannot distinguish every item from one position without exposing raw or nested index paths | Authoring 052–053 | Rule details add one human-readable Applies to scope before the existing flat When section; every array boundary defaults to Every item and at most one selected boundary may use Item at position, where position 1 means first item | Focused rule editor, stable item and array-boundary targeting, linear array-scope projector, rule compiler, validator, issue projector, and Undo | Every-item pattern rule; first-item value rule; every-product first-detail rule; independent per-context conditions; concrete issue paths; one-based position and boundary controls; absent raw paths and second fixed-position selector; invalid position blocking; missing-position cardinality boundary; stable rename reference; reload and Undo | A, B, C, E | Operators express “all product IDs,” “the first product type,” and “every product's first detail code” directly while the builder remains flat and cannot encode two fixed array positions |
-| C57 | Table wastes width on redundant Property and Path columns and hides Type and Presence behind another editor | Authoring 054–056 | One far-left Property editor action column precedes a full-width friendly Path; Type and ordinary Presence are direct dropdowns that create sparse inherited overrides without ownership confirmation while conditional presence remains independent | Shared Table projection, inline select adapter, sparse facet command bus, rule compiler, provenance projector, Reset, and Undo | Twelve contributor-surface layouts; exact column order and width; labelled controls; absent intermediate layers; sparse bytes; parent and sibling isolation; ordinary and conditional presence outcomes; reset and Undo | B, C, E | Every schema Table exposes compact direct editing without redundant path text, and an inherited Type or Presence change persists exactly one local facet |
+| C57 | Table wastes width on redundant Property and Path columns and hides Type and Presence behind another editor | Authoring 054–056 | One intrinsic-width property action column precedes a full-width friendly Path; Type and ordinary Presence are direct dropdowns that create sparse inherited overrides without ownership confirmation while conditional presence remains independent | Shared Table projection, inline select adapter, sparse facet command bus, rule compiler, provenance projector, Reset, and Undo | Twelve contributor-surface layouts; exact column order and width; labelled controls; absent intermediate layers; sparse bytes; parent and sibling isolation; ordinary and conditional presence outcomes; reset and Undo | B, C, E | Every schema Table exposes compact direct editing without redundant path text, and an inherited Type or Presence change persists exactly one local facet |
 | C58 | Example choice is either inert or restricted to predefined values | Authoring 057 | Example is an editable typed combobox that suggests allowed values in order and also accepts a custom type-valid value | Shared Table example combobox, typed value adapter, canonical property repository, and validation | String, Number, and Boolean suggestions; custom input; stored typed value; unchanged allowed-value bytes | B, C, E | Suggestions accelerate common entry without turning Allowed values into an exhaustive input restriction |
-| C59 | Keyboard quick editing excludes dropdowns and cannot traverse the complete editable row | Authoring 058 | Tab and Shift+Tab commit once and traverse Type, Presence, Description, Allowed values, and Example in row-major order while skipping non-field controls | Table keyboard adapter, select and combobox adapters, command deduplication, subscription rerender, and focus restoration | Forward and reverse activeElement sequence, one command per changed value, skipped Property editor and read-only cells, and no rerender duplication | B, E | An operator can work through every editable Table field in either direction without leaving the keyboard flow |
+| C59 | Keyboard quick editing excludes dropdowns and cannot traverse the complete editable row | Authoring 058 | Tab and Shift+Tab commit once and traverse Concept, Type, Presence, Description, Allowed values, and Example in row-major order while skipping non-field controls | Table keyboard adapter, select and combobox adapters, command deduplication, subscription rerender, and focus restoration | Forward and reverse activeElement sequence, one command per changed value, skipped Property editor and read-only cells, and no rerender duplication | B, E | An operator can work through every editable Table field in either direction without leaving the keyboard flow |
 | C60 | Canonical editors omit the schema-level closed-field policy available in the legacy editor | Authoring 059 | Top-level Only defined fields stores an inheritable schema-scoped closed-field policy and rejects otherwise undeclared payload properties | Canonical schema repository, compiler, validator, JSON Schema adapter, inheritance projector, reload, and project portability | Toggle commands; undeclared and declared payload results; export and reload; property-byte isolation; disabled-policy result | A, B, C, D, E | Every schema editor can opt into defined fields only and the same policy governs installed validation and portable output |
+| C61 | Canonical properties cannot be grouped by a reusable business concept | Authoring 060–061 | Table and focused Definition expose an optional custom-entry Concept combobox with project-wide effective suggestions, sparse inherited overrides, reset, and virtual Ungrouped absence | Canonical Definition model, project concept index, Table and focused editors, sparse command bus, provenance, Reset, and Undo | Deduplicated suggestions, custom and blank values, direct versus staged writes, sparse child bytes, and parent/sibling isolation | A, B, C, E | Every canonical property can carry one optional concept without copying or mutating its parent |
+| C62 | The wider Table spends space on headings and validation state instead of authoring fields | Authoring 054 | The property-action header becomes visually empty and intrinsic-width, State replaces the longer ownership heading, Concept precedes Type, and validation repair moves behind Property editor while invalid state stays perceivable | Shared Table projection, responsive columns, accessibility projection, issue summary, and focused repair routing | Twelve contributor-surface layouts, header order and measurements, absent validation column, invalid styling, issue accessibility, and repair reachability | B, E | Every Table provides more path and Concept space without hiding a real validation problem or its repair |
+| C63 | Concept grouping is not operable in long tables or complete keyboard editing | Authoring 058 and 062 | Sort by Concept groups alphabetically with path order inside and Ungrouped last; Tab and Shift+Tab include Concept in the complete row-major sequence | Table sort projection, concept normalizer, keyboard adapter, command deduplication, and focus restoration | Ordered groups and property IDs, sort-option inventory, forward/reverse activeElement sequence, and one-command ledger | B, E | Operators can group and edit concepts throughout the Table without leaving keyboard flow |
+| C64 | Concept metadata can be lost or accidentally change schema semantics | Authoring 063 | Concept is an annotation-only property facet preserved as `x-concept` through JSON Schema and project round-trips, with no property-tree propagation | Canonical model, compiler, validator, JSON Schema adapter, inheritance projector, repository, and portability | Parent/child grouping, identity and validation hashes, exact extension keyword, reload, and sparse ownership | A, C, D, E | Concept survives every supported round-trip while validation and child properties remain semantically unchanged |
 
 ## Terminal acceptance
 
@@ -611,6 +640,12 @@ show:
 - one wide Path column in place of redundant Property and Path columns, direct Type
   and ordinary Presence dropdowns, an allowed-value-suggesting editable Example
   combobox, and Tab/Shift+Tab traversal across every editable field;
+- one optional Concept Definition facet in every canonical property editor, with
+  project-wide custom-entry suggestions, sparse inherited overrides, Ungrouped
+  absence, Concept sorting, `x-concept` round-trip, and keyboard traversal;
+- a compact visually blank Property editor heading, concise State heading, and no
+  visible Validation state column, while accessible invalid state and focused
+  repair actions remain available;
 - top-level Only defined fields in every canonical schema editor, preserved through
   inheritance, compilation, validation, JSON Schema export, reload, and portability;
 - one layered property menu whose single Definition form combines type, presence,

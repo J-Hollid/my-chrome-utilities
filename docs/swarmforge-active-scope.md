@@ -178,6 +178,35 @@ editor exposes top-level `Only defined fields`, whose inheritable closed-field
 policy is preserved by compilation, validation, JSON Schema export, reload, and
 project portability.
 
+On approval, the Concept specification is later authority for Authoring scenarios
+054, 058, and 060–063 and project Documentation scenarios 016–020. `concept` is one optional
+property-level Definition facet available as a custom-entry combobox in every
+canonical Table and focused property editor. Its suggestions are the trimmed,
+case-insensitively deduplicated project-wide set of effective canonical concepts.
+Blank means no stored facet and downstream `Ungrouped`; property-tree descendants
+do not inherit a parent's concept. Direct inherited Table edits create sparse local
+overrides without confirmation, focused Definition stages them for review, and
+JSON Schema uses `x-concept`. Concept remains annotation-only.
+
+The same cycle makes the Table's far-left action heading visually blank but
+accessibly named Property editor, sizes it to its action, inserts Concept before
+Type, shortens Local or effective state to State, and removes the visible Validation
+state column while retaining accessible invalid styling, issue summaries, and
+focused repair actions. Concept sort is alphabetical with tree/path order inside
+each group and Ungrouped last. Tab and Shift+Tab traverse Concept, Type, Presence,
+Description, Allowed values, and Example in row-major order.
+
+Each Documentation Set gains one ordered include/exclude checklist of concepts and
+an independent Include concept subheadings option. Filtering remains active when
+headings are hidden. This configuration affects only the literal Sitewide Profile
+sheet and Data capture matrix, never Flows or another Profile such as Opened Article.
+Preview, Excel, rich Jira/Confluence-compatible document copy, and its plain-text
+fallback share the same concept order and row set. New concepts append before
+Ungrouped; saved configuration survives reload, Undo, and portability. The exact
+checkpoints are `layered_schema` and `flow_export`, followed by `npm run package`.
+This cycle does not authorize a Jira API, a new export type, or concept propagation
+through the property hierarchy.
+
 The following task lineages remain open and must now be recovered in this order:
 
 1. `project-documentation-workspace`; then
