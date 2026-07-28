@@ -308,8 +308,8 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
     And DOM inspection finds no separate Presence, Expected values, Allowed values, Conditions, Documentation, or Example first-layer section
     When actual controls activate Definition
     Then one adjacent child overlay retains the first layer and renders type, a Required or Optional or Forbidden selector, Allowed values, display text, description, comments, and example method
-    And Allowed values persists zero, one, or many comma-separated typed values
-    And installed Table cells render allowed values as comma-separated human text without square brackets
+    And Allowed values persists zero, one, or many type-directed literals separated by commas outside quoted strings, arrays, and objects
+    And installed Table cells render unambiguous comma-separated human text without enclosing square brackets
     And DOM and geometry inspection find no further Definition submenu, below-table controls, or detached scroll destination
     When actual Escape and Cancel dismiss the active child layer
     Then only that layer closes and focus returns to its parent choice
@@ -1065,3 +1065,76 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
     When actual JSON Schema export, import, reload, and project portability complete
     Then exported /products has x-concept ecommerce
     And repository inspection restores the same concept, absence, stable property IDs, and sparse contributor ownership
+
+  # Data layer canonical Shared Profile schema authoring runtime 064
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 064
+    Given installed String property /shippingLabel has no allowed-value or example bytes
+    When actual Allowed values input receives <allowed_input>
+    Then canonical bytes contain <stored_values> in order
+    And the installed field renders <rendered_values> without losing a comma, quotation mark, backslash, or empty string
+    When actual Custom value input receives <example_input>
+    Then canonical example bytes contain the single String <stored_example>
+    And the allowed-value hash remains unchanged
+
+    Examples:
+      | allowed_input                    | stored_values                         | rendered_values                   | example_input       | stored_example     |
+      | home, in-store                   | strings home and in-store             | home, in-store                    | partner             | partner            |
+      | "home, in-store"                 | string home, in-store                 | "home, in-store"                  | "home, in-store"    | home, in-store     |
+      | "home, in-store", pickup         | strings home, in-store and pickup     | "home, in-store", pickup          | "say \"hello\""     | say "hello"        |
+      | ""                               | one empty string                      | ""                                | "C:\\Temp"          | C:\Temp            |
+
+  # Data layer canonical Shared Profile schema authoring runtime 065
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 065
+    Given installed property /values has Type Array and Item type <item_type>
+    When actual Custom example input receives <example_input>
+    Then installed array example handling yields <example_result>
+    And parser evidence treats commas inside the complete array as array structure rather than separate property allowed values
+    When actual controls configure Allowed values on the Items definition
+    Then validator evidence applies those values independently to each observed item
+    And canonical and JSON Schema bytes retain one homogeneous recursive item schema
+
+    Examples:
+      | item_type | example_input                                      | example_result                                                               |
+      | Number    | [123, 1234]                                       | canonical example bytes contain one array of numbers 123 and 1234            |
+      | String    | ["home, in-store", "pickup"]                      | canonical example bytes contain one array of two strings                     |
+      | Object    | [{"method":"home"}, {"method":"in-store"}]        | canonical example bytes contain one array of two objects                     |
+      | Number    | [123, "1234"]                                     | item 2 reports Expected Number and command and persistence counts stay zero  |
+
+  # Data layer canonical Shared Profile schema authoring runtime 066
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 066
+    Given an installed property is open in focused <section>
+    When actual controls stage <change>
+    Then command, persistence, and Undo counts remain unchanged
+    When the installed Review changes button is activated
+    Then one adjacent visible layer has accessible name Review changes
+    And its change inventory contains <change> and the prospective effective result
+    And its enabled Confirm changes button is inside the viewport and passes keyboard and center-point pointer checks
+    When the installed Confirm changes button is activated
+    Then command, persistence, and Undo counts each increase exactly once
+    And no focused overlay remains mounted
+
+    Examples:
+      | section    | change                                      |
+      | Definition | Description to Presented shipping options    |
+      | Structure  | Add child property shipping_method           |
+
+  # Data layer canonical Shared Profile schema authoring runtime 067
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 067
+    Given installed Add rule is open and its Add rule button is disabled
+    When actual inputs complete a named <rule_type> rule with one valid flat condition and <outcome>
+    Then the same Add rule button becomes enabled without an editor remount
+    When actual input makes <required_part> incomplete
+    Then the same Add rule button becomes disabled with <diagnostic>
+    When actual input restores <required_part>
+    Then the same Add rule button becomes enabled and the other control values and condition IDs are unchanged
+    When the installed Add rule button is activated
+    Then the rule appears in the staged stable-rule inventory
+    And durable repository and Undo counts remain unchanged until property Review changes is confirmed
+
+    Examples:
+      | rule_type      | outcome                       | required_part       | diagnostic                              |
+      | Presence       | Then Required                 | rule name           | Enter a rule name                       |
+      | Allowed values | Then values home and pickup   | allowed values      | Enter at least one allowed value        |
+      | Pattern        | Then pattern ^home$           | regular expression  | Enter a regular expression              |
+      | Range          | Then minimum 1                | minimum             | Enter a minimum or maximum              |
+      | Cardinality    | Then minimum items 1          | minimum items       | Enter minimum or maximum items          |

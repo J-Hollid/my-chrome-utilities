@@ -307,8 +307,8 @@ Feature: Data layer canonical Shared Profile schema authoring
     And Presence, Expected values, Allowed values, Conditions, Documentation, and Example are not separate first-layer sections
     When Definition is activated from the first-layer menu
     Then one adjacent child overlay keeps the first layer open and contains type, a Required or Optional or Forbidden selector, Allowed values, display text, description, comments, and example method
-    And Allowed values accepts zero, one, or many comma-separated typed values
-    And allowed values render as comma-separated human text without square brackets
+    And Allowed values accepts zero, one, or many type-directed literals separated by commas outside quoted strings, arrays, and objects
+    And allowed values render as unambiguous comma-separated human text without enclosing square brackets
     And no Definition control requires another submenu, inserts controls below the property table, or requires scrolling to a detached panel
     When Escape or Cancel closes the Definition child layer
     Then only that layer closes and focus returns to its parent choice
@@ -1068,3 +1068,76 @@ Feature: Data layer canonical Shared Profile schema authoring
     When JSON Schema is exported, imported, reloaded, and moved through project portability
     Then /products contains extension keyword x-concept with value ecommerce
     And the same concept, absence, stable property identities, and sparse contributor ownership return
+
+  # Data layer canonical Shared Profile schema authoring 064
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 064
+    Given a String property has no allowed values or example
+    When the operator enters <allowed_input> in Allowed values
+    Then the property stores <stored_values> in order
+    And the field renders <rendered_values> without losing a comma, quotation mark, backslash, or empty string
+    When Custom value uses <example_input>
+    Then the example stores the single String <stored_example>
+    And Allowed values remain unchanged
+
+    Examples:
+      | allowed_input                    | stored_values                         | rendered_values                   | example_input       | stored_example     |
+      | home, in-store                   | strings home and in-store             | home, in-store                    | partner             | partner            |
+      | "home, in-store"                 | string home, in-store                 | "home, in-store"                  | "home, in-store"    | home, in-store     |
+      | "home, in-store", pickup         | strings home, in-store and pickup     | "home, in-store", pickup          | "say \"hello\""     | say "hello"        |
+      | ""                               | one empty string                      | ""                                | "C:\\Temp"          | C:\Temp            |
+
+  # Data layer canonical Shared Profile schema authoring 065
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 065
+    Given property values has Type Array and Item type <item_type>
+    When the operator enters Custom example <example_input>
+    Then array example handling yields <example_result>
+    And commas inside the complete array are parsed as array structure rather than separate property allowed values
+    When the operator configures Allowed values on the Items definition
+    Then those values constrain each item rather than enumerating complete array combinations
+    And the array property retains one homogeneous recursive item schema
+
+    Examples:
+      | item_type | example_input                                      | example_result                                                       |
+      | Number    | [123, 1234]                                       | one typed array containing numbers 123 and 1234 is staged             |
+      | String    | ["home, in-store", "pickup"]                      | one typed array containing two strings is staged                      |
+      | Object    | [{"method":"home"}, {"method":"in-store"}]        | one typed array containing two objects is staged                      |
+      | Number    | [123, "1234"]                                     | staging is blocked at item 2 with Expected Number and no change       |
+
+  # Data layer canonical Shared Profile schema authoring 066
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 066
+    Given a property is open in focused <section>
+    When the operator stages <change>
+    Then no property command, persistence write, or Undo action has occurred
+    When Review changes is activated
+    Then an adjacent Review changes layer becomes visible
+    And it lists <change> and its prospective effective result
+    And an enabled Confirm changes action is visible, keyboard reachable, and pointer operable
+    When Confirm changes is activated
+    Then the complete staged session is saved as one property command and one Undo action
+    And the focused overlay closes
+
+    Examples:
+      | section    | change                                      |
+      | Definition | Description to Presented shipping options    |
+      | Structure  | Add child property shipping_method           |
+
+  # Data layer canonical Shared Profile schema authoring 067
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 067
+    Given Add rule is open with an initially disabled Add rule action
+    When the operator completes a named <rule_type> rule with one valid flat condition and <outcome>
+    Then Add rule becomes enabled immediately without closing or reopening the editor
+    When the operator makes <required_part> incomplete
+    Then Add rule becomes disabled immediately with <diagnostic>
+    When the operator restores <required_part>
+    Then Add rule becomes enabled again and all other entered rule content remains unchanged
+    When Add rule is activated
+    Then the valid rule is staged in the Rules list
+    And repository and Undo state remain unchanged until property Review changes is confirmed
+
+    Examples:
+      | rule_type   | outcome                   | required_part       | diagnostic                              |
+      | Presence    | Then Required             | rule name           | Enter a rule name                       |
+      | Allowed values | Then values home and pickup | allowed values  | Enter at least one allowed value        |
+      | Pattern     | Then pattern ^home$       | regular expression  | Enter a regular expression              |
+      | Range       | Then minimum 1            | minimum              | Enter a minimum or maximum              |
+      | Cardinality | Then minimum items 1      | minimum items        | Enter minimum or maximum items          |

@@ -207,6 +207,24 @@ checkpoints are `layered_schema` and `flow_export`, followed by `npm run package
 This cycle does not authorize a Jira API, a new export type, or concept propagation
 through the property hierarchy.
 
+On approval, the typed-literal and focused-editor correction is later authority
+for Authoring scenarios 023 and 064–067. Allowed values and custom examples share
+a type-directed literal language: commas delimit allowed values only outside
+quoted strings, arrays, and objects; JSON quoting and escapes represent commas,
+quotation marks, backslashes, whitespace escapes, and empty Strings. Array custom
+examples are complete JSON arrays validated against one recursive homogeneous
+Items definition. Scalar Items Allowed values constrain each item. Mixed or union
+item types and tuple schemas remain unavailable.
+
+The same correction requires focused Definition and Structure Review changes to
+mount one visible adjacent review layer with an enabled and operable Confirm
+changes action. Add rule must revalidate after every validity-changing input,
+become enabled immediately when the named rule, flat condition, and type-specific
+outcome are complete, and become disabled with the exact diagnostic when any
+required part becomes incomplete. Staging either operation performs no durable
+write or Undo change until property Review changes is confirmed. The exact
+checkpoint remains `layered_schema` followed by `npm run package`.
+
 The following task lineages remain open and must now be recovered in this order:
 
 1. `project-documentation-workspace`; then

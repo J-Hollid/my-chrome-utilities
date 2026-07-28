@@ -59,6 +59,15 @@ so rendered rows, adopted schemas, and compiler input can diverge. The correctio
 is a model replacement, not an additional synchronization adapter between those
 representations.
 
+Two later focused-editor defects expose remaining projection drift. The compact
+canonical editor mounts Review changes as another overlay layer, while the composed
+editor replaces its existing action area in place; Definition and Structure
+therefore do not share one observable review transition. Add rule validity is also
+computed independently by the canonical and composed rule panels. Existing
+installed evidence completes only one Presence rule using an Exists condition and
+does not prove the disabled-to-enabled transition for the other rule outcomes or
+its reversal after a required value is cleared.
+
 ## Canonical schema document
 
 Each project-owned schema contribution is a revisioned tree. A property node has a
@@ -90,6 +99,21 @@ Table keeps one row per real property, friendly paths use `products[].name`,
 canonical paths use `/products/*/name`, and observed issues use concrete indexes
 such as `/products/1/name`. Compilation and JSON Schema round-trip the same
 structure through `items.properties`.
+
+Allowed values and custom examples share one type-directed literal language.
+Commas delimit allowed values only outside quoted strings, arrays, and objects.
+JSON quotation and escape syntax represents strings containing commas, quotation
+marks, backslashes, whitespace escapes, or the empty string. Bare String tokens
+remain convenient for simple values. Number and Boolean properties require their
+unquoted typed forms, while quotation explicitly denotes a String and is invalid
+for those non-String property types.
+
+An Array custom example is one complete JSON array literal validated against its
+recursive Items definition. Allowed values configured on a scalar Items definition
+constrain each item; they do not enumerate complete array combinations. The array
+retains one homogeneous item schema, so a Number array accepts `[123, 1234]` and
+rejects `[123, "1234"]` at the second item. Mixed or union item types and tuple
+schemas are not introduced by this correction.
 
 Rules attached to a property beneath an array expose an `Applies to` scope before
 `When`: `Every item`, selected by default, or `Item at position`. Positions are
@@ -611,6 +635,9 @@ feature.
 | C62 | The wider Table spends space on headings and validation state instead of authoring fields | Authoring 054 | The property-action header becomes visually empty and intrinsic-width, State replaces the longer ownership heading, Concept precedes Type, and validation repair moves behind Property editor while invalid state stays perceivable | Shared Table projection, responsive columns, accessibility projection, issue summary, and focused repair routing | Twelve contributor-surface layouts, header order and measurements, absent validation column, invalid styling, issue accessibility, and repair reachability | B, E | Every Table provides more path and Concept space without hiding a real validation problem or its repair |
 | C63 | Concept grouping is not operable in long tables or complete keyboard editing | Authoring 058 and 062 | Sort by Concept groups alphabetically with path order inside and Ungrouped last; Tab and Shift+Tab include Concept in the complete row-major sequence | Table sort projection, concept normalizer, keyboard adapter, command deduplication, and focus restoration | Ordered groups and property IDs, sort-option inventory, forward/reverse activeElement sequence, and one-command ledger | B, E | Operators can group and edit concepts throughout the Table without leaving keyboard flow |
 | C64 | Concept metadata can be lost or accidentally change schema semantics | Authoring 063 | Concept is an annotation-only property facet preserved as `x-concept` through JSON Schema and project round-trips, with no property-tree propagation | Canonical model, compiler, validator, JSON Schema adapter, inheritance projector, repository, and portability | Parent/child grouping, identity and validation hashes, exact extension keyword, reload, and sparse ownership | A, C, D, E | Concept survives every supported round-trip while validation and child properties remain semantically unchanged |
+| C65 | Comma-separated values cannot represent a String containing a comma or other escaped characters unambiguously | Authoring 064–065 | One type-directed literal language uses quoted JSON strings for delimiters and escapes, complete JSON arrays for Array examples, and item-level Allowed values for homogeneous arrays | Canonical value parser and formatter, Definition and Table editors, recursive Items model, example adapter, compiler, validator, JSON Schema, and repository | Bare and quoted strings, embedded commas and quotation marks, backslashes, empty strings, scalar types, valid String, Number, and Object arrays, mixed-array rejection at the observed item, round-trip text, and write isolation | A, B, C, D, E | Operators can enter every supported scalar value and complete homogeneous array example without delimiter ambiguity or accidental type coercion |
+| C66 | Focused Definition and Structure Review changes can fail to reveal the review and confirmation controls | Authoring 066 | Every valid staged Definition or Structure change opens one adjacent visible review layer with an enabled, reachable Confirm changes action before any write | Shared focused-property overlay transition, staged delta inventory, viewport placement, focus adapter, property command bus, repository, and Undo | Definition and Structure staging, pre-review hashes, visible layer and inventory, enabled action, keyboard and center-point operability, one command, one persistence write, one Undo action, and overlay closure | B, E | Review changes always exposes the exact pending change and a usable confirmation boundary rather than leaving the operator in the editor |
+| C67 | Add rule can remain disabled after all required rule fields and a valid flat condition are complete | Authoring 067 | Add rule revalidates after every rule-detail, condition, outcome, severity, and reusable-choice change, enabling exactly when the staged rule is complete and disabling again when it becomes incomplete | Shared Add rule editor, flat condition adapter, type-specific rule policy, control event adapters, staged rule inventory, and property review session | Presence, Allowed values, Pattern, Range, and Cardinality transitions; exact diagnostics; same mounted button; retained control values and condition IDs; staged inventory; and unchanged durable state before property review | B, C, E | A complete valid rule can always be staged immediately, while removing any required input blocks it with the exact repair message |
 
 ## Terminal acceptance
 
