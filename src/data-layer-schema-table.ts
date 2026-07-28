@@ -147,7 +147,7 @@ export function schemaTableExpectedOrAllowed(value:{expectedValue?:unknown;allow
 }
 
 const parsedScalar=(text:string,previous:unknown):unknown=>{
-  if(typeof previous==="string"){try{const parsed=JSON.parse(text) as unknown;return typeof parsed==="string"?parsed:text;}catch{return text;}}
+  if(typeof previous==="string")return typedCanonicalValue("string",text);
   try{return JSON.parse(text) as unknown;}catch{return text;}
 };
 
@@ -176,7 +176,8 @@ export function schemaTableStageAllowedValues(
 ):unknown[] {
   const entries=ordinaryEntries(text);
   return entries.map((entry,index)=>{
-    if(type==="string"||type===undefined)return parsedScalar(entry,typeof previous[index]==="string"?previous[index]:"");
+    if(type==="string")return typedCanonicalValue("string",entry);
+    if(type===undefined)return parsedScalar(entry,typeof previous[index]==="string"?previous[index]:"");
     return typedCanonicalValue(type,entry);
   });
 }

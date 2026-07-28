@@ -10,6 +10,19 @@ const stableValueId = (owner, value) => { let hash = 2166136261; for (const char
     hash ^= char.charCodeAt(0);
     hash = Math.imul(hash, 16777619);
 } return `allowed-value:${owner}:${(hash >>> 0).toString(16)}`; };
+const clearExampleInput = (draft) => { delete draft.exampleInput; delete draft.exampleIssue; };
+const stageCustomExample = (draft, type, text) => {
+    draft.exampleInput = text;
+    try {
+        draft.exampleValue = typedComposedValue(type, text, draft.itemSchema);
+        delete draft.exampleIssue;
+        return undefined;
+    }
+    catch (error) {
+        draft.exampleIssue = error instanceof Error ? error.message : String(error);
+        return draft.exampleIssue;
+    }
+};
 export const resetComposedDefinitionFacet = (draft, inherited, facet) => facet === "description" ? { ...draft, documentation: inherited?.documentation ?? "" } : draft;
 export function renderComposedFocusedSection(host, context) {
     const { dom } = context, draft = context.getDraft();
@@ -65,29 +78,49 @@ export function renderComposedFocusedSection(host, context) {
         itemAllowedValues.addEventListener("input", () => { if (draft.itemSchema?.type)
             draft.itemSchema.allowedValues = schemaTableStageAllowedValues(draft.itemSchema.allowedValues ?? [], itemAllowedValues.value, draft.itemSchema.type); });
         presence.addEventListener("change", () => { draft.presence = presence.value; });
-        const renderExample = () => { exampleHost.replaceChildren(); const projection = schemaTableExampleControl(draft.exampleMethod, draft.allowedValues); if (projection.kind === "none")
-            return; if (projection.kind === "select") {
-            const select = dom.createElement("select");
-            select.name = "exampleValue";
-            for (const value of projection.values)
-                select.append(new Option(valueText(value), valueText(value)));
-            select.value = draft.exampleValue === undefined ? "" : valueText(draft.exampleValue);
-            select.addEventListener("change", () => { draft.exampleValue = typedComposedValue(draft.type ?? context.row.effective.type, select.value, draft.itemSchema); });
-            exampleHost.append(select);
-            return;
-        } const input = dom.createElement("input"); input.name = "exampleValue"; input.value = draft.exampleValue === undefined ? "" : valueText(draft.exampleValue); if (draft.type === "number" || draft.type === "integer")
-            input.type = "number"; input.addEventListener("input", () => { try {
-            draft.exampleValue = typedComposedValue(draft.type ?? context.row.effective.type, input.value, draft.itemSchema);
+        const renderExample = () => {
+            exampleHost.replaceChildren();
+            const projection = schemaTableExampleControl(draft.exampleMethod, draft.allowedValues);
+            if (projection.kind === "none")
+                return;
+            if (projection.kind === "select") {
+                const select = dom.createElement("select");
+                select.name = "exampleValue";
+                for (const value of projection.values)
+                    select.append(new Option(valueText(value), valueText(value)));
+                select.value = draft.exampleValue === undefined ? "" : valueText(draft.exampleValue);
+                select.addEventListener("change", () => { draft.exampleValue = typedComposedValue(draft.type ?? context.row.effective.type, select.value, draft.itemSchema); clearExampleInput(draft); });
+                exampleHost.append(select);
+                return;
+            }
+            const input = dom.createElement("input"), issue = dom.createElement("output"), showIssue = (message) => { input.setCustomValidity(message ?? ""); issue.textContent = message ?? ""; };
+            input.name = "exampleValue";
+            input.value = draft.exampleInput ?? (draft.exampleValue === undefined ? "" : valueText(draft.exampleValue));
+            issue.setAttribute("role", "status");
+            issue.setAttribute("aria-label", "Custom example diagnostic");
+            if (draft.type === "number" || draft.type === "integer")
+                input.type = "number";
+            showIssue(draft.exampleIssue);
+            input.addEventListener("input", () => showIssue(stageCustomExample(draft, draft.type ?? context.row.effective.type, input.value)));
+            exampleHost.append(input, issue);
+        };
+        allowed.addEventListener("input", () => { try {
+            draft.allowedValues = schemaTableStageAllowedValues(draft.allowedValues, allowed.value, (draft.type ?? context.row.effective.type));
+            allowed.setCustomValidity("");
+            delete draft.expectedValue;
+            delete draft.allowedValueIds;
+            delete draft.allowedValueProvenance;
+            if (draft.exampleMethod === "allowed-value" && !draft.allowedValues.some((value) => JSON.stringify(value) === JSON.stringify(draft.exampleValue)))
+                draft.exampleValue = draft.allowedValues[0];
+            renderExample();
         }
-        catch {
-            draft.exampleValue = input.value;
-        } }); exampleHost.append(input); };
-        allowed.addEventListener("input", () => { draft.allowedValues = schemaTableStageAllowedValues(draft.allowedValues, allowed.value, (draft.type ?? context.row.effective.type)); delete draft.expectedValue; delete draft.allowedValueIds; delete draft.allowedValueProvenance; if (draft.exampleMethod === "allowed-value" && !draft.allowedValues.some((value) => JSON.stringify(value) === JSON.stringify(draft.exampleValue)))
-            draft.exampleValue = draft.allowedValues[0]; renderExample(); });
+        catch (error) {
+            allowed.setCustomValidity(error instanceof Error ? error.message : String(error));
+        } });
         displayText.addEventListener("input", () => { draft.displayText = displayText.value; });
         description.addEventListener("input", () => { draft.documentation = description.value; });
         comments.addEventListener("input", () => { draft.comments = comments.value; });
-        method.addEventListener("change", () => { draft.exampleMethod = method.value; if (method.value === "blank")
+        method.addEventListener("change", () => { draft.exampleMethod = method.value; clearExampleInput(draft); if (method.value === "blank")
             draft.exampleValue = undefined;
         else if (method.value === "allowed-value")
             draft.exampleValue = draft.allowedValues[0]; renderExample(); });
@@ -155,22 +188,19 @@ export function renderComposedFocusedSection(host, context) {
         host.append(labeled(dom, "Documentation", control));
     }
     if (context.activeSection === "example") {
-        const method = dom.createElement("select"), control = dom.createElement("input");
+        const method = dom.createElement("select"), control = dom.createElement("input"), issue = dom.createElement("output"), showIssue = (message) => { control.setCustomValidity(message ?? ""); issue.textContent = message ?? ""; };
         method.name = "exampleMethod";
         method.append(new Option("Blank", "blank"), new Option("Allowed value", "allowed-value"), new Option("Custom typed value", "custom"));
         method.value = draft.exampleMethod;
         control.name = "exampleValue";
-        control.value = valueText(draft.exampleValue);
-        method.addEventListener("change", () => { draft.exampleMethod = method.value; if (method.value === "blank")
+        control.value = draft.exampleInput ?? valueText(draft.exampleValue);
+        issue.setAttribute("role", "status");
+        issue.setAttribute("aria-label", "Custom example diagnostic");
+        showIssue(draft.exampleIssue);
+        method.addEventListener("change", () => { draft.exampleMethod = method.value; clearExampleInput(draft); if (method.value === "blank")
             draft.exampleValue = undefined; context.render(); });
-        control.addEventListener("input", () => { try {
-            draft.exampleValue = typedComposedValue(draft.type ?? context.row.effective.type, control.value, draft.itemSchema);
-            draft.exampleMethod = "custom";
-        }
-        catch {
-            draft.exampleValue = control.value;
-        } });
-        host.append(labeled(dom, "Example method", method), labeled(dom, "Example value", control));
+        control.addEventListener("input", () => { draft.exampleMethod = "custom"; showIssue(stageCustomExample(draft, draft.type ?? context.row.effective.type, control.value)); });
+        host.append(labeled(dom, "Example method", method), labeled(dom, "Example value", control), issue);
     }
     if (context.activeSection === "structure") {
         host.append(Object.assign(dom.createElement("p"), { textContent: `Stable identity ${context.row.effective.definitionId ?? context.row.path}` }));

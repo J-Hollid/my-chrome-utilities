@@ -6,5 +6,5 @@ export type ComposedCondition=ConditionPredicate|ConditionGroup;
 export interface ComposedPropertyChoice {path:string;definitionId:string;type?:string|undefined;}
 export interface ComposedFacetDraft {
   concept?:string|undefined;type?:string|undefined;itemType?:string|undefined;itemSchema?:LayerConstraint["itemSchema"]|undefined;presence?:LayerConstraint["presence"]|undefined;expectedValue?:unknown;allowedValues:unknown[];allowedValueIds?:string[];allowedValueProvenance?:LayerValueProvenance[];
-  condition:ConditionGroup;rules:Record<string,unknown>[];displayText:string;documentation:string;comments:string;exampleMethod:"allowed-value"|"custom"|"blank";exampleValue?:unknown;
+  condition:ConditionGroup;rules:Record<string,unknown>[];displayText:string;documentation:string;comments:string;exampleMethod:"allowed-value"|"custom"|"blank";exampleValue?:unknown;exampleInput?:string;exampleIssue?:string;
 }

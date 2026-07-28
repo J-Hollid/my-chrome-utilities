@@ -109,7 +109,10 @@ function composedReviewLayer(row, context) {
         list.append(Object.assign(dom.createElement("li"), { textContent: `Unchanged facets · prospective effective result ${context.effectiveText(row)} · consumers recompile` }));
     const confirm = button(dom, "Confirm changes", () => context.save(row));
     confirm.disabled = false;
-    review.append(Object.assign(dom.createElement("p"), { textContent: `Review changes · ${row.path} · one confirmation creates one Undo entry; no durable write occurs before confirmation.` }), list, button(dom, "Cancel review", context.cancelReview), confirm);
+    review.append(Object.assign(dom.createElement("p"), { textContent: `Review changes · ${row.path} · one confirmation creates one Undo entry; no durable write occurs before confirmation.` }), list);
+    if (context.saveIssue)
+        review.append(Object.assign(dom.createElement("p"), { textContent: context.saveIssue, role: "alert" }));
+    review.append(button(dom, "Cancel review", context.cancelReview), confirm);
     return review;
 }
 export function renderComposedRows(rows, context) {

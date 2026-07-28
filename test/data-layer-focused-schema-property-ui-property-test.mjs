@@ -42,6 +42,24 @@ for(const type of ["string","number","integer","boolean","null","object","array"
   assert.deepEqual(schemaTableExampleControl("allowed-value",values),{kind:"select",values});
   assert.deepEqual(schemaTableExampleControl("custom",values),{kind:"input"});
 }
+for(let index=0;index<200;index+=1){
+  const value=[
+    "",
+    `quoted "${word()}"`,
+    `path\\${word()}`,
+    `${word()}, ${word()}`,
+    `line ${index}\nnext\tcolumn`,
+  ][index%5],text=JSON.stringify(value);
+  assert.deepEqual(schemaTableStageAllowedValues([],text,"string"),[value],"escaped quoted String literals round-trip through allowed-value staging");
+  assert.equal(schemaTableAllowedValues({allowedValues:[value]}),text,"escaped String values render in the same JSON literal language");
+}
+for(const malformed of ['"unterminated','"bad\\escape"','"closed" trailing','"line\nbreak"']){
+  assert.throws(
+    ()=>schemaTableStageAllowedValues([],malformed,"string"),
+    /quoted String literal/,
+    `malformed quoted String input ${JSON.stringify(malformed)} is rejected instead of staging raw text`,
+  );
+}
 assert.deepEqual(schemaTableStageExpectedOrAllowed({expectedValue:{first:1,second:2}},'{"first":3,"second":4}'),{expectedValue:{first:3,second:4}});
 assert.deepEqual(schemaTableStageExpectedOrAllowed({expectedValue:"contact"},'contact, delivery, payment'),{allowedValues:["contact","delivery","payment"]});
 assert.deepEqual(schemaTableStageExpectedOrAllowed({allowedValues:["contact","delivery"]},"payment"),{expectedValue:"payment"});

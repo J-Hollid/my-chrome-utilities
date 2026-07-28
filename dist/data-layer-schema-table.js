@@ -160,15 +160,8 @@ export function schemaTableExpectedOrAllowed(value) {
     return schemaTableValueFacet(value).text;
 }
 const parsedScalar = (text, previous) => {
-    if (typeof previous === "string") {
-        try {
-            const parsed = JSON.parse(text);
-            return typeof parsed === "string" ? parsed : text;
-        }
-        catch {
-            return text;
-        }
-    }
+    if (typeof previous === "string")
+        return typedCanonicalValue("string", text);
     try {
         return JSON.parse(text);
     }
@@ -213,7 +206,9 @@ export function schemaTableAllowedValues(value) {
 export function schemaTableStageAllowedValues(previous, text, type) {
     const entries = ordinaryEntries(text);
     return entries.map((entry, index) => {
-        if (type === "string" || type === undefined)
+        if (type === "string")
+            return typedCanonicalValue("string", entry);
+        if (type === undefined)
             return parsedScalar(entry, typeof previous[index] === "string" ? previous[index] : "");
         return typedCanonicalValue(type, entry);
     });

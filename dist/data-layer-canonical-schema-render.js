@@ -29,7 +29,7 @@ export function renderCanonicalSchemaEditor(context) {
         header.append(policyLabel);
     header.append(undo, redo);
     options.host.append(header, renderCanonicalNavigator(context));
-    if (document.view === "table" && context.review)
+    if (document.view === "table" && context.review && !context.focusedPropertyId)
         options.host.append(context.review);
     const node = context.selectedNode(document);
     const preview = dom.createElement("section"), previewHeading = dom.createElement("h3"), previewText = dom.createElement("p"), feedbackOutput = dom.createElement("output");

@@ -80,8 +80,18 @@ export function renderDefinitionSection(host, context, working) {
     presence.addEventListener("change", () => { const next = context.getWorking(); if (next)
         next.presence = { mode: presence.value }; });
     allowed.addEventListener("input", () => { const next = context.getWorking(); if (!next)
-        return; const values = schemaTableStageAllowedValues(next.allowedValues.map(({ value }) => value), allowed.value, next.type); delete next.expectedValue; next.allowedValues = values.map((value, index) => ({ id: next.allowedValues[index]?.id ?? context.id("allowed-value"), value })); if (next.documentation.example.method === "allowed-value" && !values.some((value) => JSON.stringify(value) === JSON.stringify(next.documentation.example.value)))
-        next.documentation = { ...next.documentation, example: { method: "allowed-value", value: values[0] } }; renderExample(); });
+        return; try {
+        const values = schemaTableStageAllowedValues(next.allowedValues.map(({ value }) => value), allowed.value, next.type);
+        allowed.setCustomValidity("");
+        delete next.expectedValue;
+        next.allowedValues = values.map((value, index) => ({ id: next.allowedValues[index]?.id ?? context.id("allowed-value"), value }));
+        if (next.documentation.example.method === "allowed-value" && !values.some((value) => JSON.stringify(value) === JSON.stringify(next.documentation.example.value)))
+            next.documentation = { ...next.documentation, example: { method: "allowed-value", value: values[0] } };
+        renderExample();
+    }
+    catch (error) {
+        allowed.setCustomValidity(error instanceof Error ? error.message : String(error));
+    } });
     description.name = "description";
     description.value = working.documentation.description;
     comments.name = "comments";
@@ -101,8 +111,17 @@ export function renderDefinitionSection(host, context, working) {
             current.documentation = { ...current.documentation, example: { method: "allowed-value", value: typedCanonicalValue(current.type, select.value, current.itemSchema) } }; });
         exampleHost.append(select);
         return;
-    } const control = input(dom, "exampleValue", canonicalFacetText(next.documentation.example.value), next.type === "number" || next.type === "integer" ? "number" : "text"); control.addEventListener("input", () => { const current = context.getWorking(); if (current)
-        current.documentation = { ...current.documentation, example: { method: "custom", value: typedCanonicalValue(current.type, control.value, current.itemSchema) } }; }); exampleHost.append(control); };
+    } const control = input(dom, "exampleValue", canonicalFacetText(next.documentation.example.value), next.type === "number" || next.type === "integer" ? "number" : "text"), issue = dom.createElement("output"); issue.setAttribute("role", "status"); issue.setAttribute("aria-label", "Custom example diagnostic"); control.addEventListener("input", () => { const current = context.getWorking(); if (!current)
+        return; try {
+        current.documentation = { ...current.documentation, example: { method: "custom", value: typedCanonicalValue(current.type, control.value, current.itemSchema) } };
+        control.setCustomValidity("");
+        issue.textContent = "";
+    }
+    catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        control.setCustomValidity(message);
+        issue.textContent = message;
+    } }); exampleHost.append(control, issue); };
     exampleMethod.name = "exampleMethod";
     exampleMethod.append(new Option("Blank", "blank"), new Option("Allowed value", "allowed-value"), new Option("Custom value", "custom"));
     exampleMethod.value = working.documentation.example.method;

@@ -164,9 +164,23 @@ assert.equal(typedComposedValue("null","anything"),null);
 assert.equal(typedComposedValue("string","02"),"02");
 assert.deepEqual(typedComposedValue("array",'["2",3]'),["2",3]);
 assert.deepEqual(typedComposedValue("object",'{"step":3}'),{step:3});
+assert.deepEqual(typedComposedValue("array","[123, 1234]",{id:"item:number",type:"number"}),[123,1234]);
+assert.throws(()=>typedComposedValue("array",'[123, "1234"]',{id:"item:number",type:"number"}),/Item 2: Expected Number/);
 assert.throws(()=>typedComposedValue("integer","2.5"),/whole number/);
 assert.throws(()=>typedComposedValue("boolean","maybe"),/true or false/);
 assert.throws(()=>typedComposedValue("array",'{"not":"an array"}'),/array/);
+const invalidArrayExampleDraft={
+  ...composedFacetDraft({path:"/quantities"},{path:"/quantities",type:"array",itemSchema:{id:"item:number",type:"number"}}),
+  exampleMethod:"custom",
+  exampleInput:'[123, "1234"]',
+  exampleIssue:"Item 2: Expected Number.",
+};
+assert.throws(
+  ()=>sparseComposedFacets(invalidArrayExampleDraft,{path:"/quantities",type:"array",itemSchema:{id:"item:number",type:"number"}}),
+  /Item 2: Expected Number/,
+  "an invalid custom example cannot cross the composed save boundary",
+);
+assert.equal(invalidArrayExampleDraft.exampleValue,undefined,"invalid custom input is not staged as a canonical value");
 assert.throws(()=>sparseComposedFacets({...draft,exampleMethod:"allowed-value",exampleValue:undefined},inherited),/Choose an allowed-value example/);
 assert.equal(composedFacetDraft({path:"/note",allowedValues:["brief"],examples:["brief"]},{path:"/note"}).exampleMethod,"allowed-value","reload reconstructs an allowed-value example method from structured storage");
 

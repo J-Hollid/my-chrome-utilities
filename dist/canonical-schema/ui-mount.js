@@ -170,6 +170,7 @@ export function mountCanonicalSchemaEditor(options) {
         }
         const panel = dom.createElement("section"), heading = dom.createElement("h3"), list = dom.createElement("ul"), prospective = dom.createElement("p"), impact = dom.createElement("p"), actions = dom.createElement("div"), cancel = button(dom, "Cancel review", () => { review = undefined; render(); }), confirm = button(dom, "Confirm changes", () => saveFocused());
         panel.setAttribute("aria-label", "Review changes");
+        panel.dataset.schemaOverlayLayer = "review";
         heading.textContent = "Review changes";
         changes.forEach(({ label, detail }) => { const item = dom.createElement("li"); item.textContent = `${label} · ${detail}`; list.append(item); });
         prospective.textContent = `Prospective effective result: ${working.type} · ${working.presence.mode} · ${working.rules.length} rules · affected consumers follow ${provenanceText(original)}.`;

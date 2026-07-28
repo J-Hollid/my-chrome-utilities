@@ -1,4 +1,5 @@
 import { focusedRuleIssue } from "../data-layer-focused-rule-policy.js";
+import { typedComposedValue } from "./facet-values.js";
 const clone = (value) => structuredClone(value);
 const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
 const normalizedCondition = (condition) => { if (condition.kind === "predicate")
@@ -23,7 +24,19 @@ export function composedFacetDraftWithoutRemovedItems(draft, removedRuleIds = ne
 export function overrideComposedRule(draft, index, id) { const rule = draft.rules[index]; if (!rule)
     return draft; const replacement = clone(rule), sourceId = String(rule.id ?? ""); replacement.id = id; replacement.replacesRuleId = sourceId; replacement.provenance = { source: "created", state: "overridden", sourceId }; return { ...draft, rules: draft.rules.map((candidate, candidateIndex) => candidateIndex === index ? replacement : candidate) }; }
 export const composedRuleIssue = focusedRuleIssue;
-export function sparseComposedFacets(draft, inherited) { if (draft.exampleMethod !== "blank" && draft.exampleValue === undefined)
-    throw new Error(draft.exampleMethod === "allowed-value" ? "Choose an allowed-value example." : "Enter a custom typed example."); if (draft.exampleMethod === "allowed-value" && !draft.allowedValues.some((value) => same(value, draft.exampleValue)))
-    throw new Error("Choose an example from the current allowed values."); const localValueOwnership = draft.allowedValueProvenance?.some(({ state }) => state !== "inherited") === true, candidate = { ...(draft.concept?.trim() ? { concept: draft.concept.trim() } : {}), ...(draft.type ? { type: draft.type } : {}), ...(draft.itemType ? { itemType: draft.itemType } : {}), ...(draft.itemSchema ? { itemSchema: clone(draft.itemSchema) } : {}), ...(draft.presence ? { presence: draft.presence } : {}), ...(draft.expectedValue !== undefined ? { expectedValue: clone(draft.expectedValue) } : {}), ...(draft.allowedValues.length ? { allowedValues: clone(draft.allowedValues), ...(draft.allowedValueIds ? { allowedValueIds: clone(draft.allowedValueIds) } : {}), ...(draft.allowedValueProvenance ? { allowedValueProvenance: clone(draft.allowedValueProvenance) } : {}) } : {}), ...(draft.condition.children.length ? { condition: persistedCondition(draft.condition) } : {}), ...(draft.rules.length ? { rules: clone(draft.rules) } : {}), ...(draft.displayText ? { displayText: draft.displayText } : {}), ...(draft.documentation ? { documentation: draft.documentation } : {}), ...(draft.comments ? { comments: draft.comments } : {}), ...(draft.exampleMethod !== "blank" ? { examples: [clone(draft.exampleValue)] } : {}) }; return Object.fromEntries(Object.entries(candidate).filter(([key, value]) => localValueOwnership && (key === "allowedValues" || key === "allowedValueIds" || key === "allowedValueProvenance") || !same(value, inherited[key]))); }
+export function sparseComposedFacets(draft, inherited) {
+    if (draft.exampleMethod === "custom" && draft.exampleInput !== undefined) {
+        const parsed = typedComposedValue(draft.type, draft.exampleInput, draft.itemSchema);
+        if (draft.exampleIssue)
+            throw new Error(draft.exampleIssue);
+        if (!same(parsed, draft.exampleValue))
+            throw new Error("Custom example input does not match its staged typed value.");
+    }
+    if (draft.exampleMethod !== "blank" && draft.exampleValue === undefined)
+        throw new Error(draft.exampleMethod === "allowed-value" ? "Choose an allowed-value example." : "Enter a custom typed example.");
+    if (draft.exampleMethod === "allowed-value" && !draft.allowedValues.some((value) => same(value, draft.exampleValue)))
+        throw new Error("Choose an example from the current allowed values.");
+    const localValueOwnership = draft.allowedValueProvenance?.some(({ state }) => state !== "inherited") === true, candidate = { ...(draft.concept?.trim() ? { concept: draft.concept.trim() } : {}), ...(draft.type ? { type: draft.type } : {}), ...(draft.itemType ? { itemType: draft.itemType } : {}), ...(draft.itemSchema ? { itemSchema: clone(draft.itemSchema) } : {}), ...(draft.presence ? { presence: draft.presence } : {}), ...(draft.expectedValue !== undefined ? { expectedValue: clone(draft.expectedValue) } : {}), ...(draft.allowedValues.length ? { allowedValues: clone(draft.allowedValues), ...(draft.allowedValueIds ? { allowedValueIds: clone(draft.allowedValueIds) } : {}), ...(draft.allowedValueProvenance ? { allowedValueProvenance: clone(draft.allowedValueProvenance) } : {}) } : {}), ...(draft.condition.children.length ? { condition: persistedCondition(draft.condition) } : {}), ...(draft.rules.length ? { rules: clone(draft.rules) } : {}), ...(draft.displayText ? { displayText: draft.displayText } : {}), ...(draft.documentation ? { documentation: draft.documentation } : {}), ...(draft.comments ? { comments: draft.comments } : {}), ...(draft.exampleMethod !== "blank" ? { examples: [clone(draft.exampleValue)] } : {}) };
+    return Object.fromEntries(Object.entries(candidate).filter(([key, value]) => localValueOwnership && (key === "allowedValues" || key === "allowedValueIds" || key === "allowedValueProvenance") || !same(value, inherited[key])));
+}
 //# sourceMappingURL=facet-draft.js.map

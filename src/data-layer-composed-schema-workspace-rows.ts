@@ -9,7 +9,7 @@ import {applySchemaTablePathAllocation,bindSchemaTableQuickEdit,clearSchemaTable
 
 export interface ComposedRowsContext {
   dom:Document;overlayHost:HTMLElement;model:ComposedSchemaWorkspace;effectiveText:(row:ComposedSchemaRow)=>string;conceptSuggestions?:(()=>readonly string[])|undefined;onRepair?:((repair:ComposedSchemaRepair)=>void)|undefined;rowPathDataset?:string|undefined;
-  activePath:string|undefined;overlayOpen:boolean;focusedOpen:boolean;reviewOpen:boolean;activeSection:FocusedPropertySection;draft:ComposedFacetDraft|undefined;removed:boolean;confirmedAction:"reset"|"remove"|undefined;removedRuleIds:Set<string>;removedValueIds:Set<string>;restoredRuleIds:Set<string>;restoredValueIds:Set<string>;stagedLocalValueIds:Set<string>;overriddenRuleIds:Set<string>;overrideRule:(id:string)=>void;
+  activePath:string|undefined;overlayOpen:boolean;focusedOpen:boolean;reviewOpen:boolean;saveIssue:string|undefined;activeSection:FocusedPropertySection;draft:ComposedFacetDraft|undefined;removed:boolean;confirmedAction:"reset"|"remove"|undefined;removedRuleIds:Set<string>;removedValueIds:Set<string>;restoredRuleIds:Set<string>;restoredValueIds:Set<string>;stagedLocalValueIds:Set<string>;overriddenRuleIds:Set<string>;overrideRule:(id:string)=>void;
   pendingAction:"reset"|"remove"|undefined;pendingStructure:readonly FlowPageInstanceStructureCommand[];beginAction:(row:ComposedSchemaRow,focus?:HTMLElement)=>void;cancelAction:()=>void;confirmAction:(row:ComposedSchemaRow)=>void;
   ownershipSession:FocusedOwnershipSession;activateOwnership:(action:string)=>void;
   open:(row:ComposedSchemaRow,focus?:HTMLElement,section?:FocusedPropertySection)=>void;commitInline:(row:ComposedSchemaRow,facet:SchemaTableEditableFacet,value:string)=>SchemaTableQuickEditResult;resetInline:(row:ComposedSchemaRow,facet:"concept"|"type"|"presence")=>SchemaTableQuickEditResult;cancelInline:()=>void;inlineDiagnostic:(message:string)=>void;quickEditRoot:()=>ParentNode;quickEditScope:string;close:()=>void;closeChild:()=>void;beginReview:()=>void;cancelReview:()=>void;save:(row:ComposedSchemaRow)=>void;render:()=>void;selectSection:(section:FocusedPropertySection)=>void;
@@ -64,7 +64,9 @@ function composedReviewLayer(row:ComposedSchemaRow,context:ComposedRowsContext):
   }
   if(!list.children.length)list.append(Object.assign(dom.createElement("li"),{textContent:`Unchanged facets · prospective effective result ${context.effectiveText(row)} · consumers recompile`}));
   const confirm=button(dom,"Confirm changes",()=>context.save(row));confirm.disabled=false;
-  review.append(Object.assign(dom.createElement("p"),{textContent:`Review changes · ${row.path} · one confirmation creates one Undo entry; no durable write occurs before confirmation.`}),list,button(dom,"Cancel review",context.cancelReview),confirm);
+  review.append(Object.assign(dom.createElement("p"),{textContent:`Review changes · ${row.path} · one confirmation creates one Undo entry; no durable write occurs before confirmation.`}),list);
+  if(context.saveIssue)review.append(Object.assign(dom.createElement("p"),{textContent:context.saveIssue,role:"alert"}));
+  review.append(button(dom,"Cancel review",context.cancelReview),confirm);
   return review;
 }
 

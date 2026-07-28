@@ -42,7 +42,7 @@ export function composedTableResetFacet(row, facet) {
 }
 export function mountComposedSchemaWorkspace(options) {
     const section = document.createElement("section"), heading = document.createElement("h2"), summary = document.createElement("p"), policy = document.createElement("input"), policyLabel = document.createElement("label"), quickEditFeedback = document.createElement("output"), filterControls = document.createElement("div"), filter = document.createElement("input"), sort = document.createElement("select"), addControls = document.createElement("div"), choice = document.createElement("select"), add = document.createElement("button"), rows = document.createElement("div");
-    let activePath, overlayOpen = false, focusedOpen = false, reviewOpen = false, activeSection = "definition", draft, removed = false, confirmedAction, removedRuleIds = new Set(), removedValueIds = new Set(), restoredRuleIds = new Set(), restoredValueIds = new Set(), stagedLocalValueIds = new Set(), overriddenRuleIds = new Set(), pendingStructure = [], pendingAction, originFocus, originPath, query = "", sortMode = "path";
+    let activePath, overlayOpen = false, focusedOpen = false, reviewOpen = false, saveIssue, activeSection = "definition", draft, removed = false, confirmedAction, removedRuleIds = new Set(), removedValueIds = new Set(), restoredRuleIds = new Set(), restoredValueIds = new Set(), stagedLocalValueIds = new Set(), overriddenRuleIds = new Set(), pendingStructure = [], pendingAction, originFocus, originPath, query = "", sortMode = "path";
     let overlayState = { phase: "closed" };
     let ownershipSession = { inherited: false, local: true, structureOwned: true, activated: [] };
     section.className = options.compact ? "composed-schema-workspace compact-schema-workspace" : "composed-schema-workspace";
@@ -82,7 +82,7 @@ export function mountComposedSchemaWorkspace(options) {
     rows.setAttribute("aria-label", `${options.model.heading} rows`);
     rows.dataset.schemaEditorScrollRegion = "true";
     const visibleModel = () => { const needle = query.trim().toLowerCase(), rows = options.model.rows.filter((row) => !needle || row.path.toLowerCase().includes(needle) || String(row.source ?? "").toLowerCase().includes(needle) || options.effectiveText(row).toLowerCase().includes(needle)).sort((left, right) => schemaTableSortComparison({ path: left.path, concept: left.effective.concept, source: left.source }, { path: right.path, concept: right.effective.concept, source: right.source }, sortMode)); return { ...options.model, rows }; };
-    const rerender = () => renderComposedRows(rows, { dom: document, overlayHost: section, model: visibleModel(), effectiveText: options.effectiveText, conceptSuggestions: options.conceptSuggestions, ...(options.onRepair ? { onRepair: options.onRepair } : {}), ...(options.onStructure ? { onStructure: (kind, path, name) => { pendingStructure.push({ kind, path, ...(name === undefined ? {} : { name }) }); rerender(); } } : {}), ...(options.rowPathDataset ? { rowPathDataset: options.rowPathDataset } : {}), activePath, overlayOpen, focusedOpen, reviewOpen, activeSection, draft, removed, confirmedAction, removedRuleIds, removedValueIds, restoredRuleIds, restoredValueIds, stagedLocalValueIds, overriddenRuleIds, overrideRule, pendingAction, pendingStructure, ownershipSession, activateOwnership: (action) => { ownershipSession = activateFocusedOwnershipSection(ownershipSession, activeSection, action); rerender(); }, beginAction, cancelAction, confirmAction, open, commitInline, resetInline, cancelInline: () => { }, inlineDiagnostic: (message) => { quickEditFeedback.textContent = message; }, quickEditRoot: () => options.host, quickEditScope: `composed:${options.schemaContributorId ?? options.model.heading}`, close, closeChild, beginReview, cancelReview, save, render: rerender, selectSection: (value) => { activeSection = value; focusedOpen = true; reviewOpen = false; overlayState = schemaTableOverlayTransition(overlayState, { kind: "focus" }); rerender(); } });
+    const rerender = () => renderComposedRows(rows, { dom: document, overlayHost: section, model: visibleModel(), effectiveText: options.effectiveText, conceptSuggestions: options.conceptSuggestions, ...(options.onRepair ? { onRepair: options.onRepair } : {}), ...(options.onStructure ? { onStructure: (kind, path, name) => { pendingStructure.push({ kind, path, ...(name === undefined ? {} : { name }) }); rerender(); } } : {}), ...(options.rowPathDataset ? { rowPathDataset: options.rowPathDataset } : {}), activePath, overlayOpen, focusedOpen, reviewOpen, saveIssue, activeSection, draft, removed, confirmedAction, removedRuleIds, removedValueIds, restoredRuleIds, restoredValueIds, stagedLocalValueIds, overriddenRuleIds, overrideRule, pendingAction, pendingStructure, ownershipSession, activateOwnership: (action) => { ownershipSession = activateFocusedOwnershipSection(ownershipSession, activeSection, action); rerender(); }, beginAction, cancelAction, confirmAction, open, commitInline, resetInline, cancelInline: () => { }, inlineDiagnostic: (message) => { quickEditFeedback.textContent = message; }, quickEditRoot: () => options.host, quickEditScope: `composed:${options.schemaContributorId ?? options.model.heading}`, close, closeChild, beginReview, cancelReview, save, render: rerender, selectSection: (value) => { activeSection = value; focusedOpen = true; reviewOpen = false; saveIssue = undefined; overlayState = schemaTableOverlayTransition(overlayState, { kind: "focus" }); rerender(); } });
     const overrideRule = (sourceId) => { if (!draft)
         return; const source = options.model.rows.find(({ path }) => path === activePath)?.effective.rules?.find((rule) => String(rule.id ?? "") === sourceId); if (!source || source.enforcement === "invariant")
         return; const id = `rule:${crypto.randomUUID()}`, replacement = { ...structuredClone(source), id, replacesRuleId: sourceId, provenance: { source: "created", state: "overridden", sourceId } }; draft = { ...draft, rules: [...draft.rules, replacement] }; overriddenRuleIds.add(id); rerender(); };
@@ -100,7 +100,7 @@ export function mountComposedSchemaWorkspace(options) {
         pendingStructure = [];
         pendingAction = undefined;
         ownershipSession = focusedOwnershipState(composedSchemaRowOwnershipInput(row)).session;
-    } overlayState = schemaTableOverlayTransition(overlayState, { kind: "open", path: row.path }); activeSection = sectionName; overlayOpen = true; focusedOpen = false; reviewOpen = false; if (focus) {
+    } overlayState = schemaTableOverlayTransition(overlayState, { kind: "open", path: row.path }); activeSection = sectionName; overlayOpen = true; focusedOpen = false; reviewOpen = false; saveIssue = undefined; if (focus) {
         originFocus = focus;
         originPath = row.path;
     } rerender(); };
@@ -122,24 +122,33 @@ export function mountComposedSchemaWorkspace(options) {
             return { status: "invalid", diagnostic: error instanceof Error ? error.message : String(error) };
         }
     };
-    const close = (reason = "cancel") => { overlayState = schemaTableOverlayTransition(overlayState, { kind: reason }); const restorePath = ("restorePath" in overlayState ? overlayState.restorePath : undefined) ?? originPath; activePath = undefined; overlayOpen = false; focusedOpen = false; reviewOpen = false; activeSection = "definition"; draft = undefined; removed = false; confirmedAction = undefined; removedRuleIds = new Set(); removedValueIds = new Set(); restoredRuleIds = new Set(); restoredValueIds = new Set(); stagedLocalValueIds = new Set(); overriddenRuleIds = new Set(); pendingStructure = []; pendingAction = undefined; ownershipSession = { inherited: false, local: true, structureOwned: true, activated: [] }; rerender(); const target = originFocus?.isConnected ? originFocus : restorePath ? rows.querySelector(`[aria-label="Property actions for ${CSS.escape(restorePath)}"]`) : undefined; originFocus = undefined; originPath = undefined; if (target)
+    const close = (reason = "cancel") => { overlayState = schemaTableOverlayTransition(overlayState, { kind: reason }); const restorePath = ("restorePath" in overlayState ? overlayState.restorePath : undefined) ?? originPath; activePath = undefined; overlayOpen = false; focusedOpen = false; reviewOpen = false; saveIssue = undefined; activeSection = "definition"; draft = undefined; removed = false; confirmedAction = undefined; removedRuleIds = new Set(); removedValueIds = new Set(); restoredRuleIds = new Set(); restoredValueIds = new Set(); stagedLocalValueIds = new Set(); overriddenRuleIds = new Set(); pendingStructure = []; pendingAction = undefined; ownershipSession = { inherited: false, local: true, structureOwned: true, activated: [] }; rerender(); const target = originFocus?.isConnected ? originFocus : restorePath ? rows.querySelector(`[aria-label="Property actions for ${CSS.escape(restorePath)}"]`) : undefined; originFocus = undefined; originPath = undefined; if (target)
         queueMicrotask(() => target.focus({ preventScroll: true })); };
     const closeChild = () => { if (reviewOpen) {
         cancelReview();
         return;
     } focusedOpen = false; overlayState = activePath ? { phase: "menu", path: activePath } : { phase: "closed" }; rerender(); const target = schemaTableOverlayTarget(section, `[data-property-context-menu="true"] [data-section="${activeSection}"] button`); if (target)
         queueMicrotask(() => target.focus({ preventScroll: true })); };
-    const beginReview = () => { reviewOpen = true; overlayState = schemaTableOverlayTransition(overlayState, { kind: "review" }); rerender(); };
+    const beginReview = () => { reviewOpen = true; saveIssue = undefined; overlayState = schemaTableOverlayTransition(overlayState, { kind: "review" }); rerender(); };
     const cancelReview = () => { reviewOpen = false; overlayState = activePath ? { phase: "focused", path: activePath } : { phase: "closed" }; rerender(); };
     const beginAction = (row, focus) => { open(row, focus); focusedOpen = true; pendingAction = row.action === "reset" ? "reset" : "remove"; rerender(); };
     const cancelAction = () => { pendingAction = undefined; removed = false; confirmedAction = undefined; rerender(); };
     const confirmAction = (_row) => { confirmedAction = pendingAction; pendingAction = undefined; removed = true; rerender(); };
     const save = (row) => { if (!draft)
-        return; if (removed) {
-        options.onReset(row);
+        return; try {
+        if (removed) {
+            options.onReset(row);
+            close();
+            return;
+        }
+        const staged = composedFacetDraftWithoutRemovedItems(draft, removedRuleIds, removedValueIds);
+        options.onSave(row, sparseComposedFacets(staged, row.inherited ?? { path: row.path }), pendingStructure);
         close();
-        return;
-    } const staged = composedFacetDraftWithoutRemovedItems(draft, removedRuleIds, removedValueIds); options.onSave(row, sparseComposedFacets(staged, row.inherited ?? { path: row.path }), pendingStructure); close(); };
+    }
+    catch (error) {
+        saveIssue = error instanceof Error ? error.message : String(error);
+        rerender();
+    } };
     filter.addEventListener("input", () => { query = filter.value; rerender(); });
     sort.addEventListener("change", () => { sortMode = sort.value; rerender(); });
     section.addEventListener("keydown", (event) => { if (event.key === "Escape" && overlayOpen) {

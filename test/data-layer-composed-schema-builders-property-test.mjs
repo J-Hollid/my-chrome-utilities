@@ -8,6 +8,7 @@ import {
   moveComposedAllowedValue,
   moveComposedConditionBranch,
   sparseComposedFacets,
+  typedComposedValue,
 } from "../dist/data-layer-composed-schema-builders.js";
 import {ensureComposedConditionIds} from "../dist/data-layer-composed-schema-workspace-focused-conditions.js";
 import {compileLayeredSchema,validateLayeredObservation} from "../dist/data-layer-layered-schema.js";
@@ -34,6 +35,33 @@ for(let example=0;example<150;example+=1){
   const removed=composedFacetDraftWithoutRemovedItems({...conditionDraft,allowedValues:["a","b"],allowedValueIds:["value:a","value:b"],rules:[{id:"rule:a"},{id:"rule:b"}]},new Set(["rule:a"]),new Set(["value:b"]));
   assert.deepEqual(removed.allowedValues,["a"],"removed value IDs are excluded from sparse drafts");
   assert.deepEqual(removed.rules,[{id:"rule:b"}],"removed rule IDs are excluded from sparse drafts");
+}
+
+for(let depth=1;depth<=8;depth+=1){
+  const terminal={id:`item:number:${depth}`,type:"number",allowedValues:[depth,depth+1]};
+  const itemSchema=Array.from({length:depth-1},(_,index)=>`item:array:${depth}:${index}`)
+    .reduceRight((items,id)=>({id,type:"array",items}),terminal);
+  const nested=(value,remaining)=>remaining===1?[value]:[nested(value,remaining-1)];
+  const validInput=JSON.stringify(nested(depth,depth));
+  assert.deepEqual(
+    typedComposedValue("array",validInput,itemSchema),
+    JSON.parse(validInput),
+    `depth ${depth} recursively homogeneous custom examples survive the typed staging round trip`,
+  );
+  const invalidInput=JSON.stringify(nested(String(depth),depth));
+  assert.throws(
+    ()=>typedComposedValue("array",invalidInput,itemSchema),
+    new RegExp(`Item ${Array.from({length:depth},()=>1).join("\\.")}: Expected Number`),
+    `depth ${depth} mixed terminal items are rejected at their recursive item path`,
+  );
+  const invalidDraft={
+    ...composedFacetDraft({path:"/matrix"},{path:"/matrix",type:"array",itemSchema}),
+    exampleMethod:"custom",
+    exampleInput:invalidInput,
+    exampleIssue:`Item ${Array.from({length:depth},()=>1).join(".")}: Expected Number.`,
+  },before=structuredClone(invalidDraft);
+  assert.throws(()=>sparseComposedFacets(invalidDraft,{path:"/matrix",type:"array",itemSchema}),/Expected Number/);
+  assert.deepEqual(invalidDraft,before,`depth ${depth} rejected save leaves staged input and canonical draft byte-identical`);
 }
 
 console.log("data-layer composed schema builder property tests passed");
