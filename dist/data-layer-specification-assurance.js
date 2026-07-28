@@ -1,4 +1,5 @@
 import { compileSpecificationProject, evaluateSpecificationObservation } from "./data-layer-specification-engine.js";
+import { assignmentContributorTargets, compileAssignmentContributorTarget } from "./data-layer-layered-schema-project.js";
 import { publishProjectRelease } from "./data-layer-specification-project.js";
 function differences(actual, expected) { if (!expected)
     return []; const result = [], status = actual.issueDetails.length ? "fail" : "pass", issueCodes = [...new Set(actual.issueDetails.map(({ code }) => code))]; if (expected.winner !== undefined && actual.winner?.assignmentId !== expected.winner)
@@ -29,11 +30,42 @@ function evidenceIdentity(prefix, value) { let hash = 2166136261; for (const cha
     hash ^= character.charCodeAt(0);
     hash = Math.imul(hash, 16777619);
 } return `${prefix}:${(hash >>> 0).toString(16).padStart(8, "0")}`; }
+function independentSchemaBlockers(project) {
+    const state = { project, history: { undo: [], redo: [] } }, findings = [];
+    for (const target of assignmentContributorTargets(state)) {
+        try {
+            const assignment = { id: `assurance:${target.id}`, name: target.name, targetId: target.id, targetKind: target.kind }, result = compileAssignmentContributorTarget(state, assignment, { eventId: target.id, eventRole: "interaction" });
+            for (const conflict of result.compiled.conflicts)
+                findings.push({ code: "contributor-conflict", message: `${conflict.message} Repair ${conflict.contributors.join(" and ")}.`, entityId: target.id, field: conflict.path });
+            for (const [path, property] of Object.entries(result.compiled.properties)) {
+                const patterns = [...(property.patterns ?? []), ...(property.rules ?? []).filter(({ kind, operator }) => kind === "pattern" || operator === "regular-expression").map(({ pattern, parameters }) => pattern ?? parameters)];
+                for (const pattern of patterns)
+                    try {
+                        if (typeof pattern !== "string" || !pattern)
+                            throw new Error();
+                        new RegExp(pattern);
+                    }
+                    catch {
+                        findings.push({ code: "canonical-invalid-rule", message: `Pattern rule at ${path} is malformed. Repair the invalid rule field.`, entityId: target.id, field: `${path}/rules` });
+                    }
+            }
+        }
+        catch (error) {
+            findings.push({ code: "canonical-invalid-schema", message: `Canonical schema compilation failed. ${error instanceof Error ? error.message : String(error)}`, entityId: target.id, field: "canonicalSchema" });
+        }
+    }
+    return [...new Map(findings.map((finding) => [`${finding.code}:${finding.entityId}:${finding.field}`, finding])).values()];
+}
+export function assertDeveloperSchemaExportAvailable(preflight) { if (preflight.blockers.length || !preflight.plan)
+    throw new Error(`Developer schema export has ${preflight.blockers.length} blocking issues. Repair canonical or effective-schema validation first.`); }
 export function specificationPreflight(envelope) {
-    const warnings = [], assignmentIds = new Set(envelope.project.collections.assignments.map(({ id }) => id));
+    const warnings = [
+        ...(envelope.project.collections.fixtures.length ? [] : [{ code: "no-fixtures", message: "No Fixtures. Add a Fixture to provide optional evaluation evidence.", entityId: envelope.project.id, field: "collections.fixtures" }]),
+        ...(envelope.project.collections.assignments.length ? [] : [{ code: "no-assignments", message: "No Assignments. Add one when routing this schema is useful.", entityId: envelope.project.id, field: "collections.assignments" }]),
+    ], assignmentIds = new Set(envelope.project.collections.assignments.map(({ id }) => id));
     let compiled = compileSpecificationProject(envelope);
     if (compiled.status === "blocked") {
-        const unresolved = compiled.diagnostics.filter(({ entityId }) => assignmentIds.has(entityId));
+        const unresolved = compiled.diagnostics.filter(({ code, entityId }) => code === "dangling-reference" && assignmentIds.has(entityId));
         for (const diagnostic of unresolved)
             warnings.push({ code: "assignment-unresolved", message: `Assignment ${diagnostic.entityId} cannot be evaluated. Repair ${diagnostic.field}: ${diagnostic.referenceId}.`, entityId: diagnostic.entityId, field: `collections.assignments/${diagnostic.entityId}/${diagnostic.field}` });
         if (unresolved.length) {
@@ -45,17 +77,13 @@ export function specificationPreflight(envelope) {
         const blockers = compiled.diagnostics.map((diagnostic) => ({ code: diagnostic.code, message: `Repair ${diagnostic.field}: ${diagnostic.referenceId}.`, entityId: diagnostic.entityId, field: diagnostic.field }));
         return { contentIdentity: evidenceIdentity("preflight", { revision: envelope.revision, warnings, blockers }), blockers, warnings, fixtures: [] };
     }
-    const fixtures = envelope.project.collections.fixtures.map((fixture) => runProductionFixture(compiled.plan, fixture)), blockers = [];
-    if (!fixtures.length)
-        warnings.push({ code: "no-fixtures", message: "No Fixtures. Add a Fixture to provide optional evaluation evidence.", entityId: envelope.project.id, field: "collections.fixtures" });
+    const fixtures = envelope.project.collections.fixtures.map((fixture) => runProductionFixture(compiled.plan, fixture)), blockers = independentSchemaBlockers(envelope.project);
     for (const fixture of fixtures)
         if (fixture.status !== "pass") {
             warnings.push({ code: fixture.status === "blocked" ? "fixture-incomplete" : "fixture-failed", message: fixture.blockers?.join(" ") ?? `Fixture ${fixture.fixtureId} does not match production evaluation. Repair its expected result.`, entityId: fixture.fixtureId, field: `collections.fixtures/${fixture.fixtureId}/${fixture.status === "blocked" ? "observations" : "expected"}` });
             if (fixture.steps.some(({ differences }) => differences.some((difference) => difference.startsWith("resultIdentity:"))))
                 warnings.push({ code: "stale-coverage", message: `Fixture ${fixture.fixtureId} evidence was captured against an older schema. Rerun the Fixture.`, entityId: fixture.fixtureId, field: `collections.fixtures/${fixture.fixtureId}/evaluationResultIdentity` });
         }
-    if (!compiled.plan.assignments.length)
-        warnings.push({ code: "no-assignments", message: "No Assignments. Add one when routing this schema is useful.", entityId: envelope.project.id, field: "collections.assignments" });
     const probes = new Map();
     for (const assignment of compiled.plan.assignments) {
         const key = `${assignment.eventId}:${assignment.priority}:${assignment.applicabilitySetId}`, ids = probes.get(key) ?? [];

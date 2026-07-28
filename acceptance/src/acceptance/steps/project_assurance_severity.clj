@@ -1,6 +1,8 @@
 (ns acceptance.steps.project-assurance-severity
   (:require [acceptance.steps.support :as support]
-            [babashka.process :as process]))
+            [babashka.process :as process]
+            [cheshire.core :as json]
+            [clojure.string :as str]))
 
 (def feature-files
   ["features/data-layer-project-assurance-severity.feature"
@@ -11,7 +13,7 @@
    "the built extension is running with production project storage, schema validation, preflight, release review, and publication" :runtime})
 
 (defonce model-verified? (atom false))
-(defonce browser-verified? (atom false))
+(defonce browser-observation (atom nil))
 
 (defn- checked! [& command]
   (let [result (apply process/shell {:out :string :err :string} command)]
@@ -25,10 +27,23 @@
    "node" "test/data-layer-project-assurance-severity-test.mjs"))
 
 (defn- verify-browser! []
-  (support/cached-command-verification!
-   browser-verified?
-   "Project assurance severity browser verification failed. "
-   "node" "test/browser-packs/project-assurance-severity.mjs"))
+  (or @browser-observation
+      (let [result (checked! "node" "test/browser-packs/project-assurance-severity.mjs")
+            payload (->> (str/split-lines (:out result))
+                         (filter #(str/starts-with? % "{"))
+                         last
+                         (#(json/parse-string % true))
+                         :projectAssuranceSeverity)]
+        (support/assert! payload "Project assurance severity browser evidence is missing."
+                         {:out (:out result)})
+        (reset! browser-observation payload))))
+
+(defn- assert-browser! [evidence]
+  (let [values (concat (vals (dissoc evidence :blockedEvidence))
+                       (vals (:blockedEvidence evidence)))]
+    (support/assert! (every? #(or (true? %) (= "status" %)) values)
+                     "Installed project assurance evidence is incomplete."
+                     evidence)))
 
 (def example-values
   {"project_state" #{"no Fixtures" "no Assignments" "zero effective Coverage cells"
@@ -60,4 +75,4 @@
   (support/verified-feature-mode-handlers
    feature-files entry-modes :project-assurance-severity-mode
    verify-model! validate-example!
-   verify-browser! (fn [_] true)))
+   verify-browser! assert-browser!))

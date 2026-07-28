@@ -1021,7 +1021,9 @@
     "unit": [
       "test/data-layer-project-assurance-severity-test.mjs"
     ],
-    "property": [],
+    "property": [
+      "test/data-layer-project-assurance-severity-property-test.mjs"
+    ],
     "features": [
       "features/data-layer-project-assurance-severity.feature",
       "features/data-layer-project-assurance-severity-runtime.feature"

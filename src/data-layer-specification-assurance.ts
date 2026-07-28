@@ -1,4 +1,5 @@
 import {compileSpecificationProject,evaluateSpecificationObservation,type CanonicalProjectEnvelope,type ExecutableSpecificationPlan,type SpecificationEvaluationResult} from "./data-layer-specification-engine.js";
+import {assignmentContributorTargets,compileAssignmentContributorTarget} from "./data-layer-layered-schema-project.js";
 import {publishProjectRelease,type FlowInstance,type IdFactory,type ProjectEntity,type ProjectState,type SpecificationProject} from "./data-layer-specification-project.js";
 export interface FixtureStepResult{index:number;actual:SpecificationEvaluationResult;expected?:Record<string,unknown>;differences:string[]}
 export interface ProductionFixtureResult{fixtureId:string;status:"pass"|"fail"|"blocked";compiledRevision:number;steps:FixtureStepResult[];blockers?:string[]}
@@ -8,11 +9,29 @@ export interface EffectiveCoverageRow{id:string;pageId:string;eventId:string;flo
 export function buildEffectiveRequirementCoverage(plan:ExecutableSpecificationPlan,evidence:readonly {fixture:ProjectEntity;result:ProductionFixtureResult}[],range:{offset:number;limit:number}):{rows:EffectiveCoverageRow[];totalRows:number}{const all:EffectiveCoverageRow[]=[];for(const assignment of plan.assignments){const schema=plan.schemas[assignment.schemaKey],event=plan.events[assignment.eventId];if(!schema||!event)continue;for(const flow of Object.values(plan.flows))for(const step of(flow.steps as ProjectEntity[]|undefined)??[]){if(step.eventId!==event.id)continue;for(const key of Object.keys(plan.provenance).filter((key)=>key.startsWith(`${assignment.schemaKey}:`))){const path=key.slice(assignment.schemaKey.length+1),proof=evidence.find(({result})=>result.status==="pass"&&result.steps.some(({actual})=>actual.winner?.assignmentId===assignment.assignmentId&&actual.activeStepId===step.id)),waiver=((step.waivers as Record<string,unknown>[]|undefined)??[]).find((item)=>item.path===path);all.push({id:`${step.pageId??"any"}:${event.id}:${flow.id}:${step.id}:${path}`,pageId:String(step.pageId??""),eventId:event.id,flowId:flow.id,stepId:step.id,assignmentId:assignment.assignmentId,requirementPath:path,schemaRevision:schema.revision,profileIds:plan.provenance[key]!.map(({profileId})=>profileId),state:waiver?"waived":proof?"covered":"missing",...(proof?{fixtureId:proof.fixture.id}:{})});}}}return{rows:all.slice(range.offset,range.offset+range.limit),totalRows:all.length};}
 export interface SpecificationFinding{code:string;message:string;entityId:string;field:string}
 function evidenceIdentity(prefix:string,value:unknown):string{let hash=2166136261;for(const character of JSON.stringify(value)){hash^=character.charCodeAt(0);hash=Math.imul(hash,16777619);}return`${prefix}:${(hash>>>0).toString(16).padStart(8,"0")}`;}
+function independentSchemaBlockers(project:SpecificationProject):SpecificationFinding[]{
+  const state:ProjectState={project,history:{undo:[],redo:[]}},findings:SpecificationFinding[]=[];
+  for(const target of assignmentContributorTargets(state)){
+    try{
+      const assignment={id:`assurance:${target.id}`,name:target.name,targetId:target.id,targetKind:target.kind},result=compileAssignmentContributorTarget(state,assignment,{eventId:target.id,eventRole:"interaction"});
+      for(const conflict of result.compiled.conflicts)findings.push({code:"contributor-conflict",message:`${conflict.message} Repair ${conflict.contributors.join(" and ")}.`,entityId:target.id,field:conflict.path});
+      for(const[path,property]of Object.entries(result.compiled.properties)){
+        const patterns=[...(property.patterns??[]),...((property.rules as Record<string,unknown>[]|undefined)??[]).filter(({kind,operator})=>kind==="pattern"||operator==="regular-expression").map(({pattern,parameters})=>pattern??parameters)];
+        for(const pattern of patterns)try{if(typeof pattern!=="string"||!pattern)throw new Error();new RegExp(pattern);}catch{findings.push({code:"canonical-invalid-rule",message:`Pattern rule at ${path} is malformed. Repair the invalid rule field.`,entityId:target.id,field:`${path}/rules`});}
+      }
+    }catch(error){findings.push({code:"canonical-invalid-schema",message:`Canonical schema compilation failed. ${error instanceof Error?error.message:String(error)}`,entityId:target.id,field:"canonicalSchema"});}
+  }
+  return[...new Map(findings.map((finding)=>[`${finding.code}:${finding.entityId}:${finding.field}`,finding])).values()];
+}
+export function assertDeveloperSchemaExportAvailable(preflight:ReturnType<typeof specificationPreflight>):void{if(preflight.blockers.length||!preflight.plan)throw new Error(`Developer schema export has ${preflight.blockers.length} blocking issues. Repair canonical or effective-schema validation first.`);}
 export function specificationPreflight(envelope:CanonicalProjectEnvelope):{contentIdentity:string;blockers:SpecificationFinding[];warnings:SpecificationFinding[];plan?:ExecutableSpecificationPlan;fixtures:ProductionFixtureResult[]}{
-  const warnings:SpecificationFinding[]=[],assignmentIds=new Set(envelope.project.collections.assignments.map(({id})=>id));
+  const warnings:SpecificationFinding[]=[
+    ...(envelope.project.collections.fixtures.length?[]:[{code:"no-fixtures",message:"No Fixtures. Add a Fixture to provide optional evaluation evidence.",entityId:envelope.project.id,field:"collections.fixtures"}]),
+    ...(envelope.project.collections.assignments.length?[]:[{code:"no-assignments",message:"No Assignments. Add one when routing this schema is useful.",entityId:envelope.project.id,field:"collections.assignments"}]),
+  ],assignmentIds=new Set(envelope.project.collections.assignments.map(({id})=>id));
   let compiled=compileSpecificationProject(envelope);
   if(compiled.status==="blocked"){
-    const unresolved=compiled.diagnostics.filter(({entityId})=>assignmentIds.has(entityId));
+    const unresolved=compiled.diagnostics.filter(({code,entityId})=>code==="dangling-reference"&&assignmentIds.has(entityId));
     for(const diagnostic of unresolved)warnings.push({code:"assignment-unresolved",message:`Assignment ${diagnostic.entityId} cannot be evaluated. Repair ${diagnostic.field}: ${diagnostic.referenceId}.`,entityId:diagnostic.entityId,field:`collections.assignments/${diagnostic.entityId}/${diagnostic.field}`});
     if(unresolved.length){
       const rejected=new Set(unresolved.map(({entityId})=>entityId)),project={...envelope.project,collections:{...envelope.project.collections,assignments:envelope.project.collections.assignments.filter(({id})=>!rejected.has(id))}};
@@ -23,13 +42,11 @@ export function specificationPreflight(envelope:CanonicalProjectEnvelope):{conte
     const blockers=compiled.diagnostics.map((diagnostic)=>({code:diagnostic.code,message:`Repair ${diagnostic.field}: ${diagnostic.referenceId}.`,entityId:diagnostic.entityId,field:diagnostic.field}));
     return{contentIdentity:evidenceIdentity("preflight",{revision:envelope.revision,warnings,blockers}),blockers,warnings,fixtures:[]};
   }
-  const fixtures=envelope.project.collections.fixtures.map((fixture)=>runProductionFixture(compiled.plan,fixture)),blockers:SpecificationFinding[]=[];
-  if(!fixtures.length)warnings.push({code:"no-fixtures",message:"No Fixtures. Add a Fixture to provide optional evaluation evidence.",entityId:envelope.project.id,field:"collections.fixtures"});
+  const fixtures=envelope.project.collections.fixtures.map((fixture)=>runProductionFixture(compiled.plan,fixture)),blockers:SpecificationFinding[]=independentSchemaBlockers(envelope.project);
   for(const fixture of fixtures)if(fixture.status!=="pass"){
     warnings.push({code:fixture.status==="blocked"?"fixture-incomplete":"fixture-failed",message:fixture.blockers?.join(" ")??`Fixture ${fixture.fixtureId} does not match production evaluation. Repair its expected result.`,entityId:fixture.fixtureId,field:`collections.fixtures/${fixture.fixtureId}/${fixture.status==="blocked"?"observations":"expected"}`});
     if(fixture.steps.some(({differences})=>differences.some((difference)=>difference.startsWith("resultIdentity:"))))warnings.push({code:"stale-coverage",message:`Fixture ${fixture.fixtureId} evidence was captured against an older schema. Rerun the Fixture.`,entityId:fixture.fixtureId,field:`collections.fixtures/${fixture.fixtureId}/evaluationResultIdentity`});
   }
-  if(!compiled.plan.assignments.length)warnings.push({code:"no-assignments",message:"No Assignments. Add one when routing this schema is useful.",entityId:envelope.project.id,field:"collections.assignments"});
   const probes=new Map<string,string[]>();
   for(const assignment of compiled.plan.assignments){const key=`${assignment.eventId}:${assignment.priority}:${assignment.applicabilitySetId}`,ids=probes.get(key)??[];ids.push(assignment.assignmentId);probes.set(key,ids);}
   for(const ids of probes.values())if(ids.length>1)warnings.push({code:"assignment-tie",message:`Equal candidates ${ids.join(", ")}. Repair assignment priority or applicability.`,entityId:ids[0]!,field:`collections.assignments/${ids[0]}/priority`});

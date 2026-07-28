@@ -2,7 +2,7 @@ import { addProjectEntity, adoptSavedSchema, buildReleaseReview, commitStagedPro
 import { openDurableProjectRuntime } from "./data-layer-durable-project-runtime.js";
 import { durableConflictSemanticField, durableProjectRouteForWorkspace } from "./data-layer-durable-project-repository.js";
 import { applyStagedBulkAction, commitStagedBulkRequirements, stageBulkRequirements } from "./data-layer-specification-bulk.js";
-import { buildEffectiveRequirementCoverage, publishCompiledRelease as publishProjectRelease, runProductionFixture, specificationPreflight } from "./data-layer-specification-assurance.js";
+import { assertDeveloperSchemaExportAvailable, buildEffectiveRequirementCoverage, publishCompiledRelease as publishProjectRelease, runProductionFixture, specificationPreflight } from "./data-layer-specification-assurance.js";
 import { compileSpecificationProject, createCanonicalProjectEnvelope } from "./data-layer-specification-engine.js";
 import { entityPurposeGuidance, projectAuthoringGuidance } from "./data-layer-specification-guidance.js";
 import { installExecutableFlowBuilder } from "./data-layer-specification-executable-flow-ui.js";
@@ -10,6 +10,7 @@ import { applyFlowPageGroupLaneSelection, flowPageGroupLaneIds, installFlowGraph
 import { addPageGroupMembership, confirmPageGroupMembershipMigration, inspectPageGroupMembershipRemoval, movePageGroupMembership, orderedPageGroupIds, pageGroupMembers, removePageGroupMembership, requiresPageGroupMembershipMigration, stagePageGroupMembershipMigration } from "./data-layer-page-group-membership.js";
 import { restoreSchemaLibrary, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
 const projectPreflight = (current, revision) => specificationPreflight({ ...createCanonicalProjectEnvelope(current.project, current.draft?.id ?? "release"), revision });
+const nextProjectReleaseRevision = (current, published) => Math.max(published, ...current.project.releases.map((release) => release.revision)) + 1;
 import { CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, commitCanonicalProjectState, inspectCanonicalProjectConflict, resolveCanonicalProjectConflict, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, } from "./data-layer-specification-repository.js";
 import { PROJECT_LIBRARY_STORAGE_KEY, activateProject, activeProjectContextChange, createProjectInLibrary, migrateSingletonProject, projectLibrary, recordProjectNavigation, replaceActiveProjectState, resolveProjectNavigation, restoreProjectLibrary, serializeProjectLibrary } from "./data-layer-project-library.js";
 import { effectivePropertySummary, installLayeredSchemaUi } from "./data-layer-layered-schema-ui.js";
@@ -1056,11 +1057,15 @@ function renderAssuranceFindings(host, result) {
     };
     host.replaceChildren(region("Warnings", result.warnings), region("Blocking issues", result.blockers));
 }
+function applyDeveloperExportGate(result) { const control = q("#export-standard-schema"); control.disabled = Boolean(result.blockers.length || !result.plan); control.title = control.disabled ? `Repair ${result.blockers.length} canonical or effective-schema blocking issues before developer export.` : "Developer export is available; project-assurance warnings are advisory."; }
+q("#run-preflight").addEventListener("click", () => { if (state)
+    applyDeveloperExportGate(projectPreflight(state, nextProjectReleaseRevision(state, publishedRevision))); });
 q("#run-preflight").addEventListener("click", () => { if (!state)
-    return; releasePreflight = projectPreflight(state, canonicalRevision); const result = releasePreflight, content = q("#workspace-content"), section = document.createElement("section"), title = document.createElement("h2"), summary = document.createElement("p"), findings = document.createElement("div"); title.textContent = "Production evaluator preflight"; summary.className = "status-text"; summary.textContent = result.blockers.length ? `${result.contentIdentity} · ${result.warnings.length} warnings · ${result.blockers.length} blocking issues · ${result.fixtures.length} fixtures evaluated` : `${result.contentIdentity} · Ready to publish from the compiled production plan · ${result.warnings.length} warnings · 0 blocking issues`; findings.id = "preflight-assurance"; findings.setAttribute("aria-label", "Project assurance"); renderAssuranceFindings(findings, result); section.append(title, summary, findings); content.prepend(section); });
+    return; releasePreflight = projectPreflight(state, nextProjectReleaseRevision(state, publishedRevision)); const result = releasePreflight, content = q("#workspace-content"), section = document.createElement("section"), title = document.createElement("h2"), summary = document.createElement("p"), findings = document.createElement("div"); title.textContent = "Production evaluator preflight"; summary.className = "status-text"; summary.textContent = result.blockers.length ? `${result.contentIdentity} · ${result.warnings.length} warnings · ${result.blockers.length} blocking issues · ${result.fixtures.length} fixtures evaluated` : `${result.contentIdentity} · Ready to publish from the compiled production plan · ${result.warnings.length} warnings · 0 blocking issues`; findings.id = "preflight-assurance"; findings.setAttribute("aria-label", "Project assurance"); renderAssuranceFindings(findings, result); section.append(title, summary, findings); content.prepend(section); });
 q("#show-coverage").addEventListener("click", () => renderCoverage());
 q("#publish-project").addEventListener("click", () => { releasePreflight = undefined; const renderReviewedAssurance = (attempt = 0) => { if (releasePreflight) {
     renderAssuranceFindings(q("#release-assurance"), releasePreflight);
+    applyDeveloperExportGate(releasePreflight);
     return;
 } if (attempt < 200)
     setTimeout(() => renderReviewedAssurance(attempt + 1), 10); }; setTimeout(() => renderReviewedAssurance(), 0); });
@@ -1124,6 +1129,15 @@ q("#confirm-release-close").addEventListener("click", () => void confirmRelease(
 q("#restore-release").addEventListener("click", () => { if (!state)
     return; const release = state.project.releases.at(-1); if (!release)
     return; persist(restoreReleaseAsDraft(state, release.id, id)); releaseDialog.close(); q("#workspace-pane").focus(); });
+q("#export-standard-schema").addEventListener("click", (event) => { if (!state)
+    return; const preflight = projectPreflight(state, nextProjectReleaseRevision(state, publishedRevision)); applyDeveloperExportGate(preflight); try {
+    assertDeveloperSchemaExportAvailable(preflight);
+}
+catch (error) {
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    q("#project-state").textContent = error instanceof Error ? error.message : String(error);
+} }, { capture: true });
 q("#export-project").addEventListener("click", () => { if (!state)
     return; download(`${state.project.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-project.json`, exportSpecificationProjectState(state)); });
 q("#export-standard-schema").addEventListener("click", () => { if (!state)

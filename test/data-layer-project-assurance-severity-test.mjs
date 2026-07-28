@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 
 import {createCanonicalProjectEnvelope} from "../dist/data-layer-specification-engine.js";
 import {
+  assertDeveloperSchemaExportAvailable,
   publishCompiledRelease,
   specificationPreflight,
 } from "../dist/data-layer-specification-assurance.js";
@@ -93,6 +94,8 @@ const tieResult = specificationPreflight(envelope(tied));
 assert.equal(tieResult.blockers.length, 0);
 assert.equal(finding(tieResult, "assignment-tie").entityId, "assignment:retail");
 assert.ok(finding(tieResult, "uncovered-requirement"));
+assert.doesNotThrow(()=>assertDeveloperSchemaExportAvailable(tieResult),
+  "optional-assurance warnings cannot block developer export");
 
 const unresolved = structuredClone(engineTestProject);
 unresolved.collections.assignments.push({
@@ -111,6 +114,27 @@ assert.equal(
   false,
   "unusable optional assignments are excluded from production evaluation",
 );
+
+const conflicted = structuredClone(engineTestProject);
+conflicted.collections.pages[0].profileId = "profile:retail";
+conflicted.collections.pages[0].schemaConstraints = [{
+  path:"/ecommerce/value",
+  type:"string",
+  enforcement:"invariant",
+}];
+const conflictResult = specificationPreflight(envelope(conflicted));
+assert.ok(conflictResult.blockers.some(({code}) => code === "contributor-conflict"));
+assert.throws(()=>assertDeveloperSchemaExportAvailable(conflictResult), /blocking issues/i);
+
+const malformed = structuredClone(engineTestProject);
+malformed.collections.profiles[0].requirements[0].rules = [{
+  id:"rule:malformed",
+  kind:"pattern",
+  pattern:"[",
+  severity:"error",
+}];
+const malformedResult = specificationPreflight(envelope(malformed));
+assert.ok(malformedResult.blockers.some(({code}) => code === "canonical-invalid-rule"));
 
 const changedWarnings = specificationPreflight(envelope({
   ...structuredClone(engineTestProject),
