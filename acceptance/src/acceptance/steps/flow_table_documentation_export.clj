@@ -53,7 +53,12 @@
    {:keys ["export_scope" "expected_sheets"]
     :rows #{["current Checkout journey section" "Checkout journey"]
             ["selected Checkout journey and Sitewide sections" "Checkout journey, Sitewide"]
-            ["complete Documentation Set" "Overview, Checkout journey, Article journey, Data capture matrix, Sitewide, Opened Article"]}}])
+            ["complete Documentation Set" "Overview, Checkout journey, Article journey, Data capture matrix, Sitewide, Opened Article"]}}
+   {:keys ["headings" "heading_result"]
+    :rows #{["on" "rendered once before each non-empty concept"]
+            ["off" "absent while concept filtering remains active"]
+            ["on" "one heading for each non-empty included group"]
+            ["off" "no headings"]}}])
 
 (defn validate-example! [_mode example]
   (support/validate-example-relations!

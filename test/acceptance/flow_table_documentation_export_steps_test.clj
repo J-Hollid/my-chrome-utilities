@@ -33,6 +33,14 @@
              :runtime
              {"export_scope" "selected Checkout journey and Sitewide sections"
               "expected_sheets" "Checkout journey, Sitewide"})))
+  (is (map? (flow-export/validate-example!
+             :model
+             {"headings" "off"
+              "heading_result" "absent while concept filtering remains active"})))
+  (is (map? (flow-export/validate-example!
+             :runtime
+             {"headings" "on"
+              "heading_result" "one heading for each non-empty included group"})))
   (is (thrown-with-msg?
        clojure.lang.ExceptionInfo
        #"invalid result"
@@ -40,11 +48,18 @@
         :model
         {"definition" "fixed to checkout"
          "display" "Checkout"
-         "detail" "exact effective value and provenance"}))))
+         "detail" "exact effective value and provenance"})))
+  (is (thrown-with-msg?
+       clojure.lang.ExceptionInfo
+       #"invalid result"
+       (flow-export/validate-example!
+        :model
+        {"headings" "off"
+         "heading_result" "rendered once before each non-empty concept"}))))
 
 (deftest flow-export-runtime-evidence-includes-excel-compatibility
   (let [evidence (into {:installedBoundary true}
                        (map (fn [index]
                               [(keyword (str "export" (format "%03d" index))) true])
-                            (range 1 16)))]
+                            (range 1 21)))]
     (is (nil? (#'flow-export/assert-runtime! evidence)))))
