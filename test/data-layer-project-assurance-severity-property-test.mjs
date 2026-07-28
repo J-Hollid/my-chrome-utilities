@@ -51,10 +51,32 @@ for (let sample=0; sample<96; sample+=1) {
     warningsBlock:Boolean(sample & 2),
   };
   project.collections.fixtures = structuredClone(fixtureStates[sample % fixtureStates.length]);
-  project.collections.assignments = assignmentState(project, sample % 4);
+  const assignmentVariant = sample % 4;
+  const untiedAssignments = structuredClone(project.collections.assignments);
+  project.collections.assignments = assignmentState(project, assignmentVariant);
   const baseline = specificationPreflight(createCanonicalProjectEnvelope(project, `draft:${sample}`));
   assert.equal(baseline.blockers.length, 0,
     "optional-assurance states and legacy flags must never create blockers");
+  if (assignmentVariant === 2) {
+    const untiedProject = {
+      ...project,
+      collections:{...project.collections, assignments:untiedAssignments},
+    };
+    const untied = specificationPreflight(
+      createCanonicalProjectEnvelope(untiedProject, `draft:untied:${sample}`));
+    const ambiguous = new Set([untiedAssignments[0].id, "assignment:tie"]);
+    assert.equal(
+      baseline.plan.assignments.some(({assignmentId}) => ambiguous.has(assignmentId)),
+      false,
+      "all generated ambiguous candidates must be excluded from evaluation",
+    );
+    assert.deepEqual(
+      baseline.plan.schemas,
+      Object.fromEntries(
+        Object.entries(untied.plan.schemas).filter(([schemaKey]) => !ambiguous.has(schemaKey))),
+      "excluding generated ties must preserve unrelated effective schema bytes",
+    );
+  }
 
   const blockedProject = structuredClone(project);
   blockedProject.collections.pages[0].profileId = "profile:retail";
