@@ -1,5 +1,5 @@
 import { canonicalPropertyPath, canonicalTableRows } from "../data-layer-canonical-schema.js";
-import { bindSchemaTableQuickEdit, mountSchemaTableOverlay, schemaTableAllowedValues, schemaTableCellMetadata, schemaTableColumns } from "../data-layer-schema-table.js";
+import { applySchemaTablePathAllocation, bindSchemaTableQuickEdit, mountSchemaTableOverlay, schemaTableAllowedValues, schemaTableCellMetadata, schemaTableColumns } from "../data-layer-schema-table.js";
 import { button } from "./dom.js";
 export function canonicalNavigatorRows(context) {
     const query = context.query.trim().toLowerCase(), matches = (node) => !query || node.name.toLowerCase().includes(query) || canonicalPropertyPath(context.document, node.id).toLowerCase().includes(query), facet = (node) => context.propertyFilter === "all" || context.propertyFilter === "conditions" && Boolean(node.presence.condition) || context.propertyFilter === "documentation" && Boolean(node.documentation.displayText || node.documentation.description || node.documentation.comments) || context.propertyFilter === "issues" && node.provenance.some(({ state }) => state === "shadowed");
@@ -76,7 +76,7 @@ function renderTable(tree, context) {
         compatibilityMarker.hidden = true;
         compatibilityMarker.textContent = " ·";
         pathCell.append(compatibilityMarker);
-        pathCell.style.minWidth = "20rem";
+        applySchemaTablePathAllocation(pathCell);
         const typeCell = cell(2), presenceCell = cell(3), appendReset = (host, facet, label, value) => { if (value === undefined || !node.localDefinitionFacets?.includes(facet))
             return; const reset = button(dom, `Reset ${label} to parent`, () => { const result = context.commitInline(row.node, facet, value); if (result.status === "invalid")
             context.inlineDiagnostic(result.diagnostic); }); reset.setAttribute("aria-label", `Reset ${label} to parent for ${row.path}`); reset.dataset.inlineFacetReset = facet; host.append(reset); };

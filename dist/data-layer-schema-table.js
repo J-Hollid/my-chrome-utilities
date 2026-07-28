@@ -13,6 +13,13 @@ export const schemaTableColumns = [
     { key: "validation-state", label: "Validation state" },
 ];
 export const schemaTableCellMetadata = schemaTableColumns.map(({ key, label }) => ({ key, label }));
+export const schemaTableFormerPropertyPathAllocation = "20rem";
+export function applySchemaTablePathAllocation(cell) {
+    cell.dataset.formerPropertyPathAllocation = schemaTableFormerPropertyPathAllocation;
+    cell.style.width = schemaTableFormerPropertyPathAllocation;
+    cell.style.minWidth = schemaTableFormerPropertyPathAllocation;
+    cell.style.maxWidth = schemaTableFormerPropertyPathAllocation;
+}
 export const schemaTableOverlayStyle = "position:fixed;right:auto;bottom:auto;margin:0;box-sizing:border-box;max-width:calc(100vw - 1rem);max-height:calc(100vh - 1rem);overflow:hidden;background:Canvas;border:1px solid ButtonBorder;padding:0.75rem;";
 const overlayPadding = 8, overlayGap = 8;
 const clamp = (value, minimum, maximum) => Math.min(Math.max(value, minimum), Math.max(minimum, maximum));

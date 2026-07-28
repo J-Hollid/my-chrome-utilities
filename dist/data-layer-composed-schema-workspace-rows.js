@@ -2,7 +2,7 @@ import { composedSchemaRowOwnershipInput } from "./data-layer-composed-schema-ow
 import { renderFocusedPropertyMenu } from "./data-layer-focused-schema-property-menu.js";
 import { focusedOwnershipActionTarget, focusedSectionOwnershipActions, focusedPropertyProvenanceSummary, focusedPropertySectionLabels, gateFocusedOwnershipSection } from "./data-layer-focused-schema-property-ui.js";
 import { renderComposedFocusedSection } from "./data-layer-composed-schema-workspace-focused-sections.js";
-import { bindSchemaTableQuickEdit, clearSchemaTableOverlay, mountSchemaTableOverlay, schemaTableAllowedValues, schemaTableCellMetadata, schemaTableColumns } from "./data-layer-schema-table.js";
+import { applySchemaTablePathAllocation, bindSchemaTableQuickEdit, clearSchemaTableOverlay, mountSchemaTableOverlay, schemaTableAllowedValues, schemaTableCellMetadata, schemaTableColumns } from "./data-layer-schema-table.js";
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 function applyPersistedItemOwnership(host, row) {
     const overriddenValues = new Set((row.local.allowedValueProvenance ?? []).filter(({ state }) => state === "overridden").map(({ id }) => id));
@@ -130,7 +130,7 @@ export function renderComposedRows(rows, context) {
         const pathCell = cell(1, row.path), typeCell = cell(2), presenceCell = cell(3), appendReset = (host, facet, label) => { if (!row.inherited || !Object.hasOwn(row.local, facet))
             return; const reset = button(dom, `Reset ${label} to parent`, () => { const result = context.resetInline(row, facet); if (result.status === "invalid")
             context.inlineDiagnostic(result.diagnostic); }); reset.setAttribute("aria-label", `Reset ${label} to parent for ${row.path}`); reset.dataset.inlineFacetReset = facet; host.append(reset); };
-        pathCell.style.minWidth = "20rem";
+        applySchemaTablePathAllocation(pathCell);
         typeCell.append(select(row, "type", String(draft?.type ?? effective.type ?? "string"), ["string", "number", "integer", "boolean", "null", "object", "array"]));
         appendReset(typeCell, "type", "Type");
         presenceCell.append(select(row, "presence", String(draft?.presence ?? effective.presence ?? "optional"), ["optional", "required", "forbidden"]));

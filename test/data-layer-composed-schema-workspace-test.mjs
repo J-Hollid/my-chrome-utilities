@@ -4,9 +4,12 @@ import {
   composedSchemaWorkspace,
   resetComposedSchemaLocalProperty,
   saveComposedCanonicalDocument,
+  saveComposedEntitySchemaPolicy,
   saveComposedEventCanonicalDocument,
   saveEventOccurrenceCanonicalDocument,
+  saveFlowContributorSchemaPolicy,
   saveFlowPageInstanceCanonicalDocument,
+  saveFlowPageInstanceSchemaPolicy,
   saveComposedSchemaLocalFacets,
   saveComposedSchemaPolicy,
   saveComposedSchemaLocalFacetsAndStructures,
@@ -42,6 +45,22 @@ const canonicalClosed=saveComposedSchemaPolicy(canonicalPolicyState,"pages",cano
 assert.equal(storedCanonicalPolicy.canonicalSchema.onlyDefinedFields,true,"Page policy persists through its canonical schema boundary");
 assert.equal(storedCanonicalPolicy.canonicalSchema.revision,1,"the policy toggle records one canonical schema-scoped command");
 assert.equal(Object.hasOwn(storedCanonicalPolicy,"onlyDefinedFields"),false,"a canonical Page never retains a competing entity-level policy");
+const compactPolicyState=structuredClone(state),compactPolicyEvent={id:"event:canonical-policy",name:"Canonical policy event",canonicalSchema:{id:"canonical:event-policy",contributorId:"event:canonical-policy",contributorName:"Canonical policy event",revision:4,rootIds:[],nodes:{},changes:[],onlyDefinedFields:false},onlyDefinedFields:true};
+compactPolicyState.project.collections.events.push(compactPolicyEvent);
+const compactClosed=saveComposedEntitySchemaPolicy(compactPolicyState,"events",compactPolicyEvent.id,true),storedCompactPolicy=compactClosed.project.collections.events.find(({id})=>id===compactPolicyEvent.id);
+assert.equal(storedCompactPolicy.canonicalSchema.onlyDefinedFields,true,"the compact Event policy updates the canonical value that compilation prefers");
+assert.equal(storedCompactPolicy.canonicalSchema.revision,5,"the compact Event policy records one canonical schema-scoped command");
+assert.equal(Object.hasOwn(storedCompactPolicy,"onlyDefinedFields"),false,"the compact Event policy removes a stale competing entity value");
+const flowPolicyState=structuredClone(state),flowId="flow:canonical-policy",canonicalFlowEntity=(id,name)=>({id,name,canonicalSchema:{id:`canonical:${id}`,contributorId:id,contributorName:name,revision:2,rootIds:[],nodes:{},changes:[],onlyDefinedFields:false},onlyDefinedFields:true});
+flowPolicyState.project.documentationFlowGraphs={};
+flowPolicyState.project.documentationFlowGraphs[flowId]={pageFrames:[canonicalFlowEntity("frame:canonical-policy","Canonical policy frame")],occurrences:[canonicalFlowEntity("occurrence:canonical-policy","Canonical policy occurrence")]};
+const flowClosed=saveFlowContributorSchemaPolicy(flowPolicyState,flowId,"occurrences","occurrence:canonical-policy",true),storedOccurrence=flowClosed.project.documentationFlowGraphs[flowId].occurrences[0];
+assert.equal(storedOccurrence.canonicalSchema.onlyDefinedFields,true,"the compact occurrence policy updates the canonical value that compilation prefers");
+assert.equal(storedOccurrence.canonicalSchema.revision,3,"the compact occurrence policy records one canonical schema-scoped command");
+assert.equal(Object.hasOwn(storedOccurrence,"onlyDefinedFields"),false,"the compact occurrence policy removes a stale competing entity value");
+const frameClosed=saveFlowPageInstanceSchemaPolicy(flowClosed,flowId,"frame:canonical-policy",true),storedFrame=frameClosed.project.documentationFlowGraphs[flowId].pageFrames[0];
+assert.equal(storedFrame.canonicalSchema.onlyDefinedFields,true,"the Flow workspace policy uses the same canonical-aware persistence boundary");
+assert.equal(Object.hasOwn(storedFrame,"onlyDefinedFields"),false,"the Flow workspace policy removes a stale competing entity value");
 const workspace=composedSchemaWorkspace(state,cart,"Page");
 const quickStep=workspace.rows.find(({path})=>path==="/page_name");
 assert.deepEqual(composedTableQuickEditFacets(quickStep,"description","Cart step"),{documentation:"Cart step"},"an inherited composed Description edit creates only its sparse local facet");
