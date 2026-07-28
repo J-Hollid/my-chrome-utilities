@@ -4,24 +4,24 @@ const labeled = (dom, text, control) => { const label = dom.createElement("label
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 export function renderCanonicalNavigator(context) {
     const { dom, document } = context, navigator = dom.createElement("section"), search = dom.createElement("input"), filter = dom.createElement("select"), sort = dom.createElement("select"), tree = dom.createElement("div"), rootName = input(dom, "newRootPropertyName", "property"), addRoot = button(dom, "Add root property", () => { const name = rootName.value.trim(); if (name)
-        context.command({ kind: "add", baseRevision: document.revision, name, type: "string", id: context.options.id }); }), refresh = () => { tree.replaceChildren(); if (document.view === "tree")
-        renderNavigatorRows(tree, context); applyNavigatorView(tree, dom, document.view, context); };
+        context.command({ kind: "add", baseRevision: document.revision, name, type: "string", id: context.options.id }); }), refresh = (updates = {}) => { const live = { ...context, ...updates }; tree.replaceChildren(); if (document.view === "tree")
+        renderNavigatorRows(tree, live); applyNavigatorView(tree, dom, document.view, live); };
     navigator.setAttribute("aria-label", "Canonical property navigator");
     search.type = "search";
     search.setAttribute("aria-label", "Canonical property search");
     search.placeholder = "Search properties";
     search.value = context.query;
-    search.addEventListener("input", () => { context.setQuery(search.value); refresh(); });
+    search.addEventListener("input", () => { context.setQuery(search.value); refresh({ query: search.value }); });
     filter.name = "propertyFilter";
     filter.setAttribute("aria-label", "Filter canonical properties");
     filter.append(new Option("All properties", "all"), new Option("With conditions", "conditions"), new Option("With documentation", "documentation"), new Option("With issues", "issues"));
     filter.value = context.propertyFilter;
-    filter.addEventListener("change", () => { context.setPropertyFilter(filter.value); refresh(); });
+    filter.addEventListener("change", () => { const value = filter.value; context.setPropertyFilter(value); refresh({ propertyFilter: value }); });
     sort.name = "propertySort";
     sort.setAttribute("aria-label", "Sort schema properties");
     sort.append(new Option("Tree order", "tree"), new Option("Concept", "concept"), new Option("Name", "name"), new Option("Type", "type"));
     sort.value = context.propertySort;
-    sort.addEventListener("change", () => { context.setPropertySort(sort.value); refresh(); });
+    sort.addEventListener("change", () => { const value = sort.value; context.setPropertySort(value); refresh({ propertySort: value }); });
     tree.setAttribute("aria-label", "Canonical property search results");
     tree.dataset.schemaEditorScrollRegion = "true";
     refresh();

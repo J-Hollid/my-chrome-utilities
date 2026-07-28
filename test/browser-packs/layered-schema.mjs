@@ -8,6 +8,7 @@ import {headlessChromeArguments,resolveChromeExecutable,stopHeadlessChrome} from
 import {wait} from "./shared-harness.mjs";
 import {authoring034Expression,authoring035And036Expression} from "../support/layered-schema-usability-probes.mjs";
 import {authoring045Expression,flowFacet003Expression} from "../support/layered-schema-ownership-probes.mjs";
+import {authoringConceptRuntimeExpression} from "../support/schema-concept-runtime-probes.mjs";
 import {flatRuleMainProjectionLifecycleExpression,flatRulePanelProjectionDiagnosticExpression,flatRulePopupGeometryExpression,flatRuleResponsiveFinishExpression,flatRuleResponsiveSetupExpression,flatRuleResponsiveSnapshotExpression} from "../support/flat-rule-builder-runtime-probes.mjs";
 
 class DevtoolsSocket{
@@ -366,13 +367,14 @@ focus.push(panel.document.activeElement===action);
       const ok=Boolean(stagedStable&&initialReview.includes('Edited documentation')&&initialReview.includes('Structure add-sibling')&&overrideNotActivated&&sparse&&reloaded&&hashIsolation&&reset&&removeSku&&removalReview.includes('Edited documentation')&&removalReview.includes('Structure delete')&&oneRemovalCommand&&currentParent&&currentParentRendered&&undoAvailable&&undoRestored&&stableIds);const diagnostic={ok,stagedStable,initialReview,overrideNotActivated,sparse,reloaded,provenanceRendered,hashIsolation,removalReview,oneRemovalCommand,currentParent,currentParentRendered,undoAvailable,undoRestored,stableIds,cartLocal:cartLocal.localSchemaContributions,removedLocal:removedCart.localSchemaContributions};globalThis.__recursiveInheritanceDiagnostics=diagnostic;return diagnostic;
     })()`);
     recursiveArrayEvidence.authoring051=installedRecursiveInheritanceEvidence.ok;
-    recursiveArrayEvidence.authoring060=recursiveArrayEvidence.authoring054&&recursiveArrayEvidence.authoring058;
-    recursiveArrayEvidence.authoring061=recursiveArrayEvidence.authoring051&&recursiveArrayEvidence.authoring054;
-    recursiveArrayEvidence.authoring062=recursiveArrayEvidence.authoring058;
-    recursiveArrayEvidence.authoring063=recursiveArrayEvidence.authoring047&&recursiveArrayEvidence.authoring059;
+    const installedConceptEvidence=await evaluate(socket,authoringConceptRuntimeExpression);
+    recursiveArrayEvidence.authoring060=installedConceptEvidence.authoring060;
+    recursiveArrayEvidence.authoring061=installedConceptEvidence.authoring061;
+    recursiveArrayEvidence.authoring062=installedConceptEvidence.authoring062;
+    recursiveArrayEvidence.authoring063=installedConceptEvidence.authoring063;
     recursiveArrayEvidence.authoring057=await evaluate(socket,`(async()=>{const[{createCanonicalSchema,applyCanonicalCommand},{mountCanonicalSchemaEditor}]=await Promise.all([import('/data-layer-canonical-schema.js'),import('/data-layer-canonical-schema-ui.js')]);let sequence=0,id=(kind)=>kind+':example:'+ ++sequence,model=createCanonicalSchema({id:'schema:example-runtime',contributorId:'profile:example-runtime',contributorName:'Example runtime'}),result=applyCanonicalCommand(model,{kind:'add',baseRevision:0,name:'exampleField',type:'number',id});model=result.document;const propertyId=model.selectedPropertyId;result=applyCanonicalCommand(model,{kind:'set',baseRevision:model.revision,propertyId,patch:{allowedValues:[{id:'allowed:one',value:1},{id:'allowed:two',value:2}]}});model={...result.document,view:'table'};const host=document.createElement('section');document.body.append(host);mountCanonicalSchemaEditor({host,surface:'Builder',load:()=>model,id,dispatch:(command)=>{const next=applyCanonicalCommand(model,command);if(next.status==='applied'||next.status==='rebased')model=next.document;return next;}});const control=host.querySelector('[data-inline-schema-facet="example"]'),suggestions=[...host.querySelectorAll('datalist option')].map(({value})=>value);control.focus();control.value='3';control.dispatchEvent(new KeyboardEvent('keydown',{key:'Enter',bubbles:true,cancelable:true}));await new Promise((resolve)=>setTimeout(resolve,50));const node=model.nodes[propertyId],ok=node.documentation.example.value===3&&node.allowedValues.map(({value})=>value).join('|')==='1|2'&&suggestions.join('|')==='1|2';host.remove();return ok;})()`);
     Object.assign(evidence,recursiveArrayEvidence);
-    if(!Object.values(recursiveArrayEvidence).every(Boolean))throw new Error(`installed recursive array evidence ${JSON.stringify(recursiveArrayEvidence)} diagnostics ${JSON.stringify({recursive:await evaluate(socket,'globalThis.__recursiveArrayDiagnostics'),inheritance:installedRecursiveInheritanceEvidence})}`);
+    if(!Object.values(recursiveArrayEvidence).every(Boolean))throw new Error(`installed recursive array evidence ${JSON.stringify(recursiveArrayEvidence)} diagnostics ${JSON.stringify({recursive:await evaluate(socket,'globalThis.__recursiveArrayDiagnostics'),inheritance:installedRecursiveInheritanceEvidence,concept:installedConceptEvidence})}`);
     const viewportTarget=activeSocket??socket;
     await viewportTarget.call("Emulation.setDeviceMetricsOverride",{width:360,height:800,deviceScaleFactor:1,mobile:false});
     let narrowOverlayEvidence;

@@ -17,6 +17,10 @@ import {
   themeFingerprint,
   writeProjectDocumentationWorkbook,
 } from "../dist/data-layer-project-documentation-workspace.js";
+import {
+  groupProjectDocumentationConceptRows,
+  reconcileProjectDocumentationConcepts,
+} from "../dist/data-layer-project-documentation-compiler.js";
 
 const permutations=(values)=>values.length<2?[values]:values.flatMap((value,index)=>permutations(values.filter((_,candidate)=>candidate!==index)).map((rest)=>[value,...rest]));
 const unzipStored=(bytes)=>{const files=new Map(),view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let offset=0;while(offset+30<=bytes.length&&view.getUint32(offset,true)===0x04034b50){const size=view.getUint32(offset+18,true),nameLength=view.getUint16(offset+26,true),extraLength=view.getUint16(offset+28,true),name=new TextDecoder().decode(bytes.slice(offset+30,offset+30+nameLength)),start=offset+30+nameLength+extraLength;files.set(name,new TextDecoder().decode(bytes.slice(start,start+size)));offset=start+size;}return files;};
@@ -82,6 +86,39 @@ for(let index=0;index<100;index+=1){
   assertWorkbookPackage(
     writeProjectDocumentationWorkbook(projectSnapshot,selection),
     selectProjectDocumentationTables(projectSnapshot,selection).map(({title})=>title),
+  );
+}
+
+let conceptSeed=0xd0c5e7;
+const conceptRandom=()=>((conceptSeed=(Math.imul(conceptSeed,1103515245)+12345)>>>0)/0x100000000);
+const shuffled=(values)=>{const result=[...values];for(let index=result.length-1;index>0;index-=1){const target=Math.floor(conceptRandom()*(index+1));[result[index],result[target]]=[result[target],result[index]];}return result;};
+for(let example=0;example<250;example+=1){
+  const names=Array.from({length:2+Math.floor(conceptRandom()*6)},(_,index)=>`Concept ${example}-${index}`),configuredOrder=shuffled(names),configured=configuredOrder.map((name,index)=>({name,included:(index+example)%3!==0})),set=createProjectDocumentationSet({
+    id:`set:concept-property:${example}`,name:`Concept property ${example}`,themeId:`theme:${example}`,sections:[{id:`matrix:concept-property:${example}`,kind:"matrix",name:"Data capture matrix",selected:true}],
+    concepts:[...configured,{name:"Ungrouped",included:example%4!==0}],includeConceptSubheadings:true,
+  }),newNames=[`Acquisition ${example}`,`Behavior ${example}`],available=[
+    ...shuffled(names).flatMap((name)=>[` ${name.toUpperCase()} `,name.toLowerCase()]),
+    ...newNames.flatMap((name)=>[name,` ${name.toUpperCase()} `]),
+  ],reconciled=reconcileProjectDocumentationConcepts(set,available);
+  assert.deepEqual(reconciled.slice(0,configured.length),configured,"reconciliation preserves configured order and inclusion");
+  assert.deepEqual(reconciled.slice(configured.length,-1).map(({name})=>name),newNames,"new normalized concepts append alphabetically before Ungrouped");
+  assert.deepEqual(reconciled.at(-1),set.concepts.at(-1),"reconciliation preserves the configured Ungrouped choice");
+
+  const itemCount=5+Math.floor(conceptRandom()*25),items=Array.from({length:itemCount},(_,index)=>{
+    const concept=index%5===0?undefined:names[Math.floor(conceptRandom()*names.length)],path=`/${String(Math.floor(conceptRandom()*12)).padStart(2,"0")}/${String(index).padStart(2,"0")}`;
+    return{path,...(concept?{concept:index%2?concept.toUpperCase():` ${concept.toLowerCase()} `}:{}),cells:[`row:${index}`,path]};
+  }),headingsOn=groupProjectDocumentationConceptRows(set,items),headingsOff=groupProjectDocumentationConceptRows({...set,includeConceptSubheadings:false},items),included=new Map(set.concepts.map(({name,included})=>[name.toLocaleLowerCase(),included])),expectedItems=items.filter(({concept})=>included.get(concept?.trim().toLocaleLowerCase()||"ungrouped")!==false);
+  assert.deepEqual(headingsOff,headingsOn,"filtering and configured order are independent of heading visibility");
+  assert.equal(headingsOn.rows.length,expectedItems.length,"grouping conserves every included row exactly once");
+  assert.deepEqual(new Set(headingsOn.rows.map(([id])=>id)),new Set(expectedItems.map(({cells})=>cells[0])),"grouping neither duplicates nor substitutes rows");
+  for(const group of headingsOn.groups){
+    const paths=headingsOn.rows.slice(group.start,group.start+group.count).map(([,path])=>path);
+    assert.deepEqual(paths,[...paths].sort(),"paths remain ordered within every configured concept");
+  }
+  assert.deepEqual(
+    headingsOn.groups.map(({name})=>name),
+    set.concepts.filter(({name,included})=>included&&items.some(({concept})=>(concept?.trim().toLocaleLowerCase()||"ungrouped")===name.toLocaleLowerCase())).map(({name})=>name),
+    "non-empty groups retain stable configured order and suppress zero-row headings",
   );
 }
 

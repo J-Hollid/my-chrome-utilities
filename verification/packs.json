@@ -966,6 +966,7 @@
     ],
     "property": [
       "test/data-layer-canonical-schema-property-test.mjs",
+      "test/data-layer-schema-property-concepts-property-test.mjs",
       "test/data-layer-canonical-array-items-property-test.mjs",
       "test/data-layer-saved-schema-canonical-property-test.mjs",
       "test/data-layer-side-panel-unified-schema-editor-property-test.mjs",
