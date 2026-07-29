@@ -33,6 +33,8 @@ are:
 - `features/data-layer-side-panel-schema-relationship-tree-runtime.feature`
 - `features/data-layer-durable-project-repository.feature`
 - `features/data-layer-durable-project-repository-runtime.feature`
+- `features/specification-studio-choice-controls.feature`
+- `features/specification-studio-choice-controls-runtime.feature`
 
 The correction program for the four schema contracts is
 `docs/data-layer-canonical-schema-authoring-correction-program-R01.md`.
@@ -55,6 +57,8 @@ The program for the relationship-derived side-panel Schema tree is
 The correction program for durable project storage, page-scoped Undo/Redo, and
 intentional publication revisions is
 `docs/data-layer-durable-project-repository-program-R01.md`.
+The correction program for Specification Studio checkboxes and immediate binary
+settings is `docs/specification-studio-choice-controls-program-R01.md`.
 
 The user-approved canonical-authoring and layered-schema cycles are later authority
 than the earlier graph-only scope reduction. They supersede that reduction only for
@@ -247,6 +251,22 @@ theme color, smaller type, and less emphasis while retaining readable contrast.
 Preview, rich copy, and Excel preserve this hierarchy; plain text emits one
 column-heading line and one label per non-empty concept. The exact checkpoint
 remains `flow_export`, followed by `npm run package`.
+
+On approval, the Specification Studio choice-control correction is later authority
+for the two Specification Studio choice-control contracts. Every Studio checkbox
+uses one shared compact labelled-row pattern: a 16–18 CSS pixel indicator, an
+8 CSS pixel indicator-to-label gap, and a complete clickable row at least 36 CSS
+pixels high for fine pointers and 44 CSS pixels for coarse or narrow presentation.
+Related choices are vertical under one legend; labels, hints, and separate row
+actions remain visually and programmatically unambiguous.
+
+Switches are reserved for standalone binary settings whose reversible consequence
+applies immediately without Save, Refresh, confirmation, or batch execution.
+`Only defined fields` is the required representative switch. Membership,
+inclusion, acknowledgement, confirmation, staged selection, and options awaiting a
+later action remain checkboxes. The correction changes no product consequence,
+Draft value, revision, Undo behavior, output, validation, or side-panel control.
+The exact checkpoint is `branding_polish`, followed by `npm run package`.
 
 On approval, the typed-literal and focused-editor correction is later authority
 for Authoring scenarios 023 and 064–067. Allowed values and custom examples share
