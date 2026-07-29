@@ -61,7 +61,7 @@ Feature: Specification Studio technical analyst guidance
     When <event> occurs
     Then the hint bubble is <result>
     And focus remains on the operator's current control
-    And project state and Undo history remain unchanged
+    And focus, project state, revision, and Undo history remain unchanged
 
     Examples:
       | event                              | result                                 |
@@ -83,3 +83,106 @@ Feature: Specification Studio technical analyst guidance
       | 1280 by 900 CSS pixel Studio          | visible    |
       | 200 percent browser zoom              | visible    |
       | narrow Studio with navigation hidden  | hidden     |
+
+  # Specification Studio technical analyst guidance 006
+  Scenario Outline: Specification Studio technical analyst guidance 006
+    Given the technical analyst is visible as an interactive guidance control
+    When <pointer_or_focus_state> applies
+    Then the analyst is displayed at <scale>
+    And a mustard and ink highlight is <highlight_state>
+    And the visual change causes no layout movement or content overlap
+
+    Examples:
+      | pointer_or_focus_state             | scale       | highlight_state |
+      | pointer hover begins               | 105 percent | visible         |
+      | keyboard focus arrives             | 105 percent | visible         |
+      | pointer hover or keyboard focus ends | 100 percent | absent          |
+
+  # Specification Studio technical analyst guidance 007
+  Scenario Outline: Specification Studio technical analyst guidance 007
+    Given the technical analyst is visible
+    When the operator activates him with <activation>
+    Then the next unused tip for the current Studio part appears immediately
+    And any visible tip is replaced
+    And the ordinary hint interval restarts at 120 seconds
+    And focus, project state, revision, and Undo history remain unchanged
+
+    Examples:
+      | activation |
+      | click      |
+      | Enter      |
+      | Space      |
+
+  # Specification Studio technical analyst guidance 008
+  Scenario: Specification Studio technical analyst guidance 008
+    Given the analyst's head is on the left
+    And a hint bubble is visible to his right
+    Then the tail's narrow end begins beside the right side of his head
+    And the tail travels rightward and curves downward
+    And its wide end joins the left edge of the bubble
+    And the complete tail remains inside dedicated guidance space
+
+  # Specification Studio technical analyst guidance 009
+  Scenario Outline: Specification Studio technical analyst guidance 009
+    Given the page being left has <current_tip_state>
+    When the operator changes to a different Studio page
+    Then the current bubble is hidden
+    And the automatic hint timer restarts at 10 seconds
+    And previously presented tip identities remain remembered for the session
+
+    Examples:
+      | current_tip_state |
+      | no visible tip    |
+      | a visible tip     |
+
+  # Specification Studio technical analyst guidance 010
+  Scenario Outline: Specification Studio technical analyst guidance 010
+    Given the operator is using <studio_part>
+    Then that part has at least 5 distinct general tips
+    And every tip gives accurate advice specific to that part
+    And automatic or requested tips rotate without repetition until that part's pool is exhausted
+
+    Examples:
+      | studio_part      |
+      | Project overview |
+      | Shared Profiles  |
+      | Pages            |
+      | Page Groups      |
+      | Events           |
+      | Applicability    |
+      | Flows            |
+      | Fixtures         |
+      | Assignments      |
+      | Documentation    |
+
+  # Specification Studio technical analyst guidance 011
+  Scenario Outline: Specification Studio technical analyst guidance 011
+    Given the pointer or keyboard focus remains on one visible named Studio control for <dwell_time>
+    And no dialog, menu, or blocking layer is open
+    When control guidance is considered
+    Then a control-specific analyst tip is <result>
+    And the tip uses the same reserved bubble without moving focus or covering content
+    And showing control guidance starts a fresh 120-second wait for ordinary guidance
+    And it does not retrigger until the pointer and keyboard focus leave that control
+
+    Examples:
+      | dwell_time                               | result      |
+      | less than 3 seconds                      | not shown   |
+      | 3 seconds of continuous pointer hover    | shown once  |
+      | 3 seconds of continuous keyboard focus   | shown once  |
+
+  # Specification Studio technical analyst guidance 012
+  Scenario Outline: Specification Studio technical analyst guidance 012
+    Given a complete analyst tip has been selected
+    When its bubble uses <motion_preference>
+    Then visible text presents <output>
+    And the interval between successive visible characters is <character_interval>
+    And space for the complete final text is reserved before the first character appears
+    And replacing, hiding, or navigating away from the tip cancels its active print sequence
+    And assistive technology receives the complete tip once rather than each partial string
+    And focus, project state, revision, and Undo history remain unchanged
+
+    Examples:
+      | motion_preference | output                                   | character_interval |
+      | standard motion   | one complete visible character at a time | 20 milliseconds    |
+      | reduced motion    | the complete tip immediately              | 0 milliseconds     |

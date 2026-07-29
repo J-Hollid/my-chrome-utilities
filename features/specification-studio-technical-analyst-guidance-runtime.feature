@@ -60,7 +60,7 @@ Feature: Specification Studio technical analyst guidance runtime
     When <event> occurs
     Then the production hint bubble is <result>
     And document active element remains the operator's prior control
-    And project bytes, Draft token, revision, and Undo count remain unchanged
+    And active element, project bytes, Draft token, revision, and Undo count remain unchanged
 
     Examples:
       | event                              | result                                  |
@@ -82,3 +82,106 @@ Feature: Specification Studio technical analyst guidance runtime
       | 1280 by 900 CSS pixel Studio         | visible    |
       | 200 percent browser zoom             | visible    |
       | narrow Studio with navigation hidden | hidden     |
+
+  # Specification Studio technical analyst guidance runtime 006
+  Scenario Outline: Specification Studio technical analyst guidance runtime 006
+    Given the installed technical analyst is a visible interactive guidance control
+    When <pointer_or_focus_state> is dispatched
+    Then its computed transform displays it at <scale>
+    And computed mustard and ink highlight is <highlight_state>
+    And guidance-region and neighboring-control bounding boxes do not move or overlap
+
+    Examples:
+      | pointer_or_focus_state               | scale       | highlight_state |
+      | pointer hover begins                 | 105 percent | visible         |
+      | keyboard focus arrives               | 105 percent | visible         |
+      | pointer hover or keyboard focus ends | 100 percent | absent          |
+
+  # Specification Studio technical analyst guidance runtime 007
+  Scenario Outline: Specification Studio technical analyst guidance runtime 007
+    Given the installed technical analyst is a visible interactive guidance control
+    When production activation uses <activation>
+    Then the next unused production tip for the current Studio part renders without scheduler delay
+    And any rendered tip is replaced
+    And the production ordinary interval becomes 120 seconds
+    And active element, project bytes, Draft token, revision, and Undo count remain unchanged
+
+    Examples:
+      | activation |
+      | click      |
+      | Enter      |
+      | Space      |
+
+  # Specification Studio technical analyst guidance runtime 008
+  Scenario: Specification Studio technical analyst guidance runtime 008
+    Given installed analyst head geometry is on the left
+    And installed bubble geometry is visible to its right
+    Then the computed tail narrow endpoint is beside the right side of the head
+    And sampled tail geometry travels rightward and curves downward
+    And its wide endpoint joins the bubble's left edge
+    And no sampled tail point falls outside reserved guidance geometry
+
+  # Specification Studio technical analyst guidance runtime 009
+  Scenario Outline: Specification Studio technical analyst guidance runtime 009
+    Given the production page being left contains <current_tip_state>
+    When production navigation opens a different Studio page
+    Then the installed bubble is hidden
+    And scheduler time until the next automatic hint is 10 seconds
+    And the session's presented-tip identities are retained
+
+    Examples:
+      | current_tip_state |
+      | no rendered tip   |
+      | a rendered tip    |
+
+  # Specification Studio technical analyst guidance runtime 010
+  Scenario Outline: Specification Studio technical analyst guidance runtime 010
+    Given the installed operator route is <studio_part>
+    Then production guidance exposes at least 5 distinct general tip identities for that part
+    And every rendered text describes a production action or concept owned by that part
+    And scheduler selection does not repeat an identity until that part's pool is exhausted
+
+    Examples:
+      | studio_part      |
+      | Project overview |
+      | Shared Profiles  |
+      | Pages            |
+      | Page Groups      |
+      | Events           |
+      | Applicability    |
+      | Flows            |
+      | Fixtures         |
+      | Assignments      |
+      | Documentation    |
+
+  # Specification Studio technical analyst guidance runtime 011
+  Scenario Outline: Specification Studio technical analyst guidance runtime 011
+    Given production pointer or keyboard focus remains on one visible named Studio control for <dwell_time>
+    And production dialog, menu, and blocking-layer state is clear
+    When the installed control-guidance observer is inspected
+    Then a control-specific production analyst tip is <result>
+    And bubble, focus, and control bounding boxes prove reserved non-overlapping presentation
+    And a rendered control tip sets the ordinary scheduler interval to 120 seconds
+    And the same control does not retrigger until pointer and keyboard focus both leave it
+
+    Examples:
+      | dwell_time                               | result        |
+      | less than 3 seconds                      | not rendered  |
+      | 3 seconds of continuous pointer hover    | rendered once |
+      | 3 seconds of continuous keyboard focus   | rendered once |
+
+  # Specification Studio technical analyst guidance runtime 012
+  Scenario Outline: Specification Studio technical analyst guidance runtime 012
+    Given production guidance has selected a complete analyst tip
+    When installed bubble presentation uses <motion_preference>
+    Then sampled visible text renders <output>
+    And successive visible-character samples are separated by <character_interval>
+    And bubble geometry equals complete-text geometry before the first character renders
+    And replacement, hide, and route-change events cancel the prior print scheduler
+    And the polite live region exposes the complete tip exactly once without partial announcements
+    And active element, project bytes, Draft token, revision, and Undo count remain unchanged
+
+    Examples:
+      | motion_preference | output                                   | character_interval |
+      | standard motion   | one complete visible character at a time | 20 milliseconds    |
+      | reduced motion    | the complete tip immediately              | 0 milliseconds     |

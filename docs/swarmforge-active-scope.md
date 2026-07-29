@@ -285,6 +285,32 @@ remain hidden whenever the narrow Studio hides its navigation rail. Reduced-moti
 presentation retains the hint without entrance or exit animation. The exact
 checkpoint is `branding_polish`, followed by `npm run package`.
 
+On approval, the Specification Studio technical-analyst interaction correction is
+later authority for technical-analyst guidance scenarios 002–003 and 006–011.
+Pointer hover or keyboard focus highlights the analyst and displays him at 105
+percent without reflow. Click, Enter, or Space requests the next unused
+part-specific tip immediately and restarts the ordinary 120-second interval.
+Changing to another Studio page hides the current bubble and restarts the initial
+10-second timer without forgetting session tip history.
+
+The analyst remains left of the bubble. Its curved tail begins beside the right
+side of his head, travels rightward and downward, and joins the bubble's left edge.
+Every top-level Studio part has at least five accurate general tips. Three seconds
+of continuous pointer hover or keyboard focus on a visible named Studio control
+shows one control-specific tip in the same reserved bubble; leaving early cancels
+it, and remaining on the control cannot repeatedly trigger it. Requested and
+control-specific tips never steal focus, cover content, mutate project state, or
+create revision or Undo changes. The exact checkpoint remains `branding_polish`,
+followed by `npm run package`.
+
+Every selected tip reserves its complete final bubble geometry before revealing
+text. With standard motion, complete visible characters appear successively at
+20-millisecond intervals. Replacing or hiding a tip and changing Studio page
+cancel the prior print sequence. Reduced-motion presentation shows the complete
+tip immediately. Assistive technology receives one polite complete-tip
+announcement rather than each partial visual string. This extends
+technical-analyst guidance scenario 012 without changing its checkpoint.
+
 On approval, the typed-literal and focused-editor correction is later authority
 for Authoring scenarios 023 and 064–067. Allowed values and custom examples share
 a type-directed literal language: commas delimit allowed values only outside
