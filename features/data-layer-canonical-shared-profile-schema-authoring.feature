@@ -338,9 +338,11 @@ Feature: Data layer canonical Shared Profile schema authoring
     And View opens read-only details without entering edit mode
     And Edit opens a further overlay containing the rule name, rule type, flat When controls, type-specific Then outcome, severity, optional message, and local actions
     When the operator adds a rule
-    Then one empty condition row is present and the rule cannot be saved until at least one condition is complete
+    Then When begins with no condition rows and offers Add condition
+    And the rule can be staged without a condition once its other required fields are complete
+    And a condition that has been started must be completed or removed
     And the rule type is chosen before only that type's Then outcome fields appear
-    And the flat When builder uses one All or Any mode, searchable property selectors, type-valid operators, and typed values only when required
+    And with at least two conditions the flat When builder uses one All or Any mode, searchable property selectors, type-valid operators, and typed values only when required
     And reusable rules use a searchable named selector rather than a raw identity input
     And there is no separate property-level Conditions editor or condition rule kind
     When the operator stages removal of the local cardinality rule
@@ -445,7 +447,7 @@ Feature: Data layer canonical Shared Profile schema authoring
     And the stored rule has one All match mode, two conditions, and one cardinality outcome
     When the operator changes its match mode to Any
     Then the same two conditions and outcome remain while either condition may activate the rule
-    And the editor offers no nested group or unconditional Always representation
+    And the editor offers no nested group or stored unconditional Always rule kind
 
   # Data layer canonical Shared Profile schema authoring 032
   Scenario Outline: Data layer canonical Shared Profile schema authoring 032
@@ -482,7 +484,9 @@ Feature: Data layer canonical Shared Profile schema authoring
     Then the remaining rows close the gap and preserve their values, order, alignment, and automatic numbering
     And the only remaining condition never leaves detached Property, Operator, or Value controls
     When Remove condition is invoked on the only remaining row
-    Then that row stays in place with an empty Property, disabled Operator, unavailable Value, and disabled Add rule action
+    Then no condition row remains
+    And When says No conditions · applies every time
+    And Add rule is enabled only when every non-condition requirement is complete
     When the operator closes the overlay stack
     Then focus returns to the invoking property action without changing the editor scroll position
 
@@ -1141,3 +1145,39 @@ Feature: Data layer canonical Shared Profile schema authoring
       | Pattern     | Then pattern ^home$       | regular expression  | Enter a regular expression              |
       | Range       | Then minimum 1            | minimum              | Enter a minimum or maximum              |
       | Cardinality | Then minimum items 1      | minimum items        | Enter minimum or maximum items          |
+
+  # Data layer canonical Shared Profile schema authoring 068
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 068
+    Given Add rule contains a name, rule type <rule_type>, <outcome>, and zero condition rows
+    Then Add rule becomes enabled immediately without closing or reopening the editor
+    And When says No conditions · applies every time
+    When Add rule is activated and property Review changes is confirmed
+    Then the stored <rule_type> rule has condition count 0
+    And its stored condition and rule-kind inventory contains no synthetic Always entry
+    And its <outcome> applies to both observations regardless of their property values
+    When the operator starts an incomplete condition on another <rule_type> rule
+    Then Add rule is disabled with Complete or remove the condition
+    When that condition is removed
+    Then removing the incomplete row restores the initially enabled conditionless rule
+
+    Examples:
+      | rule_type      | outcome                     |
+      | Presence       | Then Required               |
+      | Allowed values | Then values home and pickup |
+      | Pattern        | Then pattern ^home$         |
+      | Range          | Then minimum 1              |
+      | Cardinality    | Then minimum items 1        |
+      | Reusable       | Then Customer tier range    |
+
+  # Data layer canonical Shared Profile schema authoring 069
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 069
+    Given the condition-count threshold starts at <condition_count> complete conditions
+    When the condition count changes to <next_condition_count>
+    Then All or Any visibility changes from <match_mode_visibility> to <next_visibility>
+    And every retained condition keeps its identity and value
+
+    Examples:
+      | condition_count | match_mode_visibility | next_condition_count | next_visibility |
+      | 0               | hidden                | 1                    | hidden          |
+      | 1               | hidden                | 2                    | visible         |
+      | 2               | visible               | 1                    | hidden          |

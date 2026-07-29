@@ -442,6 +442,22 @@ prove definition bytes remain unchanged, exercise nested overlay geometry and
 layer-by-layer focus restoration, and persist one reviewed property command and
 Undo action.
 
+On approval, the optional rule-condition correction is later authority for
+Authoring scenarios 024, 031, 033, and 067–069. A rule requires its name, type,
+type-specific Then outcome, and any other rule-type requirement, but requires no
+When condition. Zero conditions means the rule applies every time. It is stored as
+an absent or empty condition list without a synthetic condition or separate Always
+rule kind, and the editor says `No conditions · applies every time`.
+
+Add condition starts one row. Once started, that row must be complete or removed;
+an incomplete row blocks Add rule with `Complete or remove the condition`.
+Removing the final row restores zero-condition validity. All or Any is hidden with
+zero or one condition and becomes available only for two or more conditions,
+without changing retained condition identities or values. This supersedes every
+earlier clause requiring one or more conditions, retaining a placeholder sole row,
+or disabling Add rule solely because no condition exists. The exact checkpoint
+remains `layered_schema`, followed by `npm run package`.
+
 The rejected schema candidate `143cc9d337` and Flow candidate `b8432d27e7` are not
 eligible because each introduced a vacuous `project_management` pack. Later coder
 commits `2db9335d` and `b4d143a4` contain useful task-owned revisions, but their

@@ -338,9 +338,11 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
     Then stable rule rows render When condition, Then outcome, severity, message, source, ownership, and context-valid actions
     And View is read-only while Edit opens a further overlay with rule name, rule type, flat When controls, type-specific Then outcome, severity, optional message, and local actions
     When actual Add rule selects a kind
-    Then one empty condition row is mounted and Add rule remains disabled until at least one condition is complete
+    Then the installed When section mounts no condition row and exposes Add condition
+    And Add rule can enable with no condition after its other required controls are complete
+    And any mounted incomplete condition disables Add rule until completed or removed
     And actual Rule type selection precedes and mounts only that type's Then outcome fields
-    And the flat When builder exposes one All or Any mode, searchable property selectors, type-valid operators, and typed values only when required
+    And with at least two conditions the flat When builder exposes one All or Any mode, searchable property selectors, type-valid operators, and typed values only when required
     And reusable-rule selection is a searchable human-named control with no raw ID input
     And DOM inspection finds no separate property-level Conditions editor or condition rule kind
     When actual controls stage removal of the local cardinality rule
@@ -444,7 +446,7 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
     And repository bytes contain one All match mode, two conditions, and one cardinality outcome
     When actual controls change its match mode to Any
     Then repository bytes retain the same two conditions and outcome while either matching condition activates the rule
-    And DOM and repository inspection find no nested group or unconditional Always representation
+    And DOM and repository inspection find no nested group or stored unconditional Always rule kind
 
   # Data layer canonical Shared Profile schema authoring runtime 032
   Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 032
@@ -481,7 +483,9 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
     Then remaining row bounding boxes close the gap while values, order, alignment, and automatic numbering persist
     And DOM inspection finds no detached Property, Operator, or Value control
     When the only remaining row's Remove condition button is activated
-    Then that row remains with empty Property, disabled Operator, unavailable Value, and disabled Add rule controls
+    Then no condition row remains
+    And installed When text is No conditions · applies every time
+    And Add rule enabled state depends only on its non-condition requirements
     When actual controls close every overlay layer
     Then document focus returns to the invoking property action with the original editor scroll offset
 
@@ -1138,3 +1142,38 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
       | Pattern        | Then pattern ^home$           | regular expression  | Enter a regular expression              |
       | Range          | Then minimum 1                | minimum             | Enter a minimum or maximum              |
       | Cardinality    | Then minimum items 1          | minimum items       | Enter minimum or maximum items          |
+
+  # Data layer canonical Shared Profile schema authoring runtime 068
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 068
+    Given installed Add rule has a name, type <rule_type>, <outcome>, and zero condition rows
+    Then the same Add rule button becomes enabled without an editor remount
+    And installed When text is No conditions · applies every time
+    When the installed Add rule and property Review changes confirmations are activated
+    Then repository bytes for the <rule_type> rule contain no condition, synthetic Always condition, or Always rule kind
+    And production compilation applies <outcome> to two observations with different property values
+    When actual controls start an incomplete condition on another <rule_type> rule
+    Then installed validity reports Complete or remove the condition and prevents submission
+    When the installed Remove condition control is activated
+    Then DOM inspection shows the initially enabled conditionless rule is restored
+
+    Examples:
+      | rule_type      | outcome                     |
+      | Presence       | Then Required               |
+      | Allowed values | Then values home and pickup |
+      | Pattern        | Then pattern ^home$         |
+      | Range          | Then minimum 1              |
+      | Cardinality    | Then minimum items 1        |
+      | Reusable       | Then Customer tier range    |
+
+  # Data layer canonical Shared Profile schema authoring runtime 069
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 069
+    Given installed match-mode threshold starts at <condition_count> complete condition rows
+    When condition rows are added or removed to reach <next_condition_count>
+    Then computed All or Any visibility changes from <match_mode_visibility> to <next_visibility>
+    And retained condition identities and control values are unchanged
+
+    Examples:
+      | condition_count | match_mode_visibility | next_condition_count | next_visibility |
+      | 0               | hidden                | 1                    | hidden          |
+      | 1               | hidden                | 2                    | visible         |
+      | 2               | visible               | 1                    | hidden          |
