@@ -39,6 +39,20 @@ for(const part of studioParts){
   assert.equal(partHints.every(({route,text})=>route===part&&text.trim().length>20),true,`${part} tips are complete and part-specific`);
 }
 
+const flowTips=studioAnalystHintsForRoute("Flows");
+const flowTipText=Object.fromEntries(flowTips.map(({id,text})=>[id,text]));
+assert.match(flowTipText.flows,/Add Pages to the canvas first.*place interaction Events inside them/u);
+assert.match(flowTipText["flows-frames"],/Page frames.*journey step/u);
+assert.match(flowTipText["flows-occurrences"],/Event occurrences inside their owning Page frame/u);
+assert.match(flowTipText["flows-relationships"],/Page-to-Page relationships/u);
+assert.match(flowTipText["flows-relationships"],/Page frames/u);
+assert.doesNotMatch(
+  flowTipText["flows-relationships"],
+  /connect(?:ing)? (?:Event )?occurrences|occurrence(?:s)? (?:as|for|to) relationship endpoints?/iu,
+  "Event availability is expressed by containment; occurrences must never be relationship endpoints",
+);
+assert.match(flowTipText["flows-documentation"],/Documentation.*Flow's value map/u);
+
 const overview=studioAnalystHintForRoute("Project overview",[]);
 assert.deepEqual(overview,{
   id:"project-overview",

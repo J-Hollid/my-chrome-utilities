@@ -63,7 +63,7 @@ const tipPools:Readonly<Record<string,readonly StudioAnalystHint[]>>=Object.free
     tip("flows","Flows","Cor! Add Pages to the canvas first, then place interaction Events inside them."),
     tip("flows-frames","Flows","Use Page frames to show where each journey step occurs."),
     tip("flows-occurrences","Flows","Place Event occurrences inside their owning Page frame and state their obligation."),
-    tip("flows-relationships","Flows","Connect occurrences in journey order so the documentary Flow reads left to right."),
+    tip("flows-relationships","Flows","Connect Page frames with Page-to-Page relationships; Event availability comes from containment, never relationship endpoints."),
     tip("flows-documentation","Flows","Refresh project Documentation after changing a selected Flow's value map."),
   ]),
   "Fixtures":Object.freeze([
