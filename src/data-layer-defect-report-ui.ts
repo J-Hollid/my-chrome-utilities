@@ -26,6 +26,7 @@ import { appendReproductionControls } from "./data-layer-defect-report-reproduct
 import { appendIssueControls } from "./data-layer-defect-report-issue-controls.js";
 import { appendTimelineControls } from "./data-layer-defect-report-timeline-controls.js";
 import type { LiveEvent } from "./utilities/data-layer/live-inspection.js";
+import {declareStudioChoice} from "./utilities/data-layer/schemas.js";
 
 export { browserDefectReportClipboard, createDefectReportNavigation, createLiveDefectReportNavigation, defectCapturedEvent, defectReportContext } from "./data-layer-defect-report-browser.js";
 export type { DefectReportContext, DefectReportNavigationEffects, LiveDefectReportNavigationEffects } from "./data-layer-defect-report-browser.js";
@@ -111,7 +112,7 @@ export function renderDefectReportBuilder(
 
   const componentControl = (label: string, key: keyof ReturnType<typeof reportComponents>) => {
     const wrapper = document.createElement("label");
-    const checkbox = document.createElement("input"); checkbox.type = "checkbox"; checkbox.checked = reportComponents(report)[key];
+    const checkbox = document.createElement("input"); checkbox.type = "checkbox"; declareStudioChoice(checkbox,"defect.report-section"); checkbox.checked = reportComponents(report)[key];
     checkbox.addEventListener("change", () => { report = updateReportComponents(report, { [key]:checkbox.checked }); refresh(); });
     wrapper.append(checkbox, ` ${label}`); return wrapper;
   };

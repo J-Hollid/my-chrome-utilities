@@ -7,6 +7,7 @@ import {
   type SchemaPropertyCopySource,
 } from "./data-layer-schema-property-copy.js";
 import type { SchemaDefinition } from "./data-layer-schema-verification.js";
+import {declareStudioChoice} from "./data-layer-studio-choice-controls.js";
 
 export interface SchemaPropertyCopyReviewOptions {
   source:SchemaPropertyCopySource;
@@ -67,6 +68,8 @@ export function renderSchemaPropertyCopyReview(
     const destructive=element("details");const destructiveCount=current.replacementImpact.paths.length+current.replacementImpact.rules.length+current.replacementImpact.documentation.length;const destructiveSummary=element("summary",`Replacement impact (${destructiveCount})`);destructive.append(destructiveSummary);
     if(destructiveCount){const list=element("ul");list.replaceChildren(...current.replacementImpact.paths.map((path)=>element("li",`Destination property replaced or removed: ${path}`)),...current.replacementImpact.rules.map((id)=>element("li",`Destination rule removed: ${id}`)),...current.replacementImpact.documentation.map((path)=>element("li",`Destination documentation removed: ${path}`)));const label=element("label");const confirmation=element("input");confirmation.type="checkbox";confirmation.checked=destructiveConfirmed;confirmation.dataset.copyDestructiveConfirmation="true";confirmation.addEventListener("change",()=>{destructiveConfirmed=confirmation.checked;confirm.disabled=!current?.ready||!destructiveConfirmed;});label.append(confirmation," Confirm replacement impact");destructive.append(list,label);}else destructive.append(element("p","No destination-owned items will be removed."));
     const impact=element("p",current.ready?"One destination working-draft transaction will be created. Published source and destination revisions remain unchanged.":"Resolve all conflicts and dependencies before confirmation.");
+    dependencyList.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach((input)=>declareStudioChoice(input,"schema.copy-dependency"));
+    destructive.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach((input)=>declareStudioChoice(input,"schema.destructive-confirmation"));
     review.replaceChildren(identity,subtree,dependencies,rules,documentation,conflicts,destructive,impact);confirm.disabled=!current.ready||(destructiveCount>0&&!destructiveConfirmed);
   };
   destination.addEventListener("change",renderPlan);

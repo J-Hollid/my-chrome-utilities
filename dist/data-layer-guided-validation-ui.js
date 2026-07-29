@@ -3,6 +3,7 @@ import { renderGuidedSchemaPicker } from "./data-layer-guided-schema-picker-ui.j
 import { inspectValidationTarget, normalizeTargetExpression, parseTargetExpression } from "./data-layer-recursive-property-tree.js";
 import { addGuidedCondition, createGuidedConditionalDraft, guidedConditionComparisonText, guidedConditionGroup, guidedConditionPropertyOptions, guidedConditionalPreview, reconcileGuidedConditions, removeGuidedCondition, selectGuidedConditionProperty, setGuidedConditionComparison, setGuidedConditionGroupOperator, setGuidedConditionOperator, validateGuidedConditionalDraft, } from "./data-layer-live-guided-conditional-rule-authoring.js";
 import { conditionalRuleSummary, operatorsForConditionType } from "./data-layer-conditional-validation-rules.js";
+import { declareStudioChoice } from "./data-layer-studio-choice-controls.js";
 const stageLabels = {
     property: "Choose properties",
     requirement: "Define requirement",
@@ -297,6 +298,7 @@ export function createGuidedValidationFlow(root, effects) {
         const toggleLabel = element("label");
         const toggle = element("input");
         toggle.type = "checkbox";
+        declareStudioChoice(toggle, "guided.conditional");
         toggle.id = "guided-apply-condition";
         toggle.checked = Boolean(draft.conditional);
         toggleLabel.append(toggle, " Apply only when");
@@ -826,6 +828,7 @@ export function createGuidedValidationFlow(root, effects) {
         const publish = element("input");
         publish.id = "guided-publish-rule";
         publish.type = "checkbox";
+        declareStudioChoice(publish, "guided.publish-rule");
         publishLabel.append(publish, " Publish this rule for Rule Library reuse");
         const save = element("button", "Add validation to draft");
         save.type = "button";

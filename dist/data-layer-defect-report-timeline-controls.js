@@ -1,4 +1,5 @@
 import { removeTimelineSelection, saveTimelineSelection, supportingTimeline, timelineEventChoices, } from "./data-layer-defect-report.js";
+import { declareStudioChoice } from "./utilities/data-layer/schemas.js";
 const resultWindowSize = 20;
 export function appendTimelineControls(composer, entries, context, state, options = {}) {
     let selections = (options.selections ?? []).map((selection) => ({ ...selection }));
@@ -186,6 +187,7 @@ export function appendTimelineControls(composer, entries, context, state, option
             const label = document.createElement("label");
             const option = document.createElement("input");
             option.type = "checkbox";
+            declareStudioChoice(option, "defect.timeline-evidence");
             option.dataset.timelineEvidence = field;
             option.checked = Boolean(draft[field]);
             option.addEventListener("change", () => { draft = { ...draft, [field]: option.checked }; });

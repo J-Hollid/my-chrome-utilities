@@ -12,6 +12,8 @@ import {
   type ExpectedPayloadField,
 } from "./data-layer-unified-defect-builder.js";
 
+import {declareStudioChoice} from "./utilities/data-layer/schemas.js";
+
 export interface ExpectedPayloadEditorState {
   draft(): ExpectedPayloadDraft;
   update(draft: ExpectedPayloadDraft): void;
@@ -71,7 +73,7 @@ export function renderExpectedPayloadEditor(
     const current = pointerValue(state.draft().payload, pointer);
     if (!required) {
       const includeLabel = element("label", `Include optional ${path}`);
-      const include = element("input"); include.type = "checkbox"; include.checked = current !== undefined;
+      const include = element("input"); include.type = "checkbox"; declareStudioChoice(include,"defect.expected-property"); include.checked = current !== undefined;
       include.addEventListener("change", () => {
         if (!include.checked) update(removeExpectedPayloadValue(state.draft(), pointer));
         else if (field.type === "boolean") update(setExpectedPayloadValue(schema, state.draft(), pointer, { method:"custom", value:false }));

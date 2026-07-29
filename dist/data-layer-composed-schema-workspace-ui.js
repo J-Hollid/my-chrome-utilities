@@ -4,6 +4,7 @@ import { activateFocusedOwnershipSection, focusedOwnershipState } from "./data-l
 import { renderComposedRows } from "./data-layer-composed-schema-workspace-rows.js";
 import { typedCanonicalValue } from "./data-layer-canonical-schema-facets.js";
 import { schemaTableOverlayTarget, schemaTableOverlayTransition, schemaTableReplaceExpectedOrAllowed, schemaTableSortComparison, schemaTableSortOptions, schemaTableStageAllowedValues } from "./data-layer-schema-table.js";
+import { declareStudioChoice } from "./data-layer-studio-choice-controls.js";
 const button = (text, run) => { const control = document.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 export function stageComposedExpectedOrAllowed(draft, text) {
     const staged = schemaTableReplaceExpectedOrAllowed(draft, text);
@@ -62,6 +63,7 @@ export function mountComposedSchemaWorkspace(options) {
     policy.setAttribute("aria-label", "Only defined fields");
     policy.addEventListener("change", () => options.onOnlyDefinedFields?.(policy.checked));
     policyLabel.append(policy, "Only defined fields");
+    declareStudioChoice(policy, "schema.only-defined");
     quickEditFeedback.setAttribute("aria-label", "Table cell diagnostic");
     filter.type = "search";
     filter.placeholder = "Filter properties";

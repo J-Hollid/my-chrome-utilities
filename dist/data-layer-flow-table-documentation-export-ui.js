@@ -1,6 +1,7 @@
 import { flowDocumentationSnapshotFromState } from "./data-layer-flow-documentation-snapshot.js";
 export { flowDocumentationSnapshotFromState } from "./data-layer-flow-documentation-snapshot.js";
 import { configureFlowDocumentationSnapshot, configureFlowDocumentationTable, flowDocumentationCellDetail, flowDocumentationPropertyPaths, flowDocumentationSnapshotStale, renderFlowDocumentationClipboard, writeFlowDocumentationWorkbook, } from "./data-layer-flow-table-documentation-export.js";
+import { declareStudioChoice } from "./data-layer-studio-choice-controls.js";
 const createButton = (text, action) => {
     const value = document.createElement("button");
     value.type = "button";
@@ -187,6 +188,13 @@ export function installFlowDocumentationExportUi(options) {
         spreadsheet.disabled = rich.disabled = download.disabled = blocked;
         actions.append(spreadsheet, rich, download, createButton("Refresh preview", () => { fresh(state, flowId, revision); renderWorkspace(); }), createButton("Close documentation export", () => { open = false; snapshot = undefined; options.renderFlow(); }));
         feedback.textContent = feedbackText;
+        declareStudioChoice(headingControl, "documentation.include-headings");
+        propertyList.querySelectorAll('input[type="checkbox"]').forEach((input) => declareStudioChoice(input, "documentation.property-row"));
+        metadataList.querySelectorAll('input[type="checkbox"]').forEach((input) => declareStudioChoice(input, "documentation.metadata-column"));
+        contextList.querySelectorAll('input[type="checkbox"]').forEach((input) => declareStudioChoice(input, "documentation.context-column"));
+        headingFieldset.querySelectorAll('input[type="checkbox"]').forEach((input) => declareStudioChoice(input, "documentation.heading-part"));
+        controls.querySelectorAll('label input[type="checkbox"]').forEach((input) => { if (!input.closest("fieldset"))
+            declareStudioChoice(input, "documentation.confirm-incomplete"); });
         section.append(heading, identity, controls, preview, detail, diagnostics, actions, feedback);
         host.append(section);
         heading.focus();

@@ -4,6 +4,7 @@ import { appendReproductionControls } from "./data-layer-defect-report-reproduct
 import { appendTimelineControls } from "./data-layer-defect-report-timeline-controls.js";
 import { appendDetailControls } from "./data-layer-defect-report-ui-controls.js";
 import { confirmOccurrenceExpectation, createOccurrenceDefectDraft, createOccurrenceReport, editOccurrenceExpectedPayload, renderOccurrenceReport, selectOccurrenceExpectedIdentity, } from "./data-layer-event-occurrence-defect-report.js";
+import { declareStudioChoice } from "./utilities/data-layer/schemas.js";
 function pathname(pageUrl) {
     try {
         return new URL(pageUrl ?? "https://local.invalid/").pathname;
@@ -106,11 +107,13 @@ export function renderOccurrenceDefectReportBuilder(root, event, mode, schemas, 
     const overrideLabel = document.createElement("label");
     const override = document.createElement("input");
     override.type = "checkbox";
+    declareStudioChoice(override, "defect.expected-override");
     override.dataset.occurrenceOverride = "true";
     overrideLabel.append(override, " Explicit override");
     const acknowledgementLabel = document.createElement("label");
     const acknowledgement = document.createElement("input");
     acknowledgement.type = "checkbox";
+    declareStudioChoice(acknowledgement, "defect.acknowledgement");
     acknowledgement.dataset.occurrenceAcknowledgement = "true";
     acknowledgementLabel.append(acknowledgement, " Acknowledge non-schema expectation");
     const expectedPayloadLabel = document.createElement("label");

@@ -4,6 +4,7 @@ import { appendReproductionControls } from "./data-layer-defect-report-reproduct
 import { appendTimelineControls } from "./data-layer-defect-report-timeline-controls.js";
 import { createExpectedPayloadDraft, expectedPayloadComplete, expectedPayloadEvaluation, expectedPayloadPresentation, missingEventActualPresentation, reconcileMissingEventJourney, reconcileMissingEventJourneyWithReview, } from "./data-layer-unified-defect-builder.js";
 import { renderExpectedPayloadEditor } from "./data-layer-missing-event-expected-payload-ui.js";
+import { declareStudioChoice } from "./utilities/data-layer/schemas.js";
 function element(tag, text) {
     const result = document.createElement(tag);
     if (text !== undefined)
@@ -260,6 +261,7 @@ export function renderMissingEventDefectReportBuilder(root, visits, schemas, opt
                 const acknowledgement = element("label", "I acknowledge that no enabled covering assignment proves this expectation");
                 const checkbox = element("input");
                 checkbox.type = "checkbox";
+                declareStudioChoice(checkbox, "defect.warning-acknowledgement");
                 checkbox.checked = selected.warningAcknowledged;
                 checkbox.addEventListener("change", () => updateDraft(editMissingEventExpectation(draft, { warningAcknowledged: checkbox.checked })));
                 acknowledgement.prepend(checkbox);

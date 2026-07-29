@@ -1,25 +1,94 @@
 export type StudioChoicePattern="checkbox"|"switch";
+export type StudioChoiceKey=
+  |"schema.only-defined"
+  |"schema.copy-dependency"
+  |"schema.destructive-confirmation"
+  |"schema.specification-property"
+  |"schema.specification-headings"
+  |"documentation.concept-subheadings"
+  |"documentation.concept-membership"
+  |"documentation.section-membership"
+  |"documentation.flow-context"
+  |"documentation.property-row"
+  |"documentation.metadata-column"
+  |"documentation.matrix-context"
+  |"documentation.profile-column"
+  |"documentation.export-section"
+  |"documentation.confirm-incomplete"
+  |"documentation.theme-option"
+  |"documentation.include-headings"
+  |"documentation.context-column"
+  |"documentation.heading-part"
+  |"entity.creation-option"
+  |"entity.editor-option"
+  |"condition.negation"
+  |"conflict.pending-field"
+  |"bulk.staged-property"
+  |"defect.issue-inclusion"
+  |"defect.timeline-evidence"
+  |"defect.expected-override"
+  |"defect.acknowledgement"
+  |"defect.report-section"
+  |"defect.warning-acknowledgement"
+  |"defect.expected-property"
+  |"guided.conditional"
+  |"guided.publish-rule";
 
-const immediateSwitches=new Map([
-  ["only defined fields","immediately applies one reversible Draft setting"],
-]);
+export interface StudioChoiceContract{
+  key:StudioChoiceKey;
+  pattern:StudioChoicePattern;
+  consequence:string;
+}
 
-const normalized=(value:string):string=>value.trim().replace(/\s+/gu," ").toLowerCase();
-const consequenceFor=(label:string):string=>{
-  const value=normalized(label);
-  if(immediateSwitches.has(value))return immediateSwitches.get(value)!;
-  if(value==="include concept subheadings")return"Changes configuration pending preview refresh";
-  if(value.startsWith("include ")&&value.endsWith(" concept"))return"Selects membership in an ordered group";
-  if(value.startsWith("export "))return"Selects membership in an export scope";
-  if(value==="confirm incomplete export")return"Records an acknowledgement before export";
-  if(value.startsWith("select staged property"))return"Selects membership for a later batch action";
-  if(value==="borders")return"Stages a theme option for an explicit save";
-  return`Changes the ${label} choice`;
+const checkbox=(key:StudioChoiceKey,consequence:string):StudioChoiceContract=>({key,pattern:"checkbox",consequence});
+const contracts:Record<StudioChoiceKey,StudioChoiceContract>={
+  "schema.only-defined":{key:"schema.only-defined",pattern:"switch",consequence:"Immediately applies one reversible Draft setting"},
+  "schema.copy-dependency":checkbox("schema.copy-dependency","Selects a schema dependency for the reviewed copy operation"),
+  "schema.destructive-confirmation":checkbox("schema.destructive-confirmation","Confirms replacement impact before the reviewed schema copy"),
+  "schema.specification-property":checkbox("schema.specification-property","Selects a property for the later specification copy action"),
+  "schema.specification-headings":checkbox("schema.specification-headings","Stages heading inclusion for the later specification copy action"),
+  "documentation.concept-subheadings":checkbox("documentation.concept-subheadings","Changes configuration pending preview refresh"),
+  "documentation.concept-membership":checkbox("documentation.concept-membership","Selects membership in the ordered concept group"),
+  "documentation.section-membership":checkbox("documentation.section-membership","Selects membership in the Documentation Set"),
+  "documentation.flow-context":checkbox("documentation.flow-context","Selects a Flow context for the saved documentation configuration"),
+  "documentation.property-row":checkbox("documentation.property-row","Selects a property row for the saved documentation configuration"),
+  "documentation.metadata-column":checkbox("documentation.metadata-column","Selects a metadata column for the saved documentation configuration"),
+  "documentation.matrix-context":checkbox("documentation.matrix-context","Selects a context for the saved capture-matrix configuration"),
+  "documentation.profile-column":checkbox("documentation.profile-column","Selects a Site Profile column for the saved documentation configuration"),
+  "documentation.export-section":checkbox("documentation.export-section","Selects membership in the export scope"),
+  "documentation.confirm-incomplete":checkbox("documentation.confirm-incomplete","Records an acknowledgement before incomplete export"),
+  "documentation.theme-option":checkbox("documentation.theme-option","Stages a theme option for explicit Save theme"),
+  "documentation.include-headings":checkbox("documentation.include-headings","Stages heading inclusion for the later documentation copy action"),
+  "documentation.context-column":checkbox("documentation.context-column","Selects a context column for the later documentation export"),
+  "documentation.heading-part":checkbox("documentation.heading-part","Selects a heading part for the later documentation export"),
+  "entity.creation-option":checkbox("entity.creation-option","Stages an entity option until the creation form is submitted"),
+  "entity.editor-option":checkbox("entity.editor-option","Stages an entity option until Save changes"),
+  "condition.negation":checkbox("condition.negation","Stages condition negation until the enclosing edit is saved"),
+  "conflict.pending-field":checkbox("conflict.pending-field","Selects the pending field value for the later conflict-resolution action"),
+  "bulk.staged-property":checkbox("bulk.staged-property","Selects membership for the later bulk action"),
+  "defect.issue-inclusion":checkbox("defect.issue-inclusion","Selects an issue for the later defect report action"),
+  "defect.timeline-evidence":checkbox("defect.timeline-evidence","Selects timeline evidence for the later defect report action"),
+  "defect.expected-override":checkbox("defect.expected-override","Stages an explicit expected-result override for later defect saving"),
+  "defect.acknowledgement":checkbox("defect.acknowledgement","Records an acknowledgement required before the later defect action"),
+  "defect.report-section":checkbox("defect.report-section","Selects a section for the later defect report copy or save action"),
+  "defect.warning-acknowledgement":checkbox("defect.warning-acknowledgement","Records an acknowledgement before the later missing-event report action"),
+  "defect.expected-property":checkbox("defect.expected-property","Selects an expected property for the later defect report action"),
+  "guided.conditional":checkbox("guided.conditional","Stages conditional application until the guided rule is saved"),
+  "guided.publish-rule":checkbox("guided.publish-rule","Stages Rule Library publication until the guided rule is saved"),
 };
+const declarations=new WeakMap<HTMLInputElement,StudioChoiceContract>();
 
-export function studioChoicePattern(label:string,consequence:string):StudioChoicePattern{
-  const expected=immediateSwitches.get(normalized(label));
-  return expected&&normalized(consequence)===normalized(expected)?"switch":"checkbox";
+export function studioChoiceContract(key:string):StudioChoiceContract{
+  const contract=contracts[key as StudioChoiceKey];
+  if(!contract)throw new Error(`Unknown Specification Studio choice contract ${key}.`);
+  return contract;
+}
+
+export function studioChoiceContractKeys():StudioChoiceKey[]{return Object.keys(contracts) as StudioChoiceKey[];}
+
+export function declareStudioChoice(input:HTMLInputElement,key:StudioChoiceKey):HTMLInputElement{
+  declarations.set(input,contracts[key]);
+  return input;
 }
 
 export function studioChoiceTargetHeight(input:{coarsePointer:boolean;narrow:boolean}):36|44{
@@ -32,6 +101,9 @@ const directActions=(label:HTMLLabelElement):HTMLElement[]=>Array.from(label.chi
 
 function enhanceChoice(input:HTMLInputElement):void{
   if(input.dataset.studioChoiceEnhanced==="true")return;
+  const contract=declarations.get(input);
+  input.dataset.studioChoiceContract=contract?.key??"missing";
+  if(!contract)input.dataset.studioChoiceMissing="true";
   let label=input.labels?.[0];
   if(!label){
     label=document.createElement("label");
@@ -47,13 +119,11 @@ function enhanceChoice(input:HTMLInputElement):void{
   input.id ||= `studio-choice-${++generatedId}`;
   input.classList.add("studio-choice-indicator");
   input.dataset.studioChoiceEnhanced="true";
+  input.setAttribute("aria-description",contract?.consequence??"Missing explicit Specification Studio choice consequence");
   label.htmlFor=input.id;
   label.classList.add("studio-choice-row");
 
-  const labelText=copy.textContent?.trim()||visibleLabel(input);
-  input.setAttribute("aria-description",consequenceFor(labelText));
-  const consequence=immediateSwitches.get(normalized(labelText));
-  if(studioChoicePattern(labelText,consequence??"")==="switch"){
+  if(contract?.pattern==="switch"){
     const mark=document.createElement("span"),state=document.createElement("span");
     mark.className="studio-switch-mark";
     mark.setAttribute("aria-hidden","true");

@@ -8,6 +8,7 @@ import {
 } from "./data-layer-defect-report.js";
 import type { DefectReportBuilderState } from "./data-layer-defect-report-ui-controls.js";
 import { exampleValueFromInput, type SchemaPropertyExampleInputType } from "./utilities/data-layer/schemas.js";
+import {declareStudioChoice} from "./utilities/data-layer/schemas.js";
 
 export function appendIssueControls(
   issues: HTMLElement,
@@ -19,7 +20,7 @@ export function appendIssueControls(
   for (const reportIssue of state.report().issues) {
     let hideCustomResponse = () => {};
     const row = document.createElement("div");
-    const selected = document.createElement("input"); selected.type = "checkbox"; selected.checked = reportIssue.selected;
+    const selected = document.createElement("input"); selected.type = "checkbox"; declareStudioChoice(selected,"defect.issue-inclusion"); selected.checked = reportIssue.selected;
     selected.id = `defect-issue-${reportIssue.id}`;
     const label = document.createElement("label"); label.htmlFor = selected.id; label.textContent = flowContext
       ? `${reportIssue.severity}: ${reportIssue.pointer} — observed ${String(reportIssue.actual)} · expected ${reportIssue.constraint} · rule ${reportIssue.rule}`
@@ -57,6 +58,7 @@ export function appendIssueControls(
     }
     const includeComment = document.createElement("input");
     includeComment.type = "checkbox";
+    declareStudioChoice(includeComment,"defect.report-section");
     includeComment.dataset.allowedValuesComment = reportIssue.id;
     const includeCommentLabel = document.createElement("label");
     includeCommentLabel.append(includeComment, "Include all allowed values as a comment");

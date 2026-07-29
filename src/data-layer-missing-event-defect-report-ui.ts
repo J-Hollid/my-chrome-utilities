@@ -32,6 +32,7 @@ import {
   type ExpectedPayloadDraft,
 } from "./data-layer-unified-defect-builder.js";
 import { renderExpectedPayloadEditor } from "./data-layer-missing-event-expected-payload-ui.js";
+import {declareStudioChoice} from "./utilities/data-layer/schemas.js";
 
 export interface MissingEventBuilderNavigation {
   backToSelectedVisit(): void;
@@ -296,7 +297,7 @@ export function renderMissingEventDefectReportBuilder(
       expectation.append(evaluationState, evaluationIssues);
       if (!selected.assignment) {
         const acknowledgement = element("label", "I acknowledge that no enabled covering assignment proves this expectation");
-        const checkbox = element("input"); checkbox.type = "checkbox"; checkbox.checked = selected.warningAcknowledged;
+        const checkbox = element("input"); checkbox.type = "checkbox"; declareStudioChoice(checkbox,"defect.warning-acknowledgement"); checkbox.checked = selected.warningAcknowledged;
         checkbox.addEventListener("change", () => updateDraft(editMissingEventExpectation(draft, { warningAcknowledged:checkbox.checked })));
         acknowledgement.prepend(checkbox); expectation.append(acknowledgement);
       }

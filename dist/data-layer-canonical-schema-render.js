@@ -1,5 +1,6 @@
 import { renderCanonicalNavigator } from "./data-layer-canonical-schema-render-navigator.js";
 import { clearSchemaTableOverlay } from "./data-layer-schema-table.js";
+import { declareStudioChoice } from "./data-layer-studio-choice-controls.js";
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 export function renderCanonicalSchemaEditor(context) {
     const { dom, options, document } = context, priorScroll = options.host.querySelector("[data-schema-editor-scroll-region]"), retainedScroll = priorScroll ? { top: priorScroll.scrollTop, left: priorScroll.scrollLeft } : undefined, retainedTable = document.view === "table" ? options.host.querySelector('table[data-canonical-view="table"]') : null;
@@ -29,6 +30,7 @@ export function renderCanonicalSchemaEditor(context) {
         header.append(policyLabel);
     header.append(undo, redo);
     options.host.append(header, renderCanonicalNavigator(context));
+    declareStudioChoice(policy, "schema.only-defined");
     if (document.view === "table" && context.review && !context.focusedPropertyId)
         options.host.append(context.review);
     const node = context.selectedNode(document);

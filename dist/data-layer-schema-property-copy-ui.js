@@ -1,4 +1,5 @@
 import { applySchemaPropertyCopy, planSchemaPropertyCopy, } from "./data-layer-schema-property-copy.js";
+import { declareStudioChoice } from "./data-layer-studio-choice-controls.js";
 function element(tag, text) { const value = document.createElement(tag); if (text !== undefined)
     value.textContent = text; return value; }
 export function renderSchemaPropertyCopyReview(dialog, options) {
@@ -116,6 +117,8 @@ export function renderSchemaPropertyCopyReview(dialog, options) {
         else
             destructive.append(element("p", "No destination-owned items will be removed."));
         const impact = element("p", current.ready ? "One destination working-draft transaction will be created. Published source and destination revisions remain unchanged." : "Resolve all conflicts and dependencies before confirmation.");
+        dependencyList.querySelectorAll('input[type="checkbox"]').forEach((input) => declareStudioChoice(input, "schema.copy-dependency"));
+        destructive.querySelectorAll('input[type="checkbox"]').forEach((input) => declareStudioChoice(input, "schema.destructive-confirmation"));
         review.replaceChildren(identity, subtree, dependencies, rules, documentation, conflicts, destructive, impact);
         confirm.disabled = !current.ready || (destructiveCount > 0 && !destructiveConfirmed);
     };

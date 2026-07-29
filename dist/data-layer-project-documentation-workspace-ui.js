@@ -4,6 +4,7 @@ import { projectCanonicalConcepts } from "./data-layer-layered-schema-project.js
 import { createProjectDocumentationSet, createProjectDocumentationTheme, parseProjectDocumentationTheme, serializeProjectDocumentationTheme, } from "./data-layer-project-documentation-records.js";
 import { projectDocumentationSnapshotStale, renderProjectDocumentationClipboard, selectProjectDocumentationTables, themeFingerprint, writeProjectDocumentationWorkbook, } from "./data-layer-project-documentation-workspace.js";
 import { conceptSectionHeading } from "./data-layer-flow-table-documentation-export.js";
+import { declareStudioChoice } from "./data-layer-studio-choice-controls.js";
 const defaultPorts = () => ({
     writePlain: async (value) => navigator.clipboard.writeText(value),
     writeRich: async (html, plain) => {
@@ -117,6 +118,7 @@ export function installProjectDocumentationWorkspaceUi(options) {
         for (const item of input.all) {
             const row = document.createElement("li"), check = document.createElement("input");
             check.type = "checkbox";
+            declareStudioChoice(check, input.choiceKey);
             check.checked = selected.has(item.id);
             check.addEventListener("change", () => input.onChange(setChecked(input.selected, item.id, check.checked)));
             row.append(labelled(item.label, check));
@@ -141,7 +143,7 @@ export function installProjectDocumentationWorkspaceUi(options) {
         const contexts = source.snapshot.contexts.map(({ id, pageName, eventName }) => ({ id, label: `${pageName} / ${eventName}` })), contextIds = checkedOrder(contexts.map(({ id }) => id), section.configuration?.contextIds), paths = checkedOrder(flowDocumentationPropertyPaths(source.snapshot), section.configuration?.paths), metadata = (section.configuration?.columns ?? []);
         const contextGroup = document.createElement("fieldset");
         contextGroup.append(Object.assign(document.createElement("legend"), { textContent: "Value-map contexts and ordering" }));
-        renderOrderedChoices(contextGroup, { all: contexts, selected: contextIds, name: "Flow contexts", onChange: (next) => mutateSection(set, section.id, (value) => ({ ...value, configuration: { ...value.configuration, contextIds: next } }), "Configure Flow contexts") });
+        renderOrderedChoices(contextGroup, { all: contexts, selected: contextIds, name: "Flow contexts", choiceKey: "documentation.flow-context", onChange: (next) => mutateSection(set, section.id, (value) => ({ ...value, configuration: { ...value.configuration, contextIds: next } }), "Configure Flow contexts") });
         const labels = document.createElement("div");
         labels.setAttribute("aria-label", "Flow documentation labels");
         for (const context of contexts.filter(({ id }) => contextIds.includes(id))) {
@@ -153,12 +155,13 @@ export function installProjectDocumentationWorkspaceUi(options) {
         contextGroup.append(labels);
         const pathGroup = document.createElement("fieldset");
         pathGroup.append(Object.assign(document.createElement("legend"), { textContent: "Property rows and ordering" }));
-        renderOrderedChoices(pathGroup, { all: flowDocumentationPropertyPaths(source.snapshot).map((path) => ({ id: path, label: path })), selected: paths, name: "Flow property rows", onChange: (next) => mutateSection(set, section.id, (value) => ({ ...value, configuration: { ...value.configuration, paths: next } }), "Configure Flow property rows") });
+        renderOrderedChoices(pathGroup, { all: flowDocumentationPropertyPaths(source.snapshot).map((path) => ({ id: path, label: path })), selected: paths, name: "Flow property rows", choiceKey: "documentation.property-row", onChange: (next) => mutateSection(set, section.id, (value) => ({ ...value, configuration: { ...value.configuration, paths: next } }), "Configure Flow property rows") });
         const metadataGroup = document.createElement("fieldset");
         metadataGroup.append(Object.assign(document.createElement("legend"), { textContent: "Metadata columns" }));
         for (const [id, label] of [["description", "Description"], ["type", "Type"], ["allowedValues", "Allowed values"], ["example", "Example"], ["comments", "Comments"]]) {
             const check = document.createElement("input");
             check.type = "checkbox";
+            declareStudioChoice(check, "documentation.metadata-column");
             check.checked = metadata.includes(id);
             check.addEventListener("change", () => mutateSection(set, section.id, (value) => ({ ...value, configuration: { ...value.configuration, columns: setChecked(metadata, id, check.checked) } }), `Configure Flow metadata ${label}`));
             metadataGroup.append(labelled(label, check));
@@ -186,6 +189,7 @@ export function installProjectDocumentationWorkspaceUi(options) {
                 for (const context of contexts) {
                     const check = document.createElement("input");
                     check.type = "checkbox";
+                    declareStudioChoice(check, "documentation.matrix-context");
                     check.checked = selected.includes(context.id);
                     check.dataset.matrixContextId = context.id;
                     check.dataset.matrixContextKind = context.kind;
@@ -201,7 +205,7 @@ export function installProjectDocumentationWorkspaceUi(options) {
         host.append(search, tree);
         const order = document.createElement("fieldset");
         order.append(Object.assign(document.createElement("legend"), { textContent: "Selected matrix column order" }));
-        renderOrderedChoices(order, { all: available.matrixContexts.filter(({ id }) => selected.includes(id)).map(({ id, label }) => ({ id, label })), selected, name: "Matrix columns", onChange: (next) => mutateSection(set, section.id, (value) => ({ ...value, configuration: { ...value.configuration, contextIds: next } }), "Reorder matrix columns") });
+        renderOrderedChoices(order, { all: available.matrixContexts.filter(({ id }) => selected.includes(id)).map(({ id, label }) => ({ id, label })), selected, name: "Matrix columns", choiceKey: "documentation.matrix-context", onChange: (next) => mutateSection(set, section.id, (value) => ({ ...value, configuration: { ...value.configuration, contextIds: next } }), "Reorder matrix columns") });
         host.append(order);
     }
     function renderProfileConfiguration(host, set, section, available) {
@@ -215,10 +219,10 @@ export function installProjectDocumentationWorkspaceUi(options) {
         const allPaths = projectDocumentationProfilePaths(profile), paths = checkedOrder(allPaths, section.configuration?.paths), columns = checkedOrder(projectDocumentationProfileColumns(), section.configuration?.columns);
         const rows = document.createElement("fieldset");
         rows.append(Object.assign(document.createElement("legend"), { textContent: "Profile property rows and ordering" }));
-        renderOrderedChoices(rows, { all: allPaths.map((path) => ({ id: path, label: path })), selected: paths, name: `${section.name} property rows`, onChange: (next) => mutateSection(set, section.id, (value) => ({ ...value, configuration: { ...value.configuration, paths: next } }), `Configure ${section.name} rows`) });
+        renderOrderedChoices(rows, { all: allPaths.map((path) => ({ id: path, label: path })), selected: paths, name: `${section.name} property rows`, choiceKey: "documentation.property-row", onChange: (next) => mutateSection(set, section.id, (value) => ({ ...value, configuration: { ...value.configuration, paths: next } }), `Configure ${section.name} rows`) });
         const columnHost = document.createElement("fieldset");
         columnHost.append(Object.assign(document.createElement("legend"), { textContent: "Profile columns and ordering" }));
-        renderOrderedChoices(columnHost, { all: projectDocumentationProfileColumns().map((column) => ({ id: column, label: column })), selected: columns, name: `${section.name} columns`, onChange: (next) => mutateSection(set, section.id, (value) => ({ ...value, configuration: { ...value.configuration, columns: next } }), `Configure ${section.name} columns`) });
+        renderOrderedChoices(columnHost, { all: projectDocumentationProfileColumns().map((column) => ({ id: column, label: column })), selected: columns, name: `${section.name} columns`, choiceKey: "documentation.profile-column", onChange: (next) => mutateSection(set, section.id, (value) => ({ ...value, configuration: { ...value.configuration, columns: next } }), `Configure ${section.name} columns`) });
         host.append(rows, columnHost);
     }
     function renderTheme(host, set, theme) {
@@ -484,7 +488,20 @@ export function installProjectDocumentationWorkspaceUi(options) {
         confirm.addEventListener("change", () => { confirmedIncomplete = confirm.checked; copy.disabled = download.disabled = !snapshot || liveStale || (snapshot.incomplete && !confirmedIncomplete); });
         copy.disabled = download.disabled = blocked;
         exportRegion.append(scope, labelled("Confirm incomplete export", confirm), copy, download, Object.assign(document.createElement("output"), { textContent: feedback }));
-        root.append(setRegion, renderConceptConfiguration(set, state), content, configure, themeRegion, preview, exportRegion);
+        const conceptRegion = renderConceptConfiguration(set, state);
+        conceptRegion.querySelectorAll('ol input[type="checkbox"]').forEach((input) => declareStudioChoice(input, "documentation.concept-membership"));
+        const conceptHeadingHint = document.createElement("small");
+        conceptHeadingHint.id = `documentation-concept-heading-hint-${set.id.replace(/[^a-z0-9_-]/giu, "-")}`;
+        conceptHeadingHint.textContent = "Shown between included concept groups after Refresh preview.";
+        conceptRegion.querySelectorAll(':scope > label input[type="checkbox"]').forEach((input) => { declareStudioChoice(input, "documentation.concept-subheadings"); input.setAttribute("aria-describedby", conceptHeadingHint.id); });
+        conceptRegion.append(conceptHeadingHint);
+        content.querySelectorAll('input[type="checkbox"]').forEach((input) => declareStudioChoice(input, "documentation.section-membership"));
+        themeRegion.querySelectorAll('input[type="checkbox"]').forEach((input) => declareStudioChoice(input, "documentation.theme-option"));
+        const exportChoices = Array.from(exportRegion.querySelectorAll('input[type="checkbox"]'));
+        exportChoices.slice(0, -1).forEach((input) => declareStudioChoice(input, "documentation.export-section"));
+        if (exportChoices.length)
+            declareStudioChoice(exportChoices.at(-1), "documentation.confirm-incomplete");
+        root.append(setRegion, conceptRegion, content, configure, themeRegion, preview, exportRegion);
         host.append(root);
     }
     return { render };

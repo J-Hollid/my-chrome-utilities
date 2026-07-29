@@ -16,6 +16,7 @@ import {
   type SpecificationSurface,
 } from "./data-layer-schema-specification-builder.js";
 import type { SchemaDefinition } from "./data-layer-schema-verification.js";
+import {declareStudioChoice} from "./data-layer-studio-choice-controls.js";
 
 export interface SpecificationClipboardPort {
   writeRich(html: string, plain: string): Promise<void>;
@@ -101,6 +102,7 @@ export function renderSchemaSpecificationBuilder(
   const spreadsheetLabel = document.createElement("label"); const spreadsheet = document.createElement("input"); spreadsheet.type = "radio"; spreadsheet.name = "schema-specification-copy-mode"; spreadsheet.value = "spreadsheet"; spreadsheet.checked = true; spreadsheetLabel.append(spreadsheet, " Spreadsheet");
   const richLabel = document.createElement("label"); const rich = document.createElement("input"); rich.type = "radio"; rich.name = spreadsheet.name; rich.value = "rich"; richLabel.append(rich, " Rich table for Confluence or Jira");
   const headingsLabel = document.createElement("label"); const headings = document.createElement("input"); headings.type = "checkbox"; headings.checked = true; headingsLabel.append(headings, " Include headings");
+  declareStudioChoice(headings,"schema.specification-headings");
   const styleLabel = document.createElement("label"); styleLabel.textContent = "Table style "; const styleSelect = document.createElement("select"); styleSelect.setAttribute("aria-label", "Table style");
   ([ ["plain","Plain"], ["bordered","Bordered"], ["highlighted","Bordered with highlighted headings"] ] as const).forEach(([value,textContent]) => styleSelect.append(Object.assign(document.createElement("option"), { value,textContent })));
   styleLabel.append(styleSelect); styleLabel.hidden = true;
@@ -250,6 +252,7 @@ export function renderSchemaSpecificationBuilder(
       const label = document.createElement("label");
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
+      declareStudioChoice(checkbox,"schema.specification-property");
       checkbox.checked = selected.has(property.canonicalPath);
       checkbox.dataset.path = property.canonicalPath;
       checkbox.addEventListener("change", () => {

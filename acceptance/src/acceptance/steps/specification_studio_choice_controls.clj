@@ -49,11 +49,13 @@
    "Specification Studio choice-control example columns describe an invalid result."))
 
 (defn- assert-browser! [evidence]
-  (support/assert! (and (= #{:installedBoundary :explicitLabels :checkboxClassification
-                             :desktopGeometry :labelActivation :verticalGroups
-                             :separateActions :immediateSwitch :oneCommand
-                             :undoRedoReload :coarseAndNarrow :focusVisible
-                             :responsiveOverflow :sidePanelUnchanged}
+  (support/assert! (and (= #{:installedBoundary :explicitContracts
+                             :documentationRoute :canonicalAuthoringRoute
+                             :conditionsRoute :conflictRoute :defectRoute
+                             :themeRoute :confirmationRoute :bulkRoute
+                             :optionalHints :groupingAndActions
+                             :activationAndKeyboard :commandConservation
+                             :durableConservation :responsive :sidePanelHashes}
                            (set (keys evidence)))
                         (every? true? (vals evidence)))
                    "Installed Specification Studio choice-control evidence is incomplete."

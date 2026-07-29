@@ -24,7 +24,7 @@ import { applyCanonicalCommand, canonicalCommandOutcome, canonicalRequirements, 
 import { mountCanonicalSchemaEditor as mountCanonicalSchemaEditorBase } from "./data-layer-canonical-schema-ui.js";
 import { mountProjectConditionEditor, projectConditionEditorValue } from "./data-layer-project-condition-editor.js";
 import { createProjectCollectionEntity, hasSavedSchemaAdoptionActions, inspectProjectEntityRemoval, projectCollectionCreationFields, projectCollectionCreationRoute, projectCollectionDefinitions, projectEntityWorkspaceRoute, projectInspectorTogglePresentation, removeProjectCollectionEntity } from "./data-layer-project-entity-lifecycle.js";
-import { installStudioChoiceControls } from "./data-layer-studio-choice-controls.js";
+import { declareStudioChoice, installStudioChoiceControls } from "./data-layer-studio-choice-controls.js";
 const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, START_PATH_KEY = "my-chrome-utilities.specification-project-start.v1", routeParameters = new URLSearchParams(location.search), startupProjectId = routeParameters.get("project") ?? undefined, startupKind = routeParameters.get("kind") ?? undefined, startupEntityId = routeParameters.get("entity") ?? undefined, startupRoute = startupKind ? durableProjectRouteForWorkspace(startupKind, startupEntityId) : undefined;
 installStudioChoiceControls(document.body);
 const durableProjectRuntime = await openDurableProjectRuntime(globalThis.localStorage, globalThis.indexedDB, { ...(startupProjectId ? { projectId: startupProjectId } : {}), ...(startupRoute ? { route: startupRoute } : {}) }).catch((error) => { const status = document.querySelector("#project-state"); if (status)
@@ -271,39 +271,52 @@ function writeProjectState(next, label = "Project edit") { const result = commit
     library = replaceActiveProjectState(library, state, result.revision);
     projectStorage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(library));
 } }
-function showConflictReview() { if (!pendingConflict && !durableConflict)
-    return; const dialog = q("#project-conflict-review"), fields = q("#project-conflict-fields"), historyBlocked = durableProjectRuntime.failedSave()?.command.commandId.startsWith("blocked-history:") ?? false; fields.querySelectorAll("label").forEach((label) => label.remove()); q("#reapply-project-conflict").disabled = historyBlocked; q("#merge-project-conflict").disabled = historyBlocked; if (durableConflict) {
-    q("#project-conflict-summary").textContent = historyBlocked ? `${durableConflict.label}: a newer Saved Draft changed ${durableConflict.conflictingFields.join(", ")}. Reject this window history action to preserve the newer value; the history entry remains available.` : `${durableConflict.label}: base Draft differs from the newer Saved Draft. Pending fields ${durableConflict.pendingFields.join(", ")}; newer fields ${durableConflict.currentFields.join(", ")}; conflicts ${durableConflict.conflictingFields.join(", ")}.`;
-    const groups = new Map();
-    for (const field of durableConflict.conflictingFields) {
-        const semantic = durableConflictSemanticField(field), group = groups.get(semantic) ?? [];
-        group.push(field);
-        groups.set(semantic, group);
+function showConflictReview() {
+    if (!pendingConflict && !durableConflict)
+        return;
+    const dialog = q("#project-conflict-review"), fields = q("#project-conflict-fields"), historyBlocked = durableProjectRuntime.failedSave()?.command.commandId.startsWith("blocked-history:") ?? false;
+    fields.querySelectorAll("label").forEach((label) => label.remove());
+    q("#reapply-project-conflict").disabled = historyBlocked;
+    q("#merge-project-conflict").disabled = historyBlocked;
+    if (durableConflict) {
+        q("#project-conflict-summary").textContent = historyBlocked
+            ? `${durableConflict.label}: a newer Saved Draft changed ${durableConflict.conflictingFields.join(", ")}. Reject this window history action to preserve the newer value; the history entry remains available.`
+            : `${durableConflict.label}: base Draft differs from the newer Saved Draft. Pending fields ${durableConflict.pendingFields.join(", ")}; newer fields ${durableConflict.currentFields.join(", ")}; conflicts ${durableConflict.conflictingFields.join(", ")}.`;
+        const groups = new Map();
+        for (const field of durableConflict.conflictingFields) {
+            const semantic = durableConflictSemanticField(field), group = groups.get(semantic) ?? [];
+            group.push(field);
+            groups.set(semantic, group);
+        }
+        for (const [semantic, group] of groups) {
+            const field = group[0], label = document.createElement("label"), input = document.createElement("input"), current = document.createElement("span"), pending = document.createElement("span");
+            input.type = "checkbox";
+            declareStudioChoice(input, "conflict.pending-field");
+            input.value = semantic;
+            input.disabled = historyBlocked;
+            current.textContent = ` Current ${JSON.stringify(durableConflict.currentValues[field])}.`;
+            pending.textContent = ` Pending ${JSON.stringify(durableConflict.pendingValues[field])}.`;
+            const description = group.length > 1 ? `${semantic} (${group.join(" and ")}; committed together)` : field;
+            label.append(input, historyBlocked ? ` Blocked history value for ${description}.` : ` Use pending value for ${description}.`, current, pending);
+            fields.append(label);
+        }
     }
-    for (const [semantic, group] of groups) {
-        const field = group[0], label = document.createElement("label"), input = document.createElement("input"), current = document.createElement("span"), pending = document.createElement("span");
-        input.type = "checkbox";
-        input.value = semantic;
-        input.disabled = historyBlocked;
-        current.textContent = ` Current ${JSON.stringify(durableConflict.currentValues[field])}.`;
-        pending.textContent = ` Pending ${JSON.stringify(durableConflict.pendingValues[field])}.`;
-        const description = group.length > 1 ? `${semantic} (${group.join(" and ")}; committed together)` : field;
-        label.append(input, historyBlocked ? ` Blocked history value for ${description}.` : ` Use pending value for ${description}.`, current, pending);
-        fields.append(label);
+    else {
+        const inspection = inspectCanonicalProjectConflict(pendingConflict);
+        q("#project-conflict-summary").textContent = `${pendingConflict.pendingLabel}: ${inspection.pendingFields.length} pending fields, ${inspection.currentFields.length} newer fields, ${inspection.conflictingFields.length} same-field conflicts.`;
+        for (const field of inspection.conflictingFields) {
+            const label = document.createElement("label"), input = document.createElement("input");
+            input.type = "checkbox";
+            declareStudioChoice(input, "conflict.pending-field");
+            input.value = field;
+            label.append(input, ` Use pending value for ${field}`);
+            fields.append(label);
+        }
     }
+    if (!dialog.open)
+        dialog.showModal();
+    dialog.querySelector("h2")?.focus();
 }
-else {
-    const inspection = inspectCanonicalProjectConflict(pendingConflict);
-    q("#project-conflict-summary").textContent = `${pendingConflict.pendingLabel}: ${inspection.pendingFields.length} pending fields, ${inspection.currentFields.length} newer fields, ${inspection.conflictingFields.length} same-field conflicts.`;
-    for (const field of inspection.conflictingFields) {
-        const label = document.createElement("label"), input = document.createElement("input");
-        input.type = "checkbox";
-        input.value = field;
-        label.append(input, ` Use pending value for ${field}`);
-        fields.append(label);
-    }
-} if (!dialog.open)
-    dialog.showModal(); dialog.querySelector("h2")?.focus(); }
 function persist(next) { const label = next.history.undo.at(-1)?.label ?? "Project edit", clean = { ...structuredClone(next), history: { undo: [], redo: [] } }; state = clean; saveStatus = { kind: "saving", label }; try {
     writeProjectState(clean, label);
     q("#retry-save").hidden = true;
@@ -459,6 +472,10 @@ function renderSelectedEntityEditor(content, entity) {
         const control = productionFieldControl(field, selectedKind === "flows" && field.key === "pageGroupIds"
             ? { ...entity, pageGroupIds: flowPageGroupLaneIds(state.project, entity.id) }
             : entity);
+        if (control instanceof HTMLInputElement && control.type === "checkbox")
+            declareStudioChoice(control, "entity.editor-option");
+        if (control instanceof HTMLFieldSetElement && field.type === "condition")
+            control.querySelectorAll('input[type="checkbox"]').forEach((input) => declareStudioChoice(input, "condition.negation"));
         if (selectedKind === "pages" && field.key === "eventName")
             control.setAttribute("required", "");
         label.textContent = field.label;
@@ -1003,26 +1020,38 @@ bulkDetails.insertBefore(bulkFormat, q("#bulk-properties"));
 bulkDetails.insertBefore(bulkReview, q("#bulk-assistance"));
 bulkDetails.insertBefore(bulkRequire, q("#bulk-assistance"));
 bulkDetails.insertBefore(bulkConfirm, q("#bulk-assistance"));
-function renderBulkStage() { bulkReview.replaceChildren(); if (!stagedBulk)
-    return; const summary = document.createElement("p"), table = document.createElement("table"), body = document.createElement("tbody"); summary.textContent = `${stagedBulk.rows.length} staged rows · ${stagedBulk.errors.length} fields need repair · project unchanged`; for (const row of stagedBulk.rows.slice(0, 40)) {
-    const tr = document.createElement("tr"), selected = document.createElement("input"), path = document.createElement("input"), type = document.createElement("input"), error = document.createElement("td");
-    selected.type = "checkbox";
-    selected.checked = row.selected;
-    selected.setAttribute("aria-label", `Select staged property ${row.path}`);
-    selected.addEventListener("change", () => { row.selected = selected.checked; });
-    path.value = row.path;
-    type.value = row.type ?? "";
-    path.addEventListener("change", () => { row.path = path.value; stagedBulk = stageBulkRequirements("json", JSON.stringify(stagedBulk.rows.map(({ id: selectedId, selected: isSelected, ...requirement }) => requirement))); renderBulkStage(); });
-    type.addEventListener("change", () => { row.type = type.value; stagedBulk = stageBulkRequirements("json", JSON.stringify(stagedBulk.rows.map(({ id: selectedId, selected: isSelected, ...requirement }) => requirement))); renderBulkStage(); });
-    for (const control of [selected, path, type]) {
-        const td = document.createElement("td");
-        td.append(control);
-        tr.append(td);
+function renderBulkStage() {
+    bulkReview.replaceChildren();
+    if (!stagedBulk)
+        return;
+    const summary = document.createElement("p"), table = document.createElement("table"), body = document.createElement("tbody");
+    summary.textContent = `${stagedBulk.rows.length} staged rows · ${stagedBulk.errors.length} fields need repair · project unchanged`;
+    for (const row of stagedBulk.rows.slice(0, 40)) {
+        const tr = document.createElement("tr"), selected = document.createElement("input"), path = document.createElement("input"), type = document.createElement("input"), error = document.createElement("td");
+        selected.type = "checkbox";
+        declareStudioChoice(selected, "bulk.staged-property");
+        selected.checked = row.selected;
+        selected.setAttribute("aria-label", `Select staged property ${row.path}`);
+        selected.addEventListener("change", () => { row.selected = selected.checked; });
+        path.value = row.path;
+        type.value = row.type ?? "";
+        path.addEventListener("change", () => { row.path = path.value; stagedBulk = stageBulkRequirements("json", JSON.stringify(stagedBulk.rows.map(({ id: selectedId, selected: isSelected, ...requirement }) => requirement))); renderBulkStage(); });
+        type.addEventListener("change", () => { row.type = type.value; stagedBulk = stageBulkRequirements("json", JSON.stringify(stagedBulk.rows.map(({ id: selectedId, selected: isSelected, ...requirement }) => requirement))); renderBulkStage(); });
+        for (const control of [selected, path, type]) {
+            const td = document.createElement("td");
+            td.append(control);
+            tr.append(td);
+        }
+        error.textContent = stagedBulk.errors.filter(({ rowId }) => rowId === row.id).map(({ field, message }) => `${field}: ${message}`).join("; ");
+        tr.append(error);
+        body.append(tr);
     }
-    error.textContent = stagedBulk.errors.filter(({ rowId }) => rowId === row.id).map(({ field, message }) => `${field}: ${message}`).join("; ");
-    tr.append(error);
-    body.append(tr);
-} table.append(body); bulkReview.append(summary, table); bulkConfirm.hidden = bulkRequire.hidden = false; bulkConfirm.disabled = Boolean(stagedBulk.errors.length); bulkReview.focus(); }
+    table.append(body);
+    bulkReview.append(summary, table);
+    bulkConfirm.hidden = bulkRequire.hidden = false;
+    bulkConfirm.disabled = Boolean(stagedBulk.errors.length);
+    bulkReview.focus();
+}
 bulkStageButton.addEventListener("click", () => { if (!state || selectedKind !== "profiles" || !selectedId)
     return; try {
     stagedBulk = stageBulkRequirements(bulkFormat.value, q("#bulk-properties").value);

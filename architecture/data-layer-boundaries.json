@@ -201,7 +201,8 @@
     "module": "defect-reporting",
     "layer": "browser",
     "contracts": [
-      "src/utilities/data-layer/live-inspection.ts"
+      "src/utilities/data-layer/live-inspection.ts",
+      "src/utilities/data-layer/schemas.ts"
     ]
   },
   "src/data-layer-event-feed-query-ui.ts": {
@@ -970,7 +971,10 @@
   },
   "src/data-layer-defect-report-timeline-controls.ts": {
     "module": "defect-reporting",
-    "layer": "browser"
+    "layer": "browser",
+    "contracts": [
+      "src/utilities/data-layer/schemas.ts"
+    ]
   },
   "src/data-layer-defect-report-timeline.ts": {
     "module": "defect-reporting",

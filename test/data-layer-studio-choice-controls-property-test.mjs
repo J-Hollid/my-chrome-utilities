@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {
-  studioChoicePattern,
+  studioChoiceContract,
   studioChoiceTargetHeight,
 } from "../dist/data-layer-studio-choice-controls.js";
 
@@ -15,13 +15,9 @@ const varied=(words)=>words
   .join("");
 
 for(let attempt=0;attempt<250;attempt+=1){
-  const label=`${" ".repeat(next()%3)}${varied(["Only","defined","fields"])}${" ".repeat(next()%3)}`;
-  const consequence=varied(["immediately","applies","one","reversible","Draft","setting"]);
-  assert.equal(studioChoicePattern(label,consequence),"switch","normalization preserves the immediate-setting classification");
-  assert.equal(studioChoicePattern(label,`${consequence} later`),"checkbox","a different consequence never gains switch semantics");
-
-  const unrelated=`Choice ${next().toString(36)}`;
-  assert.equal(studioChoicePattern(unrelated,consequence),"checkbox","only the named immediate setting is a switch");
+  const contract=studioChoiceContract("schema.only-defined");
+  const unrelated=`${" ".repeat(next()%3)}${varied(["Only","defined","fields"])} ${next().toString(36)}`;
+  assert.deepEqual(studioChoiceContract(contract.key),contract,`${unrelated} copy cannot alter the explicit contract`);
 
   const coarsePointer=Boolean(next()&1),narrow=Boolean(next()&1);
   assert.equal(

@@ -1,4 +1,5 @@
 import { deriveSpecificationRows, defaultSpecificationColumns, retainedSpecificationPreviewScroll, renderSpecificationClipboard, specificationExampleChoices, specificationColumnLabels, specificationProperties, specificationSurfaces, typeSpecificationExampleSelection, } from "./data-layer-schema-specification-builder.js";
+import { declareStudioChoice } from "./data-layer-studio-choice-controls.js";
 function isDescendant(parent, child) {
     return child.startsWith(`${parent}/`) || child.startsWith(`${parent}/*/`);
 }
@@ -76,6 +77,7 @@ export function renderSchemaSpecificationBuilder(root, current, allSchemas, init
     headings.type = "checkbox";
     headings.checked = true;
     headingsLabel.append(headings, " Include headings");
+    declareStudioChoice(headings, "schema.specification-headings");
     const styleLabel = document.createElement("label");
     styleLabel.textContent = "Table style ";
     const styleSelect = document.createElement("select");
@@ -279,6 +281,7 @@ export function renderSchemaSpecificationBuilder(root, current, allSchemas, init
             const label = document.createElement("label");
             const checkbox = document.createElement("input");
             checkbox.type = "checkbox";
+            declareStudioChoice(checkbox, "schema.specification-property");
             checkbox.checked = selected.has(property.canonicalPath);
             checkbox.dataset.path = property.canonicalPath;
             checkbox.addEventListener("change", () => {

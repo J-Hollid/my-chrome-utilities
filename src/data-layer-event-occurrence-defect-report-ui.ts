@@ -21,6 +21,8 @@ import {
   type OccurrenceReport,
 } from "./data-layer-event-occurrence-defect-report.js";
 
+import {declareStudioChoice} from "./utilities/data-layer/schemas.js";
+
 export interface OccurrenceDefectReportPersistence {
   save(report: OccurrenceReport, options: { copy:boolean; saveSeparately:boolean }): Promise<{ feedback:string; existing?: readonly { id:string; label:string }[] }>;
   openExisting(defectId: string): void;
@@ -113,8 +115,8 @@ export function renderOccurrenceDefectReportBuilder(
   const expectation = document.createElement("section"); expectation.setAttribute("aria-label", "Expected event occurrence");
   const guardrail = document.createElement("output"); guardrail.setAttribute("aria-live", "polite");
   const confirmation = document.createElement("button"); confirmation.type = "button"; confirmation.textContent = "Confirm expectation";
-  const overrideLabel = document.createElement("label"); const override = document.createElement("input"); override.type = "checkbox"; override.dataset.occurrenceOverride = "true"; overrideLabel.append(override, " Explicit override");
-  const acknowledgementLabel = document.createElement("label"); const acknowledgement = document.createElement("input"); acknowledgement.type = "checkbox"; acknowledgement.dataset.occurrenceAcknowledgement = "true"; acknowledgementLabel.append(acknowledgement, " Acknowledge non-schema expectation");
+  const overrideLabel = document.createElement("label"); const override = document.createElement("input"); override.type = "checkbox"; declareStudioChoice(override,"defect.expected-override"); override.dataset.occurrenceOverride = "true"; overrideLabel.append(override, " Explicit override");
+  const acknowledgementLabel = document.createElement("label"); const acknowledgement = document.createElement("input"); acknowledgement.type = "checkbox"; declareStudioChoice(acknowledgement,"defect.acknowledgement"); acknowledgement.dataset.occurrenceAcknowledgement = "true"; acknowledgementLabel.append(acknowledgement, " Acknowledge non-schema expectation");
   const expectedPayloadLabel = document.createElement("label"); expectedPayloadLabel.textContent = "Expected payload ";
   const expectedPayload = document.createElement("textarea"); expectedPayload.dataset.occurrenceExpectedPayload = "true"; expectedPayloadLabel.append(expectedPayload);
   const identityControls = document.createElement("div");

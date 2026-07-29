@@ -1,5 +1,6 @@
 import { exactFlowExpectationChoice, expectedResultAssistance, isUndeclaredPropertyIssue, toggleReportIssue, validateAssistedResponse, } from "./data-layer-defect-report.js";
 import { exampleValueFromInput } from "./utilities/data-layer/schemas.js";
+import { declareStudioChoice } from "./utilities/data-layer/schemas.js";
 export function appendIssueControls(issues, expectedControls, state, selectedChoices) {
     const flowContext = state.report().event.flowContext;
     for (const reportIssue of state.report().issues) {
@@ -7,6 +8,7 @@ export function appendIssueControls(issues, expectedControls, state, selectedCho
         const row = document.createElement("div");
         const selected = document.createElement("input");
         selected.type = "checkbox";
+        declareStudioChoice(selected, "defect.issue-inclusion");
         selected.checked = reportIssue.selected;
         selected.id = `defect-issue-${reportIssue.id}`;
         const label = document.createElement("label");
@@ -46,6 +48,7 @@ export function appendIssueControls(issues, expectedControls, state, selectedCho
         }
         const includeComment = document.createElement("input");
         includeComment.type = "checkbox";
+        declareStudioChoice(includeComment, "defect.report-section");
         includeComment.dataset.allowedValuesComment = reportIssue.id;
         const includeCommentLabel = document.createElement("label");
         includeCommentLabel.append(includeComment, "Include all allowed values as a comment");

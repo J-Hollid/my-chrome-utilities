@@ -1,21 +1,29 @@
 import assert from "node:assert/strict";
 import {
-  studioChoicePattern,
+  studioChoiceContract,
   studioChoiceTargetHeight,
 } from "../dist/data-layer-studio-choice-controls.js";
 
-for(const [label,consequence,expected] of[
-  ["Only defined fields","immediately applies one reversible Draft setting","switch"],
-  ["Include concept subheadings","changes configuration pending preview refresh","checkbox"],
-  ["Include ecommerce concept","selects membership in an ordered group","checkbox"],
-  ["Export Sitewide","selects membership in an export scope","checkbox"],
-  ["Confirm incomplete export","records an acknowledgement","checkbox"],
-  ["Select staged property","selects membership for a later batch action","checkbox"],
-  ["Borders","stages a theme option for an explicit save","checkbox"],
+for(const [key,pattern,consequence] of[
+  ["schema.only-defined","switch","Immediately applies one reversible Draft setting"],
+  ["documentation.concept-subheadings","checkbox","Changes configuration pending preview refresh"],
+  ["documentation.concept-membership","checkbox","Selects membership in the ordered concept group"],
+  ["documentation.export-section","checkbox","Selects membership in the export scope"],
+  ["documentation.confirm-incomplete","checkbox","Records an acknowledgement before incomplete export"],
+  ["bulk.staged-property","checkbox","Selects membership for the later bulk action"],
+  ["documentation.theme-option","checkbox","Stages a theme option for explicit Save theme"],
 ]){
-  assert.equal(studioChoicePattern(label,consequence),expected,`${label} control classification`);
+  assert.deepEqual(studioChoiceContract(key),{key,pattern,consequence});
 }
 
+const immediate=studioChoiceContract("schema.only-defined");
+for(const changedCopy of["Closed fields","Only documented properties","Anything a translator writes"]){
+  assert.deepEqual(
+    studioChoiceContract(immediate.key),
+    immediate,
+    `${changedCopy} cannot change stable switch semantics`,
+  );
+}
 assert.equal(studioChoiceTargetHeight({coarsePointer:false,narrow:false}),36);
 assert.equal(studioChoiceTargetHeight({coarsePointer:true,narrow:false}),44);
 assert.equal(studioChoiceTargetHeight({coarsePointer:false,narrow:true}),44);

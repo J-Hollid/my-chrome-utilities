@@ -1,4 +1,5 @@
 import { addExpectedArrayItem, duplicateExpectedArrayItem, expectedPayloadFields, normalizedExpectedPayloadSchema, removeExpectedArrayItem, removeExpectedPayloadValue, setExpectedPayloadValue, } from "./data-layer-unified-defect-builder.js";
+import { declareStudioChoice } from "./utilities/data-layer/schemas.js";
 function element(tag, text) {
     const result = document.createElement(tag);
     if (text !== undefined)
@@ -45,6 +46,7 @@ export function renderExpectedPayloadEditor(root, schema, state, schemas = [sche
             const includeLabel = element("label", `Include optional ${path}`);
             const include = element("input");
             include.type = "checkbox";
+            declareStudioChoice(include, "defect.expected-property");
             include.checked = current !== undefined;
             include.addEventListener("change", () => {
                 if (!include.checked)

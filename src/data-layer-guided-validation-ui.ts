@@ -55,6 +55,7 @@ import {
   type GuidedConditionPropertyOption,
 } from "./data-layer-live-guided-conditional-rule-authoring.js";
 import { conditionalRuleSummary, operatorsForConditionType, type ConditionalRuleConsequence } from "./data-layer-conditional-validation-rules.js";
+import {declareStudioChoice} from "./data-layer-studio-choice-controls.js";
 
 export interface GuidedValidationFlow {
   open(event: GuidedValidationDraft["event"], continuation?: GuidedSchemaCandidate): void;
@@ -301,7 +302,7 @@ export function createGuidedValidationFlow(
 
   function renderGuidedConditions(container: HTMLElement): void {
     if (!draft?.property || !draft.requirement) return;
-    const toggleLabel = element("label"); const toggle = element("input"); toggle.type = "checkbox"; toggle.id = "guided-apply-condition"; toggle.checked = Boolean(draft.conditional);
+    const toggleLabel = element("label"); const toggle = element("input"); toggle.type = "checkbox"; declareStudioChoice(toggle,"guided.conditional"); toggle.id = "guided-apply-condition"; toggle.checked = Boolean(draft.conditional);
     toggleLabel.append(toggle, " Apply only when"); container.append(toggleLabel);
     toggle.addEventListener("change", () => {
       if (toggle.checked) {
@@ -629,7 +630,7 @@ export function createGuidedValidationFlow(
   function renderReviewStage(container: HTMLElement): void {
     if (!draft) return;
     const review = element("p", draft.review); review.id = "guided-validation-review";
-    const publishLabel = element("label"); const publish = element("input"); publish.id = "guided-publish-rule"; publish.type = "checkbox"; publishLabel.append(publish, " Publish this rule for Rule Library reuse");
+    const publishLabel = element("label"); const publish = element("input"); publish.id = "guided-publish-rule"; publish.type = "checkbox"; declareStudioChoice(publish,"guided.publish-rule"); publishLabel.append(publish, " Publish this rule for Rule Library reuse");
     const save = element("button", "Add validation to draft"); save.type = "button"; save.addEventListener("click", async () => {
       try {
         const result = publishGuidedValidation(draft!, publish.checked);

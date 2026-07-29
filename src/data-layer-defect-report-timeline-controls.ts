@@ -8,6 +8,7 @@ import {
 } from "./data-layer-defect-report.js";
 import type { DefectReportContext } from "./data-layer-defect-report-browser.js";
 import type { ComposableDefectReport, DefectReportBuilderState } from "./data-layer-defect-report-ui-controls.js";
+import {declareStudioChoice} from "./utilities/data-layer/schemas.js";
 
 const resultWindowSize = 20;
 type ComposerStage = "idle" | "select" | "configure";
@@ -153,7 +154,7 @@ export function appendTimelineControls<Report extends ComposableDefectReport>(
       ["includeValidation", "Validation details — schema, rule, and issue information"],
     ] as const) {
       const label = document.createElement("label");
-      const option = document.createElement("input"); option.type = "checkbox"; option.dataset.timelineEvidence = field; option.checked = Boolean(draft[field]);
+      const option = document.createElement("input"); option.type = "checkbox"; declareStudioChoice(option,"defect.timeline-evidence"); option.dataset.timelineEvidence = field; option.checked = Boolean(draft[field]);
       option.addEventListener("change", () => { draft = { ...draft!, [field]: option.checked }; });
       const description = document.createElement("span"); description.textContent = labelText;
       label.append(option, description); stageRoot.append(label);
