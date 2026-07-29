@@ -1,8 +1,5 @@
 (ns acceptance.steps.project-assurance-severity
-  (:require [acceptance.steps.support :as support]
-            [babashka.process :as process]
-            [cheshire.core :as json]
-            [clojure.string :as str]))
+  (:require [acceptance.steps.support :as support]))
 
 (def feature-files
   ["features/data-layer-project-assurance-severity.feature"
@@ -15,11 +12,6 @@
 (defonce model-verified? (atom false))
 (defonce browser-observation (atom nil))
 
-(defn- checked! [& command]
-  (let [result (apply process/shell {:out :string :err :string} command)]
-    (support/assert! (zero? (:exit result)) (:err result) {:out (:out result)})
-    result))
-
 (defn- verify-model! []
   (support/cached-command-verification!
    model-verified?
@@ -27,16 +19,12 @@
    "node" "test/data-layer-project-assurance-severity-test.mjs"))
 
 (defn- verify-browser! []
-  (or @browser-observation
-      (let [result (checked! "node" "test/browser-packs/project-assurance-severity.mjs")
-            payload (->> (str/split-lines (:out result))
-                         (filter #(str/starts-with? % "{"))
-                         last
-                         (#(json/parse-string % true))
-                         :projectAssuranceSeverity)]
-        (support/assert! payload "Project assurance severity browser evidence is missing."
-                         {:out (:out result)})
-        (reset! browser-observation payload))))
+  (support/cached-command-observation!
+   browser-observation
+   {:command ["node" "test/browser-packs/project-assurance-severity.mjs"]
+    :observation-key :projectAssuranceSeverity
+    :runtime-error "Project assurance severity browser verification failed."
+    :missing-error "Project assurance severity browser evidence is missing."}))
 
 (defn- assert-browser! [evidence]
   (let [values (concat (vals (dissoc evidence :blockedEvidence))

@@ -1,8 +1,5 @@
 (ns acceptance.steps.specification-studio-choice-controls
-  (:require [acceptance.steps.support :as support]
-            [babashka.process :as process]
-            [cheshire.core :as json]
-            [clojure.string :as str]))
+  (:require [acceptance.steps.support :as support]))
 
 (def feature-files
   ["features/specification-studio-choice-controls.feature"
@@ -15,11 +12,6 @@
 (defonce model-verified? (atom false))
 (defonce browser-observation (atom nil))
 
-(defn- checked! [& command]
-  (let [result (apply process/shell {:out :string :err :string} command)]
-    (support/assert! (zero? (:exit result)) (:err result) {:out (:out result)})
-    result))
-
 (defn- verify-model! []
   (support/cached-command-verification!
    model-verified?
@@ -27,16 +19,12 @@
    "node" "test/data-layer-studio-choice-controls-test.mjs"))
 
 (defn- verify-browser! []
-  (or @browser-observation
-      (let [result (checked! "node" "test/twatility-workflow-polish-browser-test.mjs")
-            payload (->> (str/split-lines (:out result))
-                         (filter #(str/starts-with? % "{"))
-                         last
-                         (#(json/parse-string % true))
-                         :studioChoiceControls)]
-        (support/assert! payload "Specification Studio choice-control browser evidence is missing."
-                         {:out (:out result)})
-        (reset! browser-observation payload))))
+  (support/cached-command-observation!
+   browser-observation
+   {:command ["node" "test/twatility-workflow-polish-browser-test.mjs"]
+    :observation-key :studioChoiceControls
+    :runtime-error "Specification Studio choice-control browser verification failed."
+    :missing-error "Specification Studio choice-control browser evidence is missing."}))
 
 (def example-relations
   [{:keys ["control" "consequence" "pattern"]

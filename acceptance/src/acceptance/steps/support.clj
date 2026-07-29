@@ -248,6 +248,20 @@
       (packs/cached-runtime! [:command command] verify!)
       (when-not @cache (reset! cache (verify!))))))
 
+(defn cached-command-observation!
+  [cache {:keys [command observation-key runtime-error missing-error]}]
+  (or @cache
+      (let [result (apply process/shell build-shell-options command)
+            line (last (filter #(str/starts-with? % "{")
+                               (str/split-lines (:out result))))
+            payload (when line (json/parse-string line true))
+            observation (get payload observation-key)]
+        (assert! (zero? (:exit result))
+                 (str runtime-error " " (:err result))
+                 {:out (:out result) :err (:err result)})
+        (assert! observation missing-error {:out (:out result)})
+        (reset! cache observation))))
+
 (defn mode-transition
   [world example text entry-modes state-key verify! validate-example! runtime-boundary!]
   (let [mode (or (entry-modes text) (get world state-key))]

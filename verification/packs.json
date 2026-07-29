@@ -1047,7 +1047,9 @@
       "test/data-layer-studio-choice-controls-test.mjs",
       "test/twatility-brand-polish-test.mjs"
     ],
-    "property": [],
+    "property": [
+      "test/data-layer-studio-choice-controls-property-test.mjs"
+    ],
     "features": [
       "features/specification-studio-choice-controls.feature",
       "features/specification-studio-choice-controls-runtime.feature"
