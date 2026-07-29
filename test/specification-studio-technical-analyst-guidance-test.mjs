@@ -4,6 +4,7 @@ import {
   STUDIO_ANALYST_FIRST_HINT_MS,
   STUDIO_ANALYST_HINT_LIFETIME_MS,
   createStudioAnalystGuidanceSchedule,
+  installStudioAnalystGuidance,
   studioAnalystHintForRoute,
 } from "../dist/specification-studio-technical-analyst-guidance.js";
 
@@ -60,5 +61,40 @@ for(const route of["Project overview","Shared Profiles","Pages","Flows","Documen
   rotation.advance(10_000,{active:true,route});
 }
 assert.equal(rotation.advance(120_000,{active:true,route:"Project overview"}).kind,"show","rotation resets only after every hint was presented");
+
+let controllerNow=0,controllerActive=true;
+const listeners=new Map();
+const ownerDocument={
+  addEventListener(type,listener){listeners.set(type,listener);},
+  removeEventListener(type,listener){if(listeners.get(type)===listener)listeners.delete(type);},
+};
+const bubble={
+  ownerDocument,
+  dataset:{},
+  hidden:true,
+  textContent:"",
+  removeAttribute(name){if(name==="data-hint-id")delete this.dataset.hintId;},
+};
+const controller=installStudioAnalystGuidance({
+  bubble,
+  route:()=>"Pages",
+  active:()=>controllerActive,
+  now:()=>controllerNow,
+  intervalMilliseconds:1_000_000,
+});
+controllerNow=5_000;
+controller.evaluate();
+controllerActive=false;
+controller.evaluate();
+controllerNow=65_000;
+controllerActive=true;
+controller.evaluate();
+assert.equal(bubble.hidden,true,"a paused interval is not charged when activity resumes");
+controllerNow=70_000;
+controller.evaluate();
+assert.equal(bubble.hidden,false,"the remaining active interval resumes from its pause boundary");
+assert.equal(bubble.dataset.hintId,"pages");
+controller.dispose();
+assert.equal(listeners.size,0,"the controller removes its owner-document listener");
 
 console.log("Specification Studio technical analyst guidance unit tests passed");

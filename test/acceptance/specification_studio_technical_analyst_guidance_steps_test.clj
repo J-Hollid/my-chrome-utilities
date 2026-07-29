@@ -62,7 +62,14 @@
        (#'guidance/validate-example!
         :runtime
         {"presentation" "200 percent browser zoom"
-         "visibility" "hidden"}))))
+         "visibility" "hidden"})))
+  (is (thrown-with-msg?
+       clojure.lang.ExceptionInfo
+       #"invalid result"
+       (#'guidance/validate-example!
+        :model
+        {"event" "the STudio document becomes hidden"
+         "result" "disappears and pauses the hint interval"}))))
 
 (deftest browser-evidence-requires-every-runtime-boundary
   (is (nil? (#'guidance/assert-browser! complete-browser-evidence)))

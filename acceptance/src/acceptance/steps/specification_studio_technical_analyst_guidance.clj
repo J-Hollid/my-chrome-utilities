@@ -44,6 +44,11 @@
             ["Pages" "Jolly good! Give each Page its observed page event before refining its schema."]
             ["Flows" "Cor! Add Pages to the canvas first, then place interaction Events inside them."]
             ["Documentation" "Splendid! Refresh the preview after changing a Documentation Set."]}}
+   {:keys ["event" "result"]
+    :rows #{["10 seconds elapse" "disappears automatically"]
+            ["the Studio document becomes hidden" "disappears and pauses the hint interval"]
+            ["10 seconds elapse" "is removed"]
+            ["the Studio document becomes hidden" "is removed and its interval timer pauses"]}}
    {:keys ["presentation" "visibility"]
     :rows #{["1280 by 900 CSS pixel Studio" "visible"]
             ["200 percent browser zoom" "visible"]
@@ -110,3 +115,7 @@
    feature-files entry-modes :specification-studio-technical-analyst-guidance-mode
    verify-model! validate-example!
    verify-browser! assert-browser!))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-07-29T20:34:30.644285695+02:00", :module-hash "1113398590", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "-141541989"} {:id "def/feature-files", :kind "def", :line 4, :end-line 6, :hash "-2026693678"} {:id "def/entry-modes", :kind "def", :line 8, :end-line 10, :hash "1522919857"} {:id "form/3/defonce", :kind "defonce", :line 12, :end-line 12, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 13, :end-line 13, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 15, :end-line 19, :hash "-373877270"} {:id "defn-/verify-browser!", :kind "defn-", :line 21, :end-line 27, :hash "-1564117678"} {:id "def/example-relations", :kind "def", :line 29, :end-line 55, :hash "1255750730"} {:id "defn-/validate-example!", :kind "defn-", :line 57, :end-line 60, :hash "1709490755"} {:id "defn-/assert-browser!", :kind "defn-", :line 62, :end-line 111, :hash "-980986341"} {:id "def/handlers", :kind "def", :line 113, :end-line 117, :hash "628619708"}]}
+;; clj-mutate-manifest-end

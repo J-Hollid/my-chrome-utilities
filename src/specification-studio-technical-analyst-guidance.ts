@@ -100,10 +100,14 @@ export function installStudioAnalystGuidance(options:{
 }):StudioAnalystGuidanceController{
   const schedule=createStudioAnalystGuidanceSchedule();
   const now=options.now??(()=>performance.now());
-  let previous=now();
+  const ownerDocument=options.bubble.ownerDocument;
+  let previous=now(),intervalWasActive=options.active();
   const evaluate=():void=>{
-    const current=now(),action=schedule.advance(current-previous,{active:options.active(),route:options.route()});
+    const current=now(),active=options.active();
+    const elapsed=active&&intervalWasActive?current-previous:0;
+    const action=schedule.advance(elapsed,{active,route:options.route()});
     previous=current;
+    intervalWasActive=active;
     if(action.kind==="show"||action.kind==="visible"){
       options.bubble.textContent=action.hint.text;
       options.bubble.dataset.hintId=action.hint.id;
@@ -114,12 +118,12 @@ export function installStudioAnalystGuidance(options:{
     }
   };
   const timer=setInterval(evaluate,options.intervalMilliseconds??250);
-  document.addEventListener("visibilitychange",evaluate);
+  ownerDocument.addEventListener("visibilitychange",evaluate);
   return{
     evaluate,
     dispose(){
       clearInterval(timer);
-      document.removeEventListener("visibilitychange",evaluate);
+      ownerDocument.removeEventListener("visibilitychange",evaluate);
       options.bubble.hidden=true;
     },
   };
