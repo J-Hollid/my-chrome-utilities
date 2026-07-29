@@ -223,6 +223,19 @@ Ungrouped; it does not change the canonical schema Table's independent Ungrouped
 last Concept sort. The exact checkpoint is `flow_export`, followed by
 `npm run package`.
 
+On approval, the Site Profile concept-output correction is later authority for
+project Documentation scenarios 016–018, 020–023. The Documentation Set's concept
+inclusion, ordering, and subheading configuration applies to every selected Site
+Profile property-table section and the Data capture matrix, regardless of Profile
+name. Adding a Profile section marks the immutable preview stale; after Refresh
+preview, preview, current/selected/complete rich copy, plain text, and Excel share
+the same filtered rows, concept order, and heading state.
+
+This supersedes the earlier restriction to literal `Sitewide` and explicitly
+includes a selected non-`Sitewide` Profile such as `Opened Article`. Flow value-map
+output remains isolated from concept configuration. The exact checkpoint remains
+`flow_export`, followed by `npm run package`.
+
 On approval, the typed-literal and focused-editor correction is later authority
 for Authoring scenarios 023 and 064–067. Allowed values and custom examples share
 a type-directed literal language: commas delimit allowed values only outside

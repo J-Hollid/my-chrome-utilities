@@ -153,15 +153,15 @@ Feature: Data layer project documentation workspace
     Then the Documentation Set offers one ordered checklist of project-wide concepts plus virtual Ungrouped
     And each entry independently controls whether its property rows are included
     And Include concept subheadings independently controls whether group headings are rendered
-    And these controls apply only to literal Sitewide and the Data capture matrix
-    And Flow sections and every other Site Profile including Opened Article expose no concept grouping or filtering control
+    And these controls apply to every selected Site Profile property-table section and the Data capture matrix
+    And Flow sections expose no concept grouping or filtering control
 
   # Data layer project documentation workspace 017
   Scenario Outline: Data layer project documentation workspace 017
     Given the concept checklist includes ecommerce, page, technical, and Ungrouped
     And ecommerce, page, and Ungrouped are included while technical is excluded
     And Include concept subheadings is <headings>
-    When literal Sitewide and the Data capture matrix are previewed or exported
+    When Sitewide, Opened Article, and the Data capture matrix are previewed or exported
     Then technical property rows are absent
     And ecommerce, page, and Ungrouped property rows remain
     And visible concept subheadings are <heading_result>
@@ -176,9 +176,9 @@ Feature: Data layer project documentation workspace
   # Data layer project documentation workspace 018
   Scenario: Data layer project documentation workspace 018
     Given Client specification orders included concepts page, ecommerce, and Ungrouped
-    And literal Sitewide and the Data capture matrix contain rows in all three concepts
+    And Sitewide, Opened Article, and the Data capture matrix contain rows in all three concepts
     When the operator requests grouped concept output
-    Then each table renders PAGE, ECOMMERCE, and UNGROUPED sections in that order
+    Then each selected Profile table and the matrix render PAGE, ECOMMERCE, and UNGROUPED sections in that order
     And each concept heading spans the complete table width
     And each heading is followed by the standard column headings and that concept's property rows in path order
     And no empty concept heading is emitted
@@ -201,9 +201,9 @@ Feature: Data layer project documentation workspace
   Scenario: Data layer project documentation workspace 020
     Given technical is excluded and concept subheadings are enabled
     When the complete Documentation Set is generated
-    Then literal Sitewide and the Data capture matrix omit technical rows and render included concept groups
-    And every Flow sheet and non-Sitewide Profile sheet is byte-equivalent to output without concept configuration
-    And current, selected, and complete export scopes apply concept configuration only when they contain literal Sitewide or the Data capture matrix
+    Then every selected Site Profile and the Data capture matrix omit technical rows and render included concept groups
+    And every Flow sheet is byte-equivalent to output without concept configuration
+    And current, selected, and complete export scopes apply concept configuration whenever they contain a selected Site Profile or the Data capture matrix
 
   # Data layer project documentation workspace 021
   Scenario: Data layer project documentation workspace 021
@@ -214,8 +214,8 @@ Feature: Data layer project documentation workspace
     And the existing preview is visibly stale until refreshed
     And stale rich-copy and Excel actions remain unavailable
     When the operator refreshes the preview
-    Then literal Sitewide and the Data capture matrix each render PAGE, ECOMMERCE, and UNGROUPED subheadings once in configured order
-    And current, selected, and complete rich copy and Excel include those subheadings whenever their scope contains either affected table
+    Then every selected Site Profile and the Data capture matrix each render PAGE, ECOMMERCE, and UNGROUPED subheadings once in configured order
+    And current, selected, and complete rich copy and Excel include those subheadings whenever their scope contains an affected table
     And the plain-text fallback contains the same subheadings and row order
     When the operator turns Include concept subheadings off and refreshes again
     Then every concept subheading is absent while the included row set and concept order remain unchanged
@@ -228,8 +228,22 @@ Feature: Data layer project documentation workspace
     And Ungrouped has the same enabled positional reorder controls as a named concept
     And each move creates one reversible project command
     When the operator refreshes grouped output
-    Then literal Sitewide, the Data capture matrix, rich copy, plain-text fallback, and Excel order their non-empty groups as UNGROUPED, ECOMMERCE, and PAGE
+    Then every selected Site Profile, the Data capture matrix, rich copy, plain-text fallback, and Excel order their non-empty groups as UNGROUPED, ECOMMERCE, and PAGE
     And reload, Undo, Redo, and project portability preserve or reverse the exact order
     When canonical properties later add new concept Acquisition
     Then Acquisition appends after the complete saved sequence without moving Ungrouped
     And every existing inclusion choice remains unchanged
+
+  # Data layer project documentation workspace 023
+  Scenario: Data layer project documentation workspace 023
+    Given a Site Profile named differently from Sitewide is absent from the Documentation Set
+    And its effective properties occupy page, technical, and Ungrouped
+    And the fresh preview was compiled before that Profile section was added
+    When the operator adds that Site Profile property-table section
+    And excludes technical, moves Ungrouped before page, and enables concept subheadings
+    Then the existing preview is visibly stale until refreshed
+    When the operator refreshes the preview
+    Then that Profile table renders UNGROUPED and PAGE subheadings in configured order
+    And its technical property rows are absent
+    And current, selected, and complete rich copy, plain-text fallback, and Excel preserve that heading order and row set whenever they contain that Profile
+    And Flow output remains unchanged

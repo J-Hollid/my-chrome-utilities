@@ -50,14 +50,13 @@ independent inclusion choice, and a separate `Include concept subheadings` choic
 controls presentation only. Exclusion always removes that concept's property rows,
 even when subheadings are hidden.
 
-Concept configuration applies only to the literal `Sitewide` Profile sheet and the
-one Data capture matrix. It does not apply to Flow value maps or to another Site
-Profile such as `Opened Article`. Every entry, including virtual `Ungrouped`, has
-the same positional reorder behavior. New concepts append after the complete saved
-sequence without moving any existing entry. Operators may reorder and include or
-exclude every entry. Configuration survives reload, Undo, Redo, and project
-portability. A configured concept with no current rows retains its choice but emits
-no empty output heading.
+Concept configuration applies to every selected Site Profile property-table sheet
+and the one Data capture matrix. It does not apply to Flow value maps. Every entry,
+including virtual `Ungrouped`, has the same positional reorder behavior. New
+concepts append after the complete saved sequence without moving any existing
+entry. Operators may reorder and include or exclude every entry. Configuration
+survives reload, Undo, Redo, and project portability. A configured concept with no
+current rows retains its choice but emits no empty output heading.
 
 Within an included concept, rows retain stable path order. When subheadings are
 hidden, rows still follow configured concept-group order in one ordinary table.
@@ -70,10 +69,17 @@ plain-text fallback.
 
 Selecting `Include concept subheadings` stores the Set choice and marks the current
 immutable preview stale. Refreshing that preview must project one heading for every
-non-empty included group into literal Sitewide and the Data capture matrix. Current,
-selected, and complete rich copy, plain text, and Excel consume that refreshed
-snapshot and cannot silently omit those headings. Turning the choice off and
-refreshing removes headings without changing filtering or row order.
+non-empty included group into every selected Site Profile property table and the
+Data capture matrix. Current, selected, and complete rich copy, plain text, and
+Excel consume that refreshed snapshot and cannot silently omit those headings.
+Turning the choice off and refreshing removes headings without changing filtering
+or row order.
+
+The initial Profile compiler gated concept processing on the literal name
+`Sitewide`. A Profile property-table section with any other name therefore bypassed
+heading presentation, concept inclusion, and concept order. Profile names have no
+concept semantics: every selected Site Profile table consumes the same Set-level
+concept snapshot, including a section added after the previous preview.
 
 The initial reconciliation treated `Ungrouped` as a terminal sentinel: it removed
 that entry from the configured sequence and appended it last on every render and
@@ -97,10 +103,10 @@ columns are Property, Description, Required, Allowed values, Example, and Commen
 Diagnostics and provenance remain tool-only preflight information and never appear
 as sheets, columns, identities, hashes, or repair details in shared output.
 
-For literal Sitewide and the matrix, enabled concept subheadings are merged styled
-rows spanning the complete Excel table width. Rich document copy emits semantic
-concept headings suitable for Jira or Confluence; this is the existing rich-copy
-path, not a new Jira API or export type.
+For every selected Site Profile and the matrix, enabled concept subheadings are
+merged styled rows spanning the complete Excel table width. Rich document copy
+emits semantic concept headings suitable for Jira or Confluence; this is the
+existing rich-copy path, not a new Jira API or export type.
 
 Incomplete output requires confirmation and contains only the concise
 `Draft — incomplete` label.
@@ -130,7 +136,10 @@ fingerprints, confirm incomplete export, and prove project and publication bytes
 remain unchanged. It must additionally prove the project-wide concept checklist,
 independent inclusion and heading controls, custom order, new-concept append
 behavior, stale refresh, identical preview/Excel/rich-copy row sets, and strict
-isolation to literal Sitewide and the Data capture matrix. Heading evidence must
-begin with an off snapshot, activate the installed control, refresh, and parse the
-on result before reversing it. Ordering evidence must move `Ungrouped` away from
-last position and preserve that position through compilation and round-trips.
+isolation to every selected Site Profile and the Data capture matrix. Heading
+evidence must begin with an off snapshot, activate the installed control, refresh,
+and parse the on result before reversing it. Ordering evidence must move
+`Ungrouped` away from last position and preserve that position through compilation
+and round-trips. A non-`Sitewide` Profile added after snapshot compilation must
+prove filtering, ordering, and headings in preview, rich copy, plain text, and
+Excel.

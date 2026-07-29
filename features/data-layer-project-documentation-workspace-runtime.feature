@@ -153,14 +153,14 @@ Feature: Data layer project documentation workspace runtime
     Then the installed Set controls render one ordered project-wide concept checklist plus Ungrouped
     And every checklist row has an independent Include control
     And a separate Include concept subheadings control is rendered
-    And those controls target only literal Sitewide and the Data capture matrix
-    And DOM inspection finds no concept configuration in Flow or Opened Article Profile sections
+    And those controls target every selected Site Profile property-table section and the Data capture matrix
+    And DOM inspection finds no concept configuration in Flow sections
 
   # Data layer project documentation workspace runtime 017
   Scenario Outline: Data layer project documentation workspace runtime 017
     Given production concept configuration includes ecommerce, page, and Ungrouped but excludes technical
     And Include concept subheadings is <headings>
-    When actual preview, Excel, and rich-copy adapters render Sitewide and the matrix
+    When actual preview, Excel, and rich-copy adapters render Sitewide, Opened Article, and the matrix
     Then parsed output contains no technical property row
     And parsed output retains ecommerce, page, and Ungrouped rows
     And parsed concept headings are <heading_result>
@@ -175,7 +175,7 @@ Feature: Data layer project documentation workspace runtime
   # Data layer project documentation workspace runtime 018
   Scenario: Data layer project documentation workspace runtime 018
     Given durable concept order is page, ecommerce, and Ungrouped
-    And production Sitewide and matrix rows occupy all three groups
+    And production Sitewide, Opened Article, and matrix rows occupy all three groups
     When actual controls request grouped concept output
     Then installed previews parse as PAGE, ECOMMERCE, and UNGROUPED sections in order
     And every section repeats its standard table header before path-ordered property rows
@@ -199,9 +199,9 @@ Feature: Data layer project documentation workspace runtime
   Scenario: Data layer project documentation workspace runtime 020
     Given production technical concept is excluded and subheadings are enabled
     When actual controls generate the complete Documentation Set
-    Then parsed Sitewide and matrix output omit technical rows and contain included concept groups
-    And Flow and non-Sitewide Profile content hashes equal their hashes with no concept configuration
-    And current, selected, and complete output manifests apply concept configuration only to literal Sitewide and the matrix
+    Then parsed Sitewide, Opened Article, and matrix output omit technical rows and contain included concept groups
+    And Flow content hashes equal their hashes with no concept configuration
+    And current, selected, and complete output manifests apply concept configuration whenever they contain a selected Site Profile or the matrix
 
   # Data layer project documentation workspace runtime 021
   Scenario: Data layer project documentation workspace runtime 021
@@ -212,8 +212,8 @@ Feature: Data layer project documentation workspace runtime
     And the prior snapshot is marked stale
     And installed rich-copy and Excel actions are disabled
     When the installed Refresh preview action is activated
-    Then parsed Sitewide and matrix preview tables each contain PAGE, ECOMMERCE, and UNGROUPED rowgroup headings once in configured order
-    And current, selected, and complete clipboard and workbook manifests contain the same headings whenever their scope contains either affected table
+    Then every parsed selected-Profile and matrix preview table contains PAGE, ECOMMERCE, and UNGROUPED rowgroup headings once in configured order
+    And current, selected, and complete clipboard and workbook manifests contain the same headings whenever their scope contains an affected table
     And parsed plain text contains the same heading and property-row order
     When the installed checkbox is cleared and preview is refreshed
     Then heading records are absent from DOM, clipboard, plain text, and workbook XML
@@ -227,8 +227,22 @@ Feature: Data layer project documentation workspace runtime
     And Ungrouped reorder-button disabled states depend only on its current first or last position
     And command and Undo counts increase once per move
     When actual controls refresh grouped output
-    Then parsed Sitewide, matrix, clipboard, plain-text, and workbook group order is UNGROUPED, ECOMMERCE, and PAGE
+    Then parsed Sitewide, Opened Article, matrix, clipboard, plain-text, and workbook group order is UNGROUPED, ECOMMERCE, and PAGE
     And reload, Undo, Redo, and portability restore the corresponding exact durable orders
     When production canonical properties add new concept Acquisition
     Then reconciliation appends Acquisition after page without changing Ungrouped position
     And durable inclusion hashes for existing entries remain unchanged
+
+  # Data layer project documentation workspace runtime 023
+  Scenario: Data layer project documentation workspace runtime 023
+    Given production Opened Article is not named Sitewide and is absent from the durable Documentation Set
+    And its effective properties occupy page, technical, and Ungrouped
+    And the installed preview predates its Profile section
+    When actual controls add the Opened Article Site Profile property-table section
+    And exclude technical, move Ungrouped before page, and enable concept subheadings
+    Then the installed preview is stale until actual refresh
+    When the installed Refresh preview action is activated
+    Then parsed Opened Article preview contains UNGROUPED and PAGE rowgroup headings in configured order
+    And its parsed property rows omit technical
+    And current, selected, and complete clipboard HTML, plain text, and workbook XML preserve that heading order and row set whenever Opened Article is in scope
+    And Flow output hashes remain unchanged
