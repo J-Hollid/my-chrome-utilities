@@ -14,7 +14,7 @@
              :inside true
              :under 0
              :overflow 0
-             :focus "project-search"
+             :focus "workspace-pane"
              :live "polite"
              :role "status"
              :animation "none"}
@@ -28,7 +28,8 @@
                {:id "pages"}
                {:id "flows"}
                {:id "documentation"}]
-    :reset {:id "project-overview"}
+    :routeHide {:hidden true}
+    :retained {:id "project-overview-search"}
     :documentPause {:before {:hidden true}
                     :inactive {:hidden true}
                     :resumed {:id "pages"}
@@ -49,6 +50,41 @@
    :narrow {:visibleBefore true
             :hiddenWithNavigation true
             :overflow true}
+   :interaction
+   {:layout {:region [0 0 100 100]}
+    :hover {:scale 1.05 :region [0 0 100 100]}
+    :focus {:scale 1.05 :region [0 0 100 100]}
+    :rest {:scale 1.0}
+    :activations [{:id "tip-1" :before "search" :after "search"}
+                  {:id "tip-2" :before "analyst" :after "analyst"}
+                  {:id "tip-3" :before "analyst" :after "analyst"}]
+    :tail {:visible true :headSide true :travels true :joins true :inside true}
+    :routeHidden true
+    :routeBeforeRequest true
+    :retainedRequest {:id "tip-4"}
+    :pools (into {}
+                 (map (fn [index]
+                        [(keyword (str "part-" index))
+                         {:count 5
+                          :distinct 5
+                          :texts (repeat 5 "Complete production-specific analyst guidance text")}])
+                      (range 10)))
+    :dwell {:pointerBefore true
+            :pointerFirst {:hidden false :id "control-search"}
+            :pointerStayed {:hidden true :id nil}
+            :focusFirst {:hidden false :id "control-preflight"}
+            :focusStayed {:hidden true :id nil}}
+    :typewriter {:initial {:text ""}
+                 :partial "Cr"
+                 :firstId "tip-1"
+                 :replacement {:id "tip-2"}
+                 :hideCancellation {:hidden true :stable true}
+                 :routeChange {:hidden true :stable true}
+                 :initialAnnouncementCount 1
+                 :replacementAnnouncementCount 1
+                 :reduced {:complete "Complete tip"
+                           :visual "Complete tip"
+                           :announcement "Complete tip"}}}
    :after {:project "project" :undo 0}})
 
 (deftest approved-examples-remain-inside-the-guidance-contract

@@ -786,13 +786,13 @@ try{
   await wait(100);
   await studio.call("Page.navigate",{url:`${base}specification-builder.html?project=${projectId}&route=overview`});
   await ready(studio,"document.readyState==='complete'&&!document.querySelector('#project-workspace').hidden&&document.querySelector('#project-tree button[data-kind=\"overview\"]')?.getAttribute('aria-current')==='true'","analyst guidance overview");
-  const analystBefore=await evaluate(studio,`(async()=>{const repo=await (await import("./data-layer-durable-project-repository.js")).openIndexedDbProjectRepository(),record=await repo.loadProject(${JSON.stringify(projectId)}),search=document.querySelector("#project-search");search.focus();return{project:JSON.stringify(record),undo:document.querySelector("#undo-project").dataset.undoCount,focus:search.id,bubbleHidden:document.querySelector("#studio-analyst-hint").hidden};})()`);
+  const analystBefore=await evaluate(studio,`(async()=>{const repo=await (await import("./data-layer-durable-project-repository.js")).openIndexedDbProjectRepository(),record=await repo.loadProject(${JSON.stringify(projectId)}),workspace=document.querySelector("#workspace-pane");workspace.focus();return{project:JSON.stringify(record),undo:document.querySelector("#undo-project").dataset.undoCount,focus:workspace.id,bubbleHidden:document.querySelector("#studio-analyst-hint").hidden};})()`);
   assert.equal(analystBefore.bubbleHidden,true);
-  await wait(9_700);
-  const analystPreFirst=await evaluate(studio,"document.querySelector('#studio-analyst-hint').hidden");
+  const analystAutomaticBoundary=await evaluate(studio,`(async()=>{const {installStudioAnalystGuidance}=await import("./specification-studio-technical-analyst-guidance.js"),bubble=document.querySelector("#studio-analyst-hint"),blocker=document.createElement("div");blocker.dataset.schemaRowOverlay="true";document.body.append(blocker);let now=0;const controller=installStudioAnalystGuidance({bubble,route:()=>"Project overview",active:()=>true,reducedMotion:()=>true,now:()=>now,intervalMilliseconds:1_000_000});now=9_999;controller.evaluate();const preFirst=bubble.hidden;now=10_000;controller.evaluate();window.__studioAnalystAutomaticBoundary={controller,blocker,setNow:(value)=>{now=value;}};return{preFirst,shown:!bubble.hidden,id:bubble.dataset.hintId};})()`);
+  const analystPreFirst=analystAutomaticBoundary.preFirst;
   assert.equal(analystPreFirst,true);
-  await wait(600);
-  const analystVisible=await evaluate(studio,`(()=>{const region=document.querySelector("#studio-analyst-guidance"),image=region.querySelector("img"),bubble=document.querySelector("#studio-analyst-hint"),nav=document.querySelector("#project-workspace > nav"),regionBox=region.getBoundingClientRect(),imageBox=image.getBoundingClientRect(),bubbleBox=bubble.getBoundingClientRect(),navBox=nav.getBoundingClientRect(),style=getComputedStyle(bubble),under=[...document.elementsFromPoint(bubbleBox.left+bubbleBox.width/2,bubbleBox.top+bubbleBox.height/2)].filter((element)=>element!==bubble&&element.matches("button,input,select,textarea,a[href],[role=button]"));return{hidden:bubble.hidden,text:bubble.textContent,hintId:bubble.dataset.hintId,width:imageBox.width,expectedWidth:parseFloat(getComputedStyle(document.documentElement).fontSize)*6.5,leftAnchored:Math.abs(imageBox.left-regionBox.left)<.6,aspectRatio:imageBox.width/imageBox.height,inside:regionBox.left>=navBox.left&&regionBox.right<=navBox.right+.6&&bubbleBox.left>=regionBox.left&&bubbleBox.right<=regionBox.right+.6&&bubbleBox.top>=regionBox.top&&bubbleBox.bottom<=regionBox.bottom+.6,under:under.length,overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth,focus:document.activeElement.id,live:bubble.getAttribute("aria-live"),role:bubble.getAttribute("role"),animation:style.animationName,transition:style.transitionDuration,background:style.backgroundImage,border:style.borderTopWidth,shadow:style.boxShadow,font:style.fontFamily};})()`);
+  assert.deepEqual(analystAutomaticBoundary,{preFirst:true,shown:true,id:"project-overview"});
+  const analystVisible=await evaluate(studio,`(()=>{const region=document.querySelector("#studio-analyst-guidance"),image=region.querySelector("img"),bubble=document.querySelector("#studio-analyst-hint"),nav=document.querySelector("#project-workspace > nav"),regionBox=region.getBoundingClientRect(),imageBox=image.getBoundingClientRect(),bubbleBox=bubble.getBoundingClientRect(),navBox=nav.getBoundingClientRect(),style=getComputedStyle(bubble),under=[...document.elementsFromPoint(bubbleBox.left+bubbleBox.width/2,bubbleBox.top+bubbleBox.height/2)].filter((element)=>element!==bubble&&element.matches("button,input,select,textarea,a[href],[role=button]"));return{hidden:bubble.hidden,text:bubble.dataset.completeText,hintId:bubble.dataset.hintId,width:imageBox.width,expectedWidth:parseFloat(getComputedStyle(document.documentElement).fontSize)*6.5,leftAnchored:Math.abs(imageBox.left-regionBox.left)<.6,aspectRatio:imageBox.width/imageBox.height,inside:regionBox.left>=navBox.left&&regionBox.right<=navBox.right+.6&&bubbleBox.left>=regionBox.left&&bubbleBox.right<=regionBox.right+.6&&bubbleBox.top>=regionBox.top&&bubbleBox.bottom<=regionBox.bottom+.6,under:under.length,overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth,focus:document.activeElement.id,live:bubble.getAttribute("aria-live"),role:bubble.getAttribute("role"),animation:style.animationName,transition:style.transitionDuration,background:style.backgroundImage,border:style.borderTopWidth,shadow:style.boxShadow,font:style.fontFamily};})()`);
   assert.deepEqual({
     hidden:analystVisible.hidden,
     text:analystVisible.text,
@@ -816,7 +816,7 @@ try{
     inside:true,
     under:0,
     overflow:0,
-    focus:"project-search",
+    focus:"workspace-pane",
     live:"polite",
     role:"status",
     animation:"none",
@@ -827,27 +827,25 @@ try{
   assert.equal(parseFloat(analystVisible.border)>0,true);
   assert.notEqual(analystVisible.shadow,"none");
   assert.match(analystVisible.font,/Bangers|sans-serif/u);
-  await wait(10_300);
-  assert.equal(await evaluate(studio,"document.querySelector('#studio-analyst-hint').hidden"),true);
+  const analystAutomaticHidden=await evaluate(studio,`(()=>{const boundary=window.__studioAnalystAutomaticBoundary;boundary.setNow(20_000);boundary.controller.evaluate();const hidden=document.querySelector("#studio-analyst-hint").hidden;boundary.controller.dispose();boundary.blocker.remove();delete window.__studioAnalystAutomaticBoundary;return hidden;})()`);
+  assert.equal(analystAutomaticHidden,true);
 
   const analystScheduleBoundary=await evaluate(studio,`(async()=>{
     const {installStudioAnalystGuidance}=await import("./specification-studio-technical-analyst-guidance.js"),bubble=document.querySelector("#studio-analyst-hint");
     let now=0,active=true,route="Project overview";
-    const snapshot=()=>({hidden:bubble.hidden,id:bubble.dataset.hintId??null,text:bubble.textContent});
+    const snapshot=()=>({hidden:bubble.hidden,id:bubble.dataset.hintId??null,text:bubble.dataset.completeText??null});
     const install=()=>installStudioAnalystGuidance({bubble,route:()=>route,active:()=>active,now:()=>now,intervalMilliseconds:1_000_000});
     let controller=install();
     const tick=(elapsed)=>{now+=elapsed;controller.evaluate();return snapshot();};
     const preFirst=tick(9_999),first=tick(1),afterLifetime=tick(10_000);
-    route="Shared Profiles";
-    const cooldownBefore=tick(109_999),second=tick(1),rotation=[first,second];
-    for(const nextRoute of["Pages","Flows","Documentation"]){
-      tick(10_000);
+    const cooldownBefore=tick(109_999),second=tick(1),rotation=[first];
+    for(const nextRoute of["Shared Profiles","Pages","Flows","Documentation"]){
       route=nextRoute;
-      rotation.push(tick(110_000));
+      tick(0);
+      rotation.push(tick(10_000));
     }
-    tick(10_000);
     route="Project overview";
-    const reset=tick(110_000);
+    const routeHide=tick(0),retained=tick(10_000);
     controller.dispose();
     const pause=(pauseKind)=>{
       now=0;active=true;route="Pages";bubble.hidden=true;controller=install();
@@ -855,13 +853,14 @@ try{
       active=false;
       const inactive=tick(60_000);
       active=true;
+      tick(0);
       const resumed=tick(5_000);
       active=false;
       const removed=tick(1);
       controller.dispose();
       return{pauseKind,before,inactive,resumed,removed};
     };
-    return{preFirst,first,afterLifetime,cooldownBefore,second,rotation,reset,documentPause:pause("document-hidden"),blockingPause:pause("blocking-surface")};
+    return{preFirst,first,afterLifetime,cooldownBefore,second,rotation,routeHide,retained,documentPause:pause("document-hidden"),blockingPause:pause("blocking-surface")};
   })()`);
   assert.deepEqual({
     preFirstHidden:analystScheduleBoundary.preFirst.hidden,
@@ -870,7 +869,8 @@ try{
     cooldownBeforeHidden:analystScheduleBoundary.cooldownBefore.hidden,
     second:analystScheduleBoundary.second.id,
     rotation:analystScheduleBoundary.rotation.map(({id,text})=>[id,text]),
-    reset:analystScheduleBoundary.reset.id,
+    routeHide:analystScheduleBoundary.routeHide.hidden,
+    retained:analystScheduleBoundary.retained.id,
     documentPause:[analystScheduleBoundary.documentPause.before.hidden,analystScheduleBoundary.documentPause.inactive.hidden,analystScheduleBoundary.documentPause.resumed.id,analystScheduleBoundary.documentPause.removed.hidden],
     blockingPause:[analystScheduleBoundary.blockingPause.before.hidden,analystScheduleBoundary.blockingPause.inactive.hidden,analystScheduleBoundary.blockingPause.resumed.id,analystScheduleBoundary.blockingPause.removed.hidden],
   },{
@@ -878,7 +878,7 @@ try{
     first:"project-overview",
     afterLifetimeHidden:true,
     cooldownBeforeHidden:true,
-    second:"shared-profiles",
+    second:"project-overview-context",
     rotation:[
       ["project-overview","Crikey! Pick a collection on the left to start shaping your specification."],
       ["shared-profiles","Smashing! Put reusable fields here so Pages and Events can inherit them."],
@@ -886,7 +886,8 @@ try{
       ["flows","Cor! Add Pages to the canvas first, then place interaction Events inside them."],
       ["documentation","Splendid! Refresh the preview after changing a Documentation Set."],
     ],
-    reset:"project-overview",
+    routeHide:true,
+    retained:"project-overview-search",
     documentPause:[true,true,"pages",true],
     blockingPause:[true,true,"pages",true],
   });
@@ -910,17 +911,116 @@ try{
   const analystZoom=await evaluate(studio,`(async()=>{
     const {installStudioAnalystGuidance}=await import("./specification-studio-technical-analyst-guidance.js"),region=document.querySelector("#studio-analyst-guidance"),bubble=document.querySelector("#studio-analyst-hint"),navigation=document.querySelector("#project-workspace > nav");let now=0;
     const controller=installStudioAnalystGuidance({bubble,route:()=>"Documentation",active:()=>true,now:()=>now,intervalMilliseconds:1_000_000});now=10_000;controller.evaluate();
-    const regionBox=region.getBoundingClientRect(),bubbleBox=bubble.getBoundingClientRect(),navigationBox=navigation.getBoundingClientRect(),result={visible:region.getClientRects().length>0&&!bubble.hidden,inside:regionBox.left>=navigationBox.left&&regionBox.right<=navigationBox.right+.6&&bubbleBox.left>=regionBox.left&&bubbleBox.right<=regionBox.right+.6,overflow:Math.max(0,document.documentElement.scrollWidth-innerWidth,document.body.scrollWidth-innerWidth),text:bubble.textContent};
+    const regionBox=region.getBoundingClientRect(),bubbleBox=bubble.getBoundingClientRect(),navigationBox=navigation.getBoundingClientRect(),result={visible:region.getClientRects().length>0&&!bubble.hidden,inside:regionBox.left>=navigationBox.left&&regionBox.right<=navigationBox.right+.6&&bubbleBox.left>=regionBox.left&&bubbleBox.right<=regionBox.right+.6,overflow:Math.max(0,document.documentElement.scrollWidth-innerWidth,document.body.scrollWidth-innerWidth),text:bubble.dataset.completeText};
     controller.dispose();return result;
   })()`);
   assert.deepEqual(analystZoom,{visible:true,inside:true,overflow:0,text:"Splendid! Refresh the preview after changing a Documentation Set."});
   await studio.call("Emulation.setDeviceMetricsOverride",{width:360,height:800,deviceScaleFactor:1,mobile:false});
   const analystNarrow=await evaluate(studio,`(()=>{const region=document.querySelector("#studio-analyst-guidance"),nav=document.querySelector("#project-workspace > nav"),visibleBefore=region.getClientRects().length>0;nav.hidden=true;const hiddenWithNavigation=region.getClientRects().length===0,overflow=Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)<=innerWidth;nav.hidden=false;return{visibleBefore,hiddenWithNavigation,overflow};})()`);
   assert.deepEqual(analystNarrow,{visibleBefore:true,hiddenWithNavigation:true,overflow:true});
+
+  await studio.call("Emulation.setDeviceMetricsOverride",{width:1280,height:900,deviceScaleFactor:1,mobile:false});
+  await evaluate(studio,"document.querySelector('#studio-analyst-control').click()");
+  const analystLayoutSample=await evaluate(studio,`(()=>{const control=document.querySelector("#studio-analyst-control"),region=document.querySelector("#studio-analyst-guidance"),bubble=document.querySelector("#studio-analyst-hint"),tree=document.querySelector("#project-tree"),box=(element)=>{const value=element.getBoundingClientRect();return[value.left,value.top,value.width,value.height].map((part)=>Math.round(part*10)/10);},controlBox=control.getBoundingClientRect();return{region:box(region),tree:box(tree),control:box(control),bubble:box(bubble),scale:new DOMMatrix(getComputedStyle(control).transform).a,shadow:getComputedStyle(control).boxShadow,center:{x:controlBox.left+controlBox.width/2,y:controlBox.top+controlBox.height/2}};})()`);
+  await studio.call("Input.dispatchMouseEvent",{type:"mouseMoved",x:analystLayoutSample.center.x,y:analystLayoutSample.center.y});
+  await wait(30);
+  const analystHover=await evaluate(studio,`(()=>{const control=document.querySelector("#studio-analyst-control"),region=document.querySelector("#studio-analyst-guidance"),bubble=document.querySelector("#studio-analyst-hint"),tree=document.querySelector("#project-tree"),box=(element)=>{const value=element.getBoundingClientRect();return[value.left,value.top,value.width,value.height].map((part)=>Math.round(part*10)/10);},controlBox=control.getBoundingClientRect(),bubbleBox=bubble.getBoundingClientRect();return{region:box(region),tree:box(tree),scale:new DOMMatrix(getComputedStyle(control).transform).a,shadow:getComputedStyle(control).boxShadow,overlap:controlBox.right>bubbleBox.left};})()`);
+  await studio.call("Input.dispatchMouseEvent",{type:"mouseMoved",x:1200,y:850});
+  const analystFocus=await evaluate(studio,`(()=>{const control=document.querySelector("#studio-analyst-control"),region=document.querySelector("#studio-analyst-guidance"),tree=document.querySelector("#project-tree"),box=(element)=>{const value=element.getBoundingClientRect();return[value.left,value.top,value.width,value.height].map((part)=>Math.round(part*10)/10);};control.focus();return{region:box(region),tree:box(tree),scale:new DOMMatrix(getComputedStyle(control).transform).a,shadow:getComputedStyle(control).boxShadow,focus:document.activeElement.id};})()`);
+  const analystRest=await evaluate(studio,`(()=>{document.querySelector("#project-search").focus();const control=document.querySelector("#studio-analyst-control");return{scale:new DOMMatrix(getComputedStyle(control).transform).a,shadow:getComputedStyle(control).boxShadow,focus:document.activeElement.id};})()`);
+  assert.equal(Math.abs(analystHover.scale-1.05)<.001,true);
+  assert.equal(Math.abs(analystFocus.scale-1.05)<.001,true);
+  assert.equal(Math.abs(analystRest.scale-1)<.001,true);
+  assert.notEqual(analystHover.shadow,analystLayoutSample.shadow);
+  assert.notEqual(analystFocus.shadow,analystLayoutSample.shadow);
+  assert.equal(analystRest.shadow,analystLayoutSample.shadow);
+  assert.deepEqual([analystHover.region,analystHover.tree],[analystLayoutSample.region,analystLayoutSample.tree]);
+  assert.deepEqual([analystFocus.region,analystFocus.tree],[analystLayoutSample.region,analystLayoutSample.tree]);
+  assert.equal(analystHover.overlap,false);
+
+  const analystClickActivation=await evaluate(studio,`(()=>{const control=document.querySelector("#studio-analyst-control"),before=document.activeElement.id;control.click();return{before,after:document.activeElement.id,id:document.querySelector("#studio-analyst-hint").dataset.hintId,text:document.querySelector("#studio-analyst-hint").dataset.completeText};})()`);
+  await evaluate(studio,"document.querySelector('#studio-analyst-control').focus()");
+  const enterFocusBefore=await evaluate(studio,"document.activeElement.id");
+  await nativeKey(studio,"Enter","Enter");
+  await wait(30);
+  const analystEnterActivation=await evaluate(studio,`(()=>({before:${JSON.stringify("studio-analyst-control")},after:document.activeElement.id,id:document.querySelector("#studio-analyst-hint").dataset.hintId,text:document.querySelector("#studio-analyst-hint").dataset.completeText}))()`);
+  assert.equal(enterFocusBefore,"studio-analyst-control");
+  await nativeKey(studio," ","Space");
+  await wait(30);
+  const analystSpaceActivation=await evaluate(studio,`(()=>({before:"studio-analyst-control",after:document.activeElement.id,id:document.querySelector("#studio-analyst-hint").dataset.hintId,text:document.querySelector("#studio-analyst-hint").dataset.completeText}))()`);
+  const activationIds=[analystClickActivation.id,analystEnterActivation.id,analystSpaceActivation.id];
+  assert.equal(new Set(activationIds).size,3);
+  assert.deepEqual(
+    [analystClickActivation.before,analystClickActivation.after,analystEnterActivation.before,analystEnterActivation.after,analystSpaceActivation.before,analystSpaceActivation.after],
+    ["project-search","project-search","studio-analyst-control","studio-analyst-control","studio-analyst-control","studio-analyst-control"],
+  );
+
+  const analystTail=await evaluate(studio,`(()=>{const region=document.querySelector("#studio-analyst-guidance").getBoundingClientRect(),image=document.querySelector("#studio-analyst-control img").getBoundingClientRect(),bubble=document.querySelector("#studio-analyst-hint").getBoundingClientRect(),path=document.querySelector("#studio-analyst-tail path"),matrix=path.getScreenCTM(),screen=(x,y)=>{const point=new DOMPoint(x,y).matrixTransform(matrix);return{x:point.x,y:point.y};},narrow=screen(1,3),middle=screen(24,13),wideTop=screen(47,34),wideBottom=screen(47,42),inside=(point)=>point.x>=region.left&&point.x<=region.right&&point.y>=region.top&&point.y<=region.bottom;return{visible:path.getClientRects().length>0,narrow,middle,wideTop,wideBottom,headSide:narrow.x>=image.left+image.width*.6&&narrow.x<=image.right+.6,travels:narrow.x<middle.x&&middle.x<wideTop.x&&narrow.y<middle.y&&middle.y<wideTop.y,joins:Math.abs(wideTop.x-bubble.left)<2&&Math.abs(wideBottom.x-bubble.left)<2,inside:[narrow,middle,wideTop,wideBottom].every(inside)};})()`);
+  assert.deepEqual({visible:analystTail.visible,headSide:analystTail.headSide,travels:analystTail.travels,joins:analystTail.joins,inside:analystTail.inside},{visible:true,headSide:true,travels:true,joins:true,inside:true});
+
+  await evaluate(studio,"document.querySelector('#project-tree button[data-kind=\"pages\"]').click()");
+  await wait(100);
+  const analystRouteHidden=await evaluate(studio,"document.querySelector('#studio-analyst-hint').hidden");
+  await evaluate(studio,"document.querySelector('#project-tree button[data-kind=\"overview\"]').click()");
+  await wait(100);
+  const analystRouteBeforeRequest=await evaluate(studio,"document.querySelector('#studio-analyst-hint').hidden");
+  const analystRetainedRequest=await evaluate(studio,`(()=>{document.querySelector("#studio-analyst-control").click();const bubble=document.querySelector("#studio-analyst-hint");return{id:bubble.dataset.hintId,text:bubble.dataset.completeText};})()`);
+  assert.deepEqual([analystRouteHidden,analystRouteBeforeRequest],[true,true]);
+  assert.equal(activationIds.includes(analystRetainedRequest.id),false);
+
+  const analystPools=await evaluate(studio,`(async()=>{const {studioAnalystHintsForRoute}=await import("./specification-studio-technical-analyst-guidance.js"),parts=["Project overview","Shared Profiles","Pages","Page Groups","Events","Applicability","Flows","Fixtures","Assignments","Documentation"];return Object.fromEntries(parts.map((part)=>{const tips=studioAnalystHintsForRoute(part);return[part,{count:tips.length,distinct:new Set(tips.map(({id})=>id)).size,texts:tips.map(({text})=>text)}];}));})()`);
+  assert.equal(Object.keys(analystPools).length,10);
+  assert.equal(Object.values(analystPools).every(({count,distinct,texts})=>count>=5&&count===distinct&&texts.every((text)=>text.length>20)),true);
+
+  const analystDwell=await evaluate(studio,`(async()=>{
+    const {installStudioAnalystGuidance}=await import("./specification-studio-technical-analyst-guidance.js"),bubble=document.querySelector("#studio-analyst-hint"),root=document.querySelector("#project-workspace"),search=document.querySelector("#project-search"),preflight=document.querySelector("#run-preflight");let now=0;
+    const install=()=>installStudioAnalystGuidance({bubble,controlRoot:root,route:()=>"Project overview",active:()=>true,reducedMotion:()=>true,now:()=>now,intervalMilliseconds:1_000_000});
+    bubble.hidden=true;let controller=install();
+    search.dispatchEvent(new PointerEvent("pointerover",{bubbles:true}));now=2_999;controller.evaluate();const pointerBefore=bubble.hidden;now=3_000;controller.evaluate();const pointerFirst={hidden:bubble.hidden,id:bubble.dataset.hintId,text:bubble.dataset.completeText,focus:document.activeElement.id};now=30_000;controller.evaluate();const pointerStayed={hidden:bubble.hidden,id:bubble.dataset.hintId??null};search.dispatchEvent(new PointerEvent("pointerout",{bubbles:true,relatedTarget:document.body}));controller.dispose();
+    now=0;bubble.hidden=true;controller=install();preflight.dispatchEvent(new FocusEvent("focusin",{bubbles:true}));now=3_000;controller.evaluate();const focusFirst={hidden:bubble.hidden,id:bubble.dataset.hintId,text:bubble.dataset.completeText,focus:document.activeElement.id};now=30_000;controller.evaluate();const focusStayed={hidden:bubble.hidden,id:bubble.dataset.hintId??null};preflight.dispatchEvent(new FocusEvent("focusout",{bubbles:true,relatedTarget:document.body}));controller.dispose();
+    return{pointerBefore,pointerFirst,pointerStayed,focusFirst,focusStayed};
+  })()`);
+  assert.equal(analystDwell.pointerBefore,true);
+  assert.equal(analystDwell.pointerFirst.hidden,false);
+  assert.deepEqual(analystDwell.pointerStayed,{hidden:true,id:null});
+  assert.match(analystDwell.pointerFirst.text,/Global search/u);
+  assert.equal(analystDwell.focusFirst.hidden,false);
+  assert.deepEqual(analystDwell.focusStayed,{hidden:true,id:null});
+  assert.match(analystDwell.focusFirst.text,/Run preflight/u);
+
+  await studio.call("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"no-preference"}]});
+  const analystTypewriter=await evaluate(studio,`(async()=>{
+    const {installStudioAnalystGuidance}=await import("./specification-studio-technical-analyst-guidance.js"),bubble=document.querySelector("#studio-analyst-hint"),reserve=bubble.querySelector("[data-analyst-tip-reserve]"),visual=bubble.querySelector("[data-analyst-tip-visual]"),announcement=bubble.querySelector("[data-analyst-tip-announcement]"),blocker=document.createElement("div");blocker.dataset.schemaRowOverlay="true";document.body.append(blocker);await new Promise((resolve)=>setTimeout(resolve,300));let route="Project overview",active=true,announcementCount=0;announcement.textContent="";
+    const announcementObserver=new MutationObserver(()=>{if(announcement.textContent)announcementCount+=1;});announcementObserver.observe(announcement,{childList:true,subtree:true,characterData:true});
+    const controller=installStudioAnalystGuidance({bubble,route:()=>route,active:()=>active,reducedMotion:()=>false,intervalMilliseconds:1_000_000}),samples=[],observer=new MutationObserver(()=>samples.push({time:performance.now(),text:visual.textContent}));observer.observe(visual,{childList:true,subtree:true,characterData:true});
+    controller.requestNext();const initialBox=bubble.getBoundingClientRect(),initial={text:visual.textContent,reserved:reserve.textContent,announcement:announcement.textContent,width:initialBox.width,height:initialBox.height};
+    await new Promise((resolve)=>setTimeout(resolve,75));const partial=visual.textContent,firstId=bubble.dataset.hintId,initialAnnouncementCount=announcementCount;controller.requestNext();const replacement={id:bubble.dataset.hintId,text:visual.textContent,complete:bubble.dataset.completeText};await new Promise((resolve)=>setTimeout(resolve,45));const replacementAnnouncementCount=announcementCount-initialAnnouncementCount;active=false;controller.evaluate();const hiddenText=visual.textContent;await new Promise((resolve)=>setTimeout(resolve,45));const hideCancellation={hidden:bubble.hidden,stable:visual.textContent===hiddenText};active=true;controller.evaluate();route="Pages";controller.evaluate();const cancelledText=visual.textContent;await new Promise((resolve)=>setTimeout(resolve,45));const routeChange={hidden:bubble.hidden,stable:visual.textContent===cancelledText};observer.disconnect();announcementObserver.disconnect();controller.dispose();
+    const reducedController=installStudioAnalystGuidance({bubble,route:()=>"Project overview",active:()=>true,reducedMotion:()=>true,intervalMilliseconds:1_000_000});reducedController.requestNext();await Promise.resolve();const reducedBox=bubble.getBoundingClientRect(),reduced={complete:bubble.dataset.completeText,visual:visual.textContent,announcement:announcement.textContent,width:reducedBox.width,height:reducedBox.height};reducedController.dispose();blocker.remove();
+    return{initial,partial,firstId,replacement,samples:samples.slice(0,4),hideCancellation,routeChange,initialAnnouncementCount,replacementAnnouncementCount,reduced};
+  })()`);
+  assert.equal(analystTypewriter.initial.text,"");
+  assert.equal(analystTypewriter.initial.reserved.length>20,true);
+  assert.equal(analystTypewriter.partial.length>=2,true);
+  assert.equal(typeof analystTypewriter.firstId,"string");
+  assert.notEqual(analystTypewriter.replacement.id,analystTypewriter.firstId);
+  assert.equal(analystTypewriter.replacement.text,"");
+  assert.deepEqual(analystTypewriter.hideCancellation,{hidden:true,stable:true});
+  assert.deepEqual(analystTypewriter.routeChange,{hidden:true,stable:true});
+  assert.equal(analystTypewriter.samples.length>=3,true);
+  assert.equal(analystTypewriter.samples.slice(1).every((sample,index)=>sample.time-analystTypewriter.samples[index].time>=15),true);
+  assert.deepEqual([analystTypewriter.initialAnnouncementCount,analystTypewriter.replacementAnnouncementCount],[1,1]);
+  assert.equal(analystTypewriter.reduced.visual,analystTypewriter.reduced.complete);
+  assert.equal(analystTypewriter.reduced.announcement,analystTypewriter.reduced.complete);
+  assert.deepEqual(
+    [analystTypewriter.initial.width,analystTypewriter.initial.height],
+    [analystTypewriter.reduced.width,analystTypewriter.reduced.height],
+  );
+  await studio.call("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"reduce"}]});
+
   const analystAfter=await evaluate(studio,`(async()=>{const repo=await (await import("./data-layer-durable-project-repository.js")).openIndexedDbProjectRepository(),record=await repo.loadProject(${JSON.stringify(projectId)});return{project:JSON.stringify(record),undo:document.querySelector("#undo-project").dataset.undoCount,focus:document.activeElement.id};})()`);
   assert.equal(analystAfter.project,analystBefore.project);
   assert.equal(analystAfter.undo,analystBefore.undo);
-  const studioAnalystGuidance={before:analystBefore,preFirstHidden:analystPreFirst,visible:analystVisible,scheduleBoundary:analystScheduleBoundary,blockingPredicate:analystBlockingPredicate,documentHidden:analystDocumentHidden,zoom:analystZoom,narrow:analystNarrow,after:analystAfter};
+  const studioAnalystGuidance={before:analystBefore,preFirstHidden:analystPreFirst,visible:analystVisible,scheduleBoundary:analystScheduleBoundary,blockingPredicate:analystBlockingPredicate,documentHidden:analystDocumentHidden,zoom:analystZoom,narrow:analystNarrow,interaction:{layout:analystLayoutSample,hover:analystHover,focus:analystFocus,rest:analystRest,activations:[analystClickActivation,analystEnterActivation,analystSpaceActivation],tail:analystTail,routeHidden:analystRouteHidden,routeBeforeRequest:analystRouteBeforeRequest,retainedRequest:analystRetainedRequest,pools:analystPools,dwell:analystDwell,typewriter:analystTypewriter},after:analystAfter};
 
   const badEvents=[...side.events,...studio.events].filter(({method,params})=>method==="Runtime.exceptionThrown"||method==="Network.loadingFailed"||(method==="Log.entryAdded"&&params.entry?.level==="error"));
   assert.deepEqual(badEvents,[],"installed Slice 6 surfaces must have no runtime or load errors");

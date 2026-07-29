@@ -48,9 +48,11 @@ const id = (kind) => `${kind}:${crypto.randomUUID()}`;
 const labels = { profiles: "Shared Profiles", pages: "Pages", pageGroups: "Page Groups", events: "Events", applicabilitySets: "Applicability", flows: "Flows", fixtures: "Fixtures", assignments: "Assignments" };
 let state, lastCommittedState, library = projectLibrary();
 let canonicalRevision = 0, publishedRevision = 0, pendingConflict, durableConflict, saveStatus = { kind: "idle" }, stagedBulk, selectedKind = "profiles", selectedId, projectOverview = routeParameters.get("route") === "overview", documentationOpen = routeParameters.get("view") === "documentation", creationKind, removalReview, lifecycleStatus = "", removedFocus, pendingLifecycleFocus, pendingWorkspaceFocus, stagedImport, lastInvokingControl, releasePreflight, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi, projectDocumentationWorkspaceUi;
-const analystNavigation = q('#project-workspace > nav'), analystRegion = q("#studio-analyst-guidance"), analystHint = q("#studio-analyst-hint");
+const analystNavigation = q('#project-workspace > nav'), analystRegion = q("#studio-analyst-guidance"), analystControl = q("#studio-analyst-control"), analystHint = q("#studio-analyst-hint");
 installStudioAnalystGuidance({
     bubble: analystHint,
+    analystControl,
+    controlRoot: projectWorkspace,
     route: () => documentationOpen ? "Documentation" : projectOverview ? "Project overview" : labels[selectedKind],
     active: () => studioAnalystGuidanceIsActive({ document, populated: Boolean(state), workspace: projectWorkspace, navigation: analystNavigation, region: analystRegion }),
 });

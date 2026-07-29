@@ -11,7 +11,12 @@ const routes=[
   "Project overview",
   "Shared Profiles",
   "Pages",
+  "Page Groups",
+  "Events",
+  "Applicability",
   "Flows",
+  "Fixtures",
+  "Assignments",
   "Documentation",
 ];
 
@@ -41,9 +46,9 @@ for(let sample=0;sample<160;sample+=1){
 
   const cooldownRemaining=STUDIO_ANALYST_COOLDOWN_MS-STUDIO_ANALYST_HINT_LIFETIME_MS;
   const beforeCooldown=random()%cooldownRemaining;
-  assert.equal(schedule.advance(beforeCooldown,{active:true,route:routes[1]}).kind,"waiting");
+  assert.equal(schedule.advance(beforeCooldown,{active:true,route:routes[0]}).kind,"waiting");
   assert.equal(
-    schedule.advance(cooldownRemaining-beforeCooldown,{active:true,route:routes[1]}).kind,
+    schedule.advance(cooldownRemaining-beforeCooldown,{active:true,route:routes[0]}).kind,
     "show",
     "cooldown is measured from the prior appearance",
   );
@@ -66,7 +71,8 @@ for(let sample=0;sample<40;sample+=1){
   const schedule=createStudioAnalystGuidanceSchedule(),seen=[];
   const routeOrder=[...routes].sort(()=>random()%3-1);
   for(const [index,route] of routeOrder.entries()){
-    const action=schedule.advance(index===0?STUDIO_ANALYST_FIRST_HINT_MS:STUDIO_ANALYST_COOLDOWN_MS,{active:true,route});
+    if(index>0)schedule.advance(0,{active:true,route});
+    const action=schedule.advance(STUDIO_ANALYST_FIRST_HINT_MS,{active:true,route});
     assert.equal(action.kind,"show");
     seen.push(action.hint.id);
     schedule.advance(STUDIO_ANALYST_HINT_LIFETIME_MS,{active:true,route});
@@ -82,7 +88,7 @@ for(let sample=0;sample<100;sample+=1){
     "route lookup remains stable across calls",
   );
   for(const hint of stableLookup){
-    assert.equal(studioAnalystHintForRoute(hint.route,[hint.id]),undefined);
+    assert.notEqual(studioAnalystHintForRoute(hint.route,[hint.id])?.id,hint.id);
   }
 }
 

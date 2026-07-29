@@ -52,7 +52,30 @@
    {:keys ["presentation" "visibility"]
     :rows #{["1280 by 900 CSS pixel Studio" "visible"]
             ["200 percent browser zoom" "visible"]
-            ["narrow Studio with navigation hidden" "hidden"]}}])
+            ["narrow Studio with navigation hidden" "hidden"]}}
+   {:keys ["pointer_or_focus_state" "scale" "highlight_state"]
+    :rows #{["pointer hover begins" "105 percent" "visible"]
+            ["keyboard focus arrives" "105 percent" "visible"]
+            ["pointer hover or keyboard focus ends" "100 percent" "absent"]}}
+   {:keys ["activation"]
+    :rows #{["click"] ["Enter"] ["Space"]}}
+   {:keys ["current_tip_state"]
+    :rows #{["no visible tip"] ["a visible tip"]
+            ["no rendered tip"] ["a rendered tip"]}}
+   {:keys ["studio_part"]
+    :rows #{["Project overview"] ["Shared Profiles"] ["Pages"] ["Page Groups"]
+            ["Events"] ["Applicability"] ["Flows"] ["Fixtures"] ["Assignments"]
+            ["Documentation"]}}
+   {:keys ["dwell_time" "result"]
+    :rows #{["less than 3 seconds" "not shown"]
+            ["3 seconds of continuous pointer hover" "shown once"]
+            ["3 seconds of continuous keyboard focus" "shown once"]
+            ["less than 3 seconds" "not rendered"]
+            ["3 seconds of continuous pointer hover" "rendered once"]
+            ["3 seconds of continuous keyboard focus" "rendered once"]}}
+   {:keys ["motion_preference" "output" "character_interval"]
+    :rows #{["standard motion" "one complete visible character at a time" "20 milliseconds"]
+            ["reduced motion" "the complete tip immediately" "0 milliseconds"]}}])
 
 (defn- validate-example! [_mode example]
   (support/validate-example-relations!
@@ -60,7 +83,7 @@
    "Specification Studio technical analyst guidance example columns describe an invalid result."))
 
 (defn- assert-browser! [{:keys [before preFirstHidden visible scheduleBoundary
-                                blockingPredicate documentHidden zoom narrow after]
+                                blockingPredicate documentHidden zoom narrow interaction after]
                          :as evidence}]
   (support/assert!
    (and (:bubbleHidden before)
@@ -72,7 +95,7 @@
         (:inside visible)
         (zero? (:under visible))
         (zero? (:overflow visible))
-        (= "project-search" (:focus visible))
+        (= "workspace-pane" (:focus visible))
         (= "polite" (:live visible))
         (= "status" (:role visible))
         (= "none" (:animation visible))
@@ -82,7 +105,8 @@
         (:hidden (:cooldownBefore scheduleBoundary))
         (= ["project-overview" "shared-profiles" "pages" "flows" "documentation"]
            (mapv :id (:rotation scheduleBoundary)))
-        (= "project-overview" (:id (:reset scheduleBoundary)))
+        (:hidden (:routeHide scheduleBoundary))
+        (= "project-overview-search" (:id (:retained scheduleBoundary)))
         (= [true true "pages" true]
            (mapv #(get-in scheduleBoundary %)
                  [[:documentPause :before :hidden]
@@ -105,6 +129,47 @@
         (:visibleBefore narrow)
         (:hiddenWithNavigation narrow)
         (:overflow narrow)
+        (< (Math/abs (- 1.05 (get-in interaction [:hover :scale]))) 0.001)
+        (< (Math/abs (- 1.05 (get-in interaction [:focus :scale]))) 0.001)
+        (< (Math/abs (- 1.0 (get-in interaction [:rest :scale]))) 0.001)
+        (= (get-in interaction [:layout :region]) (get-in interaction [:hover :region]))
+        (= (get-in interaction [:layout :region]) (get-in interaction [:focus :region]))
+        (= 3 (count (:activations interaction)))
+        (= 3 (count (set (map :id (:activations interaction)))))
+        (every? #(= (:before %) (:after %)) (:activations interaction))
+        (every? true? (map (get-in interaction [:tail])
+                           [:visible :headSide :travels :joins :inside]))
+        (:routeHidden interaction)
+        (:routeBeforeRequest interaction)
+        (not (contains? (set (map :id (:activations interaction)))
+                        (get-in interaction [:retainedRequest :id])))
+        (= 10 (count (:pools interaction)))
+        (every? (fn [{tip-count :count :keys [distinct texts]}]
+                  (and (<= 5 tip-count)
+                       (= tip-count distinct)
+                       (every? #(> (count %) 20) texts)))
+                (vals (:pools interaction)))
+        (get-in interaction [:dwell :pointerBefore])
+        (false? (get-in interaction [:dwell :pointerFirst :hidden]))
+        (= {:hidden true :id nil} (get-in interaction [:dwell :pointerStayed]))
+        (false? (get-in interaction [:dwell :focusFirst :hidden]))
+        (= {:hidden true :id nil} (get-in interaction [:dwell :focusStayed]))
+        (= "" (get-in interaction [:typewriter :initial :text]))
+        (<= 2 (count (get-in interaction [:typewriter :partial])))
+        (string? (get-in interaction [:typewriter :firstId]))
+        (not= (get-in interaction [:typewriter :firstId])
+              (get-in interaction [:typewriter :replacement :id]))
+        (get-in interaction [:typewriter :hideCancellation :hidden])
+        (get-in interaction [:typewriter :hideCancellation :stable])
+        (get-in interaction [:typewriter :routeChange :hidden])
+        (get-in interaction [:typewriter :routeChange :stable])
+        (= [1 1]
+           [(get-in interaction [:typewriter :initialAnnouncementCount])
+            (get-in interaction [:typewriter :replacementAnnouncementCount])])
+        (= (get-in interaction [:typewriter :reduced :complete])
+           (get-in interaction [:typewriter :reduced :visual]))
+        (= (get-in interaction [:typewriter :reduced :complete])
+           (get-in interaction [:typewriter :reduced :announcement]))
         (= (:project before) (:project after))
         (= (:undo before) (:undo after)))
    "Installed Specification Studio technical analyst guidance evidence is incomplete."

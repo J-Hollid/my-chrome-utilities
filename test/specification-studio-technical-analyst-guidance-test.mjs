@@ -3,14 +3,41 @@ import {
   STUDIO_ANALYST_COOLDOWN_MS,
   STUDIO_ANALYST_FIRST_HINT_MS,
   STUDIO_ANALYST_HINT_LIFETIME_MS,
+  STUDIO_ANALYST_CONTROL_DWELL_MS,
+  STUDIO_ANALYST_PRINT_INTERVAL_MS,
+  createStudioAnalystControlDwell,
   createStudioAnalystGuidanceSchedule,
   installStudioAnalystGuidance,
+  studioAnalystControlHint,
   studioAnalystHintForRoute,
+  studioAnalystHintsForRoute,
+  studioAnalystVisibleText,
 } from "../dist/specification-studio-technical-analyst-guidance.js";
 
 assert.equal(STUDIO_ANALYST_FIRST_HINT_MS,10_000);
 assert.equal(STUDIO_ANALYST_HINT_LIFETIME_MS,10_000);
 assert.equal(STUDIO_ANALYST_COOLDOWN_MS,120_000);
+assert.equal(STUDIO_ANALYST_CONTROL_DWELL_MS,3_000);
+assert.equal(STUDIO_ANALYST_PRINT_INTERVAL_MS,20);
+
+const studioParts=[
+  "Project overview",
+  "Shared Profiles",
+  "Pages",
+  "Page Groups",
+  "Events",
+  "Applicability",
+  "Flows",
+  "Fixtures",
+  "Assignments",
+  "Documentation",
+];
+for(const part of studioParts){
+  const partHints=studioAnalystHintsForRoute(part);
+  assert.equal(partHints.length>=5,true,`${part} has at least five general tips`);
+  assert.equal(new Set(partHints.map(({id})=>id)).size,partHints.length,`${part} tip identities are distinct`);
+  assert.equal(partHints.every(({route,text})=>route===part&&text.trim().length>20),true,`${part} tips are complete and part-specific`);
+}
 
 const overview=studioAnalystHintForRoute("Project overview",[]);
 assert.deepEqual(overview,{
@@ -18,7 +45,7 @@ assert.deepEqual(overview,{
   route:"Project overview",
   text:"Crikey! Pick a collection on the left to start shaping your specification.",
 });
-assert.equal(studioAnalystHintForRoute("Project overview",["project-overview"]),undefined);
+assert.equal(studioAnalystHintForRoute("Project overview",["project-overview"])?.id,"project-overview-context");
 assert.equal(studioAnalystHintForRoute("Unknown route",[]),undefined);
 
 const schedule=createStudioAnalystGuidanceSchedule();
@@ -30,6 +57,7 @@ assert.deepEqual(schedule.advance(1,{active:true,route:"Project overview"}),{
 assert.deepEqual(schedule.advance(9_999,{active:true,route:"Project overview"}),{kind:"visible",hint:overview});
 assert.deepEqual(schedule.advance(1,{active:true,route:"Project overview"}),{kind:"hide"});
 assert.deepEqual(schedule.advance(109_999,{active:true,route:"Shared Profiles"}),{kind:"waiting"});
+assert.deepEqual(schedule.advance(9_999,{active:true,route:"Shared Profiles"}),{kind:"waiting"});
 assert.deepEqual(schedule.advance(1,{active:true,route:"Shared Profiles"}),{
   kind:"show",
   hint:{
@@ -55,12 +83,66 @@ assert.deepEqual(paused.advance(9_999,{active:true,route:"Pages"}),{kind:"visibl
 assert.deepEqual(paused.advance(1,{active:true,route:"Pages"}),{kind:"hide"});
 
 const rotation=createStudioAnalystGuidanceSchedule();
-for(const route of["Project overview","Shared Profiles","Pages","Flows","Documentation"]){
-  const result=rotation.advance(route==="Project overview"?10_000:120_000,{active:true,route});
+for(const [index,route] of["Project overview","Shared Profiles","Pages","Flows","Documentation"].entries()){
+  if(index>0)rotation.advance(0,{active:true,route});
+  const result=rotation.advance(10_000,{active:true,route});
   assert.equal(result.kind,"show",`${route} should have one applicable hint`);
   rotation.advance(10_000,{active:true,route});
 }
-assert.equal(rotation.advance(120_000,{active:true,route:"Project overview"}).kind,"show","rotation resets only after every hint was presented");
+assert.equal(rotation.advance(0,{active:true,route:"Project overview"}).kind,"waiting");
+assert.equal(rotation.advance(10_000,{active:true,route:"Project overview"}).kind,"show","returning to a part resumes its unused tip rotation");
+
+const requested=createStudioAnalystGuidanceSchedule();
+const requestedOverview=requested.request({active:true,route:"Project overview"});
+assert.equal(requestedOverview.kind,"show");
+const replacedOverview=requested.request({active:true,route:"Project overview"});
+assert.equal(replacedOverview.kind,"show");
+assert.notEqual(replacedOverview.hint.id,requestedOverview.hint.id,"activation replaces with the next unused part tip");
+assert.equal(requested.advance(10_000,{active:true,route:"Project overview"}).kind,"hide");
+assert.equal(requested.advance(109_999,{active:true,route:"Project overview"}).kind,"waiting");
+assert.equal(requested.advance(1,{active:true,route:"Project overview"}).kind,"show","activation restarts the ordinary 120-second interval");
+assert.equal(requested.advance(0,{active:true,route:"Pages"}).kind,"hide","route change hides a current tip");
+assert.equal(requested.advance(9_999,{active:true,route:"Pages"}).kind,"waiting");
+assert.equal(requested.advance(1,{active:true,route:"Pages"}).kind,"show","route change restarts the initial timer");
+requested.advance(0,{active:true,route:"Project overview"});
+const retained=requested.request({active:true,route:"Project overview"});
+assert.equal(retained.kind,"show");
+assert.equal(
+  new Set([requestedOverview.hint.id,replacedOverview.hint.id,retained.hint.id]).size,
+  3,
+  "route changes retain the session's presented identities",
+);
+
+const controlHint=studioAnalystControlHint("Pages",{id:"add-page",name:"Add Page"});
+assert.deepEqual(controlHint,{
+  id:"control:pages:add-page",
+  route:"Pages",
+  text:'“Add Page” is available in Pages; use it to work with this part of the specification.',
+});
+
+const dwell=createStudioAnalystControlDwell();
+dwell.enter({id:"add-page",name:"Add Page"},"pointer");
+assert.equal(dwell.advance(2_999,true),undefined);
+assert.equal(dwell.advance(1,true)?.id,"add-page");
+assert.equal(dwell.advance(30_000,true),undefined,"remaining on one control cannot retrigger");
+dwell.enter({id:"add-page",name:"Add Page"},"focus");
+dwell.leave("pointer");
+assert.equal(dwell.advance(30_000,true),undefined,"focus continuity prevents retrigger after pointer leaves");
+dwell.leave("focus");
+dwell.enter({id:"add-page",name:"Add Page"},"focus");
+assert.equal(dwell.advance(3_000,true)?.id,"add-page","leaving with both modalities permits a later dwell");
+const earlyDwell=createStudioAnalystControlDwell();
+earlyDwell.enter({id:"validate",name:"Validate"},"pointer");
+assert.equal(earlyDwell.advance(2_999,true),undefined);
+earlyDwell.leave("pointer");
+assert.equal(earlyDwell.advance(30_000,true),undefined,"leaving before three seconds cancels the dwell");
+
+assert.equal(studioAnalystVisibleText("Crikey!",0,false),"");
+assert.equal(studioAnalystVisibleText("Crikey!",19,false),"");
+assert.equal(studioAnalystVisibleText("Crikey!",20,false),"C");
+assert.equal(studioAnalystVisibleText("Crikey!",40,false),"Cr");
+assert.equal(studioAnalystVisibleText("Crikey!",0,true),"Crikey!");
+assert.equal(studioAnalystVisibleText("Crikey!",10_000,false),"Crikey!");
 
 let controllerNow=0,controllerActive=true;
 const listeners=new Map();

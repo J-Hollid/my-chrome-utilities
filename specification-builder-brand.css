@@ -58,6 +58,7 @@ body.twatility-studio {
 }
 
 .twatility-studio #studio-analyst-guidance {
+  position: relative;
   display: grid;
   grid-template-columns: 6.5rem minmax(0, 1fr);
   min-width: 0;
@@ -68,11 +69,56 @@ body.twatility-studio {
   border-block-start: 0.14rem solid var(--twa-mustard);
 }
 
-.twatility-studio #studio-analyst-guidance > img {
+.twatility-studio #studio-analyst-control {
   display: block;
   width: 6.5rem;
-  height: auto;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 46% 46% 42% 40%;
+  background: transparent;
   justify-self: start;
+  transform: scale(1);
+  transform-origin: 50% 75%;
+  transition: transform 120ms ease-out, box-shadow 120ms ease-out;
+}
+
+.twatility-studio #studio-analyst-control > img {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.twatility-studio #studio-analyst-control:is(:hover, :focus) {
+  box-shadow: 0 0 0 0.18rem var(--twa-mustard), 0 0 0 0.34rem var(--twa-ink), 0.2rem 0.24rem 0 var(--twa-ink);
+  transform: scale(1.05);
+}
+
+.twatility-studio #studio-analyst-control:focus-visible {
+  outline: 0.16rem solid var(--twa-mustard);
+  outline-offset: 0.22rem;
+}
+
+.twatility-studio #studio-analyst-tail {
+  position: absolute;
+  z-index: 1;
+  inset-block-start: 2.1rem;
+  inset-inline-start: 4.9rem;
+  width: 2.3rem;
+  height: 3rem;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.twatility-studio #studio-analyst-tail path {
+  fill: #fff3cf;
+  stroke: var(--twa-ink);
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.twatility-studio #studio-analyst-guidance:has(#studio-analyst-hint[hidden]) #studio-analyst-tail {
+  display: none;
 }
 
 .twatility-studio #studio-analyst-hint {
@@ -96,17 +142,26 @@ body.twatility-studio {
   animation: studio-analyst-pop 180ms ease-out;
 }
 
-.twatility-studio #studio-analyst-hint::before {
+.twatility-studio #studio-analyst-hint [data-analyst-tip-reserve] {
+  display: block;
+  visibility: hidden;
+}
+
+.twatility-studio #studio-analyst-hint [data-analyst-tip-visual] {
   position: absolute;
-  z-index: -1;
-  inset-inline-start: -0.72rem;
-  inset-block-end: 0.8rem;
-  width: 1.15rem;
-  height: 1rem;
-  border-block-end: 0.16rem solid var(--twa-ink);
-  background: #fff3cf;
-  clip-path: polygon(100% 0, 0 76%, 100% 100%);
-  content: "";
+  inset: 0.7rem;
+}
+
+.twatility-studio .studio-analyst-announcement {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 @keyframes studio-analyst-pop {
@@ -243,7 +298,7 @@ body.twatility-studio {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .twatility-studio #studio-analyst-hint {
+  .twatility-studio :is(#studio-analyst-hint, #studio-analyst-control) {
     animation: none;
     transition: none;
   }
