@@ -53,12 +53,65 @@ body.twatility-studio {
 }
 
 .twatility-studio #project-workspace > nav {
-  padding-block-end: 7rem;
   border-inline-end: 0.14rem solid var(--border);
+  background: linear-gradient(var(--twa-paper-raised), var(--twa-paper));
+}
+
+.twatility-studio #studio-analyst-guidance {
+  display: grid;
+  grid-template-columns: 6.5rem minmax(0, 1fr);
+  min-width: 0;
+  align-items: end;
+  gap: 0.7rem;
+  margin-block-start: 1rem;
+  padding-block-start: 0.8rem;
+  border-block-start: 0.14rem solid var(--twa-mustard);
+}
+
+.twatility-studio #studio-analyst-guidance > img {
+  display: block;
+  width: 6.5rem;
+  height: auto;
+  justify-self: start;
+}
+
+.twatility-studio #studio-analyst-hint {
+  position: relative;
+  isolation: isolate;
+  min-width: 0;
+  padding: 0.7rem;
+  border: 0.16rem solid var(--twa-ink);
+  border-radius: 48% 42% 45% 38% / 16% 20% 14% 18%;
   background:
-    url("assets/brand/technical-analyst.png") right 0.8rem bottom 0.7rem / 5.2rem auto
-      no-repeat,
-    linear-gradient(var(--twa-paper-raised), var(--twa-paper));
+    radial-gradient(circle, #17130e24 0 0.05rem, transparent 0.06rem) 0 0 / 0.36rem 0.36rem,
+    #fff3cf;
+  color: var(--twa-navy-deep);
+  box-shadow: 0.18rem 0.2rem 0 var(--twa-mustard), 0.32rem 0.36rem 0 var(--twa-ink);
+  font-family: var(--twa-font-display);
+  font-size: 0.82rem;
+  font-weight: 850;
+  line-height: 1.28;
+  letter-spacing: 0.015em;
+  overflow-wrap: anywhere;
+  animation: studio-analyst-pop 180ms ease-out;
+}
+
+.twatility-studio #studio-analyst-hint::before {
+  position: absolute;
+  z-index: -1;
+  inset-inline-start: -0.72rem;
+  inset-block-end: 0.8rem;
+  width: 1.15rem;
+  height: 1rem;
+  border-block-end: 0.16rem solid var(--twa-ink);
+  background: #fff3cf;
+  clip-path: polygon(100% 0, 0 76%, 100% 100%);
+  content: "";
+}
+
+@keyframes studio-analyst-pop {
+  from { opacity: 0; transform: translateX(0.45rem) rotate(1deg) scale(0.96); }
+  to { opacity: 1; transform: none; }
 }
 
 .twatility-studio #project-tree button {
@@ -173,6 +226,10 @@ body.twatility-studio {
     background-image: none;
     padding-block-end: 1rem;
   }
+
+  .twatility-studio #studio-analyst-guidance {
+    display: none;
+  }
 }
 
 @media (forced-colors: active) {
@@ -185,6 +242,13 @@ body.twatility-studio {
     border-color: Highlight;
     background: Highlight;
     color: HighlightText;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .twatility-studio #studio-analyst-hint {
+    animation: none;
+    transition: none;
   }
 }
 

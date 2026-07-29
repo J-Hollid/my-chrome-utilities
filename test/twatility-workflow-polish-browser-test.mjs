@@ -779,6 +779,61 @@ try{
   assert.equal(forced.count,3);
   assert.equal(forced.borders.every((widths)=>widths.some((width)=>parseFloat(width)>0)),true);
 
+  await studio.call("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"reduce"}]});
+  await studio.call("Emulation.setDeviceMetricsOverride",{width:1280,height:900,deviceScaleFactor:1,mobile:false});
+  await studio.call("Page.bringToFront");
+  await evaluate(studio,"document.querySelector('#project-tree button[data-kind=\"pages\"]').click()");
+  await wait(100);
+  await studio.call("Page.navigate",{url:`${base}specification-builder.html?project=${projectId}&route=overview`});
+  await ready(studio,"document.readyState==='complete'&&!document.querySelector('#project-workspace').hidden&&document.querySelector('#project-tree button[data-kind=\"overview\"]')?.getAttribute('aria-current')==='true'","analyst guidance overview");
+  const analystBefore=await evaluate(studio,`(async()=>{const repo=await (await import("./data-layer-durable-project-repository.js")).openIndexedDbProjectRepository(),record=await repo.loadProject(${JSON.stringify(projectId)}),search=document.querySelector("#project-search");search.focus();return{project:JSON.stringify(record),undo:document.querySelector("#undo-project").dataset.undoCount,focus:search.id,bubbleHidden:document.querySelector("#studio-analyst-hint").hidden};})()`);
+  assert.equal(analystBefore.bubbleHidden,true);
+  await wait(10_300);
+  const analystVisible=await evaluate(studio,`(()=>{const region=document.querySelector("#studio-analyst-guidance"),image=region.querySelector("img"),bubble=document.querySelector("#studio-analyst-hint"),nav=document.querySelector("#project-workspace > nav"),regionBox=region.getBoundingClientRect(),imageBox=image.getBoundingClientRect(),bubbleBox=bubble.getBoundingClientRect(),navBox=nav.getBoundingClientRect(),style=getComputedStyle(bubble),under=[...document.elementsFromPoint(bubbleBox.left+bubbleBox.width/2,bubbleBox.top+bubbleBox.height/2)].filter((element)=>element!==bubble&&element.matches("button,input,select,textarea,a[href],[role=button]"));return{hidden:bubble.hidden,text:bubble.textContent,hintId:bubble.dataset.hintId,width:imageBox.width,expectedWidth:parseFloat(getComputedStyle(document.documentElement).fontSize)*6.5,leftAnchored:Math.abs(imageBox.left-regionBox.left)<.6,aspectRatio:imageBox.width/imageBox.height,inside:regionBox.left>=navBox.left&&regionBox.right<=navBox.right+.6&&bubbleBox.left>=regionBox.left&&bubbleBox.right<=regionBox.right+.6&&bubbleBox.top>=regionBox.top&&bubbleBox.bottom<=regionBox.bottom+.6,under:under.length,overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth,focus:document.activeElement.id,live:bubble.getAttribute("aria-live"),role:bubble.getAttribute("role"),animation:style.animationName,transition:style.transitionDuration,background:style.backgroundImage,border:style.borderTopWidth,shadow:style.boxShadow,font:style.fontFamily};})()`);
+  assert.deepEqual({
+    hidden:analystVisible.hidden,
+    text:analystVisible.text,
+    hintId:analystVisible.hintId,
+    widthMatchesRem:Math.abs(analystVisible.width-analystVisible.expectedWidth)<.1,
+    leftAnchored:analystVisible.leftAnchored,
+    inside:analystVisible.inside,
+    under:analystVisible.under,
+    overflow:analystVisible.overflow,
+    focus:analystVisible.focus,
+    live:analystVisible.live,
+    role:analystVisible.role,
+    animation:analystVisible.animation,
+    transitionDisabled:analystVisible.transition.split(",").every((value)=>parseFloat(value)<=0.001),
+  },{
+    hidden:false,
+    text:"Crikey! Pick a collection on the left to start shaping your specification.",
+    hintId:"project-overview",
+    widthMatchesRem:true,
+    leftAnchored:true,
+    inside:true,
+    under:0,
+    overflow:0,
+    focus:"project-search",
+    live:"polite",
+    role:"status",
+    animation:"none",
+    transitionDisabled:true,
+  });
+  assert.ok(analystVisible.aspectRatio>0.64&&analystVisible.aspectRatio<0.68);
+  assert.match(analystVisible.background,/radial-gradient/u);
+  assert.equal(parseFloat(analystVisible.border)>0,true);
+  assert.notEqual(analystVisible.shadow,"none");
+  assert.match(analystVisible.font,/Bangers|sans-serif/u);
+  await wait(10_300);
+  assert.equal(await evaluate(studio,"document.querySelector('#studio-analyst-hint').hidden"),true);
+  await studio.call("Emulation.setDeviceMetricsOverride",{width:360,height:800,deviceScaleFactor:1,mobile:false});
+  const analystNarrow=await evaluate(studio,`(()=>{const region=document.querySelector("#studio-analyst-guidance"),nav=document.querySelector("#project-workspace > nav");return{region:region.getClientRects().length,nav:getComputedStyle(nav).display,overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)<=innerWidth};})()`);
+  assert.deepEqual(analystNarrow,{region:0,nav:"block",overflow:true});
+  const analystAfter=await evaluate(studio,`(async()=>{const repo=await (await import("./data-layer-durable-project-repository.js")).openIndexedDbProjectRepository(),record=await repo.loadProject(${JSON.stringify(projectId)});return{project:JSON.stringify(record),undo:document.querySelector("#undo-project").dataset.undoCount,focus:document.activeElement.id};})()`);
+  assert.equal(analystAfter.project,analystBefore.project);
+  assert.equal(analystAfter.undo,analystBefore.undo);
+  const studioAnalystGuidance={before:analystBefore,visible:analystVisible,narrow:analystNarrow,after:analystAfter};
+
   const badEvents=[...side.events,...studio.events].filter(({method,params})=>method==="Runtime.exceptionThrown"||method==="Network.loadingFailed"||(method==="Log.entryAdded"&&params.entry?.level==="error"));
   assert.deepEqual(badEvents,[],"installed Slice 6 surfaces must have no runtime or load errors");
   const observedDescriptions={
@@ -837,8 +892,8 @@ try{
     &&nativeChoiceAudits.filter((item)=>item.key===key).every((item)=>item.role===(pattern==="switch"?"switch":null))
   ]));
   assert.equal(Object.values(studioChoiceControls).every(Boolean),true,JSON.stringify({observedDescriptions,instanceEvidence,consequenceEvidence,studioChoiceControls,copyInteractions:mountedComponentChoices.interactions.filter(({key})=>key.startsWith("schema.")),copyConsequence:mountedComponentChoices.consequences.copy}));
-  await writeFile(path.join(evidenceDirectory,"report.json"),`${JSON.stringify({live,library,tree:treeBefore,treeKeyboard,documentation,documentationChoices,documentationConfigurationChoices,documentationConservation,documentationDurableConsequences,nativeChoiceFocusOrders,nativeChoiceAudits,mountedComponentChoices,switch:{before:switchBefore,after:switchAfter,undo:switchUndo,redo:switchRedo,reloaded:switchReloaded},bulkConservation,defectOptions,conditionOptions,creationChoice,conflictConservation,studioChoiceControls,flow,zoom,reduced,forced},null,2)}\n`);
-  console.log(JSON.stringify({studioChoiceControls}));
+  await writeFile(path.join(evidenceDirectory,"report.json"),`${JSON.stringify({live,library,tree:treeBefore,treeKeyboard,documentation,documentationChoices,documentationConfigurationChoices,documentationConservation,documentationDurableConsequences,nativeChoiceFocusOrders,nativeChoiceAudits,mountedComponentChoices,switch:{before:switchBefore,after:switchAfter,undo:switchUndo,redo:switchRedo,reloaded:switchReloaded},bulkConservation,defectOptions,conditionOptions,creationChoice,conflictConservation,studioChoiceControls,studioAnalystGuidance,flow,zoom,reduced,forced},null,2)}\n`);
+  console.log(JSON.stringify({studioChoiceControls,studioAnalystGuidance}));
 } finally {
   blockedStudio?.close();conflictStudio?.close();side?.close();studio?.close();
   await stopHeadlessChrome(chrome,1500);

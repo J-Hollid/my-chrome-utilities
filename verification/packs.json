@@ -1040,11 +1040,13 @@
   {
     "id": "branding_polish",
     "source": [
-      "src/data-layer-studio-choice-controls.ts"
+      "src/data-layer-studio-choice-controls.ts",
+      "src/specification-studio-technical-analyst-guidance.ts"
     ],
     "dependencies": [],
     "unit": [
       "test/data-layer-studio-choice-controls-test.mjs",
+      "test/specification-studio-technical-analyst-guidance-test.mjs",
       "test/twatility-brand-polish-test.mjs"
     ],
     "property": [
@@ -1052,10 +1054,13 @@
     ],
     "features": [
       "features/specification-studio-choice-controls.feature",
-      "features/specification-studio-choice-controls-runtime.feature"
+      "features/specification-studio-choice-controls-runtime.feature",
+      "features/specification-studio-technical-analyst-guidance.feature",
+      "features/specification-studio-technical-analyst-guidance-runtime.feature"
     ],
     "handlers": [
-      "acceptance/src/acceptance/steps/specification_studio_choice_controls.clj"
+      "acceptance/src/acceptance/steps/specification_studio_choice_controls.clj",
+      "acceptance/src/acceptance/steps/specification_studio_technical_analyst_guidance.clj"
     ],
     "browserAdapters": [
       "test/twatility-workflow-polish-browser-test.mjs"
