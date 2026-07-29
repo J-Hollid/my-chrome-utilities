@@ -31,10 +31,14 @@ export const sharedFlatConditionRows = (condition) => {
 };
 const completeConditionValue = (value) => value !== undefined && !(typeof value === "string" && !value.trim()) && !(Array.isArray(value) && !value.length);
 export const sharedFlatConditionResult = (mode, rows) => {
-    if (!rows.length || rows.some(({ propertyId, operator, value }) => !propertyId.trim() || !operator || !existence.includes(operator) && !completeConditionValue(value)))
+    if (!rows.length || sharedFlatConditionIssue(rows))
         return undefined;
     return { kind: mode, children: rows.map(({ id, propertyId, operator, value }) => ({ kind: "predicate", ...(id ? { id } : {}), propertyId, operator: operator, ...(existence.includes(operator) ? {} : { value }) })) };
 };
+export const sharedFlatConditionIssue = (rows) => rows.some(({ propertyId, operator, value }) => !propertyId.trim() || !operator || !existence.includes(operator) && !completeConditionValue(value))
+    ? "Complete or remove the condition"
+    : undefined;
+export const sharedConditionMatchModeVisible = (rowCount) => rowCount >= 2;
 export function renderSharedConditionTree(host, options) {
     const { dom } = options, initial = options.condition, migrationIssue = canonicalFlatPredicateIssue(initial);
     if (migrationIssue) {
@@ -48,7 +52,7 @@ export function renderSharedConditionTree(host, options) {
         return;
     }
     let mode = initial?.kind === "any" ? "any" : "all", rows = sharedFlatConditionRows(initial).map((row) => ({ ...row, id: row.id ?? options.id("condition") }));
-    if (!rows.length)
+    if (!rows.length && !options.allowEmpty)
         rows = [{ id: options.id("condition"), propertyId: "", operator: "" }];
     if (!dom.getElementById("flat-rule-builder-responsive-style")) {
         const style = dom.createElement("style");
@@ -58,20 +62,23 @@ export function renderSharedConditionTree(host, options) {
     }
     let focusRowId;
     const properties = () => options.properties(), selected = (row) => properties().find(({ id }) => id === row.propertyId);
-    const emit = () => options.onChange(sharedFlatConditionResult(mode, rows));
+    const emit = () => { options.onIssue?.(sharedFlatConditionIssue(rows)); options.onChange(sharedFlatConditionResult(mode, rows)); };
     const render = () => {
         host.closest("[data-rule-editor-mode]")?.querySelectorAll("[data-condition-property-listbox]").forEach((popup) => popup.remove());
         host.replaceChildren();
         host.setAttribute("aria-label", "Flat When condition list");
         host.dataset.conditionLayout = "responsive";
-        const heading = dom.createElement("h4"), match = dom.createElement("select"), list = dom.createElement("div");
-        heading.textContent = "Match conditions";
+        const heading = dom.createElement("h4"), match = dom.createElement("select"), matchLabel = labeled(dom, "Match", match), list = dom.createElement("div"), empty = dom.createElement("p");
+        heading.textContent = "Conditions";
         match.setAttribute("aria-label", "Rule match mode");
         match.append(new Option("All of these conditions", "all"), new Option("Any of these conditions", "any"));
         match.value = mode;
         match.addEventListener("change", () => { mode = match.value; emit(); });
+        matchLabel.hidden = !sharedConditionMatchModeVisible(rows.length);
         list.setAttribute("role", "list");
         list.setAttribute("aria-label", "Condition rows");
+        empty.textContent = "No conditions · applies every time";
+        empty.hidden = rows.length > 0;
         const chooseProperty = (row, entry, property, operator, listbox) => { row.propertyId = entry.id; row.operator = ""; delete row.value; property.value = entry.name; property.setAttribute("aria-expanded", "false"); listbox.hidden = true; renderOperators(row, operator); emit(); operator.focus({ preventScroll: true }); };
         const propertyControl = (row, operator) => {
             const wrapper = dom.createElement("span"), property = dom.createElement("input"), listbox = dom.createElement("div"), listboxId = `condition-property-list-${crypto.randomUUID()}`;
@@ -197,12 +204,12 @@ export function renderSharedConditionTree(host, options) {
             row.operator = "";
             delete row.value;
         } };
-        rows.forEach((row, index) => { const item = dom.createElement("article"), operator = dom.createElement("select"), valueSlot = dom.createElement("span"), remove = button(dom, "Remove condition", () => { if (rows.length === 1)
+        rows.forEach((row, index) => { const item = dom.createElement("article"), operator = dom.createElement("select"), valueSlot = dom.createElement("span"), remove = button(dom, "Remove condition", () => { if (rows.length === 1 && !options.allowEmpty)
             rows = [{ ...(row.id ? { id: row.id } : {}), propertyId: "", operator: "" }];
         else
             rows.splice(index, 1); focusRowId = rows[Math.min(index, rows.length - 1)]?.id; emit(); render(); }); item.dataset.conditionId = row.id ?? ""; item.dataset.conditionPath = String(index); item.dataset.conditionKind = "predicate"; item.setAttribute("role", "listitem"); item.style.cssText = "display:grid;grid-template-columns:repeat(3,minmax(0,1fr)) auto;gap:0.5rem;align-items:end;min-width:0;"; operator.setAttribute("aria-label", "Type-valid operator"); renderOperators(row, operator); operator.addEventListener("change", () => { row.operator = operator.value; delete row.value; emit(); render(); }); valueSlot.append(valueControl(row)); item.append(labeled(dom, "Property", propertyControl(row, operator)), labeled(dom, "Operator", operator), labeled(dom, "Value", valueSlot), remove); list.append(item); });
         const add = button(dom, "Add condition", () => { const row = { id: options.id("condition"), propertyId: "", operator: "" }; rows.push(row); focusRowId = row.id; emit(); render(); });
-        host.append(heading, labeled(dom, "Match", match), list, add);
+        host.append(heading, empty, matchLabel, list, add);
         emit();
         queueMicrotask(() => { if (focusRowId) {
             host.querySelector(`[data-condition-id="${CSS.escape(focusRowId)}"] [aria-label="Condition property"]`)?.focus({ preventScroll: true });

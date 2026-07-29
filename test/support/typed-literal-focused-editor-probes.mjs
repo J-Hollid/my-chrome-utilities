@@ -304,6 +304,7 @@ export const typedLiteralFocusedEditorExpression=String.raw`(async()=>{
       const add=buttons(panel.querySelector('[aria-label="Rule actions"]')).find(({textContent})=>textContent.trim()==='Add rule'),identity=add,initiallyDisabled=add.disabled;
       fire(panel.querySelector('[name="newRuleName"]'),'Shipping '+spec.kind);
       fire(panel.querySelector('[name="'+spec.field+'"]'),spec.value);
+      click(panel,'Add condition');
       const property=panel.querySelector('[aria-label="Condition property"]');
       property.focus();fire(property,propertyName);await pause();
       const option=[...panel.querySelectorAll('[role="option"]')].find(({textContent})=>textContent.trim()===propertyName);

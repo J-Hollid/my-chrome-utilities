@@ -219,9 +219,9 @@ try{
   await evaluate(studio,"document.querySelector('[aria-label=\"Flat When condition list\"]').scrollIntoView({block:'center'})");
   await wait(50);
   await screenshot(studio,path.join(evidenceDirectory,"canonical-rules-1280x900.png"));
-  const focusBefore=await evaluate(studio,"(()=>{const control=document.querySelector('[aria-label=\"Flat When condition list\"] [aria-label=\"Rule match mode\"]');control.focus();return control===document.activeElement;})()");
+  const focusBefore=await evaluate(studio,"(()=>{const control=document.querySelector('[aria-label=\"Flat When condition list\"] [aria-label=\"Condition property\"]');control.focus();return control===document.activeElement;})()");
   assert.equal(focusBefore,true);await nativeTab(studio);
-  assert.equal(await evaluate(studio,"document.activeElement?.getAttribute('aria-label')!=='Rule match mode'"),true,"native Tab advances within the installed flat condition list");
+  assert.equal(await evaluate(studio,"document.activeElement?.getAttribute('aria-label')!=='Condition property'"),true,"native Tab advances within the installed flat condition list");
   await metrics(studio,360,800);
   await openCanonicalRuleTree();
   await evaluate(studio,"document.querySelector('[aria-label=\"Flat When condition list\"]').scrollIntoView({block:'center'})");

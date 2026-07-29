@@ -18,8 +18,6 @@ export function canonicalFlatPredicateIssue(condition) {
         return "A rule condition must be a structured All or Any match.";
     if (value.children.some((child) => !child || typeof child !== "object" || child.kind !== "predicate"))
         return nestedCanonicalPredicateMessage;
-    if (!value.children.length)
-        return "A rule condition requires at least one condition row.";
     return undefined;
 }
 //# sourceMappingURL=predicate-policy.js.map

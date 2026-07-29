@@ -18,7 +18,7 @@ export function renderCanonicalRuleAddPanel(host, context) {
             return;
         opener.remove();
         const panel = dom.createElement("fieldset"), legend = dom.createElement("legend"), details = section(dom, "Rule details"), when = section(dom, "When"), then = section(dom, "Then"), severitySection = section(dom, "Severity and message"), actions = section(dom, "Rule actions"), kind = dom.createElement("select"), fields = dom.createElement("div"), status = dom.createElement("p"), name = input(dom, "newRuleName"), target = context.properties?.().find(({ id }) => id === working.id), boundaries = target?.arrayBoundaries ?? [], scope = boundaries.map(({ propertyId }) => ({ propertyId, mode: "every" }));
-        let condition;
+        let condition, conditionIssue;
         panel.dataset.ruleEditorMode = "add";
         fields.dataset.ruleFieldGrid = "true";
         severitySection.dataset.ruleFieldGrid = "true";
@@ -58,11 +58,11 @@ export function renderCanonicalRuleAddPanel(host, context) {
             return rule;
         };
         const add = button(dom, "Add rule", () => { const next = context.getWorking(), rule = candidate(); if (!next || !rule)
-            return; const issue = focusedRuleIssue(rule); if (issue) {
+            return; const issue = conditionIssue ?? focusedRuleIssue(rule); if (issue) {
             status.textContent = issue;
             return;
         } rule.id = context.id("rule"); next.rules = [...next.rules, rule]; context.feedback("Staged rule addition."); context.render(); });
-        const validate = () => { const rule = candidate(), issue = canonicalArrayScopeIssue(rule?.arrayScope) ?? (rule ? focusedRuleIssue(rule) : "Choose a rule type."); add.disabled = Boolean(issue); status.textContent = issue ?? ""; };
+        const validate = () => { const rule = candidate(), issue = conditionIssue ?? canonicalArrayScopeIssue(rule?.arrayScope) ?? (rule ? focusedRuleIssue(rule) : "Choose a rule type."); add.disabled = Boolean(issue); status.textContent = issue ?? ""; };
         const renderOutcome = () => {
             fields.replaceChildren();
             for (const field of focusedRuleFields(kind.value)) {
@@ -130,7 +130,7 @@ export function renderCanonicalRuleAddPanel(host, context) {
         then.append(fields);
         panel.append(legend, details, ...(boundaries.length ? [applies] : []), when, then, severitySection, actions);
         host.append(panel);
-        renderSharedConditionTree(conditionHost, { dom, properties: () => context.properties?.() ?? [], id: context.id, onChange: (next) => { condition = next; validate(); } });
+        renderSharedConditionTree(conditionHost, { dom, allowEmpty: true, properties: () => context.properties?.() ?? [], id: context.id, onIssue: (issue) => { conditionIssue = issue; }, onChange: (next) => { condition = next; validate(); } });
         renderOutcome();
         name.focus({ preventScroll: true });
     };

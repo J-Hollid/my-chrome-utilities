@@ -12,9 +12,10 @@ const incompleteConditionPredicate=(condition:unknown):boolean=>{
   return Array.isArray(value.children)?value.children.some(incompleteConditionPredicate):true;
 };
 const flatConditionIssue=(condition:unknown):boolean=>{
+  if(condition===undefined)return false;
   if(!condition||typeof condition!=="object")return true;
   const value=condition as Record<string,unknown>;
-  if(!["all","any"].includes(String(value.kind))||!Array.isArray(value.children)||!value.children.length)return true;
+  if(!["all","any"].includes(String(value.kind))||!Array.isArray(value.children))return true;
   return value.children.some((child)=>!child||typeof child!=="object"||(child as Record<string,unknown>).kind!=="predicate"||incompleteConditionPredicate(child));
 };
 
@@ -22,7 +23,7 @@ const flatConditionIssue=(condition:unknown):boolean=>{
 export function focusedRuleIssue(rule:Record<string,unknown>):string|undefined {
   if(["presence","value","pattern","range","cardinality","reusable"].includes(String(rule.kind))&&!String(rule.name??"").trim())return"Enter a rule name";
   const migrationIssue=canonicalFlatPredicateIssue(rule.condition);if(migrationIssue)return migrationIssue;
-  if(["presence","value","pattern","range","cardinality","reusable"].includes(String(rule.kind))&&flatConditionIssue(rule.condition))return"Complete or remove the condition.";
+  if(["presence","value","pattern","range","cardinality","reusable"].includes(String(rule.kind))&&flatConditionIssue(rule.condition))return"Complete or remove the condition";
   if(rule.kind==="presence"&&!["required","optional","forbidden"].includes(String(rule.presence??"")))return"Choose Required, Optional, or Forbidden.";
   if(rule.kind==="value"&&!(Array.isArray(rule.allowedValues)&&rule.allowedValues.length))return"Enter at least one allowed value";
   if(rule.kind==="pattern"&&!String(rule.pattern??"").trim())return"Enter a regular expression";

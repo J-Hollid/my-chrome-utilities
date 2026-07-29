@@ -13,10 +13,12 @@ const incompleteConditionPredicate = (condition) => {
     return Array.isArray(value.children) ? value.children.some(incompleteConditionPredicate) : true;
 };
 const flatConditionIssue = (condition) => {
+    if (condition === undefined)
+        return false;
     if (!condition || typeof condition !== "object")
         return true;
     const value = condition;
-    if (!["all", "any"].includes(String(value.kind)) || !Array.isArray(value.children) || !value.children.length)
+    if (!["all", "any"].includes(String(value.kind)) || !Array.isArray(value.children))
         return true;
     return value.children.some((child) => !child || typeof child !== "object" || child.kind !== "predicate" || incompleteConditionPredicate(child));
 };
@@ -28,7 +30,7 @@ export function focusedRuleIssue(rule) {
     if (migrationIssue)
         return migrationIssue;
     if (["presence", "value", "pattern", "range", "cardinality", "reusable"].includes(String(rule.kind)) && flatConditionIssue(rule.condition))
-        return "Complete or remove the condition.";
+        return "Complete or remove the condition";
     if (rule.kind === "presence" && !["required", "optional", "forbidden"].includes(String(rule.presence ?? "")))
         return "Choose Required, Optional, or Forbidden.";
     if (rule.kind === "value" && !(Array.isArray(rule.allowedValues) && rule.allowedValues.length))

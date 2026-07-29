@@ -21,7 +21,7 @@ export function renderCanonicalRuleAddPanel(host:HTMLElement,context:CanonicalFo
     const working=context.getWorking();if(!working)return;
     opener.remove();
     const panel=dom.createElement("fieldset"),legend=dom.createElement("legend"),details=section(dom,"Rule details"),when=section(dom,"When"),then=section(dom,"Then"),severitySection=section(dom,"Severity and message"),actions=section(dom,"Rule actions"),kind=dom.createElement("select"),fields=dom.createElement("div"),status=dom.createElement("p"),name=input(dom,"newRuleName"),target=context.properties?.().find(({id})=>id===working.id),boundaries=target?.arrayBoundaries??[],scope:CanonicalArrayScopeBoundary[]=boundaries.map(({propertyId})=>({propertyId,mode:"every"}));
-    let condition:CanonicalPredicate|undefined;
+    let condition:CanonicalPredicate|undefined,conditionIssue:string|undefined;
     panel.dataset.ruleEditorMode="add";fields.dataset.ruleFieldGrid="true";severitySection.dataset.ruleFieldGrid="true";panel.setAttribute("aria-label","Add rule editor");legend.textContent="Add rule";status.setAttribute("role","status");kind.name="ruleKind";kind.required=true;kind.append(new Option("Choose rule type",""),...(["presence","value","pattern","range","cardinality","reusable"] as const).map((entry)=>new Option(entry,entry)));
     details.append(labeled(dom,"Rule name",name),labeled(dom,"Rule type",kind));
     const conditionHost=dom.createElement("div");when.append(conditionHost);
@@ -38,8 +38,8 @@ export function renderCanonicalRuleAddPanel(host:HTMLElement,context:CanonicalFo
       if(reusable?.value){rule.reusableRuleId=reusable.value;const source=readFocusedReusableRules().find(({id})=>id===reusable.value),ruleName=source?.name??reusable.selectedOptions[0]?.textContent,outcome=source&&focusedReusableOutcome(source);if(ruleName)rule.name=ruleName;if(outcome)rule.reusableOutcome=outcome;}
       return rule;
     };
-    const add=button(dom,"Add rule",()=>{const next=context.getWorking(),rule=candidate();if(!next||!rule)return;const issue=focusedRuleIssue(rule as unknown as Record<string,unknown>);if(issue){status.textContent=issue;return;}rule.id=context.id("rule");next.rules=[...next.rules,rule];context.feedback("Staged rule addition.");context.render();});
-    const validate=():void=>{const rule=candidate(),issue=canonicalArrayScopeIssue(rule?.arrayScope)??(rule?focusedRuleIssue(rule as unknown as Record<string,unknown>):"Choose a rule type.");add.disabled=Boolean(issue);status.textContent=issue??"";};
+    const add=button(dom,"Add rule",()=>{const next=context.getWorking(),rule=candidate();if(!next||!rule)return;const issue=conditionIssue??focusedRuleIssue(rule as unknown as Record<string,unknown>);if(issue){status.textContent=issue;return;}rule.id=context.id("rule");next.rules=[...next.rules,rule];context.feedback("Staged rule addition.");context.render();});
+    const validate=():void=>{const rule=candidate(),issue=conditionIssue??canonicalArrayScopeIssue(rule?.arrayScope)??(rule?focusedRuleIssue(rule as unknown as Record<string,unknown>):"Choose a rule type.");add.disabled=Boolean(issue);status.textContent=issue??"";};
     const renderOutcome=():void=>{
       fields.replaceChildren();
       for(const field of focusedRuleFields(kind.value)){
@@ -59,7 +59,7 @@ export function renderCanonicalRuleAddPanel(host:HTMLElement,context:CanonicalFo
     const applies=section(dom,"Applies to");if(boundaries.length){applies.dataset.arrayRuleScope="true";const summary=dom.createElement("p"),renderSummary=()=>{summary.textContent=canonicalArrayScopeSummary(boundaries.map((boundary,index)=>({...boundary,...scope[index]!})));};for(const [index,boundary] of boundaries.entries()){const row=dom.createElement("div"),mode=dom.createElement("select"),position=input(dom,`arrayScopePosition${index+1}`,"1","number");mode.name=`arrayScopeMode${index+1}`;mode.setAttribute("aria-label",`Applies to ${boundary.name}`);mode.append(new Option("Every item","every"),new Option("Item at position","position"));position.min="1";position.step="1";position.hidden=true;mode.addEventListener("change",()=>{scope[index]={propertyId:boundary.propertyId,mode:mode.value as CanonicalArrayScopeBoundary["mode"],...(mode.value==="position"?{position:Number(position.value)}:{})};position.hidden=mode.value!=="position";renderSummary();validate();});position.addEventListener("input",()=>{scope[index]={propertyId:boundary.propertyId,mode:"position",position:Number(position.value)};renderSummary();validate();});row.append(labeled(dom,boundary.name,mode),labeled(dom,"Position (1 means the first item)",position));applies.append(row);}applies.append(summary);renderSummary();}
     actions.setAttribute("aria-label","Rule actions");actions.append(status,button(dom,"Cancel",()=>{panel.remove();host.prepend(opener);opener.focus({preventScroll:true});}),add);
     then.append(fields);panel.append(legend,details,...(boundaries.length?[applies]:[]),when,then,severitySection,actions);host.append(panel);
-    renderSharedConditionTree(conditionHost,{dom,properties:()=>context.properties?.()??[],id:context.id,onChange:(next)=>{condition=next;validate();}});
+    renderSharedConditionTree(conditionHost,{dom,allowEmpty:true,properties:()=>context.properties?.()??[],id:context.id,onIssue:(issue)=>{conditionIssue=issue;},onChange:(next)=>{condition=next;validate();}});
     renderOutcome();name.focus({preventScroll:true});
   };
 }

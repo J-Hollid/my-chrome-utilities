@@ -14,6 +14,5 @@ export function canonicalFlatPredicateIssue(condition:unknown):string|undefined 
   if(value.kind==="not")return nestedCanonicalPredicateMessage;
   if(!["all","any"].includes(String(value.kind))||!Array.isArray(value.children))return"A rule condition must be a structured All or Any match.";
   if(value.children.some((child)=>!child||typeof child!=="object"||(child as Record<string,unknown>).kind!=="predicate"))return nestedCanonicalPredicateMessage;
-  if(!value.children.length)return"A rule condition requires at least one condition row.";
   return undefined;
 }

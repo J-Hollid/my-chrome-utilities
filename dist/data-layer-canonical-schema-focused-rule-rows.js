@@ -9,7 +9,7 @@ const ruleKindLabel = (rule) => rule.name ?? rule.kind;
 const fieldLabel = (field) => ({ pattern: "Regular expression", minimum: "Minimum", maximum: "Maximum", minItems: "Minimum items", maxItems: "Maximum items", severity: "Severity", message: "Message" }[field] ?? field);
 function editRule(row, rule, context, invoker) {
     const { dom } = context, editor = dom.createElement("fieldset"), legend = dom.createElement("legend"), draft = clone(rule), status = dom.createElement("p"), details = dom.createElement("section"), when = dom.createElement("section"), then = dom.createElement("section"), severitySection = dom.createElement("section"), actions = dom.createElement("section");
-    let save;
+    let save, conditionIssue;
     const headed = (host, text) => { const heading = dom.createElement("h3"); heading.textContent = text; host.append(heading); };
     editor.dataset.ruleEditorMode = "edit";
     then.dataset.ruleFieldGrid = "true";
@@ -23,7 +23,7 @@ function editRule(row, rule, context, invoker) {
     headed(severitySection, "Severity and message");
     headed(actions, "Rule actions");
     actions.setAttribute("aria-label", "Rule actions");
-    const validate = () => { const issue = focusedRuleIssue(draft); if (save)
+    const validate = () => { const issue = conditionIssue ?? focusedRuleIssue(draft); if (save)
         save.disabled = Boolean(issue); status.textContent = issue ?? ""; };
     const name = input(dom, "editRuleName", draft.name ?? ""), kind = dom.createElement("select");
     kind.name = "editRuleKind";
@@ -35,7 +35,7 @@ function editRule(row, rule, context, invoker) {
         delete draft.name; validate(); });
     details.append(labeled(dom, "Rule name", name), labeled(dom, "Rule type", kind));
     const tree = dom.createElement("div");
-    renderSharedConditionTree(tree, { dom, ...(draft.condition ? { condition: draft.condition } : {}), properties: () => context.properties?.() ?? [], id: context.id, onChange: (condition) => { if (condition)
+    renderSharedConditionTree(tree, { dom, allowEmpty: true, ...(draft.condition ? { condition: draft.condition } : {}), properties: () => context.properties?.() ?? [], id: context.id, onIssue: (issue) => { conditionIssue = issue; }, onChange: (condition) => { if (condition)
             draft.condition = condition;
         else
             delete draft.condition; validate(); } });
@@ -74,7 +74,7 @@ function editRule(row, rule, context, invoker) {
     }
     save = button(dom, "Save rule", () => { const working = context.getWorking(); if (!working)
         return; const index = working.rules.findIndex(({ id }) => id === rule.id); if (index < 0)
-        return; const issue = focusedRuleIssue(draft); if (issue) {
+        return; const issue = conditionIssue ?? focusedRuleIssue(draft); if (issue) {
         status.textContent = issue;
         return;
     } working.rules[index] = draft; context.feedback(`Staged changes to ${ruleKindLabel(draft)}.`); context.render(); });

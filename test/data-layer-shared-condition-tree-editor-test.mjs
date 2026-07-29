@@ -1,8 +1,11 @@
 import assert from "node:assert/strict";
 import {
+  sharedConditionMatchModeVisible,
   sharedConditionOperators,
   sharedConditionPropertyMatches,
   sharedConditionValueMounted,
+  sharedFlatConditionIssue,
+  sharedFlatConditionResult,
   sharedTypedConditionValue,
 } from "../dist/data-layer-shared-condition-tree-editor.js";
 import {projectConditionEditorDraft} from "../dist/data-layer-project-condition-editor.js";
@@ -23,6 +26,12 @@ assert.equal(sharedConditionValueMounted("Exists"),false);
 assert.equal(sharedConditionValueMounted("Equals"),true);
 assert.equal(sharedTypedConditionValue("integer","7"),7);
 assert.equal(sharedTypedConditionValue("boolean","true"),true);
+assert.equal(sharedFlatConditionResult("all",[]),undefined,"zero condition rows persist without a synthetic Always condition");
+assert.equal(sharedFlatConditionIssue([]),undefined,"zero rows are valid and apply every time");
+assert.equal(sharedFlatConditionIssue([{id:"condition:1",propertyId:"",operator:""}]),"Complete or remove the condition","a started incomplete row blocks the rule");
+assert.equal(sharedConditionMatchModeVisible(0),false);
+assert.equal(sharedConditionMatchModeVisible(1),false);
+assert.equal(sharedConditionMatchModeVisible(2),true);
 assert.deepEqual(
   sharedConditionPropertyMatches([
     {id:"property:page-type",name:"page_type"},

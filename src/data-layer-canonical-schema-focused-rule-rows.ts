@@ -13,12 +13,12 @@ const fieldLabel=(field:string):string=>({pattern:"Regular expression",minimum:"
 
 function editRule(row:HTMLElement,rule:CanonicalRule,context:CanonicalFocusedRuleRowsContext,invoker:HTMLButtonElement):void {
   const {dom}=context,editor=dom.createElement("fieldset"),legend=dom.createElement("legend"),draft=clone(rule),status=dom.createElement("p"),details=dom.createElement("section"),when=dom.createElement("section"),then=dom.createElement("section"),severitySection=dom.createElement("section"),actions=dom.createElement("section");
-  let save:HTMLButtonElement|undefined;
+  let save:HTMLButtonElement|undefined,conditionIssue:string|undefined;
   const headed=(host:HTMLElement,text:string)=>{const heading=dom.createElement("h3");heading.textContent=text;host.append(heading);};
   editor.dataset.ruleEditorMode="edit";then.dataset.ruleFieldGrid="true";severitySection.dataset.ruleFieldGrid="true";editor.setAttribute("aria-label",`Edit rule ${rule.id}`);legend.textContent=`Edit ${ruleKindLabel(rule)}`;status.setAttribute("role","status");headed(details,"Rule details");headed(when,"When");headed(then,"Then");headed(severitySection,"Severity and message");headed(actions,"Rule actions");actions.setAttribute("aria-label","Rule actions");
-  const validate=():void=>{const issue=focusedRuleIssue(draft as unknown as Record<string,unknown>);if(save)save.disabled=Boolean(issue);status.textContent=issue??"";};
+  const validate=():void=>{const issue=conditionIssue??focusedRuleIssue(draft as unknown as Record<string,unknown>);if(save)save.disabled=Boolean(issue);status.textContent=issue??"";};
   const name=input(dom,"editRuleName",draft.name??""),kind=dom.createElement("select");kind.name="editRuleKind";kind.disabled=true;kind.append(new Option(draft.kind,draft.kind));name.addEventListener("input",()=>{const value=name.value.trim();if(value)draft.name=value;else delete draft.name;validate();});details.append(labeled(dom,"Rule name",name),labeled(dom,"Rule type",kind));
-  const tree=dom.createElement("div");renderSharedConditionTree(tree,{dom,...(draft.condition?{condition:draft.condition}:{}),properties:()=>context.properties?.()??[],id:context.id,onChange:(condition)=>{if(condition)draft.condition=condition;else delete draft.condition;validate();}});when.append(tree);
+  const tree=dom.createElement("div");renderSharedConditionTree(tree,{dom,allowEmpty:true,...(draft.condition?{condition:draft.condition}:{}),properties:()=>context.properties?.()??[],id:context.id,onIssue:(issue)=>{conditionIssue=issue;},onChange:(condition)=>{if(condition)draft.condition=condition;else delete draft.condition;validate();}});when.append(tree);
   for(const field of focusedRuleFields(draft.kind)){
     if(field==="condition")continue;
     if(field==="reusableRuleId")continue;
@@ -27,7 +27,7 @@ function editRule(row:HTMLElement,rule:CanonicalRule,context:CanonicalFocusedRul
     const numeric=["minimum","maximum","minItems","maxItems"].includes(field),control=field==="severity"?dom.createElement("select"):input(dom,`editRule${field[0]!.toUpperCase()+field.slice(1)}`,String((draft as any)[field]??""),numeric?"number":"text");
     control.name=`editRule${field[0]!.toUpperCase()+field.slice(1)}`;if(control instanceof HTMLSelectElement){control.append(new Option("error","error"),new Option("warning","warning"));control.value=draft.severity;}control.addEventListener("input",()=>{(draft as any)[field]=control.value===""?undefined:numeric?Number(control.value):control.value;validate();});const label=labeled(dom,fieldLabel(field),control);if(field==="message")label.dataset.ruleMessageField="true";(field==="severity"||field==="message"?severitySection:then).append(label);
   }
-  save=button(dom,"Save rule",()=>{const working=context.getWorking();if(!working)return;const index=working.rules.findIndex(({id})=>id===rule.id);if(index<0)return;const issue=focusedRuleIssue(draft as unknown as Record<string,unknown>);if(issue){status.textContent=issue;return;}working.rules[index]=draft;context.feedback(`Staged changes to ${ruleKindLabel(draft)}.`);context.render();});
+  save=button(dom,"Save rule",()=>{const working=context.getWorking();if(!working)return;const index=working.rules.findIndex(({id})=>id===rule.id);if(index<0)return;const issue=conditionIssue??focusedRuleIssue(draft as unknown as Record<string,unknown>);if(issue){status.textContent=issue;return;}working.rules[index]=draft;context.feedback(`Staged changes to ${ruleKindLabel(draft)}.`);context.render();});
   actions.append(status,button(dom,"Cancel",()=>{editor.remove();row.dataset.ruleMode="view";invoker.focus({preventScroll:true});}),save);editor.append(legend,details,when,then,severitySection,actions);row.append(editor);validate();
 }
 

@@ -10,14 +10,14 @@ const properties = (context) => () => context.model.rows.map(({ path, effective 
 const section = (dom, title) => { const host = dom.createElement("section"), heading = dom.createElement("h3"); heading.textContent = title; host.append(heading); return host; };
 function renderRuleEditor(row, rule, index, context, invoker) {
     const { dom } = context, draftRule = clone(rule), editor = dom.createElement("fieldset"), details = section(dom, "Rule details"), when = section(dom, "When"), then = section(dom, "Then"), severity = section(dom, "Severity and message"), actions = section(dom, "Rule actions"), status = dom.createElement("p");
-    let save;
+    let save, conditionIssue;
     editor.dataset.ruleEditorMode = "edit";
     then.dataset.ruleFieldGrid = "true";
     severity.dataset.ruleFieldGrid = "true";
     editor.setAttribute("aria-label", `Edit rule ${String(rule.id ?? index)}`);
     actions.setAttribute("aria-label", "Rule actions");
     status.setAttribute("role", "status");
-    const validate = () => { const issue = focusedRuleIssue(draftRule); if (save)
+    const validate = () => { const issue = conditionIssue ?? focusedRuleIssue(draftRule); if (save)
         save.disabled = Boolean(issue); status.textContent = issue ?? ""; };
     const name = dom.createElement("input"), kind = dom.createElement("select");
     name.name = "editRuleName";
@@ -31,7 +31,7 @@ function renderRuleEditor(row, rule, index, context, invoker) {
         delete draftRule.name; validate(); });
     details.append(labeled(dom, "Rule name", name), labeled(dom, "Rule type", kind));
     const tree = dom.createElement("div");
-    renderSharedConditionTree(tree, { dom, ...(draftRule.condition ? { condition: draftRule.condition } : {}), properties: properties(context), id: (kindName) => `${kindName}:${crypto.randomUUID()}`, onChange: (next) => { if (next)
+    renderSharedConditionTree(tree, { dom, allowEmpty: true, ...(draftRule.condition ? { condition: draftRule.condition } : {}), properties: properties(context), id: (kindName) => `${kindName}:${crypto.randomUUID()}`, onIssue: (issue) => { conditionIssue = issue; }, onChange: (next) => { if (next)
             draftRule.condition = next;
         else
             delete draftRule.condition; validate(); } });
@@ -72,7 +72,7 @@ function renderRuleEditor(row, rule, index, context, invoker) {
             label.dataset.ruleMessageField = "true";
         (field === "severity" || field === "message" ? severity : then).append(label);
     }
-    save = button(dom, "Save rule", () => { const draft = context.getDraft(), issue = focusedRuleIssue(draftRule); if (!draft)
+    save = button(dom, "Save rule", () => { const draft = context.getDraft(), issue = conditionIssue ?? focusedRuleIssue(draftRule); if (!draft)
         return; if (issue) {
         status.textContent = issue;
         return;
@@ -127,7 +127,7 @@ function renderAddPanel(host, context) {
             return;
         opener.remove();
         const panel = dom.createElement("fieldset"), details = section(dom, "Rule details"), when = section(dom, "When"), then = section(dom, "Then"), severity = section(dom, "Severity and message"), actions = section(dom, "Rule actions"), kind = dom.createElement("select"), name = dom.createElement("input"), fields = dom.createElement("div"), status = dom.createElement("p");
-        let condition;
+        let condition, conditionIssue;
         panel.dataset.ruleEditorMode = "add";
         fields.dataset.ruleFieldGrid = "true";
         severity.dataset.ruleFieldGrid = "true";
@@ -152,11 +152,11 @@ function renderAddPanel(host, context) {
             if (outcome)
                 rule.reusableOutcome = outcome;
         } return rule; };
-        const add = button(dom, "Add rule", () => { const rule = candidate(), issue = rule && focusedRuleIssue(rule); if (!rule)
+        const add = button(dom, "Add rule", () => { const rule = candidate(), issue = conditionIssue ?? (rule && focusedRuleIssue(rule)); if (!rule)
             return; if (issue) {
             status.textContent = issue;
             return;
-        } rule.id = `rule:${crypto.randomUUID()}`; draft.rules = [...draft.rules, rule]; context.render(); }), validate = () => { const rule = candidate(), issue = rule ? focusedRuleIssue(rule) : "Choose a rule type."; add.disabled = Boolean(issue); status.textContent = issue ?? ""; };
+        } rule.id = `rule:${crypto.randomUUID()}`; draft.rules = [...draft.rules, rule]; context.render(); }), validate = () => { const rule = candidate(), issue = conditionIssue ?? (rule ? focusedRuleIssue(rule) : "Choose a rule type."); add.disabled = Boolean(issue); status.textContent = issue ?? ""; };
         const renderFields = () => { fields.replaceChildren(); for (const field of focusedRuleFields(kind.value)) {
             if (["condition", "severity", "message"].includes(field))
                 continue;
@@ -200,7 +200,7 @@ function renderAddPanel(host, context) {
         actions.append(status, button(dom, "Cancel", () => { panel.remove(); host.prepend(opener); opener.focus({ preventScroll: true }); }), add);
         panel.append(details, when, then, severity, actions);
         host.append(panel);
-        renderSharedConditionTree(tree, { dom, properties: properties(context), id: (prefix) => `${prefix}:${crypto.randomUUID()}`, onChange: (next) => { condition = next; validate(); } });
+        renderSharedConditionTree(tree, { dom, allowEmpty: true, properties: properties(context), id: (prefix) => `${prefix}:${crypto.randomUUID()}`, onIssue: (issue) => { conditionIssue = issue; }, onChange: (next) => { condition = next; validate(); } });
         name.addEventListener("input", validate);
         kind.addEventListener("change", renderFields);
         severityControl.addEventListener("change", validate);
