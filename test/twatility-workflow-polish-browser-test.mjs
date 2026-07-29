@@ -15,6 +15,10 @@ import {
 } from "./support/studio-choice-contract-oracle.mjs";
 
 const wait=(milliseconds)=>new Promise((resolve)=>setTimeout(resolve,milliseconds));
+const expectedSidePanelControlHashes=Object.freeze({
+  dom:"36ee1d22cee0578ad8f33172ed6c9b9c88c89ef84313946cbd10d864cd289dc7",
+  presentation:"99299e7d0055d5b4763266702b349a2db277b16f1e4fb8e739d380ac33e5075d",
+});
 
 class DevtoolsSocket {
   constructor(url){this.url=new URL(url);this.nextId=1;this.pending=new Map();this.buffer=Buffer.alloc(0);this.events=[];}
@@ -113,27 +117,72 @@ async function screenshot(socket,target){
   const capture=await socket.call("Page.captureScreenshot",{format:"png",captureBeyondViewport:false,fromSurface:false});
   await writeFile(target,Buffer.from(capture.data,"base64"));
 }
-async function nativeKey(socket,key,code=key){
-  await socket.call("Input.dispatchKeyEvent",{type:"keyDown",key,code});
-  await socket.call("Input.dispatchKeyEvent",{type:"keyUp",key,code});
+async function nativeKey(socket,key,code=key,modifiers=0){
+  await socket.call("Input.dispatchKeyEvent",{type:"keyDown",key,code,modifiers});
+  await socket.call("Input.dispatchKeyEvent",{type:"keyUp",key,code,modifiers});
+}
+async function nativeShiftTab(socket){
+  await socket.call("Input.dispatchKeyEvent",{type:"keyDown",key:"Shift",code:"ShiftLeft",modifiers:8});
+  await socket.call("Input.dispatchKeyEvent",{type:"keyDown",key:"Tab",code:"Tab",modifiers:8});
+  await socket.call("Input.dispatchKeyEvent",{type:"keyUp",key:"Tab",code:"Tab",modifiers:8});
+  await socket.call("Input.dispatchKeyEvent",{type:"keyUp",key:"Shift",code:"ShiftLeft"});
+}
+async function nativePointerFocus(socket,expression){
+  const point=await evaluate(socket,`(()=>{const input=${expression};input.scrollIntoView({block:"center",inline:"nearest"});const box=input.getBoundingClientRect();return{x:box.left+box.width/2,y:box.top+box.height/2};})()`);
+  await socket.call("Input.dispatchMouseEvent",{type:"mouseMoved",...point});
+  await socket.call("Input.dispatchMouseEvent",{type:"mousePressed",...point,button:"left",clickCount:1});
+  await socket.call("Input.dispatchMouseEvent",{type:"mouseMoved",x:0,y:0,button:"left"});
+  await socket.call("Input.dispatchMouseEvent",{type:"mouseReleased",x:0,y:0,button:"left",clickCount:1});
+  return evaluate(socket,`document.activeElement===${expression}`);
+}
+async function nativeFocusChoice(socket,rootSelector,labelIncludes){
+  const locate=`(()=>{const root=document.querySelector(${JSON.stringify(rootSelector)});return[...root.querySelectorAll('input[type="checkbox"]')].find((choice)=>choice.labels?.[0]?.textContent.includes(${JSON.stringify(labelIncludes)}))})()`,defaultFocus=await evaluate(socket,`(()=>{const input=${locate},style=getComputedStyle(input.labels[0]);return[style.outlineStyle,style.outlineWidth,style.outlineColor];})()`);
+  assert.equal(await nativePointerFocus(socket,locate),true,`pointer primer could not focus ${labelIncludes}`);
+  await nativeShiftTab(socket);
+  assert.equal(await evaluate(socket,`document.activeElement!==${locate}`),true,`Shift+Tab did not leave ${labelIncludes}`);
+  await nativeKey(socket,"Tab","Tab");
+  const reached=await evaluate(socket,`(()=>{const input=${locate},style=getComputedStyle(input.labels[0]);return{active:document.activeElement===input,focus:[style.outlineStyle,style.outlineWidth,style.outlineColor]};})()`);
+  assert.equal(reached.active,true,`native Tab did not reach ${labelIncludes}`);
+  await nativeKey(socket,"Tab","Tab");
+  assert.equal(await evaluate(socket,`document.activeElement!==${locate}`),true,`Tab did not leave ${labelIncludes}`);
+  await nativeShiftTab(socket);
+  assert.equal(await evaluate(socket,`document.activeElement===${locate}`),true,`native Shift+Tab did not return to ${labelIncludes}`);
+  return{...reached,defaultFocus,forward:true,reverse:true};
 }
 async function nativeChoiceAudit(socket,rootSelector,{settle=100,projectId,durableKeys=[],restore=true}={}){
   const descriptors=await evaluate(socket,`(()=>{
     const root=document.querySelector(${JSON.stringify(rootSelector)}),counts={},text=(input)=>{const copy=input.labels?.[0]?.querySelector(".studio-choice-copy")?.cloneNode(true);copy?.querySelectorAll?.(".studio-switch-mark,.studio-switch-state").forEach((node)=>node.remove());return copy?.textContent.trim()??input.labels?.[0]?.textContent.trim()??"";};
-    return[...root.querySelectorAll('input[type="checkbox"]')].filter((input)=>input.getClientRects().length>0&&!input.disabled).map((input)=>{
+    return[...root.querySelectorAll('input[type="checkbox"]')].filter((input)=>input.getClientRects().length>0).map((input)=>{
       const key=input.dataset.studioChoiceContract,label=text(input),identity=key+"\\n"+label,index=counts[identity]??0;counts[identity]=index+1;return{key,label,index};
     });
   })()`);
   const results=[];
   for(const descriptor of descriptors){
-    await evaluate(socket,`(()=>{const root=document.querySelector(${JSON.stringify(rootSelector)}),text=(input)=>{const copy=input.labels?.[0]?.querySelector(".studio-choice-copy")?.cloneNode(true);copy?.querySelectorAll?.(".studio-switch-mark,.studio-switch-state").forEach((node)=>node.remove());return copy?.textContent.trim()??input.labels?.[0]?.textContent.trim()??"";},matches=root?[...root.querySelectorAll('input[type="checkbox"]')].filter((input)=>!input.disabled&&input.dataset.studioChoiceContract===${JSON.stringify(descriptor.key)}&&text(input)===${JSON.stringify(descriptor.label)}):[],input=matches[${descriptor.index}];if(input?.closest("details"))input.closest("details").open=true;return Boolean(input);})()`);
+    await wait(settle);
+    await evaluate(socket,`(()=>{const root=document.querySelector(${JSON.stringify(rootSelector)}),text=(input)=>{const copy=input.labels?.[0]?.querySelector(".studio-choice-copy")?.cloneNode(true);copy?.querySelectorAll?.(".studio-switch-mark,.studio-switch-state").forEach((node)=>node.remove());return copy?.textContent.trim()??input.labels?.[0]?.textContent.trim()??"";},matches=root?[...root.querySelectorAll('input[type="checkbox"]')].filter((input)=>input.dataset.studioChoiceContract===${JSON.stringify(descriptor.key)}&&text(input)===${JSON.stringify(descriptor.label)}):[],input=matches[${descriptor.index}];if(input?.closest("details"))input.closest("details").open=true;input?.scrollIntoView({block:"center",inline:"nearest"});return Boolean(input);})()`);
     const durable=projectId&&durableKeys.includes(descriptor.key),sequenceBefore=durable?await evaluate(socket,`(async()=>{const {openIndexedDbProjectRepository}=await import("./data-layer-durable-project-repository.js");return(await(await openIndexedDbProjectRepository()).loadProject(${JSON.stringify(projectId)})).draftSequence;})()`):undefined;
-    const locate=`(()=>{const root=document.querySelector(${JSON.stringify(rootSelector)}),text=(input)=>{const copy=input.labels?.[0]?.querySelector(".studio-choice-copy")?.cloneNode(true);copy?.querySelectorAll?.(".studio-switch-mark,.studio-switch-state").forEach((node)=>node.remove());return copy?.textContent.trim()??input.labels?.[0]?.textContent.trim()??"";},matches=root?[...root.querySelectorAll('input[type="checkbox"]')].filter((input)=>input.getClientRects().length>0&&!input.disabled&&input.dataset.studioChoiceContract===${JSON.stringify(descriptor.key)}&&text(input)===${JSON.stringify(descriptor.label)}):[];return matches[${descriptor.index}]})()`,present=`Boolean(${locate})`;
-    const before=await evaluate(socket,`(()=>{const input=${locate},label=input?.labels?.[0],indicator=input?.getBoundingClientRect(),row=label?.getBoundingClientRect(),copy=label?.querySelector(".studio-choice-copy")?.getBoundingClientRect(),style=input&&getComputedStyle(input),labelStyle=label&&getComputedStyle(label),defaultFocus=[labelStyle?.outlineStyle,labelStyle?.outlineWidth,labelStyle?.outlineColor],describedBy=input?.getAttribute("aria-describedby"),actions=[...label?.parentElement?.children??[]].filter((element)=>element!==label&&element.matches?.("button,a[href],[role=button]")),intersects=actions.some((action)=>{const box=action.getBoundingClientRect();return!(row.right<=box.left||box.right<=row.left||row.bottom<=box.top||box.bottom<=row.top);});if(!input||!label)return null;const token=${JSON.stringify(`${descriptor.key}\n${descriptor.label}\n${descriptor.index}`)};globalThis.__studioChoiceAuditChanges??={};globalThis.__studioChoiceAuditInputs??={};globalThis.__studioChoiceAuditEventChecked??={};globalThis.__studioChoiceAuditChanges[token]=0;globalThis.__studioChoiceAuditInputs[token]=input;input.addEventListener("change",(event)=>{globalThis.__studioChoiceAuditChanges[token]++;globalThis.__studioChoiceAuditEventChecked[token]=event.currentTarget.checked;});return{checked:input.checked,type:input.type,role:input.getAttribute("role"),id:input.id,forValue:label.htmlFor,labels:input.labels?.length,enhanced:input.dataset.studioChoiceEnhanced,description:input.getAttribute("aria-description"),width:indicator.width,height:indicator.height,rowHeight:row.height,gap:copy?copy.left-indicator.right:null,padding:style.padding,describedByValid:!describedBy||describedBy.split(/\\s+/).every((id)=>document.getElementById(id)),defaultFocus,actionsSeparate:!intersects,contained:row.left>=0&&row.right<=innerWidth+.1};})()`);
+    const locate=`(()=>{const root=document.querySelector(${JSON.stringify(rootSelector)}),text=(input)=>{const copy=input.labels?.[0]?.querySelector(".studio-choice-copy")?.cloneNode(true);copy?.querySelectorAll?.(".studio-switch-mark,.studio-switch-state").forEach((node)=>node.remove());return copy?.textContent.trim()??input.labels?.[0]?.textContent.trim()??"";},matches=root?[...root.querySelectorAll('input[type="checkbox"]')].filter((input)=>input.getClientRects().length>0&&input.dataset.studioChoiceContract===${JSON.stringify(descriptor.key)}&&text(input)===${JSON.stringify(descriptor.label)}):[];return matches[${descriptor.index}]})()`,present=`Boolean(${locate})`;
+    const before=await evaluate(socket,`(()=>{const input=${locate},label=input?.labels?.[0],indicator=input?.getBoundingClientRect(),row=label?.getBoundingClientRect(),copy=label?.querySelector(".studio-choice-copy")?.getBoundingClientRect(),style=input&&getComputedStyle(input),labelStyle=label&&getComputedStyle(label),defaultFocus=[labelStyle?.outlineStyle,labelStyle?.outlineWidth,labelStyle?.outlineColor],describedBy=input?.getAttribute("aria-describedby"),actions=[...label?.parentElement?.children??[]].filter((element)=>element!==label&&element.matches?.("button,a[href],[role=button]")),intersects=actions.some((action)=>{const box=action.getBoundingClientRect();return!(row.right<=box.left||box.right<=row.left||row.bottom<=box.top||box.bottom<=row.top);});if(!input||!label)return null;const token=${JSON.stringify(`${descriptor.key}\n${descriptor.label}\n${descriptor.index}`)};globalThis.__studioChoiceAuditChanges??={};globalThis.__studioChoiceAuditInputs??={};globalThis.__studioChoiceAuditEventChecked??={};globalThis.__studioChoiceAuditChanges[token]=0;globalThis.__studioChoiceAuditInputs[token]=input;input.addEventListener("change",(event)=>{globalThis.__studioChoiceAuditChanges[token]++;globalThis.__studioChoiceAuditEventChecked[token]=event.currentTarget.checked;});return{checked:input.checked,disabled:input.disabled,disabledState:input.matches(":disabled"),type:input.type,role:input.getAttribute("role"),id:input.id,forValue:label.htmlFor,labels:input.labels?.length,enhanced:input.dataset.studioChoiceEnhanced,description:input.getAttribute("aria-description"),width:indicator.width,height:indicator.height,rowHeight:row.height,gap:copy?copy.left-indicator.right:null,padding:style.padding,describedByValid:!describedBy||describedBy.split(/\\s+/).every((id)=>document.getElementById(id)),defaultFocus,actionsSeparate:!intersects,contained:row.left>=0&&row.right<=innerWidth+.1};})()`);
     assert.ok(before,`native choice audit could not locate ${JSON.stringify(descriptor)}`);
+    if(before.disabled){
+      const disabledFocus=await evaluate(socket,`(()=>{const input=${locate},prior=document.activeElement;input.focus();const active=document.activeElement===input;if(prior instanceof HTMLElement)prior.focus();return{active,focusable:input.matches(":focus"),checked:input.checked};})()`);
+      results.push({...descriptor,...before,focused:{active:false,forward:true,reverse:true,focus:before.defaultFocus},after:{checked:before.checked,changes:0},inputClick:{before:before.checked,checked:before.checked,changes:0},labelClick:{before:before.checked,checked:before.checked,changes:0},restored:{checked:before.checked,changes:0},restoreExpected:false,disabledFocus});
+      continue;
+    }
+    assert.equal(await nativePointerFocus(socket,locate),true,`pointer primer could not focus ${descriptor.key} ${descriptor.label}`);
+    await nativeShiftTab(socket);
+    assert.equal(await evaluate(socket,`document.activeElement!==${locate}`),true,`native Shift+Tab did not leave ${descriptor.key} ${descriptor.label}`);
     await nativeKey(socket,"Tab","Tab");
-    const focused=await evaluate(socket,`(()=>{const input=${locate},token=${JSON.stringify(`${descriptor.key}\n${descriptor.label}\n${descriptor.index}`)};if(globalThis.__studioChoiceAuditInputs[token]!==input){globalThis.__studioChoiceAuditInputs[token]=input;input.addEventListener("change",(event)=>{globalThis.__studioChoiceAuditChanges[token]++;globalThis.__studioChoiceAuditEventChecked[token]=event.currentTarget.checked;});}input.focus();const label=input.labels?.[0],style=label&&getComputedStyle(label);return{active:document.activeElement===input,activeElement:document.activeElement?.outerHTML,focus:[style?.outlineStyle,style?.outlineWidth,style?.outlineColor]};})()`);
+    const focused=await evaluate(socket,`(()=>{const input=${locate},label=input?.labels?.[0],style=label&&getComputedStyle(label);return{active:document.activeElement===input,activeElement:document.activeElement?.outerHTML,focus:[style?.outlineStyle,style?.outlineWidth,style?.outlineColor]};})()`);
     assert.equal(focused.active,true,`native Tab did not focus ${descriptor.key} ${descriptor.label}: ${focused.activeElement}`);
+    await nativeKey(socket,"Tab","Tab");
+    const reverseReached=await evaluate(socket,`document.activeElement!==${locate}`);
+    assert.equal(reverseReached,true,`forward traversal did not leave ${descriptor.key} ${descriptor.label}`);
+    await nativeShiftTab(socket);
+    const returned=await evaluate(socket,`(()=>({active:document.activeElement===${locate},element:document.activeElement?.outerHTML}))()`);
+    assert.equal(returned.active,true,`native Shift+Tab did not return to ${descriptor.key} ${descriptor.label}: ${returned.element}`);
+    focused.forward=true;focused.reverse=true;
+    await evaluate(socket,`(()=>{const input=${locate},token=${JSON.stringify(`${descriptor.key}\n${descriptor.label}\n${descriptor.index}`)};globalThis.__studioChoiceAuditChanges[token]=0;globalThis.__studioChoiceAuditEventChecked[token]=input.checked;if(globalThis.__studioChoiceAuditInputs[token]!==input){globalThis.__studioChoiceAuditInputs[token]=input;input.addEventListener("change",(event)=>{if(globalThis.__studioChoiceAuditInputs[token]===event.currentTarget){globalThis.__studioChoiceAuditChanges[token]++;globalThis.__studioChoiceAuditEventChecked[token]=event.currentTarget.checked;}});}return true;})()`);
     await nativeKey(socket," ","Space");
     if(durable)await evaluate(socket,`(async()=>{const {openIndexedDbProjectRepository}=await import("./data-layer-durable-project-repository.js"),repo=await openIndexedDbProjectRepository();for(let attempt=0;attempt<240;attempt+=1){if((await repo.loadProject(${JSON.stringify(projectId)})).draftSequence>=${sequenceBefore+1})return true;await new Promise((resolve)=>setTimeout(resolve,20));}return false;})()`);
     else await wait(settle);
@@ -141,15 +190,23 @@ async function nativeChoiceAudit(socket,rootSelector,{settle=100,projectId,durab
     const after=await evaluate(socket,`(()=>{const input=${locate},token=${JSON.stringify(`${descriptor.key}\n${descriptor.label}\n${descriptor.index}`)};return{checked:input?.checked,eventChecked:globalThis.__studioChoiceAuditEventChecked?.[token],changes:globalThis.__studioChoiceAuditChanges?.[token]};})()`);
     let restored=after;
     if(restore&&after.checked!==before.checked){
-      await evaluate(socket,`(()=>{const input=${locate},token=${JSON.stringify(`${descriptor.key}\n${descriptor.label}\n${descriptor.index}`)};if(!input)return false;if(globalThis.__studioChoiceAuditInputs[token]!==input){globalThis.__studioChoiceAuditInputs[token]=input;input.addEventListener("change",(event)=>{globalThis.__studioChoiceAuditChanges[token]++;globalThis.__studioChoiceAuditEventChecked[token]=event.currentTarget.checked;});}input.focus();return true;})()`);
-      await nativeKey(socket," ","Space");
+      await evaluate(socket,`(()=>{const input=${locate},token=${JSON.stringify(`${descriptor.key}\n${descriptor.label}\n${descriptor.index}`)};if(!input)return false;if(globalThis.__studioChoiceAuditInputs[token]!==input){globalThis.__studioChoiceAuditInputs[token]=input;input.addEventListener("change",(event)=>{globalThis.__studioChoiceAuditChanges[token]++;globalThis.__studioChoiceAuditEventChecked[token]=event.currentTarget.checked;});}input.click();return true;})()`);
       if(descriptor.key==="guided.conditional")await evaluate(socket,`[...document.querySelectorAll("#guided-condition-discard-confirmation button")].find(({textContent})=>textContent==="Discard conditions")?.click()`);
       if(durable)await evaluate(socket,`(async()=>{const {openIndexedDbProjectRepository}=await import("./data-layer-durable-project-repository.js"),repo=await openIndexedDbProjectRepository();for(let attempt=0;attempt<240;attempt+=1){if((await repo.loadProject(${JSON.stringify(projectId)})).draftSequence>=${sequenceBefore+2})return true;await new Promise((resolve)=>setTimeout(resolve,20));}return false;})()`);
       else await wait(settle);
       try{await ready(socket,present,`rerendered ${descriptor.key} after native restore`);}catch(error){const diagnostic=await evaluate(socket,`(()=>({root:Boolean(document.querySelector(${JSON.stringify(rootSelector)})),active:document.activeElement?.outerHTML,choices:[...document.querySelectorAll('input[type="checkbox"]')].map((input)=>[input.dataset.studioChoiceContract,input.labels?.[0]?.textContent.trim(),input.checked,input.disabled]).filter(([key])=>key)}))()`);throw new Error(`${error.message}: ${JSON.stringify({descriptor,diagnostic})}`);}
       restored=await evaluate(socket,`(()=>{const input=${locate},token=${JSON.stringify(`${descriptor.key}\n${descriptor.label}\n${descriptor.index}`)};return{checked:input?.checked,eventChecked:globalThis.__studioChoiceAuditEventChecked?.[token],changes:globalThis.__studioChoiceAuditChanges?.[token]};})()`);
     }
-    results.push({...descriptor,...before,focused,after,restored,restoreExpected:restore});
+    const pointerActivation=async(kind)=>{
+      const armed=await evaluate(socket,`(()=>{const input=${locate},stage=(globalThis.__studioChoicePointerStage??0)+1;globalThis.__studioChoicePointerStage=stage;globalThis.__studioChoicePointerAudit={stage,input,changes:0,eventChecked:input.checked};input.addEventListener("change",(event)=>{if(globalThis.__studioChoicePointerAudit?.stage===stage&&globalThis.__studioChoicePointerAudit.input===event.currentTarget){globalThis.__studioChoicePointerAudit.changes++;globalThis.__studioChoicePointerAudit.eventChecked=event.currentTarget.checked;}});const before=input.checked;${JSON.stringify(kind)}==="input"?input.click():input.labels[0].click();return before;})()`);
+      if(descriptor.key==="guided.conditional")await evaluate(socket,`[...document.querySelectorAll("#guided-condition-discard-confirmation button")].find(({textContent})=>textContent==="Discard conditions")?.click()`);
+      await wait(settle);
+      await ready(socket,present,`rerendered ${descriptor.key} after ${kind} click`);
+      return evaluate(socket,`(()=>{const input=${locate},audit=globalThis.__studioChoicePointerAudit;return{before:${armed},checked:input?.checked,eventChecked:audit?.eventChecked,changes:audit?.changes};})()`);
+    };
+    const inputClick=await pointerActivation("input"),labelClick=await pointerActivation("label");
+    if(restore&&labelClick.checked!==before.checked)restored=await pointerActivation("input");
+    results.push({...descriptor,...before,focused,after,inputClick,labelClick,restored,restoreExpected:restore});
   }
   return results;
 }
@@ -162,8 +219,9 @@ async function durableChoiceConsequence(socket,projectId,key,readExpression,{roo
 }
 function validNativeChoiceAudit(item){
   const expectedPattern=expectedStudioChoiceContracts.get(item.key)?.[0],focusChanged=item.focused.active&&JSON.stringify(item.focused.focus)!==JSON.stringify(item.defaultFocus)&&item.focused.focus[0]!=="none"&&item.focused.focus[1]!=="0px",indicatorValid=expectedPattern==="switch"?item.width===36&&item.height>=16&&item.height<=18:item.width>=16&&item.width<=18&&item.height>=16&&item.height<=18;
-  const restorationValid=!item.restoreExpected||(item.restored.checked===item.checked&&item.restored.changes===(item.after.checked===item.checked?1:2));
-  return item.description===exactChoiceDescriptions[item.key]&&item.type==="checkbox"&&item.role===(expectedPattern==="switch"?"switch":null)&&item.enhanced==="true"&&item.labels===1&&Boolean(item.id)&&item.forValue===item.id&&indicatorValid&&item.padding==="0px"&&Math.abs(item.gap-8)<0.1&&item.rowHeight>=36&&item.describedByValid&&item.actionsSeparate&&item.contained&&focusChanged&&item.after.eventChecked===!item.checked&&item.after.changes===1&&restorationValid;
+  const activationValid=(entry)=>entry.checked===!entry.before&&entry.eventChecked===entry.checked&&entry.changes===1,disabledValid=item.disabledState&&!item.disabledFocus.active&&!item.disabledFocus.focusable&&item.after.changes===0&&item.inputClick.changes===0&&item.labelClick.changes===0;
+  const restorationValid=!item.restoreExpected||item.restored.checked===item.checked;
+  return item.description===exactChoiceDescriptions[item.key]&&item.type==="checkbox"&&item.role===(expectedPattern==="switch"?"switch":null)&&item.enhanced==="true"&&item.labels===1&&Boolean(item.id)&&item.forValue===item.id&&indicatorValid&&item.padding==="0px"&&Math.abs(item.gap-8)<0.1&&item.rowHeight>=36&&item.describedByValid&&item.actionsSeparate&&item.contained&&(item.disabled?disabledValid:focusChanged&&item.focused.forward&&item.focused.reverse&&item.after.eventChecked===!item.checked&&item.after.changes===1&&activationValid(item.inputClick)&&activationValid(item.labelClick)&&restorationValid);
 }
 
 const profile=await mkdtemp(path.join(os.tmpdir(),"twatility-workflow-polish-"));
@@ -172,7 +230,7 @@ chromeArguments.splice(-1,0,`--load-extension=${extensionRoot}`);
 const chrome=spawn(resolveChromeExecutable(),chromeArguments,{stdio:["ignore","ignore","pipe"]});
 const evidenceDirectory=path.resolve(process.env.BRAND_EVIDENCE_DIR??"docs/twatility-branding-evidence/slice-6-workflows");
 await mkdir(evidenceDirectory,{recursive:true});
-let side,studio,conflictStudio;
+let side,studio,conflictStudio,blockedStudio;
 try{
   const port=await new Promise((resolve,reject)=>{
     let output="";const timeout=setTimeout(()=>reject(new Error(`Chrome debugging timeout: ${output}`)),15_000);
@@ -227,15 +285,14 @@ try{
     const ids=["project-transport-context","history-path","history-path-status","default-push-path","default-push-path-status"];
     const controls=[...document.querySelectorAll("button,input,select,textarea,a[href],[role=tab]")];
     const refs=["aria-controls","aria-labelledby","aria-describedby","aria-errormessage"];
-    const signature=()=>controls.map((element)=>({tag:element.tagName,id:element.id,type:element.getAttribute("type"),role:element.getAttribute("role"),hidden:element.hidden,disabled:Boolean(element.disabled),aria:refs.map((name)=>[name,element.getAttribute(name)])}));
-    const before=signature(),sheets=[...document.styleSheets].filter((sheet)=>/(?:twatility-brand|side-panel-brand)\\.css/.test(sheet.href||""));sheets.forEach((sheet)=>sheet.disabled=true);const after=signature();sheets.forEach((sheet)=>sheet.disabled=false);const hash=async(value)=>Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(JSON.stringify(value)))),byte=>byte.toString(16).padStart(2,"0")).join(""),hashes={before:await hash(before),after:await hash(after)};
+    const domSignature=controls.map((element)=>({tag:element.tagName,id:element.id,type:element.getAttribute("type"),role:element.getAttribute("role"),hidden:element.hidden,disabled:Boolean(element.disabled),aria:refs.map((name)=>[name,element.getAttribute(name)])})),presentationSignature=controls.filter((element)=>element.getClientRects().length>0).map((element)=>{const style=getComputedStyle(element),box=element.getBoundingClientRect();return{tag:element.tagName,id:element.id,type:element.getAttribute("type"),box:[box.width,box.height],display:style.display,position:style.position,padding:[style.paddingTop,style.paddingRight,style.paddingBottom,style.paddingLeft],border:[style.borderTopWidth,style.borderRightWidth,style.borderBottomWidth,style.borderLeftWidth],radius:style.borderRadius,font:[style.fontFamily,style.fontSize,style.fontWeight,style.lineHeight],color:style.color,background:style.backgroundColor};}),hash=async(value)=>Array.from(new Uint8Array(await crypto.subtle.digest("SHA-256",new TextEncoder().encode(JSON.stringify(value)))),byte=>byte.toString(16).padStart(2,"0")).join(""),hashes={dom:await hash(domSignature),presentation:await hash(presentationSignature)};
     const workspace=document.querySelector("#workspace-panel-data-layer");
-    return{present:ids.every((id)=>document.getElementById(id)),context:document.querySelector("#project-transport-context").textContent,values:[document.querySelector("#history-path").value,document.querySelector("#default-push-path").value],equivalent:JSON.stringify(before)===JSON.stringify(after),hashes,overflow:[document.documentElement.scrollWidth-document.documentElement.clientWidth,document.body.scrollWidth-document.body.clientWidth,workspace.scrollWidth-workspace.clientWidth],broken:[...document.querySelectorAll("*")].flatMap((element)=>refs.flatMap((name)=>(element.getAttribute(name)||"").split(/\\s+/).filter(Boolean).filter((id)=>!document.getElementById(id))))};
+    return{present:ids.every((id)=>document.getElementById(id)),context:document.querySelector("#project-transport-context").textContent,values:[document.querySelector("#history-path").value,document.querySelector("#default-push-path").value],hashes,overflow:[document.documentElement.scrollWidth-document.documentElement.clientWidth,document.body.scrollWidth-document.body.clientWidth,workspace.scrollWidth-workspace.clientWidth],broken:[...document.querySelectorAll("*")].flatMap((element)=>refs.flatMap((name)=>(element.getAttribute(name)||"").split(/\\s+/).filter(Boolean).filter((id)=>!document.getElementById(id))))};
   })()`);
   assert.equal(live.present,true);
   assert.match(live.context,/Retail measurement operations/u);
   assert.deepEqual(live.values,["event.history","dataLayer"]);
-  assert.equal(live.equivalent,true);
+  assert.deepEqual(live.hashes,expectedSidePanelControlHashes,"packaged side-panel controls must match the immutable pre-migration DOM and presentation baselines");
   assert.deepEqual(live.overflow,[0,0,0]);
   assert.deepEqual(live.broken,[]);
   await evaluate(side,`document.querySelector("#data-layer-settings").scrollIntoView({block:"start"})`);
@@ -307,7 +364,7 @@ try{
   const documentationNativeChoices=await nativeChoiceAudit(studio,'[aria-label="Project Documentation workspace"]',{settle:300});
   const documentationConfigurationChoices=await evaluate(studio,`(async()=>{
     const root=()=>document.querySelector('[aria-label="Project Documentation workspace"]'),contracts={},details=[];
-    const collect=()=>{for(const input of root().querySelectorAll('[aria-label="Selected documentation section configuration"] input[type="checkbox"]')){const key=input.dataset.studioChoiceContract,label=input.labels?.[0],indicator=input.getBoundingClientRect(),row=label?.getBoundingClientRect(),copy=label?.querySelector(".studio-choice-copy")?.getBoundingClientRect(),describedBy=input.getAttribute("aria-describedby");input.focus();const focus=getComputedStyle(label),detail={key,description:input.getAttribute("aria-description"),enhanced:input.dataset.studioChoiceEnhanced,labels:input.labels?.length,id:input.id,forValue:label?.htmlFor,width:indicator.width,height:indicator.height,rowHeight:row?.height,gap:copy?copy.left-indicator.right:null,describedByValid:!describedBy||describedBy.split(/\\s+/).every((id)=>document.getElementById(id)),focus:[focus.outlineStyle,focus.outlineWidth]};details.push(detail);contracts[key]??=detail.description;}};
+    const collect=()=>{for(const input of root().querySelectorAll('[aria-label="Selected documentation section configuration"] input[type="checkbox"]')){const key=input.dataset.studioChoiceContract,label=input.labels?.[0],indicator=input.getBoundingClientRect(),row=label?.getBoundingClientRect(),copy=label?.querySelector(".studio-choice-copy")?.getBoundingClientRect(),describedBy=input.getAttribute("aria-describedby"),detail={key,description:input.getAttribute("aria-description"),enhanced:input.dataset.studioChoiceEnhanced,labels:input.labels?.length,id:input.id,forValue:label?.htmlFor,width:indicator.width,height:indicator.height,rowHeight:row?.height,gap:copy?copy.left-indicator.right:null,describedByValid:!describedBy||describedBy.split(/\\s+/).every((id)=>document.getElementById(id))};details.push(detail);contracts[key]??=detail.description;}};
     for(const kind of["flow","matrix","profile"]){root().querySelector('[aria-label="Documentation section outline"] [data-section-kind="'+kind+'"] > button').click();await new Promise((resolve)=>setTimeout(resolve,20));collect();}
     root().querySelector('[aria-label="Documentation section outline"] [data-section-kind="overview"] > button').click();
     return{contracts,details};
@@ -372,7 +429,8 @@ try{
   await evaluate(studio,`document.querySelector('#project-tree button[data-kind="pages"]').click();document.querySelector('[data-entity-id] button').click()`);
   await ready(studio,"document.querySelector('.composed-schema-workspace input[aria-label=\"Only defined fields\"]')?.dataset.studioChoiceEnhanced==='true'","Only defined fields switch");
   const switchNativeChoices=await nativeChoiceAudit(studio,".composed-schema-workspace",{settle:180});
-  const switchBefore=await evaluate(studio,`(()=>{const input=document.querySelector('.composed-schema-workspace input[aria-label="Only defined fields"]'),label=input.labels[0];input.focus();return{checked:input.checked,role:input.getAttribute("role"),contract:input.dataset.studioChoiceContract,description:input.getAttribute("aria-description"),enhanced:input.dataset.studioChoiceEnhanced==="true"&&input.labels?.length===1&&label.htmlFor===input.id,ariaChecked:input.getAttribute("aria-checked"),state:label.querySelector(".studio-switch-state")?.textContent,mark:label.querySelector(".studio-switch-mark")?.textContent,undo:Number(document.querySelector("#undo-project").dataset.undoCount)};})()`);
+  await nativeFocusChoice(studio,".composed-schema-workspace","Only defined fields");
+  const switchBefore=await evaluate(studio,`(()=>{const input=document.querySelector('.composed-schema-workspace input[aria-label="Only defined fields"]'),label=input.labels[0];return{checked:input.checked,role:input.getAttribute("role"),contract:input.dataset.studioChoiceContract,description:input.getAttribute("aria-description"),enhanced:input.dataset.studioChoiceEnhanced==="true"&&input.labels?.length===1&&label.htmlFor===input.id,ariaChecked:input.getAttribute("aria-checked"),state:label.querySelector(".studio-switch-state")?.textContent,mark:label.querySelector(".studio-switch-mark")?.textContent,undo:Number(document.querySelector("#undo-project").dataset.undoCount)};})()`);
   await nativeKey(studio," ","Space");
   await wait(180);
   const switchAfter=await evaluate(studio,`(()=>{const input=document.querySelector('.composed-schema-workspace input[aria-label="Only defined fields"]'),label=input.labels[0];return{checked:input.checked,role:input.getAttribute("role"),ariaChecked:input.getAttribute("aria-checked"),state:label.querySelector(".studio-switch-state")?.textContent,mark:label.querySelector(".studio-switch-mark")?.textContent,undo:Number(document.querySelector("#undo-project").dataset.undoCount)};})()`);
@@ -396,6 +454,26 @@ try{
   assert.equal(switchUndo.redo,1);
   assert.equal(switchRedo.checked,switchAfter.checked);
   assert.equal(switchRedo.undo,switchAfter.undo);
+  blockedStudio=await pageSocket(port,`${base}specification-builder.html?project=${projectId}&kind=pages`);
+  await metrics(blockedStudio,1000,760);
+  await ready(blockedStudio,"document.querySelector('#project-tree button[data-kind=\"pages\"]')","second-window Pages");
+  await evaluate(blockedStudio,`document.querySelector('[data-entity-id] button').click()`);
+  await ready(blockedStudio,"document.querySelector('.composed-schema-workspace input[aria-label=\"Only defined fields\"]')?.dataset.studioChoiceEnhanced==='true'","second-window Only defined fields");
+  await evaluate(blockedStudio,`document.querySelector('.composed-schema-workspace input[aria-label="Only defined fields"]').click()`);
+  await ready(studio,`document.querySelector('.composed-schema-workspace input[aria-label="Only defined fields"]')?.checked===${JSON.stringify(switchBefore.checked)}`,"newer second-window switch value");
+  const blockedHistoryEventStart=studio.events.length;
+  await evaluate(studio,`document.querySelector("#undo-project").click()`);
+  await ready(studio,"document.querySelector('#project-conflict-review')?.open&&document.querySelector('#project-conflict-fields input[type=\"checkbox\"]')?.disabled","blocked history conflict");
+  const disabledConflictNativeChoices=await nativeChoiceAudit(studio,"#project-conflict-review");
+  assert.equal(disabledConflictNativeChoices.length>0&&disabledConflictNativeChoices.every(({disabled,disabledState,disabledFocus})=>disabled&&disabledState&&!disabledFocus.active&&!disabledFocus.focusable),true,JSON.stringify(disabledConflictNativeChoices));
+  await evaluate(studio,`document.querySelector("#reload-project-conflict").click()`);
+  await ready(studio,"!document.querySelector('#project-conflict-review').open","rejected blocked history conflict");
+  const blockedHistoryEvents=studio.events.splice(blockedHistoryEventStart),expectedBlockedHistoryEvents=blockedHistoryEvents.filter(({method,params})=>method==="Runtime.exceptionThrown"&&params.exceptionDetails?.exception?.className==="DurablePageHistoryConflict");
+  assert.equal(expectedBlockedHistoryEvents.length,1,JSON.stringify(blockedHistoryEvents));
+  studio.events.push(...blockedHistoryEvents.filter((event)=>!expectedBlockedHistoryEvents.includes(event)));
+  await evaluate(blockedStudio,`document.querySelector('.composed-schema-workspace input[aria-label="Only defined fields"]').click()`);
+  await ready(studio,`document.querySelector('.composed-schema-workspace input[aria-label="Only defined fields"]')?.checked===${JSON.stringify(switchAfter.checked)}`,"restored second-window switch value");
+  await blockedStudio.call("Page.close");blockedStudio.close();blockedStudio=undefined;
   await studio.call("Page.reload",{ignoreCache:true});
   await ready(studio,"document.querySelector('.composed-schema-workspace input[aria-label=\"Only defined fields\"]')?.dataset.studioChoiceEnhanced==='true'","reloaded Only defined fields switch");
   const switchReloaded=await evaluate(studio,`document.querySelector('.composed-schema-workspace input[aria-label="Only defined fields"]').checked`);
@@ -464,8 +542,8 @@ try{
       for(const input of root.querySelectorAll('input[type="checkbox"]')){
         if(seen.has(input))continue;seen.add(input);
         const key=input.dataset.studioChoiceContract;if(!key)continue;
-        const label=input.labels?.[0],indicator=input.getBoundingClientRect(),row=label?.getBoundingClientRect(),copy=label?.querySelector(".studio-choice-copy")?.getBoundingClientRect(),describedBy=input.getAttribute("aria-describedby"),actions=[...label?.parentElement?.children??[]].filter((element)=>element!==label&&element.matches?.("button,a")),intersects=actions.some((action)=>{const box=action.getBoundingClientRect();return!(row.right<=box.left||box.right<=row.left||row.bottom<=box.top||box.bottom<=row.top);});input.focus();const focus=getComputedStyle(label);
-        const detail={key,description:input.getAttribute("aria-description"),pattern:input.getAttribute("role")==="switch"?"switch":"checkbox",enhanced:input.dataset.studioChoiceEnhanced,labels:input.labels?.length,id:input.id,forValue:label?.htmlFor,width:indicator.width,height:indicator.height,rowHeight:row?.height,gap:copy?copy.left-indicator.right:null,describedByValid:!describedBy||describedBy.split(/\\s+/).every((id)=>document.getElementById(id)),visible:input.getClientRects().length>0,focus:[focus.outlineStyle,focus.outlineWidth],actionsSeparate:!intersects};
+        const label=input.labels?.[0],indicator=input.getBoundingClientRect(),row=label?.getBoundingClientRect(),copy=label?.querySelector(".studio-choice-copy")?.getBoundingClientRect(),describedBy=input.getAttribute("aria-describedby"),actions=[...label?.parentElement?.children??[]].filter((element)=>element!==label&&element.matches?.("button,a")),intersects=actions.some((action)=>{const box=action.getBoundingClientRect();return!(row.right<=box.left||box.right<=row.left||row.bottom<=box.top||box.bottom<=row.top);});
+        const detail={key,description:input.getAttribute("aria-description"),pattern:input.getAttribute("role")==="switch"?"switch":"checkbox",enhanced:input.dataset.studioChoiceEnhanced,labels:input.labels?.length,id:input.id,forValue:label?.htmlFor,width:indicator.width,height:indicator.height,rowHeight:row?.height,gap:copy?copy.left-indicator.right:null,describedByValid:!describedBy||describedBy.split(/\\s+/).every((id)=>document.getElementById(id)),visible:input.getClientRects().length>0,actionsSeparate:!intersects};
         instances.push(detail);contracts[key]??=detail;
       }
     },probe=async(root,onlyKey)=>{
@@ -584,17 +662,19 @@ try{
   await metrics(studio,360,800);
   await evaluate(studio,`document.querySelector('#project-tree button[data-kind="documentation"]').click();document.querySelector('[data-theme-group="Table"]').open=true`);
   await ready(studio,"document.querySelector('[aria-label=\"Project Documentation workspace\"] input[type=\"checkbox\"]')?.dataset.studioChoiceEnhanced==='true'","narrow choice rows");
-  await nativeKey(studio,"Tab","Tab");
+  const responsiveFocus=await nativeFocusChoice(studio,'[aria-label="Project Documentation workspace"]',"Include concept subheadings");
   const responsiveChoices=await evaluate(studio,`(()=>{
-    const root=document.querySelector('[aria-label="Project Documentation workspace"]'),choices=[...root.querySelectorAll('input[type="checkbox"]')].filter((input)=>input.getClientRects().length),rows=choices.map((input)=>input.labels[0]),boxes=rows.map((row)=>row.getBoundingClientRect()),input=choices.find((choice)=>choice.labels[0].textContent.includes("Include concept subheadings"));input.focus();const focus=getComputedStyle(input.labels[0]);
-    return{coarse:matchMedia("(pointer: coarse)").matches,minTarget:Math.min(...boxes.map(({height})=>height)),adjacent:choices.every((choice)=>{const indicator=choice.getBoundingClientRect(),copy=choice.labels[0].querySelector(".studio-choice-copy").getBoundingClientRect();return Math.abs(copy.left-indicator.right-8)<.1;}),contained:boxes.every(({left,right})=>left>=0&&right<=innerWidth+.1),focus:[focus.outlineStyle,focus.outlineWidth],overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth};
+    const root=document.querySelector('[aria-label="Project Documentation workspace"]'),choices=[...root.querySelectorAll('input[type="checkbox"]')].filter((input)=>input.getClientRects().length),rows=choices.map((input)=>input.labels[0]),boxes=rows.map((row)=>row.getBoundingClientRect());
+    return{coarse:matchMedia("(pointer: coarse)").matches,minTarget:Math.min(...boxes.map(({height})=>height)),adjacent:choices.every((choice)=>{const indicator=choice.getBoundingClientRect(),copy=choice.labels[0].querySelector(".studio-choice-copy").getBoundingClientRect();return Math.abs(copy.left-indicator.right-8)<.1;}),contained:boxes.every(({left,right})=>left>=0&&right<=innerWidth+.1),overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth};
   })()`);
   assert.equal(responsiveChoices.coarse,true);
   assert.equal(responsiveChoices.minTarget>=44,true);
   assert.equal(responsiveChoices.adjacent,true);
   assert.equal(responsiveChoices.contained,true);
-  assert.notEqual(responsiveChoices.focus[0],"none");
-  assert.notEqual(responsiveChoices.focus[1],"0px");
+  assert.equal(responsiveFocus.active,true);
+  assert.notDeepEqual(responsiveFocus.focus,responsiveFocus.defaultFocus);
+  assert.notEqual(responsiveFocus.focus[0],"none");
+  assert.notEqual(responsiveFocus.focus[1],"0px");
   assert.equal(responsiveChoices.overflow,0);
   await metrics(studio,640,450);
   const zoomChoices=await evaluate(studio,`(()=>{const root=document.querySelector('[aria-label="Project Documentation workspace"]'),choices=[...root.querySelectorAll('input[type="checkbox"]')].filter((input)=>input.getClientRects().length),rows=choices.map((input)=>input.labels[0].getBoundingClientRect());return{targets:rows.every(({height})=>height>=44),contained:rows.every(({left,right})=>left>=0&&right<=innerWidth+.1),overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth};})()`);
@@ -644,7 +724,7 @@ try{
     [conflictConservation.contract]:conflictConservation.description,
   };
   assert.deepEqual(Object.keys(observedDescriptions).sort(),[...expectedStudioChoiceContracts.keys()].sort(),"the installed production mounts must exercise every registered Studio choice");
-  const nativeChoiceAudits=[...documentationNativeChoices,...documentationConfigurationNativeChoices,...switchNativeChoices,...bulkNativeChoices,...defectNativeChoices,...mountedComponentNativeChoices,...conditionNativeChoices,...creationNativeChoices,...conflictNativeChoices];
+  const nativeChoiceAudits=[...documentationNativeChoices,...documentationConfigurationNativeChoices,...switchNativeChoices,...disabledConflictNativeChoices,...bulkNativeChoices,...defectNativeChoices,...mountedComponentNativeChoices,...conditionNativeChoices,...creationNativeChoices,...conflictNativeChoices];
   assert.equal(nativeChoiceAudits.every(validNativeChoiceAudit),true,JSON.stringify(nativeChoiceAudits.filter((item)=>!validNativeChoiceAudit(item))));
   const instanceEvidence=Object.fromEntries([...expectedStudioChoiceContracts.keys()].map((key)=>{const instances=nativeChoiceAudits.filter((detail)=>detail.key===key);return[key,instances.length>0&&instances.every(validNativeChoiceAudit)];}));
   const mountedInteractionsByKey=(key)=>mountedComponentChoices.interactions.some((item)=>item.key===key)&&mountedComponentChoices.interactions.filter((item)=>item.key===key).every(({before,afterInput,freshBefore,afterLabel,inputChanges,labelChanges})=>afterInput===!before&&freshBefore===afterInput&&afterLabel===before&&inputChanges>=1&&labelChanges===1);
@@ -691,7 +771,7 @@ try{
   await writeFile(path.join(evidenceDirectory,"report.json"),`${JSON.stringify({live,library,tree:treeBefore,treeKeyboard,documentation,documentationChoices,documentationConfigurationChoices,documentationConservation,documentationDurableConsequences,nativeChoiceAudits,mountedComponentChoices,switch:{before:switchBefore,after:switchAfter,undo:switchUndo,redo:switchRedo,reloaded:switchReloaded},bulkConservation,defectOptions,conditionOptions,creationChoice,conflictConservation,studioChoiceControls,flow,zoom,reduced,forced},null,2)}\n`);
   console.log(JSON.stringify({studioChoiceControls}));
 } finally {
-  conflictStudio?.close();side?.close();studio?.close();
+  blockedStudio?.close();conflictStudio?.close();side?.close();studio?.close();
   await stopHeadlessChrome(chrome,1500);
   await rm(profile,{recursive:true,force:true,maxRetries:5,retryDelay:100});
 }
