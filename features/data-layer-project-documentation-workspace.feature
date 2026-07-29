@@ -180,7 +180,8 @@ Feature: Data layer project documentation workspace
     When the operator requests grouped concept output
     Then each selected Profile table and the matrix render PAGE, ECOMMERCE, and UNGROUPED sections in that order
     And each concept heading spans the complete table width
-    And each heading is followed by the standard column headings and that concept's property rows in path order
+    And the standard column headings occur once at the top of each table
+    And each concept heading is followed directly by that concept's property rows in path order
     And no empty concept heading is emitted
     And Excel uses merged styled concept rows across the table width
     And rich document copy uses semantic concept headings with equivalent plain-text fallback
@@ -247,3 +248,14 @@ Feature: Data layer project documentation workspace
     And its technical property rows are absent
     And current, selected, and complete rich copy, plain-text fallback, and Excel preserve that heading order and row set whenever they contain that Profile
     And Flow output remains unchanged
+
+  # Data layer project documentation workspace 024
+  Scenario: Data layer project documentation workspace 024
+    Given concept subheadings are enabled for a table containing multiple non-empty concepts
+    When the operator refreshes the documentation preview
+    Then the table renders its section title as the strongest heading
+    And it renders one standard column-heading row before the first concept
+    And each concept renders as a full-width divider with a lighter theme color, smaller type, and less emphasis than the section title
+    And no concept divider repeats the standard column headings
+    And preview, rich copy, and Excel preserve that visual hierarchy
+    And plain-text fallback emits the column headings once and each concept label once

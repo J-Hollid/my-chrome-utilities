@@ -236,6 +236,18 @@ includes a selected non-`Sitewide` Profile such as `Opened Article`. Flow value-
 output remains isolated from concept configuration. The exact checkpoint remains
 `flow_export`, followed by `npm run package`.
 
+On approval, the concept-table hierarchy correction is later authority for project
+Documentation scenarios 018 and 024. Every grouped table renders its section title,
+one standard column-heading row, full-width concept dividers, and property rows in
+that order. A concept divider is followed directly by its rows and never repeats
+the standard column headings.
+
+The section title remains the strongest heading. Concept dividers use a lighter
+theme color, smaller type, and less emphasis while retaining readable contrast.
+Preview, rich copy, and Excel preserve this hierarchy; plain text emits one
+column-heading line and one label per non-empty concept. The exact checkpoint
+remains `flow_export`, followed by `npm run package`.
+
 On approval, the typed-literal and focused-editor correction is later authority
 for Authoring scenarios 023 and 064–067. Allowed values and custom examples share
 a type-directed literal language: commas delimit allowed values only outside

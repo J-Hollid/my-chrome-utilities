@@ -178,7 +178,8 @@ Feature: Data layer project documentation workspace runtime
     And production Sitewide, Opened Article, and matrix rows occupy all three groups
     When actual controls request grouped concept output
     Then installed previews parse as PAGE, ECOMMERCE, and UNGROUPED sections in order
-    And every section repeats its standard table header before path-ordered property rows
+    And each parsed table contains one standard column-header record before its first concept
+    And every concept record is followed directly by path-ordered property rows
     And no zero-row section exists
     And workbook parsing finds one merged styled concept row spanning each table width
     And clipboard parsing finds semantic concept headings and an equivalent plain-text fallback
@@ -246,3 +247,14 @@ Feature: Data layer project documentation workspace runtime
     And its parsed property rows omit technical
     And current, selected, and complete clipboard HTML, plain text, and workbook XML preserve that heading order and row set whenever Opened Article is in scope
     And Flow output hashes remain unchanged
+
+  # Data layer project documentation workspace runtime 024
+  Scenario: Data layer project documentation workspace runtime 024
+    Given production concept subheadings are enabled for a table containing multiple non-empty concepts
+    When the installed Refresh preview action is activated
+    Then DOM parsing finds the section title before one table header and every concept rowgroup
+    And computed concept-divider theme color, font size, and emphasis are subordinate to the section title
+    And DOM parsing finds no concept-column repetition records
+    And clipboard HTML and workbook XML each contain one standard column-heading row per table
+    And their concept dividers retain the same subordinate theme treatment
+    And parsed plain text contains one column-heading line and one label per non-empty concept

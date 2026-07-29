@@ -60,10 +60,11 @@ current rows retains its choice but emits no empty output heading.
 
 Within an included concept, rows retain stable path order. When subheadings are
 hidden, rows still follow configured concept-group order in one ordinary table.
-When enabled, each non-empty concept begins with a full-width concept heading,
-followed by the table's standard headings and that concept's rows. This order and
-filtering are identical in preview, Excel, semantic rich clipboard HTML, and the
-plain-text fallback.
+When enabled, the table renders its standard column headings once, followed by
+each non-empty concept as a full-width divider and that concept's rows. Concept
+dividers never repeat the standard column headings. This order and filtering are
+identical in preview, Excel, semantic rich clipboard HTML, and the plain-text
+fallback.
 
 ## Concept correction
 
@@ -88,6 +89,20 @@ an ordinary saved ordering entry with virtual grouping semantics only. Reconcili
 preserves its exact position and appends newly discovered concepts after all saved
 entries.
 
+## Concept table hierarchy
+
+A grouped table has one deliberate visual hierarchy: section title, one standard
+column-heading row, full-width concept dividers, then property rows. The section
+title remains the strongest heading. Concept dividers use a lighter theme color,
+smaller type, and less emphasis than the section title while retaining readable
+contrast. They do not resemble a second table header.
+
+Preview and rich clipboard HTML use one semantic table header and semantic concept
+row-group headings. Excel uses one standard column-heading row and merged concept
+divider rows spanning the table width. Plain text writes the column headings once
+and each non-empty concept label once. Repetition required by a rendering medium at
+a physical page boundary is not concept-driven repetition.
+
 ## Output contract
 
 The first release supports:
@@ -104,9 +119,9 @@ Diagnostics and provenance remain tool-only preflight information and never appe
 as sheets, columns, identities, hashes, or repair details in shared output.
 
 For every selected Site Profile and the matrix, enabled concept subheadings are
-merged styled rows spanning the complete Excel table width. Rich document copy
-emits semantic concept headings suitable for Jira or Confluence; this is the
-existing rich-copy path, not a new Jira API or export type.
+subordinate merged styled rows spanning the complete Excel table width. Rich
+document copy emits semantic concept headings suitable for Jira or Confluence;
+this is the existing rich-copy path, not a new Jira API or export type.
 
 Incomplete output requires confirmation and contains only the concise
 `Draft — incomplete` label.
@@ -142,4 +157,6 @@ and parse the on result before reversing it. Ordering evidence must move
 `Ungrouped` away from last position and preserve that position through compilation
 and round-trips. A non-`Sitewide` Profile added after snapshot compilation must
 prove filtering, ordering, and headings in preview, rich copy, plain text, and
-Excel.
+Excel. Grouped-table evidence must additionally prove one column-heading row per
+table, no concept-driven column-heading repetition, and the subordinate concept
+divider treatment in preview, rich copy, and Excel.
