@@ -48,6 +48,13 @@ function applyThemeToTable(table, theme) {
             cell.style.color = "#fff";
         }
     }
+    for (const cell of Array.from(table.querySelectorAll('th[scope="rowgroup"]'))) {
+        cell.style.backgroundColor = theme.colors.stripe;
+        cell.style.color = theme.colors.accent;
+        cell.style.fontSize = `${Math.min(theme.typography.bodySize, theme.typography.headingSize - 2)}pt`;
+        cell.style.fontWeight = "600";
+        cell.style.textAlign = "start";
+    }
     if (theme.striping)
         for (const [index, row] of Array.from(table.querySelectorAll("tbody tr")).entries())
             if (index % 2 === 1)
@@ -75,15 +82,13 @@ function renderTable(value, theme) {
     for (const [index, sourceRow] of value.rows.entries()) {
         const group = groups.get(index);
         if (group) {
-            const headingRow = document.createElement("tr"), cell = document.createElement("th"), columnRow = document.createElement("tr");
+            const headingRow = document.createElement("tr"), cell = document.createElement("th");
             headingRow.dataset.conceptHeading = group.name;
             cell.colSpan = value.headings.length;
             cell.scope = "rowgroup";
             cell.textContent = conceptSectionHeading(group.name);
             headingRow.append(cell);
-            columnRow.dataset.conceptColumns = "true";
-            columnRow.append(...columns());
-            body.append(headingRow, columnRow);
+            body.append(headingRow);
         }
         const row = document.createElement("tr");
         row.append(...sourceRow.map((cell) => Object.assign(document.createElement("td"), { textContent: cell })));
@@ -394,12 +399,16 @@ export function installProjectDocumentationWorkspaceUi(options) {
             if (live.stale)
                 preview.append(Object.assign(document.createElement("p"), { textContent: `Preview stale — changed sources: ${live.changedSources.join(", ")}.`, role: "alert" }));
             for (const table of selectProjectDocumentationTables(snapshot, { scope: "complete" })) {
-                const sectionHost = document.createElement("section"), identity = [theme.clientName, theme.headerText].filter(Boolean).join(" · ");
+                const sectionHost = document.createElement("section"), sectionTitle = heading(3, table.title), identity = [theme.clientName, theme.headerText].filter(Boolean).join(" · ");
                 sectionHost.dataset.previewSection = table.id;
                 sectionHost.dataset.themeFingerprint = themeFingerprint(theme);
+                sectionTitle.style.fontFamily = theme.typography.family;
+                sectionTitle.style.fontSize = `${theme.typography.headingSize}pt`;
+                sectionTitle.style.fontWeight = "700";
+                sectionTitle.style.color = theme.colors.heading;
                 if (theme.logo)
                     sectionHost.append(Object.assign(document.createElement("img"), { src: theme.logo, alt: `${theme.clientName || theme.name} logo` }));
-                sectionHost.append(heading(3, table.title));
+                sectionHost.append(sectionTitle);
                 if (identity)
                     sectionHost.append(Object.assign(document.createElement("p"), { textContent: identity }));
                 sectionHost.append(renderTable(table, theme));

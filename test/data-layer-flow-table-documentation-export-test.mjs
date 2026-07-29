@@ -100,21 +100,18 @@ const groupedCopy=renderFlowDocumentationClipboard(groupedTable,{includeHeadings
 assert.deepEqual(groupedCopy.plain.split("\n"),[
   "Property\tDescription",
   "PAGE\t",
-  "Property\tDescription",
   "/page\tPage",
   "ECOMMERCE\t",
-  "Property\tDescription",
   "/ecommerce/a\tCommerce A",
   "/ecommerce/b\tCommerce B",
   "UNGROUPED\t",
-  "Property\tDescription",
   "/visitor\tVisitor",
-],"plain grouped copy presents uppercase sections and repeats the standard header before every path-ordered group");
+],"plain grouped copy presents one standard header followed by uppercase dividers and path-ordered groups");
 assert.equal((groupedCopy.html.match(/scope="rowgroup"/gu)??[]).length,3,"rich copy emits one semantic heading for each non-empty concept");
-assert.equal((groupedCopy.html.match(/data-concept-columns="true"/gu)??[]).length,3,"rich copy repeats the standard column headings for each concept");
+assert.equal((groupedCopy.html.match(/data-concept-columns="true"/gu)??[]).length,0,"rich copy emits the standard column headings once");
 const groupedWorksheet=documentationWorksheet(groupedTable);
 assert.equal((groupedWorksheet.match(/data-concept-heading="true"/gu)??[]).length,3,"Excel emits one merged concept row per non-empty group");
-assert.equal((groupedWorksheet.match(/data-concept-columns="true"/gu)??[]).length,3,"Excel repeats the standard column headings after each concept row");
+assert.equal((groupedWorksheet.match(/data-concept-columns="true"/gu)??[]).length,0,"Excel emits the standard column headings once");
 assert.match(groupedWorksheet,/PAGE/);assert.match(groupedWorksheet,/ECOMMERCE/);assert.match(groupedWorksheet,/UNGROUPED/);
 const incompleteCopy=renderFlowDocumentationClipboard(values,{documentTitle:snapshot.title});
 assert.match(incompleteCopy.plain,/^Checkout journey · Draft — incomplete/);

@@ -63,7 +63,8 @@
                         :orderingControls true
                         :export021 true
                         :export022 true
-                        :export023 true}
+                        :export023 true
+                        :export024 true}
                        (map (fn [index]
                               [(keyword (str "export" (format "%03d" index))) true])
                             (range 1 21)))]

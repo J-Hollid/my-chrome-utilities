@@ -127,9 +127,17 @@ const groupedSnapshot=compileProjectDocumentationSnapshot({
     conceptGroups:[{name:"Commerce",start:0,count:2},{name:"Ungrouped",start:2,count:1}],
   }],
 });
-const groupedWorkbook=writeProjectDocumentationWorkbook(groupedSnapshot,{scope:"complete"}),groupedFiles=unzipStored(groupedWorkbook),groupedSheet=new TextDecoder().decode(groupedFiles.get("xl/worksheets/sheet1.xml")),repeatedColumnRows=[...groupedSheet.matchAll(/<row[^>]*data-concept-columns="true"[^>]*>([\s\S]*?)<\/row>/gu)].map((match)=>match[1]);
-assert.equal(repeatedColumnRows.length,2,"the workbook retains one repeated standard column row after every concept heading");
-assert.equal(repeatedColumnRows.every((row)=>(row.match(/<c /gu)??[]).length>0&&(row.match(/<c s="1" /gu)??[]).length===(row.match(/<c /gu)??[]).length),true,"every repeated concept column cell uses the standard workbook heading style");
+const groupedClipboard=renderProjectDocumentationClipboard(groupedSnapshot,{scope:"complete"}),plainColumnHeading="Property\tDescription\tRequired\tAllowed values\tExample\tComments";
+assert.equal((groupedClipboard.html.match(/data-concept-columns=/gu)??[]).length,0,"rich output never repeats standard columns after a concept divider");
+assert.equal((groupedClipboard.plain.match(new RegExp(plainColumnHeading,"gu"))??[]).length,1,"plain output writes the standard column headings once");
+assert.equal((groupedClipboard.plain.match(/\nCOMMERCE\t/gu)??[]).length,1);
+assert.equal((groupedClipboard.plain.match(/\nUNGROUPED\t/gu)??[]).length,1);
+assert.match(groupedClipboard.html,/<caption style="[^"]*font-size:16pt;[^"]*font-weight:700;[^"]*color:#112233;/u,"rich output makes the section title the strongest themed heading");
+assert.match(groupedClipboard.html,/<th colspan="6" scope="rowgroup" style="[^"]*font-size:11pt;[^"]*font-weight:600;[^"]*background:#eef2f4;color:#445566;/u,"rich concept dividers use subordinate theme treatment");
+const groupedWorkbook=writeProjectDocumentationWorkbook(groupedSnapshot,{scope:"complete"}),groupedFiles=unzipStored(groupedWorkbook),groupedSheet=new TextDecoder().decode(groupedFiles.get("xl/worksheets/sheet1.xml")),repeatedColumnRows=[...groupedSheet.matchAll(/<row[^>]*data-concept-columns="true"[^>]*>([\s\S]*?)<\/row>/gu)].map((match)=>match[1]),conceptRows=[...groupedSheet.matchAll(/<row[^>]*data-concept-heading="true"[^>]*>([\s\S]*?)<\/row>/gu)].map((match)=>match[1]);
+assert.equal(repeatedColumnRows.length,0,"the workbook contains one standard column-heading row per grouped table");
+assert.equal(conceptRows.length,2);
+assert.equal(conceptRows.every((row)=>(row.match(/<c /gu)??[]).length>0&&(row.match(/<c s="2" /gu)??[]).length===(row.match(/<c /gu)??[]).length),true,"every concept divider uses the subordinate workbook style");
 for(const forbidden of ["diagnostic","provenance","revision hash","repair action"])assert.doesNotMatch(binary,new RegExp(forbidden,"i"));
 assert.doesNotMatch(binary,/<f>/);
 assert.match(binary,/data-theme-fingerprint=/);

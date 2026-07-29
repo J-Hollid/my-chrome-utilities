@@ -87,7 +87,8 @@ const theme={id:"theme:concept",name:"Concept theme",clientName:"",logo:"",color
 const snapshot=compileProjectDocumentationSnapshot({projectId:"project:concept",projectName:"Concept project",set:documentationSet,theme,sourceRevisions:{},generatedAt:"2026-07-28T00:00:00.000Z",diagnostics:[],tables:[{id:"section:matrix",title:"Data capture matrix",headings:["Property","Page"],rows:[["/a","Mandatory"],["/b","Optional"],["/u","Optional"]],conceptGroups:[{name:"Commerce",start:0,count:2},{name:"Ungrouped",start:2,count:1}]}]});
 const rich=renderProjectDocumentationClipboard(snapshot,{scope:"complete"});
 assert.match(rich.html,/<th[^>]+scope="rowgroup"[^>]*>COMMERCE<\/th>/);
-assert.match(rich.plain,/COMMERCE\t*\nProperty\tPage\n\/a\tMandatory/);
+assert.match(rich.plain,/Property\tPage\nCOMMERCE\t*\n\/a\tMandatory/);
+assert.equal((rich.plain.match(/Property\tPage/gu)??[]).length,1);
 assert.match(new TextDecoder().decode(writeProjectDocumentationWorkbook(snapshot,{scope:"complete"})),/<mergeCell ref="A3:B3"\/>/);
 
 console.log("schema property concept model tests passed");
