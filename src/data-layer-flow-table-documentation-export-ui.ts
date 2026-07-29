@@ -79,23 +79,14 @@ export function installFlowDocumentationExportUi(options:Options):{render():void
     if(base.incomplete){const confirm=document.createElement("input");confirm.type="checkbox";confirm.checked=confirmedIncomplete;confirm.addEventListener("change",()=>{confirmedIncomplete=confirm.checked;renderWorkspace();});controls.append(labelled("Export labelled incomplete",confirm));}
     const copy=async(mode:"plain"|"rich")=>{if(blocked){feedbackText=stale.stale?"Refresh the stale preview before export.":"Confirm Export labelled incomplete first.";renderWorkspace();return;}const rendered=renderFlowDocumentationClipboard(configuredTable(),{includeHeadings,style,...(snapshot!.incomplete?{documentTitle:snapshot!.title}:{})});try{mode==="plain"?await ports.writePlain(rendered.plain):await ports.writeRich(rendered.html,rendered.plain);feedbackText=mode==="plain"?"Spreadsheet copied.":"Rich table copied with plain fallback.";}catch{feedbackText="Copy failed; preview remains available.";}renderWorkspace();};
     const spreadsheet=createButton("Spreadsheet",()=>{void copy("plain");}),rich=createButton("Rich table for Confluence or Jira",()=>{void copy("rich");}),download=createButton("Download Excel workbook",()=>{if(blocked){feedbackText=stale.stale?"Refresh the stale preview before export.":"Confirm Export labelled incomplete first.";renderWorkspace();return;}const configuredNow=configuredSnapshot(),bytes=writeFlowDocumentationWorkbook(configuredNow,{valueTable:configuredTable("values"),matrixTable:configuredTable("matrix")});ports.download(`${flow.name.toLowerCase().replace(/[^a-z0-9]+/g,"-")}-documentation.xlsx`,bytes,"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");feedbackText="Excel workbook downloaded.";renderWorkspace();});spreadsheet.disabled=rich.disabled=download.disabled=blocked;actions.append(spreadsheet,rich,download,createButton("Refresh preview",()=>{fresh(state,flowId,revision);renderWorkspace();}),createButton("Close documentation export",()=>{open=false;snapshot=undefined;options.renderFlow();}));feedback.textContent=feedbackText;
-    declareStudioChoice(headingControl,"documentation.include-headings");
     propertyList.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach((input)=>declareStudioChoice(input,"documentation.property-row"));
     metadataList.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach((input)=>declareStudioChoice(input,"documentation.metadata-column"));
-    contextList.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach((input)=>declareStudioChoice(input,"documentation.context-column"));
-    headingFieldset.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach((input)=>declareStudioChoice(input,"documentation.heading-part"));
     controls.querySelectorAll<HTMLInputElement>('label input[type="checkbox"]').forEach((input)=>{if(!input.closest("fieldset"))declareStudioChoice(input,"documentation.confirm-incomplete");});
     section.append(heading,identity,controls,preview,detail,diagnostics,actions,feedback);host.append(section);heading.focus();
   }
 
   function render():void {
     document.querySelectorAll("[data-flow-documentation-export]").forEach((control)=>control.remove());
-    if(open){renderWorkspace();return;}
-    const {state,flowId,flow}=current(),host=document.querySelector<HTMLElement>("#flow-graph-workspace");
-    if(!host||!state||!flowId||!flow)return;
-    const trigger=createButton("Export selected Flow documentation",()=>{open=true;renderWorkspace();});
-    trigger.dataset.flowDocumentationExport="true";
-    host.prepend(trigger);
   }
   return{render};
 }

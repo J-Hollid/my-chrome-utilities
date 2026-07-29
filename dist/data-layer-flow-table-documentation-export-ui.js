@@ -188,11 +188,8 @@ export function installFlowDocumentationExportUi(options) {
         spreadsheet.disabled = rich.disabled = download.disabled = blocked;
         actions.append(spreadsheet, rich, download, createButton("Refresh preview", () => { fresh(state, flowId, revision); renderWorkspace(); }), createButton("Close documentation export", () => { open = false; snapshot = undefined; options.renderFlow(); }));
         feedback.textContent = feedbackText;
-        declareStudioChoice(headingControl, "documentation.include-headings");
         propertyList.querySelectorAll('input[type="checkbox"]').forEach((input) => declareStudioChoice(input, "documentation.property-row"));
         metadataList.querySelectorAll('input[type="checkbox"]').forEach((input) => declareStudioChoice(input, "documentation.metadata-column"));
-        contextList.querySelectorAll('input[type="checkbox"]').forEach((input) => declareStudioChoice(input, "documentation.context-column"));
-        headingFieldset.querySelectorAll('input[type="checkbox"]').forEach((input) => declareStudioChoice(input, "documentation.heading-part"));
         controls.querySelectorAll('label input[type="checkbox"]').forEach((input) => { if (!input.closest("fieldset"))
             declareStudioChoice(input, "documentation.confirm-incomplete"); });
         section.append(heading, identity, controls, preview, detail, diagnostics, actions, feedback);
@@ -201,16 +198,6 @@ export function installFlowDocumentationExportUi(options) {
     }
     function render() {
         document.querySelectorAll("[data-flow-documentation-export]").forEach((control) => control.remove());
-        if (open) {
-            renderWorkspace();
-            return;
-        }
-        const { state, flowId, flow } = current(), host = document.querySelector("#flow-graph-workspace");
-        if (!host || !state || !flowId || !flow)
-            return;
-        const trigger = createButton("Export selected Flow documentation", () => { open = true; renderWorkspace(); });
-        trigger.dataset.flowDocumentationExport = "true";
-        host.prepend(trigger);
     }
     return { render };
 }

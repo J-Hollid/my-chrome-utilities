@@ -16,12 +16,8 @@ export type StudioChoiceKey=
   |"documentation.export-section"
   |"documentation.confirm-incomplete"
   |"documentation.theme-option"
-  |"documentation.include-headings"
-  |"documentation.context-column"
-  |"documentation.heading-part"
   |"entity.creation-option"
   |"entity.editor-option"
-  |"condition.negation"
   |"conflict.pending-field"
   |"bulk.staged-property"
   |"defect.issue-inclusion"
@@ -59,12 +55,8 @@ const contracts:Readonly<Record<StudioChoiceKey,StudioChoiceContract>>=Object.fr
   "documentation.export-section":checkbox("documentation.export-section","Selects membership in the export scope"),
   "documentation.confirm-incomplete":checkbox("documentation.confirm-incomplete","Records an acknowledgement before incomplete export"),
   "documentation.theme-option":checkbox("documentation.theme-option","Stages a theme option for explicit Save theme"),
-  "documentation.include-headings":checkbox("documentation.include-headings","Stages heading inclusion for the later documentation copy action"),
-  "documentation.context-column":checkbox("documentation.context-column","Selects a context column for the later documentation export"),
-  "documentation.heading-part":checkbox("documentation.heading-part","Selects a heading part for the later documentation export"),
   "entity.creation-option":checkbox("entity.creation-option","Stages an entity option until the creation form is submitted"),
   "entity.editor-option":checkbox("entity.editor-option","Stages an entity option until Save changes"),
-  "condition.negation":checkbox("condition.negation","Stages condition negation until the enclosing edit is saved"),
   "conflict.pending-field":checkbox("conflict.pending-field","Selects the pending field value for the later conflict-resolution action"),
   "bulk.staged-property":checkbox("bulk.staged-property","Selects membership for the later bulk action"),
   "defect.issue-inclusion":checkbox("defect.issue-inclusion","Selects an issue for the later defect report action"),

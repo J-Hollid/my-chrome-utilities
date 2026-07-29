@@ -207,7 +207,6 @@ function renderSelectedEntityEditor(content:HTMLElement,entity:ProjectEntity):vo
         : entity,
     );
     if(control instanceof HTMLInputElement&&control.type==="checkbox")declareStudioChoice(control,"entity.editor-option");
-    if(control instanceof HTMLFieldSetElement&&field.type==="condition")control.querySelectorAll<HTMLInputElement>('input[type="checkbox"]').forEach((input)=>declareStudioChoice(input,"condition.negation"));
     if(selectedKind==="pages"&&field.key==="eventName") control.setAttribute("required","");
     label.textContent=field.label;
     label.append(control);
