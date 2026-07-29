@@ -3,6 +3,7 @@ import {
   compileFlowDocumentationSnapshot,
   configureFlowDocumentationSnapshot,
   configureFlowDocumentationTable,
+  documentationWorksheet,
   orderFlowDocumentationOccurrenceIds,
   renderFlowDocumentationClipboard,
   writeFlowDocumentationWorkbook,
@@ -119,6 +120,13 @@ for(let example=0;example<250;example+=1){
     set.concepts.filter(({name,included})=>included&&items.some(({concept})=>(concept?.trim().toLocaleLowerCase()||"ungrouped")===name.toLocaleLowerCase())).map(({name})=>name),
     "non-empty groups retain stable configured order and suppress zero-row headings",
   );
+  const groupedTable={title:`Concept property ${example}`,headings:["Property","Path"],rows:headingsOn.rows,conceptGroups:headingsOn.groups},rendered=renderFlowDocumentationClipboard(groupedTable,{includeHeadings:true}),worksheet=documentationWorksheet(groupedTable);
+  assert.equal((rendered.plain.match(/^Property\tPath$/gmu)??[]).length,1,"plain grouped output emits its standard headings once");
+  assert.equal((rendered.html.match(/<thead><tr>/gu)??[]).length,1,"rich grouped output emits one standard heading row");
+  assert.equal((rendered.html.match(/data-concept-columns/gu)??[]).length,0,"rich grouped output never repeats columns per concept");
+  assert.equal((worksheet.match(/data-concept-columns/gu)??[]).length,0,"worksheet grouped output never repeats columns per concept");
+  assert.equal((rendered.html.match(/scope="rowgroup"/gu)??[]).length,headingsOn.groups.length,"rich grouped output conserves every non-empty concept divider");
+  assert.equal((worksheet.match(/data-concept-heading="true"/gu)??[]).length,headingsOn.groups.length,"worksheet grouped output conserves every non-empty concept divider");
 }
 
 console.log("Flow table documentation export property tests passed");
