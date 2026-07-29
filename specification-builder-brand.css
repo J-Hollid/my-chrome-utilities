@@ -227,9 +227,6 @@ body.twatility-studio {
     padding-block-end: 1rem;
   }
 
-  .twatility-studio #studio-analyst-guidance {
-    display: none;
-  }
 }
 
 @media (forced-colors: active) {

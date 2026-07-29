@@ -13,6 +13,15 @@ export function studioAnalystHintForRoute(route, shown) {
     const hint = hints.find((candidate) => candidate.route === route && !excluded.has(candidate.id));
     return hint ? { ...hint } : undefined;
 }
+export function studioAnalystGuidanceIsActive(options) {
+    const view = options.document.defaultView;
+    return options.populated
+        && !options.document.hidden
+        && !options.workspace.hidden
+        && view?.getComputedStyle(options.navigation).display !== "none"
+        && view?.getComputedStyle(options.region).display !== "none"
+        && !options.document.querySelector('dialog[open], .actions details[open], [aria-modal="true"], [data-schema-row-overlay="true"]');
+}
 export function createStudioAnalystGuidanceSchedule() {
     let untilNext = STUDIO_ANALYST_FIRST_HINT_MS;
     let current;
@@ -76,10 +85,13 @@ export function installStudioAnalystGuidance(options) {
     };
     const timer = setInterval(evaluate, options.intervalMilliseconds ?? 250);
     document.addEventListener("visibilitychange", evaluate);
-    return () => {
-        clearInterval(timer);
-        document.removeEventListener("visibilitychange", evaluate);
-        options.bubble.hidden = true;
+    return {
+        evaluate,
+        dispose() {
+            clearInterval(timer);
+            document.removeEventListener("visibilitychange", evaluate);
+            options.bubble.hidden = true;
+        },
     };
 }
 //# sourceMappingURL=specification-studio-technical-analyst-guidance.js.map

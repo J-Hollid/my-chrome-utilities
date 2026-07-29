@@ -25,7 +25,7 @@ import { mountCanonicalSchemaEditor as mountCanonicalSchemaEditorBase } from "./
 import { mountProjectConditionEditor, projectConditionEditorValue } from "./data-layer-project-condition-editor.js";
 import { createProjectCollectionEntity, hasSavedSchemaAdoptionActions, inspectProjectEntityRemoval, projectCollectionCreationFields, projectCollectionCreationRoute, projectCollectionDefinitions, projectEntityWorkspaceRoute, projectInspectorTogglePresentation, removeProjectCollectionEntity } from "./data-layer-project-entity-lifecycle.js";
 import { declareStudioChoice, installStudioChoiceControls } from "./data-layer-studio-choice-controls.js";
-import { installStudioAnalystGuidance } from "./specification-studio-technical-analyst-guidance.js";
+import { installStudioAnalystGuidance, studioAnalystGuidanceIsActive } from "./specification-studio-technical-analyst-guidance.js";
 const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, START_PATH_KEY = "my-chrome-utilities.specification-project-start.v1", routeParameters = new URLSearchParams(location.search), startupProjectId = routeParameters.get("project") ?? undefined, startupKind = routeParameters.get("kind") ?? undefined, startupEntityId = routeParameters.get("entity") ?? undefined, startupRoute = startupKind ? durableProjectRouteForWorkspace(startupKind, startupEntityId) : undefined;
 installStudioChoiceControls(document.body);
 const durableProjectRuntime = await openDurableProjectRuntime(globalThis.localStorage, globalThis.indexedDB, { ...(startupProjectId ? { projectId: startupProjectId } : {}), ...(startupRoute ? { route: startupRoute } : {}) }).catch((error) => { const status = document.querySelector("#project-state"); if (status)
@@ -52,7 +52,7 @@ const analystNavigation = q('#project-workspace > nav'), analystRegion = q("#stu
 installStudioAnalystGuidance({
     bubble: analystHint,
     route: () => documentationOpen ? "Documentation" : projectOverview ? "Project overview" : labels[selectedKind],
-    active: () => Boolean(state) && !document.hidden && !projectWorkspace.hidden && getComputedStyle(analystNavigation).display !== "none" && getComputedStyle(analystRegion).display !== "none" && !document.querySelector('dialog[open], .actions details[open], [aria-modal="true"], [data-schema-row-overlay="true"]'),
+    active: () => studioAnalystGuidanceIsActive({ document, populated: Boolean(state), workspace: projectWorkspace, navigation: analystNavigation, region: analystRegion }),
 });
 const mountCanonicalSchemaEditor = (options) => mountCanonicalSchemaEditorBase({ ...options, conceptSuggestions: () => state ? projectCanonicalConcepts(state) : [] });
 let pageGroupMembershipStatus = "";

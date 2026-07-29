@@ -32,6 +32,27 @@ export interface StudioAnalystGuidanceSchedule{
   advance(elapsedMilliseconds:number,context:{readonly active:boolean;readonly route:string}):StudioAnalystGuidanceAction;
 }
 
+export interface StudioAnalystGuidanceController{
+  evaluate():void;
+  dispose():void;
+}
+
+export function studioAnalystGuidanceIsActive(options:{
+  readonly document:Document;
+  readonly populated:boolean;
+  readonly workspace:HTMLElement;
+  readonly navigation:HTMLElement;
+  readonly region:HTMLElement;
+}):boolean{
+  const view=options.document.defaultView;
+  return options.populated
+    &&!options.document.hidden
+    &&!options.workspace.hidden
+    &&view?.getComputedStyle(options.navigation).display!=="none"
+    &&view?.getComputedStyle(options.region).display!=="none"
+    &&!options.document.querySelector('dialog[open], .actions details[open], [aria-modal="true"], [data-schema-row-overlay="true"]');
+}
+
 export function createStudioAnalystGuidanceSchedule():StudioAnalystGuidanceSchedule{
   let untilNext=STUDIO_ANALYST_FIRST_HINT_MS;
   let current:StudioAnalystHint|undefined;
@@ -76,7 +97,7 @@ export function installStudioAnalystGuidance(options:{
   readonly active:()=>boolean;
   readonly now?:()=>number;
   readonly intervalMilliseconds?:number;
-}):()=>void{
+}):StudioAnalystGuidanceController{
   const schedule=createStudioAnalystGuidanceSchedule();
   const now=options.now??(()=>performance.now());
   let previous=now();
@@ -94,9 +115,12 @@ export function installStudioAnalystGuidance(options:{
   };
   const timer=setInterval(evaluate,options.intervalMilliseconds??250);
   document.addEventListener("visibilitychange",evaluate);
-  return()=>{
-    clearInterval(timer);
-    document.removeEventListener("visibilitychange",evaluate);
-    options.bubble.hidden=true;
+  return{
+    evaluate,
+    dispose(){
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange",evaluate);
+      options.bubble.hidden=true;
+    },
   };
 }

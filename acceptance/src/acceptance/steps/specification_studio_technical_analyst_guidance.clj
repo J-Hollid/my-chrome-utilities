@@ -54,9 +54,12 @@
    example-relations example
    "Specification Studio technical analyst guidance example columns describe an invalid result."))
 
-(defn- assert-browser! [{:keys [before visible narrow after] :as evidence}]
+(defn- assert-browser! [{:keys [before preFirstHidden visible scheduleBoundary
+                                blockingPredicate documentHidden zoom narrow after]
+                         :as evidence}]
   (support/assert!
    (and (:bubbleHidden before)
+        preFirstHidden
         (false? (:hidden visible))
         (= "project-overview" (:hintId visible))
         (= (:expectedWidth visible) (:width visible))
@@ -68,7 +71,34 @@
         (= "polite" (:live visible))
         (= "status" (:role visible))
         (= "none" (:animation visible))
-        (= 0 (:region narrow))
+        (:hidden (:preFirst scheduleBoundary))
+        (= "project-overview" (:id (:first scheduleBoundary)))
+        (:hidden (:afterLifetime scheduleBoundary))
+        (:hidden (:cooldownBefore scheduleBoundary))
+        (= ["project-overview" "shared-profiles" "pages" "flows" "documentation"]
+           (mapv :id (:rotation scheduleBoundary)))
+        (= "project-overview" (:id (:reset scheduleBoundary)))
+        (= [true true "pages" true]
+           (mapv #(get-in scheduleBoundary %)
+                 [[:documentPause :before :hidden]
+                  [:documentPause :inactive :hidden]
+                  [:documentPause :resumed :id]
+                  [:documentPause :removed :hidden]]))
+        (= [true true "pages" true]
+           (mapv #(get-in scheduleBoundary %)
+                 [[:blockingPause :before :hidden]
+                  [:blockingPause :inactive :hidden]
+                  [:blockingPause :resumed :id]
+                  [:blockingPause :removed :hidden]]))
+        (every? true? (vals blockingPredicate))
+        (:hidden documentHidden)
+        (false? (:active documentHidden))
+        (:visible zoom)
+        (:inside zoom)
+        (zero? (:overflow zoom))
+        (= "Splendid! Refresh the preview after changing a Documentation Set." (:text zoom))
+        (:visibleBefore narrow)
+        (:hiddenWithNavigation narrow)
         (:overflow narrow)
         (= (:project before) (:project after))
         (= (:undo before) (:undo after)))

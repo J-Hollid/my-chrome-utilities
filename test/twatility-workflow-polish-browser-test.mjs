@@ -788,7 +788,10 @@ try{
   await ready(studio,"document.readyState==='complete'&&!document.querySelector('#project-workspace').hidden&&document.querySelector('#project-tree button[data-kind=\"overview\"]')?.getAttribute('aria-current')==='true'","analyst guidance overview");
   const analystBefore=await evaluate(studio,`(async()=>{const repo=await (await import("./data-layer-durable-project-repository.js")).openIndexedDbProjectRepository(),record=await repo.loadProject(${JSON.stringify(projectId)}),search=document.querySelector("#project-search");search.focus();return{project:JSON.stringify(record),undo:document.querySelector("#undo-project").dataset.undoCount,focus:search.id,bubbleHidden:document.querySelector("#studio-analyst-hint").hidden};})()`);
   assert.equal(analystBefore.bubbleHidden,true);
-  await wait(10_300);
+  await wait(9_700);
+  const analystPreFirst=await evaluate(studio,"document.querySelector('#studio-analyst-hint').hidden");
+  assert.equal(analystPreFirst,true);
+  await wait(600);
   const analystVisible=await evaluate(studio,`(()=>{const region=document.querySelector("#studio-analyst-guidance"),image=region.querySelector("img"),bubble=document.querySelector("#studio-analyst-hint"),nav=document.querySelector("#project-workspace > nav"),regionBox=region.getBoundingClientRect(),imageBox=image.getBoundingClientRect(),bubbleBox=bubble.getBoundingClientRect(),navBox=nav.getBoundingClientRect(),style=getComputedStyle(bubble),under=[...document.elementsFromPoint(bubbleBox.left+bubbleBox.width/2,bubbleBox.top+bubbleBox.height/2)].filter((element)=>element!==bubble&&element.matches("button,input,select,textarea,a[href],[role=button]"));return{hidden:bubble.hidden,text:bubble.textContent,hintId:bubble.dataset.hintId,width:imageBox.width,expectedWidth:parseFloat(getComputedStyle(document.documentElement).fontSize)*6.5,leftAnchored:Math.abs(imageBox.left-regionBox.left)<.6,aspectRatio:imageBox.width/imageBox.height,inside:regionBox.left>=navBox.left&&regionBox.right<=navBox.right+.6&&bubbleBox.left>=regionBox.left&&bubbleBox.right<=regionBox.right+.6&&bubbleBox.top>=regionBox.top&&bubbleBox.bottom<=regionBox.bottom+.6,under:under.length,overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth,focus:document.activeElement.id,live:bubble.getAttribute("aria-live"),role:bubble.getAttribute("role"),animation:style.animationName,transition:style.transitionDuration,background:style.backgroundImage,border:style.borderTopWidth,shadow:style.boxShadow,font:style.fontFamily};})()`);
   assert.deepEqual({
     hidden:analystVisible.hidden,
@@ -826,13 +829,98 @@ try{
   assert.match(analystVisible.font,/Bangers|sans-serif/u);
   await wait(10_300);
   assert.equal(await evaluate(studio,"document.querySelector('#studio-analyst-hint').hidden"),true);
+
+  const analystScheduleBoundary=await evaluate(studio,`(async()=>{
+    const {installStudioAnalystGuidance}=await import("./specification-studio-technical-analyst-guidance.js"),bubble=document.querySelector("#studio-analyst-hint");
+    let now=0,active=true,route="Project overview";
+    const snapshot=()=>({hidden:bubble.hidden,id:bubble.dataset.hintId??null,text:bubble.textContent});
+    const install=()=>installStudioAnalystGuidance({bubble,route:()=>route,active:()=>active,now:()=>now,intervalMilliseconds:1_000_000});
+    let controller=install();
+    const tick=(elapsed)=>{now+=elapsed;controller.evaluate();return snapshot();};
+    const preFirst=tick(9_999),first=tick(1),afterLifetime=tick(10_000);
+    route="Shared Profiles";
+    const cooldownBefore=tick(109_999),second=tick(1),rotation=[first,second];
+    for(const nextRoute of["Pages","Flows","Documentation"]){
+      tick(10_000);
+      route=nextRoute;
+      rotation.push(tick(110_000));
+    }
+    tick(10_000);
+    route="Project overview";
+    const reset=tick(110_000);
+    controller.dispose();
+    const pause=(pauseKind)=>{
+      now=0;active=true;route="Pages";bubble.hidden=true;controller=install();
+      const before=tick(5_000);
+      active=false;
+      const inactive=tick(60_000);
+      active=true;
+      const resumed=tick(5_000);
+      active=false;
+      const removed=tick(1);
+      controller.dispose();
+      return{pauseKind,before,inactive,resumed,removed};
+    };
+    return{preFirst,first,afterLifetime,cooldownBefore,second,rotation,reset,documentPause:pause("document-hidden"),blockingPause:pause("blocking-surface")};
+  })()`);
+  assert.deepEqual({
+    preFirstHidden:analystScheduleBoundary.preFirst.hidden,
+    first:analystScheduleBoundary.first.id,
+    afterLifetimeHidden:analystScheduleBoundary.afterLifetime.hidden,
+    cooldownBeforeHidden:analystScheduleBoundary.cooldownBefore.hidden,
+    second:analystScheduleBoundary.second.id,
+    rotation:analystScheduleBoundary.rotation.map(({id,text})=>[id,text]),
+    reset:analystScheduleBoundary.reset.id,
+    documentPause:[analystScheduleBoundary.documentPause.before.hidden,analystScheduleBoundary.documentPause.inactive.hidden,analystScheduleBoundary.documentPause.resumed.id,analystScheduleBoundary.documentPause.removed.hidden],
+    blockingPause:[analystScheduleBoundary.blockingPause.before.hidden,analystScheduleBoundary.blockingPause.inactive.hidden,analystScheduleBoundary.blockingPause.resumed.id,analystScheduleBoundary.blockingPause.removed.hidden],
+  },{
+    preFirstHidden:true,
+    first:"project-overview",
+    afterLifetimeHidden:true,
+    cooldownBeforeHidden:true,
+    second:"shared-profiles",
+    rotation:[
+      ["project-overview","Crikey! Pick a collection on the left to start shaping your specification."],
+      ["shared-profiles","Smashing! Put reusable fields here so Pages and Events can inherit them."],
+      ["pages","Jolly good! Give each Page its observed page event before refining its schema."],
+      ["flows","Cor! Add Pages to the canvas first, then place interaction Events inside them."],
+      ["documentation","Splendid! Refresh the preview after changing a Documentation Set."],
+    ],
+    reset:"project-overview",
+    documentPause:[true,true,"pages",true],
+    blockingPause:[true,true,"pages",true],
+  });
+
+  const analystBlockingPredicate=await evaluate(studio,`(async()=>{
+    const {studioAnalystGuidanceIsActive}=await import("./specification-studio-technical-analyst-guidance.js"),workspace=document.querySelector("#project-workspace"),navigation=document.querySelector("#project-workspace > nav"),region=document.querySelector("#studio-analyst-guidance"),active=()=>studioAnalystGuidanceIsActive({document,populated:true,workspace,navigation,region}),dialog=document.querySelector("#project-conflict-review"),menu=document.querySelector(".actions details"),layer=document.createElement("div");
+    const baseline=active();
+    dialog.showModal();const dialogBlocked=!active();dialog.close();
+    menu.open=true;const menuBlocked=!active();menu.open=false;
+    layer.dataset.schemaRowOverlay="true";document.body.append(layer);const layerBlocked=!active();layer.remove();
+    return{baseline,dialogBlocked,menuBlocked,layerBlocked};
+  })()`);
+  assert.deepEqual(analystBlockingPredicate,{baseline:true,dialogBlocked:true,menuBlocked:true,layerBlocked:true});
+  await side.call("Page.bringToFront");
+  await wait(100);
+  const analystDocumentHidden=await evaluate(studio,`(async()=>{const {studioAnalystGuidanceIsActive}=await import("./specification-studio-technical-analyst-guidance.js");return{hidden:document.hidden,active:studioAnalystGuidanceIsActive({document,populated:true,workspace:document.querySelector("#project-workspace"),navigation:document.querySelector("#project-workspace > nav"),region:document.querySelector("#studio-analyst-guidance")})};})()`);
+  assert.deepEqual(analystDocumentHidden,{hidden:true,active:false});
+  await studio.call("Page.bringToFront");
+
+  await studio.call("Emulation.setDeviceMetricsOverride",{width:640,height:450,deviceScaleFactor:1,mobile:false});
+  const analystZoom=await evaluate(studio,`(async()=>{
+    const {installStudioAnalystGuidance}=await import("./specification-studio-technical-analyst-guidance.js"),region=document.querySelector("#studio-analyst-guidance"),bubble=document.querySelector("#studio-analyst-hint"),navigation=document.querySelector("#project-workspace > nav");let now=0;
+    const controller=installStudioAnalystGuidance({bubble,route:()=>"Documentation",active:()=>true,now:()=>now,intervalMilliseconds:1_000_000});now=10_000;controller.evaluate();
+    const regionBox=region.getBoundingClientRect(),bubbleBox=bubble.getBoundingClientRect(),navigationBox=navigation.getBoundingClientRect(),result={visible:region.getClientRects().length>0&&!bubble.hidden,inside:regionBox.left>=navigationBox.left&&regionBox.right<=navigationBox.right+.6&&bubbleBox.left>=regionBox.left&&bubbleBox.right<=regionBox.right+.6,overflow:Math.max(0,document.documentElement.scrollWidth-innerWidth,document.body.scrollWidth-innerWidth),text:bubble.textContent};
+    controller.dispose();return result;
+  })()`);
+  assert.deepEqual(analystZoom,{visible:true,inside:true,overflow:0,text:"Splendid! Refresh the preview after changing a Documentation Set."});
   await studio.call("Emulation.setDeviceMetricsOverride",{width:360,height:800,deviceScaleFactor:1,mobile:false});
-  const analystNarrow=await evaluate(studio,`(()=>{const region=document.querySelector("#studio-analyst-guidance"),nav=document.querySelector("#project-workspace > nav");return{region:region.getClientRects().length,nav:getComputedStyle(nav).display,overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)<=innerWidth};})()`);
-  assert.deepEqual(analystNarrow,{region:0,nav:"block",overflow:true});
+  const analystNarrow=await evaluate(studio,`(()=>{const region=document.querySelector("#studio-analyst-guidance"),nav=document.querySelector("#project-workspace > nav"),visibleBefore=region.getClientRects().length>0;nav.hidden=true;const hiddenWithNavigation=region.getClientRects().length===0,overflow=Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)<=innerWidth;nav.hidden=false;return{visibleBefore,hiddenWithNavigation,overflow};})()`);
+  assert.deepEqual(analystNarrow,{visibleBefore:true,hiddenWithNavigation:true,overflow:true});
   const analystAfter=await evaluate(studio,`(async()=>{const repo=await (await import("./data-layer-durable-project-repository.js")).openIndexedDbProjectRepository(),record=await repo.loadProject(${JSON.stringify(projectId)});return{project:JSON.stringify(record),undo:document.querySelector("#undo-project").dataset.undoCount,focus:document.activeElement.id};})()`);
   assert.equal(analystAfter.project,analystBefore.project);
   assert.equal(analystAfter.undo,analystBefore.undo);
-  const studioAnalystGuidance={before:analystBefore,visible:analystVisible,narrow:analystNarrow,after:analystAfter};
+  const studioAnalystGuidance={before:analystBefore,preFirstHidden:analystPreFirst,visible:analystVisible,scheduleBoundary:analystScheduleBoundary,blockingPredicate:analystBlockingPredicate,documentHidden:analystDocumentHidden,zoom:analystZoom,narrow:analystNarrow,after:analystAfter};
 
   const badEvents=[...side.events,...studio.events].filter(({method,params})=>method==="Runtime.exceptionThrown"||method==="Network.loadingFailed"||(method==="Log.entryAdded"&&params.entry?.level==="error"));
   assert.deepEqual(badEvents,[],"installed Slice 6 surfaces must have no runtime or load errors");

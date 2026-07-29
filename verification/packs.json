@@ -1050,7 +1050,8 @@
       "test/twatility-brand-polish-test.mjs"
     ],
     "property": [
-      "test/data-layer-studio-choice-controls-property-test.mjs"
+      "test/data-layer-studio-choice-controls-property-test.mjs",
+      "test/specification-studio-technical-analyst-guidance-property-test.mjs"
     ],
     "features": [
       "features/specification-studio-choice-controls.feature",
