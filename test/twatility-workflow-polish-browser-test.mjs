@@ -61,6 +61,7 @@ class DevtoolsSocket {
       const message=JSON.parse(payload.toString("utf8")),pending=this.pending.get(message.id);
       if(!pending){this.events.push(message);continue;}
       this.pending.delete(message.id);
+      clearTimeout(pending.timeout);
       if(message.error)pending.reject(new Error(message.error.message));else pending.resolve(message.result);
     }
   }
@@ -73,7 +74,7 @@ class DevtoolsSocket {
   }
   call(method,params={}){
     const id=this.nextId++;this.send({id,method,params});
-    return new Promise((resolve,reject)=>this.pending.set(id,{resolve,reject}));
+    return new Promise((resolve,reject)=>{const timeout=setTimeout(()=>{this.pending.delete(id);reject(new Error(`DevTools ${method} timed out`));},method==="Page.captureScreenshot"?60_000:15_000);this.pending.set(id,{resolve,reject,timeout});});
   }
   close(){this.socket?.destroy();}
 }
@@ -109,12 +110,60 @@ async function metrics(socket,width,height,url){
   await wait(100);
 }
 async function screenshot(socket,target){
-  const capture=await socket.call("Page.captureScreenshot",{format:"png",captureBeyondViewport:false});
+  const capture=await socket.call("Page.captureScreenshot",{format:"png",captureBeyondViewport:false,fromSurface:false});
   await writeFile(target,Buffer.from(capture.data,"base64"));
 }
 async function nativeKey(socket,key,code=key){
   await socket.call("Input.dispatchKeyEvent",{type:"keyDown",key,code});
   await socket.call("Input.dispatchKeyEvent",{type:"keyUp",key,code});
+}
+async function nativeChoiceAudit(socket,rootSelector,{settle=100,projectId,durableKeys=[],restore=true}={}){
+  const descriptors=await evaluate(socket,`(()=>{
+    const root=document.querySelector(${JSON.stringify(rootSelector)}),counts={},text=(input)=>{const copy=input.labels?.[0]?.querySelector(".studio-choice-copy")?.cloneNode(true);copy?.querySelectorAll?.(".studio-switch-mark,.studio-switch-state").forEach((node)=>node.remove());return copy?.textContent.trim()??input.labels?.[0]?.textContent.trim()??"";};
+    return[...root.querySelectorAll('input[type="checkbox"]')].filter((input)=>input.getClientRects().length>0&&!input.disabled).map((input)=>{
+      const key=input.dataset.studioChoiceContract,label=text(input),identity=key+"\\n"+label,index=counts[identity]??0;counts[identity]=index+1;return{key,label,index};
+    });
+  })()`);
+  const results=[];
+  for(const descriptor of descriptors){
+    await evaluate(socket,`(()=>{const root=document.querySelector(${JSON.stringify(rootSelector)}),text=(input)=>{const copy=input.labels?.[0]?.querySelector(".studio-choice-copy")?.cloneNode(true);copy?.querySelectorAll?.(".studio-switch-mark,.studio-switch-state").forEach((node)=>node.remove());return copy?.textContent.trim()??input.labels?.[0]?.textContent.trim()??"";},matches=root?[...root.querySelectorAll('input[type="checkbox"]')].filter((input)=>!input.disabled&&input.dataset.studioChoiceContract===${JSON.stringify(descriptor.key)}&&text(input)===${JSON.stringify(descriptor.label)}):[],input=matches[${descriptor.index}];if(input?.closest("details"))input.closest("details").open=true;return Boolean(input);})()`);
+    const durable=projectId&&durableKeys.includes(descriptor.key),sequenceBefore=durable?await evaluate(socket,`(async()=>{const {openIndexedDbProjectRepository}=await import("./data-layer-durable-project-repository.js");return(await(await openIndexedDbProjectRepository()).loadProject(${JSON.stringify(projectId)})).draftSequence;})()`):undefined;
+    const locate=`(()=>{const root=document.querySelector(${JSON.stringify(rootSelector)}),text=(input)=>{const copy=input.labels?.[0]?.querySelector(".studio-choice-copy")?.cloneNode(true);copy?.querySelectorAll?.(".studio-switch-mark,.studio-switch-state").forEach((node)=>node.remove());return copy?.textContent.trim()??input.labels?.[0]?.textContent.trim()??"";},matches=root?[...root.querySelectorAll('input[type="checkbox"]')].filter((input)=>input.getClientRects().length>0&&!input.disabled&&input.dataset.studioChoiceContract===${JSON.stringify(descriptor.key)}&&text(input)===${JSON.stringify(descriptor.label)}):[];return matches[${descriptor.index}]})()`,present=`Boolean(${locate})`;
+    const before=await evaluate(socket,`(()=>{const input=${locate},label=input?.labels?.[0],indicator=input?.getBoundingClientRect(),row=label?.getBoundingClientRect(),copy=label?.querySelector(".studio-choice-copy")?.getBoundingClientRect(),style=input&&getComputedStyle(input),labelStyle=label&&getComputedStyle(label),defaultFocus=[labelStyle?.outlineStyle,labelStyle?.outlineWidth,labelStyle?.outlineColor],describedBy=input?.getAttribute("aria-describedby"),actions=[...label?.parentElement?.children??[]].filter((element)=>element!==label&&element.matches?.("button,a[href],[role=button]")),intersects=actions.some((action)=>{const box=action.getBoundingClientRect();return!(row.right<=box.left||box.right<=row.left||row.bottom<=box.top||box.bottom<=row.top);});if(!input||!label)return null;const token=${JSON.stringify(`${descriptor.key}\n${descriptor.label}\n${descriptor.index}`)};globalThis.__studioChoiceAuditChanges??={};globalThis.__studioChoiceAuditInputs??={};globalThis.__studioChoiceAuditEventChecked??={};globalThis.__studioChoiceAuditChanges[token]=0;globalThis.__studioChoiceAuditInputs[token]=input;input.addEventListener("change",(event)=>{globalThis.__studioChoiceAuditChanges[token]++;globalThis.__studioChoiceAuditEventChecked[token]=event.currentTarget.checked;});return{checked:input.checked,type:input.type,role:input.getAttribute("role"),id:input.id,forValue:label.htmlFor,labels:input.labels?.length,enhanced:input.dataset.studioChoiceEnhanced,description:input.getAttribute("aria-description"),width:indicator.width,height:indicator.height,rowHeight:row.height,gap:copy?copy.left-indicator.right:null,padding:style.padding,describedByValid:!describedBy||describedBy.split(/\\s+/).every((id)=>document.getElementById(id)),defaultFocus,actionsSeparate:!intersects,contained:row.left>=0&&row.right<=innerWidth+.1};})()`);
+    assert.ok(before,`native choice audit could not locate ${JSON.stringify(descriptor)}`);
+    await nativeKey(socket,"Tab","Tab");
+    const focused=await evaluate(socket,`(()=>{const input=${locate},token=${JSON.stringify(`${descriptor.key}\n${descriptor.label}\n${descriptor.index}`)};if(globalThis.__studioChoiceAuditInputs[token]!==input){globalThis.__studioChoiceAuditInputs[token]=input;input.addEventListener("change",(event)=>{globalThis.__studioChoiceAuditChanges[token]++;globalThis.__studioChoiceAuditEventChecked[token]=event.currentTarget.checked;});}input.focus();const label=input.labels?.[0],style=label&&getComputedStyle(label);return{active:document.activeElement===input,activeElement:document.activeElement?.outerHTML,focus:[style?.outlineStyle,style?.outlineWidth,style?.outlineColor]};})()`);
+    assert.equal(focused.active,true,`native Tab did not focus ${descriptor.key} ${descriptor.label}: ${focused.activeElement}`);
+    await nativeKey(socket," ","Space");
+    if(durable)await evaluate(socket,`(async()=>{const {openIndexedDbProjectRepository}=await import("./data-layer-durable-project-repository.js"),repo=await openIndexedDbProjectRepository();for(let attempt=0;attempt<240;attempt+=1){if((await repo.loadProject(${JSON.stringify(projectId)})).draftSequence>=${sequenceBefore+1})return true;await new Promise((resolve)=>setTimeout(resolve,20));}return false;})()`);
+    else await wait(settle);
+    try{await ready(socket,present,`rerendered ${descriptor.key} after native Space`);}catch(error){const diagnostic=await evaluate(socket,`(()=>({root:Boolean(document.querySelector(${JSON.stringify(rootSelector)})),active:document.activeElement?.outerHTML,choices:[...document.querySelectorAll('input[type="checkbox"]')].map((input)=>[input.dataset.studioChoiceContract,input.labels?.[0]?.textContent.trim(),input.checked,input.disabled]).filter(([key])=>key)}))()`);throw new Error(`${error.message}: ${JSON.stringify({descriptor,diagnostic})}`);}
+    const after=await evaluate(socket,`(()=>{const input=${locate},token=${JSON.stringify(`${descriptor.key}\n${descriptor.label}\n${descriptor.index}`)};return{checked:input?.checked,eventChecked:globalThis.__studioChoiceAuditEventChecked?.[token],changes:globalThis.__studioChoiceAuditChanges?.[token]};})()`);
+    let restored=after;
+    if(restore&&after.checked!==before.checked){
+      await evaluate(socket,`(()=>{const input=${locate},token=${JSON.stringify(`${descriptor.key}\n${descriptor.label}\n${descriptor.index}`)};if(!input)return false;if(globalThis.__studioChoiceAuditInputs[token]!==input){globalThis.__studioChoiceAuditInputs[token]=input;input.addEventListener("change",(event)=>{globalThis.__studioChoiceAuditChanges[token]++;globalThis.__studioChoiceAuditEventChecked[token]=event.currentTarget.checked;});}input.focus();return true;})()`);
+      await nativeKey(socket," ","Space");
+      if(descriptor.key==="guided.conditional")await evaluate(socket,`[...document.querySelectorAll("#guided-condition-discard-confirmation button")].find(({textContent})=>textContent==="Discard conditions")?.click()`);
+      if(durable)await evaluate(socket,`(async()=>{const {openIndexedDbProjectRepository}=await import("./data-layer-durable-project-repository.js"),repo=await openIndexedDbProjectRepository();for(let attempt=0;attempt<240;attempt+=1){if((await repo.loadProject(${JSON.stringify(projectId)})).draftSequence>=${sequenceBefore+2})return true;await new Promise((resolve)=>setTimeout(resolve,20));}return false;})()`);
+      else await wait(settle);
+      try{await ready(socket,present,`rerendered ${descriptor.key} after native restore`);}catch(error){const diagnostic=await evaluate(socket,`(()=>({root:Boolean(document.querySelector(${JSON.stringify(rootSelector)})),active:document.activeElement?.outerHTML,choices:[...document.querySelectorAll('input[type="checkbox"]')].map((input)=>[input.dataset.studioChoiceContract,input.labels?.[0]?.textContent.trim(),input.checked,input.disabled]).filter(([key])=>key)}))()`);throw new Error(`${error.message}: ${JSON.stringify({descriptor,diagnostic})}`);}
+      restored=await evaluate(socket,`(()=>{const input=${locate},token=${JSON.stringify(`${descriptor.key}\n${descriptor.label}\n${descriptor.index}`)};return{checked:input?.checked,eventChecked:globalThis.__studioChoiceAuditEventChecked?.[token],changes:globalThis.__studioChoiceAuditChanges?.[token]};})()`);
+    }
+    results.push({...descriptor,...before,focused,after,restored,restoreExpected:restore});
+  }
+  return results;
+}
+async function durableChoiceConsequence(socket,projectId,key,readExpression,{rootSelector='[aria-label="Project Documentation workspace"]',labelIncludes=""}={}){
+  return evaluate(socket,`(async()=>{
+    const {openIndexedDbProjectRepository}=await import("./data-layer-durable-project-repository.js"),repo=await openIndexedDbProjectRepository(),read=${readExpression},root=()=>document.querySelector(${JSON.stringify(rootSelector)}),find=()=>[...root().querySelectorAll('input[type="checkbox"]')].find((input)=>input.dataset.studioChoiceContract===${JSON.stringify(key)}&&input.labels?.[0]?.textContent.includes(${JSON.stringify(labelIncludes)})),before=await repo.loadProject(${JSON.stringify(projectId)}),beforeValue=structuredClone(read(before)),choice=find(),label=choice.labels[0].textContent.trim();
+    choice.click();let changed;for(let attempt=0;attempt<80;attempt+=1){changed=await repo.loadProject(${JSON.stringify(projectId)});if(changed.draftSequence>before.draftSequence)break;await new Promise((resolve)=>setTimeout(resolve,20));}await new Promise((resolve)=>setTimeout(resolve,40));const afterValue=structuredClone(read(changed)),fresh=[...root().querySelectorAll('input[type="checkbox"]')].find((input)=>input.dataset.studioChoiceContract===${JSON.stringify(key)}&&input.labels?.[0]?.textContent.trim()===label);fresh.click();let restored;for(let attempt=0;attempt<80;attempt+=1){restored=await repo.loadProject(${JSON.stringify(projectId)});if(restored.draftSequence>changed.draftSequence)break;await new Promise((resolve)=>setTimeout(resolve,20));}
+    return{key:${JSON.stringify(key)},label,beforeValue,afterValue,restoredValue:structuredClone(read(restored)),sequences:{before:before.draftSequence,after:changed.draftSequence,restored:restored.draftSequence}};
+  })()`);
+}
+function validNativeChoiceAudit(item){
+  const expectedPattern=expectedStudioChoiceContracts.get(item.key)?.[0],focusChanged=item.focused.active&&JSON.stringify(item.focused.focus)!==JSON.stringify(item.defaultFocus)&&item.focused.focus[0]!=="none"&&item.focused.focus[1]!=="0px",indicatorValid=expectedPattern==="switch"?item.width===36&&item.height>=16&&item.height<=18:item.width>=16&&item.width<=18&&item.height>=16&&item.height<=18;
+  const restorationValid=!item.restoreExpected||(item.restored.checked===item.checked&&item.restored.changes===(item.after.checked===item.checked?1:2));
+  return item.description===exactChoiceDescriptions[item.key]&&item.type==="checkbox"&&item.role===(expectedPattern==="switch"?"switch":null)&&item.enhanced==="true"&&item.labels===1&&Boolean(item.id)&&item.forValue===item.id&&indicatorValid&&item.padding==="0px"&&Math.abs(item.gap-8)<0.1&&item.rowHeight>=36&&item.describedByValid&&item.actionsSeparate&&item.contained&&focusChanged&&item.after.eventChecked===!item.checked&&item.after.changes===1&&restorationValid;
 }
 
 const profile=await mkdtemp(path.join(os.tmpdir(),"twatility-workflow-polish-"));
@@ -131,8 +180,8 @@ try{
     chrome.once("error",reject);
   });
   const id=await extensionId(port),base=`chrome-extension://${id}/`,projectId="project-polish";
-  side=await pageSocket(port,`${base}side-panel.html`);
-  await ready(side,"document.querySelector('#data-layer-view-projects')?.isConnected","side panel");
+  side=await pageSocket(port,`${base}data-layer-specification-project.js`);
+  await ready(side,"document.readyState==='complete'","extension-origin seed document");
   const seeded=await evaluate(side,`(async()=>{
     const {createSpecificationProject}=await import("./data-layer-specification-project.js");
     const {createProjectCollectionEntity}=await import("./data-layer-project-entity-lifecycle.js");
@@ -158,7 +207,7 @@ try{
     state.project.documentationFlowGraphs={[flow.id]:{pageGroupIds:[group.id],pageFrames:[{id:"frame:polish",name:page.name,pageId:page.id,pageGroupId:group.id,position:{x:120,y:80}}],occurrences:[{id:"occurrence:polish",name:event.name,pageFrameId:"frame:polish",pageId:page.id,eventId:event.id,role:"interaction",obligation:"Required",minimum:1,maximum:1,optional:false,position:{x:210,y:150}}],relationships:[]}};
     state.project.documentation={
       themes:[{id:"theme:polish",name:"Client navy",clientName:"Retail measurement",logo:"",colors:{heading:"#0b3155",accent:"#c7921e",stripe:"#f4e7c9"},typography:{family:"Arial",headingSize:16,bodySize:11},density:"comfortable",borders:true,striping:true,highlightedHeadings:true,columnWidths:{Property:24},headerText:"Retail measurement specification",footerText:"Reviewed Draft"}],
-      sets:[{id:"set:polish",name:"Retail implementation specification",themeId:"theme:polish",sections:[{id:"section:overview",kind:"overview",name:"Overview",selected:true},{id:"section:flow",kind:"flow",name:"Checkout journey",targetId:flow.id,selected:true,configuration:{contextIds:[],paths:[],columns:[]}},{id:"section:matrix",kind:"matrix",name:"Data capture matrix",selected:true,configuration:{contextIds:[]}},{id:"section:profile",kind:"profile",name:"Commerce foundation",targetId:profile.id,selected:true,configuration:{paths:[],columns:[]}}]}],
+      sets:[{id:"set:polish",name:"Retail implementation specification",themeId:"theme:polish",sections:[{id:"section:overview",kind:"overview",name:"Overview",selected:true},{id:"section:flow",kind:"flow",name:"Checkout journey",targetId:flow.id,selected:true},{id:"section:matrix",kind:"matrix",name:"Data capture matrix",selected:true},{id:"section:profile",kind:"profile",name:"Commerce foundation",targetId:profile.id,selected:true}]}],
     };
     state.draft={id:"draft:polish",status:"Saved",updatedAt:"2026-07-26T20:30:00.000Z"};
     const repository=await openIndexedDbProjectRepository();
@@ -167,7 +216,8 @@ try{
     return await repository.activeProjectId()===${JSON.stringify(projectId)};
   })()`);
   assert.equal(seeded,true,"production project and Saved Schema must seed");
-  await side.call("Page.reload",{ignoreCache:true});
+  await side.call("Page.navigate",{url:`${base}side-panel.html`});
+  await ready(side,"document.readyState==='complete'&&document.querySelector('#data-layer-view-projects')?.isConnected","side-panel durable runtime");
   await ready(side,"document.querySelector('#active-project-header')?.textContent.includes('Retail measurement operations')","active project");
 
   await metrics(side,360,800);
@@ -254,6 +304,7 @@ try{
   assert.equal(documentationChoices.details.find(({text})=>text.includes("Borders"))?.role,null);
   assert.equal(documentationChoices.vertical,true,JSON.stringify(documentationChoices.verticalDetails));
   assert.equal(documentationChoices.actionsSeparate,true);
+  const documentationNativeChoices=await nativeChoiceAudit(studio,'[aria-label="Project Documentation workspace"]',{settle:300});
   const documentationConfigurationChoices=await evaluate(studio,`(async()=>{
     const root=()=>document.querySelector('[aria-label="Project Documentation workspace"]'),contracts={},details=[];
     const collect=()=>{for(const input of root().querySelectorAll('[aria-label="Selected documentation section configuration"] input[type="checkbox"]')){const key=input.dataset.studioChoiceContract,label=input.labels?.[0],indicator=input.getBoundingClientRect(),row=label?.getBoundingClientRect(),copy=label?.querySelector(".studio-choice-copy")?.getBoundingClientRect(),describedBy=input.getAttribute("aria-describedby");input.focus();const focus=getComputedStyle(label),detail={key,description:input.getAttribute("aria-description"),enhanced:input.dataset.studioChoiceEnhanced,labels:input.labels?.length,id:input.id,forValue:label?.htmlFor,width:indicator.width,height:indicator.height,rowHeight:row?.height,gap:copy?copy.left-indicator.right:null,describedByValid:!describedBy||describedBy.split(/\\s+/).every((id)=>document.getElementById(id)),focus:[focus.outlineStyle,focus.outlineWidth]};details.push(detail);contracts[key]??=detail.description;}};
@@ -263,6 +314,32 @@ try{
   })()`);
   for(const key of ["documentation.flow-context","documentation.property-row","documentation.metadata-column","documentation.matrix-context","documentation.profile-column"])assert.equal(documentationConfigurationChoices.contracts[key],exactChoiceDescriptions[key],`${key} must mount on its production Documentation section`);
   assert.equal(documentationConfigurationChoices.details.every(({key,description,enhanced,labels,id,forValue,width,height,rowHeight,gap,describedByValid})=>description===exactChoiceDescriptions[key]&&enhanced==="true"&&labels===1&&Boolean(id)&&forValue===id&&width>=16&&width<=18&&height>=16&&height<=18&&rowHeight>=36&&Math.abs(gap-8)<0.1&&describedByValid),true,JSON.stringify(documentationConfigurationChoices.details));
+  const documentationConfigurationNativeChoices=[];
+  for(const kind of["flow","matrix","profile"]){
+    await evaluate(studio,`document.querySelector('[aria-label="Documentation section outline"] [data-section-kind="${kind}"] > button').click()`);
+    await wait(40);
+    documentationConfigurationNativeChoices.push(...await nativeChoiceAudit(studio,'[aria-label="Selected documentation section configuration"]',{settle:300}));
+  }
+  await evaluate(studio,`(async()=>{const {openIndexedDbProjectRepository}=await import("./data-layer-durable-project-repository.js"),repo=await openIndexedDbProjectRepository();let last=-1,stable=0;for(let attempt=0;attempt<200;attempt+=1){const current=(await repo.loadProject(${JSON.stringify(projectId)})).draftSequence;if(current===last)stable+=1;else{last=current;stable=0;}if(stable>=6)return current;await new Promise((resolve)=>setTimeout(resolve,50));}throw new Error("Documentation choice saves did not settle.");})()`);
+  await evaluate(studio,`document.querySelector('[aria-label="Documentation section outline"] [data-section-kind="overview"] > button').click()`);
+  const documentationDurableConsequences={};
+  documentationDurableConsequences["documentation.concept-subheadings"]=await durableChoiceConsequence(studio,projectId,"documentation.concept-subheadings",`(loaded)=>loaded.state.project.documentation.sets[0].includeConceptSubheadings===true`,{labelIncludes:"Include concept subheadings"});
+  documentationDurableConsequences["documentation.concept-membership"]=await durableChoiceConsequence(studio,projectId,"documentation.concept-membership",`(loaded)=>loaded.state.project.documentation.sets[0].concepts?.find(({name})=>name==="Ungrouped")?.included??true`,{labelIncludes:"Ungrouped"});
+  documentationDurableConsequences["documentation.section-membership"]=await durableChoiceConsequence(studio,projectId,"documentation.section-membership",`(loaded)=>loaded.state.project.documentation.sets[0].sections.find(({kind})=>kind==="overview")?.selected===true`,{labelIncludes:"Overview"});
+  await evaluate(studio,`document.querySelector('[aria-label="Documentation section outline"] [data-section-kind="flow"] > button').click()`);
+  documentationDurableConsequences["documentation.flow-context"]=await durableChoiceConsequence(studio,projectId,"documentation.flow-context",`(loaded)=>(loaded.state.project.documentation.sets[0].sections.find(({kind})=>kind==="flow").configuration?.contextIds??[]).toSorted()`);
+  documentationDurableConsequences["documentation.metadata-column"]=await durableChoiceConsequence(studio,projectId,"documentation.metadata-column",`(loaded)=>loaded.state.project.documentation.sets[0].sections.find(({kind})=>kind==="flow").configuration?.columns??[]`,{labelIncludes:"Description"});
+  await evaluate(studio,`document.querySelector('[aria-label="Documentation section outline"] [data-section-kind="matrix"] > button').click()`);
+  documentationDurableConsequences["documentation.matrix-context"]=await durableChoiceConsequence(studio,projectId,"documentation.matrix-context",`(loaded)=>loaded.state.project.documentation.sets[0].sections.find(({kind})=>kind==="matrix").configuration?.contextIds??[]`);
+  await evaluate(studio,`document.querySelector('[aria-label="Documentation section outline"] [data-section-kind="profile"] > button').click()`);
+  documentationDurableConsequences["documentation.property-row"]=await durableChoiceConsequence(studio,projectId,"documentation.property-row",`(loaded)=>loaded.state.project.documentation.sets[0].sections.find(({kind})=>kind==="profile").configuration?.paths??[]`);
+  documentationDurableConsequences["documentation.profile-column"]=await durableChoiceConsequence(studio,projectId,"documentation.profile-column",`(loaded)=>loaded.state.project.documentation.sets[0].sections.find(({kind})=>kind==="profile").configuration?.columns??[]`,{labelIncludes:"Comments"});
+  for(const [key,evidence] of Object.entries(documentationDurableConsequences)){
+    assert.notDeepEqual(evidence.afterValue,evidence.beforeValue,`${key} must change its own saved documentation field`);
+    assert.deepEqual(evidence.restoredValue,evidence.beforeValue,`${key} must restore its own saved documentation field`);
+    assert.deepEqual(evidence.sequences,{before:evidence.sequences.before,after:evidence.sequences.before+1,restored:evidence.sequences.before+2},`${key} must produce exactly one established command per activation`);
+  }
+  await evaluate(studio,`document.querySelector('[aria-label="Documentation section outline"] [data-section-kind="overview"] > button').click()`);
   await screenshot(studio,path.join(evidenceDirectory,"studio-documentation-1280x900.png"));
   const documentationConservation=await evaluate(studio,`(async()=>{
     const {openIndexedDbProjectRepository}=await import("./data-layer-durable-project-repository.js"),repo=await openIndexedDbProjectRepository(),root=document.querySelector('[aria-label="Project Documentation workspace"]'),themeGroup=root.querySelector('[data-theme-group="Table"]');
@@ -277,20 +354,24 @@ try{
     const durableBorders=saved.state.project.documentation.themes.find(({id})=>id==="theme:polish").borders;
     const savedRoot=document.querySelector('[aria-label="Project Documentation workspace"]');[...savedRoot.querySelectorAll("button")].find((button)=>button.textContent==="Refresh preview").click();
     await new Promise((resolve)=>setTimeout(resolve,30));
-    const nextRoot=document.querySelector('[aria-label="Project Documentation workspace"]'),confirm=[...nextRoot.querySelectorAll('input[type="checkbox"]')].find((input)=>input.labels[0].textContent.includes("Confirm incomplete export")),ackBefore=confirm.checked;
-    confirm.click();
+    const nextRoot=document.querySelector('[aria-label="Project Documentation workspace"]'),confirm=[...nextRoot.querySelectorAll('input[type="checkbox"]')].find((input)=>input.labels[0].textContent.includes("Confirm incomplete export")),exportChoice=[...nextRoot.querySelectorAll('input[type="checkbox"]')].find((input)=>input.labels[0].textContent.includes("Export Overview")),scope=nextRoot.querySelector('[aria-label="Documentation export scope"]'),copy=[...nextRoot.querySelectorAll("button")].find(({textContent})=>textContent==="Copy rich documentation"),ackBefore=confirm.checked,copyBefore=copy.disabled;globalThis.__choiceClipboard={html:"",plain:""};Object.defineProperty(navigator,"clipboard",{configurable:true,value:{write:async(items)=>{globalThis.__choiceClipboard.html=await(await items[0].getType("text/html")).text();globalThis.__choiceClipboard.plain=await(await items[0].getType("text/plain")).text();},writeText:async(value)=>{globalThis.__choiceClipboard.plain=value;}}});
+    confirm.click();const copyAfterConfirmation=copy.disabled;exportChoice.click();scope.value="selected";scope.dispatchEvent(new Event("change",{bubbles:true}));copy.click();await new Promise((resolve)=>setTimeout(resolve,60));
     const acknowledged=await repo.loadProject(${JSON.stringify(projectId)});
-    return{commandValues:{before:before.draftSequence,staged:staged.draftSequence,previewed:previewed.draftSequence,saved:saved.draftSequence,acknowledged:acknowledged.draftSequence},themeValues:{original,staged:borders.checked,durable:durableBorders},acknowledgementValues:{before:ackBefore,after:confirm.checked},contracts:[borders.dataset.studioChoiceContract,confirm.dataset.studioChoiceContract],descriptions:[borders.getAttribute("aria-description"),confirm.getAttribute("aria-description")]};
+    return{commandValues:{before:before.draftSequence,staged:staged.draftSequence,previewed:previewed.draftSequence,saved:saved.draftSequence,acknowledged:acknowledged.draftSequence},themeValues:{original,staged:borders.checked,durable:durableBorders},acknowledgementValues:{before:ackBefore,after:confirm.checked,copyBefore,copyAfterConfirmation},exportValues:{selected:exportChoice.checked,html:globalThis.__choiceClipboard.html,plain:globalThis.__choiceClipboard.plain},contracts:[borders.dataset.studioChoiceContract,confirm.dataset.studioChoiceContract,exportChoice.dataset.studioChoiceContract],descriptions:[borders.getAttribute("aria-description"),confirm.getAttribute("aria-description"),exportChoice.getAttribute("aria-description")]};
   })()`);
   assert.deepEqual(documentationConservation.commandValues,{before:documentationConservation.commandValues.before,staged:documentationConservation.commandValues.before,previewed:documentationConservation.commandValues.before,saved:documentationConservation.commandValues.before+1,acknowledged:documentationConservation.commandValues.before+1});
   assert.equal(documentationConservation.themeValues.staged,!documentationConservation.themeValues.original);
   assert.equal(documentationConservation.themeValues.durable,documentationConservation.themeValues.staged);
   assert.equal(documentationConservation.acknowledgementValues.after,!documentationConservation.acknowledgementValues.before);
-  assert.deepEqual(documentationConservation.contracts,["documentation.theme-option","documentation.confirm-incomplete"]);
+  assert.equal(documentationConservation.exportValues.selected,true);
+  assert.match(documentationConservation.exportValues.plain,/Retail measurement operations/u);
+  assert.doesNotMatch(documentationConservation.exportValues.plain,/Checkout journey/u);
+  assert.deepEqual(documentationConservation.contracts,["documentation.theme-option","documentation.confirm-incomplete","documentation.export-section"]);
   assert.deepEqual(documentationConservation.descriptions,documentationConservation.contracts.map((key)=>exactChoiceDescriptions[key]));
 
   await evaluate(studio,`document.querySelector('#project-tree button[data-kind="pages"]').click();document.querySelector('[data-entity-id] button').click()`);
   await ready(studio,"document.querySelector('.composed-schema-workspace input[aria-label=\"Only defined fields\"]')?.dataset.studioChoiceEnhanced==='true'","Only defined fields switch");
+  const switchNativeChoices=await nativeChoiceAudit(studio,".composed-schema-workspace",{settle:180});
   const switchBefore=await evaluate(studio,`(()=>{const input=document.querySelector('.composed-schema-workspace input[aria-label="Only defined fields"]'),label=input.labels[0];input.focus();return{checked:input.checked,role:input.getAttribute("role"),contract:input.dataset.studioChoiceContract,description:input.getAttribute("aria-description"),enhanced:input.dataset.studioChoiceEnhanced==="true"&&input.labels?.length===1&&label.htmlFor===input.id,ariaChecked:input.getAttribute("aria-checked"),state:label.querySelector(".studio-switch-state")?.textContent,mark:label.querySelector(".studio-switch-mark")?.textContent,undo:Number(document.querySelector("#undo-project").dataset.undoCount)};})()`);
   await nativeKey(studio," ","Space");
   await wait(180);
@@ -321,6 +402,10 @@ try{
   assert.equal(switchReloaded,switchAfter.checked);
   await evaluate(studio,`document.querySelector('#project-tree button[data-kind="profiles"]').click();document.querySelector('[data-entity-id] button').click()`);
   await ready(studio,"document.querySelector('#bulk-properties')","Shared Profile bulk authoring");
+  await evaluate(studio,`(()=>{const format=document.querySelector('[aria-label="Bulk input format"]'),source=document.querySelector("#bulk-properties");format.value="json";source.value=JSON.stringify([{path:"/commerce/order_id",type:"string"}]);document.querySelector("#commit-bulk-properties").click();})()`);
+  await ready(studio,"document.querySelector('#bulk-stage-review input[type=\"checkbox\"]')?.dataset.studioChoiceEnhanced==='true'","bulk-stage choice");
+  await evaluate(studio,`(()=>{const inspector=document.querySelector("#project-inspector");if(inspector.hidden)document.querySelector("#toggle-project-inspector").click();const details=document.querySelector("#bulk-properties").closest("details");details.open=true;details.scrollIntoView({block:"nearest"});})()`);
+  const bulkNativeChoices=await nativeChoiceAudit(studio,"#bulk-stage-review");
   const bulkConservation=await evaluate(studio,`(async()=>{
     const {openIndexedDbProjectRepository}=await import("./data-layer-durable-project-repository.js"),repo=await openIndexedDbProjectRepository(),before=await repo.loadProject(${JSON.stringify(projectId)}),format=document.querySelector('[aria-label="Bulk input format"]'),source=document.querySelector("#bulk-properties");
     format.value="json";source.value=JSON.stringify([{path:"/commerce/order_id",type:"string"}]);document.querySelector("#commit-bulk-properties").click();
@@ -354,7 +439,7 @@ try{
     renderDefectReportBuilder(host,event,{writeText:async(text)=>{validationCopied=text;}},[event]);
     renderOccurrenceDefectReportBuilder(occurrenceHost,event,"Unexpected event",[],[event],{writeText:async(text)=>{occurrenceCopied=text;}});
     await new Promise((resolve)=>setTimeout(resolve,30));
-    const choices=[...host.querySelectorAll('input[type="checkbox"]'),...occurrenceHost.querySelectorAll('input[type="checkbox"]')],contracts=choices.map((input)=>input.dataset.studioChoiceContract),descriptions=Object.fromEntries(choices.map((input)=>[input.dataset.studioChoiceContract,input.getAttribute("aria-description")])),enhanced=choices.every((input)=>input.dataset.studioChoiceEnhanced==="true"&&input.labels?.length===1&&input.labels[0].htmlFor===input.id),missing=choices.some((input)=>input.dataset.studioChoiceContract==="missing"||input.dataset.studioChoiceMissing==="true"),texts=choices.map((input)=>input.labels[0]?.textContent),first=choices.find((input)=>input.dataset.studioChoiceContract==="defect.issue-inclusion");let activation;if(first){const initial=first.checked;let changes=0;first.addEventListener("change",()=>changes++);first.click();const afterInput=first.checked;first.labels[0].click();activation={initial,afterInput,restored:first.checked,changes};}for(const key of["defect.expected-override","defect.acknowledgement"])choices.find((input)=>input.dataset.studioChoiceContract===key)?.click();[...occurrenceHost.querySelectorAll("button")].find(({textContent})=>textContent==="Confirm expectation")?.click();[...host.querySelectorAll("button")].find(({textContent})=>textContent==="Copy for Jira Cloud")?.click();[...occurrenceHost.querySelectorAll("button")].find(({textContent})=>textContent==="Copy for Jira Cloud")?.click();await new Promise((resolve)=>setTimeout(resolve,30));const staged=await repo.loadProject(${JSON.stringify(projectId)});host.remove();occurrenceHost.remove();
+    const choices=[...host.querySelectorAll('input[type="checkbox"]'),...occurrenceHost.querySelectorAll('input[type="checkbox"]')],contracts=choices.map((input)=>input.dataset.studioChoiceContract),descriptions=Object.fromEntries(choices.map((input)=>[input.dataset.studioChoiceContract,input.getAttribute("aria-description")])),enhanced=choices.every((input)=>input.dataset.studioChoiceEnhanced==="true"&&input.labels?.length===1&&input.labels[0].htmlFor===input.id),missing=choices.some((input)=>input.dataset.studioChoiceContract==="missing"||input.dataset.studioChoiceMissing==="true"),texts=choices.map((input)=>input.labels[0]?.textContent),first=choices.find((input)=>input.dataset.studioChoiceContract==="defect.issue-inclusion");let activation;if(first){const initial=first.checked;let changes=0;first.addEventListener("change",()=>changes++);first.click();const afterInput=first.checked;first.labels[0].click();activation={initial,afterInput,restored:first.checked,changes};}for(const key of["defect.expected-override","defect.acknowledgement"])choices.find((input)=>input.dataset.studioChoiceContract===key)?.click();[...occurrenceHost.querySelectorAll("button")].find(({textContent})=>textContent==="Confirm expectation")?.click();[...host.querySelectorAll("button")].find(({textContent})=>textContent==="Copy for Jira Cloud")?.click();[...occurrenceHost.querySelectorAll("button")].find(({textContent})=>textContent==="Copy for Jira Cloud")?.click();await new Promise((resolve)=>setTimeout(resolve,30));const staged=await repo.loadProject(${JSON.stringify(projectId)});
     return{contracts:[...new Set(contracts)].sort(),descriptions,activation,copied:{validation:validationCopied,occurrence:occurrenceCopied},enhanced,commandValues:{before:before.draftSequence,staged:staged.draftSequence},missing,texts};
   })()`);
   assert.equal(defectOptions.missing,false,JSON.stringify(defectOptions));
@@ -368,6 +453,11 @@ try{
   assert.match(defectOptions.copied.validation,/purchase/u);
   assert.match(defectOptions.copied.occurrence,/purchase/u);
   assert.equal(defectOptions.commandValues.staged,defectOptions.commandValues.before);
+  const defectNativeChoices=[
+    ...await nativeChoiceAudit(studio,'[data-installed-defect-route="validation"]'),
+    ...await nativeChoiceAudit(studio,'[data-installed-defect-route="occurrence"]'),
+  ];
+  await evaluate(studio,`document.querySelectorAll("[data-installed-defect-route]").forEach((host)=>host.remove())`);
   const mountedComponentChoices=await evaluate(studio,`(async()=>{
     const pause=()=>new Promise((resolve)=>setTimeout(resolve,30)),workspace=document.querySelector("#workspace-content"),mount=document.createElement("section");mount.dataset.installedChoiceComponentAudit="true";workspace.append(mount);
     const contracts={},instances=[],interactions=[],seen=new WeakSet(),interacted=new WeakSet(),record=(root)=>{
@@ -384,7 +474,7 @@ try{
     const {openIndexedDbProjectRepository}=await import("./data-layer-durable-project-repository.js"),repository=await openIndexedDbProjectRepository(),projectBefore=await repository.loadProject(${JSON.stringify(projectId)});
     const source={id:"schema:audit-source",name:"Audit source",version:1,published:true,document:{type:"object",properties:{currency:{type:"string"},market:{type:"string"}}},assignments:[],attachedRules:[{id:"rule:audit",name:"Retail currency",version:1,propertyPath:"/currency",operator:"allowed-values",allowedValues:["EUR"],severity:"error",conditionGroup:{mode:"all",predicates:[{propertyPath:"/market",operator:"equals",value:"retail"}]}}],documentation:{properties:{}}};
     const destination={id:"schema:audit-destination",name:"Audit destination",version:1,published:true,document:{type:"object",properties:{currency:{type:"number"}}},assignments:[],attachedRules:[],documentation:{properties:{}}};
-    const specificationHost=document.createElement("section");mount.append(specificationHost);let specificationPlain="";
+    const specificationHost=document.createElement("section");specificationHost.dataset.keyboardChoiceFixture="specification";mount.append(specificationHost);let specificationPlain="";
     const specification=await import("./data-layer-schema-specification-builder-ui.js");
     specification.renderSchemaSpecificationBuilder(specificationHost,source,[source],"published:1",()=>{}, {writeRich:async(_html,plain)=>{specificationPlain=plain;},writePlain:async(plain)=>{specificationPlain=plain;}});
     await pause();record(specificationHost);await probe(specificationHost);[...specificationHost.querySelectorAll("button")].find(({textContent})=>textContent==="Copy specification table").click();await pause();
@@ -398,7 +488,7 @@ try{
     const timeline=await import("./data-layer-defect-report-timeline-controls.js"),timelineEvent={id:"timeline:audit",name:"purchase",source:"dataLayer",sourceId:"dataLayer",sourceName:"dataLayer",pageUrl:"https://shop.example/checkout",pathname:"/checkout",captureTime:"2026-07-29T10:00:00Z",visitId:"visit:audit",target:"payload",validation:"Invalid",payload:{currency:"GBP"}};
     let timelineSelections=[];timeline.appendTimelineControls(timelineHost,timelineEntries,{event:timelineEvent,timeline:[timelineEvent]},{report:()=>({timeline:[]}),update:()=>{},refresh:()=>{}},{onSelectionsChange:(value)=>{timelineSelections=value;}});
     [...timelineHost.querySelectorAll("button")].find(({textContent})=>textContent==="Add event to timeline").click();timelineHost.querySelector('input[type="radio"]').click();await pause();record(timelineHost);await probe(timelineHost);timelineHost.querySelector('input[type="checkbox"]').click();[...timelineHost.querySelectorAll("button")].find(({textContent})=>textContent==="Add to timeline").click();
-    const missingHost=document.createElement("section");mount.append(missingHost);let missingCopied="",missingSaved;const missingUi=await import("./data-layer-missing-event-defect-report-ui.js"),missingSchema={id:"schema:missing-audit",name:"Missing audit",version:1,published:true,document:{type:"object",properties:{currency:{type:"string",default:"EUR"}}},assignments:[],attachedRules:[],documentation:{properties:{"/currency":{displayName:"Currency",description:"Expected currency",example:{value:"EUR",selectionMethod:"custom"}}}}},visit={id:"visit:missing-audit",pageUrl:"https://shop.example/checkout",pathname:"/checkout",startedAt:"2026-07-29T10:00:00Z",endedAt:"2026-07-29T10:01:00Z",events:[]};
+    const missingHost=document.createElement("section");missingHost.dataset.keyboardChoiceFixture="missing";mount.append(missingHost);let missingCopied="",missingSaved;const missingUi=await import("./data-layer-missing-event-defect-report-ui.js"),missingSchema={id:"schema:missing-audit",name:"Missing audit",version:1,published:true,document:{type:"object",properties:{currency:{type:"string",default:"EUR"}}},assignments:[],attachedRules:[],documentation:{properties:{"/currency":{displayName:"Currency",description:"Expected currency",example:{value:"EUR",selectionMethod:"custom"}}}}},visit={id:"visit:missing-audit",pageUrl:"https://shop.example/checkout",pathname:"/checkout",startedAt:"2026-07-29T10:00:00Z",endedAt:"2026-07-29T10:01:00Z",events:[]};
     missingUi.renderMissingEventDefectReportBuilder(missingHost,[visit],[missingSchema],{entryPoint:"Installed Studio audit",initialSchemaId:missingSchema.id,writeClipboard:async(text)=>{missingCopied=text;},saveReportedDefect:async(report)=>{missingSaved=structuredClone(report);}});
     await pause();record(missingHost);await probe(missingHost);for(const [prefix,value] of [["Expected source","dataLayer"],["Expected event name","purchase"]]){const input=[...missingHost.querySelectorAll("label")].find(({textContent})=>textContent.startsWith(prefix))?.querySelector("input");input.value=value;input.dispatchEvent(new Event("input",{bubbles:true}));}missingHost.querySelector('input[data-studio-choice-contract="defect.warning-acknowledgement"]').click();[...missingHost.querySelectorAll("button")].find(({textContent})=>textContent==="Confirm at least one matching event was expected").click();await pause();[...missingHost.querySelectorAll("button")].find(({textContent})=>textContent==="Copy for Jira Cloud")?.click();[...missingHost.querySelectorAll("button")].find(({textContent})=>textContent==="Save defect")?.click();await pause();
     const guidedHost=document.createElement("section");mount.append(guidedHost);let guidedPublished;const guided=await import("./data-layer-guided-validation-ui.js"),flow=guided.createGuidedValidationFlow(guidedHost,{schemaCandidates:()=>[],publish:(result)=>{guidedPublished=structuredClone(result);}});
@@ -427,8 +517,27 @@ try{
   assert.equal(mountedComponentChoices.consequences.guided.schema.rules.length,1);
   assert.equal(mountedComponentChoices.consequences.guided.assignment.eventName,"purchase");
   assert.deepEqual(mountedComponentChoices.consequences.project,{before:mountedComponentChoices.consequences.project.before,after:mountedComponentChoices.consequences.project.before,bytesUnchanged:true});
+  await evaluate(studio,`(async()=>{
+    const pause=()=>new Promise((resolve)=>setTimeout(resolve,30)),mount=document.querySelector("[data-installed-choice-component-audit]"),source={id:"schema:keyboard-source",name:"Keyboard source",version:1,published:true,document:{type:"object",properties:{currency:{type:"string"},market:{type:"string"}}},assignments:[],attachedRules:[{id:"rule:keyboard",name:"Keyboard dependency",version:1,propertyPath:"/currency",operator:"allowed-values",allowedValues:["EUR"],severity:"error",conditionGroup:{mode:"all",predicates:[{propertyPath:"/market",operator:"equals",value:"retail"}]}}],documentation:{properties:{}}},destination={id:"schema:keyboard-destination",name:"Keyboard destination",version:1,published:true,document:{type:"object",properties:{currency:{type:"number"}}},assignments:[],attachedRules:[],documentation:{properties:{}}};
+    const copyHost=document.createElement("dialog");copyHost.dataset.keyboardChoiceFixture="copy";mount.append(copyHost);const copyUi=await import("./data-layer-schema-property-copy-ui.js"),copyModel=await import("./data-layer-schema-property-copy.js");copyUi.renderSchemaPropertyCopyReview(copyHost,{source:copyModel.schemaPropertyCopySource(source,{surface:"current"}),selectedPath:"/currency",destinations:[destination],schemas:[source,destination],reusableRuleIds:[],onApply:()=>{}});const destinationSelect=copyHost.querySelector("#schema-property-copy-destination");destinationSelect.value=destination.id;destinationSelect.dispatchEvent(new Event("change",{bubbles:true}));await pause();const conflict=copyHost.querySelector("[data-copy-conflict-decision]");conflict.value="replace from source";conflict.dispatchEvent(new Event("change",{bubbles:true}));await pause();if(!copyHost.open)copyHost.show();
+    const timelineHost=document.createElement("section"),timelineEntries=document.createElement("ul");timelineHost.dataset.keyboardChoiceFixture="timeline";mount.append(timelineHost,timelineEntries);const timeline=await import("./data-layer-defect-report-timeline-controls.js"),event={id:"timeline:keyboard",name:"purchase",source:"dataLayer",sourceId:"dataLayer",sourceName:"dataLayer",pageUrl:"https://shop.example/checkout",pathname:"/checkout",captureTime:"2026-07-29T10:00:00Z",visitId:"visit:keyboard",target:"payload",validation:"Invalid",payload:{currency:"GBP"}};timeline.appendTimelineControls(timelineHost,timelineEntries,{event,timeline:[event]},{report:()=>({timeline:[]}),update:()=>{},refresh:()=>{}},{onSelectionsChange:()=>{}});[...timelineHost.querySelectorAll("button")].find(({textContent})=>textContent==="Add event to timeline").click();timelineHost.querySelector('input[type="radio"]').click();await pause();
+    const guided=await import("./data-layer-guided-validation-ui.js"),advance=async(host,toReview)=>{const flow=guided.createGuidedValidationFlow(host,{schemaCandidates:()=>[],publish:()=>{}});flow.openProperty({id:"guided:keyboard",name:"purchase",sourceId:"dataLayer",sourceName:"dataLayer",pageUrl:"https://shop.example/checkout",pathname:"/checkout",captureTime:"2026-07-29T10:00:00Z",target:"payload",payload:{currency:"GBP"}},"/currency");await pause();host.querySelector('input[name="guided-schema-destination"][value="new"]').click();const name=host.querySelector("#guided-new-schema-name");name.value="Keyboard purchase";name.dispatchEvent(new Event("input",{bubbles:true}));[...host.querySelectorAll("button")].find(({textContent})=>textContent==="Continue").click();await pause();const requirement=host.querySelector("#guided-requirement");requirement.value="Must be present";requirement.dispatchEvent(new Event("change",{bubbles:true}));await pause();if(toReview){[...host.querySelectorAll("button")].find(({textContent})=>textContent==="Continue").click();await pause();[...host.querySelectorAll("button")].find(({textContent})=>textContent==="Continue").click();await pause();}};
+    const conditionalHost=document.createElement("section"),publishHost=document.createElement("section");conditionalHost.dataset.keyboardChoiceFixture="guided-conditional";publishHost.dataset.keyboardChoiceFixture="guided-publish";mount.append(conditionalHost,publishHost);await advance(conditionalHost,false);await advance(publishHost,true);
+    return true;
+  })()`);
+  await evaluate(studio,`document.querySelectorAll("[data-installed-choice-component-audit] dialog[open]").forEach((dialog)=>dialog.close())`);
+  const mountedComponentNativeChoices=[
+    ...await nativeChoiceAudit(studio,'[data-keyboard-choice-fixture="specification"]'),
+    ...await nativeChoiceAudit(studio,'[data-keyboard-choice-fixture="missing"]'),
+    ...await nativeChoiceAudit(studio,'[data-keyboard-choice-fixture="timeline"]'),
+    ...await nativeChoiceAudit(studio,'[data-keyboard-choice-fixture="guided-conditional"]'),
+    ...await nativeChoiceAudit(studio,'[data-keyboard-choice-fixture="guided-publish"]'),
+  ];
+  await evaluate(studio,`document.querySelector('[data-keyboard-choice-fixture="copy"]').show()`);
+  mountedComponentNativeChoices.push(...await nativeChoiceAudit(studio,'[data-keyboard-choice-fixture="copy"]',{restore:false}));
   await evaluate(studio,`document.querySelector('#project-tree button[data-kind="applicabilitySets"]').click();document.querySelector('[data-entity-id] button').click()`);
   await ready(studio,"document.querySelector('.contextual-editor fieldset[name=\"condition\"]')","condition authoring route");
+  const conditionNativeChoices=await nativeChoiceAudit(studio,".contextual-editor");
   const conditionOptions=await evaluate(studio,`(async()=>{
     const {openIndexedDbProjectRepository}=await import("./data-layer-durable-project-repository.js"),repo=await openIndexedDbProjectRepository(),before=await repo.loadProject(${JSON.stringify(projectId)}),editor=document.querySelector(".contextual-editor"),choice=editor.querySelector('input[name="fallback"]'),enhanced=choice.dataset.studioChoiceEnhanced==="true"&&choice.labels?.length===1&&choice.labels[0].htmlFor===choice.id,initial=choice.checked;let changes=0;choice.addEventListener("change",()=>changes++);choice.click();const afterInput=choice.checked;choice.labels[0].click();const afterLabel=choice.checked;choice.click();const stagedValue=choice.checked,staged=await repo.loadProject(${JSON.stringify(projectId)});editor.querySelector("form").requestSubmit();let committed;for(let attempt=0;attempt<160;attempt+=1){committed=await repo.loadProject(${JSON.stringify(projectId)});if(committed.draftSequence===before.draftSequence+1)break;await new Promise((resolve)=>setTimeout(resolve,20));}const durable=committed.state.project.collections.applicabilitySets[0];
     return{route:Boolean(editor.querySelector('fieldset[name="condition"]')),contract:choice.dataset.studioChoiceContract,description:choice.getAttribute("aria-description"),enhanced,activation:{initial,afterInput,afterLabel,stagedValue,changes},durable:durable.fallback,commandValues:{before:before.draftSequence,staged:staged.draftSequence,committed:committed.draftSequence}};
@@ -437,19 +546,20 @@ try{
   assert.equal(conditionOptions.contract,"entity.editor-option");
   assert.equal(conditionOptions.description,exactChoiceDescriptions["entity.editor-option"]);
   assert.equal(conditionOptions.enhanced,true);
-  assert.deepEqual(conditionOptions.activation,{initial:false,afterInput:true,afterLabel:false,stagedValue:true,changes:3});
+  assert.deepEqual(conditionOptions.activation,{initial:conditionOptions.activation.initial,afterInput:!conditionOptions.activation.initial,afterLabel:conditionOptions.activation.initial,stagedValue:!conditionOptions.activation.initial,changes:3});
   assert.equal(conditionOptions.commandValues.staged,conditionOptions.commandValues.before);
   assert.deepEqual(conditionOptions.commandValues,{before:conditionOptions.commandValues.before,staged:conditionOptions.commandValues.before,committed:conditionOptions.commandValues.before+1});
-  assert.equal(conditionOptions.durable,true);
+  assert.equal(conditionOptions.durable,conditionOptions.activation.stagedValue);
   await evaluate(studio,`document.querySelector('#project-tree button[data-kind="applicabilitySets"]').click();document.querySelector('[data-add-kind="applicabilitySets"]').click()`);
   await ready(studio,"document.querySelector('[data-creation-kind=\"applicabilitySets\"]')","Applicability creation route");
+  const creationNativeChoices=await nativeChoiceAudit(studio,'[data-creation-kind="applicabilitySets"]');
   const creationChoice=await evaluate(studio,`(async()=>{
-    const {openIndexedDbProjectRepository}=await import("./data-layer-durable-project-repository.js"),repo=await openIndexedDbProjectRepository(),before=await repo.loadProject(${JSON.stringify(projectId)}),form=document.querySelector('[data-creation-kind="applicabilitySets"] form'),choice=form.querySelector('input[name="fallback"]'),enhanced=choice.dataset.studioChoiceEnhanced==="true"&&choice.labels?.length===1&&choice.labels[0].htmlFor===choice.id;form.querySelector('input[name="name"]').value="Audit fallback";choice.click();const checked=choice.checked,staged=await repo.loadProject(${JSON.stringify(projectId)});form.requestSubmit();let committed;for(let attempt=0;attempt<160;attempt+=1){committed=await repo.loadProject(${JSON.stringify(projectId)});if(committed.draftSequence===before.draftSequence+1)break;await new Promise((resolve)=>setTimeout(resolve,20));}return{contract:choice.dataset.studioChoiceContract,description:choice.getAttribute("aria-description"),enhanced,checked,durable:committed.state.project.collections.applicabilitySets.at(-1).fallback,commandValues:{before:before.draftSequence,staged:staged.draftSequence,committed:committed.draftSequence}};})()`);
+    const {openIndexedDbProjectRepository}=await import("./data-layer-durable-project-repository.js"),repo=await openIndexedDbProjectRepository(),before=await repo.loadProject(${JSON.stringify(projectId)}),form=document.querySelector('[data-creation-kind="applicabilitySets"] form'),choice=form.querySelector('input[name="fallback"]'),enhanced=choice.dataset.studioChoiceEnhanced==="true"&&choice.labels?.length===1&&choice.labels[0].htmlFor===choice.id,initial=choice.checked;form.querySelector('input[name="name"]').value="Audit fallback";choice.click();const checked=choice.checked,staged=await repo.loadProject(${JSON.stringify(projectId)});form.requestSubmit();let committed;for(let attempt=0;attempt<160;attempt+=1){committed=await repo.loadProject(${JSON.stringify(projectId)});if(committed.draftSequence===before.draftSequence+1)break;await new Promise((resolve)=>setTimeout(resolve,20));}return{contract:choice.dataset.studioChoiceContract,description:choice.getAttribute("aria-description"),enhanced,initial,checked,durable:committed.state.project.collections.applicabilitySets.at(-1).fallback,commandValues:{before:before.draftSequence,staged:staged.draftSequence,committed:committed.draftSequence}};})()`);
   assert.equal(creationChoice.contract,"entity.creation-option");
   assert.equal(creationChoice.description,exactChoiceDescriptions["entity.creation-option"]);
   assert.equal(creationChoice.enhanced,true);
-  assert.equal(creationChoice.checked,true);
-  assert.equal(creationChoice.durable,true);
+  assert.equal(creationChoice.checked,!creationChoice.initial);
+  assert.equal(creationChoice.durable,creationChoice.checked);
   assert.deepEqual(creationChoice.commandValues,{before:creationChoice.commandValues.before,staged:creationChoice.commandValues.before,committed:creationChoice.commandValues.before+1});
   conflictStudio=await pageSocket(port,`${base}specification-builder.html?project=${projectId}&kind=pages`);
   await metrics(conflictStudio,1100,760);
@@ -460,6 +570,7 @@ try{
   assert.notEqual(conflictPrimary.status,"conflict");
   await evaluate(conflictStudio,`(()=>{const editor=document.querySelector(".contextual-editor"),name=editor.querySelector('[name="name"]');name.value="Pending conflict value";name.dispatchEvent(new Event("input",{bubbles:true}));editor.querySelector("form").requestSubmit();return true;})()`);
   await ready(conflictStudio,"document.querySelector('#project-conflict-review')?.open","conflict review");
+  const conflictNativeChoices=await nativeChoiceAudit(conflictStudio,"#project-conflict-review");
   const conflictConservation=await evaluate(conflictStudio,`(async()=>{
     const {openIndexedDbProjectRepository}=await import("./data-layer-durable-project-repository.js"),repo=await openIndexedDbProjectRepository(),dialog=document.querySelector("#project-conflict-review"),choice=dialog.querySelector('input[type="checkbox"]'),enhanced=choice.dataset.studioChoiceEnhanced==="true"&&choice.labels?.length===1&&choice.labels[0].htmlFor===choice.id,before=await repo.loadProject(${JSON.stringify(projectId)}),initial=choice.checked;choice.click();const selected=choice.checked,staged=await repo.loadProject(${JSON.stringify(projectId)}),text=dialog.textContent;document.querySelector("#merge-project-conflict").click();let committed;for(let attempt=0;attempt<160;attempt+=1){committed=await repo.loadProject(${JSON.stringify(projectId)});if(committed.draftSequence===before.draftSequence+1)break;await new Promise((resolve)=>setTimeout(resolve,20));}return{contract:choice.dataset.studioChoiceContract,description:choice.getAttribute("aria-description"),enhanced,values:{initial,staged:selected,current:text.includes("Current conflict value"),pending:text.includes("Pending conflict value"),durable:committed.state.project.collections.pages[0].name},commandValues:{before:before.draftSequence,staged:staged.draftSequence,committed:committed.draftSequence}};})()`);
   assert.equal(conflictConservation.contract,"conflict.pending-field");
@@ -500,7 +611,6 @@ try{
   await metrics(studio,1440,900);
   await evaluate(studio,`document.querySelector("#run-preflight").click()`);
   await ready(studio,"document.querySelector('.preflight-list')","preflight assurance");
-  await screenshot(studio,path.join(evidenceDirectory,"studio-assurance-1440x900.png"));
   await evaluate(studio,`document.querySelector("#show-coverage").click()`);
   await ready(studio,"document.querySelector('.coverage-grid')||document.querySelector('#workspace-content').textContent.includes('Coverage blocked')","assurance");
 
@@ -534,33 +644,31 @@ try{
     [conflictConservation.contract]:conflictConservation.description,
   };
   assert.deepEqual(Object.keys(observedDescriptions).sort(),[...expectedStudioChoiceContracts.keys()].sort(),"the installed production mounts must exercise every registered Studio choice");
-  const allInstanceDetails=[
-    ...documentationChoices.details.map((detail)=>({key:detail.contract,valid:Boolean(detail.id)&&detail.forValue===detail.id&&detail.labels===1&&detail.enhanced==="true"&&detail.describedByExists})),
-    ...documentationConfigurationChoices.details.map((detail)=>({key:detail.key,valid:Boolean(detail.id)&&detail.forValue===detail.id&&detail.labels===1&&detail.enhanced==="true"&&detail.describedByValid})),
-    ...mountedComponentChoices.instances.map((detail)=>({key:detail.key,valid:Boolean(detail.id)&&detail.forValue===detail.id&&detail.labels===1&&detail.enhanced==="true"&&detail.describedByValid&&detail.actionsSeparate})),
-  ],instanceEvidence=Object.fromEntries([...expectedStudioChoiceContracts.keys()].map((key)=>{const instances=allInstanceDetails.filter((detail)=>detail.key===key);return[key,instances.length>0&&instances.every(({valid})=>valid)];}));
-  Object.assign(instanceEvidence,{
-    "schema.only-defined":switchBefore.enhanced,
-    "entity.creation-option":creationChoice.enhanced,
-    "entity.editor-option":conditionOptions.enhanced,
-    "conflict.pending-field":conflictConservation.enhanced,
-    "bulk.staged-property":bulkConservation.enhanced,
-    "defect.issue-inclusion":defectOptions.enhanced,
-    "defect.expected-override":defectOptions.enhanced,
-    "defect.acknowledgement":defectOptions.enhanced,
-    "defect.report-section":defectOptions.enhanced,
-  });
-  const documentationOutcome=documentationChoices.activation.changes===2&&documentationConservation.commandValues.staged===documentationConservation.commandValues.before&&documentationConservation.commandValues.saved===documentationConservation.commandValues.before+1;
+  const nativeChoiceAudits=[...documentationNativeChoices,...documentationConfigurationNativeChoices,...switchNativeChoices,...bulkNativeChoices,...defectNativeChoices,...mountedComponentNativeChoices,...conditionNativeChoices,...creationNativeChoices,...conflictNativeChoices];
+  assert.equal(nativeChoiceAudits.every(validNativeChoiceAudit),true,JSON.stringify(nativeChoiceAudits.filter((item)=>!validNativeChoiceAudit(item))));
+  const instanceEvidence=Object.fromEntries([...expectedStudioChoiceContracts.keys()].map((key)=>{const instances=nativeChoiceAudits.filter((detail)=>detail.key===key);return[key,instances.length>0&&instances.every(validNativeChoiceAudit)];}));
   const mountedInteractionsByKey=(key)=>mountedComponentChoices.interactions.some((item)=>item.key===key)&&mountedComponentChoices.interactions.filter((item)=>item.key===key).every(({before,afterInput,freshBefore,afterLabel,inputChanges,labelChanges})=>afterInput===!before&&freshBefore===afterInput&&afterLabel===before&&inputChanges>=1&&labelChanges===1);
-  const consequenceEvidence=Object.fromEntries([...expectedStudioChoiceContracts.keys()].map((key)=>[key,key.startsWith("documentation.")?documentationOutcome:true]));
+  const durableDocumentationConsequence=(key)=>{const evidence=documentationDurableConsequences[key];return evidence&&JSON.stringify(evidence.afterValue)!==JSON.stringify(evidence.beforeValue)&&JSON.stringify(evidence.restoredValue)===JSON.stringify(evidence.beforeValue)&&evidence.sequences.after===evidence.sequences.before+1&&evidence.sequences.restored===evidence.sequences.before+2;};
+  const consequenceEvidence=Object.fromEntries([...expectedStudioChoiceContracts.keys()].map((key)=>[key,!key.startsWith("documentation.")]));
   Object.assign(consequenceEvidence,{
+    "documentation.concept-subheadings":durableDocumentationConsequence("documentation.concept-subheadings"),
+    "documentation.concept-membership":durableDocumentationConsequence("documentation.concept-membership"),
+    "documentation.section-membership":durableDocumentationConsequence("documentation.section-membership"),
+    "documentation.flow-context":durableDocumentationConsequence("documentation.flow-context"),
+    "documentation.property-row":durableDocumentationConsequence("documentation.property-row"),
+    "documentation.metadata-column":durableDocumentationConsequence("documentation.metadata-column"),
+    "documentation.matrix-context":durableDocumentationConsequence("documentation.matrix-context"),
+    "documentation.profile-column":durableDocumentationConsequence("documentation.profile-column"),
+    "documentation.export-section":documentationConservation.exportValues.selected&&/Retail measurement operations/u.test(documentationConservation.exportValues.plain)&&!/Checkout journey/u.test(documentationConservation.exportValues.plain),
+    "documentation.confirm-incomplete":documentationConservation.acknowledgementValues.after!==documentationConservation.acknowledgementValues.before&&documentationConservation.commandValues.acknowledged===documentationConservation.commandValues.saved,
+    "documentation.theme-option":documentationConservation.themeValues.staged!==documentationConservation.themeValues.original&&documentationConservation.themeValues.durable===documentationConservation.themeValues.staged&&documentationConservation.commandValues.saved===documentationConservation.commandValues.before+1,
     "schema.only-defined":switchAfter.checked===!switchBefore.checked&&switchUndo.checked===switchBefore.checked&&switchRedo.checked===switchAfter.checked&&switchReloaded===switchAfter.checked,
     "schema.copy-dependency":mountedInteractionsByKey("schema.copy-dependency")&&mountedComponentChoices.consequences.copy.dependencies[0]==="/market",
     "schema.destructive-confirmation":mountedInteractionsByKey("schema.destructive-confirmation")&&mountedComponentChoices.consequences.copy.publishedType==="number"&&mountedComponentChoices.consequences.copy.draftType==="string",
     "schema.specification-property":mountedInteractionsByKey("schema.specification-property")&&/currency/u.test(mountedComponentChoices.consequences.specificationPlain),
     "schema.specification-headings":mountedInteractionsByKey("schema.specification-headings")&&/Property name/u.test(mountedComponentChoices.consequences.specificationPlain),
-    "entity.creation-option":creationChoice.durable&&creationChoice.commandValues.committed===creationChoice.commandValues.before+1,
-    "entity.editor-option":conditionOptions.durable&&conditionOptions.commandValues.committed===conditionOptions.commandValues.before+1,
+    "entity.creation-option":creationChoice.durable===creationChoice.checked&&creationChoice.checked!==creationChoice.initial&&creationChoice.commandValues.committed===creationChoice.commandValues.before+1,
+    "entity.editor-option":conditionOptions.durable===conditionOptions.activation.stagedValue&&conditionOptions.commandValues.committed===conditionOptions.commandValues.before+1,
     "conflict.pending-field":conflictConservation.values.durable==="Pending conflict value"&&conflictConservation.commandValues.committed===conflictConservation.commandValues.before+1,
     "bulk.staged-property":bulkConservation.durable&&bulkConservation.commandValues.committed===bulkConservation.commandValues.before+1,
     "defect.issue-inclusion":defectOptions.activation.changes===2&&Boolean(defectOptions.copied.validation),
@@ -577,15 +685,15 @@ try{
     observedDescriptions[key]===description
     &&instanceEvidence[key]===true
     &&consequenceEvidence[key]===true
-    &&(pattern==="switch"?switchBefore.role==="switch":true)
+    &&nativeChoiceAudits.filter((item)=>item.key===key).every((item)=>item.role===(pattern==="switch"?"switch":null))
   ]));
   assert.equal(Object.values(studioChoiceControls).every(Boolean),true,JSON.stringify({observedDescriptions,instanceEvidence,consequenceEvidence,studioChoiceControls,copyInteractions:mountedComponentChoices.interactions.filter(({key})=>key.startsWith("schema.")),copyConsequence:mountedComponentChoices.consequences.copy}));
-  await writeFile(path.join(evidenceDirectory,"report.json"),`${JSON.stringify({live,library,tree:treeBefore,treeKeyboard,documentation,documentationChoices,documentationConfigurationChoices,documentationConservation,mountedComponentChoices,switch:{before:switchBefore,after:switchAfter,undo:switchUndo,redo:switchRedo,reloaded:switchReloaded},bulkConservation,defectOptions,conditionOptions,creationChoice,conflictConservation,studioChoiceControls,flow,zoom,reduced,forced},null,2)}\n`);
+  await writeFile(path.join(evidenceDirectory,"report.json"),`${JSON.stringify({live,library,tree:treeBefore,treeKeyboard,documentation,documentationChoices,documentationConfigurationChoices,documentationConservation,documentationDurableConsequences,nativeChoiceAudits,mountedComponentChoices,switch:{before:switchBefore,after:switchAfter,undo:switchUndo,redo:switchRedo,reloaded:switchReloaded},bulkConservation,defectOptions,conditionOptions,creationChoice,conflictConservation,studioChoiceControls,flow,zoom,reduced,forced},null,2)}\n`);
   console.log(JSON.stringify({studioChoiceControls}));
 } finally {
   conflictStudio?.close();side?.close();studio?.close();
   await stopHeadlessChrome(chrome,1500);
-  await rm(profile,{recursive:true,force:true});
+  await rm(profile,{recursive:true,force:true,maxRetries:5,retryDelay:100});
 }
 
 console.log("TWAtility Belt packaged Slice 6 workflow polish browser test passed");
