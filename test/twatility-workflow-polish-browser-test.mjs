@@ -680,8 +680,10 @@ try{
   ];
   await evaluate(studio,`document.querySelector('[data-keyboard-choice-fixture="copy"]').showModal()`);
   mountedComponentNativeChoices.push(...await nativeChoiceAudit(studio,'[data-keyboard-choice-fixture="copy"]',{restore:false}));
+  await evaluate(studio,`document.querySelectorAll("dialog[open]").forEach((dialog)=>dialog.close())`);
   await evaluate(studio,`document.querySelector('#project-tree button[data-kind="applicabilitySets"]').click();document.querySelector('[data-entity-id] button').click()`);
   await ready(studio,"document.querySelector('.contextual-editor fieldset[name=\"condition\"]')","condition authoring route");
+  await wait(250);
   const conditionNativeChoices=await nativeChoiceAudit(studio,".contextual-editor");
   const conditionOptions=await evaluate(studio,`(async()=>{
     const {openIndexedDbProjectRepository}=await import("./data-layer-durable-project-repository.js"),repo=await openIndexedDbProjectRepository(),before=await repo.loadProject(${JSON.stringify(projectId)}),editor=document.querySelector(".contextual-editor"),choice=editor.querySelector('input[name="fallback"]'),enhanced=choice.dataset.studioChoiceEnhanced==="true"&&choice.labels?.length===1&&choice.labels[0].htmlFor===choice.id,initial=choice.checked;let changes=0;choice.addEventListener("change",()=>changes++);choice.click();const afterInput=choice.checked;choice.labels[0].click();const afterLabel=choice.checked;choice.click();const stagedValue=choice.checked,staged=await repo.loadProject(${JSON.stringify(projectId)});editor.querySelector("form").requestSubmit();let committed;for(let attempt=0;attempt<160;attempt+=1){committed=await repo.loadProject(${JSON.stringify(projectId)});if(committed.draftSequence===before.draftSequence+1)break;await new Promise((resolve)=>setTimeout(resolve,20));}const durable=committed.state.project.collections.applicabilitySets[0];

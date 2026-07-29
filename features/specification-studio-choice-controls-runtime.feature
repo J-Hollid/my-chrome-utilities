@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=b9d6fac75afda9e3fa9adb13852f81d97a6397abf8fd48f93af2061ce6b59662
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-29T16:40:12.662740674Z","feature_name":"Specification Studio choice controls runtime","feature_path":"features/specification-studio-choice-controls-runtime.feature","background_hash":"b1c91efd60907e4e2d082767addab0cc8ba4d671775b27afe4a5deadb41c675b","implementation_hash":"unknown","scenarios":[{"index":0,"name":"Specification Studio choice controls runtime 001","scenario_hash":"2018725d79950f732357cf5a474c319deee67d3e5711bd6d2b15a77c364e65e3","mutation_count":21,"result":{"Total":21,"Killed":21,"Survived":0,"Errors":0},"tested_at":"2026-07-29T16:40:12.662740674Z"},{"index":1,"name":"Specification Studio choice controls runtime 002","scenario_hash":"a9c9e9b432ac3e8dbe34fa6a1c1e6f6bcc982439cfb743962339927e1352ee53","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-29T16:40:12.662740674Z"},{"index":4,"name":"Specification Studio choice controls runtime 005","scenario_hash":"5b7c4eb5ba0fbf0faaed0b133ec1f2bd36e47d2942576d889a8aa22962c132ef","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-29T16:40:12.662740674Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Specification Studio choice controls runtime
 
   Background:

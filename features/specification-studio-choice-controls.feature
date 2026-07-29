@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=8fc36af220c24a44ba2eb7be30ca85efb269760d247c9090d1f4aafa6d1389b1
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-29T16:29:02.205655070Z","feature_name":"Specification Studio choice controls","feature_path":"features/specification-studio-choice-controls.feature","background_hash":"69b6edb91456b1276fe564a422e1df7df1cc34aa3011219426550ec0a35bb70f","implementation_hash":"unknown","scenarios":[{"index":0,"name":"Specification Studio choice controls 001","scenario_hash":"52f858858c2542d8f5abf463238703493cf33937c4001b9d62da91c2b55a0d5c","mutation_count":21,"result":{"Total":21,"Killed":21,"Survived":0,"Errors":0},"tested_at":"2026-07-29T16:29:02.205655070Z"},{"index":1,"name":"Specification Studio choice controls 002","scenario_hash":"29e1a2052310abd7919479c73f6288dbdc76a5aa6908717e386894af9674f2b8","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-29T16:29:02.205655070Z"},{"index":4,"name":"Specification Studio choice controls 005","scenario_hash":"32f292c76c15a39003d082412814584b1bc5c5ba63ee588a2be7e1d57c179453","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-29T16:29:02.205655070Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Specification Studio choice controls
 
   Background:
