@@ -62,13 +62,20 @@
     :routeHidden true
     :routeBeforeRequest true
     :retainedRequest {:id "tip-4"}
-    :pools (into {}
-                 (map (fn [index]
-                        [(keyword (str "part-" index))
-                         {:count 5
-                          :distinct 5
-                          :texts (repeat 5 "Complete production-specific analyst guidance text")}])
-                      (range 10)))
+    :pools {:pools
+            (into {}
+                  (map (fn [index]
+                         [(keyword (str "part-" index))
+                          {:count 5
+                           :distinct 5
+                           :texts (repeat 5 "Complete production-specific analyst guidance text")}])
+                       (range 10)))
+            :semantics {:canvas true
+                        :frames true
+                        :containment true
+                        :pageRelationships true
+                        :occurrencesAreNotEndpoints true
+                        :documentation true}}
     :dwell {:pointerBefore true
             :pointerFirst {:hidden false :id "control-search"}
             :pointerStayed {:hidden true :id nil}

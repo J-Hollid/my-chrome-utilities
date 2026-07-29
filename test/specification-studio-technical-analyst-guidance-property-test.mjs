@@ -1,10 +1,15 @@
 import assert from "node:assert/strict";
 import {
   STUDIO_ANALYST_COOLDOWN_MS,
+  STUDIO_ANALYST_CONTROL_DWELL_MS,
   STUDIO_ANALYST_FIRST_HINT_MS,
   STUDIO_ANALYST_HINT_LIFETIME_MS,
+  STUDIO_ANALYST_PRINT_INTERVAL_MS,
+  createStudioAnalystControlDwell,
   createStudioAnalystGuidanceSchedule,
   studioAnalystHintForRoute,
+  studioAnalystHintsForRoute,
+  studioAnalystVisibleText,
 } from "../dist/specification-studio-technical-analyst-guidance.js";
 
 const routes=[
@@ -90,6 +95,44 @@ for(let sample=0;sample<100;sample+=1){
   for(const hint of stableLookup){
     assert.notEqual(studioAnalystHintForRoute(hint.route,[hint.id])?.id,hint.id);
   }
+}
+
+for(let sample=0;sample<160;sample+=1){
+  const text=`Tip ${sample}: ${"guidance ".repeat(1+(random()%12)).trim()}`;
+  const elapsed=random()%((text.length+20)*STUDIO_ANALYST_PRINT_INTERVAL_MS);
+  const visible=studioAnalystVisibleText(text,elapsed,false);
+  const expectedLength=Math.min(text.length,Math.floor(elapsed/STUDIO_ANALYST_PRINT_INTERVAL_MS));
+  assert.equal(visible,text.slice(0,expectedLength),"typewriter output is always the expected prefix");
+  assert.equal(studioAnalystVisibleText(text,-elapsed,false),"","negative elapsed time is clamped");
+  assert.equal(studioAnalystVisibleText(text,elapsed,true),text,"reduced motion always reveals the complete tip");
+}
+
+for(let sample=0;sample<120;sample+=1){
+  const dwell=createStudioAnalystControlDwell();
+  const target={id:`control-${sample}`,name:`Control ${sample}`};
+  const activeBefore=random()%STUDIO_ANALYST_CONTROL_DWELL_MS;
+  const inactiveDuration=1+(random()%1_000_000);
+  dwell.enter(target,sample%2===0?"pointer":"focus");
+  assert.equal(dwell.advance(activeBefore,true),undefined);
+  assert.equal(dwell.advance(inactiveDuration,false),undefined,"inactive time never consumes control dwell");
+  assert.deepEqual(
+    dwell.advance(STUDIO_ANALYST_CONTROL_DWELL_MS-activeBefore,true),
+    target,
+    "every active-time partition reaches the same control dwell boundary",
+  );
+  assert.equal(dwell.advance(1_000_000,true),undefined,"one continuous dwell triggers only once");
+}
+
+for(const route of routes){
+  const pool=studioAnalystHintsForRoute(route);
+  const schedule=createStudioAnalystGuidanceSchedule();
+  const presented=[];
+  for(let index=0;index<pool.length;index+=1){
+    const action=schedule.request({active:true,route});
+    assert.equal(action.kind,"show");
+    presented.push(action.hint.id);
+  }
+  assert.equal(new Set(presented).size,pool.length,`${route} exhausts its complete pool without repetition`);
 }
 
 console.log("Specification Studio technical analyst guidance properties passed");
