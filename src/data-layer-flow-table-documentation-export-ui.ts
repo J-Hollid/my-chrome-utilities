@@ -90,6 +90,12 @@ export function installFlowDocumentationExportUi(options:Options):{render():void
 
   function render():void {
     document.querySelectorAll("[data-flow-documentation-export]").forEach((control)=>control.remove());
+    if(open){renderWorkspace();return;}
+    const {state,flowId,flow}=current(),host=document.querySelector<HTMLElement>("#flow-graph-workspace");
+    if(!host||!state||!flowId||!flow)return;
+    const trigger=createButton("Export selected Flow documentation",()=>{open=true;renderWorkspace();});
+    trigger.dataset.flowDocumentationExport="true";
+    host.prepend(trigger);
   }
   return{render};
 }

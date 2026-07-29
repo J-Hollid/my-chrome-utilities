@@ -35,14 +35,15 @@ export type StudioChoiceKey=
   |"guided.publish-rule";
 
 export interface StudioChoiceContract{
-  key:StudioChoiceKey;
-  pattern:StudioChoicePattern;
-  consequence:string;
+  readonly key:StudioChoiceKey;
+  readonly pattern:StudioChoicePattern;
+  readonly consequence:string;
 }
 
-const checkbox=(key:StudioChoiceKey,consequence:string):StudioChoiceContract=>({key,pattern:"checkbox",consequence});
-const contracts:Record<StudioChoiceKey,StudioChoiceContract>={
-  "schema.only-defined":{key:"schema.only-defined",pattern:"switch",consequence:"Immediately applies one reversible Draft setting"},
+const contract=(key:StudioChoiceKey,pattern:StudioChoicePattern,consequence:string):StudioChoiceContract=>Object.freeze({key,pattern,consequence});
+const checkbox=(key:StudioChoiceKey,consequence:string):StudioChoiceContract=>contract(key,"checkbox",consequence);
+const contracts:Readonly<Record<StudioChoiceKey,StudioChoiceContract>>=Object.freeze({
+  "schema.only-defined":contract("schema.only-defined","switch","Immediately applies one reversible Draft setting"),
   "schema.copy-dependency":checkbox("schema.copy-dependency","Selects a schema dependency for the reviewed copy operation"),
   "schema.destructive-confirmation":checkbox("schema.destructive-confirmation","Confirms replacement impact before the reviewed schema copy"),
   "schema.specification-property":checkbox("schema.specification-property","Selects a property for the later specification copy action"),
@@ -75,19 +76,19 @@ const contracts:Record<StudioChoiceKey,StudioChoiceContract>={
   "defect.expected-property":checkbox("defect.expected-property","Selects an expected property for the later defect report action"),
   "guided.conditional":checkbox("guided.conditional","Stages conditional application until the guided rule is saved"),
   "guided.publish-rule":checkbox("guided.publish-rule","Stages Rule Library publication until the guided rule is saved"),
-};
+});
 const declarations=new WeakMap<HTMLInputElement,StudioChoiceContract>();
 
 export function studioChoiceContract(key:string):StudioChoiceContract{
-  const contract=contracts[key as StudioChoiceKey];
-  if(!contract)throw new Error(`Unknown Specification Studio choice contract ${key}.`);
-  return contract;
+  const value=contracts[key as StudioChoiceKey];
+  if(!value)throw new Error(`Unknown Specification Studio choice contract ${key}.`);
+  return contract(value.key,value.pattern,value.consequence);
 }
 
-export function studioChoiceContractKeys():StudioChoiceKey[]{return Object.keys(contracts) as StudioChoiceKey[];}
+export function studioChoiceContractKeys():readonly StudioChoiceKey[]{return Object.freeze(Object.keys(contracts) as StudioChoiceKey[]);}
 
 export function declareStudioChoice(input:HTMLInputElement,key:StudioChoiceKey):HTMLInputElement{
-  declarations.set(input,contracts[key]);
+  declarations.set(input,studioChoiceContract(key));
   return input;
 }
 

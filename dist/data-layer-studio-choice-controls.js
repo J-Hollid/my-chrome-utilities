@@ -1,6 +1,7 @@
-const checkbox = (key, consequence) => ({ key, pattern: "checkbox", consequence });
-const contracts = {
-    "schema.only-defined": { key: "schema.only-defined", pattern: "switch", consequence: "Immediately applies one reversible Draft setting" },
+const contract = (key, pattern, consequence) => Object.freeze({ key, pattern, consequence });
+const checkbox = (key, consequence) => contract(key, "checkbox", consequence);
+const contracts = Object.freeze({
+    "schema.only-defined": contract("schema.only-defined", "switch", "Immediately applies one reversible Draft setting"),
     "schema.copy-dependency": checkbox("schema.copy-dependency", "Selects a schema dependency for the reviewed copy operation"),
     "schema.destructive-confirmation": checkbox("schema.destructive-confirmation", "Confirms replacement impact before the reviewed schema copy"),
     "schema.specification-property": checkbox("schema.specification-property", "Selects a property for the later specification copy action"),
@@ -33,17 +34,17 @@ const contracts = {
     "defect.expected-property": checkbox("defect.expected-property", "Selects an expected property for the later defect report action"),
     "guided.conditional": checkbox("guided.conditional", "Stages conditional application until the guided rule is saved"),
     "guided.publish-rule": checkbox("guided.publish-rule", "Stages Rule Library publication until the guided rule is saved"),
-};
+});
 const declarations = new WeakMap();
 export function studioChoiceContract(key) {
-    const contract = contracts[key];
-    if (!contract)
+    const value = contracts[key];
+    if (!value)
         throw new Error(`Unknown Specification Studio choice contract ${key}.`);
-    return contract;
+    return contract(value.key, value.pattern, value.consequence);
 }
-export function studioChoiceContractKeys() { return Object.keys(contracts); }
+export function studioChoiceContractKeys() { return Object.freeze(Object.keys(contracts)); }
 export function declareStudioChoice(input, key) {
-    declarations.set(input, contracts[key]);
+    declarations.set(input, studioChoiceContract(key));
     return input;
 }
 export function studioChoiceTargetHeight(input) {

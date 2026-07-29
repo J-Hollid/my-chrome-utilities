@@ -5,6 +5,10 @@ import {
   sharedConditionValueMounted,
   sharedTypedConditionValue,
 } from "../dist/data-layer-shared-condition-tree-editor.js";
+import {
+  projectConditionNegated,
+  setProjectConditionNegated,
+} from "../dist/data-layer-project-condition-editor.js";
 import {projectConditionEditorDraft} from "../dist/data-layer-project-condition-editor.js";
 import {conditionMatches} from "../dist/data-layer-specification-project.js";
 
@@ -77,3 +81,9 @@ assert.deepEqual(
   {kind:"all",conditions:[]},
   "a blank Studio condition retains the production match-all representation",
 );
+const baseProjectCondition={kind:"all",conditions:[{kind:"predicate",field:"event",operator:"equals",value:"purchase"}]};
+assert.equal(projectConditionNegated(baseProjectCondition),false);
+assert.deepEqual(setProjectConditionNegated(baseProjectCondition,true),{kind:"not",conditions:[baseProjectCondition]});
+assert.equal(projectConditionNegated(setProjectConditionNegated(baseProjectCondition,true)),true);
+assert.deepEqual(setProjectConditionNegated(setProjectConditionNegated(baseProjectCondition,true),false),baseProjectCondition);
+assert.deepEqual(setProjectConditionNegated(undefined,true),{kind:"not",conditions:[{kind:"all",conditions:[]}]});

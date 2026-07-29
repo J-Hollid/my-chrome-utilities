@@ -49,17 +49,25 @@
    "Specification Studio choice-control example columns describe an invalid result."))
 
 (defn- assert-browser! [evidence]
-  (support/assert! (and (= #{:installedBoundary :explicitContracts
-                             :documentationRoute :canonicalAuthoringRoute
-                             :conditionsRoute :conflictRoute :defectRoute
-                             :themeRoute :confirmationRoute :bulkRoute
-                             :optionalHints :groupingAndActions
-                             :activationAndKeyboard :commandConservation
-                             :durableConservation :responsive :sidePanelHashes}
+  (let [contracts #{"schema.only-defined" "schema.copy-dependency" "schema.destructive-confirmation"
+                    "schema.specification-property" "schema.specification-headings"
+                    "documentation.concept-subheadings" "documentation.concept-membership"
+                    "documentation.section-membership" "documentation.flow-context"
+                    "documentation.property-row" "documentation.metadata-column"
+                    "documentation.matrix-context" "documentation.profile-column"
+                    "documentation.export-section" "documentation.confirm-incomplete"
+                    "documentation.theme-option" "documentation.include-headings"
+                    "documentation.context-column" "documentation.heading-part"
+                    "entity.creation-option" "entity.editor-option" "condition.negation"
+                    "conflict.pending-field" "bulk.staged-property" "defect.issue-inclusion"
+                    "defect.timeline-evidence" "defect.expected-override" "defect.acknowledgement"
+                    "defect.report-section" "defect.warning-acknowledgement"
+                    "defect.expected-property" "guided.conditional" "guided.publish-rule"}]
+  (support/assert! (and (= (set (map keyword contracts))
                            (set (keys evidence)))
                         (every? true? (vals evidence)))
                    "Installed Specification Studio choice-control evidence is incomplete."
-                   evidence))
+                   evidence)))
 
 (def handlers
   (support/verified-feature-mode-handlers

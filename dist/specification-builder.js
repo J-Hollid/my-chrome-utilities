@@ -675,6 +675,8 @@ function renderCreationPage(content, kind) {
             control.required = true;
             control.setAttribute("placeholder", "Required observed Page event");
         }
+        if (control instanceof HTMLInputElement && control.type === "checkbox")
+            declareStudioChoice(control, "entity.creation-option");
         label.textContent = field.label;
         control.dataset.creationField = field.key;
         label.append(control);
