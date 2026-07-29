@@ -207,6 +207,22 @@ checkpoints are `layered_schema` and `flow_export`, followed by `npm run package
 This cycle does not authorize a Jira API, a new export type, or concept propagation
 through the property hierarchy.
 
+On approval, the Documentation concept correction is later authority for project
+Documentation scenarios 019 and 021–022. Selecting Include concept subheadings
+stores the choice, makes the current immutable preview stale, and after Refresh
+preview renders every non-empty included heading in literal Sitewide and the Data
+capture matrix. Current, selected, and complete preview, rich copy, plain text, and
+Excel consume the same heading-on or heading-off snapshot.
+
+Virtual Ungrouped is reorderable exactly like a named concept and is never forced
+back to the final position during reconciliation or compilation. New concepts
+append after the complete saved sequence without moving Ungrouped or another saved
+entry. Exact order and inclusion survive reload, Undo, Redo, and portability. This
+supersedes only the earlier Documentation rule that new concepts insert before
+Ungrouped; it does not change the canonical schema Table's independent Ungrouped-
+last Concept sort. The exact checkpoint is `flow_export`, followed by
+`npm run package`.
+
 On approval, the typed-literal and focused-editor correction is later authority
 for Authoring scenarios 023 and 064–067. Allowed values and custom examples share
 a type-directed literal language: commas delimit allowed values only outside

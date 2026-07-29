@@ -189,7 +189,7 @@ Feature: Data layer project documentation workspace
   Scenario: Data layer project documentation workspace 019
     Given Client specification has saved concept order ecommerce, page, and Ungrouped
     When canonical properties add Acquisition and ACQUISITION with whitespace variations
-    Then the checklist contains one Acquisition entry after page and before Ungrouped
+    Then the checklist contains one Acquisition entry after every saved entry
     And existing inclusion choices and order remain unchanged
     When Acquisition is moved before ecommerce and excluded
     Then the Documentation Set stores its normalized identity, display spelling, order, and inclusion choice
@@ -204,3 +204,32 @@ Feature: Data layer project documentation workspace
     Then literal Sitewide and the Data capture matrix omit technical rows and render included concept groups
     And every Flow sheet and non-Sitewide Profile sheet is byte-equivalent to output without concept configuration
     And current, selected, and complete export scopes apply concept configuration only when they contain literal Sitewide or the Data capture matrix
+
+  # Data layer project documentation workspace 021
+  Scenario: Data layer project documentation workspace 021
+    Given Client specification has concept subheadings off and a fresh heading-free preview
+    And included non-empty concepts are page, ecommerce, and Ungrouped
+    When the operator selects Include concept subheadings
+    Then the Documentation Set stores concept subheadings on
+    And the existing preview is visibly stale until refreshed
+    And stale rich-copy and Excel actions remain unavailable
+    When the operator refreshes the preview
+    Then literal Sitewide and the Data capture matrix each render PAGE, ECOMMERCE, and UNGROUPED subheadings once in configured order
+    And current, selected, and complete rich copy and Excel include those subheadings whenever their scope contains either affected table
+    And the plain-text fallback contains the same subheadings and row order
+    When the operator turns Include concept subheadings off and refreshes again
+    Then every concept subheading is absent while the included row set and concept order remain unchanged
+
+  # Data layer project documentation workspace 022
+  Scenario: Data layer project documentation workspace 022
+    Given Client specification has saved concept order ecommerce, page, and Ungrouped
+    When the operator moves Ungrouped earlier twice
+    Then the ordered checklist and Documentation Set store Ungrouped, ecommerce, and page
+    And Ungrouped has the same enabled positional reorder controls as a named concept
+    And each move creates one reversible project command
+    When the operator refreshes grouped output
+    Then literal Sitewide, the Data capture matrix, rich copy, plain-text fallback, and Excel order their non-empty groups as UNGROUPED, ECOMMERCE, and PAGE
+    And reload, Undo, Redo, and project portability preserve or reverse the exact order
+    When canonical properties later add new concept Acquisition
+    Then Acquisition appends after the complete saved sequence without moving Ungrouped
+    And every existing inclusion choice remains unchanged

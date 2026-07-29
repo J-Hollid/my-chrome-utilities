@@ -187,7 +187,7 @@ Feature: Data layer project documentation workspace runtime
   Scenario: Data layer project documentation workspace runtime 019
     Given durable concept configuration orders ecommerce, page, and Ungrouped
     When production canonical properties add Acquisition and ACQUISITION with whitespace variations
-    Then installed controls append one Acquisition entry after page and before Ungrouped
+    Then installed controls append one Acquisition entry after every durable entry
     And existing durable inclusion and order values remain unchanged
     When actual controls move Acquisition before ecommerce, exclude it, and save
     Then repository bytes store normalized identity, display spelling, order, and inclusion
@@ -202,3 +202,33 @@ Feature: Data layer project documentation workspace runtime
     Then parsed Sitewide and matrix output omit technical rows and contain included concept groups
     And Flow and non-Sitewide Profile content hashes equal their hashes with no concept configuration
     And current, selected, and complete output manifests apply concept configuration only to literal Sitewide and the matrix
+
+  # Data layer project documentation workspace runtime 021
+  Scenario: Data layer project documentation workspace runtime 021
+    Given production concept subheadings are off and the immutable preview contains no concept-heading records
+    And included non-empty concept groups are page, ecommerce, and Ungrouped
+    When the installed Include concept subheadings checkbox is selected
+    Then durable Documentation Set bytes store includeConceptSubheadings true
+    And the prior snapshot is marked stale
+    And installed rich-copy and Excel actions are disabled
+    When the installed Refresh preview action is activated
+    Then parsed Sitewide and matrix preview tables each contain PAGE, ECOMMERCE, and UNGROUPED rowgroup headings once in configured order
+    And current, selected, and complete clipboard and workbook manifests contain the same headings whenever their scope contains either affected table
+    And parsed plain text contains the same heading and property-row order
+    When the installed checkbox is cleared and preview is refreshed
+    Then heading records are absent from DOM, clipboard, plain text, and workbook XML
+    And row-identity and ordering hashes equal their heading-on values
+
+  # Data layer project documentation workspace runtime 022
+  Scenario: Data layer project documentation workspace runtime 022
+    Given durable concept order is ecommerce, page, and Ungrouped
+    When actual controls activate Move concept earlier twice for Ungrouped
+    Then installed checklist order and durable bytes are Ungrouped, ecommerce, and page
+    And Ungrouped reorder-button disabled states depend only on its current first or last position
+    And command and Undo counts increase once per move
+    When actual controls refresh grouped output
+    Then parsed Sitewide, matrix, clipboard, plain-text, and workbook group order is UNGROUPED, ECOMMERCE, and PAGE
+    And reload, Undo, Redo, and portability restore the corresponding exact durable orders
+    When production canonical properties add new concept Acquisition
+    Then reconciliation appends Acquisition after page without changing Ungrouped position
+    And durable inclusion hashes for existing entries remain unchanged

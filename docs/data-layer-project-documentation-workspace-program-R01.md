@@ -52,10 +52,12 @@ even when subheadings are hidden.
 
 Concept configuration applies only to the literal `Sitewide` Profile sheet and the
 one Data capture matrix. It does not apply to Flow value maps or to another Site
-Profile such as `Opened Article`. New concepts append after configured concepts and
-before Ungrouped. Operators may reorder and include or exclude them. Configuration
-survives reload, Undo, and project portability. A configured concept with no current
-rows retains its choice but emits no empty output heading.
+Profile such as `Opened Article`. Every entry, including virtual `Ungrouped`, has
+the same positional reorder behavior. New concepts append after the complete saved
+sequence without moving any existing entry. Operators may reorder and include or
+exclude every entry. Configuration survives reload, Undo, Redo, and project
+portability. A configured concept with no current rows retains its choice but emits
+no empty output heading.
 
 Within an included concept, rows retain stable path order. When subheadings are
 hidden, rows still follow configured concept-group order in one ordinary table.
@@ -63,6 +65,22 @@ When enabled, each non-empty concept begins with a full-width concept heading,
 followed by the table's standard headings and that concept's rows. This order and
 filtering are identical in preview, Excel, semantic rich clipboard HTML, and the
 plain-text fallback.
+
+## Concept correction
+
+Selecting `Include concept subheadings` stores the Set choice and marks the current
+immutable preview stale. Refreshing that preview must project one heading for every
+non-empty included group into literal Sitewide and the Data capture matrix. Current,
+selected, and complete rich copy, plain text, and Excel consume that refreshed
+snapshot and cannot silently omit those headings. Turning the choice off and
+refreshing removes headings without changing filtering or row order.
+
+The initial reconciliation treated `Ungrouped` as a terminal sentinel: it removed
+that entry from the configured sequence and appended it last on every render and
+compile. This made its visible reorder controls ineffective. `Ungrouped` is instead
+an ordinary saved ordering entry with virtual grouping semantics only. Reconciliation
+preserves its exact position and appends newly discovered concepts after all saved
+entries.
 
 ## Output contract
 
@@ -112,4 +130,7 @@ fingerprints, confirm incomplete export, and prove project and publication bytes
 remain unchanged. It must additionally prove the project-wide concept checklist,
 independent inclusion and heading controls, custom order, new-concept append
 behavior, stale refresh, identical preview/Excel/rich-copy row sets, and strict
-isolation to literal Sitewide and the Data capture matrix.
+isolation to literal Sitewide and the Data capture matrix. Heading evidence must
+begin with an off snapshot, activate the installed control, refresh, and parse the
+on result before reversing it. Ordering evidence must move `Ungrouped` away from
+last position and preserve that position through compilation and round-trips.
