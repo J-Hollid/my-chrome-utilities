@@ -69,5 +69,5 @@
     (is (nil? (#'flow-export/assert-runtime! evidence)))))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-29T07:27:43.902318184+02:00", :module-hash "343434988", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1511126195"} {:id "defn-/applicable-handler?", :kind "defn-", :line 5, :end-line 10, :hash "-1188712919"} {:id "form/2/deftest", :kind "deftest", :line 12, :end-line 18, :hash "497408386"} {:id "form/3/deftest", :kind "deftest", :line 20, :end-line 58, :hash "1346968272"} {:id "form/4/deftest", :kind "deftest", :line 60, :end-line 69, :hash "927580539"}]}
+;; {:version 1, :tested-at "2026-07-29T08:12:15.969802862+02:00", :module-hash "343434988", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1511126195"} {:id "defn-/applicable-handler?", :kind "defn-", :line 5, :end-line 10, :hash "-1188712919"} {:id "form/2/deftest", :kind "deftest", :line 12, :end-line 18, :hash "497408386"} {:id "form/3/deftest", :kind "deftest", :line 20, :end-line 58, :hash "1346968272"} {:id "form/4/deftest", :kind "deftest", :line 60, :end-line 69, :hash "927580539"}]}
 ;; clj-mutate-manifest-end
