@@ -268,6 +268,23 @@ later action remain checkboxes. The correction changes no product consequence,
 Draft value, revision, Undo behavior, output, validation, or side-panel control.
 The exact checkpoint is `branding_polish`, followed by `npm run package`.
 
+On approval, the Specification Studio technical-analyst guidance cycle is later
+authority for the two technical-analyst guidance contracts. In a populated Studio
+with its navigation rail visible, the existing genuine-alpha analyst moves to the
+left of dedicated guidance space and grows from 5.2rem to 6.5rem. The no-project
+start-card artwork is unchanged. Guidance first appears after 10 seconds of active
+Studio use, remains for 10 seconds, and then appears no more frequently than once
+every 120 seconds.
+
+Each route-appropriate hint occupies only reserved guidance space, points to the
+analyst, and uses a cheesy classic British-comic treatment without sacrificing a
+concise instruction. Guidance pauses while the document is hidden or a blocking
+surface is open, never steals focus, covers no content, creates no project or Undo
+change, and introduces no zoomed horizontal overflow. The analyst and guidance
+remain hidden whenever the narrow Studio hides its navigation rail. Reduced-motion
+presentation retains the hint without entrance or exit animation. The exact
+checkpoint is `branding_polish`, followed by `npm run package`.
+
 On approval, the typed-literal and focused-editor correction is later authority
 for Authoring scenarios 023 and 064–067. Allowed values and custom examples share
 a type-directed literal language: commas delimit allowed values only outside
