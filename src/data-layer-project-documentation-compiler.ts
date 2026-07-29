@@ -56,9 +56,8 @@ export function projectDocumentationSources(state:ProjectState,generatedAt:strin
   return{flows,matrixContexts:[...definitions(state.project.collections.pages,"Page","pages"),...definitions(state.project.collections.events,"Event","events"),...instances],profiles:state.project.collections.profiles};
 }
 
-function profileTable(section:ProjectDocumentationSection,profile:Profile,set:ProjectDocumentationSet,applyConcepts:boolean):ProjectDocumentationTable {
+function profileTable(section:ProjectDocumentationSection,profile:Profile,set:ProjectDocumentationSet):ProjectDocumentationTable {
   const requirements=profile.canonicalSchema?canonicalRequirements(profile.canonicalSchema):profile.requirements,concepts=profile.canonicalSchema?new Map(canonicalConstraints(profile.canonicalSchema).map(({path,concept})=>[path,concept])):new Map<string,string|undefined>(),columns=(section.configuration?.columns?.filter((column):column is ProjectDocumentationProfileColumn=>defaultProfileColumns.includes(column as ProjectDocumentationProfileColumn))??defaultProfileColumns),paths=section.configuration?.paths??requirements.map(({path})=>path),byPath=new Map(requirements.map((item)=>[item.path,item])),grouped=groupProjectDocumentationConceptRows(set,paths.flatMap((path)=>byPath.has(path)?[{path,concept:concepts.get(path),cells:columns.map((column)=>profileValue(column,byPath.get(path)!))}]:[]));
-  if(!applyConcepts)return{id:section.id,title:section.name,headings:columns,rows:paths.flatMap((path)=>byPath.has(path)?[[...columns.map((column)=>profileValue(column,byPath.get(path)!))]]:[])};
   return{id:section.id,title:section.name,headings:columns,rows:grouped.rows,...(set.includeConceptSubheadings?{conceptGroups:grouped.groups}:{})};
 }
 
@@ -74,7 +73,7 @@ export function compileProjectDocumentation(input:CompileProjectDocumentationInp
     }
     if(section.kind==="profile"){
       const profile=sources.profiles.find(({id})=>id===section.targetId);if(!profile){diagnostics.push({sectionId:section.id,message:`Site Profile ${section.name} is unavailable.`,repair:"Open Site Profile selection",repairTarget:{kind:"profiles",id:String(section.targetId??"")}});continue;}
-      revisions[profile.id]=stableRevision(profile);tables.push({...profileTable(section,profile,set,profile.name==="Sitewide"),themeFingerprint:themeFingerprint(theme)});continue;
+      revisions[profile.id]=stableRevision(profile);tables.push({...profileTable(section,profile,set),themeFingerprint:themeFingerprint(theme)});continue;
     }
     const selected=selectedOrder(sources.matrixContexts,section.configuration?.contextIds),paths=section.configuration?.paths??[...new Set(selected.flatMap(({compiled})=>[...Object.keys(compiled.properties),...compiled.conflicts.map(({path})=>path)]))];
     for(const context of selected){revisions[`${context.sourceId}:${context.id}`]=context.effectiveRevision;for(const conflict of context.compiled.conflicts)diagnostics.push({sectionId:section.id,message:`${context.label}: ${conflict.message}`,repair:`Open ${context.label} effective property ${conflict.path}`,repairTarget:repairTarget(context,conflict.path)});}

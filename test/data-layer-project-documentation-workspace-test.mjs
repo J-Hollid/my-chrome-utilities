@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {canonicalSchemaWithConstraint,createCanonicalSchema} from "../dist/data-layer-canonical-schema.js";
 import {
   applyProjectDocumentationTheme,
   compileProjectDocumentationSnapshot,
@@ -199,5 +200,26 @@ assert.equal(new Set(compiledProject.tables[1].rows.flatMap((row)=>row.slice(1))
 assert.deepEqual(compiledProject.tables[2].headings,["Property","Required","Description"]);
 assert.deepEqual(compiledProject.tables[2].rows.map(([path])=>path),["/locale","/site_id"]);
 assert.equal(compiledProject.tables[1].headings.some((value)=>value.includes("Compiler Sitewide")),false);
+
+let openedArticleSchema=createCanonicalSchema({id:"schema:opened-concepts",contributorId:"profile:opened-concepts",contributorName:"Opened Article"}),openedArticleIdentity=0;
+for(const constraint of [
+  {path:"/visitor",type:"string",documentation:"Visitor"},
+  {path:"/page",type:"string",concept:"page",documentation:"Page"},
+  {path:"/technical",type:"string",concept:"technical",documentation:"Technical"},
+])openedArticleSchema=canonicalSchemaWithConstraint(openedArticleSchema,constraint,(kind)=>`${kind}:opened-concepts:${++openedArticleIdentity}`);
+const openedArticleState=structuredClone(compilerState);
+openedArticleState.project.collections.profiles=[{id:"profile:opened-concepts",name:"Opened Article",requirements:[],canonicalSchema:openedArticleSchema}];
+const openedArticleSet=createProjectDocumentationSet({
+  id:"set:opened-concepts",name:"Opened concepts",themeId:compilerTheme.id,
+  concepts:[{name:"Ungrouped",included:true},{name:"page",included:true},{name:"technical",included:false}],
+  includeConceptSubheadings:true,
+  sections:[
+    {id:"matrix:opened-concepts",kind:"matrix",name:"Data capture matrix",selected:false,configuration:{contextIds:[]}},
+    {id:"profile:opened-concepts",kind:"profile",name:"Opened Article",targetId:"profile:opened-concepts",selected:true},
+  ],
+});
+const openedArticleTable=compileProjectDocumentation({state:openedArticleState,set:openedArticleSet,theme:compilerTheme,revision:5,generatedAt:"2026-07-26T00:00:00.000Z"}).tables[0];
+assert.deepEqual(openedArticleTable.rows.map(([path])=>path),["/visitor","/page"],"every selected Site Profile follows Documentation Set concept inclusion and ordering");
+assert.deepEqual(openedArticleTable.conceptGroups,[{name:"Ungrouped",start:0,count:1},{name:"page",start:1,count:1}],"a non-Sitewide Profile receives configured concept subheadings");
 
 console.log("Project documentation workspace tests passed");

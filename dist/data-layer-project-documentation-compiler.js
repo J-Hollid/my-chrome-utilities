@@ -43,10 +43,8 @@ export function projectDocumentationSources(state, generatedAt, revision) {
     const instances = flows.flatMap(({ entity, snapshot }) => snapshot.contexts.map((context) => ({ id: context.id, kind: context.kind === "page-instance" ? "page-instance" : "event-occurrence", label: `${context.kind === "page-instance" ? "Page instance" : "Event occurrence"} ${contextHeading(context)}`, flowName: entity.name, pageName: context.pageName, groupLabel: entity.name, parentLabel: context.pageName, searchText: `${entity.name} ${context.pageName} ${context.eventName}`, effectiveRevision: context.effectiveRevision, compiled: context.compiled, sourceId: entity.id, sourceKind: "flows", flowSnapshot: snapshot })));
     return { flows, matrixContexts: [...definitions(state.project.collections.pages, "Page", "pages"), ...definitions(state.project.collections.events, "Event", "events"), ...instances], profiles: state.project.collections.profiles };
 }
-function profileTable(section, profile, set, applyConcepts) {
+function profileTable(section, profile, set) {
     const requirements = profile.canonicalSchema ? canonicalRequirements(profile.canonicalSchema) : profile.requirements, concepts = profile.canonicalSchema ? new Map(canonicalConstraints(profile.canonicalSchema).map(({ path, concept }) => [path, concept])) : new Map(), columns = (section.configuration?.columns?.filter((column) => defaultProfileColumns.includes(column)) ?? defaultProfileColumns), paths = section.configuration?.paths ?? requirements.map(({ path }) => path), byPath = new Map(requirements.map((item) => [item.path, item])), grouped = groupProjectDocumentationConceptRows(set, paths.flatMap((path) => byPath.has(path) ? [{ path, concept: concepts.get(path), cells: columns.map((column) => profileValue(column, byPath.get(path))) }] : []));
-    if (!applyConcepts)
-        return { id: section.id, title: section.name, headings: columns, rows: paths.flatMap((path) => byPath.has(path) ? [[...columns.map((column) => profileValue(column, byPath.get(path)))]] : []) };
     return { id: section.id, title: section.name, headings: columns, rows: grouped.rows, ...(set.includeConceptSubheadings ? { conceptGroups: grouped.groups } : {}) };
 }
 export function compileProjectDocumentation(input) {
@@ -76,7 +74,7 @@ export function compileProjectDocumentation(input) {
                 continue;
             }
             revisions[profile.id] = stableRevision(profile);
-            tables.push({ ...profileTable(section, profile, set, profile.name === "Sitewide"), themeFingerprint: themeFingerprint(theme) });
+            tables.push({ ...profileTable(section, profile, set), themeFingerprint: themeFingerprint(theme) });
             continue;
         }
         const selected = selectedOrder(sources.matrixContexts, section.configuration?.contextIds), paths = section.configuration?.paths ?? [...new Set(selected.flatMap(({ compiled }) => [...Object.keys(compiled.properties), ...compiled.conflicts.map(({ path }) => path)]))];
