@@ -66,8 +66,10 @@
    "Flow documentation export example columns describe an invalid result."))
 
 (def runtime-paths
-  (set (concat [:installedBoundary]
-               (map #(keyword (str "export" (format "%03d" %))) (range 1 21)))))
+  (set (concat [:installedBoundary
+                :headingLifecycleStart
+                :orderingControls]
+               (map #(keyword (str "export" (format "%03d" %))) (range 1 23)))))
 
 (defn- assert-runtime! [evidence]
   (support/assert! (and (= runtime-paths (set (keys evidence)))

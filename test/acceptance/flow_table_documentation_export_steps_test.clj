@@ -57,8 +57,12 @@
         {"headings" "off"
          "heading_result" "rendered once before each non-empty concept"}))))
 
-(deftest flow-export-runtime-evidence-includes-excel-compatibility
-  (let [evidence (into {:installedBoundary true}
+(deftest flow-export-runtime-evidence-includes-documentation-concept-corrections
+  (let [evidence (into {:installedBoundary true
+                        :headingLifecycleStart true
+                        :orderingControls true
+                        :export021 true
+                        :export022 true}
                        (map (fn [index]
                               [(keyword (str "export" (format "%03d" index))) true])
                             (range 1 21)))]
