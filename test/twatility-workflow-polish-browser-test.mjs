@@ -127,26 +127,99 @@ async function nativeShiftTab(socket){
   await socket.call("Input.dispatchKeyEvent",{type:"keyUp",key:"Tab",code:"Tab",modifiers:8});
   await socket.call("Input.dispatchKeyEvent",{type:"keyUp",key:"Shift",code:"ShiftLeft"});
 }
-async function nativePointerFocus(socket,expression){
-  const point=await evaluate(socket,`(()=>{const input=${expression};input.scrollIntoView({block:"center",inline:"nearest"});const box=input.getBoundingClientRect();return{x:box.left+box.width/2,y:box.top+box.height/2};})()`);
+async function nativeClick(socket,point){
   await socket.call("Input.dispatchMouseEvent",{type:"mouseMoved",...point});
   await socket.call("Input.dispatchMouseEvent",{type:"mousePressed",...point,button:"left",clickCount:1});
-  await socket.call("Input.dispatchMouseEvent",{type:"mouseMoved",x:0,y:0,button:"left"});
-  await socket.call("Input.dispatchMouseEvent",{type:"mouseReleased",x:0,y:0,button:"left",clickCount:1});
-  return evaluate(socket,`document.activeElement===${expression}`);
+  await socket.call("Input.dispatchMouseEvent",{type:"mouseReleased",...point,button:"left",clickCount:1});
+}
+async function protocolFocus(socket,expression){
+  try{
+    const remote=await socket.call("Runtime.evaluate",{expression});
+    if(!remote.result.objectId)return false;
+    const described=await socket.call("DOM.describeNode",{objectId:remote.result.objectId});
+    await socket.call("DOM.focus",{backendNodeId:described.node.backendNodeId});
+    return evaluate(socket,`document.activeElement===${expression}`);
+  }catch(error){
+    if(error instanceof Error&&error.message==="Element is not focusable")return false;
+    throw error;
+  }
+}
+const nativeChoiceFocusOrders=[];
+const sequentialFocusScript=(rootSelector)=>`(()=>{
+  const root=document.querySelector(${JSON.stringify(rootSelector)}),visible=(element)=>element.getClientRects().length>0&&getComputedStyle(element).visibility!=="hidden",hiddenByDetails=(element)=>{const details=element.closest("details:not([open])");return details&&element!==details.querySelector(":scope > summary")&&!element.closest("summary");},base=(element)=>visible(element)&&!hiddenByDetails(element)&&!element.disabled&&element.tabIndex>=0&&!element.closest("[inert]");
+  const candidates=[...root.querySelectorAll('button,input,select,textarea,a[href],summary,[tabindex]')].filter(base),sequential=candidates.filter((element)=>{
+    if(!(element instanceof HTMLInputElement)||element.type!=="radio"||!element.name)return true;
+    const group=candidates.filter((candidate)=>candidate instanceof HTMLInputElement&&candidate.type==="radio"&&candidate.name===element.name),selected=group.find((candidate)=>candidate.checked)??group[0];
+    return element===selected;
+  });
+  sequential.forEach((element,index)=>element.dataset.nativeFocusOrder=String(index));
+  return sequential;
+})()`;
+const currentFocusOrderId=(socket,rootSelector)=>evaluate(socket,`(()=>{${sequentialFocusScript(rootSelector)};return document.activeElement?.dataset.nativeFocusOrder??null;})()`);
+async function seedFocusOrder(socket,rootSelector,id){
+  const target=`document.querySelector(${JSON.stringify(rootSelector)}).querySelector('[data-native-focus-order="${id}"]')`;
+  for(let attempt=0;attempt<4;attempt+=1){
+    await currentFocusOrderId(socket,rootSelector);
+    if(await protocolFocus(socket,target)){
+      await wait(10);
+      if(await currentFocusOrderId(socket,rootSelector)===id)return true;
+    }
+  }
+  return false;
+}
+async function nativeFocusOrderAudit(socket,rootSelector){
+  const expected=await evaluate(socket,`(()=>{
+    const sequence=${sequentialFocusScript(rootSelector)},choiceIndexes=sequence.flatMap((element,index)=>element.matches(".studio-choice-indicator")?[index]:[]);
+    if(!choiceIndexes.length)return[];
+    const relevant=sequence.slice(Math.min(...choiceIndexes),Math.max(...choiceIndexes)+1),description=(element)=>({id:element.dataset.nativeFocusOrder,tag:element.tagName.toLowerCase(),type:element.getAttribute("type"),choice:element.dataset.studioChoiceContract??null,text:(element.labels?.[0]?.textContent??element.getAttribute("aria-label")??element.textContent??"").replace(/\\s+/g," ").trim().slice(0,120),top:Math.round(element.getBoundingClientRect().top),left:Math.round(element.getBoundingClientRect().left)});
+    return relevant.map(description).sort((left,right)=>Math.abs(left.top-right.top)>1?left.top-right.top:left.left-right.left);
+  })()`);
+  if(!expected.length){
+    const evidence={rootSelector,expected:[],forward:[],reverse:[],valid:true};
+    nativeChoiceFocusOrders.push(evidence);
+    return evidence;
+  }
+  assert.equal(await seedFocusOrder(socket,rootSelector,expected[0].id),true,`could not prime native focus order for ${rootSelector}`);
+  const forward=[await currentFocusOrderId(socket,rootSelector)];
+  for(let index=1;index<expected.length;index+=1){
+    await nativeKey(socket,"Tab","Tab");
+    forward.push(await currentFocusOrderId(socket,rootSelector));
+  }
+  await nativeKey(socket,"Tab","Tab");
+  const outside=await currentFocusOrderId(socket,rootSelector);
+  assert.equal(await seedFocusOrder(socket,rootSelector,expected.at(-1).id),true,`could not prime reverse native focus order for ${rootSelector}`);
+  const reverse=[await currentFocusOrderId(socket,rootSelector)];
+  for(let index=1;index<expected.length;index+=1){
+    await nativeShiftTab(socket);
+    reverse.push(await currentFocusOrderId(socket,rootSelector));
+  }
+  const expectedIds=expected.map(({id})=>id),valid=!expectedIds.includes(outside)&&JSON.stringify(forward)===JSON.stringify(expectedIds)&&JSON.stringify(reverse)===JSON.stringify([...expectedIds].reverse()),evidence={rootSelector,expected,forward,outside,reverse,valid};
+  assert.equal(valid,true,`native focus order diverged from visual order: ${JSON.stringify(evidence)}`);
+  nativeChoiceFocusOrders.push(evidence);
+  return evidence;
+}
+async function nativeReachChoice(socket,rootSelector,locate,label){
+  const targetId=await evaluate(socket,`(()=>{${sequentialFocusScript(rootSelector)};const target=${locate};return target?.dataset.nativeFocusOrder??null;})()`);
+  assert.notEqual(targetId,null,`choice is absent from native focus order: ${label}`);
+  const sequence=await evaluate(socket,`(()=>{const sequence=${sequentialFocusScript(rootSelector)},target=${locate},index=sequence.indexOf(target),firstChoice=sequence.findIndex((element)=>element.matches(".studio-choice-indicator"));return sequence.slice(firstChoice,index+1).map((element)=>element.dataset.nativeFocusOrder);})()`);
+  assert.equal(await seedFocusOrder(socket,rootSelector,sequence[0]),true,`could not prime native traversal to ${label}`);
+  const traversed=[await currentFocusOrderId(socket,rootSelector)];
+  for(let index=1;index<sequence.length;index+=1){
+    await nativeKey(socket,"Tab","Tab");
+    traversed.push(await currentFocusOrderId(socket,rootSelector));
+  }
+  assert.deepEqual(traversed,sequence,`native traversal did not reach ${label} in sequence`);
+  return evaluate(socket,`(()=>{const input=${locate},style=getComputedStyle(input.labels[0]);return{active:document.activeElement===input,focus:[style.outlineStyle,style.outlineWidth,style.outlineColor],traversed:${JSON.stringify(traversed)}};})()`);
+}
+async function accessibleDisabled(socket,expression){
+  const remote=await socket.call("Runtime.evaluate",{expression});
+  const described=await socket.call("DOM.describeNode",{objectId:remote.result.objectId});
+  const tree=await socket.call("Accessibility.getPartialAXTree",{backendNodeId:described.node.backendNodeId,fetchRelatives:false});
+  return tree.nodes.some((node)=>node.properties?.some((property)=>property.name==="disabled"&&property.value?.value===true));
 }
 async function nativeFocusChoice(socket,rootSelector,labelIncludes){
   const locate=`(()=>{const root=document.querySelector(${JSON.stringify(rootSelector)});return[...root.querySelectorAll('input[type="checkbox"]')].find((choice)=>choice.labels?.[0]?.textContent.includes(${JSON.stringify(labelIncludes)}))})()`,defaultFocus=await evaluate(socket,`(()=>{const input=${locate},style=getComputedStyle(input.labels[0]);return[style.outlineStyle,style.outlineWidth,style.outlineColor];})()`);
-  assert.equal(await nativePointerFocus(socket,locate),true,`pointer primer could not focus ${labelIncludes}`);
-  await nativeShiftTab(socket);
-  assert.equal(await evaluate(socket,`document.activeElement!==${locate}`),true,`Shift+Tab did not leave ${labelIncludes}`);
-  await nativeKey(socket,"Tab","Tab");
-  const reached=await evaluate(socket,`(()=>{const input=${locate},style=getComputedStyle(input.labels[0]);return{active:document.activeElement===input,focus:[style.outlineStyle,style.outlineWidth,style.outlineColor]};})()`);
-  assert.equal(reached.active,true,`native Tab did not reach ${labelIncludes}`);
-  await nativeKey(socket,"Tab","Tab");
-  assert.equal(await evaluate(socket,`document.activeElement!==${locate}`),true,`Tab did not leave ${labelIncludes}`);
-  await nativeShiftTab(socket);
-  assert.equal(await evaluate(socket,`document.activeElement===${locate}`),true,`native Shift+Tab did not return to ${labelIncludes}`);
+  const reached=await nativeReachChoice(socket,rootSelector,locate,labelIncludes);
   return{...reached,defaultFocus,forward:true,reverse:true};
 }
 async function nativeChoiceAudit(socket,rootSelector,{settle=100,projectId,durableKeys=[],restore=true}={}){
@@ -156,31 +229,32 @@ async function nativeChoiceAudit(socket,rootSelector,{settle=100,projectId,durab
       const key=input.dataset.studioChoiceContract,label=text(input),identity=key+"\\n"+label,index=counts[identity]??0;counts[identity]=index+1;return{key,label,index};
     });
   })()`);
+  await nativeFocusOrderAudit(socket,rootSelector);
   const results=[];
   for(const descriptor of descriptors){
     await wait(settle);
-    await evaluate(socket,`(()=>{const root=document.querySelector(${JSON.stringify(rootSelector)}),text=(input)=>{const copy=input.labels?.[0]?.querySelector(".studio-choice-copy")?.cloneNode(true);copy?.querySelectorAll?.(".studio-switch-mark,.studio-switch-state").forEach((node)=>node.remove());return copy?.textContent.trim()??input.labels?.[0]?.textContent.trim()??"";},matches=root?[...root.querySelectorAll('input[type="checkbox"]')].filter((input)=>input.dataset.studioChoiceContract===${JSON.stringify(descriptor.key)}&&text(input)===${JSON.stringify(descriptor.label)}):[],input=matches[${descriptor.index}];if(input?.closest("details"))input.closest("details").open=true;input?.scrollIntoView({block:"center",inline:"nearest"});return Boolean(input);})()`);
+    await evaluate(socket,`(()=>{const root=document.querySelector(${JSON.stringify(rootSelector)}),text=(input)=>{const copy=input.labels?.[0]?.querySelector(".studio-choice-copy")?.cloneNode(true);copy?.querySelectorAll?.(".studio-switch-mark,.studio-switch-state").forEach((node)=>node.remove());return copy?.textContent.trim()??input.labels?.[0]?.textContent.trim()??"";},matches=root?[...root.querySelectorAll('input[type="checkbox"]')].filter((input)=>input.dataset.studioChoiceContract===${JSON.stringify(descriptor.key)}&&text(input)===${JSON.stringify(descriptor.label)}):[],input=matches[${descriptor.index}];if(input?.closest("details"))input.closest("details").open=true;if(document.activeElement instanceof HTMLElement)document.activeElement.blur();input?.scrollIntoView({block:"center",inline:"nearest"});return Boolean(input);})()`);
     const durable=projectId&&durableKeys.includes(descriptor.key),sequenceBefore=durable?await evaluate(socket,`(async()=>{const {openIndexedDbProjectRepository}=await import("./data-layer-durable-project-repository.js");return(await(await openIndexedDbProjectRepository()).loadProject(${JSON.stringify(projectId)})).draftSequence;})()`):undefined;
     const locate=`(()=>{const root=document.querySelector(${JSON.stringify(rootSelector)}),text=(input)=>{const copy=input.labels?.[0]?.querySelector(".studio-choice-copy")?.cloneNode(true);copy?.querySelectorAll?.(".studio-switch-mark,.studio-switch-state").forEach((node)=>node.remove());return copy?.textContent.trim()??input.labels?.[0]?.textContent.trim()??"";},matches=root?[...root.querySelectorAll('input[type="checkbox"]')].filter((input)=>input.getClientRects().length>0&&input.dataset.studioChoiceContract===${JSON.stringify(descriptor.key)}&&text(input)===${JSON.stringify(descriptor.label)}):[];return matches[${descriptor.index}]})()`,present=`Boolean(${locate})`;
-    const before=await evaluate(socket,`(()=>{const input=${locate},label=input?.labels?.[0],indicator=input?.getBoundingClientRect(),row=label?.getBoundingClientRect(),copy=label?.querySelector(".studio-choice-copy")?.getBoundingClientRect(),style=input&&getComputedStyle(input),labelStyle=label&&getComputedStyle(label),defaultFocus=[labelStyle?.outlineStyle,labelStyle?.outlineWidth,labelStyle?.outlineColor],describedBy=input?.getAttribute("aria-describedby"),actions=[...label?.parentElement?.children??[]].filter((element)=>element!==label&&element.matches?.("button,a[href],[role=button]")),intersects=actions.some((action)=>{const box=action.getBoundingClientRect();return!(row.right<=box.left||box.right<=row.left||row.bottom<=box.top||box.bottom<=row.top);});if(!input||!label)return null;const token=${JSON.stringify(`${descriptor.key}\n${descriptor.label}\n${descriptor.index}`)};globalThis.__studioChoiceAuditChanges??={};globalThis.__studioChoiceAuditInputs??={};globalThis.__studioChoiceAuditEventChecked??={};globalThis.__studioChoiceAuditChanges[token]=0;globalThis.__studioChoiceAuditInputs[token]=input;input.addEventListener("change",(event)=>{globalThis.__studioChoiceAuditChanges[token]++;globalThis.__studioChoiceAuditEventChecked[token]=event.currentTarget.checked;});return{checked:input.checked,disabled:input.disabled,disabledState:input.matches(":disabled"),type:input.type,role:input.getAttribute("role"),id:input.id,forValue:label.htmlFor,labels:input.labels?.length,enhanced:input.dataset.studioChoiceEnhanced,description:input.getAttribute("aria-description"),width:indicator.width,height:indicator.height,rowHeight:row.height,gap:copy?copy.left-indicator.right:null,padding:style.padding,describedByValid:!describedBy||describedBy.split(/\\s+/).every((id)=>document.getElementById(id)),defaultFocus,actionsSeparate:!intersects,contained:row.left>=0&&row.right<=innerWidth+.1};})()`);
+    const before=await evaluate(socket,`(()=>{const input=${locate},label=input?.labels?.[0],indicator=input?.getBoundingClientRect(),row=label?.getBoundingClientRect(),copy=label?.querySelector(".studio-choice-copy")?.getBoundingClientRect(),style=input&&getComputedStyle(input),labelStyle=label&&getComputedStyle(label),defaultFocus=[labelStyle?.outlineStyle,labelStyle?.outlineWidth,labelStyle?.outlineColor],describedBy=input?.getAttribute("aria-describedby"),actions=[...label?.parentElement?.children??[]].filter((element)=>element!==label&&element.matches?.("button,a[href],[role=button]")),intersects=actions.some((action)=>{const box=action.getBoundingClientRect();return!(row.right<=box.left||box.right<=row.left||row.bottom<=box.top||box.bottom<=row.top);});if(!input||!label)return null;const token=${JSON.stringify(`${descriptor.key}\n${descriptor.label}\n${descriptor.index}`)};globalThis.__studioChoiceAuditChanges??={};globalThis.__studioChoiceAuditInputs??={};globalThis.__studioChoiceAuditEventChecked??={};globalThis.__studioChoiceAuditChanges[token]=0;globalThis.__studioChoiceAuditInputs[token]=input;input.addEventListener("change",(event)=>{globalThis.__studioChoiceAuditChanges[token]++;globalThis.__studioChoiceAuditEventChecked[token]=event.currentTarget.checked;});return{checked:input.checked,disabled:input.disabled,disabledState:input.matches(":disabled"),type:input.type,role:input.getAttribute("role"),id:input.id,forValue:label.htmlFor,labels:input.labels?.length,enhanced:input.dataset.studioChoiceEnhanced,description:input.getAttribute("aria-description"),width:indicator.width,height:indicator.height,rowHeight:row.height,gap:copy?copy.left-indicator.right:null,padding:style.padding,describedByValid:!describedBy||describedBy.split(/\\s+/).every((id)=>document.getElementById(id)),defaultFocus,disabledCursor:labelStyle.cursor,disabledDecoration:labelStyle.textDecorationLine,actionsSeparate:!intersects,contained:row.left>=0&&row.right<=innerWidth+.1};})()`);
     assert.ok(before,`native choice audit could not locate ${JSON.stringify(descriptor)}`);
+    const pointerActivation=async(kind)=>{
+      const armed=await evaluate(socket,`(()=>{const input=${locate};input.closest("details")?.setAttribute("open","");const label=input.labels[0],target=${JSON.stringify(kind)}==="input"?input:label.querySelector(".studio-choice-copy")??label;target.scrollIntoView({block:"center",inline:"nearest"});const dialog=target.closest("dialog");if(dialog&&dialog.scrollHeight>dialog.clientHeight){const targetBox=target.getBoundingClientRect(),dialogBox=dialog.getBoundingClientRect();dialog.scrollTop+=targetBox.top+targetBox.height/2-(dialogBox.top+dialog.clientHeight/2);}const preliminary=target.getBoundingClientRect();scrollBy(0,preliminary.top+preliminary.height/2-innerHeight/2);const box=target.getBoundingClientRect(),point={x:box.left+box.width/2,y:box.top+box.height/2},hit=document.elementFromPoint(point.x,point.y),stage=(globalThis.__studioChoicePointerStage??0)+1;globalThis.__studioChoicePointerStage=stage;globalThis.__studioChoicePointerAudit={stage,input,changes:0,eventChecked:input.checked};input.addEventListener("change",(event)=>{if(globalThis.__studioChoicePointerAudit?.stage===stage&&globalThis.__studioChoicePointerAudit.input===event.currentTarget){globalThis.__studioChoicePointerAudit.changes++;globalThis.__studioChoicePointerAudit.eventChecked=event.currentTarget.checked;}});return{before:input.checked,...point,hit:hit===input||label.contains(hit),hitTag:hit?.tagName};})()`);
+      assert.equal(armed.hit,true,`${kind} pointer coordinate missed ${descriptor.key} ${descriptor.label}: ${JSON.stringify(armed)}`);
+      await nativeClick(socket,{x:armed.x,y:armed.y});
+      if(descriptor.key==="guided.conditional")await evaluate(socket,`[...document.querySelectorAll("#guided-condition-discard-confirmation button")].find(({textContent})=>textContent==="Discard conditions")?.click()`);
+      await wait(settle);
+      await ready(socket,present,`rerendered ${descriptor.key} after native ${kind} click`);
+      return evaluate(socket,`(()=>{const input=${locate},audit=globalThis.__studioChoicePointerAudit;return{before:${armed.before},checked:input?.checked,eventChecked:audit?.eventChecked,changes:audit?.changes,point:${JSON.stringify({x:armed.x,y:armed.y})},hit:true,hitTag:${JSON.stringify(armed.hitTag)}};})()`);
+    };
     if(before.disabled){
-      const disabledFocus=await evaluate(socket,`(()=>{const input=${locate},prior=document.activeElement;input.focus();const active=document.activeElement===input;if(prior instanceof HTMLElement)prior.focus();return{active,focusable:input.matches(":focus"),checked:input.checked};})()`);
-      results.push({...descriptor,...before,focused:{active:false,forward:true,reverse:true,focus:before.defaultFocus},after:{checked:before.checked,changes:0},inputClick:{before:before.checked,checked:before.checked,changes:0},labelClick:{before:before.checked,checked:before.checked,changes:0},restored:{checked:before.checked,changes:0},restoreExpected:false,disabledFocus});
+      const disabledFocus=await evaluate(socket,`(()=>{const input=${locate},prior=document.activeElement;input.focus();const active=document.activeElement===input;if(prior instanceof HTMLElement)prior.focus();return{active,focusable:input.matches(":focus"),checked:input.checked};})()`),accessibilityDisabled=await accessibleDisabled(socket,locate),inputClick=await pointerActivation("input"),labelClick=await pointerActivation("label");
+      results.push({...descriptor,...before,focused:{active:false,forward:true,reverse:true,focus:before.defaultFocus},after:{checked:before.checked,changes:0},inputClick,labelClick,restored:{checked:before.checked,changes:0},restoreExpected:false,disabledFocus,accessibilityDisabled});
       continue;
     }
-    assert.equal(await nativePointerFocus(socket,locate),true,`pointer primer could not focus ${descriptor.key} ${descriptor.label}`);
-    await nativeShiftTab(socket);
-    assert.equal(await evaluate(socket,`document.activeElement!==${locate}`),true,`native Shift+Tab did not leave ${descriptor.key} ${descriptor.label}`);
-    await nativeKey(socket,"Tab","Tab");
-    const focused=await evaluate(socket,`(()=>{const input=${locate},label=input?.labels?.[0],style=label&&getComputedStyle(label);return{active:document.activeElement===input,activeElement:document.activeElement?.outerHTML,focus:[style?.outlineStyle,style?.outlineWidth,style?.outlineColor]};})()`);
-    assert.equal(focused.active,true,`native Tab did not focus ${descriptor.key} ${descriptor.label}: ${focused.activeElement}`);
-    await nativeKey(socket,"Tab","Tab");
-    const reverseReached=await evaluate(socket,`document.activeElement!==${locate}`);
-    assert.equal(reverseReached,true,`forward traversal did not leave ${descriptor.key} ${descriptor.label}`);
-    await nativeShiftTab(socket);
-    const returned=await evaluate(socket,`(()=>({active:document.activeElement===${locate},element:document.activeElement?.outerHTML}))()`);
-    assert.equal(returned.active,true,`native Shift+Tab did not return to ${descriptor.key} ${descriptor.label}: ${returned.element}`);
+    const focused=await nativeReachChoice(socket,rootSelector,locate,`${descriptor.key} ${descriptor.label}`);
+    await nativeKey(socket,"Shift","ShiftLeft");
+    Object.assign(focused,await evaluate(socket,`(()=>{const input=${locate},style=getComputedStyle(input.labels[0]);return{active:document.activeElement===input,focus:[style.outlineStyle,style.outlineWidth,style.outlineColor]};})()`));
     focused.forward=true;focused.reverse=true;
     await evaluate(socket,`(()=>{const input=${locate},token=${JSON.stringify(`${descriptor.key}\n${descriptor.label}\n${descriptor.index}`)};globalThis.__studioChoiceAuditChanges[token]=0;globalThis.__studioChoiceAuditEventChecked[token]=input.checked;if(globalThis.__studioChoiceAuditInputs[token]!==input){globalThis.__studioChoiceAuditInputs[token]=input;input.addEventListener("change",(event)=>{if(globalThis.__studioChoiceAuditInputs[token]===event.currentTarget){globalThis.__studioChoiceAuditChanges[token]++;globalThis.__studioChoiceAuditEventChecked[token]=event.currentTarget.checked;}});}return true;})()`);
     await nativeKey(socket," ","Space");
@@ -197,13 +271,6 @@ async function nativeChoiceAudit(socket,rootSelector,{settle=100,projectId,durab
       try{await ready(socket,present,`rerendered ${descriptor.key} after native restore`);}catch(error){const diagnostic=await evaluate(socket,`(()=>({root:Boolean(document.querySelector(${JSON.stringify(rootSelector)})),active:document.activeElement?.outerHTML,choices:[...document.querySelectorAll('input[type="checkbox"]')].map((input)=>[input.dataset.studioChoiceContract,input.labels?.[0]?.textContent.trim(),input.checked,input.disabled]).filter(([key])=>key)}))()`);throw new Error(`${error.message}: ${JSON.stringify({descriptor,diagnostic})}`);}
       restored=await evaluate(socket,`(()=>{const input=${locate},token=${JSON.stringify(`${descriptor.key}\n${descriptor.label}\n${descriptor.index}`)};return{checked:input?.checked,eventChecked:globalThis.__studioChoiceAuditEventChecked?.[token],changes:globalThis.__studioChoiceAuditChanges?.[token]};})()`);
     }
-    const pointerActivation=async(kind)=>{
-      const armed=await evaluate(socket,`(()=>{const input=${locate},stage=(globalThis.__studioChoicePointerStage??0)+1;globalThis.__studioChoicePointerStage=stage;globalThis.__studioChoicePointerAudit={stage,input,changes:0,eventChecked:input.checked};input.addEventListener("change",(event)=>{if(globalThis.__studioChoicePointerAudit?.stage===stage&&globalThis.__studioChoicePointerAudit.input===event.currentTarget){globalThis.__studioChoicePointerAudit.changes++;globalThis.__studioChoicePointerAudit.eventChecked=event.currentTarget.checked;}});const before=input.checked;${JSON.stringify(kind)}==="input"?input.click():input.labels[0].click();return before;})()`);
-      if(descriptor.key==="guided.conditional")await evaluate(socket,`[...document.querySelectorAll("#guided-condition-discard-confirmation button")].find(({textContent})=>textContent==="Discard conditions")?.click()`);
-      await wait(settle);
-      await ready(socket,present,`rerendered ${descriptor.key} after ${kind} click`);
-      return evaluate(socket,`(()=>{const input=${locate},audit=globalThis.__studioChoicePointerAudit;return{before:${armed},checked:input?.checked,eventChecked:audit?.eventChecked,changes:audit?.changes};})()`);
-    };
     const inputClick=await pointerActivation("input"),labelClick=await pointerActivation("label");
     if(restore&&labelClick.checked!==before.checked)restored=await pointerActivation("input");
     results.push({...descriptor,...before,focused,after,inputClick,labelClick,restored,restoreExpected:restore});
@@ -219,7 +286,7 @@ async function durableChoiceConsequence(socket,projectId,key,readExpression,{roo
 }
 function validNativeChoiceAudit(item){
   const expectedPattern=expectedStudioChoiceContracts.get(item.key)?.[0],focusChanged=item.focused.active&&JSON.stringify(item.focused.focus)!==JSON.stringify(item.defaultFocus)&&item.focused.focus[0]!=="none"&&item.focused.focus[1]!=="0px",indicatorValid=expectedPattern==="switch"?item.width===36&&item.height>=16&&item.height<=18:item.width>=16&&item.width<=18&&item.height>=16&&item.height<=18;
-  const activationValid=(entry)=>entry.checked===!entry.before&&entry.eventChecked===entry.checked&&entry.changes===1,disabledValid=item.disabledState&&!item.disabledFocus.active&&!item.disabledFocus.focusable&&item.after.changes===0&&item.inputClick.changes===0&&item.labelClick.changes===0;
+  const activationValid=(entry)=>entry.hit&&entry.checked===!entry.before&&entry.eventChecked===entry.checked&&entry.changes===1,disabledValid=item.disabledState&&item.accessibilityDisabled&&item.disabledCursor==="not-allowed"&&item.disabledDecoration.includes("line-through")&&!item.disabledFocus.active&&!item.disabledFocus.focusable&&item.after.changes===0&&item.inputClick.hit&&item.inputClick.checked===item.inputClick.before&&item.inputClick.changes===0&&item.labelClick.hit&&item.labelClick.checked===item.labelClick.before&&item.labelClick.changes===0;
   const restorationValid=!item.restoreExpected||item.restored.checked===item.checked;
   return item.description===exactChoiceDescriptions[item.key]&&item.type==="checkbox"&&item.role===(expectedPattern==="switch"?"switch":null)&&item.enhanced==="true"&&item.labels===1&&Boolean(item.id)&&item.forValue===item.id&&indicatorValid&&item.padding==="0px"&&Math.abs(item.gap-8)<0.1&&item.rowHeight>=36&&item.describedByValid&&item.actionsSeparate&&item.contained&&(item.disabled?disabledValid:focusChanged&&item.focused.forward&&item.focused.reverse&&item.after.eventChecked===!item.checked&&item.after.changes===1&&activationValid(item.inputClick)&&activationValid(item.labelClick)&&restorationValid);
 }
@@ -611,7 +678,7 @@ try{
     ...await nativeChoiceAudit(studio,'[data-keyboard-choice-fixture="guided-conditional"]'),
     ...await nativeChoiceAudit(studio,'[data-keyboard-choice-fixture="guided-publish"]'),
   ];
-  await evaluate(studio,`document.querySelector('[data-keyboard-choice-fixture="copy"]').show()`);
+  await evaluate(studio,`document.querySelector('[data-keyboard-choice-fixture="copy"]').showModal()`);
   mountedComponentNativeChoices.push(...await nativeChoiceAudit(studio,'[data-keyboard-choice-fixture="copy"]',{restore:false}));
   await evaluate(studio,`document.querySelector('#project-tree button[data-kind="applicabilitySets"]').click();document.querySelector('[data-entity-id] button').click()`);
   await ready(studio,"document.querySelector('.contextual-editor fieldset[name=\"condition\"]')","condition authoring route");
@@ -768,7 +835,7 @@ try{
     &&nativeChoiceAudits.filter((item)=>item.key===key).every((item)=>item.role===(pattern==="switch"?"switch":null))
   ]));
   assert.equal(Object.values(studioChoiceControls).every(Boolean),true,JSON.stringify({observedDescriptions,instanceEvidence,consequenceEvidence,studioChoiceControls,copyInteractions:mountedComponentChoices.interactions.filter(({key})=>key.startsWith("schema.")),copyConsequence:mountedComponentChoices.consequences.copy}));
-  await writeFile(path.join(evidenceDirectory,"report.json"),`${JSON.stringify({live,library,tree:treeBefore,treeKeyboard,documentation,documentationChoices,documentationConfigurationChoices,documentationConservation,documentationDurableConsequences,nativeChoiceAudits,mountedComponentChoices,switch:{before:switchBefore,after:switchAfter,undo:switchUndo,redo:switchRedo,reloaded:switchReloaded},bulkConservation,defectOptions,conditionOptions,creationChoice,conflictConservation,studioChoiceControls,flow,zoom,reduced,forced},null,2)}\n`);
+  await writeFile(path.join(evidenceDirectory,"report.json"),`${JSON.stringify({live,library,tree:treeBefore,treeKeyboard,documentation,documentationChoices,documentationConfigurationChoices,documentationConservation,documentationDurableConsequences,nativeChoiceFocusOrders,nativeChoiceAudits,mountedComponentChoices,switch:{before:switchBefore,after:switchAfter,undo:switchUndo,redo:switchRedo,reloaded:switchReloaded},bulkConservation,defectOptions,conditionOptions,creationChoice,conflictConservation,studioChoiceControls,flow,zoom,reduced,forced},null,2)}\n`);
   console.log(JSON.stringify({studioChoiceControls}));
 } finally {
   blockedStudio?.close();conflictStudio?.close();side?.close();studio?.close();

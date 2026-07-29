@@ -32,6 +32,10 @@ fieldset:has(> ol .studio-choice-row) {
   outline: 3px solid #8dc5ff;
   outline-offset: 1px;
 }
+.studio-choice-row:has(.studio-choice-indicator:disabled) {
+  cursor: not-allowed;
+  text-decoration: line-through;
+}
 .studio-choice-indicator[role="switch"] {
   appearance: none;
   inline-size: 36px;
