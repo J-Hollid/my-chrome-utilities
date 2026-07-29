@@ -93,16 +93,15 @@ let conceptSeed=0xd0c5e7;
 const conceptRandom=()=>((conceptSeed=(Math.imul(conceptSeed,1103515245)+12345)>>>0)/0x100000000);
 const shuffled=(values)=>{const result=[...values];for(let index=result.length-1;index>0;index-=1){const target=Math.floor(conceptRandom()*(index+1));[result[index],result[target]]=[result[target],result[index]];}return result;};
 for(let example=0;example<250;example+=1){
-  const names=Array.from({length:2+Math.floor(conceptRandom()*6)},(_,index)=>`Concept ${example}-${index}`),configuredOrder=shuffled(names),configured=configuredOrder.map((name,index)=>({name,included:(index+example)%3!==0})),set=createProjectDocumentationSet({
+  const names=Array.from({length:2+Math.floor(conceptRandom()*6)},(_,index)=>`Concept ${example}-${index}`),configuredOrder=shuffled(names),configured=configuredOrder.map((name,index)=>({name,included:(index+example)%3!==0})),ungrouped={name:"Ungrouped",included:example%4!==0},ungroupedIndex=Math.floor(conceptRandom()*(configured.length+1)),savedConcepts=[...configured.slice(0,ungroupedIndex),ungrouped,...configured.slice(ungroupedIndex)],set=createProjectDocumentationSet({
     id:`set:concept-property:${example}`,name:`Concept property ${example}`,themeId:`theme:${example}`,sections:[{id:`matrix:concept-property:${example}`,kind:"matrix",name:"Data capture matrix",selected:true}],
-    concepts:[...configured,{name:"Ungrouped",included:example%4!==0}],includeConceptSubheadings:true,
+    concepts:savedConcepts,includeConceptSubheadings:true,
   }),newNames=[`Acquisition ${example}`,`Behavior ${example}`],available=[
     ...shuffled(names).flatMap((name)=>[` ${name.toUpperCase()} `,name.toLowerCase()]),
     ...newNames.flatMap((name)=>[name,` ${name.toUpperCase()} `]),
   ],reconciled=reconcileProjectDocumentationConcepts(set,available);
-  assert.deepEqual(reconciled.slice(0,configured.length),configured,"reconciliation preserves configured order and inclusion");
-  assert.deepEqual(reconciled.slice(configured.length,-1).map(({name})=>name),newNames,"new normalized concepts append alphabetically before Ungrouped");
-  assert.deepEqual(reconciled.at(-1),set.concepts.at(-1),"reconciliation preserves the configured Ungrouped choice");
+  assert.deepEqual(reconciled.slice(0,savedConcepts.length),savedConcepts,"reconciliation preserves the complete saved order and inclusion, including Ungrouped");
+  assert.deepEqual(reconciled.slice(savedConcepts.length).map(({name})=>name),newNames,"new normalized concepts append alphabetically after every saved entry");
 
   const itemCount=5+Math.floor(conceptRandom()*25),items=Array.from({length:itemCount},(_,index)=>{
     const concept=index%5===0?undefined:names[Math.floor(conceptRandom()*names.length)],path=`/${String(Math.floor(conceptRandom()*12)).padStart(2,"0")}/${String(index).padStart(2,"0")}`;

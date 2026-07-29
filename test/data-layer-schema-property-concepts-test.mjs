@@ -70,18 +70,18 @@ assert.deepEqual(schemaTableEditableFacets,["concept","type","presence","descrip
 const documentationSet=createProjectDocumentationSet({id:"set:concept",name:"Concept docs",themeId:"theme:concept",sections:[{id:"section:matrix",kind:"matrix",name:"Data capture matrix",selected:true}],concepts:[{name:"Page",included:false},{name:"Ungrouped",included:true}],includeConceptSubheadings:true});
 assert.deepEqual(reconcileProjectDocumentationConcepts(documentationSet,["page","Commerce"]),[
   {name:"Page",included:false},
-  {name:"Commerce",included:true},
   {name:"Ungrouped",included:true},
-],"new concepts append before Ungrouped without replacing saved choices");
+  {name:"Commerce",included:true},
+],"new concepts append after the complete saved sequence without replacing saved choices");
 assert.deepEqual(groupProjectDocumentationConceptRows(documentationSet,[
   {path:"/z",concept:"Page",cells:["/z"]},
   {path:"/b",concept:"Commerce",cells:["/b"]},
   {path:"/a",concept:"Commerce",cells:["/a"]},
   {path:"/u",cells:["/u"]},
 ]),{
-  rows:[["/a"],["/b"],["/u"]],
-  groups:[{name:"Commerce",start:0,count:2},{name:"Ungrouped",start:2,count:1}],
-  concepts:[{name:"Page",included:false},{name:"Commerce",included:true},{name:"Ungrouped",included:true}],
+  rows:[["/u"],["/a"],["/b"]],
+  groups:[{name:"Ungrouped",start:0,count:1},{name:"Commerce",start:1,count:2}],
+  concepts:[{name:"Page",included:false},{name:"Ungrouped",included:true},{name:"Commerce",included:true}],
 },"filtering stays active independently of headings and retains path order inside configured groups");
 const theme={id:"theme:concept",name:"Concept theme",clientName:"",logo:"",colors:{heading:"#222222",accent:"#666666",stripe:"#f4f4f4"},typography:{family:"Arial",headingSize:16,bodySize:11},density:"comfortable",borders:true,striping:false,highlightedHeadings:true,columnWidths:{},headerText:"",footerText:""};
 const snapshot=compileProjectDocumentationSnapshot({projectId:"project:concept",projectName:"Concept project",set:documentationSet,theme,sourceRevisions:{},generatedAt:"2026-07-28T00:00:00.000Z",diagnostics:[],tables:[{id:"section:matrix",title:"Data capture matrix",headings:["Property","Page"],rows:[["/a","Mandatory"],["/b","Optional"],["/u","Optional"]],conceptGroups:[{name:"Commerce",start:0,count:2},{name:"Ungrouped",start:2,count:1}]}]});
