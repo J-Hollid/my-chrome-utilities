@@ -224,7 +224,74 @@ try{
   assert.equal(documentation.set,true);
   assert.equal(documentation.regions,true);
   assert.deepEqual(documentation.overflow,[0,0]);
+  const documentationChoices=await evaluate(studio,`(()=>{
+    const root=document.querySelector('[aria-label="Project Documentation workspace"]'),tableTheme=root.querySelector('[data-theme-group="Table"]');tableTheme.open=true;
+    const choices=[...root.querySelectorAll('input[type="checkbox"]')],visible=(element)=>element.getClientRects().length>0;
+    const details=choices.map((input)=>{const label=input.labels?.[0],indicator=input.getBoundingClientRect(),copy=label?.querySelector(".studio-choice-copy")?.getBoundingClientRect(),style=getComputedStyle(input),row=label?.getBoundingClientRect();return{text:label?.textContent.trim(),id:input.id,forValue:label?.htmlFor,labels:input.labels?.length,role:input.getAttribute("role"),description:input.getAttribute("aria-description"),enhanced:input.dataset.studioChoiceEnhanced,width:indicator.width,height:indicator.height,padding:style.padding,gap:copy?copy.left-indicator.right:null,rowHeight:row?.height,visible:visible(input)};});
+    const exportChoice=choices.find((input)=>input.labels?.[0]?.textContent.includes("Export Overview")),before=exportChoice.checked;let changes=0;exportChoice.addEventListener("change",()=>changes++);exportChoice.click();const afterInput=exportChoice.checked;exportChoice.labels[0].click();
+    const actionPairs=[...root.querySelectorAll("li")].flatMap((item)=>{const label=item.querySelector(":scope > label.studio-choice-row"),action=item.querySelector(":scope > button");if(!label||!action||!visible(label)||!visible(action))return[];const left=label.getBoundingClientRect(),right=action.getBoundingClientRect();return[{intersects:!(left.right<=right.left||right.right<=left.left||left.bottom<=right.top||right.bottom<=left.top)}];});
+    const verticalDetails=[...root.querySelectorAll("fieldset")].filter((field)=>field.querySelector(":scope > .studio-choice-row,:scope > ol .studio-choice-row")).map((field)=>{const rows=[...field.querySelectorAll(".studio-choice-row")].filter(visible).map((row)=>row.getBoundingClientRect());return{legend:field.querySelector("legend")?.textContent,columns:getComputedStyle(field).gridTemplateColumns,stacked:rows.every((row,index)=>!index||row.top>=rows[index-1].bottom-0.1)};});
+    return{count:choices.length,details,activation:{before,afterInput,restored:exportChoice.checked,changes},vertical:verticalDetails.every(({stacked})=>stacked),verticalDetails,actionsSeparate:actionPairs.every(({intersects})=>!intersects)};
+  })()`);
+  assert.equal(documentationChoices.count>5,true);
+  assert.equal(documentationChoices.details.every(({id,forValue,labels,enhanced,description})=>id&&forValue===id&&labels===1&&enhanced==="true"&&description),true);
+  assert.equal(documentationChoices.details.filter(({visible,role})=>visible&&role!=="switch").every(({width,height,padding,gap,rowHeight})=>width>=16&&width<=18&&height>=16&&height<=18&&padding==="0px"&&Math.abs(gap-8)<0.1&&rowHeight>=36),true,JSON.stringify(documentationChoices.details.filter(({visible,role})=>visible&&role!=="switch")));
+  assert.equal(documentationChoices.activation.afterInput,!documentationChoices.activation.before);
+  assert.equal(documentationChoices.activation.restored,documentationChoices.activation.before);
+  assert.equal(documentationChoices.activation.changes,2);
+  assert.equal(documentationChoices.details.find(({text})=>text.includes("Include concept subheadings"))?.role,null);
+  assert.equal(documentationChoices.details.find(({text})=>text.includes("Borders"))?.role,null);
+  assert.equal(documentationChoices.vertical,true,JSON.stringify(documentationChoices.verticalDetails));
+  assert.equal(documentationChoices.actionsSeparate,true);
   await screenshot(studio,path.join(evidenceDirectory,"studio-documentation-1280x900.png"));
+
+  await evaluate(studio,`document.querySelector('#project-tree button[data-kind="pages"]').click();document.querySelector('[data-entity-id] button').click()`);
+  await ready(studio,"document.querySelector('.composed-schema-workspace input[aria-label=\"Only defined fields\"]')?.dataset.studioChoiceEnhanced==='true'","Only defined fields switch");
+  const switchBefore=await evaluate(studio,`(()=>{const input=document.querySelector('.composed-schema-workspace input[aria-label="Only defined fields"]'),label=input.labels[0];input.focus();return{checked:input.checked,role:input.getAttribute("role"),ariaChecked:input.getAttribute("aria-checked"),state:label.querySelector(".studio-switch-state")?.textContent,mark:label.querySelector(".studio-switch-mark")?.textContent,undo:Number(document.querySelector("#undo-project").dataset.undoCount)};})()`);
+  await nativeKey(studio," ","Space");
+  await wait(180);
+  const switchAfter=await evaluate(studio,`(()=>{const input=document.querySelector('.composed-schema-workspace input[aria-label="Only defined fields"]'),label=input.labels[0];return{checked:input.checked,role:input.getAttribute("role"),ariaChecked:input.getAttribute("aria-checked"),state:label.querySelector(".studio-switch-state")?.textContent,mark:label.querySelector(".studio-switch-mark")?.textContent,undo:Number(document.querySelector("#undo-project").dataset.undoCount)};})()`);
+  assert.equal(switchBefore.role,"switch");
+  assert.equal(switchAfter.role,"switch");
+  assert.equal(switchAfter.checked,!switchBefore.checked);
+  assert.equal(switchAfter.ariaChecked,String(switchAfter.checked));
+  assert.equal(switchAfter.state,switchAfter.checked?"On":"Off");
+  assert.equal(switchAfter.mark,switchAfter.checked?"✓":"—");
+  assert.equal(switchAfter.undo,switchBefore.undo+1);
+  await evaluate(studio,`document.querySelector("#undo-project").click()`);
+  await wait(180);
+  const switchUndo=await evaluate(studio,`(()=>{const input=document.querySelector('.composed-schema-workspace input[aria-label="Only defined fields"]');return{checked:input.checked,undo:Number(document.querySelector("#undo-project").dataset.undoCount),redo:Number(document.querySelector("#redo-project").dataset.redoCount)};})()`);
+  await evaluate(studio,`document.querySelector("#redo-project").click()`);
+  await wait(180);
+  const switchRedo=await evaluate(studio,`(()=>{const input=document.querySelector('.composed-schema-workspace input[aria-label="Only defined fields"]');return{checked:input.checked,undo:Number(document.querySelector("#undo-project").dataset.undoCount),redo:Number(document.querySelector("#redo-project").dataset.redoCount)};})()`);
+  assert.equal(switchUndo.checked,switchBefore.checked);
+  assert.equal(switchUndo.redo,1);
+  assert.equal(switchRedo.checked,switchAfter.checked);
+  assert.equal(switchRedo.undo,switchAfter.undo);
+  await studio.call("Page.reload",{ignoreCache:true});
+  await ready(studio,"document.querySelector('.composed-schema-workspace input[aria-label=\"Only defined fields\"]')?.dataset.studioChoiceEnhanced==='true'","reloaded Only defined fields switch");
+  const switchReloaded=await evaluate(studio,`document.querySelector('.composed-schema-workspace input[aria-label="Only defined fields"]').checked`);
+  assert.equal(switchReloaded,switchAfter.checked);
+
+  await studio.call("Emulation.setTouchEmulationEnabled",{enabled:true,maxTouchPoints:1});
+  await metrics(studio,360,800);
+  await evaluate(studio,`document.querySelector('#project-tree button[data-kind="documentation"]').click();document.querySelector('[data-theme-group="Table"]').open=true`);
+  await ready(studio,"document.querySelector('[aria-label=\"Project Documentation workspace\"] input[type=\"checkbox\"]')?.dataset.studioChoiceEnhanced==='true'","narrow choice rows");
+  const responsiveChoices=await evaluate(studio,`(()=>{
+    const root=document.querySelector('[aria-label="Project Documentation workspace"]'),choices=[...root.querySelectorAll('input[type="checkbox"]')].filter((input)=>input.getClientRects().length),rows=choices.map((input)=>input.labels[0]),boxes=rows.map((row)=>row.getBoundingClientRect()),input=choices.find((choice)=>choice.labels[0].textContent.includes("Include concept subheadings"));input.focus();const focus=getComputedStyle(input.labels[0]);
+    return{coarse:matchMedia("(pointer: coarse)").matches,minTarget:Math.min(...boxes.map(({height})=>height)),adjacent:choices.every((choice)=>{const indicator=choice.getBoundingClientRect(),copy=choice.labels[0].querySelector(".studio-choice-copy").getBoundingClientRect();return Math.abs(copy.left-indicator.right-8)<.1;}),contained:boxes.every(({left,right})=>left>=0&&right<=innerWidth+.1),focus:[focus.outlineStyle,focus.outlineWidth],overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth};
+  })()`);
+  assert.equal(responsiveChoices.coarse,true);
+  assert.equal(responsiveChoices.minTarget>=44,true);
+  assert.equal(responsiveChoices.adjacent,true);
+  assert.equal(responsiveChoices.contained,true);
+  assert.notEqual(responsiveChoices.focus[0],"none");
+  assert.notEqual(responsiveChoices.focus[1],"0px");
+  assert.equal(responsiveChoices.overflow,0);
+  await metrics(studio,640,450);
+  const zoomChoices=await evaluate(studio,`(()=>{const root=document.querySelector('[aria-label="Project Documentation workspace"]'),choices=[...root.querySelectorAll('input[type="checkbox"]')].filter((input)=>input.getClientRects().length),rows=choices.map((input)=>input.labels[0].getBoundingClientRect());return{targets:rows.every(({height})=>height>=44),contained:rows.every(({left,right})=>left>=0&&right<=innerWidth+.1),overflow:document.documentElement.scrollWidth-document.documentElement.clientWidth};})()`);
+  assert.deepEqual(zoomChoices,{targets:true,contained:true,overflow:0});
+  await studio.call("Emulation.setTouchEmulationEnabled",{enabled:false});
 
   await metrics(studio,1720,960);
   await evaluate(studio,`document.querySelector('#project-tree button[data-kind="flows"]').click();document.querySelector('[data-entity-id] button').click()`);
@@ -260,7 +327,24 @@ try{
 
   const badEvents=[...side.events,...studio.events].filter(({method,params})=>method==="Runtime.exceptionThrown"||method==="Network.loadingFailed"||(method==="Log.entryAdded"&&params.entry?.level==="error"));
   assert.deepEqual(badEvents,[],"installed Slice 6 surfaces must have no runtime or load errors");
-  await writeFile(path.join(evidenceDirectory,"report.json"),`${JSON.stringify({live,library,tree:treeBefore,treeKeyboard,documentation,flow,zoom,reduced,forced},null,2)}\n`);
+  const studioChoiceControls={
+    installedBoundary:documentationChoices.count>5,
+    explicitLabels:documentationChoices.details.every(({id,forValue,labels,enhanced,description})=>Boolean(id)&&forValue===id&&labels===1&&enhanced==="true"&&Boolean(description)),
+    checkboxClassification:documentationChoices.details.find(({text})=>text.includes("Include concept subheadings"))?.role===null&&documentationChoices.details.find(({text})=>text.includes("Borders"))?.role===null,
+    desktopGeometry:documentationChoices.details.filter(({visible,role})=>visible&&role!=="switch").every(({width,height,padding,gap,rowHeight})=>width>=16&&width<=18&&height>=16&&height<=18&&padding==="0px"&&Math.abs(gap-8)<0.1&&rowHeight>=36),
+    labelActivation:documentationChoices.activation.afterInput===!documentationChoices.activation.before&&documentationChoices.activation.restored===documentationChoices.activation.before&&documentationChoices.activation.changes===2,
+    verticalGroups:documentationChoices.vertical,
+    separateActions:documentationChoices.actionsSeparate,
+    immediateSwitch:switchBefore.role==="switch"&&switchAfter.role==="switch"&&switchAfter.checked===!switchBefore.checked&&switchAfter.ariaChecked===String(switchAfter.checked)&&switchAfter.state===(switchAfter.checked?"On":"Off")&&switchAfter.mark===(switchAfter.checked?"✓":"—"),
+    oneCommand:switchAfter.undo===switchBefore.undo+1,
+    undoRedoReload:switchUndo.checked===switchBefore.checked&&switchUndo.redo===1&&switchRedo.checked===switchAfter.checked&&switchReloaded===switchAfter.checked,
+    coarseAndNarrow:responsiveChoices.coarse&&responsiveChoices.minTarget>=44&&responsiveChoices.adjacent&&responsiveChoices.contained,
+    focusVisible:responsiveChoices.focus[0]!=="none"&&responsiveChoices.focus[1]!=="0px",
+    responsiveOverflow:responsiveChoices.overflow===0&&zoomChoices.targets&&zoomChoices.contained&&zoomChoices.overflow===0,
+    sidePanelUnchanged:live.equivalent&&!side.events.some(({method})=>method==="Runtime.exceptionThrown"),
+  };
+  await writeFile(path.join(evidenceDirectory,"report.json"),`${JSON.stringify({live,library,tree:treeBefore,treeKeyboard,documentation,studioChoiceControls,flow,zoom,reduced,forced},null,2)}\n`);
+  console.log(JSON.stringify({studioChoiceControls}));
 } finally {
   side?.close();studio?.close();
   await stopHeadlessChrome(chrome,1500);

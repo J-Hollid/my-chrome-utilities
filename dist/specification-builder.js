@@ -24,7 +24,9 @@ import { applyCanonicalCommand, canonicalCommandOutcome, canonicalRequirements, 
 import { mountCanonicalSchemaEditor as mountCanonicalSchemaEditorBase } from "./data-layer-canonical-schema-ui.js";
 import { mountProjectConditionEditor, projectConditionEditorValue } from "./data-layer-project-condition-editor.js";
 import { createProjectCollectionEntity, hasSavedSchemaAdoptionActions, inspectProjectEntityRemoval, projectCollectionCreationFields, projectCollectionCreationRoute, projectCollectionDefinitions, projectEntityWorkspaceRoute, projectInspectorTogglePresentation, removeProjectCollectionEntity } from "./data-layer-project-entity-lifecycle.js";
+import { installStudioChoiceControls } from "./data-layer-studio-choice-controls.js";
 const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, START_PATH_KEY = "my-chrome-utilities.specification-project-start.v1", routeParameters = new URLSearchParams(location.search), startupProjectId = routeParameters.get("project") ?? undefined, startupKind = routeParameters.get("kind") ?? undefined, startupEntityId = routeParameters.get("entity") ?? undefined, startupRoute = startupKind ? durableProjectRouteForWorkspace(startupKind, startupEntityId) : undefined;
+installStudioChoiceControls(document.body);
 const durableProjectRuntime = await openDurableProjectRuntime(globalThis.localStorage, globalThis.indexedDB, { ...(startupProjectId ? { projectId: startupProjectId } : {}), ...(startupRoute ? { route: startupRoute } : {}) }).catch((error) => { const status = document.querySelector("#project-state"); if (status)
     status.textContent = `Durable project storage unavailable: ${error instanceof Error ? error.message : String(error)}`; document.querySelectorAll("button,input,select,textarea").forEach((control) => { control.disabled = true; }); return new Promise(() => { }); }), projectStorage = durableProjectRuntime.storage;
 const q = (selector) => { const element = document.querySelector(selector); if (!element)
@@ -1006,6 +1008,7 @@ function renderBulkStage() { bulkReview.replaceChildren(); if (!stagedBulk)
     const tr = document.createElement("tr"), selected = document.createElement("input"), path = document.createElement("input"), type = document.createElement("input"), error = document.createElement("td");
     selected.type = "checkbox";
     selected.checked = row.selected;
+    selected.setAttribute("aria-label", `Select staged property ${row.path}`);
     selected.addEventListener("change", () => { row.selected = selected.checked; });
     path.value = row.path;
     type.value = row.type ?? "";

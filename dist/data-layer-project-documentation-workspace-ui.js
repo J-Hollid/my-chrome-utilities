@@ -245,7 +245,7 @@ export function installProjectDocumentationWorkspaceUi(options) {
         density.name = "density";
         density.append(new Option("Comfortable", "comfortable"), new Option("Compact", "compact"));
         density.value = theme.density;
-        const borders = document.createElement("input"), striping = document.createElement("input"), highlighted = document.createElement("input"), widths = document.createElement("textarea");
+        const borders = document.createElement("input"), striping = document.createElement("input"), highlighted = document.createElement("input"), widths = document.createElement("textarea"), tableChoices = document.createElement("fieldset");
         for (const check of [borders, striping, highlighted])
             check.type = "checkbox";
         borders.name = "borders";
@@ -256,7 +256,8 @@ export function installProjectDocumentationWorkspaceUi(options) {
         highlighted.checked = theme.highlightedHeadings;
         widths.value = Object.entries(theme.columnWidths).map(([column, width]) => `${column}=${width}`).join("\n");
         widths.setAttribute("aria-label", "Theme column widths");
-        groups.Table.append(labelled("Density", density), labelled("Borders", borders), labelled("Striping", striping), labelled("Highlighted headings", highlighted), labelled("Column widths", widths));
+        tableChoices.append(Object.assign(document.createElement("legend"), { textContent: "Table presentation choices" }), labelled("Density", density), labelled("Borders", borders), labelled("Striping", striping), labelled("Highlighted headings", highlighted), labelled("Column widths", widths));
+        groups.Table.append(tableChoices);
         const header = controlInput("headerText", theme.headerText), footer = controlInput("footerText", theme.footerText);
         header.setAttribute("aria-label", "Theme header text");
         footer.setAttribute("aria-label", "Theme footer text");

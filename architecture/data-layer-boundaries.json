@@ -1137,6 +1137,10 @@
     "module": "schemas",
     "layer": "browser"
   },
+  "src/data-layer-studio-choice-controls.ts": {
+    "module": "schemas",
+    "layer": "browser"
+  },
   "src/specification-builder.ts": {
     "module": "schemas",
     "layer": "browser",

@@ -3,6 +3,7 @@ import {readFile} from "node:fs/promises";
 
 const side=await readFile(new URL("../side-panel-brand.css",import.meta.url),"utf8");
 const studio=await readFile(new URL("../specification-builder-brand.css",import.meta.url),"utf8");
+const studioBase=await readFile(new URL("../specification-builder.css",import.meta.url),"utf8");
 
 for(const [name,source,scope] of[
   ["side panel",side,".twatility-side-panel"],
@@ -43,5 +44,9 @@ for(const selector of[
 assert.doesNotMatch(side,/\.twatility-side-panel\s+#schema-list\[role="tree"\][^{]*\{[^}]*overflow-y\s*:\s*(?:auto|scroll)/su,"relationship tree must not gain a second vertical scroll owner");
 assert.match(studio,/\.twatility-studio \.flow-canvas-scroll\s*\{[^}]*max-width\s*:\s*100%/su,"Flow canvas branding must stay contained by its production scroll owner");
 assert.doesNotMatch(studio,/\.twatility-studio\s+table\s*\{/u,"wide table styling must remain locally scoped");
+assert.match(studioBase,/\.studio-choice-row\s*\{[^}]*min-height\s*:\s*36px[^}]*column-gap\s*:\s*8px/su,"Studio choice rows must provide the fine-pointer target and exact label gap");
+assert.match(studioBase,/\.studio-choice-indicator\s*\{[^}]*inline-size\s*:\s*18px[^}]*block-size\s*:\s*18px/su,"Studio checkbox indicators must remain compact");
+assert.match(studioBase,/@media[^{]*\(pointer:\s*coarse\)[^{]*\{[\s\S]*?\.studio-choice-row\s*\{[^}]*min-height\s*:\s*44px/su,"coarse-pointer choice rows must provide a 44 CSS pixel target");
+assert.doesNotMatch(side,/studio-choice-row|studio-choice-indicator/u,"Studio choice presentation must not alter side-panel CSS");
 
 console.log("TWAtility Belt Slice 6 polish selector tests passed");

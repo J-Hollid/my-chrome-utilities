@@ -1039,14 +1039,22 @@
   },
   {
     "id": "branding_polish",
-    "source": [],
+    "source": [
+      "src/data-layer-studio-choice-controls.ts"
+    ],
     "dependencies": [],
     "unit": [
+      "test/data-layer-studio-choice-controls-test.mjs",
       "test/twatility-brand-polish-test.mjs"
     ],
     "property": [],
-    "features": [],
-    "handlers": [],
+    "features": [
+      "features/specification-studio-choice-controls.feature",
+      "features/specification-studio-choice-controls-runtime.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/specification_studio_choice_controls.clj"
+    ],
     "browserAdapters": [
       "test/twatility-workflow-polish-browser-test.mjs"
     ]
