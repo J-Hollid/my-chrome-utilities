@@ -94,6 +94,19 @@ for(let index=0;index<250;index+=1) {
   assert.equal(layered,canonical,`flat ${mode} condition ${index} agrees between canonical and layered matchers`);
 }
 
+for(const [label,condition] of [
+  ["absent",undefined],
+  ["empty All",{kind:"all",children:[]}],
+  ["empty Any",{kind:"any",children:[]}],
+]) {
+  const canonical=evaluateCanonicalPredicate(condition,{nodes:{}},{}).matched;
+  const composed=evaluateComposedCondition(condition,{},[]);
+  const layered=layeredConditionMatches(condition,{},new Map());
+  assert.equal(canonical,true,`${label} is unconditional in the canonical matcher`);
+  assert.equal(composed,true,`${label} is unconditional in the composed matcher`);
+  assert.equal(layered,true,`${label} is unconditional in the layered matcher`);
+}
+
 for(const [index,row] of [
   {propertyId:"",operator:"Exists"},
   {propertyId:"property:empty-operator",operator:""},

@@ -15,7 +15,10 @@ export function moveComposedConditionBranch(draft, path, delta) { if (!path.leng
     return draft; [parent.children[index], parent.children[target]] = [parent.children[target], parent.children[index]]; return { ...draft, condition }; }
 const valueAt = (observation, path) => path.split("/").filter(Boolean).reduce((value, key) => value && typeof value === "object" ? value[key] : undefined, observation);
 const includesAny = (actual, expected) => (Array.isArray(expected) ? expected : [expected]).some((choice) => Array.isArray(actual) ? actual.some((entry) => same(entry, choice)) : String(actual ?? "").includes(String(choice ?? "")));
-export function evaluateComposedCondition(condition, observation, propertyChoices = []) { if (condition.kind !== "predicate") {
+export function evaluateComposedCondition(condition, observation, propertyChoices = []) { if (!condition)
+    return true; if (condition.kind !== "predicate") {
+    if (!condition.children.length)
+        return true;
     if (condition.kind === "all")
         return condition.children.every((child) => evaluateComposedCondition(child, observation, propertyChoices));
     if (condition.kind === "any")

@@ -26,9 +26,10 @@ function leafMatches(leaf, document, observation) { const actual = actualFor(doc
     case "Less than": return Number(actual) < Number(expected);
     case "At most": return Number(actual) <= Number(expected);
 } }
-export function evaluateCanonicalPredicate(predicate, document, observation) { const branches = []; const visit = (branch) => { if (branch.kind === "predicate") {
+export function evaluateCanonicalPredicate(predicate, document, observation) { const branches = []; if (!predicate)
+    return { matched: true, branches }; const visit = (branch) => { if (branch.kind === "predicate") {
     const matched = Boolean(document.nodes[branch.propertyId]) && leafMatches(branch, document, observation);
     branches.push({ label: `${document.nodes[branch.propertyId]?.name ?? "Unresolved property"} ${branch.operator}${branch.value === undefined ? "" : ` ${String(branch.value)}`}`, matched, propertyId: branch.propertyId });
     return matched;
-} const results = branch.children.map(visit), matched = branch.kind === "all" ? results.every(Boolean) : branch.kind === "any" ? results.some(Boolean) : !results.some(Boolean); branches.push({ label: `${branch.kind.toUpperCase()} group`, matched }); return matched; }; return { matched: visit(predicate), branches }; }
+} const results = branch.children.map(visit), matched = !results.length ? true : branch.kind === "all" ? results.every(Boolean) : branch.kind === "any" ? results.some(Boolean) : !results.some(Boolean); branches.push({ label: `${branch.kind.toUpperCase()} group`, matched }); return matched; }; return { matched: visit(predicate), branches }; }
 //# sourceMappingURL=data-layer-canonical-schema-predicates.js.map

@@ -44,6 +44,8 @@ export const layeredConditionMatches = (condition, payload, pathsByDefinition) =
         return predicateMatches(String(condition.operator ?? "Equals"), actual, condition.value);
     }
     const children = condition.children ?? [];
+    if (!children.length && ["all", "any"].includes(kind))
+        return true;
     if (kind === "all")
         return children.every((child) => layeredConditionMatches(child, payload, pathsByDefinition));
     if (kind === "any")

@@ -26,6 +26,7 @@ export const layeredConditionMatches=(condition:Record<string,unknown>|undefined
   const kind=String(condition.kind??"");
   if(kind==="predicate"){const path=pathsByDefinition.get(String(condition.propertyId??"")),actual=path?valueAt(payload,path):undefined;return predicateMatches(String(condition.operator??"Equals"),actual,condition.value);}
   const children=(condition.children as Record<string,unknown>[]|undefined)??[];
+  if(!children.length&&["all","any"].includes(kind))return true;
   if(kind==="all")return children.every((child)=>layeredConditionMatches(child,payload,pathsByDefinition));
   if(kind==="any")return children.some((child)=>layeredConditionMatches(child,payload,pathsByDefinition));
   if(kind==="not")return!children.some((child)=>layeredConditionMatches(child,payload,pathsByDefinition));
