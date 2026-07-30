@@ -23,6 +23,13 @@
     "module": "schemas",
     "layer": "core"
   },
+  "src/data-layer-string-rule-validation-ui.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-string-rule-validation.ts"
+    ]
+  },
   "src/layered-schema/conditional-rules.ts": {
     "module": "schemas",
     "layer": "core",

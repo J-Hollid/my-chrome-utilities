@@ -22,10 +22,10 @@ const ownershipProvenance = (row, entity, itemId, raw, localIds) => {
     const source = raw && typeof raw === "object" ? raw : undefined, local = localIds.has(itemId), sourceId = typeof source?.contributorId === "string" ? source.contributorId : typeof source?.sourceId === "string" ? source.sourceId : undefined, origin = (sourceId ? row.provenance.find(({ contributorId }) => contributorId === sourceId) : undefined) ?? (local ? row.provenance.find(({ contributorId }) => contributorId === entity.id) ?? row.provenance.at(-1) : row.provenance.find(({ state }) => state === "inherited") ?? row.provenance.at(-1)), sourceState = String(source?.state ?? ""), state = local && sourceState === "overridden" ? "overridden" : local ? "local" : sourceState === "shadowed" ? "shadowed" : "inherited";
     return itemProvenance(raw, { source: "path-constraint", ...(origin?.contributorId ? { sourceId: origin.contributorId, contributorId: origin.contributorId } : {}), ...(origin?.contributorName ? { contributorName: origin.contributorName } : {}), ...(origin?.scope ? { scope: origin.scope } : {}), state });
 };
-const ruleKinds = new Set(["presence", "value", "pattern", "range", "cardinality", "condition", "reusable", "custom"]);
+const ruleKinds = new Set(["presence", "value", "pattern", "starts-with", "ends-with", "includes", "range", "cardinality", "condition", "reusable", "custom"]);
 const ruleFor = (value, fallbackId, provenance) => {
     const rule = { id: String(value.id ?? fallbackId), kind: ruleKinds.has(value.kind) ? value.kind : "custom", severity: value.severity === "warning" ? "warning" : "error", provenance };
-    for (const field of ["presence", "expectedValue", "allowedValues", "pattern", "minimum", "maximum", "minItems", "maxItems", "message", "enabled", "reusableRuleId", "reusableOutcome", "replacesRuleId", "enforcement", "name", "revision", "operator"])
+    for (const field of ["presence", "expectedValue", "allowedValues", "pattern", "literal", "minimum", "maximum", "minItems", "maxItems", "message", "enabled", "reusableRuleId", "reusableOutcome", "replacesRuleId", "enforcement", "name", "revision", "operator"])
         if (value[field] !== undefined)
             rule[field] = clone(value[field]);
     if (value.condition)

@@ -1,7 +1,8 @@
 import { focusedOwnershipActionTarget, focusedOwnershipActions, focusedRuleFields, focusedRuleIssue } from "./data-layer-focused-schema-property-ui.js";
 import { renderSharedConditionTree } from "./data-layer-shared-condition-tree-editor.js";
 import { schemaTableAllowedValues, schemaTableRuleConditionSummary, schemaTableRuleOutcomeSummary, schemaTableStageAllowedValues } from "./data-layer-schema-table.js";
-import { renderRegularExpressionTester, stringRuleKindOptions } from "./data-layer-string-rule-validation.js";
+import { stringRuleKindOptions } from "./data-layer-string-rule-validation.js";
+import { renderRegularExpressionTester } from "./data-layer-string-rule-validation-ui.js";
 const clone = (value) => structuredClone(value);
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const input = (dom, name, value = "", type = "text") => { const control = dom.createElement("input"); control.name = name; control.type = type; control.value = value; return control; };

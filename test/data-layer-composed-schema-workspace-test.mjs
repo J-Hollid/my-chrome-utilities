@@ -37,6 +37,14 @@ state.project.collections.pageGroups.push(
 state.project.collections.pages.push({id:"page:cart",name:"Cart",profileId:"profile:sitewide",pageGroupIds:["group:checkout","group:retail"],schemaConstraints:[{path:"/funnel_step",expectedValue:"2"}]});
 
 const cart=state.project.collections.pages[0];
+const literalRuleState=structuredClone(state),literalRulePage=literalRuleState.project.collections.pages[0],literalRule={id:"rule:page-name-prefix",name:"Page-name prefix",kind:"starts-with",literal:"checkout-",severity:"error"};
+literalRulePage.schemaConstraints.push({path:"/page_name",rules:[literalRule]});
+const literalRuleProjection=composedCanonicalSchema(literalRuleState,literalRulePage,"Page"),literalRuleNode=Object.values(literalRuleProjection.nodes).find((node)=>canonicalPropertyPath(literalRuleProjection,node.id)==="/page_name");
+assert.deepEqual(
+  literalRuleNode.rules.map(({id,name,kind,literal,severity})=>({id,name,kind,literal,severity})),
+  [literalRule],
+  "composed contributor projection preserves String literal rule identity and operand",
+);
 const closedCart=saveComposedSchemaPolicy(state,"pages",cart.id,true);
 assert.equal(closedCart.project.collections.pages[0].onlyDefinedFields,true,"a composed schema policy persists independently from property contributions");
 assert.deepEqual(closedCart.project.collections.pages[0].schemaConstraints,cart.schemaConstraints,"the schema policy command does not rewrite property definitions");

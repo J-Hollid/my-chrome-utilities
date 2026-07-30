@@ -927,6 +927,7 @@
       "src/data-layer-focused-schema-property-menu.ts",
       "src/data-layer-focused-rule-policy.ts",
       "src/data-layer-string-rule-validation.ts",
+      "src/data-layer-string-rule-validation-ui.ts",
       "src/data-layer-focused-schema-property-ui.ts",
       "src/layered-schema/conditional-rules.ts",
       "src/data-layer-canonical-predicate-editor.ts",

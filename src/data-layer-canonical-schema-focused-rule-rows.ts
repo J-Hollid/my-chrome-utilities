@@ -2,7 +2,8 @@ import type {CanonicalPropertyNode,CanonicalRule} from "./data-layer-canonical-s
 import {focusedOwnershipActionTarget,focusedOwnershipActions,focusedRuleFields,focusedRuleIssue} from "./data-layer-focused-schema-property-ui.js";
 import {renderSharedConditionTree} from "./data-layer-shared-condition-tree-editor.js";
 import {schemaTableAllowedValues,schemaTableRuleConditionSummary,schemaTableRuleOutcomeSummary,schemaTableStageAllowedValues} from "./data-layer-schema-table.js";
-import {renderRegularExpressionTester,stringRuleKindOptions} from "./data-layer-string-rule-validation.js";
+import {stringRuleKindOptions} from "./data-layer-string-rule-validation.js";
+import {renderRegularExpressionTester} from "./data-layer-string-rule-validation-ui.js";
 
 export interface CanonicalFocusedRuleRowsContext {dom:Document;getWorking:()=>CanonicalPropertyNode|undefined;properties?:()=>readonly {id:string;name:string;type?:string;allowedValues?:readonly unknown[]}[];removedRuleIds:Set<string>;invariant:boolean;id:(kind:string)=>string;render:()=>void;feedback:(message:string)=>void;}
 const clone=<T>(value:T):T=>structuredClone(value);

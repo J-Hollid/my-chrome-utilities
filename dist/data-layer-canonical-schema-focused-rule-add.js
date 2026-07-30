@@ -2,7 +2,8 @@ import { filterFocusedReusableRules, focusedReusableOutcome, focusedRuleFields, 
 import { renderSharedConditionTree } from "./data-layer-shared-condition-tree-editor.js";
 import { schemaTableStageAllowedValues } from "./data-layer-schema-table.js";
 import { canonicalArrayScopeIssue, canonicalArrayScopeSummary } from "./data-layer-canonical-array-items.js";
-import { renderRegularExpressionTester, stringRuleKindOptions } from "./data-layer-string-rule-validation.js";
+import { stringRuleKindOptions } from "./data-layer-string-rule-validation.js";
+import { renderRegularExpressionTester } from "./data-layer-string-rule-validation-ui.js";
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const input = (dom, name, value = "", type = "text") => { const control = dom.createElement("input"); control.name = name; control.type = type; control.value = value; return control; };
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };

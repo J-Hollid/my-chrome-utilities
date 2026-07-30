@@ -3,7 +3,8 @@ import {filterFocusedReusableRules,focusedOwnershipActions,focusedReusableOutcom
 import type {ComposedFocusedSectionContext} from "./data-layer-composed-schema-workspace-focused-sections.js";
 import {renderSharedConditionTree} from "./data-layer-shared-condition-tree-editor.js";
 import {schemaTableAllowedValues,schemaTableRuleConditionSummary,schemaTableRuleOutcomeSummary,schemaTableStageAllowedValues} from "./data-layer-schema-table.js";
-import {renderRegularExpressionTester,stringRuleKindOptions} from "./data-layer-string-rule-validation.js";
+import {stringRuleKindOptions} from "./data-layer-string-rule-validation.js";
+import {renderRegularExpressionTester} from "./data-layer-string-rule-validation-ui.js";
 
 const labeled=(dom:Document,text:string,control:HTMLElement):HTMLLabelElement=>{const label=dom.createElement("label");label.append(text,control);return label;};
 const button=(dom:Document,text:string,run:()=>void):HTMLButtonElement=>{const control=dom.createElement("button");control.type="button";control.textContent=text;control.addEventListener("click",run);return control;};

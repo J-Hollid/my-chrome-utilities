@@ -3,7 +3,8 @@ import {filterFocusedReusableRules,focusedReusableOutcome,focusedRuleFields,focu
 import {renderSharedConditionTree} from "./data-layer-shared-condition-tree-editor.js";
 import {schemaTableStageAllowedValues} from "./data-layer-schema-table.js";
 import {canonicalArrayScopeIssue,canonicalArrayScopeSummary} from "./data-layer-canonical-array-items.js";
-import {renderRegularExpressionTester,stringRuleKindOptions} from "./data-layer-string-rule-validation.js";
+import {stringRuleKindOptions} from "./data-layer-string-rule-validation.js";
+import {renderRegularExpressionTester} from "./data-layer-string-rule-validation-ui.js";
 import type {CanonicalArrayScopeBoundary} from "./data-layer-canonical-schema.js";
 
 export interface CanonicalFocusedRuleAddContext {dom:Document;getWorking:()=>CanonicalPropertyNode|undefined;properties?:()=>readonly {id:string;name:string;type?:string;allowedValues?:readonly unknown[];arrayBoundaries?:readonly {propertyId:string;name:string}[]}[];id:(kind:string)=>string;render:()=>void;feedback:(message:string)=>void;}
