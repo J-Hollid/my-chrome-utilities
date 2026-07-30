@@ -1,4 +1,3 @@
-import {canonicalConstraints,type CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
 import {compileLayeredSchema,validateLayeredObservation,type CompiledLayeredSchema,type LayerConstraint} from "./data-layer-layered-schema.js";
 import {layeredContributorPath,layeredContributorsForPath} from "./data-layer-layered-schema-project.js";
 import type {Condition,ProjectEntity,ProjectState} from "./data-layer-specification-project.js";
@@ -44,14 +43,6 @@ export interface PageGroupFixtureEvaluation {
   compiled:CompiledLayeredSchema;
   validation:ReturnType<typeof validateLayeredObservation>;
 }
-
-const constraintsFor=(entity:ProjectEntity):LayerConstraint[]=>{
-  const canonical=entity.canonicalSchema as CanonicalSchemaDocument|undefined;
-  return canonical?canonicalConstraints(canonical):[
-    ...((entity.schemaConstraints as LayerConstraint[]|undefined)??[]),
-    ...((entity.localSchemaContributions as LayerConstraint[]|undefined)??[]),
-  ];
-};
 
 const scalar=(value:unknown):string=>typeof value==="string"?value:JSON.stringify(value);
 

@@ -305,7 +305,6 @@
     "module": "schemas",
     "layer": "application",
     "contracts": [
-      "src/data-layer-canonical-schema.ts",
       "src/data-layer-layered-schema.ts",
       "src/data-layer-layered-schema-project.ts",
       "src/data-layer-specification-project.ts"

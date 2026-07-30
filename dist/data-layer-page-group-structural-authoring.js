@@ -1,13 +1,5 @@
-import { canonicalConstraints } from "./data-layer-canonical-schema.js";
 import { compileLayeredSchema, validateLayeredObservation } from "./data-layer-layered-schema.js";
 import { layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
-const constraintsFor = (entity) => {
-    const canonical = entity.canonicalSchema;
-    return canonical ? canonicalConstraints(canonical) : [
-        ...(entity.schemaConstraints ?? []),
-        ...(entity.localSchemaContributions ?? []),
-    ];
-};
 const scalar = (value) => typeof value === "string" ? value : JSON.stringify(value);
 export function pageGroupConditionText(condition) {
     if (!condition)
