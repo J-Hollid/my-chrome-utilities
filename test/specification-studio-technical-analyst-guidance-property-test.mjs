@@ -7,6 +7,7 @@ import {
   STUDIO_ANALYST_PRINT_INTERVAL_MS,
   createStudioAnalystControlDwell,
   createStudioAnalystGuidanceSchedule,
+  studioAnalystControlHint,
   studioAnalystHintForRoute,
   studioAnalystHintsForRoute,
   studioAnalystVisibleText,
@@ -121,6 +122,15 @@ for(let sample=0;sample<120;sample+=1){
     "every active-time partition reaches the same control dwell boundary",
   );
   assert.equal(dwell.advance(1_000_000,true),undefined,"one continuous dwell triggers only once");
+}
+
+for(let sample=0;sample<120;sample+=1){
+  const target={id:`unregistered-${sample}-${random()}`,name:`Unregistered action ${sample}`};
+  assert.equal(
+    studioAnalystControlHint(routes[random()%routes.length],target),
+    undefined,
+    "arbitrary named controls never receive fabricated generic guidance",
+  );
 }
 
 for(const route of routes){

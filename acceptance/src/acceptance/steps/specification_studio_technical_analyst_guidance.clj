@@ -97,134 +97,161 @@
    example-relations example
    "Specification Studio technical analyst guidance example columns describe an invalid result."))
 
-(defn- assert-browser! [{:keys [before preFirstHidden visible scheduleBoundary
-                                blockingPredicate documentHidden zoom narrow interaction after]
-                         :as evidence}]
+(defn- base-evidence-valid?
+  [{:keys [before preFirstHidden visible blockingPredicate documentHidden zoom narrow]}]
+  (and (:bubbleHidden before)
+       preFirstHidden
+       (false? (:hidden visible))
+       (= "project-overview" (:hintId visible))
+       (= (:expectedWidth visible) (:width visible))
+       (:leftAnchored visible)
+       (:inside visible)
+       (zero? (:under visible))
+       (zero? (:overflow visible))
+       (= "workspace-pane" (:focus visible))
+       (= "polite" (:live visible))
+       (= "status" (:role visible))
+       (= "none" (:animation visible))
+       (every? true? (vals blockingPredicate))
+       (:hidden documentHidden)
+       (false? (:active documentHidden))
+       (:visible zoom)
+       (:inside zoom)
+       (zero? (:overflow zoom))
+       (= "Splendid! Refresh the preview after changing a Documentation Set." (:text zoom))
+       (:visibleBefore narrow)
+       (:hiddenWithNavigation narrow)
+       (:overflow narrow)))
+
+(defn- pause-evidence [schedule-boundary pause]
+  (mapv (partial get-in schedule-boundary)
+        [[pause :before :hidden]
+         [pause :inactive :hidden]
+         [pause :resumed :id]
+         [pause :removed :hidden]]))
+
+(defn- schedule-evidence-valid? [schedule-boundary]
+  (and (:hidden (:preFirst schedule-boundary))
+       (= "project-overview" (:id (:first schedule-boundary)))
+       (:hidden (:afterLifetime schedule-boundary))
+       (:hidden (:cooldownBefore schedule-boundary))
+       (= ["project-overview" "shared-profiles" "pages" "flows" "documentation"]
+          (mapv :id (:rotation schedule-boundary)))
+       (:hidden (:routeHide schedule-boundary))
+       (= "project-overview-search" (:id (:retained schedule-boundary)))
+       (= [true true "pages" true]
+          (pause-evidence schedule-boundary :documentPause))
+       (= [true true "pages" true]
+          (pause-evidence schedule-boundary :blockingPause))))
+
+(defn- footer-evidence-valid? [interaction]
+  (and (false? (get-in interaction [:footerLayout :short :scrollable]))
+       (get-in interaction [:footerLayout :short :treeAboveFooter])
+       (get-in interaction [:footerLayout :short :bubbleRightOfAnalyst])
+       (get-in interaction [:footerLayout :short :controlsClear])
+       (get-in interaction [:footerLayout :long :beforeScroll :scrollable])
+       (pos? (get-in interaction [:footerLayout :long :afterScroll :scrollTop]))
+       (= (get-in interaction [:footerLayout :long :beforeScroll :region])
+          (get-in interaction [:footerLayout :long :afterScroll :region]))
+       (get-in interaction [:footerLayout :long :afterScroll :treeAboveFooter])
+       (get-in interaction [:footerLayout :long :afterScroll :controlsClear])
+       (= (get-in interaction [:footerLayout :short :region])
+          (get-in interaction [:footerLayout :restored :region]))))
+
+(defn- activation-unchanged? [activation]
+  (= (:before activation) (:after activation)))
+
+(defn- interaction-evidence-valid? [interaction]
+  (and (< (Math/abs (- 1.05 (get-in interaction [:hover :scale]))) 0.001)
+       (< (Math/abs (- 1.05 (get-in interaction [:focus :scale]))) 0.001)
+       (< (Math/abs (- 1.0 (get-in interaction [:rest :scale]))) 0.001)
+       (= ["none" "none" "none" "none"]
+          [(get-in interaction [:layout :shadow])
+           (get-in interaction [:hover :shadow])
+           (get-in interaction [:focus :shadow])
+           (get-in interaction [:rest :shadow])])
+       (= ["0px" "0px"]
+          [(get-in interaction [:layout :border])
+           (get-in interaction [:rest :border])])
+       (= ["0" "0"]
+          [(get-in interaction [:layout :outlineOpacity])
+           (get-in interaction [:rest :outlineOpacity])])
+       (pos? (Double/parseDouble (get-in interaction [:hover :outlineOpacity])))
+       (pos? (Double/parseDouble (get-in interaction [:focus :outlineOpacity])))
+       (= (get-in interaction [:layout :region]) (get-in interaction [:hover :region]))
+       (= (get-in interaction [:layout :region]) (get-in interaction [:focus :region]))
+       (= 3 (count (:activations interaction)))
+       (= 3 (count (set (map :id (:activations interaction)))))
+       (every? activation-unchanged? (:activations interaction))
+       (every? true? (map (get-in interaction [:tail])
+                          [:visible :headSide :travels :joins :inside]))
+       (:routeHidden interaction)
+       (:routeBeforeRequest interaction)
+       (not (contains? (set (map :id (:activations interaction)))
+                       (get-in interaction [:retainedRequest :id])))))
+
+(defn- substantial-text? [text]
+  (> (count text) 20))
+
+(defn- pool-valid? [{tip-count :count :keys [distinct texts comic]}]
+  (and (<= 5 tip-count)
+       (= tip-count distinct)
+       comic
+       (every? substantial-text? texts)))
+
+(def dwell-keys [:preflight :coverage :publish :addPage :undo])
+
+(defn- dwell-values [dwell tail]
+  (mapv (fn [control] (get-in dwell [control :first tail])) dwell-keys))
+
+(defn- stayed-hidden? [value]
+  (= {:hidden true :id nil} value))
+
+(defn- dwell-evidence-valid? [dwell]
+  (and (every? true? (mapv (fn [control] (get-in dwell [control :before])) dwell-keys))
+       (every? false? (dwell-values dwell :hidden))
+       (= ["Gadzooks! Run preflight checks the whole Draft for blocking schema faults and advisory assurance warnings without publishing."
+           "Cor! Coverage matrix shows which project contexts exercise each canonical property; use it to spot evidence gaps."
+           "Blimey! Publish release opens a review before creating an immutable project revision."
+           "Crikey! Add Page creates a Page draft for a real location; use it before placing that Page in a Flow."
+           "Whoops-a-daisy! Undo rolls back the latest command on this Studio page while the published revision stays put."]
+          (dwell-values dwell :text))
+       (every? stayed-hidden? (mapv (fn [control] (get-in dwell [control :stayed])) dwell-keys))
+       (= [true nil nil]
+          [(get-in dwell [:unsupported :first :hidden])
+           (get-in dwell [:unsupported :first :id])
+           (get-in dwell [:unsupported :first :text])])))
+
+(defn- typewriter-evidence-valid? [typewriter]
+  (and (= "" (get-in typewriter [:initial :text]))
+       (<= 2 (count (:partial typewriter)))
+       (string? (:firstId typewriter))
+       (not= (:firstId typewriter) (get-in typewriter [:replacement :id]))
+       (get-in typewriter [:hideCancellation :hidden])
+       (get-in typewriter [:hideCancellation :stable])
+       (get-in typewriter [:routeChange :hidden])
+       (get-in typewriter [:routeChange :stable])
+       (= [1 1] [(:initialAnnouncementCount typewriter)
+                 (:replacementAnnouncementCount typewriter)])
+       (= (get-in typewriter [:reduced :complete])
+          (get-in typewriter [:reduced :visual]))
+       (= (get-in typewriter [:reduced :complete])
+          (get-in typewriter [:reduced :announcement]))))
+
+(defn- detailed-evidence-valid? [interaction]
+  (and (footer-evidence-valid? interaction)
+       (interaction-evidence-valid? interaction)
+       (= 10 (count (get-in interaction [:pools :pools])))
+       (every? pool-valid? (vals (get-in interaction [:pools :pools])))
+       (every? true? (vals (get-in interaction [:pools :semantics])))
+       (dwell-evidence-valid? (:dwell interaction))
+       (typewriter-evidence-valid? (:typewriter interaction))))
+
+(defn- assert-browser! [{:keys [before scheduleBoundary interaction after] :as evidence}]
   (support/assert!
-   (and (:bubbleHidden before)
-        preFirstHidden
-        (false? (:hidden visible))
-        (= "project-overview" (:hintId visible))
-        (= (:expectedWidth visible) (:width visible))
-        (:leftAnchored visible)
-        (:inside visible)
-        (zero? (:under visible))
-        (zero? (:overflow visible))
-        (= "workspace-pane" (:focus visible))
-        (= "polite" (:live visible))
-        (= "status" (:role visible))
-        (= "none" (:animation visible))
-        (:hidden (:preFirst scheduleBoundary))
-        (= "project-overview" (:id (:first scheduleBoundary)))
-        (:hidden (:afterLifetime scheduleBoundary))
-        (:hidden (:cooldownBefore scheduleBoundary))
-        (= ["project-overview" "shared-profiles" "pages" "flows" "documentation"]
-           (mapv :id (:rotation scheduleBoundary)))
-        (:hidden (:routeHide scheduleBoundary))
-        (= "project-overview-search" (:id (:retained scheduleBoundary)))
-        (= [true true "pages" true]
-           (mapv #(get-in scheduleBoundary %)
-                 [[:documentPause :before :hidden]
-                  [:documentPause :inactive :hidden]
-                  [:documentPause :resumed :id]
-                  [:documentPause :removed :hidden]]))
-        (= [true true "pages" true]
-           (mapv #(get-in scheduleBoundary %)
-                 [[:blockingPause :before :hidden]
-                  [:blockingPause :inactive :hidden]
-                  [:blockingPause :resumed :id]
-                  [:blockingPause :removed :hidden]]))
-        (every? true? (vals blockingPredicate))
-        (:hidden documentHidden)
-        (false? (:active documentHidden))
-        (:visible zoom)
-        (:inside zoom)
-        (zero? (:overflow zoom))
-        (= "Splendid! Refresh the preview after changing a Documentation Set." (:text zoom))
-        (:visibleBefore narrow)
-        (:hiddenWithNavigation narrow)
-        (:overflow narrow)
-        (false? (get-in interaction [:footerLayout :short :scrollable]))
-        (get-in interaction [:footerLayout :short :treeAboveFooter])
-        (get-in interaction [:footerLayout :short :bubbleRightOfAnalyst])
-        (get-in interaction [:footerLayout :short :controlsClear])
-        (get-in interaction [:footerLayout :long :beforeScroll :scrollable])
-        (pos? (get-in interaction [:footerLayout :long :afterScroll :scrollTop]))
-        (= (get-in interaction [:footerLayout :long :beforeScroll :region])
-           (get-in interaction [:footerLayout :long :afterScroll :region]))
-        (get-in interaction [:footerLayout :long :afterScroll :treeAboveFooter])
-        (get-in interaction [:footerLayout :long :afterScroll :controlsClear])
-        (= (get-in interaction [:footerLayout :short :region])
-           (get-in interaction [:footerLayout :restored :region]))
-        (< (Math/abs (- 1.05 (get-in interaction [:hover :scale]))) 0.001)
-        (< (Math/abs (- 1.05 (get-in interaction [:focus :scale]))) 0.001)
-        (< (Math/abs (- 1.0 (get-in interaction [:rest :scale]))) 0.001)
-        (= ["none" "none" "none" "none"]
-           [(get-in interaction [:layout :shadow])
-            (get-in interaction [:hover :shadow])
-            (get-in interaction [:focus :shadow])
-            (get-in interaction [:rest :shadow])])
-        (= ["0px" "0px"]
-           [(get-in interaction [:layout :border])
-            (get-in interaction [:rest :border])])
-        (= ["0" "0"]
-           [(get-in interaction [:layout :outlineOpacity])
-            (get-in interaction [:rest :outlineOpacity])])
-        (pos? (Double/parseDouble (get-in interaction [:hover :outlineOpacity])))
-        (pos? (Double/parseDouble (get-in interaction [:focus :outlineOpacity])))
-        (= (get-in interaction [:layout :region]) (get-in interaction [:hover :region]))
-        (= (get-in interaction [:layout :region]) (get-in interaction [:focus :region]))
-        (= 3 (count (:activations interaction)))
-        (= 3 (count (set (map :id (:activations interaction)))))
-        (every? #(= (:before %) (:after %)) (:activations interaction))
-        (every? true? (map (get-in interaction [:tail])
-                           [:visible :headSide :travels :joins :inside]))
-        (:routeHidden interaction)
-        (:routeBeforeRequest interaction)
-        (not (contains? (set (map :id (:activations interaction)))
-                        (get-in interaction [:retainedRequest :id])))
-        (= 10 (count (get-in interaction [:pools :pools])))
-        (every? (fn [{tip-count :count :keys [distinct texts comic]}]
-                  (and (<= 5 tip-count)
-                       (= tip-count distinct)
-                       comic
-                       (every? #(> (count %) 20) texts)))
-                (vals (get-in interaction [:pools :pools])))
-        (every? true? (vals (get-in interaction [:pools :semantics])))
-        (every? true? (map #(get-in interaction [:dwell % :before])
-                           [:preflight :coverage :publish :addPage :undo]))
-        (every? false? (map #(get-in interaction [:dwell % :first :hidden])
-                            [:preflight :coverage :publish :addPage :undo]))
-        (= ["Gadzooks! Run preflight checks the whole Draft for blocking schema faults and advisory assurance warnings without publishing."
-            "Cor! Coverage matrix shows which project contexts exercise each canonical property; use it to spot evidence gaps."
-            "Blimey! Publish release opens a review before creating an immutable project revision."
-            "Crikey! Add Page creates a Page draft for a real location; use it before placing that Page in a Flow."
-            "Whoops-a-daisy! Undo rolls back the latest command on this Studio page while the published revision stays put."]
-           (mapv #(get-in interaction [:dwell % :first :text])
-                 [:preflight :coverage :publish :addPage :undo]))
-        (every? #(= {:hidden true :id nil} %)
-                (map #(get-in interaction [:dwell % :stayed])
-                     [:preflight :coverage :publish :addPage :undo]))
-        (= [true nil nil]
-           [(get-in interaction [:dwell :unsupported :first :hidden])
-            (get-in interaction [:dwell :unsupported :first :id])
-            (get-in interaction [:dwell :unsupported :first :text])])
-        (= "" (get-in interaction [:typewriter :initial :text]))
-        (<= 2 (count (get-in interaction [:typewriter :partial])))
-        (string? (get-in interaction [:typewriter :firstId]))
-        (not= (get-in interaction [:typewriter :firstId])
-              (get-in interaction [:typewriter :replacement :id]))
-        (get-in interaction [:typewriter :hideCancellation :hidden])
-        (get-in interaction [:typewriter :hideCancellation :stable])
-        (get-in interaction [:typewriter :routeChange :hidden])
-        (get-in interaction [:typewriter :routeChange :stable])
-        (= [1 1]
-           [(get-in interaction [:typewriter :initialAnnouncementCount])
-            (get-in interaction [:typewriter :replacementAnnouncementCount])])
-        (= (get-in interaction [:typewriter :reduced :complete])
-           (get-in interaction [:typewriter :reduced :visual]))
-        (= (get-in interaction [:typewriter :reduced :complete])
-           (get-in interaction [:typewriter :reduced :announcement]))
+   (and (base-evidence-valid? evidence)
+        (schedule-evidence-valid? scheduleBoundary)
+        (detailed-evidence-valid? interaction)
         (= (:project before) (:project after))
         (= (:undo before) (:undo after)))
    "Installed Specification Studio technical analyst guidance evidence is incomplete."
