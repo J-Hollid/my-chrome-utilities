@@ -44,11 +44,11 @@
             ["Pages" "Jolly good! Give each Page its observed page event before refining its schema."]
             ["Flows" "Cor! Add Pages to the canvas first, then place interaction Events inside them."]
             ["Documentation" "Splendid! Refresh the preview after changing a Documentation Set."]
-            ["Project overview" "Crumbs! Global search finds any collection or entity without changing your saved Draft."]
-            ["Shared Profiles" "By gum! Concepts group Profile properties in documentation without changing validation."]
-            ["Pages" "Gadzooks! Path conditions decide which observed locations resolve to this Page."]
-            ["Assignments" "Cor! Run preflight before testing to catch missing targets or tied Assignment candidates."]
-            ["Documentation" "Ker-pow! Generate rich copy or Excel only after refreshing the preview snapshot."]}}
+            ["Project overview" "Lost an entity in the filing-cabinet jungle? Global search finds it without rearranging a single saved Draft."]
+            ["Shared Profiles" "Concepts arrange Profile properties into sensible documentation gangs. Validation remains unmoved; it has its own clipboard."]
+            ["Pages" "Path conditions are the Page's doorman: they inspect each observed location and politely—or firmly—decide whether it belongs."]
+            ["Assignments" "Run preflight before testing. Missing targets and tied candidates are much easier to catch before they put on matching moustaches."]
+            ["Documentation" "Generate rich copy or Excel only after refreshing the preview. Yesterday's snapshot is beautifully formatted and completely unaware of today."]}}
    {:keys ["event" "result"]
     :rows #{["10 seconds elapse" "disappears automatically"]
             ["the Studio document becomes hidden" "disappears and pauses the hint interval"]
@@ -86,11 +86,11 @@
     :rows #{["a short list ending well above the footer"]
             ["a long list requiring navigation scrolling"]}}
    {:keys ["route" "control" "tip"]
-    :rows #{["Pages" "Add Page" "Crikey! Add Page creates a Page draft for a real location; use it before placing that Page in a Flow."]
-            ["Project overview" "Run preflight" "Gadzooks! Run preflight checks the whole Draft for blocking schema faults and advisory assurance warnings without publishing."]
-            ["Project overview" "Coverage matrix" "Cor! Coverage matrix shows which project contexts exercise each canonical property; use it to spot evidence gaps."]
-            ["Pages" "Undo" "Whoops-a-daisy! Undo rolls back the latest command on this Studio page while the published revision stays put."]
-            ["Project overview" "Publish release" "Blimey! Publish release opens a review before creating an immutable project revision."]}}])
+    :rows #{["Pages" "Add Page" "Every grand journey needs somewhere for the trouble to begin. Add Page creates a real location before you send it marching onto a Flow."]
+            ["Project overview" "Run preflight" "Run preflight before publishing. It is considerably cheaper than discovering a missing target while the brass band is already playing."]
+            ["Project overview" "Coverage matrix" "The Coverage matrix catches untested properties hiding behind the curtains. Open it when surely something covers that stops sounding scientific."]
+            ["Pages" "Undo" "Made a magnificent blunder? Undo rewinds the latest change on this page while the published revision remains safely behind glass."]
+            ["Project overview" "Publish release" "Publish release turns today's Draft into an immutable revision. Give the review one heroic squint first; even boffins check the parachute."]}}])
 
 (defn- validate-example! [_mode example]
   (support/validate-example-relations!
@@ -118,7 +118,7 @@
        (:visible zoom)
        (:inside zoom)
        (zero? (:overflow zoom))
-       (= "Splendid! Refresh the preview after changing a Documentation Set." (:text zoom))
+       (= "Refresh the preview after changing a Documentation Set. Yesterday's snapshot is beautifully formatted and completely unaware of today." (:text zoom))
        (:visibleBefore narrow)
        (:hiddenWithNavigation narrow)
        (:overflow narrow)))
@@ -210,11 +210,11 @@
 (defn- dwell-evidence-valid? [dwell]
   (and (every? true? (mapv (fn [control] (get-in dwell [control :before])) dwell-keys))
        (every? false? (dwell-values dwell :hidden))
-       (= ["Gadzooks! Run preflight checks the whole Draft for blocking schema faults and advisory assurance warnings without publishing."
-           "Cor! Coverage matrix shows which project contexts exercise each canonical property; use it to spot evidence gaps."
-           "Blimey! Publish release opens a review before creating an immutable project revision."
-           "Crikey! Add Page creates a Page draft for a real location; use it before placing that Page in a Flow."
-           "Whoops-a-daisy! Undo rolls back the latest command on this Studio page while the published revision stays put."]
+       (= ["Run preflight before publishing. It is considerably cheaper than discovering a missing target while the brass band is already playing."
+           "The Coverage matrix catches untested properties hiding behind the curtains. Open it when surely something covers that stops sounding scientific."
+           "Publish release turns today's Draft into an immutable revision. Give the review one heroic squint first; even boffins check the parachute."
+           "Every grand journey needs somewhere for the trouble to begin. Add Page creates a real location before you send it marching onto a Flow."
+           "Made a magnificent blunder? Undo rewinds the latest change on this page while the published revision remains safely behind glass."]
           (dwell-values dwell :text))
        (every? stayed-hidden? (mapv (fn [control] (get-in dwell [control :stayed])) dwell-keys))
        (= [true nil nil]

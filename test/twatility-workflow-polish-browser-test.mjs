@@ -809,7 +809,7 @@ try{
     transitionDisabled:analystVisible.transition.split(",").every((value)=>parseFloat(value)<=0.001),
   },{
     hidden:false,
-    text:"Crikey! Pick a collection on the left to start shaping your specification.",
+    text:"A project with no collection is merely a clipboard with ambitions. Pick one on the left and give the specification somewhere to begin.",
     hintId:"project-overview",
     widthMatchesRem:true,
     leftAnchored:true,
@@ -880,11 +880,11 @@ try{
     cooldownBeforeHidden:true,
     second:"project-overview-context",
     rotation:[
-      ["project-overview","Crikey! Pick a collection on the left to start shaping your specification."],
-      ["shared-profiles","Smashing! Put reusable fields here so Pages and Events can inherit them."],
-      ["pages","Jolly good! Give each Page its observed page event before refining its schema."],
-      ["flows","Cor! Add Pages to the canvas first, then place interaction Events inside them."],
-      ["documentation","Splendid! Refresh the preview after changing a Documentation Set."],
+      ["project-overview","A project with no collection is merely a clipboard with ambitions. Pick one on the left and give the specification somewhere to begin."],
+      ["shared-profiles","If Pages keep borrowing the same fields, stop issuing duplicates like raffle tickets. Put them in a Shared Profile and let inheritance do the legwork."],
+      ["pages","Give each Page its observed page event before polishing the schema. Even a splendid room needs a doorbell before anyone can prove they visited."],
+      ["flows","Pages are the rooms; Events are the custard pies. Add the rooms first, then put each splat where it actually happened."],
+      ["documentation","Refresh the preview after changing a Documentation Set. Yesterday's snapshot is beautifully formatted and completely unaware of today."],
     ],
     routeHide:true,
     retained:"project-overview-search",
@@ -914,7 +914,7 @@ try{
     const regionBox=region.getBoundingClientRect(),bubbleBox=bubble.getBoundingClientRect(),navigationBox=navigation.getBoundingClientRect(),result={visible:region.getClientRects().length>0&&!bubble.hidden,inside:regionBox.left>=navigationBox.left&&regionBox.right<=navigationBox.right+.6&&bubbleBox.left>=regionBox.left&&bubbleBox.right<=regionBox.right+.6,overflow:Math.max(0,document.documentElement.scrollWidth-innerWidth,document.body.scrollWidth-innerWidth),text:bubble.dataset.completeText};
     controller.dispose();return result;
   })()`);
-  assert.deepEqual(analystZoom,{visible:true,inside:true,overflow:0,text:"Splendid! Refresh the preview after changing a Documentation Set."});
+  assert.deepEqual(analystZoom,{visible:true,inside:true,overflow:0,text:"Refresh the preview after changing a Documentation Set. Yesterday's snapshot is beautifully formatted and completely unaware of today."});
   await studio.call("Emulation.setDeviceMetricsOverride",{width:360,height:800,deviceScaleFactor:1,mobile:false});
   const analystNarrow=await evaluate(studio,`(()=>{const region=document.querySelector("#studio-analyst-guidance"),nav=document.querySelector("#project-workspace > nav"),visibleBefore=region.getClientRects().length>0;nav.hidden=true;const hiddenWithNavigation=region.getClientRects().length===0,overflow=Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)<=innerWidth;nav.hidden=false;return{visibleBefore,hiddenWithNavigation,overflow};})()`);
   assert.deepEqual(analystNarrow,{visibleBefore:true,hiddenWithNavigation:true,overflow:true});
@@ -989,7 +989,7 @@ try{
   assert.deepEqual([analystRouteHidden,analystRouteBeforeRequest],[true,true]);
   assert.equal(activationIds.includes(analystRetainedRequest.id),false);
 
-  const analystPools=await evaluate(studio,`(async()=>{const {studioAnalystHintsForRoute}=await import("./specification-studio-technical-analyst-guidance.js"),parts=["Project overview","Shared Profiles","Pages","Page Groups","Events","Applicability","Flows","Fixtures","Assignments","Documentation"],voice=/^(?:Blimey|By gum|Cor|Crikey|Crumbs|Gadzooks|Great Scott|Jolly good|Ker-pow|Smashing|Splendid|Stone the crows|Whoops-a-daisy)!/u,pools=Object.fromEntries(parts.map((part)=>{const tips=studioAnalystHintsForRoute(part);return[part,{count:tips.length,distinct:new Set(tips.map(({id})=>id)).size,texts:tips.map(({text})=>text),comic:tips.every(({text})=>voice.test(text))}];})),flow=Object.fromEntries(studioAnalystHintsForRoute("Flows").map(({id,text})=>[id,text])),required={"Project overview":"Crumbs! Global search finds any collection or entity without changing your saved Draft.","Shared Profiles":"By gum! Concepts group Profile properties in documentation without changing validation.","Pages":"Gadzooks! Path conditions decide which observed locations resolve to this Page.","Assignments":"Cor! Run preflight before testing to catch missing targets or tied Assignment candidates.","Documentation":"Ker-pow! Generate rich copy or Excel only after refreshing the preview snapshot."},semantics={canvas:/Add Pages to the canvas first.*place interaction Events inside them/u.test(flow.flows),frames:/Page frames.*journey step/u.test(flow["flows-frames"]),containment:/Event occurrences inside their owning Page frame/u.test(flow["flows-occurrences"]),pageRelationships:/Page-to-Page relationships/u.test(flow["flows-relationships"])&&/Page frames/u.test(flow["flows-relationships"]),occurrencesAreNotEndpoints:!/connect(?:ing)? (?:Event )?occurrences|occurrence(?:s)? (?:as|for|to) relationship endpoints?/iu.test(flow["flows-relationships"]),documentation:/Documentation.*Flow's value map/u.test(flow["flows-documentation"]),required:Object.entries(required).every(([route,text])=>studioAnalystHintsForRoute(route).some((hint)=>hint.text===text))};return{pools,semantics};})()`);
+  const analystPools=await evaluate(studio,`(async()=>{const {studioAnalystHintsForRoute}=await import("./specification-studio-technical-analyst-guidance.js"),parts=["Project overview","Shared Profiles","Pages","Page Groups","Events","Applicability","Flows","Fixtures","Assignments","Documentation"],comicDevice=/clipboard|ambitions|cast|filing-cabinet|brass band|magnifying glass|raffle|moustache|family tree|gangs|gate|doorbell|doorman|inspectors|rebellions|ancestors|club|crystal balls|telegrams|orchestra|quarrel|parties|pipe|hat|custard pie|witness|megaphone|eyebrow|mystery|traffic control|rooms|carpet|plot|road sign|yesterday|heroic|loitering|detective|machinery|flag|parcel|ushers|building|crown|cupboard|shoppers|waistcoat|stationery/iu,pools=Object.fromEntries(parts.map((part)=>{const tips=studioAnalystHintsForRoute(part);return[part,{count:tips.length,distinct:new Set(tips.map(({id})=>id)).size,texts:tips.map(({text})=>text),comic:tips.every(({text})=>comicDevice.test(text))}];})),flow=Object.fromEntries(studioAnalystHintsForRoute("Flows").map(({id,text})=>[id,text])),required={"Project overview":"Lost an entity in the filing-cabinet jungle? Global search finds it without rearranging a single saved Draft.","Shared Profiles":"Concepts arrange Profile properties into sensible documentation gangs. Validation remains unmoved; it has its own clipboard.","Pages":"Path conditions are the Page's doorman: they inspect each observed location and politely—or firmly—decide whether it belongs.","Assignments":"Run preflight before testing. Missing targets and tied candidates are easier to catch before they put on matching moustaches.","Documentation":"Generate rich copy or Excel only after refreshing the preview. Exporting stale work merely gives yesterday better stationery."},semantics={canvas:/Pages are the rooms; Events are the custard pies.*Add the rooms first/u.test(flow.flows),frames:/Page frames.*journey step/u.test(flow["flows-frames"]),containment:/Event occurrence inside its owning Page frame/u.test(flow["flows-occurrences"]),pageRelationships:/Connect Page frames to Page frames/u.test(flow["flows-relationships"]),occurrencesAreNotEndpoints:!/connect(?:ing)? (?:Event )?occurrences|occurrence(?:s)? (?:as|for|to) relationship endpoints?/iu.test(flow["flows-relationships"]),documentation:/Refresh Documentation.*selected Flow.*value map/u.test(flow["flows-documentation"]),required:Object.entries(required).every(([route,text])=>studioAnalystHintsForRoute(route).some((hint)=>hint.text===text))};return{pools,semantics};})()`);
   assert.equal(Object.keys(analystPools.pools).length,10);
   assert.equal(Object.values(analystPools.pools).every(({count,distinct,texts,comic})=>count>=5&&count===distinct&&texts.every((text)=>text.length>20)&&comic),true);
   assert.equal(Object.values(analystPools.semantics).every(Boolean),true);
@@ -1002,11 +1002,11 @@ try{
     return{preflight,coverage,publish,unsupported,addPage,undo};
   })()`);
   const expectedControlTips={
-    preflight:"Gadzooks! Run preflight checks the whole Draft for blocking schema faults and advisory assurance warnings without publishing.",
-    coverage:"Cor! Coverage matrix shows which project contexts exercise each canonical property; use it to spot evidence gaps.",
-    publish:"Blimey! Publish release opens a review before creating an immutable project revision.",
-    addPage:"Crikey! Add Page creates a Page draft for a real location; use it before placing that Page in a Flow.",
-    undo:"Whoops-a-daisy! Undo rolls back the latest command on this Studio page while the published revision stays put.",
+    preflight:"Run preflight before publishing. It is considerably cheaper than discovering a missing target while the brass band is already playing.",
+    coverage:"The Coverage matrix catches untested properties hiding behind the curtains. Open it when surely something covers that stops sounding scientific.",
+    publish:"Publish release turns today's Draft into an immutable revision. Give the review one heroic squint first; even boffins check the parachute.",
+    addPage:"Every grand journey needs somewhere for the trouble to begin. Add Page creates a real location before you send it marching onto a Flow.",
+    undo:"Made a magnificent blunder? Undo rewinds the latest change on this page while the published revision remains safely behind glass.",
   };
   for(const [key,text] of Object.entries(expectedControlTips)){
     assert.equal(analystDwell[key].before,true);

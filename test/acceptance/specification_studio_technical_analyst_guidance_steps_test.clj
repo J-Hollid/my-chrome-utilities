@@ -46,7 +46,7 @@
    :zoom {:visible true
           :inside true
           :overflow 0
-          :text "Splendid! Refresh the preview after changing a Documentation Set."}
+          :text "Refresh the preview after changing a Documentation Set. Yesterday's snapshot is beautifully formatted and completely unaware of today."}
    :narrow {:visibleBefore true
             :hiddenWithNavigation true
             :overflow true}
@@ -105,23 +105,23 @@
                         :required true}}
     :dwell {:preflight {:before true
                         :first {:hidden false
-                                :text "Gadzooks! Run preflight checks the whole Draft for blocking schema faults and advisory assurance warnings without publishing."}
+                                :text "Run preflight before publishing. It is considerably cheaper than discovering a missing target while the brass band is already playing."}
                         :stayed {:hidden true :id nil}}
             :coverage {:before true
                        :first {:hidden false
-                               :text "Cor! Coverage matrix shows which project contexts exercise each canonical property; use it to spot evidence gaps."}
+                               :text "The Coverage matrix catches untested properties hiding behind the curtains. Open it when surely something covers that stops sounding scientific."}
                        :stayed {:hidden true :id nil}}
             :publish {:before true
                       :first {:hidden false
-                              :text "Blimey! Publish release opens a review before creating an immutable project revision."}
+                              :text "Publish release turns today's Draft into an immutable revision. Give the review one heroic squint first; even boffins check the parachute."}
                       :stayed {:hidden true :id nil}}
             :addPage {:before true
                       :first {:hidden false
-                              :text "Crikey! Add Page creates a Page draft for a real location; use it before placing that Page in a Flow."}
+                              :text "Every grand journey needs somewhere for the trouble to begin. Add Page creates a real location before you send it marching onto a Flow."}
                       :stayed {:hidden true :id nil}}
             :undo {:before true
                    :first {:hidden false
-                           :text "Whoops-a-daisy! Undo rolls back the latest command on this Studio page while the published revision stays put."}
+                           :text "Made a magnificent blunder? Undo rewinds the latest change on this page while the published revision remains safely behind glass."}
                    :stayed {:hidden true :id nil}}
             :unsupported {:first {:hidden true :id nil :text nil}}}
     :typewriter {:initial {:text ""}

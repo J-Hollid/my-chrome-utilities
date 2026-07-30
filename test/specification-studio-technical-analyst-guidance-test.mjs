@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {readFileSync} from "node:fs";
 import {
   STUDIO_ANALYST_COOLDOWN_MS,
   STUDIO_ANALYST_FIRST_HINT_MS,
@@ -32,24 +33,35 @@ const studioParts=[
   "Assignments",
   "Documentation",
 ];
+const catalogue=readFileSync(new URL("../docs/specification-studio-technical-analyst-copy-R01.md",import.meta.url),"utf8");
+const generalCatalogue=new Map();
+let catalogueRoute;
+for(const line of catalogue.split("\n")){
+  const heading=/^### (.+)$/u.exec(line);
+  if(heading)catalogueRoute=heading[1];
+  const row=/^\| ([a-z][a-z0-9-]+) \| [^|]+ \| (.+) \|$/u.exec(line);
+  if(row&&catalogueRoute)generalCatalogue.set(row[1],{route:catalogueRoute,text:row[2]});
+}
+assert.equal(generalCatalogue.size,50,"the approved catalogue retains all 50 general-tip identities");
+for(const part of studioParts){
+  for(const hint of studioAnalystHintsForRoute(part)){
+    assert.deepEqual({route:hint.route,text:hint.text},generalCatalogue.get(hint.id),`${hint.id} uses its approved exact comic copy`);
+  }
+}
 for(const part of studioParts){
   const partHints=studioAnalystHintsForRoute(part);
   assert.equal(partHints.length>=5,true,`${part} has at least five general tips`);
   assert.equal(new Set(partHints.map(({id})=>id)).size,partHints.length,`${part} tip identities are distinct`);
   assert.equal(partHints.every(({route,text})=>route===part&&text.trim().length>20),true,`${part} tips are complete and part-specific`);
-  assert.equal(
-    partHints.every(({text})=>/^(?:Blimey|By gum|Cor|Crikey|Crumbs|Gadzooks|Great Scott|Jolly good|Ker-pow|Smashing|Splendid|Stone the crows|Whoops-a-daisy)!/u.test(text)),
-    true,
-    `${part} tips retain the configured British-comic character voice`,
-  );
+  assert.equal(partHints.every(({text})=>text.length<=180),true,`${part} tips fit the complete bubble copy limit`);
 }
 
 const requiredGeneralTips=new Map([
-  ["Project overview","Crumbs! Global search finds any collection or entity without changing your saved Draft."],
-  ["Shared Profiles","By gum! Concepts group Profile properties in documentation without changing validation."],
-  ["Pages","Gadzooks! Path conditions decide which observed locations resolve to this Page."],
-  ["Assignments","Cor! Run preflight before testing to catch missing targets or tied Assignment candidates."],
-  ["Documentation","Ker-pow! Generate rich copy or Excel only after refreshing the preview snapshot."],
+  ["Project overview","Lost an entity in the filing-cabinet jungle? Global search finds it without rearranging a single saved Draft."],
+  ["Shared Profiles","Concepts arrange Profile properties into sensible documentation gangs. Validation remains unmoved; it has its own clipboard."],
+  ["Pages","Path conditions are the Page's doorman: they inspect each observed location and politely—or firmly—decide whether it belongs."],
+  ["Assignments","Run preflight before testing. Missing targets and tied candidates are easier to catch before they put on matching moustaches."],
+  ["Documentation","Generate rich copy or Excel only after refreshing the preview. Exporting stale work merely gives yesterday better stationery."],
 ]);
 for(const [route,text] of requiredGeneralTips){
   assert.equal(studioAnalystHintsForRoute(route).some((hint)=>hint.text===text),true,`${route} exposes the specified comic guidance`);
@@ -57,23 +69,22 @@ for(const [route,text] of requiredGeneralTips){
 
 const flowTips=studioAnalystHintsForRoute("Flows");
 const flowTipText=Object.fromEntries(flowTips.map(({id,text})=>[id,text]));
-assert.match(flowTipText.flows,/Add Pages to the canvas first.*place interaction Events inside them/u);
+assert.match(flowTipText.flows,/Pages are the rooms; Events are the custard pies.*Add the rooms first/u);
 assert.match(flowTipText["flows-frames"],/Page frames.*journey step/u);
-assert.match(flowTipText["flows-occurrences"],/Event occurrences inside their owning Page frame/u);
-assert.match(flowTipText["flows-relationships"],/Page-to-Page relationships/u);
-assert.match(flowTipText["flows-relationships"],/Page frames/u);
+assert.match(flowTipText["flows-occurrences"],/Event occurrence inside its owning Page frame/u);
+assert.match(flowTipText["flows-relationships"],/Connect Page frames to Page frames/u);
 assert.doesNotMatch(
   flowTipText["flows-relationships"],
   /connect(?:ing)? (?:Event )?occurrences|occurrence(?:s)? (?:as|for|to) relationship endpoints?/iu,
   "Event availability is expressed by containment; occurrences must never be relationship endpoints",
 );
-assert.match(flowTipText["flows-documentation"],/Documentation.*Flow's value map/u);
+assert.match(flowTipText["flows-documentation"],/Refresh Documentation.*selected Flow.*value map/u);
 
 const overview=studioAnalystHintForRoute("Project overview",[]);
 assert.deepEqual(overview,{
   id:"project-overview",
   route:"Project overview",
-  text:"Crikey! Pick a collection on the left to start shaping your specification.",
+  text:"A project with no collection is merely a clipboard with ambitions. Pick one on the left and give the specification somewhere to begin.",
 });
 assert.equal(studioAnalystHintForRoute("Project overview",["project-overview"])?.id,"project-overview-context");
 assert.equal(studioAnalystHintForRoute("Unknown route",[]),undefined);
@@ -93,7 +104,7 @@ assert.deepEqual(schedule.advance(1,{active:true,route:"Shared Profiles"}),{
   hint:{
     id:"shared-profiles",
     route:"Shared Profiles",
-    text:"Smashing! Put reusable fields here so Pages and Events can inherit them.",
+    text:"If Pages keep borrowing the same fields, stop issuing duplicates like raffle tickets. Put them in a Shared Profile and let inheritance do the legwork.",
   },
 });
 
@@ -105,7 +116,7 @@ assert.deepEqual(paused.advance(5_000,{active:true,route:"Pages"}),{
   hint:{
     id:"pages",
     route:"Pages",
-    text:"Jolly good! Give each Page its observed page event before refining its schema.",
+    text:"Give each Page its observed page event before polishing the schema. Even a splendid room needs a doorbell before anyone can prove they visited.",
   },
 });
 assert.deepEqual(paused.advance(1,{active:false,route:"Pages"}),{kind:"hide"});
@@ -147,23 +158,23 @@ const controlHint=studioAnalystControlHint("Pages",{id:"add-page",name:"Add Page
 assert.deepEqual(controlHint,{
   id:"control:pages:add-page",
   route:"Pages",
-  text:"Crikey! Add Page creates a Page draft for a real location; use it before placing that Page in a Flow.",
+  text:"Every grand journey needs somewhere for the trouble to begin. Add Page creates a real location before you send it marching onto a Flow.",
 });
 assert.equal(
   studioAnalystControlHint("Project overview",{id:"run-preflight",name:"Run preflight"})?.text,
-  "Gadzooks! Run preflight checks the whole Draft for blocking schema faults and advisory assurance warnings without publishing.",
+  "Run preflight before publishing. It is considerably cheaper than discovering a missing target while the brass band is already playing.",
 );
 assert.equal(
   studioAnalystControlHint("Project overview",{id:"show-coverage",name:"Coverage matrix"})?.text,
-  "Cor! Coverage matrix shows which project contexts exercise each canonical property; use it to spot evidence gaps.",
+  "The Coverage matrix catches untested properties hiding behind the curtains. Open it when surely something covers that stops sounding scientific.",
 );
 assert.equal(
   studioAnalystControlHint("Pages",{id:"undo-project",name:"Undo"})?.text,
-  "Whoops-a-daisy! Undo rolls back the latest command on this Studio page while the published revision stays put.",
+  "Made a magnificent blunder? Undo rewinds the latest change on this page while the published revision remains safely behind glass.",
 );
 assert.equal(
   studioAnalystControlHint("Project overview",{id:"publish-project",name:"Publish release"})?.text,
-  "Blimey! Publish release opens a review before creating an immutable project revision.",
+  "Publish release turns today's Draft into an immutable revision. Give the review one heroic squint first; even boffins check the parachute.",
 );
 assert.equal(
   studioAnalystControlHint("Pages",{id:"unregistered",name:"Unregistered action"}),
