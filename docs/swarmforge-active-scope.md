@@ -366,6 +366,22 @@ than fabricated filler. Representative exact guidance covers Add Page, Run
 preflight, Coverage matrix, Undo, and Publish release. The exact checkpoint remains
 `branding_polish`, followed by `npm run package`.
 
+On approval, the technical-analyst comic-copy correction is later authority for
+technical-analyst guidance scenarios 003, 010, and 014–018. The authoritative
+exact catalogue is `docs/specification-studio-technical-analyst-copy-R01.md`.
+Every tip speaks as one cheerful, overconfident specification detective and makes
+its accurate advice funny through a situation-specific comic image, escalation,
+personification, or punchline. A prefixed British-comic exclamation alone cannot
+satisfy the voice.
+
+The correction preserves breadth: all 50 existing general-tip identities remain
+on their original routes, every route retains its five distinct documented
+topics, and Add Page, Run preflight, Coverage matrix, Undo, and Publish release
+retain control-specific guidance. Every exact tip is warm, workplace-safe, no more
+than 180 characters, and never mocks the operator. Timing, rotation, dwell,
+session history, presentation, and accessibility behavior remain unchanged. The
+exact checkpoint remains `branding_polish`, followed by `npm run package`.
+
 On approval, the typed-literal and focused-editor correction is later authority
 for Authoring scenarios 023 and 064–067. Allowed values and custom examples share
 a type-directed literal language: commas delimit allowed values only outside

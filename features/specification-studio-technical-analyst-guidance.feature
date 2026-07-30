@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=aad1fc24dd82534d0e069b8f6049fe7bb663c79053ca7a4551ce90e1008afc4a
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-30T13:42:52.010669509Z","feature_name":"Specification Studio technical analyst guidance","feature_path":"features/specification-studio-technical-analyst-guidance.feature","background_hash":"67a51519f2b0d0749043fabf24f5487caf0095c72f134ae6b2f3cc74c388867d","implementation_hash":"architect-analyst-nav-guidance-v1","scenarios":[{"index":5,"name":"Specification Studio technical analyst guidance 006","scenario_hash":"aa3843188d5ab0f07bbd413f57a8bacb828d445d18fb12c50a0bed775999b66f","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-30T13:42:52.010669509Z"},{"index":12,"name":"Specification Studio technical analyst guidance 013","scenario_hash":"a375c71f83d48d27ae22394926b77b5f55efe1351b4d99146f38f0f0d977764f","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-30T13:42:52.010669509Z"},{"index":13,"name":"Specification Studio technical analyst guidance 014","scenario_hash":"e25b0c8304e55dec5851e9eecdd7f1276312a41666c08455a02cde01b2fd9461","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-07-30T13:42:52.010669509Z"},{"index":14,"name":"Specification Studio technical analyst guidance 015","scenario_hash":"9d083298a79c2845d60d54ae6de8ce814ce549c1456f27d6d0912f7c4263e4a4","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-07-30T13:42:52.010669509Z"},{"index":3,"name":"Specification Studio technical analyst guidance 004","scenario_hash":"188dcf3518f08d60728e18ecb050bc9260243eefd229782fef3bb5c815372e1e","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-29T20:43:26.833629861Z"},{"index":6,"name":"Specification Studio technical analyst guidance 007","scenario_hash":"55f3a38ae6eea797b12fe8d6b13499a9c1541496b5e871a229d94ab299c8018b","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-29T20:43:26.833629861Z"},{"index":8,"name":"Specification Studio technical analyst guidance 009","scenario_hash":"cf35e28a89fc48af0face7204dfb31c42a6b4695aa43edd3b40bec850ab16b97","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-29T20:43:26.833629861Z"},{"index":9,"name":"Specification Studio technical analyst guidance 010","scenario_hash":"dbbb6e325a82c37d20c1aefe5d4d3ce9867599e1515b1206ba261fe13c35e7c3","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-07-29T20:43:26.833629861Z"},{"index":10,"name":"Specification Studio technical analyst guidance 011","scenario_hash":"a8ceae706062875d94a0f831dabcbbb471937f59ea51079c4ee1cb25d9f78cfd","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-29T20:43:26.833629861Z"},{"index":11,"name":"Specification Studio technical analyst guidance 012","scenario_hash":"3728b1612ceb571f3615a12a506ada65bab1d8ab86314d6a98c3623331102f38","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-29T20:43:26.833629861Z"},{"index":0,"name":"Specification Studio technical analyst guidance 001","scenario_hash":"ef4c3f80f1436cdf6a1c54c0a9d9d3e621e9612a7dc1cd2609d6a886610dfe19","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-29T18:33:49.987709123Z"},{"index":1,"name":"Specification Studio technical analyst guidance 002","scenario_hash":"2105176ad2cb9e68145c7d6e0ea1f2d209e7a10d9957d561c8ef2e38983aea68","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-29T18:33:49.987709123Z"},{"index":2,"name":"Specification Studio technical analyst guidance 003","scenario_hash":"86e504c6101e12b2fdc36ba0da70eebd5c980e3d9f011c85e5f654ac6a378495","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-07-29T18:33:49.987709123Z"},{"index":4,"name":"Specification Studio technical analyst guidance 005","scenario_hash":"77ac3ab506683a2c15ee8277e1bd75bfdb5b43820638c967e797b1b7dc52d3d5","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-29T18:33:49.987709123Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Specification Studio technical analyst guidance
 
   Background:
@@ -214,12 +209,12 @@ Feature: Specification Studio technical analyst guidance
     And no additional tip falls back to a neutral documentation sentence without that character voice
 
     Examples:
-      | route            | hint                                                                                     |
-      | Project overview | Crumbs! Global search finds any collection or entity without changing your saved Draft.  |
-      | Shared Profiles  | By gum! Concepts group Profile properties in documentation without changing validation. |
-      | Pages            | Gadzooks! Path conditions decide which observed locations resolve to this Page.          |
-      | Assignments      | Cor! Run preflight before testing to catch missing targets or tied Assignment candidates. |
-      | Documentation    | Ker-pow! Generate rich copy or Excel only after refreshing the preview snapshot.         |
+      | route            | hint                                                                                                                                                      |
+      | Project overview | Lost an entity in the filing-cabinet jungle? Global search finds it without rearranging a single saved Draft.                                             |
+      | Shared Profiles  | Concepts arrange Profile properties into sensible documentation gangs. Validation remains unmoved; it has its own clipboard.                             |
+      | Pages            | Path conditions are the Page's doorman: they inspect each observed location and politely—or firmly—decide whether it belongs.                            |
+      | Assignments      | Run preflight before testing. Missing targets and tied candidates are much easier to catch before they put on matching moustaches.                         |
+      | Documentation    | Generate rich copy or Excel only after refreshing the preview. Yesterday's snapshot is beautifully formatted and completely unaware of today.            |
 
   # Specification Studio technical analyst guidance 015
   Scenario Outline: Specification Studio technical analyst guidance 015
@@ -233,9 +228,49 @@ Feature: Specification Studio technical analyst guidance
     Then no control tip appears instead of fabricated generic guidance
 
     Examples:
-      | route            | control        | tip                                                                                                                           |
-      | Pages            | Add Page       | Crikey! Add Page creates a Page draft for a real location; use it before placing that Page in a Flow.                          |
-      | Project overview | Run preflight   | Gadzooks! Run preflight checks the whole Draft for blocking schema faults and advisory assurance warnings without publishing. |
-      | Project overview | Coverage matrix | Cor! Coverage matrix shows which project contexts exercise each canonical property; use it to spot evidence gaps.              |
-      | Pages            | Undo            | Whoops-a-daisy! Undo rolls back the latest command on this Studio page while the published revision stays put.                 |
-      | Project overview | Publish release | Blimey! Publish release opens a review before creating an immutable project revision.                                          |
+      | route            | control        | tip                                                                                                                                                            |
+      | Pages            | Add Page       | Every grand journey needs somewhere for the trouble to begin. Add Page creates a real location before you send it marching onto a Flow.                       |
+      | Project overview | Run preflight   | Run preflight before publishing. It is considerably cheaper than discovering a missing target while the brass band is already playing.                       |
+      | Project overview | Coverage matrix | The Coverage matrix catches untested properties hiding behind the curtains. Open it when surely something covers that stops sounding scientific.            |
+      | Pages            | Undo            | Made a magnificent blunder? Undo rewinds the latest change on this page while the published revision remains safely behind glass.                             |
+      | Project overview | Publish release | Publish release turns today's Draft into an immutable revision. Give the review one heroic squint first; even boffins check the parachute.                    |
+
+  # Specification Studio technical analyst guidance 016
+  Scenario: Specification Studio technical analyst guidance 016
+    Given the approved technical-analyst copy catalogue
+    When any general or control-specific tip is presented
+    Then its complete text matches its catalogue entry
+    And it gives accurate advice about an action, consequence, concept, or useful moment
+    And a situation-specific comic image, escalation, personification, or punchline is integral to that advice
+    And it speaks as the same cheerful, overconfident specification detective
+    And a prefixed exclamation without an integral comic device cannot satisfy the character voice
+    And its humour is warm, workplace-safe, and never mocks the operator
+    And its complete text is at most 180 characters
+
+  # Specification Studio technical analyst guidance 017
+  Scenario Outline: Specification Studio technical analyst guidance 017
+    Given the approved catalogue contains the <route> general-tip pool
+    Then the pool retains at least 5 distinct tips
+    And its distinct advice collectively covers <topics>
+    And no topic is replaced by another wording of advice already present in that pool
+
+    Examples:
+      | route            | topics                                                                                          |
+      | Project overview | collection selection, project context, global search, preflight, and Inspector                  |
+      | Shared Profiles  | reusable fields, canonical authoring, Saved Schema adoption, concepts, and closed fields        |
+      | Pages            | observed event, path conditions, Page Group order, Shared Profiles, and effective schema        |
+      | Page Groups      | membership, conditions, inherited fields, contribution order, and conflict repair               |
+      | Events           | observed name, observation source, payload target, Page and Flow use, and canonical contributors |
+      | Applicability    | priority, observable conditions, fallback, overlap preflight, and Assignment selection          |
+      | Flows            | Page insertion, Page frames, Event containment, relationships, and Documentation refresh        |
+      | Fixtures         | observations, expected outcomes, context, guided validation, and advisory coverage              |
+      | Assignments      | Event selection, Applicability, contributor target, priority, and preflight                     |
+      | Documentation    | preview refresh, section selection, concepts, theme save, and export                            |
+
+  # Specification Studio technical analyst guidance 018
+  Scenario: Specification Studio technical analyst guidance 018
+    Given Add Page, Run preflight, Coverage matrix, Undo, and Publish release have curated control guidance
+    When the catalogue is replaced with its comic rewrite
+    Then all 5 controls retain control-specific guidance
+    And every prior general-tip topic remains represented on its original Studio route
+    And timing, rotation, dwell, session history, presentation, and accessibility behavior remain unchanged
