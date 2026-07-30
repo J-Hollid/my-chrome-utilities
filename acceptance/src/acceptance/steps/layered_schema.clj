@@ -19,7 +19,7 @@
 (defn- verify-model! [] (when-not @model-verified? (checked! "node" "test/data-layer-canonical-schema-authoring-test.mjs") (checked! "node" "test/data-layer-schema-property-concepts-test.mjs") (checked! "node" "test/data-layer-canonical-array-items-test.mjs") (checked! "node" "test/data-layer-canonical-migration-acknowledgement-test.mjs") (checked! "node" "test/data-layer-composed-schema-workspace-test.mjs") (checked! "node" "test/data-layer-layered-schema-test.mjs") (checked! "node" "test/data-layer-layered-schema-persistence-test.mjs") (checked! "node" "test/data-layer-layered-schema-adoption-test.mjs") (checked! "node" "test/data-layer-string-rule-validation-test.mjs") (reset! model-verified? true)))
 (defn- observe-browser! [] (or @browser-observation (let [result (checked! "node" "test/browser-packs/layered-schema.mjs") line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result)))) observed (:layeredSchema (json/parse-string line true))] (reset! browser-observation observed))))
 (def runtime-paths (set (concat [:installedBoundary :consequential :persistenceReload :sidePanelParity]
-                                (map #(keyword (str "authoring" (format "%03d" %))) (range 1 74))
+                                (map #(keyword (str "authoring" (format "%03d" %))) (range 1 75))
                                 (map #(keyword (str "layering" (format "%03d" %))) (range 1 25))
                                 (map #(keyword (str "flowFacet" (format "%03d" %))) (range 1 5))
                                 [:canonicalPresence :canonicalValues :canonicalConditions :canonicalRules :canonicalExample :canonicalPersisted

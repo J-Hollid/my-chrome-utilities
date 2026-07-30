@@ -8,6 +8,24 @@ import {
 import {focusedRuleIssue} from "../dist/data-layer-focused-rule-policy.js";
 import {schemaTableRuleOutcomeSummary} from "../dist/data-layer-schema-table.js";
 import {compileLayeredSchema,validateLayeredObservation} from "../dist/data-layer-layered-schema.js";
+import {
+  regularExpressionTesterCopy,
+  regularExpressionTesterGridStyle,
+} from "../dist/data-layer-string-rule-validation-ui.js";
+
+assert.deepEqual(
+  regularExpressionTesterCopy,
+  {
+    patternLabel:"Regular expression",
+    sampleLabel:"Test value",
+    resultLabel:"Test result",
+    guidance:"Enter a sample value to check it against the regular expression. Test values are not saved.",
+  },
+  "the shared Pattern helper exposes the complete visible copy contract",
+);
+assert.match(regularExpressionTesterGridStyle,/grid-template-columns:repeat\(2,minmax\(0,1fr\)\)/);
+assert.match(regularExpressionTesterGridStyle,/grid-column:1\/-1/);
+assert.match(regularExpressionTesterGridStyle,/max-width:100%/);
 
 assert.deepEqual(
   stringRuleKindOptions("string"),
