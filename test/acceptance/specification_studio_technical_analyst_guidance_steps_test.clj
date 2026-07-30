@@ -51,10 +51,35 @@
             :hiddenWithNavigation true
             :overflow true}
    :interaction
-   {:layout {:region [0 0 100 100]}
-    :hover {:scale 1.05 :region [0 0 100 100]}
-    :focus {:scale 1.05 :region [0 0 100 100]}
-    :rest {:scale 1.0}
+   {:footerLayout
+    {:short {:scrollable false
+             :treeAboveFooter true
+             :bubbleRightOfAnalyst true
+             :controlsClear true
+             :region {:left 0 :bottom 100}}
+     :long {:beforeScroll {:scrollable true
+                           :region {:left 0 :bottom 100}}
+            :afterScroll {:scrollTop 20
+                          :treeAboveFooter true
+                          :controlsClear true
+                          :region {:left 0 :bottom 100}}}
+     :restored {:region {:left 0 :bottom 100}}}
+    :layout {:region [0 0 100 100]
+             :shadow "none"
+             :border "0px"
+             :outlineOpacity "0"}
+    :hover {:scale 1.05
+            :region [0 0 100 100]
+            :shadow "none"
+            :outlineOpacity "1"}
+    :focus {:scale 1.05
+            :region [0 0 100 100]
+            :shadow "none"
+            :outlineOpacity "1"}
+    :rest {:scale 1.0
+           :shadow "none"
+           :border "0px"
+           :outlineOpacity "0"}
     :activations [{:id "tip-1" :before "search" :after "search"}
                   {:id "tip-2" :before "analyst" :after "analyst"}
                   {:id "tip-3" :before "analyst" :after "analyst"}]
@@ -68,6 +93,7 @@
                          [(keyword (str "part-" index))
                           {:count 5
                            :distinct 5
+                           :comic true
                            :texts (repeat 5 "Complete production-specific analyst guidance text")}])
                        (range 10)))
             :semantics {:canvas true
@@ -75,12 +101,29 @@
                         :containment true
                         :pageRelationships true
                         :occurrencesAreNotEndpoints true
-                        :documentation true}}
-    :dwell {:pointerBefore true
-            :pointerFirst {:hidden false :id "control-search"}
-            :pointerStayed {:hidden true :id nil}
-            :focusFirst {:hidden false :id "control-preflight"}
-            :focusStayed {:hidden true :id nil}}
+                        :documentation true
+                        :required true}}
+    :dwell {:preflight {:before true
+                        :first {:hidden false
+                                :text "Gadzooks! Run preflight checks the whole Draft for blocking schema faults and advisory assurance warnings without publishing."}
+                        :stayed {:hidden true :id nil}}
+            :coverage {:before true
+                       :first {:hidden false
+                               :text "Cor! Coverage matrix shows which project contexts exercise each canonical property; use it to spot evidence gaps."}
+                       :stayed {:hidden true :id nil}}
+            :publish {:before true
+                      :first {:hidden false
+                              :text "Blimey! Publish release opens a review before creating an immutable project revision."}
+                      :stayed {:hidden true :id nil}}
+            :addPage {:before true
+                      :first {:hidden false
+                              :text "Crikey! Add Page creates a Page draft for a real location; use it before placing that Page in a Flow."}
+                      :stayed {:hidden true :id nil}}
+            :undo {:before true
+                   :first {:hidden false
+                           :text "Whoops-a-daisy! Undo rolls back the latest command on this Studio page while the published revision stays put."}
+                   :stayed {:hidden true :id nil}}
+            :unsupported {:first {:hidden true :id nil :text nil}}}
     :typewriter {:initial {:text ""}
                  :partial "Cr"
                  :firstId "tip-1"

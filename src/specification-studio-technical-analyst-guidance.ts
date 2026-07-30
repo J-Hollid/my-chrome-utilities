@@ -19,73 +19,73 @@ const tip=(id:string,route:string,text:string):StudioAnalystHint=>Object.freeze(
 const tipPools:Readonly<Record<string,readonly StudioAnalystHint[]>>=Object.freeze({
   "Project overview":Object.freeze([
     tip("project-overview","Project overview","Crikey! Pick a collection on the left to start shaping your specification."),
-    tip("project-overview-context","Project overview","Start with the project context so every collection shares the same measurement purpose."),
-    tip("project-overview-search","Project overview","Use Global search to find a collection or entity without changing the saved Draft."),
-    tip("project-overview-validate","Project overview","Run preflight when you want a project-wide view of blockers and advisory warnings."),
-    tip("project-overview-inspector","Project overview","Keep the Inspector open when you need context for the currently selected project part."),
+    tip("project-overview-context","Project overview","Stone the crows! Set the project context so every collection shares the same measurement purpose."),
+    tip("project-overview-search","Project overview","Crumbs! Global search finds any collection or entity without changing your saved Draft."),
+    tip("project-overview-validate","Project overview","Gadzooks! Run preflight for a project-wide view of blockers and advisory warnings."),
+    tip("project-overview-inspector","Project overview","By gum! Keep the Inspector open when you need context for the selected project part."),
   ]),
   "Shared Profiles":Object.freeze([
     tip("shared-profiles","Shared Profiles","Smashing! Put reusable fields here so Pages and Events can inherit them."),
-    tip("shared-profiles-canonical","Shared Profiles","Author each reusable property once in the canonical Shared Profile schema."),
-    tip("shared-profiles-library","Shared Profiles","Adopt a published Saved Schema when its source lineage should remain visible."),
-    tip("shared-profiles-concepts","Shared Profiles","Use Concepts to group Profile properties for project documentation without changing validation."),
-    tip("shared-profiles-policy","Shared Profiles","Only defined fields closes a Profile schema while preserving its inherited policy."),
+    tip("shared-profiles-canonical","Shared Profiles","Crikey! Author each reusable property once in the canonical Shared Profile schema."),
+    tip("shared-profiles-library","Shared Profiles","Blimey! Adopt a published Saved Schema when its source lineage should remain visible."),
+    tip("shared-profiles-concepts","Shared Profiles","By gum! Concepts group Profile properties in documentation without changing validation."),
+    tip("shared-profiles-policy","Shared Profiles","Cor! Only defined fields closes a Profile schema while preserving its inherited policy."),
   ]),
   "Pages":Object.freeze([
     tip("pages","Pages","Jolly good! Give each Page its observed page event before refining its schema."),
-    tip("pages-location","Pages","Describe host and path conditions so observations resolve to the intended Page."),
-    tip("pages-groups","Pages","Order Page Group memberships to make their effective schema contribution predictable."),
-    tip("pages-profiles","Pages","Attach Shared Profiles when the Page should inherit reusable canonical fields."),
-    tip("pages-schema","Pages","Review the effective Page schema before adding a sparse local override."),
+    tip("pages-location","Pages","Gadzooks! Path conditions decide which observed locations resolve to this Page."),
+    tip("pages-groups","Pages","Crikey! Order Page Group memberships to make their effective schema contribution predictable."),
+    tip("pages-profiles","Pages","By gum! Attach Shared Profiles when the Page should inherit reusable canonical fields."),
+    tip("pages-schema","Pages","Cor! Review the effective Page schema before adding a sparse local override."),
   ]),
   "Page Groups":Object.freeze([
-    tip("page-groups-membership","Page Groups","Group Pages that share applicability or schema contributions, then review their effective order."),
-    tip("page-groups-conditions","Page Groups","Use Page Group conditions to describe where a shared contribution applies."),
-    tip("page-groups-schema","Page Groups","Keep reusable group-level fields canonical so member Pages inherit them consistently."),
-    tip("page-groups-order","Page Groups","Reorder memberships only after checking the affected Page instances and compiled targets."),
-    tip("page-groups-repair","Page Groups","Open a conflicting Page Group directly from effective-schema evidence to repair its contribution."),
+    tip("page-groups-membership","Page Groups","Crikey! Group Pages that share applicability or schema contributions, then review their effective order."),
+    tip("page-groups-conditions","Page Groups","By gum! Use Page Group conditions to describe where a shared contribution applies."),
+    tip("page-groups-schema","Page Groups","Smashing! Keep group-level fields canonical so member Pages inherit them consistently."),
+    tip("page-groups-order","Page Groups","Gadzooks! Reorder memberships only after checking affected Page instances and compiled targets."),
+    tip("page-groups-repair","Page Groups","Whoops-a-daisy! Open a conflicting Page Group from effective-schema evidence to repair its contribution."),
   ]),
   "Events":Object.freeze([
-    tip("events-name","Events","Give each Event the exact observed event name used by its production source."),
-    tip("events-source","Events","Choose the observation source that actually carries this Event in the active project."),
-    tip("events-target","Events","Set the payload target before connecting Assignments to the Event."),
-    tip("events-pages","Events","Associate interaction Events with the Pages and Flows where they are expected."),
-    tip("events-schema","Events","Refine Event data through canonical contributors instead of duplicating property definitions."),
+    tip("events-name","Events","Crikey! Give each Event the exact observed event name used by its production source."),
+    tip("events-source","Events","By gum! Choose the observation source that actually carries this Event in the active project."),
+    tip("events-target","Events","Gadzooks! Set the payload target before connecting Assignments to the Event."),
+    tip("events-pages","Events","Jolly good! Associate interaction Events with the Pages and Flows where they are expected."),
+    tip("events-schema","Events","Smashing! Refine Event data through canonical contributors instead of duplicating properties."),
   ]),
   "Applicability":Object.freeze([
-    tip("applicability-priority","Applicability","Order Applicability Sets deliberately because higher-priority matches resolve first."),
-    tip("applicability-conditions","Applicability","Build conditions from observable project data and keep each comparison type-compatible."),
-    tip("applicability-fallback","Applicability","Retain one truthful fallback for observations that match no more specific set."),
-    tip("applicability-overlap","Applicability","Run preflight to find ambiguous Applicability Sets before publishing."),
-    tip("applicability-assignments","Applicability","Use Applicability Sets on Assignments to select the right contributor for an observation."),
+    tip("applicability-priority","Applicability","Crikey! Order Applicability Sets deliberately because higher-priority matches resolve first."),
+    tip("applicability-conditions","Applicability","By gum! Build conditions from observable data and keep every comparison type-compatible."),
+    tip("applicability-fallback","Applicability","Jolly good! Retain one truthful fallback for observations matching no more specific set."),
+    tip("applicability-overlap","Applicability","Gadzooks! Run preflight to find ambiguous Applicability Sets before publishing."),
+    tip("applicability-assignments","Applicability","Smashing! Use Applicability Sets so Assignments select the right observation contributor."),
   ]),
   "Flows":Object.freeze([
     tip("flows","Flows","Cor! Add Pages to the canvas first, then place interaction Events inside them."),
-    tip("flows-frames","Flows","Use Page frames to show where each journey step occurs."),
-    tip("flows-occurrences","Flows","Place Event occurrences inside their owning Page frame and state their obligation."),
-    tip("flows-relationships","Flows","Connect Page frames with Page-to-Page relationships; Event availability comes from containment, never relationship endpoints."),
-    tip("flows-documentation","Flows","Refresh project Documentation after changing a selected Flow's value map."),
+    tip("flows-frames","Flows","Crikey! Use Page frames to show where each journey step occurs."),
+    tip("flows-occurrences","Flows","By gum! Place Event occurrences inside their owning Page frame and state their obligation."),
+    tip("flows-relationships","Flows","Gadzooks! Connect Page frames with Page-to-Page relationships; Event availability comes from containment, never relationship endpoints."),
+    tip("flows-documentation","Flows","Smashing! Refresh project Documentation after changing a selected Flow's value map."),
   ]),
   "Fixtures":Object.freeze([
-    tip("fixtures-observations","Fixtures","Capture representative observations so guided testing can exercise the intended event path."),
-    tip("fixtures-expected","Fixtures","Record expected outcomes that distinguish a useful Fixture from raw sample data."),
-    tip("fixtures-context","Fixtures","Link each Fixture to the Page, Event, and Flow context it is meant to demonstrate."),
-    tip("fixtures-guided","Fixtures","Use guided validation to compare a Fixture with the current compiled specification."),
-    tip("fixtures-warning","Fixtures","Treat incomplete Fixture coverage as advisory while canonical validation remains authoritative."),
+    tip("fixtures-observations","Fixtures","Crikey! Capture representative observations so guided testing can exercise the intended event path."),
+    tip("fixtures-expected","Fixtures","By gum! Record expected outcomes that distinguish a useful Fixture from raw sample data."),
+    tip("fixtures-context","Fixtures","Gadzooks! Link each Fixture to the Page, Event, and Flow context it demonstrates."),
+    tip("fixtures-guided","Fixtures","Smashing! Use guided validation to compare a Fixture with the compiled specification."),
+    tip("fixtures-warning","Fixtures","Jolly good! Treat incomplete Fixture coverage as advisory while canonical validation remains authoritative."),
   ]),
   "Assignments":Object.freeze([
-    tip("assignments-event","Assignments","Choose the observed Event before mapping an Assignment to a canonical contributor."),
-    tip("assignments-applicability","Assignments","Select an Applicability Set that makes the Assignment's winning context unambiguous."),
-    tip("assignments-target","Assignments","Point the Assignment at the Shared Profile, Page, Event, or Flow instance that owns the schema."),
-    tip("assignments-priority","Assignments","Use priority only to resolve otherwise valid competing Assignment candidates."),
-    tip("assignments-preflight","Assignments","Run preflight to find unresolved targets or ties before testing observations."),
+    tip("assignments-event","Assignments","Crikey! Choose the observed Event before mapping an Assignment to a canonical contributor."),
+    tip("assignments-applicability","Assignments","By gum! Select an Applicability Set that makes the winning context unambiguous."),
+    tip("assignments-target","Assignments","Smashing! Point the Assignment at the contributor that owns its schema."),
+    tip("assignments-priority","Assignments","Gadzooks! Use priority only to resolve otherwise valid competing Assignment candidates."),
+    tip("assignments-preflight","Assignments","Cor! Run preflight before testing to catch missing targets or tied Assignment candidates."),
   ]),
   "Documentation":Object.freeze([
     tip("documentation","Documentation","Splendid! Refresh the preview after changing a Documentation Set."),
-    tip("documentation-sections","Documentation","Select only the Flow, matrix, and Profile sections required by this audience."),
-    tip("documentation-concepts","Documentation","Order and include Concepts to control grouped property tables consistently."),
-    tip("documentation-theme","Documentation","Save project-local theme choices before refreshing the immutable preview."),
-    tip("documentation-export","Documentation","Generate rich copy or Excel from the same current preview snapshot."),
+    tip("documentation-sections","Documentation","Crikey! Select only the Flow, matrix, and Profile sections required by this audience."),
+    tip("documentation-concepts","Documentation","By gum! Order and include Concepts to control grouped property tables consistently."),
+    tip("documentation-theme","Documentation","Smashing! Save project-local theme choices before refreshing the immutable preview."),
+    tip("documentation-export","Documentation","Ker-pow! Generate rich copy or Excel only after refreshing the preview snapshot."),
   ]),
 });
 
@@ -101,12 +101,25 @@ export function studioAnalystHintForRoute(route:string,shown:readonly string[]):
 
 const slug=(value:string):string=>value.toLowerCase().replace(/[^a-z0-9]+/gu,"-").replace(/^-|-$/gu,"");
 
-export function studioAnalystControlHint(route:string,target:StudioAnalystControlTarget):StudioAnalystHint{
-  return{
+export function studioAnalystControlHint(route:string,target:StudioAnalystControlTarget):StudioAnalystHint|undefined{
+  const targetKey=slug(target.id||target.name),targetName=target.name.trim();
+  const text=
+    route==="Pages"&&(targetKey==="add-page"||/^Add Page(?:\b| to )/u.test(targetName))
+      ?"Crikey! Add Page creates a Page draft for a real location; use it before placing that Page in a Flow."
+    :route==="Project overview"&&(targetKey==="run-preflight"||targetName==="Run preflight")
+      ?"Gadzooks! Run preflight checks the whole Draft for blocking schema faults and advisory assurance warnings without publishing."
+    :route==="Project overview"&&(targetKey==="show-coverage"||targetName==="Coverage matrix")
+      ?"Cor! Coverage matrix shows which project contexts exercise each canonical property; use it to spot evidence gaps."
+    :route==="Pages"&&(targetKey==="undo-project"||targetName==="Undo")
+      ?"Whoops-a-daisy! Undo rolls back the latest command on this Studio page while the published revision stays put."
+    :route==="Project overview"&&(targetKey==="publish-project"||targetName==="Publish release")
+      ?"Blimey! Publish release opens a review before creating an immutable project revision."
+    :undefined;
+  return text?{
     id:`control:${slug(route)}:${slug(target.id||target.name)}`,
     route,
-    text:`“${target.name}” is available in ${route}; use it to work with this part of the specification.`,
-  };
+    text,
+  }:undefined;
 }
 
 export function studioAnalystVisibleText(text:string,elapsedMilliseconds:number,reducedMotion:boolean):string{
@@ -349,7 +362,8 @@ export function installStudioAnalystGuidance(options:{
     const elapsed=active&&intervalWasActive?currentTime-previous:0;
     apply(schedule.advance(elapsed,{active,route}));
     const dwellTarget=dwell.advance(active?Math.max(0,currentTime-dwellPrevious):0,active);
-    if(dwellTarget)apply(schedule.present(studioAnalystControlHint(route,dwellTarget),{active,route}));
+    const controlHint=dwellTarget?studioAnalystControlHint(route,dwellTarget):undefined;
+    if(controlHint)apply(schedule.present(controlHint,{active,route}));
     previous=currentTime;
     dwellPrevious=currentTime;
     intervalWasActive=active;

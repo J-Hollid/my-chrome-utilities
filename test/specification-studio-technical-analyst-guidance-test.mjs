@@ -37,6 +37,22 @@ for(const part of studioParts){
   assert.equal(partHints.length>=5,true,`${part} has at least five general tips`);
   assert.equal(new Set(partHints.map(({id})=>id)).size,partHints.length,`${part} tip identities are distinct`);
   assert.equal(partHints.every(({route,text})=>route===part&&text.trim().length>20),true,`${part} tips are complete and part-specific`);
+  assert.equal(
+    partHints.every(({text})=>/^(?:Blimey|By gum|Cor|Crikey|Crumbs|Gadzooks|Great Scott|Jolly good|Ker-pow|Smashing|Splendid|Stone the crows|Whoops-a-daisy)!/u.test(text)),
+    true,
+    `${part} tips retain the configured British-comic character voice`,
+  );
+}
+
+const requiredGeneralTips=new Map([
+  ["Project overview","Crumbs! Global search finds any collection or entity without changing your saved Draft."],
+  ["Shared Profiles","By gum! Concepts group Profile properties in documentation without changing validation."],
+  ["Pages","Gadzooks! Path conditions decide which observed locations resolve to this Page."],
+  ["Assignments","Cor! Run preflight before testing to catch missing targets or tied Assignment candidates."],
+  ["Documentation","Ker-pow! Generate rich copy or Excel only after refreshing the preview snapshot."],
+]);
+for(const [route,text] of requiredGeneralTips){
+  assert.equal(studioAnalystHintsForRoute(route).some((hint)=>hint.text===text),true,`${route} exposes the specified comic guidance`);
 }
 
 const flowTips=studioAnalystHintsForRoute("Flows");
@@ -131,8 +147,29 @@ const controlHint=studioAnalystControlHint("Pages",{id:"add-page",name:"Add Page
 assert.deepEqual(controlHint,{
   id:"control:pages:add-page",
   route:"Pages",
-  text:'“Add Page” is available in Pages; use it to work with this part of the specification.',
+  text:"Crikey! Add Page creates a Page draft for a real location; use it before placing that Page in a Flow.",
 });
+assert.equal(
+  studioAnalystControlHint("Project overview",{id:"run-preflight",name:"Run preflight"})?.text,
+  "Gadzooks! Run preflight checks the whole Draft for blocking schema faults and advisory assurance warnings without publishing.",
+);
+assert.equal(
+  studioAnalystControlHint("Project overview",{id:"show-coverage",name:"Coverage matrix"})?.text,
+  "Cor! Coverage matrix shows which project contexts exercise each canonical property; use it to spot evidence gaps.",
+);
+assert.equal(
+  studioAnalystControlHint("Pages",{id:"undo-project",name:"Undo"})?.text,
+  "Whoops-a-daisy! Undo rolls back the latest command on this Studio page while the published revision stays put.",
+);
+assert.equal(
+  studioAnalystControlHint("Project overview",{id:"publish-project",name:"Publish release"})?.text,
+  "Blimey! Publish release opens a review before creating an immutable project revision.",
+);
+assert.equal(
+  studioAnalystControlHint("Pages",{id:"unregistered",name:"Unregistered action"}),
+  undefined,
+  "unregistered named controls do not receive fabricated generic guidance",
+);
 
 const dwell=createStudioAnalystControlDwell();
 dwell.enter({id:"add-page",name:"Add Page"},"pointer");

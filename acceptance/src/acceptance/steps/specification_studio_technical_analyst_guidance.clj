@@ -43,7 +43,12 @@
             ["Shared Profiles" "Smashing! Put reusable fields here so Pages and Events can inherit them."]
             ["Pages" "Jolly good! Give each Page its observed page event before refining its schema."]
             ["Flows" "Cor! Add Pages to the canvas first, then place interaction Events inside them."]
-            ["Documentation" "Splendid! Refresh the preview after changing a Documentation Set."]}}
+            ["Documentation" "Splendid! Refresh the preview after changing a Documentation Set."]
+            ["Project overview" "Crumbs! Global search finds any collection or entity without changing your saved Draft."]
+            ["Shared Profiles" "By gum! Concepts group Profile properties in documentation without changing validation."]
+            ["Pages" "Gadzooks! Path conditions decide which observed locations resolve to this Page."]
+            ["Assignments" "Cor! Run preflight before testing to catch missing targets or tied Assignment candidates."]
+            ["Documentation" "Ker-pow! Generate rich copy or Excel only after refreshing the preview snapshot."]}}
    {:keys ["event" "result"]
     :rows #{["10 seconds elapse" "disappears automatically"]
             ["the Studio document becomes hidden" "disappears and pauses the hint interval"]
@@ -53,8 +58,9 @@
     :rows #{["1280 by 900 CSS pixel Studio" "visible"]
             ["200 percent browser zoom" "visible"]
             ["narrow Studio with navigation hidden" "hidden"]}}
-   {:keys ["pointer_or_focus_state" "scale" "highlight_state"]
-    :rows #{["pointer hover begins" "105 percent" "visible"]
+   {:keys ["pointer_or_focus_state" "scale" "outline_state"]
+    :rows #{["resting state" "100 percent" "absent"]
+            ["pointer hover begins" "105 percent" "visible"]
             ["keyboard focus arrives" "105 percent" "visible"]
             ["pointer hover or keyboard focus ends" "100 percent" "absent"]}}
    {:keys ["activation"]
@@ -75,7 +81,16 @@
             ["3 seconds of continuous keyboard focus" "rendered once"]}}
    {:keys ["motion_preference" "output" "character_interval"]
     :rows #{["standard motion" "one complete visible character at a time" "20 milliseconds"]
-            ["reduced motion" "the complete tip immediately" "0 milliseconds"]}}])
+            ["reduced motion" "the complete tip immediately" "0 milliseconds"]}}
+   {:keys ["navigation_inventory"]
+    :rows #{["a short list ending well above the footer"]
+            ["a long list requiring navigation scrolling"]}}
+   {:keys ["route" "control" "tip"]
+    :rows #{["Pages" "Add Page" "Crikey! Add Page creates a Page draft for a real location; use it before placing that Page in a Flow."]
+            ["Project overview" "Run preflight" "Gadzooks! Run preflight checks the whole Draft for blocking schema faults and advisory assurance warnings without publishing."]
+            ["Project overview" "Coverage matrix" "Cor! Coverage matrix shows which project contexts exercise each canonical property; use it to spot evidence gaps."]
+            ["Pages" "Undo" "Whoops-a-daisy! Undo rolls back the latest command on this Studio page while the published revision stays put."]
+            ["Project overview" "Publish release" "Blimey! Publish release opens a review before creating an immutable project revision."]}}])
 
 (defn- validate-example! [_mode example]
   (support/validate-example-relations!
@@ -129,9 +144,34 @@
         (:visibleBefore narrow)
         (:hiddenWithNavigation narrow)
         (:overflow narrow)
+        (false? (get-in interaction [:footerLayout :short :scrollable]))
+        (get-in interaction [:footerLayout :short :treeAboveFooter])
+        (get-in interaction [:footerLayout :short :bubbleRightOfAnalyst])
+        (get-in interaction [:footerLayout :short :controlsClear])
+        (get-in interaction [:footerLayout :long :beforeScroll :scrollable])
+        (pos? (get-in interaction [:footerLayout :long :afterScroll :scrollTop]))
+        (= (get-in interaction [:footerLayout :long :beforeScroll :region])
+           (get-in interaction [:footerLayout :long :afterScroll :region]))
+        (get-in interaction [:footerLayout :long :afterScroll :treeAboveFooter])
+        (get-in interaction [:footerLayout :long :afterScroll :controlsClear])
+        (= (get-in interaction [:footerLayout :short :region])
+           (get-in interaction [:footerLayout :restored :region]))
         (< (Math/abs (- 1.05 (get-in interaction [:hover :scale]))) 0.001)
         (< (Math/abs (- 1.05 (get-in interaction [:focus :scale]))) 0.001)
         (< (Math/abs (- 1.0 (get-in interaction [:rest :scale]))) 0.001)
+        (= ["none" "none" "none" "none"]
+           [(get-in interaction [:layout :shadow])
+            (get-in interaction [:hover :shadow])
+            (get-in interaction [:focus :shadow])
+            (get-in interaction [:rest :shadow])])
+        (= ["0px" "0px"]
+           [(get-in interaction [:layout :border])
+            (get-in interaction [:rest :border])])
+        (= ["0" "0"]
+           [(get-in interaction [:layout :outlineOpacity])
+            (get-in interaction [:rest :outlineOpacity])])
+        (pos? (Double/parseDouble (get-in interaction [:hover :outlineOpacity])))
+        (pos? (Double/parseDouble (get-in interaction [:focus :outlineOpacity])))
         (= (get-in interaction [:layout :region]) (get-in interaction [:hover :region]))
         (= (get-in interaction [:layout :region]) (get-in interaction [:focus :region]))
         (= 3 (count (:activations interaction)))
@@ -144,17 +184,31 @@
         (not (contains? (set (map :id (:activations interaction)))
                         (get-in interaction [:retainedRequest :id])))
         (= 10 (count (get-in interaction [:pools :pools])))
-        (every? (fn [{tip-count :count :keys [distinct texts]}]
+        (every? (fn [{tip-count :count :keys [distinct texts comic]}]
                   (and (<= 5 tip-count)
                        (= tip-count distinct)
+                       comic
                        (every? #(> (count %) 20) texts)))
                 (vals (get-in interaction [:pools :pools])))
         (every? true? (vals (get-in interaction [:pools :semantics])))
-        (get-in interaction [:dwell :pointerBefore])
-        (false? (get-in interaction [:dwell :pointerFirst :hidden]))
-        (= {:hidden true :id nil} (get-in interaction [:dwell :pointerStayed]))
-        (false? (get-in interaction [:dwell :focusFirst :hidden]))
-        (= {:hidden true :id nil} (get-in interaction [:dwell :focusStayed]))
+        (every? true? (map #(get-in interaction [:dwell % :before])
+                           [:preflight :coverage :publish :addPage :undo]))
+        (every? false? (map #(get-in interaction [:dwell % :first :hidden])
+                            [:preflight :coverage :publish :addPage :undo]))
+        (= ["Gadzooks! Run preflight checks the whole Draft for blocking schema faults and advisory assurance warnings without publishing."
+            "Cor! Coverage matrix shows which project contexts exercise each canonical property; use it to spot evidence gaps."
+            "Blimey! Publish release opens a review before creating an immutable project revision."
+            "Crikey! Add Page creates a Page draft for a real location; use it before placing that Page in a Flow."
+            "Whoops-a-daisy! Undo rolls back the latest command on this Studio page while the published revision stays put."]
+           (mapv #(get-in interaction [:dwell % :first :text])
+                 [:preflight :coverage :publish :addPage :undo]))
+        (every? #(= {:hidden true :id nil} %)
+                (map #(get-in interaction [:dwell % :stayed])
+                     [:preflight :coverage :publish :addPage :undo]))
+        (= [true nil nil]
+           [(get-in interaction [:dwell :unsupported :first :hidden])
+            (get-in interaction [:dwell :unsupported :first :id])
+            (get-in interaction [:dwell :unsupported :first :text])])
         (= "" (get-in interaction [:typewriter :initial :text]))
         (<= 2 (count (get-in interaction [:typewriter :partial])))
         (string? (get-in interaction [:typewriter :firstId]))
