@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=baebb716125d279d8c14b85bacb4f15e24450cf02513b88ff9777ac2f25d4910
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-30T14:51:41.129160646Z","feature_name":"Data layer project documentation workspace","feature_path":"features/data-layer-project-documentation-workspace.feature","background_hash":"6e9a3622de99090815714fa5d2fbae827c8feda287a062680b2f0de443e8da1f","implementation_hash":"architect-documentation-logo-picker-v1","scenarios":[{"index":14,"name":"Data layer project documentation workspace 015","scenario_hash":"4a89e82941719a62bee409628fb4f7d19c8c0bfb1e83a2ddec2cbe93f631eb0d","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-30T14:51:41.129160646Z"},{"index":16,"name":"Data layer project documentation workspace 017","scenario_hash":"e5dc5bbfb335ef940349ada74a7fb648286494f0bfdfffafaf1f57d4592c49a3","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-30T14:51:41.129160646Z"},{"index":24,"name":"Data layer project documentation workspace 025","scenario_hash":"fbdd31535c77d81b146edc238daae95e1ac3ba234cb0008d75d78b97bbc533c5","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-30T14:51:41.129160646Z"},{"index":25,"name":"Data layer project documentation workspace 026","scenario_hash":"75e5ea3e1534a98f4b9a9036780430c2fa283ec3514e13c0c776009439d55b00","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-30T14:51:41.129160646Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer project documentation workspace
 
   Background:
@@ -301,3 +296,34 @@ Feature: Data layer project documentation workspace
     And the operator refreshes the documentation preview
     Then Acme stores no logo
     And preview, rich copy, and Excel contain no theme logo
+
+  # Data layer project documentation workspace 028
+  Scenario Outline: Data layer project documentation workspace 028
+    Given project-local theme Acme has a saved valid 3000 by 2000 pixel <image_type> logo
+    When the operator refreshes the complete Documentation Set and generates rich copy and Excel
+    Then the Brand sample, every preview section, and every rich-copy section show the complete logo at 96 by 64 CSS pixels
+    And no rendered logo exceeds 180 by 64 CSS pixels or its intrinsic dimensions
+    And every Excel sheet shows the logo at 1 by two-thirds inches within a 1.875 by two-thirds inch logo area
+    And every presentation preserves the logo's three-to-two aspect ratio
+    And the logo area precedes and cannot obscure the section title or table
+    And Microsoft Excel opens the workbook without a content warning, repair, or removed drawing or image
+
+    Examples:
+      | image_type |
+      | PNG        |
+      | JPEG       |
+      | GIF        |
+
+  # Data layer project documentation workspace 029
+  Scenario Outline: Data layer project documentation workspace 029
+    Given project-local theme Acme has a saved valid logo
+    When the operator chooses a file declared as <declared_type> whose bytes do not decode as <declared_type>
+    Then the Brand controls show <diagnostic>
+    And the saved logo and its preview remain unchanged
+    And saving Acme cannot store the invalid image bytes
+
+    Examples:
+      | declared_type | diagnostic                |
+      | PNG           | Choose a valid PNG image   |
+      | JPEG          | Choose a valid JPEG image  |
+      | GIF           | Choose a valid GIF image   |

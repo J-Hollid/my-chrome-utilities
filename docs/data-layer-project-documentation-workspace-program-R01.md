@@ -148,6 +148,19 @@ ordinary theme save operation. Accepted, retained, replaced, and removed logos
 continue through the same preview, rich-copy, Excel, reload, and portability
 paths as every other structured theme value.
 
+Logo presentation uses one aspect-ratio-preserving fit within a 180 by 64 CSS
+pixel box and never enlarges an image beyond its decoded intrinsic dimensions.
+The Brand sample, every configured preview section, and every rich-copy section
+use that rule. Excel uses the physical equivalent 1.875 by two-thirds inch logo
+area and fits the image within it at the same aspect ratio without enlargement.
+Each logo area reserves its own space before the section title and table.
+
+Selection validates that the bytes decode as the declared PNG, JPEG, or GIF
+format before replacing the current logo. A type-valid data-URL prefix alone is
+insufficient. Every logo-bearing workbook contains valid image, drawing,
+relationship, and content-type parts and opens without a content warning, repair,
+or removed drawing or image.
+
 ## Delivery boundary
 
 This program supersedes the Flow-page entry point, per-Flow capture matrix,
@@ -178,3 +191,10 @@ PNG, JPEG, and GIF files through the installed file control; compare preview,
 clipboard, and workbook image bytes; prove raw data URLs are absent from the UI;
 reject unsupported, unreadable, and oversized files without replacing the saved
 logo; and remove a logo through the installed control and ordinary theme save.
+Correction evidence must use real decodable 3000 by 2000 pixel PNG, JPEG, and GIF
+fixtures, prove a 96 by 64 fit throughout the 180 by 64 presentation box, preserve
+the three-to-two aspect ratio, and show that no logo obscures a title or table. It
+must reject declared formats whose bytes cannot decode as that format. Workbook
+evidence must resolve every image and drawing part and open each logo-bearing
+workbook with an independent Excel-compatible reader without repair or removed
+content.

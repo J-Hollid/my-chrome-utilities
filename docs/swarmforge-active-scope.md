@@ -267,6 +267,21 @@ ordinary theme save operation. Preview, rich copy, Excel, reload, and project
 portability continue to consume the same structured theme value. The exact
 checkpoint remains `flow_export`, followed by `npm run package`.
 
+On approval, the Documentation logo sizing and workbook correction is later
+authority for project Documentation scenarios 015, 025–026, and 028–029. The
+Brand sample, every preview section, and every rich-copy section fit a logo
+without enlargement into a 180 by 64 CSS pixel box while preserving its decoded
+intrinsic aspect ratio. Excel uses the physical equivalent 1.875 by two-thirds
+inch logo area with the same fit. Each medium reserves this area before its title
+and table so the logo cannot obscure documentation content.
+
+Logo selection must decode the bytes as the declared PNG, JPEG, or GIF before
+replacing the current logo; a matching MIME prefix alone is insufficient.
+Logo-bearing workbooks contain valid real image, drawing, relationship, and
+content-type parts and open without a content warning, repair, or removed drawing
+or image. The exact checkpoint remains `flow_export`, followed by
+`npm run package`.
+
 On approval, the Specification Studio choice-control correction is later authority
 for the two Specification Studio choice-control contracts. Every Studio checkbox
 uses one shared compact labelled-row pattern: a 16–18 CSS pixel indicator, an

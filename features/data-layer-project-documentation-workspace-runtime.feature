@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=8f1669d9658730e87b6de9f531fced80ad13f260e7a3660f591a881de613c687
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-30T14:53:39.505032896Z","feature_name":"Data layer project documentation workspace runtime","feature_path":"features/data-layer-project-documentation-workspace-runtime.feature","background_hash":"f9d1fefd5e548fd8f09cd46b438977b308e72ef8198e23d2f0d73530911ea2e9","implementation_hash":"architect-documentation-logo-picker-v1","scenarios":[{"index":14,"name":"Data layer project documentation workspace runtime 015","scenario_hash":"583c1c4ab7b42a4fc78239c4ae455b638f03bae3ef8d3907205c50100f9bc360","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-30T14:53:39.505032896Z"},{"index":16,"name":"Data layer project documentation workspace runtime 017","scenario_hash":"33d6b8fb974af143301312e244a1a3833ceaf85d14fd279f7f12e66de55e8f48","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-30T14:53:39.505032896Z"},{"index":24,"name":"Data layer project documentation workspace runtime 025","scenario_hash":"714464d58a8e3fb65bb85a132c7e1d1d37ec5f249598e469b68199223b8ce2f9","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-30T14:53:39.505032896Z"},{"index":25,"name":"Data layer project documentation workspace runtime 026","scenario_hash":"5c7c53dc8532dae41227417db9f1a778bddb58de630c4edaaedc636b5bcb960d","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-30T14:53:39.505032896Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer project documentation workspace runtime
 
   Background:
@@ -300,3 +295,35 @@ Feature: Data layer project documentation workspace runtime
     And refresh the documentation preview
     Then repository bytes contain no Acme logo
     And parsed preview HTML, clipboard HTML, and workbook media contain no theme logo
+
+  # Data layer project documentation workspace runtime 028
+  Scenario Outline: Data layer project documentation workspace runtime 028
+    Given production Acme has a saved valid 3000 by 2000 pixel <image_type> logo
+    When actual controls refresh the complete Documentation Set and generate rich copy and Excel
+    Then computed Brand-sample, preview-section, and clipboard-image dimensions are 96 by 64 CSS pixels
+    And every installed or copied logo fits within 180 by 64 CSS pixels without exceeding its decoded intrinsic dimensions
+    And parsed drawing extents on every workbook sheet are 1 by two-thirds inches within a 1.875 by two-thirds inch logo area
+    And computed, parsed HTML, and drawing dimensions retain the three-to-two aspect ratio
+    And DOM and worksheet geometry place the logo area before the section title and table without overlap
+    And independent package validation resolves every drawing, relationship, content type, and real image part
+    And an independent Excel-compatible reader opens the workbook without repair or removed drawing or image content
+
+    Examples:
+      | image_type |
+      | PNG        |
+      | JPEG       |
+      | GIF        |
+
+  # Data layer project documentation workspace runtime 029
+  Scenario Outline: Data layer project documentation workspace runtime 029
+    Given production Acme has a saved valid logo
+    When the installed Choose logo control receives a file declared as <declared_type> whose bytes do not decode as <declared_type>
+    Then the associated validation region renders <diagnostic>
+    And the Brand sample and repository bytes retain the saved logo
+    And activating Save theme cannot persist the rejected bytes
+
+    Examples:
+      | declared_type | diagnostic                |
+      | PNG           | Choose a valid PNG image   |
+      | JPEG          | Choose a valid JPEG image  |
+      | GIF           | Choose a valid GIF image   |
