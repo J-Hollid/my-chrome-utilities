@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=01cb2aff1c24cd0982728e41ee236e159d4aa7d32cf70aaa1a90d35c3cc75c74
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-30T22:53:19.902122170Z","feature_name":"Data layer Page Group structural authoring","feature_path":"features/data-layer-page-group-structural-authoring.feature","background_hash":"0e77c7b39c8fe132aa0c01de16e81d29224bc1297fef080d38492186a66d9f5f","implementation_hash":"81c349b65b-architect","scenarios":[{"index":3,"name":"Data layer Page Group structural authoring 004","scenario_hash":"a186ab1d32f1b8732c6f5b24ac7a57b57e7b89a69184af4c9ea64f3519900029","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-30T22:53:19.902122170Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer Page Group structural authoring
 
   Background:
