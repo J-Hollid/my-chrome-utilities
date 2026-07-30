@@ -252,13 +252,17 @@ applicability, and prospective rule impact. The resulting `Page Group rule stack
 supports pointer and keyboard reordering, removal, direct group navigation, and an
 effective contribution or conflict summary for every row.
 
-Only memberships applicable to the selected observation participate in compilation;
-inactive memberships remain visible in exclusion evidence and active groups retain
-their relative Page-defined order. A later applicable group may narrow or explicitly
-replace an earlier overridable definition under the same legality rules used at
-other layers. Order cannot legalize a type change, widening, required relaxation,
-forbidden re-enablement, unresolved conflict, or overlapping applicability. Those
-conditions block with exact Page Group provenance and repair actions.
+When a concrete Fixture or captured observation is selected, only matching
+memberships participate in that scenario-specific compilation; inactive memberships
+remain visible in exclusion evidence and active groups retain their relative
+Page-defined order. Without an observation, Page authoring and generic
+documentation preserve every membership's structural contribution and represent
+Applicability Sets as conditional branches instead of evaluating them against an
+empty payload. A later applicable group may narrow or explicitly replace an earlier
+overridable definition under the same legality rules used at other layers. Order
+cannot legalize a type change, widening, required relaxation, forbidden
+re-enablement, unresolved conflict, or overlapping applicability. Those conditions
+block with exact Page Group provenance and repair actions.
 
 Before membership reorder or removal, impact review names changed effective
 properties, affected Page instances and compiled targets, stale exports or evidence,

@@ -886,6 +886,19 @@ its placement group is separate from membership order and lane order. Reordering
 membership never moves a frame, and removing an in-use membership blocks until the
 frame is moved to another eligible lane or removed.
 
+Page authoring requires no observation. Its effective-schema workspace preserves
+every ordered Page Group contribution, representing Applicability Sets as named
+conditional branches rather than evaluating them against an empty payload. Concrete
+project-editor applicability evaluation belongs to saved Fixtures, whose own
+payloads determine the active and inactive memberships; the Pages editor contains
+no fixed Retail, Trade, Overlapping, or other product-owned observation examples.
+Generic Page documentation likewise preserves every conditional branch, while a
+Fixture-specific result is explicitly an evaluated example. This correction is
+specified by
+`docs/data-layer-page-group-structural-authoring-correction-program-R01.md` and
+`features/data-layer-page-group-structural-authoring.feature` and supersedes older
+wording that could imply an observation is required for Page authoring.
+
 Opening a Page or Page Group from its overview goes directly to a full
 main-workspace configuration with an `Effective schema at <name>` table; the
 Inspector is only an optional summary and link. The wide table keeps every
@@ -912,8 +925,10 @@ direct repairs, but do not roll back the membership or hide the configuration.
 The cycle requires named integration with the existing assignment resolver and
 per-Event validator plus Flow selection restoration. These requirements are not a
 general Assignment or resolver redesign. Top-level Fixture and Assignment overview
-creation, opening, and guarded removal are active only as project-entity lifecycle;
-fixture execution and resolver semantics beyond contributor targeting are not.
+creation, opening, and guarded removal are active as project-entity lifecycle.
+Fixture execution is additionally active only for the Page Group applicability
+evaluation defined by the structural-authoring correction above; broader Fixture
+execution and resolver semantics beyond contributor targeting are not.
 Except for the later project-assurance severity contract above, Coverage and release assurance,
 automatic or temporal Flow execution, Live behavior beyond operator-guided Flow
 testing, and cross-surface concurrency beyond canonical Draft concurrency and
