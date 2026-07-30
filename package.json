@@ -42,6 +42,7 @@
   "devDependencies": {
     "@types/chrome": "^0.0.321",
     "ajv": "^8.20.0",
+    "exceljs": "^4.4.0",
     "typescript": "^5.8.3"
   }
 }

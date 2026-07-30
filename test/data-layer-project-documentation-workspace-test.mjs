@@ -183,12 +183,12 @@ assert.match(binary,/wrapText="1"/);
 assert.match(binary,/oddHeader>Acme · Client specification/);
 assert.doesNotMatch(binary,/oddHeader>[^<]*Logo/);
 assert.match(binary,/oddFooter>Internal/);
-assert.equal(workbookFiles.get("xl/media/documentation-logo.png").length>20,true);
+assert.equal(workbookFiles.get("xl/media/documentationLogo.png").length>20,true);
 for(let index=1;index<=set.sections.length;index+=1){
   assert.match(workbookText(`xl/worksheets/sheet${index}.xml`),/<drawing r:id="rId1"\/>/);
   assert.match(workbookText(`xl/worksheets/_rels/sheet${index}.xml.rels`),new RegExp(`Target="../drawings/drawing${index}\\.xml"`));
   assert.match(workbookText(`xl/drawings/drawing${index}.xml`),/<xdr:pic>/);
-  assert.match(workbookText(`xl/drawings/_rels/drawing${index}.xml.rels`),/Target="\.\.\/media\/documentation-logo\.png"/);
+  assert.match(workbookText(`xl/drawings/_rels/drawing${index}.xml.rels`),/Target="\.\.\/media\/documentationLogo\.png"/);
 }
 assert.match(workbookText("[Content_Types].xml"),/ContentType="image\/png"/);
 
@@ -204,7 +204,7 @@ for(const [mediaType,extension,bytes] of [["image/png","png",sizedPng],["image/j
   const sizedFiles=unzipStored(sizedWorkbook),sizedDrawing=new TextDecoder().decode(sizedFiles.get("xl/drawings/drawing1.xml")),sizedSheet=new TextDecoder().decode(sizedFiles.get("xl/worksheets/sheet1.xml"));
   assert.match(sizedDrawing,/<xdr:ext cx="914400" cy="609600"\/>/);
   assert.match(sizedSheet,/<row r="1" ht="48" customHeight="1"\/><row r="2"/);
-  assert.deepEqual(sizedFiles.get(`xl/media/documentation-logo.${extension}`),bytes);
+  assert.deepEqual(sizedFiles.get(`xl/media/documentationLogo.${extension}`),bytes);
   assert.match(new TextDecoder().decode(sizedFiles.get("[Content_Types].xml")),new RegExp(`ContentType="${mediaType}"`));
 }
 
