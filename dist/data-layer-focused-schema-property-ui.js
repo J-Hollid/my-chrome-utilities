@@ -1,3 +1,4 @@
+import { isStringLiteralRuleKind } from "./data-layer-string-rule-validation.js";
 export { focusedRuleIssue } from "./data-layer-focused-rule-policy.js";
 /** The deliberately small vocabulary shared by every schema contributor editor. */
 export const focusedPropertySections = [
@@ -124,7 +125,7 @@ export function readFocusedReusableRules(storage) {
 export function focusedReusableOutcome(rule) {
     const source = rule.outcome && typeof rule.outcome === "object" ? rule.outcome : rule;
     const kind = String(source.kind ?? "");
-    if (!["presence", "value", "pattern", "range", "cardinality", "condition", "custom"].includes(kind))
+    if (!["presence", "value", "pattern", "range", "cardinality", "condition", "custom", "starts-with", "ends-with", "includes"].includes(kind))
         return undefined;
     const outcome = cloneReusable(source);
     delete outcome.id;
@@ -140,11 +141,14 @@ export function focusedRuleFields(kind) {
         case "presence": return ["condition", "presence", "severity", "message"];
         case "value": return ["condition", "ordinaryValue", "severity", "message"];
         case "pattern": return ["condition", "pattern", "severity", "message"];
+        case "starts-with":
+        case "ends-with":
+        case "includes": return ["condition", "literal", "severity", "message"];
         case "range": return ["condition", "minimum", "maximum", "severity", "message"];
         case "cardinality": return ["condition", "minItems", "maxItems", "severity", "message"];
         case "reusable": return ["condition", "reusableRuleId"];
         case "custom": return ["condition", "severity", "message", "reusableRuleId"];
-        default: return ["severity", "message"];
+        default: return isStringLiteralRuleKind(kind) ? ["condition", "literal", "severity", "message"] : ["severity", "message"];
     }
 }
 export function focusedConditionLabel(condition) {

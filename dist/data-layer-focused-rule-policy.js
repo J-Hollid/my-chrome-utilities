@@ -1,5 +1,7 @@
 import { canonicalFlatPredicateIssue } from "./canonical-schema/predicate-policy.js";
+import { isStringLiteralRuleKind, regularExpressionIssue } from "./data-layer-string-rule-validation.js";
 const existenceOperators = new Set(["Exists", "Does not exist"]);
+const namedRuleKinds = new Set(["presence", "value", "pattern", "range", "cardinality", "reusable", "starts-with", "ends-with", "includes"]);
 const incompleteConditionPredicate = (condition) => {
     if (!condition || typeof condition !== "object")
         return true;
@@ -24,19 +26,21 @@ const flatConditionIssue = (condition) => {
 };
 /** Validate a staged rule without depending on a browser or persistence adapter. */
 export function focusedRuleIssue(rule) {
-    if (["presence", "value", "pattern", "range", "cardinality", "reusable"].includes(String(rule.kind)) && !String(rule.name ?? "").trim())
+    if (namedRuleKinds.has(String(rule.kind)) && !String(rule.name ?? "").trim())
         return "Enter a rule name";
     const migrationIssue = canonicalFlatPredicateIssue(rule.condition);
     if (migrationIssue)
         return migrationIssue;
-    if (["presence", "value", "pattern", "range", "cardinality", "reusable"].includes(String(rule.kind)) && flatConditionIssue(rule.condition))
+    if (namedRuleKinds.has(String(rule.kind)) && flatConditionIssue(rule.condition))
         return "Complete or remove the condition";
     if (rule.kind === "presence" && !["required", "optional", "forbidden"].includes(String(rule.presence ?? "")))
         return "Choose Required, Optional, or Forbidden.";
     if (rule.kind === "value" && !(Array.isArray(rule.allowedValues) && rule.allowedValues.length))
         return "Enter at least one allowed value";
-    if (rule.kind === "pattern" && !String(rule.pattern ?? "").trim())
-        return "Enter a regular expression";
+    if (rule.kind === "pattern")
+        return regularExpressionIssue(rule.pattern);
+    if (isStringLiteralRuleKind(rule.kind) && !String(rule.literal ?? "").length)
+        return "Enter a literal value";
     if (rule.kind === "range" && rule.minimum !== undefined && rule.maximum !== undefined && Number(rule.minimum) > Number(rule.maximum))
         return "Minimum must not exceed maximum.";
     if (rule.kind === "range" && rule.minimum === undefined && rule.maximum === undefined)

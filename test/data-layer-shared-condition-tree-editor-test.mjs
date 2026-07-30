@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import {
   sharedConditionMatchModeVisible,
+  sharedConditionListboxLayout,
   sharedConditionOperators,
+  sharedConditionOptionStyle,
   sharedConditionPropertyMatches,
   sharedConditionValueMounted,
   sharedFlatConditionIssue,
@@ -32,6 +34,19 @@ assert.equal(sharedFlatConditionIssue([{id:"condition:1",propertyId:"",operator:
 assert.equal(sharedConditionMatchModeVisible(0),false);
 assert.equal(sharedConditionMatchModeVisible(1),false);
 assert.equal(sharedConditionMatchModeVisible(2),true);
+assert.deepEqual(
+  sharedConditionListboxLayout(
+    {left:360,right:540,width:180},
+    {left:100,right:740},
+    {width:800},
+    520,
+  ),
+  {left:220,width:520},
+  "a long complete property name widens the popup beyond its field while staying inside the available editor viewport",
+);
+assert.match(sharedConditionOptionStyle,/white-space:normal/);
+assert.match(sharedConditionOptionStyle,/text-overflow:clip/);
+assert.match(sharedConditionOptionStyle,/overflow-wrap:anywhere/);
 assert.deepEqual(
   sharedConditionPropertyMatches([
     {id:"property:page-type",name:"page_type"},

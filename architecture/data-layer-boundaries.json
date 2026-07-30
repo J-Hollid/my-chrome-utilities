@@ -19,6 +19,10 @@
     "module": "schemas",
     "layer": "core"
   },
+  "src/data-layer-string-rule-validation.ts": {
+    "module": "schemas",
+    "layer": "core"
+  },
   "src/layered-schema/conditional-rules.ts": {
     "module": "schemas",
     "layer": "core",

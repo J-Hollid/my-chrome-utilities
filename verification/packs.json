@@ -926,6 +926,7 @@
       "src/data-layer-canonical-schema-render-navigator.ts",
       "src/data-layer-focused-schema-property-menu.ts",
       "src/data-layer-focused-rule-policy.ts",
+      "src/data-layer-string-rule-validation.ts",
       "src/data-layer-focused-schema-property-ui.ts",
       "src/layered-schema/conditional-rules.ts",
       "src/data-layer-canonical-predicate-editor.ts",
@@ -948,6 +949,7 @@
       "durable_project_repository"
     ],
     "unit": [
+      "test/data-layer-string-rule-validation-test.mjs",
       "test/data-layer-canonical-schema-authoring-test.mjs",
       "test/data-layer-schema-property-concepts-test.mjs",
       "test/data-layer-canonical-array-items-test.mjs",

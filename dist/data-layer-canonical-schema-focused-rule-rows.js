@@ -1,12 +1,13 @@
 import { focusedOwnershipActionTarget, focusedOwnershipActions, focusedRuleFields, focusedRuleIssue } from "./data-layer-focused-schema-property-ui.js";
 import { renderSharedConditionTree } from "./data-layer-shared-condition-tree-editor.js";
 import { schemaTableAllowedValues, schemaTableRuleConditionSummary, schemaTableRuleOutcomeSummary, schemaTableStageAllowedValues } from "./data-layer-schema-table.js";
+import { renderRegularExpressionTester, stringRuleKindOptions } from "./data-layer-string-rule-validation.js";
 const clone = (value) => structuredClone(value);
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const input = (dom, name, value = "", type = "text") => { const control = dom.createElement("input"); control.name = name; control.type = type; control.value = value; return control; };
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 const ruleKindLabel = (rule) => rule.name ?? rule.kind;
-const fieldLabel = (field) => ({ pattern: "Regular expression", minimum: "Minimum", maximum: "Maximum", minItems: "Minimum items", maxItems: "Maximum items", severity: "Severity", message: "Message" }[field] ?? field);
+const fieldLabel = (field) => ({ pattern: "Regular expression", literal: "Literal value", minimum: "Minimum", maximum: "Maximum", minItems: "Minimum items", maxItems: "Maximum items", severity: "Severity", message: "Message" }[field] ?? field);
 function editRule(row, rule, context, invoker) {
     const { dom } = context, editor = dom.createElement("fieldset"), legend = dom.createElement("legend"), draft = clone(rule), status = dom.createElement("p"), details = dom.createElement("section"), when = dom.createElement("section"), then = dom.createElement("section"), severitySection = dom.createElement("section"), actions = dom.createElement("section");
     let save, conditionIssue;
@@ -25,10 +26,10 @@ function editRule(row, rule, context, invoker) {
     actions.setAttribute("aria-label", "Rule actions");
     const validate = () => { const issue = conditionIssue ?? focusedRuleIssue(draft); if (save)
         save.disabled = Boolean(issue); status.textContent = issue ?? ""; };
-    const name = input(dom, "editRuleName", draft.name ?? ""), kind = dom.createElement("select");
+    const name = input(dom, "editRuleName", draft.name ?? ""), kind = dom.createElement("select"), kindLabel = stringRuleKindOptions(context.getWorking()?.type).find(({ kind: entry }) => entry === draft.kind)?.label ?? draft.kind;
     kind.name = "editRuleKind";
     kind.disabled = true;
-    kind.append(new Option(draft.kind, draft.kind));
+    kind.append(new Option(kindLabel, draft.kind));
     name.addEventListener("input", () => { const value = name.value.trim(); if (value)
         draft.name = value;
     else
@@ -71,6 +72,8 @@ function editRule(row, rule, context, invoker) {
         if (field === "message")
             label.dataset.ruleMessageField = "true";
         (field === "severity" || field === "message" ? severitySection : then).append(label);
+        if (field === "pattern" && control instanceof HTMLInputElement)
+            then.append(renderRegularExpressionTester(dom, control));
     }
     save = button(dom, "Save rule", () => { const working = context.getWorking(); if (!working)
         return; const index = working.rules.findIndex(({ id }) => id === rule.id); if (index < 0)

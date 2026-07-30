@@ -2,11 +2,12 @@ import { filterFocusedReusableRules, focusedReusableOutcome, focusedRuleFields, 
 import { renderSharedConditionTree } from "./data-layer-shared-condition-tree-editor.js";
 import { schemaTableStageAllowedValues } from "./data-layer-schema-table.js";
 import { canonicalArrayScopeIssue, canonicalArrayScopeSummary } from "./data-layer-canonical-array-items.js";
+import { renderRegularExpressionTester, stringRuleKindOptions } from "./data-layer-string-rule-validation.js";
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const input = (dom, name, value = "", type = "text") => { const control = dom.createElement("input"); control.name = name; control.type = type; control.value = value; return control; };
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 const numericFields = new Set(["minimum", "maximum", "minItems", "maxItems"]);
-const fieldLabel = (field) => ({ ordinaryValue: "Allowed values", pattern: "Regular expression", minimum: "Minimum", maximum: "Maximum", minItems: "Minimum items", maxItems: "Maximum items", severity: "Severity", message: "Message" }[field] ?? field);
+const fieldLabel = (field) => ({ ordinaryValue: "Allowed values", pattern: "Regular expression", literal: "Literal value", minimum: "Minimum", maximum: "Maximum", minItems: "Minimum items", maxItems: "Maximum items", severity: "Severity", message: "Message" }[field] ?? field);
 const section = (dom, title) => { const value = dom.createElement("section"), heading = dom.createElement("h3"); heading.textContent = title; value.append(heading); return value; };
 export function renderCanonicalRuleAddPanel(host, context) {
     const { dom } = context;
@@ -27,7 +28,7 @@ export function renderCanonicalRuleAddPanel(host, context) {
         status.setAttribute("role", "status");
         kind.name = "ruleKind";
         kind.required = true;
-        kind.append(new Option("Choose rule type", ""), ...["presence", "value", "pattern", "range", "cardinality", "reusable"].map((entry) => new Option(entry, entry)));
+        kind.append(new Option("Choose rule type", ""), ...["presence", "value", "pattern", "range", "cardinality", "reusable"].map((entry) => new Option(entry, entry)), ...stringRuleKindOptions(working.type).map(({ kind: entry, label }) => new Option(label, entry)));
         details.append(labeled(dom, "Rule name", name), labeled(dom, "Rule type", kind));
         const conditionHost = dom.createElement("div");
         when.append(conditionHost);
@@ -35,7 +36,7 @@ export function renderCanonicalRuleAddPanel(host, context) {
             if (!kind.value)
                 return undefined;
             const trimmedName = name.value.trim(), rule = { id: "staged-rule", kind: kind.value, severity: (severitySection.querySelector("[name=\"newRuleSeverity\"]")?.value ?? "error"), ...(trimmedName ? { name: trimmedName } : {}), ...(condition ? { condition } : {}), ...(scope.length ? { arrayScope: { boundaries: structuredClone(scope) } } : {}) };
-            for (const field of ["pattern", "minimum", "maximum", "minItems", "maxItems", "message"]) {
+            for (const field of ["pattern", "literal", "minimum", "maximum", "minItems", "maxItems", "message"]) {
                 const control = panel.querySelector(`[name="newRule${field[0].toUpperCase() + field.slice(1)}"]`);
                 if (control && control.value !== "")
                     Object.assign(rule, { [field]: numericFields.has(field) ? Number(control.value) : control.value });
@@ -93,6 +94,8 @@ export function renderCanonicalRuleAddPanel(host, context) {
                 const control = input(dom, `newRule${field[0].toUpperCase() + field.slice(1)}`, "", numericFields.has(field) ? "number" : "text");
                 control.addEventListener("input", validate);
                 fields.append(labeled(dom, fieldLabel(field), control));
+                if (field === "pattern")
+                    fields.append(renderRegularExpressionTester(dom, control));
             }
             validate();
         };

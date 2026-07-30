@@ -1,10 +1,11 @@
 import { filterFocusedReusableRules, focusedOwnershipActions, focusedReusableOutcome, focusedRuleFields, focusedRuleIssue, readFocusedReusableRules } from "./data-layer-focused-schema-property-ui.js";
 import { renderSharedConditionTree } from "./data-layer-shared-condition-tree-editor.js";
 import { schemaTableAllowedValues, schemaTableRuleConditionSummary, schemaTableRuleOutcomeSummary, schemaTableStageAllowedValues } from "./data-layer-schema-table.js";
+import { renderRegularExpressionTester, stringRuleKindOptions } from "./data-layer-string-rule-validation.js";
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 const numericFields = new Set(["minimum", "maximum", "minItems", "maxItems"]);
-const fieldLabel = (field) => ({ pattern: "Regular expression", minimum: "Minimum", maximum: "Maximum", minItems: "Minimum items", maxItems: "Maximum items", severity: "Severity", message: "Message" }[field] ?? field);
+const fieldLabel = (field) => ({ pattern: "Regular expression", literal: "Literal value", minimum: "Minimum", maximum: "Maximum", minItems: "Minimum items", maxItems: "Maximum items", severity: "Severity", message: "Message" }[field] ?? field);
 const clone = (value) => structuredClone(value);
 const properties = (context) => () => context.model.rows.map(({ path, effective }) => ({ id: effective.definitionId ?? path, name: path.split("/").filter(Boolean).at(-1) ?? path, ...(effective.type ? { type: effective.type } : {}), ...(effective.allowedValues?.length ? { allowedValues: effective.allowedValues } : {}) }));
 const section = (dom, title) => { const host = dom.createElement("section"), heading = dom.createElement("h3"); heading.textContent = title; host.append(heading); return host; };
@@ -19,12 +20,12 @@ function renderRuleEditor(row, rule, index, context, invoker) {
     status.setAttribute("role", "status");
     const validate = () => { const issue = conditionIssue ?? focusedRuleIssue(draftRule); if (save)
         save.disabled = Boolean(issue); status.textContent = issue ?? ""; };
-    const name = dom.createElement("input"), kind = dom.createElement("select");
+    const name = dom.createElement("input"), kind = dom.createElement("select"), propertyType = context.getDraft()?.type ?? context.row.effective.type, kindValue = String(draftRule.kind ?? "rule"), kindLabel = stringRuleKindOptions(propertyType).find(({ kind: entry }) => entry === kindValue)?.label ?? kindValue;
     name.name = "editRuleName";
     name.value = String(draftRule.name ?? "");
     kind.name = "editRuleKind";
     kind.disabled = true;
-    kind.append(new Option(String(draftRule.kind ?? "rule"), String(draftRule.kind ?? "rule")));
+    kind.append(new Option(kindLabel, kindValue));
     name.addEventListener("input", () => { if (name.value.trim())
         draftRule.name = name.value.trim();
     else
@@ -71,6 +72,8 @@ function renderRuleEditor(row, rule, index, context, invoker) {
         if (field === "message")
             label.dataset.ruleMessageField = "true";
         (field === "severity" || field === "message" ? severity : then).append(label);
+        if (field === "pattern" && control instanceof HTMLInputElement)
+            then.append(renderRegularExpressionTester(dom, control));
     }
     save = button(dom, "Save rule", () => { const draft = context.getDraft(), issue = conditionIssue ?? focusedRuleIssue(draftRule); if (!draft)
         return; if (issue) {
@@ -135,11 +138,11 @@ function renderAddPanel(host, context) {
         actions.setAttribute("aria-label", "Rule actions");
         status.setAttribute("role", "status");
         kind.name = "ruleKind";
-        kind.append(new Option("Choose rule type", ""), ...["presence", "value", "pattern", "range", "cardinality", "reusable"].map((entry) => new Option(entry, entry)));
+        kind.append(new Option("Choose rule type", ""), ...["presence", "value", "pattern", "range", "cardinality", "reusable"].map((entry) => new Option(entry, entry)), ...stringRuleKindOptions(draft.type ?? context.row.effective.type).map(({ kind: entry, label }) => new Option(label, entry)));
         name.name = "newRuleName";
         details.append(labeled(dom, "Rule name", name), labeled(dom, "Rule type", kind));
         const candidate = () => { if (!kind.value)
-            return undefined; const rule = { id: "staged-rule", kind: kind.value, severity: severity.querySelector("[name=\"newRuleSeverity\"]")?.value ?? "error", ...(name.value.trim() ? { name: name.value.trim() } : {}), ...(condition ? { condition } : {}) }; for (const field of ["pattern", "minimum", "maximum", "minItems", "maxItems", "message"]) {
+            return undefined; const rule = { id: "staged-rule", kind: kind.value, severity: severity.querySelector("[name=\"newRuleSeverity\"]")?.value ?? "error", ...(name.value.trim() ? { name: name.value.trim() } : {}), ...(condition ? { condition } : {}) }; for (const field of ["pattern", "literal", "minimum", "maximum", "minItems", "maxItems", "message"]) {
             const control = panel.querySelector(`[name="newRule${field[0].toUpperCase() + field.slice(1)}"]`);
             if (control?.value)
                 rule[field] = numericFields.has(field) ? Number(control.value) : control.value;
@@ -187,6 +190,8 @@ function renderAddPanel(host, context) {
                 control.type = "number";
             control.addEventListener("input", validate);
             fields.append(labeled(dom, field === "ordinaryValue" ? "Allowed values" : fieldLabel(field), control));
+            if (field === "pattern")
+                fields.append(renderRegularExpressionTester(dom, control));
         } validate(); };
         const tree = dom.createElement("div");
         when.append(tree);

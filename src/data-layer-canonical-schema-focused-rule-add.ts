@@ -3,6 +3,7 @@ import {filterFocusedReusableRules,focusedReusableOutcome,focusedRuleFields,focu
 import {renderSharedConditionTree} from "./data-layer-shared-condition-tree-editor.js";
 import {schemaTableStageAllowedValues} from "./data-layer-schema-table.js";
 import {canonicalArrayScopeIssue,canonicalArrayScopeSummary} from "./data-layer-canonical-array-items.js";
+import {renderRegularExpressionTester,stringRuleKindOptions} from "./data-layer-string-rule-validation.js";
 import type {CanonicalArrayScopeBoundary} from "./data-layer-canonical-schema.js";
 
 export interface CanonicalFocusedRuleAddContext {dom:Document;getWorking:()=>CanonicalPropertyNode|undefined;properties?:()=>readonly {id:string;name:string;type?:string;allowedValues?:readonly unknown[];arrayBoundaries?:readonly {propertyId:string;name:string}[]}[];id:(kind:string)=>string;render:()=>void;feedback:(message:string)=>void;}
@@ -10,7 +11,7 @@ const labeled=(dom:Document,text:string,control:HTMLElement):HTMLLabelElement=>{
 const input=(dom:Document,name:string,value="",type="text"):HTMLInputElement=>{const control=dom.createElement("input");control.name=name;control.type=type;control.value=value;return control;};
 const button=(dom:Document,text:string,run:()=>void):HTMLButtonElement=>{const control=dom.createElement("button");control.type="button";control.textContent=text;control.addEventListener("click",run);return control;};
 const numericFields=new Set(["minimum","maximum","minItems","maxItems"]);
-const fieldLabel=(field:string):string=>({ordinaryValue:"Allowed values",pattern:"Regular expression",minimum:"Minimum",maximum:"Maximum",minItems:"Minimum items",maxItems:"Maximum items",severity:"Severity",message:"Message"}[field]??field);
+const fieldLabel=(field:string):string=>({ordinaryValue:"Allowed values",pattern:"Regular expression",literal:"Literal value",minimum:"Minimum",maximum:"Maximum",minItems:"Minimum items",maxItems:"Maximum items",severity:"Severity",message:"Message"}[field]??field);
 const section=(dom:Document,title:string):HTMLElement=>{const value=dom.createElement("section"),heading=dom.createElement("h3");heading.textContent=title;value.append(heading);return value;};
 
 export function renderCanonicalRuleAddPanel(host:HTMLElement,context:CanonicalFocusedRuleAddContext):void {
@@ -22,13 +23,13 @@ export function renderCanonicalRuleAddPanel(host:HTMLElement,context:CanonicalFo
     opener.remove();
     const panel=dom.createElement("fieldset"),legend=dom.createElement("legend"),details=section(dom,"Rule details"),when=section(dom,"When"),then=section(dom,"Then"),severitySection=section(dom,"Severity and message"),actions=section(dom,"Rule actions"),kind=dom.createElement("select"),fields=dom.createElement("div"),status=dom.createElement("p"),name=input(dom,"newRuleName"),target=context.properties?.().find(({id})=>id===working.id),boundaries=target?.arrayBoundaries??[],scope:CanonicalArrayScopeBoundary[]=boundaries.map(({propertyId})=>({propertyId,mode:"every"}));
     let condition:CanonicalPredicate|undefined,conditionIssue:string|undefined;
-    panel.dataset.ruleEditorMode="add";fields.dataset.ruleFieldGrid="true";severitySection.dataset.ruleFieldGrid="true";panel.setAttribute("aria-label","Add rule editor");legend.textContent="Add rule";status.setAttribute("role","status");kind.name="ruleKind";kind.required=true;kind.append(new Option("Choose rule type",""),...(["presence","value","pattern","range","cardinality","reusable"] as const).map((entry)=>new Option(entry,entry)));
+    panel.dataset.ruleEditorMode="add";fields.dataset.ruleFieldGrid="true";severitySection.dataset.ruleFieldGrid="true";panel.setAttribute("aria-label","Add rule editor");legend.textContent="Add rule";status.setAttribute("role","status");kind.name="ruleKind";kind.required=true;kind.append(new Option("Choose rule type",""),...(["presence","value","pattern","range","cardinality","reusable"] as const).map((entry)=>new Option(entry,entry)),...stringRuleKindOptions(working.type).map(({kind:entry,label})=>new Option(label,entry)));
     details.append(labeled(dom,"Rule name",name),labeled(dom,"Rule type",kind));
     const conditionHost=dom.createElement("div");when.append(conditionHost);
     const candidate=():CanonicalRule|undefined=>{
       if(!kind.value)return undefined;
       const trimmedName=name.value.trim(),rule:CanonicalRule={id:"staged-rule",kind:kind.value as CanonicalRule["kind"],severity:(severitySection.querySelector<HTMLSelectElement>("[name=\"newRuleSeverity\"]")?.value??"error") as CanonicalRule["severity"],...(trimmedName?{name:trimmedName}:{}),...(condition?{condition}:{}),...(scope.length?{arrayScope:{boundaries:structuredClone(scope)}}:{})};
-      for(const field of ["pattern","minimum","maximum","minItems","maxItems","message"]){
+      for(const field of ["pattern","literal","minimum","maximum","minItems","maxItems","message"]){
         const control=panel.querySelector<HTMLInputElement>(`[name="newRule${field[0]!.toUpperCase()+field.slice(1)}"]`);
         if(control&&control.value!=="")Object.assign(rule,{[field]:numericFields.has(field)?Number(control.value):control.value});
       }
@@ -50,7 +51,7 @@ export function renderCanonicalRuleAddPanel(host:HTMLElement,context:CanonicalFo
           search.addEventListener("input",renderChoices);reusable.addEventListener("change",validate);renderChoices();fields.append(labeled(dom,"Search reusable rules",search),labeled(dom,"Reusable rule",reusable));continue;
         }
         if(field==="presence"){const control=dom.createElement("select");control.name="newRulePresence";control.append(new Option("Choose presence",""),new Option("Required","required"),new Option("Optional","optional"),new Option("Forbidden","forbidden"));control.addEventListener("change",validate);fields.append(labeled(dom,"Presence",control));continue;}
-        const control=input(dom,`newRule${field[0]!.toUpperCase()+field.slice(1)}`,"",numericFields.has(field)?"number":"text");control.addEventListener("input",validate);fields.append(labeled(dom,fieldLabel(field),control));
+        const control=input(dom,`newRule${field[0]!.toUpperCase()+field.slice(1)}`,"",numericFields.has(field)?"number":"text");control.addEventListener("input",validate);fields.append(labeled(dom,fieldLabel(field),control));if(field==="pattern")fields.append(renderRegularExpressionTester(dom,control));
       }
       validate();
     };

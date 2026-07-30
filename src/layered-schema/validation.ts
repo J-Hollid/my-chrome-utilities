@@ -1,12 +1,18 @@
 import type {CompiledLayeredSchema,LayerItemSchema} from "../data-layer-layered-schema.js";
+import {isStringLiteralRuleKind,stringRuleMatches} from "../data-layer-string-rule-validation.js";
 import {layeredConditionMatches,layeredPropertyPaths,resolveConditionalLayeredSchema} from "./conditional-rules.js";
 
-type LayerValidationIssue={path:string;canonicalPath?:string;code:"REQUIRED"|"FORBIDDEN"|"TYPE"|"ALLOWED_VALUE"|"PATTERN"|"MINIMUM"|"MAXIMUM"|"MIN_ITEMS"|"MAX_ITEMS"|"EXPECTED_VALUE"|"UNDECLARED_PROPERTY";message?:string;severity:"error";expected:unknown;actual:unknown;provenance:string};
+type LayerValidationIssue={path:string;canonicalPath?:string;code:"REQUIRED"|"FORBIDDEN"|"TYPE"|"ALLOWED_VALUE"|"PATTERN"|"STARTS_WITH"|"ENDS_WITH"|"INCLUDES"|"MINIMUM"|"MAXIMUM"|"MIN_ITEMS"|"MAX_ITEMS"|"EXPECTED_VALUE"|"UNDECLARED_PROPERTY";message?:string;severity:"error";expected:unknown;actual:unknown;provenance:string};
 const clone=<T>(value:T):T=>structuredClone(value);
 const same=(left:unknown,right:unknown):boolean=>JSON.stringify(left)===JSON.stringify(right);
 const valueAt=(payload:Record<string,unknown>,path:string):unknown=>path.split("/").filter(Boolean).reduce<unknown>((value,key)=>value&&typeof value==="object"?(value as Record<string,unknown>)[key]:undefined,payload);
 const typeMatches=(value:unknown,type:string):boolean=>type==="array"?Array.isArray(value):type==="null"?value===null:type==="integer"?Number.isInteger(value):type==="object"?Boolean(value)&&typeof value==="object"&&!Array.isArray(value):typeof value===type;
 const pushIssue=(issues:LayerValidationIssue[],targetName:string,path:string,canonicalPath:string,property:Record<string,unknown>,actual:unknown,code:LayerValidationIssue["code"],expected:unknown):void=>{issues.push({path,...(canonicalPath!==path?{canonicalPath}:{}),code,severity:"error",expected:clone(expected),actual:clone(actual),provenance:String(property.expectedContributor??targetName)});};
+const pushNamedRuleIssue=(issues:LayerValidationIssue[],targetName:string,path:string,canonicalPath:string,property:Record<string,unknown>,actual:unknown,rule:Record<string,unknown>):void=>{
+  const code=rule.kind==="starts-with"?"STARTS_WITH":rule.kind==="ends-with"?"ENDS_WITH":"INCLUDES";
+  pushIssue(issues,targetName,path,canonicalPath,property,actual,code,String(rule.literal??""));
+  issues.at(-1)!.message=String(rule.name??"String rule");
+};
 const concretePaths=(payload:Record<string,unknown>,template:string):string[]=>{const segments=template.split("/").filter(Boolean),walk=(value:unknown,index:number,parts:string[]):string[]=>{if(index===segments.length)return[`/${parts.join("/")}`];const segment=segments[index]!;if(segment==="*")return Array.isArray(value)?value.flatMap((entry,itemIndex)=>walk(entry,index+1,[...parts,String(itemIndex)])):[];const decoded=segment.replaceAll("~1","/").replaceAll("~0","~"),next=value&&typeof value==="object"?(value as Record<string,unknown>)[decoded]:undefined;if(next===undefined&&segments.slice(index+1).includes("*"))return[];return walk(next,index+1,[...parts,segment]);};return walk(payload,0,[]);};
 const scopedPath=(path:string,canonicalPath:string,rule:Record<string,unknown>):boolean=>{
   const boundaries=((rule.arrayScope as {boundaries?:Record<string,unknown>[]}|undefined)?.boundaries??[]),actual=path.split("/").filter(Boolean),canonical=canonicalPath.split("/").filter(Boolean),wildcards=canonical.flatMap((segment,index)=>segment==="*"?[index]:[]);
@@ -24,11 +30,12 @@ const validateItemShape=(issues:LayerValidationIssue[],targetName:string,path:st
 };
 const validateScopedRules=(issues:LayerValidationIssue[],targetName:string,path:string,canonicalPath:string,property:Record<string,unknown>,actual:unknown,payload:Record<string,unknown>,pathsByDefinition:ReadonlyMap<string,string>):void=>{
   for(const rule of (property.rules as Record<string,unknown>[]|undefined)??[]){
-    const scoped=Boolean((rule.arrayScope as {boundaries?:Record<string,unknown>[]}|undefined)?.boundaries?.length);
-    if(!scoped||rule.enabled===false||!scopedPath(path,canonicalPath,rule)||!layeredConditionMatches(rule.condition as Record<string,unknown>|undefined,payload,contextualPaths(pathsByDefinition,path,canonicalPath)))continue;
+    const scoped=Boolean((rule.arrayScope as {boundaries?:Record<string,unknown>[]}|undefined)?.boundaries?.length),literal=isStringLiteralRuleKind(rule.kind);
+    if(!scoped&&!literal||rule.enabled===false||!scopedPath(path,canonicalPath,rule)||!layeredConditionMatches(rule.condition as Record<string,unknown>|undefined,payload,contextualPaths(pathsByDefinition,path,canonicalPath)))continue;
     if(rule.kind==="presence"&&rule.presence==="required"&&actual===undefined)pushIssue(issues,targetName,path,canonicalPath,property,actual,"REQUIRED","present");
     if(rule.kind==="presence"&&rule.presence==="forbidden"&&actual!==undefined)pushIssue(issues,targetName,path,canonicalPath,property,actual,"FORBIDDEN","absent");
     if(actual===undefined)continue;
+    if(literal&&!stringRuleMatches(rule.kind,actual,rule.literal))pushNamedRuleIssue(issues,targetName,path,canonicalPath,property,actual,rule);
     if(rule.kind==="pattern"&&typeof rule.pattern==="string"&&!new RegExp(rule.pattern).test(String(actual)))pushIssue(issues,targetName,path,canonicalPath,property,actual,"PATTERN",[rule.pattern]);
     if(rule.kind==="value"&&Array.isArray(rule.allowedValues)&&!rule.allowedValues.some((candidate)=>same(candidate,actual)))pushIssue(issues,targetName,path,canonicalPath,property,actual,"ALLOWED_VALUE",rule.allowedValues);
     if(rule.kind==="value"&&rule.expectedValue!==undefined&&!same(rule.expectedValue,actual))pushIssue(issues,targetName,path,canonicalPath,property,actual,"EXPECTED_VALUE",rule.expectedValue);
