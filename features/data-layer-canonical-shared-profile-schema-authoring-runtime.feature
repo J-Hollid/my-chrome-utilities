@@ -1177,3 +1177,53 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
       | 0               | hidden                | 1                    | hidden          |
       | 1               | hidden                | 2                    | visible         |
       | 2               | visible               | 1                    | hidden          |
+
+  # Data layer canonical Shared Profile schema authoring runtime 070
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 070
+    Given an installed String property is open in the shared Add rule and Edit rule controls
+    When actual controls select <rule_type> and enter literal value <operand>
+    Then the rendered summary says the value must <requirement>
+    And evaluator evidence uses case-sensitive literal matching rather than regular-expression interpretation
+    When the production evaluator runs independently against <passing_value> and <failing_value>
+    Then <passing_value> produces no issue and <failing_value> produces the named-rule issue
+    And repository, reload, compiler, and validator evidence retain the selected rule type and literal value
+    When the installed rule-type control is rendered for a non-String property
+    Then its option inventory excludes Starts with, Ends with, and Includes
+
+    Examples:
+      | rule_type   | operand | requirement       | passing_value    | failing_value       |
+      | Starts with | order-  | start with order- | order-123        | pre-order-123       |
+      | Ends with   | .com    | end with .com     | shop.example.com | shop.example.com.au |
+      | Includes    | sale    | include sale      | wholesale-item   | premium-item        |
+
+  # Data layer canonical Shared Profile schema authoring runtime 071
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 071
+    Given Pattern is selected in both installed shared rule editor modes
+    Then each regular-expression input has an adjacent Test value input and textual result
+    When actual inputs set the regular expression to ^order-[0-9]+$ and Test value to <test_value>
+    Then the same mounted result says <result> and has <style_token>
+    And the installed Add rule or Save rule action remains governed by rule validity rather than sample matching
+    And repository, command, and Undo inspection contains no test value, tester result, or tester colour
+
+    Examples:
+      | test_value    | result                 | style_token           |
+      | order-123     | Matches pattern        | the valid green token |
+      | pre-order-123 | Does not match pattern | the invalid red token |
+
+  # Data layer canonical Shared Profile schema authoring runtime 072
+  Scenario: Data layer canonical Shared Profile schema authoring runtime 072
+    Given an installed Pattern rule has expression ^order-[0-9]+$ and Test value order-123
+    When actual input changes the regular expression to [
+    Then the result exposes an invalid-regular-expression diagnostic with no match-state token
+    And the installed Add rule or Save rule action is disabled until the expression compiles
+
+  # Data layer canonical Shared Profile schema authoring runtime 073
+  Scenario: Data layer canonical Shared Profile schema authoring runtime 073
+    Given the installed conditional property combobox indexes checkout.customer.contact.preferred_delivery_channel and checkout.customer.contact.preferred_delivery_window
+    When actual search input receives checkout.customer.contact.preferred_delivery_
+    Then both rendered options expose their complete accessible and visible property names
+    And listbox geometry is wider than its combobox input and uses available viewport width before option wrapping
+    And each option that fits the available viewport has one rendered line
+    And computed styles and bounding boxes show no ellipsis, clipping, or horizontal overflow
+    When actual keyboard and pointer selection choose preferred_delivery_window
+    Then the complete selected name remains visible and repository evidence retains its stable property identity

@@ -458,6 +458,28 @@ earlier clause requiring one or more conditions, retaining a placeholder sole ro
 or disabling Add rule solely because no condition exists. The exact checkpoint
 remains `layered_schema`, followed by `npm run package`.
 
+On approval, the string rule-validation and property-picker correction is later
+authority for Authoring scenarios 023–024, 032, and 070–073. Every shared Add rule
+and Edit rule editor offers case-sensitive literal `Starts with`, `Ends with`, and
+`Includes` rule types for String properties and excludes them for non-String
+properties. Their literal values, human summaries, persistence, compilation,
+reload, and validation remain distinct from regular-expression interpretation.
+
+Pattern rules add an adjacent transient Test value and textual live result. A
+matching sample says `Matches pattern` with valid green treatment; a non-matching
+sample says `Does not match pattern` with invalid red treatment but does not block
+staging or saving. An invalid regular expression shows neither result, identifies
+the expression error, and blocks Add rule or Save rule until repaired. Tester
+input, result, and colour never enter repository or Undo state.
+
+Conditional property search results widen beyond their combobox input toward the
+available viewport before wrapping. Every property name remains complete and
+distinguishable without ellipsis, clipping, or horizontal overflow; an option
+that fits remains on one line. Keyboard and pointer selection retain the correct
+stable property identity. This supersedes narrower or truncated listbox sizing
+where it differs. The exact checkpoint remains `layered_schema`, followed by
+`npm run package`.
+
 The rejected schema candidate `143cc9d337` and Flow candidate `b8432d27e7` are not
 eligible because each introduced a vacuous `project_management` pack. Later coder
 commits `2db9335d` and `b4d143a4` contain useful task-owned revisions, but their

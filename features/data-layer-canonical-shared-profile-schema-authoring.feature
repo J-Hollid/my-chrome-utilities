@@ -1181,3 +1181,53 @@ Feature: Data layer canonical Shared Profile schema authoring
       | 0               | hidden                | 1                    | hidden          |
       | 1               | hidden                | 2                    | visible         |
       | 2               | visible               | 1                    | hidden          |
+
+  # Data layer canonical Shared Profile schema authoring 070
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 070
+    Given a String property is open in a shared Add rule or Edit rule editor
+    When the operator chooses <rule_type> and enters literal value <operand>
+    Then the rule summary says the value must <requirement>
+    And matching is case-sensitive and treats regular-expression punctuation as literal text
+    When the evaluator runs independently against <passing_value> and <failing_value>
+    Then <passing_value> passes and <failing_value> reports the named rule
+    And save, reload, compilation, and validation preserve the selected rule type and literal value
+    When a non-String property opens the same rule-type selector
+    Then Starts with, Ends with, and Includes are absent
+
+    Examples:
+      | rule_type   | operand | requirement       | passing_value  | failing_value    |
+      | Starts with | order-  | start with order- | order-123      | pre-order-123    |
+      | Ends with   | .com    | end with .com     | shop.example.com | shop.example.com.au |
+      | Includes    | sale    | include sale      | wholesale-item | premium-item     |
+
+  # Data layer canonical Shared Profile schema authoring 071
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 071
+    Given Pattern is the selected rule type in both shared rule editor modes
+    Then a Test value input and a text result are adjacent to the regular-expression input
+    When the regular expression is ^order-[0-9]+$ and Test value becomes <test_value>
+    Then the live result says <result> and uses <treatment>
+    And sample matching does not change whether an otherwise valid rule can be staged or saved
+    And Test value, result state, and result colour are never stored in the rule or Undo history
+
+    Examples:
+      | test_value    | result                 | treatment                 |
+      | order-123     | Matches pattern        | the valid green treatment |
+      | pre-order-123 | Does not match pattern | the invalid red treatment |
+
+  # Data layer canonical Shared Profile schema authoring 072
+  Scenario: Data layer canonical Shared Profile schema authoring 072
+    Given the Pattern tester is showing a successful sample result
+    When the regular expression changes to [
+    Then the result identifies an invalid regular expression without showing a match or non-match state
+    And Add rule or Save rule is blocked until the regular expression becomes valid
+
+  # Data layer canonical Shared Profile schema authoring 073
+  Scenario: Data layer canonical Shared Profile schema authoring 073
+    Given the conditional rule property picker contains properties checkout.customer.contact.preferred_delivery_channel and checkout.customer.contact.preferred_delivery_window
+    When the operator searches for checkout.customer.contact.preferred_delivery_
+    Then both matching options show their complete property names
+    And the results panel widens beyond the combobox input toward the available viewport width before wrapping an option
+    And an option that fits the available viewport remains on one line
+    And no matching name is hidden by ellipsis, clipping, or horizontal overflow
+    When keyboard or pointer input chooses preferred_delivery_window
+    Then the complete selected property name remains visible and the correct stable property identity is retained
