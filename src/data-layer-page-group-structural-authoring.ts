@@ -27,6 +27,10 @@ export interface PageGroupStructuralSchema {
   pageId:string;
   pageName:string;
   memberships:PageGroupStructuralMembership[];
+  applicabilityPreviews:{applicabilitySetId:string;applicabilitySetName:string;condition:string;checked:boolean}[];
+  includedMemberships:PageGroupStructuralMembership[];
+  excludedMemberships:PageGroupStructuralMembership[];
+  compiled:CompiledLayeredSchema;
   unconditional:CompiledLayeredSchema;
   conditionalBranches:PageGroupConditionalBranch[];
 }
@@ -40,6 +44,8 @@ export interface PageGroupFixtureEvaluation {
   payload:Record<string,unknown>;
   includedStack:string[];
   inactiveGroups:string[];
+  matchedApplicabilitySets:string[];
+  unmatchedApplicabilitySets:string[];
   compiled:CompiledLayeredSchema;
   validation:ReturnType<typeof validateLayeredObservation>;
 }
@@ -63,7 +69,7 @@ const pageFor=(state:ProjectState,pageId:string):ProjectEntity=>{
   return page;
 };
 
-export function pageGroupStructuralSchema(state:ProjectState,pageId:string):PageGroupStructuralSchema {
+export function pageGroupStructuralSchema(state:ProjectState,pageId:string,selectedApplicabilitySetIds?:readonly string[]):PageGroupStructuralSchema {
   const page=pageFor(state,pageId);
   const contributors=layeredContributorsForPath(state,layeredContributorPath(state,page,"Page"));
   const unconditionalContributors=contributors.filter(({applicabilityConditional})=>!applicabilityConditional);
@@ -76,6 +82,16 @@ export function pageGroupStructuralSchema(state:ProjectState,pageId:string):Page
     condition:contributor.applicabilityCondition?pageGroupConditionText(contributor.applicabilityCondition as unknown as Condition):"Always",
     contributions:contributor.constraints.map((constraint)=>structuredClone(constraint)),
   }));
+  const referencedSetIds=[...new Set(memberships.flatMap(({applicabilitySetId})=>applicabilitySetId?[applicabilitySetId]:[]))];
+  const selected=new Set(selectedApplicabilitySetIds??referencedSetIds);
+  const applicabilityPreviews=referencedSetIds.map((applicabilitySetId)=>{
+    const membership=memberships.find((candidate)=>candidate.applicabilitySetId===applicabilitySetId)!;
+    return{applicabilitySetId,applicabilitySetName:membership.applicabilitySetName,condition:membership.condition,checked:selected.has(applicabilitySetId)};
+  });
+  const includedMemberships=memberships.filter(({applicabilitySetId})=>!applicabilitySetId||selected.has(applicabilitySetId));
+  const excludedMemberships=memberships.filter(({applicabilitySetId})=>Boolean(applicabilitySetId&&!selected.has(applicabilitySetId)));
+  const participatingGroupIds=new Set(includedMemberships.map(({groupId})=>groupId));
+  const participatingContributors=contributors.filter(({scope,id})=>scope!=="Page Group"||participatingGroupIds.has(id));
   const conditionalBranches=memberships.filter((membership):membership is PageGroupStructuralMembership&{applicabilitySetId:string}=>Boolean(membership.applicabilitySetId)).map((membership)=>({
     groupId:membership.groupId,
     groupName:membership.groupName,
@@ -90,6 +106,10 @@ export function pageGroupStructuralSchema(state:ProjectState,pageId:string):Page
     pageId:page.id,
     pageName:page.name,
     memberships,
+    applicabilityPreviews,
+    includedMemberships,
+    excludedMemberships,
+    compiled:compileLayeredSchema(participatingContributors,{eventId:String(page.eventName??page.id),eventRole:"context"}),
     unconditional:compileLayeredSchema(unconditionalContributors,{eventId:String(page.eventName??page.id),eventRole:"context"}),
     conditionalBranches,
   };
@@ -111,6 +131,7 @@ export function evaluatePageGroupFixture(state:ProjectState,fixtureId:string):Pa
   const contributors=layeredContributorsForPath(state,layeredContributorPath(state,page,"Page"),payload);
   const compiled=compileLayeredSchema(contributors,{eventId:String(page.eventName??page.id),eventRole:"context"});
   const groups=contributors.filter(({scope})=>scope==="Page Group");
+  const distinctSets=(active:boolean)=>[...new Set(groups.filter((group)=>active?group.active!==false:group.active===false).flatMap(({applicabilitySetName})=>applicabilitySetName?[applicabilitySetName]:[]))];
   return{
     mode:"evaluated-example",
     fixtureId:fixture.id,
@@ -120,6 +141,8 @@ export function evaluatePageGroupFixture(state:ProjectState,fixtureId:string):Pa
     payload,
     includedStack:groups.filter(({active})=>active!==false).map(({name})=>name),
     inactiveGroups:groups.filter(({active})=>active===false).map(({name})=>name),
+    matchedApplicabilitySets:distinctSets(true),
+    unmatchedApplicabilitySets:distinctSets(false),
     compiled,
     validation:validateLayeredObservation({targetId:page.id,targetName:page.name,revision:Number(page.revision??1),compiled},payload),
   };
@@ -139,6 +162,8 @@ export function documentPageGroupStructure(input:PageGroupStructuralSchema|PageG
   if(input.mode==="evaluated-example"){
     return[
       `Evaluated example: ${input.fixtureName} · Page ${input.pageName}`,
+      `Matched Applicability Sets: ${input.matchedApplicabilitySets.join(", ")||"none"}`,
+      `Not matched Applicability Sets: ${input.unmatchedApplicabilitySets.join(", ")||"none"}`,
       `Applicable Page Groups: ${input.includedStack.join(", ")||"none"}`,
       `Inactive Page Groups: ${input.inactiveGroups.join(", ")||"none"}`,
       ...Object.values(input.compiled.properties).map(constraintText),
@@ -146,10 +171,7 @@ export function documentPageGroupStructure(input:PageGroupStructuralSchema|PageG
   }
   return[
     `Complete Page specification: ${input.pageName}`,
-    ...Object.values(input.unconditional.properties).map((property)=>`${constraintText(property)} · provenance ${property.origins.map(({contributorName})=>contributorName).join(" → ")}`),
-    ...input.conditionalBranches.flatMap((branch)=>[
-      `${branch.applicabilitySetName} · ${branch.condition} · Page Group ${branch.groupName}`,
-      ...Object.values(branch.properties).map((property)=>`${constraintText(property)} · conditional provenance ${branch.groupName}`),
-    ]),
+    ...input.memberships.map(({groupName,applicabilitySetId,applicabilitySetName,condition})=>`${groupName} · ${applicabilitySetId?`Applicability Set ${applicabilitySetName} · ${condition}`:"Always included"}`),
+    ...Object.values(input.compiled.properties).map((property)=>`${constraintText(property)} · provenance ${property.origins.map(({contributorName})=>contributorName).join(" → ")}${property.superseded.length?` · superseded ${property.superseded.map(({contributorName,value})=>`${contributorName} ${scalar(value)}`).join(", ")}`:""}`),
   ].join("\n");
 }

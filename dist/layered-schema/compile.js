@@ -3,9 +3,6 @@ import { mergeLayeredProperty } from "./compile-merge.js";
 export function compileLayeredSchema(contributors, context) {
     const activeContributors = contributors.filter(({ active }) => active !== false), properties = {}, conflicts = [], provenance = activeContributors.map(origin), exclusions = contributors.filter(({ active }) => active === false).flatMap((contributor) => contributor.constraints.length ? contributor.constraints.map(({ path }) => ({ contributorId: contributor.id, contributorName: contributor.name, path, target: contributor.exclusionReason ?? "applicability did not match" })) : [{ contributorId: contributor.id, contributorName: contributor.name, path: "/", target: contributor.exclusionReason ?? "applicability did not match" }]);
     const conflict = (path, message, names) => conflicts.push({ path, message, contributors: names });
-    const applicableGroups = activeContributors.filter(({ scope, applicabilityConditional }) => scope === "Page Group" && applicabilityConditional);
-    if (applicableGroups.length > 1)
-        conflict("/", "ambiguous Page Group applicability; membership order cannot select a winner", applicableGroups.map(({ name }) => name));
     const active = activeContributors.flatMap((contributor) => contributor.constraints.map(constraintWithStructuredRules).filter((constraint) => included(constraint.target, context)).map((constraint) => ({ contributor, constraint }))), blockedParallel = new Set(), resolvedParallel = new Set();
     for (const page of active.filter(({ contributor }) => branch(contributor.scope) === "page"))
         for (const event of active.filter(({ contributor }) => branch(contributor.scope) === "event")) {

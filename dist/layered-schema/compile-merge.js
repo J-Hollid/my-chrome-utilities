@@ -14,11 +14,24 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
         next.itemSchema = clone(constraint.itemSchema);
     if (constraint.allowedValues) {
         if (prior.allowedValues) {
-            const narrowed = constraint.allowedValues.filter((value) => prior.allowedValues.some((base) => same(base, value)));
-            if (narrowed.length !== constraint.allowedValues.length)
-                conflict(constraint.path, `${String(constraint.allowedValues.find((value) => !prior.allowedValues.some((base) => same(base, value))))} is outside the base allowed universe`, [prior.origins.at(-1).contributorName, contributor.name]);
-            else
-                next.allowedValues = clone(narrowed);
+            const orderedPageGroups = prior.origins.at(-1)?.scope === "Page Group" && contributor.scope === "Page Group", changed = !same(prior.allowedValues, constraint.allowedValues);
+            if (orderedPageGroups && changed) {
+                if (prior.enforcement === "invariant")
+                    conflict(constraint.path, "invariant allowed values cannot be replaced by membership order", [prior.origins.at(-1).contributorName, contributor.name]);
+                else {
+                    next.superseded.push({ contributorId: prior.origins.at(-1).contributorId, contributorName: prior.origins.at(-1).contributorName, value: clone(prior.allowedValues) });
+                    next.allowedValues = clone(constraint.allowedValues);
+                    delete next.allowedValueIds;
+                    delete next.allowedValueProvenance;
+                }
+            }
+            else {
+                const narrowed = constraint.allowedValues.filter((value) => prior.allowedValues.some((base) => same(base, value)));
+                if (narrowed.length !== constraint.allowedValues.length)
+                    conflict(constraint.path, `${String(constraint.allowedValues.find((value) => !prior.allowedValues.some((base) => same(base, value))))} is outside the base allowed universe`, [prior.origins.at(-1).contributorName, contributor.name]);
+                else
+                    next.allowedValues = clone(narrowed);
+            }
         }
         else
             next.allowedValues = clone(constraint.allowedValues);

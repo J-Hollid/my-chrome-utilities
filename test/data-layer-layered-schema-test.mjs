@@ -246,47 +246,72 @@ const structuralState={project:{collections:{
   events:[],
   pageGroups:[
     {id:"group:checkout",name:"Checkout",schemaConstraints:[{path:"/funnel_name",type:"string",expectedValue:"checkout"}]},
-    {id:"group:retail",name:"Retail Checkout",applicabilitySetId:"set:retail",schemaConstraints:[{path:"/funnel_step",type:"string",allowedValues:["3a"]}]},
-    {id:"group:trade",name:"Trade Checkout",applicabilitySetId:"set:trade",schemaConstraints:[{path:"/funnel_step",type:"string",allowedValues:["3b"]}]},
+    {id:"group:retail",name:"Retail Checkout",applicabilitySetId:"set:retail",schemaConstraints:[{path:"/funnel_step",type:"string",allowedValues:["3a"]},{path:"/retail",type:"boolean"}]},
+    {id:"group:signed-in",name:"Signed-in Checkout",applicabilitySetId:"set:signed-in",schemaConstraints:[{path:"/account_id",type:"string"}]},
+    {id:"group:trade",name:"Trade Checkout",applicabilitySetId:"set:trade",schemaConstraints:[{path:"/funnel_step",type:"string",allowedValues:["3b"]},{path:"/trade",type:"boolean"}]},
   ],
-  pages:[{id:"page:cart",name:"Cart",pageGroupIds:["group:checkout","group:retail","group:trade"]}],
+  pages:[{id:"page:cart",name:"Cart",pageGroupIds:["group:checkout","group:retail","group:signed-in","group:trade"],schemaConstraints:[{path:"/cart_id",type:"string"}]}],
   applicabilitySets:[
     {id:"set:retail",name:"Retail customers",condition:{kind:"predicate",field:"customer_type",operator:"equals",value:"retail"}},
+    {id:"set:signed-in",name:"Signed-in visitors",condition:{kind:"predicate",field:"signed_in",operator:"equals",value:true}},
     {id:"set:trade",name:"Trade customers",condition:{kind:"predicate",field:"customer_type",operator:"equals",value:"trade"}},
   ],
   flows:[],
   fixtures:[
-    {id:"fixture:retail",name:"Retail Cart example",pageId:"page:cart",payload:{customer_type:"retail",funnel_name:"checkout",funnel_step:"3a"}},
+    {id:"fixture:retail",name:"Retail Cart example",pageId:"page:cart",payload:{customer_type:"retail",signed_in:true,funnel_name:"checkout",funnel_step:"3a"}},
     {id:"fixture:trade",name:"Trade Cart example",pageId:"page:cart",payload:{customer_type:"trade",funnel_name:"checkout",funnel_step:"3b"}},
   ],
   assignments:[],
 },documentationFlowGraphs:{}}};
+const structuralBefore=structuredClone(structuralState);
 const structural=pageGroupStructuralSchema(structuralState,"page:cart");
 assert.deepEqual(structural.memberships.map(({groupName,applicabilitySetName})=>[groupName,applicabilitySetName]),[
   ["Checkout","Always"],
   ["Retail Checkout","Retail customers"],
+  ["Signed-in Checkout","Signed-in visitors"],
   ["Trade Checkout","Trade customers"],
 ],"Page authoring preserves every ordered membership and its named applicability without an observation");
-assert.deepEqual(Object.keys(structural.unconditional.properties),["/funnel_name"]);
-assert.deepEqual(structural.conditionalBranches.map(({groupName,condition,properties})=>[groupName,condition,Object.keys(properties)]),[
-  ["Retail Checkout","customer_type equals retail",["/funnel_step"]],
-  ["Trade Checkout","customer_type equals trade",["/funnel_step"]],
-],"mutually exclusive Page Group contributions remain separate readable branches");
+assert.deepEqual(structural.applicabilityPreviews.map(({applicabilitySetName,checked})=>[applicabilitySetName,checked]),[
+  ["Retail customers",true],
+  ["Signed-in visitors",true],
+  ["Trade customers",true],
+],"every distinct referenced Applicability Set is independently checked by default");
+assert.deepEqual(Object.keys(structural.compiled.properties).sort(),["/account_id","/cart_id","/funnel_name","/funnel_step","/retail","/trade"]);
+assert.deepEqual(structural.compiled.properties["/funnel_step"].allowedValues,["3b"],"the later ordinary Page Group value wins");
+assert.deepEqual(structural.compiled.properties["/funnel_step"].superseded.map(({contributorName,value})=>[contributorName,value]),[["Retail Checkout",["3a"]]],"the earlier ordinary value remains as superseded provenance");
+const previewed=pageGroupStructuralSchema(structuralState,"page:cart",["set:signed-in","set:trade"]);
+assert.deepEqual(previewed.includedMemberships.map(({groupName})=>groupName),["Checkout","Signed-in Checkout","Trade Checkout"]);
+assert.deepEqual(previewed.excludedMemberships.map(({groupName})=>groupName),["Retail Checkout"]);
+assert.equal("/retail" in previewed.compiled.properties,false);
+assert.equal("/trade" in previewed.compiled.properties,true);
+assert.deepEqual(structuralState,structuralBefore,"applicability preview never mutates project records");
+const reordered=structuredClone(structuralState);
+reordered.project.collections.pages[0].pageGroupIds=["group:checkout","group:trade","group:signed-in","group:retail"];
+const reorderedStructure=pageGroupStructuralSchema(reordered,"page:cart");
+assert.deepEqual(reorderedStructure.compiled.properties["/funnel_step"].allowedValues,["3a"]);
+assert.deepEqual(reorderedStructure.compiled.properties["/funnel_step"].superseded.map(({contributorName,value})=>[contributorName,value]),[["Trade Checkout",["3b"]]]);
+const invariantStructure=structuredClone(structuralState);
+invariantStructure.project.collections.pageGroups[1].schemaConstraints[0].enforcement="invariant";
+assert.match(pageGroupStructuralSchema(invariantStructure,"page:cart").compiled.conflicts.find(({path})=>path==="/funnel_step").message,/invariant allowed values cannot be replaced/);
+const incompatibleStructure=structuredClone(structuralState);
+incompatibleStructure.project.collections.pageGroups[3].schemaConstraints[0].type="number";
+assert.match(pageGroupStructuralSchema(incompatibleStructure,"page:cart").compiled.conflicts.find(({path})=>path==="/funnel_step").message,/type cannot change/);
 for(const [fixtureId,included,excluded] of [
-  ["fixture:retail",["Checkout","Retail Checkout"],["Trade Checkout"]],
-  ["fixture:trade",["Checkout","Trade Checkout"],["Retail Checkout"]],
+  ["fixture:retail",["Checkout","Retail Checkout","Signed-in Checkout"],["Trade Checkout"]],
+  ["fixture:trade",["Checkout","Trade Checkout"],["Retail Checkout","Signed-in Checkout"]],
 ]){
   const evaluated=evaluatePageGroupFixture(structuralState,fixtureId);
   assert.deepEqual(evaluated.includedStack,included);
   assert.deepEqual(evaluated.inactiveGroups,excluded);
   assert.equal(evaluated.compiled.status,"ready");
-  assert.deepEqual(evaluated.validation.issues,[]);
+  assert.equal(evaluated.compiled.conflicts.some(({message})=>message.includes("ambiguous Page Group applicability")),false);
   assert.equal(evaluated.mode,"evaluated-example");
 }
 const structuralDocument=documentPageGroupStructure(structural);
 assert.match(structuralDocument,/Complete Page specification: Cart/);
-assert.match(structuralDocument,/Retail customers · customer_type equals retail · Page Group Retail Checkout/);
-assert.match(structuralDocument,/Trade customers · customer_type equals trade · Page Group Trade Checkout/);
+assert.match(structuralDocument,/Retail Checkout · Applicability Set Retail customers/);
+assert.match(structuralDocument,/Signed-in Checkout · Applicability Set Signed-in visitors/);
+assert.match(structuralDocument,/funnel_step.*Trade Checkout.*superseded Retail Checkout/s);
 assert.doesNotMatch(structuralDocument,/Inactive/);
 assert.match(documentPageGroupStructure(evaluatePageGroupFixture(structuralState,"fixture:retail")),/Evaluated example: Retail Cart example/);
 

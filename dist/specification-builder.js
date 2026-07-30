@@ -7,7 +7,7 @@ import { compileSpecificationProject, createCanonicalProjectEnvelope } from "./d
 import { entityPurposeGuidance, projectAuthoringGuidance } from "./data-layer-specification-guidance.js";
 import { installExecutableFlowBuilder } from "./data-layer-specification-executable-flow-ui.js";
 import { applyFlowPageGroupLaneSelection, flowPageGroupLaneIds, installFlowGraphBuilder, moveFlowPageFrame, removeFlowPageFrame } from "./utilities/data-layer/flow-graph.js";
-import { addPageGroupMembership, confirmPageGroupMembershipMigration, inspectPageGroupMembershipRemoval, movePageGroupMembership, orderedPageGroupIds, pageGroupMembers, removePageGroupMembership, requiresPageGroupMembershipMigration, stagePageGroupMembershipMigration } from "./data-layer-page-group-membership.js";
+import { addPageGroupMembership, confirmPageGroupMembershipMigration, inspectPageGroupMembershipRemoval, movePageGroupMembership, orderedPageGroupIds, pageGroupMembers, previewPageGroupMembershipMove, removePageGroupMembership, requiresPageGroupMembershipMigration, stagePageGroupMembershipMigration } from "./data-layer-page-group-membership.js";
 import { restoreSchemaLibrary, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
 const projectPreflight = (current, revision) => specificationPreflight({ ...createCanonicalProjectEnvelope(current.project, current.draft?.id ?? "release"), revision });
 const nextProjectReleaseRevision = (current, published) => Math.max(published, ...current.project.releases.map((release) => release.revision)) + 1;
@@ -59,6 +59,7 @@ installStudioAnalystGuidance({
 const mountCanonicalSchemaEditor = (options) => mountCanonicalSchemaEditorBase({ ...options, conceptSuggestions: () => state ? projectCanonicalConcepts(state) : [] });
 let pageGroupMembershipStatus = "";
 let pendingPageGroupMembershipReorder;
+const pageApplicabilityPreviews = new Map();
 let canonicalCommandFeedback;
 let retainedBuilderCanonicalEditor;
 const savedSchemas = () => restoreSchemaLibrary(projectStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY)).filter(({ published }) => published).map((schema) => structuredClone(schema));
@@ -124,10 +125,10 @@ function renderCanonicalProfileOverview(host) {
     host.append(section);
 }
 function labeledControl(text, control) { const label = document.createElement("label"); label.append(text, control); return label; }
-function renderComposedSchemaWorkspace(host, entity, kind, scope) {
+function renderComposedSchemaWorkspace(host, entity, kind, scope, pageGroupApplicabilitySetIds) {
     if (!state)
         return;
-    const workspaceState = state, canonical = entity.canonicalSchema, persistComposed = (next) => { durableProjectRuntime.prepareProjectRoute(next.project.id, { collectionKind: kind, entityId: entity.id }); persist(next); }, liveState = () => state ?? workspaceState, model = composedSchemaWorkspace(workspaceState, entity, scope), section = mountComposedSchemaWorkspace({ host, model, effectiveText: (row) => effectivePropertySummary(row.effective), conceptSuggestions: () => projectCanonicalConcepts(liveState()), onlyDefinedFields: (canonical?.onlyDefinedFields ?? entity.onlyDefinedFields) === true, onOnlyDefinedFields: (value) => persistComposed(saveComposedSchemaPolicy(liveState(), kind, entity.id, value)), onSave: (row, facets, structures = []) => persistComposed(saveComposedSchemaLocalFacetsAndStructures(liveState(), kind, entity.id, row.path, facets, structures, id)), onReset: (row) => persistComposed(resetComposedSchemaLocalProperty(liveState(), kind, entity.id, row.path)), onStructure: () => { }, onRepair: (repair) => { const match = ['pages', 'pageGroups', 'profiles', 'events'].find((collection) => state.project.collections[collection].some(({ id }) => id === repair.contributorId)); if (match) {
+    const workspaceState = state, canonical = entity.canonicalSchema, persistComposed = (next) => { durableProjectRuntime.prepareProjectRoute(next.project.id, { collectionKind: kind, entityId: entity.id }); persist(next); }, liveState = () => state ?? workspaceState, model = composedSchemaWorkspace(workspaceState, entity, scope, undefined, undefined, pageGroupApplicabilitySetIds), section = mountComposedSchemaWorkspace({ host, model, effectiveText: (row) => effectivePropertySummary(row.effective), conceptSuggestions: () => projectCanonicalConcepts(liveState()), onlyDefinedFields: (canonical?.onlyDefinedFields ?? entity.onlyDefinedFields) === true, onOnlyDefinedFields: (value) => persistComposed(saveComposedSchemaPolicy(liveState(), kind, entity.id, value)), onSave: (row, facets, structures = []) => persistComposed(saveComposedSchemaLocalFacetsAndStructures(liveState(), kind, entity.id, row.path, facets, structures, id)), onReset: (row) => persistComposed(resetComposedSchemaLocalProperty(liveState(), kind, entity.id, row.path)), onStructure: () => { }, onRepair: (repair) => { const match = ['pages', 'pageGroups', 'profiles', 'events'].find((collection) => state.project.collections[collection].some(({ id }) => id === repair.contributorId)); if (match) {
             selectedKind = match;
             selectedId = repair.contributorId;
             persistNavigation();
@@ -148,10 +149,11 @@ function renderComposedSchemaWorkspace(host, entity, kind, scope) {
 function renderPageGroupMembershipEditor(host, page) {
     if (!state)
         return;
-    const section = document.createElement("section"), heading = document.createElement("h3"), guidance = document.createElement("p"), impact = document.createElement("p"), picker = document.createElement("section"), search = document.createElement("input"), results = document.createElement("div"), add = document.createElement("button"), menu = document.createElement("details"), menuSummary = document.createElement("summary"), menuAdd = document.createElement("button"), stack = document.createElement("ol"), effective = document.createElement("ol"), branches = document.createElement("section"), documentationButton = document.createElement("button"), documentationOutput = document.createElement("pre"), memberships = orderedPageGroupIds(state.project, page.id), migrationRequired = requiresPageGroupMembershipMigration(state.project, page.id), groups = new Map(state.project.collections.pageGroups.map((group) => [group.id, group])), structure = pageGroupStructuralSchema(state, page.id);
+    const section = document.createElement("section"), heading = document.createElement("h3"), guidance = document.createElement("p"), impact = document.createElement("p"), picker = document.createElement("section"), search = document.createElement("input"), results = document.createElement("div"), add = document.createElement("button"), menu = document.createElement("details"), menuSummary = document.createElement("summary"), menuAdd = document.createElement("button"), stack = document.createElement("ol"), effective = document.createElement("ol"), preview = document.createElement("fieldset"), previewLegend = document.createElement("legend"), excluded = document.createElement("p"), documentationButton = document.createElement("button"), documentationOutput = document.createElement("pre"), memberships = orderedPageGroupIds(state.project, page.id), migrationRequired = requiresPageGroupMembershipMigration(state.project, page.id), groups = new Map(state.project.collections.pageGroups.map((group) => [group.id, group])), referencedSetIds = [...new Set(memberships.flatMap((groupId) => { const setId = groups.get(groupId)?.applicabilitySetId; return typeof setId === "string" && setId ? [setId] : []; }))], selectedSets = pageApplicabilityPreviews.get(page.id) ?? new Set(referencedSetIds), structure = pageGroupStructuralSchema(state, page.id, [...selectedSets]);
+    pageApplicabilityPreviews.set(page.id, selectedSets);
     section.setAttribute("aria-label", "Page Group rule stack");
     heading.textContent = "Page Group rule stack";
-    guidance.textContent = "Rules apply from top to bottom, general to specific. Later Page Groups may only make legal guarded refinements.";
+    guidance.textContent = "Rules apply from top to bottom, general to specific. Later ordinary values replace earlier ones; invariants and structural incompatibilities remain blocked.";
     impact.setAttribute("role", "status");
     impact.setAttribute("aria-label", "Page Group membership impact");
     impact.textContent = pageGroupMembershipStatus;
@@ -171,23 +173,32 @@ function renderPageGroupMembershipEditor(host, page) {
     menuAdd.addEventListener("click", showPicker);
     picker.append(search, results);
     renderResults();
+    preview.setAttribute("aria-label", "Applicability Set composition preview");
+    previewLegend.textContent = "Include Page Groups for Applicability Sets";
+    preview.append(previewLegend);
+    for (const option of structure.applicabilityPreviews) {
+        const label = document.createElement("label"), control = document.createElement("input"), detail = document.createElement("span");
+        control.type = "checkbox";
+        control.checked = option.checked;
+        control.value = option.applicabilitySetId;
+        control.dataset.applicabilityPreviewSetId = option.applicabilitySetId;
+        declareStudioChoice(control, "schema.page-group-applicability-preview");
+        detail.textContent = `${option.applicabilitySetName} · ${option.condition}`;
+        control.addEventListener("change", () => { if (control.checked)
+            selectedSets.add(option.applicabilitySetId);
+        else
+            selectedSets.delete(option.applicabilitySetId); render(); });
+        label.append(control, detail);
+        preview.append(label);
+    }
+    excluded.setAttribute("aria-label", "Unchecked applicability preview explanation");
+    excluded.textContent = structure.excludedMemberships.length ? `Unchecked preview excludes ${structure.excludedMemberships.map(({ groupName, applicabilitySetName }) => `${groupName} (${applicabilitySetName})`).join(", ")}. No project data changed.` : "All referenced Applicability Sets participate. No project data changed.";
     effective.setAttribute("aria-label", "Effective Page Group contribution order");
-    for (const membership of structure.memberships) {
+    for (const membership of structure.includedMemberships) {
         const item = document.createElement("li");
         item.dataset.effectivePageGroupId = membership.groupId;
         item.textContent = `${membership.order + 1}. ${membership.groupName} · ${membership.applicabilitySetName} · ${membership.condition} · ${membership.contributions.map(({ path }) => path).join(", ") || "no local schema contribution"}`;
         effective.append(item);
-    }
-    branches.setAttribute("aria-label", "Conditional Page Group branches");
-    branches.append(Object.assign(document.createElement("h4"), { textContent: "Conditional schema branches" }));
-    for (const branch of structure.conditionalBranches) {
-        const article = document.createElement("article"), title = document.createElement("h5"), properties = document.createElement("ul");
-        article.dataset.conditionalPageGroupId = branch.groupId;
-        title.textContent = `${branch.applicabilitySetName} · ${branch.condition} · ${branch.groupName}`;
-        for (const [path, constraint] of Object.entries(branch.properties))
-            properties.append(Object.assign(document.createElement("li"), { textContent: `${path}: ${JSON.stringify(constraint)} · ordered provenance ${branch.order + 1}. ${branch.groupName}` }));
-        article.append(title, properties);
-        branches.append(article);
     }
     documentationButton.type = "button";
     documentationButton.textContent = "Generate Page specification documentation";
@@ -210,7 +221,7 @@ function renderPageGroupMembershipEditor(host, page) {
         later.disabled = migrationRequired || index === memberships.length - 1;
         remove.disabled = migrationRequired;
         open.addEventListener("click", () => { selectedKind = "pageGroups"; selectedId = groupId; persistNavigation(); render(); });
-        const reorder = (delta) => { pendingPageGroupMembershipReorder = { pageId: page.id, pageGroupId: groupId, delta }; pageGroupMembershipStatus = `Impact preview before commit: affected properties for ${page.name}; affected Page instances and compiled targets will be recomputed; exports and evidence become stale; project remains Draft with Undo available.`; render(); queueMicrotask(() => document.querySelector("[data-confirm-membership-reorder]")?.focus()); }, keyboardReorder = (event, delta) => { if (event.key !== "Enter" && event.key !== " ")
+        const reorder = (delta) => { const nextOrder = previewPageGroupMembershipMove(state.project, page.id, groupId, delta), previewState = structuredClone(state), previewPage = previewState.project.collections.pages.find(({ id }) => id === page.id); previewPage.pageGroupIds = nextOrder; const before = pageGroupStructuralSchema(state, page.id, [...selectedSets]).compiled, after = pageGroupStructuralSchema(previewState, page.id, [...selectedSets]).compiled, paths = [...new Set([...Object.keys(before.properties), ...Object.keys(after.properties)])], changed = paths.filter((path) => JSON.stringify(before.properties[path]) !== JSON.stringify(after.properties[path])).map((path) => { const prior = before.properties[path]?.origins.at(-1)?.contributorName ?? "none", next = after.properties[path]?.origins.at(-1)?.contributorName ?? "none"; return `${path}: ${prior} → ${next}`; }); pendingPageGroupMembershipReorder = { pageId: page.id, pageGroupId: groupId, delta }; pageGroupMembershipStatus = `Impact preview before commit: ${changed.join("; ") || "no effective property changes"}; contributors ${nextOrder.map((id) => groups.get(id)?.name ?? id).join(" → ")}; affected Page instances and compiled targets will be recomputed; exports and evidence become stale; project remains Draft with Undo available.`; render(); queueMicrotask(() => document.querySelector("[data-confirm-membership-reorder]")?.focus()); }, keyboardReorder = (event, delta) => { if (event.key !== "Enter" && event.key !== " ")
             return; event.preventDefault(); reorder(delta); };
         earlier.addEventListener("click", () => reorder(-1));
         later.addEventListener("click", () => reorder(1));
@@ -253,7 +264,7 @@ function renderPageGroupMembershipEditor(host, page) {
         review.append(summary, confirm);
         section.append(review);
     }
-    section.append(heading, guidance, add, menu, picker, stack, effective, branches, documentationButton, documentationOutput, impact);
+    section.append(heading, guidance, add, menu, picker, stack, preview, excluded, effective, documentationButton, documentationOutput, impact);
     host.append(section);
 }
 function writeProjectState(next, label = "Project edit") { const result = commitCanonicalProjectState(projectStorage, next, { expectedRevision: canonicalRevision, pendingLabel: label, ...(lastCommittedState ? { base: lastCommittedState } : {}) }); if (result.status === "conflict") {
@@ -363,6 +374,8 @@ function fieldControl(field, entity) { if (field.type === "flow-role") {
     const select = document.createElement("select");
     select.name = field.key;
     select.multiple = Boolean(field.multiple);
+    if (!field.multiple && field.key === "applicabilitySetId")
+        select.append(new Option("None", ""));
     for (const optionEntity of state.project.collections[field.collection]) {
         if (optionEntity.id === entity.id)
             continue;
@@ -372,6 +385,7 @@ function fieldControl(field, entity) { if (field.type === "flow-role") {
         option.selected = field.multiple ? entity[field.key]?.includes(optionEntity.id) ?? false : entity[field.key] === optionEntity.id;
         select.append(option);
     }
+    select.value = field.multiple ? select.value : String(entity[field.key] ?? "");
     return select;
 } if (field.type === "condition") {
     const group = document.createElement("fieldset"), operator = document.createElement("select"), rows = document.createElement("div"), add = document.createElement("button"), condition = entity[field.key];
@@ -519,6 +533,8 @@ function renderSelectedEntityEditor(content, entity) {
                         const merged = { ...candidate, ...update };
                         if (selectedKind === "flows")
                             delete merged.pageGroupIds;
+                        if (update.applicabilitySetId === "")
+                            delete merged.applicabilitySetId;
                         return merged;
                     }),
                 },
@@ -608,7 +624,8 @@ function hydrateVisibleProjectRoute(kind, entityId, focus) { if (!state)
     return; const projectId = state.project.id; void durableProjectRuntime.ensureProjectRoute(projectId, durableProjectRouteForWorkspace(kind, entityId)).then((loaded) => { if (state?.project.id !== projectId || selectedKind !== kind || selectedId !== entityId)
     return; state = { ...structuredClone(loaded.state), history: { undo: [], redo: [] } }; lastCommittedState = structuredClone(state); canonicalRevision = loaded.draftSequence; publishedRevision = loaded.publishedRevision; library = restoreProjectLibrary(projectStorage.getItem(PROJECT_LIBRARY_STORAGE_KEY)) ?? library; if (pendingWorkspaceFocus?.kind === kind && pendingWorkspaceFocus.id === entityId)
     pendingWorkspaceFocus = undefined; render(); queueMicrotask(() => focus?.()?.focus({ preventScroll: true })); }).catch((error) => { pendingWorkspaceFocus = undefined; saveStatus = { kind: "failed", label: `Open ${labels[kind]}`, message: error instanceof Error ? error.message : String(error) }; render(); }); }
-function openCollectionOverview(kind, focusId) { pendingWorkspaceFocus = undefined; documentationOpen = false; projectOverview = false; creationKind = undefined; removalReview = undefined; selectedKind = kind; selectedId = undefined; persistNavigation(); replaceProjectRoute(kind); render(); hydrateVisibleProjectRoute(kind, undefined, () => focusId ? document.querySelector(`[data-entity-id="${CSS.escape(focusId)}"]`) : document.querySelector(`[data-add-kind="${kind}"]`)); }
+function openCollectionOverview(kind, focusId) { pendingWorkspaceFocus = undefined; documentationOpen = false; projectOverview = false; creationKind = undefined; removalReview = undefined; if (selectedKind === "pages" && selectedId)
+    pageApplicabilityPreviews.delete(selectedId); selectedKind = kind; selectedId = undefined; persistNavigation(); replaceProjectRoute(kind); render(); hydrateVisibleProjectRoute(kind, undefined, () => focusId ? document.querySelector(`[data-entity-id="${CSS.escape(focusId)}"]`) : document.querySelector(`[data-add-kind="${kind}"]`)); }
 function openProjectEntityWorkspace(kind, entityId) { pendingWorkspaceFocus = { kind, id: entityId }; projectOverview = false; creationKind = undefined; removalReview = undefined; selectedKind = kind; selectedId = entityId; durableProjectRuntime.prepareProjectRoute(state.project.id, durableProjectRouteForWorkspace(kind, entityId)); persistNavigation(); replaceProjectRoute(kind, entityId); render(); queueMicrotask(restorePendingWorkspaceFocus); hydrateVisibleProjectRoute(kind, entityId, () => document.querySelector(`[data-project-entity-workspace="${CSS.escape(entityId)}"] h1`)); }
 function openProjectCollectionCreation(kind) { pendingWorkspaceFocus = undefined; projectOverview = false; creationKind = kind; removalReview = undefined; selectedKind = kind; selectedId = undefined; persistNavigation(); replaceProjectRoute(kind, undefined, "add"); render(); }
 function projectCreationFieldControl(field) { if (field.key === "targetId" && state) {
@@ -729,7 +746,7 @@ function renderProjectEntityWorkspace(content, kind, entity) { if (!state)
     return;
 } q("#flow-inspector-context").replaceChildren(); renderSelectedEntityEditor(workspace, entity); if (kind === "pages") {
     renderPageGroupMembershipEditor(workspace, entity);
-    renderComposedSchemaWorkspace(workspace, entity, "pages", "Page");
+    renderComposedSchemaWorkspace(workspace, entity, "pages", "Page", [...(pageApplicabilityPreviews.get(entity.id) ?? new Set())]);
 } if (kind === "pageGroups") {
     const members = document.createElement("section"), memberList = document.createElement("ul");
     members.setAttribute("aria-label", "Derived Page Group members");

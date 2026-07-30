@@ -12,7 +12,7 @@
                     "features/data-layer-page-group-structural-authoring.feature"])
 (def entry-modes {"Shop specification project is open" :model
                   "Shop project contains Shared Profiles Sitewide and Opened Article" :model
-                  "Shop project contains Page Cart and Page Groups Checkout, Retail Checkout, and Trade Checkout" :runtime
+                  "Shop project contains Page Cart and Page Groups Checkout, Retail Checkout, Signed-in Checkout, and Trade Checkout" :runtime
                   "the built extension is running with production project storage and the production schema editor" :runtime
                   "the built extension is running with the production project repository, canonical schema editor, compiler, assignment resolver, and per-Event validator" :runtime})
 (defonce model-verified? (atom false))
@@ -28,7 +28,8 @@
                                  :flowFacetOwnership001 :flowFacetOwnership002
                                  :flowStructural001 :flowStructural002 :flowStructural003
                                  :pageGroupStructural001 :pageGroupStructural002
-                                 :pageGroupStructural003 :pageGroupStructural004])))
+                                 :pageGroupStructural003 :pageGroupStructural004
+                                 :pageGroupStructural005 :pageGroupStructural006])))
 (def authoritative-examples
   (set (for [feature-file feature-files
              scenario (:scenarios (gherkin/parse-file feature-file))
