@@ -157,6 +157,25 @@
         {"event" "the STudio document becomes hidden"
          "result" "disappears and pauses the hint interval"}))))
 
+(deftest runtime-hint-examples-bind-to-the-installed-route-pool
+  (let [hint "A project with no collection is merely a clipboard with ambitions. Pick one on the left and give the specification somewhere to begin."
+        example {"route" "Project overview" "hint" hint}
+        route-key (keyword "Project overview")
+        observation {:interaction
+                     {:pools
+                      {:pools
+                       {route-key {:texts [hint]}}}}}]
+    (is (= observation
+           (#'guidance/validate-runtime-example! example observation)))
+    (is (thrown-with-msg?
+         clojure.lang.ExceptionInfo
+         #"does not match installed guidance"
+         (#'guidance/validate-runtime-example!
+          example
+          (assoc-in observation
+                    [:interaction :pools :pools route-key :texts]
+                    ["Obsolete prefixed-exclamation copy."]))))))
+
 (deftest browser-evidence-requires-every-runtime-boundary
   (is (nil? (#'guidance/assert-browser! complete-browser-evidence)))
   (is (thrown? clojure.lang.ExceptionInfo

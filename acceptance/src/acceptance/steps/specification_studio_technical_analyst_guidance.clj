@@ -39,16 +39,16 @@
             ["less than 120 seconds after the prior hint" "not rendered"]
             ["120 seconds after the prior hint" "rendered once when available"]}}
    {:keys ["route" "hint"]
-    :rows #{["Project overview" "Crikey! Pick a collection on the left to start shaping your specification."]
-            ["Shared Profiles" "Smashing! Put reusable fields here so Pages and Events can inherit them."]
-            ["Pages" "Jolly good! Give each Page its observed page event before refining its schema."]
-            ["Flows" "Cor! Add Pages to the canvas first, then place interaction Events inside them."]
-            ["Documentation" "Splendid! Refresh the preview after changing a Documentation Set."]
+    :rows #{["Project overview" "A project with no collection is merely a clipboard with ambitions. Pick one on the left and give the specification somewhere to begin."]
+            ["Shared Profiles" "If Pages keep borrowing the same fields, stop issuing duplicates like raffle tickets. Put them in a Shared Profile and let inheritance do the legwork."]
+            ["Pages" "Give each Page its observed page event before polishing the schema. Even a splendid room needs a doorbell before anyone can prove they visited."]
+            ["Flows" "Pages are the rooms; Events are the custard pies. Add the rooms first, then put each splat where it actually happened."]
+            ["Documentation" "Refresh the preview after changing a Documentation Set. Yesterday's snapshot is beautifully formatted and completely unaware of today."]
             ["Project overview" "Lost an entity in the filing-cabinet jungle? Global search finds it without rearranging a single saved Draft."]
             ["Shared Profiles" "Concepts arrange Profile properties into sensible documentation gangs. Validation remains unmoved; it has its own clipboard."]
             ["Pages" "Path conditions are the Page's doorman: they inspect each observed location and politely—or firmly—decide whether it belongs."]
-            ["Assignments" "Run preflight before testing. Missing targets and tied candidates are much easier to catch before they put on matching moustaches."]
-            ["Documentation" "Generate rich copy or Excel only after refreshing the preview. Yesterday's snapshot is beautifully formatted and completely unaware of today."]}}
+            ["Assignments" "Run preflight before testing. Missing targets and tied candidates are easier to catch before they put on matching moustaches."]
+            ["Documentation" "Generate rich copy or Excel only after refreshing the preview. Exporting stale work merely gives yesterday better stationery."]}}
    {:keys ["event" "result"]
     :rows #{["10 seconds elapse" "disappears automatically"]
             ["the Studio document becomes hidden" "disappears and pauses the hint interval"]
@@ -96,6 +96,19 @@
   (support/validate-example-relations!
    example-relations example
    "Specification Studio technical analyst guidance example columns describe an invalid result."))
+
+(defn- validate-runtime-example! [example observation]
+  (let [route (get example "route")
+        hint (get example "hint")]
+    (when (and route hint)
+      (support/assert!
+       (contains?
+        (set (get-in observation
+                     [:interaction :pools :pools (keyword route) :texts]))
+        hint)
+       "Specification Studio technical analyst guidance example does not match installed guidance."
+       {:route route :hint hint}))
+    observation))
 
 (defn- base-evidence-valid?
   [{:keys [before preFirstHidden visible blockingPredicate documentHidden zoom narrow]}]
@@ -258,10 +271,16 @@
    evidence))
 
 (def handlers
-  (support/verified-feature-mode-handlers
+  (support/feature-mode-handlers
    feature-files entry-modes :specification-studio-technical-analyst-guidance-mode
-   verify-model! validate-example!
-   verify-browser! assert-browser!))
+   (fn [world example _captures {:keys [text]}]
+     (support/mode-transition
+      world example text entry-modes
+      :specification-studio-technical-analyst-guidance-mode
+      verify-model! validate-example!
+      #(let [observation (verify-browser!)]
+         (validate-runtime-example! example observation)
+         (assert-browser! observation))))))
 
 ;; clj-mutate-manifest-begin
 ;; {:version 1, :tested-at "2026-07-30T15:42:38.675048301+02:00", :module-hash "-1480116745", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "-141541989"} {:id "def/feature-files", :kind "def", :line 4, :end-line 6, :hash "-2026693678"} {:id "def/entry-modes", :kind "def", :line 8, :end-line 10, :hash "1522919857"} {:id "form/3/defonce", :kind "defonce", :line 12, :end-line 12, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 13, :end-line 13, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 15, :end-line 19, :hash "-373877270"} {:id "defn-/verify-browser!", :kind "defn-", :line 21, :end-line 27, :hash "-1564117678"} {:id "def/example-relations", :kind "def", :line 29, :end-line 93, :hash "-384609571"} {:id "defn-/validate-example!", :kind "defn-", :line 95, :end-line 98, :hash "1709490755"} {:id "defn-/base-evidence-valid?", :kind "defn-", :line 100, :end-line 124, :hash "-1690838487"} {:id "defn-/pause-evidence", :kind "defn-", :line 126, :end-line 131, :hash "1577238289"} {:id "defn-/schedule-evidence-valid?", :kind "defn-", :line 133, :end-line 145, :hash "-1445817175"} {:id "defn-/footer-evidence-valid?", :kind "defn-", :line 147, :end-line 159, :hash "1839699614"} {:id "defn-/activation-unchanged?", :kind "defn-", :line 161, :end-line 162, :hash "1731646445"} {:id "defn-/interaction-evidence-valid?", :kind "defn-", :line 164, :end-line 191, :hash "669403679"} {:id "defn-/substantial-text?", :kind "defn-", :line 193, :end-line 194, :hash "-2117338587"} {:id "defn-/pool-valid?", :kind "defn-", :line 196, :end-line 200, :hash "11322883"} {:id "def/dwell-keys", :kind "def", :line 202, :end-line 202, :hash "73325018"} {:id "defn-/dwell-values", :kind "defn-", :line 204, :end-line 205, :hash "-974825008"} {:id "defn-/stayed-hidden?", :kind "defn-", :line 207, :end-line 208, :hash "-556440693"} {:id "defn-/dwell-evidence-valid?", :kind "defn-", :line 210, :end-line 223, :hash "679444369"} {:id "defn-/typewriter-evidence-valid?", :kind "defn-", :line 225, :end-line 239, :hash "-2073143279"} {:id "defn-/detailed-evidence-valid?", :kind "defn-", :line 241, :end-line 248, :hash "1767624212"} {:id "defn-/assert-browser!", :kind "defn-", :line 250, :end-line 258, :hash "-1966366715"} {:id "def/handlers", :kind "def", :line 260, :end-line 264, :hash "628619708"}]}

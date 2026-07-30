@@ -43,11 +43,11 @@ Feature: Specification Studio technical analyst guidance runtime
 
     Examples:
       | route             | hint                                                                                          |
-      | Project overview  | Crikey! Pick a collection on the left to start shaping your specification.                    |
-      | Shared Profiles   | Smashing! Put reusable fields here so Pages and Events can inherit them.                       |
-      | Pages             | Jolly good! Give each Page its observed page event before refining its schema.                 |
-      | Flows             | Cor! Add Pages to the canvas first, then place interaction Events inside them.                 |
-      | Documentation     | Splendid! Refresh the preview after changing a Documentation Set.                              |
+      | Project overview  | A project with no collection is merely a clipboard with ambitions. Pick one on the left and give the specification somewhere to begin.                              |
+      | Shared Profiles   | If Pages keep borrowing the same fields, stop issuing duplicates like raffle tickets. Put them in a Shared Profile and let inheritance do the legwork.               |
+      | Pages             | Give each Page its observed page event before polishing the schema. Even a splendid room needs a doorbell before anyone can prove they visited.                       |
+      | Flows             | Pages are the rooms; Events are the custard pies. Add the rooms first, then put each splat where it actually happened.                                                 |
+      | Documentation     | Refresh the preview after changing a Documentation Set. Yesterday's snapshot is beautifully formatted and completely unaware of today.                               |
 
   # Specification Studio technical analyst guidance runtime 004
   Scenario Outline: Specification Studio technical analyst guidance runtime 004
@@ -212,8 +212,8 @@ Feature: Specification Studio technical analyst guidance runtime
       | Project overview | Lost an entity in the filing-cabinet jungle? Global search finds it without rearranging a single saved Draft.                                             |
       | Shared Profiles  | Concepts arrange Profile properties into sensible documentation gangs. Validation remains unmoved; it has its own clipboard.                             |
       | Pages            | Path conditions are the Page's doorman: they inspect each observed location and politely—or firmly—decide whether it belongs.                            |
-      | Assignments      | Run preflight before testing. Missing targets and tied candidates are much easier to catch before they put on matching moustaches.                         |
-      | Documentation    | Generate rich copy or Excel only after refreshing the preview. Yesterday's snapshot is beautifully formatted and completely unaware of today.            |
+      | Assignments      | Run preflight before testing. Missing targets and tied candidates are easier to catch before they put on matching moustaches.                              |
+      | Documentation    | Generate rich copy or Excel only after refreshing the preview. Exporting stale work merely gives yesterday better stationery.                             |
 
   # Specification Studio technical analyst guidance runtime 015
   Scenario Outline: Specification Studio technical analyst guidance runtime 015
