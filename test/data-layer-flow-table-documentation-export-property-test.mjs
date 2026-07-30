@@ -12,6 +12,7 @@ import {
   compileProjectDocumentationSnapshot,
   createProjectDocumentationSet,
   createProjectDocumentationTheme,
+  fitProjectDocumentationLogo,
   parseProjectDocumentationTheme,
   PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT,
   readProjectDocumentationLogoFile,
@@ -50,6 +51,15 @@ const logoRandom=()=>{
   logoSeed=(Math.imul(logoSeed,1664525)+1013904223)>>>0;
   return logoSeed;
 };
+for(let sample=0;sample<240;sample+=1){
+  const intrinsicWidth=1+(logoRandom()%10000),intrinsicHeight=1+(logoRandom()%10000),maxWidth=1+(logoRandom()%1000),maxHeight=1+(logoRandom()%1000);
+  const fitted=fitProjectDocumentationLogo(intrinsicWidth,intrinsicHeight,maxWidth,maxHeight),scale=Math.min(1,maxWidth/intrinsicWidth,maxHeight/intrinsicHeight);
+  assert.ok(fitted.width<=maxWidth+1e-9&&fitted.height<=maxHeight+1e-9,"fitted logos stay within both bounds");
+  assert.ok(Math.abs(fitted.width-intrinsicWidth*scale)<1e-9&&Math.abs(fitted.height-intrinsicHeight*scale)<1e-9,"fitted logos preserve aspect ratio");
+  if(scale===1)assert.deepEqual(fitted,{width:intrinsicWidth,height:intrinsicHeight},"logos that already fit are not enlarged");
+  else assert.ok(Math.abs(fitted.width-maxWidth)<1e-9||Math.abs(fitted.height-maxHeight)<1e-9,"a reduced logo touches one limiting edge");
+}
+for(const dimensions of [[0,1],[1,0],[-1,1],[1,-1],[Number.NaN,1]])assert.deepEqual(fitProjectDocumentationLogo(...dimensions),{width:0,height:0});
 for(let sample=0;sample<120;sample+=1){
   const type=logoMediaTypes[logoRandom()%logoMediaTypes.length],name=`logo-${sample}.${type.split("/")[1]}`,payload=logoPayloadPrefixes[type]+"A".repeat((logoRandom()%1024)*4),dataUrl=`data:${type};base64,${payload}`;
   assert.deepEqual(
