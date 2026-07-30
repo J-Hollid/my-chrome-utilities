@@ -1231,3 +1231,23 @@ Feature: Data layer canonical Shared Profile schema authoring
     And no matching name is hidden by ellipsis, clipping, or horizontal overflow
     When keyboard or pointer input chooses preferred_delivery_window
     Then the complete selected property name remains visible and the correct stable property identity is retained
+
+  # Data layer canonical Shared Profile schema authoring 074
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 074
+    Given a Pattern rule is open in shared <editor_mode> mode at <presentation>
+    Then Regular expression is a visible label associated with the pattern input
+    And Test value is a visible label associated with the sample input
+    And Test result visibly identifies the live result region
+    And guidance says Enter a sample value to check it against the regular expression. Test values are not saved.
+    And the pattern and sample controls occupy the same field grid with equal input widths and aligned input edges
+    When the operator enters a pattern and sample value
+    Then the textual result remains aligned with the labelled helper controls
+    And no label, input, guidance, or result overlaps or causes horizontal overflow
+    And the green or red result remains supplementary to its textual match state
+
+    Examples:
+      | editor_mode | presentation          |
+      | Add rule    | wide viewport         |
+      | Edit rule   | wide viewport         |
+      | Add rule    | narrow 360px viewport |
+      | Edit rule   | narrow 360px viewport |

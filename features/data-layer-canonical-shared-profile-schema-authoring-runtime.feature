@@ -1227,3 +1227,22 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
     And computed styles and bounding boxes show no ellipsis, clipping, or horizontal overflow
     When actual keyboard and pointer selection choose preferred_delivery_window
     Then the complete selected name remains visible and repository evidence retains its stable property identity
+
+  # Data layer canonical Shared Profile schema authoring runtime 074
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 074
+    Given the installed shared Pattern editor is open in <editor_mode> mode at <presentation>
+    Then visible Regular expression and Test value labels resolve to their respective inputs
+    And visible Test result text identifies the live result region
+    And rendered guidance is Enter a sample value to check it against the regular expression. Test values are not saved.
+    And DOM and computed-style evidence places both inputs in one field grid with equal widths and aligned edges
+    When actual inputs receive a pattern and sample value
+    Then the live textual result remains aligned with the labelled helper controls
+    And bounding boxes show no overlap or horizontal overflow among labels, inputs, guidance, and result
+    And accessibility inspection finds the textual match state independently of its green or red style token
+
+    Examples:
+      | editor_mode | presentation          |
+      | Add rule    | wide viewport         |
+      | Edit rule   | wide viewport         |
+      | Add rule    | narrow 360px viewport |
+      | Edit rule   | narrow 360px viewport |

@@ -480,6 +480,20 @@ stable property identity. This supersedes narrower or truncated listbox sizing
 where it differs. The exact checkpoint remains `layered_schema`, followed by
 `npm run package`.
 
+On approval, the Pattern-helper presentation correction is later authority for
+Authoring scenarios 071–072 and 074. In every shared Add rule and Edit rule
+editor, `Regular expression` and `Test value` are visible labels associated with
+their inputs, and `Test result` visibly identifies the live result region. The
+helper explains `Enter a sample value to check it against the regular expression.
+Test values are not saved.`
+
+Pattern and sample controls use one field grid with equal input widths and aligned
+edges. The textual result remains aligned with those controls at wide and 360px
+viewports, with no overlap or horizontal overflow. Green and red treatments remain
+supplementary to the textual match state. This supersedes the unlabeled or
+independently flowing helper layout where it differs. The exact checkpoint remains
+`layered_schema`, followed by `npm run package`.
+
 The rejected schema candidate `143cc9d337` and Flow candidate `b8432d27e7` are not
 eligible because each introduced a vacuous `project_management` pack. Later coder
 commits `2db9335d` and `b4d143a4` contain useful task-owned revisions, but their
