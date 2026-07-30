@@ -311,6 +311,31 @@ tip immediately. Assistive technology receives one polite complete-tip
 announcement rather than each partial visual string. This extends
 technical-analyst guidance scenario 012 without changing its checkpoint.
 
+On approval, the navigation-analyst presentation and content correction is later
+authority for technical-analyst guidance scenarios 001, 003, 006, 010–011, and
+013–015. The analyst occupies a reserved footer anchored to the bottom-left of the
+visible project navigation rail, independent of the last navigation button.
+Navigation items use and, when necessary, scroll within the remaining space above
+that footer. The analyst and right-hand bubble cover no navigation content.
+
+At rest the genuine-alpha analyst has no border, oval plate, outline, or shadow.
+Pointer hover and keyboard focus display him at 105 percent with an interaction
+outline only; no drop shadow or oval backing appears in any state. Ending the
+interaction removes the outline without reflow or overlap.
+
+Every general tip, including the additional entries in each route pool, combines
+accurate route-specific advice with the same playful cheesy British-comic character
+voice as the original tips. Automatic, requested, and control-specific guidance
+shares the cream, ink, halftone, mustard, curved-tail, and typewriter presentation.
+
+After a three-second pointer or keyboard dwell, a supported control tip identifies
+the action, explains its consequence, and says when or why to use it. It cannot use
+the generic `available in ...; use it to work with this part` template. A visible
+named control without curated or semantic guidance produces no control tip rather
+than fabricated filler. Representative exact guidance covers Add Page, Run
+preflight, Coverage matrix, Undo, and Publish release. The exact checkpoint remains
+`branding_polish`, followed by `npm run package`.
+
 On approval, the typed-literal and focused-editor correction is later authority
 for Authoring scenarios 023 and 064–067. Allowed values and custom examples share
 a type-directed literal language: commas delimit allowed values only outside

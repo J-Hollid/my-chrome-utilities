@@ -89,14 +89,16 @@ Feature: Specification Studio technical analyst guidance
     Given the technical analyst is visible as an interactive guidance control
     When <pointer_or_focus_state> applies
     Then the analyst is displayed at <scale>
-    And a mustard and ink highlight is <highlight_state>
+    And a mustard and ink interaction outline is <outline_state>
+    And no border, oval plate, or drop shadow is visible
     And the visual change causes no layout movement or content overlap
 
     Examples:
-      | pointer_or_focus_state             | scale       | highlight_state |
-      | pointer hover begins               | 105 percent | visible         |
-      | keyboard focus arrives             | 105 percent | visible         |
-      | pointer hover or keyboard focus ends | 100 percent | absent          |
+      | pointer_or_focus_state               | scale       | outline_state |
+      | resting state                        | 100 percent | absent        |
+      | pointer hover begins                 | 105 percent | visible       |
+      | keyboard focus arrives               | 105 percent | visible       |
+      | pointer hover or keyboard focus ends | 100 percent | absent        |
 
   # Specification Studio technical analyst guidance 007
   Scenario Outline: Specification Studio technical analyst guidance 007
@@ -186,3 +188,54 @@ Feature: Specification Studio technical analyst guidance
       | motion_preference | output                                   | character_interval |
       | standard motion   | one complete visible character at a time | 20 milliseconds    |
       | reduced motion    | the complete tip immediately              | 0 milliseconds     |
+
+  # Specification Studio technical analyst guidance 013
+  Scenario Outline: Specification Studio technical analyst guidance 013
+    Given project navigation inventory is <navigation_inventory>
+    When the analyst guidance region is laid out
+    Then the analyst is anchored at the bottom-left corner of the visible rail
+    And his left and bottom insets do not depend on the final navigation button's position
+    And navigation items occupy the remaining space above the reserved guidance footer
+    And an overflowing navigation list scrolls without moving or covering the analyst
+    And the bubble remains to his right without covering navigation content
+
+    Examples:
+      | navigation_inventory                       |
+      | a short list ending well above the footer  |
+      | a long list requiring navigation scrolling |
+
+  # Specification Studio technical analyst guidance 014
+  Scenario Outline: Specification Studio technical analyst guidance 014
+    Given a non-repeated general tip is selected for <route>
+    When the tip is presented automatically or requested from the analyst
+    Then it says <hint>
+    And it combines accurate route-specific advice with a playful British-comic character flourish
+    And it uses the established cream, ink, halftone, mustard, curved-tail, and typewriter presentation
+    And no additional tip falls back to a neutral documentation sentence without that character voice
+
+    Examples:
+      | route            | hint                                                                                     |
+      | Project overview | Crumbs! Global search finds any collection or entity without changing your saved Draft.  |
+      | Shared Profiles  | By gum! Concepts group Profile properties in documentation without changing validation. |
+      | Pages            | Gadzooks! Path conditions decide which observed locations resolve to this Page.          |
+      | Assignments      | Cor! Run preflight before testing to catch missing targets or tied Assignment candidates. |
+      | Documentation    | Ker-pow! Generate rich copy or Excel only after refreshing the preview snapshot.         |
+
+  # Specification Studio technical analyst guidance 015
+  Scenario Outline: Specification Studio technical analyst guidance 015
+    Given the pointer or keyboard focus dwells for 3 seconds on <control> in <route>
+    When the analyst presents control guidance
+    Then the analyst delivers <tip>
+    And the tip identifies the action, explains its consequence, and says when or why to use it
+    And it never says only that the control is available here or can be used here
+    And it uses the same comic character, speech bubble, tail, and typewriter behavior as general tips
+    When a visible named control has no curated or semantic explanation
+    Then no control tip appears instead of fabricated generic guidance
+
+    Examples:
+      | route            | control        | tip                                                                                                                           |
+      | Pages            | Add Page       | Crikey! Add Page creates a Page draft for a real location; use it before placing that Page in a Flow.                          |
+      | Project overview | Run preflight   | Gadzooks! Run preflight checks the whole Draft for blocking schema faults and advisory assurance warnings without publishing. |
+      | Project overview | Coverage matrix | Cor! Coverage matrix shows which project contexts exercise each canonical property; use it to spot evidence gaps.              |
+      | Pages            | Undo            | Whoops-a-daisy! Undo rolls back the latest command on this Studio page while the published revision stays put.                 |
+      | Project overview | Publish release | Blimey! Publish release opens a review before creating an immutable project revision.                                          |

@@ -88,14 +88,16 @@ Feature: Specification Studio technical analyst guidance runtime
     Given the installed technical analyst is a visible interactive guidance control
     When <pointer_or_focus_state> is dispatched
     Then its computed transform displays it at <scale>
-    And computed mustard and ink highlight is <highlight_state>
+    And computed mustard and ink interaction outline is <outline_state>
+    And computed border, backing, and box-shadow evidence is absent
     And guidance-region and neighboring-control bounding boxes do not move or overlap
 
     Examples:
-      | pointer_or_focus_state               | scale       | highlight_state |
-      | pointer hover begins                 | 105 percent | visible         |
-      | keyboard focus arrives               | 105 percent | visible         |
-      | pointer hover or keyboard focus ends | 100 percent | absent          |
+      | pointer_or_focus_state               | scale       | outline_state |
+      | resting state                        | 100 percent | absent        |
+      | pointer hover begins                 | 105 percent | visible       |
+      | keyboard focus arrives               | 105 percent | visible       |
+      | pointer hover or keyboard focus ends | 100 percent | absent        |
 
   # Specification Studio technical analyst guidance runtime 007
   Scenario Outline: Specification Studio technical analyst guidance runtime 007
@@ -185,3 +187,54 @@ Feature: Specification Studio technical analyst guidance runtime
       | motion_preference | output                                   | character_interval |
       | standard motion   | one complete visible character at a time | 20 milliseconds    |
       | reduced motion    | the complete tip immediately              | 0 milliseconds     |
+
+  # Specification Studio technical analyst guidance runtime 013
+  Scenario Outline: Specification Studio technical analyst guidance runtime 013
+    Given production navigation inventory is <navigation_inventory>
+    When production layout renders the analyst guidance region
+    Then bounding boxes anchor the analyst to the visible rail's bottom-left corner
+    And its left and bottom offsets are invariant from the final navigation button
+    And the navigation list owns the remaining space above the reserved guidance footer
+    And overflow metrics show the navigation list scrolling without moving or covering the analyst
+    And bubble geometry remains to his right without intersecting navigation controls
+
+    Examples:
+      | navigation_inventory                       |
+      | a short list ending well above the footer  |
+      | a long list requiring navigation scrolling |
+
+  # Specification Studio technical analyst guidance runtime 014
+  Scenario Outline: Specification Studio technical analyst guidance runtime 014
+    Given production rotation selects a previously unused general tip for <route>
+    When automatic and analyst-requested presentation paths render it
+    Then the complete tip text is <hint>
+    And semantic inspection finds accurate route advice plus a configured playful British-comic flourish
+    And DOM and computed styles retain the cream, ink, halftone, mustard, curved-tail, and typewriter presentation
+    And the complete additional pool contains no neutral documentation-only tip without configured character voice
+
+    Examples:
+      | route            | hint                                                                                     |
+      | Project overview | Crumbs! Global search finds any collection or entity without changing your saved Draft.  |
+      | Shared Profiles  | By gum! Concepts group Profile properties in documentation without changing validation. |
+      | Pages            | Gadzooks! Path conditions decide which observed locations resolve to this Page.          |
+      | Assignments      | Cor! Run preflight before testing to catch missing targets or tied Assignment candidates. |
+      | Documentation    | Ker-pow! Generate rich copy or Excel only after refreshing the preview snapshot.         |
+
+  # Specification Studio technical analyst guidance runtime 015
+  Scenario Outline: Specification Studio technical analyst guidance runtime 015
+    Given production pointer hover and keyboard focus dwell for 3 seconds on <control> in <route>
+    When the control-specific scheduler result is presented
+    Then rendered control guidance is <tip>
+    And semantic evidence identifies the action, its consequence, and when or why to use it
+    And text inspection excludes the generic available-here and use-it-here templates
+    And DOM and scheduler evidence uses the same comic bubble, tail, and typewriter path as general tips
+    When an unregistered visible named control completes the same dwell
+    Then scheduler evidence presents no fabricated generic control tip
+
+    Examples:
+      | route            | control        | tip                                                                                                                           |
+      | Pages            | Add Page       | Crikey! Add Page creates a Page draft for a real location; use it before placing that Page in a Flow.                          |
+      | Project overview | Run preflight   | Gadzooks! Run preflight checks the whole Draft for blocking schema faults and advisory assurance warnings without publishing. |
+      | Project overview | Coverage matrix | Cor! Coverage matrix shows which project contexts exercise each canonical property; use it to spot evidence gaps.              |
+      | Pages            | Undo            | Whoops-a-daisy! Undo rolls back the latest command on this Studio page while the published revision stays put.                 |
+      | Project overview | Publish release | Blimey! Publish release opens a review before creating an immutable project revision.                                          |
