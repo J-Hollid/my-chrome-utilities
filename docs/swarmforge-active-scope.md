@@ -878,23 +878,31 @@ upgrade converts legacy schemaDrafts to Shared Profiles and remaps their Assignm
 targets without losing canonical content, lineage, or identity.
 
 A Page owns one ordered general-to-specific list of Page Group memberships. Group
-member views derive from that list. Applicable groups compile in relative order, but
-order cannot legalize unsafe weakening or resolve overlapping applicability. The
-Page editor provides searchable add, accessible reorder, removal, provenance, and
-impact review. A Flow Page frame may use any selected lane in that membership list;
-its placement group is separate from membership order and lane order. Reordering
-membership never moves a frame, and removing an in-use membership blocks until the
-frame is moved to another eligible lane or removed.
+member views derive from that list. Membership is the composition contract; an
+Applicability Set attached to a Page Group is optional and does not gate inheritance
+in the absence of an observation. The Page editor provides searchable add,
+accessible reorder, removal, provenance, and impact review. A Flow Page frame may
+use any selected lane in that membership list; its placement group is separate from
+membership order and lane order. Reordering membership never moves a frame, and
+removing an in-use membership blocks until the frame is moved to another eligible
+lane or removed.
 
-Page authoring requires no observation. Its effective-schema workspace preserves
-every ordered Page Group contribution, representing Applicability Sets as named
-conditional branches rather than evaluating them against an empty payload. Concrete
-project-editor applicability evaluation belongs to saved Fixtures, whose own
-payloads determine the active and inactive memberships; the Pages editor contains
-no fixed Retail, Trade, Overlapping, or other product-owned observation examples.
-Generic Page documentation likewise preserves every conditional branch, while a
-Fixture-specific result is explicitly an evaluated example. This correction is
-specified by
+Page authoring requires no observation. Effective schema at Page is the real
+canonical composed-schema table and populates from every selected membership in
+stored order plus the Page-local contribution. One transient checked-by-default
+checkbox appears for each distinct Applicability Set referenced by assigned Page
+Groups; groups without a set always participate and multiple checked sets compose
+together. Reopening the Page restores all checked. Fixtures and Live payloads
+evaluate each referenced set independently; Applicability Sets do not compete for a
+global winner, while tied competing Assignments may remain ambiguous.
+
+Later Page Groups replace earlier ordinary conflicting facets with superseded
+provenance, making reorder a deterministic composition control. Compatible
+constraints combine; invariant rules and structurally incompatible definitions
+remain blocked. The Pages editor contains no fixed Retail, Trade, Overlapping, or
+other product-owned observation examples. Generic Page documentation uses the
+all-checked composition, while a Fixture-specific result is explicitly an evaluated
+example. This correction is specified by
 `docs/data-layer-page-group-structural-authoring-correction-program-R01.md` and
 `features/data-layer-page-group-structural-authoring.feature` and supersedes older
 wording that could imply an observation is required for Page authoring.

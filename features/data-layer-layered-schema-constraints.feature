@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=27dcb6a77d0acdf683adaf0f6bf55463efc143a454671ecb6173f22c8cceae2b
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-27T21:42:13.249141587Z","feature_name":"Data layer layered schema constraints","feature_path":"features/data-layer-layered-schema-constraints.feature","background_hash":"fb0d1f404fb0f55f8682c5c7edfe59c4ef21fe314d802f1e5552e4014cacd104","implementation_hash":"076ed24313","scenarios":[{"index":22,"name":"Data layer layered schema constraints 023","scenario_hash":"c84c59f813ebd519264b0b21b11a9804c78f939dfae328d51fa92e0eda289884","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-27T18:33:20.500074899Z"},{"index":0,"name":"Data layer layered schema constraints 001","scenario_hash":"a5183bedc23abc0279313c0d2042eaa9a765afdc9141a0444902aed1a2a4b766","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-25T18:53:09.275136020Z"},{"index":4,"name":"Data layer layered schema constraints 005","scenario_hash":"527091a0b3f315daabfdf211aaa2ac580aa78d700a679941f48a08aded429cd2","mutation_count":32,"result":{"Total":32,"Killed":32,"Survived":0,"Errors":0},"tested_at":"2026-07-25T18:53:09.275136020Z"},{"index":19,"name":"Data layer layered schema constraints 020","scenario_hash":"3f75768023c30398e21f1b6f70fde500fee667c17b64829a9f9a69fb8100f1c2","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-07-25T18:53:09.275136020Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer layered schema constraints
 
   Background:
@@ -208,26 +203,23 @@ Feature: Data layer layered schema constraints
     And the impact preview identifies affected properties, Page instances, compiled targets, and stale exports before commit
 
   # Data layer layered schema constraints 014
-  Scenario: Data layer layered schema constraints 014
-    Given Cart composition order is Checkout followed by Retail Checkout followed by Trade Checkout
+  Scenario Outline: Data layer layered schema constraints 014
+    Given Cart composition order is Checkout followed by <specific order>
     And Checkout requires funnel_name checkout and allows funnel_step 3a or 3b
-    And conditional Page Group definitions are
-      | Page Group      | applicability                     | funnel_step refinement |
-      | Retail Checkout | customer_type Equals retail       | allowed value 3a       |
-      | Trade Checkout  | customer_type Equals trade        | allowed value 3b       |
-    When effective Cart schemas compile for one retail observation and one trade observation
-    Then their Page Group provenance is
-      | observation | included stack              | funnel_step |
-      | retail      | Checkout, Retail Checkout   | 3a          |
-      | trade       | Checkout, Trade Checkout    | 3b          |
-    And inactive memberships are named as excluded without changing the relative order of active groups
-    When Retail Checkout attempts type number for funnel_step
-    Then compilation is blocked at funnel_step despite Retail Checkout's later position
-    And the issue names Checkout, Retail Checkout, their order, the unsafe type change, and direct repair actions
-    When its allowed-value editor instead adds 4
-    Then compilation is blocked at funnel_step with the unsafe allowed-value expansion
+    And Retail Checkout and Trade Checkout reference independently evaluable Applicability Sets
+    And they define ordinary funnel_step values 3a and 3b respectively
+    When both independently applicable Page Groups participate
+    Then <winner> supplies effective funnel_step <effective value> as the later ordinary contribution
+    And provenance identifies <superseded> as superseded
+    And no Applicability Set priority or winner changes the stored Page Group order
     When Retail Checkout and Trade Checkout both match one observation
-    Then applicability is blocked as ambiguous rather than allowing membership order to choose a winner
+    Then both Page Groups participate without applicability ambiguity
+    And only an invariant or structurally incompatible definition blocks ordered composition
+
+    Examples:
+      | specific order                      | winner          | effective value | superseded      |
+      | Retail Checkout then Trade Checkout | Trade Checkout  | 3b              | Retail Checkout |
+      | Trade Checkout then Retail Checkout | Retail Checkout | 3a              | Trade Checkout  |
 
   # Data layer layered schema constraints 015
   Scenario: Data layer layered schema constraints 015

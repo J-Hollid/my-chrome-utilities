@@ -252,17 +252,21 @@ applicability, and prospective rule impact. The resulting `Page Group rule stack
 supports pointer and keyboard reordering, removal, direct group navigation, and an
 effective contribution or conflict summary for every row.
 
-When a concrete Fixture or captured observation is selected, only matching
-memberships participate in that scenario-specific compilation; inactive memberships
-remain visible in exclusion evidence and active groups retain their relative
-Page-defined order. Without an observation, Page authoring and generic
-documentation preserve every membership's structural contribution and represent
-Applicability Sets as conditional branches instead of evaluating them against an
-empty payload. A later applicable group may narrow or explicitly replace an earlier
-overridable definition under the same legality rules used at other layers. Order
-cannot legalize a type change, widening, required relaxation, forbidden
-re-enablement, unresolved conflict, or overlapping applicability. Those conditions
-block with exact Page Group provenance and repair actions.
+Page Group membership is the schema-composition contract. A referenced
+Applicability Set is optional and never removes that membership merely because no
+observation exists. The Page editor presents one transient checkbox for each
+distinct Applicability Set referenced by its memberships; all are checked by
+default, groups without a set always participate, and multiple checked sets compose
+together in Page-defined order. Fixtures and captured observations evaluate every
+referenced set independently rather than selecting one global set winner.
+
+Composition proceeds from general to specific. A later Page Group replaces an
+earlier ordinary conflicting facet and retains the earlier value as superseded
+provenance, so reordering can deliberately change the effective result. Compatible
+constraints combine. Invariant rules and structurally incompatible definitions
+remain blocked with exact Page Group provenance and repair actions. Assignment
+priority resolves competing routing candidates; simultaneous Applicability Set
+matches alone are not ambiguous.
 
 Before membership reorder or removal, impact review names changed effective
 properties, affected Page instances and compiled targets, stale exports or evidence,
@@ -604,7 +608,7 @@ feature.
 | C27 | Complete rules need readable alternatives without nested Boolean trees | Authoring 014 | One All or Any mode combines flat typed condition rows, with multi-value operators for alternatives | Flat rule-condition model, typed operator adapter, and rule compiler | Persisted match mode and ordered conditions plus positive and negative tests | B, D | Conditions require no raw expression or nested group and invalid rows focus exact controls |
 | C28 | Canonical property search drops focus after each character | Authoring 015–016 | Continuous typing, caret editing, composition, and clearing retain search focus on every contributor surface | Shared canonical editor renderer, navigator projection, and focus adapter | Per-event active element and selection offsets, filtered rows, unchanged revision and storage | B, E | A multi-character query completes without refocusing and search emits no canonical command |
 | C29 | Pages need multiple ordered Page Group memberships | Layering 013 | Searchable Add to Page Group and an accessible ordered rule stack | Page membership command, Page editor, and derived group member projection | Stable ordered references, focus restoration, impact preview, and absent duplicate source | B, C | Page owns one general-to-specific membership list and group members derive from it |
-| C30 | Membership order must refine without hiding unsafe conflicts | Layering 014 | Applicable groups compose in relative order with exclusion and conflict explanations | Applicability matcher, Page-branch compiler, and legality matrix | Retail and Trade outputs, excluded contributors, blocking issues, and overlap evidence | C, D | Order selects no ambiguous group and cannot legalize an unsafe override |
+| C30 | Membership order must produce a deterministic effective schema | Layering 014 | Independently selected groups compose in relative order; later ordinary facets supersede earlier ones while invariants and structural incompatibilities block | Applicability preview, Page-branch compiler, provenance, and legality matrix | Retail and Trade reorder outputs, superseded contributors, blocking invariants, and simultaneous matches | C, D | Reorder changes the ordinary winner, multiple sets do not become ambiguous, and irreconcilable definitions remain blocked |
 | C31 | Existing Page and Page Group membership sources may diverge | Layering 015 | Human migration review preserves Page order and appends group-only membership | Membership migration, project transaction store, and derived member projection | Proposed ordered union, missing-reference blocker, canonical Saved Draft, and page-scoped Undo restoration | A | No membership is lost and only the Page-owned ordered list remains editable |
 | C32 | Page and Page Group schema editing is hidden behind Inspector interaction | Layering 016 | Direct entity routes show complete configuration and composed effective-schema rows | Builder routing, shared editor, and effective-schema compiler | Route ancestry, mounted rows, contribution stacks, and absent parallel editor | B, C | Overview-to-entity editing never requires the Inspector |
 | C33 | Page-local overrides must remain intentional and reversible as parents change | Layering 017 | Local facet wins ordinary parent differences, warns, and can reset to live parents | Sparse contribution commands and Page-branch compiler | Local facet storage, shadowed provenance, reset impact, recompilation, and Undo | B, C | Reset deletes the local contribution and never copies a parent snapshot |

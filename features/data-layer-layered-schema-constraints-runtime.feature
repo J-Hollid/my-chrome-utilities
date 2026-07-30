@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=e841e2e3e3f72f934d44b14f2e9714c12ab0c868e121033d0758804e7f6fc807
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-27T21:42:13.360241018Z","feature_name":"Data layer layered schema constraints runtime","feature_path":"features/data-layer-layered-schema-constraints-runtime.feature","background_hash":"e3abf09522d1a7021ef5c4fddde53d634dd57d90657c227f341935b5a82edc94","implementation_hash":"076ed24313","scenarios":[{"index":22,"name":"Data layer layered schema constraints runtime 023","scenario_hash":"22070da951bdc4facb3dc337370b032e33a9636500f08d6391d565e86da5686e","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-07-27T18:33:25.961266088Z"},{"index":0,"name":"Data layer layered schema constraints runtime 001","scenario_hash":"841b58bac0a850830dd983e58475124102f2e9e7df6f82b643fd77f719b16764","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-25T18:53:09.531441286Z"},{"index":4,"name":"Data layer layered schema constraints runtime 005","scenario_hash":"e6f9b12fb82ce881ea1a801d881cef93539989a8ae6fcdc441241974c826ece5","mutation_count":32,"result":{"Total":32,"Killed":32,"Survived":0,"Errors":0},"tested_at":"2026-07-25T18:53:09.531441286Z"},{"index":19,"name":"Data layer layered schema constraints runtime 020","scenario_hash":"1d4735c775a66aaaeb64d8d2d882d91c5f770db945eceec40651d722079e715e","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-07-25T18:53:09.531441286Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer layered schema constraints runtime
 
   Background:
@@ -207,26 +202,21 @@ Feature: Data layer layered schema constraints runtime
     And the rendered impact preview names affected properties, Page instances, compiled targets, and stale exports before commit
 
   # Data layer layered schema constraints runtime 014
-  Scenario: Data layer layered schema constraints runtime 014
-    Given production Cart membership order is Checkout, Retail Checkout, and Trade Checkout
+  Scenario Outline: Data layer layered schema constraints runtime 014
+    Given production Cart membership order is Checkout followed by <specific order>
     And production Checkout requires funnel_name checkout and permits funnel_step 3a or 3b
-    And production conditional group definitions are
-      | Page Group      | applicability              | funnel_step refinement |
-      | Retail Checkout | customer_type retail       | allowed value 3a       |
-      | Trade Checkout  | customer_type trade        | allowed value 3b       |
-    When the production compiler receives retail and trade observations for Cart
-    Then compiled Page Group evidence is
-      | observation | included stack              | funnel_step |
-      | retail      | Checkout, Retail Checkout   | 3a          |
-      | trade       | Checkout, Trade Checkout    | 3b          |
-    And rendered evidence names inactive memberships without reordering active group IDs
-    When production Retail Checkout proposes changing funnel_step from string to number
-    Then compilation blocks at funnel_step regardless of stored membership position
-    And the installed issue names Checkout, Retail Checkout, their order, the unsafe type change, and repair links
-    When production Retail Checkout instead proposes allowed value 4
-    Then compilation blocks at funnel_step with the unsafe allowed-value expansion
+    And production Retail Checkout and Trade Checkout have independent Applicability Sets and ordinary funnel_step values 3a and 3b
+    When both independently applicable Page Groups participate in the installed effective-schema table
+    Then production <winner> supplies funnel_step <effective value> with <superseded> shown as superseded provenance
+    And no Applicability Set priority or winner changes the stored Page Group order
     When one production observation matches Retail Checkout and Trade Checkout
-    Then assignment reports ambiguity without selecting the later membership
+    Then both Page Groups participate without applicability ambiguity
+    And production blocks only an invariant or structurally incompatible definition with direct repair links
+
+    Examples:
+      | specific order                      | winner          | effective value | superseded      |
+      | Retail Checkout then Trade Checkout | Trade Checkout  | 3b              | Retail Checkout |
+      | Trade Checkout then Retail Checkout | Retail Checkout | 3a              | Trade Checkout  |
 
   # Data layer layered schema constraints runtime 015
   Scenario: Data layer layered schema constraints runtime 015
