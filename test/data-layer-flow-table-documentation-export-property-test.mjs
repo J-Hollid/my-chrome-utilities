@@ -22,6 +22,10 @@ import {
   groupProjectDocumentationConceptRows,
   reconcileProjectDocumentationConcepts,
 } from "../dist/data-layer-project-documentation-compiler.js";
+import {
+  PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT,
+  readProjectDocumentationLogoFile,
+} from "../dist/data-layer-project-documentation-workspace-ui.js";
 
 const permutations=(values)=>values.length<2?[values]:values.flatMap((value,index)=>permutations(values.filter((_,candidate)=>candidate!==index)).map((rest)=>[value,...rest]));
 const unzipStored=(bytes)=>{const files=new Map(),view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let offset=0;while(offset+30<=bytes.length&&view.getUint32(offset,true)===0x04034b50){const size=view.getUint32(offset+18,true),nameLength=view.getUint16(offset+26,true),extraLength=view.getUint16(offset+28,true),name=new TextDecoder().decode(bytes.slice(offset+30,offset+30+nameLength)),start=offset+30+nameLength+extraLength;files.set(name,new TextDecoder().decode(bytes.slice(start,start+size)));offset=start+size;}return files;};
@@ -41,6 +45,39 @@ const configured=configureFlowDocumentationSnapshot(snapshot,{contextOrder:["con
 for(const prefix of ["'=SUM(1,2)","'+1","'-2","'@name"])assert.equal(renderFlowDocumentationClipboard(configureFlowDocumentationTable(snapshot,"values",{selectedPaths:["/unsafe"]})).plain.includes(prefix),true);
 assert.match(copy.html,/&lt;strong&gt;<br>line/);assert.doesNotMatch(copy.html,/<strong>/);assert.doesNotMatch(binary,/<f>/);assert.match(binary,/Checkout · Published/);
 assert.deepEqual(snapshot.contexts.map(({id})=>id),["context:a","context:b","context:c","context:d"]);
+
+const logoMediaTypes=["image/png","image/jpeg","image/gif"];
+let logoSeed=0x10c0f11e;
+const logoRandom=()=>{
+  logoSeed=(Math.imul(logoSeed,1664525)+1013904223)>>>0;
+  return logoSeed;
+};
+for(let sample=0;sample<120;sample+=1){
+  const type=logoMediaTypes[logoRandom()%logoMediaTypes.length],name=`logo-${sample}.${type.split("/")[1]}`,payload="A".repeat(logoRandom()%4096),dataUrl=`data:${type};base64,${payload}`;
+  assert.deepEqual(
+    await readProjectDocumentationLogoFile({name,type},async()=>dataUrl),
+    {fileName:name,dataUrl},
+    "every supported media type preserves the human name and exact converted bytes",
+  );
+}
+let unsupportedReadCount=0;
+for(const type of ["","image/svg+xml","text/plain","application/octet-stream"]){
+  await assert.rejects(
+    readProjectDocumentationLogoFile({name:"unsupported",type},async()=>{unsupportedReadCount+=1;return`data:${type};base64,AA==`;}),
+    {message:"Choose a PNG, JPEG, or GIF image"},
+  );
+}
+assert.equal(unsupportedReadCount,0,"unsupported media is rejected before reading its bytes");
+const boundaryPrefix="data:image/png;base64,",boundaryDataUrl=boundaryPrefix+"A".repeat(PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT-boundaryPrefix.length);
+assert.equal(
+  (await readProjectDocumentationLogoFile({name:"boundary.png",type:"image/png"},async()=>boundaryDataUrl)).dataUrl.length,
+  PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT,
+  "the documented inclusive data-URL limit is accepted",
+);
+await assert.rejects(
+  readProjectDocumentationLogoFile({name:"oversize.png",type:"image/png"},async()=>`${boundaryDataUrl}A`),
+  {message:"The logo is too large"},
+);
 
 for(let index=0;index<100;index+=1){
   const inputLogo=index%4===0?"data:image/png;base64,AA==":index%4===1?"https://example.test/logo.png":"javascript:unsafe";
