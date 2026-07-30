@@ -10,7 +10,7 @@ const pushNamedRuleIssue = (issues, targetName, path, canonicalPath, property, a
     pushIssue(issues, targetName, path, canonicalPath, property, actual, code, String(rule.literal ?? ""));
     issues.at(-1).message = String(rule.name ?? "String rule");
 };
-const pushValueRuleIssue = (issues, targetName, path, canonicalPath, property, actual, rule) => { pushIssue(issues, targetName, path, canonicalPath, property, actual, "VALUE_OPERATOR", rule.expectedValue); issues.at(-1).message = String(rule.name ?? "Value rule"); };
+const pushValueRuleIssue = (issues, targetName, path, canonicalPath, property, actual, rule) => { const code = rule.operator === "Starts with" ? "STARTS_WITH" : rule.operator === "Ends with" ? "ENDS_WITH" : rule.operator === "Includes" ? "INCLUDES" : "VALUE_OPERATOR"; pushIssue(issues, targetName, path, canonicalPath, property, actual, code, rule.expectedValue); issues.at(-1).message = String(rule.name ?? "Value rule"); };
 const concretePaths = (payload, template) => { const segments = template.split("/").filter(Boolean), walk = (value, index, parts) => { if (index === segments.length)
     return [`/${parts.join("/")}`]; const segment = segments[index]; if (segment === "*")
     return Array.isArray(value) ? value.flatMap((entry, itemIndex) => walk(entry, index + 1, [...parts, String(itemIndex)])) : []; const decoded = segment.replaceAll("~1", "/").replaceAll("~0", "~"), next = value && typeof value === "object" ? value[decoded] : undefined; if (next === undefined && segments.slice(index + 1).includes("*"))

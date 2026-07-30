@@ -28,7 +28,7 @@ function editRule(row, rule, context, invoker) {
     headed(severitySection, "Severity and message");
     headed(actions, "Rule actions");
     actions.setAttribute("aria-label", "Rule actions");
-    const validate = () => { const issue = conditionIssue ?? focusedRuleIssue(draft); if (save)
+    const validate = () => { const issue = conditionIssue ?? focusedRuleIssue(draft, context.getWorking()?.type); if (save)
         save.disabled = Boolean(issue); status.textContent = issue ?? ""; };
     const name = input(dom, "editRuleName", draft.name ?? ""), kind = dom.createElement("select"), kindLabel = draft.kind === "value" ? "Value" : draft.kind === "allowed-values" ? "Allowed values" : draft.kind === "pattern" ? "Pattern" : draft.kind;
     kind.name = "editRuleKind";
@@ -91,7 +91,7 @@ function editRule(row, rule, context, invoker) {
     }
     save = button(dom, "Save rule", () => { const working = context.getWorking(); if (!working)
         return; const index = working.rules.findIndex(({ id }) => id === rule.id); if (index < 0)
-        return; const issue = conditionIssue ?? focusedRuleIssue(draft); if (issue) {
+        return; const issue = conditionIssue ?? focusedRuleIssue(draft, working.type); if (issue) {
         status.textContent = issue;
         return;
     } working.rules[index] = draft; context.feedback(`Staged changes to ${ruleKindLabel(draft)}.`); context.render(); });

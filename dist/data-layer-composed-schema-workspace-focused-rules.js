@@ -22,7 +22,7 @@ function renderRuleEditor(row, rule, index, context, invoker) {
     editor.setAttribute("aria-label", `Edit rule ${String(rule.id ?? index)}`);
     actions.setAttribute("aria-label", "Rule actions");
     status.setAttribute("role", "status");
-    const validate = () => { const issue = conditionIssue ?? focusedRuleIssue(draftRule); if (save)
+    const validate = () => { const issue = conditionIssue ?? focusedRuleIssue(draftRule, String(context.getDraft()?.type ?? context.row.effective.type ?? "")); if (save)
         save.disabled = Boolean(issue); status.textContent = issue ?? ""; };
     const name = dom.createElement("input"), kind = dom.createElement("select"), propertyType = context.getDraft()?.type ?? context.row.effective.type, kindValue = String(draftRule.kind ?? "rule"), kindLabel = kindValue === "value" ? "Value" : kindValue === "allowed-values" ? "Allowed values" : kindValue === "pattern" ? "Pattern" : kindValue;
     name.name = "editRuleName";
@@ -89,7 +89,7 @@ function renderRuleEditor(row, rule, index, context, invoker) {
         if (field === "pattern" && control instanceof HTMLInputElement)
             then.append(renderRegularExpressionTester(dom, control));
     }
-    save = button(dom, "Save rule", () => { const draft = context.getDraft(), issue = conditionIssue ?? focusedRuleIssue(draftRule); if (!draft)
+    save = button(dom, "Save rule", () => { const draft = context.getDraft(), issue = conditionIssue ?? focusedRuleIssue(draftRule, String(context.getDraft()?.type ?? context.row.effective.type ?? "")); if (!draft)
         return; if (issue) {
         status.textContent = issue;
         return;
@@ -145,6 +145,7 @@ function renderAddPanel(host, context) {
         opener.remove();
         const panel = dom.createElement("fieldset"), details = section(dom, "Rule details"), when = section(dom, "When"), then = section(dom, "Then"), severity = section(dom, "Severity and message"), actions = section(dom, "Rule actions"), kind = dom.createElement("select"), name = dom.createElement("input"), fields = dom.createElement("div"), status = dom.createElement("p");
         let condition, conditionIssue;
+        const propertyType = String(draft.type ?? context.row.effective.type ?? ""), scalarValue = ["string", "number", "integer", "boolean"].includes(propertyType.toLocaleLowerCase()), ruleTypes = [["presence", "Presence"], ...(scalarValue ? [["value", "Value"]] : []), ["allowed-values", "Allowed values"], ["pattern", "Pattern"], ["range", "Range"], ["cardinality", "Cardinality"], ["reusable", "Reusable"]];
         panel.dataset.ruleEditorMode = "add";
         fields.dataset.ruleFieldGrid = "true";
         severity.dataset.ruleFieldGrid = "true";
@@ -152,7 +153,7 @@ function renderAddPanel(host, context) {
         actions.setAttribute("aria-label", "Rule actions");
         status.setAttribute("role", "status");
         kind.name = "ruleKind";
-        kind.append(new Option("Choose rule type", ""), ...[["presence", "Presence"], ["value", "Value"], ["allowed-values", "Allowed values"], ["pattern", "Pattern"], ["range", "Range"], ["cardinality", "Cardinality"], ["reusable", "Reusable"]].map(([entry, label]) => new Option(label, entry)));
+        kind.append(new Option("Choose rule type", ""), ...ruleTypes.map(([entry, label]) => new Option(label, entry)));
         name.name = "newRuleName";
         details.append(labeled(dom, "Rule name", name), labeled(dom, "Rule type", kind));
         const candidate = () => { if (!kind.value)
@@ -173,11 +174,11 @@ function renderAddPanel(host, context) {
             if (outcome)
                 rule.reusableOutcome = outcome;
         } return rule; };
-        const add = button(dom, "Add rule", () => { const rule = candidate(), issue = conditionIssue ?? (rule && focusedRuleIssue(rule)); if (!rule)
+        const add = button(dom, "Add rule", () => { const rule = candidate(), issue = conditionIssue ?? (rule && focusedRuleIssue(rule, propertyType)); if (!rule)
             return; if (issue) {
             status.textContent = issue;
             return;
-        } rule.id = `rule:${crypto.randomUUID()}`; draft.rules = [...draft.rules, rule]; context.render(); }), validate = () => { const rule = candidate(), issue = conditionIssue ?? (rule ? focusedRuleIssue(rule) : "Choose a rule type."); add.disabled = Boolean(issue); status.textContent = issue ?? ""; };
+        } rule.id = `rule:${crypto.randomUUID()}`; draft.rules = [...draft.rules, rule]; context.render(); }), validate = () => { const rule = candidate(), issue = conditionIssue ?? (rule ? focusedRuleIssue(rule, propertyType) : "Choose a rule type."); add.disabled = Boolean(issue); status.textContent = issue ?? ""; };
         const renderFields = () => { fields.replaceChildren(); for (const field of focusedRuleFields(kind.value)) {
             if (["condition", "severity", "message"].includes(field))
                 continue;

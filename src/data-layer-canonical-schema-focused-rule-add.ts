@@ -24,7 +24,8 @@ export function renderCanonicalRuleAddPanel(host:HTMLElement,context:CanonicalFo
     opener.remove();
     const panel=dom.createElement("fieldset"),legend=dom.createElement("legend"),details=section(dom,"Rule details"),when=section(dom,"When"),then=section(dom,"Then"),severitySection=section(dom,"Severity and message"),actions=section(dom,"Rule actions"),kind=dom.createElement("select"),fields=dom.createElement("div"),status=dom.createElement("p"),name=input(dom,"newRuleName"),target=context.properties?.().find(({id})=>id===working.id),boundaries=target?.arrayBoundaries??[],scope:CanonicalArrayScopeBoundary[]=boundaries.map(({propertyId})=>({propertyId,mode:"every"}));
     let condition:CanonicalPredicate|undefined,conditionIssue:string|undefined;
-    panel.dataset.ruleEditorMode="add";fields.dataset.ruleFieldGrid="true";severitySection.dataset.ruleFieldGrid="true";panel.setAttribute("aria-label","Add rule editor");legend.textContent="Add rule";status.setAttribute("role","status");kind.name="ruleKind";kind.required=true;kind.append(new Option("Choose rule type",""),...([["presence","Presence"],["value","Value"],["allowed-values","Allowed values"],["pattern","Pattern"],["range","Range"],["cardinality","Cardinality"],["reusable","Reusable"]] as const).map(([entry,label])=>new Option(label,entry)));
+    const scalarValue=["string","number","integer","boolean"].includes(working.type),ruleTypes=[["presence","Presence"],...(scalarValue?[["value","Value"]]:[]),["allowed-values","Allowed values"],["pattern","Pattern"],["range","Range"],["cardinality","Cardinality"],["reusable","Reusable"]] as const;
+    panel.dataset.ruleEditorMode="add";fields.dataset.ruleFieldGrid="true";severitySection.dataset.ruleFieldGrid="true";panel.setAttribute("aria-label","Add rule editor");legend.textContent="Add rule";status.setAttribute("role","status");kind.name="ruleKind";kind.required=true;kind.append(new Option("Choose rule type",""),...ruleTypes.map(([entry,label])=>new Option(label,entry)));
     details.append(labeled(dom,"Rule name",name),labeled(dom,"Rule type",kind));
     const conditionHost=dom.createElement("div");when.append(conditionHost);
     const candidate=():CanonicalRule|undefined=>{
@@ -41,8 +42,8 @@ export function renderCanonicalRuleAddPanel(host:HTMLElement,context:CanonicalFo
       if(reusable?.value){rule.reusableRuleId=reusable.value;const source=readFocusedReusableRules().find(({id})=>id===reusable.value),ruleName=source?.name??reusable.selectedOptions[0]?.textContent,outcome=source&&focusedReusableOutcome(source);if(ruleName)rule.name=ruleName;if(outcome)rule.reusableOutcome=outcome;}
       return rule;
     };
-    const add=button(dom,"Add rule",()=>{const next=context.getWorking(),rule=candidate();if(!next||!rule)return;const issue=conditionIssue??focusedRuleIssue(rule as unknown as Record<string,unknown>);if(issue){status.textContent=issue;return;}rule.id=context.id("rule");next.rules=[...next.rules,rule];context.feedback("Staged rule addition.");context.render();});
-    const validate=():void=>{const rule=candidate(),issue=conditionIssue??canonicalArrayScopeIssue(rule?.arrayScope)??(rule?focusedRuleIssue(rule as unknown as Record<string,unknown>):"Choose a rule type.");add.disabled=Boolean(issue);status.textContent=issue??"";};
+    const add=button(dom,"Add rule",()=>{const next=context.getWorking(),rule=candidate();if(!next||!rule)return;const issue=conditionIssue??focusedRuleIssue(rule as unknown as Record<string,unknown>,working.type);if(issue){status.textContent=issue;return;}rule.id=context.id("rule");next.rules=[...next.rules,rule];context.feedback("Staged rule addition.");context.render();});
+    const validate=():void=>{const rule=candidate(),issue=conditionIssue??canonicalArrayScopeIssue(rule?.arrayScope)??(rule?focusedRuleIssue(rule as unknown as Record<string,unknown>,working.type):"Choose a rule type.");add.disabled=Boolean(issue);status.textContent=issue??"";};
     const renderOutcome=():void=>{
       fields.replaceChildren();
       for(const field of focusedRuleFields(kind.value)){

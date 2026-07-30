@@ -16,8 +16,11 @@ export function renderValueRuleControls(dom, propertyType, prefix, selectedOpera
     value.name = `${prefix}RuleValue`;
     if (value instanceof HTMLSelectElement)
         value.append(new Option("Choose value", ""), new Option("true", "true"), new Option("false", "false"));
-    else
+    else {
         value.type = ["number", "integer"].includes(type ?? "") ? "number" : "text";
+        if (type === "integer")
+            value.step = "1";
+    }
     if (operand !== undefined)
         value.value = String(operand);
     valueLabel.append("Value", value);

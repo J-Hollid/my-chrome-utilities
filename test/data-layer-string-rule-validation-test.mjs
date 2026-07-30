@@ -6,6 +6,7 @@ import {
   stringRuleRequirement,
   valueOperatorOptions,
   valueRuleMatches,
+  valueRuleOperand,
   valueRuleRequirement,
 } from "../dist/data-layer-string-rule-validation.js";
 import {focusedRuleIssue} from "../dist/data-layer-focused-rule-policy.js";
@@ -45,6 +46,16 @@ for(const type of ["number","integer","boolean"])assert.deepEqual(
   ["Equals","Does not equal"],
   `${type} Value rules expose only equality operators`,
 );
+assert.deepEqual(valueOperatorOptions("object"),[]);
+assert.deepEqual(valueOperatorOptions("array"),[]);
+assert.equal(valueRuleMatches("Equals",0,-0),true,"typed numeric equality treats signed zeroes as the same value");
+assert.equal(valueRuleMatches("Does not equal",0,-0),false,"negative equality complements equality for signed zeroes");
+assert.equal(valueRuleMatches("Equals",Number.NaN,Number.NaN),false,"NaN is not equal to itself");
+assert.equal(valueRuleMatches("Does not equal",Number.NaN,Number.NaN),true,"negative equality complements equality for NaN");
+assert.equal(valueRuleOperand("integer","12"),12);
+assert.equal(valueRuleOperand("integer","1.5"),undefined);
+assert.equal(valueRuleOperand("number","Infinity"),undefined);
+assert.equal(focusedRuleIssue({kind:"value",name:"Integer value",operator:"Equals",expectedValue:1.5},"integer"),"Enter a whole-number Value");
 
 const examples=[
   {operator:"Equals",operand:"sale",passing:"sale",failing:"presale",requirement:"equal sale"},
@@ -81,7 +92,7 @@ for(const example of examples){
   const issues=validateLayeredObservation({targetId:"target:string-rules",targetName:"String rules",revision:1,compiled},{value:example.failing}).issues;
   assert.deepEqual(
     issues.map(({code,message,expected})=>({code,message,expected})),
-    [{code:"VALUE_OPERATOR",message:`Named ${example.operator} rule`,expected:example.operand}],
+    [{code:example.operator==="Starts with"?"STARTS_WITH":example.operator==="Ends with"?"ENDS_WITH":example.operator==="Includes"?"INCLUDES":"VALUE_OPERATOR",message:`Named ${example.operator} rule`,expected:example.operand}],
     "the production validator reports the named Value rule",
   );
 }

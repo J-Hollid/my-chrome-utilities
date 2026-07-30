@@ -11,7 +11,7 @@ export const regularExpressionTesterGridStyle="display:grid;grid-template-column
 export function renderValueRuleControls(dom:Document,propertyType:string|undefined,prefix:"new"|"edit",selectedOperator:unknown,operand:unknown,onChange:()=>void):HTMLElement {
   const host=dom.createElement("div"),operatorLabel=dom.createElement("label"),operator=dom.createElement("select"),valueLabel=dom.createElement("label"),type=propertyType?.toLocaleLowerCase(),value=type==="boolean"?dom.createElement("select"):dom.createElement("input");
   host.dataset.valueRuleControls="true";operator.name=`${prefix}RuleOperator`;operator.append(...valueOperatorOptions(type).map((choice)=>new Option(choice,choice)));operator.value=String(selectedOperator??"Equals");operatorLabel.append("Operator",operator);
-  value.name=`${prefix}RuleValue`;if(value instanceof HTMLSelectElement)value.append(new Option("Choose value",""),new Option("true","true"),new Option("false","false"));else value.type=["number","integer"].includes(type??"")?"number":"text";
+  value.name=`${prefix}RuleValue`;if(value instanceof HTMLSelectElement)value.append(new Option("Choose value",""),new Option("true","true"),new Option("false","false"));else{value.type=["number","integer"].includes(type??"")?"number":"text";if(type==="integer")value.step="1";}
   if(operand!==undefined)value.value=String(operand);valueLabel.append("Value",value);operator.addEventListener("change",onChange);value.addEventListener("input",onChange);value.addEventListener("change",onChange);host.append(operatorLabel,valueLabel);return host;
 }
 

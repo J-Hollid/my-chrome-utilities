@@ -10,8 +10,12 @@ export const valueOperatorOptions = (propertyType) => propertyType?.toLocaleLowe
 export function valueRuleOperand(propertyType, value) {
     if (propertyType?.toLocaleLowerCase() === "boolean")
         return value === "true";
-    if (["number", "integer"].includes(propertyType?.toLocaleLowerCase() ?? ""))
-        return Number(value);
+    if (["number", "integer"].includes(propertyType?.toLocaleLowerCase() ?? "")) {
+        const numeric = Number(value);
+        if (!Number.isFinite(numeric) || propertyType?.toLocaleLowerCase() === "integer" && !Number.isInteger(numeric))
+            return undefined;
+        return numeric;
+    }
     return value;
 }
 export function normalizeValueRule(rule) {
@@ -21,7 +25,7 @@ export function normalizeValueRule(rule) {
     return { ...retained, kind: "value", operator: legacyOperators[rule.kind], expectedValue: literal };
 }
 export function valueRuleMatches(operator, actual, operand) {
-    const equal = Object.is(actual, operand), value = String(actual ?? ""), expected = String(operand ?? "");
+    const equal = actual === operand, value = String(actual ?? ""), expected = String(operand ?? "");
     if (operator === "Equals")
         return equal;
     if (operator === "Does not equal")

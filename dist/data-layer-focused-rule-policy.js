@@ -1,5 +1,6 @@
 import { canonicalFlatPredicateIssue } from "./canonical-schema/predicate-policy.js";
 import { isStringLiteralRuleKind, regularExpressionIssue } from "./data-layer-string-rule-validation.js";
+import { valueOperatorOptions } from "./data-layer-string-rule-validation.js";
 const existenceOperators = new Set(["Exists", "Does not exist"]);
 const namedRuleKinds = new Set(["presence", "value", "allowed-values", "pattern", "range", "cardinality", "reusable", "starts-with", "ends-with", "includes"]);
 const incompleteConditionPredicate = (condition) => {
@@ -25,7 +26,7 @@ const flatConditionIssue = (condition) => {
     return value.children.some((child) => !child || typeof child !== "object" || child.kind !== "predicate" || incompleteConditionPredicate(child));
 };
 /** Validate a staged rule without depending on a browser or persistence adapter. */
-export function focusedRuleIssue(rule) {
+export function focusedRuleIssue(rule, propertyType) {
     if (namedRuleKinds.has(String(rule.kind)) && !String(rule.name ?? "").trim())
         return "Enter a rule name";
     const migrationIssue = canonicalFlatPredicateIssue(rule.condition);
@@ -35,8 +36,18 @@ export function focusedRuleIssue(rule) {
         return "Complete or remove the condition";
     if (rule.kind === "presence" && !["required", "optional", "forbidden"].includes(String(rule.presence ?? "")))
         return "Choose Required, Optional, or Forbidden.";
-    if (rule.kind === "value" && rule.operator !== undefined && rule.expectedValue === undefined)
-        return "Enter a Value";
+    if (rule.kind === "value" && rule.operator !== undefined) {
+        if (propertyType && !valueOperatorOptions(propertyType).includes(rule.operator))
+            return "Choose a compatible Operator";
+        if (rule.expectedValue === undefined)
+            return "Enter a Value";
+        if (propertyType?.toLocaleLowerCase() === "integer" && !Number.isInteger(rule.expectedValue))
+            return "Enter a whole-number Value";
+        if (propertyType?.toLocaleLowerCase() === "number" && !(typeof rule.expectedValue === "number" && Number.isFinite(rule.expectedValue)))
+            return "Enter a numeric Value";
+        if (propertyType?.toLocaleLowerCase() === "boolean" && typeof rule.expectedValue !== "boolean")
+            return "Choose true or false";
+    }
     if (rule.kind === "value" && rule.operator === undefined && !(Array.isArray(rule.allowedValues) && rule.allowedValues.length))
         return "Enter at least one allowed value";
     if (rule.kind === "allowed-values" && !(Array.isArray(rule.allowedValues) && rule.allowedValues.length))

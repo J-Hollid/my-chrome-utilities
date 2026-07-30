@@ -21,7 +21,11 @@ export const valueOperatorOptions=(propertyType:string|undefined):ValueRuleOpera
 
 export function valueRuleOperand(propertyType:string|undefined,value:string):unknown {
   if(propertyType?.toLocaleLowerCase()==="boolean")return value==="true";
-  if(["number","integer"].includes(propertyType?.toLocaleLowerCase()??""))return Number(value);
+  if(["number","integer"].includes(propertyType?.toLocaleLowerCase()??"")){
+    const numeric=Number(value);
+    if(!Number.isFinite(numeric)||propertyType?.toLocaleLowerCase()==="integer"&&!Number.isInteger(numeric))return undefined;
+    return numeric;
+  }
   return value;
 }
 
@@ -32,7 +36,7 @@ export function normalizeValueRule<T extends Record<string,unknown>>(rule:T):T {
 }
 
 export function valueRuleMatches(operator:unknown,actual:unknown,operand:unknown):boolean {
-  const equal=Object.is(actual,operand),value=String(actual??""),expected=String(operand??"");
+  const equal=actual===operand,value=String(actual??""),expected=String(operand??"");
   if(operator==="Equals")return equal;
   if(operator==="Does not equal")return!equal;
   if(operator==="Starts with")return value.startsWith(expected);

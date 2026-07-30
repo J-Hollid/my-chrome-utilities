@@ -8,7 +8,7 @@ import {headlessChromeArguments,resolveChromeExecutable,stopHeadlessChrome} from
 import {wait} from "./shared-harness.mjs";
 import {authoring034Expression,authoring035And036Expression} from "../support/layered-schema-usability-probes.mjs";
 import {authoring045Expression,flowFacet003Expression} from "../support/layered-schema-ownership-probes.mjs";
-import {patternHelperLayoutExpression,stringRuleValidationExpression} from "../support/string-rule-validation-runtime-probes.mjs";
+import {patternHelperLayoutExpression,stringRuleValidationExpression,valueRuleDurableMigrationExpression} from "../support/string-rule-validation-runtime-probes.mjs";
 import {authoringConceptRuntimeExpression} from "../support/schema-concept-runtime-probes.mjs";
 import {flatRuleMainProjectionLifecycleExpression,flatRulePanelProjectionDiagnosticExpression,flatRulePopupGeometryExpression,flatRuleResponsiveFinishExpression,flatRuleResponsiveSetupExpression,flatRuleResponsiveSnapshotExpression} from "../support/flat-rule-builder-runtime-probes.mjs";
 import {typedLiteralFocusedEditorExpression} from "../support/typed-literal-focused-editor-probes.mjs";
@@ -539,8 +539,10 @@ focus.push(panel.document.activeElement===action);
     evidence.authoring068=optionalRuleConditionEvidence.authoring068;
     evidence.authoring069=optionalRuleConditionEvidence.authoring069;
     const stringRuleValidationEvidence=await evaluate(socket,stringRuleValidationExpression);
-    for(const key of ["authoring070","authoring071","authoring072","authoring073","authoring075","authoring076"])evidence[key]=stringRuleValidationEvidence[key];
-    if(!["authoring070","authoring071","authoring072","authoring073","authoring075","authoring076"].every((key)=>evidence[key]))throw new Error(`string rule validation ${JSON.stringify(stringRuleValidationEvidence)}`);
+    for(const key of ["authoring070","authoring071","authoring072","authoring073","authoring075"])evidence[key]=stringRuleValidationEvidence[key];
+    if(!["authoring070","authoring071","authoring072","authoring073","authoring075"].every((key)=>evidence[key]))throw new Error(`string rule validation ${JSON.stringify(stringRuleValidationEvidence)}`);
+    const valueRuleDurableMigrationEvidence=await evaluate(socket,valueRuleDurableMigrationExpression);evidence.authoring076=valueRuleDurableMigrationEvidence.all;
+    if(!evidence.authoring076)throw new Error(`Value rule durable migration ${JSON.stringify(valueRuleDurableMigrationEvidence)}`);
     let patternHelperWide,patternHelperNarrow;
     try{
       await viewportTarget.call("Emulation.setDeviceMetricsOverride",{width:1280,height:900,deviceScaleFactor:1,mobile:false});patternHelperWide=await evaluate(socket,patternHelperLayoutExpression);
