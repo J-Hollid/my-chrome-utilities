@@ -11,6 +11,7 @@ import {canonicalConstraints,createCanonicalSchema} from "../dist/data-layer-can
 import {createSpecificationProject,transactProject} from "../dist/data-layer-specification-project.js";
 import {compileSpecificationProject,createCanonicalProjectEnvelope,evaluateSpecificationObservation} from "../dist/data-layer-specification-engine.js";
 import {documentPageGroupStructure,evaluatePageGroupFixture,pageGroupStructuralSchema} from "../dist/data-layer-page-group-structural-authoring.js";
+import {composedSchemaWorkspace} from "../dist/data-layer-composed-schema-workspace.js";
 
 const contribution=(id,name,scope,constraints)=>({id,name,scope,constraints});
 const legacyRoleState=createSpecificationProject({name:"Record-scoped transaction",site:"shop.example",id:(kind)=>`${kind}:record-scope`});legacyRoleState.project.collections.events=[{id:"event:legacy-role",name:"Legacy",eventName:"legacy",role:"interaction"}];const recordScoped=transactProject(legacyRoleState,"Update an unrelated graph",(project)=>({...project,documentationFlowGraphs:{}}));assert.equal(recordScoped.project.collections.events[0].role,"interaction","an unrelated transaction cannot perform an implicit Event migration");
@@ -314,5 +315,37 @@ assert.match(structuralDocument,/Signed-in Checkout · Applicability Set Signed-
 assert.match(structuralDocument,/funnel_step.*Trade Checkout.*superseded Retail Checkout/s);
 assert.doesNotMatch(structuralDocument,/Inactive/);
 assert.match(documentPageGroupStructure(evaluatePageGroupFixture(structuralState,"fixture:retail")),/Evaluated example: Retail Cart example/);
+
+const transitiveState={project:{collections:{
+  profiles:[
+    {id:"profile:commerce",name:"Commerce",schemaConstraints:[{path:"/currency",type:"string",presence:"required"}]},
+    {id:"profile:experience",name:"Experience",schemaConstraints:[{path:"/locale",type:"string"}]},
+    {id:"profile:customer",name:"Customer",schemaConstraints:[{path:"/customer_id",type:"string"}]},
+  ],
+  events:[],
+  pageGroups:[
+    {id:"group:checkout",name:"Checkout",profileIds:["profile:commerce","profile:experience"],schemaConstraints:[{path:"/funnel_name",type:"string"}]},
+    {id:"group:retail",name:"Retail Checkout",profileIds:["profile:commerce","profile:customer"],applicabilitySetId:"set:retail",schemaConstraints:[{path:"/retail_only",type:"boolean"}]},
+  ],
+  pages:[{id:"page:cart",name:"Cart",eventName:"pageview",profileIds:["profile:commerce"],pageGroupIds:["group:checkout","group:retail"],schemaConstraints:[{path:"/page_name",type:"string"}]}],
+  applicabilitySets:[{id:"set:retail",name:"Retail customers",condition:{kind:"predicate",field:"customer_type",operator:"equals",value:"retail"}}],
+  flows:[{id:"flow:checkout",name:"Checkout Flow"}],
+  fixtures:[{id:"fixture:retail-profile",name:"Retail profile example",pageId:"page:cart",payload:{customer_type:"retail",currency:"EUR"}}],
+  assignments:[],
+},documentationFlowGraphs:{"flow:checkout":{pageFrames:[{id:"frame:cart",name:"Cart instance",pageId:"page:cart",pageGroupId:"group:checkout",localSchemaContributions:[]}]}}}};
+const checkoutEntity=transitiveState.project.collections.pageGroups[0],checkoutWorkspace=composedSchemaWorkspace(transitiveState,checkoutEntity,"Page Group"),allProfiles=pageGroupStructuralSchema(transitiveState,"page:cart"),currency=allProfiles.compiled.properties["/currency"];
+assert.deepEqual(checkoutWorkspace.rows.map(({path})=>path),["/currency","/funnel_name","/locale"],"a Page Group workspace composes every referenced Shared Profile before its local schema");
+assert.deepEqual(Object.keys(allProfiles.compiled.properties).sort(),["/currency","/customer_id","/funnel_name","/locale","/page_name","/retail_only"],"Page compilation carries complete Page Group effective schemas into the Page");
+assert.equal(currency.origins.filter(({contributorId})=>contributorId==="profile:commerce").length,1,"stable Shared Profile identity contributes one effective value without a self-conflict");
+assert.deepEqual(currency.origins.find(({contributorId})=>contributorId==="profile:commerce").inheritanceRoutes,["Commerce → Cart","Commerce → Checkout → Cart","Commerce → Retail Checkout → Cart"],"deduplicated provenance retains every direct and Page Group route");
+const withoutRetail=pageGroupStructuralSchema(transitiveState,"page:cart",[]);
+assert.equal("/customer_id" in withoutRetail.compiled.properties,false,"an unchecked group excludes a profile reachable only through that group");
+assert.equal("/retail_only" in withoutRetail.compiled.properties,false,"an unchecked group excludes its local contribution");
+assert.deepEqual(withoutRetail.compiled.properties["/currency"].origins[0].inheritanceRoutes,["Commerce → Cart","Commerce → Checkout → Cart"],"a profile reachable by remaining routes survives with only participating provenance");
+const frame=transitiveState.project.documentationFlowGraphs["flow:checkout"].pageFrames[0],frameWorkspace=composedSchemaWorkspace(transitiveState,frame,"Flow Page-instance",undefined,"flow:checkout"),fixtureProfile=evaluatePageGroupFixture(transitiveState,"fixture:retail-profile"),profileDocument=documentPageGroupStructure(allProfiles),fixtureDocument=documentPageGroupStructure(fixtureProfile);
+assert.ok(frameWorkspace.rows.some(({path,effective})=>path==="/currency"&&effective.origins.some(({inheritanceRoutes})=>inheritanceRoutes?.includes("Commerce → Checkout → Cart → Cart instance"))),"a Flow Page instance retains the complete downstream inheritance route");
+assert.equal(fixtureProfile.validation.issues.some(({path})=>path==="/currency"),false,"Fixture validation consumes the inherited required Shared Profile property");
+assert.match(profileDocument,/Commerce → Checkout → Cart/,"Page documentation preserves transitive Shared Profile provenance");
+assert.match(fixtureDocument,/Commerce → Checkout → Cart/,"Fixture documentation preserves the same transitive Shared Profile provenance");
 
 console.log("data-layer layered schema tests passed");

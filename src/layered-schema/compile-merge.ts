@@ -1,7 +1,7 @@
 import type {EffectiveProperty,LayerConflict,LayerConstraint,LayerContributor} from "../data-layer-layered-schema.js";
 import {clone,same} from "./compile-context.js";
 export function mergeLayeredProperty(prior:EffectiveProperty|undefined,constraint:LayerConstraint,contributor:LayerContributor,parallelPair:boolean,conflict:(path:string,message:string,names:string[])=>void):EffectiveProperty{
-  const source={contributorId:contributor.id,contributorName:contributor.name,scope:contributor.scope};
+  const source={contributorId:contributor.id,contributorName:contributor.name,scope:contributor.scope,...(contributor.inheritanceRoutes?.length?{inheritanceRoutes:[...contributor.inheritanceRoutes]}:{})};
   if(!prior)return{...clone(constraint),origins:[source],superseded:[],...(constraint.expectedValue!==undefined?{expectedContributor:contributor.name}:{})};
   const next:EffectiveProperty={...prior,origins:[...prior.origins,source],superseded:[...prior.superseded]};
   if(!parallelPair&&constraint.type&&prior.type&&constraint.type!==prior.type)conflict(constraint.path,"type cannot change",[prior.origins.at(-1)!.contributorName,contributor.name]);else if(!parallelPair&&constraint.type)next.type=constraint.type;

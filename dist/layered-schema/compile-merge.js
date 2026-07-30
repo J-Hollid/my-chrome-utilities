@@ -1,6 +1,6 @@
 import { clone, same } from "./compile-context.js";
 export function mergeLayeredProperty(prior, constraint, contributor, parallelPair, conflict) {
-    const source = { contributorId: contributor.id, contributorName: contributor.name, scope: contributor.scope };
+    const source = { contributorId: contributor.id, contributorName: contributor.name, scope: contributor.scope, ...(contributor.inheritanceRoutes?.length ? { inheritanceRoutes: [...contributor.inheritanceRoutes] } : {}) };
     if (!prior)
         return { ...clone(constraint), origins: [source], superseded: [], ...(constraint.expectedValue !== undefined ? { expectedContributor: contributor.name } : {}) };
     const next = { ...prior, origins: [...prior.origins, source], superseded: [...prior.superseded] };

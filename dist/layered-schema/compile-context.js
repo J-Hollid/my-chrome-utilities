@@ -1,7 +1,7 @@
 export const clone = (value) => structuredClone(value);
 export const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
 export const included = (target, context) => !target || target === "all" || target === context.eventRole || target === context.eventId || target === context.occurrenceId;
-export const origin = (contributor) => ({ contributorId: contributor.id, contributorName: contributor.name, scope: contributor.scope });
+export const origin = (contributor) => ({ contributorId: contributor.id, contributorName: contributor.name, scope: contributor.scope, ...(contributor.inheritanceRoutes?.length ? { inheritanceRoutes: [...contributor.inheritanceRoutes] } : {}) });
 export const branch = (scope) => scope === "Event" ? "event" : scope === "Page Group" || scope === "Page" || scope === "Flow Page-instance" ? "page" : scope === "Event-occurrence" ? "occurrence" : "shared";
 export const parallelMismatch = (left, right) => Boolean(left.type && right.type && left.type !== right.type || left.expectedValue !== undefined && right.expectedValue !== undefined && !same(left.expectedValue, right.expectedValue) || left.presence === "required" && right.presence === "forbidden" || left.presence === "forbidden" && right.presence === "required");
 const ordinaryRules = (rules) => rules.filter(({ condition, arrayScope }) => !condition && !(arrayScope?.boundaries?.length));

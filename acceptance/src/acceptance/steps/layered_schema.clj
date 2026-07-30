@@ -29,7 +29,9 @@
                                  :flowStructural001 :flowStructural002 :flowStructural003
                                  :pageGroupStructural001 :pageGroupStructural002
                                  :pageGroupStructural003 :pageGroupStructural004
-                                 :pageGroupStructural005 :pageGroupStructural006])))
+                                 :pageGroupStructural005 :pageGroupStructural006
+                                 :pageGroupStructural007 :pageGroupStructural008
+                                 :pageGroupStructural009])))
 (def authoritative-examples
   (set (for [feature-file feature-files
              scenario (:scenarios (gherkin/parse-file feature-file))

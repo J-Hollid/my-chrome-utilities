@@ -6,7 +6,7 @@ import {composedCanonicalSchema,resetCanonicalRow} from "./composed-schema/canon
 import {applyLayerConstraintStructures,structureDeletesPath,type FlowPageInstanceStructureCommand} from "./flow-graph/page-instance-structure.js";
 export {composedSchemaWorkspace,composedCanonicalSchema};
 export type ComposedSchemaRowState="ready"|"warning"|"blocked";
-export interface ComposedSchemaProvenance {contributorId:string;contributorName:string;scope:LayerScope;state:"inherited"|"shadowed"|"effective";}
+export interface ComposedSchemaProvenance {contributorId:string;contributorName:string;scope:LayerScope;inheritanceRoutes?:readonly string[];state:"inherited"|"shadowed"|"effective";}
 export interface ComposedSchemaRepair {contributorId:string;contributorName:string;label:string;}
 export interface ComposedSchemaRow {path:string;inherited?:EffectiveProperty;local:LayerConstraint;effective:EffectiveProperty;source:string;validationState:ComposedSchemaRowState;message:string;action:"override"|"reset"|"remove";provenance:ComposedSchemaProvenance[];repairs:ComposedSchemaRepair[];}
 export interface ComposedSchemaWorkspace {heading:string;status:"ready"|"blocked";rows:ComposedSchemaRow[];conflictSummary:string;}
