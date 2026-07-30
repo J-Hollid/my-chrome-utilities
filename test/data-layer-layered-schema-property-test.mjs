@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {compileLayeredSchema,resolveLayeredTarget,validateLayeredObservation} from "../dist/data-layer-layered-schema.js";
 import {flowPageFrameContributor,layeredContributorPath} from "../dist/data-layer-layered-schema-project.js";
+import {documentPageGroupStructure,evaluatePageGroupFixture,pageGroupStructuralSchema} from "../dist/data-layer-page-group-structural-authoring.js";
 import {compileSpecificationProject,createCanonicalProjectEnvelope,evaluateSpecificationObservation} from "../dist/data-layer-specification-engine.js";
 
 let seed=0x51a7e;
@@ -55,6 +56,14 @@ for(let iteration=0;iteration<200;iteration+=1){
   assert.equal(contextualCompilation.status,"compiled");
   const alpha=evaluateSpecificationObservation(contextualCompilation.plan,{sourceId:"event-history",eventName:"event",payload:{alpha:"present"}}),beta=evaluateSpecificationObservation(contextualCompilation.plan,{sourceId:"event-history",eventName:"other_event",payload:{beta:"present"}});
   eventTargetsIsolated&&=alpha.issueDetails.length===0&&beta.issueDetails.length===0;
+
+  const membershipCount=2+Math.floor(random()*6),activeIndex=Math.floor(random()*(membershipCount-1)),pageGroupIds=Array.from({length:membershipCount},(_,index)=>`group:structural:${iteration}:${index}`),applicabilitySets=pageGroupIds.slice(1).map((groupId,index)=>({id:`set:structural:${iteration}:${index}`,name:`Audience ${iteration}-${index}`,condition:{kind:"predicate",field:"audience",operator:"equals",value:`audience-${index}`},groupId})),structuralState={project:{collections:{profiles:[],events:[],flows:[],schemaDrafts:[],assignments:[],applicabilitySets,pageGroups:pageGroupIds.map((id,index)=>({id,name:`Group ${iteration}-${index}`,...(index?{applicabilitySetId:applicabilitySets[index-1].id}:{}),schemaConstraints:[{path:`/property_${index}`,type:"string",expectedValue:`value-${index}`}]})),pages:[{id:`page:structural:${iteration}`,name:`Page ${iteration}`,eventName:"pageview",pageGroupIds}],fixtures:[{id:`fixture:structural:${iteration}`,name:`Fixture ${iteration}`,pageId:`page:structural:${iteration}`,payload:{audience:`audience-${activeIndex}`}}]},documentationFlowGraphs:{}}},before=structuredClone(structuralState),structural=pageGroupStructuralSchema(structuralState,`page:structural:${iteration}`),evaluated=evaluatePageGroupFixture(structuralState,`fixture:structural:${iteration}`),genericDocumentation=documentPageGroupStructure(structural);
+  assert.deepEqual(structural.memberships.map(({groupId})=>groupId),pageGroupIds,"structural authoring preserves every stored membership in exact order");
+  assert.deepEqual(structural.conditionalBranches.map(({groupId})=>groupId),pageGroupIds.slice(1),"generic structure preserves every conditional branch without evaluating a payload");
+  assert.ok(applicabilitySets.every(({name})=>genericDocumentation.includes(name)),"generic documentation names every conditional branch");
+  assert.deepEqual(evaluated.includedStack,[`Group ${iteration}-0`,`Group ${iteration}-${activeIndex+1}`],"Fixture evaluation selects the unconditional group and exactly the matching conditional group");
+  assert.deepEqual(evaluated.inactiveGroups,pageGroupIds.slice(1).map((_,index)=>({index,name:`Group ${iteration}-${index+1}`})).filter(({index})=>index!==activeIndex).map(({name})=>name),"Fixture evaluation preserves the stored order of inactive groups");
+  assert.deepEqual(structuralState,before,"structural authoring and Fixture evaluation do not mutate the saved project");
 }
 
 assert.deepEqual(
