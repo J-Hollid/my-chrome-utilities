@@ -1,8 +1,8 @@
 import {documentationWorksheet,renderFlowDocumentationClipboard,zipDocumentationFiles,type FlowDocumentationClipboard,type FlowDocumentationTable} from "./data-layer-flow-table-documentation-export.js";
 import {createProjectDocumentationSet,createProjectDocumentationTheme,projectDocumentationSafeText,type ProjectDocumentationSection,type ProjectDocumentationSet,type ProjectDocumentationTheme} from "./data-layer-project-documentation-records.js";
 
-export {createProjectDocumentationSet,createProjectDocumentationTheme,parseProjectDocumentationTheme,serializeProjectDocumentationTheme} from "./data-layer-project-documentation-records.js";
-export type {ProjectDocumentationSection,ProjectDocumentationSet,ProjectDocumentationTheme} from "./data-layer-project-documentation-records.js";
+export {createProjectDocumentationSet,createProjectDocumentationTheme,parseProjectDocumentationTheme,PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT,readProjectDocumentationLogoFile,serializeProjectDocumentationTheme} from "./data-layer-project-documentation-records.js";
+export type {ProjectDocumentationLogoFile,ProjectDocumentationLogoReader,ProjectDocumentationSection,ProjectDocumentationSet,ProjectDocumentationTheme} from "./data-layer-project-documentation-records.js";
 export interface ProjectDocumentationDiagnostic {sectionId:string;message:string;repair:string;repairTarget?:{kind:"profiles"|"pages"|"pageGroups"|"events"|"applicabilitySets"|"flows"|"fixtures"|"assignments";id:string;path?:string}}
 export interface ProjectDocumentationTable extends FlowDocumentationTable {id:string;themeFingerprint?:string;conceptGroups?:readonly {name:string;start:number;count:number}[]}
 export interface ProjectDocumentationSnapshotInput {projectId:string;projectName:string;set:ProjectDocumentationSet;theme:ProjectDocumentationTheme;sourceRevisions:Readonly<Record<string,number>>;generatedAt:string;tables:readonly ProjectDocumentationTable[];diagnostics:readonly ProjectDocumentationDiagnostic[]}

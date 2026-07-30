@@ -1,6 +1,6 @@
 import { documentationWorksheet, renderFlowDocumentationClipboard, zipDocumentationFiles } from "./data-layer-flow-table-documentation-export.js";
 import { createProjectDocumentationTheme, projectDocumentationSafeText } from "./data-layer-project-documentation-records.js";
-export { createProjectDocumentationSet, createProjectDocumentationTheme, parseProjectDocumentationTheme, serializeProjectDocumentationTheme } from "./data-layer-project-documentation-records.js";
+export { createProjectDocumentationSet, createProjectDocumentationTheme, parseProjectDocumentationTheme, PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT, readProjectDocumentationLogoFile, serializeProjectDocumentationTheme } from "./data-layer-project-documentation-records.js";
 const clone = (value) => structuredClone(value);
 const freeze = (value) => { if (value && typeof value === "object" && !Object.isFrozen(value)) {
     Object.freeze(value);

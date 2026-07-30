@@ -1,3 +1,20 @@
+export const PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT = 250_000;
+export async function readProjectDocumentationLogoFile(file, readDataUrl) {
+    if (!["image/png", "image/jpeg", "image/gif"].includes(file.type))
+        throw new Error("Choose a PNG, JPEG, or GIF image");
+    let dataUrl;
+    try {
+        dataUrl = await readDataUrl(file);
+    }
+    catch {
+        throw new Error("The logo could not be read");
+    }
+    if (!dataUrl.startsWith(`data:${file.type};base64,`))
+        throw new Error("The logo could not be read");
+    if (dataUrl.length > PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT)
+        throw new Error("The logo is too large");
+    return { fileName: file.name, dataUrl };
+}
 const clone = (value) => structuredClone(value);
 const freeze = (value) => { if (value && typeof value === "object" && !Object.isFrozen(value)) {
     Object.freeze(value);
@@ -7,7 +24,7 @@ const freeze = (value) => { if (value && typeof value === "object" && !Object.is
 export const projectDocumentationSafeText = (value) => String(value ?? "").replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/gu, "").trim();
 const safeColor = (value, fallback) => /^#[0-9a-f]{6}$/iu.test(String(value)) ? String(value).toLowerCase() : fallback;
 const safeFamily = (value) => { const candidate = projectDocumentationSafeText(value); return /^[\p{L}\p{N}][\p{L}\p{N} .-]{0,63}$/u.test(candidate) ? candidate : "Arial"; };
-const safeLogo = (value) => { const candidate = projectDocumentationSafeText(value); return /^data:image\/(?:png|jpeg|gif);base64,[a-z0-9+/]+={0,2}$/iu.test(candidate) && candidate.length <= 250_000 ? candidate : ""; };
+const safeLogo = (value) => { const candidate = projectDocumentationSafeText(value); return /^data:image\/(?:png|jpeg|gif);base64,[a-z0-9+/]+={0,2}$/iu.test(candidate) && candidate.length <= PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT ? candidate : ""; };
 const safeId = (value, label) => { const candidate = projectDocumentationSafeText(value); if (!candidate)
     throw new Error(`${label} needs a stable identity.`); return candidate; };
 const safeList = (value) => value ? [...new Set(value.map(projectDocumentationSafeText).filter(Boolean))] : undefined;

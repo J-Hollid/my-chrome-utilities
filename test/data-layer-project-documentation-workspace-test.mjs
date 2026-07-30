@@ -6,7 +6,9 @@ import {
   createProjectDocumentationSet,
   createProjectDocumentationTheme,
   parseProjectDocumentationTheme,
+  PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT,
   projectDocumentationSnapshotStale,
+  readProjectDocumentationLogoFile,
   renderProjectDocumentationClipboard,
   serializeProjectDocumentationTheme,
   selectProjectDocumentationTables,
@@ -14,10 +16,6 @@ import {
   writeProjectDocumentationWorkbook,
 } from "../dist/data-layer-project-documentation-workspace.js";
 import {compileProjectDocumentation,projectDocumentationSources} from "../dist/data-layer-project-documentation-compiler.js";
-import {
-  PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT,
-  readProjectDocumentationLogoFile,
-} from "../dist/data-layer-project-documentation-workspace-ui.js";
 import {createSpecificationProject,exportSpecificationProject,importSpecificationProject,transactProject} from "../dist/data-layer-specification-project.js";
 
 assert.equal(PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT,250_000);

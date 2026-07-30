@@ -1,7 +1,7 @@
 import { flowDocumentationPropertyPaths } from "./data-layer-flow-table-documentation-export.js";
 import { compileProjectDocumentation, projectDocumentationProfileColumns, projectDocumentationProfilePaths, projectDocumentationSources, reconcileProjectDocumentationConcepts } from "./data-layer-project-documentation-compiler.js";
 import { projectCanonicalConcepts } from "./data-layer-layered-schema-project.js";
-import { createProjectDocumentationSet, createProjectDocumentationTheme, parseProjectDocumentationTheme, serializeProjectDocumentationTheme, } from "./data-layer-project-documentation-records.js";
+import { createProjectDocumentationSet, createProjectDocumentationTheme, parseProjectDocumentationTheme, readProjectDocumentationLogoFile, serializeProjectDocumentationTheme, } from "./data-layer-project-documentation-records.js";
 import { projectDocumentationSnapshotStale, renderProjectDocumentationClipboard, selectProjectDocumentationTables, themeFingerprint, writeProjectDocumentationWorkbook, } from "./data-layer-project-documentation-workspace.js";
 import { conceptSectionHeading } from "./data-layer-flow-table-documentation-export.js";
 import { declareStudioChoice } from "./data-layer-studio-choice-controls.js";
@@ -27,23 +27,6 @@ const moveVisible = (items, item, direction, visible) => { const projected = ite
 const checkedOrder = (all, configured) => configured ? [...configured] : [...all];
 const setChecked = (current, id, checked) => checked ? [...current.filter((candidate) => candidate !== id), id] : current.filter((candidate) => candidate !== id);
 const controlInput = (name, value, type = "text") => { const input = document.createElement("input"); input.name = name; input.type = type; input.value = value; return input; };
-export const PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT = 250_000;
-export async function readProjectDocumentationLogoFile(file, readDataUrl) {
-    if (!["image/png", "image/jpeg", "image/gif"].includes(file.type))
-        throw new Error("Choose a PNG, JPEG, or GIF image");
-    let dataUrl;
-    try {
-        dataUrl = await readDataUrl(file);
-    }
-    catch {
-        throw new Error("The logo could not be read");
-    }
-    if (!dataUrl.startsWith(`data:${file.type};base64,`))
-        throw new Error("The logo could not be read");
-    if (dataUrl.length > PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT)
-        throw new Error("The logo is too large");
-    return { fileName: file.name, dataUrl };
-}
 const fileDataUrl = (file) => new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.addEventListener("load", () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Unreadable logo")));

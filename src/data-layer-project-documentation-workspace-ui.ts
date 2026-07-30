@@ -5,7 +5,9 @@ import {
   createProjectDocumentationSet,
   createProjectDocumentationTheme,
   parseProjectDocumentationTheme,
+  readProjectDocumentationLogoFile,
   serializeProjectDocumentationTheme,
+  type ProjectDocumentationLogoFile,
   type ProjectDocumentationDraft,
   type ProjectDocumentationProfileColumn,
   type ProjectDocumentationSection,
@@ -53,23 +55,6 @@ const moveVisible=<T,>(items:readonly T[],item:T,direction:-1|1,visible:(candida
 const checkedOrder=(all:readonly string[],configured:readonly string[]|undefined):string[]=>configured?[...configured]:[...all];
 const setChecked=(current:readonly string[],id:string,checked:boolean):string[]=>checked?[...current.filter((candidate)=>candidate!==id),id]:current.filter((candidate)=>candidate!==id);
 const controlInput=(name:string,value:string,type="text"):HTMLInputElement=>{const input=document.createElement("input");input.name=name;input.type=type;input.value=value;return input;};
-
-export const PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT=250_000;
-type ProjectDocumentationLogoFile=Pick<File,"name"|"type">;
-type ProjectDocumentationLogoReader=(file:ProjectDocumentationLogoFile)=>Promise<string>;
-
-export async function readProjectDocumentationLogoFile(
-  file:ProjectDocumentationLogoFile,
-  readDataUrl:ProjectDocumentationLogoReader,
-):Promise<{fileName:string;dataUrl:string}>{
-  if(!["image/png","image/jpeg","image/gif"].includes(file.type))throw new Error("Choose a PNG, JPEG, or GIF image");
-  let dataUrl:string;
-  try{dataUrl=await readDataUrl(file);}
-  catch{throw new Error("The logo could not be read");}
-  if(!dataUrl.startsWith(`data:${file.type};base64,`))throw new Error("The logo could not be read");
-  if(dataUrl.length>PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT)throw new Error("The logo is too large");
-  return{fileName:file.name,dataUrl};
-}
 
 const fileDataUrl=(file:ProjectDocumentationLogoFile):Promise<string>=>new Promise((resolve,reject)=>{
   const reader=new FileReader();

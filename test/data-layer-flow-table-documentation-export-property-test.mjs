@@ -13,6 +13,8 @@ import {
   createProjectDocumentationSet,
   createProjectDocumentationTheme,
   parseProjectDocumentationTheme,
+  PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT,
+  readProjectDocumentationLogoFile,
   selectProjectDocumentationTables,
   serializeProjectDocumentationTheme,
   themeFingerprint,
@@ -22,11 +24,6 @@ import {
   groupProjectDocumentationConceptRows,
   reconcileProjectDocumentationConcepts,
 } from "../dist/data-layer-project-documentation-compiler.js";
-import {
-  PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT,
-  readProjectDocumentationLogoFile,
-} from "../dist/data-layer-project-documentation-workspace-ui.js";
-
 const permutations=(values)=>values.length<2?[values]:values.flatMap((value,index)=>permutations(values.filter((_,candidate)=>candidate!==index)).map((rest)=>[value,...rest]));
 const unzipStored=(bytes)=>{const files=new Map(),view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let offset=0;while(offset+30<=bytes.length&&view.getUint32(offset,true)===0x04034b50){const size=view.getUint32(offset+18,true),nameLength=view.getUint16(offset+26,true),extraLength=view.getUint16(offset+28,true),name=new TextDecoder().decode(bytes.slice(offset+30,offset+30+nameLength)),start=offset+30+nameLength+extraLength;files.set(name,new TextDecoder().decode(bytes.slice(start,start+size)));offset=start+size;}return files;};
 const workbookSheetNames=(files)=>[...files.get("xl/workbook.xml").matchAll(/<sheet name="([^"]+)"/gu)].map((match)=>match[1]);

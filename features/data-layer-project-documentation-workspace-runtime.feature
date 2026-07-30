@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=8f1669d9658730e87b6de9f531fced80ad13f260e7a3660f591a881de613c687
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-30T14:53:39.505032896Z","feature_name":"Data layer project documentation workspace runtime","feature_path":"features/data-layer-project-documentation-workspace-runtime.feature","background_hash":"f9d1fefd5e548fd8f09cd46b438977b308e72ef8198e23d2f0d73530911ea2e9","implementation_hash":"architect-documentation-logo-picker-v1","scenarios":[{"index":14,"name":"Data layer project documentation workspace runtime 015","scenario_hash":"583c1c4ab7b42a4fc78239c4ae455b638f03bae3ef8d3907205c50100f9bc360","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-30T14:53:39.505032896Z"},{"index":16,"name":"Data layer project documentation workspace runtime 017","scenario_hash":"33d6b8fb974af143301312e244a1a3833ceaf85d14fd279f7f12e66de55e8f48","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-30T14:53:39.505032896Z"},{"index":24,"name":"Data layer project documentation workspace runtime 025","scenario_hash":"714464d58a8e3fb65bb85a132c7e1d1d37ec5f249598e469b68199223b8ce2f9","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-30T14:53:39.505032896Z"},{"index":25,"name":"Data layer project documentation workspace runtime 026","scenario_hash":"5c7c53dc8532dae41227417db9f1a778bddb58de630c4edaaedc636b5bcb960d","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-30T14:53:39.505032896Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer project documentation workspace runtime
 
   Background:
