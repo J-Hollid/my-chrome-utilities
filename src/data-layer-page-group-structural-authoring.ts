@@ -50,6 +50,20 @@ export interface PageGroupFixtureEvaluation {
   validation:ReturnType<typeof validateLayeredObservation>;
 }
 
+export interface PageApplicabilityPreviewRoute {
+  projectId:string;
+  pageId:string;
+}
+
+export function resetDepartedPageApplicabilityPreview(
+  previews:Map<string,Set<string>>,
+  active:PageApplicabilityPreviewRoute|undefined,
+  next:PageApplicabilityPreviewRoute|undefined,
+):PageApplicabilityPreviewRoute|undefined {
+  if(active&&(active.projectId!==next?.projectId||active.pageId!==next?.pageId))previews.delete(active.pageId);
+  return next;
+}
+
 const scalar=(value:unknown):string=>typeof value==="string"?value:JSON.stringify(value);
 
 export function pageGroupConditionText(condition:Condition|undefined):string {

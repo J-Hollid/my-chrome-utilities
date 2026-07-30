@@ -1,5 +1,10 @@
 import { compileLayeredSchema, validateLayeredObservation } from "./data-layer-layered-schema.js";
 import { layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
+export function resetDepartedPageApplicabilityPreview(previews, active, next) {
+    if (active && (active.projectId !== next?.projectId || active.pageId !== next?.pageId))
+        previews.delete(active.pageId);
+    return next;
+}
 const scalar = (value) => typeof value === "string" ? value : JSON.stringify(value);
 export function pageGroupConditionText(condition) {
     if (!condition)

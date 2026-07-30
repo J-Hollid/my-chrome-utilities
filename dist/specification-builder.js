@@ -15,7 +15,7 @@ import { CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, commitCanonicalProjectStat
 import { PROJECT_LIBRARY_STORAGE_KEY, activateProject, activeProjectContextChange, createProjectInLibrary, migrateSingletonProject, projectLibrary, recordProjectNavigation, replaceActiveProjectState, resolveProjectNavigation, restoreProjectLibrary, serializeProjectLibrary } from "./data-layer-project-library.js";
 import { effectivePropertySummary, installLayeredSchemaUi } from "./data-layer-layered-schema-ui.js";
 import { assignmentContributorTargets, projectCanonicalConcepts } from "./data-layer-layered-schema-project.js";
-import { documentPageGroupStructure, evaluatePageGroupFixture, pageGroupStructuralSchema } from "./data-layer-page-group-structural-authoring.js";
+import { documentPageGroupStructure, evaluatePageGroupFixture, pageGroupStructuralSchema, resetDepartedPageApplicabilityPreview } from "./data-layer-page-group-structural-authoring.js";
 import { composedSchemaWorkspace, resetComposedSchemaLocalProperty, saveComposedSchemaLocalFacetsAndStructures, saveComposedSchemaPolicy } from "./data-layer-composed-schema-workspace.js";
 import { mountComposedSchemaWorkspace } from "./data-layer-composed-schema-workspace-ui.js";
 import { installFlowDocumentationExportUi } from "./data-layer-flow-table-documentation-export-ui.js";
@@ -60,6 +60,7 @@ const mountCanonicalSchemaEditor = (options) => mountCanonicalSchemaEditorBase({
 let pageGroupMembershipStatus = "";
 let pendingPageGroupMembershipReorder;
 const pageApplicabilityPreviews = new Map();
+let activePageApplicabilityPreviewRoute;
 let canonicalCommandFeedback;
 let retainedBuilderCanonicalEditor;
 const savedSchemas = () => restoreSchemaLibrary(projectStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY)).filter(({ published }) => published).map((schema) => structuredClone(schema));
@@ -624,8 +625,7 @@ function hydrateVisibleProjectRoute(kind, entityId, focus) { if (!state)
     return; const projectId = state.project.id; void durableProjectRuntime.ensureProjectRoute(projectId, durableProjectRouteForWorkspace(kind, entityId)).then((loaded) => { if (state?.project.id !== projectId || selectedKind !== kind || selectedId !== entityId)
     return; state = { ...structuredClone(loaded.state), history: { undo: [], redo: [] } }; lastCommittedState = structuredClone(state); canonicalRevision = loaded.draftSequence; publishedRevision = loaded.publishedRevision; library = restoreProjectLibrary(projectStorage.getItem(PROJECT_LIBRARY_STORAGE_KEY)) ?? library; if (pendingWorkspaceFocus?.kind === kind && pendingWorkspaceFocus.id === entityId)
     pendingWorkspaceFocus = undefined; render(); queueMicrotask(() => focus?.()?.focus({ preventScroll: true })); }).catch((error) => { pendingWorkspaceFocus = undefined; saveStatus = { kind: "failed", label: `Open ${labels[kind]}`, message: error instanceof Error ? error.message : String(error) }; render(); }); }
-function openCollectionOverview(kind, focusId) { pendingWorkspaceFocus = undefined; documentationOpen = false; projectOverview = false; creationKind = undefined; removalReview = undefined; if (selectedKind === "pages" && selectedId)
-    pageApplicabilityPreviews.delete(selectedId); selectedKind = kind; selectedId = undefined; persistNavigation(); replaceProjectRoute(kind); render(); hydrateVisibleProjectRoute(kind, undefined, () => focusId ? document.querySelector(`[data-entity-id="${CSS.escape(focusId)}"]`) : document.querySelector(`[data-add-kind="${kind}"]`)); }
+function openCollectionOverview(kind, focusId) { pendingWorkspaceFocus = undefined; documentationOpen = false; projectOverview = false; creationKind = undefined; removalReview = undefined; selectedKind = kind; selectedId = undefined; persistNavigation(); replaceProjectRoute(kind); render(); hydrateVisibleProjectRoute(kind, undefined, () => focusId ? document.querySelector(`[data-entity-id="${CSS.escape(focusId)}"]`) : document.querySelector(`[data-add-kind="${kind}"]`)); }
 function openProjectEntityWorkspace(kind, entityId) { pendingWorkspaceFocus = { kind, id: entityId }; projectOverview = false; creationKind = undefined; removalReview = undefined; selectedKind = kind; selectedId = entityId; durableProjectRuntime.prepareProjectRoute(state.project.id, durableProjectRouteForWorkspace(kind, entityId)); persistNavigation(); replaceProjectRoute(kind, entityId); render(); queueMicrotask(restorePendingWorkspaceFocus); hydrateVisibleProjectRoute(kind, entityId, () => document.querySelector(`[data-project-entity-workspace="${CSS.escape(entityId)}"] h1`)); }
 function openProjectCollectionCreation(kind) { pendingWorkspaceFocus = undefined; projectOverview = false; creationKind = kind; removalReview = undefined; selectedKind = kind; selectedId = undefined; persistNavigation(); replaceProjectRoute(kind, undefined, "add"); render(); }
 function projectCreationFieldControl(field) { if (field.key === "targetId" && state) {
@@ -943,7 +943,7 @@ function renderAssignments() {
         list.append(item);
     }
 }
-function render() { const empty = q("#project-empty"), workspace = q("#project-workspace"); empty.hidden = Boolean(state); workspace.hidden = !state; if (!state) {
+function render() { const visiblePageRoute = state && !documentationOpen && !projectOverview && !creationKind && !removalReview && selectedKind === "pages" && selectedId ? { projectId: state.project.id, pageId: selectedId } : undefined; activePageApplicabilityPreviewRoute = resetDepartedPageApplicabilityPreview(pageApplicabilityPreviews, activePageApplicabilityPreviewRoute, visiblePageRoute); const empty = q("#project-empty"), workspace = q("#project-workspace"); empty.hidden = Boolean(state); workspace.hidden = !state; if (!state) {
     document.title = "Specification Studio · No active project";
     q("#project-context").textContent = "No active project";
     return;
