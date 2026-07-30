@@ -14,8 +14,8 @@ const nextProjectReleaseRevision = (current, published) => Math.max(published, .
 import { CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, commitCanonicalProjectState, inspectCanonicalProjectConflict, resolveCanonicalProjectConflict, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, } from "./data-layer-specification-repository.js";
 import { PROJECT_LIBRARY_STORAGE_KEY, activateProject, activeProjectContextChange, createProjectInLibrary, migrateSingletonProject, projectLibrary, recordProjectNavigation, replaceActiveProjectState, resolveProjectNavigation, restoreProjectLibrary, serializeProjectLibrary } from "./data-layer-project-library.js";
 import { effectivePropertySummary, installLayeredSchemaUi } from "./data-layer-layered-schema-ui.js";
-import { compileLayeredSchema } from "./data-layer-layered-schema.js";
-import { assignmentContributorTargets, layeredContributorPath, layeredContributorsForPath, projectCanonicalConcepts } from "./data-layer-layered-schema-project.js";
+import { assignmentContributorTargets, projectCanonicalConcepts } from "./data-layer-layered-schema-project.js";
+import { documentPageGroupStructure, evaluatePageGroupFixture, pageGroupStructuralSchema } from "./data-layer-page-group-structural-authoring.js";
 import { composedSchemaWorkspace, resetComposedSchemaLocalProperty, saveComposedSchemaLocalFacetsAndStructures, saveComposedSchemaPolicy } from "./data-layer-composed-schema-workspace.js";
 import { mountComposedSchemaWorkspace } from "./data-layer-composed-schema-workspace-ui.js";
 import { installFlowDocumentationExportUi } from "./data-layer-flow-table-documentation-export-ui.js";
@@ -148,7 +148,7 @@ function renderComposedSchemaWorkspace(host, entity, kind, scope) {
 function renderPageGroupMembershipEditor(host, page) {
     if (!state)
         return;
-    const section = document.createElement("section"), heading = document.createElement("h3"), guidance = document.createElement("p"), impact = document.createElement("p"), picker = document.createElement("section"), search = document.createElement("input"), results = document.createElement("div"), add = document.createElement("button"), menu = document.createElement("details"), menuSummary = document.createElement("summary"), menuAdd = document.createElement("button"), stack = document.createElement("ol"), effective = document.createElement("ol"), evaluation = document.createElement("section"), observation = document.createElement("select"), changePreview = document.createElement("select"), evaluateMembership = document.createElement("button"), evaluationResult = document.createElement("div"), memberships = orderedPageGroupIds(state.project, page.id), migrationRequired = requiresPageGroupMembershipMigration(state.project, page.id), groups = new Map(state.project.collections.pageGroups.map((group) => [group.id, group]));
+    const section = document.createElement("section"), heading = document.createElement("h3"), guidance = document.createElement("p"), impact = document.createElement("p"), picker = document.createElement("section"), search = document.createElement("input"), results = document.createElement("div"), add = document.createElement("button"), menu = document.createElement("details"), menuSummary = document.createElement("summary"), menuAdd = document.createElement("button"), stack = document.createElement("ol"), effective = document.createElement("ol"), branches = document.createElement("section"), documentationButton = document.createElement("button"), documentationOutput = document.createElement("pre"), memberships = orderedPageGroupIds(state.project, page.id), migrationRequired = requiresPageGroupMembershipMigration(state.project, page.id), groups = new Map(state.project.collections.pageGroups.map((group) => [group.id, group])), structure = pageGroupStructuralSchema(state, page.id);
     section.setAttribute("aria-label", "Page Group rule stack");
     heading.textContent = "Page Group rule stack";
     guidance.textContent = "Rules apply from top to bottom, general to specific. Later Page Groups may only make legal guarded refinements.";
@@ -172,42 +172,28 @@ function renderPageGroupMembershipEditor(host, page) {
     picker.append(search, results);
     renderResults();
     effective.setAttribute("aria-label", "Effective Page Group contribution order");
-    for (const [index, groupId] of memberships.entries()) {
-        const group = groups.get(groupId), item = document.createElement("li"), constraints = group?.schemaConstraints ?? [];
-        item.dataset.effectivePageGroupId = groupId;
-        item.textContent = `${index + 1}. ${group?.name ?? groupId} · ${constraints.map(({ path, type, allowedValues }) => `${path ?? "property"}${type ? ` type ${type}` : ""}${allowedValues ? ` allowed ${allowedValues.join(", ")}` : ""}`).join("; ") || "no local schema contribution"}`;
+    for (const membership of structure.memberships) {
+        const item = document.createElement("li");
+        item.dataset.effectivePageGroupId = membership.groupId;
+        item.textContent = `${membership.order + 1}. ${membership.groupName} · ${membership.applicabilitySetName} · ${membership.condition} · ${membership.contributions.map(({ path }) => path).join(", ") || "no local schema contribution"}`;
         effective.append(item);
     }
-    evaluation.setAttribute("aria-label", "Page Group effective schema evaluation");
-    observation.setAttribute("aria-label", "Page Group applicability observation");
-    observation.append(new Option("Retail observation", "retail"), new Option("Trade observation", "trade"), new Option("Overlapping observation", "overlap"));
-    changePreview.setAttribute("aria-label", "Page Group proposed schema change");
-    changePreview.append(new Option("Stored contributions", "stored"), new Option("Retail unsafe type number", "unsafe-type"), new Option("Retail unsafe allowed value 4", "unsafe-allowed"));
-    evaluateMembership.type = "button";
-    evaluateMembership.textContent = "Evaluate effective Page Group schema";
-    evaluationResult.setAttribute("aria-label", "Rendered Page Group compilation evidence");
-    evaluateMembership.addEventListener("click", () => { const observed = observation.value === "retail" ? { customer_type: "retail" } : observation.value === "trade" ? { customer_type: "trade" } : { customer_type: "retail", market: "overlap" }, rawContributors = layeredContributorsForPath(state, layeredContributorPath(state, page, "Page"), observed), contributors = rawContributors.map((entry) => entry.scope !== "Page Group" || !entry.applicabilityConditional || entry.active === false || changePreview.value === "stored" ? entry : { ...entry, constraints: [{ path: "/funnel_step", ...(changePreview.value === "unsafe-type" ? { type: "number" } : { allowedValues: ["4"] }) }] }), compiled = compileLayeredSchema(contributors, { eventId: "event:page-group-membership-preview", eventRole: "interaction" }), included = compiled.provenance.filter(({ scope }) => scope === "Page Group"), inactive = compiled.exclusions.filter(({ contributorId }, index, all) => all.findIndex((candidate) => candidate.contributorId === contributorId) === index); evaluationResult.replaceChildren(); const summary = document.createElement("p"), properties = document.createElement("p"), provenance = document.createElement("ol"), effectiveProperties = document.createElement("ul"), issues = document.createElement("ul"); summary.textContent = `Status ${compiled.status}. Included stack: ${included.map(({ contributorName }) => contributorName).join(", ") || "none"}. Inactive memberships: ${inactive.map(({ contributorName }) => contributorName).join(", ") || "none"}. Stored order: ${memberships.map((id) => groups.get(id)?.name ?? id).join(" → ")}.`; properties.textContent = `Effective funnel_step: ${String(compiled.properties["/funnel_step"]?.allowedValues?.join(", ") ?? "unavailable")}.`; provenance.setAttribute("aria-label", "Rendered Page Group ordered provenance"); for (const contributor of included) {
-        const item = document.createElement("li");
-        item.dataset.compiledPageGroupId = contributor.contributorId;
-        item.textContent = `${contributor.contributorName} · ${contributor.scope}`;
-        provenance.append(item);
-    } effectiveProperties.setAttribute("aria-label", "Rendered effective Page Group properties"); for (const [path, property] of Object.entries(compiled.properties)) {
-        const item = document.createElement("li");
-        item.dataset.effectivePropertyPath = path;
-        item.textContent = `${path}: ${JSON.stringify(property)}`;
-        effectiveProperties.append(item);
-    } for (const conflict of compiled.conflicts) {
-        const item = document.createElement("li");
-        item.textContent = `${conflict.path}: ${conflict.contributors.join(" before ")} · ${conflict.message}. `;
-        for (const contributorName of conflict.contributors) {
-            const contributor = state.project.collections.pageGroups.find(({ name }) => name === contributorName), repair = document.createElement("a");
-            repair.textContent = `Repair ${contributorName}`;
-            repair.href = `?kind=pageGroups&entity=${encodeURIComponent(contributor?.id ?? contributorName)}&field=canonicalSchema`;
-            item.append(repair, " ");
-        }
-        issues.append(item);
-    } evaluationResult.append(summary, properties, provenance, effectiveProperties, issues); });
-    evaluation.append(observation, changePreview, evaluateMembership, evaluationResult);
+    branches.setAttribute("aria-label", "Conditional Page Group branches");
+    branches.append(Object.assign(document.createElement("h4"), { textContent: "Conditional schema branches" }));
+    for (const branch of structure.conditionalBranches) {
+        const article = document.createElement("article"), title = document.createElement("h5"), properties = document.createElement("ul");
+        article.dataset.conditionalPageGroupId = branch.groupId;
+        title.textContent = `${branch.applicabilitySetName} · ${branch.condition} · ${branch.groupName}`;
+        for (const [path, constraint] of Object.entries(branch.properties))
+            properties.append(Object.assign(document.createElement("li"), { textContent: `${path}: ${JSON.stringify(constraint)} · ordered provenance ${branch.order + 1}. ${branch.groupName}` }));
+        article.append(title, properties);
+        branches.append(article);
+    }
+    documentationButton.type = "button";
+    documentationButton.textContent = "Generate Page specification documentation";
+    documentationOutput.setAttribute("aria-label", "Complete Page specification documentation");
+    documentationOutput.hidden = true;
+    documentationButton.addEventListener("click", () => { documentationOutput.textContent = documentPageGroupStructure(pageGroupStructuralSchema(state, page.id)); documentationOutput.hidden = false; });
     for (const [index, groupId] of memberships.entries()) {
         const group = groups.get(groupId), row = document.createElement("li"), summary = document.createElement("span"), actions = document.createElement("div"), open = document.createElement("button"), earlier = document.createElement("button"), later = document.createElement("button"), remove = document.createElement("button");
         row.dataset.pageGroupMembershipId = groupId;
@@ -267,7 +253,7 @@ function renderPageGroupMembershipEditor(host, page) {
         review.append(summary, confirm);
         section.append(review);
     }
-    section.append(heading, guidance, add, menu, picker, stack, effective, evaluation, impact);
+    section.append(heading, guidance, add, menu, picker, stack, effective, branches, documentationButton, documentationOutput, impact);
     host.append(section);
 }
 function writeProjectState(next, label = "Project edit") { const result = commitCanonicalProjectState(projectStorage, next, { expectedRevision: canonicalRevision, pendingLabel: label, ...(lastCommittedState ? { base: lastCommittedState } : {}) }); if (result.status === "conflict") {
@@ -452,10 +438,19 @@ function productionEditorValue(field, control) {
     return editorValue(field, control);
 }
 function renderFixtureExecution(form, fixture) { const section = document.createElement("section"), heading = document.createElement("h3"), evidence = document.createElement("p"), run = document.createElement("button"), result = document.createElement("output"); section.setAttribute("aria-label", "Fixture execution"); heading.textContent = "Production evaluator replay"; const observations = fixture.observations ?? [], expected = fixture.expected ?? {}; evidence.textContent = `Captured observation: ${observations.map(({ eventName }) => String(eventName ?? "unnamed")).join(", ") || "none"} · Proposed assertions: status ${String(expected.status ?? "not set")}; issueCodes ${JSON.stringify(expected.issueCodes ?? [])}`; run.type = "button"; run.textContent = "Run Fixture"; result.id = "fixture-run-result"; result.setAttribute("aria-live", "polite"); run.addEventListener("click", () => { if (!state)
-    return; const compiled = compileSpecificationProject({ ...createCanonicalProjectEnvelope(state.project, state.draft?.id ?? "published"), revision: canonicalRevision }); if (compiled.status === "blocked") {
+    return; const currentFixture = state.project.collections.fixtures.find(({ id }) => id === fixture.id) ?? fixture; if (currentFixture.pageId || currentFixture.context?.pageId) {
+    try {
+        const evaluated = evaluatePageGroupFixture(state, currentFixture.id), issues = evaluated.validation.issues.map(({ path, code }) => `${path} ${code}`).join(", ") || "none";
+        result.textContent = `${documentPageGroupStructure(evaluated)}\nValidation issues: ${issues}`;
+    }
+    catch (error) {
+        result.textContent = error instanceof Error ? error.message : String(error);
+    }
+    return;
+} const compiled = compileSpecificationProject({ ...createCanonicalProjectEnvelope(state.project, state.draft?.id ?? "published"), revision: canonicalRevision }); if (compiled.status === "blocked") {
     result.textContent = `Run blocked: ${compiled.diagnostics.map(({ field }) => field).join(", ")}`;
     return;
-} const execution = runProductionFixture(compiled.plan, fixture), last = execution.steps.at(-1), capturedIdentity = String(fixture.evaluationResultIdentity ?? "not recorded"), replayIdentity = last?.actual.resultIdentity ?? "not evaluated", differences = execution.steps.flatMap((step) => step.differences); result.textContent = `${execution.status.toUpperCase()} · captured evaluator result ${capturedIdentity} · replay result ${replayIdentity} · ${differences.length ? differences.join("; ") : "status and issueCodes assertions matched"}`; }); section.append(heading, evidence, run, result); form.append(section); }
+} const execution = runProductionFixture(compiled.plan, currentFixture), last = execution.steps.at(-1), capturedIdentity = String(currentFixture.evaluationResultIdentity ?? "not recorded"), replayIdentity = last?.actual.resultIdentity ?? "not evaluated", differences = execution.steps.flatMap((step) => step.differences); result.textContent = `${execution.status.toUpperCase()} · captured evaluator result ${capturedIdentity} · replay result ${replayIdentity} · ${differences.length ? differences.join("; ") : "status and issueCodes assertions matched"}`; }); section.append(heading, evidence, run, result); form.append(section); }
 function renderSelectedEntityEditor(content, entity) {
     if (!state)
         return;

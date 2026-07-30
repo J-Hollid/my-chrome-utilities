@@ -10,6 +10,7 @@ import {assignmentContributorTargets,compileAssignmentContributorTarget,flowPage
 import {canonicalConstraints,createCanonicalSchema} from "../dist/data-layer-canonical-schema.js";
 import {createSpecificationProject,transactProject} from "../dist/data-layer-specification-project.js";
 import {compileSpecificationProject,createCanonicalProjectEnvelope,evaluateSpecificationObservation} from "../dist/data-layer-specification-engine.js";
+import {documentPageGroupStructure,evaluatePageGroupFixture,pageGroupStructuralSchema} from "../dist/data-layer-page-group-structural-authoring.js";
 
 const contribution=(id,name,scope,constraints)=>({id,name,scope,constraints});
 const legacyRoleState=createSpecificationProject({name:"Record-scoped transaction",site:"shop.example",id:(kind)=>`${kind}:record-scope`});legacyRoleState.project.collections.events=[{id:"event:legacy-role",name:"Legacy",eventName:"legacy",role:"interaction"}];const recordScoped=transactProject(legacyRoleState,"Update an unrelated graph",(project)=>({...project,documentationFlowGraphs:{}}));assert.equal(recordScoped.project.collections.events[0].role,"interaction","an unrelated transaction cannot perform an implicit Event migration");
@@ -239,5 +240,54 @@ assert.deepEqual(
 );
 assert.deepEqual(evaluateSpecificationObservation(isolatedCompilation.plan,{sourceId:"history",eventName:"alpha",payload:{nested:{value:"present"}}}).issueDetails,[]);
 assert.deepEqual(evaluateSpecificationObservation(isolatedCompilation.plan,{sourceId:"history",eventName:"beta",payload:{beta:"present"}}).issueDetails,[]);
+
+const structuralState={project:{collections:{
+  profiles:[],
+  events:[],
+  pageGroups:[
+    {id:"group:checkout",name:"Checkout",schemaConstraints:[{path:"/funnel_name",type:"string",expectedValue:"checkout"}]},
+    {id:"group:retail",name:"Retail Checkout",applicabilitySetId:"set:retail",schemaConstraints:[{path:"/funnel_step",type:"string",allowedValues:["3a"]}]},
+    {id:"group:trade",name:"Trade Checkout",applicabilitySetId:"set:trade",schemaConstraints:[{path:"/funnel_step",type:"string",allowedValues:["3b"]}]},
+  ],
+  pages:[{id:"page:cart",name:"Cart",pageGroupIds:["group:checkout","group:retail","group:trade"]}],
+  applicabilitySets:[
+    {id:"set:retail",name:"Retail customers",condition:{kind:"predicate",field:"customer_type",operator:"equals",value:"retail"}},
+    {id:"set:trade",name:"Trade customers",condition:{kind:"predicate",field:"customer_type",operator:"equals",value:"trade"}},
+  ],
+  flows:[],
+  fixtures:[
+    {id:"fixture:retail",name:"Retail Cart example",pageId:"page:cart",payload:{customer_type:"retail",funnel_name:"checkout",funnel_step:"3a"}},
+    {id:"fixture:trade",name:"Trade Cart example",pageId:"page:cart",payload:{customer_type:"trade",funnel_name:"checkout",funnel_step:"3b"}},
+  ],
+  assignments:[],
+},documentationFlowGraphs:{}}};
+const structural=pageGroupStructuralSchema(structuralState,"page:cart");
+assert.deepEqual(structural.memberships.map(({groupName,applicabilitySetName})=>[groupName,applicabilitySetName]),[
+  ["Checkout","Always"],
+  ["Retail Checkout","Retail customers"],
+  ["Trade Checkout","Trade customers"],
+],"Page authoring preserves every ordered membership and its named applicability without an observation");
+assert.deepEqual(Object.keys(structural.unconditional.properties),["/funnel_name"]);
+assert.deepEqual(structural.conditionalBranches.map(({groupName,condition,properties})=>[groupName,condition,Object.keys(properties)]),[
+  ["Retail Checkout","customer_type equals retail",["/funnel_step"]],
+  ["Trade Checkout","customer_type equals trade",["/funnel_step"]],
+],"mutually exclusive Page Group contributions remain separate readable branches");
+for(const [fixtureId,included,excluded] of [
+  ["fixture:retail",["Checkout","Retail Checkout"],["Trade Checkout"]],
+  ["fixture:trade",["Checkout","Trade Checkout"],["Retail Checkout"]],
+]){
+  const evaluated=evaluatePageGroupFixture(structuralState,fixtureId);
+  assert.deepEqual(evaluated.includedStack,included);
+  assert.deepEqual(evaluated.inactiveGroups,excluded);
+  assert.equal(evaluated.compiled.status,"ready");
+  assert.deepEqual(evaluated.validation.issues,[]);
+  assert.equal(evaluated.mode,"evaluated-example");
+}
+const structuralDocument=documentPageGroupStructure(structural);
+assert.match(structuralDocument,/Complete Page specification: Cart/);
+assert.match(structuralDocument,/Retail customers · customer_type equals retail · Page Group Retail Checkout/);
+assert.match(structuralDocument,/Trade customers · customer_type equals trade · Page Group Trade Checkout/);
+assert.doesNotMatch(structuralDocument,/Inactive/);
+assert.match(documentPageGroupStructure(evaluatePageGroupFixture(structuralState,"fixture:retail")),/Evaluated example: Retail Cart example/);
 
 console.log("data-layer layered schema tests passed");

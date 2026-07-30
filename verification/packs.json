@@ -943,6 +943,7 @@
       "src/data-layer-page-group-membership.ts",
       "src/data-layer-layered-schema.ts",
       "src/data-layer-layered-schema-project.ts",
+      "src/data-layer-page-group-structural-authoring.ts",
       "src/data-layer-layered-schema-ui.ts",
       "src/data-layer-side-panel-schema-editor.ts"
     ],
@@ -984,7 +985,8 @@
       "features/data-layer-canonical-shared-profile-schema-authoring.feature",
       "features/data-layer-canonical-shared-profile-schema-authoring-runtime.feature",
       "features/data-layer-layered-schema-constraints.feature",
-      "features/data-layer-layered-schema-constraints-runtime.feature"
+      "features/data-layer-layered-schema-constraints-runtime.feature",
+      "features/data-layer-page-group-structural-authoring.feature"
     ],
     "handlers": [
       "acceptance/src/acceptance/steps/layered_schema.clj"
