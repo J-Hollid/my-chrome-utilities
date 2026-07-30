@@ -1184,21 +1184,24 @@ Feature: Data layer canonical Shared Profile schema authoring
 
   # Data layer canonical Shared Profile schema authoring 070
   Scenario Outline: Data layer canonical Shared Profile schema authoring 070
-    Given a String property is open in a shared Add rule or Edit rule editor
-    When the operator chooses <rule_type> and enters literal value <operand>
+    Given the selected String property is ready for a named comparison rule
+    When the shared rule form sets Rule type Value, Operator <operator>, and operand <operand>
     Then the rule summary says the value must <requirement>
     And matching is case-sensitive and treats regular-expression punctuation as literal text
     When the evaluator runs independently against <passing_value> and <failing_value>
     Then <passing_value> passes and <failing_value> reports the named rule
-    And save, reload, compilation, and validation preserve the selected rule type and literal value
-    When a non-String property opens the same rule-type selector
-    Then Starts with, Ends with, and Includes are absent
+    And save, reload, compilation, validation, and Undo preserve Value, the selected operator, and its typed operand
 
     Examples:
-      | rule_type   | operand | requirement       | passing_value  | failing_value    |
-      | Starts with | order-  | start with order- | order-123      | pre-order-123    |
-      | Ends with   | .com    | end with .com     | shop.example.com | shop.example.com.au |
-      | Includes    | sale    | include sale      | wholesale-item | premium-item     |
+      | operator             | operand | requirement              | passing_value    | failing_value       |
+      | Equals               | sale    | equal sale               | sale             | presale             |
+      | Does not equal       | sale    | not equal sale           | retail           | sale                |
+      | Starts with          | order-  | start with order-        | order-123        | pre-order-123       |
+      | Does not start with  | order-  | not start with order-    | retail-123       | order-123           |
+      | Ends with            | .com    | end with .com            | shop.example.com | shop.example.com.au |
+      | Does not end with    | .com    | not end with .com        | shop.example.net | shop.example.com    |
+      | Includes             | sale    | include sale             | wholesale-item   | premium-item        |
+      | Does not include     | sale    | not include sale         | premium-item     | wholesale-item      |
 
   # Data layer canonical Shared Profile schema authoring 071
   Scenario Outline: Data layer canonical Shared Profile schema authoring 071
@@ -1251,3 +1254,37 @@ Feature: Data layer canonical Shared Profile schema authoring
       | Edit rule   | wide viewport         |
       | Add rule    | narrow 360px viewport |
       | Edit rule   | narrow 360px viewport |
+
+  # Data layer canonical Shared Profile schema authoring 075
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 075
+    Given Add rule choices are rendered for a <property_type> property
+    When the Value entry is activated
+    Then one Operator dropdown and one <value_control> are revealed beneath Value
+    And Operator defaults to Equals
+    And its choices are <operator_choices>
+    And switching away from Value hides its Operator and Value controls
+    When the top-level Rule type menu is inspected
+    Then it contains one Value entry and no Starts with, Ends with, Includes, or negated literal entry
+    And Pattern and Allowed values remain separate peer rule types
+
+    Examples:
+      | property_type | value_control         | operator_choices                                                                                                           |
+      | String        | text Value input      | Equals, Does not equal, Starts with, Does not start with, Ends with, Does not end with, Includes, and Does not include     |
+      | Number        | typed Number input    | Equals and Does not equal                                                                                                  |
+      | Integer       | typed Integer input   | Equals and Does not equal                                                                                                  |
+      | Boolean       | true or false selector | Equals and Does not equal                                                                                                 |
+
+  # Data layer canonical Shared Profile schema authoring 076
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 076
+    Given a saved String rule uses legacy top-level <legacy_type> with operand <operand>
+    When the shared rule editor loads it
+    Then the editor presents Value with <operator> selected
+    And its operand, name, condition, severity, message, ownership, and effective validation result remain unchanged
+    When the rule is saved, reloaded, undone, and redone
+    Then the Value operator representation remains stable without duplicating or dropping the rule
+
+    Examples:
+      | legacy_type | operator    | operand |
+      | Starts with | Starts with | order-  |
+      | Ends with   | Ends with   | .com    |
+      | Includes    | Includes    | sale    |

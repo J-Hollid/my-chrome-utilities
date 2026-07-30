@@ -494,6 +494,28 @@ supplementary to the textual match state. This supersedes the unlabeled or
 independently flowing helper layout where it differs. The exact checkpoint remains
 `layered_schema`, followed by `npm run package`.
 
+On approval, the Value-operator hierarchy correction is later authority for
+Authoring scenarios 023–024, 070, and 075–076. Every compatible scalar property
+offers one top-level `Value` rule type. Selecting it reveals an `Operator` dropdown
+defaulted to `Equals` and one type-valid `Value` control. String operators are
+`Equals`, `Does not equal`, `Starts with`, `Does not start with`, `Ends with`,
+`Does not end with`, `Includes`, and `Does not include`. Number, Integer, and
+Boolean expose only `Equals` and `Does not equal` with their typed value control.
+
+No literal comparison remains a top-level rule type. `Pattern` and multi-value
+`Allowed values` remain separate peers. Switching away from Value hides its
+subcontrols. Summaries use the selected positive or negative operation naturally,
+and persistence, reload, compilation, validation, Undo, and Redo preserve the
+operator and typed operand.
+
+Saved `Starts with`, `Ends with`, and `Includes` rules from the superseded
+representation load as Value rules with their equivalent operator, preserving
+operand, name, condition, severity, message, ownership, and effective validation
+semantics. Saving and history produce one stable rule without duplication or loss.
+This supersedes the earlier requirement that Starts with, Ends with, and Includes
+appear as separate top-level rule types. The exact checkpoint remains
+`layered_schema`, followed by `npm run package`.
+
 The rejected schema candidate `143cc9d337` and Flow candidate `b8432d27e7` are not
 eligible because each introduced a vacuous `project_management` pack. Later coder
 commits `2db9335d` and `b4d143a4` contain useful task-owned revisions, but their
