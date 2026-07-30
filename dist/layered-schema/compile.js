@@ -1,9 +1,36 @@
-import { branch, constraintWithStructuredRules, included, origin, parallelMismatch } from "./compile-context.js";
+import { branch, constraintWithStructuredRules, included, origin, parallelMismatch, peerMismatch } from "./compile-context.js";
 import { mergeLayeredProperty } from "./compile-merge.js";
 export function compileLayeredSchema(contributors, context) {
-    const activeContributors = contributors.filter(({ active }) => active !== false), properties = {}, conflicts = [], provenance = activeContributors.map(origin), exclusions = contributors.filter(({ active }) => active === false).flatMap((contributor) => contributor.constraints.length ? contributor.constraints.map(({ path }) => ({ contributorId: contributor.id, contributorName: contributor.name, path, target: contributor.exclusionReason ?? "applicability did not match" })) : [{ contributorId: contributor.id, contributorName: contributor.name, path: "/", target: contributor.exclusionReason ?? "applicability did not match" }]);
+    const selected = contributors.filter(({ active }) => active !== false), peerQueues = new Map();
+    for (const contributor of selected)
+        if (contributor.peerGroup) {
+            const queue = peerQueues.get(contributor.peerGroup) ?? [];
+            queue.push(contributor);
+            peerQueues.set(contributor.peerGroup, queue);
+        }
+    for (const queue of peerQueues.values())
+        queue.sort((left, right) => left.id.localeCompare(right.id));
+    const activeContributors = selected.map((contributor) => contributor.peerGroup ? peerQueues.get(contributor.peerGroup).shift() : contributor), properties = {}, conflicts = [], provenance = activeContributors.map(origin), exclusions = contributors.filter(({ active }) => active === false).flatMap((contributor) => contributor.constraints.length ? contributor.constraints.map(({ path }) => ({ contributorId: contributor.id, contributorName: contributor.name, path, target: contributor.exclusionReason ?? "applicability did not match" })) : [{ contributorId: contributor.id, contributorName: contributor.name, path: "/", target: contributor.exclusionReason ?? "applicability did not match" }]);
     const conflict = (path, message, names) => conflicts.push({ path, message, contributors: names });
-    const active = activeContributors.flatMap((contributor) => contributor.constraints.map(constraintWithStructuredRules).filter((constraint) => included(constraint.target, context)).map((constraint) => ({ contributor, constraint }))), blockedParallel = new Set(), resolvedParallel = new Set();
+    const active = activeContributors.flatMap((contributor) => contributor.constraints.map(constraintWithStructuredRules).filter((constraint) => included(constraint.target, context)).map((constraint) => ({ contributor, constraint }))), blockedParallel = new Set(), blockedPeers = new Set(), resolvedParallel = new Set();
+    const peerEntries = new Map();
+    for (const entry of active)
+        if (entry.contributor.peerGroup) {
+            const key = `${entry.contributor.peerGroup}\u0000${entry.constraint.path}`, entries = peerEntries.get(key) ?? [];
+            entries.push(entry);
+            peerEntries.set(key, entries);
+        }
+    for (const entries of peerEntries.values()) {
+        let incompatible = false;
+        for (let left = 0; left < entries.length; left += 1)
+            for (let right = left + 1; right < entries.length; right += 1)
+                incompatible ||= peerMismatch(entries[left].constraint, entries[right].constraint);
+        if (!incompatible)
+            continue;
+        const path = entries[0].constraint.path;
+        blockedPeers.add(path);
+        conflict(path, "parallel Shared Profile peers conflict; add an explicit contextual resolution", [...new Set(entries.map(({ contributor }) => contributor.name))]);
+    }
     for (const page of active.filter(({ contributor }) => branch(contributor.scope) === "page"))
         for (const event of active.filter(({ contributor }) => branch(contributor.scope) === "event")) {
             if (page.constraint.path !== event.constraint.path || !parallelMismatch(page.constraint, event.constraint))
@@ -16,6 +43,7 @@ export function compileLayeredSchema(contributors, context) {
                 conflict(page.constraint.path, "parallel Page and Event branches conflict; add an explicit contextual resolution", [page.contributor.name, event.contributor.name]);
             }
         }
+    const contributorById = new Map(activeContributors.map((contributor) => [contributor.id, contributor]));
     for (const contributor of activeContributors)
         for (const rawConstraint of contributor.constraints) {
             const constraint = constraintWithStructuredRules(rawConstraint);
@@ -23,10 +51,10 @@ export function compileLayeredSchema(contributors, context) {
                 exclusions.push({ contributorId: contributor.id, contributorName: contributor.name, path: constraint.path, target: constraint.target ?? "all" });
                 continue;
             }
-            if (blockedParallel.has(constraint.path))
+            if (blockedParallel.has(constraint.path) || blockedPeers.has(constraint.path))
                 continue;
-            const prior = properties[constraint.path], parallelPair = Boolean(prior && resolvedParallel.has(constraint.path) && new Set([branch(prior.origins.at(-1).scope), branch(contributor.scope)]).has("page") && new Set([branch(prior.origins.at(-1).scope), branch(contributor.scope)]).has("event"));
-            properties[constraint.path] = mergeLayeredProperty(prior, constraint, contributor, parallelPair, conflict);
+            const prior = properties[constraint.path], priorContributor = prior ? contributorById.get(prior.origins.at(-1).contributorId) : undefined, parallelPair = Boolean(prior && resolvedParallel.has(constraint.path) && new Set([branch(prior.origins.at(-1).scope), branch(contributor.scope)]).has("page") && new Set([branch(prior.origins.at(-1).scope), branch(contributor.scope)]).has("event")), parallelPeer = Boolean(priorContributor?.peerGroup && priorContributor.peerGroup === contributor.peerGroup);
+            properties[constraint.path] = mergeLayeredProperty(prior, constraint, contributor, parallelPair, parallelPeer, conflict);
         }
     const onlyDefinedFields = [...activeContributors].reverse().find((contributor) => contributor.onlyDefinedFields !== undefined)?.onlyDefinedFields;
     return { status: conflicts.length ? "blocked" : "ready", properties, conflicts, provenance, exclusions, ...(onlyDefinedFields !== undefined ? { onlyDefinedFields } : {}) };

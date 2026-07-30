@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {compileLayeredSchema,resolveLayeredTarget,validateLayeredObservation} from "../dist/data-layer-layered-schema.js";
-import {flowPageFrameContributor,layeredContributorPath} from "../dist/data-layer-layered-schema-project.js";
+import {flowPageFrameContributor,layeredContributorPath,layeredContributorsForPath} from "../dist/data-layer-layered-schema-project.js";
 import {documentPageGroupStructure,evaluatePageGroupFixture,pageGroupStructuralSchema,resetDepartedPageApplicabilityPreview} from "../dist/data-layer-page-group-structural-authoring.js";
 import {compileSpecificationProject,createCanonicalProjectEnvelope,evaluateSpecificationObservation} from "../dist/data-layer-specification-engine.js";
 
@@ -74,6 +74,36 @@ for(let iteration=0;iteration<200;iteration+=1){
   assert.deepEqual(evaluated.includedStack,[`Group ${iteration}-0`,`Group ${iteration}-${activeIndex+1}`],"Fixture evaluation selects the unconditional group and exactly the matching conditional group");
   assert.deepEqual(evaluated.inactiveGroups,pageGroupIds.slice(1).map((_,index)=>({index,name:`Group ${iteration}-${index+1}`})).filter(({index})=>index!==activeIndex).map(({name})=>name),"Fixture evaluation preserves the stored order of inactive groups");
   assert.deepEqual(structuralState,before,"structural authoring and Fixture evaluation do not mutate the saved project");
+}
+
+for(let iteration=0;iteration<120;iteration+=1){
+  const commonId=`profile:common:${iteration}`,leftId=`profile:left:${iteration}`,rightId=`profile:right:${iteration}`,leftGroupId=`group:left:${iteration}`,rightGroupId=`group:right:${iteration}`,pageId=`page:fan:${iteration}`,flowId=`flow:fan:${iteration}`,frameId=`frame:fan:${iteration}`;
+  const fanState={project:{collections:{
+    profiles:[
+      {id:commonId,name:`Common ${iteration}`,schemaConstraints:[{path:"/shared",type:"string"}]},
+      {id:leftId,name:`Left ${iteration}`,schemaConstraints:[{path:"/tier",type:"string",expectedValue:`left-${iteration}`}]},
+      {id:rightId,name:`Right ${iteration}`,schemaConstraints:[{path:"/tier",type:"string",expectedValue:`right-${iteration}`}]},
+    ],
+    pageGroups:[
+      {id:leftGroupId,name:`Left group ${iteration}`,profileIds:[commonId,leftId],schemaConstraints:[]},
+      {id:rightGroupId,name:`Right group ${iteration}`,profileIds:[commonId,rightId],applicabilitySetId:`set:right:${iteration}`,schemaConstraints:[]},
+    ],
+    pages:[{id:pageId,name:`Fan page ${iteration}`,profileIds:[commonId],pageGroupIds:[leftGroupId,rightGroupId],schemaConstraints:[]}],
+    events:[],flows:[{id:flowId,name:`Fan flow ${iteration}`}],fixtures:[],assignments:[],
+    applicabilitySets:[{id:`set:right:${iteration}`,name:`Right audience ${iteration}`,condition:{kind:"predicate",field:"audience",operator:"equals",value:"right"}}],
+  },documentationFlowGraphs:{[flowId]:{pageFrames:[{id:frameId,name:`Fan instance ${iteration}`,pageId,pageGroupId:leftGroupId}],occurrences:[],relationships:[]}}}};
+  const page=fanState.project.collections.pages[0],pagePath=layeredContributorPath(fanState,page,"Page"),all=layeredContributorsForPath(fanState,pagePath),peers=all.filter(({scope})=>scope==="Shared Profile"),forward=compileLayeredSchema(peers,{eventId:"pageview",eventRole:"context"}),reverse=compileLayeredSchema([...peers].reverse(),{eventId:"pageview",eventRole:"context"});
+  assert.equal(forward.status,"blocked","generated incompatible profile fan-in blocks");
+  assert.deepEqual(reverse.conflicts,forward.conflicts,"peer conflict evidence is independent of profile permutation");
+  const common=peers.find(({id})=>id===commonId);
+  assert.equal(peers.filter(({id})=>id===commonId).length,1,"fan-out deduplicates a repeated stable profile identity");
+  assert.equal(common.inheritanceRoutes.length,3,"fan-out retains the direct route and every participating group route");
+  const previewed=layeredContributorsForPath(fanState,pagePath,{audience:"other"}),previewCommon=previewed.find(({id})=>id===commonId);
+  assert.equal(previewed.some(({id})=>id===rightId),false,"preview exclusion removes a profile with no remaining route");
+  assert.equal(previewCommon.inheritanceRoutes.length,2,"preview exclusion conserves every surviving route");
+  const frame=fanState.project.documentationFlowGraphs[flowId].pageFrames[0],framePath=layeredContributorPath(fanState,frame,"Flow Page-instance",flowId);
+  assert.deepEqual(framePath.pageGroupIds,[leftGroupId,rightGroupId],"downstream Page instances retain complete ordered membership independently of placement");
+  assert.ok(layeredContributorsForPath(fanState,framePath).some(({id})=>id===rightId),"downstream compilation receives profiles from non-placement memberships");
 }
 
 assert.deepEqual(

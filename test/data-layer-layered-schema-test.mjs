@@ -12,6 +12,7 @@ import {createSpecificationProject,transactProject} from "../dist/data-layer-spe
 import {compileSpecificationProject,createCanonicalProjectEnvelope,evaluateSpecificationObservation} from "../dist/data-layer-specification-engine.js";
 import {documentPageGroupStructure,evaluatePageGroupFixture,pageGroupStructuralSchema} from "../dist/data-layer-page-group-structural-authoring.js";
 import {composedSchemaWorkspace} from "../dist/data-layer-composed-schema-workspace.js";
+import {flowDocumentationSnapshotFromState} from "../dist/data-layer-flow-table-documentation-export-ui.js";
 
 const contribution=(id,name,scope,constraints)=>({id,name,scope,constraints});
 const legacyRoleState=createSpecificationProject({name:"Record-scoped transaction",site:"shop.example",id:(kind)=>`${kind}:record-scope`});legacyRoleState.project.collections.events=[{id:"event:legacy-role",name:"Legacy",eventName:"legacy",role:"interaction"}];const recordScoped=transactProject(legacyRoleState,"Update an unrelated graph",(project)=>({...project,documentationFlowGraphs:{}}));assert.equal(recordScoped.project.collections.events[0].role,"interaction","an unrelated transaction cannot perform an implicit Event migration");
@@ -81,6 +82,17 @@ const resolvedParallel=compileLayeredSchema([
 assert.equal(resolvedParallel.status,"ready");
 assert.equal(resolvedParallel.properties["/consent_state"].expectedValue,"granted");
 assert.deepEqual(resolvedParallel.properties["/consent_state"].overrideReferences,["definition:page-consent","definition:event-consent"]);
+
+const peerProfiles=[
+  {...contribution("profile:audience-a","Audience A","Shared Profile",[{path:"/tier",type:"string",expectedValue:"a"}]),peerGroup:"shared-profiles"},
+  {...contribution("profile:audience-b","Audience B","Shared Profile",[{path:"/tier",type:"string",expectedValue:"b"}]),peerGroup:"shared-profiles"},
+];
+for(const peers of [peerProfiles,[...peerProfiles].reverse()]){
+  const peerConflict=compileLayeredSchema(peers,{eventId:"pageview",eventRole:"context"});
+  assert.equal(peerConflict.status,"blocked","incompatible Shared Profile peers block in every list order");
+  assert.match(peerConflict.conflicts[0].message,/parallel Shared Profile peers/);
+  assert.equal(peerConflict.properties["/tier"],undefined,"a peer conflict has no list-order winner");
+}
 
 const targeted=compileLayeredSchema([contribution("targets","Checkout","Page Group",[
   {path:"/all",target:"all"},{path:"/context",target:"context"},{path:"/interaction",target:"interaction"},{path:"/purchase",target:"event:purchase"},
@@ -347,5 +359,14 @@ assert.ok(frameWorkspace.rows.some(({path,effective})=>path==="/currency"&&effec
 assert.equal(fixtureProfile.validation.issues.some(({path})=>path==="/currency"),false,"Fixture validation consumes the inherited required Shared Profile property");
 assert.match(profileDocument,/Commerce → Checkout → Cart/,"Page documentation preserves transitive Shared Profile provenance");
 assert.match(fixtureDocument,/Commerce → Checkout → Cart/,"Fixture documentation preserves the same transitive Shared Profile provenance");
+const flowSnapshot=flowDocumentationSnapshotFromState(transitiveState,"flow:checkout","2026-07-30T00:00:00.000Z"),flowContext=flowSnapshot.contexts.find(({id})=>id==="context:frame:frame:cart");
+assert.ok(flowContext.compiled.properties["/customer_id"],"Flow documentation composes every Page membership, not only the frame placement lane");
+assert.ok(flowContext.compiled.properties["/currency"].origins.some(({inheritanceRoutes})=>inheritanceRoutes?.includes("Commerce → Retail Checkout → Cart → Cart instance")),"Flow documentation preserves the complete downstream inheritance route");
+const flowDeveloperExport=exportLayeredSchema({targetName:"Checkout Flow",pageName:"Cart",eventName:"pageview",activation:"manual",compiled:flowContext.compiled});
+assert.match(flowDeveloperExport,/Commerce → Checkout → Cart → Cart instance/,"developer export preserves inheritance-route provenance");
+const revisedTransitiveState=structuredClone(transitiveState),previousEffectiveRevision=flowContext.effectiveRevision;
+revisedTransitiveState.project.collections.profiles.find(({id})=>id==="profile:customer").schemaConstraints.push({path:"/loyalty_tier",type:"string"});
+const revisedFlowContext=flowDocumentationSnapshotFromState(revisedTransitiveState,"flow:checkout","2026-07-30T00:00:00.000Z").contexts.find(({id})=>id==="context:frame:frame:cart");
+assert.notEqual(revisedFlowContext.effectiveRevision,previousEffectiveRevision,"changing a transitively inherited profile changes the documentation effective revision");
 
 console.log("data-layer layered schema tests passed");

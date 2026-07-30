@@ -1,5 +1,5 @@
 import { clone, same } from "./compile-context.js";
-export function mergeLayeredProperty(prior, constraint, contributor, parallelPair, conflict) {
+export function mergeLayeredProperty(prior, constraint, contributor, parallelPair, parallelPeer, conflict) {
     const source = { contributorId: contributor.id, contributorName: contributor.name, scope: contributor.scope, ...(contributor.inheritanceRoutes?.length ? { inheritanceRoutes: [...contributor.inheritanceRoutes] } : {}) };
     if (!prior)
         return { ...clone(constraint), origins: [source], superseded: [], ...(constraint.expectedValue !== undefined ? { expectedContributor: contributor.name } : {}) };
@@ -15,7 +15,9 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
     if (constraint.allowedValues) {
         if (prior.allowedValues) {
             const orderedPageGroups = prior.origins.at(-1)?.scope === "Page Group" && contributor.scope === "Page Group", changed = !same(prior.allowedValues, constraint.allowedValues);
-            if (orderedPageGroups && changed) {
+            if (parallelPeer)
+                next.allowedValues = clone(prior.allowedValues.filter((value) => constraint.allowedValues.some((candidate) => same(value, candidate))));
+            else if (orderedPageGroups && changed) {
                 if (prior.enforcement === "invariant")
                     conflict(constraint.path, "invariant allowed values cannot be replaced by membership order", [prior.origins.at(-1).contributorName, contributor.name]);
                 else {
@@ -46,7 +48,17 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
         next.allowedValueIds = clone(constraint.allowedValueIds);
     if (!constraint.allowedValues && constraint.allowedValueProvenance)
         next.allowedValueProvenance = clone(constraint.allowedValueProvenance);
-    if (prior.presence === "required" && constraint.presence === "optional")
+    if (parallelPeer && constraint.presence) {
+        if (prior.presence === "required" || constraint.presence === "required")
+            next.presence = "required";
+        else if (prior.presence === "forbidden" || constraint.presence === "forbidden")
+            next.presence = "forbidden";
+        else if (prior.presence === "optional" || constraint.presence === "optional")
+            next.presence = "optional";
+        else
+            next.presence = "permitted";
+    }
+    else if (prior.presence === "required" && constraint.presence === "optional")
         conflict(constraint.path, "required cannot be silently relaxed", [prior.origins.at(-1).contributorName, contributor.name]);
     else if (prior.presence === "forbidden" && constraint.presence === "permitted")
         conflict(constraint.path, "a forbidden property cannot be re-enabled", [prior.origins.at(-1).contributorName, contributor.name]);

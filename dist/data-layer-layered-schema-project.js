@@ -11,7 +11,7 @@ const contributionFor = (entity, scope) => {
     const canonical = entity.canonicalSchema;
     const requirements = (entity.requirements ?? []).map((requirement) => ({ ...requirement, ...(requirement.required ? { presence: "required" } : requirement.forbidden ? { presence: "forbidden" } : {}) }));
     const base = canonical ? canonicalConstraints(canonical) : (entity.schemaConstraints ?? requirements), sparse = entity.localSchemaContributions ?? [];
-    return { id: entity.id, name: entity.name, scope, revision: Number(entity.revision ?? entity.version ?? 1), constraints: [...base, ...sparse], ...(canonical?.onlyDefinedFields !== undefined ? { onlyDefinedFields: canonical.onlyDefinedFields } : typeof entity.onlyDefinedFields === "boolean" ? { onlyDefinedFields: entity.onlyDefinedFields } : {}) };
+    return { id: entity.id, name: entity.name, scope, revision: Number(entity.revision ?? entity.version ?? 1), constraints: [...base, ...sparse], ...(scope === "Shared Profile" ? { peerGroup: "shared-profiles" } : {}), ...(canonical?.onlyDefinedFields !== undefined ? { onlyDefinedFields: canonical.onlyDefinedFields } : typeof entity.onlyDefinedFields === "boolean" ? { onlyDefinedFields: entity.onlyDefinedFields } : {}) };
 };
 const referencedId = (entity, key) => typeof entity[key] === "string" ? String(entity[key]) : undefined;
 const referencedProfileIds = (entity) => entity ? [...new Set([...(referencedId(entity, "profileId") ? [referencedId(entity, "profileId")] : []), ...(entity.profileIds ?? []).filter((value) => typeof value === "string" && Boolean(value))])] : [];

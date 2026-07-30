@@ -16,7 +16,7 @@ const contributionFor=(entity:ProjectEntity,scope:LayerScope):LayerContributor=>
   const canonical=entity.canonicalSchema as CanonicalSchemaDocument|undefined;
   const requirements=((entity.requirements as Record<string,unknown>[]|undefined)??[]).map((requirement)=>({...requirement,...(requirement.required?{presence:"required"}:requirement.forbidden?{presence:"forbidden"}:{})})) as LayerConstraint[];
   const base=canonical?canonicalConstraints(canonical):((entity.schemaConstraints as LayerConstraint[]|undefined)??requirements),sparse=(entity.localSchemaContributions as LayerConstraint[]|undefined)??[];
-  return{id:entity.id,name:entity.name,scope,revision:Number(entity.revision??entity.version??1),constraints:[...base,...sparse],...(canonical?.onlyDefinedFields!==undefined?{onlyDefinedFields:canonical.onlyDefinedFields}:typeof entity.onlyDefinedFields==="boolean"?{onlyDefinedFields:entity.onlyDefinedFields}:{})};
+  return{id:entity.id,name:entity.name,scope,revision:Number(entity.revision??entity.version??1),constraints:[...base,...sparse],...(scope==="Shared Profile"?{peerGroup:"shared-profiles"}:{}),...(canonical?.onlyDefinedFields!==undefined?{onlyDefinedFields:canonical.onlyDefinedFields}:typeof entity.onlyDefinedFields==="boolean"?{onlyDefinedFields:entity.onlyDefinedFields}:{})};
 };
 const referencedId=(entity:Record<string,unknown>,key:string):string|undefined=>typeof entity[key]==="string"?String(entity[key]):undefined;
 const referencedProfileIds=(entity:ProjectEntity|undefined):string[]=>entity?[...new Set([...(referencedId(entity,"profileId")?[referencedId(entity,"profileId")!]:[]),...((entity.profileIds as string[]|undefined)??[]).filter((value):value is string=>typeof value==="string"&&Boolean(value))])]:[];
