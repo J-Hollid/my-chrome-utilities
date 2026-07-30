@@ -14,7 +14,35 @@ import {
   writeProjectDocumentationWorkbook,
 } from "../dist/data-layer-project-documentation-workspace.js";
 import {compileProjectDocumentation,projectDocumentationSources} from "../dist/data-layer-project-documentation-compiler.js";
+import {
+  PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT,
+  readProjectDocumentationLogoFile,
+} from "../dist/data-layer-project-documentation-workspace-ui.js";
 import {createSpecificationProject,exportSpecificationProject,importSpecificationProject,transactProject} from "../dist/data-layer-specification-project.js";
+
+assert.equal(PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT,250_000);
+for(const [name,type] of [["acme.png","image/png"],["acme.jpg","image/jpeg"],["acme.gif","image/gif"]]){
+  const dataUrl=`data:${type};base64,AA==`;
+  assert.deepEqual(
+    await readProjectDocumentationLogoFile({name,type},async()=>dataUrl),
+    {fileName:name,dataUrl},
+  );
+}
+await assert.rejects(
+  readProjectDocumentationLogoFile({name:"acme.svg",type:"image/svg+xml"},async()=>"data:image/svg+xml;base64,AA=="),
+  {message:"Choose a PNG, JPEG, or GIF image"},
+);
+await assert.rejects(
+  readProjectDocumentationLogoFile({name:"broken.png",type:"image/png"},async()=>{throw new Error("read failed");}),
+  {message:"The logo could not be read"},
+);
+await assert.rejects(
+  readProjectDocumentationLogoFile(
+    {name:"huge.png",type:"image/png"},
+    async()=>`data:image/png;base64,${"A".repeat(PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT)}`,
+  ),
+  {message:"The logo is too large"},
+);
 
 const theme=createProjectDocumentationTheme({
   id:"theme:acme",name:"Acme",clientName:"Acme",

@@ -58,7 +58,16 @@
     :rows #{["on" "rendered once before each non-empty concept"]
             ["off" "absent while concept filtering remains active"]
             ["on" "one heading for each non-empty included group"]
-            ["off" "no headings"]}}])
+            ["off" "no headings"]}}
+   {:keys ["image_type" "media_type"]
+    :rows #{["PNG" "image/png"]
+            ["JPEG" "image/jpeg"]
+            ["GIF" "image/gif"]}}
+   {:keys ["invalid_logo" "diagnostic"]
+    :rows #{["an SVG file" "Choose a PNG, JPEG, or GIF image"]
+            ["a file whose image data cannot be read" "The logo could not be read"]
+            ["a file that produces an image-read failure" "The logo could not be read"]
+            ["an image whose converted data URL exceeds 250000 characters" "The logo is too large"]}}])
 
 (defn validate-example! [_mode example]
   (support/validate-example-relations!
@@ -69,7 +78,7 @@
   (set (concat [:installedBoundary
                 :headingLifecycleStart
                 :orderingControls]
-               (map #(keyword (str "export" (format "%03d" %))) (range 1 25)))))
+               (map #(keyword (str "export" (format "%03d" %))) (range 1 28)))))
 
 (defn- assert-runtime! [evidence]
   (support/assert! (and (= runtime-paths (set (keys evidence)))

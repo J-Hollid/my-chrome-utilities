@@ -27,6 +27,30 @@ const moveVisible = (items, item, direction, visible) => { const projected = ite
 const checkedOrder = (all, configured) => configured ? [...configured] : [...all];
 const setChecked = (current, id, checked) => checked ? [...current.filter((candidate) => candidate !== id), id] : current.filter((candidate) => candidate !== id);
 const controlInput = (name, value, type = "text") => { const input = document.createElement("input"); input.name = name; input.type = type; input.value = value; return input; };
+export const PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT = 250_000;
+export async function readProjectDocumentationLogoFile(file, readDataUrl) {
+    if (!["image/png", "image/jpeg", "image/gif"].includes(file.type))
+        throw new Error("Choose a PNG, JPEG, or GIF image");
+    let dataUrl;
+    try {
+        dataUrl = await readDataUrl(file);
+    }
+    catch {
+        throw new Error("The logo could not be read");
+    }
+    if (!dataUrl.startsWith(`data:${file.type};base64,`))
+        throw new Error("The logo could not be read");
+    if (dataUrl.length > PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT)
+        throw new Error("The logo is too large");
+    return { fileName: file.name, dataUrl };
+}
+const fileDataUrl = (file) => new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.addEventListener("load", () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Unreadable logo")));
+    reader.addEventListener("error", () => reject(reader.error ?? new Error("Unreadable logo")));
+    reader.addEventListener("abort", () => reject(new Error("Unreadable logo")));
+    reader.readAsDataURL(file);
+});
 function applyThemeToTable(table, theme) {
     table.dataset.themeFingerprint = themeFingerprint(theme);
     table.dataset.density = theme.density;
@@ -238,10 +262,17 @@ export function installProjectDocumentationWorkspaceUi(options) {
             groups[title] = details;
             host.append(details);
         }
-        const client = controlInput("clientName", theme.clientName), logo = controlInput("logo", theme.logo), headingColor = controlInput("headingColor", theme.colors.heading, "color"), accent = controlInput("accentColor", theme.colors.accent, "color"), stripe = controlInput("stripeColor", theme.colors.stripe, "color");
+        const client = controlInput("clientName", theme.clientName), logoPicker = controlInput("logoFile", "", "file"), logoName = document.createElement("p"), logoDiagnostic = document.createElement("output"), removeLogo = button("Remove logo", () => { }), headingColor = controlInput("headingColor", theme.colors.heading, "color"), accent = controlInput("accentColor", theme.colors.accent, "color"), stripe = controlInput("stripeColor", theme.colors.stripe, "color");
+        let logoValue = theme.logo, logoFileName = theme.logo ? "Saved logo" : "";
         client.setAttribute("aria-label", "Theme client name");
-        logo.setAttribute("aria-label", "Theme raster data-image logo");
-        groups.Brand.append(labelled("Client name", client), labelled("PNG, JPEG, or GIF data-image logo", logo), labelled("Heading color", headingColor), labelled("Accent color", accent), labelled("Stripe color", stripe));
+        logoPicker.accept = "image/png,image/jpeg,image/gif";
+        logoPicker.setAttribute("aria-label", "Choose logo file");
+        logoDiagnostic.id = `documentation-logo-diagnostic-${theme.id}`;
+        logoDiagnostic.setAttribute("aria-live", "polite");
+        logoPicker.setAttribute("aria-describedby", logoDiagnostic.id);
+        logoName.dataset.logoFileName = "true";
+        logoDiagnostic.dataset.logoDiagnostic = "true";
+        groups.Brand.append(labelled("Client name", client), labelled("Choose logo file", logoPicker), logoName, logoDiagnostic, removeLogo, labelled("Heading color", headingColor), labelled("Accent color", accent), labelled("Stripe color", stripe));
         const family = controlInput("family", theme.typography.family), headingSize = controlInput("headingSize", String(theme.typography.headingSize), "number"), bodySize = controlInput("bodySize", String(theme.typography.bodySize), "number");
         family.setAttribute("aria-label", "Theme font family");
         groups.Typography.append(labelled("Font family", family), labelled("Heading size", headingSize), labelled("Body size", bodySize));
@@ -266,10 +297,21 @@ export function installProjectDocumentationWorkspaceUi(options) {
         header.setAttribute("aria-label", "Theme header text");
         footer.setAttribute("aria-label", "Theme footer text");
         groups["Header and footer"].append(labelled("Header text", header), labelled("Footer text", footer));
-        const read = () => createProjectDocumentationTheme({ id: theme.id, name: name.value, clientName: client.value, logo: logo.value, colors: { heading: headingColor.value, accent: accent.value, stripe: stripe.value }, typography: { family: family.value, headingSize: Number(headingSize.value), bodySize: Number(bodySize.value) }, density: density.value === "compact" ? "compact" : "comfortable", borders: borders.checked, striping: striping.checked, highlightedHeadings: highlighted.checked, columnWidths: Object.fromEntries(widths.value.split(/\r?\n/u).flatMap((line) => { const [column, raw] = line.split("="); return column && Number(raw) > 0 ? [[column.trim(), Number(raw)]] : []; })), headerText: header.value, footerText: footer.value });
-        const sampleHost = document.createElement("section"), drawSample = (sampleTheme) => { sampleHost.replaceChildren(); sampleHost.dataset.themeSample = "true"; if (sampleTheme.logo)
-            sampleHost.append(Object.assign(document.createElement("img"), { src: sampleTheme.logo, alt: `${sampleTheme.clientName || sampleTheme.name} logo` })); sampleHost.append(Object.assign(document.createElement("p"), { textContent: [sampleTheme.clientName, sampleTheme.headerText].filter(Boolean).join(" · ") }), renderTable({ id: "theme-sample", title: "Theme sample", headings: ["Property", "Description"], rows: [["page_name", "Page name"], ["event_name", "Observed event"]] }, sampleTheme), Object.assign(document.createElement("p"), { textContent: sampleTheme.footerText })); };
-        drawSample(theme);
+        const read = () => createProjectDocumentationTheme({ id: theme.id, name: name.value, clientName: client.value, logo: logoValue, colors: { heading: headingColor.value, accent: accent.value, stripe: stripe.value }, typography: { family: family.value, headingSize: Number(headingSize.value), bodySize: Number(bodySize.value) }, density: density.value === "compact" ? "compact" : "comfortable", borders: borders.checked, striping: striping.checked, highlightedHeadings: highlighted.checked, columnWidths: Object.fromEntries(widths.value.split(/\r?\n/u).flatMap((line) => { const [column, raw] = line.split("="); return column && Number(raw) > 0 ? [[column.trim(), Number(raw)]] : []; })), headerText: header.value, footerText: footer.value });
+        const sampleHost = document.createElement("section"), drawSample = (sampleTheme) => { sampleHost.replaceChildren(); sampleHost.dataset.themeSample = "true"; if (sampleTheme.logo) {
+            const image = Object.assign(document.createElement("img"), { src: sampleTheme.logo, alt: `${sampleTheme.clientName || sampleTheme.name} logo` });
+            image.style.maxWidth = "12rem";
+            image.style.maxHeight = "5rem";
+            image.style.width = "auto";
+            image.style.height = "auto";
+            image.style.objectFit = "contain";
+            sampleHost.append(image);
+        } sampleHost.append(Object.assign(document.createElement("p"), { textContent: [sampleTheme.clientName, sampleTheme.headerText].filter(Boolean).join(" · ") }), renderTable({ id: "theme-sample", title: "Theme sample", headings: ["Property", "Description"], rows: [["page_name", "Page name"], ["event_name", "Observed event"]] }, sampleTheme), Object.assign(document.createElement("p"), { textContent: sampleTheme.footerText })); };
+        const drawLogoState = () => { logoName.textContent = logoFileName; removeLogo.hidden = !logoValue; drawSample(read()); };
+        removeLogo.addEventListener("click", () => { logoValue = ""; logoFileName = ""; logoPicker.value = ""; logoDiagnostic.textContent = ""; drawLogoState(); });
+        logoPicker.addEventListener("change", () => { const file = logoPicker.files?.[0]; if (!file)
+            return; logoDiagnostic.textContent = ""; void readProjectDocumentationLogoFile(file, fileDataUrl).then((logo) => { logoValue = logo.dataUrl; logoFileName = logo.fileName; drawLogoState(); }, (error) => { logoPicker.value = ""; logoDiagnostic.textContent = error instanceof Error ? error.message : String(error); }); });
+        drawLogoState();
         const save = button("Save theme", () => { try {
             saveTheme(read(), "Save project documentation theme");
         }

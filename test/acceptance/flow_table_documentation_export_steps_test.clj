@@ -41,6 +41,18 @@
              :runtime
              {"headings" "on"
               "heading_result" "one heading for each non-empty included group"})))
+  (is (map? (flow-export/validate-example!
+             :runtime
+             {"image_type" "JPEG"
+              "media_type" "image/jpeg"})))
+  (is (map? (flow-export/validate-example!
+             :model
+             {"invalid_logo" "a file whose image data cannot be read"
+              "diagnostic" "The logo could not be read"})))
+  (is (map? (flow-export/validate-example!
+             :runtime
+             {"invalid_logo" "a file that produces an image-read failure"
+              "diagnostic" "The logo could not be read"})))
   (is (thrown-with-msg?
        clojure.lang.ExceptionInfo
        #"invalid result"
@@ -64,7 +76,10 @@
                         :export021 true
                         :export022 true
                         :export023 true
-                        :export024 true}
+                        :export024 true
+                        :export025 true
+                        :export026 true
+                        :export027 true}
                        (map (fn [index]
                               [(keyword (str "export" (format "%03d" index))) true])
                             (range 1 21)))]
