@@ -907,6 +907,16 @@ example. This correction is specified by
 `features/data-layer-page-group-structural-authoring.feature` and supersedes older
 wording that could imply an observation is required for Page authoring.
 
+Each participating Page Group contributes its complete effective schema: all
+referenced Shared Profiles as parallel peers, followed by the Page Group local
+contribution. Those profile properties continue through the Page, Page-local
+contribution, Flow Page instance, Fixture validation, documentation, and export.
+Stable Shared Profile identity prevents duplicate rows and self-conflicts when the
+same profile is reachable directly or through multiple groups, while provenance
+retains every route. Clearing a Page Group applicability preview excludes profiles
+reachable only through that group and preserves any profile with another selected
+route.
+
 Opening a Page or Page Group from its overview goes directly to a full
 main-workspace configuration with an `Effective schema at <name>` table; the
 Inspector is only an optional summary and link. The wide table keeps every

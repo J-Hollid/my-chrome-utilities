@@ -37,6 +37,26 @@ Applicability Set selection.
 
 The Pages editor contains no observation selector or sample payload editor.
 
+### Transitive Shared Profile inheritance
+
+Each participating Page Group contributes its complete effective schema rather
+than only its local canonical properties. A Page Group first composes every Shared
+Profile it references as parallel peers, then applies its local contribution. The
+Page composes those effective Page Group results in membership order before its
+Page-local contribution.
+
+Provenance preserves the complete inheritance route, for example `Commerce →
+Checkout → Cart`. A Shared Profile reachable directly from the Page or through
+multiple selected Page Groups produces one effective property contribution rather
+than duplicate rows or a conflict with itself, while provenance retains every
+reachability route.
+
+Clearing an Applicability Set preview checkbox excludes the associated Page Group's
+complete effective schema, including profiles reachable only through that group. A
+profile remains when another participating group or the Page itself still
+references it. Flow Page instances, Fixtures, validation, documentation, and export
+use this same transitive contributor graph.
+
 ### Ordered resolution
 
 Composition first combines compatible facets. A later Page Group replaces an
@@ -76,11 +96,15 @@ schema as an evaluated example.
 | Reorder does not resolve ordinary conflicts | Structural authoring 004 | Later ordinary facets win with superseded provenance |
 | Applicability Sets incorrectly compete globally | Structural authoring 005 | Every set evaluates independently and only Assignments can tie |
 | Generic documentation drops composition context | Structural authoring 006 | All-checked ordered output preserves applicability and provenance |
+| Shared Profile inheritance stops at Page Groups | Structural authoring 007 | Multiple Page Group profiles populate the Page table with complete provenance |
+| Repeated profile reachability duplicates or loses properties | Structural authoring 008 | Stable profile identity deduplicates values while retaining every route |
+| Downstream surfaces flatten Page Groups to local schema | Structural authoring 009 | Page instances, Fixtures, validation, and documentation use the same transitive graph |
 
 ## Scope
 
 This correction covers Page and Page Group configuration, canonical effective
 schema composition, independent Applicability Set evaluation, Fixture-owned
 scenario evaluation, Assignment ambiguity boundaries, ordered ordinary override,
-and Page schema documentation. It does not change live event capture or conditional
-rule authoring inside a canonical property.
+transitive Shared Profile inheritance, and Page schema documentation. It does not
+change live event capture or conditional rule authoring inside a canonical
+property.

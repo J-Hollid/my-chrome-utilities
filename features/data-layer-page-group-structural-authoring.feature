@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=01cb2aff1c24cd0982728e41ee236e159d4aa7d32cf70aaa1a90d35c3cc75c74
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-30T22:53:19.902122170Z","feature_name":"Data layer Page Group structural authoring","feature_path":"features/data-layer-page-group-structural-authoring.feature","background_hash":"0e77c7b39c8fe132aa0c01de16e81d29224bc1297fef080d38492186a66d9f5f","implementation_hash":"81c349b65b-architect","scenarios":[{"index":3,"name":"Data layer Page Group structural authoring 004","scenario_hash":"a186ab1d32f1b8732c6f5b24ac7a57b57e7b89a69184af4c9ea64f3519900029","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-30T22:53:19.902122170Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer Page Group structural authoring
 
   Background:
@@ -78,3 +73,44 @@ Feature: Data layer Page Group structural authoring
     And it identifies the referenced Applicability Set for each Page Group
     And it does not evaluate any Applicability Set against an empty payload
     And Fixture-specific documentation identifies its independently matched sets as an evaluated example
+
+  # Data layer Page Group structural authoring 007
+  Scenario: Data layer Page Group structural authoring 007
+    Given Shared Profiles Commerce and Experience define canonical properties currency and locale
+    And Checkout inherits Commerce and Experience and locally defines funnel_name
+    And Cart locally defines page_name
+    When the operator compares Effective schema at Checkout and Cart with Checkout participating
+    Then effective schema properties are
+      | workspace | properties                               |
+      | Checkout  | currency, locale, funnel_name            |
+      | Cart      | currency, locale, funnel_name, page_name |
+    And inherited provenance routes are
+      | property | route                                |
+      | currency | Commerce through Checkout into Cart  |
+      | locale   | Experience through Checkout into Cart |
+    And no inherited Shared Profile property stops at the Page Group boundary
+
+  # Data layer Page Group structural authoring 008
+  Scenario Outline: Data layer Page Group structural authoring 008
+    Given Shared Profile reachability into Cart is
+      | profile  | routes                                      |
+      | Commerce | Cart, Checkout, and Retail Checkout         |
+      | Customer | Retail Checkout                             |
+    When the operator sets the Retail applicability preview to <selection>
+    Then Commerce appears once without a self-conflict and retains <Commerce routes>
+    And Customer is <Customer outcome>
+    And the Retail Checkout local contribution is <local outcome>
+
+    Examples:
+      | selection | Commerce routes                    | Customer outcome                           | local outcome                       |
+      | unchecked | Cart and Checkout                  | absent                                     | absent                              |
+      | checked   | Cart, Checkout, and Retail Checkout | present through Retail Checkout provenance | present at its membership position  |
+
+  # Data layer Page Group structural authoring 009
+  Scenario: Data layer Page Group structural authoring 009
+    Given Cart inherits a Shared Profile property through a participating Page Group
+    And Cart is used by a Flow Page instance and a matching Fixture
+    When the operator reviews the Page, Flow Page instance, Fixture result, and Page documentation
+    Then every surface contains the same inherited Shared Profile property
+    And each surface preserves the Shared Profile, Page Group, Page, and downstream provenance
+    And no surface substitutes the Page Group's local-only schema for its effective schema
