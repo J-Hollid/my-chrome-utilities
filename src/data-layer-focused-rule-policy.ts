@@ -2,7 +2,7 @@ import {canonicalFlatPredicateIssue} from "./canonical-schema/predicate-policy.j
 import {isStringLiteralRuleKind,regularExpressionIssue} from "./data-layer-string-rule-validation.js";
 
 const existenceOperators=new Set(["Exists","Does not exist"]);
-const namedRuleKinds=new Set(["presence","value","pattern","range","cardinality","reusable","starts-with","ends-with","includes"]);
+const namedRuleKinds=new Set(["presence","value","allowed-values","pattern","range","cardinality","reusable","starts-with","ends-with","includes"]);
 const incompleteConditionPredicate=(condition:unknown):boolean=>{
   if(!condition||typeof condition!=="object")return true;
   const value=condition as Record<string,unknown>;
@@ -27,7 +27,9 @@ export function focusedRuleIssue(rule:Record<string,unknown>):string|undefined {
   const migrationIssue=canonicalFlatPredicateIssue(rule.condition);if(migrationIssue)return migrationIssue;
   if(namedRuleKinds.has(String(rule.kind))&&flatConditionIssue(rule.condition))return"Complete or remove the condition";
   if(rule.kind==="presence"&&!["required","optional","forbidden"].includes(String(rule.presence??"")))return"Choose Required, Optional, or Forbidden.";
-  if(rule.kind==="value"&&!(Array.isArray(rule.allowedValues)&&rule.allowedValues.length))return"Enter at least one allowed value";
+  if(rule.kind==="value"&&rule.operator!==undefined&&rule.expectedValue===undefined)return"Enter a Value";
+  if(rule.kind==="value"&&rule.operator===undefined&&!(Array.isArray(rule.allowedValues)&&rule.allowedValues.length))return"Enter at least one allowed value";
+  if(rule.kind==="allowed-values"&&!(Array.isArray(rule.allowedValues)&&rule.allowedValues.length))return"Enter at least one allowed value";
   if(rule.kind==="pattern")return regularExpressionIssue(rule.pattern);
   if(isStringLiteralRuleKind(rule.kind)&&!String(rule.literal??"").length)return"Enter a literal value";
   if(rule.kind==="range"&&rule.minimum!==undefined&&rule.maximum!==undefined&&Number(rule.minimum)>Number(rule.maximum))return"Minimum must not exceed maximum.";

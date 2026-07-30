@@ -3,8 +3,8 @@ import {filterFocusedReusableRules,focusedReusableOutcome,focusedRuleFields,focu
 import {renderSharedConditionTree} from "./data-layer-shared-condition-tree-editor.js";
 import {schemaTableStageAllowedValues} from "./data-layer-schema-table.js";
 import {canonicalArrayScopeIssue,canonicalArrayScopeSummary} from "./data-layer-canonical-array-items.js";
-import {stringRuleKindOptions} from "./data-layer-string-rule-validation.js";
-import {renderRegularExpressionTester} from "./data-layer-string-rule-validation-ui.js";
+import {valueRuleOperand} from "./data-layer-string-rule-validation.js";
+import {renderRegularExpressionTester,renderValueRuleControls} from "./data-layer-string-rule-validation-ui.js";
 import type {CanonicalArrayScopeBoundary} from "./data-layer-canonical-schema.js";
 
 export interface CanonicalFocusedRuleAddContext {dom:Document;getWorking:()=>CanonicalPropertyNode|undefined;properties?:()=>readonly {id:string;name:string;type?:string;allowedValues?:readonly unknown[];arrayBoundaries?:readonly {propertyId:string;name:string}[]}[];id:(kind:string)=>string;render:()=>void;feedback:(message:string)=>void;}
@@ -24,7 +24,7 @@ export function renderCanonicalRuleAddPanel(host:HTMLElement,context:CanonicalFo
     opener.remove();
     const panel=dom.createElement("fieldset"),legend=dom.createElement("legend"),details=section(dom,"Rule details"),when=section(dom,"When"),then=section(dom,"Then"),severitySection=section(dom,"Severity and message"),actions=section(dom,"Rule actions"),kind=dom.createElement("select"),fields=dom.createElement("div"),status=dom.createElement("p"),name=input(dom,"newRuleName"),target=context.properties?.().find(({id})=>id===working.id),boundaries=target?.arrayBoundaries??[],scope:CanonicalArrayScopeBoundary[]=boundaries.map(({propertyId})=>({propertyId,mode:"every"}));
     let condition:CanonicalPredicate|undefined,conditionIssue:string|undefined;
-    panel.dataset.ruleEditorMode="add";fields.dataset.ruleFieldGrid="true";severitySection.dataset.ruleFieldGrid="true";panel.setAttribute("aria-label","Add rule editor");legend.textContent="Add rule";status.setAttribute("role","status");kind.name="ruleKind";kind.required=true;kind.append(new Option("Choose rule type",""),...(["presence","value","pattern","range","cardinality","reusable"] as const).map((entry)=>new Option(entry,entry)),...stringRuleKindOptions(working.type).map(({kind:entry,label})=>new Option(label,entry)));
+    panel.dataset.ruleEditorMode="add";fields.dataset.ruleFieldGrid="true";severitySection.dataset.ruleFieldGrid="true";panel.setAttribute("aria-label","Add rule editor");legend.textContent="Add rule";status.setAttribute("role","status");kind.name="ruleKind";kind.required=true;kind.append(new Option("Choose rule type",""),...([["presence","Presence"],["value","Value"],["allowed-values","Allowed values"],["pattern","Pattern"],["range","Range"],["cardinality","Cardinality"],["reusable","Reusable"]] as const).map(([entry,label])=>new Option(label,entry)));
     details.append(labeled(dom,"Rule name",name),labeled(dom,"Rule type",kind));
     const conditionHost=dom.createElement("div");when.append(conditionHost);
     const candidate=():CanonicalRule|undefined=>{
@@ -36,6 +36,7 @@ export function renderCanonicalRuleAddPanel(host:HTMLElement,context:CanonicalFo
       }
       const presence=panel.querySelector<HTMLSelectElement>("[name=\"newRulePresence\"]");if(presence?.value)rule.presence=presence.value as NonNullable<CanonicalRule["presence"]>;
       const ordinary=panel.querySelector<HTMLInputElement>("[name=\"newRuleOrdinaryValue\"]");if(ordinary?.value)rule.allowedValues=schemaTableStageAllowedValues([],ordinary.value,working.type);
+      const operator=panel.querySelector<HTMLSelectElement>("[name=\"newRuleOperator\"]"),value=panel.querySelector<HTMLInputElement|HTMLSelectElement>("[name=\"newRuleValue\"]");if(operator){rule.operator=operator.value;if(value&&value.value!=="")rule.expectedValue=valueRuleOperand(working.type,value.value);}
       const reusable=panel.querySelector<HTMLSelectElement>("[name=\"newRuleReusableRuleId\"]");
       if(reusable?.value){rule.reusableRuleId=reusable.value;const source=readFocusedReusableRules().find(({id})=>id===reusable.value),ruleName=source?.name??reusable.selectedOptions[0]?.textContent,outcome=source&&focusedReusableOutcome(source);if(ruleName)rule.name=ruleName;if(outcome)rule.reusableOutcome=outcome;}
       return rule;
@@ -52,6 +53,7 @@ export function renderCanonicalRuleAddPanel(host:HTMLElement,context:CanonicalFo
           search.addEventListener("input",renderChoices);reusable.addEventListener("change",validate);renderChoices();fields.append(labeled(dom,"Search reusable rules",search),labeled(dom,"Reusable rule",reusable));continue;
         }
         if(field==="presence"){const control=dom.createElement("select");control.name="newRulePresence";control.append(new Option("Choose presence",""),new Option("Required","required"),new Option("Optional","optional"),new Option("Forbidden","forbidden"));control.addEventListener("change",validate);fields.append(labeled(dom,"Presence",control));continue;}
+        if(field==="valueOperator"){fields.append(renderValueRuleControls(dom,working.type,"new","Equals",undefined,validate));continue;}
         const control=input(dom,`newRule${field[0]!.toUpperCase()+field.slice(1)}`,"",numericFields.has(field)?"number":"text");control.addEventListener("input",validate);fields.append(labeled(dom,fieldLabel(field),control));if(field==="pattern")fields.append(renderRegularExpressionTester(dom,control));
       }
       validate();

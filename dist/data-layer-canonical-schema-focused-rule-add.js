@@ -2,8 +2,8 @@ import { filterFocusedReusableRules, focusedReusableOutcome, focusedRuleFields, 
 import { renderSharedConditionTree } from "./data-layer-shared-condition-tree-editor.js";
 import { schemaTableStageAllowedValues } from "./data-layer-schema-table.js";
 import { canonicalArrayScopeIssue, canonicalArrayScopeSummary } from "./data-layer-canonical-array-items.js";
-import { stringRuleKindOptions } from "./data-layer-string-rule-validation.js";
-import { renderRegularExpressionTester } from "./data-layer-string-rule-validation-ui.js";
+import { valueRuleOperand } from "./data-layer-string-rule-validation.js";
+import { renderRegularExpressionTester, renderValueRuleControls } from "./data-layer-string-rule-validation-ui.js";
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const input = (dom, name, value = "", type = "text") => { const control = dom.createElement("input"); control.name = name; control.type = type; control.value = value; return control; };
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
@@ -29,7 +29,7 @@ export function renderCanonicalRuleAddPanel(host, context) {
         status.setAttribute("role", "status");
         kind.name = "ruleKind";
         kind.required = true;
-        kind.append(new Option("Choose rule type", ""), ...["presence", "value", "pattern", "range", "cardinality", "reusable"].map((entry) => new Option(entry, entry)), ...stringRuleKindOptions(working.type).map(({ kind: entry, label }) => new Option(label, entry)));
+        kind.append(new Option("Choose rule type", ""), ...[["presence", "Presence"], ["value", "Value"], ["allowed-values", "Allowed values"], ["pattern", "Pattern"], ["range", "Range"], ["cardinality", "Cardinality"], ["reusable", "Reusable"]].map(([entry, label]) => new Option(label, entry)));
         details.append(labeled(dom, "Rule name", name), labeled(dom, "Rule type", kind));
         const conditionHost = dom.createElement("div");
         when.append(conditionHost);
@@ -48,6 +48,12 @@ export function renderCanonicalRuleAddPanel(host, context) {
             const ordinary = panel.querySelector("[name=\"newRuleOrdinaryValue\"]");
             if (ordinary?.value)
                 rule.allowedValues = schemaTableStageAllowedValues([], ordinary.value, working.type);
+            const operator = panel.querySelector("[name=\"newRuleOperator\"]"), value = panel.querySelector("[name=\"newRuleValue\"]");
+            if (operator) {
+                rule.operator = operator.value;
+                if (value && value.value !== "")
+                    rule.expectedValue = valueRuleOperand(working.type, value.value);
+            }
             const reusable = panel.querySelector("[name=\"newRuleReusableRuleId\"]");
             if (reusable?.value) {
                 rule.reusableRuleId = reusable.value;
@@ -90,6 +96,10 @@ export function renderCanonicalRuleAddPanel(host, context) {
                     control.append(new Option("Choose presence", ""), new Option("Required", "required"), new Option("Optional", "optional"), new Option("Forbidden", "forbidden"));
                     control.addEventListener("change", validate);
                     fields.append(labeled(dom, "Presence", control));
+                    continue;
+                }
+                if (field === "valueOperator") {
+                    fields.append(renderValueRuleControls(dom, working.type, "new", "Equals", undefined, validate));
                     continue;
                 }
                 const control = input(dom, `newRule${field[0].toUpperCase() + field.slice(1)}`, "", numericFields.has(field) ? "number" : "text");

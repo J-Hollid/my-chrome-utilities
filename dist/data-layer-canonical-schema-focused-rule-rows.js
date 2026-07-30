@@ -1,8 +1,8 @@
 import { focusedOwnershipActionTarget, focusedOwnershipActions, focusedRuleFields, focusedRuleIssue } from "./data-layer-focused-schema-property-ui.js";
 import { renderSharedConditionTree } from "./data-layer-shared-condition-tree-editor.js";
 import { schemaTableAllowedValues, schemaTableRuleConditionSummary, schemaTableRuleOutcomeSummary, schemaTableStageAllowedValues } from "./data-layer-schema-table.js";
-import { stringRuleKindOptions } from "./data-layer-string-rule-validation.js";
-import { renderRegularExpressionTester } from "./data-layer-string-rule-validation-ui.js";
+import { normalizeValueRule, valueRuleOperand } from "./data-layer-string-rule-validation.js";
+import { renderRegularExpressionTester, renderValueRuleControls } from "./data-layer-string-rule-validation-ui.js";
 const clone = (value) => structuredClone(value);
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const input = (dom, name, value = "", type = "text") => { const control = dom.createElement("input"); control.name = name; control.type = type; control.value = value; return control; };
@@ -10,7 +10,10 @@ const button = (dom, text, run) => { const control = dom.createElement("button")
 const ruleKindLabel = (rule) => rule.name ?? rule.kind;
 const fieldLabel = (field) => ({ pattern: "Regular expression", literal: "Literal value", minimum: "Minimum", maximum: "Maximum", minItems: "Minimum items", maxItems: "Maximum items", severity: "Severity", message: "Message" }[field] ?? field);
 function editRule(row, rule, context, invoker) {
-    const { dom } = context, editor = dom.createElement("fieldset"), legend = dom.createElement("legend"), draft = clone(rule), status = dom.createElement("p"), details = dom.createElement("section"), when = dom.createElement("section"), then = dom.createElement("section"), severitySection = dom.createElement("section"), actions = dom.createElement("section");
+    const normalized = normalizeValueRule(rule);
+    if (normalized.kind === "value" && normalized.operator === undefined && normalized.allowedValues)
+        normalized.kind = "allowed-values";
+    const { dom } = context, editor = dom.createElement("fieldset"), legend = dom.createElement("legend"), draft = clone(normalized), status = dom.createElement("p"), details = dom.createElement("section"), when = dom.createElement("section"), then = dom.createElement("section"), severitySection = dom.createElement("section"), actions = dom.createElement("section");
     let save, conditionIssue;
     const headed = (host, text) => { const heading = dom.createElement("h3"); heading.textContent = text; host.append(heading); };
     editor.dataset.ruleEditorMode = "edit";
@@ -27,7 +30,7 @@ function editRule(row, rule, context, invoker) {
     actions.setAttribute("aria-label", "Rule actions");
     const validate = () => { const issue = conditionIssue ?? focusedRuleIssue(draft); if (save)
         save.disabled = Boolean(issue); status.textContent = issue ?? ""; };
-    const name = input(dom, "editRuleName", draft.name ?? ""), kind = dom.createElement("select"), kindLabel = stringRuleKindOptions(context.getWorking()?.type).find(({ kind: entry }) => entry === draft.kind)?.label ?? draft.kind;
+    const name = input(dom, "editRuleName", draft.name ?? ""), kind = dom.createElement("select"), kindLabel = draft.kind === "value" ? "Value" : draft.kind === "allowed-values" ? "Allowed values" : draft.kind === "pattern" ? "Pattern" : draft.kind;
     kind.name = "editRuleKind";
     kind.disabled = true;
     kind.append(new Option(kindLabel, draft.kind));
@@ -36,9 +39,9 @@ function editRule(row, rule, context, invoker) {
     else
         delete draft.name; validate(); });
     details.append(labeled(dom, "Rule name", name), labeled(dom, "Rule type", kind));
-    const tree = dom.createElement("div");
+    const conditionId = draft.condition?.id, tree = dom.createElement("div");
     renderSharedConditionTree(tree, { dom, allowEmpty: true, ...(draft.condition ? { condition: draft.condition } : {}), properties: () => context.properties?.() ?? [], id: context.id, onIssue: (issue) => { conditionIssue = issue; }, onChange: (condition) => { if (condition)
-            draft.condition = condition;
+            draft.condition = conditionId && !condition.id ? { ...condition, id: conditionId } : condition;
         else
             delete draft.condition; validate(); } });
     when.append(tree);
@@ -54,6 +57,16 @@ function editRule(row, rule, context, invoker) {
             control.value = draft.presence ?? "required";
             control.addEventListener("change", () => { draft.presence = control.value; validate(); });
             then.append(labeled(dom, "Presence", control));
+            continue;
+        }
+        if (field === "valueOperator") {
+            let controls;
+            const update = () => { const operator = controls.querySelector("[name=\"editRuleOperator\"]"), value = controls.querySelector("[name=\"editRuleValue\"]"); draft.operator = operator?.value ?? "Equals"; if (value && value.value !== "")
+                draft.expectedValue = valueRuleOperand(context.getWorking()?.type, value.value);
+            else
+                delete draft.expectedValue; validate(); };
+            controls = renderValueRuleControls(dom, context.getWorking()?.type, "edit", draft.operator, draft.expectedValue, update);
+            then.append(controls);
             continue;
         }
         if (field === "ordinaryValue") {

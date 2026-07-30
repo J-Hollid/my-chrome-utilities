@@ -157,7 +157,7 @@ export function readFocusedReusableRules(storage?:Pick<Storage,"getItem">):Focus
 
 export function focusedReusableOutcome(rule:FocusedReusableRule):Record<string,unknown>|undefined {
   const source=rule.outcome&&typeof rule.outcome==="object"?rule.outcome:rule;
-  const kind=String(source.kind??"");if(!["presence","value","pattern","range","cardinality","condition","custom","starts-with","ends-with","includes"].includes(kind))return undefined;
+  const kind=String(source.kind??"");if(!["presence","value","allowed-values","pattern","range","cardinality","condition","custom","starts-with","ends-with","includes"].includes(kind))return undefined;
   const outcome=cloneReusable(source);delete outcome.id;delete outcome.name;delete outcome.enabled;delete outcome.condition;delete outcome.outcome;
   return outcome;
 }
@@ -167,7 +167,8 @@ const cloneReusable=(value:Record<string,unknown>):Record<string,unknown>=>struc
 export function focusedRuleFields(kind:string):string[] {
   switch(kind) {
     case "presence": return ["condition","presence","severity","message"];
-    case "value": return ["condition","ordinaryValue","severity","message"];
+    case "value": return ["condition","valueOperator","severity","message"];
+    case "allowed-values": return ["condition","ordinaryValue","severity","message"];
     case "pattern": return ["condition","pattern","severity","message"];
     case "starts-with":
     case "ends-with":

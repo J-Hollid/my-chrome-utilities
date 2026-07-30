@@ -125,7 +125,7 @@ export function readFocusedReusableRules(storage) {
 export function focusedReusableOutcome(rule) {
     const source = rule.outcome && typeof rule.outcome === "object" ? rule.outcome : rule;
     const kind = String(source.kind ?? "");
-    if (!["presence", "value", "pattern", "range", "cardinality", "condition", "custom", "starts-with", "ends-with", "includes"].includes(kind))
+    if (!["presence", "value", "allowed-values", "pattern", "range", "cardinality", "condition", "custom", "starts-with", "ends-with", "includes"].includes(kind))
         return undefined;
     const outcome = cloneReusable(source);
     delete outcome.id;
@@ -139,7 +139,8 @@ const cloneReusable = (value) => structuredClone(value);
 export function focusedRuleFields(kind) {
     switch (kind) {
         case "presence": return ["condition", "presence", "severity", "message"];
-        case "value": return ["condition", "ordinaryValue", "severity", "message"];
+        case "value": return ["condition", "valueOperator", "severity", "message"];
+        case "allowed-values": return ["condition", "ordinaryValue", "severity", "message"];
         case "pattern": return ["condition", "pattern", "severity", "message"];
         case "starts-with":
         case "ends-with":

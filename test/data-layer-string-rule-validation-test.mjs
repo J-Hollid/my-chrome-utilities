@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import {
+  normalizeValueRule,
   regularExpressionTest,
-  stringRuleKindOptions,
   stringRuleMatches,
   stringRuleRequirement,
+  valueOperatorOptions,
+  valueRuleMatches,
+  valueRuleRequirement,
 } from "../dist/data-layer-string-rule-validation.js";
 import {focusedRuleIssue} from "../dist/data-layer-focused-rule-policy.js";
 import {schemaTableRuleOutcomeSummary} from "../dist/data-layer-schema-table.js";
@@ -27,41 +30,50 @@ assert.match(regularExpressionTesterGridStyle,/grid-template-columns:repeat\(2,m
 assert.match(regularExpressionTesterGridStyle,/grid-column:1\/-1/);
 assert.match(regularExpressionTesterGridStyle,/max-width:100%/);
 
-assert.deepEqual(
-  stringRuleKindOptions("string"),
-  [
-    {kind:"starts-with",label:"Starts with"},
-    {kind:"ends-with",label:"Ends with"},
-    {kind:"includes",label:"Includes"},
-  ],
-  "String properties expose all three literal rule types",
+assert.deepEqual(valueOperatorOptions("string"),[
+  "Equals",
+  "Does not equal",
+  "Starts with",
+  "Does not start with",
+  "Ends with",
+  "Does not end with",
+  "Includes",
+  "Does not include",
+]);
+for(const type of ["number","integer","boolean"])assert.deepEqual(
+  valueOperatorOptions(type),
+  ["Equals","Does not equal"],
+  `${type} Value rules expose only equality operators`,
 );
-assert.deepEqual(stringRuleKindOptions("number"),[],"non-String properties exclude literal String rules");
 
 const examples=[
-  {kind:"starts-with",literal:"order-",passing:"order-123",failing:"pre-order-123",requirement:"start with order-"},
-  {kind:"ends-with",literal:".com",passing:"shop.example.com",failing:"shop.example.com.au",requirement:"end with .com"},
-  {kind:"includes",literal:"sale",passing:"wholesale-item",failing:"premium-item",requirement:"include sale"},
+  {operator:"Equals",operand:"sale",passing:"sale",failing:"presale",requirement:"equal sale"},
+  {operator:"Does not equal",operand:"sale",passing:"retail",failing:"sale",requirement:"not equal sale"},
+  {operator:"Starts with",operand:"order-",passing:"order-123",failing:"pre-order-123",requirement:"start with order-"},
+  {operator:"Does not start with",operand:"order-",passing:"retail-123",failing:"order-123",requirement:"not start with order-"},
+  {operator:"Ends with",operand:".com",passing:"shop.example.com",failing:"shop.example.com.au",requirement:"end with .com"},
+  {operator:"Does not end with",operand:".com",passing:"shop.example.net",failing:"shop.example.com",requirement:"not end with .com"},
+  {operator:"Includes",operand:"sale",passing:"wholesale-item",failing:"premium-item",requirement:"include sale"},
+  {operator:"Does not include",operand:"sale",passing:"premium-item",failing:"wholesale-item",requirement:"not include sale"},
 ];
 for(const example of examples){
-  assert.equal(stringRuleMatches(example.kind,example.passing,example.literal),true);
-  assert.equal(stringRuleMatches(example.kind,example.failing,example.literal),false);
-  assert.equal(stringRuleMatches(example.kind,example.passing.toUpperCase(),example.literal),false,"literal matching is case-sensitive");
-  assert.equal(stringRuleRequirement(example.kind,example.literal),example.requirement);
+  assert.equal(valueRuleMatches(example.operator,example.passing,example.operand),true);
+  assert.equal(valueRuleMatches(example.operator,example.failing,example.operand),false);
+  assert.equal(valueRuleRequirement(example.operator,example.operand),example.requirement);
   assert.equal(
-    schemaTableRuleOutcomeSummary({kind:example.kind,literal:example.literal}),
+    schemaTableRuleOutcomeSummary({kind:"value",operator:example.operator,expectedValue:example.operand}),
     example.requirement,
-    "rule inventory summaries retain the selected literal operation",
+    "rule inventory summaries retain the selected Value operation",
   );
-  assert.equal(focusedRuleIssue({kind:example.kind,name:"Literal rule",literal:example.literal}),undefined);
-  const persisted=JSON.parse(JSON.stringify({id:`rule:${example.kind}`,name:`Named ${example.kind} rule`,kind:example.kind,literal:example.literal,severity:"error"}));
+  assert.equal(focusedRuleIssue({kind:"value",name:"Value rule",operator:example.operator,expectedValue:example.operand}),undefined);
+  const persisted=JSON.parse(JSON.stringify({id:`rule:${example.operator}`,name:`Named ${example.operator} rule`,kind:"value",operator:example.operator,expectedValue:example.operand,severity:"error"}));
   const compiled=compileLayeredSchema([{
     id:"profile:string-rules",
     name:"String rules",
     scope:"Shared Profile",
     constraints:[{path:"/value",type:"string",rules:[persisted]}],
   }],{eventId:"event:string-rules",eventRole:"interaction"});
-  assert.deepEqual(compiled.properties["/value"].rules,[persisted],"compilation retains the literal rule bytes");
+  assert.deepEqual(compiled.properties["/value"].rules,[persisted],"compilation retains the Value rule bytes");
   assert.equal(
     validateLayeredObservation({targetId:"target:string-rules",targetName:"String rules",revision:1,compiled},{value:example.passing}).issues.length,
     0,
@@ -69,12 +81,34 @@ for(const example of examples){
   const issues=validateLayeredObservation({targetId:"target:string-rules",targetName:"String rules",revision:1,compiled},{value:example.failing}).issues;
   assert.deepEqual(
     issues.map(({code,message,expected})=>({code,message,expected})),
-    [{code:example.kind==="starts-with"?"STARTS_WITH":example.kind==="ends-with"?"ENDS_WITH":"INCLUDES",message:`Named ${example.kind} rule`,expected:example.literal}],
-    "the production validator reports the named literal rule",
+    [{code:"VALUE_OPERATOR",message:`Named ${example.operator} rule`,expected:example.operand}],
+    "the production validator reports the named Value rule",
   );
 }
-assert.equal(stringRuleMatches("starts-with","[order","[order"),true,"regular-expression punctuation remains literal");
-assert.equal(focusedRuleIssue({kind:"includes",name:"Literal rule",literal:""}),"Enter a literal value");
+assert.equal(valueRuleMatches("Starts with","[order","[order"),true,"regular-expression punctuation remains literal");
+assert.equal(focusedRuleIssue({kind:"value",name:"Value rule",operator:"Includes"}),"Enter a Value");
+assert.equal(focusedRuleIssue({kind:"allowed-values",name:"Allowed values rule",allowedValues:[]}),"Enter at least one allowed value");
+
+for(const legacy of [
+  {kind:"starts-with",operator:"Starts with",literal:"order-"},
+  {kind:"ends-with",operator:"Ends with",literal:".com"},
+  {kind:"includes",operator:"Includes",literal:"sale"},
+]){
+  const source={id:`rule:${legacy.kind}`,name:"Legacy rule",kind:legacy.kind,literal:legacy.literal,condition:{kind:"all",children:[]},severity:"warning",message:"Legacy message",provenance:{source:"created"}};
+  assert.deepEqual(normalizeValueRule(source),{
+    id:source.id,
+    name:source.name,
+    kind:"value",
+    operator:legacy.operator,
+    expectedValue:legacy.literal,
+    condition:source.condition,
+    severity:source.severity,
+    message:source.message,
+    provenance:source.provenance,
+  },"legacy literal rules normalize without losing surrounding rule state");
+  const legacyPassing=legacy.kind==="starts-with"?`${legacy.literal}x`:legacy.kind==="ends-with"?`x${legacy.literal}`:`x${legacy.literal}x`;
+  assert.equal(stringRuleMatches(legacy.kind,legacyPassing,legacy.literal),true,"legacy rules remain executable before save");
+}
 
 assert.deepEqual(
   regularExpressionTest("^order-[0-9]+$","order-123"),

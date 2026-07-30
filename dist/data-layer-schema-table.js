@@ -1,5 +1,5 @@
 import { typedCanonicalValue } from "./data-layer-canonical-schema-facets.js";
-import { isStringLiteralRuleKind, stringRuleRequirement } from "./data-layer-string-rule-validation.js";
+import { isStringLiteralRuleKind, stringRuleRequirement, valueRuleRequirement } from "./data-layer-string-rule-validation.js";
 export { bindSchemaTableQuickEdit, schemaTableEditableFacets, schemaTableQuickEditCommitsOnChange, schemaTableQuickEditDestination, schemaTableQuickEditFocusGenerationAfterFocus, schemaTableQuickEditIntent } from "./data-layer-schema-table-quick-edit.js";
 export const schemaTableColumns = [
     { key: "property-editor", label: "" },
@@ -247,7 +247,9 @@ export function schemaTableRuleOutcomeSummary(rule) {
         return `pattern ${String(rule.pattern ?? "")}`.trim();
     if (isStringLiteralRuleKind(rule.kind))
         return stringRuleRequirement(rule.kind, rule.literal);
-    if (rule.kind === "value")
+    if (rule.kind === "value" && rule.operator !== undefined)
+        return valueRuleRequirement(rule.operator, rule.expectedValue);
+    if (rule.kind === "value" || rule.kind === "allowed-values")
         return `allowed values ${schemaTableAllowedValues(rule)}`.trim();
     return String(rule.name ?? rule.kind ?? "reusable rule");
 }

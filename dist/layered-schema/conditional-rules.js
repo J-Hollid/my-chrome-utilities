@@ -96,7 +96,7 @@ function resolveProperty(property, payload, paths) {
         else if (typeof presence[0].presence === "string")
             result.presence = presence[0].presence;
     }
-    const values = matches.filter(({ kind }) => kind === "value");
+    const values = matches.filter(({ kind, operator }) => (kind === "value" && operator === undefined) || kind === "allowed-values");
     if (values.length) {
         const definition = (rule) => rule.allowedValues !== undefined ? { allowedValues: rule.allowedValues } : { expectedValue: rule.expectedValue };
         if (differing(values, definition))

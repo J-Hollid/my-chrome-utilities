@@ -62,7 +62,7 @@ function resolveProperty(property:EffectiveProperty,payload:Record<string,unknow
   const result=clone(property),matches=conditional(property,payload,paths),conflicts:LayerConflict[]=[];
   const presence=matches.filter(({kind})=>kind==="presence");
   if(presence.length){if(differing(presence,(rule)=>rule.presence))conflicts.push(conflictFor(property.path,"presence",presence));else if(typeof presence[0]!.presence==="string")result.presence=presence[0]!.presence as NonNullable<EffectiveProperty["presence"]>;}
-  const values=matches.filter(({kind})=>kind==="value");
+  const values=matches.filter(({kind,operator})=>(kind==="value"&&operator===undefined)||kind==="allowed-values");
   if(values.length){
     const definition=(rule:Record<string,unknown>)=>rule.allowedValues!==undefined?{allowedValues:rule.allowedValues}:{expectedValue:rule.expectedValue};
     if(differing(values,definition))conflicts.push(conflictFor(property.path,"value",values));

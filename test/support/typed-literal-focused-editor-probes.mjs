@@ -290,7 +290,7 @@ export const typedLiteralFocusedEditorExpression=String.raw`(async()=>{
 
   const ruleCases=[
     {kind:'presence',field:'newRulePresence',value:'required',clear:'newRuleName',diagnostic:'Enter a rule name'},
-    {kind:'value',field:'newRuleOrdinaryValue',value:'home, pickup',diagnostic:'Enter at least one allowed value'},
+    {kind:'allowed-values',field:'newRuleOrdinaryValue',value:'home, pickup',diagnostic:'Enter at least one allowed value'},
     {kind:'pattern',field:'newRulePattern',value:'^home$',diagnostic:'Enter a regular expression'},
     {kind:'range',field:'newRuleMinimum',value:'1',diagnostic:'Enter a minimum or maximum'},
     {kind:'cardinality',field:'newRuleMinItems',value:'1',diagnostic:'Enter minimum or maximum items'},

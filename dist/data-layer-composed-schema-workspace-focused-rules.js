@@ -1,8 +1,8 @@
 import { filterFocusedReusableRules, focusedOwnershipActions, focusedReusableOutcome, focusedRuleFields, focusedRuleIssue, readFocusedReusableRules } from "./data-layer-focused-schema-property-ui.js";
 import { renderSharedConditionTree } from "./data-layer-shared-condition-tree-editor.js";
 import { schemaTableAllowedValues, schemaTableRuleConditionSummary, schemaTableRuleOutcomeSummary, schemaTableStageAllowedValues } from "./data-layer-schema-table.js";
-import { stringRuleKindOptions } from "./data-layer-string-rule-validation.js";
-import { renderRegularExpressionTester } from "./data-layer-string-rule-validation-ui.js";
+import { normalizeValueRule, valueRuleOperand } from "./data-layer-string-rule-validation.js";
+import { renderRegularExpressionTester, renderValueRuleControls } from "./data-layer-string-rule-validation-ui.js";
 const labeled = (dom, text, control) => { const label = dom.createElement("label"); label.append(text, control); return label; };
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 const numericFields = new Set(["minimum", "maximum", "minItems", "maxItems"]);
@@ -11,7 +11,10 @@ const clone = (value) => structuredClone(value);
 const properties = (context) => () => context.model.rows.map(({ path, effective }) => ({ id: effective.definitionId ?? path, name: path.split("/").filter(Boolean).at(-1) ?? path, ...(effective.type ? { type: effective.type } : {}), ...(effective.allowedValues?.length ? { allowedValues: effective.allowedValues } : {}) }));
 const section = (dom, title) => { const host = dom.createElement("section"), heading = dom.createElement("h3"); heading.textContent = title; host.append(heading); return host; };
 function renderRuleEditor(row, rule, index, context, invoker) {
-    const { dom } = context, draftRule = clone(rule), editor = dom.createElement("fieldset"), details = section(dom, "Rule details"), when = section(dom, "When"), then = section(dom, "Then"), severity = section(dom, "Severity and message"), actions = section(dom, "Rule actions"), status = dom.createElement("p");
+    const draftRule = normalizeValueRule(rule);
+    if (draftRule.kind === "value" && draftRule.operator === undefined && draftRule.allowedValues)
+        draftRule.kind = "allowed-values";
+    const { dom } = context, editor = dom.createElement("fieldset"), details = section(dom, "Rule details"), when = section(dom, "When"), then = section(dom, "Then"), severity = section(dom, "Severity and message"), actions = section(dom, "Rule actions"), status = dom.createElement("p");
     let save, conditionIssue;
     editor.dataset.ruleEditorMode = "edit";
     then.dataset.ruleFieldGrid = "true";
@@ -21,7 +24,7 @@ function renderRuleEditor(row, rule, index, context, invoker) {
     status.setAttribute("role", "status");
     const validate = () => { const issue = conditionIssue ?? focusedRuleIssue(draftRule); if (save)
         save.disabled = Boolean(issue); status.textContent = issue ?? ""; };
-    const name = dom.createElement("input"), kind = dom.createElement("select"), propertyType = context.getDraft()?.type ?? context.row.effective.type, kindValue = String(draftRule.kind ?? "rule"), kindLabel = stringRuleKindOptions(propertyType).find(({ kind: entry }) => entry === kindValue)?.label ?? kindValue;
+    const name = dom.createElement("input"), kind = dom.createElement("select"), propertyType = context.getDraft()?.type ?? context.row.effective.type, kindValue = String(draftRule.kind ?? "rule"), kindLabel = kindValue === "value" ? "Value" : kindValue === "allowed-values" ? "Allowed values" : kindValue === "pattern" ? "Pattern" : kindValue;
     name.name = "editRuleName";
     name.value = String(draftRule.name ?? "");
     kind.name = "editRuleKind";
@@ -32,9 +35,9 @@ function renderRuleEditor(row, rule, index, context, invoker) {
     else
         delete draftRule.name; validate(); });
     details.append(labeled(dom, "Rule name", name), labeled(dom, "Rule type", kind));
-    const tree = dom.createElement("div");
+    const conditionId = draftRule.condition?.id, tree = dom.createElement("div");
     renderSharedConditionTree(tree, { dom, allowEmpty: true, ...(draftRule.condition ? { condition: draftRule.condition } : {}), properties: properties(context), id: (kindName) => `${kindName}:${crypto.randomUUID()}`, onIssue: (issue) => { conditionIssue = issue; }, onChange: (next) => { if (next)
-            draftRule.condition = next;
+            draftRule.condition = conditionId && !next.id ? { ...next, id: conditionId } : next;
         else
             delete draftRule.condition; validate(); } });
     when.append(tree);
@@ -48,6 +51,16 @@ function renderRuleEditor(row, rule, index, context, invoker) {
             control.value = String(draftRule.presence ?? "required");
             control.addEventListener("change", () => { draftRule.presence = control.value; validate(); });
             then.append(labeled(dom, "Presence", control));
+            continue;
+        }
+        if (field === "valueOperator") {
+            let controls;
+            const update = () => { const operator = controls.querySelector("[name=\"editRuleOperator\"]"), value = controls.querySelector("[name=\"editRuleValue\"]"); draftRule.operator = operator?.value ?? "Equals"; if (value && value.value !== "")
+                draftRule.expectedValue = valueRuleOperand(propertyType, value.value);
+            else
+                delete draftRule.expectedValue; validate(); };
+            controls = renderValueRuleControls(dom, propertyType, "edit", draftRule.operator, draftRule.expectedValue, update);
+            then.append(controls);
             continue;
         }
         if (field === "ordinaryValue") {
@@ -139,7 +152,7 @@ function renderAddPanel(host, context) {
         actions.setAttribute("aria-label", "Rule actions");
         status.setAttribute("role", "status");
         kind.name = "ruleKind";
-        kind.append(new Option("Choose rule type", ""), ...["presence", "value", "pattern", "range", "cardinality", "reusable"].map((entry) => new Option(entry, entry)), ...stringRuleKindOptions(draft.type ?? context.row.effective.type).map(({ kind: entry, label }) => new Option(label, entry)));
+        kind.append(new Option("Choose rule type", ""), ...[["presence", "Presence"], ["value", "Value"], ["allowed-values", "Allowed values"], ["pattern", "Pattern"], ["range", "Range"], ["cardinality", "Cardinality"], ["reusable", "Reusable"]].map(([entry, label]) => new Option(label, entry)));
         name.name = "newRuleName";
         details.append(labeled(dom, "Rule name", name), labeled(dom, "Rule type", kind));
         const candidate = () => { if (!kind.value)
@@ -149,7 +162,11 @@ function renderAddPanel(host, context) {
                 rule[field] = numericFields.has(field) ? Number(control.value) : control.value;
         } const presence = panel.querySelector("[name=\"newRulePresence\"]"); if (presence?.value)
             rule.presence = presence.value; const ordinary = panel.querySelector("[name=\"newRuleOrdinaryValue\"]"); if (ordinary?.value)
-            rule.allowedValues = schemaTableStageAllowedValues([], ordinary.value, (draft.type ?? context.row.effective.type)); const reusable = panel.querySelector("[name=\"newRuleReusableRuleId\"]"); if (reusable?.value) {
+            rule.allowedValues = schemaTableStageAllowedValues([], ordinary.value, (draft.type ?? context.row.effective.type)); const operator = panel.querySelector("[name=\"newRuleOperator\"]"), value = panel.querySelector("[name=\"newRuleValue\"]"); if (operator) {
+            rule.operator = operator.value;
+            if (value && value.value !== "")
+                rule.expectedValue = valueRuleOperand(draft.type ?? context.row.effective.type, value.value);
+        } const reusable = panel.querySelector("[name=\"newRuleReusableRuleId\"]"); if (reusable?.value) {
             rule.reusableRuleId = reusable.value;
             const source = readFocusedReusableRules().find(({ id }) => id === reusable.value), outcome = source && focusedReusableOutcome(source);
             rule.name = source?.name ?? reusable.selectedOptions[0]?.textContent;
@@ -183,6 +200,10 @@ function renderAddPanel(host, context) {
                 control.append(new Option("Choose presence", ""), new Option("Required", "required"), new Option("Optional", "optional"), new Option("Forbidden", "forbidden"));
                 control.addEventListener("change", validate);
                 fields.append(labeled(dom, "Presence", control));
+                continue;
+            }
+            if (field === "valueOperator") {
+                fields.append(renderValueRuleControls(dom, draft.type ?? context.row.effective.type, "new", "Equals", undefined, validate));
                 continue;
             }
             const control = dom.createElement("input");

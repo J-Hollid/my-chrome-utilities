@@ -13,7 +13,8 @@ assert.deepEqual(executed,scheduled,"the focused checkpoint executes every regis
 
 assert.deepEqual(focusedPropertySections,["definition","rules","structure"],"property actions expose one compact first layer");
 assert.deepEqual(focusedRuleFields("presence"),["condition","presence","severity","message"]);
-assert.deepEqual(focusedRuleFields("value"),["condition","ordinaryValue","severity","message"]);
+assert.deepEqual(focusedRuleFields("value"),["condition","valueOperator","severity","message"]);
+assert.deepEqual(focusedRuleFields("allowed-values"),["condition","ordinaryValue","severity","message"]);
 assert.deepEqual(
   focusedReusableOutcome({id:"library:required",name:"Required",kind:"presence",presence:"required",severity:"error",condition:{kind:"predicate"}}),
   {kind:"presence",presence:"required",severity:"error"},

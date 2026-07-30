@@ -3,6 +3,63 @@ const options = [
     { kind: "ends-with", label: "Ends with" },
     { kind: "includes", label: "Includes" },
 ];
+const equalityOperators = ["Equals", "Does not equal"];
+const stringOperators = [...equalityOperators, "Starts with", "Does not start with", "Ends with", "Does not end with", "Includes", "Does not include"];
+const legacyOperators = { "starts-with": "Starts with", "ends-with": "Ends with", "includes": "Includes" };
+export const valueOperatorOptions = (propertyType) => propertyType?.toLocaleLowerCase() === "string" ? [...stringOperators] : ["number", "integer", "boolean"].includes(propertyType?.toLocaleLowerCase() ?? "") ? [...equalityOperators] : [];
+export function valueRuleOperand(propertyType, value) {
+    if (propertyType?.toLocaleLowerCase() === "boolean")
+        return value === "true";
+    if (["number", "integer"].includes(propertyType?.toLocaleLowerCase() ?? ""))
+        return Number(value);
+    return value;
+}
+export function normalizeValueRule(rule) {
+    if (!isStringLiteralRuleKind(rule.kind))
+        return structuredClone(rule);
+    const { literal, ...retained } = structuredClone(rule);
+    return { ...retained, kind: "value", operator: legacyOperators[rule.kind], expectedValue: literal };
+}
+export function valueRuleMatches(operator, actual, operand) {
+    const equal = Object.is(actual, operand), value = String(actual ?? ""), expected = String(operand ?? "");
+    if (operator === "Equals")
+        return equal;
+    if (operator === "Does not equal")
+        return !equal;
+    if (operator === "Starts with")
+        return value.startsWith(expected);
+    if (operator === "Does not start with")
+        return !value.startsWith(expected);
+    if (operator === "Ends with")
+        return value.endsWith(expected);
+    if (operator === "Does not end with")
+        return !value.endsWith(expected);
+    if (operator === "Includes")
+        return value.includes(expected);
+    if (operator === "Does not include")
+        return !value.includes(expected);
+    return false;
+}
+export function valueRuleRequirement(operator, operand) {
+    const value = String(operand ?? "");
+    if (operator === "Equals")
+        return `equal ${value}`;
+    if (operator === "Does not equal")
+        return `not equal ${value}`;
+    if (operator === "Starts with")
+        return `start with ${value}`;
+    if (operator === "Does not start with")
+        return `not start with ${value}`;
+    if (operator === "Ends with")
+        return `end with ${value}`;
+    if (operator === "Does not end with")
+        return `not end with ${value}`;
+    if (operator === "Includes")
+        return `include ${value}`;
+    if (operator === "Does not include")
+        return `not include ${value}`;
+    return value;
+}
 export const stringRuleKindOptions = (propertyType) => propertyType?.toLocaleLowerCase() === "string" ? options.map((option) => ({ ...option })) : [];
 export const isStringLiteralRuleKind = (kind) => options.some((option) => option.kind === kind);
 export function stringRuleMatches(kind, actual, literal) {

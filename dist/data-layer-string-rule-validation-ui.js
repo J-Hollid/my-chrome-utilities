@@ -1,4 +1,4 @@
-import { regularExpressionTest } from "./data-layer-string-rule-validation.js";
+import { regularExpressionTest, valueOperatorOptions } from "./data-layer-string-rule-validation.js";
 export const regularExpressionTesterCopy = {
     patternLabel: "Regular expression",
     sampleLabel: "Test value",
@@ -6,6 +6,27 @@ export const regularExpressionTesterCopy = {
     guidance: "Enter a sample value to check it against the regular expression. Test values are not saved.",
 };
 export const regularExpressionTesterGridStyle = "display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:0.5rem;align-items:start;min-width:0;max-width:100%;grid-column:1/-1;";
+export function renderValueRuleControls(dom, propertyType, prefix, selectedOperator, operand, onChange) {
+    const host = dom.createElement("div"), operatorLabel = dom.createElement("label"), operator = dom.createElement("select"), valueLabel = dom.createElement("label"), type = propertyType?.toLocaleLowerCase(), value = type === "boolean" ? dom.createElement("select") : dom.createElement("input");
+    host.dataset.valueRuleControls = "true";
+    operator.name = `${prefix}RuleOperator`;
+    operator.append(...valueOperatorOptions(type).map((choice) => new Option(choice, choice)));
+    operator.value = String(selectedOperator ?? "Equals");
+    operatorLabel.append("Operator", operator);
+    value.name = `${prefix}RuleValue`;
+    if (value instanceof HTMLSelectElement)
+        value.append(new Option("Choose value", ""), new Option("true", "true"), new Option("false", "false"));
+    else
+        value.type = ["number", "integer"].includes(type ?? "") ? "number" : "text";
+    if (operand !== undefined)
+        value.value = String(operand);
+    valueLabel.append("Value", value);
+    operator.addEventListener("change", onChange);
+    value.addEventListener("input", onChange);
+    value.addEventListener("change", onChange);
+    host.append(operatorLabel, valueLabel);
+    return host;
+}
 export function renderRegularExpressionTester(dom, pattern) {
     const host = dom.createElement("div"), patternLabel = pattern.closest("label") ?? dom.createElement("label"), sampleLabel = dom.createElement("label"), sample = dom.createElement("input"), guidance = dom.createElement("p"), resultRegion = dom.createElement("div"), resultLabel = dom.createElement("strong"), result = dom.createElement("p"), identity = crypto.randomUUID(), guidanceId = `pattern-tester-guidance-${identity}`, resultLabelId = `pattern-tester-result-${identity}`;
     if (!patternLabel.contains(pattern))

@@ -1,4 +1,4 @@
-import { isStringLiteralRuleKind, stringRuleMatches } from "../data-layer-string-rule-validation.js";
+import { isStringLiteralRuleKind, stringRuleMatches, valueRuleMatches } from "../data-layer-string-rule-validation.js";
 import { layeredConditionMatches, layeredPropertyPaths, resolveConditionalLayeredSchema } from "./conditional-rules.js";
 const clone = (value) => structuredClone(value);
 const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
@@ -10,6 +10,7 @@ const pushNamedRuleIssue = (issues, targetName, path, canonicalPath, property, a
     pushIssue(issues, targetName, path, canonicalPath, property, actual, code, String(rule.literal ?? ""));
     issues.at(-1).message = String(rule.name ?? "String rule");
 };
+const pushValueRuleIssue = (issues, targetName, path, canonicalPath, property, actual, rule) => { pushIssue(issues, targetName, path, canonicalPath, property, actual, "VALUE_OPERATOR", rule.expectedValue); issues.at(-1).message = String(rule.name ?? "Value rule"); };
 const concretePaths = (payload, template) => { const segments = template.split("/").filter(Boolean), walk = (value, index, parts) => { if (index === segments.length)
     return [`/${parts.join("/")}`]; const segment = segments[index]; if (segment === "*")
     return Array.isArray(value) ? value.flatMap((entry, itemIndex) => walk(entry, index + 1, [...parts, String(itemIndex)])) : []; const decoded = segment.replaceAll("~1", "/").replaceAll("~0", "~"), next = value && typeof value === "object" ? value[decoded] : undefined; if (next === undefined && segments.slice(index + 1).includes("*"))
@@ -36,8 +37,8 @@ const validateItemShape = (issues, targetName, path, canonicalPath, property, ac
 };
 const validateScopedRules = (issues, targetName, path, canonicalPath, property, actual, payload, pathsByDefinition) => {
     for (const rule of property.rules ?? []) {
-        const scoped = Boolean(rule.arrayScope?.boundaries?.length), literal = isStringLiteralRuleKind(rule.kind);
-        if (!scoped && !literal || rule.enabled === false || !scopedPath(path, canonicalPath, rule) || !layeredConditionMatches(rule.condition, payload, contextualPaths(pathsByDefinition, path, canonicalPath)))
+        const scoped = Boolean(rule.arrayScope?.boundaries?.length), literal = isStringLiteralRuleKind(rule.kind), comparison = rule.kind === "value" && typeof rule.operator === "string";
+        if (!scoped && !literal && !comparison || rule.enabled === false || !scopedPath(path, canonicalPath, rule) || !layeredConditionMatches(rule.condition, payload, contextualPaths(pathsByDefinition, path, canonicalPath)))
             continue;
         if (rule.kind === "presence" && rule.presence === "required" && actual === undefined)
             pushIssue(issues, targetName, path, canonicalPath, property, actual, "REQUIRED", "present");
@@ -47,11 +48,13 @@ const validateScopedRules = (issues, targetName, path, canonicalPath, property, 
             continue;
         if (literal && !stringRuleMatches(rule.kind, actual, rule.literal))
             pushNamedRuleIssue(issues, targetName, path, canonicalPath, property, actual, rule);
+        if (comparison && !valueRuleMatches(rule.operator, actual, rule.expectedValue))
+            pushValueRuleIssue(issues, targetName, path, canonicalPath, property, actual, rule);
         if (rule.kind === "pattern" && typeof rule.pattern === "string" && !new RegExp(rule.pattern).test(String(actual)))
             pushIssue(issues, targetName, path, canonicalPath, property, actual, "PATTERN", [rule.pattern]);
-        if (rule.kind === "value" && Array.isArray(rule.allowedValues) && !rule.allowedValues.some((candidate) => same(candidate, actual)))
+        if (((rule.kind === "value" && rule.operator === undefined) || rule.kind === "allowed-values") && Array.isArray(rule.allowedValues) && !rule.allowedValues.some((candidate) => same(candidate, actual)))
             pushIssue(issues, targetName, path, canonicalPath, property, actual, "ALLOWED_VALUE", rule.allowedValues);
-        if (rule.kind === "value" && rule.expectedValue !== undefined && !same(rule.expectedValue, actual))
+        if (rule.kind === "value" && rule.operator === undefined && rule.expectedValue !== undefined && !same(rule.expectedValue, actual))
             pushIssue(issues, targetName, path, canonicalPath, property, actual, "EXPECTED_VALUE", rule.expectedValue);
         if (rule.kind === "range" && typeof rule.minimum === "number" && typeof actual === "number" && actual < rule.minimum)
             pushIssue(issues, targetName, path, canonicalPath, property, actual, "MINIMUM", rule.minimum);
