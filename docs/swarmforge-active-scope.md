@@ -252,6 +252,21 @@ Preview, rich copy, and Excel preserve this hierarchy; plain text emits one
 column-heading line and one label per non-empty concept. The exact checkpoint
 remains `flow_export`, followed by `npm run package`.
 
+On approval, the Documentation logo-picker correction is later authority for
+project Documentation scenarios 010 and 025–027. The Brand group replaces the raw
+data-URL logo field with a labelled Choose logo file control accepting readable
+PNG, JPEG, and GIF files. An accepted file is converted automatically to the
+existing portable Base64 data-URL theme value and immediately appears with its
+human file name in a bounded, aspect-ratio-preserving sample. The raw data URL is
+not shown to ordinary operators.
+
+Unsupported, unreadable, and converted values over 250,000 characters show an
+associated textual diagnostic and cannot replace the current saved logo or
+preview. Remove logo clears the sample immediately and persists through the
+ordinary theme save operation. Preview, rich copy, Excel, reload, and project
+portability continue to consume the same structured theme value. The exact
+checkpoint remains `flow_export`, followed by `npm run package`.
+
 On approval, the Specification Studio choice-control correction is later authority
 for the two Specification Studio choice-control contracts. Every Studio checkbox
 uses one shared compact labelled-row pattern: a 16–18 CSS pixel indicator, an

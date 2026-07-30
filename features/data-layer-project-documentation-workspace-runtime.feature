@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=c2be95ea7a638ea71733e274f50c305e4ef0d1dd3326ad4b806fbe9d643e08fd
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-29T10:27:07.277647863Z","feature_name":"Data layer project documentation workspace runtime","feature_path":"features/data-layer-project-documentation-workspace-runtime.feature","background_hash":"f9d1fefd5e548fd8f09cd46b438977b308e72ef8198e23d2f0d73530911ea2e9","implementation_hash":"sha256:7ee30a580d1c19231c00ebb6a4d0c724295b3d06c7eb1a801bc194231a5b4126","scenarios":[{"index":16,"name":"Data layer project documentation workspace runtime 017","scenario_hash":"33d6b8fb974af143301312e244a1a3833ceaf85d14fd279f7f12e66de55e8f48","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-29T07:36:26.382892754Z"},{"index":14,"name":"Data layer project documentation workspace runtime 015","scenario_hash":"583c1c4ab7b42a4fc78239c4ae455b638f03bae3ef8d3907205c50100f9bc360","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-26T15:21:54.588573152Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer project documentation workspace runtime
 
   Background:
@@ -258,3 +253,45 @@ Feature: Data layer project documentation workspace runtime
     And clipboard HTML and workbook XML each contain one standard column-heading row per table
     And their concept dividers retain the same subordinate theme treatment
     And parsed plain text contains one column-heading line and one label per non-empty concept
+
+  # Data layer project documentation workspace runtime 025
+  Scenario Outline: Data layer project documentation workspace runtime 025
+    Given production Acme has no logo
+    When the installed Choose logo control receives a readable <image_type> file whose converted data URL is within the supported limit
+    Then the installed Brand controls render its human file name
+    And DOM inspection finds the complete image contained without aspect-ratio distortion in the Brand sample
+    And DOM text and editable controls contain no raw data URL
+    When actual controls save Acme
+    Then repository bytes contain a <media_type> Base64 data URL
+    And refreshed preview HTML, clipboard HTML, and workbook media contain the same image bytes
+
+    Examples:
+      | image_type | media_type |
+      | PNG        | image/png  |
+      | JPEG       | image/jpeg |
+      | GIF        | image/gif  |
+
+  # Data layer project documentation workspace runtime 026
+  Scenario Outline: Data layer project documentation workspace runtime 026
+    Given production Acme has a saved valid logo
+    When the installed Choose logo control receives <invalid_logo>
+    Then the associated validation region renders <diagnostic>
+    And the Brand sample and repository bytes retain the saved logo
+    And activating Save theme cannot persist the rejected bytes
+
+    Examples:
+      | invalid_logo                                                | diagnostic                      |
+      | an SVG file                                                 | Choose a PNG, JPEG, or GIF image |
+      | a file that produces an image-read failure                  | The logo could not be read       |
+      | an image whose converted data URL exceeds 250000 characters | The logo is too large            |
+
+  # Data layer project documentation workspace runtime 027
+  Scenario: Data layer project documentation workspace runtime 027
+    Given production Acme has a saved valid logo
+    When the installed Remove logo control is activated
+    Then the Brand sample contains no logo image
+    And the Choose logo control remains operable
+    When actual controls save Acme
+    And refresh the documentation preview
+    Then repository bytes contain no Acme logo
+    And parsed preview HTML, clipboard HTML, and workbook media contain no theme logo

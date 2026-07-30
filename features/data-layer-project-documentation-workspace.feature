@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=73d856e0b6f3198f9396c0651338f59c9030ecca6d152350191dea4b1a355917
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-29T10:26:58.197538958Z","feature_name":"Data layer project documentation workspace","feature_path":"features/data-layer-project-documentation-workspace.feature","background_hash":"6e9a3622de99090815714fa5d2fbae827c8feda287a062680b2f0de443e8da1f","implementation_hash":"sha256:0a3578f4d6e5792fd6e2585b2df27b332745538c05c362e047a22aa85096e6d3","scenarios":[{"index":16,"name":"Data layer project documentation workspace 017","scenario_hash":"e5dc5bbfb335ef940349ada74a7fb648286494f0bfdfffafaf1f57d4592c49a3","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-29T07:36:13.656972912Z"},{"index":14,"name":"Data layer project documentation workspace 015","scenario_hash":"4a89e82941719a62bee409628fb4f7d19c8c0bfb1e83a2ddec2cbe93f631eb0d","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-26T15:21:48.347536960Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer project documentation workspace
 
   Background:
@@ -259,3 +254,45 @@ Feature: Data layer project documentation workspace
     And no concept divider repeats the standard column headings
     And preview, rich copy, and Excel preserve that visual hierarchy
     And plain-text fallback emits the column headings once and each concept label once
+
+  # Data layer project documentation workspace 025
+  Scenario Outline: Data layer project documentation workspace 025
+    Given project-local theme Acme has no logo
+    When the operator chooses a readable <image_type> logo whose converted data URL is within the supported limit
+    Then the branding control accepts the file and shows its human file name
+    And the Brand sample immediately shows the complete logo within a bounded preview while preserving its aspect ratio
+    And no raw data URL is displayed to the operator
+    When the operator saves Acme
+    Then the theme stores the logo as a portable <media_type> Base64 data URL
+    And refreshed preview, rich copy, and Excel use that same logo
+
+    Examples:
+      | image_type | media_type |
+      | PNG        | image/png  |
+      | JPEG       | image/jpeg |
+      | GIF        | image/gif  |
+
+  # Data layer project documentation workspace 026
+  Scenario Outline: Data layer project documentation workspace 026
+    Given project-local theme Acme has a saved valid logo
+    When the operator chooses <invalid_logo>
+    Then the Brand controls show <diagnostic>
+    And the saved logo and its preview remain unchanged
+    And saving Acme cannot replace the logo with the rejected file
+
+    Examples:
+      | invalid_logo                                                | diagnostic                      |
+      | an SVG file                                                 | Choose a PNG, JPEG, or GIF image |
+      | a file whose image data cannot be read                      | The logo could not be read       |
+      | an image whose converted data URL exceeds 250000 characters | The logo is too large            |
+
+  # Data layer project documentation workspace 027
+  Scenario: Data layer project documentation workspace 027
+    Given project-local theme Acme has a saved valid logo
+    When the operator removes the logo
+    Then the Brand sample immediately shows no logo
+    And the operator can choose a replacement logo
+    When the operator saves Acme
+    And the operator refreshes the documentation preview
+    Then Acme stores no logo
+    And preview, rich copy, and Excel contain no theme logo

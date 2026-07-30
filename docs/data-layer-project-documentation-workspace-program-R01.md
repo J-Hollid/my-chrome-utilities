@@ -134,6 +134,20 @@ headings, column widths, and header and footer text. The same supported decision
 drive preview, Excel, and rich clipboard styling. Theme values contain no
 executable CSS or workbook code. Cross-project reuse is manual copy and paste.
 
+The Brand group presents logo selection as a labelled image-file control rather
+than a raw data-URL text field. It accepts readable PNG, JPEG, and GIF files,
+converts an accepted file to the existing portable Base64 data-URL theme value,
+and immediately shows the human file name and a bounded, aspect-ratio-preserving
+sample. The converted data URL cannot exceed 250,000 characters. Raw data URLs
+remain hidden from ordinary operators.
+
+Type, read, and size failures show an associated textual diagnostic and cannot
+replace the current saved logo or its sample. A saved logo exposes a Remove logo
+control; removal updates the sample immediately and is persisted through the
+ordinary theme save operation. Accepted, retained, replaced, and removed logos
+continue through the same preview, rich-copy, Excel, reload, and portability
+paths as every other structured theme value.
+
 ## Delivery boundary
 
 This program supersedes the Flow-page entry point, per-Flow capture matrix,
@@ -159,4 +173,8 @@ and round-trips. A non-`Sitewide` Profile added after snapshot compilation must
 prove filtering, ordering, and headings in preview, rich copy, plain text, and
 Excel. Grouped-table evidence must additionally prove one column-heading row per
 table, no concept-driven column-heading repetition, and the subordinate concept
-divider treatment in preview, rich copy, and Excel.
+divider treatment in preview, rich copy, and Excel. Branding evidence must choose
+PNG, JPEG, and GIF files through the installed file control; compare preview,
+clipboard, and workbook image bytes; prove raw data URLs are absent from the UI;
+reject unsupported, unreadable, and oversized files without replacing the saved
+logo; and remove a logo through the installed control and ordinary theme save.
