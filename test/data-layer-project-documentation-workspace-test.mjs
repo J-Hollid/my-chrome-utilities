@@ -5,6 +5,7 @@ import {
   compileProjectDocumentationSnapshot,
   createProjectDocumentationSet,
   createProjectDocumentationTheme,
+  fitProjectDocumentationLogo,
   parseProjectDocumentationTheme,
   PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT,
   projectDocumentationSnapshotStale,
@@ -19,10 +20,11 @@ import {compileProjectDocumentation,projectDocumentationSources} from "../dist/d
 import {createSpecificationProject,exportSpecificationProject,importSpecificationProject,transactProject} from "../dist/data-layer-specification-project.js";
 
 assert.equal(PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT,250_000);
+const logoPayloads={"image/png":"iVBORw0KGgo","image/jpeg":"/9j/","image/gif":"R0lGODlh"};
 for(const [name,type] of [["acme.png","image/png"],["acme.jpg","image/jpeg"],["acme.gif","image/gif"]]){
-  const dataUrl=`data:${type};base64,AA==`;
+  const dataUrl=`data:${type};base64,${logoPayloads[type]}`;
   assert.deepEqual(
-    await readProjectDocumentationLogoFile({name,type},async()=>dataUrl),
+    await readProjectDocumentationLogoFile({name,type},async()=>dataUrl,async()=>({width:3000,height:2000})),
     {fileName:name,dataUrl},
   );
 }
@@ -41,10 +43,18 @@ await assert.rejects(
   ),
   {message:"The logo is too large"},
 );
+for(const [name,type,label] of [["broken.png","image/png","PNG"],["broken.jpg","image/jpeg","JPEG"],["broken.gif","image/gif","GIF"]]){
+  await assert.rejects(
+    readProjectDocumentationLogoFile({name,type},async()=>`data:${type};base64,AA==`,async()=>{throw new Error("decode failed");}),
+    {message:`Choose a valid ${label} image`},
+  );
+}
+assert.deepEqual(fitProjectDocumentationLogo(3000,2000),{width:96,height:64});
+assert.deepEqual(fitProjectDocumentationLogo(90,60),{width:90,height:60});
 
 const theme=createProjectDocumentationTheme({
   id:"theme:acme",name:"Acme",clientName:"Acme",
-  logo:"data:image/png;base64,AA==",colors:{heading:"#112233",accent:"#445566",stripe:"#eef2f4"},
+  logo:"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=",colors:{heading:"#112233",accent:"#445566",stripe:"#eef2f4"},
   typography:{family:"Arial",headingSize:16,bodySize:11},density:"compact",borders:true,
   striping:true,highlightedHeadings:true,columnWidths:{Property:28,Description:48},
   headerText:"Client specification",footerText:"Internal",
@@ -119,6 +129,8 @@ assert.match(clipboard.html,/data-theme-fingerprint="/);
 assert.match(clipboard.plain,/Checkout journey[\s\S]*Data capture matrix/);
 for(const shared of ["Acme","Client specification","Internal"])assert.match(clipboard.html+clipboard.plain,new RegExp(shared));
 assert.match(clipboard.html,/<img[^>]+data:image\/png/);
+assert.match(clipboard.html,/data-documentation-logo-area[^>]+width:180px;height:64px/);
+assert.match(clipboard.html,/<img[^>]+max-width:180px;max-height:64px;width:auto;height:auto/);
 assert.match(clipboard.html,/width:28ch/);
 
 const workbook=writeProjectDocumentationWorkbook(snapshot,{scope:"complete"});
@@ -171,7 +183,7 @@ assert.match(binary,/wrapText="1"/);
 assert.match(binary,/oddHeader>Acme · Client specification/);
 assert.doesNotMatch(binary,/oddHeader>[^<]*Logo/);
 assert.match(binary,/oddFooter>Internal/);
-assert.deepEqual(workbookFiles.get("xl/media/documentation-logo.png"),Uint8Array.from([0]));
+assert.equal(workbookFiles.get("xl/media/documentation-logo.png").length>20,true);
 for(let index=1;index<=set.sections.length;index+=1){
   assert.match(workbookText(`xl/worksheets/sheet${index}.xml`),/<drawing r:id="rId1"\/>/);
   assert.match(workbookText(`xl/worksheets/_rels/sheet${index}.xml.rels`),new RegExp(`Target="../drawings/drawing${index}\\.xml"`));
@@ -179,6 +191,22 @@ for(let index=1;index<=set.sections.length;index+=1){
   assert.match(workbookText(`xl/drawings/_rels/drawing${index}.xml.rels`),/Target="\.\.\/media\/documentation-logo\.png"/);
 }
 assert.match(workbookText("[Content_Types].xml"),/ContentType="image\/png"/);
+
+const sizedPng=new Uint8Array(24);
+sizedPng.set([137,80,78,71,13,10,26,10,0,0,0,13,73,72,68,82]);
+new DataView(sizedPng.buffer).setUint32(16,3000);
+new DataView(sizedPng.buffer).setUint32(20,2000);
+const sizedGif=new Uint8Array([71,73,70,56,57,97,184,11,208,7]);
+const sizedJpeg=new Uint8Array([255,216,255,192,0,17,8,7,208,11,184,3,1,17,0,2,17,0,3,17,0]);
+for(const [mediaType,extension,bytes] of [["image/png","png",sizedPng],["image/jpeg","jpg",sizedJpeg],["image/gif","gif",sizedGif]]){
+  const sizedTheme=createProjectDocumentationTheme({...theme,id:`theme:sized:${extension}`,logo:`data:${mediaType};base64,${Buffer.from(bytes).toString("base64")}`});
+  const sizedWorkbook=writeProjectDocumentationWorkbook(compileProjectDocumentationSnapshot({...source,theme:sizedTheme}),{scope:"current",currentSectionId:"section:overview"});
+  const sizedFiles=unzipStored(sizedWorkbook),sizedDrawing=new TextDecoder().decode(sizedFiles.get("xl/drawings/drawing1.xml")),sizedSheet=new TextDecoder().decode(sizedFiles.get("xl/worksheets/sheet1.xml"));
+  assert.match(sizedDrawing,/<xdr:ext cx="914400" cy="609600"\/>/);
+  assert.match(sizedSheet,/<row r="1" ht="48" customHeight="1"\/><row r="2"/);
+  assert.deepEqual(sizedFiles.get(`xl/media/documentation-logo.${extension}`),bytes);
+  assert.match(new TextDecoder().decode(sizedFiles.get("[Content_Types].xml")),new RegExp(`ContentType="${mediaType}"`));
+}
 
 const unsafe=compileProjectDocumentationSnapshot({...source,set:{...set,name:"=Client<script>",sections:set.sections.map((section,index)=>({...section,name:index<2?"A/B*?":"A:B"}))},diagnostics:[{sectionId:"section:article",message:"Blocked identity profile:article",repair:"Open raw revision hash"}]});
 assert.equal(unsafe.incomplete,true);

@@ -53,6 +53,10 @@
              :runtime
              {"invalid_logo" "a file that produces an image-read failure"
               "diagnostic" "The logo could not be read"})))
+  (is (map? (flow-export/validate-example!
+             :runtime
+             {"declared_type" "GIF"
+              "diagnostic" "Choose a valid GIF image"})))
   (is (thrown-with-msg?
        clojure.lang.ExceptionInfo
        #"invalid result"
@@ -79,7 +83,9 @@
                         :export024 true
                         :export025 true
                         :export026 true
-                        :export027 true}
+                        :export027 true
+                        :export028 true
+                        :export029 true}
                        (map (fn [index]
                               [(keyword (str "export" (format "%03d" index))) true])
                             (range 1 21)))]

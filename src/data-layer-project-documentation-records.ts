@@ -45,15 +45,39 @@ export interface ProjectDocumentationDraft {
 }
 
 export const PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT=250_000;
+export const PROJECT_DOCUMENTATION_LOGO_MAX_WIDTH=180;
+export const PROJECT_DOCUMENTATION_LOGO_MAX_HEIGHT=64;
 export interface ProjectDocumentationLogoFile {
   readonly name:string;
   readonly type:string;
 }
 export type ProjectDocumentationLogoReader=(file:ProjectDocumentationLogoFile)=>Promise<string>;
+export interface ProjectDocumentationLogoDimensions {width:number;height:number}
+export type ProjectDocumentationLogoDecoder=(dataUrl:string)=>Promise<ProjectDocumentationLogoDimensions>;
+
+export function fitProjectDocumentationLogo(
+  intrinsicWidth:number,
+  intrinsicHeight:number,
+  maxWidth=PROJECT_DOCUMENTATION_LOGO_MAX_WIDTH,
+  maxHeight=PROJECT_DOCUMENTATION_LOGO_MAX_HEIGHT,
+):ProjectDocumentationLogoDimensions {
+  if(!(intrinsicWidth>0&&intrinsicHeight>0&&maxWidth>0&&maxHeight>0))return{width:0,height:0};
+  const scale=Math.min(1,maxWidth/intrinsicWidth,maxHeight/intrinsicHeight);
+  return{width:intrinsicWidth*scale,height:intrinsicHeight*scale};
+}
+const declaredLogoBytesMatch=(type:string,dataUrl:string):boolean=>{
+  try{
+    const encoded=dataUrl.slice(dataUrl.indexOf(",")+1),bytes=Uint8Array.from(atob(encoded),character=>character.charCodeAt(0));
+    if(type==="image/png")return bytes.length>=8&&[137,80,78,71,13,10,26,10].every((value,index)=>bytes[index]===value);
+    if(type==="image/jpeg")return bytes.length>=3&&bytes[0]===0xff&&bytes[1]===0xd8&&bytes[2]===0xff;
+    return bytes.length>=6&&/^GIF8[79]a$/u.test(new TextDecoder().decode(bytes.slice(0,6)));
+  }catch{return false;}
+};
 
 export async function readProjectDocumentationLogoFile(
   file:ProjectDocumentationLogoFile,
   readDataUrl:ProjectDocumentationLogoReader,
+  decodeDataUrl:ProjectDocumentationLogoDecoder,
 ):Promise<{fileName:string;dataUrl:string}>{
   if(!["image/png","image/jpeg","image/gif"].includes(file.type))throw new Error("Choose a PNG, JPEG, or GIF image");
   let dataUrl:string;
@@ -61,6 +85,14 @@ export async function readProjectDocumentationLogoFile(
   catch{throw new Error("The logo could not be read");}
   if(!dataUrl.startsWith(`data:${file.type};base64,`))throw new Error("The logo could not be read");
   if(dataUrl.length>PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT)throw new Error("The logo is too large");
+  const label=file.type==="image/jpeg"?"JPEG":file.type.slice("image/".length).toUpperCase();
+  if(!declaredLogoBytesMatch(file.type,dataUrl))throw new Error(`Choose a valid ${label} image`);
+  try{
+    const dimensions=await decodeDataUrl(dataUrl);
+    if(!(dimensions.width>0&&dimensions.height>0))throw new Error("Invalid dimensions");
+  }catch{
+    throw new Error(`Choose a valid ${label} image`);
+  }
   return{fileName:file.name,dataUrl};
 }
 

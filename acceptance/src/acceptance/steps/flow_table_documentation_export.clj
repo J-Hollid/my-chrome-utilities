@@ -67,7 +67,11 @@
     :rows #{["an SVG file" "Choose a PNG, JPEG, or GIF image"]
             ["a file whose image data cannot be read" "The logo could not be read"]
             ["a file that produces an image-read failure" "The logo could not be read"]
-            ["an image whose converted data URL exceeds 250000 characters" "The logo is too large"]}}])
+            ["an image whose converted data URL exceeds 250000 characters" "The logo is too large"]}}
+   {:keys ["declared_type" "diagnostic"]
+    :rows #{["PNG" "Choose a valid PNG image"]
+            ["JPEG" "Choose a valid JPEG image"]
+            ["GIF" "Choose a valid GIF image"]}}])
 
 (defn validate-example! [_mode example]
   (support/validate-example-relations!
@@ -78,7 +82,7 @@
   (set (concat [:installedBoundary
                 :headingLifecycleStart
                 :orderingControls]
-               (map #(keyword (str "export" (format "%03d" %))) (range 1 28)))))
+               (map #(keyword (str "export" (format "%03d" %))) (range 1 30)))))
 
 (defn- assert-runtime! [evidence]
   (support/assert! (and (= runtime-paths (set (keys evidence)))

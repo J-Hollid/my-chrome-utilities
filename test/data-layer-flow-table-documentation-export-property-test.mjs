@@ -44,15 +44,16 @@ assert.match(copy.html,/&lt;strong&gt;<br>line/);assert.doesNotMatch(copy.html,/
 assert.deepEqual(snapshot.contexts.map(({id})=>id),["context:a","context:b","context:c","context:d"]);
 
 const logoMediaTypes=["image/png","image/jpeg","image/gif"];
+const logoPayloadPrefixes={"image/png":"iVBORw0KGgo","image/jpeg":"/9j/","image/gif":"R0lGODlh"};
 let logoSeed=0x10c0f11e;
 const logoRandom=()=>{
   logoSeed=(Math.imul(logoSeed,1664525)+1013904223)>>>0;
   return logoSeed;
 };
 for(let sample=0;sample<120;sample+=1){
-  const type=logoMediaTypes[logoRandom()%logoMediaTypes.length],name=`logo-${sample}.${type.split("/")[1]}`,payload="A".repeat(logoRandom()%4096),dataUrl=`data:${type};base64,${payload}`;
+  const type=logoMediaTypes[logoRandom()%logoMediaTypes.length],name=`logo-${sample}.${type.split("/")[1]}`,payload=logoPayloadPrefixes[type]+"A".repeat((logoRandom()%1024)*4),dataUrl=`data:${type};base64,${payload}`;
   assert.deepEqual(
-    await readProjectDocumentationLogoFile({name,type},async()=>dataUrl),
+    await readProjectDocumentationLogoFile({name,type},async()=>dataUrl,async()=>({width:1,height:1})),
     {fileName:name,dataUrl},
     "every supported media type preserves the human name and exact converted bytes",
   );
@@ -65,9 +66,9 @@ for(const type of ["","image/svg+xml","text/plain","application/octet-stream"]){
   );
 }
 assert.equal(unsupportedReadCount,0,"unsupported media is rejected before reading its bytes");
-const boundaryPrefix="data:image/png;base64,",boundaryDataUrl=boundaryPrefix+"A".repeat(PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT-boundaryPrefix.length);
+const boundaryPrefix="data:image/png;base64,iVBORw0KGgo",boundaryDataUrl=boundaryPrefix+"A".repeat(PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT-boundaryPrefix.length);
 assert.equal(
-  (await readProjectDocumentationLogoFile({name:"boundary.png",type:"image/png"},async()=>boundaryDataUrl)).dataUrl.length,
+  (await readProjectDocumentationLogoFile({name:"boundary.png",type:"image/png"},async()=>boundaryDataUrl,async()=>({width:1,height:1}))).dataUrl.length,
   PROJECT_DOCUMENTATION_LOGO_DATA_URL_LIMIT,
   "the documented inclusive data-URL limit is accepted",
 );

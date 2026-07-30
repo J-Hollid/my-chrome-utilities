@@ -1,7 +1,7 @@
 import { flowDocumentationPropertyPaths } from "./data-layer-flow-table-documentation-export.js";
 import { compileProjectDocumentation, projectDocumentationProfileColumns, projectDocumentationProfilePaths, projectDocumentationSources, reconcileProjectDocumentationConcepts } from "./data-layer-project-documentation-compiler.js";
 import { projectCanonicalConcepts } from "./data-layer-layered-schema-project.js";
-import { createProjectDocumentationSet, createProjectDocumentationTheme, parseProjectDocumentationTheme, readProjectDocumentationLogoFile, serializeProjectDocumentationTheme, } from "./data-layer-project-documentation-records.js";
+import { createProjectDocumentationSet, createProjectDocumentationTheme, parseProjectDocumentationTheme, PROJECT_DOCUMENTATION_LOGO_MAX_HEIGHT, PROJECT_DOCUMENTATION_LOGO_MAX_WIDTH, readProjectDocumentationLogoFile, serializeProjectDocumentationTheme, } from "./data-layer-project-documentation-records.js";
 import { projectDocumentationSnapshotStale, renderProjectDocumentationClipboard, selectProjectDocumentationTables, themeFingerprint, writeProjectDocumentationWorkbook, } from "./data-layer-project-documentation-workspace.js";
 import { conceptSectionHeading } from "./data-layer-flow-table-documentation-export.js";
 import { declareStudioChoice } from "./data-layer-studio-choice-controls.js";
@@ -34,6 +34,28 @@ const fileDataUrl = (file) => new Promise((resolve, reject) => {
     reader.addEventListener("abort", () => reject(new Error("Unreadable logo")));
     reader.readAsDataURL(file);
 });
+const decodeLogoDataUrl = (dataUrl) => new Promise((resolve, reject) => {
+    const image = new Image();
+    image.addEventListener("load", () => image.naturalWidth > 0 && image.naturalHeight > 0 ? resolve({ width: image.naturalWidth, height: image.naturalHeight }) : reject(new Error("Invalid logo dimensions")));
+    image.addEventListener("error", () => reject(new Error("Invalid logo image")));
+    image.src = dataUrl;
+});
+const logoArea = (theme) => {
+    const area = document.createElement("div");
+    area.dataset.documentationLogoArea = "true";
+    area.style.width = `${PROJECT_DOCUMENTATION_LOGO_MAX_WIDTH}px`;
+    area.style.height = `${PROJECT_DOCUMENTATION_LOGO_MAX_HEIGHT}px`;
+    area.style.display = "flex";
+    area.style.alignItems = "flex-start";
+    const image = Object.assign(document.createElement("img"), { src: theme.logo, alt: `${theme.clientName || theme.name} logo` });
+    image.style.maxWidth = `${PROJECT_DOCUMENTATION_LOGO_MAX_WIDTH}px`;
+    image.style.maxHeight = `${PROJECT_DOCUMENTATION_LOGO_MAX_HEIGHT}px`;
+    image.style.width = "auto";
+    image.style.height = "auto";
+    image.style.objectFit = "contain";
+    area.append(image);
+    return area;
+};
 function applyThemeToTable(table, theme) {
     table.dataset.themeFingerprint = themeFingerprint(theme);
     table.dataset.density = theme.density;
@@ -281,19 +303,12 @@ export function installProjectDocumentationWorkspaceUi(options) {
         footer.setAttribute("aria-label", "Theme footer text");
         groups["Header and footer"].append(labelled("Header text", header), labelled("Footer text", footer));
         const read = () => createProjectDocumentationTheme({ id: theme.id, name: name.value, clientName: client.value, logo: logoValue, colors: { heading: headingColor.value, accent: accent.value, stripe: stripe.value }, typography: { family: family.value, headingSize: Number(headingSize.value), bodySize: Number(bodySize.value) }, density: density.value === "compact" ? "compact" : "comfortable", borders: borders.checked, striping: striping.checked, highlightedHeadings: highlighted.checked, columnWidths: Object.fromEntries(widths.value.split(/\r?\n/u).flatMap((line) => { const [column, raw] = line.split("="); return column && Number(raw) > 0 ? [[column.trim(), Number(raw)]] : []; })), headerText: header.value, footerText: footer.value });
-        const sampleHost = document.createElement("section"), drawSample = (sampleTheme) => { sampleHost.replaceChildren(); sampleHost.dataset.themeSample = "true"; if (sampleTheme.logo) {
-            const image = Object.assign(document.createElement("img"), { src: sampleTheme.logo, alt: `${sampleTheme.clientName || sampleTheme.name} logo` });
-            image.style.maxWidth = "12rem";
-            image.style.maxHeight = "5rem";
-            image.style.width = "auto";
-            image.style.height = "auto";
-            image.style.objectFit = "contain";
-            sampleHost.append(image);
-        } sampleHost.append(Object.assign(document.createElement("p"), { textContent: [sampleTheme.clientName, sampleTheme.headerText].filter(Boolean).join(" · ") }), renderTable({ id: "theme-sample", title: "Theme sample", headings: ["Property", "Description"], rows: [["page_name", "Page name"], ["event_name", "Observed event"]] }, sampleTheme), Object.assign(document.createElement("p"), { textContent: sampleTheme.footerText })); };
+        const sampleHost = document.createElement("section"), drawSample = (sampleTheme) => { sampleHost.replaceChildren(); sampleHost.dataset.themeSample = "true"; if (sampleTheme.logo)
+            sampleHost.append(logoArea(sampleTheme)); sampleHost.append(Object.assign(document.createElement("p"), { textContent: [sampleTheme.clientName, sampleTheme.headerText].filter(Boolean).join(" · ") }), renderTable({ id: "theme-sample", title: "Theme sample", headings: ["Property", "Description"], rows: [["page_name", "Page name"], ["event_name", "Observed event"]] }, sampleTheme), Object.assign(document.createElement("p"), { textContent: sampleTheme.footerText })); };
         const drawLogoState = () => { logoName.textContent = logoFileName; removeLogo.hidden = !logoValue; drawSample(read()); };
         removeLogo.addEventListener("click", () => { logoValue = ""; logoFileName = ""; logoPicker.value = ""; logoDiagnostic.textContent = ""; drawLogoState(); });
         logoPicker.addEventListener("change", () => { const file = logoPicker.files?.[0]; if (!file)
-            return; logoDiagnostic.textContent = ""; void readProjectDocumentationLogoFile(file, fileDataUrl).then((logo) => { logoValue = logo.dataUrl; logoFileName = logo.fileName; drawLogoState(); }, (error) => { logoPicker.value = ""; logoDiagnostic.textContent = error instanceof Error ? error.message : String(error); }); });
+            return; logoDiagnostic.textContent = ""; void readProjectDocumentationLogoFile(file, fileDataUrl, decodeLogoDataUrl).then((logo) => { logoValue = logo.dataUrl; logoFileName = logo.fileName; drawLogoState(); }, (error) => { logoPicker.value = ""; logoDiagnostic.textContent = error instanceof Error ? error.message : String(error); }); });
         drawLogoState();
         const save = button("Save theme", () => { try {
             saveTheme(read(), "Save project documentation theme");
@@ -437,7 +452,7 @@ export function installProjectDocumentationWorkspaceUi(options) {
                 sectionTitle.style.fontWeight = "700";
                 sectionTitle.style.color = theme.colors.heading;
                 if (theme.logo)
-                    sectionHost.append(Object.assign(document.createElement("img"), { src: theme.logo, alt: `${theme.clientName || theme.name} logo` }));
+                    sectionHost.append(logoArea(theme));
                 sectionHost.append(sectionTitle);
                 if (identity)
                     sectionHost.append(Object.assign(document.createElement("p"), { textContent: identity }));
