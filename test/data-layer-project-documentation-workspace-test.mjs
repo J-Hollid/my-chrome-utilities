@@ -146,6 +146,14 @@ const assertExcelCompatiblePackage=(bytes,expectedSheets)=>{
   assert.equal(files.has("xl/_rels/workbook.xml.rels"),true);
   assert.deepEqual(workbookSheetNames(bytes),expectedSheets);
 };
+const assertLogoWorkbookIntegrity=(bytes,expectedTables)=>{
+  const files=unzipStored(bytes);
+  for(const [index,table] of expectedTables.entries()){
+    const worksheet=new TextDecoder().decode(files.get(`xl/worksheets/sheet${index+1}.xml`));
+    assert.ok(worksheet.indexOf("<headerFooter>")<worksheet.indexOf('<drawing r:id="rId1"/>'),"header and footer precede the drawing reference in worksheet schema order");
+    for(const value of [table.title,...table.headings,...table.rows.flat()])assert.match(worksheet,new RegExp(String(value).replace(/[.*+?^${}()|[\]\\]/gu,"\\$&")),`logo worksheet preserves ${value}`);
+  }
+};
 assertExcelCompatiblePackage(
   writeProjectDocumentationWorkbook(snapshot,{scope:"current",currentSectionId:"section:checkout"}),
   ["Checkout journey"],
@@ -200,7 +208,9 @@ const sizedGif=new Uint8Array([71,73,70,56,57,97,184,11,208,7]);
 const sizedJpeg=new Uint8Array([255,216,255,192,0,17,8,7,208,11,184,3,1,17,0,2,17,0,3,17,0]);
 for(const [mediaType,extension,bytes] of [["image/png","png",sizedPng],["image/jpeg","jpg",sizedJpeg],["image/gif","gif",sizedGif]]){
   const sizedTheme=createProjectDocumentationTheme({...theme,id:`theme:sized:${extension}`,logo:`data:${mediaType};base64,${Buffer.from(bytes).toString("base64")}`});
-  const sizedWorkbook=writeProjectDocumentationWorkbook(compileProjectDocumentationSnapshot({...source,theme:sizedTheme}),{scope:"current",currentSectionId:"section:overview"});
+  const sizedSnapshot=compileProjectDocumentationSnapshot({...source,theme:sizedTheme}),selections=extension==="png"?[{scope:"current",currentSectionId:"section:overview"},{scope:"selected",selectedSectionIds:["section:checkout","section:sitewide"]},{scope:"complete"}]:[{scope:"complete"}];
+  for(const selection of selections){const selectedTables=selectProjectDocumentationTables(sizedSnapshot,selection),scopedWorkbook=writeProjectDocumentationWorkbook(sizedSnapshot,selection);assertExcelCompatiblePackage(scopedWorkbook,selectedTables.map(({title})=>title));assertLogoWorkbookIntegrity(scopedWorkbook,selectedTables);}
+  const sizedWorkbook=writeProjectDocumentationWorkbook(sizedSnapshot,{scope:"current",currentSectionId:"section:overview"});
   const sizedFiles=unzipStored(sizedWorkbook),sizedDrawing=new TextDecoder().decode(sizedFiles.get("xl/drawings/drawing1.xml")),sizedSheet=new TextDecoder().decode(sizedFiles.get("xl/worksheets/sheet1.xml"));
   assert.match(sizedDrawing,/<xdr:ext cx="914400" cy="609600"\/>/);
   assert.match(sizedSheet,/<row r="1" ht="48" customHeight="1"\/><row r="2"/);

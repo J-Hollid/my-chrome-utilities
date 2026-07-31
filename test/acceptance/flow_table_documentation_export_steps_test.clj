@@ -46,6 +46,10 @@
              {"image_type" "JPEG"
               "media_type" "image/jpeg"})))
   (is (map? (flow-export/validate-example!
+             :runtime
+             {"image_type" "PNG"
+              "export_scope" "selected sections"})))
+  (is (map? (flow-export/validate-example!
              :model
              {"invalid_logo" "a file whose image data cannot be read"
               "diagnostic" "The logo could not be read"})))

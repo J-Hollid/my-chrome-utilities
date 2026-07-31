@@ -38,14 +38,18 @@ fixture={...fixture,project:{...fixture.project,documentationFlowGraphs:{
 const fixturePackage=exportSpecificationProjectState(fixture);
 
 async function openLogoWorkbooksWithExcelReader(samples){
-  assert.deepEqual(samples.map(({format})=>format),["png","jpeg","gif"]);
-  for(const {format,workbookBase64,expectedSheets} of samples){
+  assert.deepEqual(samples.map(({format,scope})=>`${format}:${scope}`),["png:current section","png:selected sections","png:complete set","jpeg:complete set","gif:complete set"]);
+  for(const {format,scope,workbookBase64,expectedSheets,expectedContent} of samples){
+    const bytes=Buffer.from(workbookBase64,"base64"),files=new Map();let offset=0;while(offset+30<=bytes.length&&bytes.readUInt32LE(offset)===0x04034b50){const size=bytes.readUInt32LE(offset+18),nameLength=bytes.readUInt16LE(offset+26),extraLength=bytes.readUInt16LE(offset+28),name=bytes.subarray(offset+30,offset+30+nameLength).toString("utf8"),start=offset+30+nameLength+extraLength;files.set(name,bytes.subarray(start,start+size));offset=start+size;}
+    assert.equal(files.has("[Content_Types].xml")&&files.has("xl/workbook.xml"),true,`${format} ${scope} package roots`);
+    for(const [index] of expectedSheets.entries()){const worksheet=files.get(`xl/worksheets/sheet${index+1}.xml`)?.toString("utf8")??"",relationship=files.get(`xl/worksheets/_rels/sheet${index+1}.xml.rels`)?.toString("utf8")??"";assert.equal(worksheet.indexOf("<sheetData>")<worksheet.indexOf("<headerFooter>")&&worksheet.indexOf("<headerFooter>")<worksheet.indexOf('<drawing r:id="rId1"/>'),true,`${format} ${scope} worksheet ${index+1} schema order`);assert.match(relationship,new RegExp(`Target="../drawings/drawing${index+1}\\.xml"`));}
     const workbook=new ExcelJS.Workbook();
-    await workbook.xlsx.load(Buffer.from(workbookBase64,"base64"));
-    assert.deepEqual(workbook.worksheets.map(({name})=>name),expectedSheets,`${format} workbook sheets`);
+    await workbook.xlsx.load(bytes);
+    assert.deepEqual(workbook.worksheets.map(({name})=>name),expectedSheets,`${format} ${scope} workbook sheets`);
     const imageCounts=workbook.worksheets.map((worksheet)=>worksheet.getImages().length);
-    assert.equal(imageCounts.every((count)=>count===1),true,`${format} workbook drawings ${JSON.stringify(imageCounts)}`);
-    assert.equal(workbook.model.media.some(({extension})=>extension===(format==="jpeg"?"jpg":format)),true,`${format} workbook image`);
+    assert.equal(imageCounts.every((count)=>count===1),true,`${format} ${scope} workbook drawings ${JSON.stringify(imageCounts)}`);
+    assert.equal(workbook.model.media.some(({extension})=>extension===(format==="jpeg"?"jpg":format)),true,`${format} ${scope} workbook image`);
+    for(const [index,expected] of expectedContent.entries()){const values=workbook.worksheets[index].getSheetValues().flat(2).filter((value)=>value!==undefined&&value!==null).map(String);for(const value of expected)assert.equal(values.some((actual)=>actual.includes(value)),true,`${format} ${scope} sheet ${index+1} retains ${value}`);}
   }
 }
 
@@ -136,6 +140,8 @@ try{
   await evaluate(socket,`globalThis.__expectedDocumentationConcepts=${JSON.stringify(conceptPhaseOne.expectedConcepts)};globalThis.__documentationProfileAddition=${JSON.stringify(conceptPhaseOne.profileAddition)}`);
   const conceptPhaseTwo=await evaluate(socket,documentationConceptPhaseTwoExpression),conceptDiagnostic={phaseOne:conceptPhaseOne.diagnostic,phaseTwo:conceptPhaseTwo.diagnostic},conceptEvidence={...conceptPhaseOne,...conceptPhaseTwo};delete conceptEvidence.expectedConcepts;delete conceptEvidence.profileAddition;delete conceptEvidence.diagnostic;if(Object.values(conceptEvidence).some((value)=>!value))console.error(JSON.stringify(conceptDiagnostic));
   Object.assign(evidence,conceptEvidence);
-  const logoWorkbookSamples=evidence._logoWorkbookSamples;delete evidence._logoWorkbookSamples;await openLogoWorkbooksWithExcelReader(logoWorkbookSamples);
+  delete evidence._logoWorkbookSamples;
+  const logoWorkbookSamples=await evaluate(socket,`(async()=>{const repository=await (await import('/data-layer-durable-project-repository.js')).openIndexedDbProjectRepository(),loaded=await repository.loadProject(await repository.activeProjectId()),compiler=await import('/data-layer-project-documentation-compiler.js'),workspaceCore=await import('/data-layer-project-documentation-workspace.js'),set=loaded.state.project.documentation.sets[0],savedTheme=loaded.state.project.documentation.themes.find(({id})=>id===set.themeId),sources=${JSON.stringify(phaseOne.logoSources)},bytesBase64=(bytes)=>{let binary='';for(let offset=0;offset<bytes.length;offset+=32768)binary+=String.fromCharCode(...bytes.slice(offset,offset+32768));return btoa(binary);},selections=(format)=>format==='png'?[{scopeName:'current section',selection:{scope:'current',currentSectionId:set.sections.find(({name})=>name==='Checkout journey').id}},{scopeName:'selected sections',selection:{scope:'selected',selectedSectionIds:set.sections.filter(({name})=>name==='Checkout journey'||name==='Sitewide').map(({id})=>id)}},{scopeName:'complete set',selection:{scope:'complete'}}]:[{scopeName:'complete set',selection:{scope:'complete'}}];return sources.flatMap((logo)=>{const format=logo.slice(11,logo.indexOf(';')),theme={...savedTheme,logo},snapshot=compiler.compileProjectDocumentation({state:loaded.state,set,theme,revision:loaded.draftSequence,generatedAt:'2026-07-26T00:00:00.000Z'});return selections(format).map(({scopeName,selection})=>{const tables=workspaceCore.selectProjectDocumentationTables(snapshot,selection),bytes=workspaceCore.writeProjectDocumentationWorkbook(snapshot,{...selection,confirmIncomplete:true});return{format,scope:scopeName,workbookBase64:bytesBase64(bytes),expectedSheets:tables.map(({title})=>title),expectedContent:tables.map((table)=>[table.title,...table.headings,...table.rows.flat()].map(String))};});});})()`);
+  await openLogoWorkbooksWithExcelReader(logoWorkbookSamples);
   if(Object.entries(evidence).some(([key,value])=>key!=="_debug"&&!value))console.error(JSON.stringify(evidence._debug));delete evidence._debug;assert.equal(Object.values(evidence).every(Boolean),true,JSON.stringify(evidence));console.log(JSON.stringify({flowExport:evidence}));
 }finally{socket?.close();await stopHeadlessChrome(chrome);await rm(profileDirectory,{recursive:true,force:true,maxRetries:5,retryDelay:100});}

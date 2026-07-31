@@ -63,6 +63,12 @@
     :rows #{["PNG" "image/png"]
             ["JPEG" "image/jpeg"]
             ["GIF" "image/gif"]}}
+   {:keys ["image_type" "export_scope"]
+    :rows #{["PNG" "current section"]
+            ["PNG" "selected sections"]
+            ["PNG" "complete set"]
+            ["JPEG" "complete set"]
+            ["GIF" "complete set"]}}
    {:keys ["invalid_logo" "diagnostic"]
     :rows #{["an SVG file" "Choose a PNG, JPEG, or GIF image"]
             ["a file whose image data cannot be read" "The logo could not be read"]
