@@ -5,6 +5,7 @@ const orderedIds = (document, parentId) => orderedChildren(document, parentId).f
 const predicatePropertyIds = (predicate) => predicate ? predicate.kind === "predicate" ? [predicate.propertyId] : predicate.children.flatMap(predicatePropertyIds) : [];
 const stableUnique = (values) => [...new Set(values)];
 const structuralItemShape = (item) => ({ id: item.id, ...(item.type ? { type: item.type } : {}), ...(item.items ? { items: structuralItemShape(item.items) } : {}) });
+const structuralDefinitionShape = (node) => ({ type: node.type, ...(node.itemType ? { itemType: node.itemType } : {}), ...(node.itemSchema ? { itemSchema: structuralItemShape(node.itemSchema) } : {}) });
 const dependencyRulesFor = (node, recipe) => {
     const presenceId = `presence:${node.id}`, presence = recipe.presenceReplacements.some(({ sourceRuleId }) => sourceRuleId === presenceId) || recipe.excludedRuleIds.includes(presenceId) ? [] : node.presence.condition ? [{ id: presenceId, condition: node.presence.condition }] : [];
     const rules = node.rules.flatMap((rule) => { if (rule.enforcement === "invariant")
@@ -83,7 +84,7 @@ export function selectiveProfileContribution(document, recipe) {
         if (!source || !node)
             return [];
         if (structural.has(propertyId))
-            return [{ path: source.path, type: source.type, ...(source.itemType ? { itemType: source.itemType } : {}), ...(node.itemSchema ? { itemSchema: structuralItemShape(node.itemSchema) } : {}), definitionId: propertyId, selectionReason: "structural" }];
+            return [{ path: source.path, ...structuralDefinitionShape(node), definitionId: propertyId, selectionReason: "structural" }];
         const constraint = clone(source), nextRules = effectiveRulesFor(node, recipe);
         constraint.rules = nextRules;
         applyDerivedRuleFacets(constraint, nextRules);
@@ -114,7 +115,7 @@ const definitionDigest = (value) => { const text = JSON.stringify(value); let le
 const sourceRuleFingerprints = (document, propertyIds) => Object.fromEntries(Object.entries(sourceRuleValues(document, propertyIds)).map(([id, value]) => [id, definitionDigest(value)]));
 const sourceDefinitionValues = (document, selection) => { const structural = new Set(selection.structuralPropertyIds); return Object.fromEntries(selection.effectivePropertyIds.flatMap((propertyId) => { const node = document.nodes[propertyId]; if (!node)
     return []; if (structural.has(propertyId))
-    return [[propertyId, { type: node.type, ...(node.itemType ? { itemType: node.itemType } : {}), ...(node.itemSchema ? { itemSchema: structuralItemShape(node.itemSchema) } : {}) }]]; const { id: _, name: __, parentId: ___, order: ____, rules: _____, provenance: ______, structureOwned: _______, localDefinitionFacets: ________, inheritedDefinition: _________, ...definitionFacets } = node; return [[propertyId, definitionFacets]]; })); };
+    return [[propertyId, structuralDefinitionShape(node)]]; const { id: _, name: __, parentId: ___, order: ____, rules: _____, provenance: ______, structureOwned: _______, localDefinitionFacets: ________, inheritedDefinition: _________, ...definitionFacets } = node; return [[propertyId, definitionFacets]]; })); };
 const sourceDefinitionFingerprints = (document, selection) => Object.fromEntries(Object.entries(sourceDefinitionValues(document, selection)).map(([id, value]) => [id, definitionDigest(value)]));
 export function profileInheritanceSourceSnapshot(document, recipe) { const selection = profileInheritanceSelection(document, recipe), ruleBearingPropertyIds = stableUnique([...selection.directPropertyIds, ...selection.ruleDependencyPropertyIds]); return { revision: document.revision, effectivePropertyIds: [...selection.effectivePropertyIds], propertyPaths: Object.fromEntries(selection.effectivePropertyIds.flatMap((propertyId) => document.nodes[propertyId] ? [[propertyId, canonicalPropertyPath(document, propertyId)]] : [])), ruleFingerprints: sourceRuleFingerprints(document, ruleBearingPropertyIds), definitionFingerprints: sourceDefinitionFingerprints(document, selection), missingRuleDependencyKeys: selection.missingRuleDependencies.map(missingDependencyKey) }; }
 export function profileInheritanceRecipeApplied(document, recipe) { const applied = { ...clone(recipe), sourceRevision: document.revision, sourceSnapshot: profileInheritanceSourceSnapshot(document, recipe) }; delete applied.sourceImpact; return applied; }
