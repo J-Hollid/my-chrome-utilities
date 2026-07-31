@@ -46,4 +46,28 @@
           {"ordered Pages" "Alpha, Landing"
            "removed Page" "Landing"
            "focus target" "Alpha"})))
+  (doseq [[url result]
+          [["https://shop.example/checkout/cart?x=1#y"
+            "matches exact pathname /checkout/cart"]
+           ["https://other.example/checkout/cart"
+            "matches exact pathname /checkout/cart"]
+           ["https://shop.example/checkout/cart/"
+            "does not match /checkout/cart"]
+           ["checkout/cart" "Enter a full URL"]]]
+    (is (= {"url" url "result" result}
+           (project-management/validate-example!
+            :model {"url" url "result" result})))
+    (is (= {"url" url "result" result}
+           (project-management/validate-example!
+            :runtime {"url" url "result" result}))))
+  (is (thrown? Exception
+               (project-management/validate-example!
+                :model
+                {"url" "https://shop.example/checkout/cart/"
+                 "result" "matches exact pathname /checkout/cart"})))
+  (is (thrown? Exception
+               (project-management/validate-example!
+                :runtime
+                {"url" "checkout/cart"
+                 "result" "does not match /checkout/cart"})))
   (is (= {} (project-management/validate-example! :runtime {}))))
