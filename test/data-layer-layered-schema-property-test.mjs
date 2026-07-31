@@ -209,6 +209,19 @@ for(let iteration=0;iteration<120;iteration+=1){
     assert.equal(resolved.properties["/generated"].expectedValue,groupValue,"generated peer recomposition preserves matching downstream rules");
     assert.equal(resolved.properties["/generated"].expectedContributor,`group ${iteration}`);
   }
+  for(const scope of ["Page Group","Page"]){
+    for(const [directFacet,conditionalOutcome,field] of [
+      [{expectedValue:`static-${iteration}`},{kind:"value",expectedValue:`conditional-${iteration}`},"expectedValue"],
+      [{allowedValues:[`static-${iteration}`]},{kind:"allowed-values",allowedValues:[`conditional-${iteration}`]},"allowedValues"],
+      [{presence:"required"},{kind:"presence",presence:"optional"},"presence"],
+    ]){
+      const downstream=downstreamContribution(`conditional-${scope}`,scope,{...directFacet,rules:[rule(`conditional-${scope}`,{...conditionalOutcome,condition:always})]}),ordinary=resolveConditionalLayeredSchema(compilePeers([downstream]),{});
+      for(const profiles of [typedProfiles,[...typedProfiles].reverse()]){
+        const inherited=resolveConditionalLayeredSchema(compilePeers([...profiles,downstream]),{});
+        assert.deepEqual(inherited.properties["/generated"][field],ordinary.properties["/generated"][field],"generated downstream direct-vs-rule precedence is conserved across compatible profile inheritance");
+      }
+    }
+  }
   const operatorRule=(id,operator,expectedValue)=>rule(id,{kind:"value",operator,expectedValue}),operatorPairs=[
     [operatorRule("equals-a","Equals",`a-${iteration}`),operatorRule("equals-b","Equals",`b-${iteration}`)],
     [operatorRule("set-a","Is one of",[`a-${iteration}`,`b-${iteration}`]),operatorRule("set-b","Is one of",[`c-${iteration}`])],

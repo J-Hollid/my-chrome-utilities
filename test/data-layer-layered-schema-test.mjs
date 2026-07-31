@@ -221,6 +221,21 @@ const downstreamConditional=compileLayeredSchema([
 assert.equal(downstreamConditionalResolved.status,"ready");
 assert.equal(downstreamConditionalResolved.properties["/value"].expectedValue,"group","resolved peer recomposition preserves matching rules from later contributors");
 assert.equal(downstreamConditionalResolved.properties["/value"].expectedContributor,"Group");
+for(const scope of ["Page Group","Page"]){
+  for(const [directFacet,conditionalOutcome,expectedFacet] of [
+    [{expectedValue:"static"},{kind:"value",expectedValue:"conditional"},["expectedValue","conditional"]],
+    [{allowedValues:["static"]},{kind:"allowed-values",allowedValues:["conditional"]},["allowedValues",["conditional"]]],
+    [{presence:"required"},{kind:"presence",presence:"optional"},["presence","optional"]],
+  ]){
+    const downstream=contribution(`conditional:${scope}`,`Conditional ${scope}`,scope,[{path:"/value",...directFacet,rules:[unconditionalRule(`rule:${scope}`,{...conditionalOutcome,condition:alwaysCondition})]}]),withoutProfiles=resolveConditionalLayeredSchema(compileLayeredSchema([downstream],{eventId:"pageview",eventRole:"context"}),{}),withProfiles=resolveConditionalLayeredSchema(compileLayeredSchema([
+      peer("a",{type:"string"}),
+      peer("b",{type:"string"}),
+      downstream,
+    ],{eventId:"pageview",eventRole:"context"}),{});
+    assert.deepEqual(withProfiles.properties["/value"][expectedFacet[0]],expectedFacet[1],`${scope} matching rules retain ordinary direct-vs-rule precedence after profile inheritance`);
+    assert.deepEqual(withProfiles.properties["/value"][expectedFacet[0]],withoutProfiles.properties["/value"][expectedFacet[0]],`${scope} conditional resolution is conserved with and without compatible profiles`);
+  }
+}
 const operatorRule=(id,operator,expectedValue)=>unconditionalRule(id,{kind:"value",operator,expectedValue});
 for(const rules of [
   [operatorRule("equals:a","Equals","a"),operatorRule("equals:b","Equals","b")],
