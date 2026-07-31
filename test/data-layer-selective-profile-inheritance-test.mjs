@@ -64,6 +64,18 @@ const structuralMaster={...master,nodes:{...master.nodes,[error.id]:businessAnce
 const structuralConstraint=selectiveProfileContribution(structuralMaster,nestedOnly).constraints[0];
 assert.deepEqual(structuralConstraint,{path:"/error",type:"object",definitionId:error.id,selectionReason:"structural"},"structural ancestors retain shape and stable provenance identity only");
 
+const structuralArrayCases=[
+  {name:"scalar",shape:{type:"array",itemType:"string"},payload:{error:[1]},expected:{itemType:"string"}},
+  {name:"object item",shape:{type:"array",itemSchema:{id:"item:object",type:"object"}},payload:{error:["not-an-object"]},expected:{itemSchema:{id:"item:object",type:"object"}}},
+  {name:"nested array",shape:{type:"array",itemSchema:{id:"item:outer",type:"array",items:{id:"item:middle",type:"array",items:{id:"item:leaf",type:"string"}}}},payload:{error:[[[1]]]},expected:{itemSchema:{id:"item:outer",type:"array",items:{id:"item:middle",type:"array",items:{id:"item:leaf",type:"string"}}}}},
+];
+for(const structuralCase of structuralArrayCases){
+  const ancestor={...businessAncestor,...structuralCase.shape},document={...master,nodes:{...master.nodes,[error.id]:ancestor}},contribution=selectiveProfileContribution(document,nestedOnly),constraint=contribution.constraints[0];
+  assert.deepEqual(constraint,{path:"/error",type:"array",...structuralCase.expected,definitionId:error.id,selectionReason:"structural"},`${structuralCase.name} structural array shape survives without business facets`);
+  const compiled=compileLayeredSchema([{id:"profile:master",name:"Master",scope:"Shared Profile",constraints:contribution.constraints}],{}),validation=validateLayeredObservation({targetId:"page:error",targetName:"Error Page",revision:1,compiled},structuralCase.payload);
+  assert.equal(validation.issues.some(({code,canonicalPath})=>code==="TYPE"&&canonicalPath?.startsWith("/error/*")),true,`${structuralCase.name} structural item shape remains enforceable`);
+}
+
 const ordinaryPattern={id:"rule:error-code-pattern",kind:"pattern",pattern:"^SOURCE$",severity:"error",message:"Source pattern"};
 const ruleMaster={...master,nodes:{...master.nodes,[errorCode.id]:{...errorCode,rules:[ordinaryPattern]}}};
 const excludedPattern={...empty,propertySelections:[errorCode.id],excludedRuleIds:[ordinaryPattern.id]};
@@ -124,12 +136,25 @@ assert.equal(profileInheritanceSelection(deleted,{...empty,propertySelections:[e
 const appliedRecipe=profileInheritanceRecipeApplied(master,{...empty,propertySelections:[errorMessage.id,errorDetails.id],excludedRuleIds:["rule:error-message"]});
 assert.equal(appliedRecipe.sourceRevision,master.revision);assert.equal(JSON.stringify(appliedRecipe.sourceSnapshot).includes('"nodes"'),false,"applied snapshots retain identity/path/fingerprint metadata, not definitions");
 const appliedBytes=JSON.stringify(appliedRecipe);
-for(const sourceDefinition of["^ERR","Use an error message",'"condition"','"value":"error"'])assert.equal(appliedBytes.includes(sourceDefinition),false,`applied recipes do not copy source definition bytes: ${sourceDefinition}`);
+for(const sourceDefinition of["^ERR","Use an error message","Readable error message","ERR unavailable",'"condition"','"value":"error"'])assert.equal(appliedBytes.includes(sourceDefinition),false,`applied recipes do not copy source definition bytes: ${sourceDefinition}`);
 assert.equal(Object.values(appliedRecipe.sourceSnapshot.ruleFingerprints).every((value)=>/^digest-v1:[0-9a-f]{16}$/.test(value)),true,"new snapshots store deterministic digests");
+assert.equal(Object.values(appliedRecipe.sourceSnapshot.definitionFingerprints).every((value)=>/^digest-v1:[0-9a-f]{16}$/.test(value)),true,"selected definition facets are stored only as deterministic digests");
+const facetEdits=[
+  ["type",errorMessage.id,(candidate)=>({...candidate,type:"number"})],
+  ["nullable",errorMessage.id,(candidate)=>({...candidate,nullable:true})],
+  ["closed-object policy",errorDetails.id,(candidate)=>({...candidate,onlyDefinedFields:true})],
+  ["item shape",errorDetails.id,(candidate)=>({...candidate,type:"array",itemSchema:{id:"item:details",type:"string"}})],
+  ["allowed values",errorMessage.id,(candidate)=>({...candidate,allowedValues:[{id:"allowed:message",value:"different"}]})],
+  ["unconditional presence",errorDetails.id,(candidate)=>({...candidate,presence:{mode:"required"}})],
+  ["documentation",errorMessage.id,(candidate)=>({...candidate,documentation:{...candidate.documentation,description:"Changed definition documentation"}})],
+  ["example",errorMessage.id,(candidate)=>({...candidate,documentation:{...candidate.documentation,example:{method:"custom",value:"Changed example"}}})],
+];
+for(const [facet,propertyId,edit] of facetEdits){const changed={...master,revision:master.revision+1,nodes:{...master.nodes,[propertyId]:edit(master.nodes[propertyId])}},facetImpact=profileInheritanceCurrentImpact(changed,appliedRecipe);assert.equal(facetImpact.stale,true,`${facet} changes stale selected inheritance consumers`);assert.equal(facetImpact.changedDefinitionPropertyIds.includes(propertyId),true,`${facet} changes identify the selected definition`);}
 const legacyApplied=structuredClone(appliedRecipe);legacyApplied.sourceSnapshot.ruleFingerprints={
   [`presence:${errorMessage.id}`]:JSON.stringify(errorMessage.presence),
   [errorMessage.rules[0].id]:JSON.stringify(errorMessage.rules[0]),
 };
+delete legacyApplied.sourceSnapshot.definitionFingerprints;
 assert.equal(profileInheritanceCurrentImpact(master,legacyApplied).stale,false,"legacy raw snapshots remain readable without migration");
 assert.equal(profileInheritanceCurrentImpact({...master,revision:8,nodes:{...master.nodes,[errorMessage.id]:{...errorMessage,rules:[{...errorMessage.rules[0],message:"Changed legacy message"}]}}},legacyApplied).changedRuleIds.includes(errorMessage.rules[0].id),true,"legacy raw snapshots still detect changes");
 const currentRenameImpact=profileInheritanceCurrentImpact(renamed,appliedRecipe);
@@ -145,6 +170,8 @@ const addedDependency={...master,revision:10,nodes:{...master.nodes,[errorMessag
 assert.equal(profileInheritanceCurrentImpact(addedDependency,appliedRecipe).newMissingRuleDependencies.some(({propertyId})=>propertyId===offer.id),true);
 const staleTarget=markProfileInheritanceTargetStale({id:"page:error",name:"Error Page",profileInheritanceRecipes:[appliedRecipe]},"profile:master",master,renamed);
 assert.equal(staleTarget.validationStale,true);assert.equal(staleTarget.testCasesStale,true);assert.equal(staleTarget.documentationStale,true);assert.equal(staleTarget.exportStale,true);assert.equal(staleTarget.profileInheritanceRecipes[0].sourceImpact.changedPaths.length,1);
+const changedDefinition={...master,revision:master.revision+1,nodes:{...master.nodes,[errorMessage.id]:{...errorMessage,type:"number"}}},definitionStaleTarget=markProfileInheritanceTargetStale({id:"page:error",name:"Error Page",profileInheritanceRecipes:[appliedRecipe]},"profile:master",master,changedDefinition);
+assert.equal(definitionStaleTarget.validationStale,true);assert.equal(definitionStaleTarget.testCasesStale,true);assert.equal(definitionStaleTarget.documentationStale,true);assert.equal(definitionStaleTarget.exportStale,true);assert.deepEqual(definitionStaleTarget.profileInheritanceRecipes[0].sourceImpact.changedDefinitionPropertyIds,[errorMessage.id]);
 const currentTarget=markProfileInheritanceTargetStale({id:"page:error",name:"Error Page",profileInheritanceRecipes:[appliedRecipe]},"profile:master",master,unrelatedEdit);
 assert.equal(currentTarget.validationStale,undefined);assert.equal(currentTarget.testCasesStale,undefined);assert.equal(currentTarget.documentationStale,undefined);assert.equal(currentTarget.exportStale,undefined);
 
