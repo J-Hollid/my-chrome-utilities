@@ -414,8 +414,7 @@ export function saveProjectAssignment(state, input, id) {
         throw new Error("Assignment routing fields must not be blank.");
     if (!assignmentTarget(state.project, input.targetKind, input.targetId))
         throw new Error(`${input.targetKind} ${input.targetId} is unavailable.`);
-    const existing = input.id ? state.project.collections.assignments.find((assignment) => assignment.id === input.id) : undefined, identity = existing?.id ?? id("assignment"), generatedApplicabilityId = input.applicabilitySetId ?? String(existing?.applicabilitySetId ?? id("applicability")), resolvedEventId = input.eventId ?? String(existing?.eventId ?? state.project.collections.events.find((event) => event.eventName === input.eventName && event.sourceId === input.sourceId)?.id ?? "");
-    const { condition: rawCondition, ...compatible } = clone(input), condition = canonicalAssignmentCondition(state.project, rawCondition), saved = { ...existing, ...compatible, id: identity, eventId: resolvedEventId, applicabilitySetId: generatedApplicabilityId };
+    const { condition: rawCondition, ...compatible } = clone(input), existing = input.id ? state.project.collections.assignments.find((assignment) => assignment.id === input.id) : undefined, identity = existing?.id ?? id("assignment"), generatedApplicabilityId = input.applicabilitySetId ?? (rawCondition ? id("applicability") : String(existing?.applicabilitySetId ?? id("applicability"))), resolvedEventId = input.eventId ?? String(existing?.eventId ?? state.project.collections.events.find((event) => event.eventName === input.eventName && event.sourceId === input.sourceId)?.id ?? ""), condition = canonicalAssignmentCondition(state.project, rawCondition), saved = { ...existing, ...compatible, id: identity, eventId: resolvedEventId, applicabilitySetId: generatedApplicabilityId };
     delete saved.condition;
     delete saved.schemaDraftId;
     delete saved.schemaId;

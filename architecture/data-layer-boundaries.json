@@ -694,6 +694,17 @@
       "src/data-layer-specification-project.ts"
     ]
   },
+  "src/data-layer-assignment-routing-ui.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-assignment-routing.ts",
+      "src/data-layer-canonical-schema.ts",
+      "src/data-layer-layered-schema-project.ts",
+      "src/data-layer-specification-engine.ts",
+      "src/data-layer-specification-project.ts"
+    ]
+  },
   "src/data-layer-layered-schema-ui.ts": {
     "module": "schemas",
     "layer": "browser",

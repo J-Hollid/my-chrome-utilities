@@ -5,6 +5,7 @@
       "src/data-layer-project-entity-lifecycle.ts",
       "src/data-layer-page-authoring.ts",
       "src/data-layer-assignment-routing.ts",
+      "src/data-layer-assignment-routing-ui.ts",
       "src/data-layer-project-library.ts",
       "src/data-layer-project-library-ui.ts"
     ],

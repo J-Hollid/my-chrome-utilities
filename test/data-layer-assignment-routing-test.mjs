@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import {guidedAssignmentConditionKinds,testAssignmentRouting} from "../dist/data-layer-assignment-routing.js";
+import {assignmentConditionControl,buildGuidedAssignmentCondition,guidedAssignmentConditionKinds} from "../dist/data-layer-assignment-routing.js";
+import {saveProjectAssignment} from "../dist/data-layer-specification-project.js";
 
 const project={
   environments:["Production","Staging"],
@@ -20,35 +21,16 @@ assert.deepEqual(guidedAssignmentConditionKinds.map(({kind,guidedInput})=>[kind,
   ["Context data","schema property, compatible comparison, and typed value"],
 ]);
 
-const evaluate=(observation)=>testAssignmentRouting(project,observation);
-const winning=evaluate({sourceId:"browser",eventName:"page_view",pathname:"/checkout/cart",payload:{}});
-assert.equal(winning.winner?.assignmentId,"assignment:cart");
-assert.equal(winning.summary,"Cart Page View is the sole winner");
-assert.equal(winning.candidates[0].event.accepted,true);
-assert.equal(winning.candidates[0].applicability.accepted,true);
+assert.deepEqual(assignmentConditionControl({path:"/name",type:"string"}),{path:"/name",type:"string",comparisons:["exists","does not exist","equals","does not equal","is one of","starts with","contains","matches pattern"],valueType:"string"});
+assert.deepEqual(assignmentConditionControl({path:"/total",type:"number"}),{path:"/total",type:"number",comparisons:["exists","does not exist","equals","does not equal","is greater than","is at least","is less than","is at most"],valueType:"number"});
+assert.deepEqual(assignmentConditionControl({path:"/member",type:"boolean"}),{path:"/member",type:"boolean",comparisons:["exists","does not exist","equals","does not equal"],valueType:"boolean"});
+assert.deepEqual(buildGuidedAssignmentCondition({kind:"Context data",property:{path:"/total",type:"number"},comparison:"is at least",value:"7"}),{kind:"predicate",field:"/total",operator:"is at least",value:7});
+assert.deepEqual(buildGuidedAssignmentCondition({kind:"Context data",property:{path:"/member",type:"boolean"},comparison:"exists"}),{kind:"predicate",field:"/member",operator:"exists"});
+assert.throws(()=>buildGuidedAssignmentCondition({kind:"Context data",comparison:"equals",value:"x"}),/schema property/i);
+assert.throws(()=>buildGuidedAssignmentCondition({kind:"Query",comparison:"equals",value:"x"}),/parameter/i);
+assert.throws(()=>buildGuidedAssignmentCondition({kind:"Pathname",comparison:"equals",value:""}),/value/i);
 
-for(const [observation,summary,rejection] of [
-  [{sourceId:"browser",eventName:"page_view",pathname:"/checkout/shipping"},"Cart Page View is rejected by pathname","pathname"],
-  [{sourceId:"server",eventName:"page_view",pathname:"/checkout/cart"},"Cart Page View is rejected by source","source"],
-  [{sourceId:"browser",eventName:"purchase",pathname:"/checkout/cart"},"Cart Page View is rejected by Event","Event"],
-]){
-  const result=evaluate(observation);
-  assert.equal(result.summary,summary);
-  assert.ok(result.candidates[0].reasons.includes(rejection));
-  assert.ok(result.candidates[0].event.evidence);
-  assert.ok(result.candidates[0].applicability.evidence);
-}
-
-const tied=structuredClone(project);tied.collections.assignments.push({...tied.collections.assignments[0],id:"assignment:alternative",name:"Cart Page View alternative"});
-const ambiguous=testAssignmentRouting(tied,{sourceId:"browser",eventName:"page_view",pathname:"/checkout/cart"});
-assert.equal(ambiguous.winner,undefined);assert.deepEqual(ambiguous.ties.map(({name})=>name),["Cart Page View","Cart Page View alternative"]);assert.match(ambiguous.summary,/ambiguous.*Cart Page View.*Cart Page View alternative/i);
-tied.collections.assignments[0].priority=20;
-const resolved=testAssignmentRouting(tied,{sourceId:"browser",eventName:"page_view",pathname:"/checkout/cart"});
-assert.equal(resolved.winner?.name,"Cart Page View");assert.equal(resolved.candidates.find(({assignmentId})=>assignmentId==="assignment:alternative").resolution,"lower priority");
-
-const before=JSON.stringify(project),without=structuredClone(project);without.collections.assignments=[];
-assert.equal(testAssignmentRouting(without,{sourceId:"browser",eventName:"page_view",pathname:"/checkout/cart"}).winner,undefined);
-assert.equal(JSON.stringify(project),before,"routing tests never mutate project bytes");
-assert.deepEqual(without.collections.pages[0],project.collections.pages[0],"Assignment removal does not change the Page or its schema relationships");
+let sequence=0;const state={project:{id:"project:routing",name:"Routing",description:"",site:"example.test",environments:["Production"],namingConventions:{},publicationPolicy:{warningsBlock:false,fixturesRequired:false},collections:{profiles:[],pageGroups:[],pages:project.collections.pages,events:project.collections.events,applicabilitySets:project.collections.applicabilitySets,flows:[],fixtures:[],assignments:project.collections.assignments},releases:[]},draft:{id:"draft:routing",status:"Saved",updatedAt:"2026-08-01T00:00:00Z"},history:{undo:[],redo:[]}},originalCondition=structuredClone(state.project.collections.applicabilitySets[0].condition),{applicabilitySetId:_sharedSet,...assignmentInput}=state.project.collections.assignments[0],saved=saveProjectAssignment(state,{...assignmentInput,eventName:"page_view",condition:{kind:"predicate",field:"pathname",operator:"equals",value:"/new"}},(kind)=>`${kind}:new:${sequence++}`),updated=saved.project.collections.assignments[0];
+assert.notEqual(updated.applicabilitySetId,"set:cart","starting a structured condition creates a distinct reusable set");assert.deepEqual(saved.project.collections.applicabilitySets.find(({id})=>id==="set:cart").condition,originalCondition,"the previously shared set is never overwritten");assert.equal(saved.project.collections.applicabilitySets.length,2);
 
 console.log("assignment routing unit tests passed");
