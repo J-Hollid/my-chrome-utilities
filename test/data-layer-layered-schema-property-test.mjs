@@ -234,6 +234,15 @@ for(let iteration=0;iteration<120;iteration+=1){
         assert.deepEqual(inherited.conflicts,ordinary.conflicts,"generated downstream conflict identity and count are conserved across compatible profile inheritance");
       }
     }
+    const conflictingDownstream=(id)=>downstreamContribution(`multi-${scope}-${id}`,scope,{rules:[
+      rule(`multi-${scope}-${id}-a-${iteration}`,{kind:"value",expectedValue:`a-${iteration}`,condition:always}),
+      rule(`multi-${scope}-${id}-b-${iteration}`,{kind:"value",expectedValue:`b-${iteration}`,condition:always}),
+    ]}),multiple=[conflictingDownstream("first"),conflictingDownstream("second")],ordinaryMultiple=resolveConditionalLayeredSchema(compilePeers(multiple),{});
+    assert.equal(ordinaryMultiple.conflicts.length,1,`generated ${scope} aggregate contradiction has one conflict across downstream contributors`);
+    for(const profiles of [typedProfiles,[...typedProfiles].reverse()]){
+      const inherited=resolveConditionalLayeredSchema(compilePeers([...profiles,...multiple]),{});
+      assert.deepEqual(inherited.conflicts,ordinaryMultiple.conflicts,"generated aggregate downstream conflict identity and count are conserved across compatible profile inheritance");
+    }
   }
   const operatorRule=(id,operator,expectedValue)=>rule(id,{kind:"value",operator,expectedValue}),operatorPairs=[
     [operatorRule("equals-a","Equals",`a-${iteration}`),operatorRule("equals-b","Equals",`b-${iteration}`)],

@@ -261,6 +261,16 @@ for(const scope of ["Page Group","Page"]){
     assert.equal(withoutProfiles.conflicts.length,1,`${scope} ${facet} contradiction has one ordinary conflict`);
     assert.deepEqual(withProfiles.conflicts,withoutProfiles.conflicts,`${scope} ${facet} conflict identity and count are conserved after compatible profile inheritance`);
   }
+  const conflictingDownstream=(id)=>contribution(`multi:${scope}:${id}`,`Multi ${scope} ${id}`,scope,[{path:"/value",rules:[
+    unconditionalRule(`multi:${scope}:${id}:a`,{kind:"value",expectedValue:"a",condition:alwaysCondition}),
+    unconditionalRule(`multi:${scope}:${id}:b`,{kind:"value",expectedValue:"b",condition:alwaysCondition}),
+  ]}]),multiple=[conflictingDownstream("first"),conflictingDownstream("second")],withoutProfiles=resolveConditionalLayeredSchema(compileLayeredSchema(multiple,{eventId:"pageview",eventRole:"context"}),{}),withProfiles=resolveConditionalLayeredSchema(compileLayeredSchema([
+    peer("a",{type:"string"}),
+    peer("b",{type:"string"}),
+    ...multiple,
+  ],{eventId:"pageview",eventRole:"context"}),{});
+  assert.equal(withoutProfiles.conflicts.length,1,`${scope} aggregate contradiction has one conflict across two contributors`);
+  assert.deepEqual(withProfiles.conflicts,withoutProfiles.conflicts,`${scope} aggregate conflict identity and count are conserved after compatible profile inheritance`);
 }
 const operatorRule=(id,operator,expectedValue)=>unconditionalRule(id,{kind:"value",operator,expectedValue});
 for(const rules of [

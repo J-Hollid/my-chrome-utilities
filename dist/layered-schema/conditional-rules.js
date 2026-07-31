@@ -89,7 +89,6 @@ const conditional = (property, payload, paths) => (property.rules ?? []).flatMap
 });
 const differing = (rules, read) => new Set(rules.map((rule) => JSON.stringify(read(rule)))).size > 1;
 const conflictFor = (path, facet, rules) => ({ path, message: `conditional ${facet} outcomes contradict`, contributors: rules.map(named) });
-const uniqueConflicts = (conflicts) => [...new Map(conflicts.map((conflict) => [JSON.stringify(conflict), conflict])).values()];
 const resolvedPeerConstraint = (constraint, payload, paths) => {
     const result = clone(constraint);
     if (result.condition && !layeredConditionMatches(result.condition, payload, paths)) {
@@ -179,7 +178,6 @@ const replayDownstream = (property, base, payload, paths) => {
     const conflicts = [];
     for (const contribution of property.downstreamContributions ?? []) {
         const owned = { ...constraintWithStructuredRules(clone(contribution.constraint)), origins: [], superseded: [] }, resolved = resolveOrdinaryProperty(owned, payload, paths), contributor = { id: contribution.contributorId, name: contribution.contributorName, scope: contribution.scope, constraints: [contribution.constraint], ...(contribution.inheritanceRoutes?.length ? { inheritanceRoutes: contribution.inheritanceRoutes } : {}) };
-        conflicts.push(...resolved.conflicts);
         result = mergeLayeredProperty(result, resolved.property, contributor, contribution.parallelPair === true, false, (path, message, names) => conflicts.push({ path, message, contributors: names }));
     }
     return { property: result, conflicts };
@@ -232,7 +230,7 @@ function resolveProperty(property, payload, paths) {
         return { property: clone(property), conflicts: [peers.conflict] };
     if (peers) {
         const replayed = replayDownstream(property, composeResolvedPeers(property, peers.constraints), payload, paths);
-        return { property: replayed.property, conflicts: uniqueConflicts([...ordinary.conflicts, ...replayed.conflicts]) };
+        return { property: replayed.property, conflicts: [...ordinary.conflicts, ...replayed.conflicts] };
     }
     return ordinary;
 }

@@ -59,7 +59,6 @@ const conditional=(property:EffectiveProperty,payload:Record<string,unknown>,pat
 });
 const differing=(rules:Record<string,unknown>[],read:(rule:Record<string,unknown>)=>unknown):boolean=>new Set(rules.map((rule)=>JSON.stringify(read(rule)))).size>1;
 const conflictFor=(path:string,facet:string,rules:Record<string,unknown>[]):LayerConflict=>({path,message:`conditional ${facet} outcomes contradict`,contributors:rules.map(named)});
-const uniqueConflicts=(conflicts:readonly LayerConflict[]):LayerConflict[]=>[...new Map(conflicts.map((conflict)=>[JSON.stringify(conflict),conflict])).values()];
 const resolvedPeerConstraint=(constraint:LayerConstraint,payload:Record<string,unknown>,paths:ReadonlyMap<string,string>):LayerConstraint=>{
   const result=clone(constraint);
   if(result.condition&&!layeredConditionMatches(result.condition,payload,paths)){delete result.presence;delete result.condition;}else delete result.condition;
@@ -90,7 +89,7 @@ const composeResolvedPeers=(property:EffectiveProperty,constraints:readonly Laye
 };
 const replayDownstream=(property:EffectiveProperty,base:EffectiveProperty,payload:Record<string,unknown>,paths:ReadonlyMap<string,string>):{property:EffectiveProperty;conflicts:LayerConflict[]}=>{
   let result=base;const conflicts:LayerConflict[]=[];
-  for(const contribution of property.downstreamContributions??[]){const owned:EffectiveProperty={...constraintWithStructuredRules(clone(contribution.constraint)),origins:[],superseded:[]},resolved=resolveOrdinaryProperty(owned,payload,paths),contributor={id:contribution.contributorId,name:contribution.contributorName,scope:contribution.scope,constraints:[contribution.constraint],...(contribution.inheritanceRoutes?.length?{inheritanceRoutes:contribution.inheritanceRoutes}:{})};conflicts.push(...resolved.conflicts);result=mergeLayeredProperty(result,resolved.property,contributor,contribution.parallelPair===true,false,(path,message,names)=>conflicts.push({path,message,contributors:names}));}
+  for(const contribution of property.downstreamContributions??[]){const owned:EffectiveProperty={...constraintWithStructuredRules(clone(contribution.constraint)),origins:[],superseded:[]},resolved=resolveOrdinaryProperty(owned,payload,paths),contributor={id:contribution.contributorId,name:contribution.contributorName,scope:contribution.scope,constraints:[contribution.constraint],...(contribution.inheritanceRoutes?.length?{inheritanceRoutes:contribution.inheritanceRoutes}:{})};result=mergeLayeredProperty(result,resolved.property,contributor,contribution.parallelPair===true,false,(path,message,names)=>conflicts.push({path,message,contributors:names}));}
   return{property:result,conflicts};
 };
 
@@ -118,7 +117,7 @@ function resolveOrdinaryProperty(property:EffectiveProperty,payload:Record<strin
 function resolveProperty(property:EffectiveProperty,payload:Record<string,unknown>,paths:ReadonlyMap<string,string>):{property:EffectiveProperty;conflicts:LayerConflict[]}{
   const ordinary=resolveOrdinaryProperty(property,payload,paths),peers=property.peerContributions?.length?peerResolution(property,payload,paths):undefined;
   if(peers?.conflict)return{property:clone(property),conflicts:[peers.conflict]};
-  if(peers){const replayed=replayDownstream(property,composeResolvedPeers(property,peers.constraints),payload,paths);return{property:replayed.property,conflicts:uniqueConflicts([...ordinary.conflicts,...replayed.conflicts])};}
+  if(peers){const replayed=replayDownstream(property,composeResolvedPeers(property,peers.constraints),payload,paths);return{property:replayed.property,conflicts:[...ordinary.conflicts,...replayed.conflicts]};}
   return ordinary;
 }
 
