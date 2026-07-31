@@ -11,6 +11,7 @@ export const peerMismatch = (left, right) => {
         || left.definitionId && right.definitionId && left.definitionId !== right.definitionId
         || left.allowedValueIds && right.allowedValueIds && !same(left.allowedValueIds, right.allowedValueIds)
         || left.allowedValueProvenance && right.allowedValueProvenance && !same(left.allowedValueProvenance, right.allowedValueProvenance)
+        || Boolean(left.condition) !== Boolean(right.condition)
         || left.allowedValues?.length && right.allowedValues?.length && !left.allowedValues.some((value) => right.allowedValues.some((candidate) => same(value, candidate)))
         || left.expectedValue !== undefined && right.allowedValues?.length && !right.allowedValues.some((value) => same(value, left.expectedValue))
         || right.expectedValue !== undefined && left.allowedValues?.length && !left.allowedValues.some((value) => same(value, right.expectedValue))
@@ -32,7 +33,7 @@ export const peerSetMismatch = (constraints) => {
         return true;
     const expected = constraints.find(({ expectedValue }) => expectedValue !== undefined)?.expectedValue, type = constraints.find((constraint) => constraint.type)?.type, itemType = constraints.find((constraint) => constraint.itemType)?.itemType, itemSchema = constraints.find((constraint) => constraint.itemSchema)?.itemSchema, presences = constraints.flatMap(({ presence }) => presence ? [presence] : []), patterns = constraints.flatMap(({ patterns }) => patterns ?? []);
     const typeMatches = (value, candidate) => candidate === "array" ? Array.isArray(value) : candidate === "null" ? value === null : candidate === "integer" ? Number.isInteger(value) : candidate === "object" ? Boolean(value) && typeof value === "object" && !Array.isArray(value) : typeof value === candidate;
-    const itemMatches = (value, schema) => !schema.type || typeMatches(value, schema.type) && (!schema.allowedValues?.length || schema.allowedValues.some((candidate) => same(candidate, value))) && (schema.type !== "array" || !Array.isArray(value) || !schema.items || value.every((item) => itemMatches(item, schema.items)));
+    const itemMatches = (value, schema) => (!schema.type || typeMatches(value, schema.type)) && (!schema.allowedValues?.length || schema.allowedValues.some((candidate) => same(candidate, value))) && (!schema.items || Array.isArray(value) && value.every((item) => itemMatches(item, schema.items)));
     if (type && (minimums.length || maximums.length) && type !== "number" && type !== "integer" || type && (minimumItems.length || maximumItems.length) && type !== "array" || type && patterns.length && type !== "string" || type && (itemType || itemSchema) && type !== "array")
         return true;
     if (type && allowed.some((values) => values.some((value) => !typeMatches(value, type))))
@@ -58,4 +59,38 @@ export const peerSetMismatch = (constraints) => {
 const ordinaryRules = (rules) => rules.filter(({ condition, arrayScope }) => !condition && !(arrayScope?.boundaries?.length));
 const numericRuleValues = (rules, kind, field) => ordinaryRules(rules).filter((rule) => rule.kind === kind && typeof rule[field] === "number").map((rule) => rule[field]);
 export const constraintWithStructuredRules = (constraint) => { const rules = constraint.rules ?? [], patterns = [...new Set([...(constraint.patterns ?? []), ...ordinaryRules(rules).filter((rule) => rule.kind === "pattern" && typeof rule.pattern === "string").map((rule) => rule.pattern)])], minimums = [...(constraint.minimum === undefined ? [] : [constraint.minimum]), ...numericRuleValues(rules, "range", "minimum")], maximums = [...(constraint.maximum === undefined ? [] : [constraint.maximum]), ...numericRuleValues(rules, "range", "maximum")], minimumItems = [...(constraint.minItems === undefined ? [] : [constraint.minItems]), ...numericRuleValues(rules, "cardinality", "minItems")], maximumItems = [...(constraint.maxItems === undefined ? [] : [constraint.maxItems]), ...numericRuleValues(rules, "cardinality", "maxItems")]; return { ...constraint, ...(patterns.length ? { patterns } : {}), ...(minimums.length ? { minimum: Math.max(...minimums) } : {}), ...(maximums.length ? { maximum: Math.min(...maximums) } : {}), ...(minimumItems.length ? { minItems: Math.max(...minimumItems) } : {}), ...(maximumItems.length ? { maxItems: Math.min(...maximumItems) } : {}) }; };
+const peerRuleOutcome = (constraint, rule) => {
+    if (rule.enabled === false || rule.condition || (rule.arrayScope?.boundaries?.length))
+        return;
+    if (rule.kind !== "reusable")
+        return rule;
+    const embedded = rule.reusableOutcome, reusable = embedded && typeof embedded === "object" && !Array.isArray(embedded) ? embedded : (constraint.reusableRules ?? []).find((candidate) => String(candidate.id ?? "") === String(rule.reusableRuleId ?? ""));
+    return reusable && typeof reusable === "object" ? { ...reusable, ...(rule.enforcement ? { enforcement: rule.enforcement } : {}) } : undefined;
+};
+export const peerRuleOutcomes = (constraint) => {
+    const outcomes = [];
+    for (const rule of (constraint.rules ?? [])) {
+        const outcome = peerRuleOutcome(constraint, rule);
+        if (!outcome)
+            continue;
+        const enforcement = outcome.enforcement === "invariant" || outcome.enforcement === "overridable" ? outcome.enforcement : undefined, base = { path: constraint.path, ...(enforcement ? { enforcement } : {}) };
+        if (outcome.kind === "presence" && (outcome.presence === "required" || outcome.presence === "optional" || outcome.presence === "forbidden" || outcome.presence === "permitted"))
+            outcomes.push({ ...base, presence: outcome.presence });
+        else if ((outcome.kind === "value" && outcome.operator === undefined) || outcome.kind === "allowed-values")
+            outcomes.push({ ...base, ...(Array.isArray(outcome.allowedValues) ? { allowedValues: outcome.allowedValues } : outcome.expectedValue !== undefined ? { expectedValue: outcome.expectedValue } : {}) });
+        else if (outcome.kind === "pattern" && typeof outcome.pattern === "string")
+            outcomes.push({ ...base, patterns: [outcome.pattern] });
+        else if (outcome.kind === "range")
+            outcomes.push({ ...base, ...(typeof outcome.minimum === "number" ? { minimum: outcome.minimum } : {}), ...(typeof outcome.maximum === "number" ? { maximum: outcome.maximum } : {}) });
+        else if (outcome.kind === "cardinality")
+            outcomes.push({ ...base, ...(typeof outcome.minItems === "number" ? { minItems: outcome.minItems } : {}), ...(typeof outcome.maxItems === "number" ? { maxItems: outcome.maxItems } : {}) });
+    }
+    return outcomes;
+};
+export const constraintWithPeerRules = (constraint) => {
+    const base = constraintWithStructuredRules(constraint), outcomes = peerRuleOutcomes(base), presence = [base, ...outcomes].flatMap(({ presence }) => presence ? [presence] : []), expected = [base, ...outcomes].find(({ expectedValue }) => expectedValue !== undefined)?.expectedValue, allowed = [base, ...outcomes].flatMap(({ allowedValues }) => allowedValues?.length ? [allowedValues] : []), patterns = [...new Set([...(base.patterns ?? []), ...outcomes.flatMap(({ patterns }) => patterns ?? [])])].sort(), minimums = [base, ...outcomes].flatMap(({ minimum }) => minimum === undefined ? [] : [minimum]), maximums = [base, ...outcomes].flatMap(({ maximum }) => maximum === undefined ? [] : [maximum]), minimumItems = [base, ...outcomes].flatMap(({ minItems }) => minItems === undefined ? [] : [minItems]), maximumItems = [base, ...outcomes].flatMap(({ maxItems }) => maxItems === undefined ? [] : [maxItems]), enforcement = [base, ...outcomes].some(({ enforcement }) => enforcement === "invariant") ? "invariant" : base.enforcement;
+    const allowedIntersection = allowed.length ? allowed.reduce((intersection, values) => intersection.filter((value) => values.some((candidate) => same(value, candidate)))) : undefined, effectivePresence = presence.includes("required") ? "required" : presence.includes("forbidden") ? "forbidden" : presence.includes("optional") ? "optional" : presence.includes("permitted") ? "permitted" : undefined;
+    const { allowedValues: discardedAllowedValues, ...withoutAllowedValues } = base;
+    return { ...(expected !== undefined ? withoutAllowedValues : base), ...(effectivePresence ? { presence: effectivePresence } : {}), ...(patterns.length ? { patterns } : {}), ...(minimums.length ? { minimum: Math.max(...minimums) } : {}), ...(maximums.length ? { maximum: Math.min(...maximums) } : {}), ...(minimumItems.length ? { minItems: Math.max(...minimumItems) } : {}), ...(maximumItems.length ? { maxItems: Math.min(...maximumItems) } : {}), ...(enforcement ? { enforcement } : {}), ...(expected !== undefined ? { expectedValue: clone(expected) } : allowedIntersection ? { allowedValues: clone(allowedIntersection) } : {}) };
+};
 //# sourceMappingURL=compile-context.js.map

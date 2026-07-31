@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {compileLayeredSchema,resolveLayeredTarget,validateLayeredObservation} from "../dist/data-layer-layered-schema.js";
+import {compileLayeredSchema,resolveConditionalLayeredSchema,resolveLayeredTarget,validateLayeredObservation} from "../dist/data-layer-layered-schema.js";
 import {flowPageFrameContributor,layeredContributorPath,layeredContributorsForPath} from "../dist/data-layer-layered-schema-project.js";
 import {documentPageGroupStructure,evaluatePageGroupFixture,pageGroupStructuralSchema,resetDepartedPageApplicabilityPreview} from "../dist/data-layer-page-group-structural-authoring.js";
 import {compileSpecificationProject,createCanonicalProjectEnvelope,evaluateSpecificationObservation} from "../dist/data-layer-specification-engine.js";
@@ -139,6 +139,28 @@ for(let iteration=0;iteration<120;iteration+=1){
     assert.equal(forward.status,"blocked");
     assert.equal(swappedOwnership.status,"blocked","generated facet ownership permutation cannot create a peer winner");
   }
+  const generatedCondition={kind:"predicate",propertyId:`definition:flag:${iteration}`,operator:"Equals",value:true},rule=(id,outcome)=>({id:`rule:${id}:${iteration}`,name:`Rule ${id} ${iteration}`,...outcome}),reusableId=`reusable:${iteration}`,ruleFacets=[
+    [peerContribution("a",{presence:"required"}),peerContribution("b",{presence:"required",condition:generatedCondition})],
+    [peerContribution("a",{rules:[rule("a",{kind:"value",expectedValue:`a-${iteration}`})]}),peerContribution("b",{rules:[rule("b",{kind:"value",expectedValue:`b-${iteration}`})]})],
+    [peerContribution("a",{rules:[rule("a",{kind:"presence",presence:"required"})]}),peerContribution("b",{rules:[rule("b",{kind:"presence",presence:"forbidden"})]})],
+    [peerContribution("a",{expectedValue:`a-${iteration}`}),peerContribution("b",{rules:[rule("b",{kind:"value",expectedValue:`b-${iteration}`})]})],
+    [peerContribution("a",{minimum:minimum}),peerContribution("b",{rules:[rule("b",{kind:"range",maximum})]})],
+    [peerContribution("a",{minItems:minimum}),peerContribution("b",{rules:[rule("b",{kind:"cardinality",maxItems:maximum})]})],
+    [peerContribution("a",{expectedValue:`a-${iteration}`}),peerContribution("b",{rules:[rule("use",{kind:"reusable",reusableRuleId:reusableId})],reusableRules:[rule("reusable",{id:reusableId,kind:"value",expectedValue:`b-${iteration}`})]})],
+    [peerContribution("a",{itemSchema:{id:`items:${iteration}`,allowedValues:[`a-${iteration}`]}}),peerContribution("b",{expectedValue:[`b-${iteration}`]})],
+    [peerContribution("a",{itemSchema:{id:`items:${iteration}`,items:{id:`nested:${iteration}`,allowedValues:[`a-${iteration}`]}}}),peerContribution("b",{expectedValue:[[`b-${iteration}`]]})],
+  ];
+  for(const generated of ruleFacets){
+    const forward=compilePeers(generated),reverse=compilePeers([...generated].reverse());
+    assert.equal(forward.status,"blocked","generated condition, rule, reusable, and recursive item facets cannot create silent peer precedence");
+    assert.deepEqual(reverse.conflicts,forward.conflicts,"generated rule-algebra evidence is peer-order independent");
+  }
+  const always={kind:"all",children:[]},conditionalRulePeers=[
+    peerContribution("a",{rules:[rule("conditional-a",{kind:"value",expectedValue:`a-${iteration}`,condition:always})]}),
+    peerContribution("b",{rules:[rule("conditional-b",{kind:"value",expectedValue:`b-${iteration}`,condition:always})]}),
+  ],conditionalCompiled=compilePeers(conditionalRulePeers),conditionalResolved=resolveConditionalLayeredSchema(conditionalCompiled,{});
+  assert.equal(conditionalCompiled.status,"ready","conditional peer rule outcomes remain deferred until their condition is evaluated");
+  assert.equal(conditionalResolved.status,"blocked","simultaneously matching generated conditional peer rules block without precedence");
   const common=peers.find(({id})=>id===commonId);
   assert.equal(peers.filter(({id})=>id===commonId).length,1,"fan-out deduplicates a repeated stable profile identity");
   assert.equal(common.inheritanceRoutes.length,3,"fan-out retains the direct route and every participating group route");

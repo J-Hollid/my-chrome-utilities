@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   compileLayeredSchema,
+  resolveConditionalLayeredSchema,
   resolveLayeredTarget,
   validateLayeredObservation,
   exportLayeredSchema,
@@ -157,6 +158,62 @@ for(const contributors of [
 ]){
   const compatiblePeer=compileLayeredSchema(contributors,{eventId:"pageview",eventRole:"context"});
   assert.deepEqual(compatiblePeer.properties["/value"].overrideReferences,["definition:a","definition:z"],"peer reference sets combine canonically");
+}
+const falseCondition={kind:"predicate",propertyId:"definition:flag",operator:"Equals",value:true};
+const conditionalPresencePeers=[
+  peer("a",{presence:"required"}),
+  peer("b",{presence:"required",condition:falseCondition}),
+];
+for(const contributors of [conditionalPresencePeers,[...conditionalPresencePeers].reverse()]){
+  const compiled=compileLayeredSchema(contributors,{eventId:"pageview",eventRole:"context"}),resolved=resolveConditionalLayeredSchema(compiled,{flag:false});
+  assert.equal(compiled.status,"blocked","a conditional peer facet cannot silently weaken an unconditional peer facet");
+  assert.equal(resolved.status,"blocked");
+}
+const unconditionalRule=(id,outcome)=>({id,name:id,...outcome});
+for(const contributors of [
+  [
+    peer("a",{rules:[unconditionalRule("rule:a",{kind:"value",expectedValue:"a"})]}),
+    peer("b",{rules:[unconditionalRule("rule:b",{kind:"value",expectedValue:"b"})]}),
+  ],
+  [
+    peer("a",{rules:[unconditionalRule("rule:a",{kind:"presence",presence:"required"})]}),
+    peer("b",{rules:[unconditionalRule("rule:b",{kind:"presence",presence:"forbidden"})]}),
+  ],
+  [
+    peer("a",{expectedValue:"a"}),
+    peer("b",{rules:[unconditionalRule("rule:b",{kind:"value",expectedValue:"b"})]}),
+  ],
+  [
+    peer("a",{allowedValues:["a"]}),
+    peer("b",{rules:[unconditionalRule("rule:b",{kind:"allowed-values",allowedValues:["b"]})]}),
+  ],
+  [
+    peer("a",{minimum:10}),
+    peer("b",{rules:[unconditionalRule("rule:b",{kind:"range",maximum:5})]}),
+  ],
+  [
+    peer("a",{minItems:4}),
+    peer("b",{rules:[unconditionalRule("rule:b",{kind:"cardinality",maxItems:2})]}),
+  ],
+  [
+    peer("a",{expectedValue:"a"}),
+    peer("b",{rules:[unconditionalRule("rule:use-b",{kind:"reusable",reusableRuleId:"reusable:b"})],reusableRules:[unconditionalRule("reusable:b",{kind:"value",expectedValue:"b"})]}),
+  ],
+  [
+    peer("a",{itemSchema:{id:"items",allowedValues:["a"]}}),
+    peer("b",{expectedValue:["b"]}),
+  ],
+  [
+    peer("a",{itemSchema:{id:"items",items:{id:"nested",allowedValues:["a"]}}}),
+    peer("b",{expectedValue:[["b"]]}),
+  ],
+]){
+  for(const order of [contributors,[...contributors].reverse()]){
+    const compiled=compileLayeredSchema(order,{eventId:"pageview",eventRole:"context"}),resolved=resolveConditionalLayeredSchema(compiled,{});
+    assert.equal(compiled.status,"blocked","unconditional peer rule and recursive item contradictions block before observation");
+    assert.equal(resolved.status,"blocked");
+    assert.equal(compiled.properties["/value"],undefined);
+  }
 }
 
 const targeted=compileLayeredSchema([contribution("targets","Checkout","Page Group",[

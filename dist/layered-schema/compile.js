@@ -1,4 +1,4 @@
-import { branch, constraintWithStructuredRules, included, origin, parallelMismatch, peerMismatch, peerSetMismatch } from "./compile-context.js";
+import { branch, constraintWithPeerRules, constraintWithStructuredRules, included, origin, parallelMismatch, peerMismatch, peerRuleOutcomes, peerSetMismatch } from "./compile-context.js";
 import { mergeLayeredProperty } from "./compile-merge.js";
 export function compileLayeredSchema(contributors, context) {
     const selected = contributors.filter(({ active }) => active !== false), peerQueues = new Map();
@@ -33,14 +33,14 @@ export function compileLayeredSchema(contributors, context) {
             peerEntries.set(key, entries);
         }
     for (const [key, entries] of peerEntries) {
-        const peerGroup = key.split("\u0000")[0], policyConflict = conflictingPolicyGroups.has(peerGroup);
-        let incompatible = policyConflict || peerSetMismatch(entries.map(({ constraint }) => constraint));
-        for (let left = 0; left < entries.length; left += 1)
-            for (let right = left + 1; right < entries.length; right += 1)
-                incompatible ||= peerMismatch(entries[left].constraint, entries[right].constraint);
+        const peerGroup = key.split("\u0000")[0], policyConflict = conflictingPolicyGroups.has(peerGroup), algebra = entries.flatMap(({ contributor, constraint }) => [constraint, ...peerRuleOutcomes(constraint)].map((facet) => ({ contributor, constraint: facet })));
+        let incompatible = policyConflict || peerSetMismatch(algebra.map(({ constraint }) => constraint));
+        for (let left = 0; left < algebra.length; left += 1)
+            for (let right = left + 1; right < algebra.length; right += 1)
+                incompatible ||= peerMismatch(algebra[left].constraint, algebra[right].constraint);
         if (!incompatible)
             continue;
-        const path = entries[0].constraint.path, names = policyConflict ? peersByGroup.get(peerGroup).map(({ name }) => name) : entries.map(({ contributor }) => contributor.name);
+        const path = entries[0].constraint.path, names = policyConflict ? peersByGroup.get(peerGroup).map(({ name }) => name) : algebra.map(({ contributor }) => contributor.name);
         blockedPeers.add(path);
         conflict(path, "parallel Shared Profile peers conflict; add an explicit contextual resolution", [...new Set(names)]);
     }
@@ -62,7 +62,7 @@ export function compileLayeredSchema(contributors, context) {
     const contributorById = new Map(activeContributors.map((contributor) => [contributor.id, contributor]));
     for (const contributor of activeContributors)
         for (const rawConstraint of contributor.constraints) {
-            const constraint = constraintWithStructuredRules(rawConstraint);
+            const constraint = contributor.peerGroup ? constraintWithPeerRules(rawConstraint) : constraintWithStructuredRules(rawConstraint);
             if (!included(constraint.target, context)) {
                 exclusions.push({ contributorId: contributor.id, contributorName: contributor.name, path: constraint.path, target: constraint.target ?? "all" });
                 continue;
