@@ -241,3 +241,17 @@ Feature: Data layer project library and active context runtime
     And hashes for unrelated entities and Published revision 3 remain unchanged
     When actual Undo runs once
     Then production restores the same Flow ID and byte-identical Flow graph
+
+  # Data layer project library and active context runtime 019
+  Scenario: Data layer project library and active context runtime 019
+    Given production Checkout Page Group bytes contain obsolete environment and matcher properties
+    When actual controls open the installed Add Page Group route
+    Then its creation form renders one optional Description textarea with associated purpose guidance
+    And DOM inspection finds no Environment or Membership matcher control
+    When actual controls create Regional checkout with description Checkout Pages used by the regional storefronts
+    Then repository bytes and the dedicated workspace contain that plain-text description
+    When actual controls edit Checkout, save description Shared checkout requirements, and reload
+    Then repository bytes and the dedicated workspace contain the new description without environment or matcher properties
+    And hashes for Page memberships, effective schemas, Applicability Sets, and Flow graphs remain unchanged
+    When production portability exports and imports the project
+    Then both description values survive exactly and no production matcher reads either value

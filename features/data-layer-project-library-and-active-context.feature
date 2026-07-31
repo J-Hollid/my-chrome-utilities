@@ -239,3 +239,17 @@ Feature: Data layer project library and active context
     And unrelated project entities and Published revision 3 remain unchanged
     When the operator invokes Undo once
     Then Checkout journey returns with its original stable identity and exact Flow graph
+
+  # Data layer project library and active context 019
+  Scenario: Data layer project library and active context 019
+    Given Checkout Page Group retains obsolete Environment and Membership matcher values
+    When the operator opens Add Page Group
+    Then Create Page Group offers an optional multiline Description with guidance to explain the group's shared Page context and intended use
+    And it offers neither Environment nor Membership matcher
+    When the operator creates Regional checkout with description Checkout Pages used by the regional storefronts
+    Then Regional checkout stores and displays that plain-text description
+    When the operator opens Checkout, replaces its description with Shared checkout requirements, and saves
+    Then Checkout stores and displays the new description without Environment or Membership matcher
+    And Page membership, ordered schema composition, Applicability Sets, and Flow placement remain unchanged
+    When the project reloads and completes portability export and import
+    Then both Page Group descriptions return unchanged and are never interpreted as membership or applicability rules
