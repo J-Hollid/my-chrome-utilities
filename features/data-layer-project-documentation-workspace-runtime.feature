@@ -298,21 +298,26 @@ Feature: Data layer project documentation workspace runtime
 
   # Data layer project documentation workspace runtime 028
   Scenario Outline: Data layer project documentation workspace runtime 028
-    Given production Acme has a saved valid 3000 by 2000 pixel <image_type> logo
-    When actual controls refresh the complete Documentation Set and generate rich copy and Excel
+    Given the installed Choose logo control has decoded and saved a complete 3000 by 2000 pixel <image_type> image as production Acme's logo
+    And production Client specification has populated current, selected, and complete export scopes
+    When actual controls refresh the <export_scope> Documentation Set output and generate rich copy and Excel
     Then computed Brand-sample, preview-section, and clipboard-image dimensions are 96 by 64 CSS pixels
     And every installed or copied logo fits within 180 by 64 CSS pixels without exceeding its decoded intrinsic dimensions
     And parsed drawing extents on every workbook sheet are 1 by two-thirds inches within a 1.875 by two-thirds inch logo area
     And computed, parsed HTML, and drawing dimensions retain the three-to-two aspect ratio
     And DOM and worksheet geometry place the logo area before the section title and table without overlap
-    And independent package validation resolves every drawing, relationship, content type, and real image part
-    And an independent Excel-compatible reader opens the workbook without repair or removed drawing or image content
+    And strict OOXML validation accepts every worksheet, drawing, relationship, content type, and complete decodable image part
+    And each parsed worksheet places its header and footer before its drawing reference in schema-valid child order
+    And an independent Excel-compatible reader opens the workbook without repair or removed drawing, image, or cell content
+    And parsed sheets retain every expected section title, column heading, and documented row
 
     Examples:
-      | image_type |
-      | PNG        |
-      | JPEG       |
-      | GIF        |
+      | image_type | export_scope      |
+      | PNG        | current section   |
+      | PNG        | selected sections |
+      | PNG        | complete set      |
+      | JPEG       | complete set      |
+      | GIF        | complete set      |
 
   # Data layer project documentation workspace runtime 029
   Scenario Outline: Data layer project documentation workspace runtime 029

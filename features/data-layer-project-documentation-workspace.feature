@@ -300,19 +300,23 @@ Feature: Data layer project documentation workspace
   # Data layer project documentation workspace 028
   Scenario Outline: Data layer project documentation workspace 028
     Given project-local theme Acme has a saved valid 3000 by 2000 pixel <image_type> logo
-    When the operator refreshes the complete Documentation Set and generates rich copy and Excel
+    And Client specification contains populated current, selected, and complete export scopes
+    When the operator refreshes the <export_scope> Documentation Set output and generates rich copy and Excel
     Then the Brand sample, every preview section, and every rich-copy section show the complete logo at 96 by 64 CSS pixels
     And no rendered logo exceeds 180 by 64 CSS pixels or its intrinsic dimensions
     And every Excel sheet shows the logo at 1 by two-thirds inches within a 1.875 by two-thirds inch logo area
     And every presentation preserves the logo's three-to-two aspect ratio
     And the logo area precedes and cannot obscure the section title or table
     And Microsoft Excel opens the workbook without a content warning, repair, or removed drawing or image
+    And every sheet still displays its section title, column headings, and documented rows
 
     Examples:
-      | image_type |
-      | PNG        |
-      | JPEG       |
-      | GIF        |
+      | image_type | export_scope      |
+      | PNG        | current section   |
+      | PNG        | selected sections |
+      | PNG        | complete set      |
+      | JPEG       | complete set      |
+      | GIF        | complete set      |
 
   # Data layer project documentation workspace 029
   Scenario Outline: Data layer project documentation workspace 029
