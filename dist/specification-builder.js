@@ -2,8 +2,8 @@ import { addProjectEntity, adoptSavedSchema, buildReleaseReview, commitStagedPro
 import { openDurableProjectRuntime } from "./data-layer-durable-project-runtime.js";
 import { durableConflictSemanticField, durableProjectRouteForWorkspace } from "./data-layer-durable-project-repository.js";
 import { applyStagedBulkAction, commitStagedBulkRequirements, stageBulkRequirements } from "./data-layer-specification-bulk.js";
-import { assertDeveloperSchemaExportAvailable, buildEffectiveRequirementCoverage, publishCompiledRelease as publishProjectRelease, runProductionFixture, specificationPreflight } from "./data-layer-specification-assurance.js";
-import { compileSpecificationProject, createCanonicalProjectEnvelope } from "./data-layer-specification-engine.js";
+import { assertDeveloperSchemaExportAvailable, buildEffectiveRequirementCoverage, publishCompiledRelease as publishProjectRelease, runProductionFixture as executeProductionFixture, specificationPreflight } from "./data-layer-specification-assurance.js";
+import { compileSpecificationProject as executeCompileSpecificationProject, createCanonicalProjectEnvelope } from "./data-layer-specification-engine.js";
 import { entityPurposeGuidance, projectAuthoringGuidance } from "./data-layer-specification-guidance.js";
 import { installExecutableFlowBuilder } from "./data-layer-specification-executable-flow-ui.js";
 import { applyFlowPageGroupLaneSelection, flowPageGroupLaneIds, installFlowGraphBuilder, moveFlowPageFrame, removeFlowPageFrame } from "./utilities/data-layer/flow-graph.js";
@@ -15,7 +15,7 @@ import { CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, commitCanonicalProjectStat
 import { PROJECT_LIBRARY_STORAGE_KEY, activateProject, activeProjectContextChange, createProjectInLibrary, migrateSingletonProject, projectLibrary, recordProjectNavigation, replaceActiveProjectState, resolveProjectNavigation, restoreProjectLibrary, serializeProjectLibrary } from "./data-layer-project-library.js";
 import { effectivePropertySummary, installLayeredSchemaUi } from "./data-layer-layered-schema-ui.js";
 import { assignmentContributorTargets, projectCanonicalConcepts } from "./data-layer-layered-schema-project.js";
-import { documentPageGroupStructure, evaluatePageGroupFixture, pageGroupStructuralSchema, resetDepartedPageApplicabilityPreview } from "./data-layer-page-group-structural-authoring.js";
+import { documentPageGroupStructure, evaluatePageGroupFixture as executePageGroupFixture, pageGroupStructuralSchema, resetDepartedPageApplicabilityPreview } from "./data-layer-page-group-structural-authoring.js";
 import { composedSchemaWorkspace, resetComposedSchemaLocalProperty, saveComposedSchemaLocalFacetsAndStructures, saveComposedSchemaPolicy } from "./data-layer-composed-schema-workspace.js";
 import { mountComposedSchemaWorkspace } from "./data-layer-composed-schema-workspace-ui.js";
 import { installFlowDocumentationExportUi } from "./data-layer-flow-table-documentation-export-ui.js";
@@ -48,7 +48,23 @@ q("#project-assignment-applicability").required = false;
 const id = (kind) => `${kind}:${crypto.randomUUID()}`;
 const labels = { profiles: "Shared Profiles", pages: "Pages", pageGroups: "Page Groups", events: "Events", applicabilitySets: "Applicability", flows: "Flows", fixtures: "Test cases", assignments: "Assignments" };
 let state, lastCommittedState, library = projectLibrary();
-let canonicalRevision = 0, publishedRevision = 0, pendingConflict, durableConflict, saveStatus = { kind: "idle" }, stagedBulk, selectedKind = "profiles", selectedId, projectOverview = routeParameters.get("route") === "overview", documentationOpen = routeParameters.get("view") === "documentation", creationKind, removalReview, lifecycleStatus = "", removedFocus, pendingLifecycleFocus, pendingWorkspaceFocus, stagedImport, lastInvokingControl, releasePreflight, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi, projectDocumentationWorkspaceUi;
+let canonicalRevision = 0, publishedRevision = 0, guidedEvaluatorInvocations = 0, pendingConflict, durableConflict, saveStatus = { kind: "idle" }, stagedBulk, selectedKind = "profiles", selectedId, projectOverview = routeParameters.get("route") === "overview", documentationOpen = routeParameters.get("view") === "documentation", creationKind, removalReview, lifecycleStatus = "", removedFocus, pendingLifecycleFocus, pendingWorkspaceFocus, stagedImport, lastInvokingControl, releasePreflight, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi, projectDocumentationWorkspaceUi;
+const recordGuidedEvaluation = () => { guidedEvaluatorInvocations += 1; document.querySelector("[data-guided-test-case]")?.setAttribute("data-evaluator-invocations", String(guidedEvaluatorInvocations)); };
+const evaluatePageGroupFixture = (...args) => { recordGuidedEvaluation(); return executePageGroupFixture(...args); };
+const runProductionFixture = (...args) => { recordGuidedEvaluation(); return executeProductionFixture(...args); };
+const compileSpecificationProject = (...args) => {
+    const compiled = executeCompileSpecificationProject(...args);
+    if (compiled.status !== "blocked")
+        return compiled;
+    const editor = document.querySelector("[data-guided-test-case]"), result = editor?.querySelector("#fixture-run-result"), repair = editor && Array.from(editor.querySelectorAll("button")).find(({ textContent }) => textContent === "Repair Test case"), message = `Compilation failed: ${compiled.diagnostics.map(({ field }) => field).join(", ")}`;
+    if (result)
+        result.textContent = `Blocked: ${message}. Saved input and prior evidence are retained.`;
+    if (repair) {
+        repair.hidden = false;
+        repair.focus();
+    }
+    return compiled;
+};
 const analystNavigation = q('#project-workspace > nav'), analystRegion = q("#studio-analyst-guidance"), analystControl = q("#studio-analyst-control"), analystHint = q("#studio-analyst-hint");
 installStudioAnalystGuidance({
     bubble: analystHint,
@@ -467,8 +483,8 @@ const guidedPageEvaluatorRevision = (current, pageId) => { const page = current.
 function guidedControlsForSchema(schema, input) {
     const canonical = schema?.canonicalSchema, requirements = canonical ? canonicalRequirements(canonical) : schema?.requirements ?? [];
     const effective = requirements.map((requirement) => {
-        const propertyId = String(requirement.propertyId ?? ""), node = canonical?.nodes[propertyId], conditional = Boolean(requirement.condition), matched = canonical && conditional ? evaluateCanonicalPredicate(requirement.condition, canonical, input) : undefined, presence = String(requirement.presenceMode ?? (requirement.required ? "required" : "optional")), active = !conditional || Boolean(matched?.matched), required = presence === "required" || (presence === "required-when" && active), explanation = matched?.branches.length ? matched.branches.map(({ label, matched: branchMatched }) => `${label}: ${branchMatched ? "matched" : "not matched"}`).join("; ") : undefined;
-        return { ...requirement, required, active, ...(explanation ? { explanation } : {}), ...(node?.type === "object" ? { additionalProperties: node.additionalProperties ?? !canonical?.onlyDefinedFields } : {}) };
+        const propertyId = String(requirement.propertyId ?? ""), node = canonical?.nodes[propertyId], conditional = Boolean(requirement.condition), matched = canonical && conditional ? evaluateCanonicalPredicate(requirement.condition, canonical, input) : undefined, presence = String(requirement.presenceMode ?? (requirement.required ? "required" : "optional")), active = !conditional || Boolean(matched?.matched), required = presence === "required" || (presence === "required-when" && active), explanation = matched?.branches.length ? matched.branches.map(({ label, matched: branchMatched }) => `${label}: ${branchMatched ? "matched" : "not matched"}`).join("; ") : undefined, requirementType = typeof requirement.type === "string" ? requirement.type : "string";
+        return { ...requirement, type: requirement.nullable && requirementType !== "null" ? [requirementType, "null"] : requirementType, required, active, ...(explanation ? { explanation } : {}), ...(node?.type === "object" ? { additionalProperties: node.onlyDefinedFields !== true } : {}) };
     });
     return guidedInputControls(effective, input);
 }
@@ -621,6 +637,7 @@ function renderGuidedTestCaseEditor(content, entity) {
     const testCase = { testType: entity.testType === "page-context" ? "page-context" : "event-validation", input: structuredClone(entity.input ?? entity.payload ?? {}), inputGuidance: { kind: "authoring-guidance", ...(entity.inputGuidance ?? {}) }, sourceProvenance: entity.sourceProvenance ?? { kind: "legacy", id: entity.id, revision: String(entity.revision ?? "imported") }, reviewedExpectations: structuredClone(entity.reviewedExpectations ?? entity.expected ?? {}), status: entity.status ?? "Blocked", differences: entity.differences ?? [], ...entity }, section = document.createElement("section"), heading = document.createElement("h2"), definition = document.createElement("p"), form = document.createElement("form"), steps = document.createElement("ol"), result = document.createElement("output");
     section.className = "contextual-editor guided-test-case";
     section.dataset.guidedTestCase = entity.id;
+    section.dataset.evaluatorInvocations = String(guidedEvaluatorInvocations);
     heading.textContent = "Edit Test case";
     heading.tabIndex = -1;
     definition.textContent = "A Test case is saved input plus reviewed expectations rerunnable against the current Draft. Test-case assurance is advisory.";
@@ -1681,8 +1698,48 @@ if (!state) {
         }
         catch { /* ignore invalid start-path recovery */ }
 }
+q("#run-preflight").addEventListener("click", () => void (async () => {
+    if (!state)
+        return;
+    const projectId = state.project.id;
+    await durableProjectRuntime.settled();
+    await durableProjectRuntime.refreshProject(projectId);
+    const durable = await durableProjectRuntime.repository.loadProject(projectId);
+    state = structuredClone(durable.state);
+    canonicalRevision = durable.draftSequence;
+    publishedRevision = durable.publishedRevision;
+    releasePreflight = projectPreflight(state, nextProjectReleaseRevision(state, publishedRevision));
+    applyDeveloperExportGate(releasePreflight);
+    const prior = document.querySelector("#preflight-assurance")?.parentElement, section = prior ?? document.createElement("section"), title = document.createElement("h2"), summary = document.createElement("p"), findings = document.createElement("div");
+    title.textContent = "Production evaluator preflight";
+    summary.className = "status-text";
+    summary.textContent = releasePreflight.blockers.length ? `${releasePreflight.contentIdentity} · ${releasePreflight.warnings.length} warnings · ${releasePreflight.blockers.length} blocking issues · ${releasePreflight.fixtures.length} fixtures evaluated` : `${releasePreflight.contentIdentity} · Ready to publish from the compiled production plan · ${releasePreflight.warnings.length} warnings · 0 blocking issues`;
+    findings.id = "preflight-assurance";
+    findings.setAttribute("aria-label", "Project assurance");
+    renderAssuranceFindings(findings, releasePreflight);
+    section.replaceChildren(title, summary, findings);
+    if (!prior)
+        q("#workspace-content").prepend(section);
+})());
+const restoreGuidedSaveFailureUi = () => queueMicrotask(() => {
+    if (!durableProjectRuntime.failedSave())
+        return;
+    const editor = document.querySelector("[data-guided-test-case]"), recovery = q("#builder-storage-recovery");
+    if (!editor)
+        return;
+    const result = editor.querySelector("#fixture-run-result"), repair = Array.from(editor.querySelectorAll("button")).find(({ textContent }) => textContent === "Repair Test case");
+    if (result)
+        result.textContent = "Save failed. Evaluation did not run; exact editable input is preserved.";
+    if (repair)
+        repair.hidden = false;
+    if (!recovery.open)
+        recovery.showModal();
+    recovery.querySelector("#builder-retry-save")?.focus();
+});
+globalThis.addEventListener("durable-project-save-failed", restoreGuidedSaveFailureUi);
+globalThis.addEventListener("durable-project-saved", restoreGuidedSaveFailureUi);
 durableProjectRuntime.subscribe(({ library: incoming, active }) => {
-    if (pendingConflict || durableConflict)
+    if (pendingConflict || durableConflict || durableProjectRuntime.failedSave())
         return;
     if (active?.state.project.id !== state?.project.id) {
         synchronizeActiveProjectContext(serializeProjectLibrary(incoming));

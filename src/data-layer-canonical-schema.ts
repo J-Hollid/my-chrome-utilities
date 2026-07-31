@@ -18,6 +18,7 @@ export interface CanonicalProvenance {source:"created"|"saved-schema"|"requireme
 export interface CanonicalItemSchema {id:string;type?:CanonicalPropertyType;items?:CanonicalItemSchema;allowedValues?:unknown[];}
 export interface CanonicalPropertyNode {
   id:string;name:string;parentId?:string;order:number;type:CanonicalPropertyType;itemType?:CanonicalPropertyType;itemSchema?:CanonicalItemSchema;
+  nullable?:boolean;onlyDefinedFields?:boolean;
   concept?:string;
   presence:{mode:CanonicalPresenceMode;condition?:CanonicalPredicate};allowedValues:CanonicalAllowedValue[];rules:CanonicalRule[];
   documentation:CanonicalDocumentation;provenance:CanonicalProvenance[];overrideReferences:string[];structureOwned?:boolean;localDefinitionFacets?:readonly string[];inheritedDefinition?:{concept?:string;type?:CanonicalPropertyType;presence?:"required"|"optional"|"forbidden";description?:string};expectedValue?:unknown;enforcement?:"invariant"|"overridable";target?:string;

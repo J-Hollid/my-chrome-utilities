@@ -52,7 +52,13 @@ export function canonicalSchemaFromJsonSchema(input) { const profile = { id: inp
     let definition = input.document;
     for (const segment of row.path.split("/").filter((value) => value && value !== "*"))
         definition = (definition.properties?.[segment] ?? definition.items ?? {});
-    const concept = typeof definition["x-concept"] === "string" ? definition["x-concept"].trim() : "";
+    const concept = typeof definition["x-concept"] === "string" ? definition["x-concept"].trim() : "", types = Array.isArray(definition.type) ? definition.type.filter((value) => typeof value === "string" && ["string", "number", "integer", "boolean", "null", "object", "array"].includes(value)) : [], declared = types.find((value) => value !== "null");
+    if (declared) {
+        row.node.type = declared;
+        row.node.nullable = types.includes("null");
+    }
+    if (row.node.type === "object" && definition.additionalProperties === false)
+        row.node.onlyDefinedFields = true;
     if (concept)
         row.node.concept = concept;
 } return document; }

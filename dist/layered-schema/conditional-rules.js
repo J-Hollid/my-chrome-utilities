@@ -118,12 +118,12 @@ const peerResolution = (property, payload, paths) => {
     return { constraints, ...(incompatible ? { conflict: { path: property.path, message: "conditional Shared Profile peers conflict; add an explicit contextual resolution", contributors: contributions.map(({ contributorName }) => contributorName) } } : {}) };
 };
 const composeResolvedPeers = (property, constraints) => {
-    const result = clone(property), first = (key) => constraints.find((constraint) => constraint[key] !== undefined)?.[key], facetKeys = ["concept", "type", "itemType", "itemSchema", "allowedValues", "allowedValueIds", "allowedValueProvenance", "presence", "patterns", "minimum", "maximum", "minItems", "maxItems", "expectedValue", "enforcement", "target", "condition", "displayText", "documentation", "comments", "examples", "definitionId", "overrideReferences"];
+    const result = clone(property), first = (key) => constraints.find((constraint) => constraint[key] !== undefined)?.[key], facetKeys = ["concept", "type", "nullable", "onlyDefinedFields", "itemType", "itemSchema", "allowedValues", "allowedValueIds", "allowedValueProvenance", "presence", "patterns", "minimum", "maximum", "minItems", "maxItems", "expectedValue", "enforcement", "target", "condition", "displayText", "documentation", "comments", "examples", "definitionId", "overrideReferences"];
     for (const key of facetKeys)
         delete result[key];
     delete result.expectedContributor;
     delete result.expectedContributors;
-    for (const key of ["concept", "type", "itemType", "itemSchema", "allowedValueIds", "allowedValueProvenance", "target", "displayText", "documentation", "comments", "examples", "definitionId"]) {
+    for (const key of ["concept", "type", "nullable", "onlyDefinedFields", "itemType", "itemSchema", "allowedValueIds", "allowedValueProvenance", "target", "displayText", "documentation", "comments", "examples", "definitionId"]) {
         const value = first(key);
         if (value !== undefined)
             result[key] = clone(value);

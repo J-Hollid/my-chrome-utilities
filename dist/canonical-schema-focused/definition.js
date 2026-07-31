@@ -17,7 +17,7 @@ export function setCanonicalNestedItemType(root, arrayItemId, type, id) {
 const terminalItemSchema = (root) => { let item = root; while (item?.type === "array")
     item = item.items; return item; };
 export function renderDefinitionSection(host, context, working) {
-    const { dom } = context, concept = input(dom, "concept", working.concept ?? ""), concepts = dom.createElement("datalist"), type = dom.createElement("select"), itemType = dom.createElement("select"), items = dom.createElement("section"), presence = dom.createElement("select"), allowed = input(dom, "ordinaryValue", schemaTableAllowedValues({ ...(working.expectedValue === undefined ? {} : { expectedValue: working.expectedValue }), allowedValues: working.allowedValues.map(({ value }) => value) })), displayText = input(dom, "displayText", working.documentation.displayText), description = dom.createElement("textarea"), comments = dom.createElement("textarea"), exampleMethod = dom.createElement("select"), exampleHost = dom.createElement("span"), installedSuggestions = Array.from(dom.querySelectorAll('datalist[id^="schema-concept-"] option')).map(({ value }) => value), fallbackSuggestions = [...new Set(Object.values(context.current().nodes).map(({ concept }) => concept?.trim()).filter(Boolean))];
+    const { dom } = context, concept = input(dom, "concept", working.concept ?? ""), concepts = dom.createElement("datalist"), type = dom.createElement("select"), nullable = dom.createElement("input"), closed = dom.createElement("input"), itemType = dom.createElement("select"), items = dom.createElement("section"), presence = dom.createElement("select"), allowed = input(dom, "ordinaryValue", schemaTableAllowedValues({ ...(working.expectedValue === undefined ? {} : { expectedValue: working.expectedValue }), allowedValues: working.allowedValues.map(({ value }) => value) })), displayText = input(dom, "displayText", working.documentation.displayText), description = dom.createElement("textarea"), comments = dom.createElement("textarea"), exampleMethod = dom.createElement("select"), exampleHost = dom.createElement("span"), installedSuggestions = Array.from(dom.querySelectorAll('datalist[id^="schema-concept-"] option')).map(({ value }) => value), fallbackSuggestions = [...new Set(Object.values(context.current().nodes).map(({ concept }) => concept?.trim()).filter(Boolean))];
     concepts.id = `focused-concepts-${working.id.replace(/[^a-z0-9_-]/gi, "-")}`;
     for (const value of context.conceptSuggestions?.() ?? (installedSuggestions.length ? installedSuggestions : fallbackSuggestions))
         concepts.append(new Option(value, value));
@@ -30,6 +30,17 @@ export function renderDefinitionSection(host, context, working) {
         else
             delete next.concept;
     } });
+    nullable.type = closed.type = "checkbox";
+    nullable.name = "nullable";
+    closed.name = "onlyDefinedFields";
+    nullable.checked = working.nullable === true;
+    closed.checked = working.onlyDefinedFields === true;
+    nullable.hidden = working.type === "null";
+    closed.hidden = working.type !== "object";
+    nullable.addEventListener("change", () => { const next = context.getWorking(); if (next)
+        next.nullable = nullable.checked; });
+    closed.addEventListener("change", () => { const next = context.getWorking(); if (next)
+        next.onlyDefinedFields = closed.checked; });
     allowed.dataset.allowedValues = "true";
     items.setAttribute("aria-label", "Items");
     items.dataset.arrayItems = "true";
@@ -56,10 +67,16 @@ export function renderDefinitionSection(host, context, working) {
     type.value = working.type;
     type.addEventListener("change", () => { const next = context.getWorking(); if (next) {
         next.type = type.value;
+        if (next.type === "null")
+            delete next.nullable;
+        if (next.type !== "object")
+            delete next.onlyDefinedFields;
         if (next.type !== "array") {
             delete next.itemType;
             delete next.itemSchema;
         }
+        nullable.hidden = next.type === "null";
+        closed.hidden = next.type !== "object";
         renderItems();
     } });
     itemType.name = "itemType";
@@ -145,6 +162,6 @@ export function renderDefinitionSection(host, context, working) {
         descriptionFacet.append(reset);
     }
     renderItems();
-    host.append(labeled(dom, "Concept", concept), concepts, labeled(dom, "Type", type), items, labeled(dom, "Presence", presence), labeled(dom, "Allowed values", allowed), labeled(dom, "Display text", displayText), descriptionFacet, labeled(dom, "Comments", comments), labeled(dom, "Example method", exampleMethod), labeled(dom, "Example value", exampleHost));
+    host.append(labeled(dom, "Concept", concept), concepts, labeled(dom, "Type", type), labeled(dom, "Nullable", nullable), labeled(dom, "Only defined fields in this object", closed), items, labeled(dom, "Presence", presence), labeled(dom, "Allowed values", allowed), labeled(dom, "Display text", displayText), descriptionFacet, labeled(dom, "Comments", comments), labeled(dom, "Example method", exampleMethod), labeled(dom, "Example value", exampleHost));
 }
 //# sourceMappingURL=definition.js.map

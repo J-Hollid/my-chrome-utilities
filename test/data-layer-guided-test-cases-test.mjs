@@ -10,6 +10,12 @@ import {
   saveAndRunGuidedTestCase,
   validateGuidedInput,
 } from "../dist/data-layer-guided-test-cases.js";
+import {
+  addCanonicalProperty,
+  canonicalRequirements,
+  createCanonicalSchema,
+  setCanonicalProperty,
+} from "../dist/data-layer-canonical-schema.js";
 
 const ids=(kind)=>`${kind}:1`;
 assert.deepEqual(guidedTestCaseTypeOptions(),[
@@ -81,6 +87,17 @@ assert.deepEqual(controls.map(({path,control,jsonTypes})=>({path,control,jsonTyp
 ]);
 assert.equal(controls[0].description,"Selling market");
 assert.equal(controls[0].origin,"Retail");
+
+let canonicalGuidance=createCanonicalSchema({id:"schema:guidance",contributorId:"profile:guidance",contributorName:"Guidance"});
+let facetSequence=0;const facetId=(kind)=>`${kind}:facet:${++facetSequence}`;
+canonicalGuidance=addCanonicalProperty(canonicalGuidance,{baseRevision:0,name:"campaign",type:"string",id:facetId}).document;
+canonicalGuidance=setCanonicalProperty(canonicalGuidance,{baseRevision:canonicalGuidance.revision,propertyId:canonicalGuidance.selectedPropertyId,patch:{nullable:true}}).document;
+canonicalGuidance=addCanonicalProperty(canonicalGuidance,{baseRevision:canonicalGuidance.revision,name:"closed",type:"object",id:facetId}).document;
+canonicalGuidance=setCanonicalProperty(canonicalGuidance,{baseRevision:canonicalGuidance.revision,propertyId:canonicalGuidance.selectedPropertyId,patch:{onlyDefinedFields:true}}).document;
+assert.deepEqual(canonicalRequirements(canonicalGuidance).map(({path,type,nullable,additionalProperties})=>({path,type,nullable,additionalProperties})),[
+  {path:"/campaign",type:"string",nullable:true,additionalProperties:undefined},
+  {path:"/closed",type:"object",nullable:undefined,additionalProperties:false},
+]);
 
 const recursiveControls=guidedInputControls([
   {path:"/order",type:"object",required:true,description:"Order details"},

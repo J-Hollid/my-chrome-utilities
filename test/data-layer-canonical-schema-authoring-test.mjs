@@ -45,6 +45,17 @@ const closedDocument=applyCanonicalCommand(visibleBaseDocument,{kind:"policy",ba
 assert.equal(closedDocument.status,"applied");
 assert.equal(closedDocument.document.onlyDefinedFields,true,"Only defined fields is stored as one schema-scoped canonical command");
 assert.equal(canonicalJsonSchemaDocument(closedDocument.document).additionalProperties,false,"canonical JSON Schema export preserves the closed-field policy");
+
+let propertyFacets=createCanonicalSchema({id:"schema:property-facets",contributorId:"profile:property-facets",contributorName:"Property facets"});
+propertyFacets=addCanonicalProperty(propertyFacets,{baseRevision:0,name:"campaign",type:"string",id}).document;
+const campaignId=propertyFacets.selectedPropertyId;
+propertyFacets=setCanonicalProperty(propertyFacets,{baseRevision:propertyFacets.revision,propertyId:campaignId,patch:{nullable:true}}).document;
+propertyFacets=addCanonicalProperty(propertyFacets,{baseRevision:propertyFacets.revision,name:"closed",type:"object",id}).document;
+const closedObjectId=propertyFacets.selectedPropertyId;
+propertyFacets=setCanonicalProperty(propertyFacets,{baseRevision:propertyFacets.revision,propertyId:closedObjectId,patch:{onlyDefinedFields:true}}).document;
+const propertyFacetSchema=canonicalJsonSchemaDocument(propertyFacets);
+assert.deepEqual(propertyFacetSchema.properties.campaign.type,["string","null"],"nullable is a canonical property facet");
+assert.equal(propertyFacetSchema.properties.closed.additionalProperties,false,"closed fields can be canonical at one nested object");
 const visibleCommandDocument={...visibleBaseDocument,revision:1,nodes:{[visibleProperty.id]:{...visibleProperty,presence:{mode:"forbidden"}}},changes:[{revision:1,propertyIds:[visibleProperty.id],kind:"set"}]};
 assert.equal(
   canonicalCommandOutcome(
@@ -253,11 +264,15 @@ const adopted=canonicalSchemaFromJsonSchema({
   contributorName:"Opened Article",
   sourceIdentity:"schema:opened-article",
   sourceRevision:4,
-  document:{type:"object",properties:{article_type:{type:"string"},metadata:{type:"object",properties:{article_name:{type:"string"}}}}},
+  document:{type:"object",properties:{article_type:{type:["string","null"]},metadata:{type:"object",additionalProperties:false,properties:{article_name:{type:"string"}}}}},
   idFactory:id,
 });
 assert.equal(adopted.selectedPropertyId,adopted.rootIds[0],"an adopted workspace starts on its first root property");
 assert.equal(adopted.nodes[adopted.selectedPropertyId].name,"article_type");
+assert.equal(adopted.nodes[adopted.selectedPropertyId].nullable,true,"adoption retains nullable as a canonical property facet");
+assert.equal(Object.values(adopted.nodes).find(({name})=>name==="metadata").onlyDefinedFields,true,"adoption retains a nested closed-object policy");
+assert.deepEqual(canonicalJsonSchemaDocument(adopted).properties.article_type.type,["string","null"],"nullable JSON Schema survives canonical adoption");
+assert.equal(canonicalJsonSchemaDocument(adopted).properties.metadata.additionalProperties,false,"nested closed-object JSON Schema survives canonical adoption");
 assert.ok(Object.values(adopted.nodes).every(({provenance})=>provenance.every(({source,sourceId,revision})=>source==="saved-schema"&&sourceId==="schema:opened-article"&&revision===4)));
 
 class SearchControl extends EventTarget{

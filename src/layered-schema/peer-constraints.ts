@@ -3,7 +3,9 @@ import {clone,constraintWithStructuredRules,parallelMismatch,same} from "./compi
 export const peerMismatch=(left:LayerConstraint,right:LayerConstraint):boolean=>{
   const differentFacet=(key:"concept"|"displayText"|"documentation"|"comments"|"examples"|"target")=>left[key]!==undefined&&right[key]!==undefined&&!same(left[key],right[key]);
   return parallelMismatch(left,right)||Boolean(
-  left.itemType&&right.itemType&&left.itemType!==right.itemType
+  left.nullable!==undefined&&right.nullable!==undefined&&left.nullable!==right.nullable
+  ||left.onlyDefinedFields!==undefined&&right.onlyDefinedFields!==undefined&&left.onlyDefinedFields!==right.onlyDefinedFields
+  ||left.itemType&&right.itemType&&left.itemType!==right.itemType
   ||left.itemSchema&&right.itemSchema&&!same(left.itemSchema,right.itemSchema)
   ||left.definitionId&&right.definitionId&&left.definitionId!==right.definitionId
   ||left.allowedValueIds&&right.allowedValueIds&&!same(left.allowedValueIds,right.allowedValueIds)

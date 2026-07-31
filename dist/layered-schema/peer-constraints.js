@@ -1,7 +1,9 @@
 import { clone, constraintWithStructuredRules, parallelMismatch, same } from "./compile-context.js";
 export const peerMismatch = (left, right) => {
     const differentFacet = (key) => left[key] !== undefined && right[key] !== undefined && !same(left[key], right[key]);
-    return parallelMismatch(left, right) || Boolean(left.itemType && right.itemType && left.itemType !== right.itemType
+    return parallelMismatch(left, right) || Boolean(left.nullable !== undefined && right.nullable !== undefined && left.nullable !== right.nullable
+        || left.onlyDefinedFields !== undefined && right.onlyDefinedFields !== undefined && left.onlyDefinedFields !== right.onlyDefinedFields
+        || left.itemType && right.itemType && left.itemType !== right.itemType
         || left.itemSchema && right.itemSchema && !same(left.itemSchema, right.itemSchema)
         || left.definitionId && right.definitionId && left.definitionId !== right.definitionId
         || left.allowedValueIds && right.allowedValueIds && !same(left.allowedValueIds, right.allowedValueIds)

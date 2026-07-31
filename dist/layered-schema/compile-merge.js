@@ -9,6 +9,10 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
         conflict(constraint.path, "type cannot change", [prior.origins.at(-1).contributorName, contributor.name]);
     else if (!parallelPair && constraint.type)
         next.type = constraint.type;
+    if (constraint.nullable !== undefined)
+        next.nullable = constraint.nullable;
+    if (constraint.onlyDefinedFields !== undefined)
+        next.onlyDefinedFields = constraint.onlyDefinedFields;
     if (constraint.itemType)
         next.itemType = constraint.itemType;
     if (constraint.itemSchema)
