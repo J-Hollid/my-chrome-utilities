@@ -65,15 +65,16 @@ const structuralConstraint=selectiveProfileContribution(structuralMaster,nestedO
 assert.deepEqual(structuralConstraint,{path:"/error",type:"object",definitionId:error.id,selectionReason:"structural"},"structural ancestors retain shape and stable provenance identity only");
 
 const structuralArrayCases=[
-  {name:"scalar",shape:{type:"array",itemType:"string"},payload:{error:[1]},expected:{itemType:"string"}},
-  {name:"object item",shape:{type:"array",itemSchema:{id:"item:object",type:"object"}},payload:{error:["not-an-object"]},expected:{itemSchema:{id:"item:object",type:"object"}}},
-  {name:"nested array",shape:{type:"array",itemSchema:{id:"item:outer",type:"array",items:{id:"item:middle",type:"array",items:{id:"item:leaf",type:"string"}}}},payload:{error:[[[1]]]},expected:{itemSchema:{id:"item:outer",type:"array",items:{id:"item:middle",type:"array",items:{id:"item:leaf",type:"string"}}}}},
+  {name:"object item",shape:{type:"array",itemSchema:{id:"item:object",type:"object",allowedValues:[{business:"source-only"}]}},validPayload:{error:[{message:"anything"}]},invalidPayload:{error:["not-an-object"]},expected:{itemSchema:{id:"item:object",type:"object"}}},
+  {name:"nested array",shape:{type:"array",itemSchema:{id:"item:outer",type:"array",allowedValues:[[{business:"source-only"}]],items:{id:"item:inner",type:"object",allowedValues:[{business:"source-only"}]}}},validPayload:{error:[[{message:"anything"}]]},invalidPayload:{error:[[1]]},expected:{itemSchema:{id:"item:outer",type:"array",items:{id:"item:inner",type:"object"}}}},
 ];
 for(const structuralCase of structuralArrayCases){
   const ancestor={...businessAncestor,...structuralCase.shape},document={...master,nodes:{...master.nodes,[error.id]:ancestor}},contribution=selectiveProfileContribution(document,nestedOnly),constraint=contribution.constraints[0];
   assert.deepEqual(constraint,{path:"/error",type:"array",...structuralCase.expected,definitionId:error.id,selectionReason:"structural"},`${structuralCase.name} structural array shape survives without business facets`);
-  const compiled=compileLayeredSchema([{id:"profile:master",name:"Master",scope:"Shared Profile",constraints:contribution.constraints}],{}),validation=validateLayeredObservation({targetId:"page:error",targetName:"Error Page",revision:1,compiled},structuralCase.payload);
-  assert.equal(validation.issues.some(({code,canonicalPath})=>code==="TYPE"&&canonicalPath?.startsWith("/error/*")),true,`${structuralCase.name} structural item shape remains enforceable`);
+  assert.equal(JSON.stringify(constraint).includes("source-only"),false,`${structuralCase.name} structural projection drops item allowed values`);
+  const compiled=compileLayeredSchema([{id:"profile:master",name:"Master",scope:"Shared Profile",constraints:contribution.constraints}],{}),validValidation=validateLayeredObservation({targetId:"page:error",targetName:"Error Page",revision:1,compiled},structuralCase.validPayload),invalidValidation=validateLayeredObservation({targetId:"page:error",targetName:"Error Page",revision:1,compiled},structuralCase.invalidPayload);
+  assert.equal(validValidation.issues.some(({code})=>code==="ALLOWED_VALUE"),false,`${structuralCase.name} structural item enums are not inherited or validated`);
+  assert.equal(invalidValidation.issues.some(({code,canonicalPath})=>code==="TYPE"&&canonicalPath?.startsWith("/error/*")),true,`${structuralCase.name} nested structural type shape remains enforceable`);
 }
 
 const ordinaryPattern={id:"rule:error-code-pattern",kind:"pattern",pattern:"^SOURCE$",severity:"error",message:"Source pattern"};
@@ -157,8 +158,12 @@ const legacyApplied=structuredClone(appliedRecipe);legacyApplied.sourceSnapshot.
 delete legacyApplied.sourceSnapshot.definitionFingerprints;
 assert.equal(profileInheritanceCurrentImpact(master,legacyApplied).stale,false,"legacy raw snapshots remain readable without migration");
 assert.equal(profileInheritanceCurrentImpact({...master,revision:8,nodes:{...master.nodes,[errorMessage.id]:{...errorMessage,rules:[{...errorMessage.rules[0],message:"Changed legacy message"}]}}},legacyApplied).changedRuleIds.includes(errorMessage.rules[0].id),true,"legacy raw snapshots still detect changes");
+const legacyDefinitionChanged={...master,revision:master.revision+1,nodes:{...master.nodes,[errorMessage.id]:{...errorMessage,type:"number"}}},legacyDefinitionImpact=profileInheritanceCurrentImpact(legacyDefinitionChanged,legacyApplied),legacyDefinitionTarget=markProfileInheritanceTargetStale({id:"page:error",name:"Error Page",profileInheritanceRecipes:[legacyApplied]},"profile:master",master,legacyDefinitionChanged);
+assert.equal(legacyDefinitionImpact.stale,true,"a later legacy source revision conservatively invalidates definitions that were not fingerprinted");assert.equal(legacyDefinitionTarget.validationStale,true);assert.equal(legacyDefinitionTarget.testCasesStale,true);assert.equal(legacyDefinitionTarget.documentationStale,true);assert.equal(legacyDefinitionTarget.exportStale,true);
 const currentRenameImpact=profileInheritanceCurrentImpact(renamed,appliedRecipe);
 assert.equal(currentRenameImpact.stale,true);assert.deepEqual(currentRenameImpact.changedPaths,[{propertyId:errorMessage.id,before:"/error/message",after:"/error/friendly_message"}]);
+const reordered={...master,revision:master.revision+1,nodes:{...master.nodes,[errorMessage.id]:{...errorMessage,order:errorDetails.order},[errorDetails.id]:{...errorDetails,order:errorMessage.order}}},reorderImpact=profileInheritanceCurrentImpact(reordered,appliedRecipe);
+assert.equal(reorderImpact.stale,true,"same-parent selected sibling reorder invalidates inherited output order");assert.equal(reorderImpact.changedDefinitionPropertyIds.includes(errorMessage.id),true);assert.equal(reorderImpact.changedDefinitionPropertyIds.includes(errorDetails.id),true);
 const changedExcludedRule={...master,revision:9,nodes:{...master.nodes,[errorMessage.id]:{...errorMessage,rules:[{...errorMessage.rules[0],pattern:"^CHANGED"}]}}};
 const excludedRuleImpact=profileInheritanceCurrentImpact(changedExcludedRule,appliedRecipe);
 assert.deepEqual(excludedRuleImpact.changedRuleIds,["rule:error-message"],"source edits to an explicitly excluded stable rule remain reviewable");assert.equal(excludedRuleImpact.stale,true);
