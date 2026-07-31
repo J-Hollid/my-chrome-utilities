@@ -20,12 +20,12 @@ import { composedSchemaWorkspace, resetComposedSchemaLocalProperty, saveComposed
 import { mountComposedSchemaWorkspace } from "./data-layer-composed-schema-workspace-ui.js";
 import { installFlowDocumentationExportUi } from "./data-layer-flow-table-documentation-export-ui.js";
 import { installProjectDocumentationWorkspaceUi } from "./data-layer-project-documentation-workspace-ui.js";
-import { applyCanonicalCommand, canonicalCommandOutcome, canonicalRequirements, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
+import { applyCanonicalCommand, canonicalCommandOutcome, canonicalRequirements, evaluateCanonicalPredicate, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor as mountCanonicalSchemaEditorBase } from "./data-layer-canonical-schema-ui.js";
 import { mountProjectConditionEditor, projectConditionEditorValue } from "./data-layer-project-condition-editor.js";
 import { createProjectCollectionEntity, hasSavedSchemaAdoptionActions, inspectProjectEntityRemoval, projectCollectionCreationFields, projectCollectionCreationRoute, projectCollectionDefinitions, projectEntityWorkspaceRoute, projectInspectorTogglePresentation, removeProjectCollectionEntity } from "./data-layer-project-entity-lifecycle.js";
 import { declareStudioChoice, installStudioChoiceControls } from "./data-layer-studio-choice-controls.js";
-import { compareGuidedTestCase, guidedInputControls, guidedTestCaseTypeOptions } from "./data-layer-guided-test-cases.js";
+import { compareGuidedTestCase, guidedArrayMove, guidedInputControls, guidedInputWithValue, guidedTestCaseTypeOptions, validateGuidedInput } from "./data-layer-guided-test-cases.js";
 import { installStudioAnalystGuidance, studioAnalystGuidanceIsActive } from "./specification-studio-technical-analyst-guidance.js";
 const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, START_PATH_KEY = "my-chrome-utilities.specification-project-start.v1", routeParameters = new URLSearchParams(location.search), startupProjectId = routeParameters.get("project") ?? undefined, startupKind = routeParameters.get("kind") ?? undefined, startupEntityId = routeParameters.get("entity") ?? undefined, startupRoute = startupKind ? durableProjectRouteForWorkspace(startupKind, startupEntityId) : undefined;
 installStudioChoiceControls(document.body);
@@ -459,10 +459,166 @@ const setInputPath = (input, path, value) => { const parts = path.split("/").fil
 } const child = cursor[part]; cursor[part] = child && typeof child === "object" && !Array.isArray(child) ? child : {}; cursor = cursor[part]; }); };
 const guidedSchemaCandidates = (testCase) => { if (!state)
     return []; const event = state.project.collections.events.find(({ id }) => id === testCase.eventId), profileIds = new Set([...(event?.profileIds ?? []), ...((state.project.collections.assignments.filter(({ eventId }) => eventId === testCase.eventId).flatMap(({ targetKind, targetId }) => targetKind === "Shared Profile" ? [String(targetId)] : [])))]); const selected = String(testCase.inputGuidance?.schemaId ?? ""); return state.project.collections.profiles.filter((profile) => profile.id === selected || !profileIds.size || profileIds.has(profile.id)); };
+const guidedPathParts = (path) => path.split("/").filter(Boolean);
+const guidedParentPath = (path) => { const parts = guidedPathParts(path); parts.pop(); return parts.length ? `/${parts.join("/")}` : ""; };
+const guidedPathValue = (input, path) => guidedPathParts(path).reduce((value, part) => value && typeof value === "object" ? value[part] : undefined, input);
+const guidedDefaultValue = (descriptor) => descriptor.jsonTypes.includes("null") ? null : descriptor.control === "object" ? {} : descriptor.control === "array" ? [] : descriptor.control === "boolean" ? false : descriptor.control === "number" ? 0 : "";
+const guidedPageEvaluatorRevision = (current, pageId) => { const page = current.project.collections.pages.find(({ id }) => id === pageId), groups = current.project.collections.pageGroups.filter(({ id }) => page?.pageGroupIds?.includes(id)); return `page:${JSON.stringify({ pageId: page?.id, pageRevision: page?.canonicalSchema?.revision ?? page?.revision ?? 0, groups: groups.map((group) => [group.id, group.canonicalSchema?.revision ?? group.revision ?? 0]) })}`; };
+function guidedControlsForSchema(schema, input) {
+    const canonical = schema?.canonicalSchema, requirements = canonical ? canonicalRequirements(canonical) : schema?.requirements ?? [];
+    const effective = requirements.map((requirement) => {
+        const propertyId = String(requirement.propertyId ?? ""), node = canonical?.nodes[propertyId], conditional = Boolean(requirement.condition), matched = canonical && conditional ? evaluateCanonicalPredicate(requirement.condition, canonical, input) : undefined, presence = String(requirement.presenceMode ?? (requirement.required ? "required" : "optional")), active = !conditional || Boolean(matched?.matched), required = presence === "required" || (presence === "required-when" && active), explanation = matched?.branches.length ? matched.branches.map(({ label, matched: branchMatched }) => `${label}: ${branchMatched ? "matched" : "not matched"}`).join("; ") : undefined;
+        return { ...requirement, required, active, ...(explanation ? { explanation } : {}), ...(node?.type === "object" ? { additionalProperties: node.additionalProperties ?? !canonical?.onlyDefinedFields } : {}) };
+    });
+    return guidedInputControls(effective, input);
+}
+function mountGuidedInputBuilder(host, options) {
+    const render = () => {
+        const controls = options.controls(), input = options.input();
+        host.replaceChildren(Object.assign(document.createElement("legend"), { textContent: "Structured input" }));
+        const byParent = (parent) => controls.filter((descriptor) => descriptor.active && guidedParentPath(descriptor.path) === parent);
+        const update = (path, value) => { options.update(guidedInputWithValue(options.input(), path, value)); render(); };
+        const renderScalar = (descriptor, concretePath) => {
+            const wrapper = document.createElement("div"), help = document.createElement("small"), helpId = `test-input-help-${concretePath.replace(/[^a-z0-9]/gi, "-")}`, value = guidedPathValue(options.input(), concretePath), label = concretePath;
+            wrapper.className = "guided-input-property";
+            wrapper.dataset.guidedProperty = concretePath;
+            help.id = helpId;
+            help.textContent = [descriptor.path, descriptor.jsonTypes.join(" or "), descriptor.required ? "required" : "optional", descriptor.description, descriptor.explanation, descriptor.example !== undefined ? `Example ${JSON.stringify(descriptor.example)}` : undefined, descriptor.origin ? `Origin ${descriptor.origin}` : undefined].filter(Boolean).join(" · ");
+            let control;
+            if (descriptor.control === "choice" || descriptor.control === "boolean") {
+                control = document.createElement("select");
+                if (!descriptor.required)
+                    control.append(new Option("Choose value", ""));
+                const values = descriptor.control === "boolean" ? [true, false] : (descriptor.constraints.allowedValues ?? []);
+                for (const choice of values)
+                    control.append(new Option(String(choice), JSON.stringify(choice)));
+                control.value = value === undefined ? "" : JSON.stringify(value);
+                control.addEventListener("change", () => update(concretePath, control.value === "" ? undefined : JSON.parse(control.value)));
+            }
+            else if (descriptor.control === "nullable") {
+                const group = document.createElement("fieldset"), legend = document.createElement("legend"), mode = document.createElement("select");
+                legend.textContent = label;
+                mode.setAttribute("aria-label", `${label} null or typed value`);
+                mode.append(new Option("Null", "null"), new Option(`Use ${descriptor.jsonTypes.filter((type) => type !== "null").join(" or ")} value`, "value"));
+                mode.value = value === null || value === undefined ? "null" : "value";
+                mode.addEventListener("change", () => update(concretePath, mode.value === "null" ? null : ""));
+                group.append(legend, mode);
+                if (mode.value === "value") {
+                    const typed = { ...descriptor, control: descriptor.jsonTypes.includes("number") || descriptor.jsonTypes.includes("integer") ? "number" : "text", jsonTypes: descriptor.jsonTypes.filter((type) => type !== "null") };
+                    group.append(renderScalar(typed, concretePath));
+                }
+                wrapper.append(group, help);
+                return wrapper;
+            }
+            else {
+                control = document.createElement("input");
+                control.type = descriptor.control === "number" ? "number" : "text";
+                control.value = value === undefined ? "" : String(value);
+                if (typeof descriptor.constraints.minimum === "number")
+                    control.min = String(descriptor.constraints.minimum);
+                if (typeof descriptor.constraints.maximum === "number")
+                    control.max = String(descriptor.constraints.maximum);
+                control.addEventListener("change", () => update(concretePath, control.type === "number" && control.value !== "" ? Number(control.value) : control.value));
+            }
+            control.dataset.testInputPath = concretePath;
+            control.required = descriptor.required;
+            control.setAttribute("aria-describedby", helpId);
+            wrapper.append(labeledControl(label, control), help);
+            return wrapper;
+        };
+        const renderAdditional = (descriptor, concretePath) => {
+            if (descriptor.constraints.additionalProperties !== true)
+                return undefined;
+            const group = document.createElement("fieldset"), legend = document.createElement("legend"), name = document.createElement("input"), type = document.createElement("select"), value = document.createElement("input"), add = document.createElement("button");
+            legend.textContent = `Add undeclared property to ${concretePath}`;
+            name.setAttribute("aria-label", "Additional property name");
+            type.setAttribute("aria-label", "Additional property value type");
+            for (const choice of ["string", "number", "boolean", "object", "array", "null"])
+                type.append(new Option(choice, choice));
+            value.setAttribute("aria-label", "Additional property typed value");
+            add.type = "button";
+            add.textContent = "Add guided property";
+            add.addEventListener("click", () => { const property = name.value.trim(); if (!property) {
+                name.setCustomValidity("Enter a property name.");
+                name.reportValidity();
+                name.focus();
+                return;
+            } let typed = value.value; try {
+                typed = type.value === "string" ? value.value : type.value === "number" ? Number(value.value) : type.value === "boolean" ? value.value === "true" : type.value === "null" ? null : JSON.parse(value.value || (type.value === "array" ? "[]" : "{}"));
+            }
+            catch {
+                value.setCustomValidity(`Enter a valid ${type.value} value.`);
+                value.reportValidity();
+                value.focus();
+                return;
+            } update(`${concretePath}/${property}`, typed); });
+            group.append(legend, labeledControl("Property name", name), labeledControl("Value type", type), labeledControl("Typed value", value), add);
+            return group;
+        };
+        const renderDescriptor = (descriptor, concretePath = descriptor.path) => {
+            const value = guidedPathValue(options.input(), concretePath);
+            if (!descriptor.required && value === undefined) {
+                const add = document.createElement("button");
+                add.type = "button";
+                add.textContent = `Add optional ${concretePath}`;
+                add.addEventListener("click", () => update(concretePath, guidedDefaultValue(descriptor)));
+                return add;
+            }
+            if (descriptor.control === "object") {
+                const group = document.createElement("fieldset"), legend = document.createElement("legend");
+                legend.textContent = `${concretePath} · Object${descriptor.required ? " · required" : ""}`;
+                group.dataset.guidedObject = concretePath;
+                for (const child of byParent(descriptor.path))
+                    group.append(renderDescriptor(child, child.path.replace(descriptor.path, concretePath)));
+                const additional = renderAdditional(descriptor, concretePath);
+                if (additional)
+                    group.append(additional);
+                group.prepend(legend);
+                return group;
+            }
+            if (descriptor.control === "array") {
+                const group = document.createElement("fieldset"), legend = document.createElement("legend"), items = Array.isArray(value) ? value : [], children = byParent(`${descriptor.path}/*`);
+                legend.textContent = `${concretePath} · Array${descriptor.required ? " · required" : ""}`;
+                group.dataset.guidedArray = concretePath;
+                items.forEach((_item, index) => { const item = document.createElement("fieldset"), itemLegend = document.createElement("legend"), earlier = document.createElement("button"), later = document.createElement("button"), remove = document.createElement("button"); itemLegend.textContent = `Item ${index + 1}`; earlier.type = later.type = remove.type = "button"; earlier.textContent = "Move earlier"; later.textContent = "Move later"; remove.textContent = "Remove item"; earlier.disabled = index === 0; later.disabled = index === items.length - 1; earlier.addEventListener("click", () => { options.update(guidedArrayMove(options.input(), concretePath, index, index - 1)); render(); }); later.addEventListener("click", () => { options.update(guidedArrayMove(options.input(), concretePath, index, index + 1)); render(); }); remove.addEventListener("click", () => { const next = [...items]; next.splice(index, 1); update(concretePath, next); }); item.append(itemLegend); if (children.length)
+                    for (const child of children)
+                        item.append(renderDescriptor(child, child.path.replace(`${descriptor.path}/*`, `${concretePath}/${index}`)));
+                else {
+                    const itemType = String(descriptor.constraints.itemType ?? "string"), synthetic = { ...descriptor, path: `${descriptor.path}/*`, control: itemType === "number" || itemType === "integer" ? "number" : itemType === "boolean" ? "boolean" : "text", jsonTypes: [itemType], required: true };
+                    item.append(renderScalar(synthetic, `${concretePath}/${index}`));
+                } item.append(earlier, later, remove); group.append(item); });
+                const add = document.createElement("button");
+                add.type = "button";
+                add.textContent = "Add array item";
+                add.addEventListener("click", () => update(concretePath, [...items, descriptor.constraints.itemType === "object" ? {} : descriptor.constraints.itemType === "array" ? [] : descriptor.constraints.itemType === "boolean" ? false : descriptor.constraints.itemType === "number" || descriptor.constraints.itemType === "integer" ? 0 : ""]));
+                group.prepend(legend);
+                group.append(add);
+                return group;
+            }
+            return renderScalar(descriptor, concretePath);
+        };
+        for (const descriptor of byParent(""))
+            host.append(renderDescriptor(descriptor));
+        const issues = validateGuidedInput(controls, options.input());
+        for (const issue of issues) {
+            const wrapper = host.querySelector(`[data-guided-property="${CSS.escape(issue.path)}"]`) ?? host.querySelector(`[data-guided-array="${CSS.escape(issue.path)}"],[data-guided-object="${CSS.escape(issue.path)}"]`);
+            if (!wrapper)
+                continue;
+            const error = document.createElement("small"), control = wrapper.querySelector("input,select"), errorId = `test-input-error-${issue.path.replace(/[^a-z0-9]/gi, "-")}`;
+            error.id = errorId;
+            error.className = "error";
+            error.textContent = issue.message;
+            wrapper.append(error);
+            control?.setAttribute("aria-errormessage", errorId);
+            control?.setAttribute("aria-invalid", "true");
+        }
+    };
+    render();
+}
 function renderGuidedTestCaseEditor(content, entity) {
     if (!state)
         return;
-    const testCase = { testType: entity.testType === "page-context" ? "page-context" : "event-validation", input: { ...(entity.input ?? entity.payload ?? {}) }, inputGuidance: { kind: "authoring-guidance", ...(entity.inputGuidance ?? {}) }, sourceProvenance: entity.sourceProvenance ?? { kind: "legacy", id: entity.id, revision: String(entity.revision ?? "imported") }, reviewedExpectations: { ...(entity.reviewedExpectations ?? entity.expected ?? {}) }, status: entity.status ?? "Blocked", differences: entity.differences ?? [], ...entity }, section = document.createElement("section"), heading = document.createElement("h2"), definition = document.createElement("p"), form = document.createElement("form"), steps = document.createElement("ol"), result = document.createElement("output");
+    const testCase = { testType: entity.testType === "page-context" ? "page-context" : "event-validation", input: structuredClone(entity.input ?? entity.payload ?? {}), inputGuidance: { kind: "authoring-guidance", ...(entity.inputGuidance ?? {}) }, sourceProvenance: entity.sourceProvenance ?? { kind: "legacy", id: entity.id, revision: String(entity.revision ?? "imported") }, reviewedExpectations: structuredClone(entity.reviewedExpectations ?? entity.expected ?? {}), status: entity.status ?? "Blocked", differences: entity.differences ?? [], ...entity }, section = document.createElement("section"), heading = document.createElement("h2"), definition = document.createElement("p"), form = document.createElement("form"), steps = document.createElement("ol"), result = document.createElement("output");
     section.className = "contextual-editor guided-test-case";
     section.dataset.guidedTestCase = entity.id;
     heading.textContent = "Edit Test case";
@@ -504,110 +660,119 @@ function renderGuidedTestCaseEditor(content, entity) {
     source.textContent = `Source: ${testCase.sourceProvenance.kind} ${testCase.sourceProvenance.id} at ${testCase.sourceProvenance.revision}. Later source edits cannot change this saved copy.`;
     form.append(source);
     const candidates = guidedSchemaCandidates(testCase), schemaSelect = document.createElement("select");
+    let schema = candidates.find(({ id }) => id === String(testCase.inputGuidance.schemaId ?? "")) ?? candidates[0], draftInput = structuredClone(testCase.input);
     schemaSelect.name = "inputGuidance";
     schemaSelect.append(new Option("Choose input-guidance schema", ""));
     for (const profile of candidates)
-        schemaSelect.append(new Option(`${profile.name} · contributor ${profile.id} · revision ${String(profile.canonicalSchema?.revision ?? profile.revision ?? 1)}`, profile.id));
-    schemaSelect.value = String(testCase.inputGuidance.schemaId ?? candidates[0]?.id ?? "");
-    form.append(labeledControl("Input-guidance schema (authoring assistance only)", schemaSelect));
-    const schema = candidates.find(({ id }) => id === schemaSelect.value), inputGroup = document.createElement("fieldset"), inputLegend = document.createElement("legend");
-    inputLegend.textContent = "Structured input";
-    inputGroup.append(inputLegend);
-    const requirements = schema ? (schema.canonicalSchema ? canonicalRequirements(schema.canonicalSchema) : schema.requirements) : [], controls = guidedInputControls(requirements, testCase.input);
-    if (!schema) {
+        schemaSelect.append(new Option(`${profile.name} · Event ${state.project.collections.events.find(({ id }) => id === testCase.eventId)?.name ?? "scope"} · applicability ${state.project.collections.assignments.some(({ eventId, targetId }) => eventId === testCase.eventId && targetId === profile.id) ? "eligible" : "proposed"} · revision ${String(profile.canonicalSchema?.revision ?? profile.revision ?? 1)}`, profile.id));
+    schemaSelect.value = String(schema?.id ?? "");
+    form.append(labeledControl("Input-guidance schema (authoring assistance only; expected and actual Assignment remain separate)", schemaSelect));
+    const inputGroup = document.createElement("fieldset"), mountInput = () => { schema = candidates.find(({ id }) => id === schemaSelect.value); if (!schema) {
+        inputGroup.replaceChildren(Object.assign(document.createElement("legend"), { textContent: "Structured input" }));
         const missing = document.createElement("p"), repair = document.createElement("button");
         missing.textContent = "No eligible input-guidance schema describes this scope. Repair the Event, Assignment, contributor, or schema relationship; the Test case name, type, source, and scope will be preserved.";
         repair.type = "button";
         repair.textContent = "Open Shared Profiles to create, adopt, select, or repair guidance";
-        repair.addEventListener("click", () => { selectedKind = "profiles"; selectedId = undefined; persistNavigation(); render(); });
+        repair.addEventListener("click", () => { const preserved = { ...testCase, name: name.value.trim(), testType: type.value, eventId: eventSelect.value || undefined, pageId: pageSelect.value || undefined, input: draftInput, inputGuidance: { schemaId: schemaSelect.value, revision: "missing", kind: "authoring-guidance" } }; persist(transactProject(state, `Preserve Test case before guidance repair`, (project) => ({ ...project, collections: { ...project.collections, fixtures: project.collections.fixtures.map((candidate) => candidate.id === entity.id ? preserved : candidate) } }))); selectedKind = "profiles"; selectedId = undefined; persistNavigation(); render(); });
         inputGroup.append(missing, repair);
-    }
-    for (const descriptor of controls) {
-        if (!descriptor.required && descriptor.value === undefined) {
-            const add = document.createElement("button");
-            add.type = "button";
-            add.textContent = `Add optional ${descriptor.path}`;
-            add.addEventListener("click", () => { setInputPath(testCase.input, descriptor.path, descriptor.jsonTypes.includes("boolean") ? false : descriptor.jsonTypes.includes("number") ? 0 : ""); persist(transactProject(state, `Add optional Test case input ${descriptor.path}`, (project) => ({ ...project, collections: { ...project.collections, fixtures: project.collections.fixtures.map((candidate) => candidate.id === entity.id ? { ...candidate, input: testCase.input } : candidate) } }))); });
-            inputGroup.append(add);
-            continue;
-        }
-        const input = descriptor.control === "choice" || descriptor.control === "boolean" || descriptor.control === "nullable" ? document.createElement("select") : document.createElement("input");
-        input.dataset.testInputPath = descriptor.path;
-        input.setAttribute("aria-describedby", `test-input-help-${descriptor.path.replace(/[^a-z0-9]/gi, "-")}`);
-        if (input instanceof HTMLSelectElement) {
-            if (descriptor.control === "choice")
-                for (const value of descriptor.constraints.allowedValues ?? [])
-                    input.append(new Option(String(value), JSON.stringify(value)));
-            if (descriptor.control === "boolean")
-                input.append(new Option("True", "true"), new Option("False", "false"));
-            if (descriptor.control === "nullable")
-                input.append(new Option("Null", "null"), new Option("Typed value", JSON.stringify(descriptor.value ?? "")));
-            input.value = JSON.stringify(descriptor.value ?? (descriptor.control === "boolean" ? false : null));
-        }
-        else {
-            input.type = descriptor.control === "number" ? "number" : "text";
-            input.value = descriptor.value === undefined ? "" : typeof descriptor.value === "object" ? String(descriptor.value) : String(descriptor.value);
-            if (typeof descriptor.constraints.minimum === "number")
-                input.min = String(descriptor.constraints.minimum);
-            if (typeof descriptor.constraints.maximum === "number")
-                input.max = String(descriptor.constraints.maximum);
-        }
-        input.required = descriptor.required;
-        const help = document.createElement("small");
-        help.id = `test-input-help-${descriptor.path.replace(/[^a-z0-9]/gi, "-")}`;
-        help.textContent = [descriptor.path, descriptor.jsonTypes.join(" or "), descriptor.required ? "required" : "optional", descriptor.description, descriptor.example !== undefined ? `Example ${JSON.stringify(descriptor.example)}` : undefined, descriptor.origin ? `Origin ${descriptor.origin}` : undefined].filter(Boolean).join(" · ");
-        inputGroup.append(labeledControl(descriptor.path, input), help);
-    }
+        return;
+    } mountGuidedInputBuilder(inputGroup, { controls: () => guidedControlsForSchema(schema, draftInput), input: () => draftInput, update: (next) => { draftInput = next; } }); };
+    schemaSelect.addEventListener("change", mountInput);
+    mountInput();
     form.append(inputGroup);
-    const expectations = document.createElement("fieldset"), expectationLegend = document.createElement("legend"), winner = document.createElement("input"), outcome = document.createElement("select"), issuePath = document.createElement("input"), issueCode = document.createElement("input");
+    const expectations = document.createElement("fieldset"), expectationLegend = document.createElement("legend"), winner = document.createElement("select"), pageGroups = document.createElement("select"), outcome = document.createElement("select"), issueChoices = document.createElement("fieldset");
     expectationLegend.textContent = "Reviewed expectations";
     winner.name = "expectedWinner";
+    winner.append(new Option("Do not assert Assignment", ""), new Option("No Assignment", "no-assignment"));
+    for (const assignment of state.project.collections.assignments)
+        winner.append(new Option(assignment.name, assignment.id));
     winner.value = String(testCase.reviewedExpectations.winner ?? "");
+    pageGroups.name = "expectedPageGroups";
+    pageGroups.multiple = true;
+    for (const group of state.project.collections.pageGroups) {
+        const option = new Option(group.name, group.id);
+        option.selected = (testCase.reviewedExpectations.applicablePageGroups ?? []).includes(group.id);
+        pageGroups.append(option);
+    }
     outcome.name = "expectedOutcome";
-    outcome.append(new Option("Choose observed outcome", ""), new Option("Valid", "Valid"), new Option("Invalid", "Invalid"));
+    outcome.append(new Option("Do not assert validation outcome", ""), new Option("Valid", "Valid"), new Option("Invalid", "Invalid"));
     outcome.value = String(testCase.reviewedExpectations.outcome ?? "");
-    issuePath.name = "expectedIssuePath";
-    issueCode.name = "expectedIssueCode";
-    const reviewedIssue = testCase.reviewedExpectations.issues?.[0];
-    issuePath.value = reviewedIssue?.path ?? "";
-    issueCode.value = reviewedIssue?.code ?? "";
-    expectations.append(expectationLegend, labeledControl("Expected winning Assignment or no Assignment", winner), labeledControl("Expected validation outcome", outcome), labeledControl("Expected issue path", issuePath), labeledControl("Expected issue code", issueCode));
+    issueChoices.append(Object.assign(document.createElement("legend"), { textContent: "Expected issue path and code pairs" }));
+    const pairedIssues = [...new Map([...(testCase.actualResult?.issues ?? []), ...(testCase.reviewedExpectations.issues ?? [])].map((issue) => [`${issue.path}:${issue.code}`, issue])).values()];
+    for (const issue of pairedIssues) {
+        const choice = document.createElement("input");
+        choice.type = "checkbox";
+        choice.value = `${issue.path}\t${issue.code}`;
+        choice.checked = (testCase.reviewedExpectations.issues ?? []).some((expected) => expected.path === issue.path && expected.code === issue.code);
+        issueChoices.append(labeledControl(`${issue.path} · ${issue.code}`, choice));
+    }
+    expectations.append(expectationLegend, labeledControl("Expected winning Assignment", winner), labeledControl("Expected applicable Page Groups", pageGroups), labeledControl("Expected validation outcome", outcome), issueChoices);
     form.append(expectations);
-    const run = document.createElement("button"), useActual = document.createElement("button");
+    let renderedCase = testCase;
+    if (testCase.actualResult) {
+        let currentRevision = testCase.actualResult.evaluatorRevision;
+        if (testCase.testType === "page-context")
+            currentRevision = guidedPageEvaluatorRevision(state, testCase.pageId);
+        else {
+            const current = compileSpecificationProject({ ...createCanonicalProjectEnvelope(state.project, state.draft?.id ?? "published"), revision: canonicalRevision });
+            if (current.status === "compiled")
+                currentRevision = current.plan.evaluatorContentIdentity;
+        }
+        renderedCase = compareGuidedTestCase({ ...testCase, evaluatorRevision: currentRevision });
+        if (testCase.status !== "Blocked" && renderedCase.status === "Stale" && testCase.status !== "Stale")
+            queueMicrotask(() => { if (!state)
+                return; persist(transactProject(state, `Mark Test case ${testCase.name} stale`, (project) => ({ ...project, collections: { ...project.collections, fixtures: project.collections.fixtures.map((candidate) => candidate.id === entity.id ? renderedCase : candidate) } }))); });
+    }
+    const actualEvidence = document.createElement("section"), actualHeading = document.createElement("h3");
+    actualHeading.textContent = "Actual and expected evidence";
+    actualEvidence.dataset.testEvidence = "true";
+    actualEvidence.append(actualHeading, Object.assign(document.createElement("p"), { textContent: testCase.actualResult ? `Observed outcome: ${testCase.actualResult.outcome ?? "not reported"} · Test comparison: ${renderedCase.status}` : "No actual result has been recorded." }));
+    for (const issue of testCase.actualResult?.issues ?? [])
+        actualEvidence.append(Object.assign(document.createElement("p"), { textContent: `Actual ${issue.path} · ${issue.code} · Expected ${pairedIssues.some((expected) => expected.path === issue.path && expected.code === issue.code) ? "paired" : "not reviewed"}` }));
+    const differences = document.createElement("section");
+    differences.setAttribute("aria-label", "Test case differences and repairs");
+    for (const difference of renderedCase.differences) {
+        const repair = document.createElement("button");
+        repair.type = "button";
+        repair.textContent = `Repair expected ${difference.field}`;
+        repair.addEventListener("click", () => { const target = difference.field === "winner" ? winner : difference.field === "outcome" ? outcome : difference.field === "applicablePageGroups" ? pageGroups : issueChoices.querySelector("input"); target?.focus(); });
+        differences.append(Object.assign(document.createElement("p"), { textContent: `${difference.field}: expected ${JSON.stringify(difference.expected)}, actual ${JSON.stringify(difference.actual)}` }), repair);
+    }
+    const run = document.createElement("button"), useActual = document.createElement("button"), repairRun = document.createElement("button");
     run.type = "submit";
-    run.textContent = "Save and run";
-    useActual.type = "button";
+    run.textContent = renderedCase.status === "Stale" ? "Rerun against current Draft" : "Save and run";
+    useActual.type = repairRun.type = "button";
     useActual.textContent = "Use actual as expected";
     useActual.disabled = !testCase.actualResult;
+    repairRun.textContent = "Repair Test case";
+    repairRun.hidden = true;
+    repairRun.addEventListener("click", () => { const target = form.querySelector("[aria-invalid=true],:invalid") ?? schemaSelect; target.focus(); });
     result.id = "fixture-run-result";
     result.setAttribute("aria-live", "polite");
-    result.textContent = `${testCase.status} · ${testCase.differences.map(({ field }) => field).join(", ") || "complete guided input and review expectations"}`;
-    const readInput = () => { const input = structuredClone(testCase.input); for (const control of Array.from(inputGroup.querySelectorAll("[data-test-input-path]"))) {
-        let value = control.value;
-        if (control instanceof HTMLSelectElement || control.type === "number") {
-            try {
-                value = JSON.parse(control.value);
-            }
-            catch {
-                value = control.value;
-            }
-        }
-        setInputPath(input, control.dataset.testInputPath, value);
-    } return input; }, readExpectations = () => ({ ...winner.value ? { winner: winner.value } : {}, ...outcome.value ? { outcome: outcome.value } : {}, ...(issuePath.value && issueCode.value ? { issues: [{ path: issuePath.value, code: issueCode.value }] } : {}) });
+    result.textContent = `${renderedCase.status} · ${renderedCase.status === "Stale" ? "prior actual and expected evidence retained; rerun is available" : renderedCase.differences.map(({ field }) => field).join(", ") || "complete guided input and review expectations"}`;
+    const readExpectations = () => { const issues = Array.from(issueChoices.querySelectorAll("input:checked"), ({ value }) => { const [path, code] = value.split("\t"); return { path: path, code: code }; }); return { ...(winner.value ? { winner: winner.value } : {}), ...(type.value === "page-context" && pageGroups.selectedOptions.length ? { applicablePageGroups: Array.from(pageGroups.selectedOptions, ({ value }) => value) } : {}), ...(outcome.value ? { outcome: outcome.value } : {}), ...(issues.length ? { issues } : {}) }; };
     form.addEventListener("submit", async (event) => { event.preventDefault(); if (!state)
-        return; eventSelect.required = type.value === "event-validation"; pageSelect.required = type.value === "page-context"; if (!form.reportValidity()) {
+        return; eventSelect.required = type.value === "event-validation"; pageSelect.required = type.value === "page-context"; const inputIssues = validateGuidedInput(guidedControlsForSchema(schema, draftInput), draftInput); if (inputIssues.length) {
+        result.textContent = `Blocked: ${inputIssues[0].message}`;
+        mountInput();
+        inputGroup.querySelector(`[data-guided-property="${CSS.escape(inputIssues[0].path)}"] input,[data-guided-array="${CSS.escape(inputIssues[0].path)}"] button`)?.focus();
+        return;
+    } if (!form.reportValidity()) {
         form.querySelector(":invalid")?.focus();
         return;
-    } const input = readInput(), reviewedExpectations = readExpectations(); if (!Object.keys(reviewedExpectations).length) {
+    } const reviewedExpectations = readExpectations(); if (!Object.keys(reviewedExpectations).length) {
         result.textContent = "Blocked: review at least one expected result.";
-        expectations.querySelector("input,select")?.focus();
+        expectations.querySelector("select,input")?.focus();
         return;
-    } const prepared = { ...testCase, name: name.value.trim(), testType: type.value, eventId: eventSelect.value || undefined, pageId: pageSelect.value || undefined, input, payload: input, inputGuidance: { schemaId: schemaSelect.value, revision: String(schema?.canonicalSchema?.revision ?? schema?.revision ?? 1), kind: "authoring-guidance" }, reviewedExpectations, status: "Blocked", differences: [] }, persisted = transactProject(state, `Save Test case ${prepared.name}`, (project) => ({ ...project, collections: { ...project.collections, fixtures: project.collections.fixtures.map((candidate) => candidate.id === entity.id ? prepared : candidate) } })); persist(persisted); if (saveStatus.kind === "failed") {
-        result.textContent = "Save failed. Evaluation did not run; editable input is preserved.";
-        return;
-    } try {
+    } const prepared = { ...testCase, name: name.value.trim(), testType: type.value, eventId: eventSelect.value || undefined, pageId: pageSelect.value || undefined, input: structuredClone(draftInput), payload: structuredClone(draftInput), inputGuidance: { schemaId: schemaSelect.value, revision: String(schema?.canonicalSchema?.revision ?? schema?.revision ?? 1), kind: "authoring-guidance" }, reviewedExpectations, status: "Blocked", differences: [] }, persisted = transactProject(state, `Save Test case ${prepared.name}`, (project) => ({ ...project, collections: { ...project.collections, fixtures: project.collections.fixtures.map((candidate) => candidate.id === entity.id ? prepared : candidate) } })); persist(persisted); try {
         await durableProjectRuntime.settled();
-        await durableProjectRuntime.ensureProject(prepared.id.startsWith("project:") ? prepared.id : state.project.id);
+        if (saveStatus.kind === "failed" || durableProjectRuntime.failedSave()) {
+            result.textContent = "Save failed. Evaluation did not run; exact editable input is preserved.";
+            repairRun.hidden = false;
+            repairRun.focus();
+            return;
+        }
+        await durableProjectRuntime.ensureProject(state.project.id);
         await durableProjectRuntime.settled();
         const loaded = await durableProjectRuntime.repository.loadProject(state.project.id);
         state = structuredClone(loaded.state);
@@ -615,8 +780,8 @@ function renderGuidedTestCaseEditor(content, entity) {
         const saved = state.project.collections.fixtures.find(({ id }) => id === entity.id);
         let actualResult;
         if (saved.testType === "page-context") {
-            const evaluated = evaluatePageGroupFixture(state, saved.id);
-            actualResult = { applicablePageGroups: evaluated.includedStack, outcome: evaluated.validation.issues.length ? "Invalid" : "Valid", issues: evaluated.validation.issues.map(({ path, code }) => ({ path, code })), evaluatorRevision: `page:${canonicalRevision}` };
+            const evaluated = evaluatePageGroupFixture(state, saved.id), included = new Set(evaluated.includedStack);
+            actualResult = { applicablePageGroups: state.project.collections.pageGroups.filter(({ name }) => included.has(name)).map(({ id }) => id), outcome: evaluated.validation.issues.length ? "Invalid" : "Valid", issues: evaluated.validation.issues.map(({ path, code }) => ({ path, code })), evaluatorRevision: guidedPageEvaluatorRevision(state, saved.pageId) };
         }
         else {
             const compiled = compileSpecificationProject({ ...createCanonicalProjectEnvelope(state.project, state.draft?.id ?? "published"), revision: canonicalRevision });
@@ -625,21 +790,23 @@ function renderGuidedTestCaseEditor(content, entity) {
             const execution = runProductionFixture(compiled.plan, saved), actual = execution.steps.at(-1)?.actual;
             if (!actual)
                 throw new Error(execution.blockers?.join(" ") ?? "Production evaluation produced no result.");
-            actualResult = { ...(actual.winner ? { winner: actual.winner.assignmentId } : {}), outcome: actual.issueDetails.length ? "Invalid" : "Valid", issues: actual.issueDetails.map(({ path, code }) => ({ path, code })), evaluatorRevision: compiled.plan.evaluatorContentIdentity, resultIdentity: actual.resultIdentity };
+            actualResult = { winner: actual.winner?.assignmentId ?? "no-assignment", outcome: actual.issueDetails.length ? "Invalid" : "Valid", issues: actual.issueDetails.map(({ path, code }) => ({ path, code })), evaluatorRevision: compiled.plan.evaluatorContentIdentity, resultIdentity: actual.resultIdentity };
         }
         const compared = compareGuidedTestCase({ ...saved, actualResult, evaluatorRevision: actualResult.evaluatorRevision });
         persist(transactProject(state, `Record Test case result ${saved.name}`, (project) => ({ ...project, collections: { ...project.collections, fixtures: project.collections.fixtures.map((candidate) => candidate.id === entity.id ? compared : candidate) } })));
         await durableProjectRuntime.settled();
-        result.textContent = `${compared.status} · observed ${actualResult.outcome} · ${compared.differences.map(({ field }) => field).join(", ") || "actual and reviewed expectations retained"}`;
+        result.textContent = `${compared.status} · Observed outcome: ${actualResult.outcome} · Test comparison: ${compared.status} · ${compared.differences.map(({ field }) => field).join(", ") || "actual and reviewed expectations retained"}`;
     }
     catch (error) {
         const message = error instanceof Error ? error.message : String(error);
         document.body.dataset.guidedTestError = message;
-        result.textContent = `Blocked: ${message}`;
+        result.textContent = `Blocked: ${message}. Saved input and prior evidence are retained.`;
+        repairRun.hidden = false;
+        repairRun.focus();
     } });
     useActual.addEventListener("click", () => { if (!state || !testCase.actualResult)
-        return; const actual = testCase.actualResult, reviewedExpectations = { ...(actual.winner ? { winner: actual.winner } : {}), ...(actual.outcome ? { outcome: actual.outcome } : {}), ...(actual.issues ? { issues: actual.issues } : {}) }, compared = compareGuidedTestCase({ ...testCase, reviewedExpectations }); persist(transactProject(state, `Review actual Test case result ${testCase.name}`, (project) => ({ ...project, collections: { ...project.collections, fixtures: project.collections.fixtures.map((candidate) => candidate.id === entity.id ? compared : candidate) } }))); });
-    form.append(run, useActual, result);
+        return; const actual = testCase.actualResult, reviewedExpectations = { ...(actual.winner ? { winner: actual.winner } : {}), ...(actual.applicablePageGroups ? { applicablePageGroups: actual.applicablePageGroups } : {}), ...(actual.outcome ? { outcome: actual.outcome } : {}), ...(actual.issues ? { issues: actual.issues } : {}) }, compared = compareGuidedTestCase({ ...testCase, reviewedExpectations, evaluatorRevision: actual.evaluatorRevision }); persist(transactProject(state, `Review actual Test case result ${testCase.name}`, (project) => ({ ...project, collections: { ...project.collections, fixtures: project.collections.fixtures.map((candidate) => candidate.id === entity.id ? compared : candidate) } }))); });
+    form.append(actualEvidence, differences, run, useActual, repairRun, result);
     section.append(heading, definition, steps, form);
     content.append(section);
 }

@@ -1086,7 +1086,9 @@
     "unit": [
       "test/data-layer-guided-test-cases-test.mjs"
     ],
-    "property": [],
+    "property": [
+      "test/data-layer-guided-test-cases-property-test.mjs"
+    ],
     "features": [
       "features/specification-studio-guided-test-cases.feature",
       "features/specification-studio-guided-test-cases-runtime.feature"

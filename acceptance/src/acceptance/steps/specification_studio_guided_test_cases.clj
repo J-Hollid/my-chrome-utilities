@@ -9,14 +9,16 @@
   {"an operator is authoring a Specification Project with Pages, Events, Assignments, and effective schemas" :model
    "the built extension is running with production Specification Studio, durable project storage, and project evaluation" :runtime})
 
-(defonce model-verified? (atom false))
+(defonce model-observation (atom nil))
 (defonce browser-observation (atom nil))
 
 (defn- verify-model! []
-  (support/cached-command-verification!
-   model-verified?
-   "Guided Test case model verification failed. "
-   "node" "test/data-layer-guided-test-cases-test.mjs"))
+  (support/cached-command-observation!
+   model-observation
+   {:command ["node" "test/data-layer-guided-test-cases-test.mjs"]
+    :observation-key :guidedTestCaseModel
+    :runtime-error "Guided Test case model verification failed."
+    :missing-error "Guided Test case model evidence is missing."}))
 
 (defn- verify-browser! []
   (support/cached-command-observation!
@@ -47,13 +49,27 @@
    :guided-test-cases example-values example-values example
    "Guided Test case example was outside the approved contract."))
 
-(defn- assert-browser! [evidence]
-  (support/assert! (every? true? (vals evidence))
-                   "Installed Guided Test case evidence is incomplete."
-                   evidence))
+(defn- scenario-evidence-key [mode world]
+  (keyword (format "%s%03d"
+                   (name mode)
+                   (inc (:acceptance/scenario-index world)))))
 
 (def handlers
-  (support/verified-feature-mode-handlers
+  (support/feature-mode-handlers
    feature-files entry-modes :specification-studio-guided-test-cases-mode
-   verify-model! validate-example!
-   verify-browser! assert-browser!))
+   (fn [world example _captures {:keys [text]}]
+     (let [state-key :specification-studio-guided-test-cases-mode
+           mode (or (entry-modes text) (get world state-key))
+           evidence (case mode
+                      :model (verify-model!)
+                      :runtime (verify-browser!)
+                      nil)
+           evidence-key (when mode (scenario-evidence-key mode world))]
+       (support/assert! mode
+                        "Scenario did not establish its Guided Test case acceptance mode."
+                        {:step text})
+       (validate-example! mode example)
+       (support/assert! (true? (get evidence evidence-key))
+                        "Scenario-specific Guided Test case evidence is missing."
+                        {:mode mode :scenario-evidence evidence-key :evidence evidence})
+       (assoc world state-key mode)))))

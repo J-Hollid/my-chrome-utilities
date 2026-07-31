@@ -59,6 +59,10 @@ export function specificationPreflight(envelope:CanonicalProjectEnvelope):{conte
     warnings.push(guidedFinding??{code:fixture.status==="blocked"?"fixture-incomplete":"fixture-failed",message:fixture.blockers?.join(" ")??`Fixture ${fixture.fixtureId} does not match production evaluation. Repair its expected result.`,entityId:fixture.fixtureId,field:`collections.fixtures/${fixture.fixtureId}/${fixture.status==="blocked"?"observations":"expected"}`});
     if(fixture.steps.some(({differences})=>differences.some((difference)=>difference.startsWith("resultIdentity:"))))warnings.push({code:"stale-coverage",message:`Fixture ${fixture.fixtureId} evidence was captured against an older schema. Rerun the Fixture.`,entityId:fixture.fixtureId,field:`collections.fixtures/${fixture.fixtureId}/evaluationResultIdentity`});
   }
+  for(const entity of envelope.project.collections.fixtures){
+    if(!entity.testType||entity.status==="Matched"||warnings.some(({entityId,code})=>entityId===entity.id&&code.startsWith("test-case-")))continue;
+    const finding=guidedTestCaseFinding(entity as GuidedTestCase);if(finding)warnings.push(finding);
+  }
   const proving=envelope.project.collections.fixtures.map((fixture,index)=>({fixture,result:fixtures[index]!})).filter(({result})=>result.status==="pass"),coverage=buildEffectiveRequirementCoverage(compiled.plan,proving,{offset:0,limit:Number.MAX_SAFE_INTEGER});
   if(!proving.length)warnings.push({code:"zero-proving-evidence",message:"No current assertion-bearing passing Fixture. Add or repair optional evidence.",entityId:envelope.project.id,field:"collections.fixtures"});
   if(!coverage.totalRows)warnings.push({code:"no-coverage",message:"No Coverage. Add an Assignment, Flow step, or Fixture to create optional evidence cells.",entityId:envelope.project.id,field:"collections.assignments"});
