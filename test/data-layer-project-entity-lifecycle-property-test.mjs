@@ -59,8 +59,8 @@ for(let example=0;example<120;example+=1){
 }
 
 const referenced=createSpecificationProject({name:"References",site:"refs.example",id:(kind)=>`${kind}:refs`});
-assert.throws(()=>createEntity(referenced,"pages","Page",()=>"page:new"),/Observed event name is required/);
-assert.throws(()=>createProjectCollectionEntity(referenced,"pages","Page",()=>"page:new",{pageGroupIds:["missing-group"]}),/unknown project reference/);
+assert.throws(()=>createEntity(referenced,"pages","Page",()=>"page:new"),/Page-view event name is required/);
+assert.deepEqual(createProjectCollectionEntity(referenced,"pages","Page",()=>"page:new",{eventName:"pageview",pageGroupIds:["missing-group"]}).project.collections.pages[0].pageGroupIds,[],"Page creation ignores membership input in favor of the workspace picker");
 assert.throws(()=>createProjectCollectionEntity(referenced,"fixtures","Fixture",()=>"fixture:new",{eventId:"missing-event"}),/does not exist/);
 assert.throws(()=>createProjectCollectionEntity(referenced,"fixtures","Test case",()=>"fixture:new",{testType:"journey"}),/unsupported value/);
 

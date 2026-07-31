@@ -680,6 +680,13 @@
       "src/data-layer-specification-project.ts"
     ]
   },
+  "src/data-layer-page-authoring.ts": {
+    "module": "schemas",
+    "layer": "application",
+    "contracts": [
+      "src/data-layer-specification-project.ts"
+    ]
+  },
   "src/data-layer-layered-schema-ui.ts": {
     "module": "schemas",
     "layer": "browser",

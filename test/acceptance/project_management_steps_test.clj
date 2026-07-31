@@ -12,7 +12,7 @@
   (into {:installedBoundary true}
         (concat
          (map (fn [index] [(keyword (format "context%03d" index)) true])
-              (range 1 20))
+              (range 1 23))
          (map (fn [index] [(keyword (format "portability%03d" index)) true])
               (range 1 6)))))
 

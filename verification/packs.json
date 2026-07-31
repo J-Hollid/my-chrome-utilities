@@ -3,12 +3,14 @@
     "id": "project_management",
     "source": [
       "src/data-layer-project-entity-lifecycle.ts",
+      "src/data-layer-page-authoring.ts",
       "src/data-layer-project-library.ts",
       "src/data-layer-project-library-ui.ts"
     ],
     "dependencies": [],
     "unit": [
       "test/data-layer-project-entity-lifecycle-test.mjs",
+      "test/data-layer-page-authoring-test.mjs",
       "test/data-layer-project-library-test.mjs"
     ],
     "property": [

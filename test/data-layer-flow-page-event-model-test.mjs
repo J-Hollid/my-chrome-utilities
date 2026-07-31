@@ -33,7 +33,7 @@ assert.equal("role" in cart,false);
 assert.equal("role" in buttonClick,false);
 assert.deepEqual(
   projectCollectionCreationFields.pages.map(({label})=>label),
-  ["Observed event name","Path matcher","Page Groups"],
+  ["Description","Page-view event name","Exact URL path"],
 );
 
 const add=(kind,entity)=>{state=addProjectEntity(state,kind,entity,id);return state.project.collections[kind].at(-1);};
