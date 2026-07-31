@@ -2,6 +2,7 @@ import { canonicalConceptIndex, canonicalConstraints } from "./data-layer-canoni
 import { compileLayeredSchema } from "./data-layer-layered-schema.js";
 import { orderedPageGroupIds } from "./data-layer-page-group-membership.js";
 import { transactProject } from "./data-layer-specification-project.js";
+import { selectiveProfileContribution } from "./data-layer-selective-profile-inheritance.js";
 import { applyLayerConstraintStructures, structureDeletesPath } from "./flow-graph/page-instance-structure.js";
 export function projectCanonicalConcepts(state) {
     const entities = [...Object.values(state.project.collections).flat(), ...Object.values(state.project.documentationFlowGraphs ?? {}).flatMap((graph) => [...(graph.pageFrames ?? []), ...(graph.occurrences ?? [])])], documents = entities.flatMap(({ canonicalSchema }) => canonicalSchema ? [canonicalSchema] : []), constraintConcepts = entities.flatMap((entity) => [...(entity.schemaConstraints ?? []), ...(entity.localSchemaContributions ?? [])].map(({ concept }) => concept).filter((value) => typeof value === "string"));
@@ -15,6 +16,7 @@ const contributionFor = (entity, scope) => {
 };
 const referencedId = (entity, key) => typeof entity[key] === "string" ? String(entity[key]) : undefined;
 const referencedProfileIds = (entity) => entity ? [...new Set([...(referencedId(entity, "profileId") ? [referencedId(entity, "profileId")] : []), ...(entity.profileIds ?? []).filter((value) => typeof value === "string" && Boolean(value))])] : [];
+const profileInheritanceRecipes = (entity, profileId) => (entity?.profileInheritanceRecipes ?? []).filter((recipe) => recipe.profileId === profileId);
 const referencedProfileId = (state, entity) => {
     const direct = referencedId(entity, "profileId") ?? (entity.profileIds?.length === 1 ? String(entity.profileIds[0]) : undefined);
     if (direct)
@@ -74,7 +76,8 @@ export function layeredContributorsForPath(state, path, observation) {
                 addRoute(profileId, [group.name, ...downstreamNames]);
     const emitted = new Set(), profileContributor = (profileId) => { if (emitted.has(profileId))
         return; const profile = state.project.collections.profiles.find(({ id }) => id === profileId), inheritanceRoutes = routes.get(profileId); if (!profile || !inheritanceRoutes?.length)
-        return; emitted.add(profileId); return { ...contributionFor(profile, "Shared Profile"), inheritanceRoutes }; }, contributors = [];
+        return; emitted.add(profileId); const base = contributionFor(profile, "Shared Profile"), recipeTargets = [...(directProfileIds.includes(profileId) ? [page, state.project.collections.events.find(({ id }) => id === path.eventId)] : []), ...groupRecords.filter(({ active, group }) => active && referencedProfileIds(group).includes(profileId)).map(({ group }) => group)].filter((target) => Boolean(target)), recipes = recipeTargets.flatMap((target) => profileInheritanceRecipes(target, profileId)), canonical = profile.canonicalSchema; if (!recipes.length || !canonical)
+        return { ...base, inheritanceRoutes }; const filtered = recipes.map((recipe) => selectiveProfileContribution(canonical, recipe)), constraints = filtered.flatMap(({ constraints }) => constraints).filter((constraint, index, all) => all.findIndex((candidate) => JSON.stringify(candidate) === JSON.stringify(constraint)) === index), inheritanceConflicts = filtered.flatMap(({ conflicts }) => conflicts); return { ...base, constraints, inheritanceRoutes, ...(inheritanceConflicts.length ? { inheritanceConflicts } : {}) }; }, contributors = [];
     for (const profileId of directProfileIds) {
         const profile = profileContributor(profileId);
         if (profile)

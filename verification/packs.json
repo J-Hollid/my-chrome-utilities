@@ -998,6 +998,30 @@
     ]
   },
   {
+    "id": "selective_profile_inheritance",
+    "source": [
+      "src/data-layer-selective-profile-inheritance.ts",
+      "src/data-layer-selective-profile-inheritance-ui.ts"
+    ],
+    "dependencies": [
+      "layered_schema"
+    ],
+    "unit": [
+      "test/data-layer-selective-profile-inheritance-test.mjs"
+    ],
+    "property": [],
+    "features": [
+      "features/specification-studio-selective-profile-inheritance.feature",
+      "features/specification-studio-selective-profile-inheritance-runtime.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/selective_profile_inheritance.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/selective-profile-inheritance.mjs"
+    ]
+  },
+  {
     "id": "schema_relationship_tree",
     "source": [
       "src/schema-relationship-tree.ts"

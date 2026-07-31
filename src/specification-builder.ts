@@ -61,6 +61,8 @@ import {createProjectCollectionEntity,hasSavedSchemaAdoptionActions,inspectProje
 import {declareStudioChoice,installStudioChoiceControls} from "./data-layer-studio-choice-controls.js";
 import {compareGuidedTestCase,guidedArrayMove,guidedInputControls,guidedInputWithValue,guidedTestCaseTypeOptions,validateGuidedInput,type GuidedInputControl,type GuidedTestCase,type GuidedTestCaseResult,type GuidedTestCaseType} from "./data-layer-guided-test-cases.js";
 import {installStudioAnalystGuidance,studioAnalystGuidanceIsActive} from "./specification-studio-technical-analyst-guidance.js";
+import {createProfileInheritanceRecipe,type ProfileInheritanceRecipe} from "./data-layer-selective-profile-inheritance.js";
+import {mountSelectiveProfileInheritance} from "./data-layer-selective-profile-inheritance-ui.js";
 
 const STORAGE_KEY=CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY,START_PATH_KEY="my-chrome-utilities.specification-project-start.v1",routeParameters=new URLSearchParams(location.search),startupProjectId=routeParameters.get("project")??undefined,startupKind=routeParameters.get("kind")??undefined,startupEntityId=routeParameters.get("entity")??undefined,startupRoute=startupKind?durableProjectRouteForWorkspace(startupKind,startupEntityId):undefined;
 installStudioChoiceControls(document.body);
@@ -180,9 +182,9 @@ function entitySearchText(value:unknown):string{return JSON.stringify(value).toL
 function entitiesForKind(kind:ProjectEntityKind):ProjectEntity[]{if(!state)return[];return kind==="assignments"?searchProjectAssignments(state.project,"").rows:state.project.collections[kind] as ProjectEntity[];}
 type EditorField={key:string;label:string;type?:"text"|"number"|"textarea"|"checkbox"|"json"|"condition"|"flow-role";collection?:ProjectEntityKind;multiple?:boolean};
 const editorFields:Record<ProjectEntityKind,EditorField[]>={
-  profiles:[],pages:[{key:"eventName",label:"Observed context event name"},{key:"environment",label:"Environment"},{key:"host",label:"Host matcher"},{key:"pathname",label:"Path matcher"},{key:"query",label:"Query matcher"},{key:"hash",label:"Hash matcher"},{key:"spa",label:"SPA route",type:"checkbox"},{key:"expectedEventIds",label:"Expected interaction Events",collection:"events",multiple:true},{key:"profileIds",label:"Requirement profiles",collection:"profiles",multiple:true},{key:"applicabilitySetId",label:"Applicability Set",collection:"applicabilitySets"}],
-  pageGroups:[{key:"environment",label:"Environment"},{key:"matcher",label:"Membership matcher"},{key:"profileIds",label:"Requirement profiles",collection:"profiles",multiple:true},{key:"applicabilitySetId",label:"Applicability Set",collection:"applicabilitySets"}],
-  events:[{key:"sourceId",label:"Source"},{key:"eventName",label:"Canonical event name"},{key:"trigger",label:"Default documentary trigger"},{key:"target",label:"Validation target"},{key:"occurrencePolicy",label:"Occurrence policy"},{key:"profileIds",label:"Requirement profiles",collection:"profiles",multiple:true},{key:"applicabilitySetId",label:"Applicability Set",collection:"applicabilitySets"}],
+  profiles:[],pages:[{key:"eventName",label:"Observed context event name"},{key:"environment",label:"Environment"},{key:"host",label:"Host matcher"},{key:"pathname",label:"Path matcher"},{key:"query",label:"Query matcher"},{key:"hash",label:"Hash matcher"},{key:"spa",label:"SPA route",type:"checkbox"},{key:"expectedEventIds",label:"Expected interaction Events",collection:"events",multiple:true},{key:"profileIds",label:"Shared Profile sources",collection:"profiles",multiple:true},{key:"applicabilitySetId",label:"Applicability Set",collection:"applicabilitySets"}],
+  pageGroups:[{key:"environment",label:"Environment"},{key:"matcher",label:"Membership matcher"},{key:"profileIds",label:"Shared Profile sources",collection:"profiles",multiple:true},{key:"applicabilitySetId",label:"Applicability Set",collection:"applicabilitySets"}],
+  events:[{key:"sourceId",label:"Source"},{key:"eventName",label:"Canonical event name"},{key:"trigger",label:"Default documentary trigger"},{key:"target",label:"Validation target"},{key:"occurrencePolicy",label:"Occurrence policy"},{key:"profileIds",label:"Shared Profile sources",collection:"profiles",multiple:true},{key:"applicabilitySetId",label:"Applicability Set",collection:"applicabilitySets"}],
   applicabilitySets:[{key:"priority",label:"Priority",type:"number"},{key:"fallback",label:"Fallback",type:"checkbox"},{key:"condition",label:"Nested All / Any / Not condition",type:"condition"}],
   flows:[{key:"entryCondition",label:"Entry condition",type:"condition"},{key:"exitCondition",label:"Exit condition",type:"condition"},{key:"timeoutMinutes",label:"Timeout minutes",type:"number"},{key:"correlationField",label:"Correlation field"},{key:"profileIds",label:"Requirement profiles",collection:"profiles",multiple:true},{key:"applicabilitySetId",label:"Applicability Set",collection:"applicabilitySets"}],
   fixtures:[],
@@ -272,6 +274,13 @@ function renderGuidedTestCaseEditor(content:HTMLElement,entity:ProjectEntity):vo
   useActual.addEventListener("click",()=>{if(!state||!testCase.actualResult)return;const actual=testCase.actualResult,reviewedExpectations={...(actual.winner?{winner:actual.winner}:{}),...(actual.applicablePageGroups?{applicablePageGroups:actual.applicablePageGroups}:{}),...(actual.outcome?{outcome:actual.outcome}:{}),...(actual.issues?{issues:actual.issues}:{})},compared=compareGuidedTestCase({...testCase,reviewedExpectations,evaluatorRevision:actual.evaluatorRevision});persist(transactProject(state!,`Review actual Test case result ${testCase.name}`,(project)=>({...project,collections:{...project.collections,fixtures:project.collections.fixtures.map((candidate)=>candidate.id===entity.id?compared:candidate)}})));});
   form.append(actualEvidence,differences,run,useActual,repairRun,result);section.append(heading,definition,steps,form);content.append(section);
 }
+function renderProfileInheritanceCards(host:HTMLElement,entity:ProjectEntity):void{
+  if(!state||!(selectedKind==="pages"||selectedKind==="pageGroups"||selectedKind==="events"))return;const profileIds=[...new Set([...((entity.profileIds as string[]|undefined)??[]),...(typeof entity.profileId==="string"?[entity.profileId]:[])])],stored=(entity.profileInheritanceRecipes as ProfileInheritanceRecipe[]|undefined)??[];
+  for(const profileId of profileIds){const profile=state.project.collections.profiles.find(({id:profileIdentity})=>profileIdentity===profileId),canonical=profile?.canonicalSchema as CanonicalSchemaDocument|undefined;if(!profile||!canonical)continue;const recipe=stored.find((candidate)=>candidate.profileId===profileId)??createProfileInheritanceRecipe({id:id("inheritance-recipe"),profileId,targetId:entity.id,startingPoint:"everything",sourceRevision:canonical.revision}),copySources=(['pages','pageGroups','events'] as const).flatMap((kind)=>state!.project.collections[kind].flatMap((candidate)=>candidate.id===entity.id?[]:((candidate.profileInheritanceRecipes as ProfileInheritanceRecipe[]|undefined)??[]).filter((candidateRecipe)=>candidateRecipe.profileId===profileId).map((candidateRecipe)=>({label:`${candidate.name} (${labels[kind]})`,recipe:candidateRecipe}))));
+    mountSelectiveProfileInheritance({host,profile:{id:profile.id,name:profile.name,canonicalSchema:canonical},target:{id:entity.id,name:entity.name},recipe,copySources,id,onApply:(applied)=>{if(!state)return;const next=transactProject(state,`Apply ${profile.name} inheritance to ${entity.name}`,(project)=>({...project,collections:{...project.collections,[selectedKind]:(project.collections[selectedKind] as ProjectEntity[]).map((candidate)=>candidate.id!==entity.id?candidate:{...candidate,profileInheritanceRecipes:[...((candidate.profileInheritanceRecipes as ProfileInheritanceRecipe[]|undefined)??[]).filter((candidateRecipe)=>candidateRecipe.profileId!==profileId),applied],compiledTargetsStale:true,validationStale:true,testCasesStale:true,documentationStale:true,exportStale:true})}} as typeof project));persist(next);queueMicrotask(()=>document.querySelector<HTMLElement>(`[data-profile-inheritance-card='${CSS.escape(profileId)}']`)?.focus({preventScroll:true}));}});
+  }
+}
+
 function renderSelectedEntityEditor(content:HTMLElement,entity:ProjectEntity):void {
   if(!state) return;
   if(selectedKind==="fixtures"){renderGuidedTestCaseEditor(content,entity);return;}
@@ -330,6 +339,14 @@ function renderSelectedEntityEditor(content:HTMLElement,entity:ProjectEntity):vo
       }
       const laneIds=selectedKind==="flows"?update.pageGroupIds as string[]:undefined;
       if(laneIds) delete update.pageGroupIds;
+      if(selectedKind==="pages"||selectedKind==="pageGroups"||selectedKind==="events") {
+        const selectedProfiles=(update.profileIds as string[]|undefined)??[],existing=(entity.profileInheritanceRecipes as ProfileInheritanceRecipe[]|undefined)??[];
+        update.profileInheritanceRecipes=selectedProfiles.flatMap((profileId)=>{
+          const retained=existing.find((recipe)=>recipe.profileId===profileId);if(retained)return[retained];
+          const profile=state!.project.collections.profiles.find(({id:profileIdentity})=>profileIdentity===profileId),canonical=profile?.canonicalSchema as CanonicalSchemaDocument|undefined;
+          return[createProfileInheritanceRecipe({id:id("inheritance-recipe"),profileId,targetId:entity.id,startingPoint:"everything",sourceRevision:canonical?.revision??Number(profile?.revision??1)})];
+        });
+      }
       const edited=transactProject(
         state,
         `Edit ${entity.name}`,
@@ -369,6 +386,7 @@ function renderSelectedEntityEditor(content:HTMLElement,entity:ProjectEntity):vo
     ));
   });
   section.append(heading,form);
+  renderProfileInheritanceCards(section,entity);
   content.append(section);
   if(selectedKind==="profiles") renderCanonicalEntityEditor(content,selectedKind,entity);
 }

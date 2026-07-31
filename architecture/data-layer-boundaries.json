@@ -650,7 +650,24 @@
       "src/data-layer-canonical-schema.ts",
       "src/data-layer-layered-schema.ts",
       "src/data-layer-page-group-membership.ts",
+      "src/data-layer-selective-profile-inheritance.ts",
       "src/data-layer-specification-project.ts"
+    ]
+  },
+  "src/data-layer-selective-profile-inheritance.ts": {
+    "module": "schemas",
+    "layer": "application",
+    "contracts": [
+      "src/data-layer-canonical-schema.ts",
+      "src/data-layer-layered-schema.ts"
+    ]
+  },
+  "src/data-layer-selective-profile-inheritance-ui.ts": {
+    "module": "schemas",
+    "layer": "browser",
+    "contracts": [
+      "src/data-layer-canonical-schema.ts",
+      "src/data-layer-selective-profile-inheritance.ts"
     ]
   },
   "src/data-layer-page-group-structural-authoring.ts": {
