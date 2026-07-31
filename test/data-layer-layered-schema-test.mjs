@@ -189,6 +189,21 @@ for(const [staticConstraint,conditionalOutcome,retained] of [
   assert.equal(resolved.status,"blocked","a matching conditional peer outcome cannot override an incompatible static peer facet");
   for(const [field,value] of Object.entries(retained))assert.deepEqual(resolved.properties["/value"][field],value,"blocked resolution preserves the static peer value and provenance");
 }
+for(const [staticConstraint,conditionalOutcome,expected] of [
+  [{allowedValues:["a","b"]},{kind:"allowed-values",allowedValues:["b","c"]},{allowedValues:["b"]}],
+  [{expectedValue:"b"},{kind:"allowed-values",allowedValues:["b","c"]},{expectedValue:"b",expectedContributor:"a"}],
+  [{minimum:10},{kind:"range",minimum:5},{minimum:10}],
+  [{maximum:10},{kind:"range",maximum:20},{maximum:10}],
+  [{minItems:4},{kind:"cardinality",minItems:2},{minItems:4}],
+  [{patterns:["^a"]},{kind:"pattern",pattern:"b$"},{patterns:["^a","b$"]}],
+]){
+  const compiled=compileLayeredSchema([
+    peer("a",staticConstraint),
+    peer("b",{rules:[unconditionalRule("rule:compatible-conditional",{...conditionalOutcome,condition:alwaysCondition})]}),
+  ],{eventId:"pageview",eventRole:"context"}),resolved=resolveConditionalLayeredSchema(compiled,{});
+  assert.equal(resolved.status,"ready","compatible matching peer conditions remain ready");
+  for(const [field,value] of Object.entries(expected))assert.deepEqual(resolved.properties["/value"][field],value,"resolved peers recompose and conserve every compatible static facet");
+}
 const operatorRule=(id,operator,expectedValue)=>unconditionalRule(id,{kind:"value",operator,expectedValue});
 for(const rules of [
   [operatorRule("equals:a","Equals","a"),operatorRule("equals:b","Equals","b")],
@@ -201,9 +216,22 @@ for(const rules of [
   for(const order of [contributors,[...contributors].reverse()])assert.equal(compileLayeredSchema(order,{eventId:"pageview",eventRole:"context"}).status,"blocked","incompatible unconditional Value operators block without peer precedence");
 }
 for(const rules of [
+  [operatorRule("equals","Equals","a"),operatorRule("not-equals","Does not equal","a")],
+  [operatorRule("prefix","Starts with","a"),operatorRule("not-prefix","Does not start with","a")],
+  [operatorRule("suffix","Ends with","a"),operatorRule("not-suffix","Does not end with","a")],
+  [operatorRule("includes","Includes","a"),operatorRule("not-includes","Does not include","a")],
+]){
+  const contributors=[peer("a",{rules:[rules[0]]}),peer("b",{rules:[rules[1]]})];
+  for(const order of [contributors,[...contributors].reverse()])assert.equal(compileLayeredSchema(order,{eventId:"pageview",eventRole:"context"}).status,"blocked","a positive Value constraint and its negation are unsatisfiable peers");
+}
+for(const rules of [
   [operatorRule("prefix:a","Starts with","order"),operatorRule("prefix:b","Starts with","order-")],
   [operatorRule("suffix:a","Ends with","com"),operatorRule("suffix:b","Ends with",".com")],
   [operatorRule("numeric:min","At least",5),operatorRule("numeric:max","Less than",10)],
+  [operatorRule("equals","Equals","a"),operatorRule("not-equals","Does not equal","b")],
+  [operatorRule("prefix","Starts with","a"),operatorRule("not-prefix","Does not start with","ab")],
+  [operatorRule("suffix","Ends with","a"),operatorRule("not-suffix","Does not end with","ba")],
+  [operatorRule("includes","Includes","a"),operatorRule("not-includes","Does not include","b")],
 ]){
   assert.equal(compileLayeredSchema([peer("a",{rules:[rules[0]]}),peer("b",{rules:[rules[1]]})],{eventId:"pageview",eventRole:"context"}).status,"ready","compatible Value operator conjunctions remain ready");
 }

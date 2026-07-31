@@ -73,6 +73,18 @@ const peerResolution=(property:EffectiveProperty,payload:Record<string,unknown>,
   for(let left=0;left<constraints.length;left+=1)for(let right=left+1;right<constraints.length;right+=1)incompatible||=peerMismatch(constraints[left]!,constraints[right]!);
   return{constraints,...(incompatible?{conflict:{path:property.path,message:"conditional Shared Profile peers conflict; add an explicit contextual resolution",contributors:contributions.map(({contributorName})=>contributorName)}}:{})};
 };
+const composeResolvedPeers=(property:EffectiveProperty,constraints:readonly LayerConstraint[]):EffectiveProperty=>{
+  const result=clone(property),first=<K extends keyof LayerConstraint>(key:K):LayerConstraint[K]|undefined=>constraints.find((constraint)=>constraint[key]!==undefined)?.[key],facetKeys:(keyof LayerConstraint)[]=["concept","type","itemType","itemSchema","allowedValues","allowedValueIds","allowedValueProvenance","presence","patterns","minimum","maximum","minItems","maxItems","expectedValue","enforcement","target","condition","displayText","documentation","comments","examples","definitionId","overrideReferences"];
+  for(const key of facetKeys)delete result[key];delete result.expectedContributor;delete result.expectedContributors;
+  for(const key of ["concept","type","itemType","itemSchema","allowedValueIds","allowedValueProvenance","target","displayText","documentation","comments","examples","definitionId"] as const){const value=first(key);if(value!==undefined)(result[key] as unknown)=clone(value);}
+  const presences=constraints.flatMap(({presence})=>presence?[presence]:[]);if(presences.includes("required"))result.presence="required";else if(presences.includes("forbidden"))result.presence="forbidden";else if(presences.includes("optional"))result.presence="optional";else if(presences.includes("permitted"))result.presence="permitted";
+  const expected=first("expectedValue"),allowed=constraints.flatMap(({allowedValues})=>allowedValues?.length?[allowedValues]:[]);if(expected!==undefined){result.expectedValue=clone(expected);const owners=(property.peerContributions??[]).flatMap((contribution,index)=>same(constraints[index]?.expectedValue,expected)?[contribution.contributorName]:[]).sort();if(owners.length){result.expectedContributors=owners;result.expectedContributor=owners.join(" + ");}}else if(allowed.length){const intersection=allowed.slice(1).reduce<unknown[]>((values,candidates)=>values.filter((value)=>candidates.some((candidate)=>same(value,candidate))),[...allowed[0]!]);result.allowedValues=clone(intersection.sort((left,right)=>JSON.stringify(left).localeCompare(JSON.stringify(right))));}
+  const patterns=[...new Set(constraints.flatMap(({patterns})=>patterns??[]))].sort();if(patterns.length)result.patterns=patterns;
+  const minimums=constraints.flatMap(({minimum})=>minimum===undefined?[]:[minimum]),maximums=constraints.flatMap(({maximum})=>maximum===undefined?[]:[maximum]),minimumItems=constraints.flatMap(({minItems})=>minItems===undefined?[]:[minItems]),maximumItems=constraints.flatMap(({maxItems})=>maxItems===undefined?[]:[maxItems]);if(minimums.length)result.minimum=Math.max(...minimums);if(maximums.length)result.maximum=Math.min(...maximums);if(minimumItems.length)result.minItems=Math.max(...minimumItems);if(maximumItems.length)result.maxItems=Math.min(...maximumItems);
+  const enforcement=constraints.some((constraint)=>constraint.enforcement==="invariant")?"invariant":first("enforcement");if(enforcement)result.enforcement=enforcement;
+  const references=[...new Set(constraints.flatMap(({overrideReferences})=>overrideReferences??[]))].sort();if(references.length)result.overrideReferences=references;
+  return result;
+};
 
 function resolveProperty(property:EffectiveProperty,payload:Record<string,unknown>,paths:ReadonlyMap<string,string>):{property:EffectiveProperty;conflicts:LayerConflict[]}{
   const result=clone(property),matches=conditional(property,payload,paths),conflicts:LayerConflict[]=[];
@@ -95,13 +107,7 @@ function resolveProperty(property:EffectiveProperty,payload:Record<string,unknow
   const cardinality=matches.filter(({kind})=>kind==="cardinality"),minimumItems=cardinality.map(({minItems})=>minItems).filter((value):value is number=>typeof value==="number"),maximumItems=cardinality.map(({maxItems})=>maxItems).filter((value):value is number=>typeof value==="number");
   if(minimumItems.length)result.minItems=Math.max(...minimumItems);if(maximumItems.length)result.maxItems=Math.min(...maximumItems);
   if(result.minItems!==undefined&&result.maxItems!==undefined&&result.minItems>result.maxItems)conflicts.push(conflictFor(property.path,"cardinality",cardinality));
-  if(peers){
-    const presences=peers.constraints.flatMap(({presence})=>presence?[presence]:[]);
-    if(presences.includes("required"))result.presence="required";else if(presences.includes("forbidden"))result.presence="forbidden";else if(presences.includes("optional"))result.presence="optional";else if(presences.includes("permitted"))result.presence="permitted";else delete result.presence;
-    delete result.condition;
-    if(result.expectedValue!==undefined){const owners=(property.peerContributions??[]).flatMap((contribution,index)=>same(peers.constraints[index]?.expectedValue,result.expectedValue)?[contribution.contributorName]:[]).sort();if(owners.length){result.expectedContributors=owners;result.expectedContributor=owners.join(" + ");}}
-  }
-  return{property:result,conflicts};
+  return{property:peers?composeResolvedPeers(property,peers.constraints):result,conflicts};
 }
 
 export function resolveConditionalLayeredSchema(compiled:CompiledLayeredSchema,payload:Record<string,unknown>):CompiledLayeredSchema {

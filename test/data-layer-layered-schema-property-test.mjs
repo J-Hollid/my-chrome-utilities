@@ -177,12 +177,35 @@ for(let iteration=0;iteration<120;iteration+=1){
   assert.equal(staticConditionalResolved.status,"blocked","generated matching conditional outcomes cannot replace static peer values");
   assert.equal(staticConditionalResolved.properties["/generated"].expectedValue,`static-${iteration}`);
   assert.equal(staticConditionalResolved.properties["/generated"].expectedContributor,`a ${iteration}`,"generated blocked resolution retains static ownership");
+  const recomposedCases=[
+    [{allowedValues:[`a-${iteration}`,`b-${iteration}`]},{kind:"allowed-values",allowedValues:[`b-${iteration}`,`c-${iteration}`]},{allowedValues:[`b-${iteration}`]}],
+    [{expectedValue:`b-${iteration}`},{kind:"allowed-values",allowedValues:[`b-${iteration}`,`c-${iteration}`]},{expectedValue:`b-${iteration}`,expectedContributor:`a ${iteration}`}],
+    [{minimum:minimum},{kind:"range",minimum:maximum},{minimum}],
+    [{maximum:minimum},{kind:"range",maximum:minimum+10},{maximum:minimum}],
+    [{minItems:minimum},{kind:"cardinality",minItems:maximum},{minItems:minimum}],
+    [{patterns:[`^a-${iteration}`]},{kind:"pattern",pattern:`b-${iteration}$`},{patterns:[`^a-${iteration}`,`b-${iteration}$`]}],
+  ];
+  for(const [staticFacet,conditionalFacet,expectedFacets] of recomposedCases){
+    const generated=[
+      peerContribution("a",staticFacet),
+      peerContribution("b",{rules:[rule("recompose",{...conditionalFacet,condition:always})]}),
+    ];
+    for(const order of [generated,[...generated].reverse()]){
+      const resolved=resolveConditionalLayeredSchema(compilePeers(order),{});
+      assert.equal(resolved.status,"ready");
+      for(const [field,value] of Object.entries(expectedFacets))assert.deepEqual(resolved.properties["/generated"][field],value,"generated matching peer facets are recomposed without weakening or widening");
+    }
+  }
   const operatorRule=(id,operator,expectedValue)=>rule(id,{kind:"value",operator,expectedValue}),operatorPairs=[
     [operatorRule("equals-a","Equals",`a-${iteration}`),operatorRule("equals-b","Equals",`b-${iteration}`)],
     [operatorRule("set-a","Is one of",[`a-${iteration}`,`b-${iteration}`]),operatorRule("set-b","Is one of",[`c-${iteration}`])],
     [operatorRule("prefix-a","Starts with",`left-${iteration}`),operatorRule("prefix-b","Starts with",`right-${iteration}`)],
     [operatorRule("suffix-a","Ends with",`.left-${iteration}`),operatorRule("suffix-b","Ends with",`.right-${iteration}`)],
     [operatorRule("numeric-min","Greater than",minimum),operatorRule("numeric-max","At most",maximum)],
+    [operatorRule("equals","Equals",`a-${iteration}`),operatorRule("not-equals","Does not equal",`a-${iteration}`)],
+    [operatorRule("prefix","Starts with",`a-${iteration}`),operatorRule("not-prefix","Does not start with",`a-${iteration}`)],
+    [operatorRule("suffix","Ends with",`a-${iteration}`),operatorRule("not-suffix","Does not end with",`a-${iteration}`)],
+    [operatorRule("includes","Includes",`a-${iteration}`),operatorRule("not-includes","Does not include",`a-${iteration}`)],
   ];
   for(const operators of operatorPairs){
     const generated=[peerContribution("a",{rules:[operators[0]]}),peerContribution("b",{rules:[operators[1]]})],forward=compilePeers(generated),reverse=compilePeers([...generated].reverse());
@@ -193,6 +216,10 @@ for(let iteration=0;iteration<120;iteration+=1){
     [operatorRule("prefix-a","Starts with",`order-${iteration}`),operatorRule("prefix-b","Starts with",`order-${iteration}-detail`)],
     [operatorRule("suffix-a","Ends with",`${iteration}`),operatorRule("suffix-b","Ends with",`-${iteration}`)],
     [operatorRule("numeric-min","At least",maximum),operatorRule("numeric-max","Less than",minimum+10)],
+    [operatorRule("equals","Equals",`a-${iteration}`),operatorRule("not-equals","Does not equal",`b-${iteration}`)],
+    [operatorRule("prefix","Starts with",`a-${iteration}`),operatorRule("not-prefix","Does not start with",`a-${iteration}-excluded`)],
+    [operatorRule("suffix","Ends with",`a-${iteration}`),operatorRule("not-suffix","Does not end with",`excluded-a-${iteration}`)],
+    [operatorRule("includes","Includes",`a-${iteration}`),operatorRule("not-includes","Does not include",`b-${iteration}`)],
   ];
   for(const operators of compatibleOperators)assert.equal(compilePeers([peerContribution("a",{rules:[operators[0]]}),peerContribution("b",{rules:[operators[1]]})]).status,"ready","generated compatible Value conjunctions remain ready");
   const common=peers.find(({id})=>id===commonId);
