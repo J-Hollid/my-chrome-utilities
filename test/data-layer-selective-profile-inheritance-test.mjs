@@ -127,12 +127,17 @@ const currentRenameImpact=profileInheritanceCurrentImpact(renamed,appliedRecipe)
 assert.equal(currentRenameImpact.stale,true);assert.deepEqual(currentRenameImpact.changedPaths,[{propertyId:errorMessage.id,before:"/error/message",after:"/error/friendly_message"}]);
 const changedExcludedRule={...master,revision:9,nodes:{...master.nodes,[errorMessage.id]:{...errorMessage,rules:[{...errorMessage.rules[0],pattern:"^CHANGED"}]}}};
 const excludedRuleImpact=profileInheritanceCurrentImpact(changedExcludedRule,appliedRecipe);
-assert.deepEqual(excludedRuleImpact.changedRuleIds,[],"source edits to an explicitly excluded rule do not affect the recipe");assert.equal(excludedRuleImpact.stale,false);
+assert.deepEqual(excludedRuleImpact.changedRuleIds,["rule:error-message"],"source edits to an explicitly excluded stable rule remain reviewable");assert.equal(excludedRuleImpact.stale,true);
+const unrelatedEdit={...master,revision:10,nodes:{...master.nodes,[offer.id]:{...offer,name:"renamed_offer"}}};
+const unrelatedImpact=profileInheritanceCurrentImpact(unrelatedEdit,appliedRecipe);
+assert.equal(unrelatedImpact.stale,false,"source edits outside the selected contribution do not stale the recipe");
 const newDependencyRule={...errorMessage.rules[0],id:"rule:new-dependency",condition:{kind:"predicate",id:"predicate:offer",propertyId:offer.id,operator:"Exists"}};
 const addedDependency={...master,revision:10,nodes:{...master.nodes,[errorMessage.id]:{...errorMessage,rules:[...errorMessage.rules,newDependencyRule]}}};
 assert.equal(profileInheritanceCurrentImpact(addedDependency,appliedRecipe).newMissingRuleDependencies.some(({propertyId})=>propertyId===offer.id),true);
 const staleTarget=markProfileInheritanceTargetStale({id:"page:error",name:"Error Page",profileInheritanceRecipes:[appliedRecipe]},"profile:master",master,renamed);
 assert.equal(staleTarget.validationStale,true);assert.equal(staleTarget.testCasesStale,true);assert.equal(staleTarget.documentationStale,true);assert.equal(staleTarget.exportStale,true);assert.equal(staleTarget.profileInheritanceRecipes[0].sourceImpact.changedPaths.length,1);
+const currentTarget=markProfileInheritanceTargetStale({id:"page:error",name:"Error Page",profileInheritanceRecipes:[appliedRecipe]},"profile:master",master,unrelatedEdit);
+assert.equal(currentTarget.validationStale,undefined);assert.equal(currentTarget.testCasesStale,undefined);assert.equal(currentTarget.documentationStale,undefined);assert.equal(currentTarget.exportStale,undefined);
 
 assert.equal(canonicalPropertyPath(renamed,errorMessage.id),"/error/friendly_message");
 
