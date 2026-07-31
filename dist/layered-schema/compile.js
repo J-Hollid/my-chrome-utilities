@@ -1,5 +1,6 @@
-import { branch, clone, constraintWithPeerRules, constraintWithStructuredRules, included, origin, parallelMismatch, peerConstraintForCompile, peerMismatch, peerSetMismatch } from "./compile-context.js";
+import { branch, clone, constraintWithStructuredRules, included, origin, parallelMismatch } from "./compile-context.js";
 import { mergeLayeredProperty } from "./compile-merge.js";
+import { constraintWithPeerRules, peerConstraintForCompile, peerMismatch, peerSetMismatch } from "./peer-constraints.js";
 export function compileLayeredSchema(contributors, context) {
     const selected = contributors.filter(({ active }) => active !== false), peerQueues = new Map();
     for (const contributor of selected)

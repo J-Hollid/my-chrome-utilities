@@ -1,5 +1,6 @@
-import { constraintWithPeerRules, constraintWithStructuredRules, peerMismatch, peerSetMismatch } from "./compile-context.js";
+import { constraintWithStructuredRules } from "./compile-context.js";
 import { mergeLayeredProperty } from "./compile-merge.js";
+import { constraintWithPeerRules, peerMismatch, peerSetMismatch } from "./peer-constraints.js";
 const clone = (value) => structuredClone(value);
 const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
 const valueAt = (payload, path) => path.split("/").filter(Boolean).reduce((value, key) => value && typeof value === "object" ? value[key] : undefined, payload);

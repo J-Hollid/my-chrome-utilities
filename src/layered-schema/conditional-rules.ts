@@ -1,6 +1,7 @@
 import type {CompiledLayeredSchema,EffectiveProperty,LayerConflict,LayerConstraint} from "../data-layer-layered-schema.js";
-import {constraintWithPeerRules,constraintWithStructuredRules,peerMismatch,peerSetMismatch} from "./compile-context.js";
+import {constraintWithStructuredRules} from "./compile-context.js";
 import {mergeLayeredProperty} from "./compile-merge.js";
+import {constraintWithPeerRules,peerMismatch,peerSetMismatch} from "./peer-constraints.js";
 
 const clone=<T>(value:T):T=>structuredClone(value);
 const same=(left:unknown,right:unknown):boolean=>JSON.stringify(left)===JSON.stringify(right);
