@@ -39,7 +39,7 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
         for (const kind of new Set([...(route.collectionKind ? [route.collectionKind] : []), ...(route.collectionKinds ?? [])])) {
             const rawEntries = pendingCollections[kind] ?? [], pendingEntries = rawEntries.filter(entity => !entity.placeholder || entity.id === route.entityId), current = collections[kind] ?? [];
             if (route.entityId && kind === route.collectionKind) {
-                const selected = pendingEntries.find(({ id }) => id === route.entityId), currentSelected = current.find(({ id }) => id === route.entityId), others = pendingEntries.filter(({ id }) => id !== route.entityId && !current.some(entity => entity.id === id)), withoutSelected = current.filter(entity => entity.id !== route.entityId), mergedSelected = selected ? { ...structuredClone(currentSelected ?? {}), ...structuredClone(selected) } : undefined;
+                const selected = pendingEntries.find(({ id }) => id === route.entityId), others = pendingEntries.filter(({ id }) => id !== route.entityId && !current.some(entity => entity.id === id)), withoutSelected = current.filter(entity => entity.id !== route.entityId), mergedSelected = selected ? structuredClone(selected) : undefined;
                 if (mergedSelected)
                     delete mergedSelected.placeholder;
                 collections[kind] = [...withoutSelected, ...(mergedSelected ? [mergedSelected] : []), ...structuredClone(others)];

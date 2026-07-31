@@ -2,7 +2,7 @@ import {createCanonicalSchema} from "./data-layer-canonical-schema.js";
 import {addProjectEntity,transactProject,type IdFactory,type ProjectEntity,type ProjectEntityKind,type ProjectState,type SpecificationProject} from "./data-layer-specification-project.js";
 
 export interface ProjectCollectionDefinition {kind:ProjectEntityKind;overview:string;singular:string;addAction:string;purpose:string;example:string;prerequisites:string[];consumers:string[];}
-export interface ProjectCollectionCreationField {key:string;label:string;control?:"text"|"number"|"textarea"|"checkbox"|"select";collection?:ProjectEntityKind;multiple?:boolean;options?:readonly {value:string;label:string}[];defaultValue?:string|number|boolean;}
+export interface ProjectCollectionCreationField {key:string;label:string;control?:"text"|"number"|"textarea"|"checkbox"|"select";collection?:ProjectEntityKind;multiple?:boolean;options?:readonly {value:string;label:string}[];defaultValue?:string|number|boolean;guidance?:string;}
 export interface ProjectEntityDependency {kind:ProjectEntityKind|"flowGraph";id:string;name:string;relationship:string;}
 export interface ProjectEntityRemovalReview {kind:ProjectEntityKind;id:string;name:string;dependencies:ProjectEntityDependency[];blocked:boolean;summary:string;}
 
@@ -19,7 +19,7 @@ export const projectCollectionDefinitions:Record<ProjectEntityKind,ProjectCollec
 
 export const projectCollectionCreationFields:Record<ProjectEntityKind,readonly ProjectCollectionCreationField[]>={
   profiles:[{key:"description",label:"Profile purpose",control:"textarea"}],
-  pageGroups:[{key:"matcher",label:"Membership matcher"}],
+  pageGroups:[{key:"description",label:"Description",control:"textarea",guidance:"Explain the shared Page context and intended use of this Page Group."}],
   pages:[{key:"eventName",label:"Observed event name"},{key:"pathname",label:"Path matcher"},{key:"pageGroupIds",label:"Page Groups",control:"select",collection:"pageGroups",multiple:true}],
   events:[{key:"eventName",label:"Canonical event name"}],
   applicabilitySets:[{key:"priority",label:"Priority",control:"number",defaultValue:0},{key:"fallback",label:"Fallback",control:"checkbox",defaultValue:false}],

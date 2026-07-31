@@ -377,7 +377,7 @@ function entitiesForKind(kind) { if (!state)
     return []; return kind === "assignments" ? searchProjectAssignments(state.project, "").rows : state.project.collections[kind]; }
 const editorFields = {
     profiles: [], pages: [{ key: "eventName", label: "Observed context event name" }, { key: "environment", label: "Environment" }, { key: "host", label: "Host matcher" }, { key: "pathname", label: "Path matcher" }, { key: "query", label: "Query matcher" }, { key: "hash", label: "Hash matcher" }, { key: "spa", label: "SPA route", type: "checkbox" }, { key: "expectedEventIds", label: "Expected interaction Events", collection: "events", multiple: true }, { key: "profileIds", label: "Shared Profile sources", collection: "profiles", multiple: true }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }],
-    pageGroups: [{ key: "environment", label: "Environment" }, { key: "matcher", label: "Membership matcher" }, { key: "profileIds", label: "Shared Profile sources", collection: "profiles", multiple: true }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }],
+    pageGroups: [{ key: "description", label: "Description", type: "textarea" }, { key: "profileIds", label: "Shared Profile sources", collection: "profiles", multiple: true }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }],
     events: [{ key: "sourceId", label: "Source" }, { key: "eventName", label: "Canonical event name" }, { key: "trigger", label: "Default documentary trigger" }, { key: "target", label: "Validation target" }, { key: "occurrencePolicy", label: "Occurrence policy" }, { key: "profileIds", label: "Shared Profile sources", collection: "profiles", multiple: true }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }],
     applicabilitySets: [{ key: "priority", label: "Priority", type: "number" }, { key: "fallback", label: "Fallback", type: "checkbox" }, { key: "condition", label: "Nested All / Any / Not condition", type: "condition" }],
     flows: [{ key: "entryCondition", label: "Entry condition", type: "condition" }, { key: "exitCondition", label: "Exit condition", type: "condition" }, { key: "timeoutMinutes", label: "Timeout minutes", type: "number" }, { key: "correlationField", label: "Correlation field" }, { key: "profileIds", label: "Requirement profiles", collection: "profiles", multiple: true }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }],
@@ -924,6 +924,17 @@ function renderSelectedEntityEditor(content, entity) {
                         const merged = { ...candidate, ...update };
                         if (selectedKind === "flows")
                             delete merged.pageGroupIds;
+                        if (selectedKind === "pageGroups") {
+                            merged.description = String(merged.description ?? "").trim();
+                            if (!merged.description)
+                                delete merged.description;
+                            if (Array.isArray(merged.profileIds) && !merged.profileIds.length)
+                                delete merged.profileIds;
+                            if (Array.isArray(merged.profileInheritanceRecipes) && !merged.profileInheritanceRecipes.length)
+                                delete merged.profileInheritanceRecipes;
+                            delete merged.environment;
+                            delete merged.matcher;
+                        }
                         if (update.applicabilitySetId === "")
                             delete merged.applicabilitySetId;
                         return merged;
@@ -1090,6 +1101,13 @@ function renderCreationPage(content, kind) {
         label.textContent = field.label;
         control.dataset.creationField = field.key;
         label.append(control);
+        if (field.guidance) {
+            const guidance = document.createElement("small");
+            guidance.id = `creation-${kind}-${field.key}-guidance`;
+            guidance.textContent = field.guidance;
+            control.setAttribute("aria-describedby", guidance.id);
+            label.append(guidance);
+        }
         settings.append(label);
     }
     cancel.type = "button";
