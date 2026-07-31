@@ -12,11 +12,11 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
         next.itemType = constraint.itemType;
     if (constraint.itemSchema)
         next.itemSchema = clone(constraint.itemSchema);
-    if (constraint.allowedValues) {
+    if (constraint.allowedValues && !(parallelPeer && prior.expectedValue !== undefined)) {
         if (prior.allowedValues) {
             const orderedPageGroups = prior.origins.at(-1)?.scope === "Page Group" && contributor.scope === "Page Group", changed = !same(prior.allowedValues, constraint.allowedValues);
             if (parallelPeer)
-                next.allowedValues = clone(prior.allowedValues.filter((value) => constraint.allowedValues.some((candidate) => same(value, candidate))));
+                next.allowedValues = clone(prior.allowedValues.filter((value) => constraint.allowedValues.some((candidate) => same(value, candidate))).sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right))));
             else if (orderedPageGroups && changed) {
                 if (prior.enforcement === "invariant")
                     conflict(constraint.path, "invariant allowed values cannot be replaced by membership order", [prior.origins.at(-1).contributorName, contributor.name]);

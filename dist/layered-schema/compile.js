@@ -1,4 +1,4 @@
-import { branch, constraintWithStructuredRules, included, origin, parallelMismatch, peerMismatch } from "./compile-context.js";
+import { branch, constraintWithStructuredRules, included, origin, parallelMismatch, peerMismatch, peerSetMismatch } from "./compile-context.js";
 import { mergeLayeredProperty } from "./compile-merge.js";
 export function compileLayeredSchema(contributors, context) {
     const selected = contributors.filter(({ active }) => active !== false), peerQueues = new Map();
@@ -12,7 +12,19 @@ export function compileLayeredSchema(contributors, context) {
         queue.sort((left, right) => left.id.localeCompare(right.id));
     const activeContributors = selected.map((contributor) => contributor.peerGroup ? peerQueues.get(contributor.peerGroup).shift() : contributor), properties = {}, conflicts = [], provenance = activeContributors.map(origin), exclusions = contributors.filter(({ active }) => active === false).flatMap((contributor) => contributor.constraints.length ? contributor.constraints.map(({ path }) => ({ contributorId: contributor.id, contributorName: contributor.name, path, target: contributor.exclusionReason ?? "applicability did not match" })) : [{ contributorId: contributor.id, contributorName: contributor.name, path: "/", target: contributor.exclusionReason ?? "applicability did not match" }]);
     const conflict = (path, message, names) => conflicts.push({ path, message, contributors: names });
-    const active = activeContributors.flatMap((contributor) => contributor.constraints.map(constraintWithStructuredRules).filter((constraint) => included(constraint.target, context)).map((constraint) => ({ contributor, constraint }))), blockedParallel = new Set(), blockedPeers = new Set(), resolvedParallel = new Set();
+    const active = activeContributors.flatMap((contributor) => contributor.constraints.map(constraintWithStructuredRules).filter((constraint) => included(constraint.target, context)).map((constraint) => ({ contributor, constraint }))), blockedParallel = new Set(), blockedPeers = new Set(), resolvedParallel = new Set(), conflictingPolicyGroups = new Set();
+    const peersByGroup = new Map();
+    for (const contributor of activeContributors)
+        if (contributor.peerGroup) {
+            const peers = peersByGroup.get(contributor.peerGroup) ?? [];
+            peers.push(contributor);
+            peersByGroup.set(contributor.peerGroup, peers);
+        }
+    for (const [peerGroup, peers] of peersByGroup) {
+        const policies = new Set(peers.flatMap(({ onlyDefinedFields }) => onlyDefinedFields === undefined ? [] : [onlyDefinedFields]));
+        if (policies.size > 1)
+            conflictingPolicyGroups.add(peerGroup);
+    }
     const peerEntries = new Map();
     for (const entry of active)
         if (entry.contributor.peerGroup) {
@@ -20,17 +32,21 @@ export function compileLayeredSchema(contributors, context) {
             entries.push(entry);
             peerEntries.set(key, entries);
         }
-    for (const entries of peerEntries.values()) {
-        let incompatible = false;
+    for (const [key, entries] of peerEntries) {
+        const peerGroup = key.split("\u0000")[0], policyConflict = conflictingPolicyGroups.has(peerGroup);
+        let incompatible = policyConflict || peerSetMismatch(entries.map(({ constraint }) => constraint));
         for (let left = 0; left < entries.length; left += 1)
             for (let right = left + 1; right < entries.length; right += 1)
                 incompatible ||= peerMismatch(entries[left].constraint, entries[right].constraint);
         if (!incompatible)
             continue;
-        const path = entries[0].constraint.path;
+        const path = entries[0].constraint.path, names = policyConflict ? peersByGroup.get(peerGroup).map(({ name }) => name) : entries.map(({ contributor }) => contributor.name);
         blockedPeers.add(path);
-        conflict(path, "parallel Shared Profile peers conflict; add an explicit contextual resolution", [...new Set(entries.map(({ contributor }) => contributor.name))]);
+        conflict(path, "parallel Shared Profile peers conflict; add an explicit contextual resolution", [...new Set(names)]);
     }
+    for (const peerGroup of conflictingPolicyGroups)
+        if (![...peerEntries.keys()].some((key) => key.startsWith(`${peerGroup}\u0000`)))
+            conflict("/", "parallel Shared Profile closed-field policies conflict; add an explicit contextual resolution", activeContributors.filter((contributor) => contributor.peerGroup === peerGroup).map(({ name }) => name));
     for (const page of active.filter(({ contributor }) => branch(contributor.scope) === "page"))
         for (const event of active.filter(({ contributor }) => branch(contributor.scope) === "event")) {
             if (page.constraint.path !== event.constraint.path || !parallelMismatch(page.constraint, event.constraint))
@@ -56,7 +72,7 @@ export function compileLayeredSchema(contributors, context) {
             const prior = properties[constraint.path], priorContributor = prior ? contributorById.get(prior.origins.at(-1).contributorId) : undefined, parallelPair = Boolean(prior && resolvedParallel.has(constraint.path) && new Set([branch(prior.origins.at(-1).scope), branch(contributor.scope)]).has("page") && new Set([branch(prior.origins.at(-1).scope), branch(contributor.scope)]).has("event")), parallelPeer = Boolean(priorContributor?.peerGroup && priorContributor.peerGroup === contributor.peerGroup);
             properties[constraint.path] = mergeLayeredProperty(prior, constraint, contributor, parallelPair, parallelPeer, conflict);
         }
-    const onlyDefinedFields = [...activeContributors].reverse().find((contributor) => contributor.onlyDefinedFields !== undefined)?.onlyDefinedFields;
+    const onlyDefinedFields = conflictingPolicyGroups.size ? undefined : [...activeContributors].reverse().find((contributor) => contributor.onlyDefinedFields !== undefined)?.onlyDefinedFields;
     return { status: conflicts.length ? "blocked" : "ready", properties, conflicts, provenance, exclusions, ...(onlyDefinedFields !== undefined ? { onlyDefinedFields } : {}) };
 }
 //# sourceMappingURL=compile.js.map

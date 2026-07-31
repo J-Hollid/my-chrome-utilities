@@ -93,6 +93,38 @@ for(const peers of [peerProfiles,[...peerProfiles].reverse()]){
   assert.match(peerConflict.conflicts[0].message,/parallel Shared Profile peers/);
   assert.equal(peerConflict.properties["/tier"],undefined,"a peer conflict has no list-order winner");
 }
+const peer=(id,constraint,policy)=>({...contribution(`profile:${id}`,id,"Shared Profile",[{path:"/value",...constraint}]),peerGroup:"shared-profiles",...(policy===undefined?{}:{onlyDefinedFields:policy})});
+for(const contributors of [
+  [peer("a",{allowedValues:["a"]}),peer("b",{expectedValue:"b"})],
+  [peer("a",{expectedValue:"b"}),peer("b",{allowedValues:["a"]})],
+  [peer("a",{minimum:10}),peer("b",{maximum:5})],
+  [peer("a",{maximum:5}),peer("b",{minimum:10})],
+  [peer("a",{minItems:4}),peer("b",{maxItems:2})],
+  [peer("a",{maxItems:2}),peer("b",{minItems:4})],
+  [peer("a",{},true),peer("b",{},false)],
+  [peer("a",{},false),peer("b",{},true)],
+]){
+  const peerConflict=compileLayeredSchema(contributors,{eventId:"pageview",eventRole:"context"});
+  assert.equal(peerConflict.status,"blocked","cross-facet, crossed-bound, and policy-incompatible peers block without stable-ID precedence");
+  assert.equal(peerConflict.properties["/value"],undefined);
+}
+const aggregatePeerConflict=compileLayeredSchema([
+  peer("a",{allowedValues:["a","b"]}),
+  peer("b",{allowedValues:["b","c"]}),
+  peer("c",{allowedValues:["a","c"]}),
+],{eventId:"pageview",eventRole:"context"});
+assert.equal(aggregatePeerConflict.status,"blocked","an empty aggregate peer intersection blocks even when every pair overlaps");
+const policyPeerConflict=compileLayeredSchema([peer("a",{},true),peer("b",{},false)],{eventId:"pageview",eventRole:"context"});
+assert.equal(policyPeerConflict.onlyDefinedFields,undefined,"a blocked peer policy has no stable-ID-selected effective value");
+for(const contributors of [
+  [peer("a",{allowedValues:["a","b"]}),peer("b",{expectedValue:"a"})],
+  [peer("a",{expectedValue:"a"}),peer("b",{allowedValues:["a","b"]})],
+]){
+  const compatiblePeer=compileLayeredSchema(contributors,{eventId:"pageview",eventRole:"context"});
+  assert.equal(compatiblePeer.status,"ready");
+  assert.equal(compatiblePeer.properties["/value"].expectedValue,"a","a compatible peer expectation narrows allowed values independently of stable identity");
+  assert.equal(compatiblePeer.properties["/value"].allowedValues,undefined);
+}
 
 const targeted=compileLayeredSchema([contribution("targets","Checkout","Page Group",[
   {path:"/all",target:"all"},{path:"/context",target:"context"},{path:"/interaction",target:"interaction"},{path:"/purchase",target:"event:purchase"},

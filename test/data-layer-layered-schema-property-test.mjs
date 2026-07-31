@@ -95,6 +95,28 @@ for(let iteration=0;iteration<120;iteration+=1){
   const page=fanState.project.collections.pages[0],pagePath=layeredContributorPath(fanState,page,"Page"),all=layeredContributorsForPath(fanState,pagePath),peers=all.filter(({scope})=>scope==="Shared Profile"),forward=compileLayeredSchema(peers,{eventId:"pageview",eventRole:"context"}),reverse=compileLayeredSchema([...peers].reverse(),{eventId:"pageview",eventRole:"context"});
   assert.equal(forward.status,"blocked","generated incompatible profile fan-in blocks");
   assert.deepEqual(reverse.conflicts,forward.conflicts,"peer conflict evidence is independent of profile permutation");
+  const peerContribution=(id,constraint,onlyDefinedFields)=>({id:`profile:${id}:${iteration}`,name:`${id} ${iteration}`,scope:"Shared Profile",peerGroup:"shared-profiles",constraints:[{path:"/generated",...constraint}],...(onlyDefinedFields===undefined?{}:{onlyDefinedFields})}),compilePeers=(peers)=>compileLayeredSchema(peers,{eventId:"pageview",eventRole:"context"});
+  const allowed=`allowed-${iteration}`,expected=`expected-${iteration}`,crossed=[
+    peerContribution("a",{allowedValues:[allowed]}),
+    peerContribution("b",{expectedValue:expected}),
+  ],crossedSwapped=[
+    peerContribution("a",{expectedValue:expected}),
+    peerContribution("b",{allowedValues:[allowed]}),
+  ],minimum=5+Math.floor(random()*20),maximum=Math.floor(random()*5),numeric=[
+    peerContribution("a",{minimum}),
+    peerContribution("b",{maximum}),
+  ],cardinality=[
+    peerContribution("a",{minItems:minimum}),
+    peerContribution("b",{maxItems:maximum}),
+  ],policy=[
+    peerContribution("a",{},true),
+    peerContribution("b",{},false),
+  ];
+  for(const incompatible of [crossed,crossedSwapped,numeric,cardinality,policy]){
+    const result=compilePeers(incompatible),permuted=compilePeers([...incompatible].reverse());
+    assert.equal(result.status,"blocked","generated incompatible peer facets never acquire stable-ID precedence");
+    assert.deepEqual(permuted.conflicts,result.conflicts,"generated peer conflict evidence is permutation-independent");
+  }
   const common=peers.find(({id})=>id===commonId);
   assert.equal(peers.filter(({id})=>id===commonId).length,1,"fan-out deduplicates a repeated stable profile identity");
   assert.equal(common.inheritanceRoutes.length,3,"fan-out retains the direct route and every participating group route");
