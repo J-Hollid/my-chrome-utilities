@@ -75,6 +75,10 @@ for(const structuralCase of structuralArrayCases){
   const compiled=compileLayeredSchema([{id:"profile:master",name:"Master",scope:"Shared Profile",constraints:contribution.constraints}],{}),validValidation=validateLayeredObservation({targetId:"page:error",targetName:"Error Page",revision:1,compiled},structuralCase.validPayload),invalidValidation=validateLayeredObservation({targetId:"page:error",targetName:"Error Page",revision:1,compiled},structuralCase.invalidPayload);
   assert.equal(validValidation.issues.some(({code})=>code==="ALLOWED_VALUE"),false,`${structuralCase.name} structural item enums are not inherited or validated`);
   assert.equal(invalidValidation.issues.some(({code,canonicalPath})=>code==="TYPE"&&canonicalPath?.startsWith("/error/*")),true,`${structuralCase.name} nested structural type shape remains enforceable`);
+  const applied=profileInheritanceRecipeApplied(document,nestedOnly),enumEditedSchema=structuralCase.name==="nested array"?{...ancestor.itemSchema,allowedValues:[[{business:"edited-only"}]],items:{...ancestor.itemSchema.items,allowedValues:[{business:"edited-only"}]}}:{...ancestor.itemSchema,allowedValues:[{business:"edited-only"}]},enumEdited={...document,revision:document.revision+1,nodes:{...document.nodes,[error.id]:{...ancestor,itemSchema:enumEditedSchema}}};
+  assert.equal(profileInheritanceCurrentImpact(enumEdited,applied).stale,false,`${structuralCase.name} structural item-enum-only edits stay current`);
+  const shapeEditedSchema=structuralCase.name==="nested array"?{...ancestor.itemSchema,items:{...ancestor.itemSchema.items,type:"string"}}:{...ancestor.itemSchema,type:"string"},shapeEdited={...document,revision:document.revision+1,nodes:{...document.nodes,[error.id]:{...ancestor,itemSchema:shapeEditedSchema}}},shapeImpact=profileInheritanceCurrentImpact(shapeEdited,applied);
+  assert.equal(shapeImpact.stale,true,`${structuralCase.name} structural item type edits stale consumers`);assert.equal(shapeImpact.changedDefinitionPropertyIds.includes(error.id),true);
 }
 
 const ordinaryPattern={id:"rule:error-code-pattern",kind:"pattern",pattern:"^SOURCE$",severity:"error",message:"Source pattern"};
