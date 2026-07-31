@@ -15,6 +15,7 @@
     ],
     "property": [
       "test/data-layer-project-entity-lifecycle-property-test.mjs",
+      "test/data-layer-page-authoring-property-test.mjs",
       "test/data-layer-project-library-property-test.mjs"
     ],
     "features": [
