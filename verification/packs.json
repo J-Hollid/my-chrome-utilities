@@ -1009,7 +1009,9 @@
     "unit": [
       "test/data-layer-selective-profile-inheritance-test.mjs"
     ],
-    "property": [],
+    "property": [
+      "test/data-layer-selective-profile-inheritance-property-test.mjs"
+    ],
     "features": [
       "features/specification-studio-selective-profile-inheritance.feature",
       "features/specification-studio-selective-profile-inheritance-runtime.feature"

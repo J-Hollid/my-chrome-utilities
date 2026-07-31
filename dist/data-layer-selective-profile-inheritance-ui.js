@@ -1,5 +1,5 @@
 import { canonicalPropertyPath } from "./data-layer-canonical-schema.js";
-import { copyProfileInheritanceRecipe, createProfileInheritanceRecipe, profileInheritanceSelection, profileInheritanceSummary, searchProfileInheritanceProperties } from "./data-layer-selective-profile-inheritance.js";
+import { copyProfileInheritanceRecipe, createProfileInheritanceRecipe, profileInheritanceCurrentImpact, profileInheritanceSelection, profileInheritanceSummary, searchProfileInheritanceProperties } from "./data-layer-selective-profile-inheritance.js";
 const clone = (value) => structuredClone(value);
 const stable = (values) => [...new Set(values)];
 const descendants = (document, propertyId) => { const children = Object.values(document.nodes).filter(({ parentId }) => parentId === propertyId).sort((left, right) => left.order - right.order); return [propertyId, ...children.flatMap(({ id }) => descendants(document, id))]; };
@@ -10,8 +10,8 @@ const ruleById = (document, ruleId) => { for (const node of Object.values(docume
 } };
 const option = (value, label) => new Option(label, value);
 export function mountSelectiveProfileInheritance(options) {
-    const { host, profile, target } = options, document = profile.canonicalSchema, card = globalThis.document.createElement("section"), heading = globalThis.document.createElement("h3"), summaryText = globalThis.document.createElement("p"), edit = globalThis.document.createElement("button"), workspace = globalThis.document.createElement("section");
-    let staged = clone(options.recipe), open = false, filters = { query: "", concept: "all", type: "all", required: "any", selection: "any" };
+    const { host, profile, target } = options, document = profile.canonicalSchema, card = globalThis.document.createElement("section"), heading = globalThis.document.createElement("h3"), summaryText = globalThis.document.createElement("p"), impactList = globalThis.document.createElement("ul"), edit = globalThis.document.createElement("button"), workspace = globalThis.document.createElement("section");
+    let staged = clone(options.recipe), open = false, filters = { query: "", concept: "all", type: "all", required: "any", selection: "any" }, replacementDraft;
     card.className = "profile-inheritance-card";
     card.dataset.profileInheritanceCard = profile.id;
     card.tabIndex = -1;
@@ -23,11 +23,11 @@ export function mountSelectiveProfileInheritance(options) {
     workspace.className = "profile-inheritance-workspace";
     workspace.dataset.profileInheritanceWorkspace = profile.id;
     workspace.hidden = true;
-    const updateCard = () => { const summary = profileInheritanceSummary(document, options.recipe); summaryText.textContent = `${summary.synchronizedConcepts} synchronized concepts · ${summary.fixedProperties} fixed selections · ${summary.exclusions} exclusions · ${summary.ruleOverrides} rule overrides · ${summary.effective} effective properties${summary.missingSelections ? ` · ${summary.missingSelections} missing selections` : ""}`; };
+    const updateCard = () => { const summary = profileInheritanceSummary(document, options.recipe), impact = options.recipe.sourceImpact ?? profileInheritanceCurrentImpact(document, options.recipe), impactText = impact.stale ? ` · Source update needs review: ${impact.addedEffectivePropertyIds.length} added, ${impact.removedPropertyIds.length} removed, ${impact.changedPaths.length} changed paths, ${impact.changedRuleIds.length} changed rules, ${impact.newMissingRuleDependencies.length} new dependencies` : " · Current with source"; summaryText.textContent = `${summary.synchronizedConcepts} synchronized concepts · ${summary.fixedProperties} fixed selections · ${summary.exclusions} exclusions · ${summary.ruleOverrides} rule overrides · ${summary.effective} effective properties${summary.missingSelections ? ` · ${summary.missingSelections} missing selections` : ""}${impactText}`; impactList.setAttribute("aria-label", "Shared Profile source impact"); impactList.hidden = !impact.stale; impactList.replaceChildren(...impact.addedEffectivePropertyIds.map((id) => Object.assign(globalThis.document.createElement("li"), { textContent: `Added effective path ${document.nodes[id] ? canonicalPropertyPath(document, id) : id}` })), ...impact.removedPropertyIds.map((id) => Object.assign(globalThis.document.createElement("li"), { textContent: `Removed effective path ${options.recipe.sourceSnapshot?.propertyPaths[id] ?? id}` })), ...impact.changedPaths.map(({ before, after }) => Object.assign(globalThis.document.createElement("li"), { textContent: `Changed effective path ${before} → ${after}` })), ...impact.changedRuleIds.map((id) => Object.assign(globalThis.document.createElement("li"), { textContent: `Changed source rule ${id}` })), ...impact.newMissingRuleDependencies.map(({ sourceRuleId, propertyId }) => Object.assign(globalThis.document.createElement("li"), { textContent: `New dependency ${sourceRuleId} needs ${document.nodes[propertyId] ? canonicalPropertyPath(document, propertyId) : propertyId}` }))); };
     const focusAfter = (selector) => queueMicrotask(() => workspace.querySelector(selector)?.focus({ preventScroll: true }));
     const renderWorkspace = () => {
         workspace.replaceChildren();
-        const title = globalThis.document.createElement("h3"), intro = globalThis.document.createElement("p"), starting = globalThis.document.createElement("select"), startingLabel = globalThis.document.createElement("label"), copySelect = globalThis.document.createElement("select"), copyButton = globalThis.document.createElement("button"), copyLabel = globalThis.document.createElement("label"), search = globalThis.document.createElement("input"), searchLabel = globalThis.document.createElement("label"), filterRow = globalThis.document.createElement("div"), conceptFilter = globalThis.document.createElement("select"), typeFilter = globalThis.document.createElement("select"), requiredFilter = globalThis.document.createElement("select"), selectionFilter = globalThis.document.createElement("select"), concepts = globalThis.document.createElement("section"), results = globalThis.document.createElement("ul"), dependencies = globalThis.document.createElement("section"), sticky = globalThis.document.createElement("aside"), apply = globalThis.document.createElement("button"), cancel = globalThis.document.createElement("button");
+        const title = globalThis.document.createElement("h3"), intro = globalThis.document.createElement("p"), composition = globalThis.document.createElement("section"), starting = globalThis.document.createElement("select"), startingLabel = globalThis.document.createElement("label"), copySelect = globalThis.document.createElement("select"), copyButton = globalThis.document.createElement("button"), copyLabel = globalThis.document.createElement("label"), search = globalThis.document.createElement("input"), searchLabel = globalThis.document.createElement("label"), filterRow = globalThis.document.createElement("div"), conceptFilter = globalThis.document.createElement("select"), typeFilter = globalThis.document.createElement("select"), requiredFilter = globalThis.document.createElement("select"), selectionFilter = globalThis.document.createElement("select"), concepts = globalThis.document.createElement("section"), results = globalThis.document.createElement("ul"), dependencies = globalThis.document.createElement("section"), sticky = globalThis.document.createElement("aside"), apply = globalThis.document.createElement("button"), cancel = globalThis.document.createElement("button");
         title.textContent = `Choose what ${target.name} inherits from ${profile.name}`;
         intro.textContent = "Concepts stay synchronized with the source. Property choices are pinned to stable identities. Explicit exclusions continue to win.";
         startingLabel.textContent = "Starting point";
@@ -118,17 +118,98 @@ export function mountSelectiveProfileInheritance(options) {
             exclude.disabled = replace.disabled = Boolean(invariant);
             if (invariant)
                 description.textContent += ` · invariant ${dependency.sourceRuleId} cannot be excluded or weakened`;
-            include.addEventListener("click", () => { staged.includedDependencyPropertyIds = stable([...staged.includedDependencyPropertyIds, dependency.propertyId]); renderWorkspace(); focusAfter(`[data-rule-dependency='${CSS.escape(dependency.sourceRuleId)}'] button`); });
-            exclude.addEventListener("click", () => { staged.excludedRuleIds = stable([...staged.excludedRuleIds, dependency.sourceRuleId]); renderWorkspace(); focusAfter("[aria-label='Missing rule dependencies']"); });
-            replace.addEventListener("click", () => { if (dependency.sourceRuleId.startsWith("presence:")) {
-                staged.presenceReplacements = [...staged.presenceReplacements, { sourceRuleId: dependency.sourceRuleId, propertyId: dependency.sourcePropertyId, presence: "required" }];
-            }
-            else if (source) {
-                staged.excludedRuleIds = stable([...staged.excludedRuleIds, dependency.sourceRuleId]);
-                staged.ruleReplacements = [...staged.ruleReplacements, { sourceRuleId: dependency.sourceRuleId, propertyId: dependency.sourcePropertyId, rule: { ...clone(source.rule), id: options.id("rule"), replacesRuleId: dependency.sourceRuleId } }];
-            } renderWorkspace(); focusAfter("[aria-label='Missing rule dependencies']"); });
+            include.addEventListener("click", () => { staged.includedDependencyPropertyIds = stable([...staged.includedDependencyPropertyIds, dependency.propertyId]); replacementDraft = undefined; renderWorkspace(); focusAfter(`[data-rule-dependency='${CSS.escape(dependency.sourceRuleId)}'] button`); });
+            exclude.addEventListener("click", () => { staged.excludedRuleIds = stable([...staged.excludedRuleIds, dependency.sourceRuleId]); replacementDraft = undefined; renderWorkspace(); focusAfter("[aria-label='Missing rule dependencies']"); });
+            replace.addEventListener("click", () => { replacementDraft = { sourceRuleId: dependency.sourceRuleId, propertyId: dependency.sourcePropertyId, ...(dependency.sourceRuleId.startsWith("presence:") ? { presence: "required" } : source ? { rule: clone(source.rule) } : {}), keepCondition: false, reviewed: false }; renderWorkspace(); focusAfter("[data-replacement-editor] input,[data-replacement-editor] select"); });
             row.append(description, include, exclude, replace);
+            if (replacementDraft?.sourceRuleId === dependency.sourceRuleId) {
+                const editor = globalThis.document.createElement("section"), editorHeading = globalThis.document.createElement("h5"), keep = globalThis.document.createElement("input"), keepLabel = globalThis.document.createElement("label"), review = globalThis.document.createElement("button"), cancelReplacement = globalThis.document.createElement("button");
+                editor.dataset.replacementEditor = dependency.sourceRuleId;
+                editor.setAttribute("aria-label", `Target-specific replacement for ${dependency.sourceRuleId}`);
+                editorHeading.textContent = "Review target-specific replacement";
+                keep.type = "checkbox";
+                keep.checked = replacementDraft.keepCondition;
+                keepLabel.append(keep, "Keep source condition and its dependencies");
+                keep.addEventListener("change", () => { replacementDraft.keepCondition = keep.checked; replacementDraft.reviewed = false; });
+                review.type = cancelReplacement.type = "button";
+                review.textContent = "Review replacement preview";
+                cancelReplacement.textContent = "Cancel replacement";
+                cancelReplacement.addEventListener("click", () => { replacementDraft = undefined; renderWorkspace(); focusAfter(`[data-rule-dependency='${CSS.escape(dependency.sourceRuleId)}'] button:last-of-type`); });
+                if (replacementDraft.presence) {
+                    const presence = globalThis.document.createElement("select"), label = globalThis.document.createElement("label");
+                    label.textContent = "Target presence";
+                    for (const value of ["required", "optional", "forbidden"])
+                        presence.append(option(value, value));
+                    presence.value = replacementDraft.presence;
+                    presence.addEventListener("change", () => { replacementDraft.presence = presence.value; replacementDraft.reviewed = false; });
+                    label.append(presence);
+                    editor.append(editorHeading, label);
+                }
+                else if (replacementDraft.rule) {
+                    const rule = replacementDraft.rule, fields = globalThis.document.createElement("div"), field = (labelText, value, onInput, type = "text") => { const label = globalThis.document.createElement("label"), input = globalThis.document.createElement("input"); label.textContent = labelText; input.type = type; input.value = value; input.addEventListener("input", () => { onInput(input.value); replacementDraft.reviewed = false; }); label.append(input); fields.append(label); };
+                    if (rule.kind === "pattern")
+                        field("Target pattern", rule.pattern ?? "", (value) => { rule.pattern = value; });
+                    else if (rule.kind === "range") {
+                        field("Target minimum", String(rule.minimum ?? ""), (value) => { if (value)
+                            rule.minimum = Number(value);
+                        else
+                            delete rule.minimum; }, "number");
+                        field("Target maximum", String(rule.maximum ?? ""), (value) => { if (value)
+                            rule.maximum = Number(value);
+                        else
+                            delete rule.maximum; }, "number");
+                    }
+                    else if (rule.kind === "cardinality") {
+                        field("Target minimum items", String(rule.minItems ?? ""), (value) => { if (value)
+                            rule.minItems = Number(value);
+                        else
+                            delete rule.minItems; }, "number");
+                        field("Target maximum items", String(rule.maxItems ?? ""), (value) => { if (value)
+                            rule.maxItems = Number(value);
+                        else
+                            delete rule.maxItems; }, "number");
+                    }
+                    else
+                        field("Target expected value", JSON.stringify(rule.expectedValue ?? ""), (value) => { try {
+                            rule.expectedValue = JSON.parse(value);
+                        }
+                        catch {
+                            rule.expectedValue = value;
+                        } });
+                    field("Target rule message", rule.message ?? "", (value) => { rule.message = value; });
+                    editor.append(editorHeading, fields, keepLabel);
+                }
+                review.addEventListener("click", () => { replacementDraft.reviewed = true; renderWorkspace(); focusAfter("[data-confirm-replacement]"); });
+                editor.append(review, cancelReplacement);
+                if (replacementDraft.reviewed) {
+                    const preview = globalThis.document.createElement("pre"), confirm = globalThis.document.createElement("button");
+                    preview.textContent = JSON.stringify(replacementDraft.presence ? { presence: replacementDraft.presence, condition: replacementDraft.keepCondition ? document.nodes[dependency.sourcePropertyId]?.presence.condition : undefined } : { ...replacementDraft.rule, ...(!replacementDraft.keepCondition ? { condition: undefined } : {}) }, null, 2);
+                    confirm.type = "button";
+                    confirm.dataset.confirmReplacement = "";
+                    confirm.textContent = "Use reviewed replacement";
+                    confirm.addEventListener("click", () => { if (replacementDraft.presence)
+                        staged.presenceReplacements = [...staged.presenceReplacements, { sourceRuleId: dependency.sourceRuleId, propertyId: dependency.sourcePropertyId, presence: replacementDraft.presence }];
+                    else if (replacementDraft.rule) {
+                        const rule = { ...clone(replacementDraft.rule), id: options.id("rule"), replacesRuleId: dependency.sourceRuleId };
+                        if (!replacementDraft.keepCondition)
+                            delete rule.condition;
+                        staged.excludedRuleIds = stable([...staged.excludedRuleIds, dependency.sourceRuleId]);
+                        staged.ruleReplacements = [...staged.ruleReplacements, { sourceRuleId: dependency.sourceRuleId, propertyId: dependency.sourcePropertyId, rule }];
+                    } replacementDraft = undefined; renderWorkspace(); focusAfter("[aria-label='Missing rule dependencies']"); });
+                    editor.append(preview, confirm);
+                }
+                row.append(editor);
+            }
             dependencies.append(row);
+        }
+        const preview = options.compositionPreview;
+        if (preview) {
+            composition.setAttribute("aria-label", "Shared Profile composition preview");
+            composition.append(Object.assign(globalThis.document.createElement("h4"), { textContent: `${preview.status === "blocked" ? "Blocked" : "Ready"} composition · ${preview.sources.join(" + ")}` }), Object.assign(globalThis.document.createElement("p"), { textContent: preview.conflicts }));
+            const previewRows = globalThis.document.createElement("ul");
+            for (const row of preview.rows.slice(0, 40))
+                previewRows.append(Object.assign(globalThis.document.createElement("li"), { textContent: `${row.path} · ${row.source} · ${row.effective}` }));
+            composition.append(previewRows);
         }
         const totals = profileInheritanceSummary(document, staged);
         sticky.className = "profile-inheritance-summary";
@@ -140,7 +221,7 @@ export function mountSelectiveProfileInheritance(options) {
         apply.addEventListener("click", () => options.onApply({ ...clone(staged), sourceRevision: document.revision }));
         cancel.addEventListener("click", () => { staged = clone(options.recipe); open = false; workspace.hidden = true; edit.setAttribute("aria-expanded", "false"); edit.focus({ preventScroll: true }); });
         sticky.append(apply, cancel);
-        workspace.append(title, intro, startingLabel, ...(sources.length ? [copyLabel] : []), searchLabel, filterRow, concepts, results, dependencies, sticky);
+        workspace.append(title, intro, ...(preview ? [composition] : []), startingLabel, ...(sources.length ? [copyLabel] : []), searchLabel, filterRow, concepts, results, dependencies, sticky);
     };
     edit.addEventListener("click", () => { open = !open; workspace.hidden = !open; edit.setAttribute("aria-expanded", String(open)); if (open) {
         staged = clone(options.recipe);
@@ -148,7 +229,7 @@ export function mountSelectiveProfileInheritance(options) {
         queueMicrotask(() => workspace.querySelector("select,input,button")?.focus({ preventScroll: true }));
     } });
     updateCard();
-    card.append(heading, summaryText, edit, workspace);
+    card.append(heading, summaryText, impactList, edit, workspace);
     host.append(card);
     return card;
 }

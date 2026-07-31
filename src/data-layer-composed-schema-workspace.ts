@@ -8,7 +8,7 @@ export {composedSchemaWorkspace,composedCanonicalSchema};
 export type ComposedSchemaRowState="ready"|"warning"|"blocked";
 export interface ComposedSchemaProvenance {contributorId:string;contributorName:string;scope:LayerScope;inheritanceRoutes?:readonly string[];state:"inherited"|"shadowed"|"effective";}
 export interface ComposedSchemaRepair {contributorId:string;contributorName:string;label:string;}
-export interface ComposedSchemaRow {path:string;inherited?:EffectiveProperty;local:LayerConstraint;effective:EffectiveProperty;source:string;validationState:ComposedSchemaRowState;message:string;action:"override"|"reset"|"remove";provenance:ComposedSchemaProvenance[];repairs:ComposedSchemaRepair[];}
+export interface ComposedSchemaRow {path:string;inherited?:EffectiveProperty;local:LayerConstraint;effective:EffectiveProperty;source:string;selectionReason?:"direct"|"structural"|"rule-dependency";validationState:ComposedSchemaRowState;message:string;action:"override"|"reset"|"remove";provenance:ComposedSchemaProvenance[];repairs:ComposedSchemaRepair[];}
 export interface ComposedSchemaWorkspace {heading:string;status:"ready"|"blocked";rows:ComposedSchemaRow[];conflictSummary:string;}
 const clone=<T>(value:T):T=>structuredClone(value);
 function updateEntity(state:ProjectState,kind:ProjectEntityKind,entityId:string,label:string,update:(entity:ProjectEntity)=>ProjectEntity):ProjectState{return transactProject(state,label,(project)=>({...project,collections:{...project.collections,[kind]:(project.collections[kind] as ProjectEntity[]).map((entity)=>entity.id===entityId?update(entity):entity)}} as typeof project));}

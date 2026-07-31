@@ -3,6 +3,9 @@ import {
   copyProfileInheritanceRecipe,
   createProfileInheritanceRecipe,
   profileInheritanceImpact,
+  profileInheritanceCurrentImpact,
+  profileInheritanceRecipeApplied,
+  markProfileInheritanceTargetStale,
   profileInheritanceSelection,
   profileInheritanceSummary,
   searchProfileInheritanceProperties,
@@ -10,7 +13,7 @@ import {
   selectiveProfileContribution,
 } from "../dist/data-layer-selective-profile-inheritance.js";
 import {canonicalPropertyPath} from "../dist/data-layer-canonical-schema.js";
-import {compileLayeredSchema} from "../dist/data-layer-layered-schema.js";
+import {compileLayeredSchema,validateLayeredObservation} from "../dist/data-layer-layered-schema.js";
 
 const node=(id,name,type,order,{parentId,concept,presence={mode:"optional"},rules=[],description="",example}={})=>({
   id,name,type,order,...(parentId?{parentId}:{}),...(concept?{concept}:{}),presence,allowedValues:[],rules,
@@ -56,6 +59,40 @@ assert.equal(nestedContribution.constraints[1].presence,undefined,"excluding con
 assert.deepEqual(nestedContribution.constraints[1].rules,[],"excluded stable rule identities are not copied into the target");
 assert.equal(JSON.stringify(nestedContribution).includes('"nodes"'),false,"recipes and filtered contributions contain no copied canonical document");
 
+const businessAncestor={...error,presence:{mode:"required"},allowedValues:[{id:"value:error",value:{code:"E"}}],rules:[{id:"rule:error-container",kind:"cardinality",minItems:2,severity:"error"}],documentation:{displayText:"Business error",description:"Business-only ancestor documentation",comments:"Do not inherit structurally",example:{method:"custom",value:{code:"E"}}},onlyDefinedFields:true};
+const structuralMaster={...master,nodes:{...master.nodes,[error.id]:businessAncestor}};
+const structuralConstraint=selectiveProfileContribution(structuralMaster,nestedOnly).constraints[0];
+assert.deepEqual(structuralConstraint,{path:"/error",type:"object",definitionId:error.id,selectionReason:"structural"},"structural ancestors retain shape and stable provenance identity only");
+
+const ordinaryPattern={id:"rule:error-code-pattern",kind:"pattern",pattern:"^SOURCE$",severity:"error",message:"Source pattern"};
+const ruleMaster={...master,nodes:{...master.nodes,[errorCode.id]:{...errorCode,rules:[ordinaryPattern]}}};
+const excludedPattern={...empty,propertySelections:[errorCode.id],excludedRuleIds:[ordinaryPattern.id]};
+const excludedPatternConstraint=selectiveProfileContribution(ruleMaster,excludedPattern).constraints.find(({definitionId})=>definitionId===errorCode.id);
+assert.equal(excludedPatternConstraint.patterns,undefined,"excluding an ordinary rule removes its projected validation facets");
+const excludedCompiled=compileLayeredSchema([{id:"profile:master",name:"Master",scope:"Shared Profile",constraints:selectiveProfileContribution(ruleMaster,excludedPattern).constraints}],{});
+assert.equal(validateLayeredObservation({targetId:"page:error",targetName:"Error Page",revision:1,compiled:excludedCompiled},{error:{code:"anything"}}).issues.some(({code})=>code==="PATTERN"),false);
+const replacementPattern={...excludedPattern,ruleReplacements:[{sourceRuleId:ordinaryPattern.id,propertyId:errorCode.id,rule:{...ordinaryPattern,id:"rule:target-pattern",pattern:"^TARGET$",replacesRuleId:ordinaryPattern.id}}]};
+const replacementPatternConstraint=selectiveProfileContribution(ruleMaster,replacementPattern).constraints.find(({definitionId})=>definitionId===errorCode.id);
+assert.deepEqual(replacementPatternConstraint.patterns,["^TARGET$"],"replacement facets are derived only from the reviewed target rule");
+const replacementCompiled=compileLayeredSchema([{id:"profile:master",name:"Master",scope:"Shared Profile",constraints:selectiveProfileContribution(ruleMaster,replacementPattern).constraints}],{});
+assert.equal(validateLayeredObservation({targetId:"page:error",targetName:"Error Page",revision:1,compiled:replacementCompiled},{error:{code:"SOURCE"}}).issues.some(({code})=>code==="PATTERN"),true);
+
+const dependencyC=node("property:dependency-c","dependency_c","string",0);
+const dependencyB=node("property:dependency-b","dependency_b","string",1,{rules:[{id:"rule:b-needs-c",kind:"value",expectedValue:"b",condition:{kind:"predicate",id:"predicate:c",propertyId:dependencyC.id,operator:"Exists"},severity:"error"}]});
+const dependencyA=node("property:dependency-a","dependency_a","string",2,{rules:[{id:"rule:a-needs-b",kind:"value",expectedValue:"a",condition:{kind:"predicate",id:"predicate:b",propertyId:dependencyB.id,operator:"Exists"},severity:"error"}]});
+const transitiveMaster={...master,rootIds:[dependencyC.id,dependencyB.id,dependencyA.id],nodes:Object.fromEntries([dependencyC,dependencyB,dependencyA].map((item)=>[item.id,item]))};
+const transitiveRecipe={...empty,propertySelections:[dependencyA.id],includedDependencyPropertyIds:[dependencyB.id]};
+assert.deepEqual(profileInheritanceSelection(transitiveMaster,transitiveRecipe).missingRuleDependencies.map(({propertyId})=>propertyId),[dependencyC.id],"included dependencies expose their own unresolved dependencies");
+const transitiveResolved={...transitiveRecipe,includedDependencyPropertyIds:[dependencyB.id,dependencyC.id]};
+assert.deepEqual(profileInheritanceSelection(transitiveMaster,transitiveResolved).ruleDependencyPropertyIds,[dependencyC.id,dependencyB.id],"dependency closure reaches a stable point in source order");
+const cyclicMaster={...transitiveMaster,nodes:{...transitiveMaster.nodes,[dependencyB.id]:{...dependencyB,rules:[...dependencyB.rules,{id:"rule:b-needs-a",kind:"value",expectedValue:"b",condition:{kind:"predicate",id:"predicate:a",propertyId:dependencyA.id,operator:"Exists"},severity:"error"}]}}};
+assert.equal(profileInheritanceSelection(cyclicMaster,transitiveResolved).missingRuleDependencies.length,0,"cycles terminate once every stable dependency identity is selected");
+
+const invariantRule={...ordinaryPattern,id:"rule:invariant",enforcement:"invariant"};
+const invariantMaster={...master,nodes:{...master.nodes,[errorCode.id]:{...errorCode,rules:[invariantRule]}}};
+const illegalInvariantExclusion={...empty,propertySelections:[errorCode.id],excludedRuleIds:[invariantRule.id]};
+assert.equal(selectiveProfileContribution(invariantMaster,illegalInvariantExclusion).constraints.find(({definitionId})=>definitionId===errorCode.id).rules.some(({id})=>id===invariantRule.id),true,"stored recipes cannot weaken an invariant even if malformed externally");
+
 const includedDependency={...empty,propertySelections:[errorMessage.id],includedDependencyPropertyIds:[pageType.id]};
 const included=profileInheritanceSelection(master,includedDependency);
 assert.deepEqual(new Set(included.ruleDependencyPropertyIds),new Set([pageType.id]));
@@ -83,6 +120,19 @@ assert.deepEqual(impact.removedPropertyIds,[]);
 const deleted={...renamed,revision:9,nodes:Object.fromEntries(Object.entries(renamed.nodes).filter(([id])=>id!==errorDetails.id))};
 assert.deepEqual(profileInheritanceImpact(renamed,deleted,{...empty,propertySelections:[errorMessage.id,errorDetails.id]}).removedPropertyIds,[errorDetails.id]);
 assert.equal(profileInheritanceSelection(deleted,{...empty,propertySelections:[errorDetails.id]}).missingPropertyIds.includes(errorDetails.id),true);
+
+const appliedRecipe=profileInheritanceRecipeApplied(master,{...empty,propertySelections:[errorMessage.id,errorDetails.id],excludedRuleIds:["rule:error-message"]});
+assert.equal(appliedRecipe.sourceRevision,master.revision);assert.equal(JSON.stringify(appliedRecipe.sourceSnapshot).includes('"nodes"'),false,"applied snapshots retain identity/path/fingerprint metadata, not definitions");
+const currentRenameImpact=profileInheritanceCurrentImpact(renamed,appliedRecipe);
+assert.equal(currentRenameImpact.stale,true);assert.deepEqual(currentRenameImpact.changedPaths,[{propertyId:errorMessage.id,before:"/error/message",after:"/error/friendly_message"}]);
+const changedExcludedRule={...master,revision:9,nodes:{...master.nodes,[errorMessage.id]:{...errorMessage,rules:[{...errorMessage.rules[0],pattern:"^CHANGED"}]}}};
+const excludedRuleImpact=profileInheritanceCurrentImpact(changedExcludedRule,appliedRecipe);
+assert.deepEqual(excludedRuleImpact.changedRuleIds,[],"source edits to an explicitly excluded rule do not affect the recipe");assert.equal(excludedRuleImpact.stale,false);
+const newDependencyRule={...errorMessage.rules[0],id:"rule:new-dependency",condition:{kind:"predicate",id:"predicate:offer",propertyId:offer.id,operator:"Exists"}};
+const addedDependency={...master,revision:10,nodes:{...master.nodes,[errorMessage.id]:{...errorMessage,rules:[...errorMessage.rules,newDependencyRule]}}};
+assert.equal(profileInheritanceCurrentImpact(addedDependency,appliedRecipe).newMissingRuleDependencies.some(({propertyId})=>propertyId===offer.id),true);
+const staleTarget=markProfileInheritanceTargetStale({id:"page:error",name:"Error Page",profileInheritanceRecipes:[appliedRecipe]},"profile:master",master,renamed);
+assert.equal(staleTarget.validationStale,true);assert.equal(staleTarget.testCasesStale,true);assert.equal(staleTarget.documentationStale,true);assert.equal(staleTarget.exportStale,true);assert.equal(staleTarget.profileInheritanceRecipes[0].sourceImpact.changedPaths.length,1);
 
 assert.equal(canonicalPropertyPath(renamed,errorMessage.id),"/error/friendly_message");
 
