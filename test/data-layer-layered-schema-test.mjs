@@ -235,6 +235,32 @@ for(const scope of ["Page Group","Page"]){
     assert.deepEqual(withProfiles.properties["/value"][expectedFacet[0]],expectedFacet[1],`${scope} matching rules retain ordinary direct-vs-rule precedence after profile inheritance`);
     assert.deepEqual(withProfiles.properties["/value"][expectedFacet[0]],withoutProfiles.properties["/value"][expectedFacet[0]],`${scope} conditional resolution is conserved with and without compatible profiles`);
   }
+  for(const [facet,rules] of [
+    ["value",[
+      unconditionalRule(`conflict:${scope}:value:a`,{kind:"value",expectedValue:"a",condition:alwaysCondition}),
+      unconditionalRule(`conflict:${scope}:value:b`,{kind:"value",expectedValue:"b",condition:alwaysCondition}),
+    ]],
+    ["presence",[
+      unconditionalRule(`conflict:${scope}:presence:a`,{kind:"presence",presence:"required",condition:alwaysCondition}),
+      unconditionalRule(`conflict:${scope}:presence:b`,{kind:"presence",presence:"forbidden",condition:alwaysCondition}),
+    ]],
+    ["range",[
+      unconditionalRule(`conflict:${scope}:range:a`,{kind:"range",minimum:10,condition:alwaysCondition}),
+      unconditionalRule(`conflict:${scope}:range:b`,{kind:"range",maximum:5,condition:alwaysCondition}),
+    ]],
+    ["cardinality",[
+      unconditionalRule(`conflict:${scope}:cardinality:a`,{kind:"cardinality",minItems:4,condition:alwaysCondition}),
+      unconditionalRule(`conflict:${scope}:cardinality:b`,{kind:"cardinality",maxItems:2,condition:alwaysCondition}),
+    ]],
+  ]){
+    const downstream=contribution(`conflict:${scope}`,`Conflict ${scope}`,scope,[{path:"/value",rules}]),withoutProfiles=resolveConditionalLayeredSchema(compileLayeredSchema([downstream],{eventId:"pageview",eventRole:"context"}),{}),withProfiles=resolveConditionalLayeredSchema(compileLayeredSchema([
+      peer("a",{type:facet==="cardinality"?"array":facet==="range"?"number":"string"}),
+      peer("b",{type:facet==="cardinality"?"array":facet==="range"?"number":"string"}),
+      downstream,
+    ],{eventId:"pageview",eventRole:"context"}),{});
+    assert.equal(withoutProfiles.conflicts.length,1,`${scope} ${facet} contradiction has one ordinary conflict`);
+    assert.deepEqual(withProfiles.conflicts,withoutProfiles.conflicts,`${scope} ${facet} conflict identity and count are conserved after compatible profile inheritance`);
+  }
 }
 const operatorRule=(id,operator,expectedValue)=>unconditionalRule(id,{kind:"value",operator,expectedValue});
 for(const rules of [

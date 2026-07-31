@@ -221,6 +221,19 @@ for(let iteration=0;iteration<120;iteration+=1){
         assert.deepEqual(inherited.properties["/generated"][field],ordinary.properties["/generated"][field],"generated downstream direct-vs-rule precedence is conserved across compatible profile inheritance");
       }
     }
+    for(const [facet,rules,type] of [
+      ["value",[rule(`conflict-value-a-${iteration}`,{kind:"value",expectedValue:`a-${iteration}`,condition:always}),rule(`conflict-value-b-${iteration}`,{kind:"value",expectedValue:`b-${iteration}`,condition:always})],"string"],
+      ["presence",[rule(`conflict-presence-a-${iteration}`,{kind:"presence",presence:"required",condition:always}),rule(`conflict-presence-b-${iteration}`,{kind:"presence",presence:"forbidden",condition:always})],"string"],
+      ["range",[rule(`conflict-range-a-${iteration}`,{kind:"range",minimum:minimum,condition:always}),rule(`conflict-range-b-${iteration}`,{kind:"range",maximum:maximum,condition:always})],"number"],
+      ["cardinality",[rule(`conflict-cardinality-a-${iteration}`,{kind:"cardinality",minItems:minimum,condition:always}),rule(`conflict-cardinality-b-${iteration}`,{kind:"cardinality",maxItems:maximum,condition:always})],"array"],
+    ]){
+      const downstream=downstreamContribution(`conflict-${scope}`,scope,{rules}),ordinary=resolveConditionalLayeredSchema(compilePeers([downstream]),{}),compatibleProfiles=[peerContribution("a",{type}),peerContribution("b",{type})];
+      assert.equal(ordinary.conflicts.length,1,`generated ${scope} ${facet} contradiction has one ordinary conflict`);
+      for(const profiles of [compatibleProfiles,[...compatibleProfiles].reverse()]){
+        const inherited=resolveConditionalLayeredSchema(compilePeers([...profiles,downstream]),{});
+        assert.deepEqual(inherited.conflicts,ordinary.conflicts,"generated downstream conflict identity and count are conserved across compatible profile inheritance");
+      }
+    }
   }
   const operatorRule=(id,operator,expectedValue)=>rule(id,{kind:"value",operator,expectedValue}),operatorPairs=[
     [operatorRule("equals-a","Equals",`a-${iteration}`),operatorRule("equals-b","Equals",`b-${iteration}`)],

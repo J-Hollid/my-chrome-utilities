@@ -89,6 +89,7 @@ const conditional = (property, payload, paths) => (property.rules ?? []).flatMap
 });
 const differing = (rules, read) => new Set(rules.map((rule) => JSON.stringify(read(rule)))).size > 1;
 const conflictFor = (path, facet, rules) => ({ path, message: `conditional ${facet} outcomes contradict`, contributors: rules.map(named) });
+const uniqueConflicts = (conflicts) => [...new Map(conflicts.map((conflict) => [JSON.stringify(conflict), conflict])).values()];
 const resolvedPeerConstraint = (constraint, payload, paths) => {
     const result = clone(constraint);
     if (result.condition && !layeredConditionMatches(result.condition, payload, paths)) {
@@ -231,7 +232,7 @@ function resolveProperty(property, payload, paths) {
         return { property: clone(property), conflicts: [peers.conflict] };
     if (peers) {
         const replayed = replayDownstream(property, composeResolvedPeers(property, peers.constraints), payload, paths);
-        return { property: replayed.property, conflicts: [...ordinary.conflicts, ...replayed.conflicts] };
+        return { property: replayed.property, conflicts: uniqueConflicts([...ordinary.conflicts, ...replayed.conflicts]) };
     }
     return ordinary;
 }
