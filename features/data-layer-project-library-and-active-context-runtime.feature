@@ -255,3 +255,42 @@ Feature: Data layer project library and active context runtime
     And hashes for Page memberships, effective schemas, Applicability Sets, and Flow graphs remain unchanged
     When production portability exports and imports the project
     Then both description values survive exactly and no production matcher reads either value
+
+  # Data layer project library and active context runtime 020
+  Scenario: Data layer project library and active context runtime 020
+    Given production Cart bytes contain obsolete environment, host, query, hash, spa, expectedEventIds, and applicabilitySetId properties
+    When actual controls open the installed Cart Page details
+    Then the form renders Name, optional Description, required Page-view event name, and optional Exact URL path with associated guidance
+    And DOM inspection finds none of the obsolete controls
+    And Save Page details is the only form commit control
+    And DOM inspection finds no Duplicate or Generate Page specification documentation action
+    When actual controls save description Checkout basket and Page-view event name pageview
+    Then repository bytes and the reloaded workspace contain trimmed Page details without any obsolete property
+    And hashes for Cart identity, memberships, inheritance recipes, local schema, Flow graphs, and documentation configuration remain unchanged
+
+  # Data layer project library and active context runtime 021
+  Scenario Outline: Data layer project library and active context runtime 021
+    Given production Cart has pathname /checkout/cart
+    When the installed Test URL control receives <url>
+    Then its non-persistent recognition result is <result>
+    And project repository bytes remain identical
+
+    Examples:
+      | url                                      | result                                |
+      | https://shop.example/checkout/cart?x=1#y | matches exact pathname /checkout/cart |
+      | https://other.example/checkout/cart      | matches exact pathname /checkout/cart |
+      | https://shop.example/checkout/cart/      | does not match /checkout/cart         |
+      | checkout/cart                            | Enter a full URL                       |
+
+  # Data layer project library and active context runtime 022
+  Scenario: Data layer project library and active context runtime 022
+    Given production Cart can inherit Sitewide and has ordered Page Group memberships
+    When actual controls open its installed workspace
+    Then landmark inspection finds Page details, Page recognition, Inherited schema, and Effective and local schema regions
+    And exactly one visible Add to Page Group action opens production membership search without an adjacent duplicate menu command
+    And every membership row retains Open Page Group, Move earlier, Move later, and Remove controls
+    And Add Shared Profile mounts the production selective-inheritance recipe while no raw profileIds multi-select exists
+    And applicability controls are adjacent to the effective-schema preview and described as Preview only — not saved
+    When actual navigation leaves Cart and returns
+    Then every transient applicability control is checked and durable Page bytes remain unchanged
+    And the Page workspace contains no local documentation generator

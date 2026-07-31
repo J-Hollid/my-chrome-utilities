@@ -253,3 +253,42 @@ Feature: Data layer project library and active context
     And Page membership, ordered schema composition, Applicability Sets, and Flow placement remain unchanged
     When the project reloads and completes portability export and import
     Then both Page Group descriptions return unchanged and are never interpreted as membership or applicability rules
+
+  # Data layer project library and active context 020
+  Scenario: Data layer project library and active context 020
+    Given Cart Page retains obsolete Environment, Host matcher, Query matcher, Hash matcher, SPA route, Expected interaction Events, and Applicability Set values
+    When the operator opens Cart Page details
+    Then the form offers Name, optional Description, required Page-view event name, and optional Exact URL path with purpose and syntax guidance
+    And it offers none of the obsolete fields
+    And its only commit action is Save Page details
+    And Duplicate and Generate Page specification documentation are absent
+    When the operator saves description Checkout basket and Page-view event name pageview
+    Then Cart stores and displays the trimmed Page details without any obsolete value
+    And its identity, memberships, inheritance recipes, local schema, Flow placements, and documentation configuration remain unchanged
+
+  # Data layer project library and active context 021
+  Scenario Outline: Data layer project library and active context 021
+    Given Cart has Exact URL path /checkout/cart
+    When the operator tests <url>
+    Then the Page recognition preview reports <result>
+    And testing changes no project data
+
+    Examples:
+      | url                                      | result                              |
+      | https://shop.example/checkout/cart?x=1#y | matches exact pathname /checkout/cart |
+      | https://other.example/checkout/cart      | matches exact pathname /checkout/cart |
+      | https://shop.example/checkout/cart/      | does not match /checkout/cart        |
+      | checkout/cart                            | Enter a full URL                      |
+
+  # Data layer project library and active context 022
+  Scenario: Data layer project library and active context 022
+    Given Cart can inherit Sitewide and belongs to ordered Page Groups
+    When the operator opens Cart
+    Then Page details, Page recognition, Inherited schema, and Effective and local schema form distinct regions
+    And one visible Add to Page Group action opens the searchable membership picker without an adjacent duplicate Page actions command
+    And each membership retains Open Page Group, Move earlier, Move later, and Remove
+    And Add Shared Profile starts the existing selective inheritance recipe without a raw Shared Profile multi-select
+    And applicability choices sit beside the effective-schema preview and state Preview only — not saved
+    When the operator leaves Cart and returns
+    Then every applicability preview choice is checked again without changing durable membership or inheritance
+    And project documentation remains owned by the Documentation workspace
