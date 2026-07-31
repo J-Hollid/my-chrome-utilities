@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=834b1349fb4acc22cc844875fa54f520f1700092e810f05b671ec3ee04679cfb
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-07-31T23:54:34.681854955Z","feature_name":"Specification Studio assignment-owned routing","feature_path":"features/specification-studio-assignment-owned-routing.feature","background_hash":"a1f1014c7dfd896c885ea0a5610d511ce3345a1d0d0429d9ad2d5c2ab8daae38","implementation_hash":"sha256:391a2d1f9b1343ac1a680930786171cad5167b773db0861469ced837cb4cac29","scenarios":[{"index":1,"name":"Specification Studio assignment-owned routing 002","scenario_hash":"1f69c51efc4039594adb62894a4b7e12e08168a1cae4e3ae7a997d1e273e4596","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-31T23:54:34.681854955Z"},{"index":2,"name":"Specification Studio assignment-owned routing 003","scenario_hash":"545e47c5eee66eb7874bef8c8ef5682502e44e31a86eedbf1d36276444ea7d43","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-31T23:54:34.681854955Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Specification Studio assignment-owned routing
 
   Background:

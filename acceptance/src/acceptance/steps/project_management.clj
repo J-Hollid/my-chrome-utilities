@@ -86,9 +86,10 @@
     result))
 (defn- verify-model! []
   (when-not @model-verified?
-    (checked! "node" "test/data-layer-project-library-test.mjs")
-    (checked! "node" "test/data-layer-project-entity-lifecycle-test.mjs")
-    (checked! "node" "test/data-layer-assignment-routing-test.mjs")
+    (doseq [test-file ["test/data-layer-project-library-test.mjs"
+                       "test/data-layer-project-entity-lifecycle-test.mjs"
+                       "test/data-layer-assignment-routing-test.mjs"]]
+      (checked! "node" test-file))
     (reset! model-verified? true)))
 (defn- observe-browser! []
   (or @browser-observation
@@ -173,5 +174,5 @@
                                           observe-browser! assert-runtime!))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-31T23:44:37.544265696+02:00", :module-hash "-1867411290", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 5, :hash "-408196865"} {:id "def/feature-files", :kind "def", :line 7, :end-line 10, :hash "-441913606"} {:id "def/model-entries", :kind "def", :line 11, :end-line 38, :hash "-1882471106"} {:id "def/runtime-entries", :kind "def", :line 39, :end-line 66, :hash "-968290588"} {:id "def/entry-modes", :kind "def", :line 67, :end-line 68, :hash "270029399"} {:id "form/5/defonce", :kind "defonce", :line 69, :end-line 69, :hash "344781070"} {:id "form/6/defonce", :kind "defonce", :line 70, :end-line 70, :hash "-1618529344"} {:id "defn-/checked!", :kind "defn-", :line 71, :end-line 74, :hash "-148274062"} {:id "defn-/verify-model!", :kind "defn-", :line 75, :end-line 79, :hash "1031433647"} {:id "defn-/observe-browser!", :kind "defn-", :line 80, :end-line 88, :hash "-464242976"} {:id "def/runtime-paths", :kind "def", :line 89, :end-line 92, :hash "1029585165"} {:id "defn/complete-browser-evidence?", :kind "defn", :line 93, :end-line 96, :hash "-1866555812"} {:id "defn-/assert-runtime!", :kind "defn-", :line 97, :end-line 100, :hash "1764318754"} {:id "def/example-values", :kind "def", :line 101, :end-line 130, :hash "1740267612"} {:id "def/page-recognition-examples", :kind "def", :line 131, :end-line 139, :hash "-1372553383"} {:id "defn/validate-example!", :kind "defn", :line 140, :end-line 147, :hash "239655776"} {:id "def/handlers", :kind "def", :line 148, :end-line 151, :hash "-1692449013"}]}
+;; {:version 1, :tested-at "2026-08-01T01:53:54.597437721+02:00", :module-hash "-1486274999", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 5, :hash "-408196865"} {:id "def/feature-files", :kind "def", :line 7, :end-line 12, :hash "-1613232606"} {:id "def/model-entries", :kind "def", :line 13, :end-line 45, :hash "39226355"} {:id "def/runtime-entries", :kind "def", :line 46, :end-line 78, :hash "1010246396"} {:id "def/entry-modes", :kind "def", :line 79, :end-line 80, :hash "270029399"} {:id "form/5/defonce", :kind "defonce", :line 81, :end-line 81, :hash "344781070"} {:id "form/6/defonce", :kind "defonce", :line 82, :end-line 82, :hash "-1618529344"} {:id "defn-/checked!", :kind "defn-", :line 83, :end-line 86, :hash "-148274062"} {:id "defn-/verify-model!", :kind "defn-", :line 87, :end-line 93, :hash "577920822"} {:id "defn-/observe-browser!", :kind "defn-", :line 94, :end-line 102, :hash "-464242976"} {:id "def/runtime-paths", :kind "def", :line 103, :end-line 106, :hash "165839163"} {:id "defn/complete-browser-evidence?", :kind "defn", :line 107, :end-line 110, :hash "-1866555812"} {:id "defn-/assert-runtime!", :kind "defn-", :line 111, :end-line 114, :hash "1764318754"} {:id "def/example-values", :kind "def", :line 115, :end-line 156, :hash "1687542411"} {:id "def/assignment-routing-examples", :kind "def", :line 157, :end-line 162, :hash "877625919"} {:id "defn/validate-example!", :kind "defn", :line 163, :end-line 170, :hash "987774597"} {:id "def/handlers", :kind "def", :line 171, :end-line 174, :hash "-1692449013"}]}
 ;; clj-mutate-manifest-end
