@@ -309,7 +309,7 @@ try {
     `(()=>{
       const tree=[...document.querySelectorAll("#project-tree button")];
       const labels=tree.map(({textContent})=>textContent.trim().replace(/ \\(\\d+\\)$/,""));
-      const expected=["Documentation","Project overview","Shared Profiles","Pages","Page Groups","Events","Applicability","Flows","Fixtures","Assignments","Releases"];
+      const expected=["Documentation","Project overview","Shared Profiles","Pages","Page Groups","Events","Applicability","Flows","Test cases","Assignments","Releases"];
       const toggle=document.querySelector("#toggle-project-inspector"),inspector=document.querySelector("#project-inspector");
       const actions=[...document.querySelectorAll(".sticky-tools .actions button")].map(({textContent})=>textContent.trim());
       return{

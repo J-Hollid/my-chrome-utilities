@@ -91,23 +91,23 @@
                    evidence))
 (def example-values
   {"overview" #{"Shared Profiles" "Page Groups" "Pages" "Events"
-                "Applicability" "Flows" "Fixtures" "Assignments"}
+                "Applicability" "Flows" "Test cases" "Assignments"}
    "entity" #{"Sitewide" "Checkout" "Cart" "Purchase" "Retail checkout"
               "Checkout journey" "Valid purchase" "Retail Purchase"}
    "add action" #{"Add Shared Profile" "Add Page Group" "Add Page" "Add Event"
-                  "Add Applicability Set" "Add Flow" "Add Fixture" "Add Assignment"}
+                  "Add Applicability Set" "Add Flow" "Add Test case" "Add Assignment"}
    "creation page" #{"Create Shared Profile" "Create Page Group" "Create Page"
                      "Create Event" "Create Applicability Set" "Create Flow"
-                     "Create Fixture" "Create Assignment"}
+                     "Create Test case" "Create Assignment"}
    "singular" #{"Shared Profile" "Page Group" "Page" "Event"
-                "Applicability Set" "Flow" "Fixture" "Assignment"}
+                "Applicability Set" "Flow" "Test case" "Assignment"}
    "purpose" #{"reusable schema rules and documentation"
                "shared Page context and inherited requirements"
                "observable Page context and specific requirements"
                "reusable interaction schema and documentation"
                "named observation matching and assignment eligibility"
                "documentary journey topology"
-               "saved per-Event validation evidence"
+               "saved input plus reviewed expectations rerunnable against the current Draft"
                "production schema selection for matching observations"}
    "ordered Pages" #{"Alpha, Landing, Cart" "Alpha, Landing" "Landing"}
    "removed Page" #{"Landing"}

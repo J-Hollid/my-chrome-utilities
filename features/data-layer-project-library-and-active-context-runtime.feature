@@ -52,7 +52,7 @@ Feature: Data layer project library and active context runtime
     Then the installed review names both project identities and every project-bound surface that will change
     When selection storage changes from project-retail to project-trade through the review
     Then active-project persistence contains only project-trade
-    And production Shared Profiles, Page Groups, Pages, Events, Applicability, Flows, Fixtures, Assignments, documentation, and Studio projections contain no Retail website record
+    And production Shared Profiles, Page Groups, Pages, Events, Applicability, Flows, Test cases, Assignments, documentation, and Studio projections contain no Retail website record
     And serialized project-retail remains saved and inactive
 
   # Data layer project library and active context runtime 005
@@ -133,7 +133,7 @@ Feature: Data layer project library and active context runtime
       | Events          | Purchase          | Add Event                 | Create Event                     | Event             |
       | Applicability   | Retail checkout   | Add Applicability Set     | Create Applicability Set         | Applicability Set |
       | Flows           | Checkout journey  | Add Flow                  | Create Flow                      | Flow              |
-      | Fixtures        | Valid purchase    | Add Fixture               | Create Fixture                   | Fixture           |
+      | Test cases      | Valid purchase    | Add Test case             | Create Test case                 | Test case         |
       | Assignments     | Retail Purchase   | Add Assignment            | Create Assignment                | Assignment        |
 
   # Data layer project library and active context runtime 012
@@ -154,7 +154,7 @@ Feature: Data layer project library and active context runtime
       | Events          | Add Event                 | reusable interaction schema and documentation           |
       | Applicability   | Add Applicability Set     | named observation matching and assignment eligibility |
       | Flows           | Add Flow                  | documentary journey topology                           |
-      | Fixtures        | Add Fixture               | saved per-Event validation evidence                    |
+      | Test cases      | Add Test case             | saved input plus reviewed expectations rerunnable against the current Draft |
       | Assignments     | Add Assignment            | production schema selection for matching observations  |
 
   # Data layer project library and active context runtime 013
@@ -176,7 +176,7 @@ Feature: Data layer project library and active context runtime
     When the production Purchase row requests deletion
     Then the installed review renders all three human dependent names and relationship descriptions
     And confirmation is disabled with Open Checkout journey, Open Retail Purchase, and Open Valid purchase controls
-    And serialized Event, Flow, Assignment, Fixture, revision, and evidence bytes remain identical
+    And serialized Event, Flow, Assignment, Test case, revision, and evidence bytes remain identical
     When actual controls remove every dependency through its production workspace and return
     Then Remove Purchase is enabled without any implicit dependent deletion
 
@@ -208,7 +208,7 @@ Feature: Data layer project library and active context runtime
       | Applicability   | Retail checkout    |
       | Flows           | Checkout journey   |
       | Assignments     | Retail Purchase    |
-      | Fixtures        | Valid purchase     |
+      | Test cases      | Valid purchase     |
     And the built Specification Studio reloads
     Then each installed overview restores exactly its created row with Open and Remove controls
     And each row opens its dedicated project-scoped workspace
@@ -231,7 +231,7 @@ Feature: Data layer project library and active context runtime
   # Data layer project library and active context runtime 018
   Scenario: Data layer project library and active context runtime 018
     Given production Checkout journey owns Payment Page frames and nested interaction Event instances
-    And no production Fixture, Assignment, or other entity references Checkout journey
+    And no production Test case, Assignment, or other entity references Checkout journey
     When actual controls open and confirm Remove Checkout journey from the Flows overview
     Then the installed review treats the complete Flow topology as owned removal content rather than a dependency or Open action
     And one production command removes the Flow record and its exact documentation Flow graph

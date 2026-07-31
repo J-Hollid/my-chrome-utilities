@@ -25,6 +25,7 @@ import { mountCanonicalSchemaEditor as mountCanonicalSchemaEditorBase } from "./
 import { mountProjectConditionEditor, projectConditionEditorValue } from "./data-layer-project-condition-editor.js";
 import { createProjectCollectionEntity, hasSavedSchemaAdoptionActions, inspectProjectEntityRemoval, projectCollectionCreationFields, projectCollectionCreationRoute, projectCollectionDefinitions, projectEntityWorkspaceRoute, projectInspectorTogglePresentation, removeProjectCollectionEntity } from "./data-layer-project-entity-lifecycle.js";
 import { declareStudioChoice, installStudioChoiceControls } from "./data-layer-studio-choice-controls.js";
+import { compareGuidedTestCase, guidedInputControls, guidedTestCaseTypeOptions } from "./data-layer-guided-test-cases.js";
 import { installStudioAnalystGuidance, studioAnalystGuidanceIsActive } from "./specification-studio-technical-analyst-guidance.js";
 const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, START_PATH_KEY = "my-chrome-utilities.specification-project-start.v1", routeParameters = new URLSearchParams(location.search), startupProjectId = routeParameters.get("project") ?? undefined, startupKind = routeParameters.get("kind") ?? undefined, startupEntityId = routeParameters.get("entity") ?? undefined, startupRoute = startupKind ? durableProjectRouteForWorkspace(startupKind, startupEntityId) : undefined;
 installStudioChoiceControls(document.body);
@@ -45,7 +46,7 @@ for (const fieldId of ["project-assignment-path", "project-assignment-value", "p
 }
 q("#project-assignment-applicability").required = false;
 const id = (kind) => `${kind}:${crypto.randomUUID()}`;
-const labels = { profiles: "Shared Profiles", pages: "Pages", pageGroups: "Page Groups", events: "Events", applicabilitySets: "Applicability", flows: "Flows", fixtures: "Fixtures", assignments: "Assignments" };
+const labels = { profiles: "Shared Profiles", pages: "Pages", pageGroups: "Page Groups", events: "Events", applicabilitySets: "Applicability", flows: "Flows", fixtures: "Test cases", assignments: "Assignments" };
 let state, lastCommittedState, library = projectLibrary();
 let canonicalRevision = 0, publishedRevision = 0, pendingConflict, durableConflict, saveStatus = { kind: "idle" }, stagedBulk, selectedKind = "profiles", selectedId, projectOverview = routeParameters.get("route") === "overview", documentationOpen = routeParameters.get("view") === "documentation", creationKind, removalReview, lifecycleStatus = "", removedFocus, pendingLifecycleFocus, pendingWorkspaceFocus, stagedImport, lastInvokingControl, releasePreflight, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi, projectDocumentationWorkspaceUi;
 const analystNavigation = q('#project-workspace > nav'), analystRegion = q("#studio-analyst-guidance"), analystControl = q("#studio-analyst-control"), analystHint = q("#studio-analyst-hint");
@@ -362,7 +363,7 @@ const editorFields = {
     events: [{ key: "sourceId", label: "Source" }, { key: "eventName", label: "Canonical event name" }, { key: "trigger", label: "Default documentary trigger" }, { key: "target", label: "Validation target" }, { key: "occurrencePolicy", label: "Occurrence policy" }, { key: "profileIds", label: "Requirement profiles", collection: "profiles", multiple: true }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }],
     applicabilitySets: [{ key: "priority", label: "Priority", type: "number" }, { key: "fallback", label: "Fallback", type: "checkbox" }, { key: "condition", label: "Nested All / Any / Not condition", type: "condition" }],
     flows: [{ key: "entryCondition", label: "Entry condition", type: "condition" }, { key: "exitCondition", label: "Exit condition", type: "condition" }, { key: "timeoutMinutes", label: "Timeout minutes", type: "number" }, { key: "correlationField", label: "Correlation field" }, { key: "profileIds", label: "Requirement profiles", collection: "profiles", multiple: true }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }],
-    fixtures: [{ key: "mode", label: "Fixture mode" }, { key: "context", label: "Context", type: "json" }, { key: "observations", label: "Ordered observations", type: "json" }, { key: "payload", label: "Payload", type: "json" }, { key: "expected", label: "Expected winner, step, schema and issues", type: "json" }, { key: "releasePolicy", label: "Release policy" }],
+    fixtures: [],
     assignments: [{ key: "targetKind", label: "Contributor kind" }, { key: "targetId", label: "Contributor target" }, { key: "eventId", label: "Event", collection: "events" }, { key: "applicabilitySetId", label: "Applicability Set", collection: "applicabilitySets" }, { key: "priority", label: "Priority", type: "number" }],
 };
 function fieldControl(field, entity) { if (field.type === "flow-role") {
@@ -452,23 +453,203 @@ function productionEditorValue(field, control) {
     }
     return editorValue(field, control);
 }
-function renderFixtureExecution(form, fixture) { const section = document.createElement("section"), heading = document.createElement("h3"), evidence = document.createElement("p"), run = document.createElement("button"), result = document.createElement("output"); section.setAttribute("aria-label", "Fixture execution"); heading.textContent = "Production evaluator replay"; const observations = fixture.observations ?? [], expected = fixture.expected ?? {}; evidence.textContent = `Captured observation: ${observations.map(({ eventName }) => String(eventName ?? "unnamed")).join(", ") || "none"} · Proposed assertions: status ${String(expected.status ?? "not set")}; issueCodes ${JSON.stringify(expected.issueCodes ?? [])}`; run.type = "button"; run.textContent = "Run Fixture"; result.id = "fixture-run-result"; result.setAttribute("aria-live", "polite"); run.addEventListener("click", () => { if (!state)
-    return; const currentFixture = state.project.collections.fixtures.find(({ id }) => id === fixture.id) ?? fixture; if (currentFixture.pageId || currentFixture.context?.pageId) {
-    try {
-        const evaluated = evaluatePageGroupFixture(state, currentFixture.id), issues = evaluated.validation.issues.map(({ path, code }) => `${path} ${code}`).join(", ") || "none";
-        result.textContent = `${documentPageGroupStructure(evaluated)}\nValidation issues: ${issues}`;
+const setInputPath = (input, path, value) => { const parts = path.split("/").filter(Boolean); let cursor = input; parts.forEach((part, index) => { if (index === parts.length - 1) {
+    cursor[part] = value;
+    return;
+} const child = cursor[part]; cursor[part] = child && typeof child === "object" && !Array.isArray(child) ? child : {}; cursor = cursor[part]; }); };
+const guidedSchemaCandidates = (testCase) => { if (!state)
+    return []; const event = state.project.collections.events.find(({ id }) => id === testCase.eventId), profileIds = new Set([...(event?.profileIds ?? []), ...((state.project.collections.assignments.filter(({ eventId }) => eventId === testCase.eventId).flatMap(({ targetKind, targetId }) => targetKind === "Shared Profile" ? [String(targetId)] : [])))]); const selected = String(testCase.inputGuidance?.schemaId ?? ""); return state.project.collections.profiles.filter((profile) => profile.id === selected || !profileIds.size || profileIds.has(profile.id)); };
+function renderGuidedTestCaseEditor(content, entity) {
+    if (!state)
+        return;
+    const testCase = { testType: entity.testType === "page-context" ? "page-context" : "event-validation", input: { ...(entity.input ?? entity.payload ?? {}) }, inputGuidance: { kind: "authoring-guidance", ...(entity.inputGuidance ?? {}) }, sourceProvenance: entity.sourceProvenance ?? { kind: "legacy", id: entity.id, revision: String(entity.revision ?? "imported") }, reviewedExpectations: { ...(entity.reviewedExpectations ?? entity.expected ?? {}) }, status: entity.status ?? "Blocked", differences: entity.differences ?? [], ...entity }, section = document.createElement("section"), heading = document.createElement("h2"), definition = document.createElement("p"), form = document.createElement("form"), steps = document.createElement("ol"), result = document.createElement("output");
+    section.className = "contextual-editor guided-test-case";
+    section.dataset.guidedTestCase = entity.id;
+    heading.textContent = "Edit Test case";
+    heading.tabIndex = -1;
+    definition.textContent = "A Test case is saved input plus reviewed expectations rerunnable against the current Draft. Test-case assurance is advisory.";
+    for (const label of ["Source", "Scope", "Input", "Save and run", "Expectations", "Review"]) {
+        const item = document.createElement("li");
+        item.textContent = label;
+        steps.append(item);
+    }
+    const name = document.createElement("input");
+    name.name = "name";
+    name.required = true;
+    name.value = testCase.name;
+    form.append(labeledControl("Test case name", name));
+    const type = document.createElement("select");
+    type.name = "testType";
+    for (const option of guidedTestCaseTypeOptions()) {
+        const element = new Option(`${option.label} — ${option.purpose}`, option.value);
+        type.append(element);
+    }
+    type.value = testCase.testType;
+    form.append(labeledControl("Test case type", type));
+    const scope = document.createElement("fieldset"), scopeLegend = document.createElement("legend"), eventSelect = document.createElement("select"), pageSelect = document.createElement("select");
+    scopeLegend.textContent = "Scope";
+    eventSelect.name = "eventId";
+    pageSelect.name = "pageId";
+    eventSelect.append(new Option("Choose one named Event", ""));
+    pageSelect.append(new Option("No Page context", ""));
+    for (const event of state.project.collections.events)
+        eventSelect.append(new Option(event.name, event.id));
+    for (const page of state.project.collections.pages)
+        pageSelect.append(new Option(page.name, page.id));
+    eventSelect.value = String(testCase.eventId ?? "");
+    pageSelect.value = String(testCase.pageId ?? "");
+    scope.append(scopeLegend, labeledControl("Event", eventSelect), labeledControl("Page", pageSelect));
+    form.append(scope);
+    const source = document.createElement("p");
+    source.textContent = `Source: ${testCase.sourceProvenance.kind} ${testCase.sourceProvenance.id} at ${testCase.sourceProvenance.revision}. Later source edits cannot change this saved copy.`;
+    form.append(source);
+    const candidates = guidedSchemaCandidates(testCase), schemaSelect = document.createElement("select");
+    schemaSelect.name = "inputGuidance";
+    schemaSelect.append(new Option("Choose input-guidance schema", ""));
+    for (const profile of candidates)
+        schemaSelect.append(new Option(`${profile.name} · contributor ${profile.id} · revision ${String(profile.canonicalSchema?.revision ?? profile.revision ?? 1)}`, profile.id));
+    schemaSelect.value = String(testCase.inputGuidance.schemaId ?? candidates[0]?.id ?? "");
+    form.append(labeledControl("Input-guidance schema (authoring assistance only)", schemaSelect));
+    const schema = candidates.find(({ id }) => id === schemaSelect.value), inputGroup = document.createElement("fieldset"), inputLegend = document.createElement("legend");
+    inputLegend.textContent = "Structured input";
+    inputGroup.append(inputLegend);
+    const requirements = schema ? (schema.canonicalSchema ? canonicalRequirements(schema.canonicalSchema) : schema.requirements) : [], controls = guidedInputControls(requirements, testCase.input);
+    if (!schema) {
+        const missing = document.createElement("p"), repair = document.createElement("button");
+        missing.textContent = "No eligible input-guidance schema describes this scope. Repair the Event, Assignment, contributor, or schema relationship; the Test case name, type, source, and scope will be preserved.";
+        repair.type = "button";
+        repair.textContent = "Open Shared Profiles to create, adopt, select, or repair guidance";
+        repair.addEventListener("click", () => { selectedKind = "profiles"; selectedId = undefined; persistNavigation(); render(); });
+        inputGroup.append(missing, repair);
+    }
+    for (const descriptor of controls) {
+        if (!descriptor.required && descriptor.value === undefined) {
+            const add = document.createElement("button");
+            add.type = "button";
+            add.textContent = `Add optional ${descriptor.path}`;
+            add.addEventListener("click", () => { setInputPath(testCase.input, descriptor.path, descriptor.jsonTypes.includes("boolean") ? false : descriptor.jsonTypes.includes("number") ? 0 : ""); persist(transactProject(state, `Add optional Test case input ${descriptor.path}`, (project) => ({ ...project, collections: { ...project.collections, fixtures: project.collections.fixtures.map((candidate) => candidate.id === entity.id ? { ...candidate, input: testCase.input } : candidate) } }))); });
+            inputGroup.append(add);
+            continue;
+        }
+        const input = descriptor.control === "choice" || descriptor.control === "boolean" || descriptor.control === "nullable" ? document.createElement("select") : document.createElement("input");
+        input.dataset.testInputPath = descriptor.path;
+        input.setAttribute("aria-describedby", `test-input-help-${descriptor.path.replace(/[^a-z0-9]/gi, "-")}`);
+        if (input instanceof HTMLSelectElement) {
+            if (descriptor.control === "choice")
+                for (const value of descriptor.constraints.allowedValues ?? [])
+                    input.append(new Option(String(value), JSON.stringify(value)));
+            if (descriptor.control === "boolean")
+                input.append(new Option("True", "true"), new Option("False", "false"));
+            if (descriptor.control === "nullable")
+                input.append(new Option("Null", "null"), new Option("Typed value", JSON.stringify(descriptor.value ?? "")));
+            input.value = JSON.stringify(descriptor.value ?? (descriptor.control === "boolean" ? false : null));
+        }
+        else {
+            input.type = descriptor.control === "number" ? "number" : "text";
+            input.value = descriptor.value === undefined ? "" : typeof descriptor.value === "object" ? String(descriptor.value) : String(descriptor.value);
+            if (typeof descriptor.constraints.minimum === "number")
+                input.min = String(descriptor.constraints.minimum);
+            if (typeof descriptor.constraints.maximum === "number")
+                input.max = String(descriptor.constraints.maximum);
+        }
+        input.required = descriptor.required;
+        const help = document.createElement("small");
+        help.id = `test-input-help-${descriptor.path.replace(/[^a-z0-9]/gi, "-")}`;
+        help.textContent = [descriptor.path, descriptor.jsonTypes.join(" or "), descriptor.required ? "required" : "optional", descriptor.description, descriptor.example !== undefined ? `Example ${JSON.stringify(descriptor.example)}` : undefined, descriptor.origin ? `Origin ${descriptor.origin}` : undefined].filter(Boolean).join(" · ");
+        inputGroup.append(labeledControl(descriptor.path, input), help);
+    }
+    form.append(inputGroup);
+    const expectations = document.createElement("fieldset"), expectationLegend = document.createElement("legend"), winner = document.createElement("input"), outcome = document.createElement("select"), issuePath = document.createElement("input"), issueCode = document.createElement("input");
+    expectationLegend.textContent = "Reviewed expectations";
+    winner.name = "expectedWinner";
+    winner.value = String(testCase.reviewedExpectations.winner ?? "");
+    outcome.name = "expectedOutcome";
+    outcome.append(new Option("Choose observed outcome", ""), new Option("Valid", "Valid"), new Option("Invalid", "Invalid"));
+    outcome.value = String(testCase.reviewedExpectations.outcome ?? "");
+    issuePath.name = "expectedIssuePath";
+    issueCode.name = "expectedIssueCode";
+    const reviewedIssue = testCase.reviewedExpectations.issues?.[0];
+    issuePath.value = reviewedIssue?.path ?? "";
+    issueCode.value = reviewedIssue?.code ?? "";
+    expectations.append(expectationLegend, labeledControl("Expected winning Assignment or no Assignment", winner), labeledControl("Expected validation outcome", outcome), labeledControl("Expected issue path", issuePath), labeledControl("Expected issue code", issueCode));
+    form.append(expectations);
+    const run = document.createElement("button"), useActual = document.createElement("button");
+    run.type = "submit";
+    run.textContent = "Save and run";
+    useActual.type = "button";
+    useActual.textContent = "Use actual as expected";
+    useActual.disabled = !testCase.actualResult;
+    result.id = "fixture-run-result";
+    result.setAttribute("aria-live", "polite");
+    result.textContent = `${testCase.status} · ${testCase.differences.map(({ field }) => field).join(", ") || "complete guided input and review expectations"}`;
+    const readInput = () => { const input = structuredClone(testCase.input); for (const control of Array.from(inputGroup.querySelectorAll("[data-test-input-path]"))) {
+        let value = control.value;
+        if (control instanceof HTMLSelectElement || control.type === "number") {
+            try {
+                value = JSON.parse(control.value);
+            }
+            catch {
+                value = control.value;
+            }
+        }
+        setInputPath(input, control.dataset.testInputPath, value);
+    } return input; }, readExpectations = () => ({ ...winner.value ? { winner: winner.value } : {}, ...outcome.value ? { outcome: outcome.value } : {}, ...(issuePath.value && issueCode.value ? { issues: [{ path: issuePath.value, code: issueCode.value }] } : {}) });
+    form.addEventListener("submit", async (event) => { event.preventDefault(); if (!state)
+        return; eventSelect.required = type.value === "event-validation"; pageSelect.required = type.value === "page-context"; if (!form.reportValidity()) {
+        form.querySelector(":invalid")?.focus();
+        return;
+    } const input = readInput(), reviewedExpectations = readExpectations(); if (!Object.keys(reviewedExpectations).length) {
+        result.textContent = "Blocked: review at least one expected result.";
+        expectations.querySelector("input,select")?.focus();
+        return;
+    } const prepared = { ...testCase, name: name.value.trim(), testType: type.value, eventId: eventSelect.value || undefined, pageId: pageSelect.value || undefined, input, payload: input, inputGuidance: { schemaId: schemaSelect.value, revision: String(schema?.canonicalSchema?.revision ?? schema?.revision ?? 1), kind: "authoring-guidance" }, reviewedExpectations, status: "Blocked", differences: [] }, persisted = transactProject(state, `Save Test case ${prepared.name}`, (project) => ({ ...project, collections: { ...project.collections, fixtures: project.collections.fixtures.map((candidate) => candidate.id === entity.id ? prepared : candidate) } })); persist(persisted); if (saveStatus.kind === "failed") {
+        result.textContent = "Save failed. Evaluation did not run; editable input is preserved.";
+        return;
+    } try {
+        await durableProjectRuntime.settled();
+        await durableProjectRuntime.ensureProject(prepared.id.startsWith("project:") ? prepared.id : state.project.id);
+        await durableProjectRuntime.settled();
+        const loaded = await durableProjectRuntime.repository.loadProject(state.project.id);
+        state = structuredClone(loaded.state);
+        canonicalRevision = loaded.draftSequence;
+        const saved = state.project.collections.fixtures.find(({ id }) => id === entity.id);
+        let actualResult;
+        if (saved.testType === "page-context") {
+            const evaluated = evaluatePageGroupFixture(state, saved.id);
+            actualResult = { applicablePageGroups: evaluated.includedStack, outcome: evaluated.validation.issues.length ? "Invalid" : "Valid", issues: evaluated.validation.issues.map(({ path, code }) => ({ path, code })), evaluatorRevision: `page:${canonicalRevision}` };
+        }
+        else {
+            const compiled = compileSpecificationProject({ ...createCanonicalProjectEnvelope(state.project, state.draft?.id ?? "published"), revision: canonicalRevision });
+            if (compiled.status === "blocked")
+                throw new Error(`Compilation failed: ${compiled.diagnostics.map(({ field }) => field).join(", ")}`);
+            const execution = runProductionFixture(compiled.plan, saved), actual = execution.steps.at(-1)?.actual;
+            if (!actual)
+                throw new Error(execution.blockers?.join(" ") ?? "Production evaluation produced no result.");
+            actualResult = { ...(actual.winner ? { winner: actual.winner.assignmentId } : {}), outcome: actual.issueDetails.length ? "Invalid" : "Valid", issues: actual.issueDetails.map(({ path, code }) => ({ path, code })), evaluatorRevision: compiled.plan.evaluatorContentIdentity, resultIdentity: actual.resultIdentity };
+        }
+        const compared = compareGuidedTestCase({ ...saved, actualResult, evaluatorRevision: actualResult.evaluatorRevision });
+        persist(transactProject(state, `Record Test case result ${saved.name}`, (project) => ({ ...project, collections: { ...project.collections, fixtures: project.collections.fixtures.map((candidate) => candidate.id === entity.id ? compared : candidate) } })));
+        await durableProjectRuntime.settled();
+        result.textContent = `${compared.status} · observed ${actualResult.outcome} · ${compared.differences.map(({ field }) => field).join(", ") || "actual and reviewed expectations retained"}`;
     }
     catch (error) {
-        result.textContent = error instanceof Error ? error.message : String(error);
-    }
-    return;
-} const compiled = compileSpecificationProject({ ...createCanonicalProjectEnvelope(state.project, state.draft?.id ?? "published"), revision: canonicalRevision }); if (compiled.status === "blocked") {
-    result.textContent = `Run blocked: ${compiled.diagnostics.map(({ field }) => field).join(", ")}`;
-    return;
-} const execution = runProductionFixture(compiled.plan, currentFixture), last = execution.steps.at(-1), capturedIdentity = String(currentFixture.evaluationResultIdentity ?? "not recorded"), replayIdentity = last?.actual.resultIdentity ?? "not evaluated", differences = execution.steps.flatMap((step) => step.differences); result.textContent = `${execution.status.toUpperCase()} · captured evaluator result ${capturedIdentity} · replay result ${replayIdentity} · ${differences.length ? differences.join("; ") : "status and issueCodes assertions matched"}`; }); section.append(heading, evidence, run, result); form.append(section); }
+        const message = error instanceof Error ? error.message : String(error);
+        document.body.dataset.guidedTestError = message;
+        result.textContent = `Blocked: ${message}`;
+    } });
+    useActual.addEventListener("click", () => { if (!state || !testCase.actualResult)
+        return; const actual = testCase.actualResult, reviewedExpectations = { ...(actual.winner ? { winner: actual.winner } : {}), ...(actual.outcome ? { outcome: actual.outcome } : {}), ...(actual.issues ? { issues: actual.issues } : {}) }, compared = compareGuidedTestCase({ ...testCase, reviewedExpectations }); persist(transactProject(state, `Review actual Test case result ${testCase.name}`, (project) => ({ ...project, collections: { ...project.collections, fixtures: project.collections.fixtures.map((candidate) => candidate.id === entity.id ? compared : candidate) } }))); });
+    form.append(run, useActual, result);
+    section.append(heading, definition, steps, form);
+    content.append(section);
+}
 function renderSelectedEntityEditor(content, entity) {
     if (!state)
         return;
+    if (selectedKind === "fixtures") {
+        renderGuidedTestCaseEditor(content, entity);
+        return;
+    }
     const section = document.createElement("section");
     const heading = document.createElement("h2");
     const form = document.createElement("form");
@@ -499,8 +680,6 @@ function renderSelectedEntityEditor(content, entity) {
         label.append(control);
         form.append(label);
     }
-    if (selectedKind === "fixtures")
-        renderFixtureExecution(form, entity);
     save.type = "submit";
     save.textContent = "Save complete entity";
     duplicate.type = "button";

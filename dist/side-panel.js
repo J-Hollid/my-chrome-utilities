@@ -105,7 +105,7 @@ import { pushPathCapabilityInPage, pushPayloadInPage, } from "./utilities/data-l
 import { panelEmptyState } from "./panel-empty-states.js";
 import { createManualFlowDefectEvent, mountLiveFlowTestingUi } from "./utilities/data-layer/live-inspection.js";
 import { findPanelEmptyStateElements, renderPanelEmptyState, } from "./panel-empty-states-ui.js";
-import { adoptSavedSchema, applyCapturedValidationToProfile, capturedValidationDestinationChoices, capturedValidationProfileRequirements, compileSpecificationProject, commitCanonicalProjectState, configureProjectEventTransport, createFixtureFromCapturedValidation, evaluateSpecificationObservation, recordSpecificationCapture, recordSpecificationNavigation, projectEventTransport, seedLibraryDestination, SPECIFICATION_PROJECT_STORAGE_KEY, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, } from "./utilities/data-layer/schemas.js";
+import { adoptSavedSchema, applyCapturedValidationToProfile, capturedValidationDestinationChoices, capturedValidationProfileRequirements, compileSpecificationProject, commitCanonicalProjectState, configureProjectEventTransport, createGuidedTestCase, createFixtureFromCapturedValidation, evaluateSpecificationObservation, recordSpecificationCapture, recordSpecificationNavigation, projectEventTransport, seedLibraryDestination, SPECIFICATION_PROJECT_STORAGE_KEY, restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, } from "./utilities/data-layer/schemas.js";
 const PROJECT_NAME = "my-chrome-utilities";
 const app = document.querySelector("#app");
 const panelRoot = document.querySelector("#side-panel-root");
@@ -1875,6 +1875,73 @@ async function copyLivePageUrl() {
     if (result === "failed")
         setLiveSessionMessage("Page URL could not be copied");
 }
+async function reviewEventTemplateTestCaseCreation(template) {
+    const dialog = document.createElement("dialog"), heading = document.createElement("h3"), summary = document.createElement("p"), projectLabel = document.createElement("label"), projectSelect = document.createElement("select"), eventLabel = document.createElement("label"), eventSelect = document.createElement("select"), schemaLabel = document.createElement("label"), schemaSelect = document.createElement("select"), confirm = document.createElement("button"), cancel = document.createElement("button"), repair = document.createElement("button");
+    heading.textContent = `Create Test case from ${template.name}`;
+    summary.textContent = "Choose the destination project, then review the matching named Event and input-guidance schema. The Library template remains unchanged.";
+    projectLabel.append("Project", projectSelect);
+    eventLabel.append("Matching Event", eventSelect);
+    schemaLabel.append("Input-guidance schema", schemaSelect);
+    confirm.type = cancel.type = repair.type = "button";
+    confirm.textContent = "Create Event validation Test case";
+    cancel.textContent = "Cancel";
+    repair.textContent = "Open Specification Studio to create, adopt, or select missing relationships";
+    repair.hidden = true;
+    const library = projectLibraryUi.library(), projects = Object.values(library.projects);
+    for (const record of projects)
+        projectSelect.append(new Option(record.state.project.name, record.state.project.id));
+    projectSelect.value = library.activeProjectId ?? projects[0]?.state.project.id ?? "";
+    const refresh = async () => { confirm.disabled = true; repair.hidden = true; eventSelect.replaceChildren(new Option("Loading matching Events…", "")); schemaSelect.replaceChildren(new Option("Loading schema relationships…", "")); try {
+        await durableProjectRuntime.ensureProject(projectSelect.value);
+        await durableProjectRuntime.settled();
+        const loaded = await durableProjectRuntime.repository.loadProject(projectSelect.value), events = loaded.state.project.collections.events.filter(({ eventName, sourceId }) => eventName === template.eventName && sourceId === template.sourceId), profiles = loaded.state.project.collections.profiles.filter((profile) => profile.id === template.schemaId || profile.sourceIdentity === template.schemaId || profile.canonicalSchema?.source?.identity === template.schemaId);
+        eventSelect.replaceChildren(new Option(events.length ? "Choose reviewed Event" : "No matching Event", ""), ...events.map(({ id, name }) => new Option(name, id)));
+        schemaSelect.replaceChildren(new Option(profiles.length ? "Choose reviewed input guidance" : "No matching project schema", ""), ...profiles.map(({ id, name, revision, canonicalSchema }) => new Option(`${name} revision ${String(canonicalSchema?.revision ?? revision ?? 1)}`, id)));
+        if (events.length === 1)
+            eventSelect.value = events[0].id;
+        if (profiles.length === 1)
+            schemaSelect.value = profiles[0].id;
+        confirm.disabled = !(events.length && profiles.length);
+        repair.hidden = !confirm.disabled;
+        summary.textContent = confirm.disabled ? `No mapping was guessed. ${events.length ? "" : "Create or select a matching Event. "}${profiles.length ? "" : "Adopt or select the attached schema in this project."}` : `${template.name} revision ${template.version} will be copied as typed input with exact source provenance.`;
+    }
+    catch (error) {
+        summary.textContent = error instanceof Error ? error.message : String(error);
+        repair.hidden = false;
+    } };
+    projectSelect.addEventListener("change", () => void refresh());
+    eventSelect.addEventListener("change", () => { confirm.disabled = !(eventSelect.value && schemaSelect.value); });
+    schemaSelect.addEventListener("change", () => { confirm.disabled = !(eventSelect.value && schemaSelect.value); });
+    repair.addEventListener("click", () => { globalThis.open(`specification-builder.html?project=${encodeURIComponent(projectSelect.value)}&kind=${eventSelect.value ? "profiles" : "events"}&route=add&source=event-library`, "_blank"); });
+    confirm.addEventListener("click", () => { void (async () => { confirm.disabled = true; try {
+        const loaded = await durableProjectRuntime.repository.loadProject(projectSelect.value), profile = loaded.state.project.collections.profiles.find(({ id }) => id === schemaSelect.value);
+        if (!eventSelect.value || !profile)
+            throw new Error("Review a matching Event and input-guidance schema before creating the Test case.");
+        const testCase = createGuidedTestCase({ name: template.name, testType: "event-validation", eventId: eventSelect.value, source: { kind: "event-library", id: template.id, revision: String(template.version), eventId: eventSelect.value, destination: template.destination, payload: structuredClone(template.payload), schemaId: profile.id, schemaRevision: String(profile.canonicalSchema?.revision ?? profile.revision ?? 1) }, id: (kind) => `${kind}:${crypto.randomUUID()}` }), next = transactProject(loaded.state, `Create Test case from Event Library ${template.name}`, (project) => ({ ...project, collections: { ...project.collections, fixtures: [...project.collections.fixtures, testCase] } })), result = commitCanonicalProjectState(projectStorage, next, { expectedRevision: loaded.draftSequence, pendingLabel: `Create Test case from ${template.name}`, base: loaded.state });
+        if (result.status === "conflict")
+            throw new Error("The selected project changed; review the Test case mapping again.");
+        if (projectLibraryUi.library().activeProjectId !== projectSelect.value)
+            projectLibraryUi.activate(projectSelect.value);
+        projectLibraryUi.captureActiveProject(next, result.revision);
+        const routed = recordProjectNavigation(projectLibraryUi.library(), projectSelect.value, { kind: "fixtures", id: testCase.id });
+        projectStorage.setItem(PROJECT_LIBRARY_STORAGE_KEY, serializeProjectLibrary(routed));
+        await durableProjectRuntime.settled();
+        dialog.close();
+        dialog.remove();
+        globalThis.open(`specification-builder.html?project=${encodeURIComponent(projectSelect.value)}&kind=fixtures&entity=${encodeURIComponent(testCase.id)}&source=event-library`, "_blank");
+    }
+    catch (error) {
+        confirm.disabled = false;
+        summary.textContent = error instanceof Error ? error.message : String(error);
+    } })(); });
+    cancel.addEventListener("click", () => { dialog.close(); dialog.remove(); });
+    dialog.append(heading, summary, projectLabel, eventLabel, schemaLabel, confirm, repair, cancel);
+    document.body.append(dialog);
+    dialog.showModal();
+    heading.tabIndex = -1;
+    heading.focus();
+    await refresh();
+}
 function renderEventTemplateLibrary() {
     const templates = searchEventTemplates(eventTemplates, eventTemplateSearch?.value ?? "");
     const empty = panelEmptyState("templates", templates.length, Boolean(eventTemplateSearch?.value.trim()));
@@ -1903,6 +1970,7 @@ function renderEventTemplateLibrary() {
             payload: template.payload,
             label: "Library template",
         }),
+        createTestCase: (template) => { void reviewEventTemplateTestCaseCreation(template); },
     });
     refreshPushPathReadiness();
     const editor = propertyEditorState;
@@ -5273,7 +5341,7 @@ async function reviewCapturedValidationContinuation(record, trigger) {
     }
     if (!project.project.collections.assignments.some(({ id, targetId }) => id === record.assignmentId && targetId === record.schemaId)) {
         if (schemaResult)
-            schemaResult.textContent = `Add ${record.schemaName ?? "the validated contributor"} to ${project.project.name} before creating its Fixture.`;
+            schemaResult.textContent = `Add ${record.schemaName ?? "the validated contributor"} to ${project.project.name} before creating its Test case.`;
         return;
     }
     const choices = capturedValidationDestinationChoices(project.project, { eventName: record.eventName, sourceId: captured.sourceId });
@@ -5287,15 +5355,15 @@ async function reviewCapturedValidationContinuation(record, trigger) {
         control.append(new Option(`No ${labelText.toLowerCase()}`, "")); control.append(...values.map(({ id, name: optionName }) => new Option(optionName, id))); label.append(control); dialog.append(label); return control; }, confirm = document.createElement("button"), cancel = document.createElement("button");
     heading.textContent = "Continue captured validation in project";
     summary.textContent = `${record.eventName} · ${record.state} · ${record.schemaName} revision ${record.schemaVersion} → ${project.project.name}.`;
-    review.textContent = `Evaluated result ${record.evaluated.resultIdentity}. Proposed assertions: status ${record.evaluated.issueDetails.length ? "fail" : "pass"}; issue codes ${record.evaluated.issueDetails.map(({ code }) => code).join(", ") || "none"}. Proposed Profile requirements: ${proposedRequirements.map(({ path, type, required }) => `${path} (${type ?? "value"}${required ? ", required" : ""})`).join(", ") || "none"}. Each requirement retains this evidence identity.`;
+    review.textContent = `Evaluated result ${record.evaluated.resultIdentity}. Proposed reviewed expectations: outcome ${record.evaluated.issueDetails.length ? "Invalid" : "Valid"}; issue paths and codes ${record.evaluated.issueDetails.map(({ path, code }) => `${path ?? "/"} ${code}`).join(", ") || "none"}. Proposed Profile requirements: ${proposedRequirements.map(({ path, type, required }) => `${path} (${type ?? "value"}${required ? ", required" : ""})`).join(", ") || "none"}. Each requirement retains this evidence identity.`;
     name.value = choices.suggestedFixtureName;
-    name.setAttribute("aria-label", "Fixture name");
+    name.setAttribute("aria-label", "Test case name");
     dialog.append(heading, summary, review, name);
-    const destination = select("Destination", [{ id: "fixture", name: "Guided Fixture" }, { id: "profile", name: "Profile requirements" }]), event = select("Event", choices.events), page = select("Page", choices.pages, true), step = select("Flow step", choices.flowSteps, true), profile = select("Profile", choices.profiles, true);
+    const destination = select("Destination", [{ id: "fixture", name: "Event validation Test case" }, { id: "profile", name: "Profile requirements" }]), event = select("Event", choices.events), page = select("Page", choices.pages, true), step = select("Flow step", choices.flowSteps, true), profile = select("Profile", choices.profiles, true);
     confirm.type = cancel.type = "button";
-    confirm.textContent = "Save Fixture and open in Builder";
+    confirm.textContent = "Create Test case and open in Specification Studio";
     cancel.textContent = "Cancel";
-    destination.addEventListener("change", () => { const toProfile = destination.value === "profile"; name.hidden = event.parentElement.hidden = page.parentElement.hidden = step.parentElement.hidden = toProfile; confirm.textContent = toProfile ? "Add requirements and open Profile" : "Save Fixture and open in Builder"; });
+    destination.addEventListener("change", () => { const toProfile = destination.value === "profile"; name.hidden = event.parentElement.hidden = page.parentElement.hidden = step.parentElement.hidden = toProfile; confirm.textContent = toProfile ? "Add requirements and open Profile" : "Create Test case and open in Specification Studio"; });
     confirm.addEventListener("click", () => { void (async () => { confirm.disabled = true; try {
         const toProfile = destination.value === "profile";
         if (toProfile && !profile.value)
@@ -5303,7 +5371,7 @@ async function reviewCapturedValidationContinuation(record, trigger) {
         await durableProjectRuntime.settled();
         await durableProjectRuntime.ensureProject(project.project.id);
         await durableProjectRuntime.settled();
-        const loaded = await durableProjectRuntime.repository.loadProject(project.project.id), current = loaded.state, next = toProfile ? applyCapturedValidationToProfile(current, { captureId: record.eventId, profileId: profile.value, contributorId: record.schemaId, evaluated: record.evaluated }) : createFixtureFromCapturedValidation(current, { name: name.value.trim(), captureId: record.eventId, sourceId: captured.sourceId, eventName: record.eventName, payload: captured.payload, contributorId: record.schemaId, eventId: event.value, ...(page.value ? { pageId: page.value } : {}), ...(step.value ? { flowStepId: step.value } : {}), evaluated: record.evaluated }, (kind) => `${kind}:${crypto.randomUUID()}`), entity = toProfile ? next.project.collections.profiles.find(({ id }) => id === profile.value) : next.project.collections.fixtures.at(-1), kind = toProfile ? "profiles" : "fixtures", result = commitCanonicalProjectState(projectStorage, next, { expectedRevision: loaded.draftSequence, pendingLabel: `Continue evaluated capture ${record.eventId} as ${toProfile ? "Profile requirements" : "Fixture"}`, base: current });
+        const loaded = await durableProjectRuntime.repository.loadProject(project.project.id), current = loaded.state, next = toProfile ? applyCapturedValidationToProfile(current, { captureId: record.eventId, profileId: profile.value, contributorId: record.schemaId, evaluated: record.evaluated }) : createFixtureFromCapturedValidation(current, { name: name.value.trim(), captureId: record.eventId, sourceId: captured.sourceId, eventName: record.eventName, payload: captured.payload, contributorId: record.schemaId, eventId: event.value, ...(page.value ? { pageId: page.value } : {}), ...(step.value ? { flowStepId: step.value } : {}), evaluated: record.evaluated }, (kind) => `${kind}:${crypto.randomUUID()}`), entity = toProfile ? next.project.collections.profiles.find(({ id }) => id === profile.value) : next.project.collections.fixtures.at(-1), kind = toProfile ? "profiles" : "fixtures", result = commitCanonicalProjectState(projectStorage, next, { expectedRevision: loaded.draftSequence, pendingLabel: `Continue evaluated capture ${record.eventId} as ${toProfile ? "Profile requirements" : "Test case"}`, base: current });
         if (result.status === "conflict")
             throw new Error(`Project changed in a newer Saved Draft; review the continuation again.`);
         projectLibraryUi.captureActiveProject(next, result.revision);

@@ -38,6 +38,7 @@ export interface EventLibraryEditorActions {
   push(template: EditableEventTemplate): void;
   delete(template: EditableEventTemplate): void;
   createSchema?(template: EditableEventTemplate): void;
+  createTestCase?(template: EditableEventTemplate): void;
 }
 
 export function findEventLibraryEditorElements(
@@ -137,6 +138,7 @@ export function renderEventLibraryEditor(
         actionButton("Delete", () => actions.delete(template), "destructive", template.id, `Delete ${template.name}`),
         actionButton("Duplicate", () => actions.duplicate(template)),
         ...(actions.createSchema ? [actionButton("Create schema", () => actions.createSchema?.(template))] : []),
+        ...(actions.createTestCase ? [actionButton("Create Test case", () => actions.createTestCase?.(template))] : []),
         actionButton("Push", () => actions.push(template)),
       );
       item.append(identity, routing, attributes, actionsRow);

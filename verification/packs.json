@@ -1074,6 +1074,31 @@
     ]
   },
   {
+    "id": "guided_test_cases",
+    "source": [
+      "src/data-layer-guided-test-cases.ts"
+    ],
+    "dependencies": [
+      "schemas",
+      "project_management",
+      "event-library"
+    ],
+    "unit": [
+      "test/data-layer-guided-test-cases-test.mjs"
+    ],
+    "property": [],
+    "features": [
+      "features/specification-studio-guided-test-cases.feature",
+      "features/specification-studio-guided-test-cases-runtime.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/specification_studio_guided_test_cases.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/guided-test-cases.mjs"
+    ]
+  },
+  {
     "id": "shell",
     "source": [
       "src/active-page",

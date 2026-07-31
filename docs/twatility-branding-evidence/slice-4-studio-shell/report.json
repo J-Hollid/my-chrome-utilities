@@ -26,12 +26,12 @@
         {
           "selector": "#project-workspace > nav",
           "hidden": false,
-          "display": "block",
+          "display": "grid",
           "left": 0,
           "right": 259,
           "top": 62.296875,
           "bottom": 900,
-          "overflowY": "auto"
+          "overflowY": "hidden"
         },
         {
           "selector": "#workspace-pane",
@@ -70,12 +70,12 @@
         {
           "selector": "#project-workspace > nav",
           "hidden": false,
-          "display": "block",
+          "display": "grid",
           "left": 0,
           "right": 259,
           "top": 62.296875,
           "bottom": 960,
-          "overflowY": "auto"
+          "overflowY": "hidden"
         },
         {
           "selector": "#workspace-pane",
@@ -117,8 +117,8 @@
           "display": "block",
           "left": 0,
           "right": 345,
-          "top": 113.46875,
-          "bottom": 639.671875,
+          "top": -353.53125,
+          "bottom": 332.765625,
           "overflowY": "visible"
         },
         {
@@ -127,8 +127,8 @@
           "display": "block",
           "left": 0,
           "right": 345,
-          "top": 639.671875,
-          "bottom": 1769.625,
+          "top": 332.765625,
+          "bottom": 1476.15625,
           "overflowY": "visible"
         },
         {
@@ -137,8 +137,8 @@
           "display": "block",
           "left": 0,
           "right": 345,
-          "top": 1769.625,
-          "bottom": 1889.09375,
+          "top": 1476.15625,
+          "bottom": 1595.625,
           "overflowY": "visible"
         }
       ],
@@ -162,7 +162,7 @@
           "left": 0,
           "right": 625,
           "top": 100.25,
-          "bottom": 421.453125,
+          "bottom": 581.546875,
           "overflowY": "visible"
         },
         {
@@ -171,8 +171,8 @@
           "display": "block",
           "left": 0,
           "right": 625,
-          "top": 421.453125,
-          "bottom": 1267.921875,
+          "top": 581.546875,
+          "bottom": 1428.015625,
           "overflowY": "visible"
         },
         {

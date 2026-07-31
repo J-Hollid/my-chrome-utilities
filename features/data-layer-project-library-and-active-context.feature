@@ -50,7 +50,7 @@ Feature: Data layer project library and active context
     Then the consequence review names the current and target projects and every project-bound surface that will change
     When the operator authorizes replacement of project-retail by project-trade
     Then project-trade is the sole active project identity
-    And Shared Profiles, Page Groups, Pages, Events, Applicability, Flows, Fixtures, Assignments, documentation, and Specification Studio show only Trade portal records
+    And Shared Profiles, Page Groups, Pages, Events, Applicability, Flows, Test cases, Assignments, documentation, and Specification Studio show only Trade portal records
     And Retail website remains saved without becoming a second active context
 
   # Data layer project library and active context 005
@@ -131,7 +131,7 @@ Feature: Data layer project library and active context
       | Events          | Purchase          | Add Event                 | Create Event                     | Event             |
       | Applicability   | Retail checkout   | Add Applicability Set     | Create Applicability Set         | Applicability Set |
       | Flows           | Checkout journey  | Add Flow                  | Create Flow                      | Flow              |
-      | Fixtures        | Valid purchase    | Add Fixture               | Create Fixture                   | Fixture           |
+      | Test cases      | Valid purchase    | Add Test case             | Create Test case                 | Test case         |
       | Assignments     | Retail Purchase   | Add Assignment            | Create Assignment                | Assignment        |
 
   # Data layer project library and active context 012
@@ -152,7 +152,7 @@ Feature: Data layer project library and active context
       | Events          | Add Event                 | reusable interaction schema and documentation           |
       | Applicability   | Add Applicability Set     | named observation matching and assignment eligibility |
       | Flows           | Add Flow                  | documentary journey topology                           |
-      | Fixtures        | Add Fixture               | saved per-Event validation evidence                    |
+      | Test cases      | Add Test case             | saved input plus reviewed expectations rerunnable against the current Draft |
       | Assignments     | Add Assignment            | production schema selection for matching observations  |
 
   # Data layer project library and active context 013
@@ -174,7 +174,7 @@ Feature: Data layer project library and active context
     When deletion is requested for Purchase from the Events overview
     Then the removal review names all three dependent entities and their relationship to Purchase
     And confirmation is blocked with Open Checkout journey, Open Retail Purchase, and Open Valid purchase repair actions
-    And no Event, Flow, Assignment, Fixture, Saved Draft, Published revision, or evidence state changes
+    And no Event, Flow, Assignment, Test case, Saved Draft, Published revision, or evidence state changes
     When the operator removes every dependency through its named workspace and returns to the review
     Then Remove Purchase becomes available without silently deleting another entity
 
@@ -205,7 +205,7 @@ Feature: Data layer project library and active context
       | Applicability   | Retail checkout    |
       | Flows           | Checkout journey   |
       | Assignments     | Retail Purchase    |
-      | Fixtures        | Valid purchase     |
+      | Test cases      | Valid purchase     |
     And the operator reloads Specification Studio
     Then every overview restores exactly its created row with Open and Remove actions
     And each row opens its dedicated project-scoped workspace
@@ -228,7 +228,7 @@ Feature: Data layer project library and active context
   # Data layer project library and active context 018
   Scenario: Data layer project library and active context 018
     Given Checkout journey owns a Flow graph containing Payment Page frames and nested interaction Event instances
-    And no Fixture, Assignment, or other entity references Checkout journey
+    And no Test case, Assignment, or other entity references Checkout journey
     When the operator invokes Remove Checkout journey from the Flows overview
     Then the impact review identifies the complete owned Flow topology as part of the removal
     And the owned graph is not reported as an independent dependency or an Open repair action

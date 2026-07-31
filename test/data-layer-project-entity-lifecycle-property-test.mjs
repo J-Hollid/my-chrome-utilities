@@ -62,6 +62,6 @@ const referenced=createSpecificationProject({name:"References",site:"refs.exampl
 assert.throws(()=>createEntity(referenced,"pages","Page",()=>"page:new"),/Observed event name is required/);
 assert.throws(()=>createProjectCollectionEntity(referenced,"pages","Page",()=>"page:new",{pageGroupIds:["missing-group"]}),/unknown project reference/);
 assert.throws(()=>createProjectCollectionEntity(referenced,"fixtures","Fixture",()=>"fixture:new",{eventId:"missing-event"}),/does not exist/);
-assert.throws(()=>createProjectCollectionEntity(referenced,"fixtures","Fixture",()=>"fixture:new",{mode:"magic"}),/unsupported value/);
+assert.throws(()=>createProjectCollectionEntity(referenced,"fixtures","Test case",()=>"fixture:new",{testType:"journey"}),/unsupported value/);
 
 console.log("data-layer project entity lifecycle properties passed");

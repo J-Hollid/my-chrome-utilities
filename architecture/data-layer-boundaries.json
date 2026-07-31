@@ -1101,6 +1101,13 @@
       "src/data-layer-specification-project.ts"
     ]
   },
+  "src/data-layer-guided-test-cases.ts": {
+    "module": "schemas",
+    "layer": "application",
+    "contracts": [
+      "src/data-layer-specification-project.ts"
+    ]
+  },
   "src/data-layer-specification-project.ts": {
     "module": "schemas",
     "layer": "application",
@@ -1128,7 +1135,10 @@
   },
   "src/data-layer-specification-assurance.ts": {
     "module": "schemas",
-    "layer": "application"
+    "layer": "application",
+    "contracts": [
+      "src/data-layer-guided-test-cases.ts"
+    ]
   },
   "src/data-layer-specification-repository.ts": {
     "module": "schemas",
