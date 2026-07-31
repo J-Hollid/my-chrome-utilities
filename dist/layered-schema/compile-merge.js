@@ -1,8 +1,9 @@
 import { clone, same } from "./compile-context.js";
+const canonicalUnion = (left, right) => [...new Map([...left, ...right].map((value) => [JSON.stringify(value), clone(value)])).values()].sort((first, second) => JSON.stringify(first).localeCompare(JSON.stringify(second)));
 export function mergeLayeredProperty(prior, constraint, contributor, parallelPair, parallelPeer, conflict) {
     const source = { contributorId: contributor.id, contributorName: contributor.name, scope: contributor.scope, ...(contributor.inheritanceRoutes?.length ? { inheritanceRoutes: [...contributor.inheritanceRoutes] } : {}) };
     if (!prior)
-        return { ...clone(constraint), origins: [source], superseded: [], ...(constraint.expectedValue !== undefined ? { expectedContributor: contributor.name } : {}) };
+        return { ...clone(constraint), origins: [source], superseded: [], ...(constraint.expectedValue !== undefined ? { expectedContributor: contributor.name, expectedContributors: [contributor.name] } : {}) };
     const next = { ...prior, origins: [...prior.origins, source], superseded: [...prior.superseded] };
     if (!parallelPair && constraint.type && prior.type && constraint.type !== prior.type)
         conflict(constraint.path, "type cannot change", [prior.origins.at(-1).contributorName, contributor.name]);
@@ -39,6 +40,7 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
             next.allowedValues = clone(constraint.allowedValues);
         delete next.expectedValue;
         delete next.expectedContributor;
+        delete next.expectedContributors;
         if (constraint.allowedValueIds)
             next.allowedValueIds = clone(constraint.allowedValueIds);
         if (constraint.allowedValueProvenance)
@@ -65,7 +67,7 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
     else if (constraint.presence)
         next.presence = constraint.presence;
     if (constraint.patterns)
-        next.patterns = [...(prior.patterns ?? []), ...constraint.patterns];
+        next.patterns = parallelPeer ? canonicalUnion(prior.patterns ?? [], constraint.patterns) : [...(prior.patterns ?? []), ...constraint.patterns];
     if (constraint.minimum !== undefined)
         next.minimum = prior.minimum === undefined ? constraint.minimum : Math.max(prior.minimum, constraint.minimum);
     if (constraint.maximum !== undefined)
@@ -75,9 +77,9 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
     if (constraint.maxItems !== undefined)
         next.maxItems = prior.maxItems === undefined ? constraint.maxItems : Math.min(prior.maxItems, constraint.maxItems);
     if (constraint.rules)
-        next.rules = [...(prior.rules ?? []), ...constraint.rules.map(clone)];
+        next.rules = parallelPeer ? canonicalUnion(prior.rules ?? [], constraint.rules) : [...(prior.rules ?? []), ...constraint.rules.map(clone)];
     if (constraint.reusableRules)
-        next.reusableRules = [...(prior.reusableRules ?? []), ...constraint.reusableRules.map(clone)];
+        next.reusableRules = parallelPeer ? canonicalUnion(prior.reusableRules ?? [], constraint.reusableRules) : [...(prior.reusableRules ?? []), ...constraint.reusableRules.map(clone)];
     if (!parallelPair && constraint.expectedValue !== undefined) {
         if (prior.expectedValue !== undefined && !same(prior.expectedValue, constraint.expectedValue)) {
             const explicit = Boolean(prior.definitionId && constraint.overrideReferences?.includes(prior.definitionId));
@@ -90,9 +92,13 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
         delete next.allowedValueIds;
         delete next.allowedValueProvenance;
         next.expectedValue = clone(constraint.expectedValue);
-        next.expectedContributor = contributor.name;
-        next.enforcement = constraint.enforcement ?? "overridable";
+        const expectedContributors = parallelPeer ? canonicalUnion(prior.expectedContributors ?? (prior.expectedContributor ? [prior.expectedContributor] : []), [contributor.name]) : [contributor.name];
+        next.expectedContributors = expectedContributors;
+        next.expectedContributor = expectedContributors.join(" + ");
+        next.enforcement = parallelPeer && (prior.enforcement === "invariant" || constraint.enforcement === "invariant") ? "invariant" : constraint.enforcement ?? "overridable";
     }
+    if (parallelPeer && constraint.enforcement)
+        next.enforcement = prior.enforcement === "invariant" || constraint.enforcement === "invariant" ? "invariant" : "overridable";
     if (constraint.concept !== undefined)
         next.concept = constraint.concept;
     if (constraint.condition)
@@ -108,7 +114,7 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
     if (constraint.definitionId)
         next.definitionId = constraint.definitionId;
     if (constraint.overrideReferences)
-        next.overrideReferences = clone(constraint.overrideReferences);
+        next.overrideReferences = parallelPeer ? canonicalUnion(prior.overrideReferences ?? [], constraint.overrideReferences) : clone(constraint.overrideReferences);
     return next;
 }
 //# sourceMappingURL=compile-merge.js.map

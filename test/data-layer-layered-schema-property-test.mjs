@@ -117,6 +117,28 @@ for(let iteration=0;iteration<120;iteration+=1){
     assert.equal(result.status,"blocked","generated incompatible peer facets never acquire stable-ID precedence");
     assert.deepEqual(permuted.conflicts,result.conflicts,"generated peer conflict evidence is permutation-independent");
   }
+  const expectation=`same-${iteration}`,enforcementA=peerContribution("a",{expectedValue:expectation,enforcement:"invariant"}),enforcementB=peerContribution("b",{expectedValue:expectation,enforcement:"overridable"}),enforcementForward=compilePeers([enforcementA,enforcementB]),enforcementOwnershipSwapped=compilePeers([peerContribution("a",{expectedValue:expectation,enforcement:"overridable"}),peerContribution("b",{expectedValue:expectation,enforcement:"invariant"})]);
+  for(const result of [enforcementForward,enforcementOwnershipSwapped]){
+    assert.equal(result.status,"ready");
+    assert.equal(result.properties["/generated"].expectedValue,expectation);
+    assert.equal(result.properties["/generated"].enforcement,"invariant");
+    assert.deepEqual(result.properties["/generated"].expectedContributors,[`a ${iteration}`,`b ${iteration}`],"generated peer expectation provenance includes every owner");
+  }
+  const identityFacets=[
+    [peerContribution("a",{expectedValue:expectation,definitionId:`definition:a:${iteration}`}),peerContribution("b",{expectedValue:expectation,definitionId:`definition:b:${iteration}`})],
+    [peerContribution("a",{allowedValues:[expectation],allowedValueIds:[`value:a:${iteration}`]}),peerContribution("b",{allowedValues:[expectation],allowedValueIds:[`value:b:${iteration}`]})],
+    [peerContribution("a",{type:"number"}),peerContribution("b",{expectedValue:"text"})],
+    [peerContribution("a",{minimum:minimum}),peerContribution("b",{expectedValue:maximum})],
+    [peerContribution("a",{presence:"forbidden"}),peerContribution("b",{expectedValue:expectation})],
+  ];
+  for(const owned of identityFacets){
+    const forward=compilePeers(owned),swappedOwnership=compilePeers([
+      {...owned[0],constraints:structuredClone(owned[1].constraints)},
+      {...owned[1],constraints:structuredClone(owned[0].constraints)},
+    ]);
+    assert.equal(forward.status,"blocked");
+    assert.equal(swappedOwnership.status,"blocked","generated facet ownership permutation cannot create a peer winner");
+  }
   const common=peers.find(({id})=>id===commonId);
   assert.equal(peers.filter(({id})=>id===commonId).length,1,"fan-out deduplicates a repeated stable profile identity");
   assert.equal(common.inheritanceRoutes.length,3,"fan-out retains the direct route and every participating group route");

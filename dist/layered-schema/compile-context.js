@@ -8,6 +8,9 @@ export const peerMismatch = (left, right) => {
     const differentFacet = (key) => left[key] !== undefined && right[key] !== undefined && !same(left[key], right[key]);
     return parallelMismatch(left, right) || Boolean(left.itemType && right.itemType && left.itemType !== right.itemType
         || left.itemSchema && right.itemSchema && !same(left.itemSchema, right.itemSchema)
+        || left.definitionId && right.definitionId && left.definitionId !== right.definitionId
+        || left.allowedValueIds && right.allowedValueIds && !same(left.allowedValueIds, right.allowedValueIds)
+        || left.allowedValueProvenance && right.allowedValueProvenance && !same(left.allowedValueProvenance, right.allowedValueProvenance)
         || left.allowedValues?.length && right.allowedValues?.length && !left.allowedValues.some((value) => right.allowedValues.some((candidate) => same(value, candidate)))
         || left.expectedValue !== undefined && right.allowedValues?.length && !right.allowedValues.some((value) => same(value, left.expectedValue))
         || right.expectedValue !== undefined && left.allowedValues?.length && !left.allowedValues.some((value) => same(value, right.expectedValue))
@@ -15,14 +18,42 @@ export const peerMismatch = (left, right) => {
         || right.minimum !== undefined && left.maximum !== undefined && right.minimum > left.maximum
         || left.minItems !== undefined && right.maxItems !== undefined && left.minItems > right.maxItems
         || right.minItems !== undefined && left.maxItems !== undefined && right.minItems > left.maxItems
-        || differentFacet("concept") || differentFacet("condition") || differentFacet("displayText") || differentFacet("documentation") || differentFacet("comments") || differentFacet("examples"));
+        || differentFacet("concept") || differentFacet("condition") || differentFacet("displayText") || differentFacet("documentation") || differentFacet("comments") || differentFacet("examples") || differentFacet("target"));
 };
 export const peerSetMismatch = (constraints) => {
     const allowed = constraints.flatMap(({ allowedValues }) => allowedValues?.length ? [allowedValues] : []);
     if (allowed.length > 1 && !allowed.reduce((intersection, values) => intersection.filter((value) => values.some((candidate) => same(value, candidate)))).length)
         return true;
+    const identifiedAllowed = constraints.filter(({ allowedValueIds, allowedValueProvenance }) => allowedValueIds?.length || allowedValueProvenance?.length);
+    if (identifiedAllowed.length && allowed.some((values) => !same(values, allowed[0])))
+        return true;
     const minimums = constraints.flatMap(({ minimum }) => minimum === undefined ? [] : [minimum]), maximums = constraints.flatMap(({ maximum }) => maximum === undefined ? [] : [maximum]), minimumItems = constraints.flatMap(({ minItems }) => minItems === undefined ? [] : [minItems]), maximumItems = constraints.flatMap(({ maxItems }) => maxItems === undefined ? [] : [maxItems]);
-    return Boolean(minimums.length && maximums.length && Math.max(...minimums) > Math.min(...maximums) || minimumItems.length && maximumItems.length && Math.max(...minimumItems) > Math.min(...maximumItems));
+    if (minimums.length && maximums.length && Math.max(...minimums) > Math.min(...maximums) || minimumItems.length && maximumItems.length && Math.max(...minimumItems) > Math.min(...maximumItems))
+        return true;
+    const expected = constraints.find(({ expectedValue }) => expectedValue !== undefined)?.expectedValue, type = constraints.find((constraint) => constraint.type)?.type, itemType = constraints.find((constraint) => constraint.itemType)?.itemType, itemSchema = constraints.find((constraint) => constraint.itemSchema)?.itemSchema, presences = constraints.flatMap(({ presence }) => presence ? [presence] : []), patterns = constraints.flatMap(({ patterns }) => patterns ?? []);
+    const typeMatches = (value, candidate) => candidate === "array" ? Array.isArray(value) : candidate === "null" ? value === null : candidate === "integer" ? Number.isInteger(value) : candidate === "object" ? Boolean(value) && typeof value === "object" && !Array.isArray(value) : typeof value === candidate;
+    const itemMatches = (value, schema) => !schema.type || typeMatches(value, schema.type) && (!schema.allowedValues?.length || schema.allowedValues.some((candidate) => same(candidate, value))) && (schema.type !== "array" || !Array.isArray(value) || !schema.items || value.every((item) => itemMatches(item, schema.items)));
+    if (type && (minimums.length || maximums.length) && type !== "number" && type !== "integer" || type && (minimumItems.length || maximumItems.length) && type !== "array" || type && patterns.length && type !== "string" || type && (itemType || itemSchema) && type !== "array")
+        return true;
+    if (type && allowed.some((values) => values.some((value) => !typeMatches(value, type))))
+        return true;
+    try {
+        for (const pattern of patterns)
+            new RegExp(pattern);
+    }
+    catch {
+        return true;
+    }
+    if (expected === undefined)
+        return false;
+    if (presences.includes("forbidden") || type && !typeMatches(expected, type) || minimums.length && (typeof expected !== "number" || expected < Math.max(...minimums)) || maximums.length && (typeof expected !== "number" || expected > Math.min(...maximums)) || minimumItems.length && (!Array.isArray(expected) || expected.length < Math.max(...minimumItems)) || maximumItems.length && (!Array.isArray(expected) || expected.length > Math.min(...maximumItems)) || itemType && (!Array.isArray(expected) || expected.some((value) => !typeMatches(value, itemType))) || itemSchema && (!Array.isArray(expected) || expected.some((value) => !itemMatches(value, itemSchema))))
+        return true;
+    try {
+        return patterns.some((pattern) => !new RegExp(pattern).test(String(expected)));
+    }
+    catch {
+        return true;
+    }
 };
 const ordinaryRules = (rules) => rules.filter(({ condition, arrayScope }) => !condition && !(arrayScope?.boundaries?.length));
 const numericRuleValues = (rules, kind, field) => ordinaryRules(rules).filter((rule) => rule.kind === kind && typeof rule[field] === "number").map((rule) => rule[field]);

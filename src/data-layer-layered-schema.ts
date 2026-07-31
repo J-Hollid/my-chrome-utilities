@@ -12,6 +12,6 @@ export interface LayerConstraint{path:string;concept?:string;type?:string;itemTy
 export interface LayerOrigin{contributorId:string;contributorName:string;scope:LayerScope;inheritanceRoutes?:readonly string[]}
 export interface LayerContributor{id:string;name:string;scope:LayerScope;revision?:number;constraints:readonly LayerConstraint[];onlyDefinedFields?:boolean;active?:boolean;applicabilityConditional?:boolean;applicabilitySetId?:string;applicabilitySetName?:string;applicabilityCondition?:Record<string,unknown>;exclusionReason?:string;inheritanceRoutes?:readonly string[];peerGroup?:string}
 export interface LayerContext{eventId:string;eventRole:"context"|"interaction";occurrenceId?:string}
-export interface EffectiveProperty extends LayerConstraint{origins:LayerOrigin[];superseded:{contributorId:string;contributorName:string;value:unknown}[];expectedContributor?:string}
+export interface EffectiveProperty extends LayerConstraint{origins:LayerOrigin[];superseded:{contributorId:string;contributorName:string;value:unknown}[];expectedContributor?:string;expectedContributors?:string[]}
 export interface LayerConflict{path:string;message:string;contributors:string[]}
 export interface CompiledLayeredSchema{status:"ready"|"blocked";properties:Record<string,EffectiveProperty>;conflicts:LayerConflict[];provenance:LayerOrigin[];exclusions:{contributorId:string;contributorName:string;path:string;target:string}[];onlyDefinedFields?:boolean}

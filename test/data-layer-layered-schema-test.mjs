@@ -125,6 +125,39 @@ for(const contributors of [
   assert.equal(compatiblePeer.properties["/value"].expectedValue,"a","a compatible peer expectation narrows allowed values independently of stable identity");
   assert.equal(compatiblePeer.properties["/value"].allowedValues,undefined);
 }
+for(const contributors of [
+  [peer("a",{expectedValue:"same",enforcement:"invariant"}),peer("b",{expectedValue:"same",enforcement:"overridable"})],
+  [peer("a",{expectedValue:"same",enforcement:"overridable"}),peer("b",{expectedValue:"same",enforcement:"invariant"})],
+]){
+  const compatiblePeer=compileLayeredSchema(contributors,{eventId:"pageview",eventRole:"context"});
+  assert.equal(compatiblePeer.status,"ready");
+  assert.equal(compatiblePeer.properties["/value"].enforcement,"invariant","peer enforcement composes to the stricter invariant without identity precedence");
+  assert.deepEqual(compatiblePeer.properties["/value"].expectedContributors,["a","b"]);
+  assert.equal(compatiblePeer.properties["/value"].expectedContributor,"a + b");
+}
+for(const contributors of [
+  [peer("a",{expectedValue:"same",definitionId:"definition:a"}),peer("b",{expectedValue:"same",definitionId:"definition:b"})],
+  [peer("a",{allowedValues:["same"],allowedValueIds:["value:a"]}),peer("b",{allowedValues:["same"],allowedValueIds:["value:b"]})],
+  [peer("a",{allowedValues:["same"],allowedValueProvenance:[{id:"source:a",state:"inherited"}]}),peer("b",{allowedValues:["same"],allowedValueProvenance:[{id:"source:b",state:"inherited"}]})],
+  [peer("a",{type:"number"}),peer("b",{expectedValue:"text"})],
+  [peer("a",{minimum:10}),peer("b",{expectedValue:5})],
+  [peer("a",{presence:"forbidden"}),peer("b",{expectedValue:"x"})],
+  [peer("a",{patterns:["^a"]}),peer("b",{expectedValue:"b"})],
+  [peer("a",{type:"array",minItems:2}),peer("b",{expectedValue:["one"]})],
+]){
+  for(const order of [contributors,[...contributors].reverse()]){
+    const incompatiblePeer=compileLayeredSchema(order,{eventId:"pageview",eventRole:"context"});
+    assert.equal(incompatiblePeer.status,"blocked","identity-bearing and expectation-incompatible peer facets block in every order");
+    assert.equal(incompatiblePeer.properties["/value"],undefined);
+  }
+}
+for(const contributors of [
+  [peer("a",{overrideReferences:["definition:z"]}),peer("b",{overrideReferences:["definition:a"]})],
+  [peer("a",{overrideReferences:["definition:a"]}),peer("b",{overrideReferences:["definition:z"]})],
+]){
+  const compatiblePeer=compileLayeredSchema(contributors,{eventId:"pageview",eventRole:"context"});
+  assert.deepEqual(compatiblePeer.properties["/value"].overrideReferences,["definition:a","definition:z"],"peer reference sets combine canonically");
+}
 
 const targeted=compileLayeredSchema([contribution("targets","Checkout","Page Group",[
   {path:"/all",target:"all"},{path:"/context",target:"context"},{path:"/interaction",target:"interaction"},{path:"/purchase",target:"event:purchase"},
