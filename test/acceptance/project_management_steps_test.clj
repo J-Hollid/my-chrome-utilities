@@ -12,7 +12,7 @@
   (into {:installedBoundary true}
         (concat
          (map (fn [index] [(keyword (format "context%03d" index)) true])
-              (range 1 23))
+              (concat (range 1 21) (range 22 28)))
          (map (fn [index] [(keyword (format "portability%03d" index)) true])
               (range 1 6)))))
 
@@ -46,28 +46,32 @@
           {"ordered Pages" "Alpha, Landing"
            "removed Page" "Landing"
            "focus target" "Alpha"})))
-  (doseq [[url result]
-          [["https://shop.example/checkout/cart?x=1#y"
-            "matches exact pathname /checkout/cart"]
-           ["https://other.example/checkout/cart"
-            "matches exact pathname /checkout/cart"]
-           ["https://shop.example/checkout/cart/"
-            "does not match /checkout/cart"]
-           ["checkout/cart" "Enter a full URL"]]]
-    (is (= {"url" url "result" result}
+  (doseq [[condition-kind guided-input]
+          [["Environment" "one configured project environment"]
+           ["Host" "host comparison and host value"]
+           ["Pathname" "exact, starts-with, or pattern comparison and path"]
+           ["Query" "parameter name, comparison, and typed value"]
+           ["Hash" "hash comparison and value"]
+           ["Context data" "schema property, compatible comparison, and typed value"]]]
+    (is (= {"condition_kind" condition-kind "guided_input" guided-input}
            (project-management/validate-example!
-            :model {"url" url "result" result})))
-    (is (= {"url" url "result" result}
+            :model {"condition_kind" condition-kind "guided_input" guided-input}))))
+  (doseq [[observation result]
+          [["browser Page View at /checkout/cart" "Cart Page View is the sole winner"]
+           ["browser Page View at /checkout/shipping" "Cart Page View is rejected by pathname"]
+           ["server Page View at /checkout/cart" "Cart Page View is rejected by source"]
+           ["browser Purchase at /checkout/cart" "Cart Page View is rejected by Event"]]]
+    (is (= {"observation" observation "result" result}
            (project-management/validate-example!
-            :runtime {"url" url "result" result}))))
+            :model {"observation" observation "result" result}))))
   (is (thrown? Exception
                (project-management/validate-example!
                 :model
-                {"url" "https://shop.example/checkout/cart/"
-                 "result" "matches exact pathname /checkout/cart"})))
+                {"condition_kind" "Host"
+                 "guided_input" "parameter name, comparison, and typed value"})))
   (is (thrown? Exception
                (project-management/validate-example!
                 :runtime
-                {"url" "checkout/cart"
-                 "result" "does not match /checkout/cart"})))
+                {"observation" "browser Purchase at /checkout/cart"
+                 "result" "Cart Page View is the sole winner"})))
   (is (= {} (project-management/validate-example! :runtime {}))))
