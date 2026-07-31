@@ -28,6 +28,8 @@ export function valueRuleMatches(operator, actual, operand) {
     const equal = actual === operand, value = String(actual ?? ""), expected = String(operand ?? "");
     if (operator === "Equals")
         return equal;
+    if (operator === "Is one of")
+        return (Array.isArray(operand) ? operand : [operand]).some((candidate) => actual === candidate);
     if (operator === "Does not equal")
         return !equal;
     if (operator === "Starts with")
@@ -42,6 +44,14 @@ export function valueRuleMatches(operator, actual, operand) {
         return value.includes(expected);
     if (operator === "Does not include")
         return !value.includes(expected);
+    if (operator === "Greater than" || operator === "Is greater than")
+        return typeof actual === "number" && typeof operand === "number" && actual > operand;
+    if (operator === "At least" || operator === "Is at least")
+        return typeof actual === "number" && typeof operand === "number" && actual >= operand;
+    if (operator === "Less than" || operator === "Is less than")
+        return typeof actual === "number" && typeof operand === "number" && actual < operand;
+    if (operator === "At most" || operator === "Is at most")
+        return typeof actual === "number" && typeof operand === "number" && actual <= operand;
     return false;
 }
 export function valueRuleRequirement(operator, operand) {

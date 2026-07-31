@@ -38,6 +38,7 @@ export function normalizeValueRule<T extends Record<string,unknown>>(rule:T):T {
 export function valueRuleMatches(operator:unknown,actual:unknown,operand:unknown):boolean {
   const equal=actual===operand,value=String(actual??""),expected=String(operand??"");
   if(operator==="Equals")return equal;
+  if(operator==="Is one of")return(Array.isArray(operand)?operand:[operand]).some((candidate)=>actual===candidate);
   if(operator==="Does not equal")return!equal;
   if(operator==="Starts with")return value.startsWith(expected);
   if(operator==="Does not start with")return!value.startsWith(expected);
@@ -45,6 +46,10 @@ export function valueRuleMatches(operator:unknown,actual:unknown,operand:unknown
   if(operator==="Does not end with")return!value.endsWith(expected);
   if(operator==="Includes")return value.includes(expected);
   if(operator==="Does not include")return!value.includes(expected);
+  if(operator==="Greater than"||operator==="Is greater than")return typeof actual==="number"&&typeof operand==="number"&&actual>operand;
+  if(operator==="At least"||operator==="Is at least")return typeof actual==="number"&&typeof operand==="number"&&actual>=operand;
+  if(operator==="Less than"||operator==="Is less than")return typeof actual==="number"&&typeof operand==="number"&&actual<operand;
+  if(operator==="At most"||operator==="Is at most")return typeof actual==="number"&&typeof operand==="number"&&actual<=operand;
   return false;
 }
 

@@ -139,8 +139,16 @@ for(let iteration=0;iteration<120;iteration+=1){
     assert.equal(forward.status,"blocked");
     assert.equal(swappedOwnership.status,"blocked","generated facet ownership permutation cannot create a peer winner");
   }
-  const generatedCondition={kind:"predicate",propertyId:`definition:flag:${iteration}`,operator:"Equals",value:true},rule=(id,outcome)=>({id:`rule:${id}:${iteration}`,name:`Rule ${id} ${iteration}`,...outcome}),reusableId=`reusable:${iteration}`,ruleFacets=[
-    [peerContribution("a",{presence:"required"}),peerContribution("b",{presence:"required",condition:generatedCondition})],
+  const expectationValue=`same-${iteration}`,generatedCondition={kind:"predicate",propertyId:"/generated",operator:"Equals",value:expectationValue},rule=(id,outcome)=>({id:`rule:${id}:${iteration}`,name:`Rule ${id} ${iteration}`,...outcome}),reusableId=`reusable:${iteration}`,conditionalPresence=[peerContribution("a",{type:"string"}),peerContribution("b",{presence:"required",condition:generatedCondition})];
+  for(const generated of [conditionalPresence,[...conditionalPresence].reverse()]){
+    const compiled=compilePeers(generated),ordinary=resolveConditionalLayeredSchema(compiled,{}),matching=resolveConditionalLayeredSchema(compiled,{generated:expectationValue});
+    assert.equal(compiled.status,"ready","generated unconditional type and conditional presence peers remain compatible");
+    assert.equal(ordinary.properties["/generated"].presence,undefined);
+    assert.equal(matching.properties["/generated"].presence,"required");
+  }
+  const selfConditional=compilePeers([peerContribution("self",{presence:"required",condition:generatedCondition,rules:[rule("self-pattern",{kind:"pattern",pattern:"^same"})]})]);
+  assert.equal(selfConditional.status,"ready","generated conditional and ordinary facets owned by one Profile do not self-conflict");
+  const ruleFacets=[
     [peerContribution("a",{rules:[rule("a",{kind:"value",expectedValue:`a-${iteration}`})]}),peerContribution("b",{rules:[rule("b",{kind:"value",expectedValue:`b-${iteration}`})]})],
     [peerContribution("a",{rules:[rule("a",{kind:"presence",presence:"required"})]}),peerContribution("b",{rules:[rule("b",{kind:"presence",presence:"forbidden"})]})],
     [peerContribution("a",{expectedValue:`a-${iteration}`}),peerContribution("b",{rules:[rule("b",{kind:"value",expectedValue:`b-${iteration}`})]})],
@@ -161,6 +169,32 @@ for(let iteration=0;iteration<120;iteration+=1){
   ],conditionalCompiled=compilePeers(conditionalRulePeers),conditionalResolved=resolveConditionalLayeredSchema(conditionalCompiled,{});
   assert.equal(conditionalCompiled.status,"ready","conditional peer rule outcomes remain deferred until their condition is evaluated");
   assert.equal(conditionalResolved.status,"blocked","simultaneously matching generated conditional peer rules block without precedence");
+  const staticConditional=compilePeers([
+    peerContribution("a",{expectedValue:`static-${iteration}`,enforcement:"invariant"}),
+    peerContribution("b",{rules:[rule("conditional-static",{kind:"value",expectedValue:`conditional-${iteration}`,condition:always})]}),
+  ]),staticConditionalResolved=resolveConditionalLayeredSchema(staticConditional,{});
+  assert.equal(staticConditional.status,"ready");
+  assert.equal(staticConditionalResolved.status,"blocked","generated matching conditional outcomes cannot replace static peer values");
+  assert.equal(staticConditionalResolved.properties["/generated"].expectedValue,`static-${iteration}`);
+  assert.equal(staticConditionalResolved.properties["/generated"].expectedContributor,`a ${iteration}`,"generated blocked resolution retains static ownership");
+  const operatorRule=(id,operator,expectedValue)=>rule(id,{kind:"value",operator,expectedValue}),operatorPairs=[
+    [operatorRule("equals-a","Equals",`a-${iteration}`),operatorRule("equals-b","Equals",`b-${iteration}`)],
+    [operatorRule("set-a","Is one of",[`a-${iteration}`,`b-${iteration}`]),operatorRule("set-b","Is one of",[`c-${iteration}`])],
+    [operatorRule("prefix-a","Starts with",`left-${iteration}`),operatorRule("prefix-b","Starts with",`right-${iteration}`)],
+    [operatorRule("suffix-a","Ends with",`.left-${iteration}`),operatorRule("suffix-b","Ends with",`.right-${iteration}`)],
+    [operatorRule("numeric-min","Greater than",minimum),operatorRule("numeric-max","At most",maximum)],
+  ];
+  for(const operators of operatorPairs){
+    const generated=[peerContribution("a",{rules:[operators[0]]}),peerContribution("b",{rules:[operators[1]]})],forward=compilePeers(generated),reverse=compilePeers([...generated].reverse());
+    assert.equal(forward.status,"blocked","generated incompatible Value operators have no peer winner");
+    assert.deepEqual(reverse.conflicts,forward.conflicts,"generated Value-operator conflicts are peer-order independent");
+  }
+  const compatibleOperators=[
+    [operatorRule("prefix-a","Starts with",`order-${iteration}`),operatorRule("prefix-b","Starts with",`order-${iteration}-detail`)],
+    [operatorRule("suffix-a","Ends with",`${iteration}`),operatorRule("suffix-b","Ends with",`-${iteration}`)],
+    [operatorRule("numeric-min","At least",maximum),operatorRule("numeric-max","Less than",minimum+10)],
+  ];
+  for(const operators of compatibleOperators)assert.equal(compilePeers([peerContribution("a",{rules:[operators[0]]}),peerContribution("b",{rules:[operators[1]]})]).status,"ready","generated compatible Value conjunctions remain ready");
   const common=peers.find(({id})=>id===commonId);
   assert.equal(peers.filter(({id})=>id===commonId).length,1,"fan-out deduplicates a repeated stable profile identity");
   assert.equal(common.inheritanceRoutes.length,3,"fan-out retains the direct route and every participating group route");

@@ -1,4 +1,5 @@
-import type {CompiledLayeredSchema,EffectiveProperty,LayerConflict} from "../data-layer-layered-schema.js";
+import type {CompiledLayeredSchema,EffectiveProperty,LayerConflict,LayerConstraint} from "../data-layer-layered-schema.js";
+import {constraintWithPeerRules,peerMismatch,peerSetMismatch} from "./compile-context.js";
 
 const clone=<T>(value:T):T=>structuredClone(value);
 const same=(left:unknown,right:unknown):boolean=>JSON.stringify(left)===JSON.stringify(right);
@@ -39,12 +40,12 @@ export const layeredPropertyPaths=(compiled:CompiledLayeredSchema):Map<string,st
   for(const[path,property]of Object.entries(compiled.properties)){paths.set(path,path);if(property.definitionId)paths.set(property.definitionId,path);}
   return paths;
 };
-const reusableOutcome=(property:EffectiveProperty,rule:Record<string,unknown>):Record<string,unknown>|undefined=>{
+const reusableOutcome=(property:{reusableRules?:readonly Record<string,unknown>[]},rule:Record<string,unknown>):Record<string,unknown>|undefined=>{
   const embedded=rule.reusableOutcome;
   if(embedded&&typeof embedded==="object"&&!Array.isArray(embedded))return embedded as Record<string,unknown>;
   return (property.reusableRules??[]).find((candidate)=>String(candidate.id??"")===String(rule.reusableRuleId??"")) as Record<string,unknown>|undefined;
 };
-const executable=(property:EffectiveProperty,rule:Record<string,unknown>):Record<string,unknown>|undefined=>{
+const executable=(property:{reusableRules?:readonly Record<string,unknown>[]},rule:Record<string,unknown>):Record<string,unknown>|undefined=>{
   if(rule.kind!=="reusable")return rule;
   const outcome=reusableOutcome(property,rule);if(!outcome)return undefined;
   return{...clone(outcome),id:rule.id,name:rule.name??outcome.name,condition:rule.condition,enabled:rule.enabled,severity:rule.severity??outcome.severity,message:rule.message??outcome.message};
@@ -57,9 +58,26 @@ const conditional=(property:EffectiveProperty,payload:Record<string,unknown>,pat
 });
 const differing=(rules:Record<string,unknown>[],read:(rule:Record<string,unknown>)=>unknown):boolean=>new Set(rules.map((rule)=>JSON.stringify(read(rule)))).size>1;
 const conflictFor=(path:string,facet:string,rules:Record<string,unknown>[]):LayerConflict=>({path,message:`conditional ${facet} outcomes contradict`,contributors:rules.map(named)});
+const resolvedPeerConstraint=(property:EffectiveProperty,constraint:LayerConstraint,payload:Record<string,unknown>,paths:ReadonlyMap<string,string>):LayerConstraint=>{
+  const result=clone(constraint);
+  if(result.condition&&!layeredConditionMatches(result.condition,payload,paths)){delete result.presence;delete result.condition;}else delete result.condition;
+  result.rules=((constraint.rules??[]) as Record<string,unknown>[]).flatMap((rule)=>{
+    const outcome=executable(constraint,rule);
+    if(!outcome||outcome.enabled===false||((outcome.arrayScope as {boundaries?:unknown[]}|undefined)?.boundaries?.length)||!layeredConditionMatches(outcome.condition as Record<string,unknown>|undefined,payload,paths))return[];
+    const active=clone(outcome);delete active.condition;return[active];
+  });
+  return constraintWithPeerRules(result);
+};
+const peerResolution=(property:EffectiveProperty,payload:Record<string,unknown>,paths:ReadonlyMap<string,string>):{constraints:LayerConstraint[];conflict?:LayerConflict}=>{
+  const contributions=property.peerContributions??[],constraints=contributions.map(({constraint})=>resolvedPeerConstraint(property,constraint,payload,paths));let incompatible=peerSetMismatch(constraints);
+  for(let left=0;left<constraints.length;left+=1)for(let right=left+1;right<constraints.length;right+=1)incompatible||=peerMismatch(constraints[left]!,constraints[right]!);
+  return{constraints,...(incompatible?{conflict:{path:property.path,message:"conditional Shared Profile peers conflict; add an explicit contextual resolution",contributors:contributions.map(({contributorName})=>contributorName)}}:{})};
+};
 
 function resolveProperty(property:EffectiveProperty,payload:Record<string,unknown>,paths:ReadonlyMap<string,string>):{property:EffectiveProperty;conflicts:LayerConflict[]}{
   const result=clone(property),matches=conditional(property,payload,paths),conflicts:LayerConflict[]=[];
+  const peers=property.peerContributions?.length?peerResolution(property,payload,paths):undefined;
+  if(peers?.conflict)return{property:result,conflicts:[peers.conflict]};
   const presence=matches.filter(({kind})=>kind==="presence");
   if(presence.length){if(differing(presence,(rule)=>rule.presence))conflicts.push(conflictFor(property.path,"presence",presence));else if(typeof presence[0]!.presence==="string")result.presence=presence[0]!.presence as NonNullable<EffectiveProperty["presence"]>;}
   const values=matches.filter(({kind,operator})=>(kind==="value"&&operator===undefined)||kind==="allowed-values");
@@ -77,6 +95,12 @@ function resolveProperty(property:EffectiveProperty,payload:Record<string,unknow
   const cardinality=matches.filter(({kind})=>kind==="cardinality"),minimumItems=cardinality.map(({minItems})=>minItems).filter((value):value is number=>typeof value==="number"),maximumItems=cardinality.map(({maxItems})=>maxItems).filter((value):value is number=>typeof value==="number");
   if(minimumItems.length)result.minItems=Math.max(...minimumItems);if(maximumItems.length)result.maxItems=Math.min(...maximumItems);
   if(result.minItems!==undefined&&result.maxItems!==undefined&&result.minItems>result.maxItems)conflicts.push(conflictFor(property.path,"cardinality",cardinality));
+  if(peers){
+    const presences=peers.constraints.flatMap(({presence})=>presence?[presence]:[]);
+    if(presences.includes("required"))result.presence="required";else if(presences.includes("forbidden"))result.presence="forbidden";else if(presences.includes("optional"))result.presence="optional";else if(presences.includes("permitted"))result.presence="permitted";else delete result.presence;
+    delete result.condition;
+    if(result.expectedValue!==undefined){const owners=(property.peerContributions??[]).flatMap((contribution,index)=>same(peers.constraints[index]?.expectedValue,result.expectedValue)?[contribution.contributorName]:[]).sort();if(owners.length){result.expectedContributors=owners;result.expectedContributor=owners.join(" + ");}}
+  }
   return{property:result,conflicts};
 }
 

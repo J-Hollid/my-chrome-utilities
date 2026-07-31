@@ -1,3 +1,4 @@
+import { constraintWithPeerRules, peerMismatch, peerSetMismatch } from "./compile-context.js";
 const clone = (value) => structuredClone(value);
 const same = (left, right) => JSON.stringify(left) === JSON.stringify(right);
 const valueAt = (payload, path) => path.split("/").filter(Boolean).reduce((value, key) => value && typeof value === "object" ? value[key] : undefined, payload);
@@ -87,8 +88,37 @@ const conditional = (property, payload, paths) => (property.rules ?? []).flatMap
 });
 const differing = (rules, read) => new Set(rules.map((rule) => JSON.stringify(read(rule)))).size > 1;
 const conflictFor = (path, facet, rules) => ({ path, message: `conditional ${facet} outcomes contradict`, contributors: rules.map(named) });
+const resolvedPeerConstraint = (property, constraint, payload, paths) => {
+    const result = clone(constraint);
+    if (result.condition && !layeredConditionMatches(result.condition, payload, paths)) {
+        delete result.presence;
+        delete result.condition;
+    }
+    else
+        delete result.condition;
+    result.rules = (constraint.rules ?? []).flatMap((rule) => {
+        const outcome = executable(constraint, rule);
+        if (!outcome || outcome.enabled === false || (outcome.arrayScope?.boundaries?.length) || !layeredConditionMatches(outcome.condition, payload, paths))
+            return [];
+        const active = clone(outcome);
+        delete active.condition;
+        return [active];
+    });
+    return constraintWithPeerRules(result);
+};
+const peerResolution = (property, payload, paths) => {
+    const contributions = property.peerContributions ?? [], constraints = contributions.map(({ constraint }) => resolvedPeerConstraint(property, constraint, payload, paths));
+    let incompatible = peerSetMismatch(constraints);
+    for (let left = 0; left < constraints.length; left += 1)
+        for (let right = left + 1; right < constraints.length; right += 1)
+            incompatible ||= peerMismatch(constraints[left], constraints[right]);
+    return { constraints, ...(incompatible ? { conflict: { path: property.path, message: "conditional Shared Profile peers conflict; add an explicit contextual resolution", contributors: contributions.map(({ contributorName }) => contributorName) } } : {}) };
+};
 function resolveProperty(property, payload, paths) {
     const result = clone(property), matches = conditional(property, payload, paths), conflicts = [];
+    const peers = property.peerContributions?.length ? peerResolution(property, payload, paths) : undefined;
+    if (peers?.conflict)
+        return { property: result, conflicts: [peers.conflict] };
     const presence = matches.filter(({ kind }) => kind === "presence");
     if (presence.length) {
         if (differing(presence, (rule) => rule.presence))
@@ -127,6 +157,27 @@ function resolveProperty(property, payload, paths) {
         result.maxItems = Math.min(...maximumItems);
     if (result.minItems !== undefined && result.maxItems !== undefined && result.minItems > result.maxItems)
         conflicts.push(conflictFor(property.path, "cardinality", cardinality));
+    if (peers) {
+        const presences = peers.constraints.flatMap(({ presence }) => presence ? [presence] : []);
+        if (presences.includes("required"))
+            result.presence = "required";
+        else if (presences.includes("forbidden"))
+            result.presence = "forbidden";
+        else if (presences.includes("optional"))
+            result.presence = "optional";
+        else if (presences.includes("permitted"))
+            result.presence = "permitted";
+        else
+            delete result.presence;
+        delete result.condition;
+        if (result.expectedValue !== undefined) {
+            const owners = (property.peerContributions ?? []).flatMap((contribution, index) => same(peers.constraints[index]?.expectedValue, result.expectedValue) ? [contribution.contributorName] : []).sort();
+            if (owners.length) {
+                result.expectedContributors = owners;
+                result.expectedContributor = owners.join(" + ");
+            }
+        }
+    }
     return { property: result, conflicts };
 }
 export function resolveConditionalLayeredSchema(compiled, payload) {

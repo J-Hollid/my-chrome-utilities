@@ -1,4 +1,4 @@
-import { branch, constraintWithPeerRules, constraintWithStructuredRules, included, origin, parallelMismatch, peerMismatch, peerRuleOutcomes, peerSetMismatch } from "./compile-context.js";
+import { branch, clone, constraintWithPeerRules, constraintWithStructuredRules, included, origin, parallelMismatch, peerConstraintForCompile, peerMismatch, peerSetMismatch } from "./compile-context.js";
 import { mergeLayeredProperty } from "./compile-merge.js";
 export function compileLayeredSchema(contributors, context) {
     const selected = contributors.filter(({ active }) => active !== false), peerQueues = new Map();
@@ -33,7 +33,7 @@ export function compileLayeredSchema(contributors, context) {
             peerEntries.set(key, entries);
         }
     for (const [key, entries] of peerEntries) {
-        const peerGroup = key.split("\u0000")[0], policyConflict = conflictingPolicyGroups.has(peerGroup), algebra = entries.flatMap(({ contributor, constraint }) => [constraint, ...peerRuleOutcomes(constraint)].map((facet) => ({ contributor, constraint: facet })));
+        const peerGroup = key.split("\u0000")[0], policyConflict = conflictingPolicyGroups.has(peerGroup), algebra = entries.map(({ contributor, constraint }) => ({ contributor, constraint: peerConstraintForCompile(constraint) }));
         let incompatible = policyConflict || peerSetMismatch(algebra.map(({ constraint }) => constraint));
         for (let left = 0; left < algebra.length; left += 1)
             for (let right = left + 1; right < algebra.length; right += 1)
@@ -69,8 +69,10 @@ export function compileLayeredSchema(contributors, context) {
             }
             if (blockedParallel.has(constraint.path) || blockedPeers.has(constraint.path))
                 continue;
-            const prior = properties[constraint.path], priorContributor = prior ? contributorById.get(prior.origins.at(-1).contributorId) : undefined, parallelPair = Boolean(prior && resolvedParallel.has(constraint.path) && new Set([branch(prior.origins.at(-1).scope), branch(contributor.scope)]).has("page") && new Set([branch(prior.origins.at(-1).scope), branch(contributor.scope)]).has("event")), parallelPeer = Boolean(priorContributor?.peerGroup && priorContributor.peerGroup === contributor.peerGroup);
-            properties[constraint.path] = mergeLayeredProperty(prior, constraint, contributor, parallelPair, parallelPeer, conflict);
+            const prior = properties[constraint.path], priorContributor = prior ? contributorById.get(prior.origins.at(-1).contributorId) : undefined, parallelPair = Boolean(prior && resolvedParallel.has(constraint.path) && new Set([branch(prior.origins.at(-1).scope), branch(contributor.scope)]).has("page") && new Set([branch(prior.origins.at(-1).scope), branch(contributor.scope)]).has("event")), parallelPeer = Boolean(priorContributor?.peerGroup && priorContributor.peerGroup === contributor.peerGroup), merged = mergeLayeredProperty(prior, constraint, contributor, parallelPair, parallelPeer, conflict);
+            if (contributor.peerGroup)
+                merged.peerContributions = [...(prior?.peerContributions ?? []), { contributorId: contributor.id, contributorName: contributor.name, constraint: clone(rawConstraint) }];
+            properties[constraint.path] = merged;
         }
     const onlyDefinedFields = conflictingPolicyGroups.size ? undefined : [...activeContributors].reverse().find((contributor) => contributor.onlyDefinedFields !== undefined)?.onlyDefinedFields;
     return { status: conflicts.length ? "blocked" : "ready", properties, conflicts, provenance, exclusions, ...(onlyDefinedFields !== undefined ? { onlyDefinedFields } : {}) };
