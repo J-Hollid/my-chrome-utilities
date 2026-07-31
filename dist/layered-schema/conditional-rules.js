@@ -89,6 +89,7 @@ const conditional = (property, payload, paths) => (property.rules ?? []).flatMap
 });
 const differing = (rules, read) => new Set(rules.map((rule) => JSON.stringify(read(rule)))).size > 1;
 const conflictFor = (path, facet, rules) => ({ path, message: `conditional ${facet} outcomes contradict`, contributors: rules.map(named) });
+const distinctConflicts = (conflicts) => [...new Map(conflicts.map((conflict) => [JSON.stringify(conflict), conflict])).values()];
 const resolvedPeerConstraint = (constraint, payload, paths) => {
     const result = clone(constraint);
     if (result.condition && !layeredConditionMatches(result.condition, payload, paths)) {
@@ -241,6 +242,7 @@ export function resolveConditionalLayeredSchema(compiled, payload) {
         properties[path] = resolved.property;
         conflicts.push(...resolved.conflicts);
     }
-    return { ...compiled, status: conflicts.length ? "blocked" : "ready", properties, conflicts };
+    const distinct = distinctConflicts(conflicts);
+    return { ...compiled, status: distinct.length ? "blocked" : "ready", properties, conflicts: distinct };
 }
 //# sourceMappingURL=conditional-rules.js.map

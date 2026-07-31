@@ -59,6 +59,7 @@ const conditional=(property:EffectiveProperty,payload:Record<string,unknown>,pat
 });
 const differing=(rules:Record<string,unknown>[],read:(rule:Record<string,unknown>)=>unknown):boolean=>new Set(rules.map((rule)=>JSON.stringify(read(rule)))).size>1;
 const conflictFor=(path:string,facet:string,rules:Record<string,unknown>[]):LayerConflict=>({path,message:`conditional ${facet} outcomes contradict`,contributors:rules.map(named)});
+const distinctConflicts=(conflicts:readonly LayerConflict[]):LayerConflict[]=>[...new Map(conflicts.map((conflict)=>[JSON.stringify(conflict),conflict])).values()];
 const resolvedPeerConstraint=(constraint:LayerConstraint,payload:Record<string,unknown>,paths:ReadonlyMap<string,string>):LayerConstraint=>{
   const result=clone(constraint);
   if(result.condition&&!layeredConditionMatches(result.condition,payload,paths)){delete result.presence;delete result.condition;}else delete result.condition;
@@ -124,5 +125,5 @@ function resolveProperty(property:EffectiveProperty,payload:Record<string,unknow
 export function resolveConditionalLayeredSchema(compiled:CompiledLayeredSchema,payload:Record<string,unknown>):CompiledLayeredSchema {
   const paths=layeredPropertyPaths(compiled),properties:Record<string,EffectiveProperty>={},conflicts=[...compiled.conflicts];
   for(const [path,property] of Object.entries(compiled.properties)){const resolved=resolveProperty(property,payload,paths);properties[path]=resolved.property;conflicts.push(...resolved.conflicts);}
-  return{...compiled,status:conflicts.length?"blocked":"ready",properties,conflicts};
+  const distinct=distinctConflicts(conflicts);return{...compiled,status:distinct.length?"blocked":"ready",properties,conflicts:distinct};
 }

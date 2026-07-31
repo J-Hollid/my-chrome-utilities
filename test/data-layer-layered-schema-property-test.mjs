@@ -244,6 +244,17 @@ for(let iteration=0;iteration<120;iteration+=1){
       assert.deepEqual(inherited.conflicts,ordinaryMultiple.conflicts,"generated aggregate downstream conflict identity and count are conserved across compatible profile inheritance");
     }
   }
+  for(const [label,peerFacet,downstreamFacet] of [
+    ["type",{type:"string"},{type:"number"}],
+    ["invariant",{expectedValue:`profile-${iteration}`,enforcement:"invariant"},{expectedValue:`group-${iteration}`}],
+  ]){
+    const profiles=[peerContribution("a",peerFacet),peerContribution("b",peerFacet)];
+    for(const orderedProfiles of [profiles,[...profiles].reverse()]){
+      const compiled=compilePeers([...orderedProfiles,downstreamContribution(`compile-${label}`,"Page Group",downstreamFacet)]),resolved=resolveConditionalLayeredSchema(compiled,{});
+      assert.equal(compiled.conflicts.length,1,`generated static ${label} mismatch has one compile-time conflict`);
+      assert.deepEqual(resolved.conflicts,compiled.conflicts,"generated compile-time conflict identity and count are conserved during conditional resolution");
+    }
+  }
   const operatorRule=(id,operator,expectedValue)=>rule(id,{kind:"value",operator,expectedValue}),operatorPairs=[
     [operatorRule("equals-a","Equals",`a-${iteration}`),operatorRule("equals-b","Equals",`b-${iteration}`)],
     [operatorRule("set-a","Is one of",[`a-${iteration}`,`b-${iteration}`]),operatorRule("set-b","Is one of",[`c-${iteration}`])],

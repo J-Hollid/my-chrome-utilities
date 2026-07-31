@@ -272,6 +272,18 @@ for(const scope of ["Page Group","Page"]){
   assert.equal(withoutProfiles.conflicts.length,1,`${scope} aggregate contradiction has one conflict across two contributors`);
   assert.deepEqual(withProfiles.conflicts,withoutProfiles.conflicts,`${scope} aggregate conflict identity and count are conserved after compatible profile inheritance`);
 }
+for(const [label,peerFacet,downstreamFacet] of [
+  ["static type",{type:"string"},{type:"number"}],
+  ["static invariant expectation",{expectedValue:"profile",enforcement:"invariant"},{expectedValue:"group"}],
+]){
+  const compiled=compileLayeredSchema([
+    peer("a",peerFacet),
+    peer("b",peerFacet),
+    contribution(`compile-conflict:${label}`,`Compile conflict ${label}`,"Page Group",[{path:"/value",...downstreamFacet}]),
+  ],{eventId:"pageview",eventRole:"context"}),resolved=resolveConditionalLayeredSchema(compiled,{});
+  assert.equal(compiled.conflicts.length,1,`${label} has one compile-time conflict`);
+  assert.deepEqual(resolved.conflicts,compiled.conflicts,`${label} conflict identity and count are conserved during conditional resolution`);
+}
 const operatorRule=(id,operator,expectedValue)=>unconditionalRule(id,{kind:"value",operator,expectedValue});
 for(const rules of [
   [operatorRule("equals:a","Equals","a"),operatorRule("equals:b","Equals","b")],
