@@ -1,18 +1,19 @@
 import { assignmentConditionControl, buildGuidedAssignmentCondition, guidedAssignmentConditionKinds } from "./data-layer-assignment-routing.js";
-import { canonicalRequirements } from "./data-layer-canonical-schema.js";
-import { assignmentContributorTargets } from "./data-layer-layered-schema-project.js";
+import { assignmentContributorTargets, compileAssignmentContributorTarget } from "./data-layer-layered-schema-project.js";
 import { compileSpecificationProject, createCanonicalProjectEnvelope, evaluateSpecificationObservation } from "./data-layer-specification-engine.js";
 import { saveProjectAssignment } from "./data-layer-specification-project.js";
 const labeled = (text, control) => { const label = document.createElement("label"); label.append(document.createTextNode(text), control); return label; };
 const region = (label) => { const fieldset = document.createElement("fieldset"), legend = document.createElement("legend"); fieldset.setAttribute("aria-label", label); legend.textContent = label; fieldset.append(legend); return fieldset; };
-export function mountAssignmentRoutingWorkspace({ host, state, assignment, id, onSave }) {
-    const section = document.createElement("section"), heading = document.createElement("h2"), form = document.createElement("form"), name = document.createElement("input");
+const existence = (operator) => operator === "exists" || operator === "does not exist";
+export function mountAssignmentRoutingWorkspace({ host, state, assignment, id, loadState, onSave }) {
+    const section = document.createElement("section"), heading = document.createElement("h2"), form = document.createElement("form"), name = document.createElement("input"), evidence = document.createElement("section");
     section.className = "contextual-editor assignment-workspace-editor";
     section.dataset.assignmentWorkspace = assignment.id;
     heading.textContent = "Edit Assignment";
     name.name = "name";
     name.required = true;
     name.value = assignment.name;
+    evidence.setAttribute("aria-label", "Assignment routing evidence");
     form.append(labeled("Assignment name", name));
     const schemaTarget = region("Schema target"), targetKind = document.createElement("select"), target = document.createElement("select"), targetKinds = ["Shared Profile", "Page Group", "Page", "Event", "Flow Page instance"];
     targetKind.name = "targetKind";
@@ -22,9 +23,6 @@ export function mountAssignmentRoutingWorkspace({ host, state, assignment, id, o
         targetKind.append(new Option(kind, kind));
     targetKind.value = String(assignment.targetKind ?? "Shared Profile");
     const renderTargets = () => { const selected = target.value || String(assignment.targetId ?? ""), targets = assignmentContributorTargets(state).filter(({ kind }) => kind === targetKind.value); target.replaceChildren(new Option("Choose stable contributor target", ""), ...targets.map((candidate) => new Option(candidate.name, candidate.id))); target.value = selected; };
-    targetKind.addEventListener("change", () => { target.value = ""; renderTargets(); renderGuidedCondition(); });
-    target.addEventListener("change", () => renderGuidedCondition());
-    renderTargets();
     schemaTarget.append(labeled("Contributor kind", targetKind), labeled("Stable contributor target", target));
     const observed = region("Observed event"), source = document.createElement("select"), eventSelect = document.createElement("select"), validationTarget = document.createElement("select"), sources = [...new Set(["browser", "server", "event-history", ...state.project.collections.events.map((event) => String(event.sourceId ?? "")).filter(Boolean)])];
     source.name = "sourceId";
@@ -49,14 +47,23 @@ export function mountAssignmentRoutingWorkspace({ host, state, assignment, id, o
     guided.setAttribute("aria-label", "Guided applicability condition");
     preview.setAttribute("aria-label", "Condition preview");
     let guidedCondition;
-    const targetProperties = () => { const entity = [...state.project.collections.profiles, ...state.project.collections.pageGroups, ...state.project.collections.pages, ...state.project.collections.events].find(({ id: identity }) => identity === target.value), canonical = entity?.canonicalSchema, requirements = canonical ? canonicalRequirements(canonical) : (entity?.requirements ?? []), local = entity?.localSchemaContributions ?? []; return [...new Map([...requirements, ...local].map((item) => [item.path, { path: item.path, type: String(item.type ?? "string") }])).values()]; };
+    const targetProperties = () => { try {
+        if (!target.value)
+            return [];
+        const candidate = { ...assignment, targetKind: targetKind.value, targetId: target.value, eventId: eventSelect.value }, result = compileAssignmentContributorTarget(state, candidate, { eventId: eventSelect.value, eventRole: "interaction" });
+        return Object.entries(result.compiled.properties).map(([path, property]) => ({ path, type: String(property.type ?? "string") }));
+    }
+    catch {
+        return [];
+    } };
     function renderGuidedCondition() {
         guided.hidden = setSelect.value !== "__new__";
         guidedControls.replaceChildren();
         guidedCondition = undefined;
         if (guided.hidden)
             return;
-        const descriptor = guidedAssignmentConditionKinds.find(({ kind }) => kind === kindSelect.value) ?? guidedAssignmentConditionKinds[0], comparison = document.createElement("select"), value = document.createElement("input"), parameter = document.createElement("input"), property = document.createElement("select"), queryType = document.createElement("select");
+        const descriptor = guidedAssignmentConditionKinds.find(({ kind }) => kind === kindSelect.value) ?? guidedAssignmentConditionKinds[0], comparison = document.createElement("select"), parameter = document.createElement("input"), property = document.createElement("select"), queryType = document.createElement("select"), valueLabel = document.createElement("label"), valueHost = document.createElement("span");
+        let valueControl = document.createElement("input");
         comparison.setAttribute("aria-label", `${descriptor.kind} comparison`);
         parameter.setAttribute("aria-label", "Query parameter name");
         property.setAttribute("aria-label", "Schema property");
@@ -64,27 +71,24 @@ export function mountAssignmentRoutingWorkspace({ host, state, assignment, id, o
         for (const option of ["string", "number", "boolean", "null"])
             queryType.append(new Option(option, option));
         queryType.setAttribute("aria-label", "Value type");
-        value.setAttribute("aria-label", descriptor.kind === "Pathname" ? "Path" : descriptor.kind === "Host" ? "Host value" : descriptor.kind === "Hash" ? "Hash value" : "Typed value");
-        const selectedProperty = () => targetProperties().find(({ path }) => path === property.value);
+        valueLabel.append(document.createTextNode(descriptor.guidedInput), valueHost);
+        const selectedProperty = () => targetProperties().find(({ path }) => path === property.value), valueType = () => descriptor.kind === "Context data" && selectedProperty() ? assignmentConditionControl(selectedProperty()).valueType : descriptor.kind === "Query" ? queryType.value : "string";
+        const mountValueControl = () => { if (existence(comparison.value)) {
+            valueLabel.remove();
+            return;
+        } if (!valueLabel.isConnected)
+            guidedControls.append(valueLabel); const previous = valueControl.value, type = valueType(); valueControl = type === "boolean" ? document.createElement("select") : document.createElement("input"); valueControl.setAttribute("aria-label", descriptor.kind === "Pathname" ? "Path" : descriptor.kind === "Host" ? "Host value" : descriptor.kind === "Hash" ? "Hash value" : "Typed value"); if (valueControl instanceof HTMLSelectElement) {
+            valueControl.append(new Option("true", "true"), new Option("false", "false"));
+            valueControl.value = previous || "true";
+        }
+        else {
+            valueControl.type = type === "number" ? "number" : "text";
+            valueControl.value = previous;
+        } valueControl.addEventListener("input", update); valueHost.replaceChildren(valueControl); };
         const refreshComparisons = () => { const selected = comparison.value, options = descriptor.kind === "Context data" && selectedProperty() ? assignmentConditionControl(selectedProperty()).comparisons : descriptor.comparisons; comparison.replaceChildren(...options.map((option) => new Option(option, option))); if (options.includes(selected))
             comparison.value = selected; };
-        const refreshValueControl = () => {
-            const control = descriptor.kind === "Context data" && selectedProperty() ? assignmentConditionControl(selectedProperty()) : undefined, type = control?.valueType ?? (descriptor.kind === "Query" ? queryType.value : "string"), existence = ["exists", "does not exist"].includes(comparison.value);
-            value.hidden = existence;
-            value.type = type === "number" ? "number" : "text";
-            if (type === "boolean") {
-                const boolean = document.createElement("select");
-                boolean.setAttribute("aria-label", "Typed value");
-                boolean.append(new Option("true", "true"), new Option("false", "false"));
-                boolean.value = value.value || "true";
-                boolean.addEventListener("change", () => { value.value = boolean.value; update(); });
-                value.replaceWith(boolean);
-                boolean.insertAdjacentElement("afterend", value);
-                value.hidden = true;
-            }
-        };
-        const update = () => { try {
-            const propertyDefinition = selectedProperty(), condition = buildGuidedAssignmentCondition({ kind: descriptor.kind, comparison: comparison.value, value: value.value, ...(descriptor.kind === "Query" ? { parameter: parameter.value, valueType: queryType.value } : {}), ...(propertyDefinition ? { property: propertyDefinition } : {}) });
+        function update() { try {
+            const propertyDefinition = selectedProperty(), condition = buildGuidedAssignmentCondition({ kind: descriptor.kind, comparison: comparison.value, value: valueControl.value, ...(descriptor.kind === "Query" ? { parameter: parameter.value, valueType: queryType.value } : {}), ...(propertyDefinition ? { property: propertyDefinition } : {}) });
             guidedCondition = condition;
             preview.textContent = condition.kind === "predicate" ? `${descriptor.kind} ${condition.field} ${condition.operator}.` : descriptor.kind;
             preview.dataset.valid = "true";
@@ -93,14 +97,14 @@ export function mountAssignmentRoutingWorkspace({ host, state, assignment, id, o
             guidedCondition = undefined;
             preview.textContent = error instanceof Error ? error.message : String(error);
             preview.dataset.valid = "false";
-        } };
+        } }
         if (descriptor.kind === "Environment") {
             const environment = document.createElement("select");
             environment.setAttribute("aria-label", "Configured project environment");
             for (const option of state.project.environments)
                 environment.append(new Option(option, option));
-            value.value = environment.value;
-            environment.addEventListener("change", () => { value.value = environment.value; update(); });
+            valueControl = environment;
+            environment.addEventListener("change", update);
             guidedControls.append(labeled("Configured environment", environment));
         }
         else {
@@ -110,19 +114,25 @@ export function mountAssignmentRoutingWorkspace({ host, state, assignment, id, o
                 guidedControls.append(labeled("Schema property", property));
             if (descriptor.kind === "Query")
                 guidedControls.append(labeled("Value type", queryType));
-            guidedControls.append(labeled(descriptor.guidedInput, value));
+            guidedControls.append(valueLabel);
         }
         guidedControls.prepend(labeled(`${descriptor.kind} comparison`, comparison));
-        property.addEventListener("change", () => { refreshComparisons(); refreshValueControl(); update(); });
-        for (const control of [parameter, comparison, queryType, value])
-            control.addEventListener("input", () => { refreshValueControl(); update(); });
+        property.addEventListener("change", () => { refreshComparisons(); mountValueControl(); update(); });
+        comparison.addEventListener("change", () => { mountValueControl(); update(); });
+        parameter.addEventListener("input", update);
+        queryType.addEventListener("change", () => { mountValueControl(); update(); });
         refreshComparisons();
-        refreshValueControl();
+        if (descriptor.kind !== "Environment")
+            mountValueControl();
         update();
         guided.replaceChildren(Object.assign(document.createElement("h3"), { textContent: "Structured condition" }), kindSelect, guidedControls, preview);
     }
     kindSelect.addEventListener("change", renderGuidedCondition);
     setSelect.addEventListener("change", renderGuidedCondition);
+    targetKind.addEventListener("change", () => { target.value = ""; renderTargets(); renderGuidedCondition(); });
+    target.addEventListener("change", renderGuidedCondition);
+    eventSelect.addEventListener("change", renderGuidedCondition);
+    renderTargets();
     applicability.append(labeled("Reusable Applicability Set or new condition", setSelect), guided);
     renderGuidedCondition();
     const resolution = region("Resolution"), priority = document.createElement("input"), guidance = document.createElement("p");
@@ -131,7 +141,11 @@ export function mountAssignmentRoutingWorkspace({ host, state, assignment, id, o
     priority.value = String(assignment.priority ?? 10);
     guidance.textContent = "Higher priority wins only after Event, source, and applicability match. Equal highest priorities block routing as ambiguous and name every tied Assignment.";
     resolution.append(labeled("Priority", priority), guidance);
-    const routing = region("Test assignment routing"), testSource = document.createElement("select"), testEvent = document.createElement("select"), pathname = document.createElement("input"), payload = document.createElement("textarea"), rawInput = document.createElement("textarea"), run = document.createElement("button"), result = document.createElement("section");
+    const assignmentInput = () => { const event = state.project.collections.events.find(({ id }) => id === eventSelect.value); if (setSelect.value === "__new__" && !guidedCondition)
+        throw new Error(preview.textContent || "Complete the structured condition."); return { id: assignment.id, name: name.value.trim(), targetKind: targetKind.value, targetId: target.value, eventId: eventSelect.value, eventName: String(event?.eventName ?? event?.name ?? ""), ...(setSelect.value && setSelect.value !== "__new__" ? { applicabilitySetId: setSelect.value } : {}), ...(setSelect.value === "__new__" ? { condition: guidedCondition } : {}), ...(setSelect.value === "" ? { clearApplicability: true } : {}), sourceId: source.value, target: validationTarget.value, priority: Number(priority.value) }; };
+    let transientSequence = 0;
+    const transientState = (base) => saveProjectAssignment(base, assignmentInput(), (kind) => `${kind}:routing-test:${++transientSequence}`);
+    const routing = region("Test assignment routing"), testSource = document.createElement("select"), testEvent = document.createElement("select"), pathname = document.createElement("input"), payload = document.createElement("textarea"), rawInput = document.createElement("textarea"), run = document.createElement("button");
     for (const value of sources)
         testSource.append(new Option(value, value));
     testSource.value = source.value;
@@ -145,12 +159,11 @@ export function mountAssignmentRoutingWorkspace({ host, state, assignment, id, o
     rawInput.setAttribute("aria-label", "Observed raw input JSON");
     run.type = "button";
     run.textContent = "Test assignment routing";
-    result.setAttribute("aria-label", "Assignment routing evidence");
-    run.addEventListener("click", () => { try {
-        const compiled = compileSpecificationProject(createCanonicalProjectEnvelope(state.project, state.draft?.id ?? "routing-test"));
+    run.addEventListener("click", () => { void (async () => { try {
+        const base = loadState ? await loadState() : state, current = transientState(base), compiled = compileSpecificationProject(createCanonicalProjectEnvelope(current.project, current.draft?.id ?? "routing-test"));
         if (compiled.status === "blocked")
-            throw new Error(`Compilation failed: ${compiled.diagnostics.map(({ field }) => field).join(", ")}`);
-        const event = state.project.collections.events.find(({ id }) => id === testEvent.value), evaluated = evaluateSpecificationObservation(compiled.plan, { sourceId: testSource.value, eventName: String(event?.eventName ?? event?.name ?? ""), pathname: pathname.value, payload: JSON.parse(payload.value), rawInput: JSON.parse(rawInput.value) }), summary = document.createElement("p"), list = document.createElement("ul");
+            throw new Error(`Compilation failed: ${compiled.diagnostics.map(({ entityId, field, referenceId }) => `${entityId}.${field}=${referenceId}`).join(", ")}`);
+        const event = base.project.collections.events.find(({ id }) => id === testEvent.value), evaluated = evaluateSpecificationObservation(compiled.plan, { sourceId: testSource.value, eventName: String(event?.eventName ?? event?.name ?? ""), pathname: pathname.value, payload: JSON.parse(payload.value), rawInput: JSON.parse(rawInput.value) }), summary = document.createElement("p"), list = document.createElement("ul");
         summary.textContent = evaluated.routingSummary;
         for (const candidate of evaluated.candidates) {
             const item = document.createElement("li");
@@ -158,23 +171,24 @@ export function mountAssignmentRoutingWorkspace({ host, state, assignment, id, o
             item.textContent = `${candidate.assignmentName}: ${candidate.event.evidence}; ${candidate.applicability.evidence}; ${candidate.resolution}`;
             list.append(item);
         }
-        result.replaceChildren(summary, list);
+        const issues = document.createElement("p");
+        issues.dataset.assignmentValidationIssues = String(evaluated.issues.length);
+        issues.textContent = evaluated.issues.length ? evaluated.issues.join("; ") : "Validation passed";
+        evidence.replaceChildren(summary, list, issues);
     }
     catch (error) {
-        result.replaceChildren(Object.assign(document.createElement("p"), { textContent: error instanceof Error ? error.message : String(error) }));
-    } });
-    routing.append(labeled("Observed source", testSource), labeled("Observed Event", testEvent), labeled("Observed pathname", pathname), labeled("Payload JSON", payload), labeled("Raw input JSON", rawInput), run, result);
+        evidence.replaceChildren(Object.assign(document.createElement("p"), { textContent: error instanceof Error ? error.message : String(error) }));
+    } })(); });
+    routing.append(labeled("Observed source", testSource), labeled("Observed Event", testEvent), labeled("Observed pathname", pathname), labeled("Payload JSON", payload), labeled("Raw input JSON", rawInput), run, evidence);
     const save = document.createElement("button");
     save.type = "submit";
     save.textContent = "Save Assignment";
     form.append(schemaTarget, observed, applicability, resolution, routing, save);
-    form.addEventListener("submit", (submit) => { submit.preventDefault(); const event = state.project.collections.events.find(({ id }) => id === eventSelect.value); try {
-        if (setSelect.value === "__new__" && !guidedCondition)
-            throw new Error(preview.textContent || "Complete the structured condition.");
-        onSave(saveProjectAssignment(state, { id: assignment.id, name: name.value.trim(), targetKind: targetKind.value, targetId: target.value, eventId: eventSelect.value, eventName: String(event?.eventName ?? event?.name ?? ""), ...(setSelect.value && setSelect.value !== "__new__" ? { applicabilitySetId: setSelect.value } : {}), ...(setSelect.value === "__new__" ? { condition: guidedCondition } : {}), sourceId: source.value, target: validationTarget.value, priority: Number(priority.value) }, id));
+    form.addEventListener("submit", (submit) => { submit.preventDefault(); try {
+        onSave(saveProjectAssignment(state, assignmentInput(), id));
     }
     catch (error) {
-        result.replaceChildren(Object.assign(document.createElement("p"), { textContent: error instanceof Error ? error.message : String(error) }));
+        evidence.replaceChildren(Object.assign(document.createElement("p"), { textContent: error instanceof Error ? error.message : String(error) }));
     } });
     section.append(heading, form);
     host.append(section);

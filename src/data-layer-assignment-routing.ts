@@ -10,6 +10,7 @@ const existence=["exists","does not exist"] as const;
 const stringComparisons=[...existence,"equals","does not equal","is one of","starts with","contains","matches pattern"] as const;
 const numberComparisons=[...existence,"equals","does not equal","is greater than","is at least","is less than","is at most"] as const;
 const booleanComparisons=[...existence,"equals","does not equal"] as const;
+const existenceOnlyComparisons=[...existence] as const;
 
 export const guidedAssignmentConditionKinds:readonly GuidedAssignmentConditionDescriptor[]=[
   {kind:"Environment",guidedInput:"one configured project environment",field:"environment",comparisons:["equals","does not equal"],valueKind:"environment"},
@@ -21,7 +22,7 @@ export const guidedAssignmentConditionKinds:readonly GuidedAssignmentConditionDe
 ] as const;
 
 export function assignmentConditionControl(property:AssignmentConditionProperty):AssignmentConditionControl{
-  const type=property.type==="integer"?"number":property.type||"string",comparisons=type==="number"?numberComparisons:type==="boolean"?booleanComparisons:stringComparisons;
+  const type=property.type==="integer"?"number":property.type||"string",comparisons=type==="number"?numberComparisons:type==="boolean"?booleanComparisons:["object","array","null"].includes(type)?existenceOnlyComparisons:stringComparisons;
   return{path:property.path,type:property.type,comparisons,valueType:type};
 }
 

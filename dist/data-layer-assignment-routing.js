@@ -3,6 +3,7 @@ const existence = ["exists", "does not exist"];
 const stringComparisons = [...existence, "equals", "does not equal", "is one of", "starts with", "contains", "matches pattern"];
 const numberComparisons = [...existence, "equals", "does not equal", "is greater than", "is at least", "is less than", "is at most"];
 const booleanComparisons = [...existence, "equals", "does not equal"];
+const existenceOnlyComparisons = [...existence];
 export const guidedAssignmentConditionKinds = [
     { kind: "Environment", guidedInput: "one configured project environment", field: "environment", comparisons: ["equals", "does not equal"], valueKind: "environment" },
     { kind: "Host", guidedInput: "host comparison and host value", field: "host", comparisons: ["equals", "does not equal", "starts with", "matches pattern"], valueKind: "text" },
@@ -12,7 +13,7 @@ export const guidedAssignmentConditionKinds = [
     { kind: "Context data", guidedInput: "schema property, compatible comparison, and typed value", field: "context", comparisons: stringComparisons, valueKind: "schema-property" },
 ];
 export function assignmentConditionControl(property) {
-    const type = property.type === "integer" ? "number" : property.type || "string", comparisons = type === "number" ? numberComparisons : type === "boolean" ? booleanComparisons : stringComparisons;
+    const type = property.type === "integer" ? "number" : property.type || "string", comparisons = type === "number" ? numberComparisons : type === "boolean" ? booleanComparisons : ["object", "array", "null"].includes(type) ? existenceOnlyComparisons : stringComparisons;
     return { path: property.path, type: property.type, comparisons, valueType: type };
 }
 const typedValue = (type, text) => {

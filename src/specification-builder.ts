@@ -301,7 +301,7 @@ function renderSelectedEntityEditor(content:HTMLElement,entity:ProjectEntity):vo
   if(!state) return;
   if(selectedKind==="fixtures"){renderGuidedTestCaseEditor(content,entity);return;}
   if(selectedKind==="pages"){renderPageDetailsEditor(content,entity);return;}
-  if(selectedKind==="assignments"){mountAssignmentRoutingWorkspace({host:content,state,assignment:entity,id,onSave:(next)=>{persist(next);render();}});return;}
+  if(selectedKind==="assignments"){mountAssignmentRoutingWorkspace({host:content,state,assignment:entity,id,loadState:async()=>structuredClone((await durableProjectRuntime.repository.loadProject(state!.project.id)).state),onSave:(next)=>{persist(next);render();}});return;}
   const section=document.createElement("section");
   const heading=document.createElement("h2");
   const form=document.createElement("form");

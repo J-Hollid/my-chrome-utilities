@@ -901,7 +901,7 @@ function renderSelectedEntityEditor(content, entity) {
         return;
     }
     if (selectedKind === "assignments") {
-        mountAssignmentRoutingWorkspace({ host: content, state, assignment: entity, id, onSave: (next) => { persist(next); render(); } });
+        mountAssignmentRoutingWorkspace({ host: content, state, assignment: entity, id, loadState: async () => structuredClone((await durableProjectRuntime.repository.loadProject(state.project.id)).state), onSave: (next) => { persist(next); render(); } });
         return;
     }
     const section = document.createElement("section");
