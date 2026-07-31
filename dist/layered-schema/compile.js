@@ -72,6 +72,8 @@ export function compileLayeredSchema(contributors, context) {
             const prior = properties[constraint.path], priorContributor = prior ? contributorById.get(prior.origins.at(-1).contributorId) : undefined, parallelPair = Boolean(prior && resolvedParallel.has(constraint.path) && new Set([branch(prior.origins.at(-1).scope), branch(contributor.scope)]).has("page") && new Set([branch(prior.origins.at(-1).scope), branch(contributor.scope)]).has("event")), parallelPeer = Boolean(priorContributor?.peerGroup && priorContributor.peerGroup === contributor.peerGroup), merged = mergeLayeredProperty(prior, constraint, contributor, parallelPair, parallelPeer, conflict);
             if (contributor.peerGroup)
                 merged.peerContributions = [...(prior?.peerContributions ?? []), { contributorId: contributor.id, contributorName: contributor.name, constraint: clone(rawConstraint) }];
+            else if (prior?.peerContributions?.length)
+                merged.downstreamContributions = [...(prior.downstreamContributions ?? []), { contributorId: contributor.id, contributorName: contributor.name, scope: contributor.scope, ...(contributor.inheritanceRoutes?.length ? { inheritanceRoutes: [...contributor.inheritanceRoutes] } : {}), ...(parallelPair ? { parallelPair: true } : {}), constraint: clone(rawConstraint) }];
             properties[constraint.path] = merged;
         }
     const onlyDefinedFields = conflictingPolicyGroups.size ? undefined : [...activeContributors].reverse().find((contributor) => contributor.onlyDefinedFields !== undefined)?.onlyDefinedFields;

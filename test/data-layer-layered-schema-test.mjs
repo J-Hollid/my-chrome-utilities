@@ -204,6 +204,23 @@ for(const [staticConstraint,conditionalOutcome,expected] of [
   assert.equal(resolved.status,"ready","compatible matching peer conditions remain ready");
   for(const [field,value] of Object.entries(expected))assert.deepEqual(resolved.properties["/value"][field],value,"resolved peers recompose and conserve every compatible static facet");
 }
+const downstreamStatic=compileLayeredSchema([
+  peer("a",{expectedValue:"profile"}),
+  peer("b",{expectedValue:"profile"}),
+  contribution("group","Group","Page Group",[{path:"/value",expectedValue:"group"}]),
+  contribution("page","Page","Page",[{path:"/value",expectedValue:"page"}]),
+],{eventId:"pageview",eventRole:"context"}),downstreamStaticResolved=resolveConditionalLayeredSchema(downstreamStatic,{});
+assert.equal(downstreamStatic.properties["/value"].expectedValue,"page");
+assert.equal(downstreamStaticResolved.properties["/value"].expectedValue,"page","resolved peer recomposition preserves later Page Group and Page precedence");
+assert.equal(downstreamStaticResolved.properties["/value"].expectedContributor,"Page");
+const downstreamConditional=compileLayeredSchema([
+  peer("a",{type:"string"}),
+  peer("b",{type:"string"}),
+  contribution("group","Group","Page Group",[{path:"/value",rules:[unconditionalRule("rule:downstream-conditional",{kind:"value",expectedValue:"group",condition:alwaysCondition})]}]),
+],{eventId:"pageview",eventRole:"context"}),downstreamConditionalResolved=resolveConditionalLayeredSchema(downstreamConditional,{});
+assert.equal(downstreamConditionalResolved.status,"ready");
+assert.equal(downstreamConditionalResolved.properties["/value"].expectedValue,"group","resolved peer recomposition preserves matching rules from later contributors");
+assert.equal(downstreamConditionalResolved.properties["/value"].expectedContributor,"Group");
 const operatorRule=(id,operator,expectedValue)=>unconditionalRule(id,{kind:"value",operator,expectedValue});
 for(const rules of [
   [operatorRule("equals:a","Equals","a"),operatorRule("equals:b","Equals","b")],
@@ -223,6 +240,13 @@ for(const rules of [
 ]){
   const contributors=[peer("a",{rules:[rules[0]]}),peer("b",{rules:[rules[1]]})];
   for(const order of [contributors,[...contributors].reverse()])assert.equal(compileLayeredSchema(order,{eventId:"pageview",eventRole:"context"}).status,"blocked","a positive Value constraint and its negation are unsatisfiable peers");
+}
+for(const [type,rules] of [
+  ["boolean",[operatorRule("not-true","Does not equal",true),operatorRule("not-false","Does not equal",false)]],
+  ["null",[operatorRule("not-null","Does not equal",null)]],
+]){
+  const contributors=rules.map((rule,index)=>peer(String.fromCharCode(97+index),{type,rules:[rule]}));
+  for(const order of [contributors,[...contributors].reverse()])assert.equal(compileLayeredSchema(order,{eventId:"pageview",eventRole:"context"}).status,"blocked","negated Value rules cannot exhaust a finite peer type");
 }
 for(const rules of [
   [operatorRule("prefix:a","Starts with","order"),operatorRule("prefix:b","Starts with","order-")],

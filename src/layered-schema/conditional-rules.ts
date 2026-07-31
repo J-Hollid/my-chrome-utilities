@@ -1,5 +1,6 @@
 import type {CompiledLayeredSchema,EffectiveProperty,LayerConflict,LayerConstraint} from "../data-layer-layered-schema.js";
 import {constraintWithPeerRules,peerMismatch,peerSetMismatch} from "./compile-context.js";
+import {mergeLayeredProperty} from "./compile-merge.js";
 
 const clone=<T>(value:T):T=>structuredClone(value);
 const same=(left:unknown,right:unknown):boolean=>JSON.stringify(left)===JSON.stringify(right);
@@ -58,7 +59,7 @@ const conditional=(property:EffectiveProperty,payload:Record<string,unknown>,pat
 });
 const differing=(rules:Record<string,unknown>[],read:(rule:Record<string,unknown>)=>unknown):boolean=>new Set(rules.map((rule)=>JSON.stringify(read(rule)))).size>1;
 const conflictFor=(path:string,facet:string,rules:Record<string,unknown>[]):LayerConflict=>({path,message:`conditional ${facet} outcomes contradict`,contributors:rules.map(named)});
-const resolvedPeerConstraint=(property:EffectiveProperty,constraint:LayerConstraint,payload:Record<string,unknown>,paths:ReadonlyMap<string,string>):LayerConstraint=>{
+const resolvedOwnedConstraint=(constraint:LayerConstraint,payload:Record<string,unknown>,paths:ReadonlyMap<string,string>):LayerConstraint=>{
   const result=clone(constraint);
   if(result.condition&&!layeredConditionMatches(result.condition,payload,paths)){delete result.presence;delete result.condition;}else delete result.condition;
   result.rules=((constraint.rules??[]) as Record<string,unknown>[]).flatMap((rule)=>{
@@ -69,7 +70,7 @@ const resolvedPeerConstraint=(property:EffectiveProperty,constraint:LayerConstra
   return constraintWithPeerRules(result);
 };
 const peerResolution=(property:EffectiveProperty,payload:Record<string,unknown>,paths:ReadonlyMap<string,string>):{constraints:LayerConstraint[];conflict?:LayerConflict}=>{
-  const contributions=property.peerContributions??[],constraints=contributions.map(({constraint})=>resolvedPeerConstraint(property,constraint,payload,paths));let incompatible=peerSetMismatch(constraints);
+  const contributions=property.peerContributions??[],constraints=contributions.map(({constraint})=>resolvedOwnedConstraint(constraint,payload,paths));let incompatible=peerSetMismatch(constraints);
   for(let left=0;left<constraints.length;left+=1)for(let right=left+1;right<constraints.length;right+=1)incompatible||=peerMismatch(constraints[left]!,constraints[right]!);
   return{constraints,...(incompatible?{conflict:{path:property.path,message:"conditional Shared Profile peers conflict; add an explicit contextual resolution",contributors:contributions.map(({contributorName})=>contributorName)}}:{})};
 };
@@ -83,7 +84,13 @@ const composeResolvedPeers=(property:EffectiveProperty,constraints:readonly Laye
   const minimums=constraints.flatMap(({minimum})=>minimum===undefined?[]:[minimum]),maximums=constraints.flatMap(({maximum})=>maximum===undefined?[]:[maximum]),minimumItems=constraints.flatMap(({minItems})=>minItems===undefined?[]:[minItems]),maximumItems=constraints.flatMap(({maxItems})=>maxItems===undefined?[]:[maxItems]);if(minimums.length)result.minimum=Math.max(...minimums);if(maximums.length)result.maximum=Math.min(...maximums);if(minimumItems.length)result.minItems=Math.max(...minimumItems);if(maximumItems.length)result.maxItems=Math.min(...maximumItems);
   const enforcement=constraints.some((constraint)=>constraint.enforcement==="invariant")?"invariant":first("enforcement");if(enforcement)result.enforcement=enforcement;
   const references=[...new Set(constraints.flatMap(({overrideReferences})=>overrideReferences??[]))].sort();if(references.length)result.overrideReferences=references;
+  const peerIds=new Set((property.peerContributions??[]).map(({contributorId})=>contributorId)),uniqueRules=(rules:Record<string,unknown>[]):Record<string,unknown>[]=>[...new Map(rules.map((rule)=>[JSON.stringify(rule),clone(rule)])).values()].sort((left,right)=>JSON.stringify(left).localeCompare(JSON.stringify(right)));result.origins=property.origins.filter(({contributorId})=>peerIds.has(contributorId));result.superseded=[];result.rules=uniqueRules((property.peerContributions??[]).flatMap(({constraint})=>(constraint.rules??[]) as Record<string,unknown>[]));result.reusableRules=uniqueRules((property.peerContributions??[]).flatMap(({constraint})=>(constraint.reusableRules??[]) as Record<string,unknown>[]));
   return result;
+};
+const replayDownstream=(property:EffectiveProperty,base:EffectiveProperty,payload:Record<string,unknown>,paths:ReadonlyMap<string,string>):{property:EffectiveProperty;conflicts:LayerConflict[]}=>{
+  let result=base;const conflicts:LayerConflict[]=[];
+  for(const contribution of property.downstreamContributions??[]){const constraint=resolvedOwnedConstraint(contribution.constraint,payload,paths),contributor={id:contribution.contributorId,name:contribution.contributorName,scope:contribution.scope,constraints:[contribution.constraint],...(contribution.inheritanceRoutes?.length?{inheritanceRoutes:contribution.inheritanceRoutes}:{})};result=mergeLayeredProperty(result,constraint,contributor,contribution.parallelPair===true,false,(path,message,names)=>conflicts.push({path,message,contributors:names}));}
+  return{property:result,conflicts};
 };
 
 function resolveProperty(property:EffectiveProperty,payload:Record<string,unknown>,paths:ReadonlyMap<string,string>):{property:EffectiveProperty;conflicts:LayerConflict[]}{
@@ -107,7 +114,8 @@ function resolveProperty(property:EffectiveProperty,payload:Record<string,unknow
   const cardinality=matches.filter(({kind})=>kind==="cardinality"),minimumItems=cardinality.map(({minItems})=>minItems).filter((value):value is number=>typeof value==="number"),maximumItems=cardinality.map(({maxItems})=>maxItems).filter((value):value is number=>typeof value==="number");
   if(minimumItems.length)result.minItems=Math.max(...minimumItems);if(maximumItems.length)result.maxItems=Math.min(...maximumItems);
   if(result.minItems!==undefined&&result.maxItems!==undefined&&result.minItems>result.maxItems)conflicts.push(conflictFor(property.path,"cardinality",cardinality));
-  return{property:peers?composeResolvedPeers(property,peers.constraints):result,conflicts};
+  if(peers){const replayed=replayDownstream(property,composeResolvedPeers(property,peers.constraints),payload,paths);return{property:replayed.property,conflicts:[...conflicts,...replayed.conflicts]};}
+  return{property:result,conflicts};
 }
 
 export function resolveConditionalLayeredSchema(compiled:CompiledLayeredSchema,payload:Record<string,unknown>):CompiledLayeredSchema {

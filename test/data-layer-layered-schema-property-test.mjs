@@ -196,6 +196,19 @@ for(let iteration=0;iteration<120;iteration+=1){
       for(const [field,value] of Object.entries(expectedFacets))assert.deepEqual(resolved.properties["/generated"][field],value,"generated matching peer facets are recomposed without weakening or widening");
     }
   }
+  const downstreamContribution=(id,scope,constraint)=>({id:`${id}:${iteration}`,name:`${id} ${iteration}`,scope,constraints:[{path:"/generated",...constraint}]}),profileValue=`profile-${iteration}`,groupValue=`group-${iteration}`,pageValue=`page-${iteration}`,staticProfiles=[peerContribution("a",{expectedValue:profileValue}),peerContribution("b",{expectedValue:profileValue})];
+  for(const profiles of [staticProfiles,[...staticProfiles].reverse()]){
+    const resolved=resolveConditionalLayeredSchema(compilePeers([...profiles,downstreamContribution("group","Page Group",{expectedValue:groupValue}),downstreamContribution("page","Page",{expectedValue:pageValue})]),{});
+    assert.equal(resolved.properties["/generated"].expectedValue,pageValue,"generated peer recomposition preserves later Page Group and Page values");
+    assert.equal(resolved.properties["/generated"].expectedContributor,`page ${iteration}`);
+  }
+  const typedProfiles=[peerContribution("a",{type:"string"}),peerContribution("b",{type:"string"})];
+  for(const profiles of [typedProfiles,[...typedProfiles].reverse()]){
+    const resolved=resolveConditionalLayeredSchema(compilePeers([...profiles,downstreamContribution("group","Page Group",{rules:[rule("downstream",{kind:"value",expectedValue:groupValue,condition:always})]})]),{});
+    assert.equal(resolved.status,"ready");
+    assert.equal(resolved.properties["/generated"].expectedValue,groupValue,"generated peer recomposition preserves matching downstream rules");
+    assert.equal(resolved.properties["/generated"].expectedContributor,`group ${iteration}`);
+  }
   const operatorRule=(id,operator,expectedValue)=>rule(id,{kind:"value",operator,expectedValue}),operatorPairs=[
     [operatorRule("equals-a","Equals",`a-${iteration}`),operatorRule("equals-b","Equals",`b-${iteration}`)],
     [operatorRule("set-a","Is one of",[`a-${iteration}`,`b-${iteration}`]),operatorRule("set-b","Is one of",[`c-${iteration}`])],
@@ -212,6 +225,11 @@ for(let iteration=0;iteration<120;iteration+=1){
     assert.equal(forward.status,"blocked","generated incompatible Value operators have no peer winner");
     assert.deepEqual(reverse.conflicts,forward.conflicts,"generated Value-operator conflicts are peer-order independent");
   }
+  const finiteDomains=[
+    [peerContribution("a",{type:"boolean",rules:[operatorRule("not-true","Does not equal",true)]}),peerContribution("b",{type:"boolean",rules:[operatorRule("not-false","Does not equal",false)]})],
+    [peerContribution("a",{type:"null",rules:[operatorRule("not-null","Does not equal",null)]})],
+  ];
+  for(const generated of finiteDomains)for(const order of [generated,[...generated].reverse()])assert.equal(compilePeers(order).status,"blocked","generated negations cannot exhaust a finite peer type");
   const compatibleOperators=[
     [operatorRule("prefix-a","Starts with",`order-${iteration}`),operatorRule("prefix-b","Starts with",`order-${iteration}-detail`)],
     [operatorRule("suffix-a","Ends with",`${iteration}`),operatorRule("suffix-b","Ends with",`-${iteration}`)],

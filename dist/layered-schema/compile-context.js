@@ -28,6 +28,9 @@ const valueDomainMismatch = (constraints) => {
         return true;
     if (equals.length)
         return !matches(equals[0]);
+    const type = constraints.find((constraint) => constraint.type)?.type, finiteDomain = type === "boolean" ? [true, false] : type === "null" ? [null] : undefined;
+    if (finiteDomain && !finiteDomain.some(matches))
+        return true;
     if (sets.length) {
         const intersection = sets.reduce((values, choices) => values.filter((value) => choices.some((candidate) => same(candidate, value))), [...sets[0]]);
         if (!intersection.some(matches))
