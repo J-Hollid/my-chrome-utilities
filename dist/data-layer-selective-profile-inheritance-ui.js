@@ -202,21 +202,23 @@ export function mountSelectiveProfileInheritance(options) {
             }
             dependencies.append(row);
         }
-        const preview = options.compositionPreview;
+        const preview = options.compositionPreview?.(staged);
         if (preview) {
-            composition.setAttribute("aria-label", "Shared Profile composition preview");
+            composition.setAttribute("aria-label", "Recalculated Shared Profile composition preview");
             composition.append(Object.assign(globalThis.document.createElement("h4"), { textContent: `${preview.status === "blocked" ? "Blocked" : "Ready"} composition · ${preview.sources.join(" + ")}` }), Object.assign(globalThis.document.createElement("p"), { textContent: preview.conflicts }));
             const previewRows = globalThis.document.createElement("ul");
             for (const row of preview.rows.slice(0, 40))
                 previewRows.append(Object.assign(globalThis.document.createElement("li"), { textContent: `${row.path} · ${row.source} · ${row.effective}` }));
             composition.append(previewRows);
         }
-        const totals = profileInheritanceSummary(document, staged);
+        const totals = profileInheritanceSummary(document, staged), unresolved = profileInheritanceSelection(document, staged).missingRuleDependencies.length;
         sticky.className = "profile-inheritance-summary";
         sticky.setAttribute("aria-label", "Selection summary");
         sticky.textContent = `Direct ${totals.direct} · Structural ${totals.structural} · Rule dependencies ${totals.ruleDependencies} · Conflicts ${totals.conflicts} · Effective total ${totals.effective}`;
         apply.type = cancel.type = "button";
         apply.textContent = "Apply inheritance";
+        apply.disabled = !preview || unresolved > 0;
+        apply.setAttribute("aria-description", !preview ? "Waiting for target-specific preview" : unresolved ? `${unresolved} rule dependencies require review` : preview.status === "blocked" ? "Preview reviewed; unresolved peer conflicts will remain blocked in the Draft" : "Target-specific preview reviewed and ready");
         cancel.textContent = "Cancel";
         apply.addEventListener("click", () => options.onApply({ ...clone(staged), sourceRevision: document.revision }));
         cancel.addEventListener("click", () => { staged = clone(options.recipe); open = false; workspace.hidden = true; edit.setAttribute("aria-expanded", "false"); edit.focus({ preventScroll: true }); });
