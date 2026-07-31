@@ -7,9 +7,17 @@
 (def feature-files ["features/data-layer-project-library-and-active-context.feature"
                     "features/data-layer-project-library-and-active-context-runtime.feature"
                     "features/data-layer-project-portability-and-upgrade.feature"
-                    "features/data-layer-project-portability-and-upgrade-runtime.feature"])
+                    "features/data-layer-project-portability-and-upgrade-runtime.feature"
+                    "features/specification-studio-assignment-owned-routing.feature"
+                    "features/specification-studio-assignment-owned-routing-runtime.feature"])
 (def model-entries
   ["the project library contains"
+   "Cart is a reusable Page schema context"
+   "Page View and Purchase are observable Events"
+   "Assignments apply effective contributor schemas to matching observations"
+   "Cart Page View applies Cart for source browser and pathname /checkout/cart"
+   "Cart Page View and Cart Page View alternative both match one observation at priority 10"
+   "Cart has no Assignment"
    "the Projects projection marks Retail website Active"
    "all repository writes for project-retail have settled"
    "the metadata form loads canonical project-retail"
@@ -33,11 +41,16 @@
    "Retail website has empty project collections and its Inspector is closed"
    "Checkout journey owns a Flow graph containing Payment Page frames and nested interaction Event instances"
    "Checkout Page Group retains obsolete Environment and Membership matcher values"
-   "Cart Page retains obsolete Environment, Host matcher, Query matcher, Hash matcher, SPA route, Expected interaction Events, and Applicability Set values"
-   "Cart has Exact URL path /checkout/cart"
+   "Cart Page retains obsolete Page-view event name, URL path, Environment, Host matcher, Query matcher, Hash matcher, SPA route, Expected interaction Events, and Applicability Set values"
    "Cart can inherit Sitewide and belongs to ordered Page Groups"])
 (def runtime-entries
   ["the built extension is running with the production project repository, side panel, and Specification Studio"
+   "the built extension is running with production Specification Studio and durable project storage"
+   "production Cart is a reusable Page schema context"
+   "production Page View and Purchase are observable Events"
+   "production Cart Page View targets Cart for source browser with pathname /checkout/cart"
+   "production Cart Page View and Cart Page View alternative both match at priority 10"
+   "production Cart has no Assignment record"
    "the production Projects projection reads selected identity project-retail"
    "the production write queue for project-retail is empty"
    "the metadata editor reads canonical record project-retail"
@@ -61,8 +74,7 @@
    "canonical project-retail collections are all empty"
    "production Checkout journey owns Payment Page frames and nested interaction Event instances"
    "production Checkout Page Group bytes contain obsolete environment and matcher properties"
-   "production Cart bytes contain obsolete environment, host, query, hash, spa, expectedEventIds, and applicabilitySetId properties"
-   "production Cart has pathname /checkout/cart"
+   "production Cart bytes contain obsolete eventName, pathname, environment, host, query, hash, spa, expectedEventIds, and applicabilitySetId properties"
    "production Cart can inherit Sitewide and has ordered Page Group memberships"])
 (def entry-modes (merge (zipmap model-entries (repeat :model))
                         (zipmap runtime-entries (repeat :runtime))))
@@ -76,6 +88,7 @@
   (when-not @model-verified?
     (checked! "node" "test/data-layer-project-library-test.mjs")
     (checked! "node" "test/data-layer-project-entity-lifecycle-test.mjs")
+    (checked! "node" "test/data-layer-assignment-routing-test.mjs")
     (reset! model-verified? true)))
 (defn- observe-browser! []
   (or @browser-observation
@@ -88,7 +101,7 @@
         (reset! browser-observation observed))))
 (def runtime-paths
   (set (concat [:installedBoundary]
-               (map #(keyword (str "context" (format "%03d" %))) (range 1 23))
+               (map #(keyword (str "context" (format "%03d" %))) (concat (range 1 21) (range 22 28)))
                (map #(keyword (str "portability" (format "%03d" %))) (range 1 6)))))
 (defn complete-browser-evidence? [evidence]
   (boolean (and (map? evidence)
@@ -121,30 +134,39 @@
    "ordered Pages" #{"Alpha, Landing, Cart" "Alpha, Landing" "Landing"}
    "removed Page" #{"Landing"}
    "focus target" #{"Cart" "Alpha" "Add Page"}
-   "url" #{"https://shop.example/checkout/cart?x=1#y"
-           "https://other.example/checkout/cart"
-           "https://shop.example/checkout/cart/"
-           "checkout/cart"}
-   "result" #{"matches exact pathname /checkout/cart"
-              "does not match /checkout/cart"
-              "Enter a full URL"}})
-(def page-recognition-examples
-  [{:keys ["url" "result"]
-    :rows #{["https://shop.example/checkout/cart?x=1#y"
-             "matches exact pathname /checkout/cart"]
-            ["https://other.example/checkout/cart"
-             "matches exact pathname /checkout/cart"]
-            ["https://shop.example/checkout/cart/"
-             "does not match /checkout/cart"]
-            ["checkout/cart" "Enter a full URL"]}}])
+   "condition_kind" #{"Environment" "Host" "Pathname" "Query" "Hash" "Context data"}
+   "guided_input" #{"one configured project environment"
+                    "host comparison and host value"
+                    "exact, starts-with, or pattern comparison and path"
+                    "parameter name, comparison, and typed value"
+                    "hash comparison and value"
+                    "schema property, compatible comparison, and typed value"
+                    "configured-environment selector"
+                    "host-comparison selector and host value"
+                    "exact, starts-with, or pattern selector and path"
+                    "schema-property, compatible-comparison, and typed-value controls"}
+   "observation" #{"browser Page View at /checkout/cart"
+                   "browser Page View at /checkout/shipping"
+                   "server Page View at /checkout/cart"
+                   "browser Purchase at /checkout/cart"}
+   "result" #{"Cart Page View is the sole winner"
+              "Cart Page View is rejected by pathname"
+              "Cart Page View is rejected by source"
+              "Cart Page View is rejected by Event"}})
+(def assignment-routing-examples
+  [{:keys ["condition_kind" "guided_input"]
+    :rows #{["Environment" "one configured project environment"] ["Host" "host comparison and host value"] ["Pathname" "exact, starts-with, or pattern comparison and path"] ["Query" "parameter name, comparison, and typed value"] ["Hash" "hash comparison and value"] ["Context data" "schema property, compatible comparison, and typed value"]
+            ["Environment" "configured-environment selector"] ["Host" "host-comparison selector and host value"] ["Pathname" "exact, starts-with, or pattern selector and path"] ["Context data" "schema-property, compatible-comparison, and typed-value controls"]}}
+   {:keys ["observation" "result"]
+    :rows #{["browser Page View at /checkout/cart" "Cart Page View is the sole winner"] ["browser Page View at /checkout/shipping" "Cart Page View is rejected by pathname"] ["server Page View at /checkout/cart" "Cart Page View is rejected by source"] ["browser Purchase at /checkout/cart" "Cart Page View is rejected by Event"]}}])
 (defn validate-example! [_mode example]
   (let [validated (support/validate-example-domain!
                    example-values example
                    (filter #(support/example-value example %) (keys example-values))
                    "Project-management example was outside the specified contract.")]
     (support/validate-example-relations!
-     page-recognition-examples validated
-     "Project-management URL recognition result was outside the specified contract.")))
+     assignment-routing-examples validated
+     "Project-management Assignment routing example was outside the specified contract.")))
 (def handlers
   (support/verified-feature-mode-handlers feature-files entry-modes :project-management-mode
                                           verify-model! validate-example!

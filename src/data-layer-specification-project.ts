@@ -122,6 +122,7 @@ function predicateMatches(predicate: Predicate, context: Record<string,unknown>)
   if(operator==="does not equal"||operator==="not equals")return!Object.is(actual,expected);
   if(operator==="is one of")return(predicate.values??(Array.isArray(expected)?expected:[])).some((candidate)=>Object.is(candidate,actual));
   if(operator==="contains")return String(actual).includes(String(expected));
+  if(operator==="starts with"||operator==="starts-with")return String(actual).startsWith(String(expected));
   if(operator==="glob")return new RegExp(`^${String(expected).replace(/[.+^${}()|[\]\\]/g,"\\$&").replaceAll("*",".*")}$`).test(String(actual));
   if(operator==="regex"||operator==="matches pattern"){try{return new RegExp(predicate.pattern??String(expected)).test(String(actual));}catch{return false;}}
   if(typeof actual==="number"&&typeof expected==="number"){

@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {savePageDetails,testPageRecognition} from "../dist/data-layer-page-authoring.js";
+import {savePageDetails} from "../dist/data-layer-page-authoring.js";
 import {createSpecificationProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
 
 let seed=0x5a6ed17;
@@ -16,12 +16,12 @@ for(let example=0;example<160;example+=1){
     canonicalSchema:{id:`schema:${suffix}`,contributorId:pageId,contributorName:`Original ${suffix}`,revision:example+1,nodes:{}},
     localSchemaContributions:[{path:`/property_${suffix}`,expectedValue:suffix}],
   },sibling={id:siblingId,name:`Sibling ${suffix}`,eventName:`sibling_${suffix}`},state={...initial,project:{...initial.project,collections:{...initial.project.collections,pages:[page,sibling]},documentationFlowGraphs:{[`flow:${suffix}`]:{pageFrames:[{id:`frame:${suffix}`,pageId}]}}}},before=structuredClone(state);
-  const name=`Page ${suffix}`,description=`Description ${token()}`,eventName=`pageview_${token()}`,pathname=`/checkout/${token()}`,
-    saved=savePageDetails(state,pageId,{name:`  ${name}  `,description:`\n ${description} \t`,eventName:` ${eventName} `,pathname:` ${pathname} `}),savedPage=saved.project.collections.pages[0];
+  const name=`Page ${suffix}`,description=`Description ${token()}`,
+    saved=savePageDetails(state,pageId,{name:`  ${name}  `,description:`\n ${description} \t`}),savedPage=saved.project.collections.pages[0];
 
   assert.deepEqual(state,before,`sample ${example} does not mutate its input`);
-  assert.deepEqual({name:savedPage.name,description:savedPage.description,eventName:savedPage.eventName,pathname:savedPage.pathname},{name,description,eventName,pathname},`sample ${example} normalizes Page details`);
-  for(const key of["environment","host","query","hash","spa","expectedEventIds","applicabilitySetId"])assert.equal(key in savedPage,false,`sample ${example} removes obsolete ${key}`);
+  assert.deepEqual({name:savedPage.name,description:savedPage.description},{name,description},`sample ${example} normalizes Page details`);
+  for(const key of["eventName","pathname","environment","host","query","hash","spa","expectedEventIds","applicabilitySetId"])assert.equal(key in savedPage,false,`sample ${example} removes obsolete ${key}`);
   assert.deepEqual(savedPage.pageGroupIds,page.pageGroupIds,`sample ${example} conserves memberships`);
   assert.deepEqual(savedPage.profileInheritanceRecipes,page.profileInheritanceRecipes,`sample ${example} conserves inheritance recipes`);
   assert.deepEqual(savedPage.canonicalSchema,page.canonicalSchema,`sample ${example} conserves canonical schema`);
@@ -29,15 +29,7 @@ for(let example=0;example<160;example+=1){
   assert.deepEqual(saved.project.collections.pages[1],sibling,`sample ${example} conserves sibling Pages`);
   assert.deepEqual(saved.project.documentationFlowGraphs,state.project.documentationFlowGraphs,`sample ${example} conserves Flow placement`);
   assert.deepEqual(undoProjectTransaction(saved).project,state.project,`sample ${example} is exactly undoable`);
-  assert.deepEqual(savePageDetails(saved,pageId,{name,description,eventName,pathname}).project,saved.project,`sample ${example} is project-idempotent`);
-
-  const protocol=example%2?"https":"http",host=`${token()}.example`,candidate=`${protocol}://${host}${pathname}?sample=${token()}#${token()}`;
-  assert.equal(testPageRecognition(pathname,candidate),`matches exact pathname ${pathname}`,`sample ${example} ignores host, query, and hash`);
-  assert.equal(testPageRecognition(pathname,`${protocol}://${host}${pathname}/extra`),`does not match ${pathname}`,`sample ${example} requires the exact pathname`);
+  assert.deepEqual(savePageDetails(saved,pageId,{name,description}).project,saved.project,`sample ${example} is project-idempotent`);
 }
-
-assert.equal(testPageRecognition(undefined,"https://example.test/checkout"),"No Exact URL path configured");
-assert.equal(testPageRecognition("/checkout","checkout"),"Enter a full URL");
-assert.equal(testPageRecognition("/checkout","file:///checkout"),"Enter a full URL");
 
 console.log("page authoring properties passed");

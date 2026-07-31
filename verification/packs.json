@@ -4,6 +4,7 @@
     "source": [
       "src/data-layer-project-entity-lifecycle.ts",
       "src/data-layer-page-authoring.ts",
+      "src/data-layer-assignment-routing.ts",
       "src/data-layer-project-library.ts",
       "src/data-layer-project-library-ui.ts"
     ],
@@ -11,11 +12,13 @@
     "unit": [
       "test/data-layer-project-entity-lifecycle-test.mjs",
       "test/data-layer-page-authoring-test.mjs",
+      "test/data-layer-assignment-routing-test.mjs",
       "test/data-layer-project-library-test.mjs"
     ],
     "property": [
       "test/data-layer-project-entity-lifecycle-property-test.mjs",
       "test/data-layer-page-authoring-property-test.mjs",
+      "test/data-layer-assignment-routing-property-test.mjs",
       "test/data-layer-project-library-property-test.mjs"
     ],
     "features": [
@@ -23,6 +26,8 @@
       "features/data-layer-project-library-and-active-context-runtime.feature",
       "features/data-layer-project-portability-and-upgrade.feature",
       "features/data-layer-project-portability-and-upgrade-runtime.feature"
+      ,"features/specification-studio-assignment-owned-routing.feature"
+      ,"features/specification-studio-assignment-owned-routing-runtime.feature"
     ],
     "handlers": [
       "acceptance/src/acceptance/steps/project_management.clj"

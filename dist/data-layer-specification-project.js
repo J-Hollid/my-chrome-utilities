@@ -97,6 +97,8 @@ function predicateMatches(predicate, context) {
         return (predicate.values ?? (Array.isArray(expected) ? expected : [])).some((candidate) => Object.is(candidate, actual));
     if (operator === "contains")
         return String(actual).includes(String(expected));
+    if (operator === "starts with" || operator === "starts-with")
+        return String(actual).startsWith(String(expected));
     if (operator === "glob")
         return new RegExp(`^${String(expected).replace(/[.+^${}()|[\]\\]/g, "\\$&").replaceAll("*", ".*")}$`).test(String(actual));
     if (operator === "regex" || operator === "matches pattern") {
