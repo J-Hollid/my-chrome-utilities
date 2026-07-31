@@ -120,12 +120,31 @@
                "production schema selection for matching observations"}
    "ordered Pages" #{"Alpha, Landing, Cart" "Alpha, Landing" "Landing"}
    "removed Page" #{"Landing"}
-   "focus target" #{"Cart" "Alpha" "Add Page"}})
+   "focus target" #{"Cart" "Alpha" "Add Page"}
+   "url" #{"https://shop.example/checkout/cart?x=1#y"
+           "https://other.example/checkout/cart"
+           "https://shop.example/checkout/cart/"
+           "checkout/cart"}
+   "result" #{"matches exact pathname /checkout/cart"
+              "does not match /checkout/cart"
+              "Enter a full URL"}})
+(def page-recognition-examples
+  [{:keys ["url" "result"]
+    :rows #{["https://shop.example/checkout/cart?x=1#y"
+             "matches exact pathname /checkout/cart"]
+            ["https://other.example/checkout/cart"
+             "matches exact pathname /checkout/cart"]
+            ["https://shop.example/checkout/cart/"
+             "does not match /checkout/cart"]
+            ["checkout/cart" "Enter a full URL"]}}])
 (defn validate-example! [_mode example]
-  (support/validate-example-domain!
-   example-values example
-   (filter #(support/example-value example %) (keys example-values))
-   "Project-management example was outside the specified contract."))
+  (let [validated (support/validate-example-domain!
+                   example-values example
+                   (filter #(support/example-value example %) (keys example-values))
+                   "Project-management example was outside the specified contract.")]
+    (support/validate-example-relations!
+     page-recognition-examples validated
+     "Project-management URL recognition result was outside the specified contract.")))
 (def handlers
   (support/verified-feature-mode-handlers feature-files entry-modes :project-management-mode
                                           verify-model! validate-example!
