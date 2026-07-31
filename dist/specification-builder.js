@@ -50,7 +50,7 @@ q("#project-assignment-applicability").required = false;
 const id = (kind) => `${kind}:${crypto.randomUUID()}`;
 const labels = { profiles: "Shared Profiles", pages: "Pages", pageGroups: "Page Groups", events: "Events", applicabilitySets: "Applicability", flows: "Flows", fixtures: "Test cases", assignments: "Assignments" };
 let state, lastCommittedState, library = projectLibrary();
-let canonicalRevision = 0, publishedRevision = 0, guidedEvaluatorInvocations = 0, pendingConflict, durableConflict, saveStatus = { kind: "idle" }, stagedBulk, selectedKind = "profiles", selectedId, projectOverview = routeParameters.get("route") === "overview", documentationOpen = routeParameters.get("view") === "documentation", creationKind, removalReview, lifecycleStatus = "", removedFocus, pendingLifecycleFocus, pendingWorkspaceFocus, stagedImport, lastInvokingControl, releasePreflight, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi, projectDocumentationWorkspaceUi;
+let canonicalRevision = 0, publishedRevision = 0, guidedEvaluatorInvocations = 0, pendingConflict, durableConflict, saveStatus = { kind: "idle" }, stagedBulk, selectedKind = "profiles", selectedId, projectOverview = routeParameters.get("route") === "overview", documentationOpen = routeParameters.get("view") === "documentation", creationKind, removalReview, lifecycleStatus = "", removedFocus, pendingLifecycleFocus, pendingWorkspaceFocus, pendingProfileInheritanceFocus, stagedImport, lastInvokingControl, releasePreflight, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi, projectDocumentationWorkspaceUi;
 const recordGuidedEvaluation = () => { guidedEvaluatorInvocations += 1; document.querySelector("[data-guided-test-case]")?.setAttribute("data-evaluator-invocations", String(guidedEvaluatorInvocations)); };
 const evaluatePageGroupFixture = (...args) => { recordGuidedEvaluation(); return executePageGroupFixture(...args); };
 const runProductionFixture = (...args) => { recordGuidedEvaluation(); return executeProductionFixture(...args); };
@@ -840,7 +840,7 @@ function renderProfileInheritanceCards(host, entity) {
         const recipe = stored.find((candidate) => candidate.profileId === profileId) ?? createProfileInheritanceRecipe({ id: id("inheritance-recipe"), profileId, targetId: entity.id, startingPoint: "everything", sourceRevision: canonical.revision }), copySources = ['pages', 'pageGroups', 'events'].flatMap((kind) => state.project.collections[kind].flatMap((candidate) => candidate.id === entity.id ? [] : (candidate.profileInheritanceRecipes ?? []).filter((candidateRecipe) => candidateRecipe.profileId === profileId).map((candidateRecipe) => ({ label: `${candidate.name} (${labels[kind]})`, recipe: candidateRecipe }))));
         const compositionPreview = (staged) => { const stagedEntity = { ...entity, profileInheritanceRecipes: [...stored.filter((candidate) => candidate.profileId !== profileId), staged] }, stagedState = { ...state, project: { ...state.project, collections: { ...state.project.collections, [kind]: state.project.collections[kind].map((candidate) => candidate.id === entity.id ? stagedEntity : candidate) } } }, previewModel = composedSchemaWorkspace(stagedState, stagedEntity, scope); return { sources: profileIds.flatMap((identity) => { const source = state.project.collections.profiles.find(({ id }) => id === identity); return source ? [source.name] : []; }), rows: previewModel.rows.map((row) => ({ path: row.path, source: row.source, effective: effectivePropertySummary(row.effective) })), conflicts: previewModel.conflictSummary, status: previewModel.status }; };
         mountSelectiveProfileInheritance({ host, profile: { id: profile.id, name: profile.name, canonicalSchema: canonical }, target: { id: entity.id, name: entity.name }, recipe, copySources, compositionPreview, id, onApply: (applied) => { if (!state)
-                return; const reviewed = profileInheritanceRecipeApplied(canonical, applied), next = transactProject(state, `Apply ${profile.name} inheritance to ${entity.name}`, (project) => ({ ...project, collections: { ...project.collections, [kind]: project.collections[kind].map((candidate) => candidate.id !== entity.id ? candidate : { ...candidate, profileInheritanceRecipes: [...(candidate.profileInheritanceRecipes ?? []).filter((candidateRecipe) => candidateRecipe.profileId !== profileId), reviewed], compiledTargetsStale: true, validationStale: true, testCasesStale: true, documentationStale: true, exportStale: true }) } })); persist(next); queueMicrotask(() => document.querySelector(`[data-profile-inheritance-card='${CSS.escape(profileId)}']`)?.focus({ preventScroll: true })); } });
+                return; const reviewed = profileInheritanceRecipeApplied(canonical, applied), next = transactProject(state, `Apply ${profile.name} inheritance to ${entity.name}`, (project) => ({ ...project, collections: { ...project.collections, [kind]: project.collections[kind].map((candidate) => candidate.id !== entity.id ? candidate : { ...candidate, profileInheritanceRecipes: [...(candidate.profileInheritanceRecipes ?? []).filter((candidateRecipe) => candidateRecipe.profileId !== profileId), reviewed], compiledTargetsStale: true, validationStale: true, testCasesStale: true, documentationStale: true, exportStale: true }) } })); pendingProfileInheritanceFocus = profileId; persist(next); } });
     }
 }
 function renderSelectedEntityEditor(content, entity) {
@@ -1785,6 +1785,13 @@ durableProjectRuntime.subscribe(({ library: incoming, active }) => {
         saveStatus = { kind: "idle" };
     render();
     renderAssignments();
+    if (pendingProfileInheritanceFocus) {
+        const profileId = pendingProfileInheritanceFocus;
+        queueMicrotask(() => { const card = document.querySelector(`[data-profile-inheritance-card='${CSS.escape(profileId)}']`); if (card) {
+            card.focus({ preventScroll: true });
+            pendingProfileInheritanceFocus = undefined;
+        } });
+    }
     if (focusedMembershipId)
         queueMicrotask(() => document.querySelector(`[data-page-group-membership-id="${CSS.escape(focusedMembershipId)}"]`)?.focus());
     queueMicrotask(restorePendingLifecycleFocus);

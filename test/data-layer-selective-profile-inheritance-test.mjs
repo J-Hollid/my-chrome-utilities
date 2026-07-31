@@ -123,6 +123,15 @@ assert.equal(profileInheritanceSelection(deleted,{...empty,propertySelections:[e
 
 const appliedRecipe=profileInheritanceRecipeApplied(master,{...empty,propertySelections:[errorMessage.id,errorDetails.id],excludedRuleIds:["rule:error-message"]});
 assert.equal(appliedRecipe.sourceRevision,master.revision);assert.equal(JSON.stringify(appliedRecipe.sourceSnapshot).includes('"nodes"'),false,"applied snapshots retain identity/path/fingerprint metadata, not definitions");
+const appliedBytes=JSON.stringify(appliedRecipe);
+for(const sourceDefinition of["^ERR","Use an error message",'"condition"','"value":"error"'])assert.equal(appliedBytes.includes(sourceDefinition),false,`applied recipes do not copy source definition bytes: ${sourceDefinition}`);
+assert.equal(Object.values(appliedRecipe.sourceSnapshot.ruleFingerprints).every((value)=>/^digest-v1:[0-9a-f]{16}$/.test(value)),true,"new snapshots store deterministic digests");
+const legacyApplied=structuredClone(appliedRecipe);legacyApplied.sourceSnapshot.ruleFingerprints={
+  [`presence:${errorMessage.id}`]:JSON.stringify(errorMessage.presence),
+  [errorMessage.rules[0].id]:JSON.stringify(errorMessage.rules[0]),
+};
+assert.equal(profileInheritanceCurrentImpact(master,legacyApplied).stale,false,"legacy raw snapshots remain readable without migration");
+assert.equal(profileInheritanceCurrentImpact({...master,revision:8,nodes:{...master.nodes,[errorMessage.id]:{...errorMessage,rules:[{...errorMessage.rules[0],message:"Changed legacy message"}]}}},legacyApplied).changedRuleIds.includes(errorMessage.rules[0].id),true,"legacy raw snapshots still detect changes");
 const currentRenameImpact=profileInheritanceCurrentImpact(renamed,appliedRecipe);
 assert.equal(currentRenameImpact.stale,true);assert.deepEqual(currentRenameImpact.changedPaths,[{propertyId:errorMessage.id,before:"/error/message",after:"/error/friendly_message"}]);
 const changedExcludedRule={...master,revision:9,nodes:{...master.nodes,[errorMessage.id]:{...errorMessage,rules:[{...errorMessage.rules[0],pattern:"^CHANGED"}]}}};
