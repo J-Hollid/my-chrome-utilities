@@ -217,13 +217,13 @@ Feature: Data layer project library and active context
   Scenario: Data layer project library and active context 017
     Given Retail website is active and Pages and Events overviews are openable
     When the operator opens Add Page
-    Then Create Page identifies a Page as a context-setting event and requires its observed event name
-    And no Events-catalog choice, nested occurrence, or documentary role is required
-    When the operator creates Cart with observed event name pageview
+    Then Create Page requires a name and offers an optional Description for its reusable schema context
+    And no observed Event, URL recognition, Applicability Set, or Assignment field is required
+    When the operator creates Cart with description Checkout basket
     And creates Button click from Add Event with observed event name button_click
-    Then Pages contains Cart identified as context-setting pageview
+    Then Pages contains Cart as a reusable Page schema context
     And Events contains Button click identified as interaction button_click
-    And neither canonical entity stores a role selector, Page-context binding, or duplicate schema
+    And neither canonical entity stores a role selector, Page-context binding, URL matcher, or duplicate schema
 
   # Data layer project library and active context 018
   Scenario: Data layer project library and active context 018
@@ -256,35 +256,21 @@ Feature: Data layer project library and active context
 
   # Data layer project library and active context 020
   Scenario: Data layer project library and active context 020
-    Given Cart Page retains obsolete Environment, Host matcher, Query matcher, Hash matcher, SPA route, Expected interaction Events, and Applicability Set values
+    Given Cart Page retains obsolete Page-view event name, URL path, Environment, Host matcher, Query matcher, Hash matcher, SPA route, Expected interaction Events, and Applicability Set values
     When the operator opens Cart Page details
-    Then the form offers Name, optional Description, required Page-view event name, and optional Exact URL path with purpose and syntax guidance
+    Then the form offers only Name and optional Description with purpose guidance
     And it offers none of the obsolete fields
     And its only commit action is Save Page details
-    And Duplicate and Generate Page specification documentation are absent
-    When the operator saves description Checkout basket and Page-view event name pageview
+    And Duplicate, Test URL, and Generate Page specification documentation are absent
+    When the operator saves description Checkout basket
     Then Cart stores and displays the trimmed Page details without any obsolete value
     And its identity, memberships, inheritance recipes, local schema, Flow placements, and documentation configuration remain unchanged
-
-  # Data layer project library and active context 021
-  Scenario Outline: Data layer project library and active context 021
-    Given Cart has Exact URL path /checkout/cart
-    When the operator tests <url>
-    Then the Page recognition preview reports <result>
-    And testing changes no project data
-
-    Examples:
-      | url                                      | result                              |
-      | https://shop.example/checkout/cart?x=1#y | matches exact pathname /checkout/cart |
-      | https://other.example/checkout/cart      | matches exact pathname /checkout/cart |
-      | https://shop.example/checkout/cart/      | does not match /checkout/cart        |
-      | checkout/cart                            | Enter a full URL                      |
 
   # Data layer project library and active context 022
   Scenario: Data layer project library and active context 022
     Given Cart can inherit Sitewide and belongs to ordered Page Groups
     When the operator opens Cart
-    Then Page details, Page recognition, Inherited schema, and Effective and local schema form distinct regions
+    Then Page details, Inherited schema, and Effective and local schema form distinct regions
     And one visible Add to Page Group action opens the searchable membership picker without an adjacent duplicate Page actions command
     And each membership retains Open Page Group, Move earlier, Move later, and Remove
     And Add Shared Profile starts the existing selective inheritance recipe without a raw Shared Profile multi-select

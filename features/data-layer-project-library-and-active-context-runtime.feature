@@ -220,13 +220,13 @@ Feature: Data layer project library and active context runtime
   Scenario: Data layer project library and active context runtime 017
     Given production project-retail is active and its Pages and Events routes are available
     When actual controls open Add Page
-    Then installed Create Page describes context-setting event semantics and requires Observed event name
-    And rendered controls require no Events-catalog reference, nested occurrence, or role selector
-    When actual controls create Cart with pageview
+    Then installed Create Page requires Name and renders an optional Description for its reusable schema context
+    And rendered controls contain no observed Event, URL recognition, Applicability Set, or Assignment field
+    When actual controls create Cart with description Checkout basket
     And create Button click from Add Event with button_click
-    Then production Pages stores Cart as context-setting pageview
+    Then production Pages stores Cart as a reusable Page schema context
     And production Events stores Button click as interaction button_click
-    And serialized entities contain no role, context binding, or copied schema
+    And serialized entities contain no role, context binding, URL matcher, or copied schema
 
   # Data layer project library and active context runtime 018
   Scenario: Data layer project library and active context runtime 018
@@ -258,35 +258,21 @@ Feature: Data layer project library and active context runtime
 
   # Data layer project library and active context runtime 020
   Scenario: Data layer project library and active context runtime 020
-    Given production Cart bytes contain obsolete environment, host, query, hash, spa, expectedEventIds, and applicabilitySetId properties
+    Given production Cart bytes contain obsolete eventName, pathname, environment, host, query, hash, spa, expectedEventIds, and applicabilitySetId properties
     When actual controls open the installed Cart Page details
-    Then the form renders Name, optional Description, required Page-view event name, and optional Exact URL path with associated guidance
+    Then the form renders only Name and optional Description with associated purpose guidance
     And DOM inspection finds none of the obsolete controls
     And Save Page details is the only form commit control
-    And DOM inspection finds no Duplicate or Generate Page specification documentation action
-    When actual controls save description Checkout basket and Page-view event name pageview
+    And DOM inspection finds no Duplicate, Test URL, or Generate Page specification documentation action
+    When actual controls save description Checkout basket
     Then repository bytes and the reloaded workspace contain trimmed Page details without any obsolete property
     And hashes for Cart identity, memberships, inheritance recipes, local schema, Flow graphs, and documentation configuration remain unchanged
-
-  # Data layer project library and active context runtime 021
-  Scenario Outline: Data layer project library and active context runtime 021
-    Given production Cart has pathname /checkout/cart
-    When the installed Test URL control receives <url>
-    Then its non-persistent recognition result is <result>
-    And project repository bytes remain identical
-
-    Examples:
-      | url                                      | result                                |
-      | https://shop.example/checkout/cart?x=1#y | matches exact pathname /checkout/cart |
-      | https://other.example/checkout/cart      | matches exact pathname /checkout/cart |
-      | https://shop.example/checkout/cart/      | does not match /checkout/cart         |
-      | checkout/cart                            | Enter a full URL                       |
 
   # Data layer project library and active context runtime 022
   Scenario: Data layer project library and active context runtime 022
     Given production Cart can inherit Sitewide and has ordered Page Group memberships
     When actual controls open its installed workspace
-    Then landmark inspection finds Page details, Page recognition, Inherited schema, and Effective and local schema regions
+    Then landmark inspection finds Page details, Inherited schema, and Effective and local schema regions
     And exactly one visible Add to Page Group action opens production membership search without an adjacent duplicate menu command
     And every membership row retains Open Page Group, Move earlier, Move later, and Remove controls
     And Add Shared Profile mounts the production selective-inheritance recipe while no raw profileIds multi-select exists
