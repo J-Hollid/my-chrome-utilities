@@ -4,6 +4,6 @@ export { canonicalFriendlyPropertyPath, canonicalJsonSchemaDocument } from "./da
 export { canonicalArrayBoundaries } from "./data-layer-canonical-array-items.js";
 export { evaluateCanonicalPredicate } from "./data-layer-canonical-schema-predicates.js";
 export { canonicalPredicateWithStableIds, canonicalPredicateIds } from "./data-layer-canonical-predicate-identity.js";
-export { canonicalConstraints, canonicalSchemaWithConstraint, canonicalRequirements } from "./data-layer-canonical-schema-constraints.js";
+export { canonicalConstraints, canonicalSchemaWithConstraint, canonicalSchemaWithConstraints, canonicalRequirements } from "./data-layer-canonical-schema-constraints.js";
 export { hasLegacySchemaRepresentation, migrateLegacyProfile, resolveCanonicalMigrationConflict, canonicalSchemaFromJsonSchema, canonicalNodeFromValue } from "./data-layer-canonical-schema-migration.js";
 //# sourceMappingURL=data-layer-canonical-schema.js.map
