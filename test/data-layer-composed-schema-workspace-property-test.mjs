@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   composedCanonicalSchema,
   composedSchemaWorkspace,
+  resetComposedSchemaLocalFacet,
   resetComposedSchemaLocalProperty,
   saveComposedCanonicalDocument,
   saveComposedSchemaLocalFacets,
@@ -37,6 +38,18 @@ for(let example=0;example<150;example+=1){
   assert.deepEqual(writtenPage.localSchemaContributions.find(({path:storedPath})=>storedPath===unrelatedPath),{path:unrelatedPath,documentation:"preserve me"},`example ${example} conserves an unrelated sparse contribution`);
   assert.deepEqual(writtenPage.localSchemaContributions.find(({path:storedPath})=>storedPath===path),{path,expectedValue:localValue},`example ${example} stores only its sparse local difference from the effective core`);
   assert.equal(composedSchemaWorkspace(written,writtenPage,"Page").rows.find(({path:rowPath})=>rowPath===path).effective.expectedValue,localValue);
+
+  const facet=random()>=0.5?"type":"presence",sourceValue=facet==="type"?"string":"required",localFacetValue=facet==="type"?"number":"forbidden",protectedState=createSpecificationProject({name:`Protected composition ${example}`,site:"shop.example",id:(kind)=>`${kind}:protected:${example}`});
+  protectedState.project.collections.profiles.push({id:`profile:protected:${example}`,name:`Protected profile ${example}`,schemaConstraints:[{path,[facet]:sourceValue,protectedFacets:[facet]}]});
+  protectedState.project.collections.pageGroups.push({id:`group:protected:${example}`,name:`Protected group ${example}`,profileId:`profile:protected:${example}`,localSchemaContributions:[{path,[facet]:localFacetValue,documentation:"preserve local documentation"},{path:unrelatedPath,type:"boolean"}]});
+  const protectedGroup=protectedState.project.collections.pageGroups[0],protectedWorkspace=composedSchemaWorkspace(protectedState,protectedGroup,"Page Group"),decision=protectedWorkspace.rows.find(({path:rowPath})=>rowPath===path);
+  assert.equal(protectedWorkspace.status,"blocked");
+  assert.equal(decision.decisionFacet,facet[0].toUpperCase()+facet.slice(1));
+  assert.ok(decision.repairs.some((repair)=>repair.kind==="use-source"&&repair.facet===facet),"every generated protected conflict offers its exact inherited facet repair");
+  const repairedFacet=resetComposedSchemaLocalFacet(protectedState,"pageGroups",protectedGroup.id,path,facet),repairedGroup=repairedFacet.project.collections.pageGroups[0];
+  assert.deepEqual(repairedGroup.localSchemaContributions,[{path,documentation:"preserve local documentation"},{path:unrelatedPath,type:"boolean"}],"a generated targeted repair conserves unrelated facets and properties");
+  assert.equal(repairedFacet.history.undo.length,protectedState.history.undo.length+1,"a generated targeted repair creates exactly one Undo action");
+  assert.equal(composedSchemaWorkspace(repairedFacet,repairedGroup,"Page Group").status,"ready");
 }
 
 console.log("data-layer composed schema workspace property tests passed");

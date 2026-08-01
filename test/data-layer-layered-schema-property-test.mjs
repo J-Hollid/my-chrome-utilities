@@ -74,6 +74,21 @@ for(let iteration=0;iteration<200;iteration+=1){
   assert.deepEqual(evaluated.includedStack,[`Group ${iteration}-0`,`Group ${iteration}-${activeIndex+1}`],"Fixture evaluation selects the unconditional group and exactly the matching conditional group");
   assert.deepEqual(evaluated.inactiveGroups,pageGroupIds.slice(1).map((_,index)=>({index,name:`Group ${iteration}-${index+1}`})).filter(({index})=>index!==activeIndex).map(({name})=>name),"Fixture evaluation preserves the stored order of inactive groups");
   assert.deepEqual(structuralState,before,"structural authoring and Fixture evaluation do not mutate the saved project");
+
+  const sourceType=["string","number","boolean","array"][Math.floor(random()*4)],localType=["string","number","boolean","array"].find((type)=>type!==sourceType),sourcePresence=["required","optional","forbidden"][Math.floor(random()*3)],localPresence=["required","optional","forbidden"].find((presence)=>presence!==sourcePresence),compileOverride=(source,local)=>compileLayeredSchema([
+    {id:`profile:override:${iteration}`,name:`Profile ${iteration}`,scope:"Shared Profile",constraints:[{path:"/override",...source}]},
+    {id:`group:override:${iteration}`,name:`Group ${iteration}`,scope:"Page Group",constraints:[{path:"/override",...local}]},
+  ],context);
+  const ordinaryType=compileOverride({type:sourceType},{type:localType}),ordinaryPresence=compileOverride({presence:sourcePresence},{presence:localPresence});
+  assert.equal(ordinaryType.status,"ready","generated ordinary Type changes remain legal sparse overrides");
+  assert.equal(ordinaryType.properties["/override"].type,localType,"the generated local Type wins exactly");
+  assert.equal(ordinaryPresence.status,"ready","generated ordinary Presence changes remain legal sparse overrides");
+  assert.equal(ordinaryPresence.properties["/override"].presence,localPresence,"the generated local Presence wins exactly");
+  for(const [facet,sourceValue,localValue] of [["type",sourceType,localType],["presence",sourcePresence,localPresence]]){
+    const protectedResult=compileOverride({[facet]:sourceValue,protectedFacets:[facet]},{[facet]:localValue}),conflict=protectedResult.conflicts[0];
+    assert.equal(protectedResult.status,"blocked","generated protected facet changes require a decision");
+    assert.deepEqual({facet:conflict.facet,sourceValue:conflict.sourceValue,localValue:conflict.localValue,sourceContributor:conflict.sourceContributor,localContributor:conflict.localContributor},{facet:facet[0].toUpperCase()+facet.slice(1),sourceValue,localValue,sourceContributor:`Profile ${iteration}`,localContributor:`Group ${iteration}`},"protected conflict evidence names the exact facet, values, and contributors");
+  }
 }
 
 for(let iteration=0;iteration<120;iteration+=1){
@@ -245,7 +260,7 @@ for(let iteration=0;iteration<120;iteration+=1){
     }
   }
   for(const [label,peerFacet,downstreamFacet] of [
-    ["type",{type:"string"},{type:"number"}],
+    ["protected type",{type:"string",protectedFacets:["type"]},{type:"number"}],
     ["invariant",{expectedValue:`profile-${iteration}`,enforcement:"invariant"},{expectedValue:`group-${iteration}`}],
   ]){
     const profiles=[peerContribution("a",peerFacet),peerContribution("b",peerFacet)];
