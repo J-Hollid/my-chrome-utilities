@@ -59,7 +59,7 @@ const protectedTypeConflict=compilePair({type:"string",protectedFacets:["type"]}
 assert.equal(protectedTypeConflict.status,"blocked","a protected Type facet still requires a decision");
 assert.deepEqual(
   protectedTypeConflict.conflicts[0],
-  {path:"/value",facet:"Type",sourceContributor:"Sitewide",sourceValue:"string",localContributor:"Shipping",localValue:"number",message:"Sitewide protects this definition from change",contributors:["Sitewide","Shipping"]},
+  {path:"/value",facet:"Type",sourceContributor:"Sitewide",sourceContributorId:"base",sourceValue:"string",localContributor:"Shipping",localContributorId:"specific",localValue:"number",message:"Sitewide protects this definition from change",contributors:["Sitewide","Shipping"],contributorIds:["base","specific"]},
 );
 assert.deepEqual(compilePair({allowedValues:["3a","3b"]},{allowedValues:["3b"]}).properties["/value"].allowedValues,["3b"]);
 assert.match(compilePair({allowedValues:["3a","3b"]},{allowedValues:["4"]}).conflicts[0].message,/outside the base allowed universe/);
@@ -69,6 +69,16 @@ assert.equal(ordinaryPresenceOverride.properties["/value"].presence,"forbidden")
 const protectedPresenceConflict=compilePair({presence:"required",protectedFacets:["presence"]},{presence:"forbidden"});
 assert.equal(protectedPresenceConflict.status,"blocked","a protected Presence facet still requires a decision");
 assert.equal(protectedPresenceConflict.conflicts[0].facet,"Presence");
+const protectedThroughIntermediate=compileLayeredSchema([
+  contribution("protected-source","Protected source","Shared Profile",[{path:"/value",type:"string",protectedFacets:["type"]}]),
+  contribution("documentation-only","Documentation only","Page Group",[{path:"/value",documentation:"Retain this documentation"}]),
+  contribution("specific","Shipping","Page",[{path:"/value",type:"number"}]),
+],{eventId:"event:purchase",eventRole:"interaction"});
+assert.deepEqual(
+  {source:protectedThroughIntermediate.conflicts[0].sourceContributor,sourceId:protectedThroughIntermediate.conflicts[0].sourceContributorId},
+  {source:"Protected source",sourceId:"protected-source"},
+  "protected facet conflicts retain the facet owner through unrelated intermediate contributions",
+);
 assert.deepEqual(compilePair({patterns:["^[a-z]+$"]},{patterns:["shipping$"]}).properties["/value"].patterns,["^[a-z]+$","shipping$"]);
 assert.equal(compilePair({rules:[{condition:"base"}]},{rules:[{condition:"specific"}]}).properties["/value"].rules.length,2);
 const bounded=compilePair({minimum:0,maximum:10,minItems:1,maxItems:8,reusableRules:[{id:"rule:base"}]},{minimum:2,maximum:7,minItems:3,maxItems:5,reusableRules:[{id:"rule:specific"}]}).properties["/value"];

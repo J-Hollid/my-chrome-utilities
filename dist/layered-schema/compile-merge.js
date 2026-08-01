@@ -6,15 +6,17 @@ const incompatibleTypeChange = (prior, constraint) => Boolean(constraint.type &&
 export function mergeLayeredProperty(prior, constraint, contributor, parallelPair, parallelPeer, conflict) {
     const source = { contributorId: contributor.id, contributorName: contributor.name, scope: contributor.scope, ...(contributor.inheritanceRoutes?.length ? { inheritanceRoutes: [...contributor.inheritanceRoutes] } : {}) };
     if (!prior)
-        return { ...clone(constraint), origins: [source], superseded: [], ...(constraint.expectedValue !== undefined ? { expectedContributor: contributor.name, expectedContributors: [contributor.name] } : {}) };
-    const next = { ...prior, origins: [...prior.origins, source], superseded: [...prior.superseded] };
+        return { ...clone(constraint), origins: [source], superseded: [], ...((constraint.type || constraint.presence) ? { facetSources: { ...(constraint.type ? { type: source } : {}), ...(constraint.presence ? { presence: source } : {}) } } : {}), ...(constraint.expectedValue !== undefined ? { expectedContributor: contributor.name, expectedContributors: [contributor.name] } : {}) };
+    const next = { ...prior, origins: [...prior.origins, source], superseded: [...prior.superseded], ...(prior.facetSources ? { facetSources: { ...prior.facetSources } } : {}) };
     if (!parallelPair && constraint.type && prior.type && constraint.type !== prior.type && (prior.protectedFacets?.includes("type") || incompatibleTypeChange(prior, constraint))) {
-        const sourceContributor = prior.origins.at(-1).contributorName;
+        const sourceOrigin = prior.facetSources?.type ?? prior.origins.at(-1), sourceContributor = sourceOrigin.contributorName;
         const protectedDefinition = prior.protectedFacets?.includes("type") === true;
-        conflict(constraint.path, protectedDefinition ? `${sourceContributor} protects this definition from change` : `type cannot change to ${constraint.type} while existing values use ${prior.type}`, [sourceContributor, contributor.name], { facet: "Type", sourceContributor, sourceValue: prior.type, localContributor: contributor.name, localValue: constraint.type });
+        conflict(constraint.path, protectedDefinition ? `${sourceContributor} protects this definition from change` : `type cannot change to ${constraint.type} while existing values use ${prior.type}`, [sourceContributor, contributor.name], { contributorIds: [sourceOrigin.contributorId, contributor.id], facet: "Type", sourceContributor, sourceContributorId: sourceOrigin.contributorId, sourceValue: prior.type, localContributor: contributor.name, localContributorId: contributor.id, localValue: constraint.type });
     }
-    else if (!parallelPair && constraint.type)
+    else if (!parallelPair && constraint.type) {
         next.type = constraint.type;
+        next.facetSources = { ...next.facetSources, type: source };
+    }
     if (constraint.nullable !== undefined)
         next.nullable = constraint.nullable;
     if (constraint.onlyDefinedFields !== undefined)
@@ -71,13 +73,17 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
             next.presence = "optional";
         else
             next.presence = "permitted";
+        if (next.presence === constraint.presence && next.presence !== prior.presence)
+            next.facetSources = { ...next.facetSources, presence: source };
     }
     else if (!parallelPair && constraint.presence && prior.presence && constraint.presence !== prior.presence && prior.protectedFacets?.includes("presence")) {
-        const sourceContributor = prior.origins.at(-1).contributorName;
-        conflict(constraint.path, `${sourceContributor} protects this definition from change`, [sourceContributor, contributor.name], { facet: "Presence", sourceContributor, sourceValue: prior.presence, localContributor: contributor.name, localValue: constraint.presence });
+        const sourceOrigin = prior.facetSources?.presence ?? prior.origins.at(-1), sourceContributor = sourceOrigin.contributorName;
+        conflict(constraint.path, `${sourceContributor} protects this definition from change`, [sourceContributor, contributor.name], { contributorIds: [sourceOrigin.contributorId, contributor.id], facet: "Presence", sourceContributor, sourceContributorId: sourceOrigin.contributorId, sourceValue: prior.presence, localContributor: contributor.name, localContributorId: contributor.id, localValue: constraint.presence });
     }
-    else if (constraint.presence)
+    else if (constraint.presence) {
         next.presence = constraint.presence;
+        next.facetSources = { ...next.facetSources, presence: source };
+    }
     if (constraint.patterns)
         next.patterns = parallelPeer ? canonicalUnion(prior.patterns ?? [], constraint.patterns) : [...(prior.patterns ?? []), ...constraint.patterns];
     if (constraint.minimum !== undefined)

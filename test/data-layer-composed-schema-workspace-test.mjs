@@ -244,4 +244,26 @@ assert.deepEqual(repairedCheckout.localSchemaContributions,[{path:"/customer_sta
 assert.equal(repaired.history.undo.length,clarity.history.undo.length+1,"a targeted facet repair creates one Undo action");
 assert.equal(composedSchemaWorkspace(repaired,repairedCheckout,"Page Group").conflictSummary,"1 property needs a decision before validation and developer export.");
 
+const duplicateNames=createSpecificationProject({name:"Duplicate contributor names",site:"shop.example",id:(kind)=>`${kind}:duplicate-names`});
+duplicateNames.project.collections.profiles.push(
+  {id:"profile:unrelated-shared",name:"Shared",schemaConstraints:[{path:"/unrelated",type:"string"}]},
+  {id:"profile:source-shared",name:"Shared",schemaConstraints:[{path:"/protected",type:"string",protectedFacets:["type"]}]},
+);
+duplicateNames.project.collections.pageGroups.push({id:"group:duplicate-names",name:"Checkout",profileId:"profile:source-shared",localSchemaContributions:[{path:"/protected",type:"number"}]});
+const duplicateDecision=composedSchemaWorkspace(duplicateNames,duplicateNames.project.collections.pageGroups[0],"Page Group").rows.find(({path})=>path==="/protected");
+assert.deepEqual(duplicateDecision.repairs.map(({kind,contributorId})=>({kind,contributorId})),[
+  {kind:"use-source",contributorId:"profile:source-shared"},
+  {kind:"open-source",contributorId:"profile:source-shared"},
+],"repair routing uses stable contributor identity even when human names collide");
+
+const policyConflict=createSpecificationProject({name:"Policy conflict",site:"shop.example",id:(kind)=>`${kind}:policy-conflict`});
+policyConflict.project.collections.profiles.push(
+  {id:"profile:closed",name:"Closed",onlyDefinedFields:true,schemaConstraints:[]},
+  {id:"profile:open",name:"Open",onlyDefinedFields:false,schemaConstraints:[]},
+);
+policyConflict.project.collections.pageGroups.push({id:"group:policy-conflict",name:"Checkout",profileIds:["profile:closed","profile:open"]});
+const policyWorkspace=composedSchemaWorkspace(policyConflict,policyConflict.project.collections.pageGroups[0],"Page Group");
+assert.equal(policyWorkspace.status,"blocked");
+assert.equal(policyWorkspace.conflictSummary,"1 schema decision is required before validation and developer export.","root policy conflicts never claim that zero properties need decisions");
+
 console.log("data-layer composed schema workspace tests passed");
