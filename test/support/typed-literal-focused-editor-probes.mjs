@@ -117,11 +117,17 @@ export const typedLiteralFocusedEditorExpression=String.raw`(async()=>{
     );
     await waitSaved();
     await pause(80);
-    return workspace;
+    return[...document.querySelectorAll('[aria-label="Effective schema at Shipping"]')]
+      .find((candidate)=>candidate.isConnected&&!candidate.closest('[hidden]'))??workspace;
   };
   const openComposedSection=async(path,section)=>{
-    const workspace=await openShipping(),row=await waitFor(
-      ()=>workspace.querySelector('[data-effective-property-path="'+CSS.escape(path)+'"]'),
+    let workspace=await openShipping();
+    const row=await waitFor(
+      ()=>{
+        workspace=[...document.querySelectorAll('[aria-label="Effective schema at Shipping"]')]
+          .find((candidate)=>candidate.isConnected&&!candidate.closest('[hidden]'))??workspace;
+        return workspace.querySelector('[data-effective-property-path="'+CSS.escape(path)+'"]');
+      },
       'Shipping row '+path,
     );
     row.querySelector('[aria-label^="Property actions"]').click();
@@ -263,6 +269,7 @@ export const typedLiteralFocusedEditorExpression=String.raw`(async()=>{
   };
   const operableGeometry=({layers,enabled,viewport,keyboard,pointer})=>
     layers&&enabled&&viewport&&keyboard&&pointer;
+  await ensureRoot('shippingRoot');
   let {focused:definitionFocused}=await openCanonicalSection('shippingLabel','Definition');
   definitionFocused=await stageFocused(definitionFocused,'[name="description"]','Presented shipping options');
   const definitionBefore=await snapshot(),definitionReview=await reviewLayer(definitionFocused),definitionGeometry=reviewGeometry(definitionReview);
