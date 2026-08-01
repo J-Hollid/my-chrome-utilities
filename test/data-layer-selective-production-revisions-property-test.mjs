@@ -4,9 +4,13 @@ import {LEGACY_PROJECT_KEYS,createMemoryDurableProjectRepository,durableDraftCom
 import {developerProductionSchemaExport,publishableProductionSchemas} from "../dist/data-layer-production-specification.js";
 
 const cleanRepository=createMemoryDurableProjectRepository();
+const fixtureHeavyState=createSpecificationProject({name:"Fixture-heavy current project",site:"fixture-heavy.example",id:kind=>`${kind}:fixture-heavy`});
+fixtureHeavyState.project.collections.fixtures.push({id:"fixture:large-payload",name:"Large captured payload",payload:{document:{type:"object"},revision:2847,changes:Array.from({length:2847},(_,index)=>({index})),body:"x".repeat(2*1024*1024)}});
+await cleanRepository.putProject(fixtureHeavyState);
 cleanRepository.clearTrace();
 assert.equal((await cleanRepository.compactLegacyDurableSchemaHistory()).entryCount,0);
 assert.deepEqual(cleanRepository.trace().writes,[],"a current repository mount remains read-only when no compaction is required");
+assert.equal(cleanRepository.trace().reads.some(({store})=>store==="fixtures"),false,"schema-history startup migration does not scan captured fixture payloads");
 cleanRepository.clearTrace();
 assert.equal((await cleanRepository.compactLegacyDurableSchemaHistory()).entryCount,0);
 assert.deepEqual(cleanRepository.trace().writes,[],"a repeated current repository mount also remains read-only");
