@@ -4,6 +4,21 @@ import { constraintWithPeerRules, peerConstraintForCompile, peerMismatch, peerSe
 const peerRule = (constraint, kind) => (constraint.rules ?? []).find((rule) => String(rule.kind ?? "") === kind);
 const valueMatchesType = (value, type) => type === "array" ? Array.isArray(value) : type === "null" ? value === null : type === "integer" ? Number.isInteger(value) : type === "object" ? Boolean(value) && typeof value === "object" && !Array.isArray(value) : typeof value === type;
 const valueMatchesItem = (value, schema) => (!schema.type || valueMatchesType(value, schema.type)) && (!schema.allowedValues?.length || schema.allowedValues.some((candidate) => same(candidate, value))) && (!schema.items || Array.isArray(value) && value.every((item) => valueMatchesItem(item, schema.items)));
+const ownsFacet = (constraint, facet) => Object.hasOwn(constraint, facet) || (facet === "minimum" && Object.hasOwn(constraint, "maximum")) || (facet === "minItems" && Object.hasOwn(constraint, "maxItems"));
+const matchesIssue = (resolution, issue, constraint) => { const sourceFacet = issue.details.sourceFacet ?? issue.keys[0], localFacet = issue.details.localFacet ?? issue.keys[0], sourceId = issue.details.sourceContributorId, localId = issue.details.localContributorId; return ownsFacet(constraint, resolution.selectedFacet) && ((resolution.selectedContributorId === sourceId && resolution.selectedFacet === sourceFacet && resolution.rejectedContributorId === localId && resolution.rejectedFacet === localFacet) || (resolution.selectedContributorId === localId && resolution.selectedFacet === localFacet && resolution.rejectedContributorId === sourceId && resolution.rejectedFacet === sourceFacet)); };
+const withoutFacet = (constraint, facet) => { const next = clone(constraint), ruleKind = facet === "patterns" ? "pattern" : facet === "minimum" || facet === "maximum" ? "range" : facet === "minItems" || facet === "maxItems" ? "cardinality" : facet === "expectedValue" ? "value" : undefined; delete next[facet]; if (facet === "allowedValues") {
+    delete next.allowedValueIds;
+    delete next.allowedValueProvenance;
+} if (facet === "minimum")
+    delete next.maximum; if (facet === "maximum")
+    delete next.minimum; if (facet === "minItems")
+    delete next.maxItems; if (facet === "maxItems")
+    delete next.minItems; if (facet === "itemType")
+    delete next.itemSchema; if (ruleKind && next.rules) {
+    next.rules = next.rules.filter((rule) => String(rule.kind ?? "") !== ruleKind);
+    if (!next.rules.length)
+        delete next.rules;
+} return next; };
 const peerFacetIssues = (left, right) => {
     const issues = [], details = (facet, section, sourceValue, localValue, message, kind, sourceFacet, localFacet) => { const sourceRule = kind ? peerRule(left.constraint, kind) : undefined, localRule = kind ? peerRule(right.constraint, kind) : undefined; return { facet, section, sourceContributor: left.contributor.name, sourceContributorId: left.contributor.id, sourceValue: clone(sourceValue), ...(sourceFacet ? { sourceFacet } : {}), localContributor: right.contributor.name, localContributorId: right.contributor.id, localValue: clone(localValue), ...(localFacet ? { localFacet } : {}), contributorIds: [left.contributor.id, right.contributor.id], message, ...(sourceRule?.id ? { sourceRuleId: String(sourceRule.id) } : {}), ...(sourceRule?.enforcement === "invariant" ? { sourceRuleInvariant: true } : {}), ...(localRule?.id ? { localRuleId: String(localRule.id) } : {}) }; };
     const leftConstraint = left.constraint, rightConstraint = right.constraint;
@@ -16,9 +31,9 @@ const peerFacetIssues = (left, right) => {
     if (leftConstraint.expectedValue !== undefined && rightConstraint.expectedValue !== undefined && !same(leftConstraint.expectedValue, rightConstraint.expectedValue))
         issues.push({ keys: ["expectedValue"], details: details("Expected value", "Definition", leftConstraint.expectedValue, rightConstraint.expectedValue, "the parallel expected values differ") });
     if (leftConstraint.minimum !== undefined && rightConstraint.maximum !== undefined && leftConstraint.minimum > rightConstraint.maximum || rightConstraint.minimum !== undefined && leftConstraint.maximum !== undefined && rightConstraint.minimum > leftConstraint.maximum)
-        issues.push({ keys: ["minimum", "maximum"], details: details("Range rule", "Rules", { minimum: leftConstraint.minimum, maximum: leftConstraint.maximum }, { minimum: rightConstraint.minimum, maximum: rightConstraint.maximum }, "the ranges do not overlap", "range") });
+        issues.push({ keys: ["minimum", "maximum"], details: details("Range rule", "Rules", { minimum: leftConstraint.minimum, maximum: leftConstraint.maximum }, { minimum: rightConstraint.minimum, maximum: rightConstraint.maximum }, "the ranges do not overlap", "range", leftConstraint.minimum !== undefined ? "minimum" : "maximum", rightConstraint.minimum !== undefined ? "minimum" : "maximum") });
     if (leftConstraint.minItems !== undefined && rightConstraint.maxItems !== undefined && leftConstraint.minItems > rightConstraint.maxItems || rightConstraint.minItems !== undefined && leftConstraint.maxItems !== undefined && rightConstraint.minItems > leftConstraint.maxItems)
-        issues.push({ keys: ["minItems", "maxItems"], details: details("Cardinality rule", "Rules", { minItems: leftConstraint.minItems, maxItems: leftConstraint.maxItems }, { minItems: rightConstraint.minItems, maxItems: rightConstraint.maxItems }, "the item counts do not overlap", "cardinality") });
+        issues.push({ keys: ["minItems", "maxItems"], details: details("Cardinality rule", "Rules", { minItems: leftConstraint.minItems, maxItems: leftConstraint.maxItems }, { minItems: rightConstraint.minItems, maxItems: rightConstraint.maxItems }, "the item counts do not overlap", "cardinality", leftConstraint.minItems !== undefined ? "minItems" : "maxItems", rightConstraint.minItems !== undefined ? "minItems" : "maxItems") });
     if (leftConstraint.itemSchema && rightConstraint.itemSchema && !same(leftConstraint.itemSchema, rightConstraint.itemSchema))
         issues.push({ keys: ["itemSchema"], details: details("Array item definition", "Structure", leftConstraint.itemSchema, rightConstraint.itemSchema, "the parallel item definitions are incompatible") });
     const expectedAgainst = (facetEntry, expectedEntry, facetOnLeft) => {
@@ -40,9 +55,9 @@ const peerFacetIssues = (left, right) => {
         } }))
             add(["patterns"], "Pattern rule", "Rules", facetConstraint.patterns, "the expected value does not match the parallel Pattern rule", "pattern");
         if ((facetConstraint.minimum !== undefined && (typeof expected !== "number" || expected < facetConstraint.minimum)) || (facetConstraint.maximum !== undefined && (typeof expected !== "number" || expected > facetConstraint.maximum)))
-            add(["minimum", "maximum"], "Range rule", "Rules", { minimum: facetConstraint.minimum, maximum: facetConstraint.maximum }, "the expected value is outside the parallel Range rule", "range");
+            add(facetConstraint.minimum !== undefined ? ["minimum", "maximum"] : ["maximum", "minimum"], "Range rule", "Rules", { minimum: facetConstraint.minimum, maximum: facetConstraint.maximum }, "the expected value is outside the parallel Range rule", "range");
         if ((facetConstraint.minItems !== undefined && (!Array.isArray(expected) || expected.length < facetConstraint.minItems)) || (facetConstraint.maxItems !== undefined && (!Array.isArray(expected) || expected.length > facetConstraint.maxItems)))
-            add(["minItems", "maxItems"], "Cardinality rule", "Rules", { minItems: facetConstraint.minItems, maxItems: facetConstraint.maxItems }, "the expected value is outside the parallel Cardinality rule", "cardinality");
+            add(facetConstraint.minItems !== undefined ? ["minItems", "maxItems"] : ["maxItems", "minItems"], "Cardinality rule", "Rules", { minItems: facetConstraint.minItems, maxItems: facetConstraint.maxItems }, "the expected value is outside the parallel Cardinality rule", "cardinality");
         if (facetConstraint.itemType && (!Array.isArray(expected) || expected.some((value) => !valueMatchesType(value, facetConstraint.itemType))))
             add(["itemType"], "Array item definition", "Structure", facetConstraint.itemType, "the expected items do not match the parallel item Type");
         if (facetConstraint.itemSchema && (!Array.isArray(expected) || expected.some((value) => !valueMatchesItem(value, facetConstraint.itemSchema))))
@@ -64,7 +79,7 @@ export function compileLayeredSchema(contributors, context) {
         queue.sort((left, right) => left.id.localeCompare(right.id));
     const activeContributors = selected.map((contributor) => contributor.peerGroup ? peerQueues.get(contributor.peerGroup).shift() : contributor), properties = {}, conflicts = activeContributors.flatMap((contributor) => (contributor.inheritanceConflicts ?? []).map(({ path, sourceRuleId, dependencyPropertyId }) => ({ path, message: `the rule needs the excluded property ${dependencyPropertyId}`, contributors: [contributor.name], contributorIds: [contributor.id], facet: "Conditional rule dependency", section: "Rules", sourceContributor: contributor.name, sourceContributorId: contributor.id, sourceValue: `requires ${dependencyPropertyId}`, sourceRuleId, localContributor: contributor.name, localContributorId: contributor.id, localValue: `exclude ${dependencyPropertyId}`, localRuleId: sourceRuleId }))), provenance = activeContributors.map(origin), exclusions = contributors.filter(({ active }) => active === false).flatMap((contributor) => contributor.constraints.length ? contributor.constraints.map(({ path }) => ({ contributorId: contributor.id, contributorName: contributor.name, path, target: contributor.exclusionReason ?? "applicability did not match" })) : [{ contributorId: contributor.id, contributorName: contributor.name, path: "/", target: contributor.exclusionReason ?? "applicability did not match" }]);
     const conflict = (path, message, names, details = {}) => conflicts.push({ path, message, contributors: names, ...details });
-    const active = activeContributors.flatMap((contributor) => contributor.constraints.map(constraintWithStructuredRules).filter((constraint) => included(constraint.target, context)).map((constraint) => ({ contributor, constraint }))), blockedParallel = new Set(), blockedPeers = new Set(), resolvedParallel = new Set(), conflictingPolicyGroups = new Set();
+    const active = activeContributors.flatMap((contributor) => contributor.constraints.map(constraintWithStructuredRules).filter((constraint) => included(constraint.target, context)).map((constraint) => ({ contributor, constraint }))), blockedParallel = new Set(), blockedPeers = new Set(), resolvedParallel = new Set(), acceptedPeerResolutions = [], conflictingPolicyGroups = new Set();
     const peersByGroup = new Map();
     for (const contributor of activeContributors)
         if (contributor.peerGroup) {
@@ -92,7 +107,12 @@ export function compileLayeredSchema(contributors, context) {
                 incompatible ||= peerMismatch(algebra[left].constraint, algebra[right].constraint);
         if (!incompatible)
             continue;
-        const path = entries[0].constraint.path, names = policyConflict ? peersByGroup.get(peerGroup).map(({ name }) => name) : algebra.map(({ contributor }) => contributor.name), issues = policyConflict ? [] : algebra.flatMap((left, leftIndex) => algebra.slice(leftIndex + 1).flatMap((right) => peerFacetIssues(left, right))), downstream = active.filter(({ contributor, constraint }) => !contributor.peerGroup && constraint.path === path), unresolved = issues.filter(({ keys }) => !downstream.some(({ constraint }) => keys.some((facetKey) => Object.hasOwn(constraint, facetKey))));
+        const path = entries[0].constraint.path, names = policyConflict ? peersByGroup.get(peerGroup).map(({ name }) => name) : algebra.map(({ contributor }) => contributor.name), issues = policyConflict ? [] : algebra.flatMap((left, leftIndex) => algebra.slice(leftIndex + 1).flatMap((right) => peerFacetIssues(left, right))), downstream = active.filter(({ contributor, constraint }) => !contributor.peerGroup && constraint.path === path), unresolved = issues.filter((issue) => { for (const { constraint } of downstream)
+            for (const resolution of constraint.peerFacetResolutions ?? [])
+                if (matchesIssue(resolution, issue, constraint)) {
+                    acceptedPeerResolutions.push({ ...resolution, path });
+                    return false;
+                } return true; });
         if (!policyConflict && issues.length && !unresolved.length)
             continue;
         blockedPeers.add(path);
@@ -120,7 +140,11 @@ export function compileLayeredSchema(contributors, context) {
     const contributorById = new Map(activeContributors.map((contributor) => [contributor.id, contributor]));
     for (const contributor of activeContributors)
         for (const rawConstraint of contributor.constraints) {
-            const constraint = contributor.peerGroup ? constraintWithPeerRules(rawConstraint) : constraintWithStructuredRules(rawConstraint);
+            let prepared = contributor.peerGroup ? constraintWithPeerRules(rawConstraint) : constraintWithStructuredRules(rawConstraint);
+            for (const resolution of acceptedPeerResolutions)
+                if (resolution.path === prepared.path && resolution.rejectedContributorId === contributor.id)
+                    prepared = withoutFacet(prepared, resolution.rejectedFacet);
+            const { peerFacetResolutions: discardedResolutions, ...constraint } = prepared;
             if (!included(constraint.target, context)) {
                 exclusions.push({ contributorId: contributor.id, contributorName: contributor.name, path: constraint.path, target: constraint.target ?? "all" });
                 continue;

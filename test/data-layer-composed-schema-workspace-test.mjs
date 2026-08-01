@@ -275,7 +275,8 @@ const contextualRepair=parallelDecision.repairs.find(({kind,contributorName})=>k
 assert.deepEqual({label:contextualRepair.label,facet:contextualRepair.facet,value:contextualRepair.value},{label:"Use Checkout Allowed values here",facet:"allowedValues",value:["closed"]},"parallel peers offer a named contextual facet resolution");
 const contextualized=applyComposedSchemaContextualFacet(parallelContext,"pageGroups",parallelGroup.id,"/customer_status",contextualRepair.facet,contextualRepair.value),contextualizedGroup=contextualized.project.collections.pageGroups[0],contextualizedWorkspace=composedSchemaWorkspace(contextualized,contextualizedGroup,"Page Group");
 assert.equal(contextualizedWorkspace.status,"ready","a contextual peer choice resolves the parent incompatibility");
-assert.deepEqual(contextualizedGroup.localSchemaContributions,[{path:"/customer_status",allowedValues:["closed"]}],"the contextual repair stores only the selected sparse facet");
+assert.deepEqual(contextualizedGroup.localSchemaContributions[0].allowedValues,["closed"],"the contextual repair stores the selected sparse facet");
+assert.deepEqual(contextualizedGroup.localSchemaContributions[0].peerFacetResolutions,[{selectedContributorId:"profile:parallel-b",selectedFacet:"allowedValues",rejectedContributorId:"profile:parallel-a",rejectedFacet:"allowedValues"}],"the contextual repair records the exact rejected peer facet");
 assert.equal(contextualized.history.undo.length,parallelContext.history.undo.length+1,"a contextual repair creates one Undo action");
 
 const crossFacetContext=createSpecificationProject({name:"Cross-facet contextual repair",site:"shop.example",id:(kind)=>`${kind}:cross-facet-context`});
@@ -291,7 +292,10 @@ assert.deepEqual(crossFacetRow.repairs.filter(({kind})=>kind==="use-contextual")
   {contributorName:"Expected",facet:"expectedValue",value:"closed"},
 ],"cross-facet peer repairs retain the exact facet and human value owned by each contributor");
 const crossFacetAllowedRepair=crossFacetRow.repairs.find(({kind,contributorId})=>kind==="use-contextual"&&contributorId==="profile:cross-allowed"),crossFacetResolved=applyComposedSchemaContextualFacet(crossFacetContext,"pageGroups",crossFacetGroup.id,"/customer_status",crossFacetAllowedRepair.facet,crossFacetAllowedRepair.value);
-assert.equal(composedSchemaWorkspace(crossFacetResolved,crossFacetResolved.project.collections.pageGroups[0],"Page Group").status,"ready","a targeted cross-facet contextual selection resolves the peer incompatibility");
+const crossFacetResolvedWorkspace=composedSchemaWorkspace(crossFacetResolved,crossFacetResolved.project.collections.pageGroups[0],"Page Group"),crossFacetEffective=crossFacetResolvedWorkspace.rows.find(({path})=>path==="/customer_status").effective;
+assert.equal(crossFacetResolvedWorkspace.status,"ready","a targeted cross-facet contextual selection resolves the peer incompatibility");
+assert.deepEqual(crossFacetEffective.allowedValues,["active"],"the chosen cross-facet constraint remains effective");
+assert.ok(!Object.hasOwn(crossFacetEffective,"expectedValue"),"the rejected cross-facet constraint is no longer effective");
 
 const namedRules=createSpecificationProject({name:"Named rule repairs",site:"shop.example",id:(kind)=>`${kind}:named-rules`});
 namedRules.project.collections.profiles.push({id:"profile:named-rules",name:"Sitewide",schemaConstraints:[

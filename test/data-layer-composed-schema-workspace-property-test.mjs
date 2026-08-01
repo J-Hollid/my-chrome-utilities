@@ -11,7 +11,7 @@ import {
   saveComposedSchemaLocalFacets,
 } from "../dist/data-layer-composed-schema-workspace.js";
 import {applyCanonicalCommand,canonicalPropertyPath} from "../dist/data-layer-canonical-schema.js";
-import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
+import {createSpecificationProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
 
 let seed=0x636f6d70;
 const random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/0x100000000);
@@ -74,8 +74,37 @@ for(let example=0;example<150;example+=1){
   assert.deepEqual({facet:chosen.facet,value:chosen.value},{facet:"allowedValues",value:[rightValue]},"generated parallel conflicts retain their contextual value");
   const contextual=applyComposedSchemaContextualFacet(peerState,"pageGroups",peerGroup.id,peerPath,chosen.facet,chosen.value),contextualGroup=contextual.project.collections.pageGroups[0];
   assert.equal(composedSchemaWorkspace(contextual,contextualGroup,"Page Group").status,"ready","every generated contextual choice recompiles ready");
-  assert.deepEqual(contextualGroup.localSchemaContributions,[{path:unrelatedPath,documentation:"peer unrelated"},{path:peerPath,allowedValues:[rightValue]}],"a generated contextual repair conserves unrelated sparse data");
+  assert.deepEqual(contextualGroup.localSchemaContributions.find(({path})=>path===unrelatedPath),{path:unrelatedPath,documentation:"peer unrelated"},"a generated contextual repair conserves unrelated sparse data");
+  assert.deepEqual(contextualGroup.localSchemaContributions.find(({path})=>path===peerPath).allowedValues,[rightValue],"a generated contextual repair stores the selected sparse value");
   assert.equal(contextual.history.undo.length,peerState.history.undo.length+1,"a generated contextual repair adds one Undo action");
+
+  const crossCases=[
+    [{allowedValues:[leftValue]},{expectedValue:rightValue},"allowedValues","expectedValue"],
+    [{type:"number"},{expectedValue:rightValue},"type","expectedValue"],
+    [{presence:"forbidden"},{expectedValue:rightValue},"presence","expectedValue"],
+    [{rules:[{id:`pattern:${example}`,kind:"pattern",pattern:"^a"}]},{expectedValue:rightValue},"patterns","expectedValue"],
+    [{rules:[{id:`range:${example}`,kind:"range",minimum:10}]},{expectedValue:5},"minimum","expectedValue"],
+    [{rules:[{id:`range-max:${example}`,kind:"range",maximum:3}]},{expectedValue:5},"maximum","expectedValue"],
+    [{rules:[{id:`cardinality:${example}`,kind:"cardinality",minItems:2}]},{expectedValue:[]},"minItems","expectedValue"],
+    [{rules:[{id:`cardinality-max:${example}`,kind:"cardinality",maxItems:1}]},{expectedValue:[1,2]},"maxItems","expectedValue"],
+    [{itemSchema:{id:`items:${example}`,type:"string"}},{expectedValue:[1]},"itemSchema","expectedValue"],
+  ],crossCase=crossCases[example%crossCases.length],crossPath=`/${token("cross")}`,crossState=createSpecificationProject({name:`Cross composition ${example}`,site:"shop.example",id:(kind)=>`${kind}:cross:${example}`});
+  crossState.project.collections.profiles.push(
+    {id:`profile:cross-left:${example}`,name:`Cross left ${example}`,schemaConstraints:[{path:crossPath,...crossCase[0]}]},
+    {id:`profile:cross-right:${example}`,name:`Cross right ${example}`,schemaConstraints:[{path:crossPath,...crossCase[1]}]},
+  );
+  crossState.project.collections.pageGroups.push({id:`group:cross:${example}`,name:`Cross group ${example}`,profileIds:[`profile:cross-left:${example}`,`profile:cross-right:${example}`],localSchemaContributions:[{path:unrelatedPath,documentation:"cross unrelated"}]});
+  const crossGroup=crossState.project.collections.pageGroups[0],crossRow=composedSchemaWorkspace(crossState,crossGroup,"Page Group").rows.find(({path:rowPath})=>rowPath===crossPath),crossRepairs=crossRow.repairs.filter(({kind})=>kind==="use-contextual");
+  assert.equal(crossRepairs.length,2,"every generated cross-facet conflict offers both exact choices");
+  for(const crossRepair of crossRepairs){
+    const repaired=applyComposedSchemaContextualFacet(crossState,"pageGroups",crossGroup.id,crossPath,crossRepair.facet,crossRepair.value,crossRepair),repairedGroup=repaired.project.collections.pageGroups[0],workspace=composedSchemaWorkspace(repaired,repairedGroup,"Page Group"),effective=workspace.rows.find(({path:rowPath})=>rowPath===crossPath).effective,selectedFacet=crossRepair.facet,rejectedFacet=selectedFacet===crossCase[2]?crossCase[3]:crossCase[2];
+    assert.equal(workspace.status,"ready",`generated ${selectedFacet} choice is semantically resolved`);
+    assert.ok(Object.hasOwn(effective,selectedFacet),`generated effective value retains selected ${selectedFacet}`);
+    assert.ok(!Object.hasOwn(effective,rejectedFacet),`generated effective value removes opposing ${rejectedFacet}`);
+    assert.deepEqual(repairedGroup.localSchemaContributions.find(({path})=>path===unrelatedPath),{path:unrelatedPath,documentation:"cross unrelated"},"generated contextual choice preserves unrelated sparse data");
+    assert.equal(repaired.history.undo.length,crossState.history.undo.length+1,"each generated contextual choice adds exactly one Undo action");
+    assert.deepEqual(undoProjectTransaction(repaired).project.collections.pageGroups[0].localSchemaContributions,crossGroup.localSchemaContributions,"one Undo restores the unresolved property without disturbing unrelated sparse data");
+  }
 
   const rulePath=`/${token("rule")}`,sourceRuleId=`rule:source:${example}`,genericRuleId=`rule:generic:${example}`,localRuleId=`rule:local:${example}`,invariant=example%2===1,ruleState=createSpecificationProject({name:`Rule composition ${example}`,site:"shop.example",id:(kind)=>`${kind}:rule:${example}`});
   ruleState.project.collections.profiles.push({id:`profile:rule:${example}`,name:`Rule source ${example}`,schemaConstraints:[{path:rulePath,type:invariant?"number":"string",rules:invariant?[{id:sourceRuleId,name:`Source Range ${example}`,kind:"range",maximum:5,enforcement:"invariant"}]:[{id:genericRuleId,name:`Generic Pattern ${example}`,kind:"pattern",pattern:"^.{1,20}$"},{id:sourceRuleId,name:`Source Pattern ${example}`,kind:"pattern",pattern:"^[a-z]+$"}]}]});

@@ -17,10 +17,10 @@ const repairsFor = (conflicts, allEntities, entity, local) => {
     for (const conflict of conflicts) {
         const facet = facetKey(conflict.facet), source = allEntities.find(({ id }) => id === conflict.sourceContributorId);
         if (facet && conflict.localContributorId !== entity.id && conflict.sourceContributorId !== entity.id) {
-            for (const [contributorId, contributorName, value, repairFacet] of [[conflict.sourceContributorId, conflict.sourceContributor, conflict.sourceValue, conflict.sourceFacet ?? facet], [conflict.localContributorId, conflict.localContributor, conflict.localValue, conflict.localFacet ?? facet]]) {
+            for (const [contributorId, contributorName, value, repairFacet, rejectedContributorId, rejectedFacet] of [[conflict.sourceContributorId, conflict.sourceContributor, conflict.sourceValue, conflict.sourceFacet ?? facet, conflict.localContributorId, conflict.localFacet ?? facet], [conflict.localContributorId, conflict.localContributor, conflict.localValue, conflict.localFacet ?? facet, conflict.sourceContributorId, conflict.sourceFacet ?? facet]]) {
                 const contributor = allEntities.find(({ id }) => id === contributorId);
-                if (contributor && contributorName)
-                    repairs.push({ kind: "use-contextual", contributorId: contributor.id, contributorName, label: `Use ${contributorName} ${facetLabel(repairFacet)} here`, facet: repairFacet, value: clone(value) });
+                if (contributor && contributorName && rejectedContributorId)
+                    repairs.push({ kind: "use-contextual", contributorId: contributor.id, contributorName, label: `Use ${contributorName} ${facetLabel(repairFacet)} here`, facet: repairFacet, value: clone(value), rejectedContributorId, rejectedFacet });
             }
             continue;
         }
