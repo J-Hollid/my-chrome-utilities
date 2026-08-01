@@ -89,6 +89,17 @@ for(let iteration=0;iteration<200;iteration+=1){
     assert.equal(protectedResult.status,"blocked","generated protected facet changes require a decision");
     assert.deepEqual({facet:conflict.facet,sourceValue:conflict.sourceValue,localValue:conflict.localValue,sourceContributor:conflict.sourceContributor,localContributor:conflict.localContributor},{facet:facet[0].toUpperCase()+facet.slice(1),sourceValue,localValue,sourceContributor:`Profile ${iteration}`,localContributor:`Group ${iteration}`},"protected conflict evidence names the exact facet, values, and contributors");
   }
+  const ordinaryUniverse=[`ordinary-a-${iteration}`,`ordinary-b-${iteration}`,`ordinary-c-${iteration}`],ordinarySubset=ordinaryUniverse.filter(()=>random()>=0.35),keptSubset=ordinarySubset.length?ordinarySubset:[ordinaryUniverse[0]],ordinaryExpected=keptSubset[Math.floor(random()*keptSubset.length)],ordinaryMinimum=Math.floor(random()*10),ordinaryMaximum=ordinaryMinimum+1+Math.floor(random()*20),ordinary=compileOverride(
+    {type:"string",allowedValues:ordinaryUniverse,documentation:`source docs ${iteration}`,examples:[ordinaryUniverse[0]],rules:[{id:`rule:source-pattern:${iteration}`,kind:"pattern",pattern:"^[a-z0-9-]+$"}]},
+    {allowedValues:keptSubset,expectedValue:ordinaryExpected,documentation:`local docs ${iteration}`,examples:[ordinaryExpected],rules:[{id:`rule:local-range:${iteration}`,kind:"range",minimum:ordinaryMinimum,maximum:ordinaryMaximum}]},
+  );
+  assert.equal(ordinary.status,"ready","generated ordinary facets and compatible named rules compose without a decision");
+  assert.deepEqual({expectedValue:ordinary.properties["/override"].expectedValue,documentation:ordinary.properties["/override"].documentation,examples:ordinary.properties["/override"].examples,minimum:ordinary.properties["/override"].minimum,maximum:ordinary.properties["/override"].maximum},{expectedValue:ordinaryExpected,documentation:`local docs ${iteration}`,examples:[ordinaryExpected],minimum:ordinaryMinimum,maximum:ordinaryMaximum},"generated ordinary facet values are conserved exactly");
+  assert.deepEqual(ordinary.properties["/override"].rules.map(({id})=>id),[`rule:source-pattern:${iteration}`,`rule:local-range:${iteration}`],"generated compatible named rules retain both stable identities");
+
+  const multi=compileOverride({allowedValues:[`base-a-${iteration}`,`base-b-${iteration}`],maximum:5},{allowedValues:[`outside-${iteration}`],minimum:10}),multiRoundTrip=compileOverride(JSON.parse(JSON.stringify({allowedValues:[`base-a-${iteration}`,`base-b-${iteration}`],maximum:5})),JSON.parse(JSON.stringify({allowedValues:[`outside-${iteration}`],minimum:10})));
+  assert.deepEqual(multi.conflicts.map(({facet,section})=>({facet,section})),[{facet:"Allowed values",section:"Definition"},{facet:"Range rule",section:"Rules"}],"generated simultaneous incompatibilities retain every independent facet issue");
+  assert.deepEqual(multiRoundTrip.conflicts,multi.conflicts,"generated multi-issue conflict evidence survives persistence without loss or duplication");
 }
 
 for(let iteration=0;iteration<120;iteration+=1){
@@ -146,13 +157,14 @@ for(let iteration=0;iteration<120;iteration+=1){
     [peerContribution("a",{minimum:minimum}),peerContribution("b",{expectedValue:maximum})],
     [peerContribution("a",{presence:"forbidden"}),peerContribution("b",{expectedValue:expectation})],
   ];
-  for(const owned of identityFacets){
+  for(const [identityIndex,owned] of identityFacets.entries()){
     const forward=compilePeers(owned),swappedOwnership=compilePeers([
       {...owned[0],constraints:structuredClone(owned[1].constraints)},
       {...owned[1],constraints:structuredClone(owned[0].constraints)},
     ]);
-    assert.equal(forward.status,"blocked");
-    assert.equal(swappedOwnership.status,"blocked","generated facet ownership permutation cannot create a peer winner");
+    const expectedStatus=identityIndex<2?"ready":"blocked";
+    assert.equal(forward.status,expectedStatus);
+    assert.equal(swappedOwnership.status,expectedStatus,"annotation-only identity differences stay non-blocking while semantic ownership conflicts cannot create a peer winner");
   }
   const expectationValue=`same-${iteration}`,generatedCondition={kind:"predicate",propertyId:"/generated",operator:"Equals",value:expectationValue},rule=(id,outcome)=>({id:`rule:${id}:${iteration}`,name:`Rule ${id} ${iteration}`,...outcome}),reusableId=`reusable:${iteration}`,conditionalPresence=[peerContribution("a",{type:"string"}),peerContribution("b",{presence:"required",condition:generatedCondition})];
   for(const generated of [conditionalPresence,[...conditionalPresence].reverse()]){

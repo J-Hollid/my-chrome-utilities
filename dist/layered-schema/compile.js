@@ -1,6 +1,26 @@
-import { branch, clone, constraintWithStructuredRules, included, origin, parallelMismatch } from "./compile-context.js";
+import { branch, clone, constraintWithStructuredRules, included, origin, parallelMismatch, same } from "./compile-context.js";
 import { mergeLayeredProperty } from "./compile-merge.js";
 import { constraintWithPeerRules, peerConstraintForCompile, peerMismatch, peerSetMismatch } from "./peer-constraints.js";
+const peerRule = (constraint, kind) => (constraint.rules ?? []).find((rule) => String(rule.kind ?? "") === kind);
+const peerFacetIssues = (left, right) => {
+    const issues = [], details = (facet, section, sourceValue, localValue, message, kind) => { const sourceRule = kind ? peerRule(left.constraint, kind) : undefined, localRule = kind ? peerRule(right.constraint, kind) : undefined; return { facet, section, sourceContributor: left.contributor.name, sourceContributorId: left.contributor.id, sourceValue: clone(sourceValue), localContributor: right.contributor.name, localContributorId: right.contributor.id, localValue: clone(localValue), contributorIds: [left.contributor.id, right.contributor.id], message, ...(sourceRule?.id ? { sourceRuleId: String(sourceRule.id) } : {}), ...(sourceRule?.enforcement === "invariant" ? { sourceRuleInvariant: true } : {}), ...(localRule?.id ? { localRuleId: String(localRule.id) } : {}) }; };
+    const leftConstraint = left.constraint, rightConstraint = right.constraint;
+    if (leftConstraint.type && rightConstraint.type && leftConstraint.type !== rightConstraint.type)
+        issues.push({ key: "type", details: details("Type", "Definition", leftConstraint.type, rightConstraint.type, "the parallel definitions use incompatible Types") });
+    if (leftConstraint.presence && rightConstraint.presence && new Set([leftConstraint.presence, rightConstraint.presence]).has("required") && new Set([leftConstraint.presence, rightConstraint.presence]).has("forbidden"))
+        issues.push({ key: "presence", details: details("Presence", "Definition", leftConstraint.presence, rightConstraint.presence, "the parallel definitions require and exclude the same property") });
+    if (leftConstraint.allowedValues?.length && rightConstraint.allowedValues?.length && !leftConstraint.allowedValues.some((value) => rightConstraint.allowedValues.some((candidate) => same(value, candidate))))
+        issues.push({ key: "allowedValues", details: details("Allowed values", "Definition", leftConstraint.allowedValues, rightConstraint.allowedValues, "the available choices do not overlap") });
+    if (leftConstraint.expectedValue !== undefined && rightConstraint.expectedValue !== undefined && !same(leftConstraint.expectedValue, rightConstraint.expectedValue))
+        issues.push({ key: "expectedValue", details: details("Expected value", "Definition", leftConstraint.expectedValue, rightConstraint.expectedValue, "the parallel expected values differ") });
+    if (leftConstraint.minimum !== undefined && rightConstraint.maximum !== undefined && leftConstraint.minimum > rightConstraint.maximum || rightConstraint.minimum !== undefined && leftConstraint.maximum !== undefined && rightConstraint.minimum > leftConstraint.maximum)
+        issues.push({ key: "minimum", alternateKey: "maximum", details: details("Range rule", "Rules", { minimum: leftConstraint.minimum, maximum: leftConstraint.maximum }, { minimum: rightConstraint.minimum, maximum: rightConstraint.maximum }, "the ranges do not overlap", "range") });
+    if (leftConstraint.minItems !== undefined && rightConstraint.maxItems !== undefined && leftConstraint.minItems > rightConstraint.maxItems || rightConstraint.minItems !== undefined && leftConstraint.maxItems !== undefined && rightConstraint.minItems > leftConstraint.maxItems)
+        issues.push({ key: "minItems", alternateKey: "maxItems", details: details("Cardinality rule", "Rules", { minItems: leftConstraint.minItems, maxItems: leftConstraint.maxItems }, { minItems: rightConstraint.minItems, maxItems: rightConstraint.maxItems }, "the item counts do not overlap", "cardinality") });
+    if (leftConstraint.itemSchema && rightConstraint.itemSchema && !same(leftConstraint.itemSchema, rightConstraint.itemSchema))
+        issues.push({ key: "itemSchema", details: details("Array item definition", "Structure", leftConstraint.itemSchema, rightConstraint.itemSchema, "the parallel item definitions are incompatible") });
+    return issues;
+};
 export function compileLayeredSchema(contributors, context) {
     const selected = contributors.filter(({ active }) => active !== false), peerQueues = new Map();
     for (const contributor of selected)
@@ -41,9 +61,15 @@ export function compileLayeredSchema(contributors, context) {
                 incompatible ||= peerMismatch(algebra[left].constraint, algebra[right].constraint);
         if (!incompatible)
             continue;
-        const path = entries[0].constraint.path, names = policyConflict ? peersByGroup.get(peerGroup).map(({ name }) => name) : algebra.map(({ contributor }) => contributor.name);
+        const path = entries[0].constraint.path, names = policyConflict ? peersByGroup.get(peerGroup).map(({ name }) => name) : algebra.map(({ contributor }) => contributor.name), issues = policyConflict ? [] : algebra.flatMap((left, leftIndex) => algebra.slice(leftIndex + 1).flatMap((right) => peerFacetIssues(left, right))), downstream = active.filter(({ contributor, constraint }) => !contributor.peerGroup && constraint.path === path), unresolved = issues.filter(({ key: facetKey, alternateKey }) => !downstream.some(({ constraint }) => Object.hasOwn(constraint, facetKey) || Boolean(alternateKey && Object.hasOwn(constraint, alternateKey))));
+        if (!policyConflict && issues.length && !unresolved.length)
+            continue;
         blockedPeers.add(path);
-        conflict(path, "parallel Shared Profile peers conflict; add an explicit contextual resolution", [...new Set(names)]);
+        if (unresolved.length)
+            for (const { details } of unresolved)
+                conflict(path, details.message, [details.sourceContributor, details.localContributor], details);
+        else
+            conflict(path, "parallel Shared Profile peers conflict; add an explicit contextual resolution", [...new Set(names)]);
     }
     for (const peerGroup of conflictingPolicyGroups)
         if (![...peerEntries.keys()].some((key) => key.startsWith(`${peerGroup}\u0000`)))

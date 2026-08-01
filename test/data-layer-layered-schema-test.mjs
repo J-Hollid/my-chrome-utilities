@@ -128,7 +128,7 @@ const peerProfiles=[
 for(const peers of [peerProfiles,[...peerProfiles].reverse()]){
   const peerConflict=compileLayeredSchema(peers,{eventId:"pageview",eventRole:"context"});
   assert.equal(peerConflict.status,"blocked","incompatible Shared Profile peers block in every list order");
-  assert.match(peerConflict.conflicts[0].message,/parallel Shared Profile peers/);
+  assert.deepEqual({message:peerConflict.conflicts[0].message,facet:peerConflict.conflicts[0].facet,section:peerConflict.conflicts[0].section,sourceContributor:peerConflict.conflicts[0].sourceContributor,localContributor:peerConflict.conflicts[0].localContributor},{message:"the parallel expected values differ",facet:"Expected value",section:"Definition",sourceContributor:"Audience A",localContributor:"Audience B"},"a peer conflict retains the exact human-facing facet and contributors");
   assert.equal(peerConflict.properties["/tier"],undefined,"a peer conflict has no list-order winner");
 }
 const peer=(id,constraint,policy)=>({...contribution(`profile:${id}`,id,"Shared Profile",[{path:"/value",...constraint}]),peerGroup:"shared-profiles",...(policy===undefined?{}:{onlyDefinedFields:policy})});
@@ -173,7 +173,7 @@ for(const contributors of [
   assert.deepEqual(compatiblePeer.properties["/value"].expectedContributors,["a","b"]);
   assert.equal(compatiblePeer.properties["/value"].expectedContributor,"a + b");
 }
-for(const contributors of [
+const peerIdentityAndExpectationCases=[
   [peer("a",{expectedValue:"same",definitionId:"definition:a"}),peer("b",{expectedValue:"same",definitionId:"definition:b"})],
   [peer("a",{allowedValues:["same"],allowedValueIds:["value:a"]}),peer("b",{allowedValues:["same"],allowedValueIds:["value:b"]})],
   [peer("a",{allowedValues:["same"],allowedValueProvenance:[{id:"source:a",state:"inherited"}]}),peer("b",{allowedValues:["same"],allowedValueProvenance:[{id:"source:b",state:"inherited"}]})],
@@ -182,11 +182,13 @@ for(const contributors of [
   [peer("a",{presence:"forbidden"}),peer("b",{expectedValue:"x"})],
   [peer("a",{patterns:["^a"]}),peer("b",{expectedValue:"b"})],
   [peer("a",{type:"array",minItems:2}),peer("b",{expectedValue:["one"]})],
-]){
+];
+for(const [caseIndex,contributors] of peerIdentityAndExpectationCases.entries()){
   for(const order of [contributors,[...contributors].reverse()]){
     const incompatiblePeer=compileLayeredSchema(order,{eventId:"pageview",eventRole:"context"});
-    assert.equal(incompatiblePeer.status,"blocked","identity-bearing and expectation-incompatible peer facets block in every order");
-    assert.equal(incompatiblePeer.properties["/value"],undefined);
+    const expectedStatus=caseIndex<3?"ready":"blocked";
+    assert.equal(incompatiblePeer.status,expectedStatus,"annotation-only identity differences stay compatible while expectation-incompatible peer facets block in every order");
+    assert.equal(incompatiblePeer.properties["/value"]===undefined,expectedStatus==="blocked");
   }
 }
 for(const contributors of [

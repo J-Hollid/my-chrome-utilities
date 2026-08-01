@@ -1,15 +1,11 @@
 import type {LayerConstraint,LayerItemSchema} from "../data-layer-layered-schema.js";
 import {clone,constraintWithStructuredRules,parallelMismatch,same} from "./compile-context.js";
 export const peerMismatch=(left:LayerConstraint,right:LayerConstraint):boolean=>{
-  const differentFacet=(key:"concept"|"displayText"|"documentation"|"comments"|"examples"|"target")=>left[key]!==undefined&&right[key]!==undefined&&!same(left[key],right[key]);
   return parallelMismatch(left,right)||Boolean(
   left.nullable!==undefined&&right.nullable!==undefined&&left.nullable!==right.nullable
   ||left.onlyDefinedFields!==undefined&&right.onlyDefinedFields!==undefined&&left.onlyDefinedFields!==right.onlyDefinedFields
   ||left.itemType&&right.itemType&&left.itemType!==right.itemType
   ||left.itemSchema&&right.itemSchema&&!same(left.itemSchema,right.itemSchema)
-  ||left.definitionId&&right.definitionId&&left.definitionId!==right.definitionId
-  ||left.allowedValueIds&&right.allowedValueIds&&!same(left.allowedValueIds,right.allowedValueIds)
-  ||left.allowedValueProvenance&&right.allowedValueProvenance&&!same(left.allowedValueProvenance,right.allowedValueProvenance)
   ||left.allowedValues?.length&&right.allowedValues?.length&&!left.allowedValues.some((value)=>right.allowedValues!.some((candidate)=>same(value,candidate)))
   ||left.expectedValue!==undefined&&right.allowedValues?.length&&!right.allowedValues.some((value)=>same(value,left.expectedValue))
   ||right.expectedValue!==undefined&&left.allowedValues?.length&&!left.allowedValues.some((value)=>same(value,right.expectedValue))
@@ -17,7 +13,6 @@ export const peerMismatch=(left:LayerConstraint,right:LayerConstraint):boolean=>
   ||right.minimum!==undefined&&left.maximum!==undefined&&right.minimum>left.maximum
   ||left.minItems!==undefined&&right.maxItems!==undefined&&left.minItems>right.maxItems
   ||right.minItems!==undefined&&left.maxItems!==undefined&&right.minItems>left.maxItems
-  ||differentFacet("concept")||differentFacet("displayText")||differentFacet("documentation")||differentFacet("comments")||differentFacet("examples")||differentFacet("target")
   );
 };
 type NumericBoundary={value:number;inclusive:boolean};

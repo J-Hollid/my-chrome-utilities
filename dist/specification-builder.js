@@ -16,7 +16,7 @@ import { PROJECT_LIBRARY_STORAGE_KEY, activateProject, activeProjectContextChang
 import { effectivePropertySummary, installLayeredSchemaUi } from "./data-layer-layered-schema-ui.js";
 import { assignmentContributorTargets, projectCanonicalConcepts } from "./data-layer-layered-schema-project.js";
 import { evaluatePageGroupFixture as executePageGroupFixture, pageGroupStructuralSchema, resetDepartedPageApplicabilityPreview } from "./data-layer-page-group-structural-authoring.js";
-import { composedSchemaWorkspace, resetComposedSchemaLocalFacet, resetComposedSchemaLocalProperty, resetComposedSchemaLocalRule, saveComposedSchemaLocalFacetsAndStructures, saveComposedSchemaPolicy } from "./data-layer-composed-schema-workspace.js";
+import { applyComposedSchemaContextualFacet, composedSchemaWorkspace, overrideComposedSchemaLocalRule, resetComposedSchemaLocalFacet, resetComposedSchemaLocalProperty, resetComposedSchemaLocalRule, saveComposedSchemaLocalFacetsAndStructures, saveComposedSchemaPolicy } from "./data-layer-composed-schema-workspace.js";
 import { mountComposedSchemaWorkspace } from "./data-layer-composed-schema-workspace-ui.js";
 import { installFlowDocumentationExportUi } from "./data-layer-flow-table-documentation-export-ui.js";
 import { installProjectDocumentationWorkspaceUi } from "./data-layer-project-documentation-workspace-ui.js";
@@ -160,8 +160,14 @@ function renderComposedSchemaWorkspace(host, entity, kind, scope, pageGroupAppli
     const persistComposed = (next) => { durableProjectRuntime.prepareProjectRoute(next.project.id, { collectionKind: kind, entityId: entity.id }); persist(next); }, liveState = () => state ?? workspaceState, model = composedSchemaWorkspace(workspaceState, entity, scope, undefined, undefined, pageGroupApplicabilitySetIds), section = mountComposedSchemaWorkspace({ host: region, model, effectiveText: (row) => effectivePropertySummary(row.effective), conceptSuggestions: () => projectCanonicalConcepts(liveState()), schemaContributorId: entity.id, schemaContributorScope: scope, onlyDefinedFields: (canonical?.onlyDefinedFields ?? entity.onlyDefinedFields) === true, onOnlyDefinedFields: (value) => persistComposed(saveComposedSchemaPolicy(liveState(), kind, entity.id, value)), onSave: (row, facets, structures = []) => persistComposed(saveComposedSchemaLocalFacetsAndStructures(liveState(), kind, entity.id, row.path, facets, structures, id)), onReset: (row) => persistComposed(resetComposedSchemaLocalProperty(liveState(), kind, entity.id, row.path)), onStructure: () => { }, onRepair: (repair) => { const row = model.rows.find((candidate) => candidate.repairs.includes(repair) || candidate.decisions?.some(({ repairs }) => repairs.includes(repair))); if (repair.kind === "use-source" && repair.facet && row) {
             persistComposed(resetComposedSchemaLocalFacet(liveState(), kind, entity.id, row.path, repair.facet));
             return;
+        } if (repair.kind === "use-contextual" && repair.facet && repair.value !== undefined && row) {
+            persistComposed(applyComposedSchemaContextualFacet(liveState(), kind, entity.id, row.path, repair.facet, repair.value));
+            return;
         } if (repair.kind === "remove-local-rule" && repair.ruleId && row) {
             persistComposed(resetComposedSchemaLocalRule(liveState(), kind, entity.id, row.path, repair.ruleId));
+            return;
+        } if (repair.kind === "override-rule" && repair.ruleId && repair.sourceRuleId && row) {
+            persistComposed(overrideComposedSchemaLocalRule(liveState(), kind, entity.id, row.path, repair.ruleId, repair.sourceRuleId));
             return;
         } const match = ['pages', 'pageGroups', 'profiles', 'events'].find((collection) => state.project.collections[collection].some(({ id }) => id === repair.contributorId)); if (match) {
             selectedKind = match;

@@ -1,9 +1,12 @@
 import assert from "node:assert/strict";
 import {
+  applyComposedSchemaContextualFacet,
   composedCanonicalSchema,
   composedSchemaWorkspace,
+  overrideComposedSchemaLocalRule,
   resetComposedSchemaLocalFacet,
   resetComposedSchemaLocalProperty,
+  resetComposedSchemaLocalRule,
   saveComposedCanonicalDocument,
   saveComposedSchemaLocalFacets,
 } from "../dist/data-layer-composed-schema-workspace.js";
@@ -50,6 +53,39 @@ for(let example=0;example<150;example+=1){
   assert.deepEqual(repairedGroup.localSchemaContributions,[{path,documentation:"preserve local documentation"},{path:unrelatedPath,type:"boolean"}],"a generated targeted repair conserves unrelated facets and properties");
   assert.equal(repairedFacet.history.undo.length,protectedState.history.undo.length+1,"a generated targeted repair creates exactly one Undo action");
   assert.equal(composedSchemaWorkspace(repairedFacet,repairedGroup,"Page Group").status,"ready");
+
+  const multiPath=`/${token("multi")}`,multiState=createSpecificationProject({name:`Multi composition ${example}`,site:"shop.example",id:(kind)=>`${kind}:multi:${example}`});
+  multiState.project.collections.profiles.push({id:`profile:multi:${example}`,name:`Multi source ${example}`,schemaConstraints:[{path:multiPath,allowedValues:[1,2],maximum:5}]});
+  multiState.project.collections.pageGroups.push({id:`group:multi:${example}`,name:`Multi local ${example}`,profileId:`profile:multi:${example}`,localSchemaContributions:[{path:multiPath,allowedValues:[30],minimum:10,documentation:"keep multi docs"}]});
+  const multiGroup=multiState.project.collections.pageGroups[0],multiRow=composedSchemaWorkspace(multiState,multiGroup,"Page Group").rows.find(({path:rowPath})=>rowPath===multiPath);
+  assert.deepEqual(multiRow.decisions.map(({facet})=>facet),["Allowed values","Range rule"],"generated multi-issue rows conserve every independent decision");
+  const multiAfterOne=resetComposedSchemaLocalFacet(multiState,"pageGroups",multiGroup.id,multiPath,"allowedValues"),multiAfterOneGroup=multiAfterOne.project.collections.pageGroups[0],multiAfterOneRow=composedSchemaWorkspace(multiAfterOne,multiAfterOneGroup,"Page Group").rows.find(({path:rowPath})=>rowPath===multiPath);
+  assert.deepEqual(multiAfterOneRow.decisions.map(({facet})=>facet),["Range rule"],"repairing one generated issue conserves the other issue on the property");
+  assert.equal(multiAfterOneGroup.localSchemaContributions[0].documentation,"keep multi docs","generated multi-issue repair conserves an unrelated facet");
+  assert.equal(multiAfterOne.history.undo.length,multiState.history.undo.length+1,"one generated multi-issue repair adds exactly one Undo action");
+
+  const peerPath=`/${token("peer")}`,leftValue=token("left"),rightValue=token("right"),peerState=createSpecificationProject({name:`Peer composition ${example}`,site:"shop.example",id:(kind)=>`${kind}:peer:${example}`});
+  peerState.project.collections.profiles.push(
+    {id:`profile:left:${example}`,name:`Left ${example}`,schemaConstraints:[{path:peerPath,type:"string",allowedValues:[leftValue]}]},
+    {id:`profile:right:${example}`,name:`Right ${example}`,schemaConstraints:[{path:peerPath,type:"string",allowedValues:[rightValue]}]},
+  );
+  peerState.project.collections.pageGroups.push({id:`group:peer:${example}`,name:`Peer group ${example}`,profileIds:[`profile:left:${example}`,`profile:right:${example}`],localSchemaContributions:[{path:unrelatedPath,documentation:"peer unrelated"}]});
+  const peerGroup=peerState.project.collections.pageGroups[0],peerRow=composedSchemaWorkspace(peerState,peerGroup,"Page Group").rows.find(({path:rowPath})=>rowPath===peerPath),chosen=peerRow.repairs.find(({kind,contributorId})=>kind==="use-contextual"&&contributorId===`profile:right:${example}`);
+  assert.deepEqual({facet:chosen.facet,value:chosen.value},{facet:"allowedValues",value:[rightValue]},"generated parallel conflicts retain their contextual value");
+  const contextual=applyComposedSchemaContextualFacet(peerState,"pageGroups",peerGroup.id,peerPath,chosen.facet,chosen.value),contextualGroup=contextual.project.collections.pageGroups[0];
+  assert.equal(composedSchemaWorkspace(contextual,contextualGroup,"Page Group").status,"ready","every generated contextual choice recompiles ready");
+  assert.deepEqual(contextualGroup.localSchemaContributions,[{path:unrelatedPath,documentation:"peer unrelated"},{path:peerPath,allowedValues:[rightValue]}],"a generated contextual repair conserves unrelated sparse data");
+  assert.equal(contextual.history.undo.length,peerState.history.undo.length+1,"a generated contextual repair adds one Undo action");
+
+  const rulePath=`/${token("rule")}`,sourceRuleId=`rule:source:${example}`,localRuleId=`rule:local:${example}`,invariant=example%2===1,ruleState=createSpecificationProject({name:`Rule composition ${example}`,site:"shop.example",id:(kind)=>`${kind}:rule:${example}`});
+  ruleState.project.collections.profiles.push({id:`profile:rule:${example}`,name:`Rule source ${example}`,schemaConstraints:[{path:rulePath,type:invariant?"number":"string",rules:[invariant?{id:sourceRuleId,name:`Source Range ${example}`,kind:"range",maximum:5,enforcement:"invariant"}:{id:sourceRuleId,name:`Source Pattern ${example}`,kind:"pattern",pattern:"^[a-z]+$"}]}]});
+  ruleState.project.collections.pageGroups.push({id:`group:rule:${example}`,name:`Rule local ${example}`,profileId:`profile:rule:${example}`,localSchemaContributions:[{path:rulePath,rules:[invariant?{id:localRuleId,name:`Local Range ${example}`,kind:"range",minimum:10}:{id:localRuleId,name:`Local Pattern ${example}`,kind:"pattern",pattern:"^[0-9]+$"}]},{path:unrelatedPath,type:"boolean"}]});
+  const ruleGroup=ruleState.project.collections.pageGroups[0],ruleRow=composedSchemaWorkspace(ruleState,ruleGroup,"Page Group").rows.find(({path:rowPath})=>rowPath===rulePath),repair=ruleRow.repairs.find(({kind})=>kind===(invariant?"remove-local-rule":"override-rule"));
+  assert.deepEqual({ruleId:repair.ruleId,sourceRuleId:repair.sourceRuleId},{ruleId:localRuleId,sourceRuleId},"generated named-rule repairs preserve both stable identities");
+  const ruleRepaired=invariant?resetComposedSchemaLocalRule(ruleState,"pageGroups",ruleGroup.id,rulePath,localRuleId):overrideComposedSchemaLocalRule(ruleState,"pageGroups",ruleGroup.id,rulePath,localRuleId,sourceRuleId),ruleRepairedGroup=ruleRepaired.project.collections.pageGroups[0];
+  assert.equal(composedSchemaWorkspace(ruleRepaired,ruleRepairedGroup,"Page Group").status,"ready","generated named-rule repair clears its conflict");
+  assert.deepEqual(ruleRepairedGroup.localSchemaContributions.find(({path:storedPath})=>storedPath===unrelatedPath),{path:unrelatedPath,type:"boolean"},"generated named-rule repair conserves unrelated properties");
+  assert.equal(ruleRepaired.history.undo.length,ruleState.history.undo.length+1,"a generated named-rule repair adds one Undo action");
 }
 
 console.log("data-layer composed schema workspace property tests passed");

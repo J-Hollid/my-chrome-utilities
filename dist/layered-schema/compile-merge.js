@@ -9,8 +9,10 @@ const itemSchemaLabel = (schema, itemType) => `${String(schema?.type ?? itemType
 const facetSource = (prior, key) => prior.facetSources?.[key] ?? prior.origins.at(-1);
 const issue = (prior, constraint, contributor, key, facet, section, sourceValue, localValue, message) => { const source = facetSource(prior, key); return { facet, section, contributorIds: [source.contributorId, contributor.id], sourceContributor: source.contributorName, sourceContributorId: source.contributorId, sourceValue, localContributor: contributor.name, localContributorId: contributor.id, localValue, message }; };
 const simplePatternDomain = (pattern) => /\[a-z\]/iu.test(pattern) ? "letters" : /\[0-9\]|\\d/u.test(pattern) ? "digits" : undefined;
-const ruleId = (constraint, kind) => { const rule = (constraint.rules ?? []).find((candidate) => String(candidate.kind ?? "") === kind); return rule?.id === undefined ? undefined : String(rule.id); };
-const ruleDetails = (prior, constraint, kind) => { const sourceRuleId = ruleId(prior, kind), localRuleId = ruleId(constraint, kind); return { ...(sourceRuleId ? { sourceRuleId } : {}), ...(localRuleId ? { localRuleId } : {}) }; };
+const ruleFor = (constraint, kind) => (constraint.rules ?? []).find((candidate) => String(candidate.kind ?? "") === kind);
+const ruleId = (constraint, kind) => { const rule = ruleFor(constraint, kind); return rule?.id === undefined ? undefined : String(rule.id); };
+const ruleDetails = (prior, constraint, kind) => { const sourceRule = ruleFor(prior, kind), sourceRuleId = sourceRule?.id === undefined ? undefined : String(sourceRule.id), localRuleId = ruleId(constraint, kind); return { ...(sourceRuleId ? { sourceRuleId } : {}), ...(sourceRule?.enforcement === "invariant" || prior.enforcement === "invariant" ? { sourceRuleInvariant: true } : {}), ...(localRuleId ? { localRuleId } : {}) }; };
+const replacedRuleIds = (constraint) => new Set((constraint.rules ?? []).flatMap((rule) => typeof rule.replacesRuleId === "string" ? [rule.replacesRuleId] : []));
 export function mergeLayeredProperty(prior, constraint, contributor, parallelPair, parallelPeer, conflict) {
     const source = { contributorId: contributor.id, contributorName: contributor.name, scope: contributor.scope, ...(contributor.inheritanceRoutes?.length ? { inheritanceRoutes: [...contributor.inheritanceRoutes] } : {}) };
     if (!prior)
@@ -47,8 +49,10 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
     if (constraint.allowedValues && !(parallelPeer && prior.expectedValue !== undefined)) {
         if (prior.allowedValues) {
             const orderedPageGroups = prior.origins.at(-1)?.scope === "Page Group" && contributor.scope === "Page Group", changed = !same(prior.allowedValues, constraint.allowedValues);
-            if (parallelPeer)
-                next.allowedValues = clone(prior.allowedValues.filter((value) => constraint.allowedValues.some((candidate) => same(value, candidate))).sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right))));
+            if (parallelPeer) {
+                const intersection = prior.allowedValues.filter((value) => constraint.allowedValues.some((candidate) => same(value, candidate)));
+                next.allowedValues = clone((intersection.length ? intersection : canonicalUnion(prior.allowedValues, constraint.allowedValues)).sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right))));
+            }
             else if (orderedPageGroups && changed) {
                 if (prior.enforcement === "invariant")
                     conflict(constraint.path, "invariant allowed values cannot be replaced by membership order", [prior.origins.at(-1).contributorName, contributor.name]);
@@ -106,12 +110,12 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
         next.facetSources = { ...next.facetSources, presence: source };
     }
     if (constraint.patterns) {
-        const priorDomains = new Set((prior.patterns ?? []).map(simplePatternDomain).filter(Boolean)), localDomains = new Set(constraint.patterns.map(simplePatternDomain).filter(Boolean));
-        if (priorDomains.size && localDomains.size && ![...priorDomains].some((value) => localDomains.has(value))) {
+        const replaced = replacedRuleIds(constraint).has(ruleId(prior, "pattern") ?? ""), priorDomains = new Set((prior.patterns ?? []).map(simplePatternDomain).filter(Boolean)), localDomains = new Set(constraint.patterns.map(simplePatternDomain).filter(Boolean));
+        if (!replaced && priorDomains.size && localDomains.size && ![...priorDomains].some((value) => localDomains.has(value))) {
             const message = "the rules cannot both match", origin = facetSource(prior, "patterns");
             conflict(constraint.path, message, [origin.contributorName, contributor.name], { ...issue(prior, constraint, contributor, "patterns", "Pattern rule", "Rules", prior.patterns, constraint.patterns, message), ...ruleDetails(prior, constraint, "pattern") });
         }
-        next.patterns = parallelPeer ? canonicalUnion(prior.patterns ?? [], constraint.patterns) : [...(prior.patterns ?? []), ...constraint.patterns];
+        next.patterns = replaced ? clone(constraint.patterns) : parallelPeer ? canonicalUnion(prior.patterns ?? [], constraint.patterns) : [...(prior.patterns ?? []), ...constraint.patterns];
         next.facetSources = { ...next.facetSources, patterns: source };
     }
     if (constraint.minimum !== undefined)
@@ -138,8 +142,10 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
         }
         next.facetSources = { ...next.facetSources, cardinality: source };
     }
-    if (constraint.rules)
-        next.rules = parallelPeer ? canonicalUnion(prior.rules ?? [], constraint.rules) : [...(prior.rules ?? []), ...constraint.rules.map(clone)];
+    if (constraint.rules) {
+        const replaced = replacedRuleIds(constraint), priorRules = (prior.rules ?? []).filter((rule) => !replaced.has(String(rule.id ?? "")));
+        next.rules = parallelPeer ? canonicalUnion(priorRules, constraint.rules) : [...priorRules, ...constraint.rules.map(clone)];
+    }
     if (constraint.reusableRules)
         next.reusableRules = parallelPeer ? canonicalUnion(prior.reusableRules ?? [], constraint.reusableRules) : [...(prior.reusableRules ?? []), ...constraint.reusableRules.map(clone)];
     if (!parallelPair && constraint.expectedValue !== undefined) {

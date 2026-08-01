@@ -2,6 +2,8 @@ import assert from "node:assert/strict";
 import {
   composedCanonicalSchema,
   composedSchemaWorkspace,
+  applyComposedSchemaContextualFacet,
+  overrideComposedSchemaLocalRule,
   resetComposedSchemaLocalProperty,
   resetComposedSchemaLocalFacet,
   saveComposedCanonicalDocument,
@@ -260,6 +262,38 @@ const completeAfterRange=resetComposedSchemaLocalFacet(completeAfterAllowed,"pag
 assert.equal(completeFinal.status,"ready","resolving the remaining decision makes validation and developer export available");
 assert.equal(completeAfterRange.history.undo.length,completeIssues.history.undo.length+2,"two targeted decisions create exactly two Undo actions");
 assert.deepEqual(completeAfterRange.project.collections.profiles,completeIssues.project.collections.profiles,"targeted repairs never mutate the source contributor");
+
+const parallelContext=createSpecificationProject({name:"Parallel contextual repair",site:"shop.example",id:(kind)=>`${kind}:parallel-context`});
+parallelContext.project.collections.profiles.push(
+  {id:"profile:parallel-a",name:"Sitewide",schemaConstraints:[{path:"/customer_status",type:"string",allowedValues:["active"]}]},
+  {id:"profile:parallel-b",name:"Checkout",schemaConstraints:[{path:"/customer_status",type:"string",allowedValues:["closed"]}]},
+);
+parallelContext.project.collections.pageGroups.push({id:"group:parallel-context",name:"Checkout context",profileIds:["profile:parallel-a","profile:parallel-b"]});
+const parallelGroup=parallelContext.project.collections.pageGroups[0],parallelWorkspace=composedSchemaWorkspace(parallelContext,parallelGroup,"Page Group"),parallelDecision=parallelWorkspace.rows.find(({path})=>path==="/customer_status");
+assert.deepEqual(parallelDecision.decisions.map(({facet,section})=>({facet,section})),[{facet:"Allowed values",section:"Definition"}],"parallel Allowed-values incompatibility retains its exact facet metadata");
+const contextualRepair=parallelDecision.repairs.find(({kind,contributorName})=>kind==="use-contextual"&&contributorName==="Checkout");
+assert.deepEqual({label:contextualRepair.label,facet:contextualRepair.facet,value:contextualRepair.value},{label:"Use Checkout Allowed values here",facet:"allowedValues",value:["closed"]},"parallel peers offer a named contextual facet resolution");
+const contextualized=applyComposedSchemaContextualFacet(parallelContext,"pageGroups",parallelGroup.id,"/customer_status",contextualRepair.facet,contextualRepair.value),contextualizedGroup=contextualized.project.collections.pageGroups[0],contextualizedWorkspace=composedSchemaWorkspace(contextualized,contextualizedGroup,"Page Group");
+assert.equal(contextualizedWorkspace.status,"ready","a contextual peer choice resolves the parent incompatibility");
+assert.deepEqual(contextualizedGroup.localSchemaContributions,[{path:"/customer_status",allowedValues:["closed"]}],"the contextual repair stores only the selected sparse facet");
+assert.equal(contextualized.history.undo.length,parallelContext.history.undo.length+1,"a contextual repair creates one Undo action");
+
+const namedRules=createSpecificationProject({name:"Named rule repairs",site:"shop.example",id:(kind)=>`${kind}:named-rules`});
+namedRules.project.collections.profiles.push({id:"profile:named-rules",name:"Sitewide",schemaConstraints:[
+  {path:"/customer_status",type:"string",rules:[{id:"rule:sitewide-pattern",name:"Sitewide Pattern rule",kind:"pattern",pattern:"^[a-z]+$"}]},
+  {path:"/order_total",type:"number",rules:[{id:"rule:sitewide-range",name:"Sitewide Range rule",kind:"range",maximum:5,enforcement:"invariant"}]},
+]});
+namedRules.project.collections.pageGroups.push({id:"group:named-rules",name:"Checkout",profileId:"profile:named-rules",localSchemaContributions:[
+  {path:"/customer_status",rules:[{id:"rule:checkout-pattern",name:"Checkout Pattern rule",kind:"pattern",pattern:"^[0-9]+$"}]},
+  {path:"/order_total",rules:[{id:"rule:checkout-range",name:"Checkout Range rule",kind:"range",minimum:10}]},
+]});
+const namedGroup=namedRules.project.collections.pageGroups[0],namedWorkspace=composedSchemaWorkspace(namedRules,namedGroup,"Page Group"),patternRow=namedWorkspace.rows.find(({path})=>path==="/customer_status"),rangeRow=namedWorkspace.rows.find(({path})=>path==="/order_total"),patternRepair=patternRow.repairs.find(({kind})=>kind==="override-rule"),rangeRepair=rangeRow.repairs.find(({kind})=>kind==="remove-local-rule");
+assert.deepEqual({label:patternRepair.label,ruleId:patternRepair.ruleId,sourceRuleId:patternRepair.sourceRuleId},{label:"Override Sitewide Pattern rule here",ruleId:"rule:checkout-pattern",sourceRuleId:"rule:sitewide-pattern"},"an ordinary named inherited rule offers a real replacement repair");
+assert.deepEqual({label:rangeRepair.label,ruleId:rangeRepair.ruleId},{label:"Remove Checkout Range rule",ruleId:"rule:checkout-range"},"an invariant Range conflict offers named local-rule removal");
+const overriddenRule=overrideComposedSchemaLocalRule(namedRules,"pageGroups",namedGroup.id,"/customer_status",patternRepair.ruleId,patternRepair.sourceRuleId),overriddenStored=overriddenRule.project.collections.pageGroups[0].localSchemaContributions.find(({path})=>path==="/customer_status").rules[0];
+assert.equal(overriddenStored.replacesRuleId,"rule:sitewide-pattern","the replacement repair names its source rule without changing local identity");
+assert.equal(composedSchemaWorkspace(overriddenRule,overriddenRule.project.collections.pageGroups[0],"Page Group").rows.find(({path})=>path==="/customer_status").validationState,"ready","the named replacement recompiles without the superseded Pattern conflict");
+assert.equal(overriddenRule.history.undo.length,namedRules.history.undo.length+1,"a named rule replacement creates one Undo action");
 
 const duplicateNames=createSpecificationProject({name:"Duplicate contributor names",site:"shop.example",id:(kind)=>`${kind}:duplicate-names`});
 duplicateNames.project.collections.profiles.push(
