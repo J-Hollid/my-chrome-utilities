@@ -10,16 +10,17 @@ const provenanceFor = (effective, entityId) => { const shadowed = new Set(effect
 const displayValue = (value) => typeof value === "string" && value.length ? value[0].toUpperCase() + value.slice(1) : JSON.stringify(value);
 const decisionDetail = (conflict) => conflict.facet && conflict.localContributor && conflict.sourceContributor ? `${conflict.localContributor} uses ${displayValue(conflict.localValue)}. ${conflict.sourceContributor} uses ${displayValue(conflict.sourceValue)}. ${conflict.message}.` : undefined;
 const facetKey = (facet) => facet === "Type" ? "type" : facet === "Presence" ? "presence" : facet === "Allowed values" ? "allowedValues" : facet === "Expected value" ? "expectedValue" : facet === "Pattern rule" ? "patterns" : facet === "Range rule" ? "minimum" : facet === "Cardinality rule" ? "minItems" : facet === "Array item definition" ? "itemSchema" : undefined;
+const facetLabel = (facet) => facet === "type" ? "Type" : facet === "presence" ? "Presence" : facet === "allowedValues" ? "Allowed values" : facet === "expectedValue" ? "Expected value" : facet === "patterns" ? "Pattern rule" : facet === "minimum" || facet === "maximum" ? "Range rule" : facet === "minItems" || facet === "maxItems" ? "Cardinality rule" : facet === "itemType" || facet === "itemSchema" ? "Array item definition" : String(facet);
 const localOwnsFacet = (local, facet) => Object.hasOwn(local, facet) || Boolean(local.rules?.some((rule) => facet === "patterns" ? rule.kind === "pattern" : facet === "minimum" ? rule.kind === "range" : facet === "minItems" ? rule.kind === "cardinality" : false));
 const repairsFor = (conflicts, allEntities, entity, local) => {
     const repairs = [];
     for (const conflict of conflicts) {
         const facet = facetKey(conflict.facet), source = allEntities.find(({ id }) => id === conflict.sourceContributorId);
-        if (facet && conflict.section === "Definition" && conflict.localContributorId !== entity.id && conflict.sourceContributorId !== entity.id) {
-            for (const [contributorId, contributorName, value] of [[conflict.sourceContributorId, conflict.sourceContributor, conflict.sourceValue], [conflict.localContributorId, conflict.localContributor, conflict.localValue]]) {
+        if (facet && conflict.localContributorId !== entity.id && conflict.sourceContributorId !== entity.id) {
+            for (const [contributorId, contributorName, value, repairFacet] of [[conflict.sourceContributorId, conflict.sourceContributor, conflict.sourceValue, conflict.sourceFacet ?? facet], [conflict.localContributorId, conflict.localContributor, conflict.localValue, conflict.localFacet ?? facet]]) {
                 const contributor = allEntities.find(({ id }) => id === contributorId);
                 if (contributor && contributorName)
-                    repairs.push({ kind: "use-contextual", contributorId: contributor.id, contributorName, label: `Use ${contributorName} ${conflict.facet} here`, facet, value: clone(value) });
+                    repairs.push({ kind: "use-contextual", contributorId: contributor.id, contributorName, label: `Use ${contributorName} ${facetLabel(repairFacet)} here`, facet: repairFacet, value: clone(value) });
             }
             continue;
         }

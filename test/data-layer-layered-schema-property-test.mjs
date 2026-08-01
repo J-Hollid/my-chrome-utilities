@@ -143,6 +143,21 @@ for(let iteration=0;iteration<120;iteration+=1){
     assert.equal(result.status,"blocked","generated incompatible peer facets never acquire stable-ID precedence");
     assert.deepEqual(permuted.conflicts,result.conflicts,"generated peer conflict evidence is permutation-independent");
   }
+  const crossFacetCases=[
+    [{allowedValues:[`allowed-${iteration}`]},{expectedValue:`outside-${iteration}`},"Expected value","Definition",["allowedValues","expectedValue"]],
+    [{type:"number"},{expectedValue:`text-${iteration}`},"Type","Definition",["type","expectedValue"]],
+    [{presence:"forbidden"},{expectedValue:`present-${iteration}`},"Presence","Definition",["presence","expectedValue"]],
+    [{patterns:["^letters$"]},{expectedValue:`digits-${iteration}`},"Pattern rule","Rules",["patterns","expectedValue"]],
+    [{minimum:10},{expectedValue:maximum},"Range rule","Rules",["minimum","expectedValue"]],
+    [{minItems:2},{expectedValue:[]},"Cardinality rule","Rules",["minItems","expectedValue"]],
+    [{itemSchema:{id:`items:${iteration}`,type:"string"}},{expectedValue:[iteration]},"Array item definition","Structure",["itemSchema","expectedValue"]],
+  ];
+  for(const [facetConstraint,expectedConstraint,facet,section,ownedFacets] of crossFacetCases){
+    const generated=[peerContribution("a",facetConstraint),peerContribution("b",expectedConstraint)],forward=compilePeers(generated),reverse=compilePeers([...generated].reverse()),issue=forward.conflicts[0];
+    assert.equal(forward.status,"blocked");
+    assert.deepEqual(reverse.conflicts,forward.conflicts,"generated cross-facet evidence is independent of peer list order");
+    assert.deepEqual({count:forward.conflicts.length,facet:issue.facet,section:issue.section,ownedFacets:[issue.sourceFacet,issue.localFacet].sort()},{count:1,facet,section,ownedFacets:[...ownedFacets].sort()},"every generated cross-facet incompatibility retains one exact decision and both contributor-owned facets");
+  }
   const expectation=`same-${iteration}`,enforcementA=peerContribution("a",{expectedValue:expectation,enforcement:"invariant"}),enforcementB=peerContribution("b",{expectedValue:expectation,enforcement:"overridable"}),enforcementForward=compilePeers([enforcementA,enforcementB]),enforcementOwnershipSwapped=compilePeers([peerContribution("a",{expectedValue:expectation,enforcement:"overridable"}),peerContribution("b",{expectedValue:expectation,enforcement:"invariant"})]);
   for(const result of [enforcementForward,enforcementOwnershipSwapped]){
     assert.equal(result.status,"ready");

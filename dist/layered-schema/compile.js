@@ -2,23 +2,54 @@ import { branch, clone, constraintWithStructuredRules, included, origin, paralle
 import { mergeLayeredProperty } from "./compile-merge.js";
 import { constraintWithPeerRules, peerConstraintForCompile, peerMismatch, peerSetMismatch } from "./peer-constraints.js";
 const peerRule = (constraint, kind) => (constraint.rules ?? []).find((rule) => String(rule.kind ?? "") === kind);
+const valueMatchesType = (value, type) => type === "array" ? Array.isArray(value) : type === "null" ? value === null : type === "integer" ? Number.isInteger(value) : type === "object" ? Boolean(value) && typeof value === "object" && !Array.isArray(value) : typeof value === type;
+const valueMatchesItem = (value, schema) => (!schema.type || valueMatchesType(value, schema.type)) && (!schema.allowedValues?.length || schema.allowedValues.some((candidate) => same(candidate, value))) && (!schema.items || Array.isArray(value) && value.every((item) => valueMatchesItem(item, schema.items)));
 const peerFacetIssues = (left, right) => {
-    const issues = [], details = (facet, section, sourceValue, localValue, message, kind) => { const sourceRule = kind ? peerRule(left.constraint, kind) : undefined, localRule = kind ? peerRule(right.constraint, kind) : undefined; return { facet, section, sourceContributor: left.contributor.name, sourceContributorId: left.contributor.id, sourceValue: clone(sourceValue), localContributor: right.contributor.name, localContributorId: right.contributor.id, localValue: clone(localValue), contributorIds: [left.contributor.id, right.contributor.id], message, ...(sourceRule?.id ? { sourceRuleId: String(sourceRule.id) } : {}), ...(sourceRule?.enforcement === "invariant" ? { sourceRuleInvariant: true } : {}), ...(localRule?.id ? { localRuleId: String(localRule.id) } : {}) }; };
+    const issues = [], details = (facet, section, sourceValue, localValue, message, kind, sourceFacet, localFacet) => { const sourceRule = kind ? peerRule(left.constraint, kind) : undefined, localRule = kind ? peerRule(right.constraint, kind) : undefined; return { facet, section, sourceContributor: left.contributor.name, sourceContributorId: left.contributor.id, sourceValue: clone(sourceValue), ...(sourceFacet ? { sourceFacet } : {}), localContributor: right.contributor.name, localContributorId: right.contributor.id, localValue: clone(localValue), ...(localFacet ? { localFacet } : {}), contributorIds: [left.contributor.id, right.contributor.id], message, ...(sourceRule?.id ? { sourceRuleId: String(sourceRule.id) } : {}), ...(sourceRule?.enforcement === "invariant" ? { sourceRuleInvariant: true } : {}), ...(localRule?.id ? { localRuleId: String(localRule.id) } : {}) }; };
     const leftConstraint = left.constraint, rightConstraint = right.constraint;
     if (leftConstraint.type && rightConstraint.type && leftConstraint.type !== rightConstraint.type)
-        issues.push({ key: "type", details: details("Type", "Definition", leftConstraint.type, rightConstraint.type, "the parallel definitions use incompatible Types") });
+        issues.push({ keys: ["type"], details: details("Type", "Definition", leftConstraint.type, rightConstraint.type, "the parallel definitions use incompatible Types") });
     if (leftConstraint.presence && rightConstraint.presence && new Set([leftConstraint.presence, rightConstraint.presence]).has("required") && new Set([leftConstraint.presence, rightConstraint.presence]).has("forbidden"))
-        issues.push({ key: "presence", details: details("Presence", "Definition", leftConstraint.presence, rightConstraint.presence, "the parallel definitions require and exclude the same property") });
+        issues.push({ keys: ["presence"], details: details("Presence", "Definition", leftConstraint.presence, rightConstraint.presence, "the parallel definitions require and exclude the same property") });
     if (leftConstraint.allowedValues?.length && rightConstraint.allowedValues?.length && !leftConstraint.allowedValues.some((value) => rightConstraint.allowedValues.some((candidate) => same(value, candidate))))
-        issues.push({ key: "allowedValues", details: details("Allowed values", "Definition", leftConstraint.allowedValues, rightConstraint.allowedValues, "the available choices do not overlap") });
+        issues.push({ keys: ["allowedValues"], details: details("Allowed values", "Definition", leftConstraint.allowedValues, rightConstraint.allowedValues, "the available choices do not overlap") });
     if (leftConstraint.expectedValue !== undefined && rightConstraint.expectedValue !== undefined && !same(leftConstraint.expectedValue, rightConstraint.expectedValue))
-        issues.push({ key: "expectedValue", details: details("Expected value", "Definition", leftConstraint.expectedValue, rightConstraint.expectedValue, "the parallel expected values differ") });
+        issues.push({ keys: ["expectedValue"], details: details("Expected value", "Definition", leftConstraint.expectedValue, rightConstraint.expectedValue, "the parallel expected values differ") });
     if (leftConstraint.minimum !== undefined && rightConstraint.maximum !== undefined && leftConstraint.minimum > rightConstraint.maximum || rightConstraint.minimum !== undefined && leftConstraint.maximum !== undefined && rightConstraint.minimum > leftConstraint.maximum)
-        issues.push({ key: "minimum", alternateKey: "maximum", details: details("Range rule", "Rules", { minimum: leftConstraint.minimum, maximum: leftConstraint.maximum }, { minimum: rightConstraint.minimum, maximum: rightConstraint.maximum }, "the ranges do not overlap", "range") });
+        issues.push({ keys: ["minimum", "maximum"], details: details("Range rule", "Rules", { minimum: leftConstraint.minimum, maximum: leftConstraint.maximum }, { minimum: rightConstraint.minimum, maximum: rightConstraint.maximum }, "the ranges do not overlap", "range") });
     if (leftConstraint.minItems !== undefined && rightConstraint.maxItems !== undefined && leftConstraint.minItems > rightConstraint.maxItems || rightConstraint.minItems !== undefined && leftConstraint.maxItems !== undefined && rightConstraint.minItems > leftConstraint.maxItems)
-        issues.push({ key: "minItems", alternateKey: "maxItems", details: details("Cardinality rule", "Rules", { minItems: leftConstraint.minItems, maxItems: leftConstraint.maxItems }, { minItems: rightConstraint.minItems, maxItems: rightConstraint.maxItems }, "the item counts do not overlap", "cardinality") });
+        issues.push({ keys: ["minItems", "maxItems"], details: details("Cardinality rule", "Rules", { minItems: leftConstraint.minItems, maxItems: leftConstraint.maxItems }, { minItems: rightConstraint.minItems, maxItems: rightConstraint.maxItems }, "the item counts do not overlap", "cardinality") });
     if (leftConstraint.itemSchema && rightConstraint.itemSchema && !same(leftConstraint.itemSchema, rightConstraint.itemSchema))
-        issues.push({ key: "itemSchema", details: details("Array item definition", "Structure", leftConstraint.itemSchema, rightConstraint.itemSchema, "the parallel item definitions are incompatible") });
+        issues.push({ keys: ["itemSchema"], details: details("Array item definition", "Structure", leftConstraint.itemSchema, rightConstraint.itemSchema, "the parallel item definitions are incompatible") });
+    const expectedAgainst = (facetEntry, expectedEntry, facetOnLeft) => {
+        const facetConstraint = facetEntry.constraint, expected = expectedEntry.constraint.expectedValue;
+        if (expected === undefined)
+            return;
+        const add = (keys, facet, section, facetValue, message, kind) => { const sourceValue = facetOnLeft ? facetValue : expected, localValue = facetOnLeft ? expected : facetValue, sourceFacet = facetOnLeft ? keys[0] : "expectedValue", localFacet = facetOnLeft ? "expectedValue" : keys[0]; issues.push({ keys: [...keys, "expectedValue"], details: details(facet, section, sourceValue, localValue, message, kind, sourceFacet, localFacet) }); };
+        if (facetConstraint.allowedValues?.length && !facetConstraint.allowedValues.some((value) => same(value, expected)))
+            add(["allowedValues"], "Expected value", "Definition", facetConstraint.allowedValues, "the expected value is outside the available choices");
+        if (facetConstraint.type && !valueMatchesType(expected, facetConstraint.type))
+            add(["type"], "Type", "Definition", facetConstraint.type, "the expected value does not match the parallel Type");
+        if (facetConstraint.presence === "forbidden")
+            add(["presence"], "Presence", "Definition", facetConstraint.presence, "the parallel definition forbids the expected value");
+        if (facetConstraint.patterns?.length && facetConstraint.patterns.some((pattern) => { try {
+            return !new RegExp(pattern).test(String(expected));
+        }
+        catch {
+            return true;
+        } }))
+            add(["patterns"], "Pattern rule", "Rules", facetConstraint.patterns, "the expected value does not match the parallel Pattern rule", "pattern");
+        if ((facetConstraint.minimum !== undefined && (typeof expected !== "number" || expected < facetConstraint.minimum)) || (facetConstraint.maximum !== undefined && (typeof expected !== "number" || expected > facetConstraint.maximum)))
+            add(["minimum", "maximum"], "Range rule", "Rules", { minimum: facetConstraint.minimum, maximum: facetConstraint.maximum }, "the expected value is outside the parallel Range rule", "range");
+        if ((facetConstraint.minItems !== undefined && (!Array.isArray(expected) || expected.length < facetConstraint.minItems)) || (facetConstraint.maxItems !== undefined && (!Array.isArray(expected) || expected.length > facetConstraint.maxItems)))
+            add(["minItems", "maxItems"], "Cardinality rule", "Rules", { minItems: facetConstraint.minItems, maxItems: facetConstraint.maxItems }, "the expected value is outside the parallel Cardinality rule", "cardinality");
+        if (facetConstraint.itemType && (!Array.isArray(expected) || expected.some((value) => !valueMatchesType(value, facetConstraint.itemType))))
+            add(["itemType"], "Array item definition", "Structure", facetConstraint.itemType, "the expected items do not match the parallel item Type");
+        if (facetConstraint.itemSchema && (!Array.isArray(expected) || expected.some((value) => !valueMatchesItem(value, facetConstraint.itemSchema))))
+            add(["itemSchema"], "Array item definition", "Structure", facetConstraint.itemSchema, "the expected items do not match the parallel item definition");
+    };
+    expectedAgainst(left, right, true);
+    expectedAgainst(right, left, false);
     return issues;
 };
 export function compileLayeredSchema(contributors, context) {
@@ -61,7 +92,7 @@ export function compileLayeredSchema(contributors, context) {
                 incompatible ||= peerMismatch(algebra[left].constraint, algebra[right].constraint);
         if (!incompatible)
             continue;
-        const path = entries[0].constraint.path, names = policyConflict ? peersByGroup.get(peerGroup).map(({ name }) => name) : algebra.map(({ contributor }) => contributor.name), issues = policyConflict ? [] : algebra.flatMap((left, leftIndex) => algebra.slice(leftIndex + 1).flatMap((right) => peerFacetIssues(left, right))), downstream = active.filter(({ contributor, constraint }) => !contributor.peerGroup && constraint.path === path), unresolved = issues.filter(({ key: facetKey, alternateKey }) => !downstream.some(({ constraint }) => Object.hasOwn(constraint, facetKey) || Boolean(alternateKey && Object.hasOwn(constraint, alternateKey))));
+        const path = entries[0].constraint.path, names = policyConflict ? peersByGroup.get(peerGroup).map(({ name }) => name) : algebra.map(({ contributor }) => contributor.name), issues = policyConflict ? [] : algebra.flatMap((left, leftIndex) => algebra.slice(leftIndex + 1).flatMap((right) => peerFacetIssues(left, right))), downstream = active.filter(({ contributor, constraint }) => !contributor.peerGroup && constraint.path === path), unresolved = issues.filter(({ keys }) => !downstream.some(({ constraint }) => keys.some((facetKey) => Object.hasOwn(constraint, facetKey))));
         if (!policyConflict && issues.length && !unresolved.length)
             continue;
         blockedPeers.add(path);

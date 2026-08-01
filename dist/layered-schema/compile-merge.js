@@ -9,9 +9,16 @@ const itemSchemaLabel = (schema, itemType) => `${String(schema?.type ?? itemType
 const facetSource = (prior, key) => prior.facetSources?.[key] ?? prior.origins.at(-1);
 const issue = (prior, constraint, contributor, key, facet, section, sourceValue, localValue, message) => { const source = facetSource(prior, key); return { facet, section, contributorIds: [source.contributorId, contributor.id], sourceContributor: source.contributorName, sourceContributorId: source.contributorId, sourceValue, localContributor: contributor.name, localContributorId: contributor.id, localValue, message }; };
 const simplePatternDomain = (pattern) => /\[a-z\]/iu.test(pattern) ? "letters" : /\[0-9\]|\\d/u.test(pattern) ? "digits" : undefined;
-const ruleFor = (constraint, kind) => (constraint.rules ?? []).find((candidate) => String(candidate.kind ?? "") === kind);
-const ruleId = (constraint, kind) => { const rule = ruleFor(constraint, kind); return rule?.id === undefined ? undefined : String(rule.id); };
-const ruleDetails = (prior, constraint, kind) => { const sourceRule = ruleFor(prior, kind), sourceRuleId = sourceRule?.id === undefined ? undefined : String(sourceRule.id), localRuleId = ruleId(constraint, kind); return { ...(sourceRuleId ? { sourceRuleId } : {}), ...(sourceRule?.enforcement === "invariant" || prior.enforcement === "invariant" ? { sourceRuleInvariant: true } : {}), ...(localRuleId ? { localRuleId } : {}) }; };
+const rulesFor = (constraint, kind) => (constraint.rules ?? []).filter((candidate) => String(candidate.kind ?? "") === kind);
+const conflictingRulePair = (prior, constraint, kind) => { const sources = rulesFor(prior, kind), locals = rulesFor(constraint, kind), conflicts = (source, local) => { if (kind === "pattern") {
+    const sourceDomain = typeof source.pattern === "string" ? simplePatternDomain(source.pattern) : undefined, localDomain = typeof local.pattern === "string" ? simplePatternDomain(local.pattern) : undefined;
+    return Boolean(sourceDomain && localDomain && sourceDomain !== localDomain);
+} if (kind === "range")
+    return typeof source.maximum === "number" && typeof local.minimum === "number" && local.minimum > source.maximum || typeof source.minimum === "number" && typeof local.maximum === "number" && local.maximum < source.minimum; return typeof source.maxItems === "number" && typeof local.minItems === "number" && local.minItems > source.maxItems || typeof source.minItems === "number" && typeof local.maxItems === "number" && local.maxItems < source.minItems; }; for (const source of sources)
+    for (const local of locals)
+        if (conflicts(source, local))
+            return { source, local }; return { ...(sources[0] ? { source: sources[0] } : {}), ...(locals[0] ? { local: locals[0] } : {}) }; };
+const ruleDetails = (prior, pair) => { const sourceRuleId = pair.source?.id === undefined ? undefined : String(pair.source.id), localRuleId = pair.local?.id === undefined ? undefined : String(pair.local.id); return { ...(sourceRuleId ? { sourceRuleId } : {}), ...(pair.source?.enforcement === "invariant" || prior.enforcement === "invariant" ? { sourceRuleInvariant: true } : {}), ...(localRuleId ? { localRuleId } : {}) }; };
 const replacedRuleIds = (constraint) => new Set((constraint.rules ?? []).flatMap((rule) => typeof rule.replacesRuleId === "string" ? [rule.replacesRuleId] : []));
 export function mergeLayeredProperty(prior, constraint, contributor, parallelPair, parallelPeer, conflict) {
     const source = { contributorId: contributor.id, contributorName: contributor.name, scope: contributor.scope, ...(contributor.inheritanceRoutes?.length ? { inheritanceRoutes: [...contributor.inheritanceRoutes] } : {}) };
@@ -110,12 +117,12 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
         next.facetSources = { ...next.facetSources, presence: source };
     }
     if (constraint.patterns) {
-        const replaced = replacedRuleIds(constraint).has(ruleId(prior, "pattern") ?? ""), priorDomains = new Set((prior.patterns ?? []).map(simplePatternDomain).filter(Boolean)), localDomains = new Set(constraint.patterns.map(simplePatternDomain).filter(Boolean));
-        if (!replaced && priorDomains.size && localDomains.size && ![...priorDomains].some((value) => localDomains.has(value))) {
+        const replaced = replacedRuleIds(constraint), priorPatternRules = rulesFor(prior, "pattern"), retainedRulePatterns = priorPatternRules.filter((rule) => !replaced.has(String(rule.id ?? ""))).flatMap((rule) => typeof rule.pattern === "string" ? [rule.pattern] : []), removedRulePatterns = new Set(priorPatternRules.filter((rule) => replaced.has(String(rule.id ?? ""))).flatMap((rule) => typeof rule.pattern === "string" ? [rule.pattern] : [])), retainedPatterns = (prior.patterns ?? []).filter((pattern) => !removedRulePatterns.has(pattern) || retainedRulePatterns.includes(pattern)), replacedAny = retainedPatterns.length !== (prior.patterns ?? []).length, priorDomains = new Set(retainedPatterns.map(simplePatternDomain).filter(Boolean)), localDomains = new Set(constraint.patterns.map(simplePatternDomain).filter(Boolean)), pair = conflictingRulePair(prior, constraint, "pattern");
+        if (!replacedAny && priorDomains.size && localDomains.size && ![...priorDomains].some((value) => localDomains.has(value))) {
             const message = "the rules cannot both match", origin = facetSource(prior, "patterns");
-            conflict(constraint.path, message, [origin.contributorName, contributor.name], { ...issue(prior, constraint, contributor, "patterns", "Pattern rule", "Rules", prior.patterns, constraint.patterns, message), ...ruleDetails(prior, constraint, "pattern") });
+            conflict(constraint.path, message, [origin.contributorName, contributor.name], { ...issue(prior, constraint, contributor, "patterns", "Pattern rule", "Rules", prior.patterns, constraint.patterns, message), ...ruleDetails(prior, pair) });
         }
-        next.patterns = replaced ? clone(constraint.patterns) : parallelPeer ? canonicalUnion(prior.patterns ?? [], constraint.patterns) : [...(prior.patterns ?? []), ...constraint.patterns];
+        next.patterns = replacedAny ? [...retainedPatterns, ...clone(constraint.patterns)] : parallelPeer ? canonicalUnion(prior.patterns ?? [], constraint.patterns) : [...(prior.patterns ?? []), ...constraint.patterns];
         next.facetSources = { ...next.facetSources, patterns: source };
     }
     if (constraint.minimum !== undefined)
@@ -126,7 +133,7 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
         const crossed = constraint.minimum !== undefined && prior.maximum !== undefined || constraint.maximum !== undefined && prior.minimum !== undefined;
         if (crossed && next.minimum !== undefined && next.maximum !== undefined && next.minimum > next.maximum) {
             const message = "the ranges do not overlap", origin = facetSource(prior, "range");
-            conflict(constraint.path, message, [origin.contributorName, contributor.name], { ...issue(prior, constraint, contributor, "range", "Range rule", "Rules", { minimum: prior.minimum, maximum: prior.maximum }, { minimum: constraint.minimum, maximum: constraint.maximum }, message), ...ruleDetails(prior, constraint, "range") });
+            conflict(constraint.path, message, [origin.contributorName, contributor.name], { ...issue(prior, constraint, contributor, "range", "Range rule", "Rules", { minimum: prior.minimum, maximum: prior.maximum }, { minimum: constraint.minimum, maximum: constraint.maximum }, message), ...ruleDetails(prior, conflictingRulePair(prior, constraint, "range")) });
         }
         next.facetSources = { ...next.facetSources, range: source };
     }
@@ -138,7 +145,7 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
         const crossed = constraint.minItems !== undefined && prior.maxItems !== undefined || constraint.maxItems !== undefined && prior.minItems !== undefined;
         if (crossed && next.minItems !== undefined && next.maxItems !== undefined && next.minItems > next.maxItems) {
             const message = "the item counts do not overlap", origin = facetSource(prior, "cardinality");
-            conflict(constraint.path, message, [origin.contributorName, contributor.name], { ...issue(prior, constraint, contributor, "cardinality", "Cardinality rule", "Rules", { minItems: prior.minItems, maxItems: prior.maxItems }, { minItems: constraint.minItems, maxItems: constraint.maxItems }, message), ...ruleDetails(prior, constraint, "cardinality") });
+            conflict(constraint.path, message, [origin.contributorName, contributor.name], { ...issue(prior, constraint, contributor, "cardinality", "Cardinality rule", "Rules", { minItems: prior.minItems, maxItems: prior.maxItems }, { minItems: constraint.minItems, maxItems: constraint.maxItems }, message), ...ruleDetails(prior, conflictingRulePair(prior, constraint, "cardinality")) });
         }
         next.facetSources = { ...next.facetSources, cardinality: source };
     }

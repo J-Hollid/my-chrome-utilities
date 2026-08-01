@@ -278,6 +278,21 @@ assert.equal(contextualizedWorkspace.status,"ready","a contextual peer choice re
 assert.deepEqual(contextualizedGroup.localSchemaContributions,[{path:"/customer_status",allowedValues:["closed"]}],"the contextual repair stores only the selected sparse facet");
 assert.equal(contextualized.history.undo.length,parallelContext.history.undo.length+1,"a contextual repair creates one Undo action");
 
+const crossFacetContext=createSpecificationProject({name:"Cross-facet contextual repair",site:"shop.example",id:(kind)=>`${kind}:cross-facet-context`});
+crossFacetContext.project.collections.profiles.push(
+  {id:"profile:cross-allowed",name:"Allowed",schemaConstraints:[{path:"/customer_status",allowedValues:["active"]}]},
+  {id:"profile:cross-expected",name:"Expected",schemaConstraints:[{path:"/customer_status",expectedValue:"closed"}]},
+);
+crossFacetContext.project.collections.pageGroups.push({id:"group:cross-facet-context",name:"Checkout",profileIds:["profile:cross-allowed","profile:cross-expected"]});
+const crossFacetGroup=crossFacetContext.project.collections.pageGroups[0],crossFacetRow=composedSchemaWorkspace(crossFacetContext,crossFacetGroup,"Page Group").rows.find(({path})=>path==="/customer_status");
+assert.deepEqual(crossFacetRow.decisions.map(({facet,section})=>({facet,section})),[{facet:"Expected value",section:"Definition"}],"cross-facet peer incompatibility retains a structured decision");
+assert.deepEqual(crossFacetRow.repairs.filter(({kind})=>kind==="use-contextual").map(({contributorName,facet,value})=>({contributorName,facet,value})),[
+  {contributorName:"Allowed",facet:"allowedValues",value:["active"]},
+  {contributorName:"Expected",facet:"expectedValue",value:"closed"},
+],"cross-facet peer repairs retain the exact facet and human value owned by each contributor");
+const crossFacetAllowedRepair=crossFacetRow.repairs.find(({kind,contributorId})=>kind==="use-contextual"&&contributorId==="profile:cross-allowed"),crossFacetResolved=applyComposedSchemaContextualFacet(crossFacetContext,"pageGroups",crossFacetGroup.id,"/customer_status",crossFacetAllowedRepair.facet,crossFacetAllowedRepair.value);
+assert.equal(composedSchemaWorkspace(crossFacetResolved,crossFacetResolved.project.collections.pageGroups[0],"Page Group").status,"ready","a targeted cross-facet contextual selection resolves the peer incompatibility");
+
 const namedRules=createSpecificationProject({name:"Named rule repairs",site:"shop.example",id:(kind)=>`${kind}:named-rules`});
 namedRules.project.collections.profiles.push({id:"profile:named-rules",name:"Sitewide",schemaConstraints:[
   {path:"/customer_status",type:"string",rules:[{id:"rule:sitewide-pattern",name:"Sitewide Pattern rule",kind:"pattern",pattern:"^[a-z]+$"}]},
@@ -294,6 +309,19 @@ const overriddenRule=overrideComposedSchemaLocalRule(namedRules,"pageGroups",nam
 assert.equal(overriddenStored.replacesRuleId,"rule:sitewide-pattern","the replacement repair names its source rule without changing local identity");
 assert.equal(composedSchemaWorkspace(overriddenRule,overriddenRule.project.collections.pageGroups[0],"Page Group").rows.find(({path})=>path==="/customer_status").validationState,"ready","the named replacement recompiles without the superseded Pattern conflict");
 assert.equal(overriddenRule.history.undo.length,namedRules.history.undo.length+1,"a named rule replacement creates one Undo action");
+
+const multiplePatternRules=createSpecificationProject({name:"Exact named Pattern repair",site:"shop.example",id:(kind)=>`${kind}:exact-pattern`});
+multiplePatternRules.project.collections.profiles.push({id:"profile:exact-pattern",name:"Sitewide",schemaConstraints:[{path:"/account_code",type:"string",rules:[
+  {id:"rule:generic-pattern",name:"Generic length",kind:"pattern",pattern:"^.{1,10}$"},
+  {id:"rule:letters-pattern",name:"Letters only",kind:"pattern",pattern:"^[a-z]+$"},
+]}]});
+multiplePatternRules.project.collections.pageGroups.push({id:"group:exact-pattern",name:"Checkout",profileId:"profile:exact-pattern",localSchemaContributions:[{path:"/account_code",rules:[{id:"rule:digits-pattern",name:"Digits only",kind:"pattern",pattern:"^[0-9]+$"}]}]});
+const exactPatternGroup=multiplePatternRules.project.collections.pageGroups[0],exactPatternRow=composedSchemaWorkspace(multiplePatternRules,exactPatternGroup,"Page Group").rows.find(({path})=>path==="/account_code"),exactPatternRepair=exactPatternRow.repairs.find(({kind})=>kind==="override-rule");
+assert.deepEqual({ruleId:exactPatternRepair.ruleId,sourceRuleId:exactPatternRepair.sourceRuleId},{ruleId:"rule:digits-pattern",sourceRuleId:"rule:letters-pattern"},"the repair identifies the actually incompatible named Pattern rule rather than the first rule of that kind");
+const exactPatternOverridden=overrideComposedSchemaLocalRule(multiplePatternRules,"pageGroups",exactPatternGroup.id,"/account_code",exactPatternRepair.ruleId,exactPatternRepair.sourceRuleId),exactPatternEffective=composedSchemaWorkspace(exactPatternOverridden,exactPatternOverridden.project.collections.pageGroups[0],"Page Group").rows[0].effective;
+assert.equal(composedSchemaWorkspace(exactPatternOverridden,exactPatternOverridden.project.collections.pageGroups[0],"Page Group").status,"ready");
+assert.deepEqual(exactPatternEffective.patterns,["^.{1,10}$","^[0-9]+$"],"the compiled Pattern facet retains the compatible named source rule and the local replacement");
+assert.deepEqual(exactPatternEffective.rules.map(({id})=>id),["rule:generic-pattern","rule:digits-pattern"],"the compiled Pattern facet and retained effective rules agree on exact identity");
 
 const duplicateNames=createSpecificationProject({name:"Duplicate contributor names",site:"shop.example",id:(kind)=>`${kind}:duplicate-names`});
 duplicateNames.project.collections.profiles.push(
