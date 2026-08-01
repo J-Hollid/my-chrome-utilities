@@ -22,7 +22,7 @@
 (defn- observe-browser! [] (or @browser-observation (let [result (checked! "node" "test/browser-packs/layered-schema.mjs") line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result)))) observed (:layeredSchema (json/parse-string line true))] (reset! browser-observation observed))))
 (def runtime-paths (set (concat [:installedBoundary :consequential :persistenceReload :sidePanelParity]
                                 (map #(keyword (str "authoring" (format "%03d" %))) (range 1 77))
-                                (map #(keyword (str "layering" (format "%03d" %))) (range 1 30))
+                                (map #(keyword (str "layering" (format "%03d" %))) (range 1 31))
                                 (map #(keyword (str "flowFacet" (format "%03d" %))) (range 1 5))
                                 [:canonicalPresence :canonicalValues :canonicalConditions :canonicalRules :canonicalExample :canonicalPersisted
                                  :flowFacetOwnership001 :flowFacetOwnership002

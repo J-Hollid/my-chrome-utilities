@@ -203,7 +203,16 @@ export function renderComposedFocusedSection(host, context) {
         host.append(labeled(dom, "Example method", method), labeled(dom, "Example value", control), issue);
     }
     if (context.activeSection === "structure") {
-        host.append(Object.assign(dom.createElement("p"), { textContent: `Stable identity ${context.row.effective.definitionId ?? context.row.path}` }));
+        const itemType = dom.createElement("select");
+        itemType.name = "itemType";
+        itemType.append(new Option("Inherit item type", ""), ...["string", "number", "integer", "boolean", "object", "array", "null"].map((entry) => new Option(entry, entry)));
+        itemType.value = draft.itemSchema?.type ?? draft.itemType ?? "";
+        itemType.disabled = draft.type !== "array";
+        itemType.addEventListener("change", () => { draft.itemType = itemType.value || undefined; if (itemType.value)
+            draft.itemSchema = { id: draft.itemSchema?.id ?? `item:${crypto.randomUUID()}`, type: itemType.value };
+        else
+            delete draft.itemSchema; });
+        host.append(labeled(dom, "Array item type", itemType), Object.assign(dom.createElement("p"), { textContent: `Stable identity ${context.row.effective.definitionId ?? context.row.path}` }));
         if (context.onStructure) {
             const name = dom.createElement("input"), newName = dom.createElement("input");
             name.name = "structureName";

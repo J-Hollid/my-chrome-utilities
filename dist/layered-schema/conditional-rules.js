@@ -89,7 +89,9 @@ const conditional = (property, payload, paths) => (property.rules ?? []).flatMap
     return !alreadyProjected && layeredConditionMatches(outcome.condition, payload, paths) ? [outcome] : [];
 });
 const differing = (rules, read) => new Set(rules.map((rule) => JSON.stringify(read(rule)))).size > 1;
-const conflictFor = (path, facet, rules) => ({ path, message: `conditional ${facet} outcomes contradict`, contributors: rules.map(named) });
+const conflictFacet = (facet) => facet === "presence" ? "Presence" : facet === "value" ? "Expected value" : facet === "range" ? "Range rule" : facet === "cardinality" ? "Cardinality rule" : "Pattern rule";
+const ruleValue = (facet, rule) => facet === "presence" ? rule.presence : facet === "value" ? (rule.allowedValues ?? rule.expectedValue) : facet === "range" ? { minimum: rule.minimum, maximum: rule.maximum } : facet === "cardinality" ? { minItems: rule.minItems, maxItems: rule.maxItems } : rule.pattern;
+const conflictFor = (path, facet, rules) => { const source = rules[0] ?? {}, local = rules.at(-1) ?? {}, sourceName = named(source), localName = named(local); return { path, message: `conditional ${facet} outcomes contradict`, contributors: rules.map(named), contributorIds: rules.map((rule) => String(rule.contributorId ?? rule.id ?? named(rule))), facet: conflictFacet(facet), section: facet === "presence" || facet === "value" ? "Definition" : "Rules", sourceContributor: sourceName, sourceContributorId: String(source.contributorId ?? source.id ?? sourceName), sourceValue: ruleValue(facet, source), sourceRuleId: String(source.id ?? ""), localContributor: localName, localContributorId: String(local.contributorId ?? local.id ?? localName), localValue: ruleValue(facet, local), localRuleId: String(local.id ?? "") }; };
 const distinctConflicts = (conflicts) => [...new Map(conflicts.map((conflict) => [JSON.stringify(conflict), conflict])).values()];
 const resolvedPeerConstraint = (constraint, payload, paths) => {
     const result = clone(constraint);

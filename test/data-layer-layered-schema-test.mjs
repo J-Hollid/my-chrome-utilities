@@ -59,10 +59,12 @@ const protectedTypeConflict=compilePair({type:"string",protectedFacets:["type"]}
 assert.equal(protectedTypeConflict.status,"blocked","a protected Type facet still requires a decision");
 assert.deepEqual(
   protectedTypeConflict.conflicts[0],
-  {path:"/value",facet:"Type",sourceContributor:"Sitewide",sourceContributorId:"base",sourceValue:"string",localContributor:"Shipping",localContributorId:"specific",localValue:"number",message:"Sitewide protects this definition from change",contributors:["Sitewide","Shipping"],contributorIds:["base","specific"]},
+  {path:"/value",facet:"Type",section:"Definition",sourceContributor:"Sitewide",sourceContributorId:"base",sourceValue:"string",localContributor:"Shipping",localContributorId:"specific",localValue:"number",message:"Sitewide protects this definition from change",contributors:["Sitewide","Shipping"],contributorIds:["base","specific"]},
 );
 assert.deepEqual(compilePair({allowedValues:["3a","3b"]},{allowedValues:["3b"]}).properties["/value"].allowedValues,["3b"]);
-assert.match(compilePair({allowedValues:["3a","3b"]},{allowedValues:["4"]}).conflicts[0].message,/outside the base allowed universe/);
+const allowedConflict=compilePair({allowedValues:["3a","3b"]},{allowedValues:["4"]}).conflicts[0];
+assert.match(allowedConflict.message,/outside the base allowed universe/);
+assert.deepEqual({facet:allowedConflict.facet,section:allowedConflict.section,source:allowedConflict.sourceContributor,local:allowedConflict.localContributor},{facet:"Allowed values",section:"Definition",source:"Sitewide",local:"Shipping"});
 const ordinaryPresenceOverride=compilePair({presence:"required"},{presence:"forbidden"});
 assert.equal(ordinaryPresenceOverride.status,"ready","an ordinary Presence facet is a legal sparse override");
 assert.equal(ordinaryPresenceOverride.properties["/value"].presence,"forbidden");
@@ -84,6 +86,19 @@ assert.equal(compilePair({rules:[{condition:"base"}]},{rules:[{condition:"specif
 const bounded=compilePair({minimum:0,maximum:10,minItems:1,maxItems:8,reusableRules:[{id:"rule:base"}]},{minimum:2,maximum:7,minItems:3,maxItems:5,reusableRules:[{id:"rule:specific"}]}).properties["/value"];
 assert.deepEqual({minimum:bounded.minimum,maximum:bounded.maximum,minItems:bounded.minItems,maxItems:bounded.maxItems},{minimum:2,maximum:7,minItems:3,maxItems:5});
 assert.deepEqual(bounded.reusableRules,[{id:"rule:base"},{id:"rule:specific"}]);
+const rangeConflict=compilePair({minimum:10},{maximum:5}).conflicts[0],cardinalityConflict=compilePair({minItems:5},{maxItems:2}).conflicts[0],patternConflict=compilePair({patterns:["^[a-z]+$"]},{patterns:["^[0-9]+$"]}).conflicts[0];
+assert.deepEqual([rangeConflict,cardinalityConflict,patternConflict].map(({facet,section})=>({facet,section})),[
+  {facet:"Range rule",section:"Rules"},
+  {facet:"Cardinality rule",section:"Rules"},
+  {facet:"Pattern rule",section:"Rules"},
+],"every blocking rule retains its named facet and Rules editor destination");
+const ordinaryItemOverride=compilePair({type:"array",itemSchema:{id:"source-items",type:"string"}},{itemSchema:{id:"local-items",type:"number"}});
+assert.equal(ordinaryItemOverride.status,"ready","an array item definition remains an ordinary override when no existing values are invalidated");
+const itemConflict=compilePair({type:"array",itemSchema:{id:"source-items",type:"string"},examples:[["existing"]]},{itemSchema:{id:"local-items",type:"number"}}).conflicts[0];
+assert.deepEqual({facet:itemConflict.facet,section:itemConflict.section,sourceValue:itemConflict.sourceValue,localValue:itemConflict.localValue,message:itemConflict.message},{facet:"Array item definition",section:"Structure",sourceValue:"String items",localValue:"Number items",message:"existing values do not fit Number items"},"an incompatible item definition records a targeted Structure decision in operator language");
+const annotationOverride=compilePair({concept:"Customer",documentation:"Parent",examples:["parent"],definitionId:"parent-id"},{concept:"Account",documentation:"Local",examples:["local"],definitionId:"imported-id"});
+assert.equal(annotationOverride.status,"ready","Concept, documentation, example, and imported identity differences are ordinary annotations");
+assert.deepEqual({concept:annotationOverride.properties["/value"].concept,documentation:annotationOverride.properties["/value"].documentation},{concept:"Account",documentation:"Local"});
 
 const invariant=compileLayeredSchema([base,checkout,{...shipping,constraints:[{...shipping.constraints[0],enforcement:"invariant"}]},alternative],{eventId:"event:purchase",eventRole:"interaction"});
 assert.equal(invariant.status,"blocked");

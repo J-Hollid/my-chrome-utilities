@@ -239,10 +239,27 @@ assert.deepEqual(customerDecision.repairs.map(({kind,label})=>({kind,label})),[
   {kind:"open-source",label:"Open Sitewide"},
 ]);
 assert.equal(orderDecision.decisionFacet,"Presence");
+assert.deepEqual(customerDecision.decisions.map(({facet,section})=>({facet,section})),[{facet:"Type",section:"Definition"}],"the workspace preserves the exact affected facet and editor section");
 const repaired=resetComposedSchemaLocalFacet(clarity,"pageGroups",emptyCheckout.id,"/customer_status","type"),repairedCheckout=repaired.project.collections.pageGroups[0];
 assert.deepEqual(repairedCheckout.localSchemaContributions,[{path:"/customer_status",documentation:"keep local documentation"},{path:"/order_total",presence:"forbidden"}],"a targeted repair removes only the selected sparse facet");
 assert.equal(repaired.history.undo.length,clarity.history.undo.length+1,"a targeted facet repair creates one Undo action");
 assert.equal(composedSchemaWorkspace(repaired,repairedCheckout,"Page Group").conflictSummary,"1 property needs a decision before validation and developer export.");
+
+const completeIssues=structuredClone(clarity);
+completeIssues.project.collections.profiles[0].schemaConstraints=[{path:"/customer_status",allowedValues:[10,20],minimum:10}];
+completeIssues.project.collections.pageGroups[0].localSchemaContributions=[{path:"/customer_status",allowedValues:[30],maximum:5}];
+const completeDecision=composedSchemaWorkspace(completeIssues,completeIssues.project.collections.pageGroups[0],"Page Group").rows.find(({path})=>path==="/customer_status");
+assert.deepEqual(completeDecision.decisions.map(({facet,section})=>({facet,section})),[
+  {facet:"Allowed values",section:"Definition"},
+  {facet:"Range rule",section:"Rules"},
+],"one property retains every independent facet decision");
+assert.match(composedSchemaWorkspace(completeIssues,completeIssues.project.collections.pageGroups[0],"Page Group").conflictSummary,/1 property needs a decision/);
+const completeAfterAllowed=resetComposedSchemaLocalFacet(completeIssues,"pageGroups","group:clarity","/customer_status","allowedValues"),completeAfterAllowedRow=composedSchemaWorkspace(completeAfterAllowed,completeAfterAllowed.project.collections.pageGroups[0],"Page Group").rows.find(({path})=>path==="/customer_status");
+assert.deepEqual(completeAfterAllowedRow.decisions.map(({facet})=>facet),["Range rule"],"repairing one sparse facet retains the independent decision on the same property");
+const completeAfterRange=resetComposedSchemaLocalFacet(completeAfterAllowed,"pageGroups","group:clarity","/customer_status","minimum"),completeFinal=composedSchemaWorkspace(completeAfterRange,completeAfterRange.project.collections.pageGroups[0],"Page Group");
+assert.equal(completeFinal.status,"ready","resolving the remaining decision makes validation and developer export available");
+assert.equal(completeAfterRange.history.undo.length,completeIssues.history.undo.length+2,"two targeted decisions create exactly two Undo actions");
+assert.deepEqual(completeAfterRange.project.collections.profiles,completeIssues.project.collections.profiles,"targeted repairs never mutate the source contributor");
 
 const duplicateNames=createSpecificationProject({name:"Duplicate contributor names",site:"shop.example",id:(kind)=>`${kind}:duplicate-names`});
 duplicateNames.project.collections.profiles.push(

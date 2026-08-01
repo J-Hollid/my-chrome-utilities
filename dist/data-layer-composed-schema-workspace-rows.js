@@ -29,7 +29,8 @@ const reviewCondition = (value) => { if (!value || typeof value !== "object")
 } return value; };
 export function composedReviewFacetDelta(row, draft) { const baseline = { ...row.inherited, ...row.local }, baselineExample = Array.isArray(baseline.examples) ? baseline.examples[0] : undefined, next = { type: draft.type, itemType: draft.itemType, presence: draft.presence, expectedValue: draft.expectedValue, condition: reviewCondition(draft.condition), documentation: draft.documentation || undefined, exampleValue: draft.exampleMethod === "blank" ? undefined : draft.exampleValue }; const previous = { ...baseline, condition: reviewCondition(baseline.condition), documentation: baseline.documentation || undefined, exampleValue: baselineExample }; return ["type", "itemType", "presence", "expectedValue", "condition", "documentation", "exampleValue"].filter((key) => JSON.stringify(next[key]) !== JSON.stringify(previous[key])).map((key) => ({ label: key === "expectedValue" ? "Edited expected value" : key === "exampleValue" ? "Edited example" : `Edited ${key}`, detail: `${row.path} · prospective result ${JSON.stringify(next[key])} · consumers recompile` })); }
 function contextMenu(row, context) {
-    return renderFocusedPropertyMenu({ dom: context.dom, path: row.path, provenance: focusedPropertyProvenanceSummary(row.provenance), sectionsDisabled: context.removed, close: context.close, sectionSummary: (section) => section === "values" ? `${(context.draft?.allowedValues ?? row.local.allowedValues ?? row.effective.allowedValues ?? []).length} allowed values` : section === "rules" ? `${(context.draft?.rules ?? []).length} rules` : "View effective value", selectSection: context.selectSection });
+    const issueSummary = (section) => { const mapped = section === "definition" ? "Definition" : section === "rules" ? "Rules" : section === "structure" ? "Structure" : undefined, issues = row.decisions?.filter(({ section: issueSection }) => issueSection === mapped) ?? []; return issues.length ? `${issues.map(({ facet }) => facet).join(", ")} ${issues.length === 1 ? "needs" : "need"} a decision` : undefined; };
+    return renderFocusedPropertyMenu({ dom: context.dom, path: row.path, provenance: focusedPropertyProvenanceSummary(row.provenance), sectionsDisabled: context.removed, close: context.close, sectionSummary: (section) => issueSummary(section) ?? (section === "values" ? `${(context.draft?.allowedValues ?? row.local.allowedValues ?? row.effective.allowedValues ?? []).length} allowed values` : section === "rules" ? `${(context.draft?.rules ?? []).length} rules` : "View effective value"), selectSection: context.selectSection });
 }
 function renderComposedSectionOwnership(host, row, context) {
     const visible = focusedSectionOwnershipActions(composedSchemaRowOwnershipInput(row))[context.activeSection], lifecycle = new Set(["Remove local", "Reset to parent"]);
@@ -60,17 +61,20 @@ function focused(row, context) {
     identity.textContent = `${row.path} · stable identity ${row.effective.definitionId ?? row.path}`;
     effective.textContent = `Inherited value and source: ${row.inherited ? context.effectiveText({ ...row, effective: row.inherited }) : "none"} · Local value: ${Object.keys(row.local).length > 1 ? context.effectiveText({ ...row, effective: row.local }) : "none"} · Effective result: ${context.effectiveText(row)} · Validation state: ${row.validationState} · Conflicts: ${row.validationState === "blocked" ? row.message : "none"}`;
     host.setAttribute("aria-label", `${row.path} focused ${focusedPropertySectionLabels[context.activeSection]} section`);
-    if (context.activeSection === "definition" && row.validationState === "blocked" && row.decisionDetail) {
+    const activeDecisionSection = context.activeSection === "definition" ? "Definition" : context.activeSection === "rules" ? "Rules" : context.activeSection === "structure" ? "Structure" : undefined;
+    for (const decision of row.decisions?.filter(({ section }) => section === activeDecisionSection) ?? []) {
         const issue = dom.createElement("section"), issueHeading = dom.createElement("h4"), detail = dom.createElement("p"), repairs = dom.createElement("div");
-        issue.setAttribute("aria-label", `${row.path} definition issue`);
+        issue.setAttribute("aria-label", `${row.path} ${decision.section.toLowerCase()} issue`);
+        issue.tabIndex = -1;
         issue.dataset.schemaDecisionIssue = "true";
-        issueHeading.textContent = `Needs decision · ${row.decisionFacet ?? "Definition"}`;
-        detail.textContent = row.decisionDetail;
-        for (const repair of row.repairs)
-            repairs.append(button(dom, repair.label, () => { if (repair.kind !== "use-source") {
+        issue.dataset.decisionFacet = decision.facet;
+        issueHeading.textContent = `Needs decision · ${decision.facet}`;
+        detail.textContent = decision.detail;
+        for (const repair of decision.repairs)
+            repairs.append(button(dom, repair.label, () => { if (!["use-source", "remove-local-rule", "override-rule"].includes(repair.kind)) {
                 context.onRepair?.(repair);
                 return;
-            } const review = dom.createElement("section"), summary = dom.createElement("p"), cancel = button(dom, "Cancel repair", () => review.remove()), confirm = button(dom, "Confirm facet repair", () => context.onRepair?.(repair)); review.setAttribute("aria-label", "Review facet repair"); summary.textContent = `Review ${repair.label}: remove only the local ${row.decisionFacet ?? "definition"} contribution. The prospective effective value comes from ${repair.contributorName}; one property command creates one Undo action.`; review.append(summary, cancel, confirm); issue.append(review); }));
+            } const review = dom.createElement("section"), summary = dom.createElement("p"), cancel = button(dom, "Cancel repair", () => review.remove()), confirm = button(dom, "Confirm facet repair", () => context.onRepair?.(repair)); review.setAttribute("aria-label", "Review facet repair"); summary.textContent = `Review ${repair.label}: change only the local ${decision.facet} contribution. The prospective effective result comes from ${repair.contributorName}; one property command creates one Undo action.`; review.append(summary, cancel, confirm); issue.append(review); }));
         issue.append(issueHeading, detail, repairs);
         host.append(issue);
     }
@@ -197,7 +201,7 @@ export function renderComposedRows(rows, context) {
                 valueCell.append(suggestions);
             tr.append(valueCell);
         }
-        const state = cell(9, context.removed && context.activePath === row.path ? "Removed" : row.validationState === "blocked" ? `Needs decision${row.decisionFacet ? ` · ${row.decisionFacet}` : ""}` : Object.keys(row.local).length > 1 ? `Local · effective ${context.effectiveText(row)}` : `Inherited · effective ${context.effectiveText(row)}`);
+        const affected = row.decisions?.map(({ facet }) => facet) ?? (row.decisionFacet ? [row.decisionFacet] : []), state = cell(9, context.removed && context.activePath === row.path ? "Removed" : row.validationState === "blocked" ? `Needs decision${affected.length ? ` · ${affected.join(", ")}` : ""}` : Object.keys(row.local).length > 1 ? `Local · effective ${context.effectiveText(row)}` : `Inherited · effective ${context.effectiveText(row)}`);
         tr.append(cell(8, row.source), state);
         if (context.overlayOpen && context.activePath === row.path) {
             const layers = [contextMenu(row, context)];
