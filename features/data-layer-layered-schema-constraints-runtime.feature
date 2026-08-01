@@ -363,3 +363,68 @@ Feature: Data layer layered schema constraints runtime
     When actual Replace here runs in a composed contributor editor
     Then staged production state contains one new local rule identity with named replacement provenance
     And repository inspection finds unchanged parent bytes before one reviewed property command commits
+
+  # Data layer layered schema constraints runtime 025
+  Scenario: Data layer layered schema constraints runtime 025
+    Given production Checkout has no local schema contribution
+    And its sole Sitewide inheritance recipe selects every canonical property
+    When the installed extension opens Effective schema at Checkout
+    Then production compilation contains every Sitewide facet unchanged
+    And rendered status is Ready for validation and developer export
+    And no production row is marked as needing a decision
+
+  # Data layer layered schema constraints runtime 026
+  Scenario Outline: Data layer layered schema constraints runtime 026
+    Given production Checkout inherits ordinary <facet> <parent_value> for customer_status from Sitewide
+    When repository state contains only sparse Checkout <facet> <local_value>
+    Then production compilation is Ready with effective <facet> <local_value>
+    And the customer_status row renders Sitewide <parent_value> and Checkout <local_value> as inherited and effective values
+    And no conflict repair action is rendered
+
+    Examples:
+      | facet    | parent_value | local_value |
+      | Type     | String       | Number      |
+      | Presence | Required     | Forbidden   |
+
+  # Data layer layered schema constraints runtime 027
+  Scenario Outline: Data layer layered schema constraints runtime 027
+    Given production has two protected-facet conflicts including <property>
+    When the installed extension opens Effective schema at Checkout
+    Then the status reports two properties need decisions before validation and developer export
+    And Show properties needing decisions filters the mounted effective-schema table
+    And the <property> row renders Needs decision and Type without internal identities
+    When actual controls open Definition from the property's regular actions
+    Then one issue panel renders Checkout <local_value>, Sitewide <source_value>, and Sitewide protects this definition from change
+    And rendered conflict copy contains no stable identity, opaque token, peer-group, compiler, or provenance jargon
+
+    Examples:
+      | property        | local_value | source_value |
+      | customer_status | Number      | String       |
+      | order_total     | String      | Number       |
+
+  # Data layer layered schema constraints runtime 028
+  Scenario Outline: Data layer layered schema constraints runtime 028
+    Given production Checkout <local_state> for <property> conflicts with protected Sitewide <facet> <source_value>
+    When actual controls open Definition from the property's regular actions
+    Then the issue panel offers <resolution_action> and Open Sitewide
+    And no unavailable, duplicate, or ineffective repair is rendered
+    When actual controls apply the reviewed <resolution_action> repair
+    Then repository inspection finds only Checkout <changed_content> removed
+    And production recompiles effective <facet> Sitewide <source_value>
+    And one durable property command and one Undo entry are recorded
+    And hashes for Sitewide, siblings, unrelated Checkout facets, and Published state remain unchanged
+
+    Examples:
+      | local_state                     | property        | facet    | source_value | resolution_action     | changed_content       |
+      | stores local Type Number        | customer_status | Type     | String       | Use Sitewide Type     | Type contribution     |
+      | stores local Presence Forbidden | order_total     | Presence | Required     | Use Sitewide Presence | Presence contribution |
+
+  # Data layer layered schema constraints runtime 029
+  Scenario: Data layer layered schema constraints runtime 029
+    Given two production Checkout properties need decisions and every other property is ready
+    When actual controls resolve the first property through its Definition issue panel
+    Then rendered status reports one remaining property and preserves the active table filter and scroll position
+    When actual controls resolve the remaining property
+    Then the Needs decision status and filter action are absent
+    And the ordinary effective-schema table again renders every property
+    And production validation and developer export become operable without mounting another resolution workspace

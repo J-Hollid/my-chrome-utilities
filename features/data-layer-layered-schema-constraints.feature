@@ -366,3 +366,71 @@ Feature: Data layer layered schema constraints
     When the operator invokes Replace here in a composed contributor editor
     Then one staged local rule receives a new stable identity and names the replaced parent rule
     And the inherited rule remains byte-identical until the reviewed property command is confirmed
+
+  # Data layer layered schema constraints 025
+  Scenario: Data layer layered schema constraints 025
+    Given Checkout is a Page Group with no local schema contribution
+    And Checkout inherits every property from Shared Profile Sitewide
+    When the operator opens Effective schema at Checkout
+    Then every Sitewide property has the same effective facets at Checkout
+    And the effective schema is Ready for validation and developer export
+    And no property is marked as needing a decision
+
+  # Data layer layered schema constraints 026
+  Scenario Outline: Data layer layered schema constraints 026
+    Given Checkout inherits ordinary <facet> <parent_value> for customer_status from Sitewide
+    When Checkout stores only local <facet> <local_value>
+    Then customer_status is a valid sparse Checkout override rather than a conflict
+    And its row distinguishes Sitewide <parent_value> from effective Checkout <local_value>
+    And the effective schema is Ready for validation and developer export
+
+    Examples:
+      | facet    | parent_value | local_value |
+      | Type     | String       | Number      |
+      | Presence | Required     | Forbidden   |
+
+  # Data layer layered schema constraints 027
+  Scenario Outline: Data layer layered schema constraints 027
+    Given <property> has an unresolved Type conflict between Checkout <local_value> and Sitewide <source_value>
+    When the operator opens Effective schema at Checkout
+    Then the summary says two properties need decisions before validation and developer export
+    And Show properties needing decisions filters the existing table without opening another workspace
+    And the <property> row shows Needs decision and Type without displaying internal identities
+    When the operator opens Definition from the property's regular actions
+    Then one concise issue panel says Checkout uses <local_value>, Sitewide uses <source_value>, and Sitewide protects this definition from change
+    And contributor names, property names, facet labels, and operator values replace compiler terminology and internal identities
+
+    Examples:
+      | property        | local_value | source_value |
+      | customer_status | Number      | String       |
+      | order_total     | String      | Number       |
+
+  # Data layer layered schema constraints 028
+  Scenario Outline: Data layer layered schema constraints 028
+    Given Checkout <local_state> for <property> conflicts with protected Sitewide <facet> <source_value>
+    When the operator opens Definition from the property's regular actions
+    Then the issue panel offers <resolution_action>
+    And it offers Open Sitewide without changing either contributor
+    And no unavailable, duplicate, or ineffective resolution action is shown
+    When the operator chooses <resolution_action>
+    Then review shows that only Checkout <changed_content> will be removed
+    And the prospective effective <facet> is Sitewide <source_value>
+    When the operator confirms the reviewed facet repair
+    Then the conflict is removed and the effective schema recompiles immediately
+    And one property-scoped Saved Draft command creates one Undo action
+    And Sitewide, siblings, unrelated Checkout facets, and Published state remain unchanged
+
+    Examples:
+      | local_state                     | property        | facet    | source_value | resolution_action     | changed_content       |
+      | stores local Type Number        | customer_status | Type     | String       | Use Sitewide Type     | Type contribution     |
+      | stores local Presence Forbidden | order_total     | Presence | Required     | Use Sitewide Presence | Presence contribution |
+
+  # Data layer layered schema constraints 029
+  Scenario: Data layer layered schema constraints 029
+    Given two Checkout properties need decisions and every other effective property is ready
+    When the operator resolves the first property through its Definition issue panel
+    Then the summary reports one remaining property without losing the table filter or position
+    When the operator resolves the remaining property
+    Then the Needs decision summary and filter action disappear
+    And all effective properties remain visible in the ordinary table
+    And validation and developer export become available without a separate conflict-resolution screen

@@ -587,6 +587,24 @@ This supersedes the earlier requirement that Starts with, Ends with, and Include
 appear as separate top-level rule types. The exact checkpoint remains
 `layered_schema`, followed by `npm run package`.
 
+On approval, the effective-schema conflict clarity correction is later authority
+for layered-schema scenarios 025–029. A Page Group with no local schema contribution
+and one complete Shared Profile inheritance compiles Ready without invented
+conflicts. Ordinary sparse Type and Presence changes remain legal local overrides;
+only a genuinely protected or incompatible facet blocks validation and developer
+export.
+
+Blocked summaries count properties needing decisions. Their rows use a compact
+Needs decision state and facet label. The existing property menu remains the sole
+advanced entry point: its Definition section explains the two human-named values
+and the reason in ordinary operator language, then offers only legal targeted
+repairs such as removing the local facet or opening the named source. It exposes no
+internal identities or compiler terminology and mounts no separate conflict
+workspace. A confirmed repair changes only the selected sparse local facet, creates
+one Undo action, recompiles immediately, and preserves the operator's table filter
+and position while further decisions remain. The exact checkpoint remains
+`layered_schema`, followed by `npm run package`.
+
 The rejected schema candidate `143cc9d337` and Flow candidate `b8432d27e7` are not
 eligible because each introduced a vacuous `project_management` pack. Later coder
 commits `2db9335d` and `b4d143a4` contain useful task-owned revisions, but their
