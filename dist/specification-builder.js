@@ -31,6 +31,7 @@ import { createProfileInheritanceRecipe, markProfileInheritanceConsumersForSourc
 import { mountSelectiveProfileInheritance } from "./data-layer-selective-profile-inheritance-ui.js";
 import { savePageDetails } from "./data-layer-page-authoring.js";
 import { mountAssignmentRoutingWorkspace } from "./data-layer-assignment-routing-ui.js";
+import { developerProductionSchemaExport, loadProductionSpecificationPlan, publishableProductionSchemas } from "./data-layer-production-specification.js";
 const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, START_PATH_KEY = "my-chrome-utilities.specification-project-start.v1", routeParameters = new URLSearchParams(location.search), startupProjectId = routeParameters.get("project") ?? undefined, startupKind = routeParameters.get("kind") ?? undefined, startupEntityId = routeParameters.get("entity") ?? undefined, startupRoute = startupKind ? durableProjectRouteForWorkspace(startupKind, startupEntityId) : undefined;
 installStudioChoiceControls(document.body);
 const durableProjectRuntime = await openDurableProjectRuntime(globalThis.localStorage, globalThis.indexedDB, { ...(startupProjectId ? { projectId: startupProjectId } : {}), ...(startupRoute ? { route: startupRoute } : {}) }).catch((error) => { const status = document.querySelector("#project-state"); if (status)
@@ -52,7 +53,7 @@ q("#project-assignment-applicability").required = false;
 const id = (kind) => `${kind}:${crypto.randomUUID()}`;
 const labels = { profiles: "Shared Profiles", pages: "Pages", pageGroups: "Page Groups", events: "Events", applicabilitySets: "Applicability", flows: "Flows", fixtures: "Test cases", assignments: "Assignments" };
 let state, lastCommittedState, library = projectLibrary();
-let canonicalRevision = 0, publishedRevision = 0, guidedEvaluatorInvocations = 0, pendingConflict, durableConflict, saveStatus = { kind: "idle" }, stagedBulk, selectedKind = "profiles", selectedId, projectOverview = routeParameters.get("route") === "overview", documentationOpen = routeParameters.get("view") === "documentation", creationKind, removalReview, lifecycleStatus = "", removedFocus, pendingLifecycleFocus, pendingWorkspaceFocus, pendingProfileInheritanceFocus, pendingPageProfile, stagedImport, lastInvokingControl, releasePreflight, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi, projectDocumentationWorkspaceUi;
+let canonicalRevision = 0, publishedRevision = 0, guidedEvaluatorInvocations = 0, pendingConflict, durableConflict, saveStatus = { kind: "idle" }, stagedBulk, selectedKind = "profiles", selectedId, projectOverview = routeParameters.get("route") === "overview", documentationOpen = routeParameters.get("view") === "documentation", creationKind, removalReview, lifecycleStatus = "", removedFocus, pendingLifecycleFocus, pendingWorkspaceFocus, pendingProfileInheritanceFocus, pendingPageProfile, stagedImport, lastInvokingControl, releasePreflight, releaseReviewHasChanges = true, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi, projectDocumentationWorkspaceUi;
 const recordGuidedEvaluation = () => { guidedEvaluatorInvocations += 1; document.querySelector("[data-guided-test-case]")?.setAttribute("data-evaluator-invocations", String(guidedEvaluatorInvocations)); };
 const evaluatePageGroupFixture = (...args) => { recordGuidedEvaluation(); return executePageGroupFixture(...args); };
 const runProductionFixture = (...args) => { recordGuidedEvaluation(); return executeProductionFixture(...args); };
@@ -819,13 +820,11 @@ function renderGuidedTestCaseEditor(content, entity) {
             actualResult = { applicablePageGroups: state.project.collections.pageGroups.filter(({ name }) => included.has(name)).map(({ id }) => id), outcome: evaluated.validation.issues.length ? "Invalid" : "Valid", issues: evaluated.validation.issues.map(({ path, code }) => ({ path, code })), evaluatorRevision: guidedPageEvaluatorRevision(state, saved.pageId) };
         }
         else {
-            const compiled = compileSpecificationProject({ ...createCanonicalProjectEnvelope(state.project, state.draft?.id ?? "published"), revision: canonicalRevision });
-            if (compiled.status === "blocked")
-                throw new Error(`Compilation failed: ${compiled.diagnostics.map(({ field }) => field).join(", ")}`);
-            const execution = runProductionFixture(compiled.plan, saved), actual = execution.steps.at(-1)?.actual;
+            const { plan } = await loadProductionSpecificationPlan(durableProjectRuntime.repository, state.project.id);
+            const execution = runProductionFixture(plan, saved), actual = execution.steps.at(-1)?.actual;
             if (!actual)
                 throw new Error(execution.blockers?.join(" ") ?? "Production evaluation produced no result.");
-            actualResult = { winner: actual.winner?.assignmentId ?? "no-assignment", outcome: actual.issueDetails.length ? "Invalid" : "Valid", issues: actual.issueDetails.map(({ path, code }) => ({ path, code })), evaluatorRevision: compiled.plan.evaluatorContentIdentity, resultIdentity: actual.resultIdentity };
+            actualResult = { winner: actual.winner?.assignmentId ?? "no-assignment", outcome: actual.issueDetails.length ? "Invalid" : "Valid", issues: actual.issueDetails.map(({ path, code }) => ({ path, code })), evaluatorRevision: plan.evaluatorContentIdentity, resultIdentity: actual.resultIdentity };
         }
         const compared = compareGuidedTestCase({ ...saved, actualResult, evaluatorRevision: actualResult.evaluatorRevision });
         persist(transactProject(state, `Record Test case result ${saved.name}`, (project) => ({ ...project, collections: { ...project.collections, fixtures: project.collections.fixtures.map((candidate) => candidate.id === entity.id ? compared : candidate) } })));
@@ -1628,9 +1627,10 @@ q("#publish-project").addEventListener("click", (event) => { if (!state)
     releasePreflight = projectPreflight(state, nextPublishedRevision);
     const preflight = releasePreflight, prior = state.project.releases.at(-1), emptyProject = { ...state.project, collections: Object.fromEntries(Object.keys(state.project.collections).map((kind) => [kind, []])), releases: [] }, review = buildReleaseReview(prior ? { ...state.project, collections: prior.snapshot } : emptyProject, state.project), diff = q("#release-diff");
     diff.replaceChildren(...review.sections.map((section) => { const item = document.createElement("li"); item.textContent = `${section.kind}: ${section.entityKind}/${section.before ?? section.after}`; return item; }));
-    releaseSummary.textContent = preflight.blockers.length ? `${preflight.contentIdentity}: publication blocked by ${preflight.blockers.length} issues — ${preflight.blockers.map(({ message }) => message).join(" ")}` : `${preflight.contentIdentity}: Release ${nextPublishedRevision} has ${review.sections.length} structured changes and one reviewed executable plan.`;
-    q("#confirm-release").disabled = Boolean(preflight.blockers.length || !review.sections.length);
-    q("#confirm-release-close").disabled = Boolean(preflight.blockers.length || !review.sections.length);
+    releaseReviewHasChanges = Boolean(review.sections.length || !publishedRevision);
+    releaseSummary.textContent = preflight.blockers.length ? `${preflight.contentIdentity}: publication blocked by ${preflight.blockers.length} issues — ${preflight.blockers.map(({ message }) => message).join(" ")}` : releaseReviewHasChanges ? `${preflight.contentIdentity}: Release ${nextPublishedRevision} has ${review.sections.length} structured changes and one reviewed executable plan.` : `${preflight.contentIdentity}: No production changes. Project and Schema revisions will remain unchanged.`;
+    q("#confirm-release").disabled = Boolean(preflight.blockers.length);
+    q("#confirm-release-close").disabled = Boolean(preflight.blockers.length);
     q("#restore-release").disabled = !prior;
 }
 catch (error) {
@@ -1639,13 +1639,28 @@ catch (error) {
     lastInvokingControl?.focus();
 } })(); });
 q("#cancel-release").addEventListener("click", () => { releaseDialog.close(); lastInvokingControl?.focus(); });
-const confirmRelease = async (close) => { if (!state || !releasePreflight)
+const confirmRelease = async (close) => { if (!state || !releasePreflight?.plan)
     return; const confirm = q(close ? "#confirm-release-close" : "#confirm-release"), other = q(close ? "#confirm-release" : "#confirm-release-close"); confirm.disabled = other.disabled = true; try {
+    const productionSchemas = publishableProductionSchemas(releasePreflight.plan);
+    if (!releaseReviewHasChanges) {
+        await durableProjectRuntime.settled();
+        const durable = await durableProjectRuntime.repository.loadProject(state.project.id), publicationId = durable.state.project.currentRelease ?? (await durableProjectRuntime.repository.currentProductionManifest(state.project.id))?.publicationId;
+        if (!publicationId)
+            throw new Error("No current publication identity is available for the no-change review.");
+        const published = await durableProjectRuntime.repository.publish(state.project.id, durable.draftToken, { publicationId, schemas: productionSchemas });
+        if (published.status !== "no-changes")
+            throw new Error("The reviewed Draft contains production changes; review it again before publishing.");
+        publishedRevision = published.publishedRevision;
+        releaseDialog.close();
+        render();
+        q("#project-state").textContent = `No production changes · Published revision ${publishedRevision}`;
+        return;
+    }
     const next = publishProjectRelease(state, { id, preflight: releasePreflight, write: (project) => writeProjectState({ project, ...(state?.draft ? { draft: structuredClone(state.draft) } : {}), history: { undo: [], redo: [] } }) }), publicationId = next.project.releases.at(-1)?.id;
     if (!publicationId)
         throw new Error("Publication did not create a reviewed release identity.");
     await durableProjectRuntime.settled();
-    const durable = await durableProjectRuntime.repository.loadProject(next.project.id), published = await durableProjectRuntime.repository.publish(next.project.id, durable.draftToken, { publicationId });
+    const durable = await durableProjectRuntime.repository.loadProject(next.project.id), published = await durableProjectRuntime.repository.publish(next.project.id, durable.draftToken, { publicationId, schemas: productionSchemas });
     await durableProjectRuntime.refreshProject(next.project.id);
     await durableProjectRuntime.settled();
     library = restoreProjectLibrary(projectStorage.getItem(PROJECT_LIBRARY_STORAGE_KEY)) ?? library;
@@ -1685,7 +1700,7 @@ catch (error) {
 q("#export-project").addEventListener("click", () => { if (!state)
     return; download(`${state.project.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}-project.json`, exportSpecificationProjectState(state)); });
 q("#export-standard-schema").addEventListener("click", () => { if (!state)
-    return; const properties = Object.fromEntries(state.project.collections.profiles.flatMap((profile) => (profile.canonicalSchema ? canonicalRequirements(profile.canonicalSchema) : profile.requirements).map((requirement) => [requirement.path.replace(/^\//, ""), { type: requirement.type ?? "string", ...(requirement.allowedValues ? { enum: requirement.allowedValues } : {}) }]))), schema = { $schema: "https://json-schema.org/draft/2020-12/schema", type: "object", properties, "x-lossy-semantics": ["applicability", "flows", "fixtures", "draft", "releases"] }, manifest = { format: "my-chrome-utilities.applicability-flow-manifest", version: 1, projectId: state.project.id, applicability: state.project.collections.applicabilitySets, flows: state.project.collections.flows, fixtures: state.project.collections.fixtures, draft: state.draft, releases: state.project.releases }; download("specification.schema.json", JSON.stringify(schema)); download("specification.manifest.json", JSON.stringify(manifest)); });
+    return; void developerProductionSchemaExport(durableProjectRuntime.repository, state.project.id).then(production => { download("specification.schema.json", JSON.stringify({ $schema: "https://json-schema.org/draft/2020-12/schema", oneOf: production.schemas.map(({ effectiveSchema }) => effectiveSchema) })); download("specification.manifest.json", JSON.stringify({ format: "my-chrome-utilities.production-schema-manifest", version: 1, projectId: production.projectId, projectRevision: production.projectRevision, schemas: production.schemas.map(({ evidence }) => evidence) })); }, error => { q("#project-state").textContent = error instanceof Error ? error.message : String(error); }); });
 q("#import-project").addEventListener("click", () => q("#import-project-file").click());
 const importDialog = q("#import-review");
 q("#import-project-file").addEventListener("change", async (event) => { const file = event.currentTarget.files?.[0]; if (!file || !state)

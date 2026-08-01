@@ -179,7 +179,8 @@ export function stageProjectImport(serialized, library, options) {
     }
     if (parsed.format !== "my-chrome-utilities.project-bundle" && parsed.format !== "my-chrome-utilities.durable-project-bundle")
         return importBlocker("bundle.format", "Choose a readable project bundle.");
-    if (parsed.version !== 1)
+    const supported = parsed.format === "my-chrome-utilities.project-bundle" ? parsed.version === 1 : parsed.version === 1 || parsed.version === 2;
+    if (!supported)
         return importBlocker("bundle.version", "Use a supported version or migrate externally.");
     if (!parsed.project || typeof parsed.project !== "object")
         return importBlocker("bundle.project", "Restore the complete project section and export again.");
@@ -191,7 +192,8 @@ export function stageProjectImport(serialized, library, options) {
     const map = new Map([...ids].map((oldId) => [oldId, options.id(oldId)])), project = remapOwned(source, map), name = targetName(library, String(parsed.sourceName ?? source.name));
     project.name = name;
     const draft = parsed.draft && typeof parsed.draft === "object" ? remapOwned(parsed.draft, map) : undefined, state = { project, ...(draft ? { draft } : {}), history: { undo: [], redo: [] } }, entityCounts = Object.fromEntries(Object.entries(project.collections).map(([kind, entries]) => [kind, entries.length]));
-    return { sourceName: String(parsed.sourceName ?? source.name), targetName: name, sourceRevision: Number(parsed.draftRevision ?? 0), projectId: project.id, state, entityCounts, referenceIntegrity: "valid", migrations: parsed.format === "my-chrome-utilities.durable-project-bundle" ? ["Durable Published project snapshot retained"] : [], blockers: [] };
+    const legacyEditHistory = JSON.stringify(source).includes('"changes"') && JSON.stringify(source).includes('"revision"');
+    return { sourceName: String(parsed.sourceName ?? source.name), targetName: name, sourceRevision: Number(parsed.draftRevision ?? parsed.baseProjectRevision ?? parsed.publishedRevision ?? 0), projectId: project.id, state, entityCounts, referenceIntegrity: "valid", migrations: parsed.format === "my-chrome-utilities.durable-project-bundle" ? ["Durable Published project snapshot retained", ...(legacyEditHistory ? ["Legacy edit revisions and change journals will be compacted without changing current schema content or publication lineage"] : [])] : [], blockers: [] };
 }
 export function commitProjectImport(library, staged, now = () => new Date().toISOString()) { if (staged.blockers.length)
     throw new Error("Project import is blocked."); if (library.projects[staged.projectId])

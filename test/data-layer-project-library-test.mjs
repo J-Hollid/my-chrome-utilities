@@ -165,6 +165,11 @@ const imported=commitProjectImport(library,staged,clock);
 assert.equal(imported.activeProjectId,"project-trade","import stays inactive");
 assert.equal(imported.projects["copy:project-retail"].state.project.name,"Retail website copy");
 assert.deepEqual(imported.projects["project-retail"],library.projects["project-retail"]);
+const durableV2={...bundle,format:"my-chrome-utilities.durable-project-bundle",version:2,baseProjectRevision:3,publishedRevision:3,publishedProject:structuredClone(bundle.project),productionManifest:{projectId:"project-retail",projectRevision:3,schemas:[]},schemaSnapshots:[]};delete durableV2.draftRevision;
+const stagedDurableV2=stageProjectImport(JSON.stringify(durableV2),library,{id:(oldId)=>`durable:${oldId}`,now:clock});
+assert.equal(stagedDurableV2.blockers.length,0,"ordinary durable version 2 bundles enter import review");
+assert.equal(stagedDurableV2.sourceRevision,3);
+assert.equal(stagedDurableV2.migrations.includes("Durable Published project snapshot retained"),true);
 
 for(const [serialized,repair] of [
   ["{",/readable project bundle/i],

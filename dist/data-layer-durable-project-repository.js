@@ -466,6 +466,19 @@ export class DurableProjectRepository {
             this.notify({ type: "durable-project-change", projectId: receipt.projectId, draftToken: receipt.draftToken, commandId: `repair:flow-graph-ownership:${receipt.flowId}`, changedRecords: [receipt.deletedRecord, { store: "projectMetadata", key: receipt.projectId }] });
         return receipts;
     }
+    async compactLegacyDurableSchemaHistory() {
+        const receiptKey = "selective-production-revisions-v1", existing = await this.backend.transaction(["migrationReceipts"], "readonly", transaction => transaction.get("migrationReceipts", receiptKey));
+        if (existing?.verified)
+            return clone(existing);
+        const candidateStores = ["projectRoots", "projectEntities", "savedSchemas", "projectRevisions"], records = (await this.backend.transaction(candidateStores, "readonly", async (transaction) => (await Promise.all(candidateStores.map(async (store) => (await transaction.getAll(store)).map(({ key, value }) => ({ store, key, value }))))).flat())), changed = records.map(record => ({ ...record, compaction: compactLegacyEditHistory(record.value) })).filter(({ compaction }) => compaction.entryCount > 0), entryCount = changed.reduce((total, { compaction }) => total + compaction.entryCount, 0), beforeChecksum = await checksum(JSON.stringify(changed.map(({ store, key, compaction }) => ({ store, key, value: compaction.before })))), afterChecksum = await checksum(JSON.stringify(changed.map(({ store, key, compaction }) => ({ store, key, value: compaction.after })))), receipt = { entryCount, beforeChecksum, afterChecksum, verified: true };
+        return this.backend.transaction([...candidateStores, "migrationBackups", "migrationReceipts"], "readwrite", async (transaction) => { const currentReceipt = await transaction.get("migrationReceipts", receiptKey); if (currentReceipt?.verified)
+            return currentReceipt; for (const candidate of changed)
+            if (!same(await transaction.get(candidate.store, candidate.key), candidate.value))
+                throw new DOMException(`Legacy schema history changed during startup migration at ${candidate.store}/${candidate.key}.`, "AbortError"); await transaction.put("migrationBackups", receiptKey, { version: 1, records: changed.map(({ store, key, compaction }) => ({ store, key, value: clone(compaction.value) })), entryCount, beforeChecksum, afterChecksum, createdAt: this.options.now() }); this.fail("Legacy durable schema-history migration"); for (const candidate of changed)
+            await transaction.put(candidate.store, candidate.key, candidate.compaction.value); for (const candidate of changed)
+            if (!same(await transaction.get(candidate.store, candidate.key), candidate.compaction.value))
+                throw new DOMException(`Legacy schema-history read-back failed at ${candidate.store}/${candidate.key}.`, "OperationError"); await transaction.put("migrationReceipts", receiptKey, receipt); return receipt; });
+    }
     async deleteMigrationBackup(input) {
         if (input.label !== "Delete retained legacy migration backup")
             throw new Error("Migration backup deletion requires its named consequence review.");
@@ -597,23 +610,34 @@ export class DurableProjectRepository {
             throw new Error("Choose a durable project bundle.");
         const compacted = compactLegacyEditHistory(bundle.project), source = compacted.value, mapping = projectIdentityMapping(source, input.projectId), project = remapProjectReferences(source, mapping);
         project.name = input.name;
-        const publishedRevision = Number(bundle.publishedRevision ?? bundle.baseProjectRevision ?? 0);
+        const publishedRevision = Number(bundle.publishedRevision ?? bundle.baseProjectRevision ?? 0), sourcePublishedProject = record(bundle.publishedProject) ? compactLegacyEditHistory(bundle.publishedProject).value : undefined;
         if (publishedRevision > 0 && !record(bundle.publishedProject))
             throw new DOMException(`Imported project ${input.projectId} declares Published revision ${publishedRevision} without its immutable domain project snapshot.`, "DataError");
-        const publishedProject = record(bundle.publishedProject) ? remapProjectReferences(compactLegacyEditHistory(bundle.publishedProject).value, mapping) : undefined;
+        const publishedProject = sourcePublishedProject ? remapProjectReferences(sourcePublishedProject, mapping) : undefined;
         if (publishedProject)
             publishedProject.name = input.name;
         let production;
         if (record(bundle.productionManifest) && Array.isArray(bundle.schemaSnapshots)) {
             const sourceManifest = bundle.productionManifest, sourceSnapshots = bundle.schemaSnapshots.filter(record), at = this.options.now(), entries = [], snapshots = [];
+            if (sourceManifest.projectRevision !== publishedRevision || sourceManifest.projectId !== String(bundle.sourceProjectId ?? source.id) || !sourcePublishedProject)
+                throw new DOMException("Imported production manifest does not match its Project revision identity.", "DataError");
+            if (new Set(sourceManifest.schemas.map(({ schemaId }) => schemaId)).size !== sourceManifest.schemas.length)
+                throw new DOMException("Imported production manifest contains duplicate schema identities.", "DataError");
             for (const entry of sourceManifest.schemas ?? []) {
-                const schemaId = mapping.get(entry.schemaId) ?? entry.schemaId, snapshot = sourceSnapshots.find(candidate => candidate.schemaId === entry.schemaId && candidate.schemaRevision === entry.schemaRevision && candidate.fingerprint === entry.fingerprint);
+                const schemaId = mapping.get(entry.schemaId) ?? entry.schemaId, snapshot = sourceSnapshots.find(candidate => candidate.projectId === sourceManifest.projectId && candidate.schemaId === entry.schemaId && candidate.schemaRevision === entry.schemaRevision && candidate.fingerprint === entry.fingerprint);
                 if (!snapshot)
-                    throw new DOMException(`Imported production schema ${entry.schemaId}:${entry.schemaRevision} has no matching immutable snapshot.`, "DataError");
+                    throw new DOMException(`Imported production schema ${entry.schemaId}:${entry.schemaRevision} has no matching immutable snapshot fingerprint.`, "DataError");
+                const fingerprint = await checksum(JSON.stringify(comparable(snapshot.effectiveSchema)));
+                if (fingerprint !== entry.fingerprint)
+                    throw new DOMException(`Imported production schema ${entry.schemaId}:${entry.schemaRevision} content fingerprint does not match its bytes.`, "DataError");
                 entries.push({ schemaId, schemaRevision: entry.schemaRevision, fingerprint: entry.fingerprint, snapshotKey: `${input.projectId}:${schemaId}:${entry.schemaRevision}` });
                 snapshots.push({ ...clone(snapshot), projectId: input.projectId, schemaId, createdAt: at });
             }
-            production = { manifest: { ...clone(sourceManifest), projectId: input.projectId, projectRevision: publishedRevision, publishedAt: at, schemas: entries }, snapshots };
+            const sourceProjectFingerprint = await checksum(JSON.stringify({ project: productionProject(sourcePublishedProject), schemas: sourceManifest.schemas.map(({ schemaId, fingerprint }) => ({ schemaId, fingerprint })).sort((left, right) => left.schemaId.localeCompare(right.schemaId)) }));
+            if (sourceProjectFingerprint !== sourceManifest.projectFingerprint)
+                throw new DOMException("Imported production Project content fingerprint does not match its immutable snapshot.", "DataError");
+            const projectFingerprint = await checksum(JSON.stringify({ project: productionProject(publishedProject), schemas: entries.map(({ schemaId, fingerprint }) => ({ schemaId, fingerprint })).sort((left, right) => left.schemaId.localeCompare(right.schemaId)) }));
+            production = { manifest: { ...clone(sourceManifest), projectId: input.projectId, projectRevision: publishedRevision, projectFingerprint, publishedAt: at, schemas: entries }, snapshots };
         }
         await this.putProjectMetadataOnly({ project, ...(record(bundle.draft) ? { draft: remapProjectReferences(compactLegacyEditHistory(bundle.draft).value, mapping) } : {}), history: { undo: [], redo: [] } }, { publishedRevision, ...(publishedProject ? { publishedProject } : {}), ...(production ? { production } : {}), active: false });
         return { projectId: input.projectId, active: false };
@@ -624,7 +648,7 @@ export async function openIndexedDbProjectRepository(factory = globalThis.indexe
     throw new DOMException("IndexedDB is unavailable.", "InvalidStateError"); const request = factory.open(DURABLE_PROJECT_DATABASE, DURABLE_PROJECT_DATABASE_VERSION), database = await new Promise((resolve, reject) => { request.onupgradeneeded = () => { if (request.result.objectStoreNames.contains("changes"))
     request.result.deleteObjectStore("changes"); for (const store of DURABLE_PROJECT_STORES)
     if (!request.result.objectStoreNames.contains(store))
-        request.result.createObjectStore(store); }; request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error ?? new Error("Cannot open the durable project repository.")); request.onblocked = () => reject(new DOMException("The durable project repository upgrade is blocked.", "InvalidStateError")); }); const repository = new DurableProjectRepository(new IndexedDbBackend(database), { now: options.now ?? (() => new Date().toISOString()), token: options.token ?? (() => `draft:${crypto.randomUUID()}`) }); await repository.repairOrphanFlowGraphs(); return repository; }
+        request.result.createObjectStore(store); }; request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error ?? new Error("Cannot open the durable project repository.")); request.onblocked = () => reject(new DOMException("The durable project repository upgrade is blocked.", "InvalidStateError")); }); const repository = new DurableProjectRepository(new IndexedDbBackend(database), { now: options.now ?? (() => new Date().toISOString()), token: options.token ?? (() => `draft:${crypto.randomUUID()}`) }); await repository.compactLegacyDurableSchemaHistory(); await repository.repairOrphanFlowGraphs(); return repository; }
 export class DurablePageHistoryConflict extends DOMException {
     projectId;
     commandId;
