@@ -122,7 +122,7 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
             const message = "the rules cannot both match", origin = facetSource(prior, "patterns");
             conflict(constraint.path, message, [origin.contributorName, contributor.name], { ...issue(prior, constraint, contributor, "patterns", "Pattern rule", "Rules", prior.patterns, constraint.patterns, message), ...ruleDetails(prior, pair) });
         }
-        next.patterns = replacedAny ? [...retainedPatterns, ...clone(constraint.patterns)] : parallelPeer ? canonicalUnion(prior.patterns ?? [], constraint.patterns) : [...(prior.patterns ?? []), ...constraint.patterns];
+        next.patterns = canonicalUnion(retainedPatterns, constraint.patterns);
         next.facetSources = { ...next.facetSources, patterns: source };
     }
     if (constraint.minimum !== undefined)
