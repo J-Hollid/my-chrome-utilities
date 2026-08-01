@@ -72,12 +72,13 @@ Feature: Data layer Page Group structural authoring
 
   # Data layer Page Group structural authoring 006
   Scenario: Data layer Page Group structural authoring 006
-    Given Cart documentation uses the default applicability preview
-    When the operator generates Cart specification documentation
-    Then documentation contains the effective ordered composition and superseded provenance
-    And it identifies the referenced Applicability Set for each Page Group
-    And it does not evaluate any Applicability Set against an empty payload
-    And Fixture-specific documentation identifies its independently matched sets as an evaluated example
+    Given Client specification selects Cart as a Page context in its project capture matrix
+    And Cart's default preview composes every Page Group in membership order without an observation
+    When the operator refreshes the Documentation workspace preview
+    Then the Data capture matrix contains one Cart column and the union of Cart's effective property paths
+    And each Cart cell describes the effective property as Mandatory, Optional, Conditional, Not expected, Not defined, or Blocked
+    And the matrix does not evaluate an Applicability Set against an empty payload
+    And it contains no Page-owned documentation action, provenance column, source identity, or Fixture-specific section
 
   # Data layer Page Group structural authoring 007
   Scenario: Data layer Page Group structural authoring 007
@@ -115,7 +116,9 @@ Feature: Data layer Page Group structural authoring
   Scenario: Data layer Page Group structural authoring 009
     Given Cart inherits a Shared Profile property through a participating Page Group
     And Cart is used by a Flow Page instance and a matching Fixture
-    When the operator reviews the Page, Flow Page instance, Fixture result, and Page documentation
-    Then every surface contains the same inherited Shared Profile property
-    And each surface preserves the Shared Profile, Page Group, Page, and downstream provenance
+    And Client specification selects Cart as a Page context in its project capture matrix
+    When the operator reviews the Page, Flow Page instance, Fixture result, and refreshed Data capture matrix
+    Then every surface resolves the same inherited Shared Profile property from Cart's transitive effective schema
+    And the Page, Flow Page instance, and Fixture result preserve their complete contributor provenance
+    And the matrix identifies Cart by its human context heading and effective state without exporting provenance
     And no surface substitutes the Page Group's local-only schema for its effective schema

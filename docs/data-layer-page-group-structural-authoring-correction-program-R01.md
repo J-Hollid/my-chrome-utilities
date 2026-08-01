@@ -78,13 +78,19 @@ or other example categories are never generated as product-owned observations.
 Captured Live events continue to use their real payloads in their owning testing
 surface.
 
-### Documentation preserves the specification
+### Project Documentation consumes the effective Page context
 
-Documentation generated without a Fixture uses the all-checked ordered composition,
-including effective and superseded provenance plus each group's referenced
-Applicability Set. It does not evaluate conditions against an empty payload. A
-document generated for a selected Fixture labels its independently matched sets and
-schema as an evaluated example.
+The project Documentation workspace owns operator documentation. A Documentation
+Set may select a Page such as Cart as one schema context in its independent Data
+capture matrix. Refresh derives that column from the Page's all-participating
+effective schema without evaluating an Applicability Set against an empty payload.
+Rows are the union of effective property paths and cells use the matrix's ordinary
+Mandatory, Optional, Conditional, Not expected, Not defined, or Blocked states.
+
+The matrix does not expose contributor provenance, source identities, diagnostics,
+or a Fixture-specific section. Page, Flow Page-instance, and Fixture surfaces retain
+their own provenance where it serves authoring or testing. There is no standalone
+Page specification generator.
 
 ## Acceptance mapping
 
@@ -95,16 +101,17 @@ schema as an evaluated example.
 | Independent contexts cannot be previewed together | Structural authoring 003 | Any checkbox combination recomposes without project writes |
 | Reorder does not resolve ordinary conflicts | Structural authoring 004 | Later ordinary facets win with superseded provenance |
 | Applicability Sets incorrectly compete globally | Structural authoring 005 | Every set evaluates independently and only Assignments can tie |
-| Generic documentation drops composition context | Structural authoring 006 | All-checked ordered output preserves applicability and provenance |
+| Documentation bypasses the effective Page context or restores a removed Page generator | Structural authoring 006 | The project capture matrix derives Cart from the all-participating effective schema under current metadata rules |
 | Shared Profile inheritance stops at Page Groups | Structural authoring 007 | Multiple Page Group profiles populate the Page table with complete provenance |
 | Repeated profile reachability duplicates or loses properties | Structural authoring 008 | Stable profile identity deduplicates values while retaining every route |
-| Downstream surfaces flatten Page Groups to local schema | Structural authoring 009 | Page instances, Fixtures, validation, and documentation use the same transitive graph |
+| Downstream surfaces flatten Page Groups to local schema | Structural authoring 009 | Page instances, Fixtures, and the project capture matrix use the same transitive graph while only authoring and testing surfaces expose provenance |
 
 ## Scope
 
 This correction covers Page and Page Group configuration, canonical effective
 schema composition, independent Applicability Set evaluation, Fixture-owned
 scenario evaluation, Assignment ambiguity boundaries, ordered ordinary override,
-transitive Shared Profile inheritance, and Page schema documentation. It does not
-change live event capture or conditional rule authoring inside a canonical
-property.
+transitive Shared Profile inheritance, and project Documentation consumption of a
+Page effective schema. It does not change live event capture, restore a Page-owned
+documentation generator, add provenance to project output, or change conditional
+rule authoring inside a canonical property.
