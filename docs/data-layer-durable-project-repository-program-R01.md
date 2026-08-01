@@ -139,6 +139,23 @@ immutable published project revision. Ordinary create, edit, delete, Undo, Redo,
 switch, reload, and autosave operations update the Saved Draft without advancing the
 published revision.
 
+Every publishable effective schema also has a stable production revision independent
+of the Project revision. Successful Publish fingerprints each effective exported
+schema, including inherited content and exported annotations such as Concept. The
+Project revision advances once when the publication differs from current Production.
+A Schema revision advances only when that schema's effective fingerprint differs from
+its preceding production fingerprint. A parent change therefore advances each
+downstream schema whose effective output changed, while a Flow-only or unrelated
+schema change leaves unaffected Schema revisions unchanged. Reversing Draft edits back
+to current Production makes Publish a no-op; failed and no-op publications create no
+Project revision, Schema revision, manifest, or immutable snapshot.
+
+The production manifest maps stable project and schema identities to Project and
+Schema revisions, fingerprints, and immutable effective-schema snapshots. Validation
+evidence and developer export use that tuple so an external consumer can reproduce the
+exact schema contract. A later Draft describes itself as based on the current Schema
+revision but cannot change production evidence before Publish.
+
 Builder, side panel, Specification Studio, and the extension service worker access
 one asynchronous repository interface. Production extension messaging publishes
 project identity, Draft token, command identity, and changed record identities. Each
@@ -182,10 +199,10 @@ For the same stable project identity:
 
 The successful migration transaction writes canonical records, active identity,
 saved-schema definitions, fixtures, Flow graphs, releases, a migration receipt, and
-one recoverable backup containing the original source
-payloads and checksums. It reads the durable records back and compares the migration
-manifest before reporting success. Only after verification are migrated document
-keys removed from Web Storage.
+one recoverable backup containing the original source payloads and checksums, subject
+to the obsolete-journal exception below. It reads the durable records back and
+compares the migration manifest before reporting success. Only after verification are
+migrated document keys removed from Web Storage.
 
 The prior full-snapshot Undo/Redo arrays do not remain in the active canonical
 record. Their original bytes remain in the migration backup only. The installed
@@ -193,6 +210,22 @@ notice explains that pre-upgrade Undo and Redo were not migrated without calling
 project content lost.
 Deleting the backup is a separate named consequence review; it never changes the
 current project.
+
+Older schemas may contain an edit-count `revision` and an unbounded `changes` journal.
+Neither value is a production revision or recoverable Undo history. Migration
+preserves current Draft content, stable identities, genuine project publications, and
+external lineage, then reconstructs each Schema revision from distinct available
+production fingerprints. A never-published schema starts at Schema revision 0. After
+verified durable read-back, the obsolete edit revision and journal are dropped from
+active records and exports and are not retained in the recovery backup. The migration
+receipt retains only removed-entry counts and before-and-after checksums. This narrow
+compaction creates no production revision and is idempotent.
+
+Ordinary project export contains the latest Saved Draft, its base Project revision,
+the current production project snapshot and schema manifest, and the current schema
+snapshots referenced by that manifest. It excludes opaque Draft tokens, field stamps,
+edit journals, and older production snapshots. Complete production history is
+available only through the separately requested repository recovery archive.
 
 If migration fails, the IndexedDB transaction aborts, no legacy source is deleted,
 and a recovery-only interface offers source export and exact repair. Concurrent
@@ -257,8 +290,9 @@ Storage and recovery interface.
 ### Phase D — legacy migration and cleanup
 
 Migrate legacy Web Storage atomically, reconcile duplicate active records, preserve
-checksummed backups, omit prior history from active records, verify read-back, remove migrated
-document keys, and prove idempotent concurrent startup.
+checksummed backups, omit prior Undo/Redo from active records, compact obsolete schema
+edit journals after verified read-back, reconstruct selective Schema revisions, remove
+migrated document keys, and prove idempotent concurrent startup.
 
 ### Phase E — installed extension terminal proof
 
@@ -285,6 +319,10 @@ the installed extension.
 | D12 | Releases and fixtures are duplicated through history | Durable repository 011; runtime 012 | Editing and export preserve immutable evidence without Undo copies | Release, fixture, page history, serializer, and importer boundaries | Record hashes, memory stack, parsed export, import transaction keys | B, E | Large immutable records remain single durable records and export semantics hold |
 | D13 | Web Storage remains a parallel canonical model | Durable repository 012; runtime 009 | All surfaces converge after reload without project `storage` events | Repository adapters, extension messaging, migration cleanup | Web Storage write trap, change-feed messages, reload tokens | B, D, E | No canonical project document or payload is written to Web Storage after migration |
 | D14 | A larger quota could mask broken failure behavior | Durable repository 006–007; runtime 002 and 006 | Unlimited storage is explained as resilience, not proof of save | Manifest permission and fault-injectable repository | Permission inspection plus quota, abort, and unavailable failures | A, E | Installed permission coexists with truthful recovery for every injected failure |
+| D15 | Canonical schema edit journals grow once per Draft change | Durable repository 014; runtime 014 | A thousand Draft edits reload exactly without becoming durable revision history | Canonical schema records, Draft transaction, serializer | Parsed records and export, production revisions, stale-write evidence | B, E | No edit-count revision or command/change/patch journal persists while opaque tokens still reject overlapping edits |
+| D16 | Project publication cannot identify independently changed schemas | Durable repository 015–016; runtime 015–016 | Publish advances only changed production identities and reports a no-op accurately | Publisher, effective-schema fingerprinting, production manifest | Project and Schema revision maps, snapshot write trace, failure injection | B, E | Project advances once for a changed publish; only changed effective schemas advance; no-op and failure advance nothing |
+| D17 | External consumers cannot reproduce the exact validated schema | Durable repository 017; runtime 017 | Validation and developer export identify an immutable effective schema independently of later Drafts | Production manifest, validation evidence, developer serializer | Stable identities, revisions, fingerprint, immutable byte lookup | B, E | Evidence resolves to exact production bytes and remains stable across unpublished edits |
+| D18 | Legacy edit counts masquerade as production history | Durable repository 018; portability 007; both runtime counterparts | Upgrade preserves content and genuine lineage while removing meaningless edit history | Installed migrator and project importer | Legacy journal, distinct production fingerprints, read-back order, compact receipt, repeat load | D, E | Schema revisions derive only from production content, never-published schemas use 0, and discarded journals do not survive active storage or export |
 
 ## Assumptions and unresolved product decisions
 
@@ -294,10 +332,12 @@ the installed extension.
   tool expected to hold large schemas, fixtures, documentation, and releases.
 - Undo and Redo exist only in the open page's memory. Closing, reloading, or
   replacing that project page intentionally discards them.
-- Opaque Draft tokens exist only for concurrency. The only operator-visible,
-  long-term project revision is created by intentional Publish.
+- Opaque Draft tokens exist only for concurrency. Operator-visible Project and Schema
+  revisions are production identities created only by intentional Publish.
 - Legacy backups remain until the operator exports or explicitly deletes them.
-  Automatic expiry is not authorized in this revision.
+  Automatic expiry is not authorized in this revision. Obsolete per-edit schema
+  journals are the sole exception: verified migration replaces them with a compact
+  checksummed receipt rather than backing up their entries.
 - Compression and content deduplication may optimize records later but cannot
   replace record-level writes, page-scoped history, or failure recovery.
 - Unrelated Live session, defect, and event-template storage are not migrated by

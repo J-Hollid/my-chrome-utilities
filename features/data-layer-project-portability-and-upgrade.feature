@@ -62,3 +62,23 @@ Feature: Data layer project portability and upgrade
     And the imported project has remapped stable references and the same effective schema meaning as its source
     When the side panel and Specification Studio reload
     Then both restore the imported project as active and show no entity from Retail website or Agency platform
+
+  # Data layer project portability and upgrade 006
+  Scenario: Data layer project portability and upgrade 006
+    Given Retail website has a newer Saved Draft above production baseline 13 and its schema manifest
+    When the operator exports the project normally
+    Then the bundle contains the current Saved Draft, its base Project revision 13, current production project snapshot, schema manifest, and referenced current schema snapshots
+    And every schema entry has one stable schema identity and its selective production Schema revision
+    And it contains no per-edit revision, canonical change list, opaque Draft token, field stamp, Undo, Redo, or older production snapshot
+    And a separately requested repository recovery archive remains the only export that includes complete production history
+
+  # Data layer project portability and upgrade 007
+  Scenario: Data layer project portability and upgrade 007
+    Given an older project bundle contains Project revision 3 and a schema at edit revision 2847 with 2847 change entries
+    When the operator stages it through Import project
+    Then import review reports that legacy edit revisions will be compacted without changing current schema content or genuine publication lineage
+    When Import as new project is confirmed
+    Then the imported project retains Project revision 3 and reconstructs Schema revisions only from distinct production snapshots
+    And the latest Draft content and remapped stable references remain exact
+    And imported active records and later ordinary exports contain no discarded edit revision or change entry
+    And the source project and every pre-existing project remain unchanged

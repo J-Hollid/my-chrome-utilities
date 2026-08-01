@@ -62,3 +62,23 @@ Feature: Data layer project portability and upgrade runtime
     And the imported graph uses remapped stable references with effective schema output equivalent to Retail website
     When the installed side panel and Specification Studio reload
     Then both render the imported project as active with no Retail website or Agency platform entity in their project-bound views
+
+  # Data layer project portability and upgrade runtime 006
+  Scenario: Data layer project portability and upgrade runtime 006
+    Given production Retail website has Project revision 13, its schema manifest, and a newer Saved Draft
+    When actual Projects controls export Retail website
+    Then parsed bundle bytes contain the current Draft, base Project revision 13, current production project snapshot, schema manifest, and referenced current schema snapshots
+    And each manifest entry contains one stable schema identity and selective production Schema revision
+    And recursive key inspection finds no per-edit revision, canonical changes array, Draft token, field stamp, Undo, Redo, or older production snapshot
+    And only the separately invoked repository recovery export contains all production-history records
+
+  # Data layer project portability and upgrade runtime 007
+  Scenario: Data layer project portability and upgrade runtime 007
+    Given an older bundle contains Project revision 3 and one canonical schema with edit revision 2847 and 2847 change entries
+    When actual controls choose that file through Import project
+    Then rendered review identifies legacy edit-revision compaction while reporting unchanged current content and genuine publication lineage
+    When actual controls confirm Import as new project
+    Then repository inspection finds Project revision 3 and Schema revisions reconstructed only from distinct production fingerprints
+    And current Draft hashes and every remapped stable reference match the staged result
+    And active imported records and their ordinary re-export contain no edit revision or canonical changes array
+    And hashes for the source and every pre-existing project remain unchanged

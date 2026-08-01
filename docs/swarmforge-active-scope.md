@@ -829,6 +829,37 @@ snapshot, history, or checkpoint record persists. A bulk edit remains one atomic
 page-scoped Undo action. Only an intentional Publish creates the next immutable
 project revision.
 
+On approval, the selective production revision correction is later authority for
+durable-repository scenarios 014–018 and project-portability scenarios 006–007.
+Project revisions and stable schema-specific revisions are production identities
+created only by a successful intentional Publish. Draft saves use opaque concurrency
+tokens and persist no edit-count revision or per-command change journal. A no-op or
+failed Publish creates no production identity.
+
+Each Publish fingerprints every publishable target's effective exported schema.
+The Project revision advances once for a changed project, while a target's Schema
+revision advances only when its effective exported content differs from that
+target's preceding production fingerprint. Inherited changes therefore advance
+affected downstream effective schemas; unrelated project changes do not. Concept
+and other exported schema annotations count as schema content. The production
+manifest maps stable project and schema identities, Project and Schema revisions,
+fingerprints, and immutable schema snapshots so external validation and developer
+export can identify and reproduce the exact effective contract.
+
+Ordinary project export contains the latest Saved Draft, its base Project revision,
+and only the current production project snapshot, schema manifest, and referenced
+current schema snapshots. Complete production history belongs only to the explicit
+repository recovery archive. Older installed
+projects and imported bundles are compacted atomically: current Draft content,
+stable identities, genuine publications, and external lineage survive; legacy
+per-edit revisions and change arrays are discarded after verified read-back.
+Schema revisions are reconstructed from distinct available production fingerprints,
+with revision 0 for a never-published schema, and never inherit the legacy edit
+count. A compact receipt retains removed-entry counts and checksums without retaining
+the discarded journal. Migration creates no production revision and is idempotent.
+The exact checkpoint is `durable_project_repository`, followed by
+`node scripts/package.mjs`.
+
 Legacy equal-generation divergence blocks for explicit source selection. Successful
 migration verifies durable read-back, retains a checksummed recovery backup, omits
 legacy Undo and Redo from active records, and only then removes migrated document

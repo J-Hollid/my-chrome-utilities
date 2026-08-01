@@ -128,3 +128,57 @@ Feature: Data layer durable project repository runtime
     And the installed Payment removal review contains no flow-orphan text or Open flow-orphan control
     And the new Saved Draft token is observed without changing Published revision 3 or unrelated record hashes
     But an injected backup, delete, receipt, or verification failure aborts all repair writes and preserves the original flowGraphs bytes
+
+  # Data layer durable project repository runtime 014
+  Scenario: Data layer durable project repository runtime 014
+    Given production Retail website's baseline is Project 12, Sitewide 4, and Cart 7
+    When actual controls durably save 1000 Draft edits without publishing
+    Then repository reload returns the exact latest Draft content
+    And stored production Project and Schema revisions remain 12, 4, and 7
+    And parsed entity records and ordinary project export contain no canonical changes array, edit-count revision, command journal, or patch journal
+    And stale-write tests still use opaque tokens while rendered version labels expose only production revisions
+
+  # Data layer durable project repository runtime 015
+  Scenario Outline: Data layer durable project repository runtime 015
+    Given the stored manifest assigns 12 to the Project and 4, 7, and 2 to Sitewide, Cart, and Purchase
+    And compiled Cart inherits Sitewide while Purchase does not
+    When actual Publish commits a Draft whose only difference is <change>
+    Then repository metadata advances to Project revision 13
+    And the persisted production manifest maps Sitewide to <sitewide_revision>, Cart to <cart_revision>, and Purchase to <purchase_revision>
+    And project-revision writes add immutable snapshots only for changed effective schema fingerprints
+
+    Examples:
+      | change                      | sitewide_revision | cart_revision | purchase_revision |
+      | Flow layout                 | revision 4        | revision 7    | revision 2        |
+      | Cart local Range rule       | revision 4        | revision 8    | revision 2        |
+      | Sitewide inherited property | revision 5        | revision 8    | revision 2        |
+      | Sitewide Concept annotation | revision 5        | revision 8    | revision 2        |
+
+  # Data layer durable project repository runtime 016
+  Scenario: Data layer durable project repository runtime 016
+    Given production Retail website is at Project revision 12 and its Draft fingerprint returns to the production fingerprint
+    When actual Publish is invoked
+    Then the installed review reports no production changes
+    And write tracing finds no Project revision, Schema revision, manifest, or snapshot write
+    But an injected failure during a changed publication also leaves all production revision records byte-identical
+
+  # Data layer durable project repository runtime 017
+  Scenario: Data layer durable project repository runtime 017
+    Given immutable Cart publication 8 belongs to production Project publication 13
+    When installed production validation and developer export consume Cart's effective schema
+    Then parsed evidence contains stable project and Cart schema identities, Project revision 13, Schema revision 8, and the production fingerprint
+    And repository lookup resolves that tuple to the exact immutable effective-schema bytes
+    When actual controls save a later unpublished Cart edit
+    Then the Draft preview renders based on Schema revision 8
+    And repeated production validation and developer export retain revision 8 and its prior fingerprint
+
+  # Data layer durable project repository runtime 018
+  Scenario: Data layer durable project repository runtime 018
+    Given production storage contains an older Project revision 3 whose canonical schema has edit revision 2847 and 2847 change entries
+    And its immutable production records contain two distinct effective schema fingerprints
+    When installed startup loads that project
+    Then one migration transaction preserves current Draft hashes, stable identities, Project revision 3, and external published lineage
+    And repository bytes contain reconstructed Schema revision 2 plus Schema revision 0 for a never-published schema
+    And migrated storage and ordinary export omit the old revision field and all 2847 journal items
+    And read-back verification occurs before the old journal is deleted and a compact receipt records 2847 plus before-and-after checksums
+    And reload tracing finds no second migration or production revision write

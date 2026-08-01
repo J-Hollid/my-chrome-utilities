@@ -138,3 +138,58 @@ Feature: Data layer durable project repository
     And dependency discovery no longer treats flow-orphan as a Payment dependency or navigable entity
     And the Saved Draft token advances while Published revision 3 and unrelated durable records remain unchanged
     But if backup, deletion, receipt, or read-back verification fails, the repair transaction aborts with the original orphan record intact
+
+  # Data layer durable project repository 014
+  Scenario: Data layer durable project repository 014
+    Given Retail website's production baseline is Project 12, Sitewide 4, and Cart 7
+    When the operator saves 1000 Draft edits before publishing
+    Then the latest Saved Draft content remains exact after reload
+    And Project revision 12 and both Schema revisions remain unchanged
+    And persisted project records and ordinary project export contain no per-edit revision, change list, command journal, or patch journal
+    And opaque Draft tokens still protect overlapping edits without becoming domain data or operator-visible versions
+
+  # Data layer durable project repository 015
+  Scenario Outline: Data layer durable project repository 015
+    Given the current manifest assigns 12 to the Project and 4, 7, and 2 to Sitewide, Cart, and Purchase
+    And Cart's effective schema inherits Sitewide while Purchase does not
+    When the operator publishes a Draft whose only difference is <change>
+    Then Production Project revision 13 is created
+    And the new manifest entries are Sitewide <sitewide_revision>, Cart <cart_revision>, and Purchase <purchase_revision>
+    And only schemas whose effective exported content changed receive a new immutable schema snapshot
+
+    Examples:
+      | change                      | sitewide_revision | cart_revision | purchase_revision |
+      | Flow layout                 | revision 4        | revision 7    | revision 2        |
+      | Cart local Range rule       | revision 4        | revision 8    | revision 2        |
+      | Sitewide inherited property | revision 5        | revision 8    | revision 2        |
+      | Sitewide Concept annotation | revision 5        | revision 8    | revision 2        |
+
+  # Data layer durable project repository 016
+  Scenario: Data layer durable project repository 016
+    Given Retail website has Project revision 12 and the Draft returns to the same publishable content after edits are reversed
+    When the operator invokes Publish
+    Then the review reports that there are no production changes
+    And no Project revision, Schema revision, production manifest, or immutable snapshot is created
+    But if an actual publication transaction fails, every Project and Schema revision remains at its prior production value
+
+  # Data layer durable project repository 017
+  Scenario: Data layer durable project repository 017
+    Given immutable Cart publication 8 belongs to Project publication 13
+    When production validation or developer export uses Cart's effective schema
+    Then its evidence identifies the stable project, Project revision 13, stable Cart schema, Schema revision 8, and production fingerprint
+    And the production manifest resolves that identity and fingerprint to the exact immutable effective schema
+    When a later Cart Draft edit is saved without publishing
+    Then Draft preview says it is based on Schema revision 8
+    And production validation and developer export continue to identify Schema revision 8
+
+  # Data layer durable project repository 018
+  Scenario: Data layer durable project repository 018
+    Given a project from an older extension has Project revision 3 and a canonical schema with edit revision 2847 and 2847 change entries
+    And its available production snapshots contain two distinct effective versions of that schema
+    When the upgraded extension loads the project
+    Then one atomic migration preserves the latest Draft content, stable identities, genuine Project revision 3, and external published lineage
+    And it reconstructs Schema revision 2 from distinct production content rather than edit revision 2847
+    And a never-published schema receives Schema revision 0
+    And the migrated schema omits the old revision field and all 2847 journal items from active storage and ordinary export
+    And verified read-back precedes removal of the discarded journal while a compact receipt retains its entry count and before-and-after checksums
+    And migration creates no production revision and does not run again on later loads
