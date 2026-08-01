@@ -361,7 +361,7 @@ Feature: Data layer layered schema constraints
 
     Examples:
       | rule_state  | available_actions                    | unavailable_actions                      |
-      | ordinary    | View and Open source                 | Override, Replace, Edit, and Remove       |
+      | ordinary    | View, Override here, and Open source | Replace, Edit, and Remove                 |
       | invariant   | View and Open source                 | Override, Replace, Edit, and Remove       |
       | replaceable | View, Replace here, and Open source | Override, Edit, and Remove                |
 
@@ -384,58 +384,98 @@ Feature: Data layer layered schema constraints
   # Data layer layered schema constraints 026
   Scenario Outline: Data layer layered schema constraints 026
     Given Checkout inherits ordinary <facet> <parent_value> for customer_status from Sitewide
-    When Checkout stores only local <facet> <local_value>
+    When Checkout stores only compatible local <facet> <local_value>
     Then customer_status is a valid sparse Checkout override rather than a conflict
     And its row distinguishes Sitewide <parent_value> from effective Checkout <local_value>
     And the effective schema is Ready for validation and developer export
 
     Examples:
-      | facet    | parent_value | local_value |
-      | Type     | String       | Number      |
-      | Presence | Required     | Forbidden   |
+      | facet                 | parent_value          | local_value             |
+      | Concept               | Customer              | Account                 |
+      | Type                  | String                | Number                  |
+      | Presence              | Optional              | Required                |
+      | Allowed values        | active and pending    | active                  |
+      | Expected value        | active                | pending                 |
+      | Description           | Parent description    | Checkout description    |
+      | Example               | parent-example        | checkout-example        |
+      | named validation rule | Parent account format | Checkout account format |
+      | array item definition | String items          | Number items            |
 
   # Data layer layered schema constraints 027
   Scenario Outline: Data layer layered schema constraints 027
-    Given <property> has an unresolved Type conflict between Checkout <local_value> and Sitewide <source_value>
+    Given two properties need decisions
+    And customer_status has an unresolved <facet> issue between Checkout <local_value> and Sitewide <source_value>
     When the operator opens Effective schema at Checkout
     Then the summary says two properties need decisions before validation and developer export
     And Show properties needing decisions filters the existing table without opening another workspace
-    And the <property> row shows Needs decision and Type without displaying internal identities
-    When the operator opens Definition from the property's regular actions
-    Then one concise issue panel says Checkout uses <local_value>, Sitewide uses <source_value>, and Sitewide protects this definition from change
-    And contributor names, property names, facet labels, and operator values replace compiler terminology and internal identities
+    And the customer_status row shows Needs decision and <facet> without displaying internal identities
+    When the operator opens the property's regular advanced menu
+    Then the <section> entry says that <facet> needs a decision
+    When the operator activates that entry
+    Then the editor opens <section> at the affected control or rule
+    And the issue says Checkout uses <local_value>, Sitewide uses <source_value>, and <reason>
+    And Concept is neither marked nor focused for this issue
 
     Examples:
-      | property        | local_value | source_value |
-      | customer_status | Number      | String       |
-      | order_total     | String      | Number       |
+      | facet                       | section    | local_value      | source_value       | reason                                  |
+      | Type                        | Definition | Number           | String             | Sitewide protects this definition       |
+      | Presence                    | Definition | Forbidden        | Required           | Sitewide protects this definition       |
+      | Allowed values              | Definition | closed           | active and pending | closed is outside the available choices |
+      | Expected value              | Definition | closed           | active             | Sitewide keeps active fixed              |
+      | Pattern rule                | Rules      | digits only      | letters only       | the rules cannot both match              |
+      | Range rule                  | Rules      | 10 or more       | 5 or less          | the ranges do not overlap                |
+      | Cardinality rule            | Rules      | at least 5 items | at most 2 items    | the item counts do not overlap           |
+      | Conditional rule dependency | Rules      | exclude country  | requires country   | the rule needs the excluded property     |
+      | Array item definition       | Structure  | Number items     | String items       | existing values do not fit Number items  |
 
   # Data layer layered schema constraints 028
   Scenario Outline: Data layer layered schema constraints 028
-    Given Checkout <local_state> for <property> conflicts with protected Sitewide <facet> <source_value>
-    When the operator opens Definition from the property's regular actions
+    Given customer_status's <facet> decision is caused by <issue_kind>
+    When its targeted issue panel is displayed in <section>
     Then the issue panel offers <resolution_action>
-    And it offers Open Sitewide without changing either contributor
+    And it offers the legal named source actions without changing a contributor
     And no unavailable, duplicate, or ineffective resolution action is shown
     When the operator chooses <resolution_action>
-    Then review shows that only Checkout <changed_content> will be removed
-    And the prospective effective <facet> is Sitewide <source_value>
-    When the operator confirms the reviewed facet repair
+    Then review shows that only <changed_content> will change
+    And the prospective effective result is <prospective_result>
+    When the operator confirms the reviewed repair
     Then the conflict is removed and the effective schema recompiles immediately
     And one property-scoped Saved Draft command creates one Undo action
     And Sitewide, siblings, unrelated Checkout facets, and Published state remain unchanged
 
     Examples:
-      | local_state                     | property        | facet    | source_value | resolution_action     | changed_content       |
-      | stores local Type Number        | customer_status | Type     | String       | Use Sitewide Type     | Type contribution     |
-      | stores local Presence Forbidden | order_total     | Presence | Required     | Use Sitewide Presence | Presence contribution |
+      | issue_kind               | facet          | section    | resolution_action                    | changed_content                 | prospective_result       |
+      | protected parent         | Type           | Definition | Use Sitewide Type                    | Checkout Type contribution      | Sitewide String           |
+      | invariant parent         | Range rule     | Rules      | Remove Checkout Range rule           | Checkout Range rule             | Sitewide Range rule       |
+      | ordinary parallel-parent | Allowed values | Definition | Use Checkout Allowed values here     | contextual Allowed values facet | Checkout allowed values   |
+      | ordinary inherited-rule  | Pattern rule   | Rules      | Override Sitewide Pattern rule here  | contextual Pattern rule         | Checkout Pattern rule     |
 
   # Data layer layered schema constraints 029
   Scenario: Data layer layered schema constraints 029
-    Given two Checkout properties need decisions and every other effective property is ready
-    When the operator resolves the first property through its Definition issue panel
-    Then the summary reports one remaining property without losing the table filter or position
-    When the operator resolves the remaining property
+    Given customer_status needs decisions for Allowed values and one Range rule
+    And order_total needs a decision for Type
+    When the operator opens Effective schema at Checkout
+    Then the summary says two properties need decisions before validation and developer export
+    And customer_status says Needs decision with two affected facets
+    And its regular advanced menu marks only Definition and Rules
+    When the operator resolves the Allowed values decision
+    Then the Range rule decision remains on customer_status without losing the table filter or position
+    And no unrelated facet, rule, contributor, or property changes
+    When the operator resolves the remaining decisions
     Then the Needs decision summary and filter action disappear
-    And all effective properties remain visible in the ordinary table
     And validation and developer export become available without a separate conflict-resolution screen
+
+  # Data layer layered schema constraints 030
+  Scenario Outline: Data layer layered schema constraints 030
+    Given Sitewide defines customer_status with Concept Customer
+    And an imported Checkout contribution for the same path has <local_concept>
+    When Checkout's effective schema is compiled
+    Then <effective_concept>
+    And customer_status does not need a decision
+    And validation and developer export remain available
+    And import-created ownership or property identity differences do not become schema conflicts
+
+    Examples:
+      | local_concept          | effective_concept                            |
+      | no local Concept facet | Sitewide Concept Customer remains effective |
+      | local Concept Account  | Checkout Concept Account becomes effective  |

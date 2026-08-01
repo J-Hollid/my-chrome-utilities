@@ -605,6 +605,30 @@ one Undo action, recompiles immediately, and preserves the operator's table filt
 and position while further decisions remain. The exact checkpoint remains
 `layered_schema`, followed by `npm run package`.
 
+On approval, the complete property-facet conflict correction is later authority
+for layered-schema scenarios 023 and 026–030. Concept, documentation, examples,
+stable identity, and ownership metadata never block validation or developer export.
+An imported local property with no Concept facet inherits its contributor parent;
+an explicit local Concept is an ordinary sparse annotation override. Neither case
+needs a decision.
+
+Every ordinary property attribute and named rule supports an explicit downstream
+override. Protected definitions and invariant rules are the exceptions: they may
+require using or editing the source rather than weakening it locally. A genuine
+unresolved semantic issue records every affected facet or named rule, its human
+contributors and values, its ordinary-language reason, its editor section, and its
+legal targeted resolutions. A property with several issues is counted once in the
+summary while retaining each independent facet decision.
+
+The regular advanced property menu marks only affected Definition, Rules, or
+Structure entries. Selecting one opens and focuses the exact control or rule with
+its explanation and repair actions beside it. A non-Concept issue never routes to,
+marks, or focuses Concept. Repairs change one sparse facet or rule, create one Undo
+action, and recompile immediately without a separate conflict workspace or exposed
+internal identities. This supersedes the Type-and-Presence-only metadata and
+Definition-only routing in scenarios 025–029. The exact checkpoint remains
+`layered_schema`, followed by `npm run package`.
+
 On approval, the structural-authoring documentation-ownership correction is later
 authority for Page Group structural-authoring scenarios 006 and 009. The project
 Documentation workspace owns operator documentation; the Page workspace has no

@@ -358,7 +358,7 @@ Feature: Data layer layered schema constraints runtime
 
     Examples:
       | rule_state  | available_actions                    | unavailable_actions                      |
-      | ordinary    | View and Open source                 | Override, Replace, Edit, and Remove       |
+      | ordinary    | View, Override here, and Open source | Replace, Edit, and Remove                 |
       | invariant   | View and Open source                 | Override, Replace, Edit, and Remove       |
       | replaceable | View, Replace here, and Open source | Override, Edit, and Remove                |
 
@@ -381,55 +381,95 @@ Feature: Data layer layered schema constraints runtime
   # Data layer layered schema constraints runtime 026
   Scenario Outline: Data layer layered schema constraints runtime 026
     Given production Checkout inherits ordinary <facet> <parent_value> for customer_status from Sitewide
-    When repository state contains only sparse Checkout <facet> <local_value>
+    When repository state contains only compatible sparse Checkout <facet> <local_value>
     Then production compilation is Ready with effective <facet> <local_value>
     And the customer_status row renders Sitewide <parent_value> and Checkout <local_value> as inherited and effective values
     And no conflict repair action is rendered
 
     Examples:
-      | facet    | parent_value | local_value |
-      | Type     | String       | Number      |
-      | Presence | Required     | Forbidden   |
+      | facet                 | parent_value          | local_value             |
+      | Concept               | Customer              | Account                 |
+      | Type                  | String                | Number                  |
+      | Presence              | Optional              | Required                |
+      | Allowed values        | active and pending    | active                  |
+      | Expected value        | active                | pending                 |
+      | Description           | Parent description    | Checkout description    |
+      | Example               | parent-example        | checkout-example        |
+      | named validation rule | Parent account format | Checkout account format |
+      | array item definition | String items          | Number items            |
 
   # Data layer layered schema constraints runtime 027
   Scenario Outline: Data layer layered schema constraints runtime 027
-    Given production has two protected-facet conflicts including <property>
+    Given production has two properties needing decisions
+    And customer_status has an unresolved <facet> issue between Checkout <local_value> and Sitewide <source_value>
     When the installed extension opens Effective schema at Checkout
     Then the status reports two properties need decisions before validation and developer export
     And Show properties needing decisions filters the mounted effective-schema table
-    And the <property> row renders Needs decision and Type without internal identities
-    When actual controls open Definition from the property's regular actions
-    Then one issue panel renders Checkout <local_value>, Sitewide <source_value>, and Sitewide protects this definition from change
-    And rendered conflict copy contains no stable identity, opaque token, peer-group, compiler, or provenance jargon
+    And the customer_status row renders Needs decision and <facet> without internal identities
+    When actual controls open its regular advanced menu
+    Then the <section> entry identifies <facet> as needing a decision
+    When actual controls activate that entry
+    Then the installed editor opens <section> with focus at the affected control or rule
+    And adjacent issue copy renders Checkout <local_value>, Sitewide <source_value>, and <reason>
+    And no Concept control is marked or focused
 
     Examples:
-      | property        | local_value | source_value |
-      | customer_status | Number      | String       |
-      | order_total     | String      | Number       |
+      | facet                       | section    | local_value      | source_value       | reason                                  |
+      | Type                        | Definition | Number           | String             | Sitewide protects this definition       |
+      | Presence                    | Definition | Forbidden        | Required           | Sitewide protects this definition       |
+      | Allowed values              | Definition | closed           | active and pending | closed is outside the available choices |
+      | Expected value              | Definition | closed           | active             | Sitewide keeps active fixed              |
+      | Pattern rule                | Rules      | digits only      | letters only       | the rules cannot both match              |
+      | Range rule                  | Rules      | 10 or more       | 5 or less          | the ranges do not overlap                |
+      | Cardinality rule            | Rules      | at least 5 items | at most 2 items    | the item counts do not overlap           |
+      | Conditional rule dependency | Rules      | exclude country  | requires country   | the rule needs the excluded property     |
+      | Array item definition       | Structure  | Number items     | String items       | existing values do not fit Number items  |
 
   # Data layer layered schema constraints runtime 028
   Scenario Outline: Data layer layered schema constraints runtime 028
-    Given production Checkout <local_state> for <property> conflicts with protected Sitewide <facet> <source_value>
-    When actual controls open Definition from the property's regular actions
-    Then the issue panel offers <resolution_action> and Open Sitewide
+    Given production customer_status's <facet> decision is caused by <issue_kind>
+    When its targeted issue panel is rendered in <section>
+    Then the issue panel offers <resolution_action> and the legal named source actions
     And no unavailable, duplicate, or ineffective repair is rendered
-    When actual controls apply the reviewed <resolution_action> repair
-    Then repository inspection finds only Checkout <changed_content> removed
-    And production recompiles effective <facet> Sitewide <source_value>
+    When the reviewed <resolution_action> repair is applied
+    Then repository inspection finds only <changed_content> changed
+    And production recompiles <prospective_result>
     And one durable property command and one Undo entry are recorded
     And hashes for Sitewide, siblings, unrelated Checkout facets, and Published state remain unchanged
 
     Examples:
-      | local_state                     | property        | facet    | source_value | resolution_action     | changed_content       |
-      | stores local Type Number        | customer_status | Type     | String       | Use Sitewide Type     | Type contribution     |
-      | stores local Presence Forbidden | order_total     | Presence | Required     | Use Sitewide Presence | Presence contribution |
+      | issue_kind               | facet          | section    | resolution_action                   | changed_content                 | prospective_result       |
+      | protected parent         | Type           | Definition | Use Sitewide Type                   | Checkout Type contribution      | effective Sitewide String |
+      | invariant parent         | Range rule     | Rules      | Remove Checkout Range rule          | Checkout Range rule             | effective Sitewide Range  |
+      | ordinary parallel-parent | Allowed values | Definition | Use Checkout Allowed values here    | contextual Allowed values facet | Checkout allowed values   |
+      | ordinary inherited-rule  | Pattern rule   | Rules      | Override Sitewide Pattern rule here | contextual Pattern rule         | Checkout Pattern rule     |
 
   # Data layer layered schema constraints runtime 029
   Scenario: Data layer layered schema constraints runtime 029
-    Given two production Checkout properties need decisions and every other property is ready
-    When actual controls resolve the first property through its Definition issue panel
-    Then rendered status reports one remaining property and preserves the active table filter and scroll position
-    When actual controls resolve the remaining property
+    Given production customer_status has unresolved Allowed values and Range rule decisions
+    And production order_total has an unresolved Type decision
+    When the installed extension opens Effective schema at Checkout
+    Then the status reports two properties need decisions before validation and developer export
+    And customer_status renders Needs decision with two affected facets
+    And its advanced menu marks only Definition and Rules
+    When actual controls resolve the Allowed values decision
+    Then the Range rule decision remains with the same table filter and scroll position
+    And repository hashes preserve every unrelated facet, rule, contributor, and property
+    When actual controls resolve the remaining decisions
     Then the Needs decision status and filter action are absent
-    And the ordinary effective-schema table again renders every property
     And production validation and developer export become operable without mounting another resolution workspace
+
+  # Data layer layered schema constraints runtime 030
+  Scenario Outline: Data layer layered schema constraints runtime 030
+    Given production Sitewide defines customer_status with Concept Customer
+    And imported Checkout repository state for the same path has <local_concept>
+    When the production compiler resolves Checkout
+    Then <effective_concept>
+    And no decision record exists for customer_status
+    And installed validation and developer export remain operable
+    And distinct imported ownership or property IDs produce no conflict record
+
+    Examples:
+      | local_concept          | effective_concept                           |
+      | no local Concept facet | effective Concept remains Sitewide Customer |
+      | local Concept Account  | effective Concept becomes Checkout Account  |
