@@ -3,6 +3,7 @@ import {
   composedCanonicalSchema,
   composedSchemaWorkspace,
   resetComposedSchemaLocalProperty,
+  resetComposedSchemaLocalFacet,
   saveComposedCanonicalDocument,
   saveComposedEntitySchemaPolicy,
   saveComposedEventCanonicalDocument,
@@ -214,5 +215,33 @@ assert.equal(blockedWorkspace.status,"blocked");
 assert.equal(blockedWorkspace.rows.find(({path})=>path==="/funnel_step").local.expectedValue,"2","the sparse local expectation survives an uncovered parent type conflict");
 assert.equal(blockedWorkspace.rows.find(({path})=>path==="/funnel_step").validationState,"blocked");
 assert.ok(blockedWorkspace.rows.find(({path})=>path==="/funnel_name").repairs.some((repair)=>repair.contributorId==="group:partner"));
+
+const clarity=createSpecificationProject({name:"Conflict clarity",site:"shop.example",id:(kind)=>`${kind}:clarity`});
+clarity.project.collections.profiles.push({id:"profile:clarity",name:"Sitewide",schemaConstraints:[
+  {path:"/customer_status",type:"string",protectedFacets:["type"]},
+  {path:"/order_total",type:"number",presence:"required",protectedFacets:["presence"]},
+]});
+clarity.project.collections.pageGroups.push({id:"group:clarity",name:"Checkout",profileId:"profile:clarity"});
+const emptyCheckout=clarity.project.collections.pageGroups[0],emptyWorkspace=composedSchemaWorkspace(clarity,emptyCheckout,"Page Group");
+assert.equal(emptyWorkspace.status,"ready","a Page Group with one complete Profile and no local contribution compiles Ready");
+assert.equal(emptyWorkspace.conflictSummary,"Ready for validation and developer export.");
+assert.ok(emptyWorkspace.rows.every(({validationState})=>validationState==="ready"));
+
+emptyCheckout.localSchemaContributions=[
+  {path:"/customer_status",type:"number",documentation:"keep local documentation"},
+  {path:"/order_total",presence:"forbidden"},
+];
+const clarityWorkspace=composedSchemaWorkspace(clarity,emptyCheckout,"Page Group"),customerDecision=clarityWorkspace.rows.find(({path})=>path==="/customer_status"),orderDecision=clarityWorkspace.rows.find(({path})=>path==="/order_total");
+assert.equal(clarityWorkspace.conflictSummary,"2 properties need decisions before validation and developer export.");
+assert.deepEqual({state:customerDecision.validationState,facet:customerDecision.decisionFacet,detail:customerDecision.decisionDetail},{state:"blocked",facet:"Type",detail:"Checkout uses Number. Sitewide uses String. Sitewide protects this definition from change."});
+assert.deepEqual(customerDecision.repairs.map(({kind,label})=>({kind,label})),[
+  {kind:"use-source",label:"Use Sitewide Type"},
+  {kind:"open-source",label:"Open Sitewide"},
+]);
+assert.equal(orderDecision.decisionFacet,"Presence");
+const repaired=resetComposedSchemaLocalFacet(clarity,"pageGroups",emptyCheckout.id,"/customer_status","type"),repairedCheckout=repaired.project.collections.pageGroups[0];
+assert.deepEqual(repairedCheckout.localSchemaContributions,[{path:"/customer_status",documentation:"keep local documentation"},{path:"/order_total",presence:"forbidden"}],"a targeted repair removes only the selected sparse facet");
+assert.equal(repaired.history.undo.length,clarity.history.undo.length+1,"a targeted facet repair creates one Undo action");
+assert.equal(composedSchemaWorkspace(repaired,repairedCheckout,"Page Group").conflictSummary,"1 property needs a decision before validation and developer export.");
 
 console.log("data-layer composed schema workspace tests passed");

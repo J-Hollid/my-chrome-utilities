@@ -1,12 +1,18 @@
 import { clone, same } from "./compile-context.js";
 const canonicalUnion = (left, right) => [...new Map([...left, ...right].map((value) => [JSON.stringify(value), clone(value)])).values()].sort((first, second) => JSON.stringify(first).localeCompare(JSON.stringify(second)));
+const valueMatchesType = (value, type) => type === "null" ? value === null : type === "array" ? Array.isArray(value) : type === "object" ? Boolean(value) && typeof value === "object" && !Array.isArray(value) : type === "integer" ? Number.isInteger(value) : type === "number" ? typeof value === "number" && Number.isFinite(value) : typeof value === type;
+const valuesForTypeCheck = (constraint) => [...(constraint.allowedValues ?? []), ...(constraint.expectedValue === undefined ? [] : [constraint.expectedValue]), ...(constraint.examples ?? [])];
+const incompatibleTypeChange = (prior, constraint) => Boolean(constraint.type && [...valuesForTypeCheck(prior), ...valuesForTypeCheck(constraint)].some((value) => !valueMatchesType(value, constraint.type)));
 export function mergeLayeredProperty(prior, constraint, contributor, parallelPair, parallelPeer, conflict) {
     const source = { contributorId: contributor.id, contributorName: contributor.name, scope: contributor.scope, ...(contributor.inheritanceRoutes?.length ? { inheritanceRoutes: [...contributor.inheritanceRoutes] } : {}) };
     if (!prior)
         return { ...clone(constraint), origins: [source], superseded: [], ...(constraint.expectedValue !== undefined ? { expectedContributor: contributor.name, expectedContributors: [contributor.name] } : {}) };
     const next = { ...prior, origins: [...prior.origins, source], superseded: [...prior.superseded] };
-    if (!parallelPair && constraint.type && prior.type && constraint.type !== prior.type)
-        conflict(constraint.path, "type cannot change", [prior.origins.at(-1).contributorName, contributor.name]);
+    if (!parallelPair && constraint.type && prior.type && constraint.type !== prior.type && (prior.protectedFacets?.includes("type") || incompatibleTypeChange(prior, constraint))) {
+        const sourceContributor = prior.origins.at(-1).contributorName;
+        const protectedDefinition = prior.protectedFacets?.includes("type") === true;
+        conflict(constraint.path, protectedDefinition ? `${sourceContributor} protects this definition from change` : `type cannot change to ${constraint.type} while existing values use ${prior.type}`, [sourceContributor, contributor.name], { facet: "Type", sourceContributor, sourceValue: prior.type, localContributor: contributor.name, localValue: constraint.type });
+    }
     else if (!parallelPair && constraint.type)
         next.type = constraint.type;
     if (constraint.nullable !== undefined)
@@ -17,6 +23,8 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
         next.itemType = constraint.itemType;
     if (constraint.itemSchema)
         next.itemSchema = clone(constraint.itemSchema);
+    if (constraint.protectedFacets)
+        next.protectedFacets = clone(constraint.protectedFacets);
     if (constraint.allowedValues && !(parallelPeer && prior.expectedValue !== undefined)) {
         if (prior.allowedValues) {
             const orderedPageGroups = prior.origins.at(-1)?.scope === "Page Group" && contributor.scope === "Page Group", changed = !same(prior.allowedValues, constraint.allowedValues);
@@ -64,10 +72,10 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
         else
             next.presence = "permitted";
     }
-    else if (prior.presence === "required" && constraint.presence === "optional")
-        conflict(constraint.path, "required cannot be silently relaxed", [prior.origins.at(-1).contributorName, contributor.name]);
-    else if (prior.presence === "forbidden" && constraint.presence === "permitted")
-        conflict(constraint.path, "a forbidden property cannot be re-enabled", [prior.origins.at(-1).contributorName, contributor.name]);
+    else if (!parallelPair && constraint.presence && prior.presence && constraint.presence !== prior.presence && prior.protectedFacets?.includes("presence")) {
+        const sourceContributor = prior.origins.at(-1).contributorName;
+        conflict(constraint.path, `${sourceContributor} protects this definition from change`, [sourceContributor, contributor.name], { facet: "Presence", sourceContributor, sourceValue: prior.presence, localContributor: contributor.name, localValue: constraint.presence });
+    }
     else if (constraint.presence)
         next.presence = constraint.presence;
     if (constraint.patterns)

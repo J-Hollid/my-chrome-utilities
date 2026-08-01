@@ -60,6 +60,20 @@ function focused(row, context) {
     identity.textContent = `${row.path} · stable identity ${row.effective.definitionId ?? row.path}`;
     effective.textContent = `Inherited value and source: ${row.inherited ? context.effectiveText({ ...row, effective: row.inherited }) : "none"} · Local value: ${Object.keys(row.local).length > 1 ? context.effectiveText({ ...row, effective: row.local }) : "none"} · Effective result: ${context.effectiveText(row)} · Validation state: ${row.validationState} · Conflicts: ${row.validationState === "blocked" ? row.message : "none"}`;
     host.setAttribute("aria-label", `${row.path} focused ${focusedPropertySectionLabels[context.activeSection]} section`);
+    if (context.activeSection === "definition" && row.validationState === "blocked" && row.decisionDetail) {
+        const issue = dom.createElement("section"), issueHeading = dom.createElement("h4"), detail = dom.createElement("p"), repairs = dom.createElement("div");
+        issue.setAttribute("aria-label", `${row.path} definition issue`);
+        issue.dataset.schemaDecisionIssue = "true";
+        issueHeading.textContent = `Needs decision · ${row.decisionFacet ?? "Definition"}`;
+        detail.textContent = row.decisionDetail;
+        for (const repair of row.repairs)
+            repairs.append(button(dom, repair.label, () => { if (repair.kind !== "use-source") {
+                context.onRepair?.(repair);
+                return;
+            } const review = dom.createElement("section"), summary = dom.createElement("p"), cancel = button(dom, "Cancel repair", () => review.remove()), confirm = button(dom, "Confirm facet repair", () => context.onRepair?.(repair)); review.setAttribute("aria-label", "Review facet repair"); summary.textContent = `Review ${repair.label}: remove only the local ${row.decisionFacet ?? "definition"} contribution. The prospective effective value comes from ${repair.contributorName}; one property command creates one Undo action.`; review.append(summary, cancel, confirm); issue.append(review); }));
+        issue.append(issueHeading, detail, repairs);
+        host.append(issue);
+    }
     const focusedContext = { model: context.model, dom, row, conceptSuggestions: context.conceptSuggestions, getDraft: () => context.draft, activeSection: context.activeSection, removedRuleIds: context.removedRuleIds, removedValueIds: context.removedValueIds, restoredRuleIds: context.restoredRuleIds, restoredValueIds: context.restoredValueIds, stagedLocalValueIds: context.stagedLocalValueIds, overriddenRuleIds: context.overriddenRuleIds, overrideRule: context.overrideRule, render: context.render, ...(context.onStructure ? { onStructure: context.onStructure } : {}) };
     if (context.removed)
         host.append(Object.assign(dom.createElement("p"), { textContent: "Whole-property lifecycle staged. Facet and structure controls are unavailable until this reset or removal is cancelled." }));
@@ -143,10 +157,10 @@ export function renderComposedRows(rows, context) {
         tr.dataset.validationState = row.validationState;
         if (row.validationState === "blocked") {
             tr.classList.add("invalid");
-            tr.setAttribute("aria-label", `${row.path}: Needs attention; open Property editor for issue summary and repair actions.`);
+            tr.setAttribute("aria-label", `${row.path}: Needs decision${row.decisionFacet ? ` for ${row.decisionFacet}` : ""}; open Property editor for details and repair actions.`);
         }
         identity.style.position = "relative";
-        propertyActions.setAttribute("aria-label", `Property actions for ${row.path}${row.validationState === "blocked" ? "; Needs attention" : ""}`);
+        propertyActions.setAttribute("aria-label", `Property actions for ${row.path}${row.validationState === "blocked" ? "; Needs decision" : ""}`);
         propertyActions.dataset.propertyActionsPath = row.path;
         identity.append(propertyActions);
         const pathCell = cell(1, row.path), conceptCell = cell(2), typeCell = cell(3), presenceCell = cell(4), appendReset = (host, facet, label) => { if (!row.inherited || !Object.hasOwn(row.local, facet))
@@ -183,10 +197,7 @@ export function renderComposedRows(rows, context) {
                 valueCell.append(suggestions);
             tr.append(valueCell);
         }
-        const state = cell(9, context.removed && context.activePath === row.path ? "Removed" : Object.keys(row.local).length > 1 ? `Local · effective ${context.effectiveText(row)}` : `Inherited · effective ${context.effectiveText(row)}`);
-        if (row.validationState === "blocked" && context.onRepair)
-            for (const repair of row.repairs)
-                state.append(button(dom, repair.label, () => context.onRepair?.(repair)));
+        const state = cell(9, context.removed && context.activePath === row.path ? "Removed" : row.validationState === "blocked" ? `Needs decision${row.decisionFacet ? ` · ${row.decisionFacet}` : ""}` : Object.keys(row.local).length > 1 ? `Local · effective ${context.effectiveText(row)}` : `Inherited · effective ${context.effectiveText(row)}`);
         tr.append(cell(8, row.source), state);
         if (context.overlayOpen && context.activePath === row.path) {
             const layers = [contextMenu(row, context)];

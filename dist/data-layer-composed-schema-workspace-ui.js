@@ -6,6 +6,7 @@ import { typedCanonicalValue } from "./data-layer-canonical-schema-facets.js";
 import { schemaTableOverlayTarget, schemaTableOverlayTransition, schemaTableReplaceExpectedOrAllowed, schemaTableSortComparison, schemaTableSortOptions, schemaTableStageAllowedValues } from "./data-layer-schema-table.js";
 import { declareStudioChoice } from "./data-layer-studio-choice-controls.js";
 const button = (text, run) => { const control = document.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
+const workspaceViews = new Map();
 export function stageComposedExpectedOrAllowed(draft, text) {
     const staged = schemaTableReplaceExpectedOrAllowed(draft, text);
     if (staged.expectedValue === undefined)
@@ -42,8 +43,8 @@ export function composedTableResetFacet(row, facet) {
     return local;
 }
 export function mountComposedSchemaWorkspace(options) {
-    const section = document.createElement("section"), heading = document.createElement("h2"), summary = document.createElement("p"), policy = document.createElement("input"), policyLabel = document.createElement("label"), quickEditFeedback = document.createElement("output"), filterControls = document.createElement("div"), filter = document.createElement("input"), sort = document.createElement("select"), addControls = document.createElement("div"), choice = document.createElement("select"), add = document.createElement("button"), rows = document.createElement("div");
-    let activePath, overlayOpen = false, focusedOpen = false, reviewOpen = false, saveIssue, activeSection = "definition", draft, removed = false, confirmedAction, removedRuleIds = new Set(), removedValueIds = new Set(), restoredRuleIds = new Set(), restoredValueIds = new Set(), stagedLocalValueIds = new Set(), overriddenRuleIds = new Set(), pendingStructure = [], pendingAction, originFocus, originPath, query = "", sortMode = "path";
+    const section = document.createElement("section"), heading = document.createElement("h2"), summary = document.createElement("p"), policy = document.createElement("input"), policyLabel = document.createElement("label"), quickEditFeedback = document.createElement("output"), filterControls = document.createElement("div"), filter = document.createElement("input"), sort = document.createElement("select"), addControls = document.createElement("div"), choice = document.createElement("select"), add = document.createElement("button"), rows = document.createElement("div"), viewKey = options.schemaContributorId ?? options.model.heading, savedView = workspaceViews.get(viewKey), hasDecisions = options.model.rows.some(({ validationState }) => validationState === "blocked");
+    let activePath, overlayOpen = false, focusedOpen = false, reviewOpen = false, saveIssue, activeSection = "definition", draft, removed = false, confirmedAction, removedRuleIds = new Set(), removedValueIds = new Set(), restoredRuleIds = new Set(), restoredValueIds = new Set(), stagedLocalValueIds = new Set(), overriddenRuleIds = new Set(), pendingStructure = [], pendingAction, originFocus, originPath, query = savedView?.query ?? "", sortMode = savedView?.sortMode ?? "path", decisionsOnly = hasDecisions && (savedView?.decisionsOnly ?? false);
     let overlayState = { phase: "closed" };
     let ownershipSession = { inherited: false, local: true, structureOwned: true, activated: [] };
     section.className = options.compact ? "composed-schema-workspace compact-schema-workspace" : "composed-schema-workspace";
@@ -57,7 +58,7 @@ export function mountComposedSchemaWorkspace(options) {
     heading.textContent = options.model.heading;
     summary.setAttribute("role", "status");
     summary.className = options.model.status === "blocked" ? "error" : "status-text";
-    summary.textContent = `${options.model.status === "blocked" ? "Blocked" : "Ready"} · ${options.model.rows.length} effective properties${options.includeConflictSummary === false ? "" : ` · ${options.model.conflictSummary}`}`;
+    summary.textContent = options.model.status === "blocked" ? `Blocked · ${options.model.conflictSummary}` : `Ready · ${options.model.rows.length} effective properties${options.includeConflictSummary === false ? "" : ` · ${options.model.conflictSummary}`}`;
     policy.type = "checkbox";
     policy.checked = options.onlyDefinedFields === true;
     policy.setAttribute("aria-label", "Only defined fields");
@@ -68,10 +69,17 @@ export function mountComposedSchemaWorkspace(options) {
     filter.type = "search";
     filter.placeholder = "Filter properties";
     filter.setAttribute("aria-label", "Filter schema properties");
+    filter.value = query;
     sort.setAttribute("aria-label", "Sort schema properties");
     sort.append(...schemaTableSortOptions.map(({ label, value }) => new Option(label, value)));
+    sort.value = sortMode;
     filterControls.setAttribute("aria-label", "Schema property navigation controls");
     filterControls.append(filter, sort);
+    if (hasDecisions) {
+        const decisionFilter = button("Show properties needing decisions", () => { decisionsOnly = !decisionsOnly; decisionFilter.setAttribute("aria-pressed", String(decisionsOnly)); saveView(); rerender(); });
+        decisionFilter.setAttribute("aria-pressed", String(decisionsOnly));
+        filterControls.append(decisionFilter);
+    }
     addControls.setAttribute("aria-label", "Add local property");
     choice.setAttribute("aria-label", "Choose inherited property to override");
     choice.append(new Option("Choose a property", ""), ...options.model.rows.filter(({ inherited }) => Boolean(inherited)).map(({ path }) => new Option(path, path)));
@@ -83,8 +91,9 @@ export function mountComposedSchemaWorkspace(options) {
     rows.setAttribute("role", "table");
     rows.setAttribute("aria-label", `${options.model.heading} rows`);
     rows.dataset.schemaEditorScrollRegion = "true";
-    const visibleModel = () => { const needle = query.trim().toLowerCase(), rows = options.model.rows.filter((row) => !needle || row.path.toLowerCase().includes(needle) || String(row.source ?? "").toLowerCase().includes(needle) || options.effectiveText(row).toLowerCase().includes(needle)).sort((left, right) => schemaTableSortComparison({ path: left.path, concept: left.effective.concept, source: left.source }, { path: right.path, concept: right.effective.concept, source: right.source }, sortMode)); return { ...options.model, rows }; };
-    const rerender = () => renderComposedRows(rows, { dom: document, overlayHost: section, model: visibleModel(), effectiveText: options.effectiveText, conceptSuggestions: options.conceptSuggestions, ...(options.onRepair ? { onRepair: options.onRepair } : {}), ...(options.onStructure ? { onStructure: (kind, path, name) => { pendingStructure.push({ kind, path, ...(name === undefined ? {} : { name }) }); rerender(); } } : {}), ...(options.rowPathDataset ? { rowPathDataset: options.rowPathDataset } : {}), activePath, overlayOpen, focusedOpen, reviewOpen, saveIssue, activeSection, draft, removed, confirmedAction, removedRuleIds, removedValueIds, restoredRuleIds, restoredValueIds, stagedLocalValueIds, overriddenRuleIds, overrideRule, pendingAction, pendingStructure, ownershipSession, activateOwnership: (action) => { ownershipSession = activateFocusedOwnershipSection(ownershipSession, activeSection, action); rerender(); }, beginAction, cancelAction, confirmAction, open, commitInline, resetInline, cancelInline: () => { }, inlineDiagnostic: (message) => { quickEditFeedback.textContent = message; }, quickEditRoot: () => options.host, quickEditScope: `composed:${options.schemaContributorId ?? options.model.heading}`, close, closeChild, beginReview, cancelReview, save, render: rerender, selectSection: (value) => { activeSection = value; focusedOpen = true; reviewOpen = false; saveIssue = undefined; overlayState = schemaTableOverlayTransition(overlayState, { kind: "focus" }); rerender(); } });
+    const saveView = () => { workspaceViews.set(viewKey, { query, sortMode, decisionsOnly, scrollTop: rows.scrollTop }); };
+    const visibleModel = () => { const needle = query.trim().toLowerCase(), visible = options.model.rows.filter((row) => (!decisionsOnly || row.validationState === "blocked") && (!needle || row.path.toLowerCase().includes(needle) || String(row.source ?? "").toLowerCase().includes(needle) || options.effectiveText(row).toLowerCase().includes(needle))).sort((left, right) => schemaTableSortComparison({ path: left.path, concept: left.effective.concept, source: left.source }, { path: right.path, concept: right.effective.concept, source: right.source }, sortMode)); return { ...options.model, rows: visible }; };
+    const rerender = () => renderComposedRows(rows, { dom: document, overlayHost: section, model: visibleModel(), effectiveText: options.effectiveText, conceptSuggestions: options.conceptSuggestions, ...(options.onRepair ? { onRepair: (repair) => { saveView(); options.onRepair?.(repair); } } : {}), ...(options.onStructure ? { onStructure: (kind, path, name) => { pendingStructure.push({ kind, path, ...(name === undefined ? {} : { name }) }); rerender(); } } : {}), ...(options.rowPathDataset ? { rowPathDataset: options.rowPathDataset } : {}), activePath, overlayOpen, focusedOpen, reviewOpen, saveIssue, activeSection, draft, removed, confirmedAction, removedRuleIds, removedValueIds, restoredRuleIds, restoredValueIds, stagedLocalValueIds, overriddenRuleIds, overrideRule, pendingAction, pendingStructure, ownershipSession, activateOwnership: (action) => { ownershipSession = activateFocusedOwnershipSection(ownershipSession, activeSection, action); rerender(); }, beginAction, cancelAction, confirmAction, open, commitInline, resetInline, cancelInline: () => { }, inlineDiagnostic: (message) => { quickEditFeedback.textContent = message; }, quickEditRoot: () => options.host, quickEditScope: `composed:${options.schemaContributorId ?? options.model.heading}`, close, closeChild, beginReview, cancelReview, save, render: rerender, selectSection: (value) => { activeSection = value; focusedOpen = true; reviewOpen = false; saveIssue = undefined; overlayState = schemaTableOverlayTransition(overlayState, { kind: "focus" }); rerender(); } });
     const overrideRule = (sourceId) => { if (!draft)
         return; const source = options.model.rows.find(({ path }) => path === activePath)?.effective.rules?.find((rule) => String(rule.id ?? "") === sourceId); if (!source || source.enforcement === "invariant")
         return; const id = `rule:${crypto.randomUUID()}`, replacement = { ...structuredClone(source), id, replacesRuleId: sourceId, provenance: { source: "created", state: "overridden", sourceId } }; draft = { ...draft, rules: [...draft.rules, replacement] }; overriddenRuleIds.add(id); rerender(); };
@@ -151,8 +160,8 @@ export function mountComposedSchemaWorkspace(options) {
         saveIssue = error instanceof Error ? error.message : String(error);
         rerender();
     } };
-    filter.addEventListener("input", () => { query = filter.value; rerender(); });
-    sort.addEventListener("change", () => { sortMode = sort.value; rerender(); });
+    filter.addEventListener("input", () => { query = filter.value; saveView(); rerender(); });
+    sort.addEventListener("change", () => { sortMode = sort.value; saveView(); rerender(); });
     section.addEventListener("keydown", (event) => { if (event.key === "Escape" && overlayOpen) {
         event.preventDefault();
         if (focusedOpen)
@@ -163,6 +172,8 @@ export function mountComposedSchemaWorkspace(options) {
     rerender();
     section.append(heading, summary, policyLabel, quickEditFeedback, filterControls, addControls, rows);
     options.host.append(section);
+    if (savedView)
+        rows.scrollTop = savedView.scrollTop;
     return section;
 }
 //# sourceMappingURL=data-layer-composed-schema-workspace-ui.js.map

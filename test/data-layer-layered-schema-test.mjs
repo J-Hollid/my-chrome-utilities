@@ -52,11 +52,23 @@ const compilePair=(baseConstraint,specificConstraint)=>compileLayeredSchema([
   contribution("base","Sitewide","Shared Profile",[{path:"/value",...baseConstraint}]),
   contribution("specific","Shipping","Page",[{path:"/value",...specificConstraint}]),
 ],{eventId:"event:purchase",eventRole:"interaction"});
-assert.match(compilePair({type:"string"},{type:"number"}).conflicts[0].message,/type cannot change/);
+const ordinaryTypeOverride=compilePair({type:"string"},{type:"number"});
+assert.equal(ordinaryTypeOverride.status,"ready","an ordinary Type facet is a legal sparse override");
+assert.equal(ordinaryTypeOverride.properties["/value"].type,"number");
+const protectedTypeConflict=compilePair({type:"string",protectedFacets:["type"]},{type:"number"});
+assert.equal(protectedTypeConflict.status,"blocked","a protected Type facet still requires a decision");
+assert.deepEqual(
+  protectedTypeConflict.conflicts[0],
+  {path:"/value",facet:"Type",sourceContributor:"Sitewide",sourceValue:"string",localContributor:"Shipping",localValue:"number",message:"Sitewide protects this definition from change",contributors:["Sitewide","Shipping"]},
+);
 assert.deepEqual(compilePair({allowedValues:["3a","3b"]},{allowedValues:["3b"]}).properties["/value"].allowedValues,["3b"]);
 assert.match(compilePair({allowedValues:["3a","3b"]},{allowedValues:["4"]}).conflicts[0].message,/outside the base allowed universe/);
-assert.match(compilePair({presence:"required"},{presence:"optional"}).conflicts[0].message,/required cannot be silently relaxed/);
-assert.match(compilePair({presence:"forbidden"},{presence:"permitted"}).conflicts[0].message,/forbidden property cannot be re-enabled/);
+const ordinaryPresenceOverride=compilePair({presence:"required"},{presence:"forbidden"});
+assert.equal(ordinaryPresenceOverride.status,"ready","an ordinary Presence facet is a legal sparse override");
+assert.equal(ordinaryPresenceOverride.properties["/value"].presence,"forbidden");
+const protectedPresenceConflict=compilePair({presence:"required",protectedFacets:["presence"]},{presence:"forbidden"});
+assert.equal(protectedPresenceConflict.status,"blocked","a protected Presence facet still requires a decision");
+assert.equal(protectedPresenceConflict.conflicts[0].facet,"Presence");
 assert.deepEqual(compilePair({patterns:["^[a-z]+$"]},{patterns:["shipping$"]}).properties["/value"].patterns,["^[a-z]+$","shipping$"]);
 assert.equal(compilePair({rules:[{condition:"base"}]},{rules:[{condition:"specific"}]}).properties["/value"].rules.length,2);
 const bounded=compilePair({minimum:0,maximum:10,minItems:1,maxItems:8,reusableRules:[{id:"rule:base"}]},{minimum:2,maximum:7,minItems:3,maxItems:5,reusableRules:[{id:"rule:specific"}]}).properties["/value"];
@@ -273,7 +285,7 @@ for(const scope of ["Page Group","Page"]){
   assert.deepEqual(withProfiles.conflicts,withoutProfiles.conflicts,`${scope} aggregate conflict identity and count are conserved after compatible profile inheritance`);
 }
 for(const [label,peerFacet,downstreamFacet] of [
-  ["static type",{type:"string"},{type:"number"}],
+  ["static type",{type:"string",protectedFacets:["type"]},{type:"number"}],
   ["static invariant expectation",{expectedValue:"profile",enforcement:"invariant"},{expectedValue:"group"}],
 ]){
   const compiled=compileLayeredSchema([
