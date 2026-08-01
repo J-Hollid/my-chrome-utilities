@@ -201,6 +201,12 @@ function renderPageApplicabilityPreview(host, page) {
         label.append(control, `${option.applicabilitySetName} · ${option.condition}`);
         preview.append(label);
     }
+    if (structure.excludedMemberships.length) {
+        const explanation = document.createElement("p");
+        explanation.setAttribute("aria-label", "Unchecked applicability preview explanation");
+        explanation.textContent = `Unchecked applicability choices exclude ${structure.excludedMemberships.map(({ groupName }) => groupName).join(", ")} from this preview.`;
+        preview.append(explanation);
+    }
     host.append(preview);
 }
 function renderPageGroupMembershipEditor(host, page) {
