@@ -3,6 +3,14 @@ import {createSpecificationProject,transactProject} from "../dist/data-layer-spe
 import {LEGACY_PROJECT_KEYS,createMemoryDurableProjectRepository,durableDraftCommand,migrateLegacyProjectStorage} from "../dist/data-layer-durable-project-repository.js";
 import {developerProductionSchemaExport,publishableProductionSchemas} from "../dist/data-layer-production-specification.js";
 
+const cleanRepository=createMemoryDurableProjectRepository();
+cleanRepository.clearTrace();
+assert.equal((await cleanRepository.compactLegacyDurableSchemaHistory()).entryCount,0);
+assert.deepEqual(cleanRepository.trace().writes,[],"a current repository mount remains read-only when no compaction is required");
+cleanRepository.clearTrace();
+assert.equal((await cleanRepository.compactLegacyDurableSchemaHistory()).entryCount,0);
+assert.deepEqual(cleanRepository.trace().writes,[],"a repeated current repository mount also remains read-only");
+
 const release=(state,revision)=>transactProject(state,`Prepare release ${revision}`,project=>{const item={id:`release:${revision}`,name:`Release ${revision}`,revision,createdAt:`2026-08-01T00:00:${String(revision).padStart(2,"0")}.000Z`,snapshot:structuredClone(project.collections)};return{...project,releases:[...project.releases,item],currentRelease:item.id};});
 for(let sample=0;sample<40;sample++){
   let token=0;
