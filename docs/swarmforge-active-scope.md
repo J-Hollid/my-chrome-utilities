@@ -605,6 +605,20 @@ one Undo action, recompiles immediately, and preserves the operator's table filt
 and position while further decisions remain. The exact checkpoint remains
 `layered_schema`, followed by `npm run package`.
 
+On approval, the structural-authoring documentation-ownership correction is later
+authority for Page Group structural-authoring scenarios 006 and 009. The project
+Documentation workspace owns operator documentation; the Page workspace has no
+standalone specification generator. A Documentation Set's Data capture matrix may
+select a Page context and derives its rows and state cells from that Page's
+all-participating transitive effective schema without evaluating Applicability Sets
+against an empty payload.
+
+Page, Flow Page-instance, and Fixture surfaces retain contributor provenance for
+authoring and testing. Project preview, rich copy, plain text, and Excel use human
+context headings and the current matrix states without provenance columns, source
+identities, or Fixture-specific sections. The exact checkpoint is `layered_schema`,
+followed by `npm run package`.
+
 The rejected schema candidate `143cc9d337` and Flow candidate `b8432d27e7` are not
 eligible because each introduced a vacuous `project_management` pack. Later coder
 commits `2db9335d` and `b4d143a4` contain useful task-owned revisions, but their
