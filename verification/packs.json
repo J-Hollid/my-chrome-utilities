@@ -62,7 +62,8 @@
     ],
     "property": [
       "test/data-layer-durable-project-repository-property-test.mjs",
-      "test/data-layer-durable-project-runtime-property-test.mjs"
+      "test/data-layer-durable-project-runtime-property-test.mjs",
+      "test/data-layer-selective-production-revisions-property-test.mjs"
     ],
     "features": [
       "features/data-layer-durable-project-repository.feature",

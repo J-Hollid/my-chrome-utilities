@@ -33,6 +33,8 @@
    "Retail website is active before project import"
    "the pre-library installation contains one singleton Legacy shop project with stable identity project-legacy, metadata, storage generation 9, project graph, navigation, Undo history, and Purchase payload in schemaDrafts"
    "the operator starts with Retail website active in the project library"
+   "Retail website has a newer Saved Draft above production baseline 13 and its schema manifest"
+   "an older project bundle contains Project revision 3 and a schema at edit revision 2847 with 2847 change entries"
    "Retail website is active and <overview> contains <entity>"
    "Retail website is active and <overview> contains no entities"
    "the Pages overview contains Cart and unreferenced Landing"
@@ -66,6 +68,8 @@
    "production project-retail is active before import"
    "production storage has only singleton Legacy shop project project-legacy with metadata, storage generation 9, project graph, navigation, Undo history, and Purchase payload in schemaDrafts"
    "the actual extension starts with production Retail website active in its project library"
+   "production Retail website has Project revision 13, its schema manifest, and a newer Saved Draft"
+   "an older bundle contains Project revision 3 and one canonical schema with edit revision 2847 and 2847 change entries"
    "production project-retail is active and the installed Inspector is closed"
    "production project-retail is active and <overview> has zero records"
    "production Pages contain Cart and unreferenced Landing"
@@ -103,7 +107,7 @@
 (def runtime-paths
   (set (concat [:installedBoundary]
                (map #(keyword (str "context" (format "%03d" %))) (concat (range 1 21) (range 22 28)))
-               (map #(keyword (str "portability" (format "%03d" %))) (range 1 6)))))
+               (map #(keyword (str "portability" (format "%03d" %))) (range 1 8)))))
 (defn complete-browser-evidence? [evidence]
   (boolean (and (map? evidence)
                 (= runtime-paths (set (keys evidence)))

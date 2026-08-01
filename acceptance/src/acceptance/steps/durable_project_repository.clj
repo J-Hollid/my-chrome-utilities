@@ -9,8 +9,18 @@
 (def entry-modes
   {"the durable project repository contains active Retail website with Saved Draft and Published revision 3" :model
    "Retail website durably contains Flow graph flow-orphan whose owning Flow entity is absent" :model
+   "Retail website's production baseline is Project 12, Sitewide 4, and Cart 7" :model
+   "the current manifest assigns 12 to the Project and 4, 7, and 2 to Sitewide, Cart, and Purchase" :model
+   "Retail website has Project revision 12 and the Draft returns to the same publishable content after edits are reversed" :model
+   "immutable Cart publication 8 belongs to Project publication 13" :model
+   "a project from an older extension has Project revision 3 and a canonical schema with edit revision 2847 and 2847 change entries" :model
    "the built extension is running with the production durable-project repository" :runtime
-   "production IndexedDB has project-retail:flow-orphan in flowGraphs without a matching Flow entity" :runtime})
+   "production IndexedDB has project-retail:flow-orphan in flowGraphs without a matching Flow entity" :runtime
+   "production Retail website's baseline is Project 12, Sitewide 4, and Cart 7" :runtime
+   "the stored manifest assigns 12 to the Project and 4, 7, and 2 to Sitewide, Cart, and Purchase" :runtime
+   "production Retail website is at Project revision 12 and its Draft fingerprint returns to the production fingerprint" :runtime
+   "immutable Cart publication 8 belongs to production Project publication 13" :runtime
+   "production storage contains an older Project revision 3 whose canonical schema has edit revision 2847 and 2847 change entries" :runtime})
 (defonce model-verified? (atom false))
 (defonce browser-observation (atom nil))
 (defn- checked! [& command]
@@ -22,6 +32,7 @@
     (checked! "node" "test/data-layer-durable-project-repository-test.mjs")
     (checked! "node" "test/data-layer-durable-project-runtime-test.mjs")
     (checked! "node" "test/data-layer-durable-project-repository-property-test.mjs")
+    (checked! "node" "test/data-layer-selective-production-revisions-property-test.mjs")
     (reset! model-verified? true)))
 (defn- observe-browser! []
   (or @browser-observation
@@ -30,7 +41,7 @@
             observed (:durableProjectRepository (json/parse-string line true))]
         (support/assert! observed "Durable repository browser evidence is missing." {:out (:out result)})
         (reset! browser-observation observed))))
-(def runtime-keys (set (map #(keyword (format "runtime%03d" %)) (range 1 14))))
+(def runtime-keys (set (map #(keyword (format "runtime%03d" %)) (range 1 19))))
 (def required-keys (conj runtime-keys :installedBoundary))
 (defn- all-true? [value] (boolean (and (map? value) (seq value) (every? true? (vals value)))))
 (defn complete-browser-evidence? [evidence]

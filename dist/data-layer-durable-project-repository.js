@@ -1,13 +1,38 @@
 export const DURABLE_PROJECT_DATABASE = "my-chrome-utilities.project-repository";
-export const DURABLE_PROJECT_DATABASE_VERSION = 5;
+export const DURABLE_PROJECT_DATABASE_VERSION = 6;
 export const LEGACY_PROJECT_KEYS = { library: "my-chrome-utilities.specification-project-library.v1", active: "my-chrome-utilities.specification-project.v1", navigation: "my-chrome-utilities.specification-project-navigation.v1", schemas: "my-chrome-utilities.schema-library.v1" };
-export const DURABLE_PROJECT_STORES = ["projectMetadata", "projectRoots", "projectEntityMetadata", "projectEntities", "savedSchemas", "flowGraphs", "fixtures", "releases", "projectRevisions", "changeFeed", "settings", "migrationReceipts", "migrationBackups"];
+export const DURABLE_PROJECT_STORES = ["projectMetadata", "projectRoots", "projectEntityMetadata", "projectEntities", "savedSchemas", "flowGraphs", "fixtures", "releases", "projectRevisions", "productionManifests", "schemaRevisions", "changeFeed", "settings", "migrationReceipts", "migrationBackups"];
 export function durableProjectRouteForWorkspace(collectionKind, entityId) { const dependencies = { pages: ["profiles", "pageGroups", "applicabilitySets", "assignments"], pageGroups: ["profiles", "pages", "applicabilitySets", "assignments"], events: ["profiles", "applicabilitySets", "assignments", "flows"], flows: ["profiles", "pages", "pageGroups", "events", "applicabilitySets", "assignments"], profiles: ["applicabilitySets", "assignments"], assignments: ["profiles", "pages", "pageGroups", "events", "flows", "applicabilitySets"], fixtures: ["profiles", "pages", "pageGroups", "events", "flows"] }; return { collectionKind, ...(entityId ? { entityId } : {}), collectionKinds: dependencies[collectionKind] ?? [], includeFlowGraphs: collectionKind === "flows" || collectionKind === "pages" || collectionKind === "assignments", includeFixtures: collectionKind === "fixtures" }; }
 const clone = (value) => structuredClone(value);
 const comparable = (value) => Array.isArray(value) ? value.map(comparable) : record(value) ? Object.fromEntries(Object.keys(value).sort().map(key => [key, comparable(value[key])])) : value;
 const same = (left, right) => JSON.stringify(comparable(left)) === JSON.stringify(comparable(right));
 const record = (value) => Boolean(value) && typeof value === "object" && !Array.isArray(value);
 const bytes = (value) => new TextEncoder().encode(JSON.stringify(value)).byteLength;
+const productionProject = (project) => { const value = clone(project); value.releases = []; delete value.currentRelease; return comparable(value); };
+const legacyProductionCount = (value) => { const candidates = Array.isArray(value.productionSnapshots) ? value.productionSnapshots : Array.isArray(value.revisionHistory) ? value.revisionHistory : [], fingerprints = new Set(candidates.map(candidate => JSON.stringify(comparable(record(candidate) && (candidate.effectiveSchema !== undefined || candidate.document !== undefined) ? candidate.effectiveSchema ?? candidate.document : candidate)))); if (fingerprints.size)
+    return fingerprints.size; return value.published === true || value.productionFingerprint !== undefined ? 1 : 0; };
+function compactLegacyEditHistory(value) {
+    const before = JSON.stringify(comparable(value));
+    let entryCount = 0;
+    const visit = (candidate) => { if (Array.isArray(candidate))
+        return candidate.map(visit); if (!record(candidate))
+        return candidate; const legacyChanges = Array.isArray(candidate.changes) ? candidate.changes : undefined, legacySchema = Boolean(legacyChanges && typeof candidate.revision === "number" && (typeof candidate.id === "string" || record(candidate.document) || record(candidate.nodes))), result = {}; for (const [key, entry] of Object.entries(candidate)) {
+        if (key === "changes" && legacySchema) {
+            entryCount += legacyChanges.length;
+            continue;
+        }
+        if (["commandJournal", "patchJournal", "editJournal"].includes(key) && Array.isArray(entry)) {
+            entryCount += entry.length;
+            continue;
+        }
+        if (key === "revision" && legacySchema)
+            continue;
+        result[key] = visit(entry);
+    } if (legacySchema)
+        result.schemaRevision = legacyProductionCount(candidate); return result; };
+    const compacted = visit(value), after = JSON.stringify(comparable(compacted));
+    return { value: compacted, entryCount, before, after };
+}
 const projectPrefix = (projectId) => `${projectId}:`;
 const byDurableIndex = (left, right) => (left.value.index ?? 0) - (right.value.index ?? 0);
 const fieldFor = (patch) => { const path = ["entity", "graph", "release"].includes(patch.path[0] ?? "") ? patch.path.slice(1) : patch.path; return `${patch.store}/${patch.key}${path.length ? `/${path.join("/")}` : ""}`; };
@@ -204,6 +229,13 @@ export class DurableProjectRepository {
                 const revision = { projectId, revision: publishedRevision, publicationId: declaredRelease.id, publishedAt: declaredRelease.createdAt, sourceDraftToken: draftToken, state: { project: clone(publishedProject), history: { undo: [], redo: [] } } };
                 await transaction.put("projectRevisions", revisionKey, revision);
             }
+            if (input.production) {
+                if (input.production.manifest.projectId !== projectId || input.production.manifest.projectRevision !== publishedRevision)
+                    throw new DOMException("Imported production manifest does not match its Project identity.", "DataError");
+                for (const snapshot of input.production.snapshots)
+                    await transaction.put("schemaRevisions", `${projectId}:${snapshot.schemaId}:${snapshot.schemaRevision}`, snapshot);
+                await transaction.put("productionManifests", revisionKey, input.production.manifest);
+            }
             return value;
         });
         const notification = { type: "durable-project-metadata-change", projectId, draftToken, changeToken: this.options.token() };
@@ -235,7 +267,7 @@ export class DurableProjectRepository {
     async deleteProject(input) { this.fail(input.label); await this.backend.transaction(allStores, "readwrite", async (transaction) => { const active = await transaction.get("settings", "activeProjectId"), metadata = await transaction.get("projectMetadata", input.projectId); if (!metadata)
         throw new Error(`Unknown durable project ${input.projectId}.`); if (active === input.projectId)
         throw new Error("Switch to another project before deleting the active project."); if (metadata.draftToken !== input.baseToken)
-        throw new DOMException(`${input.label} requires current Draft token ${metadata.draftToken}.`, "AbortError"); for (const store of [...replaceableProjectStores, "projectRevisions"])
+        throw new DOMException(`${input.label} requires current Draft token ${metadata.draftToken}.`, "AbortError"); for (const store of [...replaceableProjectStores, "projectRevisions", "productionManifests", "schemaRevisions"])
         for (const { key } of await transaction.getPrefix(store, projectPrefix(input.projectId)))
             await transaction.delete(store, key); await transaction.delete("changeFeed", input.projectId); await transaction.delete("projectRoots", input.projectId); await transaction.delete("projectMetadata", input.projectId); }); }
     async loadProject(projectId) {
@@ -330,15 +362,64 @@ export class DurableProjectRepository {
             this.notify(result.notification);
         return result;
     }
-    async publish(projectId, baseToken, input) { this.fail("Publish project"); const current = await this.loadProject(projectId), result = await this.backend.transaction(["projectMetadata", "projectRevisions", "changeFeed"], "readwrite", async (transaction) => { const metadata = await transaction.get("projectMetadata", projectId); if (!metadata)
-        throw new Error(`Durable project ${projectId} is unavailable.`); if (metadata.draftToken !== baseToken)
-        throw new Error(`Publish requires current Draft token ${metadata.draftToken}.`); const publishedRevision = metadata.publishedRevision + 1, release = current.state.project.releases.find(candidate => candidate.id === input.publicationId && candidate.revision === publishedRevision); if (!release)
-        throw new DOMException(`Publish revision ${publishedRevision} requires matching release ${input.publicationId}.`, "DataError"); const draftToken = this.options.token(), at = this.options.now(), revisionKey = `${projectId}:${publishedRevision}`, draftSequence = (metadata.draftSequence ?? 0) + 1, publishedProject = { ...clone(current.state.project), collections: clone(release.snapshot), releases: current.state.project.releases.filter(candidate => candidate.revision <= publishedRevision), currentRelease: release.id }, revision = { projectId, revision: publishedRevision, publicationId: input.publicationId, publishedAt: at, sourceDraftToken: baseToken, state: { project: publishedProject, history: { undo: [], redo: [] } } }, changedRecords = [{ store: "projectRevisions", key: revisionKey }, { store: "projectMetadata", key: projectId }], fieldVersions = { ...(metadata.fieldVersions ?? {}), [`projectRevisions/${revisionKey}`]: draftSequence }, feed = { projectId, draftToken, commandId: input.publicationId, changedRecords: clone(changedRecords) }; await transaction.put("projectRevisions", revisionKey, revision); await transaction.put("projectMetadata", projectId, { ...metadata, publishedRevision, draftToken, draftSequence, lastSavedAt: at, fieldVersions }); await transaction.put("changeFeed", projectId, feed); return { draftToken, draftSequence, publishedRevision, changedRecords }; }); this.notify({ type: "durable-project-change", projectId, draftToken: result.draftToken, commandId: input.publicationId, changedRecords: result.changedRecords }); return { draftToken: result.draftToken, publishedRevision: result.publishedRevision }; }
+    async publish(projectId, baseToken, input) {
+        const current = await this.loadProject(projectId), metadata = (await this.listProjectMetadata()).find(candidate => candidate.projectId === projectId);
+        if (!metadata)
+            throw new Error(`Durable project ${projectId} is unavailable.`);
+        if (metadata.draftToken !== baseToken)
+            throw new Error(`Publish requires current Draft token ${metadata.draftToken}.`);
+        const previous = await this.currentProductionManifest(projectId), previousSchemas = new Map(previous?.schemas.map(entry => [entry.schemaId, entry]) ?? []), schemaCandidates = input.schemas ? await Promise.all(input.schemas.map(async (candidate) => ({ ...clone(candidate), fingerprint: await checksum(JSON.stringify(comparable(candidate.effectiveSchema))) }))) : (previous?.schemas.map(entry => ({ schemaId: entry.schemaId, effectiveSchema: undefined, priorRevision: entry.schemaRevision, fingerprint: entry.fingerprint })) ?? []), schemaChanged = input.schemas !== undefined && (schemaCandidates.some(candidate => previousSchemas.get(candidate.schemaId)?.fingerprint !== candidate.fingerprint) || schemaCandidates.length !== (previous?.schemas.length ?? 0)), nextRevision = metadata.publishedRevision + 1, release = current.state.project.releases.find(candidate => candidate.id === input.publicationId && candidate.revision === nextRevision), candidateProject = release ? { ...clone(current.state.project), collections: clone(release.snapshot), releases: current.state.project.releases.filter(candidate => candidate.revision <= nextRevision), currentRelease: release.id } : current.state.project, projectFingerprint = await checksum(JSON.stringify({ project: productionProject(candidateProject), schemas: schemaCandidates.map(({ schemaId, fingerprint }) => ({ schemaId, fingerprint })).sort((left, right) => left.schemaId.localeCompare(right.schemaId)) })), changed = previous ? previous.projectFingerprint !== projectFingerprint : metadata.publishedRevision === 0 || Boolean(release) || schemaChanged;
+        if (!changed) {
+            return { status: "no-changes", draftToken: baseToken, publishedRevision: metadata.publishedRevision, manifest: clone(previous) };
+        }
+        this.fail("Publish project");
+        if (!release)
+            throw new DOMException(`Publish revision ${nextRevision} requires matching release ${input.publicationId}.`, "DataError");
+        const result = await this.backend.transaction(["projectMetadata", "projectRevisions", "productionManifests", "schemaRevisions", "changeFeed"], "readwrite", async (transaction) => {
+            const durableMetadata = await transaction.get("projectMetadata", projectId);
+            if (!durableMetadata)
+                throw new Error(`Durable project ${projectId} is unavailable.`);
+            if (durableMetadata.draftToken !== baseToken)
+                throw new Error(`Publish requires current Draft token ${durableMetadata.draftToken}.`);
+            const publishedRevision = durableMetadata.publishedRevision + 1, draftToken = this.options.token(), at = this.options.now(), revisionKey = `${projectId}:${publishedRevision}`, draftSequence = (durableMetadata.draftSequence ?? 0) + 1, publishedProject = { ...clone(current.state.project), collections: clone(release.snapshot), releases: current.state.project.releases.filter(candidate => candidate.revision <= publishedRevision), currentRelease: release.id }, revision = { projectId, revision: publishedRevision, publicationId: input.publicationId, publishedAt: at, sourceDraftToken: baseToken, state: { project: publishedProject, history: { undo: [], redo: [] } } }, changedRecords = [{ store: "projectRevisions", key: revisionKey }, { store: "productionManifests", key: revisionKey }, { store: "projectMetadata", key: projectId }], entries = [];
+            for (const candidate of schemaCandidates) {
+                const prior = previousSchemas.get(candidate.schemaId), schemaRevision = prior?.fingerprint === candidate.fingerprint ? prior.schemaRevision : (prior?.schemaRevision ?? candidate.priorRevision ?? 0) + 1, snapshotKey = prior?.fingerprint === candidate.fingerprint ? prior.snapshotKey : `${projectId}:${candidate.schemaId}:${schemaRevision}`;
+                entries.push({ schemaId: candidate.schemaId, schemaRevision, fingerprint: candidate.fingerprint, snapshotKey });
+                if (prior?.fingerprint !== candidate.fingerprint) {
+                    const snapshot = { projectId, schemaId: candidate.schemaId, schemaRevision, fingerprint: candidate.fingerprint, effectiveSchema: clone(candidate.effectiveSchema), createdAt: at };
+                    await transaction.put("schemaRevisions", snapshotKey, snapshot);
+                    changedRecords.push({ store: "schemaRevisions", key: snapshotKey });
+                }
+            }
+            const manifest = { projectId, projectRevision: publishedRevision, projectFingerprint, publicationId: input.publicationId, publishedAt: at, schemas: entries.sort((left, right) => left.schemaId.localeCompare(right.schemaId)) }, fieldVersions = { ...(durableMetadata.fieldVersions ?? {}), [`projectRevisions/${revisionKey}`]: draftSequence }, feed = { projectId, draftToken, commandId: input.publicationId, changedRecords: clone(changedRecords) };
+            await transaction.put("projectRevisions", revisionKey, revision);
+            await transaction.put("productionManifests", revisionKey, manifest);
+            await transaction.put("projectMetadata", projectId, { ...durableMetadata, publishedRevision, draftToken, draftSequence, lastSavedAt: at, fieldVersions });
+            await transaction.put("changeFeed", projectId, feed);
+            return { draftToken, publishedRevision, changedRecords, manifest };
+        });
+        this.notify({ type: "durable-project-change", projectId, draftToken: result.draftToken, commandId: input.publicationId, changedRecords: result.changedRecords });
+        return { status: "published", draftToken: result.draftToken, publishedRevision: result.publishedRevision, manifest: clone(result.manifest) };
+    }
     async latestProjectChange(projectId) { const value = await this.backend.transaction(["changeFeed"], "readonly", transaction => transaction.get("changeFeed", projectId)); return value ? clone(value) : undefined; }
     async loadPublishedRevision(projectId, revision) { const snapshot = await this.backend.transaction(["projectRevisions"], "readonly", transaction => transaction.get("projectRevisions", `${projectId}:${revision}`)); if (!snapshot)
         throw new Error(`Published revision ${revision} for ${projectId} is unavailable.`); return clone(snapshot); }
     async loadCurrentPublishedProject(projectId) { const metadata = (await this.listProjectMetadata()).find(entry => entry.projectId === projectId); if (!metadata?.publishedRevision)
         return undefined; const snapshot = await this.loadPublishedRevision(projectId, metadata.publishedRevision); return { revision: metadata.publishedRevision, project: clone(snapshot.state.project) }; }
+    async loadProductionManifest(projectId, projectRevision) { const manifest = await this.backend.transaction(["productionManifests"], "readonly", transaction => transaction.get("productionManifests", `${projectId}:${projectRevision}`)); if (!manifest)
+        throw new Error(`Production manifest ${projectId}:${projectRevision} is unavailable.`); return clone(manifest); }
+    async currentProductionManifest(projectId) { const metadata = (await this.listProjectMetadata()).find(entry => entry.projectId === projectId); if (!metadata?.publishedRevision)
+        return undefined; try {
+        return await this.loadProductionManifest(projectId, metadata.publishedRevision);
+    }
+    catch {
+        return undefined;
+    } }
+    async productionSchemaEvidence(projectId, schemaId) { const manifest = await this.currentProductionManifest(projectId), entry = manifest?.schemas.find(candidate => candidate.schemaId === schemaId); if (!manifest || !entry)
+        throw new Error(`Production schema ${schemaId} for ${projectId} is unavailable.`); return { projectId, projectRevision: manifest.projectRevision, schemaId, schemaRevision: entry.schemaRevision, fingerprint: entry.fingerprint }; }
+    async loadProductionSchema(evidence) { const manifest = await this.loadProductionManifest(evidence.projectId, evidence.projectRevision), entry = manifest.schemas.find(candidate => candidate.schemaId === evidence.schemaId && candidate.schemaRevision === evidence.schemaRevision && candidate.fingerprint === evidence.fingerprint); if (!entry)
+        throw new DOMException("Production schema evidence does not match its immutable manifest.", "DataError"); const snapshot = await this.backend.transaction(["schemaRevisions"], "readonly", transaction => transaction.get("schemaRevisions", entry.snapshotKey)); if (!snapshot || snapshot.fingerprint !== evidence.fingerprint)
+        throw new DOMException("Immutable production schema bytes are unavailable.", "DataError"); return clone(snapshot); }
     async hashRecord(store, key) { const value = await this.backend.transaction([store], "readonly", transaction => transaction.get(store, key)); return checksum(JSON.stringify(value)); }
     async hashProject(projectId) { const loaded = await this.loadProject(projectId); return checksum(JSON.stringify(loaded)); }
     async storageDiagnostics(projectId, estimate, unsavedCommand) { const loaded = await this.loadProject(projectId), prefix = projectPrefix(projectId), sizes = await this.backend.transaction(["projectEntities", "flowGraphs", "fixtures", "releases", "projectRevisions", "migrationBackups"], "readonly", async (transaction) => { const selected = async (store) => (await transaction.getPrefix(store, prefix)).reduce((total, { value }) => total + bytes(value), 0); return { projectEntityBytes: await selected("projectEntities") + await selected("flowGraphs"), releaseBytes: await selected("releases") + await selected("projectRevisions"), fixtureBytes: await selected("fixtures"), migrationBackupBytes: (await transaction.getAll("migrationBackups")).reduce((total, { value }) => total + bytes(value), 0) }; }); return { lastSavedAt: loaded.lastSavedAt, publishedRevision: loaded.publishedRevision, ...(unsavedCommand ? { unsavedCommand } : {}), ...sizes, ...(estimate ? { browserEstimate: { ...estimate, label: "Browser storage estimate" } } : {}), explanation: "Unlimited storage reduces quota risk; it does not make a failed write successful or provide infinite disk." }; }
@@ -497,7 +578,7 @@ export class DurableProjectRepository {
             if (!same(backup?.sources.map(({ key, checksum }) => ({ key, checksum })), records.backup.sources.map(({ key, checksum }) => ({ key, checksum }))))
                 throw new DOMException("Migration backup manifest verification failed.", "OperationError");
             const verifiedAt = this.options.now();
-            await transaction.put("migrationReceipts", "legacy-v1", { version: 1, projectIds: records.projects.map(({ state }) => state.project.id), sourceChecksums: records.backup.sources.map(({ key, checksum }) => ({ key, checksum })), verified: true, phase: "verified", owner, at: verifiedAt, verifiedAt });
+            await transaction.put("migrationReceipts", "legacy-v1", { version: 1, projectIds: records.projects.map(({ state }) => state.project.id), sourceChecksums: records.backup.sources.map(({ key, checksum }) => ({ key, checksum })), legacyEditCompactions: clone(records.compactions ?? []), verified: true, phase: "verified", owner, at: verifiedAt, verifiedAt });
             await transaction.delete("settings", "legacyMigrationLock");
         });
         if (typeof BroadcastChannel !== "undefined") {
@@ -508,13 +589,35 @@ export class DurableProjectRepository {
     }
     async abandonLegacyMigration(owner) { await this.backend.transaction(["settings"], "readwrite", async (transaction) => { const lock = await transaction.get("settings", "legacyMigrationLock"); if (lock?.owner === owner)
         await transaction.delete("settings", "legacyMigrationLock"); }); }
-    async exportProject(projectId) { const loaded = await this.loadProject(projectId), publishedProject = loaded.publishedRevision ? (await this.loadPublishedRevision(projectId, loaded.publishedRevision)).state.project : undefined; return { format: "my-chrome-utilities.durable-project-bundle", version: 1, sourceProjectId: projectId, sourceName: loaded.state.project.name, publishedRevision: loaded.publishedRevision, ...(publishedProject ? { publishedProject: clone(publishedProject) } : {}), project: clone(loaded.state.project), draft: clone(loaded.state.draft) }; }
+    async exportProject(projectId) { const loaded = await this.loadProject(projectId), publishedProject = loaded.publishedRevision ? (await this.loadPublishedRevision(projectId, loaded.publishedRevision)).state.project : undefined, manifest = await this.currentProductionManifest(projectId), schemaSnapshots = manifest ? await Promise.all(manifest.schemas.map(entry => this.loadProductionSchema({ projectId, projectRevision: manifest.projectRevision, schemaId: entry.schemaId, schemaRevision: entry.schemaRevision, fingerprint: entry.fingerprint }))) : [], currentRelease = loaded.state.project.releases.find(({ revision }) => revision === loaded.publishedRevision), draftProject = { ...clone(loaded.state.project), releases: currentRelease ? [clone(currentRelease)] : [], ...(currentRelease ? { currentRelease: currentRelease.id } : {}) }, productionProjectSnapshot = publishedProject ? { ...clone(publishedProject), releases: currentRelease ? [clone(currentRelease)] : [], ...(currentRelease ? { currentRelease: currentRelease.id } : {}) } : undefined; return { format: "my-chrome-utilities.durable-project-bundle", version: 2, sourceProjectId: projectId, sourceName: loaded.state.project.name, publishedRevision: loaded.publishedRevision, baseProjectRevision: loaded.publishedRevision, ...(productionProjectSnapshot ? { publishedProject: productionProjectSnapshot } : {}), ...(manifest ? { productionManifest: clone(manifest), schemaSnapshots: clone(schemaSnapshots) } : {}), project: draftProject, draft: clone(loaded.state.draft) }; }
     async exportRecoveryBundle(projectId) { const project = await this.exportProject(projectId), metadata = (await this.listProjectMetadata()).find(entry => entry.projectId === projectId), migrationBackup = await this.migrationBackup(); return { format: "my-chrome-utilities.durable-recovery-bundle", version: 1, createdAt: this.options.now(), project, metadata: metadata ? clone(metadata) : undefined, migrationBackup }; }
-    async exportRepositoryRecoveryBundle() { const metadata = await this.listProjectMetadata(), projects = await Promise.all(metadata.map(({ projectId }) => this.exportProject(projectId))), savedSchemas = await this.savedSchemaRecords(), internal = await this.backend.transaction(["projectRevisions", "settings", "migrationReceipts", "migrationBackups"], "readonly", async (transaction) => ({ projectRevisions: await transaction.getAll("projectRevisions"), settings: await transaction.getAll("settings"), migrationReceipts: await transaction.getAll("migrationReceipts"), migrationBackups: await transaction.getAll("migrationBackups") })); return { format: "my-chrome-utilities.durable-repository-recovery-bundle", version: 1, createdAt: this.options.now(), metadata: clone(metadata), projects: clone(projects), savedSchemas: clone(savedSchemas), ...clone(internal) }; }
-    async importProject(bundle, input) { if (bundle.format !== "my-chrome-utilities.durable-project-bundle" || !record(bundle.project))
-        throw new Error("Choose a durable project bundle."); const source = clone(bundle.project), mapping = projectIdentityMapping(source, input.projectId), project = remapProjectReferences(source, mapping); project.name = input.name; const publishedRevision = Number(bundle.publishedRevision ?? 0); if (publishedRevision > 0 && !record(bundle.publishedProject))
-        throw new DOMException(`Imported project ${input.projectId} declares Published revision ${publishedRevision} without its immutable domain project snapshot.`, "DataError"); const publishedProject = record(bundle.publishedProject) ? remapProjectReferences(bundle.publishedProject, mapping) : undefined; if (publishedProject)
-        publishedProject.name = input.name; await this.putProjectMetadataOnly({ project, ...(record(bundle.draft) ? { draft: remapProjectReferences(bundle.draft, mapping) } : {}), history: { undo: [], redo: [] } }, { publishedRevision, ...(publishedProject ? { publishedProject } : {}), active: false }); return { projectId: input.projectId, active: false }; }
+    async exportRepositoryRecoveryBundle() { const metadata = await this.listProjectMetadata(), projects = await Promise.all(metadata.map(({ projectId }) => this.exportProject(projectId))), savedSchemas = await this.savedSchemaRecords(), internal = await this.backend.transaction(["projectRevisions", "productionManifests", "schemaRevisions", "settings", "migrationReceipts", "migrationBackups"], "readonly", async (transaction) => ({ projectRevisions: await transaction.getAll("projectRevisions"), productionManifests: await transaction.getAll("productionManifests"), schemaRevisions: await transaction.getAll("schemaRevisions"), settings: await transaction.getAll("settings"), migrationReceipts: await transaction.getAll("migrationReceipts"), migrationBackups: await transaction.getAll("migrationBackups") })); return { format: "my-chrome-utilities.durable-repository-recovery-bundle", version: 2, createdAt: this.options.now(), metadata: clone(metadata), projects: clone(projects), savedSchemas: clone(savedSchemas), ...clone(internal) }; }
+    async importProject(bundle, input) {
+        if (bundle.format !== "my-chrome-utilities.durable-project-bundle" || !record(bundle.project))
+            throw new Error("Choose a durable project bundle.");
+        const compacted = compactLegacyEditHistory(bundle.project), source = compacted.value, mapping = projectIdentityMapping(source, input.projectId), project = remapProjectReferences(source, mapping);
+        project.name = input.name;
+        const publishedRevision = Number(bundle.publishedRevision ?? bundle.baseProjectRevision ?? 0);
+        if (publishedRevision > 0 && !record(bundle.publishedProject))
+            throw new DOMException(`Imported project ${input.projectId} declares Published revision ${publishedRevision} without its immutable domain project snapshot.`, "DataError");
+        const publishedProject = record(bundle.publishedProject) ? remapProjectReferences(compactLegacyEditHistory(bundle.publishedProject).value, mapping) : undefined;
+        if (publishedProject)
+            publishedProject.name = input.name;
+        let production;
+        if (record(bundle.productionManifest) && Array.isArray(bundle.schemaSnapshots)) {
+            const sourceManifest = bundle.productionManifest, sourceSnapshots = bundle.schemaSnapshots.filter(record), at = this.options.now(), entries = [], snapshots = [];
+            for (const entry of sourceManifest.schemas ?? []) {
+                const schemaId = mapping.get(entry.schemaId) ?? entry.schemaId, snapshot = sourceSnapshots.find(candidate => candidate.schemaId === entry.schemaId && candidate.schemaRevision === entry.schemaRevision && candidate.fingerprint === entry.fingerprint);
+                if (!snapshot)
+                    throw new DOMException(`Imported production schema ${entry.schemaId}:${entry.schemaRevision} has no matching immutable snapshot.`, "DataError");
+                entries.push({ schemaId, schemaRevision: entry.schemaRevision, fingerprint: entry.fingerprint, snapshotKey: `${input.projectId}:${schemaId}:${entry.schemaRevision}` });
+                snapshots.push({ ...clone(snapshot), projectId: input.projectId, schemaId, createdAt: at });
+            }
+            production = { manifest: { ...clone(sourceManifest), projectId: input.projectId, projectRevision: publishedRevision, publishedAt: at, schemas: entries }, snapshots };
+        }
+        await this.putProjectMetadataOnly({ project, ...(record(bundle.draft) ? { draft: remapProjectReferences(compactLegacyEditHistory(bundle.draft).value, mapping) } : {}), history: { undo: [], redo: [] } }, { publishedRevision, ...(publishedProject ? { publishedProject } : {}), ...(production ? { production } : {}), active: false });
+        return { projectId: input.projectId, active: false };
+    }
 }
 export function createMemoryDurableProjectRepository(options = {}) { return new DurableProjectRepository(new MemoryBackend(), { now: options.now ?? (() => new Date().toISOString()), token: options.token ?? (() => `draft:${crypto.randomUUID()}`) }); }
 export async function openIndexedDbProjectRepository(factory = globalThis.indexedDB, options = {}) { if (!factory)
@@ -643,9 +746,9 @@ export async function migrateLegacyProjectStorage(repository, storage, options =
             storage.removeItem(key);
         return { status: "migrated", removedKeys: raw.map(({ key }) => key) };
     }
-    const backup = { sources: await Promise.all(raw.map(async ({ key, value }) => ({ key, bytes: new TextEncoder().encode(value).byteLength, checksum: await checksum(value), value }))) }, schemas = (schemasValue ?? []);
+    const backup = { sources: await Promise.all(raw.map(async ({ key, value }) => ({ key, bytes: new TextEncoder().encode(value).byteLength, checksum: await checksum(value), value }))) }, schemaSource = (schemasValue ?? []), projectCompactions = selected.map(entry => ({ entry, compaction: compactLegacyEditHistory(entry.state) })), schemaCompactions = schemaSource.map(schema => compactLegacyEditHistory(schema)), projects = projectCompactions.map(({ entry, compaction }) => ({ ...entry, state: compaction.value })), schemas = schemaCompactions.map(({ value }) => value), changed = [...projectCompactions.map(({ compaction }) => compaction), ...schemaCompactions].filter(({ entryCount }) => entryCount > 0), compactions = await Promise.all(changed.map(async ({ entryCount, before, after }) => ({ entryCount, beforeChecksum: await checksum(before), afterChecksum: await checksum(after) })));
     try {
-        await repository.importLegacy(owner, { projects: selected, schemas, backup });
+        await repository.importLegacy(owner, { projects, schemas, backup, compactions });
     }
     catch (error) {
         await repository.abandonLegacyMigration(owner);
