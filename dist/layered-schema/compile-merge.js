@@ -18,7 +18,7 @@ const conflictingRulePair = (prior, constraint, kind) => { const sources = rules
     for (const local of locals)
         if (conflicts(source, local))
             return { source, local }; return { ...(sources[0] ? { source: sources[0] } : {}), ...(locals[0] ? { local: locals[0] } : {}) }; };
-const ruleDetails = (prior, pair) => { const sourceRuleId = pair.source?.id === undefined ? undefined : String(pair.source.id), localRuleId = pair.local?.id === undefined ? undefined : String(pair.local.id); return { ...(sourceRuleId ? { sourceRuleId } : {}), ...(pair.source?.enforcement === "invariant" || prior.enforcement === "invariant" ? { sourceRuleInvariant: true } : {}), ...(localRuleId ? { localRuleId } : {}) }; };
+const ruleDetails = (prior, pair) => { const sourceRuleId = pair.source?.id === undefined ? undefined : String(pair.source.id), localRuleId = pair.local?.id === undefined ? undefined : String(pair.local.id); return { ...(sourceRuleId ? { sourceRuleId } : {}), ...(pair.source?.enforcement === "invariant" || prior.enforcement === "invariant" ? { sourceRuleInvariant: true } : {}), ...(localRuleId ? { localRuleId } : {}), ...(pair.local?.enforcement === "invariant" ? { localRuleInvariant: true } : {}) }; };
 const replacedRuleIds = (constraint) => new Set((constraint.rules ?? []).flatMap((rule) => typeof rule.replacesRuleId === "string" ? [rule.replacesRuleId] : []));
 export function mergeLayeredProperty(prior, constraint, contributor, parallelPair, parallelPeer, conflict) {
     const source = { contributorId: contributor.id, contributorName: contributor.name, scope: contributor.scope, ...(contributor.inheritanceRoutes?.length ? { inheritanceRoutes: [...contributor.inheritanceRoutes] } : {}) };

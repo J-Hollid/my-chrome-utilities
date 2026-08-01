@@ -158,6 +158,20 @@ for(let iteration=0;iteration<120;iteration+=1){
     assert.deepEqual(reverse.conflicts,forward.conflicts,"generated cross-facet evidence is independent of peer list order");
     assert.deepEqual({count:forward.conflicts.length,facet:issue.facet,section:issue.section,ownedFacets:[issue.sourceFacet,issue.localFacet].sort()},{count:1,facet,section,ownedFacets:[...ownedFacets].sort()},"every generated cross-facet incompatibility retains one exact decision and both contributor-owned facets");
   }
+  const authorityCases=[
+    [{type:"string",protectedFacets:["type"]},{type:"number"},"sourceFacetProtected","localFacetProtected"],
+    [{rules:[{id:`invariant-pattern:${iteration}`,kind:"pattern",pattern:"^[a-z]+$",enforcement:"invariant"}]},{rules:[{id:`loose-pattern:${iteration}`,kind:"pattern",pattern:"^[0-9]+$"}]},"sourceRuleInvariant","localRuleInvariant"],
+    [{rules:[{id:`invariant-range:${iteration}`,kind:"range",minimum:10,enforcement:"invariant"}]},{rules:[{id:`loose-range:${iteration}`,kind:"range",maximum:5}]},"sourceRuleInvariant","localRuleInvariant"],
+    [{rules:[{id:`invariant-cardinality:${iteration}`,kind:"cardinality",minItems:2,enforcement:"invariant"}]},{rules:[{id:`loose-cardinality:${iteration}`,kind:"cardinality",maxItems:1}]},"sourceRuleInvariant","localRuleInvariant"],
+  ];
+  for(const [authority,loose,sourceFlag,localFlag] of authorityCases){
+    const sourceOwned=compilePeers([peerContribution("a",authority),peerContribution("b",loose)]),localOwned=compilePeers([peerContribution("a",loose),peerContribution("b",authority)]),sourceIssue=sourceOwned.conflicts[0],localIssue=localOwned.conflicts[0];
+    assert.equal(sourceIssue[sourceFlag],true,"generated peer authority is recorded on the source side");
+    assert.equal(sourceIssue[localFlag],undefined,"generated loose peer is not marked authoritative on the local side");
+    assert.equal(localIssue[localFlag],true,"generated peer authority follows ownership to the local side");
+    assert.equal(localIssue[sourceFlag],undefined,"generated loose peer is not marked authoritative on the source side");
+    assert.deepEqual(compilePeers([peerContribution("b",loose),peerContribution("a",authority)]).conflicts,sourceOwned.conflicts,"generated authority metadata is independent of peer list order");
+  }
   const expectation=`same-${iteration}`,enforcementA=peerContribution("a",{expectedValue:expectation,enforcement:"invariant"}),enforcementB=peerContribution("b",{expectedValue:expectation,enforcement:"overridable"}),enforcementForward=compilePeers([enforcementA,enforcementB]),enforcementOwnershipSwapped=compilePeers([peerContribution("a",{expectedValue:expectation,enforcement:"overridable"}),peerContribution("b",{expectedValue:expectation,enforcement:"invariant"})]);
   for(const result of [enforcementForward,enforcementOwnershipSwapped]){
     assert.equal(result.status,"ready");

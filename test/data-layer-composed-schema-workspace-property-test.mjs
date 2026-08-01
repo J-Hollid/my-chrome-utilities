@@ -106,6 +106,26 @@ for(let example=0;example<150;example+=1){
     assert.deepEqual(undoProjectTransaction(repaired).project.collections.pageGroups[0].localSchemaContributions,crossGroup.localSchemaContributions,"one Undo restores the unresolved property without disturbing unrelated sparse data");
   }
 
+  const guardedCases=[
+    [{type:"string",protectedFacets:["type"]},{type:"number"},"type","type","number",(effective)=>effective.type==="string"],
+    [{rules:[{id:`guarded-pattern:${example}`,kind:"pattern",pattern:"^[a-z]+$",enforcement:"invariant"}]},{rules:[{id:`loose-pattern:${example}`,kind:"pattern",pattern:"^[0-9]+$"}]},"patterns","patterns",["^[0-9]+$"],(effective)=>effective.patterns?.includes("^[a-z]+$")&&!effective.patterns?.includes("^[0-9]+$")],
+    [{rules:[{id:`guarded-range:${example}`,kind:"range",minimum:10,enforcement:"invariant"}]},{rules:[{id:`loose-range:${example}`,kind:"range",maximum:5}]},"minimum","maximum",{maximum:5},(effective)=>effective.minimum===10&&effective.maximum===undefined],
+    [{rules:[{id:`guarded-cardinality:${example}`,kind:"cardinality",minItems:2,enforcement:"invariant"}]},{rules:[{id:`loose-cardinality:${example}`,kind:"cardinality",maxItems:1}]},"minItems","maxItems",{maxItems:1},(effective)=>effective.minItems===2&&effective.maxItems===undefined],
+  ],guardedCase=guardedCases[example%guardedCases.length],guardedPath=`/${token("guarded")}`,guardedState=createSpecificationProject({name:`Guarded composition ${example}`,site:"shop.example",id:(kind)=>`${kind}:guarded:${example}`}),guardedFirst=example%2===0,guardedId=guardedFirst?`profile:guard-a:${example}`:`profile:guard-b:${example}`,looseId=guardedFirst?`profile:guard-b:${example}`:`profile:guard-a:${example}`,guardedProfiles=[
+    {id:guardedId,name:`Guarded ${example}`,schemaConstraints:[{path:guardedPath,...guardedCase[0]}]},
+    {id:looseId,name:`Loose ${example}`,schemaConstraints:[{path:guardedPath,...guardedCase[1]}]},
+  ];
+  guardedState.project.collections.profiles.push(...(example%3===0?[...guardedProfiles].reverse():guardedProfiles));
+  guardedState.project.collections.pageGroups.push({id:`group:guarded:${example}`,name:`Guarded group ${example}`,profileIds:guardedState.project.collections.profiles.map(({id})=>id),localSchemaContributions:[{path:unrelatedPath,documentation:"guarded unrelated"}]});
+  const guardedGroup=guardedState.project.collections.pageGroups[0],guardedRow=composedSchemaWorkspace(guardedState,guardedGroup,"Page Group").rows.find(({path:rowPath})=>rowPath===guardedPath),guardedRepairs=guardedRow.repairs.filter(({kind})=>kind==="use-contextual");
+  assert.deepEqual(guardedRepairs.map(({contributorId})=>contributorId),[guardedId],"generated protected and invariant conflicts expose only the authority-preserving contextual choice");
+  const legalGuarded=guardedRepairs[0],guardedRepaired=applyComposedSchemaContextualFacet(guardedState,"pageGroups",guardedGroup.id,guardedPath,legalGuarded.facet,legalGuarded.value,legalGuarded),guardedRepairedGroup=guardedRepaired.project.collections.pageGroups[0],guardedWorkspace=composedSchemaWorkspace(guardedRepaired,guardedRepairedGroup,"Page Group"),guardedEffective=guardedWorkspace.rows.find(({path:rowPath})=>rowPath===guardedPath).effective;
+  assert.equal(guardedWorkspace.status,"ready","the generated authority-preserving contextual choice resolves the peer conflict");
+  assert.ok(guardedCase[5](guardedEffective),"the generated repair retains the protected or invariant effective facet and removes only the loose facet");
+  assert.deepEqual(undoProjectTransaction(guardedRepaired).project.collections.pageGroups[0].localSchemaContributions,guardedGroup.localSchemaContributions,"one generated Undo restores the guarded decision and preserves unrelated sparse data");
+  const illegalRepair={kind:"use-contextual",contributorId:looseId,rejectedContributorId:guardedId,rejectedFacet:guardedCase[2]},illegal=applyComposedSchemaContextualFacet(guardedState,"pageGroups",guardedGroup.id,guardedPath,guardedCase[3],guardedCase[4],illegalRepair);
+  assert.deepEqual(illegal,guardedState,"a forged generated repair cannot reject a protected or invariant peer facet");
+
   const rulePath=`/${token("rule")}`,sourceRuleId=`rule:source:${example}`,genericRuleId=`rule:generic:${example}`,localRuleId=`rule:local:${example}`,invariant=example%2===1,ruleState=createSpecificationProject({name:`Rule composition ${example}`,site:"shop.example",id:(kind)=>`${kind}:rule:${example}`});
   ruleState.project.collections.profiles.push({id:`profile:rule:${example}`,name:`Rule source ${example}`,schemaConstraints:[{path:rulePath,type:invariant?"number":"string",rules:invariant?[{id:sourceRuleId,name:`Source Range ${example}`,kind:"range",maximum:5,enforcement:"invariant"}]:[{id:genericRuleId,name:`Generic Pattern ${example}`,kind:"pattern",pattern:"^.{1,20}$"},{id:sourceRuleId,name:`Source Pattern ${example}`,kind:"pattern",pattern:"^[a-z]+$"}]}]});
   ruleState.project.collections.pageGroups.push({id:`group:rule:${example}`,name:`Rule local ${example}`,profileId:`profile:rule:${example}`,localSchemaContributions:[{path:rulePath,rules:[invariant?{id:localRuleId,name:`Local Range ${example}`,kind:"range",minimum:10}:{id:localRuleId,name:`Local Pattern ${example}`,kind:"pattern",pattern:"^[0-9]+$"}]},{path:unrelatedPath,type:"boolean"}]});
