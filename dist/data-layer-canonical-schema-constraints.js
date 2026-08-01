@@ -1,4 +1,5 @@
 import { addCanonicalProperty, canonicalPropertyPath, canonicalTableRows, setCanonicalProperty } from "./data-layer-canonical-schema.js";
+import { canonicalSetConditionIssue, canonicalTypeTransition, normalizeCanonicalTypeShape } from "./canonical-schema/set-transition.js";
 const clone = (value) => structuredClone(value);
 const orderWithin = (document, parentId) => Object.values(document.nodes).filter((node) => node.parentId === parentId).sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
 const orderedIds = (document, parentId) => orderWithin(document, parentId).flatMap((node) => [node.id, ...orderedIds(document, node.id)]);
@@ -26,10 +27,11 @@ export function canonicalSchemaWithConstraint(document, constraint, id) { let ne
  * resulting revisions and change entries intentionally match the sequential
  * command representation because existing concurrency tokens can observe them. */
 export function canonicalSchemaWithConstraints(document, constraints, id) {
-    const next = clone(document), pathIds = new Map(canonicalTableRows(next).map(({ path, id: propertyId }) => [path, propertyId])), childCounts = new Map();
+    const next = clone(document), pathIds = new Map(canonicalTableRows(next).map(({ path, id: propertyId }) => [path, propertyId])), childIds = new Map();
     next.changes ??= [];
     for (const node of Object.values(next.nodes))
-        childCounts.set(node.parentId, (childCounts.get(node.parentId) ?? 0) + 1);
+        childIds.set(node.parentId, [...(childIds.get(node.parentId) ?? []), node.id]);
+    const descendants = (propertyId) => (childIds.get(propertyId) ?? []).flatMap((childId) => [childId, ...descendants(childId)]);
     const change = (kind, propertyIds) => { next.revision += 1; next.changes.push({ revision: next.revision, propertyIds, kind }); };
     for (const constraint of constraints) {
         let parentId;
@@ -43,10 +45,10 @@ export function canonicalSchemaWithConstraints(document, constraints, id) {
                 parentId = existing;
                 continue;
             }
-            const propertyId = id("property"), node = { id: propertyId, name, ...(parentId ? { parentId } : {}), order: childCounts.get(parentId) ?? 0, type: name === realSegments.at(-1) ? constraint.type ?? "string" : "object", presence: { mode: "optional" }, allowedValues: [], rules: [], documentation: { displayText: "", description: "", comments: "", example: { method: "blank" } }, provenance: [{ source: "created" }], overrideReferences: [] };
+            const propertyId = id("property"), node = { id: propertyId, name, ...(parentId ? { parentId } : {}), order: (childIds.get(parentId) ?? []).length, type: name === realSegments.at(-1) ? constraint.type ?? "string" : "object", presence: { mode: "optional" }, allowedValues: [], rules: [], documentation: { displayText: "", description: "", comments: "", example: { method: "blank" } }, provenance: [{ source: "created" }], overrideReferences: [] };
             next.nodes[propertyId] = node;
-            childCounts.set(parentId, node.order + 1);
-            childCounts.set(propertyId, 0);
+            childIds.set(parentId, [...(childIds.get(parentId) ?? []), propertyId]);
+            childIds.set(propertyId, []);
             pathIds.set(path, propertyId);
             parentId = propertyId;
             next.selectedPropertyId = propertyId;
@@ -56,8 +58,11 @@ export function canonicalSchemaWithConstraints(document, constraints, id) {
         }
         if (!parentId)
             throw new Error("A canonical constraint needs a generated property path.");
-        const node = next.nodes[parentId], rules = [...node.rules, ...((constraint.patterns ?? []).map((pattern) => ({ id: id("rule"), kind: "pattern", pattern, severity: "error", message: "Pattern mismatch" }))), ...(constraint.minimum !== undefined || constraint.maximum !== undefined ? [{ id: id("rule"), kind: "range", severity: "error", message: "Outside range", ...(constraint.minimum !== undefined ? { minimum: constraint.minimum } : {}), ...(constraint.maximum !== undefined ? { maximum: constraint.maximum } : {}) }] : []), ...(constraint.minItems !== undefined || constraint.maxItems !== undefined ? [{ id: id("rule"), kind: "cardinality", severity: "error", message: "Outside cardinality", ...(constraint.minItems !== undefined ? { minItems: constraint.minItems } : {}), ...(constraint.maxItems !== undefined ? { maxItems: constraint.maxItems } : {}) }] : [])], itemSchema = constraint.itemSchema ? clone(constraint.itemSchema) : constraint.itemType ? { id: `item:${parentId}`, type: constraint.itemType } : undefined;
-        Object.assign(node, { ...(constraint.concept?.trim() ? { concept: constraint.concept.trim() } : {}), type: constraint.type ?? node.type, ...(constraint.nullable !== undefined ? { nullable: constraint.nullable } : {}), ...(constraint.onlyDefinedFields !== undefined ? { onlyDefinedFields: constraint.onlyDefinedFields } : {}), ...(constraint.itemType ? { itemType: constraint.itemType } : {}), ...(itemSchema ? { itemSchema } : {}), allowedValues: (constraint.allowedValues ?? []).map((value, index) => ({ id: constraint.allowedValueIds?.[index] ?? id("allowed-value"), value: clone(value) })), presence: { mode: constraint.presence === "required" ? "required" : constraint.presence === "forbidden" ? "forbidden" : "optional" }, rules, documentation: { ...node.documentation, description: constraint.documentation ?? node.documentation.description, ...(constraint.examples?.length ? { example: { method: "custom", value: clone(constraint.examples[0]) } } : {}) }, ...(constraint.expectedValue !== undefined ? { expectedValue: clone(constraint.expectedValue) } : {}), ...(constraint.enforcement ? { enforcement: constraint.enforcement } : {}), ...(constraint.target ? { target: constraint.target } : {}), overrideReferences: [...(constraint.overrideReferences ?? [])] });
+        const node = next.nodes[parentId], rules = [...node.rules, ...((constraint.patterns ?? []).map((pattern) => ({ id: id("rule"), kind: "pattern", pattern, severity: "error", message: "Pattern mismatch" }))), ...(constraint.minimum !== undefined || constraint.maximum !== undefined ? [{ id: id("rule"), kind: "range", severity: "error", message: "Outside range", ...(constraint.minimum !== undefined ? { minimum: constraint.minimum } : {}), ...(constraint.maximum !== undefined ? { maximum: constraint.maximum } : {}) }] : []), ...(constraint.minItems !== undefined || constraint.maxItems !== undefined ? [{ id: id("rule"), kind: "cardinality", severity: "error", message: "Outside cardinality", ...(constraint.minItems !== undefined ? { minItems: constraint.minItems } : {}), ...(constraint.maxItems !== undefined ? { maxItems: constraint.maxItems } : {}) }] : [])], itemSchema = constraint.itemSchema ? clone(constraint.itemSchema) : constraint.itemType ? { id: `item:${parentId}`, type: constraint.itemType } : undefined, patch = { ...(constraint.concept?.trim() ? { concept: constraint.concept.trim() } : {}), type: constraint.type ?? node.type, ...(constraint.nullable !== undefined ? { nullable: constraint.nullable } : {}), ...(constraint.onlyDefinedFields !== undefined ? { onlyDefinedFields: constraint.onlyDefinedFields } : {}), ...(constraint.itemType ? { itemType: constraint.itemType } : {}), ...(itemSchema ? { itemSchema } : {}), allowedValues: (constraint.allowedValues ?? []).map((value, index) => ({ id: constraint.allowedValueIds?.[index] ?? id("allowed-value"), value: clone(value) })), presence: { mode: constraint.presence === "required" ? "required" : constraint.presence === "forbidden" ? "forbidden" : "optional" }, rules, documentation: { ...node.documentation, description: constraint.documentation ?? node.documentation.description, ...(constraint.examples?.length ? { example: { method: "custom", value: clone(constraint.examples[0]) } } : {}) }, ...(constraint.expectedValue !== undefined ? { expectedValue: clone(constraint.expectedValue) } : {}), ...(constraint.enforcement ? { enforcement: constraint.enforcement } : {}), ...(constraint.target ? { target: constraint.target } : {}), overrideReferences: [...(constraint.overrideReferences ?? [])] }, issue = canonicalSetConditionIssue(patch), nextType = patch.type ?? node.type, nextItemType = nextType === "array" ? (Object.hasOwn(patch, "itemType") ? patch.itemType : node.itemType) : undefined, nextItemSchema = nextType === "array" ? (Object.hasOwn(patch, "itemSchema") ? patch.itemSchema : node.itemSchema) : undefined, transition = canonicalTypeTransition(node, nextType, nextItemType, nextItemSchema, descendants(parentId), next);
+        if (issue || transition.confirmationRequired)
+            throw new Error(`Cannot update canonical property ${constraint.path}.`);
+        Object.assign(node, patch);
+        normalizeCanonicalTypeShape(node, nextType, Object.hasOwn(patch, "itemType"), Object.hasOwn(patch, "itemSchema"));
         change("set", [parentId]);
     }
     return next;

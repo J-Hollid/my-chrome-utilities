@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   addCanonicalProperty,
   canonicalPropertyPath,
+  canonicalSchemaWithConstraint,
   canonicalTableRows,
   createCanonicalRepository,
   createCanonicalSchema,
@@ -9,6 +10,8 @@ import {
   renameCanonicalProperty,
   resolveCanonicalMigrationConflict,
 } from "../dist/data-layer-canonical-schema.js";
+import {addProjectEntity,createSpecificationProject} from "../dist/data-layer-specification-project.js";
+import {commitStagedBulkRequirements,stageBulkRequirements} from "../dist/data-layer-specification-bulk.js";
 
 let seed=0x5eed1234;
 const random=()=>((seed=(Math.imul(seed,1664525)+1013904223)>>>0)/0x100000000);
@@ -72,6 +75,13 @@ for(let example=0;example<100;example+=1){
   assert.ok(node.rules.some(({kind,pattern})=>kind==="pattern"&&pattern==="^C"));
   assert.ok(node.rules.some(({kind,minimum,maximum})=>kind==="range"&&minimum===example&&maximum===example+10));
   assert.ok(node.rules.filter(({id})=>id!==`rule:requirement:${example}`).every(({id})=>id.startsWith("json-facet:")),"schema facets must remain distinguishable from attached rules during round-trip");
+}
+
+for(let example=0;example<100;example+=1){
+  let sequence=0;const id=(kind)=>`${kind}:bulk-transition:${example}:${++sequence}`;let state=createSpecificationProject({name:`Bulk transition ${example}`,site:`bulk-${example}.example`,id});state=addProjectEntity(state,"profiles",{name:`Profile ${example}`,requirements:[]},id);const profileId=state.project.collections.profiles[0].id,isObject=example%2===0,initialRows=isObject?[{path:"/container",type:"object"},{path:`/container/child_${example}`,type:"string"}]:[{path:"/container",type:"array",itemType:"string"}],initial=commitStagedBulkRequirements(state,profileId,stageBulkRequirements("json",JSON.stringify(initialRows))),canonical=initial.project.collections.profiles[0].canonicalSchema,nextConstraint=isObject?{path:"/container",type:["string","number","boolean"][example%3]}:{path:"/container",type:"array",itemType:["number","boolean","object"][example%3]},snapshot=structuredClone(initial);
+  assert.throws(()=>canonicalSchemaWithConstraint(canonical,nextConstraint,id),/Cannot update canonical property \/container/,"the sequential command must reject generated destructive transitions");
+  assert.throws(()=>commitStagedBulkRequirements(initial,profileId,stageBulkRequirements("json",JSON.stringify([nextConstraint]))),/Cannot update canonical property \/container/,"the bounded batch must match sequential transition safety for generated object and array shapes");
+  assert.deepEqual(initial,snapshot,"rejected generated bulk transitions must conserve the input project");
 }
 
 console.log("data-layer canonical schema property tests passed");
