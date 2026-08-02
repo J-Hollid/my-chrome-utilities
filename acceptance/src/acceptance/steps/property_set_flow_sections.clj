@@ -40,7 +40,7 @@
         (reset! browser-observation observed))))
 
 (def runtime-paths
-  (set (concat [:installedBoundary]
+  (set (concat [:installedBoundary :preservedGraph]
                (map #(keyword (str "runtime" (format "%03d" %))) (range 1 12)))))
 
 (defn- assert-runtime! [evidence]

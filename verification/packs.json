@@ -1056,7 +1056,8 @@
     "id": "property_set_flow_sections",
     "source": [
       "src/data-layer-property-set-flow-section.ts",
-      "src/data-layer-property-set-flow-section-ui.ts"
+      "src/data-layer-property-set-flow-section-ui.ts",
+      "src/utilities/data-layer/property-set-flow-section.ts"
     ],
     "dependencies": [],
     "unit": [

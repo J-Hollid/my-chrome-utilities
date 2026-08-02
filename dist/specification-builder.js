@@ -6,7 +6,7 @@ import { assertDeveloperSchemaExportAvailable, buildEffectiveRequirementCoverage
 import { compileSpecificationProject as executeCompileSpecificationProject, createCanonicalProjectEnvelope } from "./data-layer-specification-engine.js";
 import { entityPurposeGuidance, projectAuthoringGuidance } from "./data-layer-specification-guidance.js";
 import { installExecutableFlowBuilder } from "./data-layer-specification-executable-flow-ui.js";
-import { applyFlowPageGroupLaneSelection, flowPageGroupLaneIds, moveFlowPageFrame, removeFlowPageFrame } from "./utilities/data-layer/flow-graph.js";
+import { applyFlowPageGroupLaneSelection, flowPageGroupLaneIds, installFlowGraphBuilder, moveFlowPageFrame, removeFlowPageFrame } from "./utilities/data-layer/flow-graph.js";
 import { addPageGroupMembership, confirmPageGroupMembershipMigration, inspectPageGroupMembershipRemoval, movePageGroupMembership, orderedPageGroupIds, pageGroupMembers, previewPageGroupMembershipMove, removePageGroupMembership, requiresPageGroupMembershipMigration, stagePageGroupMembershipMigration } from "./data-layer-page-group-membership.js";
 import { restoreSchemaLibrary, SCHEMA_LIBRARY_STORAGE_KEY } from "./data-layer-schema-verification.js";
 const projectPreflight = (current, revision) => specificationPreflight({ ...createCanonicalProjectEnvelope(current.project, current.draft?.id ?? "release"), revision });
@@ -32,16 +32,14 @@ import { mountSelectiveProfileInheritance } from "./data-layer-selective-profile
 import { savePageDetails } from "./data-layer-page-authoring.js";
 import { mountAssignmentRoutingWorkspace } from "./data-layer-assignment-routing-ui.js";
 import { developerProductionSchemaExport, loadProductionSpecificationPlan, publishableProductionSchemas } from "./data-layer-production-specification.js";
-import { mountFlowSectionWorkspace, mountPropertyCompositionWorkspace } from "./data-layer-property-set-flow-section-ui.js";
+import { mountPropertyCompositionWorkspace } from "./data-layer-property-set-flow-section-ui.js";
 const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, START_PATH_KEY = "my-chrome-utilities.specification-project-start.v1", routeParameters = new URLSearchParams(location.search), startupProjectId = routeParameters.get("project") ?? undefined, startupKind = routeParameters.get("kind") ?? undefined, startupEntityId = routeParameters.get("entity") ?? undefined, startupRoute = startupKind ? durableProjectRouteForWorkspace(startupKind, startupEntityId) : undefined;
 installStudioChoiceControls(document.body);
 const durableProjectRuntime = await openDurableProjectRuntime(globalThis.localStorage, globalThis.indexedDB, { ...(startupProjectId ? { projectId: startupProjectId } : {}), ...(startupRoute ? { route: startupRoute } : {}) }).catch((error) => { const status = document.querySelector("#project-state"); if (status)
     status.textContent = `Durable project storage unavailable: ${error instanceof Error ? error.message : String(error)}`; document.querySelectorAll("button,input,select,textarea").forEach((control) => { control.disabled = true; }); return new Promise(() => { }); }), projectStorage = durableProjectRuntime.storage;
 const q = (selector) => { const element = document.querySelector(selector); if (!element)
     throw new Error(`Missing ${selector}`); return element; };
-const projectInspector = q("#project-inspector"), projectInspectorToggle = q("#toggle-project-inspector"), projectWorkspace = q("#project-workspace"), flowInspectorContext = document.createElement("section");
-flowInspectorContext.id = "flow-inspector-context";
-projectInspector.insertBefore(flowInspectorContext, q("#flow-step-editor"));
+const projectInspector = q("#project-inspector"), projectInspectorToggle = q("#toggle-project-inspector"), projectWorkspace = q("#project-workspace");
 const setProjectInspectorOpen = (open) => { const presentation = projectInspectorTogglePresentation(open); projectInspector.hidden = !open; projectInspectorToggle.textContent = presentation.label; projectInspectorToggle.setAttribute("aria-expanded", presentation.expanded); projectWorkspace.dataset.inspectorOpen = String(open); };
 projectInspectorToggle.addEventListener("click", () => setProjectInspectorOpen(projectInspector.hidden));
 setProjectInspectorOpen(globalThis.matchMedia("(min-width: 1600px)").matches);
@@ -56,7 +54,7 @@ q("#project-assignment-applicability").required = false;
 const id = (kind) => `${kind}:${crypto.randomUUID()}`;
 const labels = { profiles: "Shared Profiles", pages: "Pages", propertySets: "Property Sets", events: "Events", applicabilitySets: "Applicability", flows: "Flows", fixtures: "Test cases", assignments: "Assignments" };
 let state, lastCommittedState, library = projectLibrary();
-let canonicalRevision = 0, publishedRevision = 0, guidedEvaluatorInvocations = 0, pendingConflict, durableConflict, saveStatus = { kind: "idle" }, stagedBulk, selectedKind = "profiles", selectedId, projectOverview = routeParameters.get("route") === "overview", documentationOpen = routeParameters.get("view") === "documentation", creationKind, removalReview, lifecycleStatus = "", removedFocus, pendingLifecycleFocus, pendingWorkspaceFocus, pendingProfileInheritanceFocus, pendingHistoryFocus, pendingProfileSource, stagedImport, lastInvokingControl, releasePreflight, releaseReviewHasChanges = true, pendingSavedSchema, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi, projectDocumentationWorkspaceUi;
+let canonicalRevision = 0, publishedRevision = 0, guidedEvaluatorInvocations = 0, pendingConflict, durableConflict, saveStatus = { kind: "idle" }, stagedBulk, selectedKind = "profiles", selectedId, projectOverview = routeParameters.get("route") === "overview", documentationOpen = routeParameters.get("view") === "documentation", creationKind, removalReview, lifecycleStatus = "", removedFocus, pendingLifecycleFocus, pendingWorkspaceFocus, pendingProfileInheritanceFocus, pendingHistoryFocus, pendingProfileSource, stagedImport, lastInvokingControl, releasePreflight, releaseReviewHasChanges = true, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi, projectDocumentationWorkspaceUi;
 const recordGuidedEvaluation = () => { guidedEvaluatorInvocations += 1; document.querySelector("[data-guided-test-case]")?.setAttribute("data-evaluator-invocations", String(guidedEvaluatorInvocations)); };
 const evaluatePageGroupFixture = (...args) => { recordGuidedEvaluation(); return executePageGroupFixture(...args); };
 const runProductionFixture = (...args) => { recordGuidedEvaluation(); return executeProductionFixture(...args); };
@@ -1324,8 +1322,6 @@ function renderWorkspace() {
     q("#inspector-context").textContent = selected ? `${selected.name} · Where used: ${whereUsed(selected.id).join(", ") || "None"}` : "Select a project entity.";
     if (selected) {
         renderProjectEntityWorkspace(content, selectedKind, selected);
-        if (selectedKind === "flows")
-            mountFlowSectionWorkspace({ host: content.querySelector("#flow-graph-workspace"), state, flowId: selected.id, id, onSave: persist });
         return;
     }
     q("#flow-inspector-context").replaceChildren();
@@ -1406,7 +1402,7 @@ function renderCoverage(offset = 0) { if (!state)
 function download(name, text, type = "application/json") { const blob = new Blob([`${text}\n`], { type }), url = URL.createObjectURL(blob), link = document.createElement("a"); link.href = url; link.download = name; link.click(); URL.revokeObjectURL(url); }
 function replaceOptions(select, entities, placeholder) { const value = select.value, empty = document.createElement("option"); empty.value = ""; empty.textContent = placeholder; select.replaceChildren(empty, ...entities.map((entity) => { const option = document.createElement("option"); option.value = entity.id; option.textContent = entity.name; return option; })); select.value = value; }
 function renderReferenceSelectors() { if (!state)
-    return; const targetKind = q("#project-assignment-kind"), targetSelect = q("#project-assignment-contributor"), selectedTarget = targetSelect.value, targets = assignmentContributorTargets(state).filter(({ kind }) => !targetKind.value || kind === targetKind.value); targetSelect.replaceChildren(new Option("Choose contributor", ""), ...targets.map((target) => new Option(`${target.kind} · ${target.name}`, target.id))); targetSelect.value = selectedTarget; const saved = q("#saved-schema-picker"), selectedSaved = saved.value; saved.replaceChildren(new Option("Choose a published saved schema", ""), ...savedSchemas().map((schema) => new Option(`${schema.name} · revision ${schema.version}`, schema.id))); saved.value = selectedSaved; const eventSelect = q("#project-assignment-event"); replaceOptions(eventSelect, state.project.collections.events, "Choose event"); for (const event of state.project.collections.events) {
+    return; flowGraphBuilder?.renderSelectors(); const targetKind = q("#project-assignment-kind"), targetSelect = q("#project-assignment-contributor"), selectedTarget = targetSelect.value, targets = assignmentContributorTargets(state).filter(({ kind }) => !targetKind.value || kind === targetKind.value); targetSelect.replaceChildren(new Option("Choose contributor", ""), ...targets.map((target) => new Option(`${target.kind} · ${target.name}`, target.id))); targetSelect.value = selectedTarget; const saved = q("#saved-schema-picker"), selectedSaved = saved.value; saved.replaceChildren(new Option("Choose a published saved schema", ""), ...savedSchemas().map((schema) => new Option(`${schema.name} · revision ${schema.version}`, schema.id))); saved.value = selectedSaved; const eventSelect = q("#project-assignment-event"); replaceOptions(eventSelect, state.project.collections.events, "Choose event"); for (const event of state.project.collections.events) {
     const eventName = String(event.eventName ?? "");
     if (eventName && eventName !== event.id) {
         const alias = document.createElement("option");
@@ -1454,6 +1450,7 @@ function render() { const visiblePageRoute = state && !documentationOpen && !pro
 } document.title = `Specification Studio · ${state.project.name} · ${state.project.id}`; q("#project-context").textContent = `${state.project.name} · ${state.project.id} · ${state.project.environments[0]} · ${state.draft ? `Preview Draft` : `Published revision ${publishedRevision}`}`; q("#project-state").textContent = pendingConflict ? `Draft conflict; pending ${pendingConflict.pendingLabel}` : durableConflict ? `${durableConflict.label} conflicts with a newer Saved Draft; review current and pending fields.` : saveStatus.kind === "saving" ? `Saving ${saveStatus.label}… · Published revision ${publishedRevision}` : saveStatus.kind === "failed" ? `Save failed for ${state.project.name}: ${saveStatus.label}. ${saveStatus.message ?? "The last Saved Draft is unchanged."}` : state.draft ? `Saved Draft · Published revision ${publishedRevision}` : `Published revision ${publishedRevision}`; q("#tree-project-name").textContent = state.project.name; const history = durableProjectRuntime.historyInspection(state.project.id), undo = q("#undo-project"), redo = q("#redo-project"); undo.dataset.undoCount = String(history.undo.length); redo.dataset.redoCount = String(history.redo.length); undo.disabled = !history.undo.length || Boolean(durableProjectRuntime.failedSave()); redo.disabled = !history.redo.length || Boolean(durableProjectRuntime.failedSave()); q("#publish-project").disabled = Boolean(durableProjectRuntime.failedSave()); q("#flow-step-editor").hidden = selectedKind !== "flows" || !selectedId || projectOverview; q("#schema-draft-editor").hidden = true; q("#assignment-editor").hidden = selectedKind !== "assignments" || projectOverview; q("#bulk-property-editor").hidden = selectedKind !== "profiles" || !selectedId || projectOverview; renderTree(); renderWorkspace(); const profileWorkspace = selectedKind === "profiles" && Boolean(selectedId) && !projectOverview; if (!profileWorkspace) {
     layeredSchemaUi?.render();
     renderReferenceSelectors();
+    flowGraphBuilder?.render();
     flowDocumentationExportUi?.render();
     executableFlowBuilder?.render();
 } }
@@ -1807,7 +1804,8 @@ projectDocumentationWorkspaceUi = installProjectDocumentationWorkspaceUi({ state
             setTimeout(() => focusPath(attempt + 1), 25); };
         queueMicrotask(focusPath);
     } } });
-flowDocumentationExportUi = installFlowDocumentationExportUi({ context: flowBuilderContext, renderFlow: () => flowDocumentationExportUi?.render(), openRepair: (contextId, path, repair) => { const selectPath = () => setTimeout(() => Array.from(document.querySelectorAll("[data-property-id]")).find((candidate) => candidate.dataset.propertyId === path || candidate.textContent?.includes(path))?.click(), 0); if (repair.startsWith("Open contributing schema ")) {
+flowGraphBuilder = installFlowGraphBuilder({ context: flowBuilderContext, persist, id, openOccurrenceSchema: (occurrenceId, path, originFocus) => layeredSchemaUi?.openGraphOccurrenceSchema(occurrenceId, path, originFocus) ?? false });
+flowDocumentationExportUi = installFlowDocumentationExportUi({ context: flowBuilderContext, renderFlow: () => { flowGraphBuilder?.render(); flowDocumentationExportUi?.render(); }, openRepair: (contextId, path, repair) => { const selectPath = () => setTimeout(() => Array.from(document.querySelectorAll("[data-property-id]")).find((candidate) => candidate.dataset.propertyId === path || candidate.textContent?.includes(path))?.click(), 0); if (repair.startsWith("Open contributing schema ")) {
         const name = repair.slice("Open contributing schema ".length), match = ["profiles", "events", "propertySets", "pages", "flows"].flatMap((kind) => state.project.collections[kind].map((entity) => ({ kind, entity }))).find(({ entity }) => entity.name === name);
         if (match) {
             selectedKind = match.kind;

@@ -22,15 +22,15 @@ export interface FlowLayout {lane:string;x:number;y:number}
 export interface FlowOccurrenceInput {name:string;pageFrameId?:string;pageGroupId?:string;freePageFrameId?:string;freePageFrame?:boolean;freePageRegion?:FreePageRegion;pageId:string;eventId?:string;role?:FlowRole;trigger?:string;fallbackRole?:FlowRole;obligation:FlowObligation;minimum:number;maximum:number;layout?:FlowLayout;x?:number;y?:number}
 export interface FlowRelationshipInput {id?:string;toStepId:string;sourcePort:FlowPortSide;targetPort:FlowPortSide;group?:string;label?:string;documentationCondition?:string;expectation?:string}
 export interface FlowNode {id:string;name:string;eventId:string;pageId:string;pageFrameId?:string;pageGroupId?:string;freePageFrameId?:string;freePageFrame?:boolean;freePageRegion?:FreePageRegion;role:FlowRole;trigger?:string;obligation:FlowObligation;expectedMinimum:number;expectedMaximum?:number;layout?:FlowLayout}
-export interface FlowConnectionEndpoint extends FlowEndpointReference {name:string;pageId:string;pageGroupId?:string;freePageRegion?:FreePageRegion;layout:FlowLayout;width:number;height:number}
+export interface FlowConnectionEndpoint extends FlowEndpointReference {name:string;pageId:string;sectionId?:string;pageGroupId?:string;freePageRegion?:FreePageRegion;layout:FlowLayout;width:number;height:number}
 export interface FlowRelationship {id:string;sourceEndpoint:FlowEndpointReference;targetEndpoint:FlowEndpointReference;sourceNodeId:string;targetNodeId:string;sourcePort:FlowPortSide;targetPort:FlowPortSide;kind:FlowRelationshipKind;group?:string;label?:string;documentationCondition?:string;expectation?:string}
 export interface FlowGraph {id:string;name:string;purpose:string;nodes:readonly FlowNode[];connectionEndpoints:readonly FlowConnectionEndpoint[];relationships:readonly FlowRelationship[]}
 export interface FlowCatalogEntry {id:string;name:string;role?:FlowRole;[key:string]:unknown}
 export interface FlowCatalog {propertySets:readonly FlowCatalogEntry[];pages:readonly FlowCatalogEntry[];events:readonly FlowCatalogEntry[]}
 export interface FlowDiagnostic {kind:"missing-event"|"missing-page"|"dangling-relationship";message:string;nodeId?:string;relationshipId?:string}
-export interface FlowLaneBand {id:string;name:string;y:number;height:number}
+export interface FlowLaneBand {id:string;name:string;x:number;y:number;width:number;height:number}
 export interface FlowGraphProjection {projectName:string;lanes:readonly FlowCatalogEntry[];laneBands:readonly FlowLaneBand[];graph:FlowGraph;catalog:FlowCatalog;diagnostics:readonly FlowDiagnostic[]}
-export interface DocumentaryPageFrameRecord {id:string;pageId:string;pageGroupId?:string;freePageRegion?:FreePageRegion;position:{x?:number;y:number}}
+export interface DocumentaryPageFrameRecord {id:string;pageId:string;sectionId?:string;pageGroupId?:string;freePageRegion?:FreePageRegion;position:{x?:number;y:number}}
 export interface DocumentaryRelationshipRecord {id:string;sourceEndpoint?:StoredFlowEndpointReference;targetEndpoint?:StoredFlowEndpointReference;sourceNodeId?:string;targetNodeId?:string;sourcePort?:FlowPortSide;targetPort?:FlowPortSide;[key:string]:unknown}
 export interface FlowViewState {selectedItem?:{kind:"page-frame"|"occurrence"|"relationship";id:string};viewport?:{x:number;y:number;zoom:number}}
 export interface DocumentaryFlowGraph extends FlowViewState {sections:readonly ProjectEntity[];pageGroupIds:readonly string[];pageFrames:readonly DocumentaryPageFrameRecord[];occurrences:readonly ProjectEntity[];relationships:readonly DocumentaryRelationshipRecord[]}
