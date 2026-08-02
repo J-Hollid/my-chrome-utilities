@@ -182,10 +182,15 @@ export function mountComposedSchemaWorkspace(options) {
             } });
             panel.append(include);
         }
-        queueMicrotask(() => { const requested = workspacePanelFocus.get(viewKey); if (requested?.mode !== mode) {
+        const restoreFocus = () => { if (!panel.isConnected)
+            return; const requested = workspacePanelFocus.get(viewKey); if (requested?.mode !== mode) {
             panel.focus();
             return;
-        } workspacePanelFocus.delete(viewKey); const samePath = requested.path ? panel.querySelector(`[data-local-change-path="${CSS.escape(requested.path)}"] button`) : undefined, next = samePath ?? panel.querySelector('[data-local-change-path] button, input[type="checkbox"]') ?? (mode === "local" ? localChangesButton : parentAdditionsButton); next.focus({ preventScroll: true }); });
+        } workspacePanelFocus.delete(viewKey); const samePath = requested.path ? panel.querySelector(`[data-local-change-path="${CSS.escape(requested.path)}"] button`) : undefined, next = samePath ?? panel.querySelector('[data-local-change-path] button, input[type="checkbox"]') ?? (mode === "local" ? localChangesButton : parentAdditionsButton); next.focus({ preventScroll: true }); };
+        if (typeof requestAnimationFrame === "function")
+            requestAnimationFrame(restoreFocus);
+        else
+            queueMicrotask(restoreFocus);
     };
     localChangesButton.addEventListener("click", () => workspacePanels.get(viewKey) === "local" ? closePanel() : renderPanel("local", localChangesButton));
     parentAdditionsButton.addEventListener("click", () => workspacePanels.get(viewKey) === "parent" ? closePanel() : renderPanel("parent", parentAdditionsButton));
