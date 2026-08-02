@@ -9,11 +9,13 @@ import {
   moveFlowSection,
   movePageFrameToSection,
   orderedPropertySetApplications,
+  pagePropertySetEvaluatorRevision,
   removeFlowSection,
   removeFlowSectionWithContents,
   renameAndResizeFlowSection,
   reorderPropertySetApplication,
   stagePropertySetParentAddition,
+  setPropertySetApplicationApplicability,
   upgradePageGroupsToPropertySets,
   verifyPropertySetFlowSectionUpgrade,
 } from "../dist/data-layer-property-set-flow-section.js";
@@ -138,6 +140,10 @@ const legacyState=()=>({
   const reordered=reorderPropertySetApplication(added,"page:product","group:checkout",-1);
   assert.deepEqual(orderedPropertySetApplications(reordered.project,"page:product").map(({propertySetId})=>propertySetId),["group:checkout","group:retail"]);
   assert.equal(reordered.history.undo.at(-1).label,"Reorder Property composition for Product detail");
+  const conditional=setPropertySetApplicationApplicability(reordered,"page:product","group:checkout","set:retail");
+  assert.equal(orderedPropertySetApplications(conditional.project,"page:product")[0].applicabilitySetId,"set:retail","applicability is edited on the Page application");
+  assert.notEqual(pagePropertySetEvaluatorRevision(reordered.project,"page:product"),pagePropertySetEvaluatorRevision(conditional.project,"page:product"),"application applicability changes stale guided Page evidence");
+  const changedCondition=structuredClone(conditional);changedCondition.project.collections.applicabilitySets[0].condition.value="wholesale";assert.notEqual(pagePropertySetEvaluatorRevision(conditional.project,"page:product"),pagePropertySetEvaluatorRevision(changedCondition.project,"page:product"),"Applicability Set input changes stale guided Page evidence");
 }
 
 {
@@ -150,6 +156,7 @@ const legacyState=()=>({
   const excluded=layeredContributorsForPath(state,path,{segment:"wholesale"}),excludedCompiled=compileLayeredSchema(excluded,{eventId:"event:view",eventRole:"interaction"});
   assert.equal(excluded.find(({name})=>name==="Checkout base").active,false,"applicability is evaluated from this Page application only");
   assert.equal(excludedCompiled.properties["/funnel_step"].expectedValue,"retail","an excluded application does not contribute to compilation");
+  const unconditional=structuredClone(state),checkout=unconditional.project.collections.propertySets.find(({id})=>id==="group:checkout"),checkoutApplication=unconditional.project.collections.pages.find(({id})=>id==="page:cart").propertySetApplications.find(({propertySetId})=>propertySetId==="group:checkout");checkout.applicabilitySetId="set:retail";delete checkoutApplication.applicabilitySetId;const unconditionalContributors=layeredContributorsForPath(unconditional,layeredContributorPath(unconditional,unconditional.project.collections.pages.find(({id})=>id==="page:cart"),"Page"),{segment:"wholesale"}),unconditionalCheckout=unconditionalContributors.find(({name})=>name==="Checkout base");assert.equal(unconditionalCheckout.applicabilityConditional,undefined,"a reusable Property Set applicability value cannot condition an unconditional Page application");assert.equal(compileLayeredSchema(unconditionalContributors,{eventId:"event:view",eventRole:"interaction"}).properties["/funnel_step"].expectedValue,"checkout","an unconditional Page application still contributes despite a reusable Property Set's legacy applicability value");
 }
 
 {
