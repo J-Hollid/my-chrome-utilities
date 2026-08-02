@@ -59,11 +59,12 @@ for(let example=0;example<150;example+=1){
   multiState.project.collections.profiles.push({id:`profile:multi:${example}`,name:`Multi source ${example}`,schemaConstraints:[{path:multiPath,allowedValues:[1,2],maximum:5}]});
   multiState.project.collections.pageGroups.push({id:`group:multi:${example}`,name:`Multi local ${example}`,profileId:`profile:multi:${example}`,localSchemaContributions:[{path:multiPath,allowedValues:[30],minimum:10,documentation:"keep multi docs"}]});
   const multiGroup=multiState.project.collections.pageGroups[0],multiRow=composedSchemaWorkspace(multiState,multiGroup,"Page Group").rows.find(({path:rowPath})=>rowPath===multiPath);
-  assert.deepEqual(multiRow.decisions.map(({facet})=>facet),["Allowed values","Range rule"],"generated multi-issue rows conserve every independent decision");
-  const multiAfterOne=resetComposedSchemaLocalFacet(multiState,"pageGroups",multiGroup.id,multiPath,"allowedValues"),multiAfterOneGroup=multiAfterOne.project.collections.pageGroups[0],multiAfterOneRow=composedSchemaWorkspace(multiAfterOne,multiAfterOneGroup,"Page Group").rows.find(({path:rowPath})=>rowPath===multiPath);
-  assert.deepEqual(multiAfterOneRow.decisions.map(({facet})=>facet),["Range rule"],"repairing one generated issue conserves the other issue on the property");
-  assert.equal(multiAfterOneGroup.localSchemaContributions[0].documentation,"keep multi docs","generated multi-issue repair conserves an unrelated facet");
-  assert.equal(multiAfterOne.history.undo.length,multiState.history.undo.length+1,"one generated multi-issue repair adds exactly one Undo action");
+  assert.deepEqual(multiRow.decisions.map(({facet})=>facet),["Range rule"],"generated complete Allowed values remain a Ready sparse override while the independent impossible Range stays a decision");
+  assert.deepEqual(multiRow.effective.allowedValues,[30],"generated complete Allowed values win exactly outside the parent universe");
+  const multiAfterOne=resetComposedSchemaLocalFacet(multiState,"pageGroups",multiGroup.id,multiPath,"minimum"),multiAfterOneGroup=multiAfterOne.project.collections.pageGroups[0],multiAfterOneRow=composedSchemaWorkspace(multiAfterOne,multiAfterOneGroup,"Page Group").rows.find(({path:rowPath})=>rowPath===multiPath);
+  assert.deepEqual(multiAfterOneRow.decisions.map(({facet})=>facet),[],"repairing the generated Range decision leaves the ordinary Allowed-values override Ready");
+  assert.equal(multiAfterOneGroup.localSchemaContributions[0].documentation,"keep multi docs","generated decision repair conserves an unrelated facet");
+  assert.equal(multiAfterOne.history.undo.length,multiState.history.undo.length+1,"one generated decision repair adds exactly one Undo action");
 
   const peerPath=`/${token("peer")}`,leftValue=token("left"),rightValue=token("right"),peerState=createSpecificationProject({name:`Peer composition ${example}`,site:"shop.example",id:(kind)=>`${kind}:peer:${example}`});
   peerState.project.collections.profiles.push(

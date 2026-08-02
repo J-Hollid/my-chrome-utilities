@@ -1,9 +1,22 @@
-import { canonicalConstraints } from "../data-layer-canonical-schema.js";
+import { canonicalConstraints, canonicalTableRows } from "../data-layer-canonical-schema.js";
 import { compileLayeredSchema } from "../data-layer-layered-schema.js";
 import { layeredContributorPath, layeredContributorsForPath } from "../data-layer-layered-schema-project.js";
 import { profileInheritanceParentAdditions } from "../data-layer-selective-profile-inheritance.js";
 const clone = (value) => structuredClone(value);
-const constraintsFor = (entity) => { const canonical = entity.canonicalSchema; return [...(canonical ? canonicalConstraints(canonical) : (entity.schemaConstraints ?? [])), ...(entity.localSchemaContributions ?? [])]; };
+const canonicalLocalConstraints = (document) => canonicalConstraints(document).map((constraint) => { const row = canonicalTableRowForPath(document, constraint.path), node = row && document.nodes[row.id]; if (!node?.localDefinitionFacets)
+    return constraint; if (node.structureOwned && !node.inheritedDefinition)
+    return constraint; const keys = new Set(node.localDefinitionFacets), result = { path: constraint.path }; if (node.structureOwned && constraint.definitionId)
+    result.definitionId = constraint.definitionId; for (const key of keys)
+    if (constraint[key] !== undefined)
+        result[key] = clone(constraint[key]); const localRules = (constraint.rules ?? []).filter((rule) => ["local", "overridden", "effective"].includes(String(rule.provenance?.state ?? ""))); if (localRules.length)
+    result.rules = localRules; if (keys.has("allowedValues")) {
+    if (constraint.allowedValueIds)
+        result.allowedValueIds = constraint.allowedValueIds;
+    if (constraint.allowedValueProvenance)
+        result.allowedValueProvenance = constraint.allowedValueProvenance;
+} return result; }).filter((constraint) => Object.keys(constraint).length > 1);
+const canonicalTableRowForPath = (document, path) => canonicalTableRows(document).find((row) => row.path === path);
+const constraintsFor = (entity) => { const canonical = entity.canonicalSchema; return [...(canonical ? canonicalLocalConstraints(canonical) : (entity.schemaConstraints ?? [])), ...(entity.localSchemaContributions ?? [])]; };
 const mergedAt = (constraints, path) => constraints.filter((constraint) => constraint.path === path).reduce((result, constraint) => ({ ...result, ...clone(constraint), path }), { path });
 const entities = (state) => Object.values(state.project.collections).flat();
 const eventContext = (entity) => ({ eventId: String(entity.eventId ?? entity.id), eventRole: (entity.role === "context-setting" ? "context" : "interaction") });

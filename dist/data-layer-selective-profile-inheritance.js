@@ -177,8 +177,10 @@ export function profileInheritanceParentAdditions(document, recipe) {
         return []; const staged = { ...clone(recipe), propertySelections: stableUnique([...recipe.propertySelections, propertyId]) }, dependencies = profileInheritanceSelection(document, staged).missingRuleDependencies.filter(({ sourcePropertyId }) => sourcePropertyId === propertyId), dependencyImpact = dependencies.length ? dependencies.map(({ sourceRuleId, propertyId: dependencyId }) => `${sourceRuleId} needs ${document.nodes[dependencyId] ? canonicalPropertyPath(document, dependencyId) : dependencyId}`).join("; ") : "No additional rule dependencies"; return [{ propertyId, path: canonicalPropertyPath(document, propertyId), sourceGroup: conceptFor(node), definitionSummary: `${node.type} · ${node.presence.mode}`, provenance: node.provenance.map(({ contributorName, scope }) => `${contributorName} (${scope})`).join(", ") || document.contributorName, dependencyImpact }]; });
 }
 export function includeProfileInheritanceParentAdditions(document, recipe, propertyIds) {
-    const included = propertyIds.filter((propertyId) => Boolean(document.nodes[propertyId])), idSet = new Set(included), staged = { ...clone(recipe), membership: "fixed", propertySelections: stableUnique([...recipe.propertySelections, ...included]), excludedPropertyIds: recipe.excludedPropertyIds.filter((propertyId) => !idSet.has(propertyId)) };
-    return profileInheritanceRecipeApplied(document, staged);
+    const included = propertyIds.filter((propertyId) => Boolean(document.nodes[propertyId])), idSet = new Set(included), staged = { ...clone(recipe), membership: "fixed", propertySelections: stableUnique([...recipe.propertySelections, ...included]), excludedPropertyIds: recipe.excludedPropertyIds.filter((propertyId) => !idSet.has(propertyId)) }, applied = profileInheritanceRecipeApplied(document, staged), sourcePropertyIds = recipe.sourceSnapshot?.sourcePropertyIds;
+    if (sourcePropertyIds && applied.sourceSnapshot)
+        applied.sourceSnapshot.sourcePropertyIds = [...sourcePropertyIds];
+    return applied;
 }
 const missingDependencyKey = ({ propertyId, sourcePropertyId, sourceRuleId }) => `${sourcePropertyId}\0${sourceRuleId}\0${propertyId}`;
 const sourceRuleValues = (document, propertyIds) => Object.fromEntries(propertyIds.flatMap((propertyId) => { const node = document.nodes[propertyId]; if (!node)

@@ -50,20 +50,77 @@ export function saveFlowContributorSchemaPolicy(state, flowId, field, entityId, 
 export function saveFlowPageInstanceSchemaPolicy(state, flowId, pageFrameId, onlyDefinedFields) { return saveFlowContributorSchemaPolicy(state, flowId, "pageFrames", pageFrameId, onlyDefinedFields); }
 export function saveComposedSchemaLocalFacetsAndStructures(state, kind, entityId, path, facets, commands, id) { const sparse = Object.fromEntries(Object.entries(facets).filter(([, value]) => value !== undefined && value !== "")); return updateEntity(state, kind, entityId, `Save ${commands.length + 1} ${kind === "pages" ? "Page" : kind === "pageGroups" ? "Page Group" : "Event"} schema changes`, (entity) => { const existing = entity.localSchemaContributions ?? [], focused = { path, ...clone(sparse) }, seeded = commands.length ? [...existing.filter((constraint) => constraint.path !== path), focused] : existing, structured = applyLayerConstraintStructures(seeded, commands, id), next = commands.length ? structured.filter((constraint) => Object.keys(constraint).length > 1) : [...existing.filter((constraint) => constraint.path !== path), ...(Object.keys(sparse).length ? [focused] : [])]; return { ...entity, localSchemaContributions: structureDeletesPath(commands, path) ? next.filter((constraint) => constraint.path !== path) : next, compiledTargetsStale: true }; }); }
 export function resetComposedSchemaLocalProperty(state, kind, entityId, path) { return updateEntity(state, kind, entityId, `Reset ${path} to parents`, (entity) => { const next = { ...entity, localSchemaContributions: (entity.localSchemaContributions ?? []).filter((constraint) => constraint.path !== path), schemaConstraints: (entity.schemaConstraints ?? []).filter((constraint) => constraint.path !== path), compiledTargetsStale: true }; return resetCanonicalRow(entity.canonicalSchema, path, next); }); }
+const recordCanonicalReset = (document, propertyIds) => { document.revision += 1; document.changes = [...document.changes, { revision: document.revision, propertyIds: [...propertyIds], kind: "set" }]; return document; };
+const canonicalNodeAt = (document, path) => { const id = canonicalTableRows(document).find((row) => row.path === path)?.id; return id ? document.nodes[id] : undefined; };
+const resetCanonicalFacet = (canonical, path, facet) => { if (!canonical)
+    return; const document = clone(canonical), node = canonicalNodeAt(document, path); if (!node)
+    return canonical; node.localDefinitionFacets = (node.localDefinitionFacets ?? []).filter((key) => key !== facet && !(facet === "minimum" && key === "maximum") && !(facet === "minItems" && key === "maxItems")); if (facet === "concept") {
+    if (node.inheritedDefinition?.concept)
+        node.concept = node.inheritedDefinition.concept;
+    else
+        delete node.concept;
+}
+else if (facet === "type" && node.inheritedDefinition?.type)
+    node.type = node.inheritedDefinition.type;
+else if (facet === "presence")
+    node.presence = { mode: node.inheritedDefinition?.presence ?? "optional" };
+else if (facet === "documentation")
+    node.documentation = { ...node.documentation, description: node.inheritedDefinition?.description ?? "" };
+else if (facet === "comments")
+    node.documentation = { ...node.documentation, comments: "" };
+else if (facet === "examples")
+    node.documentation = { ...node.documentation, example: { method: "blank" } };
+else if (facet === "allowedValues")
+    node.allowedValues = [];
+else if (facet === "expectedValue")
+    delete node.expectedValue; return recordCanonicalReset(document, [node.id]); };
+const resetCanonicalRule = (canonical, path, ruleId) => { if (!canonical)
+    return; const document = clone(canonical), node = canonicalNodeAt(document, path); if (!node)
+    return canonical; node.rules = node.rules.filter(({ id }) => id !== ruleId); return recordCanonicalReset(document, [node.id]); };
+const resetCanonicalChanges = (canonical) => { if (!canonical)
+    return; const document = clone(canonical), localOnly = new Set(Object.values(document.nodes).filter((node) => node.structureOwned === true && !node.inheritedDefinition).map(({ id }) => id)), removed = new Set(); for (const id of localOnly) {
+    let current = id;
+    while (current) {
+        if (localOnly.has(current)) {
+            removed.add(id);
+            break;
+        }
+        current = document.nodes[current]?.parentId;
+    }
+} for (const id of removed)
+    delete document.nodes[id]; for (const node of Object.values(document.nodes)) {
+    node.localDefinitionFacets = [];
+    node.rules = node.rules.filter((rule) => !["local", "overridden", "effective"].includes(String(rule.provenance?.state ?? "")));
+} document.rootIds = document.rootIds.filter((id) => !removed.has(id)); return recordCanonicalReset(document, [...removed, ...Object.keys(document.nodes)]); };
 export function resetComposedSchemaLocalFacet(state, kind, entityId, path, facet) { return updateEntity(state, kind, entityId, `Use inherited ${String(facet)} for ${path}`, (entity) => { const withoutFacet = (constraints) => ((constraints ?? []).flatMap((constraint) => { if (constraint.path !== path)
     return [constraint]; const next = clone(constraint); delete next[facet]; if (facet === "minimum") {
     delete next.maximum;
 } if (facet === "minItems") {
     delete next.maxItems;
-} return Object.keys(next).length > 1 ? [next] : []; })); return { ...entity, localSchemaContributions: withoutFacet(entity.localSchemaContributions), schemaConstraints: withoutFacet(entity.schemaConstraints), compiledTargetsStale: true }; }); }
+} return Object.keys(next).length > 1 ? [next] : []; })); return { ...entity, localSchemaContributions: withoutFacet(entity.localSchemaContributions), schemaConstraints: withoutFacet(entity.schemaConstraints), ...(entity.canonicalSchema ? { canonicalSchema: resetCanonicalFacet(entity.canonicalSchema, path, facet) } : {}), compiledTargetsStale: true }; }); }
 export function resetComposedSchemaLocalRule(state, kind, entityId, path, ruleId) { return updateEntity(state, kind, entityId, `Remove local rule for ${path}`, (entity) => { const withoutRule = (constraints) => ((constraints ?? []).flatMap((constraint) => { if (constraint.path !== path)
     return [constraint]; const next = clone(constraint), rules = (next.rules ?? []).filter((rule) => String(rule.id ?? "") !== ruleId); if (rules.length)
     next.rules = rules;
 else
-    delete next.rules; return Object.keys(next).length > 1 ? [next] : []; })); return { ...entity, localSchemaContributions: withoutRule(entity.localSchemaContributions), schemaConstraints: withoutRule(entity.schemaConstraints), compiledTargetsStale: true }; }); }
-export function resetComposedSchemaLocalChanges(state, kind, entityId) { return updateEntity(state, kind, entityId, "Reset all local schema changes to parents", (entity) => ({ ...entity, localSchemaContributions: [], schemaConstraints: [], compiledTargetsStale: true })); }
-export function includeComposedSchemaParentAdditions(state, kind, entityId, recipeId, propertyIds) { return updateEntity(state, kind, entityId, "Include selected parent additions", (entity) => { const recipes = entity.profileInheritanceRecipes ?? [], recipe = recipes.find(({ id }) => id === recipeId), profile = recipe ? state.project.collections.profiles.find(({ id }) => id === recipe.profileId) : undefined, document = profile?.canonicalSchema; if (!recipe || !document)
-    return entity; return { ...entity, profileInheritanceRecipes: recipes.map((candidate) => candidate.id === recipeId ? includeProfileInheritanceParentAdditions(document, candidate, propertyIds) : candidate), compiledTargetsStale: true }; }); }
+    delete next.rules; return Object.keys(next).length > 1 ? [next] : []; })); return { ...entity, localSchemaContributions: withoutRule(entity.localSchemaContributions), schemaConstraints: withoutRule(entity.schemaConstraints), ...(entity.canonicalSchema ? { canonicalSchema: resetCanonicalRule(entity.canonicalSchema, path, ruleId) } : {}), compiledTargetsStale: true }; }); }
+export function resetComposedSchemaLocalChanges(state, kind, entityId) { return updateEntity(state, kind, entityId, "Reset all local schema changes to parents", (entity) => ({ ...entity, localSchemaContributions: [], schemaConstraints: [], ...(entity.canonicalSchema ? { canonicalSchema: resetCanonicalChanges(entity.canonicalSchema) } : {}), compiledTargetsStale: true })); }
+export function includeComposedSchemaParentAdditions(state, kind, entityId, recipeId, propertyIds) { return updateEntity(state, kind, entityId, "Include selected parent additions", (entity) => { const recipes = entity.profileInheritanceRecipes ?? [], selectedRecipeIds = recipeId ? new Set([recipeId]) : new Set(recipes.map(({ id }) => id)), nextRecipes = recipes.map((recipe) => { if (!selectedRecipeIds.has(recipe.id))
+    return recipe; const profile = state.project.collections.profiles.find(({ id }) => id === recipe.profileId), document = profile?.canonicalSchema, matching = document ? propertyIds.filter((propertyId) => Boolean(document.nodes[propertyId])) : []; return document && matching.length ? includeProfileInheritanceParentAdditions(document, recipe, matching) : recipe; }); return nextRecipes.some((recipe, index) => recipe !== recipes[index]) ? { ...entity, profileInheritanceRecipes: nextRecipes, compiledTargetsStale: true } : entity; }); }
+export function includeComposedSchemaParentAdditionSelections(state, kind, entityId, selections) { return updateEntity(state, kind, entityId, "Include selected parent additions", (entity) => { const selected = new Map(selections.filter(({ propertyIds }) => propertyIds.length).map(({ recipeId, propertyIds }) => [recipeId, propertyIds])), recipes = entity.profileInheritanceRecipes ?? []; if (!selected.size)
+    return entity; return { ...entity, profileInheritanceRecipes: recipes.map((recipe) => { const propertyIds = selected.get(recipe.id), profile = propertyIds ? state.project.collections.profiles.find(({ id }) => id === recipe.profileId) : undefined, document = profile?.canonicalSchema; return propertyIds && document ? includeProfileInheritanceParentAdditions(document, recipe, propertyIds) : recipe; }), compiledTargetsStale: true }; }); }
+const updateFlowComposedEntity = (state, flowId, entityId, label, update) => transactProject(state, label, (project) => { const graphs = project.documentationFlowGraphs, graph = graphs[flowId]; if (!graph)
+    return project; const field = graph.pageFrames?.some(({ id }) => id === entityId) ? "pageFrames" : "occurrences", entries = graph[field] ?? []; return { ...project, documentationFlowGraphs: { ...graphs, [flowId]: { ...graph, [field]: entries.map((entity) => entity.id === entityId ? update(entity) : entity) } } }; });
+export function saveFlowComposedSchemaLocalFacets(state, flowId, entityId, path, facets) { return updateFlowComposedEntity(state, flowId, entityId, `Save local schema facets for ${path}`, (entity) => { const existing = entity.localSchemaContributions ?? [], sparse = Object.fromEntries(Object.entries(facets).filter(([, value]) => value !== undefined && value !== "")); return { ...entity, localSchemaContributions: [...existing.filter((constraint) => constraint.path !== path), ...(Object.keys(sparse).length ? [{ path, ...sparse }] : [])], compiledTargetsStale: true }; }); }
+export function resetFlowComposedSchemaLocalProperty(state, flowId, entityId, path) { return updateFlowComposedEntity(state, flowId, entityId, `Reset ${path} to parents`, (entity) => resetCanonicalRow(entity.canonicalSchema, path, { ...entity, localSchemaContributions: (entity.localSchemaContributions ?? []).filter((constraint) => constraint.path !== path), schemaConstraints: (entity.schemaConstraints ?? []).filter((constraint) => constraint.path !== path), compiledTargetsStale: true })); }
+export function resetFlowComposedSchemaLocalFacet(state, flowId, entityId, path, facet) { return updateFlowComposedEntity(state, flowId, entityId, `Use inherited ${String(facet)} for ${path}`, (entity) => { const strip = (constraints) => ((constraints ?? []).flatMap((constraint) => { if (constraint.path !== path)
+    return [constraint]; const next = clone(constraint); delete next[facet]; return Object.keys(next).length > 1 ? [next] : []; })); return { ...entity, localSchemaContributions: strip(entity.localSchemaContributions), schemaConstraints: strip(entity.schemaConstraints), ...(entity.canonicalSchema ? { canonicalSchema: resetCanonicalFacet(entity.canonicalSchema, path, facet) } : {}), compiledTargetsStale: true }; }); }
+export function resetFlowComposedSchemaLocalRule(state, flowId, entityId, path, ruleId) { return updateFlowComposedEntity(state, flowId, entityId, `Remove local rule for ${path}`, (entity) => { const strip = (constraints) => ((constraints ?? []).flatMap((constraint) => { if (constraint.path !== path)
+    return [constraint]; const next = clone(constraint), rules = (next.rules ?? []).filter((rule) => String(rule.id ?? "") !== ruleId); if (rules.length)
+    next.rules = rules;
+else
+    delete next.rules; return Object.keys(next).length > 1 ? [next] : []; })); return { ...entity, localSchemaContributions: strip(entity.localSchemaContributions), schemaConstraints: strip(entity.schemaConstraints), ...(entity.canonicalSchema ? { canonicalSchema: resetCanonicalRule(entity.canonicalSchema, path, ruleId) } : {}), compiledTargetsStale: true }; }); }
+export function resetFlowComposedSchemaLocalChanges(state, flowId, entityId) { return updateFlowComposedEntity(state, flowId, entityId, "Reset all local schema changes to parents", (entity) => ({ ...entity, localSchemaContributions: [], schemaConstraints: [], ...(entity.canonicalSchema ? { canonicalSchema: resetCanonicalChanges(entity.canonicalSchema) } : {}), compiledTargetsStale: true })); }
+export function includeFlowComposedSchemaParentAdditions(state, flowId, entityId, propertyIds) { return updateFlowComposedEntity(state, flowId, entityId, "Include selected parent additions", (entity) => { const recipes = entity.profileInheritanceRecipes ?? [], nextRecipes = recipes.map((recipe) => { const profile = state.project.collections.profiles.find(({ id }) => id === recipe.profileId), document = profile?.canonicalSchema, matching = document ? propertyIds.filter((propertyId) => Boolean(document.nodes[propertyId])) : []; return document && matching.length ? includeProfileInheritanceParentAdditions(document, recipe, matching) : recipe; }); return { ...entity, profileInheritanceRecipes: nextRecipes, compiledTargetsStale: true }; }); }
 export function composedSchemaScopeForKind(kind) { return kind === "pages" ? "Page" : kind === "pageGroups" ? "Page Group" : "Event"; }
 export function applyComposedSchemaContextualFacet(state, kind, entityId, path, facet, value, repair) {
     const target = state.project.collections[kind].find(({ id }) => id === entityId), offered = target ? composedSchemaWorkspace(state, target, composedSchemaScopeForKind(kind)).rows.find(({ path: rowPath }) => rowPath === path)?.repairs.filter((candidate) => candidate.kind === "use-contextual" && candidate.facet === facet && JSON.stringify(candidate.value) === JSON.stringify(value)) ?? [] : [], selected = offered.find((candidate) => !repair || candidate.contributorId === repair.contributorId && candidate.rejectedContributorId === repair.rejectedContributorId && candidate.rejectedFacet === repair.rejectedFacet);

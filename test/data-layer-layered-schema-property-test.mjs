@@ -98,7 +98,8 @@ for(let iteration=0;iteration<200;iteration+=1){
   assert.deepEqual(ordinary.properties["/override"].rules.map(({id})=>id),[`rule:source-pattern:${iteration}`,`rule:local-range:${iteration}`],"generated compatible named rules retain both stable identities");
 
   const multi=compileOverride({allowedValues:[`base-a-${iteration}`,`base-b-${iteration}`],maximum:5},{allowedValues:[`outside-${iteration}`],minimum:10}),multiRoundTrip=compileOverride(JSON.parse(JSON.stringify({allowedValues:[`base-a-${iteration}`,`base-b-${iteration}`],maximum:5})),JSON.parse(JSON.stringify({allowedValues:[`outside-${iteration}`],minimum:10})));
-  assert.deepEqual(multi.conflicts.map(({facet,section})=>({facet,section})),[{facet:"Allowed values",section:"Definition"},{facet:"Range rule",section:"Rules"}],"generated simultaneous incompatibilities retain every independent facet issue");
+  assert.deepEqual(multi.conflicts.map(({facet,section})=>({facet,section})),[{facet:"Range rule",section:"Rules"}],"generated complete Allowed values override is Ready while the independent impossible Range remains a decision");
+  assert.deepEqual(multi.properties["/override"].allowedValues,[`outside-${iteration}`],"generated outside-parent Allowed values win exactly");
   assert.deepEqual(multiRoundTrip.conflicts,multi.conflicts,"generated multi-issue conflict evidence survives persistence without loss or duplication");
 }
 

@@ -6,6 +6,7 @@ import {
   overrideComposedSchemaLocalRule,
   resetComposedSchemaLocalProperty,
   resetComposedSchemaLocalFacet,
+  resetComposedSchemaLocalRule,
   resetComposedSchemaLocalChanges,
   saveComposedCanonicalDocument,
   saveComposedEntitySchemaPolicy,
@@ -283,6 +284,17 @@ const resetInventoryAll=resetComposedSchemaLocalChanges(inventoryState,"pageGrou
 assert.deepEqual(resetInventoryAll.project.collections.pageGroups[0].localSchemaContributions,[],"reset all removes every target-owned sparse contribution");
 assert.equal(resetInventoryAll.history.undo.length,inventoryState.history.undo.length+1,"reset all is one atomic Undo action");
 assert.deepEqual(resetInventoryAll.project.collections.profiles,inventoryState.project.collections.profiles,"reset all cannot mutate Master");
+const canonicalInventoryState=structuredClone(inventoryState),canonicalInventoryGroup=canonicalInventoryState.project.collections.pageGroups[0],canonicalInventoryDocument=composedCanonicalSchema(canonicalInventoryState,canonicalInventoryGroup,"Page Group");canonicalInventoryGroup.canonicalSchema=canonicalInventoryDocument;delete canonicalInventoryGroup.localSchemaContributions;delete canonicalInventoryGroup.schemaConstraints;
+assert.equal(composedSchemaWorkspace(canonicalInventoryState,canonicalInventoryGroup,"Page Group").localChangeCount,5,"canonical-backed contributors inventory only their explicitly local facets, rules, and property");
+const canonicalFacetReset=resetComposedSchemaLocalFacet(canonicalInventoryState,"pageGroups",canonicalInventoryGroup.id,"/customer_status","documentation"),canonicalFacetGroup=canonicalFacetReset.project.collections.pageGroups[0],canonicalFacetWorkspace=composedSchemaWorkspace(canonicalFacetReset,canonicalFacetGroup,"Page Group");
+assert.equal(canonicalFacetWorkspace.localChangeCount,4,"canonical-backed exact facet reset removes the advertised owner item");
+assert.equal(canonicalFacetWorkspace.rows.find(({path})=>path==="/customer_status").effective.documentation,"Parent description","canonical-backed facet reset immediately derives the current parent value");
+assert.equal(canonicalFacetGroup.canonicalSchema.nodes[Object.values(canonicalFacetGroup.canonicalSchema.nodes).find(({name})=>name==="customer_status").id].localDefinitionFacets.includes("documentation"),false,"canonical-backed reset removes only the local ownership marker");
+const canonicalRuleId=canonicalInventoryDocument.nodes[Object.values(canonicalInventoryDocument.nodes).find(({name})=>name==="customer_status").id].rules.find(({name})=>name==="Checkout account").id,canonicalRuleReset=resetComposedSchemaLocalRule(canonicalInventoryState,"pageGroups",canonicalInventoryGroup.id,"/customer_status",canonicalRuleId);
+assert.equal(composedSchemaWorkspace(canonicalRuleReset,canonicalRuleReset.project.collections.pageGroups[0],"Page Group").localChangeCount,4,"canonical-backed exact rule reset removes the advertised local rule");
+const canonicalAllReset=resetComposedSchemaLocalChanges(canonicalInventoryState,"pageGroups",canonicalInventoryGroup.id);
+assert.equal(composedSchemaWorkspace(canonicalAllReset,canonicalAllReset.project.collections.pageGroups[0],"Page Group").localChangeCount,0,"canonical-backed reset all removes every target-owned item");
+assert.equal(canonicalAllReset.history.undo.length,canonicalInventoryState.history.undo.length+1,"canonical-backed reset all stays one atomic Undo action");
 
 const parallelContext=createSpecificationProject({name:"Parallel contextual repair",site:"shop.example",id:(kind)=>`${kind}:parallel-context`});
 parallelContext.project.collections.profiles.push(

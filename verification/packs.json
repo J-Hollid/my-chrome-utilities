@@ -957,7 +957,9 @@
       "src/data-layer-layered-schema-project.ts",
       "src/data-layer-page-group-structural-authoring.ts",
       "src/data-layer-layered-schema-ui.ts",
-      "src/data-layer-side-panel-schema-editor.ts"
+      "src/data-layer-side-panel-schema-editor.ts",
+      "src/data-layer-selective-profile-inheritance.ts",
+      "src/data-layer-selective-profile-inheritance-ui.ts"
     ],
     "dependencies": [
       "durable_project_repository"
@@ -978,7 +980,8 @@
       "test/data-layer-page-group-membership-test.mjs",
       "test/data-layer-layered-schema-test.mjs",
       "test/data-layer-layered-schema-persistence-test.mjs",
-      "test/data-layer-layered-schema-adoption-test.mjs"
+      "test/data-layer-layered-schema-adoption-test.mjs",
+      "test/data-layer-selective-profile-inheritance-test.mjs"
     ],
     "property": [
       "test/data-layer-string-rule-validation-property-test.mjs",
@@ -991,49 +994,40 @@
       "test/data-layer-composed-schema-workspace-property-test.mjs",
       "test/data-layer-focused-schema-property-ui-property-test.mjs",
       "test/data-layer-shared-condition-tree-editor-property-test.mjs",
-      "test/data-layer-layered-schema-property-test.mjs"
+      "test/data-layer-layered-schema-property-test.mjs",
+      "test/data-layer-selective-profile-inheritance-property-test.mjs"
     ],
     "features": [
       "features/data-layer-canonical-shared-profile-schema-authoring.feature",
       "features/data-layer-canonical-shared-profile-schema-authoring-runtime.feature",
       "features/data-layer-layered-schema-constraints.feature",
       "features/data-layer-layered-schema-constraints-runtime.feature",
-      "features/data-layer-page-group-structural-authoring.feature"
+      "features/data-layer-page-group-structural-authoring.feature",
+      "features/specification-studio-selective-profile-inheritance.feature",
+      "features/specification-studio-selective-profile-inheritance-runtime.feature"
     ],
     "handlers": [
-      "acceptance/src/acceptance/steps/layered_schema.clj"
+      "acceptance/src/acceptance/steps/layered_schema.clj",
+      "acceptance/src/acceptance/steps/selective_profile_inheritance.clj"
     ],
     "browserAdapters": [
       "test/data-layer-canonical-migration-browser-test.mjs",
       "test/browser-packs/layered-schema.mjs",
+      "test/browser-packs/selective-profile-inheritance.mjs",
       "test/twatility-rules-conditions-browser-test.mjs"
     ]
   },
   {
     "id": "selective_profile_inheritance",
-    "source": [
-      "src/data-layer-selective-profile-inheritance.ts",
-      "src/data-layer-selective-profile-inheritance-ui.ts"
-    ],
+    "source": [],
     "dependencies": [
       "layered_schema"
     ],
-    "unit": [
-      "test/data-layer-selective-profile-inheritance-test.mjs"
-    ],
-    "property": [
-      "test/data-layer-selective-profile-inheritance-property-test.mjs"
-    ],
-    "features": [
-      "features/specification-studio-selective-profile-inheritance.feature",
-      "features/specification-studio-selective-profile-inheritance-runtime.feature"
-    ],
-    "handlers": [
-      "acceptance/src/acceptance/steps/selective_profile_inheritance.clj"
-    ],
-    "browserAdapters": [
-      "test/browser-packs/selective-profile-inheritance.mjs"
-    ]
+    "unit": [],
+    "property": [],
+    "features": [],
+    "handlers": [],
+    "browserAdapters": []
   },
   {
     "id": "schema_relationship_tree",
