@@ -1,4 +1,6 @@
 import {transactProject,type IdFactory,type ProjectEntity,type ProjectState,type SpecificationProject} from "./data-layer-specification-project.js";
+import type {CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
+import {selectiveProfileContribution,type ProfileInheritanceRecipe} from "./data-layer-selective-profile-inheritance.js";
 
 export interface PropertySetApplication extends ProjectEntity {
   propertySetId:string;
@@ -55,6 +57,31 @@ export function reorderPropertySetApplication(state:ProjectState,pageId:string,p
 
 export function removePropertySetApplication(state:ProjectState,pageId:string,propertySetId:string):ProjectState{
   const page=state.project.collections.pages.find(({id})=>id===pageId);if(!page)return state;const current=applications(page);if(!current.some((application)=>application.propertySetId===propertySetId))return state;const propertySet=state.project.collections.propertySets.find(({id})=>id===propertySetId);return updatePage(state,pageId,`Remove Property Set ${propertySet?.name??propertySetId} from ${page.name}`,(candidate)=>({...candidate,propertySetApplications:current.filter((application)=>application.propertySetId!==propertySetId)}));
+}
+
+export function setPropertySetApplicationApplicability(state:ProjectState,pageId:string,propertySetId:string,applicabilitySetId?:string):ProjectState{
+  const page=state.project.collections.pages.find(({id})=>id===pageId),propertySet=state.project.collections.propertySets.find(({id})=>id===propertySetId);if(!page)throw new Error(`Unknown Page ${pageId}.`);if(!propertySet)throw new Error(`Unknown Property Set ${propertySetId}.`);if(applicabilitySetId&&!state.project.collections.applicabilitySets.some(({id})=>id===applicabilitySetId))throw new Error(`Unknown Applicability Set ${applicabilitySetId}.`);if(!applications(page).some((application)=>application.propertySetId===propertySetId))throw new Error(`${page.name} does not apply ${propertySet.name}.`);return updatePage(state,pageId,`Change ${propertySet.name} applicability on ${page.name}`,(candidate)=>({...candidate,propertySetApplications:applications(candidate).map((application)=>{if(application.propertySetId!==propertySetId)return application;const next={...application,...(applicabilitySetId?{applicabilitySetId}:{})};if(!applicabilitySetId)delete next.applicabilitySetId;return next;})}));
+}
+
+const schemaEvaluationInput=(entity:ProjectEntity|undefined)=>entity?{
+  id:entity.id,
+  revision:(entity.canonicalSchema as {revision?:number}|undefined)?.revision??entity.revision??entity.version??0,
+  canonicalSchema:entity.canonicalSchema,
+  schemaConstraints:entity.schemaConstraints,
+  requirements:entity.requirements,
+  localSchemaContributions:entity.localSchemaContributions,
+  onlyDefinedFields:entity.onlyDefinedFields,
+  profileId:entity.profileId,
+  profileIds:entity.profileIds,
+}:undefined;
+
+const referencedProfileIds=(entity:ProjectEntity):string[]=>unique([entity.profileId,...((entity.profileIds as string[]|undefined)??[])].filter((value):value is string=>typeof value==="string"&&Boolean(value)));
+const profileEvaluationInput=(profile:ProjectEntity|undefined,targets:readonly ProjectEntity[])=>{
+  if(!profile)return;const canonical=profile.canonicalSchema as CanonicalSchemaDocument|undefined,recipes=targets.flatMap((target)=>((target.profileInheritanceRecipes as ProfileInheritanceRecipe[]|undefined)??[]).filter(({profileId})=>profileId===profile.id));if(!canonical||!recipes.length)return schemaEvaluationInput(profile);const contributions=recipes.map((recipe)=>selectiveProfileContribution(canonical,recipe)),constraints=contributions.flatMap((contribution)=>contribution.constraints).filter((constraint,index,all)=>all.findIndex((candidate)=>JSON.stringify(candidate)===JSON.stringify(constraint))===index),inheritanceConflicts=contributions.flatMap((contribution)=>contribution.conflicts),onlyDefinedFields=canonical.onlyDefinedFields!==undefined?canonical.onlyDefinedFields:typeof profile.onlyDefinedFields==="boolean"?profile.onlyDefinedFields:undefined;return{id:profile.id,constraints,inheritanceConflicts,...(onlyDefinedFields!==undefined?{onlyDefinedFields}:{})};
+};
+
+export function pagePropertySetEvaluatorRevision(project:SpecificationProject,pageId:string|undefined):string{
+  const page=project.collections.pages.find(({id})=>id===pageId),sets=new Map(project.collections.propertySets.map((set)=>[set.id,set])),profiles=new Map(project.collections.profiles.map((profile)=>[profile.id,profile])),applicabilitySets=new Map(project.collections.applicabilitySets.map((set)=>[set.id,set])),applied=applications(page??{id:"",name:""}),appliedSets=applied.flatMap(({propertySetId})=>{const set=sets.get(propertySetId);return set?[set]:[];}),profileTargets=[...(page?[page]:[]),...appliedSets],profileIds=unique(profileTargets.flatMap(referencedProfileIds));return`page:${JSON.stringify({page:schemaEvaluationInput(page),profiles:profileIds.map((profileId)=>profileEvaluationInput(profiles.get(profileId),profileTargets.filter((target)=>referencedProfileIds(target).includes(profileId)))),applications:applied.map(({id,propertySetId,applicabilitySetId})=>{const applicability=applicabilitySetId?applicabilitySets.get(applicabilitySetId):undefined;return{id,propertySetId,propertySet:schemaEvaluationInput(sets.get(propertySetId)),...(applicabilitySetId?{applicabilitySetId,applicabilityRevision:(applicability?.canonicalSchema as {revision?:number}|undefined)?.revision??applicability?.revision??applicability?.version??0,applicabilityCondition:applicability?.condition}:{}),};})})}`;
 }
 
 export function propertySetPages(project:SpecificationProject,propertySetId:string):ProjectEntity[]{return project.collections.pages.filter((page)=>applications(page).some((application)=>application.propertySetId===propertySetId));}

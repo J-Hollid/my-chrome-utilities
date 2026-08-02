@@ -275,7 +275,7 @@ export function installFlowGraphBuilder(options) {
     } const before = new Set(graph.relationships.map(({ id }) => id)), next = saveGraphRelationship(state, flow.id, sourceId, { toStepId: targetId, sourcePort, targetPort: inferredTargetPort }, options.id), created = documentaryFlowGraph(next.project, flow.id).relationships.find(({ id }) => !before.has(id)); if (!created) {
         cancelConnection(true, true);
         return;
-    } connection = undefined; document.querySelector(".flow-canvas-scroll")?.classList.remove("is-connecting"); selected = { kind: "relationship", id: created.id }; relationshipPopoverFocusIntent = { id: created.id, revision: Number(revision ?? 0), optimisticFocused: false }; persist(next); }
+    } connection = undefined; document.querySelector(".flow-canvas-scroll")?.classList.remove("is-connecting"); selected = { kind: "relationship", id: created.id }; writeView(state.project.id, flow.id, { ...readView(state.project.id, flow.id), selectedItem: selected }); relationshipPopoverFocusIntent = { id: created.id, revision: Number(revision ?? 0), optimisticFocused: false }; persist(next); }
     function renderRelationshipPopover(host) {
         if (selected?.kind !== "relationship")
             return;

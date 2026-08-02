@@ -1,11 +1,11 @@
-import { addFlowEventOccurrence, addFlowPageFrameToSection, addPropertySetApplication, connectFlowPageFrames, createFlowSection, inspectSectionRemovalWithContents, moveFlowPageFramePresentation, moveFlowSection, movePageFrameToSection, orderedPropertySetApplications, removeFlowSection, removeFlowSectionWithContents, removePropertySetApplication, renameAndResizeFlowSection, reorderPropertySetApplication } from "./data-layer-property-set-flow-section.js";
+import { addFlowEventOccurrence, addFlowPageFrameToSection, addPropertySetApplication, connectFlowPageFrames, createFlowSection, inspectSectionRemovalWithContents, moveFlowPageFramePresentation, moveFlowSection, movePageFrameToSection, orderedPropertySetApplications, removeFlowSection, removeFlowSectionWithContents, removePropertySetApplication, renameAndResizeFlowSection, reorderPropertySetApplication, setPropertySetApplicationApplicability } from "./data-layer-property-set-flow-section.js";
 const number = (value, fallback) => Number.isFinite(Number(value)) ? Number(value) : fallback;
 const graphFor = (state, flowId) => (state.project.documentationFlowGraphs?.[flowId] ?? {});
 export function mountPropertyCompositionWorkspace({ host, state, pageId, id, onSave, onOpen }) {
     const page = state.project.collections.pages.find(({ id }) => id === pageId);
     if (!page)
         throw new Error(`Unknown Page ${pageId}.`);
-    const propertySets = state.project.collections.propertySets, byId = new Map(propertySets.map((set) => [set.id, set])), workspace = document.createElement("section"), heading = document.createElement("h2"), guidance = document.createElement("p"), search = document.createElement("input"), results = document.createElement("div"), review = document.createElement("section"), list = document.createElement("ol");
+    const propertySets = state.project.collections.propertySets, applicabilitySets = state.project.collections.applicabilitySets, byId = new Map(propertySets.map((set) => [set.id, set])), workspace = document.createElement("section"), heading = document.createElement("h2"), guidance = document.createElement("p"), search = document.createElement("input"), newApplicability = document.createElement("select"), results = document.createElement("div"), review = document.createElement("section"), list = document.createElement("ol");
     workspace.className = "property-composition-workspace";
     workspace.dataset.propertyComposition = page.id;
     workspace.setAttribute("aria-label", `Property composition for ${page.name}`);
@@ -13,18 +13,24 @@ export function mountPropertyCompositionWorkspace({ host, state, pageId, id, onS
     guidance.textContent = "Applied Property Sets in general-to-specific order. Each application owns its optional Applicability Set; Shared Profile source inheritance remains selective and separately managed.";
     search.type = "search";
     search.setAttribute("aria-label", "Search Property Sets to apply");
+    newApplicability.setAttribute("aria-label", `Applicability Set for new application on ${page.name}`);
+    newApplicability.append(new Option("Always", ""), ...applicabilitySets.map((set) => new Option(set.name, set.id)));
     results.setAttribute("aria-label", "Property Set search results");
     review.setAttribute("aria-label", "Property composition reorder review");
     review.hidden = true;
     list.setAttribute("aria-label", "Applied Property Sets");
-    const renderResults = () => { const query = search.value.trim().toLocaleLowerCase(), applied = new Set(orderedPropertySetApplications(state.project, page.id).map(({ propertySetId }) => propertySetId)); results.replaceChildren(...propertySets.filter((set) => !applied.has(set.id) && set.name.toLocaleLowerCase().includes(query)).map((set) => { const button = document.createElement("button"); button.type = "button"; button.textContent = `Apply ${set.name}`; button.setAttribute("aria-label", `Apply Property Set ${set.name} to ${page.name}`); button.addEventListener("click", () => onSave(addPropertySetApplication(state, page.id, set.id, undefined, id))); return button; })); };
+    const renderResults = () => { const query = search.value.trim().toLocaleLowerCase(), applied = new Set(orderedPropertySetApplications(state.project, page.id).map(({ propertySetId }) => propertySetId)); results.replaceChildren(...propertySets.filter((set) => !applied.has(set.id) && set.name.toLocaleLowerCase().includes(query)).map((set) => { const button = document.createElement("button"); button.type = "button"; button.textContent = `Apply ${set.name}`; button.setAttribute("aria-label", `Apply Property Set ${set.name} to ${page.name}`); button.addEventListener("click", () => onSave(addPropertySetApplication(state, page.id, set.id, newApplicability.value || undefined, id))); return button; })); };
     search.addEventListener("input", renderResults);
     renderResults();
     const applications = orderedPropertySetApplications(state.project, page.id), stageReorder = (application, delta) => { const target = Math.max(0, Math.min(applications.length - 1, applications.findIndex(({ id }) => id === application.id) + delta)), other = applications[target] ?? application, next = reorderPropertySetApplication(state, page.id, application.propertySetId, delta), paths = [...new Set([application, other].flatMap(({ propertySetId }) => (byId.get(propertySetId)?.schemaConstraints ?? []).flatMap(({ path }) => path ? [path] : [])))], summary = document.createElement("p"), confirm = document.createElement("button"), cancel = document.createElement("button"); summary.textContent = `Review application order for ${page.name}: ${applications.map(({ propertySetId }) => byId.get(propertySetId)?.name ?? propertySetId).join(" then ")} becomes ${orderedPropertySetApplications(next.project, page.id).map(({ propertySetId }) => byId.get(propertySetId)?.name ?? propertySetId).join(" then ")}. Impacted properties: ${paths.join(", ") || "none"}. Both Property Sets remain visible as effective or superseded provenance; invariant and structural conflicts remain blocked.`; confirm.type = cancel.type = "button"; confirm.textContent = "Confirm application reorder"; cancel.textContent = "Cancel application reorder"; confirm.addEventListener("click", () => onSave(next)); cancel.addEventListener("click", () => { review.hidden = true; review.replaceChildren(); }); review.replaceChildren(summary, confirm, cancel); review.hidden = false; confirm.focus(); };
     for (const [order, application] of applications.entries()) {
-        const set = byId.get(application.propertySetId), row = document.createElement("li"), summary = document.createElement("p"), open = document.createElement("button"), earlier = document.createElement("button"), later = document.createElement("button"), remove = document.createElement("button");
+        const set = byId.get(application.propertySetId), row = document.createElement("li"), summary = document.createElement("p"), applicability = document.createElement("select"), open = document.createElement("button"), earlier = document.createElement("button"), later = document.createElement("button"), remove = document.createElement("button");
         row.dataset.propertySetApplicationId = application.id;
         summary.textContent = `${set?.name ?? application.propertySetId} · applicability ${application.applicabilitySetId ?? "Always"} · complete effective contribution · provenance Property Set ${set?.name ?? application.propertySetId}`;
+        applicability.setAttribute("aria-label", `Applicability Set for ${set?.name ?? application.propertySetId} on ${page.name}`);
+        applicability.append(new Option("Always", ""), ...applicabilitySets.map((candidate) => new Option(candidate.name, candidate.id)));
+        applicability.value = application.applicabilitySetId ?? "";
+        applicability.addEventListener("change", () => onSave(setPropertySetApplicationApplicability(state, page.id, application.propertySetId, applicability.value || undefined)));
         for (const control of [open, earlier, later, remove])
             control.type = "button";
         open.textContent = "Open Property Set";
@@ -38,10 +44,10 @@ export function mountPropertyCompositionWorkspace({ host, state, pageId, id, onS
         earlier.addEventListener("click", () => stageReorder(application, -1));
         later.addEventListener("click", () => stageReorder(application, 1));
         remove.addEventListener("click", () => onSave(removePropertySetApplication(state, page.id, application.propertySetId)));
-        row.append(summary, open, earlier, later, remove);
+        row.append(summary, applicability, open, earlier, later, remove);
         list.append(row);
     }
-    workspace.append(heading, guidance, search, results, review, list);
+    workspace.append(heading, guidance, search, newApplicability, results, review, list);
     host.append(workspace);
     return workspace;
 }
