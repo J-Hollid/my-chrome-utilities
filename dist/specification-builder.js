@@ -53,7 +53,7 @@ q("#project-assignment-applicability").required = false;
 const id = (kind) => `${kind}:${crypto.randomUUID()}`;
 const labels = { profiles: "Shared Profiles", pages: "Pages", pageGroups: "Page Groups", events: "Events", applicabilitySets: "Applicability", flows: "Flows", fixtures: "Test cases", assignments: "Assignments" };
 let state, lastCommittedState, library = projectLibrary();
-let canonicalRevision = 0, publishedRevision = 0, guidedEvaluatorInvocations = 0, pendingConflict, durableConflict, saveStatus = { kind: "idle" }, stagedBulk, selectedKind = "profiles", selectedId, projectOverview = routeParameters.get("route") === "overview", documentationOpen = routeParameters.get("view") === "documentation", creationKind, removalReview, lifecycleStatus = "", removedFocus, pendingLifecycleFocus, pendingWorkspaceFocus, pendingProfileInheritanceFocus, pendingProfileSource, stagedImport, lastInvokingControl, releasePreflight, releaseReviewHasChanges = true, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi, projectDocumentationWorkspaceUi;
+let canonicalRevision = 0, publishedRevision = 0, guidedEvaluatorInvocations = 0, pendingConflict, durableConflict, saveStatus = { kind: "idle" }, stagedBulk, selectedKind = "profiles", selectedId, projectOverview = routeParameters.get("route") === "overview", documentationOpen = routeParameters.get("view") === "documentation", creationKind, removalReview, lifecycleStatus = "", removedFocus, pendingLifecycleFocus, pendingWorkspaceFocus, pendingProfileInheritanceFocus, pendingHistoryFocus, pendingProfileSource, stagedImport, lastInvokingControl, releasePreflight, releaseReviewHasChanges = true, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi, projectDocumentationWorkspaceUi;
 const recordGuidedEvaluation = () => { guidedEvaluatorInvocations += 1; document.querySelector("[data-guided-test-case]")?.setAttribute("data-evaluator-invocations", String(guidedEvaluatorInvocations)); };
 const evaluatePageGroupFixture = (...args) => { recordGuidedEvaluation(); return executePageGroupFixture(...args); };
 const runProductionFixture = (...args) => { recordGuidedEvaluation(); return executeProductionFixture(...args); };
@@ -896,7 +896,8 @@ function renderProfileInheritanceEditor(host, entity, includePageGroups = false)
     picker.setAttribute("aria-label", "Add Shared Profile picker");
     search.type = "search";
     search.setAttribute("aria-label", "Search Shared Profiles to inherit");
-    const renderResults = () => results.replaceChildren(...state.project.collections.profiles.filter(({ id, name }) => !existing.has(id) && name.toLowerCase().includes(search.value.trim().toLowerCase())).map((profile) => { const choose = document.createElement("button"); choose.type = "button"; choose.textContent = profile.name; choose.addEventListener("click", () => { pendingProfileSource = { targetId: entity.id, profileId: profile.id }; render(); }); return choose; }));
+    const renderResults = () => results.replaceChildren(...state.project.collections.profiles.filter(({ id, name }) => !existing.has(id) && name.toLowerCase().includes(search.value.trim().toLowerCase())).map((profile) => { const choose = document.createElement("button"); choose.type = "button"; choose.textContent = profile.name; choose.addEventListener("click", () => { const projectId = state.project.id, targetId = entity.id; void durableProjectRuntime.repository.loadProject(projectId).then((loaded) => { if (state?.project.id !== projectId || selectedId !== targetId)
+        return; state = { ...structuredClone(loaded.state), history: state.history }; pendingProfileSource = { targetId, profileId: profile.id }; render(); }); }); return choose; }));
     search.addEventListener("input", renderResults);
     add.addEventListener("click", () => { picker.hidden = false; search.focus(); });
     picker.append(search, results);
@@ -1444,7 +1445,7 @@ q("#add-entity-form").addEventListener("submit", (event) => { event.preventDefau
     return; const kind = q("#entity-kind").value, name = q("#entity-name").value.trim(); if (!name)
     return; const next = createProjectCollectionEntity(state, kind, name, id), created = next.project.collections[kind].at(-1); selectedKind = kind; selectedId = created?.id; q("#entity-name").value = ""; persist(next); persistNavigation(); render(); });
 q("#undo-project").addEventListener("click", () => { if (!state)
-    return; const projectId = state.project.id, restored = removedFocus; if (restored)
+    return; const projectId = state.project.id, restored = removedFocus; pendingHistoryFocus = "undo-project"; if (restored)
     pendingLifecycleFocus = { kind: restored.kind, id: restored.id }; void durableProjectRuntime.undo(projectId).then(() => { if (restored) {
     removedFocus = undefined;
     selectedKind = restored.kind;
@@ -1455,9 +1456,11 @@ q("#undo-project").addEventListener("click", () => { if (!state)
     pendingLifecycleFocus = { kind: restored.kind, id: restored.id };
     render();
     queueMicrotask(() => { restorePendingLifecycleFocus(); pendingLifecycleFocus = undefined; });
-} }); });
-q("#redo-project").addEventListener("click", () => { if (state)
-    void durableProjectRuntime.redo(state.project.id); });
+} queueMicrotask(() => { const control = q("#undo-project"); (control.disabled ? document.querySelector("[data-profile-inheritance-card], #workspace-content h1") : control)?.focus({ preventScroll: true }); }); }); });
+q("#redo-project").addEventListener("click", () => { if (state) {
+    pendingHistoryFocus = "redo-project";
+    void durableProjectRuntime.redo(state.project.id).then(() => queueMicrotask(() => { const control = q("#redo-project"); (control.disabled ? document.querySelector("[data-profile-inheritance-card], #workspace-content h1") : control)?.focus({ preventScroll: true }); }));
+} });
 q("#project-search").addEventListener("input", renderWorkspace);
 const savedSchemaDialog = q("#saved-schema-review"), savedSchemaChanges = q("#saved-schema-review-changes");
 q("#review-saved-schema").addEventListener("click", () => { if (!state)
@@ -1896,6 +1899,11 @@ durableProjectRuntime.subscribe(({ library: incoming, active }) => {
             card.focus({ preventScroll: true });
             pendingProfileInheritanceFocus = undefined;
         } });
+    }
+    if (pendingHistoryFocus) {
+        const controlId = pendingHistoryFocus;
+        queueMicrotask(() => { const control = q(`#${controlId}`); (control.disabled ? document.querySelector("[data-profile-inheritance-card], #workspace-content h1") : control)?.focus({ preventScroll: true }); if (pendingHistoryFocus === controlId)
+            pendingHistoryFocus = undefined; });
     }
     if (focusedMembershipId)
         queueMicrotask(() => document.querySelector(`[data-page-group-membership-id="${CSS.escape(focusedMembershipId)}"]`)?.focus());
