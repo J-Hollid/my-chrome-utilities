@@ -86,7 +86,7 @@ const pageFor=(state:ProjectState,pageId:string):ProjectEntity=>{
 export function pageGroupStructuralSchema(state:ProjectState,pageId:string,selectedApplicabilitySetIds?:readonly string[]):PageGroupStructuralSchema {
   const page=pageFor(state,pageId);
   const contributorPath=layeredContributorPath(state,page,"Page"),contributors=layeredContributorsForPath(state,contributorPath);
-  const memberships=contributors.filter(({scope})=>scope==="Page Group").map((contributor,order):PageGroupStructuralMembership=>({
+  const memberships=contributors.filter(({scope})=>scope==="Property Set").map((contributor,order):PageGroupStructuralMembership=>({
     groupId:contributor.id,
     groupName:contributor.name,
     order,
@@ -142,7 +142,7 @@ export function evaluatePageGroupFixture(state:ProjectState,fixtureId:string):Pa
   const page=pageFor(state,pageId),payload=fixturePayload(fixture);
   const contributors=layeredContributorsForPath(state,layeredContributorPath(state,page,"Page"),payload);
   const compiled=compileLayeredSchema(contributors,{eventId:String(page.eventName??page.id),eventRole:"context"});
-  const groups=contributors.filter(({scope})=>scope==="Page Group");
+  const groups=contributors.filter(({scope})=>scope==="Property Set");
   const distinctSets=(active:boolean)=>[...new Set(groups.filter((group)=>active?group.active!==false:group.active===false).flatMap(({applicabilitySetName})=>applicabilitySetName?[applicabilitySetName]:[]))];
   return{
     mode:"evaluated-example",
@@ -177,8 +177,8 @@ export function documentPageGroupStructure(input:PageGroupStructuralSchema|PageG
       `Evaluated example: ${input.fixtureName} · Page ${input.pageName}`,
       `Matched Applicability Sets: ${input.matchedApplicabilitySets.join(", ")||"none"}`,
       `Not matched Applicability Sets: ${input.unmatchedApplicabilitySets.join(", ")||"none"}`,
-      `Applicable Page Groups: ${input.includedStack.join(", ")||"none"}`,
-      `Inactive Page Groups: ${input.inactiveGroups.join(", ")||"none"}`,
+      `Applicable Property Sets: ${input.includedStack.join(", ")||"none"}`,
+      `Inactive Property Sets: ${input.inactiveGroups.join(", ")||"none"}`,
       ...Object.values(input.compiled.properties).map((property)=>`${constraintText(property)} · provenance ${provenanceText(property)}`),
     ].join("\n");
   }

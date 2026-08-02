@@ -5,7 +5,7 @@ export function mountPropertyCompositionWorkspace({ host, state, pageId, id, onS
     const page = state.project.collections.pages.find(({ id }) => id === pageId);
     if (!page)
         throw new Error(`Unknown Page ${pageId}.`);
-    const propertySets = (state.project.collections.propertySets ?? state.project.collections.pageGroups), byId = new Map(propertySets.map((set) => [set.id, set])), workspace = document.createElement("section"), heading = document.createElement("h2"), guidance = document.createElement("p"), search = document.createElement("input"), results = document.createElement("div"), list = document.createElement("ol");
+    const propertySets = state.project.collections.propertySets, byId = new Map(propertySets.map((set) => [set.id, set])), workspace = document.createElement("section"), heading = document.createElement("h2"), guidance = document.createElement("p"), search = document.createElement("input"), results = document.createElement("div"), review = document.createElement("section"), list = document.createElement("ol");
     workspace.className = "property-composition-workspace";
     workspace.dataset.propertyComposition = page.id;
     workspace.setAttribute("aria-label", `Property composition for ${page.name}`);
@@ -14,11 +14,13 @@ export function mountPropertyCompositionWorkspace({ host, state, pageId, id, onS
     search.type = "search";
     search.setAttribute("aria-label", "Search Property Sets to apply");
     results.setAttribute("aria-label", "Property Set search results");
+    review.setAttribute("aria-label", "Property composition reorder review");
+    review.hidden = true;
     list.setAttribute("aria-label", "Applied Property Sets");
     const renderResults = () => { const query = search.value.trim().toLocaleLowerCase(), applied = new Set(orderedPropertySetApplications(state.project, page.id).map(({ propertySetId }) => propertySetId)); results.replaceChildren(...propertySets.filter((set) => !applied.has(set.id) && set.name.toLocaleLowerCase().includes(query)).map((set) => { const button = document.createElement("button"); button.type = "button"; button.textContent = `Apply ${set.name}`; button.setAttribute("aria-label", `Apply Property Set ${set.name} to ${page.name}`); button.addEventListener("click", () => onSave(addPropertySetApplication(state, page.id, set.id, undefined, id))); return button; })); };
     search.addEventListener("input", renderResults);
     renderResults();
-    const applications = orderedPropertySetApplications(state.project, page.id);
+    const applications = orderedPropertySetApplications(state.project, page.id), stageReorder = (application, delta) => { const target = Math.max(0, Math.min(applications.length - 1, applications.findIndex(({ id }) => id === application.id) + delta)), other = applications[target] ?? application, next = reorderPropertySetApplication(state, page.id, application.propertySetId, delta), paths = [...new Set([application, other].flatMap(({ propertySetId }) => (byId.get(propertySetId)?.schemaConstraints ?? []).flatMap(({ path }) => path ? [path] : [])))], summary = document.createElement("p"), confirm = document.createElement("button"), cancel = document.createElement("button"); summary.textContent = `Review application order for ${page.name}: ${applications.map(({ propertySetId }) => byId.get(propertySetId)?.name ?? propertySetId).join(" then ")} becomes ${orderedPropertySetApplications(next.project, page.id).map(({ propertySetId }) => byId.get(propertySetId)?.name ?? propertySetId).join(" then ")}. Impacted properties: ${paths.join(", ") || "none"}. Both Property Sets remain visible as effective or superseded provenance; invariant and structural conflicts remain blocked.`; confirm.type = cancel.type = "button"; confirm.textContent = "Confirm application reorder"; cancel.textContent = "Cancel application reorder"; confirm.addEventListener("click", () => onSave(next)); cancel.addEventListener("click", () => { review.hidden = true; review.replaceChildren(); }); review.replaceChildren(summary, confirm, cancel); review.hidden = false; confirm.focus(); };
     for (const [order, application] of applications.entries()) {
         const set = byId.get(application.propertySetId), row = document.createElement("li"), summary = document.createElement("p"), open = document.createElement("button"), earlier = document.createElement("button"), later = document.createElement("button"), remove = document.createElement("button");
         row.dataset.propertySetApplicationId = application.id;
@@ -33,18 +35,18 @@ export function mountPropertyCompositionWorkspace({ host, state, pageId, id, onS
         earlier.disabled = order === 0;
         later.disabled = order === applications.length - 1;
         open.addEventListener("click", () => onOpen?.(application.propertySetId));
-        earlier.addEventListener("click", () => onSave(reorderPropertySetApplication(state, page.id, application.propertySetId, -1)));
-        later.addEventListener("click", () => onSave(reorderPropertySetApplication(state, page.id, application.propertySetId, 1)));
+        earlier.addEventListener("click", () => stageReorder(application, -1));
+        later.addEventListener("click", () => stageReorder(application, 1));
         remove.addEventListener("click", () => onSave(removePropertySetApplication(state, page.id, application.propertySetId)));
         row.append(summary, open, earlier, later, remove);
         list.append(row);
     }
-    workspace.append(heading, guidance, search, results, list);
+    workspace.append(heading, guidance, search, results, review, list);
     host.append(workspace);
     return workspace;
 }
 export function mountFlowSectionWorkspace({ host, state, flowId, id, onSave }) {
-    const graph = graphFor(state, flowId), workspace = document.createElement("section"), heading = document.createElement("h2"), guidance = document.createElement("p"), createForm = document.createElement("form"), name = document.createElement("input"), add = document.createElement("button"), list = document.createElement("div"), placement = document.createElement("fieldset"), placementLegend = document.createElement("legend"), frameSelect = document.createElement("select"), sectionSelect = document.createElement("select"), place = document.createElement("button"), outside = document.createElement("button"), status = document.createElement("output");
+    const graph = graphFor(state, flowId), workspace = document.createElement("section"), heading = document.createElement("h2"), guidance = document.createElement("p"), toolbar = document.createElement("nav"), canvas = document.createElement("div"), surface = document.createElement("div"), createForm = document.createElement("form"), name = document.createElement("input"), add = document.createElement("button"), list = document.createElement("div"), placement = document.createElement("fieldset"), placementLegend = document.createElement("legend"), frameSelect = document.createElement("select"), sectionSelect = document.createElement("select"), place = document.createElement("button"), outside = document.createElement("button"), status = document.createElement("output");
     workspace.className = "flow-section-workspace";
     workspace.dataset.flowSectionWorkspace = flowId;
     workspace.setAttribute("aria-label", "Flow Sections");
@@ -57,6 +59,46 @@ export function mountFlowSectionWorkspace({ host, state, flowId, id, onSave }) {
     add.textContent = "Add Section";
     createForm.append(name, add);
     list.setAttribute("aria-label", "Section outline");
+    toolbar.className = "flow-section-toolbar";
+    toolbar.setAttribute("aria-label", "Flow canvas tools");
+    for (const label of ["Sections", "Pages", "Events"]) {
+        const tool = document.createElement("button");
+        tool.type = "button";
+        tool.textContent = label;
+        tool.disabled = label !== "Sections";
+        toolbar.append(tool);
+    }
+    canvas.className = "flow-section-canvas";
+    canvas.setAttribute("aria-label", "Flow Section canvas");
+    surface.className = "flow-section-canvas-surface";
+    const sections = graph.sections ?? [], frames = (graph.pageFrames ?? []), right = Math.max(720, ...sections.map(({ bounds }) => bounds.x + bounds.width + 32), ...frames.map(({ position }) => (position?.x ?? 24) + 200)), bottom = Math.max(360, ...sections.map(({ bounds }) => bounds.y + bounds.height + 32), ...frames.map(({ position }) => (position?.y ?? 24) + 72));
+    surface.style.width = `${right}px`;
+    surface.style.height = `${bottom}px`;
+    for (const section of sections) {
+        const region = document.createElement("section"), label = document.createElement("h3");
+        region.className = "flow-section-region";
+        region.dataset.flowSectionRegion = section.id;
+        region.setAttribute("aria-label", `Section ${section.name}`);
+        region.style.left = `${section.bounds.x}px`;
+        region.style.top = `${section.bounds.y}px`;
+        region.style.width = `${section.bounds.width}px`;
+        region.style.height = `${section.bounds.height}px`;
+        label.textContent = section.name;
+        region.append(label);
+        surface.append(region);
+    }
+    for (const frame of frames) {
+        const card = document.createElement("button");
+        card.type = "button";
+        card.className = "flow-section-page-frame";
+        card.dataset.pageFrameId = frame.id;
+        card.textContent = frame.name;
+        card.setAttribute("aria-label", `Page frame ${frame.name}${frame.sectionId ? " in Section" : " outside Sections"}`);
+        card.style.left = `${frame.position?.x ?? 24}px`;
+        card.style.top = `${frame.position?.y ?? 24}px`;
+        surface.append(card);
+    }
+    canvas.append(surface);
     createForm.addEventListener("submit", (event) => { event.preventDefault(); try {
         onSave(createFlowSection(state, flowId, { name: name.value, bounds: { x: 24, y: 48 + (graph.sections?.length ?? 0) * 220, width: 640, height: 190 } }, id));
     }
@@ -103,7 +145,7 @@ export function mountFlowSectionWorkspace({ host, state, flowId, id, onSave }) {
     outside.addEventListener("click", () => { if (frameSelect.value)
         onSave(movePageFrameToSection(state, flowId, frameSelect.value)); });
     placement.append(placementLegend, frameSelect, sectionSelect, place, outside);
-    workspace.append(heading, guidance, createForm, list, placement, status);
+    workspace.append(heading, guidance, toolbar, canvas, createForm, list, placement, status);
     host.append(workspace);
     return workspace;
 }

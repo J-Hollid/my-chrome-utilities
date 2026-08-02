@@ -69,9 +69,9 @@ export function validOccurrence(state, flowId, input) {
         throw new Error("A Flow occurrence requires its existing containing Page frame.");
     const effectivePageGroupId = input.pageGroupId ?? frame?.pageGroupId;
     if (effectivePageGroupId) {
-        const group = state.project.collections.pageGroups.find(({ id }) => id === effectivePageGroupId), memberIds = orderedPageGroupIds(state.project, page.id);
+        const group = state.project.collections.propertySets.find(({ id }) => id === effectivePageGroupId), memberIds = orderedPageGroupIds(state.project, page.id);
         if (!group || !flowPageGroupLaneIds(state.project, flowId).includes(group.id) || !memberIds.includes(group.id))
-            throw new Error("A Flow occurrence requires a selected Page Group containing its Page.");
+            throw new Error("A Flow occurrence requires a selected Property Set containing its Page.");
     }
     if (input.freePageFrameId) {
         const legacyFrame = graph.occurrences.find(({ id }) => id === input.freePageFrameId);

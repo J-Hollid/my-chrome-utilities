@@ -55,7 +55,7 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
         next.protectedFacets = clone(constraint.protectedFacets);
     if (constraint.allowedValues && !(parallelPeer && prior.expectedValue !== undefined)) {
         if (prior.allowedValues) {
-            const orderedPageGroups = prior.origins.at(-1)?.scope === "Page Group" && contributor.scope === "Page Group", changed = !same(prior.allowedValues, constraint.allowedValues);
+            const orderedPageGroups = prior.origins.at(-1)?.scope === "Property Set" && contributor.scope === "Property Set", changed = !same(prior.allowedValues, constraint.allowedValues);
             if (parallelPeer) {
                 const intersection = prior.allowedValues.filter((value) => constraint.allowedValues.some((candidate) => same(value, candidate)));
                 next.allowedValues = clone((intersection.length ? intersection : canonicalUnion(prior.allowedValues, constraint.allowedValues)).sort((left, right) => JSON.stringify(left).localeCompare(JSON.stringify(right))));

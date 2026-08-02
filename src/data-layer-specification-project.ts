@@ -2,8 +2,8 @@ import {canonicalConstraints,canonicalPropertyPath,canonicalRequirements,canonic
 import {savedSchemaCanonicalDocument,savedSchemaFromCanonical} from "./data-layer-saved-schema-canonical.js";
 import type {ProjectDocumentationDraft} from "./data-layer-project-documentation-records.js";
 
-export type ProjectEntityKind = "profiles" | "pages" | "pageGroups" | "events" | "applicabilitySets" | "flows" | "fixtures" | "assignments";
-export type AssignmentTargetKind = "Shared Profile" | "Property Set" | "Page Group" | "Page" | "Event" | "Flow Page instance";
+export type ProjectEntityKind = "profiles" | "propertySets" | "pages" | "events" | "applicabilitySets" | "flows" | "fixtures" | "assignments";
+export type AssignmentTargetKind = "Shared Profile" | "Property Set" | "Page" | "Event" | "Flow Page instance";
 export type IdFactory = (kind: string) => string;
 
 export interface Requirement { path: string; type?: string; required?: boolean; forbidden?: boolean; allowedValues?: readonly unknown[]; description?:string; examples?:readonly unknown[]; rules?:readonly Record<string,unknown>[]; introducedIn?:string; origin?: string; evaluationResultIdentity?:string; }
@@ -14,8 +14,8 @@ export interface ConditionGroup { kind: "all" | "any" | "not"; conditions: Condi
 export type Condition = Predicate | ConditionGroup;
 export interface SpecificationCollections {
   profiles: Profile[];
+  propertySets: ProjectEntity[];
   pages: ProjectEntity[];
-  pageGroups: ProjectEntity[];
   events: ProjectEntity[];
   applicabilitySets: ProjectEntity[];
   flows: ProjectEntity[];
@@ -58,7 +58,7 @@ export function createSpecificationProject(input: { name: string; description?: 
     namingConventions:{ property:"snake_case", event:"snake_case" },
     publicationPolicy:{ warningsBlock:false, fixturesRequired:true },
     eventTransport:{ observationHistoryPath:"queue.history", defaultPushPath:"dataLayer" },
-    collections:{ profiles:[], pages:[], pageGroups:[], events:[], applicabilitySets:[], flows:[], fixtures:[], assignments:[] },
+    collections:{ profiles:[], propertySets:[], pages:[], events:[], applicabilitySets:[], flows:[], fixtures:[], assignments:[] },
     releases:[],
   };
   return { project, draft:{ id:input.id("draft"), status:"Saved", updatedAt:now() }, history:{ undo:[], redo:[] } };
@@ -308,7 +308,7 @@ export function applyCapturedValidationToProfile(state:ProjectState,input:{captu
 
 export interface ProjectAssignmentInput extends Omit<ProjectEntity,"id"> { id?:string;name:string;targetId:string;targetKind:AssignmentTargetKind;eventId?:string;eventName:string;applicabilitySetId?:string;clearApplicability?:boolean;sourceId:string;target:string;priority:number;condition?:Condition; }
 function canonicalAssignmentCondition(project:SpecificationProject,condition:Condition|undefined):Condition|undefined{if(!condition)return undefined;if(condition.kind!=="predicate")return{...condition,conditions:condition.conditions.map((child)=>canonicalAssignmentCondition(project,child)!)};if(condition.field!=="flowId"||typeof condition.value!=="string")return clone(condition);const normalized=condition.value.trim().toLowerCase(),flow=project.collections.flows.find((candidate)=>candidate.id===condition.value||candidate.name.trim().toLowerCase()===normalized);return{...condition,...(flow?{value:flow.id}:{})};}
-function assignmentTarget(project:SpecificationProject,kind:AssignmentTargetKind,identity:string):ProjectEntity|undefined{if(kind==="Shared Profile")return project.collections.profiles.find(({id})=>id===identity);if(kind==="Property Set"||kind==="Page Group")return ((project.collections as SpecificationCollections&{propertySets?:ProjectEntity[]}).propertySets??project.collections.pageGroups).find(({id})=>id===identity);if(kind==="Page")return project.collections.pages.find(({id})=>id===identity);if(kind==="Event")return project.collections.events.find(({id})=>id===identity);return Object.values(project.documentationFlowGraphs??{}).flatMap((graph)=>((graph as {pageFrames?:ProjectEntity[]}).pageFrames??[])).find(({id})=>id===identity);}
+function assignmentTarget(project:SpecificationProject,kind:AssignmentTargetKind,identity:string):ProjectEntity|undefined{if(kind==="Shared Profile")return project.collections.profiles.find(({id})=>id===identity);if(kind==="Property Set")return project.collections.propertySets.find(({id})=>id===identity);if(kind==="Page")return project.collections.pages.find(({id})=>id===identity);if(kind==="Event")return project.collections.events.find(({id})=>id===identity);return Object.values(project.documentationFlowGraphs??{}).flatMap((graph)=>((graph as {pageFrames?:ProjectEntity[]}).pageFrames??[])).find(({id})=>id===identity);}
 export function saveProjectAssignment(state:ProjectState,input:ProjectAssignmentInput,id:IdFactory):ProjectState{
   if(!input.targetId.trim()||!input.eventName.trim()||!input.sourceId.trim()||!input.target.trim())throw new Error("Assignment routing fields must not be blank.");if(!assignmentTarget(state.project,input.targetKind,input.targetId))throw new Error(`${input.targetKind} ${input.targetId} is unavailable.`);
   const {condition:rawCondition,clearApplicability,...compatible}=clone(input),existing=input.id?state.project.collections.assignments.find((assignment)=>assignment.id===input.id):undefined,identity=existing?.id??id("assignment"),generatedApplicabilityId=clearApplicability?undefined:input.applicabilitySetId??(rawCondition?id("applicability"):String(existing?.applicabilitySetId??id("applicability"))),resolvedEventId=input.eventId??String(existing?.eventId??state.project.collections.events.find((event)=>event.eventName===input.eventName&&event.sourceId===input.sourceId)?.id??""),condition=canonicalAssignmentCondition(state.project,rawCondition),saved:ProjectEntity={...existing,...compatible,id:identity,eventId:resolvedEventId,...(generatedApplicabilityId?{applicabilitySetId:generatedApplicabilityId}:{})};if(!generatedApplicabilityId)delete saved.applicabilitySetId;delete saved.condition;delete saved.schemaDraftId;delete saved.schemaId;delete saved.schemaRevision;delete saved.schemaDocument;delete saved.compiledSchema;

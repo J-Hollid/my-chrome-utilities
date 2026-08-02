@@ -6,7 +6,7 @@ const contracts = Object.freeze({
     "schema.destructive-confirmation": checkbox("schema.destructive-confirmation", "Confirms replacement impact before the reviewed schema copy"),
     "schema.specification-property": checkbox("schema.specification-property", "Selects a property for the later specification copy action"),
     "schema.specification-headings": checkbox("schema.specification-headings", "Stages heading inclusion for the later specification copy action"),
-    "schema.page-group-applicability-preview": checkbox("schema.page-group-applicability-preview", "Previews independent Page Group composition without changing project data"),
+    "schema.page-group-applicability-preview": checkbox("schema.page-group-applicability-preview", "Previews independent Property Set composition without changing project data"),
     "documentation.concept-subheadings": checkbox("documentation.concept-subheadings", "Changes configuration pending preview refresh"),
     "documentation.concept-membership": checkbox("documentation.concept-membership", "Selects membership in the ordered concept group"),
     "documentation.section-membership": checkbox("documentation.section-membership", "Selects membership in the Documentation Set"),

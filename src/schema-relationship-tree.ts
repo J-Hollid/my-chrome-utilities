@@ -36,12 +36,12 @@ export function projectSchemaRelationshipTree(state:ProjectState|undefined,saved
   const savedPath=["Saved schemas"],savedChildren=savedSchemas.map((schema)=>contributor(`saved:${schema.id}`,schema.name,"Saved schema","Saved schemas",savedPath,`saved:${schema.id}`));
   const saved=branch("saved-schemas","Saved schemas",[],savedChildren);
   if(!state)return [saved];
-  const {project}=state,{collections}=project,projectPath=[project.name],graphs=(project.documentationFlowGraphs??{}) as Record<string,{pageFrames?:ProjectEntity[];occurrences?:ProjectEntity[]}>,propertySets=((collections as typeof collections&{propertySets?:ProjectEntity[]}).propertySets??collections.pageGroups);
+  const {project}=state,{collections}=project,projectPath=[project.name],graphs=(project.documentationFlowGraphs??{}) as Record<string,{pageFrames?:ProjectEntity[];occurrences?:ProjectEntity[]}>,sets=collections.propertySets;
   const byId=<T extends ProjectEntity>(values:readonly T[],id:unknown)=>values.find((candidate)=>candidate.id===id);
   const occurrencesFor=(flowId:string,frameId?:string,eventId?:string)=>(graphs[flowId]?.occurrences??[]).filter((occurrence)=>(!frameId||occurrence.pageFrameId===frameId)&&(!eventId||occurrence.eventId===eventId));
   const occurrenceNode=(appearance:string,flowId:string,occurrence:ProjectEntity,parts:string[])=>reference(`${appearance}:occurrence:${flowId}:${occurrence.id}`,occurrence.name,"Event occurrence","Event occurrences",parts,`occurrences:${flowId}:${occurrence.id}`);
   const shared=branch(`project:${project.id}:shared`,"Shared Profiles",projectPath,collections.profiles.map((profile)=>contributor(`profiles:${profile.id}`,profile.name,"Shared Profile","Shared Profiles",[...projectPath,"Shared Profiles"])));
-  const pageGroups=branch(`project:${project.id}:property-sets`,"Property Sets",projectPath,propertySets.map((group)=>{
+  const propertySets=branch(`project:${project.id}:property-sets`,"Property Sets",projectPath,sets.map((group)=>{
     const parts=[...projectPath,"Property Sets"],node=contributor(`propertySets:${group.id}`,group.name,"Property Set","Property Sets",parts);
     node.children=collections.pages.filter((page)=>((page.propertySetApplications as {propertySetId?:string}[]|undefined)??[]).some(({propertySetId})=>propertySetId===group.id)||((page.pageGroupIds as string[]|undefined)??[]).includes(group.id)).map((page)=>reference(`property-set:${group.id}:page:${page.id}`,page.name,"Page application","Pages",[...parts,group.name],`pages:${page.id}`));
     return node;
@@ -70,7 +70,7 @@ export function projectSchemaRelationshipTree(state:ProjectState|undefined,saved
     });
     return flowNode;
   }));
-  return [saved,branch(`project:${project.id}`,`Project ${project.name}`,[],[shared,pageGroups,pages,events,flows])];
+  return [saved,branch(`project:${project.id}`,`Project ${project.name}`,[],[shared,propertySets,pages,events,flows])];
 }
 
 function clonePruned(node:SchemaRelationshipTreeNode,children:SchemaRelationshipTreeNode[],expanded=false,match=false):SchemaRelationshipTreeNode{

@@ -7,12 +7,12 @@ export function projectSchemaRelationshipTree(state, savedSchemas) {
     const saved = branch("saved-schemas", "Saved schemas", [], savedChildren);
     if (!state)
         return [saved];
-    const { project } = state, { collections } = project, projectPath = [project.name], graphs = (project.documentationFlowGraphs ?? {}), propertySets = (collections.propertySets ?? collections.pageGroups);
+    const { project } = state, { collections } = project, projectPath = [project.name], graphs = (project.documentationFlowGraphs ?? {}), sets = collections.propertySets;
     const byId = (values, id) => values.find((candidate) => candidate.id === id);
     const occurrencesFor = (flowId, frameId, eventId) => (graphs[flowId]?.occurrences ?? []).filter((occurrence) => (!frameId || occurrence.pageFrameId === frameId) && (!eventId || occurrence.eventId === eventId));
     const occurrenceNode = (appearance, flowId, occurrence, parts) => reference(`${appearance}:occurrence:${flowId}:${occurrence.id}`, occurrence.name, "Event occurrence", "Event occurrences", parts, `occurrences:${flowId}:${occurrence.id}`);
     const shared = branch(`project:${project.id}:shared`, "Shared Profiles", projectPath, collections.profiles.map((profile) => contributor(`profiles:${profile.id}`, profile.name, "Shared Profile", "Shared Profiles", [...projectPath, "Shared Profiles"])));
-    const pageGroups = branch(`project:${project.id}:property-sets`, "Property Sets", projectPath, propertySets.map((group) => {
+    const propertySets = branch(`project:${project.id}:property-sets`, "Property Sets", projectPath, sets.map((group) => {
         const parts = [...projectPath, "Property Sets"], node = contributor(`propertySets:${group.id}`, group.name, "Property Set", "Property Sets", parts);
         node.children = collections.pages.filter((page) => (page.propertySetApplications ?? []).some(({ propertySetId }) => propertySetId === group.id) || (page.pageGroupIds ?? []).includes(group.id)).map((page) => reference(`property-set:${group.id}:page:${page.id}`, page.name, "Page application", "Pages", [...parts, group.name], `pages:${page.id}`));
         return node;
@@ -41,7 +41,7 @@ export function projectSchemaRelationshipTree(state, savedSchemas) {
         });
         return flowNode;
     }));
-    return [saved, branch(`project:${project.id}`, `Project ${project.name}`, [], [shared, pageGroups, pages, events, flows])];
+    return [saved, branch(`project:${project.id}`, `Project ${project.name}`, [], [shared, propertySets, pages, events, flows])];
 }
 function clonePruned(node, children, expanded = false, match = false) {
     const { expanded: _expanded, match: _match, ...base } = node;

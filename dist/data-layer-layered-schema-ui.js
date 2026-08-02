@@ -10,7 +10,7 @@ export { layeredContributionDetails, layeredContributorPath, layeredContributors
 export const canonicalLayerConceptSuggestions = (load) => () => { const state = load(); return state ? projectCanonicalConcepts(state) : []; };
 const q = (selector) => { const value = document.querySelector(selector); if (!value)
     throw new Error(`Missing ${selector}`); return value; };
-const scopeFor = (kind) => ({ profiles: "Shared Profile", events: "Event", pageGroups: "Page Group", pages: "Page", flows: "Flow Page-instance" }[kind] ?? "Event-occurrence");
+const scopeFor = (kind) => ({ profiles: "Shared Profile", events: "Event", propertySets: "Property Set", pages: "Page", flows: "Flow Page-instance" }[kind] ?? "Event-occurrence");
 export const canonicalLayerEditorSurface = (kind) => kind === "flows" ? "Flow workspace" : "Builder";
 const structuredPaths = (document, prefix = "") => { if (!document || typeof document !== "object")
     return []; const properties = document.properties ?? {}; return Object.entries(properties).flatMap(([name, value]) => { const path = `${prefix}/${name}`; return [path, ...structuredPaths(value, path)]; }); };
@@ -57,7 +57,7 @@ export function mountSidePanelLayeredProfileEditor(options) {
         status.textContent = `Effective ${Object.keys(compiled.properties).length} · shadowed ${Object.values(compiled.properties).reduce((count, property) => count + property.superseded.length, 0)} · conflicting ${compiled.conflicts.length}`;
         inheritance.append(order, status);
         options.host.append(heading, identity, inheritance);
-        if (selection.collectionKind === "pages" || selection.collectionKind === "pageGroups") {
+        if (selection.collectionKind === "pages" || selection.collectionKind === "propertySets") {
             if (options.openUnifiedContributor) {
                 if (options.legacyEditor)
                     options.legacyEditor.hidden = false;
@@ -106,7 +106,7 @@ export function installLayeredSchemaUi(options) {
     const writeCanonical = (state, entity, scope, canonical) => transactProject(state, `Save canonical schema for ${entity.name}`, (project) => { if (graphSelection && (scope === "Event-occurrence" || scope === "Flow Page-instance")) {
         const flowId = options.context().entityId, graphs = project.documentationFlowGraphs, graph = graphs[flowId], ownsPageFrame = scope === "Flow Page-instance" && Boolean(graph.pageFrames?.some(({ id }) => id === entity.id));
         return { ...project, documentationFlowGraphs: { ...graphs, [flowId]: ownsPageFrame ? { ...graph, pageFrames: graph.pageFrames.map((candidate) => candidate.id === entity.id ? { ...candidate, canonicalSchema: canonical } : candidate) } : { ...graph, occurrences: graph.occurrences.map((candidate) => candidate.id === entity.id ? { ...candidate, canonicalSchema: canonical } : candidate) } } };
-    } const collectionKind = scope === "Page" ? "pages" : scope === "Page Group" ? "pageGroups" : scope === "Event" ? "events" : scope === "Shared Profile" ? "profiles" : "flows"; return { ...project, collections: { ...project.collections, [collectionKind]: project.collections[collectionKind].map((candidate) => candidate.id === entity.id ? { ...candidate, canonicalSchema: canonical, ...(collectionKind === "profiles" ? { requirements: [] } : {}) } : candidate) } }; });
+    } const collectionKind = scope === "Page" ? "pages" : scope === "Property Set" ? "propertySets" : scope === "Event" ? "events" : scope === "Shared Profile" ? "profiles" : "flows"; return { ...project, collections: { ...project.collections, [collectionKind]: project.collections[collectionKind].map((candidate) => candidate.id === entity.id ? { ...candidate, canonicalSchema: canonical, ...(collectionKind === "profiles" ? { requirements: [] } : {}) } : candidate) } }; });
     const ensureCanonical = () => { const { state, entity, scope } = current(); if (!state || !entity || entity.canonicalSchema)
         return; const legacy = Boolean(entity.requirements || entity.structuredSchema || entity.structuredDraft || entity.schemaConstraints), canonical = legacy ? migrateLegacyProfile(entity, { id }).document : createCanonicalSchema({ id: id("canonical-schema"), contributorId: entity.id, contributorName: entity.name }); if (graphSelection)
         graphSelection = { ...graphSelection, canonicalSchema: canonical }; options.persist(writeCanonical(state, entity, scope, canonical)); };
@@ -213,7 +213,7 @@ export function installLayeredSchemaUi(options) {
         summary.hidden = true;
         delete summary.dataset.eventRole;
         return;
-    } summary.hidden = false; const title = document.createElement("h3"), counts = document.createElement("p"), open = document.createElement("button"), eventRole = layeredEventRole(entity), compiled = compileLayeredSchema(contributorsFor(state, entity, scope), { eventId: String(entity.eventId ?? entity.id), eventRole, ...(entity.id ? { occurrenceId: entity.id } : {}) }), local = (entity.schemaConstraints ?? []).length + (entity.localSchemaContributions ?? []).length, activation = String(entity.activation ?? "manual"), directWorkspace = scope === "Page" || scope === "Page Group"; summary.dataset.eventRole = eventRole; title.textContent = `Schema constraints · ${entity.name} · ${scope}`; counts.textContent = `Inherited ${Math.max(0, compiled.provenance.length - 1)} · Local ${local} · Effective ${Object.keys(compiled.properties).length} · Conflict ${compiled.conflicts.length} · ${eventRole === "context" ? "Context Event" : "Interaction Event"} · Activation ${activation}`; open.type = "button"; open.textContent = "Open complete schema editor"; open.addEventListener("click", () => { returnFocus = open; if (directWorkspace) {
+    } summary.hidden = false; const title = document.createElement("h3"), counts = document.createElement("p"), open = document.createElement("button"), eventRole = layeredEventRole(entity), compiled = compileLayeredSchema(contributorsFor(state, entity, scope), { eventId: String(entity.eventId ?? entity.id), eventRole, ...(entity.id ? { occurrenceId: entity.id } : {}) }), local = (entity.schemaConstraints ?? []).length + (entity.localSchemaContributions ?? []).length, activation = String(entity.activation ?? "manual"), directWorkspace = scope === "Page" || scope === "Property Set"; summary.dataset.eventRole = eventRole; title.textContent = `Schema constraints · ${entity.name} · ${scope}`; counts.textContent = `Inherited ${Math.max(0, compiled.provenance.length - 1)} · Local ${local} · Effective ${Object.keys(compiled.properties).length} · Conflict ${compiled.conflicts.length} · ${eventRole === "context" ? "Context Event" : "Interaction Event"} · Activation ${activation}`; open.type = "button"; open.textContent = "Open complete schema editor"; open.addEventListener("click", () => { returnFocus = open; if (directWorkspace) {
         const target = document.querySelector(`[aria-label="${CSS.escape(`Effective schema at ${entity.name}`)}"]`);
         target?.scrollIntoView({ block: "start" });
         target?.querySelector('[aria-label$="canonical schema editor"] [data-property-id], button')?.focus();
@@ -240,8 +240,8 @@ export function installLayeredSchemaUi(options) {
         graphSelectionScope = "Flow Page-instance";
     }
     else if (pageGroupId && pageGroupId !== "ungrouped") {
-        graphSelection = state.project.collections.pageGroups.find(({ id }) => id === pageGroupId);
-        graphSelectionScope = "Page Group";
+        graphSelection = state.project.collections.propertySets.find(({ id }) => id === pageGroupId);
+        graphSelectionScope = "Property Set";
     }
     else
         return; if (!graphSelection)

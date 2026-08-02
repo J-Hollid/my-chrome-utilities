@@ -3,7 +3,7 @@ export {exportLayeredSchema} from "./layered-schema/export.js";
 export {validateLayeredObservation} from "./layered-schema/validation.js";
 export {layeredConditionMatches,resolveConditionalLayeredSchema} from "./layered-schema/conditional-rules.js";
 export {resolveLayeredTarget,type LayerPredicate,type LayerResolution,type LayerTarget} from "./layered-schema/targets.js";
-export type LayerScope="Shared Profile"|"Event"|"Page Group"|"Page"|"Flow Page-instance"|"Event-occurrence";
+export type LayerScope="Shared Profile"|"Event"|"Property Set"|"Page"|"Flow Page-instance"|"Event-occurrence";
 export type LayerPresence="required"|"optional"|"forbidden"|"permitted";
 export type LayerActivation="automatic"|"manual"|"documentation-only";
 export interface LayerValueProvenance{id:string;state:"inherited"|"local"|"overridden";contributorId?:string;source?:string;}

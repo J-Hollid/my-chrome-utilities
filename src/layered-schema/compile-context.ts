@@ -4,7 +4,7 @@ export const clone=<T>(value:T):T=>structuredClone(value);
 export const same=(left:unknown,right:unknown):boolean=>JSON.stringify(left)===JSON.stringify(right);
 export const included=(target:string|undefined,context:LayerContext):boolean=>!target||target==="all"||target===context.eventRole||target===context.eventId||target===context.occurrenceId;
 export const origin=(contributor:LayerContributor)=>({contributorId:contributor.id,contributorName:contributor.name,scope:contributor.scope,...(contributor.inheritanceRoutes?.length?{inheritanceRoutes:[...contributor.inheritanceRoutes]}:{})});
-export const branch=(scope:LayerScope):"page"|"event"|"shared"|"occurrence"=>scope==="Event"?"event":scope==="Page Group"||scope==="Page"||scope==="Flow Page-instance"?"page":scope==="Event-occurrence"?"occurrence":"shared";
+export const branch=(scope:LayerScope):"page"|"event"|"shared"|"occurrence"=>scope==="Event"?"event":scope==="Property Set"||scope==="Page"||scope==="Flow Page-instance"?"page":scope==="Event-occurrence"?"occurrence":"shared";
 export const parallelMismatch=(left:LayerConstraint,right:LayerConstraint):boolean=>Boolean(left.type&&right.type&&left.type!==right.type||left.expectedValue!==undefined&&right.expectedValue!==undefined&&!same(left.expectedValue,right.expectedValue)||left.presence==="required"&&right.presence==="forbidden"||left.presence==="forbidden"&&right.presence==="required");
 
 const ordinaryRules=(rules:readonly Record<string,unknown>[]):readonly Record<string,unknown>[]=>rules.filter(({enabled,condition,arrayScope})=>enabled!==false&&!condition&&!((arrayScope as {boundaries?:Record<string,unknown>[]}|undefined)?.boundaries?.length));

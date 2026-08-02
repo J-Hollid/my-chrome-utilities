@@ -4,10 +4,10 @@ export function sidePanelSchemaGroups(state, savedSchemas) {
     const saved = { name: "Saved schemas", entries: savedSchemas.map((schema) => ({ key: `saved:${schema.id}`, name: schema.name, role: "Saved schema", scope: "Library", lineage: schema.parentSchemaId ? `Parent ${schema.parentSchemaId}` : "Library root", revision: schema.version, state: schema.published === false || schema.workingDraft ? "Draft" : "saved" })) };
     if (!state)
         return saved.entries.length ? [saved] : [];
-    const { collections } = state.project, profileName = (id) => collections.profiles.find((candidate) => candidate.id === id)?.name, groupName = (id) => collections.pageGroups.find((candidate) => candidate.id === id)?.name, pageName = (id) => collections.pages.find((candidate) => candidate.id === id)?.name, eventName = (id) => collections.events.find((candidate) => candidate.id === id)?.name, join = (values) => values.filter((value) => Boolean(value)).join(" → ");
+    const { collections } = state.project, profileName = (id) => collections.profiles.find((candidate) => candidate.id === id)?.name, groupName = (id) => collections.propertySets.find((candidate) => candidate.id === id)?.name, pageName = (id) => collections.pages.find((candidate) => candidate.id === id)?.name, eventName = (id) => collections.events.find((candidate) => candidate.id === id)?.name, join = (values) => values.filter((value) => Boolean(value)).join(" → ");
     const groups = [saved,
         { name: "Shared", entries: collections.profiles.map((entity) => projectEntry(`profiles:${entity.id}`, entity, "Shared Profile", "Shared Profile", "Project root")) },
-        { name: "Page Groups", entries: collections.pageGroups.map((entity) => projectEntry(`pageGroups:${entity.id}`, entity, "Page Group", "Page Group", profileName(entity.profileId) ?? "Project root")) },
+        { name: "Property Sets", entries: collections.propertySets.map((entity) => projectEntry(`propertySets:${entity.id}`, entity, "Property Set", "Property Set", profileName(entity.profileId) ?? "Project root")) },
         { name: "Pages", entries: collections.pages.map((entity) => projectEntry(`pages:${entity.id}`, entity, "Page", "Page", join([profileName(entity.profileId), ...(entity.pageGroupIds ?? []).map(groupName)]))) },
         { name: "Events", entries: collections.events.map((entity) => projectEntry(`events:${entity.id}`, entity, "Event", "Event", profileName(entity.profileId) ?? "Project root")) },
         { name: "Flow instances", entries: Object.entries(state.project.documentationFlowGraphs ?? {}).flatMap(([flowId, graph]) => (graph.pageFrames ?? []).map((entity) => projectEntry(`flowInstances:${flowId}:${entity.id}`, entity, "Flow Page instance", "Flow Page-instance", join([collections.flows.find(({ id }) => id === flowId)?.name, groupName(entity.pageGroupId), pageName(entity.pageId)])))) },
@@ -16,7 +16,7 @@ export function sidePanelSchemaGroups(state, savedSchemas) {
     return groups.filter(({ entries }) => entries.length);
 }
 export function resolveSidePanelSchemaContributor(state, key) {
-    const collections = [["profiles", "Shared Profile"], ["pageGroups", "Page Group"], ["pages", "Page"], ["events", "Event"]];
+    const collections = [["profiles", "Shared Profile"], ["propertySets", "Property Set"], ["pages", "Page"], ["events", "Event"]];
     for (const [collectionKind, scope] of collections) {
         const entity = state.project.collections[collectionKind].find((candidate) => key === `${collectionKind}:${candidate.id}`);
         if (entity)

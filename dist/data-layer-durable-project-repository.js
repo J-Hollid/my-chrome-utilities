@@ -1,10 +1,12 @@
+import { upgradePageGroupsToPropertySets } from "./data-layer-property-set-flow-section.js";
 import { repairCanonicalBooleanAllowedValues } from "./data-layer-canonical-schema-facets.js";
 export const DURABLE_PROJECT_DATABASE = "my-chrome-utilities.project-repository";
 export const DURABLE_PROJECT_DATABASE_VERSION = 6;
 export const LEGACY_PROJECT_KEYS = { library: "my-chrome-utilities.specification-project-library.v1", active: "my-chrome-utilities.specification-project.v1", navigation: "my-chrome-utilities.specification-project-navigation.v1", schemas: "my-chrome-utilities.schema-library.v1" };
 export const DURABLE_PROJECT_STORES = ["projectMetadata", "projectRoots", "projectEntityMetadata", "projectEntities", "savedSchemas", "flowGraphs", "fixtures", "releases", "projectRevisions", "productionManifests", "schemaRevisions", "changeFeed", "settings", "migrationReceipts", "migrationBackups"];
-export function durableProjectRouteForWorkspace(collectionKind, entityId) { const dependencies = { pages: ["profiles", "propertySets", "pageGroups", "applicabilitySets", "assignments"], propertySets: ["profiles", "pages", "applicabilitySets", "assignments"], pageGroups: ["profiles", "pages", "applicabilitySets", "assignments"], events: ["profiles", "applicabilitySets", "assignments", "flows"], flows: ["profiles", "pages", "propertySets", "pageGroups", "events", "applicabilitySets", "assignments"], profiles: ["applicabilitySets", "assignments"], assignments: ["profiles", "pages", "propertySets", "pageGroups", "events", "flows", "applicabilitySets"], fixtures: ["profiles", "pages", "propertySets", "pageGroups", "events", "flows"] }; return { collectionKind, ...(entityId ? { entityId } : {}), collectionKinds: dependencies[collectionKind] ?? [], includeFlowGraphs: collectionKind === "flows" || collectionKind === "pages" || collectionKind === "assignments", includeFixtures: collectionKind === "fixtures" }; }
+export function durableProjectRouteForWorkspace(collectionKind, entityId) { const dependencies = { pages: ["profiles", "propertySets", "applicabilitySets", "assignments"], propertySets: ["profiles", "pages", "applicabilitySets", "assignments"], events: ["profiles", "applicabilitySets", "assignments", "flows"], flows: ["profiles", "pages", "propertySets", "events", "applicabilitySets", "assignments"], profiles: ["applicabilitySets", "assignments"], assignments: ["profiles", "pages", "propertySets", "events", "flows", "applicabilitySets"], fixtures: ["profiles", "pages", "propertySets", "events", "flows"] }; return { collectionKind, ...(entityId ? { entityId } : {}), collectionKinds: dependencies[collectionKind] ?? [], includeFlowGraphs: collectionKind === "flows" || collectionKind === "pages" || collectionKind === "assignments", includeFixtures: collectionKind === "fixtures" }; }
 const clone = (value) => structuredClone(value);
+const upgradeSeparatedState = (state) => { let sequence = 0; return upgradePageGroupsToPropertySets(state, (kind) => `${kind}:${state.project.id}:separation:${++sequence}`); };
 const comparable = (value) => Array.isArray(value) ? value.map(comparable) : record(value) ? Object.fromEntries(Object.keys(value).sort().map(key => [key, comparable(value[key])])) : value;
 const same = (left, right) => JSON.stringify(comparable(left)) === JSON.stringify(comparable(right));
 const record = (value) => Boolean(value) && typeof value === "object" && !Array.isArray(value);
@@ -262,6 +264,8 @@ export class DurableProjectRepository {
     } if (typeof chrome !== "undefined" && chrome.runtime?.id)
         void chrome.runtime.sendMessage(notification).catch(() => { }); }
     async putProjectMetadataOnly(state, input = {}) {
+        const legacyState = state, requiresSeparation = Object.hasOwn(state.project.collections, "pageGroups");
+        state = upgradeSeparatedState(state);
         const projectId = state.project.id, draftToken = input.draftToken ?? this.options.token(), lastSavedAt = this.options.now(), parts = projectParts(state), publishedRevision = input.publishedRevision ?? 0, declaredRelease = state.project.releases.find(release => release.revision === publishedRevision), publishedProject = input.publishedProject ?? (declaredRelease ? { ...clone(state.project), collections: clone(declaredRelease.snapshot), releases: state.project.releases.filter(candidate => candidate.revision <= publishedRevision), currentRelease: declaredRelease.id } : undefined);
         if (publishedRevision > 0 && (!declaredRelease || !publishedProject))
             throw new DOMException(`Project ${projectId} cannot claim Published revision ${publishedRevision} without a matching release snapshot.`, "DataError");
@@ -279,6 +283,13 @@ export class DurableProjectRepository {
             await transaction.put("projectMetadata", projectId, value);
             if (input.active)
                 await transaction.put("settings", "activeProjectId", projectId);
+            if (requiresSeparation) {
+                const receiptKey = `property-set-flow-sections-v1:${projectId}`, beforeChecksum = await checksum(JSON.stringify(comparable(legacyState.project))), afterChecksum = await checksum(JSON.stringify(comparable(state.project))), root = await transaction.get("projectRoots", projectId);
+                if (!root?.collectionKinds.includes("propertySets") || root.collectionKinds.includes("pageGroups"))
+                    throw new DOMException(`Property Set migration read-back failed for ${projectId}.`, "OperationError");
+                await transaction.put("migrationBackups", receiptKey, { version: 1, project: clone(legacyState.project), beforeChecksum, createdAt: lastSavedAt });
+                await transaction.put("migrationReceipts", receiptKey, { version: 1, projectIds: [projectId], beforeChecksum, afterChecksum, verified: true, upgradedAt: lastSavedAt });
+            }
             if (publishedRevision > 0 && declaredRelease && publishedProject && !existingRevision) {
                 const revision = { projectId, revision: publishedRevision, publicationId: declaredRelease.id, publishedAt: declaredRelease.createdAt, sourceDraftToken: draftToken, state: { project: clone(publishedProject), history: { undo: [], redo: [] } } };
                 await transaction.put("projectRevisions", revisionKey, revision);
@@ -498,6 +509,29 @@ export class DurableProjectRepository {
     async hashRecord(store, key) { const value = await this.backend.transaction([store], "readonly", transaction => transaction.get(store, key)); return checksum(JSON.stringify(value)); }
     async hashProject(projectId) { const loaded = await this.loadProject(projectId); return checksum(JSON.stringify(loaded)); }
     async storageDiagnostics(projectId, estimate, unsavedCommand) { const loaded = await this.loadProject(projectId), prefix = projectPrefix(projectId), sizes = await this.backend.transaction(["projectEntities", "flowGraphs", "fixtures", "releases", "projectRevisions", "migrationBackups"], "readonly", async (transaction) => { const selected = async (store) => (await transaction.getPrefix(store, prefix)).reduce((total, { value }) => total + bytes(value), 0); return { projectEntityBytes: await selected("projectEntities") + await selected("flowGraphs"), releaseBytes: await selected("releases") + await selected("projectRevisions"), fixtureBytes: await selected("fixtures"), migrationBackupBytes: (await transaction.getAll("migrationBackups")).reduce((total, { value }) => total + bytes(value), 0) }; }); return { lastSavedAt: loaded.lastSavedAt, publishedRevision: loaded.publishedRevision, ...(unsavedCommand ? { unsavedCommand } : {}), ...sizes, ...(estimate ? { browserEstimate: { ...estimate, label: "Browser storage estimate" } } : {}), explanation: "Unlimited storage reduces quota risk; it does not make a failed write successful or provide infinite disk." }; }
+    async upgradeLegacyPropertySetStorage() {
+        const receiptKey = "property-set-flow-sections-v1", existing = await this.backend.transaction(["migrationReceipts"], "readonly", transaction => transaction.get("migrationReceipts", receiptKey));
+        if (existing?.verified)
+            return clone(existing);
+        const metadata = await this.listProjectMetadata(), loaded = await Promise.all(metadata.map(({ projectId }) => this.loadProject(projectId))), legacy = loaded.filter(({ state }) => Object.hasOwn(state.project.collections, "pageGroups")), beforeChecksum = await checksum(JSON.stringify(comparable(legacy.map(({ state }) => state.project))));
+        const upgraded = legacy.map(({ state, ...durable }) => ({ durable, state: upgradeSeparatedState(state) })), afterChecksum = await checksum(JSON.stringify(comparable(upgraded.map(({ state }) => state.project)))), receipt = { version: 1, projectIds: upgraded.map(({ state }) => state.project.id), beforeChecksum, afterChecksum, verified: true, upgradedAt: this.options.now() };
+        return this.backend.transaction(allStores, "readwrite", async (transaction) => { const current = await transaction.get("migrationReceipts", receiptKey); if (current?.verified)
+            return current; await transaction.put("migrationBackups", receiptKey, { version: 1, projects: legacy.map(({ state }) => clone(state.project)), beforeChecksum, createdAt: this.options.now() }); for (const candidate of upgraded) {
+            const projectId = candidate.state.project.id, root = await transaction.get("projectRoots", projectId);
+            if (!root?.collectionKinds.includes("pageGroups"))
+                throw new DOMException(`Legacy Property Set source ${projectId} changed before upgrade.`, "AbortError");
+            const parts = projectParts(candidate.state);
+            await replaceProjectParts(transaction, projectId, parts);
+            const verifiedRoot = await transaction.get("projectRoots", projectId);
+            if (!verifiedRoot?.collectionKinds.includes("propertySets") || verifiedRoot.collectionKinds.includes("pageGroups"))
+                throw new DOMException(`Property Set upgrade read-back failed for ${projectId}.`, "OperationError");
+            const currentMetadata = await transaction.get("projectMetadata", projectId);
+            if (!currentMetadata)
+                throw new DOMException(`Property Set upgrade lost metadata for ${projectId}.`, "OperationError");
+            const draftSequence = (currentMetadata.draftSequence ?? 0) + 1, draftToken = this.options.token();
+            await transaction.put("projectMetadata", projectId, { ...currentMetadata, draftSequence, draftToken, lastSavedAt: this.options.now(), fieldVersions: Object.fromEntries([...parts.keys()].map(key => [key, draftSequence])) });
+        } await transaction.put("migrationReceipts", receiptKey, receipt); return receipt; });
+    }
     async migrationBackup() { return this.backend.transaction(["migrationBackups"], "readonly", async (transaction) => (await transaction.get("migrationBackups", "legacy-v1")) ?? { sources: [] }); }
     async repairOrphanFlowGraphs() {
         const repairVersion = await this.backend.transaction(["settings"], "readonly", transaction => transaction.get("settings", "flowGraphOwnershipRepairVersion"));
@@ -669,6 +703,7 @@ export class DurableProjectRepository {
         channel.unref?.();
     } void poll(); }); }
     async importLegacy(owner, records) {
+        records = { ...records, projects: records.projects.map((entry) => ({ ...entry, state: upgradeSeparatedState(entry.state) })) };
         await this.backend.transaction(allStores, "readwrite", async (transaction) => {
             const lock = await transaction.get("settings", "legacyMigrationLock");
             if (lock?.owner !== owner)
@@ -731,9 +766,9 @@ export class DurableProjectRepository {
     async importProject(bundle, input) {
         if (bundle.format !== "my-chrome-utilities.durable-project-bundle" || !record(bundle.project))
             throw new Error("Choose a durable project bundle.");
-        const compacted = compactLegacyEditHistory(bundle.project), source = compacted.value, mapping = projectIdentityMapping(source, input.projectId), mappedProject = remapProjectReferences(source, mapping);
+        const compacted = compactLegacyEditHistory(bundle.project), sourceState = upgradeSeparatedState({ project: compacted.value, history: { undo: [], redo: [] } }), source = sourceState.project, mapping = projectIdentityMapping(source, input.projectId), mappedProject = remapProjectReferences(source, mapping);
         mappedProject.name = input.name;
-        const repairedProject = repairCanonicalBooleanValuesInProject(mappedProject), project = repairedProject.project, publishedRevision = Number(bundle.publishedRevision ?? bundle.baseProjectRevision ?? 0), rawSourcePublishedProject = record(bundle.publishedProject) ? bundle.publishedProject : undefined, sourcePublishedProject = rawSourcePublishedProject ? compactLegacyEditHistory(rawSourcePublishedProject).value : undefined;
+        const repairedProject = repairCanonicalBooleanValuesInProject(mappedProject), project = repairedProject.project, publishedRevision = Number(bundle.publishedRevision ?? bundle.baseProjectRevision ?? 0), rawSourcePublishedProject = record(bundle.publishedProject) ? bundle.publishedProject : undefined, sourcePublishedProject = rawSourcePublishedProject ? upgradeSeparatedState({ project: compactLegacyEditHistory(rawSourcePublishedProject).value, history: { undo: [], redo: [] } }).project : undefined;
         if (publishedRevision > 0 && !record(bundle.publishedProject))
             throw new DOMException(`Imported project ${input.projectId} declares Published revision ${publishedRevision} without its immutable domain project snapshot.`, "DataError");
         const mappedPublishedProject = sourcePublishedProject ? remapProjectReferences(sourcePublishedProject, mapping) : undefined;
@@ -773,7 +808,7 @@ export async function openIndexedDbProjectRepository(factory = globalThis.indexe
     request.result.deleteObjectStore("changes"); for (const store of DURABLE_PROJECT_STORES)
     if (!request.result.objectStoreNames.contains(store))
         request.result.createObjectStore(store); if (event.oldVersion === 0)
-    request.transaction.objectStore("migrationReceipts").put({ entryCount: 0, beforeChecksum: "", afterChecksum: "", verified: true }, "selective-production-revisions-v1"); }; request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error ?? new Error("Cannot open the durable project repository.")); request.onblocked = () => reject(new DOMException("The durable project repository upgrade is blocked.", "InvalidStateError")); }); const repository = new DurableProjectRepository(new IndexedDbBackend(database), { now: options.now ?? (() => new Date().toISOString()), token: options.token ?? (() => `draft:${crypto.randomUUID()}`) }); await repository.compactLegacyDurableSchemaHistory(); await repository.repairOrphanFlowGraphs(); return repository; }
+    request.transaction.objectStore("migrationReceipts").put({ entryCount: 0, beforeChecksum: "", afterChecksum: "", verified: true }, "selective-production-revisions-v1"); }; request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error ?? new Error("Cannot open the durable project repository.")); request.onblocked = () => reject(new DOMException("The durable project repository upgrade is blocked.", "InvalidStateError")); }); const repository = new DurableProjectRepository(new IndexedDbBackend(database), { now: options.now ?? (() => new Date().toISOString()), token: options.token ?? (() => `draft:${crypto.randomUUID()}`) }); await repository.compactLegacyDurableSchemaHistory(); await repository.upgradeLegacyPropertySetStorage(); await repository.repairOrphanFlowGraphs(); return repository; }
 export class DurablePageHistoryConflict extends DOMException {
     projectId;
     commandId;

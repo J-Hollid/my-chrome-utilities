@@ -1058,14 +1058,13 @@
       "src/data-layer-property-set-flow-section.ts",
       "src/data-layer-property-set-flow-section-ui.ts"
     ],
-    "dependencies": [
-      "durable_project_repository",
-      "layered_schema"
-    ],
+    "dependencies": [],
     "unit": [
       "test/data-layer-property-set-flow-section-test.mjs"
     ],
-    "property": [],
+    "property": [
+      "test/data-layer-property-set-flow-section-property-test.mjs"
+    ],
     "features": [
       "features/data-layer-property-set-and-flow-section-separation.feature",
       "features/data-layer-property-set-and-flow-section-separation-runtime.feature"

@@ -3,8 +3,8 @@ import { transactProject } from "../utilities/data-layer/schemas.js";
 import { duplicatePageFrameRecord } from "../data-layer-flow-graph-structural.js";
 import { flowPageGroupLaneIds, relationshipTouches, saveStoredGraph, storedGraph } from "../data-layer-flow-graph.js";
 export function inspectPageFrameDrop(project, flowId, pageId, targetPageGroupId) {
-    const page = project.collections.pages.find(({ id }) => id === pageId), group = project.collections.pageGroups.find(({ id }) => id === targetPageGroupId), selected = flowPageGroupLaneIds(project, flowId).includes(targetPageGroupId), memberships = orderedPageGroupIds(project, pageId), member = Boolean(group && memberships.includes(group.id)), migrationRequired = Boolean(page && requiresPageGroupMembershipMigration(project, pageId)), rejected = !page || !group || !selected || !member || migrationRequired, names = memberships.map((id) => project.collections.pageGroups.find((candidate) => candidate.id === id)?.name ?? id);
-    return { rejected, message: rejected ? `${page?.name ?? pageId} belongs to ${names.join(", ") || "no selected Page Group"}, not ${group?.name ?? targetPageGroupId}.` : `${page.name} can be placed in ${group.name}.`, guidance: `?kind=pages&entity=${encodeURIComponent(pageId)}&field=pageGroupIds` };
+    const page = project.collections.pages.find(({ id }) => id === pageId), group = project.collections.propertySets.find(({ id }) => id === targetPageGroupId), selected = flowPageGroupLaneIds(project, flowId).includes(targetPageGroupId), memberships = orderedPageGroupIds(project, pageId), member = Boolean(group && memberships.includes(group.id)), migrationRequired = Boolean(page && requiresPageGroupMembershipMigration(project, pageId)), rejected = !page || !group || !selected || !member || migrationRequired, names = memberships.map((id) => project.collections.propertySets.find((candidate) => candidate.id === id)?.name ?? id);
+    return { rejected, message: rejected ? `${page?.name ?? pageId} belongs to ${names.join(", ") || "no selected Property Set"}, not ${group?.name ?? targetPageGroupId}.` : `${page.name} can be placed in ${group.name}.`, guidance: `?kind=pages&entity=${encodeURIComponent(pageId)}&field=pageGroupIds` };
 }
 export function addFlowPageFrame(state, flowId, input, id) {
     const review = inspectPageFrameDrop(state.project, flowId, input.pageId, input.pageGroupId);
@@ -41,17 +41,17 @@ export function reorderFlowPageGroupLane(state, flowId, pageGroupId, delta) { co
     return state; lanes.splice(from, 1); lanes.splice(to, 0, pageGroupId); return setFlowPageGroupLanes(state, flowId, lanes); }
 export function saveFlowViewState(state, _flowId, _view) { return state; }
 export function setFlowPageGroupLanes(state, flowId, pageGroupIds) {
-    const flow = state.project.collections.flows.find(({ id }) => id === flowId), known = new Set(state.project.collections.pageGroups.map(({ id }) => id)), graph = storedGraph(state.project, flowId);
+    const flow = state.project.collections.flows.find(({ id }) => id === flowId), known = new Set(state.project.collections.propertySets.map(({ id }) => id)), graph = storedGraph(state.project, flowId);
     if (!flow)
         throw new Error(`Unknown Flow ${flowId}`);
     if (new Set(pageGroupIds).size !== pageGroupIds.length || pageGroupIds.some((groupId) => !known.has(groupId)))
-        throw new Error("Flow lanes require distinct existing Page Group references.");
+        throw new Error("Flow lanes require distinct existing Property Set references.");
     const removed = new Set(graph.pageGroupIds.filter((groupId) => !pageGroupIds.includes(groupId))), affectedFrame = graph.pageFrames.find((frame) => removed.has(String(frame.pageGroupId ?? ""))), affectedOccurrence = graph.occurrences.find((occurrence) => removed.has(String(occurrence.pageGroupId ?? ""))), affectedPage = state.project.collections.pages.find(({ id }) => id === (affectedFrame?.pageId ?? affectedOccurrence?.pageId));
     if (affectedFrame || affectedOccurrence)
         throw new Error(`${affectedPage?.name ?? affectedOccurrence?.name ?? "Contained Page"} must be reassigned or removed. Move Page frame or Remove Page frame first.`);
     if (JSON.stringify(graph.pageGroupIds) === JSON.stringify(pageGroupIds) && !("pageGroupIds" in flow))
         return state;
-    return transactProject(state, "Set Flow Page Group lanes", (project) => { const current = storedGraph(project, flowId); return saveStoredGraph({ ...project, collections: { ...project.collections, flows: project.collections.flows.map((candidate) => { if (candidate.id !== flowId)
+    return transactProject(state, "Set Flow Property Set lanes", (project) => { const current = storedGraph(project, flowId); return saveStoredGraph({ ...project, collections: { ...project.collections, flows: project.collections.flows.map((candidate) => { if (candidate.id !== flowId)
                 return candidate; const { pageGroupIds: discarded, ...stored } = candidate; void discarded; return stored; }) } }, flowId, { ...current, pageGroupIds: [...pageGroupIds] }); });
 }
 export function applyFlowPageGroupLaneSelection(state, flowId, pageGroupIds) { return pageGroupIds === undefined ? state : setFlowPageGroupLanes(state, flowId, pageGroupIds); }

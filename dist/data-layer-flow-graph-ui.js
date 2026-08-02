@@ -97,8 +97,8 @@ export function installFlowGraphBuilder(options) {
         search.type = "search";
         search.placeholder = `Search ${kind}`;
         search.setAttribute("aria-label", `Search ${kind}`);
-        const renderItems = () => { const term = search.value.trim().toLowerCase(); items.replaceChildren(...entities.filter(({ name }) => name.toLowerCase().includes(term)).map((entity) => { const control = button(entity.name, () => activate(entity)); control.draggable = true; control.dataset.componentKind = kind === "Page Groups" ? "page-group" : kind === "Pages" ? "page" : "event"; control.dataset.componentId = entity.id; if (kind === "Pages") {
-            const { state } = current(), owners = state ? orderedPageGroupIds(state.project, entity.id).map((id) => entityName(state.project.collections.pageGroups, id)) : [];
+        const renderItems = () => { const term = search.value.trim().toLowerCase(); items.replaceChildren(...entities.filter(({ name }) => name.toLowerCase().includes(term)).map((entity) => { const control = button(entity.name, () => activate(entity)); control.draggable = true; control.dataset.componentKind = kind === "Property Sets" ? "page-group" : kind === "Pages" ? "page" : "event"; control.dataset.componentId = entity.id; if (kind === "Pages") {
+            const { state } = current(), owners = state ? orderedPageGroupIds(state.project, entity.id).map((id) => entityName(state.project.collections.propertySets, id)) : [];
             control.textContent = `${entity.name} · ${owners.join(" → ") || "Ungrouped"}`;
         } const payload = () => ({ kind: String(control.dataset.componentKind), id: entity.id }); control.addEventListener("pointerdown", () => { activeCatalogPayload = payload(); if (kind === "Pages")
             markPageDropStates(entity.id); }); control.addEventListener("dragstart", (event) => { activeCatalogPayload = payload(); event.dataTransfer?.setData("application/x-flow-component", JSON.stringify(activeCatalogPayload)); if (kind === "Pages")
@@ -114,11 +114,11 @@ export function installFlowGraphBuilder(options) {
         const { state, flow, graph } = current();
         if (!state || !flow || !graph)
             return;
-        const memberships = orderedPageGroupIds(state.project, page.id), selectedGroups = state.project.collections.pageGroups.filter((group) => graph.pageGroupIds.includes(group.id) && memberships.includes(group.id)), target = targetGroupId ? selectedGroups.find(({ id }) => id === targetGroupId) : selectedGroups[0];
+        const memberships = orderedPageGroupIds(state.project, page.id), selectedGroups = state.project.collections.propertySets.filter((group) => graph.pageGroupIds.includes(group.id) && memberships.includes(group.id)), target = targetGroupId ? selectedGroups.find(({ id }) => id === targetGroupId) : selectedGroups[0];
         if (target) {
             const count = graph.pageFrames.filter(({ pageGroupId }) => pageGroupId === target.id).length, next = addFlowPageFrame(state, flow.id, { pageId: page.id, pageGroupId: target.id, x: 40 + count * 240, y: 120 }, options.id);
             if (next === state) {
-                statusMessage = `${page.name} is already placed or does not belong to ${target.name}. Open Page Group membership.`;
+                statusMessage = `${page.name} is already placed or does not belong to ${target.name}. Open Property Set membership.`;
                 render();
             }
             else
@@ -126,14 +126,14 @@ export function installFlowGraphBuilder(options) {
             return;
         }
         if (targetGroupId) {
-            const attempted = state.project.collections.pageGroups.find(({ id }) => id === targetGroupId);
-            statusMessage = `${page.name} does not belong to ${attempted?.name ?? targetGroupId}. Open Page Group membership to repair placement.`;
+            const attempted = state.project.collections.propertySets.find(({ id }) => id === targetGroupId);
+            statusMessage = `${page.name} does not belong to ${attempted?.name ?? targetGroupId}. Open Property Set membership to repair placement.`;
             statusRepairHref = `?kind=pages&entity=${encodeURIComponent(page.id)}&field=pageGroupIds`;
             render();
             return;
         }
         if (memberships.length) {
-            statusMessage = `Add ${entityName(state.project.collections.pageGroups, memberships[0])} to the lane order before placing ${page.name}.`;
+            statusMessage = `Add ${entityName(state.project.collections.propertySets, memberships[0])} to the lane order before placing ${page.name}.`;
             render();
             return;
         }
@@ -219,9 +219,9 @@ export function installFlowGraphBuilder(options) {
             return;
         const heading = document.createElement("h4"), list = document.createElement("ol");
         heading.textContent = "Flow lane order";
-        host.setAttribute("aria-label", "Page Group lane controls");
+        host.setAttribute("aria-label", "Property Set lane controls");
         for (const groupId of graph.pageGroupIds) {
-            const group = state.project.collections.pageGroups.find(({ id }) => id === groupId);
+            const group = state.project.collections.propertySets.find(({ id }) => id === groupId);
             if (!group)
                 continue;
             const item = document.createElement("li");
@@ -253,7 +253,7 @@ export function installFlowGraphBuilder(options) {
         host.setAttribute("aria-label", "Flow Page frames");
         host.append(heading);
         for (const frame of graph.pageFrames) {
-            const page = state.project.collections.pages.find(({ id }) => id === frame.pageId), group = state.project.collections.pageGroups.find(({ id }) => id === frame.pageGroupId), card = document.createElement("article"), region = frame.freePageRegion === "before-lanes" ? "before lanes" : "after lanes", title = button(frame.freePageRegion ? `Free ${region} / ${contextSettingPageLabel(page?.name ?? frame.pageId)}` : `${group?.name ?? "Page"} / ${contextSettingPageLabel(page?.name ?? frame.pageId)}`, () => saveSelection({ kind: "page-frame", id: frame.id }));
+            const page = state.project.collections.pages.find(({ id }) => id === frame.pageId), group = state.project.collections.propertySets.find(({ id }) => id === frame.pageGroupId), card = document.createElement("article"), region = frame.freePageRegion === "before-lanes" ? "before lanes" : "after lanes", title = button(frame.freePageRegion ? `Free ${region} / ${contextSettingPageLabel(page?.name ?? frame.pageId)}` : `${group?.name ?? "Page"} / ${contextSettingPageLabel(page?.name ?? frame.pageId)}`, () => saveSelection({ kind: "page-frame", id: frame.id }));
             card.dataset.pageFrameId = frame.id;
             card.dataset.pageId = frame.pageId;
             if (frame.pageGroupId)
@@ -429,15 +429,15 @@ export function installFlowGraphBuilder(options) {
         boundary.textContent = "Documentary journey expectations are checked manually. Each Event payload schema validates independently.";
         toolbar.setAttribute("aria-label", "Flow component catalogs");
         const toggleInspector = button(inspector.hidden ? "Open Inspector" : "Close Inspector", () => { inspector.hidden = !inspector.hidden; toggleInspector.textContent = inspector.hidden ? "Open Inspector" : "Close Inspector"; });
-        toolbar.append(catalog("Page Groups", state.project.collections.pageGroups, addLane), catalog("Pages", state.project.collections.pages, (page) => insertPage(page)), catalog("Events", state.project.collections.events, (event) => insertEvent(event)), toggleInspector);
+        toolbar.append(catalog("Property Sets", state.project.collections.propertySets, addLane), catalog("Pages", state.project.collections.pages, (page) => insertPage(page)), catalog("Events", state.project.collections.events, (event) => insertEvent(event)), toggleInspector);
         renderLaneControls(laneControls);
         renderFrameCards(frames);
         status.setAttribute("role", "status");
-        status.textContent = statusMessage || (!stored.pageGroupIds.length ? "Add a Page Group to begin. No fallback lanes exist." : !stored.pageFrames.length && !freeRoots.length ? "Add a Page from the Pages catalog." : "Draw between matching relationship ports, or press Enter on a port.");
+        status.textContent = statusMessage || (!stored.pageGroupIds.length ? "Add a Property Set to begin. No fallback lanes exist." : !stored.pageFrames.length && !freeRoots.length ? "Add a Page from the Pages catalog." : "Draw between matching relationship ports, or press Enter on a port.");
         if (statusRepairHref) {
             const repair = document.createElement("a");
             repair.href = statusRepairHref;
-            repair.textContent = "Open Page Group membership";
+            repair.textContent = "Open Property Set membership";
             status.append(" ", repair);
         }
         canvas.classList.add("flow-graph-canvas");
@@ -486,7 +486,7 @@ export function installFlowGraphBuilder(options) {
         canvas.addEventListener("pointerup", placeActiveCatalogPage);
         canvas.addEventListener("mouseup", placeActiveCatalogPage);
         for (const frame of stored.pageFrames.filter(({ pageGroupId, freePageRegion }) => Boolean(pageGroupId) && !freePageRegion)) {
-            const endpoint = projection.graph.connectionEndpoints.find(({ kind, id }) => kind === "page-frame" && id === frame.id), x = endpoint.layout.x, y = endpoint.layout.y, group = svg("g"), rect = svg("rect"), label = svg("text"), inputPort = svg("circle"), outputPort = svg("circle"), page = state.project.collections.pages.find(({ id }) => id === frame.pageId), memberships = orderedPageGroupIds(state.project, frame.pageId), eligibleLanes = stored.pageGroupIds.filter((id) => memberships.includes(id)), reject = (targetId) => { const target = state.project.collections.pageGroups.find(({ id }) => id === targetId); statusMessage = `${page?.name ?? frame.pageId} cannot move to ${target?.name ?? "that lane"}; add Page Group membership before moving it.`; statusRepairHref = `?kind=pages&entity=${encodeURIComponent(frame.pageId)}&field=pageGroupIds`; render(); setTimeout(() => elementByData("data-page-frame-id", frame.id)?.focus(), 50); }, moveTo = (targetId, nextX, nextY) => { if (!eligibleLanes.includes(targetId)) {
+            const endpoint = projection.graph.connectionEndpoints.find(({ kind, id }) => kind === "page-frame" && id === frame.id), x = endpoint.layout.x, y = endpoint.layout.y, group = svg("g"), rect = svg("rect"), label = svg("text"), inputPort = svg("circle"), outputPort = svg("circle"), page = state.project.collections.pages.find(({ id }) => id === frame.pageId), memberships = orderedPageGroupIds(state.project, frame.pageId), eligibleLanes = stored.pageGroupIds.filter((id) => memberships.includes(id)), reject = (targetId) => { const target = state.project.collections.propertySets.find(({ id }) => id === targetId); statusMessage = `${page?.name ?? frame.pageId} cannot move to ${target?.name ?? "that lane"}; add Property Set membership before moving it.`; statusRepairHref = `?kind=pages&entity=${encodeURIComponent(frame.pageId)}&field=pageGroupIds`; render(); setTimeout(() => elementByData("data-page-frame-id", frame.id)?.focus(), 50); }, moveTo = (targetId, nextX, nextY) => { if (!eligibleLanes.includes(targetId)) {
                 reject(targetId);
                 return;
             } const band = projection.laneBands.find(({ id }) => id === targetId), currentState = current().state, next = moveFlowPageFrame(currentState, flow.id, frame.id, { pageGroupId: targetId, x: Math.max(20, Math.round(nextX - laneOffset)), y: Math.max(40, Math.round(nextY - (band?.y ?? 0))) }); if (next !== currentState)
@@ -734,7 +734,7 @@ export function installFlowGraphBuilder(options) {
                 return;
             } persist(moveGraphOccurrence(current().state, flow.id, nodeData.id, { x, y })); focusNode(); }, rejectMembershipMove = () => { if (nodeData.freePageFrame) {
                 const page = state.project.collections.pages.find(({ id }) => id === nodeData.pageId);
-                statusMessage = `${page?.name ?? nodeData.name} requires explicit Page Group membership before entering a named lane.`;
+                statusMessage = `${page?.name ?? nodeData.name} requires explicit Property Set membership before entering a named lane.`;
                 statusRepairHref = `?kind=pages&entity=${encodeURIComponent(nodeData.pageId)}&field=pageGroupIds`;
             }
             else {

@@ -2,7 +2,9 @@ import assert from "node:assert/strict";
 
 import {
   addPropertySetApplication,
+  changePropertySetSchema,
   createFlowSection,
+  includePropertySetParentAddition,
   inspectSectionRemovalWithContents,
   moveFlowSection,
   movePageFrameToSection,
@@ -11,10 +13,14 @@ import {
   removeFlowSectionWithContents,
   renameAndResizeFlowSection,
   reorderPropertySetApplication,
+  stagePropertySetParentAddition,
   upgradePageGroupsToPropertySets,
 } from "../dist/data-layer-property-set-flow-section.js";
 import {compileLayeredSchema} from "../dist/data-layer-layered-schema.js";
 import {layeredContributorPath,layeredContributorsForPath} from "../dist/data-layer-layered-schema-project.js";
+import {createProjectCollectionEntity} from "../dist/data-layer-project-entity-lifecycle.js";
+import {createMemoryDurableProjectRepository} from "../dist/data-layer-durable-project-repository.js";
+import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
 
 let sequence=0;
 const id=(kind)=>`${kind}:separation:${++sequence}`;
@@ -52,6 +58,26 @@ const legacyState=()=>({
 });
 
 {
+  let state=createSpecificationProject({name:"New Shop",site:"shop.test",id});
+  assert.deepEqual(Object.keys(state.project.collections),["profiles","propertySets","pages","events","applicabilitySets","flows","fixtures","assignments"],"new projects persist only the separated collection taxonomy");
+  state=createProjectCollectionEntity(state,"propertySets","Checkout base",id,{description:"Reusable checkout schema"});
+  state=createProjectCollectionEntity(state,"pages","Cart",id);
+  assert.equal(state.project.collections.propertySets[0].name,"Checkout base");
+  assert.deepEqual(state.project.collections.pages[0].propertySetApplications,[],"new Pages own ordered Property Set applications from creation");
+  assert.equal(JSON.stringify(state.project).includes("pageGroup"),false,"newly saved domain bytes contain no legacy Page Group representation");
+}
+
+{
+  let state=upgradePageGroupsToPropertySets(legacyState(),id);
+  state=changePropertySetSchema(state,"group:checkout",[{path:"/checkout_type",documentation:"Changed"},{path:"/checkout_version",type:"string"}]);
+  assert.equal(state.project.collections.propertySets.find(({id})=>id==="group:checkout").schemaConstraints.length,2,"Property Set schema changes stay live for applying Pages");
+  state=stagePropertySetParentAddition(state,"group:checkout","profile:commerce",{path:"/commerce_new",type:"string"});
+  assert.equal(state.project.collections.propertySets.find(({id})=>id==="group:checkout").schemaConstraints.some(({path})=>path==="/commerce_new"),false,"new parent properties remain pending");
+  state=includePropertySetParentAddition(state,"group:checkout","/commerce_new");
+  assert.equal(state.project.collections.propertySets.find(({id})=>id==="group:checkout").schemaConstraints.some(({path})=>path==="/commerce_new"),true,"reviewed Parent additions join the fixed Property Set selection");
+}
+
+{
   const upgraded=upgradePageGroupsToPropertySets(legacyState(),id),project=upgraded.project;
   assert.equal(Object.hasOwn(project.collections,"pageGroups"),false,"verified storage removes the legacy Page Group collection");
   assert.deepEqual(project.collections.propertySets.map(({id,name})=>({id,name})),[
@@ -81,7 +107,7 @@ const legacyState=()=>({
 
 {
   let state=upgradePageGroupsToPropertySets(legacyState(),id),page=state.project.collections.pages.find(({id})=>id==="page:cart"),path=layeredContributorPath(state,page,"Page"),contributors=layeredContributorsForPath(state,path,{segment:"retail"}),compiled=compileLayeredSchema(contributors,{eventId:"event:view",eventRole:"interaction"});
-  assert.deepEqual(contributors.filter(({scope})=>scope==="Page Group").map(({name})=>name),["Checkout base","Retail commerce"],"the compiler consumes migrated Page-owned application order");
+  assert.deepEqual(contributors.filter(({scope})=>scope==="Property Set").map(({name})=>name),["Checkout base","Retail commerce"],"the compiler consumes migrated Page-owned application order");
   assert.equal(compiled.properties["/funnel_step"].expectedValue,"retail");
   assert.deepEqual(compiled.properties["/funnel_step"].superseded.map(({contributorName})=>contributorName),["Checkout base"],"ordinary predecessor provenance remains visible");
   state=reorderPropertySetApplication(state,"page:cart","group:retail",-1);page=state.project.collections.pages.find(({id})=>id==="page:cart");path=layeredContributorPath(state,page,"Page");compiled=compileLayeredSchema(layeredContributorsForPath(state,path,{segment:"retail"}),{eventId:"event:view",eventRole:"interaction"});
@@ -118,6 +144,20 @@ const legacyState=()=>({
   assert.equal(graph.occurrences.some(({id})=>id==="occurrence:view"),false);
   assert.equal(graph.relationships.some(({id})=>id==="relationship:next"),false);
   assert.equal(state.history.undo.length,2,"upgrade and destructive removal are each one undoable command");
+}
+
+{
+  const repository=createMemoryDurableProjectRepository({now:()=>"2026-08-02T12:00:00.000Z",token:()=>`draft:separation:${++sequence}`}),legacy=legacyState();
+  await repository.putProjectMetadataOnly(legacy,{draftToken:"draft:legacy",draftSequence:4});
+  const loaded=await repository.loadProject("project:shop"),recovery=await repository.exportRepositoryRecoveryBundle(),receipt=recovery.migrationReceipts.find(({key})=>key==="property-set-flow-sections-v1:project:shop"),backup=recovery.migrationBackups.find(({key})=>key==="property-set-flow-sections-v1:project:shop");
+  assert.equal(Object.hasOwn(loaded.state.project.collections,"pageGroups"),false,"the repository installs separated storage before first read");
+  assert.equal(receipt.value.verified,true,"repository removal follows verified read-back");
+  assert.equal(Array.isArray(backup.value.project.collections.pageGroups),true,"repository migration retains recoverable source bytes");
+  const exported=await repository.exportProject("project:shop");
+  assert.equal(JSON.stringify(exported).includes('"pageGroups"'),false,"portable output contains only the separated model");
+  await repository.importProject(exported,{projectId:"project:round-trip",name:"Round trip"});
+  const roundTrip=await repository.loadProject("project:round-trip"),ids=new Set(roundTrip.state.project.collections.propertySets.map(({id})=>id));
+  assert.equal(roundTrip.state.project.collections.pages.every((page)=>page.propertySetApplications.every(({propertySetId})=>ids.has(propertySetId))),true,"portable import preserves remapped application references without another migration");
 }
 
 console.log("property set and Flow Section separation tests passed");

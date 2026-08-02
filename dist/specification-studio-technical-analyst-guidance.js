@@ -22,16 +22,16 @@ const tipPools = Object.freeze({
     "Pages": Object.freeze([
         tip("pages", "Pages", "Give each Page its observed page event before polishing the schema. Even a splendid room needs a doorbell before anyone can prove they visited."),
         tip("pages-location", "Pages", "Path conditions are the Page's doorman: they inspect each observed location and politely—or firmly—decide whether it belongs."),
-        tip("pages-groups", "Pages", "Order Page Group memberships deliberately. Otherwise their schema contributions arrive like five inspectors all claiming the same chair."),
+        tip("pages-groups", "Pages", "Order Property Set memberships deliberately. Otherwise their schema contributions arrive like five inspectors all claiming the same chair."),
         tip("pages-profiles", "Pages", "Attach a Shared Profile when a Page needs reusable fields. Copying them by hand only breeds tiny paperwork rebellions later."),
         tip("pages-schema", "Pages", "Review the effective Page schema before adding a local override. Magnify first, meddle second; the ancestors may already have done the work."),
     ]),
-    "Page Groups": Object.freeze([
-        tip("page-groups-membership", "Page Groups", "Group Pages that share applicability or schema contributions. It is a club with useful paperwork, not matching blazers."),
-        tip("page-groups-conditions", "Page Groups", "Page Group conditions decide where the shared contribution applies. Make them observable; crystal balls produce dreadful test evidence."),
-        tip("page-groups-schema", "Page Groups", "Keep shared fields canonical at the group level so member Pages inherit one story instead of exchanging contradictory telegrams."),
-        tip("page-groups-order", "Page Groups", "Reorder group contributions only after checking affected Pages and Flow instances. Moving one chair can upset the entire schema orchestra."),
-        tip("page-groups-repair", "Page Groups", "When contributions quarrel, open the named Page Group from the evidence. Repair the culprit, not every innocent bystander in the corridor."),
+    "Property Sets": Object.freeze([
+        tip("page-groups-membership", "Property Sets", "Group Pages that share applicability or schema contributions. It is a club with useful paperwork, not matching blazers."),
+        tip("page-groups-conditions", "Property Sets", "Property Set conditions decide where the shared contribution applies. Make them observable; crystal balls produce dreadful test evidence."),
+        tip("page-groups-schema", "Property Sets", "Keep shared fields canonical at the group level so member Pages inherit one story instead of exchanging contradictory telegrams."),
+        tip("page-groups-order", "Property Sets", "Reorder group contributions only after checking affected Pages and Flow instances. Moving one chair can upset the entire schema orchestra."),
+        tip("page-groups-repair", "Property Sets", "When contributions quarrel, open the named Property Set from the evidence. Repair the culprit, not every innocent bystander in the corridor."),
     ]),
     "Events": Object.freeze([
         tip("events-name", "Events", "Give the Event its exact production name. Aliases are charming at parties and catastrophic when the observer is taking attendance."),

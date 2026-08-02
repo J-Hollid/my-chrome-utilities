@@ -1,6 +1,6 @@
 import { transactProject } from "./data-layer-specification-project.js";
 const clone = (value) => structuredClone(value);
-const collections = (project) => project.collections;
+const legacyCollections = (project) => project.collections;
 const graphs = (project) => (project.documentationFlowGraphs ?? {});
 const unique = (values) => [...new Set(values)];
 const applications = (page) => Array.isArray(page.propertySetApplications) ? clone(page.propertySetApplications) : [];
@@ -13,7 +13,7 @@ const updatePage = (state, pageId, label, update) => transactProject(state, labe
     return { ...project, collections: { ...project.collections, pages: project.collections.pages.map((page) => page.id === pageId ? update(page) : page) } };
 });
 export function addPropertySetApplication(state, pageId, propertySetId, applicabilitySetId, id) {
-    const page = state.project.collections.pages.find(({ id }) => id === pageId), propertySet = collections(state.project).propertySets?.find(({ id }) => id === propertySetId);
+    const page = state.project.collections.pages.find(({ id }) => id === pageId), propertySet = state.project.collections.propertySets.find(({ id }) => id === propertySetId);
     if (!page)
         throw new Error(`Unknown Page ${pageId}.`);
     if (!propertySet)
@@ -45,10 +45,35 @@ export function removePropertySetApplication(state, pageId, propertySetId) {
     const current = applications(page);
     if (!current.some((application) => application.propertySetId === propertySetId))
         return state;
-    const propertySet = collections(state.project).propertySets?.find(({ id }) => id === propertySetId);
+    const propertySet = state.project.collections.propertySets.find(({ id }) => id === propertySetId);
     return updatePage(state, pageId, `Remove Property Set ${propertySet?.name ?? propertySetId} from ${page.name}`, (candidate) => ({ ...candidate, propertySetApplications: current.filter((application) => application.propertySetId !== propertySetId) }));
 }
 export function propertySetPages(project, propertySetId) { return project.collections.pages.filter((page) => applications(page).some((application) => application.propertySetId === propertySetId)); }
+export function changePropertySetSchema(state, propertySetId, constraints) {
+    const propertySet = state.project.collections.propertySets.find(({ id }) => id === propertySetId);
+    if (!propertySet)
+        throw new Error(`Unknown Property Set ${propertySetId}.`);
+    return transactProject(state, `Change Property Set schema for ${propertySet.name}`, (project) => ({ ...project, collections: { ...project.collections, propertySets: project.collections.propertySets.map((candidate) => candidate.id === propertySetId ? { ...candidate, schemaConstraints: clone(constraints), compiledTargetsStale: true } : candidate) } }));
+}
+export function stagePropertySetParentAddition(state, propertySetId, profileId, constraint) {
+    const propertySet = state.project.collections.propertySets.find(({ id }) => id === propertySetId), profile = state.project.collections.profiles.find(({ id }) => id === profileId), path = String(constraint.path ?? "");
+    if (!propertySet)
+        throw new Error(`Unknown Property Set ${propertySetId}.`);
+    if (!profile)
+        throw new Error(`Unknown Shared Profile ${profileId}.`);
+    if (!path)
+        throw new Error("A Parent addition requires a property path.");
+    return transactProject(state, `Add ${path} to ${profile.name} for ${propertySet.name} review`, (project) => ({ ...project, collections: { ...project.collections, profiles: project.collections.profiles.map((candidate) => candidate.id === profileId ? { ...candidate, parentAdditions: [...(candidate.parentAdditions ?? []).filter((entry) => entry.path !== path), clone(constraint)] } : candidate), propertySets: project.collections.propertySets.map((candidate) => candidate.id === propertySetId ? { ...candidate, parentAdditions: [...(candidate.parentAdditions ?? []).filter((entry) => entry.path !== path), { ...clone(constraint), profileId }] } : candidate) } }));
+}
+export function includePropertySetParentAddition(state, propertySetId, path) {
+    const propertySet = state.project.collections.propertySets.find(({ id }) => id === propertySetId), addition = propertySet?.parentAdditions?.find((entry) => entry.path === path);
+    if (!propertySet)
+        throw new Error(`Unknown Property Set ${propertySetId}.`);
+    if (!addition)
+        throw new Error(`Parent addition ${path} is unavailable.`);
+    const { profileId: _profileId, ...constraint } = addition;
+    return transactProject(state, `Include Parent addition ${path} in ${propertySet.name}`, (project) => ({ ...project, collections: { ...project.collections, propertySets: project.collections.propertySets.map((candidate) => candidate.id !== propertySetId ? candidate : { ...candidate, schemaConstraints: [...(candidate.schemaConstraints ?? []).filter((entry) => entry.path !== path), constraint], parentAdditions: (candidate.parentAdditions ?? []).filter((entry) => entry.path !== path), compiledTargetsStale: true }) } }));
+}
 const sectionGraph = (project, flowId) => { if (!project.collections.flows.some(({ id }) => id === flowId))
     throw new Error(`Unknown Flow ${flowId}.`); return graphs(project)[flowId] ?? { sections: [], pageFrames: [], occurrences: [], relationships: [] }; };
 const saveGraph = (state, flowId, label, update) => transactProject(state, label, (project) => ({ ...project, documentationFlowGraphs: { ...graphs(project), [flowId]: update(clone(sectionGraph(project, flowId))) } }));
@@ -107,7 +132,7 @@ export function removeFlowSectionWithContents(state, flowId, sectionId, review) 
     return saveGraph(state, flowId, `Remove Section ${review.sectionName} with contents`, (next) => ({ ...next, sections: (next.sections ?? []).filter(({ id }) => id !== sectionId).map((candidate, order) => ({ ...candidate, order })), pageFrames: (next.pageFrames ?? []).filter(({ id }) => !frameIds.has(id)), occurrences: (next.occurrences ?? []).filter(({ id }) => !occurrenceIds.has(id)), relationships: (next.relationships ?? []).filter((relationship) => !removedIds.has(endpointId(relationship, "source") ?? "") && !removedIds.has(endpointId(relationship, "target") ?? "")) }));
 }
 const verifyUpgrade = (before, after) => {
-    const legacy = collections(before).pageGroups ?? [], sets = collections(after).propertySets ?? [];
+    const legacy = legacyCollections(before).pageGroups ?? [], sets = after.collections.propertySets;
     if (legacy.length !== sets.length || legacy.some((group) => !sets.some(({ id }) => id === group.id)))
         throw new Error("Property Set upgrade did not preserve contributor identities.");
     for (const [flowId, beforeGraph] of Object.entries(graphs(before))) {
@@ -120,11 +145,11 @@ const verifyUpgrade = (before, after) => {
     }
 };
 export function upgradePageGroupsToPropertySets(state, id) {
-    const legacy = collections(state.project).pageGroups;
+    const legacy = legacyCollections(state.project).pageGroups;
     if (!legacy)
         return state;
     return transactProject(state, "Upgrade Page Groups to Property Sets and Flow Sections", (project) => {
-        const legacySets = collections(project).pageGroups ?? [], propertySets = legacySets.map((group) => { const next = clone(group); delete next.pageIds; delete next.applicabilitySetId; return next; }), applicabilityBySet = new Map(legacySets.map((group) => [group.id, typeof group.applicabilitySetId === "string" ? group.applicabilitySetId : undefined])), legacyMembers = new Map(legacySets.map((group) => [group.id, new Set((group.pageIds ?? []).map(String))]));
+        const legacySets = legacyCollections(project).pageGroups ?? [], propertySets = legacySets.map((group) => { const next = clone(group); delete next.pageIds; delete next.applicabilitySetId; return next; }), applicabilityBySet = new Map(legacySets.map((group) => [group.id, typeof group.applicabilitySetId === "string" ? group.applicabilitySetId : undefined])), legacyMembers = new Map(legacySets.map((group) => [group.id, new Set((group.pageIds ?? []).map(String))]));
         const pages = project.collections.pages.map((page) => { const stored = Array.isArray(page.pageGroupIds) ? page.pageGroupIds.map(String) : [], fromGroups = legacySets.filter((group) => legacyMembers.get(group.id)?.has(page.id)).map(({ id }) => id), ordered = unique([...stored, ...fromGroups]), next = { ...page, propertySetApplications: ordered.map((propertySetId) => { const set = propertySets.find(({ id }) => id === propertySetId); return { id: id("property-set-application"), name: set.name, propertySetId, ...(applicabilityBySet.get(propertySetId) ? { applicabilitySetId: applicabilityBySet.get(propertySetId) } : {}) }; }) }; delete next.pageGroupIds; return next; });
         const documentationFlowGraphs = Object.fromEntries(Object.entries(graphs(project)).map(([flowId, graph]) => { const laneIds = unique([...(graph.pageGroupIds ?? []), ...(graph.pageFrames ?? []).flatMap((frame) => typeof frame.pageGroupId === "string" ? [frame.pageGroupId] : [])]), sectionByLane = new Map(), sections = laneIds.map((groupId, order) => { const group = legacySets.find(({ id }) => id === groupId), sectionId = id("flow-section"); sectionByLane.set(groupId, sectionId); return { id: sectionId, name: group?.name ?? groupId, order, bounds: { x: 20, y: 40 + order * 220, width: 1000, height: 200 } }; }), pageFrames = (graph.pageFrames ?? []).map((frame) => { const legacyFrame = frame, next = { ...legacyFrame, ...(typeof legacyFrame.pageGroupId === "string" && sectionByLane.has(legacyFrame.pageGroupId) ? { sectionId: sectionByLane.get(legacyFrame.pageGroupId) } : {}) }; delete next.pageGroupId; return next; }), next = { ...graph, sections, pageFrames }; delete next.pageGroupIds; return [flowId, next]; })), assignments = project.collections.assignments.map((assignment) => assignment.targetKind === "Page Group" ? { ...assignment, targetKind: "Property Set" } : assignment), nextCollections = { ...project.collections, propertySets, pages, assignments };
         delete nextCollections.pageGroups;

@@ -6,7 +6,7 @@ export function appendFlowPageFrameCardControls(context) {
     card.append(title);
     const memberships = orderedPageGroupIds(state.project, frame.pageId);
     for (const groupId of graph.pageGroupIds.filter((id) => memberships.includes(id) && id !== frame.pageGroupId)) {
-        const group = state.project.collections.pageGroups.find(({ id }) => id === groupId), move = button(`Move to ${group?.name ?? groupId}`, () => context.persist(context.movePageFrame(state, flow.id, frame.id, { pageGroupId: groupId, ...(frame.position.x === undefined ? {} : { x: frame.position.x }), y: frame.position.y })));
+        const group = state.project.collections.propertySets.find(({ id }) => id === groupId), move = button(`Move to ${group?.name ?? groupId}`, () => context.persist(context.movePageFrame(state, flow.id, frame.id, { pageGroupId: groupId, ...(frame.position.x === undefined ? {} : { x: frame.position.x }), y: frame.position.y })));
         move.dataset.movePageFrameTo = groupId;
         move.addEventListener("keydown", (event) => { if (event.key === "Enter") {
             event.preventDefault();

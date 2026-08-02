@@ -157,13 +157,13 @@ function remapOwned(value, map, external = false) { if (typeof value === "string
     return !external && map.has(value) ? map.get(value) : value; if (Array.isArray(value))
     return value.map((entry) => remapOwned(entry, map, external)); if (!value || typeof value !== "object")
     return value; return Object.fromEntries(Object.entries(value).map(([key, entry]) => { const outside = external || key === "sourceLineage" || key === "externalLineage", mappedKey = !outside && map.has(key) ? map.get(key) : key; return [mappedKey, remapOwned(entry, map, outside)]; })); }
-function referenceBlockers(project) { const pages = new Set(project.collections.pages.map(({ id }) => id)), groups = new Set(project.collections.pageGroups.map(({ id }) => id)), events = new Set(project.collections.events.map(({ id }) => id)), issues = []; for (const [flowId, graph] of Object.entries(project.documentationFlowGraphs ?? {})) {
+function referenceBlockers(project) { const pages = new Set(project.collections.pages.map(({ id }) => id)), groups = new Set(project.collections.propertySets.map(({ id }) => id)), events = new Set(project.collections.events.map(({ id }) => id)), issues = []; for (const [flowId, graph] of Object.entries(project.documentationFlowGraphs ?? {})) {
     const typed = graph;
     for (const frame of typed.pageFrames ?? []) {
         if (frame.pageId && !pages.has(String(frame.pageId)))
             issues.push({ section: `project.documentationFlowGraphs.${flowId}.pageFrames`, message: `Missing Page ${String(frame.pageId)} referenced by Flow ${flowId}; restore the missing Page and export again.` });
         if (frame.pageGroupId && !groups.has(String(frame.pageGroupId)))
-            issues.push({ section: `project.documentationFlowGraphs.${flowId}.pageFrames`, message: `Missing Page Group ${String(frame.pageGroupId)} referenced by Flow ${flowId}.` });
+            issues.push({ section: `project.documentationFlowGraphs.${flowId}.pageFrames`, message: `Missing Property Set ${String(frame.pageGroupId)} referenced by Flow ${flowId}.` });
     }
     for (const occurrence of typed.occurrences ?? [])
         if (occurrence.eventId && !events.has(String(occurrence.eventId)))

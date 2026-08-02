@@ -9,7 +9,7 @@ export function createSpecificationProject(input) {
         namingConventions: { property: "snake_case", event: "snake_case" },
         publicationPolicy: { warningsBlock: false, fixturesRequired: true },
         eventTransport: { observationHistoryPath: "queue.history", defaultPushPath: "dataLayer" },
-        collections: { profiles: [], pages: [], pageGroups: [], events: [], applicabilitySets: [], flows: [], fixtures: [], assignments: [] },
+        collections: { profiles: [], propertySets: [], pages: [], events: [], applicabilitySets: [], flows: [], fixtures: [], assignments: [] },
         releases: [],
     };
     return { project, draft: { id: input.id("draft"), status: "Saved", updatedAt: now() }, history: { undo: [], redo: [] } };
@@ -405,8 +405,8 @@ function canonicalAssignmentCondition(project, condition) { if (!condition)
     return { ...condition, conditions: condition.conditions.map((child) => canonicalAssignmentCondition(project, child)) }; if (condition.field !== "flowId" || typeof condition.value !== "string")
     return clone(condition); const normalized = condition.value.trim().toLowerCase(), flow = project.collections.flows.find((candidate) => candidate.id === condition.value || candidate.name.trim().toLowerCase() === normalized); return { ...condition, ...(flow ? { value: flow.id } : {}) }; }
 function assignmentTarget(project, kind, identity) { if (kind === "Shared Profile")
-    return project.collections.profiles.find(({ id }) => id === identity); if (kind === "Property Set" || kind === "Page Group")
-    return (project.collections.propertySets ?? project.collections.pageGroups).find(({ id }) => id === identity); if (kind === "Page")
+    return project.collections.profiles.find(({ id }) => id === identity); if (kind === "Property Set")
+    return project.collections.propertySets.find(({ id }) => id === identity); if (kind === "Page")
     return project.collections.pages.find(({ id }) => id === identity); if (kind === "Event")
     return project.collections.events.find(({ id }) => id === identity); return Object.values(project.documentationFlowGraphs ?? {}).flatMap((graph) => (graph.pageFrames ?? [])).find(({ id }) => id === identity); }
 export function saveProjectAssignment(state, input, id) {

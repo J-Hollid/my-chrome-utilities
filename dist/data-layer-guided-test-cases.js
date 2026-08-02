@@ -1,6 +1,6 @@
 export function guidedTestCaseTypeOptions() {
     return [
-        { value: "page-context", label: "Page context test", purpose: "Page Group applicability and Page validation", scope: "one production Page", evaluation: "production Page effective-schema evaluation" },
+        { value: "page-context", label: "Page context test", purpose: "Property Set applicability and Page validation", scope: "one production Page", evaluation: "production Page effective-schema evaluation" },
         { value: "event-validation", label: "Event validation test", purpose: "Assignment routing and Event validation", scope: "one production Event and optional Page", evaluation: "production Assignment and schema evaluation" },
     ];
 }
