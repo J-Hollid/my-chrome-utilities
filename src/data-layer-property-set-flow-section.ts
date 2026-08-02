@@ -61,8 +61,21 @@ export function setPropertySetApplicationApplicability(state:ProjectState,pageId
   const page=state.project.collections.pages.find(({id})=>id===pageId),propertySet=state.project.collections.propertySets.find(({id})=>id===propertySetId);if(!page)throw new Error(`Unknown Page ${pageId}.`);if(!propertySet)throw new Error(`Unknown Property Set ${propertySetId}.`);if(applicabilitySetId&&!state.project.collections.applicabilitySets.some(({id})=>id===applicabilitySetId))throw new Error(`Unknown Applicability Set ${applicabilitySetId}.`);if(!applications(page).some((application)=>application.propertySetId===propertySetId))throw new Error(`${page.name} does not apply ${propertySet.name}.`);return updatePage(state,pageId,`Change ${propertySet.name} applicability on ${page.name}`,(candidate)=>({...candidate,propertySetApplications:applications(candidate).map((application)=>{if(application.propertySetId!==propertySetId)return application;const next={...application,...(applicabilitySetId?{applicabilitySetId}:{})};if(!applicabilitySetId)delete next.applicabilitySetId;return next;})}));
 }
 
+const schemaEvaluationInput=(entity:ProjectEntity|undefined)=>entity?{
+  id:entity.id,
+  revision:(entity.canonicalSchema as {revision?:number}|undefined)?.revision??entity.revision??entity.version??0,
+  canonicalSchema:entity.canonicalSchema,
+  schemaConstraints:entity.schemaConstraints,
+  requirements:entity.requirements,
+  localSchemaContributions:entity.localSchemaContributions,
+  onlyDefinedFields:entity.onlyDefinedFields,
+  profileId:entity.profileId,
+  profileIds:entity.profileIds,
+  profileInheritanceRecipes:entity.profileInheritanceRecipes,
+}:undefined;
+
 export function pagePropertySetEvaluatorRevision(project:SpecificationProject,pageId:string|undefined):string{
-  const page=project.collections.pages.find(({id})=>id===pageId),sets=new Map(project.collections.propertySets.map((set)=>[set.id,set])),applicabilitySets=new Map(project.collections.applicabilitySets.map((set)=>[set.id,set])),revision=(entity:ProjectEntity|undefined)=>(entity?.canonicalSchema as {revision?:number}|undefined)?.revision??entity?.revision??0;return`page:${JSON.stringify({pageId:page?.id,pageRevision:revision(page),applications:applications(page??{id:"",name:""}).map(({id,propertySetId,applicabilitySetId})=>{const applicability=applicabilitySetId?applicabilitySets.get(applicabilitySetId):undefined;return{id,propertySetId,propertySetRevision:revision(sets.get(propertySetId)),...(applicabilitySetId?{applicabilitySetId,applicabilityRevision:revision(applicability),applicabilityCondition:applicability?.condition}:{}),};})})}`;
+  const page=project.collections.pages.find(({id})=>id===pageId),sets=new Map(project.collections.propertySets.map((set)=>[set.id,set])),profiles=new Map(project.collections.profiles.map((profile)=>[profile.id,profile])),applicabilitySets=new Map(project.collections.applicabilitySets.map((set)=>[set.id,set])),applied=applications(page??{id:"",name:""}),appliedSets=applied.flatMap(({propertySetId})=>{const set=sets.get(propertySetId);return set?[set]:[];}),profileIds=unique([page?.profileId,...((page?.profileIds as string[]|undefined)??[]),...appliedSets.flatMap((set)=>[set.profileId,...((set.profileIds as string[]|undefined)??[])])].filter((value):value is string=>typeof value==="string"&&Boolean(value)));return`page:${JSON.stringify({page:schemaEvaluationInput(page),profiles:profileIds.map((profileId)=>schemaEvaluationInput(profiles.get(profileId))),applications:applied.map(({id,propertySetId,applicabilitySetId})=>{const applicability=applicabilitySetId?applicabilitySets.get(applicabilitySetId):undefined;return{id,propertySetId,propertySet:schemaEvaluationInput(sets.get(propertySetId)),...(applicabilitySetId?{applicabilitySetId,applicabilityRevision:(applicability?.canonicalSchema as {revision?:number}|undefined)?.revision??applicability?.revision??applicability?.version??0,applicabilityCondition:applicability?.condition}:{}),};})})}`;
 }
 
 export function propertySetPages(project:SpecificationProject,propertySetId:string):ProjectEntity[]{return project.collections.pages.filter((page)=>applications(page).some((application)=>application.propertySetId===propertySetId));}
