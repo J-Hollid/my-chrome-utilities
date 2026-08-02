@@ -119,11 +119,15 @@ const legacyState=()=>({
 
 {
   let state=upgradePageGroupsToPropertySets(legacyState(),id);
-  state=createFlowSection(state,"flow:checkout",{name:"Review phase",bounds:{x:280,y:40,width:420,height:300}},id);
+  state=createFlowSection(state,"flow:checkout",{name:"Review phase",bounds:{x:20,y:40,width:720,height:300}},id);
   const graph=()=>state.project.documentationFlowGraphs["flow:checkout"],review=graph().sections.at(-1),schemaBytes=JSON.stringify({pages:state.project.collections.pages,propertySets:state.project.collections.propertySets,assignments:state.project.collections.assignments});
+  const originalPositions=graph().pageFrames.map(({id,position})=>({id,position:structuredClone(position)}));
   state=movePageFrameToSection(state,"flow:checkout","frame:cart",review.id);
+  state=movePageFrameToSection(state,"flow:checkout","frame:product",review.id);
+  assert.deepEqual(graph().pageFrames.map(({id,position})=>({id,position})),originalPositions,"placing Page frames in a Section preserves their coordinates and relative positions");
   state=moveFlowSection(state,"flow:checkout",review.id,{x:40,y:25});
-  assert.deepEqual(graph().pageFrames.find(({id})=>id==="frame:cart").position,{x:80,y:75},"moving a Section preserves the contained frame's relative position");
+  assert.deepEqual(graph().pageFrames.find(({id})=>id==="frame:cart").position,{x:60,y:75},"moving a Section preserves the contained frame's relative position");
+  assert.deepEqual(graph().pageFrames.find(({id})=>id==="frame:product").position,{x:360,y:235},"all contained frames move by the same Section delta");
   state=renameAndResizeFlowSection(state,"flow:checkout",review.id,{name:"Review",bounds:{x:320,y:65,width:460,height:330}});
   assert.equal(JSON.stringify({pages:state.project.collections.pages,propertySets:state.project.collections.propertySets,assignments:state.project.collections.assignments}),schemaBytes,"Section commands are schema-neutral");
   const removed=removeFlowSection(state,"flow:checkout",review.id),removedGraph=removed.project.documentationFlowGraphs["flow:checkout"];

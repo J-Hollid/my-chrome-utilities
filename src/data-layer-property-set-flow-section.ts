@@ -81,7 +81,23 @@ export function createFlowSection(state:ProjectState,flowId:string,input:{name:s
 }
 
 export function movePageFrameToSection(state:ProjectState,flowId:string,frameId:string,sectionId?:string):ProjectState{
-  const graph=sectionGraph(state.project,flowId),frame=graph.pageFrames?.find(({id})=>id===frameId);if(!frame)throw new Error(`Unknown Page frame ${frameId}.`);const section=sectionId?graph.sections?.find(({id})=>id===sectionId):undefined;if(sectionId&&!section)throw new Error(`Unknown Flow Section ${sectionId}.`);return saveGraph(state,flowId,section?`Move ${frame.name} to Section ${section.name}`:`Move ${frame.name} outside Sections`,(next)=>({...next,pageFrames:(next.pageFrames??[]).map((candidate)=>candidate.id!==frameId?candidate:section?{...candidate,sectionId:section.id,position:{x:section.bounds.x+40,y:section.bounds.y+50}}:withoutSection(candidate))}));
+  const graph=sectionGraph(state.project,flowId),frame=graph.pageFrames?.find(({id})=>id===frameId);if(!frame)throw new Error(`Unknown Page frame ${frameId}.`);const section=sectionId?graph.sections?.find(({id})=>id===sectionId):undefined;if(sectionId&&!section)throw new Error(`Unknown Flow Section ${sectionId}.`);return saveGraph(state,flowId,section?`Move ${frame.name} to Section ${section.name}`:`Move ${frame.name} outside Sections`,(next)=>({...next,pageFrames:(next.pageFrames??[]).map((candidate)=>candidate.id!==frameId?candidate:section?{...candidate,sectionId:section.id}:withoutSection(candidate))}));
+}
+
+export function addFlowPageFrameToSection(state:ProjectState,flowId:string,pageId:string,sectionId:string|undefined,id:IdFactory):ProjectState{
+  const graph=sectionGraph(state.project,flowId),page=state.project.collections.pages.find(({id})=>id===pageId),section=sectionId?graph.sections?.find(({id})=>id===sectionId):undefined;if(!page)throw new Error(`Unknown Page ${pageId}.`);if(sectionId&&!section)throw new Error(`Unknown Flow Section ${sectionId}.`);const peers=(graph.pageFrames??[]).filter((frame)=>frame.sectionId===sectionId),position={x:(section?.bounds.x??24)+40+(peers.length%3)*220,y:(section?.bounds.y??24)+50+Math.floor(peers.length/3)*120};return saveGraph(state,flowId,section?`Add ${page.name} to Section ${section.name}`:`Add ${page.name} outside Sections`,(next)=>({...next,pageFrames:[...(next.pageFrames??[]),{id:id("flow-page-frame"),name:page.name,pageId:page.id,...(section?{sectionId:section.id}:{}),position}]}));
+}
+
+export function moveFlowPageFramePresentation(state:ProjectState,flowId:string,frameId:string,position:{x:number;y:number}):ProjectState{
+  const graph=sectionGraph(state.project,flowId),frame=graph.pageFrames?.find(({id})=>id===frameId);if(!frame)throw new Error(`Unknown Page frame ${frameId}.`);const nextPosition={x:Math.round(position.x),y:Math.round(position.y)};if(frame.position.x===nextPosition.x&&frame.position.y===nextPosition.y)return state;return saveGraph(state,flowId,`Move ${frame.name} Page frame`,(next)=>({...next,pageFrames:(next.pageFrames??[]).map((candidate)=>candidate.id===frameId?{...candidate,position:nextPosition}:candidate)}));
+}
+
+export function connectFlowPageFrames(state:ProjectState,flowId:string,sourceId:string,targetId:string,id:IdFactory):ProjectState{
+  const graph=sectionGraph(state.project,flowId),source=graph.pageFrames?.find(({id})=>id===sourceId),target=graph.pageFrames?.find(({id})=>id===targetId);if(!source||!target||source.id===target.id)throw new Error("A Flow relationship requires two distinct Page frames.");return saveGraph(state,flowId,`Connect ${source.name} to ${target.name}`,(next)=>({...next,relationships:[...(next.relationships??[]),{id:id("flow-relationship"),name:`${source.name} to ${target.name}`,sourceEndpoint:{kind:"page-frame",id:source.id},targetEndpoint:{kind:"page-frame",id:target.id},sourcePort:"right",targetPort:"left"}]}));
+}
+
+export function addFlowEventOccurrence(state:ProjectState,flowId:string,frameId:string,eventId:string,id:IdFactory):ProjectState{
+  const graph=sectionGraph(state.project,flowId),frame=graph.pageFrames?.find(({id})=>id===frameId),event=state.project.collections.events.find(({id})=>id===eventId);if(!frame)throw new Error(`Unknown Page frame ${frameId}.`);if(!event)throw new Error(`Unknown Event ${eventId}.`);const peers=(graph.occurrences??[]).filter((occurrence)=>occurrence.pageFrameId===frame.id);return saveGraph(state,flowId,`Add ${event.name} to ${frame.name}`,(next)=>({...next,occurrences:[...(next.occurrences??[]),{id:id("flow-occurrence"),name:event.name,pageFrameId:frame.id,pageId:frame.pageId,eventId:event.id,obligation:"Required",minimum:1,maximum:1,position:{x:24,y:70+peers.length*28}}]}));
 }
 
 export function moveFlowSection(state:ProjectState,flowId:string,sectionId:string,position:{x:number;y:number}):ProjectState{

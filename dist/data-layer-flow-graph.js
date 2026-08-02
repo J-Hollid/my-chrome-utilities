@@ -8,8 +8,12 @@ export { applyFlowPageGroupLaneSelection, addFlowPageFrame, duplicateFlowPageFra
 export const FLOW_GRAPH_GEOMETRY = { eventWidth: 170, eventHeight: 94, eventMinX: 12, eventMinY: 40, pageFrameMinWidth: 190, pageFrameMinHeight: 108, pageFrameChildRightPadding: 20, pageFrameChildBottomPadding: 16 };
 export const clone = (value) => structuredClone(value);
 export const graphIndex = (project) => project.documentationFlowGraphs ?? {};
-export const storedGraph = (project, flowId) => { const stored = graphIndex(project)[flowId], legacy = project.collections.flows.find(({ id }) => id === flowId)?.pageGroupIds; return { pageGroupIds: [...(stored?.pageGroupIds ?? legacy ?? [])], pageFrames: stored?.pageFrames ?? [], occurrences: stored?.occurrences ?? [], relationships: stored?.relationships ?? [], ...(stored?.selectedItem ? { selectedItem: stored.selectedItem } : {}), ...(stored?.viewport ? { viewport: stored.viewport } : {}) }; };
-export const saveStoredGraph = (project, flowId, graph) => { const { selectedItem: _selectedItem, viewport: _viewport, ...semanticGraph } = graph; return { ...project, documentationFlowGraphs: { ...graphIndex(project), [flowId]: semanticGraph } }; };
+export const storedGraph = (project, flowId) => { const stored = graphIndex(project)[flowId], legacyProject = Object.hasOwn(project.collections, "pageGroups"), legacy = legacyProject ? project.collections.flows.find(({ id }) => id === flowId)?.pageGroupIds : undefined; return { sections: stored?.sections ?? [], pageGroupIds: legacyProject ? [...(stored?.pageGroupIds ?? legacy ?? [])] : [], pageFrames: stored?.pageFrames ?? [], occurrences: stored?.occurrences ?? [], relationships: stored?.relationships ?? [], ...(stored?.selectedItem ? { selectedItem: stored.selectedItem } : {}), ...(stored?.viewport ? { viewport: stored.viewport } : {}) }; };
+export const saveStoredGraph = (project, flowId, graph) => { const { selectedItem: _selectedItem, viewport: _viewport, ...semanticGraph } = graph; if (!Object.hasOwn(project.collections, "pageGroups")) {
+    delete semanticGraph.pageGroupIds;
+    for (const frame of semanticGraph.pageFrames)
+        delete frame.pageGroupId;
+} return { ...project, documentationFlowGraphs: { ...graphIndex(project), [flowId]: semanticGraph } }; };
 export const legacyBindingOccurrence = (occurrence) => typeof occurrence.contextBindingId === "string" && Boolean(occurrence.contextBindingId);
 export const relationshipEndpoint = (relationship, side) => {
     const endpoint = side === "source" ? relationship.sourceEndpoint : relationship.targetEndpoint;
@@ -45,7 +49,7 @@ export const normalizedOccurrence = (input) => {
         throw new Error("An uncontained legacy Flow occurrence requires an explicit legacy layout.");
     return { ...values, lane: layout.lane, position: { x: layout.x, y: layout.y }, optional: input.obligation === "Optional" };
 };
-export function documentaryFlowGraph(project, flowId) { const graph = storedGraph(project, flowId); return { pageGroupIds: graph.pageGroupIds, pageFrames: graph.pageFrames, occurrences: graph.occurrences, relationships: graph.relationships, ...(graph.selectedItem ? { selectedItem: graph.selectedItem } : {}), ...(graph.viewport ? { viewport: graph.viewport } : {}) }; }
+export function documentaryFlowGraph(project, flowId) { const graph = storedGraph(project, flowId); return { sections: graph.sections, pageGroupIds: graph.pageGroupIds, pageFrames: graph.pageFrames, occurrences: graph.occurrences, relationships: graph.relationships, ...(graph.selectedItem ? { selectedItem: graph.selectedItem } : {}), ...(graph.viewport ? { viewport: graph.viewport } : {}) }; }
 export function flowPageGroupLaneIds(project, flowId) { return storedGraph(project, flowId).pageGroupIds; }
 export function flowOccurrenceEventSchema(project, flowId, occurrenceId) {
     const occurrence = storedGraph(project, flowId).occurrences.find(({ id }) => id === occurrenceId), event = project.collections.events.find(({ id }) => id === occurrence?.eventId);

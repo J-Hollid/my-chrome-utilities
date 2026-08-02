@@ -1,4 +1,4 @@
-import { addPropertySetApplication, createFlowSection, inspectSectionRemovalWithContents, moveFlowSection, movePageFrameToSection, orderedPropertySetApplications, removeFlowSection, removeFlowSectionWithContents, removePropertySetApplication, renameAndResizeFlowSection, reorderPropertySetApplication } from "./data-layer-property-set-flow-section.js";
+import { addFlowEventOccurrence, addFlowPageFrameToSection, addPropertySetApplication, connectFlowPageFrames, createFlowSection, inspectSectionRemovalWithContents, moveFlowPageFramePresentation, moveFlowSection, movePageFrameToSection, orderedPropertySetApplications, removeFlowSection, removeFlowSectionWithContents, removePropertySetApplication, renameAndResizeFlowSection, reorderPropertySetApplication } from "./data-layer-property-set-flow-section.js";
 const number = (value, fallback) => Number.isFinite(Number(value)) ? Number(value) : fallback;
 const graphFor = (state, flowId) => (state.project.documentationFlowGraphs?.[flowId] ?? {});
 export function mountPropertyCompositionWorkspace({ host, state, pageId, id, onSave, onOpen }) {
@@ -46,34 +46,88 @@ export function mountPropertyCompositionWorkspace({ host, state, pageId, id, onS
     return workspace;
 }
 export function mountFlowSectionWorkspace({ host, state, flowId, id, onSave }) {
-    const graph = graphFor(state, flowId), workspace = document.createElement("section"), heading = document.createElement("h2"), guidance = document.createElement("p"), toolbar = document.createElement("nav"), canvas = document.createElement("div"), surface = document.createElement("div"), createForm = document.createElement("form"), name = document.createElement("input"), add = document.createElement("button"), list = document.createElement("div"), placement = document.createElement("fieldset"), placementLegend = document.createElement("legend"), frameSelect = document.createElement("select"), sectionSelect = document.createElement("select"), place = document.createElement("button"), outside = document.createElement("button"), status = document.createElement("output");
+    const graph = graphFor(state, flowId), sections = graph.sections ?? [], frames = graph.pageFrames ?? [], relationships = graph.relationships ?? [], workspace = document.createElement("section"), heading = document.createElement("h2"), guidance = document.createElement("p"), toolbar = document.createElement("nav"), catalogs = document.createElement("section"), canvas = document.createElement("div"), surface = document.createElement("div"), createForm = document.createElement("form"), name = document.createElement("input"), add = document.createElement("button"), list = document.createElement("div"), placement = document.createElement("fieldset"), placementLegend = document.createElement("legend"), frameSelect = document.createElement("select"), sectionSelect = document.createElement("select"), place = document.createElement("button"), outside = document.createElement("button"), connection = document.createElement("fieldset"), connectionLegend = document.createElement("legend"), sourceSelect = document.createElement("select"), targetSelect = document.createElement("select"), connect = document.createElement("button"), status = document.createElement("output"), viewKey = `flow-section-view:${state.project.id}:${flowId}`, storedView = JSON.parse(sessionStorage.getItem(viewKey) ?? "{}");
     workspace.className = "flow-section-workspace";
     workspace.dataset.flowSectionWorkspace = flowId;
-    workspace.setAttribute("aria-label", "Flow Sections");
-    heading.textContent = "Sections";
-    guidance.textContent = "Flow-owned presentation containers. Section changes never change Property composition, applicability, schema provenance, validation, or Assignment targets.";
+    workspace.setAttribute("aria-label", "Flow canvas and outline");
+    heading.textContent = "Flow canvas";
+    guidance.textContent = "Sections are Flow-owned presentation containers. Page frames, Events, and relationships remain independent of Property composition, applicability, schema provenance, validation, and Assignment targets.";
     name.required = true;
     name.placeholder = "Section name";
     name.setAttribute("aria-label", "New Section name");
     add.type = "submit";
     add.textContent = "Add Section";
     createForm.append(name, add);
-    list.setAttribute("aria-label", "Section outline");
+    list.setAttribute("aria-label", "Synchronized Flow outline");
+    let selectedFrameId = storedView.selectedFrameId;
+    const remember = (selected = selectedFrameId, focusLabel) => { selectedFrameId = selected; sessionStorage.setItem(viewKey, JSON.stringify({ ...(selected ? { selectedFrameId: selected } : {}), ...(focusLabel ? { focusLabel } : {}) })); }, save = (next, focusLabel) => { remember(selectedFrameId, focusLabel); onSave(next); };
     toolbar.className = "flow-section-toolbar";
-    toolbar.setAttribute("aria-label", "Flow canvas tools");
+    toolbar.setAttribute("aria-label", "Flow toolbar");
+    catalogs.className = "flow-section-catalogs";
+    catalogs.setAttribute("aria-label", "Flow component catalogs");
+    const panels = new Map();
     for (const label of ["Sections", "Pages", "Events"]) {
-        const tool = document.createElement("button");
+        const tool = document.createElement("button"), panel = document.createElement("section");
         tool.type = "button";
         tool.textContent = label;
-        tool.disabled = label !== "Sections";
+        tool.setAttribute("aria-expanded", String(label === "Sections"));
+        panel.hidden = label !== "Sections";
+        panel.setAttribute("aria-label", `${label} controls`);
+        tool.addEventListener("click", () => { for (const [candidate, currentPanel] of panels) {
+            currentPanel.hidden = candidate !== label;
+            const control = Array.from(toolbar.querySelectorAll("button")).find(({ textContent }) => textContent === candidate);
+            control?.setAttribute("aria-expanded", String(candidate === label));
+        } panel.querySelector("button,input,select")?.focus(); });
+        panels.set(label, panel);
         toolbar.append(tool);
+        catalogs.append(panel);
     }
+    panels.get("Sections").append(createForm);
+    const pagesPanel = panels.get("Pages"), pageSearch = document.createElement("input"), pageResults = document.createElement("div");
+    pageSearch.type = "search";
+    pageSearch.setAttribute("aria-label", "Search Pages to add to Flow");
+    const renderPages = () => { const query = pageSearch.value.trim().toLocaleLowerCase(); pageResults.replaceChildren(...state.project.collections.pages.filter(({ name }) => name.toLocaleLowerCase().includes(query)).map((page) => { const control = document.createElement("button"); control.type = "button"; control.textContent = `Add ${page.name}`; control.setAttribute("aria-label", `Add Page ${page.name} outside Sections`); control.addEventListener("click", () => save(addFlowPageFrameToSection(state, flowId, page.id, undefined, id), control.getAttribute("aria-label"))); return control; })); };
+    pageSearch.addEventListener("input", renderPages);
+    renderPages();
+    pagesPanel.append(pageSearch, pageResults);
+    const eventsPanel = panels.get("Events"), eventFrame = document.createElement("select"), eventChoices = document.createElement("div");
+    eventFrame.setAttribute("aria-label", "Page frame for Event");
+    eventFrame.append(new Option("Choose Page frame", ""), ...frames.map((frame) => new Option(frame.name, frame.id)));
+    for (const event of state.project.collections.events) {
+        const control = document.createElement("button");
+        control.type = "button";
+        control.textContent = `Add ${event.name}`;
+        control.setAttribute("aria-label", `Add Event ${event.name} to selected Page frame`);
+        control.addEventListener("click", () => { if (eventFrame.value)
+            save(addFlowEventOccurrence(state, flowId, eventFrame.value, event.id, id), control.getAttribute("aria-label")); });
+        eventChoices.append(control);
+    }
+    eventsPanel.append(eventFrame, eventChoices);
     canvas.className = "flow-section-canvas";
-    canvas.setAttribute("aria-label", "Flow Section canvas");
+    canvas.setAttribute("aria-label", "Interactive directional Flow canvas");
     surface.className = "flow-section-canvas-surface";
-    const sections = graph.sections ?? [], frames = (graph.pageFrames ?? []), right = Math.max(720, ...sections.map(({ bounds }) => bounds.x + bounds.width + 32), ...frames.map(({ position }) => (position?.x ?? 24) + 200)), bottom = Math.max(360, ...sections.map(({ bounds }) => bounds.y + bounds.height + 32), ...frames.map(({ position }) => (position?.y ?? 24) + 72));
+    const right = Math.max(720, ...sections.map(({ bounds }) => bounds.x + bounds.width + 32), ...frames.map(({ position }) => (position.x ?? 24) + 220)), bottom = Math.max(360, ...sections.map(({ bounds }) => bounds.y + bounds.height + 32), ...frames.map(({ position }) => position.y + 100));
     surface.style.width = `${right}px`;
     surface.style.height = `${bottom}px`;
+    const lines = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    lines.classList.add("flow-section-relationships");
+    lines.setAttribute("aria-label", "Flow relationships");
+    lines.setAttribute("width", String(right));
+    lines.setAttribute("height", String(bottom));
+    for (const relationship of relationships) {
+        const endpoint = (side) => relationship[`${side}Endpoint`]?.id ?? relationship[`${side}NodeId`], source = frames.find(({ id }) => id === endpoint("source")), target = frames.find(({ id }) => id === endpoint("target"));
+        if (!source || !target)
+            continue;
+        const line = document.createElementNS(lines.namespaceURI, "line");
+        line.setAttribute("x1", String((source.position.x ?? 24) + 170));
+        line.setAttribute("y1", String(source.position.y + 34));
+        line.setAttribute("x2", String(target.position.x ?? 24));
+        line.setAttribute("y2", String(target.position.y + 34));
+        line.setAttribute("data-relationship-id", relationship.id);
+        line.setAttribute("aria-label", relationship.name || `${source.name} to ${target.name}`);
+        lines.append(line);
+    }
+    surface.append(lines);
     for (const section of sections) {
         const region = document.createElement("section"), label = document.createElement("h3");
         region.className = "flow-section-region";
@@ -88,24 +142,39 @@ export function mountFlowSectionWorkspace({ host, state, flowId, id, onSave }) {
         surface.append(region);
     }
     for (const frame of frames) {
-        const card = document.createElement("button");
+        const card = document.createElement("button"), moveBy = (dx, dy) => save(moveFlowPageFramePresentation(state, flowId, frame.id, { x: (frame.position.x ?? 24) + dx, y: frame.position.y + dy }), card.getAttribute("aria-label"));
         card.type = "button";
         card.className = "flow-section-page-frame";
         card.dataset.pageFrameId = frame.id;
         card.textContent = frame.name;
-        card.setAttribute("aria-label", `Page frame ${frame.name}${frame.sectionId ? " in Section" : " outside Sections"}`);
-        card.style.left = `${frame.position?.x ?? 24}px`;
-        card.style.top = `${frame.position?.y ?? 24}px`;
+        card.setAttribute("aria-label", `Page frame ${frame.name}${frame.sectionId ? ` in ${sections.find(({ id }) => id === frame.sectionId)?.name ?? "Section"}` : " outside Sections"}`);
+        card.setAttribute("aria-pressed", String(storedView.selectedFrameId === frame.id));
+        card.style.left = `${frame.position.x ?? 24}px`;
+        card.style.top = `${frame.position.y}px`;
+        card.addEventListener("click", () => { remember(frame.id, card.getAttribute("aria-label")); for (const peer of Array.from(surface.querySelectorAll("[data-page-frame-id]")))
+            peer.setAttribute("aria-pressed", String(peer === card)); });
+        card.addEventListener("keydown", (event) => { const delta = { ArrowLeft: [-20, 0], ArrowRight: [20, 0], ArrowUp: [0, -20], ArrowDown: [0, 20] }, movement = delta[event.key]; if (movement) {
+            event.preventDefault();
+            moveBy(movement[0], movement[1]);
+        } });
+        let drag;
+        card.addEventListener("pointerdown", (event) => { drag = { x: event.clientX, y: event.clientY }; try {
+            card.setPointerCapture?.(event.pointerId);
+        }
+        catch { /* Synthetic acceptance pointers have no active device pointer. */ } });
+        card.addEventListener("pointerup", (event) => { if (!drag)
+            return; const dx = event.clientX - drag.x, dy = event.clientY - drag.y; drag = undefined; if (dx || dy)
+            moveBy(dx, dy); });
         surface.append(card);
     }
     canvas.append(surface);
     createForm.addEventListener("submit", (event) => { event.preventDefault(); try {
-        onSave(createFlowSection(state, flowId, { name: name.value, bounds: { x: 24, y: 48 + (graph.sections?.length ?? 0) * 220, width: 640, height: 190 } }, id));
+        save(createFlowSection(state, flowId, { name: name.value, bounds: { x: 24, y: 48 + sections.length * 220, width: 640, height: 190 } }, id), "New Section name");
     }
     catch (error) {
         status.textContent = error instanceof Error ? error.message : String(error);
     } });
-    for (const section of [...(graph.sections ?? [])].sort((left, right) => left.order - right.order)) {
+    for (const section of [...sections].sort((left, right) => left.order - right.order)) {
         const row = document.createElement("article"), title = document.createElement("h3"), rename = document.createElement("input"), x = document.createElement("input"), y = document.createElement("input"), width = document.createElement("input"), height = document.createElement("input"), save = document.createElement("button"), move = document.createElement("button"), remove = document.createElement("button"), destructive = document.createElement("button"), review = document.createElement("section");
         row.dataset.flowSectionId = section.id;
         title.textContent = section.name;
@@ -125,28 +194,43 @@ export function mountFlowSectionWorkspace({ host, state, flowId, id, onSave }) {
         review.hidden = true;
         review.setAttribute("aria-label", `Remove ${section.name} with contents review`);
         const bounds = () => ({ x: number(x.value, section.bounds.x), y: number(y.value, section.bounds.y), width: number(width.value, section.bounds.width), height: number(height.value, section.bounds.height) });
-        save.addEventListener("click", () => onSave(renameAndResizeFlowSection(state, flowId, section.id, { name: rename.value, bounds: bounds() })));
-        move.addEventListener("click", () => onSave(moveFlowSection(state, flowId, section.id, { x: number(x.value, section.bounds.x), y: number(y.value, section.bounds.y) })));
-        remove.addEventListener("click", () => onSave(removeFlowSection(state, flowId, section.id)));
-        destructive.addEventListener("click", () => { const impact = inspectSectionRemovalWithContents(state.project, flowId, section.id), summary = document.createElement("p"), confirm = document.createElement("button"), cancel = document.createElement("button"); summary.textContent = `Remove Page frames: ${impact.pageFrames.map(({ name }) => name).join(", ") || "none"}. Remove relationships: ${impact.relationships.map(({ name }) => name).join(", ") || "none"}. Nothing changes until confirmed.`; confirm.type = cancel.type = "button"; confirm.textContent = "Confirm remove Section with contents"; cancel.textContent = "Cancel"; confirm.addEventListener("click", () => onSave(removeFlowSectionWithContents(state, flowId, section.id, impact))); cancel.addEventListener("click", () => { review.hidden = true; review.replaceChildren(); destructive.focus(); }); review.replaceChildren(summary, confirm, cancel); review.hidden = false; confirm.focus(); });
+        save.addEventListener("click", () => saveState(renameAndResizeFlowSection(state, flowId, section.id, { name: rename.value, bounds: bounds() }), save.getAttribute("aria-label")));
+        move.addEventListener("click", () => saveState(moveFlowSection(state, flowId, section.id, { x: number(x.value, section.bounds.x), y: number(y.value, section.bounds.y) }), move.getAttribute("aria-label")));
+        remove.addEventListener("click", () => saveState(removeFlowSection(state, flowId, section.id), "New Section name"));
+        destructive.addEventListener("click", () => { const impact = inspectSectionRemovalWithContents(state.project, flowId, section.id), summary = document.createElement("p"), confirm = document.createElement("button"), cancel = document.createElement("button"); summary.textContent = `Remove Page frames: ${impact.pageFrames.map(({ name }) => name).join(", ") || "none"}. Remove relationships: ${impact.relationships.map(({ name }) => name).join(", ") || "none"}. Nothing changes until confirmed.`; confirm.type = cancel.type = "button"; confirm.textContent = "Confirm remove Section with contents"; cancel.textContent = "Cancel"; confirm.addEventListener("click", () => saveState(removeFlowSectionWithContents(state, flowId, section.id, impact), "New Section name")); cancel.addEventListener("click", () => { review.hidden = true; review.replaceChildren(); destructive.focus(); }); review.replaceChildren(summary, confirm, cancel); review.hidden = false; confirm.focus(); });
+        for (const [control, label] of [[save, `Save ${section.name} name and size`], [move, `Move Section ${section.name}`], [remove, `Remove Section ${section.name} and retain Page frames`], [destructive, `Review remove Section ${section.name} with contents`]])
+            control.setAttribute("aria-label", label);
         row.append(title, rename, x, y, width, height, save, move, remove, destructive, review);
         list.append(row);
     }
+    const saveState = save;
     placementLegend.textContent = "Organize Page frames";
     frameSelect.setAttribute("aria-label", "Page frame to organize");
     sectionSelect.setAttribute("aria-label", "Destination Section");
-    frameSelect.append(new Option("Choose Page frame", ""), ...(graph.pageFrames ?? []).map((frame) => new Option(frame.name, frame.id)));
-    sectionSelect.append(new Option("Choose Section", ""), ...(graph.sections ?? []).map((section) => new Option(section.name, section.id)));
+    frameSelect.append(new Option("Choose Page frame", ""), ...frames.map((frame) => new Option(frame.name, frame.id)));
+    sectionSelect.append(new Option("Choose Section", ""), ...sections.map((section) => new Option(section.name, section.id)));
     place.type = outside.type = "button";
     place.textContent = "Place in Section";
     outside.textContent = "Move outside every Section";
     place.addEventListener("click", () => { if (frameSelect.value && sectionSelect.value)
-        onSave(movePageFrameToSection(state, flowId, frameSelect.value, sectionSelect.value)); });
+        saveState(movePageFrameToSection(state, flowId, frameSelect.value, sectionSelect.value), "Page frame to organize"); });
     outside.addEventListener("click", () => { if (frameSelect.value)
-        onSave(movePageFrameToSection(state, flowId, frameSelect.value)); });
+        saveState(movePageFrameToSection(state, flowId, frameSelect.value), "Page frame to organize"); });
     placement.append(placementLegend, frameSelect, sectionSelect, place, outside);
-    workspace.append(heading, guidance, toolbar, canvas, createForm, list, placement, status);
+    connectionLegend.textContent = "Connect Page frames";
+    sourceSelect.setAttribute("aria-label", "Relationship source Page frame");
+    targetSelect.setAttribute("aria-label", "Relationship target Page frame");
+    sourceSelect.append(new Option("Choose source", ""), ...frames.map((frame) => new Option(frame.name, frame.id)));
+    targetSelect.append(new Option("Choose target", ""), ...frames.map((frame) => new Option(frame.name, frame.id)));
+    connect.type = "button";
+    connect.textContent = "Connect Page frames";
+    connect.addEventListener("click", () => { if (sourceSelect.value && targetSelect.value)
+        saveState(connectFlowPageFrames(state, flowId, sourceSelect.value, targetSelect.value, id), "Relationship source Page frame"); });
+    connection.append(connectionLegend, sourceSelect, targetSelect, connect);
+    workspace.append(heading, guidance, toolbar, catalogs, canvas, list, placement, connection, status);
     host.append(workspace);
+    queueMicrotask(() => { const label = storedView.focusLabel; if (label)
+        Array.from(workspace.querySelectorAll("button,input,select")).find((control) => control.getAttribute("aria-label") === label)?.focus({ preventScroll: true }); });
     return workspace;
 }
 //# sourceMappingURL=data-layer-property-set-flow-section-ui.js.map
