@@ -56,8 +56,10 @@
   gap: 0.25rem;
 }
 .composed-schema-inventory-actions{display:flex;gap:.5rem;flex-wrap:wrap}
-.composed-schema-inventory-panel{position:fixed;z-index:20;inset-block:0;inset-inline-end:0;width:min(32rem,45vw);overflow:auto;background:var(--surface,#fff);border-inline-start:1px solid currentColor;padding:1rem;box-shadow:0 0 1.5rem rgb(0 0 0 / .2)}
+.composed-schema-inventory-panel{position:sticky;z-index:20;inset-block-start:0;grid-column:2;grid-row:1/span 8;box-sizing:border-box;width:auto;max-height:calc(100vh - 5rem);overflow:auto;background:var(--surface,#fff);border-inline-start:1px solid currentColor;padding:1rem;box-shadow:0 0 1.5rem rgb(0 0 0 / .2)}
 .composed-schema-inventory-panel section,.composed-schema-inventory-panel article{display:grid;gap:.5rem;margin-block:1rem}
 .composed-schema-inventory-panel label{display:flex;align-items:flex-start;gap:.5rem}
 .composed-schema-workspace{position:relative}
-@media(max-width:50rem){.composed-schema-inventory-panel{inset:0;width:auto;max-width:none;border:0;overflow:auto}}
+.composed-schema-workspace:has(>.composed-schema-inventory-panel:not([hidden])){display:grid;grid-template-columns:minmax(0,1fr) minmax(18rem,32rem);column-gap:1rem;align-items:start}
+.composed-schema-workspace:has(>.composed-schema-inventory-panel:not([hidden]))>:not(.composed-schema-inventory-panel){grid-column:1}
+@media(max-width:50rem){.composed-schema-workspace:has(>.composed-schema-inventory-panel:not([hidden])){display:block}.composed-schema-inventory-panel{position:fixed;inset:0;inline-size:100vw;block-size:100vh;max-width:none;max-height:none;border:0;overflow:auto}}
