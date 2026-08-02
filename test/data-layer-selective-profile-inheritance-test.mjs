@@ -8,9 +8,12 @@ import {
   markProfileInheritanceTargetStale,
   profileInheritanceSelection,
   profileInheritanceSummary,
+  profileInheritanceTree,
   searchProfileInheritanceProperties,
   selectProfileInheritanceBranch,
   selectiveProfileContribution,
+  toggleProfileInheritanceConcept,
+  toggleProfileInheritanceTreeBranch,
 } from "../dist/data-layer-selective-profile-inheritance.js";
 import {canonicalPropertyPath} from "../dist/data-layer-canonical-schema.js";
 import {compileLayeredSchema,validateLayeredObservation} from "../dist/data-layer-layered-schema.js";
@@ -47,7 +50,7 @@ assert.equal(partialSelection.missingRuleDependencies.some(({propertyId})=>prope
 const unresolvedContribution=selectiveProfileContribution(master,{...empty,propertySelections:[errorMessage.id]});
 const unresolvedCompile=compileLayeredSchema([{id:"profile:master",name:"Master",scope:"Shared Profile",constraints:unresolvedContribution.constraints,inheritanceConflicts:unresolvedContribution.conflicts}],{surface:"data-layer"});
 assert.equal(unresolvedCompile.status,"blocked");
-assert.equal(unresolvedCompile.conflicts.some(({message})=>message.includes("include, exclude, or replace")),true);
+assert.equal(unresolvedCompile.conflicts.some(({message,facet,sourceRuleId})=>message.includes("needs the excluded property")&&facet==="Conditional rule dependency"&&sourceRuleId==="presence:property:error-message"),true);
 
 const nestedOnly={...empty,propertySelections:[errorMessage.id],excludedRuleIds:["presence:property:error-message","rule:error-message"]};
 const nestedSelection=profileInheritanceSelection(master,nestedOnly);
@@ -123,6 +126,27 @@ assert.equal(replacementConstraint.rules[0].replacesRuleId,"rule:error-message")
 
 const summary=profileInheritanceSummary(master,{...concepts,propertySelections:[errorCode.id],excludedPropertyIds:[pageType.id]});
 assert.deepEqual(summary,{direct:1,structural:1,ruleDependencies:0,missingDependencies:0,conflicts:0,effective:2,synchronizedConcepts:1,fixedProperties:1,exclusions:1,ruleOverrides:0,missingSelections:0});
+
+const ecommerce=node("property:ecommerce","ecommerce","object",3,{concept:"ecommerce"});
+const product=node("property:product","product","object",0,{parentId:ecommerce.id,concept:"ecommerce"});
+const productId=node("property:product-id","product_id","string",0,{parentId:product.id,concept:"ecommerce",presence:{mode:"required"},description:"Stable product identity",example:"sku-1"});
+const productName=node("property:product-name","product_name","string",1,{parentId:product.id,concept:"ecommerce",description:"Readable product title",example:"Desk lamp"});
+const treeDocument={...master,rootIds:[...master.rootIds,ecommerce.id],nodes:{...master.nodes,...Object.fromEntries([ecommerce,product,productId,productName].map((item)=>[item.id,item]))}};
+const ecommerceRecipe=toggleProfileInheritanceConcept(treeDocument,empty,"ecommerce");
+let inheritanceTree=profileInheritanceTree(treeDocument,ecommerceRecipe);
+const conceptNode=inheritanceTree.find(({id})=>id==="concept:ecommerce"),productNode=inheritanceTree.find(({propertyId})=>propertyId===product.id),productIdNode=inheritanceTree.find(({propertyId})=>propertyId===productId.id);
+assert.deepEqual({kind:conceptNode.kind,level:conceptNode.level,checked:conceptNode.checked,selectedCount:conceptNode.selectedCount,totalCount:conceptNode.totalCount},{kind:"concept",level:1,checked:"true",selectedCount:4,totalCount:4},"tree exposes one synchronized concept parent with descendant counts");
+assert.deepEqual({kind:productNode.kind,parentId:productNode.parentId,level:productNode.level,checked:productNode.checked},{kind:"branch",parentId:`property:${ecommerce.id}`,level:3,checked:"true"},"structural branches remain nested beneath their concept and source parent");
+assert.deepEqual({kind:productIdNode.kind,parentId:productIdNode.parentId,level:productIdNode.level,checked:productIdNode.checked},{kind:"property",parentId:`property:${product.id}`,level:4,checked:"true"},"property leaves retain source hierarchy and selection state");
+const partialEcommerce=toggleProfileInheritanceTreeBranch(treeDocument,ecommerceRecipe,productName.id);
+inheritanceTree=profileInheritanceTree(treeDocument,partialEcommerce);
+assert.equal(partialEcommerce.excludedPropertyIds.includes(productName.id),true,"deselecting a synchronized descendant records an explicit stable exception");
+assert.equal(inheritanceTree.find(({id})=>id==="concept:ecommerce").checked,"mixed");
+assert.equal(inheritanceTree.find(({propertyId})=>propertyId===product.id).checked,"mixed");
+const laterProduct=node("property:product-price","product_price","number",2,{parentId:product.id,concept:"ecommerce"}),grownTreeDocument={...treeDocument,nodes:{...treeDocument.nodes,[laterProduct.id]:laterProduct}};
+assert.equal(profileInheritanceSelection(grownTreeDocument,partialEcommerce).directPropertyIds.includes(laterProduct.id),true,"synchronized concepts continue to absorb later descendants beside explicit exceptions");
+const searchedTree=profileInheritanceTree(treeDocument,ecommerceRecipe,{query:"Desk lamp",concept:"all",type:"all",required:"any",selection:"any"});
+assert.deepEqual(searchedTree.map(({id})=>id),["concept:ecommerce",`property:${ecommerce.id}`,`property:${product.id}`,`property:${productName.id}`],"discovery results retain visible concept and structural ancestors without flattening matches");
 
 assert.deepEqual(searchProfileInheritanceProperties(master,{query:"readable",concept:"error",type:"string",required:"any",selection:"any"},partial).map(({id})=>id),[errorMessage.id]);
 assert.deepEqual(searchProfileInheritanceProperties(master,{query:"ERR unavailable",concept:"all",type:"all",required:"required",selection:"selected"},partial).map(({id})=>id),[errorMessage.id]);

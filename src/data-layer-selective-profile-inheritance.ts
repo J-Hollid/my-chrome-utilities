@@ -19,6 +19,10 @@ export interface ProfileInheritanceSelection{
 }
 export interface SelectiveProfileContribution{constraints:LayerConstraint[];selection:ProfileInheritanceSelection;conflicts:{path:string;sourceRuleId:string;dependencyPropertyId:string}[]}
 export interface ProfileInheritanceFilters{query:string;concept:string;type:string;required:"any"|"required"|"optional";selection:"any"|"selected"|"unselected"}
+export interface ProfileInheritanceTreeNode{
+  id:string;parentId?:string;kind:"concept"|"branch"|"property";level:number;label:string;concept:string;propertyId?:string;
+  descendantPropertyIds:string[];selectedCount:number;totalCount:number;checked:"true"|"false"|"mixed";
+}
 
 const clone=<T>(value:T):T=>structuredClone(value);
 const orderedChildren=(document:CanonicalSchemaDocument,parentId?:string):CanonicalPropertyNode[]=>Object.values(document.nodes).filter((node)=>node.parentId===parentId).sort((left,right)=>left.order-right.order||left.id.localeCompare(right.id));
@@ -41,6 +45,39 @@ export function createProfileInheritanceRecipe(input:{id:string;profileId:string
 
 export function selectProfileInheritanceBranch(document:CanonicalSchemaDocument,recipe:ProfileInheritanceRecipe,propertyId:string):ProfileInheritanceRecipe{
   if(!document.nodes[propertyId])return clone(recipe);return{...clone(recipe),propertySelections:stableUnique([...recipe.propertySelections,propertyId,...orderedIds(document,propertyId)])};
+}
+
+const conceptFor=(node:CanonicalPropertyNode):string=>node.concept?.trim()||"Ungrouped";
+const checkedState=(selectedCount:number,totalCount:number):ProfileInheritanceTreeNode["checked"]=>selectedCount===0?"false":selectedCount===totalCount?"true":"mixed";
+
+export function profileInheritanceTree(document:CanonicalSchemaDocument,recipe:ProfileInheritanceRecipe,filters?:ProfileInheritanceFilters):ProfileInheritanceTreeNode[]{
+  const order=orderedIds(document),selected=new Set(profileInheritanceSelection(document,recipe).directPropertyIds),concepts=stableUnique(order.map((id)=>conceptFor(document.nodes[id]!))),matching=filters?new Set(searchProfileInheritanceProperties(document,filters,recipe).map(({id})=>id)):undefined,result:ProfileInheritanceTreeNode[]=[];
+  for(const concept of concepts){
+    const conceptIds=order.filter((id)=>conceptFor(document.nodes[id]!)===concept),conceptSet=new Set(conceptIds),children=new Map<string|undefined,string[]>();
+    for(const id of conceptIds){const sourceParent=document.nodes[id]!.parentId,parent=sourceParent&&conceptSet.has(sourceParent)?sourceParent:undefined;children.set(parent,[...(children.get(parent)??[]),id]);}
+    const descendantIds=(propertyId:string):string[]=>[propertyId,...(children.get(propertyId)??[]).flatMap(descendantIds)];
+    const visible=matching?new Set([...matching].flatMap((id)=>{if(!conceptSet.has(id))return[];const lineage=[id];let parent=document.nodes[id]?.parentId;while(parent&&conceptSet.has(parent)){lineage.push(parent);parent=document.nodes[parent]?.parentId;}return lineage;})):conceptSet;
+    if(!visible.size)continue;
+    const selectedConceptCount=conceptIds.filter((id)=>selected.has(id)).length,conceptNodeId=`concept:${concept}`;
+    result.push({id:conceptNodeId,kind:"concept",level:1,label:concept,concept,descendantPropertyIds:conceptIds,selectedCount:selectedConceptCount,totalCount:conceptIds.length,checked:checkedState(selectedConceptCount,conceptIds.length)});
+    const appendProperties=(parentPropertyId:string|undefined,level:number)=>{for(const id of children.get(parentPropertyId)??[]){if(!visible.has(id))continue;const node=document.nodes[id]!,descendantPropertyIds=descendantIds(id),selectedCount=descendantPropertyIds.filter((candidate)=>selected.has(candidate)).length,hasChildren=(children.get(id)?.length??0)>0;result.push({id:`property:${id}`,parentId:parentPropertyId?`property:${parentPropertyId}`:conceptNodeId,kind:hasChildren?"branch":"property",level,label:node.name,concept,propertyId:id,descendantPropertyIds,selectedCount,totalCount:descendantPropertyIds.length,checked:checkedState(selectedCount,descendantPropertyIds.length)});appendProperties(id,level+1);}};
+    appendProperties(undefined,2);
+  }
+  return result;
+}
+
+export function toggleProfileInheritanceConcept(document:CanonicalSchemaDocument,recipe:ProfileInheritanceRecipe,concept:string):ProfileInheritanceRecipe{
+  const next=clone(recipe),ids=Object.values(document.nodes).filter((node)=>conceptFor(node)===concept).map(({id})=>id),active=next.conceptSelections.includes(concept),idSet=new Set(ids);
+  next.conceptSelections=active?next.conceptSelections.filter((value)=>value!==concept):stableUnique([...next.conceptSelections,concept]);
+  next.propertySelections=active?next.propertySelections.filter((id)=>!idSet.has(id)):next.propertySelections;
+  next.excludedPropertyIds=active?stableUnique([...next.excludedPropertyIds,...ids]):next.excludedPropertyIds.filter((id)=>!idSet.has(id));
+  return next;
+}
+
+export function toggleProfileInheritanceTreeBranch(document:CanonicalSchemaDocument,recipe:ProfileInheritanceRecipe,propertyId:string):ProfileInheritanceRecipe{
+  if(!document.nodes[propertyId])return clone(recipe);const next=clone(recipe),ids=[propertyId,...orderedIds(document,propertyId)],selected=new Set(profileInheritanceSelection(document,next).directPropertyIds),allSelected=ids.every((id)=>selected.has(id)),idSet=new Set(ids);
+  if(allSelected){next.propertySelections=next.propertySelections.filter((id)=>!idSet.has(id));next.excludedPropertyIds=stableUnique([...next.excludedPropertyIds,...ids]);return next;}
+  next.excludedPropertyIds=next.excludedPropertyIds.filter((id)=>!idSet.has(id));const live=(id:string)=>next.startingPoint==="everything"||Boolean(document.nodes[id]?.concept&&next.conceptSelections.includes(document.nodes[id]!.concept!));next.propertySelections=stableUnique([...next.propertySelections,...ids.filter((id)=>!live(id))]);return next;
 }
 
 export function profileInheritanceSelection(document:CanonicalSchemaDocument,recipe:ProfileInheritanceRecipe):ProfileInheritanceSelection{
