@@ -1,4 +1,4 @@
-import type {CanonicalItemSchema,CanonicalPropertyType} from "./data-layer-canonical-schema.js";
+import type {CanonicalAllowedValue,CanonicalItemSchema,CanonicalPropertyNode,CanonicalPropertyType} from "./data-layer-canonical-schema.js";
 
 const clone=<T>(value:T):T=>structuredClone(value);
 
@@ -42,4 +42,16 @@ export function canonicalFacetText(value:unknown):string {
   if(typeof value==="string")return value;
   const serialized=JSON.stringify(value);
   return serialized===undefined?String(value):serialized;
+}
+
+export function repairCanonicalBooleanAllowedValues(node:Pick<CanonicalPropertyNode,"type"|"allowedValues">,nextType:CanonicalPropertyType):{allowedValues:CanonicalAllowedValue[];repairCount:number} {
+  if(nextType!=="boolean"||!node.allowedValues.length||node.type!=="string"&&node.type!=="boolean")return{allowedValues:node.allowedValues,repairCount:0};
+  let repairCount=0;
+  const allowedValues=node.allowedValues.map((entry)=>{
+    if(typeof entry.value==="boolean")return entry;
+    if(entry.value!=="true"&&entry.value!=="false")throw new Error(`${canonicalFacetText(entry.value)} is not a Boolean.`);
+    repairCount+=1;
+    return{...entry,value:entry.value==="true"};
+  });
+  return{allowedValues:repairCount?allowedValues:node.allowedValues,repairCount};
 }

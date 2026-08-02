@@ -33,6 +33,16 @@ const visibleProperty={id:"property:visible",name:"article_type",order:0,type:"s
 const visibleBaseDocument={...document,rootIds:[visibleProperty.id],nodes:{[visibleProperty.id]:visibleProperty}};
 assert.deepEqual(canonicalTableQuickEditPatch(visibleProperty,"description","Quick description",id),{documentation:{...visibleProperty.documentation,description:"Quick description"}},"a Description cell produces only its property-scoped documentation patch");
 assert.deepEqual(canonicalTableQuickEditPatch(visibleProperty,"type","number",id),{type:"number"},"a Type cell produces only its property-scoped type patch");
+const booleanStringValues={...visibleProperty,allowedValues:[{id:"allowed:true",value:"true",provenance:[{source:"created"}]},{id:"allowed:false",value:"false"}]};
+const booleanTypePatch=canonicalTableQuickEditPatch(booleanStringValues,"type","boolean",id);
+assert.deepEqual(booleanTypePatch,{type:"boolean",allowedValues:[{id:"allowed:true",value:true,provenance:[{source:"created"}]},{id:"allowed:false",value:false}]},"a Boolean Type edit repairs true and false payloads in the same property command without replacing their identities");
+const booleanTypeResult=applyCanonicalCommand({...visibleBaseDocument,nodes:{[visibleProperty.id]:booleanStringValues}},{kind:"set",baseRevision:0,propertyId:visibleProperty.id,patch:booleanTypePatch});
+assert.equal(booleanTypeResult.status,"applied");
+assert.equal(booleanTypeResult.document.revision,1,"the Type and allowed-value repair is one canonical command");
+assert.deepEqual(booleanTypeResult.document.nodes[visibleProperty.id].allowedValues,booleanTypePatch.allowedValues);
+const invalidBooleanValues={...booleanStringValues,allowedValues:[{id:"allowed:true",value:"true"},{id:"allowed:other",value:"Other"}]},invalidBooleanBytes=JSON.stringify(invalidBooleanValues);
+assert.throws(()=>canonicalTableQuickEditPatch(invalidBooleanValues,"type","boolean",id),/Other is not a Boolean/,"a non-Boolean String blocks the installed Type edit with the offending value");
+assert.equal(JSON.stringify(invalidBooleanValues),invalidBooleanBytes,"a blocked Boolean Type edit preserves the original property bytes");
 assert.deepEqual(canonicalTableQuickEditPatch(visibleProperty,"presence","required",id),{presence:{mode:"required"}},"an ordinary Presence cell does not rewrite conditional rules");
 const quickLegacy={...visibleProperty,expectedValue:"retail"};
 const quickAllowed=canonicalTableQuickEditPatch(quickLegacy,"expected-or-allowed","retail, wholesale",id);

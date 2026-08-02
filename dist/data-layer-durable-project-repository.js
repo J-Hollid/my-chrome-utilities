@@ -1,3 +1,4 @@
+import { repairCanonicalBooleanAllowedValues } from "./data-layer-canonical-schema-facets.js";
 export const DURABLE_PROJECT_DATABASE = "my-chrome-utilities.project-repository";
 export const DURABLE_PROJECT_DATABASE_VERSION = 6;
 export const LEGACY_PROJECT_KEYS = { library: "my-chrome-utilities.specification-project-library.v1", active: "my-chrome-utilities.specification-project.v1", navigation: "my-chrome-utilities.specification-project-navigation.v1", schemas: "my-chrome-utilities.schema-library.v1" };
@@ -16,7 +17,7 @@ function compactLegacyEditHistory(value) {
     let entryCount = 0;
     const visit = (candidate) => { if (Array.isArray(candidate))
         return candidate.map(visit); if (!record(candidate))
-        return candidate; const legacyChanges = Array.isArray(candidate.changes) ? candidate.changes : undefined, legacySchema = Boolean(legacyChanges && typeof candidate.revision === "number" && (record(candidate.document) || record(candidate.nodes) || Array.isArray(candidate.productionSnapshots) || Array.isArray(candidate.revisionHistory))), result = {}; for (const [key, entry] of Object.entries(candidate)) {
+        return candidate; const legacyChanges = Array.isArray(candidate.changes) ? candidate.changes : undefined, currentCanonical = candidate.state === "Draft" && record(candidate.nodes) && Array.isArray(candidate.rootIds), legacySchema = Boolean(!currentCanonical && legacyChanges && typeof candidate.revision === "number" && (record(candidate.document) || record(candidate.nodes) || Array.isArray(candidate.productionSnapshots) || Array.isArray(candidate.revisionHistory))), result = {}; for (const [key, entry] of Object.entries(candidate)) {
         if (key === "changes" && legacySchema) {
             entryCount += legacyChanges.length;
             continue;
@@ -63,6 +64,38 @@ export function durableConflictSemanticField(field) {
     return match ? `projectEntity/${match[2]}${match[3] ?? ""}` : field;
 }
 const overlaps = (left, right) => left === right || left.startsWith(`${right}/`) || right.startsWith(`${left}/`);
+function repairCanonicalBooleanValuesInEntity(entity) {
+    const schema = entity.canonicalSchema;
+    if (!schema)
+        return { entity, repairCount: 0 };
+    let repairCount = 0, next;
+    for (const node of Object.values(schema.nodes)) {
+        const repair = repairCanonicalBooleanAllowedValues(node, node.type);
+        if (!repair.repairCount)
+            continue;
+        if (!next)
+            next = clone(entity);
+        const nextSchema = next.canonicalSchema;
+        nextSchema.nodes[node.id].allowedValues = repair.allowedValues;
+        repairCount += repair.repairCount;
+    }
+    return { entity: next ?? entity, repairCount };
+}
+function repairCanonicalBooleanValuesInProject(project) {
+    let repairCount = 0, next;
+    for (const [kind, entities] of Object.entries(project.collections)) {
+        for (const [index, entity] of entities.entries()) {
+            const repair = repairCanonicalBooleanValuesInEntity(entity);
+            if (!repair.repairCount)
+                continue;
+            if (!next)
+                next = clone(project);
+            next.collections[kind][index] = repair.entity;
+            repairCount += repair.repairCount;
+        }
+    }
+    return { project: next ?? project, repairCount };
+}
 async function checksum(value) { const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)); return Array.from(new Uint8Array(digest), (byte) => byte.toString(16).padStart(2, "0")).join(""); }
 function changed(base, next, path = []) {
     if (same(base, next))
@@ -291,31 +324,51 @@ export class DurableProjectRepository {
         throw new DOMException(`${input.label} requires current Draft token ${metadata.draftToken}.`, "AbortError"); for (const store of [...replaceableProjectStores, "projectRevisions", "productionManifests", "schemaRevisions"])
         for (const { key } of await transaction.getPrefix(store, projectPrefix(input.projectId)))
             await transaction.delete(store, key); await transaction.delete("changeFeed", input.projectId); await transaction.delete("projectRoots", input.projectId); await transaction.delete("projectMetadata", input.projectId); }); }
+    async persistCanonicalRepairs(repairs) { if (!repairs.length)
+        return true; return this.backend.transaction([...new Set(repairs.map(({ store }) => store))], "readwrite", async (transaction) => { for (const repair of repairs)
+        if (!same(await transaction.get(repair.store, repair.key), repair.before))
+            return false; for (const repair of repairs)
+        await transaction.put(repair.store, repair.key, repair.after); return true; }); }
     async loadProject(projectId) {
-        return this.backend.transaction(["projectMetadata", "projectRoots", "projectEntities", "flowGraphs", "fixtures", "releases"], "readonly", async (transaction) => {
+        const result = await this.backend.transaction(["projectMetadata", "projectRoots", "projectEntities", "flowGraphs", "fixtures", "releases"], "readonly", async (transaction) => {
             const metadata = await transaction.get("projectMetadata", projectId), root = await transaction.get("projectRoots", projectId);
             if (!metadata || !root)
                 throw new Error(`Durable project ${projectId} is unavailable.`);
-            const prefix = projectPrefix(projectId), entityRecords = await transaction.getPrefix("projectEntities", prefix), fixtureRecords = await transaction.getPrefix("fixtures", prefix), graphs = await transaction.getPrefix("flowGraphs", prefix), releases = await transaction.getPrefix("releases", prefix), collections = Object.fromEntries(root.collectionKinds.map(kind => [kind, []]));
+            const prefix = projectPrefix(projectId), storedEntityRecords = await transaction.getPrefix("projectEntities", prefix), fixtureRecords = await transaction.getPrefix("fixtures", prefix), graphs = await transaction.getPrefix("flowGraphs", prefix), releases = await transaction.getPrefix("releases", prefix), collections = Object.fromEntries(root.collectionKinds.map(kind => [kind, []])), repairs = [];
+            let canonicalRepairCount = 0;
+            const entityRecords = [];
+            for (const record of storedEntityRecords) {
+                const repair = repairCanonicalBooleanValuesInEntity(record.value.entity), value = repair.repairCount ? { ...record.value, entity: repair.entity } : record.value;
+                if (repair.repairCount)
+                    repairs.push({ store: "projectEntities", key: record.key, before: record.value, after: value });
+                canonicalRepairCount += repair.repairCount;
+                entityRecords.push({ key: record.key, value });
+            }
             for (const { value } of [...entityRecords, ...fixtureRecords].sort(byDurableIndex))
                 (collections[value.kind] ??= []).push(clone(value.entity));
             const project = { ...clone(root.project), collections, ...(root.hasDocumentationFlowGraphs ? { documentationFlowGraphs: Object.fromEntries(graphs.map(({ value }) => [value.flowId, clone(value.graph)])) } : {}), releases: releases.map(({ value }) => clone(value.release)) }, state = { project, ...(metadata.draft ? { draft: clone(metadata.draft) } : {}), history: { undo: [], redo: [] } };
-            return { state, draftToken: metadata.draftToken, draftSequence: metadata.draftSequence ?? 0, publishedRevision: metadata.publishedRevision, lastSavedAt: metadata.lastSavedAt, ...(metadata.navigation ? { navigation: clone(metadata.navigation) } : {}) };
+            return { loaded: { state, draftToken: metadata.draftToken, draftSequence: metadata.draftSequence ?? 0, publishedRevision: metadata.publishedRevision, lastSavedAt: metadata.lastSavedAt, canonicalRepairCount, ...(metadata.navigation ? { navigation: clone(metadata.navigation) } : {}) }, repairs };
         });
+        return await this.persistCanonicalRepairs(result.repairs) ? result.loaded : this.loadProject(projectId);
     }
     async loadProjectRoute(projectId, route) { return this.loadVisibleProjectRoute(projectId, route); }
     async loadVisibleProjectRoute(projectId, route) {
-        return this.backend.transaction(["projectMetadata", "projectRoots", "projectEntityMetadata", "projectEntities", "flowGraphs", "fixtures", "releases"], "readonly", async (transaction) => {
+        const result = await this.backend.transaction(["projectMetadata", "projectRoots", "projectEntityMetadata", "projectEntities", "flowGraphs", "fixtures", "releases"], "readonly", async (transaction) => {
             const metadata = await transaction.get("projectMetadata", projectId), root = await transaction.get("projectRoots", projectId);
             if (!metadata || !root)
                 throw new Error(`Durable project ${projectId} is unavailable.`);
             const collections = Object.fromEntries(root.collectionKinds.map(kind => [kind, []])), compact = await transaction.getPrefix("projectEntityMetadata", projectPrefix(projectId));
             for (const { value } of compact.sort(byDurableIndex))
                 (collections[value.kind] ??= []).push({ id: value.id, name: value.name, placeholder: true });
-            const kinds = [...new Set([...(route.collectionKind ? [route.collectionKind] : []), ...(route.collectionKinds ?? [])])];
+            let canonicalRepairCount = 0;
+            const repairs = [], kinds = [...new Set([...(route.collectionKind ? [route.collectionKind] : []), ...(route.collectionKinds ?? [])])];
             for (const kind of kinds) {
-                const store = kind === "fixtures" ? "fixtures" : "projectEntities", prefix = `${projectId}:${kind}:`, selected = route.entityId && kind === route.collectionKind ? await transaction.get(store, `${prefix}${route.entityId}`) : undefined, visible = selected ? [selected] : route.entityId && kind === route.collectionKind ? [] : (await transaction.getPrefix(store, prefix)).sort(byDurableIndex).map(({ value }) => value), target = collections[kind] ?? [];
-                for (const value of visible) {
+                const store = kind === "fixtures" ? "fixtures" : "projectEntities", prefix = `${projectId}:${kind}:`, selectedKey = `${prefix}${route.entityId}`, selectedValue = route.entityId && kind === route.collectionKind ? await transaction.get(store, selectedKey) : undefined, visible = selectedValue ? [{ key: selectedKey, value: selectedValue }] : route.entityId && kind === route.collectionKind ? [] : (await transaction.getPrefix(store, prefix)).sort(byDurableIndex), target = collections[kind] ?? [];
+                for (const record of visible) {
+                    const repair = repairCanonicalBooleanValuesInEntity(record.value.entity), value = repair.repairCount ? { ...record.value, entity: repair.entity } : record.value;
+                    if (repair.repairCount)
+                        repairs.push({ store, key: record.key, before: record.value, after: value });
+                    canonicalRepairCount += repair.repairCount;
                     const index = target.findIndex(({ id }) => id === value.entity.id);
                     if (index >= 0)
                         target[index] = clone(value.entity);
@@ -333,8 +386,9 @@ export class DurableProjectRepository {
                     target.push(clone(value.entity));
             }
             const releases = route.includeReleases ? await transaction.getPrefix("releases", projectPrefix(projectId)) : [], project = { ...clone(root.project), collections, ...(root.hasDocumentationFlowGraphs && route.includeFlowGraphs ? { documentationFlowGraphs: Object.fromEntries(graphs.map(({ value }) => [value.flowId, clone(value.graph)])) } : {}), releases: releases.map(({ value }) => clone(value.release)) };
-            return { state: { project, ...(metadata.draft ? { draft: clone(metadata.draft) } : {}), history: { undo: [], redo: [] } }, draftToken: metadata.draftToken, draftSequence: metadata.draftSequence ?? 0, publishedRevision: metadata.publishedRevision, lastSavedAt: metadata.lastSavedAt, ...(metadata.navigation ? { navigation: clone(metadata.navigation) } : {}) };
+            return { loaded: { state: { project, ...(metadata.draft ? { draft: clone(metadata.draft) } : {}), history: { undo: [], redo: [] } }, draftToken: metadata.draftToken, draftSequence: metadata.draftSequence ?? 0, publishedRevision: metadata.publishedRevision, lastSavedAt: metadata.lastSavedAt, canonicalRepairCount, ...(metadata.navigation ? { navigation: clone(metadata.navigation) } : {}) }, repairs };
         });
+        return await this.persistCanonicalRepairs(result.repairs) ? result.loaded : this.loadVisibleProjectRoute(projectId, route);
     }
     async saveDraft(command) {
         this.fail(command.label);
@@ -677,14 +731,15 @@ export class DurableProjectRepository {
     async importProject(bundle, input) {
         if (bundle.format !== "my-chrome-utilities.durable-project-bundle" || !record(bundle.project))
             throw new Error("Choose a durable project bundle.");
-        const compacted = compactLegacyEditHistory(bundle.project), source = compacted.value, mapping = projectIdentityMapping(source, input.projectId), project = remapProjectReferences(source, mapping);
-        project.name = input.name;
-        const publishedRevision = Number(bundle.publishedRevision ?? bundle.baseProjectRevision ?? 0), rawSourcePublishedProject = record(bundle.publishedProject) ? bundle.publishedProject : undefined, sourcePublishedProject = rawSourcePublishedProject ? compactLegacyEditHistory(rawSourcePublishedProject).value : undefined;
+        const compacted = compactLegacyEditHistory(bundle.project), source = compacted.value, mapping = projectIdentityMapping(source, input.projectId), mappedProject = remapProjectReferences(source, mapping);
+        mappedProject.name = input.name;
+        const repairedProject = repairCanonicalBooleanValuesInProject(mappedProject), project = repairedProject.project, publishedRevision = Number(bundle.publishedRevision ?? bundle.baseProjectRevision ?? 0), rawSourcePublishedProject = record(bundle.publishedProject) ? bundle.publishedProject : undefined, sourcePublishedProject = rawSourcePublishedProject ? compactLegacyEditHistory(rawSourcePublishedProject).value : undefined;
         if (publishedRevision > 0 && !record(bundle.publishedProject))
             throw new DOMException(`Imported project ${input.projectId} declares Published revision ${publishedRevision} without its immutable domain project snapshot.`, "DataError");
-        const publishedProject = sourcePublishedProject ? remapProjectReferences(sourcePublishedProject, mapping) : undefined;
-        if (publishedProject)
-            publishedProject.name = input.name;
+        const mappedPublishedProject = sourcePublishedProject ? remapProjectReferences(sourcePublishedProject, mapping) : undefined;
+        if (mappedPublishedProject)
+            mappedPublishedProject.name = input.name;
+        const repairedPublishedProject = mappedPublishedProject ? repairCanonicalBooleanValuesInProject(mappedPublishedProject) : undefined, publishedProject = repairedPublishedProject?.project;
         let production;
         if (record(bundle.productionManifest) && Array.isArray(bundle.schemaSnapshots)) {
             const sourceManifest = bundle.productionManifest, sourceSnapshots = bundle.schemaSnapshots.filter(record), at = this.options.now(), entries = [], snapshots = [];
@@ -709,15 +764,16 @@ export class DurableProjectRepository {
             production = { manifest: { ...clone(sourceManifest), projectId: input.projectId, projectRevision: publishedRevision, projectFingerprint, publishedAt: at, schemas: entries }, snapshots };
         }
         await this.putProjectMetadataOnly({ project, ...(record(bundle.draft) ? { draft: remapProjectReferences(compactLegacyEditHistory(bundle.draft).value, mapping) } : {}), history: { undo: [], redo: [] } }, { publishedRevision, ...(publishedProject ? { publishedProject } : {}), ...(production ? { production } : {}), active: false });
-        return { projectId: input.projectId, active: false };
+        return { projectId: input.projectId, active: false, canonicalRepairCount: repairedProject.repairCount + (repairedPublishedProject?.repairCount ?? 0) };
     }
 }
 export function createMemoryDurableProjectRepository(options = {}) { return new DurableProjectRepository(new MemoryBackend(), { now: options.now ?? (() => new Date().toISOString()), token: options.token ?? (() => `draft:${crypto.randomUUID()}`) }); }
 export async function openIndexedDbProjectRepository(factory = globalThis.indexedDB, options = {}) { if (!factory)
-    throw new DOMException("IndexedDB is unavailable.", "InvalidStateError"); const request = factory.open(DURABLE_PROJECT_DATABASE, DURABLE_PROJECT_DATABASE_VERSION), database = await new Promise((resolve, reject) => { request.onupgradeneeded = () => { if (request.result.objectStoreNames.contains("changes"))
+    throw new DOMException("IndexedDB is unavailable.", "InvalidStateError"); const request = factory.open(DURABLE_PROJECT_DATABASE, DURABLE_PROJECT_DATABASE_VERSION), database = await new Promise((resolve, reject) => { request.onupgradeneeded = (event) => { if (request.result.objectStoreNames.contains("changes"))
     request.result.deleteObjectStore("changes"); for (const store of DURABLE_PROJECT_STORES)
     if (!request.result.objectStoreNames.contains(store))
-        request.result.createObjectStore(store); }; request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error ?? new Error("Cannot open the durable project repository.")); request.onblocked = () => reject(new DOMException("The durable project repository upgrade is blocked.", "InvalidStateError")); }); const repository = new DurableProjectRepository(new IndexedDbBackend(database), { now: options.now ?? (() => new Date().toISOString()), token: options.token ?? (() => `draft:${crypto.randomUUID()}`) }); await repository.compactLegacyDurableSchemaHistory(); await repository.repairOrphanFlowGraphs(); return repository; }
+        request.result.createObjectStore(store); if (event.oldVersion === 0)
+    request.transaction.objectStore("migrationReceipts").put({ entryCount: 0, beforeChecksum: "", afterChecksum: "", verified: true }, "selective-production-revisions-v1"); }; request.onsuccess = () => resolve(request.result); request.onerror = () => reject(request.error ?? new Error("Cannot open the durable project repository.")); request.onblocked = () => reject(new DOMException("The durable project repository upgrade is blocked.", "InvalidStateError")); }); const repository = new DurableProjectRepository(new IndexedDbBackend(database), { now: options.now ?? (() => new Date().toISOString()), token: options.token ?? (() => `draft:${crypto.randomUUID()}`) }); await repository.compactLegacyDurableSchemaHistory(); await repository.repairOrphanFlowGraphs(); return repository; }
 export class DurablePageHistoryConflict extends DOMException {
     projectId;
     commandId;

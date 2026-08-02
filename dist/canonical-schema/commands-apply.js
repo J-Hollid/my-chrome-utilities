@@ -1,3 +1,4 @@
+import { repairCanonicalBooleanAllowedValues } from "../data-layer-canonical-schema-facets.js";
 import { canonicalSetConditionIssue, canonicalTypeTransition, normalizeCanonicalTypeShape } from "./set-transition.js";
 const clone = (value) => structuredClone(value);
 const orderWithin = (document, parentId) => Object.values(document.nodes).filter((node) => node.parentId === parentId).sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
@@ -79,6 +80,16 @@ export function applyCanonicalAtCurrent(document, command) {
         const issue = canonicalSetConditionIssue(command.patch);
         if (issue)
             return { status: "conflict", document, propertyId: command.propertyId, message: `Canonical condition write blocked: ${issue}` };
+        const source = document.nodes[command.propertyId];
+        if (source && command.patch.type === "boolean")
+            try {
+                const candidate = { ...source, ...clone(command.patch) }, repair = repairCanonicalBooleanAllowedValues(candidate, "boolean");
+                if (repair.repairCount)
+                    command = { ...command, patch: { ...command.patch, allowedValues: repair.allowedValues } };
+            }
+            catch (error) {
+                return { status: "conflict", document, propertyId: command.propertyId, message: error instanceof Error ? error.message : String(error) };
+            }
     }
     const next = clone(document);
     if (command.kind === "policy") {
@@ -128,10 +139,19 @@ export function applyCanonicalAtCurrent(document, command) {
         const descendants = orderedIds(next, command.propertyId), nextItemSchema = command.type === "array" && command.itemType ? { id: `item:${node.id}`, type: command.itemType } : undefined, change = canonicalTypeTransition(node, command.type, command.itemType, nextItemSchema, descendants, next);
         if (change.confirmationRequired && !command.confirmed)
             return { status: "confirmation-required", document, propertyId: command.propertyId, impact: change.impact };
+        let repair;
+        try {
+            repair = repairCanonicalBooleanAllowedValues(node, command.type);
+        }
+        catch (error) {
+            return { status: "conflict", document, propertyId: command.propertyId, message: error instanceof Error ? error.message : String(error) };
+        }
         if (change.removeDescendants)
             for (const id of descendants)
                 delete next.nodes[id];
         node.type = command.type;
+        if (repair.repairCount)
+            node.allowedValues = repair.allowedValues;
         if (command.type === "array" && command.itemType) {
             node.itemType = command.itemType;
             node.itemSchema = nextItemSchema;

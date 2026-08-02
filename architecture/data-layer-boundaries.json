@@ -1190,6 +1190,8 @@
     "module": "schemas",
     "layer": "browser",
     "contracts": [
+      "src/data-layer-canonical-schema-facets.ts",
+      "src/data-layer-canonical-schema.ts",
       "src/data-layer-production-model.ts",
       "src/data-layer-specification-project.ts"
     ]

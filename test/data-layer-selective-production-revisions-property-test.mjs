@@ -1,16 +1,19 @@
 import assert from "node:assert/strict";
 import {createSpecificationProject,transactProject} from "../dist/data-layer-specification-project.js";
+import {createCanonicalSchema,applyCanonicalCommand} from "../dist/data-layer-canonical-schema.js";
 import {LEGACY_PROJECT_KEYS,createMemoryDurableProjectRepository,durableDraftCommand,migrateLegacyProjectStorage} from "../dist/data-layer-durable-project-repository.js";
 import {developerProductionSchemaExport,publishableProductionSchemas} from "../dist/data-layer-production-specification.js";
 
 const cleanRepository=createMemoryDurableProjectRepository();
 const fixtureHeavyState=createSpecificationProject({name:"Fixture-heavy current project",site:"fixture-heavy.example",id:kind=>`${kind}:fixture-heavy`});
+let currentCanonical=createCanonicalSchema({id:"canonical:current",contributorId:"profile:current",contributorName:"Current Profile"});currentCanonical=applyCanonicalCommand(currentCanonical,{kind:"add",baseRevision:0,name:"enabled",type:"boolean",id:kind=>`${kind}:current`}).document;fixtureHeavyState.project.collections.profiles.push({id:"profile:current",name:"Current Profile",canonicalSchema:currentCanonical});
 fixtureHeavyState.project.collections.fixtures.push({id:"fixture:large-payload",name:"Large captured payload",payload:{document:{type:"object"},revision:2847,changes:Array.from({length:2847},(_,index)=>({index})),body:"x".repeat(2*1024*1024)}});
 await cleanRepository.putProject(fixtureHeavyState);
 cleanRepository.clearTrace();
 assert.equal((await cleanRepository.compactLegacyDurableSchemaHistory()).entryCount,0);
 assert.deepEqual(cleanRepository.trace().writes,[],"a current repository mount remains read-only when no compaction is required");
 assert.equal(cleanRepository.trace().reads.some(({store})=>store==="fixtures"),false,"schema-history startup migration does not scan captured fixture payloads");
+assert.equal((await cleanRepository.loadProject(fixtureHeavyState.project.id)).state.project.collections.profiles[0].canonicalSchema.revision,1,"current canonical edit lineage is not mistaken for legacy production history");
 cleanRepository.clearTrace();
 assert.equal((await cleanRepository.compactLegacyDurableSchemaHistory()).entryCount,0);
 assert.deepEqual(cleanRepository.trace().writes,[],"a repeated current repository mount also remains read-only");

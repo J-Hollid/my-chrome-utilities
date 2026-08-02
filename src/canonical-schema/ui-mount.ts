@@ -6,7 +6,7 @@ import {renderCanonicalFocusedEditor} from "../data-layer-canonical-schema-focus
 import {renderCanonicalSchemaEditor} from "../data-layer-canonical-schema-render.js";
 import {focusedCanonicalOwnershipInput,focusedPropertyPatch,focusedStagedChanges,focusedSourceState,type CanonicalFocusedPatch} from "../data-layer-canonical-schema-focused-drafts.js";
 import {dispatchFocusedCanonicalCommand} from "../data-layer-canonical-schema-focused-command.js";
-import {typedCanonicalValue} from "../data-layer-canonical-schema-facets.js";
+import {repairCanonicalBooleanAllowedValues,typedCanonicalValue} from "../data-layer-canonical-schema-facets.js";
 import {button,clone,presenceText,provenanceText,sectionLabel} from "./ui-mount-helpers.js";
 import {schemaTableOverlayTarget,schemaTableOverlayTransition,schemaTableStageAllowedValues,type SchemaTableEditableFacet,type SchemaTableOverlayState,type SchemaTableQuickEditResult} from "../data-layer-schema-table.js";
 
@@ -22,7 +22,11 @@ export function canonicalDispatchRequiresLocalRender(result:CanonicalCommandResu
 export function canonicalTableQuickEditPatch(original:CanonicalPropertyNode,facet:SchemaTableEditableFacet,value:string,id:CanonicalIdFactory):CanonicalFocusedPatch {
   const next=clone(original);
   if(facet==="concept"){const concept=value.trim();if(concept)next.concept=concept;else delete next.concept;}
-  else if(facet==="type")next.type=value as CanonicalPropertyNode["type"];
+  else if(facet==="type"){
+    next.type=value as CanonicalPropertyNode["type"];
+    const repair=repairCanonicalBooleanAllowedValues(original,next.type);
+    if(repair.repairCount)next.allowedValues=repair.allowedValues;
+  }
   else if(facet==="presence")next.presence={...next.presence,mode:value as CanonicalPropertyNode["presence"]["mode"]};
   else if(facet==="description")next.documentation={...next.documentation,description:value};
   else if(facet==="example")next.documentation={...next.documentation,example:value===""?{method:"blank"}:{method:"custom",value:typedCanonicalValue(next.type,value,next.itemSchema)}};

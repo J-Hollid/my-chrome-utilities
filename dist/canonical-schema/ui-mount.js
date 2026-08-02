@@ -6,7 +6,7 @@ import { renderCanonicalFocusedEditor } from "../data-layer-canonical-schema-foc
 import { renderCanonicalSchemaEditor } from "../data-layer-canonical-schema-render.js";
 import { focusedCanonicalOwnershipInput, focusedPropertyPatch, focusedStagedChanges, focusedSourceState } from "../data-layer-canonical-schema-focused-drafts.js";
 import { dispatchFocusedCanonicalCommand } from "../data-layer-canonical-schema-focused-command.js";
-import { typedCanonicalValue } from "../data-layer-canonical-schema-facets.js";
+import { repairCanonicalBooleanAllowedValues, typedCanonicalValue } from "../data-layer-canonical-schema-facets.js";
 import { button, clone, presenceText, provenanceText, sectionLabel } from "./ui-mount-helpers.js";
 import { schemaTableOverlayTarget, schemaTableOverlayTransition, schemaTableStageAllowedValues } from "../data-layer-schema-table.js";
 export function bindCanonicalPropertySearch(control, update) { control.addEventListener("input", () => update(control.value)); }
@@ -20,8 +20,12 @@ export function canonicalTableQuickEditPatch(original, facet, value, id) {
         else
             delete next.concept;
     }
-    else if (facet === "type")
+    else if (facet === "type") {
         next.type = value;
+        const repair = repairCanonicalBooleanAllowedValues(original, next.type);
+        if (repair.repairCount)
+            next.allowedValues = repair.allowedValues;
+    }
     else if (facet === "presence")
         next.presence = { ...next.presence, mode: value };
     else if (facet === "description")
