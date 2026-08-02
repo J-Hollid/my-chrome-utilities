@@ -1288,3 +1288,32 @@ Feature: Data layer canonical Shared Profile schema authoring
       | Starts with | Starts with | order-  |
       | Ends with   | Ends with   | .com    |
       | Includes    | Includes    | sale    |
+
+  # Data layer canonical Shared Profile schema authoring 077
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 077
+    Given an allowed-values payload is <existing_values> while its property Type is String
+    When the operator changes its Type to Boolean
+    Then the type change is <result>
+    And allowed-value handling is <allowed_value_result>
+
+    Examples:
+      | existing_values        | result                                | allowed_value_result                                      |
+      | strings true and false | saved                                 | typed Boolean values true and false retain their identities |
+      | strings true and other | blocked with Other is not a Boolean   | the original String type and values remain byte-identical |
+
+  # Data layer canonical Shared Profile schema authoring 078
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 078
+    Given a persisted Boolean property contains String allowed values true and false
+    And a <consumer> inherits that property from a Page Group
+    When <project_entry> makes the project available for use
+    Then the String allowed values are automatically repaired to typed Boolean values true and false before inheritance is evaluated
+    And the inherited property is valid and accepts Boolean true and false while rejecting String true and false
+    And every stored field outside the two repaired value payloads remains unchanged
+    And no operator edit or repair confirmation is required
+    When the repaired project is saved and loaded again
+    Then the typed Boolean values remain stable and no further repair is reported
+
+    Examples:
+      | consumer | project_entry             |
+      | Page     | opening a stored project  |
+      | Page     | importing a portable copy |

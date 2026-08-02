@@ -1283,3 +1283,33 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
       | Starts with | Starts with | order-  |
       | Ends with   | Ends with   | .com    |
       | Includes    | Includes    | sale    |
+
+  # Data layer canonical Shared Profile schema authoring runtime 077
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 077
+    Given repository bytes contain a String property with allowed values <existing_values>
+    When the installed Type control changes that property to Boolean
+    Then command evidence is <result>
+    And allowed-value payload evidence is <allowed_value_result>
+
+    Examples:
+      | existing_values        | result                                      | allowed_value_result                                  |
+      | strings true and false | one saved type command                      | Boolean values true and false under their original IDs |
+      | strings true and other | no command and Other is not a Boolean       | the byte-identical original String type and values    |
+
+  # Data layer canonical Shared Profile schema authoring runtime 078
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 078
+    Given repository bytes contain a Boolean property whose allowed-value payloads are Strings true and false
+    And a production <consumer> inherits that property from a Page Group
+    When <project_entry> installs the project
+    Then canonical bytes contain typed Boolean allowed values true and false before layered compilation runs
+    And compiled inheritance reports no conflict for that property
+    And validation accepts Boolean true and false and rejects String true and false
+    And every repository byte outside the two repaired value payloads retains its hash
+    And installed controls require no operator edit or repair confirmation
+    When the repaired project is persisted and installed again
+    Then its canonical-byte hash is stable and repair count is zero
+
+    Examples:
+      | consumer | project_entry                  |
+      | Page     | durable project loading        |
+      | Page     | portable project import        |
