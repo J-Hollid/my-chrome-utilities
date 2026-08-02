@@ -7,6 +7,7 @@ import { schemaTableOverlayTarget, schemaTableOverlayTransition, schemaTableRepl
 import { declareStudioChoice } from "./data-layer-studio-choice-controls.js";
 const button = (text, run) => { const control = document.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 const workspaceViews = new Map();
+const workspacePanels = new Map();
 export function stageComposedExpectedOrAllowed(draft, text) {
     const staged = schemaTableReplaceExpectedOrAllowed(draft, text);
     if (staged.expectedValue === undefined)
@@ -43,7 +44,7 @@ export function composedTableResetFacet(row, facet) {
     return local;
 }
 export function mountComposedSchemaWorkspace(options) {
-    const section = document.createElement("section"), heading = document.createElement("h2"), summary = document.createElement("p"), policy = document.createElement("input"), policyLabel = document.createElement("label"), quickEditFeedback = document.createElement("output"), filterControls = document.createElement("div"), filter = document.createElement("input"), sort = document.createElement("select"), addControls = document.createElement("div"), choice = document.createElement("select"), add = document.createElement("button"), rows = document.createElement("div"), viewKey = options.schemaContributorId ?? options.model.heading, savedView = workspaceViews.get(viewKey), hasDecisions = options.model.rows.some(({ validationState }) => validationState === "blocked");
+    const section = document.createElement("section"), heading = document.createElement("h2"), summary = document.createElement("p"), headerActions = document.createElement("div"), localChangesButton = document.createElement("button"), parentAdditionsButton = document.createElement("button"), panel = document.createElement("aside"), policy = document.createElement("input"), policyLabel = document.createElement("label"), quickEditFeedback = document.createElement("output"), filterControls = document.createElement("div"), filter = document.createElement("input"), sort = document.createElement("select"), addControls = document.createElement("div"), choice = document.createElement("select"), add = document.createElement("button"), rows = document.createElement("div"), viewKey = options.schemaContributorId ?? options.model.heading, savedView = workspaceViews.get(viewKey), hasDecisions = options.model.rows.some(({ validationState }) => validationState === "blocked");
     let activePath, overlayOpen = false, focusedOpen = false, reviewOpen = false, saveIssue, activeSection = "definition", draft, removed = false, confirmedAction, removedRuleIds = new Set(), removedValueIds = new Set(), restoredRuleIds = new Set(), restoredValueIds = new Set(), stagedLocalValueIds = new Set(), overriddenRuleIds = new Set(), pendingStructure = [], pendingAction, originFocus, originPath, query = savedView?.query ?? "", sortMode = savedView?.sortMode ?? "path", decisionsOnly = hasDecisions && (savedView?.decisionsOnly ?? false);
     let overlayState = { phase: "closed" };
     let ownershipSession = { inherited: false, local: true, structureOwned: true, activated: [] };
@@ -59,6 +60,16 @@ export function mountComposedSchemaWorkspace(options) {
     summary.setAttribute("role", "status");
     summary.className = options.model.status === "blocked" ? "error" : "status-text";
     summary.textContent = options.model.status === "blocked" ? `Blocked · ${options.model.conflictSummary}` : `Ready · ${options.model.rows.length} effective properties${options.includeConflictSummary === false ? "" : ` · ${options.model.conflictSummary}`}`;
+    headerActions.className = "composed-schema-inventory-actions";
+    localChangesButton.type = parentAdditionsButton.type = "button";
+    localChangesButton.textContent = `Local changes ${options.model.localChangeCount}`;
+    parentAdditionsButton.textContent = `Parent additions ${options.model.parentAdditionCount}`;
+    localChangesButton.setAttribute("aria-expanded", "false");
+    parentAdditionsButton.setAttribute("aria-expanded", "false");
+    panel.className = "composed-schema-inventory-panel";
+    panel.hidden = true;
+    panel.tabIndex = -1;
+    headerActions.append(localChangesButton, parentAdditionsButton);
     policy.type = "checkbox";
     policy.checked = options.onlyDefinedFields === true;
     policy.setAttribute("aria-label", "Only defined fields");
@@ -92,6 +103,68 @@ export function mountComposedSchemaWorkspace(options) {
     rows.setAttribute("aria-label", `${options.model.heading} rows`);
     rows.dataset.schemaEditorScrollRegion = "true";
     const saveView = () => { workspaceViews.set(viewKey, { query, sortMode, decisionsOnly, scrollTop: rows.scrollTop }); };
+    const valueText = (value) => value === undefined ? "Not set" : typeof value === "string" ? value : JSON.stringify(value);
+    const closePanel = () => { const mode = workspacePanels.get(viewKey); workspacePanels.delete(viewKey); panel.hidden = true; panel.replaceChildren(); localChangesButton.setAttribute("aria-expanded", "false"); parentAdditionsButton.setAttribute("aria-expanded", "false"); (mode === "local" ? localChangesButton : parentAdditionsButton).focus(); };
+    const reviewReset = (path, item, origin) => { const review = document.createElement("section"), heading = document.createElement("h4"), detail = document.createElement("p"), confirm = button("Confirm reset", () => { workspacePanels.set(viewKey, "local"); if (item.action === "remove-property")
+        options.onReset(options.model.rows.find((row) => row.path === path));
+    else if (item.action === "reset-rule" && item.ruleId)
+        options.onResetLocalRule?.(path, item.ruleId);
+    else
+        options.onResetLocalFacet?.(path, item.key); }), cancel = button("Cancel", () => { review.remove(); origin.focus(); }); heading.textContent = item.action === "remove-property" ? `Remove local property ${path}` : `Reset ${item.label} to parent`; detail.textContent = `Review removal: ${valueText(item.localValue)}. Current parent value ${valueText(item.inheritedValue)} will become effective.`; review.setAttribute("aria-label", `Review reset for ${path} ${item.label}`); review.append(heading, detail, confirm, cancel); panel.append(review); confirm.focus(); };
+    const renderPanel = (mode, origin) => { workspacePanels.set(viewKey, mode); panel.hidden = false; panel.replaceChildren(); panel.setAttribute("role", "dialog"); panel.setAttribute("aria-modal", "false"); panel.setAttribute("aria-label", mode === "local" ? "Local changes" : "Parent additions"); localChangesButton.setAttribute("aria-expanded", String(mode === "local")); parentAdditionsButton.setAttribute("aria-expanded", String(mode === "parent")); const title = document.createElement("h3"), close = button("Close", closePanel); title.textContent = mode === "local" ? `Local changes ${options.model.localChangeCount}` : `Parent additions ${options.model.parentAdditionCount}`; panel.append(title, close); if (mode === "local") {
+        for (const group of options.model.localChanges) {
+            const property = document.createElement("section"), propertyHeading = document.createElement("h4"), edit = button(`Edit ${group.path}`, () => { const row = options.model.rows.find(({ path }) => path === group.path); if (row)
+                open(row, edit); });
+            propertyHeading.textContent = group.path;
+            property.append(propertyHeading, edit);
+            for (const item of group.items) {
+                const entry = document.createElement("article"), itemHeading = document.createElement("h5"), detail = document.createElement("p"), reset = document.createElement("button");
+                itemHeading.textContent = item.label;
+                detail.textContent = item.kind === "property" ? `Effective definition ${valueText(item.effectiveValue)}` : `${item.sourceContributor ?? "Parent"}: ${valueText(item.inheritedValue)} · Local: ${valueText(item.localValue)} · Effective: ${valueText(item.effectiveValue)}${item.parentDiffers ? " · Parent differs" : ""}`;
+                reset.type = "button";
+                reset.textContent = item.action === "remove-property" ? "Remove local property" : "Reset to parent";
+                reset.setAttribute("aria-label", `${reset.textContent} ${group.path} ${item.label}`);
+                reset.addEventListener("click", () => reviewReset(group.path, item, reset));
+                entry.append(itemHeading, detail, reset);
+                property.append(entry);
+            }
+            panel.append(property);
+        }
+        if (options.model.localChangeCount) {
+            const resetAll = button("Reset all to parents", () => { const review = document.createElement("section"), description = document.createElement("p"), confirm = button("Confirm reset all", () => { workspacePanels.set(viewKey, "local"); options.onResetAllLocalChanges?.(); }), cancel = button("Cancel", () => { review.remove(); resetAll.focus(); }); description.textContent = `Review removal of all ${options.model.localChangeCount} local items. Current parent values will become effective.`; review.setAttribute("aria-label", "Review reset all local changes"); review.append(description, confirm, cancel); panel.append(review); confirm.focus(); });
+            panel.append(resetAll);
+        }
+    }
+    else {
+        const selected = new Map();
+        for (const group of options.model.parentAdditions) {
+            const source = document.createElement("section"), sourceHeading = document.createElement("h4");
+            sourceHeading.textContent = `${group.profileName} · ${group.sourceGroup}`;
+            source.append(sourceHeading);
+            for (const item of group.items) {
+                const label = document.createElement("label"), control = document.createElement("input"), detail = document.createElement("span");
+                control.type = "checkbox";
+                control.value = item.propertyId;
+                control.addEventListener("change", () => { const ids = selected.get(group.recipeId) ?? new Set(); if (control.checked)
+                    ids.add(item.propertyId);
+                else
+                    ids.delete(item.propertyId); selected.set(group.recipeId, ids); });
+                detail.textContent = `${item.path} · ${item.definitionSummary} · ${item.provenance} · ${item.dependencyImpact}`;
+                label.append(control, detail);
+                source.append(label);
+            }
+            panel.append(source);
+        }
+        const include = button("Include selected", () => { for (const [recipeId, ids] of selected)
+            if (ids.size) {
+                workspacePanels.set(viewKey, "parent");
+                options.onIncludeParentAdditions?.(recipeId, [...ids]);
+                break;
+            } });
+        panel.append(include);
+    } queueMicrotask(() => panel.focus()); };
+    localChangesButton.addEventListener("click", () => workspacePanels.get(viewKey) === "local" ? closePanel() : renderPanel("local", localChangesButton));
+    parentAdditionsButton.addEventListener("click", () => workspacePanels.get(viewKey) === "parent" ? closePanel() : renderPanel("parent", parentAdditionsButton));
     const visibleModel = () => { const needle = query.trim().toLowerCase(), visible = options.model.rows.filter((row) => (!decisionsOnly || row.validationState === "blocked") && (!needle || row.path.toLowerCase().includes(needle) || String(row.source ?? "").toLowerCase().includes(needle) || options.effectiveText(row).toLowerCase().includes(needle))).sort((left, right) => schemaTableSortComparison({ path: left.path, concept: left.effective.concept, source: left.source }, { path: right.path, concept: right.effective.concept, source: right.source }, sortMode)); return { ...options.model, rows: visible }; };
     const focusDecisionTarget = () => {
         const row = options.model.rows.find(({ path }) => path === activePath), sectionName = activeSection === "definition" ? "Definition" : activeSection === "rules" ? "Rules" : activeSection === "structure" ? "Structure" : undefined, decision = row?.decisions?.find(({ section: decisionSection }) => decisionSection === sectionName);
@@ -169,7 +242,11 @@ export function mountComposedSchemaWorkspace(options) {
     } };
     filter.addEventListener("input", () => { query = filter.value; saveView(); rerender(); });
     sort.addEventListener("change", () => { sortMode = sort.value; saveView(); rerender(); });
-    section.addEventListener("keydown", (event) => { if (event.key === "Escape" && overlayOpen) {
+    section.addEventListener("keydown", (event) => { if (event.key === "Escape" && !panel.hidden) {
+        event.preventDefault();
+        closePanel();
+        return;
+    } if (event.key === "Escape" && overlayOpen) {
         event.preventDefault();
         if (focusedOpen)
             closeChild();
@@ -177,10 +254,13 @@ export function mountComposedSchemaWorkspace(options) {
             close("escape");
     } });
     rerender();
-    section.append(heading, summary, policyLabel, quickEditFeedback, filterControls, addControls, rows);
+    section.append(heading, summary, headerActions, policyLabel, quickEditFeedback, filterControls, addControls, rows, panel);
     options.host.append(section);
     if (savedView)
         rows.scrollTop = savedView.scrollTop;
+    const retainedPanel = workspacePanels.get(viewKey);
+    if (retainedPanel)
+        renderPanel(retainedPanel);
     return section;
 }
 //# sourceMappingURL=data-layer-composed-schema-workspace-ui.js.map

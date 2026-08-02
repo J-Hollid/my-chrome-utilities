@@ -3,6 +3,7 @@ import { transactProject } from "./data-layer-specification-project.js";
 import { composedSchemaWorkspace } from "./composed-schema/workspace-model.js";
 import { composedCanonicalSchema, resetCanonicalRow } from "./composed-schema/canonical-workspace.js";
 import { applyLayerConstraintStructures, structureDeletesPath } from "./flow-graph/page-instance-structure.js";
+import { includeProfileInheritanceParentAdditions } from "./data-layer-selective-profile-inheritance.js";
 export { composedSchemaWorkspace, composedCanonicalSchema };
 const clone = (value) => structuredClone(value);
 function updateEntity(state, kind, entityId, label, update) { return transactProject(state, label, (project) => ({ ...project, collections: { ...project.collections, [kind]: project.collections[kind].map((entity) => entity.id === entityId ? update(entity) : entity) } })); }
@@ -60,6 +61,9 @@ export function resetComposedSchemaLocalRule(state, kind, entityId, path, ruleId
     next.rules = rules;
 else
     delete next.rules; return Object.keys(next).length > 1 ? [next] : []; })); return { ...entity, localSchemaContributions: withoutRule(entity.localSchemaContributions), schemaConstraints: withoutRule(entity.schemaConstraints), compiledTargetsStale: true }; }); }
+export function resetComposedSchemaLocalChanges(state, kind, entityId) { return updateEntity(state, kind, entityId, "Reset all local schema changes to parents", (entity) => ({ ...entity, localSchemaContributions: [], schemaConstraints: [], compiledTargetsStale: true })); }
+export function includeComposedSchemaParentAdditions(state, kind, entityId, recipeId, propertyIds) { return updateEntity(state, kind, entityId, "Include selected parent additions", (entity) => { const recipes = entity.profileInheritanceRecipes ?? [], recipe = recipes.find(({ id }) => id === recipeId), profile = recipe ? state.project.collections.profiles.find(({ id }) => id === recipe.profileId) : undefined, document = profile?.canonicalSchema; if (!recipe || !document)
+    return entity; return { ...entity, profileInheritanceRecipes: recipes.map((candidate) => candidate.id === recipeId ? includeProfileInheritanceParentAdditions(document, candidate, propertyIds) : candidate), compiledTargetsStale: true }; }); }
 export function composedSchemaScopeForKind(kind) { return kind === "pages" ? "Page" : kind === "pageGroups" ? "Page Group" : "Event"; }
 export function applyComposedSchemaContextualFacet(state, kind, entityId, path, facet, value, repair) {
     const target = state.project.collections[kind].find(({ id }) => id === entityId), offered = target ? composedSchemaWorkspace(state, target, composedSchemaScopeForKind(kind)).rows.find(({ path: rowPath }) => rowPath === path)?.repairs.filter((candidate) => candidate.kind === "use-contextual" && candidate.facet === facet && JSON.stringify(candidate.value) === JSON.stringify(value)) ?? [] : [], selected = offered.find((candidate) => !repair || candidate.contributorId === repair.contributorId && candidate.rejectedContributorId === repair.rejectedContributorId && candidate.rejectedFacet === repair.rejectedFacet);

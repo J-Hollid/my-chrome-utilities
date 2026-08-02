@@ -71,13 +71,11 @@ export function mergeLayeredProperty(prior, constraint, contributor, parallelPai
                 }
             }
             else {
-                const narrowed = constraint.allowedValues.filter((value) => prior.allowedValues.some((base) => same(base, value)));
-                if (narrowed.length !== constraint.allowedValues.length) {
-                    const message = `${String(constraint.allowedValues.find((value) => !prior.allowedValues.some((base) => same(base, value))))} is outside the base allowed universe`, origin = facetSource(prior, "allowedValues");
-                    conflict(constraint.path, message, [origin.contributorName, contributor.name], issue(prior, constraint, contributor, "allowedValues", "Allowed values", "Definition", prior.allowedValues, constraint.allowedValues, message));
-                }
-                else
-                    next.allowedValues = clone(narrowed);
+                if (changed)
+                    next.superseded.push({ contributorId: prior.origins.at(-1).contributorId, contributorName: prior.origins.at(-1).contributorName, value: clone(prior.allowedValues) });
+                next.allowedValues = clone(constraint.allowedValues);
+                delete next.allowedValueIds;
+                delete next.allowedValueProvenance;
             }
         }
         else

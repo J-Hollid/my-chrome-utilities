@@ -62,9 +62,9 @@ assert.deepEqual(
   {path:"/value",facet:"Type",section:"Definition",sourceContributor:"Sitewide",sourceContributorId:"base",sourceValue:"string",localContributor:"Shipping",localContributorId:"specific",localValue:"number",message:"Sitewide protects this definition from change",contributors:["Sitewide","Shipping"],contributorIds:["base","specific"]},
 );
 assert.deepEqual(compilePair({allowedValues:["3a","3b"]},{allowedValues:["3b"]}).properties["/value"].allowedValues,["3b"]);
-const allowedConflict=compilePair({allowedValues:["3a","3b"]},{allowedValues:["4"]}).conflicts[0];
-assert.match(allowedConflict.message,/outside the base allowed universe/);
-assert.deepEqual({facet:allowedConflict.facet,section:allowedConflict.section,source:allowedConflict.sourceContributor,local:allowedConflict.localContributor},{facet:"Allowed values",section:"Definition",source:"Sitewide",local:"Shipping"});
+const completeAllowedOverride=compilePair({allowedValues:["3a","3b"]},{allowedValues:["4"]});
+assert.equal(completeAllowedOverride.status,"ready","a complete sparse Allowed values facet may replace an ordinary parent universe");
+assert.deepEqual(completeAllowedOverride.properties["/value"].allowedValues,["4"]);
 const ordinaryPresenceOverride=compilePair({presence:"required"},{presence:"forbidden"});
 assert.equal(ordinaryPresenceOverride.status,"ready","an ordinary Presence facet is a legal sparse override");
 assert.equal(ordinaryPresenceOverride.properties["/value"].presence,"forbidden");

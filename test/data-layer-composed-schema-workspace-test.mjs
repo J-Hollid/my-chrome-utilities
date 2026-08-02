@@ -6,6 +6,7 @@ import {
   overrideComposedSchemaLocalRule,
   resetComposedSchemaLocalProperty,
   resetComposedSchemaLocalFacet,
+  resetComposedSchemaLocalChanges,
   saveComposedCanonicalDocument,
   saveComposedEntitySchemaPolicy,
   saveComposedEventCanonicalDocument,
@@ -252,16 +253,36 @@ completeIssues.project.collections.profiles[0].schemaConstraints=[{path:"/custom
 completeIssues.project.collections.pageGroups[0].localSchemaContributions=[{path:"/customer_status",allowedValues:[30],maximum:5}];
 const completeDecision=composedSchemaWorkspace(completeIssues,completeIssues.project.collections.pageGroups[0],"Page Group").rows.find(({path})=>path==="/customer_status");
 assert.deepEqual(completeDecision.decisions.map(({facet,section})=>({facet,section})),[
-  {facet:"Allowed values",section:"Definition"},
   {facet:"Range rule",section:"Rules"},
-],"one property retains every independent facet decision");
+],"a complete lower-precedence Allowed values facet is an ordinary sparse override while the independent impossible Range remains a decision");
 assert.match(composedSchemaWorkspace(completeIssues,completeIssues.project.collections.pageGroups[0],"Page Group").conflictSummary,/1 property needs a decision/);
-const completeAfterAllowed=resetComposedSchemaLocalFacet(completeIssues,"pageGroups","group:clarity","/customer_status","allowedValues"),completeAfterAllowedRow=composedSchemaWorkspace(completeAfterAllowed,completeAfterAllowed.project.collections.pageGroups[0],"Page Group").rows.find(({path})=>path==="/customer_status");
-assert.deepEqual(completeAfterAllowedRow.decisions.map(({facet})=>facet),["Range rule"],"repairing one sparse facet retains the independent decision on the same property");
-const completeAfterRange=resetComposedSchemaLocalFacet(completeAfterAllowed,"pageGroups","group:clarity","/customer_status","minimum"),completeFinal=composedSchemaWorkspace(completeAfterRange,completeAfterRange.project.collections.pageGroups[0],"Page Group");
+const completeAfterRange=resetComposedSchemaLocalFacet(completeIssues,"pageGroups","group:clarity","/customer_status","minimum"),completeFinal=composedSchemaWorkspace(completeAfterRange,completeAfterRange.project.collections.pageGroups[0],"Page Group");
 assert.equal(completeFinal.status,"ready","resolving the remaining decision makes validation and developer export available");
-assert.equal(completeAfterRange.history.undo.length,completeIssues.history.undo.length+2,"two targeted decisions create exactly two Undo actions");
+assert.equal(completeAfterRange.history.undo.length,completeIssues.history.undo.length+1,"one targeted decision creates exactly one Undo action");
 assert.deepEqual(completeAfterRange.project.collections.profiles,completeIssues.project.collections.profiles,"targeted repairs never mutate the source contributor");
+
+const inventoryState=createSpecificationProject({name:"Local inventory",site:"shop.example",id:(kind)=>`${kind}:inventory`});
+inventoryState.project.collections.profiles.push({id:"profile:inventory",name:"Master",schemaConstraints:[{path:"/customer_status",type:"string",presence:"optional",documentation:"Parent description",allowedValues:["active","pending"],rules:[{id:"rule:parent-account",name:"Parent account",kind:"pattern",pattern:"^[a-z]+$"}]},{path:"/order_total",type:"number"}]});
+inventoryState.project.collections.pageGroups.push({id:"group:inventory",name:"Checkout",profileId:"profile:inventory",localSchemaContributions:[{path:"/customer_status",documentation:"Checkout description",allowedValues:["closed","archived"],rules:[{id:"rule:checkout-account",name:"Checkout account",kind:"pattern",pattern:"^[0-9]+$",replacesRuleId:"rule:parent-account"}]},{path:"/order_total",presence:"required"},{path:"/checkout_note",type:"string",documentation:"Checkout only"}]});
+const inventoryGroup=inventoryState.project.collections.pageGroups[0],inventoryWorkspace=composedSchemaWorkspace(inventoryState,inventoryGroup,"Page Group");
+assert.equal(inventoryWorkspace.localChangeCount,5,"the header count treats each inherited facet or rule and each local-only property as one local change");
+assert.deepEqual(inventoryWorkspace.localChanges.map(({path,items})=>({path,items:items.map(({kind,label,sourceContributor,action})=>({kind,label,sourceContributor,action}))})),[
+  {path:"/checkout_note",items:[{kind:"property",label:"Local property",sourceContributor:undefined,action:"remove-property"}]},
+  {path:"/customer_status",items:[
+    {kind:"facet",label:"Allowed values",sourceContributor:"Master",action:"reset-facet"},
+    {kind:"facet",label:"Description",sourceContributor:"Master",action:"reset-facet"},
+    {kind:"rule",label:"Checkout account",sourceContributor:"Master",action:"reset-rule"},
+  ]},
+  {path:"/order_total",items:[{kind:"facet",label:"Presence",sourceContributor:"Master",action:"reset-facet"}]},
+],"Local changes groups repository-owned sparse items by property and distinguishes removal from exact resets");
+const allowedInventory=inventoryWorkspace.localChanges.find(({path})=>path==="/customer_status").items.find(({label})=>label==="Allowed values");
+assert.deepEqual({inherited:allowedInventory.inheritedValue,local:allowedInventory.localValue,effective:allowedInventory.effectiveValue,parentDiffers:allowedInventory.parentDiffers},{inherited:["active","pending"],local:["closed","archived"],effective:["closed","archived"],parentDiffers:true},"an ordinary local facet neutrally exposes current parent, local, and effective values");
+const resetInventoryProperty=resetComposedSchemaLocalProperty(inventoryState,"pageGroups",inventoryGroup.id,"/customer_status");
+assert.deepEqual(resetInventoryProperty.project.collections.pageGroups[0].localSchemaContributions.map(({path})=>path),["/order_total","/checkout_note"],"property reset removes only that property's local items in one command");
+const resetInventoryAll=resetComposedSchemaLocalChanges(inventoryState,"pageGroups",inventoryGroup.id);
+assert.deepEqual(resetInventoryAll.project.collections.pageGroups[0].localSchemaContributions,[],"reset all removes every target-owned sparse contribution");
+assert.equal(resetInventoryAll.history.undo.length,inventoryState.history.undo.length+1,"reset all is one atomic Undo action");
+assert.deepEqual(resetInventoryAll.project.collections.profiles,inventoryState.project.collections.profiles,"reset all cannot mutate Master");
 
 const parallelContext=createSpecificationProject({name:"Parallel contextual repair",site:"shop.example",id:(kind)=>`${kind}:parallel-context`});
 parallelContext.project.collections.profiles.push(

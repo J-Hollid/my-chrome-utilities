@@ -6,6 +6,8 @@ import {
   profileInheritanceCurrentImpact,
   profileInheritanceRecipeApplied,
   markProfileInheritanceTargetStale,
+  includeProfileInheritanceParentAdditions,
+  profileInheritanceParentAdditions,
   profileInheritanceSelection,
   profileInheritanceSummary,
   profileInheritanceTree,
@@ -145,7 +147,14 @@ assert.equal(partialEcommerce.excludedPropertyIds.includes(productName.id),true,
 assert.equal(inheritanceTree.find(({id})=>id==="concept:ecommerce").checked,"mixed");
 assert.equal(inheritanceTree.find(({propertyId})=>propertyId===product.id).checked,"mixed");
 const laterProduct=node("property:product-price","product_price","number",2,{parentId:product.id,concept:"ecommerce"}),grownTreeDocument={...treeDocument,nodes:{...treeDocument.nodes,[laterProduct.id]:laterProduct}};
-assert.equal(profileInheritanceSelection(grownTreeDocument,partialEcommerce).directPropertyIds.includes(laterProduct.id),true,"synchronized concepts continue to absorb later descendants beside explicit exceptions");
+const appliedPartialEcommerce=profileInheritanceRecipeApplied(treeDocument,partialEcommerce);
+assert.deepEqual(new Set(appliedPartialEcommerce.propertySelections),new Set(profileInheritanceSelection(treeDocument,partialEcommerce).directPropertyIds),"Apply materializes the then-current concept selection as a fixed identity allowlist");
+assert.equal(profileInheritanceSelection(grownTreeDocument,appliedPartialEcommerce).directPropertyIds.includes(laterProduct.id),false,"applied source-group metadata cannot absorb a later descendant");
+assert.equal(selectiveProfileContribution(grownTreeDocument,appliedPartialEcommerce).constraints.some(({definitionId})=>definitionId===laterProduct.id),false,"later parent additions stay outside compiler input");
+assert.deepEqual(profileInheritanceParentAdditions(grownTreeDocument,appliedPartialEcommerce).map(({propertyId,path,sourceGroup,dependencyImpact})=>({propertyId,path,sourceGroup,dependencyImpact})),[{propertyId:laterProduct.id,path:"/ecommerce/product/product_price",sourceGroup:"ecommerce",dependencyImpact:"No additional rule dependencies"}],"Parent additions expose current source context without changing membership");
+const includedLaterProduct=includeProfileInheritanceParentAdditions(grownTreeDocument,appliedPartialEcommerce,[laterProduct.id]);
+assert.equal(includedLaterProduct.propertySelections.includes(laterProduct.id),true,"Include selected adds the stable parent identity to the fixed allowlist");
+assert.equal(profileInheritanceSelection(grownTreeDocument,includedLaterProduct).structuralPropertyIds.includes(product.id),false,"an already selected parent remains the structural closure for an included child");
 const searchedTree=profileInheritanceTree(treeDocument,ecommerceRecipe,{query:"Desk lamp",concept:"all",type:"all",required:"any",selection:"any"});
 assert.deepEqual(searchedTree.map(({id})=>id),["concept:ecommerce",`property:ecommerce:${ecommerce.id}`,`property:ecommerce:${product.id}`,`property:ecommerce:${productName.id}`],"discovery results retain visible concept and structural ancestors without flattening matches");
 const mixedConceptParent=node("property:commerce-root","commerce_root","object",4,{concept:"commerce"}),mixedConceptChild=node("property:identity-leaf","identity_id","string",0,{parentId:mixedConceptParent.id,concept:"identity"}),mixedConceptDocument={...master,rootIds:[...master.rootIds,mixedConceptParent.id],nodes:{...master.nodes,[mixedConceptParent.id]:mixedConceptParent,[mixedConceptChild.id]:mixedConceptChild}},mixedConceptTree=profileInheritanceTree(mixedConceptDocument,empty),commerceParent=mixedConceptTree.find(({id})=>id===`property:commerce:${mixedConceptParent.id}`),identityParent=mixedConceptTree.find(({id})=>id===`property:identity:${mixedConceptParent.id}`),identityLeaf=mixedConceptTree.find(({id})=>id===`property:identity:${mixedConceptChild.id}`);
