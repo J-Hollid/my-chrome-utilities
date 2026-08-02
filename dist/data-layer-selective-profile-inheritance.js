@@ -36,31 +36,45 @@ const checkedState = (selectedCount, totalCount) => selectedCount === 0 ? "false
 export function profileInheritanceTree(document, recipe, filters) {
     const order = orderedIds(document), selected = new Set(profileInheritanceSelection(document, recipe).directPropertyIds), concepts = stableUnique(order.map((id) => conceptFor(document.nodes[id]))), matching = filters ? new Set(searchProfileInheritanceProperties(document, filters, recipe).map(({ id }) => id)) : undefined, result = [];
     for (const concept of concepts) {
-        const conceptIds = order.filter((id) => conceptFor(document.nodes[id]) === concept), conceptSet = new Set(conceptIds), children = new Map();
-        for (const id of conceptIds) {
-            const sourceParent = document.nodes[id].parentId, parent = sourceParent && conceptSet.has(sourceParent) ? sourceParent : undefined;
+        const conceptIds = order.filter((id) => conceptFor(document.nodes[id]) === concept), visibleTargets = matching ? conceptIds.filter((id) => matching.has(id)) : conceptIds;
+        if (!visibleTargets.length)
+            continue;
+        const included = new Set(), operatedById = new Map();
+        for (const id of visibleTargets) {
+            let current = id;
+            while (current) {
+                included.add(current);
+                operatedById.set(current, [...(operatedById.get(current) ?? []), id]);
+                current = document.nodes[current]?.parentId;
+            }
+        }
+        const children = new Map();
+        for (const id of order.filter((candidate) => included.has(candidate))) {
+            const parent = document.nodes[id].parentId;
             children.set(parent, [...(children.get(parent) ?? []), id]);
         }
-        const descendantIds = (propertyId) => [propertyId, ...(children.get(propertyId) ?? []).flatMap(descendantIds)];
-        const visible = matching ? new Set([...matching].flatMap((id) => { if (!conceptSet.has(id))
-            return []; const lineage = [id]; let parent = document.nodes[id]?.parentId; while (parent && conceptSet.has(parent)) {
-            lineage.push(parent);
-            parent = document.nodes[parent]?.parentId;
-        } return lineage; })) : conceptSet;
-        if (!visible.size)
-            continue;
-        const selectedConceptCount = conceptIds.filter((id) => selected.has(id)).length, conceptNodeId = `concept:${concept}`;
-        result.push({ id: conceptNodeId, kind: "concept", level: 1, label: concept, concept, descendantPropertyIds: conceptIds, selectedCount: selectedConceptCount, totalCount: conceptIds.length, checked: checkedState(selectedConceptCount, conceptIds.length) });
+        const descendantIds = (propertyId) => operatedById.get(propertyId) ?? [];
+        const selectedConceptCount = visibleTargets.filter((id) => selected.has(id)).length, conceptNodeId = `concept:${concept}`;
+        result.push({ id: conceptNodeId, kind: "concept", level: 1, label: concept, concept, descendantPropertyIds: visibleTargets, selectedCount: selectedConceptCount, totalCount: visibleTargets.length, checked: checkedState(selectedConceptCount, visibleTargets.length) });
         const appendProperties = (parentPropertyId, level) => { for (const id of children.get(parentPropertyId) ?? []) {
-            if (!visible.has(id))
-                continue;
             const node = document.nodes[id], descendantPropertyIds = descendantIds(id), selectedCount = descendantPropertyIds.filter((candidate) => selected.has(candidate)).length, hasChildren = (children.get(id)?.length ?? 0) > 0;
-            result.push({ id: `property:${id}`, parentId: parentPropertyId ? `property:${parentPropertyId}` : conceptNodeId, kind: hasChildren ? "branch" : "property", level, label: node.name, concept, propertyId: id, descendantPropertyIds, selectedCount, totalCount: descendantPropertyIds.length, checked: checkedState(selectedCount, descendantPropertyIds.length) });
+            result.push({ id: `property:${concept}:${id}`, parentId: parentPropertyId ? `property:${concept}:${parentPropertyId}` : conceptNodeId, kind: hasChildren ? "branch" : "property", level, label: node.name, concept, propertyId: id, descendantPropertyIds, selectedCount, totalCount: descendantPropertyIds.length, checked: checkedState(selectedCount, descendantPropertyIds.length) });
             appendProperties(id, level + 1);
         } };
         appendProperties(undefined, 2);
     }
     return result;
+}
+export function profileInheritanceTreeWindow(tree, offset, limit) {
+    const safeLimit = Math.max(1, Math.floor(limit)), safeOffset = Math.min(Math.max(0, Math.floor(offset)), Math.max(0, tree.length - 1)), included = new Set(tree.slice(safeOffset, safeOffset + safeLimit).map(({ id }) => id)), byId = new Map(tree.map((node) => [node.id, node]));
+    for (const id of [...included]) {
+        let parent = byId.get(id)?.parentId;
+        while (parent) {
+            included.add(parent);
+            parent = byId.get(parent)?.parentId;
+        }
+    }
+    return { nodes: tree.filter(({ id }) => included.has(id)), offset: safeOffset, total: tree.length };
 }
 export function toggleProfileInheritanceConcept(document, recipe, concept) {
     const next = clone(recipe), ids = Object.values(document.nodes).filter((node) => conceptFor(node) === concept).map(({ id }) => id), active = next.conceptSelections.includes(concept), idSet = new Set(ids);
@@ -69,10 +83,10 @@ export function toggleProfileInheritanceConcept(document, recipe, concept) {
     next.excludedPropertyIds = active ? stableUnique([...next.excludedPropertyIds, ...ids]) : next.excludedPropertyIds.filter((id) => !idSet.has(id));
     return next;
 }
-export function toggleProfileInheritanceTreeBranch(document, recipe, propertyId) {
+export function toggleProfileInheritanceTreeBranch(document, recipe, propertyId, operatedPropertyIds) {
     if (!document.nodes[propertyId])
         return clone(recipe);
-    const next = clone(recipe), ids = [propertyId, ...orderedIds(document, propertyId)], selected = new Set(profileInheritanceSelection(document, next).directPropertyIds), allSelected = ids.every((id) => selected.has(id)), idSet = new Set(ids);
+    const next = clone(recipe), ids = stableUnique((operatedPropertyIds ?? [propertyId, ...orderedIds(document, propertyId)]).filter((id) => Boolean(document.nodes[id]))), selected = new Set(profileInheritanceSelection(document, next).directPropertyIds), allSelected = ids.every((id) => selected.has(id)), idSet = new Set(ids);
     if (allSelected) {
         next.propertySelections = next.propertySelections.filter((id) => !idSet.has(id));
         next.excludedPropertyIds = stableUnique([...next.excludedPropertyIds, ...ids]);

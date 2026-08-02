@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {copyProfileInheritanceRecipe,createProfileInheritanceRecipe,profileInheritanceCurrentImpact,profileInheritanceImpact,profileInheritanceRecipeApplied,profileInheritanceSelection,selectiveProfileContribution} from "../dist/data-layer-selective-profile-inheritance.js";
+import {copyProfileInheritanceRecipe,createProfileInheritanceRecipe,profileInheritanceCurrentImpact,profileInheritanceImpact,profileInheritanceRecipeApplied,profileInheritanceSelection,profileInheritanceTree,profileInheritanceTreeWindow,selectiveProfileContribution,toggleProfileInheritanceTreeBranch} from "../dist/data-layer-selective-profile-inheritance.js";
 import {compileLayeredSchema,validateLayeredObservation} from "../dist/data-layer-layered-schema.js";
 
 let seed=0x51ec71;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/0x100000000;};
@@ -13,6 +13,17 @@ for(let run=0;run<180;run+=1){
   assert.equal(JSON.stringify(JSON.parse(JSON.stringify(configured))),JSON.stringify(configured),"recipes round-trip without source definitions");
   assert.equal(JSON.stringify(configured).includes('"nodes"'),false);
   assert.equal(contribution.constraints.length,selection.effectivePropertyIds.length);
+  const tree=profileInheritanceTree(document,configured),propertyTreeNodes=tree.filter(({propertyId})=>propertyId);
+  assert.equal(tree.every(({descendantPropertyIds,totalCount})=>descendantPropertyIds.length===totalCount),true,"every generated tree count describes exactly its operated scope");
+  for(const child of children){
+    const projectedAncestor=tree.find(({id})=>id===`property:${child.concept}:${root.id}`),projectedChild=tree.find(({id})=>id===`property:${child.concept}:${child.id}`);
+    assert.equal(Boolean(projectedAncestor),true,"mixed-concept structural ancestry remains present in every generated projection");
+    assert.equal(projectedChild?.parentId,projectedAncestor?.id,"generated mixed-concept leaves retain their canonical parent");
+  }
+  const operated=propertyTreeNodes[Math.floor(random()*propertyTreeNodes.length)],beforeDirect=new Set(selection.directPropertyIds),afterRecipe=toggleProfileInheritanceTreeBranch(document,configured,operated.propertyId,operated.descendantPropertyIds),afterDirect=new Set(profileInheritanceSelection(document,afterRecipe).directPropertyIds),changed=[...new Set([...beforeDirect,...afterDirect])].filter((id)=>beforeDirect.has(id)!==afterDirect.has(id));
+  assert.equal(changed.every((id)=>operated.descendantPropertyIds.includes(id)),true,"generated tree operations never change properties outside their displayed scope");
+  const pageSize=3,windows=Array.from({length:Math.ceil(tree.length/pageSize)},(_,page)=>profileInheritanceTreeWindow(tree,page*pageSize,pageSize));
+  assert.equal(new Set(windows.flatMap(({nodes})=>nodes.map(({id})=>id))).size,tree.length,"generated windows make every mixed-concept tree node reachable");
   const structural=contribution.constraints.find(({definitionId})=>definitionId===root.id),validPayload=shape===0?{[root.name]:[{[selected.name]:selected.name}]}:{[root.name]:[[{[selected.name]:selected.name}]]},invalidPayload=shape===0?{[root.name]:[1]}:{[root.name]:[[1]]},compiled=compileLayeredSchema([{id:"profile:property",name:"Master",scope:"Shared Profile",constraints:contribution.constraints}],{}),validValidation=validateLayeredObservation({targetId:`page:${run}`,targetName:"Page",revision:1,compiled},validPayload),invalidValidation=validateLayeredObservation({targetId:`page:${run}`,targetName:"Page",revision:1,compiled},invalidPayload);
   assert.equal(Boolean(structural.itemSchema),true,"random structural closure retains object-item and nested-array shape");assert.equal(JSON.stringify(structural).includes(sourceEnum),false,"random structural projections drop item enums");assert.equal(validValidation.issues.some(({code})=>code==="ALLOWED_VALUE"),false,"random structural item enums are not validated");assert.equal(invalidValidation.issues.some(({code})=>code==="TYPE"),true,"random structural nested type shape remains enforceable");
   const structuralApplied=profileInheritanceRecipeApplied(document,{...recipe,propertySelections:[selected.id]}),enumEditedSchema=shape===0?{...root.itemSchema,allowedValues:[{business:`edited-only-${run}`}]}:{...root.itemSchema,allowedValues:[[{business:`edited-outer-${run}`}]],items:{...root.itemSchema.items,allowedValues:[{business:`edited-inner-${run}`}] }},enumEdited={...document,revision:2,nodes:{...document.nodes,[root.id]:{...root,itemSchema:enumEditedSchema}}};assert.equal(profileInheritanceCurrentImpact(enumEdited,structuralApplied).stale,false,"random structural item-enum-only edits remain current");

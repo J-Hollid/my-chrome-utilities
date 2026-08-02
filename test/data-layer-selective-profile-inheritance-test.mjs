@@ -9,6 +9,7 @@ import {
   profileInheritanceSelection,
   profileInheritanceSummary,
   profileInheritanceTree,
+  profileInheritanceTreeWindow,
   searchProfileInheritanceProperties,
   selectProfileInheritanceBranch,
   selectiveProfileContribution,
@@ -136,8 +137,8 @@ const ecommerceRecipe=toggleProfileInheritanceConcept(treeDocument,empty,"ecomme
 let inheritanceTree=profileInheritanceTree(treeDocument,ecommerceRecipe);
 const conceptNode=inheritanceTree.find(({id})=>id==="concept:ecommerce"),productNode=inheritanceTree.find(({propertyId})=>propertyId===product.id),productIdNode=inheritanceTree.find(({propertyId})=>propertyId===productId.id);
 assert.deepEqual({kind:conceptNode.kind,level:conceptNode.level,checked:conceptNode.checked,selectedCount:conceptNode.selectedCount,totalCount:conceptNode.totalCount},{kind:"concept",level:1,checked:"true",selectedCount:4,totalCount:4},"tree exposes one synchronized concept parent with descendant counts");
-assert.deepEqual({kind:productNode.kind,parentId:productNode.parentId,level:productNode.level,checked:productNode.checked},{kind:"branch",parentId:`property:${ecommerce.id}`,level:3,checked:"true"},"structural branches remain nested beneath their concept and source parent");
-assert.deepEqual({kind:productIdNode.kind,parentId:productIdNode.parentId,level:productIdNode.level,checked:productIdNode.checked},{kind:"property",parentId:`property:${product.id}`,level:4,checked:"true"},"property leaves retain source hierarchy and selection state");
+assert.deepEqual({kind:productNode.kind,parentId:productNode.parentId,level:productNode.level,checked:productNode.checked},{kind:"branch",parentId:`property:ecommerce:${ecommerce.id}`,level:3,checked:"true"},"structural branches remain nested beneath their concept and source parent");
+assert.deepEqual({kind:productIdNode.kind,parentId:productIdNode.parentId,level:productIdNode.level,checked:productIdNode.checked},{kind:"property",parentId:`property:ecommerce:${product.id}`,level:4,checked:"true"},"property leaves retain source hierarchy and selection state");
 const partialEcommerce=toggleProfileInheritanceTreeBranch(treeDocument,ecommerceRecipe,productName.id);
 inheritanceTree=profileInheritanceTree(treeDocument,partialEcommerce);
 assert.equal(partialEcommerce.excludedPropertyIds.includes(productName.id),true,"deselecting a synchronized descendant records an explicit stable exception");
@@ -146,7 +147,16 @@ assert.equal(inheritanceTree.find(({propertyId})=>propertyId===product.id).check
 const laterProduct=node("property:product-price","product_price","number",2,{parentId:product.id,concept:"ecommerce"}),grownTreeDocument={...treeDocument,nodes:{...treeDocument.nodes,[laterProduct.id]:laterProduct}};
 assert.equal(profileInheritanceSelection(grownTreeDocument,partialEcommerce).directPropertyIds.includes(laterProduct.id),true,"synchronized concepts continue to absorb later descendants beside explicit exceptions");
 const searchedTree=profileInheritanceTree(treeDocument,ecommerceRecipe,{query:"Desk lamp",concept:"all",type:"all",required:"any",selection:"any"});
-assert.deepEqual(searchedTree.map(({id})=>id),["concept:ecommerce",`property:${ecommerce.id}`,`property:${product.id}`,`property:${productName.id}`],"discovery results retain visible concept and structural ancestors without flattening matches");
+assert.deepEqual(searchedTree.map(({id})=>id),["concept:ecommerce",`property:ecommerce:${ecommerce.id}`,`property:ecommerce:${product.id}`,`property:ecommerce:${productName.id}`],"discovery results retain visible concept and structural ancestors without flattening matches");
+const mixedConceptParent=node("property:commerce-root","commerce_root","object",4,{concept:"commerce"}),mixedConceptChild=node("property:identity-leaf","identity_id","string",0,{parentId:mixedConceptParent.id,concept:"identity"}),mixedConceptDocument={...master,rootIds:[...master.rootIds,mixedConceptParent.id],nodes:{...master.nodes,[mixedConceptParent.id]:mixedConceptParent,[mixedConceptChild.id]:mixedConceptChild}},mixedConceptTree=profileInheritanceTree(mixedConceptDocument,empty),commerceParent=mixedConceptTree.find(({id})=>id===`property:commerce:${mixedConceptParent.id}`),identityParent=mixedConceptTree.find(({id})=>id===`property:identity:${mixedConceptParent.id}`),identityLeaf=mixedConceptTree.find(({id})=>id===`property:identity:${mixedConceptChild.id}`);
+assert.deepEqual({scope:commerceParent.descendantPropertyIds,count:commerceParent.totalCount,parent:commerceParent.parentId},{scope:[mixedConceptParent.id],count:1,parent:"concept:commerce"},"a concept projection operates only the properties displayed in that projection");
+assert.deepEqual({kind:identityParent.kind,scope:identityParent.descendantPropertyIds,count:identityParent.totalCount,parent:identityParent.parentId},{kind:"branch",scope:[mixedConceptChild.id],count:1,parent:"concept:identity"},"a mixed-concept projection repeats the complete structural ancestry without widening its operated scope");
+assert.equal(identityLeaf.parentId,identityParent.id,"the mixed-concept leaf remains beneath its canonical structural parent");
+const selectedIdentity=toggleProfileInheritanceTreeBranch(mixedConceptDocument,empty,mixedConceptParent.id,identityParent.descendantPropertyIds);
+assert.deepEqual(selectedIdentity.propertySelections,[mixedConceptChild.id],"operating a structural proxy changes exactly its displayed descendant scope");
+const manyTreeDocument={...master,rootIds:[...master.rootIds,...Array.from({length:260},(_,index)=>`property:many:${index}`)],nodes:{...master.nodes,...Object.fromEntries(Array.from({length:260},(_,index)=>{const item=node(`property:many:${index}`,`many_${index}`,"string",100+index,{concept:"many"});return[item.id,item];}))}},manyTree=profileInheritanceTree(manyTreeDocument,empty),windows=Array.from({length:Math.ceil(manyTree.length/80)},(_,page)=>profileInheritanceTreeWindow(manyTree,page*80,80));
+assert.equal(windows.every(({nodes})=>nodes.length<=81),true,"tree windows stay bounded while retaining their concept ancestor");
+assert.equal(new Set(windows.flatMap(({nodes})=>nodes.map(({id})=>id))).size,manyTree.length,"tree paging makes every indexed node reachable");
 
 assert.deepEqual(searchProfileInheritanceProperties(master,{query:"readable",concept:"error",type:"string",required:"any",selection:"any"},partial).map(({id})=>id),[errorMessage.id]);
 assert.deepEqual(searchProfileInheritanceProperties(master,{query:"ERR unavailable",concept:"all",type:"all",required:"required",selection:"selected"},partial).map(({id})=>id),[errorMessage.id]);

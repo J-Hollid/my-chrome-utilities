@@ -1,5 +1,5 @@
 import { canonicalPropertyPath } from "./data-layer-canonical-schema.js";
-import { copyProfileInheritanceRecipe, createProfileInheritanceRecipe, profileInheritanceCurrentImpact, profileInheritanceSelection, profileInheritanceSummary, profileInheritanceTree, toggleProfileInheritanceConcept, toggleProfileInheritanceTreeBranch } from "./data-layer-selective-profile-inheritance.js";
+import { copyProfileInheritanceRecipe, createProfileInheritanceRecipe, profileInheritanceCurrentImpact, profileInheritanceSelection, profileInheritanceSummary, profileInheritanceTree, profileInheritanceTreeWindow, toggleProfileInheritanceConcept, toggleProfileInheritanceTreeBranch } from "./data-layer-selective-profile-inheritance.js";
 const clone = (value) => structuredClone(value);
 const stable = (values) => [...new Set(values)];
 const ruleById = (document, ruleId) => { for (const node of Object.values(document.nodes)) {
@@ -10,7 +10,7 @@ const ruleById = (document, ruleId) => { for (const node of Object.values(docume
 const option = (value, label) => new Option(label, value);
 export function mountSelectiveProfileInheritance(options) {
     const { host, profile, target } = options, document = profile.canonicalSchema, card = globalThis.document.createElement("section"), heading = globalThis.document.createElement("h3"), summaryText = globalThis.document.createElement("p"), resolutionText = globalThis.document.createElement("p"), impactList = globalThis.document.createElement("ul"), edit = globalThis.document.createElement("button"), workspace = globalThis.document.createElement("section");
-    let staged = clone(options.recipe), open = false, filters = { query: "", concept: "all", type: "all", required: "any", selection: "any" }, expandedIds = new Set(), expansionInitialized = false, activeTreeId, detailPropertyId, reviewOpen = false, treeScrollTop = 0, discoveryScrollTop = 0, restoreDiscoveryScroll = false, replacementDraft;
+    let staged = clone(options.recipe), open = false, filters = { query: "", concept: "all", type: "all", required: "any", selection: "any" }, expandedIds = new Set(), expansionInitialized = false, activeTreeId, detailTreeNodeId, reviewOpen = false, treeScrollTop = 0, treeWindowOffset = 0, restoreTreeScroll = false, discoverySnapshot, replacementDraft;
     card.className = "profile-inheritance-card";
     card.dataset.profileInheritanceCard = profile.id;
     card.tabIndex = -1;
@@ -24,11 +24,23 @@ export function mountSelectiveProfileInheritance(options) {
     workspace.hidden = true;
     const updateCard = () => { const summary = profileInheritanceSummary(document, options.recipe), impact = options.recipe.sourceImpact ?? profileInheritanceCurrentImpact(document, options.recipe), impactText = impact.stale ? ` · Source update needs review: ${impact.addedEffectivePropertyIds.length} added, ${impact.removedPropertyIds.length} removed, ${impact.changedPaths.length} changed paths, ${impact.changedDefinitionPropertyIds?.length ?? 0} changed definitions, ${impact.changedRuleIds.length} changed rules, ${impact.newMissingRuleDependencies.length} new dependencies` : " · Current with source"; summaryText.textContent = `${summary.synchronizedConcepts} synchronized concepts · ${summary.fixedProperties} fixed selections · ${summary.exclusions} exclusions · ${summary.ruleOverrides} rule overrides · ${summary.effective} effective properties${summary.missingSelections ? ` · ${summary.missingSelections} missing selections` : ""}${impactText}`; resolutionText.setAttribute("aria-label", "Shared Profile rule resolution provenance"); resolutionText.hidden = !options.recipe.excludedRuleIds.length && !options.recipe.ruleReplacements.length && !options.recipe.presenceReplacements.length; resolutionText.textContent = `${profile.name} source rules at ${target.name} boundary · Excluded ${options.recipe.excludedRuleIds.join(", ") || "none"} · Replaced ${[...options.recipe.ruleReplacements.map(({ sourceRuleId }) => sourceRuleId), ...options.recipe.presenceReplacements.map(({ sourceRuleId }) => sourceRuleId)].join(", ") || "none"}`; impactList.setAttribute("aria-label", "Shared Profile source impact"); impactList.hidden = !impact.stale; impactList.replaceChildren(...impact.addedEffectivePropertyIds.map((id) => Object.assign(globalThis.document.createElement("li"), { textContent: `Added effective path ${document.nodes[id] ? canonicalPropertyPath(document, id) : id}` })), ...impact.removedPropertyIds.map((id) => Object.assign(globalThis.document.createElement("li"), { textContent: `Removed effective path ${options.recipe.sourceSnapshot?.propertyPaths[id] ?? id}` })), ...impact.changedPaths.map(({ before, after }) => Object.assign(globalThis.document.createElement("li"), { textContent: `Changed effective path ${before} → ${after}` })), ...(impact.changedDefinitionPropertyIds ?? []).map((id) => Object.assign(globalThis.document.createElement("li"), { textContent: `Changed source definition ${document.nodes[id] ? canonicalPropertyPath(document, id) : id}` })), ...impact.changedRuleIds.map((id) => Object.assign(globalThis.document.createElement("li"), { textContent: `Changed source rule ${id}` })), ...impact.newMissingRuleDependencies.map(({ sourceRuleId, propertyId }) => Object.assign(globalThis.document.createElement("li"), { textContent: `New dependency ${sourceRuleId} needs ${document.nodes[propertyId] ? canonicalPropertyPath(document, propertyId) : propertyId}` }))); };
     const focusAfter = (selector) => queueMicrotask(() => workspace.querySelector(selector)?.focus({ preventScroll: true }));
+    const discoveryActive = (value) => Boolean(value.query.trim() || value.concept !== "all" || value.type !== "all" || value.required !== "any" || value.selection !== "any");
+    const updateDiscovery = (next, focusSelector) => { const wasActive = discoveryActive(filters), willBeActive = discoveryActive(next); if (!wasActive && willBeActive)
+        discoverySnapshot = { expandedIds: new Set(expandedIds), activeTreeId, scrollTop: workspace.querySelector("[role='tree']")?.scrollTop ?? treeScrollTop, windowOffset: treeWindowOffset }; filters = next; if (willBeActive)
+        treeWindowOffset = 0;
+    else if (wasActive && discoverySnapshot) {
+        expandedIds = new Set(discoverySnapshot.expandedIds);
+        activeTreeId = discoverySnapshot.activeTreeId;
+        treeScrollTop = discoverySnapshot.scrollTop;
+        treeWindowOffset = discoverySnapshot.windowOffset;
+        restoreTreeScroll = true;
+        discoverySnapshot = undefined;
+    } renderWorkspace(); focusAfter(!willBeActive && activeTreeId ? `[data-tree-node-id='${CSS.escape(activeTreeId)}']` : focusSelector); };
     const renderWorkspace = () => {
         const previousTree = workspace.querySelector("[role='tree']");
-        if (previousTree && !restoreDiscoveryScroll)
+        if (previousTree && !restoreTreeScroll)
             treeScrollTop = previousTree.scrollTop;
-        restoreDiscoveryScroll = false;
+        restoreTreeScroll = false;
         workspace.replaceChildren();
         const title = globalThis.document.createElement("h3"), intro = globalThis.document.createElement("p"), compactControls = globalThis.document.createElement("div"), starting = globalThis.document.createElement("select"), startingLabel = globalThis.document.createElement("label"), copySelect = globalThis.document.createElement("select"), copyButton = globalThis.document.createElement("button"), copyLabel = globalThis.document.createElement("label"), toolbar = globalThis.document.createElement("section"), search = globalThis.document.createElement("input"), searchLabel = globalThis.document.createElement("label"), filterRow = globalThis.document.createElement("div"), conceptFilter = globalThis.document.createElement("select"), typeFilter = globalThis.document.createElement("select"), requiredFilter = globalThis.document.createElement("select"), selectionFilter = globalThis.document.createElement("select"), tree = globalThis.document.createElement("ul"), dependencies = globalThis.document.createElement("section"), sticky = globalThis.document.createElement("aside"), review = globalThis.document.createElement("button"), apply = globalThis.document.createElement("button"), cancel = globalThis.document.createElement("button");
         title.textContent = `Choose what ${target.name} inherits from ${profile.name}`;
@@ -61,11 +73,7 @@ export function mountSelectiveProfileInheritance(options) {
         search.type = "search";
         search.value = filters.query;
         search.placeholder = "Name, path, description, or example";
-        search.addEventListener("input", () => { const entering = !filters.query && Boolean(search.value), restoreTree = Boolean(filters.query) && !search.value; if (entering)
-            discoveryScrollTop = workspace.querySelector("[role='tree']")?.scrollTop ?? treeScrollTop; if (restoreTree) {
-            treeScrollTop = discoveryScrollTop;
-            restoreDiscoveryScroll = true;
-        } filters = { ...filters, query: search.value }; renderWorkspace(); focusAfter(restoreTree && activeTreeId ? `[data-tree-checkbox-id='${CSS.escape(activeTreeId)}']` : "input[type=search]"); });
+        search.addEventListener("input", () => updateDiscovery({ ...filters, query: search.value }, "input[type=search]"));
         searchLabel.append(search);
         toolbar.append(searchLabel);
         const conceptsAvailable = stable(Object.values(document.nodes).map((node) => node.concept?.trim() || "Ungrouped")), types = stable(Object.values(document.nodes).map(({ type }) => type));
@@ -77,7 +85,7 @@ export function mountSelectiveProfileInheritance(options) {
             control.value = filters[key];
             control.setAttribute("aria-label", `${label} filter`);
             control.dataset.filter = key;
-            control.addEventListener("change", () => { filters = { ...filters, [key]: control.value }; renderWorkspace(); focusAfter(`[data-filter='${key}']`); });
+            control.addEventListener("change", () => updateDiscovery({ ...filters, [key]: control.value }, `[data-filter='${key}']`));
             filterRow.append(control);
         }
         filterRow.className = "profile-inheritance-filters";
@@ -87,49 +95,41 @@ export function mountSelectiveProfileInheritance(options) {
             expandedIds = new Set(parentIds);
             expansionInitialized = true;
         }
-        const discoveryActive = Boolean(filters.query.trim() || filters.concept !== "all" || filters.type !== "all" || filters.required !== "any" || filters.selection !== "any"), byId = new Map(treeNodes.map((node) => [node.id, node])), shown = treeNodes.filter((node) => { let parent = node.parentId; while (parent) {
-            if (!discoveryActive && !expandedIds.has(parent))
+        const isDiscovery = discoveryActive(filters), byId = new Map(treeNodes.map((node) => [node.id, node])), pageSize = 100, window = profileInheritanceTreeWindow(treeNodes, treeWindowOffset, pageSize), shown = window.nodes.filter((node) => { let parent = node.parentId; while (parent) {
+            if (!isDiscovery && !expandedIds.has(parent))
                 return false;
             parent = byId.get(parent)?.parentId;
-        } return true; }).slice(0, 120);
+        } return true; }), treePager = globalThis.document.createElement("nav"), previousPage = globalThis.document.createElement("button"), nextPage = globalThis.document.createElement("button"), pageStatus = globalThis.document.createElement("span");
+        treeWindowOffset = window.offset;
+        treePager.className = "profile-inheritance-tree-pager";
+        treePager.setAttribute("aria-label", "Inheritance tree pages");
+        previousPage.type = nextPage.type = "button";
+        previousPage.textContent = "Previous properties";
+        nextPage.textContent = "Next properties";
+        previousPage.disabled = treeWindowOffset === 0;
+        nextPage.disabled = treeWindowOffset + pageSize >= treeNodes.length;
+        pageStatus.textContent = treeNodes.length ? `Nodes ${treeWindowOffset + 1}–${Math.min(treeWindowOffset + pageSize, treeNodes.length)} of ${treeNodes.length}` : "No matching properties";
+        previousPage.addEventListener("click", () => { treeWindowOffset = Math.max(0, treeWindowOffset - pageSize); renderWorkspace(); focusAfter("[aria-label='Inheritance tree pages'] button:last-of-type"); });
+        nextPage.addEventListener("click", () => { treeWindowOffset += pageSize; renderWorkspace(); focusAfter("[aria-label='Inheritance tree pages'] button:first-of-type"); });
+        treePager.append(previousPage, pageStatus, nextPage);
         tree.className = "profile-inheritance-tree";
         tree.setAttribute("role", "tree");
         tree.setAttribute("aria-label", `Inheritance selection tree, showing ${shown.length} of ${treeNodes.length} nodes`);
         tree.tabIndex = -1;
-        const focusTree = (id) => { activeTreeId = id; focusAfter(`[data-tree-checkbox-id='${CSS.escape(id)}']`); };
+        const focusTree = (id) => { activeTreeId = id; focusAfter(`[data-tree-node-id='${CSS.escape(id)}']`); };
         const moveTreeFocus = (id, direction) => { const ids = shown.map(({ id }) => id), index = ids.indexOf(id), next = ids[Math.max(0, Math.min(ids.length - 1, index + direction))]; if (next)
             focusTree(next); };
         for (const treeNode of shown) {
             const item = globalThis.document.createElement("li"), row = globalThis.document.createElement("div"), disclosure = treeNode.kind === "property" ? undefined : globalThis.document.createElement("button"), checkbox = globalThis.document.createElement("button"), node = document.nodes[treeNode.propertyId ?? ""];
             item.setAttribute("role", "treeitem");
             item.setAttribute("aria-level", String(treeNode.level));
+            item.setAttribute("aria-checked", treeNode.checked);
+            item.tabIndex = treeNode.id === (activeTreeId ?? shown[0]?.id) ? 0 : -1;
             item.dataset.treeNodeId = treeNode.id;
             item.style.setProperty("--tree-level", String(treeNode.level));
-            if (disclosure) {
-                const expanded = discoveryActive || expandedIds.has(treeNode.id);
-                item.setAttribute("aria-expanded", String(expanded));
-                disclosure.type = "button";
-                disclosure.className = "profile-inheritance-disclosure";
-                disclosure.setAttribute("aria-label", `${expanded ? "Collapse" : "Expand"} ${treeNode.label}`);
-                disclosure.textContent = expanded ? "▾" : "▸";
-                disclosure.addEventListener("click", () => { expanded ? expandedIds.delete(treeNode.id) : expandedIds.add(treeNode.id); activeTreeId = treeNode.id; renderWorkspace(); focusTree(treeNode.id); });
-            }
-            checkbox.type = "button";
-            checkbox.className = "profile-inheritance-checkbox";
-            checkbox.dataset.treeCheckboxId = treeNode.id;
-            checkbox.setAttribute("role", "checkbox");
-            checkbox.setAttribute("aria-checked", treeNode.checked);
-            checkbox.setAttribute("aria-label", `${treeNode.label}, ${treeNode.selectedCount} of ${treeNode.totalCount} selected${treeNode.kind === "concept" && staged.conceptSelections.includes(treeNode.concept) ? ", synchronized" : ""}`);
-            if (treeNode.kind === "concept")
-                checkbox.dataset.concept = treeNode.concept;
-            else
-                checkbox.dataset.profileProperty = treeNode.propertyId;
-            const primary = globalThis.document.createElement("span"), secondary = globalThis.document.createElement("small");
-            primary.textContent = treeNode.kind === "concept" ? treeNode.label : canonicalPropertyPath(document, treeNode.propertyId);
-            secondary.textContent = treeNode.kind === "concept" ? `${treeNode.selectedCount} of ${treeNode.totalCount} selected${staged.conceptSelections.includes(treeNode.concept) ? " · synchronized" : ""}` : `${node.type} · ${node.presence.mode} · ${treeNode.selectedCount} of ${treeNode.totalCount} selected`;
-            checkbox.append(primary, secondary);
-            checkbox.addEventListener("focus", () => { activeTreeId = treeNode.id; });
-            checkbox.addEventListener("keydown", (event) => { if (event.key === "ArrowDown" || event.key === "ArrowUp") {
+            item.addEventListener("focus", () => { activeTreeId = treeNode.id; });
+            item.addEventListener("keydown", (event) => { if (event.target !== item)
+                return; if (event.key === "ArrowDown" || event.key === "ArrowUp") {
                 event.preventDefault();
                 moveTreeFocus(treeNode.id, event.key === "ArrowDown" ? 1 : -1);
             }
@@ -157,20 +157,43 @@ export function mountSelectiveProfileInheritance(options) {
                 event.preventDefault();
                 checkbox.click();
             } });
-            checkbox.addEventListener("click", () => { staged = treeNode.kind === "concept" ? toggleProfileInheritanceConcept(document, staged, treeNode.concept) : toggleProfileInheritanceTreeBranch(document, staged, treeNode.propertyId); activeTreeId = treeNode.id; renderWorkspace(); focusTree(treeNode.id); });
+            if (disclosure) {
+                const expanded = isDiscovery || expandedIds.has(treeNode.id);
+                item.setAttribute("aria-expanded", String(expanded));
+                disclosure.type = "button";
+                disclosure.className = "profile-inheritance-disclosure";
+                disclosure.setAttribute("aria-label", `${expanded ? "Collapse" : "Expand"} ${treeNode.label}`);
+                disclosure.textContent = expanded ? "▾" : "▸";
+                disclosure.addEventListener("click", () => { expanded ? expandedIds.delete(treeNode.id) : expandedIds.add(treeNode.id); activeTreeId = treeNode.id; renderWorkspace(); focusTree(treeNode.id); });
+            }
+            checkbox.type = "button";
+            checkbox.className = "profile-inheritance-checkbox";
+            checkbox.dataset.treeCheckboxId = treeNode.id;
+            checkbox.setAttribute("role", "checkbox");
+            checkbox.setAttribute("aria-checked", treeNode.checked);
+            checkbox.setAttribute("aria-label", `${treeNode.label}, ${treeNode.selectedCount} of ${treeNode.totalCount} selected${treeNode.kind === "concept" && staged.conceptSelections.includes(treeNode.concept) ? ", synchronized" : ""}`);
+            if (treeNode.kind === "concept")
+                checkbox.dataset.concept = treeNode.concept;
+            else
+                checkbox.dataset.profileProperty = treeNode.propertyId;
+            const primary = globalThis.document.createElement("span"), secondary = globalThis.document.createElement("small");
+            primary.textContent = treeNode.kind === "concept" ? treeNode.label : canonicalPropertyPath(document, treeNode.propertyId);
+            secondary.textContent = treeNode.kind === "concept" ? `${treeNode.selectedCount} of ${treeNode.totalCount} selected${staged.conceptSelections.includes(treeNode.concept) ? " · synchronized" : ""}` : `${node.type} · ${node.presence.mode} · ${treeNode.selectedCount} of ${treeNode.totalCount} selected`;
+            checkbox.append(primary, secondary);
+            checkbox.addEventListener("click", () => { staged = treeNode.kind === "concept" ? toggleProfileInheritanceConcept(document, staged, treeNode.concept) : toggleProfileInheritanceTreeBranch(document, staged, treeNode.propertyId, treeNode.descendantPropertyIds); activeTreeId = treeNode.id; renderWorkspace(); focusTree(treeNode.id); });
             row.append(...(disclosure ? [disclosure] : [Object.assign(globalThis.document.createElement("span"), { className: "profile-inheritance-disclosure-placeholder" })]), checkbox);
             if (node) {
                 const detailsButton = globalThis.document.createElement("button");
                 detailsButton.type = "button";
                 detailsButton.className = "profile-inheritance-details-button";
-                detailsButton.textContent = detailPropertyId === node.id ? "Hide details" : "Property details";
-                detailsButton.setAttribute("aria-expanded", String(detailPropertyId === node.id));
-                detailsButton.setAttribute("aria-label", `${detailPropertyId === node.id ? "Hide" : "Show"} details for ${node.name}`);
-                detailsButton.addEventListener("click", () => { detailPropertyId = detailPropertyId === node.id ? undefined : node.id; activeTreeId = treeNode.id; renderWorkspace(); focusAfter(`[data-profile-details='${CSS.escape(node.id)}']`); });
+                detailsButton.textContent = detailTreeNodeId === treeNode.id ? "Hide details" : "Property details";
+                detailsButton.setAttribute("aria-expanded", String(detailTreeNodeId === treeNode.id));
+                detailsButton.setAttribute("aria-label", `${detailTreeNodeId === treeNode.id ? "Hide" : "Show"} details for ${node.name}`);
+                detailsButton.addEventListener("click", () => { const hiding = detailTreeNodeId === treeNode.id; detailTreeNodeId = hiding ? undefined : treeNode.id; activeTreeId = treeNode.id; renderWorkspace(); focusAfter(hiding ? `[data-tree-checkbox-id='${CSS.escape(treeNode.id)}']` : `[data-profile-details='${CSS.escape(node.id)}']`); });
                 row.append(detailsButton);
             }
             item.append(row);
-            if (node && detailPropertyId === node.id) {
+            if (node && detailTreeNodeId === treeNode.id) {
                 const details = globalThis.document.createElement("section");
                 details.dataset.profileDetails = node.id;
                 details.tabIndex = -1;
@@ -181,7 +204,7 @@ export function mountSelectiveProfileInheritance(options) {
             tree.append(item);
         }
         queueMicrotask(() => { tree.scrollTop = treeScrollTop; if (activeTreeId && !workspace.contains(globalThis.document.activeElement))
-            workspace.querySelector(`[data-tree-checkbox-id='${CSS.escape(activeTreeId)}']`)?.focus({ preventScroll: true }); });
+            workspace.querySelector(`[data-tree-node-id='${CSS.escape(activeTreeId)}']`)?.focus({ preventScroll: true }); });
         dependencies.setAttribute("aria-label", "Missing rule dependencies");
         dependencies.append(Object.assign(globalThis.document.createElement("h4"), { textContent: "Rule dependencies" }));
         const closure = profileInheritanceSelection(document, staged);
@@ -284,15 +307,16 @@ export function mountSelectiveProfileInheritance(options) {
             }
             dependencies.append(row);
         }
-        const composition = options.compositionPreview?.(staged), peerIssueCount = composition?.status === "blocked" && composition.sources.length > 1 ? 1 : 0;
-        if (peerIssueCount) {
+        const composition = options.compositionPreview?.(staged), peerConflicts = composition?.conflicts ?? [], peerIssueCount = peerConflicts.length;
+        for (const conflict of peerConflicts) {
             const peerIssue = globalThis.document.createElement("section"), peerHeading = globalThis.document.createElement("h5"), peerText = globalThis.document.createElement("p"), route = globalThis.document.createElement("button");
-            peerIssue.dataset.peerInheritanceConflict = "";
-            peerHeading.textContent = `Peer conflict · ${composition.sources.join(" and ")}`;
-            peerText.textContent = composition.conflicts;
+            peerIssue.dataset.peerInheritanceConflict = conflict.path;
+            peerHeading.textContent = `Peer conflict at ${conflict.path} · ${conflict.sources.join(" and ")}`;
+            peerText.textContent = conflict.summary;
             route.type = "button";
-            route.textContent = "Review conflicting sources";
-            route.setAttribute("aria-label", `Review conflict between ${composition.sources.join(" and ")}`);
+            route.textContent = conflict.resolutionLabel;
+            route.setAttribute("aria-label", `${conflict.resolutionLabel} at ${conflict.path}`);
+            route.addEventListener("click", () => options.onOpenConflict?.(conflict.path));
             peerIssue.append(peerHeading, peerText, route);
             dependencies.append(peerIssue);
         }
@@ -315,11 +339,11 @@ export function mountSelectiveProfileInheritance(options) {
         cancel.textContent = "Cancel";
         apply.textContent = "Apply inheritance";
         apply.disabled = unresolved > 0;
-        apply.setAttribute("aria-description", unresolved ? `${unresolved} rule dependencies require review` : peerIssueCount ? "Ready to store; the peer conflict will remain Draft-blocking" : "Selection is ready to apply");
+        apply.setAttribute("aria-description", unresolved ? `${unresolved} rule dependencies require review` : peerIssueCount ? "Ready to store; peer conflicts remain Draft-blocking" : "Selection is ready to apply");
         apply.addEventListener("click", () => options.onApply({ ...clone(staged), sourceRevision: document.revision }));
         cancel.addEventListener("click", () => { staged = clone(options.recipe); open = false; workspace.hidden = true; edit.setAttribute("aria-expanded", "false"); edit.focus({ preventScroll: true }); });
         sticky.append(counts, review, cancel, apply, reviewPanel);
-        workspace.append(title, intro, compactControls, toolbar, tree, dependencies, sticky);
+        workspace.append(title, intro, compactControls, toolbar, treePager, tree, dependencies, sticky);
     };
     edit.addEventListener("click", () => { open = !open; workspace.hidden = !open; edit.setAttribute("aria-expanded", String(open)); if (open) {
         staged = clone(options.recipe);
