@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   composedCanonicalSchema,
   composedSchemaWorkspace,
+  includeComposedSchemaParentAdditionSelections,
   applyComposedSchemaContextualFacet,
   overrideComposedSchemaLocalRule,
   resetComposedSchemaLocalProperty,
@@ -290,11 +291,25 @@ const canonicalFacetReset=resetComposedSchemaLocalFacet(canonicalInventoryState,
 assert.equal(canonicalFacetWorkspace.localChangeCount,4,"canonical-backed exact facet reset removes the advertised owner item");
 assert.equal(canonicalFacetWorkspace.rows.find(({path})=>path==="/customer_status").effective.documentation,"Parent description","canonical-backed facet reset immediately derives the current parent value");
 assert.equal(canonicalFacetGroup.canonicalSchema.nodes[Object.values(canonicalFacetGroup.canonicalSchema.nodes).find(({name})=>name==="customer_status").id].localDefinitionFacets.includes("documentation"),false,"canonical-backed reset removes only the local ownership marker");
+const canonicalValuesReset=resetComposedSchemaLocalFacet(canonicalInventoryState,"pageGroups",canonicalInventoryGroup.id,"/customer_status","allowedValues"),canonicalValuesWorkspace=composedSchemaWorkspace(canonicalValuesReset,canonicalValuesReset.project.collections.pageGroups[0],"Page Group"),canonicalValuesNode=Object.values(canonicalValuesReset.project.collections.pageGroups[0].canonicalSchema.nodes).find(({name})=>name==="customer_status");
+assert.deepEqual(canonicalValuesWorkspace.rows.find(({path})=>path==="/customer_status").effective.allowedValues,["active","pending"],"canonical-backed Allowed values reset immediately restores the current parent values");
+assert.equal(canonicalValuesNode.localDefinitionFacets.some((facet)=>["allowedValues","allowedValueIds","allowedValueProvenance"].includes(facet)),false,"Allowed values reset clears every grouped ownership marker");
 const canonicalRuleId=canonicalInventoryDocument.nodes[Object.values(canonicalInventoryDocument.nodes).find(({name})=>name==="customer_status").id].rules.find(({name})=>name==="Checkout account").id,canonicalRuleReset=resetComposedSchemaLocalRule(canonicalInventoryState,"pageGroups",canonicalInventoryGroup.id,"/customer_status",canonicalRuleId);
 assert.equal(composedSchemaWorkspace(canonicalRuleReset,canonicalRuleReset.project.collections.pageGroups[0],"Page Group").localChangeCount,4,"canonical-backed exact rule reset removes the advertised local rule");
 const canonicalAllReset=resetComposedSchemaLocalChanges(canonicalInventoryState,"pageGroups",canonicalInventoryGroup.id);
 assert.equal(composedSchemaWorkspace(canonicalAllReset,canonicalAllReset.project.collections.pageGroups[0],"Page Group").localChangeCount,0,"canonical-backed reset all removes every target-owned item");
 assert.equal(canonicalAllReset.history.undo.length,canonicalInventoryState.history.undo.length+1,"canonical-backed reset all stays one atomic Undo action");
+const canonicalAllEffective=composedSchemaWorkspace(canonicalAllReset,canonicalAllReset.project.collections.pageGroups[0],"Page Group").rows.find(({path})=>path==="/customer_status").effective,canonicalParent=composedSchemaWorkspace(inventoryState,inventoryGroup,"Page Group").rows.find(({path})=>path==="/customer_status").inherited;
+assert.deepEqual({type:canonicalAllEffective.type,presence:canonicalAllEffective.presence,documentation:canonicalAllEffective.documentation,allowedValues:canonicalAllEffective.allowedValues,patterns:canonicalAllEffective.patterns},{type:canonicalParent.type,presence:canonicalParent.presence,documentation:canonicalParent.documentation,allowedValues:canonicalParent.allowedValues,patterns:canonicalParent.patterns},"canonical-backed reset all immediately restores the complete current parent definition");
+assert.equal(Object.hasOwn(canonicalAllReset.project.collections.pageGroups[0],"canonicalSchema"),false,"reset all removes the canonical owning storage instead of retaining stale local values behind cleared markers");
+
+const sharedAdditionState=createSpecificationProject({name:"Recipe-aware additions",site:"shop.example",id:(kind)=>`${kind}:recipe-aware`}),sharedNode=(profileId)=>({id:"property:shared-addition",name:"shared_addition",order:0,type:"string",presence:{mode:"optional"},allowedValues:[],rules:[],documentation:{displayText:"",description:"",comments:"",example:{method:"blank"}},provenance:[{source:"created",contributorId:profileId,contributorName:profileId,scope:"Shared Profile"}],overrideReferences:[]}),sharedDocument=(profileId)=>({id:`canonical:${profileId}`,revision:2,state:"Draft",contributorId:profileId,contributorName:profileId,rootIds:["property:shared-addition"],nodes:{"property:shared-addition":sharedNode(profileId)},view:"tree",changes:[]}),recipe=(id,profileId)=>({id,profileId,targetId:"group:recipe-aware",startingPoint:"empty",membership:"fixed",sourceRevision:1,conceptSelections:[],propertySelections:[],excludedPropertyIds:[],excludedRuleIds:[],includedDependencyPropertyIds:[],ruleReplacements:[],presenceReplacements:[],sourceSnapshot:{revision:1,sourcePropertyIds:[],effectivePropertyIds:[],propertyPaths:{},ruleFingerprints:{},definitionFingerprints:{},missingRuleDependencyKeys:[]}});
+sharedAdditionState.project.collections.profiles.push({id:"profile:first",name:"First",canonicalSchema:sharedDocument("profile:first")},{id:"profile:second",name:"Second",canonicalSchema:sharedDocument("profile:second")});
+sharedAdditionState.project.collections.pageGroups.push({id:"group:recipe-aware",name:"Recipe aware",profileInheritanceRecipes:[recipe("recipe:first","profile:first"),recipe("recipe:second","profile:second")]});
+const recipeAwareIncluded=includeComposedSchemaParentAdditionSelections(sharedAdditionState,"pageGroups","group:recipe-aware",[{recipeId:"recipe:first",propertyIds:["property:shared-addition"]}]),recipeAwareRecipes=recipeAwareIncluded.project.collections.pageGroups[0].profileInheritanceRecipes;
+assert.equal(recipeAwareRecipes[0].propertySelections.includes("property:shared-addition"),true,"the checked recipe receives its selected stable property identity");
+assert.equal(recipeAwareRecipes[1].propertySelections.includes("property:shared-addition"),false,"an unchecked recipe with the same property identity remains unchanged");
+assert.equal(recipeAwareIncluded.history.undo.length,sharedAdditionState.history.undo.length+1,"cross-profile Include selected is one atomic project command");
 
 const parallelContext=createSpecificationProject({name:"Parallel contextual repair",site:"shop.example",id:(kind)=>`${kind}:parallel-context`});
 parallelContext.project.collections.profiles.push(

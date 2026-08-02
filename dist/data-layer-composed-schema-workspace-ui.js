@@ -161,6 +161,7 @@ export function mountComposedSchemaWorkspace(options) {
                     const label = document.createElement("label"), control = document.createElement("input"), detail = document.createElement("span");
                     control.type = "checkbox";
                     control.value = item.propertyId;
+                    control.dataset.recipeId = group.recipeId;
                     control.addEventListener("change", () => { const ids = selected.get(group.recipeId) ?? new Set(); if (control.checked)
                         ids.add(item.propertyId);
                     else
@@ -171,10 +172,10 @@ export function mountComposedSchemaWorkspace(options) {
                 }
                 panel.append(source);
             }
-            const include = button("Include selected", () => { const propertyIds = [...selected.values()].flatMap((ids) => [...ids]); if (propertyIds.length) {
+            const include = button("Include selected", () => { const selections = [...selected].flatMap(([recipeId, ids]) => ids.size ? [{ recipeId, propertyIds: [...ids] }] : []); if (selections.length) {
                 workspacePanels.set(viewKey, "parent");
                 workspacePanelFocus.set(viewKey, { mode: "parent" });
-                options.onIncludeParentAdditions?.("", propertyIds);
+                options.onIncludeParentAdditions?.(selections);
             } });
             panel.append(include);
         }

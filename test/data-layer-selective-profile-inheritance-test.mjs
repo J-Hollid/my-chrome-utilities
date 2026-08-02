@@ -230,6 +230,12 @@ assert.equal(definitionStaleTarget.validationStale,true);assert.equal(definition
 const currentTarget=markProfileInheritanceTargetStale({id:"page:error",name:"Error Page",profileInheritanceRecipes:[appliedRecipe]},"profile:master",master,unrelatedEdit);
 assert.equal(currentTarget.validationStale,undefined);assert.equal(currentTarget.testCasesStale,undefined);assert.equal(currentTarget.documentationStale,undefined);assert.equal(currentTarget.exportStale,undefined);
 
+const legacyAdditionRecipe=structuredClone(appliedRecipe);delete legacyAdditionRecipe.sourceSnapshot.sourcePropertyIds;
+const laterOffer=node("property:later-offer","later_offer","string",5,{concept:"offer"}),laterStock=node("property:later-stock","later_stock","boolean",6,{concept:"offer"}),legacyGrown={...master,revision:master.revision+1,rootIds:[...master.rootIds,laterOffer.id,laterStock.id],nodes:{...master.nodes,[laterOffer.id]:laterOffer,[laterStock.id]:laterStock}},legacyIncluded=includeProfileInheritanceParentAdditions(legacyGrown,legacyAdditionRecipe,[laterOffer.id]);
+assert.equal(profileInheritanceParentAdditions(legacyGrown,legacyIncluded).some(({propertyId})=>propertyId===laterStock.id),true,"including one addition from a legacy snapshot keeps the other addition available for review");
+assert.equal(profileInheritanceSelection(legacyGrown,legacyIncluded).directPropertyIds.includes(laterOffer.id),true,"the selected legacy addition becomes compiler input");
+assert.equal(profileInheritanceSelection(legacyGrown,legacyIncluded).directPropertyIds.includes(laterStock.id),false,"the unchecked legacy addition stays outside compiler input");
+
 assert.equal(canonicalPropertyPath(renamed,errorMessage.id),"/error/friendly_message");
 
 console.log("selective profile inheritance model tests passed");

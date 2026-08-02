@@ -14,6 +14,7 @@ export interface CanonicalArrayScopeBoundary {propertyId:string;mode:"every"|"po
 export interface CanonicalArrayScope {boundaries:CanonicalArrayScopeBoundary[];}
 export interface CanonicalRule {id:string;kind:"presence"|"value"|"allowed-values"|"pattern"|"starts-with"|"ends-with"|"includes"|"range"|"cardinality"|"condition"|"reusable"|"custom";presence?:CanonicalPresenceMode;expectedValue?:unknown;allowedValues?:unknown[];pattern?:string;literal?:string;minimum?:number;maximum?:number;minItems?:number;maxItems?:number;condition?:CanonicalPredicate;arrayScope?:CanonicalArrayScope;severity:"error"|"warning";message?:string;enabled?:boolean;reusableRuleId?:string;reusableOutcome?:Record<string,unknown>;replacesRuleId?:string;enforcement?:"invariant"|"overridable";name?:string;revision?:number;operator?:string;provenance?:CanonicalProvenance;}
 export interface CanonicalDocumentation {displayText:string;description:string;comments:string;example:{method:"allowed-value"|"custom"|"blank";value?:unknown};}
+export type CanonicalInheritedDefinition=Partial<LayerConstraint>&{description?:string};
 export interface CanonicalProvenance {source:"created"|"saved-schema"|"requirements"|"structured-schema"|"structured-draft"|"path-constraint";sourceId?:string;revision?:number;contributorId?:string;contributorName?:string;scope?:LayerScope;state?:"inherited"|"shadowed"|"effective"|"local"|"overridden"|"conflict";}
 export interface CanonicalItemSchema {id:string;type?:CanonicalPropertyType;items?:CanonicalItemSchema;allowedValues?:unknown[];}
 export interface CanonicalPropertyNode {
@@ -21,7 +22,7 @@ export interface CanonicalPropertyNode {
   nullable?:boolean;onlyDefinedFields?:boolean;
   concept?:string;
   presence:{mode:CanonicalPresenceMode;condition?:CanonicalPredicate};allowedValues:CanonicalAllowedValue[];rules:CanonicalRule[];
-  documentation:CanonicalDocumentation;provenance:CanonicalProvenance[];overrideReferences:string[];structureOwned?:boolean;localDefinitionFacets?:readonly string[];inheritedDefinition?:{concept?:string;type?:CanonicalPropertyType;presence?:"required"|"optional"|"forbidden";description?:string};expectedValue?:unknown;enforcement?:"invariant"|"overridable";target?:string;
+  documentation:CanonicalDocumentation;provenance:CanonicalProvenance[];overrideReferences:string[];structureOwned?:boolean;localDefinitionFacets?:readonly string[];inheritedDefinition?:CanonicalInheritedDefinition;expectedValue?:unknown;enforcement?:"invariant"|"overridable";target?:string;
 }
 export interface CanonicalSchemaDocument {
   id:string;revision:number;state:"Draft";contributorId:string;contributorName:string;rootIds:string[];nodes:Record<string,CanonicalPropertyNode>;

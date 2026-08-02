@@ -130,8 +130,8 @@ export function installLayeredSchemaUi(options) {
                 persistFlow(resetFlowComposedSchemaLocalProperty(live.state, flowId, entity.id, row.path)); }, onResetLocalFacet: (path, facet) => { const live = current(); if (live.state)
                 persistFlow(resetFlowComposedSchemaLocalFacet(live.state, flowId, entity.id, path, facet)); }, onResetLocalRule: (path, ruleId) => { const live = current(); if (live.state)
                 persistFlow(resetFlowComposedSchemaLocalRule(live.state, flowId, entity.id, path, ruleId)); }, onResetAllLocalChanges: () => { const live = current(); if (live.state)
-                persistFlow(resetFlowComposedSchemaLocalChanges(live.state, flowId, entity.id)); }, onIncludeParentAdditions: (_recipeId, propertyIds) => { const live = current(); if (live.state)
-                persistFlow(includeFlowComposedSchemaParentAdditions(live.state, flowId, entity.id, propertyIds)); }, onStructure: () => { } });
+                persistFlow(resetFlowComposedSchemaLocalChanges(live.state, flowId, entity.id)); }, onIncludeParentAdditions: (selections) => { const live = current(); if (live.state)
+                persistFlow(includeFlowComposedSchemaParentAdditions(live.state, flowId, entity.id, selections)); }, onStructure: () => { } });
     };
     const renderFlowComposedSchemaWorkspace = (state, entity, flowId) => { const identity = document.createElement("p"), back = document.createElement("button"); identity.textContent = `Contributor: ${entity.name} · Flow Page-instance`; editor.append(identity); mountFlowComposedSchemaWorkspace(editor, state, entity, flowId, "Flow Page-instance"); back.type = "button"; back.textContent = "Return to Flow"; back.addEventListener("click", () => { editor.hidden = true; editorHost.hidden = true; workspace.hidden = false; restoreFlowReturn(); }); editor.append(back); return true; };
     const renderCanonicalLayerEditor = (state, entity, scope) => { const flowId = options.context().kind === "flows" ? options.context().entityId : undefined; if (scope === "Flow Page-instance" && flowId)

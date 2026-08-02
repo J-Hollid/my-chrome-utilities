@@ -53,11 +53,9 @@ export function composedCanonicalSchema(state, entity, scope, flowId) {
         node.structureOwned = !row.inherited || Boolean(row.local.definitionId);
         node.localDefinitionFacets = Object.keys(row.local).filter((key) => !["path", "definitionId", "rules", "reusableRules", "overrideReferences"].includes(key));
         if (row.inherited)
-            node.inheritedDefinition = { ...(row.inherited.type ? { type: row.inherited.type } : {}), ...(row.inherited.presence ? { presence: row.inherited.presence } : {}), description: row.inherited.documentation ?? "" };
+            node.inheritedDefinition = Object.fromEntries(Object.entries({ concept: row.inherited.concept, type: row.inherited.type, presence: row.inherited.presence, documentation: row.inherited.documentation, description: row.inherited.documentation, comments: row.inherited.comments, examples: clone(row.inherited.examples), nullable: row.inherited.nullable, onlyDefinedFields: row.inherited.onlyDefinedFields, itemType: row.inherited.itemType, itemSchema: clone(row.inherited.itemSchema), allowedValues: clone(row.inherited.allowedValues), allowedValueIds: clone(row.inherited.allowedValueIds), allowedValueProvenance: clone(row.inherited.allowedValueProvenance), expectedValue: clone(row.inherited.expectedValue), condition: clone(row.inherited.condition), patterns: clone(row.inherited.patterns), minimum: row.inherited.minimum, maximum: row.inherited.maximum, minItems: row.inherited.minItems, maxItems: row.inherited.maxItems, target: row.inherited.target, enforcement: row.inherited.enforcement }).filter(([, value]) => value !== undefined));
         if (row.effective.concept)
             node.concept = row.effective.concept;
-        if (row.inherited?.concept)
-            node.inheritedDefinition = { ...node.inheritedDefinition, concept: row.inherited.concept };
         document.nodes[id] = node;
         byPath.set(row.path, id);
     }

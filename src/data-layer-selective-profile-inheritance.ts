@@ -120,7 +120,7 @@ export function profileInheritanceParentAdditions(document:CanonicalSchemaDocume
 }
 
 export function includeProfileInheritanceParentAdditions(document:CanonicalSchemaDocument,recipe:ProfileInheritanceRecipe,propertyIds:readonly string[]):ProfileInheritanceRecipe{
-  const included=propertyIds.filter((propertyId)=>Boolean(document.nodes[propertyId])),idSet=new Set(included),staged={...clone(recipe),membership:"fixed" as const,propertySelections:stableUnique([...recipe.propertySelections,...included]),excludedPropertyIds:recipe.excludedPropertyIds.filter((propertyId)=>!idSet.has(propertyId))},applied=profileInheritanceRecipeApplied(document,staged),sourcePropertyIds=recipe.sourceSnapshot?.sourcePropertyIds;
+  const included=propertyIds.filter((propertyId)=>Boolean(document.nodes[propertyId])),idSet=new Set(included),staged={...clone(recipe),membership:"fixed" as const,propertySelections:stableUnique([...recipe.propertySelections,...included]),excludedPropertyIds:recipe.excludedPropertyIds.filter((propertyId)=>!idSet.has(propertyId))},applied=profileInheritanceRecipeApplied(document,staged),sourcePropertyIds=recipe.sourceSnapshot?.sourcePropertyIds??(recipe.sourceSnapshot?Object.keys(recipe.sourceSnapshot.propertyPaths):undefined);
   if(sourcePropertyIds&&applied.sourceSnapshot)applied.sourceSnapshot.sourcePropertyIds=[...sourcePropertyIds];
   return applied;
 }
