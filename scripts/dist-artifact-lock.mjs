@@ -1,4 +1,4 @@
-import {link,mkdir,open,readFile,rename,rm,stat,writeFile} from "node:fs/promises";
+import {mkdir,readFile,readdir,rm,stat,writeFile} from "node:fs/promises";
 
 const lockDirectory=new URL("../tmp/.dist-artifact.lock/",import.meta.url);
 const heldEnvironmentKey="MY_CHROME_UTILITIES_DIST_LOCK_HELD";
@@ -21,24 +21,22 @@ async function staleClaim(claimFile){
   }catch{try{return Date.now()-(await stat(claimFile)).mtimeMs>1000;}catch{return true;}}
 }
 
-async function recoverStaleClaim(directory,claimFile){
-  let observed;try{observed=await open(claimFile,"r");}catch(error){if(error?.code==="ENOENT")return true;throw error;}
-  const observedStat=await observed.stat();if(!await staleClaim(claimFile)){await observed.close();return false;}
-  const quarantine=new URL(`reclaim.claim.recovery-${process.pid}-${Date.now()}-${Math.random()}`,directory);
-  try{await rename(claimFile,quarantine);}catch(error){await observed.close();if(error?.code==="ENOENT")return true;throw error;}
-  const movedStat=await stat(quarantine),sameClaim=observedStat.dev===movedStat.dev&&observedStat.ino===movedStat.ino;await observed.close();
-  if(!sameClaim){try{await link(quarantine,claimFile);}catch(error){if(error?.code!=="EEXIST")throw error;}await rm(quarantine);return false;}
-  await rm(quarantine);return true;
-}
+const reclaimClaimPattern=/^reclaim\.\d{24}\..+\.claim$/;
+const reclaimClaims=async(directory)=>{try{return(await readdir(directory)).filter((name)=>reclaimClaimPattern.test(name));}catch(error){if(error?.code==="ENOENT")return[];throw error;}};
+const orderedReclaimClaims=async(directory)=>{const entries=[];for(const name of await reclaimClaims(directory))try{const details=await stat(new URL(name,directory),{bigint:true});entries.push({name,created:details.birthtimeNs,ino:details.ino});}catch(error){if(error?.code!=="ENOENT")throw error;}return entries.sort((left,right)=>left.created<right.created?-1:left.created>right.created?1:left.ino<right.ino?-1:left.ino>right.ino?1:left.name.localeCompare(right.name)).map(({name})=>name);};
 
 async function reclaimObservedOwner(directory,ownerFile,observed){
-  const claimFile=new URL("reclaim.claim",directory),claimToken=`${process.pid}:${Date.now()}:${Math.random()}`,claimOwner={pid:process.pid,startTime:await processStartTime(process.pid),token:claimToken};let claim;
-  try{claim=await open(claimFile,"wx");await claim.writeFile(JSON.stringify(claimOwner));}
-  catch(error){if(error?.code==="EEXIST"){if(!await recoverStaleClaim(directory,claimFile))await pause(25);return false;}if(error?.code==="ENOENT")return false;throw error;}
-  finally{await claim?.close();}
+  const claimToken=`${process.pid}:${Date.now()}:${Math.random()}`,claimName=`reclaim.${process.hrtime.bigint().toString().padStart(24,"0")}.${process.pid}.${Math.random()}.claim`,claimFile=new URL(claimName,directory),claimOwner={pid:process.pid,startTime:await processStartTime(process.pid),token:claimToken};
+  try{await writeFile(claimFile,JSON.stringify(claimOwner),{flag:"wx"});}catch(error){if(error?.code==="ENOENT")return false;throw error;}
   try{
+    for(;;){
+      for(const name of await reclaimClaims(directory)){const candidate=new URL(name,directory);if(await staleClaim(candidate))try{await rm(candidate);}catch(error){if(error?.code!=="ENOENT")throw error;}}
+      const claims=await orderedReclaimClaims(directory);if(!claims.includes(claimName))return false;if(claims[0]!==claimName){await pause(25);continue;}
+      break;
+    }
     let current;try{current=await readFile(ownerFile,"utf8");}catch(error){if(error?.code!=="ENOENT")throw error;}
     if(current!==observed.source)return false;
+    const claim=JSON.parse(await readFile(claimFile,"utf8"));if(claim.token!==claimToken)return false;
     await rm(directory,{recursive:true});return true;
   }finally{
     try{if(JSON.parse(await readFile(claimFile,"utf8")).token===claimToken)await rm(claimFile);}catch(error){if(error?.code!=="ENOENT")throw error;}
