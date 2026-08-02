@@ -48,9 +48,10 @@ const legacyState=()=>({
         pageFrames:[
           {id:"frame:cart",name:"Cart",pageId:"page:cart",pageGroupId:"group:checkout",position:{x:40,y:90}},
           {id:"frame:product",name:"Product detail",pageId:"page:product",pageGroupId:"group:retail",position:{x:340,y:250}},
+          {id:"frame:free",name:"Product detail outside",pageId:"page:product",freePageRegion:"after-lanes",position:{x:24,y:410}},
         ],
-        occurrences:[{id:"occurrence:view",name:"View",pageFrameId:"frame:cart",pageId:"page:cart",eventId:"event:view"}],
-        relationships:[{id:"relationship:next",sourceEndpoint:{kind:"page-frame",id:"frame:cart"},targetEndpoint:{kind:"page-frame",id:"frame:product"}}],
+        occurrences:[{id:"occurrence:view",name:"View",pageFrameId:"frame:cart",pageId:"page:cart",eventId:"event:view"},{id:"occurrence:free",name:"View outside",pageFrameId:"frame:free",pageId:"page:product",eventId:"event:view",position:{x:24,y:70}}],
+        relationships:[{id:"relationship:next",sourceEndpoint:{kind:"page-frame",id:"frame:cart"},targetEndpoint:{kind:"page-frame",id:"frame:product"}},{id:"relationship:free",sourceEndpoint:{kind:"page-frame",id:"frame:free"},targetEndpoint:{kind:"page-frame",id:"frame:product"}}],
       },
     },
   },
@@ -90,7 +91,11 @@ const legacyState=()=>({
   assert.equal(graph.sections.length,2,"each used legacy Flow lane becomes a Flow-owned Section");
   assert.equal(graph.pageFrames[0].sectionId,graph.sections[0].id,"frame placement points to the new Section identity");
   assert.equal(Object.hasOwn(graph.pageFrames[0],"pageGroupId"),false,"legacy frame placement is removed");
+  const outside=graph.pageFrames.find(({id})=>id==="frame:free");
+  assert.deepEqual(outside,{id:"frame:free",name:"Product detail outside",pageId:"page:product",position:{x:924,y:410}},"legacy free placement becomes an ordinary Page frame outside Sections at the same canvas geometry");
+  assert.equal(JSON.stringify(graph).includes("freePageRegion"),false,"upgraded Flow bytes contain no superseded free-region placement");
   assert.deepEqual(graph.relationships,legacyState().project.documentationFlowGraphs["flow:checkout"].relationships,"topology is conserved");
+  assert.deepEqual(graph.occurrences,legacyState().project.documentationFlowGraphs["flow:checkout"].occurrences,"occurrence identities and geometry are conserved");
   assert.equal(project.collections.assignments[0].targetKind,"Property Set","Assignment kind is migrated without changing target identity");
   assert.equal(project.collections.assignments[0].targetId,"group:checkout");
   assert.strictEqual(upgradePageGroupsToPropertySets(upgraded,id),upgraded,"the verified upgrade is idempotent");
@@ -132,7 +137,7 @@ const legacyState=()=>({
   assert.equal(JSON.stringify({pages:state.project.collections.pages,propertySets:state.project.collections.propertySets,assignments:state.project.collections.assignments}),schemaBytes,"Section commands are schema-neutral");
   const removed=removeFlowSection(state,"flow:checkout",review.id),removedGraph=removed.project.documentationFlowGraphs["flow:checkout"];
   assert.equal(removedGraph.pageFrames.some(({id,sectionId})=>id==="frame:cart"&&sectionId===undefined),true,"default removal keeps frames outside Sections");
-  assert.equal(removedGraph.relationships.length,1,"default removal keeps relationships");
+  assert.equal(removedGraph.relationships.length,2,"default removal keeps relationships");
 }
 
 {

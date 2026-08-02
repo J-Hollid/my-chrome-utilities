@@ -26,22 +26,23 @@ export function addFreePageFrame(state, flowId, input, id) {
     const page = state.project.collections.pages.find(({ id }) => id === input.pageId);
     if (!page)
         return state;
-    return transactProject(state, "Add free Flow Page frame", (project) => { const current = storedGraph(project, flowId), frame = { id: id("flow-page-frame"), pageId: input.pageId, freePageRegion: input.region, position: { x: Math.max(12, Math.round(input.x)), y: Math.max(55, Math.round(input.y)) } }; return saveStoredGraph(project, flowId, { ...current, pageFrames: [...current.pageFrames, frame] }); });
+    return transactProject(state, "Add Flow Page frame outside Sections", (project) => { const current = storedGraph(project, flowId), frame = { id: id("flow-page-frame"), pageId: input.pageId, position: { x: Math.max(12, Math.round(input.x)), y: Math.max(55, Math.round(input.y)) } }; return saveStoredGraph(project, flowId, { ...current, pageFrames: [...current.pageFrames, frame] }); });
 }
 export function addUngroupedPageFrame(state, flowId, input, id) { return addFreePageFrame(state, flowId, { ...input, region: "after-lanes", x: 24 }, id); }
 export function inspectFreePageEdgeMove(project, flowId, occurrenceId, targetRegion) {
-    const occurrence = storedGraph(project, flowId).occurrences.find(({ id }) => id === occurrenceId), page = project.collections.pages.find(({ id }) => id === occurrence?.pageId), flow = project.collections.flows.find(({ id }) => id === flowId), rejected = !occurrence?.freePageFrame;
-    return { rejected, message: rejected ? `${page?.name ?? occurrence?.name ?? occurrenceId} remains in its Property Set lane in ${flow?.name ?? flowId}; it cannot move to ${targetRegion} without explicit membership changes.` : `${page?.name ?? occurrence.name} can move to ${targetRegion} without changing membership.`, guidance: `?kind=pages&entity=${encodeURIComponent(String(occurrence?.pageId ?? ""))}&field=pageGroupIds` };
+    const occurrence = storedGraph(project, flowId).occurrences.find(({ id }) => id === occurrenceId), page = project.collections.pages.find(({ id }) => id === occurrence?.pageId);
+    void targetRegion;
+    return { rejected: !occurrence, message: occurrence ? `${page?.name ?? occurrence.name} can move outside every Section without changing schema composition.` : "Choose an existing Event occurrence.", guidance: `?kind=flows&entity=${encodeURIComponent(flowId)}` };
 }
-export function inspectUngroupedPageDrop(project, flowId, pageId, targetPageGroupId) { const page = project.collections.pages.find(({ id }) => id === pageId), group = project.collections.propertySets.find(({ id }) => id === targetPageGroupId), flow = project.collections.flows.find(({ id }) => id === flowId); return { rejected: true, message: `${page?.name ?? pageId} is a free Page and cannot be dropped over ${group?.name ?? targetPageGroupId} in ${flow?.name ?? flowId} without explicit membership.`, guidance: `?kind=pages&entity=${encodeURIComponent(pageId)}&field=pageGroupIds` }; }
+export function inspectUngroupedPageDrop(project, flowId, pageId, targetSectionId) { const page = project.collections.pages.find(({ id }) => id === pageId), section = storedGraph(project, flowId).sections.find(({ id }) => id === targetSectionId), rejected = !page || !section; return { rejected, message: rejected ? "Choose an existing Page and Section." : `${page.name} can be placed in ${section.name} independently of Property composition.`, guidance: `?kind=flows&entity=${encodeURIComponent(flowId)}` }; }
 export function moveFreePageFrame(state, flowId, frameId, presentation) {
     const frame = storedGraph(state.project, flowId).pageFrames.find(({ id }) => id === frameId), position = frame?.position;
     if (!frame)
         return state;
-    const next = { region: presentation.region, x: Math.max(12, Math.round(presentation.x)), y: Math.max(55, Math.round(presentation.y)) };
-    if (frame.freePageRegion === next.region && position?.x === next.x && position.y === next.y)
+    const next = { x: Math.max(12, Math.round(presentation.x)), y: Math.max(55, Math.round(presentation.y)) };
+    if (!frame.freePageRegion && !frame.pageGroupId && position?.x === next.x && position.y === next.y)
         return state;
-    return transactProject(state, `Move free Page frame ${frameId}`, (project) => { const graph = storedGraph(project, flowId); return saveStoredGraph(project, flowId, { ...graph, pageFrames: graph.pageFrames.map((item) => { if (item.id !== frameId)
-            return item; const moved = { ...item, freePageRegion: next.region, position: { x: next.x, y: next.y } }; delete moved.pageGroupId; return moved; }) }); });
+    return transactProject(state, `Move Page frame ${frameId} outside Sections`, (project) => { const graph = storedGraph(project, flowId); return saveStoredGraph(project, flowId, { ...graph, pageFrames: graph.pageFrames.map((item) => { if (item.id !== frameId)
+            return item; const moved = { ...item, position: next }; delete moved.pageGroupId; delete moved.freePageRegion; delete moved.sectionId; return moved; }) }); });
 }
 //# sourceMappingURL=containment.js.map

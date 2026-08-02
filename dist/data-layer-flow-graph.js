@@ -9,10 +9,18 @@ export const FLOW_GRAPH_GEOMETRY = { eventWidth: 170, eventHeight: 94, eventMinX
 export const clone = (value) => structuredClone(value);
 export const graphIndex = (project) => project.documentationFlowGraphs ?? {};
 export const storedGraph = (project, flowId) => { const stored = graphIndex(project)[flowId], legacyProject = Object.hasOwn(project.collections, "pageGroups"), legacy = legacyProject ? project.collections.flows.find(({ id }) => id === flowId)?.pageGroupIds : undefined; return { sections: stored?.sections ?? [], pageGroupIds: legacyProject ? [...(stored?.pageGroupIds ?? legacy ?? [])] : [], pageFrames: stored?.pageFrames ?? [], occurrences: stored?.occurrences ?? [], relationships: stored?.relationships ?? [], ...(stored?.selectedItem ? { selectedItem: stored.selectedItem } : {}), ...(stored?.viewport ? { viewport: stored.viewport } : {}) }; };
-export const saveStoredGraph = (project, flowId, graph) => { const { selectedItem: _selectedItem, viewport: _viewport, ...semanticGraph } = graph; if (!Object.hasOwn(project.collections, "pageGroups")) {
+export const saveStoredGraph = (project, flowId, graph) => { const { selectedItem: _selectedItem, viewport: _viewport, ...semanticGraph } = clone(graph); if (!Object.hasOwn(project.collections, "pageGroups")) {
     delete semanticGraph.pageGroupIds;
-    for (const frame of semanticGraph.pageFrames)
+    for (const frame of semanticGraph.pageFrames) {
         delete frame.pageGroupId;
+        delete frame.freePageRegion;
+    }
+    for (const occurrence of semanticGraph.occurrences) {
+        delete occurrence.pageGroupId;
+        delete occurrence.freePageFrameId;
+        delete occurrence.freePageFrame;
+        delete occurrence.freePageRegion;
+    }
 } return { ...project, documentationFlowGraphs: { ...graphIndex(project), [flowId]: semanticGraph } }; };
 export const legacyBindingOccurrence = (occurrence) => typeof occurrence.contextBindingId === "string" && Boolean(occurrence.contextBindingId);
 export const relationshipEndpoint = (relationship, side) => {

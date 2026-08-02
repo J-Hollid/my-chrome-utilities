@@ -1940,7 +1940,8 @@ const applyRequestedRoute = () => { const deepKind = routeParameters.get("kind")
     selectedId = creationKind ? undefined : deepId && state && state.project.collections[deepKind].some(({ id }) => id === deepId) ? deepId : undefined;
     persistNavigation();
     render();
-    queueMicrotask(() => { const target = creationKind ? document.querySelector(`[data-creation-kind="${deepKind}"] h1`) : selectedId ? document.querySelector(`[data-project-entity-workspace="${CSS.escape(selectedId)}"] h1`) : document.querySelector(`[data-add-kind="${deepKind}"], #workspace-content h1, #workspace-pane`); if (target) {
+    queueMicrotask(() => { if (deepKind === "flows" && document.activeElement?.closest("[data-page-frame-id]"))
+        return; const target = creationKind ? document.querySelector(`[data-creation-kind="${deepKind}"] h1`) : selectedId ? document.querySelector(`[data-project-entity-workspace="${CSS.escape(selectedId)}"] h1`) : document.querySelector(`[data-add-kind="${deepKind}"], #workspace-content h1, #workspace-pane`); if (target) {
         target.tabIndex = -1;
         target.focus({ preventScroll: true });
     } });

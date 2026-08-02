@@ -233,7 +233,7 @@ export function installLayeredSchemaUi(options) {
     const selectGraphContributor = (target) => { const { state, kind, entityId: flowId } = options.context(); if (!state || kind !== "flows" || !flowId)
         return; const graphs = state.project.documentationFlowGraphs, occurrenceId = target.dataset.occurrenceId, pageFrameId = !occurrenceId ? target.dataset.pageFrameId : undefined, pageGroupId = !occurrenceId && !pageFrameId ? target.dataset.pageGroupId : undefined; if (occurrenceId) {
         graphSelection = graphs[flowId]?.occurrences?.find(({ id }) => id === occurrenceId);
-        graphSelectionScope = graphSelection?.freePageFrame ? "Flow Page-instance" : "Event-occurrence";
+        graphSelectionScope = "Event-occurrence";
     }
     else if (pageFrameId) {
         graphSelection = flowPageFrameContributor(state, flowId, pageFrameId);
@@ -252,7 +252,7 @@ export function installLayeredSchemaUi(options) {
         return; const target = event.target.closest(graphContributorSelector); if (target)
         selectGraphContributor(target); });
     const openGraphOccurrenceSchema = (contributorId, path, originFocus) => { const { state, kind, entityId: flowId } = options.context(), graphs = state?.project.documentationFlowGraphs, occurrence = flowId ? graphs?.[flowId]?.occurrences?.find(({ id }) => id === contributorId) : undefined, frame = flowId ? flowPageFrameContributor(state, flowId, contributorId) : undefined, contributor = occurrence ?? frame; if (!state || kind !== "flows" || !flowId || !contributor)
-        return false; graphSelection = contributor; graphSelectionScope = frame ? "Flow Page-instance" : occurrence?.freePageFrame ? "Flow Page-instance" : "Event-occurrence"; returnFocus = originFocus ?? (document.activeElement instanceof HTMLElement ? document.activeElement : undefined); const stableSelectorId = contributorId; captureFlowReturn(frame ? "page-frame" : "occurrence", stableSelectorId, returnFocus); editor.hidden = false; if (graphSelectionScope !== "Flow Page-instance")
+        return false; graphSelection = contributor; graphSelectionScope = frame ? "Flow Page-instance" : "Event-occurrence"; returnFocus = originFocus ?? (document.activeElement instanceof HTMLElement ? document.activeElement : undefined); const stableSelectorId = contributorId; captureFlowReturn(frame ? "page-frame" : "occurrence", stableSelectorId, returnFocus); editor.hidden = false; if (graphSelectionScope !== "Flow Page-instance")
         ensureCanonical(); renderEditor(); editorHost.hidden = false; workspace.hidden = true; editor.querySelector("h2")?.focus(); if (path)
         setTimeout(() => { const candidate = Array.from(editor.querySelectorAll("[data-property-id]")).find((row) => row.dataset.propertyId === path); if (!candidate)
             return; candidate.click(); setTimeout(() => Array.from(editor.querySelectorAll("[data-property-id]")).find((row) => row.dataset.propertyId === path)?.focus({ preventScroll: true }), 0); }, 0); return true; };
