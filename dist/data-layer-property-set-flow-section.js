@@ -62,9 +62,21 @@ export function setPropertySetApplicationApplicability(state, pageId, propertySe
             return application; const next = { ...application, ...(applicabilitySetId ? { applicabilitySetId } : {}) }; if (!applicabilitySetId)
             delete next.applicabilitySetId; return next; }) }));
 }
+const schemaEvaluationInput = (entity) => entity ? {
+    id: entity.id,
+    revision: entity.canonicalSchema?.revision ?? entity.revision ?? entity.version ?? 0,
+    canonicalSchema: entity.canonicalSchema,
+    schemaConstraints: entity.schemaConstraints,
+    requirements: entity.requirements,
+    localSchemaContributions: entity.localSchemaContributions,
+    onlyDefinedFields: entity.onlyDefinedFields,
+    profileId: entity.profileId,
+    profileIds: entity.profileIds,
+    profileInheritanceRecipes: entity.profileInheritanceRecipes,
+} : undefined;
 export function pagePropertySetEvaluatorRevision(project, pageId) {
-    const page = project.collections.pages.find(({ id }) => id === pageId), sets = new Map(project.collections.propertySets.map((set) => [set.id, set])), applicabilitySets = new Map(project.collections.applicabilitySets.map((set) => [set.id, set])), revision = (entity) => entity?.canonicalSchema?.revision ?? entity?.revision ?? 0;
-    return `page:${JSON.stringify({ pageId: page?.id, pageRevision: revision(page), applications: applications(page ?? { id: "", name: "" }).map(({ id, propertySetId, applicabilitySetId }) => { const applicability = applicabilitySetId ? applicabilitySets.get(applicabilitySetId) : undefined; return { id, propertySetId, propertySetRevision: revision(sets.get(propertySetId)), ...(applicabilitySetId ? { applicabilitySetId, applicabilityRevision: revision(applicability), applicabilityCondition: applicability?.condition } : {}), }; }) })}`;
+    const page = project.collections.pages.find(({ id }) => id === pageId), sets = new Map(project.collections.propertySets.map((set) => [set.id, set])), profiles = new Map(project.collections.profiles.map((profile) => [profile.id, profile])), applicabilitySets = new Map(project.collections.applicabilitySets.map((set) => [set.id, set])), applied = applications(page ?? { id: "", name: "" }), appliedSets = applied.flatMap(({ propertySetId }) => { const set = sets.get(propertySetId); return set ? [set] : []; }), profileIds = unique([page?.profileId, ...(page?.profileIds ?? []), ...appliedSets.flatMap((set) => [set.profileId, ...(set.profileIds ?? [])])].filter((value) => typeof value === "string" && Boolean(value)));
+    return `page:${JSON.stringify({ page: schemaEvaluationInput(page), profiles: profileIds.map((profileId) => schemaEvaluationInput(profiles.get(profileId))), applications: applied.map(({ id, propertySetId, applicabilitySetId }) => { const applicability = applicabilitySetId ? applicabilitySets.get(applicabilitySetId) : undefined; return { id, propertySetId, propertySet: schemaEvaluationInput(sets.get(propertySetId)), ...(applicabilitySetId ? { applicabilitySetId, applicabilityRevision: applicability?.canonicalSchema?.revision ?? applicability?.revision ?? applicability?.version ?? 0, applicabilityCondition: applicability?.condition } : {}), }; }) })}`;
 }
 export function propertySetPages(project, propertySetId) { return project.collections.pages.filter((page) => applications(page).some((application) => application.propertySetId === propertySetId)); }
 export function changePropertySetSchema(state, propertySetId, constraints) {
