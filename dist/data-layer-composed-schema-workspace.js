@@ -70,8 +70,12 @@ else if (facet === "concept") {
     else
         delete node.concept;
 }
-else if (facet === "type" && typeof value === "string")
-    node.type = value;
+else if (facet === "type") {
+    if (typeof value === "string")
+        node.type = value;
+    else
+        delete node.type;
+}
 else if (facet === "nullable") {
     if (typeof value === "boolean")
         node.nullable = value;
