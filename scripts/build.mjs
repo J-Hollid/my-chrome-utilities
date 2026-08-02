@@ -11,7 +11,9 @@ import {
 import { execFileSync } from "node:child_process";
 import { createRequire } from "node:module";
 import path from "node:path";
+import {withDistArtifactLock} from "./dist-artifact-lock.mjs";
 
+await withDistArtifactLock(async()=>{
 await rm("dist", { recursive: true, force: true });
 const require = createRequire(import.meta.url);
 const compiler = require.resolve("typescript/bin/tsc");
@@ -86,3 +88,4 @@ for (const htmlName of ["side-panel.html", "specification-builder.html"]) {
     }
   }
 }
+});

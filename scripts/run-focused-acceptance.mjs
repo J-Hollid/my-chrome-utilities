@@ -7,6 +7,7 @@ import {
   planVerification,
   validateVerificationPacks,
 } from "./verification-packs.mjs";
+import {withDistArtifactLock} from "./dist-artifact-lock.mjs";
 
 export function focusedAcceptanceOptions(args) {
   const options = { packIds:[], changedPaths:[], terminalFull:false };
@@ -48,7 +49,7 @@ export async function runFocusedAcceptance(args, { commandRunner = runCommand } 
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  runFocusedAcceptance(process.argv.slice(2)).catch((error) => {
+  withDistArtifactLock(()=>runFocusedAcceptance(process.argv.slice(2))).catch((error) => {
     console.error(error.message);
     process.exitCode = 1;
   });

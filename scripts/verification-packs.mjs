@@ -80,6 +80,14 @@ function validateDependencies(packs, ids) {
         throw new Error(`Register every direct dependency: ${dependency}`);
       }
     }
+    for (const component of pack.sharedComponents ?? []) {
+      if (!ids.has(component)) {
+        throw new Error(`Register every shared verification component: ${component}`);
+      }
+      if (pack.dependencies.includes(component)) {
+        throw new Error(`Choose dependency or shared component semantics once: ${pack.id} -> ${component}`);
+      }
+    }
   }
 }
 
@@ -170,7 +178,7 @@ function expandDependants(packs, ids) {
   while (changed) {
     changed = false;
     for (const pack of packs) {
-      if (pack.dependencies.some((id) => selected.has(id)) && !selected.has(pack.id)) {
+      if ([...pack.dependencies,...(pack.sharedComponents??[])].some((id) => selected.has(id)) && !selected.has(pack.id)) {
         selected.add(pack.id);
         changed = true;
       }

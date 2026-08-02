@@ -802,7 +802,11 @@
   {
     "id": "flow_graph",
     "source": [
-      "src/data-layer-flow-graph-structural.ts"
+      "src/data-layer-flow-graph.ts",
+      "src/data-layer-flow-graph-ui.ts",
+      "src/data-layer-flow-graph-structural.ts",
+      "src/data-layer-flow-graph-ui-page-frame.ts",
+      "src/flow-graph"
     ],
     "dependencies": [
       "durable_project_repository",
@@ -1053,13 +1057,12 @@
     "source": [
       "src/data-layer-property-set-flow-section.ts",
       "src/data-layer-property-set-flow-section-ui.ts",
-      "src/utilities/data-layer/property-set-flow-section.ts",
-      "src/data-layer-flow-graph.ts",
-      "src/data-layer-flow-graph-ui.ts",
-      "src/data-layer-flow-graph-ui-page-frame.ts",
-      "src/flow-graph"
+      "src/utilities/data-layer/property-set-flow-section.ts"
     ],
     "dependencies": [],
+    "sharedComponents": [
+      "flow_graph"
+    ],
     "unit": [
       "test/data-layer-property-set-flow-section-test.mjs"
     ],

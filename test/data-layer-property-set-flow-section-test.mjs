@@ -20,10 +20,16 @@ import {compileLayeredSchema} from "../dist/data-layer-layered-schema.js";
 import {layeredContributorPath,layeredContributorsForPath} from "../dist/data-layer-layered-schema-project.js";
 import {createProjectCollectionEntity} from "../dist/data-layer-project-entity-lifecycle.js";
 import {createMemoryDurableProjectRepository} from "../dist/data-layer-durable-project-repository.js";
+import {projectFlowGraph} from "../dist/data-layer-flow-graph.js";
 import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
+import {acquireDistArtifactLock} from "../scripts/dist-artifact-lock.mjs";
+import {loadVerificationPacks,planVerification,validateVerificationPacks} from "../scripts/verification-packs.mjs";
 
 let sequence=0;
 const id=(kind)=>`${kind}:separation:${++sequence}`;
+const legacyFlowProjection=(state,flowId)=>{
+  const graph=state.project.documentationFlowGraphs[flowId],laneIds=graph.pageGroupIds,hasBefore=graph.pageFrames.some(({freePageRegion})=>freePageRegion==="before-lanes"),laneOffset=hasBefore?200:0,size=(frame)=>{const children=graph.occurrences.filter(({pageFrameId})=>pageFrameId===frame.id);return{width:Math.max(190,...children.map(({position})=>Number(position?.x??24)+190)),height:Math.max(108,...children.map(({position})=>Number(position?.y??70)+110))};},bands=[];let nextY=20;for(const laneId of laneIds){const frames=graph.pageFrames.filter(({pageGroupId,freePageRegion})=>pageGroupId===laneId&&!freePageRegion),height=Math.max(240,...frames.map((frame)=>Number(frame.position.y??40)+size(frame).height+40));bands.push({id:laneId,y:nextY,height});nextY+=height+24;}const bandById=new Map(bands.map((band)=>[band.id,band])),namedWidth=Math.max(900,...graph.pageFrames.filter(({freePageRegion})=>!freePageRegion).map((frame)=>Number(frame.position.x??40)+size(frame).width+60)),laneLeft=laneOffset+10,namedRight=Math.max(laneLeft+700,...graph.pageFrames.filter(({freePageRegion})=>!freePageRegion).map((frame)=>laneOffset+Number(frame.position.x??40)+size(frame).width+60)),endpoints=graph.pageFrames.map((frame)=>{const dimensions=size(frame),band=bandById.get(frame.pageGroupId),x=frame.freePageRegion?frame.freePageRegion==="before-lanes"?Number(frame.position.x??24):laneOffset+namedWidth+Number(frame.position.x??24):laneOffset+Number(frame.position.x??40),y=frame.freePageRegion?Number(frame.position.y??55):Number(band?.y??20)+Number(frame.position.y??40);return{id:frame.id,x,y,...dimensions};}),endpointById=new Map(endpoints.map((endpoint)=>[endpoint.id,endpoint])),occurrences=graph.occurrences.map((occurrence)=>{const endpoint=endpointById.get(occurrence.pageFrameId);return{id:occurrence.id,x:endpoint.x+Number(occurrence.position?.x??24),y:endpoint.y+Number(occurrence.position?.y??70)};}),relationships=graph.relationships.map((relationship)=>{const source=endpointById.get(relationship.sourceEndpoint.id),target=endpointById.get(relationship.targetEndpoint.id);return{id:relationship.id,x1:source.x+source.width,y1:source.y+source.height/2,x2:target.x,y2:target.y+target.height/2};});return{sections:bands.map((band,order)=>({laneId:band.id,order,bounds:{x:laneLeft,y:band.y,width:namedRight-laneLeft,height:band.height}})),endpoints,occurrences,relationships};
+};
 const legacyState=()=>({
   project:{
     id:"project:shop",name:"Shop",description:"",site:"https://shop.test",environments:["Production"],
@@ -48,6 +54,7 @@ const legacyState=()=>({
         pageFrames:[
           {id:"frame:cart",name:"Cart",pageId:"page:cart",pageGroupId:"group:checkout",position:{x:40,y:90}},
           {id:"frame:product",name:"Product detail",pageId:"page:product",pageGroupId:"group:retail",position:{x:340,y:250}},
+          {id:"frame:before",name:"Cart before",pageId:"page:cart",freePageRegion:"before-lanes",position:{x:32,y:30}},
           {id:"frame:free",name:"Product detail outside",pageId:"page:product",freePageRegion:"after-lanes",position:{x:24,y:410}},
         ],
         occurrences:[{id:"occurrence:view",name:"View",pageFrameId:"frame:cart",pageId:"page:cart",eventId:"event:view"},{id:"occurrence:free",name:"View outside",pageFrameId:"frame:free",pageId:"page:product",eventId:"event:view",position:{x:24,y:70}}],
@@ -57,6 +64,11 @@ const legacyState=()=>({
   },
   draft:{id:"draft:shop",status:"Saved",updatedAt:"2026-08-02T00:00:00.000Z"},history:{undo:[],redo:[]},
 });
+
+{
+  const testLock=new URL("../build/.test-dist-artifact.lock/",import.meta.url),order=[],releaseFirst=await acquireDistArtifactLock(testLock);order.push("first acquired");let secondAcquired=false;const second=acquireDistArtifactLock(testLock).then(async(release)=>{secondAcquired=true;order.push("second acquired");await release();});await new Promise((resolve)=>setTimeout(resolve,30));assert.equal(secondAcquired,false,"a second build or acceptance session waits while the completed dist artifact is in use");await releaseFirst();await second;assert.deepEqual(order,["first acquired","second acquired"],"dist artifact consumers resume in acquisition order");
+  const packs=await loadVerificationPacks();await validateVerificationPacks(packs);const focused=planVerification(packs,{packIds:["property_set_flow_sections"]}),changedFlow=planVerification(packs,{changedPaths:["src/data-layer-flow-graph.ts"]});assert.deepEqual(focused.packIds,["property_set_flow_sections"],"the separation checkpoint reuses only its bounded Flow component evidence");assert.equal(changedFlow.packIds.includes("flow_graph")&&changedFlow.packIds.includes("property_set_flow_sections"),true,"a core Flow change selects both its owning pack and the bounded separation consumer");
+}
 
 {
   let state=createSpecificationProject({name:"New Shop",site:"shop.test",id});
@@ -79,7 +91,7 @@ const legacyState=()=>({
 }
 
 {
-  const upgraded=upgradePageGroupsToPropertySets(legacyState(),id),project=upgraded.project;
+  const legacy=legacyState(),beforeProjection=legacyFlowProjection(legacy,"flow:checkout"),upgraded=upgradePageGroupsToPropertySets(legacy,id),project=upgraded.project;
   assert.equal(Object.hasOwn(project.collections,"pageGroups"),false,"verified storage removes the legacy Page Group collection");
   assert.deepEqual(project.collections.propertySets.map(({id,name})=>({id,name})),[
     {id:"group:checkout",name:"Checkout base"},{id:"group:retail",name:"Retail commerce"},
@@ -92,10 +104,15 @@ const legacyState=()=>({
   assert.equal(graph.pageFrames[0].sectionId,graph.sections[0].id,"frame placement points to the new Section identity");
   assert.equal(Object.hasOwn(graph.pageFrames[0],"pageGroupId"),false,"legacy frame placement is removed");
   const outside=graph.pageFrames.find(({id})=>id==="frame:free");
-  assert.deepEqual(outside,{id:"frame:free",name:"Product detail outside",pageId:"page:product",position:{x:924,y:410}},"legacy free placement becomes an ordinary Page frame outside Sections at the same canvas geometry");
+  assert.deepEqual(outside,{id:"frame:free",name:"Product detail outside",pageId:"page:product",position:{x:1124,y:410}},"legacy free placement becomes an ordinary Page frame outside Sections at the same canvas geometry");
   assert.equal(JSON.stringify(graph).includes("freePageRegion"),false,"upgraded Flow bytes contain no superseded free-region placement");
   assert.deepEqual(graph.relationships,legacyState().project.documentationFlowGraphs["flow:checkout"].relationships,"topology is conserved");
   assert.deepEqual(graph.occurrences,legacyState().project.documentationFlowGraphs["flow:checkout"].occurrences,"occurrence identities and geometry are conserved");
+  const afterProjection=projectFlowGraph(project,"flow:checkout"),afterEndpoints=afterProjection.graph.connectionEndpoints.map(({id,layout,width,height})=>({id,x:layout.x,y:layout.y,width,height})),afterOccurrences=afterProjection.graph.nodes.map(({id,layout})=>({id,x:layout.x,y:layout.y})),afterEndpointById=new Map(afterEndpoints.map((endpoint)=>[endpoint.id,endpoint])),afterRelationships=afterProjection.graph.relationships.map((relationship)=>{const source=afterEndpointById.get(relationship.sourceEndpoint.id),target=afterEndpointById.get(relationship.targetEndpoint.id);return{id:relationship.id,x1:source.x+source.width,y1:source.y+source.height/2,x2:target.x,y2:target.y+target.height/2};});
+  assert.deepEqual(graph.sections.map(({order,bounds},index)=>({laneId:beforeProjection.sections[index].laneId,order,bounds})),beforeProjection.sections,"migrated Sections reproduce every legacy lane's content-derived bounds and order");
+  assert.deepEqual(afterEndpoints,beforeProjection.endpoints,"named and before/after free Page frames retain their absolute legacy canvas geometry");
+  assert.deepEqual(afterOccurrences,beforeProjection.occurrences,"contained occurrence placement retains its absolute legacy canvas geometry");
+  assert.deepEqual(afterRelationships,beforeProjection.relationships,"relationship endpoints retain their absolute legacy canvas geometry");
   assert.equal(project.collections.assignments[0].targetKind,"Property Set","Assignment kind is migrated without changing target identity");
   assert.equal(project.collections.assignments[0].targetId,"group:checkout");
   assert.strictEqual(upgradePageGroupsToPropertySets(upgraded,id),upgraded,"the verified upgrade is idempotent");
@@ -131,8 +148,8 @@ const legacyState=()=>({
   state=movePageFrameToSection(state,"flow:checkout","frame:product",review.id);
   assert.deepEqual(graph().pageFrames.map(({id,position})=>({id,position})),originalPositions,"placing Page frames in a Section preserves their coordinates and relative positions");
   state=moveFlowSection(state,"flow:checkout",review.id,{x:40,y:25});
-  assert.deepEqual(graph().pageFrames.find(({id})=>id==="frame:cart").position,{x:60,y:75},"moving a Section preserves the contained frame's relative position");
-  assert.deepEqual(graph().pageFrames.find(({id})=>id==="frame:product").position,{x:360,y:235},"all contained frames move by the same Section delta");
+  assert.deepEqual(graph().pageFrames.find(({id})=>id==="frame:cart").position,{x:260,y:95},"moving a Section preserves the contained frame's relative position");
+  assert.deepEqual(graph().pageFrames.find(({id})=>id==="frame:product").position,{x:560,y:589},"all contained frames move by the same Section delta");
   state=renameAndResizeFlowSection(state,"flow:checkout",review.id,{name:"Review",bounds:{x:320,y:65,width:460,height:330}});
   assert.equal(JSON.stringify({pages:state.project.collections.pages,propertySets:state.project.collections.propertySets,assignments:state.project.collections.assignments}),schemaBytes,"Section commands are schema-neutral");
   const removed=removeFlowSection(state,"flow:checkout",review.id),removedGraph=removed.project.documentationFlowGraphs["flow:checkout"];

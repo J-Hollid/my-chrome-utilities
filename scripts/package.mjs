@@ -1,5 +1,8 @@
 import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+import {withDistArtifactLock} from "./dist-artifact-lock.mjs";
+
+await withDistArtifactLock(async()=>{
 
 const projectName = "my-chrome-utilities";
 const distDir = "dist";
@@ -137,3 +140,4 @@ async function writeZip(files) {
 
 await writeZip(await collectFiles(distDir));
 console.log(outputPath);
+});
