@@ -4,7 +4,19 @@
   "version": "0.1.0",
   "description": "Technical Web Analyst utilities for observing, specifying, and validating data layers.",
   "action": {
-    "default_title": "Open TWAtility Belt"
+    "default_title": "Open TWAtility Belt",
+    "default_icon": {
+      "16": "assets/brand/icons/icon-16.png",
+      "32": "assets/brand/icons/icon-32.png",
+      "48": "assets/brand/icons/icon-48.png",
+      "128": "assets/brand/icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "assets/brand/icons/icon-16.png",
+    "32": "assets/brand/icons/icon-32.png",
+    "48": "assets/brand/icons/icon-48.png",
+    "128": "assets/brand/icons/icon-128.png"
   },
   "background": {
     "service_worker": "background.js",

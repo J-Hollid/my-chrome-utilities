@@ -205,7 +205,11 @@ async function inspectSurface(socket, width, height, expectedClass, expectedShee
         broken:[...document.querySelectorAll("*")].flatMap((element)=>references.flatMap((attribute)=>{const value=element.getAttribute(attribute);return value?value.split(/\\s+/).filter((id)=>!document.getElementById(id)).map((id)=>({owner:element.id,attribute,id})):[];})),
         equivalent:JSON.stringify(before)===JSON.stringify(after),
         belt:await alpha("assets/brand/twatility-belt.png"),
-        analyst:await alpha("assets/brand/technical-analyst.png")
+        title:await alpha("assets/brand/specification-studio-title.png"),
+        panelTitle:await alpha("assets/brand/side-panel-title.png"),
+        analyst:await alpha("assets/brand/technical-analyst.png"),
+        analystSpeakingA:await alpha("assets/brand/technical-analyst-speaking-a.png"),
+        analystSpeakingB:await alpha("assets/brand/technical-analyst-speaking-b.png")
       };
     })()`,
   );
@@ -222,7 +226,11 @@ async function inspectSurface(socket, width, height, expectedClass, expectedShee
   assert.deepEqual(report.broken, [], "ARIA references must resolve");
   assert.equal(report.equivalent, true, "branding must not alter control state or identity");
   assert.deepEqual(report.belt, { transparent: true, opaque: true });
+  assert.deepEqual(report.title, { transparent: true, opaque: true });
+  assert.deepEqual(report.panelTitle, { transparent: true, opaque: true });
   assert.deepEqual(report.analyst, { transparent: true, opaque: true });
+  assert.deepEqual(report.analystSpeakingA, { transparent: true, opaque: true });
+  assert.deepEqual(report.analystSpeakingB, { transparent: true, opaque: true });
   return report;
 }
 
@@ -289,6 +297,18 @@ async function inspectShellInteractions(socket, width, height) {
       const root=document.documentElement;
       const panel=document.getElementById("workspace-panel-data-layer");
       const longTextContained=url.scrollWidth<=url.clientWidth+1||getComputedStyle(url).overflowWrap==="anywhere";
+      const brand=document.getElementById("app");
+      const brandImage=brand?.querySelector(".twatility-wordmark__image");
+      const header=document.getElementById("application-header");
+      const commands=document.getElementById("open-palette");
+      const brandBox=brand?.getBoundingClientRect();
+      const imageBox=brandImage?.getBoundingClientRect();
+      const headerBox=header?.getBoundingClientRect();
+      const commandsBox=commands?.getBoundingClientRect();
+      const contains=(outer,inner)=>Boolean(outer&&inner)&&inner.left>=outer.left-.5&&inner.top>=outer.top-.5&&inner.right<=outer.right+.5&&inner.bottom<=outer.bottom+.5;
+      const disjoint=(a,b)=>Boolean(a&&b)&&(a.right<=b.left+.5||b.right<=a.left+.5||a.bottom<=b.top+.5||b.bottom<=a.top+.5);
+      const brandStyle=brand?getComputedStyle(brand):null;
+      const imageStyle=brandImage?getComputedStyle(brandImage):null;
       const overflow={
         document:root.scrollWidth-root.clientWidth,
         body:document.body.scrollWidth-document.body.clientWidth,
@@ -299,7 +319,17 @@ async function inspectShellInteractions(socket, width, height) {
         width:${width},
         height:${height},
         brandName:document.getElementById("app")?.getAttribute("aria-label"),
-        brandText:document.getElementById("app")?.textContent?.trim(),
+        brandArt:{
+          count:brand?.querySelectorAll(".twatility-wordmark__image").length??0,
+          source:Boolean(brandImage)&&new URL(brandImage.currentSrc||brandImage.src).pathname.endsWith("/assets/brand/side-panel-title.png"),
+          decoded:Boolean(brandImage)&&brandImage.complete&&brandImage.naturalWidth===800&&brandImage.naturalHeight===180,
+          decorative:Boolean(brandImage)&&brandImage.alt===""&&brandImage.getAttribute("aria-hidden")==="true",
+          aspectPreserved:Boolean(imageBox)&&Math.abs(imageBox.width/imageBox.height-800/180)<.02,
+          unscaled:Boolean(brandStyle&&imageStyle)&&brandStyle.transform==="none"&&imageStyle.transform==="none",
+          contained:contains(headerBox,brandBox)&&contains(brandBox,imageBox),
+          separateFromCommands:disjoint(imageBox,commandsBox),
+          renderedWidth:imageBox?.width??0
+        },
         utilityCount:document.querySelectorAll("#utility-directory li").length,
         dataTabs:dataTabs.map((tab)=>tab.textContent.trim()),
         expected,
@@ -312,7 +342,33 @@ async function inspectShellInteractions(socket, width, height) {
     })()`,
   );
   assert.equal(tabReport.brandName, "TWAtility Belt");
-  assert.equal(tabReport.brandText, "TWAtility Belt");
+  assert.deepEqual(
+    {
+      count:tabReport.brandArt.count,
+      source:tabReport.brandArt.source,
+      decoded:tabReport.brandArt.decoded,
+      decorative:tabReport.brandArt.decorative,
+      aspectPreserved:tabReport.brandArt.aspectPreserved,
+      unscaled:tabReport.brandArt.unscaled,
+      contained:tabReport.brandArt.contained,
+      separateFromCommands:tabReport.brandArt.separateFromCommands,
+    },
+    {
+      count:1,
+      source:true,
+      decoded:true,
+      decorative:true,
+      aspectPreserved:true,
+      unscaled:true,
+      contained:true,
+      separateFromCommands:true,
+    },
+    "the panel must use one contained, proportion-preserved derivative of the corrected Studio wordmark",
+  );
+  assert.ok(
+    tabReport.brandArt.renderedWidth >= 120 && tabReport.brandArt.renderedWidth <= 170,
+    `panel wordmark optical width at ${width}px: ${tabReport.brandArt.renderedWidth}`,
+  );
   assert.equal(tabReport.utilityCount, 3, "all registered utilities remain visible");
   assert.deepEqual(tabReport.dataTabs, tabReport.expected);
   assert.ok(

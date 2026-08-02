@@ -8,9 +8,16 @@
    :preFirstHidden true
    :visible {:hidden false
              :hintId "project-overview"
-             :expectedWidth 91
-             :width 91
+             :minReadableWidth 112
+             :width 122
              :leftAnchored true
+             :pose "holding"
+             :bubbleWidthRatio 0.9
+             :bubbleAboveAnalyst true
+             :artSources ["technical-analyst.png"
+                          "technical-analyst-speaking-a.png"
+                          "technical-analyst-speaking-b.png"]
+             :artCanvases [[587 822 true] [587 822 true] [587 822 true]]
              :inside true
              :under 0
              :overflow 0
@@ -54,7 +61,8 @@
    {:footerLayout
     {:short {:scrollable false
              :treeAboveFooter true
-             :bubbleRightOfAnalyst true
+             :bubbleAboveAnalyst true
+             :bubbleReadable true
              :controlsClear true
              :region {:left 0 :bottom 100}}
      :long {:beforeScroll {:scrollable true
@@ -83,7 +91,16 @@
     :activations [{:id "tip-1" :before "search" :after "search"}
                   {:id "tip-2" :before "analyst" :after "analyst"}
                   {:id "tip-3" :before "analyst" :after "analyst"}]
-    :tail {:visible true :headSide true :travels true :joins true :inside true}
+    :tail {:visible true
+           :attached true
+           :openRoot true
+           :melds true
+           :simple true
+           :monotonicEdges true
+           :pointsToward true
+           :clearsArtwork true
+           :travels true
+           :inside true}
     :routeHidden true
     :routeBeforeRequest true
     :retainedRequest {:id "tip-4"}
@@ -124,17 +141,21 @@
                            :text "Made a magnificent blunder? Undo rewinds the latest change on this page while the published revision remains safely behind glass."}
                    :stayed {:hidden true :id nil}}
             :unsupported {:first {:hidden true :id nil :text nil}}}
-    :typewriter {:initial {:text ""}
+    :typewriter {:initial {:text "" :pose "speaking" :frame [1 0]}
                  :partial "Cr"
+                 :switchedFrame [0 1]
                  :firstId "tip-1"
-                 :replacement {:id "tip-2"}
-                 :hideCancellation {:hidden true :stable true}
-                 :routeChange {:hidden true :stable true}
+                 :replacement {:id "tip-2" :pose "speaking"}
+                 :hideCancellation {:hidden true :stable true :pose "idle"}
+                 :routeChange {:hidden true :stable true :pose "idle"}
                  :initialAnnouncementCount 1
                  :replacementAnnouncementCount 1
                  :reduced {:complete "Complete tip"
                            :visual "Complete tip"
-                           :announcement "Complete tip"}}}
+                           :announcement "Complete tip"
+                           :pose "holding"
+                           :frame [1 0]}
+                 :disposedPose "idle"}}
    :after {:project "project" :undo 0}})
 
 (deftest approved-examples-remain-inside-the-guidance-contract
@@ -153,9 +174,21 @@
        clojure.lang.ExceptionInfo
        #"invalid result"
        (#'guidance/validate-example!
-        :model
+       :model
         {"event" "the STudio document becomes hidden"
-         "result" "disappears and pauses the hint interval"}))))
+         "result" "disappears and pauses the hint interval"})))
+  (is (map?
+       (#'guidance/validate-example!
+        :model
+        {"route" "Project overview"
+         "topics" "collection selection, project context, global search, preflight, and Inspector"})))
+  (is (thrown-with-msg?
+       clojure.lang.ExceptionInfo
+       #"invalid result"
+       (#'guidance/validate-example!
+        :model
+        {"route" "Project overview"
+         "topics" "collection selection, project context, global search, preflight, and InSpector"}))))
 
 (deftest runtime-hint-examples-bind-to-the-installed-route-pool
   (let [hint "A project with no collection is merely a clipboard with ambitions. Pick one on the left and give the specification somewhere to begin."
@@ -185,4 +218,34 @@
                (#'guidance/assert-browser!
                 (assoc-in complete-browser-evidence
                           [:blockingPredicate :menuBlocked]
-                          false)))))
+                          false))))
+  (is (thrown? clojure.lang.ExceptionInfo
+               (#'guidance/assert-browser!
+                (assoc-in complete-browser-evidence
+                          [:interaction :tail :melds]
+                          false))))
+  (is (thrown? clojure.lang.ExceptionInfo
+               (#'guidance/assert-browser!
+                (assoc-in complete-browser-evidence
+                          [:interaction :tail :simple]
+                          false))))
+  (is (thrown? clojure.lang.ExceptionInfo
+               (#'guidance/assert-browser!
+                (assoc-in complete-browser-evidence
+                          [:interaction :tail :monotonicEdges]
+                          false))))
+  (is (thrown? clojure.lang.ExceptionInfo
+               (#'guidance/assert-browser!
+                (assoc-in complete-browser-evidence
+                          [:interaction :tail :pointsToward]
+                          false))))
+  (is (thrown? clojure.lang.ExceptionInfo
+               (#'guidance/assert-browser!
+                (assoc-in complete-browser-evidence
+                          [:interaction :tail :clearsArtwork]
+                          false))))
+  (is (thrown? clojure.lang.ExceptionInfo
+               (#'guidance/assert-browser!
+                (assoc-in complete-browser-evidence
+                          [:interaction :typewriter :disposedPose]
+                          "speaking")))))

@@ -60,10 +60,23 @@ body.twatility-side-panel {
 
 .twatility-side-panel #app {
   flex: 0 0 auto;
+  width: clamp(8.5rem, 36vw, 10rem);
+  max-width: calc(100% - 5.5rem);
+  align-items: center;
   margin: 0;
-  color: var(--twa-paper-raised);
-  font-size: clamp(1.12rem, 4vw, 1.42rem);
-  text-shadow: 0.1rem 0.1rem 0 var(--twa-ink);
+  font-size: 0;
+  letter-spacing: 0;
+  line-height: 0;
+  text-shadow: none;
+}
+
+.twatility-side-panel #app .twatility-wordmark__image {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 40 / 9;
+  object-fit: contain;
+  transform: none;
 }
 
 .twatility-side-panel #utility-directory {
@@ -565,6 +578,18 @@ body.twatility-side-panel {
   opacity: 0.62;
 }
 
+@media (max-width: 540px) {
+  .twatility-side-panel #application-header::after {
+    display: none;
+  }
+
+  .twatility-side-panel #utility-directory {
+    order: 3;
+    flex-basis: 100%;
+    justify-content: flex-start;
+  }
+}
+
 @media (max-width: 512px) {
   .twatility-side-panel #application-header {
     align-items: center;
@@ -590,15 +615,6 @@ body.twatility-side-panel {
     min-height: 0;
     align-items: flex-start;
     flex-wrap: wrap;
-  }
-
-  .twatility-side-panel #application-header::after {
-    display: none;
-  }
-
-  .twatility-side-panel #utility-directory {
-    order: 3;
-    flex-basis: 100%;
   }
 
   .twatility-side-panel #utility-directory li {
@@ -631,10 +647,6 @@ body.twatility-side-panel {
   .twatility-side-panel #application-header {
     gap: 0.4rem;
     padding: 0.55rem 0.6rem;
-  }
-
-  .twatility-side-panel #app {
-    font-size: 1.08rem;
   }
 
   .twatility-side-panel #open-palette {

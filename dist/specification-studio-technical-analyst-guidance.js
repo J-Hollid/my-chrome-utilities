@@ -264,6 +264,10 @@ export function installStudioAnalystGuidance(options) {
     const announcement = options.bubble.querySelector?.("[data-analyst-tip-announcement]");
     const reducedMotion = options.reducedMotion ?? (() => ownerDocument.defaultView?.matchMedia("(prefers-reduced-motion: reduce)").matches ?? false);
     let previous = now(), dwellPrevious = previous, intervalWasActive = options.active(), printTimer, printSequence = 0;
+    const setAnalystPose = (pose) => {
+        if (options.analystControl)
+            options.analystControl.dataset.analystPose = pose;
+    };
     const cancelPrint = () => {
         printSequence += 1;
         if (printTimer !== undefined) {
@@ -273,6 +277,7 @@ export function installStudioAnalystGuidance(options) {
     };
     const hideBubble = () => {
         cancelPrint();
+        setAnalystPose("idle");
         options.bubble.hidden = true;
         options.bubble.removeAttribute("data-hint-id");
         options.bubble.removeAttribute("data-complete-text");
@@ -283,16 +288,18 @@ export function installStudioAnalystGuidance(options) {
         options.bubble.dataset.hintId = hint.id;
         options.bubble.dataset.completeText = hint.text;
         options.bubble.hidden = false;
+        const motionReduced = reducedMotion();
+        setAnalystPose(motionReduced ? "holding" : "speaking");
         if (!reserve || !visual || !announcement) {
             options.bubble.textContent = hint.text;
             return;
         }
         reserve.textContent = hint.text;
-        visual.textContent = reducedMotion() ? hint.text : "";
+        visual.textContent = motionReduced ? hint.text : "";
         announcement.textContent = "";
         queueMicrotask(() => { if (sequence === printSequence)
             announcement.textContent = hint.text; });
-        if (reducedMotion())
+        if (motionReduced)
             return;
         let elapsed = 0;
         printTimer = setInterval(() => {
@@ -301,6 +308,7 @@ export function installStudioAnalystGuidance(options) {
             if (visual.textContent === hint.text && printTimer !== undefined) {
                 clearInterval(printTimer);
                 printTimer = undefined;
+                setAnalystPose("holding");
             }
         }, STUDIO_ANALYST_PRINT_INTERVAL_MS);
     };
@@ -309,6 +317,7 @@ export function installStudioAnalystGuidance(options) {
         options.bubble.dataset.hintId = hint.id;
         options.bubble.dataset.completeText = hint.text;
         options.bubble.hidden = false;
+        setAnalystPose("holding");
         if (!reserve || !visual || !announcement) {
             options.bubble.textContent = hint.text;
             return;
@@ -372,6 +381,7 @@ export function installStudioAnalystGuidance(options) {
         event.preventDefault();
         requestNext();
     };
+    setAnalystPose("idle");
     const timer = setInterval(evaluate, options.intervalMilliseconds ?? 250);
     ownerDocument.addEventListener("visibilitychange", evaluate);
     ownerDocument.addEventListener("click", routeClick);

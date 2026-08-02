@@ -1,7 +1,8 @@
-# mutation-stamp: sha256=740ba3e10414ac951dc61ad89714752d26c9114abf07fc6dbe28e03e5b48d6e6
+# mutation-stamp: sha256=33c96abb7e7f5ec33e73b8607781e60b90ca7b5ef7f5e67a949d0c80e0fd4f2c
 # acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-07-30T18:09:30.459843922Z","feature_name":"Specification Studio technical analyst guidance runtime","feature_path":"features/specification-studio-technical-analyst-guidance-runtime.feature","background_hash":"c8660f9d15d2ee101f3dff16f67c8ccb32beecdba47ce19f0493021e5bef5390","implementation_hash":"79833dd38e","scenarios":[{"index":0,"name":"Specification Studio technical analyst guidance runtime 001","scenario_hash":"39d0bf19405bebd82cb0b074a95323987803c4b3de27c1a5726997c2cc91e675","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-30T18:09:30.459843922Z"},{"index":1,"name":"Specification Studio technical analyst guidance runtime 002","scenario_hash":"650d4bd2f1a022345d111159a13ff41623c8d40f33f6531155a6fd64ccb65529","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-07-30T18:09:30.459843922Z"},{"index":2,"name":"Specification Studio technical analyst guidance runtime 003","scenario_hash":"a745f08be10404e53d6475e51eaed62d6629c85bfc94246fc1943665a85fb327","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-07-30T18:09:30.459843922Z"},{"index":3,"name":"Specification Studio technical analyst guidance runtime 004","scenario_hash":"1fc091ecfecd5a7108b051b5731f7d8c4ed6d54f1ea131787ef975487fac4fe3","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-07-30T18:09:30.459843922Z"},{"index":4,"name":"Specification Studio technical analyst guidance runtime 005","scenario_hash":"7bdbb80da1744d74916df95711461fa6f5491f4db13398479ad0f5f2bde303cd","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-30T18:09:30.459843922Z"},{"index":5,"name":"Specification Studio technical analyst guidance runtime 006","scenario_hash":"ebc3d38db0d22e38261b49593246a63770b2125d1809220e08facdef1ffbf1e8","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-07-30T18:09:30.459843922Z"},{"index":6,"name":"Specification Studio technical analyst guidance runtime 007","scenario_hash":"88e96c05e7385cc1827089954a20077fa76e788834a06be7eebb6e04b57746d4","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-07-30T18:09:30.459843922Z"},{"index":8,"name":"Specification Studio technical analyst guidance runtime 009","scenario_hash":"d2ada72e63110ab2c22c04873c30334a9aa939e882b33d04820320ba3dc07635","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-30T18:09:30.459843922Z"},{"index":9,"name":"Specification Studio technical analyst guidance runtime 010","scenario_hash":"863c898f72780c2af5b8a9eb927aa0965ab102e84ee30d00fe1885326ce938af","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-07-30T18:09:30.459843922Z"},{"index":10,"name":"Specification Studio technical analyst guidance runtime 011","scenario_hash":"0abea7d5a6d707ba1f9bffd750dfaf3877682a57b0102b79584d3e3638616735","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-30T18:09:30.459843922Z"},{"index":11,"name":"Specification Studio technical analyst guidance runtime 012","scenario_hash":"b32386523817de56a555c2a61ae8d397fd97932cff99a7a9734d120eb3071847","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-07-30T18:09:30.459843922Z"},{"index":12,"name":"Specification Studio technical analyst guidance runtime 013","scenario_hash":"2eb6ab93a86eb0c53e5b777a07ccdd93ad1c15add3fb2e5a9c73423d559995be","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-07-30T18:09:30.459843922Z"},{"index":13,"name":"Specification Studio technical analyst guidance runtime 014","scenario_hash":"bc67929b62eadd71db8f6b74b2ddb00d23acab3c3877c3d79bb9900f0803fb36","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-07-30T18:09:30.459843922Z"},{"index":14,"name":"Specification Studio technical analyst guidance runtime 015","scenario_hash":"6e521cad56af539c57f8a97969c13242563b4fb4b021113eaee75b6bbb99f8b1","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-07-30T18:09:30.459843922Z"},{"index":16,"name":"Specification Studio technical analyst guidance runtime 017","scenario_hash":"c80acea3b1432c79d4e5bee526cb68324eaca1ec3e252fefa7655fb3b897cfee","mutation_count":20,"result":{"Total":20,"Killed":20,"Survived":0,"Errors":0},"tested_at":"2026-07-30T18:09:30.459843922Z"}]}
+# {"version":1,"tested_at":"2026-08-02T19:37:12.712432500Z","feature_name":"Specification Studio technical analyst guidance runtime","feature_path":"features\\specification-studio-technical-analyst-guidance-runtime.feature","background_hash":"c8660f9d15d2ee101f3dff16f67c8ccb32beecdba47ce19f0493021e5bef5390","implementation_hash":"sha256:1a8a5e6b69d586db6af2d548b58a9dd93886f4b4a67f91a0077483a855b04cf3","scenarios":[{"index":0,"name":"Specification Studio technical analyst guidance runtime 001","scenario_hash":"8aecc10521f64a9f71d5f0541e0b7037c9c61e0974ed946a49d14dbf03b7cd84","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-08-02T19:37:12.712432500Z"},{"index":1,"name":"Specification Studio technical analyst guidance runtime 002","scenario_hash":"650d4bd2f1a022345d111159a13ff41623c8d40f33f6531155a6fd64ccb65529","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-08-02T19:37:12.712432500Z"},{"index":2,"name":"Specification Studio technical analyst guidance runtime 003","scenario_hash":"a745f08be10404e53d6475e51eaed62d6629c85bfc94246fc1943665a85fb327","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-08-02T19:37:12.712432500Z"},{"index":3,"name":"Specification Studio technical analyst guidance runtime 004","scenario_hash":"1fc091ecfecd5a7108b051b5731f7d8c4ed6d54f1ea131787ef975487fac4fe3","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-08-02T19:37:12.712432500Z"},{"index":4,"name":"Specification Studio technical analyst guidance runtime 005","scenario_hash":"7bdbb80da1744d74916df95711461fa6f5491f4db13398479ad0f5f2bde303cd","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-08-02T19:37:12.712432500Z"},{"index":5,"name":"Specification Studio technical analyst guidance runtime 006","scenario_hash":"ebc3d38db0d22e38261b49593246a63770b2125d1809220e08facdef1ffbf1e8","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-08-02T19:37:12.712432500Z"},{"index":6,"name":"Specification Studio technical analyst guidance runtime 007","scenario_hash":"88e96c05e7385cc1827089954a20077fa76e788834a06be7eebb6e04b57746d4","mutation_count":3,"result":{"Total":3,"Killed":3,"Survived":0,"Errors":0},"tested_at":"2026-08-02T19:37:12.712432500Z"},{"index":8,"name":"Specification Studio technical analyst guidance runtime 009","scenario_hash":"d2ada72e63110ab2c22c04873c30334a9aa939e882b33d04820320ba3dc07635","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-08-02T19:37:12.712432500Z"},{"index":9,"name":"Specification Studio technical analyst guidance runtime 010","scenario_hash":"863c898f72780c2af5b8a9eb927aa0965ab102e84ee30d00fe1885326ce938af","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-08-02T19:37:12.712432500Z"},{"index":10,"name":"Specification Studio technical analyst guidance runtime 011","scenario_hash":"0abea7d5a6d707ba1f9bffd750dfaf3877682a57b0102b79584d3e3638616735","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-08-02T19:37:12.712432500Z"},{"index":11,"name":"Specification Studio technical analyst guidance runtime 012","scenario_hash":"42c57376744f30f098841ded290a545ee5427912690f09fb2feae32785f805db","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-08-02T19:37:12.712432500Z"},{"index":12,"name":"Specification Studio technical analyst guidance runtime 013","scenario_hash":"4032d1425f0b152ce3b62c378f8c39f53fc1ef0561f600412130fa0bb2e78d7b","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-08-02T19:37:12.712432500Z"},{"index":13,"name":"Specification Studio technical analyst guidance runtime 014","scenario_hash":"86e20297e976afbdf50a16d0a241ddc6057b194ff2ee110f8a781f0a06d3d93d","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-08-02T19:37:12.712432500Z"},{"index":14,"name":"Specification Studio technical analyst guidance runtime 015","scenario_hash":"6e521cad56af539c57f8a97969c13242563b4fb4b021113eaee75b6bbb99f8b1","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-08-02T19:37:12.712432500Z"},{"index":16,"name":"Specification Studio technical analyst guidance runtime 017","scenario_hash":"c80acea3b1432c79d4e5bee526cb68324eaca1ec3e252fefa7655fb3b897cfee","mutation_count":20,"result":{"Total":20,"Killed":20,"Survived":0,"Errors":0},"tested_at":"2026-08-02T19:37:12.712432500Z"}]}
 # acceptance-mutation-manifest-end
+
 
 Feature: Specification Studio technical analyst guidance runtime
 
@@ -14,13 +15,13 @@ Feature: Specification Studio technical analyst guidance runtime
     Given the production Studio navigation rail is visible
     When the installed Studio renders the technical analyst in the navigation rail
     Then its computed <horizontal_edge> edge is anchored to the <horizontal_edge> of its dedicated space
-    And its computed width is <displayed_width> instead of <previous_width>
-    And the source aspect ratio and transparent pixels are preserved
-    And computed <unchanged_surface> artwork is unchanged
+    And its computed width is at least <minimum_width>
+    And all installed analyst sources decode on the same <pose_canvas> transparent canvas and registered baseline
+    And the computed <start_card_surface> uses the same generated idle source
 
     Examples:
-      | horizontal_edge | displayed_width | previous_width | unchanged_surface     |
-      | left            | 6.5rem          | 5.2rem         | no-project start-card |
+      | horizontal_edge | minimum_width | pose_canvas        | start_card_surface    |
+      | left            | 8rem          | 587 by 822 pixels  | no-project start-card |
 
   # Specification Studio technical analyst guidance runtime 002
   Scenario Outline: Specification Studio technical analyst guidance runtime 002
@@ -116,12 +117,13 @@ Feature: Specification Studio technical analyst guidance runtime
 
   # Specification Studio technical analyst guidance runtime 008
   Scenario: Specification Studio technical analyst guidance runtime 008
-    Given installed analyst head geometry is on the left
-    And installed bubble geometry is visible to its right
-    Then the computed tail narrow endpoint is beside the right side of the head
-    And sampled tail geometry travels rightward and curves downward
-    And its wide endpoint joins the bubble's left edge
-    And no sampled tail point falls outside reserved guidance geometry
+    Given installed bubble geometry spans the footer above the analyst
+    Then the computed broad open tail root melds into the bubble's lower edge without a closing stroke
+    And its two tapered edges form one monotonic simple outline with no curl, loop, or self-intersection
+    And sampled tail geometry travels downward and leftward
+    And its rounded point enters the analyst control's upper-right transparent canvas and aims toward the speaker
+    And sampled pixels under the complete painted tail remain transparent in every analyst pose
+    And the complete painted tail remains inside reserved guidance geometry
 
   # Specification Studio technical analyst guidance runtime 009
   Scenario Outline: Specification Studio technical analyst guidance runtime 009
@@ -181,6 +183,9 @@ Feature: Specification Studio technical analyst guidance runtime
     And bubble geometry equals complete-text geometry before the first character renders
     And replacement, hide, and route-change events cancel the prior print scheduler
     And the polite live region exposes the complete tip exactly once without partial announcements
+    And standard-motion computed styles alternate the two speaking sources only during printing
+    And reduced-motion computed styles expose one static speaking source
+    And hide, route-change, and disposal evidence restore the idle source
     And active element, project bytes, Draft token, revision, and Undo count remain unchanged
 
     Examples:
@@ -192,11 +197,11 @@ Feature: Specification Studio technical analyst guidance runtime
   Scenario Outline: Specification Studio technical analyst guidance runtime 013
     Given production navigation inventory is <navigation_inventory>
     When production layout renders the analyst guidance region
-    Then bounding boxes anchor the analyst to the visible rail's bottom-left corner
+    Then bounding boxes anchor the framed analyst to the visible rail's bottom-left corner
     And its left and bottom offsets are invariant from the final navigation button
     And the navigation list owns the remaining space above the reserved guidance footer
     And overflow metrics show the navigation list scrolling without moving or covering the analyst
-    And bubble geometry remains to his right without intersecting navigation controls
+    And bubble geometry spans the framed footer above him without intersecting navigation controls
 
     Examples:
       | navigation_inventory                       |
@@ -209,7 +214,7 @@ Feature: Specification Studio technical analyst guidance runtime
     When automatic and analyst-requested presentation paths render it
     Then the complete tip text is <hint>
     And semantic inspection finds accurate route advice plus a configured playful British-comic flourish
-    And DOM and computed styles retain the cream, ink, halftone, mustard, curved-tail, and typewriter presentation
+    And DOM and computed styles retain the cream, ink, halftone, mustard, connected-tail, generated-pose, and typewriter presentation
     And the complete additional pool contains no neutral documentation-only tip without configured character voice
 
     Examples:
@@ -276,4 +281,5 @@ Feature: Specification Studio technical analyst guidance runtime
     When the installed comic catalogue replaces its text
     Then all 5 stable control targets still return curated control guidance
     And all 50 prior general-tip identities remain on their original routes
-    And scheduler constants, rotation order, dwell behavior, session history, DOM presentation, and live-region behavior are unchanged
+    And scheduler constants, rotation order, dwell behavior, session history, copy semantics, and live-region behavior are unchanged
+    And installed R02 title art, analyst sources, stacked bubble, and speaking cycle intentionally replace the prior R01 artwork and side-by-side geometry
