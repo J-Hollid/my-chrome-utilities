@@ -15,7 +15,7 @@ const random=()=>{
 const count=(maximum)=>Math.floor(random()*(maximum+1));
 const flatten=(nodes)=>nodes.flatMap((node)=>[node,...flatten(node.children)]);
 const entity=(id,name,extra={})=>({id,name,...extra});
-const categories=["All","Saved schemas","Shared Profiles","Page Groups","Pages","Events","Flow Page instances","Event occurrences"];
+const categories=["All","Saved schemas","Shared Profiles","Property Sets","Pages","Events","Flow Page instances","Event occurrences"];
 
 for(let sample=0;sample<200;sample+=1){
   const groupCount=count(4),pageCount=count(6),eventCount=count(5),flowCount=count(4);

@@ -1053,6 +1053,31 @@
     ]
   },
   {
+    "id": "property_set_flow_sections",
+    "source": [
+      "src/data-layer-property-set-flow-section.ts",
+      "src/data-layer-property-set-flow-section-ui.ts"
+    ],
+    "dependencies": [
+      "durable_project_repository",
+      "layered_schema"
+    ],
+    "unit": [
+      "test/data-layer-property-set-flow-section-test.mjs"
+    ],
+    "property": [],
+    "features": [
+      "features/data-layer-property-set-and-flow-section-separation.feature",
+      "features/data-layer-property-set-and-flow-section-separation-runtime.feature"
+    ],
+    "handlers": [
+      "acceptance/src/acceptance/steps/property_set_flow_sections.clj"
+    ],
+    "browserAdapters": [
+      "test/browser-packs/property-set-flow-sections.mjs"
+    ]
+  },
+  {
     "id": "project_assurance_severity",
     "source": [],
     "dependencies": [

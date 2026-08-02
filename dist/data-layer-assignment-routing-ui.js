@@ -15,7 +15,7 @@ export function mountAssignmentRoutingWorkspace({ host, state, assignment, id, l
     name.value = assignment.name;
     evidence.setAttribute("aria-label", "Assignment routing evidence");
     form.append(labeled("Assignment name", name));
-    const schemaTarget = region("Schema target"), targetKind = document.createElement("select"), target = document.createElement("select"), targetKinds = ["Shared Profile", "Page Group", "Page", "Event", "Flow Page instance"];
+    const schemaTarget = region("Schema target"), targetKind = document.createElement("select"), target = document.createElement("select"), targetKinds = ["Shared Profile", "Property Set", "Page", "Event", "Flow Page instance"];
     targetKind.name = "targetKind";
     target.name = "targetId";
     target.required = true;

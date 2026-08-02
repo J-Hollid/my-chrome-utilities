@@ -7,14 +7,14 @@ export function projectSchemaRelationshipTree(state, savedSchemas) {
     const saved = branch("saved-schemas", "Saved schemas", [], savedChildren);
     if (!state)
         return [saved];
-    const { project } = state, { collections } = project, projectPath = [project.name], graphs = (project.documentationFlowGraphs ?? {});
+    const { project } = state, { collections } = project, projectPath = [project.name], graphs = (project.documentationFlowGraphs ?? {}), propertySets = (collections.propertySets ?? collections.pageGroups);
     const byId = (values, id) => values.find((candidate) => candidate.id === id);
     const occurrencesFor = (flowId, frameId, eventId) => (graphs[flowId]?.occurrences ?? []).filter((occurrence) => (!frameId || occurrence.pageFrameId === frameId) && (!eventId || occurrence.eventId === eventId));
     const occurrenceNode = (appearance, flowId, occurrence, parts) => reference(`${appearance}:occurrence:${flowId}:${occurrence.id}`, occurrence.name, "Event occurrence", "Event occurrences", parts, `occurrences:${flowId}:${occurrence.id}`);
     const shared = branch(`project:${project.id}:shared`, "Shared Profiles", projectPath, collections.profiles.map((profile) => contributor(`profiles:${profile.id}`, profile.name, "Shared Profile", "Shared Profiles", [...projectPath, "Shared Profiles"])));
-    const pageGroups = branch(`project:${project.id}:page-groups`, "Page Groups", projectPath, collections.pageGroups.map((group) => {
-        const parts = [...projectPath, "Page Groups"], node = contributor(`pageGroups:${group.id}`, group.name, "Page Group", "Page Groups", parts);
-        node.children = collections.pages.filter((page) => (page.pageGroupIds ?? []).includes(group.id)).map((page) => reference(`page-group:${group.id}:page:${page.id}`, page.name, "Page reference", "Pages", [...parts, group.name], `pages:${page.id}`));
+    const pageGroups = branch(`project:${project.id}:property-sets`, "Property Sets", projectPath, propertySets.map((group) => {
+        const parts = [...projectPath, "Property Sets"], node = contributor(`propertySets:${group.id}`, group.name, "Property Set", "Property Sets", parts);
+        node.children = collections.pages.filter((page) => (page.propertySetApplications ?? []).some(({ propertySetId }) => propertySetId === group.id) || (page.pageGroupIds ?? []).includes(group.id)).map((page) => reference(`property-set:${group.id}:page:${page.id}`, page.name, "Page application", "Pages", [...parts, group.name], `pages:${page.id}`));
         return node;
     }));
     const pages = branch(`project:${project.id}:pages`, "Pages", projectPath, collections.pages.map((page) => {
@@ -52,8 +52,8 @@ export function filterSchemaRelationshipTree(tree, view) {
     const categoryBranch = (node) => {
         if (node.key.endsWith(":shared"))
             return "Shared Profiles";
-        if (node.key.endsWith(":page-groups"))
-            return "Page Groups";
+        if (node.key.endsWith(":property-sets"))
+            return "Property Sets";
         if (node.key.endsWith(":pages"))
             return "Pages";
         if (node.key.endsWith(":events"))
@@ -76,8 +76,8 @@ export function filterSchemaRelationshipTree(tree, view) {
             return true;
         if (node.kind === "branch")
             return true;
-        if (category === "Page Groups")
-            return node.category === "Page Groups" || Boolean(query && node.key.startsWith("page-group:"));
+        if (category === "Property Sets")
+            return node.category === "Property Sets" || Boolean(query && node.key.startsWith("property-set:"));
         if (category === "Flow Page instances")
             return node.category === "Flow Page instances" && node.key.startsWith("flow:");
         if (category === "Event occurrences")
@@ -132,7 +132,7 @@ export function restoreSchemaRelationshipTreeView(storage, projectId, validKeys)
     if (!serialized)
         return defaultView();
     try {
-        const parsed = JSON.parse(serialized), categories = ["All", "Saved schemas", "Shared Profiles", "Page Groups", "Pages", "Events", "Flow Page instances", "Event occurrences"];
+        const parsed = JSON.parse(serialized), categories = ["All", "Saved schemas", "Shared Profiles", "Property Sets", "Pages", "Events", "Flow Page instances", "Event occurrences"];
         return { query: typeof parsed.query === "string" ? parsed.query : "", category: categories.includes(parsed.category) ? parsed.category : "All", expandedKeys: Array.isArray(parsed.expandedKeys) ? parsed.expandedKeys.filter((value) => typeof value === "string" && validKeys.has(value)) : [], scrollTop: Number.isFinite(parsed.scrollTop) && Number(parsed.scrollTop) >= 0 ? Number(parsed.scrollTop) : 0 };
     }
     catch {

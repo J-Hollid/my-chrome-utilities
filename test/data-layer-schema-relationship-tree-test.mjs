@@ -31,9 +31,9 @@ const flatten=(nodes)=>nodes.flatMap((node)=>[node,...flatten(node.children)]);
 const nodes=flatten(tree);
 
 assert.deepEqual(tree.map(({name})=>name),["Saved schemas","Project Shop"]);
-assert.deepEqual(tree[1].children.map(({name})=>name),["Shared Profiles","Page Groups","Pages","Events","Flows"]);
+assert.deepEqual(tree[1].children.map(({name})=>name),["Shared Profiles","Property Sets","Pages","Events","Flows"]);
 const cartReferences=nodes.filter(({targetKey})=>targetKey==="pages:page:cart");
-assert.equal(cartReferences.length,3,"Cart has one canonical Pages row and one reference under each Page Group");
+assert.equal(cartReferences.length,3,"Cart has one canonical Pages row and one reference under each Property Set");
 assert.deepEqual(new Set(cartReferences.map(({targetKey})=>targetKey)),new Set(["pages:page:cart"]),"references route one stable canonical target");
 assert.ok(cartReferences.every(({relationshipPath})=>relationshipPath.includes("Cart")&&!relationshipPath.includes("page:cart")),"paths are human-readable");
 const purchaseOccurrences=nodes.filter(({targetKey})=>targetKey?.startsWith("occurrences:"));
@@ -44,11 +44,11 @@ const ordinaryTree=filterSchemaRelationshipTree(tree,{category:"All",query:""});
 assert.equal(flatten(ordinaryTree).filter(({expanded})=>expanded).length,0,"blank-query filtering leaves expansion under operator control");
 assert.deepEqual(flatten(filterSchemaRelationshipTree(tree,{category:"Pages",query:""})).filter(({targetKey})=>targetKey).map(({targetKey})=>targetKey),["pages:page:cart"],"category filters expose canonical results from their relationship branch");
 
-const pageGroupSearch=filterSchemaRelationshipTree(tree,{category:"Page Groups",query:"cart"});
+const pageGroupSearch=filterSchemaRelationshipTree(tree,{category:"Property Sets",query:"cart"});
 const pageGroupNodes=flatten(pageGroupSearch);
 assert.deepEqual(pageGroupNodes.filter(({targetKey})=>targetKey==="pages:page:cart").map(({relationshipPath})=>relationshipPath),[
-  "Shop → Page Groups → Checkout → Cart",
-  "Shop → Page Groups → Promotions → Cart",
+  "Shop → Property Sets → Checkout → Cart",
+  "Shop → Property Sets → Promotions → Cart",
 ]);
 assert.ok(pageGroupNodes.every(({name})=>name!=="Flows"),"unrelated siblings are pruned");
 assert.ok(pageGroupNodes.filter(({targetKey})=>targetKey==="pages:page:cart").every(({match})=>match),"matching references are marked for result semantics");

@@ -477,11 +477,11 @@ assert.deepEqual({id:selectedFrame.id,name:selectedFrame.name,canonicalSchemaId:
 assert.notEqual(selectedFrame.canonicalSchema.id,pathState.project.collections.pages[0].canonicalSchema.id);
 assert.notEqual(selectedFrame.canonicalSchema.id,pathState.project.collections.flows[0].canonicalSchema.id);
 assert.deepEqual(assignmentContributorTargets(pathState).filter(({id})=>id.endsWith(":selected")).map(({id,kind})=>({id,kind})),[
-  {id:"profile:selected",kind:"Shared Profile"},{id:"group:selected",kind:"Page Group"},{id:"page:selected",kind:"Page"},{id:"event:selected",kind:"Event"},{id:"frame:selected",kind:"Flow Page instance"},
+  {id:"profile:selected",kind:"Shared Profile"},{id:"group:selected",kind:"Property Set"},{id:"page:selected",kind:"Page"},{id:"event:selected",kind:"Event"},{id:"frame:selected",kind:"Flow Page instance"},
 ]);
 for(const [targetKind,targetId,expected] of [
   ["Shared Profile","profile:selected",["profile:selected"]],
-  ["Page Group","group:selected",["profile:selected","group:selected"]],
+  ["Property Set","group:selected",["profile:selected","group:selected"]],
   ["Page","page:selected",["profile:selected","group:selected","page:selected"]],
   ["Event","event:selected",["profile:selected","event:selected"]],
   ["Flow Page instance","frame:selected",["profile:selected","group:selected","page:selected","frame:selected"]],

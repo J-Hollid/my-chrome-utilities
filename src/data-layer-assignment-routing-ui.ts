@@ -13,7 +13,7 @@ export function mountAssignmentRoutingWorkspace({host,state,assignment,id,loadSt
   const section=document.createElement("section"),heading=document.createElement("h2"),form=document.createElement("form"),name=document.createElement("input"),evidence=document.createElement("section");
   section.className="contextual-editor assignment-workspace-editor";section.dataset.assignmentWorkspace=assignment.id;heading.textContent="Edit Assignment";name.name="name";name.required=true;name.value=assignment.name;evidence.setAttribute("aria-label","Assignment routing evidence");form.append(labeled("Assignment name",name));
 
-  const schemaTarget=region("Schema target"),targetKind=document.createElement("select"),target=document.createElement("select"),targetKinds=["Shared Profile","Page Group","Page","Event","Flow Page instance"] as const;
+  const schemaTarget=region("Schema target"),targetKind=document.createElement("select"),target=document.createElement("select"),targetKinds=["Shared Profile","Property Set","Page","Event","Flow Page instance"] as const;
   targetKind.name="targetKind";target.name="targetId";target.required=true;for(const kind of targetKinds)targetKind.append(new Option(kind,kind));targetKind.value=String(assignment.targetKind??"Shared Profile");
   const renderTargets=()=>{const selected=target.value||String(assignment.targetId??""),targets=assignmentContributorTargets(state).filter(({kind})=>kind===targetKind.value);target.replaceChildren(new Option("Choose stable contributor target",""),...targets.map((candidate)=>new Option(candidate.name,candidate.id)));target.value=selected;};
   schemaTarget.append(labeled("Contributor kind",targetKind),labeled("Stable contributor target",target));

@@ -1,7 +1,7 @@
 import type {ProjectEntity,ProjectState} from "./data-layer-specification-project.js";
 import type {SavedSchemaSummary} from "./data-layer-side-panel-schema-editor.js";
 
-export type SchemaRelationshipCategory="All"|"Saved schemas"|"Shared Profiles"|"Page Groups"|"Pages"|"Events"|"Flow Page instances"|"Event occurrences";
+export type SchemaRelationshipCategory="All"|"Saved schemas"|"Shared Profiles"|"Property Sets"|"Pages"|"Events"|"Flow Page instances"|"Event occurrences";
 export interface SchemaRelationshipTreeNode {
   key:string;
   name:string;
@@ -36,14 +36,14 @@ export function projectSchemaRelationshipTree(state:ProjectState|undefined,saved
   const savedPath=["Saved schemas"],savedChildren=savedSchemas.map((schema)=>contributor(`saved:${schema.id}`,schema.name,"Saved schema","Saved schemas",savedPath,`saved:${schema.id}`));
   const saved=branch("saved-schemas","Saved schemas",[],savedChildren);
   if(!state)return [saved];
-  const {project}=state,{collections}=project,projectPath=[project.name],graphs=(project.documentationFlowGraphs??{}) as Record<string,{pageFrames?:ProjectEntity[];occurrences?:ProjectEntity[]}>;
+  const {project}=state,{collections}=project,projectPath=[project.name],graphs=(project.documentationFlowGraphs??{}) as Record<string,{pageFrames?:ProjectEntity[];occurrences?:ProjectEntity[]}>,propertySets=((collections as typeof collections&{propertySets?:ProjectEntity[]}).propertySets??collections.pageGroups);
   const byId=<T extends ProjectEntity>(values:readonly T[],id:unknown)=>values.find((candidate)=>candidate.id===id);
   const occurrencesFor=(flowId:string,frameId?:string,eventId?:string)=>(graphs[flowId]?.occurrences??[]).filter((occurrence)=>(!frameId||occurrence.pageFrameId===frameId)&&(!eventId||occurrence.eventId===eventId));
   const occurrenceNode=(appearance:string,flowId:string,occurrence:ProjectEntity,parts:string[])=>reference(`${appearance}:occurrence:${flowId}:${occurrence.id}`,occurrence.name,"Event occurrence","Event occurrences",parts,`occurrences:${flowId}:${occurrence.id}`);
   const shared=branch(`project:${project.id}:shared`,"Shared Profiles",projectPath,collections.profiles.map((profile)=>contributor(`profiles:${profile.id}`,profile.name,"Shared Profile","Shared Profiles",[...projectPath,"Shared Profiles"])));
-  const pageGroups=branch(`project:${project.id}:page-groups`,"Page Groups",projectPath,collections.pageGroups.map((group)=>{
-    const parts=[...projectPath,"Page Groups"],node=contributor(`pageGroups:${group.id}`,group.name,"Page Group","Page Groups",parts);
-    node.children=collections.pages.filter((page)=>((page.pageGroupIds as string[]|undefined)??[]).includes(group.id)).map((page)=>reference(`page-group:${group.id}:page:${page.id}`,page.name,"Page reference","Pages",[...parts,group.name],`pages:${page.id}`));
+  const pageGroups=branch(`project:${project.id}:property-sets`,"Property Sets",projectPath,propertySets.map((group)=>{
+    const parts=[...projectPath,"Property Sets"],node=contributor(`propertySets:${group.id}`,group.name,"Property Set","Property Sets",parts);
+    node.children=collections.pages.filter((page)=>((page.propertySetApplications as {propertySetId?:string}[]|undefined)??[]).some(({propertySetId})=>propertySetId===group.id)||((page.pageGroupIds as string[]|undefined)??[]).includes(group.id)).map((page)=>reference(`property-set:${group.id}:page:${page.id}`,page.name,"Page application","Pages",[...parts,group.name],`pages:${page.id}`));
     return node;
   }));
   const pages=branch(`project:${project.id}:pages`,"Pages",projectPath,collections.pages.map((page)=>{
@@ -82,7 +82,7 @@ export function filterSchemaRelationshipTree(tree:readonly SchemaRelationshipTre
   const query=view.query.trim().toLocaleLowerCase(),category=view.category;
   const categoryBranch=(node:SchemaRelationshipTreeNode):SchemaRelationshipCategory|undefined=>{
     if(node.key.endsWith(":shared"))return"Shared Profiles";
-    if(node.key.endsWith(":page-groups"))return"Page Groups";
+    if(node.key.endsWith(":property-sets"))return"Property Sets";
     if(node.key.endsWith(":pages"))return"Pages";
     if(node.key.endsWith(":events"))return"Events";
     if(node.key.endsWith(":flows"))return category==="Event occurrences"?"Event occurrences":"Flow Page instances";
@@ -97,7 +97,7 @@ export function filterSchemaRelationshipTree(tree:readonly SchemaRelationshipTre
   const allowed=(node:SchemaRelationshipTreeNode):boolean=>{
     if(category==="All")return true;
     if(node.kind==="branch")return true;
-    if(category==="Page Groups")return node.category==="Page Groups"||Boolean(query&&node.key.startsWith("page-group:"));
+    if(category==="Property Sets")return node.category==="Property Sets"||Boolean(query&&node.key.startsWith("property-set:"));
     if(category==="Flow Page instances")return node.category==="Flow Page instances"&&node.key.startsWith("flow:");
     if(category==="Event occurrences")return node.category==="Event occurrences"&&node.key.startsWith("flow:");
     return node.category===category;
@@ -136,7 +136,7 @@ export function restoreSchemaRelationshipTreeView(storage:TreeViewStorage,projec
   try{serialized=storage.getItem?storage.getItem(key):storage.get?.(key);}catch{return defaultView();}
   if(!serialized)return defaultView();
   try{
-    const parsed=JSON.parse(serialized) as Partial<SchemaRelationshipTreeView>,categories:SchemaRelationshipCategory[]=["All","Saved schemas","Shared Profiles","Page Groups","Pages","Events","Flow Page instances","Event occurrences"];
+    const parsed=JSON.parse(serialized) as Partial<SchemaRelationshipTreeView>,categories:SchemaRelationshipCategory[]=["All","Saved schemas","Shared Profiles","Property Sets","Pages","Events","Flow Page instances","Event occurrences"];
     return{query:typeof parsed.query==="string"?parsed.query:"",category:categories.includes(parsed.category as SchemaRelationshipCategory)?parsed.category as SchemaRelationshipCategory:"All",expandedKeys:Array.isArray(parsed.expandedKeys)?parsed.expandedKeys.filter((value):value is string=>typeof value==="string"&&validKeys.has(value)):[],scrollTop:Number.isFinite(parsed.scrollTop)&&Number(parsed.scrollTop)>=0?Number(parsed.scrollTop):0};
   }catch{return defaultView();}
 }

@@ -32,12 +32,28 @@ import { mountSelectiveProfileInheritance } from "./data-layer-selective-profile
 import { savePageDetails } from "./data-layer-page-authoring.js";
 import { mountAssignmentRoutingWorkspace } from "./data-layer-assignment-routing-ui.js";
 import { developerProductionSchemaExport, loadProductionSpecificationPlan, publishableProductionSchemas } from "./data-layer-production-specification.js";
+import { mountFlowSectionWorkspace, mountPropertyCompositionWorkspace } from "./data-layer-property-set-flow-section-ui.js";
 const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, START_PATH_KEY = "my-chrome-utilities.specification-project-start.v1", routeParameters = new URLSearchParams(location.search), startupProjectId = routeParameters.get("project") ?? undefined, startupKind = routeParameters.get("kind") ?? undefined, startupEntityId = routeParameters.get("entity") ?? undefined, startupRoute = startupKind ? durableProjectRouteForWorkspace(startupKind, startupEntityId) : undefined;
 installStudioChoiceControls(document.body);
 const durableProjectRuntime = await openDurableProjectRuntime(globalThis.localStorage, globalThis.indexedDB, { ...(startupProjectId ? { projectId: startupProjectId } : {}), ...(startupRoute ? { route: startupRoute } : {}) }).catch((error) => { const status = document.querySelector("#project-state"); if (status)
     status.textContent = `Durable project storage unavailable: ${error instanceof Error ? error.message : String(error)}`; document.querySelectorAll("button,input,select,textarea").forEach((control) => { control.disabled = true; }); return new Promise(() => { }); }), projectStorage = durableProjectRuntime.storage;
 const q = (selector) => { const element = document.querySelector(selector); if (!element)
     throw new Error(`Missing ${selector}`); return element; };
+const separatedCopy = (value) => value.replaceAll("Page Groups", "Property Sets").replaceAll("Page Group", "Property Set").replace(/\bFlow lanes\b/g, "Flow Sections").replace(/\bflow lanes\b/g, "Flow Sections").replace(/\blanes\b/g, "Sections").replace(/\blane\b/g, "Section");
+function relabelSeparatedWorkspace(root) { const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT); let node; while ((node = walker.nextNode()))
+    if (node.nodeValue) {
+        const next = separatedCopy(node.nodeValue);
+        if (next !== node.nodeValue)
+            node.nodeValue = next;
+    } for (const element of Array.from(root.querySelectorAll("[aria-label],[title],[placeholder]")))
+    for (const attribute of ["aria-label", "title", "placeholder"]) {
+        const value = element.getAttribute(attribute);
+        if (value) {
+            const next = separatedCopy(value);
+            if (next !== value)
+                element.setAttribute(attribute, next);
+        }
+    } }
 const projectInspector = q("#project-inspector"), projectInspectorToggle = q("#toggle-project-inspector"), projectWorkspace = q("#project-workspace");
 const setProjectInspectorOpen = (open) => { const presentation = projectInspectorTogglePresentation(open); projectInspector.hidden = !open; projectInspectorToggle.textContent = presentation.label; projectInspectorToggle.setAttribute("aria-expanded", presentation.expanded); projectWorkspace.dataset.inspectorOpen = String(open); };
 projectInspectorToggle.addEventListener("click", () => setProjectInspectorOpen(projectInspector.hidden));
@@ -51,7 +67,7 @@ for (const fieldId of ["project-assignment-path", "project-assignment-value", "p
 }
 q("#project-assignment-applicability").required = false;
 const id = (kind) => `${kind}:${crypto.randomUUID()}`;
-const labels = { profiles: "Shared Profiles", pages: "Pages", pageGroups: "Page Groups", events: "Events", applicabilitySets: "Applicability", flows: "Flows", fixtures: "Test cases", assignments: "Assignments" };
+const labels = { profiles: "Shared Profiles", pages: "Pages", pageGroups: "Property Sets", events: "Events", applicabilitySets: "Applicability", flows: "Flows", fixtures: "Test cases", assignments: "Assignments" };
 let state, lastCommittedState, library = projectLibrary();
 let canonicalRevision = 0, publishedRevision = 0, guidedEvaluatorInvocations = 0, pendingConflict, durableConflict, saveStatus = { kind: "idle" }, stagedBulk, selectedKind = "profiles", selectedId, projectOverview = routeParameters.get("route") === "overview", documentationOpen = routeParameters.get("view") === "documentation", creationKind, removalReview, lifecycleStatus = "", removedFocus, pendingLifecycleFocus, pendingWorkspaceFocus, pendingProfileInheritanceFocus, pendingHistoryFocus, pendingProfileSource, stagedImport, lastInvokingControl, releasePreflight, releaseReviewHasChanges = true, pendingSavedSchema, flowGraphBuilder, executableFlowBuilder, layeredSchemaUi, flowDocumentationExportUi, projectDocumentationWorkspaceUi;
 const recordGuidedEvaluation = () => { guidedEvaluatorInvocations += 1; document.querySelector("[data-guided-test-case]")?.setAttribute("data-evaluator-invocations", String(guidedEvaluatorInvocations)); };
@@ -224,19 +240,19 @@ function renderPageGroupMembershipEditor(host, page) {
         return;
     const section = document.createElement("section"), heading = document.createElement("h3"), guidance = document.createElement("p"), impact = document.createElement("p"), picker = document.createElement("section"), search = document.createElement("input"), results = document.createElement("div"), add = document.createElement("button"), stack = document.createElement("ol"), memberships = orderedPageGroupIds(state.project, page.id), migrationRequired = requiresPageGroupMembershipMigration(state.project, page.id), groups = new Map(state.project.collections.pageGroups.map((group) => [group.id, group])), referencedSetIds = [...new Set(memberships.flatMap((groupId) => { const setId = groups.get(groupId)?.applicabilitySetId; return typeof setId === "string" && setId ? [setId] : []; }))], selectedSets = pageApplicabilityPreviews.get(page.id) ?? new Set(referencedSetIds);
     pageApplicabilityPreviews.set(page.id, selectedSets);
-    section.setAttribute("aria-label", "Page Group rule stack");
-    heading.textContent = "Page Group rule stack";
-    guidance.textContent = "Rules apply from top to bottom, general to specific. Later ordinary values replace earlier ones; invariants and structural incompatibilities remain blocked.";
+    section.setAttribute("aria-label", "Property composition");
+    heading.textContent = "Property composition";
+    guidance.textContent = "Applied Property Sets run from top to bottom, general to specific. Applicability belongs to each Page application; later ordinary values replace earlier ones while invariants and structural incompatibilities remain blocked.";
     impact.setAttribute("role", "status");
-    impact.setAttribute("aria-label", "Page Group membership impact");
+    impact.setAttribute("aria-label", "Property composition impact");
     impact.textContent = pageGroupMembershipStatus;
-    picker.setAttribute("aria-label", "Add to Page Group picker");
+    picker.setAttribute("aria-label", "Apply Property Set picker");
     picker.hidden = true;
     search.type = "search";
-    search.setAttribute("aria-label", "Search Page Groups to add");
-    results.setAttribute("aria-label", "Page Group membership search results");
+    search.setAttribute("aria-label", "Search Property Sets to apply");
+    results.setAttribute("aria-label", "Property Set application search results");
     add.type = "button";
-    add.textContent = "Add to Page Group";
+    add.textContent = "Apply Property Set";
     const showPicker = () => { picker.hidden = false; search.focus(); }, renderResults = () => { const term = search.value.trim().toLowerCase(); results.replaceChildren(...state.project.collections.pageGroups.filter((group) => !memberships.includes(group.id) && group.name.toLowerCase().includes(term)).map((group) => { const control = document.createElement("button"), constraints = (group.canonicalSchema?.nodes ? Object.keys(group.canonicalSchema.nodes).length : (group.schemaConstraints ?? []).length), applicability = state.project.collections.applicabilitySets.find(({ id }) => id === group.applicabilitySetId); control.type = "button"; control.textContent = `${group.name} · Purpose ${String(group.purpose ?? "Page schema contribution")} · Applicability ${applicability?.name ?? "Always"} · Prospective rule impact ${constraints} properties`; control.addEventListener("click", () => persist(addPageGroupMembership(state, page.id, group.id))); return control; })); };
     search.addEventListener("input", renderResults);
     add.addEventListener("click", showPicker);
@@ -279,6 +295,15 @@ function renderPageGroupMembershipEditor(host, page) {
         row.append(summary, actions);
         stack.append(row);
     }
+    for (const [index, row] of Array.from(stack.children).entries()) {
+        const groupId = memberships[index], group = groups.get(groupId), summary = row.querySelector("span"), buttons = row.querySelectorAll("button");
+        if (summary)
+            summary.textContent = `${index + 1}. Property Set ${group?.name ?? groupId} · applicability ${String(group?.applicabilitySetId ?? "Always")} · ${(group?.schemaConstraints ?? []).length} effective contributions or conflicts · provenance ${group?.name ?? groupId}`;
+        if (buttons[0])
+            buttons[0].textContent = "Open Property Set";
+        if (buttons[3])
+            buttons[3].textContent = "Remove application";
+    }
     if (pendingPageGroupMembershipReorder?.pageId === page.id) {
         const pending = pendingPageGroupMembershipReorder, confirm = document.createElement("button"), cancel = document.createElement("button");
         confirm.type = cancel.type = "button";
@@ -300,6 +325,15 @@ function renderPageGroupMembershipEditor(host, page) {
         confirm.addEventListener("click", () => persist(confirmPageGroupMembershipMigration(state, migration)));
         review.append(summary, confirm);
         section.append(review);
+    }
+    const legacyReview = section.querySelector('[aria-label="Page Group membership migration review"]');
+    if (legacyReview) {
+        legacyReview.setAttribute("aria-label", "Legacy application migration review");
+        const summary = legacyReview.querySelector("p"), confirm = legacyReview.querySelector("button");
+        if (summary)
+            summary.textContent = `Proposed ordered Property composition: ${migration.proposedPageGroupIds.map((identity) => groups.get(identity)?.name ?? identity).join(", ")}. Page-owned order is preserved before legacy inverse memberships. ${migration.missingPageGroupIds.length ? `Missing references: ${migration.missingPageGroupIds.join(", ")}.` : "No application will be lost."}`;
+        if (confirm)
+            confirm.textContent = "Confirm ordered application migration";
     }
     section.append(heading, guidance, add, picker, stack, impact);
     host.append(section);
@@ -904,8 +938,13 @@ function renderProfileInheritanceEditor(host, entity, includePageGroups = false)
     renderResults();
     section.append(heading, add, picker);
     renderProfileInheritanceCards(section, entity);
-    if (includePageGroups)
-        renderPageGroupMembershipEditor(section, entity);
+    if (includePageGroups) {
+        const separated = state.project.collections.propertySets;
+        if (separated?.length || !state.project.collections.pageGroups.length)
+            mountPropertyCompositionWorkspace({ host: section, state, pageId: entity.id, id, onSave: persist });
+        else
+            renderPageGroupMembershipEditor(section, entity);
+    }
     host.append(section);
 }
 function renderSelectedEntityEditor(content, entity) {
@@ -1303,6 +1342,9 @@ function renderWorkspace() {
     q("#inspector-context").textContent = selected ? `${selected.name} · Where used: ${whereUsed(selected.id).join(", ") || "None"}` : "Select a project entity.";
     if (selected) {
         renderProjectEntityWorkspace(content, selectedKind, selected);
+        if (selectedKind === "flows")
+            mountFlowSectionWorkspace({ host: content.querySelector(`[data-project-entity-workspace="${CSS.escape(selected.id)}"]`), state, flowId: selected.id, id, onSave: persist });
+        queueMicrotask(() => relabelSeparatedWorkspace(content));
         return;
     }
     q("#flow-inspector-context").replaceChildren();
