@@ -15,6 +15,7 @@ import {
   reorderPropertySetApplication,
   stagePropertySetParentAddition,
   upgradePageGroupsToPropertySets,
+  verifyPropertySetFlowSectionUpgrade,
 } from "../dist/data-layer-property-set-flow-section.js";
 import {compileLayeredSchema} from "../dist/data-layer-layered-schema.js";
 import {layeredContributorPath,layeredContributorsForPath} from "../dist/data-layer-layered-schema-project.js";
@@ -66,8 +67,17 @@ const legacyState=()=>({
 });
 
 {
-  const testLock=new URL("../build/.test-dist-artifact.lock/",import.meta.url),order=[],releaseFirst=await acquireDistArtifactLock(testLock);order.push("first acquired");let secondAcquired=false;const second=acquireDistArtifactLock(testLock).then(async(release)=>{secondAcquired=true;order.push("second acquired");await release();});await new Promise((resolve)=>setTimeout(resolve,30));assert.equal(secondAcquired,false,"a second build or acceptance session waits while the completed dist artifact is in use");await releaseFirst();await second;assert.deepEqual(order,["first acquired","second acquired"],"dist artifact consumers resume in acquisition order");
+  const testLock=new URL("../tmp/.test-dist-artifact.lock/",import.meta.url),order=[],releaseFirst=await acquireDistArtifactLock(testLock);order.push("first acquired");let secondAcquired=false;const second=acquireDistArtifactLock(testLock).then(async(release)=>{secondAcquired=true;order.push("second acquired");await release();});await new Promise((resolve)=>setTimeout(resolve,30));assert.equal(secondAcquired,false,"a second build or acceptance session waits while the completed dist artifact is in use");await releaseFirst();await second;assert.deepEqual(order,["first acquired","second acquired"],"dist artifact consumers resume in acquisition order");
+  const staleLock=new URL("../tmp/.test-dist-artifact-stale.lock/",import.meta.url);await import("node:fs/promises").then(async({mkdir,rm,writeFile})=>{await rm(staleLock,{recursive:true,force:true});await mkdir(staleLock,{recursive:true});await writeFile(new URL("owner.json",staleLock),JSON.stringify({pid:999999999,startTime:"dead",token:"stale"}));});let active=0,maximumActive=0;await Promise.all(Array.from({length:8},async()=>{const release=await acquireDistArtifactLock(staleLock);active+=1;maximumActive=Math.max(maximumActive,active);await new Promise((resolve)=>setTimeout(resolve,10));active-=1;await release();}));assert.equal(maximumActive,1,"concurrent stale reclaimers never delete a newly acquired lock");
   const packs=await loadVerificationPacks();await validateVerificationPacks(packs);const focused=planVerification(packs,{packIds:["property_set_flow_sections"]}),changedFlow=planVerification(packs,{changedPaths:["src/data-layer-flow-graph.ts"]});assert.deepEqual(focused.packIds,["property_set_flow_sections"],"the separation checkpoint reuses only its bounded Flow component evidence");assert.equal(changedFlow.packIds.includes("flow_graph")&&changedFlow.packIds.includes("property_set_flow_sections"),true,"a core Flow change selects both its owning pack and the bounded separation consumer");
+}
+
+{
+  const legacy=legacyState(),upgraded=upgradePageGroupsToPropertySets(legacy,id),corrupt=(change)=>{const candidate=structuredClone(upgraded.project);change(candidate);return candidate;};
+  assert.throws(()=>verifyPropertySetFlowSectionUpgrade(legacy.project,corrupt(project=>project.collections.pages[0].propertySetApplications.reverse())),/applications/,"verification rejects changed Page application order");
+  assert.throws(()=>verifyPropertySetFlowSectionUpgrade(legacy.project,corrupt(project=>{project.collections.propertySets[0].schemaConstraints[0].expectedValue="corrupt";})),/contributors/,"verification rejects changed effective Property Set input");
+  assert.throws(()=>verifyPropertySetFlowSectionUpgrade(legacy.project,corrupt(project=>{project.documentationFlowGraphs["flow:checkout"].sections[0].bounds.x+=1;})),/geometry/,"verification rejects changed Section geometry");
+  assert.throws(()=>verifyPropertySetFlowSectionUpgrade(legacy.project,corrupt(project=>{project.documentationFlowGraphs["flow:checkout"].occurrences[0].position={x:999,y:999};})),/geometry/,"verification rejects changed occurrence geometry");
 }
 
 {

@@ -1,20 +1,35 @@
-import {mkdir,readFile,rm,stat,writeFile} from "node:fs/promises";
+import {mkdir,open,readFile,rm,stat,writeFile} from "node:fs/promises";
 
-const lockDirectory=new URL("../build/.dist-artifact.lock/",import.meta.url);
+const lockDirectory=new URL("../tmp/.dist-artifact.lock/",import.meta.url);
 const heldEnvironmentKey="MY_CHROME_UTILITIES_DIST_LOCK_HELD";
 const pause=(milliseconds)=>new Promise((resolve)=>setTimeout(resolve,milliseconds));
 const processStartTime=async(pid)=>{const fields=(await readFile(`/proc/${pid}/stat`,"utf8")).trim().split(" ");return fields[21];};
 
 async function staleOwner(directory,ownerFile){
   try{
-    const owner=JSON.parse(await readFile(ownerFile,"utf8"));
-    if(!Number.isInteger(owner.pid)||owner.pid<1||typeof owner.startTime!=="string")return true;
-    try{return await processStartTime(owner.pid)!==owner.startTime;}catch(error){return error?.code==="ENOENT"||error?.code==="ESRCH";}
-  }catch{try{return Date.now()-(await stat(directory)).mtimeMs>1000;}catch{return true;}}
+    const source=await readFile(ownerFile,"utf8"),owner=JSON.parse(source);
+    if(!Number.isInteger(owner.pid)||owner.pid<1||typeof owner.startTime!=="string")return {source};
+    try{return await processStartTime(owner.pid)!==owner.startTime?{source}:undefined;}catch(error){return error?.code==="ENOENT"||error?.code==="ESRCH"?{source}:undefined;}
+  }catch{try{return Date.now()-(await stat(directory)).mtimeMs>1000?{source:undefined}:undefined;}catch{return {source:undefined};}}
+}
+
+async function reclaimObservedOwner(directory,ownerFile,observed){
+  const claimFile=new URL("reclaim.claim",directory),claimToken=`${process.pid}:${Date.now()}:${Math.random()}`;let claim;
+  try{claim=await open(claimFile,"wx");await claim.writeFile(claimToken);}
+  catch(error){if(error?.code==="EEXIST"||error?.code==="ENOENT")return false;throw error;}
+  finally{await claim?.close();}
+  try{
+    let current;try{current=await readFile(ownerFile,"utf8");}catch(error){if(error?.code!=="ENOENT")throw error;}
+    if(current!==observed.source)return false;
+    await rm(directory,{recursive:true});return true;
+  }finally{
+    try{if(await readFile(claimFile,"utf8")===claimToken)await rm(claimFile);}catch(error){if(error?.code!=="ENOENT")throw error;}
+  }
 }
 
 export async function acquireDistArtifactLock(directory=lockDirectory){
   const ownerFile=new URL("owner.json",directory);
+  await mkdir(new URL("../",directory),{recursive:true});
   for(;;){
     try{
       await mkdir(directory);
@@ -24,7 +39,7 @@ export async function acquireDistArtifactLock(directory=lockDirectory){
       return async()=>{if(released)return;released=true;try{const owner=JSON.parse(await readFile(ownerFile,"utf8"));if(owner.token===token)await rm(directory,{recursive:true,force:true});}catch(error){if(error?.code!=="ENOENT")throw error;}};
     }catch(error){
       if(error?.code!=="EEXIST")throw error;
-      if(await staleOwner(directory,ownerFile)){try{await rm(directory,{recursive:true});}catch(error){if(error?.code!=="ENOENT")throw error;}continue;}
+      const observed=await staleOwner(directory,ownerFile);if(observed){await reclaimObservedOwner(directory,ownerFile,observed);continue;}
       await pause(25);
     }
   }

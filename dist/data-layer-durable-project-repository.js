@@ -1,4 +1,4 @@
-import { upgradePageGroupsToPropertySets } from "./data-layer-property-set-flow-section.js";
+import { upgradePageGroupsToPropertySets, verifyPropertySetFlowSectionUpgrade } from "./data-layer-property-set-flow-section.js";
 import { repairCanonicalBooleanAllowedValues } from "./data-layer-canonical-schema-facets.js";
 export const DURABLE_PROJECT_DATABASE = "my-chrome-utilities.project-repository";
 export const DURABLE_PROJECT_DATABASE_VERSION = 6;
@@ -199,6 +199,16 @@ async function replaceProjectParts(transaction, projectId, parts) {
     for (const { identity, value } of parts.values())
         await transaction.put(identity.store, identity.key, value);
 }
+async function verifyStoredProjectParts(transaction, projectId, parts) {
+    for (const { identity, value } of parts.values())
+        if (!same(await transaction.get(identity.store, identity.key), value))
+            throw new DOMException(`Property Set migration read-back failed for ${projectId} at ${identity.store}/${identity.key}.`, "OperationError");
+    const expected = new Set([...parts.values()].map(({ identity }) => `${identity.store}/${identity.key}`)), prefix = projectPrefix(projectId);
+    for (const store of replaceableProjectStores)
+        for (const { key } of await transaction.getPrefix(store, prefix))
+            if (!expected.has(`${store}/${key}`))
+                throw new DOMException(`Property Set migration read-back retained unexpected ${store}/${key}.`, "OperationError");
+}
 const externalLineageKeys = new Set(["sourceLineage", "externalLineage"]), identityMapContainers = new Set(["nodes", "documentationFlowGraphs"]);
 const referenceField = (key) => key === "id" || key === "currentRelease" || /(?:Id|Ids|Reference|References)$/.test(key);
 function projectIdentityMapping(source, targetProjectId) {
@@ -284,9 +294,9 @@ export class DurableProjectRepository {
             if (input.active)
                 await transaction.put("settings", "activeProjectId", projectId);
             if (requiresSeparation) {
-                const receiptKey = `property-set-flow-sections-v1:${projectId}`, beforeChecksum = await checksum(JSON.stringify(comparable(legacyState.project))), afterChecksum = await checksum(JSON.stringify(comparable(state.project))), root = await transaction.get("projectRoots", projectId);
-                if (!root?.collectionKinds.includes("propertySets") || root.collectionKinds.includes("pageGroups"))
-                    throw new DOMException(`Property Set migration read-back failed for ${projectId}.`, "OperationError");
+                const receiptKey = `property-set-flow-sections-v1:${projectId}`, beforeChecksum = await checksum(JSON.stringify(comparable(legacyState.project))), afterChecksum = await checksum(JSON.stringify(comparable(state.project)));
+                verifyPropertySetFlowSectionUpgrade(legacyState.project, state.project);
+                await verifyStoredProjectParts(transaction, projectId, parts);
                 await transaction.put("migrationBackups", receiptKey, { version: 1, project: clone(legacyState.project), beforeChecksum, createdAt: lastSavedAt });
                 await transaction.put("migrationReceipts", receiptKey, { version: 1, projectIds: [projectId], beforeChecksum, afterChecksum, verified: true, upgradedAt: lastSavedAt });
             }
@@ -520,11 +530,13 @@ export class DurableProjectRepository {
             const projectId = candidate.state.project.id, root = await transaction.get("projectRoots", projectId);
             if (!root?.collectionKinds.includes("pageGroups"))
                 throw new DOMException(`Legacy Property Set source ${projectId} changed before upgrade.`, "AbortError");
+            const source = legacy.find(({ state }) => state.project.id === projectId);
+            if (!source)
+                throw new DOMException(`Legacy Property Set source ${projectId} is unavailable.`, "DataError");
+            verifyPropertySetFlowSectionUpgrade(source.state.project, candidate.state.project);
             const parts = projectParts(candidate.state);
             await replaceProjectParts(transaction, projectId, parts);
-            const verifiedRoot = await transaction.get("projectRoots", projectId);
-            if (!verifiedRoot?.collectionKinds.includes("propertySets") || verifiedRoot.collectionKinds.includes("pageGroups"))
-                throw new DOMException(`Property Set upgrade read-back failed for ${projectId}.`, "OperationError");
+            await verifyStoredProjectParts(transaction, projectId, parts);
             const currentMetadata = await transaction.get("projectMetadata", projectId);
             if (!currentMetadata)
                 throw new DOMException(`Property Set upgrade lost metadata for ${projectId}.`, "OperationError");

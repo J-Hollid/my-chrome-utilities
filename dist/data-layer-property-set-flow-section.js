@@ -175,19 +175,64 @@ const normalizeLegacyFramePlacement = (graph, frame, sectionId, laneOffset, name
     delete next.freePageRegion;
     return next;
 };
-const verifyUpgrade = (before, after) => {
-    const legacy = legacyCollections(before).pageGroups ?? [], sets = after.collections.propertySets;
-    if (legacy.length !== sets.length || legacy.some((group) => !sets.some(({ id }) => id === group.id)))
-        throw new Error("Property Set upgrade did not preserve contributor identities.");
+const equal = (left, right) => JSON.stringify(left) === JSON.stringify(right);
+const expectedPropertySets = (before) => (legacyCollections(before).pageGroups ?? []).map((group) => { const next = clone(group); delete next.pageIds; delete next.applicabilitySetId; return next; });
+const expectedApplications = (before, page) => { const legacy = legacyCollections(before).pageGroups ?? [], stored = Array.isArray(page.pageGroupIds) ? page.pageGroupIds.map(String) : [], members = legacy.filter((group) => (group.pageIds ?? []).map(String).includes(page.id)).map(({ id }) => id); return unique([...stored, ...members]).map((propertySetId) => { const group = legacy.find(({ id }) => id === propertySetId); return { name: group.name, propertySetId, ...(typeof group.applicabilitySetId === "string" ? { applicabilitySetId: group.applicabilitySetId } : {}) }; }); };
+const applicationSemantics = (page) => applications(page).map(({ name, propertySetId, applicabilitySetId }) => ({ name, propertySetId, ...(applicabilitySetId ? { applicabilitySetId } : {}) }));
+const projectedGeometry = (graph) => { const frames = (graph.pageFrames ?? []).map((frame) => { const size = legacyFrameSize(graph, frame); return { id: frame.id, x: Number(frame.position.x ?? 24), y: Number(frame.position.y), ...size }; }), byId = new Map(frames.map((frame) => [frame.id, frame])); return { frames, occurrences: (graph.occurrences ?? []).map((occurrence) => { const frame = byId.get(String(occurrence.pageFrameId)); return { id: occurrence.id, x: Number(frame?.x ?? 0) + Number(occurrence.position?.x ?? 24), y: Number(frame?.y ?? 0) + Number(occurrence.position?.y ?? 70) }; }), relationships: (graph.relationships ?? []).map((relationship) => { const source = byId.get(endpointId(relationship, "source") ?? ""), target = byId.get(endpointId(relationship, "target") ?? ""); return { id: relationship.id, x1: Number(source?.x ?? 0) + Number(source?.width ?? 0), y1: Number(source?.y ?? 0) + Number(source?.height ?? 0) / 2, x2: Number(target?.x ?? 0), y2: Number(target?.y ?? 0) + Number(target?.height ?? 0) / 2 }; }) }; };
+export function verifyPropertySetFlowSectionUpgrade(before, after) {
+    const propertySets = expectedPropertySets(before);
+    if (!equal(propertySets, after.collections.propertySets))
+        throw new Error("Property Set upgrade did not preserve contributors and effective schema inputs.");
+    const beforePages = before.collections.pages, afterPages = after.collections.pages;
+    if (beforePages.length !== afterPages.length)
+        throw new Error("Property Set upgrade did not preserve Pages or their applications.");
+    for (const page of beforePages) {
+        const upgraded = afterPages.find(({ id }) => id === page.id), expected = expectedApplications(before, page);
+        if (!upgraded || !equal(expected, applicationSemantics(upgraded)))
+            throw new Error(`Property Set applications for Page ${page.id} changed order or applicability.`);
+        const expectedPage = clone(page);
+        delete expectedPage.pageGroupIds;
+        delete expectedPage.propertySetApplications;
+        const actualPage = clone(upgraded);
+        delete actualPage.propertySetApplications;
+        if (!equal(expectedPage, actualPage))
+            throw new Error(`Page ${page.id} changed outside its Property Set applications.`);
+    }
+    const expectedAssignments = before.collections.assignments.map((assignment) => assignment.targetKind === "Page Group" ? { ...assignment, targetKind: "Property Set" } : assignment);
+    if (!equal(expectedAssignments, after.collections.assignments))
+        throw new Error("Property Set upgrade did not preserve Assignment targets.");
+    for (const kind of Object.keys(before.collections)) {
+        if (kind === "pages" || kind === "propertySets" || kind === "assignments" || kind === "pageGroups")
+            continue;
+        if (!equal(before.collections[kind], after.collections[kind]))
+            throw new Error(`Property Set upgrade changed unrelated ${String(kind)} entities.`);
+    }
     for (const [flowId, beforeGraph] of Object.entries(graphs(before))) {
         const afterGraph = graphs(after)[flowId];
         if (!afterGraph)
             throw new Error(`Flow ${flowId} was not preserved.`);
-        const keys = (values) => JSON.stringify((values ?? []).map(({ id }) => id));
-        if (keys(beforeGraph.pageFrames) !== keys(afterGraph.pageFrames) || keys(beforeGraph.occurrences) !== keys(afterGraph.occurrences) || JSON.stringify(beforeGraph.relationships ?? []) !== JSON.stringify(afterGraph.relationships ?? []))
-            throw new Error(`Flow ${flowId} identities or topology changed during upgrade.`);
+        const laneIds = unique([...(beforeGraph.pageGroupIds ?? []), ...(beforeGraph.pageFrames ?? []).flatMap((frame) => typeof frame.pageGroupId === "string" ? [frame.pageGroupId] : [])]), hasBefore = (beforeGraph.pageFrames ?? []).some((frame) => frame.freePageRegion === "before-lanes"), laneOffset = hasBefore ? 200 : 0, namedFrames = (beforeGraph.pageFrames ?? []).filter((frame) => !frame.freePageRegion), namedWidth = Math.max(900, ...namedFrames.map((frame) => Number(frame.position.x ?? 40) + legacyFrameSize(beforeGraph, frame).width + 60)), laneLeft = laneOffset + 10, namedRight = Math.max(laneLeft + 700, ...namedFrames.map((frame) => laneOffset + Number(frame.position.x ?? 40) + legacyFrameSize(beforeGraph, frame).width + 60)), sections = afterGraph.sections ?? [];
+        if (sections.length !== laneIds.length)
+            throw new Error(`Flow ${flowId} Section geometry was not preserved.`);
+        let nextY = 20;
+        const lane = new Map();
+        for (const [groupOrder, groupId] of laneIds.entries()) {
+            const section = sections[groupOrder], group = (legacyCollections(before).pageGroups ?? []).find(({ id }) => id === groupId), frames = namedFrames.filter((frame) => frame.pageGroupId === groupId), height = Math.max(240, ...frames.map((frame) => Number(frame.position.y ?? 40) + legacyFrameSize(beforeGraph, frame).height + 40)), expected = { id: section?.id, name: group?.name ?? groupId, order: groupOrder, bounds: { x: laneLeft, y: nextY, width: namedRight - laneLeft, height } };
+            if (!section || !equal(expected, section))
+                throw new Error(`Flow ${flowId} Section geometry was not preserved.`);
+            lane.set(groupId, { sectionId: section.id, y: nextY });
+            nextY += height + 24;
+        }
+        const expectedFrames = (beforeGraph.pageFrames ?? []).map((frame) => { const groupId = typeof frame.pageGroupId === "string" ? frame.pageGroupId : undefined, placement = groupId ? lane.get(groupId) : undefined; return normalizeLegacyFramePlacement(beforeGraph, frame, placement?.sectionId, laneOffset, namedWidth, placement?.y ?? 20); });
+        if (!equal(expectedFrames, afterGraph.pageFrames ?? []))
+            throw new Error(`Flow ${flowId} Page-frame geometry was not preserved.`);
+        if (!equal(beforeGraph.occurrences ?? [], afterGraph.occurrences ?? []) || !equal(beforeGraph.relationships ?? [], afterGraph.relationships ?? []))
+            throw new Error(`Flow ${flowId} occurrence or relationship geometry and topology changed during upgrade.`);
+        if (!equal(projectedGeometry({ ...beforeGraph, pageFrames: expectedFrames }), projectedGeometry(afterGraph)))
+            throw new Error(`Flow ${flowId} projected occurrence or relationship geometry changed during upgrade.`);
     }
-};
+}
 export function upgradePageGroupsToPropertySets(state, id) {
     const legacy = legacyCollections(state.project).pageGroups;
     if (!legacy)
@@ -198,7 +243,7 @@ export function upgradePageGroupsToPropertySets(state, id) {
         const documentationFlowGraphs = Object.fromEntries(Object.entries(graphs(project)).map(([flowId, graph]) => { const laneIds = unique([...(graph.pageGroupIds ?? []), ...(graph.pageFrames ?? []).flatMap((frame) => typeof frame.pageGroupId === "string" ? [frame.pageGroupId] : [])]), hasBefore = (graph.pageFrames ?? []).some((frame) => frame.freePageRegion === "before-lanes"), laneOffset = hasBefore ? 200 : 0, namedFrames = (graph.pageFrames ?? []).filter((frame) => !frame.freePageRegion), namedWidth = Math.max(900, ...namedFrames.map((frame) => Number(frame.position.x ?? 40) + legacyFrameSize(graph, frame).width + 60)), laneLeft = laneOffset + 10, namedRight = Math.max(laneLeft + 700, ...namedFrames.map((frame) => laneOffset + Number(frame.position.x ?? 40) + legacyFrameSize(graph, frame).width + 60)), sectionByLane = new Map(), laneYById = new Map(); let nextLaneY = 20; const sections = laneIds.map((groupId, order) => { const group = legacySets.find(({ id }) => id === groupId), sectionId = id("flow-section"), frames = namedFrames.filter((frame) => frame.pageGroupId === groupId), height = Math.max(240, ...frames.map((frame) => Number(frame.position.y ?? 40) + legacyFrameSize(graph, frame).height + 40)); sectionByLane.set(groupId, sectionId); laneYById.set(groupId, nextLaneY); const section = { id: sectionId, name: group?.name ?? groupId, order, bounds: { x: laneLeft, y: nextLaneY, width: namedRight - laneLeft, height } }; nextLaneY += height + 24; return section; }), pageFrames = (graph.pageFrames ?? []).map((frame) => { const legacyFrame = frame, groupId = typeof legacyFrame.pageGroupId === "string" ? legacyFrame.pageGroupId : undefined, sectionId = groupId ? sectionByLane.get(groupId) : undefined; return normalizeLegacyFramePlacement(graph, legacyFrame, sectionId, laneOffset, namedWidth, groupId ? laneYById.get(groupId) ?? 20 : 0); }), next = { ...graph, sections, pageFrames }; delete next.pageGroupIds; return [flowId, next]; })), assignments = project.collections.assignments.map((assignment) => assignment.targetKind === "Page Group" ? { ...assignment, targetKind: "Property Set" } : assignment), nextCollections = { ...project.collections, propertySets, pages, assignments };
         delete nextCollections.pageGroups;
         const next = { ...project, collections: nextCollections, documentationFlowGraphs, propertySetFlowSectionVersion: 1 };
-        verifyUpgrade(project, next);
+        verifyPropertySetFlowSectionUpgrade(project, next);
         return next;
     });
 }
