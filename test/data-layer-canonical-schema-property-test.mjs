@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import {
   addCanonicalProperty,
+  applyCanonicalCommand,
   canonicalPropertyPath,
   canonicalSchemaWithConstraint,
   canonicalTableRows,
@@ -10,6 +11,7 @@ import {
   renameCanonicalProperty,
   resolveCanonicalMigrationConflict,
 } from "../dist/data-layer-canonical-schema.js";
+import {repairCanonicalBooleanAllowedValues} from "../dist/data-layer-canonical-schema-facets.js";
 import {addProjectEntity,createSpecificationProject} from "../dist/data-layer-specification-project.js";
 import {commitStagedBulkRequirements,stageBulkRequirements} from "../dist/data-layer-specification-bulk.js";
 
@@ -41,6 +43,31 @@ for(let example=0;example<200;example+=1){
   assert.equal(names.filter((name)=>name===firstName).length,1);
   assert.equal(names.filter((name)=>name===secondName).length,1);
   assert.equal(current.revision,baseRevision+2);
+}
+
+for(let example=0;example<200;example+=1){
+  const values=example%2===0?["true","false"]:["false","true"],node={
+    id:`property:boolean-repair:${example}`,name:`enabled_${example}`,order:example,type:"string",presence:{mode:"optional"},
+    allowedValues:values.map((value,index)=>({id:`allowed:${example}:${index}`,value,provenance:[{source:"created",label:`Source ${example}:${index}`}]})),
+    rules:[],documentation:{displayText:`Enabled ${example}`,description:`Description ${example}`,comments:`Comment ${example}`,example:{method:"blank"}},
+    provenance:[{source:"created"}],overrideReferences:[],
+  },before=structuredClone(node),repair=repairCanonicalBooleanAllowedValues(node,"boolean"),repeat=repairCanonicalBooleanAllowedValues({...node,type:"boolean",allowedValues:repair.allowedValues},"boolean");
+  assert.deepEqual(node,before,"Boolean repair planning must not mutate the source property");
+  assert.deepEqual(repair.allowedValues.map(({id,value,provenance})=>({id,value,provenance})),before.allowedValues.map(({id,value,provenance})=>({id,value:value==="true",provenance})),"Boolean repair preserves allowed-value identity and metadata across generated orderings");
+  assert.equal(repair.repairCount,2);
+  assert.equal(repeat.repairCount,0,"Boolean repair is idempotent");
+  assert.equal(repeat.allowedValues,repair.allowedValues,"an idempotent repair preserves the stable allowed-value collection");
+
+  const document={...createCanonicalSchema({id:`schema:boolean-repair:${example}`,contributorId:`profile:boolean-repair:${example}`,contributorName:`Boolean repair ${example}`}),rootIds:[node.id],nodes:{[node.id]:node}},result=applyCanonicalCommand(document,{kind:"type",baseRevision:0,propertyId:node.id,type:"boolean"});
+  assert.equal(result.status,"applied");
+  assert.equal(result.document.revision,1,"Boolean repair and Type transition remain one command");
+  assert.deepEqual(result.document.nodes[node.id].allowedValues,repair.allowedValues);
+
+  const invalid={...node,allowedValues:[...node.allowedValues,{id:`allowed:${example}:invalid`,value:`other_${example}`}]},invalidBytes=JSON.stringify(invalid),invalidDocument={...document,nodes:{[node.id]:invalid}},blocked=applyCanonicalCommand(invalidDocument,{kind:"type",baseRevision:0,propertyId:node.id,type:"boolean"});
+  assert.equal(blocked.status,"conflict");
+  assert.match(blocked.message,new RegExp(`other_${example} is not a Boolean`));
+  assert.equal(JSON.stringify(invalid),invalidBytes,"a blocked generated repair conserves the source property bytes");
+  assert.equal(blocked.document,invalidDocument,"a blocked generated repair returns the unchanged document");
 }
 
 for(let example=0;example<100;example+=1){
