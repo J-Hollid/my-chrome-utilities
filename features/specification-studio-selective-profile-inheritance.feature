@@ -42,10 +42,12 @@ Feature: Specification Studio selective profile inheritance
   Scenario: Specification Studio selective profile inheritance 003
     When its inheritance recipe workspace opens
     Then the target editor retains one compact Master summary card
-    And the dedicated workspace provides search by name, path, description, and example
-    And it filters by concept, type, required state, and selection state
-    And concepts and property branches show selected and total counts with tri-state selection
-    And a persistent summary shows direct selections, structural dependencies, rule dependencies, conflicts, and effective total
+    And compact starting-point and copy controls precede a search and filter toolbar
+    And one expandable selection tree contains concept parents, structural branches, and property leaves
+    And visible checkboxes show selected, unselected, and mixed states independently of tree focus and expansion
+    And each parent shows selected and total descendant counts
+    And a sticky action bar shows effective properties, exclusions, issues, Review selection, Cancel, and Apply inheritance
+    And no recalculated composition preview or row-by-row effective-property list is rendered in the workspace
     And no complete inherited property table is inserted into the ordinary target form
 
   # Specification Studio selective profile inheritance 004
@@ -113,7 +115,7 @@ Feature: Specification Studio selective profile inheritance
     Then error_message retains its inherited definition and is optional for Standalone Error Event
     And the effective Event schema contains no page_type condition or unresolved dependency
     And provenance identifies the Master rule and its exclusion at the Event inheritance boundary
-    And another Page inheriting the same Master rule still requires error_message when page_type equals error
+    And the same rule's behavior for another Page is unchanged
 
   # Specification Studio selective profile inheritance 010
   Scenario Outline: Specification Studio selective profile inheritance 010
@@ -144,7 +146,7 @@ Feature: Specification Studio selective profile inheritance
     Given a target composes selective recipes from Master and Commerce
     When both selected contributions define the same effective property or incompatible facets
     Then the existing peer composition and conflict rules apply after each recipe filters its source
-    And preview names both Shared Profiles, their selected paths, effective facets, and conflicts
+    And Needs attention names both Shared Profiles and each conflicting path beside its resolution route
     And applying an unresolved conflict preserves the Draft recipe but keeps the effective schema blocked
     And exclusion cannot be presented as a resolution unless the operator actually removes that source contribution
 
@@ -180,15 +182,77 @@ Feature: Specification Studio selective profile inheritance
     Given Error Page has a reviewed Master recipe
     When the operator chooses Copy selection from Error Page while authoring another target
     Then a new independently reviewable recipe starts with the same concepts, property identities, exclusions, and rule resolutions
-    And its target-specific preview is recalculated before Apply inheritance is enabled
+    And its target-specific closure, issue count, and effective total are recalculated in the tree and sticky action bar
+    And Apply inheritance is enabled when no unresolved rule dependency remains
     And later edits to either recipe do not edit the other
     And no separately managed named preset is required
 
   # Specification Studio selective profile inheritance 016
   Scenario: Specification Studio selective profile inheritance 016
     When the recipe is completed at desktop width, 360 CSS pixels, or 200 percent browser zoom using only the keyboard
-    Then property results are rendered with bounded work while preserving search and selection position
-    And concept, branch, property, dependency, and rule-resolution controls have programmatic names and states
-    And the selection summary and Apply inheritance remain reachable without horizontal page scrolling
+    Then tree nodes are rendered with bounded work while preserving search, expansion, focus, and selection position
+    And concept, branch, property, dependency, and rule-resolution controls have visible and programmatic names and states
+    And the sticky action bar and Apply inheritance remain reachable without horizontal page scrolling
     And focus returns to the operated property, dependency, or Master summary card after each action
     And selection, partial selection, dependency, conflict, and exclusion never depend on color alone
+
+  # Specification Studio selective profile inheritance 017
+  Scenario: Specification Studio selective profile inheritance 017
+    Given product_id and product_name are descendants of product in concept ecommerce
+    When the inheritance selection tree is presented
+    Then the tree renders the concept, branch, and leaves at successive indentation levels
+    And each parent has a separate disclosure control and tri-state checkbox
+    And each property leaf has a checkbox, primary property name, and secondary type and presence
+    When the ecommerce checkbox is selected
+    Then ecommerce is marked synchronized and every current descendant is selected
+    When the operator deselects product_name
+    Then ecommerce and product become mixed
+    And product_name is recorded as an explicit exception to synchronized ecommerce
+    And a later property added to ecommerce remains selected
+
+  # Specification Studio selective profile inheritance 018
+  Scenario Outline: Specification Studio selective profile inheritance 018
+    Given keyboard focus is on <node_state> in the inheritance selection tree
+    When the operator uses <keyboard_action>
+    Then tree navigation produces <navigation_result>
+    And no unrelated selection or expansion state changes
+
+    Examples:
+      | node_state        | keyboard_action | navigation_result                                      |
+      | a collapsed parent | Right Arrow     | that parent expands without changing its checkbox      |
+      | an expanded parent | Left Arrow      | that parent collapses without changing its checkbox    |
+      | a visible node     | Down Arrow      | focus moves to the next visible node                   |
+      | a visible checkbox | Space           | only that checkbox selection toggles                   |
+
+  # Specification Studio selective profile inheritance 019
+  Scenario Outline: Specification Studio selective profile inheritance 019
+    Given the inheritance tree contains hundreds of properties
+    When <discovery_control> matches a property by <criterion>
+    Then the matching property remains nested beneath its visible concept and structural ancestors
+    And matching ancestors expand without changing selection
+    And clearing the discovery control restores the prior expansion, focus, and scroll position
+    When the operator requests details for one property
+    Then its full path, description, example, provenance, and rules are disclosed without expanding every property row
+
+    Examples:
+      | discovery_control | criterion       |
+      | search            | name            |
+      | search            | path            |
+      | search            | description     |
+      | search            | example         |
+      | filters           | concept         |
+      | filters           | type            |
+      | filters           | presence        |
+      | filters           | selection state |
+
+  # Specification Studio selective profile inheritance 020
+  Scenario: Specification Studio selective profile inheritance 020
+    Given staged selection has one synchronized concept, one fixed property, one exclusion, one missing rule dependency, and one peer conflict
+    When selection consequences are recalculated
+    Then Needs attention shows the missing dependency and peer conflict with their resolution routes
+    And summary counters report the effective total plus one exclusion and two issues
+    And Apply inheritance is disabled by the missing rule dependency
+    When Review selection is expanded
+    Then it summarizes synchronized concepts, fixed properties, exclusions, rule resolutions, and issues
+    When the missing dependency is resolved
+    Then Apply inheritance is enabled while the unresolved peer conflict remains identified as Draft-blocking

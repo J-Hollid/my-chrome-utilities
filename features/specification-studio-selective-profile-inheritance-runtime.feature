@@ -42,10 +42,12 @@ Feature: Specification Studio selective profile inheritance runtime
   Scenario: Specification Studio selective profile inheritance runtime 003
     When the installed recipe workspace renders
     Then the ordinary target form contains one compact Master summary card
-    And actual search matches property name, path, description, and example
-    And actual filters restrict concept, type, required state, and selection state
-    And rendered concept and branch controls expose selected and total counts plus mixed state
-    And the sticky summary exposes direct, structural, rule-dependency, conflict, and effective counts
+    And compact starting-point and copy controls precede the installed search and filter toolbar
+    And one rendered selection tree nests concept, structural-branch, and property nodes
+    And visible checkboxes expose checked, unchecked, and indeterminate states independently of active treeitem and expansion state
+    And each rendered parent exposes selected and total descendant counts
+    And the sticky action bar exposes effective properties, exclusions, issues, Review selection, Cancel, and Apply inheritance
+    And DOM inspection finds no recalculated composition preview or row-by-row effective-property list in the workspace
     And DOM inspection finds no complete inherited-property table inside the ordinary target form
 
   # Specification Studio selective profile inheritance runtime 004
@@ -139,9 +141,9 @@ Feature: Specification Studio selective profile inheritance runtime
   # Specification Studio selective profile inheritance runtime 012
   Scenario: Specification Studio selective profile inheritance runtime 012
     Given a production target has selective Master and Commerce recipes with overlapping properties
-    When production preview and compiler run
+    When production selection consequences and compiler output recalculate
     Then existing peer composition determines effective facets and conflicts after source filtering
-    And rendered preview names both profiles, selected paths, effective facets, and conflicts
+    And installed Needs attention names both profiles and every conflicting path beside its resolution route
     And committing the recipes preserves an unresolved Draft conflict while compiled readiness remains blocked
     And excluding a source changes resolution only after its actual contribution is removed
 
@@ -177,15 +179,77 @@ Feature: Specification Studio selective profile inheritance runtime
     Given production Error Page has a reviewed Master recipe
     When actual Copy selection from Error Page is used for another target
     Then the destination draft copies concept queries, stable property identities, exclusions, and rule resolutions
-    And its production preview recalculates target-specific closure and conflicts before Apply inheritance enables
+    And the installed tree and sticky action bar recalculate target-specific closure, issue count, and effective total
+    And the copied recipe is immediately applicable because its dependency closure is complete
     And later durable edits to either recipe leave the other recipe unchanged
     And repository inspection finds no named preset entity
 
   # Specification Studio selective profile inheritance runtime 016
   Scenario: Specification Studio selective profile inheritance runtime 016
     When the actual recipe workflow is completed at desktop width, 360 CSS pixels, and 200 percent browser zoom using only the keyboard
-    Then rendered property work is bounded and search and selection position persist
-    And accessibility inspection resolves names and states for concept, branch, property, dependency, and rule-resolution controls
-    And the selection summary and Apply inheritance remain reachable with zero horizontal document overflow
+    Then rendered tree work is bounded and search, expansion, activeElement, selection, and scroll position persist
+    And accessibility inspection resolves visible and programmatic names and states for concept, branch, property, dependency, and rule-resolution controls
+    And the sticky action bar and Apply inheritance remain reachable with zero horizontal document overflow
     And focus returns to the operated property, dependency, or Master card after every action
     And computed presentation distinguishes selection, mixed state, dependency, conflict, and exclusion without color alone
+
+  # Specification Studio selective profile inheritance runtime 017
+  Scenario: Specification Studio selective profile inheritance runtime 017
+    Given production concept ecommerce contains object branch product with product_id and product_name
+    When the installed inheritance selection tree renders
+    Then DOM hierarchy nests product beneath ecommerce and both properties beneath product
+    And each parent exposes separate disclosure-button and indeterminate-capable checkbox semantics
+    And each leaf renders a checkbox, primary property name, and secondary type and presence
+    When actual input selects ecommerce
+    Then durable staged state contains synchronized ecommerce and all current descendant identities
+    When actual input deselects product_name
+    Then computed ecommerce and product checkbox states are indeterminate
+    And durable staged state records product_name as an explicit exclusion
+    And adding another ecommerce property includes its stable identity in derived selection
+
+  # Specification Studio selective profile inheritance runtime 018
+  Scenario Outline: Specification Studio selective profile inheritance runtime 018
+    Given production activeElement is on <node_state> in the inheritance selection tree
+    When actual keyboard input dispatches <keyboard_action>
+    Then installed tree navigation produces <navigation_result>
+    And hashes for unrelated checkbox and expansion state remain unchanged
+
+    Examples:
+      | node_state         | keyboard_action | navigation_result                                           |
+      | a collapsed parent | Right Arrow     | aria-expanded becomes true and aria-checked is unchanged     |
+      | an expanded parent | Left Arrow      | aria-expanded becomes false and aria-checked is unchanged    |
+      | a visible node     | Down Arrow      | activeElement becomes the next visible treeitem             |
+      | a visible checkbox | Space           | only that checkbox and derived ancestor states change       |
+
+  # Specification Studio selective profile inheritance runtime 019
+  Scenario Outline: Specification Studio selective profile inheritance runtime 019
+    Given the production inheritance tree indexes hundreds of properties
+    When installed <discovery_control> matches a property by <criterion>
+    Then DOM hierarchy retains the matching property's visible concept and structural ancestors
+    And matching ancestors expand without changing durable selection bytes
+    And clearing the discovery control restores prior expanded IDs, active property ID, and scroll offset
+    When the installed property-details disclosure is activated
+    Then it renders full path, description, example, provenance, and rules for only that property
+
+    Examples:
+      | discovery_control | criterion       |
+      | search            | name            |
+      | search            | path            |
+      | search            | description     |
+      | search            | example         |
+      | filters           | concept         |
+      | filters           | type            |
+      | filters           | presence        |
+      | filters           | selection state |
+
+  # Specification Studio selective profile inheritance runtime 020
+  Scenario: Specification Studio selective profile inheritance runtime 020
+    Given production staged selection has one synchronized concept, one fixed property, one exclusion, one missing rule dependency, and one peer conflict
+    When installed selection consequences recalculate
+    Then Needs attention renders the missing dependency and peer conflict with operable resolution routes
+    And the sticky action bar renders effective total, one exclusion, and two issues
+    And Apply inheritance is disabled while missing-rule-dependency count is one
+    When actual Review selection disclosure expands
+    Then its summary contains synchronized concepts, fixed properties, exclusions, rule resolutions, and issues
+    When actual controls resolve the missing dependency
+    Then Apply inheritance is enabled and the peer conflict remains visibly Draft-blocking
