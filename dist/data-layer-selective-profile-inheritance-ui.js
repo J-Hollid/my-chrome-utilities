@@ -119,6 +119,7 @@ export function mountSelectiveProfileInheritance(options) {
         const focusTree = (id) => { activeTreeId = id; focusAfter(`[data-tree-node-id='${CSS.escape(id)}']`); };
         const moveTreeFocus = (id, direction) => { const ids = shown.map(({ id }) => id), index = ids.indexOf(id), next = ids[Math.max(0, Math.min(ids.length - 1, index + direction))]; if (next)
             focusTree(next); };
+        const treeItems = new Map();
         for (const treeNode of shown) {
             const item = globalThis.document.createElement("li"), row = globalThis.document.createElement("div"), disclosure = treeNode.kind === "property" ? undefined : globalThis.document.createElement("button"), checkbox = globalThis.document.createElement("button"), node = document.nodes[treeNode.propertyId ?? ""];
             item.setAttribute("role", "treeitem");
@@ -201,7 +202,19 @@ export function mountSelectiveProfileInheritance(options) {
                 details.textContent = `Full path ${canonicalPropertyPath(document, node.id)} · Description ${node.documentation.description || "None"} · Example ${String(node.documentation.example.value ?? "None")} · Provenance ${node.provenance.map(({ contributorName, scope }) => `${contributorName} (${scope})`).join(", ") || "None"} · Rules ${node.rules.map(({ id }) => id).join(", ") || "None"}`;
                 item.append(details);
             }
-            tree.append(item);
+            const parentItem = treeNode.parentId ? treeItems.get(treeNode.parentId) : undefined;
+            if (parentItem) {
+                let group = Array.from(parentItem.children).find((child) => child.getAttribute("role") === "group");
+                if (!group) {
+                    group = globalThis.document.createElement("ul");
+                    group.setAttribute("role", "group");
+                    parentItem.append(group);
+                }
+                group.append(item);
+            }
+            else
+                tree.append(item);
+            treeItems.set(treeNode.id, item);
         }
         queueMicrotask(() => { tree.scrollTop = treeScrollTop; if (activeTreeId && !workspace.contains(globalThis.document.activeElement))
             workspace.querySelector(`[data-tree-node-id='${CSS.escape(activeTreeId)}']`)?.focus({ preventScroll: true }); });
