@@ -1,4 +1,5 @@
 import { transactProject } from "./data-layer-specification-project.js";
+import { selectiveProfileContribution } from "./data-layer-selective-profile-inheritance.js";
 const clone = (value) => structuredClone(value);
 const legacyCollections = (project) => project.collections;
 const graphs = (project) => (project.documentationFlowGraphs ?? {});
@@ -72,11 +73,20 @@ const schemaEvaluationInput = (entity) => entity ? {
     onlyDefinedFields: entity.onlyDefinedFields,
     profileId: entity.profileId,
     profileIds: entity.profileIds,
-    profileInheritanceRecipes: entity.profileInheritanceRecipes,
 } : undefined;
+const referencedProfileIds = (entity) => unique([entity.profileId, ...(entity.profileIds ?? [])].filter((value) => typeof value === "string" && Boolean(value)));
+const profileEvaluationInput = (profile, targets) => {
+    if (!profile)
+        return;
+    const canonical = profile.canonicalSchema, recipes = targets.flatMap((target) => (target.profileInheritanceRecipes ?? []).filter(({ profileId }) => profileId === profile.id));
+    if (!canonical || !recipes.length)
+        return schemaEvaluationInput(profile);
+    const contributions = recipes.map((recipe) => selectiveProfileContribution(canonical, recipe)), constraints = contributions.flatMap((contribution) => contribution.constraints).filter((constraint, index, all) => all.findIndex((candidate) => JSON.stringify(candidate) === JSON.stringify(constraint)) === index), inheritanceConflicts = contributions.flatMap((contribution) => contribution.conflicts);
+    return { id: profile.id, constraints, inheritanceConflicts };
+};
 export function pagePropertySetEvaluatorRevision(project, pageId) {
-    const page = project.collections.pages.find(({ id }) => id === pageId), sets = new Map(project.collections.propertySets.map((set) => [set.id, set])), profiles = new Map(project.collections.profiles.map((profile) => [profile.id, profile])), applicabilitySets = new Map(project.collections.applicabilitySets.map((set) => [set.id, set])), applied = applications(page ?? { id: "", name: "" }), appliedSets = applied.flatMap(({ propertySetId }) => { const set = sets.get(propertySetId); return set ? [set] : []; }), profileIds = unique([page?.profileId, ...(page?.profileIds ?? []), ...appliedSets.flatMap((set) => [set.profileId, ...(set.profileIds ?? [])])].filter((value) => typeof value === "string" && Boolean(value)));
-    return `page:${JSON.stringify({ page: schemaEvaluationInput(page), profiles: profileIds.map((profileId) => schemaEvaluationInput(profiles.get(profileId))), applications: applied.map(({ id, propertySetId, applicabilitySetId }) => { const applicability = applicabilitySetId ? applicabilitySets.get(applicabilitySetId) : undefined; return { id, propertySetId, propertySet: schemaEvaluationInput(sets.get(propertySetId)), ...(applicabilitySetId ? { applicabilitySetId, applicabilityRevision: applicability?.canonicalSchema?.revision ?? applicability?.revision ?? applicability?.version ?? 0, applicabilityCondition: applicability?.condition } : {}), }; }) })}`;
+    const page = project.collections.pages.find(({ id }) => id === pageId), sets = new Map(project.collections.propertySets.map((set) => [set.id, set])), profiles = new Map(project.collections.profiles.map((profile) => [profile.id, profile])), applicabilitySets = new Map(project.collections.applicabilitySets.map((set) => [set.id, set])), applied = applications(page ?? { id: "", name: "" }), appliedSets = applied.flatMap(({ propertySetId }) => { const set = sets.get(propertySetId); return set ? [set] : []; }), profileTargets = [...(page ? [page] : []), ...appliedSets], profileIds = unique(profileTargets.flatMap(referencedProfileIds));
+    return `page:${JSON.stringify({ page: schemaEvaluationInput(page), profiles: profileIds.map((profileId) => profileEvaluationInput(profiles.get(profileId), profileTargets.filter((target) => referencedProfileIds(target).includes(profileId)))), applications: applied.map(({ id, propertySetId, applicabilitySetId }) => { const applicability = applicabilitySetId ? applicabilitySets.get(applicabilitySetId) : undefined; return { id, propertySetId, propertySet: schemaEvaluationInput(sets.get(propertySetId)), ...(applicabilitySetId ? { applicabilitySetId, applicabilityRevision: applicability?.canonicalSchema?.revision ?? applicability?.revision ?? applicability?.version ?? 0, applicabilityCondition: applicability?.condition } : {}), }; }) })}`;
 }
 export function propertySetPages(project, propertySetId) { return project.collections.pages.filter((page) => applications(page).some((application) => application.propertySetId === propertySetId)); }
 export function changePropertySetSchema(state, propertySetId, constraints) {
