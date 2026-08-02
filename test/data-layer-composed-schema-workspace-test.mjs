@@ -9,6 +9,7 @@ import {
   resetComposedSchemaLocalFacet,
   resetComposedSchemaLocalRule,
   resetComposedSchemaLocalChanges,
+  resetFlowComposedSchemaLocalFacet,
   saveComposedCanonicalDocument,
   saveComposedEntitySchemaPolicy,
   saveComposedEventCanonicalDocument,
@@ -294,6 +295,19 @@ assert.equal(canonicalFacetGroup.canonicalSchema.nodes[Object.values(canonicalFa
 const canonicalValuesReset=resetComposedSchemaLocalFacet(canonicalInventoryState,"pageGroups",canonicalInventoryGroup.id,"/customer_status","allowedValues"),canonicalValuesWorkspace=composedSchemaWorkspace(canonicalValuesReset,canonicalValuesReset.project.collections.pageGroups[0],"Page Group"),canonicalValuesNode=Object.values(canonicalValuesReset.project.collections.pageGroups[0].canonicalSchema.nodes).find(({name})=>name==="customer_status");
 assert.deepEqual(canonicalValuesWorkspace.rows.find(({path})=>path==="/customer_status").effective.allowedValues,["active","pending"],"canonical-backed Allowed values reset immediately restores the current parent values");
 assert.equal(canonicalValuesNode.localDefinitionFacets.some((facet)=>["allowedValues","allowedValueIds","allowedValueProvenance"].includes(facet)),false,"Allowed values reset clears every grouped ownership marker");
+const derivedFacetState=createSpecificationProject({name:"Derived canonical resets",site:"shop.example",id:(kind)=>`${kind}:derived-reset`});
+derivedFacetState.project.collections.profiles.push({id:"profile:derived-reset",name:"Parent",schemaConstraints:[{path:"/code",type:"string",patterns:["^parent$"]},{path:"/amount",type:"number",minimum:1,maximum:10},{path:"/items",type:"array",minItems:1,maxItems:5}]});
+derivedFacetState.project.collections.pageGroups.push({id:"group:derived-reset",name:"Child",profileId:"profile:derived-reset",localSchemaContributions:[{path:"/code",patterns:["^local$"]},{path:"/amount",minimum:3,maximum:8},{path:"/items",minItems:2,maxItems:4}]});
+const derivedGroup=derivedFacetState.project.collections.pageGroups[0];derivedGroup.canonicalSchema=composedCanonicalSchema(derivedFacetState,derivedGroup,"Page Group");delete derivedGroup.localSchemaContributions;
+const resetDerived=(path,facet)=>{const reset=resetComposedSchemaLocalFacet(derivedFacetState,"pageGroups",derivedGroup.id,path,facet),row=composedSchemaWorkspace(reset,reset.project.collections.pageGroups[0],"Page Group").rows.find((candidate)=>candidate.path===path);return{reset,row,node:Object.values(reset.project.collections.pageGroups[0].canonicalSchema.nodes).find(({name})=>path.endsWith(name))};};
+const patternReset=resetDerived("/code","patterns"),rangeReset=resetDerived("/amount","minimum"),cardinalityReset=resetDerived("/items","minItems");
+assert.deepEqual(patternReset.row.effective.patterns,["^parent$"],"Pattern reset replaces the stored local canonical pattern with the current parent pattern");
+assert.deepEqual({minimum:rangeReset.row.effective.minimum,maximum:rangeReset.row.effective.maximum},{minimum:1,maximum:10},"Range reset restores both current parent bounds as one advertised facet");
+assert.deepEqual({minItems:cardinalityReset.row.effective.minItems,maxItems:cardinalityReset.row.effective.maxItems},{minItems:1,maxItems:5},"Cardinality reset restores both current parent bounds as one advertised facet");
+assert.equal(patternReset.node.localDefinitionFacets.includes("patterns")||rangeReset.node.localDefinitionFacets.some((facet)=>["minimum","maximum"].includes(facet))||cardinalityReset.node.localDefinitionFacets.some((facet)=>["minItems","maxItems"].includes(facet)),false,"derived resets clear ownership only after restoring their effective parent values");
+const flowDerivedState=structuredClone(derivedFacetState),derivedFlowId="flow:derived-reset",derivedFrame={id:"frame:derived-reset",name:"Derived frame",profileId:"profile:derived-reset",canonicalSchema:structuredClone(derivedGroup.canonicalSchema)};flowDerivedState.project.collections.flows.push({id:derivedFlowId,name:"Derived Flow"});flowDerivedState.project.documentationFlowGraphs={[derivedFlowId]:{pageFrames:[derivedFrame],occurrences:[]}};
+const flowRangeReset=resetFlowComposedSchemaLocalFacet(flowDerivedState,derivedFlowId,derivedFrame.id,"/amount","maximum"),flowRangeRow=composedSchemaWorkspace(flowRangeReset,flowRangeReset.project.documentationFlowGraphs[derivedFlowId].pageFrames[0],"Flow Page-instance",undefined,derivedFlowId).rows.find(({path})=>path==="/amount");
+assert.deepEqual({minimum:flowRangeRow.effective.minimum,maximum:flowRangeRow.effective.maximum},{minimum:1,maximum:10},"Flow range reset applies the same grouped parent restoration when either bound is selected");
 const canonicalRuleId=canonicalInventoryDocument.nodes[Object.values(canonicalInventoryDocument.nodes).find(({name})=>name==="customer_status").id].rules.find(({name})=>name==="Checkout account").id,canonicalRuleReset=resetComposedSchemaLocalRule(canonicalInventoryState,"pageGroups",canonicalInventoryGroup.id,"/customer_status",canonicalRuleId);
 assert.equal(composedSchemaWorkspace(canonicalRuleReset,canonicalRuleReset.project.collections.pageGroups[0],"Page Group").localChangeCount,4,"canonical-backed exact rule reset removes the advertised local rule");
 const canonicalAllReset=resetComposedSchemaLocalChanges(canonicalInventoryState,"pageGroups",canonicalInventoryGroup.id);

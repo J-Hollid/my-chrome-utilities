@@ -52,7 +52,25 @@ export function saveComposedSchemaLocalFacetsAndStructures(state, kind, entityId
 export function resetComposedSchemaLocalProperty(state, kind, entityId, path) { return updateEntity(state, kind, entityId, `Reset ${path} to parents`, (entity) => { const next = { ...entity, localSchemaContributions: (entity.localSchemaContributions ?? []).filter((constraint) => constraint.path !== path), schemaConstraints: (entity.schemaConstraints ?? []).filter((constraint) => constraint.path !== path), compiledTargetsStale: true }; return resetCanonicalRow(entity.canonicalSchema, path, next); }); }
 const recordCanonicalReset = (document, propertyIds) => { document.revision += 1; document.changes = [...document.changes, { revision: document.revision, propertyIds: [...propertyIds], kind: "set" }]; return document; };
 const canonicalNodeAt = (document, path) => { const id = canonicalTableRows(document).find((row) => row.path === path)?.id; return id ? document.nodes[id] : undefined; };
-const restoreCanonicalFacet = (node, facet) => { const inherited = node.inheritedDefinition, value = inherited?.[facet], related = new Set([String(facet), ...(facet === "allowedValues" ? ["allowedValueIds", "allowedValueProvenance"] : []), ...(facet === "presence" ? ["condition"] : [])]); node.localDefinitionFacets = (node.localDefinitionFacets ?? []).filter((key) => !related.has(key) && !(facet === "minimum" && key === "maximum") && !(facet === "minItems" && key === "maxItems")); if (facet === "concept") {
+const restoreCanonicalDerivedFacet = (node, facet) => { const inherited = node.inheritedDefinition, provenance = { source: "path-constraint", state: "inherited" }; if (facet === "patterns") {
+    node.rules = node.rules.filter(({ kind }) => kind !== "pattern");
+    for (const [at, pattern] of (inherited?.patterns ?? []).entries())
+        node.rules.push({ id: `rule:${node.id}:inherited-pattern:${at}`, kind: "pattern", pattern, severity: "error", message: "Pattern mismatch", provenance });
+    return true;
+} if (facet === "minimum" || facet === "maximum") {
+    node.rules = node.rules.filter(({ kind }) => kind !== "range");
+    if (inherited?.minimum !== undefined || inherited?.maximum !== undefined)
+        node.rules.push({ id: `rule:${node.id}:inherited-range`, kind: "range", ...(inherited.minimum !== undefined ? { minimum: inherited.minimum } : {}), ...(inherited.maximum !== undefined ? { maximum: inherited.maximum } : {}), severity: "error", message: "Outside range", provenance });
+    return true;
+} if (facet === "minItems" || facet === "maxItems") {
+    node.rules = node.rules.filter(({ kind }) => kind !== "cardinality");
+    if (inherited?.minItems !== undefined || inherited?.maxItems !== undefined)
+        node.rules.push({ id: `rule:${node.id}:inherited-cardinality`, kind: "cardinality", ...(inherited.minItems !== undefined ? { minItems: inherited.minItems } : {}), ...(inherited.maxItems !== undefined ? { maxItems: inherited.maxItems } : {}), severity: "error", message: "Outside cardinality", provenance });
+    return true;
+} return false; };
+const restoreCanonicalFacet = (node, facet) => { const inherited = node.inheritedDefinition, value = inherited?.[facet], related = new Set([String(facet), ...(facet === "allowedValues" ? ["allowedValueIds", "allowedValueProvenance"] : []), ...(facet === "presence" ? ["condition"] : []), ...((facet === "minimum" || facet === "maximum") ? ["minimum", "maximum"] : []), ...((facet === "minItems" || facet === "maxItems") ? ["minItems", "maxItems"] : [])]); node.localDefinitionFacets = (node.localDefinitionFacets ?? []).filter((key) => !related.has(key) && !(facet === "minimum" && key === "maximum") && !(facet === "minItems" && key === "maxItems")); if (restoreCanonicalDerivedFacet(node, facet))
+    return;
+else if (facet === "concept") {
     if (typeof value === "string")
         node.concept = value;
     else
@@ -110,6 +128,17 @@ const resetCanonicalFacet = (canonical, path, facet) => { if (!canonical)
 const resetCanonicalRule = (canonical, path, ruleId) => { if (!canonical)
     return; const document = clone(canonical), node = canonicalNodeAt(document, path); if (!node)
     return canonical; node.rules = node.rules.filter(({ id }) => id !== ruleId); return recordCanonicalReset(document, [node.id]); };
+const removeLayerFacet = (constraint, facet) => { delete constraint[facet]; if (facet === "minimum" || facet === "maximum") {
+    delete constraint.minimum;
+    delete constraint.maximum;
+} if (facet === "minItems" || facet === "maxItems") {
+    delete constraint.minItems;
+    delete constraint.maxItems;
+} if (facet === "allowedValues") {
+    delete constraint.allowedValueIds;
+    delete constraint.allowedValueProvenance;
+} if (facet === "presence")
+    delete constraint.condition; };
 export function resetComposedSchemaLocalFacet(state, kind, entityId, path, facet) { return updateEntity(state, kind, entityId, `Use inherited ${String(facet)} for ${path}`, (entity) => { const withoutFacet = (constraints) => ((constraints ?? []).flatMap((constraint) => { if (constraint.path !== path)
     return [constraint]; const next = clone(constraint); delete next[facet]; if (facet === "minimum") {
     delete next.maximum;
@@ -132,7 +161,7 @@ const updateFlowComposedEntity = (state, flowId, entityId, label, update) => tra
 export function saveFlowComposedSchemaLocalFacets(state, flowId, entityId, path, facets) { return updateFlowComposedEntity(state, flowId, entityId, `Save local schema facets for ${path}`, (entity) => { const existing = entity.localSchemaContributions ?? [], sparse = Object.fromEntries(Object.entries(facets).filter(([, value]) => value !== undefined && value !== "")); return { ...entity, localSchemaContributions: [...existing.filter((constraint) => constraint.path !== path), ...(Object.keys(sparse).length ? [{ path, ...sparse }] : [])], compiledTargetsStale: true }; }); }
 export function resetFlowComposedSchemaLocalProperty(state, flowId, entityId, path) { return updateFlowComposedEntity(state, flowId, entityId, `Reset ${path} to parents`, (entity) => resetCanonicalRow(entity.canonicalSchema, path, { ...entity, localSchemaContributions: (entity.localSchemaContributions ?? []).filter((constraint) => constraint.path !== path), schemaConstraints: (entity.schemaConstraints ?? []).filter((constraint) => constraint.path !== path), compiledTargetsStale: true })); }
 export function resetFlowComposedSchemaLocalFacet(state, flowId, entityId, path, facet) { return updateFlowComposedEntity(state, flowId, entityId, `Use inherited ${String(facet)} for ${path}`, (entity) => { const strip = (constraints) => ((constraints ?? []).flatMap((constraint) => { if (constraint.path !== path)
-    return [constraint]; const next = clone(constraint); delete next[facet]; return Object.keys(next).length > 1 ? [next] : []; })); return { ...entity, localSchemaContributions: strip(entity.localSchemaContributions), schemaConstraints: strip(entity.schemaConstraints), ...(entity.canonicalSchema ? { canonicalSchema: resetCanonicalFacet(entity.canonicalSchema, path, facet) } : {}), compiledTargetsStale: true }; }); }
+    return [constraint]; const next = clone(constraint); removeLayerFacet(next, facet); return Object.keys(next).length > 1 ? [next] : []; })); return { ...entity, localSchemaContributions: strip(entity.localSchemaContributions), schemaConstraints: strip(entity.schemaConstraints), ...(entity.canonicalSchema ? { canonicalSchema: resetCanonicalFacet(entity.canonicalSchema, path, facet) } : {}), compiledTargetsStale: true }; }); }
 export function resetFlowComposedSchemaLocalRule(state, flowId, entityId, path, ruleId) { return updateFlowComposedEntity(state, flowId, entityId, `Remove local rule for ${path}`, (entity) => { const strip = (constraints) => ((constraints ?? []).flatMap((constraint) => { if (constraint.path !== path)
     return [constraint]; const next = clone(constraint), rules = (next.rules ?? []).filter((rule) => String(rule.id ?? "") !== ruleId); if (rules.length)
     next.rules = rules;
