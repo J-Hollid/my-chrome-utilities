@@ -54,3 +54,7 @@
    feature-files entry-modes :property-set-flow-sections-mode
    verify-model! validate-example!
    observe-browser! assert-runtime!))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-08-03T00:32:59.543310646+02:00", :module-hash "102451181", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "1117519402"} {:id "def/feature-files", :kind "def", :line 5, :end-line 7, :hash "-339792063"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 11, :hash "-1600061933"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/checked!", :kind "defn-", :line 16, :end-line 19, :hash "-148274062"} {:id "defn-/verify-model!", :kind "defn-", :line 21, :end-line 25, :hash "-363026210"} {:id "def/authoritative-examples", :kind "def", :line 27, :end-line 28, :hash "1598887325"} {:id "defn-/validate-example!", :kind "defn-", :line 30, :end-line 34, :hash "-68312048"} {:id "defn-/observe-browser!", :kind "defn-", :line 36, :end-line 40, :hash "1197638688"} {:id "def/runtime-paths", :kind "def", :line 42, :end-line 44, :hash "831832343"} {:id "defn-/assert-runtime!", :kind "defn-", :line 46, :end-line 50, :hash "-864839930"} {:id "def/handlers", :kind "def", :line 52, :end-line 56, :hash "1771714116"}]}
+;; clj-mutate-manifest-end

@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=1ce3b6fa2c10a45b7f82a88fd2f2c58383abf06a7cbc69a6112201fa5f642ecc
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-08-02T22:33:48.398678685Z","feature_name":"Data layer Property Set and Flow Section separation runtime","feature_path":"features/data-layer-property-set-and-flow-section-separation-runtime.feature","background_hash":"2ef7d1c7b99d5ba3e845264389ad9532da2337e474e364f499a8ac47a9e68f46","implementation_hash":"sha256:6e2734d38b0c7de0d3a4c6a84f227b9c756350bbdc481c27d34a33f010ab28af","scenarios":[{"index":2,"name":"Data layer Property Set and Flow Section separation runtime 003","scenario_hash":"2aba991e34bb4728fe4c1a24e91e89d6dcf71da0eb6f583a7198699b1a78d6a4","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-08-02T22:33:48.398678685Z"},{"index":7,"name":"Data layer Property Set and Flow Section separation runtime 008","scenario_hash":"7601203cb03af755697382026f1a3f3e55dd0e390f0ac525681ba856c75dcacd","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-08-02T22:33:48.398678685Z"},{"index":10,"name":"Data layer Property Set and Flow Section separation runtime 011","scenario_hash":"7fbe956736bdf8ac9aaab6480895aa545049607633536b7a1acc8f4ff76d25ea","mutation_count":2,"result":{"Total":2,"Killed":2,"Survived":0,"Errors":0},"tested_at":"2026-08-02T22:33:48.398678685Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer Property Set and Flow Section separation runtime
 
   Background:
