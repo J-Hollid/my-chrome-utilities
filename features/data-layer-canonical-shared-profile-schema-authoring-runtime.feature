@@ -1313,3 +1313,87 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
       | consumer | project_entry                  |
       | Page     | durable project loading        |
       | Page     | portable project import        |
+
+  # Data layer canonical Shared Profile schema authoring runtime 079
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 079
+    Given production <contributor> has three sparse local facets or rules across two inherited properties
+    And its repository state has one local-only property
+    And its durable fixed recipes exclude two properties added later to selected Shared Profiles
+    When the installed canonical schema opens in <surface>
+    Then the effective-schema header renders Local changes 4 and Parent additions 2 controls
+    And the mounted effective-property table remains the primary workspace content
+    And DOM inventory finds no recalculated composition preview or concept-and-property button wall before the table
+    When actual controls open Local changes
+    Then one mounted changes panel contains only repository-owned local facets, rules, and properties grouped by property identity
+    And each inherited item renders facet or rule, source contributor, inherited value, local value, and effective value
+    And the local-only property renders its effective definition and Remove local property without Reset to parent
+    And activating a property group routes to the existing installed focused property editor
+
+    Examples:
+      | contributor      | surface        |
+      | Page Group       | standalone     |
+      | Page             | standalone     |
+      | Page frame       | Flow workspace |
+      | Event occurrence | Flow workspace |
+
+  # Data layer canonical Shared Profile schema authoring runtime 080
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 080
+    Given production Checkout repository state owns only <local_item> on inherited customer_status
+    And production Sitewide now supplies <current_parent_value> for that item
+    When actual Local changes controls invoke Reset to parent beside <local_item>
+    Then repository inspection finds only <deleted_content> deleted from Checkout
+    And production compilation immediately derives <current_parent_value> from Sitewide
+    And the mounted count and customer_status group update without unmounting the panel
+    And one durable property command and one Undo entry are recorded
+    And hashes for Sitewide, siblings, unrelated Checkout facets, and Published state remain unchanged
+
+    Examples:
+      | local_item            | current_parent_value        | deleted_content                   |
+      | Description facet     | Revised parent description | sparse Checkout Description       |
+      | Allowed values facet  | active, pending, and paused | sparse Checkout Allowed values    |
+      | replaced Account rule | revised Parent account rule | Checkout Account rule replacement |
+
+  # Data layer canonical Shared Profile schema authoring runtime 081
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 081
+    Given production Checkout owns local Description, Allowed values, and Account rule items on customer_status
+    And production Checkout owns one unrelated local item on order_total
+    When actual Local changes controls invoke <reset_action>
+    Then rendered review identifies <reviewed_removal> and the current prospective parent values
+    When the installed confirmation action runs
+    Then one atomic durable Draft command removes <removed_content>
+    And one actual Undo restores the complete pre-reset repository hash
+    And parent, sibling, and Published hashes remain unchanged
+
+    Examples:
+      | reset_action                    | reviewed_removal                       | removed_content                                |
+      | Reset customer_status to parent | its three repository-owned local items | only the three customer_status local items     |
+      | Reset all to parents            | all four local items in Checkout only  | every Checkout local item and nothing upstream |
+
+  # Data layer canonical Shared Profile schema authoring runtime 082
+  Scenario: Data layer canonical Shared Profile schema authoring runtime 082
+    Given production Sitewide changed customer_status Allowed values from active and pending to active, pending, and paused
+    And Checkout repository state owns customer_status Allowed values closed and archived
+    And one new Sitewide property identity is absent from Checkout's fixed recipe
+    And another property has an unresolved difference between same-precedence Shared Profile recipes
+    When the installed extension renders Checkout effective-schema status and Local changes
+    Then customer_status compiles Ready with Checkout Allowed values closed and archived
+    And its local item renders Parent differs plus the current Sitewide values without decision styling
+    And the new Sitewide property occurs only in the Parent additions inventory
+    And the Needs decision count includes only the same-precedence difference
+    And the Reset to parent review renders active, pending, and paused as prospective effective values
+
+  # Data layer canonical Shared Profile schema authoring runtime 083
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 083
+    Given the installed Local changes panel is open at <presentation> using only actual keyboard input
+    Then the same grouped inventory and reset controls render as <panel_presentation>
+    And geometry inspection finds one vertical scroll owner and zero horizontal document overflow
+    And accessibility inspection resolves names for counts, source differences, decision states, and reset scopes
+    When actual controls close the panel or complete a reset
+    Then activeElement returns to the originating control or nearest remaining changed item
+    And computed presentation exposes every state independently of color, hover, or expanded property rows
+
+    Examples:
+      | presentation            | panel_presentation                |
+      | wide viewport           | an adjacent changes drawer        |
+      | 360 CSS pixel viewport  | a full-height changes sheet       |
+      | 200 percent browser zoom | a non-overlapping changes sheet  |

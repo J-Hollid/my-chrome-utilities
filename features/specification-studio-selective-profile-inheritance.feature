@@ -65,13 +65,13 @@ Feature: Specification Studio selective profile inheritance
 
   # Specification Studio selective profile inheritance 005
   Scenario: Specification Studio selective profile inheritance 005
-    Given the Error Page recipe selects all properties in concept page
+    Given the applied Error Page recipe selected every then-current property in concept page
     And it selects seven individual properties from concept error
     When Master later adds one page property and one error property
-    Then the new page property becomes inherited through the live concept selection
-    And the new error property remains unselected through the pinned property selection
-    And the recipe summary distinguishes all synchronized page properties from seven fixed error properties
-    And explicit exclusions remain excluded when their concept changes
+    Then neither new property enters the Error Page effective schema
+    And both are counted as Parent additions until the operator explicitly includes them
+    And every previously selected property remains inherited by stable identity
+    And source concepts and branches explain how the fixed selection was made without acting as live subscriptions
 
   # Specification Studio selective profile inheritance 006
   Scenario: Specification Studio selective profile inheritance 006
@@ -135,7 +135,8 @@ Feature: Specification Studio selective profile inheritance
   Scenario: Specification Studio selective profile inheritance 011
     Given the operator has staged property, concept, exclusion, and rule-resolution choices
     When Apply inheritance is confirmed
-    Then one Draft command stores one recipe using stable profile, property, and rule identities
+    Then one Draft command stores one recipe with a fixed allowlist of stable property and rule identities
+    And concept and branch choices remain selection provenance rather than future-membership queries
     And the target recompiles from the selected Shared Profile contribution plus its local contribution
     And Cancel stores no recipe or local schema change
     And Undo and Redo restore the complete prior and applied recipe respectively
@@ -154,7 +155,8 @@ Feature: Specification Studio selective profile inheritance
   Scenario: Specification Studio selective profile inheritance 013
     Given Checkout Page Group has an applied Master recipe
     When its normal schema workspace opens
-    Then the Master card summarizes synchronized concepts, fixed selections, exclusions, rule overrides, and effective count
+    Then the Master card summarizes source groupings, fixed selected properties, exclusions, rule overrides, and effective count
+    And its header shows Local changes and Parent additions counts without an eager composition preview
     And Edit selection returns to the complete recipe workspace
     And effective rows identify Master inheritance, selection reason, local differences, and provenance
     When a local override is reset to parents
@@ -171,17 +173,18 @@ Feature: Specification Studio selective profile inheritance
 
     Examples:
       | source_change                                      | target_effect                                             |
-      | rename or move of a selected property              | selection follows the stable identity and displays its new path |
+      | edit of a selected non-overridden definition facet | the current source facet becomes effective                |
       | edit of an included non-overridden rule            | the current source rule becomes effective                 |
       | edit of an excluded rule                           | exclusion remains attached to that stable rule identity   |
+      | rename or move of a selected property              | structural source review is required before its path changes |
       | deletion of a pinned selected property             | missing selection is identified for recipe repair         |
-      | new dependency in a live selected property rule    | unresolved rule dependency requires an explicit resolution |
+      | new dependency in a selected property rule         | unresolved rule dependency requires an explicit resolution |
 
   # Specification Studio selective profile inheritance 015
   Scenario: Specification Studio selective profile inheritance 015
     Given Error Page has a reviewed Master recipe
     When the operator chooses Copy selection from Error Page while authoring another target
-    Then a new independently reviewable recipe starts with the same concepts, property identities, exclusions, and rule resolutions
+    Then a new independently reviewable recipe starts with the same fixed property identities, source groupings, exclusions, and rule resolutions
     And its target-specific closure, issue count, and effective total are recalculated in the tree and sticky action bar
     And Apply inheritance is enabled when no unresolved rule dependency remains
     And later edits to either recipe do not edit the other
@@ -204,11 +207,13 @@ Feature: Specification Studio selective profile inheritance
     And each parent has a separate disclosure control and tri-state checkbox
     And each property leaf has a checkbox, primary property name, and secondary type and presence
     When the ecommerce checkbox is selected
-    Then ecommerce is marked synchronized and every current descendant is selected
+    Then every current ecommerce descendant is selected as one authoring action
     When the operator deselects product_name
     Then ecommerce and product become mixed
-    And product_name is recorded as an explicit exception to synchronized ecommerce
-    And a later property added to ecommerce remains selected
+    And product_name is recorded as an explicit exception to that staged group selection
+    When the operator applies inheritance and Master later adds another ecommerce property
+    Then the applied recipe retains the fixed selected identities
+    And the later ecommerce property is a Parent addition rather than effective schema content
 
   # Specification Studio selective profile inheritance 018
   Scenario Outline: Specification Studio selective profile inheritance 018
@@ -247,12 +252,23 @@ Feature: Specification Studio selective profile inheritance
 
   # Specification Studio selective profile inheritance 020
   Scenario: Specification Studio selective profile inheritance 020
-    Given staged selection has one synchronized concept, one fixed property, one exclusion, one missing rule dependency, and one peer conflict
+    Given staged selection has one concept group, one individual property, one exclusion, one missing rule dependency, and one peer conflict
     When selection consequences are recalculated
     Then Needs attention shows the missing dependency and peer conflict with their resolution routes
     And summary counters report the effective total plus one exclusion and two issues
     And Apply inheritance is disabled by the missing rule dependency
     When Review selection is expanded
-    Then it summarizes synchronized concepts, fixed properties, exclusions, rule resolutions, and issues
+    Then it summarizes source groupings, fixed properties, exclusions, rule resolutions, and issues
     When the missing dependency is resolved
     Then Apply inheritance is enabled while the unresolved peer conflict remains identified as Draft-blocking
+
+  # Specification Studio selective profile inheritance 021
+  Scenario: Specification Studio selective profile inheritance 021
+    Given an applied recipe has two Parent additions that do not participate in the effective schema
+    When the operator opens Parent additions from the normal schema workspace
+    Then one review panel groups the two properties under Master and their concepts or branches
+    And each property shows its complete path, definition summary, provenance, and dependency impact
+    When the operator selects one property and confirms Include selected
+    Then one Draft recipe command adds only that stable property identity and required structural ancestors
+    And the other Parent addition remains absent from the effective schema
+    And Undo restores the prior fixed recipe without creating a local property override or mutating Master

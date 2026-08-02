@@ -381,7 +381,7 @@ Feature: Data layer layered schema constraints runtime
   # Data layer layered schema constraints runtime 026
   Scenario Outline: Data layer layered schema constraints runtime 026
     Given production Checkout inherits ordinary <facet> <parent_value> for customer_status from Sitewide
-    When repository state contains only compatible sparse Checkout <facet> <local_value>
+    When repository state contains only sparse Checkout <facet> <local_value>
     Then production compilation is Ready with effective <facet> <local_value>
     And the customer_status row renders Sitewide <parent_value> and Checkout <local_value> as inherited and effective values
     And no conflict repair action is rendered
@@ -391,7 +391,7 @@ Feature: Data layer layered schema constraints runtime
       | Concept               | Customer              | Account                 |
       | Type                  | String                | Number                  |
       | Presence              | Optional              | Required                |
-      | Allowed values        | active and pending    | active                  |
+      | Allowed values        | active and pending    | closed and archived     |
       | Expected value        | active                | pending                 |
       | Description           | Parent description    | Checkout description    |
       | Example               | parent-example        | checkout-example        |
@@ -417,7 +417,6 @@ Feature: Data layer layered schema constraints runtime
       | facet                       | section    | local_value      | source_value       | reason                                  |
       | Type                        | Definition | Number           | String             | Sitewide protects this definition       |
       | Presence                    | Definition | Forbidden        | Required           | Sitewide protects this definition       |
-      | Allowed values              | Definition | closed           | active and pending | closed is outside the available choices |
       | Expected value              | Definition | closed           | active             | Sitewide keeps active fixed              |
       | Pattern rule                | Rules      | digits only      | letters only       | the rules cannot both match              |
       | Range rule                  | Rules      | 10 or more       | 5 or less          | the ranges do not overlap                |
@@ -446,7 +445,8 @@ Feature: Data layer layered schema constraints runtime
 
   # Data layer layered schema constraints runtime 029
   Scenario: Data layer layered schema constraints runtime 029
-    Given production customer_status has unresolved Allowed values and Range rule decisions
+    Given production customer_status has an Allowed values decision between two same-precedence Shared Profile recipes
+    And production customer_status has an unresolved Range rule decision
     And production order_total has an unresolved Type decision
     When the installed extension opens Effective schema at Checkout
     Then the status reports two properties need decisions before validation and developer export
@@ -473,3 +473,22 @@ Feature: Data layer layered schema constraints runtime
       | local_concept          | effective_concept                           |
       | no local Concept facet | effective Concept remains Sitewide Customer |
       | local Concept Account  | effective Concept becomes Checkout Account  |
+
+  # Data layer layered schema constraints runtime 031
+  Scenario Outline: Data layer layered schema constraints runtime 031
+    Given production Sitewide supplies customer_status <facet> <original_parent_value>
+    And repository state gives Checkout sparse customer_status <facet> <local_value>
+    And a sibling Page has no local customer_status <facet>
+    When a production command changes Sitewide customer_status <facet> to <updated_parent_value>
+    Then Checkout compiles effective <facet> <local_value> with no decision record
+    And its installed row renders the updated Sitewide value as a non-blocking parent difference
+    And the sibling compiled schema contains <updated_parent_value>
+    When actual controls reset only Checkout customer_status <facet> to parent
+    Then repository state deletes that sparse facet and Checkout compiles <updated_parent_value>
+    And hashes for every other local facet, contributor, property, and Published revision remain unchanged
+
+    Examples:
+      | facet          | original_parent_value | updated_parent_value       | local_value          |
+      | Allowed values | active and pending    | active, pending, and paused | closed and archived  |
+      | Presence       | Optional              | Required                   | Forbidden            |
+      | Description    | Parent description    | Revised parent description | Checkout description |

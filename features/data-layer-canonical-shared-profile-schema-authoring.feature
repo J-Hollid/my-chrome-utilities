@@ -1317,3 +1317,87 @@ Feature: Data layer canonical Shared Profile schema authoring
       | consumer | project_entry             |
       | Page     | opening a stored project  |
       | Page     | importing a portable copy |
+
+  # Data layer canonical Shared Profile schema authoring 079
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 079
+    Given <contributor> has three sparse local facets or rules across two inherited properties
+    And it has one local-only property
+    And its selected Shared Profile sources contain two properties added after inheritance was applied
+    When the operator opens its canonical schema in <surface>
+    Then the effective-schema header offers Local changes 4 and Parent additions 2
+    And the effective property table remains the primary workspace content
+    And no recalculated composition preview or concept-and-property button wall precedes the table
+    When the operator opens Local changes
+    Then one changes panel lists only locally owned facets, rules, and properties grouped by property
+    And each inherited item identifies its facet or rule, source contributor, inherited value, local value, and effective value
+    And the local-only property shows its effective definition and Remove local property instead of Reset to parent
+    And each property group opens the existing focused property editor rather than a second editing model
+
+    Examples:
+      | contributor       | surface        |
+      | Page Group        | standalone     |
+      | Page              | standalone     |
+      | Page frame        | Flow workspace |
+      | Event occurrence  | Flow workspace |
+
+  # Data layer canonical Shared Profile schema authoring 080
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 080
+    Given Checkout locally owns only <local_item> on inherited customer_status
+    And Sitewide now supplies <current_parent_value> for that item
+    When the operator chooses Reset to parent beside <local_item> in Local changes
+    Then only <deleted_content> is deleted from Checkout
+    And customer_status immediately derives <current_parent_value> from Sitewide
+    And the Local changes count and property group update without closing the panel
+    And one property-scoped Draft command provides one Undo action
+    And Sitewide, sibling contributors, unrelated Checkout facets, and Published state remain unchanged
+
+    Examples:
+      | local_item                 | current_parent_value        | deleted_content                  |
+      | Description facet          | Revised parent description | sparse Checkout Description      |
+      | Allowed values facet       | active, pending, and paused | sparse Checkout Allowed values   |
+      | replaced Account rule      | revised Parent account rule | Checkout Account rule replacement |
+
+  # Data layer canonical Shared Profile schema authoring 081
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 081
+    Given Checkout has local Description, Allowed values, and Account rule changes on customer_status
+    And it has one unrelated local change on order_total
+    When the operator chooses <reset_action> from Local changes
+    Then review identifies <reviewed_removal> and the current parent values that will become effective
+    When the operator confirms the reset
+    Then one atomic Draft command removes <removed_content>
+    And one Undo restores the complete pre-reset local contribution
+    And parent contributors, sibling contributors, and Published state remain unchanged
+
+    Examples:
+      | reset_action                  | reviewed_removal                            | removed_content                              |
+      | Reset customer_status to parent | its three locally owned items             | only the three customer_status local items   |
+      | Reset all to parents            | all four local items in Checkout only      | every Checkout local item and nothing upstream |
+
+  # Data layer canonical Shared Profile schema authoring 082
+  Scenario: Data layer canonical Shared Profile schema authoring 082
+    Given Sitewide changed customer_status Allowed values from active and pending to active, pending, and paused
+    And Checkout locally owns customer_status Allowed values closed and archived
+    And one new Sitewide property is absent from Checkout's fixed inheritance recipe
+    And a separate property has an unresolved difference between same-precedence Shared Profile recipes
+    When the operator reviews the Checkout effective-schema header and Local changes
+    Then customer_status is Ready with Checkout Allowed values closed and archived
+    And its local item neutrally says Parent differs and shows the current Sitewide values
+    And the new Sitewide property is counted only under Parent additions
+    And Needs decision counts only the unresolved same-precedence difference
+    And Reset to parent previews active, pending, and paused as the prospective effective values
+
+  # Data layer canonical Shared Profile schema authoring 083
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 083
+    Given Local changes is open at <presentation> using only the keyboard
+    Then the same grouped change inventory and reset actions are available as <panel_presentation>
+    And one vertical scroll owner reaches every property group and action without horizontal page scrolling
+    And counts, source differences, decision states, and reset scopes have visible and programmatic names
+    When the operator closes the panel or completes a reset
+    Then focus returns to the originating control or the nearest remaining changed item
+    And no state depends on color, pointer hover, or a property row remaining expanded
+
+    Examples:
+      | presentation          | panel_presentation              |
+      | wide viewport         | an adjacent changes drawer      |
+      | 360 CSS pixel viewport | a full-height changes sheet    |
+      | 200 percent browser zoom | a non-overlapping changes sheet |

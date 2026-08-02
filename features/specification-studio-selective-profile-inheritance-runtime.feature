@@ -65,12 +65,12 @@ Feature: Specification Studio selective profile inheritance runtime
 
   # Specification Studio selective profile inheritance runtime 005
   Scenario: Specification Studio selective profile inheritance runtime 005
-    Given the production Error Page recipe selects all concept page and seven fixed error properties
+    Given the production Error Page recipe contains the then-current page properties and seven error property identities
     When a production command adds one page property and one error property to Master
-    Then compilation includes the new page property
-    And compilation excludes the new error property
-    And rendered summary distinguishes synchronized page selection from seven fixed error identities
-    And every explicit exclusion remains absent from compiler input
+    Then compiler input excludes both new property identities
+    And the installed workspace counts both as Parent additions
+    And repository bytes retain every previously selected stable identity
+    And rendered source-group labels do not expand durable recipe membership
 
   # Specification Studio selective profile inheritance runtime 006
   Scenario: Specification Studio selective profile inheritance runtime 006
@@ -132,7 +132,8 @@ Feature: Specification Studio selective profile inheritance runtime
   Scenario: Specification Studio selective profile inheritance runtime 011
     Given production recipe controls have staged selection and rule-resolution changes
     When actual Apply inheritance is confirmed
-    Then one durable Draft command stores stable profile, property, and rule identities
+    Then one durable Draft command stores a fixed allowlist of stable property and rule identities
+    And serialized concept and branch metadata cannot derive future membership
     And production recompilation uses the selected source plus local target contribution
     And Cancel writes no recipe or local contribution
     And actual Undo and Redo restore the whole prior and applied recipe
@@ -151,7 +152,8 @@ Feature: Specification Studio selective profile inheritance runtime
   Scenario: Specification Studio selective profile inheritance runtime 013
     Given production Checkout Page Group has an applied Master recipe
     When its installed schema workspace opens
-    Then the Master card renders synchronized concepts, fixed selections, exclusions, rule overrides, and effective count
+    Then the Master card renders source groupings, fixed selected properties, exclusions, rule overrides, and effective count
+    And the workspace header renders Local changes and Parent additions counts without an eager composition preview
     And Edit selection restores the complete recipe workspace state
     And effective rows expose Master source, selection reason, local differences, and provenance
     When an actual local override is reset
@@ -168,17 +170,18 @@ Feature: Specification Studio selective profile inheritance runtime
 
     Examples:
       | source_change                                      | target_effect                                             |
-      | rename or move of a selected property              | stable selection displays its new path                    |
+      | edit of a selected non-overridden definition facet | current source facet becomes effective                    |
       | edit of an included non-overridden rule            | current source rule becomes effective                     |
       | edit of an excluded rule                           | exclusion remains attached to the stable rule             |
+      | rename or move of a selected property              | structural source review is required before path changes  |
       | deletion of a pinned selected property             | missing selection repair is displayed                     |
-      | new dependency in a live selected property rule    | explicit rule-dependency resolution is required           |
+      | new dependency in a selected property rule         | explicit rule-dependency resolution is required           |
 
   # Specification Studio selective profile inheritance runtime 015
   Scenario: Specification Studio selective profile inheritance runtime 015
     Given production Error Page has a reviewed Master recipe
     When actual Copy selection from Error Page is used for another target
-    Then the destination draft copies concept queries, stable property identities, exclusions, and rule resolutions
+    Then the destination draft copies fixed property identities, source-group metadata, exclusions, and rule resolutions
     And the installed tree and sticky action bar recalculate target-specific closure, issue count, and effective total
     And the copied recipe is immediately applicable because its dependency closure is complete
     And later durable edits to either recipe leave the other recipe unchanged
@@ -201,11 +204,13 @@ Feature: Specification Studio selective profile inheritance runtime
     And each parent exposes separate disclosure-button and indeterminate-capable checkbox semantics
     And each leaf renders a checkbox, primary property name, and secondary type and presence
     When actual input selects ecommerce
-    Then durable staged state contains synchronized ecommerce and all current descendant identities
+    Then durable staged state contains every current ecommerce descendant identity from that one action
     When actual input deselects product_name
     Then computed ecommerce and product checkbox states are indeterminate
-    And durable staged state records product_name as an explicit exclusion
-    And adding another ecommerce property includes its stable identity in derived selection
+    And durable staged state records product_name as an explicit exception to the staged group selection
+    When actual Apply inheritance runs and another ecommerce property is added to Master
+    Then durable recipe membership retains its fixed identity set
+    And the added identity appears only in the installed Parent additions inventory
 
   # Specification Studio selective profile inheritance runtime 018
   Scenario Outline: Specification Studio selective profile inheritance runtime 018
@@ -244,12 +249,23 @@ Feature: Specification Studio selective profile inheritance runtime
 
   # Specification Studio selective profile inheritance runtime 020
   Scenario: Specification Studio selective profile inheritance runtime 020
-    Given production staged selection has one synchronized concept, one fixed property, one exclusion, one missing rule dependency, and one peer conflict
+    Given production staged selection has one concept group, one individual property, one exclusion, one missing rule dependency, and one peer conflict
     When installed selection consequences recalculate
     Then Needs attention renders the missing dependency and peer conflict with operable resolution routes
     And the sticky action bar renders effective total, one exclusion, and two issues
     And Apply inheritance is disabled while missing-rule-dependency count is one
     When actual Review selection disclosure expands
-    Then its summary contains synchronized concepts, fixed properties, exclusions, rule resolutions, and issues
+    Then its summary contains source groupings, fixed properties, exclusions, rule resolutions, and issues
     When actual controls resolve the missing dependency
     Then Apply inheritance is enabled and the peer conflict remains visibly Draft-blocking
+
+  # Specification Studio selective profile inheritance runtime 021
+  Scenario: Specification Studio selective profile inheritance runtime 021
+    Given a durable applied recipe has two new Master properties absent from compiler input
+    When actual controls open Parent additions in the installed schema workspace
+    Then one rendered review panel groups both properties under Master and their source branches
+    And each row exposes complete path, definition summary, provenance, and dependency impact
+    When actual controls select one property and confirm Include selected
+    Then one durable Draft recipe command adds only that property identity and required structural ancestors
+    And compiled schema still excludes the other new property
+    And actual Undo restores the previous recipe hash while Master and local-contribution hashes remain unchanged

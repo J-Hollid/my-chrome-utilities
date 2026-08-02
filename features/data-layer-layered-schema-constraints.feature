@@ -384,7 +384,7 @@ Feature: Data layer layered schema constraints
   # Data layer layered schema constraints 026
   Scenario Outline: Data layer layered schema constraints 026
     Given Checkout inherits ordinary <facet> <parent_value> for customer_status from Sitewide
-    When Checkout stores only compatible local <facet> <local_value>
+    When Checkout stores only local <facet> <local_value>
     Then customer_status is a valid sparse Checkout override rather than a conflict
     And its row distinguishes Sitewide <parent_value> from effective Checkout <local_value>
     And the effective schema is Ready for validation and developer export
@@ -394,7 +394,7 @@ Feature: Data layer layered schema constraints
       | Concept               | Customer              | Account                 |
       | Type                  | String                | Number                  |
       | Presence              | Optional              | Required                |
-      | Allowed values        | active and pending    | active                  |
+      | Allowed values        | active and pending    | closed and archived     |
       | Expected value        | active                | pending                 |
       | Description           | Parent description    | Checkout description    |
       | Example               | parent-example        | checkout-example        |
@@ -420,7 +420,6 @@ Feature: Data layer layered schema constraints
       | facet                       | section    | local_value      | source_value       | reason                                  |
       | Type                        | Definition | Number           | String             | Sitewide protects this definition       |
       | Presence                    | Definition | Forbidden        | Required           | Sitewide protects this definition       |
-      | Allowed values              | Definition | closed           | active and pending | closed is outside the available choices |
       | Expected value              | Definition | closed           | active             | Sitewide keeps active fixed              |
       | Pattern rule                | Rules      | digits only      | letters only       | the rules cannot both match              |
       | Range rule                  | Rules      | 10 or more       | 5 or less          | the ranges do not overlap                |
@@ -452,7 +451,8 @@ Feature: Data layer layered schema constraints
 
   # Data layer layered schema constraints 029
   Scenario: Data layer layered schema constraints 029
-    Given customer_status needs decisions for Allowed values and one Range rule
+    Given customer_status needs an Allowed values decision between two same-precedence Shared Profile recipes
+    And customer_status needs one Range rule decision
     And order_total needs a decision for Type
     When the operator opens Effective schema at Checkout
     Then the summary says two properties need decisions before validation and developer export
@@ -479,3 +479,22 @@ Feature: Data layer layered schema constraints
       | local_concept          | effective_concept                            |
       | no local Concept facet | Sitewide Concept Customer remains effective |
       | local Concept Account  | Checkout Concept Account becomes effective  |
+
+  # Data layer layered schema constraints 031
+  Scenario Outline: Data layer layered schema constraints 031
+    Given Sitewide supplies customer_status <facet> <original_parent_value>
+    And Checkout owns sparse customer_status <facet> <local_value>
+    And a sibling Page has no local customer_status <facet>
+    When Sitewide changes customer_status <facet> to <updated_parent_value>
+    Then Checkout keeps effective <facet> <local_value> without needing a decision
+    And Checkout identifies the updated Sitewide value as a non-blocking parent difference
+    And the sibling Page automatically receives <updated_parent_value>
+    When the operator resets only Checkout customer_status <facet> to parent
+    Then the sparse Checkout facet is deleted and <updated_parent_value> becomes effective
+    And every other local facet, contributor, property, and Published revision remains unchanged
+
+    Examples:
+      | facet          | original_parent_value | updated_parent_value       | local_value         |
+      | Allowed values | active and pending    | active, pending, and paused | closed and archived |
+      | Presence       | Optional              | Required                   | Forbidden           |
+      | Description    | Parent description    | Revised parent description | Checkout description |

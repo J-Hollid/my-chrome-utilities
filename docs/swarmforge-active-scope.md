@@ -21,6 +21,8 @@ are:
 - `features/data-layer-canonical-shared-profile-schema-authoring-runtime.feature`
 - `features/data-layer-layered-schema-constraints.feature`
 - `features/data-layer-layered-schema-constraints-runtime.feature`
+- `features/specification-studio-selective-profile-inheritance.feature`
+- `features/specification-studio-selective-profile-inheritance-runtime.feature`
 - `features/data-layer-project-library-and-active-context.feature`
 - `features/data-layer-project-library-and-active-context-runtime.feature`
 - `features/data-layer-project-portability-and-upgrade.feature`
@@ -60,10 +62,23 @@ intentional publication revisions is
 The correction program for Specification Studio checkboxes and immediate binary
 settings is `docs/specification-studio-choice-controls-program-R01.md`.
 
-The user-approved canonical-authoring and layered-schema cycles are later authority
-than the earlier graph-only scope reduction. They supersede that reduction only for
-behavior named by the four schema contracts above. Agents must not discard, reject,
+The user-approved canonical-authoring, layered-schema, and selective-inheritance
+cycles are later authority than the earlier graph-only scope reduction. They supersede that reduction only for
+behavior named by the six schema contracts above. Agents must not discard, reject,
 or classify these cycles as inactive because of the earlier reduction.
+
+The later user-approved inheritance correction makes every applied Shared Profile
+recipe a fixed allowlist of stable property identities. Concepts and branches are
+selection aids and provenance, not live subscriptions: newly added parent properties
+remain under Parent additions until explicitly included. Definition and rule changes
+for already selected properties continue downstream automatically where the child has
+no local item; an ordinary sparse child facet, including a complete Allowed values
+facet outside the parent's choices, remains effective without a conflict. Structural
+source changes and new dependencies require review. The normal effective-schema
+workspace exposes compact Local changes and Parent additions controls, exact facet,
+property, and contributor reset scopes, and reserves Needs decision for genuinely
+unresolved same-precedence, invariant, type-validity, dependency, or structural
+issues.
 
 The project-management contracts are likewise later user-approved authority only
 for the named project library, active context, Studio routing, top-level project-
@@ -1220,11 +1235,14 @@ keyboard operation, and 360px geometry. It may depend on `layered_schema`,
 `project_management`, and `flow_graph`, but must not invoke unrelated authoring,
 Live, documentation, release, or full-site suites.
 
-The `layered_schema` pack must register all four canonical-authoring and layered-
-schema feature contracts and their focused production evidence, including
+The `layered_schema` pack must register all six canonical-authoring, layered-schema,
+and selective-inheritance feature contracts and their focused production evidence,
+including
 cross-surface property-menu parity, focused facet and rule lifecycle, ownership
-action legality, and exact Page-frame card routing. Adding the new contracts does
-not authorize extra checkpoint commands.
+action legality, exact Page-frame card routing, fixed recipe membership, explicit
+parent additions, deterministic child-facet precedence, consolidated local-change
+inventory, and exact reset scopes. Adding the new contracts does not authorize extra
+checkpoint commands.
 
 Each pack command performs its registered type/build, focused unit tests, installed
 browser adapter, Gherkin generation, and focused runtime acceptance. Pack dependencies
