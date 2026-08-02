@@ -208,6 +208,17 @@ export function verifyPropertySetFlowSectionUpgrade(before, after) {
         if (!equal(before.collections[kind], after.collections[kind]))
             throw new Error(`Property Set upgrade changed unrelated ${String(kind)} entities.`);
     }
+    const legacyIdentities = new Set(), collectIdentities = (value) => { if (Array.isArray(value)) {
+        value.forEach(collectIdentities);
+        return;
+    } if (!value || typeof value !== "object")
+        return; for (const [key, nested] of Object.entries(value)) {
+        if (key === "id" && typeof nested === "string")
+            legacyIdentities.add(nested);
+        collectIdentities(nested);
+    } };
+    collectIdentities(before);
+    const sectionIdentities = new Set();
     for (const [flowId, beforeGraph] of Object.entries(graphs(before))) {
         const afterGraph = graphs(after)[flowId];
         if (!afterGraph)
@@ -215,6 +226,11 @@ export function verifyPropertySetFlowSectionUpgrade(before, after) {
         const laneIds = unique([...(beforeGraph.pageGroupIds ?? []), ...(beforeGraph.pageFrames ?? []).flatMap((frame) => typeof frame.pageGroupId === "string" ? [frame.pageGroupId] : [])]), hasBefore = (beforeGraph.pageFrames ?? []).some((frame) => frame.freePageRegion === "before-lanes"), laneOffset = hasBefore ? 200 : 0, namedFrames = (beforeGraph.pageFrames ?? []).filter((frame) => !frame.freePageRegion), namedWidth = Math.max(900, ...namedFrames.map((frame) => Number(frame.position.x ?? 40) + legacyFrameSize(beforeGraph, frame).width + 60)), laneLeft = laneOffset + 10, namedRight = Math.max(laneLeft + 700, ...namedFrames.map((frame) => laneOffset + Number(frame.position.x ?? 40) + legacyFrameSize(beforeGraph, frame).width + 60)), sections = afterGraph.sections ?? [];
         if (sections.length !== laneIds.length)
             throw new Error(`Flow ${flowId} Section geometry was not preserved.`);
+        for (const section of sections) {
+            if (typeof section.id !== "string" || !section.id.trim() || legacyIdentities.has(section.id) || sectionIdentities.has(section.id))
+                throw new Error(`Flow ${flowId} did not receive new unique Section identities.`);
+            sectionIdentities.add(section.id);
+        }
         let nextY = 20;
         const lane = new Map();
         for (const [groupOrder, groupId] of laneIds.entries()) {
