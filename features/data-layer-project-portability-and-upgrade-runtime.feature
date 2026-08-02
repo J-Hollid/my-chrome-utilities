@@ -1,3 +1,8 @@
+# mutation-stamp: sha256=4d4991bf8ce429e1d01d155b3b6035df5434c46fa25e101c0943725c2b2ee95a
+# acceptance-mutation-manifest-begin
+# {"version":1,"tested_at":"2026-08-02T00:01:08.818501773Z","feature_name":"Data layer project portability and upgrade runtime","feature_path":"features/data-layer-project-portability-and-upgrade-runtime.feature","background_hash":"74234e98afe7498fb5daf1f36ac2d78acc339464f950703b8c019892f982b90b","implementation_hash":"3f2001697c-architect-fixed","scenarios":[{"index":2,"name":"Data layer project portability and upgrade runtime 003","scenario_hash":"399547ea6a278a969397888d37636ba985e648e13de668eff4c265dceb6aef7a","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-08-02T00:01:08.818501773Z"}]}
+# acceptance-mutation-manifest-end
+
 Feature: Data layer project portability and upgrade runtime
 
   # Data layer project portability and upgrade runtime 001

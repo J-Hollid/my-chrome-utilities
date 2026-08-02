@@ -44,6 +44,7 @@
     "id": "durable_project_repository",
     "source": [
       "src/data-layer-durable-project-repository.ts",
+      "src/data-layer-production-model.ts",
       "src/data-layer-production-specification.ts",
       "src/data-layer-durable-project-repository-ui.ts",
       "src/data-layer-durable-project-runtime.ts",

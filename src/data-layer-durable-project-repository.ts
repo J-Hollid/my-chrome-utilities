@@ -1,5 +1,7 @@
 import type {ProjectEntity,ProjectState,SpecificationProject} from "./data-layer-specification-project.js";
 import type {ProjectNavigation} from "./data-layer-project-library.js";
+import type {DurableProductionManifest,DurableProductionSchemaEntry,DurableProductionSchemaEvidence,DurableProductionSchemaInput,DurableProductionSchemaSnapshot,DurablePublishResult} from "./data-layer-production-model.js";
+export type {DurableProductionManifest,DurableProductionSchemaEntry,DurableProductionSchemaEvidence,DurableProductionSchemaInput,DurableProductionSchemaSnapshot,DurablePublishResult} from "./data-layer-production-model.js";
 
 export const DURABLE_PROJECT_DATABASE="my-chrome-utilities.project-repository";
 export const DURABLE_PROJECT_DATABASE_VERSION=6;
@@ -24,12 +26,6 @@ export interface DurableProjectMetadataNotification{type:"durable-project-metada
 export type DurableFailure="quota exceeded"|"transaction aborted"|"repository unavailable"|"corrupt record"|"verification failure";
 export interface DurableStorageDiagnostics{lastSavedAt:string;publishedRevision:number;unsavedCommand?:string;projectEntityBytes:number;releaseBytes:number;fixtureBytes:number;migrationBackupBytes:number;browserEstimate?:{usage:number;quota:number;label:"Browser storage estimate"};explanation:string;}
 export interface DurablePublishedRevision{projectId:string;revision:number;publicationId:string;publishedAt:string;sourceDraftToken:string;state:ProjectState;}
-export interface DurableProductionSchemaInput{schemaId:string;effectiveSchema:unknown;priorRevision?:number;}
-export interface DurableProductionSchemaEntry{schemaId:string;schemaRevision:number;fingerprint:string;snapshotKey:string;}
-export interface DurableProductionManifest{projectId:string;projectRevision:number;projectFingerprint:string;publicationId:string;publishedAt:string;schemas:DurableProductionSchemaEntry[];}
-export interface DurableProductionSchemaSnapshot{projectId:string;schemaId:string;schemaRevision:number;fingerprint:string;effectiveSchema:unknown;createdAt:string;}
-export interface DurableProductionSchemaEvidence{projectId:string;projectRevision:number;schemaId:string;schemaRevision:number;fingerprint:string;}
-export type DurablePublishResult={status:"published";draftToken:string;publishedRevision:number;manifest:DurableProductionManifest}|{status:"no-changes";draftToken:string;publishedRevision:number;manifest:DurableProductionManifest};
 export interface DurableFlowGraphRepairReceipt{version:1;projectId:string;flowId:string;sourceChecksum:string;deletedRecord:DurableRecordIdentity;draftToken:string;verified:true;repairedAt:string;}
 export interface DurableSavedSchemaRecord{schema:Record<string,unknown>;token:string;revision:number;lastSavedAt:string;}
 export type DurableSavedSchemaResult={status:"committed";schemaId:string;token:string;revision:number}|{status:"conflict";schemaId:string;baseToken:string|undefined;currentToken:string;current:Record<string,unknown>;pending:Record<string,unknown>};
