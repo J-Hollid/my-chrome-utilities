@@ -107,12 +107,14 @@ export function mountComposedSchemaWorkspace(options) {
     const valueText = (value) => value === undefined ? "Not set" : typeof value === "string" ? value : JSON.stringify(value);
     const prospectiveParentValues = (items) => items.map((item) => item.action === "remove-property" ? `${item.label}: no parent value; local property will be removed` : `${item.label}: ${valueText(item.inheritedValue)}`).join("; ");
     const closePanel = () => { const mode = workspacePanels.get(viewKey); workspacePanels.delete(viewKey); panel.hidden = true; panel.replaceChildren(); localChangesButton.setAttribute("aria-expanded", "false"); parentAdditionsButton.setAttribute("aria-expanded", "false"); (mode === "local" ? localChangesButton : parentAdditionsButton).focus(); };
-    const reviewReset = (path, item, origin) => { const review = document.createElement("section"), heading = document.createElement("h4"), detail = document.createElement("p"), confirm = button("Confirm reset", () => { workspacePanels.set(viewKey, "local"); workspacePanelFocus.set(viewKey, { mode: "local", path }); if (item.action === "remove-property")
-        options.onReset(options.model.rows.find((row) => row.path === path));
-    else if (item.action === "reset-rule" && item.ruleId)
+    const applyItemReset = (path, item) => { workspacePanels.set(viewKey, "local"); workspacePanelFocus.set(viewKey, { mode: "local", path }); if (item.action === "reset-rule" && item.ruleId)
         options.onResetLocalRule?.(path, item.ruleId);
     else
-        options.onResetLocalFacet?.(path, item.key); }), cancel = button("Cancel", () => { review.remove(); origin.focus(); }); heading.textContent = item.action === "remove-property" ? `Remove local property ${path}` : `Reset ${item.label} to parent`; detail.textContent = `Review removal: ${valueText(item.localValue)}. Current parent value ${valueText(item.inheritedValue)} will become effective.`; review.setAttribute("aria-label", `Review reset for ${path} ${item.label}`); review.append(heading, detail, confirm, cancel); panel.append(review); confirm.focus(); };
+        options.onResetLocalFacet?.(path, item.key); };
+    const reviewReset = (path, item, origin) => { const review = document.createElement("section"), heading = document.createElement("h4"), detail = document.createElement("p"), confirm = button("Confirm reset", () => { workspacePanels.set(viewKey, "local"); workspacePanelFocus.set(viewKey, { mode: "local", path }); if (item.action === "remove-property")
+        options.onReset(options.model.rows.find((row) => row.path === path));
+    else
+        applyItemReset(path, item); }), cancel = button("Cancel", () => { review.remove(); origin.focus(); }); heading.textContent = item.action === "remove-property" ? `Remove local property ${path}` : `Reset ${item.label} to parent`; detail.textContent = `Review removal: ${valueText(item.localValue)}. Current parent value ${valueText(item.inheritedValue)} will become effective.`; review.setAttribute("aria-label", `Review reset for ${path} ${item.label}`); review.append(heading, detail, confirm, cancel); panel.append(review); confirm.focus(); };
     const renderPanel = (mode, origin) => {
         workspacePanels.set(viewKey, mode);
         panel.hidden = false;
@@ -141,7 +143,7 @@ export function mountComposedSchemaWorkspace(options) {
                     reset.type = "button";
                     reset.textContent = item.action === "remove-property" ? "Remove local property" : "Reset to parent";
                     reset.setAttribute("aria-label", `${reset.textContent} ${group.path} ${item.label}`);
-                    reset.addEventListener("click", () => reviewReset(group.path, item, reset));
+                    reset.addEventListener("click", () => item.action === "remove-property" ? reviewReset(group.path, item, reset) : applyItemReset(group.path, item));
                     entry.append(itemHeading, detail, reset);
                     property.append(entry);
                 }

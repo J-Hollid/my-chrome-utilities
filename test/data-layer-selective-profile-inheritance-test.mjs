@@ -138,12 +138,12 @@ const treeDocument={...master,rootIds:[...master.rootIds,ecommerce.id],nodes:{..
 const ecommerceRecipe=toggleProfileInheritanceConcept(treeDocument,empty,"ecommerce");
 let inheritanceTree=profileInheritanceTree(treeDocument,ecommerceRecipe);
 const conceptNode=inheritanceTree.find(({id})=>id==="concept:ecommerce"),productNode=inheritanceTree.find(({propertyId})=>propertyId===product.id),productIdNode=inheritanceTree.find(({propertyId})=>propertyId===productId.id);
-assert.deepEqual({kind:conceptNode.kind,level:conceptNode.level,checked:conceptNode.checked,selectedCount:conceptNode.selectedCount,totalCount:conceptNode.totalCount},{kind:"concept",level:1,checked:"true",selectedCount:4,totalCount:4},"tree exposes one synchronized concept parent with descendant counts");
+assert.deepEqual({kind:conceptNode.kind,level:conceptNode.level,checked:conceptNode.checked,selectedCount:conceptNode.selectedCount,totalCount:conceptNode.totalCount},{kind:"concept",level:1,checked:"true",selectedCount:4,totalCount:4},"tree exposes one staged source-group selection with descendant counts");
 assert.deepEqual({kind:productNode.kind,parentId:productNode.parentId,level:productNode.level,checked:productNode.checked},{kind:"branch",parentId:`property:ecommerce:${ecommerce.id}`,level:3,checked:"true"},"structural branches remain nested beneath their concept and source parent");
 assert.deepEqual({kind:productIdNode.kind,parentId:productIdNode.parentId,level:productIdNode.level,checked:productIdNode.checked},{kind:"property",parentId:`property:ecommerce:${product.id}`,level:4,checked:"true"},"property leaves retain source hierarchy and selection state");
 const partialEcommerce=toggleProfileInheritanceTreeBranch(treeDocument,ecommerceRecipe,productName.id);
 inheritanceTree=profileInheritanceTree(treeDocument,partialEcommerce);
-assert.equal(partialEcommerce.excludedPropertyIds.includes(productName.id),true,"deselecting a synchronized descendant records an explicit stable exception");
+assert.equal(partialEcommerce.excludedPropertyIds.includes(productName.id),true,"deselecting a staged group descendant records an explicit stable exception");
 assert.equal(inheritanceTree.find(({id})=>id==="concept:ecommerce").checked,"mixed");
 assert.equal(inheritanceTree.find(({propertyId})=>propertyId===product.id).checked,"mixed");
 const laterProduct=node("property:product-price","product_price","number",2,{parentId:product.id,concept:"ecommerce"}),grownTreeDocument={...treeDocument,nodes:{...treeDocument.nodes,[laterProduct.id]:laterProduct}};
