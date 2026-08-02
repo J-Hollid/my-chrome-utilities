@@ -37,6 +37,8 @@ are:
 - `features/data-layer-durable-project-repository-runtime.feature`
 - `features/specification-studio-choice-controls.feature`
 - `features/specification-studio-choice-controls-runtime.feature`
+- `features/data-layer-property-set-and-flow-section-separation.feature`
+- `features/data-layer-property-set-and-flow-section-separation-runtime.feature`
 
 The correction program for the four schema contracts is
 `docs/data-layer-canonical-schema-authoring-correction-program-R01.md`.
@@ -61,6 +63,8 @@ intentional publication revisions is
 `docs/data-layer-durable-project-repository-program-R01.md`.
 The correction program for Specification Studio checkboxes and immediate binary
 settings is `docs/specification-studio-choice-controls-program-R01.md`.
+The program separating Property Sets from Flow-owned Sections is
+`docs/data-layer-property-set-flow-section-separation-program-R01.md`.
 
 The user-approved canonical-authoring, layered-schema, and selective-inheritance
 cycles are later authority than the earlier graph-only scope reduction. They supersede that reduction only for
@@ -97,6 +101,49 @@ categories, repeated canonical references, hierarchy filtering and search, and
 project-scoped tree view state. They do not create a tagging model or change
 schema inheritance, Flow ownership, project collections, or Saved Schema Library
 ownership.
+
+On approval, the Property Set and Flow Section separation is later authority for
+the two separation contracts and its program. It replaces Page Group's combined
+meanings with project-level Property Sets and Flow-owned Sections. A Page owns
+ordered Property Set applications, and applicability belongs to each application.
+A Property Set contributes its complete current effective schema while its
+selective Shared Profile sources retain fixed membership and explicit Parent
+additions.
+
+A Flow Section is a named presentation container only. Any Page instance may be
+inside or outside a Section regardless of Property composition. Section placement,
+movement, resizing, renaming, and removal never change schema composition,
+applicability, provenance, validation, or Assignment targets. Flow relationship
+topology remains the documentation ordering authority. The verified upgrade
+preserves Property Set contributor identities, Page application order, Assignment
+targets, Page frames, occurrences, relationships, and effective results while
+creating new per-Flow Section identities for legacy lanes.
+
+This later authority supersedes Page Group terminology, project collection
+lifecycle, Page membership wording and storage, Assignment target naming,
+schema-tree categories, Flow catalogs, lane eligibility, and Page-frame placement
+where they appear in the active project-management, layered-schema, Page Group
+structural-authoring, side-panel relationship-tree, and directional Flow graph
+contracts. It preserves their unrelated schema authoring, deterministic
+composition, guarded removal, relationship, Page-instance, Event-occurrence,
+documentation, and accessibility behavior.
+
+The exact checkpoint for this cycle is:
+
+```sh
+node scripts/run-focused-acceptance.mjs --pack property_set_flow_sections
+node scripts/package.mjs
+```
+
+The `property_set_flow_sections` pack must register both separation contracts and
+focused production evidence for collection taxonomy, Property Set lifecycle and
+where-used relationships, ordered Page applications, application-specific
+applicability, Shared Profile boundary behavior, Assignment and schema-tree
+renaming, Flow-owned Section containment, schema-neutral canvas commands, verified
+legacy migration, portability, Undo, keyboard operation, and 360px geometry. It
+may reuse focused components from the layered-schema, Flow-graph,
+project-management, and schema-relationship-tree checkpoints, but must not execute
+their unrelated feature contracts or archived suites.
 
 ## Scope and lineage processing invariant
 
