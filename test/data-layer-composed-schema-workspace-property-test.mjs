@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   applyComposedSchemaContextualFacet,
   composedCanonicalSchema,
+  composedSchemaScopeForKind,
   composedSchemaWorkspace,
   overrideComposedSchemaLocalRule,
   resetComposedSchemaLocalFacet,
@@ -77,6 +78,23 @@ for(let example=0;example<150;example+=1){
   assert.deepEqual(contextualGroup.localSchemaContributions.find(({path})=>path===unrelatedPath),{path:unrelatedPath,documentation:"peer unrelated"},"a generated contextual repair conserves unrelated sparse data");
   assert.deepEqual(contextualGroup.localSchemaContributions.find(({path})=>path===peerPath).allowedValues,[rightValue],"a generated contextual repair stores the selected sparse value");
   assert.equal(contextual.history.undo.length,peerState.history.undo.length+1,"a generated contextual repair adds one Undo action");
+
+  for(const {collection,kind,scope} of[
+    {collection:"pages",kind:"pages",scope:"Page"},
+    {collection:"pageGroups",kind:"pageGroups",scope:"Page Group"},
+    {collection:"events",kind:"events",scope:"Event"},
+  ]){
+    assert.equal(composedSchemaScopeForKind(kind),scope,`generated ${scope} targets resolve contextual repairs under their own scope`);
+    const targetState=createSpecificationProject({name:`Scoped ${scope} composition ${example}`,site:"shop.example",id:(value)=>`${value}:scoped:${scope}:${example}`}),targetId=`${kind}:scoped:${example}`;
+    targetState.project.collections.profiles.push(
+      {id:`profile:scoped-left:${example}`,name:`Scoped left ${example}`,schemaConstraints:[{path:peerPath,type:"string",allowedValues:[leftValue]}]},
+      {id:`profile:scoped-right:${example}`,name:`Scoped right ${example}`,schemaConstraints:[{path:peerPath,type:"string",allowedValues:[rightValue]}]},
+    );
+    targetState.project.collections[collection].push({id:targetId,name:`Scoped ${scope} ${example}`,profileIds:[`profile:scoped-left:${example}`,`profile:scoped-right:${example}`]});
+    const target=targetState.project.collections[collection][0],row=composedSchemaWorkspace(targetState,target,scope).rows.find(({path:rowPath})=>rowPath===peerPath),offered=row.repairs.find(({kind:repairKind,contributorId})=>repairKind==="use-contextual"&&contributorId===`profile:scoped-right:${example}`),repaired=applyComposedSchemaContextualFacet(targetState,kind,targetId,peerPath,offered.facet,offered.value,offered),repairedTarget=repaired.project.collections[collection][0];
+    assert.equal(composedSchemaWorkspace(repaired,repairedTarget,scope).status,"ready",`generated ${scope} contextual choices resolve under their own scope`);
+    assert.deepEqual(repairedTarget.localSchemaContributions.find(({path})=>path===peerPath).allowedValues,[rightValue],`generated ${scope} contextual choices persist their selected facet`);
+  }
 
   const crossCases=[
     [{allowedValues:[leftValue]},{expectedValue:rightValue},"allowedValues","expectedValue"],

@@ -409,7 +409,6 @@ function renderSelectedEntityEditor(content:HTMLElement,entity:ProjectEntity):vo
     ));
   });
   section.append(heading,form);
-  renderProfileInheritanceCards(section,entity);
   content.append(section);
   if(selectedKind==="profiles") renderCanonicalEntityEditor(content,selectedKind,entity);
 }

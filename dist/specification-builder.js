@@ -1023,7 +1023,6 @@ function renderSelectedEntityEditor(content, entity) {
         persist(addProjectEntity(state, selectedKind, { ...structuredClone(copy), name: `${entity.name} copy` }, id));
     });
     section.append(heading, form);
-    renderProfileInheritanceCards(section, entity);
     content.append(section);
     if (selectedKind === "profiles")
         renderCanonicalEntityEditor(content, selectedKind, entity);
