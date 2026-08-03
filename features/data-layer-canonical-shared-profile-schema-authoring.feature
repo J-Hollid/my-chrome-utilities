@@ -1401,3 +1401,37 @@ Feature: Data layer canonical Shared Profile schema authoring
       | wide viewport         | an adjacent changes drawer      |
       | 360 CSS pixel viewport | a full-height changes sheet    |
       | 200 percent browser zoom | a non-overlapping changes sheet |
+
+  # Data layer canonical Shared Profile schema authoring 084
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 084
+    Given <contributor> in <surface> opens a three-row inheritance-transition fixture
+    And its effective-schema Table starts with
+      | property         | Inheritance |
+      | /customer_status | Inherited   |
+      | /order_total     | Inherited   |
+      | /checkout_note   | Local       |
+    And neither inherited property has a local contribution
+    When the operator commits /customer_status Description Checkout customer status in its Table cell
+    Then the same contributor workspace still presents one complete effective-schema Table as the primary editor
+    And the Table retains all three property identities in the same order without navigation, reopening, or refresh
+    And /customer_status changes from Inherited to Mixed / overridden while /order_total remains Inherited and /checkout_note remains Local
+    And /order_total's inherited row and ordinary Table cells remain mounted, enabled, and immediately operable
+    And no local-contribution-only Table, ownership filter, or second schema editor replaces the effective projection
+    When the operator immediately commits /order_total Example 125.00 from that retained row
+    Then all three effective rows remain visible and both edited rows show Mixed / overridden
+    And storage contains only the sparse local /customer_status Description and /order_total Example facets
+    And the Draft command ledger gains two property patches while Undo history gains two entries
+    And parents, siblings, unrelated facets, property identities, and Published state remain unchanged
+
+    Examples:
+      | contributor        | surface        |
+      | Page Group         | standalone     |
+      | Page               | standalone     |
+      | Event              | standalone     |
+      | Flow Page-instance | Flow workspace |
+      | Event occurrence   | Flow workspace |
+      | Page Group         | in-panel       |
+      | Page               | in-panel       |
+      | Event              | in-panel       |
+      | Flow Page-instance | in-panel       |
+      | Event occurrence   | in-panel       |

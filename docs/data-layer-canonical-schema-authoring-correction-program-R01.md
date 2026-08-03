@@ -451,6 +451,15 @@ into local storage. A local-only property instead offers `Remove local property`
 Both actions preview changed effective values, affected instances, stale outputs,
 Draft status, runtime consequences, and one Undo action.
 
+Creating that first sparse local facet must not change which Table projection is
+rendered. The repository-driven rerender retains the complete effective row set and
+order: the edited row becomes `Mixed / overridden`, unchanged inherited rows remain
+mounted and immediately editable, and local-only rows remain `Local`. It neither
+substitutes a local-contribution-only Table nor mounts a second editor. This
+row-continuity contract covers every inherited-capable contributor surface so that
+operators can edit multiple inherited properties consecutively without navigating,
+reopening, or refreshing.
+
 Adding a Page Group to a Page always commits the ordered stable membership as a
 Draft configuration change and then recompiles the Page. A Page's explicit local
 facet resolves an ordinary difference on that same facet, remains effective, and
@@ -663,6 +672,7 @@ feature.
 | C65 | Comma-separated values cannot represent a String containing a comma or other escaped characters unambiguously | Authoring 064–065 | One type-directed literal language uses quoted JSON strings for delimiters and escapes, complete JSON arrays for Array examples, and item-level Allowed values for homogeneous arrays | Canonical value parser and formatter, Definition and Table editors, recursive Items model, example adapter, compiler, validator, JSON Schema, and repository | Bare and quoted strings, embedded commas and quotation marks, backslashes, empty strings, scalar types, valid String, Number, and Object arrays, mixed-array rejection at the observed item, round-trip text, and write isolation | A, B, C, D, E | Operators can enter every supported scalar value and complete homogeneous array example without delimiter ambiguity or accidental type coercion |
 | C66 | Focused Definition and Structure Review changes can fail to reveal the review and confirmation controls | Authoring 066 | Every valid staged Definition or Structure change opens one adjacent visible review layer with an enabled, reachable Confirm changes action before any write | Shared focused-property overlay transition, staged delta inventory, viewport placement, focus adapter, property command bus, repository, and Undo | Definition and Structure staging, pre-review hashes, visible layer and inventory, enabled action, keyboard and center-point operability, one command, one persistence write, one Undo action, and overlay closure | B, E | Review changes always exposes the exact pending change and a usable confirmation boundary rather than leaving the operator in the editor |
 | C67 | Add rule can remain disabled after all required rule fields and a valid flat condition are complete | Authoring 067 | Add rule revalidates after every rule-detail, condition, outcome, severity, and reusable-choice change, enabling exactly when the staged rule is complete and disabling again when it becomes incomplete | Shared Add rule editor, flat condition adapter, type-specific rule policy, control event adapters, staged rule inventory, and property review session | Presence, Allowed values, Pattern, Range, and Cardinality transitions; exact diagnostics; same mounted button; retained control values and condition IDs; staged inventory; and unchanged durable state before property review | B, C, E | A complete valid rule can always be staged immediately, while removing any required input blocks it with the exact repair message |
+| C68 | The first inherited-property edit can replace the effective row set with sparse local rows until refresh | Authoring 084 | Every ownership-transition rerender retains the complete effective-schema Table, row order, editability, and accurate Inheritance states | Shared effective-row projector, repository subscriptions, sparse local command adapter, Table renderer, and focus adapter | Ten contributor-surface flows; pre- and post-command row identities and order; Inherited, Mixed / overridden, and Local states; immediate second edit; sparse repository bytes; command and Undo counts; and parent, sibling, identity, facet, and Published hashes | A, B, C, E | Multiple inherited rows can be edited consecutively without navigation, reopening, refresh, a local-only projection, or a second schema editor |
 
 ## Terminal acceptance
 

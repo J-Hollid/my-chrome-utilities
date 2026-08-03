@@ -1397,3 +1397,43 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
       | wide viewport           | an adjacent changes drawer        |
       | 360 CSS pixel viewport  | a full-height changes sheet       |
       | 200 percent browser zoom | a non-overlapping changes sheet  |
+
+  # Data layer canonical Shared Profile schema authoring runtime 084
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 084
+    Given production <contributor> in <surface> opens a three-row inheritance-transition fixture
+    And its installed effective-schema Table starts with
+      | property         | Inheritance |
+      | /customer_status | Inherited   |
+      | /order_total     | Inherited   |
+      | /checkout_note   | Local       |
+    And repository state contains no local contribution for either inherited property
+    When actual controls commit /customer_status Description Checkout customer status in its Table cell
+    Then the installed contributor workspace still renders one complete effective-schema Table as the primary editor
+    And DOM inspection finds the same three property identities in the same order without navigation, reopening, or page refresh
+    And /customer_status renders Mixed / overridden while /order_total renders Inherited and /checkout_note renders Local
+    And /order_total's inherited row and ordinary Table controls remain mounted, enabled, and immediately operable
+    And DOM inventory finds no substituted local-contribution-only Table, ownership filter, or second schema editor
+    When actual controls immediately commit /order_total Example 125.00 from that retained row
+    Then DOM inspection still finds all three effective rows and both edited rows render Mixed / overridden
+    And repository inspection finds only sparse local /customer_status Description and /order_total Example facets
+    And the command ledger and Undo stack contain one entry for each commit
+    And the immutable-state ledger reports zero byte changes to
+      | protected scope     |
+      | parent contributors |
+      | sibling contributors |
+      | unrelated facets    |
+      | property identities |
+      | Published state     |
+
+    Examples:
+      | contributor        | surface        |
+      | Page Group         | standalone     |
+      | Page               | standalone     |
+      | Event              | standalone     |
+      | Flow Page-instance | Flow workspace |
+      | Event occurrence   | Flow workspace |
+      | Page Group         | in-panel       |
+      | Page               | in-panel       |
+      | Event              | in-panel       |
+      | Flow Page-instance | in-panel       |
+      | Event occurrence   | in-panel       |

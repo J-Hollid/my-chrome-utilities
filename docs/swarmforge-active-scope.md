@@ -1197,6 +1197,17 @@ changed property facet. `Override here` is reserved for operations that must fir
 establish local item or structural ownership; it is not a prerequisite for ordinary
 Definition-field editing. `Replace here` is reserved for an explicitly replaceable
 inherited rule and creates a new local rule identity that names its source rule.
+The repository-driven rerender after that first sparse local facet is created must
+preserve the contributor's complete effective row set and its current order. The
+edited row changes from `Inherited` to `Mixed / overridden`; every unchanged
+inherited row remains mounted and immediately editable, and local-only rows remain
+`Local`. No descendant schema editor may substitute a local-contribution-only
+table, enable an ownership filter, or mount a second schema editor merely because
+one inherited property became locally overridden. Consecutive inherited-property
+edits require no navigation, reopening, or refresh. This continuity rule applies
+to Page Group, Page, Event, Flow Page-instance, and Event-occurrence editors in
+their standalone, Flow-workspace, and in-panel presentations and supersedes any
+narrower projection behavior after save.
 A Page-local facet wins an ordinary difference on that same facet after its ordered
 Page Group stack and produces a non-blocking warning with shadowed-parent
 provenance. `Reset to parents` deletes that sparse local contribution and recompiles
