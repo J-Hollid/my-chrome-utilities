@@ -5,6 +5,7 @@ import { composedCanonicalSchema, resetCanonicalRow } from "./composed-schema/ca
 import { applyLayerConstraintStructures, structureDeletesPath } from "./flow-graph/page-instance-structure.js";
 import { includeProfileInheritanceParentAdditions } from "./data-layer-selective-profile-inheritance.js";
 export { composedSchemaWorkspace, composedCanonicalSchema };
+export const schemaContributorUsesEffectiveWorkspace = (scope) => scope !== "Shared Profile";
 const clone = (value) => structuredClone(value);
 function updateEntity(state, kind, entityId, label, update) { return transactProject(state, label, (project) => ({ ...project, collections: { ...project.collections, [kind]: project.collections[kind].map((entity) => entity.id === entityId ? update(entity) : entity) } })); }
 const sparseFacetKeys = (constraint) => Object.fromEntries(Object.entries(constraint).filter(([key]) => !["path", "origins", "superseded", "expectedContributor"].includes(key)));

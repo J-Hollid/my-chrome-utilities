@@ -16,7 +16,7 @@ import { PROJECT_LIBRARY_STORAGE_KEY, activateProject, activeProjectContextChang
 import { effectivePropertySummary, installLayeredSchemaUi } from "./data-layer-layered-schema-ui.js";
 import { assignmentContributorTargets, projectCanonicalConcepts } from "./data-layer-layered-schema-project.js";
 import { evaluatePageGroupFixture as executePageGroupFixture, pageGroupStructuralSchema, resetDepartedPageApplicabilityPreview } from "./data-layer-page-group-structural-authoring.js";
-import { applyComposedSchemaContextualFacet, composedSchemaWorkspace, includeComposedSchemaParentAdditionSelections, overrideComposedSchemaLocalRule, resetComposedSchemaLocalChanges, resetComposedSchemaLocalFacet, resetComposedSchemaLocalProperty, resetComposedSchemaLocalRule, saveComposedEntitySchemaPolicy, saveComposedSchemaLocalFacetsAndStructures, saveComposedSchemaPolicy } from "./data-layer-composed-schema-workspace.js";
+import { applyComposedSchemaContextualFacet, composedCanonicalSchema, composedSchemaWorkspace, includeComposedSchemaParentAdditionSelections, overrideComposedSchemaLocalRule, resetComposedSchemaLocalChanges, resetComposedSchemaLocalFacet, resetComposedSchemaLocalProperty, resetComposedSchemaLocalRule, saveComposedCanonicalDocument, saveComposedEntitySchemaPolicy, saveComposedEventCanonicalDocument, saveComposedSchemaLocalFacetsAndStructures, saveComposedSchemaPolicy } from "./data-layer-composed-schema-workspace.js";
 import { mountComposedSchemaWorkspace } from "./data-layer-composed-schema-workspace-ui.js";
 import { installFlowDocumentationExportUi } from "./data-layer-flow-table-documentation-export-ui.js";
 import { installProjectDocumentationWorkspaceUi } from "./data-layer-project-documentation-workspace-ui.js";
@@ -158,7 +158,19 @@ function renderComposedSchemaWorkspace(host, entity, kind, scope, pageGroupAppli
         host.append(region);
         renderPageApplicabilityPreview(region, entity);
     }
-    const persistComposed = (next) => { durableProjectRuntime.prepareProjectRoute(next.project.id, { collectionKind: kind, entityId: entity.id }); persist(next); }, liveState = () => state ?? workspaceState, model = composedSchemaWorkspace(workspaceState, entity, scope, undefined, undefined, pageGroupApplicabilitySetIds), section = mountComposedSchemaWorkspace({ host: region, model, effectiveText: (row) => effectivePropertySummary(row.effective), conceptSuggestions: () => projectCanonicalConcepts(liveState()), schemaContributorId: entity.id, schemaContributorScope: scope, onlyDefinedFields: (canonical?.onlyDefinedFields ?? entity.onlyDefinedFields) === true, onOnlyDefinedFields: (value) => persistComposed(kind === "events" ? saveComposedEntitySchemaPolicy(liveState(), kind, entity.id, value) : saveComposedSchemaPolicy(liveState(), kind, entity.id, value)), onSave: (row, facets, structures = []) => persistComposed(saveComposedSchemaLocalFacetsAndStructures(liveState(), kind, entity.id, row.path, facets, structures, id)), onReset: (row) => persistComposed(resetComposedSchemaLocalProperty(liveState(), kind, entity.id, row.path)), onResetLocalFacet: (path, facet) => persistComposed(resetComposedSchemaLocalFacet(liveState(), kind, entity.id, path, facet)), onResetLocalRule: (path, ruleId) => persistComposed(resetComposedSchemaLocalRule(liveState(), kind, entity.id, path, ruleId)), onResetAllLocalChanges: () => persistComposed(resetComposedSchemaLocalChanges(liveState(), kind, entity.id)), onIncludeParentAdditions: (selections) => persistComposed(includeComposedSchemaParentAdditionSelections(liveState(), kind, entity.id, selections)), onStructure: () => { }, onRepair: (repair) => { const row = model.rows.find((candidate) => candidate.repairs.includes(repair) || candidate.decisions?.some(({ repairs }) => repairs.includes(repair))); if (repair.kind === "use-source" && repair.facet && row) {
+    const persistComposed = (next) => { durableProjectRuntime.prepareProjectRoute(next.project.id, { collectionKind: kind, entityId: entity.id }); persist(next); }, liveState = () => state ?? workspaceState, liveEntity = () => liveState().project.collections[kind].find(({ id: entityId }) => entityId === entity.id), model = composedSchemaWorkspace(workspaceState, entity, scope, undefined, undefined, pageGroupApplicabilitySetIds);
+    if (scope === "Event" || !model.rows.some(({ inherited }) => Boolean(inherited))) {
+        const editorHost = document.createElement("section"), load = () => composedCanonicalSchema(liveState(), liveEntity(), scope);
+        editorHost.dataset.schemaContributorScope = scope;
+        region.append(editorHost);
+        mountCanonicalSchemaEditor({ host: editorHost, surface: "Builder", renderAfterDispatch: false, load, id, dispatch: (command) => { const current = load(); if (command.baseRevision !== current.revision)
+                return { status: "conflict", document: current, message: `This contributor changed from opaque Draft token ${command.baseRevision} to ${current.revision}; compare this command with the latest property before retrying.` }; const result = applyCanonicalCommand(current, command); if (result.status === "applied" || result.status === "rebased")
+                persistComposed(kind === "events" ? saveComposedEventCanonicalDocument(liveState(), entity.id, result.document) : saveComposedCanonicalDocument(liveState(), kind, entity.id, result.document)); return result; }, onUndo: () => { if (state)
+                void durableProjectRuntime.undo(state.project.id); }, onRedo: () => { if (state)
+                void durableProjectRuntime.redo(state.project.id); } });
+        return;
+    }
+    mountComposedSchemaWorkspace({ host: region, model, effectiveText: (row) => effectivePropertySummary(row.effective), conceptSuggestions: () => projectCanonicalConcepts(liveState()), schemaContributorId: entity.id, schemaContributorScope: scope, onlyDefinedFields: (canonical?.onlyDefinedFields ?? entity.onlyDefinedFields) === true, onOnlyDefinedFields: (value) => persistComposed(kind === "events" ? saveComposedEntitySchemaPolicy(liveState(), kind, entity.id, value) : saveComposedSchemaPolicy(liveState(), kind, entity.id, value)), onSave: (row, facets, structures = []) => persistComposed(saveComposedSchemaLocalFacetsAndStructures(liveState(), kind, entity.id, row.path, facets, structures, id)), onReset: (row) => persistComposed(resetComposedSchemaLocalProperty(liveState(), kind, entity.id, row.path)), onResetLocalFacet: (path, facet) => persistComposed(resetComposedSchemaLocalFacet(liveState(), kind, entity.id, path, facet)), onResetLocalRule: (path, ruleId) => persistComposed(resetComposedSchemaLocalRule(liveState(), kind, entity.id, path, ruleId)), onResetAllLocalChanges: () => persistComposed(resetComposedSchemaLocalChanges(liveState(), kind, entity.id)), onIncludeParentAdditions: (selections) => persistComposed(includeComposedSchemaParentAdditionSelections(liveState(), kind, entity.id, selections)), onStructure: () => { }, onRepair: (repair) => { const row = model.rows.find((candidate) => candidate.repairs.includes(repair) || candidate.decisions?.some(({ repairs }) => repairs.includes(repair))); if (repair.kind === "use-source" && repair.facet && row) {
             persistComposed(resetComposedSchemaLocalFacet(liveState(), kind, entity.id, row.path, repair.facet));
             return;
         } if (repair.kind === "use-contextual" && repair.facet && repair.value !== undefined && row) {
@@ -176,17 +188,6 @@ function renderComposedSchemaWorkspace(host, entity, kind, scope, pageGroupAppli
             persistNavigation();
             render();
         } } });
-    if (canonical) {
-        const canonicalHost = document.createElement("section");
-        canonicalHost.setAttribute("aria-label", `${entity.name} canonical schema contribution`);
-        section.append(canonicalHost);
-        mountCanonicalSchemaEditor({ host: canonicalHost, surface: "Builder", renderAfterDispatch: false, showOnlyDefinedFields: false, load: () => state.project.collections[kind].find(({ id: entityId }) => entityId === entity.id).canonicalSchema, id, dispatch: (command) => { const current = state.project.collections[kind].find(({ id: entityId }) => entityId === entity.id).canonicalSchema, result = applyCanonicalCommand(current, command); if (result.status === "applied" || result.status === "rebased") {
-                canonicalCommandFeedback = { schemaId: current.id, text: canonicalCommandOutcome(command, result, current) };
-                persistComposed(transactProject(liveState(), `${command.kind} canonical property in ${entity.name}`, (project) => ({ ...project, collections: { ...project.collections, [kind]: project.collections[kind].map((candidate) => candidate.id === entity.id ? { ...candidate, canonicalSchema: result.document } : candidate) } })));
-            } return result; }, onUndo: () => { if (state)
-                void durableProjectRuntime.undo(state.project.id); }, onRedo: () => { if (state)
-                void durableProjectRuntime.redo(state.project.id); }, ...(canonicalCommandFeedback?.schemaId === canonical.id ? { initialFeedback: canonicalCommandFeedback.text } : {}) });
-    }
 }
 function renderPageApplicabilityPreview(host, page) {
     if (!state)
