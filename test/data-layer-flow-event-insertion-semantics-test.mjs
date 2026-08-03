@@ -14,7 +14,7 @@ let sequence=0;
 const id=(kind)=>`${kind}:fixed-event-${++sequence}`;
 let state=createSpecificationProject({name:"Fixed Flow semantics",site:"shop.example",id});
 const add=(kind,entity)=>{state=addProjectEntity(state,kind,entity,id);return state.project.collections[kind].at(-1);};
-const checkout=add("pageGroups",{name:"Checkout"});
+const checkout=add("propertySets",{name:"Checkout"});
 const cart=add("pages",{name:"Cart",eventName:"pageview",pageGroupIds:[checkout.id]});
 const payment=add("pages",{name:"Payment",eventName:"pageview",pageGroupIds:[checkout.id]});
 const pageView=add("events",{name:"page_view",eventName:"page_view",role:"context-setting",trigger:"Initial load"});

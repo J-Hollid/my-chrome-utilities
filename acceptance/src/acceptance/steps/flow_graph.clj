@@ -23,10 +23,10 @@
     (checked-command! "Flow Page-instance verification failed." "node" "test/data-layer-flow-page-instance-test.mjs")
     (checked-command! "Flow graph projection verification failed." "node" "test/data-layer-flow-graph-test.mjs")
     (checked-command! "Flow graph port inference property verification failed." "node" "test/data-layer-flow-graph-property-test.mjs")
-    (checked-command! "Flow graph persistence verification failed." "node" "test/data-layer-flow-graph-persistence-test.mjs")
     (checked-command! "Flow Page-context model verification failed." "node" "test/data-layer-flow-page-context-model-test.mjs")
     (checked-command! "Flow Event insertion semantics verification failed." "node" "test/data-layer-flow-event-insertion-semantics-test.mjs")
     (checked-command! "Flow Page context-event model verification failed." "node" "test/data-layer-flow-page-event-model-test.mjs")
+    (checked-command! "Flow graph persistence verification failed." "node" "test/data-layer-flow-graph-persistence-test.mjs")
     (reset! model-verified? true)))
 (defn- observe-browser! []
   (or @browser-observation
@@ -36,7 +36,7 @@
         (support/assert! observed "Flow graph browser evidence is missing." {:out (:out result)})
         (reset! browser-observation observed))))
 (def runtime-evidence-keys
-  (set (map #(keyword (format "runtime%03d" %)) (range 1 26))))
+  (set (map #(keyword (format "runtime%03d" %)) (range 1 27))))
 (def required-evidence-keys (conj runtime-evidence-keys :installedBoundary))
 (def flow005-examples
   {[:model ["Cart" "button_click" "Continue clicked" "activates button_click from the Events catalog by pointer"]] :pointer-activation

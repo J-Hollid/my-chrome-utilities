@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
-import {addFlowPageFrame,addGraphOccurrence,documentaryFlowGraph,removeFlowRelationship,saveGraphRelationship,setFlowPageGroupLanes} from "../dist/data-layer-flow-graph.js";
+import {addGraphOccurrence,documentaryFlowGraph,removeFlowRelationship,saveGraphRelationship} from "../dist/data-layer-flow-graph.js";
+import {addFlowPageFrameToSection,createFlowSection} from "../dist/data-layer-property-set-flow-section.js";
 import {consumeRelationshipDeletionFocus,flowRelationshipDeletionAccessibleName,flowViewAfterRelationshipDeletion} from "../dist/data-layer-flow-graph-ui.js";
 import {addProjectEntity,createSpecificationProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
 
@@ -7,13 +8,14 @@ let sequence=0;
 const id=(kind)=>`${kind}:relationship-deletion-${++sequence}`;
 let state=createSpecificationProject({name:"Shop",site:"shop.example",id});
 const add=(kind,entity)=>{state=addProjectEntity(state,kind,entity,id);return state.project.collections[kind].at(-1);};
-const customer=add("pages",{name:"Customer details",eventName:"pageview"}),payment=add("pages",{name:"Payment",eventName:"pageview"}),verify=add("events",{name:"verify_identity",eventName:"verify_identity"}),group=add("pageGroups",{name:"Checkout"}),flow=add("flows",{name:"Checkout journey",purpose:"Document checkout",steps:[]});
-state={...state,project:{...state.project,collections:{...state.project.collections,pages:state.project.collections.pages.map((page)=>page.id===customer.id||page.id===payment.id?{...page,pageGroupIds:[group.id]}:page)}}};
-state=setFlowPageGroupLanes(state,flow.id,[group.id]);
-state=addFlowPageFrame(state,flow.id,{pageId:customer.id,pageGroupId:group.id,x:40,y:40},id);
-state=addFlowPageFrame(state,flow.id,{pageId:payment.id,pageGroupId:group.id,x:420,y:40},id);
+const customer=add("pages",{name:"Customer details",eventName:"pageview"}),payment=add("pages",{name:"Payment",eventName:"pageview"}),verify=add("events",{name:"verify_identity",eventName:"verify_identity"}),group=add("propertySets",{name:"Checkout"}),flow=add("flows",{name:"Checkout journey",purpose:"Document checkout",steps:[]});
+state={...state,project:{...state.project,collections:{...state.project.collections,pages:state.project.collections.pages.map((page)=>page.id===customer.id||page.id===payment.id?{...page,pageGroupIds:[group.id],propertySetApplications:[{id:id("application"),name:group.name,propertySetId:group.id}]}:page)}}};
+state=createFlowSection(state,flow.id,{name:"Checkout",bounds:{x:20,y:20,width:900,height:300}},id);
+const sectionId=documentaryFlowGraph(state.project,flow.id).sections[0].id;
+state=addFlowPageFrameToSection(state,flow.id,customer.id,sectionId,id);
+state=addFlowPageFrameToSection(state,flow.id,payment.id,sectionId,id);
 const [customerFrame,paymentFrame]=documentaryFlowGraph(state.project,flow.id).pageFrames;
-state=addGraphOccurrence(state,flow.id,{name:"ID verification",pageFrameId:customerFrame.id,pageGroupId:group.id,pageId:customer.id,eventId:verify.id,fallbackRole:"interaction",obligation:"Required",minimum:1,maximum:1,x:30,y:70},id);
+state=addGraphOccurrence(state,flow.id,{name:"ID verification",pageFrameId:customerFrame.id,pageId:customer.id,eventId:verify.id,fallbackRole:"interaction",obligation:"Required",minimum:1,maximum:1,x:30,y:70},id);
 const verification=documentaryFlowGraph(state.project,flow.id).occurrences[0];
 state=saveGraphRelationship(state,flow.id,customerFrame.id,{toStepId:paymentFrame.id,sourcePort:"right",targetPort:"left",label:"Checkout route",group:"primary",documentationCondition:"checkout is open",expectation:"payment follows details"},id);
 state=saveGraphRelationship(state,flow.id,paymentFrame.id,{toStepId:customerFrame.id,sourcePort:"top",targetPort:"bottom",group:"identity",documentationCondition:"identity required",expectation:"details can be revisited"},id);

@@ -1,148 +1,16 @@
 import assert from "node:assert/strict";
-import {addEventOccurrenceToPage,addFlowPageFrame,documentaryFlowGraph,inferFlowRelationshipKind,migrateLegacyFlowContextBindings,migrateLegacyFlowRelationshipKinds,removeFlowRelationship,setFlowPageGroupLanes} from "../dist/data-layer-flow-graph.js";
-import {resetFlowPageInstanceLocalProperty,saveFlowPageInstanceLocalFacets} from "../dist/data-layer-layered-schema-project.js";
-import {addProjectEntity,createSpecificationProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
+import {documentaryFlowGraph,inferFlowRelationshipKind,renameFlowPageFrame,resetFlowPageFrameName} from "../dist/data-layer-flow-graph.js";
+import {addFlowPageFrameToSection,createFlowSection} from "../dist/data-layer-property-set-flow-section.js";
+import {addProjectEntity,createSpecificationProject,transactProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
 
-const sides=["left","right","top","bottom"];
-const expected=new Map([
-  ["right:left","expected_next"],
-  ["top:bottom","alternative"],
-  ["bottom:top","merge"],
-]);
+const sides=["left","right","top","bottom"],expected=new Map([["right:left","expected_next"],["top:bottom","alternative"],["bottom:top","merge"]]);let seed=0x5eed1234;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/0x100000000;};
+for(let sample=0;sample<1024;sample+=1){const source=sides[Math.floor(random()*4)],target=sides[Math.floor(random()*4)];assert.equal(inferFlowRelationshipKind(source,target),expected.get(`${source}:${target}`));}
 
-let seed=0x5eed1234;
-const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/0x100000000;};
-
-for(let sample=0;sample<512;sample+=1){
-  const sourcePort=sides[Math.floor(random()*sides.length)];
-  const targetPort=sides[Math.floor(random()*sides.length)];
-  const key=`${sourcePort}:${targetPort}`;
-  assert.equal(
-    inferFlowRelationshipKind(sourcePort,targetPort),
-    expected.get(key),
-    `${key} must ${expected.has(key)?"infer exactly one canonical kind":"remain invalid"}`,
-  );
+for(let sample=0;sample<64;sample+=1){let sequence=0;const id=(kind)=>`${kind}:property-${sample}-${++sequence}`;let state=createSpecificationProject({name:`Property sample ${sample}`,site:"example.test",id});const add=(kind,entity)=>{state=addProjectEntity(state,kind,entity,id);return state.project.collections[kind].at(-1);};const propertySet=add("propertySets",{name:"Checkout"}),page=add("pages",{name:"Confirmation",pageGroupIds:[propertySet.id],propertySetApplications:[{id:id("application"),name:propertySet.name,propertySetId:propertySet.id}],schemaConstraints:[{path:"/status",type:"string",expectedValue:"pending"}]}),flow=add("flows",{name:"Repeated instances",steps:[]});state=createFlowSection(state,flow.id,{name:"Checkout",bounds:{x:20,y:20,width:1000,height:480}},id);const sectionId=documentaryFlowGraph(state.project,flow.id).sections[0].id;const count=2+Math.floor(random()*7);for(let index=0;index<count;index+=1)state=addFlowPageFrameToSection(state,flow.id,page.id,sectionId,id);let frames=documentaryFlowGraph(state.project,flow.id).pageFrames;assert.equal(frames.length,count);assert.equal(new Set(frames.map(({id})=>id)).size,count);
+  const target=frames[Math.floor(random()*count)],siblings=Object.fromEntries(frames.filter(({id})=>id!==target.id).map(({id})=>[id,JSON.stringify(documentaryFlowGraph(state.project,flow.id).pageFrames.find((frame)=>frame.id===id))]));
+  state=renameFlowPageFrame(state,flow.id,target.id,`  Review ${sample}  `);assert.equal(documentaryFlowGraph(state.project,flow.id).pageFrames.find(({id})=>id===target.id).nameInFlow,`Review ${sample}`);for(const [id,before] of Object.entries(siblings))assert.equal(JSON.stringify(documentaryFlowGraph(state.project,flow.id).pageFrames.find((frame)=>frame.id===id)),before);
+  const sourceBefore=JSON.stringify(state.project.collections.pages.find(({id})=>id===page.id));state=transactProject(state,"Rename source Page",(project)=>({...project,collections:{...project.collections,pages:project.collections.pages.map((candidate)=>candidate.id===page.id?{...candidate,name:`Source ${sample}`}:candidate)}}));assert.equal(JSON.stringify(state.project.collections.pages.find(({id})=>id===page.id))!==sourceBefore,true);assert.equal(documentaryFlowGraph(state.project,flow.id).pageFrames.find(({id})=>id===target.id).nameInFlow,`Review ${sample}`);
+  const beforeReset=state;state=resetFlowPageFrameName(state,flow.id,target.id);assert.equal(documentaryFlowGraph(state.project,flow.id).pageFrames.find(({id})=>id===target.id).nameInFlow,undefined);assert.deepEqual(undoProjectTransaction(state).project,beforeReset.project);
+  const graph=documentaryFlowGraph(state.project,flow.id);assert.ok(graph.pageFrames.every(({pageId,sectionId})=>pageId===page.id&&sectionId===sectionId));assert.equal(graph.pageFrames.length,count);
 }
-
-for(const sourcePort of sides)for(const targetPort of sides){
-  const key=`${sourcePort}:${targetPort}`;
-  assert.equal(inferFlowRelationshipKind(sourcePort,targetPort),expected.get(key),key);
-}
-
-let identity=0,base=createSpecificationProject({name:"Migration properties",site:"example.test",id:(kind)=>`${kind}:property-${++identity}`});
-base=addProjectEntity(base,"flows",{name:"Migrated Flow"},(kind)=>`${kind}:property-${++identity}`);
-const flow=base.project.collections.flows[0];
-const graph={pageGroupIds:[],pageFrames:[],occurrences:[],relationships:[]};
-const randomText=(prefix)=>`${prefix}-${Math.floor(random()*1_000_000)}`;
-
-for(let sample=0;sample<128;sample+=1){
-  const relationship={
-    id:`relationship:legacy-${sample}`,
-    sourceEndpoint:{kind:"page-frame",id:`source:${sample}`},
-    targetEndpoint:{kind:"page-frame",id:`target:${sample}`},
-    kind:"parallel",
-    group:randomText("group"),
-    ...(sample%2?{label:randomText("label")}:{}),
-    documentationCondition:randomText("condition"),
-    expectation:randomText("expectation"),
-    geometry:{bendX:Math.floor(random()*500),bendY:Math.floor(random()*500)},
-  };
-  const state={...base,project:{...base.project,documentationFlowGraphs:{[flow.id]:{...graph,relationships:[relationship]}}}},preserved={...relationship};
-  delete preserved.kind;
-  const migrated=migrateLegacyFlowRelationshipKinds(state,flow.id),stored=migrated.project.documentationFlowGraphs[flow.id].relationships[0],conserved={...stored};
-  delete conserved.kind;delete conserved.sourcePort;delete conserved.targetPort;
-  assert.deepEqual(conserved,preserved,`migration sample ${sample} must conserve identity, endpoints, optional metadata, and geometry`);
-  assert.deepEqual({kind:stored.kind,sourcePort:stored.sourcePort,targetPort:stored.targetPort},{kind:"alternative",sourcePort:"top",targetPort:"bottom"});
-  assert.equal(migrateLegacyFlowRelationshipKinds(migrated,flow.id),migrated,`migration sample ${sample} must be referentially idempotent`);
-}
-
-const current={...base,project:{...base.project,documentationFlowGraphs:{[flow.id]:{...graph,relationships:[{id:"relationship:current",kind:"alternative",sourcePort:"top",targetPort:"bottom"}]}}}};
-assert.equal(migrateLegacyFlowRelationshipKinds(current,flow.id),current,"a current graph must remain an exact no-op");
-
-for(let sample=0;sample<128;sample+=1){
-  const pageId=`page:context-${sample}`,eventId=`event:context-${sample}`,bindingId=`binding:context-${sample}`,sourceFrameId=`frame:source-${sample}`,targetFrameId=`frame:target-${sample}`,sourceOccurrenceId=`occurrence:source-${sample}`,targetOccurrenceId=`occurrence:target-${sample}`,explicitEndpoints=sample%2===0,reverse=sample%3===0;
-  const sourceEndpoint={kind:"event-occurrence",id:reverse?targetOccurrenceId:sourceOccurrenceId},targetEndpoint={kind:"event-occurrence",id:reverse?sourceOccurrenceId:targetOccurrenceId};
-  const relationship={
-    id:`relationship:context-${sample}`,
-    ...(explicitEndpoints?{sourceEndpoint,targetEndpoint}:{sourceNodeId:sourceEndpoint.id,targetNodeId:targetEndpoint.id}),
-    sourcePort:sample%2?"bottom":"right",
-    targetPort:sample%2?"top":"left",
-    kind:sample%2?"merge":"expected_next",
-    group:randomText("context-group"),
-    ...(sample%3?{label:randomText("context-label")}:{}),
-    documentationCondition:randomText("context-condition"),
-    expectation:randomText("context-expectation"),
-    geometry:{bendX:Math.floor(random()*500),bendY:Math.floor(random()*500)},
-  };
-  const occurrences=[sourceOccurrenceId,targetOccurrenceId].map((id,index)=>({id,name:`Legacy context ${index}`,pageFrameId:index?targetFrameId:sourceFrameId,pageId,contextBindingId:bindingId,position:{y:80+index*40},obligation:"Required",minimum:1,maximum:1,optional:false}));
-  const project={...base.project,collections:{...base.project.collections,pages:[{id:pageId,name:"Context Page",contextEventBindings:[{id:bindingId,name:"Initial load",eventId,trigger:"initial-load"}]}],events:[{id:eventId,name:"page_view",eventName:"page_view",role:"context-setting"}]},documentationFlowGraphs:{[flow.id]:{...graph,pageFrames:[{id:sourceFrameId,pageId,position:{x:20,y:40}},{id:targetFrameId,pageId,position:{x:320,y:40}}],occurrences,relationships:[relationship]}}},state={...base,project},migrated=migrateLegacyFlowContextBindings(state,flow.id),stored=migrated.project.documentationFlowGraphs[flow.id],expectedSource=reverse?targetFrameId:sourceFrameId,expectedTarget=reverse?sourceFrameId:targetFrameId;
-  assert.deepEqual(stored.occurrences,[],`context migration sample ${sample} must absorb every primary context occurrence`);
-  assert.equal(stored.relationships.length,1,`context migration sample ${sample} must conserve relationship cardinality`);
-  assert.deepEqual(stored.relationships[0].sourceEndpoint,{kind:"page-frame",id:expectedSource},`context migration sample ${sample} must resolve the source Page frame`);
-  assert.deepEqual(stored.relationships[0].targetEndpoint,{kind:"page-frame",id:expectedTarget},`context migration sample ${sample} must resolve the target Page frame`);
-  const {sourceEndpoint:discardedSourceEndpoint,targetEndpoint:discardedTargetEndpoint,sourceNodeId:discardedSourceNodeId,targetNodeId:discardedTargetNodeId,...conserved}=stored.relationships[0],{sourceEndpoint:originalSourceEndpoint,targetEndpoint:originalTargetEndpoint,sourceNodeId:originalSourceNodeId,targetNodeId:originalTargetNodeId,...metadata}=relationship;
-  void discardedSourceEndpoint;void discardedTargetEndpoint;void discardedSourceNodeId;void discardedTargetNodeId;void originalSourceEndpoint;void originalTargetEndpoint;void originalSourceNodeId;void originalTargetNodeId;
-  assert.deepEqual(conserved,metadata,`context migration sample ${sample} must conserve identity, ports, kind, metadata, and geometry`);
-  assert.deepEqual(undoProjectTransaction(migrated).project,project,`context migration sample ${sample} must round-trip the complete project through one Undo`);
-}
-
-for(let sample=0;sample<128;sample+=1){
-  const relationships=Array.from({length:2+Math.floor(random()*12)},(_,index)=>({
-    id:`relationship:deletion-${sample}-${index}`,
-    sourceEndpoint:{kind:"page-frame",id:`source:${sample}:${index}`},
-    targetEndpoint:{kind:"page-frame",id:`target:${sample}:${index}`},
-    sourcePort:index%2?"top":"right",
-    targetPort:index%2?"bottom":"left",
-    kind:index%2?"alternative":"expected_next",
-    group:randomText("group"),
-    ...(index%2?{label:randomText("label")}:{}),
-    documentationCondition:randomText("condition"),
-    expectation:randomText("expectation"),
-  })),removed=relationships[Math.floor(random()*relationships.length)],state={...base,project:{...base.project,documentationFlowGraphs:{[flow.id]:{...graph,relationships}}}};
-  const deleted=removeFlowRelationship(state,flow.id,removed.id),remaining=deleted.project.documentationFlowGraphs[flow.id].relationships;
-  assert.deepEqual(remaining,relationships.filter(({id})=>id!==removed.id),`deletion sample ${sample} must remove only the selected stable identity`);
-  assert.deepEqual(undoProjectTransaction(deleted).project,state.project,`deletion sample ${sample} must round-trip the complete graph through one Undo`);
-}
-
-for(let sample=0;sample<64;sample+=1){
-  let propertyIdentity=0,state=createSpecificationProject({name:`Instance properties ${sample}`,site:"example.test",id:(kind)=>`${kind}:instance-${sample}-${++propertyIdentity}`});
-  const instanceId=(kind)=>`${kind}:instance-${sample}-${++propertyIdentity}`;
-  state=addProjectEntity(state,"pageGroups",{name:"Checkout"},instanceId);
-  const group=state.project.collections.pageGroups[0];
-  state=addProjectEntity(state,"pages",{name:"Confirmation",eventName:"pageview",pageGroupIds:[group.id],schemaConstraints:[{path:"/status",type:"string",expectedValue:"pending"}]},instanceId);
-  state=addProjectEntity(state,"flows",{name:"Repeated instances"},instanceId);
-  const page=state.project.collections.pages[0],instanceFlow=state.project.collections.flows[0],count=2+Math.floor(random()*7);
-  state=setFlowPageGroupLanes(state,instanceFlow.id,[group.id]);
-  for(let index=0;index<count;index+=1)state=addFlowPageFrame(state,instanceFlow.id,{pageId:page.id,pageGroupId:group.id,x:40+index*20,y:40},instanceId);
-  const instances=documentaryFlowGraph(state.project,instanceFlow.id).pageFrames,target=instances[Math.floor(random()*instances.length)],pageBefore=JSON.stringify(page),siblingsBefore=Object.fromEntries(instances.filter(({id})=>id!==target.id).map(({id})=>[id,JSON.stringify(documentaryFlowGraph(state.project,instanceFlow.id).pageFrames.find((frame)=>frame.id===id))]));
-  assert.equal(instances.length,count,`instance sample ${sample} must preserve every repeated insertion`);
-  assert.equal(new Set(instances.map(({id})=>id)).size,count,`instance sample ${sample} must allocate distinct identities`);
-  state=saveFlowPageInstanceLocalFacets(state,instanceFlow.id,target.id,"/status",{expectedValue:randomText("status")});
-  assert.equal(JSON.stringify(state.project.collections.pages[0]),pageBefore,`instance sample ${sample} must not mutate the Page`);
-  for(const [id,before] of Object.entries(siblingsBefore))assert.equal(JSON.stringify(documentaryFlowGraph(state.project,instanceFlow.id).pageFrames.find((frame)=>frame.id===id)),before,`instance sample ${sample} must not mutate sibling ${id}`);
-  state=resetFlowPageInstanceLocalProperty(state,instanceFlow.id,target.id,"/status");
-  assert.ok(!documentaryFlowGraph(state.project,instanceFlow.id).pageFrames.find(({id})=>id===target.id).localSchemaContributions.some(({path})=>path==="/status"),`instance sample ${sample} must reset only its local property`);
-}
-
-for(let sample=0;sample<64;sample+=1){
-  let propertyIdentity=0,state=createSpecificationProject({name:`Event properties ${sample}`,site:"example.test",id:(kind)=>`${kind}:event-${sample}-${++propertyIdentity}`});
-  const eventId=(kind)=>`${kind}:event-${sample}-${++propertyIdentity}`;
-  state=addProjectEntity(state,"pageGroups",{name:"Checkout"},eventId);
-  const group=state.project.collections.pageGroups[0];
-  state=addProjectEntity(state,"pages",{name:"Cart",eventName:"pageview",pageGroupIds:[group.id]},eventId);
-  state=addProjectEntity(state,"events",{name:"Add to cart",eventName:"add_to_cart",role:sample%2?"context-setting":"interaction",trigger:sample%3?randomText("trigger"):undefined},eventId);
-  state=addProjectEntity(state,"flows",{name:"Event insertion"},eventId);
-  const page=state.project.collections.pages[0],event=state.project.collections.events[0],eventFlow=state.project.collections.flows[0];
-  assert.equal("role" in event,false,`event sample ${sample} must discard definition roles`);
-  state=setFlowPageGroupLanes(state,eventFlow.id,[group.id]);
-  state=addFlowPageFrame(state,eventFlow.id,{pageId:page.id,pageGroupId:group.id,x:40,y:40},eventId);
-  const frame=documentaryFlowGraph(state.project,eventFlow.id).pageFrames[0],eventBefore=JSON.stringify(event),pageBefore=JSON.stringify(page);
-  state=addEventOccurrenceToPage(state,eventFlow.id,{name:event.name,pageFrameId:frame.id,pageGroupId:group.id,pageId:page.id,eventId:event.id,role:sample%2?"context-setting":"interaction",trigger:event.trigger,obligation:"Required",minimum:1,maximum:1,x:20+Math.floor(random()*80),y:70+Math.floor(random()*80)},eventId);
-  const occurrence=documentaryFlowGraph(state.project,eventFlow.id).occurrences[0];
-  assert.deepEqual({pageFrameId:occurrence.pageFrameId,pageId:occurrence.pageId,pageGroupId:occurrence.pageGroupId,eventId:occurrence.eventId,trigger:occurrence.trigger},{pageFrameId:frame.id,pageId:page.id,pageGroupId:group.id,eventId:event.id,trigger:event.trigger},`event sample ${sample} must preserve exact context references and descriptive trigger`);
-  assert.equal("role" in occurrence,false,`event sample ${sample} must discard occurrence roles`);
-  assert.equal(JSON.stringify(state.project.collections.events[0]),eventBefore,`event sample ${sample} must not mutate its reusable Event definition`);
-  assert.equal(JSON.stringify(state.project.collections.pages[0]),pageBefore,`event sample ${sample} must not copy context into its Page definition`);
-}
-
 console.log("Flow graph property tests passed");

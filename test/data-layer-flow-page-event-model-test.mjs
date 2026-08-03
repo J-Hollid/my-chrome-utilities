@@ -37,7 +37,7 @@ assert.deepEqual(
 );
 
 const add=(kind,entity)=>{state=addProjectEntity(state,kind,entity,id);return state.project.collections[kind].at(-1);};
-const checkout=add("pageGroups",{name:"Checkout"});
+const checkout=add("propertySets",{name:"Checkout"});
 const flow=add("flows",{name:"Checkout journey",steps:[]});
 state={...state,project:{...state.project,collections:{...state.project.collections,
   pages:state.project.collections.pages.map((page)=>({...page,pageGroupIds:[checkout.id],localSchemaContributions:[{path:page.id===cart.id?"/cart_only":"/payment_only",type:"string",presence:"required"}]})),
