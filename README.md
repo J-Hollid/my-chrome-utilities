@@ -66,6 +66,9 @@ clj-mutate acceptance/src/acceptance/runtime.clj --scan
 
 `crap4clj` runs the Clojure unit coverage suite and analyzes the Babashka
 acceptance implementation under `acceptance/src`. Optional arguments select
-source-path fragments. `dry4clj` compares the acceptance implementation and
+source-path fragments in the CRAP report. When the coverage suite reports test
+failures but still produces a fresh LCOV file, `crap4clj` prints the selected
+CRAP report and retains the nonzero coverage exit status; it never reuses stale
+coverage. `dry4clj` compares the acceptance implementation and
 its unit tests by default. Mutation scans require an explicit source file and
 do not run mutation tests.
