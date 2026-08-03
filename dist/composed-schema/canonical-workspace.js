@@ -1,4 +1,4 @@
-import { applyCanonicalCommand, canonicalPredicateWithStableIds, canonicalTableRows, createCanonicalSchema } from "../data-layer-canonical-schema.js";
+import { applyCanonicalCommand, canonicalPredicateWithStableIds, canonicalTableRows, createCanonicalSchema, journalFreeCanonicalData } from "../data-layer-canonical-schema.js";
 import { layeredContributorPath, layeredContributorsForPath } from "../data-layer-layered-schema-project.js";
 import { composedSchemaWorkspace } from "./workspace-model.js";
 const clone = (value) => structuredClone(value);
@@ -44,6 +44,9 @@ const addDerivedRules = (row, entity, id, rules) => { const localPatterns = new 
     rules.push(derived({ id: ruleId, kind: "cardinality", ...(row.effective.minItems !== undefined ? { minItems: row.effective.minItems } : {}), ...(row.effective.maxItems !== undefined ? { maxItems: row.effective.maxItems } : {}), severity: "error", message: "Outside cardinality" }, row.local.minItems !== undefined || row.local.maxItems !== undefined));
 } };
 export function composedCanonicalSchema(state, entity, scope, flowId) {
+    const admitted = entity.canonicalSchema;
+    if (admitted && Object.keys(admitted.nodes).length > 0 && !entity.localSchemaContributions && !entity.schemaConstraints && !entity.requirements)
+        return journalFreeCanonicalData(clone(admitted));
     const contributorPath = layeredContributorPath(state, entity, scope, flowId), contributors = layeredContributorsForPath(state, contributorPath), workspace = composedSchemaWorkspace(state, entity, scope, undefined, flowId), document = createCanonicalSchema({ id: `canonical:effective:${entity.id}`, contributorId: entity.id, contributorName: entity.name }), used = new Set(), byPath = new Map(), rows = [...workspace.rows].sort((left, right) => left.path.split("/").length - right.path.split("/").length || left.path.localeCompare(right.path));
     for (const row of rows) {
         const segments = row.path.split("/").filter(Boolean), parentSegments = segments.slice(0, -1);

@@ -163,8 +163,7 @@ function renderComposedSchemaWorkspace(host, entity, kind, scope, pageGroupAppli
         const editorHost = document.createElement("section"), load = () => composedCanonicalSchema(liveState(), liveEntity(), scope);
         editorHost.dataset.schemaContributorScope = scope;
         region.append(editorHost);
-        mountCanonicalSchemaEditor({ host: editorHost, surface: "Builder", renderAfterDispatch: false, load, id, dispatch: (command) => { const current = load(); if (command.baseRevision !== current.revision)
-                return { status: "conflict", document: current, message: `This contributor changed from opaque Draft token ${command.baseRevision} to ${current.revision}; compare this command with the latest property before retrying.` }; const result = applyCanonicalCommand(current, command); if (result.status === "applied" || result.status === "rebased")
+        mountCanonicalSchemaEditor({ host: editorHost, surface: "Builder", renderAfterDispatch: false, load, id, dispatch: (command) => { const current = load(), result = applyCanonicalCommand(current, command); if (result.status === "applied" || result.status === "rebased")
                 persistComposed(kind === "events" ? saveComposedEventCanonicalDocument(liveState(), entity.id, result.document) : saveComposedCanonicalDocument(liveState(), kind, entity.id, result.document)); return result; }, onUndo: () => { if (state)
                 void durableProjectRuntime.undo(state.project.id); }, onRedo: () => { if (state)
                 void durableProjectRuntime.redo(state.project.id); } });
