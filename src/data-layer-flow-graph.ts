@@ -7,7 +7,7 @@ export {deriveFlowOccurrenceExample,deriveFlowPageFrameExample,setFlowOccurrence
 export type {FlowExampleIssue,FlowOccurrenceExample,FlowOccurrenceExampleEditorRow} from "./flow-graph/examples.js";
 export {migrateLegacyFlowContextBindings,migrateLegacyFlowRelationshipKinds,removeFlowRelationship,reviewLegacyFlowContextMigration,saveGraphRelationship} from "./flow-graph/examples.js";
 export {addEventOccurrenceToPage,addGraphOccurrence,addInteractionOccurrenceToPage,moveGraphOccurrence,removeGraphOccurrence,reorderGraphOccurrence,updateGraphOccurrence} from "./flow-graph/occurrences.js";
-export {applyFlowPageGroupLaneSelection,addFlowPageFrame,duplicateFlowPageFrame,inspectPageFrameDrop,moveFlowPageFrame,removeFlowPageFrame,reorderFlowPageGroupLane,saveFlowViewState,setFlowPageGroupLanes} from "./flow-graph/page-frames.js";
+export {applyFlowPageGroupLaneSelection,addFlowPageFrame,duplicateFlowPageFrame,inspectPageFrameDrop,moveFlowPageFrame,removeFlowPageFrame,renameFlowPageFrame,resetFlowPageFrameName,reorderFlowPageGroupLane,saveFlowViewState,setFlowPageGroupLanes} from "./flow-graph/page-frames.js";
 
 export type FlowRole="context-setting"|"interaction";
 export type FlowObligation="Required"|"Optional"|"Conditional"|"Informational";
@@ -30,7 +30,7 @@ export interface FlowCatalog {propertySets:readonly FlowCatalogEntry[];pages:rea
 export interface FlowDiagnostic {kind:"missing-event"|"missing-page"|"dangling-relationship";message:string;nodeId?:string;relationshipId?:string}
 export interface FlowLaneBand {id:string;name:string;x:number;y:number;width:number;height:number}
 export interface FlowGraphProjection {projectName:string;lanes:readonly FlowCatalogEntry[];laneBands:readonly FlowLaneBand[];graph:FlowGraph;catalog:FlowCatalog;diagnostics:readonly FlowDiagnostic[]}
-export interface DocumentaryPageFrameRecord {id:string;pageId:string;sectionId?:string;pageGroupId?:string;freePageRegion?:FreePageRegion;position:{x?:number;y:number}}
+export interface DocumentaryPageFrameRecord {id:string;pageId:string;nameInFlow?:string;sectionId?:string;pageGroupId?:string;freePageRegion?:FreePageRegion;position:{x?:number;y:number}}
 export interface DocumentaryRelationshipRecord {id:string;sourceEndpoint?:StoredFlowEndpointReference;targetEndpoint?:StoredFlowEndpointReference;sourceNodeId?:string;targetNodeId?:string;sourcePort?:FlowPortSide;targetPort?:FlowPortSide;[key:string]:unknown}
 export interface FlowViewState {selectedItem?:{kind:"page-frame"|"occurrence"|"relationship";id:string};viewport?:{x:number;y:number;zoom:number}}
 export interface DocumentaryFlowGraph extends FlowViewState {sections:readonly ProjectEntity[];pageGroupIds:readonly string[];pageFrames:readonly DocumentaryPageFrameRecord[];occurrences:readonly ProjectEntity[];relationships:readonly DocumentaryRelationshipRecord[]}
@@ -40,6 +40,7 @@ interface LegacyBindingOccurrence extends ProjectEntity {contextBindingId:string
 type ProjectWithDocumentaryGraphs=SpecificationProject&{documentationFlowGraphs?:Record<string,StoredDocumentaryFlowGraph>};
 export const clone=<T>(value:T):T=>structuredClone(value);
 export const graphIndex=(project:SpecificationProject):Record<string,StoredDocumentaryFlowGraph>=>(project as ProjectWithDocumentaryGraphs).documentationFlowGraphs??{};
+export function effectiveFlowPageFrameName(project:SpecificationProject,frame:DocumentaryPageFrameRecord):string{return frame.nameInFlow?.trim()||project.collections.pages.find(({id})=>id===frame.pageId)?.name||frame.pageId;}
 export const storedGraph=(project:SpecificationProject,flowId:string):StoredDocumentaryFlowGraph=>{const stored=graphIndex(project)[flowId],legacyProject=Object.hasOwn(project.collections,"pageGroups"),legacy=legacyProject?project.collections.flows.find(({id})=>id===flowId)?.pageGroupIds as string[]|undefined:undefined;return{sections:stored?.sections??[],pageGroupIds:legacyProject?[...(stored?.pageGroupIds??legacy??[])]:[],pageFrames:stored?.pageFrames??[],occurrences:stored?.occurrences??[],relationships:stored?.relationships??[],...(stored?.selectedItem?{selectedItem:stored.selectedItem}:{}),...(stored?.viewport?{viewport:stored.viewport}:{})};};
 export const saveStoredGraph=(project:SpecificationProject,flowId:string,graph:StoredDocumentaryFlowGraph):SpecificationProject=>{const{selectedItem:_selectedItem,viewport:_viewport,...semanticGraph}=clone(graph);if(!Object.hasOwn(project.collections,"pageGroups")){delete (semanticGraph as Partial<StoredDocumentaryFlowGraph>).pageGroupIds;for(const frame of semanticGraph.pageFrames){delete frame.pageGroupId;delete frame.freePageRegion;}for(const occurrence of semanticGraph.occurrences){delete occurrence.pageGroupId;delete occurrence.freePageFrameId;delete occurrence.freePageFrame;delete occurrence.freePageRegion;}}return{...project,documentationFlowGraphs:{...graphIndex(project),[flowId]:semanticGraph}};};
 export const legacyBindingOccurrence=(occurrence:ProjectEntity):occurrence is LegacyBindingOccurrence=>typeof occurrence.contextBindingId==="string"&&Boolean(occurrence.contextBindingId);

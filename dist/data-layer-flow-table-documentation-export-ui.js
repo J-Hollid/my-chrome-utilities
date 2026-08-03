@@ -128,7 +128,7 @@ export function installFlowDocumentationExportUi(options) {
         contextFieldset.append(Object.assign(document.createElement("legend"), { textContent: "Context columns and documentation order" }));
         for (const id of contextOrder) {
             const context = base.contexts.find((candidate) => candidate.id === id);
-            const item = document.createElement("li"), check = document.createElement("input"), label = document.createElement("input");
+            const item = document.createElement("li"), check = document.createElement("input"), label = document.createElement("input"), source = context.sourcePageName && context.sourcePageName !== context.pageName ? ` · Source Page ${context.sourcePageName}` : "";
             item.dataset.contextId = context.id;
             item.dataset.pageFrameId = context.pageFrameId;
             if (context.occurrenceId)
@@ -139,7 +139,7 @@ export function installFlowDocumentationExportUi(options) {
             label.value = stepLabels[id] ?? context.stepLabel;
             label.setAttribute("aria-label", `Step label for ${context.pageName} ${context.eventName}`);
             label.addEventListener("change", () => { stepLabels[id] = label.value.trim() || context.stepLabel; renderWorkspace(); });
-            item.append(labelled(`${context.pageName} / ${context.eventName} · ${context.kind}`, check), label, createButton("Move earlier", () => { contextOrder = move(contextOrder, id, -1); renderWorkspace(); }), createButton("Move later", () => { contextOrder = move(contextOrder, id, 1); renderWorkspace(); }));
+            item.append(labelled(`${context.pageName} / ${context.eventName} · ${context.kind}${source}`, check), label, createButton("Move earlier", () => { contextOrder = move(contextOrder, id, -1); renderWorkspace(); }), createButton("Move later", () => { contextOrder = move(contextOrder, id, 1); renderWorkspace(); }));
             contextList.append(item);
         }
         contextFieldset.append(contextList, createButton("Reset context order", () => { contextOrder = snapshot.contexts.map(({ id }) => id); selectedContexts = new Set(contextOrder); stepLabels = Object.fromEntries(snapshot.contexts.map(({ id, stepLabel }) => [id, stepLabel])); renderWorkspace(); }));

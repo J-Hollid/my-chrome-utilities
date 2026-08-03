@@ -848,8 +848,10 @@
       "src/data-layer-project-documentation-workspace-ui.ts"
     ],
     "dependencies": [
-      "flow_graph",
       "layered_schema"
+    ],
+    "sharedComponents": [
+      "flow_graph"
     ],
     "unit": [
       "test/data-layer-flow-table-documentation-export-test.mjs",

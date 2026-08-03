@@ -127,4 +127,19 @@ for(const sheet of ["Flow values","Capture matrix","Legend and provenance","Expo
 assert.doesNotMatch(binary,/<f>/);assert.match(binary,/Draft — incomplete/);assert.match(binary,/&lt;script&gt;/);
 assert.match(binary,/Checkout journey · Draft — incomplete/);
 
+const namedSnapshot=compileFlowDocumentationSnapshot({
+  projectId:"project:shop",projectName:"Shop",flowId:"flow:checkout",flowName:"Checkout journey",graphRevision:9,sourceState:"draft",generatedAt:"2026-08-03T00:00:00.000Z",
+  contexts:contexts.map((context,index)=>({...context,pageName:["Basket review","Express delivery","Card confirmation"][index],sourcePageName:context.pageName})),
+});
+const namedValues=flowValueMapTable(namedSnapshot),namedMatrix=captureMatrixTable(namedSnapshot);
+for(const name of ["Basket review","Express delivery","Card confirmation"]){
+  assert.match(namedValues.headings.join("|"),new RegExp(name));
+  assert.match(namedMatrix.headings.join("|"),new RegExp(name));
+  assert.match(renderFlowDocumentationClipboard(namedValues,{includeHeadings:true,style:"plain"}).plain,new RegExp(name));
+  assert.match(new TextDecoder().decode(writeFlowDocumentationWorkbook(namedSnapshot,{valueTable:namedValues,matrixTable:namedMatrix})),new RegExp(name));
+}
+assert.equal(namedSnapshot.contexts.every(({sourcePageName},index)=>sourcePageName===contexts[index].pageName),true,"export contexts retain source Page provenance independently of Flow display names");
+const namedWorkbook=new TextDecoder().decode(writeFlowDocumentationWorkbook(namedSnapshot,{valueTable:namedValues,matrixTable:namedMatrix}));
+for(const sourcePageName of ["Cart","Shipping","Payment"])assert.match(namedWorkbook,new RegExp(`Source Page ${sourcePageName}`));
+
 console.log("Flow table documentation export tests passed");

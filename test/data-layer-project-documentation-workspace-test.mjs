@@ -243,12 +243,12 @@ const compilerState={
     id:"project:compiler",name:"Compiler Shop",description:"Configured documentation",site:"compiler.example",environments:["Production"],namingConventions:{property:"snake_case",event:"snake_case"},publicationPolicy:{warningsBlock:false,fixturesRequired:false},releases:[],
     collections:{
       profiles:[{id:"profile:compiler",name:"Compiler Sitewide",requirements:[{path:"/site_id",type:"string",required:true,description:"Site",examples:["shop"]},{path:"/locale",type:"string",description:"Locale"}]}],
-      pageGroups:[{id:"group:compiler",name:"Checkout",pageIds:["page:compiler"],schemaConstraints:[{path:"/currency",type:"string",allowedValues:["EUR"]}]}],
-      pages:[{id:"page:compiler",name:"Cart",eventName:"pageview",profileIds:["profile:compiler"],pageGroupIds:["group:compiler"],schemaConstraints:[{path:"/page_name",type:"string",presence:"required",documentation:"Page"}]}],
+      propertySets:[{id:"group:compiler",name:"Checkout",schemaConstraints:[{path:"/currency",type:"string",allowedValues:["EUR"]}]}],
+      pages:[{id:"page:compiler",name:"Cart",eventName:"pageview",profileIds:["profile:compiler"],propertySetApplications:[{id:"application:compiler",name:"Checkout",propertySetId:"group:compiler"}],schemaConstraints:[{path:"/page_name",type:"string",presence:"required",documentation:"Page"}]}],
       events:[{id:"event:compiler",name:"Purchase",eventName:"purchase",schemaConstraints:[{path:"/purchase_id",type:"string",presence:"required"}]}],
       flows:[{id:"flow:compiler",name:"Checkout compiler journey"}],applicabilitySets:[],fixtures:[],assignments:[],
     },
-    documentationFlowGraphs:{"flow:compiler":{pageGroupIds:["group:compiler"],pageFrames:[{id:"frame:compiler",name:"Cart instance",pageId:"page:compiler",pageGroupId:"group:compiler",localSchemaContributions:[{path:"/instance_only",type:"string"}]}],occurrences:[{id:"occurrence:compiler",name:"Purchase occurrence",pageFrameId:"frame:compiler",pageId:"page:compiler",pageGroupId:"group:compiler",eventId:"event:compiler",localSchemaContributions:[{path:"/occurrence_only",type:"string",presence:"forbidden"}]}],relationships:[]}},
+    documentationFlowGraphs:{"flow:compiler":{pageGroupIds:["group:compiler"],pageFrames:[{id:"frame:compiler",nameInFlow:"Basket review",pageId:"page:compiler",pageGroupId:"group:compiler",localSchemaContributions:[{path:"/instance_only",type:"string"}]}],occurrences:[{id:"occurrence:compiler",name:"Purchase occurrence",pageFrameId:"frame:compiler",pageId:"page:compiler",pageGroupId:"group:compiler",eventId:"event:compiler",localSchemaContributions:[{path:"/occurrence_only",type:"string",presence:"forbidden"}]}],relationships:[]}},
     releases:[],
   },
   draft:{id:"draft:compiler",status:"Saved",updatedAt:"2026-07-26T00:00:00.000Z"},history:{undo:[],redo:[]},
@@ -257,6 +257,8 @@ const compilerSources=projectDocumentationSources(compilerState,"2026-07-26T00:0
 assert.deepEqual([...new Set(compilerSources.matrixContexts.map(({kind})=>kind))],["page-definition","event-definition","page-instance","event-occurrence"]);
 assert.equal(compilerSources.matrixContexts.find(({kind})=>kind==="page-instance").groupLabel,"Checkout compiler journey");
 assert.equal(compilerSources.matrixContexts.find(({kind})=>kind==="event-occurrence").parentLabel,"Cart");
+assert.equal(compilerSources.matrixContexts.find(({kind})=>kind==="page-instance").parentLabel,"Cart","authoring groups a stable instance beneath its source Page");
+assert.match(compilerSources.matrixContexts.find(({kind})=>kind==="page-instance").label,/Basket review/,"authoring names the instance by its effective Flow name");
 const contextByKind=Object.fromEntries(compilerSources.matrixContexts.map((context)=>[context.kind,context.id])),compilerTheme=createProjectDocumentationTheme({...theme,id:"theme:compiler"}),compilerSet=createProjectDocumentationSet({id:"set:compiler",name:"Configured",themeId:compilerTheme.id,sections:[
   {id:"flow-section",kind:"flow",name:"Checkout configured",targetId:"flow:compiler",selected:true,configuration:{contextIds:[contextByKind["event-occurrence"],contextByKind["page-instance"]],paths:["/purchase_id","/page_name"],columns:["description"],labels:{[contextByKind["event-occurrence"]]:"Purchase label"}}},
   {id:"matrix-section",kind:"matrix",name:"Data capture matrix",selected:true,configuration:{contextIds:[contextByKind["page-definition"],contextByKind["event-definition"],contextByKind["page-instance"],contextByKind["event-occurrence"]]}},
@@ -267,11 +269,15 @@ assert.deepEqual(compiledProject.tables.map(({title})=>title),["Checkout configu
 assert.deepEqual(compiledProject.tables[0].rows.map(([path])=>path),["/purchase_id","/page_name"]);
 assert.equal(compiledProject.tables[0].headings[1],"Description");
 assert.match(compiledProject.tables[0].headings.join("|"),/Purchase label/);
+assert.match(compiledProject.tables[0].headings.join("|"),/Basket review/);
 assert.deepEqual(compiledProject.tables[1].headings.slice(1),compilerSources.matrixContexts.map(({label})=>label));
+assert.match(compiledProject.tables[1].headings.join("|"),/Basket review/);
 assert.equal(new Set(compiledProject.tables[1].rows.flatMap((row)=>row.slice(1))).size>=3,true);
 assert.deepEqual(compiledProject.tables[2].headings,["Property","Required","Description"]);
 assert.deepEqual(compiledProject.tables[2].rows.map(([path])=>path),["/locale","/site_id"]);
 assert.equal(compiledProject.tables[1].headings.some((value)=>value.includes("Compiler Sitewide")),false);
+assert.match(renderProjectDocumentationClipboard(compiledProject,{scope:"complete"}).plain,/Basket review/);
+assert.match(new TextDecoder().decode(writeProjectDocumentationWorkbook(compiledProject,{scope:"complete"})),/Basket review/);
 
 let openedArticleSchema=createCanonicalSchema({id:"schema:opened-concepts",contributorId:"profile:opened-concepts",contributorName:"Opened Article"}),openedArticleIdentity=0;
 for(const constraint of [

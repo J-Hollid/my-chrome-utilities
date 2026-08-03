@@ -1,4 +1,4 @@
-import { addEventOccurrenceToPage, addGraphOccurrence, deriveFlowOccurrenceExample, deriveFlowPageFrameExample, documentaryFlowGraph, duplicateFlowPageFrame, flowOccurrenceExampleEditorRows, FLOW_GRAPH_GEOMETRY, flowRelationshipText, inspectOccurrencePageChange, migrateLegacyFlowContextBindings, migrateLegacyFlowRelationshipKinds, moveGraphOccurrence, projectFlowGraph, reassignFlowOccurrencePage, reviewLegacyFlowContextMigration, removeFlowPageFrame, removeFlowRelationship, removeGraphOccurrence, saveGraphRelationship, setFlowOccurrenceExample, } from "./data-layer-flow-graph.js";
+import { addEventOccurrenceToPage, addGraphOccurrence, deriveFlowOccurrenceExample, deriveFlowPageFrameExample, documentaryFlowGraph, duplicateFlowPageFrame, effectiveFlowPageFrameName, flowOccurrenceExampleEditorRows, FLOW_GRAPH_GEOMETRY, flowRelationshipText, inspectOccurrencePageChange, migrateLegacyFlowContextBindings, migrateLegacyFlowRelationshipKinds, moveGraphOccurrence, projectFlowGraph, reassignFlowOccurrencePage, reviewLegacyFlowContextMigration, removeFlowPageFrame, renameFlowPageFrame, resetFlowPageFrameName, removeFlowRelationship, removeGraphOccurrence, saveGraphRelationship, setFlowOccurrenceExample, } from "./data-layer-flow-graph.js";
 import { appendFlowPageFrameCardControls } from "./data-layer-flow-graph-ui-page-frame.js";
 import { addFlowPageFrameToSection, connectFlowPageFrames, createFlowSection, inspectSectionRemovalWithContents, moveFlowPageFramePresentation, moveFlowSection, movePageFrameToSection, removeFlowSection, removeFlowSectionWithContents, renameAndResizeFlowSection } from "./utilities/data-layer/property-set-flow-section.js";
 import { button, elementByData, entityName, flowEdgeGeometry, flowPortPoint, nodeHeight, nodeWidth, ownsPointerDrag, q, restorePointerCancellationFocus, svg } from "./flow-graph/ui-primitives.js";
@@ -85,7 +85,7 @@ export function installFlowGraphBuilder(options) {
             return;
         }
         const occurrence = graph?.occurrences.find(({ id }) => id === selected.id), relationship = graph?.relationships.find(({ id }) => id === selected.id), frame = graph?.pageFrames.find(({ id }) => id === selected.id);
-        copy.textContent = occurrence ? `${occurrence.name} · stable occurrence ${occurrence.id}` : relationship ? `Stable relationship ${relationship.id}` : frame ? `${entityName(state.project.collections.pages, frame.pageId)} · stable Page frame ${frame.id}` : "Selection details unavailable";
+        copy.textContent = occurrence ? `${occurrence.name} · stable occurrence ${occurrence.id}` : relationship ? `Stable relationship ${relationship.id}` : frame ? `${effectiveFlowPageFrameName(state.project, frame)} · stable Page frame ${frame.id}` : "Selection details unavailable";
         inspectorContext.append(heading, copy);
     }
     function catalog(kind, entities, activate) {
@@ -205,7 +205,7 @@ export function installFlowGraphBuilder(options) {
         source.append(new Option("Choose source", ""));
         target.append(new Option("Choose target", ""));
         for (const frame of graph.pageFrames) {
-            const label = entityName(state.project.collections.pages, frame.pageId);
+            const label = effectiveFlowPageFrameName(state.project, frame);
             frameChoice.append(new Option(label, frame.id));
             source.append(new Option(label, frame.id));
             target.append(new Option(label, frame.id));
@@ -233,13 +233,13 @@ export function installFlowGraphBuilder(options) {
         host.setAttribute("aria-label", "Flow Page frames");
         host.append(heading);
         for (const frame of graph.pageFrames) {
-            const page = state.project.collections.pages.find(({ id }) => id === frame.pageId), section = graph.sections.find(({ id }) => id === frame.sectionId), card = document.createElement("article"), title = button(`${section?.name ?? "Outside Sections"} / ${contextSettingPageLabel(page?.name ?? frame.pageId)}`, () => saveSelection({ kind: "page-frame", id: frame.id })), move = (dx, dy) => { sessionStorage.setItem(`my-chrome-utilities.flow-focus.v1:${state.project.id}:${flow.id}`, frame.id); persist(moveFlowPageFramePresentation(current().state, flow.id, frame.id, { x: Number(frame.position.x ?? 0) + dx, y: frame.position.y + dy, sectionId: frame.sectionId ?? null })); };
+            const effectiveName = effectiveFlowPageFrameName(state.project, frame), section = graph.sections.find(({ id }) => id === frame.sectionId), card = document.createElement("article"), title = button(`${section?.name ?? "Outside Sections"} / ${contextSettingPageLabel(effectiveName)}`, () => saveSelection({ kind: "page-frame", id: frame.id })), move = (dx, dy) => { sessionStorage.setItem(`my-chrome-utilities.flow-focus.v1:${state.project.id}:${flow.id}`, frame.id); persist(moveFlowPageFramePresentation(current().state, flow.id, frame.id, { x: Number(frame.position.x ?? 0) + dx, y: frame.position.y + dy, sectionId: frame.sectionId ?? null })); };
             card.dataset.pageFrameId = frame.id;
             card.dataset.pageId = frame.pageId;
             if (frame.sectionId)
                 card.dataset.flowSectionId = frame.sectionId;
             card.tabIndex = 0;
-            card.setAttribute("aria-label", `Page frame ${page?.name ?? frame.pageId}`);
+            card.setAttribute("aria-label", `Page frame ${effectiveName}`);
             card.addEventListener("click", (event) => { if (event.target === card)
                 saveSelection({ kind: "page-frame", id: frame.id }); });
             card.addEventListener("keydown", (event) => { if (!event.key.startsWith("Arrow"))
@@ -258,7 +258,7 @@ export function installFlowGraphBuilder(options) {
                 statusMessage = "A Page frame cannot contain another Page.";
                 render();
             } });
-            appendFlowPageFrameCardControls({ card, title, state, flow, graph, frame, entityName, pageExampleDetails, saveSelection: (value) => saveSelection(value), ...(options.openOccurrenceSchema ? { openOccurrenceSchema: options.openOccurrenceSchema } : {}), persist: (next) => persist(next), duplicatePageFrame: (next, flowId, frameId) => duplicateFlowPageFrame(next, flowId, frameId, options.id), removePageFrame: (next, flowId, frameId) => removeFlowPageFrame(next, flowId, frameId) });
+            appendFlowPageFrameCardControls({ card, title, state, flow, graph, frame, entityName, pageExampleDetails, saveSelection: (value) => saveSelection(value), ...(options.openOccurrenceSchema ? { openOccurrenceSchema: options.openOccurrenceSchema } : {}), persist: (next) => persist(next), duplicatePageFrame: (next, flowId, frameId) => duplicateFlowPageFrame(next, flowId, frameId, options.id), removePageFrame: (next, flowId, frameId) => removeFlowPageFrame(next, flowId, frameId), renamePageFrame: renameFlowPageFrame, resetPageFrameName: resetFlowPageFrameName });
             host.append(card);
         }
     }

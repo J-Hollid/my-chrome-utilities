@@ -16,6 +16,14 @@ export function duplicateFlowPageFrame(state:ProjectState,flowId:string,pageFram
   const graph=storedGraph(state.project,flowId),source=graph.pageFrames.find(({id:candidateId})=>candidateId===pageFrameId);if(!source)return state;
   return transactProject(state,`Duplicate Flow Page frame ${pageFrameId}`,(project)=>{const current=storedGraph(project,flowId),latest=current.pageFrames.find(({id:candidateId})=>candidateId===pageFrameId)??source,copy=duplicatePageFrameRecord(latest,id("flow-page-frame"));return saveStoredGraph(project,flowId,{...current,pageFrames:[...current.pageFrames,copy]});});
 }
+export function renameFlowPageFrame(state:ProjectState,flowId:string,pageFrameId:string,nameInFlow:string):ProjectState{
+  const graph=storedGraph(state.project,flowId),frame=graph.pageFrames.find(({id})=>id===pageFrameId),name=nameInFlow.trim();if(!frame)throw new Error(`Unknown Flow Page frame ${pageFrameId}`);if(!name)throw new Error("Name in this Flow cannot be blank; use the Page name action instead.");if(frame.nameInFlow===name)return state;
+  return transactProject(state,`Name Flow Page frame ${name}`,(project)=>{const current=storedGraph(project,flowId);return saveStoredGraph(project,flowId,{...current,pageFrames:current.pageFrames.map((candidate)=>candidate.id===pageFrameId?{...candidate,nameInFlow:name}:candidate)});});
+}
+export function resetFlowPageFrameName(state:ProjectState,flowId:string,pageFrameId:string):ProjectState{
+  const graph=storedGraph(state.project,flowId),frame=graph.pageFrames.find(({id})=>id===pageFrameId);if(!frame)throw new Error(`Unknown Flow Page frame ${pageFrameId}`);if(!frame.nameInFlow)return state;
+  return transactProject(state,"Reset Flow Page frame name to Page name",(project)=>{const current=storedGraph(project,flowId);return saveStoredGraph(project,flowId,{...current,pageFrames:current.pageFrames.map((candidate)=>{if(candidate.id!==pageFrameId)return candidate;const next={...candidate};delete next.nameInFlow;return next;})});});
+}
 export function removeFlowPageFrame(state:ProjectState,flowId:string,pageFrameId:string):ProjectState{
   const graph=storedGraph(state.project,flowId),frame=graph.pageFrames.find(({id})=>id===pageFrameId);if(!frame)return state;const removedIds=new Set([pageFrameId,...graph.occurrences.filter((occurrence)=>occurrence.pageFrameId===pageFrameId).map(({id})=>id)]);return transactProject(state,"Remove Flow Page frame",(project)=>{const current=storedGraph(project,flowId);return saveStoredGraph(project,flowId,{...current,pageFrames:current.pageFrames.filter(({id})=>id!==pageFrameId),occurrences:current.occurrences.filter((occurrence)=>occurrence.pageFrameId!==pageFrameId),relationships:current.relationships.filter((relationship)=>!relationshipTouches(relationship,removedIds))});});
 }
