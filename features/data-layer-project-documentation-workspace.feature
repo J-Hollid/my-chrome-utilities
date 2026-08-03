@@ -336,3 +336,18 @@ Feature: Data layer project documentation workspace
       | PNG           | Choose a valid PNG image   |
       | JPEG          | Choose a valid JPEG image  |
       | GIF           | Choose a valid GIF image   |
+
+  # Data layer project documentation workspace 030
+  Scenario Outline: Data layer project documentation workspace 030
+    Given Checkout journey contains <first_name>, <second_name>, <third_name>, and <fourth_name> instances of Page <source_page>
+    And Client specification contains Checkout journey and those four Page-instance capture-matrix contexts
+    When the operator refreshes the documentation preview
+    Then the Flow section and capture-matrix headings use <first_name>, <second_name>, <third_name>, and <fourth_name>
+    And authoring selectors group the stable instances beneath Checkout journey and <source_page> while naming each instance by its effective Flow name
+    And repeated Page references remain distinct without raw identities or generated suffixes
+    And current-section, selected-section, and complete preview, rich copy, plain-text fallback, and Excel preserve the effective Flow names wherever those contexts appear
+    And export-specific documentation labels and ordering remain independent of the Flow-instance names
+
+    Examples:
+      | source_page           | first_name       | second_name | third_name | fourth_name  |
+      | Generic checkout page | Customer details | Payment     | Summary    | Confirmation |

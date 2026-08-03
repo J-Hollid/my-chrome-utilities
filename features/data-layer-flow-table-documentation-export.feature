@@ -173,3 +173,17 @@ Feature: Data layer Flow table documentation export
     And the workbook contains the four required sheets
     And the project, graph, canonical schemas, documentation, assignments, and per-Event validation behavior remain byte-identical
     And no output claims that the documented Flow executed successfully
+
+  # Data layer Flow table documentation export 015
+  Scenario Outline: Data layer Flow table documentation export 015
+    Given Checkout journey contains <instance_count> instances of Page <source_page>
+    And their effective Flow names are <first_name>, <second_name>, <third_name>, and <fourth_name>
+    When the operator refreshes the preview
+    Then human context selectors and primary headings use <first_name>, <second_name>, <third_name>, and <fourth_name>
+    And every primary heading retains its configured documentation label and observed event identity pageview
+    And context provenance identifies <source_page> without replacing an effective Flow name
+    And preview, Spreadsheet copy, rich copy, and Excel use the same effective Flow names
+
+    Examples:
+      | instance_count | source_page           | first_name       | second_name | third_name | fourth_name  |
+      | 4              | Generic checkout page | Customer details | Payment     | Summary    | Confirmation |

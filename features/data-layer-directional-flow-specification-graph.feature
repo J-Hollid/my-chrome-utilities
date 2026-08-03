@@ -362,3 +362,27 @@ Feature: Data layer directional Flow specification graph
     Then recomposition renders Complete with page_name payment and no persisted JSON payload
     And a type violation produces Invalid while an inherited conflict produces Blocked
     And contained Event occurrence JSON continues to add its Event and occurrence contributors after the Payment Page-instance branch
+
+  # Data layer directional Flow specification graph 026
+  Scenario Outline: Data layer directional Flow specification graph 026
+    Given Page <source_page> belongs to Checkout
+    When the operator inserts <source_page> into Checkout <instance_count> times
+    And connects the four frames in insertion order
+    Then all <instance_count> Page frames initially show <source_page> without a generated suffix
+    And each frame offers an independent Name in this Flow control
+    And the frames retain distinct stable identities while referencing the same <source_page> Page
+    When the operator names the first three frames <first_name>, <second_name>, and <third_name>
+    And leaves the fourth frame using its Page name
+    Then canvas, synchronized outline, relationship controls, and contextual actions show <first_name>, <second_name>, <third_name>, and <source_page>
+    And the Pages catalog and Page editor continue to show <source_page>
+    And no frame identity, Page reference, position, relationship, schema contribution, or configured value changes
+    When Page <source_page> is renamed <renamed_page>
+    Then the unrenamed fourth frame follows <renamed_page>
+    And <first_name>, <second_name>, and <third_name> retain their Flow-specific names
+    When the operator resets <third_name> to its Page name
+    Then <third_name> alone changes to <renamed_page>
+    And the naming change marks affected Flow documentation stale and offers one Undo action
+
+    Examples:
+      | source_page           | instance_count | first_name       | second_name | third_name | renamed_page           |
+      | Generic checkout page | 4              | Customer details | Payment     | Summary    | Reusable commerce page |
