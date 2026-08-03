@@ -17,7 +17,7 @@ const routes=[
   "Project overview",
   "Shared Profiles",
   "Pages",
-  "Page Groups",
+  "Property Sets",
   "Events",
   "Applicability",
   "Flows",

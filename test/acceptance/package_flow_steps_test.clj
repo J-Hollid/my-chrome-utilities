@@ -18,9 +18,15 @@
 
 (deftest validates-loadable-extension-build-files
   (is (package-flow/loadable-extension-build?
-       {"manifest.json" "{\"manifest_version\":3,\"background\":{\"service_worker\":\"background.js\"},\"side_panel\":{\"default_path\":\"side-panel.html\"}}"
+       {"manifest.json" "{\"manifest_version\":3,\"background\":{\"service_worker\":\"background.js\"},\"side_panel\":{\"default_path\":\"side-panel.html\"},\"icons\":{\"16\":\"assets/brand/icons/icon-16.png\"},\"action\":{\"default_icon\":{\"32\":\"assets/brand/icons/icon-32.png\"}}}"
         "background.js" "console.log('ready');"
-        "side-panel.html" "<main>my-chrome-utilities</main>"}))
+        "side-panel.html" "<main>my-chrome-utilities</main>"
+        "assets/brand/icons/icon-16.png" "png"
+        "assets/brand/icons/icon-32.png" "png"}))
+  (is (not (package-flow/loadable-extension-build?
+            {"manifest.json" "{\"manifest_version\":3,\"background\":{\"service_worker\":\"background.js\"},\"side_panel\":{\"default_path\":\"side-panel.html\"},\"icons\":{\"16\":\"assets/brand/icons/icon-16.png\"}}"
+             "background.js" "console.log('ready');"
+             "side-panel.html" "<main>my-chrome-utilities</main>"})))
   (is (not (package-flow/loadable-extension-build?
             {"manifest.json" "{\"manifest_version\":2}"
              "background.js" ""})))
@@ -31,6 +37,18 @@
 (deftest ignores-malformed-zip-data
   (is (= [] (package-flow/zip-entry-names (temp-zip-with-bytes (byte-array 0)))))
   (is (= [] (package-flow/zip-entry-names (temp-zip-with-bytes (local-header-only-bytes))))))
+
+(deftest requires-the-package-to-match-the-complete-dist-inventory
+  (let [dist-files ["manifest.json"
+                    "side-panel.html"
+                    "assets/brand/side-panel-title.png"]]
+    (is (package-flow/package-matches-dist? dist-files dist-files))
+    (is (not (package-flow/package-matches-dist?
+              dist-files
+              ["manifest.json" "side-panel.html"])))
+    (is (not (package-flow/package-matches-dist?
+              dist-files
+              (conj dist-files "unexpected.txt"))))))
 
 (deftest recognizes-readme-portability-documentation
   (let [readme "Copy build/package/my-chrome-utilities.zip to another machine.

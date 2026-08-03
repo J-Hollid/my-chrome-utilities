@@ -5,6 +5,7 @@
 (def contracts
   #{:schema.only-defined :schema.copy-dependency :schema.destructive-confirmation
     :schema.specification-property :schema.specification-headings
+    :schema.page-group-applicability-preview
     :documentation.concept-subheadings :documentation.concept-membership
     :documentation.section-membership :documentation.flow-context
     :documentation.property-row :documentation.metadata-column

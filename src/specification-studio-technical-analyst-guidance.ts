@@ -305,12 +305,17 @@ export function installStudioAnalystGuidance(options:{
   const reducedMotion=options.reducedMotion??(()=>ownerDocument.defaultView?.matchMedia("(prefers-reduced-motion: reduce)").matches??false);
   let previous=now(),dwellPrevious=previous,intervalWasActive=options.active(),printTimer:ReturnType<typeof setInterval>|undefined,printSequence=0;
 
+  const setAnalystPose=(pose:"idle"|"speaking"|"holding"):void=>{
+    if(options.analystControl)options.analystControl.dataset.analystPose=pose;
+  };
+
   const cancelPrint=():void=>{
     printSequence+=1;
     if(printTimer!==undefined){clearInterval(printTimer);printTimer=undefined;}
   };
   const hideBubble=():void=>{
     cancelPrint();
+    setAnalystPose("idle");
     options.bubble.hidden=true;
     options.bubble.removeAttribute("data-hint-id");
     options.bubble.removeAttribute("data-complete-text");
@@ -321,15 +326,17 @@ export function installStudioAnalystGuidance(options:{
     options.bubble.dataset.hintId=hint.id;
     options.bubble.dataset.completeText=hint.text;
     options.bubble.hidden=false;
+    const motionReduced=reducedMotion();
+    setAnalystPose(motionReduced?"holding":"speaking");
     if(!reserve||!visual||!announcement){
       options.bubble.textContent=hint.text;
       return;
     }
     reserve.textContent=hint.text;
-    visual.textContent=reducedMotion()?hint.text:"";
+    visual.textContent=motionReduced?hint.text:"";
     announcement.textContent="";
     queueMicrotask(()=>{if(sequence===printSequence)announcement.textContent=hint.text;});
-    if(reducedMotion())return;
+    if(motionReduced)return;
     let elapsed=0;
     printTimer=setInterval(()=>{
       elapsed+=STUDIO_ANALYST_PRINT_INTERVAL_MS;
@@ -337,6 +344,7 @@ export function installStudioAnalystGuidance(options:{
       if(visual.textContent===hint.text&&printTimer!==undefined){
         clearInterval(printTimer);
         printTimer=undefined;
+        setAnalystPose("holding");
       }
     },STUDIO_ANALYST_PRINT_INTERVAL_MS);
   };
@@ -345,6 +353,7 @@ export function installStudioAnalystGuidance(options:{
     options.bubble.dataset.hintId=hint.id;
     options.bubble.dataset.completeText=hint.text;
     options.bubble.hidden=false;
+    setAnalystPose("holding");
     if(!reserve||!visual||!announcement){
       options.bubble.textContent=hint.text;
       return;
@@ -399,6 +408,7 @@ export function installStudioAnalystGuidance(options:{
     event.preventDefault();
     requestNext();
   };
+  setAnalystPose("idle");
   const timer=setInterval(evaluate,options.intervalMilliseconds??250);
   ownerDocument.addEventListener("visibilitychange",evaluate);
   ownerDocument.addEventListener("click",routeClick);

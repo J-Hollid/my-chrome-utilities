@@ -25,6 +25,7 @@ Feature: Specification Studio choice controls
       | Confirm incomplete export    | records an acknowledgement                          | checkbox |
       | Select staged property       | selects membership for a later batch action          | checkbox |
       | Borders                      | stages a theme option for an explicit save            | checkbox |
+      | Applicability preview        | previews independent Property Set composition          | checkbox |
 
   # Specification Studio choice controls 002
   Scenario Outline: Specification Studio choice controls 002

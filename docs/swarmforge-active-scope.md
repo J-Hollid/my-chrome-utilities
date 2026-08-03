@@ -39,6 +39,8 @@ are:
 - `features/specification-studio-choice-controls-runtime.feature`
 - `features/data-layer-property-set-and-flow-section-separation.feature`
 - `features/data-layer-property-set-and-flow-section-separation-runtime.feature`
+- `features/specification-studio-technical-analyst-guidance.feature`
+- `features/specification-studio-technical-analyst-guidance-runtime.feature`
 
 The correction program for the four schema contracts is
 `docs/data-layer-canonical-schema-authoring-correction-program-R01.md`.
@@ -360,13 +362,13 @@ later action remain checkboxes. The correction changes no product consequence,
 Draft value, revision, Undo behavior, output, validation, or side-panel control.
 The exact checkpoint is `branding_polish`, followed by `npm run package`.
 
-On approval, the Specification Studio technical-analyst guidance cycle is later
+The user-approved Specification Studio technical-analyst guidance cycle is later
 authority for the two technical-analyst guidance contracts. In a populated Studio
-with its navigation rail visible, the existing genuine-alpha analyst moves to the
-left of dedicated guidance space and grows from 5.2rem to 6.5rem. The no-project
-start-card artwork is unchanged. Guidance first appears after 10 seconds of active
-Studio use, remains for 10 seconds, and then appears no more frequently than once
-every 120 seconds.
+with its navigation rail visible, the registered genuine-alpha 587 by 822 pixel
+analyst occupies dedicated guidance space at no less than 8rem wide. The
+no-project start card uses that same generated idle analyst. Guidance first
+appears after 10 seconds of active Studio use, remains for 10 seconds, and then
+appears no more frequently than once every 120 seconds.
 
 Each route-appropriate hint occupies only reserved guidance space, points to the
 analyst, and uses a cheesy classic British-comic treatment without sacrificing a
@@ -385,8 +387,9 @@ part-specific tip immediately and restarts the ordinary 120-second interval.
 Changing to another Studio page hides the current bubble and restarts the initial
 10-second timer without forgetting session tip history.
 
-The analyst remains left of the bubble. Its curved tail begins beside the right
-side of his head, travels rightward and downward, and joins the bubble's left edge.
+The bubble remains above the analyst. Its connected tail leaves a broad open root
+in the bubble's lower edge and tapers monotonically downward and leftward to a
+rounded point in the analyst image's transparent upper-right canvas.
 Every top-level Studio part has at least five accurate general tips. Three seconds
 of continuous pointer hover or keyboard focus on a visible named Studio control
 shows one control-specific tip in the same reserved bubble; leaving early cancels
@@ -408,7 +411,7 @@ authority for technical-analyst guidance scenarios 001, 003, 006, 010–011, and
 013–015. The analyst occupies a reserved footer anchored to the bottom-left of the
 visible project navigation rail, independent of the last navigation button.
 Navigation items use and, when necessary, scroll within the remaining space above
-that footer. The analyst and right-hand bubble cover no navigation content.
+that footer. The analyst and bubble above him cover no navigation content.
 
 At rest the genuine-alpha analyst has no border, oval plate, outline, or shadow.
 Pointer hover and keyboard focus display him at 105 percent with an interaction
@@ -418,7 +421,8 @@ interaction removes the outline without reflow or overlap.
 Every general tip, including the additional entries in each route pool, combines
 accurate route-specific advice with the same playful cheesy British-comic character
 voice as the original tips. Automatic, requested, and control-specific guidance
-shares the cream, ink, halftone, mustard, curved-tail, and typewriter presentation.
+shares the cream, ink, halftone, mustard, connected-tail, generated-pose, and
+typewriter presentation.
 
 After a three-second pointer or keyboard dwell, a supported control tip identifies
 the action, explains its consequence, and says when or why to use it. It cannot use
@@ -443,6 +447,104 @@ retain control-specific guidance. Every exact tip is warm, workplace-safe, no mo
 than 180 characters, and never mocks the operator. Timing, rotation, dwell,
 session history, presentation, and accessibility behavior remain unchanged. The
 exact checkpoint remains `branding_polish`, followed by `npm run package`.
+
+The user-approved generated-branding R02 correction is later authority for every
+earlier visual-preservation clause in the technical-analyst guidance contracts
+and the Studio shell. The concept boards are reference material only. Production
+uses the generated `specification-studio-title.png`, the registered 587 by 822
+pixel idle and two-speaking-pose analyst set, and the generated 16, 32, 48, and
+128 pixel manifest/action icons documented in `assets/brand/ARTWORK.md`. The
+no-project card intentionally adopts the generated idle analyst; it is no longer
+required to preserve the R01 portrait.
+
+The later extension-icon optical-fill correction is authority over the earlier
+generated icon framing. The 16, 32, 48, and 128 pixel manifest/action PNGs keep
+their existing paths and square dimensions, but the rounded navy badge now has
+genuine transparent corners and reaches the useful canvas edge. The high-alpha
+core is at least 14 by 14 pixels at toolbar size and at least 91 percent of each
+larger canvas axis, while the low-alpha edge stays within two percent of every
+canvas side. The black outline remains unclipped, the red `TWA`, mustard burst,
+and navy field remain present, and chroma-green edge residue is forbidden.
+Reintroducing the former fully opaque cream square, a pale halo, or a widely
+inset floating badge is a regression.
+
+The merge-time index for these later branding decisions is
+`docs/twatility-branding-merge-handover-R02.md`. It summarizes conflict-resolution
+and validation guidance; the active-scope clauses, `assets/brand/ARTWORK.md`, and
+their executable tests remain the detailed production authority.
+
+Every `docs/twatility-branding-*-R01.md` record and the
+`docs/twatility-branding-evidence/` directory are historical evidence for visual
+decisions. Their code-native wordmark, combined-lockup, R01 portrait, side-bubble,
+old-tail, or prior icon-framing preservation statements cannot overrule the R02
+authority above. Their non-visual guidance remains applicable only where it does
+not contradict the active contracts, current artwork registry, or R02 handover.
+
+The later split-masthead correction is authority over both earlier R02 lockup
+compositions. The generated 1600 by 360 `specification-studio-title.png` is now
+wordmark-only: it contains exactly `TWAtility Belt`, keeps `TWAtility` continuous,
+separates `y` and `B` without detaching `Belt`, and shares one outer ink/keyline/
+shadow envelope. The semantic `Specification Studio` title and its two
+aria-hidden stars are live HTML/CSS in a shallow mustard ticket. The generated
+wordmark retains its intrinsic ratio with no `scaleX`, while wordmark, ticket,
+context, and state remain non-overlapping and contained at 360, 640, 920, 1440,
+and 1720 CSS pixels. Returning to either combined raster lockup, hiding or
+duplicating the semantic title, or stretching the wordmark is a regression.
+
+The later wordmark-spelling correction is authority over that split-masthead
+raster. The painted text must visibly read exactly `TWAtility Belt`: red `TWA`,
+cream `tility` spelled `t-i-l-i-t-y` with one lowercase `l` between two dotted
+`i` letters, then a clear word space and `Belt`. The correct alt label or live
+metadata cannot excuse misspelled pixels. At 1600 by 360, normalized cream-fill
+inspection must find six `tility` bodies, four `Belt` bodies, and two detached
+`i` dots. Restoring `TWAtillity`, inserting any other glyph, merging `y` into
+`Belt`, or stretching the corrected art is a regression.
+
+The later side-panel wordmark consistency correction is authority over the
+former live-text approximation in the extension panel. The panel heading uses
+the packaged 800 by 180 `side-panel-title.png`, an exact 50 percent Lanczos
+derivative of the corrected 1600 by 360 Studio wordmark. It must preserve the
+40:9 intrinsic ratio, visibly retain the same ten cream glyph bodies and two
+detached `i` dots, remain contained and separate from the Commands control at
+360, 420, and 512 CSS pixels, and keep the parent heading's accessible name
+`TWAtility Belt`. Reintroducing the live imitation, a differently drawn logo,
+the misspelling `TWAtillity`, cropping, or horizontal stretching is a regression.
+
+The later analyst proportion-continuity correction supersedes the open-hand and
+magnifying-glass pose requirement. All three 587 by 822 analyst files now use
+one locked generated base drawing and identical alpha crop. The open speaking
+frame may differ visibly only inside the face-expression guard rectangle
+`[240, 175, 382, 320)`; its alpha channel is identical to the idle base, and the
+alternate speaking frame is the relaxed-mouth locked base. Hair and head scale,
+eye placement, shoulders, clipboard, hands, torso,
+belt, buckle, both pouches and tools, and waist baseline may not translate,
+scale, redraw, disappear, or differ outside that rectangle. Standard-motion
+speaking still alternates the two speaking image sources, but the visible change
+is a mouth flipbook rather than a whole-body pose change. Returning to broad
+gesture/prop redraws or independently generated figures is a regression.
+
+The analyst control is at least 8rem wide in the desktop rail. Its framed footer
+places a readable, full-width dynamic-text bubble above the bust. The connected
+tail uses a broad open root that interrupts the bubble's lower border and shadow
+without a closing cap or doubled seam, then tapers downward and leftward to a
+rounded point. Both tapered edges are monotonic and form one simple outline;
+any inward curl, loop, crossing, or self-intersection is a regression. That
+point enters only the upper-right transparent canvas so it
+clearly aims toward the speaker; sampled tail pixels remain transparent across
+all three poses and never cover the character, tools, hands, or magnifying glass. Requirements
+for a 6.5rem portrait, a bubble to his right, or either former SVG path are
+obsolete. Standard-motion typewriter output alternates the two speaking
+drawings at a dedicated cadence and settles on one speaking drawing when printing
+finishes. Reduced motion never alternates frames. Hiding guidance, changing route,
+blocking the Studio, or disposing the controller restores the idle drawing.
+
+This art and geometry replacement does not change the exact comic-copy catalogue,
+10-second first appearance, 10-second lifetime, 120-second cooldown, three-second
+dwell, session rotation, focus behavior, project bytes, revision, Undo history,
+or polite single-announcement live-region contract. Regression evidence must check
+decoded local assets, common pose canvases, source-state transitions, readable
+geometry, and viewport containment rather than old pixel hashes or R01 dimensions.
+The exact checkpoint remains `branding_polish`, followed by `npm run package`.
 
 On approval, the typed-literal and focused-editor correction is later authority
 for Authoring scenarios 023 and 064–067. Allowed values and custom examples share

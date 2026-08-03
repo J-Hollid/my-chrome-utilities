@@ -25,7 +25,7 @@ const studioParts=[
   "Project overview",
   "Shared Profiles",
   "Pages",
-  "Page Groups",
+  "Property Sets",
   "Events",
   "Applicability",
   "Flows",
@@ -36,7 +36,7 @@ const studioParts=[
 const catalogue=readFileSync(new URL("../docs/specification-studio-technical-analyst-copy-R01.md",import.meta.url),"utf8");
 const generalCatalogue=new Map();
 let catalogueRoute;
-for(const line of catalogue.split("\n")){
+for(const line of catalogue.split(/\r?\n/u)){
   const heading=/^### (.+)$/u.exec(line);
   if(heading)catalogueRoute=heading[1];
   const row=/^\| ([a-z][a-z0-9-]+) \| [^|]+ \| (.+) \|$/u.exec(line);
@@ -208,9 +208,15 @@ assert.equal(studioAnalystVisibleText("Crikey!",10_000,false),"Crikey!");
 
 let controllerNow=0,controllerActive=true;
 const listeners=new Map();
+const analystListeners=new Map();
 const ownerDocument={
   addEventListener(type,listener){listeners.set(type,listener);},
   removeEventListener(type,listener){if(listeners.get(type)===listener)listeners.delete(type);},
+};
+const analystControl={
+  dataset:{},
+  addEventListener(type,listener){analystListeners.set(type,listener);},
+  removeEventListener(type,listener){if(analystListeners.get(type)===listener)analystListeners.delete(type);},
 };
 const bubble={
   ownerDocument,
@@ -223,9 +229,11 @@ const controller=installStudioAnalystGuidance({
   bubble,
   route:()=>"Pages",
   active:()=>controllerActive,
+  analystControl,
   now:()=>controllerNow,
   intervalMilliseconds:1_000_000,
 });
+assert.equal(analystControl.dataset.analystPose,"idle","the installed analyst starts on the idle art");
 controllerNow=5_000;
 controller.evaluate();
 controllerActive=false;
@@ -238,7 +246,35 @@ controllerNow=70_000;
 controller.evaluate();
 assert.equal(bubble.hidden,false,"the remaining active interval resumes from its pause boundary");
 assert.equal(bubble.dataset.hintId,"pages");
+assert.equal(analystControl.dataset.analystPose,"speaking","a newly presented tip selects speaking art");
+controllerActive=false;
+controller.evaluate();
+assert.equal(analystControl.dataset.analystPose,"idle","inactivity restores idle art");
 controller.dispose();
 assert.equal(listeners.size,0,"the controller removes its owner-document listener");
+assert.equal(analystListeners.size,0,"the controller removes analyst-control listeners");
+assert.equal(analystControl.dataset.analystPose,"idle","disposal leaves the analyst idle");
+
+const reducedAnalystControl={
+  dataset:{},
+  addEventListener(){},
+  removeEventListener(){},
+};
+const reducedController=installStudioAnalystGuidance({
+  bubble:{...bubble,dataset:{},hidden:true},
+  route:()=>"Pages",
+  active:()=>true,
+  analystControl:reducedAnalystControl,
+  reducedMotion:()=>true,
+  now:()=>0,
+  intervalMilliseconds:1_000_000,
+});
+reducedController.requestNext();
+assert.equal(
+  reducedAnalystControl.dataset.analystPose,
+  "holding",
+  "reduced motion uses one static speaking pose instead of cycling frames",
+);
+reducedController.dispose();
 
 console.log("Specification Studio technical analyst guidance unit tests passed");

@@ -252,7 +252,7 @@ try {
       state.project.notes="Production-backed Slice 4 fixture with deliberately long identifiers.";
       for(const [kind,name,fields] of [
         ["profiles","Commerce foundation",{}],
-        ["pageGroups","Checkout customers",{}],
+        ["propertySets","Checkout customers",{}],
         ["pages","Checkout confirmation",{eventName:"pageview"}],
         ["pages","Account overview",{eventName:"pageview"}],
         ["events","Purchase completed",{eventName:"purchase"}],
@@ -260,7 +260,8 @@ try {
         ["flows","Checkout journey",{}],
         ["fixtures","Valid checkout",{}],
       ]) state=createProjectCollectionEntity(state,kind,name,makeId,fields);
-      const flow=state.project.collections.flows[0],page=state.project.collections.pages[0],event=state.project.collections.events[0];
+      const flow=state.project.collections.flows[0],page=state.project.collections.pages[0],event=state.project.collections.events[0],propertySet=state.project.collections.propertySets[0],applicabilitySet=state.project.collections.applicabilitySets[0];
+      page.propertySetApplications=[{id:makeId("property-set-application"),propertySetId:propertySet.id,applicabilitySetId:applicabilitySet.id}];
       state=createProjectCollectionEntity(state,"assignments","Purchase payload",makeId,{
         targetKind:"Shared Profile",
         targetId:state.project.collections.profiles[0].id,
@@ -269,7 +270,7 @@ try {
       });
       state.project.documentationFlowGraphs={
         [flow.id]:{
-          pageGroupIds:[],
+          sections:[],
           pageFrames:[{id:"frame:studio:checkout",name:page.name,pageId:page.id,position:{x:140,y:90}}],
           occurrences:[{id:"occurrence:studio:purchase",name:event.name,pageFrameId:"frame:studio:checkout",pageId:page.id,eventId:event.id,role:"interaction",obligation:"Required",minimum:1,maximum:1,optional:false,position:{x:220,y:150}}],
           relationships:[],
@@ -309,7 +310,7 @@ try {
     `(()=>{
       const tree=[...document.querySelectorAll("#project-tree button")];
       const labels=tree.map(({textContent})=>textContent.trim().replace(/ \\(\\d+\\)$/,""));
-      const expected=["Documentation","Project overview","Shared Profiles","Pages","Page Groups","Events","Applicability","Flows","Test cases","Assignments","Releases"];
+      const expected=["Documentation","Project overview","Shared Profiles","Pages","Property Sets","Events","Applicability","Flows","Test cases","Assignments","Releases"];
       const toggle=document.querySelector("#toggle-project-inspector"),inspector=document.querySelector("#project-inspector");
       const actions=[...document.querySelectorAll(".sticky-tools .actions button")].map(({textContent})=>textContent.trim());
       return{
@@ -381,6 +382,9 @@ try {
         const name=(element)=>element.getAttribute("aria-label")||element.getAttribute("aria-labelledby")||element.labels?.[0]?.textContent?.trim()||element.textContent?.trim()||element.getAttribute("title")||element.getAttribute("placeholder")||element.value||"";
         const references=["aria-controls","aria-labelledby","aria-describedby","aria-errormessage"];
         const panes=["#project-workspace > nav","#workspace-pane","#project-inspector"].map((selector)=>{const element=document.querySelector(selector),box=element.getBoundingClientRect();return{selector,hidden:element.hidden,display:getComputedStyle(element).display,left:box.left,right:box.right,top:box.top,bottom:box.bottom,overflowY:getComputedStyle(element).overflowY};});
+        const header=document.querySelector(".project-bar"),headerBox=header.getBoundingClientRect(),brand=document.querySelector(".twatility-studio-brand"),brandBox=brand.getBoundingClientRect(),wordmark=document.querySelector(".twatility-studio-wordmark"),wordmarkBox=wordmark.getBoundingClientRect(),titleImage=wordmark.querySelector("img"),imageBox=titleImage.getBoundingClientRect(),surface=document.querySelector(".twatility-studio-surface-lockup"),surfaceBox=surface.getBoundingClientRect(),surfaceTitle=document.querySelector(".twatility-studio-surface-title"),stars=[...document.querySelectorAll(".twatility-studio-star")],context=document.querySelector("#project-context"),contextBox=context.getBoundingClientRect();
+        const contained=(box,parent)=>box.left>=parent.left-.5&&box.right<=parent.right+.5&&box.top>=parent.top-.5&&box.bottom<=parent.bottom+.5;
+        const disjoint=(a,b)=>a.right<=b.left+.5||b.right<=a.left+.5||a.bottom<=b.top+.5||b.bottom<=a.top+.5;
         const signature=()=>[...document.querySelectorAll("button,input,select,textarea,a[href],summary")].map((element)=>({tag:element.tagName,id:element.id,type:element.getAttribute("type"),role:element.getAttribute("role"),text:element.textContent.trim(),hidden:element.hidden,disabled:Boolean(element.disabled),aria:references.map((attribute)=>[attribute,element.getAttribute(attribute)])}));
         const before=signature(),branding=[...document.styleSheets].filter((sheet)=>/(?:twatility-brand|specification-builder-brand)\\.css/.test(sheet.href||""));
         branding.forEach((sheet)=>{sheet.disabled=true;});const after=signature();branding.forEach((sheet)=>{sheet.disabled=false;});
@@ -395,6 +399,7 @@ try {
           inspectorVisible:visible(document.querySelector("#project-inspector")),
           scrollOwner:document.scrollingElement.scrollHeight>document.scrollingElement.clientHeight,
           fictional:[...document.querySelectorAll("img")].filter(({alt})=>/retail|trade|project logo/i.test(alt)).length,
+          title:{decoded:titleImage.complete&&titleImage.naturalWidth===1600&&titleImage.naturalHeight===360,broad:titleImage.naturalWidth/titleImage.naturalHeight>=4.3&&titleImage.naturalWidth/titleImage.naturalHeight<=4.6,aspectPreserved:Math.abs(imageBox.width/imageBox.height-titleImage.naturalWidth/titleImage.naturalHeight)<.02,unscaled:getComputedStyle(titleImage).transform==="none"&&getComputedStyle(surfaceTitle).transform==="none",midViewportWidth:${width}!==920||imageBox.width>=250,source:new URL(titleImage.currentSrc||titleImage.src).pathname.endsWith("/assets/brand/specification-studio-title.png"),contained:[brandBox,wordmarkBox,surfaceBox,contextBox].every((box)=>contained(box,headerBox)),accessible:titleImage.alt==="TWAtility Belt"&&surfaceTitle.textContent.trim()==="Specification Studio"&&visible(surfaceTitle)&&surfaceTitle.getAttribute("aria-hidden")===null&&!surface.closest('[aria-hidden="true"]'),ticket:getComputedStyle(surfaceTitle).whiteSpace==="nowrap"&&getComputedStyle(surfaceTitle).textTransform==="uppercase"&&surfaceTitle.scrollWidth<=surfaceTitle.clientWidth+1,stars:stars.length===2&&stars.every((star)=>star.getAttribute("aria-hidden")==="true"),separated:disjoint(wordmarkBox,surfaceBox)&&disjoint(brandBox,contextBox),sideBySide:${width}!==920||(surfaceBox.left>=wordmarkBox.right+4&&surfaceBox.left-wordmarkBox.right<=32&&Math.abs((surfaceBox.top+surfaceBox.bottom-wordmarkBox.top-wordmarkBox.bottom)/2)<=10),context:visible(context)},
         };
       })()`,
     );
@@ -416,6 +421,18 @@ try {
   await screenshot(
     studio,
     path.join(evidenceDirectory, "studio-pages-1440x900.png"),
+  );
+
+  await viewport(
+    studio,
+    920,
+    640,
+    `${base}specification-builder.html?project=project-studio&kind=pages`,
+  );
+  const report920 = await inspect(920, 640);
+  await screenshot(
+    studio,
+    path.join(evidenceDirectory, "studio-pages-920x640.png"),
   );
 
   await viewport(
@@ -448,6 +465,11 @@ try {
     800,
     `${base}specification-builder.html?project=project-studio&kind=pages`,
   );
+  await evaluate(studio, "scrollTo(0,0);true");
+  await screenshot(
+    studio,
+    path.join(evidenceDirectory, "studio-masthead-360x800.png"),
+  );
   const openedNarrow = await evaluate(
     studio,
     `(()=>{const toggle=document.querySelector("#toggle-project-inspector");toggle.focus();toggle.click();return document.activeElement===toggle&&!document.querySelector("#project-inspector").hidden;})()`,
@@ -467,13 +489,14 @@ try {
   );
   const report200 = await inspect(640, 450);
 
-  for (const report of [report1440, report1720, report360, report200]) {
+  for (const report of [report1440, report920, report1720, report360, report200]) {
     assert.equal(report.overflow, false, `${report.width}px page overflow`);
     assert.deepEqual(report.unnamed, [], `${report.width}px accessible names`);
     assert.deepEqual(report.broken, [], `${report.width}px ARIA references`);
     assert.equal(report.equivalent, true, `${report.width}px control equivalence`);
     assert.equal(report.treeVisible, true, `${report.width}px project tree`);
     assert.equal(report.fictional, 0, `${report.width}px fictional project logos`);
+    assert.deepEqual(report.title,{decoded:true,broad:true,aspectPreserved:true,unscaled:true,midViewportWidth:true,source:true,contained:true,accessible:true,ticket:true,stars:true,separated:true,sideBySide:true,context:true},`${report.width}px generated Studio masthead`);
     assert.ok(
       report.panes
         .filter(({ hidden, display }) => !hidden && display !== "none")
@@ -513,7 +536,7 @@ try {
       initialInspector: "collapsed below 1600 CSS pixels",
     },
     routes,
-    viewports: [report1440, report1720, report360, report200],
+    viewports: [report1440, report920, report1720, report360, report200],
     runtimeErrors: runtimeErrors.length,
   };
   await writeFile(

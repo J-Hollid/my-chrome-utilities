@@ -18,9 +18,18 @@
 (defn- mv3-manifest? [manifest]
   (= 3 (:manifest_version manifest)))
 
+(defn- manifest-icon-paths [manifest]
+  (->> [(:icons manifest) (get-in manifest [:action :default_icon])]
+       (mapcat vals)
+       (filter string?)
+       distinct))
+
 (defn- required-extension-paths [manifest]
-  [(get-in manifest [:background :service_worker])
-   (get-in manifest [:side_panel :default_path])])
+  (->> (concat [(get-in manifest [:background :service_worker])
+                (get-in manifest [:side_panel :default_path])]
+               (manifest-icon-paths manifest))
+       (filter string?)
+       distinct))
 
 (defn- required-extension-files-present? [files manifest]
   (every? #(contains? files %) (required-extension-paths manifest)))
@@ -40,7 +49,18 @@
        (map (fn [file]
               [(str (fs/relativize (fs/path root dir) file))
                (slurp (str file))]))
-       (into {})))
+        (into {})))
+
+(defn- dir-file-names [root dir]
+  (->> (file-seq (fs/file (fs/path root dir)))
+       (filter fs/regular-file?)
+       (map #(fs/relativize (fs/path root dir) %))
+       (map str)
+       (map #(str/replace % "\\" "/"))
+       set))
+
+(defn package-matches-dist? [dist-entry-names zip-entry-names]
+  (= (set dist-entry-names) (set zip-entry-names)))
 
 (defn- run-command [command]
   (process/shell support/build-shell-options command))
@@ -202,11 +222,13 @@
 
    {:pattern #"^the package artifact contains the Chrome extension build from <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [dist-key]]
-               (let [_dist-dir (support/require-example example dist-key)
+               (let [dist-dir (support/require-example example dist-key)
+                     dist-entries (dir-file-names (:root world) dist-dir)
                      entries (set (zip-entry-names (:artifact-path world)))]
-                 (support/assert! (every? entries ["manifest.json" "background.js" "side-panel.html"])
-                                  "Package artifact does not contain the extension build."
+                 (support/assert! (package-matches-dist? dist-entries entries)
+                                  "Package artifact does not exactly contain the extension build."
                                   {:artifact (:artifact-path world)
+                                   :dist-entries (sort dist-entries)
                                    :entries (sort entries)})
                  world))}
 
@@ -285,5 +307,5 @@
                  world))}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-08T21:12:49.892951768+02:00", :module-hash "-1777405898", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1593518491"} {:id "defn-/read-json-string", :kind "defn-", :line 9, :end-line nil, :hash "690457943"} {:id "defn-/parse-manifest", :kind "defn-", :line 12, :end-line nil, :hash "994706495"} {:id "defn-/mv3-manifest?", :kind "defn-", :line 18, :end-line nil, :hash "1774518718"} {:id "defn-/required-extension-paths", :kind "defn-", :line 21, :end-line nil, :hash "747792405"} {:id "defn-/required-extension-files-present?", :kind "defn-", :line 25, :end-line nil, :hash "-410150834"} {:id "defn-/loadable-manifest-files?", :kind "defn-", :line 28, :end-line nil, :hash "-1009365665"} {:id "defn/loadable-extension-build?", :kind "defn", :line 32, :end-line nil, :hash "1062306633"} {:id "defn-/dir-files", :kind "defn-", :line 37, :end-line nil, :hash "-1460515422"} {:id "defn-/run-command", :kind "defn-", :line 45, :end-line nil, :hash "-1681224082"} {:id "defn-/ensure-command-succeeded!", :kind "defn-", :line 48, :end-line nil, :hash "1259508497"} {:id "defn-/package-artifacts", :kind "defn-", :line 56, :end-line nil, :hash "779442048"} {:id "defn-/unsigned-byte", :kind "defn-", :line 65, :end-line nil, :hash "-997641724"} {:id "defn-/uint16-le", :kind "defn-", :line 68, :end-line nil, :hash "-1600799826"} {:id "defn-/uint32-le", :kind "defn-", :line 72, :end-line nil, :hash "506658415"} {:id "def/local-file-header-signature", :kind "def", :line 76, :end-line nil, :hash "1877106412"} {:id "defn-/zip-local-header-readable?", :kind "defn-", :line 78, :end-line nil, :hash "-130781360"} {:id "defn-/zip-local-header?", :kind "defn-", :line 81, :end-line nil, :hash "-1227548006"} {:id "defn-/zip-entry", :kind "defn-", :line 85, :end-line nil, :hash "-2133922594"} {:id "defn-/next-zip-entry", :kind "defn-", :line 95, :end-line nil, :hash "-1370731326"} {:id "defn-/zip-entries", :kind "defn-", :line 98, :end-line nil, :hash "-1709355234"} {:id "defn/zip-entry-names", :kind "defn", :line 103, :end-line nil, :hash "517448888"} {:id "defn-/readme-documents-copy?", :kind "defn-", :line 106, :end-line nil, :hash "1582992062"} {:id "defn/readme-documents-artifact-copy?", :kind "defn", :line 112, :end-line nil, :hash "1071943901"} {:id "defn/readme-documents-dist-copy?", :kind "defn", :line 115, :end-line nil, :hash "371019833"} {:id "defn/readme-documents-unpacked-load?", :kind "defn", :line 118, :end-line nil, :hash "1299327260"} {:id "defn/readme-documents-smoke-test?", :kind "defn", :line 122, :end-line nil, :hash "1565565512"} {:id "def/forbidden-package-patterns", :kind "def", :line 127, :end-line nil, :hash "-157648807"} {:id "defn/forbidden-package-scope-findings", :kind "defn", :line 135, :end-line nil, :hash "-427700473"} {:id "defn/forbidden-package-scope-findings-of-kind", :kind "defn", :line 138, :end-line nil, :hash "1979717122"} {:id "defn-/inspected-files", :kind "defn-", :line 141, :end-line nil, :hash "677397666"} {:id "def/handlers", :kind "def", :line 148, :end-line nil, :hash "1840866963"}]}
+;; {:version 1, :tested-at "2026-08-02T20:16:48.4040564+02:00", :module-hash "-1935453385", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1593518491"} {:id "defn-/read-json-string", :kind "defn-", :line 9, :end-line nil, :hash "690457943"} {:id "defn-/parse-manifest", :kind "defn-", :line 12, :end-line nil, :hash "994706495"} {:id "defn-/mv3-manifest?", :kind "defn-", :line 18, :end-line nil, :hash "1774518718"} {:id "defn-/manifest-icon-paths", :kind "defn-", :line 21, :end-line nil, :hash "-1571982889"} {:id "defn-/required-extension-paths", :kind "defn-", :line 27, :end-line nil, :hash "-365858826"} {:id "defn-/required-extension-files-present?", :kind "defn-", :line 34, :end-line nil, :hash "-410150834"} {:id "defn-/loadable-manifest-files?", :kind "defn-", :line 37, :end-line nil, :hash "-1009365665"} {:id "defn/loadable-extension-build?", :kind "defn", :line 41, :end-line nil, :hash "1062306633"} {:id "defn-/dir-files", :kind "defn-", :line 46, :end-line nil, :hash "-1460515422"} {:id "defn-/run-command", :kind "defn-", :line 54, :end-line nil, :hash "-1681224082"} {:id "defn-/ensure-command-succeeded!", :kind "defn-", :line 57, :end-line nil, :hash "1259508497"} {:id "defn-/package-artifacts", :kind "defn-", :line 65, :end-line nil, :hash "779442048"} {:id "defn-/unsigned-byte", :kind "defn-", :line 74, :end-line nil, :hash "-997641724"} {:id "defn-/uint16-le", :kind "defn-", :line 77, :end-line nil, :hash "-1600799826"} {:id "defn-/uint32-le", :kind "defn-", :line 81, :end-line nil, :hash "506658415"} {:id "def/local-file-header-signature", :kind "def", :line 85, :end-line nil, :hash "1877106412"} {:id "defn-/zip-local-header-readable?", :kind "defn-", :line 87, :end-line nil, :hash "-130781360"} {:id "defn-/zip-local-header?", :kind "defn-", :line 90, :end-line nil, :hash "-1227548006"} {:id "defn-/zip-entry", :kind "defn-", :line 94, :end-line nil, :hash "-2133922594"} {:id "defn-/next-zip-entry", :kind "defn-", :line 104, :end-line nil, :hash "-1370731326"} {:id "defn-/zip-entries", :kind "defn-", :line 107, :end-line nil, :hash "-1709355234"} {:id "defn/zip-entry-names", :kind "defn", :line 112, :end-line nil, :hash "517448888"} {:id "defn-/readme-documents-copy?", :kind "defn-", :line 115, :end-line nil, :hash "1582992062"} {:id "defn/readme-documents-artifact-copy?", :kind "defn", :line 121, :end-line nil, :hash "1071943901"} {:id "defn/readme-documents-dist-copy?", :kind "defn", :line 124, :end-line nil, :hash "371019833"} {:id "defn/readme-documents-unpacked-load?", :kind "defn", :line 127, :end-line nil, :hash "1299327260"} {:id "defn/readme-documents-smoke-test?", :kind "defn", :line 131, :end-line nil, :hash "1565565512"} {:id "def/forbidden-package-patterns", :kind "def", :line 136, :end-line nil, :hash "-157648807"} {:id "defn/forbidden-package-scope-findings", :kind "defn", :line 144, :end-line nil, :hash "-427700473"} {:id "defn/forbidden-package-scope-findings-of-kind", :kind "defn", :line 147, :end-line nil, :hash "1979717122"} {:id "defn-/inspected-files", :kind "defn-", :line 150, :end-line nil, :hash "677397666"} {:id "def/handlers", :kind "def", :line 157, :end-line nil, :hash "742966289"}]}
 ;; clj-mutate-manifest-end

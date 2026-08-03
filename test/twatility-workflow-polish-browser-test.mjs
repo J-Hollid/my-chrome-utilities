@@ -16,7 +16,7 @@ import {
 
 const wait=(milliseconds)=>new Promise((resolve)=>setTimeout(resolve,milliseconds));
 const expectedSidePanelControlHashes=Object.freeze({
-  dom:"36ee1d22cee0578ad8f33172ed6c9b9c88c89ef84313946cbd10d864cd289dc7",
+  dom:"d631b978338eae5c282bd0bbd4512a97a57d784728c2e606ae4bdbfd3872f8b2",
   presentation:"99299e7d0055d5b4763266702b349a2db277b16f1e4fb8e739d380ac33e5075d",
 });
 
@@ -114,7 +114,7 @@ async function metrics(socket,width,height,url){
   await wait(100);
 }
 async function screenshot(socket,target){
-  const capture=await socket.call("Page.captureScreenshot",{format:"png",captureBeyondViewport:false,fromSurface:false});
+  const capture=await socket.call("Page.captureScreenshot",{format:"png",captureBeyondViewport:false,fromSurface:true});
   await writeFile(target,Buffer.from(capture.data,"base64"));
 }
 async function nativeKey(socket,key,code=key,modifiers=0){
@@ -317,19 +317,19 @@ try{
     let state=createSpecificationProject({name:"Retail measurement operations",description:"Long-form production workflow evidence across every remaining surface.",site:"retail-measurement-operations.example.com",id:makeId});
     for(const [kind,name,values] of[
       ["profiles","Commerce foundation",{}],
-      ["pageGroups","Checkout customers",{}],
+      ["propertySets","Checkout customers",{}],
       ["pages","Checkout confirmation",{eventName:"pageview"}],
       ["events","Purchase completed",{eventName:"purchase"}],
       ["applicabilitySets","Retail customers",{}],
       ["flows","Checkout journey",{}],
       ["fixtures","Valid checkout",{}],
     ])state=createProjectCollectionEntity(state,kind,name,makeId,values);
-    const profile=state.project.collections.profiles[0],page=state.project.collections.pages[0],group=state.project.collections.pageGroups[0],event=state.project.collections.events[0],flow=state.project.collections.flows[0];
+    const profile=state.project.collections.profiles[0],page=state.project.collections.pages[0],propertySet=state.project.collections.propertySets[0],event=state.project.collections.events[0],flow=state.project.collections.flows[0],applicabilitySet=state.project.collections.applicabilitySets[0];
     profile.canonicalSchema=addCanonicalProperty(profile.canonicalSchema,{baseRevision:profile.canonicalSchema.revision,name:"order_id",type:"string",id:(kind)=>kind+":documentation-audit"}).document;
-    flow.pageGroupIds=[group.id];
+    page.propertySetApplications=[{id:makeId("property-set-application"),propertySetId:propertySet.id,applicabilitySetId:applicabilitySet.id}];
     state=createProjectCollectionEntity(state,"assignments","Purchase payload",makeId,{targetKind:"Shared Profile",targetId:profile.id,eventId:event.id,applicabilitySetId:state.project.collections.applicabilitySets[0].id});
     state=configureProjectEventTransport(state,{observationHistoryPath:"event.history",defaultPushPath:"dataLayer"});
-    state.project.documentationFlowGraphs={[flow.id]:{pageGroupIds:[group.id],pageFrames:[{id:"frame:polish",name:page.name,pageId:page.id,pageGroupId:group.id,position:{x:120,y:80}}],occurrences:[{id:"occurrence:polish",name:event.name,pageFrameId:"frame:polish",pageId:page.id,eventId:event.id,role:"interaction",obligation:"Required",minimum:1,maximum:1,optional:false,position:{x:210,y:150}}],relationships:[]}};
+    state.project.documentationFlowGraphs={[flow.id]:{sections:[],pageFrames:[{id:"frame:polish",name:page.name,pageId:page.id,position:{x:120,y:80}}],occurrences:[{id:"occurrence:polish",name:event.name,pageFrameId:"frame:polish",pageId:page.id,eventId:event.id,role:"interaction",obligation:"Required",minimum:1,maximum:1,optional:false,position:{x:210,y:150}}],relationships:[]}};
     state.project.documentation={
       themes:[{id:"theme:polish",name:"Client navy",clientName:"Retail measurement",logo:"",colors:{heading:"#0b3155",accent:"#c7921e",stripe:"#f4e7c9"},typography:{family:"Arial",headingSize:16,bodySize:11},density:"comfortable",borders:true,striping:true,highlightedHeadings:true,columnWidths:{Property:24},headerText:"Retail measurement specification",footerText:"Reviewed Draft"}],
       sets:[{id:"set:polish",name:"Retail implementation specification",themeId:"theme:polish",sections:[{id:"section:overview",kind:"overview",name:"Overview",selected:true},{id:"section:flow",kind:"flow",name:"Checkout journey",targetId:flow.id,selected:true},{id:"section:matrix",kind:"matrix",name:"Data capture matrix",selected:true},{id:"section:profile",kind:"profile",name:"Commerce foundation",targetId:profile.id,selected:true}]}],
@@ -385,7 +385,7 @@ try{
   await evaluate(side,`document.querySelector("#data-layer-view-schemas").click()`);
   await ready(side,"document.querySelector('#schema-list')?.textContent.includes('Project Retail measurement operations')","schema tree");
   const treeBefore=await evaluate(side,`(()=>{const tree=document.querySelector("#schema-list"),rows=[...tree.querySelectorAll('[role="treeitem"]')],first=rows[0]?.querySelector("button");first?.focus();return{categories:[...document.querySelector("#schema-category-filter").options].map(({textContent})=>textContent),rows:rows.length,levels:rows.every((row)=>Number(row.getAttribute("aria-level"))>=1),selected:rows.every((row)=>row.hasAttribute("aria-selected")),contained:tree.scrollWidth<=tree.clientWidth+1,firstText:first?.textContent};})()`);
-  assert.deepEqual(treeBefore.categories,["All","Saved schemas","Shared Profiles","Page Groups","Pages","Events","Flow Page instances","Event occurrences"]);
+  assert.deepEqual(treeBefore.categories,["All","Saved schemas","Shared Profiles","Property Sets","Pages","Events","Flow Page instances","Event occurrences"]);
   assert.equal(treeBefore.rows>5,true);
   assert.equal(treeBefore.levels,true);
   assert.equal(treeBefore.selected,true);
@@ -495,6 +495,8 @@ try{
 
   await evaluate(studio,`document.querySelector('#project-tree button[data-kind="pages"]').click();document.querySelector('[data-entity-id] button').click()`);
   await ready(studio,"document.querySelector('.composed-schema-workspace input[aria-label=\"Only defined fields\"]')?.dataset.studioChoiceEnhanced==='true'","Only defined fields switch");
+  await ready(studio,"document.querySelector('[aria-label=\"Applicability Set composition preview\"] [data-studio-choice-contract=\"schema.page-group-applicability-preview\"]')","Property Set applicability preview choice");
+  const applicabilityPreviewNativeChoices=await nativeChoiceAudit(studio,'[aria-label="Applicability Set composition preview"]',{settle:180});
   const switchNativeChoices=await nativeChoiceAudit(studio,".composed-schema-workspace",{settle:180});
   await nativeFocusChoice(studio,".composed-schema-workspace","Only defined fields");
   const switchBefore=await evaluate(studio,`(()=>{const input=document.querySelector('.composed-schema-workspace input[aria-label="Only defined fields"]'),label=input.labels[0];return{checked:input.checked,role:input.getAttribute("role"),contract:input.dataset.studioChoiceContract,description:input.getAttribute("aria-description"),enhanced:input.dataset.studioChoiceEnhanced==="true"&&input.labels?.length===1&&label.htmlFor===input.id,ariaChecked:input.getAttribute("aria-checked"),state:label.querySelector(".studio-switch-state")?.textContent,mark:label.querySelector(".studio-switch-mark")?.textContent,undo:Number(document.querySelector("#undo-project").dataset.undoCount)};})()`);
@@ -788,16 +790,16 @@ try{
   await ready(studio,"document.readyState==='complete'&&!document.querySelector('#project-workspace').hidden&&document.querySelector('#project-tree button[data-kind=\"overview\"]')?.getAttribute('aria-current')==='true'","analyst guidance overview");
   const analystBefore=await evaluate(studio,`(async()=>{const repo=await (await import("./data-layer-durable-project-repository.js")).openIndexedDbProjectRepository(),record=await repo.loadProject(${JSON.stringify(projectId)}),workspace=document.querySelector("#workspace-pane");workspace.focus();return{project:JSON.stringify(record),undo:document.querySelector("#undo-project").dataset.undoCount,focus:workspace.id,bubbleHidden:document.querySelector("#studio-analyst-hint").hidden};})()`);
   assert.equal(analystBefore.bubbleHidden,true);
-  const analystAutomaticBoundary=await evaluate(studio,`(async()=>{const {installStudioAnalystGuidance}=await import("./specification-studio-technical-analyst-guidance.js"),bubble=document.querySelector("#studio-analyst-hint"),blocker=document.createElement("div");blocker.dataset.schemaRowOverlay="true";document.body.append(blocker);let now=0;const controller=installStudioAnalystGuidance({bubble,route:()=>"Project overview",active:()=>true,reducedMotion:()=>true,now:()=>now,intervalMilliseconds:1_000_000});now=9_999;controller.evaluate();const preFirst=bubble.hidden;now=10_000;controller.evaluate();window.__studioAnalystAutomaticBoundary={controller,blocker,setNow:(value)=>{now=value;}};return{preFirst,shown:!bubble.hidden,id:bubble.dataset.hintId};})()`);
+  const analystAutomaticBoundary=await evaluate(studio,`(async()=>{const {installStudioAnalystGuidance}=await import("./specification-studio-technical-analyst-guidance.js"),bubble=document.querySelector("#studio-analyst-hint"),analystControl=document.querySelector("#studio-analyst-control"),blocker=document.createElement("div");blocker.dataset.schemaRowOverlay="true";document.body.append(blocker);let now=0;const controller=installStudioAnalystGuidance({bubble,analystControl,route:()=>"Project overview",active:()=>true,reducedMotion:()=>true,now:()=>now,intervalMilliseconds:1_000_000});now=9_999;controller.evaluate();const preFirst=bubble.hidden,preFirstPose=analystControl.dataset.analystPose;now=10_000;controller.evaluate();window.__studioAnalystAutomaticBoundary={controller,blocker,setNow:(value)=>{now=value;}};return{preFirst,preFirstPose,shown:!bubble.hidden,id:bubble.dataset.hintId,pose:analystControl.dataset.analystPose};})()`);
   const analystPreFirst=analystAutomaticBoundary.preFirst;
   assert.equal(analystPreFirst,true);
-  assert.deepEqual(analystAutomaticBoundary,{preFirst:true,shown:true,id:"project-overview"});
-  const analystVisible=await evaluate(studio,`(()=>{const region=document.querySelector("#studio-analyst-guidance"),image=region.querySelector("img"),bubble=document.querySelector("#studio-analyst-hint"),nav=document.querySelector("#project-workspace > nav"),regionBox=region.getBoundingClientRect(),imageBox=image.getBoundingClientRect(),bubbleBox=bubble.getBoundingClientRect(),navBox=nav.getBoundingClientRect(),style=getComputedStyle(bubble),under=[...document.elementsFromPoint(bubbleBox.left+bubbleBox.width/2,bubbleBox.top+bubbleBox.height/2)].filter((element)=>element!==bubble&&element.matches("button,input,select,textarea,a[href],[role=button]"));return{hidden:bubble.hidden,text:bubble.dataset.completeText,hintId:bubble.dataset.hintId,width:imageBox.width,expectedWidth:parseFloat(getComputedStyle(document.documentElement).fontSize)*6.5,leftAnchored:Math.abs(imageBox.left-regionBox.left)<.6,aspectRatio:imageBox.width/imageBox.height,inside:regionBox.left>=navBox.left&&regionBox.right<=navBox.right+.6&&bubbleBox.left>=regionBox.left&&bubbleBox.right<=regionBox.right+.6&&bubbleBox.top>=regionBox.top&&bubbleBox.bottom<=regionBox.bottom+.6,under:under.length,overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth,focus:document.activeElement.id,live:bubble.getAttribute("aria-live"),role:bubble.getAttribute("role"),animation:style.animationName,transition:style.transitionDuration,background:style.backgroundImage,border:style.borderTopWidth,shadow:style.boxShadow,font:style.fontFamily};})()`);
+  assert.deepEqual(analystAutomaticBoundary,{preFirst:true,preFirstPose:"idle",shown:true,id:"project-overview",pose:"holding"});
+  const analystVisible=await evaluate(studio,`(()=>{const region=document.querySelector("#studio-analyst-guidance"),control=document.querySelector("#studio-analyst-control"),images=[...control.querySelectorAll("img")],bubble=document.querySelector("#studio-analyst-hint"),nav=document.querySelector("#project-workspace > nav"),regionBox=region.getBoundingClientRect(),controlBox=control.getBoundingClientRect(),bubbleBox=bubble.getBoundingClientRect(),navBox=nav.getBoundingClientRect(),style=getComputedStyle(bubble),under=[...document.elementsFromPoint(bubbleBox.left+bubbleBox.width/2,bubbleBox.top+bubbleBox.height/2)].filter((element)=>element!==bubble&&element.matches("button,input,select,textarea,a[href],[role=button]"));return{hidden:bubble.hidden,text:bubble.dataset.completeText,hintId:bubble.dataset.hintId,pose:control.dataset.analystPose,width:controlBox.width,minReadableWidth:parseFloat(getComputedStyle(document.documentElement).fontSize)*8,leftAnchored:controlBox.left<regionBox.left+regionBox.width*.2,aspectRatio:controlBox.width/controlBox.height,bubbleWidthRatio:bubbleBox.width/regionBox.width,bubbleAboveAnalyst:bubbleBox.bottom<=controlBox.top+2,artSources:images.map((image)=>new URL(image.currentSrc||image.src).pathname.split("/").pop()),artCanvases:images.map((image)=>[image.naturalWidth,image.naturalHeight,image.complete]),artGeometry:images.map((image)=>{const box=image.getBoundingClientRect(),imageStyle=getComputedStyle(image);return{box:[box.left,box.top,box.width,box.height].map((value)=>Math.round(value*100)/100),objectFit:imageStyle.objectFit,objectPosition:imageStyle.objectPosition,transform:imageStyle.transform};}),inside:regionBox.left>=navBox.left&&regionBox.right<=navBox.right+.6&&bubbleBox.left>=regionBox.left&&bubbleBox.right<=regionBox.right+.6&&bubbleBox.top>=regionBox.top&&controlBox.bottom<=regionBox.bottom+.6,under:under.length,overflow:Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)-innerWidth,focus:document.activeElement.id,live:bubble.getAttribute("aria-live"),role:bubble.getAttribute("role"),animation:style.animationName,transition:style.transitionDuration,background:style.backgroundImage,border:style.borderTopWidth,shadow:style.boxShadow,font:style.fontFamily};})()`);
   assert.deepEqual({
     hidden:analystVisible.hidden,
     text:analystVisible.text,
     hintId:analystVisible.hintId,
-    widthMatchesRem:Math.abs(analystVisible.width-analystVisible.expectedWidth)<.1,
+    readableWidth:analystVisible.width>=analystVisible.minReadableWidth,
     leftAnchored:analystVisible.leftAnchored,
     inside:analystVisible.inside,
     under:analystVisible.under,
@@ -811,7 +813,7 @@ try{
     hidden:false,
     text:"A project with no collection is merely a clipboard with ambitions. Pick one on the left and give the specification somewhere to begin.",
     hintId:"project-overview",
-    widthMatchesRem:true,
+    readableWidth:true,
     leftAnchored:true,
     inside:true,
     under:0,
@@ -822,13 +824,31 @@ try{
     animation:"none",
     transitionDisabled:true,
   });
-  assert.ok(analystVisible.aspectRatio>0.64&&analystVisible.aspectRatio<0.68);
+  assert.equal(analystVisible.pose,"holding");
+  assert.ok(analystVisible.aspectRatio>0.70&&analystVisible.aspectRatio<0.73);
+  assert.equal(analystVisible.bubbleWidthRatio>0.84,true,JSON.stringify(analystVisible));
+  assert.equal(analystVisible.bubbleAboveAnalyst,true);
+  assert.deepEqual(analystVisible.artSources,["technical-analyst.png","technical-analyst-speaking-a.png","technical-analyst-speaking-b.png"]);
+  assert.equal(analystVisible.artCanvases.every(([width,height,complete])=>width===587&&height===822&&complete),true);
+  assert.equal(
+    analystVisible.artGeometry.slice(1).every((geometry)=>JSON.stringify(geometry)===JSON.stringify(analystVisible.artGeometry[0])),
+    true,
+    JSON.stringify(analystVisible.artGeometry),
+  );
+  assert.deepEqual(
+    {
+      objectFit:analystVisible.artGeometry[0].objectFit,
+      objectPosition:analystVisible.artGeometry[0].objectPosition,
+      transform:analystVisible.artGeometry[0].transform,
+    },
+    {objectFit:"contain",objectPosition:"50% 100%",transform:"none"},
+  );
   assert.match(analystVisible.background,/radial-gradient/u);
   assert.equal(parseFloat(analystVisible.border)>0,true);
   assert.notEqual(analystVisible.shadow,"none");
   assert.match(analystVisible.font,/Bangers|sans-serif/u);
-  const analystAutomaticHidden=await evaluate(studio,`(()=>{const boundary=window.__studioAnalystAutomaticBoundary;boundary.setNow(20_000);boundary.controller.evaluate();const hidden=document.querySelector("#studio-analyst-hint").hidden;boundary.controller.dispose();boundary.blocker.remove();delete window.__studioAnalystAutomaticBoundary;return hidden;})()`);
-  assert.equal(analystAutomaticHidden,true);
+  const analystAutomaticHidden=await evaluate(studio,`(()=>{const boundary=window.__studioAnalystAutomaticBoundary;boundary.setNow(20_000);boundary.controller.evaluate();const hidden=document.querySelector("#studio-analyst-hint").hidden,pose=document.querySelector("#studio-analyst-control").dataset.analystPose;boundary.controller.dispose();boundary.blocker.remove();delete window.__studioAnalystAutomaticBoundary;return{hidden,pose};})()`);
+  assert.deepEqual(analystAutomaticHidden,{hidden:true,pose:"idle"});
 
   const analystScheduleBoundary=await evaluate(studio,`(async()=>{
     const {installStudioAnalystGuidance}=await import("./specification-studio-technical-analyst-guidance.js"),bubble=document.querySelector("#studio-analyst-hint");
@@ -916,15 +936,15 @@ try{
   })()`);
   assert.deepEqual(analystZoom,{visible:true,inside:true,overflow:0,text:"Refresh the preview after changing a Documentation Set. Yesterday's snapshot is beautifully formatted and completely unaware of today."});
   await studio.call("Emulation.setDeviceMetricsOverride",{width:360,height:800,deviceScaleFactor:1,mobile:false});
-  const analystNarrow=await evaluate(studio,`(()=>{const region=document.querySelector("#studio-analyst-guidance"),nav=document.querySelector("#project-workspace > nav"),visibleBefore=region.getClientRects().length>0;nav.hidden=true;const hiddenWithNavigation=region.getClientRects().length===0,overflow=Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)<=innerWidth;nav.hidden=false;return{visibleBefore,hiddenWithNavigation,overflow};})()`);
+  const analystNarrow=await evaluate(studio,`(()=>{const region=document.querySelector("#studio-analyst-guidance"),nav=document.querySelector("#project-workspace > nav"),visibleBefore=region.getClientRects().length>0;nav.hidden=true;const hiddenWithNavigation=region.getClientRects().length===0;nav.hidden=false;const overflow=Math.max(document.documentElement.scrollWidth,document.body.scrollWidth)<=innerWidth;return{visibleBefore,hiddenWithNavigation,overflow};})()`);
   assert.deepEqual(analystNarrow,{visibleBefore:true,hiddenWithNavigation:true,overflow:true});
 
   await studio.call("Emulation.setDeviceMetricsOverride",{width:1280,height:900,deviceScaleFactor:1,mobile:false});
   await evaluate(studio,"document.querySelector('#studio-analyst-control').click()");
-  const analystFooterLayout=await evaluate(studio,`(()=>{const nav=document.querySelector("#project-workspace > nav"),tree=document.querySelector("#project-tree"),region=document.querySelector("#studio-analyst-guidance"),bubble=document.querySelector("#studio-analyst-hint"),box=(element)=>{const value=element.getBoundingClientRect();return{left:value.left,top:value.top,right:value.right,bottom:value.bottom,width:value.width,height:value.height};},sample=()=>{const navBox=box(nav),treeBox=box(tree),regionBox=box(region),bubbleBox=box(bubble),buttons=[...tree.querySelectorAll("button")],lastBox=box(buttons.at(-1));return{nav:navBox,tree:treeBox,region:regionBox,bubble:bubbleBox,last:lastBox,scrollable:tree.scrollHeight>tree.clientHeight,scrollTop:tree.scrollTop,footerBottom:Math.round((navBox.bottom-regionBox.bottom)*10)/10,footerLeft:Math.round((regionBox.left-navBox.left)*10)/10,treeAboveFooter:treeBox.bottom<=regionBox.top+.6,bubbleRightOfAnalyst:bubbleBox.left>=regionBox.left+parseFloat(getComputedStyle(document.documentElement).fontSize)*6.5,controlsClear:[...tree.querySelectorAll("button")].every((button)=>{const value=button.getBoundingClientRect();return value.bottom<=bubbleBox.top||value.top>=bubbleBox.bottom||value.right<=bubbleBox.left||value.left>=bubbleBox.right;})};},short=sample(),added=[];for(let index=0;index<28;index+=1){const item=document.createElement("li"),button=document.createElement("button");button.type="button";button.textContent="Temporary navigation evidence "+index;item.append(button);tree.append(item);added.push(item);}const beforeScroll=sample();tree.scrollTop=tree.scrollHeight;const afterScroll=sample();added.forEach((item)=>item.remove());tree.scrollTop=0;return{short,long:{beforeScroll,afterScroll},restored:sample()};})()`);
-  assert.equal(analystFooterLayout.short.scrollable,false);
+  const analystFooterLayout=await evaluate(studio,`(()=>{const nav=document.querySelector("#project-workspace > nav"),tree=document.querySelector("#project-tree"),region=document.querySelector("#studio-analyst-guidance"),control=document.querySelector("#studio-analyst-control"),bubble=document.querySelector("#studio-analyst-hint"),box=(element)=>{const value=element.getBoundingClientRect();return{left:value.left,top:value.top,right:value.right,bottom:value.bottom,width:value.width,height:value.height};},sample=()=>{const navBox=box(nav),treeBox=box(tree),regionBox=box(region),controlBox=box(control),bubbleBox=box(bubble),buttons=[...tree.querySelectorAll("button")],lastBox=box(buttons.at(-1));return{nav:navBox,tree:treeBox,region:regionBox,control:controlBox,bubble:bubbleBox,last:lastBox,scrollable:tree.scrollHeight>tree.clientHeight,scrollTop:tree.scrollTop,footerBottom:Math.round((navBox.bottom-regionBox.bottom)*10)/10,footerLeft:Math.round((regionBox.left-navBox.left)*10)/10,treeAboveFooter:treeBox.bottom<=regionBox.top+.6,bubbleAboveAnalyst:bubbleBox.bottom<=controlBox.top+2,bubbleReadable:bubbleBox.width>=regionBox.width*.84,controlsClear:treeBox.bottom<=regionBox.top+.6&&buttons.every((button)=>{const value=button.getBoundingClientRect(),visibleTop=Math.max(value.top,treeBox.top),visibleBottom=Math.min(value.bottom,treeBox.bottom);return visibleBottom<=visibleTop||visibleBottom<=regionBox.top+.6;})};},short=sample(),added=[];for(let index=0;index<28;index+=1){const item=document.createElement("li"),button=document.createElement("button");button.type="button";button.textContent="Temporary navigation evidence "+index;item.append(button);tree.append(item);added.push(item);}const beforeScroll=sample();tree.scrollTop=tree.scrollHeight;const afterScroll=sample();added.forEach((item)=>item.remove());tree.scrollTop=0;return{short,long:{beforeScroll,afterScroll},restored:sample()};})()`);
   assert.equal(analystFooterLayout.short.treeAboveFooter,true);
-  assert.equal(analystFooterLayout.short.bubbleRightOfAnalyst,true);
+  assert.equal(analystFooterLayout.short.bubbleAboveAnalyst,true);
+  assert.equal(analystFooterLayout.short.bubbleReadable,true);
   assert.equal(analystFooterLayout.short.controlsClear,true);
   assert.equal(analystFooterLayout.long.beforeScroll.scrollable,true);
   assert.equal(analystFooterLayout.long.afterScroll.scrollTop>0,true);
@@ -939,7 +959,7 @@ try{
   const analystLayoutSample=await evaluate(studio,`(()=>{const control=document.querySelector("#studio-analyst-control"),region=document.querySelector("#studio-analyst-guidance"),bubble=document.querySelector("#studio-analyst-hint"),tree=document.querySelector("#project-tree"),box=(element)=>{const value=element.getBoundingClientRect();return[value.left,value.top,value.width,value.height].map((part)=>Math.round(part*10)/10);},controlBox=control.getBoundingClientRect(),style=getComputedStyle(control),outline=getComputedStyle(control,"::after");return{region:box(region),tree:box(tree),control:box(control),bubble:box(bubble),scale:new DOMMatrix(style.transform).a,shadow:style.boxShadow,border:style.borderTopWidth,background:style.backgroundColor,outlineOpacity:outline.opacity,center:{x:controlBox.left+controlBox.width/2,y:controlBox.top+controlBox.height/2}};})()`);
   await studio.call("Input.dispatchMouseEvent",{type:"mouseMoved",x:analystLayoutSample.center.x,y:analystLayoutSample.center.y});
   await wait(30);
-  const analystHover=await evaluate(studio,`(()=>{const control=document.querySelector("#studio-analyst-control"),region=document.querySelector("#studio-analyst-guidance"),bubble=document.querySelector("#studio-analyst-hint"),tree=document.querySelector("#project-tree"),box=(element)=>{const value=element.getBoundingClientRect();return[value.left,value.top,value.width,value.height].map((part)=>Math.round(part*10)/10);},controlBox=control.getBoundingClientRect(),bubbleBox=bubble.getBoundingClientRect(),style=getComputedStyle(control),outline=getComputedStyle(control,"::after");return{region:box(region),tree:box(tree),scale:new DOMMatrix(style.transform).a,shadow:style.boxShadow,outlineOpacity:outline.opacity,outlineBorder:outline.borderTopWidth,outlineWidth:outline.outlineWidth,overlap:controlBox.right>bubbleBox.left};})()`);
+  const analystHover=await evaluate(studio,`(()=>{const control=document.querySelector("#studio-analyst-control"),region=document.querySelector("#studio-analyst-guidance"),bubble=document.querySelector("#studio-analyst-hint"),tree=document.querySelector("#project-tree"),box=(element)=>{const value=element.getBoundingClientRect();return[value.left,value.top,value.width,value.height].map((part)=>Math.round(part*10)/10);},controlBox=control.getBoundingClientRect(),bubbleBox=bubble.getBoundingClientRect(),style=getComputedStyle(control),outline=getComputedStyle(control,"::after");return{region:box(region),tree:box(tree),scale:new DOMMatrix(style.transform).a,shadow:style.boxShadow,outlineOpacity:outline.opacity,outlineBorder:outline.borderTopWidth,outlineWidth:outline.outlineWidth,overlap:controlBox.top<bubbleBox.bottom-2};})()`);
   await studio.call("Input.dispatchMouseEvent",{type:"mouseMoved",x:1200,y:850});
   const analystFocus=await evaluate(studio,`(()=>{const control=document.querySelector("#studio-analyst-control"),region=document.querySelector("#studio-analyst-guidance"),tree=document.querySelector("#project-tree"),box=(element)=>{const value=element.getBoundingClientRect();return[value.left,value.top,value.width,value.height].map((part)=>Math.round(part*10)/10);};control.focus();const style=getComputedStyle(control),outline=getComputedStyle(control,"::after");return{region:box(region),tree:box(tree),scale:new DOMMatrix(style.transform).a,shadow:style.boxShadow,outlineOpacity:outline.opacity,outlineBorder:outline.borderTopWidth,outlineWidth:outline.outlineWidth,focus:document.activeElement.id};})()`);
   const analystRest=await evaluate(studio,`(()=>{document.querySelector("#project-search").focus();const control=document.querySelector("#studio-analyst-control"),style=getComputedStyle(control),outline=getComputedStyle(control,"::after");return{scale:new DOMMatrix(style.transform).a,shadow:style.boxShadow,border:style.borderTopWidth,background:style.backgroundColor,outlineOpacity:outline.opacity,focus:document.activeElement.id};})()`);
@@ -976,8 +996,26 @@ try{
     ["project-search","project-search","studio-analyst-control","studio-analyst-control","studio-analyst-control","studio-analyst-control"],
   );
 
-  const analystTail=await evaluate(studio,`(()=>{const region=document.querySelector("#studio-analyst-guidance").getBoundingClientRect(),image=document.querySelector("#studio-analyst-control img").getBoundingClientRect(),bubble=document.querySelector("#studio-analyst-hint").getBoundingClientRect(),path=document.querySelector("#studio-analyst-tail path"),matrix=path.getScreenCTM(),screen=(x,y)=>{const point=new DOMPoint(x,y).matrixTransform(matrix);return{x:point.x,y:point.y};},narrow=screen(1,3),middle=screen(24,13),wideTop=screen(47,34),wideBottom=screen(47,42),inside=(point)=>point.x>=region.left&&point.x<=region.right&&point.y>=region.top&&point.y<=region.bottom;return{visible:path.getClientRects().length>0,narrow,middle,wideTop,wideBottom,headSide:narrow.x>=image.left+image.width*.6&&narrow.x<=image.right+.6,travels:narrow.x<middle.x&&middle.x<wideTop.x&&narrow.y<middle.y&&middle.y<wideTop.y,joins:Math.abs(wideTop.x-bubble.left)<2&&Math.abs(wideBottom.x-bubble.left)<2,inside:[narrow,middle,wideTop,wideBottom].every(inside)};})()`);
-  assert.deepEqual({visible:analystTail.visible,headSide:analystTail.headSide,travels:analystTail.travels,joins:analystTail.joins,inside:analystTail.inside},{visible:true,headSide:true,travels:true,joins:true,inside:true});
+  const analystTail=await evaluate(studio,`(()=>{
+    const region=document.querySelector("#studio-analyst-guidance").getBoundingClientRect();
+    const controlElement=document.querySelector("#studio-analyst-control"),control=controlElement.getBoundingClientRect();
+    const bubbleElement=document.querySelector("#studio-analyst-hint"),bubble=bubbleElement.getBoundingClientRect();
+    const svg=document.querySelector("#studio-analyst-tail"),path=svg.querySelector("[data-analyst-tail-shape]"),matrix=path.getScreenCTM();
+    const screen=(x,y)=>{const point=new DOMPoint(x,y).matrixTransform(matrix);return{x:point.x,y:point.y};};
+    const mouthRight=screen(54,6),mouthLeft=screen(28,6),mouth={x:(mouthRight.x+mouthLeft.x)/2,y:(mouthRight.y+mouthLeft.y)/2},middle=screen(20,33),tip=screen(4,45),painted=path.getBoundingClientRect();
+    const openRoot=!/[zZ]\\s*$/u.test(path.getAttribute("d")??""),attached=svg.parentElement===bubbleElement;
+    const mouthMelds=[mouthRight,mouthLeft].every((point)=>point.x>bubble.left&&point.x<bubble.right&&Math.abs(point.y-bubble.bottom)<4);
+    const pathLength=path.getTotalLength(),sampleCount=Math.ceil(pathLength/.4),localPoints=Array.from({length:sampleCount+1},(_,index)=>{const point=path.getPointAtLength(pathLength*index/sampleCount);return{x:point.x,y:point.y};});
+    const orientation=(a,b,c)=>(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x),intersections=[];
+    for(let first=0;first<localPoints.length-1;first+=1){for(let second=first+2;second<localPoints.length-1;second+=1){const a=localPoints[first],b=localPoints[first+1],c=localPoints[second],d=localPoints[second+1],abC=orientation(a,b,c),abD=orientation(a,b,d),cdA=orientation(c,d,a),cdB=orientation(c,d,b);if(abC*abD < -1e-4&&cdA*cdB < -1e-4)intersections.push([first,second]);}}
+    const rootMidpoint={x:(localPoints[0].x+localPoints.at(-1).x)/2,y:(localPoints[0].y+localPoints.at(-1).y)/2};let tipIndex=0,tipDistance=-1;localPoints.forEach((point,index)=>{const distance=(point.x-rootMidpoint.x)**2+(point.y-rootMidpoint.y)**2;if(distance>tipDistance){tipDistance=distance;tipIndex=index;}});const localTip=localPoints[tipIndex],axisLength=Math.hypot(localTip.x-rootMidpoint.x,localTip.y-rootMidpoint.y),axis={x:(localTip.x-rootMidpoint.x)/axisLength,y:(localTip.y-rootMidpoint.y)/axisLength},projections=localPoints.map((point)=>(point.x-rootMidpoint.x)*axis.x+(point.y-rootMidpoint.y)*axis.y),outbound=projections.slice(0,tipIndex+1),returning=projections.slice(tipIndex),monotonicEdges=tipIndex>0&&tipIndex<localPoints.length-1&&outbound.every((value,index)=>index===0||value>=outbound[index-1]-.5)&&returning.every((value,index)=>index===0||value<=returning[index-1]+.5);
+    const artworks=[...controlElement.querySelectorAll("img")].map((art)=>{const canvas=document.createElement("canvas");canvas.width=art.naturalWidth;canvas.height=art.naturalHeight;const context=canvas.getContext("2d",{willReadFrequently:true});context.drawImage(art,0,0);return{width:canvas.width,height:canvas.height,rgba:context.getImageData(0,0,canvas.width,canvas.height).data};});
+    let canvasSamples=0,opaqueSamples=0;
+    for(let y=0;y<=50;y+=1)for(let x=0;x<=54;x+=1){const local=new DOMPoint(x,y);if(!path.isPointInFill(local)&&!path.isPointInStroke(local))continue;const point=local.matrixTransform(matrix);if(point.x<control.left||point.x>control.right||point.y<control.top||point.y>control.bottom)continue;canvasSamples+=1;for(const art of artworks){const pixelX=Math.min(art.width-1,Math.max(0,Math.floor((point.x-control.left)/control.width*art.width))),pixelY=Math.min(art.height-1,Math.max(0,Math.floor((point.y-control.top)/control.height*art.height)));if(art.rgba[(pixelY*art.width+pixelX)*4+3]>24)opaqueSamples+=1;}}
+    return{visible:path.getClientRects().length>0,mouth,middle,tip,attached,openRoot,melds:attached&&openRoot&&mouthMelds&&Math.abs(mouthRight.x-mouthLeft.x)>control.width*.12,simple:intersections.length===0,monotonicEdges,intersections:intersections.slice(0,8),pointsToward:tip.x<control.right-2&&tip.x>=control.right-control.width*.18&&tip.y>=control.top&&tip.y<=control.top+control.height*.3,clearsArtwork:canvasSamples>0&&opaqueSamples===0,clearanceSamples:canvasSamples,travels:mouth.x>middle.x&&middle.x>tip.x&&mouth.y<middle.y&&middle.y<tip.y,inside:painted.left>=region.left-1&&painted.right<=region.right+1&&painted.top>=region.top-1&&painted.bottom<=region.bottom+1};
+  })()`);
+  assert.deepEqual({visible:analystTail.visible,attached:analystTail.attached,openRoot:analystTail.openRoot,melds:analystTail.melds,simple:analystTail.simple,monotonicEdges:analystTail.monotonicEdges,pointsToward:analystTail.pointsToward,clearsArtwork:analystTail.clearsArtwork,travels:analystTail.travels,inside:analystTail.inside},{visible:true,attached:true,openRoot:true,melds:true,simple:true,monotonicEdges:true,pointsToward:true,clearsArtwork:true,travels:true,inside:true},`tail geometry: ${JSON.stringify(analystTail)}`);
+  await screenshot(studio,path.join(evidenceDirectory,"studio-analyst-guidance-1280x900.png"));
 
   await evaluate(studio,"document.querySelector('#project-tree button[data-kind=\"pages\"]').click()");
   await wait(100);
@@ -989,7 +1027,7 @@ try{
   assert.deepEqual([analystRouteHidden,analystRouteBeforeRequest],[true,true]);
   assert.equal(activationIds.includes(analystRetainedRequest.id),false);
 
-  const analystPools=await evaluate(studio,`(async()=>{const {studioAnalystHintsForRoute}=await import("./specification-studio-technical-analyst-guidance.js"),parts=["Project overview","Shared Profiles","Pages","Page Groups","Events","Applicability","Flows","Fixtures","Assignments","Documentation"],comicDevice=/clipboard|ambitions|cast|filing-cabinet|brass band|magnifying glass|raffle|moustache|family tree|gangs|gate|doorbell|doorman|inspectors|rebellions|ancestors|club|crystal balls|telegrams|orchestra|quarrel|parties|pipe|hat|custard pie|witness|megaphone|eyebrow|mystery|traffic control|rooms|carpet|plot|road sign|yesterday|heroic|loitering|detective|machinery|flag|parcel|ushers|building|crown|cupboard|shoppers|waistcoat|stationery/iu,pools=Object.fromEntries(parts.map((part)=>{const tips=studioAnalystHintsForRoute(part);return[part,{count:tips.length,distinct:new Set(tips.map(({id})=>id)).size,texts:tips.map(({text})=>text),comic:tips.every(({text})=>comicDevice.test(text))}];})),flow=Object.fromEntries(studioAnalystHintsForRoute("Flows").map(({id,text})=>[id,text])),required={"Project overview":"Lost an entity in the filing-cabinet jungle? Global search finds it without rearranging a single saved Draft.","Shared Profiles":"Concepts arrange Profile properties into sensible documentation gangs. Validation remains unmoved; it has its own clipboard.","Pages":"Path conditions are the Page's doorman: they inspect each observed location and politely—or firmly—decide whether it belongs.","Assignments":"Run preflight before testing. Missing targets and tied candidates are easier to catch before they put on matching moustaches.","Documentation":"Generate rich copy or Excel only after refreshing the preview. Exporting stale work merely gives yesterday better stationery."},semantics={canvas:/Pages are the rooms; Events are the custard pies.*Add the rooms first/u.test(flow.flows),frames:/Page frames.*journey step/u.test(flow["flows-frames"]),containment:/Event occurrence inside its owning Page frame/u.test(flow["flows-occurrences"]),pageRelationships:/Connect Page frames to Page frames/u.test(flow["flows-relationships"]),occurrencesAreNotEndpoints:!/connect(?:ing)? (?:Event )?occurrences|occurrence(?:s)? (?:as|for|to) relationship endpoints?/iu.test(flow["flows-relationships"]),documentation:/Refresh Documentation.*selected Flow.*value map/u.test(flow["flows-documentation"]),required:Object.entries(required).every(([route,text])=>studioAnalystHintsForRoute(route).some((hint)=>hint.text===text))};return{pools,semantics};})()`);
+  const analystPools=await evaluate(studio,`(async()=>{const {studioAnalystHintsForRoute}=await import("./specification-studio-technical-analyst-guidance.js"),parts=["Project overview","Shared Profiles","Pages","Property Sets","Events","Applicability","Flows","Fixtures","Assignments","Documentation"],comicDevice=/clipboard|ambitions|cast|filing-cabinet|brass band|magnifying glass|raffle|moustache|family tree|gangs|gate|doorbell|doorman|inspectors|rebellions|ancestors|club|crystal balls|telegrams|orchestra|quarrel|parties|pipe|hat|custard pie|witness|megaphone|eyebrow|mystery|traffic control|rooms|carpet|plot|road sign|yesterday|heroic|loitering|detective|machinery|flag|parcel|ushers|building|crown|cupboard|shoppers|waistcoat|stationery/iu,pools=Object.fromEntries(parts.map((part)=>{const tips=studioAnalystHintsForRoute(part);return[part,{count:tips.length,distinct:new Set(tips.map(({id})=>id)).size,texts:tips.map(({text})=>text),comic:tips.every(({text})=>comicDevice.test(text))}];})),flow=Object.fromEntries(studioAnalystHintsForRoute("Flows").map(({id,text})=>[id,text])),required={"Project overview":"Lost an entity in the filing-cabinet jungle? Global search finds it without rearranging a single saved Draft.","Shared Profiles":"Concepts arrange Profile properties into sensible documentation gangs. Validation remains unmoved; it has its own clipboard.","Pages":"Path conditions are the Page's doorman: they inspect each observed location and politely—or firmly—decide whether it belongs.","Assignments":"Run preflight before testing. Missing targets and tied candidates are easier to catch before they put on matching moustaches.","Documentation":"Generate rich copy or Excel only after refreshing the preview. Exporting stale work merely gives yesterday better stationery."},semantics={canvas:/Pages are the rooms; Events are the custard pies.*Add the rooms first/u.test(flow.flows),frames:/Page frames.*journey step/u.test(flow["flows-frames"]),containment:/Event occurrence inside its owning Page frame/u.test(flow["flows-occurrences"]),pageRelationships:/Connect Page frames to Page frames/u.test(flow["flows-relationships"]),occurrencesAreNotEndpoints:!/connect(?:ing)? (?:Event )?occurrences|occurrence(?:s)? (?:as|for|to) relationship endpoints?/iu.test(flow["flows-relationships"]),documentation:/Refresh Documentation.*selected Flow.*value map/u.test(flow["flows-documentation"]),required:Object.entries(required).every(([route,text])=>studioAnalystHintsForRoute(route).some((hint)=>hint.text===text))};return{pools,semantics};})()`);
   assert.equal(Object.keys(analystPools.pools).length,10);
   assert.equal(Object.values(analystPools.pools).every(({count,distinct,texts,comic})=>count>=5&&count===distinct&&texts.every((text)=>text.length>20)&&comic),true);
   assert.equal(Object.values(analystPools.semantics).every(Boolean),true);
@@ -1021,27 +1059,35 @@ try{
 
   await studio.call("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"no-preference"}]});
   const analystTypewriter=await evaluate(studio,`(async()=>{
-    const {installStudioAnalystGuidance}=await import("./specification-studio-technical-analyst-guidance.js"),bubble=document.querySelector("#studio-analyst-hint"),reserve=bubble.querySelector("[data-analyst-tip-reserve]"),visual=bubble.querySelector("[data-analyst-tip-visual]"),announcement=bubble.querySelector("[data-analyst-tip-announcement]"),blocker=document.createElement("div");blocker.dataset.schemaRowOverlay="true";document.body.append(blocker);await new Promise((resolve)=>setTimeout(resolve,300));let route="Project overview",active=true,announcementCount=0;announcement.textContent="";
+    const {installStudioAnalystGuidance}=await import("./specification-studio-technical-analyst-guidance.js"),bubble=document.querySelector("#studio-analyst-hint"),analystControl=document.querySelector("#studio-analyst-control"),talkA=analystControl.querySelector('[data-analyst-art="speaking-a"]'),talkB=analystControl.querySelector('[data-analyst-art="speaking-b"]'),reserve=bubble.querySelector("[data-analyst-tip-reserve]"),visual=bubble.querySelector("[data-analyst-tip-visual]"),announcement=bubble.querySelector("[data-analyst-tip-announcement]"),blocker=document.createElement("div");blocker.dataset.schemaRowOverlay="true";document.body.append(blocker);await new Promise((resolve)=>setTimeout(resolve,300));let route="Project overview",active=true,announcementCount=0;announcement.textContent="";
     const announcementObserver=new MutationObserver(()=>{if(announcement.textContent)announcementCount+=1;});announcementObserver.observe(announcement,{childList:true,subtree:true,characterData:true});
-    const controller=installStudioAnalystGuidance({bubble,route:()=>route,active:()=>active,reducedMotion:()=>false,intervalMilliseconds:1_000_000}),samples=[],observer=new MutationObserver(()=>samples.push({time:performance.now(),text:visual.textContent}));observer.observe(visual,{childList:true,subtree:true,characterData:true});
-    controller.requestNext();const initialBox=bubble.getBoundingClientRect(),initial={text:visual.textContent,reserved:reserve.textContent,announcement:announcement.textContent,width:initialBox.width,height:initialBox.height};
-    await new Promise((resolve)=>setTimeout(resolve,75));const partial=visual.textContent,firstId=bubble.dataset.hintId,initialAnnouncementCount=announcementCount;controller.requestNext();const replacement={id:bubble.dataset.hintId,text:visual.textContent,complete:bubble.dataset.completeText};await new Promise((resolve)=>setTimeout(resolve,45));const replacementAnnouncementCount=announcementCount-initialAnnouncementCount;active=false;controller.evaluate();const hiddenText=visual.textContent;await new Promise((resolve)=>setTimeout(resolve,45));const hideCancellation={hidden:bubble.hidden,stable:visual.textContent===hiddenText};active=true;controller.evaluate();route="Pages";controller.evaluate();const cancelledText=visual.textContent;await new Promise((resolve)=>setTimeout(resolve,45));const routeChange={hidden:bubble.hidden,stable:visual.textContent===cancelledText};observer.disconnect();announcementObserver.disconnect();controller.dispose();
-    const reducedController=installStudioAnalystGuidance({bubble,route:()=>"Project overview",active:()=>true,reducedMotion:()=>true,intervalMilliseconds:1_000_000});reducedController.requestNext();await Promise.resolve();const reducedBox=bubble.getBoundingClientRect(),reduced={complete:bubble.dataset.completeText,visual:visual.textContent,announcement:announcement.textContent,width:reducedBox.width,height:reducedBox.height};reducedController.dispose();blocker.remove();
-    return{initial,partial,firstId,replacement,samples:samples.slice(0,4),hideCancellation,routeChange,initialAnnouncementCount,replacementAnnouncementCount,reduced};
+    const frame=()=>[Number(getComputedStyle(talkA).opacity),Number(getComputedStyle(talkB).opacity)];
+    const controller=installStudioAnalystGuidance({bubble,analystControl,route:()=>route,active:()=>active,reducedMotion:()=>false,intervalMilliseconds:1_000_000}),samples=[];let samplingInitialPrint=true;const observer=new MutationObserver(()=>{if(samplingInitialPrint)samples.push({time:performance.now(),text:visual.textContent});});observer.observe(visual,{childList:true,subtree:true,characterData:true});
+    controller.requestNext();const initialBox=bubble.getBoundingClientRect(),initial={text:visual.textContent,reserved:reserve.textContent,announcement:announcement.textContent,width:initialBox.width,height:initialBox.height,pose:analystControl.dataset.analystPose,frame:frame()};
+    await new Promise((resolve)=>setTimeout(resolve,75));const partial=visual.textContent;await new Promise((resolve)=>setTimeout(resolve,210));samplingInitialPrint=false;const switchedFrame=frame(),firstId=bubble.dataset.hintId,initialAnnouncementCount=announcementCount;controller.requestNext();const replacement={id:bubble.dataset.hintId,text:visual.textContent,complete:bubble.dataset.completeText,pose:analystControl.dataset.analystPose};await new Promise((resolve)=>setTimeout(resolve,45));const replacementAnnouncementCount=announcementCount-initialAnnouncementCount;active=false;controller.evaluate();const hiddenText=visual.textContent;await new Promise((resolve)=>setTimeout(resolve,45));const hideCancellation={hidden:bubble.hidden,stable:visual.textContent===hiddenText,pose:analystControl.dataset.analystPose};active=true;controller.evaluate();route="Pages";controller.evaluate();const cancelledText=visual.textContent;await new Promise((resolve)=>setTimeout(resolve,45));const routeChange={hidden:bubble.hidden,stable:visual.textContent===cancelledText,pose:analystControl.dataset.analystPose};observer.disconnect();announcementObserver.disconnect();controller.dispose();
+    const reducedController=installStudioAnalystGuidance({bubble,analystControl,route:()=>"Project overview",active:()=>true,reducedMotion:()=>true,intervalMilliseconds:1_000_000});reducedController.requestNext();await Promise.resolve();const reducedBox=bubble.getBoundingClientRect(),reduced={complete:bubble.dataset.completeText,visual:visual.textContent,announcement:announcement.textContent,width:reducedBox.width,height:reducedBox.height,pose:analystControl.dataset.analystPose,frame:frame()};reducedController.dispose();const disposedPose=analystControl.dataset.analystPose;blocker.remove();
+    return{initial,partial,switchedFrame,firstId,replacement,samples:samples.slice(0,4),hideCancellation,routeChange,initialAnnouncementCount,replacementAnnouncementCount,reduced,disposedPose};
   })()`);
   assert.equal(analystTypewriter.initial.text,"");
   assert.equal(analystTypewriter.initial.reserved.length>20,true);
+  assert.equal(analystTypewriter.initial.pose,"speaking");
+  assert.notDeepEqual(analystTypewriter.initial.frame,analystTypewriter.switchedFrame,"the two speaking drawings alternate during typewriter output");
+  assert.equal([...analystTypewriter.initial.frame,...analystTypewriter.switchedFrame].every((opacity)=>opacity===0||opacity===1),true);
   assert.equal(analystTypewriter.partial.length>=2,true);
   assert.equal(typeof analystTypewriter.firstId,"string");
   assert.notEqual(analystTypewriter.replacement.id,analystTypewriter.firstId);
   assert.equal(analystTypewriter.replacement.text,"");
-  assert.deepEqual(analystTypewriter.hideCancellation,{hidden:true,stable:true});
-  assert.deepEqual(analystTypewriter.routeChange,{hidden:true,stable:true});
+  assert.equal(analystTypewriter.replacement.pose,"speaking");
+  assert.deepEqual(analystTypewriter.hideCancellation,{hidden:true,stable:true,pose:"idle"});
+  assert.deepEqual(analystTypewriter.routeChange,{hidden:true,stable:true,pose:"idle"});
   assert.equal(analystTypewriter.samples.length>=3,true);
   assert.equal(analystTypewriter.samples.slice(1).every((sample,index)=>sample.time-analystTypewriter.samples[index].time>=15),true);
   assert.deepEqual([analystTypewriter.initialAnnouncementCount,analystTypewriter.replacementAnnouncementCount],[1,1]);
   assert.equal(analystTypewriter.reduced.visual,analystTypewriter.reduced.complete);
   assert.equal(analystTypewriter.reduced.announcement,analystTypewriter.reduced.complete);
+  assert.equal(analystTypewriter.reduced.pose,"holding");
+  assert.deepEqual(analystTypewriter.reduced.frame,[1,0]);
+  assert.equal(analystTypewriter.disposedPose,"idle");
   assert.deepEqual(
     [analystTypewriter.initial.width,analystTypewriter.initial.height],
     [analystTypewriter.reduced.width,analystTypewriter.reduced.height],
@@ -1059,6 +1105,7 @@ try{
     ...Object.fromEntries(documentationChoices.details.map(({contract,description})=>[contract,description])),
     ...documentationConfigurationChoices.contracts,
     ...Object.fromEntries(Object.entries(mountedComponentChoices.contracts).map(([key,{description}])=>[key,description])),
+    ...Object.fromEntries(applicabilityPreviewNativeChoices.map(({key,description})=>[key,description])),
     [switchBefore.contract]:switchBefore.description,
     [bulkConservation.contract]:bulkConservation.description,
     ...defectOptions.descriptions,
@@ -1067,7 +1114,7 @@ try{
     [conflictConservation.contract]:conflictConservation.description,
   };
   assert.deepEqual(Object.keys(observedDescriptions).sort(),[...expectedStudioChoiceContracts.keys()].sort(),"the installed production mounts must exercise every registered Studio choice");
-  const nativeChoiceAudits=[...documentationNativeChoices,...documentationConfigurationNativeChoices,...switchNativeChoices,...disabledConflictNativeChoices,...bulkNativeChoices,...defectNativeChoices,...mountedComponentNativeChoices,...conditionNativeChoices,...creationNativeChoices,...conflictNativeChoices];
+  const nativeChoiceAudits=[...documentationNativeChoices,...documentationConfigurationNativeChoices,...switchNativeChoices,...disabledConflictNativeChoices,...bulkNativeChoices,...defectNativeChoices,...mountedComponentNativeChoices,...applicabilityPreviewNativeChoices,...conditionNativeChoices,...creationNativeChoices,...conflictNativeChoices];
   assert.equal(nativeChoiceAudits.every(validNativeChoiceAudit),true,JSON.stringify(nativeChoiceAudits.filter((item)=>!validNativeChoiceAudit(item))));
   const instanceEvidence=Object.fromEntries([...expectedStudioChoiceContracts.keys()].map((key)=>{const instances=nativeChoiceAudits.filter((detail)=>detail.key===key);return[key,instances.length>0&&instances.every(validNativeChoiceAudit)];}));
   const mountedInteractionsByKey=(key)=>mountedComponentChoices.interactions.some((item)=>item.key===key)&&mountedComponentChoices.interactions.filter((item)=>item.key===key).every(({before,afterInput,freshBefore,afterLabel,inputChanges,labelChanges})=>afterInput===!before&&freshBefore===afterInput&&afterLabel===before&&inputChanges>=1&&labelChanges===1);
@@ -1090,6 +1137,7 @@ try{
     "schema.destructive-confirmation":mountedInteractionsByKey("schema.destructive-confirmation")&&mountedComponentChoices.consequences.copy.publishedType==="number"&&mountedComponentChoices.consequences.copy.draftType==="string",
     "schema.specification-property":mountedInteractionsByKey("schema.specification-property")&&/currency/u.test(mountedComponentChoices.consequences.specificationPlain),
     "schema.specification-headings":mountedInteractionsByKey("schema.specification-headings")&&/Property name/u.test(mountedComponentChoices.consequences.specificationPlain),
+    "schema.page-group-applicability-preview":applicabilityPreviewNativeChoices.some(({key,checked,after,restored})=>key==="schema.page-group-applicability-preview"&&after.checked===!checked&&restored.checked===checked),
     "entity.creation-option":creationChoice.durable===creationChoice.checked&&creationChoice.checked!==creationChoice.initial&&creationChoice.commandValues.committed===creationChoice.commandValues.before+1,
     "entity.editor-option":conditionOptions.durable===conditionOptions.activation.stagedValue&&conditionOptions.commandValues.committed===conditionOptions.commandValues.before+1,
     "conflict.pending-field":conflictConservation.values.durable==="Pending conflict value"&&conflictConservation.commandValues.committed===conflictConservation.commandValues.before+1,

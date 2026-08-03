@@ -27,8 +27,8 @@
     :missing-error "Specification Studio technical analyst guidance browser evidence is missing."}))
 
 (def example-relations
-  [{:keys ["horizontal_edge" "displayed_width" "previous_width" "unchanged_surface"]
-    :rows #{["left" "6.5rem" "5.2rem" "no-project start-card"]}}
+  [{:keys ["horizontal_edge" "minimum_width" "pose_canvas" "start_card_surface"]
+    :rows #{["left" "8rem" "587 by 822 pixels" "no-project start-card"]}}
    {:keys ["elapsed_time" "result"]
     :rows #{["less than 10 seconds after Studio is ready" "not shown"]
             ["10 seconds after Studio is ready" "shown once"]
@@ -69,7 +69,7 @@
     :rows #{["no visible tip"] ["a visible tip"]
             ["no rendered tip"] ["a rendered tip"]}}
    {:keys ["studio_part"]
-    :rows #{["Project overview"] ["Shared Profiles"] ["Pages"] ["Page Groups"]
+    :rows #{["Project overview"] ["Shared Profiles"] ["Pages"] ["Property Sets"]
             ["Events"] ["Applicability"] ["Flows"] ["Fixtures"] ["Assignments"]
             ["Documentation"]}}
    {:keys ["dwell_time" "result"]
@@ -85,6 +85,17 @@
    {:keys ["navigation_inventory"]
     :rows #{["a short list ending well above the footer"]
             ["a long list requiring navigation scrolling"]}}
+   {:keys ["route" "topics"]
+    :rows #{["Project overview" "collection selection, project context, global search, preflight, and Inspector"]
+            ["Shared Profiles" "reusable fields, canonical authoring, Saved Schema adoption, concepts, and closed fields"]
+            ["Pages" "observed event, path conditions, Property Set order, Shared Profiles, and effective schema"]
+            ["Property Sets" "membership, conditions, inherited fields, contribution order, and conflict repair"]
+            ["Events" "observed name, observation source, payload target, Page and Flow use, and canonical contributors"]
+            ["Applicability" "priority, observable conditions, fallback, overlap preflight, and Assignment selection"]
+            ["Flows" "Page insertion, Page frames, Event containment, relationships, and Documentation refresh"]
+            ["Fixtures" "observations, expected outcomes, context, guided validation, and advisory coverage"]
+            ["Assignments" "Event selection, Applicability, contributor target, priority, and preflight"]
+            ["Documentation" "preview refresh, section selection, concepts, theme save, and export"]}}
    {:keys ["route" "control" "tip"]
     :rows #{["Pages" "Add Page" "Every grand journey needs somewhere for the trouble to begin. Add Page creates a real location before you send it marching onto a Flow."]
             ["Project overview" "Run preflight" "Run preflight before publishing. It is considerably cheaper than discovering a missing target while the brass band is already playing."]
@@ -116,8 +127,16 @@
        preFirstHidden
        (false? (:hidden visible))
        (= "project-overview" (:hintId visible))
-       (= (:expectedWidth visible) (:width visible))
+       (<= (:minReadableWidth visible) (:width visible))
        (:leftAnchored visible)
+       (= "holding" (:pose visible))
+       (< 0.84 (:bubbleWidthRatio visible))
+       (:bubbleAboveAnalyst visible)
+       (= ["technical-analyst.png"
+           "technical-analyst-speaking-a.png"
+           "technical-analyst-speaking-b.png"]
+          (:artSources visible))
+       (every? #(= [587 822 true] %) (:artCanvases visible))
        (:inside visible)
        (zero? (:under visible))
        (zero? (:overflow visible))
@@ -158,9 +177,9 @@
           (pause-evidence schedule-boundary :blockingPause))))
 
 (defn- footer-evidence-valid? [interaction]
-  (and (false? (get-in interaction [:footerLayout :short :scrollable]))
-       (get-in interaction [:footerLayout :short :treeAboveFooter])
-       (get-in interaction [:footerLayout :short :bubbleRightOfAnalyst])
+  (and (get-in interaction [:footerLayout :short :treeAboveFooter])
+       (get-in interaction [:footerLayout :short :bubbleAboveAnalyst])
+       (get-in interaction [:footerLayout :short :bubbleReadable])
        (get-in interaction [:footerLayout :short :controlsClear])
        (get-in interaction [:footerLayout :long :beforeScroll :scrollable])
        (pos? (get-in interaction [:footerLayout :long :afterScroll :scrollTop]))
@@ -197,7 +216,7 @@
        (= 3 (count (set (map :id (:activations interaction)))))
        (every? activation-unchanged? (:activations interaction))
        (every? true? (map (get-in interaction [:tail])
-                          [:visible :headSide :travels :joins :inside]))
+                          [:visible :attached :openRoot :melds :simple :monotonicEdges :pointsToward :clearsArtwork :travels :inside]))
        (:routeHidden interaction)
        (:routeBeforeRequest interaction)
        (not (contains? (set (map :id (:activations interaction)))
@@ -237,19 +256,29 @@
 
 (defn- typewriter-evidence-valid? [typewriter]
   (and (= "" (get-in typewriter [:initial :text]))
+       (= "speaking" (get-in typewriter [:initial :pose]))
+       (not= (get-in typewriter [:initial :frame]) (:switchedFrame typewriter))
+       (every? #{0 1} (concat (get-in typewriter [:initial :frame])
+                              (:switchedFrame typewriter)))
        (<= 2 (count (:partial typewriter)))
        (string? (:firstId typewriter))
        (not= (:firstId typewriter) (get-in typewriter [:replacement :id]))
+       (= "speaking" (get-in typewriter [:replacement :pose]))
        (get-in typewriter [:hideCancellation :hidden])
        (get-in typewriter [:hideCancellation :stable])
+       (= "idle" (get-in typewriter [:hideCancellation :pose]))
        (get-in typewriter [:routeChange :hidden])
        (get-in typewriter [:routeChange :stable])
+       (= "idle" (get-in typewriter [:routeChange :pose]))
        (= [1 1] [(:initialAnnouncementCount typewriter)
                  (:replacementAnnouncementCount typewriter)])
        (= (get-in typewriter [:reduced :complete])
           (get-in typewriter [:reduced :visual]))
        (= (get-in typewriter [:reduced :complete])
-          (get-in typewriter [:reduced :announcement]))))
+          (get-in typewriter [:reduced :announcement]))
+       (= "holding" (get-in typewriter [:reduced :pose]))
+       (= [1 0] (get-in typewriter [:reduced :frame]))
+       (= "idle" (:disposedPose typewriter))))
 
 (defn- detailed-evidence-valid? [interaction]
   (and (footer-evidence-valid? interaction)
@@ -283,5 +312,5 @@
          (assert-browser! observation))))))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-30T20:08:44.8897136+02:00", :module-hash "1676023489", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "-141541989"} {:id "def/feature-files", :kind "def", :line 4, :end-line 6, :hash "-2026693678"} {:id "def/entry-modes", :kind "def", :line 8, :end-line 10, :hash "1522919857"} {:id "form/3/defonce", :kind "defonce", :line 12, :end-line 12, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 13, :end-line 13, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 15, :end-line 19, :hash "-373877270"} {:id "defn-/verify-browser!", :kind "defn-", :line 21, :end-line 27, :hash "-1564117678"} {:id "def/example-relations", :kind "def", :line 29, :end-line 93, :hash "352245780"} {:id "defn-/validate-example!", :kind "defn-", :line 95, :end-line 98, :hash "1709490755"} {:id "defn-/validate-runtime-example!", :kind "defn-", :line 100, :end-line 111, :hash "-1761494061"} {:id "defn-/base-evidence-valid?", :kind "defn-", :line 113, :end-line 137, :hash "492931899"} {:id "defn-/pause-evidence", :kind "defn-", :line 139, :end-line 144, :hash "1577238289"} {:id "defn-/schedule-evidence-valid?", :kind "defn-", :line 146, :end-line 158, :hash "-1445817175"} {:id "defn-/footer-evidence-valid?", :kind "defn-", :line 160, :end-line 172, :hash "1839699614"} {:id "defn-/activation-unchanged?", :kind "defn-", :line 174, :end-line 175, :hash "1731646445"} {:id "defn-/interaction-evidence-valid?", :kind "defn-", :line 177, :end-line 204, :hash "669403679"} {:id "defn-/substantial-text?", :kind "defn-", :line 206, :end-line 207, :hash "-2117338587"} {:id "defn-/pool-valid?", :kind "defn-", :line 209, :end-line 213, :hash "11322883"} {:id "def/dwell-keys", :kind "def", :line 215, :end-line 215, :hash "73325018"} {:id "defn-/dwell-values", :kind "defn-", :line 217, :end-line 218, :hash "-974825008"} {:id "defn-/stayed-hidden?", :kind "defn-", :line 220, :end-line 221, :hash "-556440693"} {:id "defn-/dwell-evidence-valid?", :kind "defn-", :line 223, :end-line 236, :hash "-439405961"} {:id "defn-/typewriter-evidence-valid?", :kind "defn-", :line 238, :end-line 252, :hash "-2073143279"} {:id "defn-/detailed-evidence-valid?", :kind "defn-", :line 254, :end-line 261, :hash "1767624212"} {:id "defn-/assert-browser!", :kind "defn-", :line 263, :end-line 271, :hash "-1966366715"} {:id "def/handlers", :kind "def", :line 273, :end-line 283, :hash "-16778699"}]}
+;; {:version 1, :tested-at "2026-08-02T21:34:10.9195974+02:00", :module-hash "1912166337", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-141541989"} {:id "def/feature-files", :kind "def", :line 4, :end-line nil, :hash "-2026693678"} {:id "def/entry-modes", :kind "def", :line 8, :end-line nil, :hash "1522919857"} {:id "form/3/defonce", :kind "defonce", :line 12, :end-line nil, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 13, :end-line nil, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 15, :end-line nil, :hash "-373877270"} {:id "defn-/verify-browser!", :kind "defn-", :line 21, :end-line nil, :hash "-1564117678"} {:id "def/example-relations", :kind "def", :line 29, :end-line nil, :hash "-1096627087"} {:id "defn-/validate-example!", :kind "defn-", :line 106, :end-line nil, :hash "1709490755"} {:id "defn-/validate-runtime-example!", :kind "defn-", :line 111, :end-line nil, :hash "-1761494061"} {:id "defn-/base-evidence-valid?", :kind "defn-", :line 124, :end-line nil, :hash "-1226064947"} {:id "defn-/pause-evidence", :kind "defn-", :line 158, :end-line nil, :hash "1577238289"} {:id "defn-/schedule-evidence-valid?", :kind "defn-", :line 165, :end-line nil, :hash "-1445817175"} {:id "defn-/footer-evidence-valid?", :kind "defn-", :line 179, :end-line nil, :hash "-1482784555"} {:id "defn-/activation-unchanged?", :kind "defn-", :line 193, :end-line nil, :hash "1731646445"} {:id "defn-/interaction-evidence-valid?", :kind "defn-", :line 196, :end-line nil, :hash "1093706799"} {:id "defn-/substantial-text?", :kind "defn-", :line 225, :end-line nil, :hash "-2117338587"} {:id "defn-/pool-valid?", :kind "defn-", :line 228, :end-line nil, :hash "11322883"} {:id "def/dwell-keys", :kind "def", :line 234, :end-line nil, :hash "73325018"} {:id "defn-/dwell-values", :kind "defn-", :line 236, :end-line nil, :hash "-974825008"} {:id "defn-/stayed-hidden?", :kind "defn-", :line 239, :end-line nil, :hash "-556440693"} {:id "defn-/dwell-evidence-valid?", :kind "defn-", :line 242, :end-line nil, :hash "-439405961"} {:id "defn-/typewriter-evidence-valid?", :kind "defn-", :line 257, :end-line nil, :hash "-628179371"} {:id "defn-/detailed-evidence-valid?", :kind "defn-", :line 283, :end-line nil, :hash "1767624212"} {:id "defn-/assert-browser!", :kind "defn-", :line 292, :end-line nil, :hash "-1966366715"} {:id "def/handlers", :kind "def", :line 302, :end-line nil, :hash "-16778699"}]}
 ;; clj-mutate-manifest-end

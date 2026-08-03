@@ -4,6 +4,7 @@ export const expectedStudioChoiceContracts=new Map([
   ["schema.destructive-confirmation",["checkbox","Confirms replacement impact before the reviewed schema copy"]],
   ["schema.specification-property",["checkbox","Selects a property for the later specification copy action"]],
   ["schema.specification-headings",["checkbox","Stages heading inclusion for the later specification copy action"]],
+  ["schema.page-group-applicability-preview",["checkbox","Previews independent Property Set composition without changing project data"]],
   ["documentation.concept-subheadings",["checkbox","Changes configuration pending preview refresh"]],
   ["documentation.concept-membership",["checkbox","Selects membership in the ordered concept group"]],
   ["documentation.section-membership",["checkbox","Selects membership in the Documentation Set"]],

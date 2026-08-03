@@ -34,7 +34,8 @@
             ["Export Sitewide" "selects membership in an export scope" "checkbox"]
             ["Confirm incomplete export" "records an acknowledgement" "checkbox"]
             ["Select staged property" "selects membership for a later batch action" "checkbox"]
-            ["Borders" "stages a theme option for an explicit save" "checkbox"]}}
+            ["Borders" "stages a theme option for an explicit save" "checkbox"]
+            ["Applicability preview" "previews independent Property Set composition" "checkbox"]}}
    {:keys ["pointer_context" "target_height"]
     :rows #{["fine pointer at desktop width" "36 CSS pixels"]
             ["coarse pointer at narrow width" "44 CSS pixels"]}}
@@ -51,6 +52,7 @@
 (defn- assert-browser! [evidence]
   (let [contracts #{"schema.only-defined" "schema.copy-dependency" "schema.destructive-confirmation"
                     "schema.specification-property" "schema.specification-headings"
+                    "schema.page-group-applicability-preview"
                     "documentation.concept-subheadings" "documentation.concept-membership"
                     "documentation.section-membership" "documentation.flow-context"
                     "documentation.property-row" "documentation.metadata-column"

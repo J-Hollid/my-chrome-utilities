@@ -40,19 +40,19 @@ the operator, and is no longer than 180 characters.
 | --- | --- | --- |
 | pages | Observed event | Give each Page its observed page event before polishing the schema. Even a splendid room needs a doorbell before anyone can prove they visited. |
 | pages-location | Path conditions | Path conditions are the Page's doorman: they inspect each observed location and politely—or firmly—decide whether it belongs. |
-| pages-groups | Page Group order | Order Page Group memberships deliberately. Otherwise their schema contributions arrive like five inspectors all claiming the same chair. |
+| pages-groups | Property Set order | Order Property Set memberships deliberately. Otherwise their schema contributions arrive like five inspectors all claiming the same chair. |
 | pages-profiles | Shared Profiles | Attach a Shared Profile when a Page needs reusable fields. Copying them by hand only breeds tiny paperwork rebellions later. |
 | pages-schema | Effective schema | Review the effective Page schema before adding a local override. Magnify first, meddle second; the ancestors may already have done the work. |
 
-### Page Groups
+### Property Sets
 
 | Identity | Topic | Exact text |
 | --- | --- | --- |
 | page-groups-membership | Membership | Group Pages that share applicability or schema contributions. It is a club with useful paperwork, not matching blazers. |
-| page-groups-conditions | Conditions | Page Group conditions decide where the shared contribution applies. Make them observable; crystal balls produce dreadful test evidence. |
+| page-groups-conditions | Conditions | Property Set conditions decide where the shared contribution applies. Make them observable; crystal balls produce dreadful test evidence. |
 | page-groups-schema | Inherited fields | Keep shared fields canonical at the group level so member Pages inherit one story instead of exchanging contradictory telegrams. |
 | page-groups-order | Contribution order | Reorder group contributions only after checking affected Pages and Flow instances. Moving one chair can upset the entire schema orchestra. |
-| page-groups-repair | Conflict repair | When contributions quarrel, open the named Page Group from the evidence. Repair the culprit, not every innocent bystander in the corridor. |
+| page-groups-repair | Conflict repair | When contributions quarrel, open the named Property Set from the evidence. Repair the culprit, not every innocent bystander in the corridor. |
 
 ### Events
 

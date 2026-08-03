@@ -49,7 +49,29 @@ for (const [htmlName, expected] of Object.entries(expectedStylesheets)) {
     .map((match) => match[1]);
   assert.deepEqual(stylesheets, expected, `${htmlName} stylesheet order`);
   assert.match(html, /<body class="twatility-theme twatility-(?:side-panel|studio)">/u);
-  assert.match(html, /aria-label="TWAtility Belt"/u);
+  if (htmlName === "side-panel.html") {
+    assert.match(html, /aria-label="TWAtility Belt"/u);
+    assert.match(
+      html,
+      /<img\b[^>]*class="twatility-wordmark__image"[^>]*src="assets\/brand\/side-panel-title\.png"[^>]*width="800"[^>]*height="180"[^>]*alt=""[^>]*aria-hidden="true"[^>]*>/u,
+    );
+    assert.doesNotMatch(html, /twatility-wordmark__twa/u);
+  } else {
+    assert.match(
+      html,
+      /<img\b[^>]*src="assets\/brand\/specification-studio-title\.png"[^>]*alt="TWAtility Belt"[^>]*>/u,
+    );
+    assert.match(
+      html,
+      /class="twatility-studio-surface-title">Specification Studio<\/span>/u,
+    );
+    assert.equal(
+      [...html.matchAll(/class="twatility-studio-star" aria-hidden="true"/gu)].length,
+      2,
+      "Studio title stars remain decorative",
+    );
+    assert.doesNotMatch(html, /studio-title-accessible/u);
+  }
 
   for (const [, reference] of html.matchAll(localReferencePattern)) {
     if (
@@ -72,6 +94,14 @@ for (const [htmlName, expected] of Object.entries(expectedStylesheets)) {
 const manifest = JSON.parse(await readFile("dist/manifest.json", "utf8"));
 assert.equal(manifest.name, "TWAtility Belt");
 assert.equal(manifest.action.default_title, "Open TWAtility Belt");
+const expectedIconMap = {
+  "16": "assets/brand/icons/icon-16.png",
+  "32": "assets/brand/icons/icon-32.png",
+  "48": "assets/brand/icons/icon-48.png",
+  "128": "assets/brand/icons/icon-128.png",
+};
+assert.deepEqual(manifest.icons, expectedIconMap);
+assert.deepEqual(manifest.action.default_icon, expectedIconMap);
 assert.ok(manifest.permissions.includes("storage"));
 assert.ok(manifest.permissions.includes("unlimitedStorage"));
 
@@ -107,10 +137,23 @@ for (const token of [
 assert.match(combinedCss, /prefers-reduced-motion:\s*reduce/u);
 assert.match(combinedCss, /forced-colors:\s*active/u);
 assert.match(combinedCss, /:focus-visible/u);
+assert.doesNotMatch(
+  combinedCss,
+  /\.twatility-studio-(?:wordmark|surface-title)[^{]*\{[^}]*scaleX\s*\(/isu,
+  "Studio masthead artwork and live title must not be horizontally scaled",
+);
 
 const assets = [
   ["twatility-belt.png", 1774, 887],
-  ["technical-analyst.png", 1023, 1537],
+  ["specification-studio-title.png", 1600, 360],
+  ["side-panel-title.png", 800, 180],
+  ["technical-analyst.png", 587, 822],
+  ["technical-analyst-speaking-a.png", 587, 822],
+  ["technical-analyst-speaking-b.png", 587, 822],
+  ["icons/icon-16.png", 16, 16],
+  ["icons/icon-32.png", 32, 32],
+  ["icons/icon-48.png", 48, 48],
+  ["icons/icon-128.png", 128, 128],
 ];
 for (const [name, width, height] of assets) {
   const source = await readFile(path.join("assets", "brand", name));
@@ -125,7 +168,20 @@ for (const [name, width, height] of assets) {
 
 assert.deepEqual(
   (await readdir(path.join("dist", "assets", "brand"))).sort(),
-  ["ARTWORK.md", "technical-analyst.png", "twatility-belt.png"],
+  [
+    "ARTWORK.md",
+    "icons",
+    "side-panel-title.png",
+    "specification-studio-title.png",
+    "technical-analyst-speaking-a.png",
+    "technical-analyst-speaking-b.png",
+    "technical-analyst.png",
+    "twatility-belt.png",
+  ],
+);
+assert.deepEqual(
+  (await readdir(path.join("dist", "assets", "brand", "icons"))).sort(),
+  ["icon-128.png", "icon-16.png", "icon-32.png", "icon-48.png"],
 );
 
 const buildScript = await readFile("scripts/build.mjs", "utf8");
