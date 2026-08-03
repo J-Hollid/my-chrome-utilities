@@ -106,7 +106,7 @@ export function mountComposedSchemaWorkspace(options) {
     const saveView = () => { workspaceViews.set(viewKey, { query, sortMode, decisionsOnly, scrollTop: rows.scrollTop }); };
     const valueText = (value) => value === undefined ? "Not set" : typeof value === "string" ? value : JSON.stringify(value);
     const prospectiveParentValues = (items) => items.map((item) => item.action === "remove-property" ? `${item.label}: no parent value; local property will be removed` : `${item.label}: ${valueText(item.inheritedValue)}`).join("; ");
-    const closePanel = () => { const mode = workspacePanels.get(viewKey); workspacePanels.delete(viewKey); panel.hidden = true; panel.replaceChildren(); localChangesButton.setAttribute("aria-expanded", "false"); parentAdditionsButton.setAttribute("aria-expanded", "false"); (mode === "local" ? localChangesButton : parentAdditionsButton).focus(); };
+    const closePanel = () => { const mode = workspacePanels.get(viewKey); workspacePanels.delete(viewKey); workspacePanelFocus.delete(viewKey); panel.hidden = true; panel.replaceChildren(); localChangesButton.setAttribute("aria-expanded", "false"); parentAdditionsButton.setAttribute("aria-expanded", "false"); (mode === "local" ? localChangesButton : parentAdditionsButton).focus(); };
     const applyItemReset = (path, item) => { workspacePanels.set(viewKey, "local"); workspacePanelFocus.set(viewKey, { mode: "local", path }); if (item.action === "reset-rule" && item.ruleId)
         options.onResetLocalRule?.(path, item.ruleId);
     else
@@ -186,7 +186,7 @@ export function mountComposedSchemaWorkspace(options) {
             return; const requested = workspacePanelFocus.get(viewKey); if (requested?.mode !== mode) {
             panel.focus();
             return;
-        } workspacePanelFocus.delete(viewKey); const samePath = requested.path ? panel.querySelector(`[data-local-change-path="${CSS.escape(requested.path)}"] button`) : undefined, next = samePath ?? panel.querySelector('[data-local-change-path] button, input[type="checkbox"]') ?? (mode === "local" ? localChangesButton : parentAdditionsButton); next.focus({ preventScroll: true }); };
+        } const samePath = requested.path ? panel.querySelector(`[data-local-change-path="${CSS.escape(requested.path)}"] button`) : undefined, next = samePath ?? panel.querySelector('[data-local-change-path] button, input[type="checkbox"]') ?? (mode === "local" ? localChangesButton : parentAdditionsButton); next.focus({ preventScroll: true }); };
         if (typeof requestAnimationFrame === "function")
             requestAnimationFrame(restoreFocus);
         else

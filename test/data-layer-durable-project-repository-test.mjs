@@ -15,6 +15,11 @@ import {
 let sequence=0;const id=(kind)=>`${kind}:${++sequence}`;
 const retail=createSpecificationProject({name:"Retail website",site:"retail.example",id});
 assert.equal(durableProjectRouteForWorkspace("pages","page:confirmation").includeFlowGraphs,true,"a Page workspace loads Flow graph references required to block unsafe membership removal");
+for(const kind of ["profiles","pages","propertySets","events"]){
+  const route=durableProjectRouteForWorkspace(kind,`${kind}:continuity`);
+  assert.equal(route.includeFlowGraphs,true,`${kind} sparse schema saves retain Flow-owned siblings and occurrences`);
+  if(kind!=="profiles")assert.ok(route.collectionKinds?.includes("profiles"),`${kind} effective workspaces retain their Shared Profile dependency`);
+}
 retail.project.collections.pages.push({id:"page:confirmation",name:"Confirmation",localSchemaContributions:[{path:"/funnel_step",expectedValue:"3a"}]},{id:"page:cart",name:"Cart"});
 retail.project.collections.flows.push({id:"flow:checkout",name:"Checkout journey"});retail.project.documentationFlowGraphs={"flow:checkout":{pageGroupIds:[],pageFrames:[{id:"flow-page-frame:confirmation",pageId:"page:confirmation",position:{x:40,y:40}}],occurrences:[],relationships:[]}};
 retail.project.collections.fixtures.push({id:"fixture:large",name:"Large capture",payload:{body:"x".repeat(2048)}});

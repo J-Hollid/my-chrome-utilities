@@ -158,8 +158,8 @@ function renderComposedSchemaWorkspace(host, entity, kind, scope, pageGroupAppli
         host.append(region);
         renderPageApplicabilityPreview(region, entity);
     }
-    const persistComposed = (next) => { durableProjectRuntime.prepareProjectRoute(next.project.id, { collectionKind: kind, entityId: entity.id }); persist(next); }, liveState = () => state ?? workspaceState, liveEntity = () => liveState().project.collections[kind].find(({ id: entityId }) => entityId === entity.id), model = composedSchemaWorkspace(workspaceState, entity, scope, undefined, undefined, pageGroupApplicabilitySetIds);
-    if (scope === "Event" || !model.rows.some(({ inherited }) => Boolean(inherited))) {
+    const persistComposed = (next) => { durableProjectRuntime.prepareProjectRoute(next.project.id, durableProjectRouteForWorkspace(kind, entity.id)); persist(next); }, liveState = () => state ?? workspaceState, liveEntity = () => liveState().project.collections[kind].find(({ id: entityId }) => entityId === entity.id), model = composedSchemaWorkspace(workspaceState, entity, scope, undefined, undefined, pageGroupApplicabilitySetIds);
+    if (!model.rows.some(({ inherited }) => Boolean(inherited))) {
         const editorHost = document.createElement("section"), load = () => composedCanonicalSchema(liveState(), liveEntity(), scope);
         editorHost.dataset.schemaContributorScope = scope;
         region.append(editorHost);
@@ -941,7 +941,7 @@ function renderSelectedEntityEditor(content, entity) {
     });
     section.append(heading, form);
     content.append(section);
-    if (selectedKind === "profiles")
+    if (selectedKind === "profiles" && !(pendingWorkspaceFocus?.kind === selectedKind && pendingWorkspaceFocus.id === entity.id))
         renderCanonicalEntityEditor(content, selectedKind, entity);
 }
 function renderTree() { const tree = q("#project-tree"); tree.replaceChildren(); if (!state)
@@ -1008,7 +1008,10 @@ function restorePendingWorkspaceFocus() { const pending = pendingWorkspaceFocus;
     return; document.querySelector(`[data-project-entity-workspace="${CSS.escape(pending.id)}"] h1`)?.focus({ preventScroll: true }); }
 function hydrateVisibleProjectRoute(kind, entityId, focus) { if (!state)
     return; const projectId = state.project.id; void durableProjectRuntime.ensureProjectRoute(projectId, durableProjectRouteForWorkspace(kind, entityId)).then((loaded) => { if (state?.project.id !== projectId || selectedKind !== kind || selectedId !== entityId)
-    return; state = { ...structuredClone(loaded.state), history: { undo: [], redo: [] } }; lastCommittedState = structuredClone(state); canonicalRevision = loaded.draftSequence; publishedRevision = loaded.publishedRevision; library = restoreProjectLibrary(projectStorage.getItem(PROJECT_LIBRARY_STORAGE_KEY)) ?? library; if (pendingWorkspaceFocus?.kind === kind && pendingWorkspaceFocus.id === entityId)
+    return; if (loaded.draftSequence < canonicalRevision) {
+    hydrateVisibleProjectRoute(kind, entityId, focus);
+    return;
+} state = { ...structuredClone(loaded.state), history: { undo: [], redo: [] } }; lastCommittedState = structuredClone(state); canonicalRevision = loaded.draftSequence; publishedRevision = loaded.publishedRevision; library = restoreProjectLibrary(projectStorage.getItem(PROJECT_LIBRARY_STORAGE_KEY)) ?? library; if (pendingWorkspaceFocus?.kind === kind && pendingWorkspaceFocus.id === entityId)
     pendingWorkspaceFocus = undefined; render(); queueMicrotask(() => focus?.()?.focus({ preventScroll: true })); }).catch((error) => { pendingWorkspaceFocus = undefined; saveStatus = { kind: "failed", label: `Open ${labels[kind]}`, message: error instanceof Error ? error.message : String(error) }; render(); }); }
 function openCollectionOverview(kind, focusId) { setPageApplicabilityPreviewRoute(undefined); pendingWorkspaceFocus = undefined; documentationOpen = false; projectOverview = false; creationKind = undefined; removalReview = undefined; selectedKind = kind; selectedId = undefined; persistNavigation(); replaceProjectRoute(kind); render(); hydrateVisibleProjectRoute(kind, undefined, () => focusId ? document.querySelector(`[data-entity-id="${CSS.escape(focusId)}"]`) : document.querySelector(`[data-add-kind="${kind}"]`)); }
 function openProjectEntityWorkspace(kind, entityId) { setPageApplicabilityPreviewRoute(kind === "pages" ? { projectId: state.project.id, pageId: entityId } : undefined); pendingWorkspaceFocus = { kind, id: entityId }; projectOverview = false; creationKind = undefined; removalReview = undefined; selectedKind = kind; selectedId = entityId; durableProjectRuntime.prepareProjectRoute(state.project.id, durableProjectRouteForWorkspace(kind, entityId)); persistNavigation(); replaceProjectRoute(kind, entityId); render(); queueMicrotask(restorePendingWorkspaceFocus); hydrateVisibleProjectRoute(kind, entityId, () => document.querySelector(`[data-project-entity-workspace="${CSS.escape(entityId)}"] h1`)); }
@@ -1136,7 +1139,13 @@ function renderProjectEntityWorkspace(content, kind, entity) { if (!state)
     inspectorHost.replaceChildren();
     renderSelectedEntityEditor(inspectorHost, entity);
     return;
-} q("#flow-inspector-context").replaceChildren(); renderSelectedEntityEditor(workspace, entity); if (kind === "pages") {
+} q("#flow-inspector-context").replaceChildren(); renderSelectedEntityEditor(workspace, entity); if (pendingWorkspaceFocus?.kind === kind && pendingWorkspaceFocus.id === entity.id) {
+    const status = document.createElement("p");
+    status.setAttribute("role", "status");
+    status.textContent = `Loading the current ${projectCollectionDefinitions[kind].singular} schema and its dependencies…`;
+    workspace.append(status);
+    return;
+} if (kind === "pages") {
     renderProfileInheritanceEditor(workspace, entity, true);
     renderComposedSchemaWorkspace(workspace, entity, "pages", "Page", [...(pageApplicabilityPreviews.get(entity.id) ?? new Set())]);
 } if (kind === "propertySets") {
