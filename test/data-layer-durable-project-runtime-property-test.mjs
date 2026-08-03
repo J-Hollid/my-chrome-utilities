@@ -4,7 +4,7 @@ import {CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY,restoreCanonicalProjectState
 import {createMemoryDurableProjectRepository} from "../dist/data-layer-durable-project-repository.js";
 import {createDurableProjectRuntime} from "../dist/data-layer-durable-project-runtime.js";
 
-const dependencyKinds=["profiles","pageGroups","events","flows","assignments"];
+const dependencyKinds=["profiles","propertySets","events","flows","assignments"];
 const subset=(mask)=>dependencyKinds.filter((_,index)=>(mask&(1<<index))!==0);
 const legacy=()=>{const values=new Map();return{getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value),removeItem:key=>values.delete(key)};};
 
