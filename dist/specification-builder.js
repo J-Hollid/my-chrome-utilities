@@ -1007,7 +1007,7 @@ function restorePendingLifecycleFocus() { const pending = pendingLifecycleFocus;
 function restorePendingWorkspaceFocus() { const pending = pendingWorkspaceFocus; if (!pending || selectedKind !== pending.kind || selectedId !== pending.id)
     return; document.querySelector(`[data-project-entity-workspace="${CSS.escape(pending.id)}"] h1`)?.focus({ preventScroll: true }); }
 function hydrateVisibleProjectRoute(kind, entityId, focus) { if (!state)
-    return; const projectId = state.project.id; void durableProjectRuntime.ensureProjectRoute(projectId, durableProjectRouteForWorkspace(kind, entityId)).then((loaded) => { if (state?.project.id !== projectId || selectedKind !== kind || selectedId !== entityId)
+    return; const projectId = state.project.id; void durableProjectRuntime.ensureProjectRoute(projectId, durableProjectRouteForWorkspace(kind, entityId)).then((loaded) => { if (state?.project.id !== projectId || selectedKind !== kind || selectedId !== entityId || documentationOpen || projectOverview || creationKind !== undefined || removalReview !== undefined)
     return; if (loaded.draftSequence < canonicalRevision) {
     hydrateVisibleProjectRoute(kind, entityId, focus);
     return;

@@ -1,9 +1,9 @@
 import { compileLayeredSchema, exportLayeredSchema, resolveLayeredTarget, validateLayeredObservation } from "./data-layer-layered-schema.js";
 import { confirmCanonicalMigration, transactProject } from "./data-layer-specification-project.js";
-import { applyCanonicalCommand, canonicalPropertyPath, canonicalSchemaWithConstraint, canonicalTableRows, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
+import { applyCanonicalCommand, canonicalSchemaWithConstraint, canonicalTableRows, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { mountCanonicalSchemaEditor } from "./data-layer-canonical-schema-ui.js";
 import { mountComposedSchemaWorkspace } from "./data-layer-composed-schema-workspace-ui.js";
-import { composedCanonicalSchema, composedSchemaWorkspace, includeFlowComposedSchemaParentAdditions, resetComposedSchemaLocalChanges, resetComposedSchemaLocalFacet, resetComposedSchemaLocalProperty, resetComposedSchemaLocalRule, resetFlowComposedSchemaLocalChanges, resetFlowComposedSchemaLocalFacet, resetFlowComposedSchemaLocalProperty, resetFlowComposedSchemaLocalRule, saveComposedCanonicalDocument, saveComposedEventCanonicalDocument, saveComposedSchemaLocalFacetsAndStructures, saveEventOccurrenceCanonicalDocument, saveFlowComposedSchemaLocalFacets, saveFlowContributorSchemaPolicy, schemaContributorUsesEffectiveWorkspace } from "./data-layer-composed-schema-workspace.js";
+import { composedSchemaWorkspace, includeFlowComposedSchemaParentAdditions, resetComposedSchemaLocalChanges, resetComposedSchemaLocalFacet, resetComposedSchemaLocalProperty, resetComposedSchemaLocalRule, resetFlowComposedSchemaLocalChanges, resetFlowComposedSchemaLocalFacet, resetFlowComposedSchemaLocalProperty, resetFlowComposedSchemaLocalRule, saveComposedSchemaLocalFacetsAndStructures, saveFlowComposedSchemaLocalFacets, saveFlowContributorSchemaPolicy, schemaContributorUsesEffectiveWorkspace } from "./data-layer-composed-schema-workspace.js";
 import { flowPageFrameContributor, layeredContributorPath, layeredContributorsForPath, projectCanonicalConcepts, saveFlowPageInstanceLocalFacetsAndStructures } from "./data-layer-layered-schema-project.js";
 import { resolveSidePanelSchemaContributor } from "./data-layer-side-panel-schema-editor.js";
 export { layeredContributionDetails, layeredContributorPath, layeredContributorsForPath } from "./data-layer-layered-schema-project.js";
@@ -140,29 +140,6 @@ export function installLayeredSchemaUi(options) {
             persistComposed(resetComposedSchemaLocalFacet(live.state, kind, entity.id, path, facet)); }, onResetLocalRule: (path, ruleId) => { const live = current(); if (live.state)
             persistComposed(resetComposedSchemaLocalRule(live.state, kind, entity.id, path, ruleId)); }, onResetAllLocalChanges: () => { const live = current(); if (live.state)
             persistComposed(resetComposedSchemaLocalChanges(live.state, kind, entity.id)); }, onStructure: () => { } }); back.type = "button"; back.textContent = "Return to Flow"; back.addEventListener("click", () => { editor.hidden = true; editorHost.hidden = true; workspace.hidden = false; restoreFlowReturn(); }); editor.append(back); return true; };
-    const renderEffectiveCanonicalSchemaWorkspace = (state, entity, scope, flowId) => { const identity = document.createElement("p"), effectiveHost = document.createElement("section"), host = document.createElement("section"), back = document.createElement("button"), load = () => { const live = current(); return composedCanonicalSchema(live.state, live.entity, scope, flowId); }, decorate = () => { const document = load(); for (const row of Array.from(host.querySelectorAll("[data-property-id]"))) {
-        if (!row.matches("tr") && !row.querySelector("[data-inline-schema-facet]")) {
-            delete row.dataset.effectivePropertyPath;
-            continue;
-        }
-        const path = canonicalPropertyPath(document, row.dataset.propertyId);
-        if (path)
-            row.dataset.effectivePropertyPath = path;
-    } }, persistEffective = (next) => { if (graphSelection) {
-        const liveScope = current().scope;
-        if (liveScope === "Event-occurrence") {
-            const graph = next.project.documentationFlowGraphs[flowId];
-            graphSelection = graph?.occurrences?.find(({ id }) => id === entity.id);
-        }
-        else {
-            const kind = liveScope === "Page" ? "pages" : liveScope === "Property Set" ? "propertySets" : "events";
-            graphSelection = next.project.collections[kind].find(({ id }) => id === entity.id);
-        }
-    } options.persist(next); queueMicrotask(renderEditor); }; identity.textContent = `Contributor: ${entity.name} · Scope: ${scope}`; effectiveHost.className = "composed-schema-workspace"; effectiveHost.setAttribute("aria-label", `Effective schema at ${entity.name}`); effectiveHost.dataset.schemaContributorId = entity.id; effectiveHost.dataset.schemaContributorScope = scope; effectiveHost.append(host); editor.append(identity, effectiveHost); mountCanonicalSchemaEditor({ host, surface: canonicalLayerEditorSurface(options.context().kind), conceptSuggestions: canonicalLayerConceptSuggestions(() => current().state), load, id, dispatch: (command) => { const live = current(), document = load(); if (command.baseRevision !== document.revision)
-            return { status: "conflict", document, message: `This contributor changed from opaque Draft token ${command.baseRevision} to ${document.revision}; compare this command with the latest property before retrying.` }; const result = applyCanonicalCommand(document, command); if ((result.status === "applied" || result.status === "rebased") && live.state) {
-            const next = scope === "Event-occurrence" ? saveEventOccurrenceCanonicalDocument(live.state, flowId, entity.id, result.document) : scope === "Event" ? saveComposedEventCanonicalDocument(live.state, entity.id, result.document) : saveComposedCanonicalDocument(live.state, scope === "Page" ? "pages" : "propertySets", entity.id, result.document);
-            persistEffective(next);
-        } return result; }, onUndo: () => options.onUndo?.(), onRedo: () => options.onRedo?.() }); new MutationObserver(decorate).observe(host, { childList: true, subtree: true }); decorate(); queueMicrotask(decorate); setTimeout(decorate, 0); back.type = "button"; back.textContent = "Return to Flow"; back.addEventListener("click", () => { editor.hidden = true; editorHost.hidden = true; workspace.hidden = false; restoreFlowReturn(); }); editor.append(back); return true; };
     const renderCanonicalLayerEditor = (state, entity, scope) => { const flowId = options.context().kind === "flows" ? options.context().entityId : undefined; if ((scope === "Flow Page-instance" || scope === "Event-occurrence") && flowId)
         return renderFlowComposedSchemaWorkspace(state, entity, flowId, scope); if (scope === "Page" || scope === "Property Set" || scope === "Event")
         return renderCollectionComposedSchemaWorkspace(state, entity, scope); const localCanonical = entity.canonicalSchema; if (!localCanonical)
