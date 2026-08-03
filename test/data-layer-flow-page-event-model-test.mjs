@@ -1,15 +1,14 @@
 import assert from "node:assert/strict";
 import {
   addEventOccurrenceToPage,
-  addFlowPageFrame,
   deriveFlowPageFrameExample,
   documentaryFlowGraph,
   inspectOccurrencePageChange,
   projectFlowGraph,
   reassignFlowOccurrencePage,
   saveGraphRelationship,
-  setFlowPageGroupLanes,
 } from "../dist/data-layer-flow-graph.js";
+import {addFlowPageFrameToSection,createFlowSection} from "../dist/data-layer-property-set-flow-section.js";
 import {
   createProjectCollectionEntity,
   projectCollectionCreationFields,
@@ -27,30 +26,31 @@ state=createProjectCollectionEntity(state,"pages","Payment",id,{eventName:"pagev
 state=createProjectCollectionEntity(state,"events","Button click",id,{eventName:"button_click"});
 const [cart,payment]=state.project.collections.pages;
 const [buttonClick]=state.project.collections.events;
-assert.equal(cart.eventName,"pageview");
+assert.equal("eventName" in cart,false,"new Pages do not persist obsolete Page-view event metadata");
 assert.equal(buttonClick.eventName,"button_click");
 assert.equal("role" in cart,false);
 assert.equal("role" in buttonClick,false);
 assert.deepEqual(
   projectCollectionCreationFields.pages.map(({label})=>label),
-  ["Description","Page-view event name","Exact URL path"],
+  ["Description"],
 );
 
 const add=(kind,entity)=>{state=addProjectEntity(state,kind,entity,id);return state.project.collections[kind].at(-1);};
 const checkout=add("propertySets",{name:"Checkout"});
 const flow=add("flows",{name:"Checkout journey",steps:[]});
 state={...state,project:{...state.project,collections:{...state.project.collections,
-  pages:state.project.collections.pages.map((page)=>({...page,pageGroupIds:[checkout.id],localSchemaContributions:[{path:page.id===cart.id?"/cart_only":"/payment_only",type:"string",presence:"required"}]})),
+  pages:state.project.collections.pages.map((page)=>({...page,propertySetApplications:[{id:id("property-set-application"),name:checkout.name,propertySetId:checkout.id}],localSchemaContributions:[{path:page.id===cart.id?"/cart_only":"/payment_only",type:"string",presence:"required"}]})),
   events:state.project.collections.events.map((event)=>({...event,schemaConstraints:[{path:"/interaction",type:"string"}]})),
 }}};
-state=setFlowPageGroupLanes(state,flow.id,[checkout.id]);
-state=addFlowPageFrame(state,flow.id,{pageId:cart.id,pageGroupId:checkout.id,x:40,y:40},id);
-state=addFlowPageFrame(state,flow.id,{pageId:payment.id,pageGroupId:checkout.id,x:320,y:40},id);
+state=createFlowSection(state,flow.id,{name:"Checkout",bounds:{x:20,y:20,width:720,height:300}},id);
+const sectionId=documentaryFlowGraph(state.project,flow.id).sections[0].id;
+state=addFlowPageFrameToSection(state,flow.id,cart.id,sectionId,id);
+state=addFlowPageFrameToSection(state,flow.id,payment.id,sectionId,id);
 const [cartFrame,paymentFrame]=documentaryFlowGraph(state.project,flow.id).pageFrames;
 assert.equal(documentaryFlowGraph(state.project,flow.id).occurrences.length,0,"a Page context event is not a nested occurrence");
 
 state=addEventOccurrenceToPage(state,flow.id,{
-  name:"Button click",pageFrameId:cartFrame.id,pageGroupId:checkout.id,pageId:cart.id,eventId:buttonClick.id,
+  name:"Button click",pageFrameId:cartFrame.id,pageId:cart.id,eventId:buttonClick.id,
   trigger:"Continue clicked",obligation:"Required",minimum:1,maximum:1,x:24,y:70,
 },id);
 const occurrence=documentaryFlowGraph(state.project,flow.id).occurrences[0];

@@ -1,13 +1,12 @@
 import assert from "node:assert/strict";
 import {
   addEventOccurrenceToPage,
-  addFlowPageFrame,
   documentaryFlowGraph,
   migrateLegacyFlowContextBindings,
   projectFlowGraph,
   reviewLegacyFlowContextMigration,
-  setFlowPageGroupLanes,
 } from "../dist/data-layer-flow-graph.js";
+import {addFlowPageFrameToSection,createFlowSection} from "../dist/data-layer-property-set-flow-section.js";
 import {addProjectEntity,createSpecificationProject} from "../dist/data-layer-specification-project.js";
 
 let sequence=0;
@@ -15,21 +14,23 @@ const id=(kind)=>`${kind}:fixed-event-${++sequence}`;
 let state=createSpecificationProject({name:"Fixed Flow semantics",site:"shop.example",id});
 const add=(kind,entity)=>{state=addProjectEntity(state,kind,entity,id);return state.project.collections[kind].at(-1);};
 const checkout=add("propertySets",{name:"Checkout"});
-const cart=add("pages",{name:"Cart",eventName:"pageview",pageGroupIds:[checkout.id]});
-const payment=add("pages",{name:"Payment",eventName:"pageview",pageGroupIds:[checkout.id]});
+const application=()=>[{id:id("property-set-application"),name:checkout.name,propertySetId:checkout.id}];
+const cart=add("pages",{name:"Cart",eventName:"pageview",propertySetApplications:application()});
+const payment=add("pages",{name:"Payment",eventName:"pageview",propertySetApplications:application()});
 const pageView=add("events",{name:"page_view",eventName:"page_view",role:"context-setting",trigger:"Initial load"});
 const flow=add("flows",{name:"Checkout journey",steps:[]});
 
 assert.equal("role" in pageView,false,"new Event definitions do not persist a documentary role");
 assert.equal(pageView.trigger,"Initial load","the optional trigger remains descriptive Event metadata");
 
-state=setFlowPageGroupLanes(state,flow.id,[checkout.id]);
-state=addFlowPageFrame(state,flow.id,{pageId:cart.id,pageGroupId:checkout.id,y:90},id);
-state=addFlowPageFrame(state,flow.id,{pageId:payment.id,pageGroupId:checkout.id,x:300,y:90},id);
+state=createFlowSection(state,flow.id,{name:"Checkout",bounds:{x:20,y:20,width:720,height:300}},id);
+const sectionId=documentaryFlowGraph(state.project,flow.id).sections[0].id;
+state=addFlowPageFrameToSection(state,flow.id,cart.id,sectionId,id);
+state=addFlowPageFrameToSection(state,flow.id,payment.id,sectionId,id);
 const [frame,paymentFrame]=documentaryFlowGraph(state.project,flow.id).pageFrames;
-state=addEventOccurrenceToPage(state,flow.id,{name:pageView.name,pageFrameId:frame.id,pageGroupId:checkout.id,pageId:cart.id,eventId:pageView.id,role:"context-setting",trigger:pageView.trigger,obligation:"Required",minimum:1,maximum:1,y:70},id);
+state=addEventOccurrenceToPage(state,flow.id,{name:pageView.name,pageFrameId:frame.id,pageId:cart.id,eventId:pageView.id,role:"context-setting",trigger:pageView.trigger,obligation:"Required",minimum:1,maximum:1,y:70},id);
 const occurrence=documentaryFlowGraph(state.project,flow.id).occurrences[0];
-assert.deepEqual({pageFrameId:occurrence.pageFrameId,pageId:occurrence.pageId,pageGroupId:occurrence.pageGroupId,eventId:occurrence.eventId,trigger:occurrence.trigger},{pageFrameId:frame.id,pageId:cart.id,pageGroupId:checkout.id,eventId:pageView.id,trigger:"Initial load"});
+assert.deepEqual({pageFrameId:occurrence.pageFrameId,pageId:occurrence.pageId,sectionId:occurrence.sectionId,eventId:occurrence.eventId,trigger:occurrence.trigger},{pageFrameId:frame.id,pageId:cart.id,sectionId:undefined,eventId:pageView.id,trigger:"Initial load"});
 assert.equal("role" in occurrence,false,"direct Event occurrences do not persist a documentary role");
 assert.equal(projectFlowGraph(state.project,flow.id).graph.nodes[0].role,"interaction","the Event projection has fixed interaction semantics");
 
@@ -48,7 +49,7 @@ assert.deepEqual(migrated.relationships,[
   {...legacyRelationships[0],sourceEndpoint:{kind:"page-frame",id:frame.id}},
   {...legacyRelationships[1],targetEndpoint:{kind:"page-frame",id:frame.id}},
 ],"legacy Event endpoints become Page-frame endpoints without losing relationship identity or metadata");
-assert.equal(migratedPage.eventName,"page_view");
+assert.equal("eventName" in migratedPage,false,"migration removes obsolete Page event metadata");
 assert.equal("role" in migratedEvent,false,"migration removes Event-definition role fields");
 assert.equal("contextEventBindings" in migratedPage,false);
 
