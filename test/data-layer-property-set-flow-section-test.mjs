@@ -214,6 +214,13 @@ const legacyState=()=>({
   const upgradedPortable=await repository.loadProject("project:legacy-portable");
   assert.equal(Object.hasOwn(upgradedPortable.state.project.collections,"pageGroups"),false,"portable import upgrades an actual legacy Page Group collection before storage");
   assert.equal(upgradedPortable.state.project.collections.propertySets.length,legacyPortableState.project.collections.pageGroups.length,"portable import retains every legacy Page Group as a Property Set");
+  const publishedLegacyState=legacyState(),publishedRelease={id:"release:legacy-portable:2",name:"Legacy publication 2",revision:2,createdAt:"2026-08-02T12:00:00.000Z",snapshot:structuredClone(publishedLegacyState.project.collections)};
+  publishedLegacyState.project.releases=[publishedRelease];publishedLegacyState.project.currentRelease=publishedRelease.id;
+  const publishedLegacyBundle={format:"my-chrome-utilities.durable-project-bundle",version:2,sourceProjectId:publishedLegacyState.project.id,sourceName:publishedLegacyState.project.name,publishedRevision:2,baseProjectRevision:2,project:publishedLegacyState.project,draft:publishedLegacyState.draft,publishedProject:structuredClone(publishedLegacyState.project)};
+  await repository.importProject(publishedLegacyBundle,{projectId:"project:published-legacy-portable",name:"Published legacy portable"});
+  const publishedLegacyPortable=await repository.loadProject("project:published-legacy-portable"),publishedLegacyRevision=await repository.loadPublishedRevision("project:published-legacy-portable",2);
+  assert.deepEqual(publishedLegacyPortable.state.project.collections,publishedLegacyRevision.state.project.collections,"portable upgrade keeps the current project and immutable published snapshot structurally identical");
+  assert.equal(Object.hasOwn(publishedLegacyRevision.state.project.collections,"pageGroups"),false,"published legacy Page Groups are upgraded inside the immutable imported revision");
 }
 
 console.log("property set and Flow Section separation tests passed");
