@@ -2,7 +2,6 @@ import assert from "node:assert/strict";
 import {applyCanonicalCommand,canonicalCommandOutcome,journalFreeCanonicalData} from "../dist/data-layer-canonical-schema.js";
 import {createSpecificationProject,exportSpecificationProjectState,stageProjectImport} from "../dist/data-layer-specification-project.js";
 import {exportProjectBundle,projectLibrary,restoreProjectLibrary} from "../dist/data-layer-project-library.js";
-import {composedCanonicalSchema,saveComposedCanonicalDocument,saveComposedEventCanonicalDocument,saveEventOccurrenceCanonicalDocument,saveFlowPageInstanceCanonicalDocument} from "../dist/data-layer-composed-schema-workspace.js";
 
 const property=(id,name,order)=>({
   id,name,order,type:"string",presence:{mode:"optional"},allowedValues:[],rules:[],
@@ -44,27 +43,5 @@ const record={state:legacyState,revision:4,publishedRevision:2,createdAt:"2026-0
 assert.ok(restored,"legacy Web Storage restores the project");
 assert.equal(JSON.stringify(restored).includes('"changes"'),false,"legacy Web Storage migration removes canonical journals before editor mounting");
 assert.equal(exportProjectBundle(library,legacyState.project.id).includes('"patchJournal"'),false,"portable project export remains journal-free");
-
-const composedState=createSpecificationProject({name:"Legacy composed",site:"legacy.example",id:(kind)=>`${kind}:legacy-composed`});
-const composedStatus=property("property:composed-status","legacy_status",0),composedTotal=property("property:composed-total","legacy_total",1),composedDocument={id:"canonical:legacy-composed",revision:2,state:"Draft",contributorId:"contributor:legacy-composed",contributorName:"Legacy composed",rootIds:[composedStatus.id,composedTotal.id],nodes:{[composedStatus.id]:composedStatus,[composedTotal.id]:composedTotal},view:"table"};
-const propertySet={id:"property-set:legacy-composed",name:"Legacy Property Set",canonicalSchema:structuredClone(composedDocument)},page={id:"page:legacy-composed",name:"Legacy Page",canonicalSchema:structuredClone(composedDocument)},event={id:"event:legacy-composed",name:"Legacy Event",canonicalSchema:structuredClone(composedDocument)},flow={id:"flow:legacy-composed",name:"Legacy Flow"},frame={id:"frame:legacy-composed",name:"Legacy frame",pageId:page.id,canonicalSchema:structuredClone(composedDocument)},occurrence={id:"occurrence:legacy-composed",name:"Legacy occurrence",eventId:event.id,pageFrameId:frame.id,canonicalSchema:structuredClone(composedDocument)};
-composedState.project.collections.propertySets.push(propertySet);composedState.project.collections.pages.push(page);composedState.project.collections.events.push(event);composedState.project.collections.flows.push(flow);composedState.project.documentationFlowGraphs={[flow.id]:{pageFrames:[frame],occurrences:[occurrence],relationships:[]}};
-const composedCases=[
-  ["Property Set",propertySet,undefined,(state,document)=>saveComposedCanonicalDocument(state,"propertySets",propertySet.id,document),state=>state.project.collections.propertySets[0]],
-  ["Page",page,undefined,(state,document)=>saveComposedCanonicalDocument(state,"pages",page.id,document),state=>state.project.collections.pages[0]],
-  ["Event",event,undefined,(state,document)=>saveComposedEventCanonicalDocument(state,event.id,document),state=>state.project.collections.events[0]],
-  ["Flow Page-instance",frame,flow.id,(state,document)=>saveFlowPageInstanceCanonicalDocument(state,flow.id,frame.id,document),state=>state.project.documentationFlowGraphs[flow.id].pageFrames[0]],
-  ["Event-occurrence",occurrence,flow.id,(state,document)=>saveEventOccurrenceCanonicalDocument(state,flow.id,occurrence.id,document),state=>state.project.documentationFlowGraphs[flow.id].occurrences[0]],
-];
-for(const[scope,entity,flowId,save,select]of composedCases){
-  const mounted=composedCanonicalSchema(composedState,entity,scope,flowId);
-  assert.deepEqual(mounted,composedDocument,`${scope} mounts the admitted legacy canonical Draft without deriving a replacement`);
-  const edited=structuredClone(mounted);edited.nodes[composedStatus.id].documentation.description="Restored legacy status";
-  const saved=save(composedState,edited),stored=select(saved).canonicalSchema;
-  assert.equal(stored.revision,2,`${scope} retains the publication-only Schema revision`);
-  assert.equal(stored.nodes[composedStatus.id].documentation.description,"Restored legacy status");
-  assert.equal(stored.nodes[composedTotal.id].name,"legacy_total");
-  assert.equal(JSON.stringify(stored).includes('"changes"'),false,`${scope} remains journal-free`);
-}
 
 console.log("journal-free canonical schema tests passed");

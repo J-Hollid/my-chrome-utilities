@@ -209,6 +209,20 @@ const legacyState=()=>({
   await repository.importProject(exported,{projectId:"project:round-trip",name:"Round trip"});
   const roundTrip=await repository.loadProject("project:round-trip"),ids=new Set(roundTrip.state.project.collections.propertySets.map(({id})=>id));
   assert.equal(roundTrip.state.project.collections.pages.every((page)=>page.propertySetApplications.every(({propertySetId})=>ids.has(propertySetId))),true,"portable import preserves remapped application references without another migration");
+
+  const legacyBundleState=legacyState(),legacyBundle={format:"my-chrome-utilities.durable-project-bundle",version:2,sourceProjectId:legacyBundleState.project.id,sourceName:legacyBundleState.project.name,publishedRevision:0,baseProjectRevision:0,project:legacyBundleState.project,draft:legacyBundleState.draft};
+  await repository.importProject(legacyBundle,{projectId:"project:legacy-portable",name:"Legacy portable"});
+  const legacyPortable=await repository.loadProject("project:legacy-portable");
+  assert.equal(Object.hasOwn(legacyPortable.state.project.collections,"pageGroups"),false,"portable import upgrades an actual legacy Page Group record before storage");
+  assert.equal(legacyPortable.state.project.collections.propertySets.length,legacyBundleState.project.collections.pageGroups.length,"portable import retains every upgraded Page Group as a Property Set");
+
+  const publishedLegacyState=legacyState(),publishedRelease={id:"release:legacy-portable:2",name:"Legacy publication 2",revision:2,createdAt:"2026-08-02T12:00:00.000Z",snapshot:structuredClone(publishedLegacyState.project.collections)};
+  publishedLegacyState.project.releases=[publishedRelease];publishedLegacyState.project.currentRelease=publishedRelease.id;
+  const publishedLegacyBundle={format:"my-chrome-utilities.durable-project-bundle",version:2,sourceProjectId:publishedLegacyState.project.id,sourceName:publishedLegacyState.project.name,publishedRevision:2,baseProjectRevision:2,project:publishedLegacyState.project,draft:publishedLegacyState.draft,publishedProject:structuredClone(publishedLegacyState.project)};
+  await repository.importProject(publishedLegacyBundle,{projectId:"project:published-legacy-portable",name:"Published legacy portable"});
+  const publishedLegacyPortable=await repository.loadProject("project:published-legacy-portable"),publishedLegacyRevision=await repository.loadPublishedRevision("project:published-legacy-portable",2);
+  assert.deepEqual(publishedLegacyPortable.state.project.collections,publishedLegacyRevision.state.project.collections,"portable upgrade keeps the current project and immutable published snapshot structurally identical");
+  assert.equal(Object.hasOwn(publishedLegacyRevision.state.project.collections,"pageGroups"),false,"published legacy Page Groups are upgraded inside the immutable imported revision");
 }
 
 console.log("property set and Flow Section separation tests passed");
