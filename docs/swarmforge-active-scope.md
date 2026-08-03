@@ -86,6 +86,14 @@ property, and contributor reset scopes, and reserves Needs decision for genuinel
 unresolved same-precedence, invariant, type-validity, dependency, or structural
 issues.
 
+The later user-directed selective-inheritance workspace correction makes every
+expandable concept and structural-property node collapsed on each fresh workspace
+opening. Starting point offers only `Start empty` and `Everything`; choosing
+concepts, branches, and properties remains the tree's purpose. An applied legacy
+recipe whose starting point was `Choose concepts` or `Choose properties` reopens as
+`Start empty` without changing its fixed identities, exclusions, rule resolutions,
+or effective schema.
+
 The project-management contracts are likewise later user-approved authority only
 for the named project library, active context, Studio routing, top-level project-
 entity collection lifecycle, portability, and singleton migration behavior. They
@@ -1172,10 +1180,17 @@ Opening a Page or Page Group from its overview goes directly to a full
 main-workspace configuration with an `Effective schema at <name>` table; the
 Inspector is only an optional summary and link. The wide table keeps every
 effective property visible and exposes common facets inline, with complete complex
-builders expanding beneath a row. Rows distinguish inherited, local, effective,
-shadowed, conflicting, and provenance values. At 360px the same model uses compact
-rows and stacked detail with one vertical scroll owner and no horizontal page
-scroll.
+builders in focused property detail. Effective-schema rows use one compact
+`Inheritance` column and no separate `Source` or `State` columns: parent-only rows
+show `Inherited`, local-only rows show `Local`, and rows combining parent and local
+contributions show `Mixed / overridden`. Validation and decision state remains
+independently accessible, while exact contributor routes, shadowed values, and
+provenance remain in focused detail rather than a thin table column. This combined
+column applies to composed effective-schema workspaces and does not alter canonical
+Shared Profile Table projections. At desktop
+width, 360 CSS pixels, and 200 percent browser zoom, the table, rows, and cells stay
+inside the main-workspace content bounds with no horizontal document or workspace
+scrolling; compact rows and stacked detail retain one vertical scroll owner.
 
 Editing an ordinary inherited Definition field directly stores only the locally
 changed property facet. `Override here` is reserved for operations that must first

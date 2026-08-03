@@ -29,14 +29,14 @@ Feature: Specification Studio selective profile inheritance
   Scenario Outline: Specification Studio selective profile inheritance 002
     When the operator begins a Master inheritance recipe from <starting_point>
     Then initial selection contains <initial_selection>
+    And Starting point offers only Start empty and Everything
+    And concept, branch, and property choices remain available in the inheritance tree
     And the operator reviews the effective property count before applying it
 
     Examples:
-      | starting_point    | initial_selection                  |
-      | Everything        | every Master property              |
-      | Choose concepts   | no property until a concept is chosen |
-      | Choose properties | no property until a branch or property is chosen |
-      | Start empty       | structural root only               |
+      | starting_point | initial_selection     |
+      | Everything     | every Master property |
+      | Start empty    | structural root only  |
 
   # Specification Studio selective profile inheritance 003
   Scenario: Specification Studio selective profile inheritance 003
@@ -44,6 +44,7 @@ Feature: Specification Studio selective profile inheritance
     Then the target editor retains one compact Master summary card
     And compact starting-point and copy controls precede a search and filter toolbar
     And one expandable selection tree contains concept parents, structural branches, and property leaves
+    And every expandable concept and structural-property node starts collapsed with its descendants hidden
     And visible checkboxes show selected, unselected, and mixed states independently of tree focus and expansion
     And each parent shows selected and total descendant counts
     And a sticky action bar shows effective properties, exclusions, issues, Review selection, Cancel, and Apply inheritance
@@ -272,3 +273,12 @@ Feature: Specification Studio selective profile inheritance
     Then one Draft recipe command adds only that stable property identity and required structural ancestors
     And the other Parent addition remains absent from the effective schema
     And Undo restores the prior fixed recipe without creating a local property override or mutating Master
+
+  # Specification Studio selective profile inheritance 022
+  Scenario: Specification Studio selective profile inheritance 022
+    Given an applied recipe created with Choose concepts or Choose properties has fixed selected identities
+    When the operator reopens it after the two-option starting-point upgrade
+    Then Starting point shows Start empty
+    And the exact fixed selections, exclusions, and rule resolutions remain staged
+    And its effective schema remains unchanged
+    And Choose concepts and Choose properties are not offered

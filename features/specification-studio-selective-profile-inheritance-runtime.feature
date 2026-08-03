@@ -29,14 +29,14 @@ Feature: Specification Studio selective profile inheritance runtime
   Scenario Outline: Specification Studio selective profile inheritance runtime 002
     When the actual Master recipe starts from <starting_point>
     Then rendered and derived initial selection contains <initial_selection>
+    And the production Starting point select contains only Start empty and Everything
+    And installed tree controls still select concepts, branches, and properties
     And the production review displays its effective property count before commit
 
     Examples:
-      | starting_point    | initial_selection                  |
-      | Everything        | every Master property              |
-      | Choose concepts   | no property until a concept is chosen |
-      | Choose properties | no property until a branch or property is chosen |
-      | Start empty       | structural root only               |
+      | starting_point | initial_selection     |
+      | Everything     | every Master property |
+      | Start empty    | structural root only  |
 
   # Specification Studio selective profile inheritance runtime 003
   Scenario: Specification Studio selective profile inheritance runtime 003
@@ -44,6 +44,8 @@ Feature: Specification Studio selective profile inheritance runtime
     Then the ordinary target form contains one compact Master summary card
     And compact starting-point and copy controls precede the installed search and filter toolbar
     And one rendered selection tree nests concept, structural-branch, and property nodes
+    And each initially visible expandable concept has aria-expanded false with no mounted descendants
+    And each expandable structural-property treeitem first revealed by a concept disclosure also has aria-expanded false until its own disclosure is operated
     And visible checkboxes expose checked, unchecked, and indeterminate states independently of active treeitem and expansion state
     And each rendered parent exposes selected and total descendant counts
     And the sticky action bar exposes effective properties, exclusions, issues, Review selection, Cancel, and Apply inheritance
@@ -269,3 +271,12 @@ Feature: Specification Studio selective profile inheritance runtime
     Then one durable Draft recipe command adds only that property identity and required structural ancestors
     And compiled schema still excludes the other new property
     And actual Undo restores the previous recipe hash while Master and local-contribution hashes remain unchanged
+
+  # Specification Studio selective profile inheritance runtime 022
+  Scenario: Specification Studio selective profile inheritance runtime 022
+    Given a durable recipe created with Choose concepts or Choose properties contains fixed selected identities
+    When the installed editor reopens it after the two-option starting-point upgrade
+    Then the Starting point select value is Start empty
+    And serialized fixed selections, exclusions, and rule resolutions are unchanged
+    And compiled effective-schema bytes are unchanged
+    And the select contains no Choose concepts or Choose properties option

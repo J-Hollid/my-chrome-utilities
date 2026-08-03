@@ -244,10 +244,10 @@ Feature: Data layer layered schema constraints
     And Cart belongs to Checkout and contributes a local funnel_step override
     When the operator opens Checkout from the Page Groups overview
     Then Checkout opens as a full main-workspace configuration page without requiring the Inspector
-    And its Effective schema at Checkout table composes Sitewide and Checkout with inherited, local, effective, and provenance values in every row
+    And its Effective schema at Checkout table composes Sitewide and Checkout with effective values and a compact Inheritance status in every row
     When the operator opens Cart from the Pages overview
     Then Cart opens as a full main-workspace configuration page with applicability, ordered memberships, and Effective schema at Cart
-    And all four effective properties remain visible with their Shared Profile, Checkout, and Cart contribution stack
+    And all four effective properties remain visible while their complete Shared Profile, Checkout, and Cart contribution stacks remain available in focused property details
     And inherited rows open directly editable ordinary Definition fields while item-specific Override here remains available only for structural ownership
     And the locally adjusted funnel_step row offers Reset to parents
     And the Inspector remains an optional summary and link to this same workspace rather than a different editor
@@ -282,10 +282,16 @@ Feature: Data layer layered schema constraints
 
   # Data layer layered schema constraints 019
   Scenario: Data layer layered schema constraints 019
-    Given Cart compilation includes parent inheritance, Page edits, and one unresolved conflict
-    When the operator opens Cart at a viewport width of 360 pixels
-    Then one vertical scroll owner presents every effective property as a compact table row
-    And each row exposes property, effective definition, source, local state, validation state, and actions without horizontal page scrolling
+    Given Cart compilation includes a parent-only property, a local-only property, an inherited property with a local override, and one unresolved conflict
+    And one property is inherited through Data layer v3 - All Events - All Properties → Datalayer v3 - Ecommerce Sales Pages · direct selection
+    When the operator opens Cart at desktop width, 360 CSS pixels, or 200 percent browser zoom
+    Then every effective property remains present in one contained table
+    And the compact-width presentation retains one vertical scroll owner
+    And the Effective schema at Cart table, its rows, and its cells remain inside the main-workspace content bounds without horizontal document or workspace scrolling
+    And one Inheritance column replaces the separate Source and State columns
+    And parent-only, local-only, and inherited-with-local rows show Inherited, Local, and Mixed / overridden respectively
+    And validation issues remain identified independently from Inheritance status
+    And the long contributor route is absent from the compact row but remains available in focused provenance details
     When the operator expands the funnel_step row
     Then its type, presence, expected or allowed values, conditions, rules, documentation, example, provenance, Override here, and Reset to parents controls appear as a stacked row detail
     And closing the row restores focus to funnel_step without hiding the other property rows
@@ -314,7 +320,8 @@ Feature: Data layer layered schema constraints
     And its effective stack provides /oForm/formStepName payment and /oForm/formType checkout from parent contributors
     When the operator invokes Open schema contribution on that Page-frame card
     Then the same composed-schema workspace used by Page Groups and Pages is the primary authoring surface
-    And compact rows show both inherited properties with effective definition, source, local state, validation state, and item-specific structural ownership actions
+    And compact rows show both effective definitions, Inherited status, and item-specific structural ownership actions
+    And their exact parent sources and validation details remain available in the focused property editor
     And no advanced facet builder is expanded until its property row is selected
     And an empty local Tree or Table is not presented as the inherited schema
     And Add local property remains available without copying either inherited property

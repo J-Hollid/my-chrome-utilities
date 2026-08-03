@@ -242,10 +242,10 @@ Feature: Data layer layered schema constraints runtime
     And production Cart belongs to Checkout with a local funnel_step override
     When Checkout is activated from the installed Page Groups overview
     Then the installed Page Group route renders its complete configuration and schema in the main workspace without Inspector interaction
-    And Effective schema at Checkout rows contain composed Sitewide and Checkout inherited, local, effective, and provenance values
+    And Effective schema at Checkout rows contain composed effective values and compact Inheritance status
     When Cart is activated from the installed Pages overview
     Then the installed Page route renders applicability, ordered memberships, and Effective schema at Cart in the main workspace
-    And four production rows remain mounted with Shared Profile, Checkout, and Cart contribution stacks
+    And four production rows remain mounted while focused details retain their complete Shared Profile, Checkout, and Cart contribution stacks
     And inherited rows open enabled ordinary Definition controls while Override here is limited to structural ownership
     And local funnel_step renders Reset to parents
     And opening the optional Inspector shows a summary linking to the same route without mounting another editor model
@@ -280,10 +280,16 @@ Feature: Data layer layered schema constraints runtime
 
   # Data layer layered schema constraints runtime 019
   Scenario: Data layer layered schema constraints runtime 019
-    Given Cart production compilation includes parent inheritance, Page edits, and one unresolved conflict
-    When the installed extension opens Cart at 360 pixels
-    Then one production vertical scroll owner renders every effective property as a compact table row
-    And each row exposes property, effective definition, source, local state, validation state, and actions without horizontal page scrolling
+    Given Cart production compilation includes a parent-only property, a local-only property, an inherited property with a local override, and one unresolved conflict
+    And one production property has provenance Data layer v3 - All Events - All Properties → Datalayer v3 - Ecommerce Sales Pages · direct selection
+    When the installed extension opens Cart at desktop width, 360 CSS pixels, and 200 percent browser zoom
+    Then every production effective-property row remains mounted in one table
+    And the compact-width presentation has one production vertical scroll owner
+    And bounding rectangles keep the effective-schema table, every row, and every cell within the main-workspace content box with zero horizontal document or workspace overflow
+    And DOM columnheaders contain one Inheritance column and no Source or State column
+    And the parent-only, local-only, and inherited-with-local rows render Inherited, Local, and Mixed / overridden respectively
+    And unresolved validation remains programmatically identified independently from Inheritance text
+    And the long contributor route is absent from the compact row and present in its focused provenance detail
     When actual controls expand the funnel_step row
     Then type, presence, expected or allowed values, conditions, rules, documentation, example, provenance, Override here, and Reset to parents render as stacked row detail
     And closing the row returns focus to funnel_step while the other production rows remain mounted
@@ -312,7 +318,8 @@ Feature: Data layer layered schema constraints runtime
     And production inheritance supplies payment for /oForm/formStepName and checkout for /oForm/formType
     When the Page-frame card action is activated in the installed Flow outline
     Then the primary main-workspace region is the same compact composed-schema workspace rendered by production Page Group and Page routes
-    And two collapsed rows render their effective definitions, parent sources, local states, validation states, and item-specific structural ownership controls
+    And two collapsed rows render their effective definitions, Inherited status, and item-specific structural ownership controls
+    And focused property details retain their exact parent sources and validation details
     And no empty local-only canonical navigator or eagerly expanded per-property facet table is visible
     And an Add local property action is operable without materializing inherited definitions
     And rendered text and controls contain none of Effective documentation, Compiled effective schema and documentation, Target Event, Activation, Priority, Applicability, Test observation, Manual Flow / Page / Event, Validation payload, or developer export

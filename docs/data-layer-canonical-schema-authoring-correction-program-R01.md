@@ -331,7 +331,7 @@ require the side panel and standalone workspace to share one rendered DOM tree:
 - a rich composed-schema table that keeps every effective property visible;
 - inline editing for common type, presence, expectation, allowed-value,
   documentation, example, and row operations;
-- expandable row detail for complete condition, rule, provenance, impact, and
+- focused property detail for complete condition, rule, provenance, impact, and
   other complex side-panel capabilities; and
 - effective documentation, validation state, impact, and provenance.
 
@@ -345,17 +345,25 @@ and 360px widths.
 Tree and Table are synchronized projections of the same canonical Saved Draft and
 selection. The Table preserves hierarchy and supports the complete property
 lifecycle. Its wide layout exposes property, path, type, presence, expected or
-allowed values, conditions, rules, documentation, example, source, local state,
-validation state, and actions. Expanding one row mounts its complete complex
+allowed values, documentation, example, and actions. In an `Effective schema at
+<name>` workspace, one `Inheritance` column replaces separate `Source` and `State`
+columns: its only row values are `Inherited`, `Local`, and `Mixed / overridden`.
+Validation issues remain independently identified, and complete contributor routes,
+conditions, rules, provenance, and validation details remain available in focused
+property detail. This combined column is specific to composed effective-schema
+workspaces; canonical Shared Profile Table projections remain unchanged. Opening one
+row mounts its complete complex
 builders in a top-level blocking overlay stack visually anchored beside that row's
 property action. The stack is outside the editor scroll region and uses the browser
 viewport for placement, so a short table cannot clip it or force an editor
 scrollbar. The editor behind it is inert and retains its scroll position. Only an
 active overlay layer whose content exceeds the browser viewport may scroll. Closing
 the stack restores the invoking property action and editor scroll position. An edit
-in any projection appears in the others immediately. At 360px the table itself
+in any projection appears in the others immediately. At desktop width, 360 CSS
+pixels, and 200 percent browser zoom, the effective-schema table and all of its
+cells stay within the main-workspace content bounds. At 360px the table itself
 becomes compact rows with stacked detail, one vertical scroll owner, no horizontal
-page scroll, and deterministic focus restoration.
+document or workspace scroll, and deterministic focus restoration.
 
 Parity means every purpose-built operation in the established in-panel editor is
 available in the standalone workspace and emits the same property-scoped command.
