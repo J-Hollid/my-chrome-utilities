@@ -26,8 +26,10 @@ function compactLegacyEditHistory(value) {
             entryCount += legacyChanges?.length ?? 1;
             continue;
         }
-        if (legacySchema && (key === "productionSnapshots" || key === "revisionHistory"))
+        if ((legacySchema || currentCanonical) && (key === "productionSnapshots" || key === "revisionHistory")) {
+            entryCount += Array.isArray(entry) ? entry.length : 1;
             continue;
+        }
         if (["commandJournal", "patchJournal", "editJournal", "editCountRevision"].includes(key) && (Array.isArray(entry) || currentCanonical)) {
             entryCount += Array.isArray(entry) ? entry.length : 1;
             continue;
@@ -58,6 +60,24 @@ function legacyProductionSchemaHistories(value) {
         visit(nested); };
     visit(value);
     return [...histories].map(([schemaId, effectiveSchemas]) => ({ schemaId, effectiveSchemas }));
+}
+async function reconstructLegacyProduction(state, histories) {
+    if (!histories.length)
+        return { manifests: [], snapshots: [] };
+    const releases = [...state.project.releases].sort((left, right) => left.revision - right.revision), snapshots = new Map();
+    for (const history of histories)
+        for (const [revisionIndex, effectiveSchema] of history.effectiveSchemas.entries()) {
+            const schemaRevision = revisionIndex + 1, key = `${state.project.id}:${history.schemaId}:${schemaRevision}`, createdAt = releases[Math.min(revisionIndex, releases.length - 1)]?.createdAt ?? "1970-01-01T00:00:00.000Z", fingerprint = await checksum(JSON.stringify(comparable(effectiveSchema)));
+            snapshots.set(key, { projectId: state.project.id, schemaId: history.schemaId, schemaRevision, fingerprint, effectiveSchema: clone(effectiveSchema), createdAt });
+        }
+    const manifests = [];
+    for (const [releaseIndex, release] of releases.entries()) {
+        const schemas = histories.flatMap(history => { const schemaRevision = Math.min(releaseIndex + 1, history.effectiveSchemas.length); if (!schemaRevision)
+            return []; const snapshotKey = `${state.project.id}:${history.schemaId}:${schemaRevision}`, snapshot = snapshots.get(snapshotKey); if (!snapshot)
+            throw new DOMException(`Legacy production schema ${snapshotKey} is unavailable during migration.`, "DataError"); return [{ schemaId: history.schemaId, schemaRevision, fingerprint: snapshot.fingerprint, snapshotKey }]; }).sort((left, right) => left.schemaId.localeCompare(right.schemaId)), publishedProject = { ...clone(state.project), collections: clone(release.snapshot), releases: state.project.releases.filter(candidate => candidate.revision <= release.revision), currentRelease: release.id }, projectFingerprint = await checksum(JSON.stringify({ project: productionProject(publishedProject), schemas: schemas.map(({ schemaId, fingerprint }) => ({ schemaId, fingerprint })) })), manifest = { projectId: state.project.id, projectRevision: release.revision, projectFingerprint, publicationId: release.id, publishedAt: release.createdAt, schemas };
+        manifests.push({ key: `${state.project.id}:${release.revision}`, manifest });
+    }
+    return { manifests, snapshots: [...snapshots].map(([key, snapshot]) => ({ key, snapshot })) };
 }
 const projectPrefix = (projectId) => `${projectId}:`;
 const byDurableIndex = (left, right) => (left.value.index ?? 0) - (right.value.index ?? 0);
@@ -717,21 +737,25 @@ export class DurableProjectRepository {
         channel.unref?.();
     } void poll(); }); }
     async importLegacy(owner, records) {
-        records = { ...records, projects: records.projects.map((entry) => ({ ...entry, state: upgradeSeparatedState(compactLegacyEditHistory(entry.state).value) })) };
+        const projects = await Promise.all(records.projects.map(async (entry) => { const histories = entry.productionHistories ?? legacyProductionSchemaHistories(entry.state), state = upgradeSeparatedState(compactLegacyEditHistory(entry.state).value), production = await reconstructLegacyProduction(state, histories); return { ...entry, state, production }; }));
         await this.backend.transaction(allStores, "readwrite", async (transaction) => {
             const lock = await transaction.get("settings", "legacyMigrationLock");
             if (lock?.owner !== owner)
                 throw new DOMException("Legacy migration lease is not owned by this context.", "AbortError");
-            const manifests = [];
-            for (const entry of records.projects) {
+            const imported = [];
+            for (const entry of projects) {
                 const draftToken = this.options.token(), parts = projectParts(entry.state), publishedRevision = Math.max(0, ...entry.state.project.releases.map(({ revision }) => revision));
-                manifests.push({ entry, parts });
+                imported.push({ entry, parts });
                 await replaceProjectParts(transaction, entry.state.project.id, parts);
                 await transaction.put("projectMetadata", entry.state.project.id, { projectId: entry.state.project.id, name: entry.state.project.name, site: entry.state.project.site, owner: String(entry.state.project.owner ?? ""), draftToken, draftSequence: entry.revision, publishedRevision, lastSavedAt: this.options.now(), fieldVersions: Object.fromEntries([...parts.keys()].map(key => [key, entry.revision])), active: entry.active, ...(entry.state.draft ? { draft: clone(entry.state.draft) } : {}), ...(entry.navigation ? { navigation: clone(entry.navigation) } : {}) });
                 for (const release of entry.state.project.releases) {
                     const publishedProject = { ...clone(entry.state.project), collections: clone(release.snapshot), releases: entry.state.project.releases.filter(candidate => candidate.revision <= release.revision), currentRelease: release.id }, revision = { projectId: entry.state.project.id, revision: release.revision, publicationId: release.id, publishedAt: release.createdAt, sourceDraftToken: draftToken, state: { project: publishedProject, history: { undo: [], redo: [] } } };
                     await transaction.put("projectRevisions", `${entry.state.project.id}:${release.revision}`, revision);
                 }
+                for (const { key, snapshot } of entry.production.snapshots)
+                    await transaction.put("schemaRevisions", key, snapshot);
+                for (const { key, manifest } of entry.production.manifests)
+                    await transaction.put("productionManifests", key, manifest);
                 if (entry.active)
                     await transaction.put("settings", "activeProjectId", entry.state.project.id);
             }
@@ -741,7 +765,7 @@ export class DurableProjectRepository {
             }
             await transaction.put("migrationBackups", "legacy-v1", records.backup);
             this.fail("Legacy migration verification");
-            for (const { entry, parts } of manifests) {
+            for (const { entry, parts } of imported) {
                 const metadata = await transaction.get("projectMetadata", entry.state.project.id);
                 if (!metadata || metadata.draftSequence !== entry.revision || !same(metadata.navigation, entry.navigation))
                     throw new DOMException(`Migration verification failed for ${entry.state.project.id} metadata.`, "OperationError");
@@ -753,6 +777,12 @@ export class DurableProjectRepository {
                     if (!revision || !same(revision.state.project.collections, release.snapshot))
                         throw new DOMException(`Migration verification failed for immutable release ${release.id}.`, "OperationError");
                 }
+                for (const { key, snapshot } of entry.production.snapshots)
+                    if (!same(await transaction.get("schemaRevisions", key), snapshot))
+                        throw new DOMException(`Migration verification failed for immutable production schema ${key}.`, "OperationError");
+                for (const { key, manifest } of entry.production.manifests)
+                    if (!same(await transaction.get("productionManifests", key), manifest))
+                        throw new DOMException(`Migration verification failed for production manifest ${key}.`, "OperationError");
             }
             for (const schema of records.schemas) {
                 const saved = await transaction.get("savedSchemas", String(schema.id));
@@ -763,7 +793,7 @@ export class DurableProjectRepository {
             if (!same(backup?.sources.map(({ key, checksum }) => ({ key, checksum })), records.backup.sources.map(({ key, checksum }) => ({ key, checksum }))))
                 throw new DOMException("Migration backup manifest verification failed.", "OperationError");
             const verifiedAt = this.options.now();
-            await transaction.put("migrationReceipts", "legacy-v1", { version: 1, projectIds: records.projects.map(({ state }) => state.project.id), sourceChecksums: records.backup.sources.map(({ key, checksum }) => ({ key, checksum })), legacyEditCompactions: clone(records.compactions ?? []), verified: true, phase: "verified", owner, at: verifiedAt, verifiedAt });
+            await transaction.put("migrationReceipts", "legacy-v1", { version: 1, projectIds: projects.map(({ state }) => state.project.id), sourceChecksums: records.backup.sources.map(({ key, checksum }) => ({ key, checksum })), legacyEditCompactions: clone(records.compactions ?? []), verified: true, phase: "verified", owner, at: verifiedAt, verifiedAt });
             await transaction.delete("settings", "legacyMigrationLock");
         });
         if (typeof BroadcastChannel !== "undefined") {
@@ -944,7 +974,7 @@ export async function migrateLegacyProjectStorage(repository, storage, options =
             storage.removeItem(key);
         return { status: "migrated", removedKeys: raw.map(({ key }) => key) };
     }
-    const backup = { sources: await Promise.all(raw.map(async ({ key, value }) => ({ key, bytes: new TextEncoder().encode(value).byteLength, checksum: await checksum(value), value }))) }, schemaSource = (schemasValue ?? []), projectCompactions = selected.map(entry => ({ entry, compaction: compactLegacyEditHistory(entry.state) })), schemaCompactions = schemaSource.map(schema => compactLegacyEditHistory(schema)), projects = projectCompactions.map(({ entry, compaction }) => ({ ...entry, state: compaction.value })), schemas = schemaCompactions.map(({ value }) => value), changed = [...projectCompactions.map(({ compaction }) => compaction), ...schemaCompactions].filter(({ entryCount }) => entryCount > 0), compactions = await Promise.all(changed.map(async ({ entryCount, before, after }) => ({ entryCount, beforeChecksum: await checksum(before), afterChecksum: await checksum(after) })));
+    const backup = { sources: await Promise.all(raw.map(async ({ key, value }) => ({ key, bytes: new TextEncoder().encode(value).byteLength, checksum: await checksum(value), value }))) }, schemaSource = (schemasValue ?? []), projectCompactions = selected.map(entry => ({ entry, productionHistories: legacyProductionSchemaHistories(entry.state), compaction: compactLegacyEditHistory(entry.state) })), schemaCompactions = schemaSource.map(schema => compactLegacyEditHistory(schema)), projects = projectCompactions.map(({ entry, productionHistories, compaction }) => ({ ...entry, productionHistories, state: compaction.value })), schemas = schemaCompactions.map(({ value }) => value), changed = [...projectCompactions.map(({ compaction }) => compaction), ...schemaCompactions].filter(({ entryCount }) => entryCount > 0), compactions = await Promise.all(changed.map(async ({ entryCount, before, after }) => ({ entryCount, beforeChecksum: await checksum(before), afterChecksum: await checksum(after) })));
     try {
         await repository.importLegacy(owner, { projects, schemas, backup, compactions });
     }
