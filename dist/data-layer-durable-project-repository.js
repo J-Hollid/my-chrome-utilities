@@ -778,9 +778,9 @@ export class DurableProjectRepository {
     async importProject(bundle, input) {
         if (bundle.format !== "my-chrome-utilities.durable-project-bundle" || !record(bundle.project))
             throw new Error("Choose a durable project bundle.");
-        const compacted = compactLegacyEditHistory(bundle.project), sourceState = upgradeSeparatedState({ project: compacted.value, history: { undo: [], redo: [] } }), source = sourceState.project, mapping = projectIdentityMapping(source, input.projectId), mappedProject = remapProjectReferences(source, mapping);
+        const compacted = compactLegacyEditHistory(bundle.project), sourceDraft = record(bundle.draft) ? compactLegacyEditHistory(bundle.draft).value : undefined, sourceState = upgradeSeparatedState({ project: compacted.value, ...(sourceDraft ? { draft: sourceDraft } : {}), history: { undo: [], redo: [] } }), source = sourceState.project, mapping = projectIdentityMapping(source, input.projectId), mappedProject = remapProjectReferences(source, mapping);
         mappedProject.name = input.name;
-        const repairedProject = repairCanonicalBooleanValuesInProject(mappedProject), project = repairedProject.project, publishedRevision = Number(bundle.publishedRevision ?? bundle.baseProjectRevision ?? 0), rawSourcePublishedProject = record(bundle.publishedProject) ? bundle.publishedProject : undefined, sourcePublishedProject = rawSourcePublishedProject ? upgradeSeparatedState({ project: compactLegacyEditHistory(rawSourcePublishedProject).value, history: { undo: [], redo: [] } }).project : undefined;
+        const repairedProject = repairCanonicalBooleanValuesInProject(mappedProject), project = repairedProject.project, publishedRevision = Number(bundle.publishedRevision ?? bundle.baseProjectRevision ?? 0), rawSourcePublishedProject = record(bundle.publishedProject) ? bundle.publishedProject : undefined, sourcePublishedProject = rawSourcePublishedProject ? upgradeSeparatedState({ project: compactLegacyEditHistory(rawSourcePublishedProject).value, ...(sourceDraft ? { draft: sourceDraft } : {}), history: { undo: [], redo: [] } }).project : undefined;
         if (publishedRevision > 0 && !record(bundle.publishedProject))
             throw new DOMException(`Imported project ${input.projectId} declares Published revision ${publishedRevision} without its immutable domain project snapshot.`, "DataError");
         const mappedPublishedProject = sourcePublishedProject ? remapProjectReferences(sourcePublishedProject, mapping) : undefined;
@@ -810,7 +810,7 @@ export class DurableProjectRepository {
             const projectFingerprint = await checksum(JSON.stringify({ project: productionProject(publishedProject), schemas: entries.map(({ schemaId, fingerprint }) => ({ schemaId, fingerprint })).sort((left, right) => left.schemaId.localeCompare(right.schemaId)) }));
             production = { manifest: { ...clone(sourceManifest), projectId: input.projectId, projectRevision: publishedRevision, projectFingerprint, publishedAt: at, schemas: entries }, snapshots };
         }
-        await this.putProjectMetadataOnly({ project, ...(record(bundle.draft) ? { draft: remapProjectReferences(compactLegacyEditHistory(bundle.draft).value, mapping) } : {}), history: { undo: [], redo: [] } }, { publishedRevision, ...(publishedProject ? { publishedProject } : {}), ...(production ? { production } : {}), active: false });
+        await this.putProjectMetadataOnly({ project, ...(sourceDraft ? { draft: remapProjectReferences(sourceDraft, mapping) } : {}), history: { undo: [], redo: [] } }, { publishedRevision, ...(publishedProject ? { publishedProject } : {}), ...(production ? { production } : {}), active: false });
         return { projectId: input.projectId, active: false, canonicalRepairCount: repairedProject.repairCount + (repairedPublishedProject?.repairCount ?? 0) };
     }
 }

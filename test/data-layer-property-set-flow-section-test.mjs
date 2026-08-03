@@ -209,6 +209,11 @@ const legacyState=()=>({
   await repository.importProject(exported,{projectId:"project:round-trip",name:"Round trip"});
   const roundTrip=await repository.loadProject("project:round-trip"),ids=new Set(roundTrip.state.project.collections.propertySets.map(({id})=>id));
   assert.equal(roundTrip.state.project.collections.pages.every((page)=>page.propertySetApplications.every(({propertySetId})=>ids.has(propertySetId))),true,"portable import preserves remapped application references without another migration");
+  const legacyPortableState=legacyState(),legacyPortable={format:"my-chrome-utilities.durable-project-bundle",version:2,sourceProjectId:legacyPortableState.project.id,sourceName:legacyPortableState.project.name,publishedRevision:0,baseProjectRevision:0,project:legacyPortableState.project,draft:legacyPortableState.draft};
+  await repository.importProject(legacyPortable,{projectId:"project:legacy-portable",name:"Legacy portable"});
+  const upgradedPortable=await repository.loadProject("project:legacy-portable");
+  assert.equal(Object.hasOwn(upgradedPortable.state.project.collections,"pageGroups"),false,"portable import upgrades an actual legacy Page Group collection before storage");
+  assert.equal(upgradedPortable.state.project.collections.propertySets.length,legacyPortableState.project.collections.pageGroups.length,"portable import retains every legacy Page Group as a Property Set");
 }
 
 console.log("property set and Flow Section separation tests passed");
