@@ -38,7 +38,7 @@ for(let example=0;example<120;example+=1){
   for(const [candidate,bytes] of Object.entries(untouched))assert.equal(JSON.stringify(created.project.collections[candidate]),bytes,`creation preserves ${candidate}`);
   if(kind==="flows")assert.deepEqual(entity.steps,[],"top-level Flow creation never invents executable steps");
   if(kind==="pages"){assert.equal("eventName" in entity,false,"Page creation owns no observed Event identity");assert.equal("pathname" in entity,false,"Page creation owns no URL routing");}
-  if(["profiles","pageGroups","pages"].includes(kind)){
+  if(["profiles","propertySets","pages"].includes(kind)){
     assert.equal(entity.canonicalSchema.contributorId,entity.id,`${kind} canonical ownership follows the stable entity identity`);
     assert.equal(entity.canonicalSchema.contributorName,entity.name,`${kind} canonical ownership follows the normalized human name`);
   }
@@ -59,7 +59,7 @@ for(let example=0;example<120;example+=1){
 }
 
 const referenced=createSpecificationProject({name:"References",site:"refs.example",id:(kind)=>`${kind}:refs`});
-assert.deepEqual(createProjectCollectionEntity(referenced,"pages","Page",()=>"page:new",{eventName:"pageview",pathname:"/legacy",pageGroupIds:["missing-group"]}).project.collections.pages[0].pageGroupIds,[],"Page creation ignores routing and membership input in favor of dedicated workspaces");
+assert.deepEqual(createProjectCollectionEntity(referenced,"pages","Page",()=>"page:new",{eventName:"pageview",pathname:"/legacy",propertySetIds:["missing-group"]}).project.collections.pages[0].propertySetApplications,[],"Page creation ignores routing and membership input in favor of dedicated workspaces");
 assert.throws(()=>createProjectCollectionEntity(referenced,"fixtures","Fixture",()=>"fixture:new",{eventId:"missing-event"}),/does not exist/);
 assert.throws(()=>createProjectCollectionEntity(referenced,"fixtures","Test case",()=>"fixture:new",{testType:"journey"}),/unsupported value/);
 

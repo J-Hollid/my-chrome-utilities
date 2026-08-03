@@ -13,7 +13,7 @@ const project=(event)=>({
   project:{
     id:"project:migration",
     name:"Migration",
-    collections:{profiles:[],pageGroups:[],pages:[],events:[event],flows:[]},
+    collections:{profiles:[],propertySets:[],pages:[],events:[event],flows:[]},
     documentationFlowGraphs:{},
   },
   history:{undo:[],redo:[]},

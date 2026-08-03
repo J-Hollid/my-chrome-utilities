@@ -1,4 +1,7 @@
 import { canonicalConstraints, canonicalPropertyPath } from "./data-layer-canonical-schema.js";
+export function profileInheritanceEditorStartingPoint(startingPoint) {
+    return startingPoint === "everything" ? "everything" : "empty";
+}
 const clone = (value) => structuredClone(value);
 const orderedChildren = (document, parentId) => Object.values(document.nodes).filter((node) => node.parentId === parentId).sort((left, right) => left.order - right.order || left.id.localeCompare(right.id));
 const orderedIds = (document, parentId) => orderedChildren(document, parentId).flatMap((node) => [node.id, ...orderedIds(document, node.id)]);

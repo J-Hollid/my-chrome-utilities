@@ -34,13 +34,13 @@ for(let iteration=0;iteration<200;iteration+=1){
   const actual=Math.floor(random()*101),expected=Math.floor(random()*101),operator=["Greater than","At least","Less than","At most"][Math.floor(random()*4)],matches={"Greater than":actual>expected,"At least":actual>=expected,"Less than":actual<expected,"At most":actual<=expected}[operator],conditional=compileLayeredSchema([{id:`numeric:${iteration}`,name:"Numeric",scope:"Event",constraints:[{path:"/actual",definitionId:`definition:actual:${iteration}`,type:"number"},{path:"/conditional",type:"string",presence:"required",condition:{kind:"predicate",propertyId:`definition:actual:${iteration}`,operator,value:expected}}]}],context),conditionalIssues=validateLayeredObservation({targetId:`numeric:${iteration}`,targetName:"Numeric",revision:1,compiled:conditional},{actual}).issues;
   assert.equal(conditionalIssues.some(({path,code})=>path==="/conditional"&&code==="REQUIRED"),matches,`${operator} remains truthful for ${actual} and ${expected}`);
 
-  const flowId=`flow:${iteration}`,pageId=`page:${iteration}`,groupId=`group:${iteration}`,frameId=`frame:${iteration}`,frameName=random()>=0.5?`Named frame ${iteration}`:"",frame={id:frameId,name:frameName,pageId,pageGroupId:groupId,canonicalSchema:{id:`schema:${iteration}`}},state={project:{collections:{profiles:[],events:[],pageGroups:[{id:groupId,name:`Group ${iteration}`,pageIds:[pageId]}],pages:[{id:pageId,name:`Page ${iteration}`}],flows:[{id:flowId,name:`Flow ${iteration}`}],applicabilitySets:[],fixtures:[],schemaDrafts:[],assignments:[]},documentationFlowGraphs:{[flowId]:{pageGroupIds:[groupId],pageFrames:[frame],occurrences:[],relationships:[]}}}},contributor=flowPageFrameContributor(state,flowId,frameId);
+  const flowId=`flow:${iteration}`,pageId=`page:${iteration}`,groupId=`group:${iteration}`,frameId=`frame:${iteration}`,frameName=random()>=0.5?`Named frame ${iteration}`:"",frame={id:frameId,name:frameName,pageId,pageGroupId:groupId,canonicalSchema:{id:`schema:${iteration}`}},state={project:{collections:{profiles:[],events:[],propertySets:[{id:groupId,name:`Group ${iteration}`,pageIds:[pageId]}],pages:[{id:pageId,name:`Page ${iteration}`}],flows:[{id:flowId,name:`Flow ${iteration}`}],applicabilitySets:[],fixtures:[],schemaDrafts:[],assignments:[]},documentationFlowGraphs:{[flowId]:{pageGroupIds:[groupId],pageFrames:[frame],occurrences:[],relationships:[]}}}},contributor=flowPageFrameContributor(state,flowId,frameId);
   assert.deepEqual({id:contributor.id,pageId:contributor.pageId,pageGroupId:contributor.pageGroupId,schemaId:contributor.canonicalSchema.id},{id:frameId,pageId,pageGroupId:groupId,schemaId:`schema:${iteration}`},"frame projection conserves every stable reference");
   assert.equal(contributor.name,frameName||`Page ${iteration} in Flow ${iteration}`,"blank frame names derive from stable human context");
-  assert.deepEqual(layeredContributorPath(state,contributor,"Flow Page-instance",flowId),{pageGroupId:groupId,pageGroupIds:[groupId],pageId,flowId,pageFrameId:frameId},"frame contributor paths retain the selected lane and ordered Page Group inheritance path");
+  assert.deepEqual(layeredContributorPath(state,contributor,"Flow Page-instance",flowId),{pageGroupId:groupId,pageGroupIds:[groupId],pageId,flowId,pageFrameId:frameId},"frame contributor paths retain the selected lane and ordered Property Set inheritance path");
   assert.equal(flowPageFrameContributor(state,flowId,`missing:${iteration}`),undefined,"unknown frame IDs never fall back to a Page or Flow entity");
 
-  const project={id:`project:${iteration}`,name:`Project ${iteration}`,site:"example.test",environments:["Production"],namingConventions:{property:"snake_case",event:"snake_case"},publicationPolicy:{warningsBlock:false,fixturesRequired:false},releases:[],collections:{profiles:[{id:`profile:${iteration}`,name:"Target profile",requirements:[{path:"/value",type:"string",required:true}]}],pageGroups:[],pages:[],events:[{id:`event:${iteration}`,name:"Event",sourceId:"event-history",eventName:"event"}],applicabilitySets:[],flows:[],fixtures:[],assignments:[{id:`assignment:${iteration}`,name:"Target assignment",targetKind:"Shared Profile",targetId:`profile:${iteration}`,eventId:`event:${iteration}`,priority:10}]}};
+  const project={id:`project:${iteration}`,name:`Project ${iteration}`,site:"example.test",environments:["Production"],namingConventions:{property:"snake_case",event:"snake_case"},publicationPolicy:{warningsBlock:false,fixturesRequired:false},releases:[],collections:{profiles:[{id:`profile:${iteration}`,name:"Target profile",requirements:[{path:"/value",type:"string",required:true}]}],propertySets:[],pages:[],events:[{id:`event:${iteration}`,name:"Event",sourceId:"event-history",eventName:"event"}],applicabilitySets:[],flows:[],fixtures:[],assignments:[{id:`assignment:${iteration}`,name:"Target assignment",targetKind:"Shared Profile",targetId:`profile:${iteration}`,eventId:`event:${iteration}`,priority:10}]}};
   const projectCompilation=compileSpecificationProject(createCanonicalProjectEnvelope(project,`draft:${iteration}`));
   assert.equal(projectCompilation.status,"compiled","current contributor-target Assignments compile without legacy schemaDrafts");
 
@@ -57,7 +57,7 @@ for(let iteration=0;iteration<200;iteration+=1){
   const alpha=evaluateSpecificationObservation(contextualCompilation.plan,{sourceId:"event-history",eventName:"event",payload:{alpha:"present"}}),beta=evaluateSpecificationObservation(contextualCompilation.plan,{sourceId:"event-history",eventName:"other_event",payload:{beta:"present"}});
   eventTargetsIsolated&&=alpha.issueDetails.length===0&&beta.issueDetails.length===0;
 
-  const membershipCount=2+Math.floor(random()*6),activeIndex=Math.floor(random()*(membershipCount-1)),pageGroupIds=Array.from({length:membershipCount},(_,index)=>`group:structural:${iteration}:${index}`),applicabilitySets=pageGroupIds.slice(1).map((groupId,index)=>({id:`set:structural:${iteration}:${index}`,name:`Audience ${iteration}-${index}`,condition:{kind:"predicate",field:"audience",operator:"equals",value:`audience-${index}`},groupId})),structuralState={project:{id:`project:structural:${iteration}`,collections:{profiles:[],events:[],flows:[],schemaDrafts:[],assignments:[],applicabilitySets,pageGroups:pageGroupIds.map((id,index)=>({id,name:`Group ${iteration}-${index}`,...(index?{applicabilitySetId:applicabilitySets[index-1].id}:{}),schemaConstraints:[{path:"/ordinary_winner",type:"string",allowedValues:[`winner-${iteration}-${index}`]},{path:`/property_${index}`,type:"string",expectedValue:`value-${index}`}]})),pages:[{id:`page:structural:${iteration}`,name:`Page ${iteration}`,eventName:"pageview",pageGroupIds}],fixtures:[{id:`fixture:structural:${iteration}`,name:`Fixture ${iteration}`,pageId:`page:structural:${iteration}`,payload:{audience:`audience-${activeIndex}`}}]},documentationFlowGraphs:{}}},before=structuredClone(structuralState),structural=pageGroupStructuralSchema(structuralState,`page:structural:${iteration}`),evaluated=evaluatePageGroupFixture(structuralState,`fixture:structural:${iteration}`),genericDocumentation=documentPageGroupStructure(structural);
+  const membershipCount=2+Math.floor(random()*6),activeIndex=Math.floor(random()*(membershipCount-1)),pageGroupIds=Array.from({length:membershipCount},(_,index)=>`group:structural:${iteration}:${index}`),applicabilitySets=pageGroupIds.slice(1).map((groupId,index)=>({id:`set:structural:${iteration}:${index}`,name:`Audience ${iteration}-${index}`,condition:{kind:"predicate",field:"audience",operator:"equals",value:`audience-${index}`},groupId})),structuralState={project:{id:`project:structural:${iteration}`,collections:{profiles:[],events:[],flows:[],schemaDrafts:[],assignments:[],applicabilitySets,propertySets:pageGroupIds.map((id,index)=>({id,name:`Group ${iteration}-${index}`,...(index?{applicabilitySetId:applicabilitySets[index-1].id}:{}),schemaConstraints:[{path:"/ordinary_winner",type:"string",allowedValues:[`winner-${iteration}-${index}`]},{path:`/property_${index}`,type:"string",expectedValue:`value-${index}`}]})),pages:[{id:`page:structural:${iteration}`,name:`Page ${iteration}`,eventName:"pageview",propertySetApplications:pageGroupIds.map((propertySetId,index)=>({propertySetId,...(index?{applicabilitySetId:applicabilitySets[index-1].id}:{})}))}],fixtures:[{id:`fixture:structural:${iteration}`,name:`Fixture ${iteration}`,pageId:`page:structural:${iteration}`,payload:{audience:`audience-${activeIndex}`}}]},documentationFlowGraphs:{}}},before=structuredClone(structuralState),structural=pageGroupStructuralSchema(structuralState,`page:structural:${iteration}`),evaluated=evaluatePageGroupFixture(structuralState,`fixture:structural:${iteration}`),genericDocumentation=documentPageGroupStructure(structural);
   assert.deepEqual(structural.memberships.map(({groupId})=>groupId),pageGroupIds,"structural authoring preserves every stored membership in exact order");
   assert.deepEqual(structural.conditionalBranches.map(({groupId})=>groupId),pageGroupIds.slice(1),"generic structure preserves every conditional branch without evaluating a payload");
   assert.ok(applicabilitySets.every(({name})=>genericDocumentation.includes(name)),"generic documentation names every conditional branch");
@@ -77,7 +77,7 @@ for(let iteration=0;iteration<200;iteration+=1){
 
   const sourceType=["string","number","boolean","array"][Math.floor(random()*4)],localType=["string","number","boolean","array"].find((type)=>type!==sourceType),sourcePresence=["required","optional","forbidden"][Math.floor(random()*3)],localPresence=["required","optional","forbidden"].find((presence)=>presence!==sourcePresence),compileOverride=(source,local)=>compileLayeredSchema([
     {id:`profile:override:${iteration}`,name:`Profile ${iteration}`,scope:"Shared Profile",constraints:[{path:"/override",...source}]},
-    {id:`group:override:${iteration}`,name:`Group ${iteration}`,scope:"Page Group",constraints:[{path:"/override",...local}]},
+    {id:`group:override:${iteration}`,name:`Group ${iteration}`,scope:"Property Set",constraints:[{path:"/override",...local}]},
   ],context);
   const ordinaryType=compileOverride({type:sourceType},{type:localType}),ordinaryPresence=compileOverride({presence:sourcePresence},{presence:localPresence});
   assert.equal(ordinaryType.status,"ready","generated ordinary Type changes remain legal sparse overrides");
@@ -111,11 +111,11 @@ for(let iteration=0;iteration<120;iteration+=1){
       {id:leftId,name:`Left ${iteration}`,schemaConstraints:[{path:"/tier",type:"string",expectedValue:`left-${iteration}`}]},
       {id:rightId,name:`Right ${iteration}`,schemaConstraints:[{path:"/tier",type:"string",expectedValue:`right-${iteration}`}]},
     ],
-    pageGroups:[
+    propertySets:[
       {id:leftGroupId,name:`Left group ${iteration}`,profileIds:[commonId,leftId],schemaConstraints:[]},
       {id:rightGroupId,name:`Right group ${iteration}`,profileIds:[commonId,rightId],applicabilitySetId:`set:right:${iteration}`,schemaConstraints:[]},
     ],
-    pages:[{id:pageId,name:`Fan page ${iteration}`,profileIds:[commonId],pageGroupIds:[leftGroupId,rightGroupId],schemaConstraints:[]}],
+    pages:[{id:pageId,name:`Fan page ${iteration}`,profileIds:[commonId],propertySetApplications:[{propertySetId:leftGroupId},{propertySetId:rightGroupId,applicabilitySetId:"set:right:"+iteration}],schemaConstraints:[]}],
     events:[],flows:[{id:flowId,name:`Fan flow ${iteration}`}],fixtures:[],assignments:[],
     applicabilitySets:[{id:`set:right:${iteration}`,name:`Right audience ${iteration}`,condition:{kind:"predicate",field:"audience",operator:"equals",value:"right"}}],
   },documentationFlowGraphs:{[flowId]:{pageFrames:[{id:frameId,name:`Fan instance ${iteration}`,pageId,pageGroupId:leftGroupId}],occurrences:[],relationships:[]}}}};
@@ -256,18 +256,18 @@ for(let iteration=0;iteration<120;iteration+=1){
   }
   const downstreamContribution=(id,scope,constraint)=>({id:`${id}:${iteration}`,name:`${id} ${iteration}`,scope,constraints:[{path:"/generated",...constraint}]}),profileValue=`profile-${iteration}`,groupValue=`group-${iteration}`,pageValue=`page-${iteration}`,staticProfiles=[peerContribution("a",{expectedValue:profileValue}),peerContribution("b",{expectedValue:profileValue})];
   for(const profiles of [staticProfiles,[...staticProfiles].reverse()]){
-    const resolved=resolveConditionalLayeredSchema(compilePeers([...profiles,downstreamContribution("group","Page Group",{expectedValue:groupValue}),downstreamContribution("page","Page",{expectedValue:pageValue})]),{});
-    assert.equal(resolved.properties["/generated"].expectedValue,pageValue,"generated peer recomposition preserves later Page Group and Page values");
+    const resolved=resolveConditionalLayeredSchema(compilePeers([...profiles,downstreamContribution("group","Property Set",{expectedValue:groupValue}),downstreamContribution("page","Page",{expectedValue:pageValue})]),{});
+    assert.equal(resolved.properties["/generated"].expectedValue,pageValue,"generated peer recomposition preserves later Property Set and Page values");
     assert.equal(resolved.properties["/generated"].expectedContributor,`page ${iteration}`);
   }
   const typedProfiles=[peerContribution("a",{type:"string"}),peerContribution("b",{type:"string"})];
   for(const profiles of [typedProfiles,[...typedProfiles].reverse()]){
-    const resolved=resolveConditionalLayeredSchema(compilePeers([...profiles,downstreamContribution("group","Page Group",{rules:[rule("downstream",{kind:"value",expectedValue:groupValue,condition:always})]})]),{});
+    const resolved=resolveConditionalLayeredSchema(compilePeers([...profiles,downstreamContribution("group","Property Set",{rules:[rule("downstream",{kind:"value",expectedValue:groupValue,condition:always})]})]),{});
     assert.equal(resolved.status,"ready");
     assert.equal(resolved.properties["/generated"].expectedValue,groupValue,"generated peer recomposition preserves matching downstream rules");
     assert.equal(resolved.properties["/generated"].expectedContributor,`group ${iteration}`);
   }
-  for(const scope of ["Page Group","Page"]){
+  for(const scope of ["Property Set","Page"]){
     for(const [directFacet,conditionalOutcome,field] of [
       [{expectedValue:`static-${iteration}`},{kind:"value",expectedValue:`conditional-${iteration}`},"expectedValue"],
       [{allowedValues:[`static-${iteration}`]},{kind:"allowed-values",allowedValues:[`conditional-${iteration}`]},"allowedValues"],
@@ -308,7 +308,7 @@ for(let iteration=0;iteration<120;iteration+=1){
   ]){
     const profiles=[peerContribution("a",peerFacet),peerContribution("b",peerFacet)];
     for(const orderedProfiles of [profiles,[...profiles].reverse()]){
-      const compiled=compilePeers([...orderedProfiles,downstreamContribution(`compile-${label}`,"Page Group",downstreamFacet)]),resolved=resolveConditionalLayeredSchema(compiled,{});
+      const compiled=compilePeers([...orderedProfiles,downstreamContribution(`compile-${label}`,"Property Set",downstreamFacet)]),resolved=resolveConditionalLayeredSchema(compiled,{});
       assert.equal(compiled.conflicts.length,1,`generated static ${label} mismatch has one compile-time conflict`);
       assert.deepEqual(resolved.conflicts,compiled.conflicts,"generated compile-time conflict identity and count are conserved during conditional resolution");
     }

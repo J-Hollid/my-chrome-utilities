@@ -2,7 +2,7 @@ import { composedSchemaRowOwnershipInput } from "./data-layer-composed-schema-ow
 import { renderFocusedPropertyMenu } from "./data-layer-focused-schema-property-menu.js";
 import { focusedOwnershipActionTarget, focusedSectionOwnershipActions, focusedPropertyProvenanceSummary, focusedPropertySectionLabels, gateFocusedOwnershipSection } from "./data-layer-focused-schema-property-ui.js";
 import { renderComposedFocusedSection } from "./data-layer-composed-schema-workspace-focused-sections.js";
-import { applySchemaTablePathAllocation, bindSchemaTableQuickEdit, clearSchemaTableOverlay, mountSchemaTableOverlay, schemaTableAllowedValues, schemaTableCellMetadata, schemaTableColumns } from "./data-layer-schema-table.js";
+import { applySchemaTablePathAllocation, bindSchemaTableQuickEdit, clearSchemaTableOverlay, mountSchemaTableOverlay, schemaTableAllowedValues } from "./data-layer-schema-table.js";
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 function applyPersistedItemOwnership(host, row) {
     const overriddenValues = new Set((row.local.allowedValueProvenance ?? []).filter(({ state }) => state === "overridden").map(({ id }) => id));
@@ -21,6 +21,15 @@ export function composedReviewLifecycleInventory(removed, confirmedAction, resto
     entries.push(confirmedAction === "reset" ? "Reset to parents" : "Remove local property"); for (const id of restoredRuleIds)
     entries.push(`Restored rule ${id}`); for (const id of restoredValueIds)
     entries.push(`Restored value ${id}`); return entries; }
+export const composedSchemaTableColumns = [
+    { key: "property-editor", label: "" }, { key: "path", label: "Path" }, { key: "concept", label: "Concept" }, { key: "type", label: "Type" }, { key: "presence", label: "Presence" }, { key: "description", label: "Description" }, { key: "expected-or-allowed", label: "Allowed values" }, { key: "example", label: "Example" }, { key: "inheritance", label: "Inheritance" },
+];
+const composedSchemaTableCellMetadata = composedSchemaTableColumns.map(({ key, label }) => ({ key, label }));
+export function composedSchemaInheritanceStatus(row) {
+    if (!row.inherited)
+        return "Local";
+    return Object.keys(row.local).some((key) => key !== "path") ? "Mixed / overridden" : "Inherited";
+}
 const reviewCondition = (value) => { if (!value || typeof value !== "object")
     return value; const condition = value; if (condition.kind === "predicate")
     return { kind: "predicate", propertyId: condition.propertyId, operator: condition.operator, ...(condition.value !== undefined ? { value: condition.value } : {}) }; if (condition.kind === "all" || condition.kind === "any" || condition.kind === "not") {
@@ -137,9 +146,9 @@ export function renderComposedRows(rows, context) {
     clearSchemaTableOverlay(context.overlayHost);
     const { dom } = context, table = rows.querySelector(":scope > table") ?? dom.createElement("table"), head = dom.createElement("thead"), headRow = dom.createElement("tr"), body = dom.createElement("tbody");
     let pendingOverlay;
-    const cell = (index, text) => { const value = dom.createElement("td"), metadata = schemaTableCellMetadata[index]; value.dataset.schemaTableCell = metadata.key; value.dataset.schemaTableLabel = metadata.label; if (text !== undefined)
+    const cell = (index, text) => { const value = dom.createElement("td"), metadata = composedSchemaTableCellMetadata[index]; value.dataset.schemaTableCell = metadata.key; value.dataset.schemaTableLabel = metadata.label; if (text !== undefined)
         value.textContent = text; return value; };
-    for (const [index, { label }] of schemaTableColumns.entries()) {
+    for (const [index, { label }] of composedSchemaTableColumns.entries()) {
         const heading = Object.assign(dom.createElement("th"), { textContent: label });
         if (index === 0) {
             heading.setAttribute("aria-label", "Property editor");
@@ -201,8 +210,7 @@ export function renderComposedRows(rows, context) {
                 valueCell.append(suggestions);
             tr.append(valueCell);
         }
-        const affected = row.decisions?.map(({ facet }) => facet) ?? (row.decisionFacet ? [row.decisionFacet] : []), state = cell(9, context.removed && context.activePath === row.path ? "Removed" : row.validationState === "blocked" ? `Needs decision${affected.length ? ` · ${affected.join(", ")}` : ""}` : Object.keys(row.local).length > 1 ? `Local · effective ${context.effectiveText(row)}` : `Inherited · effective ${context.effectiveText(row)}`);
-        tr.append(cell(8, row.source), state);
+        tr.append(cell(8, composedSchemaInheritanceStatus(row)));
         if (context.overlayOpen && context.activePath === row.path) {
             const layers = [contextMenu(row, context)];
             if (context.focusedOpen)

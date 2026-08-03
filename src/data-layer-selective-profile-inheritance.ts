@@ -3,6 +3,7 @@ import type {LayerConstraint} from "./data-layer-layered-schema.js";
 import type {ProjectState} from "./data-layer-specification-project.js";
 
 export type ProfileInheritanceStartingPoint="everything"|"concepts"|"properties"|"empty";
+export type ProfileInheritanceEditorStartingPoint="everything"|"empty";
 export interface ProfileInheritanceRuleReplacement{sourceRuleId:string;propertyId:string;rule:CanonicalRule}
 export interface ProfileInheritancePresenceReplacement{sourceRuleId:string;propertyId:string;presence:"required"|"optional"|"forbidden"}
 export interface ProfileInheritanceSourceSnapshot{revision:number;sourcePropertyIds?:string[];effectivePropertyIds:string[];propertyPaths:Record<string,string>;ruleFingerprints:Record<string,string>;definitionFingerprints?:Record<string,string>;missingRuleDependencyKeys:string[]}
@@ -26,6 +27,10 @@ export interface ProfileInheritanceTreeNode{
 }
 export interface ProfileInheritanceTreeWindow{nodes:ProfileInheritanceTreeNode[];offset:number;total:number}
 export interface ProfileInheritanceParentAddition{propertyId:string;path:string;sourceGroup:string;definitionSummary:string;provenance:string;dependencyImpact:string}
+
+export function profileInheritanceEditorStartingPoint(startingPoint:ProfileInheritanceStartingPoint):ProfileInheritanceEditorStartingPoint{
+  return startingPoint==="everything"?"everything":"empty";
+}
 
 const clone=<T>(value:T):T=>structuredClone(value);
 const orderedChildren=(document:CanonicalSchemaDocument,parentId?:string):CanonicalPropertyNode[]=>Object.values(document.nodes).filter((node)=>node.parentId===parentId).sort((left,right)=>left.order-right.order||left.id.localeCompare(right.id));

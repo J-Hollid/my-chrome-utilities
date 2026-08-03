@@ -20,7 +20,7 @@ const legacyRoleState=createSpecificationProject({name:"Record-scoped transactio
 const base=contribution("profile:sitewide","Sitewide","Shared Profile",[
   {path:"/funnel_step",type:"string",allowedValues:["1","2","3a","3b"],presence:"optional",enforcement:"invariant"},
 ]);
-const checkout=contribution("group:checkout","Checkout","Page Group",[
+const checkout=contribution("group:checkout","Checkout","Property Set",[
   {path:"/funnel_step",presence:"required",enforcement:"invariant",target:"all"},
   {path:"/funnel_name",type:"string",expectedValue:"checkout",enforcement:"invariant",target:"all"},
 ]);
@@ -40,7 +40,7 @@ assert.equal(ready.properties["/funnel_step"].allowedValues,undefined,"a more-sp
 assert.equal(ready.properties["/funnel_step"].presence,"required");
 assert.equal(ready.properties["/funnel_step"].expectedValue,"3b");
 assert.deepEqual(ready.properties["/funnel_step"].superseded.map(({contributorName})=>contributorName),["Shipping"]);
-assert.deepEqual(ready.provenance.map(({scope})=>scope),["Shared Profile","Page Group","Page","Flow Page-instance","Event-occurrence"]);
+assert.deepEqual(ready.provenance.map(({scope})=>scope),["Shared Profile","Property Set","Page","Flow Page-instance","Event-occurrence"]);
 assert.equal(ready.properties["/order_id"].presence,"required");
 const closed=compileLayeredSchema([{...base,onlyDefinedFields:true}],{eventId:"event:purchase",eventRole:"interaction"});
 assert.equal(closed.onlyDefinedFields,true,"the effective closed-field policy is inherited with the contributor chain");
@@ -73,7 +73,7 @@ assert.equal(protectedPresenceConflict.status,"blocked","a protected Presence fa
 assert.equal(protectedPresenceConflict.conflicts[0].facet,"Presence");
 const protectedThroughIntermediate=compileLayeredSchema([
   contribution("protected-source","Protected source","Shared Profile",[{path:"/value",type:"string",protectedFacets:["type"]}]),
-  contribution("documentation-only","Documentation only","Page Group",[{path:"/value",documentation:"Retain this documentation"}]),
+  contribution("documentation-only","Documentation only","Property Set",[{path:"/value",documentation:"Retain this documentation"}]),
   contribution("specific","Shipping","Page",[{path:"/value",type:"number"}]),
 ],{eventId:"event:purchase",eventRole:"interaction"});
 assert.deepEqual(
@@ -246,21 +246,21 @@ for(const [staticConstraint,conditionalOutcome,expected] of [
 const downstreamStatic=compileLayeredSchema([
   peer("a",{expectedValue:"profile"}),
   peer("b",{expectedValue:"profile"}),
-  contribution("group","Group","Page Group",[{path:"/value",expectedValue:"group"}]),
+  contribution("group","Group","Property Set",[{path:"/value",expectedValue:"group"}]),
   contribution("page","Page","Page",[{path:"/value",expectedValue:"page"}]),
 ],{eventId:"pageview",eventRole:"context"}),downstreamStaticResolved=resolveConditionalLayeredSchema(downstreamStatic,{});
 assert.equal(downstreamStatic.properties["/value"].expectedValue,"page");
-assert.equal(downstreamStaticResolved.properties["/value"].expectedValue,"page","resolved peer recomposition preserves later Page Group and Page precedence");
+assert.equal(downstreamStaticResolved.properties["/value"].expectedValue,"page","resolved peer recomposition preserves later Property Set and Page precedence");
 assert.equal(downstreamStaticResolved.properties["/value"].expectedContributor,"Page");
 const downstreamConditional=compileLayeredSchema([
   peer("a",{type:"string"}),
   peer("b",{type:"string"}),
-  contribution("group","Group","Page Group",[{path:"/value",rules:[unconditionalRule("rule:downstream-conditional",{kind:"value",expectedValue:"group",condition:alwaysCondition})]}]),
+  contribution("group","Group","Property Set",[{path:"/value",rules:[unconditionalRule("rule:downstream-conditional",{kind:"value",expectedValue:"group",condition:alwaysCondition})]}]),
 ],{eventId:"pageview",eventRole:"context"}),downstreamConditionalResolved=resolveConditionalLayeredSchema(downstreamConditional,{});
 assert.equal(downstreamConditionalResolved.status,"ready");
 assert.equal(downstreamConditionalResolved.properties["/value"].expectedValue,"group","resolved peer recomposition preserves matching rules from later contributors");
 assert.equal(downstreamConditionalResolved.properties["/value"].expectedContributor,"Group");
-for(const scope of ["Page Group","Page"]){
+for(const scope of ["Property Set","Page"]){
   for(const [directFacet,conditionalOutcome,expectedFacet] of [
     [{expectedValue:"static"},{kind:"value",expectedValue:"conditional"},["expectedValue","conditional"]],
     [{allowedValues:["static"]},{kind:"allowed-values",allowedValues:["conditional"]},["allowedValues",["conditional"]]],
@@ -318,7 +318,7 @@ for(const [label,peerFacet,downstreamFacet] of [
   const compiled=compileLayeredSchema([
     peer("a",peerFacet),
     peer("b",peerFacet),
-    contribution(`compile-conflict:${label}`,`Compile conflict ${label}`,"Page Group",[{path:"/value",...downstreamFacet}]),
+    contribution(`compile-conflict:${label}`,`Compile conflict ${label}`,"Property Set",[{path:"/value",...downstreamFacet}]),
   ],{eventId:"pageview",eventRole:"context"}),resolved=resolveConditionalLayeredSchema(compiled,{});
   assert.equal(compiled.conflicts.length,1,`${label} has one compile-time conflict`);
   assert.deepEqual(resolved.conflicts,compiled.conflicts,`${label} conflict identity and count are conserved during conditional resolution`);
@@ -407,7 +407,7 @@ for(const contributors of [
   }
 }
 
-const targeted=compileLayeredSchema([contribution("targets","Checkout","Page Group",[
+const targeted=compileLayeredSchema([contribution("targets","Checkout","Property Set",[
   {path:"/all",target:"all"},{path:"/context",target:"context"},{path:"/interaction",target:"interaction"},{path:"/purchase",target:"event:purchase"},
 ])],{eventId:"event:purchase",eventRole:"interaction"});
 assert.deepEqual(Object.keys(targeted.properties),["/all","/interaction","/purchase"]);
@@ -450,7 +450,7 @@ canonicalOnly.nodes={
   "definition:order-id":{id:"definition:order-id",name:"order_id",order:1,type:"string",presence:{mode:"required-when",condition:{kind:"predicate",propertyId:"definition:purchase-count",operator:"At least",value:1}},allowedValues:[],rules:[{id:"rule:order",kind:"pattern",pattern:"^ORD-",severity:"error",message:"Use the order prefix"}],documentation:{displayText:"Order ID",description:"Canonical order identity",comments:"Runtime contract",example:{method:"custom",value:"ORD-1"}},provenance:[{source:"saved-schema",sourceId:"schema:purchase",revision:4}],overrideReferences:[]},
   "definition:total":{id:"definition:total",name:"total",order:2,type:"number",presence:{mode:"optional"},allowedValues:[],rules:[{id:"rule:total",kind:"range",minimum:10,maximum:20,severity:"error",message:"Expected order total"}],documentation:{displayText:"Total",description:"Canonical purchase total",comments:"",example:{method:"custom",value:15}},provenance:[{source:"created"}],overrideReferences:[]},
 };
-const canonicalOnlyState={project:{collections:{profiles:[],events:[{id:"event:fresh",name:"Fresh purchase",canonicalSchema:canonicalOnly}],pageGroups:[],pages:[],flows:[]},documentationFlowGraphs:{}}},canonicalOnlyContributors=layeredContributorsForPath(canonicalOnlyState,{eventId:"event:fresh"}),canonicalOnlyCompiled=compileLayeredSchema(canonicalOnlyContributors,{eventId:"event:fresh",eventRole:"interaction"});
+const canonicalOnlyState={project:{collections:{profiles:[],events:[{id:"event:fresh",name:"Fresh purchase",canonicalSchema:canonicalOnly}],propertySets:[],pages:[],flows:[]},documentationFlowGraphs:{}}},canonicalOnlyContributors=layeredContributorsForPath(canonicalOnlyState,{eventId:"event:fresh"}),canonicalOnlyCompiled=compileLayeredSchema(canonicalOnlyContributors,{eventId:"event:fresh",eventRole:"interaction"});
 assert.deepEqual(canonicalOnlyContributors.map(({id,constraints})=>({id,paths:constraints.map(({path})=>path)})),[{id:"event:fresh",paths:["/purchase_count","/order_id","/total"]}],"the compatibility contributor projection is derived from canonical storage alone");
 assert.deepEqual({condition:canonicalOnlyCompiled.properties["/order_id"].condition,rules:canonicalOnlyCompiled.properties["/order_id"].rules,patterns:canonicalOnlyCompiled.properties["/order_id"].patterns,documentation:canonicalOnlyCompiled.properties["/order_id"].documentation,examples:canonicalOnlyCompiled.properties["/order_id"].examples,definitionId:canonicalOnlyCompiled.properties["/order_id"].definitionId,origins:canonicalOnlyCompiled.properties["/order_id"].origins},{condition:{kind:"predicate",propertyId:"definition:purchase-count",operator:"At least",value:1},rules:[{id:"rule:order",kind:"pattern",pattern:"^ORD-",severity:"error",message:"Use the order prefix"}],patterns:["^ORD-"],documentation:"Canonical order identity",examples:["ORD-1"],definitionId:"definition:order-id",origins:[{contributorId:"event:fresh",contributorName:"Fresh purchase",scope:"Event"}]},"compiler retains canonical conditions, structured rules, documentation, examples, stable identity, and contributor provenance");
 const canonicalTarget={targetId:"target:fresh",targetName:"Fresh purchase",revision:canonicalOnly.revision,compiled:canonicalOnlyCompiled};
@@ -462,7 +462,7 @@ const pageCanonical=createCanonicalSchema({id:"canonical:page",contributorId:"pa
 const pathState={project:{collections:{
   profiles:[{id:"profile:selected",name:"Selected"},{id:"profile:unrelated",name:"Unrelated"}],
   events:[{id:"event:selected",name:"Selected event",profileId:"profile:selected"},{id:"event:unrelated",name:"Unrelated event"}],
-  pageGroups:[{id:"group:selected",name:"Selected group",profileId:"profile:selected",pageIds:["page:selected"]},{id:"group:unrelated",name:"Unrelated group",pageIds:["page:unrelated"]}],
+  propertySets:[{id:"group:selected",name:"Selected group",profileId:"profile:selected",pageIds:["page:selected"]},{id:"group:unrelated",name:"Unrelated group",pageIds:["page:unrelated"]}],
   pages:[{id:"page:selected",name:"Selected page",profileId:"profile:selected",pageGroupIds:["group:selected"],canonicalSchema:pageCanonical,contextEventBindings:[{id:"binding:selected",name:"Selected binding",eventId:"event:selected"}]},{id:"page:unrelated",name:"Unrelated page"}],
   flows:[{id:"flow:selected",name:"Selected flow",canonicalSchema:flowCanonical},{id:"flow:unrelated",name:"Unrelated flow"}],
 },documentationFlowGraphs:{"flow:selected":{pageGroupIds:["group:selected"],pageFrames:[{id:"frame:selected",name:"Selected page instance",profileId:"profile:selected",pageId:"page:selected",pageGroupId:"group:selected",canonicalSchema:frameCanonical}],occurrences:[{id:"occurrence:selected",name:"Selected occurrence",profileId:"profile:selected",eventId:"event:selected",pageFrameId:"frame:selected",pageGroupId:"group:selected",pageId:"page:selected"},{id:"occurrence:sibling",name:"Sibling occurrence",eventId:"event:unrelated",pageGroupId:"group:selected",pageId:"page:selected"}]},"flow:unrelated":{occurrences:[{id:"occurrence:unrelated",name:"Unrelated occurrence",eventId:"event:unrelated",pageGroupId:"group:unrelated",pageId:"page:unrelated"}]}}}};
@@ -489,7 +489,7 @@ for(const [targetKind,targetId,expected] of [
   const assignment={id:`assignment:${targetId}`,name:"Retail Purchase",targetKind,targetId},result=compileAssignmentContributorTarget(pathState,assignment,{eventId:"event:selected",eventRole:"interaction"});
   assert.deepEqual(result.contributors.map(({id})=>id),expected,`${targetKind} compiles its live inheritance`);assert.equal(result.compiled.status,"ready");assert.equal("schemaDraftId" in assignment,false);assert.equal("schemaId" in assignment,false);
 }
-assert.equal(canonicalLayerEditorSurface("pageGroups"),"Builder");assert.equal(canonicalLayerEditorSurface("pages"),"Builder");assert.equal(canonicalLayerEditorSurface("events"),"Builder");assert.equal(canonicalLayerEditorSurface("flows"),"Flow workspace");
+assert.equal(canonicalLayerEditorSurface("propertySets"),"Builder");assert.equal(canonicalLayerEditorSurface("pages"),"Builder");assert.equal(canonicalLayerEditorSurface("events"),"Builder");assert.equal(canonicalLayerEditorSurface("flows"),"Flow workspace");
 assert.equal(layeredContributorPath(pathState,{id:"occurrence:context",name:"Context occurrence",pageGroupId:"group:selected",pageId:"page:selected",contextBindingId:"binding:selected"},"Event-occurrence","flow:selected").eventId,"event:selected");
 assert.equal(layeredEventRole({id:"occurrence:context",name:"Context occurrence",contextBindingId:"binding:selected"}),"context");
 assert.equal(effectivePropertySummary({type:"string",allowedValues:["3b"],patterns:["^[a-z]+$","shipping$"],rules:[{condition:"base"},{condition:"specific"}]}),'type string · allowed ["3b"] · patterns ["^[a-z]+$","shipping$"] · rules 2');
@@ -545,7 +545,7 @@ const isolatedProject={
       {path:"/nested/value",type:"string",required:true,target:"event:alpha"},
       {path:"/beta",type:"string",required:true,target:"event:beta"},
     ]}],
-    pageGroups:[],pages:[],events:[
+    propertySets:[],pages:[],events:[
       {id:"event:alpha",name:"Alpha",sourceId:"history",eventName:"alpha"},
       {id:"event:beta",name:"Beta",sourceId:"history",eventName:"beta"},
     ],applicabilitySets:[],flows:[],fixtures:[],assignments:[
@@ -570,13 +570,18 @@ assert.deepEqual(evaluateSpecificationObservation(isolatedCompilation.plan,{sour
 const structuralState={project:{collections:{
   profiles:[],
   events:[],
-  pageGroups:[
+  propertySets:[
     {id:"group:checkout",name:"Checkout",schemaConstraints:[{path:"/funnel_name",type:"string",expectedValue:"checkout"}]},
     {id:"group:retail",name:"Retail Checkout",applicabilitySetId:"set:retail",schemaConstraints:[{path:"/funnel_step",type:"string",allowedValues:["3a"]},{path:"/retail",type:"boolean"}]},
     {id:"group:signed-in",name:"Signed-in Checkout",applicabilitySetId:"set:signed-in",schemaConstraints:[{path:"/account_id",type:"string"}]},
     {id:"group:trade",name:"Trade Checkout",applicabilitySetId:"set:trade",schemaConstraints:[{path:"/funnel_step",type:"string",allowedValues:["3b"]},{path:"/trade",type:"boolean"}]},
   ],
-  pages:[{id:"page:cart",name:"Cart",pageGroupIds:["group:checkout","group:retail","group:signed-in","group:trade"],schemaConstraints:[{path:"/cart_id",type:"string"}]}],
+  pages:[{id:"page:cart",name:"Cart",propertySetApplications:[
+    {propertySetId:"group:checkout"},
+    {propertySetId:"group:retail",applicabilitySetId:"set:retail"},
+    {propertySetId:"group:signed-in",applicabilitySetId:"set:signed-in"},
+    {propertySetId:"group:trade",applicabilitySetId:"set:trade"},
+  ],schemaConstraints:[{path:"/cart_id",type:"string"}]}],
   applicabilitySets:[
     {id:"set:retail",name:"Retail customers",condition:{kind:"predicate",field:"customer_type",operator:"equals",value:"retail"}},
     {id:"set:signed-in",name:"Signed-in visitors",condition:{kind:"predicate",field:"signed_in",operator:"equals",value:true}},
@@ -603,7 +608,7 @@ assert.deepEqual(structural.applicabilityPreviews.map(({applicabilitySetName,che
   ["Trade customers",true],
 ],"every distinct referenced Applicability Set is independently checked by default");
 assert.deepEqual(Object.keys(structural.compiled.properties).sort(),["/account_id","/cart_id","/funnel_name","/funnel_step","/retail","/trade"]);
-assert.deepEqual(structural.compiled.properties["/funnel_step"].allowedValues,["3b"],"the later ordinary Page Group value wins");
+assert.deepEqual(structural.compiled.properties["/funnel_step"].allowedValues,["3b"],"the later ordinary Property Set value wins");
 assert.deepEqual(structural.compiled.properties["/funnel_step"].superseded.map(({contributorName,value})=>[contributorName,value]),[["Retail Checkout",["3a"]]],"the earlier ordinary value remains as superseded provenance");
 const previewed=pageGroupStructuralSchema(structuralState,"page:cart",["set:signed-in","set:trade"]);
 assert.deepEqual(previewed.includedMemberships.map(({groupName})=>groupName),["Checkout","Signed-in Checkout","Trade Checkout"]);
@@ -612,15 +617,20 @@ assert.equal("/retail" in previewed.compiled.properties,false);
 assert.equal("/trade" in previewed.compiled.properties,true);
 assert.deepEqual(structuralState,structuralBefore,"applicability preview never mutates project records");
 const reordered=structuredClone(structuralState);
-reordered.project.collections.pages[0].pageGroupIds=["group:checkout","group:trade","group:signed-in","group:retail"];
+reordered.project.collections.pages[0].propertySetApplications=[
+  {propertySetId:"group:checkout"},
+  {propertySetId:"group:trade",applicabilitySetId:"set:trade"},
+  {propertySetId:"group:signed-in",applicabilitySetId:"set:signed-in"},
+  {propertySetId:"group:retail",applicabilitySetId:"set:retail"},
+];
 const reorderedStructure=pageGroupStructuralSchema(reordered,"page:cart");
 assert.deepEqual(reorderedStructure.compiled.properties["/funnel_step"].allowedValues,["3a"]);
 assert.deepEqual(reorderedStructure.compiled.properties["/funnel_step"].superseded.map(({contributorName,value})=>[contributorName,value]),[["Trade Checkout",["3b"]]]);
 const invariantStructure=structuredClone(structuralState);
-invariantStructure.project.collections.pageGroups[1].schemaConstraints[0].enforcement="invariant";
+invariantStructure.project.collections.propertySets[1].schemaConstraints[0].enforcement="invariant";
 assert.match(pageGroupStructuralSchema(invariantStructure,"page:cart").compiled.conflicts.find(({path})=>path==="/funnel_step").message,/invariant allowed values cannot be replaced/);
 const incompatibleStructure=structuredClone(structuralState);
-incompatibleStructure.project.collections.pageGroups[3].schemaConstraints[0].type="number";
+incompatibleStructure.project.collections.propertySets[3].schemaConstraints[0].type="number";
 assert.match(pageGroupStructuralSchema(incompatibleStructure,"page:cart").compiled.conflicts.find(({path})=>path==="/funnel_step").message,/type cannot change/);
 for(const [fixtureId,included,excluded] of [
   ["fixture:retail",["Checkout","Retail Checkout","Signed-in Checkout"],["Trade Checkout"]],
@@ -630,7 +640,7 @@ for(const [fixtureId,included,excluded] of [
   assert.deepEqual(evaluated.includedStack,included);
   assert.deepEqual(evaluated.inactiveGroups,excluded);
   assert.equal(evaluated.compiled.status,"ready");
-  assert.equal(evaluated.compiled.conflicts.some(({message})=>message.includes("ambiguous Page Group applicability")),false);
+  assert.equal(evaluated.compiled.conflicts.some(({message})=>message.includes("ambiguous Property Set applicability")),false);
   assert.equal(evaluated.mode,"evaluated-example");
 }
 const structuralDocument=documentPageGroupStructure(structural);
@@ -648,21 +658,21 @@ const transitiveState={project:{collections:{
     {id:"profile:customer",name:"Customer",schemaConstraints:[{path:"/customer_id",type:"string"}]},
   ],
   events:[],
-  pageGroups:[
+  propertySets:[
     {id:"group:checkout",name:"Checkout",profileIds:["profile:commerce","profile:experience"],schemaConstraints:[{path:"/funnel_name",type:"string"}]},
     {id:"group:retail",name:"Retail Checkout",profileIds:["profile:commerce","profile:customer"],applicabilitySetId:"set:retail",schemaConstraints:[{path:"/retail_only",type:"boolean"}]},
   ],
-  pages:[{id:"page:cart",name:"Cart",eventName:"pageview",profileIds:["profile:commerce"],pageGroupIds:["group:checkout","group:retail"],schemaConstraints:[{path:"/page_name",type:"string"}]}],
+  pages:[{id:"page:cart",name:"Cart",eventName:"pageview",profileIds:["profile:commerce"],propertySetApplications:[{propertySetId:"group:checkout"},{propertySetId:"group:retail",applicabilitySetId:"set:retail"}],schemaConstraints:[{path:"/page_name",type:"string"}]}],
   applicabilitySets:[{id:"set:retail",name:"Retail customers",condition:{kind:"predicate",field:"customer_type",operator:"equals",value:"retail"}}],
   flows:[{id:"flow:checkout",name:"Checkout Flow"}],
   fixtures:[{id:"fixture:retail-profile",name:"Retail profile example",pageId:"page:cart",payload:{customer_type:"retail",currency:"EUR"}}],
   assignments:[],
 },documentationFlowGraphs:{"flow:checkout":{pageFrames:[{id:"frame:cart",name:"Cart instance",pageId:"page:cart",pageGroupId:"group:checkout",localSchemaContributions:[]}]}}}};
-const checkoutEntity=transitiveState.project.collections.pageGroups[0],checkoutWorkspace=composedSchemaWorkspace(transitiveState,checkoutEntity,"Page Group"),allProfiles=pageGroupStructuralSchema(transitiveState,"page:cart"),currency=allProfiles.compiled.properties["/currency"];
-assert.deepEqual(checkoutWorkspace.rows.map(({path})=>path),["/currency","/funnel_name","/locale"],"a Page Group workspace composes every referenced Shared Profile before its local schema");
-assert.deepEqual(Object.keys(allProfiles.compiled.properties).sort(),["/currency","/customer_id","/funnel_name","/locale","/page_name","/retail_only"],"Page compilation carries complete Page Group effective schemas into the Page");
+const checkoutEntity=transitiveState.project.collections.propertySets[0],checkoutWorkspace=composedSchemaWorkspace(transitiveState,checkoutEntity,"Property Set"),allProfiles=pageGroupStructuralSchema(transitiveState,"page:cart"),currency=allProfiles.compiled.properties["/currency"];
+assert.deepEqual(checkoutWorkspace.rows.map(({path})=>path),["/currency","/funnel_name","/locale"],"a Property Set workspace composes every referenced Shared Profile before its local schema");
+assert.deepEqual(Object.keys(allProfiles.compiled.properties).sort(),["/currency","/customer_id","/funnel_name","/locale","/page_name","/retail_only"],"Page compilation carries complete Property Set effective schemas into the Page");
 assert.equal(currency.origins.filter(({contributorId})=>contributorId==="profile:commerce").length,1,"stable Shared Profile identity contributes one effective value without a self-conflict");
-assert.deepEqual(currency.origins.find(({contributorId})=>contributorId==="profile:commerce").inheritanceRoutes,["Commerce → Cart","Commerce → Checkout → Cart","Commerce → Retail Checkout → Cart"],"deduplicated provenance retains every direct and Page Group route");
+assert.deepEqual(currency.origins.find(({contributorId})=>contributorId==="profile:commerce").inheritanceRoutes,["Commerce → Cart","Commerce → Checkout → Cart","Commerce → Retail Checkout → Cart"],"deduplicated provenance retains every direct and Property Set route");
 const withoutRetail=pageGroupStructuralSchema(transitiveState,"page:cart",[]);
 assert.equal("/customer_id" in withoutRetail.compiled.properties,false,"an unchecked group excludes a profile reachable only through that group");
 assert.equal("/retail_only" in withoutRetail.compiled.properties,false,"an unchecked group excludes its local contribution");

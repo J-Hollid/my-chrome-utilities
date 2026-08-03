@@ -21,8 +21,8 @@ const token=(prefix)=>`${prefix}_${Math.floor(random()*1_000_000)}`;
 for(let example=0;example<150;example+=1){
   const path=`/${token("property")}`,unrelatedPath=`/${token("unrelated")}`,parentValue=token("parent"),localValue=token("local"),state=createSpecificationProject({name:`Composition ${example}`,site:"shop.example",id:(kind)=>`${kind}:${example}`});
   state.project.collections.profiles.push({id:`profile:${example}`,name:`Profile ${example}`,schemaConstraints:[{path,type:"string",expectedValue:parentValue},{path:unrelatedPath,type:"string"}]});
-  state.project.collections.pageGroups.push({id:`group:${example}`,name:`Group ${example}`,profileId:`profile:${example}`});
-  state.project.collections.pages.push({id:`page:${example}`,name:`Page ${example}`,profileId:`profile:${example}`,pageGroupIds:[`group:${example}`],localSchemaContributions:[{path:unrelatedPath,documentation:"preserve me"}]});
+  state.project.collections.propertySets.push({id:`group:${example}`,name:`Group ${example}`,profileId:`profile:${example}`});
+  state.project.collections.pages.push({id:`page:${example}`,name:`Page ${example}`,profileId:`profile:${example}`,propertySetApplications:[{propertySetId:`group:`}],localSchemaContributions:[{path:unrelatedPath,documentation:"preserve me"}]});
 
   const saved=saveComposedSchemaLocalFacets(state,"pages",`page:${example}`,path,{expectedValue:localValue,documentation:""}),savedPage=saved.project.collections.pages[0],savedRows=composedSchemaWorkspace(saved,savedPage,"Page").rows;
   assert.deepEqual(savedPage.localSchemaContributions,[{path:unrelatedPath,documentation:"preserve me"},{path,expectedValue:localValue}]);
@@ -45,23 +45,23 @@ for(let example=0;example<150;example+=1){
 
   const facet=random()>=0.5?"type":"presence",sourceValue=facet==="type"?"string":"required",localFacetValue=facet==="type"?"number":"forbidden",protectedState=createSpecificationProject({name:`Protected composition ${example}`,site:"shop.example",id:(kind)=>`${kind}:protected:${example}`});
   protectedState.project.collections.profiles.push({id:`profile:protected:${example}`,name:`Protected profile ${example}`,schemaConstraints:[{path,[facet]:sourceValue,protectedFacets:[facet]}]});
-  protectedState.project.collections.pageGroups.push({id:`group:protected:${example}`,name:`Protected group ${example}`,profileId:`profile:protected:${example}`,localSchemaContributions:[{path,[facet]:localFacetValue,documentation:"preserve local documentation"},{path:unrelatedPath,type:"boolean"}]});
-  const protectedGroup=protectedState.project.collections.pageGroups[0],protectedWorkspace=composedSchemaWorkspace(protectedState,protectedGroup,"Page Group"),decision=protectedWorkspace.rows.find(({path:rowPath})=>rowPath===path);
+  protectedState.project.collections.propertySets.push({id:`group:protected:${example}`,name:`Protected group ${example}`,profileId:`profile:protected:${example}`,localSchemaContributions:[{path,[facet]:localFacetValue,documentation:"preserve local documentation"},{path:unrelatedPath,type:"boolean"}]});
+  const protectedGroup=protectedState.project.collections.propertySets[0],protectedWorkspace=composedSchemaWorkspace(protectedState,protectedGroup,"Property Set"),decision=protectedWorkspace.rows.find(({path:rowPath})=>rowPath===path);
   assert.equal(protectedWorkspace.status,"blocked");
   assert.equal(decision.decisionFacet,facet[0].toUpperCase()+facet.slice(1));
   assert.ok(decision.repairs.some((repair)=>repair.kind==="use-source"&&repair.facet===facet),"every generated protected conflict offers its exact inherited facet repair");
-  const repairedFacet=resetComposedSchemaLocalFacet(protectedState,"pageGroups",protectedGroup.id,path,facet),repairedGroup=repairedFacet.project.collections.pageGroups[0];
+  const repairedFacet=resetComposedSchemaLocalFacet(protectedState,"propertySets",protectedGroup.id,path,facet),repairedGroup=repairedFacet.project.collections.propertySets[0];
   assert.deepEqual(repairedGroup.localSchemaContributions,[{path,documentation:"preserve local documentation"},{path:unrelatedPath,type:"boolean"}],"a generated targeted repair conserves unrelated facets and properties");
   assert.equal(repairedFacet.history.undo.length,protectedState.history.undo.length+1,"a generated targeted repair creates exactly one Undo action");
-  assert.equal(composedSchemaWorkspace(repairedFacet,repairedGroup,"Page Group").status,"ready");
+  assert.equal(composedSchemaWorkspace(repairedFacet,repairedGroup,"Property Set").status,"ready");
 
   const multiPath=`/${token("multi")}`,multiState=createSpecificationProject({name:`Multi composition ${example}`,site:"shop.example",id:(kind)=>`${kind}:multi:${example}`});
   multiState.project.collections.profiles.push({id:`profile:multi:${example}`,name:`Multi source ${example}`,schemaConstraints:[{path:multiPath,allowedValues:[1,2],maximum:5}]});
-  multiState.project.collections.pageGroups.push({id:`group:multi:${example}`,name:`Multi local ${example}`,profileId:`profile:multi:${example}`,localSchemaContributions:[{path:multiPath,allowedValues:[30],minimum:10,documentation:"keep multi docs"}]});
-  const multiGroup=multiState.project.collections.pageGroups[0],multiRow=composedSchemaWorkspace(multiState,multiGroup,"Page Group").rows.find(({path:rowPath})=>rowPath===multiPath);
+  multiState.project.collections.propertySets.push({id:`group:multi:${example}`,name:`Multi local ${example}`,profileId:`profile:multi:${example}`,localSchemaContributions:[{path:multiPath,allowedValues:[30],minimum:10,documentation:"keep multi docs"}]});
+  const multiGroup=multiState.project.collections.propertySets[0],multiRow=composedSchemaWorkspace(multiState,multiGroup,"Property Set").rows.find(({path:rowPath})=>rowPath===multiPath);
   assert.deepEqual(multiRow.decisions.map(({facet})=>facet),["Range rule"],"generated complete Allowed values remain a Ready sparse override while the independent impossible Range stays a decision");
   assert.deepEqual(multiRow.effective.allowedValues,[30],"generated complete Allowed values win exactly outside the parent universe");
-  const multiAfterOne=resetComposedSchemaLocalFacet(multiState,"pageGroups",multiGroup.id,multiPath,"minimum"),multiAfterOneGroup=multiAfterOne.project.collections.pageGroups[0],multiAfterOneRow=composedSchemaWorkspace(multiAfterOne,multiAfterOneGroup,"Page Group").rows.find(({path:rowPath})=>rowPath===multiPath);
+  const multiAfterOne=resetComposedSchemaLocalFacet(multiState,"propertySets",multiGroup.id,multiPath,"minimum"),multiAfterOneGroup=multiAfterOne.project.collections.propertySets[0],multiAfterOneRow=composedSchemaWorkspace(multiAfterOne,multiAfterOneGroup,"Property Set").rows.find(({path:rowPath})=>rowPath===multiPath);
   assert.deepEqual(multiAfterOneRow.decisions.map(({facet})=>facet),[],"repairing the generated Range decision leaves the ordinary Allowed-values override Ready");
   assert.equal(multiAfterOneGroup.localSchemaContributions[0].documentation,"keep multi docs","generated decision repair conserves an unrelated facet");
   assert.equal(multiAfterOne.history.undo.length,multiState.history.undo.length+1,"one generated decision repair adds exactly one Undo action");
@@ -71,18 +71,18 @@ for(let example=0;example<150;example+=1){
     {id:`profile:left:${example}`,name:`Left ${example}`,schemaConstraints:[{path:peerPath,type:"string",allowedValues:[leftValue]}]},
     {id:`profile:right:${example}`,name:`Right ${example}`,schemaConstraints:[{path:peerPath,type:"string",allowedValues:[rightValue]}]},
   );
-  peerState.project.collections.pageGroups.push({id:`group:peer:${example}`,name:`Peer group ${example}`,profileIds:[`profile:left:${example}`,`profile:right:${example}`],localSchemaContributions:[{path:unrelatedPath,documentation:"peer unrelated"}]});
-  const peerGroup=peerState.project.collections.pageGroups[0],peerRow=composedSchemaWorkspace(peerState,peerGroup,"Page Group").rows.find(({path:rowPath})=>rowPath===peerPath),chosen=peerRow.repairs.find(({kind,contributorId})=>kind==="use-contextual"&&contributorId===`profile:right:${example}`);
+  peerState.project.collections.propertySets.push({id:`group:peer:${example}`,name:`Peer group ${example}`,profileIds:[`profile:left:${example}`,`profile:right:${example}`],localSchemaContributions:[{path:unrelatedPath,documentation:"peer unrelated"}]});
+  const peerGroup=peerState.project.collections.propertySets[0],peerRow=composedSchemaWorkspace(peerState,peerGroup,"Property Set").rows.find(({path:rowPath})=>rowPath===peerPath),chosen=peerRow.repairs.find(({kind,contributorId})=>kind==="use-contextual"&&contributorId===`profile:right:${example}`);
   assert.deepEqual({facet:chosen.facet,value:chosen.value},{facet:"allowedValues",value:[rightValue]},"generated parallel conflicts retain their contextual value");
-  const contextual=applyComposedSchemaContextualFacet(peerState,"pageGroups",peerGroup.id,peerPath,chosen.facet,chosen.value),contextualGroup=contextual.project.collections.pageGroups[0];
-  assert.equal(composedSchemaWorkspace(contextual,contextualGroup,"Page Group").status,"ready","every generated contextual choice recompiles ready");
+  const contextual=applyComposedSchemaContextualFacet(peerState,"propertySets",peerGroup.id,peerPath,chosen.facet,chosen.value),contextualGroup=contextual.project.collections.propertySets[0];
+  assert.equal(composedSchemaWorkspace(contextual,contextualGroup,"Property Set").status,"ready","every generated contextual choice recompiles ready");
   assert.deepEqual(contextualGroup.localSchemaContributions.find(({path})=>path===unrelatedPath),{path:unrelatedPath,documentation:"peer unrelated"},"a generated contextual repair conserves unrelated sparse data");
   assert.deepEqual(contextualGroup.localSchemaContributions.find(({path})=>path===peerPath).allowedValues,[rightValue],"a generated contextual repair stores the selected sparse value");
   assert.equal(contextual.history.undo.length,peerState.history.undo.length+1,"a generated contextual repair adds one Undo action");
 
   for(const {collection,kind,scope} of[
     {collection:"pages",kind:"pages",scope:"Page"},
-    {collection:"pageGroups",kind:"pageGroups",scope:"Page Group"},
+    {collection:"propertySets",kind:"propertySets",scope:"Property Set"},
     {collection:"events",kind:"events",scope:"Event"},
   ]){
     assert.equal(composedSchemaScopeForKind(kind),scope,`generated ${scope} targets resolve contextual repairs under their own scope`);
@@ -112,17 +112,17 @@ for(let example=0;example<150;example+=1){
     {id:`profile:cross-left:${example}`,name:`Cross left ${example}`,schemaConstraints:[{path:crossPath,...crossCase[0]}]},
     {id:`profile:cross-right:${example}`,name:`Cross right ${example}`,schemaConstraints:[{path:crossPath,...crossCase[1]}]},
   );
-  crossState.project.collections.pageGroups.push({id:`group:cross:${example}`,name:`Cross group ${example}`,profileIds:[`profile:cross-left:${example}`,`profile:cross-right:${example}`],localSchemaContributions:[{path:unrelatedPath,documentation:"cross unrelated"}]});
-  const crossGroup=crossState.project.collections.pageGroups[0],crossRow=composedSchemaWorkspace(crossState,crossGroup,"Page Group").rows.find(({path:rowPath})=>rowPath===crossPath),crossRepairs=crossRow.repairs.filter(({kind})=>kind==="use-contextual");
+  crossState.project.collections.propertySets.push({id:`group:cross:${example}`,name:`Cross group ${example}`,profileIds:[`profile:cross-left:${example}`,`profile:cross-right:${example}`],localSchemaContributions:[{path:unrelatedPath,documentation:"cross unrelated"}]});
+  const crossGroup=crossState.project.collections.propertySets[0],crossRow=composedSchemaWorkspace(crossState,crossGroup,"Property Set").rows.find(({path:rowPath})=>rowPath===crossPath),crossRepairs=crossRow.repairs.filter(({kind})=>kind==="use-contextual");
   assert.equal(crossRepairs.length,2,"every generated cross-facet conflict offers both exact choices");
   for(const crossRepair of crossRepairs){
-    const repaired=applyComposedSchemaContextualFacet(crossState,"pageGroups",crossGroup.id,crossPath,crossRepair.facet,crossRepair.value,crossRepair),repairedGroup=repaired.project.collections.pageGroups[0],workspace=composedSchemaWorkspace(repaired,repairedGroup,"Page Group"),effective=workspace.rows.find(({path:rowPath})=>rowPath===crossPath).effective,selectedFacet=crossRepair.facet,rejectedFacet=selectedFacet===crossCase[2]?crossCase[3]:crossCase[2];
+    const repaired=applyComposedSchemaContextualFacet(crossState,"propertySets",crossGroup.id,crossPath,crossRepair.facet,crossRepair.value,crossRepair),repairedGroup=repaired.project.collections.propertySets[0],workspace=composedSchemaWorkspace(repaired,repairedGroup,"Property Set"),effective=workspace.rows.find(({path:rowPath})=>rowPath===crossPath).effective,selectedFacet=crossRepair.facet,rejectedFacet=selectedFacet===crossCase[2]?crossCase[3]:crossCase[2];
     assert.equal(workspace.status,"ready",`generated ${selectedFacet} choice is semantically resolved`);
     assert.ok(Object.hasOwn(effective,selectedFacet),`generated effective value retains selected ${selectedFacet}`);
     assert.ok(!Object.hasOwn(effective,rejectedFacet),`generated effective value removes opposing ${rejectedFacet}`);
     assert.deepEqual(repairedGroup.localSchemaContributions.find(({path})=>path===unrelatedPath),{path:unrelatedPath,documentation:"cross unrelated"},"generated contextual choice preserves unrelated sparse data");
     assert.equal(repaired.history.undo.length,crossState.history.undo.length+1,"each generated contextual choice adds exactly one Undo action");
-    assert.deepEqual(undoProjectTransaction(repaired).project.collections.pageGroups[0].localSchemaContributions,crossGroup.localSchemaContributions,"one Undo restores the unresolved property without disturbing unrelated sparse data");
+    assert.deepEqual(undoProjectTransaction(repaired).project.collections.propertySets[0].localSchemaContributions,crossGroup.localSchemaContributions,"one Undo restores the unresolved property without disturbing unrelated sparse data");
   }
 
   const guardedFirstRule=Math.floor(example/4)%2===0,orderedRules=(ordinary,invariant)=>guardedFirstRule?[ordinary,invariant]:[invariant,ordinary],guardedCases=[
@@ -135,30 +135,30 @@ for(let example=0;example<150;example+=1){
     {id:looseId,name:`Loose ${example}`,schemaConstraints:[{path:guardedPath,...guardedCase[1]}]},
   ];
   guardedState.project.collections.profiles.push(...(example%3===0?[...guardedProfiles].reverse():guardedProfiles));
-  guardedState.project.collections.pageGroups.push({id:`group:guarded:${example}`,name:`Guarded group ${example}`,profileIds:guardedState.project.collections.profiles.map(({id})=>id),localSchemaContributions:[{path:unrelatedPath,documentation:"guarded unrelated"}]});
-  const guardedGroup=guardedState.project.collections.pageGroups[0],guardedRow=composedSchemaWorkspace(guardedState,guardedGroup,"Page Group").rows.find(({path:rowPath})=>rowPath===guardedPath),guardedRepairs=guardedRow.repairs.filter(({kind})=>kind==="use-contextual");
+  guardedState.project.collections.propertySets.push({id:`group:guarded:${example}`,name:`Guarded group ${example}`,profileIds:guardedState.project.collections.profiles.map(({id})=>id),localSchemaContributions:[{path:unrelatedPath,documentation:"guarded unrelated"}]});
+  const guardedGroup=guardedState.project.collections.propertySets[0],guardedRow=composedSchemaWorkspace(guardedState,guardedGroup,"Property Set").rows.find(({path:rowPath})=>rowPath===guardedPath),guardedRepairs=guardedRow.repairs.filter(({kind})=>kind==="use-contextual");
   assert.deepEqual(guardedRepairs.map(({contributorId})=>contributorId),[guardedId],"generated protected and invariant conflicts expose only the authority-preserving contextual choice");
-  const legalGuarded=guardedRepairs[0],guardedRepaired=applyComposedSchemaContextualFacet(guardedState,"pageGroups",guardedGroup.id,guardedPath,legalGuarded.facet,legalGuarded.value,legalGuarded),guardedRepairedGroup=guardedRepaired.project.collections.pageGroups[0],guardedWorkspace=composedSchemaWorkspace(guardedRepaired,guardedRepairedGroup,"Page Group"),guardedEffective=guardedWorkspace.rows.find(({path:rowPath})=>rowPath===guardedPath).effective;
+  const legalGuarded=guardedRepairs[0],guardedRepaired=applyComposedSchemaContextualFacet(guardedState,"propertySets",guardedGroup.id,guardedPath,legalGuarded.facet,legalGuarded.value,legalGuarded),guardedRepairedGroup=guardedRepaired.project.collections.propertySets[0],guardedWorkspace=composedSchemaWorkspace(guardedRepaired,guardedRepairedGroup,"Property Set"),guardedEffective=guardedWorkspace.rows.find(({path:rowPath})=>rowPath===guardedPath).effective;
   assert.equal(guardedWorkspace.status,"ready","the generated authority-preserving contextual choice resolves the peer conflict");
   assert.ok(guardedCase[5](guardedEffective),"the generated repair retains the protected or invariant effective facet and removes only the loose facet");
-  assert.deepEqual(undoProjectTransaction(guardedRepaired).project.collections.pageGroups[0].localSchemaContributions,guardedGroup.localSchemaContributions,"one generated Undo restores the guarded decision and preserves unrelated sparse data");
-  const illegalRepair={kind:"use-contextual",contributorId:looseId,rejectedContributorId:guardedId,rejectedFacet:guardedCase[2]},illegal=applyComposedSchemaContextualFacet(guardedState,"pageGroups",guardedGroup.id,guardedPath,guardedCase[3],guardedCase[4],illegalRepair);
+  assert.deepEqual(undoProjectTransaction(guardedRepaired).project.collections.propertySets[0].localSchemaContributions,guardedGroup.localSchemaContributions,"one generated Undo restores the guarded decision and preserves unrelated sparse data");
+  const illegalRepair={kind:"use-contextual",contributorId:looseId,rejectedContributorId:guardedId,rejectedFacet:guardedCase[2]},illegal=applyComposedSchemaContextualFacet(guardedState,"propertySets",guardedGroup.id,guardedPath,guardedCase[3],guardedCase[4],illegalRepair);
   assert.deepEqual(illegal,guardedState,"a forged generated repair cannot reject a protected or invariant peer facet");
 
   const ordinaryPatternState=createSpecificationProject({name:`Ordinary Pattern composition ${example}`,site:"shop.example",id:(kind)=>`${kind}:ordinary-pattern:${example}`}),ordinaryPatternPath=`/${token("ordinary_pattern")}`;
   ordinaryPatternState.project.collections.profiles.push({id:`profile:ordinary-letters:${example}`,name:`Letters ${example}`,schemaConstraints:[{path:ordinaryPatternPath,rules:[{id:`ordinary-letters:${example}`,kind:"pattern",pattern:"^[a-z]+$"}]}]},{id:`profile:ordinary-digits:${example}`,name:`Digits ${example}`,schemaConstraints:[{path:ordinaryPatternPath,rules:[{id:`ordinary-digits:${example}`,kind:"pattern",pattern:"^[0-9]+$"}]}]});
-  ordinaryPatternState.project.collections.pageGroups.push({id:`group:ordinary-pattern:${example}`,name:`Ordinary Pattern group ${example}`,profileIds:[`profile:ordinary-letters:${example}`,`profile:ordinary-digits:${example}`]});
-  const ordinaryPatternGroup=ordinaryPatternState.project.collections.pageGroups[0],ordinaryPatternRow=composedSchemaWorkspace(ordinaryPatternState,ordinaryPatternGroup,"Page Group").rows.find(({path:rowPath})=>rowPath===ordinaryPatternPath),lettersRepair=ordinaryPatternRow.repairs.find(({contributorId})=>contributorId===`profile:ordinary-letters:${example}`),ordinaryPatternRepaired=applyComposedSchemaContextualFacet(ordinaryPatternState,"pageGroups",ordinaryPatternGroup.id,ordinaryPatternPath,lettersRepair.facet,lettersRepair.value,lettersRepair),ordinaryPatternEffective=composedSchemaWorkspace(ordinaryPatternRepaired,ordinaryPatternRepaired.project.collections.pageGroups[0],"Page Group").rows.find(({path:rowPath})=>rowPath===ordinaryPatternPath).effective;
+  ordinaryPatternState.project.collections.propertySets.push({id:`group:ordinary-pattern:${example}`,name:`Ordinary Pattern group ${example}`,profileIds:[`profile:ordinary-letters:${example}`,`profile:ordinary-digits:${example}`]});
+  const ordinaryPatternGroup=ordinaryPatternState.project.collections.propertySets[0],ordinaryPatternRow=composedSchemaWorkspace(ordinaryPatternState,ordinaryPatternGroup,"Property Set").rows.find(({path:rowPath})=>rowPath===ordinaryPatternPath),lettersRepair=ordinaryPatternRow.repairs.find(({contributorId})=>contributorId===`profile:ordinary-letters:${example}`),ordinaryPatternRepaired=applyComposedSchemaContextualFacet(ordinaryPatternState,"propertySets",ordinaryPatternGroup.id,ordinaryPatternPath,lettersRepair.facet,lettersRepair.value,lettersRepair),ordinaryPatternEffective=composedSchemaWorkspace(ordinaryPatternRepaired,ordinaryPatternRepaired.project.collections.propertySets[0],"Property Set").rows.find(({path:rowPath})=>rowPath===ordinaryPatternPath).effective;
   assert.deepEqual(ordinaryPatternEffective.patterns,["^[a-z]+$"],"a generated same-facet Pattern choice is conserved exactly once");
 
   const rulePath=`/${token("rule")}`,sourceRuleId=`rule:source:${example}`,genericRuleId=`rule:generic:${example}`,localRuleId=`rule:local:${example}`,invariant=example%2===1,ruleState=createSpecificationProject({name:`Rule composition ${example}`,site:"shop.example",id:(kind)=>`${kind}:rule:${example}`});
   ruleState.project.collections.profiles.push({id:`profile:rule:${example}`,name:`Rule source ${example}`,schemaConstraints:[{path:rulePath,type:invariant?"number":"string",rules:invariant?[{id:sourceRuleId,name:`Source Range ${example}`,kind:"range",maximum:5,enforcement:"invariant"}]:[{id:genericRuleId,name:`Generic Pattern ${example}`,kind:"pattern",pattern:"^.{1,20}$"},{id:sourceRuleId,name:`Source Pattern ${example}`,kind:"pattern",pattern:"^[a-z]+$"}]}]});
-  ruleState.project.collections.pageGroups.push({id:`group:rule:${example}`,name:`Rule local ${example}`,profileId:`profile:rule:${example}`,localSchemaContributions:[{path:rulePath,rules:[invariant?{id:localRuleId,name:`Local Range ${example}`,kind:"range",minimum:10}:{id:localRuleId,name:`Local Pattern ${example}`,kind:"pattern",pattern:"^[0-9]+$"}]},{path:unrelatedPath,type:"boolean"}]});
-  const ruleGroup=ruleState.project.collections.pageGroups[0],ruleRow=composedSchemaWorkspace(ruleState,ruleGroup,"Page Group").rows.find(({path:rowPath})=>rowPath===rulePath),repair=ruleRow.repairs.find(({kind})=>kind===(invariant?"remove-local-rule":"override-rule"));
+  ruleState.project.collections.propertySets.push({id:`group:rule:${example}`,name:`Rule local ${example}`,profileId:`profile:rule:${example}`,localSchemaContributions:[{path:rulePath,rules:[invariant?{id:localRuleId,name:`Local Range ${example}`,kind:"range",minimum:10}:{id:localRuleId,name:`Local Pattern ${example}`,kind:"pattern",pattern:"^[0-9]+$"}]},{path:unrelatedPath,type:"boolean"}]});
+  const ruleGroup=ruleState.project.collections.propertySets[0],ruleRow=composedSchemaWorkspace(ruleState,ruleGroup,"Property Set").rows.find(({path:rowPath})=>rowPath===rulePath),repair=ruleRow.repairs.find(({kind})=>kind===(invariant?"remove-local-rule":"override-rule"));
   assert.deepEqual({ruleId:repair.ruleId,sourceRuleId:repair.sourceRuleId},{ruleId:localRuleId,sourceRuleId},"generated named-rule repairs preserve both stable identities");
-  const ruleRepaired=invariant?resetComposedSchemaLocalRule(ruleState,"pageGroups",ruleGroup.id,rulePath,localRuleId):overrideComposedSchemaLocalRule(ruleState,"pageGroups",ruleGroup.id,rulePath,localRuleId,sourceRuleId),ruleRepairedGroup=ruleRepaired.project.collections.pageGroups[0];
-  assert.equal(composedSchemaWorkspace(ruleRepaired,ruleRepairedGroup,"Page Group").status,"ready","generated named-rule repair clears its conflict");
-  if(!invariant){const effective=composedSchemaWorkspace(ruleRepaired,ruleRepairedGroup,"Page Group").rows.find(({path:rowPath})=>rowPath===rulePath).effective;assert.deepEqual(effective.rules.map(({id})=>id),[genericRuleId,localRuleId],"generated multiple-same-kind repair replaces only the actually conflicting identity");assert.deepEqual(effective.patterns,["^.{1,20}$","^[0-9]+$"],"generated Pattern facet remains aligned with retained rule identities");}
+  const ruleRepaired=invariant?resetComposedSchemaLocalRule(ruleState,"propertySets",ruleGroup.id,rulePath,localRuleId):overrideComposedSchemaLocalRule(ruleState,"propertySets",ruleGroup.id,rulePath,localRuleId,sourceRuleId),ruleRepairedGroup=ruleRepaired.project.collections.propertySets[0];
+  assert.equal(composedSchemaWorkspace(ruleRepaired,ruleRepairedGroup,"Property Set").status,"ready","generated named-rule repair clears its conflict");
+  if(!invariant){const effective=composedSchemaWorkspace(ruleRepaired,ruleRepairedGroup,"Property Set").rows.find(({path:rowPath})=>rowPath===rulePath).effective;assert.deepEqual(effective.rules.map(({id})=>id),[genericRuleId,localRuleId],"generated multiple-same-kind repair replaces only the actually conflicting identity");assert.deepEqual(effective.patterns,["^.{1,20}$","^[0-9]+$"],"generated Pattern facet remains aligned with retained rule identities");}
   assert.deepEqual(ruleRepairedGroup.localSchemaContributions.find(({path:storedPath})=>storedPath===unrelatedPath),{path:unrelatedPath,type:"boolean"},"generated named-rule repair conserves unrelated properties");
   assert.equal(ruleRepaired.history.undo.length,ruleState.history.undo.length+1,"a generated named-rule repair adds one Undo action");
 }

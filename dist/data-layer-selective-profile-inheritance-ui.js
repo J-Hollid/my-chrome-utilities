@@ -1,5 +1,5 @@
 import { canonicalPropertyPath } from "./data-layer-canonical-schema.js";
-import { copyProfileInheritanceRecipe, createProfileInheritanceRecipe, profileInheritanceCurrentImpact, profileInheritanceSelection, profileInheritanceSummary, profileInheritanceTree, profileInheritanceTreeWindow, toggleProfileInheritanceConcept, toggleProfileInheritanceTreeBranch } from "./data-layer-selective-profile-inheritance.js";
+import { copyProfileInheritanceRecipe, createProfileInheritanceRecipe, profileInheritanceCurrentImpact, profileInheritanceEditorStartingPoint, profileInheritanceSelection, profileInheritanceSummary, profileInheritanceTree, profileInheritanceTreeWindow, toggleProfileInheritanceConcept, toggleProfileInheritanceTreeBranch } from "./data-layer-selective-profile-inheritance.js";
 const clone = (value) => structuredClone(value);
 const stable = (values) => [...new Set(values)];
 const ruleById = (document, ruleId) => { for (const node of Object.values(document.nodes)) {
@@ -10,7 +10,7 @@ const ruleById = (document, ruleId) => { for (const node of Object.values(docume
 const option = (value, label) => new Option(label, value);
 export function mountSelectiveProfileInheritance(options) {
     const { host, profile, target } = options, document = profile.canonicalSchema, card = globalThis.document.createElement("section"), heading = globalThis.document.createElement("h3"), summaryText = globalThis.document.createElement("p"), resolutionText = globalThis.document.createElement("p"), impactList = globalThis.document.createElement("ul"), edit = globalThis.document.createElement("button"), workspace = globalThis.document.createElement("section");
-    let staged = clone(options.recipe), open = false, filters = { query: "", concept: "all", type: "all", required: "any", selection: "any" }, expandedIds = new Set(), expansionInitialized = false, activeTreeId, detailTreeNodeId, reviewOpen = false, treeScrollTop = 0, treeWindowOffset = 0, restoreTreeScroll = false, discoverySnapshot, replacementDraft;
+    let staged = clone(options.recipe), open = false, filters = { query: "", concept: "all", type: "all", required: "any", selection: "any" }, expandedIds = new Set(), activeTreeId, detailTreeNodeId, reviewOpen = false, treeScrollTop = 0, treeWindowOffset = 0, restoreTreeScroll = false, discoverySnapshot, replacementDraft;
     card.className = "profile-inheritance-card";
     card.dataset.profileInheritanceCard = profile.id;
     card.tabIndex = -1;
@@ -47,9 +47,9 @@ export function mountSelectiveProfileInheritance(options) {
         intro.textContent = "Concepts and branches help stage the current selection. Apply stores a fixed allowlist of stable property identities. Explicit exclusions continue to win.";
         compactControls.className = "profile-inheritance-starting-controls";
         startingLabel.textContent = "Starting point";
-        for (const [value, label] of [["everything", "Everything"], ["concepts", "Choose concepts"], ["properties", "Choose properties"], ["empty", "Start empty"]])
+        for (const [value, label] of [["empty", "Start empty"], ["everything", "Everything"]])
             starting.append(option(value, label));
-        starting.value = staged.startingPoint;
+        starting.value = profileInheritanceEditorStartingPoint(staged.startingPoint);
         startingLabel.append(starting);
         compactControls.append(startingLabel);
         starting.addEventListener("change", () => { const next = createProfileInheritanceRecipe({ id: staged.id, profileId: staged.profileId, targetId: staged.targetId, startingPoint: starting.value, sourceRevision: document.revision }); staged = next; renderWorkspace(); focusAfter("select"); });
@@ -62,7 +62,7 @@ export function mountSelectiveProfileInheritance(options) {
         copyButton.textContent = "Copy selection";
         copyButton.disabled = !sources.length;
         copyButton.addEventListener("click", () => { const source = sources.find(({ recipe }) => recipe.id === copySelect.value); if (!source)
-            return; staged = copyProfileInheritanceRecipe(source.recipe, { id: staged.id, targetId: target.id }); staged.profileId = profile.id; staged.sourceRevision = document.revision; renderWorkspace(); focusAfter("[data-profile-copy] select"); });
+            return; staged = copyProfileInheritanceRecipe(source.recipe, { id: staged.id, targetId: target.id }); staged.profileId = profile.id; staged.sourceRevision = document.revision; staged.startingPoint = profileInheritanceEditorStartingPoint(staged.startingPoint); renderWorkspace(); focusAfter("[data-profile-copy] select"); });
         copyLabel.append(copySelect, copyButton);
         copyLabel.dataset.profileCopy = "";
         if (sources.length)
@@ -90,12 +90,7 @@ export function mountSelectiveProfileInheritance(options) {
         }
         filterRow.className = "profile-inheritance-filters";
         toolbar.append(filterRow);
-        const treeNodes = profileInheritanceTree(document, staged, filters), parentIds = new Set(treeNodes.filter(({ kind }) => kind !== "property").map(({ id }) => id));
-        if (!expansionInitialized) {
-            expandedIds = new Set(parentIds);
-            expansionInitialized = true;
-        }
-        const isDiscovery = discoveryActive(filters), byId = new Map(treeNodes.map((node) => [node.id, node])), pageSize = 100, window = profileInheritanceTreeWindow(treeNodes, treeWindowOffset, pageSize), shown = window.nodes.filter((node) => { let parent = node.parentId; while (parent) {
+        const treeNodes = profileInheritanceTree(document, staged, filters), isDiscovery = discoveryActive(filters), byId = new Map(treeNodes.map((node) => [node.id, node])), pageSize = 100, window = profileInheritanceTreeWindow(treeNodes, treeWindowOffset, pageSize), shown = window.nodes.filter((node) => { let parent = node.parentId; while (parent) {
             if (!isDiscovery && !expandedIds.has(parent))
                 return false;
             parent = byId.get(parent)?.parentId;
@@ -360,6 +355,13 @@ export function mountSelectiveProfileInheritance(options) {
     };
     edit.addEventListener("click", () => { open = !open; workspace.hidden = !open; edit.setAttribute("aria-expanded", String(open)); if (open) {
         staged = clone(options.recipe);
+        staged.startingPoint = profileInheritanceEditorStartingPoint(staged.startingPoint);
+        expandedIds = new Set();
+        activeTreeId = undefined;
+        detailTreeNodeId = undefined;
+        treeScrollTop = 0;
+        treeWindowOffset = 0;
+        discoverySnapshot = undefined;
         renderWorkspace();
         queueMicrotask(() => workspace.querySelector("select,input,button")?.focus({ preventScroll: true }));
     } });

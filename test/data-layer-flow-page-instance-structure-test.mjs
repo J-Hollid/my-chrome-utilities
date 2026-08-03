@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import {addFlowPageFrame,documentaryFlowGraph,setFlowPageGroupLanes} from "../dist/data-layer-flow-graph.js";
+import {documentaryFlowGraph} from "../dist/data-layer-flow-graph.js";
 import {applyFlowPageInstanceStructure,applyFlowPageInstanceStructures} from "../dist/flow-graph/page-instance-structure.js";
 import {addProjectEntity,createSpecificationProject} from "../dist/data-layer-specification-project.js";
 
@@ -8,11 +8,10 @@ const id=(kind)=>`${kind}:structure-${++sequence}`;
 let state=createSpecificationProject({name:"Structure shop",site:"structure.example",id});
 const add=(kind,entity)=>{state=addProjectEntity(state,kind,entity,id);return state.project.collections[kind].at(-1);};
 const profile=add("profiles",{name:"Sitewide",schemaConstraints:[{path:"/shippingRoot",type:"object"}]});
-const group=add("pageGroups",{name:"Checkout",profileIds:[profile.id]});
+const group=add("propertySets",{name:"Checkout",profileIds:[profile.id]});
 const page=add("pages",{name:"Shipping",pageGroupIds:[group.id],profileIds:[profile.id]});
 const flow=add("flows",{name:"Checkout flow",steps:[]});
-state=setFlowPageGroupLanes(state,flow.id,[group.id]);
-state=addFlowPageFrame(state,flow.id,{pageId:page.id,pageGroupId:group.id,x:30,y:40},id);
+state.project.documentationFlowGraphs={[flow.id]:{sections:[],pageFrames:[{id:id("flow-page-frame"),name:"Shipping",pageId:page.id,position:{x:30,y:40}}],occurrences:[],relationships:[]}};
 const frame=documentaryFlowGraph(state.project,flow.id).pageFrames[0];
 
 const apply=(command)=>{state=applyFlowPageInstanceStructure(state,flow.id,frame.id,command,id);};

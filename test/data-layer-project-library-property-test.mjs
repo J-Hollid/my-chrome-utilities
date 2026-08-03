@@ -25,11 +25,11 @@ for(let example=0;example<120;example+=1){
   const state=createSpecificationProject({name:`Project ${suffix}`,site:`${suffix}.example`,id:(kind)=>kind==="project"?projectId:`${kind}:${suffix}`});
   const groupId=`group:${suffix}`,pageId=`page:${suffix}`,eventId=`event:${suffix}`,flowId=`flow:${suffix}`,frameId=`frame:${suffix}`,occurrenceId=`occurrence:${suffix}`;
   state.project.collections.profiles.push({id:`profile:${suffix}`,name:"Sitewide",sourceLineage:{schemaId:`external:${suffix}`,revision:example+1}});
-  state.project.collections.pageGroups.push({id:groupId,name:"Group"});
-  state.project.collections.pages.push({id:pageId,name:"Page",pageGroupIds:[groupId]});
+  state.project.collections.propertySets.push({id:groupId,name:"Group"});
+  state.project.collections.pages.push({id:pageId,name:"Page",propertySetApplications:[{propertySetId:groupId}]});
   state.project.collections.events.push({id:eventId,name:"Event"});
   state.project.collections.flows.push({id:flowId,name:"Flow"});
-  state.project.documentationFlowGraphs={[flowId]:{pageFrames:[{id:frameId,name:"Frame",pageId,pageGroupId:groupId}],occurrences:[{id:occurrenceId,name:"Occurrence",pageFrameId:frameId,pageId,eventId}],relationships:[]}};
+  state.project.documentationFlowGraphs={[flowId]:{pageFrames:[{id:frameId,name:"Frame",pageId}],occurrences:[{id:occurrenceId,name:"Occurrence",pageFrameId:frameId,pageId,eventId}],relationships:[]}};
   const timestamp=`2026-07-20T12:${String(example%60).padStart(2,"0")}:00.000Z`,library=projectLibrary([{state,revision:example,createdAt:timestamp,lastModifiedAt:timestamp}],projectId);
 
   assert.deepEqual(restoreProjectLibrary(serializeProjectLibrary(library)),library,"library serialization must round-trip exactly");
@@ -37,7 +37,7 @@ for(let example=0;example<120;example+=1){
   const bundle=exportProjectBundle(library,projectId),prefix=`copy:${suffix}:`,staged=stageProjectImport(bundle,library,{id:(oldId)=>`${prefix}${oldId}`});
   assert.equal(staged.blockers.length,0);
   assert.equal(staged.projectId,`${prefix}${projectId}`);
-  assert.equal(staged.state.project.collections.pages[0].pageGroupIds[0],`${prefix}${groupId}`);
+  assert.equal(staged.state.project.collections.pages[0].propertySetApplications[0].propertySetId,`${prefix}${groupId}`);
   assert.equal(staged.state.project.documentationFlowGraphs[`${prefix}${flowId}`].pageFrames[0].pageId,`${prefix}${pageId}`);
   assert.equal(staged.state.project.documentationFlowGraphs[`${prefix}${flowId}`].occurrences[0].eventId,`${prefix}${eventId}`);
   assert.deepEqual(staged.state.project.collections.profiles[0].sourceLineage,{schemaId:`external:${suffix}`,revision:example+1},"external lineage must not be remapped");
