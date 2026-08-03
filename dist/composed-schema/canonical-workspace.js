@@ -1,7 +1,9 @@
-import { applyCanonicalCommand, canonicalPredicateWithStableIds, canonicalTableRows, createCanonicalSchema } from "../data-layer-canonical-schema.js";
+import { applyCanonicalCommand, canonicalPredicateWithStableIds, canonicalTableRows, createCanonicalSchema, journalFreeCanonicalData } from "../data-layer-canonical-schema.js";
 import { layeredContributorPath, layeredContributorsForPath } from "../data-layer-layered-schema-project.js";
 import { composedSchemaWorkspace } from "./workspace-model.js";
 const clone = (value) => structuredClone(value);
+const empty = (value) => !Array.isArray(value) || value.length === 0;
+export const hasStandaloneCanonicalSchema = (entity) => { const document = entity.canonicalSchema; return Boolean(document && Object.keys(document.nodes).length > 0 && empty(entity.localSchemaContributions) && empty(entity.schemaConstraints) && empty(entity.requirements)); };
 const canonicalTypes = new Set(["string", "number", "integer", "boolean", "null", "object", "array"]);
 const stableValueIdentity = (owner, value) => { let hash = 2166136261; for (const char of JSON.stringify(value)) {
     hash ^= char.charCodeAt(0);
@@ -44,10 +46,9 @@ const addDerivedRules = (row, entity, id, rules) => { const localPatterns = new 
     rules.push(derived({ id: ruleId, kind: "cardinality", ...(row.effective.minItems !== undefined ? { minItems: row.effective.minItems } : {}), ...(row.effective.maxItems !== undefined ? { maxItems: row.effective.maxItems } : {}), severity: "error", message: "Outside cardinality" }, row.local.minItems !== undefined || row.local.maxItems !== undefined));
 } };
 export function composedCanonicalSchema(state, entity, scope, flowId) {
+    if (hasStandaloneCanonicalSchema(entity))
+        return journalFreeCanonicalData(clone(entity.canonicalSchema));
     const contributorPath = layeredContributorPath(state, entity, scope, flowId), contributors = layeredContributorsForPath(state, contributorPath), workspace = composedSchemaWorkspace(state, entity, scope, undefined, flowId), document = createCanonicalSchema({ id: `canonical:effective:${entity.id}`, contributorId: entity.id, contributorName: entity.name }), used = new Set(), byPath = new Map(), rows = [...workspace.rows].sort((left, right) => left.path.split("/").length - right.path.split("/").length || left.path.localeCompare(right.path));
-    const stored = entity.canonicalSchema;
-    if (stored && !workspace.rows.some(({ inherited }) => Boolean(inherited)))
-        return clone(stored);
     for (const row of rows) {
         const segments = row.path.split("/").filter(Boolean), parentSegments = segments.slice(0, -1);
         if (parentSegments.at(-1) === "*")
