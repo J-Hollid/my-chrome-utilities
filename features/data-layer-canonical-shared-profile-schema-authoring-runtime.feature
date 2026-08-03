@@ -1437,3 +1437,32 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
       | Event              | in-panel       |
       | Flow Page-instance | in-panel       |
       | Event occurrence   | in-panel       |
+
+  # Data layer canonical Shared Profile schema authoring runtime 085
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 085
+    Given production <project_entry> contains an older current Draft canonical document for <contributor>
+    And repository bytes contain stable /legacy_status and /legacy_total properties but no changes member
+    And the production manifest identifies Schema revision <schema_revision> for <production_state>
+    When the installed project entry path makes the older project available to its schema editor
+    Then the actual editor mounts without a compatibility baseline, changes array, edit-count revision, or additional repair write solely for the absent member
+    And hashes for state, contributor, source, view, selection, nodes, root order, inheritance, and Published state remain semantically unchanged
+    When actual Table input enters Restored legacy status for /legacy_status Description and commits
+    Then the installed edit completes with no uncaught exception, error overlay, or recovery reload
+    And repository read-back contains Restored legacy status, /legacy_total, and every other effective property
+    And parsed canonical records contain no changes array, edit-count revision, command journal, or patch journal
+    And stored Schema revision <schema_revision> and the production fingerprint remain unchanged
+    And an overlapping stale production edit is rejected through opaque Draft concurrency metadata rather than canonical domain history
+    And installed post-edit counters are
+      | durable user mutations | 1 |
+      | Undo entries           | 1 |
+    When the installed project is reopened
+    Then Restored legacy status renders from storage and the canonical document remains journal-free
+
+    Examples:
+      | project_entry                | contributor        | production_state | schema_revision |
+      | existing durable project     | Shared Profile     | never published  | 0               |
+      | portable project import      | Page Group         | published        | 2               |
+      | legacy Web Storage migration | Page               | published        | 2               |
+      | existing durable project     | Event              | never published  | 0               |
+      | portable project import      | Flow Page-instance | published        | 2               |
+      | legacy Web Storage migration | Event occurrence   | never published  | 0               |

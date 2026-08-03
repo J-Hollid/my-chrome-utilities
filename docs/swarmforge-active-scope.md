@@ -1208,6 +1208,22 @@ edits require no navigation, reopening, or refresh. This continuity rule applies
 to Page Group, Page, Event, Flow Page-instance, and Event-occurrence editors in
 their standalone, Flow-workspace, and in-panel presentations and supersedes any
 narrower projection behavior after save.
+
+Older canonical Draft documents may have no `changes` member. That absence is the
+required journal-free current-Draft shape, not damage to repair. Every supported
+durable load, portable project import, and legacy Web Storage migration must admit
+that shape before any schema editor mounts, including canonical documents owned by
+Shared Profiles, Page Groups, Pages, Events, Flow Page-instances, and
+Event-occurrences. Neither opening nor editing may create a compatibility baseline,
+`changes` array, edit-count revision, command journal, or patch journal. A property
+edit updates the one current Draft in one durable mutation and creates one
+page-scoped in-memory Undo action; opaque repository Draft tokens and field versions
+reject overlapping stale edits without becoming canonical domain data or
+operator-visible history. Project and Schema revisions remain publication-only,
+with Schema revision 0 for a never-published schema, and the command boundary must
+accept a missing journal without throwing. Reload and ordinary export preserve the
+latest Draft while remaining free of per-edit history.
+
 A Page-local facet wins an ordinary difference on that same facet after its ordered
 Page Group stack and produces a non-blocking warning with shadowed-parent
 provenance. `Reset to parents` deletes that sparse local contribution and recompiles

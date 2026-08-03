@@ -460,6 +460,17 @@ row-continuity contract covers every inherited-capable contributor surface so th
 operators can edit multiple inherited properties consecutively without navigating,
 reopening, or refreshing.
 
+Legacy canonical Drafts that have a valid document body but no `changes` member are
+already in the required journal-free shape. Durable loading, portable project
+import, and legacy Web Storage migration admit that shape before editor mounting,
+including canonical contributors nested in Flow graphs, without adding a
+compatibility baseline or edit-count revision. The command boundary accepts the
+absent member and updates only the one current Draft. One page-scoped Undo action is
+kept in memory, while opaque repository Draft tokens and field versions reject
+overlapping stale edits without becoming canonical domain data. The save leaves
+production revisions and fingerprints unchanged and does not persist a change,
+command, or patch journal.
+
 Adding a Page Group to a Page always commits the ordered stable membership as a
 Draft configuration change and then recompiles the Page. A Page's explicit local
 facet resolves an ordinary difference on that same facet, remains effective, and
@@ -673,6 +684,7 @@ feature.
 | C66 | Focused Definition and Structure Review changes can fail to reveal the review and confirmation controls | Authoring 066 | Every valid staged Definition or Structure change opens one adjacent visible review layer with an enabled, reachable Confirm changes action before any write | Shared focused-property overlay transition, staged delta inventory, viewport placement, focus adapter, property command bus, repository, and Undo | Definition and Structure staging, pre-review hashes, visible layer and inventory, enabled action, keyboard and center-point operability, one command, one persistence write, one Undo action, and overlay closure | B, E | Review changes always exposes the exact pending change and a usable confirmation boundary rather than leaving the operator in the editor |
 | C67 | Add rule can remain disabled after all required rule fields and a valid flat condition are complete | Authoring 067 | Add rule revalidates after every rule-detail, condition, outcome, severity, and reusable-choice change, enabling exactly when the staged rule is complete and disabling again when it becomes incomplete | Shared Add rule editor, flat condition adapter, type-specific rule policy, control event adapters, staged rule inventory, and property review session | Presence, Allowed values, Pattern, Range, and Cardinality transitions; exact diagnostics; same mounted button; retained control values and condition IDs; staged inventory; and unchanged durable state before property review | B, C, E | A complete valid rule can always be staged immediately, while removing any required input blocks it with the exact repair message |
 | C68 | The first inherited-property edit can replace the effective row set with sparse local rows until refresh | Authoring 084 | Every ownership-transition rerender retains the complete effective-schema Table, row order, editability, and accurate Inheritance states | Shared effective-row projector, repository subscriptions, sparse local command adapter, Table renderer, and focus adapter | Ten contributor-surface flows; pre- and post-command row identities and order; Inherited, Mixed / overridden, and Local states; immediate second edit; sparse repository bytes; command and Undo counts; and parent, sibling, identity, facet, and Published hashes | A, B, C, E | Multiple inherited rows can be edited consecutively without navigation, reopening, refresh, a local-only projection, or a second schema editor |
+| C69 | Older canonical documents can mount with no change journal and throw on their first property edit | Authoring 085 | Every supported project-entry path accepts the journal-free current-Draft shape, and property commands update it without restoring legacy edit history | Canonical command boundary, durable Draft transaction and concurrency metadata, import and Web Storage migration adapters, shared effective-row projector, and page-scoped Undo | Six contributor and entry-path combinations; absent-member fixture; semantic hashes; no compatibility write; current Draft read-back; unchanged production revision and fingerprint; opaque stale-write conflict; command and Undo counts; reload; and absence of uncaught errors | A, B, C, E | An older schema's first edit succeeds without refresh or data loss while storage and export remain free of per-edit canonical history |
 
 ## Terminal acceptance
 
