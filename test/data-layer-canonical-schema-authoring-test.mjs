@@ -38,7 +38,8 @@ const booleanTypePatch=canonicalTableQuickEditPatch(booleanStringValues,"type","
 assert.deepEqual(booleanTypePatch,{type:"boolean",allowedValues:[{id:"allowed:true",value:true,provenance:[{source:"created"}]},{id:"allowed:false",value:false}]},"a Boolean Type edit repairs true and false payloads in the same property command without replacing their identities");
 const booleanTypeResult=applyCanonicalCommand({...visibleBaseDocument,nodes:{[visibleProperty.id]:booleanStringValues}},{kind:"set",baseRevision:0,propertyId:visibleProperty.id,patch:booleanTypePatch});
 assert.equal(booleanTypeResult.status,"applied");
-assert.equal(booleanTypeResult.document.revision,1,"the Type and allowed-value repair is one canonical command");
+assert.equal(booleanTypeResult.document.revision,0,"the Type repair leaves the publication-only Schema revision unchanged");
+assert.equal(Object.hasOwn(booleanTypeResult.document,"changes"),false,"the Type repair creates no canonical command journal");
 assert.deepEqual(booleanTypeResult.document.nodes[visibleProperty.id].allowedValues,booleanTypePatch.allowedValues);
 const invalidBooleanValues={...booleanStringValues,allowedValues:[{id:"allowed:true",value:"true"},{id:"allowed:other",value:"Other"}]},invalidBooleanBytes=JSON.stringify(invalidBooleanValues);
 assert.throws(()=>canonicalTableQuickEditPatch(invalidBooleanValues,"type","boolean",id),/Other is not a Boolean/,"a non-Boolean String blocks the installed Type edit with the offending value");
@@ -73,8 +74,8 @@ assert.equal(
     {status:"applied",document:visibleCommandDocument},
     visibleBaseDocument,
   ),
-  "Saved presence for /article_type from Draft token 0 at Draft token 1.",
-  "the installed editor should expose the command scope and Draft-token transition",
+  "Saved presence for /article_type at Schema revision 1.",
+  "the installed editor should expose the command scope and production Schema revision",
 );
 assert.equal(
   canonicalCommandOutcome(
@@ -82,8 +83,8 @@ assert.equal(
     {status:"rebased",document:{...visibleCommandDocument,revision:2,changes:[...visibleCommandDocument.changes,{revision:2,propertyIds:["property:visible"],kind:"set"}]}},
     visibleBaseDocument,
   ),
-  "Rebased presence for /article_type from Draft token 0 at Draft token 2.",
-  "a rebased command should remain visibly attributable to its retained base token",
+  "Rebased presence for /article_type from Schema revision 0 at Schema revision 2.",
+  "a rebased legacy command should remain visibly attributable to its retained publication revision",
 );
 assert.equal(
   canonicalCommandOutcome(
@@ -91,18 +92,18 @@ assert.equal(
     {status:"applied",document:{...visibleBaseDocument,revision:1,rootIds:[],nodes:{},changes:[{revision:1,propertyIds:["property:visible"],kind:"delete"}]}},
     visibleBaseDocument,
   ),
-  "Saved property removal for /article_type from Draft token 0 at Draft token 1.",
+  "Saved property removal for /article_type at Schema revision 1.",
   "a deletion result should retain the human path from the pre-command Draft",
 );
 
 ({document}=addCanonicalProperty(document,{baseRevision:0,name:"commerce",type:"object",id}));
 const commerce=document.rootIds[0];
-({document}=addCanonicalProperty(document,{baseRevision:1,parentId:commerce,name:"transaction",type:"object",id}));
+({document}=addCanonicalProperty(document,{baseRevision:document.revision,parentId:commerce,name:"transaction",type:"object",id}));
 const transaction=Object.values(document.nodes).find(({name})=>name==="transaction").id;
-({document}=addCanonicalProperty(document,{baseRevision:2,parentId:transaction,name:"transaction_id",type:"string",id}));
+({document}=addCanonicalProperty(document,{baseRevision:document.revision,parentId:transaction,name:"transaction_id",type:"string",id}));
 const transactionId=Object.values(document.nodes).find(({name})=>name==="transaction_id").id;
 assert.equal(canonicalPropertyPath(document,transactionId),"/commerce/transaction/transaction_id");
-({document}=renameCanonicalProperty(document,{baseRevision:3,propertyId:transaction,name:"order"}));
+({document}=renameCanonicalProperty(document,{baseRevision:document.revision,propertyId:transaction,name:"order"}));
 assert.equal(canonicalPropertyPath(document,transactionId),"/commerce/order/transaction_id");
 assert.equal(document.nodes[transactionId].id,transactionId);
 
@@ -117,7 +118,7 @@ const flatPredicate={kind:"all",children:[
   {kind:"predicate",propertyId:transactionId,operator:"Equals",value:"A-1"},
   {kind:"predicate",propertyId:commerce,operator:"Exists"},
 ]};
-({document}=setCanonicalProperty(document,{baseRevision:4,propertyId:transactionId,patch:{
+({document}=setCanonicalProperty(document,{baseRevision:document.revision,propertyId:transactionId,patch:{
   presence:{mode:"required-when",condition:flatPredicate},
   allowedValues:[{id:"value:one",value:"A-1"},{id:"value:two",value:"A-2"}],
   rules:[{id:"rule:one",kind:"pattern",pattern:"^A-",severity:"error",message:"Use an order identifier",condition:flatPredicate,reusableRuleId:"rule:identifier"}],
@@ -159,13 +160,13 @@ assert.deepEqual(focusedSparseDelta({expectedValue:"local",documentation:""},{ex
 assert.deepEqual(focusedOwnershipActions({inherited:true,replaceable:true}),["View","Replace here","Open source"],"replaceable inherited facets expose a legal replacement action");
 assert.deepEqual(focusedOwnershipActions({inherited:true,invariant:true}),["View","Open source"],"invariant inherited facets cannot be overridden");
 
-const impact=changeCanonicalPropertyType(document,{baseRevision:5,propertyId:commerce,type:"string"});
+const impact=changeCanonicalPropertyType(document,{baseRevision:document.revision,propertyId:commerce,type:"string"});
 assert.equal(impact.status,"confirmation-required");
 assert.match(impact.impact,/child definitions and documentation removed/);
 assert.equal(canonicalDispatchRequiresLocalRender(impact,false),true,"confirmation review must render locally when applied commands rely on the outer durable projection");
 assert.equal(canonicalDispatchRequiresLocalRender({status:"applied",document},false),false,"ordinary applied commands may continue through the outer durable render");
 assert.equal(document.nodes[commerce].type,"object");
-const destructive=changeCanonicalPropertyType(document,{baseRevision:5,propertyId:commerce,type:"string",confirmed:true});
+const destructive=changeCanonicalPropertyType(document,{baseRevision:document.revision,propertyId:commerce,type:"string",confirmed:true});
 assert.equal(destructive.status,"applied");
 assert.equal(destructive.document.nodes[commerce].type,"string");
 assert.equal(destructive.document.nodes[transaction],undefined);
@@ -184,17 +185,16 @@ assert.equal(Object.values(deletedCopy.document.nodes).some(({parentId})=>parent
 const repository=createCanonicalRepository(document);
 const observed=[];
 repository.subscribe((next)=>observed.push(next.revision));
-const builder=repository.dispatch({kind:"add",baseRevision:5,name:"article_author",type:"string",id});
+const builder=repository.dispatch({kind:"add",baseRevision:document.revision,name:"article_author",type:"string",id});
 assert.equal(builder.status,"applied");
-const stale=repository.dispatch({kind:"add",baseRevision:5,name:"article_category",type:"string",id});
-assert.equal(stale.status,"rebased");
-assert.equal(repository.current().revision,7);
+const nextEdit=repository.dispatch({kind:"add",baseRevision:document.revision,name:"article_category",type:"string",id});
+assert.equal(nextEdit.status,"applied");
+assert.equal(repository.current().revision,document.revision);
 assert.deepEqual(Object.values(repository.current().nodes).filter(({name})=>name.startsWith("article_")).map(({name})=>name),["article_author","article_category"]);
-assert.equal(repository.dispatch({kind:"rename",baseRevision:7,propertyId:transactionId,name:"identifier"}).status,"applied");
-const conflict=repository.dispatch({kind:"rename",baseRevision:7,propertyId:transactionId,name:"reference"});
-assert.equal(conflict.status,"conflict");
-assert.equal(conflict.propertyId,transactionId);
-assert.deepEqual(observed,[6,7,8]);
+assert.equal(repository.dispatch({kind:"rename",baseRevision:document.revision,propertyId:transactionId,name:"identifier"}).status,"applied");
+assert.equal(repository.dispatch({kind:"rename",baseRevision:document.revision,propertyId:transactionId,name:"reference"}).status,"applied");
+assert.equal(Object.hasOwn(repository.current(),"changes"),false,"in-memory commands retain no operator-visible history");
+assert.deepEqual(observed,[document.revision,document.revision,document.revision,document.revision]);
 
 const legacyState=createSpecificationProject({name:"Legacy",site:"shop.example",id});
 assert.equal(hasLegacySchemaRepresentation({id:"profile:fresh",name:"Fresh",requirements:[],structuredSchema:{type:"object",properties:{}},structuredDraft:{document:{type:"object",properties:{},required:[]}},schemaConstraints:[]}),false);

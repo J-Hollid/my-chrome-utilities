@@ -916,6 +916,7 @@
       "src/data-layer-canonical-schema-commands.ts",
       "src/data-layer-canonical-schema-constraints.ts",
       "src/data-layer-canonical-schema-migration.ts",
+      "src/data-layer-canonical-schema-journal.ts",
       "src/data-layer-canonical-schema-model.ts",
       "src/data-layer-canonical-array-items.ts",
       "src/data-layer-canonical-schema-predicates.ts",
@@ -967,6 +968,7 @@
     "unit": [
       "test/data-layer-string-rule-validation-test.mjs",
       "test/data-layer-canonical-schema-authoring-test.mjs",
+      "test/data-layer-journal-free-canonical-schema-test.mjs",
       "test/data-layer-schema-property-concepts-test.mjs",
       "test/data-layer-canonical-array-items-test.mjs",
       "test/data-layer-canonical-migration-acknowledgement-test.mjs",

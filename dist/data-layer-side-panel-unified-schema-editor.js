@@ -35,28 +35,28 @@ export function canonicalCommandsFromCompactProjection(document, projection, id)
     const { canonicalSchema: _canonicalSchema, ...source } = projection;
     const parsed = savedSchemaCanonicalDocument(source, id), parsedByPath = new Map(Object.values(parsed.nodes).map((node) => [canonicalPropertyPath(parsed, node.id), node])), currentByPath = new Map(Object.values(document.nodes).map((node) => [canonicalPropertyPath(document, node.id), node]));
     const commands = [];
-    let revision = document.revision;
+    const revision = document.revision;
     const removedPaths = new Set([...currentByPath.keys()].filter((path) => !parsedByPath.has(path)));
     for (const [path, current] of [...currentByPath].filter(([candidatePath]) => removedPaths.has(candidatePath) && !candidatePath.split("/").slice(1, -1).some((_, index) => removedPaths.has(`/${candidatePath.split("/").slice(1, index + 2).join("/")}`)))) {
-        commands.push({ kind: "delete", baseRevision: revision++, propertyId: current.id });
+        commands.push({ kind: "delete", baseRevision: revision, propertyId: current.id });
     }
     const addedIdsByPath = new Map();
     for (const [path, candidate] of [...parsedByPath].filter(([candidatePath]) => !currentByPath.has(candidatePath)).sort(([left], [right]) => left.split("/").length - right.split("/").length)) {
         const parentPath = path.split("/").slice(0, -1).join("/"), parentId = parentPath ? (currentByPath.get(parentPath)?.id ?? addedIdsByPath.get(parentPath)) : undefined, nodeId = candidate.id;
-        commands.push({ kind: "add", baseRevision: revision++, name: candidate.name, type: candidate.type, ...(parentId ? { parentId } : {}), id: () => nodeId });
+        commands.push({ kind: "add", baseRevision: revision, name: candidate.name, type: candidate.type, ...(parentId ? { parentId } : {}), id: () => nodeId });
         addedIdsByPath.set(path, nodeId);
         if (candidate.itemType)
-            commands.push({ kind: "type", baseRevision: revision++, propertyId: nodeId, type: candidate.type, itemType: candidate.itemType, confirmed: true });
+            commands.push({ kind: "type", baseRevision: revision, propertyId: nodeId, type: candidate.type, itemType: candidate.itemType, confirmed: true });
         const facets = { presence: candidate.presence, allowedValues: candidate.allowedValues, rules: candidate.rules, documentation: candidate.documentation }, defaults = { presence: { mode: "optional" }, allowedValues: [], rules: [], documentation: { displayText: "", description: "", comments: "", example: { method: "blank" } } };
         if (!same(facets, defaults))
-            commands.push({ kind: "set", baseRevision: revision++, propertyId: nodeId, patch: clone(facets) });
+            commands.push({ kind: "set", baseRevision: revision, propertyId: nodeId, patch: clone(facets) });
     }
     for (const current of Object.values(document.nodes)) {
         const path = canonicalPropertyPath(document, current.id), candidate = parsedByPath.get(path);
         if (!candidate)
             continue;
         if (current.type !== candidate.type || current.itemType !== candidate.itemType) {
-            commands.push({ kind: "type", baseRevision: revision++, propertyId: current.id, type: candidate.type, ...(candidate.itemType ? { itemType: candidate.itemType } : {}), confirmed: true });
+            commands.push({ kind: "type", baseRevision: revision, propertyId: current.id, type: candidate.type, ...(candidate.itemType ? { itemType: candidate.itemType } : {}), confirmed: true });
         }
         const candidatePresence = presenceFamily(candidate.presence.mode) === presenceFamily(current.presence.mode)
             ? current.presence
@@ -72,7 +72,7 @@ export function canonicalCommandsFromCompactProjection(document, projection, id)
             if (!same(currentFacets[key], candidateFacets[key]))
                 Object.assign(patch, { [key]: candidateFacets[key] });
         if (Object.keys(patch).length)
-            commands.push({ kind: "set", baseRevision: revision++, propertyId: current.id, patch });
+            commands.push({ kind: "set", baseRevision: revision, propertyId: current.id, patch });
     }
     return commands;
 }

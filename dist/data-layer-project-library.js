@@ -1,4 +1,4 @@
-import { canonicalSchemaFromJsonSchema } from "./data-layer-canonical-schema.js";
+import { canonicalSchemaFromJsonSchema, journalFreeCanonicalData } from "./data-layer-canonical-schema.js";
 import { createSpecificationProject, transactProject } from "./data-layer-specification-project.js";
 export const PROJECT_LIBRARY_STORAGE_KEY = "my-chrome-utilities.specification-project-library.v1";
 const clone = (value) => structuredClone(value);
@@ -15,7 +15,7 @@ export function projectLibrary(records = [], activeProjectId) {
 export function restoreProjectLibrary(serialized) { if (!serialized)
     return undefined; const parsed = JSON.parse(serialized); if (parsed.format !== "my-chrome-utilities.project-library" || parsed.version !== 1 || !parsed.projects)
     throw new Error("Unsupported project library format."); if (parsed.activeProjectId && !parsed.projects[parsed.activeProjectId])
-    throw new Error("The active project is missing from the project library."); return { ...clone(parsed), projects: Object.fromEntries(Object.entries(parsed.projects).map(([projectId, record]) => { const upgraded = upgradeLegacySchemaDrafts(record.state); return [projectId, { ...clone(record), state: upgraded.state, ...(upgraded.backup ? { legacyMigrationBackup: upgraded.backup } : {}) }]; })) }; }
+    throw new Error("The active project is missing from the project library."); return { ...clone(parsed), projects: Object.fromEntries(Object.entries(parsed.projects).map(([projectId, record]) => { const upgraded = upgradeLegacySchemaDrafts(journalFreeCanonicalData(record.state)); return [projectId, { ...clone(record), state: upgraded.state, ...(upgraded.backup ? { legacyMigrationBackup: upgraded.backup } : {}) }]; })) }; }
 export function activeProjectContextChange(serialized, currentProjectId, currentRevision = 0) { const library = restoreProjectLibrary(serialized); if (!library)
     throw new Error("Project library synchronization requires persisted library state."); const active = library.activeProjectId ? library.projects[library.activeProjectId] : undefined, changed = library.activeProjectId !== currentProjectId || (active?.revision ?? 0) > currentRevision; return { library, changed, ...(active ? { active } : {}) }; }
 export function projectRecordNeedsSynchronization(record, state, revision) { return record.revision !== revision || JSON.stringify(record.state) !== JSON.stringify(state); }
@@ -133,8 +133,10 @@ export function resolveProjectNavigation(library, projectId, requested) { const 
     return undefined; const candidate = requested ?? record.navigation; return candidate && validNavigation(record.state, candidate) ? clone(candidate) : undefined; }
 const transientKeys = new Set(["compiledTargets", "compiledTarget", "compiledTargetsStale", "compilationCache", "cache", "uiState", "interfaceState", "liveObservations", "observations", "permissions"]);
 function portable(value) { if (Array.isArray(value))
-    return value.map(portable); if (value && typeof value === "object")
-    return Object.fromEntries(Object.entries(value).filter(([key]) => !transientKeys.has(key)).map(([key, entry]) => [key, portable(entry)])); return clone(value); }
+    return value.map(portable); if (value && typeof value === "object") {
+    const candidate = value, canonical = candidate.state === "Draft" && candidate.nodes && Array.isArray(candidate.rootIds);
+    return Object.fromEntries(Object.entries(candidate).filter(([key]) => !transientKeys.has(key) && !(canonical && ["changes", "commandJournal", "patchJournal", "editJournal", "editCountRevision"].includes(key))).map(([key, entry]) => [key, portable(entry)]));
+} return clone(value); }
 export function exportProjectBundle(library, projectId) { const record = library.projects[projectId]; if (!record)
     throw new Error(`Unknown project ${projectId}.`); return JSON.stringify({ format: "my-chrome-utilities.project-bundle", version: 1, sourceProjectId: projectId, sourceName: record.state.project.name, draftRevision: record.revision, project: portable(record.state.project), draft: portable(record.state.draft), externalLineage: "preserved" }); }
 const importBlocker = (section, message) => ({ sourceName: "Unknown", targetName: "", sourceRevision: 0, projectId: "", state: {}, entityCounts: {}, referenceIntegrity: "blocked", migrations: [], blockers: [{ section, message }] });

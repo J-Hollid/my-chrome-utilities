@@ -210,14 +210,14 @@ const withProperty={...source,rootIds:[property.id],nodes:{[property.id]:propert
 const selected=applyCanonicalCommand(withProperty,{kind:"select",baseRevision:0,propertyId:property.id});
 assert.equal(selected.status,"applied");
 assert.equal(selected.document.revision,0,"opening a property is transient and must not advance the Draft");
-assert.deepEqual(selected.document.changes,[],"selection must not append a durable change");
+assert.equal(Object.hasOwn(selected.document,"changes"),false,"selection must not append a durable change journal");
 const viewed=applyCanonicalCommand(withProperty,{kind:"view",baseRevision:0,view:"table"});
 assert.equal(viewed.status,"applied");
 assert.equal(viewed.document.revision,0,"switching Tree/Table is transient and must not advance the Draft");
 const saved=applyCanonicalCommand(withProperty,{kind:"set",baseRevision:0,propertyId:property.id,patch:{type:"number",documentation:{...property.documentation,description:"atomic"}}});
 assert.equal(saved.status,"applied");
-assert.equal(saved.document.revision,1,"focused review must commit one property command");
-assert.equal(saved.document.changes.length,1,"focused review must produce one Undo/change entry");
+assert.equal(saved.document.revision,0,"focused review must retain the publication-only Schema revision");
+assert.equal(Object.hasOwn(saved.document,"changes"),false,"focused review must keep canonical data journal-free");
 const nestedCondition={kind:"all",children:[
   {kind:"any",children:[
     {kind:"predicate",propertyId:property.id,operator:"Equals",value:"retail"},
@@ -240,13 +240,13 @@ assert.equal(impact.status,"confirmation-required");
 const confirmed=applyCanonicalCommand(objectDocument,{kind:"set",baseRevision:0,propertyId:property.id,patch:{type:"string"},confirmed:true});
 assert.equal(confirmed.status,"applied");
 assert.equal(Object.hasOwn(confirmed.document.nodes,child.id),false,"confirmed destructive type change removes descendants atomically");
-assert.equal(confirmed.document.changes.length,1);
+assert.equal(Object.hasOwn(confirmed.document,"changes"),false);
 const predicate=canonicalPredicateWithStableIds({kind:"all",children:[{kind:"predicate",propertyId:property.id,operator:"Exists"}]},(kind)=>`stable:${kind}`);
 assert.deepEqual(canonicalPredicateIds(predicate),["stable:condition-root","stable:condition-root.0"],"canonical predicates retain deterministic item identities");
 const structural=applyCanonicalCommand(withProperty,{kind:"set",baseRevision:0,propertyId:property.id,patch:{},operations:[{kind:"rename",propertyId:property.id,name:"renamed"},{kind:"add",id:(kind)=>`added:${kind}`,propertyId:property.id,name:"child",parentId:property.id,type:"string"}]});
 assert.equal(structural.status,"applied");
-assert.equal(structural.document.revision,1,"a focused structural session commits one revision");
-assert.equal(structural.document.changes.length,1,"a focused structural session produces one Undo entry");
+assert.equal(structural.document.revision,0,"a focused structural session retains the publication-only Schema revision");
+assert.equal(Object.hasOwn(structural.document,"changes"),false,"a focused structural session keeps its Undo entry outside canonical data");
 assert.ok(Object.values(structural.document.nodes).some(({name})=>name==="child"),"the same atomic command includes staged additions");
 const navigatorDocument={...withProperty,rootIds:[property.id,"property:documented","property:conditioned"],nodes:{...withProperty.nodes,"property:documented":{...property,id:"property:documented",name:"alpha",order:1,type:"number",documentation:{...property.documentation,description:"Documented"}},"property:conditioned":{...property,id:"property:conditioned",name:"zeta",order:2,presence:{mode:"required-when",condition:{id:"condition:navigator",kind:"predicate",propertyId:property.id,operator:"Exists"}}}}};
 const navigator=(query="",propertyFilter="all",propertySort="path")=>canonicalNavigatorRows({document:navigatorDocument,query,propertyFilter,propertySort});

@@ -1,4 +1,7 @@
 const clone = (value) => structuredClone(value);
+const draftContent = (document) => { const { selectedPropertyId: _selection, view: _view, changes: _legacyJournal, ...content } = document; return content; };
+export const compactCanonicalDocumentIdentity = (document) => JSON.stringify(draftContent(document));
+const sameDraftContent = (left, right) => compactCanonicalDocumentIdentity(left) === compactCanonicalDocumentIdentity(right);
 export const compactCanonicalPageHistory = () => ({ contributors: {} });
 export const compactCanonicalHistorySettlement = (history = compactCanonicalPageHistory()) => ({ history: clone(history) });
 export const compactCanonicalHistoryKey = (projectId, editorKey) => JSON.stringify([projectId, editorKey]);
@@ -27,8 +30,8 @@ export function prepareCompactCanonicalUndo(history, key, current) {
     const currentStack = stack(history, key), entry = currentStack.undo.at(-1);
     if (!entry)
         return { status: "empty", message: "No page-scoped canonical command is available to Undo." };
-    if (current.revision !== entry.after.revision)
-        return { status: "blocked", message: `Undo blocked: this contributor is at Draft token ${current.revision}, but the page-scoped command expects Draft token ${entry.after.revision}. Review the newer contributor before changing it.` };
+    if (!sameDraftContent(current, entry.after))
+        return { status: "blocked", message: "Undo blocked: this contributor changed outside this page-scoped history. Review the newer contributor before changing it." };
     const document = clone(entry.before), nextEntry = { before: clone(entry.before), after: clone(entry.after) };
     return { status: "ready", document, history: { contributors: { ...clone(history.contributors), [key]: { undo: clone(currentStack.undo.slice(0, -1)), redo: [...clone(currentStack.redo), nextEntry] } } } };
 }
@@ -36,8 +39,8 @@ export function prepareCompactCanonicalRedo(history, key, current) {
     const currentStack = stack(history, key), entry = currentStack.redo.at(-1);
     if (!entry)
         return { status: "empty", message: "No page-scoped canonical command is available to Redo." };
-    if (current.revision !== entry.before.revision)
-        return { status: "blocked", message: `Redo blocked: this contributor is at Draft token ${current.revision}, but the page-scoped command expects Draft token ${entry.before.revision}. Review the newer contributor before changing it.` };
+    if (!sameDraftContent(current, entry.before))
+        return { status: "blocked", message: "Redo blocked: this contributor changed outside this page-scoped history. Review the newer contributor before changing it." };
     const document = clone(entry.after), nextEntry = { before: clone(entry.before), after: clone(entry.after) };
     return { status: "ready", document, history: { contributors: { ...clone(history.contributors), [key]: { undo: [...clone(currentStack.undo), nextEntry], redo: clone(currentStack.redo.slice(0, -1)) } } } };
 }

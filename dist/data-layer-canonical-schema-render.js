@@ -17,7 +17,7 @@ export function renderCanonicalSchemaEditor(context) {
     const header = dom.createElement("header"), title = dom.createElement("h2"), status = dom.createElement("p"), undo = button(dom, "Undo", () => options.onUndo?.()), redo = button(dom, "Redo", () => options.onRedo?.()), policy = dom.createElement("input"), policyLabel = dom.createElement("label");
     title.textContent = document.contributorName;
     status.setAttribute("aria-label", "Canonical Draft status");
-    status.textContent = `Draft · ${document.source ? `source ${document.source.identity} revision ${document.source.revision}` : "no source revision"} · lineage ${document.source?.provenance ?? "project-created"} · Saved · Draft token ${document.revision}`;
+    status.textContent = `Draft · ${document.source ? `source ${document.source.identity} revision ${document.source.revision}` : "no source revision"} · lineage ${document.source?.provenance ?? "project-created"} · Saved · Schema revision ${document.revision}`;
     undo.disabled = !options.onUndo;
     redo.disabled = !options.onRedo;
     policy.type = "checkbox";

@@ -64,7 +64,7 @@ export function composedCanonicalSchema(state, entity, scope, flowId) {
     }
     document.rootIds = Object.values(document.nodes).filter(({ parentId }) => !parentId).sort((left, right) => left.order - right.order).map(({ id }) => id);
     document.revision = opaqueRevision(contributors.map(({ id, name, scope: contributorScope, revision, constraints, onlyDefinedFields }) => ({ id, name, scope: contributorScope, revision, constraints, onlyDefinedFields })));
-    document.changes = [];
+    delete document.changes;
     document.source = { identity: entity.id, revision: document.revision, provenance: "project-composed-effective" };
     const onlyDefinedFields = [...contributors].reverse().find((contributor) => contributor.onlyDefinedFields !== undefined)?.onlyDefinedFields;
     if (onlyDefinedFields !== undefined)

@@ -23,16 +23,13 @@ export function canonicalSchemaWithConstraint(document, constraint, id) { let ne
     throw new Error("A canonical constraint needs a generated property path."); const node = next.nodes[parentId], rules = [...node.rules, ...((constraint.patterns ?? []).map((pattern) => ({ id: id("rule"), kind: "pattern", pattern, severity: "error", message: "Pattern mismatch" }))), ...(constraint.minimum !== undefined || constraint.maximum !== undefined ? [{ id: id("rule"), kind: "range", severity: "error", message: "Outside range", ...(constraint.minimum !== undefined ? { minimum: constraint.minimum } : {}), ...(constraint.maximum !== undefined ? { maximum: constraint.maximum } : {}) }] : []), ...(constraint.minItems !== undefined || constraint.maxItems !== undefined ? [{ id: id("rule"), kind: "cardinality", severity: "error", message: "Outside cardinality", ...(constraint.minItems !== undefined ? { minItems: constraint.minItems } : {}), ...(constraint.maxItems !== undefined ? { maxItems: constraint.maxItems } : {}) }] : [])]; const itemSchema = constraint.itemSchema ? clone(constraint.itemSchema) : constraint.itemType ? { id: `item:${parentId}`, type: constraint.itemType } : undefined, result = setCanonicalProperty(next, { baseRevision: next.revision, propertyId: parentId, patch: { ...(constraint.concept?.trim() ? { concept: constraint.concept.trim() } : {}), type: constraint.type ?? node.type, ...(constraint.nullable !== undefined ? { nullable: constraint.nullable } : {}), ...(constraint.onlyDefinedFields !== undefined ? { onlyDefinedFields: constraint.onlyDefinedFields } : {}), ...(constraint.itemType ? { itemType: constraint.itemType } : {}), ...(itemSchema ? { itemSchema } : {}), allowedValues: (constraint.allowedValues ?? []).map((value, index) => ({ id: constraint.allowedValueIds?.[index] ?? id("allowed-value"), value: clone(value) })), presence: { mode: constraint.presence === "required" ? "required" : constraint.presence === "forbidden" ? "forbidden" : "optional" }, rules, documentation: { ...node.documentation, description: constraint.documentation ?? node.documentation.description, ...(constraint.examples?.length ? { example: { method: "custom", value: clone(constraint.examples[0]) } } : {}) }, ...(constraint.expectedValue !== undefined ? { expectedValue: clone(constraint.expectedValue) } : {}), ...(constraint.enforcement ? { enforcement: constraint.enforcement } : {}), ...(constraint.target ? { target: constraint.target } : {}), overrideReferences: [...(constraint.overrideReferences ?? [])] } }); if (result.status !== "applied" && result.status !== "rebased")
     throw new Error(`Cannot update canonical property ${constraint.path}.`); return result.document; }
 /** Build an imported constraint set with one document clone instead of cloning the
- * growing canonical tree once for every generated add and set command. The
- * resulting revisions and change entries intentionally match the sequential
- * command representation because existing concurrency tokens can observe them. */
+ * growing canonical tree once for every generated add and set command. */
 export function canonicalSchemaWithConstraints(document, constraints, id) {
     const next = clone(document), pathIds = new Map(canonicalTableRows(next).map(({ path, id: propertyId }) => [path, propertyId])), childIds = new Map();
-    next.changes ??= [];
+    delete next.changes;
     for (const node of Object.values(next.nodes))
         childIds.set(node.parentId, [...(childIds.get(node.parentId) ?? []), node.id]);
     const descendants = (propertyId) => (childIds.get(propertyId) ?? []).flatMap((childId) => [childId, ...descendants(childId)]);
-    const change = (kind, propertyIds) => { next.revision += 1; next.changes.push({ revision: next.revision, propertyIds, kind }); };
     for (const constraint of constraints) {
         let parentId;
         const segments = constraint.path.split("/").filter(Boolean), realSegments = segments.filter((segment) => segment !== "*"), current = [];
@@ -54,7 +51,6 @@ export function canonicalSchemaWithConstraints(document, constraints, id) {
             next.selectedPropertyId = propertyId;
             if (!node.parentId)
                 next.rootIds.push(propertyId);
-            change("add", [propertyId, ...(node.parentId ? [node.parentId] : [])]);
         }
         if (!parentId)
             throw new Error("A canonical constraint needs a generated property path.");
@@ -63,7 +59,6 @@ export function canonicalSchemaWithConstraints(document, constraints, id) {
             throw new Error(`Cannot update canonical property ${constraint.path}.`);
         Object.assign(node, patch);
         normalizeCanonicalTypeShape(node, nextType, Object.hasOwn(patch, "itemType"), Object.hasOwn(patch, "itemSchema"));
-        change("set", [parentId]);
     }
     return next;
 }

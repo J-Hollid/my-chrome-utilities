@@ -20,14 +20,14 @@ function compactLegacyEditHistory(value) {
     const visit = (candidate) => { if (Array.isArray(candidate))
         return candidate.map(visit); if (!record(candidate))
         return candidate; const legacyChanges = Array.isArray(candidate.changes) ? candidate.changes : undefined, currentCanonical = candidate.state === "Draft" && record(candidate.nodes) && Array.isArray(candidate.rootIds), legacySchema = Boolean(!currentCanonical && legacyChanges && typeof candidate.revision === "number" && (record(candidate.document) || record(candidate.nodes) || Array.isArray(candidate.productionSnapshots) || Array.isArray(candidate.revisionHistory))), result = {}; for (const [key, entry] of Object.entries(candidate)) {
-        if (key === "changes" && legacySchema) {
-            entryCount += legacyChanges.length;
+        if (key === "changes" && (legacySchema || currentCanonical)) {
+            entryCount += legacyChanges?.length ?? 1;
             continue;
         }
         if (legacySchema && (key === "productionSnapshots" || key === "revisionHistory"))
             continue;
-        if (["commandJournal", "patchJournal", "editJournal"].includes(key) && Array.isArray(entry)) {
-            entryCount += entry.length;
+        if (["commandJournal", "patchJournal", "editJournal", "editCountRevision"].includes(key) && (Array.isArray(entry) || currentCanonical)) {
+            entryCount += Array.isArray(entry) ? entry.length : 1;
             continue;
         }
         if (key === "revision" && legacySchema)
@@ -715,7 +715,7 @@ export class DurableProjectRepository {
         channel.unref?.();
     } void poll(); }); }
     async importLegacy(owner, records) {
-        records = { ...records, projects: records.projects.map((entry) => ({ ...entry, state: upgradeSeparatedState(entry.state) })) };
+        records = { ...records, projects: records.projects.map((entry) => ({ ...entry, state: upgradeSeparatedState(compactLegacyEditHistory(entry.state).value) })) };
         await this.backend.transaction(allStores, "readwrite", async (transaction) => {
             const lock = await transaction.get("settings", "legacyMigrationLock");
             if (lock?.owner !== owner)

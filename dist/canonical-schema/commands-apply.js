@@ -2,7 +2,7 @@ import { repairCanonicalBooleanAllowedValues } from "../data-layer-canonical-sch
 import { canonicalSetConditionIssue, canonicalTypeTransition, normalizeCanonicalTypeShape } from "./set-transition.js";
 const clone = (value) => structuredClone(value);
 const orderWithin = (document, parentId) => Object.values(document.nodes).filter((node) => node.parentId === parentId).sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
-const appendChange = (document, command, propertyIds) => ({ ...document, revision: document.revision + 1, changes: [...document.changes, { revision: document.revision + 1, propertyIds, kind: command.kind }] });
+const completeDraftCommand = (document) => { const { changes: _legacyJournal, ...currentDraft } = document; return currentDraft; };
 const emptyDocumentation = () => ({ displayText: "", description: "", comments: "", example: { method: "blank" } });
 const assertBase = (document, baseRevision) => { if (baseRevision !== document.revision)
     throw new Error(`Command revision ${baseRevision} does not match canonical revision ${document.revision}.`); };
@@ -94,7 +94,7 @@ export function applyCanonicalAtCurrent(document, command) {
     const next = clone(document);
     if (command.kind === "policy") {
         next.onlyDefinedFields = command.onlyDefinedFields;
-        return { status: "applied", document: appendChange(next, command, []) };
+        return { status: "applied", document: completeDraftCommand(next) };
     }
     if (command.kind === "add") {
         if (command.parentId && !next.nodes[command.parentId])
@@ -107,7 +107,7 @@ export function applyCanonicalAtCurrent(document, command) {
         if (!command.parentId)
             next.rootIds = orderWithin(next).map(({ id }) => id);
         next.selectedPropertyId = propertyId;
-        return { status: "applied", document: appendChange(next, command, [propertyId, ...(command.parentId ? [command.parentId] : [])]) };
+        return { status: "applied", document: completeDraftCommand(next) };
     }
     if (command.kind === "view")
         return { status: "applied", document: { ...next, view: command.view } };
@@ -118,7 +118,7 @@ export function applyCanonicalAtCurrent(document, command) {
         return { status: "applied", document: { ...next, selectedPropertyId: command.propertyId } };
     if (command.kind === "rename") {
         node.name = command.name.trim() || node.name;
-        return { status: "applied", document: appendChange(next, command, [command.propertyId]) };
+        return { status: "applied", document: completeDraftCommand(next) };
     }
     if (command.kind === "set") {
         const descendants = orderedIds(next, command.propertyId), nextType = command.patch.type ?? node.type, nextItemType = nextType === "array" ? (Object.hasOwn(command.patch, "itemType") ? command.patch.itemType : node.itemType) : undefined, nextItemSchema = nextType === "array" ? (Object.hasOwn(command.patch, "itemSchema") ? command.patch.itemSchema : node.itemSchema) : undefined, change = canonicalTypeTransition(node, nextType, nextItemType, nextItemSchema, descendants, next);
@@ -129,11 +129,9 @@ export function applyCanonicalAtCurrent(document, command) {
                 delete next.nodes[id];
         Object.assign(node, clone(command.patch));
         normalizeCanonicalTypeShape(node, nextType, Object.hasOwn(command.patch, "itemType"), Object.hasOwn(command.patch, "itemSchema"));
-        const affected = new Set([command.propertyId, ...(change.removeDescendants ? descendants : [])]);
         for (const operation of command.operations ?? [])
-            for (const id of applyStructuralOperation(next, operation))
-                affected.add(id);
-        return { status: "applied", document: appendChange(next, command, [...affected]) };
+            applyStructuralOperation(next, operation);
+        return { status: "applied", document: completeDraftCommand(next) };
     }
     if (command.kind === "type") {
         const descendants = orderedIds(next, command.propertyId), nextItemSchema = command.type === "array" && command.itemType ? { id: `item:${node.id}`, type: command.itemType } : undefined, change = canonicalTypeTransition(node, command.type, command.itemType, nextItemSchema, descendants, next);
@@ -160,7 +158,7 @@ export function applyCanonicalAtCurrent(document, command) {
             delete node.itemType;
             delete node.itemSchema;
         }
-        return { status: "applied", document: appendChange(next, command, [command.propertyId, ...descendants]) };
+        return { status: "applied", document: completeDraftCommand(next) };
     }
     if (command.kind === "delete") {
         const descendants = [command.propertyId, ...orderedIds(next, command.propertyId)], parentId = node.parentId;
@@ -170,7 +168,7 @@ export function applyCanonicalAtCurrent(document, command) {
         next.rootIds = orderWithin(next).map(({ id }) => id);
         if (descendants.includes(next.selectedPropertyId ?? ""))
             delete next.selectedPropertyId;
-        return { status: "applied", document: appendChange(next, command, descendants) };
+        return { status: "applied", document: completeDraftCommand(next) };
     }
     if (command.kind === "move") {
         if (command.parentId === command.propertyId || orderedIds(next, command.propertyId).includes(command.parentId ?? ""))
@@ -183,7 +181,7 @@ export function applyCanonicalAtCurrent(document, command) {
         if (command.parentId)
             node.parentId = command.parentId;
         next.rootIds = orderWithin(next).map(({ id }) => id);
-        return { status: "applied", document: appendChange(next, command, [command.propertyId, ...(oldParent ? [oldParent] : []), ...(command.parentId ? [command.parentId] : [])]) };
+        return { status: "applied", document: completeDraftCommand(next) };
     }
     const source = node, copies = new Map();
     for (const sourceId of [command.propertyId, ...orderedIds(next, command.propertyId)]) {
@@ -204,6 +202,6 @@ export function applyCanonicalAtCurrent(document, command) {
     normalizeOrders(next, source.parentId);
     next.rootIds = orderWithin(next).map(({ id }) => id);
     next.selectedPropertyId = rootCopy;
-    return { status: "applied", document: appendChange(next, command, [...copies.values()]) };
+    return { status: "applied", document: completeDraftCommand(next) };
 }
 //# sourceMappingURL=commands-apply.js.map

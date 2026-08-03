@@ -1,4 +1,4 @@
-import { canonicalConstraints, canonicalPropertyPath, canonicalRequirements, canonicalSchemaWithConstraint, createCanonicalSchema, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
+import { canonicalConstraints, canonicalPropertyPath, canonicalRequirements, canonicalSchemaWithConstraint, createCanonicalSchema, journalFreeCanonicalData, migrateLegacyProfile } from "./data-layer-canonical-schema.js";
 import { savedSchemaCanonicalDocument, savedSchemaFromCanonical } from "./data-layer-saved-schema-canonical.js";
 const clone = (value) => structuredClone(value);
 const now = () => new Date().toISOString();
@@ -306,8 +306,9 @@ function preserveCanonicalFacets(base, current, next, nextSource, affectedProper
         nodes[nextNode.id] = merged;
     }
     const propertyId = (id) => nextIds.get(id) ?? id, nextSourceId = (id) => sourceIds.get(id) ?? propertyId(id), definitions = nextSource.sourceContent?.definitionsByNodeId, pathsByNodeId = Object.fromEntries(Object.entries(nextSourcePaths).map(([id, path]) => [nextSourceId(id), path])), sourceContent = next.sourceContent ? { ...clone(next.sourceContent), ...(definitions ? { definitionsByNodeId: Object.fromEntries(Object.entries(definitions).map(([id, definition]) => [nextSourceId(id), clone(definition)])) } : { definitionsByNodeId: {} }), pathsByNodeId } : undefined, selected = current.selectedPropertyId && nodes[current.selectedPropertyId] ? current.selectedPropertyId : next.selectedPropertyId ? propertyId(next.selectedPropertyId) : undefined;
-    const baseOrNextSourcePath = { ...baseSourcePaths, ...nextSourcePaths }, revision = current.revision + 1, changed = [...new Set(affectedPropertyIds.map((id) => currentBySourcePath.get(baseOrNextSourcePath[id] ?? "") ?? nextSourceId(id)))].sort(), rootIds = Object.values(nodes).filter(({ parentId }) => !parentId).sort((left, right) => left.order - right.order || left.id.localeCompare(right.id)).map(({ id }) => id);
-    return { ...clone(next), revision, view: current.view, nodes, rootIds, ...(selected ? { selectedPropertyId: selected } : {}), ...(sourceContent ? { sourceContent } : {}), changes: [...clone(current.changes), { revision, propertyIds: changed, kind: "synchronize" }] };
+    const rootIds = Object.values(nodes).filter(({ parentId }) => !parentId).sort((left, right) => left.order - right.order || left.id.localeCompare(right.id)).map(({ id }) => id), synchronized = { ...clone(next), revision: current.revision, view: current.view, nodes, rootIds, ...(selected ? { selectedPropertyId: selected } : {}), ...(sourceContent ? { sourceContent } : {}) };
+    delete synchronized.changes;
+    return synchronized;
 }
 export function adoptSavedSchema(state, source) {
     if (!source.published)
@@ -542,12 +543,12 @@ export function buildReleaseReview(previous, next) { const sections = []; for (c
 } const changedIds = new Set(sections.map(({ id }) => id)); const affectedConsumers = Object.values(next.collections).flatMap((entities) => entities.filter((entity) => changedIds.has(entity.id) || [...changedIds].some((id) => JSON.stringify(entity).includes(id))).map(({ id, name }) => ({ id, name }))); return { sections, affectedConsumers, breaking: sections.some(({ kind }) => kind === "removed"), preflight: projectPreflight(next) }; }
 export function restoreReleaseAsDraft(state, releaseId, id) { const release = state.project.releases.find((candidate) => candidate.id === releaseId); if (!release)
     throw new Error(`Unknown release ${releaseId}`); return { project: { ...state.project, collections: clone(release.snapshot) }, draft: { id: id("draft"), status: "Saved", updatedAt: now(), restoredFromRelease: releaseId }, history: { undo: [], redo: [] } }; }
-export function exportSpecificationProjectState(state) { return JSON.stringify({ format: "my-chrome-utilities.specification-project-state", version: 2, state: { ...clone(state), history: { undo: [], redo: [] } }, migrations: [] }); }
+export function exportSpecificationProjectState(state) { return JSON.stringify({ format: "my-chrome-utilities.specification-project-state", version: 2, state: { ...journalFreeCanonicalData(state), history: { undo: [], redo: [] } }, migrations: [] }); }
 export function stageProjectImport(serialized, current, options) {
     const parsed = JSON.parse(serialized);
     if (parsed.format !== "my-chrome-utilities.specification-project-state" || (parsed.version !== 1 && parsed.version !== 2) || !parsed.state)
         throw new Error("Unsupported Specification Project format; supported versions are 1 and 2.");
-    const sourceVersion = parsed.version, migrations = sourceVersion === 1 ? ["project-state-v1-to-v2"] : [...(parsed.migrations ?? [])], imported = clone(parsed.state);
+    const sourceVersion = parsed.version, migrations = sourceVersion === 1 ? ["project-state-v1-to-v2"] : [...(parsed.migrations ?? [])], imported = journalFreeCanonicalData(parsed.state);
     if (options?.projectId)
         imported.project.id = options.projectId;
     const blockers = imported.project.id === current.project.id ? [{ kind: "project-id-collision", message: "Choose replace or remap for the conflicting project identity.", ids: [imported.project.id] }] : [];

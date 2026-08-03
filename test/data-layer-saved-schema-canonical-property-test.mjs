@@ -102,7 +102,7 @@ for(let sample=0;sample<128;sample+=1){
   assert.equal(localResult.status,"applied");
   localResult=applyCanonicalCommand(localResult.document,{kind:"select",baseRevision:localResult.document.revision,propertyId:valueNode.id});
   for(let token=0;token<3;token+=1)localResult=applyCanonicalCommand(localResult.document,{kind:"view",baseRevision:localResult.document.revision,view:token%2?"tree":"table"});
-  const localCanonical=localResult.document,priorChanges=structuredClone(localCanonical.changes);
+  const localCanonical=localResult.document;
   syncState=transactProject(syncState,"Author canonical-only facets",(project)=>({...project,collections:{...project.collections,profiles:project.collections.profiles.map((profile)=>profile.id===syncProfile.id?{...profile,canonicalSchema:localCanonical}:profile)}}));
   const nextSource={...syncSource,version:2,document:{type:"object",properties:{...syncSource.document.properties,value:{...syncSource.document.properties.value,description:`Source revision ${sample}`},new_value:{type:"string"}}},rules:[
     {...syncSource.rules[0],version:2},
@@ -110,9 +110,8 @@ for(let sample=0;sample<128;sample+=1){
   ]};
   syncState=commitSavedSchemaSynchronization(syncState,stageSavedSchemaSynchronization(syncState,nextSource));
   const synchronized=syncState.project.collections.profiles[0].canonicalSchema,synchronizedValue=synchronized.nodes[valueNode.id],newValue=Object.values(synchronized.nodes).find(({name})=>name==="new_value");
-  assert.equal(synchronized.revision,localCanonical.revision+1,`sample ${sample} must advance the canonical Draft token exactly once`);
-  assert.deepEqual(synchronized.changes.slice(0,priorChanges.length),priorChanges,`sample ${sample} must conserve prior canonical command history as a prefix`);
-  assert.deepEqual(synchronized.changes.at(-1),{revision:synchronized.revision,propertyIds:[newValue.id,valueNode.id].sort(),kind:"synchronize"},`sample ${sample} must record every source-affected canonical identity at the new Draft token`);
+  assert.equal(synchronized.revision,localCanonical.revision,`sample ${sample} must retain the publication-only Schema revision`);
+  assert.equal(Object.hasOwn(synchronized,"changes"),false,`sample ${sample} must remain journal-free after synchronization`);
   assert.equal(synchronized.selectedPropertyId,valueNode.id,`sample ${sample} must conserve canonical selection`);
   assert.deepEqual(synchronizedValue.presence,{mode:"required-when",condition:localPredicate},`sample ${sample} must conserve local presence predicates`);
   assert.deepEqual(synchronizedValue.rules.find(({id})=>id===syncSource.rules[0].id).condition,localPredicate,`sample ${sample} must conserve local rule predicates`);

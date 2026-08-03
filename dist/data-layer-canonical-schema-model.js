@@ -1,7 +1,7 @@
 const clone = (value) => structuredClone(value);
 const orderWithin = (document, parentId) => Object.values(document.nodes).filter((node) => node.parentId === parentId).sort((a, b) => a.order - b.order || a.id.localeCompare(b.id));
 const orderedIds = (document, parentId) => orderWithin(document, parentId).flatMap((node) => [node.id, ...orderedIds(document, node.id)]);
-export function createCanonicalSchema(input) { return { id: input.id, revision: 0, state: "Draft", contributorId: input.contributorId, contributorName: input.contributorName, rootIds: [], nodes: {}, view: "tree", changes: [], ...(input.source ? { source: clone(input.source) } : {}) }; }
+export function createCanonicalSchema(input) { return { id: input.id, revision: 0, state: "Draft", contributorId: input.contributorId, contributorName: input.contributorName, rootIds: [], nodes: {}, view: "tree", ...(input.source ? { source: clone(input.source) } : {}) }; }
 const propertySegments = (document, propertyId) => { const parts = []; let node = document.nodes[propertyId], guard = 0; while (node && guard < Object.keys(document.nodes).length + 1) {
     let arrayBoundaries = node.type === "array" ? 1 : 0, item = node.itemSchema;
     while (item?.type === "array") {

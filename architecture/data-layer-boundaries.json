@@ -452,6 +452,10 @@
       "src/data-layer-layered-schema.ts"
     ]
   },
+  "src/data-layer-canonical-schema-journal.ts": {
+    "module": "schemas",
+    "layer": "application"
+  },
   "src/data-layer-canonical-schema-facets.ts": {
     "module": "schemas",
     "layer": "application",

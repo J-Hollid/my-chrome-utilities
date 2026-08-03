@@ -97,8 +97,8 @@ export function migrateLegacyProfile(profile, options) {
             parentId = byPath[current];
         }
     }
-    document.revision = 1;
-    document.changes = [{ revision: 1, propertyIds: Object.keys(document.nodes), kind: "add" }];
+    document.revision = 0;
+    delete document.changes;
     return { profileId: profile.id, document, byPath, conflicts, legacyKeys: ["requirements", "structuredSchema", "structuredDraft", "schemaConstraints"] };
 }
 //# sourceMappingURL=migration-plan.js.map

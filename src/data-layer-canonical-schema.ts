@@ -29,7 +29,7 @@ export interface CanonicalSchemaDocument {
   source?:{identity:string;revision:number;provenance:"saved-schema-library"|"project-composed-effective"};selectedPropertyId?:string;view:"tree"|"table";
   onlyDefinedFields?:boolean;
   sourceContent?:{document:Record<string,unknown>;rules:readonly Record<string,unknown>[];documentation:unknown;examples:readonly unknown[];definitionsByNodeId?:Record<string,Record<string,unknown>>;pathsByNodeId?:Record<string,string>};
-  changes:{revision:number;propertyIds:string[];kind:CanonicalCommand["kind"]|"synchronize"}[];
+  changes?:{revision:number;propertyIds:string[];kind:CanonicalCommand["kind"]|"synchronize"}[];
 }
 export type CanonicalStructuralOperation=
   |{kind:"add";id:CanonicalIdFactory;propertyId:string;name:string;type:CanonicalPropertyType;parentId?:string;afterId?:string}
@@ -60,6 +60,7 @@ export {canonicalCommandOutcome,applyCanonicalCommand,addCanonicalProperty,renam
 export {createCanonicalSchema,canonicalConceptIndex,canonicalConceptSortedRows,canonicalPropertyPath,canonicalTableRows} from "./data-layer-canonical-schema-model.js";
 export {canonicalFriendlyPropertyPath,canonicalJsonSchemaDocument} from "./data-layer-canonical-schema-model.js";
 export {canonicalArrayBoundaries} from "./data-layer-canonical-array-items.js";
+export {journalFreeCanonicalData} from "./data-layer-canonical-schema-journal.js";
 export {evaluateCanonicalPredicate} from "./data-layer-canonical-schema-predicates.js";
 export {canonicalPredicateWithStableIds,canonicalPredicateIds} from "./data-layer-canonical-predicate-identity.js";
 export {canonicalConstraints,canonicalSchemaWithConstraint,canonicalSchemaWithConstraints,canonicalRequirements} from "./data-layer-canonical-schema-constraints.js";

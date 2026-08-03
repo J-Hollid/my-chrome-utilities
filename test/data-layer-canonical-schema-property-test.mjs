@@ -32,17 +32,18 @@ for(let example=0;example<200;example+=1){
 
   assert.equal(document.nodes[childId].id,childId,"ancestor rename preserves descendant identity");
   assert.equal(canonicalPropertyPath(document,childId),`/${renamedRoot}/${childName}`);
-  assert.equal(document.revision,beforeRevision+1);
+  assert.equal(document.revision,beforeRevision,"Draft commands preserve the publication-only Schema revision");
   assert.deepEqual(new Set(canonicalTableRows(document).map(({id})=>id)).size,Object.keys(document.nodes).length);
 
   const repository=createCanonicalRepository(document),baseRevision=document.revision;
   const firstName=word("first"),secondName=word("second");
   assert.equal(repository.dispatch({kind:"add",baseRevision,name:firstName,type:"string",id}).status,"applied");
-  assert.equal(repository.dispatch({kind:"add",baseRevision,name:secondName,type:"string",id}).status,"rebased");
+  assert.equal(repository.dispatch({kind:"add",baseRevision,name:secondName,type:"string",id}).status,"applied");
   const current=repository.current(),names=Object.values(current.nodes).map(({name})=>name);
   assert.equal(names.filter((name)=>name===firstName).length,1);
   assert.equal(names.filter((name)=>name===secondName).length,1);
-  assert.equal(current.revision,baseRevision+2);
+  assert.equal(current.revision,baseRevision);
+  assert.equal(Object.hasOwn(current,"changes"),false);
 }
 
 for(let example=0;example<200;example+=1){
@@ -60,7 +61,7 @@ for(let example=0;example<200;example+=1){
 
   const document={...createCanonicalSchema({id:`schema:boolean-repair:${example}`,contributorId:`profile:boolean-repair:${example}`,contributorName:`Boolean repair ${example}`}),rootIds:[node.id],nodes:{[node.id]:node}},result=applyCanonicalCommand(document,{kind:"type",baseRevision:0,propertyId:node.id,type:"boolean"});
   assert.equal(result.status,"applied");
-  assert.equal(result.document.revision,1,"Boolean repair and Type transition remain one command");
+  assert.equal(result.document.revision,0,"Boolean repair leaves the publication-only Schema revision unchanged");
   assert.deepEqual(result.document.nodes[node.id].allowedValues,repair.allowedValues);
 
   const invalid={...node,allowedValues:[...node.allowedValues,{id:`allowed:${example}:invalid`,value:`other_${example}`}]},invalidBytes=JSON.stringify(invalid),invalidDocument={...document,nodes:{[node.id]:invalid}},blocked=applyCanonicalCommand(invalidDocument,{kind:"type",baseRevision:0,propertyId:node.id,type:"boolean"});

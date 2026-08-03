@@ -13,7 +13,7 @@ cleanRepository.clearTrace();
 assert.equal((await cleanRepository.compactLegacyDurableSchemaHistory()).entryCount,0);
 assert.deepEqual(cleanRepository.trace().writes,[],"a current repository mount remains read-only when no compaction is required");
 assert.equal(cleanRepository.trace().reads.some(({store})=>store==="fixtures"),false,"schema-history startup migration does not scan captured fixture payloads");
-assert.equal((await cleanRepository.loadProject(fixtureHeavyState.project.id)).state.project.collections.profiles[0].canonicalSchema.revision,1,"current canonical edit lineage is not mistaken for legacy production history");
+assert.equal((await cleanRepository.loadProject(fixtureHeavyState.project.id)).state.project.collections.profiles[0].canonicalSchema.revision,0,"an unpublished canonical edit retains Schema revision zero and is not mistaken for legacy production history");
 cleanRepository.clearTrace();
 assert.equal((await cleanRepository.compactLegacyDurableSchemaHistory()).entryCount,0);
 assert.deepEqual(cleanRepository.trace().writes,[],"a repeated current repository mount also remains read-only");

@@ -1,4 +1,4 @@
-import {canonicalConstraints,canonicalPropertyPath,canonicalRequirements,canonicalSchemaWithConstraint,createCanonicalSchema,migrateLegacyProfile,type CanonicalMigrationPlan,type CanonicalPredicate,type CanonicalPropertyNode,type CanonicalRule,type CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
+import {canonicalConstraints,canonicalPropertyPath,canonicalRequirements,canonicalSchemaWithConstraint,createCanonicalSchema,journalFreeCanonicalData,migrateLegacyProfile,type CanonicalMigrationPlan,type CanonicalPredicate,type CanonicalPropertyNode,type CanonicalRule,type CanonicalSchemaDocument} from "./data-layer-canonical-schema.js";
 import {savedSchemaCanonicalDocument,savedSchemaFromCanonical} from "./data-layer-saved-schema-canonical.js";
 import type {ProjectDocumentationDraft} from "./data-layer-project-documentation-records.js";
 
@@ -231,8 +231,8 @@ function preserveCanonicalFacets(base:CanonicalSchemaDocument,current:CanonicalS
     merged.rules=baseNode&&sourceNode?synchronizeCanonicalRules(baseNode.rules,currentNode.rules,sourceNode.rules):synchronizeCanonicalRules([],currentNode.rules,sourceNode?.rules??nextNode.rules);nodes[nextNode.id]=merged;
   }
   const propertyId=(id:string)=>nextIds.get(id)??id,nextSourceId=(id:string)=>sourceIds.get(id)??propertyId(id),definitions=nextSource.sourceContent?.definitionsByNodeId,pathsByNodeId=Object.fromEntries(Object.entries(nextSourcePaths).map(([id,path])=>[nextSourceId(id),path])),sourceContent=next.sourceContent?{...clone(next.sourceContent),...(definitions?{definitionsByNodeId:Object.fromEntries(Object.entries(definitions).map(([id,definition])=>[nextSourceId(id),clone(definition)]))}:{definitionsByNodeId:{}}),pathsByNodeId}:undefined,selected=current.selectedPropertyId&&nodes[current.selectedPropertyId]?current.selectedPropertyId:next.selectedPropertyId?propertyId(next.selectedPropertyId):undefined;
-  const baseOrNextSourcePath={...baseSourcePaths,...nextSourcePaths},revision=current.revision+1,changed=[...new Set(affectedPropertyIds.map((id)=>currentBySourcePath.get(baseOrNextSourcePath[id]??"")??nextSourceId(id)))].sort(),rootIds=Object.values(nodes).filter(({parentId})=>!parentId).sort((left,right)=>left.order-right.order||left.id.localeCompare(right.id)).map(({id})=>id);
-  return{...clone(next),revision,view:current.view,nodes,rootIds,...(selected?{selectedPropertyId:selected}:{}),...(sourceContent?{sourceContent}:{}),changes:[...clone(current.changes),{revision,propertyIds:changed,kind:"synchronize"}]};
+  const rootIds=Object.values(nodes).filter(({parentId})=>!parentId).sort((left,right)=>left.order-right.order||left.id.localeCompare(right.id)).map(({id})=>id),synchronized={...clone(next),revision:current.revision,view:current.view,nodes,rootIds,...(selected?{selectedPropertyId:selected}:{}),...(sourceContent?{sourceContent}:{})};
+  delete synchronized.changes;return synchronized;
 }
 
 export function adoptSavedSchema(state:ProjectState,source:SavedSchemaSource):ProjectState{
@@ -355,12 +355,12 @@ export function restoreReleaseAsDraft(state:ProjectState,releaseId:string,id:IdF
 interface FullFidelityPackageV1 { format:"my-chrome-utilities.specification-project-state";version:1;state:ProjectState; }
 interface FullFidelityPackageV2 { format:"my-chrome-utilities.specification-project-state";version:2;state:ProjectState;migrations:string[]; }
 type FullFidelityPackage=FullFidelityPackageV1|FullFidelityPackageV2;
-export function exportSpecificationProjectState(state:ProjectState):string{return JSON.stringify({format:"my-chrome-utilities.specification-project-state",version:2,state:{...clone(state),history:{undo:[],redo:[]}},migrations:[]} satisfies FullFidelityPackageV2);}
+export function exportSpecificationProjectState(state:ProjectState):string{return JSON.stringify({format:"my-chrome-utilities.specification-project-state",version:2,state:{...journalFreeCanonicalData(state),history:{undo:[],redo:[]}},migrations:[]} satisfies FullFidelityPackageV2);}
 export interface StagedProjectImport { state:ProjectState; diff:ReleaseReview; blockers:{kind:string;message:string;ids:string[]}[]; source:string;sourceVersion:1|2;targetVersion:2;migrations:string[]; }
 export function stageProjectImport(serialized:string,current:ProjectState,options?:{projectId?:string}):StagedProjectImport{
   const parsed=JSON.parse(serialized) as Partial<FullFidelityPackage>;
   if(parsed.format!=="my-chrome-utilities.specification-project-state"||(parsed.version!==1&&parsed.version!==2)||!parsed.state)throw new Error("Unsupported Specification Project format; supported versions are 1 and 2.");
-  const sourceVersion=parsed.version,migrations=sourceVersion===1?["project-state-v1-to-v2"]:[...((parsed as Partial<FullFidelityPackageV2>).migrations??[])],imported=clone(parsed.state);
+  const sourceVersion=parsed.version,migrations=sourceVersion===1?["project-state-v1-to-v2"]:[...((parsed as Partial<FullFidelityPackageV2>).migrations??[])],imported=journalFreeCanonicalData(parsed.state);
   if(options?.projectId)imported.project.id=options.projectId;
   const blockers=imported.project.id===current.project.id?[{kind:"project-id-collision",message:"Choose replace or remap for the conflicting project identity.",ids:[imported.project.id]}]:[];
   return{state:imported,diff:buildReleaseReview(current.project,imported.project),blockers,source:serialized,sourceVersion,targetVersion:2,migrations};

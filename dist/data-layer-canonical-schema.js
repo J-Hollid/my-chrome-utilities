@@ -2,6 +2,7 @@ export { canonicalCommandOutcome, applyCanonicalCommand, addCanonicalProperty, r
 export { createCanonicalSchema, canonicalConceptIndex, canonicalConceptSortedRows, canonicalPropertyPath, canonicalTableRows } from "./data-layer-canonical-schema-model.js";
 export { canonicalFriendlyPropertyPath, canonicalJsonSchemaDocument } from "./data-layer-canonical-schema-model.js";
 export { canonicalArrayBoundaries } from "./data-layer-canonical-array-items.js";
+export { journalFreeCanonicalData } from "./data-layer-canonical-schema-journal.js";
 export { evaluateCanonicalPredicate } from "./data-layer-canonical-schema-predicates.js";
 export { canonicalPredicateWithStableIds, canonicalPredicateIds } from "./data-layer-canonical-predicate-identity.js";
 export { canonicalConstraints, canonicalSchemaWithConstraint, canonicalSchemaWithConstraints, canonicalRequirements } from "./data-layer-canonical-schema-constraints.js";
