@@ -2498,7 +2498,7 @@ function renderSchemaDraft() {
     const status = document.querySelector("#schema-editor-status");
     if (status)
         status.textContent = compactCanonicalEditor && compactDocument
-            ? `${compactCanonicalEditor.label} · Draft token ${compactDocument.revision}`
+            ? `${compactCanonicalEditor.label} · Publication Schema revision ${compactDocument.revision}`
             : storedSchema?.published === false
                 ? `Unpublished new schema draft · ${pendingChanges} pending changes`
                 : storedSchema?.workingDraft
@@ -3353,7 +3353,7 @@ function renderCompactCanonicalContext() {
         retry.textContent = "Retry local edit";
         reject.textContent = "Reject local edit";
         compare.addEventListener("click", () => { if (!compactCanonicalPendingCommand || !compactCanonicalEditor)
-            return; compactCanonicalReviewVisible = true; const latest = compactCanonicalEditor.load(), scope = compactCanonicalCommandScope(compactCanonicalPendingCommand, latest); compactCanonicalCommandFeedback = `Comparing ${compactCanonicalPendingCommand.kind} for ${scope}: local Draft token ${compactCanonicalPendingCommand.baseRevision} versus latest Draft token ${latest.revision}.`; renderCompactCanonicalContext(); });
+            return; compactCanonicalReviewVisible = true; const latest = compactCanonicalEditor.load(), scope = compactCanonicalCommandScope(compactCanonicalPendingCommand, latest); compactCanonicalCommandFeedback = `Comparing ${compactCanonicalPendingCommand.kind} for ${scope}: local publication Schema revision ${compactCanonicalPendingCommand.baseRevision} versus latest publication Schema revision ${latest.revision}.`; renderCompactCanonicalContext(); });
         retry.addEventListener("click", () => { const pending = compactCanonicalPendingCommand; if (!pending || !compactCanonicalEditor)
             return; dispatchCompactCanonicalCommand({ ...pending, baseRevision: compactCanonicalEditor.load().revision }); });
         reject.addEventListener("click", () => { if (compactCanonicalPendingCommand && "propertyId" in compactCanonicalPendingCommand && compactCanonicalPresenceDraft?.propertyId === compactCanonicalPendingCommand.propertyId)
@@ -3365,9 +3365,9 @@ function renderCompactCanonicalContext() {
         const latest = adapter.load(), comparison = document.createElement("section"), heading = document.createElement("h3"), base = document.createElement("pre"), pending = document.createElement("pre"), current = document.createElement("pre"), propertyId = "propertyId" in compactCanonicalPendingCommand ? compactCanonicalPendingCommand.propertyId : undefined;
         comparison.setAttribute("aria-label", "Command-scoped canonical comparison");
         heading.textContent = `Command-scoped comparison · ${compactCanonicalCommandScope(compactCanonicalPendingCommand, latest)}`;
-        base.textContent = `Base Saved Draft · Draft token ${compactCanonicalPendingCommand.baseRevision}\n${JSON.stringify(propertyId ? compactCanonicalPendingBase?.nodes[propertyId] : compactCanonicalPendingBase?.rootIds ?? [], null, 2)}`;
+        base.textContent = `Base Saved Draft · publication Schema revision ${compactCanonicalPendingCommand.baseRevision}\n${JSON.stringify(propertyId ? compactCanonicalPendingBase?.nodes[propertyId] : compactCanonicalPendingBase?.rootIds ?? [], null, 2)}`;
         pending.textContent = `Local ${compactCanonicalPendingCommand.kind} command\n${JSON.stringify(compactCanonicalPendingCommand, (key, value) => key === "baseRevision" ? undefined : typeof value === "function" ? "[identity factory]" : value, 2)}`;
-        current.textContent = `Newer Saved Draft · Draft token ${latest.revision}\n${JSON.stringify(propertyId ? latest.nodes[propertyId] : latest.rootIds, null, 2)}`;
+        current.textContent = `Newer Saved Draft · publication Schema revision ${latest.revision}\n${JSON.stringify(propertyId ? latest.nodes[propertyId] : latest.rootIds, null, 2)}`;
         comparison.append(heading, base, pending, current);
         context.append(comparison);
     }

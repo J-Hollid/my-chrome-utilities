@@ -45,6 +45,9 @@ const addDerivedRules = (row, entity, id, rules) => { const localPatterns = new 
 } };
 export function composedCanonicalSchema(state, entity, scope, flowId) {
     const contributorPath = layeredContributorPath(state, entity, scope, flowId), contributors = layeredContributorsForPath(state, contributorPath), workspace = composedSchemaWorkspace(state, entity, scope, undefined, flowId), document = createCanonicalSchema({ id: `canonical:effective:${entity.id}`, contributorId: entity.id, contributorName: entity.name }), used = new Set(), byPath = new Map(), rows = [...workspace.rows].sort((left, right) => left.path.split("/").length - right.path.split("/").length || left.path.localeCompare(right.path));
+    const stored = entity.canonicalSchema;
+    if (stored && !workspace.rows.some(({ inherited }) => Boolean(inherited)))
+        return clone(stored);
     for (const row of rows) {
         const segments = row.path.split("/").filter(Boolean), parentSegments = segments.slice(0, -1);
         if (parentSegments.at(-1) === "*")

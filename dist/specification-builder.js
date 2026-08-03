@@ -164,7 +164,7 @@ function renderComposedSchemaWorkspace(host, entity, kind, scope, pageGroupAppli
         editorHost.dataset.schemaContributorScope = scope;
         region.append(editorHost);
         mountCanonicalSchemaEditor({ host: editorHost, surface: "Builder", renderAfterDispatch: false, load, id, dispatch: (command) => { const current = load(); if (command.baseRevision !== current.revision)
-                return { status: "conflict", document: current, message: `This contributor changed from opaque Draft token ${command.baseRevision} to ${current.revision}; compare this command with the latest property before retrying.` }; const result = applyCanonicalCommand(current, command); if (result.status === "applied" || result.status === "rebased")
+                return { status: "conflict", document: current, message: `This command targets publication Schema revision ${command.baseRevision}, but the contributor is now at publication Schema revision ${current.revision}; compare it with the latest property before retrying.` }; const result = applyCanonicalCommand(current, command); if (result.status === "applied" || result.status === "rebased")
                 persistComposed(kind === "events" ? saveComposedEventCanonicalDocument(liveState(), entity.id, result.document) : saveComposedCanonicalDocument(liveState(), kind, entity.id, result.document)); return result; }, onUndo: () => { if (state)
                 void durableProjectRuntime.undo(state.project.id); }, onRedo: () => { if (state)
                 void durableProjectRuntime.redo(state.project.id); } });
