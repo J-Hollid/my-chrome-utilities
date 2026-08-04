@@ -210,7 +210,7 @@ export const flowFacet003Expression=`(async()=>{
   const before=await repository.loadProject(projectId);
   const beforeLocal=frameRecord(before)?.localSchemaContributions?.find(({path})=>path==='/shippingRoot');
   const workspace=[...document.querySelectorAll('.composed-schema-workspace')]
-    .find((candidate)=>candidate.isConnected&&!candidate.closest('[hidden]'));
+    .find((candidate)=>candidate.isConnected&&!candidate.closest('[hidden]')&&candidate.querySelector('[data-flow-instance-effective-path="/shippingRoot"]'));
   const row=workspace?.querySelector('[data-flow-instance-effective-path="/shippingRoot"]');
   row?.querySelector('[aria-label^="Property actions"]')?.click();
   await pause();
