@@ -19,7 +19,7 @@ function inspectPageTable({id}){
 
 export async function runSchemaTableContainmentRuntimeProbe({evaluate,socket,ready,setViewport}){
   const seed=await call(evaluate,socket,seedPageTable);await evaluate(socket,'location.reload(); true');await ready(socket,'#project-tree');await call(evaluate,socket,openPage,seed);const presentations=[];
-  for(const[width,zoom]of[[1280,1],[360,1],[720,2]]){await setViewport(width,800,zoom);presentations.push({width,zoom,...await call(evaluate,socket,inspectPageTable,seed)});}
+  for(const[width,zoom]of[[1280,1],[360,1],[720,2]]){await setViewport(width,800,1);await socket.call('Emulation.setPageScaleFactor',{pageScaleFactor:zoom});presentations.push({width,zoom,...await call(evaluate,socket,inspectPageTable,seed)});}
   await setViewport(1280,900,1);
   return{authoring086:presentations.every(({all})=>all),presentations};
 }
