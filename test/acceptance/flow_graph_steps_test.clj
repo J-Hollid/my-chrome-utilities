@@ -7,9 +7,8 @@
   (is (empty? (feature-support/unhandled-step-texts flow-graph/feature-files flow-graph/handlers))))
 
 (def complete-evidence
-  (assoc (into {} (map (fn [number] [(keyword (format "runtime%03d" number)) {:exact true}]) (range 1 12)))
-         :installedBoundary true
-         :preservedGraph true))
+  (assoc (into {} (map (fn [number] [(keyword (format "runtime%03d" number)) {:exact true}]) (range 1 27)))
+         :installedBoundary true))
 
 (deftest evidence-maps-cannot-pass-vacuously
   (is (false? (boolean (flow-graph/all-true? nil))))

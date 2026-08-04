@@ -833,7 +833,7 @@
       "acceptance/src/acceptance/steps/flow_graph.clj"
     ],
     "browserAdapters": [
-      "test/browser-packs/property-set-flow-sections.mjs"
+      "test/browser-packs/flow-graph.mjs"
     ]
   },
   {
@@ -1082,7 +1082,9 @@
     "handlers": [
       "acceptance/src/acceptance/steps/property_set_flow_sections.clj"
     ],
-    "browserAdapters": []
+    "browserAdapters": [
+      "test/browser-packs/property-set-flow-sections.mjs"
+    ]
   },
   {
     "id": "project_assurance_severity",
