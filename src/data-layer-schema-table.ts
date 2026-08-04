@@ -39,18 +39,12 @@ export function schemaTableSortComparison(
 }
 export const schemaTableFormerPropertyPathAllocation="20rem";
 export const schemaTablePropertyEditorAllocation="3rem";
-const schemaTablePropertyEditorContainmentStyleId="schema-table-property-editor-containment-style";
-const schemaTablePropertyEditorContainmentCss='@media(max-width:760px){.composed-schema-workspace>[role="table"]>table>tbody>tr{box-sizing:border-box;grid-template-columns:3rem minmax(0,1fr);max-width:100%;overflow:hidden}.composed-schema-workspace>[role="table"]>table>tbody>tr>td[data-schema-table-property-editor-cell="true"]{grid-column:1;box-sizing:border-box;width:3rem!important;min-width:0;max-width:3rem;padding-inline:.3rem;justify-content:center}.composed-schema-workspace>[role="table"]>table>tbody>tr>td[data-schema-table-property-editor-cell="true"]::before{display:none}.composed-schema-workspace>[role="table"]>table>tbody>tr>td[data-schema-table-cell="path"]{grid-column:2;box-sizing:border-box;width:100%;min-width:0;max-width:100%;overflow-wrap:anywhere}.composed-schema-workspace>[role="table"]>table>tbody>tr>td:nth-child(n+3){grid-column:1/-1;min-width:0;max-width:100%}}';
-export function ensureSchemaTablePropertyEditorContainmentStyle(dom:Document):void {
-  if(dom.getElementById(schemaTablePropertyEditorContainmentStyleId))return;
-  const style=dom.createElement("style");style.id=schemaTablePropertyEditorContainmentStyleId;style.textContent=schemaTablePropertyEditorContainmentCss;dom.head.append(style);
-}
 export function applySchemaTablePropertyEditorAllocation(heading?:HTMLElement,cell?:HTMLElement,action?:HTMLElement):void {
-  for(const element of heading?[heading]:[]){
-    element.style.width=schemaTablePropertyEditorAllocation;
-    element.style.minWidth=schemaTablePropertyEditorAllocation;
-    element.style.maxWidth=schemaTablePropertyEditorAllocation;
-    element.style.whiteSpace="nowrap";
+  if(heading){
+    heading.style.width=schemaTablePropertyEditorAllocation;
+    heading.style.minWidth=schemaTablePropertyEditorAllocation;
+    heading.style.maxWidth=schemaTablePropertyEditorAllocation;
+    heading.style.whiteSpace="nowrap";
   }
   if(cell)cell.dataset.schemaTablePropertyEditorCell="true";
   if(action){action.dataset.schemaTablePropertyEditorAction="true";action.style.maxWidth="100%";}
