@@ -79,6 +79,8 @@ for (let sample=0; sample<96; sample+=1) {
   }
 
   const blockedProject = structuredClone(project);
+  blockedProject.collections.profiles[0].requirements
+    .find(({path}) => path === "/ecommerce/value").protectedFacets = ["type"];
   blockedProject.collections.pages[0].profileId = "profile:retail";
   blockedProject.collections.pages[0].schemaConstraints = [{
     path:"/ecommerce/value",

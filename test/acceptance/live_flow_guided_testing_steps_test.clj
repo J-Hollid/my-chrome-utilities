@@ -7,26 +7,35 @@
     "next_step" "Payment Page frame"
     "label_state" "no label"
     "display_name" "Cart to Payment"}
-   {"relationship_kind" "alternative"
-    "next_step" "Cart PayPal Event occurrence"
-    "label_state" "label PayPal route"
-    "display_name" "PayPal route"}
    {"relationship_kind" "merge"
     "next_step" "Confirmation Page frame"
     "label_state" "no label"
     "display_name" "Cart to Confirmation"}
    {"flow_step" "Payment Page frame"
-    "effective_schema" "its Shared Profiles, ordered Page Groups, Page, and Flow Page-instance contribution"}
+    "effective_schema" "its Shared Profiles, ordered Property Sets, Page, and Flow Page-instance contribution"}
    {"flow_step" "Payment add_payment_info occurrence"
     "effective_schema" "its Page-instance branch, Event branch, and Event-occurrence contribution"}
    {"capture_order" "before"}
-   {"capture_order" "after"}])
+   {"capture_order" "after"}
+   {"link_evidence" "relationship Cart to Payment"
+    "displayed_link_evidence" "path Cart to Payment"}
+   {"link_evidence" "initial selection at Payment"
+    "displayed_link_evidence" "Started at Payment"}])
 
 (deftest validates-every-live-flow-outline-value
   (testing "each specified row requires matching fixture evidence"
     (let [observation {:outlineRows authoritative-rows}]
       (doseq [row authoritative-rows]
         (is (= row (live-flow/validate-observed-example! row observation)))))
+    (let [observation {:outlineRows authoritative-rows}
+          current-row (nth authoritative-rows 2)
+          legacy-row (assoc current-row "effective_schema"
+                            live-flow/legacy-page-group-effective-schema)]
+      (is (= legacy-row
+             (live-flow/validate-observed-example! legacy-row observation)))
+      (is (thrown? Exception
+                   (live-flow/validate-observed-example!
+                    legacy-row {:outlineRows [legacy-row]}))))
     (is (thrown? Exception
                  (live-flow/validate-observed-example!
                   (first authoritative-rows)
@@ -35,7 +44,7 @@
                  (live-flow/validate-observed-example!
                   (first authoritative-rows)
                   {}))))
-  (testing "changing any one of the 18 outline values is rejected"
+  (testing "changing any one of the 18 current outline values is rejected"
     (let [mutants (for [row authoritative-rows
                         key (keys row)]
                     (update row key str " mutated"))]

@@ -10,6 +10,12 @@
    :permissions (set (:permissions manifest))
    :content-scripts? (contains? manifest :content_scripts)})
 
+(def project-extension-names
+  {"my-chrome-utilities" "TWAtility Belt"})
+
+(defn extension-name-for-project [project-name]
+  (get project-extension-names project-name project-name))
+
 (defn opens-side-panel-for-active-tab? [source]
   (support/matches-all? source
                         [#"chrome\.action\.onClicked\.addListener"
@@ -22,7 +28,7 @@
    {:kind :command-palette
     :pattern #"(?i)commandPalette|command palette"}
    {:kind :data-layer
-    :pattern #"(?i)chrome\.storage|indexedDB|fetch\s*\("}])
+    :pattern #"(?i)chrome\.storage|\bindexedDB\b|fetch\s*\("}])
 
 (defn forbidden-scope-findings [files]
   (support/pattern-findings forbidden-scopes files))
@@ -62,11 +68,12 @@
 
    {:pattern #"^the extension name is <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [project-key]]
-               (let [expected (support/require-example example project-key)
+               (let [project-name (support/require-example example project-key)
+                     expected (extension-name-for-project project-name)
                      actual (:extension-name (manifest-contract (:manifest world)))]
                  (support/assert! (= expected actual)
                                   "Extension name does not match."
-                                  {:expected expected :actual actual})
+                                  {:project project-name :expected expected :actual actual})
                  world))}
 
    {:pattern #"^side_panel\.default_path points to the side panel HTML entry$"
@@ -113,7 +120,13 @@
 
    {:pattern #"^the production extension is built$"
     :handler (fn [world _example _captures]
-               (support/run-build-command (assoc world :root (or (:root world) (support/repository-root)))))}
+               (assoc world
+                      :root (or (:root world) (support/repository-root))
+                      :build-result
+                      (support/verified-command-or-prepared-task-result
+                       ["npm" "run" "build"]
+                       "checkpoint:shell:prepared-dist-freshness"
+                       ["node" "scripts/verify-dist-artifact.mjs"])))}
 
    {:pattern #"^dist can be loaded unpacked in Chrome$"
     :handler (fn [world _example _captures]
@@ -147,11 +160,12 @@
    {:pattern #"^the side panel displays <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [project-key]]
                (support/ensure-build-passed! world)
-               (let [expected (support/require-example example project-key)
+               (let [project-name (support/require-example example project-key)
+                     expected (extension-name-for-project project-name)
                      html (slurp (str (dist-path world "side-panel.html")))]
                  (support/assert! (str/includes? html expected)
-                                  "Side panel HTML does not display the project name."
-                                  {:expected expected})
+                                  "Side panel HTML does not display the branded extension name."
+                                  {:project project-name :expected expected})
                  world))}
 
    {:pattern #"^the extension implementation is inspected$"

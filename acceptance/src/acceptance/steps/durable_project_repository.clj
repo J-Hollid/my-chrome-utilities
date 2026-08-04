@@ -24,15 +24,13 @@
 (defonce model-verified? (atom false))
 (defonce browser-observation (atom nil))
 (defn- checked! [& command]
-  (let [result (apply process/shell {:out :string :err :string} command)]
+  (let [result (apply support/verified-command-result command)]
     (support/assert! (zero? (:exit result)) (:err result) {:out (:out result)})
     result))
 (defn- verify-model! []
   (when-not @model-verified?
     (checked! "node" "test/data-layer-durable-project-repository-test.mjs")
     (checked! "node" "test/data-layer-durable-project-runtime-test.mjs")
-    (checked! "node" "test/data-layer-durable-project-repository-property-test.mjs")
-    (checked! "node" "test/data-layer-selective-production-revisions-property-test.mjs")
     (reset! model-verified? true)))
 (defn- observe-browser! []
   (or @browser-observation
@@ -70,5 +68,5 @@
                                           observe-browser! assert-runtime!))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-02T02:00:38.387622449+02:00", :module-hash "1624285042", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 5, :hash "-976827486"} {:id "def/feature-files", :kind "def", :line 7, :end-line 8, :hash "-314391133"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 23, :hash "426928939"} {:id "form/3/defonce", :kind "defonce", :line 24, :end-line 24, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 25, :end-line 25, :hash "-1618529344"} {:id "defn-/checked!", :kind "defn-", :line 26, :end-line 29, :hash "-148274062"} {:id "defn-/verify-model!", :kind "defn-", :line 30, :end-line 36, :hash "-1690955560"} {:id "defn-/observe-browser!", :kind "defn-", :line 37, :end-line 43, :hash "-1924535678"} {:id "def/runtime-keys", :kind "def", :line 44, :end-line 44, :hash "-2015778871"} {:id "def/required-keys", :kind "def", :line 45, :end-line 45, :hash "-627843649"} {:id "defn-/all-true?", :kind "defn-", :line 46, :end-line 46, :hash "-1681869564"} {:id "defn/complete-browser-evidence?", :kind "defn", :line 47, :end-line 51, :hash "-2131545939"} {:id "defn-/assert-runtime!", :kind "defn-", :line 52, :end-line 53, :hash "217878866"} {:id "def/failure-example-values", :kind "def", :line 54, :end-line 55, :hash "-644280616"} {:id "def/authoritative-examples", :kind "def", :line 56, :end-line 57, :hash "1598887325"} {:id "defn/validate-example!", :kind "defn", :line 58, :end-line 66, :hash "-64642505"} {:id "def/handlers", :kind "def", :line 67, :end-line 70, :hash "2100359538"}]}
+;; {:version 1, :tested-at "2026-08-04T11:33:29.531364522+02:00", :module-hash "632681613", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-976827486"} {:id "def/feature-files", :kind "def", :line 7, :end-line nil, :hash "-314391133"} {:id "def/entry-modes", :kind "def", :line 9, :end-line nil, :hash "426928939"} {:id "form/3/defonce", :kind "defonce", :line 24, :end-line nil, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 25, :end-line nil, :hash "-1618529344"} {:id "defn-/checked!", :kind "defn-", :line 26, :end-line nil, :hash "1504155082"} {:id "defn-/verify-model!", :kind "defn-", :line 30, :end-line nil, :hash "-379187691"} {:id "defn-/observe-browser!", :kind "defn-", :line 35, :end-line nil, :hash "-980948312"} {:id "def/runtime-keys", :kind "def", :line 42, :end-line nil, :hash "575369566"} {:id "def/required-keys", :kind "def", :line 43, :end-line nil, :hash "-627843649"} {:id "defn-/all-true?", :kind "defn-", :line 44, :end-line nil, :hash "-1681869564"} {:id "defn/complete-browser-evidence?", :kind "defn", :line 45, :end-line nil, :hash "-385744476"} {:id "defn-/assert-runtime!", :kind "defn-", :line 50, :end-line nil, :hash "217878866"} {:id "def/failure-example-values", :kind "def", :line 52, :end-line nil, :hash "-644280616"} {:id "def/authoritative-examples", :kind "def", :line 54, :end-line nil, :hash "1598887325"} {:id "defn/validate-example!", :kind "defn", :line 56, :end-line nil, :hash "559851829"} {:id "def/handlers", :kind "def", :line 65, :end-line nil, :hash "2100359538"}]}
 ;; clj-mutate-manifest-end

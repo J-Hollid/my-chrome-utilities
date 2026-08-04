@@ -2,7 +2,15 @@
   (:require [acceptance.feature-support :as feature-support]
             [acceptance.steps.all :as all]
             [acceptance.steps.defect-library :as defect-library]
-            [clojure.test :refer [deftest]]))
+            [clojure.test :refer [deftest is]]))
+
+(deftest requires-the-current-primary-navigation-order
+  (is (defect-library/primary-navigation-current?
+       {:nav ["Live" "Projects" "Library" "Sessions" "Defects" "Schemas"]}))
+  (is (not (defect-library/primary-navigation-current?
+            {:nav ["Live" "Library" "Sessions" "Defects" "Schemas"]})))
+  (is (not (defect-library/primary-navigation-current?
+            {:nav ["Live" "Projects" "Library" "Defects" "Sessions" "Schemas"]}))))
 
 (deftest verifies-defect-library-features
   (feature-support/verify-feature-suite!

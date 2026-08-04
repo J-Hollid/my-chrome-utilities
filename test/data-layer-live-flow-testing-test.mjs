@@ -21,10 +21,10 @@ const canonical=(entityId,entityName,constraints)=>constraints.reduce(
 const project={
   id:"project-retail",name:"Retail website",collections:{
     profiles:[{id:"profile:sitewide",name:"Sitewide",canonicalSchema:canonical("profile:sitewide","Sitewide",[constraint("/site",{presence:"required",type:"string"})])}],
-    pageGroups:[{id:"group:checkout",name:"Checkout",canonicalSchema:canonical("group:checkout","Checkout",[constraint("/currency",{presence:"required",allowedValues:["EUR"]})])}],
+    propertySets:[{id:"group:checkout",name:"Checkout",canonicalSchema:canonical("group:checkout","Checkout",[constraint("/currency",{presence:"required",allowedValues:["EUR"]})])}],
     pages:[
-      {id:"page:cart",name:"Cart",eventName:"pageview",pageGroupIds:["group:checkout"],profileId:"profile:sitewide",pathname:"/cart",canonicalSchema:canonical("page:cart","Cart",[constraint("/cart_id",{presence:"required",type:"string"})])},
-      {id:"page:confirmation",name:"Confirmation",eventName:"pageview",pageGroupIds:["group:checkout"],profileId:"profile:sitewide",pathname:"/confirmation"},
+      {id:"page:cart",name:"Cart",eventName:"pageview",propertySetApplications:[{propertySetId:"group:checkout"}],profileId:"profile:sitewide",pathname:"/cart",canonicalSchema:canonical("page:cart","Cart",[constraint("/cart_id",{presence:"required",type:"string"})])},
+      {id:"page:confirmation",name:"Confirmation",eventName:"pageview",propertySetApplications:[{propertySetId:"group:checkout"}],profileId:"profile:sitewide",pathname:"/confirmation"},
     ],
     events:[{id:"event:view",name:"page_view",sourceId:"history",canonicalSchema:canonical("event:view","page_view",[constraint("/event_name",{expectedValue:"page_view"})])}],
     applicabilitySets:[],assignments:[],fixtures:[],
@@ -32,11 +32,11 @@ const project={
   },
   documentationFlowGraphs:{
     "flow:checkout":{
-      pageGroupIds:["group:checkout"],
+      sections:[],
       pageFrames:[
-        {id:"frame:cart",name:"Cart frame",pageId:"page:cart",pageGroupId:"group:checkout",localSchemaContributions:[constraint("/instance",{presence:"required",type:"string"})]},
-        {id:"frame:confirmation-a",name:"Confirmation A",pageId:"page:confirmation",pageGroupId:"group:checkout"},
-        {id:"frame:confirmation-b",name:"Confirmation B",pageId:"page:confirmation",pageGroupId:"group:checkout"},
+        {id:"frame:cart",name:"Cart frame",pageId:"page:cart",localSchemaContributions:[constraint("/instance",{presence:"required",type:"string"})]},
+        {id:"frame:confirmation-a",name:"Confirmation A",pageId:"page:confirmation"},
+        {id:"frame:confirmation-b",name:"Confirmation B",pageId:"page:confirmation"},
       ],
       occurrences:[{id:"occurrence:view",name:"Cart page_view",pageFrameId:"frame:cart",pageId:"page:cart",eventId:"event:view",localSchemaContributions:[constraint("/occurrence",{presence:"required",type:"boolean"})]}],
       relationships:[
@@ -89,7 +89,7 @@ assert.deepEqual(
 assert.deepEqual(run.history[0].matchedPath.map(({stepId,eventId})=>({stepId,eventId})),[
   {stepId:"frame:cart",eventId:"live-101"},
 ]);
-assert.deepEqual(run.history[0].provenance.map(({scope})=>scope),["Shared Profile","Page Group","Page","Flow Page-instance"]);
+assert.deepEqual(run.history[0].provenance.map(({scope})=>scope),["Shared Profile","Property Set","Page","Flow Page-instance"]);
 assert.equal("contributors" in run.history[0],false,"run evidence stores provenance rather than copied schema contributors");
 assert.equal(run.history[0].issues.length,0);
 assert.ok(run.history[0].effectiveSchemaRevision>0,"the effective revision comes from canonical contributors");
@@ -117,7 +117,7 @@ assert.deepEqual(run.history[1].matchedPath.map(({stepId,relationshipId,eventId}
   {stepId:"frame:cart",relationshipId:undefined,eventId:"live-101"},
   {stepId:"occurrence:view",relationshipId:undefined,eventId:"live-100"},
 ],"an earlier captured feed event may be linked without a chronological restriction");
-assert.deepEqual(run.history[1].provenance.map(({scope})=>scope),["Shared Profile","Page Group","Page","Flow Page-instance","Event","Event-occurrence"]);
+assert.deepEqual(run.history[1].provenance.map(({scope})=>scope),["Shared Profile","Property Set","Page","Flow Page-instance","Event","Event-occurrence"]);
 assert.equal(run.history[1].target.id,"occurrence:view");
 assert.ok(run.history[1].effectiveSchemaRevision>0);
 assert.equal(liveFlowEventStepChoices(run,state,"live-103").choices.find(({id})=>id==="frame:confirmation-a").displayName,"Success route");

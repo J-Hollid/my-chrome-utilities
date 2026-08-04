@@ -52,6 +52,7 @@ assert.equal(document.$id, jsonSchemaResourceId(product));
 assert.equal(document.title, "Product detail");
 assert.equal(document.description, "Product event");
 assert.equal(filename, "product-detail-revision-4.schema.json");
+assert.equal(document.properties.page_name.type, "string");
 assert.equal(document.properties.page_type.const, "product_detail");
 assert.equal(document.not.anyOf[0].required[0], "debug");
 assert.equal(document.required.includes("page_name"), true);

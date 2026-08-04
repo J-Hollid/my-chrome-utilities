@@ -1,7 +1,5 @@
 (ns acceptance.steps.json-schema-export
   (:require [acceptance.steps.support :as support]
-            [babashka.process :as process]
-            [cheshire.core :as json]
             [clojure.string :as str]))
 
 (def feature-files
@@ -40,15 +38,45 @@
 
 (def ^:private validation-outcomes {"pass" true "fail" false})
 
+(def model-example-relations
+  [{:keys ["property_path" "extension_rule" "standard_assertion"]
+    :rows #{["/page_name" "type string" "type string"]
+            ["/page_name" "Required" "parent required contains page_name"]
+            ["/page_type" "Exact value product_detail" "const product_detail"]
+            ["/currency" "Allowed values EUR and USD" "enum EUR and USD"]
+            ["/transaction_id" "Regular expression ^[A-Z]+-[0-9]+$" "pattern ^[A-Z]+-[0-9]+$"]
+            ["/product_id" "Digits only" "pattern ^[0-9]+$"]
+            ["/page_name" "Non-empty string" "minLength 1"]
+            ["/revenue" "Numeric range minimum 0 maximum 1000" "minimum 0 and maximum 1000"]
+            ["/debug" "Forbidden property" "parent not required debug"]}}
+   {:keys ["rule_type" "comparison" "standard_assertion"]
+    :rows #{["Text length" ">" "minLength 51"]
+            ["Text length" ">=" "minLength 50"]
+            ["Text length" "==" "minLength 50 and maxLength 50"]
+            ["Text length" "<" "maxLength 49"]
+            ["Text length" "<=" "maxLength 50"]
+            ["Item count" ">" "minItems 51"]
+            ["Item count" ">=" "minItems 50"]
+            ["Item count" "==" "minItems 50 and maxItems 50"]
+            ["Item count" "<" "maxItems 49"]
+            ["Item count" "<=" "maxItems 50"]}}
+   {:keys ["trigger" "trigger_behavior"]
+    :rows #{["/page_type Equals product_detail" "property const product_detail"]
+            ["/page_type Does not equal internal" "property not const internal"]
+            ["/page_type Is one of product, cart" "property enum product and cart"]
+            ["/page_type Matches pattern ^product_" "property pattern ^product_"]
+            ["/revenue Is greater than 0" "property exclusiveMinimum 0"]
+            ["/revenue Is at least 0" "property minimum 0"]
+            ["/coupon Exists" "parent required contains coupon"]
+            ["/coupon Does not exist" "parent not required coupon"]}}])
+
 (defn- validate-example! [mode example]
   (if (= mode :model)
     (when (some #(support/example-value example %) ["extension_rule" "rule_type" "trigger"])
-      (let [result (process/shell {:out :string :err :string :continue true}
-                                  "node" "test/helpers/json-schema-export-example-adapter.mjs"
-                                  (json/generate-string example))]
-        (support/assert! (zero? (:exit result))
-                         "JSON Schema export example was not connected to production behavior."
-                         {:example example :error (:err result)})))
+      (support/validate-example-relations!
+       model-example-relations
+       example
+       "JSON Schema export example is not a verified production case."))
     (when-let [payload (support/example-value example "payload")]
       (let [expected (validation-outcomes (support/require-example example "validation_outcome"))
             observed (get-in (observe-runtime!) [:extensionOutcomes (payload-outcome-keys payload)])]

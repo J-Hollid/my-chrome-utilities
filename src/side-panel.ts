@@ -292,7 +292,7 @@ import { cardinalityComparisonPasses, cardinalityMeasuredValue } from "./utiliti
 import { applicablePropertyTypesForRule, builtInRulesForProperty, configuredRuleDetails, createRuleConfiguration, createRuleConfigurationFromAttachedRule, reusableRuleMetadata, reusableRulesForProperty, ruleConfigurationControls, validateRuleConfiguration, type RuleConfiguration, type SchemaPropertyType, type SchemaRuleType } from "./utilities/data-layer/schemas.js";
 import { canonicalRulePropertyPath } from "./utilities/data-layer/schemas.js";
 import { renderSchemaSpecificationBuilder } from "./utilities/data-layer/schemas.js";
-import { activateFocusedOwnershipSection, applyCanonicalCommand, canonicalCommandOutcome, canonicalCommandsFromCompactProjection, canonicalMigrationDurablyAcknowledged, canonicalPredicateText, canonicalPropertyPath, clearSchemaTableOverlay, compactSchemaProjection, composedCanonicalSchema, createCanonicalSchema, focusedCanonicalOwnershipInput, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedOwnershipSectionEditable, focusedOwnershipState, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions, focusedSourceState, focusedStagedChanges, gateFocusedOwnershipSection, hasLegacySchemaRepresentation, migrateLegacyProfile, mountCanonicalPredicateEditor, mountCanonicalSchemaEditor, mountSchemaTableOverlay, mountSidePanelLayeredProfileEditor, projectCanonicalConcepts, renderCanonicalFocusedSection, renderFocusedPropertyMenu, resolveCanonicalMigrationConflict, resolveSidePanelSchemaContributor, saveComposedCanonicalDocument, saveComposedEntitySchemaPolicy, saveComposedEventCanonicalDocument, saveEventOccurrenceCanonicalDocument, saveFlowContributorSchemaPolicy, saveFlowPageInstanceCanonicalDocument, savedSchemaCanonicalDocument, savedSchemaFromCanonical, sidePanelSchemaGroups, transactProject, type CanonicalSchemaDocument, type ProjectEntity, type ProjectState, type SidePanelContributorSelection } from "./utilities/data-layer/schemas.js";
+import { activateFocusedOwnershipSection, applyCanonicalCommand, canonicalCommandOutcome, canonicalCommandsFromCompactProjection, canonicalMigrationDurablyAcknowledged, canonicalPredicateText, canonicalPropertyPath, clearSchemaTableOverlay, compactCanonicalCommandPolicy, compactSchemaProjection, composedCanonicalSchema, createCanonicalSchema, focusedCanonicalOwnershipInput, focusedDefinitionFieldLabels, focusedOwnershipActionTarget, focusedOwnershipSectionEditable, focusedOwnershipState, focusedPropertyLayerSequence, focusedPropertyLifecycleOperation, focusedPropertyPatch, focusedPropertyProvenanceSummary, focusedSectionOwnershipActions, focusedSourceState, focusedStagedChanges, gateFocusedOwnershipSection, hasLegacySchemaRepresentation, migrateLegacyProfile, mountCanonicalPredicateEditor, mountCanonicalSchemaEditor, mountSchemaTableOverlay, mountSidePanelLayeredProfileEditor, projectCanonicalConcepts, renderCanonicalFocusedSection, renderFocusedPropertyMenu, resolveCanonicalMigrationConflict, resolveSidePanelSchemaContributor, saveComposedCanonicalDocument, saveComposedEntitySchemaPolicy, saveComposedEventCanonicalDocument, saveEventOccurrenceCanonicalDocument, saveFlowContributorSchemaPolicy, saveFlowPageInstanceCanonicalDocument, savedSchemaCanonicalDocument, savedSchemaFromCanonical, sidePanelSchemaGroups, transactProject, type CanonicalSchemaDocument, type ProjectEntity, type ProjectState, type SidePanelContributorSelection } from "./utilities/data-layer/schemas.js";
 import {filterSchemaRelationshipTree,projectSchemaRelationshipTree,restoreSchemaRelationshipTreeView,saveSchemaRelationshipTreeView,type SchemaRelationshipCategory,type SchemaRelationshipTreeNode} from "./utilities/data-layer/schemas.js";
 import {beginCompactCanonicalHistoryTransition,compactCanonicalDocumentIdentity,compactCanonicalHistoryKey,compactCanonicalHistorySettlement,completeCompactCanonicalHistoryTransition,prepareCompactCanonicalRedo,prepareCompactCanonicalUndo,recordCompactCanonicalMutation,rejectCompactCanonicalHistoryTransition,type CompactCanonicalHistoryTransitionIdentity,type CompactCanonicalPageHistory} from "./utilities/data-layer/schemas.js";
 import { mountProjectLibraryUi, PROJECT_LIBRARY_STORAGE_KEY, recordProjectNavigation, serializeProjectLibrary } from "./utilities/data-layer/schemas.js";
@@ -693,6 +693,15 @@ schemaManualPropertyDialog.append(schemaManualPropertyForm); document.body.appen
 let pendingManualPropertyContext: { parentPath:string; trigger:HTMLButtonElement } | undefined;
 let schemaRulePickerPath: string | undefined;
 let schemaRulePickerTrigger: HTMLButtonElement | undefined;
+let schemaPropertyInteractionReturn: {
+  schemaId:string;
+  path:string;
+  triggerLabel:string;
+  editorScroll:number;
+  treeScroll:number;
+  detailScroll:number;
+} | undefined;
+let schemaPropertyRenderSequence = 0;
 let schemaRuleConfiguration: RuleConfiguration | undefined;
 let editingAttachedLocalRule: NonNullable<SchemaDefinition["attachedRules"]>[number] | undefined;
 const schemaPropertyRulePicker = document.createElement("dialog");
@@ -701,6 +710,11 @@ schemaPropertyRulePicker.setAttribute("aria-label", "Schema property rule picker
 document.body.append(schemaPropertyRulePicker);
 const localRulePromotionDialog = createLocalRulePromotionDialog();
 let pendingLocalRulePromotion: { trigger:HTMLButtonElement; propertyPath:string; sourceRuleId:string; scrollTop:number } | undefined;
+let pendingLocalRulePromotionPersistence: { schemaId:string; complete():void; reject(error:unknown):void } | undefined;
+let pendingGuidedValidationPersistence: { schemaId:string; pause():void; complete():void; reject(error:unknown):void } | undefined;
+document.querySelector<HTMLDialogElement>("#durable-storage-recovery")?.addEventListener("close",()=>{
+  if(schemaPropertyInteractionReturn&&!schemaPropertyRulePicker.open&&!durableProjectRuntime.failedSchemaSave()&&!compactCanonicalProjectionRequest&&!compactCanonicalProjectionWorker)finishSchemaPropertyInteractionReturn();
+});
 const createSchemaAssignmentButton = document.querySelector<HTMLButtonElement>("#create-schema-assignment");
 const createSchemaRuleButton = document.querySelector<HTMLButtonElement>("#create-schema-rule");
 const schemaRuleEditor = document.querySelector<HTMLElement>("#schema-rule-editor");
@@ -978,13 +992,13 @@ const schemaContributorRoute={collectionKinds:["profiles","propertySets","pages"
 async function hydrateActiveProjectForSchemas():Promise<void>{if(activeSchemaProjectHydration)return activeSchemaProjectHydration;const activeProjectId=projectLibraryUi.library().activeProjectId;if(!activeProjectId)return;activeSchemaProjectHydration=(async()=>{if(schemaResult)schemaResult.textContent="Loading active project schema contributors from durable storage…";await durableProjectRuntime.settled();await durableProjectRuntime.ensureProjectRoute(activeProjectId,schemaContributorRoute);await durableProjectRuntime.settled();const current=restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY));if(!current||current.project.id!==activeProjectId||current.project.placeholder)throw new Error(`Active project ${activeProjectId} did not load its durable schema contributors.`);renderSchemas();if(schemaResult)schemaResult.textContent=`Loaded schema contributors for ${current.project.name}.`;})().finally(()=>{activeSchemaProjectHydration=undefined;});return activeSchemaProjectHydration;}
 if(durableProjectRuntime.migration.status==="review-required"){const review=document.querySelector<HTMLElement>("#durable-migration-review")!,summary=document.querySelector<HTMLElement>("#durable-migration-review-summary")!,result=document.querySelector<HTMLOutputElement>("#durable-migration-review-result")!,migration=durableProjectRuntime.migration;review.hidden=false;summary.textContent=`${migration.projectId} differs between ${migration.sources.map(({source,revision,checksum})=>`${source} generation ${revision} checksum ${checksum}`).join(" and ")}. Conflicting fields: ${migration.conflictingFields.join(", ")}. No source was deleted or imported.`;document.querySelector<HTMLButtonElement>("#export-legacy-migration-sources")!.addEventListener("click",()=>{const sources=migration.sources.map((source)=>({...source,key:source.source==="library"?"my-chrome-utilities.specification-project-library.v1":"my-chrome-utilities.specification-project.v1",payload:globalThis.localStorage.getItem(source.source==="library"?"my-chrome-utilities.specification-project-library.v1":"my-chrome-utilities.specification-project.v1")})),serialized=JSON.stringify({format:"my-chrome-utilities.legacy-migration-sources",version:1,projectId:migration.projectId,sources}),link=document.createElement("a");link.href=URL.createObjectURL(new Blob([serialized],{type:"application/json"}));link.download=`${migration.projectId}-legacy-migration-sources.json`;link.click();URL.revokeObjectURL(link.href);result.textContent="Exported both complete legacy source payloads with their identities and checksums.";});for(const[selector,choice]of[["#migrate-legacy-library-source","library"],["#migrate-legacy-active-source","active"]] as const)document.querySelector<HTMLButtonElement>(selector)!.addEventListener("click",()=>{result.textContent=`Migrating the reviewed ${choice} source…`;void durableProjectRuntime.resolveMigration(choice).then(()=>location.reload(),error=>{result.textContent=`Migration was not committed; both legacy sources remain unchanged. ${error instanceof Error?error.message:String(error)}`;});});}
 if(durableProjectRuntime.migration.status==="invalid-source-review"){const review=document.querySelector<HTMLElement>("#durable-migration-review")!,summary=document.querySelector<HTMLElement>("#durable-migration-review-summary")!,result=document.querySelector<HTMLOutputElement>("#durable-migration-review-result")!,migration=durableProjectRuntime.migration,schemaSource=migration.sources.find(({key})=>key==="my-chrome-utilities.schema-library.v1"),validChoice=(key:string)=>migration.sources.find((source)=>source.key===key)?.valid===true&&schemaSource?.valid!==false;review.hidden=false;summary.textContent=`Invalid legacy source recovery only; zero durable project records were written. ${migration.sources.map(({key,valid,error,bytes,checksum})=>`${key}: ${valid?"valid":"invalid"} · ${bytes} bytes · checksum ${checksum} · ${error}`).join(" | ")}. Export every preserved byte, repair the named invalid key and reload, or explicitly choose a valid project source.`;document.querySelector<HTMLButtonElement>("#export-legacy-migration-sources")!.addEventListener("click",()=>{const serialized=JSON.stringify({format:"my-chrome-utilities.invalid-legacy-migration-sources",version:1,actions:migration.actions,sources:migration.sources}),link=document.createElement("a");link.href=URL.createObjectURL(new Blob([serialized],{type:"application/json"}));link.download="invalid-legacy-migration-sources.json";link.click();URL.revokeObjectURL(link.href);result.textContent="Exported every invalid and valid legacy source byte-for-byte with errors and checksums.";});for(const[selector,choice,key]of[["#migrate-legacy-library-source","library","my-chrome-utilities.specification-project-library.v1"],["#migrate-legacy-active-source","active","my-chrome-utilities.specification-project.v1"]] as const){const control=document.querySelector<HTMLButtonElement>(selector)!;control.disabled=!validChoice(key);control.addEventListener("click",()=>{result.textContent=`Migrating only the explicitly reviewed valid ${choice} source; rejected bytes remain in backup…`;void durableProjectRuntime.resolveMigration(choice).then(()=>location.reload(),error=>{result.textContent=`Migration was not committed; every legacy source remains byte-identical. ${error instanceof Error?error.message:String(error)}`;});});}}
-void mountDurableProjectRepositoryUi(document,globalThis.indexedDB,durableProjectRuntime.repository).then((ui)=>{globalThis.addEventListener("durable-project-save-failed",(event)=>{const origin=document.activeElement instanceof HTMLElement?document.activeElement:undefined,failed=durableProjectRuntime.failedSave(),failedSchema=durableProjectRuntime.failedSchemaSave();if(failed){const pendingHistory=compactCanonicalPendingHistoryFor(failed.projectId,failed.command.label);projectLibraryUi.render();void ui.reportSaveFailure({projectId:failed.projectId,projectName:failed.projectName,command:failed.command,retry:async()=>{await durableProjectRuntime.retryFailedSave();const currentEditorMatches=Boolean(pendingHistory&&compactCanonicalEditor?.key===pendingHistory.editorKey);if(pendingHistory)completeCompactCanonicalPendingHistory(pendingHistory);if(currentEditorMatches)compactCanonicalCommandFeedback=`Retried ${failed.command.label}; the exact command committed to the Saved Draft and is now in page history.`;projectLibraryUi.render();renderSchemas();if(compactCanonicalEditor)renderCompactCanonicalEditor();},reject:async()=>{await durableProjectRuntime.resolveFailedSave("reject");const currentEditorMatches=Boolean(pendingHistory&&compactCanonicalEditor?.key===pendingHistory.editorKey);if(pendingHistory)rejectCompactCanonicalPendingHistory(pendingHistory);if(currentEditorMatches)compactCanonicalCommandFeedback=`Rejected ${failed.command.label}; the last durable Saved Draft was restored and the prior Undo and Redo state is unchanged.`;projectLibraryUi.render();renderSchemas();if(compactCanonicalEditor)renderCompactCanonicalEditor();},exportUnsaved:()=>{const serialized=durableProjectRuntime.exportUnsavedDraft(),link=document.createElement("a");link.href=URL.createObjectURL(new Blob([serialized],{type:"application/json"}));link.download=`${failed.projectName.replace(/[^a-z0-9]+/gi,"-").toLowerCase()}-unsaved-draft.json`;link.click();URL.revokeObjectURL(link.href);},...(origin?{originControl:origin}:{})},(event as CustomEvent<{error?:unknown}>).detail?.error??failed.error);return;}if(!failedSchema)return;schemas=restoreSchemaLibrary(projectStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY));const affectedId=String(failedSchema.batch.upserts[0]?.schema.id??failedSchema.batch.deletes[0]?.schemaId??""),restored=schemas.find(({id})=>id===affectedId);if(restored){schemaDraft=schemaEditorDraft(restored);savedCanonicalDocument=savedSchemaCanonicalDocument(schemaDraft,(kind)=>`${kind}:${crypto.randomUUID()}`);}renderSchemas();renderSchemaDraft();if(compactCanonicalEditor)renderCompactCanonicalEditor();const names=failedSchema.batch.names.join(", ");void ui.reportSaveFailure({kind:"saved-schema",projectName:names,command:{label:failedSchema.batch.label},retry:async()=>{await durableProjectRuntime.retryFailedSchemaSave();schemas=restoreSchemaLibrary(projectStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY));const committed=schemas.find(({id})=>id===affectedId);if(committed){schemaDraft=schemaEditorDraft(committed);savedCanonicalDocument=savedSchemaCanonicalDocument(schemaDraft,(kind)=>`${kind}:${crypto.randomUUID()}`);}else{schemaDraft=undefined;savedCanonicalDocument=undefined;}renderSchemas();renderSchemaDraft();if(compactCanonicalEditor)renderCompactCanonicalEditor();},exportUnsaved:()=>{const serialized=durableProjectRuntime.exportUnsavedSchemas(),link=document.createElement("a");link.href=URL.createObjectURL(new Blob([serialized],{type:"application/json"}));link.download="unsaved-saved-schema-batch.json";link.click();URL.revokeObjectURL(link.href);},...(origin?{originControl:origin}:{})},(event as CustomEvent<{error?:unknown}>).detail?.error??failedSchema.error);});}).catch((error)=>{const status=document.querySelector<HTMLOutputElement>("#durable-repository-status"),open=document.querySelector<HTMLButtonElement>("#open-storage-recovery");if(status)status.textContent=`Durable project storage unavailable: ${error instanceof Error?error.message:String(error)}`;if(open)open.disabled=true;});
+void mountDurableProjectRepositoryUi(document,globalThis.indexedDB,durableProjectRuntime.repository).then((ui)=>{globalThis.addEventListener("durable-project-save-failed",(event)=>{const origin=document.activeElement instanceof HTMLElement?document.activeElement:undefined,failed=durableProjectRuntime.failedSave(),failedSchema=durableProjectRuntime.failedSchemaSave();if(failed){const pendingHistory=compactCanonicalPendingHistoryFor(failed.projectId,failed.command.label);projectLibraryUi.render();void ui.reportSaveFailure({projectId:failed.projectId,projectName:failed.projectName,command:failed.command,retry:async()=>{await durableProjectRuntime.retryFailedSave();const currentEditorMatches=Boolean(pendingHistory&&compactCanonicalEditor?.key===pendingHistory.editorKey);if(pendingHistory)completeCompactCanonicalPendingHistory(pendingHistory);if(currentEditorMatches)compactCanonicalCommandFeedback=`Retried ${failed.command.label}; the exact command committed to the Saved Draft and is now in page history.`;projectLibraryUi.render();renderSchemas();if(compactCanonicalEditor)renderCompactCanonicalEditor();},reject:async()=>{await durableProjectRuntime.resolveFailedSave("reject");const currentEditorMatches=Boolean(pendingHistory&&compactCanonicalEditor?.key===pendingHistory.editorKey);if(pendingHistory)rejectCompactCanonicalPendingHistory(pendingHistory);if(currentEditorMatches)compactCanonicalCommandFeedback=`Rejected ${failed.command.label}; the last durable Saved Draft was restored and the prior Undo and Redo state is unchanged.`;projectLibraryUi.render();renderSchemas();if(compactCanonicalEditor)renderCompactCanonicalEditor();},exportUnsaved:()=>{const serialized=durableProjectRuntime.exportUnsavedDraft(),link=document.createElement("a");link.href=URL.createObjectURL(new Blob([serialized],{type:"application/json"}));link.download=`${failed.projectName.replace(/[^a-z0-9]+/gi,"-").toLowerCase()}-unsaved-draft.json`;link.click();URL.revokeObjectURL(link.href);},...(origin?{originControl:origin}:{})},(event as CustomEvent<{error?:unknown}>).detail?.error??failed.error);return;}if(!failedSchema)return;const affectedId=String(failedSchema.batch.upserts[0]?.schema.id??failedSchema.batch.deletes[0]?.schemaId??""),affectedEditorKey=`saved:${affectedId}`,promotionPersistence=pendingLocalRulePromotionPersistence?.schemaId===affectedId?pendingLocalRulePromotionPersistence:undefined,guidedPersistence=pendingGuidedValidationPersistence&&failedSchema.batch.upserts.some(({schema:candidate})=>candidate.id===pendingGuidedValidationPersistence?.schemaId)?pendingGuidedValidationPersistence:undefined,editorAtFailure=compactCanonicalEditor?.key===affectedEditorKey?compactCanonicalEditor:undefined,failedProjectionAdapter=()=>compactCanonicalProjectionRequest?.adapter.key===affectedEditorKey?compactCanonicalProjectionRequest.adapter:undefined,restoreAffectedSchema=()=>{schemas=restoreSchemaLibrary(projectStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY));const restored=schemas.find(({id})=>id===affectedId),activeAffected=compactCanonicalEditor?.key===affectedEditorKey||(!compactCanonicalEditor&&schemaDraft?.id===affectedId);if(activeAffected){if(restored){schemaDraft=schemaEditorDraft(restored);savedCanonicalDocument=savedSchemaCanonicalDocument(schemaDraft,(kind)=>`${kind}:${crypto.randomUUID()}`);}else{schemaDraft=undefined;savedCanonicalDocument=undefined;}}return restored;};guidedPersistence?.pause();restoreAffectedSchema();renderSchemas();renderSchemaWorkflowRows();renderSchemaDraft();if(compactCanonicalEditor)renderCompactCanonicalEditor();const names=failedSchema.batch.names.join(", ");void ui.reportSaveFailure({kind:"saved-schema",projectName:names,command:{label:failedSchema.batch.label},retry:async()=>{await durableProjectRuntime.retryFailedSchemaSave();restoreAffectedSchema();renderSchemas();renderSchemaWorkflowRows();const projectionAdapter=failedProjectionAdapter();if(editorAtFailure&&compactCanonicalEditor===editorAtFailure&&projectionAdapter===editorAtFailure){if(!await resumeCompactCanonicalProjectionPersistence(editorAtFailure))throw new Error("The latest queued Saved Schema metadata edit was not committed after Retry.");}else{if(projectionAdapter)discardCompactCanonicalProjectionPersistence(projectionAdapter);renderSchemaDraft();if(compactCanonicalEditor)renderCompactCanonicalEditor();}promotionPersistence?.complete();guidedPersistence?.complete();},reject:async()=>{await durableProjectRuntime.resolveFailedSchemaSave("reject");promotionPersistence?.reject(failedSchema.error);guidedPersistence?.reject(failedSchema.error);const projectionAdapter=failedProjectionAdapter();if(projectionAdapter)discardCompactCanonicalProjectionPersistence(projectionAdapter);else if(editorAtFailure&&compactCanonicalEditor===editorAtFailure)discardCompactCanonicalProjectionPersistence(editorAtFailure);restoreAffectedSchema();if(editorAtFailure&&compactCanonicalEditor===editorAtFailure)compactCanonicalCommandFeedback=`Rejected ${failedSchema.batch.label}; the latest durable Saved Schema and concurrency token were reloaded for review.`;renderSchemas();renderSchemaWorkflowRows();renderSchemaDraft();if(compactCanonicalEditor)renderCompactCanonicalEditor();},exportUnsaved:()=>{const serialized=durableProjectRuntime.exportUnsavedSchemas(),link=document.createElement("a");link.href=URL.createObjectURL(new Blob([serialized],{type:"application/json"}));link.download="unsaved-saved-schema-batch.json";link.click();URL.revokeObjectURL(link.href);},...(origin?{originControl:origin}:{})},(event as CustomEvent<{error?:unknown}>).detail?.error??failedSchema.error);});}).catch((error)=>{const status=document.querySelector<HTMLOutputElement>("#durable-repository-status"),open=document.querySelector<HTMLButtonElement>("#open-storage-recovery");if(status)status.textContent=`Durable project storage unavailable: ${error instanceof Error?error.message:String(error)}`;if(open)open.disabled=true;});
 sidePanelLayeredProfileEditor=sidePanelLayeredProfileEditorHost?mountSidePanelLayeredProfileEditor({host:sidePanelLayeredProfileEditorHost,legacyEditor:schemaEditor,emptyHost:schemaDetailEmpty,openUnifiedContributor:openContributorInUnifiedEditor,load:()=>restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY)),subscribe:(listener)=>durableProjectRuntime.subscribe(()=>listener()),onUndo:()=>{const state=restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY));if(state)void durableProjectRuntime.undo(state.project.id);},onRedo:()=>{const state=restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY));if(state)void durableProjectRuntime.redo(state.project.id);},persist:(next)=>{const serialized=projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY),envelope=restoreCanonicalProjectEnvelope(serialized),base=restoreCanonicalProjectState(serialized);if(!envelope||!base)throw new Error("The Specification Project is unavailable.");const result=commitCanonicalProjectState(projectStorage,next,{expectedRevision:envelope.revision,pendingLabel:"Side-panel canonical schema command",base});if(result.status==="conflict")throw new Error(`Schema contributor changed in a newer Saved Draft; review the structured edit again.`);projectLibraryUi.captureActiveProject(next,result.revision);}}):undefined;
 let guidedContinuationSelections: GuidedContinuationSelections = restoreGuidedContinuationSelections(dataLayerStorage.getItem(GUIDED_CONTINUATION_STORAGE_KEY));
 let guidedPropertyReturn: { eventId:string; path:string; expanded:string[]; inspectorScroll:number; feedScroll:number } | undefined;
 let schemaDraft: SchemaDefinition | undefined;
 let savedCanonicalDocument:CanonicalSchemaDocument|undefined;
-type CompactCanonicalEditorAdapter={key:string;label:string;load:()=>CanonicalSchemaDocument;dispatch:(command:Parameters<typeof applyCanonicalCommand>[1])=>ReturnType<typeof applyCanonicalCommand>;settle?:()=>Promise<void>;settles?:(command:Parameters<typeof applyCanonicalCommand>[1])=>boolean;settlementTarget?:string;onSettlementCommitted?:()=>void;onUndo?:()=>void;onRedo?:()=>void;actions?:readonly {label:string;run:()=>void}[];renderContext?:(host:HTMLElement)=>void};
+type CompactCanonicalEditorAdapter={key:string;label:string;load:()=>CanonicalSchemaDocument;dispatch:(command:Parameters<typeof applyCanonicalCommand>[1])=>ReturnType<typeof applyCanonicalCommand>;stageProjectionCommand?:(command:Parameters<typeof applyCanonicalCommand>[1])=>ReturnType<typeof applyCanonicalCommand>;restoreStagedProjection?:(canonical:CanonicalSchemaDocument)=>void;projection?:(canonical:CanonicalSchemaDocument)=>SchemaDefinition;persistProjection?:(projection:SchemaDefinition,change?:string)=>boolean;settle?:()=>Promise<void>;settles?:(command:Parameters<typeof applyCanonicalCommand>[1])=>boolean;settlementTarget?:string;onSettlementCommitted?:()=>void;onUndo?:()=>void;onRedo?:()=>void;actions?:readonly {label:string;run:()=>void}[];renderContext?:(host:HTMLElement)=>void};
 let compactCanonicalEditor:CompactCanonicalEditorAdapter|undefined;
 let compactCanonicalPendingCommand:Parameters<CompactCanonicalEditorAdapter["dispatch"]>[0]|undefined;
 let compactCanonicalPendingBase:CanonicalSchemaDocument|undefined;
@@ -993,6 +1007,9 @@ const compactCanonicalRevisionSnapshots=new Map<number,CanonicalSchemaDocument>(
 let compactCanonicalCommandFeedback="";
 let compactCanonicalSettlementSequence=0;
 let compactCanonicalSettlementPending=false;
+type CompactCanonicalProjectionPersistenceRequest={adapter:CompactCanonicalEditorAdapter;projection:SchemaDefinition;change?:string};
+let compactCanonicalProjectionRequest:CompactCanonicalProjectionPersistenceRequest|undefined;
+let compactCanonicalProjectionWorker:{adapter:CompactCanonicalEditorAdapter;promise:Promise<boolean>}|undefined;
 let compactCanonicalReopenSelection:string|undefined;
 const compactCanonicalScrollByKey=new Map<string,number>();
 schemaDetail?.addEventListener("scroll",()=>{if(compactCanonicalEditor&&schemaDetail.scrollTop>0)compactCanonicalScrollByKey.set(compactCanonicalEditor.key,schemaDetail.scrollTop);});
@@ -2376,6 +2393,8 @@ function openLocalRulePromotionReview(propertyPath: string, sourceRuleId: string
       pendingLocalRulePromotion = undefined;
     },
     confirm(selected) {
+      const previousRules = structuredClone(reusableSchemaRules);
+      const previousRuleStorage = dataLayerStorage.getItem(SCHEMA_RULE_STORAGE_KEY);
       const result = selected.action === "create"
         ? promoteLocalRule({ schema, reusableRules:promotionReusableRules(), propertyPath, sourceRuleId, editorContext, ...selected })
         : promoteLocalRule({ schema, reusableRules:promotionReusableRules(), propertyPath, sourceRuleId, editorContext, action:"use-existing", reusableRuleId:selected.reusableRuleId });
@@ -2385,17 +2404,44 @@ function openLocalRulePromotionReview(propertyPath: string, sourceRuleId: string
       const nextRules = storedPromotionRules(result.reusableRules);
       persistLocalRulePromotion(dataLayerStorage, {
         schemaKey:SCHEMA_LIBRARY_STORAGE_KEY,
-        schemaValue:serializeSchemaLibrary(nextSchemas),
+        ...(storedSchema ? { schemaValue:serializeSchemaLibrary(nextSchemas) } : {}),
         ruleKey:SCHEMA_RULE_STORAGE_KEY,
         ruleValue:JSON.stringify(nextRules),
       });
       schemas = nextSchemas; reusableSchemaRules = nextRules; schemaDraft = storedSchema ? schemaEditorDraft(result.schema) : result.schema;
-      return () => {
+      const afterClose = () => {
         renderSchemas(); renderSchemaWorkflowRows(); renderSchemaDraft();
         restoreLocalRulePromotionPresentation(result.replacementRuleId, false);
         pendingLocalRulePromotion = undefined;
         if (schemaResult) schemaResult.textContent = `Promoted ${sourceRuleId} to reusable rule ${result.replacementRuleId}.`;
       };
+      if (!storedSchema) return afterClose;
+      return new Promise<void | (() => void)>((resolve, reject) => {
+        let settled = false;
+        const transaction = {
+          schemaId:result.schema.id,
+          complete() {
+            if (settled) return;
+            settled = true;
+            if (pendingLocalRulePromotionPersistence === transaction) pendingLocalRulePromotionPersistence = undefined;
+            resolve(afterClose);
+          },
+          reject(error: unknown) {
+            if (settled) return;
+            settled = true;
+            reusableSchemaRules = structuredClone(previousRules);
+            if (previousRuleStorage === null) dataLayerStorage.removeItem(SCHEMA_RULE_STORAGE_KEY);
+            else dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, previousRuleStorage);
+            renderSchemaWorkflowRows();
+            if (pendingLocalRulePromotionPersistence === transaction) pendingLocalRulePromotionPersistence = undefined;
+            reject(error);
+          },
+        };
+        pendingLocalRulePromotionPersistence = transaction;
+        void durableProjectRuntime.settled("schema").then(transaction.complete, (error) => {
+          if (!durableProjectRuntime.failedSchemaSave()) transaction.reject(error);
+        });
+      });
     },
   });
 }
@@ -2413,6 +2459,8 @@ function renderSchemaDraft(): void {
   if (discardWorkingSchemaDraftButton) discardWorkingSchemaDraftButton.hidden = !draft || !schemas.some((schema) => schema.id === draft.id && schema.workingDraft);
   if (schemaDetailEmpty) schemaDetailEmpty.hidden = Boolean(draft);
   if (!draft) return;
+  schemaPropertyRenderSequence += 1;
+  if(schemaPropertyInteractionReturn?.schemaId===draft.id)selectedSchemaPropertyPath=schemaPropertyInteractionReturn.path;
   if(schemaDetail)schemaDetail.hidden=false;
   const storedSchema = schemas.find((schema) => schema.id === draft.id);
   buildSpecificationButton.hidden = !storedSchema?.workingDraft;
@@ -2421,15 +2469,18 @@ function renderSchemaDraft(): void {
     : null;
   const pendingChanges = storedSchema?.workingDraft?.pendingChanges.length ?? 0;
   const status = document.querySelector<HTMLElement>("#schema-editor-status");
-  if (status) status.textContent = compactCanonicalEditor&&compactDocument
-    ? `${compactCanonicalEditor.label} · ${compactDocument.source?.provenance==="project-composed-effective"?"Composed content version":"Schema revision"} ${compactDocument.revision}`
-    : storedSchema?.published === false
+  const lifecycleStatus = storedSchema?.published === false
     ? `Unpublished new schema draft · ${pendingChanges} pending changes`
     : storedSchema?.workingDraft
       ? `Working draft based on revision ${storedSchema.version} · ${pendingChanges} pending changes`
       : storedSchema
         ? `Current revision ${storedSchema.version} · no working draft`
         : "Unsaved new schema";
+  if (status) status.textContent = compactCanonicalEditor&&compactDocument
+    ? compactCanonicalEditor.key.startsWith("saved:")
+      ? `${lifecycleStatus} · ${compactCanonicalEditor.label} · Schema revision ${compactDocument.revision}`
+      : `${compactCanonicalEditor.label} · ${compactDocument.source?.provenance==="project-composed-effective"?"Composed content version":"Schema revision"} ${compactDocument.revision}`
+    : lifecycleStatus;
   if (schemaEditorName) schemaEditorName.value = draft.name;
   const effectiveDocumentation = resolveEffectiveSchemaDocumentation(draft, [...schemas.filter(({ id }) => id !== draft.id), draft]);
   if (schemaEditorDescription) schemaEditorDescription.value = draft.documentation?.description ?? "";
@@ -2461,6 +2512,7 @@ function renderSchemaDraft(): void {
   const propertyTreeScrollTop = schemaPropertyTree.scrollTop;
   const schemaEditorScrollTop = schemaEditor?.scrollTop ?? 0;
   const schemaDetailScrollTop = schemaDetail?.scrollTop ?? 0;
+  const propertyTreeFocusLabel=document.activeElement instanceof HTMLElement&&schemaPropertyTree.contains(document.activeElement)?document.activeElement.getAttribute("aria-label"):undefined;
   const propertyItems = propertyRows.map((propertyRow) => {
     const path = propertyRow.displayPath;
     const item = document.createElement("li");
@@ -2479,8 +2531,14 @@ function renderSchemaDraft(): void {
     const compactNode=compactNodesByPath.get(persistedPath);
     const compactPropertyActions=compactNode&&compactCanonicalEditor?document.createElement("button"):undefined;
     if(compactPropertyActions){compactPropertyActions.type="button";compactPropertyActions.textContent="⋯";compactPropertyActions.setAttribute("aria-label",`Property actions for ${persistedPath}`);compactPropertyActions.addEventListener("click",()=>openCompactCanonicalPropertyActions(persistedPath,compactPropertyActions));}
-    if(compactNode)metadata.textContent+=` · ${compactNode.provenance.map(({contributorName})=>contributorName).join(" · ")}`;
-    if(compactNode){item.dataset.propertyId=compactNode.id;item.addEventListener("click",(event)=>{if(!compactCanonicalEditor||!compactDocument||event.target!==item&&event.target!==label)return;void dispatchCompactCanonicalCommand({kind:"select",baseRevision:compactDocument.revision,propertyId:compactNode.id});});}
+    const compactProvenanceNames=compactNode?.provenance.map(({contributorName})=>contributorName?.trim()).filter((name):name is string=>Boolean(name))??[];
+    if(compactProvenanceNames.length)metadata.textContent+=` · ${compactProvenanceNames.join(" · ")}`;
+    if(compactNode)item.dataset.propertyId=compactNode.id;
+    if(compactCanonicalEditor)item.addEventListener("click",(event)=>{
+      if(!compactDocument||event.target!==item&&event.target!==label)return;
+      if(compactNode){void dispatchCompactCanonicalCommand({kind:"select",baseRevision:compactDocument.revision,propertyId:compactNode.id});return;}
+      selectedSchemaPropertyPath=path;renderSchemaDraft();
+    });
     if(compactCanonicalEditor&&!selectedRow){item.append(label,metadata,...(compactPropertyActions?[compactPropertyActions]:[]));return item;}
     const owningSchema = inherited ? schemaPropertyTypeOwner(draft, persistedPath, schemas) : undefined;
     const typeControls = renderSchemaPropertyTypeEditor({
@@ -2513,9 +2571,11 @@ function renderSchemaDraft(): void {
     const documentationParent = draft.parentSchemaId ? schemas.find(({ id }) => id === draft.parentSchemaId) : undefined;
     const inheritedDocumentation = documentationParent ? resolveEffectiveSchemaDocumentation(documentationParent, schemas).properties[documentationPath] : undefined;
     const attached = (draft.attachedRules ?? []).filter((rule) => canonicalRulePropertyPath(rule.propertyPath ?? "") === persistedPath);
-    const count = document.createElement("span"); count.textContent = ` (${attached.filter((rule) => rule.enabled !== false).length} active rules)`;
+    const count = document.createElement("span"); count.className="schema-property-active-rule-count"; count.textContent = ` (${attached.filter((rule) => rule.enabled !== false).length} active rules)`;
     const add = document.createElement("button"); add.type = "button"; add.textContent = "Add rule"; add.className = "schema-property-add-rule"; add.setAttribute("aria-label", `Add rule for ${path}`);
     add.addEventListener("click", () => openSchemaPropertyRulePicker(path, add));
+    const editCanonicalRules=compactCanonicalEditor?document.createElement("button"):undefined;
+    if(editCanonicalRules){editCanonicalRules.type="button";editCanonicalRules.textContent="Edit canonical rules";editCanonicalRules.className="schema-property-canonical-rules";editCanonicalRules.setAttribute("aria-label",`Edit canonical rules for ${path}`);editCanonicalRules.addEventListener("click",()=>openCompactCanonicalRuleEditor(path,editCanonicalRules));}
     const containerAction = inherited ? undefined : manualPropertyContainerAction(draft.document, persistedPath);
     const addContainerChild = containerAction ? document.createElement("button") : undefined;
     if (addContainerChild && containerAction) {
@@ -2671,7 +2731,7 @@ function renderSchemaDraft(): void {
       }
       view.append(row);
     }
-    if(compactCanonicalEditor){item.append(label,metadata,...(compactPropertyActions?[compactPropertyActions]:[]));if(selectedRow){const stackedDetail=document.createElement("section"),facets=compactDocument&&compactNode?document.createElement("p"):undefined;stackedDetail.setAttribute("aria-label",`Stacked property detail for ${persistedPath}`);if(facets&&compactDocument&&compactNode){facets.className="compact-canonical-facet-summary";facets.setAttribute("aria-label",`Canonical facets for ${persistedPath}`);facets.textContent=compactCanonicalFacetText(compactDocument,compactNode);}stackedDetail.append(...(facets?[facets]:[]),typeAction,typeEditor,...(compactPresence?[compactPresence]:[]),documentationSection,...(compactLifecycle?[compactLifecycle]:[]),count,...(addContainerChild?[addContainerChild]:[]),add,...(addSpecificIndex?[addSpecificIndex]:[]),copyProperty,removeProperty,view);item.append(stackedDetail);}}
+    if(compactCanonicalEditor){item.append(label,metadata,...(compactPropertyActions?[compactPropertyActions]:[]));if(selectedRow){const stackedDetail=document.createElement("section"),facets=compactDocument&&compactNode?document.createElement("p"):undefined;stackedDetail.setAttribute("aria-label",`Stacked property detail for ${persistedPath}`);if(facets&&compactDocument&&compactNode){facets.className="compact-canonical-facet-summary";facets.setAttribute("aria-label",`Canonical facets for ${persistedPath}`);facets.textContent=compactCanonicalFacetText(compactDocument,compactNode);}stackedDetail.append(...(facets?[facets]:[]),typeAction,typeEditor,...(compactPresence?[compactPresence]:[]),documentationSection,...(compactLifecycle?[compactLifecycle]:[]),count,...(addContainerChild?[addContainerChild]:[]),add,...(editCanonicalRules?[editCanonicalRules]:[]),...(addSpecificIndex?[addSpecificIndex]:[]),copyProperty,removeProperty,view);item.append(stackedDetail);}}
     else item.append(label, metadata, typeAction, typeEditor, documentationSection, count, ...(addContainerChild ? [addContainerChild] : []), add, ...(addSpecificIndex ? [addSpecificIndex] : []), copyProperty, removeProperty, view); return item;
   });
   const itemByPath = new Map(propertyPaths.map((path, index) => [path, propertyItems[index]!]));
@@ -2691,6 +2751,8 @@ function renderSchemaDraft(): void {
   schemaPropertyTree.scrollTop = propertyTreeScrollTop;
   if (schemaEditor) schemaEditor.scrollTop = schemaEditorScrollTop;
   if (schemaDetail) schemaDetail.scrollTop = schemaDetailScrollTop;
+  if(schemaPropertyInteractionReturn)restoreSchemaPropertyInteractionReturn();
+  else if(propertyTreeFocusLabel)Array.from(schemaPropertyTree.querySelectorAll<HTMLElement>("[aria-label]")).find((control)=>control.getAttribute("aria-label")===propertyTreeFocusLabel)?.focus({preventScroll:true});
   const existing = schemas.find((schema) => schema.id === draft.id);
   const candidate = { ...draft, id: existing?.id ?? createSchema(draft.name, 1, draft.document).id };
   if (schemaEditorParent) {
@@ -2842,6 +2904,7 @@ function openSchemaFromSource(source: { name: string; sourceId: string; eventNam
 }
 
 function openNewSchemaEditor(): void {
+  if (compactCanonicalEditor) closeCompactCanonicalEditor();
   schemaDraft = createSchema("", 1, { type: "object" });
   renderSchemaDraft(); schemaEditorName?.focus({ preventScroll: true });
 }
@@ -2871,7 +2934,7 @@ function schemaEditorDraft(schema: SchemaDefinition): SchemaDefinition {
 }
 
 function compactCanonicalProjection(adapter:CompactCanonicalEditorAdapter,canonical=adapter.load()):SchemaDefinition{
-  return compactSchemaProjection(canonical,{id:canonical.contributorId,name:canonical.contributorName,version:canonical.revision});
+  return adapter.projection?.(canonical)??compactSchemaProjection(canonical,{id:canonical.contributorId,name:canonical.contributorName,version:canonical.revision});
 }
 
 function compactCanonicalFacetText(canonical:CanonicalSchemaDocument,node:CanonicalSchemaDocument["nodes"][string]):string{
@@ -2895,37 +2958,128 @@ function compactCanonicalPendingHistoryFor(projectId:string,label:string):Compac
   const pending=compactCanonicalHistoryState.pending;return pending&&pending.projectId===projectId&&compactCanonicalPendingHistoryLabel===label?{operationId:pending.operationId,projectId:pending.projectId,editorKey:pending.editorKey}:undefined;
 }
 
-async function dispatchCompactCanonicalCommand(command:Parameters<CompactCanonicalEditorAdapter["dispatch"]>[0]):Promise<boolean>{
-  const adapter=compactCanonicalEditor;if(!adapter)return false;
-  if(compactCanonicalSettlementPending||compactCanonicalHistoryState.pending){compactCanonicalCommandFeedback="Resolve the current durable schema save through Retry or Reject before making another semantic change. Export may preserve a recovery copy first.";renderCompactCanonicalContext();return false;}
+function compactCanonicalSemanticUnresolved(ownedProjection?:CompactCanonicalProjectionPersistenceRequest):boolean{return Boolean(compactCanonicalSettlementPending||compactCanonicalProjectionWorker||(compactCanonicalProjectionRequest&&compactCanonicalProjectionRequest!==ownedProjection)||compactCanonicalHistoryState.pending||compactCanonicalPendingCommand||durableProjectRuntime.failedSchemaSave());}
+
+function compactCanonicalProjectionQueueUnavailable(adapter:CompactCanonicalEditorAdapter):boolean{
+  const ownedWorker=compactCanonicalProjectionWorker?.adapter===adapter;
+  return Boolean(
+    durableProjectRuntime.failedSchemaSave()
+    ||compactCanonicalHistoryState.pending
+    ||compactCanonicalPendingCommand
+    ||compactCanonicalProjectionWorker&&!ownedWorker
+    ||compactCanonicalProjectionRequest&&compactCanonicalProjectionRequest.adapter!==adapter
+    ||compactCanonicalSettlementPending&&!ownedWorker
+  );
+}
+
+type CompactCanonicalCommand=Parameters<CompactCanonicalEditorAdapter["dispatch"]>[0];
+type CompactCanonicalCommandResult=ReturnType<CompactCanonicalEditorAdapter["dispatch"]>;
+type CompactCanonicalDispatch={accepted:boolean;result:CompactCanonicalCommandResult;completion:Promise<boolean>};
+
+function blockedCompactCanonicalCommand(adapter:CompactCanonicalEditorAdapter,command:CompactCanonicalCommand,message:string):CompactCanonicalCommandResult{
+  return{status:"conflict",document:adapter.load(),...("propertyId"in command?{propertyId:command.propertyId}:{}),message};
+}
+
+function beginCompactCanonicalCommand(command:CompactCanonicalCommand,render:"immediate"|"deferred"="immediate",ownedProjection?:CompactCanonicalProjectionPersistenceRequest):CompactCanonicalDispatch|undefined{
+  const adapter=compactCanonicalEditor;if(!adapter)return;
+  const refresh=()=>{if(compactCanonicalEditor!==adapter)return;if(render==="deferred")queueMicrotask(()=>{if(compactCanonicalEditor===adapter)renderCompactCanonicalEditor();});else renderCompactCanonicalEditor();};
+  const commandPolicy=compactCanonicalCommandPolicy(command.kind,compactCanonicalSemanticUnresolved(ownedProjection));
+  const preservePendingPresentation= !commandPolicy.semantic&&Boolean(compactCanonicalSettlementPending||compactCanonicalHistoryState.pending||compactCanonicalPendingCommand);
+  if(!commandPolicy.allowed){const message="Resolve the current durable schema save through Retry or Reject before making another semantic change. Export may preserve a recovery copy first.";compactCanonicalCommandFeedback=message;refresh();return{accepted:false,result:blockedCompactCanonicalCommand(adapter,command,message),completion:Promise.resolve(false)};}
   const base=compactCanonicalRevisionSnapshots.get(command.baseRevision);
-  let result:ReturnType<CompactCanonicalEditorAdapter["dispatch"]>;
-  try{result=adapter.dispatch(command);}catch(error){compactCanonicalCommandFeedback=`The canonical command was not applied; the current Draft remains unchanged. ${error instanceof Error?error.message:String(error)}`;renderCompactCanonicalEditor();return false;}
+  let result:CompactCanonicalCommandResult;
+  try{result=adapter.dispatch(command);}catch(error){const message=`The canonical command was not applied; the current Draft remains unchanged. ${error instanceof Error?error.message:String(error)}`;compactCanonicalCommandFeedback=message;refresh();return{accepted:false,result:blockedCompactCanonicalCommand(adapter,command,message),completion:Promise.resolve(false)};}
   if(result.status==="conflict"){
     compactCanonicalPendingCommand=command;
     compactCanonicalPendingBase=base;
     compactCanonicalReviewVisible=false;
     compactCanonicalCommandFeedback=`${result.message} Compare this command with the latest Draft, retry only this command, or reject the local edit.`;
-    renderCompactCanonicalContext();return false;
+    refresh();return{accepted:false,result,completion:Promise.resolve(false)};
   }
   if(result.status==="confirmation-required"){
     compactCanonicalPendingCommand=command;
     compactCanonicalPendingBase=base;
     compactCanonicalReviewVisible=false;
     compactCanonicalCommandFeedback=`${result.impact} Compare this command with the latest Draft before retrying or reject the local edit.`;
-    renderCompactCanonicalContext();return false;
+    refresh();return{accepted:false,result,completion:Promise.resolve(false)};
   }
-  compactCanonicalPendingCommand=undefined;
-  if(command.kind==="set"&&command.patch.presence&&compactCanonicalPresenceDraft?.propertyId===command.propertyId)compactCanonicalPresenceDraft=undefined;
-  compactCanonicalPendingBase=undefined;compactCanonicalReviewVisible=false;
-  const outcome=canonicalCommandOutcome(command,result,base??result.document),settlement=adapter.settle&&(adapter.settles?.(command)??true)?++compactCanonicalSettlementSequence:undefined;
-  compactCanonicalSettlementPending=Boolean(settlement);
+  if(commandPolicy.semantic){
+    compactCanonicalPendingCommand=undefined;
+    if(command.kind==="set"&&command.patch.presence&&compactCanonicalPresenceDraft?.propertyId===command.propertyId)compactCanonicalPresenceDraft=undefined;
+    compactCanonicalPendingBase=undefined;compactCanonicalReviewVisible=false;
+  }
+  const outcome=canonicalCommandOutcome(command,result,base??result.document),settlement=commandPolicy.settles&&adapter.settle&&(adapter.settles?.(command)??true)?++compactCanonicalSettlementSequence:undefined;
+  if(commandPolicy.settles)compactCanonicalSettlementPending=Boolean(settlement);
   const settlementTarget=adapter.settlementTarget??"durable Saved Draft";
   const savingFeedback=settlement?`Saving ${outcome.replace(/^(Saved|Rebased) /,"").replace(/\.$/,"")} to the ${settlementTarget}…`:undefined;
-  compactCanonicalCommandFeedback=savingFeedback??outcome;
-  renderCompactCanonicalEditor();
-  if(settlement&&adapter.settle){try{await adapter.settle();adapter.onSettlementCommitted?.();if(compactCanonicalEditor!==adapter)return true;const committedFeedback=`${outcome} ${settlementTarget.charAt(0).toUpperCase()}${settlementTarget.slice(1)} committed.`;if(compactCanonicalSettlementSequence!==settlement){if(!compactCanonicalSettlementPending&&compactCanonicalCommandFeedback===savingFeedback){compactCanonicalCommandFeedback=committedFeedback;renderCompactCanonicalEditor();}return true;}compactCanonicalSettlementPending=false;compactCanonicalCommandFeedback=committedFeedback;renderCompactCanonicalEditor();}catch(error){if(compactCanonicalEditor!==adapter||compactCanonicalSettlementSequence!==settlement)return false;compactCanonicalSettlementPending=false;compactCanonicalCommandFeedback=`Not saved to the ${settlementTarget}; the exact change remains available for Retry, Reject, or export. ${error instanceof Error?error.message:String(error)}`;renderCompactCanonicalEditor();return false;}}
-  return true;
+  if(!preservePendingPresentation)compactCanonicalCommandFeedback=savingFeedback??outcome;
+  refresh();
+  const completion=settlement&&adapter.settle?(async()=>{try{await adapter.settle!();adapter.onSettlementCommitted?.();const committedFeedback=`${outcome} ${settlementTarget.charAt(0).toUpperCase()}${settlementTarget.slice(1)} committed.`;if(compactCanonicalEditor!==adapter){if(compactCanonicalSettlementSequence===settlement)compactCanonicalSettlementPending=false;if(compactCanonicalEditor)renderCompactCanonicalEditor();return true;}if(compactCanonicalSettlementSequence!==settlement){if(!compactCanonicalSettlementPending&&compactCanonicalCommandFeedback===savingFeedback){compactCanonicalCommandFeedback=committedFeedback;renderCompactCanonicalEditor();}return true;}compactCanonicalSettlementPending=false;compactCanonicalCommandFeedback=committedFeedback;renderCompactCanonicalEditor();return true;}catch(error){if(compactCanonicalEditor!==adapter){if(compactCanonicalSettlementSequence===settlement)compactCanonicalSettlementPending=false;if(compactCanonicalEditor)renderCompactCanonicalEditor();return false;}if(compactCanonicalSettlementSequence!==settlement)return false;compactCanonicalSettlementPending=false;compactCanonicalCommandFeedback=`Not saved to the ${settlementTarget}; the exact change remains available for Retry, Reject, or export. ${error instanceof Error?error.message:String(error)}`;renderCompactCanonicalEditor();return false;}})():Promise.resolve(true);
+  return{accepted:true,result,completion};
+}
+
+async function dispatchCompactCanonicalCommand(command:CompactCanonicalCommand,ownedProjection?:CompactCanonicalProjectionPersistenceRequest):Promise<boolean>{
+  const dispatch=beginCompactCanonicalCommand(command,"immediate",ownedProjection);return dispatch?dispatch.accepted&&await dispatch.completion:false;
+}
+
+function beginCompactCanonicalProjectionPersistence(adapter:CompactCanonicalEditorAdapter,projection:SchemaDefinition,change?:string):Promise<boolean>{
+  if(!adapter.persistProjection)return Promise.resolve(true);
+  compactCanonicalProjectionRequest={adapter,projection:structuredClone(projection),...(change?{change}:{})};
+  compactCanonicalSettlementSequence+=1;compactCanonicalSettlementPending=true;
+  const target=adapter.settlementTarget??"durable Saved Draft",label=change??"schema metadata";
+  if(durableProjectRuntime.failedSchemaSave()){
+    compactCanonicalCommandFeedback=`${label} is waiting. Resolve the failed ${target} save through Retry or Reject first.`;renderCompactCanonicalContext();if(schemaEditor)schemaEditor.setAttribute("aria-busy","true");if(saveSchemaButton)saveSchemaButton.disabled=true;return Promise.resolve(false);
+  }
+  compactCanonicalCommandFeedback=`Saving ${label} to the ${target}…`;renderCompactCanonicalContext();if(schemaEditor)schemaEditor.setAttribute("aria-busy","true");if(saveSchemaButton)saveSchemaButton.disabled=true;
+  if(compactCanonicalProjectionWorker?.adapter===adapter)return compactCanonicalProjectionWorker.promise;
+  const worker={adapter,promise:Promise.resolve(false)};compactCanonicalProjectionWorker=worker;worker.promise=(async()=>{
+    let lastLabel=label,committed=false;
+    try{
+      while(compactCanonicalEditor===adapter){
+        const request=compactCanonicalProjectionRequest;if(!request||request.adapter!==adapter)break;
+        compactCanonicalProjectionRequest=undefined;lastLabel=request.change??"schema metadata";
+        let changed=false;
+        try{changed=adapter.persistProjection!(structuredClone(request.projection),request.change);}catch(error){
+          if(durableProjectRuntime.failedSchemaSave()&&compactCanonicalEditor===adapter&&!compactCanonicalProjectionRequest)compactCanonicalProjectionRequest=request;
+          if(compactCanonicalEditor===adapter){compactCanonicalSettlementPending=false;compactCanonicalCommandFeedback=`The Saved Schema metadata was not queued; the current Draft remains unchanged. ${error instanceof Error?error.message:String(error)}`;renderCompactCanonicalEditor();}return false;
+        }
+        if(!changed)continue;
+        try{await adapter.settle?.();adapter.onSettlementCommitted?.();committed=true;}catch(error){
+          if(durableProjectRuntime.failedSchemaSave()&&compactCanonicalEditor===adapter&&!compactCanonicalProjectionRequest)compactCanonicalProjectionRequest=request;
+          if(compactCanonicalEditor===adapter){compactCanonicalSettlementPending=false;compactCanonicalCommandFeedback=`Not saved to the ${target}; the exact metadata edit remains available for Retry, Reject, or export. ${error instanceof Error?error.message:String(error)}`;renderCompactCanonicalEditor();}return false;
+        }
+        if(durableProjectRuntime.failedSchemaSave())return false;
+      }
+      if(compactCanonicalEditor===adapter){compactCanonicalSettlementPending=false;compactCanonicalCommandFeedback=committed?`Saved ${lastLabel} to the ${target}.`:`${lastLabel.charAt(0).toUpperCase()}${lastLabel.slice(1)} is already current in the ${target}.`;renderCompactCanonicalEditor();}
+      return true;
+    }finally{if(compactCanonicalProjectionWorker===worker){compactCanonicalProjectionWorker=undefined;compactCanonicalSettlementPending=false;if(compactCanonicalEditor)renderCompactCanonicalEditor();}}
+  })();return worker.promise;
+}
+
+async function persistCompactCanonicalProjection(adapter:CompactCanonicalEditorAdapter,projection:SchemaDefinition,change?:string):Promise<boolean>{
+  const base=adapter.load(),commands=canonicalCommandsFromCompactProjection(base,projection,(kind)=>`${kind}:${crypto.randomUUID()}`),existingRequest=compactCanonicalProjectionRequest?.adapter===adapter?compactCanonicalProjectionRequest:undefined,stagedProjection:CompactCanonicalProjectionPersistenceRequest|undefined=commands.length?(existingRequest??{adapter,projection:structuredClone(projection),...(change?{change}:{})}):undefined;
+  if(stagedProjection)compactCanonicalProjectionRequest=stagedProjection;
+  if(adapter.stageProjectionCommand){
+    const projectionBase=structuredClone(adapter.load());
+    for(const command of commands){if(compactCanonicalEditor!==adapter)return false;const base=adapter.load(),currentCommand={...command,baseRevision:base.revision} as CompactCanonicalCommand;let result:CompactCanonicalCommandResult;try{result=adapter.stageProjectionCommand(currentCommand);}catch(error){adapter.restoreStagedProjection?.(projectionBase);if(compactCanonicalProjectionRequest===stagedProjection)compactCanonicalProjectionRequest=undefined;compactCanonicalCommandFeedback=`The canonical projection was not staged; the durable Draft remains unchanged. ${error instanceof Error?error.message:String(error)}`;renderCompactCanonicalEditor();return false;}if(result.status==="conflict"||result.status==="confirmation-required"){adapter.restoreStagedProjection?.(projectionBase);compactCanonicalPendingCommand=currentCommand;compactCanonicalPendingBase=structuredClone(base);compactCanonicalReviewVisible=false;compactCanonicalCommandFeedback=result.status==="conflict"?`${result.message} Compare this command with the latest Draft, retry the complete projection, or reject the local edit.`:`${result.impact} Compare this command with the latest Draft before retrying or reject the complete projection.`;renderCompactCanonicalEditor();return false;}}
+    if(compactCanonicalEditor!==adapter)return false;
+    const persisted=await beginCompactCanonicalProjectionPersistence(adapter,projection,change);if(!persisted&&!durableProjectRuntime.failedSchemaSave()){adapter.restoreStagedProjection?.(projectionBase);if(compactCanonicalProjectionRequest===stagedProjection)compactCanonicalProjectionRequest=undefined;if(compactCanonicalEditor===adapter)renderCompactCanonicalEditor();}return persisted;
+  }
+  for(const command of commands){if(compactCanonicalEditor!==adapter)return false;const currentCommand={...command,baseRevision:adapter.load().revision} as CompactCanonicalCommand,dispatch=beginCompactCanonicalCommand(currentCommand,"immediate",stagedProjection);if(!dispatch?.accepted){if(!compactCanonicalPendingCommand&&!durableProjectRuntime.failedSchemaSave()&&compactCanonicalProjectionRequest===stagedProjection)compactCanonicalProjectionRequest=undefined;return false;}if(!await dispatch.completion){if(!compactCanonicalPendingCommand&&!durableProjectRuntime.failedSchemaSave()&&compactCanonicalProjectionRequest===stagedProjection)compactCanonicalProjectionRequest=undefined;return false;}if(compactCanonicalEditor!==adapter)return false;}
+  if(compactCanonicalEditor!==adapter)return false;
+  if(!adapter.persistProjection){if(compactCanonicalProjectionRequest?.adapter===adapter)compactCanonicalProjectionRequest=undefined;if(compactCanonicalEditor===adapter)renderCompactCanonicalEditor();return true;}
+  return beginCompactCanonicalProjectionPersistence(adapter,projection,commands.length?undefined:change);
+}
+
+function discardCompactCanonicalProjectionPersistence(adapter?:CompactCanonicalEditorAdapter):void{
+  if(!adapter||compactCanonicalProjectionRequest?.adapter===adapter)compactCanonicalProjectionRequest=undefined;
+  if(compactCanonicalSettlementPending||(adapter&&compactCanonicalProjectionWorker?.adapter===adapter))return;
+  compactCanonicalSettlementSequence+=1;compactCanonicalSettlementPending=false;
+}
+
+function resumeCompactCanonicalProjectionPersistence(adapter:CompactCanonicalEditorAdapter):Promise<boolean>{
+  const request=compactCanonicalProjectionRequest;if(!request||request.adapter!==adapter){compactCanonicalSettlementPending=false;return Promise.resolve(true);}
+  schemaDraft=structuredClone(request.projection);renderSchemaDraft();return persistCompactCanonicalProjection(adapter,request.projection,request.change);
 }
 
 function compactCanonicalCommandScope(command:Parameters<CompactCanonicalEditorAdapter["dispatch"]>[0],document:CanonicalSchemaDocument):string{
@@ -2945,9 +3099,9 @@ function renderCompactCanonicalContext():void{
   identity.textContent=`${adapter.label} · ${canonical.source?.provenance??"canonical-draft"}${origins.length?` · contributors ${origins.join(", ")}`:""}`;
   if(adapter.onUndo){const undo=document.createElement("button");undo.type="button";undo.textContent="Undo";undo.addEventListener("click",adapter.onUndo);actions.append(undo);}
   if(adapter.onRedo){const redo=document.createElement("button");redo.type="button";redo.textContent="Redo";redo.addEventListener("click",adapter.onRedo);actions.append(redo);}
-  for(const action of adapter.actions??[]){const button=document.createElement("button");button.type="button";button.textContent=action.label;button.addEventListener("click",action.run);actions.append(button);}
+  for(const action of adapter.actions??[]){const button=document.createElement("button");button.type="button";button.textContent=action.label;button.disabled=action.label==="Publish schema"&&compactCanonicalSemanticUnresolved();button.addEventListener("click",action.run);actions.append(button);}
   feedback.setAttribute("aria-label","Compact canonical command result");feedback.textContent=compactCanonicalCommandFeedback;
-  if(compactCanonicalPendingCommand){const compare=document.createElement("button"),retry=document.createElement("button"),reject=document.createElement("button");compare.type=retry.type=reject.type="button";compare.textContent="Compare latest property";retry.textContent="Retry local edit";reject.textContent="Reject local edit";compare.addEventListener("click",()=>{if(!compactCanonicalPendingCommand||!compactCanonicalEditor)return;compactCanonicalReviewVisible=true;const latest=compactCanonicalEditor.load(),scope=compactCanonicalCommandScope(compactCanonicalPendingCommand,latest),versionLabel=latest.source?.provenance==="project-composed-effective"?"composed content version":"Schema revision";compactCanonicalCommandFeedback=`Comparing ${compactCanonicalPendingCommand.kind} for ${scope}: command base ${versionLabel} ${compactCanonicalPendingCommand.baseRevision} versus latest ${versionLabel} ${latest.revision}. Overlapping saves are checked against opaque durable Draft concurrency metadata.`;renderCompactCanonicalContext();});retry.addEventListener("click",()=>{const pending=compactCanonicalPendingCommand;if(!pending||!compactCanonicalEditor)return;dispatchCompactCanonicalCommand({...pending,baseRevision:compactCanonicalEditor.load().revision});});reject.addEventListener("click",()=>{if(compactCanonicalPendingCommand&&"propertyId"in compactCanonicalPendingCommand&&compactCanonicalPresenceDraft?.propertyId===compactCanonicalPendingCommand.propertyId)compactCanonicalPresenceDraft=undefined;compactCanonicalPendingCommand=undefined;compactCanonicalPendingBase=undefined;compactCanonicalReviewVisible=false;compactCanonicalCommandFeedback="Local edit rejected; the latest Draft remains unchanged.";renderCompactCanonicalEditor();});actions.append(compare,retry,reject);}
+  if(compactCanonicalPendingCommand){const compare=document.createElement("button"),retry=document.createElement("button"),reject=document.createElement("button");compare.type=retry.type=reject.type="button";compare.textContent="Compare latest property";retry.textContent="Retry local edit";reject.textContent="Reject local edit";compare.addEventListener("click",()=>{if(!compactCanonicalPendingCommand||!compactCanonicalEditor)return;compactCanonicalReviewVisible=true;const latest=compactCanonicalEditor.load(),scope=compactCanonicalCommandScope(compactCanonicalPendingCommand,latest),versionLabel=latest.source?.provenance==="project-composed-effective"?"composed content version":"Schema revision";compactCanonicalCommandFeedback=`Comparing ${compactCanonicalPendingCommand.kind} for ${scope}: command base ${versionLabel} ${compactCanonicalPendingCommand.baseRevision} versus latest ${versionLabel} ${latest.revision}. Overlapping saves are checked against opaque durable Draft concurrency metadata.`;renderCompactCanonicalContext();});retry.addEventListener("click",()=>{const pending=compactCanonicalPendingCommand,editor=compactCanonicalEditor,request=compactCanonicalProjectionRequest;if(!pending||!editor)return;compactCanonicalPendingCommand=undefined;if(request?.adapter===editor&&editor.stageProjectionCommand){void resumeCompactCanonicalProjectionPersistence(editor);return;}void(async()=>{if(!await dispatchCompactCanonicalCommand({...pending,baseRevision:editor.load().revision},request?.adapter===editor?request:undefined)){if(!compactCanonicalPendingCommand&&compactCanonicalEditor===editor)compactCanonicalPendingCommand=pending;renderCompactCanonicalEditor();return;}if(request?.adapter===editor&&compactCanonicalProjectionRequest===request)await resumeCompactCanonicalProjectionPersistence(editor);})();});reject.addEventListener("click",()=>{const editor=compactCanonicalEditor;if(compactCanonicalPendingCommand&&"propertyId"in compactCanonicalPendingCommand&&compactCanonicalPresenceDraft?.propertyId===compactCanonicalPendingCommand.propertyId)compactCanonicalPresenceDraft=undefined;if(editor&&compactCanonicalProjectionRequest?.adapter===editor)compactCanonicalProjectionRequest=undefined;compactCanonicalPendingCommand=undefined;compactCanonicalPendingBase=undefined;compactCanonicalReviewVisible=false;compactCanonicalCommandFeedback="Local edit rejected; the latest Draft remains unchanged.";renderCompactCanonicalEditor();});actions.append(compare,retry,reject);}
   context.append(identity,actions,feedback);
   if(compactCanonicalPendingCommand&&compactCanonicalReviewVisible){const latest=adapter.load(),comparison=document.createElement("section"),heading=document.createElement("h3"),base=document.createElement("pre"),pending=document.createElement("pre"),current=document.createElement("pre"),propertyId="propertyId"in compactCanonicalPendingCommand?compactCanonicalPendingCommand.propertyId:undefined,versionLabel=latest.source?.provenance==="project-composed-effective"?"Composed content version":"Schema revision";comparison.setAttribute("aria-label","Command-scoped canonical comparison");heading.textContent=`Command-scoped comparison · ${compactCanonicalCommandScope(compactCanonicalPendingCommand,latest)}`;base.textContent=`Base Saved Draft · ${versionLabel} ${compactCanonicalPendingCommand.baseRevision}\n${JSON.stringify(propertyId?compactCanonicalPendingBase?.nodes[propertyId]:compactCanonicalPendingBase?.rootIds??[],null,2)}`;pending.textContent=`Local ${compactCanonicalPendingCommand.kind} command\n${JSON.stringify(compactCanonicalPendingCommand,(key,value)=>key==="baseRevision"?undefined:typeof value==="function"?"[identity factory]":value,2)}`;current.textContent=`Newer Saved Draft · ${versionLabel} ${latest.revision}\n${JSON.stringify(propertyId?latest.nodes[propertyId]:latest.rootIds,null,2)}`;comparison.append(heading,base,pending,current);context.append(comparison);}
   adapter.renderContext?.(context);schemaEditor.prepend(context);
@@ -2959,26 +3113,39 @@ function renderCompactCanonicalEditor():void{
   const canonical=adapter.load(),selected=canonical.selectedPropertyId&&canonical.nodes[canonical.selectedPropertyId];
   schemaDraft=compactCanonicalProjection(adapter,canonical);
   compactCanonicalRevisionSnapshots.set(canonical.revision,structuredClone(canonical));
-  if(compactCanonicalReopenSelection)selectedSchemaPropertyPath=compactCanonicalReopenSelection;
+  if(schemaPropertyInteractionReturn?.schemaId===schemaDraft.id)selectedSchemaPropertyPath=schemaPropertyInteractionReturn.path;
+  else if(compactCanonicalReopenSelection)selectedSchemaPropertyPath=compactCanonicalReopenSelection;
   else if(selected)selectedSchemaPropertyPath=canonicalPropertyPath(canonical,selected.id).slice(1).replaceAll("/",".");
   if(schemaEditor){schemaEditor.hidden=false;schemaEditor.dataset.schemaPresentation="compact-panel";schemaEditor.dataset.canonicalRevision=String(canonical.revision);schemaEditor.dataset.canonicalSchemaId=canonical.id;schemaEditor.setAttribute("aria-label","Side panel canonical schema editor");}
   if(schemaDetail){schemaDetail.hidden=false;schemaDetail.setAttribute("aria-label","Side panel schema editor region");}
   renderCompactCanonicalContext();renderSchemaDraft();
-  if(schemaEditor){let tableHost=schemaEditor.querySelector<HTMLElement>("#compact-canonical-table-editor");if(!tableHost){tableHost=document.createElement("section");tableHost.id="compact-canonical-table-editor";schemaEditor.append(tableHost);}const dispatchMounted=(command:Parameters<CompactCanonicalEditorAdapter["dispatch"]>[0])=>{const result=adapter.dispatch(command),settles=command.kind!=="select"&&command.kind!=="view"&&adapter.settle&&(adapter.settles?.(command)??true);if(settles)void adapter.settle!().then(()=>{adapter.onSettlementCommitted?.();if(compactCanonicalEditor===adapter)renderCompactCanonicalEditor();}).catch((error)=>{if(compactCanonicalEditor===adapter){compactCanonicalCommandFeedback=`Not saved to the ${adapter.settlementTarget??"durable Saved Draft"}. ${error instanceof Error?error.message:String(error)}`;renderCompactCanonicalContext();}});return result;};mountCanonicalSchemaEditor({host:tableHost,surface:"Side panel",conceptSuggestions:()=>{const state=restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY));return state?projectCanonicalConcepts(state):[];},load:adapter.load,id:(kind)=>`${kind}:${crypto.randomUUID()}`,dispatch:dispatchMounted,...(adapter.onUndo?{onUndo:adapter.onUndo}:{}),...(adapter.onRedo?{onRedo:adapter.onRedo}:{})});const tableMode=adapter.load().view==="table";tableHost.hidden=!tableMode;if(!tableMode)for(const duplicate of Array.from(tableHost.querySelectorAll("[data-property-id]")))duplicate.remove();const legacyPropertyRegion=schemaPropertyTree.parentElement,tableControl=Array.from(tableHost.querySelectorAll("button")).find(({textContent})=>textContent?.trim()==="Table"),treeControl=Array.from(tableHost.querySelectorAll("button")).find(({textContent})=>textContent?.trim()==="Tree");tableControl?.addEventListener("click",()=>{const current=adapter.load();adapter.dispatch({kind:"view",baseRevision:current.revision,view:"table"});tableHost!.hidden=false;if(legacyPropertyRegion)legacyPropertyRegion.hidden=true;schemaPropertyTree.replaceChildren();},{once:true});treeControl?.addEventListener("click",()=>{const current=adapter.load();adapter.dispatch({kind:"view",baseRevision:current.revision,view:"tree"});renderCompactCanonicalEditor();},{once:true});}
-  if(schemaEditor){const unavailable=compactCanonicalSettlementPending||Boolean(compactCanonicalHistoryState.pending);schemaEditor.setAttribute("aria-busy",String(unavailable));for(const control of Array.from(schemaEditor.querySelectorAll<HTMLButtonElement|HTMLInputElement|HTMLSelectElement|HTMLTextAreaElement>("button,input,select,textarea")))control.disabled=unavailable;}
+  if(schemaEditor){
+    let tableHost=schemaEditor.querySelector<HTMLElement>("#compact-canonical-table-editor");
+    if(!tableHost){tableHost=document.createElement("section");tableHost.id="compact-canonical-table-editor";schemaEditor.append(tableHost);}
+    const dispatchMounted=(command:CompactCanonicalCommand):CompactCanonicalCommandResult=>beginCompactCanonicalCommand(command,"deferred")?.result??blockedCompactCanonicalCommand(adapter,command,"The canonical editor is no longer available.");
+    mountCanonicalSchemaEditor({host:tableHost,surface:"Side panel",conceptSuggestions:()=>{const state=restoreCanonicalProjectState(projectStorage.getItem(SPECIFICATION_PROJECT_STORAGE_KEY));return state?projectCanonicalConcepts(state):[];},load:adapter.load,id:(kind)=>`${kind}:${crypto.randomUUID()}`,dispatch:dispatchMounted,...(adapter.onUndo?{onUndo:adapter.onUndo}:{}),...(adapter.onRedo?{onRedo:adapter.onRedo}:{})});
+    const tableMode=adapter.load().view==="table";
+    tableHost.hidden=!tableMode;
+    if(!tableMode)for(const duplicate of Array.from(tableHost.querySelectorAll("[data-property-id]")))duplicate.remove();
+    const legacyPropertyRegion=schemaPropertyTree.parentElement,tableControl=Array.from(tableHost.querySelectorAll("button")).find(({textContent})=>textContent?.trim()==="Table"),treeControl=Array.from(tableHost.querySelectorAll("button")).find(({textContent})=>textContent?.trim()==="Tree");
+    tableControl?.addEventListener("click",()=>{const current=adapter.load();beginCompactCanonicalCommand({kind:"view",baseRevision:current.revision,view:"table"},"deferred");tableHost!.hidden=false;if(legacyPropertyRegion)legacyPropertyRegion.hidden=true;schemaPropertyTree.replaceChildren();},{once:true});
+    treeControl?.addEventListener("click",()=>{const current=adapter.load();beginCompactCanonicalCommand({kind:"view",baseRevision:current.revision,view:"tree"},"deferred");renderCompactCanonicalEditor();},{once:true});
+  }
+  if(schemaEditor){const unavailable=compactCanonicalSemanticUnresolved();schemaEditor.setAttribute("aria-busy",String(unavailable));if(saveSchemaButton&&adapter.key.startsWith("saved:"))saveSchemaButton.disabled=saveSchemaButton.disabled||unavailable;}
+  restoreSchemaPropertyInteractionReturn();
 }
 
 function openCompactCanonicalEditor(adapter:CompactCanonicalEditorAdapter):void{
   sidePanelLayeredProfileEditor?.close();
   compactCanonicalReopenSelection=compactCanonicalEditor?.key===adapter.key?selectedSchemaPropertyPath:undefined;
   const retainedScroll=compactCanonicalEditor?.key===adapter.key?compactCanonicalScrollByKey.get(adapter.key):undefined;
-  compactCanonicalSettlementSequence+=1;compactCanonicalSettlementPending=false;compactCanonicalEditor=adapter;compactCanonicalPendingCommand=undefined;compactCanonicalPendingBase=undefined;compactCanonicalReviewVisible=false;compactCanonicalPresenceDraft=undefined;compactCanonicalRevisionSnapshots.clear();compactCanonicalCommandFeedback="";renderCompactCanonicalEditor();
+  discardCompactCanonicalProjectionPersistence(compactCanonicalEditor);compactCanonicalEditor=adapter;compactCanonicalPendingCommand=undefined;compactCanonicalPendingBase=undefined;compactCanonicalReviewVisible=false;compactCanonicalPresenceDraft=undefined;compactCanonicalRevisionSnapshots.clear();compactCanonicalCommandFeedback="";renderCompactCanonicalEditor();
   if(schemaDetail&&retainedScroll!==undefined)schemaDetail.scrollTop=retainedScroll;
   compactCanonicalReopenSelection=undefined;
 }
 
 function closeCompactCanonicalEditor():void{
-  compactCanonicalSettlementSequence+=1;compactCanonicalSettlementPending=false;compactCanonicalEditor=undefined;schemaDraft=undefined;savedCanonicalDocument=undefined;
+  discardCompactCanonicalProjectionPersistence(compactCanonicalEditor);compactCanonicalEditor=undefined;schemaDraft=undefined;savedCanonicalDocument=undefined;
   compactCanonicalPendingCommand=undefined;compactCanonicalPendingBase=undefined;compactCanonicalReviewVisible=false;compactCanonicalPresenceDraft=undefined;compactCanonicalRevisionSnapshots.clear();compactCanonicalCommandFeedback="";
   if(schemaEditor){delete schemaEditor.dataset.schemaPresentation;delete schemaEditor.dataset.canonicalRevision;delete schemaEditor.dataset.canonicalSchemaId;schemaEditor.removeAttribute("aria-label");schemaEditor.hidden=true;}
   if(schemaDetail){schemaDetail.hidden=true;schemaDetail.setAttribute("aria-label","Schema detail");}
@@ -2990,10 +3157,13 @@ function closeCompactCanonicalEditor():void{
 function persistSchemaEditorDraft(change?: string): void {
   if (!schemaDraft) return;
   if(compactCanonicalEditor){
-    if(compactCanonicalSettlementPending){compactCanonicalCommandFeedback="Wait for the current durable schema save to finish before making another semantic change.";renderCompactCanonicalContext();return;}
-    const canonical=compactCanonicalEditor.load();
-    const commands=canonicalCommandsFromCompactProjection(canonical,schemaDraft,(kind)=>`${kind}:${crypto.randomUUID()}`);
-    void (async()=>{for(const command of commands)if(!await dispatchCompactCanonicalCommand(command))return;renderSchemas();})();
+    const adapter=compactCanonicalEditor;
+    if(compactCanonicalProjectionQueueUnavailable(adapter)){schemaDraft=compactCanonicalProjectionRequest?.adapter===adapter?structuredClone(compactCanonicalProjectionRequest.projection):compactCanonicalProjection(adapter);compactCanonicalCommandFeedback="Wait for the current durable schema save or resolve its Retry/Reject recovery before making another semantic change.";renderSchemaDraft();renderCompactCanonicalContext();return;}
+    const projection=structuredClone(schemaDraft);
+    void persistCompactCanonicalProjection(adapter,projection,change).then((persisted)=>{
+      if(persisted)renderSchemas();
+      if(persisted||!durableProjectRuntime.failedSchemaSave())finishSchemaPropertyInteractionReturn();
+    });
     return;
   }
   const stored = schemas.find((schema) => schema.id === schemaDraft?.id);
@@ -3070,14 +3240,31 @@ function commitUnifiedContributorState(next:ProjectState,label:string):Extract<R
 
 function persistSavedCanonicalResult(schemaId:string,canonical:CanonicalSchemaDocument,change:string):void{
   const stored=schemas.find(({id})=>id===schemaId);if(!stored)throw new Error("The saved schema is unavailable.");
-  const projected=savedSchemaFromCanonical(schemaEditorDraft(stored),canonical),renamed=proposeSchemaWorkingDraftName(stored,projected.name),updated=updateSchemaWorkingDraft(renamed,{document:projected.document,assignments:projected.assignments,attachedRules:projected.attachedRules,parentSchemaId:projected.parentSchemaId,inheritedRuleOverrides:projected.inheritedRuleOverrides,documentation:projected.documentation,canonicalSchema:canonical},change),previousSchemas=schemas;
+  const projectionSource=schemaDraft?.id===schemaId?schemaDraft:schemaEditorDraft(stored),projected=savedSchemaFromCanonical(projectionSource,canonical),renamed=proposeSchemaWorkingDraftName(stored,projected.name),updated=updateSchemaWorkingDraft(renamed,{document:projected.document,assignments:projected.assignments,attachedRules:projected.attachedRules,parentSchemaId:projected.parentSchemaId,inheritedRuleOverrides:projected.inheritedRuleOverrides,documentation:projected.documentation,canonicalSchema:canonical},change),previousSchemas=schemas;
   schemas=schemas.map((candidate)=>candidate.id===updated.id?updated:candidate);try{persistSchemaLibrary();}catch(error){schemas=previousSchemas;throw error;}
   savedCanonicalDocument=canonical;
 }
 
+function persistSavedProjectionMetadata(schemaId:string,projection:SchemaDefinition,change?:string):boolean{
+  const stored=schemas.find(({id})=>id===schemaId);if(!stored)throw new Error("The saved schema is unavailable.");
+  const renamed=proposeSchemaWorkingDraftName(stored,projection.name),canonical=savedCanonicalDocument??renamed.workingDraft?.canonicalSchema,updated=updateSchemaWorkingDraft(renamed,{document:projection.document,assignments:projection.assignments,attachedRules:projection.attachedRules,parentSchemaId:projection.parentSchemaId,inheritedRuleOverrides:projection.inheritedRuleOverrides,documentation:projection.documentation,...(canonical?{canonicalSchema:{...canonical,contributorName:projection.name}}:{})},change==="schema name"?undefined:change);
+  if(JSON.stringify(updated)===JSON.stringify(stored))return false;
+  const previousSchemas=schemas;schemas=schemas.map((candidate)=>candidate.id===updated.id?updated:candidate);
+  try{persistSchemaLibrary();}catch(error){schemas=previousSchemas;throw error;}
+  if(canonical)savedCanonicalDocument={...canonical,contributorName:projection.name};
+  return true;
+}
+
+function savedCompactCanonicalProjection(schemaId:string,canonical:CanonicalSchemaDocument):SchemaDefinition{
+  const stored=schemas.find(({id})=>id===schemaId);
+  if(!stored)return compactSchemaProjection(canonical,{id:canonical.contributorId,name:canonical.contributorName,version:canonical.revision});
+  const outer=schemaEditorDraft(stored),projected=savedSchemaFromCanonical({...outer,name:canonical.contributorName},canonical),{canonicalSchema:_canonicalSchema,...projection}=projected;
+  return projection;
+}
+
 function openSavedSchemaInUnifiedEditor(schema:SchemaDefinition):void{
   sidePanelLayeredProfileEditor?.close();schemaDraft=schemaEditorDraft(schema);savedCanonicalDocument=savedSchemaCanonicalDocument(schemaDraft,(kind)=>`${kind}:${crypto.randomUUID()}`);if(schemaDetailEmpty)schemaDetailEmpty.hidden=true;
-  openCompactCanonicalEditor({key:`saved:${schema.id}`,label:`${schema.name} · Saved schema working draft`,load:()=>savedCanonicalDocument!,dispatch:(command)=>{const result=applyCanonicalCommand(savedCanonicalDocument!,command);if(result.status==="applied"||result.status==="rebased")persistSavedCanonicalResult(schema.id,result.document,`${command.kind} canonical property`);return result;},settle:()=>durableProjectRuntime.settled("schema"),settlementTarget:"durable Saved Schema Library",actions:[{label:"Publish schema",run:()=>{if(saveSchemaButton){saveSchemaButton.disabled=false;saveSchemaButton.click();}}},{label:"Close editor",run:closeCompactCanonicalEditor}]});
+  openCompactCanonicalEditor({key:`saved:${schema.id}`,label:`${schema.name} · Saved schema working draft`,load:()=>savedCanonicalDocument!,projection:(canonical)=>savedCompactCanonicalProjection(schema.id,canonical),dispatch:(command)=>{const result=applyCanonicalCommand(savedCanonicalDocument!,command);if(result.status==="applied"||result.status==="rebased"){if(command.kind==="select"||command.kind==="view")savedCanonicalDocument=result.document;else persistSavedCanonicalResult(schema.id,result.document,`${command.kind} canonical property`);}return result;},stageProjectionCommand:(command)=>{const result=applyCanonicalCommand(savedCanonicalDocument!,command);if(result.status==="applied"||result.status==="rebased")savedCanonicalDocument=result.document;return result;},restoreStagedProjection:(canonical)=>{savedCanonicalDocument=structuredClone(canonical);},persistProjection:(projection,change)=>persistSavedProjectionMetadata(schema.id,projection,change),settles:(command)=>command.kind!=="select"&&command.kind!=="view",settle:()=>durableProjectRuntime.settled("schema"),settlementTarget:"durable Saved Schema Library",actions:[{label:"Publish schema",run:()=>saveSchemaButton?.click()},{label:"Close editor",run:closeCompactCanonicalEditor}]});
 }
 
 function openSchemaPropertyCopyReview(path:string, trigger:HTMLButtonElement):void {
@@ -3089,14 +3276,16 @@ function openSchemaPropertyCopyReview(path:string, trigger:HTMLButtonElement):vo
     : schemaPropertyCopySource(stored,{surface:"current"});
   const sources=[source,...(stored.workingDraft?[schemaPropertyCopySource(stored,{surface:"current"})]:[]),...schemaRevisionChoices(stored).map((version)=>schemaPropertyCopySource(stored,{surface:"historical",version}))];
   const editorScroll=schemaEditor?.scrollTop??0;const treeScroll=schemaPropertyTree.scrollTop;
+  const restoreSourcePosition=()=>{if(schemaDraft?.id!==stored.id)return;if(schemaEditor)schemaEditor.scrollTop=editorScroll;schemaPropertyTree.scrollTop=treeScroll;Array.from(schemaPropertyTree.querySelectorAll<HTMLButtonElement>("button")).find((button)=>button.getAttribute("aria-label")===`Copy ${path} to another schema`)?.focus({preventScroll:true});};
   renderSchemaPropertyCopyReview(schemaPropertyCopyDialog,{
     source,sources,selectedPath:path,destinations:schemas.filter(({id})=>id!==stored.id),schemas,reusableRuleIds:reusableSchemaRules.map(({id})=>id),trigger,
     onApply:(transaction)=>{
       schemas=schemas.map((schema)=>schema.id===transaction.schema.id?transaction.schema:schema);lastSchemaPropertyCopy=transaction;
       persistSchemaLibrary();renderSchemas();renderSchemaWorkflowRows();renderSchemaDraft();undoSchemaPropertyCopyButton.hidden=false;
       schemaPropertyCopyFeedback.textContent=`Copied ${path} from ${source.label} to ${transaction.schema.name}. Published revisions are unchanged.`;
+      void durableProjectRuntime.settled("schema").then(restoreSourcePosition).catch(()=>{});
     },
-    onClose:()=>{if(schemaEditor)schemaEditor.scrollTop=editorScroll;schemaPropertyTree.scrollTop=treeScroll;Array.from(schemaPropertyTree.querySelectorAll<HTMLButtonElement>("button")).find((button)=>button.getAttribute("aria-label")===`Copy ${path} to another schema`)?.focus({preventScroll:true});},
+    onClose:restoreSourcePosition,
   });
 }
 
@@ -3483,11 +3672,13 @@ function finishGuidedValidationSave(result: PublishedGuidedValidation): void {
   persistGuidedContinuation(event, result.schema.id);
   openLiveInspector(event.id, true);
   if (guidedPropertyReturn) restoreGuidedPropertyReturn();
+  const recovery=document.querySelector<HTMLDialogElement>("#durable-storage-recovery");
+  if(recovery?.open&&guidedPropertyReturn)recovery.addEventListener("close",()=>requestAnimationFrame(restoreGuidedPropertyReturn),{once:true});
 }
 
-function persistPublishedGuidedValidation(result: PublishedGuidedValidation): void {
+function persistPublishedGuidedValidation(result: PublishedGuidedValidation): Promise<void> {
   const rule = result.schema.rules[0];
-  if (!rule) return;
+  if (!rule) return Promise.resolve();
   const assignment: SchemaAssignment = {
     id:result.assignment.id,
     name:result.assignment.name,
@@ -3553,6 +3744,38 @@ function persistPublishedGuidedValidation(result: PublishedGuidedValidation): vo
     : reusableSchemaRules;
   const previousSchemas = dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY);
   const previousRules = dataLayerStorage.getItem(SCHEMA_RULE_STORAGE_KEY);
+  const previousReusableRules = structuredClone(reusableSchemaRules);
+  let resolveCompletion!:()=>void,rejectCompletion!:(error:unknown)=>void,settled=false,paused=false;
+  const completion=new Promise<void>((resolve,reject)=>{resolveCompletion=resolve;rejectCompletion=reject;});
+  const restoreRules=()=>{if(previousRules===null)dataLayerStorage.removeItem(SCHEMA_RULE_STORAGE_KEY);else dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY,previousRules);reusableSchemaRules=structuredClone(previousReusableRules);renderSchemaWorkflowRows();};
+  const transaction = {
+    schemaId:schema.id,
+    pause() {
+      if(settled||paused)return;
+      paused=true;
+      restoreRules();
+    },
+    complete() {
+      if(settled)return;
+      settled=true;
+      if(paused){dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY,JSON.stringify(nextRules));reusableSchemaRules=structuredClone(nextRules);}
+      schemas=restoreSchemaLibrary(projectStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY));
+      renderSchemas();
+      renderSchemaWorkflowRows();
+      if(pendingGuidedValidationPersistence===transaction)pendingGuidedValidationPersistence=undefined;
+      resolveCompletion();
+    },
+    reject(error:unknown) {
+      if(settled)return;
+      settled=true;
+      restoreRules();
+      schemas=restoreSchemaLibrary(projectStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY));
+      renderSchemas();
+      if(pendingGuidedValidationPersistence===transaction)pendingGuidedValidationPersistence=undefined;
+      rejectCompletion(error);
+    },
+  };
+  pendingGuidedValidationPersistence=transaction;
   try {
     dataLayerStorage.setItem(SCHEMA_LIBRARY_STORAGE_KEY, serializeSchemaLibrary(nextSchemas));
     dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(nextRules));
@@ -3563,12 +3786,14 @@ function persistPublishedGuidedValidation(result: PublishedGuidedValidation): vo
       if (previousRules === null) dataLayerStorage.removeItem(SCHEMA_RULE_STORAGE_KEY);
       else dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, previousRules);
     } catch { /* Preserve the original storage failure. */ }
-    throw error;
+    transaction.reject(error);return completion;
   }
   schemas = nextSchemas;
   reusableSchemaRules = nextRules;
   renderSchemas();
   renderSchemaWorkflowRows();
+  void durableProjectRuntime.settled("schema").then(transaction.complete,(error)=>{if(!durableProjectRuntime.failedSchemaSave())transaction.reject(error);});
+  return completion;
 }
 
 function withSchemaParent(schema: SchemaDefinition, parentSchemaId: string | undefined): SchemaDefinition {
@@ -3625,13 +3850,67 @@ function openCompactCanonicalPropertyActions(path:string,trigger:HTMLButtonEleme
   showMenu();return true;
 }
 
-function closeSchemaPropertyRulePicker(): void {
+function captureSchemaPropertyInteractionReturn(path:string,trigger:HTMLButtonElement):void{
+  if(!schemaDraft)return;
+  schemaPropertyInteractionReturn={
+    schemaId:schemaDraft.id,
+    path,
+    triggerLabel:trigger.getAttribute("aria-label")??`Add rule for ${path}`,
+    editorScroll:schemaEditor?.scrollTop??0,
+    treeScroll:schemaPropertyTree.scrollTop,
+    detailScroll:schemaDetail?.scrollTop??0,
+  };
+}
+
+function restoreSchemaPropertyInteractionReturn():void{
+  const pending=schemaPropertyInteractionReturn;
+  if(!pending||schemaDraft?.id!==pending.schemaId||schemaPropertyRulePicker.open)return;
+  selectedSchemaPropertyPath=pending.path;
+  if(schemaEditor)schemaEditor.scrollTop=pending.editorScroll;
+  schemaPropertyTree.scrollTop=pending.treeScroll;
+  if(schemaDetail)schemaDetail.scrollTop=pending.detailScroll;
+  Array.from(schemaPropertyTree.querySelectorAll<HTMLButtonElement>("button"))
+    .find((button)=>button.getAttribute("aria-label")===pending.triggerLabel)
+    ?.focus({preventScroll:true});
+}
+
+function finishSchemaPropertyInteractionReturn():void{
+  const pending=schemaPropertyInteractionReturn;
+  if(!pending)return;
+  restoreSchemaPropertyInteractionReturn();
+  if(!compactCanonicalEditor){schemaPropertyInteractionReturn=undefined;return;}
+  if(schemaEditor)schemaEditor.setAttribute("aria-busy","true");
+  requestAnimationFrame(()=>{
+    if(schemaPropertyInteractionReturn!==pending)return;
+    if(schemaDraft?.id===pending.schemaId){selectedSchemaPropertyPath=pending.path;renderSchemaDraft();restoreSchemaPropertyInteractionReturn();}
+    let stableRenderSequence=-1;
+    const finishAfterStableRender=()=>{
+      if(schemaPropertyInteractionReturn!==pending)return;
+      restoreSchemaPropertyInteractionReturn();
+      if(stableRenderSequence!==schemaPropertyRenderSequence){stableRenderSequence=schemaPropertyRenderSequence;requestAnimationFrame(finishAfterStableRender);return;}
+      schemaPropertyInteractionReturn=undefined;
+      if(schemaEditor)schemaEditor.setAttribute("aria-busy",String(compactCanonicalSemanticUnresolved()));
+    };
+    finishAfterStableRender();
+  });
+}
+
+function closeSchemaPropertyRulePickerInternal(preserveInteraction:boolean): void {
+  const triggerLabel=schemaRulePickerTrigger?.ariaLabel;
   if (schemaPropertyRulePicker.open) schemaPropertyRulePicker.close();
-  schemaRulePickerTrigger?.focus({ preventScroll:true });
+  const currentTrigger=schemaRulePickerTrigger?.isConnected
+    ? schemaRulePickerTrigger
+    : Array.from(schemaPropertyTree.querySelectorAll<HTMLButtonElement>("button")).find(({ariaLabel})=>ariaLabel===triggerLabel);
+  currentTrigger?.focus({ preventScroll:true });
   schemaRulePickerPath = undefined;
   schemaRuleConfiguration = undefined;
   editingAttachedLocalRule = undefined;
+  if(preserveInteraction)restoreSchemaPropertyInteractionReturn();
+  else{restoreSchemaPropertyInteractionReturn();schemaPropertyInteractionReturn=undefined;}
 }
+
+function closeSchemaPropertyRulePicker():void{closeSchemaPropertyRulePickerInternal(false);}
+function closeSchemaPropertyRulePickerForCommit():void{closeSchemaPropertyRulePickerInternal(true);}
 
 function openCompactCanonicalRuleEditor(path:string,trigger:HTMLButtonElement):boolean{
   const adapter=compactCanonicalEditor,base=adapter?.load(),node=base&&Object.values(base.nodes).find((candidate)=>canonicalPropertyPath(base,candidate.id)===canonicalRulePropertyPath(path));if(!adapter||!base||!node)return false;
@@ -3724,9 +4003,9 @@ function createConfiguredSchemaRule(path: string, configuration: RuleConfigurati
       schemas = schemas.map((candidate) => candidate.id === updated.id ? updated : candidate);
       schemaDraft = schemaEditorDraft(updated);
       persistSchemaLibrary();
-      closeSchemaPropertyRulePicker(); renderSchemas(); renderSchemaDraft(); focusSchemaPropertyRow(path);
+      closeSchemaPropertyRulePickerForCommit(); renderSchemas(); renderSchemaDraft(); focusSchemaPropertyRow(path);finishSchemaPropertyInteractionReturn();
     } else {
-      closeSchemaPropertyRulePicker();
+      closeSchemaPropertyRulePickerForCommit();
       updateAttachedRule(path, edited.id, () => nextRule);
     }
     return;
@@ -3736,7 +4015,7 @@ function createConfiguredSchemaRule(path: string, configuration: RuleConfigurati
     dataLayerStorage.setItem(SCHEMA_RULE_STORAGE_KEY, JSON.stringify(reusableSchemaRules));
     renderSchemaWorkflowRows();
   }
-  closeSchemaPropertyRulePicker();
+  closeSchemaPropertyRulePickerForCommit();
   attachReusableRule(path, rule);
   schemaPropertyTree.querySelector<HTMLButtonElement>(`button[aria-label="Add rule for ${CSS.escape(path)}"]`)?.focus({ preventScroll:true });
 }
@@ -3912,10 +4191,8 @@ function renderSchemaLocalRuleConfiguration(path: string, configuration: RuleCon
   });
   const reusableLabel = document.createElement("label"); const reusable = document.createElement("input"); reusable.id = "schema-local-rule-reusable"; reusable.type = "checkbox"; reusable.checked = configuration.saveReusable; reusableLabel.append(reusable, " Save as reusable rule in Rule Library");
   reusable.addEventListener("change", () => { configuration.saveReusable = reusable.checked; renderSchemaPropertyRulePicker(); schemaPropertyRulePicker.querySelector<HTMLInputElement>("#schema-local-rule-reusable")?.focus(); });
-  form.append(heading, context, parameters, severityLabel, severity, messageLabel, message, enabledLabel);
-  if(compactCanonicalEditor){const canonicalNotice=document.createElement("p");canonicalNotice.textContent="Save the rule, then author its nested All, Any, or Not condition directly in the canonical stacked rule detail.";form.append(canonicalNotice);}
-  else form.append(conditionalLabel);
-  if (configuration.applyOnlyWhen&&!compactCanonicalEditor) form.append(renderConditionalRuleConfiguration(path, configuration, refreshValidation));
+  form.append(heading, context, parameters, severityLabel, severity, messageLabel, message, enabledLabel, conditionalLabel);
+  if (configuration.applyOnlyWhen) form.append(renderConditionalRuleConfiguration(path, configuration, refreshValidation));
   if (!editing) form.append(reusableLabel);
   if (!editing && configuration.saveReusable) {
     const explanation = document.createElement("p"); explanation.id = "schema-local-rule-reusable-explanation"; explanation.textContent = "This reusable rule will be available to other schemas.";
@@ -3957,7 +4234,7 @@ function renderSchemaPropertyRulePicker(): void {
   const library = document.createElement("section"); library.setAttribute("aria-label", "Attach from Rule Library"); library.append(Object.assign(document.createElement("h5"), { textContent:"Attach from Rule Library" }), ...reusable.map((rule) => resultButton(
     `${rule.name} version ${rule.version ?? 1}${rule.alreadyAttached ? " · already attached" : ""}`,
     reusableRuleMetadata(rule, propertyType),
-    () => { closeSchemaPropertyRulePicker(); attachReusableRule(path, rule); schemaPropertyTree.querySelector<HTMLButtonElement>(`button[aria-label="Add rule for ${CSS.escape(path)}"]`)?.focus({ preventScroll:true }); },
+    () => { closeSchemaPropertyRulePickerForCommit(); attachReusableRule(path, rule); schemaPropertyTree.querySelector<HTMLButtonElement>(`button[aria-label="Add rule for ${CSS.escape(path)}"]`)?.focus({ preventScroll:true }); },
     rule.alreadyAttached,
   )));
   if (!builtIns.length && !reusable.length) {
@@ -3976,7 +4253,8 @@ function renderSchemaPropertyRulePicker(): void {
 }
 
 function openSchemaPropertyRulePicker(path: string, trigger: HTMLButtonElement): void {
-  if(compactCanonicalEditor&&openCompactCanonicalRuleEditor(path,trigger))return;
+  if(compactCanonicalEditor&&!compactCanonicalEditor.key.startsWith("saved:")&&openCompactCanonicalRuleEditor(path,trigger))return;
+  captureSchemaPropertyInteractionReturn(path,trigger);
   selectedSchemaPropertyPath = schemaRulePickerPath = path; schemaRulePickerTrigger = trigger; schemaRuleConfiguration = undefined; editingAttachedLocalRule = undefined;
   renderSchemaPropertyRulePicker(); schemaPropertyRulePicker.showModal();
   schemaPropertyRulePicker.querySelector<HTMLInputElement>("#schema-property-rule-search")?.focus({ preventScroll:true });
@@ -4032,6 +4310,7 @@ function attachReusableRule(path: string, rule: ReusableSchemaRule): void {
   persistSchemaEditorDraft(`Attach ${rule.name} to ${path}`);
   renderSchemaDraft();
   focusSchemaPropertyRow(path);
+  if(!compactCanonicalEditor)finishSchemaPropertyInteractionReturn();
 }
 
 function updateAttachedRule(path: string, id: string, update: (rule: NonNullable<SchemaDefinition["attachedRules"]>[number]) => NonNullable<SchemaDefinition["attachedRules"]>[number] | undefined): void {
@@ -4147,17 +4426,24 @@ function openReusableRuleSyncReview(rule: ReusableSchemaRule, trigger: HTMLButto
 confirmSchemaRuleSyncButton.addEventListener("click", () => {
   const pending = pendingSchemaRuleSync;
   if (!pending) return;
-  try {
-    const nextSchemas = publishReusableRuleSync(schemas, { ...pending.rule, version:pending.rule.version ?? 1 }, pending.review);
-    persistSchemaAndRuleLibraries(nextSchemas, reusableSchemaRules);
-    schemas = nextSchemas;
-    renderSchemas();
-    renderSchemaWorkflowRows();
-    schemaRuleSyncReview.close(); pendingSchemaRuleSync = undefined;
-    if (schemaResult) schemaResult.textContent = `Published ${pending.review.schemaCount} schema revisions with ${pending.rule.name} revision ${pending.rule.version ?? 1}.`;
-  } catch (error) {
-    schemaRuleSyncReviewSummary.textContent = error instanceof Error ? `No schema revision was published. ${error.message}` : "No schema revision was published.";
-  }
+  void (async()=>{
+    confirmSchemaRuleSyncButton.disabled=true;cancelSchemaRuleSyncButton.disabled=true;
+    try {
+      await durableProjectRuntime.settled("schema");
+      const settledSchemas=restoreSchemaLibrary(dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY)),versionedRule={...pending.rule,version:pending.rule.version??1},settledReview=reviewReusableRuleSync(settledSchemas,versionedRule);
+      if(JSON.stringify(settledReview)!==JSON.stringify(pending.review))throw new Error("The attached schemas changed after review. Reopen synchronization and confirm the current publication plan.");
+      const nextSchemas=publishReusableRuleSync(settledSchemas,versionedRule,settledReview);
+      persistSchemaAndRuleLibraries(nextSchemas,reusableSchemaRules);
+      await durableProjectRuntime.settled("schema");
+      schemas=restoreSchemaLibrary(dataLayerStorage.getItem(SCHEMA_LIBRARY_STORAGE_KEY));
+      renderSchemas();renderSchemaWorkflowRows();
+      schemaRuleSyncReview.close();pendingSchemaRuleSync=undefined;
+      if(schemaResult)schemaResult.textContent=`Published ${settledReview.schemaCount} schema revisions with ${pending.rule.name} revision ${pending.rule.version??1}.`;
+    }catch(error){
+      schemaRuleSyncReviewSummary.textContent=error instanceof Error?`No schema revision was published. ${error.message}`:"No schema revision was published.";
+      confirmSchemaRuleSyncButton.disabled=!pending.review.ready;cancelSchemaRuleSyncButton.disabled=false;
+    }
+  })();
 });
 cancelSchemaRuleSyncButton.addEventListener("click", () => {
   const trigger = pendingSchemaRuleSync?.trigger;
@@ -5566,6 +5852,7 @@ schemaSubviews.forEach((tab) => tab.addEventListener("click", () => showSchemaSu
 schemaEditorName?.addEventListener("input", () => {
   if (!schemaDraft) return;
   schemaDraft = { ...schemaDraft, name:schemaEditorName.value };
+  if(compactCanonicalEditor){const adapter=compactCanonicalEditor;if(compactCanonicalProjectionQueueUnavailable(adapter)){schemaDraft=compactCanonicalProjectionRequest?.adapter===adapter?structuredClone(compactCanonicalProjectionRequest.projection):compactCanonicalProjection(adapter);compactCanonicalCommandFeedback="Wait for the current durable schema save or resolve its Retry/Reject recovery before renaming.";renderSchemaDraft();renderCompactCanonicalContext();return;}const projection=structuredClone(schemaDraft);renderSchemaDraft();void beginCompactCanonicalProjectionPersistence(adapter,projection,"schema name");return;}
   persistSchemaEditorDraft(); renderSchemaDraft();
 });
 saveSchemaDescriptionButton?.addEventListener("click", () => {
@@ -5585,15 +5872,17 @@ schemaEditorTarget?.addEventListener("input", () => {
   persistSchemaEditorDraft("Change validation target"); renderSchemaDraft();
 });
 schemaEditorParent?.addEventListener("change", () => { if (schemaDraft) { schemaDraft = withSchemaParent(schemaDraft, schemaEditorParent.value || undefined); persistSchemaEditorDraft("Change parent schema"); renderSchemaDraft(); } });
-schemaOnlyDeclaredProperties?.addEventListener("change", () => { if (schemaDraft) { const { additionalProperties: _previous, ...document } = schemaDraft.document; schemaDraft = { ...schemaDraft, document:schemaOnlyDeclaredProperties.checked ? { ...document, additionalProperties:false } : document }; persistSchemaEditorDraft("Change additional-property policy"); renderSchemaDraft(); } });
+schemaOnlyDeclaredProperties?.addEventListener("change", () => { if (schemaDraft) { const { additionalProperties: _previous, ...document } = schemaDraft.document; schemaDraft = { ...schemaDraft, document:schemaOnlyDeclaredProperties.checked ? { ...document, additionalProperties:false } : document };if(compactCanonicalEditor){const canonical=compactCanonicalEditor.load();void dispatchCompactCanonicalCommand({kind:"policy",baseRevision:canonical.revision,onlyDefinedFields:schemaOnlyDeclaredProperties.checked});return;}persistSchemaEditorDraft("Change additional-property policy"); renderSchemaDraft(); } });
 createSchemaButton?.addEventListener("click", openNewSchemaEditor);
 addSchemaPropertyButton?.addEventListener("click", openManualPropertyForm);
 saveSchemaButton?.addEventListener("click", () => {
-  if (!schemaDraft || saveSchemaButton.disabled) return;
+  if (!schemaDraft) return;
+  if(compactCanonicalEditor&&compactCanonicalSemanticUnresolved()){compactCanonicalCommandFeedback="Publish is waiting for the current canonical edit to commit. Retry after the Saved Draft is ready, or resolve the pending command first.";if(schemaResult)schemaResult.textContent=compactCanonicalCommandFeedback;renderCompactCanonicalContext();return;}
+  if(saveSchemaButton.disabled)return;
   const draft = schemaDraft;
   if (schemaRevisionReview) {
     const existing = schemas.find((schema) => schema.id === draft.id);
-    if (existing) persistSchemaEditorDraft();
+    if (existing&&!compactCanonicalEditor) persistSchemaEditorDraft();
     const persisted = schemas.find((schema) => schema.id === draft.id);
     const pendingChangeSummary = persisted?.workingDraft?.pendingChanges
       .filter((change) => !change.startsWith("Rename schema from "))
@@ -5611,6 +5900,7 @@ saveSchemaButton?.addEventListener("click", () => {
   confirmSchemaRevisionButton?.click();
 });
 confirmSchemaRevisionButton?.addEventListener("click", () => {
+  if(compactCanonicalEditor&&compactCanonicalSemanticUnresolved()){compactCanonicalCommandFeedback="Publish was not started because a canonical edit is still saving or awaiting Retry or Reject.";if(schemaResult)schemaResult.textContent=compactCanonicalCommandFeedback;renderCompactCanonicalContext();return;}
   if (pendingSchemaRestoration) {
     const current = schemas.find((schema) => schema.id === pendingSchemaRestoration?.schemaId);
     if (!current) return;
@@ -5623,24 +5913,27 @@ confirmSchemaRevisionButton?.addEventListener("click", () => {
     return;
   }
   if (!schemaDraft) return;
-  const draft = schemaDraft;
-  const target = schemaEditorTarget?.value === "raw input" ? "raw input" : "payload";
-  const existing = schemas.find((schema) => schema.id === draft.id);
+  const presentedDraft = schemaDraft;
+  const existing = schemas.find((schema) => schema.id === presentedDraft.id);
+  const draft = compactCanonicalEditor&&existing?schemaEditorDraft(existing):presentedDraft;
+  const completeAssignments = draft.assignments.filter(({ sourceId, eventName }) => Boolean(sourceId.trim() && eventName.trim()));
   const candidate = { ...draft, id:existing?.id ?? createSchema(draft.name, 1, draft.document).id };
   const candidates = [...schemas.filter((schema) => schema.id !== candidate.id), candidate];
   const inheritanceError = schemaInheritanceError(candidate, candidates) ?? schemaInheritanceConflict(candidate, candidates);
   if (inheritanceError) { if (schemaResult) schemaResult.textContent = inheritanceError; return; }
   const saved = existing
-    ? publishSchemaWorkingDraft(updateSchemaWorkingDraft(existing, {
+    ? publishSchemaWorkingDraft(updateSchemaWorkingDraft(existing, compactCanonicalEditor?{
+      assignments:completeAssignments,
+    }:{
       name:draft.name.trim(),
       document:draft.document,
-      assignments:draft.assignments,
+      assignments:completeAssignments,
       attachedRules:draft.attachedRules,
       parentSchemaId:draft.parentSchemaId,
       inheritedRuleOverrides:draft.inheritedRuleOverrides,
       documentation:draft.documentation,
     }))
-    : { ...draft, id:`schema:${draft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, published:true, assignments:draft.assignments.length ? draft.assignments : [{ sourceId:"", eventName:"", target:target as "payload" | "raw input" }] };
+    : { ...draft, id:`schema:${draft.name.toLowerCase().replace(/[^a-z0-9]+/g, "-")}:1`, published:true, assignments:completeAssignments };
   schemas = existing ? schemas.map((schema) => schema.id === existing.id ? saved : schema) : [...schemas, saved];
   for (const rule of saved.attachedRules ?? []) {
     if (!rule.id.startsWith("rule:") || reusableSchemaRules.some(({ id }) => id === rule.id)) continue;
@@ -5676,17 +5969,17 @@ restoreSchemaRevisionButton?.addEventListener("click", () => {
   if (confirmSchemaRevisionButton) confirmSchemaRevisionButton.textContent = `Restore revision ${version} to working draft`;
   if (schemaRevisionReview) { schemaRevisionReview.hidden = false; schemaRevisionReview.showModal(); }
 });
-discardSchemaDraftButton?.addEventListener("click", () => { schemaDraft = undefined; renderSchemaDraft(); if (schemaCloseReview?.open) schemaCloseReview.close(); if (schemaCloseReview) schemaCloseReview.hidden = true; });
+discardSchemaDraftButton?.addEventListener("click", () => { if(compactCanonicalEditor)closeCompactCanonicalEditor();else{schemaDraft = undefined;renderSchemaDraft();} if (schemaCloseReview?.open) schemaCloseReview.close(); if (schemaCloseReview) schemaCloseReview.hidden = true; });
 discardWorkingSchemaDraftButton?.addEventListener("click", () => {
   if (!schemaDraft) return;
   const stored = schemas.find((schema) => schema.id === schemaDraft?.id);
   if (!stored) return;
   schemas = stored.published === false ? schemas.filter((schema) => schema.id !== stored.id) : schemas.map((schema) => schema.id === stored.id ? discardSchemaWorkingDraft(stored) : schema);
-  schemaDraft = undefined; persistSchemaLibrary(); renderSchemaDraft(); renderSchemas(); renderSchemaWorkflowRows();
+  if(compactCanonicalEditor)closeCompactCanonicalEditor();else schemaDraft = undefined; persistSchemaLibrary(); renderSchemaDraft(); renderSchemas(); renderSchemaWorkflowRows();
   if (schemaResult) schemaResult.textContent = `Discarded ${stored.name} working draft; revision ${stored.version} remains current.`;
 });
 keepEditingSchemaButton?.addEventListener("click", () => { if (schemaCloseReview?.open) schemaCloseReview.close(); if (schemaCloseReview) schemaCloseReview.hidden = true; schemaEditorName?.focus({ preventScroll:true }); });
-closeSchemaEditorButton?.addEventListener("click", () => { if (!schemaDraft) return; schemaDraft = undefined; renderSchemaDraft(); renderSchemas(); if (schemaResult) schemaResult.textContent = "Working draft retained without publishing."; });
+closeSchemaEditorButton?.addEventListener("click", () => { if (!schemaDraft) return; if(compactCanonicalEditor)closeCompactCanonicalEditor();else{schemaDraft = undefined;renderSchemaDraft();} renderSchemas(); if (schemaResult) schemaResult.textContent = "Working draft retained without publishing."; });
 saveAndCloseSchemaButton?.addEventListener("click", () => { saveSchemaButton?.click(); });
 saveSchemaCloseReviewButton?.addEventListener("click", () => { if (schemaCloseReview?.open) schemaCloseReview.close(); if (schemaCloseReview) schemaCloseReview.hidden = true; saveSchemaButton?.click(); });
 createSchemaRuleButton?.addEventListener("click", () => { editingReusableSchemaRuleId = undefined; schemaRuleAttachments?.replaceChildren(...schemas.map((schema) => Object.assign(document.createElement("option"), { value:schema.id, textContent:`${schema.name} v${schema.version}` }))); if (schemaRuleEditor) schemaRuleEditor.hidden = false; schemaRuleName?.focus({ preventScroll:true }); });
@@ -5757,7 +6050,21 @@ saveSchemaAssignmentButton?.addEventListener("click", () => {
   const sourceId = schemaAssignmentSource?.value.trim() || "event-history"; const eventName = schemaAssignmentEvent?.value.trim() || "page_view"; const priority = Number(schemaAssignmentPriority?.value ?? 10); const target: "payload" | "raw input" = schemaAssignmentTarget?.value === "raw input" ? "raw input" : "payload";
   const domainCondition = schemaAssignmentDomain?.value.trim(); const pathnameCondition = schemaAssignmentPathname?.value.trim();
   const next: SchemaAssignment = { sourceId, eventName, target, id:editingSchemaAssignment?.assignmentId ?? `assignment:${schema.id}:${eventName}`, name:existingAssignment?.name ?? `${schema.name} automatic`, priority, ...(domainCondition ? { domainCondition } : {}), ...(pathnameCondition ? { pathnameCondition } : {}), ...(schemaAssignmentConditionState.group ? { conditionTarget:schemaAssignmentConditionState.target, dataConditionGroup:structuredClone(schemaAssignmentConditionState.group) } : {}), versionPolicy:schemaAssignmentVersionPolicy?.value === "follow latest" ? "follow latest" : "pinned", enabled:schemaAssignmentEnabled?.checked ?? true };
-  schemas = schemas.map((candidate) => candidate.id === schema.id ? { ...candidate, assignments:editingSchemaAssignment?.schemaId === schema.id ? candidate.assignments.map((assignment) => assignment.id === editingSchemaAssignment?.assignmentId ? next : assignment) : [...candidate.assignments, next] } : candidate);
+  schemas = schemas.map((candidate) => {
+    if (candidate.id !== schema.id) return candidate;
+    const editedAssignmentId = editingSchemaAssignment?.schemaId === schema.id ? editingSchemaAssignment.assignmentId : undefined;
+    const isEditing = editingSchemaAssignment?.schemaId === schema.id;
+    const editedIndex = isEditing ? candidate.assignments.findIndex((assignment) => assignment.id === editedAssignmentId) : -1;
+    const collisionIndex = candidate.assignments.findIndex((assignment) => assignment.id === next.id);
+    const replacementIndexes = new Set([editedIndex, collisionIndex].filter((index) => index >= 0));
+    const insertionIndex = replacementIndexes.size ? Math.min(...replacementIndexes) : -1;
+    return {
+      ...candidate,
+      assignments:insertionIndex >= 0
+        ? candidate.assignments.flatMap((assignment, index) => index === insertionIndex ? [next] : replacementIndexes.has(index) ? [] : [assignment])
+        : [...candidate.assignments, next],
+    };
+  });
   editingSchemaAssignment = undefined; persistSchemaLibrary(); renderSchemas(); renderSchemaWorkflowRows(); if (schemaAssignmentEditor) schemaAssignmentEditor.hidden = true; if (schemaResult) schemaResult.textContent = `Saved ${next.name} with ${assignmentDataConditionSummary(next)}.`;
 });
 importSchemaButton?.addEventListener("click", () => schemaLibraryImportFile?.click());
@@ -6038,6 +6345,10 @@ function refreshSelectedTargetPathStatus(): void {
   void targetPathStatusController.configure(path, historyPathInput?.value ?? path);
 }
 
+historyPathInput?.addEventListener("input",()=>{
+  const typedPath=historyPathInput.value;
+  void targetPathStatusController.configure(currentObservationHistoryPath(),typedPath);
+});
 historyPathInput?.addEventListener("change",()=>{void saveProjectEventTransport().then(refreshSelectedTargetPathStatus).catch((error)=>{if(historyPathStatus)historyPathStatus.textContent=error instanceof Error?error.message:String(error);});});
 defaultPushPathInput?.addEventListener("change",()=>{void saveProjectEventTransport().catch((error)=>{if(defaultPushPathStatus)defaultPushPathStatus.textContent=error instanceof Error?error.message:String(error);});});
 

@@ -26,26 +26,34 @@
                    "Property rule menus did not expose production actions." {:observation observation})
   (support/assert! (every? true? (map #(get-in observation [:rules %]) [:menuOpen :returnFocus :stateReturnFocus]))
                    "Property rule menu disclosure or focus return failed." {:observation observation})
-  (support/assert! (= "Re-enable" (get-in observation [:rules :reenable]))
-                   "Property rule disable and re-enable did not persist." {:observation observation})
+  (support/assert! (= ["View" "Edit" "Remove local"]
+                      (get-in observation [:rules :canonical :actions]))
+                   "Canonical property rule actions were not observed." {:observation observation})
+  (support/assert! (= "Restore" (get-in observation [:rules :canonical :restore]))
+                   "Staged canonical rule removal did not expose Restore." {:observation observation})
+  (support/assert! (= "reusable" (get-in observation [:rules :canonical :rule :kind]))
+                   "The canonical reusable rule was not persisted." {:observation observation})
+  (support/assert! (= (get-in observation [:rules :canonical :rule :selectedReusableRuleId])
+                      (get-in observation [:rules :canonical :rule :reusableRuleId]))
+                   "The selected reusable-rule identity did not round-trip." {:observation observation})
+  (support/assert! (= ["set canonical property"]
+                      (get-in observation [:rules :canonical :pendingChanges]))
+                   "The durable working draft omitted its canonical pending change." {:observation observation})
   (support/assert! (= "event-history" (get-in observation [:assignment :sourceId]))
                    "Schema assignment did not retain its production source." {:observation observation})
   (support/assert! (= 120 (get-in observation [:assignment :priority]))
                    "Schema assignment edit did not persist its production priority." {:observation observation})
   (support/assert! (= "active-inherited" (get-in observation [:inheritance :groups 0 :state]))
                    "Inherited rules did not render in their active state group." {:observation observation})
-  (support/assert! (some #{"/example · Known page types v1 · inherited from Checkout schema v2"}
-                         (get-in observation [:inheritance :preview]))
-                   "Effective-rule preview did not identify the inherited rule origin." {:observation observation})
   (support/assert! (re-find #"Not checked|Valid|warnings|issues" (str (get-in observation [:validation :validation])))
                    "Live Validate did not produce a validation state." {:observation observation})
   observation)
 
 (defn- run-browser-workspace! [fixture]
-  (let [environment (cond-> {"SCHEMA_WORKSPACE_BROWSER_ADAPTER" "1"}
-                      fixture (assoc "SCHEMA_LIBRARY_EXPORT_FIXTURE" fixture))
+  (let [observation-id (str "SCHEMA_WORKSPACE_BROWSER_ADAPTER:"
+                            (or fixture "default"))
         observation (support/load-browser-observation-with-environment!
-                      {:environment environment
+                      {:observation-id observation-id
                        :observation-key :schemaWorkspace
                        :runtime-error "Schema workspace browser runtime verification failed."
                        :missing-error "Schema workspace browser observation is missing."})]

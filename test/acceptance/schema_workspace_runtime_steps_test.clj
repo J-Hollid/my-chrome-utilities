@@ -10,7 +10,11 @@
 (def valid-observation
   {:mounted true
    :sourceCreation {:name "Order complete schema"
-                    :paths ["page_type" "page_name" "commerce" "commerce.order" "commerce.order.id"]}
+                    :paths ["page_type · /page_type"
+                            "page_name · /page_name"
+                            "commerce · /commerce"
+                            "commerce.order · /commerce/order"
+                            "commerce.order.id · /commerce/order/id"]}
    :transfer {:downloadName "schema-library-v1.json"
               :before {:schemas ["schema:checkout" "schema:order"]
                        :rules ["rule:page-type" "rule:channel"]}
@@ -22,10 +26,17 @@
    :reload {:stored 2 :rendered 2}
    :rules {:actions ["Edit" "Disable" "Remove"]
            :menuOpen true :returnFocus true :stateReturnFocus true
-           :reenable "Re-enable" :revisionReview {:open true}}
+           :revisionReview {:open true}
+           :canonical {:actions ["View" "Edit" "Remove local"]
+                       :restore "Restore"
+                       :rule {:kind "reusable"
+                              :reusableRuleId "rule:page-type"
+                              :selectedReusableRuleId "rule:page-type"
+                              :selectedReusableRuleName "Known page types"}
+                       :pendingChanges ["set canonical property"]}}
    :assignment {:sourceId "event-history" :priority 120}
    :inheritance {:groups [{:state "active-inherited"}]
-                 :preview ["/example · Known page types v1 · inherited from Checkout schema v2"]}
+                 :preview []}
    :validation {:validation "Valid"}})
 
 (deftest shared-export-preflight-is-independent-of-outline-counts
@@ -130,6 +141,12 @@
   (is (= valid-observation (#'workspace/validate-browser-workspace! valid-observation)))
   (is (thrown? clojure.lang.ExceptionInfo
                (#'workspace/validate-browser-workspace! (assoc valid-observation :mounted false))))
+  (is (thrown? clojure.lang.ExceptionInfo
+               (#'workspace/validate-browser-workspace!
+                (assoc-in valid-observation [:rules :canonical :restore] "Re-enable"))))
+  (is (thrown? clojure.lang.ExceptionInfo
+               (#'workspace/validate-browser-workspace!
+                (assoc-in valid-observation [:rules :canonical :rule :reusableRuleId] "rule:other"))))
   (is (true? (:schema-workspace-runtime?
               (#'workspace/begin-runtime-observation
                {:browser-observation valid-observation} {}

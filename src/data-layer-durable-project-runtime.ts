@@ -24,6 +24,7 @@ export interface DurableProjectRuntime{
   failedSchemaSave():DurableRuntimeFailedSchemaSave|undefined;
   retryFailedSave():Promise<void>;
   retryFailedSchemaSave():Promise<void>;
+  resolveFailedSchemaSave(strategy:"reject"):Promise<void>;
   resolveFailedSave(strategy:"reject"|"reapply"|"merge",pendingFields?:readonly string[]):Promise<void>;
   exportUnsavedDraft():string;
   exportUnsavedSchemas():string;

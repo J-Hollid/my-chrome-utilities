@@ -22,15 +22,17 @@
     :runtime-error "Schema property removal browser runtime failed."
     :missing-error "Schema property removal browser observation is missing."}))
 
+(defn- inherited-actions-safe? [actions]
+  (and (every? (set actions) ["Type owned by Base" "Add rule" "Copy to another schema" "Exclude inherited property"])
+       (not-any? #{"Remove property"} actions)
+       (not-any? #(str/includes? % "parent") actions)))
+
 (defn- assert-actions! [initial]
   (let [actions (into {} (map (juxt :path :actions) (:actions initial)))]
     (support/assert! (every? #(some #{"Remove property"} (get actions %))
                             ["page_type" "commerce" "commerce.order" "commerce.order.id" "commerce.order.value" "debug" "items"])
                      "Editable rows lost their property-specific removal action." actions)
-    (support/assert! (and (every? (set (get actions "inherited_id"))
-                                  ["Add rule" "Copy to another schema" "Exclude inherited property"])
-                          (not-any? #{"Remove property"} (get actions "inherited_id"))
-                          (not-any? #(str/includes? % "parent") (mapcat val actions)))
+    (support/assert! (inherited-actions-safe? (get actions "inherited_id"))
                      "Inherited property actions implied parent-schema mutation." actions)
     (support/assert! (= {:absent true :parentUnchanged true} (:excluded initial))
                      "Excluding an inherited property changed its parent schema." (:excluded initial))))
@@ -124,8 +126,8 @@
    assert-observation!))
 
 (def handlers
-  (support/stateful-semantic-handlers
-   (support/feature-step-specs feature-files #{})
+  (support/feature-scoped-stateful-handlers
+   feature-files
    entry-steps
    :schema-property-removal
    transition))

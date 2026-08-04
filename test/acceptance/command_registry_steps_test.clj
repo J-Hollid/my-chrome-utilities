@@ -68,3 +68,12 @@
            (vec (command-registry/forbidden-command-ui-findings-of-kind
                  files
                  :keybindings))))))
+
+(deftest selects-a-command-record-from-the-fixed-runtime-observation
+  (let [record {:commandId "demo.say-hello" :message "demo.say-hello ran"}
+        observation {:records [record]}]
+    (is (= record
+           (command-registry/command-runtime-record
+            observation "demo.say-hello")))
+    (is (nil? (command-registry/command-runtime-record
+               observation "demo.missing")))))

@@ -40,7 +40,7 @@
    :publication {:review "Product listing working draft will be compared with current revision 3; confirmation publishes revision 4. Pending changes: Add page_type; Add page_name."
                  :productCurrent 3 :checkoutUnchanged true}
    :switchOpen {:heading "Choose schema destination"
-                :choices ["Product listing revision 3 · 2 pending changes" "Checkout revision 2 · 1 pending changes"]
+                :choices ["Checkout revision 2 · 1 pending changes" "Product listing revision 3 · 2 pending changes"]
                 :productUnchanged true}
    :afterCancel {:context "Product listing working draft" :productUnchanged true}
    :afterSwitch {:context "Checkout working draft" :sectionCount 1 :unnamedAbsent true :productUnchanged true}

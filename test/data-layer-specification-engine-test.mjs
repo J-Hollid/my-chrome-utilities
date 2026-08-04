@@ -16,7 +16,7 @@ const project={
       {id:"profile:retail",name:"Retail",requirements:[{path:"/event",type:"string",required:true},{path:"/ecommerce/transaction_id",type:"string",required:true},{path:"/ecommerce/value",type:"number",required:true}]},
       {id:"profile:trade",name:"Trade",requirements:[{path:"/event",type:"string",required:true},{path:"/ecommerce/transaction_id",type:"string",required:true},{path:"/ecommerce/account_id",type:"string",required:true}]},
     ],
-    pages:[{id:"page:confirmation",name:"Confirmation",matcher:{pathname:"/checkout/confirmation"}}],pageGroups:[],
+    propertySets:[],pages:[{id:"page:confirmation",name:"Confirmation",matcher:{pathname:"/checkout/confirmation"}}],
     events:[{id:"event:purchase",name:"Purchase",sourceId:"event-history",eventName:"purchase"}],
     applicabilitySets:[
       {id:"app:retail",name:"Retail confirmation",priority:10,condition:{kind:"all",conditions:[{kind:"predicate",field:"flowId",operator:"equals",value:"flow:retail"}]}},

@@ -29,7 +29,7 @@
           "display": "grid",
           "left": 0,
           "right": 259,
-          "top": 62.296875,
+          "top": 95.046875,
           "bottom": 900,
           "overflowY": "hidden"
         },
@@ -39,7 +39,7 @@
           "display": "block",
           "left": 259,
           "right": 1440,
-          "top": 62.296875,
+          "top": 95.046875,
           "bottom": 900,
           "overflowY": "auto"
         },
@@ -57,7 +57,81 @@
       "treeVisible": true,
       "inspectorVisible": false,
       "scrollOwner": false,
-      "fictional": 0
+      "fictional": 0,
+      "title": {
+        "decoded": true,
+        "broad": true,
+        "aspectPreserved": true,
+        "unscaled": true,
+        "midViewportWidth": true,
+        "source": true,
+        "contained": true,
+        "accessible": true,
+        "ticket": true,
+        "stars": true,
+        "separated": true,
+        "sideBySide": true,
+        "context": true
+      }
+    },
+    {
+      "width": 920,
+      "height": 640,
+      "overflow": false,
+      "unnamed": [],
+      "broken": [],
+      "equivalent": true,
+      "panes": [
+        {
+          "selector": "#project-workspace > nav",
+          "hidden": false,
+          "display": "grid",
+          "left": 0,
+          "right": 196,
+          "top": 123.0625,
+          "bottom": 640,
+          "overflowY": "hidden"
+        },
+        {
+          "selector": "#workspace-pane",
+          "hidden": false,
+          "display": "block",
+          "left": 196,
+          "right": 920,
+          "top": 123.0625,
+          "bottom": 640,
+          "overflowY": "auto"
+        },
+        {
+          "selector": "#project-inspector",
+          "hidden": true,
+          "display": "none",
+          "left": 0,
+          "right": 0,
+          "top": 0,
+          "bottom": 0,
+          "overflowY": "auto"
+        }
+      ],
+      "treeVisible": true,
+      "inspectorVisible": false,
+      "scrollOwner": false,
+      "fictional": 0,
+      "title": {
+        "decoded": true,
+        "broad": true,
+        "aspectPreserved": true,
+        "unscaled": true,
+        "midViewportWidth": true,
+        "source": true,
+        "contained": true,
+        "accessible": true,
+        "ticket": true,
+        "stars": true,
+        "separated": true,
+        "sideBySide": true,
+        "context": true
+      }
     },
     {
       "width": 1720,
@@ -73,7 +147,7 @@
           "display": "grid",
           "left": 0,
           "right": 259,
-          "top": 62.296875,
+          "top": 95.046875,
           "bottom": 960,
           "overflowY": "hidden"
         },
@@ -83,7 +157,7 @@
           "display": "block",
           "left": 259,
           "right": 1426,
-          "top": 62.296875,
+          "top": 95.046875,
           "bottom": 960,
           "overflowY": "auto"
         },
@@ -93,7 +167,7 @@
           "display": "block",
           "left": 1426,
           "right": 1720,
-          "top": 62.296875,
+          "top": 95.046875,
           "bottom": 960,
           "overflowY": "auto"
         }
@@ -101,7 +175,22 @@
       "treeVisible": true,
       "inspectorVisible": true,
       "scrollOwner": false,
-      "fictional": 0
+      "fictional": 0,
+      "title": {
+        "decoded": true,
+        "broad": true,
+        "aspectPreserved": true,
+        "unscaled": true,
+        "midViewportWidth": true,
+        "source": true,
+        "contained": true,
+        "accessible": true,
+        "ticket": true,
+        "stars": true,
+        "separated": true,
+        "sideBySide": true,
+        "context": true
+      }
     },
     {
       "width": 360,
@@ -117,8 +206,8 @@
           "display": "block",
           "left": 0,
           "right": 345,
-          "top": -353.53125,
-          "bottom": 332.765625,
+          "top": -429.828125,
+          "bottom": 332.234375,
           "overflowY": "visible"
         },
         {
@@ -127,8 +216,8 @@
           "display": "block",
           "left": 0,
           "right": 345,
-          "top": 332.765625,
-          "bottom": 1476.15625,
+          "top": 332.234375,
+          "bottom": 1475.625,
           "overflowY": "visible"
         },
         {
@@ -137,15 +226,30 @@
           "display": "block",
           "left": 0,
           "right": 345,
-          "top": 1476.15625,
-          "bottom": 1595.625,
+          "top": 1475.625,
+          "bottom": 1595.09375,
           "overflowY": "visible"
         }
       ],
       "treeVisible": true,
       "inspectorVisible": true,
       "scrollOwner": true,
-      "fictional": 0
+      "fictional": 0,
+      "title": {
+        "decoded": true,
+        "broad": true,
+        "aspectPreserved": true,
+        "unscaled": true,
+        "midViewportWidth": true,
+        "source": true,
+        "contained": true,
+        "accessible": true,
+        "ticket": true,
+        "stars": true,
+        "separated": true,
+        "sideBySide": true,
+        "context": true
+      }
     },
     {
       "width": 640,
@@ -161,8 +265,8 @@
           "display": "block",
           "left": 0,
           "right": 625,
-          "top": 100.25,
-          "bottom": 581.546875,
+          "top": 143.4375,
+          "bottom": 700.5,
           "overflowY": "visible"
         },
         {
@@ -171,8 +275,8 @@
           "display": "block",
           "left": 0,
           "right": 625,
-          "top": 581.546875,
-          "bottom": 1428.015625,
+          "top": 700.5,
+          "bottom": 1546.96875,
           "overflowY": "visible"
         },
         {
@@ -189,7 +293,22 @@
       "treeVisible": true,
       "inspectorVisible": false,
       "scrollOwner": true,
-      "fictional": 0
+      "fictional": 0,
+      "title": {
+        "decoded": true,
+        "broad": true,
+        "aspectPreserved": true,
+        "unscaled": true,
+        "midViewportWidth": true,
+        "source": true,
+        "contained": true,
+        "accessible": true,
+        "ticket": true,
+        "stars": true,
+        "separated": true,
+        "sideBySide": true,
+        "context": true
+      }
     }
   ],
   "runtimeErrors": 0

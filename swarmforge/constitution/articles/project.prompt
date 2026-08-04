@@ -2,11 +2,14 @@
 
 ## Project Shape
 - This project is configured for SwarmForge with four Codex-backed agents: specifier, coder, refactorer, and architect.
-- Project language: Babashka.
+- Product language: TypeScript. Babashka is the acceptance and orchestration harness.
+- Apply TypeScript quality tools to `src/` changes. Apply Clojure mutation/quality tools only when the acceptance harness itself changes, and Gherkin mutation only when feature contracts change.
 
 ## Local Configuration
 - Preserve project-local SwarmForge configuration under `swarmforge/`.
 - Keep swarm state local under `.swarmforge/`, worktrees under `.worktrees/`, and shared scripts under `swarmforge/scripts/`.
+- Treat `swarmforge/toolchain.lock.json` as the runtime and tool authority. Run its checker once at role startup, use the vendored APS tree, and provision optional locked tools only through the checker's explicit named operation.
+- Use `swarmforge/scripts/clj` so Clojure configuration, Maven artifacts, and gitlibs stay in the assigned worktree rather than protected home-directory caches.
 
 ## Active Specification Scope
 - Before starting or resuming data-layer specification work, read `docs/swarmforge-active-scope.md`.
@@ -24,6 +27,7 @@
 ## Handoffs
 - Prefer terse, explicit handoffs that report state and request role-appropriate review. Do not include successful verification logs or sender process narrative; blocker notes may name failed and skipped checks when those results are required for the recipient to repair the task.
 - A note keeps an 80-character routing summary but may include a bounded detail body when a role or this constitution requires one consolidated finding set. Use the body for exact blockers, paths, failed checks, and skipped checks with their dependencies; do not use it for process narrative.
+- Record a settled exact whole-pack checkpoint in two steps: run with `--property --changed-since <base> --prepare-evidence <task>`, then record the printed pending file only after the runner exits. The Git note in `refs/notes/swarmforge-verification` binds the exact base, task, pack set, commit tree, change set, locked toolchain, artifact, and raw task receipt. Every `git_handoff` carries `base:`; downstream roles may forward evidence only while the candidate tree is unchanged.
 
 ## Ownership
 - Do not change another role's prompt or workflow ownership without explicit user direction.

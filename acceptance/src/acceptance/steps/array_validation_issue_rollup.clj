@@ -1,7 +1,5 @@
 (ns acceptance.steps.array-validation-issue-rollup
   (:require [acceptance.steps.support :as support]
-            [babashka.process :as process]
-            [cheshire.core :as json]
             [clojure.string :as str]))
 
 (def feature-files ["features/data-layer-array-validation-issue-rollup.feature"
@@ -15,14 +13,20 @@
   (support/cached-command-verification! model-check "Array validation issue roll-up model failed. " "node" "test/data-layer-array-validation-issue-rollup-test.mjs"))
 (defn- observe! []
   (support/cached-browser-observation! browser-check {:adapter-env "ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER" :observation-key :arrayValidationRollup :runtime-error "Array validation roll-up browser runtime failed." :missing-error "Array validation roll-up browser evidence is missing."}))
+
+(def issue-distribution-relations
+  [{:keys ["issue_distribution" "error_count" "warning_count" "affected_item_count"]
+    :rows #{["type errors in items 3 and 8" "2" "0" "2"]
+            ["id and type errors in item 8" "2" "0" "1"]
+            ["type error in item 8 and name warning in item 4" "1" "1" "2"]
+            ["type error and name warning both in item 8" "1" "1" "1"]}}])
+
 (defn- validate-example! [mode example]
   (when (and (= mode :model) (support/example-value example "issue_distribution"))
-    (let [result (process/shell support/build-shell-options
-                                "node" "test/helpers/array-validation-rollup-example-adapter.mjs"
-                                (json/generate-string example))]
-      (support/assert! (zero? (:exit result))
-                       "Array roll-up distribution example was not connected to production behavior."
-                       {:example example :error (:err result)})))
+    (support/validate-example-relations!
+     issue-distribution-relations
+     example
+     "Array roll-up distribution example is not a verified production case."))
   (when-let [entry (support/example-value example "issue_entry_point")]
     (support/assert! (contains? #{"the /products aggregate status" "the /products/* aggregate status" "the Event-level issue link"} entry) "Unknown roll-up entry point." {:entry entry}))
   (when-let [control (support/example-value example "rendered_control")]

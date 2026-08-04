@@ -50,6 +50,15 @@
                   :ruleWasOpen true :ruleHiddenWhileAway true}
    :restored {:editorVisible true :name "Unsaved checkout schema" :closeReviewOpen false}})
 
+(def live-session-runtime-observation
+  {:controls [{:sessionState "Inactive" :captureState "Inactive"
+               :sessionAction "Start testing" :captureAction "none"}
+              {:sessionState "Active" :captureState "Live"
+               :sessionAction "End testing" :captureAction "Pause capture"}
+              {:sessionState "Active" :captureState "Paused"
+               :sessionAction "End testing" :captureAction "Resume capture"}]
+   :lifecycle {:started true :ended true}})
+
 (deftest recognizes-contained-schema-view-browser-observation
   (is (information-architecture/schema-view-contained? contained-schema-observation))
   (is (not (information-architecture/schema-view-contained?
@@ -57,9 +66,18 @@
   (is (not (information-architecture/schema-view-contained?
             (assoc-in contained-schema-observation [:restored :name] "")))))
 
+(deftest selects-live-session-controls-from-the-fixed-runtime-observation
+  (is (= {:session-action "End testing" :capture-action "Resume capture"}
+         (information-architecture/runtime-live-session-controls
+          live-session-runtime-observation "Active" "Paused")))
+  (is (nil? (information-architecture/runtime-live-session-controls
+             live-session-runtime-observation "Inactive" "Paused"))))
+
 (deftest navigation-information-architecture-features-exercise-owned-handlers
   (reset! information-architecture/schema-view-containment-observation
           contained-schema-observation)
+  (reset! information-architecture/live-session-runtime-observation
+          live-session-runtime-observation)
   (try
     (doseq [feature-file ["features/side-panel-navigation-information-architecture.feature"
                           "features/data-layer-secondary-view-separation.feature"]]
@@ -69,7 +87,8 @@
                                     information-architecture/handlers)))
           feature-file))
     (finally
-      (reset! information-architecture/schema-view-containment-observation nil))))
+      (reset! information-architecture/schema-view-containment-observation nil)
+      (reset! information-architecture/live-session-runtime-observation nil))))
 
 (deftest primary-navigation-order-requires-strictly-distinct-label-positions
   (is (thrown?

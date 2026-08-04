@@ -71,7 +71,7 @@
   (support/cached-command-verification!
    model-verified?
    "Schema property type editing model verification failed. "
-   "npm" "run" "test:unit:schema-property-type-editing"))
+   "node" "test/data-layer-schema-property-type-editing-test.mjs"))
 
 (defn- runtime-observation! []
   (support/cached-browser-observation!

@@ -17,7 +17,7 @@
   (support/cached-command-verification!
    model-verified?
    "Schema property comments model verification failed. "
-   "npm" "run" "test:unit:schema-property-comments"))
+   "node" "test/data-layer-schema-property-comments-test.mjs"))
 
 (defn- runtime-observation! []
   (support/cached-browser-observation!

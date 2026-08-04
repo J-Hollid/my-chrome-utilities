@@ -20,6 +20,8 @@ to: <role>[,<role>...]
 priority: NN
 task: <short-stable-task-name>
 commit: <10-character-commit-abbrev>
+base: <10-character-base-commit-abbrev>
+verified: <pack-id>[,<pack-id>...]|not-required
 ```
 
 - When your role is an intermediate step in the pack pipeline, always forward
@@ -63,6 +65,20 @@ message: <one line, max 80 chars>
   narrative, sender process history, or information available from the referenced
   commit.
 - Do not send tmux notifications directly.
+- `base:` identifies the received commit on which the candidate was based. For
+  the first handoff in a task, use the starting repository commit from before the
+  work. Preserve it only while forwarding an unchanged candidate; a new candidate
+  commit uses the commit from which that role began its changes.
+- `verified: <pack-id>[,<pack-id>...]` is accepted only when the commit has matching
+  durable evidence in `refs/notes/swarmforge-verification` for that exact base,
+  task, and pack set. After committing, run the settled whole-pack checkpoint with
+  `--property --changed-since <base> --prepare-evidence <task>`, then run
+  `node scripts/verification-evidence.mjs record <printed-pending-file>` after the
+  checkpoint process exits.
+- Use `verified: not-required` only for documentation, specification, or prompt-only
+  forwarding. The helper checks every canonical changed path and rejects mixed
+  product, test, registry, build, or executable-tooling ranges. Coder handoffs
+  cannot use it.
 - Do not hand-edit, merge, stage, or commit handoff runtime state.
 
 ## Receiving Handoffs

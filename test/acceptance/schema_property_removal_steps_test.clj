@@ -10,8 +10,8 @@
               {:path "commerce.order.id" :actions ["Add rule" "Copy to another schema" "Remove property"]}
               {:path "commerce.order.value" :actions ["Add rule" "Copy to another schema" "Remove property"]}
               {:path "debug" :actions ["Add rule" "Copy to another schema" "Remove property"]}
-              {:path "items" :actions ["Add rule" "Copy to another schema" "Remove property"]}
-              {:path "inherited_id" :actions ["Add rule" "Copy to another schema" "Exclude inherited property"]}]
+              {:path "items" :actions ["Add rule" "Copy to another schema" "Reset to parents" "Remove property"]}
+              {:path "inherited_id" :actions ["Type owned by Base" "Save presence" "Add rule" "Edit canonical rules" "Copy to another schema" "Exclude inherited property"]}]
     :excluded {:absent true :parentUnchanged true}
     :immediate {:absent true
                 :undo true
@@ -63,3 +63,20 @@
                     :tree_order "only property"
                     :focus_destination "Add property"}]]
     (is (nil? (#'schema-property-removal/assert-observation! example valid-observation)))))
+
+(deftest inherited-safety-is-scoped-to-the-inherited-row
+  (let [safe-actions ["Type owned by Base" "Save presence" "Add rule" "Edit canonical rules"
+                      "Copy to another schema" "Exclude inherited property"]]
+    (is (true? (#'schema-property-removal/inherited-actions-safe? safe-actions)))
+    (is (false? (#'schema-property-removal/inherited-actions-safe?
+                 (conj safe-actions "Remove property"))))
+    (is (false? (#'schema-property-removal/inherited-actions-safe?
+                 (conj safe-actions "Remove parent property"))))))
+
+(deftest removal-entry-handlers-only-apply-to-removal-features
+  (doseq [entry-step schema-property-removal/entry-steps
+          :let [handler (first (filter #(re-matches (:pattern %) entry-step)
+                                       schema-property-removal/handlers))
+                applies? (:applies? handler)]]
+    (is (true? (applies? #:acceptance{:feature-name "Data layer schema property removal"})))
+    (is (false? (applies? #:acceptance{:feature-name "Data layer schema rule property identity"})))))

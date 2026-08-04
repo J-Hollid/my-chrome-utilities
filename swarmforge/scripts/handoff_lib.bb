@@ -5,6 +5,12 @@
             [babashka.process]
             [clojure.string :as str]))
 
+(def script-dir (fs/parent *file*))
+(load-file (str (fs/path script-dir "handoff_sequence.bb")))
+(def allocate-next-sequence!
+  (or (resolve 'swarmforge.handoff-sequence/next-sequence!)
+      (throw (ex-info "Cannot load the handoff sequence allocator" {:exit 1}))))
+
 (defn role []
   (or (System/getenv "SWARMFORGE_ROLE")
       (throw (ex-info "Set SWARMFORGE_ROLE." {:exit 1}))))
@@ -136,26 +142,7 @@
       (print-task file))))
 
 (defn next-sequence []
-  (let [dir (state-dir)
-        seq-file (fs/path dir "sequence")
-        lock-dir (fs/path dir "sequence.lock")]
-    (fs/create-dirs dir)
-    (loop []
-      (when-not (try (fs/create-dir lock-dir) true (catch Exception _ false))
-        (Thread/sleep 50)
-        (recur)))
-    (try
-      (let [last-value (if (fs/exists? seq-file)
-                         (str/trim (slurp (str seq-file)))
-                         "0")
-            last-number (if (re-matches #"[0-9]+" last-value)
-                          (Long/parseLong last-value)
-                          0)
-            next-number (inc last-number)]
-        (spit (str seq-file) (format "%06d\n" next-number))
-        (format "%06d" next-number))
-      (finally
-        (fs/delete-tree lock-dir)))))
+  (allocate-next-sequence! (state-dir)))
 
 (defn -main [& args]
   (try

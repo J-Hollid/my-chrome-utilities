@@ -151,14 +151,14 @@
 (defn- missing-property [_text _example observation]
   (support/assert! (= ["Missing" true]
                       [(get-in observation [:properties :order_id :missing])
-                       (boolean (some #(str/includes? % "order_id: Required property") (:issueRows observation)))])
+                       (boolean (some #(str/includes? % "/order_id · Required property") (:issueRows observation)))])
                    "Missing-property issue was not represented in both views." {:observation observation}))
 
 (defn- issue-rows [_text _example observation]
   (support/assert! (= [true "live-property-page-type" true]
                       [(>= (count (:issueRows observation)) 8)
                        (:issueFocus observation)
-                       (boolean (some #(str/starts-with? % "Event:") (:issueRows observation)))])
+                       (boolean (some #(str/starts-with? % "Event ·") (:issueRows observation)))])
                    "Event-level issues omitted metadata, property focus, or root issues." {:observation observation}))
 
 (defn- successful-evaluation [_text _example observation]
@@ -175,7 +175,7 @@
 
 (def assertion-routes
   [[(fn [_text example] (support/example-value example "event_name")) feed-example]
-   [(fn [_text example] (support/example-value example "property_path")) property-example]
+   [(fn [_text example] (support/example-value example "attached_rule_count")) property-example]
    [(fn [text _example] (str/includes? text "error border or tint")) error-border]
    [(fn [text _example] (str/includes? text "accessible name")) accessible-name]
    [(fn [text _example] (includes-any? text ["selection, hover" "does not obscure"])) row-states]

@@ -38,6 +38,12 @@
       "test/browser-packs/project-entity-lifecycle.mjs",
       "test/twatility-projects-browser-test.mjs",
       "test/twatility-studio-shell-browser-test.mjs"
+    ],
+    "browserAdapterModes": [
+      {"path": "test/browser-packs/project-management.mjs", "mode": "shared"},
+      {"path": "test/browser-packs/project-entity-lifecycle.mjs", "mode": "shared"},
+      {"path": "test/twatility-projects-browser-test.mjs", "mode": "integration"},
+      {"path": "test/twatility-studio-shell-browser-test.mjs", "mode": "integration"}
     ]
   },
   {
@@ -77,6 +83,10 @@
     "browserAdapters": [
       "test/browser-packs/durable-project-repository.mjs",
       "test/browser-packs/durable-project-renderer.mjs"
+    ],
+    "browserAdapterModes": [
+      {"path": "test/browser-packs/durable-project-repository.mjs", "mode": "shared"},
+      {"path": "test/browser-packs/durable-project-renderer.mjs", "mode": "shared"}
     ]
   },
   {
@@ -88,7 +98,8 @@
     ],
     "dependencies": [],
     "unit": [
-      "test/command-palette-test.mjs"
+      "test/command-palette-test.mjs",
+      "test/command-registry-runtime-test.mjs"
     ],
     "property": [
       "test/command-palette-property-test.mjs"
@@ -105,6 +116,9 @@
     ],
     "browserAdapters": [
       "test/browser-packs/command-palette.mjs"
+    ],
+    "browserAdapterModes": [
+      {"path": "test/browser-packs/command-palette.mjs", "mode": "shared"}
     ]
   },
   {
@@ -132,6 +146,9 @@
     ],
     "browserAdapters": [
       "test/browser-packs/hotkeys.mjs"
+    ],
+    "browserAdapterModes": [
+      {"path": "test/browser-packs/hotkeys.mjs", "mode": "shared"}
     ]
   },
   {
@@ -174,6 +191,12 @@
       "src/data-layer.ts"
     ],
     "dependencies": [],
+    "verificationInputs": [
+      "src/commands.ts",
+      "src/hotkey-editor.ts",
+      "src/data-layer-event-library-editor.ts",
+      "src/data-layer-event-library-editor-ui.ts"
+    ],
     "unit": [
       "test/data-layer-event-feed-query-test.mjs",
       "test/data-layer-event-feed-query-ui-test.mjs",
@@ -248,8 +271,6 @@
       "features/data-layer-lossless-observation-activation-runtime.feature",
       "features/data-layer-multiple-observation-sources.feature",
       "features/data-layer-nested-event-timeline.feature",
-      "features/data-layer-non-applicable-property-visibility-runtime.feature",
-      "features/data-layer-non-applicable-property-visibility.feature",
       "features/data-layer-observation-subscription-lifecycle.feature",
       "features/data-layer-observation-target-access.feature",
       "features/data-layer-observation-target-commands.feature",
@@ -262,7 +283,6 @@
       "features/data-layer-push-confirmation-decision-data-runtime.feature",
       "features/data-layer-push-destination-configuration.feature",
       "features/data-layer-push-draft-review.feature",
-      "features/data-layer-recursive-property-tree.feature",
       "features/data-layer-same-page-session-restart-runtime.feature",
       "features/data-layer-saved-event-feed-filters-runtime.feature",
       "features/data-layer-saved-event-feed-filters.feature",
@@ -292,6 +312,7 @@
       "acceptance/src/acceptance/steps/live_observer_timeline.clj",
       "acceptance/src/acceptance/steps/data_layer_timeline.clj",
       "acceptance/src/acceptance/steps/event_feed_query.clj",
+      "acceptance/src/acceptance/steps/event_library_editor_support.clj",
       "acceptance/src/acceptance/steps/event_property_editor.clj",
       "acceptance/src/acceptance/steps/fresh_live_session.clj",
       "acceptance/src/acceptance/steps/live_event_presentation.clj",
@@ -300,19 +321,74 @@
       "acceptance/src/acceptance/steps/live_observer_support.clj",
       "acceptance/src/acceptance/steps/live_observer_workspace.clj",
       "acceptance/src/acceptance/steps/lossless_observation_activation.clj",
-      "acceptance/src/acceptance/steps/non_applicable_property_visibility.clj",
       "acceptance/src/acceptance/steps/observability_library.clj",
       "acceptance/src/acceptance/steps/observation_targets.clj",
       "acceptance/src/acceptance/steps/observation_targets_support.clj",
-      "acceptance/src/acceptance/steps/recursive_property_validation.clj",
       "acceptance/src/acceptance/steps/saved_event_feed_filters.clj",
       "acceptance/src/acceptance/steps/saved_session_live_feed.clj",
       "acceptance/src/acceptance/steps/saved_sessions.clj",
-      "acceptance/src/acceptance/steps/schema_publication_refresh_support.clj",
       "acceptance/src/acceptance/steps/session_boundaries.clj"
     ],
     "browserAdapters": [
       "test/browser-packs/capture.mjs"
+    ],
+    "browserAdapterModes": [
+      {"path": "test/browser-packs/capture.mjs", "mode": "shared"}
+    ],
+    "browserObservations": [
+      {
+        "id": "FRESH_LIVE_SESSION_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"FRESH_LIVE_SESSION_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["freshLiveSession"],
+        "features": ["features/data-layer-fresh-session.feature"]
+      },
+      {
+        "id": "PAYLOAD_PATH_FILTER_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"PAYLOAD_PATH_FILTER_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["payloadPathFilterPicker"],
+        "features": ["features/data-layer-event-feed-query-builder.feature"]
+      },
+      {
+        "id": "SAVED_EVENT_FEED_FILTERS_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"SAVED_EVENT_FEED_FILTERS_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["savedEventFeedFilters"],
+        "features": ["features/data-layer-saved-event-feed-filters-runtime.feature"]
+      },
+      {
+        "id": "SAVED_SESSION_LIVE_FEED_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"SAVED_SESSION_LIVE_FEED_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["savedSessionLiveFeed"],
+        "features": [
+          "features/data-layer-saved-session-live-feed-restore.feature",
+          "features/data-layer-session-save-snapshot.feature",
+          "features/data-layer-saved-session-library.feature"
+        ]
+      },
+      {
+        "id": "SINGLE_LIVE_EVENT_FEED_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"SINGLE_LIVE_EVENT_FEED_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["singleLiveEventFeed"],
+        "features": ["features/data-layer-event-timeline.feature"]
+      }
+    ],
+    "checkpointCommands": [
+      {
+        "id": "cross-tab-reattachment-runtime",
+        "executable": "node",
+        "args": ["acceptance/runtime/cross-tab-reattachment.mjs"],
+        "features": ["features/data-layer-cross-tab-reattachment-runtime.feature"]
+      },
+      {
+        "id": "lossless-observation-activation-runtime",
+        "executable": "node",
+        "args": ["acceptance/runtime/lossless-observation-activation.mjs"],
+        "features": ["features/data-layer-lossless-observation-activation-runtime.feature"]
+      }
     ]
   },
   {
@@ -355,12 +431,23 @@
     ],
     "handlers": [
       "acceptance/src/acceptance/steps/event_library_editor.clj",
-      "acceptance/src/acceptance/steps/event_library_editor_support.clj",
       "acceptance/src/acceptance/steps/event_template_library.clj",
       "acceptance/src/acceptance/steps/library_direct_template_push.clj"
     ],
     "browserAdapters": [
       "test/browser-packs/event-library.mjs"
+    ],
+    "browserAdapterModes": [
+      {"path": "test/browser-packs/event-library.mjs", "mode": "shared"}
+    ],
+    "browserObservations": [
+      {
+        "id": "LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["libraryDirectTemplatePush"],
+        "features": ["features/data-layer-library-direct-template-push-runtime.feature"]
+      }
     ]
   },
   {
@@ -388,6 +475,9 @@
     ],
     "browserAdapters": [
       "test/browser-packs/project-event-transport.mjs"
+    ],
+    "browserAdapterModes": [
+      {"path": "test/browser-packs/project-event-transport.mjs", "mode": "shared"}
     ]
   },
   {
@@ -566,10 +656,13 @@
       "features/data-layer-local-rule-promotion.feature",
       "features/data-layer-local-rule-editing-runtime.feature",
       "features/data-layer-local-rule-editing.feature",
+      "features/data-layer-non-applicable-property-visibility-runtime.feature",
+      "features/data-layer-non-applicable-property-visibility.feature",
       "features/data-layer-required-rule-type-independence-runtime.feature",
       "features/data-layer-required-rule-type-independence.feature",
       "features/data-layer-recursive-declared-property-validation-runtime.feature",
       "features/data-layer-recursive-declared-property-validation.feature",
+      "features/data-layer-recursive-property-tree.feature",
       "features/data-layer-reusable-rule-sync-publication-runtime.feature",
       "features/data-layer-reusable-rule-sync-publication.feature",
       "features/data-layer-schema-assignment-data-conditions-runtime.feature",
@@ -651,8 +744,10 @@
       "acceptance/src/acceptance/steps/local_rule_promotion.clj",
       "acceptance/src/acceptance/steps/local_rule_promotion_availability.clj",
       "acceptance/src/acceptance/steps/local_rule_editing.clj",
+      "acceptance/src/acceptance/steps/non_applicable_property_visibility.clj",
       "acceptance/src/acceptance/steps/required_rule_type_independence.clj",
       "acceptance/src/acceptance/steps/recursive_declared_property_validation.clj",
+      "acceptance/src/acceptance/steps/recursive_property_validation.clj",
       "acceptance/src/acceptance/steps/reusable_rule_sync.clj",
       "acceptance/src/acceptance/steps/schema_assignment_data_conditions.clj",
       "acceptance/src/acceptance/steps/schema_cardinality_comparison.clj",
@@ -669,6 +764,7 @@
       "acceptance/src/acceptance/steps/schema_property_rule_picker.clj",
       "acceptance/src/acceptance/steps/schema_property_type_editing.clj",
       "acceptance/src/acceptance/steps/schema_publication_refresh.clj",
+      "acceptance/src/acceptance/steps/schema_publication_refresh_support.clj",
       "acceptance/src/acceptance/steps/schema_renaming.clj",
       "acceptance/src/acceptance/steps/schema_revision_lifecycle.clj",
       "acceptance/src/acceptance/steps/schema_rule_property_identity.clj",
@@ -688,6 +784,383 @@
     ],
     "browserAdapters": [
       "test/browser-packs/schemas.mjs"
+    ],
+    "browserAdapterModes": [
+      {"path": "test/browser-packs/schemas.mjs", "mode": "shared"}
+    ],
+    "browserObservations": [
+      {
+        "id": "SCHEMA_WORKSPACE_BROWSER_ADAPTER:default",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"SCHEMA_WORKSPACE_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["schemaWorkspace"],
+        "features": [
+          "features/data-layer-schema-workspace-runtime-completion.feature",
+          "features/data-layer-schema-rule-editor-visibility.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_WORKSPACE_BROWSER_ADAPTER:1:3",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {
+          "SCHEMA_WORKSPACE_BROWSER_ADAPTER": "1",
+          "SCHEMA_LIBRARY_EXPORT_FIXTURE": "1:3"
+        },
+        "observationKeys": ["schemaWorkspace"],
+        "features": ["features/data-layer-schema-workspace-runtime-completion.feature"]
+      },
+      {
+        "id": "SCHEMA_WORKSPACE_BROWSER_ADAPTER:2:4",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {
+          "SCHEMA_WORKSPACE_BROWSER_ADAPTER": "1",
+          "SCHEMA_LIBRARY_EXPORT_FIXTURE": "2:4"
+        },
+        "observationKeys": ["schemaWorkspace"],
+        "features": ["features/data-layer-schema-workspace-runtime-completion.feature"]
+      },
+      {
+        "id": "ALLOWED_VALUES_RULE_MIGRATION_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"ALLOWED_VALUES_RULE_MIGRATION_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["allowedValuesRuleMigration"],
+        "features": ["features/data-layer-allowed-values-rule-migration-runtime.feature"]
+      },
+      {
+        "id": "ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["allowedValueExpansion"],
+        "features": ["features/data-layer-live-allowed-value-expansion-runtime.feature"]
+      },
+      {
+        "id": "ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["arrayValidationRollup"],
+        "features": ["features/data-layer-array-validation-issue-rollup-runtime.feature"]
+      },
+      {
+        "id": "CANONICAL_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"CANONICAL_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["canonicalDeclaredPropertyValidation"],
+        "features": ["features/data-layer-canonical-declared-property-validation-runtime.feature"]
+      },
+      {
+        "id": "CONDITIONAL_VALIDATION_RULES_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"CONDITIONAL_VALIDATION_RULES_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["conditionalValidationRules"],
+        "features": [
+          "features/data-layer-conditional-validation-rules.feature",
+          "features/data-layer-conditional-validation-rules-runtime.feature"
+        ]
+      },
+      {
+        "id": "GUIDED_ASSIGNMENT_COVERAGE_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"GUIDED_ASSIGNMENT_COVERAGE_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["guidedAssignmentCoverage"],
+        "features": ["features/data-layer-guided-assignment-coverage-runtime.feature"]
+      },
+      {
+        "id": "GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["guidedDraftContinuation"],
+        "features": ["features/data-layer-guided-validation-draft-continuation.feature"]
+      },
+      {
+        "id": "GUIDED_NESTED_PROPERTY_MERGE_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"GUIDED_NESTED_PROPERTY_MERGE_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["guidedNestedPropertyMerge"],
+        "features": ["features/data-layer-guided-nested-property-merge-runtime.feature"]
+      },
+      {
+        "id": "GUIDED_VALIDATION_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"GUIDED_VALIDATION_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["guidedValidation", "guidedSchemaPicker"],
+        "features": [
+          "features/data-layer-guided-validation-constraint-authoring.feature",
+          "features/data-layer-guided-validation-creation.feature",
+          "features/data-layer-guided-validation-form-assistance.feature",
+          "features/data-layer-guided-validation-path-scope.feature",
+          "features/data-layer-guided-validation-schema-destination.feature",
+          "features/data-layer-guided-validation-schema-picker-dialog.feature",
+          "features/data-layer-guided-rule-parameter-integrity-runtime.feature"
+        ]
+      },
+      {
+        "id": "JSON_SCHEMA_EXPORT_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"JSON_SCHEMA_EXPORT_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["jsonSchemaExport"],
+        "features": [
+          "features/data-layer-json-schema-2020-12-export-runtime.feature",
+          "features/data-layer-schema-export-selection.feature"
+        ]
+      },
+      {
+        "id": "LIVE_GUIDED_CONDITIONAL_RULE_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"LIVE_GUIDED_CONDITIONAL_RULE_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["liveGuidedConditionalRule"],
+        "features": ["features/data-layer-live-guided-conditional-rule-authoring-runtime.feature"]
+      },
+      {
+        "id": "LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["liveSchemaPropertyDeclaration"],
+        "features": ["features/data-layer-live-schema-property-declaration-runtime.feature"]
+      },
+      {
+        "id": "LIVE_VALIDATION_VISUALS_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"LIVE_VALIDATION_VISUALS_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["liveValidationVisuals"],
+        "features": [
+          "features/data-layer-live-validation-feed-presentation.feature",
+          "features/data-layer-live-validation-interaction.feature",
+          "features/data-layer-live-validation-property-presentation.feature"
+        ]
+      },
+      {
+        "id": "LOCAL_RULE_EDITING_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"LOCAL_RULE_EDITING_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["localRuleEditing"],
+        "features": ["features/data-layer-local-rule-editing-runtime.feature"]
+      },
+      {
+        "id": "LOCAL_RULE_PROMOTION_AVAILABILITY_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"LOCAL_RULE_PROMOTION_AVAILABILITY_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["localRulePromotionAvailability"],
+        "features": ["features/data-layer-local-rule-promotion-availability-hardening-runtime.feature"]
+      },
+      {
+        "id": "LOCAL_RULE_PROMOTION_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"LOCAL_RULE_PROMOTION_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["localRulePromotion"],
+        "features": ["features/data-layer-local-rule-promotion-runtime.feature"]
+      },
+      {
+        "id": "RECURSIVE_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"RECURSIVE_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["recursiveDeclaredPropertyValidation"],
+        "features": ["features/data-layer-recursive-declared-property-validation-runtime.feature"]
+      },
+      {
+        "id": "REQUIRED_RULE_TYPE_INDEPENDENCE_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"REQUIRED_RULE_TYPE_INDEPENDENCE_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["requiredRuleTypeIndependence"],
+        "features": ["features/data-layer-required-rule-type-independence-runtime.feature"]
+      },
+      {
+        "id": "REUSABLE_RULE_SYNC_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"REUSABLE_RULE_SYNC_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["reusableRuleSync"],
+        "features": ["features/data-layer-reusable-rule-sync-publication-runtime.feature"]
+      },
+      {
+        "id": "SCHEMA_ASSIGNMENT_DATA_CONDITIONS_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"SCHEMA_ASSIGNMENT_DATA_CONDITIONS_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["schemaAssignmentDataConditions"],
+        "features": ["features/data-layer-schema-assignment-data-conditions-runtime.feature"]
+      },
+      {
+        "id": "SCHEMA_CARDINALITY_COMPARISON_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"SCHEMA_CARDINALITY_COMPARISON_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["schemaCardinalityComparison"],
+        "features": ["features/data-layer-schema-cardinality-comparison-rules.feature"]
+      },
+      {
+        "id": "SCHEMA_DECLARED_PROPERTY_EXCEPTIONS_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"SCHEMA_DECLARED_PROPERTY_EXCEPTIONS_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["schemaDeclaredPropertyExceptions"],
+        "features": ["features/data-layer-schema-declared-property-exceptions.feature"]
+      },
+      {
+        "id": "SCHEMA_DOCUMENTATION_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"SCHEMA_DOCUMENTATION_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["schemaDocumentation"],
+        "features": [
+          "features/data-layer-schema-documentation.feature",
+          "features/data-layer-schema-documentation-runtime.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_MANUAL_PROPERTY_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"SCHEMA_MANUAL_PROPERTY_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["schemaManualProperty", "schemaContainerChild"],
+        "features": [
+          "features/data-layer-schema-manual-property-authoring.feature",
+          "features/data-layer-schema-container-child-authoring.feature",
+          "features/data-layer-schema-container-child-authoring-runtime.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_NESTED_PATH_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"SCHEMA_NESTED_PATH_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["schemaNestedPath"],
+        "features": [
+          "features/data-layer-schema-nested-path-authoring.feature",
+          "features/data-layer-schema-nested-path-validation.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_PROPERTY_COMMENTS_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"SCHEMA_PROPERTY_COMMENTS_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["schemaPropertyComments"],
+        "features": ["features/data-layer-schema-property-comments-runtime.feature"]
+      },
+      {
+        "id": "SCHEMA_PROPERTY_COPY_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"SCHEMA_PROPERTY_COPY_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["schemaPropertyCopy"],
+        "features": ["features/data-layer-schema-property-copy-runtime.feature"]
+      },
+      {
+        "id": "SCHEMA_PROPERTY_EXAMPLE_VALUES_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"SCHEMA_PROPERTY_EXAMPLE_VALUES_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["schemaPropertyExampleValues"],
+        "features": ["features/data-layer-schema-property-example-values-runtime.feature"]
+      },
+      {
+        "id": "SCHEMA_PROPERTY_FILTER_SORT_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"SCHEMA_PROPERTY_FILTER_SORT_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["schemaPropertyFilterSort"],
+        "features": [
+          "features/data-layer-schema-property-filtering-sorting.feature",
+          "features/data-layer-schema-property-filtering-sorting-runtime.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_PROPERTY_REMOVAL_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"SCHEMA_PROPERTY_REMOVAL_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["schemaPropertyRemoval"],
+        "features": ["features/data-layer-schema-property-removal.feature"]
+      },
+      {
+        "id": "SCHEMA_PROPERTY_RULE_PICKER_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"SCHEMA_PROPERTY_RULE_PICKER_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["schemaPropertyRulePicker"],
+        "features": ["features/data-layer-schema-property-rule-picker.feature"]
+      },
+      {
+        "id": "SCHEMA_PROPERTY_TYPE_EDITING_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"SCHEMA_PROPERTY_TYPE_EDITING_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["schemaPropertyTypeEditing"],
+        "features": ["features/data-layer-schema-property-type-editing-runtime.feature"]
+      },
+      {
+        "id": "SCHEMA_RENAMING_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"SCHEMA_RENAMING_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["schemaRenaming"],
+        "features": [
+          "features/data-layer-schema-renaming.feature",
+          "features/data-layer-schema-renaming-runtime.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["schemaRevisionLifecycle"],
+        "features": ["features/data-layer-schema-revision-lifecycle.feature"]
+      },
+      {
+        "id": "SCHEMA_RULE_PROPERTY_IDENTITY_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"SCHEMA_RULE_PROPERTY_IDENTITY_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["schemaRulePropertyIdentity"],
+        "features": ["features/data-layer-schema-rule-property-identity-runtime.feature"]
+      },
+      {
+        "id": "SCHEMA_SPECIFICATION_BUILDER_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"SCHEMA_SPECIFICATION_BUILDER_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["schemaSpecificationBuilder"],
+        "features": ["features/data-layer-schema-specification-builder-runtime.feature"]
+      },
+      {
+        "id": "SCHEMA_SPECIFICATION_BUILDER_CUSTOMIZATION_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"SCHEMA_SPECIFICATION_BUILDER_CUSTOMIZATION_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["schemaSpecificationBuilderCustomization"],
+        "features": ["features/data-layer-schema-specification-builder-customization-runtime.feature"]
+      },
+      {
+        "id": "SCHEMA_SPECIFICATION_CONTAINER_DEFAULTS_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"SCHEMA_SPECIFICATION_CONTAINER_DEFAULTS_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["schemaSpecificationContainerDefaults"],
+        "features": ["features/data-layer-schema-specification-container-defaults-runtime.feature"]
+      },
+      {
+        "id": "SCHEMA_SPECIFICATION_EXAMPLE_SELECTION_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"SCHEMA_SPECIFICATION_EXAMPLE_SELECTION_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["schemaSpecificationExampleSelection"],
+        "features": ["features/data-layer-schema-specification-example-selection-runtime.feature"]
+      },
+      {
+        "id": "SCHEMA_SPECIFICATION_PREVIEW_LAYOUT_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"SCHEMA_SPECIFICATION_PREVIEW_LAYOUT_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["schemaSpecificationPreviewLayout"],
+        "features": ["features/data-layer-schema-specification-preview-layout-runtime.feature"]
+      },
+      {
+        "id": "VALIDATION_PRESENCE_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"VALIDATION_PRESENCE_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["validationPresenceSemantics"],
+        "features": ["features/data-layer-validation-presence-semantics-runtime.feature"]
+      },
+      {
+        "id": "RECURSIVE_PROPERTY_VALIDATION_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"RECURSIVE_PROPERTY_VALIDATION_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["recursivePropertyValidation"],
+        "features": [
+          "features/data-layer-recursive-property-tree.feature",
+          "features/data-layer-event-property-validation-entry.feature",
+          "features/data-layer-validation-target-path-editor.feature"
+        ]
+      },
+      {
+        "id": "SCHEMA_PUBLICATION_REFRESH_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"SCHEMA_PUBLICATION_REFRESH_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["schemaPublicationRefresh"],
+        "features": [
+          "features/data-layer-schema-publication-live-revalidation-runtime.feature",
+          "features/data-layer-non-applicable-property-visibility-runtime.feature"
+        ]
+      }
     ]
   },
   {
@@ -775,6 +1248,92 @@
     ],
     "browserAdapters": [
       "test/browser-packs/defects.mjs"
+    ],
+    "browserAdapterModes": [
+      {"path": "test/browser-packs/defects.mjs", "mode": "shared"}
+    ],
+    "browserObservations": [
+      {
+        "id": "DEFECT_LIBRARY_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"DEFECT_LIBRARY_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["defectLibrary"],
+        "features": ["features/data-layer-defect-library-runtime.feature"]
+      },
+      {
+        "id": "DEFECT_REPORT_COMPONENT_OPTIONS_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"DEFECT_REPORT_COMPONENT_OPTIONS_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["defectReportComponentOptions"],
+        "features": ["features/data-layer-defect-report-component-options-runtime.feature"]
+      },
+      {
+        "id": "DEFECT_REPORT_PROVENANCE_PRESENTATION_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"DEFECT_REPORT_PROVENANCE_PRESENTATION_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["defectReportProvenancePresentation"],
+        "features": ["features/data-layer-defect-report-provenance-presentation-runtime.feature"]
+      },
+      {
+        "id": "DEFECT_REPORT_SEMANTIC_DIFFERENCES_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"DEFECT_REPORT_SEMANTIC_DIFFERENCES_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["defectReportSemanticDifferences"],
+        "features": ["features/data-layer-defect-report-semantic-differences-runtime.feature"]
+      },
+      {
+        "id": "DEFECT_REPORT_UNDECLARED_REMOVAL_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"DEFECT_REPORT_UNDECLARED_REMOVAL_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["defectReportUndeclaredRemoval"],
+        "features": ["features/data-layer-defect-report-undeclared-property-removal-runtime.feature"]
+      },
+      {
+        "id": "EVENT_OCCURRENCE_DEFECT_REPORT_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"EVENT_OCCURRENCE_DEFECT_REPORT_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["eventOccurrenceDefectReport"],
+        "features": ["features/data-layer-event-occurrence-defect-report-runtime.feature"]
+      },
+      {
+        "id": "MISSING_EVENT_DEFECT_FIDELITY_BROWSER_OBSERVATION",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {
+          "MISSING_EVENT_DEFECT_REPORT_BROWSER_ADAPTER": "1",
+          "MISSING_EVENT_REPORT_FIDELITY_BROWSER_ADAPTER": "1",
+          "UNIFIED_DEFECT_BUILDER_BROWSER_ADAPTER": "1"
+        },
+        "observationKeys": [
+          "missingEventDefectReport",
+          "missingEventReportFidelity",
+          "unifiedDefectBuilder"
+        ],
+        "features": [
+          "features/data-layer-missing-event-defect-report-runtime.feature",
+          "features/data-layer-missing-event-report-representation-fidelity-runtime.feature",
+          "features/data-layer-missing-event-expected-payload-hardening-runtime.feature",
+          "features/data-layer-unified-defect-report-builder-runtime.feature"
+        ]
+      },
+      {
+        "id": "REPRODUCTION_STEP_ACTION_ROWS_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"REPRODUCTION_STEP_ACTION_ROWS_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["reproductionStepActionRows"],
+        "features": [
+          "features/data-layer-defect-report-builder.feature",
+          "features/data-layer-defect-report-jira-cloud-export.feature",
+          "features/data-layer-defect-report-reproduction-step-composer.feature",
+          "features/data-layer-defect-report-reproduction.feature"
+        ]
+      },
+      {
+        "id": "REQUIRED_PROPERTY_DEFECT_SCHEMA_CHOICES_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"REQUIRED_PROPERTY_DEFECT_SCHEMA_CHOICES_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["requiredPropertyDefectSchemaChoices"],
+        "features": ["features/data-layer-required-property-defect-schema-choices-runtime.feature"]
+      }
     ]
   },
   {
@@ -797,6 +1356,9 @@
     ],
     "browserAdapters": [
       "test/browser-packs/replay.mjs"
+    ],
+    "browserAdapterModes": [
+      {"path": "test/browser-packs/replay.mjs", "mode": "shared"}
     ]
   },
   {
@@ -833,7 +1395,14 @@
       "acceptance/src/acceptance/steps/flow_graph.clj"
     ],
     "browserAdapters": [
-      "test/browser-packs/flow-graph.mjs"
+      "test/browser-packs/flow-graph.mjs",
+      "test/browser-packs/flow-graph-legacy.mjs",
+      "test/browser-packs/flow-graph-examples.mjs"
+    ],
+    "browserAdapterModes": [
+      {"path": "test/browser-packs/flow-graph.mjs", "mode": "shared"},
+      {"path": "test/browser-packs/flow-graph-legacy.mjs", "mode": "shared-wrapper"},
+      {"path": "test/browser-packs/flow-graph-examples.mjs", "mode": "shared-wrapper"}
     ]
   },
   {
@@ -871,6 +1440,9 @@
     ],
     "browserAdapters": [
       "test/browser-packs/flow-table-documentation-export.mjs"
+    ],
+    "browserAdapterModes": [
+      {"path": "test/browser-packs/flow-table-documentation-export.mjs", "mode": "shared"}
     ]
   },
   {
@@ -903,6 +1475,9 @@
     ],
     "browserAdapters": [
       "test/browser-packs/live-flow-testing.mjs"
+    ],
+    "browserAdapterModes": [
+      {"path": "test/browser-packs/live-flow-testing.mjs", "mode": "shared"}
     ]
   },
   {
@@ -1021,6 +1596,12 @@
       "test/browser-packs/layered-schema.mjs",
       "test/browser-packs/selective-profile-inheritance.mjs",
       "test/twatility-rules-conditions-browser-test.mjs"
+    ],
+    "browserAdapterModes": [
+      {"path": "test/data-layer-canonical-migration-browser-test.mjs", "mode": "shared"},
+      {"path": "test/browser-packs/layered-schema.mjs", "mode": "shared"},
+      {"path": "test/browser-packs/selective-profile-inheritance.mjs", "mode": "shared"},
+      {"path": "test/twatility-rules-conditions-browser-test.mjs", "mode": "integration"}
     ]
   },
   {
@@ -1033,7 +1614,8 @@
     "property": [],
     "features": [],
     "handlers": [],
-    "browserAdapters": []
+    "browserAdapters": [],
+    "browserAdapterModes": []
   },
   {
     "id": "schema_relationship_tree",
@@ -1056,6 +1638,9 @@
     ],
     "browserAdapters": [
       "test/browser-packs/schema-relationship-tree.mjs"
+    ],
+    "browserAdapterModes": [
+      {"path": "test/browser-packs/schema-relationship-tree.mjs", "mode": "shared"}
     ]
   },
   {
@@ -1084,6 +1669,9 @@
     ],
     "browserAdapters": [
       "test/browser-packs/property-set-flow-sections.mjs"
+    ],
+    "browserAdapterModes": [
+      {"path": "test/browser-packs/property-set-flow-sections.mjs", "mode": "shared"}
     ]
   },
   {
@@ -1107,6 +1695,9 @@
     ],
     "browserAdapters": [
       "test/browser-packs/project-assurance-severity.mjs"
+    ],
+    "browserAdapterModes": [
+      {"path": "test/browser-packs/project-assurance-severity.mjs", "mode": "shared"}
     ]
   },
   {
@@ -1116,6 +1707,9 @@
       "src/specification-studio-technical-analyst-guidance.ts"
     ],
     "dependencies": [],
+    "verificationInputs": [
+      "docs/specification-studio-technical-analyst-copy-R01.md"
+    ],
     "unit": [
       "test/data-layer-studio-choice-controls-test.mjs",
       "test/specification-studio-technical-analyst-guidance-test.mjs",
@@ -1137,6 +1731,9 @@
     ],
     "browserAdapters": [
       "test/twatility-workflow-polish-browser-test.mjs"
+    ],
+    "browserAdapterModes": [
+      {"path": "test/twatility-workflow-polish-browser-test.mjs", "mode": "integration"}
     ]
   },
   {
@@ -1164,10 +1761,101 @@
     ],
     "browserAdapters": [
       "test/browser-packs/guided-test-cases.mjs"
+    ],
+    "browserAdapterModes": [
+      {"path": "test/browser-packs/guided-test-cases.mjs", "mode": "shared"}
     ]
   },
   {
     "id": "shell",
+    "process": [
+      ".gitignore",
+      ".nvmrc",
+      ".github/",
+      "acceptance/src/acceptance/",
+      "architecture/",
+      "assets/",
+      "bb.edn",
+      "deps.edn",
+      "docs/",
+      "layered-schema.css",
+      "manifest.json",
+      "package-lock.json",
+      "package.json",
+      "project-briefs/",
+      "README.md",
+      "schema-authoring-brand.css",
+      "scripts/",
+      "side-panel-brand.css",
+      "side-panel.css",
+      "side-panel.html",
+      "specification-builder-brand.css",
+      "specification-builder-guidance.css",
+      "specification-builder.css",
+      "specification-builder.html",
+      "swarmforge/",
+      "swarm",
+      "test/acceptance/",
+      "test/browser-packs/shared-harness.mjs",
+      "test/fixtures/",
+      "test/hardening/",
+      "test/mutation/",
+      "test/project_tools/",
+      "test/support/",
+      "tsconfig.json",
+      "twatility-brand.css",
+      "vendor/acceptance-pipeline-specification/",
+      "verification/"
+    ],
+    "globalImpact": [
+      "architecture/",
+      "assets/",
+      "acceptance/src/acceptance/generator.clj",
+      "acceptance/src/acceptance/pack_runtime.clj",
+      "acceptance/src/acceptance/pack_session.clj",
+      "acceptance/src/acceptance/runtime.clj",
+      "acceptance/src/acceptance/steps/operator_interface.clj",
+      "acceptance/src/acceptance/steps/project_skeleton.clj",
+      "acceptance/src/acceptance/steps/side_panel.clj",
+      "acceptance/src/acceptance/steps/support.clj",
+      "bb.edn",
+      "deps.edn",
+      "layered-schema.css",
+      "manifest.json",
+      "package-lock.json",
+      "package.json",
+      "schema-authoring-brand.css",
+      "scripts/build.mjs",
+      "scripts/check-architecture.mjs",
+      "scripts/check-swarmforge-toolchain.mjs",
+      "scripts/dist-artifact-lock.mjs",
+      "scripts/dist-artifact.mjs",
+      "scripts/run-browser-observation.mjs",
+      "side-panel-brand.css",
+      "side-panel.css",
+      "side-panel.html",
+      "specification-builder-brand.css",
+      "specification-builder-guidance.css",
+      "specification-builder.css",
+      "specification-builder.html",
+      "src/active-page",
+      "src/background",
+      "src/panel-",
+      "src/platform",
+      "src/side-panel",
+      "src/utility-registry",
+      "src/workspace",
+      "swarmforge/toolchain.lock.json",
+      "test/browser-packs/shared-harness.mjs",
+      "test/fixtures/",
+      "test/hardening/",
+      "test/mutation/",
+      "test/project_tools/",
+      "test/support/",
+      "tsconfig.json",
+      "twatility-brand.css",
+      "vendor/acceptance-pipeline-specification/"
+    ],
     "source": [
       "src/active-page",
       "src/background",
@@ -1178,6 +1866,7 @@
       "src/workspace"
     ],
     "dependencies": [
+      "project_management",
       "command-palette",
       "hotkeys",
       "capture",
@@ -1188,13 +1877,15 @@
     ],
     "unit": [
       "test/background-command-test.mjs",
+      "test/information-architecture-runtime-test.mjs",
       "test/modular-utility-architecture-test.mjs",
+      "test/swarmforge-process-contract-test.mjs",
+      "test/verification-process-contract-test.mjs",
       "test/headless-chrome-lifecycle-test.mjs",
       "test/panel-empty-states-test.mjs",
       "test/panel-empty-states-ui-test.mjs",
       "test/side-panel-action-hierarchy-test.mjs",
       "test/side-panel-action-hierarchy-ui-test.mjs",
-      "test/side-panel-component-layout-runtime-test.mjs",
       "test/twatility-brand-foundation-test.mjs"
     ],
     "property": [
@@ -1235,8 +1926,60 @@
     ],
     "browserAdapters": [
       "test/browser-packs/shell.mjs",
+      "test/side-panel-component-layout-runtime-test.mjs",
       "test/twatility-brand-foundation-browser-test.mjs",
       "test/twatility-side-panel-shell-browser-test.mjs"
+    ],
+    "browserAdapterModes": [
+      {"path": "test/browser-packs/shell.mjs", "mode": "shared"},
+      {"path": "test/side-panel-component-layout-runtime-test.mjs", "mode": "integration"},
+      {"path": "test/twatility-brand-foundation-browser-test.mjs", "mode": "integration"},
+      {"path": "test/twatility-side-panel-shell-browser-test.mjs", "mode": "integration"}
+    ],
+    "browserObservations": [
+      {
+        "id": "SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["schemaViewContainment"],
+        "features": ["features/data-layer-secondary-view-separation.feature"]
+      },
+      {
+        "id": "WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER",
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "environment": {"WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER": "1"},
+        "observationKeys": ["workspacePanelContainment"],
+        "features": ["features/side-panel-workspace-tabs.feature"]
+      }
+    ],
+    "checkpointCommands": [
+      {
+        "id": "prepared-dist-freshness",
+        "executable": "node",
+        "args": ["scripts/verify-dist-artifact.mjs"],
+        "modes": ["terminal"]
+      },
+      {
+        "id": "acceptance-clojure-contracts",
+        "executable": "bb",
+        "args": ["test:unit"],
+        "environment": {
+          "SWARMFORGE_BUILD_PREPARED": "1",
+          "SWARMFORGE_PACK_RUNNER_OWNS_JS": "1"
+        },
+        "modes": ["exact", "impact"]
+      },
+      {
+        "id": "dist-artifact-integrity",
+        "executable": "node",
+        "args": ["scripts/dist-artifact-integrity-test.mjs"]
+      },
+      {
+        "id": "portable-package",
+        "executable": "npm",
+        "args": ["run", "package"],
+        "features": ["features/portable-build-package-flow.feature"]
+      }
     ]
   }
 ]

@@ -7,6 +7,14 @@
 (defn- enough-verification-packs? [registry]
   (>= (count registry) 6))
 
+(def ^:private browser-adapter-modes
+  #{"shared" "shared-wrapper" "integration"})
+
+(defn- classified-browser-adapters [registry]
+  (into {}
+        (map (juxt :path :mode))
+        (mapcat :browserAdapterModes registry)))
+
 (defn- inspect! [world]
   (if (:modular/inspected world)
     world
@@ -15,12 +23,24 @@
           utility-registry (support/source-file root "src/utility-registry.ts")
           side-panel (support/source-file root "src/side-panel.ts")
           generator (support/source-file root "acceptance/src/acceptance/generator.clj")
-          adapters (mapcat :browserAdapters registry)]
+          adapters (mapcat :browserAdapters registry)
+          adapter-classifications (classified-browser-adapters registry)]
       (support/assert! (enough-verification-packs? registry) "Too few verification packs are registered." {})
       (doseq [pack registry
-              key [:source :dependencies :unit :property :features :handlers :browserAdapters]]
+              key [:source :dependencies :unit :property :features :handlers
+                   :browserAdapters :browserAdapterModes]]
         (support/assert! (vector? (get pack key)) "Verification pack field is not a vector."
                          {:pack (:id pack) :field key}))
+      (doseq [pack registry]
+        (let [pack-adapters (set (:browserAdapters pack))
+              classifications (:browserAdapterModes pack)]
+          (support/assert! (and (= (count pack-adapters) (count classifications))
+                                (= pack-adapters (set (map :path classifications))))
+                           "Browser adapters are not classified exactly once."
+                           {:pack (:id pack)})
+          (support/assert! (every? #(browser-adapter-modes (:mode %)) classifications)
+                           "Browser adapter mode is invalid."
+                           {:pack (:id pack)})))
       (doseq [path (mapcat #(mapcat % registry)
                            [#(:unit %) #(:property %) #(:features %) #(:handlers %) #(:browserAdapters %)])]
         (support/assert! (fs/exists? (fs/path root path)) "Verification pack path is missing."
@@ -32,10 +52,13 @@
       (support/assert! (and (str/includes? side-panel "extensionShell")
                             (not (str/includes? generator "acceptance.steps.all :as steps")))
                        "Production shell or generated acceptance wiring is not modular." {})
-      (doseq [adapter adapters]
+      (doseq [adapter (filter #(= "shared" (adapter-classifications %)) adapters)]
         (support/assert! (str/includes? (support/source-file root adapter) "shared-harness")
                          "Browser adapter does not use the shared harness." {:adapter adapter}))
-      (assoc world :modular/inspected true :modular/registry registry))))
+      (assoc world
+             :modular/inspected true
+             :modular/registry registry
+             :modular/browser-adapter-modes adapter-classifications))))
 
 (def handlers
   [{:pattern #"^.*$"

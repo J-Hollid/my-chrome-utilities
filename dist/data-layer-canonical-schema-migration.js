@@ -5,6 +5,20 @@ import { canonicalPredicateWithStableIds } from "./data-layer-canonical-predicat
 const clone = (value) => structuredClone(value);
 const emptyDocumentation = () => ({ displayText: "", description: "", comments: "", example: { method: "blank" } });
 const typeOf = (value) => value === null ? "null" : Array.isArray(value) ? "array" : typeof value === "number" ? "number" : typeof value === "boolean" ? "boolean" : typeof value === "object" ? "object" : "string";
+const schemaRecord = (value) => value && typeof value === "object" && !Array.isArray(value) ? value : undefined;
+function jsonSchemaDefinitionAtPath(document, path) {
+    const rootProperties = schemaRecord(document.properties), flat = schemaRecord(rootProperties?.[path]);
+    if (flat)
+        return flat;
+    let definition = document;
+    for (const segment of path.split("/").filter(Boolean)) {
+        const next = segment === "*" ? schemaRecord(definition.items) : schemaRecord(schemaRecord(definition.properties)?.[segment]);
+        if (!next)
+            return {};
+        definition = next;
+    }
+    return definition;
+}
 export function resolveCanonicalMigrationConflict(plan, conflictId, choiceId) {
     const conflict = plan.conflicts.find(({ id }) => id === conflictId), choice = conflict?.choices.find(({ id }) => id === choiceId);
     if (!conflict || !choice)
@@ -49,10 +63,7 @@ export function canonicalSchemaFromJsonSchema(input) { const profile = { id: inp
     node.rules = node.rules.map((rule) => { const condition = canonicalPredicateWithStableIds(rule.condition, input.idFactory); return condition ? { ...rule, condition } : { ...rule }; });
     node.provenance = node.provenance.map(() => ({ source: "saved-schema", sourceId: input.sourceIdentity, revision: input.sourceRevision }));
 } for (const row of canonicalTableRows(document)) {
-    let definition = input.document;
-    for (const segment of row.path.split("/").filter((value) => value && value !== "*"))
-        definition = (definition.properties?.[segment] ?? definition.items ?? {});
-    const concept = typeof definition["x-concept"] === "string" ? definition["x-concept"].trim() : "", types = Array.isArray(definition.type) ? definition.type.filter((value) => typeof value === "string" && ["string", "number", "integer", "boolean", "null", "object", "array"].includes(value)) : [], declared = types.find((value) => value !== "null");
+    const definition = jsonSchemaDefinitionAtPath(input.document, row.path), concept = typeof definition["x-concept"] === "string" ? definition["x-concept"].trim() : "", rawTypes = Array.isArray(definition.type) ? definition.type : [definition.type], types = rawTypes.filter((value) => typeof value === "string" && ["string", "number", "integer", "boolean", "null", "object", "array"].includes(value)), declared = types.find((value) => value !== "null");
     if (declared) {
         row.node.type = declared;
         row.node.nullable = types.includes("null");

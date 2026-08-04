@@ -251,7 +251,11 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
         throw new Error("Resolve the visible conflicting fields before retrying this Draft."); loaded.delete(pending.projectId); enqueue(`Retry ${pending.command.label}`, () => persistState(pending.projectId, pending.state, pending.command.label, true)); await latest; await installCurrent(pending.projectId, partialRoutes.get(pending.projectId)); projectionChanged(true); const deferred = deferredActiveContext; deferredActiveContext = undefined; if (deferred)
         await installActive(deferred); };
     const retryFailedSchemaSave = async () => { const pending = failedSchema; if (!pending)
-        throw new Error("There is no failed Saved Schema Library batch to retry."); enqueue(`Retry ${pending.batch.label}`, () => commitSchemaBatch(pending.batch, true)); await latest; };
+        throw new Error("There is no failed Saved Schema Library batch to retry."); if (pending.conflict)
+        throw new Error("This Saved Schema Library batch has a stale base token. Reject it, reload the latest durable schema, and review the edit again instead of retrying the same conflict."); enqueue(`Retry ${pending.batch.label}`, () => commitSchemaBatch(pending.batch, true)); await latest; };
+    const resolveFailedSchemaSave = async (strategy) => { if (strategy !== "reject")
+        throw new Error("A failed Saved Schema Library batch can only be rejected."); if (!failedSchema)
+        throw new Error("There is no failed Saved Schema Library batch to resolve."); failedSchema = undefined; await refreshSchemas(); projectionChanged(true); };
     const resolveFailedSave = async (strategy, pendingFields = []) => { const pending = failed; if (!pending)
         throw new Error("There is no failed durable Draft to resolve."); if (strategy === "reject") {
         failed = undefined;
@@ -302,6 +306,6 @@ export async function createDurableProjectRuntime(repository, legacy, startup = 
         throw failedSchema.error; };
     const settledProjectCommand = async (projectId, label) => { await settled("project"); const acknowledgement = pageHistory(projectId).snapshot().undo.find((entry) => entry.label === label); if (!acknowledgement)
         throw new Error(`${label} was not acknowledged in durable page history.`); };
-    return { repository, storage, ensureProject, prepareProjectRoute, ensureProjectRoute, refreshProject, settled, settledProjectCommand, subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); }, failedSave: () => failed ? structuredClone(failed) : undefined, failedSchemaSave: () => failedSchema ? structuredClone(failedSchema) : undefined, retryFailedSave, retryFailedSchemaSave, resolveFailedSave, exportUnsavedDraft, exportUnsavedSchemas, historyInspection: projectId => structuredClone(pageHistory(projectId).snapshot()), canUndo: projectId => pageHistory(projectId).snapshot().undo.length > 0, canRedo: projectId => pageHistory(projectId).snapshot().redo.length > 0, undo: projectId => applyHistory(projectId, "undo"), redo: projectId => applyHistory(projectId, "redo"), resolveMigration, migration };
+    return { repository, storage, ensureProject, prepareProjectRoute, ensureProjectRoute, refreshProject, settled, settledProjectCommand, subscribe(listener) { listeners.add(listener); return () => listeners.delete(listener); }, failedSave: () => failed ? structuredClone(failed) : undefined, failedSchemaSave: () => failedSchema ? structuredClone(failedSchema) : undefined, retryFailedSave, retryFailedSchemaSave, resolveFailedSchemaSave, resolveFailedSave, exportUnsavedDraft, exportUnsavedSchemas, historyInspection: projectId => structuredClone(pageHistory(projectId).snapshot()), canUndo: projectId => pageHistory(projectId).snapshot().undo.length > 0, canRedo: projectId => pageHistory(projectId).snapshot().redo.length > 0, undo: projectId => applyHistory(projectId, "undo"), redo: projectId => applyHistory(projectId, "redo"), resolveMigration, migration };
 }
 //# sourceMappingURL=runtime-core.js.map

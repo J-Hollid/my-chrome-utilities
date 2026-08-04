@@ -65,6 +65,9 @@
    :assignments [{:schemaId "schema-product-listing" :schemaVersion 3 :versionPolicy "pinned"}
                  {:schemaId "schema-product-listing" :schemaVersion nil :versionPolicy "follow latest"}]})
 
+(def ^:private expected-history-status
+  "Working draft based on revision 4 · 3 pending changes · Product listing · Saved schema working draft · Schema revision 0")
+
 (def ^:private expected-ui
   {:history
    {:options ["Revision 3" "Revision 2" "Revision 1"]
@@ -73,7 +76,7 @@
     :separateRows 0
     :assignmentChoices ["Product listing version 4"]
     :openedWithoutMutation true
-    :status "Working draft based on revision 4 · 3 pending changes"}
+    :status expected-history-status}
    :duplication
    {:name "Product listing revision 2 copy"
     :published false
@@ -89,7 +92,10 @@
    {:review "Product listing working draft will be compared with current revision 4; confirmation publishes revision 5. Pending changes: Restore revision 2."
     :current 5
     :history [1 2 3 4]
-    :draftCleared true}})
+   :draftCleared true}})
+
+(defn- current-history-status? [ui]
+  (= expected-history-status (get-in ui [:history :status])))
 
 (def ^:private policy-keys
   {"pinned to 3" :pinned
@@ -117,6 +123,8 @@
                    "Historical duplication or restoration changed the current revision." observation)
   (support/assert! (= expected-migration (:migration observation))
                    "Legacy revision rows did not migrate to one stable schema." observation)
+  (support/assert! (current-history-status? (:ui observation))
+                   "Revision history omitted its working-draft canonical context." observation)
   (support/assert! (= expected-ui (:ui observation))
                    "Revision history UI changed lifecycle state or exposed an assignable draft or historical row." observation)
   (support/assert! (= ["Review draft" "Publish revision"] (:completionActions observation))

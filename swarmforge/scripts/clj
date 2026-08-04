@@ -2,13 +2,55 @@
 set -euo pipefail
 
 if repo_root=$(git rev-parse --show-toplevel 2>/dev/null); then
+  repo_root=$(cd "$repo_root" && pwd -P)
   state_dir="$repo_root/.swarmforge/clojure"
+  state_parent="$repo_root/.swarmforge"
 else
-  state_dir="${TMPDIR:-/tmp}/clojure-cli-${UID}"
+  state_dir="/tmp/swarmforge-clojure-${UID}"
+  state_parent="$state_dir"
 fi
 
-export CLJ_CONFIG="${CLJ_CONFIG:-$state_dir/config}"
-export CLJ_CACHE="${CLJ_CACHE:-$state_dir/cache}"
-mkdir -p "$CLJ_CONFIG" "$CLJ_CACHE"
+for argument in "$@"; do
+  case "$argument" in
+    -Sdeps*)
+      echo "The SwarmForge Clojure wrapper owns -Sdeps so the Maven repository stays local." >&2
+      exit 64
+      ;;
+  esac
+done
 
-exec "$HOME/.local/bin/clojure" "$@"
+for local_state_path in \
+  "$state_parent" \
+  "$state_dir" \
+  "$state_dir/config" \
+  "$state_dir/cache" \
+  "$state_dir/gitlibs" \
+  "$state_dir/m2"; do
+  if [[ -L "$local_state_path" ]]; then
+    echo "Refusing a symlinked Clojure state path: $local_state_path" >&2
+    exit 78
+  fi
+done
+
+export CLJ_CONFIG="$state_dir/config"
+export CLJ_CACHE="$state_dir/cache"
+export GITLIBS="$state_dir/gitlibs"
+clj_m2_dir="$state_dir/m2"
+mkdir -p "$CLJ_CONFIG" "$CLJ_CACHE" "$GITLIBS" "$clj_m2_dir"
+
+clojure_cli="${CLOJURE_CLI:-$HOME/.local/bin/clojure}"
+if [[ ! -x "$clojure_cli" ]]; then
+  if command -v clojure >/dev/null 2>&1; then
+    clojure_cli=$(command -v clojure)
+  else
+    echo "Clojure CLI is unavailable; set CLOJURE_CLI to an executable." >&2
+    exit 127
+  fi
+fi
+
+# tools.deps does not honor -Dmaven.repo.local during basis calculation. Supply
+# the local repository as data so both dependency resolution and JVM execution
+# stay inside the project-owned cache.
+escaped_m2=${clj_m2_dir//\\/\\\\}
+escaped_m2=${escaped_m2//\"/\\\"}
+exec "$clojure_cli" -Sdeps "{:mvn/local-repo \"$escaped_m2\"}" "$@"

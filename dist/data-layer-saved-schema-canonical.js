@@ -1,4 +1,5 @@
 import { canonicalPropertyPath, canonicalSchemaFromJsonSchema } from "./data-layer-canonical-schema.js";
+import { normalizeCanonicalSchemaDocument } from "./data-layer-schema-canonical-document.js";
 const pointer = (path) => `/${path.split(/[./]/).filter(Boolean).join("/")}`;
 const clone = (value) => structuredClone(value);
 const stableValueIdentity = (owner, value) => { let hash = 2166136261; for (const char of JSON.stringify(value)) {
@@ -6,47 +7,142 @@ const stableValueIdentity = (owner, value) => { let hash = 2166136261; for (cons
     hash = Math.imul(hash, 16777619);
 } return `allowed-value:${owner}:${(hash >>> 0).toString(16)}`; };
 const jsonFacetRule = (schemaId, nodeId, kind) => `json-facet:${schemaId}:${nodeId}:${kind}`;
+const pointerSegments = (path) => path.split("/").filter(Boolean).map((segment) => segment.replaceAll("~1", "/").replaceAll("~0", "~"));
+const sourcePropertyAtPath = (document, path) => {
+    const directProperties = document.properties;
+    if (directProperties && typeof directProperties === "object" && !Array.isArray(directProperties)) {
+        const directDefinition = directProperties[path];
+        if (directDefinition && typeof directDefinition === "object" && !Array.isArray(directDefinition))
+            return { definition: directDefinition, container: document, name: path };
+    }
+    const segments = pointerSegments(path);
+    if (!segments.length)
+        return undefined;
+    let current = document;
+    for (let index = 0; index < segments.length - 1; index += 1) {
+        const segment = segments[index];
+        if (segment === "*") {
+            const items = current.items;
+            if (!items || typeof items !== "object" || Array.isArray(items))
+                return undefined;
+            current = items;
+            continue;
+        }
+        const properties = current.properties;
+        if (!properties || typeof properties !== "object" || Array.isArray(properties))
+            return undefined;
+        const child = properties[segment];
+        if (!child || typeof child !== "object" || Array.isArray(child))
+            return undefined;
+        current = child;
+    }
+    const name = segments.at(-1);
+    if (name === "*")
+        return undefined;
+    const properties = current.properties;
+    if (!properties || typeof properties !== "object" || Array.isArray(properties))
+        return undefined;
+    const definition = properties[name];
+    return definition && typeof definition === "object" && !Array.isArray(definition) ? { definition: definition, container: current, name } : undefined;
+};
 const canonicalOperator = (operator) => ({ "Equal": "Equals", "Is greater than": "Greater than", "Is at least": "At least", "Is less than": "Less than", "Is at most": "At most" }[operator] ?? operator);
+const comparisonValue = (comparison) => comparison?.value !== undefined ? clone(comparison.value) : comparison?.type === "null" ? null : undefined;
 function canonicalRuleCondition(document, group) {
     if (!group)
         return { complete: true };
+    if (!Array.isArray(group.predicates))
+        return { complete: false };
     const byPath = new Map(Object.values(document.nodes).map((node) => [canonicalPropertyPath(document, node.id), node.id])), kind = group.operator === "All" ? "all" : group.operator === "Any" ? "any" : group.operator === "Not" ? "not" : undefined, children = group.predicates.map((predicate) => { const propertyId = byPath.get(pointer(predicate.propertyPath)); if (!propertyId)
-        return undefined; const value = predicate.comparison?.value; return { kind: "predicate", propertyId, operator: canonicalOperator(predicate.operator), ...(value !== undefined ? { value } : predicate.comparison?.type === "null" ? { value: null } : {}) }; });
+        return undefined; const operator = canonicalOperator(predicate.operator), value = operator === "Is one of" && predicate.comparisons ? predicate.comparisons.map(comparisonValue) : comparisonValue(predicate.comparison); return { kind: "predicate", propertyId, operator, ...(value !== undefined ? { value } : {}) }; });
     if (!kind || !children.length || children.some((child) => child === undefined) || (kind === "not" && children.length !== 1))
         return { complete: false };
     return { complete: true, condition: { kind, children: children } };
 }
+const legacyOperator = (operator) => ({ "Greater than": "Is greater than", "At least": "Is at least", "Less than": "Is less than", "At most": "Is at most" }[operator] ?? operator);
+const legacyConditionOperators = new Set(["Equals", "Does not equal", "Exists", "Does not exist", "Starts with", "Contains", "Is one of", "Matches pattern", "Greater than", "At least", "Less than", "At most"]);
+const typedComparison = (value) => value === null ? { type: "null", value: null } : typeof value === "string" ? { type: "string", value } : typeof value === "number" ? { type: "number", value } : typeof value === "boolean" ? { type: "boolean", value } : undefined;
+const sameValue = (left, right) => Object.is(left, right) || Array.isArray(left) && Array.isArray(right) && left.length === right.length && left.every((value, index) => sameValue(value, right[index]));
+const conditionValue = (predicate) => canonicalOperator(predicate.operator) === "Is one of" && predicate.comparisons ? predicate.comparisons.map(comparisonValue) : comparisonValue(predicate.comparison);
+function legacyRuleCondition(document, condition, prior, previous) {
+    if (!condition || (condition.kind !== "all" && condition.kind !== "any") || !condition.children.length || condition.children.some(({ kind }) => kind !== "predicate"))
+        return undefined;
+    const operator = condition.kind === "all" ? "All" : "Any", sourcePaths = new Map(Object.entries(document.sourceContent?.pathsByNodeId ?? {}).map(([id, path]) => [pointer(path), id])), currentPaths = new Map(Object.values(document.nodes).map((node) => [canonicalPropertyPath(document, node.id), node.id])), previousPaths = new Map(Object.values(previous?.nodes ?? {}).map((node) => [canonicalPropertyPath(previous, node.id), node.id])), priorPredicates = prior?.operator === operator && prior.predicates.length === condition.children.length ? prior.predicates : [];
+    const predicates = [];
+    for (const [index, entry] of condition.children.entries()) {
+        if (entry.kind !== "predicate" || !legacyConditionOperators.has(entry.operator))
+            return undefined;
+        const node = document.nodes[entry.propertyId];
+        if (!node)
+            return undefined;
+        const candidate = priorPredicates[index], candidatePropertyId = candidate ? (currentPaths.get(pointer(candidate.propertyPath)) ?? sourcePaths.get(pointer(candidate.propertyPath)) ?? previousPaths.get(pointer(candidate.propertyPath))) : undefined, candidateMatches = Boolean(candidate && candidatePropertyId === entry.propertyId && canonicalOperator(candidate.operator) === entry.operator && (["Exists", "Does not exist"].includes(entry.operator) || sameValue(conditionValue(candidate), entry.value))), currentPath = canonicalPropertyPath(document, entry.propertyId), base = candidateMatches ? clone(candidate) : undefined, { comparison: _comparison, comparisons: _comparisons, ...metadata } = base ?? {}, propertyPath = base && pointer(base.propertyPath) === currentPath ? base.propertyPath : currentPath, predicate = { ...metadata, propertyPath, operator: base?.operator ?? legacyOperator(entry.operator) };
+        if (entry.operator === "Is one of") {
+            if (!Array.isArray(entry.value))
+                return undefined;
+            const comparisons = entry.value.map(typedComparison);
+            if (comparisons.some((value) => value === undefined))
+                return undefined;
+            predicate.comparisons = comparisons;
+        }
+        else if (entry.operator !== "Exists" && entry.operator !== "Does not exist") {
+            const comparison = typedComparison(entry.value);
+            if (!comparison)
+                return undefined;
+            predicate.comparison = comparison;
+        }
+        if (!base)
+            predicate.detectedType = node.type === "integer" ? "number" : node.type;
+        predicates.push(predicate);
+    }
+    return { operator, predicates };
+}
+const attachedRuleKey = (rule) => `${rule.id}\u0000${pointer(rule.propertyPath ?? "")}`;
+const projectionOnlyJsonMetadata = (projected, source) => {
+    const next = clone(projected);
+    for (const key of ["typeMismatchTreatment", "propertyOrigin"]) {
+        if (source[key] !== undefined)
+            next[key] = source[key];
+        else
+            delete next[key];
+    }
+    for (const [name, child] of Object.entries(next.properties ?? {})) {
+        const sourceChild = source.properties?.[name];
+        if (sourceChild)
+            next.properties[name] = projectionOnlyJsonMetadata(child, sourceChild);
+    }
+    if (next.items && source.items)
+        next.items = projectionOnlyJsonMetadata(next.items, source.items);
+    return next;
+};
 export function savedSchemaCanonicalDocument(schema, id, target) {
     if (schema.canonicalSchema)
         return clone(schema.canonicalSchema);
     const canonical = canonicalSchemaFromJsonSchema({ id: target?.id ?? `canonical:saved:${schema.id}`, contributorId: target?.contributorId ?? schema.id, contributorName: target?.contributorName ?? schema.name, sourceIdentity: schema.id, sourceRevision: schema.version, document: schema.document, idFactory: id }), byPath = new Map(Object.values(canonical.nodes).map((node) => [canonicalPropertyPath(canonical, node.id), node]));
     const definitionsByNodeId = {}, pathsByNodeId = {}, sourceRules = schema.attachedRules ?? schema.rules ?? [];
-    const visit = (definition, path) => { for (const [index, [name, child]] of Object.entries(definition.properties ?? {}).entries()) {
-        const childPath = `${path}/${name}`, node = byPath.get(childPath), documentation = schema.documentation?.properties?.[childPath], rich = child;
-        if (node) {
-            node.order = index;
-            definitionsByNodeId[node.id] = clone(rich);
-            pathsByNodeId[node.id] = childPath;
-            if (definition.required?.includes(name))
-                node.presence = { mode: "required" };
-            else if (definition.forbidden?.includes(name))
-                node.presence = { mode: "forbidden" };
-            if (node.type === "array" && rich.items && typeof rich.items === "object" && typeof rich.items.type === "string")
-                node.itemType = rich.items.type;
-            node.allowedValues = node.allowedValues.map((entry) => ({ ...entry, id: entry.id ?? stableValueIdentity(node.id, entry.value) }));
-            if (documentation)
-                node.documentation = { displayText: documentation.displayName, description: documentation.description || node.documentation.description, comments: documentation.comments ?? "", example: documentation.example ? { method: documentation.example.selectionMethod === "allowed value" ? "allowed-value" : "custom", value: clone(documentation.example.value) } : node.documentation.example };
-            const minimum = typeof rich.minimum === "number" ? rich.minimum : undefined, maximum = typeof rich.maximum === "number" ? rich.maximum : undefined, minItems = typeof rich.minItems === "number" ? rich.minItems : undefined, maxItems = typeof rich.maxItems === "number" ? rich.maxItems : undefined;
-            if (typeof rich.pattern === "string")
-                node.rules.push({ id: jsonFacetRule(schema.id, node.id, "pattern"), kind: "pattern", pattern: rich.pattern, severity: "error", message: "Pattern mismatch" });
-            if (minimum !== undefined || maximum !== undefined)
-                node.rules.push({ id: jsonFacetRule(schema.id, node.id, "range"), kind: "range", ...(minimum !== undefined ? { minimum } : {}), ...(maximum !== undefined ? { maximum } : {}), severity: "error", message: "Outside range" });
-            if (minItems !== undefined || maxItems !== undefined)
-                node.rules.push({ id: jsonFacetRule(schema.id, node.id, "cardinality"), kind: "cardinality", ...(minItems !== undefined ? { minItems } : {}), ...(maxItems !== undefined ? { maxItems } : {}), severity: "error", message: "Outside cardinality" });
-        }
-        visit(child, childPath);
-    } };
-    visit(schema.document, "");
+    for (const [path, node] of byPath) {
+        const source = sourcePropertyAtPath(schema.document, path);
+        if (!source)
+            continue;
+        const { definition: rich, container, name } = source, documentation = schema.documentation?.properties?.[path], siblings = container.properties;
+        node.order = Object.keys(siblings).indexOf(name);
+        definitionsByNodeId[node.id] = clone(rich);
+        pathsByNodeId[node.id] = path;
+        if (Array.isArray(container.required) && container.required.includes(name))
+            node.presence = { mode: "required" };
+        else if (Array.isArray(container.forbidden) && container.forbidden.includes(name))
+            node.presence = { mode: "forbidden" };
+        if (node.type === "array" && rich.items && typeof rich.items === "object" && !Array.isArray(rich.items) && typeof rich.items.type === "string")
+            node.itemType = rich.items.type;
+        node.allowedValues = node.allowedValues.map((entry) => ({ ...entry, id: entry.id ?? stableValueIdentity(node.id, entry.value) }));
+        if (documentation)
+            node.documentation = { displayText: documentation.displayName, description: documentation.description || node.documentation.description, comments: documentation.comments ?? "", example: documentation.example ? { method: documentation.example.selectionMethod === "allowed value" ? "allowed-value" : "custom", value: clone(documentation.example.value) } : node.documentation.example };
+        const minimum = typeof rich.minimum === "number" ? rich.minimum : undefined, maximum = typeof rich.maximum === "number" ? rich.maximum : undefined, minItems = typeof rich.minItems === "number" ? rich.minItems : undefined, maxItems = typeof rich.maxItems === "number" ? rich.maxItems : undefined;
+        if (typeof rich.pattern === "string")
+            node.rules.push({ id: jsonFacetRule(schema.id, node.id, "pattern"), kind: "pattern", pattern: rich.pattern, severity: "error", message: "Pattern mismatch" });
+        if (minimum !== undefined || maximum !== undefined)
+            node.rules.push({ id: jsonFacetRule(schema.id, node.id, "range"), kind: "range", ...(minimum !== undefined ? { minimum } : {}), ...(maximum !== undefined ? { maximum } : {}), severity: "error", message: "Outside range" });
+        if (minItems !== undefined || maxItems !== undefined)
+            node.rules.push({ id: jsonFacetRule(schema.id, node.id, "cardinality"), kind: "cardinality", ...(minItems !== undefined ? { minItems } : {}), ...(maxItems !== undefined ? { maxItems } : {}), severity: "error", message: "Outside cardinality" });
+    }
     canonical.rootIds = Object.values(canonical.nodes).filter(({ parentId }) => !parentId).sort((left, right) => left.order - right.order).map(({ id }) => id);
     if (canonical.rootIds[0])
         canonical.selectedPropertyId = canonical.rootIds[0];
@@ -83,30 +179,76 @@ export function savedSchemaCanonicalDocument(schema, id, target) {
     return canonical;
 }
 const orderedChildren = (document, parentId) => Object.values(document.nodes).filter((node) => node.parentId === parentId).sort((left, right) => left.order - right.order || left.id.localeCompare(right.id));
-function jsonDefinition(document, node) {
-    const base = clone(document.sourceContent?.definitionsByNodeId?.[node.id] ?? {}), children = orderedChildren(document, node.id), definition = { ...base, type: node.type };
+const savedRuleOwnsFacet = (node, operator) => node.rules.some((rule) => rule.enabled !== false && rule.operator === operator && rule.provenance?.source === "saved-schema");
+const sourceOwnsPresence = (document, node, mode) => {
+    const path = document.sourceContent?.pathsByNodeId?.[node.id];
+    if (!path)
+        return false;
+    const source = sourcePropertyAtPath(document.sourceContent?.document ?? {}, path), members = source?.container[mode];
+    return Array.isArray(members) && members.includes(source.name);
+};
+const materializedPresence = (document, node, mode) => {
+    if (savedRuleOwnsFacet(node, mode))
+        return sourceOwnsPresence(document, node, mode);
+    return node.presence.mode === mode;
+};
+const sourceDocumentationAtNode = (document, node) => {
+    const documentation = document.sourceContent?.documentation, sourcePath = document.sourceContent?.pathsByNodeId?.[node.id], paths = [canonicalPropertyPath(document, node.id), ...(sourcePath ? [pointer(sourcePath)] : [])];
+    return paths.map((path) => documentation?.properties?.[path]).find(Boolean);
+};
+const withoutRootDeclaredPolicy = (document) => { const next = clone(document); delete next.additionalProperties; return next; };
+const losslessSourceRepresentation = (source, projected, onlyDefinedFields) => {
+    const sourceMeaning = normalizeCanonicalSchemaDocument(withoutRootDeclaredPolicy(source)), projectedMeaning = normalizeCanonicalSchemaDocument(withoutRootDeclaredPolicy(projected));
+    if (JSON.stringify(sourceMeaning) !== JSON.stringify(projectedMeaning))
+        return projected;
+    const preserved = clone(source);
+    if (onlyDefinedFields)
+        preserved.additionalProperties = false;
+    else
+        delete preserved.additionalProperties;
+    return preserved;
+};
+function jsonDefinition(document, node, currentDocument, previousCanonical) {
+    const currentPaths = [canonicalPropertyPath(document, node.id), ...(previousCanonical?.nodes[node.id] ? [canonicalPropertyPath(previousCanonical, node.id)] : []), ...(document.sourceContent?.pathsByNodeId?.[node.id] ? [document.sourceContent.pathsByNodeId[node.id]] : [])], currentDefinition = currentPaths.map((path) => sourcePropertyAtPath(currentDocument, path)?.definition).find(Boolean), sourceDefinition = document.sourceContent?.definitionsByNodeId?.[node.id], base = clone(currentDefinition ?? sourceDefinition ?? {}), sourceDocumentation = sourceDocumentationAtNode(document, node), children = orderedChildren(document, node.id), definition = { ...base, type: node.type };
+    if (!currentDefinition && !sourceDefinition && node.provenance.some(({ source }) => source === "created"))
+        definition.propertyOrigin = "manual";
     for (const key of ["properties", "required", "forbidden", "enum", "description", "examples", "pattern", "minimum", "maximum", "minItems", "maxItems"])
         delete definition[key];
-    if (node.type === "array") {
-        const prior = base.items && typeof base.items === "object" ? clone(base.items) : undefined;
-        definition.items = node.itemType && prior?.type === node.itemType ? prior : { type: node.itemType ?? "string" };
+    if (node.type === "array" && node.itemType) {
+        const prior = base.items && typeof base.items === "object" && !Array.isArray(base.items) ? clone(base.items) : undefined;
+        definition.items = prior?.type === node.itemType ? prior : { type: node.itemType };
     }
     else
         delete definition.items;
     if (children.length) {
         const container = node.type === "array" && node.itemType === "object" ? definition.items : definition;
-        container.properties = Object.fromEntries(children.map((child) => [child.name, jsonDefinition(document, child)]));
-        const required = children.filter(({ presence }) => presence.mode.startsWith("required")).map(({ name }) => name), forbidden = children.filter(({ presence }) => presence.mode.startsWith("forbidden")).map(({ name }) => name);
+        container.properties = Object.fromEntries(children.map((child) => [child.name, jsonDefinition(document, child, currentDocument, previousCanonical)]));
+        delete container.required;
+        delete container.forbidden;
+        const required = children.filter((child) => materializedPresence(document, child, "required")).map(({ name }) => name), forbidden = children.filter((child) => materializedPresence(document, child, "forbidden")).map(({ name }) => name);
         if (required.length)
             container.required = required;
         if (forbidden.length)
             container.forbidden = forbidden;
     }
-    if (node.allowedValues.length)
+    const sourceEnum = Array.isArray(base.enum) ? base.enum : undefined;
+    if (savedRuleOwnsFacet(node, "allowed-values")) {
+        if (sourceEnum)
+            definition.enum = clone(sourceEnum);
+    }
+    else if (node.allowedValues.length)
         definition.enum = node.allowedValues.map(({ value }) => clone(value));
-    if (node.documentation.description)
+    if (sourceDocumentation?.description) {
+        if (base.description !== undefined)
+            definition.description = clone(base.description);
+    }
+    else if (node.documentation.description)
         definition.description = node.documentation.description;
-    if (node.documentation.example.method !== "blank")
+    if (sourceDocumentation?.example) {
+        if (base.examples !== undefined)
+            definition.examples = clone(base.examples);
+    }
+    else if (node.documentation.example.method !== "blank")
         definition.examples = [clone(node.documentation.example.value)];
     for (const rule of node.rules.filter(({ id }) => id.startsWith("json-facet:"))) {
         if (rule.kind === "pattern" && rule.pattern)
@@ -127,19 +269,21 @@ function jsonDefinition(document, node) {
     return definition;
 }
 export function savedSchemaFromCanonical(schema, canonical) {
-    const roots = orderedChildren(canonical), root = clone(canonical.sourceContent?.document ?? {});
+    const roots = orderedChildren(canonical), previousCanonical = schema.canonicalSchema, root = clone(schema.document ?? canonical.sourceContent?.document ?? {});
     for (const key of ["properties", "required", "forbidden", "additionalProperties"])
         delete root[key];
     root.type = "object";
-    root.properties = Object.fromEntries(roots.map((node) => [node.name, jsonDefinition(canonical, node)]));
+    root.properties = Object.fromEntries(roots.map((node) => [node.name, jsonDefinition(canonical, node, schema.document, previousCanonical)]));
     if (canonical.onlyDefinedFields)
         root.additionalProperties = false;
-    const rootRequired = roots.filter(({ presence }) => presence.mode.startsWith("required")).map(({ name }) => name), rootForbidden = roots.filter(({ presence }) => presence.mode.startsWith("forbidden")).map(({ name }) => name);
+    const rootRequired = roots.filter((node) => materializedPresence(canonical, node, "required")).map(({ name }) => name), rootForbidden = roots.filter((node) => materializedPresence(canonical, node, "forbidden")).map(({ name }) => name);
     if (rootRequired.length)
         root.required = rootRequired;
     if (rootForbidden.length)
         root.forbidden = rootForbidden;
-    const document = root, attachedRules = [], properties = {};
+    const document = root, attachedRules = [], properties = {}, sourceAttachments = [...(schema.attachedRules ?? [])], consumedSourceRules = new Set(), projectedRuleKeys = new Set(), outputOrder = new Map(), canonicalPaths = new Set(Object.values(canonical.nodes).map((node) => canonicalPropertyPath(canonical, node.id))), sourcePathByNodeId = canonical.sourceContent?.pathsByNodeId ?? {};
+    const priorRule = (id, nodeId, path) => { const candidates = sourceAttachments.map((rule, index) => ({ rule, index })).filter(({ rule, index }) => rule.id === id && !consumedSourceRules.has(index)), sourcePath = sourcePathByNodeId[nodeId], previousPath = previousCanonical?.nodes[nodeId] ? canonicalPropertyPath(previousCanonical, nodeId) : undefined, expectedPaths = new Set([path, ...(sourcePath ? [pointer(sourcePath)] : []), ...(previousPath ? [previousPath] : [])]), match = candidates.find(({ rule }) => expectedPaths.has(pointer(rule.propertyPath ?? ""))); if (match)
+        consumedSourceRules.add(match.index); return match; };
     for (const node of Object.values(canonical.nodes)) {
         const path = canonicalPropertyPath(canonical, node.id), priorDocumentation = schema.documentation?.properties?.[path], example = node.documentation.example.method === "blank" ? undefined : { value: structuredClone(node.documentation.example.value), selectionMethod: node.documentation.example.method === "allowed-value" ? "allowed value" : "custom" }, sourceRules = canonical.sourceContent?.definitionsByNodeId?.[node.id]?.rules, embeddedRuleIds = new Set(Array.isArray(sourceRules) ? sourceRules.flatMap((rule) => rule && typeof rule === "object" && "id" in rule && typeof rule.id === "string" ? [rule.id] : []) : []);
         if (node.documentation.displayText || node.documentation.description || node.documentation.comments || priorDocumentation || example)
@@ -147,18 +291,34 @@ export function savedSchemaFromCanonical(schema, canonical) {
         for (const rule of node.rules) {
             if (rule.id.startsWith("json-facet:"))
                 continue;
-            const prior = (schema.attachedRules ?? []).find(({ id }) => id === rule.id);
+            const priorMatch = priorRule(rule.id, node.id, path), prior = priorMatch?.rule;
             if (!prior && embeddedRuleIds.has(rule.id))
                 continue;
-            const operator = rule.kind === "pattern" ? (prior?.operator ?? "regular-expression") : rule.kind === "range" ? "numeric-range" : rule.kind === "cardinality" ? "item-count" : prior?.operator ?? rule.kind, parameters = rule.kind === "pattern" ? rule.pattern : rule.kind === "range" ? `${rule.minimum ?? ""},${rule.maximum ?? ""}` : rule.kind === "cardinality" ? `${rule.minItems ?? ""},${rule.maxItems ?? ""}` : prior?.parameters, propertyPath = prior?.propertyPath && pointer(prior.propertyPath) === path ? prior.propertyPath : path, { conditionGroup: _legacyConditionGroup, ...priorWithoutLegacyCondition } = prior ?? {};
-            attachedRules.push({ ...priorWithoutLegacyCondition, id: rule.id, version: prior?.version ?? 1, propertyPath, operator, ...(parameters !== undefined ? { parameters } : {}), severity: rule.severity, ...(rule.message !== undefined ? { message: rule.message } : {}) });
+            const operator = rule.kind === "pattern" ? (prior?.operator ?? "regular-expression") : rule.kind === "range" ? "numeric-range" : rule.kind === "cardinality" ? "item-count" : prior?.operator ?? rule.kind, parameters = rule.kind === "pattern" ? rule.pattern : rule.kind === "range" ? `${rule.minimum ?? ""},${rule.maximum ?? ""}` : rule.kind === "cardinality" ? `${rule.minItems ?? ""},${rule.maxItems ?? ""}` : prior?.parameters, propertyPath = prior?.propertyPath && pointer(prior.propertyPath) === path ? prior.propertyPath : path, { conditionGroup: _legacyConditionGroup, ...priorWithoutLegacyCondition } = prior ?? {}, projectedCondition = legacyRuleCondition(canonical, rule.condition, prior?.conditionGroup, previousCanonical), opaqueCondition = !rule.condition && prior?.conditionGroup && !canonicalRuleCondition(canonical, prior.conditionGroup).complete ? clone(prior.conditionGroup) : undefined, conditionGroup = projectedCondition ?? opaqueCondition, projected = { ...priorWithoutLegacyCondition, id: rule.id, version: prior?.version ?? 1, propertyPath, operator, ...(parameters !== undefined ? { parameters } : {}), severity: rule.severity, ...(rule.message !== undefined ? { message: rule.message } : {}), ...(conditionGroup ? { conditionGroup } : {}) }, key = attachedRuleKey(projected);
+            if (projectedRuleKeys.has(key))
+                continue;
+            projectedRuleKeys.add(key);
+            attachedRules.push(projected);
+            if (priorMatch)
+                outputOrder.set(key, priorMatch.index);
         }
     }
+    for (const [ruleIndex, rule] of sourceAttachments.entries()) {
+        if (consumedSourceRules.has(ruleIndex) || canonicalPaths.has(pointer(rule.propertyPath ?? "")))
+            continue;
+        const key = attachedRuleKey(rule);
+        if (projectedRuleKeys.has(key))
+            continue;
+        projectedRuleKeys.add(key);
+        attachedRules.push(clone(rule));
+        outputOrder.set(key, ruleIndex);
+    }
+    attachedRules.sort((left, right) => (outputOrder.get(attachedRuleKey(left)) ?? Number.MAX_SAFE_INTEGER) - (outputOrder.get(attachedRuleKey(right)) ?? Number.MAX_SAFE_INTEGER));
     const clean = (value) => { const next = structuredClone(value); delete next.attachedRules; if (next.required && !next.required.length)
         delete next.required; for (const child of Object.values(next.properties ?? {}))
         clean(child); return next; };
     const documentation = { ...(schema.documentation?.description ? { description: schema.documentation.description } : {}), ...(Object.keys(properties).length ? { properties } : {}) };
-    const { attachedRules: _attachedRules, documentation: _documentation, canonicalSchema: _canonicalSchema, ...current } = schema;
-    return { ...current, document: clean(document), ...(attachedRules.length ? { attachedRules } : {}), ...(Object.keys(documentation).length ? { documentation } : {}), canonicalSchema: clone(canonical) };
+    const projectedDocument = clean(projectionOnlyJsonMetadata(document, schema.document)), losslessDocument = losslessSourceRepresentation(schema.document, projectedDocument, canonical.onlyDefinedFields === true), { attachedRules: _attachedRules, documentation: _documentation, canonicalSchema: _canonicalSchema, ...current } = schema;
+    return { ...current, document: losslessDocument, ...(attachedRules.length ? { attachedRules } : {}), ...(Object.keys(documentation).length ? { documentation } : {}), canonicalSchema: clone(canonical) };
 }
 //# sourceMappingURL=data-layer-saved-schema-canonical.js.map

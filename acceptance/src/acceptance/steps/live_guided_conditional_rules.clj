@@ -60,7 +60,7 @@
                    requirement)
   (support/assert! (and (= "Detected type: string" (:type initial))
                         (= "product_detail" (:comparison initial))
-                        (= ["Exists" "Does not exist" "Equals" "Does not equal" "Is one of" "Matches pattern"] (:operators initial))
+                        (= ["Exists" "Does not exist" "Equals" "Does not equal" "Is one of" "Starts with" "Contains" "Matches pattern"] (:operators initial))
                         (= 1 (:customerCount initial))
                         (= 1 (:currentPageCount initial))
                         (:noConsequenceOption initial)
@@ -69,7 +69,8 @@
                    "Trigger options, typed default, readable summary, or constrained layout were incorrect."
                    initial)
   (support/assert! (and (= "Detected type: string" (:type absent))
-                        (= "" (:comparison absent)))
+                        (= "" (:comparison absent))
+                        (= ["Exists" "Does not exist" "Equals" "Does not equal" "Is one of" "Starts with" "Contains" "Matches pattern"] (:operators absent)))
                    "A schema-only condition property invented an observed comparison value."
                    absent)
   (support/assert! (and (:storageUnchanged invalidEmpty)

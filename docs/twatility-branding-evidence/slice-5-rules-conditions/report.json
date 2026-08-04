@@ -124,7 +124,7 @@
       "overflow": false,
       "width": 1280,
       "height": 900,
-      "controls": 39
+      "controls": 20
     },
     {
       "equivalent": true,
@@ -135,7 +135,7 @@
       "overflow": false,
       "width": 360,
       "height": 800,
-      "controls": 39
+      "controls": 20
     },
     {
       "equivalent": true,
@@ -157,7 +157,7 @@
       "overflow": false,
       "width": 360,
       "height": 800,
-      "controls": 81
+      "controls": 92
     }
   ],
   "runtimeErrors": 0

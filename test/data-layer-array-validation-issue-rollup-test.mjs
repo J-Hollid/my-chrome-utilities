@@ -18,6 +18,43 @@ assert.deepEqual(products.rollup.affectedPaths,["/products/7/type"]);
 const repeated=applyArrayValidationRollups(tree,[{...evaluations[7],propertyPath:"/products/7/id",templatePath:"/products/*/id"},evaluations[7]]);
 assert.deepEqual({errors:repeated[0].rollup.errors,affected:repeated[0].rollup.affectedItemCount},{errors:2,affected:1});
 
+const distributionItems=Array.from({length:10},(_,index)=>({
+  ...leaf(`/products/${index}`,`Item ${index+1}`),
+  zeroBasedIndex:index,
+  children:["id","type","name"].map((property)=>leaf(`/products/${index}/${property}`,property)),
+}));
+const distributionTree=[{
+  ...leaf("/products","products"),
+  children:[{
+    ...leaf("/products/*","Every item"),
+    matchedValueCount:10,
+    children:["id","type","name"].map((property)=>leaf(`/products/*/${property}`,property)),
+  }],
+  specificItems:distributionItems,
+}];
+const distributionEvaluation=(index,property,status)=>({
+  ...evaluations[7],
+  propertyPath:`/products/${index}/${property}`,
+  templatePath:`/products/*/${property}`,
+  status,
+  severity:status,
+});
+for (const [distribution,expected] of [
+  [[distributionEvaluation(2,"type","error"),distributionEvaluation(7,"type","error")],{errors:2,warnings:0,affected:2}],
+  [[distributionEvaluation(7,"id","error"),distributionEvaluation(7,"type","error")],{errors:2,warnings:0,affected:1}],
+  [[distributionEvaluation(7,"type","error"),distributionEvaluation(3,"name","warning")],{errors:1,warnings:1,affected:2}],
+  [[distributionEvaluation(7,"type","error"),distributionEvaluation(7,"name","warning")],{errors:1,warnings:1,affected:1}],
+]) {
+  const distributionRollup=applyArrayValidationRollups(distributionTree,distribution)[0];
+  assert.deepEqual({
+    errors:distributionRollup.rollup.errors,
+    warnings:distributionRollup.rollup.warnings,
+    affected:distributionRollup.rollup.affectedItemCount,
+  },expected);
+  assert.equal(distributionRollup.rollup.errors+distributionRollup.rollup.warnings,distribution.length);
+  assert.equal(distributionRollup.affectedItems.length,expected.affected);
+}
+
 const nestedItems=Array.from({length:5},(_,index)=>({...leaf(`/orders/1/items/${index}`,`Item ${index+1}`),zeroBasedIndex:index,children:[leaf(`/orders/1/items/${index}/sku`,"sku")]}));
 const nested=[{...leaf("/orders","orders"),specificItems:[{...leaf("/orders/1","Item 2"),zeroBasedIndex:1,children:[{...leaf("/orders/1/items","items"),specificItems:nestedItems}]}]}];
 const nestedEvaluation={...evaluations[7],propertyPath:"/orders/1/items/4/sku",templatePath:"/orders/*/items/*/sku"};

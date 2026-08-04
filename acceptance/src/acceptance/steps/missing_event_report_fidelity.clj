@@ -22,6 +22,7 @@
   (support/cached-browser-observation!
    browser-observation
    {:adapter-env "MISSING_EVENT_REPORT_FIDELITY_BROWSER_ADAPTER"
+    :observation-id "MISSING_EVENT_DEFECT_FIDELITY_BROWSER_OBSERVATION"
     :observation-key :missingEventReportFidelity
     :runtime-error "Missing-event report fidelity browser runtime failed."
     :missing-error "Missing-event report fidelity browser evidence is missing."}))

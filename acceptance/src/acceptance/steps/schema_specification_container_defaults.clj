@@ -16,7 +16,7 @@
   (support/cached-command-verification!
    model-verified?
    "Specification container defaults model verification failed. "
-   "npm" "run" "test:unit:schema-specification-container-defaults"))
+   "node" "test/data-layer-schema-specification-container-defaults-test.mjs"))
 
 (defn- runtime-observation! []
   (support/cached-browser-observation!

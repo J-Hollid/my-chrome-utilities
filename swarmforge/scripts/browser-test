@@ -1,0 +1,27 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+script_dir="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+repo_root="$(cd -- "$script_dir/../.." && pwd)"
+cd "$repo_root"
+
+if [[ $# -ne 1 ]]; then
+  echo "usage: browser-test test/browser-packs/<pack>.mjs" >&2
+  exit 64
+fi
+
+case "$1" in
+  test/browser-packs/*.mjs|test/*-browser-test.mjs|test/*-runtime-test.mjs)
+    ;;
+  *)
+    echo "browser-test only runs registered browser/runtime test files" >&2
+    exit 64
+    ;;
+esac
+
+if ! rg --fixed-strings --quiet "\"$1\"" verification/packs.json; then
+  echo "browser-test refuses unregistered verification paths: $1" >&2
+  exit 64
+fi
+
+exec node scripts/dist-artifact.mjs run -- node "$1"

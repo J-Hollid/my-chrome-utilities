@@ -16,7 +16,7 @@
 (defn- verify-model! []
   (support/cached-command-verification!
    model-verified? "Library direct-template-push model verification failed. "
-   "npm" "run" "test:unit:event-library-editor"))
+   "node" "test/data-layer-library-direct-template-push-test.mjs"))
 
 (defn- runtime-observation! []
   (support/cached-browser-observation!

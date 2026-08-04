@@ -33,7 +33,7 @@
 (defn- verify-model! []
   (support/cached-command-verification!
    model-verified? "Specification example selection model verification failed. "
-   "npm" "run" "test:unit:schema-specification-example-selection"))
+   "node" "test/data-layer-schema-specification-example-selection-test.mjs"))
 
 (defn- runtime-observation! []
   (support/cached-browser-observation!

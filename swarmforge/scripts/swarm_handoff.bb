@@ -5,6 +5,12 @@
             [clojure.java.shell :refer [sh]]
             [clojure.string :as str]))
 
+(def script-dir (fs/parent *file*))
+(load-file (str (fs/path script-dir "handoff_sequence.bb")))
+(def allocate-next-sequence!
+  (or (resolve 'swarmforge.handoff-sequence/next-sequence!)
+      (throw (ex-info "Cannot load the handoff sequence allocator" {:exit 1}))))
+
 (def usage-text
   (str "Usage: swarm_handoff.sh <draft-file>\n\n"
        "Draft formats:\n\n"
@@ -12,7 +18,9 @@
        "to: <role>[,<role>...]\n"
        "priority: NN\n"
        "task: <short-stable-task-name>\n"
-       "commit: <10-char-commit-abbrev>\n\n"
+       "commit: <10-char-commit-abbrev>\n"
+       "base: <10-char-received-commit-abbrev>\n"
+       "verified: <pack-id>[,<pack-id>...]|not-required\n\n"
        "type: note\n"
        "to: <role>[,<role>...]\n"
        "priority: NN\n"
@@ -22,7 +30,7 @@
        "Only note drafts may contain a body."))
 
 (def reserved-fields #{"id" "from" "role" "recipient" "created_at" "enqueued_at" "dequeued_at" "completed_at"})
-(def allowed-fields #{"type" "to" "priority" "task" "commit" "message"})
+(def allowed-fields #{"type" "to" "priority" "task" "commit" "base" "verified" "message"})
 (def allowed-types #{"git_handoff" "note"})
 (def max-note-details-length 4000)
 
@@ -180,7 +188,9 @@
         to (get headers "to")
         priority (get headers "priority")
         commit (get headers "commit")
+        base (get headers "base")
         task-name (get headers "task")
+        verified (get headers "verified")
         note-message (get headers "message")
         [recipients recipient-errors] (validate-recipients to)
         field-errors (for [field ordered
@@ -190,6 +200,8 @@
                                           ["git_handoff" "priority"] true
                                           ["git_handoff" "task"] true
                                           ["git_handoff" "commit"] true
+                                          ["git_handoff" "base"] true
+                                          ["git_handoff" "verified"] true
                                           ["note" "type"] true
                                           ["note" "to"] true
                                           ["note" "priority"] true
@@ -213,11 +225,38 @@
             [nil (format "Header 'commit' must be exactly 10 hexadecimal characters; got '%s'." commit)]
             :else (canonical-commit commit))
           [nil nil])
+        [canonical-base base-commit-error]
+        (if (= "git_handoff" type)
+          (cond
+            (str/blank? base) [nil "Missing required header 'base' for git_handoff."]
+            (not (re-matches #"[0-9a-fA-F]{10}" base))
+            [nil (format "Header 'base' must be exactly 10 hexadecimal characters; got '%s'." base)]
+            :else (canonical-commit base))
+          [nil nil])
+        lineage-error (when (and canonical canonical-base)
+                        (let [result (command "." "git" "merge-base" "--is-ancestor"
+                                              canonical-base canonical)]
+                          (when-not (zero? (:exit result))
+                            (format "Header 'base' commit '%s' must be an ancestor of candidate '%s'."
+                                    canonical-base canonical))))
         git-errors (cond-> []
                      (= "git_handoff" type)
                      (into (cond-> []
                              (str/blank? task-name)
                              (conj "Missing required header 'task' for git_handoff.")
+                             (str/blank? verified)
+                             (conj "Missing required header 'verified' for git_handoff.")
+                             (and (not (str/blank? verified))
+                                  (not (re-matches #"(?:[a-z0-9][a-z0-9_-]*(?:,[a-z0-9][a-z0-9_-]*)*|not-required)" verified)))
+                             (conj (format "Header 'verified' must be comma-separated pack ids or not-required; got '%s'." verified))
+                             (and (not (str/blank? verified))
+                                  (not= verified "not-required")
+                                  (not= (count (str/split verified #","))
+                                        (count (set (str/split verified #",")))))
+                             (conj "Header 'verified' must list every pack once.")
+                             (and (not (str/blank? task-name))
+                                  (not (re-matches #"[A-Za-z0-9][A-Za-z0-9._-]*" task-name)))
+                             (conj (format "Header 'task' must be a stable task name; got '%s'." task-name))
                              (> (count (or task-name "")) 80)
                              (conj (format "Header 'task' must be no longer than 80 characters; got %d." (count task-name)))))
                      (and (not= "git_handoff" type) (not (str/blank? commit)))
@@ -225,7 +264,11 @@
                      (and (not= "git_handoff" type) (not (str/blank? task-name)))
                      (conj "Header 'task' is only allowed for git_handoff.")
                      commit-error
-                     (conj commit-error))
+                     (conj commit-error)
+                     base-commit-error
+                     (conj base-commit-error)
+                     lineage-error
+                     (conj lineage-error))
         note-errors (cond-> []
                       (= "note" type)
                       (into (cond-> []
@@ -244,35 +287,14 @@
                                     (count details))))]
     {:recipients recipients
      :canonical-commit canonical
+     :canonical-base canonical-base
      :errors (vec (concat base-errors recipient-errors field-errors git-errors note-errors body-errors))}))
 
 (defn next-sequence []
-  (let [dir (state-dir)
-        seq-file (fs/path dir "sequence")
-        lock-dir (fs/path dir "sequence.lock")]
-    (fs/create-dirs dir)
-    (loop []
-      (if (try
-            (fs/create-dir lock-dir)
-            true
-            (catch java.nio.file.FileAlreadyExistsException _
-              false))
-        nil
-        (do
-          (Thread/sleep 50)
-          (recur))))
-    (try
-      (let [last-value (if (fs/exists? seq-file)
-                         (try
-                           (Long/parseLong (str/trim (slurp (str seq-file))))
-                           (catch Exception _ 0))
-                         0)
-            next-value (inc last-value)
-            formatted (format "%06d" next-value)]
-        (spit (str seq-file) (str formatted "\n"))
-        formatted)
-      (finally
-        (fs/delete lock-dir)))))
+  (try
+    (allocate-next-sequence! (state-dir))
+    (catch clojure.lang.ExceptionInfo error
+      (exit! (or (:exit (ex-data error)) 1) (ex-message error)))))
 
 (defn body [type sender canonical-commit note-message note-details]
   (case type
@@ -282,7 +304,7 @@
                 (when-not (str/blank? note-details)
                   (str "\n\nDetails:\n" note-details)))))
 
-(defn write-handoff! [{:keys [headers recipients canonical-commit sender details]}]
+(defn write-handoff! [{:keys [headers recipients canonical-commit canonical-base sender details]}]
   (let [timestamp-id (id-timestamp)
         created-at (timestamp)
         sequence (next-sequence)
@@ -303,8 +325,10 @@
                        (str "type: " type)]
                 (= "git_handoff" type)
                 (conj (str "role: " sender)
-                      (str "task: " (get headers "task"))
-                      (str "commit: " canonical-commit))
+                     (str "task: " (get headers "task"))
+                      (str "commit: " canonical-commit)
+                      (str "base: " canonical-base)
+                      (str "verified: " (get headers "verified")))
                 (= "note" type)
                 (conj (str "message: " (get headers "message")))
                 true
@@ -327,6 +351,69 @@
     (println)
     (println usage-text)))
 
+(defn canonical-change-paths [canonical-base canonical-commit]
+  (let [result (command "." "git" "diff" "--name-status" "-z"
+                        "--find-renames" "--find-copies"
+                        (str canonical-base "..." canonical-commit))]
+    (if-not (zero? (:exit result))
+      [nil (str "Cannot classify verification exemption change set: "
+                (str/trim (str (:err result) " " (:out result))))]
+      (loop [fields (vec (remove str/blank? (str/split (:out result) #"\u0000" -1)))
+             paths #{}]
+        (if (empty? fields)
+          [(sort paths) nil]
+          (let [status-field (first fields)
+                match (re-matches #"([ACDMRTUXB])(\d{1,3})?" status-field)]
+            (cond
+              (nil? match)
+              [nil (str "Cannot classify unsupported Git change status: " status-field)]
+
+              (contains? #{"R" "C"} (second match))
+              (if (< (count fields) 3)
+                [nil (str "Cannot classify incomplete Git change: " status-field)]
+                (recur (subvec fields 3) (conj paths (second fields) (nth fields 2))))
+
+              (< (count fields) 2)
+              [nil (str "Cannot classify incomplete Git change: " status-field)]
+
+              :else
+              (recur (subvec fields 2) (conj paths (second fields))))))))))
+
+(defn verification-exempt-path? [changed-path]
+  (or (= changed-path "README.md")
+      (str/starts-with? changed-path "docs/")
+      (str/starts-with? changed-path "features/")
+      (str/starts-with? changed-path "project-briefs/")
+      (str/ends-with? changed-path ".prompt")))
+
+(defn verification-errors [sender headers canonical-commit canonical-base]
+  (when (= "git_handoff" (get headers "type"))
+    (let [verified (get headers "verified")]
+      (cond
+        (and (= sender "coder") (= verified "not-required"))
+        ["Coder handoffs require durable exact-pack evidence; not-required is not allowed."]
+
+        (or (str/blank? verified) (str/blank? canonical-commit) (str/blank? canonical-base)) []
+
+        (= verified "not-required")
+        (let [[changed-paths classification-error]
+              (canonical-change-paths canonical-base canonical-commit)
+              disallowed (remove verification-exempt-path? changed-paths)]
+          (cond
+            classification-error [classification-error]
+            (seq disallowed)
+            [(str "verified: not-required is limited to documentation, specification, and prompt-only changes; "
+                  "durable exact-pack evidence is required for: " (str/join ", " disallowed))]
+            :else []))
+
+        :else
+        (let [result (command "." "node" "scripts/verification-evidence.mjs"
+                              "verify" canonical-commit canonical-base (get headers "task") verified)]
+          (if (zero? (:exit result))
+            []
+            [(str "Durable verification evidence is missing or invalid: "
+                  (str/trim (str (:err result) " " (:out result))))]))))))
+
 (defn -main [& args]
   (when (not= 1 (count args))
     (usage)
@@ -339,13 +426,15 @@
         (exit! 1 (str "Unknown sender role: " sender)))
       (let [{:keys [headers ordered details errors]} (parse-draft draft)
             validation (validate headers ordered details)
-            all-errors (vec (concat errors (:errors validation)))]
+            evidence-errors (verification-errors sender headers (:canonical-commit validation) (:canonical-base validation))
+            all-errors (vec (concat errors (:errors validation) evidence-errors))]
         (when (seq all-errors)
           (error-report draft all-errors)
           (System/exit 2))
         (let [outbox-file (write-handoff! {:headers headers
                                            :recipients (:recipients validation)
                                            :canonical-commit (:canonical-commit validation)
+                                           :canonical-base (:canonical-base validation)
                                            :sender sender
                                            :details details})]
           (fs/delete draft)

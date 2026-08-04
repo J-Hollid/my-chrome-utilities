@@ -46,7 +46,10 @@
    observed)
   (support/assert!
    (and (get-in observed [:failure :unchanged])
-        (str/includes? (get-in observed [:failure :message]) "No schema revision was published"))
+        (str/includes? (get-in observed [:failure :message]) "durable Saved Schema Library is unchanged")
+        (str/includes? (get-in observed [:failure :message]) "publication fails")
+        (get-in observed [:failure :recovery])
+        (get-in observed [:failure :retry]))
    "A production persistence failure left a partial schema publication."
    observed)
   (support/assert!

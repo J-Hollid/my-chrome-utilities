@@ -1,0 +1,26 @@
+{
+  "version": 2,
+  "recordedAt": "2026-08-04",
+  "source": "bootstrap fallback; 2026-08-04 pinned-runtime samples measured build at 6.06s and one array browser observation at 1.01s; validated receipt-ledger measurements take precedence",
+  "runtime": {
+    "node": "24.19.0",
+    "typescript": "5.9.3",
+    "platform": "linux-x64"
+  },
+  "fallbackMilliseconds": {
+    "build": 6100,
+    "unit": 250,
+    "property": 500,
+    "browser": 15000,
+    "browser-observation": 2000,
+    "acceptance-parse": 50,
+    "acceptance-generate": 50,
+    "checkpoint": 2000,
+    "acceptance-session": 1000,
+    "unknown": 1000
+  },
+  "sharding": {
+    "algorithm": "deterministic-greedy-pack-weight",
+    "maximumToAverageRatio": 1.75
+  }
+}

@@ -62,7 +62,11 @@
     "no scenario-specific library size is required before an export-count example is active"})
 
 (defn- assert-source-paths! [observation]
-  (support/assert! (= ["page_type" "page_name" "commerce" "commerce.order" "commerce.order.id"]
+  (support/assert! (= ["page_type · /page_type"
+                       "page_name · /page_name"
+                       "commerce · /commerce"
+                       "commerce.order · /commerce/order"
+                       "commerce.order.id · /commerce/order/id"]
                       (get-in observation [:sourceCreation :paths]))
                    "Source schema browser controls did not render observed paths."
                    {:observation observation}))
@@ -71,6 +75,13 @@
   (support/assert! (every? true? (map #(get-in observation [:rules %])
                                       [:menuOpen :returnFocus :stateReturnFocus]))
                    "Property rule browser controls were not observed."
+                   {:observation observation})
+  (support/assert! (= "Restore" (get-in observation [:rules :canonical :restore]))
+                   "Canonical property-rule Restore was not observed."
+                   {:observation observation})
+  (support/assert! (= (get-in observation [:rules :canonical :rule :selectedReusableRuleId])
+                      (get-in observation [:rules :canonical :rule :reusableRuleId]))
+                   "Canonical reusable-rule identity did not round-trip."
                    {:observation observation}))
 
 (defn- assert-inheritance! [observation]

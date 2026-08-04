@@ -19,10 +19,10 @@ const categories=["All","Saved schemas","Shared Profiles","Property Sets","Pages
 
 for(let sample=0;sample<200;sample+=1){
   const groupCount=count(4),pageCount=count(6),eventCount=count(5),flowCount=count(4);
-  const groups=Array.from({length:groupCount},(_,index)=>entity(`group:${sample}:${index}`,`Group ${sample} ${index}`));
+  const propertySets=Array.from({length:groupCount},(_,index)=>entity(`group:${sample}:${index}`,`Group ${sample} ${index}`));
   const pages=Array.from({length:pageCount},(_,index)=>{
-    const pageGroupIds=groups.filter(()=>random()<0.55).map(({id})=>id);
-    return entity(`page:${sample}:${index}`,`Page ${sample} ${index}`,{pageGroupIds});
+    const propertySetApplications=propertySets.filter(()=>random()<0.55).map(({id})=>({propertySetId:id}));
+    return entity(`page:${sample}:${index}`,`Page ${sample} ${index}`,{propertySetApplications});
   });
   const events=Array.from({length:eventCount},(_,index)=>entity(`event:${sample}:${index}`,`Event ${sample} ${index}`));
   const flows=Array.from({length:flowCount},(_,index)=>entity(`flow:${sample}:${index}`,`Flow ${sample} ${index}`));
@@ -44,7 +44,7 @@ for(let sample=0;sample<200;sample+=1){
     name:`Project ${sample}`,
     collections:{
       profiles:Array.from({length:count(3)},(_,index)=>entity(`profile:${sample}:${index}`,`Profile ${sample} ${index}`)),
-      pageGroups:groups,
+      propertySets,
       pages,
       events,
       flows,
@@ -63,7 +63,7 @@ for(let sample=0;sample<200;sample+=1){
   assert.equal(new Set(nodes.map(({key})=>key)).size,nodes.length,"every rendered appearance needs a stable unique key");
 
   for(const page of pages){
-    const membershipCount=page.pageGroupIds.length;
+    const membershipCount=page.propertySetApplications.length;
     const references=nodes.filter(({targetKey})=>targetKey===`pages:${page.id}`);
     assert.equal(references.length,1+membershipCount,"a Page has one canonical row plus one reference per membership");
     assert.equal(references.filter(({role})=>role==="Flow Page instance").length,0,"Page references never impersonate Flow instances");

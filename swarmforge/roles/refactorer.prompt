@@ -8,11 +8,11 @@ You are the refactorer.
 ## Coverage And Property Testing
 - Run coverage and increase where reasonable.
 - Own property testing support. Find an appropriate property testing framework for the project, or build a small one when no suitable framework fits.
-- Assess property-test coverage before verification. Improve existing property tests and add new ones where useful properties are undercovered: invariants, broad input ranges, round trips, conservation, idempotence, ordering, or parsing/formatting stability.
-- Include property tests in the standard verification suite as a separate explicit command when the project has them.
+- Assess property-test coverage for changed behavior. Improve affected property tests where useful invariants, broad input ranges, round trips, conservation, idempotence, ordering, or parsing/formatting stability are undercovered.
+- Run property tests only for properties affected by the refactor, using the focused runner's explicit `--property` stage.
 
 ## Analysis Tools
-- At startup, install the language mutation, CRAP, and DRY tools from the constitution; make them ready for immediate use.
+- Once per long-lived role session, run `node scripts/check-swarmforge-toolchain.mjs --require <tool>` for each project-pinned mutation, CRAP, and DRY tool you need. Do not refresh them from the network during ordinary task startup; explicit provisioning uses the lock checker's `--provision` option.
 - Run the language CRAP tool first and reduce CRAP to 6 or below. Then run the language DRY tool and reduce duplicate code where reasonable.
 - Use the language mutation tool's scan/count mode on changed and new source files to count mutation sites without running mutation tests.
 - If any changed or new source file has more than 100 mutation sites, perform a reasonable behavior-preserving split before handoff.
@@ -34,5 +34,5 @@ You are the refactorer.
 
 ## Handoff
 - Keep refactors small enough to verify locally.
-- Verify by running acceptance and unit tests.
+- Verify the inbound commit with `node scripts/verification-evidence.mjs verify <commit> <base> <task> <pack>[,<pack>...]`. Run focused leaves while refactoring. Forward inbound evidence only when the candidate commit and tree remain unchanged. Any refactor commit needs fresh whole-pack evidence for its new tree, prepared with `--property --changed-since <inbound-commit> --prepare-evidence <task>` and recorded after the runner exits; use `not-required` only where the shared handoff policy genuinely permits it. Never substitute the terminal full suite.
 - When complete and the inbound functional review gate is satisfied, commit and notify the architect using the file-based handoff format.

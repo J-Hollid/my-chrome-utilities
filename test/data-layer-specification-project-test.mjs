@@ -43,7 +43,7 @@ let state = createSpecificationProject({
 assert.equal(state.project.name,"Shop data specification");
 assert.equal(state.project.currentRelease,undefined);
 assert.equal(state.draft.status,"Saved");
-assert.deepEqual(Object.keys(state.project.collections),["profiles","pages","pageGroups","events","applicabilitySets","flows","fixtures","assignments"]);
+assert.deepEqual(Object.keys(state.project.collections),["profiles","propertySets","pages","events","applicabilitySets","flows","fixtures","assignments"]);
 
 const add = (kind, entity) => { state = addProjectEntity(state, kind, entity, id); return state.project.collections[kind].at(-1); };
 const sitewide = add("profiles",{name:"Sitewide",requirements:[{path:"/page_type",type:"string",required:true}]});

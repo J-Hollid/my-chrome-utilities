@@ -2,6 +2,10 @@ import assert from "node:assert/strict";
 
 import {createCanonicalProjectEnvelope} from "../dist/data-layer-specification-engine.js";
 import {
+  canonicalSchemaWithConstraint,
+  createCanonicalSchema,
+} from "../dist/data-layer-canonical-schema.js";
+import {
   assertDeveloperSchemaExportAvailable,
   publishCompiledRelease,
   specificationPreflight,
@@ -127,6 +131,7 @@ assert.equal(
 );
 
 const conflicted = structuredClone(engineTestProject);
+conflicted.collections.profiles[0].requirements.find(({path}) => path === "/ecommerce/value").protectedFacets = ["type"];
 conflicted.collections.pages[0].profileId = "profile:retail";
 conflicted.collections.pages[0].schemaConstraints = [{
   path:"/ecommerce/value",
@@ -138,12 +143,24 @@ assert.ok(conflictResult.blockers.some(({code}) => code === "contributor-conflic
 assert.throws(()=>assertDeveloperSchemaExportAvailable(conflictResult), /blocking issues/i);
 
 const malformed = structuredClone(engineTestProject);
-malformed.collections.profiles[0].requirements[0].rules = [{
+const malformedId = (kind) => `${kind}:malformed`;
+let malformedCanonical = createCanonicalSchema({
+  id:"schema:malformed",
+  contributorId:"page:confirmation",
+  contributorName:"Confirmation",
+});
+malformedCanonical = canonicalSchemaWithConstraint(
+  malformedCanonical,
+  {path:"/transaction_id", type:"string"},
+  malformedId,
+);
+Object.values(malformedCanonical.nodes)[0].rules.push({
   id:"rule:malformed",
   kind:"pattern",
   pattern:"[",
   severity:"error",
-}];
+});
+malformed.collections.pages[0].canonicalSchema = malformedCanonical;
 const malformedResult = specificationPreflight(envelope(malformed));
 assert.ok(malformedResult.blockers.some(({code}) => code === "canonical-invalid-rule"));
 

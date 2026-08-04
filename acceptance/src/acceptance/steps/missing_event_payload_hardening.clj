@@ -23,6 +23,7 @@
   (support/cached-browser-observation!
    browser-observation
    {:adapter-env "UNIFIED_DEFECT_BUILDER_BROWSER_ADAPTER"
+    :observation-id "MISSING_EVENT_DEFECT_FIDELITY_BROWSER_OBSERVATION"
     :observation-key :unifiedDefectBuilder
     :runtime-error "Missing-event payload hardening browser runtime failed."
     :missing-error "Missing-event payload hardening browser evidence is missing."}))

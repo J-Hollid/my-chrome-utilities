@@ -1,0 +1,62 @@
+name: terminal verification
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 3 * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  full-verification:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.19.0
+          cache: npm
+      - name: Install locked Babashka
+        shell: bash
+        run: |
+          node scripts/check-swarmforge-toolchain.mjs --provision babashka
+          echo "$GITHUB_WORKSPACE/tmp/toolchain/babashka/bin" >> "$GITHUB_PATH"
+      - run: npm ci --prefer-offline
+      - run: node scripts/check-swarmforge-toolchain.mjs --strict-runtime
+      - run: npm run build
+      - name: Run full verification shard
+        env:
+          VERIFICATION_CONCURRENCY: 4
+        run: npm run test:terminal:shard -- --no-build --shard ${{ matrix.shard }}/4
+
+  acceptance-harness:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24.19.0
+          cache: npm
+      - name: Install locked Babashka
+        shell: bash
+        run: |
+          node scripts/check-swarmforge-toolchain.mjs --provision babashka
+          echo "$GITHUB_WORKSPACE/tmp/toolchain/babashka/bin" >> "$GITHUB_PATH"
+      - run: npm ci --prefer-offline
+      - run: node scripts/check-swarmforge-toolchain.mjs --strict-runtime
+      - run: node test/swarmforge-process-contract-test.mjs
+      - run: npm run build
+      - name: Run acceptance-harness unit and property checks
+        env:
+          SWARMFORGE_BUILD_PREPARED: 1
+          SWARMFORGE_PACK_RUNNER_OWNS_JS: 1
+        run: |
+          bb test:unit
+          bb test:property

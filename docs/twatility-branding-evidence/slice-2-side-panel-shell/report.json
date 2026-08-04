@@ -14,6 +14,7 @@
           "side-panel.css",
           "layered-schema.css",
           "twatility-brand.css",
+          "schema-authoring-brand.css",
           "side-panel-brand.css"
         ],
         "ink": "#17130e",
@@ -25,7 +26,23 @@
           "transparent": true,
           "opaque": true
         },
+        "title": {
+          "transparent": true,
+          "opaque": true
+        },
+        "panelTitle": {
+          "transparent": true,
+          "opaque": true
+        },
         "analyst": {
+          "transparent": true,
+          "opaque": true
+        },
+        "analystSpeakingA": {
+          "transparent": true,
+          "opaque": true
+        },
+        "analystSpeakingB": {
           "transparent": true,
           "opaque": true
         }
@@ -34,7 +51,17 @@
         "width": 360,
         "height": 760,
         "brandName": "TWAtility Belt",
-        "brandText": "TWAtility Belt",
+        "brandArt": {
+          "count": 1,
+          "source": true,
+          "decoded": true,
+          "decorative": true,
+          "aspectPreserved": true,
+          "unscaled": true,
+          "contained": true,
+          "separateFromCommands": true,
+          "renderedWidth": 129.59375
+        },
         "utilityCount": 3,
         "dataTabs": [
           "Live",
@@ -118,6 +145,7 @@
           "side-panel.css",
           "layered-schema.css",
           "twatility-brand.css",
+          "schema-authoring-brand.css",
           "side-panel-brand.css"
         ],
         "ink": "#17130e",
@@ -129,7 +157,23 @@
           "transparent": true,
           "opaque": true
         },
+        "title": {
+          "transparent": true,
+          "opaque": true
+        },
+        "panelTitle": {
+          "transparent": true,
+          "opaque": true
+        },
         "analyst": {
+          "transparent": true,
+          "opaque": true
+        },
+        "analystSpeakingA": {
+          "transparent": true,
+          "opaque": true
+        },
+        "analystSpeakingB": {
           "transparent": true,
           "opaque": true
         }
@@ -138,7 +182,17 @@
         "width": 420,
         "height": 900,
         "brandName": "TWAtility Belt",
-        "brandText": "TWAtility Belt",
+        "brandArt": {
+          "count": 1,
+          "source": true,
+          "decoded": true,
+          "decorative": true,
+          "aspectPreserved": true,
+          "unscaled": true,
+          "contained": true,
+          "separateFromCommands": true,
+          "renderedWidth": 140
+        },
         "utilityCount": 3,
         "dataTabs": [
           "Live",
@@ -222,6 +276,7 @@
           "side-panel.css",
           "layered-schema.css",
           "twatility-brand.css",
+          "schema-authoring-brand.css",
           "side-panel-brand.css"
         ],
         "ink": "#17130e",
@@ -233,7 +288,23 @@
           "transparent": true,
           "opaque": true
         },
+        "title": {
+          "transparent": true,
+          "opaque": true
+        },
+        "panelTitle": {
+          "transparent": true,
+          "opaque": true
+        },
         "analyst": {
+          "transparent": true,
+          "opaque": true
+        },
+        "analystSpeakingA": {
+          "transparent": true,
+          "opaque": true
+        },
+        "analystSpeakingB": {
           "transparent": true,
           "opaque": true
         }
@@ -242,7 +313,17 @@
         "width": 512,
         "height": 900,
         "brandName": "TWAtility Belt",
-        "brandText": "TWAtility Belt",
+        "brandArt": {
+          "count": 1,
+          "source": true,
+          "decoded": true,
+          "decorative": true,
+          "aspectPreserved": true,
+          "unscaled": true,
+          "contained": true,
+          "separateFromCommands": true,
+          "renderedWidth": 140
+        },
         "utilityCount": 3,
         "dataTabs": [
           "Live",

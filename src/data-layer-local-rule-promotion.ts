@@ -58,7 +58,7 @@ export interface LocalRulePromotionStorage {
 
 export interface LocalRulePromotionPersistence {
   schemaKey: string;
-  schemaValue: string;
+  schemaValue?: string;
   ruleKey: string;
   ruleValue: string;
 }
@@ -273,14 +273,22 @@ export function persistLocalRulePromotion(
   storage: LocalRulePromotionStorage,
   values: LocalRulePromotionPersistence,
 ): void {
-  const previousSchema = storage.getItem(values.schemaKey);
+  const previousSchema = values.schemaValue === undefined ? undefined : storage.getItem(values.schemaKey);
   const previousRules = storage.getItem(values.ruleKey);
+  const written: { key: string; previous: string | null }[] = [];
   try {
-    storage.setItem(values.ruleKey, values.ruleValue);
-    storage.setItem(values.schemaKey, values.schemaValue);
+    if (previousRules !== values.ruleValue) {
+      storage.setItem(values.ruleKey, values.ruleValue);
+      written.push({ key:values.ruleKey, previous:previousRules });
+    }
+    if (values.schemaValue !== undefined && previousSchema !== values.schemaValue) {
+      storage.setItem(values.schemaKey, values.schemaValue);
+      written.push({ key:values.schemaKey, previous:previousSchema ?? null });
+    }
   } catch (error) {
-    try { restoreStoredValue(storage, values.ruleKey, previousRules); } catch { /* Preserve the original persistence error. */ }
-    try { restoreStoredValue(storage, values.schemaKey, previousSchema); } catch { /* Preserve the original persistence error. */ }
+    for (const { key, previous } of written.reverse()) {
+      try { restoreStoredValue(storage, key, previous); } catch { /* Preserve the original persistence error. */ }
+    }
     throw error;
   }
 }

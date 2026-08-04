@@ -27,6 +27,22 @@
     :runtime-error "Local-rule editing browser runtime failed."
     :missing-error "Local-rule editing browser evidence is missing."}))
 
+(defn- saved-local-rule-evidence? [observed]
+  (let [saved (:saved observed)]
+    (and (= 3 (:version saved))
+         (= ["page" "product"] (:published saved))
+         (= ["page" "product" "checkout"] (:draft saved))
+         (= ["page" "product" "checkout"] (:first saved))
+         (= ["page" "product" "checkout"] (:rendered saved))
+         (= {:ruleId "local-41"
+             :ruleCount 1
+             :propertyPath "/page_type"
+             :operator "allowed-values"}
+            (select-keys saved [:ruleId :ruleCount :propertyPath :operator]))
+         (= ["Edit Known page types at /page_type"] (:pending saved))
+         (:open saved)
+         (zero? (:previewIssues observed)))))
+
 (defn- assert-runtime! [observed]
   (support/assert!
    (and (= ["page" "product"] (get-in observed [:opened :values]))
@@ -44,14 +60,8 @@
    "Cancelling an unsaved local edit did not restore the persisted configuration."
    observed)
   (support/assert!
-   (and (= 3 (get-in observed [:saved :version]))
-        (= ["page" "product"] (get-in observed [:saved :published]))
-        (= ["page" "product" "checkout"] (get-in observed [:saved :draft]))
-        (= 1 (get-in observed [:saved :index]))
-        (str/includes? (last (get-in observed [:saved :pending])) "Edit Known page types at /page_type")
-        (get-in observed [:saved :open])
-        (zero? (:previewIssues observed)))
-   "The production edit did not preserve publication, stable index, disclosure, or draft validation."
+   (saved-local-rule-evidence? observed)
+   "The production edit did not preserve publication, stable rule identity, disclosure, or draft validation."
    observed)
   (support/assert!
    (and (str/includes? (get-in observed [:invalid :assistance]) "Correct the regular expression")
@@ -60,9 +70,18 @@
    "Invalid local configuration changed storage or lacked inline assistance."
    observed)
   (support/assert!
-   (= {:ruleLibrary "true" :reusableEditor true :name "Approved page names" :localDialog false}
-      (:routed observed))
-   "A reusable attachment did not route to its Rule Library editor."
+   (and (= {:ruleLibrary "true"
+            :reusableEditor true
+            :name "Approved page names"
+            :localDialog false}
+           (select-keys (:routed observed)
+                        [:ruleLibrary :reusableEditor :name :localDialog]))
+        (= {:storageUnchanged true
+            :pending []
+            :busy "false"
+            :controlsEnabled true}
+           (get-in observed [:routed :selection])))
+   "A reusable attachment did not route to a settled Rule Library editor without mutating schema storage."
    observed)
   observed)
 

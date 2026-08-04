@@ -20,7 +20,8 @@
                        (swap! commands conj command)
                        {:exit 0})}
         #(do (verify!) (verify!)))
-      (is (= 8 (count @commands)))
+      (is (= 7 (count @commands))
+          "normal acceptance reuses unit evidence and does not embed a property run")
       (is (true? @flow-graph/model-verified?))
       (finally
         (reset! flow-graph/model-verified? false)))))
@@ -39,7 +40,7 @@
         #(do
            (is (= {:runtime001 {:exact true}} (observe!)))
            (is (= {:runtime001 {:exact true}} (observe!)))))
-      (is (= 1 (count @commands)))
+      (is (= 3 (count @commands)) "independent browser shards are each consumed once")
       (finally
         (reset! flow-graph/browser-observation nil)))))
 

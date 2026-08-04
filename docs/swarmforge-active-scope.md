@@ -1405,7 +1405,7 @@ Page context-event and Event interaction creation semantics, dependency-guarded
 removal, Flow-owned topology deletion and safe stale-route fallback, versioned
 serializer, import remapper, and legacy singleton migration. It
 may declare canonical schema dependencies in the pack
-registry but must not invoke archived project-foundation, release, or full-site
+registry as build/contract dependencies but must not execute those packs' regression leaves or invoke archived project-foundation, release, or full-site
 acceptance suites.
 
 The `project_event_transport` pack must register both project event transport
@@ -1435,11 +1435,45 @@ parent additions, deterministic child-facet precedence, consolidated local-chang
 inventory, and exact reset scopes. Adding the new contracts does not authorize extra
 checkpoint commands.
 
-Each pack command performs its registered type/build, focused unit tests, installed
-browser adapter, Gherkin generation, and focused runtime acceptance. Pack dependencies
-must be declared in the registry rather than invoked as extra commands. The package
+Each exact pack command performs one shared type/build, every registered unit and
+requested property test in that pack, every installed browser adapter and browser
+observation, Gherkin generation for every pack feature, every checkpoint, and one
+pack runtime session. Changed paths select whole packs; they do not select individual
+leaves or feature subsets. Pack dependencies
+must be declared in the registry for impact and build planning, but are not extra regression commands. Property tests require the explicit `--property` option. The package
 command consumes that already-built `dist`; `npm run package` is not part of any
-checkpoint sequence because it rebuilds.
+checkpoint unless that pack explicitly verifies packaging, and it does not rebuild.
+Portable-package acceptance rejects duplicate or missing archive entries and compares
+every stored entry byte-for-byte with the already validated `dist` tree.
+Build, browser, package, and freshness consumers hold the artifact lock across use.
+Publishing swaps complete sibling directories with recoverable same-filesystem
+renames; an unsupported reader that ignores the lock may observe the brief rename
+gap, while the next locked promotion restores any backup stranded by interruption.
+
+Pack fan-out models behavioral verification ownership, not the complete production
+module import graph. Direct verification consumers—registered unit, property, and
+browser modules, browser observations, Node checkpoints, acceptance handlers, and
+shared handlers—must expose every cross-pack source/helper read through a dependency,
+shared component, or global-impact boundary. Production `src`-to-`src` imports are
+covered once by the mandatory common typecheck and architecture build; they cause
+additional pack fan-out only when the registry declares a semantic dependency.
+An exact `verificationInputs` entry is narrower: changing that owned, non-generated
+path unions the observing pack into the plan only after semantic owner/dependant and
+global-impact closure has been computed. The observer's production dependants are
+not expanded merely because its verification reads the path. Current and historical
+exact observers are both retained for deleted, renamed, or copied paths, and they
+remain part of the fail-closed changed-path evidence boundary.
+
+Every registered browser adapter also declares one execution mode. `shared`
+adapters directly use the common browser/DOM harness; `shared-wrapper` adapters are
+same-pack launchers that resolve to a `shared` adapter; and `integration` adapters
+own intentionally broader installed-shell or legacy integration coverage. Registry
+validation rejects missing, duplicate, cross-pack wrapper, or import-inconsistent
+classifications. It derives normalized module dependencies from parsed static
+imports, re-exports, and literal dynamic imports; comments, ordinary strings,
+templates outside an import, and computed dynamic imports cannot masquerade as a
+harness dependency. The modular utility assertion applies the direct shared-harness
+requirement only to adapters classified `shared`.
 
 For local diagnosis, `npm run typecheck`, `npm run build`,
 `node test/data-layer-flow-graph-test.mjs`, and
@@ -1447,3 +1481,142 @@ For local diagnosis, `npm run typecheck`, `npm run build`,
 alternatives, not additional checkpoint steps. `schemas`, `shell`, full browser
 matrices, full acceptance, and full regression are not checkpoint gates. They and
 archived feature packs require explicit direction.
+
+Focused-runner controls:
+
+- `--changed <path>` accepts an existing candidate path and selects its complete
+  owning pack plus affected consumers. Use `--changed-since` for deleted or renamed
+  paths; manual nonexistent paths are rejected.
+- For a committed task candidate, append `--changed-since <received-commit>` to
+  its named `--pack` checkpoint. The runner resolves that commit before any build,
+  requires it to be an ancestor, and uses a canonical rename-aware Git change set.
+  Historical ownership selects deleted paths, cross-pack renames select both packs,
+  and a registry change or unusable historical registry selects every runnable pack.
+  An explicit pack set remains a fail-closed ownership boundary.
+- `--property` adds property leaves for the selected packs.
+- `--with-dependencies` explicitly expands dependency regression ownership; exact
+  `--pack` runs do not do this by default.
+- `--no-build` is reserved for a prepared terminal `--full` shard. The current CI
+  matrix uses four isolated runners, so each lane performs one local build and then
+  runs one no-build shard; it does not share an artifact across runners. A terminal-only
+  freshness checkpoint records the prepared artifact before package acceptance, so
+  the receipt remains fail-closed without repeating `npm run build`.
+- `--prepare-evidence <task>` requires exact pack selectors, `--property`, a clean
+  committed candidate, `--changed-since <base>`, and the fully locked Node, Babashka,
+  TypeScript, and vendored APS toolchain. It emits an ignored pending file only.
+  After the long run exits, record it separately with
+  `node scripts/verification-evidence.mjs record <pending-file>`. The short recorder
+  revalidates the tree, base lineage, registry, toolchain, artifact, receipt, and
+  canonical change set under artifact-then-Git-note locks. Pending files are unique,
+  exclusively published, and retain the runner-owned raw receipt for the recorder
+  to re-read. `swarm_handoff.sh` accepts
+  `verified: <pack>[,<pack>...]` only with the exact task/base/commit evidence.
+  `verified: not-required` is mechanically limited to documentation,
+  specification, and prompt-only change sets, and is never accepted from Coder.
+- `--shard <index>/<count>` assigns complete packs deterministically to terminal
+  lanes. `npm run test:terminal:shard -- --no-build --shard 1/4` through `4/4`
+  covers every pack exactly once; normal development never uses terminal shards.
+- `VERIFICATION_CONCURRENCY` controls independent unit, parser, generator, and
+  receipt-backed pack-session workers (default 4). Chrome adapters remain
+  sequential; registered physical browser observations use
+  `VERIFICATION_OBSERVATION_CONCURRENCY` (default 2). Pack sessions start only
+  after all checkpoints and then finish as one bounded phase, so independent
+  acceptance failures are consolidated instead of hiding later packs.
+- `VERIFICATION_COMMAND_TIMEOUT_MS` and `DIST_ARTIFACT_LOCK_TIMEOUT_MS` bound
+  commands and build-lock waits. Progress and elapsed time are printed automatically;
+  the raw receipt path is printed before execution, and receipts retain bounded
+  stdout and stderr so ordinary nonzero exits remain diagnosable after a runner or
+  terminal disconnects. `SIGHUP`, `SIGINT`, and `SIGTERM` are forwarded to every
+  active detached verification process group, followed by bounded `SIGKILL`
+  escalation. A received parent signal remains terminal for that runner process:
+  bounded workers refuse to start later leaves, descendants close before artifact
+  ownership is released, and the runner preserves the conventional signal exit
+  status after cleanup.
+- `SWARMFORGE_PACK_RUNNER_OWNS_JS=1` is an internal orchestration boundary. In
+  that mode `bb test:unit` runs its explicit subprocess-free Clojure unit list and
+  `bb test:property` runs only its Clojure properties; neither launches the
+  standalone JavaScript wrappers. Acceptance command/task helpers require an exact
+  passed receipt and fail closed before `process/shell` for a missing, failed, or
+  mismatched receipt. Browser-backed feature replays run only as registered pack
+  tasks. Without this internal flag, focused standalone Babashka behavior is
+  unchanged. Clojure wrappers whose purpose is to replay registered features are
+  covered by the later pack acceptance sessions. The process contract inventories
+  every `test/acceptance/*_test.clj` namespace and fails if it is not required and
+  assigned to a declared Clojure test list; standalone unit-only contracts belong
+  in the runner-owned list as well.
+
+Handoff sequence allocation uses one shared, operating-system-backed lease with
+an atomic owner record containing PID, process start time when available, and a
+unique token. `SWARMFORGE_SEQUENCE_LOCK_TIMEOUT_MS` bounds contention waits
+(default 5000ms, maximum 60000ms); live identities are never reclaimed merely
+because metadata and the lease disagree. A killed writer releases the kernel
+lease automatically, allowing its stale owner record to be replaced. The numeric
+counter is written to a unique same-directory stage and atomically moved into
+place while the lease is held, so an interrupted write cannot truncate the last
+published value. Malformed, empty, or out-of-range published counters fail closed
+instead of resetting to zero and reusing a handoff ID.
+
+`npm test -- --pack <id> ...` is the development entry point. The complete suite
+is isolated behind `npm run test:terminal` and the scheduled/manual four-lane
+`.github/workflows/terminal-verification.yml`; it is not a feature-development gate.
+
+Codex role sessions explicitly select workspace-write isolation and `on-request`
+approvals. The launcher enables the fail-closed Codex network proxy, denies broad
+local/private binding, and allowlists only exact `localhost` and `127.0.0.1`
+destinations for Chrome DevTools. Public network egress remains denied during
+ordinary work. Git metadata remains a protected sandbox boundary, so the launcher
+uses automatic approval review for precise Git commands instead of granting broad
+filesystem access. Direct browser diagnosis uses `browser-test
+<registered-test-path>`.
+
+Runtime and analysis versions are pinned in `swarmforge/toolchain.lock.json`.
+This includes the supported Node LTS and the minimum Codex version/capabilities
+needed to enforce that sandbox policy. `node
+scripts/check-swarmforge-toolchain.mjs` validates the installed offline toolchain,
+the vendored APS digest, every direct npm dependency and development dependency
+at its exact root `package-lock.json` version, and clean optional tool revisions.
+Missing or divergent direct packages fail before SwarmForge mutates project state;
+optional platform-specific transitive packages are not treated as direct gates.
+Node, Babashka, and
+optional Clojure tools have explicit named provisioning operations; ordinary
+checks and launcher help never contact the network or install tools. If Babashka
+is absent from `PATH`, `./swarm` reports `--provision babashka` only when the lock
+contains an archive for the current platform; otherwise it directs the operator to
+install the locked version on `PATH`. Before adding a project-local `bb` to `PATH`,
+the shell launcher uses the Node checker to verify its exact locked digest and then
+its version. Ordinary toolchain checks repeat that deep local validation. CI uses
+the same lock-owned provisioning operation rather than duplicating release
+metadata. If the host Node is older, run `node
+scripts/check-swarmforge-toolchain.mjs --provision node`, prepend the printed
+project-local `bin` directory to `PATH`, then validate with `--strict-runtime`.
+Optional Git tools are cloned and checked out only in unique sibling stages. A
+clean stale cache is replaced only when the host filesystem and `mv` support a
+single atomic directory exchange; otherwise provisioning fails with the final
+checkout unchanged. The checker can restore one clean `.displaced-*` checkout
+when the final target is absent. Current replacements use that
+`.displaced-<owner-pid>-*` namespace, so restart recovery can also finish an
+interrupted exchange or remove the clean old checkout left after a completed
+exchange. Live-owner stages are never treated as crash residue, and ambiguous,
+dirty, or origin-mismatched recovery state is refused. Dirty final caches are
+always left untouched and reported as a blocker. The SwarmForge launcher requires
+all pinned helper executables, including `browser-test`, and host `rg` alongside
+the other host dependencies before it creates repository, worktree, tmux, or role
+state. It performs the strict runtime and Codex capability check in that same
+mutation-free startup boundary.
+Run `npm run test:throughput` to inspect whole-pack and terminal-shard build,
+observation, checkpoint, and session counts, median/p90 receipt timings, and shard
+balance. Only completed receipts matching the locked Node, TypeScript, platform,
+and recomputed build identity enter the ledger; `verification/timing-baseline.json`
+supplies documented fallbacks. Parseable receipts that fail those gates are counted
+as rejected but never influence timing samples. Each current receipt rewrite is
+atomically promoted, so a concurrent scan sees either the complete prior snapshot or
+the complete replacement; malformed legacy or crash artifacts are ignored. Sandbox
+approval re-evaluation counts are an external/manual operational metric because Codex
+exposes no receipt API for them; receipt durations must not be presented as that count.
+
+Freeze further structural verification-process changes for the next 5–10 completed
+development tasks. For that observation window, retain receipt timing, build-count,
+and browser-launch/observation data, and log repeated sandbox-approval prompts and
+false pack-targeting incidents manually. Reopen process design only for a correctness
+blocker or evidence from that window; otherwise prefer ordinary defect fixes within
+the frozen structure.

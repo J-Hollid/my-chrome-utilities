@@ -5,6 +5,16 @@
  * existing side-panel implementation.
  */
 
+/*
+ * The side panel owns this stylesheet, so establish the native-control theme
+ * at the document root as well as on the branded body.  Chromium reports the
+ * root's computed color-scheme independently of its child body; keeping both
+ * pinned prevents host light-mode emulation from leaking into panel chrome.
+ */
+:root {
+  color-scheme: dark;
+}
+
 body.twatility-side-panel {
   color-scheme: dark;
   --bg: var(--twa-navy-deep);

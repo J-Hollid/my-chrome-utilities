@@ -14,7 +14,7 @@
          (map (fn [index] [(keyword (format "context%03d" index)) true])
               (concat (range 1 21) (range 22 28)))
          (map (fn [index] [(keyword (format "portability%03d" index)) true])
-              (range 1 6)))))
+              (range 1 8)))))
 
 (deftest browser-evidence-requires-the-exact-non-vacuous-contract
   (is (false? (project-management/complete-browser-evidence? nil)))

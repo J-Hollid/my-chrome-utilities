@@ -27,23 +27,38 @@
        "Rename collision readiness changed."
        {:example example :state state}))))
 
+(defn- isolated-rename-draft? [draft]
+  (= {:proposed "Generic page view"
+      :canonicalName "Generic page view"
+      :current "Page view"
+      :pending ["Rename schema from Page view to Generic page view"]
+      :version 3
+      :publishBlockedImmediately true
+      :publishReady true}
+     draft))
+
+(defn- complete-rename-review? [review]
+  (and (:unchanged review)
+       (= 1 (count (re-seq #"Rename schema from Page view to Generic page view"
+                           (:text review))))
+       (str/includes? (:text review) "policy canonical property")))
+
 (defn- assert-observation! [example observed]
   (let [{:keys [draft published invalidAndDiscard]} observed
         publication (:published published)]
     (support/assert!
-     (= {:proposed "Generic page view" :current "Page view"
-         :pending ["Rename schema from Page view to Generic page view"] :version 3}
-        draft)
+     (isolated-rename-draft? draft)
      "Rename proposal was not isolated in revision 3's working draft." observed)
     (support/assert!
-     (= ["Generic page view" ["Rename schema from Page view to Generic page view"]]
-        [(get-in published [:restored :name]) (get-in published [:restored :pending])])
+     (= ["Generic page view"
+         "Generic page view"
+         ["Rename schema from Page view to Generic page view"]]
+        [(get-in published [:restored :name])
+         (get-in published [:restored :canonicalName])
+         (get-in published [:restored :pending])])
      "Pending rename did not survive editor close and reload." observed)
     (support/assert!
-     (and (get-in published [:review :unchanged])
-          (= 1 (count (re-seq #"Rename schema from Page view to Generic page view"
-                              (get-in published [:review :text]))))
-          (str/includes? (get-in published [:review :text]) "Change additional-property policy"))
+     (complete-rename-review? (:review published))
      "Publish review changed storage or omitted pending changes." observed)
     (support/assert!
      (= {:id "schema-page-view" :name "Generic page view" :version 4

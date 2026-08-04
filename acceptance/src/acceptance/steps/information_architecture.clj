@@ -1,7 +1,5 @@
 (ns acceptance.steps.information-architecture
   (:require [acceptance.steps.support :as support]
-            [babashka.process :as process]
-            [clojure.edn :as edn]
             [clojure.string :as str]))
 
 (defn- inspect [world]
@@ -32,34 +30,22 @@
        (str/includes? source "function renderLiveContextActions()")
        (str/includes? source "startTestingButton?.addEventListener")))
 
-(defn- run-production-module! [script]
-  (let [{:keys [exit out err]} (process/shell {:out :string :err :string}
-                                                "node" "--input-type=module" "--eval" script)]
-    (support/assert! (zero? exit)
-                     "Production module execution failed."
-                     {:error err})
-    (edn/read-string (str/trim out))))
+(defonce live-session-runtime-observation (atom nil))
 
-(defn- runtime-live-session-controls [session-state capture-state]
-  (run-production-module!
-   (format (str "import { liveSessionControls } from './dist/data-layer-live-session-controls.js';"
-                "const controls=liveSessionControls({activeSession:%s,captureStatus:%s});"
-                "console.log(`{:session-action ${JSON.stringify(controls.sessionAction)} :capture-action ${JSON.stringify(controls.captureAction)}}`);"
-                )
-           (if (= session-state "Active") "true" "false")
-           (pr-str (get {"Paused" "Paused"} capture-state "Live")))))
+(defn- observe-live-session-runtime! []
+  (support/cached-command-observation!
+   live-session-runtime-observation
+   {:command ["node" "test/information-architecture-runtime-test.mjs"]
+    :observation-key :informationArchitecture
+    :runtime-error "Information architecture runtime verification failed."
+    :missing-error "Information architecture runtime observation is missing."}))
 
-(defn- runtime-live-session-lifecycle []
-  (run-production-module!
-   (str "import { createObservationTarget, createObservationTargetState, selectObservationTarget, attachSelectedObservationTarget, detachObservationTarget } from './dist/data-layer-observation-targets.js';"
-        "import { startDataLayerTestingSession, endDataLayerTestingSession } from './dist/data-layer-session.js';"
-        "const target=createObservationTarget({tabId:42,windowId:7,pageUrl:'https://example.test/',title:'Example'});"
-        "const selected=selectObservationTarget(createObservationTargetState([target]),target.id);"
-        "const attached=attachSelectedObservationTarget(selected);"
-        "const started=startDataLayerTestingSession({}, {id:'test',tabId:target.tabId,windowId:target.windowId,url:target.pageUrl,historyPath:'event.history',targetTitle:target.title,targetOrigin:target.origin});"
-        "const ended=endDataLayerTestingSession(started);"
-        "const detached=detachObservationTarget(attached.state);"
-        "console.log(`{:started ${attached.result==='Attached' && started.session?.status==='active'} :ended ${ended.session?.status==='ended' && detached.sessionState==='Detached'}}`);")))
+(defn runtime-live-session-controls [observation session-state capture-state]
+  (some #(when (= [session-state capture-state]
+                  [(:sessionState %) (:captureState %)])
+           {:session-action (:sessionAction %)
+            :capture-action (:captureAction %)})
+        (:controls observation)))
 
 (def data-layer-secondary-views #{"Live" "Library" "Sessions" "Schemas"})
 
@@ -512,10 +498,17 @@
    {:pattern #"^Data Layer Live has session state <([A-Za-z0-9_]+)> and capture state <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [session-key capture-key]]
                (let [session-state (example-value example session-key)
-                     capture-state (example-value example capture-key)]
+                     capture-state (example-value example capture-key)
+                     observation (observe-live-session-runtime!)
+                     controls (runtime-live-session-controls
+                               observation session-state capture-state)]
+                 (support/assert! controls
+                                  "Information architecture runtime observation does not contain the session state."
+                                  {:session-state session-state
+                                   :capture-state capture-state})
                  (assoc (inspect world)
-                        :runtime-controls (runtime-live-session-controls session-state capture-state)
-                        :runtime-lifecycle (runtime-live-session-lifecycle))))}
+                        :runtime-controls controls
+                        :runtime-lifecycle (:lifecycle observation))))}
    {:pattern #"^the Live contextual actions are displayed$"
     :handler (fn [world _example _captures]
                (support/assert! (contextual-actions? (:html world) (:source world))

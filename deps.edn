@@ -13,19 +13,15 @@
                     "-t" "^(?!acceptance\\.property-test$).*"]}
   :crap {:extra-paths ["scripts/clojure"]
          :extra-deps {io.github.unclebob/crap4clj
-                      {:git/url "https://github.com/unclebob/crap4clj.git"
-                       :git/sha "63a56db38f898d8d63cb044c71da09c7bfa3abcd"}}
+                      {:local/root "tmp/tools/crap4clj"}}
          :main-opts ["-m" "project-tools.crap"]}
   :crap-test {:extra-paths ["scripts/clojure" "test"]
               :extra-deps {io.github.unclebob/crap4clj
-                           {:git/url "https://github.com/unclebob/crap4clj.git"
-                            :git/sha "63a56db38f898d8d63cb044c71da09c7bfa3abcd"}}
+                           {:local/root "tmp/tools/crap4clj"}}
               :main-opts ["-m" "project-tools.crap-test"]}
   :dry4clj {:extra-deps {io.github.unclebob/dry4clj
-                         {:git/url "https://github.com/unclebob/dry4clj.git"
-                          :git/sha "5994ef2bcaaae8d12bcd0afb4f091ae09083228c"}}
+                         {:local/root "tmp/tools/dry4clj"}}
             :main-opts ["-m" "dry4clj.core"]}
   :mutate {:extra-deps {io.github.unclebob/clj-mutate
-                        {:git/url "https://github.com/unclebob/clj-mutate.git"
-                         :git/sha "e27dd5df63c4efdd66438587d1c5f49e73661b69"}}
+                        {:local/root "tmp/tools/clj-mutate"}}
            :main-opts ["-m" "clj-mutate.core"]}}}

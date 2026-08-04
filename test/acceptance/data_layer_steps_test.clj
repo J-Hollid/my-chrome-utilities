@@ -1,6 +1,7 @@
 (ns acceptance.data-layer-steps-test
   (:require [acceptance.steps.data-layer :as data-layer]
             [acceptance.runtime :as runtime]
+            [clojure.string :as str]
             [clojure.test :refer [deftest is]]))
 
 (def settings-html
@@ -20,6 +21,21 @@
      if (value === undefined) return 'path missing';
      return Array.isArray(value) ? 'ready' : 'not an array';
    }")
+
+(def project-scoped-history-path-source
+  "function renderHistoryPath(path, fieldValue = path) {}
+   async function saveProjectEventTransport() {
+     configureProjectEventTransport(state, {
+       observationHistoryPath: historyPathInput?.value ?? '',
+     });
+   }
+   historyPathInput?.addEventListener(\"input\", () => {
+     const typedPath = historyPathInput.value;
+     void targetPathStatusController.configure(currentObservationHistoryPath(), typedPath);
+   });
+   historyPathInput?.addEventListener(\"change\", () => {
+     void saveProjectEventTransport();
+   });")
 
 (deftest resolves-history-array-path-status
   (is (= "ready"
@@ -62,6 +78,22 @@
     (is (= "event." (:intermediate-history-path-field-value state)))
     (is (= "event.history" (:history-path-field-value state)))
     (is (= "event.history" (:history-path state)))))
+
+(deftest recognizes-project-scoped-history-path-entry
+  (is (data-layer/history-path-text-entry-wired?
+       settings-html
+       project-scoped-history-path-source))
+  (is (data-layer/history-path-incremental-entry-wired?
+       project-scoped-history-path-source))
+  (is (not (data-layer/history-path-text-entry-wired?
+            settings-html
+            (str/replace project-scoped-history-path-source
+                         "observationHistoryPath"
+                         "unrelatedSetting"))))
+  (is (not (data-layer/history-path-incremental-entry-wired?
+            (str/replace project-scoped-history-path-source
+                         "addEventListener(\"input\""
+                         "addEventListener(\"blur\"")))))
 
 (deftest canonical-incremental-history-path-checks-dispatch
   (let [base-state (data-layer/type-history-array-path-sequence

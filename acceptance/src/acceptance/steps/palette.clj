@@ -233,7 +233,11 @@
                         :root root
                         :package (support/read-json (fs/path root "package.json"))
                         :manifest (support/read-json (fs/path root "manifest.json"))
-                        :implementation-files (support/source-files root))))}
+                        :implementation-files (support/source-files
+                                               root
+                                               ["src/command-palette"
+                                                "src/commands.ts"
+                                                "src/utilities/command-palette"]))))}
 
    {:pattern #"^no fuzzy-search package dependency is declared$"
     :handler (fn [world _example _captures]

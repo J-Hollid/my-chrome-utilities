@@ -23,4 +23,13 @@
   (let [inspected (#'modular/inspect! {})]
     (is (true? (:modular/inspected inspected)))
     (is (seq (:modular/registry inspected)))
+    (is (= "shared"
+           (get (:modular/browser-adapter-modes inspected)
+                "test/browser-packs/flow-graph.mjs")))
+    (is (= "shared-wrapper"
+           (get (:modular/browser-adapter-modes inspected)
+                "test/browser-packs/flow-graph-legacy.mjs")))
+    (is (= "integration"
+           (get (:modular/browser-adapter-modes inspected)
+                "test/twatility-projects-browser-test.mjs")))
     (is (identical? inspected (#'modular/inspect! inspected)))))

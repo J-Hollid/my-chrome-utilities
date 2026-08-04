@@ -75,5 +75,26 @@ for(const failureKey of ["rules","schemas"]){
   persistLocalRulePromotion(storage,{schemaKey:"schemas",schemaValue:"after schemas",ruleKey:"rules",ruleValue:"after rules"});
   assert.deepEqual(Object.fromEntries(values),{rules:"after rules",schemas:"after schemas"});
 }
+{
+  const values=new Map([["schemas","same schemas"],["rules","before rules"]]),writes=[];
+  const storage={getItem:(key)=>values.get(key)??null,removeItem:(key)=>{writes.push(["remove",key]);values.delete(key);},setItem:(key,value)=>{writes.push(["set",key,value]);values.set(key,value);}};
+  persistLocalRulePromotion(storage,{schemaKey:"schemas",schemaValue:"same schemas",ruleKey:"rules",ruleValue:"after rules"});
+  assert.deepEqual(writes,[["set","rules","after rules"]]);
+  assert.deepEqual(Object.fromEntries(values),{schemas:"same schemas",rules:"after rules"});
+}
+{
+  const values=new Map([["schemas","opaque schemas"],["rules","before rules"]]),writes=[];
+  const storage={getItem:(key)=>values.get(key)??null,removeItem:(key)=>{writes.push(["remove",key]);values.delete(key);},setItem:(key,value)=>{writes.push(["set",key,value]);values.set(key,value);}};
+  persistLocalRulePromotion(storage,{schemaKey:"schemas",ruleKey:"rules",ruleValue:"after rules"});
+  assert.deepEqual(writes,[["set","rules","after rules"]]);
+  assert.deepEqual(Object.fromEntries(values),{schemas:"opaque schemas",rules:"after rules"});
+}
+{
+  const values=new Map([["schemas","before schemas"],["rules","before rules"]]),writes=[];
+  const storage={getItem:(key)=>values.get(key)??null,removeItem:(key)=>{writes.push(["remove",key]);values.delete(key);},setItem:(key,value)=>{writes.push(["set",key,value]);if(key==="schemas"&&value==="after schemas")throw new Error("schemas unavailable");values.set(key,value);}};
+  assert.throws(()=>persistLocalRulePromotion(storage,{schemaKey:"schemas",schemaValue:"after schemas",ruleKey:"rules",ruleValue:"after rules"}),/schemas unavailable/);
+  assert.deepEqual(writes,[["set","rules","after rules"],["set","schemas","after schemas"],["set","rules","before rules"]]);
+  assert.deepEqual(Object.fromEntries(values),{schemas:"before schemas",rules:"before rules"});
+}
 
 console.log("data-layer local-rule promotion tests passed");

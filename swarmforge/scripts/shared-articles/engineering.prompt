@@ -1,12 +1,14 @@
 # Engineering Rules
 
-## Startup Tools
-- On startup, procure the latest version of each required CRAP, mutation, and DRY tool for the project language directly from the listed `github.com/unclebob/...` repositories and get each one ready to run.
-- Resolve each listed repository at its latest available upstream version before installing or building it.
-- Do not rely on stale cached, vendored, or preinstalled copies when a fresh GitHub install/build is possible in the current environment.
+## Tool Provisioning
+- Use the project-pinned or already-provisioned CRAP, mutation, DRY, and APS tools. Check availability once per long-lived role session, not once per task.
+- `swarmforge/toolchain.lock.json` is authoritative for Node, Babashka, TypeScript, Codex capabilities, vendored APS, and optional Clojure analysis tools. Use `node scripts/check-swarmforge-toolchain.mjs` for offline validation and its explicit `--provision <tool>` mode only when a required runtime or tool is absent.
+- Do not contact GitHub merely to refresh a working tool. Refresh versions only during an explicit tool-maintenance task, then pin the resolved revision in project configuration.
+- If a required pinned tool is unavailable, report that single provisioning blocker instead of repeatedly retrying network installs from inside the sandbox.
 - Language tool table:
+  - TypeScript: use the repository-pinned TypeScript compiler, architecture checker, coverage, and any explicitly pinned analysis tools; do not substitute Clojure tools for TypeScript production code.
   - Go: install with `go install`; mutation `github.com/unclebob/mutate4go`, CRAP `github.com/unclebob/crap4go`, DRY `github.com/unclebob/dry4go`.
-  - Clojure: install with Clojure CLI/deps.edn; mutation `github.com/unclebob/clj-mutate`, CRAP `github.com/unclebob/crap4clj`, DRY `github.com/unclebob/dry4clj`.
+  - Clojure: use Clojure CLI/deps.edn; provision the locked local checkouts for mutation (`clj-mutate`), CRAP (`crap4clj`), and DRY (`dry4clj`) through the toolchain checker before first use.
   - Java: install with Maven (`mvn`); mutation `github.com/unclebob/mutate4java`, CRAP `github.com/unclebob/crap4java`, DRY `github.com/unclebob/dry4java`.
 
 ## Language Defaults
@@ -24,8 +26,8 @@
 - Keep property tests separate from normal verification. Do not include property-test tags in normal unit coverage, Gherkin acceptance mutation, language mutation tools, CRAP, or coverage commands unless the role owns property-test verification or the user explicitly asks for property tests.
 
 ## Acceptance Pipeline
-- Use github.com/unclebob/Acceptance-Pipeline-Specification for Gherkin acceptance tests.
-- The Acceptance Pipeline Specification supplies `gherkin-parser` and `gherkin-mutator`; install or build those commands from that repository instead of reimplementing them in the project.
+- Use the locked tree under `vendor/acceptance-pipeline-specification` for Gherkin acceptance tests. Validate its digest through the toolchain checker; do not fetch APS during ordinary role startup.
+- The vendored Acceptance Pipeline Specification supplies `gherkin-parser` and `gherkin-mutator`; use those commands instead of reimplementing them in the project.
 - Prefer the Babashka APS tools for `gherkin-parser`, `gherkin-mutator`, and related APS support commands.
 - Use Go-based APS tools only if the Babashka APS tools do not work in the current project environment.
 - Project-specific acceptance pipeline components are the acceptance entrypoint generator, acceptance runtime, project step handlers, runner adapter, and convenience scripts.
@@ -33,10 +35,17 @@
 - Gherkin acceptance mutation runs must report periodic progress/status so agents can distinguish normal long-running work from a hang.
 
 ## Verification
-- Before running language, build, or test commands, prefer project-local cache/configuration paths inside the assigned worktree. Avoid default cache locations that write outside the project and may trigger sandbox or permission restrictions.
-- Run acceptance generation and acceptance tests sequentially.
+- Before running language, build, or test commands, prefer project-local cache/configuration paths inside the assigned worktree. The `swarmforge/scripts/clj` wrapper keeps Clojure configuration, Maven artifacts, and gitlibs there. Avoid default cache locations that write outside the project and may trigger sandbox or permission restrictions.
+- Let the focused verification runner parallelize independent unit, parser, generator, and receipt-backed pack-session leaves within its bounded worker limit. Keep Chrome adapters sequential; the runner consolidates independent pack-session failures after checkpoints complete.
 - Avoid running whole-suite language test commands concurrently with acceptance generation.
 - Run the relevant local verification command before handoff whenever the project has one.
+- Treat verification-pack dependencies as build or contract dependencies, not permission to run their complete regression suites. Use `--with-dependencies` only when impact evidence requires it.
+- Property tests are opt-in with `--property` outside terminal `--full` verification, except that durable `--prepare-evidence` checkpoints require them.
+- Run the task's exact pack once on a settled candidate. During correction loops, run only the failing leaf. Do not repeat a passing exact pack unless later changes could invalidate it.
+- Run direct Chrome corrections through `browser-test <registered-test-path>`. It is the narrow, approval-friendly browser boundary; never request broad danger-full-access merely to obtain localhost CDP sockets.
+- Codex roles run with explicit workspace-write isolation, `on-request` approvals, and a fail-closed network proxy that permits only exact `localhost` and `127.0.0.1` destinations. Git metadata remains protected. Use precise Git commands and let the configured automatic approval reviewer handle them; do not request or simulate broad write access to `.git`.
+- Own only failures in the selected pack that are attributable to the task lineage or touched boundary. Do not repair unrelated full-suite or baseline failures; record the exact leaf as unrelated and keep it out of the implementation diff.
+- Downstream roles may consume inbound commit-bound Git-note evidence only while the candidate commit and tree remain unchanged. A role that creates a new candidate runs fresh evidence for every complete pack affected by its change, using the inbound commit as `base:`; verification ownership moves forward without replaying unchanged terminal suites.
 
 ## Functional Delivery And Runtime Evidence
 - A task originating from an approved externally visible behavior or regression specification is functional unless it explicitly says it is test-only, documentation-only, tooling-only, or prompt-only.

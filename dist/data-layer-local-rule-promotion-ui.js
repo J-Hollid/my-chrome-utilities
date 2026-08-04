@@ -8,8 +8,9 @@ export function createLocalRulePromotionDialog() {
     dialog.setAttribute("aria-label", "Local rule promotion review");
     document.body.append(dialog);
     let current;
+    let committing = false;
     const close = () => {
-        if (!current)
+        if (!current || committing)
             return;
         if (dialog.open)
             dialog.close();
@@ -25,6 +26,7 @@ export function createLocalRulePromotionDialog() {
         close,
         open(input) {
             current = input;
+            committing = false;
             dialog.removeAttribute("aria-label");
             dialog.setAttribute("aria-labelledby", "local-rule-promotion-heading");
             let duplicateArmed = false;
@@ -110,15 +112,17 @@ export function createLocalRulePromotionDialog() {
                 duplicateArmed = false;
                 const validation = validateLocalRulePromotion(review, selection());
                 assistance.textContent = validation.assistance;
-                confirm.disabled = !validation.ready;
+                confirm.disabled = committing || !validation.ready;
+                cancel.disabled = committing;
+                actionGroup.disabled = committing;
                 warning.hidden = !validation.duplicateDefinitionWarning;
                 warning.textContent = validation.duplicateDefinitionWarning
                     ? "An equivalent reusable definition already exists. Confirm to create a separate duplicate definition."
                     : "";
                 const creating = selectedAction()?.value === "create";
-                name.disabled = !creating;
-                description.disabled = !creating;
-                examples.disabled = !creating;
+                name.disabled = committing || !creating;
+                description.disabled = committing || !creating;
+                examples.disabled = committing || !creating;
                 confirm.textContent = "Confirm promotion";
             };
             actionGroup.addEventListener("change", refresh);
@@ -139,14 +143,30 @@ export function createLocalRulePromotionDialog() {
                     confirm.textContent = "Confirm duplicate definition";
                     return;
                 }
+                committing = true;
+                refresh();
+                assistance.textContent = "Saving promotion to the reusable Rule Library and durable Saved Schema Library…";
                 try {
-                    const afterClose = input.confirm(selection());
-                    if (dialog.open)
-                        dialog.close();
-                    current = undefined;
-                    afterClose?.();
+                    const pending = input.confirm(selection());
+                    void Promise.resolve(pending).then((afterClose) => {
+                        if (current !== input)
+                            return;
+                        if (dialog.open)
+                            dialog.close();
+                        current = undefined;
+                        committing = false;
+                        afterClose?.();
+                    }, (error) => {
+                        if (current !== input)
+                            return;
+                        committing = false;
+                        refresh();
+                        assistance.textContent = error instanceof Error ? `Promotion was not saved: ${error.message}` : "Promotion was not saved.";
+                    });
                 }
                 catch (error) {
+                    committing = false;
+                    refresh();
                     assistance.textContent = error instanceof Error ? `Promotion was not saved: ${error.message}` : "Promotion was not saved.";
                 }
             });

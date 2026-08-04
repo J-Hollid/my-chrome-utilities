@@ -1,5 +1,6 @@
 (ns acceptance.pack-session
-  (:require [acceptance.pack-runtime :as packs]))
+  (:require [acceptance.pack-runtime :as packs]
+            [clojure.string :as str]))
 
 (defn run-entrypoint! [{:keys [generated ir]}]
   (load-file generated)
@@ -12,16 +13,24 @@
   (binding [packs/*runtime-cache* (atom {:scope {:pack-id pack-id
                                                  :build-artifact build-artifact}
                                          :values {}})]
+    (let [failures (atom [])]
     (doseq [entry entries]
       (try
         (run! entry)
         (catch Throwable error
-          (throw (ex-info (str "Acceptance pack session failed: " pack-id
-                               ": " (:generated entry) ": " (ex-message error))
-                          {:pack-id pack-id
-                           :build-artifact build-artifact
-                           :entry entry}
-                          error)))))))
+          (swap! failures conj {:entry entry :message (ex-message error) :error error}))))
+    (when (seq @failures)
+      (throw (ex-info
+              (str "Acceptance pack session failed in " (count @failures)
+                   " feature(s): " pack-id ": "
+                   (str/join "; "
+                                        (map (fn [{:keys [entry message]}]
+                                               (str (:generated entry) ": " message))
+                                             @failures)))
+              {:pack-id pack-id
+               :build-artifact build-artifact
+               :failures (mapv #(dissoc % :error) @failures)}
+              (:error (first @failures))))))))
 
 (defn- entries [paths]
   (when (or (empty? paths) (odd? (count paths)))
@@ -39,5 +48,5 @@
   (println "acceptance passed"))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-17T16:55:27.14858271+02:00", :module-hash "-1882642103", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "-57477308"} {:id "defn/run-entrypoint!", :kind "defn", :line 4, :end-line 9, :hash "1692666856"} {:id "defn/run-session!", :kind "defn", :line 11, :end-line 24, :hash "-1750034662"} {:id "defn-/entries", :kind "defn-", :line 26, :end-line 30, :hash "-710617747"} {:id "defn/-main", :kind "defn", :line 32, :end-line 39, :hash "-1636546623"}]}
+;; {:version 1, :tested-at "2026-08-04T11:33:29.365825845+02:00", :module-hash "1514196895", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-2140623998"} {:id "defn/run-entrypoint!", :kind "defn", :line 5, :end-line nil, :hash "1692666856"} {:id "defn/run-session!", :kind "defn", :line 12, :end-line nil, :hash "1444155882"} {:id "defn-/entries", :kind "defn-", :line 35, :end-line nil, :hash "-710617747"} {:id "defn/-main", :kind "defn", :line 41, :end-line nil, :hash "-1636546623"}]}
 ;; clj-mutate-manifest-end

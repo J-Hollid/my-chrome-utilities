@@ -67,7 +67,7 @@
 (defn- verify-model! []
   (support/cached-command-verification!
    model-verified? "Specification builder UI model verification failed. "
-   "npm" "run" "test:unit:schema-specification-builder-ui"))
+   "node" "test/data-layer-schema-specification-builder-test.mjs"))
 
 (defn- runtime-observation! []
   (support/cached-browser-observation!

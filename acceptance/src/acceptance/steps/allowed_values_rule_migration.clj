@@ -55,7 +55,7 @@
   (support/cached-command-verification!
    model-verified?
    "Allowed values rule migration model verification failed. "
-   "npm" "run" "test:unit:allowed-values-rule-migration"))
+   "node" "test/data-layer-allowed-values-rule-migration-test.mjs"))
 
 (defn- runtime-observation! []
   (support/cached-browser-observation!

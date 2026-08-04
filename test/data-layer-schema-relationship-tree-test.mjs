@@ -12,15 +12,15 @@ const state={
     id:"project:shop",name:"Shop",
     collections:{
       profiles:[entity("profile:sitewide","Sitewide")],
-      pageGroups:[entity("group:checkout","Checkout"),entity("group:promotions","Promotions")],
-      pages:[entity("page:cart","Cart",{pageGroupIds:["group:checkout","group:promotions"]})],
+      propertySets:[entity("group:checkout","Checkout"),entity("group:promotions","Promotions")],
+      pages:[entity("page:cart","Cart",{propertySetApplications:[{propertySetId:"group:checkout"},{propertySetId:"group:promotions"}]})],
       events:[entity("event:purchase","Purchase")],
       flows:[entity("flow:checkout","Checkout journey"),entity("flow:express","Express checkout")],
       applicabilitySets:[],fixtures:[],assignments:[],
     },
     documentationFlowGraphs:{
-      "flow:checkout":{pageFrames:[entity("frame:checkout-cart","Cart",{pageId:"page:cart",pageGroupId:"group:checkout"})],occurrences:[entity("occurrence:checkout-purchase","Purchase occurrence",{pageFrameId:"frame:checkout-cart",pageId:"page:cart",eventId:"event:purchase"})]},
-      "flow:express":{pageFrames:[entity("frame:express-cart","Cart",{pageId:"page:cart",pageGroupId:"group:checkout"})],occurrences:[entity("occurrence:express-purchase","Purchase occurrence",{pageFrameId:"frame:express-cart",pageId:"page:cart",eventId:"event:purchase"})]},
+      "flow:checkout":{sections:[],pageFrames:[entity("frame:checkout-cart","Cart",{pageId:"page:cart"})],occurrences:[entity("occurrence:checkout-purchase","Purchase occurrence",{pageFrameId:"frame:checkout-cart",pageId:"page:cart",eventId:"event:purchase"})]},
+      "flow:express":{sections:[],pageFrames:[entity("frame:express-cart","Cart",{pageId:"page:cart"})],occurrences:[entity("occurrence:express-purchase","Purchase occurrence",{pageFrameId:"frame:express-cart",pageId:"page:cart",eventId:"event:purchase"})]},
     },
   },
   history:{undo:[],redo:[]},
@@ -44,14 +44,14 @@ const ordinaryTree=filterSchemaRelationshipTree(tree,{category:"All",query:""});
 assert.equal(flatten(ordinaryTree).filter(({expanded})=>expanded).length,0,"blank-query filtering leaves expansion under operator control");
 assert.deepEqual(flatten(filterSchemaRelationshipTree(tree,{category:"Pages",query:""})).filter(({targetKey})=>targetKey).map(({targetKey})=>targetKey),["pages:page:cart"],"category filters expose canonical results from their relationship branch");
 
-const pageGroupSearch=filterSchemaRelationshipTree(tree,{category:"Property Sets",query:"cart"});
-const pageGroupNodes=flatten(pageGroupSearch);
-assert.deepEqual(pageGroupNodes.filter(({targetKey})=>targetKey==="pages:page:cart").map(({relationshipPath})=>relationshipPath),[
+const propertySetSearch=filterSchemaRelationshipTree(tree,{category:"Property Sets",query:"cart"});
+const propertySetNodes=flatten(propertySetSearch);
+assert.deepEqual(propertySetNodes.filter(({targetKey})=>targetKey==="pages:page:cart").map(({relationshipPath})=>relationshipPath),[
   "Shop → Property Sets → Checkout → Cart",
   "Shop → Property Sets → Promotions → Cart",
 ]);
-assert.ok(pageGroupNodes.every(({name})=>name!=="Flows"),"unrelated siblings are pruned");
-assert.ok(pageGroupNodes.filter(({targetKey})=>targetKey==="pages:page:cart").every(({match})=>match),"matching references are marked for result semantics");
+assert.ok(propertySetNodes.every(({name})=>name!=="Flows"),"unrelated siblings are pruned");
+assert.ok(propertySetNodes.filter(({targetKey})=>targetKey==="pages:page:cart").every(({match})=>match),"matching references are marked for result semantics");
 
 const occurrenceSearch=filterSchemaRelationshipTree(tree,{category:"Event occurrences",query:"express"});
 const occurrenceNodes=flatten(occurrenceSearch);

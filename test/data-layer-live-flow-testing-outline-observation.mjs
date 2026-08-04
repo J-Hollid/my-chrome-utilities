@@ -31,11 +31,11 @@ const state={project:{
   id:"project:outline",name:"Retail website",
   collections:{
     profiles:[{id:"profile:sitewide",name:"Sitewide",canonicalSchema:canonical("profile:sitewide","Sitewide","/site")}],
-    pageGroups:[{id:"group:checkout",name:"Checkout",canonicalSchema:canonical("group:checkout","Checkout","/currency")}],
+    propertySets:[{id:"group:checkout",name:"Checkout",canonicalSchema:canonical("group:checkout","Checkout","/currency")}],
     pages:[
-      {id:"page:cart",name:"Cart",eventName:"pageview",profileId:"profile:sitewide",pageGroupIds:["group:checkout"],canonicalSchema:canonical("page:cart","Cart","/cart_id")},
-      {id:"page:payment",name:"Payment",eventName:"pageview",profileId:"profile:sitewide",pageGroupIds:["group:checkout"],canonicalSchema:withConstraint(canonical("page:payment","Payment","/payment_id"),{path:"/oForm/formStepName",expectedValue:"payment"})},
-      {id:"page:confirmation",name:"Confirmation",eventName:"pageview",profileId:"profile:sitewide",pageGroupIds:["group:checkout"],canonicalSchema:canonical("page:confirmation","Confirmation","/confirmation_id")},
+      {id:"page:cart",name:"Cart",eventName:"pageview",profileId:"profile:sitewide",propertySetApplications:[{propertySetId:"group:checkout"}],canonicalSchema:canonical("page:cart","Cart","/cart_id")},
+      {id:"page:payment",name:"Payment",eventName:"pageview",profileId:"profile:sitewide",propertySetApplications:[{propertySetId:"group:checkout"}],canonicalSchema:withConstraint(canonical("page:payment","Payment","/payment_id"),{path:"/oForm/formStepName",expectedValue:"payment"})},
+      {id:"page:confirmation",name:"Confirmation",eventName:"pageview",profileId:"profile:sitewide",propertySetApplications:[{propertySetId:"group:checkout"}],canonicalSchema:canonical("page:confirmation","Confirmation","/confirmation_id")},
     ],
     events:[
       {id:"event:paypal",name:"PayPal",eventName:"paypal",canonicalSchema:canonical("event:paypal","PayPal","/paypal")},
@@ -45,11 +45,11 @@ const state={project:{
     applicabilitySets:[],assignments:[],fixtures:[],
   },
   documentationFlowGraphs:{"flow:checkout":{
-    pageGroupIds:["group:checkout"],
+    sections:[],
     pageFrames:[
-      {id:"frame:cart",name:"Cart frame",pageId:"page:cart",pageGroupId:"group:checkout"},
-      {id:"frame:payment",name:"Payment frame",pageId:"page:payment",pageGroupId:"group:checkout"},
-      {id:"frame:confirmation",name:"Confirmation frame",pageId:"page:confirmation",pageGroupId:"group:checkout"},
+      {id:"frame:cart",name:"Cart frame",pageId:"page:cart"},
+      {id:"frame:payment",name:"Payment frame",pageId:"page:payment"},
+      {id:"frame:confirmation",name:"Confirmation frame",pageId:"page:confirmation"},
     ],
     occurrences:[
       {id:"occurrence:paypal",name:"Cart PayPal",pageFrameId:"frame:cart",pageId:"page:cart",eventId:"event:paypal",localSchemaContributions:[{path:"/paypal_route",presence:"required",type:"string"}]},
@@ -114,11 +114,11 @@ const pageScopes=paymentEntry.provenance.map(({scope})=>scope);
 const occurrenceScopes=occurrenceEntry.provenance.map(({scope})=>scope);
 const outlineRows=[
   ...relationshipRows,
-  ...(JSON.stringify(pageScopes)===JSON.stringify(["Shared Profile","Page Group","Page","Flow Page-instance"])?[{
+  ...(JSON.stringify(pageScopes)===JSON.stringify(["Shared Profile","Property Set","Page","Flow Page-instance"])?[{
     flow_step:"Payment Page frame",
-    effective_schema:"its Shared Profiles, ordered Page Groups, Page, and Flow Page-instance contribution",
+    effective_schema:"its Shared Profiles, ordered Property Sets, Page, and Flow Page-instance contribution",
   }]:[]),
-  ...(JSON.stringify(occurrenceScopes)===JSON.stringify(["Shared Profile","Page Group","Page","Flow Page-instance","Event","Event-occurrence"])?[{
+  ...(JSON.stringify(occurrenceScopes)===JSON.stringify(["Shared Profile","Property Set","Page","Flow Page-instance","Event","Event-occurrence"])?[{
     flow_step:"Payment add_payment_info occurrence",
     effective_schema:"its Page-instance branch, Event branch, and Event-occurrence contribution",
   }]:[]),

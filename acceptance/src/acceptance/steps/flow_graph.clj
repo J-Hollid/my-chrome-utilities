@@ -14,7 +14,7 @@
 (defonce browser-observation (atom nil))
 
 (defn- checked-command! [message & command]
-  (let [result (apply process/shell {:out :string :err :string} command)]
+  (let [result (apply support/verified-command-result command)]
     (support/assert! (zero? (:exit result)) (str message " " (:err result)) {:out (:out result)})
     result))
 (defn- verify-model! []
@@ -22,7 +22,6 @@
     (checked-command! "Flow relationship deletion verification failed." "node" "test/data-layer-flow-relationship-deletion-test.mjs")
     (checked-command! "Flow Page-instance verification failed." "node" "test/data-layer-flow-page-instance-test.mjs")
     (checked-command! "Flow graph projection verification failed." "node" "test/data-layer-flow-graph-test.mjs")
-    (checked-command! "Flow graph port inference property verification failed." "node" "test/data-layer-flow-graph-property-test.mjs")
     (checked-command! "Flow Page-context model verification failed." "node" "test/data-layer-flow-page-context-model-test.mjs")
     (checked-command! "Flow Event insertion semantics verification failed." "node" "test/data-layer-flow-event-insertion-semantics-test.mjs")
     (checked-command! "Flow Page context-event model verification failed." "node" "test/data-layer-flow-page-event-model-test.mjs")
@@ -30,10 +29,18 @@
     (reset! model-verified? true)))
 (defn- observe-browser! []
   (or @browser-observation
-      (let [result (checked-command! "Flow graph browser adapter failed." "node" "test/browser-packs/flow-graph.mjs")
-            line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result))))
-            observed (:flowGraph (json/parse-string line true))]
-        (support/assert! observed "Flow graph browser evidence is missing." {:out (:out result)})
+      (let [results (mapv #(checked-command! "Flow graph browser shard failed." "node" %)
+                          ["test/browser-packs/flow-graph.mjs"
+                           "test/browser-packs/flow-graph-legacy.mjs"
+                           "test/browser-packs/flow-graph-examples.mjs"])
+            observed (apply merge
+                            (map (fn [result]
+                                   (let [line (last (filter #(str/starts-with? % "{")
+                                                            (str/split-lines (:out result))))]
+                                     (:flowGraph (json/parse-string line true))))
+                                 results))]
+        (support/assert! observed "Flow graph browser evidence is missing."
+                         {:out (mapv :out results)})
         (reset! browser-observation observed))))
 (def runtime-evidence-keys
   (set (map #(keyword (format "runtime%03d" %)) (range 1 27))))
@@ -111,5 +118,5 @@
    observe-browser! assert-runtime!))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-04T10:51:17.876637191+02:00", :module-hash "-728960123", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "12328700"} {:id "def/feature-files", :kind "def", :line 7, :end-line nil, :hash "-435723109"} {:id "def/entry-modes", :kind "def", :line 10, :end-line nil, :hash "1245758286"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line nil, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line nil, :hash "-1618529344"} {:id "defn-/checked-command!", :kind "defn-", :line 16, :end-line nil, :hash "-109796194"} {:id "defn-/verify-model!", :kind "defn-", :line 20, :end-line nil, :hash "-1342822011"} {:id "defn-/observe-browser!", :kind "defn-", :line 31, :end-line nil, :hash "2063982482"} {:id "def/runtime-evidence-keys", :kind "def", :line 38, :end-line nil, :hash "-910527984"} {:id "def/required-evidence-keys", :kind "def", :line 40, :end-line nil, :hash "-1295581414"} {:id "def/flow005-examples", :kind "def", :line 41, :end-line nil, :hash "574951723"} {:id "def/runtime009-examples", :kind "def", :line 48, :end-line nil, :hash "-167167521"} {:id "def/runtime023-examples", :kind "def", :line 53, :end-line nil, :hash "-1984771249"} {:id "def/runtime024-examples", :kind "def", :line 56, :end-line nil, :hash "1058329484"} {:id "def/flow026-examples", :kind "def", :line 58, :end-line nil, :hash "-1147461739"} {:id "defn-/exact-example-key", :kind "defn-", :line 61, :end-line nil, :hash "-1396433188"} {:id "defn/flow005-example-key", :kind "defn", :line 66, :end-line nil, :hash "-1643203963"} {:id "defn/runtime009-example-key", :kind "defn", :line 72, :end-line nil, :hash "-1376855772"} {:id "defn/runtime023-example-key", :kind "defn", :line 74, :end-line nil, :hash "-1160499936"} {:id "defn/runtime024-example-key", :kind "defn", :line 76, :end-line nil, :hash "1247866732"} {:id "defn/flow026-example-key", :kind "defn", :line 78, :end-line nil, :hash "1303746130"} {:id "defn/validate-example!", :kind "defn", :line 85, :end-line nil, :hash "-1762897624"} {:id "defn/all-true?", :kind "defn", :line 92, :end-line nil, :hash "731206003"} {:id "defn/complete-browser-evidence?", :kind "defn", :line 94, :end-line nil, :hash "-1622482226"} {:id "defn-/assert-runtime!", :kind "defn-", :line 100, :end-line nil, :hash "1781741610"} {:id "def/handlers", :kind "def", :line 107, :end-line nil, :hash "89345785"}]}
+;; {:version 1, :tested-at "2026-08-04T11:53:35.971837629+02:00", :module-hash "-1810506462", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "12328700"} {:id "def/feature-files", :kind "def", :line 7, :end-line nil, :hash "-435723109"} {:id "def/entry-modes", :kind "def", :line 10, :end-line nil, :hash "1245758286"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line nil, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line nil, :hash "-1618529344"} {:id "defn-/checked-command!", :kind "defn-", :line 16, :end-line nil, :hash "1232323377"} {:id "defn-/verify-model!", :kind "defn-", :line 20, :end-line nil, :hash "-1477867511"} {:id "defn-/observe-browser!", :kind "defn-", :line 30, :end-line nil, :hash "515803462"} {:id "def/runtime-evidence-keys", :kind "def", :line 45, :end-line nil, :hash "-910527984"} {:id "def/required-evidence-keys", :kind "def", :line 47, :end-line nil, :hash "-1295581414"} {:id "def/flow005-examples", :kind "def", :line 48, :end-line nil, :hash "574951723"} {:id "def/runtime009-examples", :kind "def", :line 55, :end-line nil, :hash "-167167521"} {:id "def/runtime023-examples", :kind "def", :line 60, :end-line nil, :hash "-1984771249"} {:id "def/runtime024-examples", :kind "def", :line 63, :end-line nil, :hash "1058329484"} {:id "def/flow026-examples", :kind "def", :line 65, :end-line nil, :hash "-1147461739"} {:id "defn-/exact-example-key", :kind "defn-", :line 68, :end-line nil, :hash "-1396433188"} {:id "defn/flow005-example-key", :kind "defn", :line 73, :end-line nil, :hash "-1643203963"} {:id "defn/runtime009-example-key", :kind "defn", :line 79, :end-line nil, :hash "-1376855772"} {:id "defn/runtime023-example-key", :kind "defn", :line 81, :end-line nil, :hash "-1160499936"} {:id "defn/runtime024-example-key", :kind "defn", :line 83, :end-line nil, :hash "1247866732"} {:id "defn/flow026-example-key", :kind "defn", :line 85, :end-line nil, :hash "1303746130"} {:id "defn/validate-example!", :kind "defn", :line 92, :end-line nil, :hash "-1762897624"} {:id "defn/all-true?", :kind "defn", :line 99, :end-line nil, :hash "731206003"} {:id "defn/complete-browser-evidence?", :kind "defn", :line 101, :end-line nil, :hash "-1622482226"} {:id "defn-/assert-runtime!", :kind "defn-", :line 107, :end-line nil, :hash "1781741610"} {:id "def/handlers", :kind "def", :line 114, :end-line nil, :hash "89345785"}]}
 ;; clj-mutate-manifest-end

@@ -96,8 +96,20 @@
                         [acceptance.saved-sessions-steps-test]
                         [acceptance.live-flow-guided-testing-steps-test]
                         [acceptance.flow-table-documentation-export-steps-test]
+                        [acceptance.command-observation-support-test]
+                        [acceptance.durable-project-repository-steps-test]
+                        [acceptance.flow-graph-steps-test]
+                        [acceptance.project-assurance-severity-steps-test]
+                        [acceptance.project-management-steps-test]
+                        [acceptance.specification-studio-choice-controls-steps-test]
+                        [acceptance.specification-studio-technical-analyst-guidance-steps-test]
                         [acceptance.gherkin-mutation-metadata-test])
-             :task (let [result (test/run-tests 'acceptance.pack-session-test
+             :task (let [runner-owns-js? (= "1" (System/getenv "SWARMFORGE_PACK_RUNNER_OWNS_JS"))
+                         build-result (if (= "1" (System/getenv "SWARMFORGE_BUILD_PREPARED"))
+                                       {:exit 0}
+                                       (process/shell {:out :inherit :err :inherit :continue true}
+                                                      "npm" "run" "build"))
+                         full-test-namespaces ['acceptance.pack-session-test
                                                 'acceptance.runtime-test
                                                 'acceptance.canonical-declared-property-validation-steps-test
                                                 'acceptance.recursive-declared-property-validation-steps-test
@@ -183,56 +195,79 @@
                                                 'acceptance.saved-sessions-steps-test
                                                 'acceptance.live-flow-guided-testing-steps-test
                                                 'acceptance.flow-table-documentation-export-steps-test
-                                                'acceptance.gherkin-mutation-metadata-test)
-                         source-result (process/shell {:out :inherit
-                                                      :err :inherit
-                                                      :continue true}
-                                                      "npm" "run" "test:unit:source-foundation")
-                         session-result (process/shell {:out :inherit
-                                                       :err :inherit
-                                                       :continue true}
-                                                      "npm" "run" "test:unit:data-layer-session")
-                         live-result (process/shell {:out :inherit
-                                                     :err :inherit
-                                                     :continue true}
-                                                    "npm" "run" "test:unit:live-observer")
-                         presentation-result (process/shell {:out :inherit
-                                                             :err :inherit
-                                                             :continue true}
-                                                            "npm" "run" "test:unit:live-event-presentation")
-                         target-result (process/shell {:out :inherit
-                                                       :err :inherit
-                                                       :continue true}
-                                                      "npm" "run" "test:unit:observation-targets")
-                         editor-result (process/shell {:out :inherit
-                                                       :err :inherit
-                                                       :continue true}
-                                                      "npm" "run" "test:unit:event-library-editor")
-                         schema-result (process/shell {:out :inherit
-                                                       :err :inherit
-                                                       :continue true}
-                                                      "npm" "run" "test:unit:schema-verification")
-                         sequence-result (process/shell {:out :inherit
-                                                         :err :inherit
-                                                         :continue true}
-                                                        "npm" "run" "test:unit:sequence-replay")
-                         saved-result (process/shell {:out :inherit
-                                                      :err :inherit
-                                                      :continue true}
-                                                     "npm" "run" "test:unit:saved-sessions")
-                         palette-result (process/shell {:out :inherit
-                                                        :err :inherit
-                                                        :continue true}
-                                                       "npm" "run" "test:unit:command-palette")
-                         action-hierarchy-result (process/shell {:out :inherit
-                                                                 :err :inherit
-                                                                 :continue true}
-                                                                "npm" "run" "test:unit:side-panel-action-hierarchy")
-                         component-layout-result (process/shell {:out :inherit
-                                                                 :err :inherit
-                                                                 :continue true}
-                                                                "npm" "run" "test:unit:component-layout")]
-                     (when (or (pos? (+ (:fail result) (:error result)))
+                                                'acceptance.command-observation-support-test
+                                                'acceptance.durable-project-repository-steps-test
+                                                'acceptance.flow-graph-steps-test
+                                                'acceptance.project-assurance-severity-steps-test
+                                                'acceptance.project-management-steps-test
+                                                'acceptance.specification-studio-choice-controls-steps-test
+                                                'acceptance.specification-studio-technical-analyst-guidance-steps-test
+                                                'acceptance.gherkin-mutation-metadata-test]
+                         runner-owned-test-namespaces
+                         ['acceptance.pack-session-test
+                          'acceptance.runtime-test
+                          'acceptance.generator-test
+                          'acceptance.steps-support-test
+                          'acceptance.side-panel-steps-test
+                          'acceptance.rule-edit-sync-steps-test
+                          'acceptance.required-rule-type-independence-steps-test
+                          'acceptance.command-registry-steps-test
+                          'acceptance.hotkey-keymap-steps-test
+                          'acceptance.package-flow-steps-test
+                          'acceptance.data-layer-steps-test
+                          'acceptance.data-layer-session-steps-test
+                          'acceptance.data-layer-observer-steps-test
+                          'acceptance.data-layer-timeline-steps-test
+                          'acceptance.data-layer-recovery-steps-test
+                          'acceptance.data-layer-page-context-steps-test
+                          'acceptance.workspace-editor-steps-test
+                          'acceptance.observability-library-steps-test
+                          'acceptance.operator-interface-steps-test
+                          'acceptance.live-observer-steps-test
+                          'acceptance.live-event-presentation-steps-test
+                          'acceptance.event-library-editor-steps-test
+                          'acceptance.fresh-live-session-steps-test
+                          'acceptance.schema-property-removal-steps-test
+                          'acceptance.schema-property-rule-picker-steps-test
+                          'acceptance.pack-runtime-test
+                          'acceptance.recursive-property-validation-steps-test
+                          'acceptance.schema-verification-steps-test
+                          'acceptance.schema-workspace-runtime-steps-test
+                          'acceptance.saved-sessions-steps-test
+                          'acceptance.live-flow-guided-testing-steps-test
+                          'acceptance.flow-table-documentation-export-steps-test
+                          'acceptance.command-observation-support-test
+                          'acceptance.durable-project-repository-steps-test
+                          'acceptance.flow-graph-steps-test
+                          'acceptance.project-assurance-severity-steps-test
+                          'acceptance.project-management-steps-test
+                          'acceptance.specification-studio-choice-controls-steps-test
+                          'acceptance.specification-studio-technical-analyst-guidance-steps-test
+                          'acceptance.gherkin-mutation-metadata-test]
+                         result (apply test/run-tests
+                                       (if runner-owns-js?
+                                         runner-owned-test-namespaces
+                                         full-test-namespaces))
+                         run-js-test (fn [& command]
+                                       (if runner-owns-js?
+                                         {:exit 0}
+                                         (apply process/shell
+                                                {:out :inherit :err :inherit :continue true}
+                                                command)))
+                         source-result (run-js-test "node" "scripts/run-prepared-npm-test.mjs" "test:unit:source-foundation")
+                         session-result (run-js-test "node" "scripts/run-prepared-npm-test.mjs" "test:unit:data-layer-session")
+                         live-result (run-js-test "node" "scripts/run-prepared-npm-test.mjs" "test:unit:live-observer")
+                         presentation-result (run-js-test "node" "scripts/run-prepared-npm-test.mjs" "test:unit:live-event-presentation")
+                         target-result (run-js-test "node" "scripts/run-prepared-npm-test.mjs" "test:unit:observation-targets")
+                         editor-result (run-js-test "node" "scripts/run-prepared-npm-test.mjs" "test:unit:event-library-editor")
+                         schema-result (run-js-test "node" "scripts/run-prepared-npm-test.mjs" "test:unit:schema-verification")
+                         sequence-result (run-js-test "node" "scripts/run-prepared-npm-test.mjs" "test:unit:sequence-replay")
+                         saved-result (run-js-test "node" "scripts/run-prepared-npm-test.mjs" "test:unit:saved-sessions")
+                         palette-result (run-js-test "node" "scripts/run-prepared-npm-test.mjs" "test:unit:command-palette")
+                         action-hierarchy-result (run-js-test "node" "scripts/run-prepared-npm-test.mjs" "test:unit:side-panel-action-hierarchy")
+                         component-layout-result (run-js-test "node" "scripts/run-prepared-npm-test.mjs" "test:unit:component-layout")]
+                     (when (or (not (zero? (:exit build-result)))
+                               (pos? (+ (:fail result) (:error result)))
                                (not (zero? (:exit source-result)))
                                (not (zero? (:exit session-result)))
                                (not (zero? (:exit live-result)))
@@ -250,20 +285,23 @@
                  :requires ([clojure.test :as test]
                             [acceptance.property-test]
                             [babashka.process :as process])
-                 :task (let [result (test/run-tests 'acceptance.property-test)]
-                         (let [property-result (process/shell {:out :inherit
-                                                              :err :inherit
-                                                              :continue true}
-                                                              "npm" "run" "test:property:browser-core")
-                               project-result (process/shell {:out :inherit
-                                                             :err :inherit
-                                                             :continue true}
-                                                            "npm" "run" "test:property:specification-project")
-                               correction-result (process/shell {:out :inherit
-                                                                :err :inherit
-                                                                :continue true}
-                                                               "npm" "run" "test:property:specification-correction")]
-                           (when (or (pos? (+ (:fail result) (:error result)))
+                 :task (let [runner-owns-js? (= "1" (System/getenv "SWARMFORGE_PACK_RUNNER_OWNS_JS"))
+                             build-result (if (= "1" (System/getenv "SWARMFORGE_BUILD_PREPARED"))
+                                           {:exit 0}
+                                           (process/shell {:out :inherit :err :inherit :continue true}
+                                                          "npm" "run" "build"))
+                             result (test/run-tests 'acceptance.property-test)]
+                         (let [run-js-test (fn [& command]
+                                             (if runner-owns-js?
+                                               {:exit 0}
+                                               (apply process/shell
+                                                      {:out :inherit :err :inherit :continue true}
+                                                      command)))
+                               property-result (run-js-test "node" "scripts/run-prepared-npm-test.mjs" "test:property:browser-core")
+                               project-result (run-js-test "node" "scripts/run-prepared-npm-test.mjs" "test:property:specification-project")
+                               correction-result (run-js-test "node" "scripts/run-prepared-npm-test.mjs" "test:property:specification-correction")]
+                           (when (or (not (zero? (:exit build-result)))
+                                     (pos? (+ (:fail result) (:error result)))
                                      (not (zero? (:exit property-result)))
                                      (not (zero? (:exit project-result)))
                                      (not (zero? (:exit correction-result))))
@@ -317,5 +355,21 @@
                                                  "node" "scripts/run-focused-acceptance.mjs" "--full")]
                       (when-not (zero? (:exit result))
                         (System/exit (:exit result))))}
-  test {:doc "Run unit, property, and acceptance tests."
-        :depends [test:unit test:property acceptance]}}}
+  test {:doc "Run unit, property, and acceptance tests with one shared build."
+        :requires ([babashka.process :as process])
+        :task (let [environment (assoc (into {} (System/getenv))
+                                      "SWARMFORGE_BUILD_PREPARED" "1"
+                                      "SWARMFORGE_PACK_RUNNER_OWNS_JS" "1")
+                    run (fn [& command]
+                          (apply process/shell {:out :inherit :err :inherit :continue true :env environment}
+                                 command))
+                    build-result (process/shell {:out :inherit :err :inherit :continue true}
+                                                "npm" "run" "build")
+                    unit-result (if (zero? (:exit build-result)) (run "bb" "test:unit") {:exit 1})
+                    property-result (if (zero? (:exit unit-result)) (run "bb" "test:property") {:exit 1})
+                    acceptance-result (if (zero? (:exit property-result))
+                                        (run "node" "scripts/run-focused-acceptance.mjs" "--full" "--no-build")
+                                        {:exit 1})]
+                (when (some (fn [result] (not (zero? (:exit result))))
+                            [build-result unit-result property-result acceptance-result])
+                  (System/exit 1)))}}}

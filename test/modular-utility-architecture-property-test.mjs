@@ -190,11 +190,11 @@ for (let sample = 0; sample < 100; sample += 1) {
   const ownerIndex = sample % count;
   const changedPath = `${packs[ownerIndex].source[0]}/implementation.ts`;
   const dependantClosure = closure(packs, [packs[ownerIndex].id], "dependants");
-  const expected = closure(packs, dependantClosure, "dependencies");
+  const expected = dependantClosure;
   const plan = planVerification(packs, { changedPaths:[changedPath] });
 
   assert.deepEqual(plan.packIds, packs.filter(({ id }) => expected.has(id)).map(({ id }) => id),
-    "generated impact plans must include transitive dependants and dependencies in registry order");
+    "generated impact plans must include transitive consumers without inheriting dependency regressions");
   assert.deepEqual(plan.handlers,
     packs.filter(({ id }) => expected.has(id)).flatMap(({ handlers }) => handlers),
     "generated impact plans must preserve handler ownership across the selected closure");
@@ -203,6 +203,8 @@ for (let sample = 0; sample < 100; sample += 1) {
     "generated acceptance plans must expose build preparation explicitly");
   assert.equal(plan.commands.filter((command) => command === "npm run build").length, 1,
     "generated plans must compile exactly once");
+  assert.deepEqual(plan.propertyCommands, [],
+    "normal focused verification must not schedule property tests");
   assert.equal(new Set(plan.commands).size, plan.commands.length,
     "generated plans must schedule each command once");
   assert.deepEqual(plan.features, packs.filter(({ id }) => expected.has(id)).flatMap(({ features }) => features).sort());
@@ -223,18 +225,31 @@ for (let sample = 0; sample < 100; sample += 1) {
   const executionOrder = [];
   await executeAcceptancePlan(plan, { runCommand:async(command) => executionOrder.push(command) });
   assert.deepEqual(executionOrder, plan.commands,
-    "generated acceptance execution must run each registered leaf once before sequential acceptance");
+    "generated acceptance execution must run each registered leaf once before bounded pack acceptance");
 
   const changedFeature = packs[ownerIndex].features[0];
   const featurePlan = planVerification(packs, { changedPaths:[changedFeature] });
-  assert.deepEqual(featurePlan.features, [changedFeature]);
-  assert.deepEqual(featurePlan.handlers, packs[ownerIndex].handlers);
+  assert.deepEqual(featurePlan.features,
+    packs.filter(({ id }) => expected.has(id)).flatMap(({ features }) => features).sort());
+  assert.deepEqual(featurePlan.handlers,
+    packs.filter(({ id }) => expected.has(id)).flatMap(({ handlers }) => handlers));
 
   const full = planVerification(packs, { terminalFull:true });
-  assert.deepEqual(full.packIds, packs.map(({ id }) => id),
+  assert.deepEqual(full.packIds, packs.filter(pack =>
+    pack.unit.length + pack.property.length + pack.features.length + pack.browserAdapters.length > 0
+  ).map(({ id }) => id),
     "terminal plans must retain every generated pack in registry order");
+  assert.ok(full.propertyCommands.length > 0,
+    "terminal plans must retain the explicit property-test stage");
+  const dependencyPlan = planVerification(packs, {
+    packIds:[packs.at(-1).id], withDependencies:true, includeProperties:true,
+  });
+  const dependencyClosure = closure(packs, [packs.at(-1).id], "dependencies");
+  assert.deepEqual(dependencyPlan.packIds,
+    packs.filter(({ id }) => dependencyClosure.has(id)).map(({ id }) => id));
+  assert.ok(dependencyPlan.propertyCommands.length > 0);
   assert.throws(() => planVerification(packs, { changedPaths:[`src/unowned-${sample}.ts`] }),
-    /Assign every source path to one pack/);
+    /Assign every changed path to one verification pack/);
 }
 
 for (let sample = 0; sample < 100; sample += 1) {

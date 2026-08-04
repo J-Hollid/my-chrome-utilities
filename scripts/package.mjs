@@ -1,12 +1,14 @@
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import {readdir, readFile} from "node:fs/promises";
 import path from "node:path";
+import {fileURLToPath} from "node:url";
+
+import {assertFreshDist, atomicWriteFile} from "./dist-artifact.mjs";
 import {withDistArtifactLock} from "./dist-artifact-lock.mjs";
 
-await withDistArtifactLock(async()=>{
-
+const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const projectName = "my-chrome-utilities";
-const distDir = "dist";
-const outputDir = path.join("build", "package");
+const distDir = path.join(projectRoot, "dist");
+const outputDir = path.join(projectRoot, "build", "package");
 const outputPath = path.join(outputDir, `${projectName}.zip`);
 
 const crcTable = new Uint32Array(256);
@@ -134,10 +136,11 @@ async function writeZip(files) {
     endOfCentralDirectory(files.length, central.length, offset),
   ]);
 
-  await mkdir(outputDir, { recursive: true });
-  await writeFile(outputPath, archive);
+  await atomicWriteFile(outputPath, archive);
 }
 
-await writeZip(await collectFiles(distDir));
-console.log(outputPath);
+await withDistArtifactLock(async () => {
+  await assertFreshDist({root: projectRoot, distDirectory: distDir});
+  await writeZip(await collectFiles(distDir));
+  console.log(path.relative(projectRoot, outputPath));
 });

@@ -23,6 +23,7 @@
   (support/cached-browser-observation!
    browser-observation
    {:adapter-env "MISSING_EVENT_DEFECT_REPORT_BROWSER_ADAPTER"
+    :observation-id "MISSING_EVENT_DEFECT_FIDELITY_BROWSER_OBSERVATION"
     :observation-key :missingEventDefectReport
     :runtime-error "Missing-event defect-report browser runtime failed."
     :missing-error "Missing-event defect-report browser evidence is missing."}))

@@ -10,6 +10,10 @@
   {"a captured event with an assigned schema is open in the Live inspector" :model
    "the built extension Live inspector is running with production validation and property-tree rendering" :runtime})
 
+(def feature-modes
+  {"Data layer non-applicable property visibility" :model
+   "Data layer non-applicable property visibility runtime" :runtime})
+
 (def example-values
   {"property_state" #{"missing" "present with value" "present with null"}
    "rule_state" #{"optional Allowed values Not applicable" "Required failed" "conditional rule Not applicable" "Allowed values failed"
@@ -23,11 +27,24 @@
    example-values example (filter #(support/example-value example %) (keys example-values))
    "Non-applicable property visibility example value was outside the specified contract."))
 
+(defn- feature-mode [world]
+  (get feature-modes (:acceptance/feature-name world)))
+
 (defn- transition [world example _captures {:keys [text]}]
-  (verification/transition!
-   world example text entry-modes :non-applicable-property-visibility-mode
-   validate-example!))
+  (let [mode (or (:non-applicable-property-visibility-mode world)
+                 (feature-mode world))]
+    (support/assert! mode
+                     "Scenario did not establish its non-applicable property visibility mode."
+                     {:step text :feature (:acceptance/feature-name world)})
+    (verification/transition!
+     (assoc world :non-applicable-property-visibility-mode mode)
+     example text entry-modes :non-applicable-property-visibility-mode
+     validate-example!)))
 
 (def handlers
-  (support/feature-mode-handlers
-   feature-files entry-modes :non-applicable-property-visibility-mode transition))
+  (mapv (fn [spec]
+          {:pattern (support/template-pattern (:text spec))
+           :applies? (fn [world] (boolean (feature-mode world)))
+           :handler (fn [world example captures]
+                      (transition world example captures spec))})
+        (support/feature-step-specs feature-files #{})))

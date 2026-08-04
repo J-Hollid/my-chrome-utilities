@@ -21,6 +21,7 @@
 (defn- runtime-observation! []
   (support/cached-browser-observation! browser-observation
     {:adapter-env "UNIFIED_DEFECT_BUILDER_BROWSER_ADAPTER"
+     :observation-id "MISSING_EVENT_DEFECT_FIDELITY_BROWSER_OBSERVATION"
      :observation-key :unifiedDefectBuilder
      :runtime-error "Unified defect builder browser runtime failed."
      :missing-error "Unified defect builder browser evidence is missing."}))

@@ -1,9 +1,6 @@
 (ns acceptance.steps.guided-validation
   (:require [acceptance.steps.guided-validation-assertions :as assertions]
-            [acceptance.steps.support :as support]
-            [babashka.process :as process]
-            [cheshire.core :as json]
-            [clojure.string :as str]))
+            [acceptance.steps.support :as support]))
 
 (def feature-files
   ["features/data-layer-guided-validation-constraint-authoring.feature"
@@ -25,26 +22,15 @@
 
 (defonce ^:private browser-observation (atom nil))
 
-(defn- parse-browser-payload [line]
-  (when line (json/parse-string line true)))
-
-(defn- combine-browser-observations [payload]
-  (when-some [guided (:guidedValidation payload)]
-    (assoc guided :schemaPicker (:guidedSchemaPicker payload))))
-
 (defn- load-browser-observation! []
-  (let [result (process/shell (assoc support/build-shell-options
-                                     :env (merge (into {} (System/getenv))
-                                                 {"GUIDED_VALIDATION_BROWSER_ADAPTER" "1"}))
-                              "node" "test/side-panel-component-layout-runtime-test.mjs")
-        line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result))))
-        payload (parse-browser-payload line)
-        observation (combine-browser-observations payload)]
-    (support/assert! (zero? (:exit result))
-                     (str "Guided validation browser runtime verification failed: " (:err result))
-                     {:out (:out result) :err (:err result)})
-    (support/assert! observation "Guided validation browser observation is missing." {:payload payload})
-    (reset! browser-observation observation)))
+  (let [options {:adapter-env "GUIDED_VALIDATION_BROWSER_ADAPTER"
+                 :runtime-error "Guided validation browser runtime verification failed."
+                 :missing-error "Guided validation browser observation is missing."}
+        guided (support/load-browser-observation!
+                (assoc options :observation-key :guidedValidation))
+        picker (support/load-browser-observation!
+                (assoc options :observation-key :guidedSchemaPicker))]
+    (reset! browser-observation (assoc guided :schemaPicker picker))))
 
 (defn- browser-observation! []
   (if-some [observation @browser-observation]

@@ -60,7 +60,7 @@
   (support/assert!
    (and (= 5 (:version publication))
         (str/includes? (:result publication) "Revalidated 2 current Live events")
-        (str/includes? (:detail publication) "commerce.debug")
+        (str/includes? (:detail publication) "/commerce/debug")
         (= ["event:nested-extra"] (:queryMatches publication))
         (:defectMatch publication)
         (:archivedUnchanged publication)

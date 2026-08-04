@@ -61,10 +61,14 @@
 
 (defn- history-path-input-persists? [source]
   (or (str/includes? source "setHistoryArrayPath(historyPathInput.value)")
-      (str/includes? source "setHistoryArrayPath(typedPath")))
+      (str/includes? source "setHistoryArrayPath(typedPath")
+      (and (str/includes? source "configureProjectEventTransport")
+           (str/includes? source "saveProjectEventTransport()")
+           (boolean (re-find #"observationHistoryPath\s*:\s*historyPathInput(?:\?\.|\.)value" source))
+           (boolean (re-find #"historyPathInput(?:\?\.|\.)addEventListener\([\"']change[\"']" source)))))
 
 (defn- history-path-input-listener? [source]
-  (boolean (re-find #"addEventListener\((\"|')input" source)))
+  (boolean (re-find #"historyPathInput(?:\?\.|\.)addEventListener\([\"']input[\"']" source)))
 
 (defn- history-path-input-source-snippets-present? [source]
   (and (every? #(str/includes? source %) history-path-input-source-snippets)
@@ -86,11 +90,13 @@
              (history-path-input-source-wired? source)])))
 
 (defn history-path-incremental-entry-wired? [source]
-  (and (every? #(str/includes? source %)
-               ["const typedPath = historyPathInput.value"
-                "setHistoryArrayPath(typedPath"])
-       (or (str/includes? source "renderHistoryPath(path, typedPath)")
-           (str/includes? source "targetPathStatusController.configure(path, typedPath)"))))
+  (let [typed-path-read? (boolean (re-find #"const\s+typedPath\s*=\s*historyPathInput(?:\?\.|\.)value" source))]
+    (and typed-path-read?
+         (history-path-input-listener? source)
+         (or (and (str/includes? source "setHistoryArrayPath(typedPath")
+                  (or (str/includes? source "renderHistoryPath(path, typedPath)")
+                      (str/includes? source "targetPathStatusController.configure(path, typedPath)")))
+             (boolean (re-find #"targetPathStatusController\.configure\(\s*currentObservationHistoryPath\(\)\s*,\s*typedPath\s*\)" source))))))
 
 (defn- assert-history-path-entry-wired! [world history-path]
   (support/assert! (settings-allow-history-path-entry?
@@ -331,7 +337,7 @@
                (let [root (support/repository-root)]
                  (assoc world
                         :root root
-                        :data-layer-files (support/source-files root))))}
+                        :data-layer-files (support/source-files root ["src/data-layer.ts"]))))}
 
    {:pattern #"^config import is not present$"
     :handler (fn [world _example _captures]

@@ -15,7 +15,16 @@
                      "package metadata identifies the project as <project_name>")))
     (is (= inspected (dispatch inspected "the skeleton includes TypeScript source")))
     (is (= inspected (dispatch inspected "the skeleton includes a browser app entry point")))
+    (is (= inspected
+           (dispatch inspected "generated dependency and transient outputs are ignored")))
     (is (= (assoc repository :build-result {:exit 0})
            (dispatch (assoc repository :build-result {:exit 0})
                      project-example
                      "a production build for <project_name> completes")))))
+
+(deftest distinguishes-the-trackable-dist-root-from-scoped-transient-artifacts
+  (is (not (project/root-directory-ignored?
+            "dist/.dist-artifact.json\ndist.previous-*/\n" "dist")))
+  (is (project/root-directory-ignored? "dist/\n" "dist"))
+  (is (project/root-directory-ignored? "/dist/\n" "dist"))
+  (is (not (project/root-directory-ignored? "!dist/\n" "dist"))))

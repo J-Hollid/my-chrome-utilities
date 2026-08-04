@@ -28,7 +28,7 @@ export {activateFocusedOwnershipSection,focusedDefinitionFacetOwnershipActions,f
 export {focusedCanonicalOwnershipInput,focusedPropertyPatch,focusedSourceState,focusedStagedChanges,focusedStructureOwned} from "../../data-layer-canonical-schema-focused-drafts.js";
 export {renderCanonicalFocusedSection} from "../../data-layer-canonical-schema-focused-sections.js";
 export {clearSchemaTableOverlay,mountSchemaTableOverlay} from "../../data-layer-schema-table.js";
-export { canonicalCommandsFromCompactProjection, compactConditionalPresence, compactSchemaProjection, savedSchemaCanonicalDocument, savedSchemaFromCanonical } from "../../data-layer-side-panel-unified-schema-editor.js";
+export { canonicalCommandsFromCompactProjection, compactCanonicalCommandPolicy, compactConditionalPresence, compactSchemaProjection, savedSchemaCanonicalDocument, savedSchemaFromCanonical } from "../../data-layer-side-panel-unified-schema-editor.js";
 export { canonicalMigrationDurablyAcknowledged, resolveSidePanelSchemaContributor, type SidePanelContributorSelection } from "../../data-layer-side-panel-schema-editor.js";
 export { redoProjectTransaction, undoProjectTransaction } from "../../data-layer-specification-project.js";
 export { configureProjectEventTransport, projectEventTransport, seedLibraryDestination } from "../../data-layer-project-event-transport.js";

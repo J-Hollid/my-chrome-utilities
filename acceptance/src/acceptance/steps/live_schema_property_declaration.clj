@@ -7,7 +7,7 @@
                   "the built extension side panel is running with production Live inspection, Schema Library drafts, persistence, and validation" :runtime})
 (defonce model-verified? (atom false))
 (defonce browser-observation (atom nil))
-(defn- verify-model! [] (support/cached-command-verification! model-verified? "Live property declaration model failed. " "npm" "run" "pretest:unit:schema-verification"))
+(defn- verify-model! [] (support/cached-command-verification! model-verified? "Live property declaration model failed. " "node" "test/data-layer-live-schema-property-declaration-test.mjs"))
 (defn- observe! [] (support/cached-browser-observation! browser-observation {:adapter-env "LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER" :observation-key :liveSchemaPropertyDeclaration :runtime-error "Live property declaration browser failed." :missing-error "Live property declaration evidence is missing."}))
 (defn- assert-runtime! [{:keys [actions reviewCases saved validation separate published reloaded] :as observed}]
   (support/assert! (and (:addToSchema actions) (:addValidation actions) (:reachable actions) (str/includes? (:destination actions) "Product detail")) "Live property actions were not distinct and reachable." observed)

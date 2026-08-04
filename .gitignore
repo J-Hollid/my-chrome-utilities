@@ -8,6 +8,9 @@ tmp/
 *.tsbuildinfo
 *.log
 *:Zone.Identifier
+dist/.dist-artifact.json
+.dist-build-*/
+dist.previous-*/
 
 # Historical operator walkthroughs are intentionally outside active SwarmForge scope.
 artifacts/schema-editor-walkthrough/R0[1-4]/

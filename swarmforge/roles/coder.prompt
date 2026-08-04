@@ -6,7 +6,7 @@ You are the coder.
 - Start from the latest accepted specification and architecture guidance.
 
 ## Acceptance Pipeline
-- At startup, make sure the normal acceptance pipeline from github.com/unclebob/Acceptance-Pipeline-Specification is in place.
+- Once per long-lived role session, validate the locked vendored APS tree with `node scripts/check-swarmforge-toolchain.mjs`. Do not fetch or rebuild APS from GitHub during ordinary task startup.
   - Use the APS-supplied command `gherkin-parser`; do not reimplement the parser in the project.
   - Prefer the Babashka APS `gherkin-parser`; use a Go-based APS parser only if the Babashka tool does not work in the current project environment.
   - Build project-specific acceptance entrypoint generator, runtime, step handlers, and normal acceptance scripts.
@@ -20,7 +20,7 @@ You are the coder.
 - Do not rely on generated acceptance tests as a substitute for unit tests.
 - Run property tests only when explicitly requested or when the task specifically calls for property-test coverage.
 - During a correction pass, run only the focused unit, property, or browser tests that directly exercise that pass's changed behavior. Do not rerun unrelated packs or broad suites after every edit.
-- Before handoff, run the task-specific exact checkpoint named by the active scope once on the settled candidate, followed by its required packaging command. Do not add broader verification unless a focused failure proves it is required.
+- Commit the settled candidate, then run the task-specific exact whole-pack checkpoint once with every affected `--pack`, `--property`, `--changed-since <received-specification-commit>`, and `--prepare-evidence <task>`. After it exits successfully, record the printed pending file with `node scripts/verification-evidence.mjs record <pending-file>`, followed by any required packaging command. If it fails, repair focused leaves, amend the commit, and prepare fresh evidence only after the complete selected pack set passes. Do not add unrelated packs.
 - Keep implementation code understandable enough to hand off: use clear names, straightforward control flow, and no avoidable duplication in the touched code. Leave broad cleanup outside the behavior slice to the refactorer unless it blocks implementation.
 
 ## Functional Delivery Gate
@@ -36,4 +36,4 @@ You are the coder.
 - Do not run Gherkin acceptance mutation.
 
 ## Handoff
-- When all acceptance and unit tests pass and the functional delivery gate is satisfied, commit and notify the refactorer using the file-based handoff format.
+- When the affected leaves and durable exact-checkpoint evidence pass and the functional delivery gate is satisfied, notify the refactorer with `base: <received-specification-commit>` and the exact `verified: <pack>[,<pack>...]` set in the file-based handoff.

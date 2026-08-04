@@ -9,7 +9,7 @@
 (defn- verify-model! []
   (support/cached-command-verification!
    model-verified? "Specification preview layout model verification failed. "
-   "npm" "run" "test:unit:schema-specification-preview-layout"))
+   "node" "test/data-layer-schema-specification-preview-layout-test.mjs"))
 
 (defn- runtime-observation! []
   (support/cached-browser-observation!

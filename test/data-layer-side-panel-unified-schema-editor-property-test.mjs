@@ -7,6 +7,7 @@ import {
   canonicalPredicateText,
   validateCanonicalPredicateTree,
 } from "../dist/data-layer-canonical-predicate-editor.js";
+import {applyCanonicalCommand,canonicalPropertyPath} from "../dist/data-layer-canonical-schema.js";
 
 let randomState=0x5eed1234;
 const random=()=>{randomState=(Math.imul(randomState,1664525)+1013904223)>>>0;return randomState/0x100000000;};
@@ -78,6 +79,90 @@ for(let example=0;example<120;example+=1){
   assert.deepEqual(roundTrip.attachedRules,saved.attachedRules,`example ${example} preserves attached rules`);
   assert.deepEqual(roundTrip.documentation,saved.documentation,`example ${example} preserves documentation`);
   assert.deepEqual(reloaded,canonical,`example ${example} preserves every canonical node identity and rich facet`);
+}
+
+for(let example=0;example<64;example+=1){
+  let sequence=0;
+  const id=(kind)=>`${kind}:path-keyed:${example}:${++sequence}`,scalarTypes=["string","number","integer","boolean"],pageType=scalarTypes[example%scalarTypes.length],levelType=scalarTypes[(example*3+1)%scalarTypes.length],nullable=example%2===0,document={type:"object",properties:{
+    "/page_type":{type:nullable?[pageType,"null"]:pageType},
+    "/page_levels":{type:"array"},
+    "/page_levels/0":{type:levelType},
+  }},saved={id:`schema:path-keyed:${example}`,name:`Path keyed ${example}`,version:example+1,assignments:[],document},before=structuredClone(saved),canonical=savedSchemaCanonicalDocument(saved,id),pageTypeNode=Object.values(canonical.nodes).find(({name,parentId})=>name==="page_type"&&!parentId),pageLevelsNode=Object.values(canonical.nodes).find(({name,parentId})=>name==="page_levels"&&!parentId),levelNode=Object.values(canonical.nodes).find(({name,parentId})=>name==="0"&&parentId===pageLevelsNode?.id);
+  assert.equal(pageTypeNode?.type,pageType,`path-keyed example ${example} resolves the /page_type definition by its complete key`);
+  assert.equal(pageTypeNode?.nullable,nullable,`path-keyed example ${example} preserves a nullable /page_type union`);
+  assert.equal(pageLevelsNode?.type,"array",`path-keyed example ${example} resolves the /page_levels array definition`);
+  assert.equal(levelNode?.type,levelType,`path-keyed example ${example} resolves the /page_levels/0 definition independently`);
+  assert.deepEqual(saved,before,`path-keyed example ${example} leaves the flat source representation immutable`);
+}
+
+for(let example=0;example<96;example+=1){
+  let sequence=0;
+  const id=(kind)=>`${kind}:dual:${example}:${++sequence}`,sourceIsArray=example%2===1,propertyName=`value_${example}`,renamedName=`renamed_${example}`,jsonValues=[`json-${example}-a`,`json-${example}-b`],ruleValues=[`rule-${example}-a`,`rule-${example}-b`],objectValue={type:"string",enum:jsonValues},arrayValue={type:"string",enum:jsonValues};
+  const saved={
+    id:`schema:dual:${example}`,name:`Dual ${example}`,version:example+1,assignments:[],
+    document:{type:"object",properties:{
+      object_bucket:{type:"object",...(sourceIsArray?{}:{required:[propertyName]}),properties:{object_anchor:{type:"boolean"},...(sourceIsArray?{}:{[propertyName]:objectValue})}},
+      array_bucket:{type:"array",items:{type:"object",...(sourceIsArray?{required:[propertyName]}:{}),properties:{array_anchor:{type:"number"},...(sourceIsArray?{[propertyName]:arrayValue}:{})}}},
+    }},
+    attachedRules:[
+      {id:`rule:dual-required:${example}`,version:2,propertyPath:sourceIsArray?`/array_bucket/*/${propertyName}`:`/object_bucket/${propertyName}`,operator:"required",severity:"error"},
+      {id:`rule:dual-values:${example}`,version:3,propertyPath:sourceIsArray?`/array_bucket/*/${propertyName}`:`/object_bucket/${propertyName}`,operator:"allowed-values",parameters:ruleValues.join(","),severity:"warning"},
+    ],
+  },before=structuredClone(saved),canonical=savedSchemaCanonicalDocument(saved,id),valueNode=Object.values(canonical.nodes).find(({name})=>name===propertyName),targetNode=Object.values(canonical.nodes).find(({name})=>name===(sourceIsArray?"object_bucket":"array_bucket"));
+  assert.deepEqual(valueNode.allowedValues.map(({value})=>value),ruleValues,`dual example ${example} keeps attached values canonical without erasing JSON ownership`);
+  const renamed=applyCanonicalCommand(canonical,{kind:"rename",baseRevision:canonical.revision,propertyId:valueNode.id,name:renamedName});assert.equal(renamed.status,"applied");
+  const moved=applyCanonicalCommand(renamed.document,{kind:"move",baseRevision:renamed.document.revision,propertyId:valueNode.id,parentId:targetNode.id});assert.equal(moved.status,"applied");
+  const projected=savedSchemaFromCanonical(saved,moved.document),targetContainer=sourceIsArray?projected.document.properties.object_bucket:projected.document.properties.array_bucket.items,sourceContainer=sourceIsArray?projected.document.properties.array_bucket.items:projected.document.properties.object_bucket,rules=Object.fromEntries(projected.attachedRules.map((rule)=>[rule.id,rule])),expectedPath=canonicalPropertyPath(moved.document,valueNode.id);
+  assert.deepEqual(targetContainer.required,[renamedName],`dual example ${example} rebases JSON required membership to the current container`);
+  assert.deepEqual(targetContainer.properties[renamedName].enum,jsonValues,`dual example ${example} preserves the divergent JSON enum after rename and move`);
+  assert.equal(sourceContainer.properties[propertyName],undefined,`dual example ${example} removes the stable node from its old JSON location`);
+  assert.equal(sourceContainer.required,undefined,`dual example ${example} removes its JSON membership from the old container`);
+  assert.equal(rules[`rule:dual-required:${example}`].propertyPath,expectedPath,`dual example ${example} independently rebases the attached required rule`);
+  assert.equal(rules[`rule:dual-values:${example}`].propertyPath,expectedPath,`dual example ${example} independently rebases the attached allowed-values rule`);
+  assert.equal(rules[`rule:dual-values:${example}`].parameters,ruleValues.join(","),`dual example ${example} never replaces attached values with the JSON enum`);
+  assert.deepEqual(saved,before,`dual example ${example} leaves its source immutable`);
+}
+
+const conditionCases=[
+  {type:"string",operator:"Equals",value:(sample)=>`equal-${sample}`},
+  {type:"string",operator:"Does not equal",value:(sample)=>`different-${sample}`},
+  {type:"string",operator:"Exists"},
+  {type:"string",operator:"Does not exist"},
+  {type:"string",operator:"Starts with",value:(sample)=>`prefix-${sample}`},
+  {type:"string",operator:"Contains",value:(sample)=>`part-${sample}`},
+  {type:"string",operator:"Is one of",values:(sample)=>[`one-${sample}`,`two-${sample}`]},
+  {type:"string",operator:"Matches pattern",value:(sample)=>`^value-${sample}`},
+  {type:"number",operator:"Is greater than",value:(sample)=>sample+0.25},
+  {type:"number",operator:"Is at least",value:(sample)=>sample},
+  {type:"number",operator:"Is less than",value:(sample)=>sample+10},
+  {type:"number",operator:"Is at most",value:(sample)=>sample+20},
+  {type:"boolean",operator:"Equals",value:(sample)=>sample%2===0},
+  {type:"null",operator:"Equals",value:()=>null},
+  {type:"integer",detectedType:"number",operator:"Is one of",values:(sample)=>[sample,sample+1]},
+];
+const comparison=(value)=>({type:value===null?"null":typeof value,value});
+for(let example=0;example<120;example+=1){
+  let sequence=0;
+  const id=(kind)=>`${kind}:condition:${example}:${++sequence}`,configuration=conditionCases[example%conditionCases.length],detectedType=configuration.detectedType??configuration.type,triggerName=`trigger_${example}`,renamedName=`renamed_trigger_${example}`,operator=example%2===0?"All":"Any",predicate={propertyPath:`/${triggerName}`,operator:configuration.operator,detectedType,...(configuration.values?{comparisons:configuration.values(example).map(comparison)}:configuration.value?{comparison:comparison(configuration.value(example))}:{})},conditionGroup={operator,predicates:[predicate]},dangling={id:`rule:dangling:${example}`,name:"Opaque dangling rule",version:8,propertyPath:`/missing_target_${example}`,operator:"vendor-opaque",severity:"warning",conditionGroup:{operator:"All",predicates:[{propertyPath:`/missing_trigger_${example}`,operator:"Vendor equals",comparison:{type:"string",value:`opaque-${example}`}}]},vendorPayload:{sample:example}},saved={
+    id:`schema:condition:${example}`,name:`Condition ${example}`,version:example+1,assignments:[],
+    document:{type:"object",properties:{[triggerName]:{type:configuration.type},target:{type:"string"},bucket:{type:"object",properties:{anchor:{type:"boolean"}}}}},
+    attachedRules:[
+      {id:`rule:flat:${example}`,name:"Flat condition",version:3,propertyPath:"/target",operator:"regular-expression",parameters:"^[a-z]",severity:"error",conditionGroup},
+      {id:`rule:partial:${example}`,name:"Unresolved condition",version:5,propertyPath:"/target",operator:"required",severity:"warning",conditionGroup:{operator:"All",predicates:[{propertyPath:`/unresolved_${example}`,operator:"Exists",detectedType:"string"}]},opaqueMetadata:{sample:example}},
+      dangling,
+    ],
+  },before=structuredClone(saved),canonical=savedSchemaCanonicalDocument(saved,id),trigger=Object.values(canonical.nodes).find(({name})=>name===triggerName),bucket=Object.values(canonical.nodes).find(({name})=>name==="bucket"),target=Object.values(canonical.nodes).find(({name})=>name==="target"),renamed=applyCanonicalCommand(canonical,{kind:"rename",baseRevision:canonical.revision,propertyId:trigger.id,name:renamedName});
+  assert.equal(renamed.status,"applied",`condition example ${example} renames its stable predicate property`);
+  const moved=applyCanonicalCommand(renamed.document,{kind:"move",baseRevision:renamed.document.revision,propertyId:trigger.id,parentId:bucket.id});
+  assert.equal(moved.status,"applied",`condition example ${example} moves its stable predicate property`);
+  const projected=savedSchemaFromCanonical(saved,moved.document),expectedPath=canonicalPropertyPath(moved.document,trigger.id),expectedGroup={...conditionGroup,predicates:conditionGroup.predicates.map((entry)=>({...entry,propertyPath:expectedPath}))};
+  assert.deepEqual(projected.attachedRules[0].conditionGroup,expectedGroup,`condition example ${example} losslessly projects and rebases a flat ${operator} ${configuration.operator} predicate`);
+  assert.deepEqual(projected.attachedRules[1],saved.attachedRules[1],`condition example ${example} retains a partially unresolved attachment as opaque source data`);
+  assert.deepEqual(projected.attachedRules[2],dangling,`condition example ${example} retains a wholly unresolved attachment by stable id and path`);
+  assert.equal(new Set(projected.attachedRules.map(({id,propertyPath})=>`${id}:${propertyPath}`)).size,projected.attachedRules.length,`condition example ${example} never duplicates canonical-projected or retained attachments`);
+  if(example%10===0){const renamedAgain=applyCanonicalCommand(moved.document,{kind:"rename",baseRevision:moved.document.revision,propertyId:trigger.id,name:`twice_${renamedName}`});assert.equal(renamedAgain.status,"applied");const projectedAgain=savedSchemaFromCanonical(projected,renamedAgain.document),nextPath=canonicalPropertyPath(renamedAgain.document,trigger.id);assert.deepEqual(projectedAgain.attachedRules[0].conditionGroup,{...expectedGroup,predicates:expectedGroup.predicates.map((entry)=>({...entry,propertyPath:nextPath}))},`condition example ${example} preserves predicate metadata through repeated path rebases`);assert.equal(projectedAgain.attachedRules.length,3,`condition example ${example} does not duplicate attachments on a subsequent save`);}
+  if(example%4===0){const nested=structuredClone(moved.document),flat=nested.nodes[target.id].rules.find(({id})=>id===`rule:flat:${example}`);flat.condition={kind:"not",children:[{kind:"predicate",propertyId:trigger.id,operator:"Exists"}]};const nestedProjected=savedSchemaFromCanonical(saved,nested);assert.equal(nestedProjected.attachedRules[0].conditionGroup,undefined,`condition example ${example} keeps Not predicates canonical-only`);}
+  assert.deepEqual(saved,before,`condition example ${example} leaves its source immutable`);
 }
 
 const predicateDocument={

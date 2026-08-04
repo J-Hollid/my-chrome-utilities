@@ -87,6 +87,9 @@
                        (get-in observed [:advanced :arrayActions])
                        (get-in observed [:advanced :everyItem])])
                    "Advanced array and item-property targets are incomplete." observed)
+  (support/assert! (= {:label "⋯" :menu ["Definition" "Rules" "Structure"]}
+                      (get-in observed [:advanced :arrayOverflow]))
+                   "The compact array-property menu did not expose every canonical authoring section." observed)
   (support/assert! (= {:min "0" :blocked true :assistance "Enter a non-negative array index"} (:invalidIndex observed))
                    "Specific-index validation changed." observed)
   (support/assert! (= {:assistance "Item 2 at zero-based index 1" :canContinue true} (:validIndex observed))

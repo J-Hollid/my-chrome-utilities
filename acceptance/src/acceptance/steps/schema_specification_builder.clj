@@ -12,7 +12,7 @@
   (support/cached-command-verification!
    model-verified?
    "Schema specification builder model verification failed. "
-   "npm" "run" "test:unit:schema-specification-builder"))
+   "node" "test/data-layer-schema-specification-builder-test.mjs"))
 (defn- runtime-observation! []
   (support/cached-browser-observation!
    browser-observation

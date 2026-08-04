@@ -34,9 +34,16 @@
     :runtime-error "Defect Library browser runtime verification failed."
     :missing-error "Defect Library browser observation is missing."}))
 
+(def primary-navigation
+  ["Live" "Projects" "Library" "Sessions" "Defects" "Schemas"])
+
+(defn primary-navigation-current? [observed]
+  (= primary-navigation (:nav observed)))
+
 (defn- assert-runtime! [observed]
-  (support/assert! (= ["Live" "Library" "Sessions" "Defects" "Schemas"] (:nav observed))
-                   "Defects did not follow Sessions and precede Schemas." observed)
+  (support/assert! (primary-navigation-current? observed)
+                   "Defect Library navigation omitted Projects or misplaced Defects between Sessions and Schemas."
+                   observed)
   (support/assert! (= [["Copy for Jira Cloud" 0 true]
                        ["Save defect" 1 false]
                        ["Save defect and copy" 1 true]]

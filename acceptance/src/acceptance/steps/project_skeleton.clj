@@ -19,6 +19,16 @@
        (filter #(str/ends-with? % suffix))
        vec))
 
+(defn root-directory-ignored? [gitignore directory]
+  (let [root-patterns #{(str directory "/") (str "/" directory "/")}]
+    (boolean
+     (some root-patterns
+           (->> (str/split-lines gitignore)
+                (map str/trim)
+                (remove str/blank?)
+                (remove #(or (str/starts-with? % "#")
+                             (str/starts-with? % "!"))))))))
+
 (def handlers
   [{:pattern #"^a repository for project <([A-Za-z0-9_]+)>$"
     :handler (fn [world example [project-key]]
@@ -81,14 +91,18 @@
                  (support/assert! (str/includes? (:gitignore world) ignored)
                                   "Expected generated dependency or transient output to be ignored."
                                   {:missing ignored}))
-               (support/assert! (not (str/includes? (:gitignore world) "dist/"))
-                                "Expected dist output to remain trackable for testing transfer."
-                                {})
+               (support/assert! (not (root-directory-ignored? (:gitignore world) "dist"))
+                                "Expected the dist root to remain trackable while scoped transient dist artifacts may be ignored."
+                                {:gitignore (:gitignore world)})
                world)}
 
    {:pattern #"^the project build command is run$"
     :handler (fn [world _example _captures]
-               (support/run-build-command world))}
+               (assoc world :build-result
+                      (support/verified-command-or-prepared-task-result
+                       ["npm" "run" "build"]
+                       "checkpoint:shell:prepared-dist-freshness"
+                       ["node" "scripts/verify-dist-artifact.mjs"])))}
 
    {:pattern #"^TypeScript checking succeeds$"
     :handler (fn [world _example _captures]

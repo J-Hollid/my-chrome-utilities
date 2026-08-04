@@ -19,7 +19,12 @@
          :saved {:version 3
                  :published ["page" "product"]
                  :draft ["page" "product" "checkout"]
-                 :index 1
+                 :ruleId "local-41"
+                 :ruleCount 1
+                 :propertyPath "/page_type"
+                 :operator "allowed-values"
+                 :first ["page" "product" "checkout"]
+                 :rendered ["page" "product" "checkout"]
                  :pending ["Edit Known page types at /page_type"]
                  :open true}
          :previewIssues 0
@@ -29,9 +34,21 @@
          :routed {:ruleLibrary "true"
                   :reusableEditor true
                   :name "Approved page names"
-                  :localDialog false}}]
-    (is (= observed
-           ((private-function 'acceptance.steps.local-rule-editing 'assert-runtime!) observed)))))
+                  :localDialog false
+                  :selection {:storageUnchanged true
+                              :pending []
+                              :busy "false"
+                              :controlsEnabled true}}}
+        assert-runtime! (private-function 'acceptance.steps.local-rule-editing 'assert-runtime!)]
+    (is (= observed (assert-runtime! observed)))
+    (is (thrown-with-msg?
+         clojure.lang.ExceptionInfo
+         #"stable rule identity"
+         (assert-runtime! (assoc-in observed [:saved :ruleId] "local-42"))))
+    (is (thrown-with-msg?
+         clojure.lang.ExceptionInfo
+         #"settled Rule Library editor"
+         (assert-runtime! (assoc-in observed [:routed :selection :busy] "true"))))))
 
 (deftest validates-reusable-rule-sync-runtime-observation
   (let [observed
@@ -45,7 +62,9 @@
                   :confirmDisabled false
                   :cancelled true}
          :failure {:unchanged true
-                   :message "No schema revision was published"}
+                   :message "Save failed: the durable Saved Schema Library is unchanged because publication fails"
+                   :recovery true
+                   :retry true}
          :published {:versions [4 6 7]
                      :pageRules [["reusable-51" 2] ["reusable-51" 2]]
                      :productRules [["reusable-51" 2]]
@@ -57,7 +76,10 @@
                    :disabled true
                    :draft ["Unrelated"]}}]
     (is (= observed
-           ((private-function 'acceptance.steps.reusable-rule-sync 'assert-runtime!) observed)))))
+           ((private-function 'acceptance.steps.reusable-rule-sync 'assert-runtime!) observed)))
+    (is (thrown-with-msg? clojure.lang.ExceptionInfo #"partial schema publication"
+                          ((private-function 'acceptance.steps.reusable-rule-sync 'assert-runtime!)
+                           (assoc-in observed [:failure :recovery] false))))))
 
 (deftest validates-rule-edit-and-sync-example-relations
   (let [validate-local

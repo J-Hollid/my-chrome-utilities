@@ -28,6 +28,22 @@
     (session/run-session! "defects" "build-b" [{:generated "three" :ir "three"}] observe!)
     (is (= 3 @created))))
 
+(deftest reports-all-feature-failures-from-one-session
+  (let [observed (atom [])
+        error (try
+                (session/run-session!
+                 "schemas" "build-a"
+                 [{:generated "first" :ir "first-ir"}
+                  {:generated "second" :ir "second-ir"}]
+                 (fn [{:keys [generated]}]
+                   (swap! observed conj generated)
+                   (throw (ex-info (str generated " failed") {}))))
+                nil
+                (catch clojure.lang.ExceptionInfo failure failure))]
+    (is (= ["first" "second"] @observed))
+    (is (= 2 (count (:failures (ex-data error)))))
+    (is (re-find #"first.*second" (ex-message error)))))
+
 (deftest rejects-incomplete-session-invocations
   (is (thrown-with-msg?
        clojure.lang.ExceptionInfo

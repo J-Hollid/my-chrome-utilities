@@ -71,7 +71,10 @@
    (= {:filter "product_" :sort "Name A-Z"
        :paths ["/products" "/products/*" "/products/*/product_id" "/products/*/product_name"]
        :contexts ["/products" "/products/*"]
-       :selected "true" :focus "Add rule for products.*.product_id" :scroll 37
+       :selected "true"
+       :focus "Add rule for products.*.product_id"
+       :settledFocus "Add rule for products.*.product_id"
+       :scroll 37
        :documentUnchanged true
        :pending ["Document schema owner" "Attach Required product id to products.*.product_id"]
        :rules [["rule:product-id" "/products/*/product_id"]]}

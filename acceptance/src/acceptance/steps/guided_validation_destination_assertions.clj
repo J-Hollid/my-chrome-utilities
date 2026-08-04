@@ -115,12 +115,16 @@
                      {:example example :result result})))
 
 (defn- failed-save [_example observation]
-  (support/assert! (= [true true "Saving failed. Check storage access and try again."]
-                      [(get-in observation [:saveFailure :flowVisible])
-                       (get-in observation [:saveFailure :unchanged])
-                       (get-in observation [:saveFailure :error])])
+  (let [failure (:saveFailure observation)]
+    (support/assert! (and (:flowVisible failure)
+                          (:schemasUnchanged failure)
+                          (:rulesUnchanged failure)
+                          (str/includes? (:review failure) "New schema draft Signal Shop pageview will be created")
+                          (= {:open true :named true :durableTruth true :retryEnabled true :exportEnabled true}
+                             (:recovery failure))
+                          (:retryCommitted failure))
                    "Failed persistence did not preserve the review and storage state."
-                   {:observation observation}))
+                   {:failure failure})))
 
 (defn- schema-prefill [_example observation]
   (support/assert! (= [{:expectedType "String"

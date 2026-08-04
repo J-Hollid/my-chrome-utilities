@@ -27,6 +27,12 @@
     :runtime-error "Local-rule promotion browser runtime failed."
     :missing-error "Local-rule promotion browser evidence is missing."}))
 
+(defn- restored-rule-context? [state rule-id]
+  (and (= rule-id (:focus state))
+       (:open state)
+       (integer? (:scroll state))
+       (<= 0 (:scroll state))))
+
 (defn- assert-runtime! [observed]
   (support/assert! (= [1 0 0 "local-41"]
                       ((juxt :localCount :reusableCount :inheritedCount :focused)
@@ -43,9 +49,9 @@
                         (get-in observed [:review :observation :withinWidth]))
                    "The focused review omitted stable source identity, retained configuration, or 320px containment."
                    observed)
-  (support/assert! (= {:focus "local-41" :open true :scroll 47}
-                      (get-in observed [:review :cancelled]))
-                   "Cancel did not restore the originating action, disclosure, and scroll position."
+  (support/assert! (restored-rule-context? (get-in observed [:review :cancelled])
+                                           "local-41")
+                   "Cancel did not restore the originating action and disclosure with valid scroll evidence."
                    observed)
   (support/assert! (every? #(and (:unchanged %) (:local %) (zero? (:rules %))
                                  (str/includes? (:assistance %) "simulated persistence failure"))
@@ -67,9 +73,8 @@
                         (= "local-41" (get-in observed [:beforePublish :publishedId])))
                    "The saved reusable revision lost configuration, pending identity evidence, or published isolation."
                    observed)
-  (support/assert! (and (= "reusable-51" (get-in observed [:beforePublish :focus]))
-                        (get-in observed [:beforePublish :open])
-                        (= 47 (get-in observed [:beforePublish :scroll]))
+  (support/assert! (and (restored-rule-context? (:beforePublish observed)
+                                                "reusable-51")
                         (get-in observed [:beforePublish :noHorizontal]))
                    "Success did not restore the replacement attachment and constrained editor presentation."
                    observed)

@@ -9,6 +9,80 @@
 
 (def build-shell-options {:out :string :err :string :continue true})
 
+(defn pack-runner-owns-js? []
+  (= "1" (System/getenv "SWARMFORGE_PACK_RUNNER_OWNS_JS")))
+
+(defn strict-verification-receipt? []
+  (= "1" (System/getenv "SWARMFORGE_STRICT_VERIFICATION_RECEIPT")))
+
+(defn- receipt-result [result]
+  (when (= "passed" (get result "status"))
+    {:exit 0
+     :out (or (get result "output") "")
+     :err (or (get result "stderr") "")
+     :receipt true}))
+
+(defn- task-command [result]
+  (let [identity (get result "identity")]
+    (into [(get identity "executable")] (get identity "args" []))))
+
+(defn verification-receipt-result
+  ([receipt command]
+   (verification-receipt-result receipt nil command))
+  ([receipt task-key command]
+   (cond
+     (= 2 (get receipt "version"))
+     (let [tasks (get receipt "tasks")
+           candidates (if task-key
+                        [(get tasks task-key)]
+                        (vals tasks))
+           matches (filter #(and % (= (vec command) (task-command %))) candidates)]
+       (when (> (count matches) 1)
+         (throw (ex-info "Verification receipt contains duplicate command identities."
+                         {:command (vec command) :task-key task-key})))
+       (some-> (first matches) receipt-result))
+
+     ;; Version 1 receipts remain readable outside strict orchestration so old
+     ;; standalone acceptance helpers do not acquire a flag-day dependency.
+     (= 1 (get receipt "version"))
+     (when-not task-key
+       (receipt-result (get-in receipt ["commands" (str/join " " command)])))
+
+     :else nil)))
+
+(defn verification-receipt-command
+  ([command]
+   (verification-receipt-command nil command))
+  ([task-key command]
+   (when-let [path (System/getenv "SWARMFORGE_VERIFICATION_RECEIPT")]
+     (when (fs/exists? path)
+       (verification-receipt-result
+        (json/parse-string (slurp path)) task-key command)))))
+
+(defn- command-result [task-key command]
+  (or (verification-receipt-command task-key command)
+      (if (or (pack-runner-owns-js?) (strict-verification-receipt?))
+        (throw (ex-info "Verification command was not declared or did not pass before acceptance"
+                        {:command (vec command)
+                         :task-key task-key
+                         :receipt (System/getenv "SWARMFORGE_VERIFICATION_RECEIPT")
+                         :pack-runner-owns-js (pack-runner-owns-js?)
+                         :strict-verification-receipt (strict-verification-receipt?)}))
+        (apply process/shell build-shell-options command))))
+
+(defn verified-command-result [& command]
+  (command-result nil command))
+
+(defn verified-task-result [task-key & command]
+  (command-result task-key command))
+
+(defn verified-command-or-prepared-task-result
+  [command prepared-task-key prepared-command]
+  (or (verification-receipt-command command)
+      (if (or (pack-runner-owns-js?) (strict-verification-receipt?))
+        (apply verified-task-result prepared-task-key prepared-command)
+        (apply verified-command-result command))))
+
 (defn example-value [example key]
   (or (get example key)
       (get example (keyword key))))
@@ -36,11 +110,14 @@
                [path (source-file root path)])
              paths)))
 
-(defn source-files [root]
+(defn source-files [root prefixes]
   (->> (file-seq (fs/file (fs/path root "src")))
        (filter fs/regular-file?)
        (map (fn [file]
-              [(str (fs/relativize root file)) (slurp (str file))]))
+              [(str (fs/relativize root file)) file]))
+       (filter (fn [[path]]
+                 (some #(or (= path %) (str/starts-with? path %)) prefixes)))
+       (map (fn [[path file]] [path (slurp (str file))]))
        (into (sorted-map))))
 
 (defn includes-all? [source snippets]
@@ -213,9 +290,13 @@
     world))
 
 (defn load-browser-observation-with-environment!
-  [{:keys [environment observation-key runtime-error missing-error]}]
-  (let [result (process/shell (assoc build-shell-options :env (merge (into {} (System/getenv)) environment))
-                              "node" "test/side-panel-component-layout-runtime-test.mjs")
+  [{:keys [observation-id observation-key runtime-error missing-error]}]
+  (assert! observation-id "Browser observation has no registered task id."
+           {:observation-key observation-key})
+  (let [task-key (str "browser-observation:" observation-id)
+        result (verified-task-result task-key
+                                     "node" "scripts/run-browser-observation.mjs"
+                                     observation-id)
         line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result))))
         payload (when line (json/parse-string line true))
         observation (get payload observation-key)]
@@ -226,7 +307,7 @@
 (defn load-browser-observation!
   [{:keys [adapter-env] :as options}]
   (load-browser-observation-with-environment!
-    (assoc options :environment {adapter-env "1"})))
+    (assoc options :observation-id (or (:observation-id options) adapter-env))))
 
 (defn cached-browser-observation!
   [cache options]
@@ -239,7 +320,7 @@
 (defn cached-command-verification!
   [cache error-message & command]
   (let [verify! (fn []
-                  (let [result (apply process/shell build-shell-options command)]
+                  (let [result (apply verified-command-result command)]
                     (assert! (zero? (:exit result))
                              (str error-message (:err result))
                              {:out (:out result) :err (:err result)})
@@ -251,7 +332,7 @@
 (defn cached-command-observation!
   [cache {:keys [command observation-key runtime-error missing-error]}]
   (or @cache
-      (let [result (apply process/shell build-shell-options command)
+      (let [result (apply verified-command-result command)
             line (last (filter #(str/starts-with? % "{")
                                (str/split-lines (:out result))))
             payload (when line (json/parse-string line true))
@@ -340,9 +421,9 @@
               :err (:err result)})))
 
 (defn run-build-command [world]
-  (let [result (process/shell build-shell-options "npm run build")]
+  (let [result (verified-command-result "npm" "run" "build")]
     (assoc world :build-result result)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-29T18:24:00.945172578+02:00", :module-hash "-1772739213", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 8, :hash "-1782816969"} {:id "def/build-shell-options", :kind "def", :line 10, :end-line 10, :hash "-930688589"} {:id "defn/example-value", :kind "defn", :line 12, :end-line 14, :hash "-599943701"} {:id "defn/require-example-value!", :kind "defn", :line 16, :end-line 18, :hash "749498583"} {:id "defn/require-example", :kind "defn", :line 20, :end-line 23, :hash "-773092781"} {:id "defn/read-json", :kind "defn", :line 25, :end-line 28, :hash "1794933363"} {:id "defn/source-file", :kind "defn", :line 30, :end-line 31, :hash "-1939833971"} {:id "defn/source-file-map", :kind "defn", :line 33, :end-line 37, :hash "-254262717"} {:id "defn/source-files", :kind "defn", :line 39, :end-line 44, :hash "-888013632"} {:id "defn/includes-all?", :kind "defn", :line 46, :end-line 47, :hash "-280066464"} {:id "defn-/strictly-increasing?", :kind "defn-", :line 49, :end-line 50, :hash "397463999"} {:id "defn/navigation-structure?", :kind "defn", :line 52, :end-line 64, :hash "1586471099"} {:id "defn/matches-all?", :kind "defn", :line 66, :end-line 67, :hash "-623138115"} {:id "defn/split-list", :kind "defn", :line 69, :end-line 73, :hash "-1368248159"} {:id "defn/template-pattern", :kind "defn", :line 75, :end-line 83, :hash "-1377922721"} {:id "defn/feature-step-specs", :kind "defn", :line 85, :end-line 97, :hash "-1076030599"} {:id "defn/authoritative-feature-examples", :kind "defn", :line 99, :end-line 103, :hash "60493994"} {:id "defn/json-observation", :kind "defn", :line 105, :end-line 109, :hash "1158076905"} {:id "defn/capture-placeholder-keys", :kind "defn", :line 111, :end-line 115, :hash "-200703852"} {:id "defn/semantic-handlers", :kind "defn", :line 117, :end-line 122, :hash "1419994062"} {:id "defn/stateful-semantic-handlers", :kind "defn", :line 124, :end-line 133, :hash "-1312329710"} {:id "defn/feature-scoped-stateful-handlers", :kind "defn", :line 135, :end-line 147, :hash "1287639268"} {:id "defn/stateful-feature-handlers", :kind "defn", :line 149, :end-line 155, :hash "-1720293067"} {:id "defn/feature-mode-handlers", :kind "defn", :line 157, :end-line 168, :hash "860506238"} {:id "defn/record-semantic-observation", :kind "defn", :line 170, :end-line 175, :hash "913946176"} {:id "defn/pattern-findings", :kind "defn", :line 177, :end-line 182, :hash "1233155688"} {:id "defn/repository-root", :kind "defn", :line 184, :end-line 185, :hash "-1494942566"} {:id "defn/assert!", :kind "defn", :line 187, :end-line 189, :hash "866058476"} {:id "defn/validate-authoritative-example!", :kind "defn", :line 191, :end-line 196, :hash "1949564479"} {:id "defn/stateful-observation", :kind "defn", :line 198, :end-line 205, :hash "2038859766"} {:id "defn/stateful-transition", :kind "defn", :line 207, :end-line 213, :hash "-1459105983"} {:id "defn/load-browser-observation-with-environment!", :kind "defn", :line 215, :end-line 224, :hash "-1112405552"} {:id "defn/load-browser-observation!", :kind "defn", :line 226, :end-line 229, :hash "-1416186719"} {:id "defn/cached-browser-observation!", :kind "defn", :line 231, :end-line 237, :hash "-1963526695"} {:id "defn/cached-command-verification!", :kind "defn", :line 239, :end-line 249, :hash "1036339390"} {:id "defn/cached-command-observation!", :kind "defn", :line 251, :end-line 263, :hash "1537276129"} {:id "defn/mode-transition", :kind "defn", :line 265, :end-line 272, :hash "-212214197"} {:id "defn/verified-feature-mode-handlers", :kind "defn", :line 274, :end-line 281, :hash "-1989417952"} {:id "defn/validate-observation-example!", :kind "defn", :line 283, :end-line 288, :hash "38475456"} {:id "defn/validated-observation-transition", :kind "defn", :line 290, :end-line 294, :hash "1162907360"} {:id "defn/validate-example-domain!", :kind "defn", :line 296, :end-line 304, :hash "1835395419"} {:id "defn/validate-mode-example-domain!", :kind "defn", :line 306, :end-line 312, :hash "166774463"} {:id "defn/validate-example-relations!", :kind "defn", :line 314, :end-line 322, :hash "281541423"} {:id "defn/validate-mode-example!", :kind "defn", :line 324, :end-line 331, :hash "-36916542"} {:id "defn/ensure-build-passed!", :kind "defn", :line 333, :end-line 340, :hash "934213542"} {:id "defn/run-build-command", :kind "defn", :line 342, :end-line 344, :hash "378996986"}]}
+;; {:version 1, :tested-at "2026-08-04T11:33:29.408616672+02:00", :module-hash "-658288002", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-1782816969"} {:id "def/build-shell-options", :kind "def", :line 10, :end-line nil, :hash "-930688589"} {:id "defn/verification-receipt-command", :kind "defn", :line 12, :end-line nil, :hash "-1423577451"} {:id "defn/verified-command-result", :kind "defn", :line 20, :end-line nil, :hash "-806024213"} {:id "defn/example-value", :kind "defn", :line 24, :end-line nil, :hash "-599943701"} {:id "defn/require-example-value!", :kind "defn", :line 28, :end-line nil, :hash "749498583"} {:id "defn/require-example", :kind "defn", :line 32, :end-line nil, :hash "-773092781"} {:id "defn/read-json", :kind "defn", :line 37, :end-line nil, :hash "1794933363"} {:id "defn/source-file", :kind "defn", :line 42, :end-line nil, :hash "-1939833971"} {:id "defn/source-file-map", :kind "defn", :line 45, :end-line nil, :hash "-254262717"} {:id "defn/source-files", :kind "defn", :line 51, :end-line nil, :hash "-888013632"} {:id "defn/includes-all?", :kind "defn", :line 58, :end-line nil, :hash "-1981627903"} {:id "defn-/strictly-increasing?", :kind "defn-", :line 61, :end-line nil, :hash "397463999"} {:id "defn/navigation-structure?", :kind "defn", :line 64, :end-line nil, :hash "-1435889438"} {:id "defn/matches-all?", :kind "defn", :line 78, :end-line nil, :hash "1542092592"} {:id "defn/split-list", :kind "defn", :line 81, :end-line nil, :hash "-1368248159"} {:id "defn/template-pattern", :kind "defn", :line 87, :end-line nil, :hash "-1377922721"} {:id "defn/feature-step-specs", :kind "defn", :line 97, :end-line nil, :hash "839713030"} {:id "defn/authoritative-feature-examples", :kind "defn", :line 111, :end-line nil, :hash "60493994"} {:id "defn/json-observation", :kind "defn", :line 117, :end-line nil, :hash "742140040"} {:id "defn/capture-placeholder-keys", :kind "defn", :line 123, :end-line nil, :hash "894327579"} {:id "defn/semantic-handlers", :kind "defn", :line 129, :end-line nil, :hash "1419994062"} {:id "defn/stateful-semantic-handlers", :kind "defn", :line 136, :end-line nil, :hash "-1312329710"} {:id "defn/feature-scoped-stateful-handlers", :kind "defn", :line 147, :end-line nil, :hash "1287639268"} {:id "defn/stateful-feature-handlers", :kind "defn", :line 161, :end-line nil, :hash "-1720293067"} {:id "defn/feature-mode-handlers", :kind "defn", :line 169, :end-line nil, :hash "860506238"} {:id "defn/record-semantic-observation", :kind "defn", :line 182, :end-line nil, :hash "913946176"} {:id "defn/pattern-findings", :kind "defn", :line 189, :end-line nil, :hash "1233155688"} {:id "defn/repository-root", :kind "defn", :line 196, :end-line nil, :hash "-1494942566"} {:id "defn/assert!", :kind "defn", :line 199, :end-line nil, :hash "866058476"} {:id "defn/validate-authoritative-example!", :kind "defn", :line 203, :end-line nil, :hash "1949564479"} {:id "defn/stateful-observation", :kind "defn", :line 210, :end-line nil, :hash "2038859766"} {:id "defn/stateful-transition", :kind "defn", :line 219, :end-line nil, :hash "-1459105983"} {:id "defn/load-browser-observation-with-environment!", :kind "defn", :line 227, :end-line nil, :hash "-59335991"} {:id "defn/load-browser-observation!", :kind "defn", :line 238, :end-line nil, :hash "-1416186719"} {:id "defn/cached-browser-observation!", :kind "defn", :line 243, :end-line nil, :hash "-1963526695"} {:id "defn/cached-command-verification!", :kind "defn", :line 251, :end-line nil, :hash "604261329"} {:id "defn/cached-command-observation!", :kind "defn", :line 263, :end-line nil, :hash "-756353594"} {:id "defn/mode-transition", :kind "defn", :line 277, :end-line nil, :hash "-212214197"} {:id "defn/verified-feature-mode-handlers", :kind "defn", :line 286, :end-line nil, :hash "-1989417952"} {:id "defn/validate-observation-example!", :kind "defn", :line 295, :end-line nil, :hash "38475456"} {:id "defn/validated-observation-transition", :kind "defn", :line 302, :end-line nil, :hash "1162907360"} {:id "defn/validate-example-domain!", :kind "defn", :line 308, :end-line nil, :hash "1835395419"} {:id "defn/validate-mode-example-domain!", :kind "defn", :line 318, :end-line nil, :hash "-178241025"} {:id "defn/validate-example-relations!", :kind "defn", :line 326, :end-line nil, :hash "-1150208791"} {:id "defn/validate-mode-example!", :kind "defn", :line 336, :end-line nil, :hash "-36916542"} {:id "defn/ensure-build-passed!", :kind "defn", :line 345, :end-line nil, :hash "934213542"} {:id "defn/run-build-command", :kind "defn", :line 354, :end-line nil, :hash "-1672970928"}]}
 ;; clj-mutate-manifest-end

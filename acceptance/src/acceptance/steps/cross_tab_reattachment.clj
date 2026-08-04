@@ -1,6 +1,5 @@
 (ns acceptance.steps.cross-tab-reattachment
   (:require [acceptance.steps.support :as support]
-            [babashka.process :as process]
             [cheshire.core :as json]
             [clojure.string :as str]))
 
@@ -35,8 +34,8 @@
     observation))
 
 (defn- run-runtime-observation! []
-  (let [result (process/shell support/build-shell-options
-                              "node" "acceptance/runtime/cross-tab-reattachment.mjs")
+  (let [result (support/verified-command-result
+                "node" "acceptance/runtime/cross-tab-reattachment.mjs")
         line (last (filter #(str/starts-with? % "{")
                            (str/split-lines (:out result))))
         observation (when line (json/parse-string line true))]

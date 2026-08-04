@@ -1,7 +1,5 @@
 (ns acceptance.steps.command-registry
   (:require [acceptance.steps.support :as support]
-            [babashka.fs :as fs]
-            [babashka.process :as process]
             [clojure.string :as str]))
 
 (def command-fields #{"id" "title" "description" "category" "run"})
@@ -53,16 +51,18 @@
 (defn forbidden-command-ui-findings-of-kind [files kind]
   (filter #(= kind (:kind %)) (forbidden-command-ui-findings files)))
 
-(defn- run-command-with-node [command-id]
-  (let [script (format "import { runCommandById } from './dist/commands.js'; runCommandById(%s, { record: (entry) => console.log(JSON.stringify(entry)) });"
-                       (pr-str command-id))]
-    (process/shell {:out :string :err :string :continue true}
-                   "node" "--input-type=module" "--eval" script)))
+(defonce command-runtime-observation (atom nil))
 
-(defn- read-node-json [result]
-  (let [path (fs/create-temp-file {:prefix "command-run" :suffix ".json"})]
-    (spit (str path) (:out result))
-    (support/read-json path)))
+(defn- observe-command-runtime! []
+  (support/cached-command-observation!
+   command-runtime-observation
+   {:command ["node" "test/command-registry-runtime-test.mjs"]
+    :observation-key :commandRegistry
+    :runtime-error "Command registry runtime verification failed."
+    :missing-error "Command registry runtime observation is missing."}))
+
+(defn command-runtime-record [observation command-id]
+  (some #(when (= command-id (:commandId %)) %) (:records observation)))
 
 (def handlers
   [{:pattern #"^the command registry contract is inspected$"
@@ -125,18 +125,14 @@
    {:pattern #"^command <([A-Za-z0-9_]+)> is run by id$"
     :handler (fn [world example [command-key]]
                (let [command-id (support/require-example example command-key)
-                     world (support/run-build-command
-                            (assoc world :root (or (:root world) (support/repository-root))))]
-                 (support/ensure-build-passed! world)
-                 (let [result (run-command-with-node command-id)]
-                   (support/assert! (zero? (:exit result))
-                                    "Command failed when run by id."
-                                    {:exit (:exit result)
-                                     :out (:out result)
-                                     :err (:err result)})
-                   (assoc world
-                          :command-id command-id
-                          :command-run-record (read-node-json result)))))}
+                     record (command-runtime-record
+                             (observe-command-runtime!) command-id)]
+                 (support/assert! record
+                                  "Command runtime observation does not contain the command id."
+                                  {:command-id command-id})
+                 (assoc world
+                        :command-id command-id
+                        :command-run-record record)))}
 
    {:pattern #"^visible app state or log records that command <([A-Za-z0-9_]+)> ran$"
     :handler (fn [world example [command-key]]
@@ -155,7 +151,7 @@
                (let [root (or (:root world) (support/repository-root))]
                  (assoc world
                         :root root
-                        :command-feature-files (support/source-files root))))}
+                        :command-feature-files (support/source-files root ["src/commands.ts"]))))}
 
    {:pattern #"^no command palette is present$"
     :handler (fn [world _example _captures]

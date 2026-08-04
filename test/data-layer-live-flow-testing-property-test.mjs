@@ -31,7 +31,7 @@ const canonical=(id,name,path)=>canonicalSchemaWithConstraint(
 );
 const state={project:{
   id:"project:property",name:"Property project",collections:{
-    profiles:[],pageGroups:[],applicabilitySets:[],assignments:[],fixtures:[],
+    profiles:[],propertySets:[],applicabilitySets:[],assignments:[],fixtures:[],
     pages:[
       {id:"page:start",name:"Start",eventName:"pageview",pathname:"/start",canonicalSchema:canonical("page:start","Start","/journey")},
       {id:"page:success",name:"Success",eventName:"pageview",pathname:"/success",canonicalSchema:canonical("page:success","Success","/result")},
@@ -41,11 +41,11 @@ const state={project:{
     flows:[{id:"flow:branch",name:"Branch journey"}],
   },
   documentationFlowGraphs:{"flow:branch":{
-    pageGroupIds:[],
+    sections:[],
     pageFrames:[
-      {id:"frame:start",name:"Start frame",pageId:"page:start",freePageRegion:"before-lanes"},
-      {id:"frame:success",name:"Success frame",pageId:"page:success",freePageRegion:"after-lanes"},
-      {id:"frame:failure",name:"Failure frame",pageId:"page:failure",freePageRegion:"after-lanes"},
+      {id:"frame:start",name:"Start frame",pageId:"page:start"},
+      {id:"frame:success",name:"Success frame",pageId:"page:success"},
+      {id:"frame:failure",name:"Failure frame",pageId:"page:failure"},
     ],
     occurrences:[{id:"occurrence:submit",name:"Submit occurrence",pageFrameId:"frame:start",pageId:"page:start",eventId:"event:submit"}],
     relationships:[

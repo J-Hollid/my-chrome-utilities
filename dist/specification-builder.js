@@ -31,7 +31,7 @@ import { createProfileInheritanceRecipe, markProfileInheritanceConsumersForSourc
 import { mountSelectiveProfileInheritance } from "./data-layer-selective-profile-inheritance-ui.js";
 import { savePageDetails } from "./data-layer-page-authoring.js";
 import { mountAssignmentRoutingWorkspace } from "./data-layer-assignment-routing-ui.js";
-import { developerProductionSchemaExport, loadProductionSpecificationPlan, publishableProductionSchemas } from "./data-layer-production-specification.js";
+import { developerProductionSchemaExport, publishableProductionSchemas } from "./data-layer-production-specification.js";
 import { mountPropertyCompositionWorkspace } from "./data-layer-property-set-flow-section-ui.js";
 import { pagePropertySetEvaluatorRevision } from "./data-layer-property-set-flow-section.js";
 const STORAGE_KEY = CANONICAL_SPECIFICATION_PROJECT_STORAGE_KEY, START_PATH_KEY = "my-chrome-utilities.specification-project-start.v1", routeParameters = new URLSearchParams(location.search), startupProjectId = routeParameters.get("project") ?? undefined, startupKind = routeParameters.get("kind") ?? undefined, startupEntityId = routeParameters.get("entity") ?? undefined, startupRoute = startupKind ? durableProjectRouteForWorkspace(startupKind, startupEntityId) : undefined;
@@ -735,8 +735,10 @@ function renderGuidedTestCaseEditor(content, entity) {
             actualResult = { applicablePageGroups: state.project.collections.propertySets.filter(({ name }) => included.has(name)).map(({ id }) => id), outcome: evaluated.validation.issues.length ? "Invalid" : "Valid", issues: evaluated.validation.issues.map(({ path, code }) => ({ path, code })), evaluatorRevision: guidedPageEvaluatorRevision(state, saved.pageId) };
         }
         else {
-            const { plan } = await loadProductionSpecificationPlan(durableProjectRuntime.repository, state.project.id);
-            const execution = runProductionFixture(plan, saved), actual = execution.steps.at(-1)?.actual;
+            const compiled = compileSpecificationProject({ ...createCanonicalProjectEnvelope(loaded.state.project, loaded.state.draft?.id ?? "draft"), revision: loaded.draftSequence });
+            if (compiled.status === "blocked")
+                return;
+            const { plan } = compiled, execution = runProductionFixture(plan, saved), actual = execution.steps.at(-1)?.actual;
             if (!actual)
                 throw new Error(execution.blockers?.join(" ") ?? "Production evaluation produced no result.");
             actualResult = { winner: actual.winner?.assignmentId ?? "no-assignment", outcome: actual.issueDetails.length ? "Invalid" : "Valid", issues: actual.issueDetails.map(({ path, code }) => ({ path, code })), evaluatorRevision: plan.evaluatorContentIdentity, resultIdentity: actual.resultIdentity };

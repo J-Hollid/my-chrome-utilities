@@ -8,6 +8,7 @@
       "side-panel.css",
       "layered-schema.css",
       "twatility-brand.css",
+      "schema-authoring-brand.css",
       "side-panel-brand.css"
     ],
     "ink": "#17130e",
@@ -19,9 +20,361 @@
       "transparent": true,
       "opaque": true
     },
+    "title": {
+      "transparent": true,
+      "opaque": true
+    },
+    "titleLettering": {
+      "bodyCount": 10,
+      "tilityBodyCount": 6,
+      "beltBodyCount": 4,
+      "iDotCount": 2,
+      "bodyBounds": [
+        [
+          578,
+          81,
+          681,
+          242
+        ],
+        [
+          655,
+          115,
+          743,
+          239
+        ],
+        [
+          731,
+          67,
+          828,
+          240
+        ],
+        [
+          796,
+          117,
+          878,
+          238
+        ],
+        [
+          870,
+          84,
+          968,
+          239
+        ],
+        [
+          932,
+          114,
+          1114,
+          287
+        ],
+        [
+          1137,
+          58,
+          1292,
+          241
+        ],
+        [
+          1266,
+          115,
+          1371,
+          239
+        ],
+        [
+          1355,
+          65,
+          1452,
+          240
+        ],
+        [
+          1426,
+          76,
+          1523,
+          240
+        ]
+      ],
+      "dotBounds": [
+        [
+          710,
+          63,
+          759,
+          108
+        ],
+        [
+          848,
+          63,
+          898,
+          108
+        ]
+      ]
+    },
+    "panelTitle": {
+      "transparent": true,
+      "opaque": true
+    },
+    "panelTitleLettering": {
+      "bodyCount": 10,
+      "tilityBodyCount": 6,
+      "beltBodyCount": 4,
+      "iDotCount": 2,
+      "bodyBounds": [
+        [
+          289,
+          41,
+          340,
+          121
+        ],
+        [
+          328,
+          57,
+          371,
+          119
+        ],
+        [
+          366,
+          34,
+          414,
+          120
+        ],
+        [
+          398,
+          59,
+          439,
+          119
+        ],
+        [
+          435,
+          42,
+          484,
+          120
+        ],
+        [
+          466,
+          57,
+          557,
+          144
+        ],
+        [
+          569,
+          29,
+          646,
+          120
+        ],
+        [
+          633,
+          57,
+          685,
+          119
+        ],
+        [
+          678,
+          33,
+          725,
+          120
+        ],
+        [
+          713,
+          38,
+          761,
+          120
+        ]
+      ],
+      "dotBounds": [
+        [
+          355,
+          31,
+          379,
+          54
+        ],
+        [
+          424,
+          32,
+          449,
+          54
+        ]
+      ]
+    },
     "analyst": {
       "transparent": true,
       "opaque": true
+    },
+    "analystSpeakingA": {
+      "transparent": true,
+      "opaque": true
+    },
+    "analystSpeakingB": {
+      "transparent": true,
+      "opaque": true
+    },
+    "icons": [
+      {
+        "source": "assets/brand/icons/icon-16.png",
+        "width": 16,
+        "height": 16,
+        "bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "coreBounds": [
+          1,
+          1,
+          15,
+          15
+        ],
+        "corners": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "transparentPixels": 4,
+        "greenFringePixels": 0,
+        "navyPixels": 118,
+        "redPixels": 97,
+        "mustardPixels": 13
+      },
+      {
+        "source": "assets/brand/icons/icon-32.png",
+        "width": 32,
+        "height": 32,
+        "bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "coreBounds": [
+          1,
+          1,
+          31,
+          31
+        ],
+        "corners": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "transparentPixels": 30,
+        "greenFringePixels": 0,
+        "navyPixels": 420,
+        "redPixels": 344,
+        "mustardPixels": 94
+      },
+      {
+        "source": "assets/brand/icons/icon-48.png",
+        "width": 48,
+        "height": 48,
+        "bounds": [
+          0,
+          0,
+          48,
+          48
+        ],
+        "coreBounds": [
+          1,
+          1,
+          46,
+          47
+        ],
+        "corners": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "transparentPixels": 144,
+        "greenFringePixels": 0,
+        "navyPixels": 1036,
+        "redPixels": 733,
+        "mustardPixels": 295
+      },
+      {
+        "source": "assets/brand/icons/icon-128.png",
+        "width": 128,
+        "height": 128,
+        "bounds": [
+          1,
+          0,
+          127,
+          128
+        ],
+        "coreBounds": [
+          4,
+          3,
+          124,
+          125
+        ],
+        "corners": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "transparentPixels": 1287,
+        "greenFringePixels": 0,
+        "navyPixels": 7062,
+        "redPixels": 4656,
+        "mustardPixels": 1627
+      }
+    ],
+    "analystRegistration": {
+      "speechRegion": {
+        "left": 240,
+        "top": 175,
+        "right": 382,
+        "bottom": 320
+      },
+      "poses": [
+        {
+          "source": "assets/brand/technical-analyst.png",
+          "width": 587,
+          "height": 822,
+          "bounds": [
+            50,
+            13,
+            536,
+            810
+          ],
+          "blueToolPixels": 105,
+          "hairChromaPixels": 142,
+          "insideDeltaPixels": 0,
+          "outsideDeltaPixels": 0,
+          "alphaDeltaPixels": 0
+        },
+        {
+          "source": "assets/brand/technical-analyst-speaking-a.png",
+          "width": 587,
+          "height": 822,
+          "bounds": [
+            50,
+            13,
+            536,
+            810
+          ],
+          "blueToolPixels": 105,
+          "hairChromaPixels": 139,
+          "insideDeltaPixels": 12969,
+          "outsideDeltaPixels": 0,
+          "alphaDeltaPixels": 0
+        },
+        {
+          "source": "assets/brand/technical-analyst-speaking-b.png",
+          "width": 587,
+          "height": 822,
+          "bounds": [
+            50,
+            13,
+            536,
+            810
+          ],
+          "blueToolPixels": 105,
+          "hairChromaPixels": 142,
+          "insideDeltaPixels": 0,
+          "outsideDeltaPixels": 0,
+          "alphaDeltaPixels": 0
+        }
+      ]
     }
   },
   "studio": {
@@ -34,6 +387,7 @@
       "specification-builder-guidance.css",
       "layered-schema.css",
       "twatility-brand.css",
+      "schema-authoring-brand.css",
       "specification-builder-brand.css",
       "(inline)"
     ],
@@ -46,9 +400,361 @@
       "transparent": true,
       "opaque": true
     },
+    "title": {
+      "transparent": true,
+      "opaque": true
+    },
+    "titleLettering": {
+      "bodyCount": 10,
+      "tilityBodyCount": 6,
+      "beltBodyCount": 4,
+      "iDotCount": 2,
+      "bodyBounds": [
+        [
+          578,
+          81,
+          681,
+          242
+        ],
+        [
+          655,
+          115,
+          743,
+          239
+        ],
+        [
+          731,
+          67,
+          828,
+          240
+        ],
+        [
+          796,
+          117,
+          878,
+          238
+        ],
+        [
+          870,
+          84,
+          968,
+          239
+        ],
+        [
+          932,
+          114,
+          1114,
+          287
+        ],
+        [
+          1137,
+          58,
+          1292,
+          241
+        ],
+        [
+          1266,
+          115,
+          1371,
+          239
+        ],
+        [
+          1355,
+          65,
+          1452,
+          240
+        ],
+        [
+          1426,
+          76,
+          1523,
+          240
+        ]
+      ],
+      "dotBounds": [
+        [
+          710,
+          63,
+          759,
+          108
+        ],
+        [
+          848,
+          63,
+          898,
+          108
+        ]
+      ]
+    },
+    "panelTitle": {
+      "transparent": true,
+      "opaque": true
+    },
+    "panelTitleLettering": {
+      "bodyCount": 10,
+      "tilityBodyCount": 6,
+      "beltBodyCount": 4,
+      "iDotCount": 2,
+      "bodyBounds": [
+        [
+          289,
+          41,
+          340,
+          121
+        ],
+        [
+          328,
+          57,
+          371,
+          119
+        ],
+        [
+          366,
+          34,
+          414,
+          120
+        ],
+        [
+          398,
+          59,
+          439,
+          119
+        ],
+        [
+          435,
+          42,
+          484,
+          120
+        ],
+        [
+          466,
+          57,
+          557,
+          144
+        ],
+        [
+          569,
+          29,
+          646,
+          120
+        ],
+        [
+          633,
+          57,
+          685,
+          119
+        ],
+        [
+          678,
+          33,
+          725,
+          120
+        ],
+        [
+          713,
+          38,
+          761,
+          120
+        ]
+      ],
+      "dotBounds": [
+        [
+          355,
+          31,
+          379,
+          54
+        ],
+        [
+          424,
+          32,
+          449,
+          54
+        ]
+      ]
+    },
     "analyst": {
       "transparent": true,
       "opaque": true
+    },
+    "analystSpeakingA": {
+      "transparent": true,
+      "opaque": true
+    },
+    "analystSpeakingB": {
+      "transparent": true,
+      "opaque": true
+    },
+    "icons": [
+      {
+        "source": "assets/brand/icons/icon-16.png",
+        "width": 16,
+        "height": 16,
+        "bounds": [
+          0,
+          0,
+          16,
+          16
+        ],
+        "coreBounds": [
+          1,
+          1,
+          15,
+          15
+        ],
+        "corners": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "transparentPixels": 4,
+        "greenFringePixels": 0,
+        "navyPixels": 118,
+        "redPixels": 97,
+        "mustardPixels": 13
+      },
+      {
+        "source": "assets/brand/icons/icon-32.png",
+        "width": 32,
+        "height": 32,
+        "bounds": [
+          0,
+          0,
+          32,
+          32
+        ],
+        "coreBounds": [
+          1,
+          1,
+          31,
+          31
+        ],
+        "corners": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "transparentPixels": 30,
+        "greenFringePixels": 0,
+        "navyPixels": 420,
+        "redPixels": 344,
+        "mustardPixels": 94
+      },
+      {
+        "source": "assets/brand/icons/icon-48.png",
+        "width": 48,
+        "height": 48,
+        "bounds": [
+          0,
+          0,
+          48,
+          48
+        ],
+        "coreBounds": [
+          1,
+          1,
+          46,
+          47
+        ],
+        "corners": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "transparentPixels": 144,
+        "greenFringePixels": 0,
+        "navyPixels": 1036,
+        "redPixels": 733,
+        "mustardPixels": 295
+      },
+      {
+        "source": "assets/brand/icons/icon-128.png",
+        "width": 128,
+        "height": 128,
+        "bounds": [
+          1,
+          0,
+          127,
+          128
+        ],
+        "coreBounds": [
+          4,
+          3,
+          124,
+          125
+        ],
+        "corners": [
+          0,
+          0,
+          0,
+          0
+        ],
+        "transparentPixels": 1287,
+        "greenFringePixels": 0,
+        "navyPixels": 7062,
+        "redPixels": 4656,
+        "mustardPixels": 1627
+      }
+    ],
+    "analystRegistration": {
+      "speechRegion": {
+        "left": 240,
+        "top": 175,
+        "right": 382,
+        "bottom": 320
+      },
+      "poses": [
+        {
+          "source": "assets/brand/technical-analyst.png",
+          "width": 587,
+          "height": 822,
+          "bounds": [
+            50,
+            13,
+            536,
+            810
+          ],
+          "blueToolPixels": 105,
+          "hairChromaPixels": 142,
+          "insideDeltaPixels": 0,
+          "outsideDeltaPixels": 0,
+          "alphaDeltaPixels": 0
+        },
+        {
+          "source": "assets/brand/technical-analyst-speaking-a.png",
+          "width": 587,
+          "height": 822,
+          "bounds": [
+            50,
+            13,
+            536,
+            810
+          ],
+          "blueToolPixels": 105,
+          "hairChromaPixels": 139,
+          "insideDeltaPixels": 12969,
+          "outsideDeltaPixels": 0,
+          "alphaDeltaPixels": 0
+        },
+        {
+          "source": "assets/brand/technical-analyst-speaking-b.png",
+          "width": 587,
+          "height": 822,
+          "bounds": [
+            50,
+            13,
+            536,
+            810
+          ],
+          "blueToolPixels": 105,
+          "hairChromaPixels": 142,
+          "insideDeltaPixels": 0,
+          "outsideDeltaPixels": 0,
+          "alphaDeltaPixels": 0
+        }
+      ]
     }
   }
 }

@@ -22,7 +22,7 @@ assert.deepEqual(guidedTestCaseTypeOptions(),[
   {
     value:"page-context",
     label:"Page context test",
-    purpose:"Page Group applicability and Page validation",
+    purpose:"Property Set applicability and Page validation",
     scope:"one production Page",
     evaluation:"production Page effective-schema evaluation",
   },

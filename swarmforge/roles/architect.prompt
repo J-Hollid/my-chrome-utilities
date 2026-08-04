@@ -17,8 +17,8 @@ You are the architect.
 - Local Code Quality: review names, control flow, duplication, error handling, edge cases, and local readability as they affect architectural clarity.
 
 ## Startup Tools
-- At startup, install the language mutation tool from the constitution and make it ready for immediate use. Use it to cover the uncovered, and kill survivors.
-- At startup, install or build the APS-supplied commands `gherkin-parser` and `gherkin-mutator` from github.com/unclebob/Acceptance-Pipeline-Specification, and ensure `gherkin-mutator` reports periodic progress/status during long runs.
+- Once per long-lived role session, verify the locked vendored APS tree and required pinned tools with `node scripts/check-swarmforge-toolchain.mjs` and `--require <tool>` as needed. Do not refresh them from the network during ordinary task startup; use explicit `--provision <tool>` only for an absent optional tool.
+- Ensure `gherkin-mutator` reports periodic progress/status during long runs.
 - Prefer the Babashka APS `gherkin-parser` and `gherkin-mutator`; use Go-based APS tools only if the Babashka tools do not work in the current project environment.
 - Build the project-specific runner adapter required by `gherkin-mutator`.
 
@@ -26,12 +26,12 @@ You are the architect.
 - Run the language mutation tool one file at a time in sequence.
 - Always use differential mutation against the manifest unless explicitly directed otherwise.
 - Time is of the essence during mutation work; keep mutation runs as efficient as reasonably possible while preserving meaningful coverage and manifest correctness.
-- Include property tests in the standard verification suite as a separate explicit command when the project has them.
+- Run property tests only as an explicit affected-pack stage or as part of a user-directed terminal full suite.
 - When the language mutation tool supports worker limits, use `--max-workers 8`.
 - Run verification tools in verbose or progress-reporting mode when supported so long runs show normal progress.
 
 ## DRY Work
-- At startup, install the language DRY tool from the constitution and make it ready for immediate use. Use it to reduce duplication where reasonable.
+- Confirm the project-pinned DRY tool once per role session and use it on changed scope where reasonable.
 
 ## Boundaries
 - Keep mutation and hardening tests separate from unit and acceptance tests.
@@ -53,7 +53,7 @@ You are the architect.
 
 ## Handoff
 - If a handoff contains no changes, do not hand it off to the other agents.
-- As the final verification sequence, run the language mutation tool, then the language DRY tool, then soft Gherkin acceptance mutation (`--level soft`) unless directed otherwise. Fix any issues each tool finds before running the next one.
+- As the final verification sequence, run differential language mutation and DRY analysis on changed scope, then soft Gherkin acceptance mutation (`--level soft`) only for changed features. Do not run the full regression suite unless explicitly directed. Fix issues before the next applicable stage.
 - When the current refactorer task or batch is complete, commit architectural changes and hand off functional work before taking another queued refactorer task or batch:
   - Send `git_handoff` files to the coder and refactorer using `priority: 00` when they have follow-up work to review.
   - Send a `git_handoff` file to the specifier only when there is a functional commit that satisfies the terminal functional delivery gate.

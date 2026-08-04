@@ -1,6 +1,5 @@
 (ns acceptance.steps.lossless-observation-activation
   (:require [acceptance.steps.support :as support]
-            [babashka.process :as process]
             [cheshire.core :as json]
             [clojure.string :as str]))
 
@@ -53,8 +52,8 @@
     observation))
 
 (defn- run-browser-observation! []
-  (let [result (process/shell support/build-shell-options
-                              "node" "acceptance/runtime/lossless-observation-activation.mjs")
+  (let [result (support/verified-command-result
+                "node" "acceptance/runtime/lossless-observation-activation.mjs")
         line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result))))
         observation (when line (json/parse-string line true))]
     (support/assert! (zero? (:exit result))
