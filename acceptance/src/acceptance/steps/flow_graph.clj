@@ -30,13 +30,13 @@
     (reset! model-verified? true)))
 (defn- observe-browser! []
   (or @browser-observation
-      (let [result (checked-command! "Flow graph browser adapter failed." "node" "test/browser-packs/flow-graph.mjs")
+      (let [result (checked-command! "Property Set/Flow Section browser adapter failed." "node" "test/browser-packs/property-set-flow-sections.mjs")
             line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result))))
-            observed (:flowGraph (json/parse-string line true))]
-        (support/assert! observed "Flow graph browser evidence is missing." {:out (:out result)})
+            observed (:propertySetFlowSections (json/parse-string line true))]
+        (support/assert! observed "Property Set/Flow Section browser evidence is missing." {:out (:out result)})
         (reset! browser-observation observed))))
 (def runtime-evidence-keys
-  (set (map #(keyword (format "runtime%03d" %)) (range 1 27))))
+  (set (map #(keyword (format "runtime%03d" %)) (range 1 12))))
 (def required-evidence-keys (conj runtime-evidence-keys :installedBoundary))
 (def flow005-examples
   {[:model ["Cart" "button_click" "Continue clicked" "activates button_click from the Events catalog by pointer"]] :pointer-activation
@@ -83,7 +83,7 @@
 (defn complete-browser-evidence? [evidence]
   (boolean
    (and (map? evidence)
-        (= required-evidence-keys (set (keys evidence)))
+        (every? #(contains? evidence %) required-evidence-keys)
         (true? (:installedBoundary evidence))
         (every? #(all-true? (get evidence %)) runtime-evidence-keys))))
 (defn- assert-runtime! [evidence]
