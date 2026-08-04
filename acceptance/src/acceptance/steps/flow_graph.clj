@@ -55,6 +55,9 @@
    ["alternative" "Customer details" "ID verification" "no label" "Delete relationship Customer details to ID verification"] :unlabelled})
 (def runtime024-examples
   {["pending" "approved" "manual_review" "declined"] :repeated-page-instances})
+(def flow026-examples
+  {["Generic checkout page" "4" "Customer details" "Payment" "Summary" "Reusable commerce page"]
+   :named-page-instances})
 (defn- exact-example-key [example columns discriminators examples message]
   (let [row (mapv #(support/example-value example %) columns)]
     (when (some #(support/example-value example %) discriminators)
@@ -72,12 +75,20 @@
   (exact-example-key example ["kind" "source" "target" "label_state" "accessible_name"] ["label_state" "accessible_name"] runtime023-examples "Unknown runtime023 relationship-deletion example."))
 (defn runtime024-example-key [example]
   (exact-example-key example ["parent_value" "approved_value" "review_value" "declined_value"] ["parent_value"] runtime024-examples "Unknown runtime024 Page-instance example."))
+(defn flow026-example-key [example]
+  (exact-example-key
+   example
+   ["source_page" "instance_count" "first_name" "second_name" "third_name" "renamed_page"]
+   ["instance_count"]
+   flow026-examples
+   "Unknown Flow 026 Page-instance naming example."))
 (defn validate-example! [mode example]
   (flow005-example-key mode example)
   (runtime009-example-key example)
   (runtime023-example-key example)
   (runtime024-example-key example)
-  true)
+  (flow026-example-key example)
+  example)
 (defn all-true? [values]
   (boolean (and (map? values) (seq values) (every? true? (vals values)))))
 (defn complete-browser-evidence? [evidence]
@@ -100,5 +111,5 @@
    observe-browser! assert-runtime!))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-22T20:06:16.772589872+02:00", :module-hash "-80478857", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 5, :hash "12328700"} {:id "def/feature-files", :kind "def", :line 7, :end-line 9, :hash "-435723109"} {:id "def/entry-modes", :kind "def", :line 10, :end-line 12, :hash "1245758286"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/checked-command!", :kind "defn-", :line 16, :end-line 19, :hash "-109796194"} {:id "defn-/verify-model!", :kind "defn-", :line 20, :end-line 29, :hash "934910746"} {:id "defn-/observe-browser!", :kind "defn-", :line 30, :end-line 36, :hash "-1469376060"} {:id "def/runtime-evidence-keys", :kind "def", :line 37, :end-line 38, :hash "-344248280"} {:id "def/required-evidence-keys", :kind "def", :line 39, :end-line 39, :hash "-1295581414"} {:id "def/flow005-examples", :kind "def", :line 40, :end-line 46, :hash "-771053583"} {:id "def/runtime009-examples", :kind "def", :line 47, :end-line 51, :hash "1540013385"} {:id "def/runtime023-examples", :kind "def", :line 52, :end-line 54, :hash "-1984771249"} {:id "def/runtime024-examples", :kind "def", :line 55, :end-line 56, :hash "1058329484"} {:id "defn-/exact-example-key", :kind "defn-", :line 57, :end-line 61, :hash "-901117598"} {:id "defn/flow005-example-key", :kind "defn", :line 62, :end-line 67, :hash "-48125906"} {:id "defn/runtime009-example-key", :kind "defn", :line 68, :end-line 69, :hash "-1376855772"} {:id "defn/runtime023-example-key", :kind "defn", :line 70, :end-line 71, :hash "-1160499936"} {:id "defn/runtime024-example-key", :kind "defn", :line 72, :end-line 73, :hash "1247866732"} {:id "defn/validate-example!", :kind "defn", :line 74, :end-line 79, :hash "-409560174"} {:id "defn/all-true?", :kind "defn", :line 80, :end-line 81, :hash "731206003"} {:id "defn/complete-browser-evidence?", :kind "defn", :line 82, :end-line 87, :hash "762470613"} {:id "defn-/assert-runtime!", :kind "defn-", :line 88, :end-line 93, :hash "1781741610"} {:id "def/handlers", :kind "def", :line 95, :end-line 99, :hash "89345785"}]}
+;; {:version 1, :tested-at "2026-08-04T10:51:17.876637191+02:00", :module-hash "-728960123", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "12328700"} {:id "def/feature-files", :kind "def", :line 7, :end-line nil, :hash "-435723109"} {:id "def/entry-modes", :kind "def", :line 10, :end-line nil, :hash "1245758286"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line nil, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line nil, :hash "-1618529344"} {:id "defn-/checked-command!", :kind "defn-", :line 16, :end-line nil, :hash "-109796194"} {:id "defn-/verify-model!", :kind "defn-", :line 20, :end-line nil, :hash "-1342822011"} {:id "defn-/observe-browser!", :kind "defn-", :line 31, :end-line nil, :hash "2063982482"} {:id "def/runtime-evidence-keys", :kind "def", :line 38, :end-line nil, :hash "-910527984"} {:id "def/required-evidence-keys", :kind "def", :line 40, :end-line nil, :hash "-1295581414"} {:id "def/flow005-examples", :kind "def", :line 41, :end-line nil, :hash "574951723"} {:id "def/runtime009-examples", :kind "def", :line 48, :end-line nil, :hash "-167167521"} {:id "def/runtime023-examples", :kind "def", :line 53, :end-line nil, :hash "-1984771249"} {:id "def/runtime024-examples", :kind "def", :line 56, :end-line nil, :hash "1058329484"} {:id "def/flow026-examples", :kind "def", :line 58, :end-line nil, :hash "-1147461739"} {:id "defn-/exact-example-key", :kind "defn-", :line 61, :end-line nil, :hash "-1396433188"} {:id "defn/flow005-example-key", :kind "defn", :line 66, :end-line nil, :hash "-1643203963"} {:id "defn/runtime009-example-key", :kind "defn", :line 72, :end-line nil, :hash "-1376855772"} {:id "defn/runtime023-example-key", :kind "defn", :line 74, :end-line nil, :hash "-1160499936"} {:id "defn/runtime024-example-key", :kind "defn", :line 76, :end-line nil, :hash "1247866732"} {:id "defn/flow026-example-key", :kind "defn", :line 78, :end-line nil, :hash "1303746130"} {:id "defn/validate-example!", :kind "defn", :line 85, :end-line nil, :hash "-1762897624"} {:id "defn/all-true?", :kind "defn", :line 92, :end-line nil, :hash "731206003"} {:id "defn/complete-browser-evidence?", :kind "defn", :line 94, :end-line nil, :hash "-1622482226"} {:id "defn-/assert-runtime!", :kind "defn-", :line 100, :end-line nil, :hash "1781741610"} {:id "def/handlers", :kind "def", :line 107, :end-line nil, :hash "89345785"}]}
 ;; clj-mutate-manifest-end

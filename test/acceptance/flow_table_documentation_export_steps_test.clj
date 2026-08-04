@@ -61,6 +61,19 @@
              :runtime
              {"declared_type" "GIF"
               "diagnostic" "Choose a valid GIF image"})))
+  (let [example {"instance_count" "4"
+                 "source_page" "Generic checkout page"
+                 "first_name" "Customer details"
+                 "second_name" "Payment"
+                 "third_name" "Summary"
+                 "fourth_name" "Confirmation"}]
+    (is (= example (flow-export/validate-example! :model example))))
+  (let [example {"source_page" "Generic checkout page"
+                 "first_name" "Customer details"
+                 "second_name" "Payment"
+                 "third_name" "Summary"
+                 "fourth_name" "Confirmation"}]
+    (is (= example (flow-export/validate-example! :model example))))
   (is (thrown-with-msg?
        clojure.lang.ExceptionInfo
        #"invalid result"

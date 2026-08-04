@@ -1,8 +1,5 @@
 (ns acceptance.steps.flow-table-documentation-export
-  (:require [acceptance.steps.support :as support]
-            [babashka.process :as process]
-            [cheshire.core :as json]
-            [clojure.string :as str]))
+  (:require [acceptance.steps.support :as support]))
 
 (def feature-files
   ["features/data-layer-flow-table-documentation-export.feature"
@@ -17,25 +14,19 @@
 (defonce model-verified? (atom false))
 (defonce browser-observation (atom nil))
 
-(defn- checked! [message & command]
-  (let [result (apply process/shell {:out :string :err :string} command)]
-    (support/assert! (zero? (:exit result)) (str message " " (:err result)) {:out (:out result)})
-    result))
-
 (defn- verify-model! []
-  (when-not @model-verified?
-    (checked! "Flow documentation export model verification failed."
-              "node" "test/data-layer-project-documentation-workspace-test.mjs")
-    (reset! model-verified? true)))
+  (support/cached-command-verification!
+   model-verified?
+   "Flow documentation export model verification failed. "
+   "node" "test/data-layer-project-documentation-workspace-test.mjs"))
 
 (defn- observe-browser! []
-  (or @browser-observation
-      (let [result (checked! "Flow documentation export browser adapter failed."
-                             "node" "test/browser-packs/flow-table-documentation-export.mjs")
-            line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result))))
-            observed (:flowExport (json/parse-string line true))]
-        (support/assert! observed "Flow documentation export browser evidence is missing." {:out (:out result)})
-        (reset! browser-observation observed))))
+  (support/cached-command-observation!
+   browser-observation
+   {:command ["node" "test/browser-packs/flow-table-documentation-export.mjs"]
+    :observation-key :flowExport
+    :runtime-error "Flow documentation export browser adapter failed."
+    :missing-error "Flow documentation export browser evidence is missing."}))
 
 (def flow-export-example-relations
   [{:keys ["definition" "display" "detail"]
@@ -77,7 +68,11 @@
    {:keys ["declared_type" "diagnostic"]
     :rows #{["PNG" "Choose a valid PNG image"]
             ["JPEG" "Choose a valid JPEG image"]
-            ["GIF" "Choose a valid GIF image"]}}])
+            ["GIF" "Choose a valid GIF image"]}}
+   {:keys ["instance_count" "source_page" "first_name" "second_name" "third_name" "fourth_name"]
+    :rows #{["4" "Generic checkout page" "Customer details" "Payment" "Summary" "Confirmation"]}}
+   {:keys ["source_page" "first_name" "second_name" "third_name" "fourth_name"]
+    :rows #{["Generic checkout page" "Customer details" "Payment" "Summary" "Confirmation"]}}])
 
 (defn validate-example! [_mode example]
   (support/validate-example-relations!
@@ -103,5 +98,5 @@
    observe-browser! assert-runtime!))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-31T19:07:26.557318647+02:00", :module-hash "1904584808", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 5, :hash "-1271057094"} {:id "def/feature-files", :kind "def", :line 7, :end-line 11, :hash "-335733992"} {:id "def/entry-modes", :kind "def", :line 12, :end-line 16, :hash "210832218"} {:id "form/3/defonce", :kind "defonce", :line 17, :end-line 17, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 18, :end-line 18, :hash "-1618529344"} {:id "defn-/checked!", :kind "defn-", :line 20, :end-line 23, :hash "938963528"} {:id "defn-/verify-model!", :kind "defn-", :line 25, :end-line 29, :hash "1417475058"} {:id "defn-/observe-browser!", :kind "defn-", :line 31, :end-line 38, :hash "1213556044"} {:id "def/flow-export-example-relations", :kind "def", :line 40, :end-line 80, :hash "-48960708"} {:id "defn/validate-example!", :kind "defn", :line 82, :end-line 85, :hash "1985321309"} {:id "def/runtime-paths", :kind "def", :line 87, :end-line 91, :hash "-861280650"} {:id "defn-/assert-runtime!", :kind "defn-", :line 93, :end-line 97, :hash "234435999"} {:id "def/handlers", :kind "def", :line 99, :end-line 103, :hash "-915256383"}]}
+;; {:version 1, :tested-at "2026-08-04T10:52:21.358263089+02:00", :module-hash "1394112264", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "44459659"} {:id "def/feature-files", :kind "def", :line 4, :end-line nil, :hash "-335733992"} {:id "def/entry-modes", :kind "def", :line 9, :end-line nil, :hash "210832218"} {:id "form/3/defonce", :kind "defonce", :line 14, :end-line nil, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 15, :end-line nil, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 17, :end-line nil, :hash "-729194422"} {:id "defn-/observe-browser!", :kind "defn-", :line 23, :end-line nil, :hash "1774642844"} {:id "def/flow-export-example-relations", :kind "def", :line 31, :end-line nil, :hash "1720611054"} {:id "defn/validate-example!", :kind "defn", :line 77, :end-line nil, :hash "1985321309"} {:id "def/runtime-paths", :kind "def", :line 82, :end-line nil, :hash "1042883056"} {:id "defn-/assert-runtime!", :kind "defn-", :line 88, :end-line nil, :hash "234435999"} {:id "def/handlers", :kind "def", :line 94, :end-line nil, :hash "-915256383"}]}
 ;; clj-mutate-manifest-end
