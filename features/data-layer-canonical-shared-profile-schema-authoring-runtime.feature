@@ -1466,3 +1466,17 @@ Feature: Data layer canonical Shared Profile schema authoring runtime
       | existing durable project     | Event              | never published  | 0               |
       | portable project import      | Flow Page-instance | published        | 2               |
       | legacy Web Storage migration | Event occurrence   | never published  | 0               |
+
+  # Data layer canonical Shared Profile schema authoring runtime 086
+  Scenario Outline: Data layer canonical Shared Profile schema authoring runtime 086
+    Given the installed Page schema Table contains inherited /customer_status and local /page_note rows
+    When the browser renders it at <viewport_width> CSS pixels and <browser_zoom> percent zoom
+    Then each Property editor button bounding rectangle is contained by its first-cell bounding rectangle
+    And each Path cell bounding rectangle begins at or after its first-cell right edge and renders the complete friendly path
+    And intersection measurement between each Property editor button and its Path cell is zero
+
+    Examples:
+      | viewport_width | browser_zoom |
+      | 1280           | 100          |
+      | 360            | 100          |
+      | 720            | 200          |

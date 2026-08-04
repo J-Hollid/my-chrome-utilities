@@ -1464,3 +1464,17 @@ Feature: Data layer canonical Shared Profile schema authoring
       | existing durable project     | Event              | never published  | 0               |
       | portable project import      | Flow Page-instance | published        | 2               |
       | legacy Web Storage migration | Event occurrence   | never published  | 0               |
+
+  # Data layer canonical Shared Profile schema authoring 086
+  Scenario Outline: Data layer canonical Shared Profile schema authoring 086
+    Given a Page schema Table contains inherited /customer_status and local /page_note rows
+    When the Table renders at <viewport_width> CSS pixels and <browser_zoom> percent browser zoom
+    Then each Property editor button is fully contained by its first-column cell
+    And each Path cell begins after the first column and shows its complete friendly property path
+    And neither Property editor button overlaps or obscures its Path cell
+
+    Examples:
+      | viewport_width | browser_zoom |
+      | 1280           | 100          |
+      | 360            | 100          |
+      | 720            | 200          |
