@@ -46,11 +46,11 @@ export function ensureSchemaTablePropertyEditorContainmentStyle(dom:Document):vo
   const style=dom.createElement("style");style.id=schemaTablePropertyEditorContainmentStyleId;style.textContent=schemaTablePropertyEditorContainmentCss;dom.head.append(style);
 }
 export function applySchemaTablePropertyEditorAllocation(heading?:HTMLElement,cell?:HTMLElement,action?:HTMLElement):void {
-  if(heading){
-    heading.style.width=schemaTablePropertyEditorAllocation;
-    heading.style.minWidth=schemaTablePropertyEditorAllocation;
-    heading.style.maxWidth=schemaTablePropertyEditorAllocation;
-    heading.style.whiteSpace="nowrap";
+  for(const element of heading?[heading]:[]){
+    element.style.width=schemaTablePropertyEditorAllocation;
+    element.style.minWidth=schemaTablePropertyEditorAllocation;
+    element.style.maxWidth=schemaTablePropertyEditorAllocation;
+    element.style.whiteSpace="nowrap";
   }
   if(cell)cell.dataset.schemaTablePropertyEditorCell="true";
   if(action){action.dataset.schemaTablePropertyEditorAction="true";action.style.maxWidth="100%";}

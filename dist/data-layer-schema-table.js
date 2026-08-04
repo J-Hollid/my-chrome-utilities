@@ -44,11 +44,11 @@ export function ensureSchemaTablePropertyEditorContainmentStyle(dom) {
     dom.head.append(style);
 }
 export function applySchemaTablePropertyEditorAllocation(heading, cell, action) {
-    if (heading) {
-        heading.style.width = schemaTablePropertyEditorAllocation;
-        heading.style.minWidth = schemaTablePropertyEditorAllocation;
-        heading.style.maxWidth = schemaTablePropertyEditorAllocation;
-        heading.style.whiteSpace = "nowrap";
+    for (const element of heading ? [heading] : []) {
+        element.style.width = schemaTablePropertyEditorAllocation;
+        element.style.minWidth = schemaTablePropertyEditorAllocation;
+        element.style.maxWidth = schemaTablePropertyEditorAllocation;
+        element.style.whiteSpace = "nowrap";
     }
     if (cell)
         cell.dataset.schemaTablePropertyEditorCell = "true";
