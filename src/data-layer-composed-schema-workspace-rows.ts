@@ -5,7 +5,7 @@ import {renderFocusedPropertyMenu} from "./data-layer-focused-schema-property-me
 import {focusedOwnershipActionTarget,focusedSectionOwnershipActions,focusedPropertyProvenanceSummary,focusedPropertySectionLabels,gateFocusedOwnershipSection,type FocusedOwnershipSession,type FocusedPropertyPrimarySection,type FocusedPropertySection} from "./data-layer-focused-schema-property-ui.js";
 import {renderComposedFocusedSection} from "./data-layer-composed-schema-workspace-focused-sections.js";
 import type {FlowPageInstanceStructureCommand,FlowPageInstanceStructureKind} from "./flow-graph/page-instance-structure.js";
-import {applySchemaTablePathAllocation,applySchemaTablePropertyEditorAllocation,bindSchemaTableQuickEdit,clearSchemaTableOverlay,mountSchemaTableOverlay,schemaTableAllowedValues,type SchemaTableEditableFacet,type SchemaTableQuickEditResult} from "./data-layer-schema-table.js";
+import {applySchemaTablePathAllocation,applySchemaTablePropertyEditorAllocation,bindSchemaTableQuickEdit,clearSchemaTableOverlay,ensureSchemaTablePropertyEditorContainmentStyle,mountSchemaTableOverlay,schemaTableAllowedValues,type SchemaTableEditableFacet,type SchemaTableQuickEditResult} from "./data-layer-schema-table.js";
 
 export interface ComposedRowsContext {
   dom:Document;overlayHost:HTMLElement;model:ComposedSchemaWorkspace;effectiveText:(row:ComposedSchemaRow)=>string;conceptSuggestions?:(()=>readonly string[])|undefined;onRepair?:((repair:ComposedSchemaRepair)=>void)|undefined;rowPathDataset?:string|undefined;
@@ -83,6 +83,7 @@ function composedReviewLayer(row:ComposedSchemaRow,context:ComposedRowsContext):
 
 export function renderComposedRows(rows:HTMLElement,context:ComposedRowsContext):void {
   clearSchemaTableOverlay(context.overlayHost);
+  ensureSchemaTablePropertyEditorContainmentStyle(context.dom);
   const {dom}=context,table=rows.querySelector<HTMLTableElement>(":scope > table")??dom.createElement("table"),head=dom.createElement("thead"),headRow=dom.createElement("tr"),body=dom.createElement("tbody");let pendingOverlay:{trigger:HTMLElement;path:string;layers:HTMLElement[]}|undefined;
   const cell=(index:number,text?:string):HTMLTableCellElement=>{const value=dom.createElement("td"),metadata=composedSchemaTableCellMetadata[index]!;value.dataset.schemaTableCell=metadata.key;value.dataset.schemaTableLabel=metadata.label;if(text!==undefined)value.textContent=text;return value;};
   for(const [index,{label}] of composedSchemaTableColumns.entries()){const heading=Object.assign(dom.createElement("th"),{textContent:label});if(index===0){heading.setAttribute("aria-label","Property editor");applySchemaTablePropertyEditorAllocation(heading);}headRow.append(heading);}

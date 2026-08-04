@@ -2,7 +2,7 @@ import { composedSchemaRowOwnershipInput } from "./data-layer-composed-schema-ow
 import { renderFocusedPropertyMenu } from "./data-layer-focused-schema-property-menu.js";
 import { focusedOwnershipActionTarget, focusedSectionOwnershipActions, focusedPropertyProvenanceSummary, focusedPropertySectionLabels, gateFocusedOwnershipSection } from "./data-layer-focused-schema-property-ui.js";
 import { renderComposedFocusedSection } from "./data-layer-composed-schema-workspace-focused-sections.js";
-import { applySchemaTablePathAllocation, applySchemaTablePropertyEditorAllocation, bindSchemaTableQuickEdit, clearSchemaTableOverlay, mountSchemaTableOverlay, schemaTableAllowedValues } from "./data-layer-schema-table.js";
+import { applySchemaTablePathAllocation, applySchemaTablePropertyEditorAllocation, bindSchemaTableQuickEdit, clearSchemaTableOverlay, ensureSchemaTablePropertyEditorContainmentStyle, mountSchemaTableOverlay, schemaTableAllowedValues } from "./data-layer-schema-table.js";
 const button = (dom, text, run) => { const control = dom.createElement("button"); control.type = "button"; control.textContent = text; control.addEventListener("click", run); return control; };
 function applyPersistedItemOwnership(host, row) {
     const overriddenValues = new Set((row.local.allowedValueProvenance ?? []).filter(({ state }) => state === "overridden").map(({ id }) => id));
@@ -144,6 +144,7 @@ function composedReviewLayer(row, context) {
 }
 export function renderComposedRows(rows, context) {
     clearSchemaTableOverlay(context.overlayHost);
+    ensureSchemaTablePropertyEditorContainmentStyle(context.dom);
     const { dom } = context, table = rows.querySelector(":scope > table") ?? dom.createElement("table"), head = dom.createElement("thead"), headRow = dom.createElement("tr"), body = dom.createElement("tbody");
     let pendingOverlay;
     const cell = (index, text) => { const value = dom.createElement("td"), metadata = composedSchemaTableCellMetadata[index]; value.dataset.schemaTableCell = metadata.key; value.dataset.schemaTableLabel = metadata.label; if (text !== undefined)
