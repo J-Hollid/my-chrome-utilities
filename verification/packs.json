@@ -833,7 +833,8 @@
       "acceptance/src/acceptance/steps/flow_graph.clj"
     ],
     "browserAdapters": [
-      "test/browser-packs/flow-graph.mjs"
+      "test/browser-packs/flow-graph.mjs",
+      "test/browser-packs/flow-graph-corrective-workflow.mjs"
     ]
   },
   {
