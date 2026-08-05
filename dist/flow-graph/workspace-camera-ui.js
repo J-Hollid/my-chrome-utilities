@@ -9,6 +9,26 @@ export function flowPanStartAllowed(start) {
         return start.button === 0;
     return start.blank && (start.button === 0 || start.button === 1);
 }
+export function flowPanClickSuppression(schedule = (callback) => { setTimeout(callback, 0); }) {
+    let pending = false;
+    let generation = 0;
+    return {
+        moved() { pending = true; generation += 1; },
+        finished() {
+            const completed = generation;
+            schedule(() => { if (generation === completed)
+                pending = false; });
+        },
+        canceled() { pending = false; generation += 1; },
+        consume() {
+            if (!pending)
+                return false;
+            pending = false;
+            generation += 1;
+            return true;
+        },
+    };
+}
 const viewportSize = (viewport) => ({
     width: Math.max(240, viewport.clientWidth || 960),
     height: Math.max(240, viewport.clientHeight || 600),
@@ -21,7 +41,7 @@ export function installFlowCamera(options) {
     const viewportIndicator = document.createElement("span");
     let spaceHeld = false;
     let drag;
-    let suppressClick = false;
+    const clickSuppression = flowPanClickSuppression();
     const touches = new Map();
     let pinch;
     zoomValue.setAttribute("aria-label", "Flow zoom percentage");
@@ -179,7 +199,7 @@ export function installFlowCamera(options) {
         event.preventDefault();
         event.stopPropagation();
         if (delta.x || delta.y)
-            suppressClick = true;
+            clickSuppression.moved();
         apply(panFlowCamera(drag.camera, delta));
     }, true);
     const finishPointer = (event) => {
@@ -190,20 +210,24 @@ export function installFlowCamera(options) {
             drag = undefined;
             if (viewport.hasPointerCapture(event.pointerId))
                 viewport.releasePointerCapture(event.pointerId);
-            queueMicrotask(() => { suppressClick = false; });
+            if (event.type === "pointercancel")
+                clickSuppression.canceled();
+            else
+                clickSuppression.finished();
         }
         if (touches.size < 2)
             pinch = undefined;
     };
     viewport.addEventListener("pointerup", finishPointer, true);
     viewport.addEventListener("pointercancel", finishPointer, true);
-    viewport.addEventListener("click", (event) => {
-        if (!suppressClick)
+    const suppressCompletedDragActivation = (event) => {
+        if (!clickSuppression.consume())
             return;
-        suppressClick = false;
         event.preventDefault();
         event.stopPropagation();
-    }, true);
+    };
+    viewport.addEventListener("click", suppressCompletedDragActivation, true);
+    viewport.addEventListener("auxclick", suppressCompletedDragActivation, true);
     viewport.addEventListener("wheel", (event) => {
         if (!event.ctrlKey && !event.metaKey)
             return;

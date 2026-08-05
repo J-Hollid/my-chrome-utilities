@@ -46,6 +46,11 @@
 (def runtime-evidence-keys
   (set (map #(keyword (format "runtime%03d" %)) (range 1 28))))
 (def required-evidence-keys (conj runtime-evidence-keys :installedBoundary))
+(def flow001-examples
+  {["360" "800" "hidden"] :narrow-navigation-hidden
+   ["360" "800" "visible"] :narrow-navigation-visible
+   ["1440" "900" "hidden"] :wide-navigation-hidden
+   ["1440" "900" "visible"] :wide-navigation-visible})
 (def flow005-examples
   {[:model ["Cart" "button_click" "Continue clicked" "chooses button_click from Add by pointer"]] :pointer-activation
    [:model ["Shipping" "add_shipping_info" "Form submitted" "drags add_shipping_info from Add onto Shipping"]] :pointer-drop
@@ -78,6 +83,28 @@
 (def flow026-examples
   {["Generic checkout page" "4" "Customer details" "Payment" "Summary" "Reusable commerce page"]
    :named-page-instances})
+(def flow027-examples
+  {["the main workspace" "primary-drags from unoccupied canvas" "120" "80"] :main-primary-blank
+   ["Focus Canvas" "primary-drags from unoccupied canvas" "-90" "-60"] :focus-primary-blank
+   ["the main workspace" "holds Space and primary-drags from a graph item" "110" "-70"] :main-space-item
+   ["Focus Canvas" "holds Space and primary-drags from a graph item" "-100" "75"] :focus-space-item
+   ["the main workspace" "middle-button-drags from unoccupied canvas" "95" "65"] :main-middle-blank
+   ["Focus Canvas" "middle-button-drags from unoccupied canvas" "-85" "-55"] :focus-middle-blank
+   ["the main workspace" "uses one-finger touch pan" "105" "-65"] :main-touch
+   ["Focus Canvas" "uses one-finger touch pan" "-95" "70"] :focus-touch
+   ["the main workspace" "uses the labelled keyboard pan command" "80" "60"] :main-keyboard
+   ["Focus Canvas" "uses the labelled keyboard pan command" "-80" "-60"] :focus-keyboard})
+(def runtime027-examples
+  {["the main workspace" "sends primary-pointer drag from empty canvas" "120" "80"] :main-primary-blank
+   ["Focus Canvas" "sends primary-pointer drag from empty canvas" "-90" "-60"] :focus-primary-blank
+   ["the main workspace" "sends Space plus primary-pointer drag from a Page card" "110" "-70"] :main-space-item
+   ["Focus Canvas" "sends Space plus primary-pointer drag from a Page card" "-100" "75"] :focus-space-item
+   ["the main workspace" "sends auxiliary-pointer drag from empty canvas" "95" "65"] :main-middle-blank
+   ["Focus Canvas" "sends auxiliary-pointer drag from empty canvas" "-85" "-55"] :focus-middle-blank
+   ["the main workspace" "sends one-contact touch pan" "105" "-65"] :main-touch
+   ["Focus Canvas" "sends one-contact touch pan" "-95" "70"] :focus-touch
+   ["the main workspace" "activates the labelled keyboard pan command" "80" "60"] :main-keyboard
+   ["Focus Canvas" "activates the labelled keyboard pan command" "-80" "-60"] :focus-keyboard})
 (defn- exact-example-key [example columns discriminators examples message]
   (let [row (mapv #(support/example-value example %) columns)]
     (when (some #(support/example-value example %) discriminators)
@@ -89,6 +116,10 @@
     (when (support/example-value example "insertion")
       (support/assert! (contains? flow005-examples key) "Unknown Flow 005 Event insertion example." {:mode mode :row row})
       (get flow005-examples key))))
+(defn flow001-example-key [mode example]
+  (when (support/example-value example "navigation")
+    (support/assert! (contains? #{:model :runtime} mode) "Unknown Flow 001 evidence mode." {:mode mode})
+    (exact-example-key example ["width" "height" "navigation"] ["navigation"] flow001-examples "Unknown Flow 001 viewport example.")))
 (defn runtime009-example-key [example]
   (when (and (support/example-value example "source")
              (support/example-value example "source_port")
@@ -109,13 +140,19 @@
    ["instance_count"]
    flow026-examples
    "Unknown Flow 026 Page-instance naming example."))
+(defn runtime027-example-key [mode example]
+  (when (support/example-value example "pan_gesture")
+    (support/assert! (contains? #{:model :runtime} mode) "Unknown runtime027 evidence mode." {:mode mode})
+    (exact-example-key example ["workspace_mode" "pan_gesture" "horizontal_distance" "vertical_distance"] ["pan_gesture"] (if (= mode :model) flow027-examples runtime027-examples) "Unknown runtime027 pan example.")))
 (defn validate-example! [mode example]
+  (flow001-example-key mode example)
   (flow005-example-key mode example)
   (runtime009-example-key example)
   (runtime010-example-key example)
   (runtime023-example-key example)
   (runtime024-example-key example)
   (flow026-example-key example)
+  (runtime027-example-key mode example)
   example)
 (defn all-true? [values]
   (boolean (and (map? values) (seq values) (every? true? (vals values)))))

@@ -71,6 +71,17 @@
   (is (thrown? clojure.lang.ExceptionInfo (flow-graph/flow005-example-key :model {"page" "Shipping" "event" "add_shipping_info" "trigger" "Wrong trigger" "insertion" "drags add_shipping_info onto the visible canvas Shipping frame"})))
   (is (thrown? clojure.lang.ExceptionInfo (flow-graph/flow005-example-key :model {"page" "Cart" "event" "page_view" "trigger" "Initial load" "insertion" "activate page_view from the Events catalog by pointer"}))))
 
+(deftest flow001-examples-require-exact-mode-specific-values
+  (is (= :narrow-navigation-hidden (flow-graph/flow001-example-key :model {"width" "360" "height" "800" "navigation" "hidden"})))
+  (is (= :wide-navigation-visible (flow-graph/flow001-example-key :runtime {"width" "1440" "height" "900" "navigation" "visible"})))
+  (is (thrown? clojure.lang.ExceptionInfo (flow-graph/flow001-example-key :runtime {"width" "360" "height" "900" "navigation" "hidden"}))))
+
+(deftest runtime027-examples-have-distinct-evidence-keys
+  (is (= :main-primary-blank (flow-graph/runtime027-example-key :model {"workspace_mode" "the main workspace" "pan_gesture" "primary-drags from unoccupied canvas" "horizontal_distance" "120" "vertical_distance" "80"})))
+  (is (= :focus-keyboard (flow-graph/runtime027-example-key :runtime {"workspace_mode" "Focus Canvas" "pan_gesture" "activates the labelled keyboard pan command" "horizontal_distance" "-80" "vertical_distance" "-60"})))
+  (is (thrown? clojure.lang.ExceptionInfo (flow-graph/runtime027-example-key :model {"workspace_mode" "the main workspace" "pan_gesture" "sends primary-pointer drag from empty canvas" "horizontal_distance" "120" "vertical_distance" "80"})))
+  (is (thrown? clojure.lang.ExceptionInfo (flow-graph/runtime027-example-key :runtime {"workspace_mode" "Focus Canvas" "pan_gesture" "activates the labelled keyboard pan command" "horizontal_distance" "-80" "vertical_distance" "60"}))))
+
 (deftest runtime009-examples-have-distinct-evidence-keys
   (is (= :pageContextExpectedNext (flow-graph/runtime009-example-key {"source" "Customer details" "source_port" "right" "target" "Payment" "target_port" "left" "kind" "expected_next"})))
   (is (= :pageToEventAlternative (flow-graph/runtime009-example-key {"source" "Customer details" "source_port" "top" "target" "ID verification" "target_port" "bottom" "kind" "alternative"})))

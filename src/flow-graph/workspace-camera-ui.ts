@@ -32,6 +32,25 @@ export function flowPanStartAllowed(start: FlowPanStart): boolean {
   return start.blank && (start.button === 0 || start.button === 1);
 }
 
+export function flowPanClickSuppression(schedule: (callback: () => void) => void = (callback) => { setTimeout(callback, 0); }) {
+  let pending = false;
+  let generation = 0;
+  return {
+    moved(): void { pending = true; generation += 1; },
+    finished(): void {
+      const completed = generation;
+      schedule(() => { if (generation === completed) pending = false; });
+    },
+    canceled(): void { pending = false; generation += 1; },
+    consume(): boolean {
+      if (!pending) return false;
+      pending = false;
+      generation += 1;
+      return true;
+    },
+  };
+}
+
 export interface FlowCameraUi {
   controls: HTMLElement[];
   minimap: HTMLElement;
@@ -54,7 +73,7 @@ export function installFlowCamera(options: CameraOptions): FlowCameraUi {
   const viewportIndicator = document.createElement("span");
   let spaceHeld = false;
   let drag: { pointerId: number; client: FlowPoint; camera: FlowCamera } | undefined;
-  let suppressClick = false;
+  const clickSuppression = flowPanClickSuppression();
   const touches = new Map<number, FlowPoint>();
   let pinch: { distance: number; camera: FlowCamera; center: FlowPoint } | undefined;
 
@@ -202,7 +221,7 @@ export function installFlowCamera(options: CameraOptions): FlowCameraUi {
     const delta = { x: event.clientX - drag.client.x, y: event.clientY - drag.client.y };
     event.preventDefault();
     event.stopPropagation();
-    if (delta.x || delta.y) suppressClick = true;
+    if (delta.x || delta.y) clickSuppression.moved();
     apply(panFlowCamera(drag.camera, delta));
   }, true);
   const finishPointer = (event: PointerEvent): void => {
@@ -212,18 +231,20 @@ export function installFlowCamera(options: CameraOptions): FlowCameraUi {
       event.stopPropagation();
       drag = undefined;
       if (viewport.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
-      queueMicrotask(() => { suppressClick = false; });
+      if (event.type === "pointercancel") clickSuppression.canceled();
+      else clickSuppression.finished();
     }
     if (touches.size < 2) pinch = undefined;
   };
   viewport.addEventListener("pointerup", finishPointer, true);
   viewport.addEventListener("pointercancel", finishPointer, true);
-  viewport.addEventListener("click", (event) => {
-    if (!suppressClick) return;
-    suppressClick = false;
+  const suppressCompletedDragActivation = (event: Event): void => {
+    if (!clickSuppression.consume()) return;
     event.preventDefault();
     event.stopPropagation();
-  }, true);
+  };
+  viewport.addEventListener("click", suppressCompletedDragActivation, true);
+  viewport.addEventListener("auxclick", suppressCompletedDragActivation, true);
   viewport.addEventListener("wheel", (event) => {
     if (!event.ctrlKey && !event.metaKey) return;
     event.preventDefault();

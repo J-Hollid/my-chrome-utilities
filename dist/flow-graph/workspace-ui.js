@@ -118,6 +118,18 @@ export function upgradeFlowWorkspace(root) {
         result.setAttribute("aria-expanded", String(view.surface === kind));
         return result;
     };
+    const projectNavigation = document.querySelector("#project-workspace > nav");
+    const applyNavigationVisibility = () => { if (projectNavigation)
+        projectNavigation.hidden = !view.navigationVisible; };
+    applyNavigationVisibility();
+    const navigationToggle = flowControl(view.navigationVisible ? "Hide navigation" : "Show navigation", () => {
+        saveView({ ...view, navigationVisible: !view.navigationVisible });
+        applyNavigationVisibility();
+        navigationToggle.textContent = view.navigationVisible ? "Hide navigation" : "Show navigation";
+        navigationToggle.setAttribute("aria-expanded", String(view.navigationVisible));
+    });
+    navigationToggle.setAttribute("aria-controls", "project-tree");
+    navigationToggle.setAttribute("aria-expanded", String(view.navigationVisible));
     const add = surfaceButton("Add", "add"), outlineButton = surfaceButton("Outline", "outline"), details = surfaceButton("Details", "details"), tidy = surfaceButton("Tidy", "tidy");
     canvas.setAttribute("tabindex", "0");
     const skip = flowControl("Skip to canvas", () => canvas.focus({ preventScroll: true }));
@@ -130,13 +142,15 @@ export function upgradeFlowWorkspace(root) {
         if (!view.focusCanvas)
             restoreFlowInvoker(projectId, flowId);
     });
+    document.body.classList.toggle("flow-focus-canvas", view.focusCanvas);
+    focusCanvas.textContent = view.focusCanvas ? "Exit Focus Canvas" : "Focus Canvas";
     const minimapToggle = flowControl("Minimap", () => {
         saveView({ ...view, minimap: !view.minimap });
         cameraUi.setMinimapVisible(view.minimap);
         minimapToggle.setAttribute("aria-pressed", String(view.minimap));
     });
     minimapToggle.setAttribute("aria-pressed", String(view.minimap));
-    toolbar.append(skip, add, outlineButton, details, tidy, focusCanvas, ...cameraUi.controls, minimapToggle);
+    toolbar.append(skip, navigationToggle, add, outlineButton, details, tidy, focusCanvas, ...cameraUi.controls, minimapToggle);
     decorateCompactFlowCards(canvas, duplicateFrames, outline);
     if (actions?.getAttribute("aria-label")?.includes("Page instance")) {
         actions.classList.add("flow-contextual-toolbar");

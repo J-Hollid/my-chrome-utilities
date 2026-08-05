@@ -19,8 +19,49 @@ body.twatility-studio {
 /* Canvas-first Flow workspace R02. */
 .twatility-studio #workspace-pane:has(.documentary-flow[data-canvas-first-r02="true"]) {
   position: relative;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  min-block-size: 0;
   overflow: hidden;
   padding: 0;
+}
+.twatility-studio:has(.documentary-flow[data-canvas-first-r02="true"]) {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  block-size: 100dvh;
+  overflow: hidden;
+}
+.twatility-studio #project-workspace:not([hidden]):has(.documentary-flow[data-canvas-first-r02="true"]) {
+  block-size: 100% !important;
+  min-block-size: 0;
+  overflow: hidden;
+}
+.twatility-studio #workspace-pane:has(.documentary-flow[data-canvas-first-r02="true"]) > .sticky-tools {
+  position: relative;
+  inset: auto;
+  z-index: 2;
+  margin-inline: 0;
+  gap: 0.25rem;
+  padding: 0.3rem;
+}
+.twatility-studio #workspace-pane:has(.documentary-flow[data-canvas-first-r02="true"]) > .sticky-tools > :is(.action-description, label) {
+  display: none;
+}
+.twatility-studio #workspace-pane:has(.documentary-flow[data-canvas-first-r02="true"]) > .sticky-tools .actions {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+.twatility-studio #workspace-pane:has(.documentary-flow[data-canvas-first-r02="true"]) > .sticky-tools .actions > * {
+  flex: 0 0 auto;
+}
+.twatility-studio #workspace-pane:has(.documentary-flow[data-canvas-first-r02="true"]) > #workspace-content {
+  position: relative;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  min-inline-size: 0;
+  min-block-size: 0;
+  overflow: hidden;
 }
 .twatility-studio .documentary-flow[data-canvas-first-r02="true"] {
   position: absolute;
@@ -225,6 +266,24 @@ body.flow-focus-canvas .documentary-flow[data-canvas-first-r02="true"] .flow-wor
   z-index: 8;
 }
 @media (max-width: 760px) {
+  .twatility-studio #project-workspace:not([hidden]):has(.documentary-flow[data-canvas-first-r02="true"]) {
+    display: flex;
+    block-size: 100%;
+    overflow: hidden;
+  }
+  .twatility-studio #project-workspace:has(.documentary-flow[data-canvas-first-r02="true"]) > nav,
+  .twatility-studio #project-workspace:has(.documentary-flow[data-canvas-first-r02="true"]) > #project-inspector {
+    flex: 0 1 20dvh;
+    max-block-size: 20dvh;
+    overflow: auto;
+  }
+  .twatility-studio #workspace-pane:has(.documentary-flow[data-canvas-first-r02="true"]) {
+    flex: 1 1 auto;
+    block-size: auto;
+    min-block-size: 0;
+    overflow: hidden;
+    padding: 0;
+  }
   .twatility-studio .flow-workspace-toolbar { flex-wrap: nowrap; overflow-x: auto; }
   .twatility-studio .flow-workspace-toolbar button { flex: 0 0 auto; }
   .twatility-studio .flow-workspace-surface {
