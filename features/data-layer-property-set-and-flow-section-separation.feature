@@ -141,3 +141,22 @@ Feature: Data layer Property Set and Flow Section separation
       | viewport width |
       | 360            |
       | 1440           |
+
+  # Data layer Property Set and Flow Section separation 012
+  Scenario Outline: Data layer Property Set and Flow Section separation 012
+    Given saved legacy Cart applies Checkout base then Retail commerce
+    And Checkout base stores unconditional applicability as <legacy representation>
+    And Retail commerce stores valid applicability Retail customers
+    When the updated extension opens the project and performs the verified separation upgrade
+    Then the repository becomes available without asking the operator to repair Cart
+    And Cart applies Checkout base unconditionally before Retail commerce with Retail customers
+    And no blank Applicability Set reference is stored on the Checkout base application
+    And application order, valid applicability, effective schema, and every pre-existing project identity remain unchanged
+    And the verified migration backup retains the exact legacy source representation
+    When the updated extension opens the project again
+    Then the separated project opens without another migration or application identity change
+
+    Examples:
+      | legacy representation         |
+      | no applicability field        |
+      | an empty applicability string |

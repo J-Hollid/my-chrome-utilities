@@ -72,6 +72,16 @@ const legacyState=()=>({
   draft:{id:"draft:shop",status:"Saved",updatedAt:"2026-08-02T00:00:00.000Z"},history:{undo:[],redo:[]},
 });
 
+const legacyCompiledCartSchema=(project,observation)=>{
+  const page=project.collections.pages.find(({id})=>id==="page:cart"),groups=new Map(project.collections.pageGroups.map((group)=>[group.id,group])),selectedGroups=page.pageGroupIds.map((groupId)=>groups.get(groupId)),sets=new Map(project.collections.applicabilitySets.map((set)=>[set.id,set])),matches=(setId)=>{if(!setId)return true;const condition=sets.get(setId)?.condition;return condition?.kind==="predicate"&&observation[condition.field]===condition.value;},references=selectedGroups.flatMap((group)=>[group.profileId,...(group.profileIds??[])].filter(Boolean).map((profileId)=>({profileId,route:`${group.name} → ${page.name}`}))),fallback=references.length?references:project.collections.profiles.length===1?[{profileId:project.collections.profiles[0].id,route:page.name}]:[],contributors=[...new Map(fallback.map(({profileId,route})=>{const profile=project.collections.profiles.find(({id})=>id===profileId);return[profileId,{id:profile.id,name:profile.name,scope:"Shared Profile",constraints:structuredClone(profile.schemaConstraints??profile.requirements??[]),active:true,inheritanceRoutes:[`${profile.name} → ${route}`]}];})).values()];
+  contributors.push(...selectedGroups.map((group)=>({id:group.id,name:group.name,scope:"Property Set",constraints:structuredClone(group.schemaConstraints??[]),active:matches(group.applicabilitySetId)})));
+  contributors.push({id:page.id,name:page.name,scope:"Page",constraints:structuredClone(page.localSchemaContributions??[]),active:true});
+  return compileLayeredSchema(contributors,{eventId:"event:view",eventRole:"interaction"});
+};
+const stableIdentityLocations=(project,{legacy=false}={})=>{
+  const identities=[],visit=(value,path=[])=>{if(Array.isArray(value)){value.forEach((entry,index)=>visit(entry,[...path,index]));return;}if(!value||typeof value!=="object")return;if(!legacy&&(path.includes("propertySetApplications")||path.includes("sections")))return;for(const[key,nested]of Object.entries(value)){const next=[...path,key],normalized=next.map((part)=>part==="pageGroups"?"propertySets":part);if(key==="id"&&typeof nested==="string")identities.push([normalized.join("/"),nested]);visit(nested,next);}};visit(project);return identities.sort(([left],[right])=>left.localeCompare(right));
+};
+
 {
   const testLock=new URL("../tmp/.test-dist-artifact.lock/",import.meta.url),order=[],releaseFirst=await acquireDistArtifactLock(testLock);order.push("first acquired");let secondAcquired=false;const second=acquireDistArtifactLock(testLock).then(async(release)=>{secondAcquired=true;order.push("second acquired");await release();});await new Promise((resolve)=>setTimeout(resolve,30));assert.equal(secondAcquired,false,"a second build or acceptance session waits while the completed dist artifact is in use");await releaseFirst();await second;assert.deepEqual(order,["first acquired","second acquired"],"dist artifact consumers resume in acquisition order");
   const staleLock=new URL("../tmp/.test-dist-artifact-stale.lock/",import.meta.url);await import("node:fs/promises").then(async({mkdir,rm,writeFile})=>{await rm(staleLock,{recursive:true,force:true});await mkdir(staleLock,{recursive:true});await writeFile(new URL("owner.json",staleLock),JSON.stringify({pid:999999999,startTime:"dead",token:"stale"}));});let active=0,maximumActive=0;await Promise.all(Array.from({length:8},async()=>{const release=await acquireDistArtifactLock(staleLock);active+=1;maximumActive=Math.max(maximumActive,active);await new Promise((resolve)=>setTimeout(resolve,10));active-=1;await release();}));assert.equal(maximumActive,1,"concurrent stale reclaimers never delete a newly acquired lock");
@@ -87,6 +97,30 @@ const legacyState=()=>({
   assert.throws(()=>verifyPropertySetFlowSectionUpgrade(legacy.project,corrupt(project=>{project.documentationFlowGraphs["flow:checkout"].occurrences[0].position={x:999,y:999};})),/geometry/,"verification rejects changed occurrence geometry");
   assert.throws(()=>verifyPropertySetFlowSectionUpgrade(legacy.project,corrupt(project=>{const graph=project.documentationFlowGraphs["flow:checkout"],alias=graph.sections[0].id;graph.sections[1].id=alias;graph.pageFrames.filter(({sectionId})=>sectionId!==alias).forEach(frame=>frame.sectionId=alias);})),/identities/,"verification rejects aliased per-Flow Section identities");
   assert.throws(()=>verifyPropertySetFlowSectionUpgrade(legacy.project,corrupt(project=>{const graph=project.documentationFlowGraphs["flow:checkout"],prior=graph.sections[0].id;graph.sections[0].id="group:checkout";graph.pageFrames.filter(({sectionId})=>sectionId===prior).forEach(frame=>frame.sectionId="group:checkout");})),/identities/,"verification rejects a Section identity reused from the legacy project");
+}
+
+for(const legacyApplicability of ["missing","empty"]){
+  const legacy=legacyState(),[checkout,retail]=legacy.project.collections.pageGroups;
+  delete checkout.applicabilitySetId;
+  if(legacyApplicability==="empty")checkout.applicabilitySetId="";
+  retail.applicabilitySetId="set:retail";
+  const upgraded=upgradePageGroupsToPropertySets(legacy,id),applications=upgraded.project.collections.pages[0].propertySetApplications;
+  assert.deepEqual(applications.map(({propertySetId,applicabilitySetId})=>({propertySetId,applicabilitySetId})),[
+    {propertySetId:"group:checkout",applicabilitySetId:undefined},
+    {propertySetId:"group:retail",applicabilitySetId:"set:retail"},
+  ],`${legacyApplicability} legacy applicability upgrades to unconditional without disturbing its valid neighbor`);
+  assert.doesNotThrow(()=>verifyPropertySetFlowSectionUpgrade(legacy.project,upgraded.project),`${legacyApplicability} optional applicability has the same normalized migration meaning`);
+  const expectedCompiled=legacyCompiledCartSchema(legacy.project,{segment:"retail"}),upgradedCart=upgraded.project.collections.pages.find(({id})=>id==="page:cart"),upgradedPath=layeredContributorPath(upgraded,upgradedCart,"Page"),actualCompiled=compileLayeredSchema(layeredContributorsForPath(upgraded,upgradedPath,{segment:"retail"}),{eventId:"event:view",eventRole:"interaction"});
+  assert.deepEqual(actualCompiled,expectedCompiled,`${legacyApplicability} upgrade preserves the independently compiled pre-upgrade Cart schema`);
+  assert.deepEqual(stableIdentityLocations(upgraded.project),stableIdentityLocations(legacy.project,{legacy:true}),`${legacyApplicability} upgrade preserves every pre-existing identity at its exact ordered location`);
+  const sourceBytes=JSON.stringify(legacy.project),repository=createMemoryDurableProjectRepository({now:()=>"2026-08-05T12:00:00.000Z",token:()=>`draft:${legacyApplicability}:${++sequence}`});
+  await repository.putProjectMetadataOnly(legacy,{draftToken:`draft:legacy:${legacyApplicability}`,draftSequence:4});
+  const first=await repository.loadProject(legacy.project.id),firstRecovery=await repository.exportRepositoryRecoveryBundle(),receiptKey=`property-set-flow-sections-v1:${legacy.project.id}`,firstReceipt=firstRecovery.migrationReceipts.find(({key})=>key===receiptKey),backup=firstRecovery.migrationBackups.find(({key})=>key===receiptKey),firstApplicationBytes=JSON.stringify(first.state.project.collections.pages[0].propertySetApplications);
+  assert.equal(JSON.stringify(backup.value.project),sourceBytes,`${legacyApplicability} migration backup retains the exact legacy project representation`);
+  assert.equal(firstReceipt.value.verified,true,`${legacyApplicability} migration completes with a verified durable receipt`);
+  const second=await repository.loadProject(legacy.project.id),secondRecovery=await repository.exportRepositoryRecoveryBundle(),secondReceipt=secondRecovery.migrationReceipts.find(({key})=>key===receiptKey);
+  assert.equal(JSON.stringify(second.state.project.collections.pages[0].propertySetApplications),firstApplicationBytes,`${legacyApplicability} migration keeps application identities stable on another load`);
+  assert.equal(JSON.stringify(secondReceipt),JSON.stringify(firstReceipt),`${legacyApplicability} migration receipt is byte-identical on another load`);
 }
 
 {

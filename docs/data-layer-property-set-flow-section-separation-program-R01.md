@@ -96,6 +96,13 @@ Import accepts the legacy representation. Newly saved and exported projects use
 Property Sets, Property Set applications, Flow Sections, and Section references
 without maintaining a second Page Group model.
 
+Older Page Groups may represent unconditional applicability with no field or an
+empty string. The upgrade compares their normalized optional meaning: either form
+becomes an application with no Applicability Set reference. A neighboring valid
+reference remains attached to its application in the original membership order.
+Empty-value normalization cannot make repository startup fail, request repair, or
+discard the exact source bytes retained by the verified migration backup.
+
 ## Acceptance mapping
 
 | Risk | Acceptance scenario | Required result |
@@ -108,6 +115,7 @@ without maintaining a second Page Group model.
 | Canvas grouping still changes schema | Separation 007 and 008 | Section placement accepts any Page and every visual operation is schema-neutral |
 | Container removal silently deletes work | Separation 009 | The default preserves Page frames and destructive removal is a separate reviewed action |
 | Existing projects lose identity or meaning | Separation 010 | Verified migration preserves schemas, topology, references, and effective results |
+| Empty legacy applicability makes the repository unavailable | Separation 012 | Missing and empty values normalize to an unconditional application while order, valid references, backup bytes, and idempotence are preserved |
 | The new controls are not operable in constrained layouts | Separation 011 | Keyboard and pointer operation remain contained at desktop and narrow widths |
 
 ## Scope
