@@ -1,4 +1,5 @@
 import { itemIdentity } from "./workspace-dom.js";
+import { flowOutlineProjection } from "./workspace-outline-model.js";
 function canvasSelector(row) {
     if (row.dataset.flowSectionId)
         return `[data-section-dropzone="${CSS.escape(row.dataset.flowSectionId)}"]`;
@@ -21,35 +22,44 @@ export function prepareFlowOutline(options) {
     const occurrences = rows.filter(({ dataset }) => dataset.occurrenceId);
     const relationships = rows.filter(({ dataset }) => dataset.relationshipId);
     const tree = document.createElement("ol");
-    const pageSection = (row) => {
-        const id = row.dataset.pageFrameId;
-        return id ? canvas.querySelector(`[data-page-frame-id="${CSS.escape(id)}"]`)?.dataset.flowSectionId : undefined;
-    };
-    const occurrenceFrame = (row) => {
-        const id = row.dataset.occurrenceId;
-        return id ? canvas.querySelector(`[data-occurrence-id="${CSS.escape(id)}"]`)?.dataset.containingPageFrameId : undefined;
-    };
-    const appendFrame = (target, frame) => {
+    const projection = flowOutlineProjection({
+        sections: sections.map((row) => ({ id: row.dataset.flowSectionId })),
+        frames: frames.map((row) => ({ id: row.dataset.pageFrameId, ...(row.dataset.flowSectionId ? { sectionId: row.dataset.flowSectionId } : {}) })),
+        occurrences: occurrences.map((row) => ({ id: row.dataset.occurrenceId, ...(row.dataset.containingPageFrameId ? { pageFrameId: row.dataset.containingPageFrameId } : {}) })),
+        relationships: relationships.map((row) => ({ id: row.dataset.relationshipId })),
+    });
+    const rowByFrameId = new Map(frames.map((row) => [row.dataset.pageFrameId, row]));
+    const rowByOccurrenceId = new Map(occurrences.map((row) => [row.dataset.occurrenceId, row]));
+    const appendFrame = (target, frameId, occurrenceIds) => {
+        const frame = rowByFrameId.get(frameId);
+        if (!frame)
+            return;
         const children = document.createElement("ol");
-        const frameId = frame.dataset.pageFrameId;
-        for (const occurrence of occurrences.filter((row) => occurrenceFrame(row) === frameId))
-            children.append(occurrence);
+        for (const occurrenceId of occurrenceIds) {
+            const occurrence = rowByOccurrenceId.get(occurrenceId);
+            if (occurrence)
+                children.append(occurrence);
+        }
         if (children.children.length)
             frame.append(children);
         target.append(frame);
     };
-    for (const section of sections) {
+    for (const projectedSection of projection.sections) {
+        const section = sections.find((row) => row.dataset.flowSectionId === projectedSection.id);
+        if (!section)
+            continue;
         const nested = document.createElement("ol");
-        const sectionId = section.dataset.flowSectionId;
-        for (const frame of frames.filter((row) => pageSection(row) === sectionId))
-            appendFrame(nested, frame);
+        for (const frame of projectedSection.frames)
+            appendFrame(nested, frame.id, frame.occurrenceIds);
         section.append(nested);
         tree.append(section);
     }
     const outside = document.createElement("li"), outsideHeading = document.createElement("span"), outsideRows = document.createElement("ol");
     outsideHeading.textContent = "Outside Sections";
-    for (const frame of frames.filter((row) => !pageSection(row)))
-        appendFrame(outsideRows, frame);
+    for (const frameId of projection.outsideFrameIds) {
+        const occurrenceIds = occurrences.filter((row) => row.dataset.containingPageFrameId === frameId).map((row) => row.dataset.occurrenceId);
+        appendFrame(outsideRows, frameId, occurrenceIds);
+    }
     outside.append(outsideHeading, outsideRows);
     tree.append(outside);
     const relationshipGroup = document.createElement("li"), relationshipHeading = document.createElement("span"), relationshipRows = document.createElement("ol");
@@ -75,14 +85,15 @@ export function prepareFlowOutline(options) {
             const item = document.createElement("li"), activate = document.createElement("button");
             activate.type = "button";
             activate.textContent = row.textContent?.trim() ?? itemIdentity(row) ?? "Flow item";
+            for (const key of ["flowSectionId", "pageFrameId", "occurrenceId", "relationshipId"]) {
+                if (row.dataset[key])
+                    activate.dataset[key] = row.dataset[key];
+            }
             activate.addEventListener("click", () => {
                 row.querySelector("button")?.click();
                 setTimeout(() => {
                     const liveCanvas = document.querySelector('[aria-label="Interactive directional Flow canvas"]');
-                    const matched = liveCanvas?.querySelector(selector);
-                    const target = matched?.dataset.sectionDropzone ? matched.closest("g") ?? matched : matched;
-                    if (target)
-                        options.reveal(target);
+                    liveCanvas?.dispatchEvent(new CustomEvent("flow-reveal-item", { detail: { selector } }));
                 }, 50);
             });
             item.append(activate);

@@ -19,9 +19,12 @@ import {
   transformedFlowBounds,
   zoomFlowCamera,
 } from "../dist/flow-graph/workspace.js";
+import {flowOutlineProjection} from "../dist/flow-graph/workspace-outline-model.js";
+import {sectionBoundsAfterKeyboardInput} from "../dist/flow-graph/workspace-section-geometry.js";
+import {flowSelectionContains,primaryFlowSelection,selectionAfterActivation,selectionAfterRemoval} from "../dist/flow-graph/workspace-selection.js";
 
 const initial=initialFlowWorkspaceView();
-assert.deepEqual(initial,{camera:{x:0,y:0,zoom:1},surface:undefined,minimap:false,focusCanvas:false});
+assert.deepEqual(initial,{camera:{x:0,y:0,zoom:1},cameraInitialized:false,surface:undefined,minimap:false,focusCanvas:false});
 assert.deepEqual(openFlowSurface(initial,"add"),{...initial,surface:"add"});
 assert.deepEqual(openFlowSurface(openFlowSurface(initial,"outline"),"details"),{...initial,surface:"details"},"only one bounded transient surface is open");
 assert.equal(closeFlowSurface(openFlowSurface(initial,"details")).surface,undefined);
@@ -74,5 +77,37 @@ assert.deepEqual(tidyFlowItems([items[2],items[0]],"horizontal",{x:40,y:60,gap:1
   {id:"page:one",position:{x:40,y:60}},
   {id:"page:three",position:{x:220,y:60}},
 ],"Tidy order is stable by current spatial order rather than selection order");
+
+const firstPage={kind:"page-frame",id:"page:first"},secondPage={kind:"page-frame",id:"page:second"};
+let selection=selectionAfterActivation([],firstPage,false);
+selection=selectionAfterActivation(selection,secondPage,true);
+assert.deepEqual(selection,[firstPage,secondPage],"modifier activation retains both stable Page selections");
+assert.equal(primaryFlowSelection(selection),secondPage,"the last activated item owns contextual actions");
+assert.equal(flowSelectionContains(selection,firstPage),true);
+assert.deepEqual(selectionAfterRemoval(selection,"page:second"),[firstPage],"removing one identity preserves the other selection");
+assert.deepEqual(selectionAfterActivation(selection,firstPage,true),[secondPage],"modifier activation toggles an existing identity");
+
+const outlineProjection=flowOutlineProjection({
+  sections:[{id:"section:sales"},{id:"section:checkout"}],
+  frames:[
+    {id:"frame:sales",sectionId:"section:sales"},
+    {id:"frame:checkout",sectionId:"section:checkout"},
+    {id:"frame:outside"},
+  ],
+  occurrences:[
+    {id:"occurrence:checkout",pageFrameId:"frame:checkout"},
+    {id:"occurrence:sales",pageFrameId:"frame:sales"},
+  ],
+  relationships:[{id:"relationship:route"}],
+});
+assert.deepEqual(outlineProjection.sections[0].frames[0].occurrenceIds,["occurrence:sales"]);
+assert.deepEqual(outlineProjection.sections[1].frames[0].occurrenceIds,["occurrence:checkout"],"Outline nesting follows canonical pageFrameId even if canvas frames overlap");
+assert.deepEqual(outlineProjection.outsideFrameIds,["frame:outside"]);
+assert.deepEqual(outlineProjection.relationshipIds,["relationship:route"]);
+
+const sectionBounds={x:100,y:80,width:320,height:220};
+assert.deepEqual(sectionBoundsAfterKeyboardInput(sectionBounds,"ArrowRight",false),{x:120,y:80,width:320,height:220});
+assert.deepEqual(sectionBoundsAfterKeyboardInput(sectionBounds,"ArrowRight",true),{x:100,y:80,width:340,height:220},"Arrow keys on the resize handle resize instead of moving the Section");
+assert.deepEqual(sectionBoundsAfterKeyboardInput({x:0,y:0,width:240,height:140},"ArrowLeft",true),{x:0,y:0,width:240,height:140},"keyboard resize respects the minimum Section size");
 
 console.log("data-layer Flow workspace tests passed");

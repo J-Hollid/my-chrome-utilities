@@ -30,10 +30,12 @@ export function flowWorkspaceView(projectId: string, flowId: string): FlowWorksp
   if (memory) return memory;
   const stored = readStoredView(projectId, flowId);
   const initial = initialFlowWorkspaceView();
+  const camera = stored?.viewport ?? stored?.camera ?? initial.camera;
   const restored = {
     ...initial,
     ...(stored ?? {}),
-    camera: stored?.viewport ?? stored?.camera ?? initial.camera,
+    camera,
+    cameraInitialized: stored?.cameraInitialized ?? Boolean(stored?.viewport ?? stored?.camera),
   };
   viewByWorkspace.set(key, restored);
   return restored;
@@ -47,6 +49,7 @@ export function saveFlowWorkspaceView(projectId: string, flowId: string, view: F
     sessionStorage.setItem(storageKey(projectId, flowId), JSON.stringify({
       ...prior,
       viewport: view.camera,
+      cameraInitialized: view.cameraInitialized,
       minimap: view.minimap,
       surface: view.surface,
       focusCanvas: view.focusCanvas,
@@ -65,4 +68,3 @@ export function restoreFlowInvoker(projectId: string, flowId: string): void {
   invokingFocusByWorkspace.get(key)?.focus({ preventScroll: true });
   invokingFocusByWorkspace.delete(key);
 }
-
