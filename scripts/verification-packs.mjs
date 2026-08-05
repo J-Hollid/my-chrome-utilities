@@ -219,6 +219,25 @@ function validateDependencies(packs, ids) {
   }
 }
 
+function validateImpactBoundaries(packs) {
+  const ids = new Set();
+  for (const pack of packs) {
+    for (const boundary of values(pack, "impactBoundaries")) {
+      if (!boundary || Array.isArray(boundary) ||
+          Object.keys(boundary).sort().join(",") !== "id,prefixes,propagateDependants" ||
+          !/^[a-z0-9][a-z0-9_-]*$/u.test(boundary.id ?? "") || ids.has(boundary.id) ||
+          !Array.isArray(boundary.prefixes) || !boundary.prefixes.length ||
+          boundary.prefixes.some((prefix) => typeof prefix !== "string" || !prefix ||
+            !values(pack, "source").some((owned) =>
+              prefixMatches(owned, prefix) || prefixMatches(prefix, owned))) ||
+          typeof boundary.propagateDependants !== "boolean") {
+        throw new Error(`Use exact owned impact boundaries in pack ${pack.id}`);
+      }
+      ids.add(boundary.id);
+    }
+  }
+}
+
 function validateVerificationInputs(packs, trackedPaths) {
   const tracked = new Set(trackedPaths);
   for (const pack of packs) {
@@ -244,6 +263,74 @@ function validateVerificationInputs(packs, trackedPaths) {
         throw new Error(`Remove self-owned verification input from pack ${pack.id}: ${input}`);
       }
     }
+  }
+}
+
+function validateRuntimeInputs(packs, trackedPaths) {
+  const tracked = new Set(trackedPaths);
+  for (const pack of packs) {
+    const inputs = values(pack, "runtimeInputs");
+    if (new Set(inputs).size !== inputs.length) {
+      throw new Error(`Declare every runtime input once in pack ${pack.id}`);
+    }
+    for (const input of inputs) {
+      if (typeof input !== "string" || !input || path.isAbsolute(input) || input.includes("\\") ||
+          input.includes("\0") || input === "." || input === ".." || input.startsWith("../") ||
+          path.posix.normalize(input) !== input || input === "dist" || input.startsWith("dist/")) {
+        throw new Error(`Use an exact normalized runtime input in pack ${pack.id}`);
+      }
+      if (!tracked.has(input)) {
+        throw new Error(`Correct the missing runtime input in pack ${pack.id}: ${input}`);
+      }
+      if (!ownerOf(packs, input)) throw new Error(`Assign runtime input ${input} to one verification owner`);
+    }
+  }
+}
+
+async function validateVerificationHelpers(packs) {
+  const declarations = new Map();
+  for (const owner of packs) {
+    for (const declaration of values(owner, "verificationHelpers")) {
+      if (!declaration || Array.isArray(declaration) ||
+          Object.keys(declaration).sort().join(",") !== "consumers,path" ||
+          typeof declaration.path !== "string" || !Array.isArray(declaration.consumers) ||
+          !declaration.consumers.length || new Set(declaration.consumers).size !== declaration.consumers.length) {
+        throw new Error(`Use an exact verification helper declaration in pack ${owner.id}`);
+      }
+      if (declarations.has(declaration.path)) {
+        throw new Error(`Declare verification helper once: ${declaration.path}`);
+      }
+      if (ownerOf(packs, declaration.path)?.id !== owner.id) {
+        throw new Error(`Declare verification helper under its owning pack: ${declaration.path}`);
+      }
+      declarations.set(declaration.path, { ownerId:owner.id, consumers:[...declaration.consumers].sort() });
+    }
+  }
+  const actual = new Map();
+  for (const consumer of packs) {
+    for (const testPath of testPathKeys.flatMap((key) => values(consumer, key))) {
+      const source = await readFile(path.join(repositoryRoot, testPath), "utf8");
+      for (const importedPath of staticallyResolvableModuleImports(source, testPath)) {
+        const helper = importedPath === sharedBrowserHarnessPath || importedPath.startsWith("test/support/")
+          ? importedPath : null;
+        if (!helper) continue;
+        const consumers = actual.get(helper) ?? new Set();
+        consumers.add(consumer.id);
+        actual.set(helper, consumers);
+      }
+    }
+  }
+  for (const [helper, consumers] of actual) {
+    const declaration = declarations.get(helper);
+    if (!declaration) throw new Error(`Declare every imported verification helper consumer: ${helper}`);
+    const actualConsumers = [...consumers].sort();
+    if (actualConsumers.join("\0") !== declaration.consumers.join("\0")) {
+      throw new Error(`Correct verification helper consumers for ${helper}: ` +
+        `declared ${declaration.consumers.join(", ")}; imported by ${actualConsumers.join(", ")}`);
+    }
+  }
+  for (const helper of declarations.keys()) {
+    if (!actual.has(helper)) throw new Error(`Remove stale verification helper declaration: ${helper}`);
   }
 }
 
@@ -294,6 +381,32 @@ async function validateBrowserAdapterModes(packs) {
       }
       if (mode === "integration" && usesSharedHarness) {
         throw new Error(`Integration browser adapter must not masquerade as a shared adapter: ${adapter}`);
+      }
+    }
+  }
+}
+
+export function validateBrowserPerformanceDeclarations(packs) {
+  for (const pack of packs) {
+    const observations = new Map(values(pack, "browserObservations").map((item) => [item.id, item]));
+    for (const performance of values(pack, "browserAdapterPerformance")) {
+      if (!performance || Array.isArray(performance) || typeof performance.path !== "string" ||
+          !values(pack, "browserAdapters").includes(performance.path) ||
+          !Number.isFinite(performance.singleTargetP90Milliseconds) ||
+          !Number.isFinite(performance.maximumSingleTargetP90Milliseconds)) {
+        throw new Error(`Use an exact browser adapter performance declaration in pack ${pack.id}`);
+      }
+      if (performance.singleTargetP90Milliseconds <= performance.maximumSingleTargetP90Milliseconds) continue;
+      if (!Array.isArray(performance.targetIds) || new Set(performance.targetIds).size < 2 ||
+          typeof performance.sessionBatch !== "string" || !performance.sessionBatch.trim()) {
+        throw new Error(`Split slow browser adapter ${performance.path} into independently selectable targets with a reusable session batch`);
+      }
+      for (const targetId of performance.targetIds) {
+        const observation = observations.get(targetId);
+        if (!observation || observation.path !== performance.path ||
+            observation.sessionBatch !== performance.sessionBatch) {
+          throw new Error(`Map slow browser adapter target ${targetId} to ${performance.path} and batch ${performance.sessionBatch}`);
+        }
       }
     }
   }
@@ -387,6 +500,10 @@ function validateDeclaredTasks(packs) {
           observation.features.some((feature) => !values(pack, "features").includes(feature))) {
         throw new Error(`Map browser observation ${observation.id} to registered features in its pack`);
       }
+      if (observation.sessionBatch !== undefined &&
+          (typeof observation.sessionBatch !== "string" || !observation.sessionBatch.trim())) {
+        throw new Error(`Use a stable reusable session batch for browser observation ${observation.id}`);
+      }
     }
     const checkpointIds = new Set();
     for (const checkpoint of values(pack, "checkpointCommands")) {
@@ -421,8 +538,11 @@ export async function validateVerificationPacks(packs, { inventory } = {}) {
   }
   await validateRegisteredPaths(packs);
   validateDependencies(packs, ids);
+  validateImpactBoundaries(packs);
   validateDeclaredTasks(packs);
   await validateBrowserAdapterModes(packs);
+  validateBrowserPerformanceDeclarations(packs);
+  await validateVerificationHelpers(packs);
 
   const repositoryInventory = { ...await verificationInventory(), ...inventory };
   validatePrefixOwnership(packs, repositoryInventory.source, "source");
@@ -430,6 +550,7 @@ export async function validateVerificationPacks(packs, { inventory } = {}) {
   validateInventoryPaths(packs, repositoryInventory);
   validateTrackedOwnership(packs, repositoryInventory.tracked);
   validateVerificationInputs(packs, repositoryInventory.tracked);
+  validateRuntimeInputs(packs, repositoryInventory.tracked);
   return packs;
 }
 
@@ -462,6 +583,19 @@ function exactVerificationConsumers(packs, path) {
     values(pack, "browserObservations").some((observation) => observation.path === path) ||
     values(pack, "checkpointCommands").some(({ executable, args }) => executable === "node" && args?.[0] === path)
   ).map(({ id }) => id);
+}
+
+function exactRuntimeConsumers(packs, path) {
+  return packs.filter((pack) => values(pack, "runtimeInputs").includes(path)).map(({ id }) => id);
+}
+
+function impactBoundaryFor(pack, changedPath) {
+  const matches = values(pack, "impactBoundaries").filter((boundary) =>
+    boundary.prefixes.some((prefix) => prefixMatches(prefix, changedPath)));
+  if (!matches.length) return null;
+  return matches.sort((left, right) =>
+    Math.max(...right.prefixes.map((prefix) => prefix.length)) -
+    Math.max(...left.prefixes.map((prefix) => prefix.length)))[0];
 }
 
 export function verificationOwner(packs, path) {
@@ -550,13 +684,17 @@ function displayArgument(argument) {
   return /^[A-Za-z0-9_./:=@+-]+$/u.test(argument) ? argument : JSON.stringify(argument);
 }
 
-function commandTask({ key, stage, packId = null, executable, args, target = null, environment = null }) {
+function commandTask({
+  key, stage, packId = null, executable, args, target = null, environment = null,
+  logicalTargetIds = undefined,
+}) {
   const task = { key, stage, packId, executable, args:[...args], target, environment };
+  if (logicalTargetIds) task.logicalTargetIds = [...logicalTargetIds];
   return { ...task, display:[executable, ...args].map(displayArgument).join(" ") };
 }
 
 export function verificationTaskIdentity(task) {
-  return {
+  const identity = {
     key:task.key,
     stage:task.stage,
     packId:task.packId ?? null,
@@ -565,6 +703,8 @@ export function verificationTaskIdentity(task) {
     target:task.target ?? null,
     environment:task.environment ?? null,
   };
+  if (task.logicalTargetIds) identity.logicalTargetIds = [...task.logicalTargetIds];
+  return identity;
 }
 
 function featureTasks(features, packs) {
@@ -603,19 +743,22 @@ function historicalRegistryHasPlanningShape(packs, known) {
   const arrayKeys = [
     ...exactOwnedPathKeys, ...prefixOwnedPathKeys, "globalImpact", "features",
     "browserObservations", "checkpointCommands", "dependencies", "sharedComponents",
-    "verificationInputs", "browserAdapterModes",
+    "verificationInputs", "runtimeInputs", "verificationHelpers", "browserAdapterModes",
+    "browserAdapterPerformance", "impactBoundaries",
   ];
   return Array.isArray(packs) && packs.length > 0 &&
     new Set(packs.map((pack) => pack?.id)).size === packs.length &&
     packs.every((pack) => pack && typeof pack.id === "string" && known.has(pack.id) &&
       arrayKeys.every((key) => pack[key] === undefined || Array.isArray(pack[key])) &&
-      exactOwnedPathKeys.concat(prefixOwnedPathKeys, "globalImpact", "features", "verificationInputs")
+      exactOwnedPathKeys.concat(prefixOwnedPathKeys, "globalImpact", "features", "verificationInputs", "runtimeInputs")
         .every((key) => values(pack, key).every((entry) => typeof entry === "string")) &&
       ["dependencies", "sharedComponents"].every((key) =>
         values(pack, key).every((entry) => typeof entry === "string" && known.has(entry))) &&
       values(pack, "browserAdapterModes").every((entry) => entry && !Array.isArray(entry) &&
         Object.keys(entry).sort().join(",") === "mode,path" && typeof entry.path === "string" &&
         browserAdapterModeNames.has(entry.mode)) &&
+      values(pack, "verificationHelpers").every((entry) => entry && typeof entry.path === "string" &&
+        Array.isArray(entry.consumers)) &&
       values(pack, "browserObservations").every((entry) => entry && typeof entry.path === "string") &&
       values(pack, "checkpointCommands").every((entry) => entry && typeof entry.executable === "string" &&
         Array.isArray(entry.args)));
@@ -626,13 +769,16 @@ export function planVerification(
   {
     packIds = [], changedPaths = [], terminalFull = false, includeProperties = false,
     withDependencies = false, skipBuild = false, shard, changeSet = null,
-    basePacks = undefined, historicalRegistryFallback = false,
+    basePacks = undefined, historicalRegistryFallback = false, browserTargetIds = [],
   } = {},
 ) {
   const known = new Set(packs.map(({ id }) => id));
   validateDependencies(packs, known);
   if (new Set(packIds).size !== packIds.length) throw new Error("Select every explicit verification pack once");
   if (new Set(changedPaths).size !== changedPaths.length) throw new Error("Select every changed path once");
+  if (new Set(browserTargetIds).size !== browserTargetIds.length) {
+    throw new Error("Select every focused browser target once");
+  }
   for (const id of packIds) {
     const pack = packs.find((candidate) => candidate.id === id);
     if (!pack) throw new Error(`Unknown verification pack: ${id}`);
@@ -640,6 +786,9 @@ export function planVerification(
   }
   if (terminalFull && (packIds.length || changedPaths.length || withDependencies)) {
     throw new Error("Use --full without pack, changed-path, or dependency selectors");
+  }
+  if (browserTargetIds.length && (terminalFull || changedPaths.length || packIds.length !== 1)) {
+    throw new Error("Select focused browser targets from one exact pack");
   }
   if (shard && !terminalFull) throw new Error("Use --shard only with --full");
   if (skipBuild && !terminalFull) throw new Error("Use --no-build only for a prepared --full shard");
@@ -671,6 +820,7 @@ export function planVerification(
   const explicit = new Set(packIds);
   let selected = terminalFull ? new Set(known) : new Set(explicit);
   const changedOwners = new Map();
+  const changedBoundaries = new Map();
   const registryChanged = changedPaths.includes("verification/packs.json");
   const historicalPacksCompatible = historicalRegistryHasPlanningShape(basePacks, known);
   const historicalOwnerPaths = !changeSet || !historicalPacksCompatible ? []
@@ -691,13 +841,16 @@ export function planVerification(
 
   const affectedFor = (registry, changedPath) => {
     if (changedPath === "dist" || changedPath.startsWith("dist/")) {
-      return { semantic:[], verificationConsumers:[] };
+      return { semantic:[], exactSemantic:[], verificationConsumers:[], boundary:null };
     }
     const owner = ownerOf(registry, changedPath);
     if (!owner) throw new Error(`Assign every changed path to one verification pack: ${changedPath}`);
+    const boundary = impactBoundaryFor(owner, changedPath);
+    const runtimeConsumers = exactRuntimeConsumers(registry, changedPath);
     const semantic = globalImpact(registry, changedPath)
       ? [owner.id, ...registry.filter(runnable).map(({ id }) => id)]
-      : [owner.id];
+      : [...(boundary && !boundary.propagateDependants ? [] : [owner.id]), ...runtimeConsumers];
+    const exactSemantic = boundary && !boundary.propagateDependants ? [owner.id] : [];
     const verificationConsumers = exactVerificationConsumers(registry, changedPath);
     const unavailable = [...new Set([...semantic, ...verificationConsumers])]
       .filter((id) => !known.has(id));
@@ -706,16 +859,22 @@ export function planVerification(
     }
     return {
       semantic:[...new Set(semantic)],
+      exactSemantic:[...new Set(exactSemantic)],
       verificationConsumers:[...new Set(verificationConsumers)],
+      boundary:boundary?.id ?? null,
     };
   };
   const combinedAffected = (...affected) => ({
     semantic:[...new Set(affected.flatMap((entry) => entry.semantic))],
+    exactSemantic:[...new Set(affected.flatMap((entry) => entry.exactSemantic ?? []))],
     verificationConsumers:[...new Set(affected.flatMap((entry) => entry.verificationConsumers))],
+    boundary:affected.map(({ boundary }) => boundary).find(Boolean) ?? null,
   });
   const applyAffected = (changedPath, affected, registries = [packs]) => {
     const semanticClosure = expandDependantsAcross(registries, affected.semantic);
-    const complete = new Set([...semanticClosure, ...affected.verificationConsumers]);
+    const complete = new Set([
+      ...semanticClosure, ...(affected.exactSemantic ?? []), ...affected.verificationConsumers,
+    ]);
     const orderedClosure = packs.filter((pack) => complete.has(pack.id) && runnable(pack))
       .map(({ id }) => id);
     const omitted = orderedClosure.filter((id) => !explicit.has(id));
@@ -725,11 +884,14 @@ export function planVerification(
     }
     for (const id of orderedClosure) selected.add(id);
     changedOwners.set(changedPath, orderedClosure);
+    if (affected.boundary) changedBoundaries.set(changedPath, affected.boundary);
   };
 
   if (forceAll) {
     for (const changedPath of changedPaths) {
-      applyAffected(changedPath, { semantic:allRunnableIds, verificationConsumers:[] });
+      applyAffected(changedPath, {
+        semantic:allRunnableIds, exactSemantic:[], verificationConsumers:[], boundary:null,
+      });
     }
   } else if (changeSet) {
     for (const entry of changeSet.entries) {
@@ -764,34 +926,54 @@ export function planVerification(
   const preparationTasks = skipBuild ? [] : [commandTask({
     key:"build:dist", stage:"build", executable:"npm", args:["run", "build"],
   })];
-  const unitTasks = executionPacks.flatMap((pack) => values(pack, "unit").map((path) => commandTask({
+  const unitTasks = browserTargetIds.length ? [] : executionPacks.flatMap((pack) => values(pack, "unit").map((path) => commandTask({
     key:`unit:${path}`, stage:"unit", packId:pack.id, executable:"node", args:[path], target:path,
   })));
-  const propertyTasks = (terminalFull || includeProperties)
+  const propertyTasks = !browserTargetIds.length && (terminalFull || includeProperties)
     ? executionPacks.flatMap((pack) => values(pack, "property").map((path) => commandTask({
       key:`property:${path}`, stage:"property", packId:pack.id, executable:"node", args:[path], target:path,
     })))
     : [];
-  const browserTasks = executionPacks.flatMap((pack) => values(pack, "browserAdapters").map((path) => commandTask({
+  const browserTasks = browserTargetIds.length ? [] : executionPacks.flatMap((pack) => values(pack, "browserAdapters").map((path) => commandTask({
     key:`browser:${path}`, stage:"browser", packId:pack.id, executable:"node", args:[path], target:path,
   })));
 
-  const acceptancePacks = executionPacks.filter((pack) => values(pack, "features").length);
+  const acceptancePacks = browserTargetIds.length ? [] : executionPacks.filter((pack) => values(pack, "features").length);
   const features = acceptancePacks.flatMap((pack) => values(pack, "features")).sort();
   const acceptance = featureTasks(features, acceptancePacks);
   const executionIds = new Set(executionPacks.map(({ id }) => id));
-  const observationTasks = packs.flatMap((declarationPack) => values(declarationPack, "browserObservations")
-    .flatMap((observation) => {
-      const taskPack = executionIds.has(declarationPack.id) ? declarationPack : null;
-      if (!taskPack) return [];
-      return [commandTask({
-      key:`browser-observation:${observation.id}`, stage:"browser-observation", packId:taskPack.id,
-      executable:"node", args:["scripts/run-browser-observation.mjs", observation.id],
-      target:observation.path, environment:{ ...observation.environment },
-      })];
-    }));
-  const mode = terminalFull ? "terminal" : explicit.size ? "exact" : "impact";
-  const checkpointTasks = executionPacks.flatMap((pack) => values(pack, "checkpointCommands")
+  const selectedObservations = packs.flatMap((declarationPack) =>
+    executionIds.has(declarationPack.id)
+      ? values(declarationPack, "browserObservations")
+        .filter(({ id }) => !browserTargetIds.length || browserTargetIds.includes(id))
+        .map((observation) => ({ declarationPack, observation }))
+      : []);
+  const selectedTargetIds = new Set(selectedObservations.map(({ observation }) => observation.id));
+  for (const id of browserTargetIds) {
+    if (!selectedTargetIds.has(id)) throw new Error(`Unknown browser target in selected pack: ${id}`);
+  }
+  const observationGroups = new Map();
+  for (const item of selectedObservations) {
+    const { declarationPack, observation } = item;
+    const groupKey = observation.sessionBatch
+      ? `${declarationPack.id}\0${observation.path}\0${observation.sessionBatch}`
+      : `${declarationPack.id}\0${observation.id}`;
+    const group = observationGroups.get(groupKey) ?? [];
+    group.push(item);
+    observationGroups.set(groupKey, group);
+  }
+  const observationTasks = [...observationGroups.values()].map((group) => {
+    const ids = group.map(({ observation }) => observation.id).sort();
+    const environment = Object.assign({}, ...group.map(({ observation }) => observation.environment));
+    return commandTask({
+      key:`browser-observation:${ids.join("+")}`, stage:"browser-observation",
+      packId:group[0].declarationPack.id, executable:"node",
+      args:["scripts/run-browser-observation.mjs", ...ids], target:ids.join(","), environment,
+      logicalTargetIds:ids,
+    });
+  });
+  const mode = browserTargetIds.length ? "focused" : terminalFull ? "terminal" : explicit.size ? "exact" : "impact";
+  const checkpointTasks = browserTargetIds.length ? [] : executionPacks.flatMap((pack) => values(pack, "checkpointCommands")
     .filter((checkpoint) => !checkpoint.modes || checkpoint.modes.includes(mode))
     .map((checkpoint) => commandTask({
       key:`checkpoint:${pack.id}:${checkpoint.id}`, stage:"checkpoint", packId:pack.id,
@@ -825,6 +1007,7 @@ export function planVerification(
     changeSet:changeSet ? structuredClone(changeSet) : null,
     baseCommit:changeSet?.baseCommit ?? null,
     changedOwners:Object.fromEntries([...changedOwners].sort(([left], [right]) => left.localeCompare(right))),
+    changedBoundaries:Object.fromEntries([...changedBoundaries].sort(([left], [right]) => left.localeCompare(right))),
     conservativeHistoricalFallbackReason,
     features,
     handlers:acceptancePacks.flatMap((pack) => values(pack, "handlers")),

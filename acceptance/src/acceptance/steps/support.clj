@@ -26,6 +26,20 @@
   (let [identity (get result "identity")]
     (into [(get identity "executable")] (get identity "args" []))))
 
+(def ^:private browser-observation-task-prefix "browser-observation:")
+
+(defn- batched-browser-command? [result task-key command]
+  (when (and task-key
+             (str/starts-with? task-key browser-observation-task-prefix))
+    (let [observation-id (subs task-key (count browser-observation-task-prefix))
+          identity (get result "identity")]
+      (and (= ["node" "scripts/run-browser-observation.mjs" observation-id]
+              (vec command))
+           (= "node" (get identity "executable"))
+           (= "scripts/run-browser-observation.mjs"
+              (first (get identity "args" [])))
+           (some #{observation-id} (get identity "logicalTargetIds" []))))))
+
 (defn verification-receipt-result
   ([receipt command]
    (verification-receipt-result receipt nil command))
@@ -33,10 +47,15 @@
    (cond
      (= 2 (get receipt "version"))
      (let [tasks (get receipt "tasks")
-           candidates (if task-key
-                        [(get tasks task-key)]
-                        (vals tasks))
-           matches (filter #(and % (= (vec command) (task-command %))) candidates)]
+           candidates (cond
+                        (nil? task-key) (vals tasks)
+                        (contains? tasks task-key) [(get tasks task-key)]
+                        (str/starts-with? task-key browser-observation-task-prefix) (vals tasks)
+                        :else [])
+           matches (filter #(and %
+                                 (or (= (vec command) (task-command %))
+                                     (batched-browser-command? % task-key command)))
+                           candidates)]
        (when (> (count matches) 1)
          (throw (ex-info "Verification receipt contains duplicate command identities."
                          {:command (vec command) :task-key task-key})))

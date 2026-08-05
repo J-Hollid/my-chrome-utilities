@@ -1543,6 +1543,66 @@
     "dependencies": [
       "durable_project_repository"
     ],
+    "runtimeInputs": [
+      "layered-schema.css"
+    ],
+    "impactBoundaries": [
+      {
+        "id": "canonical_schema_core",
+        "prefixes": [
+          "src/canonical-schema",
+          "src/data-layer-canonical-schema.ts",
+          "src/data-layer-canonical-predicate-identity.ts",
+          "src/data-layer-canonical-schema-facets.ts",
+          "src/data-layer-canonical-schema-constraints.ts",
+          "src/data-layer-canonical-schema-model.ts",
+          "src/data-layer-canonical-array-items.ts",
+          "src/data-layer-canonical-schema-predicates.ts"
+        ],
+        "propagateDependants": true
+      },
+      {
+        "id": "canonical_schema_editor",
+        "prefixes": [
+          "src/canonical-schema-focused",
+          "src/data-layer-canonical-schema-ui.ts",
+          "src/data-layer-canonical-schema-focused-sections.ts",
+          "src/data-layer-canonical-schema-focused-facets-ui.ts",
+          "src/data-layer-canonical-schema-focused-conditions.ts",
+          "src/data-layer-canonical-schema-focused-condition-tree.ts",
+          "src/data-layer-canonical-schema-focused-rules.ts",
+          "src/data-layer-canonical-schema-focused-rule-rows.ts",
+          "src/data-layer-side-panel-schema-editor.ts"
+        ],
+        "propagateDependants": false
+      },
+      {
+        "id": "layered_schema_composition",
+        "prefixes": [
+          "src/composed-schema",
+          "src/layered-schema",
+          "src/data-layer-composed-schema",
+          "src/data-layer-layered-schema"
+        ],
+        "propagateDependants": true
+      },
+      {
+        "id": "page_group_structure",
+        "prefixes": [
+          "src/data-layer-page-group-membership.ts",
+          "src/data-layer-page-group-structural-authoring.ts"
+        ],
+        "propagateDependants": true
+      },
+      {
+        "id": "selective_profile_inheritance",
+        "prefixes": [
+          "src/data-layer-selective-profile-inheritance.ts",
+          "src/data-layer-selective-profile-inheritance-ui.ts"
+        ],
+        "propagateDependants": false
+      }
+    ],
     "unit": [
       "test/data-layer-string-rule-validation-test.mjs",
       "test/data-layer-canonical-schema-authoring-test.mjs",
@@ -1711,6 +1771,9 @@
     "verificationInputs": [
       "docs/specification-studio-technical-analyst-copy-R01.md"
     ],
+    "runtimeInputs": [
+      "specification-builder-guidance.css"
+    ],
     "unit": [
       "test/data-layer-studio-choice-controls-test.mjs",
       "test/specification-studio-technical-analyst-guidance-test.mjs",
@@ -1769,6 +1832,68 @@
   },
   {
     "id": "shell",
+    "verificationHelpers": [
+      {
+        "path": "test/browser-packs/shared-harness.mjs",
+        "consumers": ["capture", "command-palette", "defects", "durable_project_repository", "event-library", "flow_export", "flow_graph", "guided_test_cases", "hotkeys", "layered_schema", "live_flow_testing", "project_assurance_severity", "project_event_transport", "project_management", "property_set_flow_sections", "replay", "schema_relationship_tree", "schemas", "shell"]
+      },
+      {
+        "path": "test/support/documentation-concept-runtime-probes.mjs",
+        "consumers": ["flow_export"]
+      },
+      {
+        "path": "test/support/flat-rule-builder-runtime-probes.mjs",
+        "consumers": ["layered_schema"]
+      },
+      {
+        "path": "test/support/flow-evidence-reporter.mjs",
+        "consumers": ["flow_graph"]
+      },
+      {
+        "path": "test/support/flow-graph-corrective-workflow.mjs",
+        "consumers": ["flow_graph"]
+      },
+      {
+        "path": "test/support/flow-r02-correction-evidence.mjs",
+        "consumers": ["flow_graph"]
+      },
+      {
+        "path": "test/support/headless-chrome.mjs",
+        "consumers": ["branding_polish", "durable_project_repository", "flow_export", "flow_graph", "guided_test_cases", "hotkeys", "layered_schema", "project_assurance_severity", "project_event_transport", "project_management", "shell"]
+      },
+      {
+        "path": "test/support/journal-free-installed-runtime-probe.mjs",
+        "consumers": ["layered_schema"]
+      },
+      {
+        "path": "test/support/layered-schema-ownership-probes.mjs",
+        "consumers": ["layered_schema"]
+      },
+      {
+        "path": "test/support/layered-schema-usability-probes.mjs",
+        "consumers": ["layered_schema"]
+      },
+      {
+        "path": "test/support/profile-inheritance-controls-runtime-probe.mjs",
+        "consumers": ["layered_schema"]
+      },
+      {
+        "path": "test/support/schema-concept-runtime-probes.mjs",
+        "consumers": ["layered_schema"]
+      },
+      {
+        "path": "test/support/string-rule-validation-runtime-probes.mjs",
+        "consumers": ["layered_schema"]
+      },
+      {
+        "path": "test/support/studio-choice-contract-oracle.mjs",
+        "consumers": ["branding_polish"]
+      },
+      {
+        "path": "test/support/typed-literal-focused-editor-probes.mjs",
+        "consumers": ["layered_schema"]
+      }
+    ],
     "process": [
       ".gitignore",
       ".nvmrc",
@@ -1821,7 +1946,6 @@
       "acceptance/src/acceptance/steps/support.clj",
       "bb.edn",
       "deps.edn",
-      "layered-schema.css",
       "manifest.json",
       "package-lock.json",
       "package.json",
@@ -1836,7 +1960,6 @@
       "side-panel.css",
       "side-panel.html",
       "specification-builder-brand.css",
-      "specification-builder-guidance.css",
       "specification-builder.css",
       "specification-builder.html",
       "src/active-page",
@@ -1942,6 +2065,7 @@
         "id": "SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER",
         "path": "test/side-panel-component-layout-runtime-test.mjs",
         "environment": {"SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER": "1"},
+        "sessionBatch": "shell-containment",
         "observationKeys": ["schemaViewContainment"],
         "features": ["features/data-layer-secondary-view-separation.feature"]
       },
@@ -1949,8 +2073,21 @@
         "id": "WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER",
         "path": "test/side-panel-component-layout-runtime-test.mjs",
         "environment": {"WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER": "1"},
+        "sessionBatch": "shell-containment",
         "observationKeys": ["workspacePanelContainment"],
         "features": ["features/side-panel-workspace-tabs.feature"]
+      }
+    ],
+    "browserAdapterPerformance": [
+      {
+        "path": "test/side-panel-component-layout-runtime-test.mjs",
+        "singleTargetP90Milliseconds": 18000,
+        "maximumSingleTargetP90Milliseconds": 10000,
+        "targetIds": [
+          "SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER",
+          "WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER"
+        ],
+        "sessionBatch": "shell-containment"
       }
     ],
     "checkpointCommands": [

@@ -133,7 +133,7 @@ assert.match(aggregateHandlers,/non-applicable-property-visibility\/handlers/);
 const focused=planVerification(packs,{packIds:["schemas"]});assert.equal(focused.packIds.includes("schemas"),true);assert.equal(focused.packIds.includes("defects"),false);
 assert.deepEqual(focused.packIds,["schemas"],"an exact pack does not inherit dependency regressions");
 assert.deepEqual(focused.propertyCommands,[],"property tests are opt-in outside terminal verification");
-assert.deepEqual(focusedAcceptanceOptions(["--pack","schemas","--property","--with-dependencies"]),{packIds:["schemas"],changedPaths:[],terminalFull:false,includeProperties:true,withDependencies:true,skipBuild:false,changedSince:undefined,shard:undefined,prepareEvidence:undefined});
+assert.deepEqual(focusedAcceptanceOptions(["--pack","schemas","--property","--with-dependencies"]),{packIds:["schemas"],changedPaths:[],terminalFull:false,includeProperties:true,withDependencies:true,skipBuild:false,changedSince:undefined,shard:undefined,prepareEvidence:undefined,browserTargetIds:[]});
 assert.throws(()=>focusedAcceptanceOptions(["--pack","schemas","--shard","5/4"]),/--shard/);
 assert.throws(()=>focusedAcceptanceOptions(["--pack","schemas","--no-build"]),/--no-build/);
 assert.deepEqual(focused.features,[...packs.find(({id})=>id==="schemas").features].sort());

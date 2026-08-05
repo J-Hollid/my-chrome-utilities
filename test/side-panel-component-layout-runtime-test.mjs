@@ -78,13 +78,43 @@ let schemaCardinalityComparisonObservation;
 let schemaDeclaredPropertyExceptionsObservation;
 let jsonSchemaExportObservation;
 let arrayValidationRollupObservation;
-const requestedBrowserAdapter = Object.entries(process.env).some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
-const runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
-const runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
-const runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
-const runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
-const runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
-const componentWidths = process.env.LOCAL_RULE_EDITING_BROWSER_ADAPTER === "1" || process.env.REUSABLE_RULE_SYNC_BROWSER_ADAPTER === "1" || process.env.REQUIRED_RULE_TYPE_INDEPENDENCE_BROWSER_ADAPTER === "1" || process.env.SPECIFICATION_PROJECT_BROWSER_ADAPTER === "1" ? [720]
+
+const browserTargetIds = JSON.parse(process.env.SWARMFORGE_BROWSER_TARGET_IDS ?? "[]");
+const browserTargetConfigurations = JSON.parse(
+  process.env.SWARMFORGE_BROWSER_TARGET_CONFIGURATIONS ?? "{}",
+);
+if (!Array.isArray(browserTargetIds) || new Set(browserTargetIds).size !== browserTargetIds.length ||
+    browserTargetIds.some((id) => typeof id !== "string" || !browserTargetConfigurations[id] ||
+      Array.isArray(browserTargetConfigurations[id]))) {
+  throw new Error("Browser target batches require unique ids with exact target configurations");
+}
+const browserTargetEnvironmentNames = new Set(Object.values(browserTargetConfigurations)
+  .flatMap((environment) => Object.keys(environment)));
+const activateBrowserTarget = (id) => {
+  for (const name of Object.keys(process.env)) {
+    if (name.endsWith("_BROWSER_ADAPTER") || browserTargetEnvironmentNames.has(name)) {
+      delete process.env[name];
+    }
+  }
+  if (id) Object.assign(process.env, browserTargetConfigurations[id]);
+};
+let requestedBrowserAdapter;
+let runGuidedDraftContinuationRuntime;
+let runSchemaRevisionLifecycleRuntime;
+let runExtendedSchemaWorkspaceRuntime;
+let runSchemaViewContainmentRuntime;
+let runWorkspacePanelContainmentRuntime;
+let componentWidths;
+let schemaLibraryExportFixture;
+function refreshBrowserTargetRuntime() {
+  requestedBrowserAdapter = Object.entries(process.env)
+    .some(([name, value]) => name.endsWith("_BROWSER_ADAPTER") && value === "1");
+  runGuidedDraftContinuationRuntime = process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
+  runSchemaRevisionLifecycleRuntime = process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
+  runExtendedSchemaWorkspaceRuntime = process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
+  runSchemaViewContainmentRuntime = process.env.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER === "1" || runExtendedSchemaWorkspaceRuntime;
+  runWorkspacePanelContainmentRuntime = process.env.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER === "1" || !requestedBrowserAdapter;
+  componentWidths = process.env.LOCAL_RULE_EDITING_BROWSER_ADAPTER === "1" || process.env.REUSABLE_RULE_SYNC_BROWSER_ADAPTER === "1" || process.env.REQUIRED_RULE_TYPE_INDEPENDENCE_BROWSER_ADAPTER === "1" || process.env.SPECIFICATION_PROJECT_BROWSER_ADAPTER === "1" ? [720]
   : process.env.LOCAL_RULE_PROMOTION_BROWSER_ADAPTER === "1" ? [320]
   : process.env.ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER === "1" ? [320]
   : process.env.JSON_SCHEMA_EXPORT_BROWSER_ADAPTER === "1" ? [320]
@@ -139,7 +169,9 @@ const componentWidths = process.env.LOCAL_RULE_EDITING_BROWSER_ADAPTER === "1" |
   : process.env.REPRODUCTION_STEP_ACTION_ROWS_BROWSER_ADAPTER === "1" ? [360, 520]
     : process.env.GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER === "1" || process.env.SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER === "1" ? [720]
       : [320, 360, 520, 720];
-const schemaLibraryExportFixture = process.env.SCHEMA_LIBRARY_EXPORT_FIXTURE ?? "2:4";
+  schemaLibraryExportFixture = process.env.SCHEMA_LIBRARY_EXPORT_FIXTURE ?? "2:4";
+}
+refreshBrowserTargetRuntime();
 
 const chromeProfile = await mkdtemp(path.join(os.tmpdir(), "side-panel-layout-"));
 const assetServer = createServer(async (request, response) => {
@@ -5662,9 +5694,20 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
 try {
   const port = await debuggingPort();
   const extensionId=await loadedExtensionId(port);
-  for (const width of componentWidths) {
+  for (const browserTargetId of browserTargetIds.length ? browserTargetIds : [null]) {
+    if (browserTargetId) activateBrowserTarget(browserTargetId);
+    refreshBrowserTargetRuntime();
+    const browserTargetStartedAt = Date.now();
+    for (const width of componentWidths) {
     const specificationScenarioId=process.env.SPECIFICATION_PROJECT_SCENARIO_ID??"",capturedContinuationScenario=process.env.SPECIFICATION_PROJECT_BROWSER_ADAPTER==="1"&&specificationScenarioId.includes("canonical project schema drafts runtime 021");
     const socket = process.env.SPECIFICATION_PROJECT_BROWSER_ADAPTER === "1" ? await openSpecificationBuilder(port,width,900,capturedContinuationScenario?`chrome-extension://${extensionId}/specification-builder.html`:undefined) : await openPanel(port, width);
+    if (browserTargetId) {
+      await socket.call("Storage.clearDataForOrigin", {
+        origin:`chrome-extension://${extensionId}`,
+        storageTypes:"all",
+      });
+      await reloadPanel(socket);
+    }
     if (process.env.SPECIFICATION_PROJECT_BROWSER_ADAPTER === "1") {
       if(capturedContinuationScenario){
         const observedPage=await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(`http://127.0.0.1:${assetPort}/observation-target.html`)}`,{method:"PUT"}).then((response)=>response.json()),observedSocket=new DevtoolsSocket(observedPage.webSocketDebuggerUrl);await observedSocket.connect();await observedSocket.call("Runtime.enable");
@@ -7499,6 +7542,18 @@ try {
     }
     if (guidedLifecycleProject) await evaluate(socket, guidedTransportProjectRestoreRuntime(guidedLifecycleProject));
     socket.close();
+    }
+    if (browserTargetId) {
+      console.log(JSON.stringify({
+        swarmforgeBrowserTargetTiming:{ id:browserTargetId, durationMs:Date.now() - browserTargetStartedAt },
+      }));
+    }
+  }
+  if (browserTargetIds.length) {
+    activateBrowserTarget(null);
+    for (const configuration of Object.values(browserTargetConfigurations)) {
+      Object.assign(process.env, configuration);
+    }
   }
   if (process.env.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ schemaWorkspace:schemaWorkspaceAdapterObservations.at(-1) }));
