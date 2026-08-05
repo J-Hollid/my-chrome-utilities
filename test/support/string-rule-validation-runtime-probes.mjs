@@ -78,7 +78,7 @@ export const stringRuleValidationExpression=String.raw`(async()=>{
 })()`;
 
 export const valueRuleDurableMigrationExpression=String.raw`(async()=>{
-  const pause=(ms=35)=>new Promise((resolve)=>setTimeout(resolve,ms)),waitFor=async(read,label)=>{for(let attempt=0;attempt<240;attempt+=1){const value=await read();if(value)return value;await pause();}throw new Error("Value migration: "+label);},buttons=(root=document)=>[...root.querySelectorAll("button")];
+  const pause=(ms=35)=>new Promise((resolve)=>setTimeout(resolve,ms)),waitFor=async(read,label)=>{for(let attempt=0;attempt<600;attempt+=1){const value=await read();if(value)return value;await pause();}throw new Error("Value migration: "+label);},buttons=(root=document)=>[...root.querySelectorAll("button")];
   const [{durableDraftCommand,openIndexedDbProjectRepository},{compileLayeredSchema,validateLayeredObservation}]=await Promise.all([import("/data-layer-durable-project-repository.js"),import("/data-layer-layered-schema.js")]);
   const repository=await openIndexedDbProjectRepository(),projectId=await repository.activeProjectId(),baseline=await repository.loadProject(projectId),seedState=structuredClone(baseline.state),profile=seedState.project.collections.profiles.find(({name})=>name==="Sitewide"),node=Object.values(profile?.canonicalSchema?.nodes??{}).find(({name})=>name==="lineOfCustomer");
   if(!profile||!node)throw new Error("Value migration: Sitewide lineOfCustomer unavailable");

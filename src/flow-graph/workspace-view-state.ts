@@ -53,6 +53,7 @@ export function saveFlowWorkspaceView(projectId: string, flowId: string, view: F
       minimap: view.minimap,
       surface: view.surface,
       focusCanvas: view.focusCanvas,
+      navigationVisible: view.navigationVisible,
     }));
   } catch {
     // Session UI state is best-effort and never enters project bytes.

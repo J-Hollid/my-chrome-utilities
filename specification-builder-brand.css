@@ -17,18 +17,95 @@ body.twatility-studio {
 }
 
 /* Canvas-first Flow workspace R02. */
-.twatility-studio .documentary-flow[data-canvas-first-r02="true"] {
+.twatility-studio #workspace-pane:has(.documentary-flow[data-canvas-first-r02="true"]) {
   position: relative;
   display: grid;
-  grid-template-rows: auto auto auto minmax(24rem, 1fr);
-  gap: 0.45rem;
-  min-block-size: min(48rem, calc(100vh - 8rem));
+  grid-template-rows: auto minmax(0, 1fr);
+  min-block-size: 0;
   overflow: hidden;
+  padding: 0;
+}
+.twatility-studio:has(.documentary-flow[data-canvas-first-r02="true"]) {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  block-size: 100dvh;
+  overflow: hidden;
+}
+.twatility-studio #project-workspace:not([hidden]):has(.documentary-flow[data-canvas-first-r02="true"]) {
+  block-size: 100% !important;
+  min-block-size: 0;
+  overflow: hidden;
+}
+@media (min-width: 761px) {
+  .twatility-studio #project-workspace:has(.documentary-flow[data-canvas-first-r02="true"]) > nav {
+    grid-column: 1;
+  }
+  .twatility-studio #project-workspace:has(.documentary-flow[data-canvas-first-r02="true"]) > #workspace-pane {
+    grid-column: 2;
+  }
+  .twatility-studio #project-workspace:has(.documentary-flow[data-canvas-first-r02="true"]) > #project-inspector {
+    grid-column: 3;
+  }
+  .twatility-studio #project-workspace:not([hidden]):has(.documentary-flow[data-canvas-first-r02="true"]):has(> nav[hidden]) {
+    grid-template-columns: minmax(0, 1fr) clamp(16rem, 20vw, 21rem);
+  }
+  .twatility-studio #project-workspace[data-inspector-open="false"]:has(.documentary-flow[data-canvas-first-r02="true"]):has(> nav[hidden]) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .twatility-studio #project-workspace:has(.documentary-flow[data-canvas-first-r02="true"]):has(> nav[hidden]) > #workspace-pane {
+    grid-column: 1;
+  }
+  .twatility-studio #project-workspace:has(.documentary-flow[data-canvas-first-r02="true"]):has(> nav[hidden]) > #project-inspector {
+    grid-column: 2;
+  }
+}
+.twatility-studio #workspace-pane:has(.documentary-flow[data-canvas-first-r02="true"]) > .sticky-tools {
+  position: relative;
+  inset: auto;
+  z-index: 2;
+  margin-inline: 0;
+  gap: 0.25rem;
+  padding: 0.3rem;
+}
+.twatility-studio #workspace-pane:has(.documentary-flow[data-canvas-first-r02="true"]) > .sticky-tools > :is(.action-description, label) {
+  display: none;
+}
+.twatility-studio #workspace-pane:has(.documentary-flow[data-canvas-first-r02="true"]) > .sticky-tools .actions {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+}
+.twatility-studio #workspace-pane:has(.documentary-flow[data-canvas-first-r02="true"]) > .sticky-tools .actions > * {
+  flex: 0 0 auto;
+}
+.twatility-studio #workspace-pane:has(.documentary-flow[data-canvas-first-r02="true"]) > #workspace-content {
+  position: relative;
+  display: grid;
+  grid-template-rows: minmax(0, 1fr);
+  min-inline-size: 0;
+  min-block-size: 0;
+  overflow: hidden;
+}
+.twatility-studio .documentary-flow[data-canvas-first-r02="true"] {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  inline-size: 100%;
+  block-size: 100%;
+  min-block-size: 0;
+  overflow: hidden;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
 }
 .twatility-studio .flow-workspace-toolbar {
   display: flex;
-  flex-wrap: wrap;
+  flex: 0 0 auto;
+  flex-wrap: nowrap;
   align-items: center;
+  overflow-x: auto;
   gap: 0.35rem;
   padding: 0.35rem;
   border: 1px solid var(--border);
@@ -43,15 +120,18 @@ body.twatility-studio {
 }
 .twatility-studio .flow-canvas-viewport {
   position: relative;
+  flex: 1 1 0;
   display: block;
   min-inline-size: 0;
-  min-block-size: 24rem;
-  block-size: min(64vh, 46rem);
+  min-block-size: 0;
   overflow: hidden;
 }
 .twatility-studio .flow-canvas-viewport > .flow-canvas-scroll {
+  position: absolute;
+  inset: 0;
   inline-size: 100%;
   block-size: 100%;
+  min-block-size: 0;
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 0.45rem;
@@ -182,9 +262,51 @@ body.flow-focus-canvas #project-workspace > nav,
 body.flow-focus-canvas #project-inspector,
 body.flow-focus-canvas .sticky-tools { display: none !important; }
 body.flow-focus-canvas #workspace-pane { padding: 0.5rem; }
+body.flow-focus-canvas .documentary-flow[data-canvas-first-r02="true"] {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: block;
+  inline-size: 100dvw;
+  block-size: 100dvh;
+  background: #f7faff;
+}
+body.flow-focus-canvas .documentary-flow[data-canvas-first-r02="true"] .flow-canvas-viewport {
+  position: absolute;
+  inset: 0;
+  inline-size: 100%;
+  block-size: 100dvh !important;
+  max-block-size: none !important;
+}
+body.flow-focus-canvas .documentary-flow[data-canvas-first-r02="true"] .flow-canvas-scroll {
+  block-size: 100dvh !important;
+  max-block-size: none !important;
+}
+body.flow-focus-canvas .documentary-flow[data-canvas-first-r02="true"] .flow-workspace-toolbar {
+  position: absolute;
+  inset-block-start: 0.5rem;
+  inset-inline: 0.5rem;
+  z-index: 8;
+}
 @media (max-width: 760px) {
-  .twatility-studio .documentary-flow[data-canvas-first-r02="true"] { min-block-size: calc(100vh - 4rem); }
-  .twatility-studio .flow-canvas-viewport { block-size: min(72vh, 42rem); }
+  .twatility-studio #project-workspace:not([hidden]):has(.documentary-flow[data-canvas-first-r02="true"]) {
+    display: flex;
+    block-size: 100%;
+    overflow: hidden;
+  }
+  .twatility-studio #project-workspace:has(.documentary-flow[data-canvas-first-r02="true"]) > nav,
+  .twatility-studio #project-workspace:has(.documentary-flow[data-canvas-first-r02="true"]) > #project-inspector {
+    flex: 0 1 20dvh;
+    max-block-size: 20dvh;
+    overflow: auto;
+  }
+  .twatility-studio #workspace-pane:has(.documentary-flow[data-canvas-first-r02="true"]) {
+    flex: 1 1 auto;
+    block-size: auto;
+    min-block-size: 0;
+    overflow: hidden;
+    padding: 0;
+  }
   .twatility-studio .flow-workspace-toolbar { flex-wrap: nowrap; overflow-x: auto; }
   .twatility-studio .flow-workspace-toolbar button { flex: 0 0 auto; }
   .twatility-studio .flow-workspace-surface {
@@ -690,11 +812,12 @@ body.flow-focus-canvas #workspace-pane { padding: 0.5rem; }
 /* Keep the canvas route bounded after the later studio foundation rules. */
 .twatility-studio .documentary-flow[data-canvas-first-r02="true"] {
   min-block-size: 0;
-  max-block-size: calc(100vh - 14rem);
+  max-block-size: none;
 }
 .twatility-studio .documentary-flow[data-canvas-first-r02="true"] .flow-canvas-viewport {
-  min-block-size: 7rem;
-  block-size: clamp(7rem, 22vh, 24rem);
+  flex: 1 1 0;
+  min-block-size: 0;
+  block-size: auto;
 }
 .twatility-studio .documentary-flow[data-canvas-first-r02="true"] .flow-workspace-surface {
   box-sizing: border-box;

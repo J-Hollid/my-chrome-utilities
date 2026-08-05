@@ -170,6 +170,14 @@ derived example states, stable identities, Undo, portability, and documentary
 non-execution boundary. Its exact checkpoint combines `flow_graph` and
 `layered_schema` in one focused invocation, followed by the package command.
 
+On approval, the viewport and camera correction makes the ordinary Flow
+canvas consume the complete route rectangle remaining beneath its compact toolbar
+and makes Focus Canvas consume the complete browser viewport behind overlay
+controls. Fixed-height, maximum-height, aspect-ratio, and unused-track layouts are
+not conforming. Unmodified primary drag on empty canvas, Space plus primary drag,
+middle-button drag, one-finger touch pan, and labelled keyboard pan work in both
+workspace modes without moving canonical graph items or writing project history.
+
 ## Scope and lineage processing invariant
 
 Current `master` is the integration baseline for every new reconstruction. Role

@@ -45,7 +45,7 @@
         (reset! flow-graph/browser-observation nil)))))
 
 (def complete-evidence
-  (assoc (into {} (map (fn [number] [(keyword (format "runtime%03d" number)) {:exact true}]) (range 1 27)))
+  (assoc (into {} (map (fn [number] [(keyword (format "runtime%03d" number)) {:exact true}]) (range 1 28)))
          :installedBoundary true))
 
 (deftest evidence-maps-cannot-pass-vacuously
@@ -58,6 +58,7 @@
   (is (false? (boolean (flow-graph/complete-browser-evidence? nil))))
   (is (false? (boolean (flow-graph/complete-browser-evidence? {}))))
   (is (false? (boolean (flow-graph/complete-browser-evidence? (dissoc complete-evidence :runtime020)))))
+  (is (false? (boolean (flow-graph/complete-browser-evidence? (dissoc complete-evidence :runtime027)))))
   (is (true? (boolean (flow-graph/complete-browser-evidence? (assoc complete-evidence :runtime026 {:exact true})))))
   (is (false? (boolean (flow-graph/complete-browser-evidence? (dissoc complete-evidence :installedBoundary)))))
   (is (false? (boolean (flow-graph/complete-browser-evidence? (assoc-in complete-evidence [:runtime021 :exact] false)))))
@@ -69,6 +70,17 @@
   (is (= :keyboard-activation (flow-graph/flow005-example-key :runtime {"page" "Payment" "event" "add_payment_info" "trigger" "Payment submitted" "insertion" "activate add_payment_info from the Events catalog by keyboard"})))
   (is (thrown? clojure.lang.ExceptionInfo (flow-graph/flow005-example-key :model {"page" "Shipping" "event" "add_shipping_info" "trigger" "Wrong trigger" "insertion" "drags add_shipping_info onto the visible canvas Shipping frame"})))
   (is (thrown? clojure.lang.ExceptionInfo (flow-graph/flow005-example-key :model {"page" "Cart" "event" "page_view" "trigger" "Initial load" "insertion" "activate page_view from the Events catalog by pointer"}))))
+
+(deftest flow001-examples-require-exact-mode-specific-values
+  (is (= :narrow-navigation-hidden (flow-graph/flow001-example-key :model {"width" "360" "height" "800" "navigation" "hidden"})))
+  (is (= :wide-navigation-visible (flow-graph/flow001-example-key :runtime {"width" "1440" "height" "900" "navigation" "visible"})))
+  (is (thrown? clojure.lang.ExceptionInfo (flow-graph/flow001-example-key :runtime {"width" "360" "height" "900" "navigation" "hidden"}))))
+
+(deftest runtime027-examples-have-distinct-evidence-keys
+  (is (= :main-primary-blank (flow-graph/runtime027-example-key :model {"workspace_mode" "the main workspace" "pan_gesture" "primary-drags from unoccupied canvas" "horizontal_distance" "120" "vertical_distance" "80"})))
+  (is (= :focus-keyboard (flow-graph/runtime027-example-key :runtime {"workspace_mode" "Focus Canvas" "pan_gesture" "activates the labelled keyboard pan command" "horizontal_distance" "-80" "vertical_distance" "-60"})))
+  (is (thrown? clojure.lang.ExceptionInfo (flow-graph/runtime027-example-key :model {"workspace_mode" "the main workspace" "pan_gesture" "sends primary-pointer drag from empty canvas" "horizontal_distance" "120" "vertical_distance" "80"})))
+  (is (thrown? clojure.lang.ExceptionInfo (flow-graph/runtime027-example-key :runtime {"workspace_mode" "Focus Canvas" "pan_gesture" "activates the labelled keyboard pan command" "horizontal_distance" "-80" "vertical_distance" "60"}))))
 
 (deftest runtime009-examples-have-distinct-evidence-keys
   (is (= :pageContextExpectedNext (flow-graph/runtime009-example-key {"source" "Customer details" "source_port" "right" "target" "Payment" "target_port" "left" "kind" "expected_next"})))
@@ -108,5 +120,5 @@
          "renamed_page" "Reusable commerce page"}))))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-22T20:06:28.236725939+02:00", :module-hash "1674244795", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "-1569434453"} {:id "form/1/deftest", :kind "deftest", :line 6, :end-line 7, :hash "1273886876"} {:id "def/complete-evidence", :kind "def", :line 9, :end-line 11, :hash "-1896130973"} {:id "form/3/deftest", :kind "deftest", :line 13, :end-line 17, :hash "-974447205"} {:id "form/4/deftest", :kind "deftest", :line 19, :end-line 26, :hash "1233157525"} {:id "form/5/deftest", :kind "deftest", :line 28, :end-line 33, :hash "971142740"} {:id "form/6/deftest", :kind "deftest", :line 35, :end-line 40, :hash "-1512853509"} {:id "form/7/deftest", :kind "deftest", :line 42, :end-line 45, :hash "-2066331369"} {:id "form/8/deftest", :kind "deftest", :line 47, :end-line 49, :hash "-1819749563"}]}
+;; {:version 1, :tested-at "2026-08-05T20:49:09.870000504+02:00", :module-hash "405547346", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "-1569434453"} {:id "form/1/deftest", :kind "deftest", :line 6, :end-line 7, :hash "1273886876"} {:id "defn-/private-var", :kind "defn-", :line 9, :end-line 10, :hash "1644259952"} {:id "form/3/deftest", :kind "deftest", :line 12, :end-line 27, :hash "-1775439981"} {:id "form/4/deftest", :kind "deftest", :line 29, :end-line 45, :hash "351959116"} {:id "def/complete-evidence", :kind "def", :line 47, :end-line 49, :hash "1423935133"} {:id "form/6/deftest", :kind "deftest", :line 51, :end-line 55, :hash "-974447205"} {:id "form/7/deftest", :kind "deftest", :line 57, :end-line 65, :hash "241758405"} {:id "form/8/deftest", :kind "deftest", :line 67, :end-line 72, :hash "-1791144720"} {:id "form/9/deftest", :kind "deftest", :line 74, :end-line 77, :hash "1603110676"} {:id "form/10/deftest", :kind "deftest", :line 79, :end-line 83, :hash "1534110227"} {:id "form/11/deftest", :kind "deftest", :line 85, :end-line 90, :hash "837333516"} {:id "form/12/deftest", :kind "deftest", :line 92, :end-line 97, :hash "-488421438"} {:id "form/13/deftest", :kind "deftest", :line 99, :end-line 101, :hash "-1819749563"} {:id "form/14/deftest", :kind "deftest", :line 103, :end-line 120, :hash "-13495486"}]}
 ;; clj-mutate-manifest-end

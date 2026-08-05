@@ -75,6 +75,12 @@ export function upgradeFlowWorkspace(root: HTMLElement): void {
     save(camera) { saveView({ ...view, camera, cameraInitialized: true }); },
   });
   const sectionUi = installFlowSections({ root, canvas, viewport, camera: () => view.camera, closeSurface });
+  for (let item = workspace.firstElementChild; item && item !== legacyToolbar;) {
+    const next = item.nextElementSibling;
+    (item as HTMLElement).hidden = true;
+    (item as HTMLElement).dataset.flowLegacyPrelude = "true";
+    item = next;
+  }
 
   toolbar.className = "flow-workspace-toolbar";
   toolbar.setAttribute("aria-label", "Flow toolbar");
@@ -125,6 +131,17 @@ export function upgradeFlowWorkspace(root: HTMLElement): void {
     return result;
   };
 
+  const projectNavigation = document.querySelector<HTMLElement>("#project-workspace > nav");
+  const applyNavigationVisibility = (): void => { if (projectNavigation) projectNavigation.hidden = !view.navigationVisible; };
+  applyNavigationVisibility();
+  const navigationToggle = flowControl(view.navigationVisible ? "Hide navigation" : "Show navigation", () => {
+    saveView({ ...view, navigationVisible: !view.navigationVisible });
+    applyNavigationVisibility();
+    navigationToggle.textContent = view.navigationVisible ? "Hide navigation" : "Show navigation";
+    navigationToggle.setAttribute("aria-expanded", String(view.navigationVisible));
+  });
+  navigationToggle.setAttribute("aria-controls", "project-tree");
+  navigationToggle.setAttribute("aria-expanded", String(view.navigationVisible));
   const add = surfaceButton("Add", "add"), outlineButton = surfaceButton("Outline", "outline"), details = surfaceButton("Details", "details"), tidy = surfaceButton("Tidy", "tidy");
   canvas.setAttribute("tabindex", "0");
   const skip = flowControl("Skip to canvas", () => canvas.focus({ preventScroll: true }));
@@ -135,13 +152,15 @@ export function upgradeFlowWorkspace(root: HTMLElement): void {
     focusCanvas.textContent = view.focusCanvas ? "Exit Focus Canvas" : "Focus Canvas";
     if (!view.focusCanvas) restoreFlowInvoker(projectId, flowId);
   });
+  document.body.classList.toggle("flow-focus-canvas", view.focusCanvas);
+  focusCanvas.textContent = view.focusCanvas ? "Exit Focus Canvas" : "Focus Canvas";
   const minimapToggle = flowControl("Minimap", () => {
     saveView({ ...view, minimap: !view.minimap });
     cameraUi.setMinimapVisible(view.minimap);
     minimapToggle.setAttribute("aria-pressed", String(view.minimap));
   });
   minimapToggle.setAttribute("aria-pressed", String(view.minimap));
-  toolbar.append(skip, add, outlineButton, details, tidy, focusCanvas, ...cameraUi.controls, minimapToggle);
+  toolbar.append(skip, navigationToggle, add, outlineButton, details, tidy, focusCanvas, ...cameraUi.controls, minimapToggle);
 
   decorateCompactFlowCards(canvas, duplicateFrames, outline);
   if (actions?.getAttribute("aria-label")?.includes("Page instance")) {
@@ -226,6 +245,7 @@ export function upgradeFlowWorkspace(root: HTMLElement): void {
   viewport.append(surface, cameraUi.minimap, ...(actions ? [actions] : []), ...(sectionActions ? [sectionActions] : []));
   canvas.style.removeProperty("width"); canvas.style.removeProperty("height");
   viewport.tabIndex = 0; viewport.setAttribute("aria-label", "Flow canvas viewport");
+  viewport.setAttribute("aria-keyshortcuts", "ArrowLeft ArrowRight ArrowUp ArrowDown");
   queueMicrotask(() => workspace.scrollIntoView({ block: "start", inline: "nearest" }));
   cameraUi.setMinimapVisible(view.minimap);
   if (view.cameraInitialized) cameraUi.apply(view.camera);

@@ -44,8 +44,13 @@
                          {:out (mapv :out results)})
         (reset! browser-observation observed))))
 (def runtime-evidence-keys
-  (set (map #(keyword (format "runtime%03d" %)) (range 1 27))))
+  (set (map #(keyword (format "runtime%03d" %)) (range 1 28))))
 (def required-evidence-keys (conj runtime-evidence-keys :installedBoundary))
+(def flow001-examples
+  {["360" "800" "hidden"] :narrow-navigation-hidden
+   ["360" "800" "visible"] :narrow-navigation-visible
+   ["1440" "900" "hidden"] :wide-navigation-hidden
+   ["1440" "900" "visible"] :wide-navigation-visible})
 (def flow005-examples
   {[:model ["Cart" "button_click" "Continue clicked" "chooses button_click from Add by pointer"]] :pointer-activation
    [:model ["Shipping" "add_shipping_info" "Form submitted" "drags add_shipping_info from Add onto Shipping"]] :pointer-drop
@@ -78,6 +83,28 @@
 (def flow026-examples
   {["Generic checkout page" "4" "Customer details" "Payment" "Summary" "Reusable commerce page"]
    :named-page-instances})
+(def flow027-examples
+  {["the main workspace" "primary-drags from unoccupied canvas" "120" "80"] :main-primary-blank
+   ["Focus Canvas" "primary-drags from unoccupied canvas" "-90" "-60"] :focus-primary-blank
+   ["the main workspace" "holds Space and primary-drags from a graph item" "110" "-70"] :main-space-item
+   ["Focus Canvas" "holds Space and primary-drags from a graph item" "-100" "75"] :focus-space-item
+   ["the main workspace" "middle-button-drags from unoccupied canvas" "95" "65"] :main-middle-blank
+   ["Focus Canvas" "middle-button-drags from unoccupied canvas" "-85" "-55"] :focus-middle-blank
+   ["the main workspace" "uses one-finger touch pan" "105" "-65"] :main-touch
+   ["Focus Canvas" "uses one-finger touch pan" "-95" "70"] :focus-touch
+   ["the main workspace" "uses the labelled keyboard pan command" "80" "60"] :main-keyboard
+   ["Focus Canvas" "uses the labelled keyboard pan command" "-80" "-60"] :focus-keyboard})
+(def runtime027-examples
+  {["the main workspace" "sends primary-pointer drag from empty canvas" "120" "80"] :main-primary-blank
+   ["Focus Canvas" "sends primary-pointer drag from empty canvas" "-90" "-60"] :focus-primary-blank
+   ["the main workspace" "sends Space plus primary-pointer drag from a Page card" "110" "-70"] :main-space-item
+   ["Focus Canvas" "sends Space plus primary-pointer drag from a Page card" "-100" "75"] :focus-space-item
+   ["the main workspace" "sends auxiliary-pointer drag from empty canvas" "95" "65"] :main-middle-blank
+   ["Focus Canvas" "sends auxiliary-pointer drag from empty canvas" "-85" "-55"] :focus-middle-blank
+   ["the main workspace" "sends one-contact touch pan" "105" "-65"] :main-touch
+   ["Focus Canvas" "sends one-contact touch pan" "-95" "70"] :focus-touch
+   ["the main workspace" "activates the labelled keyboard pan command" "80" "60"] :main-keyboard
+   ["Focus Canvas" "activates the labelled keyboard pan command" "-80" "-60"] :focus-keyboard})
 (defn- exact-example-key [example columns discriminators examples message]
   (let [row (mapv #(support/example-value example %) columns)]
     (when (some #(support/example-value example %) discriminators)
@@ -89,6 +116,10 @@
     (when (support/example-value example "insertion")
       (support/assert! (contains? flow005-examples key) "Unknown Flow 005 Event insertion example." {:mode mode :row row})
       (get flow005-examples key))))
+(defn flow001-example-key [mode example]
+  (when (support/example-value example "navigation")
+    (support/assert! (contains? #{:model :runtime} mode) "Unknown Flow 001 evidence mode." {:mode mode})
+    (exact-example-key example ["width" "height" "navigation"] ["navigation"] flow001-examples "Unknown Flow 001 viewport example.")))
 (defn runtime009-example-key [example]
   (when (and (support/example-value example "source")
              (support/example-value example "source_port")
@@ -109,13 +140,19 @@
    ["instance_count"]
    flow026-examples
    "Unknown Flow 026 Page-instance naming example."))
+(defn runtime027-example-key [mode example]
+  (when (support/example-value example "pan_gesture")
+    (support/assert! (contains? #{:model :runtime} mode) "Unknown runtime027 evidence mode." {:mode mode})
+    (exact-example-key example ["workspace_mode" "pan_gesture" "horizontal_distance" "vertical_distance"] ["pan_gesture"] (if (= mode :model) flow027-examples runtime027-examples) "Unknown runtime027 pan example.")))
 (defn validate-example! [mode example]
+  (flow001-example-key mode example)
   (flow005-example-key mode example)
   (runtime009-example-key example)
   (runtime010-example-key example)
   (runtime023-example-key example)
   (runtime024-example-key example)
   (flow026-example-key example)
+  (runtime027-example-key mode example)
   example)
 (defn all-true? [values]
   (boolean (and (map? values) (seq values) (every? true? (vals values)))))
@@ -139,5 +176,5 @@
    observe-browser! assert-runtime!))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-04T11:53:35.971837629+02:00", :module-hash "-1810506462", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "12328700"} {:id "def/feature-files", :kind "def", :line 7, :end-line nil, :hash "-435723109"} {:id "def/entry-modes", :kind "def", :line 10, :end-line nil, :hash "1245758286"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line nil, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line nil, :hash "-1618529344"} {:id "defn-/checked-command!", :kind "defn-", :line 16, :end-line nil, :hash "1232323377"} {:id "defn-/verify-model!", :kind "defn-", :line 20, :end-line nil, :hash "-1477867511"} {:id "defn-/observe-browser!", :kind "defn-", :line 30, :end-line nil, :hash "515803462"} {:id "def/runtime-evidence-keys", :kind "def", :line 45, :end-line nil, :hash "-910527984"} {:id "def/required-evidence-keys", :kind "def", :line 47, :end-line nil, :hash "-1295581414"} {:id "def/flow005-examples", :kind "def", :line 48, :end-line nil, :hash "574951723"} {:id "def/runtime009-examples", :kind "def", :line 55, :end-line nil, :hash "-167167521"} {:id "def/runtime023-examples", :kind "def", :line 60, :end-line nil, :hash "-1984771249"} {:id "def/runtime024-examples", :kind "def", :line 63, :end-line nil, :hash "1058329484"} {:id "def/flow026-examples", :kind "def", :line 65, :end-line nil, :hash "-1147461739"} {:id "defn-/exact-example-key", :kind "defn-", :line 68, :end-line nil, :hash "-1396433188"} {:id "defn/flow005-example-key", :kind "defn", :line 73, :end-line nil, :hash "-1643203963"} {:id "defn/runtime009-example-key", :kind "defn", :line 79, :end-line nil, :hash "-1376855772"} {:id "defn/runtime023-example-key", :kind "defn", :line 81, :end-line nil, :hash "-1160499936"} {:id "defn/runtime024-example-key", :kind "defn", :line 83, :end-line nil, :hash "1247866732"} {:id "defn/flow026-example-key", :kind "defn", :line 85, :end-line nil, :hash "1303746130"} {:id "defn/validate-example!", :kind "defn", :line 92, :end-line nil, :hash "-1762897624"} {:id "defn/all-true?", :kind "defn", :line 99, :end-line nil, :hash "731206003"} {:id "defn/complete-browser-evidence?", :kind "defn", :line 101, :end-line nil, :hash "-1622482226"} {:id "defn-/assert-runtime!", :kind "defn-", :line 107, :end-line nil, :hash "1781741610"} {:id "def/handlers", :kind "def", :line 114, :end-line nil, :hash "89345785"}]}
+;; {:version 1, :tested-at "2026-08-05T20:49:09.864952842+02:00", :module-hash "1201272624", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 5, :hash "12328700"} {:id "def/feature-files", :kind "def", :line 7, :end-line 9, :hash "-435723109"} {:id "def/entry-modes", :kind "def", :line 10, :end-line 12, :hash "-1332460073"} {:id "form/3/defonce", :kind "defonce", :line 13, :end-line 13, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 14, :end-line 14, :hash "-1618529344"} {:id "defn-/checked-command!", :kind "defn-", :line 16, :end-line 19, :hash "1232323377"} {:id "defn-/verify-model!", :kind "defn-", :line 20, :end-line 30, :hash "-17233573"} {:id "defn-/observe-browser!", :kind "defn-", :line 31, :end-line 45, :hash "-1924280539"} {:id "def/runtime-evidence-keys", :kind "def", :line 46, :end-line 47, :hash "1598037166"} {:id "def/required-evidence-keys", :kind "def", :line 48, :end-line 48, :hash "-1295581414"} {:id "def/flow001-examples", :kind "def", :line 49, :end-line 53, :hash "-1929769532"} {:id "def/flow005-examples", :kind "def", :line 54, :end-line 68, :hash "-1087909857"} {:id "def/runtime009-examples", :kind "def", :line 69, :end-line 73, :hash "-167167521"} {:id "def/runtime010-examples", :kind "def", :line 74, :end-line 77, :hash "49886018"} {:id "def/runtime023-examples", :kind "def", :line 78, :end-line 80, :hash "-1984771249"} {:id "def/runtime024-examples", :kind "def", :line 81, :end-line 82, :hash "1058329484"} {:id "def/flow026-examples", :kind "def", :line 83, :end-line 85, :hash "-1147461739"} {:id "def/flow027-examples", :kind "def", :line 86, :end-line 96, :hash "-1245513417"} {:id "def/runtime027-examples", :kind "def", :line 97, :end-line 107, :hash "1138963094"} {:id "defn-/exact-example-key", :kind "defn-", :line 108, :end-line 112, :hash "-1670933730"} {:id "defn/flow005-example-key", :kind "defn", :line 113, :end-line 118, :hash "1749731827"} {:id "defn/flow001-example-key", :kind "defn", :line 119, :end-line 122, :hash "966521447"} {:id "defn/runtime009-example-key", :kind "defn", :line 123, :end-line 127, :hash "1897394456"} {:id "defn/runtime010-example-key", :kind "defn", :line 128, :end-line 131, :hash "608325806"} {:id "defn/runtime023-example-key", :kind "defn", :line 132, :end-line 133, :hash "-1160499936"} {:id "defn/runtime024-example-key", :kind "defn", :line 134, :end-line 135, :hash "1247866732"} {:id "defn/flow026-example-key", :kind "defn", :line 136, :end-line 142, :hash "1303746130"} {:id "defn/runtime027-example-key", :kind "defn", :line 143, :end-line 146, :hash "-2025668393"} {:id "defn/validate-example!", :kind "defn", :line 147, :end-line 156, :hash "-292079014"} {:id "defn/all-true?", :kind "defn", :line 157, :end-line 158, :hash "731206003"} {:id "defn/complete-browser-evidence?", :kind "defn", :line 159, :end-line 164, :hash "-765019633"} {:id "defn-/assert-runtime!", :kind "defn-", :line 165, :end-line 170, :hash "1781741610"} {:id "def/handlers", :kind "def", :line 172, :end-line 176, :hash "89345785"}]}
 ;; clj-mutate-manifest-end

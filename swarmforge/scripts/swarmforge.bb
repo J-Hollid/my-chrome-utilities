@@ -369,8 +369,12 @@
 
 (defn reject-unsafe-codex-args! [row]
   (when-let [args (:extra-args row)]
-    (when (re-find #"(?:^|\s)(?:--dangerously-bypass-approvals-and-sandbox(?=\s|$)|--dangerously-bypass-hook-trust(?=\s|$)|--yolo(?=\s|$)|--sandbox(?:=|\s)|-s(?:\S|\s|$)|--ask-for-approval(?:=|\s)|-a(?:\S|\s|$)|--config(?:=|\s)|-c(?:\S|\s|$)|--add-dir(?:=|\s)|--search(?=\s|$)|--cd(?:=|\s)|-C(?:\S|\s|$)|--profile(?:=|\s)|-p(?:\S|\s|$)|--remote(?:=|\s)|--(?=\s|$))" args)
-      (fail! (str red "Error:" reset " Unsafe Codex sandbox override is not allowed for role '" (:role row) "'.")))))
+    (let [args-with-safe-reasoning-removed
+          (str/replace args
+                       #"(?:^|\s)(?:-c|--config)\s+model_reasoning_effort=(?:low|medium|high|xhigh|max|ultra)(?=\s|$)"
+                       " ")]
+      (when (re-find #"(?:^|\s)(?:--dangerously-bypass-approvals-and-sandbox(?=\s|$)|--dangerously-bypass-hook-trust(?=\s|$)|--yolo(?=\s|$)|--sandbox(?:=|\s)|-s(?:\S|\s|$)|--ask-for-approval(?:=|\s)|-a(?:\S|\s|$)|--config(?:=|\s)|-c(?:\S|\s|$)|--add-dir(?:=|\s)|--search(?=\s|$)|--cd(?:=|\s)|-C(?:\S|\s|$)|--profile(?:=|\s)|-p(?:\S|\s|$)|--remote(?:=|\s)|--(?=\s|$))" args-with-safe-reasoning-removed)
+        (fail! (str red "Error:" reset " Unsafe Codex sandbox override is not allowed for role '" (:role row) "'."))))))
 
 (defn validate-agent-args! [ctx]
   (doseq [row (:roles ctx)]

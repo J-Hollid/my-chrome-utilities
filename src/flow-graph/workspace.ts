@@ -3,14 +3,14 @@ import type {FlowPortSide} from "../data-layer-flow-graph.js";
 export const FLOW_MANUAL_ZOOM={minimum:.25,maximum:2} as const;
 export type FlowWorkspaceSurface="add"|"outline"|"details"|"tidy";
 export interface FlowCamera{x:number;y:number;zoom:number}
-export interface FlowWorkspaceView{camera:FlowCamera;cameraInitialized:boolean;surface:FlowWorkspaceSurface|undefined;minimap:boolean;focusCanvas:boolean}
+export interface FlowWorkspaceView{camera:FlowCamera;cameraInitialized:boolean;surface:FlowWorkspaceSurface|undefined;minimap:boolean;focusCanvas:boolean;navigationVisible:boolean}
 export interface FlowPoint{x:number;y:number}
 export interface FlowBounds extends FlowPoint{width:number;height:number}
 export interface FlowSurfacePlacement{left:number;top:number;width:number;maxHeight:number}
 
 export function flowWorkspaceKey(projectId:string,flowId:string):string{return `${projectId}\u0000${flowId}`;}
 
-export function initialFlowWorkspaceView():FlowWorkspaceView{return{camera:{x:0,y:0,zoom:1},cameraInitialized:false,surface:undefined,minimap:false,focusCanvas:false};}
+export function initialFlowWorkspaceView():FlowWorkspaceView{return{camera:{x:0,y:0,zoom:1},cameraInitialized:false,surface:undefined,minimap:false,focusCanvas:false,navigationVisible:true};}
 export function openFlowSurface(view:FlowWorkspaceView,surface:FlowWorkspaceSurface):FlowWorkspaceView{return{...view,surface};}
 export function closeFlowSurface(view:FlowWorkspaceView):FlowWorkspaceView{return{...view,surface:undefined};}
 export function flowDetailLevel(zoom:number):"identity"|"events"{return zoom<.5?"identity":"events";}

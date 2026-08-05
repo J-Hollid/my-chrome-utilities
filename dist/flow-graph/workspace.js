@@ -1,6 +1,6 @@
 export const FLOW_MANUAL_ZOOM = { minimum: .25, maximum: 2 };
 export function flowWorkspaceKey(projectId, flowId) { return `${projectId}\u0000${flowId}`; }
-export function initialFlowWorkspaceView() { return { camera: { x: 0, y: 0, zoom: 1 }, cameraInitialized: false, surface: undefined, minimap: false, focusCanvas: false }; }
+export function initialFlowWorkspaceView() { return { camera: { x: 0, y: 0, zoom: 1 }, cameraInitialized: false, surface: undefined, minimap: false, focusCanvas: false, navigationVisible: true }; }
 export function openFlowSurface(view, surface) { return { ...view, surface }; }
 export function closeFlowSurface(view) { return { ...view, surface: undefined }; }
 export function flowDetailLevel(zoom) { return zoom < .5 ? "identity" : "events"; }
