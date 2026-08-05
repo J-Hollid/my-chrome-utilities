@@ -74,3 +74,69 @@ Feature: Modular verification packs
     Then that test is scheduled once
     And suite composition references the owning pack instead of repeating test filenames
 
+  # Modular verification packs 008
+  Scenario Outline: Modular verification packs 008
+    Given changed verification input is <verification_input>
+    And its registered consumers are <registered_consumers>
+    When impacted verification packs are selected
+    Then selected packs are <selected_packs>
+    And semantic dependant expansion is <dependant_expansion>
+
+    Examples:
+      | verification_input                    | registered_consumers | selected_packs | dependant_expansion |
+      | layered schema usability helper       | layered schema       | layered schema | excluded            |
+      | flow graph runtime helper             | flow graph           | flow graph      | excluded            |
+      | shared headless Chrome harness        | every browser pack   | every browser pack | excluded         |
+
+  # Modular verification packs 009
+  Scenario: Modular verification packs 009
+    Given registered tests import verification support helpers
+    When verification-pack validation runs
+    Then every imported helper declares each consuming pack
+    And every declared consumer imports that helper through a registered test
+    And an undeclared or stale helper consumer blocks verification with the helper path and pack identity
+
+  # Modular verification packs 010
+  Scenario Outline: Modular verification packs 010
+    Given a changed file belongs to <layered_boundary>
+    When impacted verification packs are selected
+    Then the primary selected pack is <primary_pack>
+    And selected downstream scope is <downstream_scope>
+    And unrelated layered boundaries are excluded
+
+    Examples:
+      | layered_boundary              | primary_pack                  | downstream_scope       |
+      | canonical schema model        | canonical schema core         | declared dependants    |
+      | canonical schema editor       | canonical schema editor       | none                   |
+      | layered schema composition    | layered schema composition    | declared dependants    |
+      | page group structure          | page group structure          | declared dependants    |
+      | selective profile inheritance | selective profile inheritance | none                   |
+
+  # Modular verification packs 011
+  Scenario: Modular verification packs 011
+    Given delivery CSS and assets declare their runtime consumer packs
+    When one delivery CSS or asset path changes
+    Then impacted verification includes its declared runtime consumers and their semantic dependants
+    And packs without a declared consumer path are excluded
+    But a delivery path used by every pack remains globally impactful
+
+  # Modular verification packs 012
+  Scenario: Modular verification packs 012
+    Given verification receipts include current and rejected runtime records
+    When verification throughput is reported
+    Then every runnable pack has an exact-pack and representative changed-path row
+    And each row reports task counts, measured coverage, projected duration, and dependant fan-out
+    And rejected receipts are counted by receipt version, runtime mismatch, and incomplete task result
+
+  # Modular verification packs 013
+  Scenario Outline: Modular verification packs 013
+    Given measured verification metric is <metric_state>
+    When verification performance budgets are checked
+    Then the budget result is <budget_result>
+    And diagnostic detail is <diagnostic_detail>
+
+    Examples:
+      | metric_state                                   | budget_result | diagnostic_detail                                  |
+      | browser target p90 is within its declared limit | pass          | target identity and measured p90                  |
+      | exact pack duration exceeds its declared limit  | fail          | pack identity, measured duration, and limit       |
+      | changed path fan-out exceeds its declared limit | fail          | changed path, selected packs, and allowed fan-out |

@@ -47,3 +47,33 @@ Feature: Modular browser runtime adapters
     Then its own responsive, focus, visibility, and accessibility outcomes are verified
     And unrelated utility DOM fixtures are absent
 
+  # Modular browser runtime adapters 006
+  Scenario Outline: Modular browser runtime adapters 006
+    Given adapter execution mode is <execution_mode>
+    When registered browser targets are selected
+    Then executed targets are <executed_targets>
+    And Chrome session use is <session_use>
+    And evidence identity is <evidence_identity>
+
+    Examples:
+      | execution_mode          | executed_targets                         | session_use                           | evidence_identity             |
+      | focused correction      | only the requested behavior target       | one session for that target           | requested target              |
+      | exact pack verification | every target owned by the selected pack  | compatible targets share one session  | each logical target           |
+      | terminal verification   | every registered target exactly once     | compatible targets share one session  | each logical target and pack  |
+
+  # Modular browser runtime adapters 007
+  Scenario: Modular browser runtime adapters 007
+    Given several browser observations use the same program and compatible harness configuration
+    When their owning pack is verified
+    Then the observation program starts once for the compatible batch
+    And each observation receives fresh page and storage state
+    And every required observation key is emitted under its logical observation identity
+    And a failed observation identifies its own key without discarding independent observation results
+
+  # Modular browser runtime adapters 008
+  Scenario: Modular browser runtime adapters 008
+    Given a browser adapter exceeds the declared maximum single-target p90
+    When browser registry validation runs
+    Then that adapter declares at least two independently selectable behavior targets
+    And compatible targets declare a reusable session batch
+    And selecting one target does not execute the adapter's unrelated behavior
