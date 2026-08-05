@@ -16,6 +16,185 @@ body.twatility-studio {
   color: var(--twa-ink);
 }
 
+/* Canvas-first Flow workspace R02. */
+.twatility-studio .documentary-flow[data-canvas-first-r02="true"] {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto auto minmax(24rem, 1fr);
+  gap: 0.45rem;
+  min-block-size: min(48rem, calc(100vh - 8rem));
+  overflow: hidden;
+}
+.twatility-studio .flow-workspace-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 0.35rem;
+  background: white;
+}
+.twatility-studio .flow-workspace-toolbar button { min-block-size: 36px; }
+.twatility-studio .flow-workspace-toolbar output {
+  min-inline-size: 3.5rem;
+  text-align: center;
+  font-weight: 800;
+}
+.twatility-studio .flow-canvas-viewport {
+  position: relative;
+  display: block;
+  min-inline-size: 0;
+  min-block-size: 24rem;
+  block-size: min(64vh, 46rem);
+  overflow: hidden;
+}
+.twatility-studio .flow-canvas-viewport > .flow-canvas-scroll {
+  inline-size: 100%;
+  block-size: 100%;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+  background: #f7faff;
+}
+.twatility-studio .flow-canvas-viewport .flow-graph-canvas {
+  inline-size: 100%;
+  block-size: 100%;
+  min-inline-size: 0;
+  min-block-size: 0;
+  border: 0;
+}
+.twatility-studio .flow-workspace-surface {
+  position: absolute;
+  inset-block: 0.5rem;
+  inset-inline-end: 0.5rem;
+  z-index: 6;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-content: start;
+  gap: 0.5rem;
+  inline-size: min(28rem, calc(100% - 1rem));
+  max-block-size: calc(100% - 1rem);
+  overflow: auto;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 0.45rem;
+  background: white;
+  box-shadow: 0 0.75rem 2rem #10203033;
+}
+.twatility-studio .flow-workspace-surface > div {
+  grid-column: 1 / -1;
+  display: grid;
+  gap: 0.5rem;
+  min-inline-size: 0;
+}
+.twatility-studio .flow-workspace-surface [aria-label$=" catalog"] div {
+  display: grid;
+  grid-template-columns: 1fr;
+  max-block-size: 13rem;
+  overflow: auto;
+}
+.twatility-studio .flow-minimap {
+  position: absolute;
+  inset-block-end: 0.75rem;
+  inset-inline-end: 0.75rem;
+  z-index: 5;
+  inline-size: 9rem;
+  block-size: 6rem;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 0.3rem;
+  background: #f8fbffdd;
+  color: #40566c;
+  font-size: 0.75rem;
+}
+.twatility-studio .flow-minimap[hidden] { display: none; }
+.twatility-studio .flow-minimap > button {
+  position: relative;
+  inline-size: 100%;
+  block-size: 100%;
+  border: 0;
+  background:
+    linear-gradient(135deg, #dbe9f5 25%, transparent 25%) 0 0 / 1rem 1rem,
+    #f8fbff;
+  overflow: hidden;
+}
+.twatility-studio .flow-minimap-viewport {
+  position: absolute;
+  min-inline-size: 0.4rem;
+  min-block-size: 0.4rem;
+  border: 2px solid var(--twa-navy, #123f65);
+  background: #ffffff66;
+  pointer-events: none;
+}
+.twatility-studio .flow-section-resize-handle {
+  fill: var(--twatility-mustard, #d9a21b);
+  stroke: var(--twa-navy, #123f65);
+  cursor: nwse-resize;
+}
+.twatility-studio .flow-section-draw-preview {
+  fill: #d9a21b1f;
+  stroke: var(--twatility-mustard, #d9a21b);
+  stroke-width: 2;
+  stroke-dasharray: 8 5;
+  pointer-events: none;
+}
+.twatility-studio .flow-tidy-edge-preview {
+  stroke: var(--twatility-mustard, #d9a21b);
+  stroke-width: 3;
+  stroke-dasharray: 7 5;
+  pointer-events: none;
+}
+.twatility-studio .flow-graph-canvas foreignObject { display: none; }
+.twatility-studio .flow-graph-canvas[data-semantic-detail="identity"] .flow-node { display: none; }
+.twatility-studio .flow-page-source,
+.twatility-studio .flow-readiness { fill: #40566c; font-size: 11px; }
+.twatility-studio .flow-readiness { font-weight: 800; }
+.twatility-studio .flow-contextual-toolbar {
+  position: absolute;
+  inset-block-start: 3.5rem;
+  inset-inline-start: 50%;
+  z-index: 5;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  max-inline-size: calc(100% - 1rem);
+  transform: translateX(-50%);
+  padding: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 0.35rem;
+  background: white;
+  box-shadow: 0 0.35rem 1rem #10203022;
+}
+.twatility-studio .flow-node circle { opacity: 0; pointer-events: none; }
+.twatility-studio .flow-node:is(:hover, :focus, .is-selected) circle,
+.twatility-studio .flow-node circle:is(:focus, .is-valid-target, .is-invalid-target) {
+  opacity: 1;
+  pointer-events: auto;
+}
+.twatility-studio .flow-lane {
+  fill: color-mix(in srgb, var(--twatility-mustard, #d9a21b) 7%, transparent);
+  stroke-width: 1.5;
+}
+body.flow-focus-canvas #project-workspace:not([hidden]) { grid-template-columns: minmax(0, 1fr) !important; }
+body.flow-focus-canvas #project-workspace > nav,
+body.flow-focus-canvas #project-inspector,
+body.flow-focus-canvas .sticky-tools { display: none !important; }
+body.flow-focus-canvas #workspace-pane { padding: 0.5rem; }
+@media (max-width: 760px) {
+  .twatility-studio .documentary-flow[data-canvas-first-r02="true"] { min-block-size: calc(100vh - 4rem); }
+  .twatility-studio .flow-canvas-viewport { block-size: min(72vh, 42rem); }
+  .twatility-studio .flow-workspace-toolbar { flex-wrap: nowrap; overflow-x: auto; }
+  .twatility-studio .flow-workspace-toolbar button { flex: 0 0 auto; }
+  .twatility-studio .flow-workspace-surface {
+    inset-inline: 0.35rem;
+    inset-block: auto 0.35rem;
+    inline-size: auto;
+    max-block-size: 65%;
+  }
+}
+
 .twatility-studio .project-bar {
   min-height: 4rem;
   align-items: center;
@@ -506,6 +685,37 @@ body.twatility-studio {
     background: Highlight;
     color: HighlightText;
   }
+}
+
+/* Keep the canvas route bounded after the later studio foundation rules. */
+.twatility-studio .documentary-flow[data-canvas-first-r02="true"] {
+  min-block-size: 0;
+  max-block-size: calc(100vh - 14rem);
+}
+.twatility-studio .documentary-flow[data-canvas-first-r02="true"] .flow-canvas-viewport {
+  min-block-size: 7rem;
+  block-size: clamp(7rem, 22vh, 24rem);
+}
+.twatility-studio .documentary-flow[data-canvas-first-r02="true"] .flow-workspace-surface {
+  box-sizing: border-box;
+  position: absolute !important;
+  inset: 0.35rem 0.35rem 0.35rem auto !important;
+  max-block-size: calc(100% - 0.7rem) !important;
+}
+.twatility-studio .documentary-flow[data-canvas-first-r02="true"] .flow-workspace-surface[hidden] {
+  display: none !important;
+}
+.twatility-studio .documentary-flow[data-canvas-first-r02="true"] .flow-workspace-status {
+  position: absolute;
+  inset-inline-start: 0.75rem;
+  inset-block-end: 0.75rem;
+  z-index: 4;
+  max-inline-size: min(34rem, calc(100% - 10rem));
+  max-block-size: 4.5rem;
+  overflow: auto;
+  margin: 0;
+  padding: 0.35rem 0.5rem;
+  background: #fffdf8e8;
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -125,6 +125,21 @@ export function createFlowSection(state, flowId, input, id) {
         throw new Error("A Flow Section requires a name.");
     return saveGraph(state, flowId, `Create Section ${name}`, (graph) => ({ ...graph, sections: [...(graph.sections ?? []), { id: id("flow-section"), name, bounds: cleanBounds(input.bounds), order: (graph.sections ?? []).length }] }));
 }
+export function createFlowSectionAroundFrames(state, flowId, input, id) {
+    const graph = sectionGraph(state.project, flowId), name = input.name.trim(), frameIds = new Set(input.frameIds), known = new Set((graph.pageFrames ?? []).map(({ id }) => id));
+    if (!name)
+        throw new Error("A Flow Section requires a name.");
+    if (!frameIds.size)
+        throw new Error("Wrap selection requires at least one Page frame.");
+    if ([...frameIds].some((frameId) => !known.has(frameId)))
+        throw new Error("Wrap selection contains an unknown Page frame.");
+    const sectionId = id("flow-section");
+    return saveGraph(state, flowId, `Create Section ${name} around selection`, (next) => ({
+        ...next,
+        sections: [...(next.sections ?? []), { id: sectionId, name, bounds: cleanBounds(input.bounds), order: (next.sections ?? []).length }],
+        pageFrames: (next.pageFrames ?? []).map((frame) => frameIds.has(frame.id) ? { ...frame, sectionId } : frame),
+    }));
+}
 export function movePageFrameToSection(state, flowId, frameId, sectionId) {
     const graph = sectionGraph(state.project, flowId), frame = graph.pageFrames?.find(({ id }) => id === frameId);
     if (!frame)
@@ -143,6 +158,30 @@ export function addFlowPageFrameToSection(state, flowId, pageId, sectionId, id) 
     const peers = (graph.pageFrames ?? []).filter((frame) => frame.sectionId === sectionId), position = { x: (section?.bounds.x ?? 24) + 40 + (peers.length % 3) * 220, y: (section?.bounds.y ?? 24) + 50 + Math.floor(peers.length / 3) * 120 };
     return saveGraph(state, flowId, section ? `Add ${page.name} to Section ${section.name}` : `Add ${page.name} outside Sections`, (next) => ({ ...next, pageFrames: [...(next.pageFrames ?? []), { id: id("flow-page-frame"), name: page.name, pageId: page.id, ...(section ? { sectionId: section.id } : {}), position }] }));
 }
+export function addFlowPageFrameAtPosition(state, flowId, pageId, position, sectionId, id) {
+    const graph = sectionGraph(state.project, flowId), page = state.project.collections.pages.find(({ id }) => id === pageId), section = sectionId ? graph.sections?.find(({ id }) => id === sectionId) : undefined;
+    if (!page)
+        throw new Error(`Unknown Page ${pageId}.`);
+    if (sectionId && !section)
+        throw new Error(`Unknown Flow Section ${sectionId}.`);
+    const cleanPosition = { x: Math.round(position.x), y: Math.round(position.y) };
+    return saveGraph(state, flowId, section ? `Add ${page.name} to Section ${section.name}` : `Add ${page.name} outside Sections`, (next) => ({ ...next, pageFrames: [...(next.pageFrames ?? []), { id: id("flow-page-frame"), name: page.name, pageId: page.id, ...(section ? { sectionId: section.id } : {}), position: cleanPosition }] }));
+}
+export function addFlowPageFrameAndRelationship(state, flowId, input, id) {
+    const graph = sectionGraph(state.project, flowId), source = graph.pageFrames?.find(({ id }) => id === input.sourceId), page = state.project.collections.pages.find(({ id }) => id === input.pageId), kind = input.sourcePort === "right" && input.targetPort === "left" ? "expected_next" : input.sourcePort === "top" && input.targetPort === "bottom" ? "alternative" : input.sourcePort === "bottom" && input.targetPort === "top" ? "merge" : undefined;
+    if (!source)
+        throw new Error(`Unknown Page frame ${input.sourceId}.`);
+    if (!page)
+        throw new Error(`Unknown Page ${input.pageId}.`);
+    if (!kind)
+        throw new Error("The selected Page ports do not define a documentary relationship kind.");
+    const frameId = id("flow-page-frame"), relationshipId = id("flow-relationship"), position = { x: Math.round(input.position.x), y: Math.round(input.position.y) };
+    return saveGraph(state, flowId, `Add ${page.name} and connect from ${source.name}`, (next) => ({
+        ...next,
+        pageFrames: [...(next.pageFrames ?? []), { id: frameId, name: page.name, pageId: page.id, position }],
+        relationships: [...(next.relationships ?? []), { id: relationshipId, name: `${source.name} to ${page.name}`, sourceEndpoint: { kind: "page-frame", id: source.id }, targetEndpoint: { kind: "page-frame", id: frameId }, sourcePort: input.sourcePort, targetPort: input.targetPort, kind }],
+    }));
+}
 export function moveFlowPageFramePresentation(state, flowId, frameId, position) {
     const graph = sectionGraph(state.project, flowId), frame = graph.pageFrames?.find(({ id }) => id === frameId), section = position.sectionId ? graph.sections?.find(({ id }) => id === position.sectionId) : undefined;
     if (!frame)
@@ -155,6 +194,14 @@ export function moveFlowPageFramePresentation(state, flowId, frameId, position) 
     return saveGraph(state, flowId, `Move ${frame.name} Page frame`, (next) => ({ ...next, pageFrames: (next.pageFrames ?? []).map((candidate) => { if (candidate.id !== frameId)
             return candidate; const moved = { ...candidate, position: nextPosition, ...(nextSectionId ? { sectionId: nextSectionId } : {}) }; if (!nextSectionId)
             delete moved.sectionId; return moved; }) }));
+}
+export function tidyFlowPageFrames(state, flowId, placements) {
+    const graph = sectionGraph(state.project, flowId), byId = new Map(placements.map(({ id, position }) => [id, { x: Math.round(position.x), y: Math.round(position.y) }])), known = new Set((graph.pageFrames ?? []).map(({ id }) => id));
+    if ([...byId.keys()].some((id) => !known.has(id)))
+        throw new Error("Tidy contains an unknown Page frame.");
+    if (![...byId].some(([id, position]) => { const frame = graph.pageFrames?.find((candidate) => candidate.id === id); return frame?.position.x !== position.x || frame.position.y !== position.y; }))
+        return state;
+    return saveGraph(state, flowId, "Tidy Flow presentation", (next) => ({ ...next, pageFrames: (next.pageFrames ?? []).map((frame) => { const position = byId.get(frame.id); return position ? { ...frame, position } : frame; }) }));
 }
 export function connectFlowPageFrames(state, flowId, sourceId, targetId, id) {
     const graph = sectionGraph(state.project, flowId), source = graph.pageFrames?.find(({ id }) => id === sourceId), target = graph.pageFrames?.find(({ id }) => id === targetId);

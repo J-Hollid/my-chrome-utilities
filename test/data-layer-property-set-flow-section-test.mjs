@@ -2,8 +2,11 @@ import assert from "node:assert/strict";
 
 import {
   addPropertySetApplication,
+  addFlowPageFrameAtPosition,
+  addFlowPageFrameAndRelationship,
   changePropertySetSchema,
   createFlowSection,
+  createFlowSectionAroundFrames,
   includePropertySetParentAddition,
   inspectSectionRemovalWithContents,
   moveFlowSection,
@@ -25,7 +28,7 @@ import {includeProfileInheritanceParentAdditions,selectiveProfileContribution} f
 import {createProjectCollectionEntity} from "../dist/data-layer-project-entity-lifecycle.js";
 import {createMemoryDurableProjectRepository} from "../dist/data-layer-durable-project-repository.js";
 import {projectFlowGraph} from "../dist/data-layer-flow-graph.js";
-import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
+import {createSpecificationProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
 import {acquireDistArtifactLock} from "../scripts/dist-artifact-lock.mjs";
 import {loadVerificationPacks,planVerification,validateVerificationPacks} from "../scripts/verification-packs.mjs";
 
@@ -166,6 +169,21 @@ const legacyState=()=>({
 
 {
   let state=upgradePageGroupsToPropertySets(legacyState(),id);
+  const beforeWrapUndo=state.history.undo.length;
+  state=createFlowSectionAroundFrames(state,"flow:checkout",{name:"Wrapped selection",bounds:{x:10,y:20,width:640,height:420},frameIds:["frame:cart","frame:product"]},id);
+  const wrapped=state.project.documentationFlowGraphs["flow:checkout"].sections.at(-1);
+  assert.equal(state.history.undo.length,beforeWrapUndo+1,"creating a Section around selected Page frames is one Flow-local command");
+  assert.deepEqual(state.project.documentationFlowGraphs["flow:checkout"].pageFrames.filter(({id})=>["frame:cart","frame:product"].includes(id)).map(({sectionId})=>sectionId),[wrapped.id,wrapped.id]);
+  const beforePositionedUndo=state.history.undo.length;
+  state=addFlowPageFrameAtPosition(state,"flow:checkout","page:cart",{x:880,y:510},undefined,id);
+  assert.deepEqual(state.project.documentationFlowGraphs["flow:checkout"].pageFrames.at(-1).position,{x:880,y:510});
+  assert.equal(state.history.undo.length,beforePositionedUndo+1,"canvas placement stores its chosen coordinates in one command");
+  const beforeDrop=state,sourceId=state.project.documentationFlowGraphs["flow:checkout"].pageFrames[0].id;
+  state=addFlowPageFrameAndRelationship(state,"flow:checkout",{sourceId,pageId:"page:product",sourcePort:"top",targetPort:"bottom",position:{x:760,y:120}},id);
+  const dropGraph=state.project.documentationFlowGraphs["flow:checkout"];
+  assert.equal(dropGraph.pageFrames.length,beforeDrop.project.documentationFlowGraphs["flow:checkout"].pageFrames.length+1);
+  assert.equal(dropGraph.relationships.at(-1).kind,"alternative");
+  assert.deepEqual(undoProjectTransaction(state).project,beforeDrop.project,"one Undo removes both empty-drop records");
   state=createFlowSection(state,"flow:checkout",{name:"Review phase",bounds:{x:20,y:40,width:720,height:300}},id);
   const graph=()=>state.project.documentationFlowGraphs["flow:checkout"],review=graph().sections.at(-1),schemaBytes=JSON.stringify({pages:state.project.collections.pages,propertySets:state.project.collections.propertySets,assignments:state.project.collections.assignments});
   const originalPositions=graph().pageFrames.map(({id,position})=>({id,position:structuredClone(position)}));
@@ -177,9 +195,9 @@ const legacyState=()=>({
   assert.deepEqual(graph().pageFrames.find(({id})=>id==="frame:product").position,{x:560,y:589},"all contained frames move by the same Section delta");
   state=renameAndResizeFlowSection(state,"flow:checkout",review.id,{name:"Review",bounds:{x:320,y:65,width:460,height:330}});
   assert.equal(JSON.stringify({pages:state.project.collections.pages,propertySets:state.project.collections.propertySets,assignments:state.project.collections.assignments}),schemaBytes,"Section commands are schema-neutral");
-  const removed=removeFlowSection(state,"flow:checkout",review.id),removedGraph=removed.project.documentationFlowGraphs["flow:checkout"];
+  const relationshipsBeforeRemoval=graph().relationships.length,removed=removeFlowSection(state,"flow:checkout",review.id),removedGraph=removed.project.documentationFlowGraphs["flow:checkout"];
   assert.equal(removedGraph.pageFrames.some(({id,sectionId})=>id==="frame:cart"&&sectionId===undefined),true,"default removal keeps frames outside Sections");
-  assert.equal(removedGraph.relationships.length,2,"default removal keeps relationships");
+  assert.equal(removedGraph.relationships.length,relationshipsBeforeRemoval,"default removal keeps relationships");
 }
 
 {

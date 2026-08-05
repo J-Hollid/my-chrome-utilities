@@ -1,7 +1,8 @@
 import { addEventOccurrenceToPage, addGraphOccurrence, deriveFlowOccurrenceExample, deriveFlowPageFrameExample, documentaryFlowGraph, duplicateFlowPageFrame, effectiveFlowPageFrameName, flowOccurrenceExampleEditorRows, FLOW_GRAPH_GEOMETRY, flowRelationshipText, inspectOccurrencePageChange, migrateLegacyFlowContextBindings, migrateLegacyFlowRelationshipKinds, moveGraphOccurrence, projectFlowGraph, reassignFlowOccurrencePage, reviewLegacyFlowContextMigration, removeFlowPageFrame, renameFlowPageFrame, resetFlowPageFrameName, removeFlowRelationship, removeGraphOccurrence, saveGraphRelationship, setFlowOccurrenceExample, } from "./data-layer-flow-graph.js";
 import { appendFlowPageFrameCardControls } from "./data-layer-flow-graph-ui-page-frame.js";
-import { addFlowPageFrameToSection, connectFlowPageFrames, createFlowSection, inspectSectionRemovalWithContents, moveFlowPageFramePresentation, moveFlowSection, movePageFrameToSection, removeFlowSection, removeFlowSectionWithContents, renameAndResizeFlowSection } from "./utilities/data-layer/property-set-flow-section.js";
+import { addFlowPageFrameAndRelationship, addFlowPageFrameAtPosition, addFlowPageFrameToSection, connectFlowPageFrames, createFlowSection, createFlowSectionAroundFrames, inspectSectionRemovalWithContents, moveFlowPageFramePresentation, moveFlowSection, movePageFrameToSection, removeFlowSection, removeFlowSectionWithContents, renameAndResizeFlowSection, tidyFlowPageFrames } from "./utilities/data-layer/property-set-flow-section.js";
 import { button, elementByData, entityName, flowEdgeGeometry, flowPortPoint, nodeHeight, nodeWidth, ownsPointerDrag, q, restorePointerCancellationFocus, svg } from "./flow-graph/ui-primitives.js";
+import { upgradeFlowWorkspace } from "./flow-graph/workspace-ui.js";
 export function contextSettingPageLabel(pageName) { return `${pageName} · Context-setting Page`; }
 function renderOccurrenceExampleControls(host, state, flowId, occurrenceId, persist, id) {
     host.setAttribute("aria-label", "Occurrence example controls");
@@ -53,6 +54,54 @@ export function installFlowGraphBuilder(options) {
     const clearActiveCatalogPayload = () => { activeCatalogPayload = undefined; clearPageDropStates(); };
     window.addEventListener("pointerup", clearActiveCatalogPayload);
     window.addEventListener("mouseup", clearActiveCatalogPayload);
+    const workspaceContent = q("#workspace-content"), upgradeWorkspace = () => queueMicrotask(() => { const flowRoot = document.querySelector("#flow-graph-workspace"); if (flowRoot)
+        upgradeFlowWorkspace(flowRoot); });
+    new MutationObserver(upgradeWorkspace).observe(workspaceContent, { childList: true, subtree: true });
+    workspaceContent.addEventListener("flow-tidy-confirm", (event) => { const detail = event.detail, { state, flow } = current(); if (state && flow && detail.placements)
+        persist(tidyFlowPageFrames(state, flow.id, detail.placements), "Tidied Flow presentation; Undo available."); });
+    workspaceContent.addEventListener("flow-empty-connection-page", (event) => { const detail = event.detail, { state, flow } = current(); if (!state || !flow || !detail.pageId || !detail.sourceId || !detail.sourcePort || !detail.targetPort || !detail.position)
+        return; persist(addFlowPageFrameAndRelationship(state, flow.id, { pageId: detail.pageId, sourceId: detail.sourceId, sourcePort: detail.sourcePort, targetPort: detail.targetPort, position: detail.position }, options.id), "Created Page instance and relationship in one Flow command; Undo removes both."); });
+    workspaceContent.addEventListener("flow-add-page-at", (event) => {
+        const detail = event.detail, { state, flow, graph } = current();
+        if (!state || !flow || !graph || !detail.pageId)
+            return;
+        const position = detail.position ?? { x: 80, y: 80 }, sectionId = graph.sections.find((section) => { const bounds = section.bounds; return position.x >= bounds.x && position.x <= bounds.x + bounds.width && position.y >= bounds.y && position.y <= bounds.y + bounds.height; })?.id;
+        persist(addFlowPageFrameAtPosition(state, flow.id, detail.pageId, position, sectionId, options.id));
+    });
+    workspaceContent.addEventListener("flow-section-command", (event) => {
+        const detail = event.detail, { state, flow, graph } = current();
+        if (!state || !flow || !graph || !detail)
+            return;
+        if (detail.kind === "select") {
+            saveSelection({ kind: "section", id: detail.sectionId });
+            return;
+        }
+        if (detail.kind === "create") {
+            persist(detail.frameIds.length ? createFlowSectionAroundFrames(state, flow.id, { name: detail.name, bounds: detail.bounds, frameIds: detail.frameIds }, options.id) : createFlowSection(state, flow.id, { name: detail.name, bounds: detail.bounds }, options.id));
+            return;
+        }
+        const section = graph.sections.find(({ id }) => id === detail.sectionId);
+        if (!section)
+            return;
+        if (detail.kind === "move") {
+            persist(moveFlowSection(state, flow.id, section.id, detail.position));
+            return;
+        }
+        if (detail.kind === "resize") {
+            persist(renameAndResizeFlowSection(state, flow.id, section.id, { name: section.name, bounds: detail.bounds }));
+            return;
+        }
+        if (detail.kind === "rename") {
+            persist(renameAndResizeFlowSection(state, flow.id, section.id, { name: detail.name, bounds: section.bounds }));
+            return;
+        }
+        if (detail.kind === "remove") {
+            persist(removeFlowSection(state, flow.id, section.id), `Removed Section ${section.name}; Page instances and relationships retained. Undo available.`);
+            return;
+        }
+        const review = inspectSectionRemovalWithContents(state.project, flow.id, section.id);
+        persist(removeFlowSectionWithContents(state, flow.id, section.id, review), `Removed Section ${section.name} with ${review.pageFrames.length} Page instances and ${review.relationships.length} relationships. Undo available.`);
+    });
     const current = () => { const context = options.context(), flow = context.flowId && context.state?.project.collections.flows.find(({ id }) => id === context.flowId), graph = flow && context.state ? documentaryFlowGraph(context.state.project, flow.id) : undefined; return { ...context, flow, graph }; };
     const persist = (next, feedback = "") => { try {
         statusMessage = feedback;
@@ -66,9 +115,10 @@ export function installFlowGraphBuilder(options) {
     } };
     const pageFrame = (frameId) => current().graph?.pageFrames.find(({ id }) => id === frameId);
     const selectedFrameForPage = (pageId) => current().graph?.pageFrames.find((frame) => frame.pageId === pageId);
-    const saveSelection = (value) => { const expanded = Array.from(document.querySelectorAll('[data-page-example-for],[data-event-example-for]')).filter((details) => details.open).map((details) => details.dataset.pageExampleFor ? `[data-page-example-for="${CSS.escape(details.dataset.pageExampleFor)}"]` : `[data-event-example-for="${CSS.escape(details.dataset.eventExampleFor ?? "")}]`); selected = value; const { state, flow } = current(); if (state && flow)
-        writeView(state.project.id, flow.id, value ? { selectedItem: value } : {}); render(); for (const selector of expanded)
-        document.querySelector(selector)?.setAttribute("open", ""); };
+    const saveSelection = (value) => { selected = value; const { state, flow } = current(); if (state && flow) {
+        const view = readView(state.project.id, flow.id);
+        writeView(state.project.id, flow.id, value ? { ...view, selectedItem: value } : { ...view, selectedItem: undefined });
+    } render(); };
     function renderInspector() {
         inspectorContext.replaceChildren();
         const { state, flow, graph } = current();
@@ -84,8 +134,8 @@ export function installFlowGraphBuilder(options) {
             inspectorContext.append(heading, copy);
             return;
         }
-        const occurrence = graph?.occurrences.find(({ id }) => id === selected.id), relationship = graph?.relationships.find(({ id }) => id === selected.id), frame = graph?.pageFrames.find(({ id }) => id === selected.id);
-        copy.textContent = occurrence ? `${occurrence.name} · stable occurrence ${occurrence.id}` : relationship ? `Stable relationship ${relationship.id}` : frame ? `${effectiveFlowPageFrameName(state.project, frame)} · stable Page frame ${frame.id}` : "Selection details unavailable";
+        const occurrence = graph?.occurrences.find(({ id }) => id === selected.id), relationship = graph?.relationships.find(({ id }) => id === selected.id), frame = graph?.pageFrames.find(({ id }) => id === selected.id), section = graph?.sections.find(({ id }) => id === selected.id);
+        copy.textContent = occurrence ? `${occurrence.name} · stable occurrence ${occurrence.id}` : relationship ? `Stable relationship ${relationship.id}` : frame ? `${effectiveFlowPageFrameName(state.project, frame)} · stable Page frame ${frame.id}` : section ? `${section.name} · stable Flow Section ${section.id}` : "Selection details unavailable";
         inspectorContext.append(heading, copy);
     }
     function catalog(kind, entities, activate) {
@@ -176,9 +226,10 @@ export function installFlowGraphBuilder(options) {
         const heading = document.createElement("h4"), form = document.createElement("form"), name = document.createElement("input"), list = document.createElement("ol"), add = button("Add Section", () => { });
         heading.textContent = "Flow Sections";
         host.dataset.flowSectionWorkspace = flow.id;
+        host.dataset.flowProjectId = state.project.id;
         host.setAttribute("aria-label", "Flow Section controls");
         name.setAttribute("aria-label", "New Section name");
-        form.addEventListener("submit", (event) => { event.preventDefault(); persist(createFlowSection(current().state, flow.id, { name: name.value, bounds: { x: 40, y: 40 + graph.sections.length * 230, width: 900, height: 200 } }, options.id)); });
+        form.addEventListener("submit", (event) => { event.preventDefault(); persist(createFlowSection(current().state, flow.id, { name: name.value, bounds: { x: 40 + graph.sections.length * 360, y: 40, width: 320, height: 220 } }, options.id)); });
         add.type = "submit";
         form.append(name, add);
         host.append(heading, form);
@@ -341,6 +392,12 @@ export function installFlowGraphBuilder(options) {
             host.append(actions);
             return;
         }
+        if (selected?.kind === "relationship") {
+            const actions = document.createElement("section");
+            actions.setAttribute("aria-label", "Selected relationship inline actions");
+            host.append(actions);
+            return;
+        }
         if (selected?.kind !== "occurrence")
             return;
         const occurrence = graph.occurrences.find(({ id }) => id === selected.id), node = projectFlowGraph(state.project, flow.id).graph.nodes.find(({ id }) => id === selected.id);
@@ -397,7 +454,7 @@ export function installFlowGraphBuilder(options) {
             review.append(heading, list, confirm);
             host.append(review);
         }
-        const transientView = readView(state.project.id, flow.id), selectionExists = selected && (selected.kind === "page-frame" ? stored.pageFrames : selected.kind === "occurrence" ? stored.occurrences : stored.relationships).some(({ id }) => id === selected.id);
+        const transientView = readView(state.project.id, flow.id), selectionCollection = selected?.kind === "section" ? stored.sections : selected?.kind === "page-frame" ? stored.pageFrames : selected?.kind === "occurrence" ? stored.occurrences : stored.relationships, selectionExists = selected && selectionCollection.some(({ id }) => id === selected.id);
         if (!selectionExists)
             selected = transientView.selectedItem;
         const projection = projectFlowGraph(state.project, flow.id), section = document.createElement("section"), heading = document.createElement("h3"), boundary = document.createElement("p"), toolbar = document.createElement("section"), laneControls = document.createElement("section"), status = document.createElement("p"), frames = document.createElement("section"), views = document.createElement("div"), canvasScroll = document.createElement("div"), canvas = svg("svg"), outline = document.createElement("ol"), popover = document.createElement("section"), actions = document.createElement("section");
@@ -439,7 +496,7 @@ export function installFlowGraphBuilder(options) {
         canvas.addEventListener("pointerup", placeActiveCatalogPage);
         canvas.addEventListener("mouseup", placeActiveCatalogPage);
         for (const frame of stored.pageFrames) {
-            const endpoint = projection.graph.connectionEndpoints.find(({ kind, id }) => kind === "page-frame" && id === frame.id), x = endpoint.layout.x, y = endpoint.layout.y, group = svg("g"), rect = svg("rect"), label = svg("text"), inputPort = svg("circle"), outputPort = svg("circle"), moveTo = (targetId, nextX, nextY) => { const currentState = current().state, next = moveFlowPageFramePresentation(currentState, flow.id, frame.id, { x: Math.max(0, Math.round(nextX)), y: Math.max(0, Math.round(nextY)), sectionId: targetId ?? null }); if (next !== currentState)
+            const endpoint = projection.graph.connectionEndpoints.find(({ kind, id }) => kind === "page-frame" && id === frame.id), x = endpoint.layout.x, y = endpoint.layout.y, group = svg("g"), rect = svg("rect"), label = svg("text"), inputPort = svg("circle"), outputPort = svg("circle"), moveTo = (targetId, nextX, nextY) => { sessionStorage.setItem(`my-chrome-utilities.flow-focus.v1:${state.project.id}:${flow.id}`, frame.id); const currentState = current().state, next = moveFlowPageFramePresentation(currentState, flow.id, frame.id, { x: Math.max(0, Math.round(nextX)), y: Math.max(0, Math.round(nextY)), sectionId: targetId ?? null }); if (next !== currentState)
                 persist(next); setTimeout(() => elementByData("data-page-frame-id", frame.id)?.focus(), 50); }, beginConnection = () => { clearSelectedRelationshipForConnection(); connection?.preview?.remove(); const targets = projection.graph.connectionEndpoints.map(({ id }) => id).filter((id) => id !== frame.id); if (!targets.length) {
                 statusMessage = "Add another Page frame before drawing a relationship.";
                 render();
@@ -487,7 +544,7 @@ export function installFlowGraphBuilder(options) {
             } });
             inputPort.addEventListener("pointerup", (event) => { event.stopPropagation(); commitConnection(frame.id); });
             label.textContent = `${endpoint.name} · Context-setting Page`;
-            group.setAttribute("aria-label", `${endpoint.name}. Context-setting Page frame. Drag or use Arrow keys to move.`);
+            group.setAttribute("aria-label", `Page frame ${endpoint.name}. Context-setting Page. Drag or use Arrow keys to move.`);
             group.addEventListener("dragover", (event) => event.preventDefault());
             group.addEventListener("drop", (event) => { event.preventDefault(); event.stopPropagation(); const payload = dropPayload(event); if (payload?.kind !== "event")
                 return; const entity = current().state?.project.collections.events.find(({ id }) => id === payload.id); if (entity)
@@ -704,10 +761,13 @@ export function installFlowGraphBuilder(options) {
                 canvasScroll.scrollTop = Math.min(canvasScroll.scrollHeight - canvasScroll.clientHeight, canvasScroll.scrollTop + edgeStep);
         } const bounds = canvas.getBoundingClientRect(), viewBox = canvas.viewBox.baseVal, scaleX = viewBox.width / bounds.width, scaleY = viewBox.height / bounds.height; connection.preview.setAttribute("x2", String(viewBox.x + (event.clientX - bounds.left) * scaleX)); connection.preview.setAttribute("y2", String(viewBox.y + (event.clientY - bounds.top) * scaleY)); document.querySelectorAll(".is-valid-target,.is-invalid-target").forEach((element) => element.classList.remove("is-valid-target", "is-invalid-target")); const valid = port && port.dataset.flowPortFor !== connection.sourceId && port.dataset.flowPortSide === targetPortFor(connection.sourcePort ?? "right"); (port ?? canvas).classList.add(valid ? "is-valid-target" : "is-invalid-target"); });
         canvas.addEventListener("pointerup", (event) => { if (!connection)
-            return; const delivered = event.target.closest("[data-flow-port-for]"), hit = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-flow-port-for]"), port = hit ?? delivered, side = port?.dataset.flowPortSide; if (port && side)
+            return; const delivered = event.target.closest("[data-flow-port-for]"), hit = document.elementFromPoint(event.clientX, event.clientY)?.closest("[data-flow-port-for]"), port = hit ?? delivered, side = port?.dataset.flowPortSide; if (port && side) {
             commitConnection(port.dataset.flowPortFor, side);
-        else
-            cancelConnection(true, true); });
+            return;
+        } const sourceId = connection.sourceId, sourcePort = connection.sourcePort ?? "right", targetPort = targetPortFor(sourcePort), bounds = canvas.getBoundingClientRect(), viewBox = canvas.viewBox.baseVal, position = { x: Math.round(viewBox.x + (event.clientX - bounds.left) * viewBox.width / bounds.width), y: Math.round(viewBox.y + (event.clientY - bounds.top) * viewBox.height / bounds.height) }, sourceElement = canvas.querySelector(`[data-flow-port-for="${CSS.escape(sourceId)}"][data-flow-port-side="${sourcePort}"]`); connection.preview?.remove(); connection = undefined; canvasScroll.classList.remove("is-connecting"); if (!targetPort) {
+            cancelConnection(true, true);
+            return;
+        } canvas.dispatchEvent(new CustomEvent("flow-empty-connection-drop", { bubbles: true, detail: { sourceId, sourcePort, targetPort, position, sourceElement } })); });
         canvas.addEventListener("keydown", (event) => { if (!connection)
             return; if (event.key === "Escape") {
             event.preventDefault();
@@ -782,7 +842,7 @@ export function installFlowGraphBuilder(options) {
         if (state) {
             const focusId = sessionStorage.getItem(`my-chrome-utilities.flow-focus.v1:${state.project.id}:${flow.id}`);
             if (focusId)
-                queueMicrotask(() => document.querySelector(`article[data-page-frame-id="${CSS.escape(focusId)}"]`)?.focus({ preventScroll: true }));
+                queueMicrotask(() => (document.querySelector(`[aria-label="Interactive directional Flow canvas"] [data-page-frame-id="${CSS.escape(focusId)}"]`) ?? document.querySelector(`article[data-page-frame-id="${CSS.escape(focusId)}"]`))?.focus({ preventScroll: true }));
         }
     }
     else {

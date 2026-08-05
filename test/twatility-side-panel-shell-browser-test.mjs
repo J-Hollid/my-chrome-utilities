@@ -512,7 +512,12 @@ try {
 } finally {
   side?.close();
   await stopHeadlessChrome(chrome, 1500);
-  await rm(profile, { recursive: true, force: true });
+  await rm(profile, {
+    recursive: true,
+    force: true,
+    maxRetries: 5,
+    retryDelay: 100,
+  });
 }
 
 console.log("TWAtility Belt packaged side-panel shell browser test passed");
