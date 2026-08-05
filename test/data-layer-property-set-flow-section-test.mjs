@@ -89,6 +89,27 @@ const legacyState=()=>({
   assert.throws(()=>verifyPropertySetFlowSectionUpgrade(legacy.project,corrupt(project=>{const graph=project.documentationFlowGraphs["flow:checkout"],prior=graph.sections[0].id;graph.sections[0].id="group:checkout";graph.pageFrames.filter(({sectionId})=>sectionId===prior).forEach(frame=>frame.sectionId="group:checkout");})),/identities/,"verification rejects a Section identity reused from the legacy project");
 }
 
+for(const legacyApplicability of ["missing","empty"]){
+  const legacy=legacyState(),[checkout,retail]=legacy.project.collections.pageGroups;
+  delete checkout.applicabilitySetId;
+  if(legacyApplicability==="empty")checkout.applicabilitySetId="";
+  retail.applicabilitySetId="set:retail";
+  const upgraded=upgradePageGroupsToPropertySets(legacy,id),applications=upgraded.project.collections.pages[0].propertySetApplications;
+  assert.deepEqual(applications.map(({propertySetId,applicabilitySetId})=>({propertySetId,applicabilitySetId})),[
+    {propertySetId:"group:checkout",applicabilitySetId:undefined},
+    {propertySetId:"group:retail",applicabilitySetId:"set:retail"},
+  ],`${legacyApplicability} legacy applicability upgrades to unconditional without disturbing its valid neighbor`);
+  assert.doesNotThrow(()=>verifyPropertySetFlowSectionUpgrade(legacy.project,upgraded.project),`${legacyApplicability} optional applicability has the same normalized migration meaning`);
+  const sourceBytes=JSON.stringify(legacy.project),repository=createMemoryDurableProjectRepository({now:()=>"2026-08-05T12:00:00.000Z",token:()=>`draft:${legacyApplicability}:${++sequence}`});
+  await repository.putProjectMetadataOnly(legacy,{draftToken:`draft:legacy:${legacyApplicability}`,draftSequence:4});
+  const first=await repository.loadProject(legacy.project.id),firstRecovery=await repository.exportRepositoryRecoveryBundle(),receiptKey=`property-set-flow-sections-v1:${legacy.project.id}`,firstReceipt=firstRecovery.migrationReceipts.find(({key})=>key===receiptKey),backup=firstRecovery.migrationBackups.find(({key})=>key===receiptKey),firstApplicationBytes=JSON.stringify(first.state.project.collections.pages[0].propertySetApplications);
+  assert.equal(JSON.stringify(backup.value.project),sourceBytes,`${legacyApplicability} migration backup retains the exact legacy project representation`);
+  assert.equal(firstReceipt.value.verified,true,`${legacyApplicability} migration completes with a verified durable receipt`);
+  const second=await repository.loadProject(legacy.project.id),secondRecovery=await repository.exportRepositoryRecoveryBundle(),secondReceipt=secondRecovery.migrationReceipts.find(({key})=>key===receiptKey);
+  assert.equal(JSON.stringify(second.state.project.collections.pages[0].propertySetApplications),firstApplicationBytes,`${legacyApplicability} migration keeps application identities stable on another load`);
+  assert.equal(JSON.stringify(secondReceipt),JSON.stringify(firstReceipt),`${legacyApplicability} migration receipt is byte-identical on another load`);
+}
+
 {
   let state=createSpecificationProject({name:"New Shop",site:"shop.test",id});
   assert.deepEqual(Object.keys(state.project.collections),["profiles","propertySets","pages","events","applicabilitySets","flows","fixtures","assignments"],"new projects persist only the separated collection taxonomy");

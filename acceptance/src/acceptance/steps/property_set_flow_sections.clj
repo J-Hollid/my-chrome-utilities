@@ -8,7 +8,9 @@
 
 (def entry-modes
   {"Shop contains Shared Profiles Sitewide and Commerce" :model
-   "the built extension is running with the production project repository, schema compiler, and Flow canvas" :runtime})
+   "saved legacy Cart applies Checkout base then Retail commerce" :model
+   "the built extension is running with the production project repository, schema compiler, and Flow canvas" :runtime
+   "production IndexedDB contains a previous-version project whose Cart memberships are Checkout base then Retail commerce" :runtime})
 
 (defonce model-verified? (atom false))
 (defonce browser-observation (atom nil))
@@ -41,7 +43,7 @@
 
 (def runtime-paths
   (set (concat [:installedBoundary :preservedGraph]
-               (map #(keyword (str "runtime" (format "%03d" %))) (range 1 12)))))
+               (map #(keyword (str "runtime" (format "%03d" %))) (range 1 13)))))
 
 (defn- assert-runtime! [evidence]
   (support/assert! (and (= runtime-paths (set (keys evidence)))
