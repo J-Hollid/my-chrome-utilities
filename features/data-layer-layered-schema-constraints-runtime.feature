@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=6122eb32daaa63e44d5bad9368c9d2ee6f15f8d9342d15039442953b3ef4aa68
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-08-03T09:17:16.800194478Z","feature_name":"Data layer layered schema constraints runtime","feature_path":"features/data-layer-layered-schema-constraints-runtime.feature","background_hash":"e3abf09522d1a7021ef5c4fddde53d634dd57d90657c227f341935b5a82edc94","implementation_hash":"sha256:bbf092d90a06dd375cc859e2a634860ead1fe0ba720bf73722ef4f8c646cf2f6","scenarios":[{"index":25,"name":"Data layer layered schema constraints runtime 026","scenario_hash":"3dae011fbdffb91df7363b5285533a358be0d0bbaec3a0ac41c460c34beccb46","mutation_count":27,"result":{"Total":27,"Killed":27,"Survived":0,"Errors":0},"tested_at":"2026-08-02T17:24:07.376935649Z"},{"index":26,"name":"Data layer layered schema constraints runtime 027","scenario_hash":"674cf075f066406dde7c4db04fe9a4912f1bf298fa161ea5e29bb29f86467111","mutation_count":40,"result":{"Total":40,"Killed":40,"Survived":0,"Errors":0},"tested_at":"2026-08-02T17:24:07.376935649Z"},{"index":30,"name":"Data layer layered schema constraints runtime 031","scenario_hash":"3a4f8c772321bbd5581826270faa09f844fa50421f002fa0a3eabbafa3841ebc","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-08-02T17:24:07.376935649Z"},{"index":22,"name":"Data layer layered schema constraints runtime 023","scenario_hash":"609973252394af0e6f51ab5d344bca7455cfb701af581dfe0c7607897ebec040","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-08-01T17:40:55.233109847Z"},{"index":27,"name":"Data layer layered schema constraints runtime 028","scenario_hash":"5b49b611c9cd75330111e227830c230f5f50250a4716807d32f0b4704dee8d15","mutation_count":24,"result":{"Total":24,"Killed":24,"Survived":0,"Errors":0},"tested_at":"2026-08-01T17:40:55.233109847Z"},{"index":29,"name":"Data layer layered schema constraints runtime 030","scenario_hash":"bf425d4c65fbcf7867ec9f6810f18ed705da72a43426174bfadcedf42959b3c4","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-08-01T17:40:55.233109847Z"},{"index":0,"name":"Data layer layered schema constraints runtime 001","scenario_hash":"841b58bac0a850830dd983e58475124102f2e9e7df6f82b643fd77f719b16764","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-08-01T13:02:22.607095383Z"},{"index":4,"name":"Data layer layered schema constraints runtime 005","scenario_hash":"e6f9b12fb82ce881ea1a801d881cef93539989a8ae6fcdc441241974c826ece5","mutation_count":32,"result":{"Total":32,"Killed":32,"Survived":0,"Errors":0},"tested_at":"2026-08-01T13:02:22.607095383Z"},{"index":13,"name":"Data layer layered schema constraints runtime 014","scenario_hash":"d8473b20394969c2c46850e4eeaa7760e591f3ba09c6e0b07f73304745a78e50","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-08-01T13:02:22.607095383Z"},{"index":19,"name":"Data layer layered schema constraints runtime 020","scenario_hash":"1d4735c775a66aaaeb64d8d2d882d91c5f770db945eceec40651d722079e715e","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-08-01T13:02:22.607095383Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer layered schema constraints runtime
 
   Background:
@@ -314,26 +309,26 @@ Feature: Data layer layered schema constraints runtime
 
   # Data layer layered schema constraints runtime 021
   Scenario: Data layer layered schema constraints runtime 021
-    Given the production Checkout / Payment Page-frame card has its derived JSON example open
+    Given production Checkout / Payment Page instance is selected with its derived JSON open in installed contextual Details
     And production inheritance supplies payment for /oForm/formStepName and checkout for /oForm/formType
-    When the Page-frame card action is activated in the installed Flow outline
-    Then the primary main-workspace region is the same compact composed-schema workspace rendered by production Page Group and Page routes
+    When actual controls activate Open schema contribution from the selected Page toolbar
+    Then the primary main-workspace region is the same compact composed-schema workspace rendered by production Property Set and Page routes
     And two collapsed rows render their effective definitions, Inherited status, and item-specific structural ownership controls
     And focused property details retain their exact parent sources and validation details
     And no empty local-only canonical navigator or eagerly expanded per-property facet table is visible
     And an Add local property action is operable without materializing inherited definitions
     And rendered text and controls contain none of Effective documentation, Compiled effective schema and documentation, Target Event, Activation, Priority, Applicability, Test observation, Manual Flow / Page / Event, Validation payload, or developer export
     When actual controls expand only /oForm/formStepName and open Definition
-    Then ordinary inherited Definition controls are enabled without a preliminary Override here action
+    Then inherited ordinary fields are editable in that one open facet editor while /oForm/formType remains collapsed
     When actual controls change the ordinary value to payment-review and confirm Review changes
     Then one durable property-scoped command adds only that sparse facet to the selected Page-frame record
     And /oForm/formType stays collapsed while hashes for the reusable Payment Page, a sibling Payment frame, unrelated contributors, and Published revision remain unchanged
-    And the installed derived JSON example changes only /oForm/formStepName to payment-review
+    And installed contextual Details changes only /oForm/formStepName to payment-review
     When actual controls invoke Reset to parents on /oForm/formStepName
     Then production deletes the sparse facet and recompiles payment without storing an inherited snapshot
     When actual Return to Flow runs
-    Then production restores the same frame selection, canvas viewport, open derived example, and focus to the originating card control
-    When actual selected-frame inline actions invoke Open schema contribution
+    Then production restores the same frame selection, canvas viewport, open contextual Details, and focus to the originating Page toolbar control
+    When actual contextual Page Details invokes Open schema contribution
     Then the same Flow Page-frame ID and compact composed-schema workspace are rendered
 
   # Data layer layered schema constraints runtime 022
