@@ -1,301 +1,330 @@
-# mutation-stamp: sha256=2d6061a56fbf57dcd708de0245c9f8e61873a0a259c0060fd155ba0c5de0b024
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-08-04T09:08:23.654936265Z","feature_name":"Data layer directional Flow specification graph","feature_path":"features/data-layer-directional-flow-specification-graph.feature","background_hash":"9634566386a15c60fdbe1b3baf8905a569be5a9b7151c97183b37df3b2801f6f","implementation_hash":"sha256:a0efdaf0ada6d5ec747ebe6281d6a7ba06a2f300192cf0db4992d77214301888","scenarios":[{"index":25,"name":"Data layer directional Flow specification graph 026","scenario_hash":"403693bea962d4d28ff63a915b57df66c41feba3f4483da32e0438286edc0f56","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-08-04T08:51:24.819926986Z"},{"index":4,"name":"Data layer directional Flow specification graph 005","scenario_hash":"350e684b9bb3b763a3581dceaad31c3126fe198f4ae9d8bef81be11da2986d3a","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-08-04T08:48:40.412443817Z"},{"index":8,"name":"Data layer directional Flow specification graph 009","scenario_hash":"349f34fbc4ad5b902bf360ddd1b50a3267221af16942dc1ba3940a8f89904d35","mutation_count":20,"result":{"Total":20,"Killed":20,"Survived":0,"Errors":0},"tested_at":"2026-08-04T08:48:40.412443817Z"},{"index":22,"name":"Data layer directional Flow specification graph 023","scenario_hash":"9492d580022d86884a9ff6f6fd2468bebb2536291bd4e46e5fdc02d7a017c913","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-08-04T08:48:40.412443817Z"},{"index":23,"name":"Data layer directional Flow specification graph 024","scenario_hash":"23636d4d033cd9593eec745fc2579d12cd539b361ba7c7576658ad7d99b20c9e","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-08-04T08:48:40.412443817Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer directional Flow specification graph
 
   Background:
-    Given Shop project contains Page Groups Checkout, Delivery, and Confirmation
-    And Checkout owns Pages Cart and Payment, Delivery owns Page Shipping, and Confirmation owns Page Thank you
-    And every Page definition identifies its context-setting observed event such as pageview
-    And ungrouped Pages Landing and Campaign and interaction Events button_click, form_submit, add_shipping_info, add_payment_info, and purchase exist
-    And Specification Flow Checkout journey is open
+    Given Shop project has Specification Flow Checkout journey open on its current Saved Draft
+    And canonical Pages, interaction Events, and Property Sets are authored outside the Flow workspace
 
   # Data layer directional Flow specification graph 001
-  Scenario: Data layer directional Flow specification graph 001
+  Scenario Outline: Data layer directional Flow specification graph 001
+    Given the viewport is <width> by <height>
+    And project navigation has remembered <navigation> visibility
+    And Checkout journey has a Cart Page instance
     When the main Flow workspace opens
-    Then its toolbar exposes Page Groups, Pages, and Events component catalogs beside the canvas
-    And the synchronized outline is a secondary projection in the main workspace
-    And the Inspector may be closed without hiding any creation, placement, connection, or relationship-detail action
-    And no documentary occurrence or relationship form is mounted in the Inspector
+    Then a bounded canvas is visible in the initial viewport without scrolling the outer document
+    And the canvas fills the available Flow route beneath one compact toolbar
+    And Outline and Details are closed and reserve no canvas space
+    And project navigation uses its remembered visibility without pushing the canvas below the initial viewport
+    When the operator selects Cart, changes the viewport, and enters Focus Canvas
+    Then project chrome is hidden while Add, camera controls, and Exit Focus remain available
+    And current selection and viewport remain unchanged
+    When the operator exits Focus Canvas
+    Then remembered navigation visibility and invoking focus are restored without changing selection or viewport
     And Structured executable flow remains separately labelled Advanced and does not duplicate the documentary graph
 
+    Examples:
+      | width | height | navigation |
+      | 360   | 800    | hidden     |
+      | 360   | 800    | visible    |
+      | 1440  | 900    | hidden     |
+      | 1440  | 900    | visible    |
+
   # Data layer directional Flow specification graph 002
-  Scenario: Data layer directional Flow specification graph 002
-    Given Checkout journey contains no selected Page Groups or graph items
-    When the operator adds available groups to the Flow lane order
-      | position | Page Group   |
-      | 1        | Checkout     |
-      | 2        | Delivery     |
-      | 3        | Confirmation |
-    Then the canvas renders exactly those three lanes in that order
-    And canonical Flow storage contains their ordered stable references
-    And no Context, Shipping, Payment, Merge, or other fallback lane is rendered or stored
-    And the recommended next action is Add a Page from the Pages catalog
+  Scenario Outline: Data layer directional Flow specification graph 002
+    Given the project contains <entity_count> available canonical Pages and interaction Events
+    When the Flow opens with Add closed
+    Then persistent canvas controls have a constant footprint independent of the entity count
+    And no per-entity catalog, raw coordinate form, occurrence form, or relationship endpoint form precedes the canvas
+    When the operator invokes Add at a canvas position
+    Then one bounded searchable palette opens at that position with New Section, existing Pages, and existing Events
+    And the palette renders a bounded result window rather than one permanent control per entity
+    And existing Events are enabled only when a containing Page is selected or targeted
+    When the operator chooses existing Page Cart
+    Then one distinct Cart Flow Page instance is placed at the invocation position
+    And the palette closes without changing the canonical Cart Page definition
+    And Add offers no route to create a canonical Page or Event definition
+
+    Examples:
+      | entity_count |
+      | 3            |
+      | 300          |
 
   # Data layer directional Flow specification graph 003
   Scenario: Data layer directional Flow specification graph 003
-    Given the Flow lanes are Checkout, Delivery, and Confirmation
-    When the operator moves Confirmation before Delivery from the main-workspace lane controls
-    Then the canvas order becomes Checkout, Confirmation, and Delivery
-    And top-to-bottom lane positions are derived from that order without changing Page Group identities
-    When the operator attempts to remove Checkout while it contains a Page frame
-    Then removal is blocked without changing the Flow revision
-    And guidance identifies the contained Page by name and offers Move Page frame or Remove Page frame
+    Given Product and Cart Page instances have independent canvas positions
+    When the operator selects Product and creates Section Sales with Wrap selection
+    And draws Section Checkout beside Sales and explicitly moves Cart into it
+    Then both Sections retain stable Flow-owned identities and arbitrary two-dimensional bounds
+    And each Page has explicit containment in exactly its chosen Section
+    When the operator selects Sales
+    Then contextual controls expose Rename, Move, Resize, Wrap selection, Remove Section, and Remove with contents without a raw geometry form
+    When the operator moves Sales
+    Then Product moves by the same offset while Cart remains fixed
+    When the operator resizes Checkout across Product
+    Then Checkout bounds change without capturing Product or releasing Cart
+    And a Section cannot be contained by another Section
+    And Section position, size, and presentation order do not change relationship topology or documentation order
 
   # Data layer directional Flow specification graph 004
   Scenario: Data layer directional Flow specification graph 004
-    Given selected membership permits Cart in Checkout and Shipping in Delivery
-    When the operator searches Pages for Cart and inserts it into Checkout
-    Then one Cart Page frame appears in the Checkout lane with stable Checkout and Cart references
-    And the Pages catalog identifies Cart as a Checkout member
-    And Cart represents its context-setting pageview event without a nested pageview occurrence
-    When the operator tries to insert Shipping into Checkout
-    Then the gesture is rejected because Shipping belongs to Delivery
-    And no Page, Page Group, Flow, or frame reference changes
-    And guidance opens Shipping Page Group membership without offering a free-form lane value
+    Given Sales and Checkout Sections exist and an unsectioned canvas position is available
+    And Product, Cart, and Landing apply different ordered Property Sets
+    When the operator inserts Product into Sales, Cart into Checkout, and Landing outside every Section
+    Then all three placements are accepted independently of Property composition
+    And each insertion creates one stable Flow Page instance at the chosen position
+    And each Page frame represents its context-setting observed event without a nested context occurrence
+    When the operator inserts Product into Checkout again
+    Then a second Product instance is created with a distinct identity and the same canonical Page reference
+    And no placement changes Property Set applications, effective schema, provenance, validation, or Assignment targets
 
   # Data layer directional Flow specification graph 005
   Scenario Outline: Data layer directional Flow specification graph 005
     Given <page> Page frame is selected and has no occurrence of <event>
-    And predefined Event <event> has optional trigger <trigger>
+    And predefined interaction Event <event> has optional trigger <trigger>
     When the operator <insertion>
-    Then one <event> occurrence appears immediately inside <page> on the canvas and synchronized outline
-    And <page> is identified as a context-setting Page event while <event> is identified as a nested interaction Event
-    And canonical storage retains stable Page-frame, Page Group, Event, and occurrence references plus optional trigger <trigger>
-    And Event creation, Event editing, catalog insertion, and occurrence detail expose no Documentary role selector
-    And no Event definition or occurrence stores a context-setting or interaction role, Page-context binding, copied schema, or lane-name string
+    Then one <event> occurrence appears immediately inside <page> on the canvas
+    And <page> remains the context-setting Page event while <event> is a nested interaction Event
+    And canonical storage retains stable Page-frame, Event, and occurrence references plus optional trigger <trigger>
+    And Event creation, editing, insertion, and occurrence detail expose no documentary role selector
+    And no Event definition or occurrence stores a documentary role, Page-context binding, copied schema, or Section-name string
 
     Examples:
-      | page     | event             | trigger           | insertion                                                     |
-      | Cart     | button_click      | Continue clicked  | activates button_click from the Events catalog by pointer     |
-      | Shipping | add_shipping_info | Form submitted    | drags add_shipping_info onto the visible canvas Shipping frame |
-      | Payment  | add_payment_info  | Payment submitted | activates add_payment_info from the Events catalog by keyboard |
+      | page     | event             | trigger           | insertion                                                   |
+      | Cart     | button_click      | Continue clicked  | chooses button_click from Add by pointer                    |
+      | Shipping | add_shipping_info | Form submitted    | drags add_shipping_info from Add onto Shipping              |
+      | Payment  | add_payment_info  | Payment submitted | chooses add_payment_info from Add by keyboard               |
 
   # Data layer directional Flow specification graph 006
   Scenario: Data layer directional Flow specification graph 006
-    Given Cart and Shipping Page frames are visible in their owning lanes
-    When the operator searches Events for add_shipping_info
+    Given Cart and Shipping Page frames are visible
+    When the operator searches Add for add_shipping_info
     And places it by pointer in Cart and by keyboard in Shipping
-    Then the new interaction occurrences are
-      | container | Event reference   | occurrence identity |
-      | Cart      | add_shipping_info | distinct            |
-      | Shipping  | add_shipping_info | distinct            |
-    And both occurrences are visible in their Page frames and the synchronized outline
-    And neither Event definition, reusable schema, Page membership, nor the first occurrence changes
+    Then each Page contains one visible add_shipping_info occurrence with a distinct stable identity
+    And the same reusable Event reference is used in both Page frames
+    And neither Event definition, reusable schema, Page Property composition, nor the first occurrence changes
 
   # Data layer directional Flow specification graph 007
   Scenario: Data layer directional Flow specification graph 007
-    Given Landing and Campaign have neither Page Group membership nor Event occurrences
-    And no free Page frame is present
-    When the operator starts dragging Landing outside the selected Page Group lanes
-    Then narrow Place before lanes and Place after lanes affordances appear at the left and right canvas edges
-    And neither affordance occupies a lane-sized background
-    When Landing is released on Place before lanes and Campaign is released on Place after lanes
-    Then compact free Landing and Campaign frames sandwich the Page Group lanes
-    And each frame persists its before-lanes or after-lanes region, coordinates, Page, and frame references without a Page Group or context-binding reference
-    And empty edge backgrounds collapse while both frames remain available for Events and relationships
+    Given Checkout Section contains Cart with Events and Page relationships
+    When the operator removes Checkout Section
+    Then Cart, its Events, and its relationships remain at the same canvas positions outside every Section
+    And only the Section and Cart containment reference are removed in one undoable Flow command
+    When the operator undoes and chooses Remove with contents
+    Then named impact review identifies Checkout, Cart, its Events, and affected relationships before any write
+    When the operator confirms the destructive action
+    Then exactly the reviewed Section and contents are removed in one undoable Flow command
+    And Undo restores their stable identities, containment, topology, and positions once
 
   # Data layer directional Flow specification graph 008
   Scenario: Data layer directional Flow specification graph 008
     Given button_click and add_payment_info are positioned inside Cart
-    When pointer drag places them side by side at distinct free positions inside Cart
-    Then Cart expands to retain both nodes without forcing either into a vertical list
-    And their saved presentation coordinates match the chosen positions after reload
-    When the operator changes add_payment_info Page frame from Cart to Payment
-    Then impact preview identifies the Page effective-schema branch that will change
-    When the operator confirms the Page change
-    Then the same add_payment_info occurrence identity, Event reference, trigger, local schema contribution, and configured examples move into Payment
-    And its effective schema recompiles from Payment Page-instance plus Event and occurrence contributions
-    And Cart, Payment, the reusable Event definition, and every other occurrence remain byte-identical
+    When the operator places them side by side at distinct free positions
+    Then Cart expands to retain both mini-cards without forcing a vertical list
+    And reload restores their chosen relative positions
+    When the operator changes the containing Page of add_payment_info from Cart to Payment
+    Then impact preview identifies the effective-schema branch that will change
+    When the operator confirms the Page reassignment
+    Then the occurrence identity, Event reference, trigger, sparse contribution, and configured examples move into Payment
+    And the occurrence recompiles against Payment while both Pages, the reusable Event, and every sibling occurrence remain unchanged
 
   # Data layer directional Flow specification graph 009
   Scenario Outline: Data layer directional Flow specification graph 009
-    Given Customer details, ID verification, Payment, and Confirmation Page frames expose left, right, top, and bottom connection ports
-    And their contained Event occurrences expose no relationship ports
-    When the operator drags from the <source> Page <source_port> port toward <target> Page
-    Then a live directed preview follows the pointer and the <target> <target_port> port is highlighted as a valid target
-    When the pointer is released on the <target> Page <target_port> port
-    Then one relationship persists with kind <kind> and stable source Page-frame, target Page-frame, and relationship identities
-    And <kind> is inferred from the source and target ports without a relationship-kind selector
-    And the relationship persists without a label
-    And the canvas renders its directed edge without requiring a source or target form
-    And an inline relationship popover opens at the new edge
+    Given the Page frames expose semantic left, right, top, and bottom connection ports
+    And contained Event occurrences expose no relationship ports
+    When the operator starts connecting <source> <source_port> toward <target>
+    Then a live directed preview follows the gesture and identifies <target> <target_port> as valid
+    When the operator commits on <target> <target_port>
+    Then one relationship persists with stable identity, kind <kind>, Page-frame endpoints, and connected ports
+    And <kind> is inferred from the semantic ports independently of visual edge routing
+    And the directed edge renders without a source, target, or relationship-kind form
+    And contextual relationship details open with an optional empty label
 
     Examples:
       | source           | source_port | target          | target_port | kind          |
       | Customer details | right       | Payment         | left        | expected_next |
       | Customer details | top         | ID verification | bottom      | alternative   |
       | ID verification  | bottom      | Payment         | top         | merge         |
-      | Payment          | right       | Confirmation    | left        | expected_next |
 
   # Data layer directional Flow specification graph 010
-  Scenario: Data layer directional Flow specification graph 010
-    Given relationship drawing started from the Customer details Page right port
-    When the pointer reaches the same Page frame, empty canvas, an incompatible target, or a port pairing other than right to left, top to bottom, or bottom to top
-    Then that target is identified as invalid
-    When the operator releases the pointer or presses Escape
-    Then the preview is removed, focus returns to Customer details Page, and canonical state remains byte-identical
-    And no incomplete relationship record exists
+  Scenario Outline: Data layer directional Flow specification graph 010
+    Given connection drawing starts from Customer details <source_port> port
+    When the operator releases the connection on empty canvas
+    Then searchable existing-Page choices open at the release position without creating a partial relationship
+    When the operator chooses Payment
+    Then one Payment Page instance and one <kind> relationship using target <target_port> are created atomically at that position
+    And one Undo removes both while preserving the canonical Payment Page
+    When the operator repeats the gesture and cancels the Page choices
+    Then focus returns to Customer details and canonical state remains unchanged
+    When the operator targets the source Page, an Event, or an incompatible Page port
+    Then the target is identified as invalid and release creates no relationship
+
+    Examples:
+      | source_port | target_port | kind          |
+      | right       | left        | expected_next |
+      | top         | bottom      | alternative   |
+      | bottom      | top         | merge         |
 
   # Data layer directional Flow specification graph 011
   Scenario: Data layer directional Flow specification graph 011
     Given four positioned Page frames form a fork-and-join candidate
-    When the operator draws two top-to-bottom splits from Decision to the branch Pages and two bottom-to-top returns from those Pages to Confirmation
-    Then the first two relationships have inferred kind alternative and the latter two have inferred kind merge
-    And graph and outline show two alternative branches and their merge with exact directed endpoints
-    When the operator labels one alternative relationship Fulfilment choice and leaves the other three relationships unlabelled
-    Then the optional label, inferred kinds, documentation conditions, and expectations persist once
+    When the operator draws two top-to-bottom splits from Decision to branch Pages
+    And draws two bottom-to-top returns from those Pages to Confirmation
+    Then the splits have kind alternative and the returns have kind merge
+    And canvas and Outline show the exact directed branch and merge endpoints
+    When one alternative receives label Fulfilment choice and the other relationships remain unlabelled
+    Then labels, kinds, conditions, and expectations persist once
     And no Parallel kind or relationship-kind selector is available
-    And the graph makes no claim that either branch or the complete Flow executed
+    And the graph makes no claim that a branch or the Flow executed
 
   # Data layer directional Flow specification graph 012
   Scenario: Data layer directional Flow specification graph 012
-    Given keyboard focus is on the Cart Page right port
+    Given keyboard focus is on Cart right port
     When Enter starts connection mode
-    And Arrow keys move the target indicator to Payment Page
+    And spatial navigation targets Payment left port
     And Enter creates the relationship
-    Then the created relationship has inferred kind expected_next
-    And the inline relationship popover receives focus for optional label and documentation editing without a kind selector
-    When the operator leaves the label blank, saves, and presses Escape
-    Then focus returns to the created edge in the canvas
-    And exactly one relationship exists without requiring pointer input or Inspector controls
+    Then the relationship has inferred kind expected_next
+    And contextual details receive focus for optional documentation without a kind selector
+    When the operator saves an empty label and presses Escape
+    Then focus returns to the created edge
+    And exactly one relationship exists without pointer input or an open Details surface
 
   # Data layer directional Flow specification graph 013
   Scenario: Data layer directional Flow specification graph 013
-    Given add_payment_info is nested in Cart while the Inspector is closed
-    When the operator selects add_payment_info
-    Then canvas handles and an inline summary expose Move within Page, Change Page, Duplicate occurrence, Remove, and Open schema contribution
-    And no Event occurrence action offers Connect or a relationship port
-    And opening schema contribution uses the canonical schema editor in the main workspace
-    When the operator returns to Flow
-    Then the same node, viewport, and canvas position are restored
-    When the optional Inspector is opened
-    Then it shows contextual details without becoming the only route to any graph action
+    Given Cart has Flow-specific name Basket, source Page Cart, status Incomplete, and two interaction Events
+    When the canvas renders at normal zoom
+    Then one compact Page card shows Basket prominently, Cart as subtle provenance, and Incomplete without expanded JSON
+    And its Events render as compact mini-cards with name, optional trigger, and readiness
+    And no duplicate pre-canvas Page card or list is rendered
+    When the operator focuses or selects Basket
+    Then semantic Page ports and a screen-sized toolbar expose Rename in Flow, Add Event, Connect, Duplicate, Details, Open schema contribution, and Remove
+    When the operator selects an Event mini-card
+    Then its toolbar exposes Move, Change Page, Duplicate, Details, Open schema contribution, and Remove without Connect
+    And Details is optional contextual depth rather than the exclusive route to a graph command
 
   # Data layer directional Flow specification graph 014
   Scenario: Data layer directional Flow specification graph 014
-    Given a rename fixture has Page relationships and two Page-contained Event occurrences
-    When Page Group Checkout is renamed Basket, Page Cart is renamed Basket page, and Event add_payment_info is renamed payment_details_added
-    Then canvas, catalogs, popover, and outline show the new human names
-    And stored Page Group, Page, Event, occurrence, trigger, and relationship values remain byte-for-byte stable
-    When the Flow is reloaded
-    Then lane order, Page-frame containment, free positions, selection, directed endpoints, and relationship meaning are unchanged
+    Given Sales Section contains Cart and add_payment_info with Page relationships
+    When Sales is renamed Acquisition, Cart Page is renamed Basket page, and add_payment_info Event is renamed payment_details_added
+    Then canvas, Add search, contextual details, and Outline show the current human names
+    And stored Section, Page, Event, occurrence, trigger, and relationship identities remain unchanged
+    When the Flow reloads
+    Then Section containment, coordinates, selection, directed endpoints, and relationship meaning are unchanged
 
   # Data layer directional Flow specification graph 015
   Scenario: Data layer directional Flow specification graph 015
-    Given a fresh Checkout journey has no lanes, frames, occurrences, or relationships
-    And predefined Customer details, ID verification, Payment, Summary, and Confirmation Pages and their Events have configured examples
-    When the operator uses only main-workspace controls to add Checkout as a horizontal Page Group lane
-    And the operator lays out Customer details, Payment, Summary, and Confirmation from left to right
-    And places ID verification above the space between Customer details and Payment
-    And positions multiple Event occurrences side by side inside their Page frames
-    And draws only Page-to-Page relationships including the ID verification branch and Payment merge
-    And expands the schema-derived JSON examples on Payment Page and its add_payment_info occurrence
-    And reloads the project with the Inspector closed
-    Then the canvas and outline restore the horizontal main route, vertical alternative branch, Page-only endpoints, free Event positions, and both derived JSON examples
-    And no fixed lane, Inspector-authored graph item, raw ID, copied Event schema, stored example JSON, or executable transition was created
-    And per-Event payload validation remains independent while journey expectations remain manual
+    Given a fresh Checkout journey has no Sections, Page instances, occurrences, or relationships
+    And existing Customer details, ID verification, Payment, Summary, and Confirmation Pages have configured examples
+    When the operator creates Sales and Checkout as side-by-side Sections from the canvas
+    And explicitly places Customer details and ID verification in Sales and Payment, Summary, and Confirmation in Checkout
+    And lays out the Pages left to right with ID verification above the main route
+    And positions interaction Events side by side inside their Page cards
+    And draws the Page-only main route, alternative branch, and merge across Section boundaries
+    And opens Payment and add_payment_info derived examples in Details
+    And reloads the project with Outline and Details closed
+    Then the canvas restores the two-dimensional route, Page endpoints, Event positions, and readiness states
+    And opening Details restores both derived examples without expanding canvas-card geometry
+    And no raw geometry, endpoint form, copied schema, stored example JSON, Section-derived ordering, or executable transition was created
 
   # Data layer directional Flow specification graph 016
   Scenario: Data layer directional Flow specification graph 016
-    Given the movement fixture places free Landing before the lanes, free Campaign after the lanes, and grouped Cart in Checkout
-    When the operator moves Landing through the after-lanes edge affordance
-    Then no domain identity referenced by Landing changes
-    And only its presentation region and coordinates change from before-lanes to after-lanes
-    When keyboard controls place Landing before the lanes again
-    Then focus returns to Landing at its persisted left-side position
-    When pointer controls place Cart through the before-lanes edge affordance
-    Then Cart keeps its frame, Page, Event-occurrence, relationship, and ordered Page Group membership identities
-    And Cart stores before-lanes and the chosen coordinates with no placement-group reference
-    And Cart continues to derive its effective schema from its applicable Page Group memberships with visible provenance
-    When keyboard controls move the Cart frame to Checkout
-    Then Checkout becomes Cart's placement group without changing membership order or effective schema meaning
-    When the Flow reloads
-    Then free frames render only in their saved edge regions and never enter Page Group lane order or documentation lane headings
+    Given Checkout journey has content wider and taller than its visible canvas
+    And two offscreen Page instances are selected
+    When the operator pans and zooms toward a chosen canvas point
+    Then the canvas changes viewport without moving canonical graph items
+    And a visible zoom percentage reports the resulting scale
+    When the operator uses Zoom in, Zoom out, 100 percent, Fit Flow, Fit selection, and toggles and navigates the minimap
+    Then each control produces the corresponding viewport result without changing selection identity
+    When the operator leaves Checkout journey, opens another Flow, and returns
+    Then Checkout restores its last viewport from project-scoped UI state
+    And manual zoom stays between 25 and 200 percent while Fit Flow may use a lower scale to include all graph bounds
+    And viewport, selection, navigation visibility, open surfaces, and minimap visibility are excluded from Saved Draft bytes, portable project data, Flow revisions, and Undo history
 
   # Data layer directional Flow specification graph 017
   Scenario: Data layer directional Flow specification graph 017
-    Given a saved legacy Checkout journey binds context-setting pageview to Cart and contains button_click and form_submit nodes with documentary roles
+    Given a saved legacy journey binds context-setting pageview to Cart and contains button_click and form_submit nodes with documentary roles
     When the operator opens the journey after the occurrence-model upgrade
-    Then migration review names Cart, its pageview context identity, and each interaction Event occurrence without exposing raw IDs
+    Then migration review names Cart, its pageview identity, and each interaction occurrence without raw identities
     When the operator confirms migration
-    Then migration stores observed event name pageview directly on Cart Page identity and creates zero context occurrence records
-    And every button_click and form_submit occurrence keeps its identity, Page-frame containment, position, Event reference, and optional trigger
-    And those contained occurrences are interactions without a role field
-    And canonical Page, Event, and Flow records contain no contextEventBindings, contextBindingId, or documentary role field
+    Then pageview is stored directly on Cart Page identity with no context occurrence
+    And every interaction occurrence retains its identity, Page containment, position, Event reference, and optional trigger without a role field
+    And canonical Page, Event, and Flow records contain no context binding or documentary role field
     And one page-scoped Undo restores the complete pre-migration Saved Draft
 
   # Data layer directional Flow specification graph 018
   Scenario: Data layer directional Flow specification graph 018
-    Given the eligible-lane fixture has Cart memberships Checkout and Retail Checkout with those lanes selected beside Delivery
-    When the operator starts dragging Cart from Pages
-    Then Checkout and Retail Checkout identify valid Page-frame targets and Delivery identifies an invalid target
-    When Cart is released in Retail Checkout
-    Then one Cart frame stores Retail Checkout as its presentation lane and retains the complete ordered membership stack
-    When keyboard controls move the Cart frame to Checkout
-    Then the frame, contained Events, relationships, and membership references keep their identities
-    And effective schema content, contribution order, and provenance remain unchanged
-    And only the frame placement-group reference and presentation coordinates change
-    And placing Cart in Delivery remains a no-op with guidance to add Delivery membership
+    Given Outline is closed and reserves no canvas width
+    When the operator opens Outline
+    Then it projects Sections, their Page instances and Event occurrences, an Outside Sections group, and Page relationships from the same stable graph
+    And Outline search can find an item that is outside the current viewport
+    When the operator activates the search result
+    Then the canvas pans to reveal and focus the exact item
+    And selection changes in either projection synchronize without duplicating graph state
+    When the operator closes Outline
+    Then the canvas reclaims its space and focus returns to the invoking control
 
   # Data layer directional Flow specification graph 019
-  Scenario: Data layer directional Flow specification graph 019
-    Given Cart is placed in Retail Checkout with membership order Checkout, Retail Checkout, and Trade Checkout
-    When the operator moves Trade Checkout before Retail Checkout in the Page Group rule stack
-    Then the Cart frame remains in the Retail Checkout lane while its effective schema recompiles in the new order
-    When the operator attempts to remove Retail Checkout membership
-    Then the membership command leaves canonical project bytes and revision unchanged
-    And impact guidance names the Checkout journey Cart frame with Move to Checkout and Remove Page frame actions
-    When the operator moves the frame to Checkout and removes Retail Checkout membership
-    Then Cart retains ordered Checkout and Trade Checkout memberships with Checkout as its placement lane
-    And Retail Checkout is no longer an eligible Cart lane
-    And the result states the changed membership, affected schema targets, stale evidence, Draft status, and one Undo action
+  Scenario Outline: Data layer directional Flow specification graph 019
+    Given <scope> has several Page instances with authored positions and relationships
+    When the operator previews Tidy <arrangement>
+    Then the preview proposes new presentation positions and routed edges without a canonical write
+    When the operator cancels the preview
+    Then every Page position and relationship route remains unchanged
+    When the operator previews Tidy <arrangement> again and confirms it
+    Then one undoable presentation command applies the proposed Page positions
+    And Page identities, Section containment, relationship endpoints and kinds, schema meaning, and documentation order remain unchanged
+    And Tidy never runs automatically after another authoring action
+
+    Examples:
+      | scope            | arrangement  |
+      | the selection    | horizontally |
+      | the selection    | vertically   |
+      | Checkout Section | horizontally |
+      | Checkout Section | vertically   |
 
   # Data layer directional Flow specification graph 020
-  Scenario: Data layer directional Flow specification graph 020
-    Given Checkout and Delivery are selected Page Group lanes in that order
-    And Checkout contains Customer details, ID verification, Payment, Summary, and Confirmation Page frames
-    When the operator lays out Customer details, Payment, Summary, and Confirmation from left to right
-    And places ID verification above the space between Customer details and Payment
-    Then Checkout renders as a horizontal band above Delivery and expands vertically around the branch
-    And the Page coordinates remain operator-authored rather than snapping into fixed columns or a vertical list
-    When the operator draws the main-route edge from Customer details right port to Payment left port
-    And routes the upper branch from Customer details top port through ID verification bottom and bottom ports into Payment top port
-    And connects Payment to Summary to Confirmation
-    Then the direct main route has kind expected_next, the upper branch has kind alternative, and its return to Payment has kind merge
-    And the graph shows a directional split above the main route and a merge at Payment
-    And compact Place before lanes and Place after lanes regions remain left and right of all named lane bands
-    And reload preserves lane order, branch geometry, Page coordinates, and directed endpoints
+  Scenario Outline: Data layer directional Flow specification graph 020
+    Given the Flow workspace is open at <width> by <height>
+    When the operator uses Skip to canvas and navigates Sections, Pages, Events, ports, and relationships by keyboard
+    Then focus order and spatial navigation are deterministic and every focused item has a visible labelled state
+    And every pointer-only revealed action is also revealed by focus and operable without a pointer
+    When Add, Outline, or Details opens
+    Then it remains contained in the viewport and closing it restores invoking focus
+    And canvas pan remains internal while the outer document has no horizontal or vertical overflow
+    And status, containment, endpoints, and invalid targets are conveyed without relying on color
+
+    Examples:
+      | width | height |
+      | 360   | 800    |
+      | 1440  | 900    |
 
   # Data layer directional Flow specification graph 021
   Scenario: Data layer directional Flow specification graph 021
-    Given Product view occurrence receives effective configured examples
-      | contributor              | property             | configured value |
-      | Sitewide                 | page_type            | product_detail   |
-      | Product detail Page      | product_id           | SKU-BASE         |
-      | Product view Event       | event                | view_item         |
-      | Product view occurrence  | product_id           | SKU-42           |
-      | Product view occurrence  | ecommerce.currency   | EUR              |
-    And required product_name has no configured example
-    And effective quantity has number type
-    When the operator expands the Product view Event example in its node
-    Then the node shows Event name Product view and status Incomplete
-    And its read-only formatted JSON contains effective values
-      | path                   | value          | effective source         |
-      | /event                 | view_item      | Product view Event       |
-      | /page_type             | product_detail | Sitewide                 |
-      | /product_id            | SKU-42         | Product view occurrence  |
-      | /ecommerce/currency    | EUR            | Product view occurrence  |
-    And ecommerce is assembled as a nested object while forbidden properties are omitted
-    And product_name is listed outside the JSON with Edit examples linked to its exact schema-instance field
-    When the operator configures Product view occurrence example product_name as Phone
-    Then the derived JSON updates to Phone and status becomes Complete without storing a copied JSON payload
-    When quantity example becomes string many against its effective number type
-    Then status becomes Invalid with the quantity path and issue
+    Given Product view Event occurrence with trigger Viewed product is contained in Product detail Page
+    And Product view receives effective configured examples
+      | contributor             | property             | configured value |
+      | Sitewide                | page_type            | product_detail   |
+      | Product detail Page     | product_id           | SKU-BASE         |
+      | Product view Event      | event                | view_item         |
+      | Product view occurrence | product_id           | SKU-42           |
+      | Product view occurrence | ecommerce.currency   | EUR              |
+    And required product_name has no configured example while effective quantity has number type
+    When the canvas is viewed at 25 percent zoom
+    Then Product detail Page retains its Flow name while inner Event detail is omitted
+    When the operator returns to normal zoom and selects Product view occurrence
+    Then its Event mini-card shows Product view, Viewed product, and Incomplete
+    When the operator opens contextual Event Details for Product view
+    Then Product view Details render read-only occurrence JSON with effective values and provenance
+      | path                | value          | effective source        |
+      | /event              | view_item      | Product view Event      |
+      | /page_type          | product_detail | Sitewide                |
+      | /product_id         | SKU-42         | Product view occurrence |
+      | /ecommerce/currency | EUR            | Product view occurrence |
+    And ecommerce is nested while missing /product_name is outside the payload with an exact Edit examples route
+    When the operator configures Product view product_name as Phone
+    Then the mini-card and Details become Complete without storing copied JSON or changing card geometry
+    When quantity is configured as string many against its effective number type
+    Then Product view becomes Invalid and Details identify /quantity
     When an inherited schema conflict blocks Product view
-    Then status becomes Blocked and the node does not claim that its example is valid
+    Then Product view readiness becomes Blocked without claiming a valid example
 
   # Data layer directional Flow specification graph 022
   Scenario: Data layer directional Flow specification graph 022
@@ -308,86 +337,80 @@ Feature: Data layer directional Flow specification graph
   # Data layer directional Flow specification graph 023
   Scenario Outline: Data layer directional Flow specification graph 023
     Given a <kind> relationship from <source> to <target> has <label_state>
-    And its canvas edge is selected with the inline popover open and the Inspector closed
-    Then the popover exposes a Delete relationship button named <accessible_name>
+    When the operator selects its edge with Details closed
+    Then a screen-sized relationship toolbar exposes Edit documentation and Delete relationship
+    And Delete relationship is named <accessible_name>
     When the operator activates Delete relationship
-    Then that relationship is absent from the canvas, synchronized outline, and canonical Flow storage
-    And its source, target, every other relationship, and their canonical identities remain unchanged
-    And feedback names the deleted relationship, Draft status, stale documentation export, and one Undo action
-    And deletion places keyboard focus on <source>
+    Then exactly that relationship is absent from canvas, Outline, and canonical Flow storage
+    And its endpoints, every other relationship, and their identities remain unchanged
+    And feedback names Draft status, stale documentation, and one Undo action while focus moves to <source>
     When the operator activates Undo
     Then the same relationship identity, ports, kind, optional label, group, condition, and expectation are restored once
-    And the restored edge receives keyboard focus
+    And the restored edge receives focus
 
     Examples:
-      | kind          | source           | target          | label_state          | accessible_name                                         |
+      | kind          | source           | target          | label_state          | accessible_name                                                  |
       | expected_next | Customer details | Payment         | label Checkout route | Delete relationship Checkout route, Customer details to Payment |
-      | alternative   | Customer details | ID verification | no label             | Delete relationship Customer details to ID verification |
+      | alternative   | Customer details | ID verification | no label             | Delete relationship Customer details to ID verification         |
 
   # Data layer directional Flow specification graph 024
-  Scenario Outline: Data layer directional Flow specification graph 024
-    Given Confirmation Page belongs to Checkout and inherits confirmation_status expected value <parent_value>
+  Scenario: Data layer directional Flow specification graph 024
+    Given Confirmation Page applies Checkout Property Set and inherits confirmation_status pending
     And Decision Page has Approved, Review, and Declined alternative branch ends
-    When the operator inserts Confirmation from the Pages catalog three times into Checkout
-    And positions one Confirmation instance at each branch end
+    When the operator inserts Confirmation into Checkout Section three times
+    And positions one instance at each branch end
     And connects Decision top port to each Confirmation bottom port
-    Then the Pages catalog remains available after every insertion
-    And the Flow stores three Page instances with distinct stable frame identities used as their schema contributor identities
-    And all three instances retain the same Confirmation Page and Checkout references
-    And the three alternative relationships target those distinct frame identities rather than the shared Page identity
-    When the operator opens the schema contribution for the Approved Confirmation instance
-    Then the canonical editor shows <parent_value> as inherited and offers Override here without copying inherited facets
-    When the operator saves Approved <approved_value>, Review <review_value>, and Declined <declined_value> as sparse local expected-value overrides
-    Then each instance composes Shared Profile, ordered Page Groups, Confirmation Page, and that Flow Page-instance in order
-    And each instance has its own effective confirmation_status value while every other inherited property remains effective
-    And each save leaves Confirmation Page and the other two instance contributions byte-identical
-    When the operator resets the Review instance confirmation_status to parents
-    Then Review inherits <parent_value> while Approved remains <approved_value> and Declined remains <declined_value>
-    And the synchronized outline and selected-Flow documentation distinguish all three instance contexts and effective values
-
-    Examples:
-      | parent_value | approved_value | review_value  | declined_value |
-      | pending      | approved       | manual_review | declined       |
+    Then the Flow stores three distinct stable Page-instance contributor identities with one shared Confirmation Page reference
+    And the relationships target those instance identities rather than the shared Page identity
+    When the operator saves approved, manual_review, and declined as sparse instance overrides
+    Then each instance composes Shared Profile, ordered Property Sets, Confirmation Page, and its Flow Page-instance
+    And Checkout Section contributes no schema or provenance
+    And each instance has its own effective confirmation_status while every other inherited property remains effective
+    When the operator resets Review confirmation_status to parents
+    Then Review inherits pending while Approved remains approved and Declined remains declined
+    And Outline and selected-Flow documentation distinguish the three instance contexts
 
   # Data layer directional Flow specification graph 025
   Scenario: Data layer directional Flow specification graph 025
-    Given Payment Page frame represents the context-setting pageview event
-    And Payment Page frame receives effective configured examples
-      | contributor          | property           | configured value |
-      | Sitewide             | page_type          | checkout         |
-      | Checkout Page Group  | form_name          | checkout         |
-      | Payment Page         | form_step_name     | payment          |
-      | Payment Page frame   | error_message      | Payment declined |
-    And Payment example inputs omit mandatory page_name
-    When the operator expands the Payment Page example in its frame
-    Then the Page frame shows status Incomplete
-    And read-only derived JSON contains page_type checkout, form_name checkout, form_step_name payment, and error_message Payment declined with effective-source provenance
-    And the Incomplete repair identifies /page_name and opens the Payment Page-frame contribution
+    Given Payment Page frame represents context-setting pageview and receives configured examples
+      | contributor          | property       | configured value |
+      | Sitewide             | page_type      | checkout         |
+      | Checkout Property Set | form_name      | checkout         |
+      | Payment Page         | form_step_name | payment          |
+      | Payment Page frame   | error_message  | Payment declined |
+    And mandatory page_name has no configured example
+    When the canvas renders Payment
+    Then its compact card shows Flow name, source Page, and Incomplete without rendering JSON
+    When the operator opens contextual Page Details for Payment
+    Then Payment Details render read-only context Page JSON with effective values and provenance
+      | path            | value            | effective source      |
+      | /page_type      | checkout         | Sitewide              |
+      | /form_name      | checkout         | Checkout Property Set |
+      | /form_step_name | payment          | Payment Page          |
+      | /error_message  | Payment declined | Payment Page frame    |
+    And missing /page_name is outside the payload with an exact Page-instance repair route
     When the Page-instance editor saves payment for page_name
-    Then recomposition renders Complete with page_name payment and no persisted JSON payload
-    And a type violation produces Invalid while an inherited conflict produces Blocked
-    And contained Event occurrence JSON continues to add its Event and occurrence contributors after the Payment Page-instance branch
+    Then card readiness and Details become Complete with page_name payment and no persisted JSON payload
+    And contained Event JSON extends the same Page branch with Event and occurrence contributors
+    When form_step_name is configured with a value that violates its effective type
+    Then Payment becomes Invalid and Details identify /form_step_name
+    When an inherited schema conflict blocks Payment
+    Then Payment readiness becomes Blocked without claiming a valid example
 
   # Data layer directional Flow specification graph 026
-  Scenario Outline: Data layer directional Flow specification graph 026
-    Given Page <source_page> belongs to Checkout
-    When the operator inserts <source_page> into Checkout <instance_count> times
+  Scenario: Data layer directional Flow specification graph 026
+    Given Page Generic checkout page applies Checkout Property Set
+    When the operator inserts Generic checkout page into Checkout Section four times
     And connects the four frames in insertion order
-    Then all <instance_count> Page frames initially show <source_page> without a generated suffix
-    And each frame offers an independent Name in this Flow control
-    And the frames retain distinct stable identities while referencing the same <source_page> Page
-    When the operator names the first three frames <first_name>, <second_name>, and <third_name>
-    And leaves the fourth frame using its Page name
-    Then canvas, synchronized outline, relationship controls, and contextual actions show <first_name>, <second_name>, <third_name>, and <source_page>
-    And the Pages catalog and Page editor continue to show <source_page>
-    And no frame identity, Page reference, position, relationship, schema contribution, or configured value changes
-    When Page <source_page> is renamed <renamed_page>
-    Then the unrenamed fourth frame follows <renamed_page>
-    And <first_name>, <second_name>, and <third_name> retain their Flow-specific names
-    When the operator resets <third_name> to its Page name
-    Then <third_name> alone changes to <renamed_page>
+    Then all four cards initially show Generic checkout page without generated suffixes
+    And each card offers an independent Rename in Flow action
+    And the cards retain distinct stable identities with the same Generic checkout page reference
+    When the operator names the first three instances Customer details, Payment, and Summary
+    Then canvas, Outline, relationship controls, and contextual actions show those names and Generic checkout page
+    And Add search and the Page editor continue to show Generic checkout page
+    And no identity, Page reference, position, relationship, schema contribution, or configured value changes
+    When Page Generic checkout page is renamed Reusable commerce page
+    Then the unrenamed fourth instance follows Reusable commerce page while the three Flow-specific names remain
+    When the operator resets Summary to its Page name
+    Then only that instance changes to Reusable commerce page
     And the naming change marks affected Flow documentation stale and offers one Undo action
-
-    Examples:
-      | source_page           | instance_count | first_name       | second_name | third_name | renamed_page           |
-      | Generic checkout page | 4              | Customer details | Payment     | Summary    | Reusable commerce page |

@@ -2,359 +2,409 @@ Feature: Data layer directional Flow specification graph runtime
 
   Background:
     Given the built extension is running with the production project repository and Specification Flow editor
-    And production Shop contains Checkout, Delivery, Confirmation, Cart, Payment, Shipping, Thank you, and Landing definitions
-    And production Pages identify context-setting observed events such as pageview
-    And the Events catalog contains only interactions including button_click, form_submit, add_shipping_info, add_payment_info, and purchase
+    And production canonical Pages, interaction Events, and Property Sets are authored outside the Flow workspace
 
   # Data layer directional Flow specification graph runtime 001
-  Scenario: Data layer directional Flow specification graph runtime 001
+  Scenario Outline: Data layer directional Flow specification graph runtime 001
+    Given the browser viewport is <width> by <height>
+    And project-navigation UI state is <navigation>
+    And production Checkout journey has a Cart Page frame
     When actual controls open Checkout journey
-    Then the production main workspace renders Page Groups, Pages, and Events catalogs beside the canvas
-    And its synchronized outline renders as a secondary main-workspace projection
-    And closing the Inspector leaves every creation, placement, connection, and relationship-detail action operable
-    And the Inspector DOM contains no documentary occurrence or relationship form
-    And installed Structured executable flow remains separately labelled Advanced without documentary duplicates
+    Then the installed canvas bounding rectangle intersects the initial viewport without document scrolling
+    And it fills the measured Flow route below exactly one compact toolbar
+    And closed Outline and Details surfaces are absent from layout
+    And project navigation matches saved UI state without displacing the canvas below the viewport
+    When actual controls select Cart, set a non-default camera transform, and enter Focus Canvas
+    Then measured project chrome disappears while installed Add, camera, and Exit Focus controls remain operable
+    And production selection ID and camera transform remain unchanged
+    When actual controls exit Focus Canvas
+    Then saved project-navigation visibility and invoking document focus return without changing selection or camera
+    And the installed Advanced structured-flow route remains separate from the documentary graph
+
+    Examples:
+      | width | height | navigation |
+      | 360   | 800    | hidden     |
+      | 360   | 800    | visible    |
+      | 1440  | 900    | hidden     |
+      | 1440  | 900    | visible    |
 
   # Data layer directional Flow specification graph runtime 002
-  Scenario: Data layer directional Flow specification graph runtime 002
-    Given production Checkout journey contains no Page Group or graph reference
-    When actual controls create the lane sequence
-      | position | Page Group   |
-      | 1        | Checkout     |
-      | 2        | Delivery     |
-      | 3        | Confirmation |
-    Then the installed canvas renders exactly those three lane labels in order
-    And canonical production storage contains their ordered stable IDs
-    And rendered and persisted Flow state contains no Context, Shipping, Payment, Merge, or other fallback lane
-    And the installed next action says Add a Page from the Pages catalog
+  Scenario Outline: Data layer directional Flow specification graph runtime 002
+    Given the production repository exposes <entity_count> available Page and Event definitions
+    When the built Flow route renders with Add closed
+    Then persistent canvas control count and measured footprint equal the small-fixture baseline
+    And no entity catalog, coordinate form, occurrence form, or endpoint form precedes the canvas in document order
+    When actual controls invoke Add at a measured canvas point
+    Then one bounded palette opens at that point with New Section and searchable existing Page and Event results
+    And its result viewport does not exceed the same configured maximum height
+    And Event results are enabled only while a containing Page is selected or targeted
+    When actual controls choose existing Page Cart
+    Then production stores one new Cart frame at the invoked graph coordinates and closes the palette
+    And serialized Cart Page definition remains byte-identical
+    And the installed Add surface has no Create Page or Create Event command
+
+    Examples:
+      | entity_count |
+      | 3            |
+      | 300          |
 
   # Data layer directional Flow specification graph runtime 003
   Scenario: Data layer directional Flow specification graph runtime 003
-    Given production Flow lanes are Checkout, Delivery, and Confirmation
-    When actual main-workspace controls move Confirmation before Delivery
-    Then rendered lane order is Checkout, Confirmation, and Delivery
-    And production top-to-bottom positions derive from that order without changing Page Group IDs
-    When actual controls attempt to remove Checkout while it contains a Page frame
-    Then the production command is rejected without a revision change
-    And installed guidance names the contained Page and offers Move Page frame or Remove Page frame
+    Given production Product and Cart frames have independent coordinates
+    When actual controls select Product and create Sales with Wrap selection
+    And actual pointer controls draw Checkout beside Sales and explicitly move Cart into it
+    Then canonical Flow state contains two stable Section IDs with independent x, y, width, and height values
+    And Product and Cart each store the explicit selected Section reference
+    When actual controls select Sales
+    Then the installed Section toolbar exposes Rename, Move, Resize, Wrap selection, Remove Section, and Remove with contents without numeric geometry inputs
+    When actual pointer controls move Sales
+    Then stored Product coordinates change by the same delta while Cart coordinates are byte-identical
+    When actual resize handles cross Product with the Checkout boundary
+    Then only Checkout bounds change and both Page Section references remain byte-identical
+    And production rejects Section nesting without a canonical write
+    And Section geometry and order leave relationship and documentation-order evidence unchanged
 
   # Data layer directional Flow specification graph runtime 004
   Scenario: Data layer directional Flow specification graph runtime 004
-    Given production membership permits Cart in Checkout and Shipping in Delivery
-    When actual Pages search finds Cart and inserts it into Checkout
-    Then one rendered Cart frame and one canonical record contain stable Checkout and Cart references
-    And the installed Pages catalog labels Cart as a Checkout member
-    And the frame represents Cart's context-setting pageview event with no nested pageview occurrence
-    When the Shipping component is released over the production Checkout lane
-    Then the production gesture is rejected because Shipping belongs to Delivery
-    And project bytes and revision remain unchanged
-    And installed guidance opens Shipping membership without a free-form lane control
+    Given production Sales and Checkout Sections exist and an unsectioned graph position is available
+    And Product, Cart, and Landing have different Property Set applications
+    When actual Add controls place Product in Sales, Cart in Checkout, and Landing outside Sections
+    Then production accepts all three placements and stores distinct Page-frame identities and chosen coordinates
+    And each installed Page card represents its Page observed-event identity without a context occurrence
+    When actual Add controls place Product in Checkout again
+    Then production stores a second Product frame ID with the same Page ID
+    And serialized Property Set applications, effective schemas, provenance, validation, and Assignment targets remain byte-identical
 
   # Data layer directional Flow specification graph runtime 005
   Scenario Outline: Data layer directional Flow specification graph runtime 005
-    Given the production <page> Page frame is selected and has no <event> occurrence
-    And production Event <event> has optional trigger <trigger>
-    When the installed Events catalog performs <insertion>
-    Then one rendered <event> occurrence appears inside <page> on the SVG canvas and synchronized outline
-    And rendered node kinds are context-setting Page event <page> and nested interaction Event <event>
-    And canonical storage contains stable Page-frame, Page Group, Event, and occurrence IDs plus optional trigger <trigger>
-    And production Event creation, Event editing, catalog insertion, and occurrence detail contain no Documentary role selector
-    And serialized Event definitions and occurrences contain no role, context binding, copied schema, or lane-name key
+    Given rendered <page> is selected without an occurrence of <event>
+    And production Event <event> carries optional trigger <trigger>
+    When actual controls <insertion>
+    Then one installed <event> mini-card appears immediately inside <page>
+    And accessibility state identifies <page> as the context-setting Page and <event> as an interaction
+    And production stores stable Page-frame, Event, and occurrence IDs plus optional trigger <trigger>
+    And installed Event-definition and occurrence routes expose no documentary role control
+    And serialized Event and occurrence records contain no documentary-role, Page-context-binding, copied-schema, or Section-name key
 
     Examples:
-      | page     | event             | trigger           | insertion                                                         |
-      | Cart     | button_click      | Continue clicked  | activate button_click from the Events catalog by pointer          |
-      | Shipping | add_shipping_info | Form submitted    | drag add_shipping_info onto the visible SVG Shipping frame        |
-      | Payment  | add_payment_info  | Payment submitted | activate add_payment_info from the Events catalog by keyboard     |
+      | page     | event             | trigger           | insertion                                              |
+      | Cart     | button_click      | Continue clicked  | choose button_click from Add by pointer                |
+      | Shipping | add_shipping_info | Form submitted    | drag add_shipping_info from Add onto Shipping          |
+      | Payment  | add_payment_info  | Payment submitted | choose add_payment_info from Add by keyboard           |
 
   # Data layer directional Flow specification graph runtime 006
   Scenario: Data layer directional Flow specification graph runtime 006
-    Given production Cart and Shipping frames are rendered in their owning lanes
-    When actual Events search finds add_shipping_info
-    And production pointer and keyboard controls place it in Cart and Shipping
-    Then canonical interaction records are
-      | container | Event ID          | occurrence ID |
-      | Cart      | add_shipping_info | distinct      |
-      | Shipping  | add_shipping_info | distinct      |
-    And both installed occurrences render in their Page frames and the synchronized outline
-    And the Event definition, reusable schema, memberships, and first occurrence bytes remain unchanged
+    Given installed Cart and Shipping Page cards are visible
+    When actual controls search Add for add_shipping_info
+    And use pointer placement in Cart and keyboard placement in Shipping
+    Then production stores two occurrence IDs with one shared Event ID and different Page-frame IDs
+    And both installed mini-cards are visible in their containing Pages
+    And canonical Event definition, Page Property composition, reusable schema, and the first occurrence remain byte-identical
 
   # Data layer directional Flow specification graph runtime 007
   Scenario: Data layer directional Flow specification graph runtime 007
-    Given production Landing and Campaign have no Page Group reference or Event occurrence
-    And the installed canvas contains no free Page frame
-    When actual pointer events drag Landing beyond the selected lane bounds
-    Then narrow Place before lanes and Place after lanes targets render at opposite canvas edges
-    And computed target geometry is not lane-sized
-    When pointerup places Landing before the lanes and Campaign after the lanes
-    Then compact production frames render on opposite sides of the Page Group lanes
-    And canonical records store before-lanes or after-lanes, coordinates, Page IDs, and frame IDs without Page Group or context-binding IDs
-    And unused edge backgrounds leave the DOM while both frames accept Event drops and connection ports
+    Given production Checkout Section contains Cart, its occurrences, and connected relationships
+    When actual controls activate Remove Section
+    Then production removes only Checkout and Cart's Section reference while retaining graph coordinates and topology
+    And one Undo entry restores Checkout and its containment exactly once
+    When actual controls undo and activate Remove with contents
+    Then installed impact review names Checkout, Cart, its occurrences, and affected relationships before storage changes
+    When actual controls confirm Section content removal
+    Then production removes exactly the reviewed graph records in one command
+    And actual Undo restores their original IDs, containment, endpoints, and coordinates once
 
   # Data layer directional Flow specification graph runtime 008
   Scenario: Data layer directional Flow specification graph runtime 008
-    Given production Cart contains button_click and add_payment_info nodes
-    When actual pointer drags place both nodes side by side at distinct positions inside Cart
-    Then the installed Cart frame expands without rendering a forced vertical Event list
-    And reload renders both saved coordinate pairs
-    When the installed occurrence Page selector changes add_payment_info from Cart to Payment
-    Then production impact preview names the changed Page effective-schema branch
-    When the installed impact review approves Page reassignment
-    Then production preserves the occurrence ID, Event ID, trigger, local schema contribution, and examples under Payment frame ID
-    And the compiler receives Payment Page-instance, Event, and occurrence contributors
-    And unrelated canonical entities remain byte-identical
+    Given installed button_click and add_payment_info mini-cards are inside Cart
+    When actual pointer controls position them side by side
+    Then measured Cart bounds contain both and production stores distinct relative coordinates
+    And a built-extension reload reproduces those positions
+    When actual Change Page controls choose Payment for add_payment_info
+    Then installed impact review identifies the new effective-schema branch before mutation
+    When actual controls confirm Page reassignment
+    Then production preserves occurrence ID, Event ID, trigger, sparse contribution, and examples while changing its Page-frame ID
+    And compiled Payment occurrence changes while both Page definitions, reusable Event, and sibling occurrences remain byte-identical
 
   # Data layer directional Flow specification graph runtime 009
   Scenario Outline: Data layer directional Flow specification graph runtime 009
-    Given production Customer details, ID verification, Payment, and Confirmation Page frames expose four relationship ports
-    And installed Event occurrences expose no relationship port
-    When actual pointer events drag from the <source> Page <source_port> port toward <target> Page
-    Then a temporary directed SVG edge follows the pointer and the <target> <target_port> port renders valid state
-    When pointerup occurs on the <target> Page <target_port> port
-    Then production storage contains one relationship with kind <kind>, stable Page-frame endpoints, and relationship ID
-    And production infers <kind> from the source and target ports without rendering a relationship-kind selector
-    And canonical relationship storage has no label value
-    And the installed canvas renders that edge without submitting a source or target form
-    And a rendered inline relationship popover opens beside the edge
+    Given installed Page cards expose labelled left, right, top, and bottom ports while Event mini-cards expose none
+    When actual pointer events drag from <source> <source_port> toward <target>
+    Then a temporary directed edge follows the pointer and <target> <target_port> renders valid state
+    When pointerup occurs on <target> <target_port>
+    Then production stores one stable relationship ID with kind <kind>, Page-frame endpoint IDs, and semantic port values
+    And changing routed edge geometry leaves inferred kind <kind> unchanged
+    And the installed directed edge was created without a source, target, or kind form
+    And its contextual details open with no required label value
 
     Examples:
       | source           | source_port | target          | target_port | kind          |
       | Customer details | right       | Payment         | left        | expected_next |
       | Customer details | top         | ID verification | bottom      | alternative   |
       | ID verification  | bottom      | Payment         | top         | merge         |
-      | Payment          | right       | Confirmation    | left        | expected_next |
 
   # Data layer directional Flow specification graph runtime 010
-  Scenario: Data layer directional Flow specification graph runtime 010
-    Given production connection mode started from Customer details Page right port
-    When the pointer reaches the source node, empty canvas, an incompatible endpoint, or a port pairing other than right to left, top to bottom, or bottom to top
-    Then the installed target state is invalid
-    When pointerup or Escape cancels the gesture
-    Then the preview DOM is removed and focus returns to the Customer details Page frame
-    And canonical project bytes remain identical with no partial relationship
+  Scenario Outline: Data layer directional Flow specification graph runtime 010
+    Given production connection mode starts from Customer details <source_port> port
+    When pointerup occurs on empty canvas
+    Then an existing-Page search surface opens at the release coordinates with no partial relationship record
+    When actual controls choose Payment
+    Then one command stores a new Payment frame and one <kind> edge using target <target_port> at those coordinates
+    And actual Undo removes both records while the canonical Payment Page remains byte-identical
+    When the same gesture is repeated and the search surface is cancelled
+    Then document focus returns to Customer details and canonical project bytes remain identical
+    When actual pointer events target Customer details, an Event mini-card, or an incompatible Page port
+    Then installed invalid state renders and pointerup produces no relationship write
+
+    Examples:
+      | source_port | target_port | kind          |
+      | right       | left        | expected_next |
+      | top         | bottom      | alternative   |
+      | bottom      | top         | merge         |
 
   # Data layer directional Flow specification graph runtime 011
   Scenario: Data layer directional Flow specification graph runtime 011
     Given four production Page frames form a fork-and-join candidate
-    When actual pointer events draw two top-to-bottom splits from Decision to branch Pages and two bottom-to-top returns from those Pages to Confirmation
-    Then the first two production relationships have inferred kind alternative and the latter two have inferred kind merge
-    And installed canvas and outline render the exact two alternative branches and merge endpoints
-    When actual controls label one alternative relationship Fulfilment choice and leave the other three relationships unlabelled
-    Then canonical relationships persist the optional label, inferred kinds, conditions, and expectations once
-    And the installed editor exposes no Parallel kind or relationship-kind selector
-    And no production graph state or output claims execution of a branch or complete Flow
+    When actual pointer events draw two top-to-bottom splits from Decision and two bottom-to-top returns to Confirmation
+    Then production stores two alternative and two merge relationships with exact Page-frame endpoints
+    And installed canvas and Outline render the same branch and merge topology
+    When actual controls label one alternative Fulfilment choice and leave the other edges unlabelled
+    Then canonical labels, kinds, conditions, and expectations persist once
+    And no installed control or serialized record offers a distinct Parallel kind
+    And no production output claims graph execution
 
   # Data layer directional Flow specification graph runtime 012
   Scenario: Data layer directional Flow specification graph runtime 012
-    Given actual keyboard focus is on the Cart Page right port
+    Given document focus is on Cart right port
     When Enter starts installed connection mode
-    And Arrow keys target Payment Page
+    And spatial keyboard controls target Payment left port
     And Enter commits the edge
-    Then the production relationship has inferred kind expected_next
-    And the production inline popover receives focus for optional label and documentation editing without a kind selector
-    When actual controls leave the label blank, save, and press Escape
-    Then focus returns to the created SVG edge
-    And production storage contains exactly one relationship without pointer or Inspector input
+    Then production stores one expected_next relationship inferred from those ports
+    And contextual relationship details receive document focus without a kind selector
+    When actual controls save an absent label and press Escape
+    Then document focus returns to the installed edge
+    And production contains exactly one relationship without pointer input or an open Details drawer
 
   # Data layer directional Flow specification graph runtime 013
   Scenario: Data layer directional Flow specification graph runtime 013
-    Given rendered add_payment_info remains nested in Cart with the Inspector closed
-    When actual controls select add_payment_info
-    Then installed canvas handles and inline summary expose Move within Page, Change Page, Duplicate occurrence, Remove, and Open schema contribution
-    And production renders no Event relationship port or Connect action
-    And Open schema contribution routes to the production canonical editor in the main workspace
-    When actual controls return to Flow
-    Then selected node, viewport, and canvas coordinates are restored
-    When the optional Inspector opens
-    Then it renders contextual detail without owning an exclusive graph command
+    Given production Cart frame is named Basket in this Flow, has source Page Cart, status Incomplete, and two occurrences
+    When the installed canvas renders at 100 percent
+    Then one compact Page card renders Basket, subdued Cart provenance, and Incomplete without JSON
+    And its compact Event cards render names, optional triggers, and readiness without a duplicate Page list
+    When actual pointer hover, keyboard focus, or selection targets Basket
+    Then labelled semantic ports and an unscaled toolbar expose Rename in Flow, Add Event, Connect, Duplicate, Details, Open schema contribution, and Remove
+    When actual controls select an Event card
+    Then its unscaled toolbar exposes Move, Change Page, Duplicate, Details, Open schema contribution, and Remove without Connect
+    And closing Details leaves every graph command reachable from installed contextual controls
 
   # Data layer directional Flow specification graph runtime 014
   Scenario: Data layer directional Flow specification graph runtime 014
-    Given the production rename fixture has Page relationships and two contained Event interactions
-    When actual collection controls rename Checkout to Basket, Cart to Basket page, and add_payment_info to payment_details_added
-    Then installed canvas, catalogs, popover, and outline render the new names
-    And canonical Page Group, Page, Event, occurrence, relationship, and trigger values remain byte-identical
+    Given production Sales contains Cart and add_payment_info with Page relationships
+    When actual collection controls rename Sales to Acquisition, Cart to Basket page, and add_payment_info to payment_details_added
+    Then installed canvas, Add results, Details, and Outline render the current names
+    And canonical Section, Page, Event, occurrence, trigger, and relationship IDs remain byte-identical
     When the built extension reloads
-    Then production lane order, containment, coordinates, selection, endpoints, and relationship meaning are unchanged
+    Then stored containment, coordinates, selection UI state, endpoints, and inferred kinds are restored
 
   # Data layer directional Flow specification graph runtime 015
   Scenario: Data layer directional Flow specification graph runtime 015
-    Given actual controls create a fresh Checkout journey with no graph content
-    And production catalogs contain Customer details, ID verification, Payment, Summary, Confirmation, and their configured Event examples
-    When only production main-workspace controls add Checkout as a horizontal lane
-    And actual controls place Customer details, Payment, Summary, and Confirmation left to right
-    And place ID verification above the gap between Customer details and Payment
-    And actual pointer controls position multiple Event occurrences side by side in their Page frames
-    And actual ports create only Page relationships including the identity branch and Payment merge
-    And installed controls expand the Payment Page and add_payment_info occurrence derived JSON examples
-    And the installed extension reloads with the Inspector closed
-    Then production canvas and outline restore horizontal route, vertical branch, Page endpoints, Event coordinates, and both derived JSON examples
-    And canonical storage contains no fixed lane, Inspector-authored item, raw selector ID, copied Event schema, stored example JSON, or executable transition
-    And installed per-Event payload validation remains independent while journey expectations remain manual
+    Given production Checkout journey has no Section, Page-frame, occurrence, or relationship records
+    And canonical Customer details, ID verification, Payment, Summary, and Confirmation Pages have examples
+    When actual canvas controls create side-by-side Sales and Checkout Sections
+    And explicitly place Customer details and ID verification in Sales and Payment, Summary, and Confirmation in Checkout
+    And place the Pages left to right with ID verification above the main route
+    And position interaction Event cards side by side inside Page cards
+    And draw the Page-only main route, alternative branch, and merge across Sections
+    And open Payment and add_payment_info examples in Details
+    And reload the built extension with Outline and Details closed
+    Then measured canvas geometry restores the two-dimensional route, Page endpoints, Event positions, and readiness
+    And reopening Details renders both examples without changing Page-card bounds
+    And serialized state contains no raw-form artifact, copied schema, example payload, Section-derived order, or executable transition
 
   # Data layer directional Flow specification graph runtime 016
   Scenario: Data layer directional Flow specification graph runtime 016
-    Given the production movement fixture places free Landing before the lanes, free Campaign after the lanes, and grouped Cart in Checkout
-    When actual pointer events move Landing through the after-lanes target
-    Then no production domain identity referenced by Landing changes
-    And stored presentation changes only region and coordinates from before-lanes to after-lanes
-    When installed keyboard controls place Landing before the lanes again
-    Then focus returns to Landing at its persisted left-side transform
-    When actual pointer controls place Cart through the before-lanes target
-    Then Cart frame, Page, occurrence, relationship, and ordered membership identities remain byte-identical
-    And production stores Cart before-lanes and chosen coordinates without a placement-group ID
-    And compiled Cart schema continues using applicable Page Group memberships with rendered provenance
-    When installed keyboard controls move the Cart frame to Checkout
-    Then production restores Checkout placement without changing membership order or effective schema meaning
-    When actual Projects controls reopen the saved Flow
-    Then each free frame renders in its saved edge region and is absent from canonical lane order and documentation lane headings
+    Given production graph bounds exceed the visible canvas in both axes
+    And two offscreen Page-frame IDs are selected
+    When actual Space-drag, middle-button drag, touch-pan, and keyboard camera inputs change the viewport
+    And modifier-wheel and pinch inputs zoom toward a measured canvas point
+    Then installed camera transform changes without changing stored graph-item coordinates
+    And the visible percentage reports the resulting camera scale
+    When actual controls use Zoom in, Zoom out, 100 percent, Fit Flow, Fit selection, and minimap toggle and navigation
+    Then measured viewport results match each command while selected graph identity remains stable
+    When actual controls switch Flows and return to Checkout
+    Then project-scoped UI state restores Checkout camera transform
+    And manual camera percentage stays between 25 and 200 while Fit Flow may use a lower scale to include measured graph bounds
+    And Saved Draft and portable export bytes, Flow revision, and Undo depth exclude camera, selection, navigation visibility, open surfaces, and minimap visibility
 
   # Data layer directional Flow specification graph runtime 017
   Scenario: Data layer directional Flow specification graph runtime 017
-    Given the production migration fixture binds context-setting pageview to Cart and contains button_click and form_submit nodes with documentary roles
-    When the built extension opens that Checkout journey
-    Then installed migration review renders Cart, its pageview context identity, and each interaction occurrence without raw IDs
+    Given production migration input binds pageview to Cart and gives button_click and form_submit documentary roles
+    When the built extension opens that legacy journey
+    Then installed migration review renders human Page, observed-event, and interaction names without raw IDs
     When actual controls confirm migration
-    Then migrated Cart storage carries observed event name pageview on its Page record and occurrence records exclude that identity
-    And migration preserves topology and layout plus the original button_click and form_submit occurrence identities
-    And migrated interaction occurrences directly store Event IDs and optional triggers without role keys
-    And serialized production Page, Event, and Flow records have no contextEventBindings, contextBindingId, or documentary role key
-    When actual Undo runs once
-    Then production storage equals the complete pre-migration revision
+    Then Cart stores pageview directly and no context occurrence record exists
+    And production preserves interaction occurrence IDs, Page-frame IDs, coordinates, Event IDs, and optional triggers without role keys
+    And serialized Page, Event, and Flow records have no context-binding or documentary-role key
+    When one page-scoped Undo reverses the migration
+    Then production storage equals the complete pre-migration Saved Draft
 
   # Data layer directional Flow specification graph runtime 018
   Scenario: Data layer directional Flow specification graph runtime 018
-    Given production Cart has ordered Checkout and Retail Checkout memberships
-    And the installed Flow renders Checkout, Retail Checkout, and Delivery lanes
-    When actual pointer events start dragging Cart from Pages
-    Then Checkout and Retail Checkout drop targets render valid while Delivery renders invalid
-    When pointerup places Cart in Retail Checkout
-    Then the canonical frame stores the Retail Checkout placement-group ID and Cart retains both ordered membership IDs
-    When installed keyboard controls move the Cart frame to Checkout
-    Then the saved Cart frame reuses its original frame, contained Event, relationship, and membership IDs
-    And compiled schema content, contribution order, and provenance remain unchanged
-    And production changes only placement-group ID and frame coordinates
-    And an actual Delivery drop performs no write and renders guidance to add Delivery membership
+    Given installed Outline is closed and its bounding box reserves no width
+    When actual controls open Outline
+    Then one tree projects Sections, nested Page instances and occurrences, Outside Sections, and Page relationships from canonical IDs
+    And installed Outline search finds an item beyond the current viewport
+    When actual controls activate that result
+    Then the camera pans to reveal it and document focus moves to its exact canvas element
+    And selecting either projection updates one shared selection identity
+    When actual controls close Outline
+    Then measured canvas width grows into the released space and focus returns to the Outline toggle
 
   # Data layer directional Flow specification graph runtime 019
-  Scenario: Data layer directional Flow specification graph runtime 019
-    Given the production Cart frame is in Retail Checkout with membership order Checkout, Retail Checkout, and Trade Checkout
-    When the production Page rule stack changes to Checkout, Trade Checkout, and Retail Checkout
-    Then installed canvas keeps Cart in Retail Checkout and production recompiles its effective schema in the new order
-    When actual controls attempt to remove Retail Checkout membership
-    Then canonical project storage is byte-identical and its revision is unchanged
-    And rendered impact guidance names the Checkout journey Cart frame with Move to Checkout and Remove Page frame actions
-    When the frame is reassigned to Checkout before confirming the pending membership removal
-    Then canonical Cart storage retains ordered Checkout and Trade Checkout memberships with Checkout frame placement
-    And production lane eligibility excludes Retail Checkout for Cart
-    And installed feedback names changed membership, affected targets, stale evidence, Draft status, and one Undo action
+  Scenario Outline: Data layer directional Flow specification graph runtime 019
+    Given production <scope> has Page frames with saved positions and relationships
+    When actual controls preview Tidy <arrangement>
+    Then installed ghost positions and routed-edge previews render without changing canonical bytes
+    When actual controls cancel
+    Then measured Page transforms and edge routes equal the saved values
+    When actual controls preview Tidy <arrangement> again and confirm
+    Then one production Undo entry stores the presentation-position command
+    And Page IDs, Section references, relationship endpoints and kinds, effective schemas, and documentation order remain byte-identical
+    And subsequent authoring controls do not invoke Tidy implicitly
+
+    Examples:
+      | scope            | arrangement  |
+      | selection        | horizontally |
+      | selection        | vertically   |
+      | Checkout Section | horizontally |
+      | Checkout Section | vertically   |
 
   # Data layer directional Flow specification graph runtime 020
-  Scenario: Data layer directional Flow specification graph runtime 020
-    Given the production canvas has a Checkout band above a Delivery band
-    And Checkout contains Customer details, ID verification, Payment, Summary, and Confirmation frames
-    When actual drags position the four-Page main route from left to right
-    And place ID verification above the gap between Customer details and Payment
-    Then measured Checkout geometry is a horizontal band above Delivery and grows vertically around the branch
-    And serialized coordinates equal the operator positions without fixed-column or vertical-list normalization
-    When actual ports draw the main-route edge from Customer details right to Payment left
-    And route the upper branch from Customer details top through ID verification bottom and bottom into Payment top
-    And connect Payment to Summary to Confirmation
-    Then production stores the direct edge as expected_next, the upper branch as alternative, and its return as merge
-    And installed SVG edges show an upper split and merge into Payment
-    And compact production edge targets remain left and right of all named lane bands
-    When the built extension reloads
-    Then lane order, branch geometry, coordinates, and endpoint identities are unchanged
+  Scenario Outline: Data layer directional Flow specification graph runtime 020
+    Given the browser viewport is <width> by <height> with the Flow route installed
+    When actual controls activate Skip to canvas and keyboard-navigate Sections, Pages, Events, ports, and edges
+    Then focus traversal and spatial targets follow a deterministic order with visible accessible names
+    And controls revealed by pointer hover are also rendered by keyboard focus and can be activated
+    When actual controls open and close Add, Outline, and Details
+    Then each surface stays within viewport bounds and closing restores its invoking element
+    And internal canvas navigation changes only its camera while document scroll width and height do not exceed the viewport
+    And accessibility state names readiness, containment, endpoints, and invalid targets without color-only meaning
+
+    Examples:
+      | width | height |
+      | 360   | 800    |
+      | 1440  | 900    |
 
   # Data layer directional Flow specification graph runtime 021
   Scenario: Data layer directional Flow specification graph runtime 021
-    Given production Product view effective example inputs are
-      | contributor              | property             | configured value |
-      | Sitewide                 | page_type            | product_detail   |
-      | Product detail Page      | product_id           | SKU-BASE         |
-      | Product view Event       | event                | view_item         |
-      | Product view occurrence  | product_id           | SKU-42           |
-      | Product view occurrence  | ecommerce.currency   | EUR              |
-    And required product_name has no production example
-    And production effective quantity has number type
-    When actual controls expand the Product view Event node example
-    Then the installed node renders Product view and status Incomplete
-    And parsed read-only JSON contains effective values and provenance
-      | path                   | value          | effective source         |
-      | /event                 | view_item      | Product view Event       |
-      | /page_type             | product_detail | Sitewide                 |
-      | /product_id            | SKU-42         | Product view occurrence  |
-      | /ecommerce/currency    | EUR            | Product view occurrence  |
-    And production JSON nests ecommerce, omits forbidden fields, and lists missing product_name outside the payload
-    And Edit examples routes to the exact canonical schema-instance field
-    When actual occurrence controls save product_name example Phone
-    Then rendered JSON updates to Phone and status becomes Complete without a stored payload copy
-    When actual controls save quantity example string many against production number type
-    Then installed status is Invalid with the quantity path and issue
-    When a production inherited schema conflict blocks Product view
-    Then installed status is Blocked and no valid-example claim renders
+    Given production Product view occurrence with trigger Viewed product is contained in Product detail Page
+    And production effective example inputs are
+      | contributor             | property             | configured value |
+      | Sitewide                | page_type            | product_detail   |
+      | Product detail Page     | product_id           | SKU-BASE         |
+      | Product view Event      | event                | view_item         |
+      | Product view occurrence | product_id           | SKU-42           |
+      | Product view occurrence | ecommerce.currency   | EUR              |
+    And required product_name lacks an example while effective quantity has number type
+    When actual zoom controls set 25 percent
+    Then the installed Product detail Page card retains its Flow name while occurrence interiors are suppressed
+    When actual controls return to 100 percent and select Product view occurrence
+    Then its mini-card renders Product view, Viewed product, and Incomplete
+    When actual controls open contextual Event Details for Product view
+    Then installed Product view Details render parsed occurrence JSON with effective values and sources
+      | path                | value          | effective source        |
+      | /event              | view_item      | Product view Event      |
+      | /page_type          | product_detail | Sitewide                |
+      | /product_id         | SKU-42         | Product view occurrence |
+      | /ecommerce/currency | EUR            | Product view occurrence |
+    And ecommerce is nested while /product_name renders outside the payload with its exact editor target
+    When actual schema controls save Product view product_name Phone
+    Then installed mini-card and Details render Complete without a payload copy or geometry change
+    When production quantity example is string many against number type
+    Then installed readiness is Invalid and Details identify /quantity
+    When a production inherited conflict blocks Product view
+    Then installed Product view readiness is Blocked without valid-example state
 
   # Data layer directional Flow specification graph runtime 022
   Scenario: Data layer directional Flow specification graph runtime 022
-    Given production migration input contains labelled and unlabelled relationships with legacy kind parallel
-    When the installed extension opens the owning Flow
-    Then one repository migration changes every persisted parallel relationship to alternative
-    And production relationship IDs, Page-frame endpoints, groups, optional labels, conditions, expectations, and coordinates equal their pre-upgrade values
-    And no stored relationship retains the legacy kind
+    Given production migration input has labelled and unlabelled relationships with kind parallel
+    When the built extension opens the owning Flow
+    Then one repository migration changes every persisted parallel kind to alternative
+    And production relationship IDs, Page-frame endpoints, groups, labels, conditions, expectations, and coordinates equal pre-upgrade values
+    And no serialized relationship retains kind parallel
 
   # Data layer directional Flow specification graph runtime 023
   Scenario Outline: Data layer directional Flow specification graph runtime 023
     Given production has a <kind> relationship from <source> to <target> with <label_state>
-    When actual pointer or keyboard controls select its SVG edge with the Inspector closed
-    Then the installed inline popover renders a Delete relationship button named <accessible_name>
+    When actual pointer or keyboard controls select its edge with Details closed
+    Then an unscaled toolbar renders Edit documentation and Delete relationship
+    And its delete button accessible name is <accessible_name>
     When actual controls activate Delete relationship
-    Then the selected SVG edge, outline item, and canonical relationship record are absent
-    And production source, target, every unrelated relationship, and their stable IDs remain byte-identical
-    And the installed result reports relationship deletion, Draft state, an invalidated documentation snapshot, and Undo availability
-    And document.activeElement identifies <source>
+    Then the selected edge, Outline item, and canonical relationship record are absent
+    And production endpoints, every other relationship, and their stable IDs remain byte-identical
+    And installed feedback reports Draft state, stale documentation, and one Undo while focus moves to <source>
     When actual Undo runs once
     Then production restores the same relationship ID, ports, kind, optional label, group, condition, and expectation once
-    And document.activeElement is the restored SVG edge
+    And document focus is the restored edge
 
     Examples:
-      | kind          | source           | target          | label_state          | accessible_name                                         |
+      | kind          | source           | target          | label_state          | accessible_name                                                  |
       | expected_next | Customer details | Payment         | label Checkout route | Delete relationship Checkout route, Customer details to Payment |
-      | alternative   | Customer details | ID verification | no label             | Delete relationship Customer details to ID verification |
+      | alternative   | Customer details | ID verification | no label             | Delete relationship Customer details to ID verification         |
 
   # Data layer directional Flow specification graph runtime 024
-  Scenario Outline: Data layer directional Flow specification graph runtime 024
-    Given production Confirmation Page belongs to Checkout and inherits confirmation_status expected value <parent_value>
-    And production Decision Page has Approved, Review, and Declined alternative branch ends
-    When actual controls insert Confirmation from the Pages catalog three times into Checkout
-    And actual drags position one Confirmation instance at each branch end
-    And actual ports connect Decision top to each Confirmation bottom
-    Then the installed Pages catalog remains available after every insertion
-    And canonical Flow storage has three distinct frame IDs used as their schema contributor IDs
-    And all three frames share the Confirmation Page ID and Checkout ID
-    And production stores three alternative relationships whose target endpoint IDs are those distinct frame IDs
-    When actual controls open the Approved Confirmation instance schema contribution
-    Then the installed canonical editor renders <parent_value> as inherited and Override here without copied inherited facets
-    When actual canonical editors save Approved <approved_value>, Review <review_value>, and Declined <declined_value> as sparse local expected-value facets
-    Then production composes Shared Profile, ordered Page Groups, Confirmation Page, and the owning Flow Page-instance in order
-    And compiled instance values are Approved <approved_value>, Review <review_value>, and Declined <declined_value> with every other inherited property retained
-    And each save leaves canonical Confirmation Page bytes and both unrelated instance contributions byte-identical
+  Scenario: Data layer directional Flow specification graph runtime 024
+    Given production Confirmation Page applies Checkout Property Set and inherits confirmation_status pending
+    And production Decision Page has Approved, Review, and Declined branch ends
+    When actual controls insert Confirmation into Checkout Section three times and connect all three from Decision
+    Then production stores three Page-frame contributor IDs with one shared Confirmation Page ID
+    And each relationship targets a distinct frame ID
+    When actual schema controls save approved, manual_review, and declined as sparse instance overrides
+    Then compilation orders Shared Profile, Property Sets, Confirmation Page, and owning Flow Page-instance
+    And Checkout Section is absent from compiled contributors and provenance
+    And the three effective confirmation_status values differ while unrelated inherited properties remain
     When actual controls reset Review confirmation_status to parents
-    Then production deletes that local facet and Review compiles <parent_value> while Approved compiles <approved_value> and Declined compiles <declined_value>
-    And the installed outline and selected-Flow documentation render three distinct instance contexts with those effective values
-
-    Examples:
-      | parent_value | approved_value | review_value  | declined_value |
-      | pending      | approved       | manual_review | declined       |
+    Then Review compiles pending while Approved compiles approved and Declined compiles declined
+    And installed Outline and selected-Flow documentation distinguish all three contexts
 
   # Data layer directional Flow specification graph runtime 025
   Scenario: Data layer directional Flow specification graph runtime 025
-    Given production Payment Page frame represents context-setting pageview
-    And it has inherited and local configured examples plus one missing required page_name
-    When actual controls expand its Page example
-    Then installed status is Incomplete
-    And rendered read-only JSON contains effective page_type, form_name, form_step_name, and error_message values with contributor provenance
-    And the missing page_name repair opens the exact Payment Page-instance schema field
-    When actual controls save page_name payment on that instance
-    Then production renders Complete with page_name payment without a stored JSON payload
-    And production renders Invalid for a typed example violation and Blocked for an unresolved inherited conflict
-    And the contained Event example compiler input extends the same Page branch with Event and occurrence contributors
+    Given production Payment Page frame represents pageview and receives configured examples
+      | contributor           | property       | configured value |
+      | Sitewide              | page_type      | checkout         |
+      | Checkout Property Set | form_name      | checkout         |
+      | Payment Page          | form_step_name | payment          |
+      | Payment Page frame    | error_message  | Payment declined |
+    And mandatory page_name lacks a configured example
+    When the installed canvas renders Payment
+    Then its compact card shows Flow name, source Page, and Incomplete without JSON content
+    When actual controls open contextual Page Details for Payment
+    Then installed Payment Details render parsed context Page JSON with effective values and sources
+      | path            | value            | effective source      |
+      | /page_type      | checkout         | Sitewide              |
+      | /form_name      | checkout         | Checkout Property Set |
+      | /form_step_name | payment          | Payment Page          |
+      | /error_message  | Payment declined | Payment Page frame    |
+    And /page_name renders outside the payload with its exact Page-instance editor target
+    When the production Page-instance editor saves page_name payment
+    Then installed card and Details render Complete with payment and serialized Flow contains no JSON payload copy
+    And the Event occurrence compiler extends the same Page branch with Event and occurrence contributors
+    When production form_step_name violates its effective type
+    Then installed Payment readiness is Invalid and Details identify /form_step_name
+    When a production inherited conflict blocks Payment
+    Then installed Payment readiness is Blocked without valid-example state
+
+  # Data layer directional Flow specification graph runtime 026
+  Scenario: Data layer directional Flow specification graph runtime 026
+    Given production Page Generic checkout page applies Checkout Property Set
+    When actual controls insert Generic checkout page into Checkout Section four times and connect the frames in order
+    Then all four cards render Generic checkout page without generated suffixes
+    And each card exposes an independent Rename in Flow action with a distinct frame ID and shared Page ID
+    When actual controls name the first three instances Customer details, Payment, and Summary
+    Then installed canvas, Outline, relationship controls, and contextual actions render those names and Generic checkout page
+    And installed Add results and Page editor retain Generic checkout page
+    And canonical identities, positions, relationships, schema contributions, and configured values remain byte-identical
+    When actual Page controls rename Generic checkout page to Reusable commerce page
+    Then the fourth card follows Reusable commerce page while all Flow-specific names remain
+    When actual controls reset Summary to its Page name
+    Then only that card changes to Reusable commerce page
+    And production marks affected Flow documentation stale with one Undo entry

@@ -119,6 +119,13 @@ export function moveFlowPageFramePresentation(state:ProjectState,flowId:string,f
   const graph=sectionGraph(state.project,flowId),frame=graph.pageFrames?.find(({id})=>id===frameId),section=position.sectionId?graph.sections?.find(({id})=>id===position.sectionId):undefined;if(!frame)throw new Error(`Unknown Page frame ${frameId}.`);if(position.sectionId&&!section)throw new Error(`Unknown Flow Section ${position.sectionId}.`);const nextPosition={x:Math.round(position.x),y:Math.round(position.y)},nextSectionId=position.sectionId===undefined?frame.sectionId:section?.id;if(frame.position.x===nextPosition.x&&frame.position.y===nextPosition.y&&frame.sectionId===nextSectionId)return state;return saveGraph(state,flowId,`Move ${frame.name} Page frame`,(next)=>({...next,pageFrames:(next.pageFrames??[]).map((candidate)=>{if(candidate.id!==frameId)return candidate;const moved:SectionPageFrame={...candidate,position:nextPosition,...(nextSectionId?{sectionId:nextSectionId}:{})};if(!nextSectionId)delete moved.sectionId;return moved;})}));
 }
 
+export function tidyFlowPageFrames(state:ProjectState,flowId:string,placements:readonly {id:string;position:{x:number;y:number}}[]):ProjectState{
+  const graph=sectionGraph(state.project,flowId),byId=new Map(placements.map(({id,position})=>[id,{x:Math.round(position.x),y:Math.round(position.y)}])),known=new Set((graph.pageFrames??[]).map(({id})=>id));
+  if([...byId.keys()].some((id)=>!known.has(id)))throw new Error("Tidy contains an unknown Page frame.");
+  if(![...byId].some(([id,position])=>{const frame=graph.pageFrames?.find((candidate)=>candidate.id===id);return frame?.position.x!==position.x||frame.position.y!==position.y;}))return state;
+  return saveGraph(state,flowId,"Tidy Flow presentation",(next)=>({...next,pageFrames:(next.pageFrames??[]).map((frame)=>{const position=byId.get(frame.id);return position?{...frame,position}:frame;})}));
+}
+
 export function connectFlowPageFrames(state:ProjectState,flowId:string,sourceId:string,targetId:string,id:IdFactory):ProjectState{
   const graph=sectionGraph(state.project,flowId),source=graph.pageFrames?.find(({id})=>id===sourceId),target=graph.pageFrames?.find(({id})=>id===targetId);if(!source||!target||source.id===target.id)throw new Error("A Flow relationship requires two distinct Page frames.");return saveGraph(state,flowId,`Connect ${source.name} to ${target.name}`,(next)=>({...next,relationships:[...(next.relationships??[]),{id:id("flow-relationship"),name:`${source.name} to ${target.name}`,sourceEndpoint:{kind:"page-frame",id:source.id},targetEndpoint:{kind:"page-frame",id:target.id},sourcePort:"right",targetPort:"left"}]}));
 }

@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=6893669771fd21eb2ed367b2131ee3a4946b033ab8a95792f9de7bfc4b92663d
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-08-03T09:17:06.991169514Z","feature_name":"Data layer layered schema constraints","feature_path":"features/data-layer-layered-schema-constraints.feature","background_hash":"fb0d1f404fb0f55f8682c5c7edfe59c4ef21fe314d802f1e5552e4014cacd104","implementation_hash":"sha256:b5cda08b35864b6b948204cfb8ebf7b4619552176b64474e4e542b70e69f0361","scenarios":[{"index":25,"name":"Data layer layered schema constraints 026","scenario_hash":"e7634cdeaae898057fb0fa66661bfc017864de9714db44a26240869649b1b40a","mutation_count":27,"result":{"Total":27,"Killed":27,"Survived":0,"Errors":0},"tested_at":"2026-08-02T17:23:29.696559438Z"},{"index":26,"name":"Data layer layered schema constraints 027","scenario_hash":"2f005548edd283023d6a3c1658672914af27e325da5988a93f1380cadb1b96a8","mutation_count":40,"result":{"Total":40,"Killed":40,"Survived":0,"Errors":0},"tested_at":"2026-08-02T17:23:29.696559438Z"},{"index":30,"name":"Data layer layered schema constraints 031","scenario_hash":"98da7f16e6f1f89098e43bb83df4f59a678c9c12a66556de00ca5d5f1ad95328","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-08-02T17:23:29.696559438Z"},{"index":22,"name":"Data layer layered schema constraints 023","scenario_hash":"1960a5e99299a1f25a2784aebe204b5362e352bbf37e9a8c2b5b5d46f914433d","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-08-01T17:36:42.316490831Z"},{"index":27,"name":"Data layer layered schema constraints 028","scenario_hash":"f2fe2f0dae15a27d08b3add59bdea9ea3c828b2d9c71d805c28a82f1bf3d2cb3","mutation_count":24,"result":{"Total":24,"Killed":24,"Survived":0,"Errors":0},"tested_at":"2026-08-01T17:36:42.316490831Z"},{"index":29,"name":"Data layer layered schema constraints 030","scenario_hash":"5bf818462a23b1f9d39ba51c71546fa0b65b026926b01bfdc9d865bd7e5a475c","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-08-01T17:36:42.316490831Z"},{"index":0,"name":"Data layer layered schema constraints 001","scenario_hash":"a5183bedc23abc0279313c0d2042eaa9a765afdc9141a0444902aed1a2a4b766","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-08-01T13:02:09.122512455Z"},{"index":4,"name":"Data layer layered schema constraints 005","scenario_hash":"527091a0b3f315daabfdf211aaa2ac580aa78d700a679941f48a08aded429cd2","mutation_count":32,"result":{"Total":32,"Killed":32,"Survived":0,"Errors":0},"tested_at":"2026-08-01T13:02:09.122512455Z"},{"index":13,"name":"Data layer layered schema constraints 014","scenario_hash":"ff421e5b385543003939bcc0a420b6f730d7bfd46b250aa0d1b03a837abc5361","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-08-01T13:02:09.122512455Z"},{"index":19,"name":"Data layer layered schema constraints 020","scenario_hash":"3f75768023c30398e21f1b6f70fde500fee667c17b64829a9f9a69fb8100f1c2","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-08-01T13:02:09.122512455Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Data layer layered schema constraints
 
   Background:
@@ -316,10 +311,10 @@ Feature: Data layer layered schema constraints
 
   # Data layer layered schema constraints 021
   Scenario: Data layer layered schema constraints 021
-    Given Checkout journey shows the Checkout / Payment Page-frame card with its derived JSON example expanded
+    Given Checkout journey has the Checkout / Payment Page instance selected with its derived JSON open in contextual Details
     And its effective stack provides /oForm/formStepName payment and /oForm/formType checkout from parent contributors
-    When the operator invokes Open schema contribution on that Page-frame card
-    Then the same composed-schema workspace used by Page Groups and Pages is the primary authoring surface
+    When the operator invokes Open schema contribution from the selected Page toolbar
+    Then the same composed-schema workspace used by Property Sets and Pages is the primary authoring surface
     And compact rows show both effective definitions, Inherited status, and item-specific structural ownership actions
     And their exact parent sources and validation details remain available in the focused property editor
     And no advanced facet builder is expanded until its property row is selected
@@ -327,16 +322,15 @@ Feature: Data layer layered schema constraints
     And Add local property remains available without copying either inherited property
     And the workspace contains no Effective documentation, Compiled effective schema and documentation, Target Event, Activation, Priority, Applicability, Test observation, Manual Flow / Page / Event, Validation payload, or developer-export panel
     When the operator selects /oForm/formStepName and opens Definition
-    Then one stacked advanced facet editor opens with inherited ordinary fields enabled while /oForm/formType remains compact
-    And no preliminary Override here action is required
+    Then the inherited ordinary fields are editable in that one open facet editor while /oForm/formType remains compact
     When the operator changes the inherited ordinary value to payment-review and confirms Review changes
     Then one property-scoped command stores only that sparse facet on the selected Page frame
-    And the derived JSON example uses payment-review while the reusable Payment Page, another Payment frame, and unrelated contributors remain byte-identical
+    And contextual Details uses payment-review while the reusable Payment Page, another Payment frame, and unrelated contributors remain byte-identical
     When the operator invokes Reset to parents
     Then the sparse local facet is deleted and the effective and derived values return to payment without copying a parent definition
     When the operator returns to Flow
-    Then Checkout journey restores the selected Page frame, viewport, expanded derived example, and focus on the originating card button
-    When Open schema contribution is invoked from the selected Page-frame inline actions
+    Then Checkout journey restores the selected Page frame, viewport, open contextual Details, and focus on the originating Page toolbar button
+    When Open schema contribution is invoked from contextual Page Details
     Then it resolves the same contributor identity and composed-schema workspace
 
   # Data layer layered schema constraints 022

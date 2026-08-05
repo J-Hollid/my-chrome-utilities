@@ -44,8 +44,10 @@ are:
 
 The correction program for the four schema contracts is
 `docs/data-layer-canonical-schema-authoring-correction-program-R01.md`.
-The correction program for the Flow graph contracts is
-`docs/data-layer-canvas-first-flow-authoring-correction-program-R01.md`.
+The current program for the Flow graph contracts is
+`docs/data-layer-canvas-first-flow-workspace-program-R02.md`. The earlier
+`docs/data-layer-canvas-first-flow-authoring-correction-program-R01.md` remains
+historical rationale where R02 does not supersede it.
 The program for selected-Flow table documentation is
 `docs/data-layer-flow-table-documentation-export-program-R01.md`.
 The later project-level documentation program is
@@ -154,6 +156,19 @@ legacy migration, portability, Undo, keyboard operation, and 360px geometry. It
 may reuse focused components from the layered-schema, Flow-graph,
 project-management, and schema-relationship-tree checkpoints, but must not execute
 their unrelated feature contracts or archived suites.
+
+On approval, the canvas-first Flow workspace R02 is later authority for the
+existing directional Flow graph pair and for the Flow return presentation in
+layered-schema scenario 021. It replaces permanent catalogs, Page Group
+lane selection, vertically stacked bands, raw geometry and endpoint forms,
+duplicate pre-canvas Page cards, fixed zoom, and permanently allocated Outline with
+an immediately visible bounded canvas, constant Add palette, arbitrary 2D Sections,
+contextual graph actions, a real camera, compact semantic-zoom cards, Details, and
+an on-demand Outline. It preserves the Section separation contract, Page and Event
+occurrence model, semantic Page ports, relationship-only documentation order,
+derived example states, stable identities, Undo, portability, and documentary
+non-execution boundary. Its exact checkpoint combines `flow_graph` and
+`layered_schema` in one focused invocation, followed by the package command.
 
 ## Scope and lineage processing invariant
 
@@ -834,70 +849,66 @@ carry it through the same terminal process. A later specification does not repla
 or deactivate an earlier task. Rejected candidates do not satisfy or close a task
 lineage, and unrelated implementation branches must not be merged wholesale.
 
-The Flow checkpoint is canvas-first. Searchable Page Group, Page, and Event catalogs,
-lane selection and ordering, Page-frame insertion, Event placement, connection
-ports, pointer and keyboard relationship drawing, inline relationship editing, and
-the synchronized outline belong to the main workspace and remain operable with the
-Inspector closed. The Inspector is optional contextual detail and owns no exclusive
-documentary graph command. Earlier form-first clauses are superseded.
+The Flow checkpoint is canvas-first. Opening a Flow renders a bounded canvas inside
+the initial viewport beneath one compact toolbar. Persistent graph chrome has a
+constant footprint independent of project entity count. Outline and Details start
+closed and reserve no canvas space; project navigation follows remembered UI state;
+Focus Canvas temporarily hides project chrome. Internal camera movement replaces
+outer document scrolling at both 360px and desktop widths.
 
-Only ordered Page Group references define named lanes; the empty Flow has no lanes
-and there are no Context, Shipping, Payment, Merge, or other fixed fallbacks. Named
-lanes are top-to-bottom horizontal bands in which Pages retain free left-to-right
-and vertical branch coordinates. A Page may occupy any selected eligible membership
-lane or a transient before-lanes or after-lanes edge region. Free placement clears
-only the frame's placement-group reference: ordered Page Group memberships,
-inheritance, and effective schema remain unchanged. Empty edge targets do not render
-as permanent lane-sized groups; compact free frames sandwich the named bands only
-where content exists. The Page frame itself is both the Page context and the
-context-setting event. Every Page definition owns its observed event identity, such
-as `pageview`, without a nested Page-event occurrence or Events-catalog record.
-Every Events-tab definition is an interaction Event that may occur on a Page;
-Event creation, editing, catalog insertion, occurrence detail, export,
-and storage expose no documentary role selector or value. An optional Event trigger
-remains descriptive metadata and cannot change those fixed semantics or select a
-validation target. Events can be inserted into a Page frame by pointer activation
-after selecting the frame, pointer drop on the visible canvas frame, or keyboard
-activation. Each successful insertion appears immediately on canvas and outline.
-Event occurrences retain free, including side-by-side, coordinates inside an
-expanding Page frame. An occurrence editor selects its containing Page frame by
-human name and stable identity. Changing that selection first previews the
-effective-schema impact, then preserves occurrence identity, Event reference,
-optional trigger, sparse contribution, configured examples, and position intent
-while recompiling the occurrence against the new Page-instance branch.
+One searchable Add palette opens at the operator's canvas position and exposes New
+Section plus existing canonical Pages and interaction Events. It does not mount a
+per-entity catalog or create canonical Page and Event definitions. Raw Section
+geometry, Page-placement, occurrence, and relationship-endpoint forms do not precede
+the graph. The Inspector or Details surface is optional contextual depth and owns no
+exclusive documentary graph command.
 
-Every Page insertion creates a new Flow Page-instance even when that Page already
-appears in the same Flow or lane. Instances retain distinct stable frame and schema-
-contributor identities while referencing the same Page and eligible placement
-group. Each instance inherits the ordinary Shared Profile, ordered Page Group, and
-Page hierarchy, then contributes only sparse local overrides through the same
-canonical editor and Reset to parents behavior as other hierarchy levels. Changes
-to one instance do not mutate the Page or sibling instances. Relationships,
-outline entries, compilation, and selected-Flow documentation resolve the frame
-identity so repeated instances remain distinct contexts with different effective
-values.
+Flow-owned Sections are arbitrary two-dimensional presentation containers. Any Page
+instance may be inside any Section or outside all Sections regardless of Property
+composition; relationships may cross Section boundaries. Moving a Section moves its
+explicitly contained Pages, while resizing never silently changes membership.
+Default removal keeps contents in place outside Sections; Remove with contents is a
+separate reviewed action. Sections are not nested and never determine schema,
+provenance, validation, Assignment targeting, relationship meaning, or documentation
+order.
 
-Only Page frames expose connection ports and only Page-to-Page relationships are
-canonical. Relationships persist stable Page-frame endpoints and connected ports.
-Source-right to target-left infers expected_next, source-top to target-bottom infers
-alternative, and source-bottom to target-top infers merge. Event availability is
-expressed by containment within a Page, never by an Event relationship.
-Alternative branches and merges are included in the first canvas release; Parallel
-is not a separate kind, relationship labels are optional, and every other port
-pairing is invalid.
-Selecting an edge exposes a Delete relationship button in its inline popover while
-the Inspector is closed. The button removes only that stable relationship, marks
-documentation from the changed topology stale, and offers one page-scoped Undo that
-restores the same identity, ports, kind, optional label, and metadata. Labelled
-buttons use the label and human endpoint names; unlabelled buttons use human
-endpoint names.
-Page frames and Event nodes expose read-only JSON examples derived respectively
-from their canonical context-setting Page-event and interaction Event-occurrence effective schemas,
-configured examples, and provenance; neither is a stored payload copy. Complete,
-Incomplete, Invalid, and Blocked states distinguish example readiness and deep-link
-exact repairs without claiming Flow execution. Graph records persist stable Page
-Group, Page, Event, occurrence, relationship, and Page-endpoint references without a
-Page-context binding model.
+Every Page insertion creates a distinct stable Flow Page-instance and schema-
+contributor identity while retaining its canonical Page reference. The Page frame is
+both Page context and context-setting observed event. Interaction Event insertions
+create stable contained occurrences with optional triggers and free, including
+side-by-side, coordinates. Page and Event records expose no documentary role or
+Page-context binding model. Reassigning an occurrence previews impact and retains
+its Event identity, sparse contribution, configured examples, and position intent.
+
+Each Page appears once as a compact canvas card with its Flow-specific name,
+canonical source Page, and readiness. Contained Events appear as compact mini-cards.
+Semantic zoom simplifies inner detail at distant scale; full derived JSON,
+provenance, missing or invalid paths, and exact repairs render in optional Details
+without expanding card geometry or storing a payload copy. Complete, Incomplete,
+Invalid, and Blocked retain their existing meanings.
+
+Only Page frames expose semantic connection ports and only Page-to-Page
+relationships are canonical. Source-right to target-left infers `expected_next`,
+source-top to target-bottom infers `alternative`, and source-bottom to target-top
+infers `merge`, independent of routed edge geometry. Dropping a connection on empty
+canvas opens existing-Page search and atomically creates the chosen Page instance
+and relationship; cancellation writes neither. Alternative branches and merges are
+supported, Parallel is not a distinct kind, labels are optional, and all other port
+pairs are invalid.
+
+Selected Pages, Events, relationships, and Sections expose screen-sized contextual
+actions. Outline is an on-demand projection of Sections, contained Pages and Events,
+Outside Sections, and relationships from the same stable graph; activating a result
+reveals and focuses the canvas item. Tidy horizontally or vertically is an explicit
+previewed and undoable presentation command that never changes graph or schema
+meaning.
+
+Pan, zoom toward a chosen point, visible percentage, 100 percent, Fit Flow, Fit
+selection, and minimap navigation update per-Flow project-scoped UI state only.
+Camera, selection, navigation visibility, semantic-detail level, open surfaces, and
+minimap visibility are excluded from Saved Draft bytes, portable project data, Flow
+revisions, and Undo history. Every pointer route has keyboard parity, labelled
+focus, deterministic cancellation, and focus restoration.
 
 The Flow remains documentary: pointer and keyboard positioning, topology,
 optionality, conditions, and multiplicity communicate expected behavior while
@@ -1120,9 +1131,9 @@ facet tables, documentation exports, activation, applicability, assignment,
 validation, and testing controls do not appear in that contribution workspace;
 their owning documentation, Assignment, guided-testing, and validation surfaces
 retain those responsibilities. Return to Flow restores selection, viewport,
-expanded example state, and origin focus. Page and Event branches compose for a
-contained Event occurrence; incompatible parallel rules block until explicitly
-resolved. The
+contextual Details state, and origin focus without expanding canvas-card geometry.
+Page and Event branches compose for a contained Event occurrence; incompatible
+parallel rules block until explicitly resolved. The
 checkpoint supports automatic applicability, manual assignment, or explicit
 Documentation-only activation and includes only the effective-schema developer
 export for a selected context.
@@ -1312,11 +1323,11 @@ program. Workspace-local untracked walkthrough files are likewise non-authoritat
 ## Verification boundary
 
 Use the task-specific verification pack. Do not estimate or execute any checkpoint
-from every command reached through the schema or shell dependency graph. The Flow
-graph checkpoint sequence is exactly:
+from every command reached through the schema or shell dependency graph. For the
+canvas-first Flow workspace R02, the Flow graph checkpoint sequence is exactly:
 
 ```sh
-node scripts/run-focused-acceptance.mjs --pack flow_graph
+node scripts/run-focused-acceptance.mjs --pack flow_graph --pack layered_schema
 node scripts/package.mjs
 ```
 
@@ -1430,8 +1441,8 @@ The `layered_schema` pack must register all six canonical-authoring, layered-sch
 and selective-inheritance feature contracts and their focused production evidence,
 including
 cross-surface property-menu parity, focused facet and rule lifecycle, ownership
-action legality, exact Page-frame card routing, fixed recipe membership, explicit
-parent additions, deterministic child-facet precedence, consolidated local-change
+action legality, exact Page toolbar and contextual-Details routing, fixed recipe
+membership, explicit parent additions, deterministic child-facet precedence, consolidated local-change
 inventory, and exact reset scopes. Adding the new contracts does not authorize extra
 checkpoint commands.
 
@@ -1557,8 +1568,7 @@ published value. Malformed, empty, or out-of-range published counters fail close
 instead of resetting to zero and reusing a handoff ID.
 
 `npm test -- --pack <id> ...` is the development entry point. The complete suite
-is isolated behind `npm run test:terminal` and the scheduled/manual four-lane
-`.github/workflows/terminal-verification.yml`; it is not a feature-development gate.
+is isolated behind `npm run test:terminal`; it is not a feature-development gate.
 
 Codex role sessions explicitly select workspace-write isolation and `on-request`
 approvals. The launcher enables the fail-closed Codex network proxy, denies broad

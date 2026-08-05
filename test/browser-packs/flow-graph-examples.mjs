@@ -1,2 +1,2 @@
-process.env.FLOW_GRAPH_BROWSER_SHARD="examples";
+process.env.FLOW_GRAPH_BROWSER_SHARD="core";
 await import("./flow-graph.mjs");

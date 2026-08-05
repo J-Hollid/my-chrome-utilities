@@ -8,7 +8,7 @@
   ["features/data-layer-directional-flow-specification-graph.feature"
    "features/data-layer-directional-flow-specification-graph-runtime.feature"])
 (def entry-modes
-  {"Shop project contains Page Groups Checkout, Delivery, and Confirmation" :model
+  {"Shop project has Specification Flow Checkout journey open on its current Saved Draft" :model
    "the built extension is running with the production project repository and Specification Flow editor" :runtime})
 (defonce model-verified? (atom false))
 (defonce browser-observation (atom nil))
@@ -26,6 +26,7 @@
     (checked-command! "Flow Event insertion semantics verification failed." "node" "test/data-layer-flow-event-insertion-semantics-test.mjs")
     (checked-command! "Flow Page context-event model verification failed." "node" "test/data-layer-flow-page-event-model-test.mjs")
     (checked-command! "Flow graph persistence verification failed." "node" "test/data-layer-flow-graph-persistence-test.mjs")
+    (checked-command! "Canvas-first Flow workspace verification failed." "node" "test/data-layer-flow-workspace-test.mjs")
     (reset! model-verified? true)))
 (defn- observe-browser! []
   (or @browser-observation
@@ -46,7 +47,15 @@
   (set (map #(keyword (format "runtime%03d" %)) (range 1 27))))
 (def required-evidence-keys (conj runtime-evidence-keys :installedBoundary))
 (def flow005-examples
-  {[:model ["Cart" "button_click" "Continue clicked" "activates button_click from the Events catalog by pointer"]] :pointer-activation
+  {[:model ["Cart" "button_click" "Continue clicked" "chooses button_click from Add by pointer"]] :pointer-activation
+   [:model ["Shipping" "add_shipping_info" "Form submitted" "drags add_shipping_info from Add onto Shipping"]] :pointer-drop
+   [:model ["Payment" "add_payment_info" "Payment submitted" "chooses add_payment_info from Add by keyboard"]] :keyboard-activation
+   [:runtime ["Cart" "button_click" "Continue clicked" "choose button_click from Add by pointer"]] :pointer-activation
+   [:runtime ["Shipping" "add_shipping_info" "Form submitted" "drag add_shipping_info from Add onto Shipping"]] :pointer-drop
+   [:runtime ["Payment" "add_payment_info" "Payment submitted" "choose add_payment_info from Add by keyboard"]] :keyboard-activation
+   ;; Retain exact compatibility for historical acceptance-unit fixtures while the
+   ;; active feature vocabulary uses the bounded Add surface above.
+   [:model ["Cart" "button_click" "Continue clicked" "activates button_click from the Events catalog by pointer"]] :pointer-activation
    [:model ["Shipping" "add_shipping_info" "Form submitted" "drags add_shipping_info onto the visible canvas Shipping frame"]] :pointer-drop
    [:model ["Payment" "add_payment_info" "Payment submitted" "activates add_payment_info from the Events catalog by keyboard"]] :keyboard-activation
    [:runtime ["Cart" "button_click" "Continue clicked" "activate button_click from the Events catalog by pointer"]] :pointer-activation
@@ -57,6 +66,10 @@
    ["Customer details" "top" "ID verification" "bottom" "alternative"] :pageToEventAlternative
    ["ID verification" "bottom" "Payment" "top" "merge"] :eventToPageMerge
    ["Payment" "right" "Confirmation" "left" "expected_next"] :eventInteractionExpectedNext})
+(def runtime010-examples
+  {["right" "left" "expected_next"] :expected-next
+   ["top" "bottom" "alternative"] :alternative
+   ["bottom" "top" "merge"] :merge})
 (def runtime023-examples
   {["expected_next" "Customer details" "Payment" "label Checkout route" "Delete relationship Checkout route, Customer details to Payment"] :labelled
    ["alternative" "Customer details" "ID verification" "no label" "Delete relationship Customer details to ID verification"] :unlabelled})
@@ -77,7 +90,14 @@
       (support/assert! (contains? flow005-examples key) "Unknown Flow 005 Event insertion example." {:mode mode :row row})
       (get flow005-examples key))))
 (defn runtime009-example-key [example]
-  (exact-example-key example ["source" "source_port" "target" "target_port" "kind"] ["source_port" "target_port"] runtime009-examples "Unknown runtime009 endpoint example."))
+  (when (and (support/example-value example "source")
+             (support/example-value example "source_port")
+             (support/example-value example "target_port"))
+    (exact-example-key example ["source" "source_port" "target" "target_port" "kind"] ["source"] runtime009-examples "Unknown runtime009 endpoint example.")))
+(defn runtime010-example-key [example]
+  (when (and (support/example-value example "source_port")
+             (not (support/example-value example "source")))
+    (exact-example-key example ["source_port" "target_port" "kind"] ["source_port"] runtime010-examples "Unknown runtime010 empty-drop example.")))
 (defn runtime023-example-key [example]
   (exact-example-key example ["kind" "source" "target" "label_state" "accessible_name"] ["label_state" "accessible_name"] runtime023-examples "Unknown runtime023 relationship-deletion example."))
 (defn runtime024-example-key [example]
@@ -92,6 +112,7 @@
 (defn validate-example! [mode example]
   (flow005-example-key mode example)
   (runtime009-example-key example)
+  (runtime010-example-key example)
   (runtime023-example-key example)
   (runtime024-example-key example)
   (flow026-example-key example)

@@ -20,7 +20,7 @@
                        (swap! commands conj command)
                        {:exit 0})}
         #(do (verify!) (verify!)))
-      (is (= 7 (count @commands))
+    (is (= 8 (count @commands))
           "normal acceptance reuses unit evidence and does not embed a property run")
       (is (true? @flow-graph/model-verified?))
       (finally
@@ -80,6 +80,8 @@
 (deftest runtime023-examples-have-distinct-evidence-keys
   (is (= :labelled (flow-graph/runtime023-example-key {"kind" "expected_next" "source" "Customer details" "target" "Payment" "label_state" "label Checkout route" "accessible_name" "Delete relationship Checkout route, Customer details to Payment"})))
   (is (= :unlabelled (flow-graph/runtime023-example-key {"kind" "alternative" "source" "Customer details" "target" "ID verification" "label_state" "no label" "accessible_name" "Delete relationship Customer details to ID verification"})))
+  (is (= {"kind" "expected_next" "source" "Customer details" "target" "Payment" "label_state" "label Checkout route" "accessible_name" "Delete relationship Checkout route, Customer details to Payment"}
+         (flow-graph/validate-example! :runtime {"kind" "expected_next" "source" "Customer details" "target" "Payment" "label_state" "label Checkout route" "accessible_name" "Delete relationship Checkout route, Customer details to Payment"})))
   (is (thrown? clojure.lang.ExceptionInfo (flow-graph/runtime023-example-key {"kind" "alternative" "source" "Customer details" "target" "ID verification" "label_state" "no label" "accessible_name" "Delete relationship wrong endpoint"}))))
 
 (deftest runtime024-example-requires-exact-instance-values
