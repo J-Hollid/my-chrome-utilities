@@ -157,6 +157,14 @@ may reuse focused components from the layered-schema, Flow-graph,
 project-management, and schema-relationship-tree checkpoints, but must not execute
 their unrelated feature contracts or archived suites.
 
+On approval, the empty legacy applicability correction is later authority for
+separation scenario 012. A missing or empty Page Group Applicability Set reference
+means unconditional applicability and upgrades to an application with no
+reference. Valid neighboring references and membership order remain exact.
+Normalizing an empty optional value cannot make the durable repository unavailable;
+verified backup bytes and idempotent startup remain required. The exact checkpoint
+remains `property_set_flow_sections`, followed by `node scripts/package.mjs`.
+
 On approval, the canvas-first Flow workspace R02 is later authority for the
 existing directional Flow graph pair and for the Flow return presentation in
 layered-schema scenario 021. It replaces permanent catalogs, Page Group

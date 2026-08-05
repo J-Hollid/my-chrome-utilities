@@ -140,3 +140,21 @@ Feature: Data layer Property Set and Flow Section separation runtime
       | viewport width |
       | 360            |
       | 1440           |
+
+  # Data layer Property Set and Flow Section separation runtime 012
+  Scenario Outline: Data layer Property Set and Flow Section separation runtime 012
+    Given production IndexedDB contains a previous-version project whose Cart memberships are Checkout base then Retail commerce
+    And serialized Checkout base has <legacy applicability value>
+    And serialized Retail commerce has applicabilitySetId applicability:retail
+    When openIndexedDbProjectRepository performs the installed Property Set and Flow Section upgrade
+    Then repository startup completes without a durable-repository-unavailable error
+    And durable read-back stores Cart applications as Checkout base without applicabilitySetId then Retail commerce with applicability:retail
+    And compiled Cart schema and every stable project identity match their pre-upgrade values
+    And the verified receipt and checksummed backup retain the exact previous-version source bytes
+    When openIndexedDbProjectRepository runs again
+    Then durable Cart application identities and the migration receipt remain byte-identical without another upgrade write
+
+    Examples:
+      | legacy applicability value            |
+      | no applicabilitySetId key             |
+      | applicabilitySetId equal to empty text |
