@@ -11,11 +11,13 @@ Feature: Data layer directional Flow specification graph runtime
     And production Checkout journey has a Cart Page frame
     When actual controls open Checkout journey
     Then the installed canvas bounding rectangle intersects the initial viewport without document scrolling
-    And it fills the measured Flow route below exactly one compact toolbar
+    And its left and right edges equal the measured Flow-route content edges, its top edge equals the compact toolbar bottom, and its bottom edge equals the viewport bottom
+    And no installed fixed height, maximum height, aspect ratio, or empty Flow-route track reduces that rectangle
     And closed Outline and Details surfaces are absent from layout
     And project navigation matches saved UI state without displacing the canvas below the viewport
     When actual controls select Cart, set a non-default camera transform, and enter Focus Canvas
     Then measured project chrome disappears while installed Add, camera, and Exit Focus controls remain operable
+    And the installed canvas bounding rectangle equals <width> by <height> at viewport origin while Focus Canvas controls overlay it without consuming layout space
     And production selection ID and camera transform remain unchanged
     When actual controls exit Focus Canvas
     Then saved project-navigation visibility and invoking document focus return without changing selection or camera
@@ -408,3 +410,27 @@ Feature: Data layer directional Flow specification graph runtime
     When actual controls reset Summary to its Page name
     Then only that card changes to Reusable commerce page
     And production marks affected Flow documentation stale with one Undo entry
+
+  # Data layer directional Flow specification graph runtime 027
+  Scenario Outline: Data layer directional Flow specification graph runtime 027
+    Given production Checkout journey is rendered in <workspace_mode> with graph bounds beyond every canvas edge
+    And no production graph authoring tool is active
+    When actual input <pan_gesture> by <horizontal_distance> CSS pixels horizontally and <vertical_distance> CSS pixels vertically
+    Then the installed camera translation changes by the same screen-space distances and exposes the corresponding offscreen graph region
+    And serialized Section, Page-frame, Event-occurrence, and relationship coordinates remain byte-identical
+    And production selection, Saved Draft bytes, Flow revision, and Undo depth remain unchanged
+    When actual input ends and repeats a nonzero pan
+    Then the camera continues from its current translation with the same zoom and without invoking Fit Flow
+
+    Examples:
+      | workspace_mode     | pan_gesture                                           | horizontal_distance | vertical_distance |
+      | the main workspace | sends primary-pointer drag from empty canvas          | 120                 | 80                |
+      | Focus Canvas       | sends primary-pointer drag from empty canvas          | -90                 | -60               |
+      | the main workspace | sends Space plus primary-pointer drag from a Page card | 110                 | -70               |
+      | Focus Canvas       | sends Space plus primary-pointer drag from a Page card | -100                | 75                |
+      | the main workspace | sends auxiliary-pointer drag from empty canvas        | 95                  | 65                |
+      | Focus Canvas       | sends auxiliary-pointer drag from empty canvas        | -85                 | -55               |
+      | the main workspace | sends one-contact touch pan                            | 105                 | -65               |
+      | Focus Canvas       | sends one-contact touch pan                            | -95                 | 70                |
+      | the main workspace | activates the labelled keyboard pan command           | 80                  | 60                |
+      | Focus Canvas       | activates the labelled keyboard pan command           | -80                 | -60               |

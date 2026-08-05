@@ -59,6 +59,13 @@ persistent graph chrome. Outline and Details start closed and reserve no space.
 Project navigation follows its remembered visibility. Focus Canvas temporarily
 hides project chrome and restores that remembered state on exit.
 
+In the ordinary Flow route, the canvas occupies the complete remaining content
+rectangle: its horizontal edges meet the route edges, its top follows the compact
+toolbar, and its bottom reaches the viewport bottom. A fixed height, maximum
+height, aspect ratio, or unused layout track cannot reduce that rectangle. In
+Focus Canvas, the canvas occupies the complete browser viewport. Add, camera, and
+Exit Focus controls overlay that surface and reserve none of its width or height.
+
 The outer document does not become the graph's scroll surface. Graph movement and
 scale stay inside the canvas viewport. Opening Add, Outline, or Details keeps the
 surface within the current viewport and restores invoking focus when it closes.
@@ -101,6 +108,14 @@ The canvas supports internal pan, zoom toward the pointer or gesture focus, visi
 zoom percentage, Zoom in, Zoom out, 100 percent, Fit Flow, Fit selection, and a
 toggleable minimap. A returning Flow restores its camera from project-scoped UI
 state; a new Flow fits its initial content.
+
+Pan is direct and continuous in the ordinary workspace and Focus Canvas. An
+unmodified primary drag from unoccupied canvas, Space plus primary drag from any
+canvas point, middle-button drag, one-finger touch pan, and the labelled keyboard
+pan command translate the rendered graph by the corresponding screen-space
+distance. Ending and restarting a gesture continues from the current camera
+without fitting or resetting zoom. Panning neither selects nor moves a graph item
+and never writes canonical coordinates or history.
 
 Manual zoom is bounded between 25 and 200 percent. Fit Flow may use a lower scale
 when required to include the complete graph bounds. Camera, selection,
@@ -221,11 +236,11 @@ migration or restore Page Groups to Flow authoring.
 
 | Risk | Scenarios | Required result |
 |---|---|---|
-| Canvas remains below growing controls | 001, 002, 020 | Canvas is initially visible, persistent chrome is constant, and the outer document does not scroll |
+| Canvas remains below growing controls or occupies only a small layout track | 001, 002, 020 | Ordinary canvas reaches every available route edge, Focus Canvas covers the viewport behind overlay controls, persistent chrome is constant, and the outer document does not scroll |
 | Sections still behave as vertical schema lanes | 003, 004, 007, 014, 015 | Sections are arbitrary 2D, explicitly contain any Page, and remain schema-neutral |
 | Contextual creation mutates reusable definitions | 002, 004, 005, 006, 010 | Add and edge-drop reuse canonical Pages and Events while creating stable Flow-local instances |
 | Cards remain duplicated or visually overloaded | 013, 021, 025 | One compact semantic-zoom card projection retains readiness while Details owns full examples and repairs |
-| Camera state changes project meaning | 016 | Pan, zoom, fit, and minimap are per-Flow UI state excluded from canonical data and Undo |
+| Camera cannot be panned or changes project meaning | 016, 027 | Direct background, modified pointer, middle-button, touch, and keyboard pan work in ordinary and focused modes while pan, zoom, fit, and minimap remain UI state excluded from canonical data and Undo |
 | Layout assistance rewrites semantics | 019 | Tidy is previewed, explicit, presentation-only, and undoable |
 | Outline consumes space or becomes a second model | 018 | Closed Outline reserves no width and on-demand navigation uses the same stable graph |
 | Direct manipulation loses keyboard access | 005, 012, 020, 023 | Pointer and keyboard routes have labelled focus, deterministic cancellation, and focus restoration |

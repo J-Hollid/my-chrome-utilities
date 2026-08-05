@@ -11,11 +11,13 @@ Feature: Data layer directional Flow specification graph
     And Checkout journey has a Cart Page instance
     When the main Flow workspace opens
     Then a bounded canvas is visible in the initial viewport without scrolling the outer document
-    And the canvas fills the available Flow route beneath one compact toolbar
+    And the canvas left and right edges match the available Flow route while its top follows the compact toolbar and its bottom reaches the viewport bottom
+    And no fixed height, maximum height, aspect ratio, or empty route region reduces that available canvas rectangle
     And Outline and Details are closed and reserve no canvas space
     And project navigation uses its remembered visibility without pushing the canvas below the initial viewport
     When the operator selects Cart, changes the viewport, and enters Focus Canvas
     Then project chrome is hidden while Add, camera controls, and Exit Focus remain available
+    And the canvas covers the complete viewport while those Focus Canvas controls overlay it without reserving canvas width or height
     And current selection and viewport remain unchanged
     When the operator exits Focus Canvas
     Then remembered navigation visibility and invoking focus are restored without changing selection or viewport
@@ -414,3 +416,27 @@ Feature: Data layer directional Flow specification graph
     When the operator resets Summary to its Page name
     Then only that instance changes to Reusable commerce page
     And the naming change marks affected Flow documentation stale and offers one Undo action
+
+  # Data layer directional Flow specification graph 027
+  Scenario Outline: Data layer directional Flow specification graph 027
+    Given the Flow workspace is in <workspace_mode> with graph content beyond every canvas edge
+    And no graph authoring tool is active
+    When the operator <pan_gesture> by <horizontal_distance> CSS pixels horizontally and <vertical_distance> CSS pixels vertically
+    Then the rendered graph translates by the same screen-space distances while the canvas reveals the corresponding offscreen region
+    And canonical Section, Page, Event, and relationship coordinates remain unchanged
+    And current selection remains unchanged while the gesture creates no Draft, revision, or Undo change
+    When the operator ends the gesture and starts another pan
+    Then camera movement resumes from the current viewport without snapping, fitting, or resetting zoom
+
+    Examples:
+      | workspace_mode      | pan_gesture                                      | horizontal_distance | vertical_distance |
+      | the main workspace  | primary-drags from unoccupied canvas             | 120                 | 80                |
+      | Focus Canvas        | primary-drags from unoccupied canvas             | -90                 | -60               |
+      | the main workspace  | holds Space and primary-drags from a graph item  | 110                 | -70               |
+      | Focus Canvas        | holds Space and primary-drags from a graph item  | -100                | 75                |
+      | the main workspace  | middle-button-drags from unoccupied canvas       | 95                  | 65                |
+      | Focus Canvas        | middle-button-drags from unoccupied canvas       | -85                 | -55               |
+      | the main workspace  | uses one-finger touch pan                         | 105                 | -65               |
+      | Focus Canvas        | uses one-finger touch pan                         | -95                 | 70                |
+      | the main workspace  | uses the labelled keyboard pan command           | 80                  | 60                |
+      | Focus Canvas        | uses the labelled keyboard pan command           | -80                 | -60               |
