@@ -29,11 +29,11 @@ import {
 } from "./data-layer-flow-graph.js";
 import {type IdFactory,type ProjectEntity,type ProjectState} from "./utilities/data-layer/schemas.js";
 import {appendFlowPageFrameCardControls} from "./data-layer-flow-graph-ui-page-frame.js";
-import {addFlowPageFrameAndRelationship,addFlowPageFrameAtPosition,addFlowPageFrameToSection,connectFlowPageFrames,createFlowSection,createFlowSectionAroundFrames,inspectSectionRemovalWithContents,moveFlowPageFramePresentation,moveFlowSection,movePageFrameToSection,removeFlowSection,removeFlowSectionWithContents,renameAndResizeFlowSection,tidyFlowPageFrames,type FlowSectionBounds} from "./utilities/data-layer/property-set-flow-section.js";
+import {addFlowPageFrameAndRelationship,addFlowPageFrameAtPosition,addFlowPageFrameToSection,connectFlowPageFrames,createFlowSection,createFlowSectionAroundFrames,inspectSectionRemovalWithContents,moveFlowPageFramePresentation,moveFlowSection,movePageFrameToSection,removeFlowSection,removeFlowSectionWithContents,renameAndResizeFlowSection,tidyFlowPageFrames,type FlowSectionBounds,type FlowSectionRemovalReview} from "./utilities/data-layer/property-set-flow-section.js";
 import {button,elementByData,entityName,flowEdgeGeometry,flowPortPoint,nodeHeight,nodeWidth,ownsPointerDrag,q,restorePointerCancellationFocus,svg} from "./flow-graph/ui-primitives.js";
 import type {FlowCamera} from "./flow-graph/workspace.js";
 import {upgradeFlowWorkspace} from "./flow-graph/workspace-ui.js";
-import type {FlowSectionCommand} from "./flow-graph/workspace-section-ui.js";
+import type {FlowSectionCommand,FlowSectionRemovalImpact} from "./flow-graph/workspace-section-ui.js";
 
 export interface FlowGraphBuilderContext {state?:ProjectState;flowId?:string;revision?:number}
 
@@ -85,6 +85,11 @@ export function installFlowGraphBuilder(options:IntegrationOptions):FlowGraphBui
     const position=detail.position??{x:80,y:80},sectionId=graph.sections.find((section)=>{const bounds=section.bounds as unknown as FlowSectionBounds;return position.x>=bounds.x&&position.x<=bounds.x+bounds.width&&position.y>=bounds.y&&position.y<=bounds.y+bounds.height;})?.id;
     persist(addFlowPageFrameAtPosition(state,flow.id,detail.pageId,position,sectionId,options.id));
   });
+  workspaceContent.addEventListener("flow-section-impact-request",(event)=>{
+    const detail=(event as CustomEvent<{sectionId?:string;respond?:(review:FlowSectionRemovalImpact)=>void}>).detail,{state,flow}=current();
+    if(!state||!flow||!detail.sectionId||!detail.respond)return;
+    detail.respond(inspectSectionRemovalWithContents(state.project,flow.id,detail.sectionId));
+  });
   workspaceContent.addEventListener("flow-section-command",(event)=>{
     const detail=(event as CustomEvent<FlowSectionCommand>).detail,{state,flow,graph}=current();
     if(!state||!flow||!graph||!detail)return;
@@ -95,7 +100,7 @@ export function installFlowGraphBuilder(options:IntegrationOptions):FlowGraphBui
     if(detail.kind==="resize"){persist(renameAndResizeFlowSection(state,flow.id,section.id,{name:section.name,bounds:detail.bounds}));return;}
     if(detail.kind==="rename"){persist(renameAndResizeFlowSection(state,flow.id,section.id,{name:detail.name,bounds:section.bounds as unknown as FlowSectionBounds}));return;}
     if(detail.kind==="remove"){persist(removeFlowSection(state,flow.id,section.id),`Removed Section ${section.name}; Page instances and relationships retained. Undo available.`);return;}
-    const review=inspectSectionRemovalWithContents(state.project,flow.id,section.id);persist(removeFlowSectionWithContents(state,flow.id,section.id,review),`Removed Section ${section.name} with ${review.pageFrames.length} Page instances and ${review.relationships.length} relationships. Undo available.`);
+    const review=detail.review as unknown as FlowSectionRemovalReview;persist(removeFlowSectionWithContents(state,flow.id,section.id,review),`Removed Section ${section.name} with ${review.pageFrames.length} Page instances, ${review.occurrences.length} occurrences, and ${review.relationships.length} relationships. Undo available.`);
   });
 
   const current=()=>{const context=options.context(),flow=context.flowId&&context.state?.project.collections.flows.find(({id})=>id===context.flowId),graph=flow&&context.state?documentaryFlowGraph(context.state.project,flow.id):undefined;return{...context,flow,graph};};
@@ -157,6 +162,7 @@ export function installFlowGraphBuilder(options:IntegrationOptions):FlowGraphBui
     form.dataset.relationshipPopover=relationship.id;form.setAttribute("aria-label","Inline relationship popover");heading.textContent="Relationship details";endpoints.dataset.relationshipEndpoints=relationship.id;endpoints.textContent=`${source?.name??sourceId} ${relationship.sourcePort} → ${target?.name??targetId} ${relationship.targetPort}`;inferredKind.dataset.inferredRelationshipKind=relationship.kind;inferredKind.textContent=`Inferred kind: ${relationship.kind}`;group.value=relationship.group??"";group.setAttribute("aria-label","Relationship group");label.value=relationship.label??"";label.setAttribute("aria-label","Optional relationship label");condition.value=relationship.documentationCondition??"";condition.setAttribute("aria-label","Documentation condition");expectation.value=relationship.expectation??"";expectation.setAttribute("aria-label","Relationship expectation");save.type="submit";save.textContent="Save relationship";cancel.type="button";cancel.textContent="Cancel";
     remove.type="button";remove.textContent="Delete relationship";remove.setAttribute("aria-label",flowRelationshipDeletionAccessibleName(relationship.label,source?.name??sourceId,target?.name??targetId));remove.addEventListener("click",()=>{relationshipPopoverFocusIntent=undefined;relationshipEdgeFocusIntent=undefined;relationshipDeletionFocusIntent={id:relationship.id,sourceKind:relationship.sourceEndpoint.kind,sourceId,sourceFocused:false};selected=undefined;const context=current(),view=readView(context.state!.project.id,flow.id);writeView(context.state!.project.id,flow.id,flowViewAfterRelationshipDeletion(view,relationship.id));persist(removeFlowRelationship(context.state!,flow.id,relationship.id),`Deleted relationship ${relationshipName}. Saved Draft; documentation preview stale; Undo available.`);});
     cancel.addEventListener("click",()=>{relationshipPopoverFocusIntent=undefined;relationshipEdgeFocusIntent=undefined;selected=undefined;render();document.querySelector<HTMLElement>(`[data-flow-port-for="${CSS.escape(sourceId)}"][data-flow-port-side="${relationship.sourcePort}"]`)?.focus();});
+    form.addEventListener("keydown",(event)=>{if(event.key!=="Escape")return;event.preventDefault();relationshipPopoverFocusIntent=undefined;relationshipEdgeFocusIntent=undefined;document.querySelector<HTMLElement>(`[data-relationship-id="${CSS.escape(relationship.id)}"]`)?.focus();});
     form.addEventListener("submit",(event)=>{event.preventDefault();relationshipPopoverFocusIntent=undefined;relationshipEdgeFocusIntent={id:relationship.id,revision:Number(revision??0),optimisticFocused:false};persist(saveGraphRelationship(current().state!,flow.id,sourceId,{id:relationship.id,toStepId:targetId,sourcePort:relationship.sourcePort,targetPort:relationship.targetPort,group:group.value.trim(),label:label.value.trim(),documentationCondition:condition.value.trim(),expectation:expectation.value.trim()},options.id));queueMicrotask(()=>document.querySelector<HTMLElement>(`[data-relationship-id="${CSS.escape(relationship.id)}"]`)?.focus());});
     const labeled=(text:string,control:HTMLElement)=>{const wrapper=document.createElement("label");wrapper.append(text,control);return wrapper;};form.append(heading,endpoints,inferredKind,labeled("Group",group),labeled("Optional label",label),labeled("Condition",condition),labeled("Expectation",expectation),save,cancel,remove);host.append(form);
     const intent=relationshipPopoverFocusIntent;if(intent?.id===relationship.id){const renderRevision=Number(revision??0),replacement=intent.optimisticFocused&&renderRevision>intent.revision;if(!intent.optimisticFocused){intent.optimisticFocused=true;intent.revision=renderRevision;}queueMicrotask(()=>{if(!label.isConnected)return;label.focus();if(replacement&&relationshipPopoverFocusIntent===intent)relationshipPopoverFocusIntent=undefined;});}

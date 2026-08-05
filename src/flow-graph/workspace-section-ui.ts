@@ -5,7 +5,7 @@ import {
   type FlowCamera,
   type FlowPoint,
 } from "./workspace.js";
-import { flowControl, renderedElementBounds } from "./workspace-dom.js";
+import { FLOW_PAGE_FRAME_SELECTOR, flowControl, renderedElementBounds } from "./workspace-dom.js";
 
 export type FlowSectionCommand =
   | { kind: "select"; sectionId: string }
@@ -14,7 +14,17 @@ export type FlowSectionCommand =
   | { kind: "resize"; sectionId: string; bounds: { x: number; y: number; width: number; height: number } }
   | { kind: "rename"; sectionId: string; name: string }
   | { kind: "remove"; sectionId: string }
-  | { kind: "remove-with-contents"; sectionId: string };
+  | { kind: "remove-with-contents"; sectionId: string; review: FlowSectionRemovalImpact };
+
+export interface FlowSectionRemovalImpact {
+  flowId?: string;
+  sectionId?: string;
+  sectionName?: string;
+  pageFrames: { id: string; name: string }[];
+  occurrences: { id: string; name: string }[];
+  relationships: { id: string; name: string }[];
+  fingerprint?: string;
+}
 
 interface SectionUiOptions {
   root: HTMLElement;
@@ -188,7 +198,7 @@ export function installFlowSections(options: SectionUiOptions): FlowSectionUi {
       canvas.focus({ preventScroll: true });
     });
     const wrap = flowControl("Wrap selection", () => {
-      const frames = Array.from(canvas.querySelectorAll<SVGGraphicsElement>("[data-page-frame-id].is-selected,[data-page-frame-id][aria-pressed=\"true\"]"));
+      const frames = Array.from(canvas.querySelectorAll<SVGGraphicsElement>(`${FLOW_PAGE_FRAME_SELECTOR}.is-selected,${FLOW_PAGE_FRAME_SELECTOR}[aria-pressed="true"]`));
       const bounds = frames.flatMap((frame) => {
         const itemBounds = renderedElementBounds(frame);
         return itemBounds ? [itemBounds] : [];
@@ -226,7 +236,7 @@ export function installFlowSections(options: SectionUiOptions): FlowSectionUi {
     const move = flowControl("Move", () => section.focus({ preventScroll: true }));
     const resize = flowControl("Resize", () => section.querySelector<SVGGraphicsElement>("[data-section-resize-for]")?.focus({ preventScroll: true }));
     const wrap = flowControl("Wrap selection", () => {
-      const frames = Array.from(canvas.querySelectorAll<SVGGraphicsElement>(`[data-page-frame-id][data-flow-section-id="${CSS.escape(id)}"]`));
+      const frames = Array.from(canvas.querySelectorAll<SVGGraphicsElement>(`${FLOW_PAGE_FRAME_SELECTOR}[data-flow-section-id="${CSS.escape(id)}"]`));
       const bounds = frames.flatMap((frame) => {
         const value = renderedElementBounds(frame);
         return value ? [value] : [];
@@ -235,10 +245,16 @@ export function installFlowSections(options: SectionUiOptions): FlowSectionUi {
     });
     const remove = flowControl("Remove Section", () => command(root, { kind: "remove", sectionId: id }));
     const removeContents = flowControl("Remove with contents", () => {
-      const frameNames = Array.from(canvas.querySelectorAll<SVGGraphicsElement>(`[data-page-frame-id][data-flow-section-id="${CSS.escape(id)}"]`)).map((frame) => frame.getAttribute("aria-label") ?? frame.dataset.pageFrameId);
-      const summary = document.createElement("p");
-      summary.textContent = `Remove ${label}, Page instances ${frameNames.join(", ") || "none"}, their Events, and affected relationships. Nothing changes until confirmed.`;
-      panel.replaceChildren(summary, flowControl("Confirm Remove with contents", () => command(root, { kind: "remove-with-contents", sectionId: id })), flowControl("Cancel", () => panel.replaceChildren(rename, move, resize, wrap, remove, removeContents)));
+      root.dispatchEvent(new CustomEvent("flow-section-impact-request", { bubbles: true, detail: {
+        sectionId: id,
+        respond(review: FlowSectionRemovalImpact) {
+          const names = (items: FlowSectionRemovalImpact["pageFrames"]): string => items.map(({ name }) => name).join(", ") || "none";
+          const summary = document.createElement("p");
+          summary.textContent = `Remove ${label}. Page instances: ${names(review.pageFrames)}. Event occurrences: ${names(review.occurrences)}. Relationships: ${names(review.relationships)}. Nothing changes until confirmed.`;
+          panel.replaceChildren(flowControl("Confirm Remove with contents", () => command(root, { kind: "remove-with-contents", sectionId: id, review })), flowControl("Cancel", () => panel.replaceChildren(rename, move, resize, wrap, remove, removeContents)));
+          panel.prepend(summary);
+        },
+      } }));
     });
     panel.setAttribute("aria-label", `Selected Section ${label} actions`);
     panel.append(rename, move, resize, wrap, remove, removeContents);

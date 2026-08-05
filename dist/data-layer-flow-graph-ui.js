@@ -68,6 +68,12 @@ export function installFlowGraphBuilder(options) {
         const position = detail.position ?? { x: 80, y: 80 }, sectionId = graph.sections.find((section) => { const bounds = section.bounds; return position.x >= bounds.x && position.x <= bounds.x + bounds.width && position.y >= bounds.y && position.y <= bounds.y + bounds.height; })?.id;
         persist(addFlowPageFrameAtPosition(state, flow.id, detail.pageId, position, sectionId, options.id));
     });
+    workspaceContent.addEventListener("flow-section-impact-request", (event) => {
+        const detail = event.detail, { state, flow } = current();
+        if (!state || !flow || !detail.sectionId || !detail.respond)
+            return;
+        detail.respond(inspectSectionRemovalWithContents(state.project, flow.id, detail.sectionId));
+    });
     workspaceContent.addEventListener("flow-section-command", (event) => {
         const detail = event.detail, { state, flow, graph } = current();
         if (!state || !flow || !graph || !detail)
@@ -99,8 +105,8 @@ export function installFlowGraphBuilder(options) {
             persist(removeFlowSection(state, flow.id, section.id), `Removed Section ${section.name}; Page instances and relationships retained. Undo available.`);
             return;
         }
-        const review = inspectSectionRemovalWithContents(state.project, flow.id, section.id);
-        persist(removeFlowSectionWithContents(state, flow.id, section.id, review), `Removed Section ${section.name} with ${review.pageFrames.length} Page instances and ${review.relationships.length} relationships. Undo available.`);
+        const review = detail.review;
+        persist(removeFlowSectionWithContents(state, flow.id, section.id, review), `Removed Section ${section.name} with ${review.pageFrames.length} Page instances, ${review.occurrences.length} occurrences, and ${review.relationships.length} relationships. Undo available.`);
     });
     const current = () => { const context = options.context(), flow = context.flowId && context.state?.project.collections.flows.find(({ id }) => id === context.flowId), graph = flow && context.state ? documentaryFlowGraph(context.state.project, flow.id) : undefined; return { ...context, flow, graph }; };
     const persist = (next, feedback = "") => { try {
@@ -361,6 +367,8 @@ export function installFlowGraphBuilder(options) {
         remove.setAttribute("aria-label", flowRelationshipDeletionAccessibleName(relationship.label, source?.name ?? sourceId, target?.name ?? targetId));
         remove.addEventListener("click", () => { relationshipPopoverFocusIntent = undefined; relationshipEdgeFocusIntent = undefined; relationshipDeletionFocusIntent = { id: relationship.id, sourceKind: relationship.sourceEndpoint.kind, sourceId, sourceFocused: false }; selected = undefined; const context = current(), view = readView(context.state.project.id, flow.id); writeView(context.state.project.id, flow.id, flowViewAfterRelationshipDeletion(view, relationship.id)); persist(removeFlowRelationship(context.state, flow.id, relationship.id), `Deleted relationship ${relationshipName}. Saved Draft; documentation preview stale; Undo available.`); });
         cancel.addEventListener("click", () => { relationshipPopoverFocusIntent = undefined; relationshipEdgeFocusIntent = undefined; selected = undefined; render(); document.querySelector(`[data-flow-port-for="${CSS.escape(sourceId)}"][data-flow-port-side="${relationship.sourcePort}"]`)?.focus(); });
+        form.addEventListener("keydown", (event) => { if (event.key !== "Escape")
+            return; event.preventDefault(); relationshipPopoverFocusIntent = undefined; relationshipEdgeFocusIntent = undefined; document.querySelector(`[data-relationship-id="${CSS.escape(relationship.id)}"]`)?.focus(); });
         form.addEventListener("submit", (event) => { event.preventDefault(); relationshipPopoverFocusIntent = undefined; relationshipEdgeFocusIntent = { id: relationship.id, revision: Number(revision ?? 0), optimisticFocused: false }; persist(saveGraphRelationship(current().state, flow.id, sourceId, { id: relationship.id, toStepId: targetId, sourcePort: relationship.sourcePort, targetPort: relationship.targetPort, group: group.value.trim(), label: label.value.trim(), documentationCondition: condition.value.trim(), expectation: expectation.value.trim() }, options.id)); queueMicrotask(() => document.querySelector(`[data-relationship-id="${CSS.escape(relationship.id)}"]`)?.focus()); });
         const labeled = (text, control) => { const wrapper = document.createElement("label"); wrapper.append(text, control); return wrapper; };
         form.append(heading, endpoints, inferredKind, labeled("Group", group), labeled("Optional label", label), labeled("Condition", condition), labeled("Expectation", expectation), save, cancel, remove);

@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import {documentaryFlowGraph,inferFlowRelationshipKind,renameFlowPageFrame,resetFlowPageFrameName} from "../dist/data-layer-flow-graph.js";
 import {addFlowPageFrameToSection,createFlowSection} from "../dist/data-layer-property-set-flow-section.js";
 import {addProjectEntity,createSpecificationProject,transactProject,undoProjectTransaction} from "../dist/data-layer-specification-project.js";
-import {boundsAroundItems,cameraFromMinimapPoint,flowWorkspaceKey,panFlowCamera,relationshipDropTarget,sectionBoundsFromDrag,tidyFlowItems,zoomFlowCamera} from "../dist/flow-graph/workspace.js";
+import {boundsAroundItems,cameraFromMinimapPoint,fitFlowBounds,flowWorkspaceKey,panFlowCamera,relationshipDropTarget,sectionBoundsFromDrag,tidyFlowItems,zoomFlowCamera} from "../dist/flow-graph/workspace.js";
 
 const sides=["left","right","top","bottom"],expected=new Map([["right:left","expected_next"],["top:bottom","alternative"],["bottom:top","merge"]]);let seed=0x5eed1234;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/0x100000000;};
 for(let sample=0;sample<1024;sample+=1){const source=sides[Math.floor(random()*4)],target=sides[Math.floor(random()*4)];assert.equal(inferFlowRelationshipKind(source,target),expected.get(`${source}:${target}`));}
@@ -14,6 +14,7 @@ for(let sample=0;sample<512;sample+=1){
   const drop=relationshipDropTarget(sides[Math.floor(random()*4)],{x:random()*1000,y:random()*800});if(drop)assert.ok([["right","left","expected_next"],["top","bottom","alternative"],["bottom","top","merge"]].some(([,target,kind])=>drop.targetPort===target&&drop.kind===kind));
   const project=`project:${Math.floor(random()*32)}`,flow=`flow:${Math.floor(random()*8)}`;assert.notEqual(flowWorkspaceKey(project,flow),flowWorkspaceKey(`${project}:other`,flow));
   const world={x:random()*400,y:random()*300,width:500+random()*2000,height:400+random()*1600},viewport={width:200+random()*800,height:180+random()*620},point={x:random(),y:random()},minimap=cameraFromMinimapPoint(world,viewport,point,.25+random());assert.ok(Number.isFinite(minimap.x)&&Number.isFinite(minimap.y)&&Number.isFinite(minimap.zoom));
+  const fitBounds={x:random()*1000,y:random()*1000,width:1+random()*1000000,height:1+random()*1000000},fit=fitFlowBounds(fitBounds,viewport,random()*100);assert.ok(Number.isFinite(fit.zoom)&&fit.zoom>0&&fit.zoom<=1,"Fit always produces a positive finite scale");assert.ok(Number.isFinite(viewport.width/fit.zoom)&&Number.isFinite(viewport.height/fit.zoom));
   const cards=Array.from({length:2+Math.floor(random()*8)},(_,index)=>({id:`card:${index}`,position:{x:random()*1000,y:random()*800}})),before=JSON.stringify(cards),tidied=tidyFlowItems(cards,random()>.5?"horizontal":"vertical",{x:random()*100,y:random()*100,gap:80+random()*200});assert.equal(JSON.stringify(cards),before);assert.equal(new Set(tidied.map(({id})=>id)).size,cards.length);assert.deepEqual(tidyFlowItems(tidied,"horizontal",{x:10,y:20,gap:100}),tidyFlowItems([...tidied].reverse(),"horizontal",{x:10,y:20,gap:100}));
   const wrapped=boundsAroundItems(cards.map(({position})=>({...position,width:100,height:60})),16);assert.ok(cards.every(({position})=>position.x>=wrapped.x&&position.y>=wrapped.y&&position.x+100<=wrapped.x+wrapped.width&&position.y+60<=wrapped.y+wrapped.height));
 }

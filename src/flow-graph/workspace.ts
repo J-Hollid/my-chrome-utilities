@@ -6,6 +6,7 @@ export interface FlowCamera{x:number;y:number;zoom:number}
 export interface FlowWorkspaceView{camera:FlowCamera;surface:FlowWorkspaceSurface|undefined;minimap:boolean;focusCanvas:boolean}
 export interface FlowPoint{x:number;y:number}
 export interface FlowBounds extends FlowPoint{width:number;height:number}
+export interface FlowSurfacePlacement{left:number;top:number;width:number;maxHeight:number}
 
 export function flowWorkspaceKey(projectId:string,flowId:string):string{return `${projectId}\u0000${flowId}`;}
 
@@ -27,8 +28,16 @@ export function clientPointToFlowPoint(rect:{left:number;top:number;width:number
 }
 
 export function fitFlowBounds(bounds:FlowBounds,viewport:{width:number;height:number},padding=24):FlowCamera{
-  const width=Math.max(1,bounds.width+padding*2),height=Math.max(1,bounds.height+padding*2),zoom=rounded(Math.min(1,viewport.width/width,viewport.height/height));
+  const width=Math.max(1,bounds.width+padding*2),height=Math.max(1,bounds.height+padding*2),scale=Math.min(1,viewport.width/width,viewport.height/height),zoom=rounded(scale)||scale;
   return{x:bounds.x-padding,y:bounds.y-padding,zoom};
+}
+
+export function placeFlowSurface(viewport:{width:number;height:number},requested?:FlowPoint):FlowSurfacePlacement{
+  const margin=6,width=Math.min(380,Math.max(280,viewport.width-margin*2));
+  const left=requested?Math.max(margin,Math.min(viewport.width-width-margin,requested.x)):Math.max(margin,viewport.width-width-margin);
+  const requestedTop=requested?.y??margin,availableBelow=viewport.height-requestedTop-margin;
+  const top=availableBelow>=180?Math.max(margin,requestedTop):margin;
+  return{left,top,width,maxHeight:Math.max(1,viewport.height-top-margin)};
 }
 
 export function cameraFromMinimapPoint(bounds:FlowBounds,viewport:{width:number;height:number},point:{x:number;y:number},zoom:number):FlowCamera{

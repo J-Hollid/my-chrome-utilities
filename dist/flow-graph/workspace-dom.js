@@ -1,4 +1,5 @@
 import { boundsAroundItems, transformedFlowBounds, } from "./workspace.js";
+export const FLOW_PAGE_FRAME_SELECTOR = "g[data-page-frame-id]:not([data-occurrence-id])";
 export function flowControl(text, action) {
     const result = document.createElement("button");
     result.type = "button";
@@ -23,7 +24,7 @@ export function renderedElementBounds(item) {
         return undefined;
     }
 }
-export function flowCanvasBounds(canvas, selector = "[data-flow-section-id],[data-page-frame-id],[data-occurrence-id]") {
+export function flowCanvasBounds(canvas, selector = `[data-flow-section-id],${FLOW_PAGE_FRAME_SELECTOR},[data-occurrence-id]`) {
     const boxes = Array.from(canvas.querySelectorAll(selector))
         .flatMap((item) => {
         const bounds = renderedElementBounds(item);
