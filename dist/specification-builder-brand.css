@@ -109,6 +109,43 @@ body.twatility-studio {
   color: #40566c;
   font-size: 0.75rem;
 }
+.twatility-studio .flow-minimap[hidden] { display: none; }
+.twatility-studio .flow-minimap > button {
+  position: relative;
+  inline-size: 100%;
+  block-size: 100%;
+  border: 0;
+  background:
+    linear-gradient(135deg, #dbe9f5 25%, transparent 25%) 0 0 / 1rem 1rem,
+    #f8fbff;
+  overflow: hidden;
+}
+.twatility-studio .flow-minimap-viewport {
+  position: absolute;
+  min-inline-size: 0.4rem;
+  min-block-size: 0.4rem;
+  border: 2px solid var(--twa-navy, #123f65);
+  background: #ffffff66;
+  pointer-events: none;
+}
+.twatility-studio .flow-section-resize-handle {
+  fill: var(--twatility-mustard, #d9a21b);
+  stroke: var(--twa-navy, #123f65);
+  cursor: nwse-resize;
+}
+.twatility-studio .flow-section-draw-preview {
+  fill: #d9a21b1f;
+  stroke: var(--twatility-mustard, #d9a21b);
+  stroke-width: 2;
+  stroke-dasharray: 8 5;
+  pointer-events: none;
+}
+.twatility-studio .flow-tidy-edge-preview {
+  stroke: var(--twatility-mustard, #d9a21b);
+  stroke-width: 3;
+  stroke-dasharray: 7 5;
+  pointer-events: none;
+}
 .twatility-studio .flow-graph-canvas foreignObject { display: none; }
 .twatility-studio .flow-graph-canvas[data-semantic-detail="identity"] .flow-node { display: none; }
 .twatility-studio .flow-page-source,

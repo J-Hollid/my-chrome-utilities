@@ -1,6 +1,6 @@
 import { addEventOccurrenceToPage, addGraphOccurrence, deriveFlowOccurrenceExample, deriveFlowPageFrameExample, documentaryFlowGraph, duplicateFlowPageFrame, effectiveFlowPageFrameName, flowOccurrenceExampleEditorRows, FLOW_GRAPH_GEOMETRY, flowRelationshipText, inspectOccurrencePageChange, migrateLegacyFlowContextBindings, migrateLegacyFlowRelationshipKinds, moveGraphOccurrence, projectFlowGraph, reassignFlowOccurrencePage, reviewLegacyFlowContextMigration, removeFlowPageFrame, renameFlowPageFrame, resetFlowPageFrameName, removeFlowRelationship, removeGraphOccurrence, saveGraphRelationship, setFlowOccurrenceExample, } from "./data-layer-flow-graph.js";
 import { appendFlowPageFrameCardControls } from "./data-layer-flow-graph-ui-page-frame.js";
-import { addFlowPageFrameToSection, connectFlowPageFrames, createFlowSection, inspectSectionRemovalWithContents, moveFlowPageFramePresentation, moveFlowSection, movePageFrameToSection, removeFlowSection, removeFlowSectionWithContents, renameAndResizeFlowSection, tidyFlowPageFrames } from "./utilities/data-layer/property-set-flow-section.js";
+import { addFlowPageFrameAndRelationship, addFlowPageFrameAtPosition, addFlowPageFrameToSection, connectFlowPageFrames, createFlowSection, createFlowSectionAroundFrames, inspectSectionRemovalWithContents, moveFlowPageFramePresentation, moveFlowSection, movePageFrameToSection, removeFlowSection, removeFlowSectionWithContents, renameAndResizeFlowSection, tidyFlowPageFrames } from "./utilities/data-layer/property-set-flow-section.js";
 import { button, elementByData, entityName, flowEdgeGeometry, flowPortPoint, nodeHeight, nodeWidth, ownsPointerDrag, q, restorePointerCancellationFocus, svg } from "./flow-graph/ui-primitives.js";
 import { upgradeFlowWorkspace } from "./flow-graph/workspace-ui.js";
 export function contextSettingPageLabel(pageName) { return `${pageName} · Context-setting Page`; }
@@ -59,9 +59,49 @@ export function installFlowGraphBuilder(options) {
     new MutationObserver(upgradeWorkspace).observe(workspaceContent, { childList: true, subtree: true });
     workspaceContent.addEventListener("flow-tidy-confirm", (event) => { const detail = event.detail, { state, flow } = current(); if (state && flow && detail.placements)
         persist(tidyFlowPageFrames(state, flow.id, detail.placements), "Tidied Flow presentation; Undo available."); });
-    workspaceContent.addEventListener("flow-empty-connection-page", (event) => { const detail = event.detail, { state, flow, graph } = current(); if (!state || !flow || !graph || !detail.pageId || !detail.sourceId || !detail.sourcePort || !detail.targetPort || !detail.position)
-        return; const before = new Set(graph.pageFrames.map(({ id }) => id)); let next = addFlowPageFrameToSection(state, flow.id, detail.pageId, undefined, options.id), created = documentaryFlowGraph(next.project, flow.id).pageFrames.find(({ id }) => !before.has(id)); if (!created)
-        return; next = moveFlowPageFramePresentation(next, flow.id, created.id, { x: detail.position.x, y: detail.position.y, sectionId: null }); next = saveGraphRelationship(next, flow.id, detail.sourceId, { toStepId: created.id, sourcePort: detail.sourcePort, targetPort: detail.targetPort }, options.id); persist(next, "Created Page instance and relationship in one Flow command; Undo removes both."); });
+    workspaceContent.addEventListener("flow-empty-connection-page", (event) => { const detail = event.detail, { state, flow } = current(); if (!state || !flow || !detail.pageId || !detail.sourceId || !detail.sourcePort || !detail.targetPort || !detail.position)
+        return; persist(addFlowPageFrameAndRelationship(state, flow.id, { pageId: detail.pageId, sourceId: detail.sourceId, sourcePort: detail.sourcePort, targetPort: detail.targetPort, position: detail.position }, options.id), "Created Page instance and relationship in one Flow command; Undo removes both."); });
+    workspaceContent.addEventListener("flow-add-page-at", (event) => {
+        const detail = event.detail, { state, flow, graph } = current();
+        if (!state || !flow || !graph || !detail.pageId)
+            return;
+        const position = detail.position ?? { x: 80, y: 80 }, sectionId = graph.sections.find((section) => { const bounds = section.bounds; return position.x >= bounds.x && position.x <= bounds.x + bounds.width && position.y >= bounds.y && position.y <= bounds.y + bounds.height; })?.id;
+        persist(addFlowPageFrameAtPosition(state, flow.id, detail.pageId, position, sectionId, options.id));
+    });
+    workspaceContent.addEventListener("flow-section-command", (event) => {
+        const detail = event.detail, { state, flow, graph } = current();
+        if (!state || !flow || !graph || !detail)
+            return;
+        if (detail.kind === "select") {
+            saveSelection({ kind: "section", id: detail.sectionId });
+            return;
+        }
+        if (detail.kind === "create") {
+            persist(detail.frameIds.length ? createFlowSectionAroundFrames(state, flow.id, { name: detail.name, bounds: detail.bounds, frameIds: detail.frameIds }, options.id) : createFlowSection(state, flow.id, { name: detail.name, bounds: detail.bounds }, options.id));
+            return;
+        }
+        const section = graph.sections.find(({ id }) => id === detail.sectionId);
+        if (!section)
+            return;
+        if (detail.kind === "move") {
+            persist(moveFlowSection(state, flow.id, section.id, detail.position));
+            return;
+        }
+        if (detail.kind === "resize") {
+            persist(renameAndResizeFlowSection(state, flow.id, section.id, { name: section.name, bounds: detail.bounds }));
+            return;
+        }
+        if (detail.kind === "rename") {
+            persist(renameAndResizeFlowSection(state, flow.id, section.id, { name: detail.name, bounds: section.bounds }));
+            return;
+        }
+        if (detail.kind === "remove") {
+            persist(removeFlowSection(state, flow.id, section.id), `Removed Section ${section.name}; Page instances and relationships retained. Undo available.`);
+            return;
+        }
+        const review = inspectSectionRemovalWithContents(state.project, flow.id, section.id);
+        persist(removeFlowSectionWithContents(state, flow.id, section.id, review), `Removed Section ${section.name} with ${review.pageFrames.length} Page instances and ${review.relationships.length} relationships. Undo available.`);
+    });
     const current = () => { const context = options.context(), flow = context.flowId && context.state?.project.collections.flows.find(({ id }) => id === context.flowId), graph = flow && context.state ? documentaryFlowGraph(context.state.project, flow.id) : undefined; return { ...context, flow, graph }; };
     const persist = (next, feedback = "") => { try {
         statusMessage = feedback;
@@ -94,8 +134,8 @@ export function installFlowGraphBuilder(options) {
             inspectorContext.append(heading, copy);
             return;
         }
-        const occurrence = graph?.occurrences.find(({ id }) => id === selected.id), relationship = graph?.relationships.find(({ id }) => id === selected.id), frame = graph?.pageFrames.find(({ id }) => id === selected.id);
-        copy.textContent = occurrence ? `${occurrence.name} · stable occurrence ${occurrence.id}` : relationship ? `Stable relationship ${relationship.id}` : frame ? `${effectiveFlowPageFrameName(state.project, frame)} · stable Page frame ${frame.id}` : "Selection details unavailable";
+        const occurrence = graph?.occurrences.find(({ id }) => id === selected.id), relationship = graph?.relationships.find(({ id }) => id === selected.id), frame = graph?.pageFrames.find(({ id }) => id === selected.id), section = graph?.sections.find(({ id }) => id === selected.id);
+        copy.textContent = occurrence ? `${occurrence.name} · stable occurrence ${occurrence.id}` : relationship ? `Stable relationship ${relationship.id}` : frame ? `${effectiveFlowPageFrameName(state.project, frame)} · stable Page frame ${frame.id}` : section ? `${section.name} · stable Flow Section ${section.id}` : "Selection details unavailable";
         inspectorContext.append(heading, copy);
     }
     function catalog(kind, entities, activate) {
@@ -414,7 +454,7 @@ export function installFlowGraphBuilder(options) {
             review.append(heading, list, confirm);
             host.append(review);
         }
-        const transientView = readView(state.project.id, flow.id), selectionExists = selected && (selected.kind === "page-frame" ? stored.pageFrames : selected.kind === "occurrence" ? stored.occurrences : stored.relationships).some(({ id }) => id === selected.id);
+        const transientView = readView(state.project.id, flow.id), selectionCollection = selected?.kind === "section" ? stored.sections : selected?.kind === "page-frame" ? stored.pageFrames : selected?.kind === "occurrence" ? stored.occurrences : stored.relationships, selectionExists = selected && selectionCollection.some(({ id }) => id === selected.id);
         if (!selectionExists)
             selected = transientView.selectedItem;
         const projection = projectFlowGraph(state.project, flow.id), section = document.createElement("section"), heading = document.createElement("h3"), boundary = document.createElement("p"), toolbar = document.createElement("section"), laneControls = document.createElement("section"), status = document.createElement("p"), frames = document.createElement("section"), views = document.createElement("div"), canvasScroll = document.createElement("div"), canvas = svg("svg"), outline = document.createElement("ol"), popover = document.createElement("section"), actions = document.createElement("section");
