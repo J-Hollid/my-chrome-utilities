@@ -42,6 +42,7 @@ export function saveFlowWorkspaceView(projectId, flowId, view) {
             minimap: view.minimap,
             surface: view.surface,
             focusCanvas: view.focusCanvas,
+            navigationVisible: view.navigationVisible,
         }));
     }
     catch {

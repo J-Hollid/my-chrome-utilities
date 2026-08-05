@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {readFile} from "node:fs/promises";
 
 import {
   FLOW_MANUAL_ZOOM,
@@ -20,11 +21,12 @@ import {
   zoomFlowCamera,
 } from "../dist/flow-graph/workspace.js";
 import {flowOutlineProjection} from "../dist/flow-graph/workspace-outline-model.js";
+import {flowPanClickSuppression,flowPanStartAllowed} from "../dist/flow-graph/workspace-camera-ui.js";
 import {sectionBoundsAfterKeyboardInput} from "../dist/flow-graph/workspace-section-geometry.js";
 import {flowSelectionContains,primaryFlowSelection,selectionAfterActivation,selectionAfterRemoval} from "../dist/flow-graph/workspace-selection.js";
 
 const initial=initialFlowWorkspaceView();
-assert.deepEqual(initial,{camera:{x:0,y:0,zoom:1},cameraInitialized:false,surface:undefined,minimap:false,focusCanvas:false});
+assert.deepEqual(initial,{camera:{x:0,y:0,zoom:1},cameraInitialized:false,surface:undefined,minimap:false,focusCanvas:false,navigationVisible:true});
 assert.deepEqual(openFlowSurface(initial,"add"),{...initial,surface:"add"});
 assert.deepEqual(openFlowSurface(openFlowSurface(initial,"outline"),"details"),{...initial,surface:"details"},"only one bounded transient surface is open");
 assert.equal(closeFlowSurface(openFlowSurface(initial,"details")).surface,undefined);
@@ -45,6 +47,22 @@ assert.deepEqual(placeFlowSurface({width:1440,height:900},{x:800,y:450}),{left:8
 assert.equal(flowWorkspaceKey("project:one","flow:shared"),"project:one\u0000flow:shared");
 assert.notEqual(flowWorkspaceKey("project:one","flow:shared"),flowWorkspaceKey("project:two","flow:shared"),"equal Flow IDs in different projects cannot share in-memory view state");
 assert.deepEqual(panFlowCamera({x:100,y:60,zoom:2},{x:40,y:-20}),{x:80,y:70,zoom:2},"screen-space camera pan is converted to world-space movement");
+assert.equal(flowPanStartAllowed({blank:true,spaceHeld:false,button:0,pointerType:"mouse",authoringActive:false}),true,"an unmodified primary drag pans from unoccupied canvas");
+assert.equal(flowPanStartAllowed({blank:false,spaceHeld:true,button:0,pointerType:"mouse",authoringActive:false}),true,"Space plus primary drag pans from a graph item");
+assert.equal(flowPanStartAllowed({blank:true,spaceHeld:false,button:1,pointerType:"mouse",authoringActive:false}),true,"middle-button drag pans from unoccupied canvas");
+assert.equal(flowPanStartAllowed({blank:true,spaceHeld:false,button:0,pointerType:"touch",authoringActive:false}),true,"one-contact touch pans the canvas");
+assert.equal(flowPanStartAllowed({blank:false,spaceHeld:false,button:0,pointerType:"mouse",authoringActive:false}),false,"an ordinary primary drag on an item remains available to graph authoring");
+assert.equal(flowPanStartAllowed({blank:true,spaceHeld:false,button:0,pointerType:"mouse",authoringActive:true}),false,"an active authoring tool owns blank-canvas gestures");
+const scheduled=[];
+const clickSuppression=flowPanClickSuppression((callback)=>scheduled.push(callback));
+clickSuppression.moved();
+clickSuppression.finished();
+assert.equal(clickSuppression.consume(),true,"a native click after pointerup remains suppressed");
+assert.equal(clickSuppression.consume(),false,"only the click belonging to the completed drag is suppressed");
+clickSuppression.moved();
+clickSuppression.finished();
+scheduled.at(-1)();
+assert.equal(clickSuppression.consume(),false,"a drag without a native click clears suppression at the next task boundary");
 assert.deepEqual(clientPointToFlowPoint({left:20,top:10,width:400,height:200},{x:100,y:50,zoom:2},{x:220,y:110}),{x:200,y:100});
 assert.deepEqual(cameraFromMinimapPoint({x:0,y:0,width:2000,height:1000},{width:500,height:250},{x:.75,y:.25},.5),{x:1000,y:0,zoom:.5},"minimap navigation centers the chosen normalized world point");
 
@@ -109,5 +127,13 @@ const sectionBounds={x:100,y:80,width:320,height:220};
 assert.deepEqual(sectionBoundsAfterKeyboardInput(sectionBounds,"ArrowRight",false),{x:120,y:80,width:320,height:220});
 assert.deepEqual(sectionBoundsAfterKeyboardInput(sectionBounds,"ArrowRight",true),{x:100,y:80,width:340,height:220},"Arrow keys on the resize handle resize instead of moving the Section");
 assert.deepEqual(sectionBoundsAfterKeyboardInput({x:0,y:0,width:240,height:140},"ArrowLeft",true),{x:0,y:0,width:240,height:140},"keyboard resize respects the minimum Section size");
+
+const flowCss=await readFile(new URL("../specification-builder-brand.css",import.meta.url),"utf8");
+assert.match(flowCss,/#workspace-pane:has\(\.documentary-flow\[data-canvas-first-r02="true"\]\)[^{]*\{[^}]*display:\s*grid[^}]*grid-template-rows:\s*auto minmax\(0, 1fr\)[^}]*overflow:\s*hidden/su,"the active Flow allocates a shared-chrome row and an explicit remaining route row");
+assert.match(flowCss,/#workspace-content\s*\{[^}]*display:\s*grid[^}]*grid-template-rows:\s*minmax\(0, 1fr\)/su,"the Flow host gives its documentary workspace a definite remaining-height grid area");
+assert.match(flowCss,/\.documentary-flow\[data-canvas-first-r02="true"\][^{]*\{[^}]*position:\s*absolute[^}]*inset:\s*0[^}]*display:\s*flex[^}]*flex-direction:\s*column[^}]*block-size:\s*100%/su,"the ordinary Flow fills its explicit remaining route instead of escaping beneath shared chrome");
+assert.match(flowCss,/body\.flow-focus-canvas \.documentary-flow\[data-canvas-first-r02="true"\][^{]*\{[^}]*position:\s*fixed[^}]*inset:\s*0[^}]*block-size:\s*100dvh/su,"Focus Canvas covers the complete browser viewport");
+assert.doesNotMatch(flowCss,/^\.twatility-studio \.flow-canvas-viewport\s*\{[^}]*(?:max-block-size|aspect-ratio|block-size:\s*min\()/msu,"the ordinary canvas viewport has no fixed, maximum, or aspect-ratio height cap");
+assert.doesNotMatch(flowCss,/\.documentary-flow\[data-canvas-first-r02="true"\][^{]*\.flow-canvas-viewport\s*\{[^}]*block-size:\s*(?:clamp|min|max)\(/su,"later branding rules cannot restore a capped Flow canvas track");
 
 console.log("data-layer Flow workspace tests passed");

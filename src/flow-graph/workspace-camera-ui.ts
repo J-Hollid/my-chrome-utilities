@@ -17,6 +17,40 @@ interface CameraOptions {
   save: (camera: FlowCamera) => void;
 }
 
+export interface FlowPanStart {
+  blank: boolean;
+  spaceHeld: boolean;
+  button: number;
+  pointerType: string;
+  authoringActive: boolean;
+}
+
+export function flowPanStartAllowed(start: FlowPanStart): boolean {
+  if (start.authoringActive) return false;
+  if (start.pointerType === "touch") return start.blank;
+  if (start.spaceHeld) return start.button === 0;
+  return start.blank && (start.button === 0 || start.button === 1);
+}
+
+export function flowPanClickSuppression(schedule: (callback: () => void) => void = (callback) => { setTimeout(callback, 0); }) {
+  let pending = false;
+  let generation = 0;
+  return {
+    moved(): void { pending = true; generation += 1; },
+    finished(): void {
+      const completed = generation;
+      schedule(() => { if (generation === completed) pending = false; });
+    },
+    canceled(): void { pending = false; generation += 1; },
+    consume(): boolean {
+      if (!pending) return false;
+      pending = false;
+      generation += 1;
+      return true;
+    },
+  };
+}
+
 export interface FlowCameraUi {
   controls: HTMLElement[];
   minimap: HTMLElement;
@@ -39,6 +73,7 @@ export function installFlowCamera(options: CameraOptions): FlowCameraUi {
   const viewportIndicator = document.createElement("span");
   let spaceHeld = false;
   let drag: { pointerId: number; client: FlowPoint; camera: FlowCamera } | undefined;
+  const clickSuppression = flowPanClickSuppression();
   const touches = new Map<number, FlowPoint>();
   let pinch: { distance: number; camera: FlowCamera; center: FlowPoint } | undefined;
 
@@ -134,10 +169,10 @@ export function installFlowCamera(options: CameraOptions): FlowCameraUi {
       }
       return;
     }
-    if (event.target !== viewport) return;
+    if (event.target !== viewport && event.target !== canvas) return;
     const deltas: Record<string, FlowPoint> = {
-      ArrowLeft: { x: 40, y: 0 }, ArrowRight: { x: -40, y: 0 },
-      ArrowUp: { x: 0, y: 40 }, ArrowDown: { x: 0, y: -40 },
+      ArrowLeft: { x: -20, y: 0 }, ArrowRight: { x: 20, y: 0 },
+      ArrowUp: { x: 0, y: -20 }, ArrowDown: { x: 0, y: 20 },
     };
     const delta = deltas[event.key];
     if (!delta) return;
@@ -166,10 +201,13 @@ export function installFlowCamera(options: CameraOptions): FlowCameraUi {
       return;
     }
     const blank = event.target === canvas || event.target === viewport;
-    if (!blank || !(spaceHeld || event.button === 1 || event.pointerType === "touch")) return;
+    const authoringActive = viewport.classList.contains("is-connecting") || canvas.classList.contains("is-drawing-section");
+    if (!flowPanStartAllowed({ blank, spaceHeld, button: event.button, pointerType: event.pointerType, authoringActive })) return;
     event.preventDefault();
+    event.stopPropagation();
     drag = { pointerId: event.pointerId, client: { x: event.clientX, y: event.clientY }, camera: options.camera() };
-  });
+    try { viewport.setPointerCapture(event.pointerId); } catch { /* Synthetic pointers have no active device to capture. */ }
+  }, true);
   viewport.addEventListener("pointermove", (event) => {
     if (touches.has(event.pointerId)) touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
     const touchPair = touchDistance();
@@ -180,15 +218,33 @@ export function installFlowCamera(options: CameraOptions): FlowCameraUi {
       return;
     }
     if (!drag || drag.pointerId !== event.pointerId) return;
-    apply(panFlowCamera(drag.camera, { x: event.clientX - drag.client.x, y: event.clientY - drag.client.y }));
-  });
+    const delta = { x: event.clientX - drag.client.x, y: event.clientY - drag.client.y };
+    event.preventDefault();
+    event.stopPropagation();
+    if (delta.x || delta.y) clickSuppression.moved();
+    apply(panFlowCamera(drag.camera, delta));
+  }, true);
   const finishPointer = (event: PointerEvent): void => {
     touches.delete(event.pointerId);
-    if (drag?.pointerId === event.pointerId) drag = undefined;
+    if (drag?.pointerId === event.pointerId) {
+      event.preventDefault();
+      event.stopPropagation();
+      drag = undefined;
+      if (viewport.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
+      if (event.type === "pointercancel") clickSuppression.canceled();
+      else clickSuppression.finished();
+    }
     if (touches.size < 2) pinch = undefined;
   };
-  viewport.addEventListener("pointerup", finishPointer);
-  viewport.addEventListener("pointercancel", finishPointer);
+  viewport.addEventListener("pointerup", finishPointer, true);
+  viewport.addEventListener("pointercancel", finishPointer, true);
+  const suppressCompletedDragActivation = (event: Event): void => {
+    if (!clickSuppression.consume()) return;
+    event.preventDefault();
+    event.stopPropagation();
+  };
+  viewport.addEventListener("click", suppressCompletedDragActivation, true);
+  viewport.addEventListener("auxclick", suppressCompletedDragActivation, true);
   viewport.addEventListener("wheel", (event) => {
     if (!event.ctrlKey && !event.metaKey) return;
     event.preventDefault();
