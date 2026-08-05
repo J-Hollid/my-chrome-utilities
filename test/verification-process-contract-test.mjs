@@ -1670,6 +1670,21 @@ try {
   assert.match(await exec("bb", [handoffScript, allowedDraft], {
     cwd:handoffRepository, env:{ ...process.env, SWARMFORGE_ROLE:"specifier" },
   }), /HANDOFF QUEUED/u, "specification-only handoffs retain the explicit not-required path");
+  const queuedHandoffNames = (await readdir(
+    path.join(handoffRepository, ".swarmforge", "handoffs", "outbox"),
+  )).filter((name) => name.endsWith(".handoff"));
+  assert.equal(queuedHandoffNames.length, 1, "one Git handoff is queued");
+  const queuedHandoff = await readFile(path.join(
+    handoffRepository, ".swarmforge", "handoffs", "outbox", queuedHandoffNames[0],
+  ), "utf8");
+  assert.doesNotMatch(queuedHandoff, /merge_and_process/u,
+    "Git handoffs must not emit a workflow label that resembles an executable");
+  assert.match(queuedHandoff, /This is a workflow instruction, not a shell command\./u,
+    "Git handoffs distinguish prose instructions from executable commands");
+  assert.ok(queuedHandoff.includes(`commit \`${specificationCommit}\``),
+    "Git handoffs identify the candidate commit in prose");
+  assert.match(queuedHandoff, /`swarmforge\/scripts\/done_with_current\.sh`/u,
+    "Git handoffs name the actual completion helper explicitly");
 
   await mkdir(path.join(handoffRepository, "src"), { recursive:true });
   await writeFile(path.join(handoffRepository, "docs", "mixed.md"), "documentation\n");

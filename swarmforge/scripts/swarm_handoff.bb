@@ -298,7 +298,14 @@
 
 (defn body [type sender canonical-commit note-message note-details]
   (case type
-    "git_handoff" (str "Re-read your role and constitution.\n\nmerge_and_process " sender " " canonical-commit)
+    "git_handoff" (str "Re-read your role and constitution.\n\n"
+                       "This is a workflow instruction, not a shell command.\n\n"
+                       "Process the Git handoff from role `" sender "` at commit `" canonical-commit "`:\n"
+                       "1. Inspect the candidate commit and task scope according to your role.\n"
+                       "2. Merge the candidate into your assigned branch when your review accepts it.\n"
+                       "3. Perform any remaining work or forwarding required by your role.\n"
+                       "4. When this handoff is fully handled, run the repository helper "
+                       "`swarmforge/scripts/done_with_current.sh`.\n")
     "note" (str "Re-read your role and constitution.\n\n"
                 note-message
                 (when-not (str/blank? note-details)

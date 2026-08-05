@@ -60,6 +60,12 @@ export function upgradeFlowWorkspace(root) {
         save(camera) { saveView({ ...view, camera, cameraInitialized: true }); },
     });
     const sectionUi = installFlowSections({ root, canvas, viewport, camera: () => view.camera, closeSurface });
+    for (let item = workspace.firstElementChild; item && item !== legacyToolbar;) {
+        const next = item.nextElementSibling;
+        item.hidden = true;
+        item.dataset.flowLegacyPrelude = "true";
+        item = next;
+    }
     toolbar.className = "flow-workspace-toolbar";
     toolbar.setAttribute("aria-label", "Flow toolbar");
     surface.className = "flow-workspace-surface";
@@ -223,6 +229,7 @@ export function upgradeFlowWorkspace(root) {
     canvas.style.removeProperty("height");
     viewport.tabIndex = 0;
     viewport.setAttribute("aria-label", "Flow canvas viewport");
+    viewport.setAttribute("aria-keyshortcuts", "ArrowLeft ArrowRight ArrowUp ArrowDown");
     queueMicrotask(() => workspace.scrollIntoView({ block: "start", inline: "nearest" }));
     cameraUi.setMinimapVisible(view.minimap);
     if (view.cameraInitialized)
