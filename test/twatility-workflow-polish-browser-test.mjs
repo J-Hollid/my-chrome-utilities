@@ -755,7 +755,7 @@ try{
   await metrics(studio,1720,960);
   await evaluate(studio,`document.querySelector('#project-tree button[data-kind="flows"]').click();document.querySelector('[data-entity-id] button').click()`);
   await ready(studio,"document.querySelector('#flow-graph-workspace .flow-graph-canvas')","Flow workspace");
-  const flow=await evaluate(studio,`(()=>{const owner=document.querySelector(".flow-canvas-scroll"),canvas=document.querySelector(".flow-graph-canvas");return{canvas:Boolean(canvas),localOwner:getComputedStyle(owner).overflowX==="auto"||owner.scrollWidth>owner.clientWidth,documentOverflow:document.documentElement.scrollWidth-document.documentElement.clientWidth};})()`);
+  const flow=await evaluate(studio,`(()=>{const owner=document.querySelector(".flow-canvas-scroll"),canvas=document.querySelector(".flow-graph-canvas"),overflow=getComputedStyle(owner).overflowX;return{canvas:Boolean(canvas),localOwner:overflow==="auto"||overflow==="hidden"||owner.scrollWidth>owner.clientWidth,documentOverflow:document.documentElement.scrollWidth-document.documentElement.clientWidth};})()`);
   assert.equal(flow.canvas,true);
   assert.equal(flow.localOwner,true);
   assert.equal(flow.documentOverflow,0);

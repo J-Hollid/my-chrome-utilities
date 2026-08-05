@@ -156,6 +156,14 @@ export function moveFlowPageFramePresentation(state, flowId, frameId, position) 
             return candidate; const moved = { ...candidate, position: nextPosition, ...(nextSectionId ? { sectionId: nextSectionId } : {}) }; if (!nextSectionId)
             delete moved.sectionId; return moved; }) }));
 }
+export function tidyFlowPageFrames(state, flowId, placements) {
+    const graph = sectionGraph(state.project, flowId), byId = new Map(placements.map(({ id, position }) => [id, { x: Math.round(position.x), y: Math.round(position.y) }])), known = new Set((graph.pageFrames ?? []).map(({ id }) => id));
+    if ([...byId.keys()].some((id) => !known.has(id)))
+        throw new Error("Tidy contains an unknown Page frame.");
+    if (![...byId].some(([id, position]) => { const frame = graph.pageFrames?.find((candidate) => candidate.id === id); return frame?.position.x !== position.x || frame.position.y !== position.y; }))
+        return state;
+    return saveGraph(state, flowId, "Tidy Flow presentation", (next) => ({ ...next, pageFrames: (next.pageFrames ?? []).map((frame) => { const position = byId.get(frame.id); return position ? { ...frame, position } : frame; }) }));
+}
 export function connectFlowPageFrames(state, flowId, sourceId, targetId, id) {
     const graph = sectionGraph(state.project, flowId), source = graph.pageFrames?.find(({ id }) => id === sourceId), target = graph.pageFrames?.find(({ id }) => id === targetId);
     if (!source || !target || source.id === target.id)
