@@ -51,6 +51,17 @@ export function flowPanClickSuppression(schedule: (callback: () => void) => void
   };
 }
 
+export function flowPanToPinch(
+  dragPointerId: number | undefined,
+  clickSuppression: Pick<ReturnType<typeof flowPanClickSuppression>, "canceled">,
+  releasePointer: (pointerId: number) => void,
+): undefined {
+  if (dragPointerId === undefined) return undefined;
+  clickSuppression.canceled();
+  releasePointer(dragPointerId);
+  return undefined;
+}
+
 export interface FlowCameraUi {
   controls: HTMLElement[];
   minimap: HTMLElement;
@@ -197,7 +208,9 @@ export function installFlowCamera(options: CameraOptions): FlowCameraUi {
     const touchPair = touchDistance();
     if (touchPair) {
       pinch = { ...touchPair, camera: options.camera() };
-      drag = undefined;
+      drag = flowPanToPinch(drag?.pointerId, clickSuppression, (pointerId) => {
+        if (viewport.hasPointerCapture(pointerId)) viewport.releasePointerCapture(pointerId);
+      });
       return;
     }
     const blank = event.target === canvas || event.target === viewport;

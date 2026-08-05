@@ -36,6 +36,29 @@ body.twatility-studio {
   min-block-size: 0;
   overflow: hidden;
 }
+@media (min-width: 761px) {
+  .twatility-studio #project-workspace:has(.documentary-flow[data-canvas-first-r02="true"]) > nav {
+    grid-column: 1;
+  }
+  .twatility-studio #project-workspace:has(.documentary-flow[data-canvas-first-r02="true"]) > #workspace-pane {
+    grid-column: 2;
+  }
+  .twatility-studio #project-workspace:has(.documentary-flow[data-canvas-first-r02="true"]) > #project-inspector {
+    grid-column: 3;
+  }
+  .twatility-studio #project-workspace:not([hidden]):has(.documentary-flow[data-canvas-first-r02="true"]):has(> nav[hidden]) {
+    grid-template-columns: minmax(0, 1fr) clamp(16rem, 20vw, 21rem);
+  }
+  .twatility-studio #project-workspace[data-inspector-open="false"]:has(.documentary-flow[data-canvas-first-r02="true"]):has(> nav[hidden]) {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .twatility-studio #project-workspace:has(.documentary-flow[data-canvas-first-r02="true"]):has(> nav[hidden]) > #workspace-pane {
+    grid-column: 1;
+  }
+  .twatility-studio #project-workspace:has(.documentary-flow[data-canvas-first-r02="true"]):has(> nav[hidden]) > #project-inspector {
+    grid-column: 2;
+  }
+}
 .twatility-studio #workspace-pane:has(.documentary-flow[data-canvas-first-r02="true"]) > .sticky-tools {
   position: relative;
   inset: auto;

@@ -29,6 +29,13 @@ export function flowPanClickSuppression(schedule = (callback) => { setTimeout(ca
         },
     };
 }
+export function flowPanToPinch(dragPointerId, clickSuppression, releasePointer) {
+    if (dragPointerId === undefined)
+        return undefined;
+    clickSuppression.canceled();
+    releasePointer(dragPointerId);
+    return undefined;
+}
 const viewportSize = (viewport) => ({
     width: Math.max(240, viewport.clientWidth || 960),
     height: Math.max(240, viewport.clientHeight || 600),
@@ -168,7 +175,10 @@ export function installFlowCamera(options) {
         const touchPair = touchDistance();
         if (touchPair) {
             pinch = { ...touchPair, camera: options.camera() };
-            drag = undefined;
+            drag = flowPanToPinch(drag?.pointerId, clickSuppression, (pointerId) => {
+                if (viewport.hasPointerCapture(pointerId))
+                    viewport.releasePointerCapture(pointerId);
+            });
             return;
         }
         const blank = event.target === canvas || event.target === viewport;
