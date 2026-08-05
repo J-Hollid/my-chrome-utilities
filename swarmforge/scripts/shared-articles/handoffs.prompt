@@ -36,8 +36,9 @@ verified: <pack-id>[,<pack-id>...]|not-required
   directed terse `note` to the named upstream role, complete the failed review,
   and do not forward the task farther down the pipeline.
 - When your role sends the end-of-chain handoff to multiple recipients, those
-  recipients merge only (`merge_and_process`). They do not forward that handoff
-  further. Only this terminal broadcast is merge-only without re-forwarding.
+  recipients inspect and merge the accepted commit, then close the current
+  handoff with `done_with_current.sh`. They do not forward that handoff further.
+  Only this terminal broadcast is merge-only without re-forwarding.
 - Do not send an end-of-chain completion handoff for a functional task until
   the terminal functional-delivery gate confirms relevant production changes
   in the task lineage.
@@ -87,6 +88,10 @@ message: <one line, max 80 chars>
   your role.
 - If it prints `NO_TASK`, stop waiting for work.
 - If it prints `TASK: <path>`, treat the printed `PAYLOAD` as the task.
+- A Git handoff payload describes workflow actions in prose; it is not itself a
+  shell command. Execute only the named repository helper scripts and ordinary
+  Git commands needed to perform those actions. Never infer an executable name
+  from a workflow label or sentence.
 - If it prints `TASK_NAME: <name>`, use that as the stable task name for any
   work you forward from that task.
 - If it prints `BATCH: <path>`, treat each printed `BATCH_ITEM` as part of the
