@@ -1557,8 +1557,7 @@ published value. Malformed, empty, or out-of-range published counters fail close
 instead of resetting to zero and reusing a handoff ID.
 
 `npm test -- --pack <id> ...` is the development entry point. The complete suite
-is isolated behind `npm run test:terminal` and the scheduled/manual four-lane
-`.github/workflows/terminal-verification.yml`; it is not a feature-development gate.
+is isolated behind `npm run test:terminal`; it is not a feature-development gate.
 
 Codex role sessions explicitly select workspace-write isolation and `on-request`
 approvals. The launcher enables the fail-closed Codex network proxy, denies broad
