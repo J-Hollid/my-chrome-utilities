@@ -212,6 +212,21 @@ try {
   assert.deepEqual(await readdir(unsafeProject), ["swarmforge"],
     "unsafe Codex arguments must fail before Git, tmux, worktree, or state mutation");
 
+  const tunedProject = path.join(temporary, "tuned-codex-project");
+  const tunedSwarmforge = path.join(tunedProject, "swarmforge");
+  await mkdir(path.join(tunedSwarmforge, "roles"), { recursive: true });
+  await writeFile(path.join(tunedSwarmforge, "constitution.prompt"), "# Test constitution\n");
+  await writeFile(path.join(tunedSwarmforge, "roles", "coder.prompt"), "# Coder\n");
+  await writeFile(
+    path.join(tunedSwarmforge, "swarmforge.conf"),
+    "window coder codex master task --model gpt-5.6-sol -c model_reasoning_effort=xhigh\n",
+  );
+  const tunedConfig = await run("bb", [launcherBb, "--test-parse", tunedProject]);
+  assert.equal(tunedConfig.status, 0, tunedConfig.stderr);
+  assert.match(tunedConfig.stdout,
+    /coder Coder .* task --model gpt-5\.6-sol -c model_reasoning_effort=xhigh/u,
+    "Codex model and reasoning effort are accepted as role-local tuning");
+
   const helperProject = path.join(temporary, "missing-helper-project");
   const helperSwarmforge = path.join(helperProject, "swarmforge");
   await mkdir(path.join(helperSwarmforge, "roles"), { recursive: true });
