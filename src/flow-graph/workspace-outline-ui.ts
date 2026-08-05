@@ -32,7 +32,7 @@ export function prepareFlowOutline(options: OutlineOptions): HTMLElement {
   };
   const occurrenceFrame = (row: HTMLElement): string | undefined => {
     const id = row.dataset.occurrenceId;
-    return id ? canvas.querySelector<SVGGraphicsElement>(`[data-occurrence-id="${CSS.escape(id)}"]`)?.dataset.pageFrameId : undefined;
+    return id ? canvas.querySelector<SVGGraphicsElement>(`[data-occurrence-id="${CSS.escape(id)}"]`)?.dataset.containingPageFrameId : undefined;
   };
 
   const appendFrame = (target: HTMLOListElement, frame: HTMLLIElement): void => {

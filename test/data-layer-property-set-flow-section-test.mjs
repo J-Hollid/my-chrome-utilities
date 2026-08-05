@@ -204,6 +204,7 @@ const legacyState=()=>({
   let state=upgradePageGroupsToPropertySets(legacyState(),id),graph=state.project.documentationFlowGraphs["flow:checkout"],section=graph.sections[0];
   const review=inspectSectionRemovalWithContents(state.project,"flow:checkout",section.id);
   assert.deepEqual(review.pageFrames.map(({id})=>id),["frame:cart"]);
+  assert.deepEqual(review.occurrences.map(({id,name})=>({id,name})),[{id:"occurrence:view",name:"View"}],"impact review names each occurrence that will be removed");
   assert.deepEqual(review.relationships.map(({id})=>id),["relationship:next"]);
   const before=JSON.stringify(state.project);
   assert.equal(JSON.stringify(state.project),before,"review is non-mutating");

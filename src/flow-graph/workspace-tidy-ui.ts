@@ -1,5 +1,5 @@
 import { tidyFlowItems, type FlowPoint } from "./workspace.js";
-import { flowControl, renderedElementBounds, svgTranslation } from "./workspace-dom.js";
+import { FLOW_PAGE_FRAME_SELECTOR, flowControl, renderedElementBounds, svgTranslation } from "./workspace-dom.js";
 
 interface TidyOptions {
   root: HTMLElement;
@@ -32,8 +32,8 @@ export function createFlowTidyPanel(options: TidyOptions): HTMLElement {
 
   function chosenItems(): TidyItem[] {
     const selector = scope.value.startsWith("section:")
-      ? `[data-page-frame-id][data-flow-section-id="${CSS.escape(scope.value.slice(8))}"]`
-      : "[data-page-frame-id].is-selected,[data-page-frame-id][aria-pressed=\"true\"]";
+      ? `${FLOW_PAGE_FRAME_SELECTOR}[data-flow-section-id="${CSS.escape(scope.value.slice(8))}"]`
+      : `${FLOW_PAGE_FRAME_SELECTOR}.is-selected,${FLOW_PAGE_FRAME_SELECTOR}[aria-pressed="true"]`;
     return Array.from(canvas.querySelectorAll<SVGGraphicsElement>(selector)).map((item) => ({
       id: item.dataset.pageFrameId!, position: svgTranslation(item), item, transform: item.getAttribute("transform") ?? "",
     }));
@@ -50,7 +50,7 @@ export function createFlowTidyPanel(options: TidyOptions): HTMLElement {
   }
 
   function edgePreviews(): void {
-    const byId = new Map(Array.from(canvas.querySelectorAll<SVGGraphicsElement>("[data-page-frame-id]")).map((item) => [item.dataset.pageFrameId!, item]));
+    const byId = new Map(Array.from(canvas.querySelectorAll<SVGGraphicsElement>(FLOW_PAGE_FRAME_SELECTOR)).map((item) => [item.dataset.pageFrameId!, item]));
     for (const edge of Array.from(canvas.querySelectorAll<SVGGraphicsElement>("[data-relationship-id]"))) {
       const source = byId.get(edge.dataset.sourceEndpointId ?? ""), target = byId.get(edge.dataset.targetEndpointId ?? "");
       const sourceBounds = source && renderedElementBounds(source), targetBounds = target && renderedElementBounds(target);

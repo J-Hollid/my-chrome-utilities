@@ -1,6 +1,7 @@
-import { clientPointToFlowPoint, openFlowSurface, type FlowPoint, type FlowWorkspaceSurface, type FlowWorkspaceView } from "./workspace.js";
+import { clientPointToFlowPoint, openFlowSurface, placeFlowSurface, type FlowPoint, type FlowWorkspaceSurface, type FlowWorkspaceView } from "./workspace.js";
 import { installFlowCamera } from "./workspace-camera-ui.js";
-import { flowControl, renderedElementBounds } from "./workspace-dom.js";
+import { decorateCompactFlowCards } from "./workspace-card-ui.js";
+import { flowControl } from "./workspace-dom.js";
 import { prepareFlowOutline } from "./workspace-outline-ui.js";
 import { installFlowSections } from "./workspace-section-ui.js";
 import { createFlowTidyPanel } from "./workspace-tidy-ui.js";
@@ -42,47 +43,6 @@ function elements(root: HTMLElement): WorkspaceElements | undefined {
   };
 }
 
-function decorateCompactCards(canvas: SVGSVGElement, duplicateFrames?: HTMLElement, outline?: HTMLOListElement): void {
-  for (const card of Array.from(duplicateFrames?.querySelectorAll<HTMLElement>("[data-page-frame-id]") ?? [])) {
-    const frameId = card.dataset.pageFrameId;
-    const group = frameId ? canvas.querySelector<SVGGElement>(`[data-page-frame-id="${CSS.escape(frameId)}"]`) : undefined;
-    if (!group || group.querySelector(".flow-page-source")) continue;
-    const source = card.querySelector<HTMLInputElement>('[aria-label^="Name in this Flow for "]')?.getAttribute("aria-label")?.replace("Name in this Flow for ", "") ?? "Page";
-    const status = card.querySelector<HTMLDetailsElement>("[data-example-status]")?.dataset.exampleStatus ?? "Incomplete";
-    const provenance = document.createElementNS(canvas.namespaceURI, "text"), readiness = document.createElementNS(canvas.namespaceURI, "text");
-    provenance.setAttribute("x", "14"); provenance.setAttribute("y", "54"); provenance.classList.add("flow-page-source"); provenance.textContent = source;
-    readiness.setAttribute("x", "14"); readiness.setAttribute("y", "76"); readiness.classList.add("flow-readiness"); readiness.textContent = status;
-    group.classList.add("flow-page-card"); group.append(provenance, readiness);
-    group.setAttribute("aria-label", `${group.getAttribute("aria-label") ?? "Page frame"}. Source Page ${source}. ${status}.`);
-  }
-  for (const row of Array.from(outline?.querySelectorAll<HTMLElement>("[data-occurrence-id]") ?? [])) {
-    const occurrenceId = row.dataset.occurrenceId;
-    const group = occurrenceId ? canvas.querySelector<SVGGElement>(`[data-occurrence-id="${CSS.escape(occurrenceId)}"]`) : undefined;
-    if (!group || group.querySelector(".flow-readiness")) continue;
-    const status = row.querySelector<HTMLDetailsElement>("[data-example-status]")?.dataset.exampleStatus ?? "Incomplete";
-    const readiness = document.createElementNS(canvas.namespaceURI, "text");
-    readiness.setAttribute("x", "12"); readiness.setAttribute("y", "76"); readiness.classList.add("flow-readiness"); readiness.textContent = status;
-    group.append(readiness); group.setAttribute("aria-label", `${group.getAttribute("aria-label") ?? "Event occurrence"}. ${status}.`);
-  }
-  const frames = Array.from(canvas.querySelectorAll<SVGGraphicsElement>("g[data-page-frame-id]"))
-    .filter((candidate) => !candidate.dataset.occurrenceId)
-    .flatMap((item) => {
-      const bounds = renderedElementBounds(item);
-      return bounds && item.dataset.pageFrameId ? [{ id: item.dataset.pageFrameId, bounds }] : [];
-    });
-  for (const occurrence of Array.from(canvas.querySelectorAll<SVGGraphicsElement>("[data-occurrence-id]"))) {
-    const bounds = renderedElementBounds(occurrence);
-    const frame = bounds && frames.find(({ bounds: candidate }) =>
-      bounds.x >= candidate.x && bounds.y >= candidate.y
-      && bounds.x + bounds.width <= candidate.x + candidate.width
-      && bounds.y + bounds.height <= candidate.y + candidate.height);
-    if (!frame) continue;
-    occurrence.dataset.pageFrameId = frame.id;
-    const occurrenceId = occurrence.dataset.occurrenceId;
-    if (occurrenceId) outline?.querySelector<HTMLElement>(`[data-occurrence-id="${CSS.escape(occurrenceId)}"]`)?.setAttribute("data-page-frame-id", frame.id);
-  }
-}
-
 export function upgradeFlowWorkspace(root: HTMLElement): void {
   const found = elements(root);
   if (!found || found.workspace.dataset.canvasFirstR02 === "true") return;
@@ -92,12 +52,14 @@ export function upgradeFlowWorkspace(root: HTMLElement): void {
   const projectId = rawSections?.dataset.flowProjectId ?? workspace.dataset.flowProjectId ?? "project";
   let view = flowWorkspaceView(projectId, flowId), emptyDrop: EmptyConnectionDrop | undefined, addPosition: FlowPoint | undefined;
   const toolbar = document.createElement("nav"), surface = document.createElement("section"), surfaceHeading = document.createElement("h4"), surfaceBody = document.createElement("div");
+  const pageCatalog = legacyToolbar.querySelector<HTMLElement>('[aria-label="Pages catalog"]'), eventCatalog = legacyToolbar.querySelector<HTMLElement>('[aria-label="Events catalog"]');
   const detailsSource = duplicateFrames?.querySelector<HTMLElement>('[aria-pressed="true"]') ?? duplicateFrames?.querySelector<HTMLElement>(".is-selected") ?? undefined;
   const selectedOutline = outline.querySelector<HTMLElement>(".is-selected") ?? undefined;
-  const parked = document.createDocumentFragment(), detailsParents = new Map<Node, Node>();
+  const detailsParents = new Map<Node, Node>();
   if (detailsSource && duplicateFrames) detailsParents.set(detailsSource, duplicateFrames);
   if (selectedOutline) detailsParents.set(selectedOutline, outline);
-  if (relationship) detailsParents.set(relationship, parked);
+  if (pageCatalog) detailsParents.set(pageCatalog, legacyToolbar);
+  if (eventCatalog) detailsParents.set(eventCatalog, legacyToolbar);
 
   const saveView = (next: FlowWorkspaceView): void => { view = next; saveFlowWorkspaceView(projectId, flowId, view); };
   const closeSurface = (): void => showSurface(undefined);
@@ -127,17 +89,17 @@ export function upgradeFlowWorkspace(root: HTMLElement): void {
     for (const [node, parent] of detailsParents) if (node.parentNode === surfaceBody) parent.appendChild(node);
   };
   const placeSurface = (client?: FlowPoint): void => {
-    const rect = viewport.getBoundingClientRect(), width = Math.min(380, Math.max(280, rect.width - 12)), height = Math.max(180, rect.height - 12);
-    const left = client ? Math.max(6, Math.min(rect.width - width - 6, client.x - rect.left)) : Math.max(6, rect.width - width - 6);
-    const top = client ? Math.max(6, Math.min(rect.height - 180, client.y - rect.top)) : 6;
-    Object.assign(surface.style, { left: `${left}px`, top: `${top}px`, right: "auto", width: `${width}px`, maxWidth: "calc(100% - 12px)", maxHeight: `${height}px` });
+    const rect = viewport.getBoundingClientRect(), placement = placeFlowSurface(
+      { width: rect.width, height: rect.height },
+      client ? { x: client.x - rect.left, y: client.y - rect.top } : undefined,
+    );
+    Object.assign(surface.style, { left: `${placement.left}px`, top: `${placement.top}px`, right: "auto", width: `${placement.width}px`, maxWidth: "calc(100% - 12px)", maxHeight: `${placement.maxHeight}px` });
   };
   const addContents = (): Node[] => {
-    const pageCatalog = legacyToolbar.querySelector<HTMLElement>('[aria-label="Pages catalog"]'), eventCatalog = legacyToolbar.querySelector<HTMLElement>('[aria-label="Events catalog"]');
     return [sectionUi.addPanel(), ...(pageCatalog ? [pageCatalog] : []), ...(eventCatalog ? [eventCatalog] : [])];
   };
   const detailsContents = (): Node[] => [
-    ...(relationship ? [relationship] : []), ...(detailsSource ? [detailsSource] : []), ...(selectedOutline ? [selectedOutline] : []),
+    ...(detailsSource ? [detailsSource] : []), ...(selectedOutline ? [selectedOutline] : []),
   ];
   const contents = (kind: FlowWorkspaceSurface): Node[] => {
     if (kind === "add") return addContents();
@@ -181,7 +143,7 @@ export function upgradeFlowWorkspace(root: HTMLElement): void {
   minimapToggle.setAttribute("aria-pressed", String(view.minimap));
   toolbar.append(skip, add, outlineButton, details, tidy, focusCanvas, ...cameraUi.controls, minimapToggle);
 
-  decorateCompactCards(canvas, duplicateFrames, outline);
+  decorateCompactFlowCards(canvas, duplicateFrames, outline);
   if (actions?.getAttribute("aria-label")?.includes("Page instance")) {
     actions.classList.add("flow-contextual-toolbar");
     const rename = flowControl("Rename in Flow", () => { showSurface("details", rename); detailsSource?.querySelector<HTMLInputElement>('[aria-label^="Name in this Flow"]')?.focus(); });
@@ -198,9 +160,10 @@ export function upgradeFlowWorkspace(root: HTMLElement): void {
   if (relationship && actions) {
     actions.classList.add("flow-contextual-toolbar");
     actions.setAttribute("aria-label", "Selected relationship actions");
-    const edit = flowControl("Edit documentation", () => showSurface("details", edit));
-    const remove = relationship.querySelector<HTMLButtonElement>('button[aria-label^="Delete relationship"]');
-    actions.append(edit, ...(remove ? [remove] : []));
+    const label = relationship.querySelector<HTMLInputElement>('[aria-label="Optional relationship label"]');
+    const edit = flowControl("Edit documentation", () => label?.focus());
+    actions.append(edit, relationship);
+    queueMicrotask(() => label?.focus({ preventScroll: true }));
   }
   const selectedSection = Array.from(canvas.querySelectorAll<SVGGraphicsElement>("g[data-flow-section-id].is-selected")).find((candidate) => candidate.querySelector(":scope > [data-section-dropzone]"));
   const sectionActions = selectedSection ? sectionUi.actions(selectedSection) : undefined;
@@ -255,7 +218,7 @@ export function upgradeFlowWorkspace(root: HTMLElement): void {
     duplicateFrames.dataset.flowDetailsSource = "true";
     workspace.append(duplicateFrames);
   }
-  outline.remove(); relationship?.remove();
+  outline.remove();
   const projections = viewport.parentElement, status = projections?.previousElementSibling instanceof HTMLParagraphElement ? projections.previousElementSibling : undefined;
   projections?.classList.add("flow-canvas-viewport");
   viewport.style.position = "relative";

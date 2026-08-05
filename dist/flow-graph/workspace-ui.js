@@ -1,6 +1,7 @@
-import { clientPointToFlowPoint, openFlowSurface } from "./workspace.js";
+import { clientPointToFlowPoint, openFlowSurface, placeFlowSurface } from "./workspace.js";
 import { installFlowCamera } from "./workspace-camera-ui.js";
-import { flowControl, renderedElementBounds } from "./workspace-dom.js";
+import { decorateCompactFlowCards } from "./workspace-card-ui.js";
+import { flowControl } from "./workspace-dom.js";
 import { prepareFlowOutline } from "./workspace-outline-ui.js";
 import { installFlowSections } from "./workspace-section-ui.js";
 import { createFlowTidyPanel } from "./workspace-tidy-ui.js";
@@ -21,60 +22,6 @@ function elements(root) {
         relationship: workspace.querySelector('[aria-label="Inline relationship popover"]') ?? undefined,
     };
 }
-function decorateCompactCards(canvas, duplicateFrames, outline) {
-    for (const card of Array.from(duplicateFrames?.querySelectorAll("[data-page-frame-id]") ?? [])) {
-        const frameId = card.dataset.pageFrameId;
-        const group = frameId ? canvas.querySelector(`[data-page-frame-id="${CSS.escape(frameId)}"]`) : undefined;
-        if (!group || group.querySelector(".flow-page-source"))
-            continue;
-        const source = card.querySelector('[aria-label^="Name in this Flow for "]')?.getAttribute("aria-label")?.replace("Name in this Flow for ", "") ?? "Page";
-        const status = card.querySelector("[data-example-status]")?.dataset.exampleStatus ?? "Incomplete";
-        const provenance = document.createElementNS(canvas.namespaceURI, "text"), readiness = document.createElementNS(canvas.namespaceURI, "text");
-        provenance.setAttribute("x", "14");
-        provenance.setAttribute("y", "54");
-        provenance.classList.add("flow-page-source");
-        provenance.textContent = source;
-        readiness.setAttribute("x", "14");
-        readiness.setAttribute("y", "76");
-        readiness.classList.add("flow-readiness");
-        readiness.textContent = status;
-        group.classList.add("flow-page-card");
-        group.append(provenance, readiness);
-        group.setAttribute("aria-label", `${group.getAttribute("aria-label") ?? "Page frame"}. Source Page ${source}. ${status}.`);
-    }
-    for (const row of Array.from(outline?.querySelectorAll("[data-occurrence-id]") ?? [])) {
-        const occurrenceId = row.dataset.occurrenceId;
-        const group = occurrenceId ? canvas.querySelector(`[data-occurrence-id="${CSS.escape(occurrenceId)}"]`) : undefined;
-        if (!group || group.querySelector(".flow-readiness"))
-            continue;
-        const status = row.querySelector("[data-example-status]")?.dataset.exampleStatus ?? "Incomplete";
-        const readiness = document.createElementNS(canvas.namespaceURI, "text");
-        readiness.setAttribute("x", "12");
-        readiness.setAttribute("y", "76");
-        readiness.classList.add("flow-readiness");
-        readiness.textContent = status;
-        group.append(readiness);
-        group.setAttribute("aria-label", `${group.getAttribute("aria-label") ?? "Event occurrence"}. ${status}.`);
-    }
-    const frames = Array.from(canvas.querySelectorAll("g[data-page-frame-id]"))
-        .filter((candidate) => !candidate.dataset.occurrenceId)
-        .flatMap((item) => {
-        const bounds = renderedElementBounds(item);
-        return bounds && item.dataset.pageFrameId ? [{ id: item.dataset.pageFrameId, bounds }] : [];
-    });
-    for (const occurrence of Array.from(canvas.querySelectorAll("[data-occurrence-id]"))) {
-        const bounds = renderedElementBounds(occurrence);
-        const frame = bounds && frames.find(({ bounds: candidate }) => bounds.x >= candidate.x && bounds.y >= candidate.y
-            && bounds.x + bounds.width <= candidate.x + candidate.width
-            && bounds.y + bounds.height <= candidate.y + candidate.height);
-        if (!frame)
-            continue;
-        occurrence.dataset.pageFrameId = frame.id;
-        const occurrenceId = occurrence.dataset.occurrenceId;
-        if (occurrenceId)
-            outline?.querySelector(`[data-occurrence-id="${CSS.escape(occurrenceId)}"]`)?.setAttribute("data-page-frame-id", frame.id);
-    }
-}
 export function upgradeFlowWorkspace(root) {
     const found = elements(root);
     if (!found || found.workspace.dataset.canvasFirstR02 === "true")
@@ -85,15 +32,18 @@ export function upgradeFlowWorkspace(root) {
     const projectId = rawSections?.dataset.flowProjectId ?? workspace.dataset.flowProjectId ?? "project";
     let view = flowWorkspaceView(projectId, flowId), emptyDrop, addPosition;
     const toolbar = document.createElement("nav"), surface = document.createElement("section"), surfaceHeading = document.createElement("h4"), surfaceBody = document.createElement("div");
+    const pageCatalog = legacyToolbar.querySelector('[aria-label="Pages catalog"]'), eventCatalog = legacyToolbar.querySelector('[aria-label="Events catalog"]');
     const detailsSource = duplicateFrames?.querySelector('[aria-pressed="true"]') ?? duplicateFrames?.querySelector(".is-selected") ?? undefined;
     const selectedOutline = outline.querySelector(".is-selected") ?? undefined;
-    const parked = document.createDocumentFragment(), detailsParents = new Map();
+    const detailsParents = new Map();
     if (detailsSource && duplicateFrames)
         detailsParents.set(detailsSource, duplicateFrames);
     if (selectedOutline)
         detailsParents.set(selectedOutline, outline);
-    if (relationship)
-        detailsParents.set(relationship, parked);
+    if (pageCatalog)
+        detailsParents.set(pageCatalog, legacyToolbar);
+    if (eventCatalog)
+        detailsParents.set(eventCatalog, legacyToolbar);
     const saveView = (next) => { view = next; saveFlowWorkspaceView(projectId, flowId, view); };
     const closeSurface = () => showSurface(undefined);
     const close = flowControl("Close", () => { emptyDrop = undefined; closeSurface(); });
@@ -124,17 +74,14 @@ export function upgradeFlowWorkspace(root) {
                 parent.appendChild(node);
     };
     const placeSurface = (client) => {
-        const rect = viewport.getBoundingClientRect(), width = Math.min(380, Math.max(280, rect.width - 12)), height = Math.max(180, rect.height - 12);
-        const left = client ? Math.max(6, Math.min(rect.width - width - 6, client.x - rect.left)) : Math.max(6, rect.width - width - 6);
-        const top = client ? Math.max(6, Math.min(rect.height - 180, client.y - rect.top)) : 6;
-        Object.assign(surface.style, { left: `${left}px`, top: `${top}px`, right: "auto", width: `${width}px`, maxWidth: "calc(100% - 12px)", maxHeight: `${height}px` });
+        const rect = viewport.getBoundingClientRect(), placement = placeFlowSurface({ width: rect.width, height: rect.height }, client ? { x: client.x - rect.left, y: client.y - rect.top } : undefined);
+        Object.assign(surface.style, { left: `${placement.left}px`, top: `${placement.top}px`, right: "auto", width: `${placement.width}px`, maxWidth: "calc(100% - 12px)", maxHeight: `${placement.maxHeight}px` });
     };
     const addContents = () => {
-        const pageCatalog = legacyToolbar.querySelector('[aria-label="Pages catalog"]'), eventCatalog = legacyToolbar.querySelector('[aria-label="Events catalog"]');
         return [sectionUi.addPanel(), ...(pageCatalog ? [pageCatalog] : []), ...(eventCatalog ? [eventCatalog] : [])];
     };
     const detailsContents = () => [
-        ...(relationship ? [relationship] : []), ...(detailsSource ? [detailsSource] : []), ...(selectedOutline ? [selectedOutline] : []),
+        ...(detailsSource ? [detailsSource] : []), ...(selectedOutline ? [selectedOutline] : []),
     ];
     const contents = (kind) => {
         if (kind === "add")
@@ -184,7 +131,7 @@ export function upgradeFlowWorkspace(root) {
     });
     minimapToggle.setAttribute("aria-pressed", String(view.minimap));
     toolbar.append(skip, add, outlineButton, details, tidy, focusCanvas, ...cameraUi.controls, minimapToggle);
-    decorateCompactCards(canvas, duplicateFrames, outline);
+    decorateCompactFlowCards(canvas, duplicateFrames, outline);
     if (actions?.getAttribute("aria-label")?.includes("Page instance")) {
         actions.classList.add("flow-contextual-toolbar");
         const rename = flowControl("Rename in Flow", () => { showSurface("details", rename); detailsSource?.querySelector('[aria-label^="Name in this Flow"]')?.focus(); });
@@ -201,9 +148,10 @@ export function upgradeFlowWorkspace(root) {
     if (relationship && actions) {
         actions.classList.add("flow-contextual-toolbar");
         actions.setAttribute("aria-label", "Selected relationship actions");
-        const edit = flowControl("Edit documentation", () => showSurface("details", edit));
-        const remove = relationship.querySelector('button[aria-label^="Delete relationship"]');
-        actions.append(edit, ...(remove ? [remove] : []));
+        const label = relationship.querySelector('[aria-label="Optional relationship label"]');
+        const edit = flowControl("Edit documentation", () => label?.focus());
+        actions.append(edit, relationship);
+        queueMicrotask(() => label?.focus({ preventScroll: true }));
     }
     const selectedSection = Array.from(canvas.querySelectorAll("g[data-flow-section-id].is-selected")).find((candidate) => candidate.querySelector(":scope > [data-section-dropzone]"));
     const sectionActions = selectedSection ? sectionUi.actions(selectedSection) : undefined;
@@ -263,7 +211,6 @@ export function upgradeFlowWorkspace(root) {
         workspace.append(duplicateFrames);
     }
     outline.remove();
-    relationship?.remove();
     const projections = viewport.parentElement, status = projections?.previousElementSibling instanceof HTMLParagraphElement ? projections.previousElementSibling : undefined;
     projections?.classList.add("flow-canvas-viewport");
     viewport.style.position = "relative";

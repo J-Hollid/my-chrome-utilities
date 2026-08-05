@@ -5,6 +5,8 @@ import {
   type FlowPoint,
 } from "./workspace.js";
 
+export const FLOW_PAGE_FRAME_SELECTOR = "g[data-page-frame-id]:not([data-occurrence-id])";
+
 export function flowControl(text: string, action: () => void): HTMLButtonElement {
   const result = document.createElement("button");
   result.type = "button";
@@ -33,7 +35,7 @@ export function renderedElementBounds(item: SVGGraphicsElement): FlowBounds | un
   }
 }
 
-export function flowCanvasBounds(canvas: SVGSVGElement, selector = "[data-flow-section-id],[data-page-frame-id],[data-occurrence-id]"): FlowBounds {
+export function flowCanvasBounds(canvas: SVGSVGElement, selector = `[data-flow-section-id],${FLOW_PAGE_FRAME_SELECTOR},[data-occurrence-id]`): FlowBounds {
   const boxes = Array.from(canvas.querySelectorAll<SVGGraphicsElement>(selector))
     .flatMap((item) => {
       const bounds = renderedElementBounds(item);

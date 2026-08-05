@@ -245,8 +245,8 @@ export function inspectSectionRemovalWithContents(project, flowId, sectionId) {
     const graph = sectionGraph(project, flowId), section = graph.sections?.find(({ id }) => id === sectionId);
     if (!section)
         throw new Error(`Unknown Flow Section ${sectionId}.`);
-    const frames = (graph.pageFrames ?? []).filter((frame) => frame.sectionId === sectionId), ids = new Set(frames.map(({ id }) => id)), relationships = (graph.relationships ?? []).filter((relationship) => ids.has(endpointId(relationship, "source") ?? "") || ids.has(endpointId(relationship, "target") ?? ""));
-    return { flowId, sectionId, sectionName: section.name, pageFrames: frames.map(({ id, name }) => ({ id, name })), relationships: relationships.map(({ id, name }) => ({ id, name: name || id })), fingerprint: sectionRemovalFingerprint(graph, sectionId) };
+    const frames = (graph.pageFrames ?? []).filter((frame) => frame.sectionId === sectionId), ids = new Set(frames.map(({ id }) => id)), occurrences = (graph.occurrences ?? []).filter((occurrence) => ids.has(String(occurrence.pageFrameId ?? ""))), relationships = (graph.relationships ?? []).filter((relationship) => ids.has(endpointId(relationship, "source") ?? "") || ids.has(endpointId(relationship, "target") ?? ""));
+    return { flowId, sectionId, sectionName: section.name, pageFrames: frames.map(({ id, name }) => ({ id, name })), occurrences: occurrences.map(({ id, name }) => ({ id, name: name || id })), relationships: relationships.map(({ id, name }) => ({ id, name: name || id })), fingerprint: sectionRemovalFingerprint(graph, sectionId) };
 }
 export function removeFlowSectionWithContents(state, flowId, sectionId, review) {
     const graph = sectionGraph(state.project, flowId);

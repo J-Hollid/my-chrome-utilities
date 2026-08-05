@@ -27,7 +27,7 @@ export function prepareFlowOutline(options) {
     };
     const occurrenceFrame = (row) => {
         const id = row.dataset.occurrenceId;
-        return id ? canvas.querySelector(`[data-occurrence-id="${CSS.escape(id)}"]`)?.dataset.pageFrameId : undefined;
+        return id ? canvas.querySelector(`[data-occurrence-id="${CSS.escape(id)}"]`)?.dataset.containingPageFrameId : undefined;
     };
     const appendFrame = (target, frame) => {
         const children = document.createElement("ol");

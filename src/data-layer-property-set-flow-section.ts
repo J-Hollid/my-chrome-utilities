@@ -14,6 +14,7 @@ export interface FlowSectionRemovalReview {
   sectionId:string;
   sectionName:string;
   pageFrames:{id:string;name:string}[];
+  occurrences:{id:string;name:string}[];
   relationships:{id:string;name:string}[];
   fingerprint:string;
 }
@@ -183,7 +184,7 @@ export function removeFlowSection(state:ProjectState,flowId:string,sectionId:str
 const endpointId=(relationship:ProjectEntity,side:"source"|"target"):string|undefined=>String((relationship[`${side}Endpoint`] as {id?:unknown}|undefined)?.id??relationship[`${side}NodeId`]??"")||undefined;
 const sectionRemovalFingerprint=(graph:SectionGraph,sectionId:string):string=>JSON.stringify({section:graph.sections?.find(({id})=>id===sectionId),frames:(graph.pageFrames??[]).filter((frame)=>frame.sectionId===sectionId),occurrences:graph.occurrences??[],relationships:graph.relationships??[]});
 export function inspectSectionRemovalWithContents(project:SpecificationProject,flowId:string,sectionId:string):FlowSectionRemovalReview{
-  const graph=sectionGraph(project,flowId),section=graph.sections?.find(({id})=>id===sectionId);if(!section)throw new Error(`Unknown Flow Section ${sectionId}.`);const frames=(graph.pageFrames??[]).filter((frame)=>frame.sectionId===sectionId),ids=new Set(frames.map(({id})=>id)),relationships=(graph.relationships??[]).filter((relationship)=>ids.has(endpointId(relationship,"source")??"")||ids.has(endpointId(relationship,"target")??""));return{flowId,sectionId,sectionName:section.name,pageFrames:frames.map(({id,name})=>({id,name})),relationships:relationships.map(({id,name})=>({id,name:name||id})),fingerprint:sectionRemovalFingerprint(graph,sectionId)};
+  const graph=sectionGraph(project,flowId),section=graph.sections?.find(({id})=>id===sectionId);if(!section)throw new Error(`Unknown Flow Section ${sectionId}.`);const frames=(graph.pageFrames??[]).filter((frame)=>frame.sectionId===sectionId),ids=new Set(frames.map(({id})=>id)),occurrences=(graph.occurrences??[]).filter((occurrence)=>ids.has(String(occurrence.pageFrameId??""))),relationships=(graph.relationships??[]).filter((relationship)=>ids.has(endpointId(relationship,"source")??"")||ids.has(endpointId(relationship,"target")??""));return{flowId,sectionId,sectionName:section.name,pageFrames:frames.map(({id,name})=>({id,name})),occurrences:occurrences.map(({id,name})=>({id,name:name||id})),relationships:relationships.map(({id,name})=>({id,name:name||id})),fingerprint:sectionRemovalFingerprint(graph,sectionId)};
 }
 
 export function removeFlowSectionWithContents(state:ProjectState,flowId:string,sectionId:string,review:FlowSectionRemovalReview):ProjectState{

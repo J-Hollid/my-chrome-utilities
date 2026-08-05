@@ -14,8 +14,15 @@ export function clientPointToFlowPoint(rect, camera, client) {
     return { x: rounded(camera.x + (client.x - rect.left) / camera.zoom), y: rounded(camera.y + (client.y - rect.top) / camera.zoom) };
 }
 export function fitFlowBounds(bounds, viewport, padding = 24) {
-    const width = Math.max(1, bounds.width + padding * 2), height = Math.max(1, bounds.height + padding * 2), zoom = rounded(Math.min(1, viewport.width / width, viewport.height / height));
+    const width = Math.max(1, bounds.width + padding * 2), height = Math.max(1, bounds.height + padding * 2), scale = Math.min(1, viewport.width / width, viewport.height / height), zoom = rounded(scale) || scale;
     return { x: bounds.x - padding, y: bounds.y - padding, zoom };
+}
+export function placeFlowSurface(viewport, requested) {
+    const margin = 6, width = Math.min(380, Math.max(280, viewport.width - margin * 2));
+    const left = requested ? Math.max(margin, Math.min(viewport.width - width - margin, requested.x)) : Math.max(margin, viewport.width - width - margin);
+    const requestedTop = requested?.y ?? margin, availableBelow = viewport.height - requestedTop - margin;
+    const top = availableBelow >= 180 ? Math.max(margin, requestedTop) : margin;
+    return { left, top, width, maxHeight: Math.max(1, viewport.height - top - margin) };
 }
 export function cameraFromMinimapPoint(bounds, viewport, point, zoom) {
     const center = { x: bounds.x + bounds.width * Math.min(1, Math.max(0, point.x)), y: bounds.y + bounds.height * Math.min(1, Math.max(0, point.y)) };

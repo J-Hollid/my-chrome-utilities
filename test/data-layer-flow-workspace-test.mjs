@@ -11,6 +11,7 @@ import {
   flowWorkspaceKey,
   initialFlowWorkspaceView,
   panFlowCamera,
+  placeFlowSurface,
   openFlowSurface,
   relationshipDropTarget,
   sectionBoundsFromDrag,
@@ -33,6 +34,11 @@ assert.equal(flowDetailLevel(.49),"identity");
 assert.equal(flowDetailLevel(.5),"events");
 
 assert.deepEqual(fitFlowBounds({x:100,y:50,width:2400,height:1200},{width:600,height:300},24),{x:76,y:26,zoom:.24},"Fit Flow may use a scale below the manual minimum");
+const extremeFit=fitFlowBounds({x:0,y:0,width:100000,height:100000},{width:360,height:800},24);
+assert.ok(extremeFit.zoom>0&&extremeFit.zoom<.25,"Fit Flow keeps an extreme graph camera positive below the manual minimum");
+assert.ok(Number.isFinite(360/extremeFit.zoom)&&Number.isFinite(800/extremeFit.zoom),"Fit Flow produces a finite viewBox for extreme graph bounds");
+assert.deepEqual(placeFlowSurface({width:360,height:800},{x:350,y:790}),{left:6,top:6,width:348,maxHeight:788},"a near-bottom palette stays fully inside the canvas viewport");
+assert.deepEqual(placeFlowSurface({width:1440,height:900},{x:800,y:450}),{left:800,top:450,width:380,maxHeight:444},"a mid-canvas palette uses only the remaining viewport height");
 assert.equal(flowWorkspaceKey("project:one","flow:shared"),"project:one\u0000flow:shared");
 assert.notEqual(flowWorkspaceKey("project:one","flow:shared"),flowWorkspaceKey("project:two","flow:shared"),"equal Flow IDs in different projects cannot share in-memory view state");
 assert.deepEqual(panFlowCamera({x:100,y:60,zoom:2},{x:40,y:-20}),{x:80,y:70,zoom:2},"screen-space camera pan is converted to world-space movement");
