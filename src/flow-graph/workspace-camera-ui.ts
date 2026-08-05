@@ -1,5 +1,6 @@
 import {
   cameraFromMinimapPoint,
+  boundsAroundItems,
   fitFlowBounds,
   flowDetailLevel,
   panFlowCamera,
@@ -7,7 +8,7 @@ import {
   type FlowCamera,
   type FlowPoint,
 } from "./workspace.js";
-import { flowCanvasBounds, flowControl, renderedElementBounds } from "./workspace-dom.js";
+import { FLOW_PAGE_FRAME_SELECTOR, flowCanvasBounds, flowControl, renderedElementBounds, selectedCanvasItems } from "./workspace-dom.js";
 
 interface CameraOptions {
   canvas: SVGSVGElement;
@@ -20,6 +21,7 @@ export interface FlowCameraUi {
   controls: HTMLElement[];
   minimap: HTMLElement;
   apply(camera: FlowCamera): void;
+  fitFlow(): void;
   reveal(target: SVGGraphicsElement): void;
   setMinimapVisible(visible: boolean): void;
 }
@@ -88,14 +90,22 @@ export function installFlowCamera(options: CameraOptions): FlowCameraUi {
     if (bounds) apply(fitFlowBounds(bounds, viewportSize(viewport), 100));
     target.focus({ preventScroll: true });
   };
+  canvas.addEventListener("flow-reveal-item", (event) => {
+    const selector = (event as CustomEvent<{ selector?: string }>).detail?.selector;
+    const target = selector ? canvas.querySelector<SVGGraphicsElement>(selector) : undefined;
+    if (target) reveal(target);
+  });
 
   const zoomOut = flowControl("Zoom out", () => zoom(.8));
   const zoomIn = flowControl("Zoom in", () => zoom(1.25));
   const actual = flowControl("100 percent", () => apply({ ...options.camera(), zoom: 1 }));
   const fitFlow = flowControl("Fit Flow", () => fit());
   const fitSelection = flowControl("Fit selection", () => {
-    const selected = canvas.querySelector<SVGGraphicsElement>(".is-selected");
-    if (selected) reveal(selected);
+    const selectedBounds = selectedCanvasItems(canvas, FLOW_PAGE_FRAME_SELECTOR).flatMap((item) => {
+      const bounds = renderedElementBounds(item);
+      return bounds ? [bounds] : [];
+    });
+    if (selectedBounds.length) apply(fitFlowBounds(boundsAroundItems(selectedBounds, 0), viewportSize(viewport), 24));
   });
 
   minimapButton.addEventListener("click", (event) => {
@@ -190,6 +200,7 @@ export function installFlowCamera(options: CameraOptions): FlowCameraUi {
     controls: [zoomOut, zoomValue, zoomIn, actual, fitFlow, fitSelection],
     minimap,
     apply,
+    fitFlow() { fit(); },
     reveal,
     setMinimapVisible(visible) { minimap.hidden = !visible; updateMinimap(options.camera()); },
   };

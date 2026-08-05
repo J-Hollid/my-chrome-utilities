@@ -57,7 +57,7 @@ export function upgradeFlowWorkspace(root) {
     }
     const cameraUi = installFlowCamera({
         canvas, viewport, camera: () => view.camera,
-        save(camera) { saveView({ ...view, camera }); },
+        save(camera) { saveView({ ...view, camera, cameraInitialized: true }); },
     });
     const sectionUi = installFlowSections({ root, canvas, viewport, camera: () => view.camera, closeSurface });
     toolbar.className = "flow-workspace-toolbar";
@@ -225,7 +225,10 @@ export function upgradeFlowWorkspace(root) {
     viewport.setAttribute("aria-label", "Flow canvas viewport");
     queueMicrotask(() => workspace.scrollIntoView({ block: "start", inline: "nearest" }));
     cameraUi.setMinimapVisible(view.minimap);
-    cameraUi.apply(view.camera);
+    if (view.cameraInitialized)
+        cameraUi.apply(view.camera);
+    else
+        cameraUi.fitFlow();
     if (view.surface)
         showSurface(view.surface);
     document.body.classList.toggle("flow-focus-canvas", view.focusCanvas);

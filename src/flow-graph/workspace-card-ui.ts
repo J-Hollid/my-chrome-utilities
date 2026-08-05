@@ -1,5 +1,3 @@
-import { FLOW_PAGE_FRAME_SELECTOR, renderedElementBounds } from "./workspace-dom.js";
-
 export function decorateCompactFlowCards(canvas: SVGSVGElement, duplicateFrames?: HTMLElement, outline?: HTMLOListElement): void {
   for (const card of Array.from(duplicateFrames?.querySelectorAll<HTMLElement>("[data-page-frame-id]") ?? [])) {
     const frameId = card.dataset.pageFrameId;
@@ -21,17 +19,5 @@ export function decorateCompactFlowCards(canvas: SVGSVGElement, duplicateFrames?
     const readiness = document.createElementNS(canvas.namespaceURI, "text");
     readiness.setAttribute("x", "12"); readiness.setAttribute("y", "76"); readiness.classList.add("flow-readiness"); readiness.textContent = status;
     group.append(readiness); group.setAttribute("aria-label", `${group.getAttribute("aria-label") ?? "Event occurrence"}. ${status}.`);
-  }
-  const frames = Array.from(canvas.querySelectorAll<SVGGraphicsElement>(FLOW_PAGE_FRAME_SELECTOR)).flatMap((item) => {
-    const bounds = renderedElementBounds(item);
-    return bounds && item.dataset.pageFrameId ? [{ id: item.dataset.pageFrameId, bounds }] : [];
-  });
-  for (const occurrence of Array.from(canvas.querySelectorAll<SVGGraphicsElement>("[data-occurrence-id]"))) {
-    const bounds = renderedElementBounds(occurrence);
-    const frame = bounds && frames.find(({ bounds: candidate }) => bounds.x >= candidate.x && bounds.y >= candidate.y && bounds.x + bounds.width <= candidate.x + candidate.width && bounds.y + bounds.height <= candidate.y + candidate.height);
-    if (!frame) continue;
-    occurrence.dataset.containingPageFrameId = frame.id;
-    const occurrenceId = occurrence.dataset.occurrenceId;
-    if (occurrenceId) outline?.querySelector<HTMLElement>(`[data-occurrence-id="${CSS.escape(occurrenceId)}"]`)?.setAttribute("data-containing-page-frame-id", frame.id);
   }
 }

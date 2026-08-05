@@ -6,6 +6,7 @@ import {
   type FlowPoint,
 } from "./workspace.js";
 import { FLOW_PAGE_FRAME_SELECTOR, flowControl, renderedElementBounds } from "./workspace-dom.js";
+import { sectionBoundsAfterKeyboardInput } from "./workspace-section-geometry.js";
 
 export type FlowSectionCommand =
   | { kind: "select"; sectionId: string }
@@ -125,7 +126,7 @@ export function installFlowSections(options: SectionUiOptions): FlowSectionUi {
     handle.setAttribute("height", "14");
     handle.tabIndex = 0;
     handle.setAttribute("role", "button");
-    handle.setAttribute("aria-label", `Resize Section ${label}`);
+    handle.setAttribute("aria-label", `Resize Section ${label}. Use Arrow keys to resize.`);
     section.append(handle);
     let drag: { pointerId: number; client: FlowPoint; bounds: ReturnType<typeof sectionBounds>; resize: boolean } | undefined;
     section.addEventListener("pointerdown", (event) => {
@@ -171,20 +172,18 @@ export function installFlowSections(options: SectionUiOptions): FlowSectionUi {
       command(root, { kind: "select", sectionId: id });
     });
     section.addEventListener("keydown", (event) => {
-      const delta: Record<string, FlowPoint> = {
-        ArrowLeft: { x: -20, y: 0 }, ArrowRight: { x: 20, y: 0 },
-        ArrowUp: { x: 0, y: -20 }, ArrowDown: { x: 0, y: 20 },
-      };
       if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
         command(root, { kind: "select", sectionId: id });
         return;
       }
-      const move = delta[event.key];
-      if (!move) return;
+      if (!event.key.startsWith("Arrow")) return;
       event.preventDefault();
       const bounds = sectionBounds(section);
-      command(root, { kind: "move", sectionId: id, position: { x: bounds.x + move.x, y: bounds.y + move.y } });
+      const resize = Boolean((event.target as Element).closest("[data-section-resize-for]"));
+      const next = sectionBoundsAfterKeyboardInput(bounds, event.key, resize);
+      if (resize) command(root, { kind: "resize", sectionId: id, bounds: next });
+      else command(root, { kind: "move", sectionId: id, position: { x: next.x, y: next.y } });
     });
   }
 

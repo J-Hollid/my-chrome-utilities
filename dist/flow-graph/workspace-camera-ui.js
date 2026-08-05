@@ -1,5 +1,5 @@
-import { cameraFromMinimapPoint, fitFlowBounds, flowDetailLevel, panFlowCamera, zoomFlowCamera, } from "./workspace.js";
-import { flowCanvasBounds, flowControl, renderedElementBounds } from "./workspace-dom.js";
+import { cameraFromMinimapPoint, boundsAroundItems, fitFlowBounds, flowDetailLevel, panFlowCamera, zoomFlowCamera, } from "./workspace.js";
+import { FLOW_PAGE_FRAME_SELECTOR, flowCanvasBounds, flowControl, renderedElementBounds, selectedCanvasItems } from "./workspace-dom.js";
 const viewportSize = (viewport) => ({
     width: Math.max(240, viewport.clientWidth || 960),
     height: Math.max(240, viewport.clientHeight || 600),
@@ -61,14 +61,23 @@ export function installFlowCamera(options) {
             apply(fitFlowBounds(bounds, viewportSize(viewport), 100));
         target.focus({ preventScroll: true });
     };
+    canvas.addEventListener("flow-reveal-item", (event) => {
+        const selector = event.detail?.selector;
+        const target = selector ? canvas.querySelector(selector) : undefined;
+        if (target)
+            reveal(target);
+    });
     const zoomOut = flowControl("Zoom out", () => zoom(.8));
     const zoomIn = flowControl("Zoom in", () => zoom(1.25));
     const actual = flowControl("100 percent", () => apply({ ...options.camera(), zoom: 1 }));
     const fitFlow = flowControl("Fit Flow", () => fit());
     const fitSelection = flowControl("Fit selection", () => {
-        const selected = canvas.querySelector(".is-selected");
-        if (selected)
-            reveal(selected);
+        const selectedBounds = selectedCanvasItems(canvas, FLOW_PAGE_FRAME_SELECTOR).flatMap((item) => {
+            const bounds = renderedElementBounds(item);
+            return bounds ? [bounds] : [];
+        });
+        if (selectedBounds.length)
+            apply(fitFlowBounds(boundsAroundItems(selectedBounds, 0), viewportSize(viewport), 24));
     });
     minimapButton.addEventListener("click", (event) => {
         const rect = minimapButton.getBoundingClientRect();
@@ -172,6 +181,7 @@ export function installFlowCamera(options) {
         controls: [zoomOut, zoomValue, zoomIn, actual, fitFlow, fitSelection],
         minimap,
         apply,
+        fitFlow() { fit(); },
         reveal,
         setMinimapVisible(visible) { minimap.hidden = !visible; updateMinimap(options.camera()); },
     };

@@ -3,6 +3,7 @@ import { appendFlowPageFrameCardControls } from "./data-layer-flow-graph-ui-page
 import { addFlowPageFrameAndRelationship, addFlowPageFrameAtPosition, addFlowPageFrameToSection, connectFlowPageFrames, createFlowSection, createFlowSectionAroundFrames, inspectSectionRemovalWithContents, moveFlowPageFramePresentation, moveFlowSection, movePageFrameToSection, removeFlowSection, removeFlowSectionWithContents, renameAndResizeFlowSection, tidyFlowPageFrames } from "./utilities/data-layer/property-set-flow-section.js";
 import { button, elementByData, entityName, flowEdgeGeometry, flowPortPoint, nodeHeight, nodeWidth, ownsPointerDrag, q, restorePointerCancellationFocus, svg } from "./flow-graph/ui-primitives.js";
 import { upgradeFlowWorkspace } from "./flow-graph/workspace-ui.js";
+import { flowSelectionContains, primaryFlowSelection, selectionAfterActivation, selectionAfterRemoval, selectionFromStoredView, storedViewWithSelection } from "./flow-graph/workspace-selection.js";
 export function contextSettingPageLabel(pageName) { return `${pageName} · Context-setting Page`; }
 function renderOccurrenceExampleControls(host, state, flowId, occurrenceId, persist, id) {
     host.setAttribute("aria-label", "Occurrence example controls");
@@ -20,8 +21,12 @@ function renderOccurrenceExampleControls(host, state, flowId, occurrenceId, pers
     }
 }
 export { ownsPointerDrag, restorePointerCancellationFocus, flowEdgeGeometry };
-export function flowViewAfterRelationshipDeletion(view, relationshipId) { if (view.selectedItem?.kind !== "relationship" || view.selectedItem.id !== relationshipId)
-    return view; const { selectedItem, ...retained } = view; void selectedItem; return retained; }
+export function flowViewAfterRelationshipDeletion(view, relationshipId) { const selection = selectionFromStoredView(view); if (!selection.some(({ kind, id }) => kind === "relationship" && id === relationshipId))
+    return view; if (!view.selectedItems) {
+    const { selectedItem, ...retained } = view;
+    void selectedItem;
+    return retained;
+} return storedViewWithSelection(view, selectionAfterRemoval(selection, relationshipId)); }
 export function consumeRelationshipDeletionFocus(intent, relationshipRestored) { if (!intent)
     return {}; if (relationshipRestored)
     return { target: "relationship" }; if (!intent.sourceFocused)
@@ -31,7 +36,9 @@ export function installFlowGraphBuilder(options) {
     const inspector = q("#project-inspector"), advanced = q("#flow-step-editor"), inspectorContext = document.createElement("section");
     inspectorContext.id = "flow-inspector-context";
     inspector.insertBefore(inspectorContext, advanced);
+    let selectedItems = [];
     let selected;
+    let selectionWorkspace = "";
     let connection;
     let relationshipPopoverFocusIntent;
     let relationshipEdgeFocusIntent;
@@ -121,10 +128,8 @@ export function installFlowGraphBuilder(options) {
     } };
     const pageFrame = (frameId) => current().graph?.pageFrames.find(({ id }) => id === frameId);
     const selectedFrameForPage = (pageId) => current().graph?.pageFrames.find((frame) => frame.pageId === pageId);
-    const saveSelection = (value) => { selected = value; const { state, flow } = current(); if (state && flow) {
-        const view = readView(state.project.id, flow.id);
-        writeView(state.project.id, flow.id, value ? { ...view, selectedItem: value } : { ...view, selectedItem: undefined });
-    } render(); };
+    const saveSelection = (value, extend = false) => { selectedItems = value ? selectionAfterActivation(selectedItems, value, extend) : []; selected = primaryFlowSelection(selectedItems); const { state, flow } = current(); if (state && flow)
+        writeView(state.project.id, flow.id, storedViewWithSelection(readView(state.project.id, flow.id), selectedItems)); render(); };
     function renderInspector() {
         inspectorContext.replaceChildren();
         const { state, flow, graph } = current();
@@ -325,14 +330,14 @@ export function installFlowGraphBuilder(options) {
         setTimeout(() => { suppressNodeClick = false; }, 0);
     } document.querySelector(`[data-flow-port-for="${CSS.escape(sourceId ?? "")}"][data-flow-port-side="${sourcePort ?? "right"}"]`)?.focus(); }
     function clearSelectedRelationshipForConnection() { if (selected?.kind !== "relationship")
-        return; selected = undefined; relationshipPopoverFocusIntent = undefined; relationshipEdgeFocusIntent = undefined; document.querySelector('[aria-label="Inline relationship popover"]')?.remove(); }
+        return; selectedItems = selectionAfterRemoval(selectedItems, selected.id); selected = primaryFlowSelection(selectedItems); relationshipPopoverFocusIntent = undefined; relationshipEdgeFocusIntent = undefined; document.querySelector('[aria-label="Inline relationship popover"]')?.remove(); }
     function commitConnection(targetId, targetPort) { const { state, flow, graph, revision } = current(), sourceId = connection?.sourceId, sourcePort = connection?.sourcePort ?? "right", inferredTargetPort = targetPort ?? (sourcePort === "right" ? "left" : sourcePort === "top" ? "bottom" : sourcePort === "bottom" ? "top" : undefined); if (!state || !flow || !graph || !sourceId || !targetId || !inferredTargetPort || sourceId === targetId) {
         cancelConnection(true, true);
         return;
     } const before = new Set(graph.relationships.map(({ id }) => id)), next = saveGraphRelationship(state, flow.id, sourceId, { toStepId: targetId, sourcePort, targetPort: inferredTargetPort }, options.id), created = documentaryFlowGraph(next.project, flow.id).relationships.find(({ id }) => !before.has(id)); if (!created) {
         cancelConnection(true, true);
         return;
-    } connection = undefined; document.querySelector(".flow-canvas-scroll")?.classList.remove("is-connecting"); selected = { kind: "relationship", id: created.id }; writeView(state.project.id, flow.id, { ...readView(state.project.id, flow.id), selectedItem: selected }); relationshipPopoverFocusIntent = { id: created.id, revision: Number(revision ?? 0), optimisticFocused: false }; persist(next); }
+    } connection = undefined; document.querySelector(".flow-canvas-scroll")?.classList.remove("is-connecting"); selectedItems = [{ kind: "relationship", id: created.id }]; selected = primaryFlowSelection(selectedItems); writeView(state.project.id, flow.id, storedViewWithSelection(readView(state.project.id, flow.id), selectedItems)); relationshipPopoverFocusIntent = { id: created.id, revision: Number(revision ?? 0), optimisticFocused: false }; persist(next); }
     function renderRelationshipPopover(host) {
         if (selected?.kind !== "relationship")
             return;
@@ -365,8 +370,8 @@ export function installFlowGraphBuilder(options) {
         remove.type = "button";
         remove.textContent = "Delete relationship";
         remove.setAttribute("aria-label", flowRelationshipDeletionAccessibleName(relationship.label, source?.name ?? sourceId, target?.name ?? targetId));
-        remove.addEventListener("click", () => { relationshipPopoverFocusIntent = undefined; relationshipEdgeFocusIntent = undefined; relationshipDeletionFocusIntent = { id: relationship.id, sourceKind: relationship.sourceEndpoint.kind, sourceId, sourceFocused: false }; selected = undefined; const context = current(), view = readView(context.state.project.id, flow.id); writeView(context.state.project.id, flow.id, flowViewAfterRelationshipDeletion(view, relationship.id)); persist(removeFlowRelationship(context.state, flow.id, relationship.id), `Deleted relationship ${relationshipName}. Saved Draft; documentation preview stale; Undo available.`); });
-        cancel.addEventListener("click", () => { relationshipPopoverFocusIntent = undefined; relationshipEdgeFocusIntent = undefined; selected = undefined; render(); document.querySelector(`[data-flow-port-for="${CSS.escape(sourceId)}"][data-flow-port-side="${relationship.sourcePort}"]`)?.focus(); });
+        remove.addEventListener("click", () => { relationshipPopoverFocusIntent = undefined; relationshipEdgeFocusIntent = undefined; relationshipDeletionFocusIntent = { id: relationship.id, sourceKind: relationship.sourceEndpoint.kind, sourceId, sourceFocused: false }; selectedItems = selectionAfterRemoval(selectedItems, relationship.id); selected = primaryFlowSelection(selectedItems); const context = current(), view = readView(context.state.project.id, flow.id); writeView(context.state.project.id, flow.id, flowViewAfterRelationshipDeletion(view, relationship.id)); persist(removeFlowRelationship(context.state, flow.id, relationship.id), `Deleted relationship ${relationshipName}. Saved Draft; documentation preview stale; Undo available.`); });
+        cancel.addEventListener("click", () => { relationshipPopoverFocusIntent = undefined; relationshipEdgeFocusIntent = undefined; selectedItems = []; selected = undefined; render(); document.querySelector(`[data-flow-port-for="${CSS.escape(sourceId)}"][data-flow-port-side="${relationship.sourcePort}"]`)?.focus(); });
         form.addEventListener("keydown", (event) => { if (event.key !== "Escape")
             return; event.preventDefault(); relationshipPopoverFocusIntent = undefined; relationshipEdgeFocusIntent = undefined; document.querySelector(`[data-relationship-id="${CSS.escape(relationship.id)}"]`)?.focus(); });
         form.addEventListener("submit", (event) => { event.preventDefault(); relationshipPopoverFocusIntent = undefined; relationshipEdgeFocusIntent = { id: relationship.id, revision: Number(revision ?? 0), optimisticFocused: false }; persist(saveGraphRelationship(current().state, flow.id, sourceId, { id: relationship.id, toStepId: targetId, sourcePort: relationship.sourcePort, targetPort: relationship.targetPort, group: group.value.trim(), label: label.value.trim(), documentationCondition: condition.value.trim(), expectation: expectation.value.trim() }, options.id)); queueMicrotask(() => document.querySelector(`[data-relationship-id="${CSS.escape(relationship.id)}"]`)?.focus()); });
@@ -462,9 +467,13 @@ export function installFlowGraphBuilder(options) {
             review.append(heading, list, confirm);
             host.append(review);
         }
-        const transientView = readView(state.project.id, flow.id), selectionCollection = selected?.kind === "section" ? stored.sections : selected?.kind === "page-frame" ? stored.pageFrames : selected?.kind === "occurrence" ? stored.occurrences : stored.relationships, selectionExists = selected && selectionCollection.some(({ id }) => id === selected.id);
-        if (!selectionExists)
-            selected = transientView.selectedItem;
+        const transientView = readView(state.project.id, flow.id), workspaceKey = `${state.project.id}\u0000${flow.id}`, selectionExists = (item) => { const collection = item.kind === "section" ? stored.sections : item.kind === "page-frame" ? stored.pageFrames : item.kind === "occurrence" ? stored.occurrences : stored.relationships; return collection.some(({ id }) => id === item.id); };
+        if (selectionWorkspace !== workspaceKey) {
+            selectedItems = selectionFromStoredView(transientView);
+            selectionWorkspace = workspaceKey;
+        }
+        selectedItems = selectedItems.filter(selectionExists);
+        selected = primaryFlowSelection(selectedItems);
         const projection = projectFlowGraph(state.project, flow.id), section = document.createElement("section"), heading = document.createElement("h3"), boundary = document.createElement("p"), toolbar = document.createElement("section"), laneControls = document.createElement("section"), status = document.createElement("p"), frames = document.createElement("section"), views = document.createElement("div"), canvasScroll = document.createElement("div"), canvas = svg("svg"), outline = document.createElement("ol"), popover = document.createElement("section"), actions = document.createElement("section");
         const namedRight = Math.max(940, ...projection.laneBands.map(({ x, width }) => x + width), ...projection.graph.connectionEndpoints.map((endpoint) => endpoint.layout.x + endpoint.width + 60)), viewWidth = Math.max(960, namedRight + 100), viewHeight = Math.max(780, ...projection.laneBands.map(({ y, height }) => y + height + 80), ...projection.graph.connectionEndpoints.map((endpoint) => endpoint.layout.y + endpoint.height + 100));
         const targetPortFor = (sourcePort) => sourcePort === "right" ? "left" : sourcePort === "top" ? "bottom" : sourcePort === "bottom" ? "top" : undefined;
@@ -580,7 +589,7 @@ export function installFlowGraphBuilder(options) {
                 return; if (suppressPointerClick) {
                 event.stopPropagation();
                 return;
-            } saveSelection({ kind: "page-frame", id: frame.id }); });
+            } saveSelection({ kind: "page-frame", id: frame.id }, event.ctrlKey || event.metaKey || event.shiftKey); });
             group.append(rect, label, inputPort, outputPort);
             canvas.append(group);
             const outlineRow = document.createElement("li"), outlineControl = button(`${endpoint.name} · Page instance`, () => saveSelection({ kind: "page-frame", id: frame.id }));
@@ -588,6 +597,8 @@ export function installFlowGraphBuilder(options) {
             outlineRow.dataset.pageId = frame.pageId;
             outlineRow.append(outlineControl);
             outline.append(outlineRow);
+            if (frame.sectionId)
+                outlineRow.dataset.flowSectionId = frame.sectionId;
             outlineControl.textContent = `${endpoint.name} · Context-setting Page`;
         }
         for (const relationship of projection.graph.relationships) {
@@ -653,6 +664,8 @@ export function installFlowGraphBuilder(options) {
             detail.textContent = "Interaction Event";
             detail.textContent = `Interaction Event${nodeData.trigger ? ` · ${nodeData.trigger}` : ""}`;
             group.setAttribute("aria-label", `${nodeData.name}. Interaction Event. Drag or use Arrow keys to move.`);
+            if (nodeData.pageFrameId)
+                group.dataset.containingPageFrameId = nodeData.pageFrameId;
             const storedOccurrence = stored.occurrences.find(({ id }) => id === nodeData.id), storedPosition = storedOccurrence.position, focusNode = () => queueMicrotask(() => elementByData("data-occurrence-id", nodeData.id)?.focus()), containingPageFrame = projection.graph.connectionEndpoints.find(({ kind, id }) => kind === "page-frame" && id === nodeData.pageFrameId), containedMoveAllowed = (x, y) => Boolean(containingPageFrame && x >= FLOW_GRAPH_GEOMETRY.eventMinX && y >= FLOW_GRAPH_GEOMETRY.eventMinY && x + nodeWidth <= containingPageFrame.width && y + nodeHeight <= containingPageFrame.height), rejectContainedMove = () => { group.setAttribute("transform", `translate(${layout.x} ${layout.y})`); statusMessage = "Use Change Page to move this Event occurrence to another Page frame."; statusRepairHref = ""; render(); focusNode(); }, moveContained = (x, y) => { if (!containedMoveAllowed(x, y)) {
                 rejectContainedMove();
                 return;
@@ -681,7 +694,7 @@ export function installFlowGraphBuilder(options) {
                 return; if (suppressNodeClick) {
                 suppressNodeClick = false;
                 return;
-            } saveSelection({ kind: "occurrence", id: nodeData.id }); });
+            } saveSelection({ kind: "occurrence", id: nodeData.id }, event.ctrlKey || event.metaKey || event.shiftKey); });
             const canvasExample = occurrenceExampleDetails(state, flow.id, nodeData.id, nodeData.name), exampleHost = svg("foreignObject"), resizeCanvasExample = () => { const expandedHeight = canvasExample.open ? Math.max(260, Math.ceil(canvasExample.scrollHeight) + 8) : 30; exampleHost.setAttribute("height", String(expandedHeight)); box.setAttribute("height", String(canvasExample.open ? nodeHeight + expandedHeight - 30 : nodeHeight)); resizeCanvasHeight(); };
             exampleHost.dataset.eventExampleNode = nodeData.id;
             exampleHost.setAttribute("x", "4");
@@ -700,6 +713,8 @@ export function installFlowGraphBuilder(options) {
             canvas.append(group);
             const row = document.createElement("li"), control = button(`${nodeData.name} · Interaction Event${nodeData.trigger ? ` · ${nodeData.trigger}` : ""}`, () => saveSelection({ kind: "occurrence", id: nodeData.id })), outlineExample = occurrenceExampleDetails(state, flow.id, nodeData.id, nodeData.name);
             row.dataset.occurrenceId = nodeData.id;
+            if (nodeData.pageFrameId)
+                row.dataset.containingPageFrameId = nodeData.pageFrameId;
             row.append(control, outlineExample);
             outline.insertBefore(row, outline.querySelector("[data-relationship-id]"));
         }
@@ -801,7 +816,7 @@ export function installFlowGraphBuilder(options) {
         renderActions(actions);
         section.append(heading, boundary, toolbar, laneControls, status, frames, views, actions, popover);
         host.append(section);
-        document.querySelectorAll("[data-occurrence-id],[data-relationship-id],[data-page-frame-id]").forEach((element) => { const id = element.dataset.occurrenceId ?? element.dataset.relationshipId ?? element.dataset.pageFrameId; element.classList.toggle("is-selected", id === selected?.id); });
+        document.querySelectorAll("[data-occurrence-id],[data-relationship-id],[data-page-frame-id]").forEach((element) => { const item = element.dataset.occurrenceId ? { kind: "occurrence", id: element.dataset.occurrenceId } : element.dataset.relationshipId ? { kind: "relationship", id: element.dataset.relationshipId } : { kind: "page-frame", id: element.dataset.pageFrameId }; element.classList.toggle("is-selected", flowSelectionContains(selectedItems, item)); });
         if (relationshipDeletionFocusTimer !== undefined) {
             clearTimeout(relationshipDeletionFocusTimer);
             relationshipDeletionFocusTimer = undefined;
@@ -846,7 +861,7 @@ export function installFlowGraphBuilder(options) {
     }
     function render() { const { state, flow } = current(); advanced.hidden = !flow; if (flow) {
         renderGraph(flow);
-        document.querySelectorAll("[data-page-frame-id]").forEach((candidate) => candidate.setAttribute("aria-pressed", String(selected?.kind === "page-frame" && candidate.dataset.pageFrameId === selected.id)));
+        document.querySelectorAll("[data-page-frame-id]").forEach((candidate) => candidate.setAttribute("aria-pressed", String(flowSelectionContains(selectedItems, { kind: "page-frame", id: candidate.dataset.pageFrameId }))));
         if (state) {
             const focusId = sessionStorage.getItem(`my-chrome-utilities.flow-focus.v1:${state.project.id}:${flow.id}`);
             if (focusId)
@@ -854,6 +869,9 @@ export function installFlowGraphBuilder(options) {
         }
     }
     else {
+        selectionWorkspace = "";
+        selectedItems = [];
+        selected = undefined;
         document.querySelector("#flow-graph-workspace")?.replaceChildren();
         inspectorContext.replaceChildren();
     } }
