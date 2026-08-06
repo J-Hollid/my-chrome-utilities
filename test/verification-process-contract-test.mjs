@@ -1837,7 +1837,11 @@ const characterizationEntries = [
   }),
 ];
 const characterization = flowExamplesCharacterization(
-  { receipts:characterizationEntries }, reportBaseline, { implementationCommit:"f".repeat(40) },
+  { receipts:characterizationEntries }, reportBaseline, {
+    implementationCommit:"f".repeat(40),
+    focusedReceiptDigests:characterizationEntries.slice(0, 5).map(({ digest }) => digest),
+    loadedReceiptDigests:characterizationEntries.slice(5).map(({ digest }) => digest),
+  },
 );
 assert.equal(characterization.completion.status, "complete");
 assert.equal(characterization.classes.focusedNormal.sampleCount, 5);

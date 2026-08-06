@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 
 import {
   boundedFlowExamplesReadiness,
   createFlowExamplesPhaseTimer,
+  flowExamplesPhaseNames,
   validateFlowExamplesPhaseTiming,
 } from "./support/flow-examples-timing.mjs";
 import {
@@ -98,5 +100,22 @@ for (const source of exampleEvidenceSources) {
   assert.doesNotMatch(source, /setTimeout\(resolve,120\)/u,
     "examples-only readiness must not use fixed-duration polling");
 }
+
+const characterization = JSON.parse(await readFile(
+  new URL("../verification/flow-examples-characterization.json", import.meta.url), "utf8",
+));
+assert.match(characterization.implementationCommit, /^[a-f0-9]{40}$/u);
+assert.equal(characterization.completion.status, "complete");
+assert.equal(characterization.focusedBudgetMilliseconds, 12_891);
+assert.equal(characterization.representativeFlowChangedPathGuardrailSeconds, 35);
+for (const timingClass of Object.values(characterization.classes)) {
+  assert.equal(timingClass.sampleCount, 5);
+  assert.equal(timingClass.receiptDigests.length, 5);
+  assert.equal(new Set(timingClass.receiptDigests).size, 5);
+  assert.equal(timingClass.maturity.status, "non-provisional");
+  assert.deepEqual(Object.keys(timingClass.phases), flowExamplesPhaseNames);
+}
+assert.ok(characterization.classes.focusedNormal.target.p90Ms <=
+  characterization.focusedBudgetMilliseconds);
 
 console.log("Flow examples phase timing tests passed");

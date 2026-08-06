@@ -276,18 +276,35 @@ export function flowExamplesCharacterization(ledger, baseline, {
   minimumIndependentSamples = 5,
   diagnosis,
   correction = "Replaced examples-only fixed-count sleeps with bounded predicate waits using a monotonic deadline and phase-specific timeout diagnostics.",
+  focusedReceiptDigests,
+  loadedReceiptDigests,
 } = {}) {
   const targetId = "FLOW_GRAPH_EXAMPLES_TARGET";
+  const declaredDigests = [...(focusedReceiptDigests ?? []), ...(loadedReceiptDigests ?? [])];
+  if (declaredDigests.length && new Set(declaredDigests).size !== declaredDigests.length) {
+    throw new Error("Flow examples characterization receipt digests must be unique across classes");
+  }
   const accepted = ledger.receipts.filter(({ receipt, rejectionReason }) => receipt && !rejectionReason);
   const condition = (entry, executionLoad, mode) =>
     entry.executionLoad === executionLoad && entry.receipt.plan?.mode === mode;
-  const builds = [...new Set(accepted.map(({ receipt }) => receipt.artifact?.buildIdentity).filter(Boolean))];
+  const select = (entries, digests, executionLoad, mode) => {
+    const selected = digests?.length
+      ? entries.filter(({ digest }) => new Set(digests).has(digest))
+      : entries.filter((entry) => condition(entry, executionLoad, mode));
+    if (digests?.length && (selected.length !== digests.length ||
+        selected.some((entry) => !condition(entry, executionLoad, mode)))) {
+      throw new Error(`Declared ${executionLoad} Flow examples receipts are missing, rejected, or use the wrong plan context`);
+    }
+    return selected;
+  };
+  const focusedAccepted = select(accepted, focusedReceiptDigests, "normal", "focused");
+  const loadedAccepted = select(accepted, loadedReceiptDigests, "loaded", "terminal");
+  const builds = [...new Set([...focusedAccepted, ...loadedAccepted]
+    .map(({ receipt }) => receipt.artifact?.buildIdentity).filter(Boolean))];
   const candidates = builds.map((buildIdentity) => ({
     buildIdentity,
-    focused:accepted.filter((entry) => entry.receipt.artifact.buildIdentity === buildIdentity &&
-      condition(entry, "normal", "focused")),
-    loaded:accepted.filter((entry) => entry.receipt.artifact.buildIdentity === buildIdentity &&
-      condition(entry, "loaded", "terminal")),
+    focused:focusedAccepted.filter((entry) => entry.receipt.artifact.buildIdentity === buildIdentity),
+    loaded:loadedAccepted.filter((entry) => entry.receipt.artifact.buildIdentity === buildIdentity),
   })).filter(({ focused, loaded }) => focused.length && loaded.length)
     .sort((left, right) => Math.min(right.focused.length, right.loaded.length) -
       Math.min(left.focused.length, left.loaded.length) || left.buildIdentity.localeCompare(right.buildIdentity));

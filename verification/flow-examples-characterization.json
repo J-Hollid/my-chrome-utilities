@@ -1,0 +1,110 @@
+{
+  "version": 1,
+  "targetId": "FLOW_GRAPH_EXAMPLES_TARGET",
+  "implementationCommit": "7f2095c346b39bf6b57e23893eace76e42438363",
+  "artifactBuildIdentity": "4ea103138a47e7bda15a9d7463d88d9ef7aedfbebe48ec9da108d2ce3e6925c8",
+  "minimumIndependentSamples": 5,
+  "focusedBudgetMilliseconds": 12891,
+  "representativeFlowChangedPathGuardrailSeconds": 35,
+  "budgetChanged": false,
+  "classes": {
+    "focusedNormal": {
+      "planContext": "focused FLOW_GRAPH_EXAMPLES_TARGET",
+      "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
+      "environment": {
+        "node": "24.19.0",
+        "typescript": "5.9.3",
+        "platform": "linux-x64",
+        "executionLoad": "normal",
+        "concurrency": 4,
+        "observationConcurrency": 2,
+        "buildIdentity": "4ea103138a47e7bda15a9d7463d88d9ef7aedfbebe48ec9da108d2ce3e6925c8"
+      },
+      "sampleCount": 5,
+      "maturity": {
+        "independentSamples": 5,
+        "minimumIndependentSamples": 5,
+        "provisional": false,
+        "status": "non-provisional"
+      },
+      "receiptDigests": [
+        "5d55b34a6065fbcd92cfd3f59a6fe62c256ce5e17af1dc351d68298ea9e74157",
+        "674ec22d833be3173b435d486108f7ea77b2efe2dcdb7fe305ddd44c821358a4",
+        "c98a057d261a70fa7384839cbbb5442d5e555dc54cf54eea34a3f753f79b7da6",
+        "cd3e4660d57954a428b686dab7c5aa52d648b948cb615fdc74a4b06abf417f99",
+        "fad26ef46287b62637529ff2b5135be2d16e10602ea65277e9c36469a66220f7"
+      ],
+      "target": { "p50Ms": 3764, "p90Ms": 3830 },
+      "phases": {
+        "browser startup": { "scope": "process", "p50Ms": 174.731, "p90Ms": 175.312, "samples": 5, "maturity": "non-provisional" },
+        "target setup": { "scope": "target", "p50Ms": 2127.858, "p90Ms": 2128.221, "samples": 5, "maturity": "non-provisional" },
+        "fixture setup": { "scope": "target", "p50Ms": 14.532, "p90Ms": 14.733, "samples": 5, "maturity": "non-provisional" },
+        "readiness": { "scope": "target", "p50Ms": 622.796, "p90Ms": 635.847, "samples": 5, "maturity": "non-provisional" },
+        "example compilation": { "scope": "target", "p50Ms": 474.894, "p90Ms": 529.643, "samples": 5, "maturity": "non-provisional" },
+        "rendering": { "scope": "target", "p50Ms": 12.517, "p90Ms": 13.678, "samples": 5, "maturity": "non-provisional" },
+        "persistence": { "scope": "target", "p50Ms": 510.154, "p90Ms": 536.809, "samples": 5, "maturity": "non-provisional" },
+        "assertion": { "scope": "target", "p50Ms": 0.555, "p90Ms": 0.652, "samples": 5, "maturity": "non-provisional" },
+        "cleanup": { "scope": "target", "p50Ms": 2.353, "p90Ms": 2.432, "samples": 5, "maturity": "non-provisional" }
+      },
+      "assignedAssertions": "passed"
+    },
+    "normallyLoaded": {
+      "planContext": "terminal lane 4/4 Flow and capture co-run",
+      "environmentClassId": "3fed9ac4330578e7e7aebf7ba60b95f53808ff20309d1932999f1016a17a160a",
+      "environment": {
+        "node": "24.19.0",
+        "typescript": "5.9.3",
+        "platform": "linux-x64",
+        "executionLoad": "loaded",
+        "concurrency": 4,
+        "observationConcurrency": 2,
+        "buildIdentity": "4ea103138a47e7bda15a9d7463d88d9ef7aedfbebe48ec9da108d2ce3e6925c8"
+      },
+      "sampleCount": 5,
+      "maturity": {
+        "independentSamples": 5,
+        "minimumIndependentSamples": 5,
+        "provisional": false,
+        "status": "non-provisional"
+      },
+      "receiptDigests": [
+        "260953ebe1266f4586e89f5a671954375cc845bd4e852b4c1628433eee9140b6",
+        "5d235e059fefed55fc1d2f3d97fd027da0d00c7da2c7b4331f6d39b23bb1a07b",
+        "667d20f4642e7182b6275f531655bb933d7b2213da37627e05df2bda4403410d",
+        "80794b6de130697b5e43e9e49cd2fbc8f9c12521589135e1ecebd86a62236b52",
+        "e31cbd8a9061addbbbc880549dcaec5a1b2c7574a993d0597e31c8618c9d54d1"
+      ],
+      "target": { "p50Ms": 4026, "p90Ms": 4108 },
+      "phases": {
+        "browser startup": { "scope": "process", "p50Ms": 189.588, "p90Ms": 192.712, "samples": 5, "maturity": "non-provisional" },
+        "target setup": { "scope": "target", "p50Ms": 2142.383, "p90Ms": 2152.832, "samples": 5, "maturity": "non-provisional" },
+        "fixture setup": { "scope": "target", "p50Ms": 18.757, "p90Ms": 22.453, "samples": 5, "maturity": "non-provisional" },
+        "readiness": { "scope": "target", "p50Ms": 598.624, "p90Ms": 631.766, "samples": 5, "maturity": "non-provisional" },
+        "example compilation": { "scope": "target", "p50Ms": 655.116, "p90Ms": 705.855, "samples": 5, "maturity": "non-provisional" },
+        "rendering": { "scope": "target", "p50Ms": 15.525, "p90Ms": 16.942, "samples": 5, "maturity": "non-provisional" },
+        "persistence": { "scope": "target", "p50Ms": 595.062, "p90Ms": 625.089, "samples": 5, "maturity": "non-provisional" },
+        "assertion": { "scope": "target", "p50Ms": 0.566, "p90Ms": 0.813, "samples": 5, "maturity": "non-provisional" },
+        "cleanup": { "scope": "target", "p50Ms": 2.332, "p90Ms": 3.888, "samples": 5, "maturity": "non-provisional" }
+      },
+      "assignedAssertions": "passed"
+    }
+  },
+  "diagnosis": {
+    "preCorrectionDominantPhase": "example compilation",
+    "preCorrectionObservedRangeMilliseconds": [7615.194, 21469.091],
+    "postCorrectionDominantPhase": "target setup",
+    "postCorrectionFocusedP90Milliseconds": 2128.221
+  },
+  "correction": "Replaced examples-only fixed-count sleeps and the redundant keyboard-then-click repair fallback with bounded predicate waits using a monotonic deadline and phase-specific timeout diagnostics.",
+  "evidenceConservation": {
+    "browserTargetIdsUnchanged": true,
+    "examplesAssertionLeaves": { "runtime021": 11, "runtime025": 10 },
+    "loadedTopology": "terminal lane 4/4",
+    "rawReceiptBytesChanged": false
+  },
+  "completion": {
+    "status": "complete",
+    "focusedBudgetPassed": true,
+    "loadedAssertionsPassed": true
+  }
+}
