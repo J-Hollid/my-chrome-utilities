@@ -40,7 +40,14 @@ const pageGroupSeedIds={pageId:"page:structural:cart",retailFixtureId:"fixture:s
   tradeFixtureId:"fixture:structural:trade",flowId:"flow:structural:profile-inheritance",
   frameId:"frame:structural:cart"};
 const pageGroupRuntimeExpression=Object.entries(pageGroupSeedIds).reduce((expression,[key,value])=>
-  expression.replaceAll(`'\${pageGroupStructuralSeed.${key}}'`,JSON.stringify(value)),pageGroupExpression);
+  expression.replaceAll(`'\${pageGroupStructuralSeed.${key}}'`,JSON.stringify(value)),pageGroupExpression)
+  .replace("const structural=","globalThis.__pageGroupStructuralStage='model';const structural=")
+  .replace("const openCart=","globalThis.__pageGroupStructuralStage='cart';let stableCartWorkspace;const openCart=")
+  .replace("return candidate?.querySelectorAll('[data-applicability-preview-set-id]').length===3&&candidate.querySelector('.composed-schema-workspace [data-effective-property-path]')?candidate:undefined;","const ready=candidate?.isConnected&&candidate.querySelectorAll('[data-applicability-preview-set-id]').length===3&&candidate.querySelector('.composed-schema-workspace [data-effective-property-path]');if(!ready){stableCartWorkspace=undefined;return;}if(stableCartWorkspace!==candidate){stableCartWorkspace=candidate;return;}return candidate;")
+  .replace("const beforePreview=","globalThis.__pageGroupStructuralStage='preview';const beforePreview=")
+  .replace("const applicationOrder=","globalThis.__pageGroupStructuralStage='reorder';const applicationOrder=")
+  .replace("document.querySelector('#project-tree button[data-kind=\"documentation\"]').click();const documentationWorkspace=","globalThis.__pageGroupStructuralStage='documentation';document.querySelector('#project-tree button[data-kind=\"documentation\"]').click();const documentationWorkspace=")
+  .replace("document.querySelector('#project-tree button[data-kind=\"flows\"]').click();const flowRoute=","globalThis.__pageGroupStructuralStage='flow';document.querySelector('#project-tree button[data-kind=\"flows\"]').click();const flowRoute=");
 const initialCoreKeys=["installedBoundary","consequential","persistenceReload",
   ...Array.from({length:14},(_,index)=>`authoring${String(index+1).padStart(3,"0")}`),
   ...[17,18,19,21,22,23,24,25].map(index=>`authoring${String(index).padStart(3,"0")}`),
@@ -166,8 +173,8 @@ const definitions = {
       const pageGroupStructuralSeed=await (${pageGroupSeedExpression});
       return pageGroupStructuralSeed;`,
     expression:()=>`
-      const pageGroupStructuralEvidence=await (${pageGroupRuntimeExpression});
-      return{layeredSchema:pageGroupStructuralEvidence};`,
+      try{const pageGroupStructuralEvidence=await (${pageGroupRuntimeExpression});return{layeredSchema:pageGroupStructuralEvidence};}
+      catch(error){throw new Error(String(error)+' [stage '+String(globalThis.__pageGroupStructuralStage??'startup')+']');}`,
   },
   LAYERED_SCHEMA_INHERITANCE_TARGET:{
     pagePath:"specification-builder.html",
