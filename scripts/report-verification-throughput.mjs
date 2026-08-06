@@ -280,13 +280,57 @@ export function flowExamplesCharacterization(ledger, baseline, {
   loadedReceiptDigests,
 } = {}) {
   const targetId = "FLOW_GRAPH_EXAMPLES_TARGET";
+  const focusedFlowTargetIds = [targetId];
+  const loadedFlowTargetIds = [
+    targetId,
+    "FLOW_GRAPH_LEGACY_TARGET",
+    "FLOW_WORKSPACE_AUTHORING_TARGET",
+    "FLOW_WORKSPACE_CONTROLS_TARGET",
+  ];
+  const loadedCaptureTargetIds = [
+    "FRESH_LIVE_SESSION_BROWSER_ADAPTER",
+    "PAYLOAD_PATH_FILTER_BROWSER_ADAPTER",
+    "SAVED_EVENT_FEED_FILTERS_BROWSER_ADAPTER",
+    "SAVED_SESSION_LIVE_FEED_BROWSER_ADAPTER",
+    "SINGLE_LIVE_EVENT_FEED_BROWSER_ADAPTER",
+  ];
+  const loadedSelectedPackIds = [
+    "capture",
+    "command-palette",
+    "flow_graph",
+    "guided_test_cases",
+    "project_management",
+    "schema_relationship_tree",
+  ];
+  const sameIds = (actual, expected) => Array.isArray(actual) &&
+    actual.length === expected.length && actual.every((id, index) => id === expected[index]);
+  const browserObservations = (receipt) => Object.values(receipt.tasks ?? {})
+    .filter((task) => task.identity?.stage === "browser-observation")
+    .map((task) => task.identity);
+  const hasExactObservation = (observations, packId, logicalTargetIds) => observations.some((identity) =>
+    identity.packId === packId && sameIds(identity.logicalTargetIds, logicalTargetIds));
+  const hasRequiredPlanTopology = (receipt, executionLoad) => {
+    const observations = browserObservations(receipt);
+    if (executionLoad === "normal") {
+      return sameIds(receipt.plan?.requestedPackIds, ["flow_graph"]) &&
+        sameIds(receipt.plan?.selectedPackIds, ["flow_graph"]) &&
+        observations.length === 1 &&
+        hasExactObservation(observations, "flow_graph", focusedFlowTargetIds);
+    }
+    return sameIds(receipt.plan?.requestedPackIds, []) &&
+      sameIds(receipt.plan?.selectedPackIds, loadedSelectedPackIds) &&
+      observations.length === 2 &&
+      hasExactObservation(observations, "flow_graph", loadedFlowTargetIds) &&
+      hasExactObservation(observations, "capture", loadedCaptureTargetIds);
+  };
   const declaredDigests = [...(focusedReceiptDigests ?? []), ...(loadedReceiptDigests ?? [])];
   if (declaredDigests.length && new Set(declaredDigests).size !== declaredDigests.length) {
     throw new Error("Flow examples characterization receipt digests must be unique across classes");
   }
   const accepted = ledger.receipts.filter(({ receipt, rejectionReason }) => receipt && !rejectionReason);
   const condition = (entry, executionLoad, mode) =>
-    entry.executionLoad === executionLoad && entry.receipt.plan?.mode === mode;
+    entry.executionLoad === executionLoad && entry.receipt.plan?.mode === mode &&
+    hasRequiredPlanTopology(entry.receipt, executionLoad);
   const select = (entries, digests, executionLoad, mode) => {
     const selected = digests?.length
       ? entries.filter(({ digest }) => new Set(digests).has(digest))

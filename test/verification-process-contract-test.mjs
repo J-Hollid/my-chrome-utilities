@@ -1821,7 +1821,12 @@ const characterizationEntries = [
     const receipt = structuredClone(normalReceipt);
     receipt.runId = `focused-${index}`;
     receipt.environment.executionLoad = "normal";
-    receipt.plan.mode = "focused";
+    receipt.plan = {
+      ...receipt.plan,
+      mode:"focused",
+      requestedPackIds:["flow_graph"],
+      selectedPackIds:["flow_graph"],
+    };
     const environment = { ...receipt.environment, buildIdentity:receipt.artifact.buildIdentity };
     return { receipt, digest:`a${String(index).padStart(63, "0")}`,
       executionLoad:"normal", environment, environmentClassId:canonicalEnvironmentClassId(environment) };
@@ -1830,18 +1835,64 @@ const characterizationEntries = [
     const receipt = structuredClone(normalReceipt);
     receipt.runId = `loaded-${index}`;
     receipt.environment.executionLoad = "loaded";
-    receipt.plan.mode = "terminal";
+    receipt.plan = {
+      ...receipt.plan,
+      mode:"terminal",
+      requestedPackIds:[],
+      selectedPackIds:[
+        "capture",
+        "command-palette",
+        "flow_graph",
+        "guided_test_cases",
+        "project_management",
+        "schema_relationship_tree",
+      ],
+    };
+    const examplesTask = receipt.tasks["browser-observation:FLOW_GRAPH_EXAMPLES_TARGET"];
+    receipt.tasks = {
+      "browser-observation:capture-batch":{
+        identity:{
+          key:"browser-observation:capture-batch",
+          stage:"browser-observation",
+          packId:"capture",
+          logicalTargetIds:[
+            "FRESH_LIVE_SESSION_BROWSER_ADAPTER",
+            "PAYLOAD_PATH_FILTER_BROWSER_ADAPTER",
+            "SAVED_EVENT_FEED_FILTERS_BROWSER_ADAPTER",
+            "SAVED_SESSION_LIVE_FEED_BROWSER_ADAPTER",
+            "SINGLE_LIVE_EVENT_FEED_BROWSER_ADAPTER",
+          ],
+        },
+        status:"passed",
+        durationMs:100,
+        output:"",
+      },
+      "browser-observation:flow-batch":{
+        ...examplesTask,
+        identity:{
+          ...examplesTask.identity,
+          key:"browser-observation:flow-batch",
+          logicalTargetIds:[
+            "FLOW_GRAPH_EXAMPLES_TARGET",
+            "FLOW_GRAPH_LEGACY_TARGET",
+            "FLOW_WORKSPACE_AUTHORING_TARGET",
+            "FLOW_WORKSPACE_CONTROLS_TARGET",
+          ],
+        },
+      },
+    };
     const environment = { ...receipt.environment, buildIdentity:receipt.artifact.buildIdentity };
     return { receipt, digest:`b${String(index).padStart(63, "0")}`,
       executionLoad:"loaded", environment, environmentClassId:canonicalEnvironmentClassId(environment) };
   }),
 ];
+const characterizationOptions = {
+  implementationCommit:"f".repeat(40),
+  focusedReceiptDigests:characterizationEntries.slice(0, 5).map(({ digest }) => digest),
+  loadedReceiptDigests:characterizationEntries.slice(5).map(({ digest }) => digest),
+};
 const characterization = flowExamplesCharacterization(
-  { receipts:characterizationEntries }, reportBaseline, {
-    implementationCommit:"f".repeat(40),
-    focusedReceiptDigests:characterizationEntries.slice(0, 5).map(({ digest }) => digest),
-    loadedReceiptDigests:characterizationEntries.slice(5).map(({ digest }) => digest),
-  },
+  { receipts:characterizationEntries }, reportBaseline, characterizationOptions,
 );
 assert.equal(characterization.completion.status, "complete");
 assert.equal(characterization.classes.focusedNormal.sampleCount, 5);
@@ -1849,6 +1900,27 @@ assert.equal(characterization.classes.normallyLoaded.sampleCount, 5);
 assert.equal(characterization.classes.focusedNormal.target.p90Ms, 10734);
 assert.equal(characterization.diagnosis.dominantPhase, "target setup");
 assert.equal(characterization.evidenceConservation.examplesAssertionLeaves.runtime021, 11);
+for (const [description, mutate] of [
+  ["focused receipt selects an extra pack", (entries) => {
+    entries[0].receipt.plan.selectedPackIds.push("capture");
+  }],
+  ["loaded receipt omits the capture batch", (entries) => {
+    delete entries[5].receipt.tasks["browser-observation:capture-batch"];
+  }],
+  ["loaded receipt omits a non-browser lane pack", (entries) => {
+    entries[5].receipt.plan.selectedPackIds = entries[5].receipt.plan.selectedPackIds
+      .filter((packId) => packId !== "project_management");
+  }],
+  ["loaded Flow batch omits a required target", (entries) => {
+    entries[5].receipt.tasks["browser-observation:flow-batch"].identity.logicalTargetIds.pop();
+  }],
+]) {
+  const mutatedEntries = structuredClone(characterizationEntries);
+  mutate(mutatedEntries);
+  assert.throws(() => flowExamplesCharacterization(
+    { receipts:mutatedEntries }, reportBaseline, characterizationOptions,
+  ), /wrong plan context/u, description);
+}
 const committedFlowCharacterization = JSON.parse(await readFile(
   new URL("../verification/flow-examples-characterization.json", import.meta.url), "utf8",
 ));
