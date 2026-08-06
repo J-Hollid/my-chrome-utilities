@@ -32,6 +32,14 @@ active-scope lineage rules. A future implementation may refine the proposed
 mechanism, but it must satisfy the outcomes and conservation constraints recorded
 here.
 
+## Delivery progress
+
+- VTD-001 completed the normal coder, refactorer, and architect chain and merged at
+  `45731650a2a5044da04dd7f0d3b94b6dde34b36f`.
+- VTD-002 is the active user-approved bounded slice; its implementation authority is
+  the corresponding specifier commit and coder handoff.
+- VTD-003 through VTD-013 remain queued and inactive.
+
 ## Executive assessment
 
 The repository's main development bottleneck is not the raw number of tests. It is

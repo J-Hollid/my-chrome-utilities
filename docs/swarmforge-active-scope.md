@@ -1751,6 +1751,80 @@ must fail at its corrected estimate.
 | Receipt and timing inputs | Raw receipts remain immutable. Existing accepted/rejected classification and logical-target eligibility are conserved; only projection arithmetic and its source label change. |
 | Property, browser, and checkpoint evidence | No leaf moves or is removed. Exact-pack and terminal plans continue to execute every applicable leaf exactly once. |
 
-VTD-001 is complete only after the normal coder, refactorer, and architect chain accepts
-the implementation and the bounded estimator reproduces the accepted comparison table.
-VTD-002 remains inactive until that completion is merged.
+VTD-001 completed the normal coder, refactorer, and architect chain and was merged at
+`45731650a2a5044da04dd7f0d3b94b6dde34b36f`. Its terminal `hotkeys,shell`
+checkpoint is recorded against specification base
+`8c8d1a9ea79ecffcaea1373da871dcb19fce8dd4`.
+
+## Verification throughput program — active slice VTD-002 (2026-08-06)
+
+The user approved VTD-002 as the only active slice. The specifier may commit and send its
+bounded coder handoff. VTD-003 and every later backlog item remain inactive until the
+normal completion chain merges VTD-002.
+
+The refreshed four-source audit at `45731650` found 193 parseable receipts: 42 eligible
+and 151 rejected, comprising 110 incomplete-task receipts, 32 runtime mismatches, and 9
+old receipt versions. Eligible receipts contain 20,583 passed task results across 9
+artifact build identities. Existing receipt environment metadata records Node,
+TypeScript, platform, worker concurrency, and observation concurrency, but it does not
+record normal versus loaded execution. The current reporter still pools eligible samples
+across build identities and observation concurrency.
+
+`FLOW_GRAPH_EXAMPLES_TARGET` still has three eligible samples, median 10.755 seconds and
+p90 24.322 seconds. A 10.734-second sample and the 24.322-second outlier share runtime,
+platform, artifact identity, worker concurrency 4, and observation concurrency 2; the
+historical raw receipts do not encode their different machine-load conditions. A
+canonical source declaration may therefore bind missing legacy load classification to a
+raw receipt digest, while every newly recorded receipt must declare its execution load.
+Classification must never be inferred from a receipt's duration, and neither mechanism
+may modify historical receipt bytes.
+
+The canonical timing ledger must be reproducible from every explicitly supplied local or
+CI receipt source. Source order cannot change the result. Identical raw receipt copies are
+deduplicated by stable content identity and count as one independent sample, while the
+ledger retains their source locations and digest. Parseable rejected receipts remain in
+accepted/rejected totals and reason counts but never contribute timing samples. Malformed
+or incomplete evidence remains visible to maintenance reporting without becoming timing
+evidence.
+
+Every timing statistic is scoped to an explicit environment class containing runtime,
+platform, normal or loaded execution, worker concurrency, observation concurrency, and
+artifact build identity. The default report cannot combine classes. An explicit
+cross-class comparison may provide a combined comparison only when it also preserves and
+labels each constituent class percentile. Machine-readable and human output must expose
+the declared receipt sources, selected environment class, accepted and rejected counts,
+rejection reasons, independent sample count, and maturity.
+
+The minimum independent sample count is configurable and defaults to five. A task, pack,
+or browser target with fewer samples in its exact environment class remains provisional;
+five samples at the default or the configured minimum make it non-provisional. Duplicate
+copies, rejected receipts, and samples from another class cannot satisfy the threshold.
+
+Ordinary reporting performs no receipt maintenance. A preview lists rejected and
+incomplete archive candidates with source, digest, and reason but changes nothing. Only
+an explicit archive action may move those candidates, and it must write a recovery
+manifest containing original path, archive path, and digest. Accepted receipt bytes are
+never changed or archived by this operation, and no report path silently deletes raw
+evidence.
+
+Implementation is limited to canonical receipt discovery or indexing, additive execution
+load metadata, environment-class partitioning, truthful reporting, safe archival, and
+their focused process and property contracts. It must preserve VTD-001 scheduling and
+timing-source semantics, artifact/toolchain eligibility, raw receipt immutability, pack
+selection, task order, browser batching, existing performance limits, and every existing
+verification leaf.
+
+### VTD-002 evidence conservation
+
+| Evidence class | Conserved before/after mapping |
+|---|---|
+| Unit/process contract | Existing receipt-version, runtime, artifact-identity, incomplete-task, target-result, critical-path, budget, and report-row assertions remain unchanged; cross-source ordering, deduplication, class partitioning, maturity, output-scope, and archive-safety fixtures are additive. |
+| Acceptance | `features/modular-verification-packs.feature` scenarios 001–023 retain their identities and steps; scenarios 024–029 add the VTD-002 contract under `acceptance/src/acceptance/steps/modular_architecture.clj`. |
+| Planner and registry | Every pack, dependency, task, feature, handler, browser observation, batch, and assertion leaf retains its identity and plan multiplicity. No selection or runner-scheduling change is authorized. |
+| Raw receipts and artifacts | Existing receipt files and artifact identities remain byte-for-byte unchanged. A canonical index or archive manifest stores source and classification metadata separately and binds it to the raw digest. |
+| Property, browser, acceptance, and checkpoint evidence | Source-order determinism, deduplication, and class isolation gain additive properties. No browser-runtime leaf moves or is removed; exact `shell` verification remains the task checkpoint. |
+
+VTD-002 is complete only after the canonical ledger reproduces the refreshed source totals,
+keeps loaded and normal Flow examples timing distinct, and the normal coder, refactorer,
+and architect chain accepts the implementation. VTD-003 remains inactive until that
+completion is merged.

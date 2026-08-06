@@ -262,3 +262,69 @@ Feature: Modular verification packs
       | report_row                            | corrected_estimate | budget      | budget_result |
       | one 200-second observation task       | 200 seconds        | 150 seconds | fail          |
       | representative Flow workspace change | 26.2 seconds       | 35 seconds  | pass          |
+
+  # Modular verification packs 024
+  Scenario: Modular verification packs 024
+    Given explicitly supplied root and worktree receipt sources contain unique receipts alpha and beta plus a copied alpha receipt
+    When the canonical timing ledger is built with those sources in either order
+    Then its accepted receipt identities are alpha and beta in deterministic order
+    And the copied alpha receipt contributes one independent sample
+    And the ledger scope identifies every supplied source and raw receipt digest
+
+  # Modular verification packs 025
+  Scenario: Modular verification packs 025
+    Given accepted timing samples declare runtime, platform, execution load, worker concurrency, observation concurrency, and artifact build identity
+    When timing environment classes are formed
+    Then every distinct environment tuple has separate task, pack, and browser-target statistics
+    And the default report includes percentiles only from the requested environment class
+    And an explicit cross-class comparison preserves each class percentile and labels any combined comparison
+
+  # Modular verification packs 026
+  Scenario Outline: Modular verification packs 026
+    Given a canonical ledger contains one accepted receipt and <rejected_receipt>
+    When receipt eligibility is reported
+    Then accepted receipt count is 1 and rejected receipt count is 1
+    And the rejection reason is <rejection_reason>
+    And the rejected receipt contributes no timing sample
+
+    Examples:
+      | rejected_receipt                       | rejection_reason        |
+      | a runtime-mismatched receipt           | runtime mismatch        |
+      | an incomplete-task receipt             | incomplete task result  |
+      | an old-version receipt                 | receipt version         |
+      | an artifact-identity-mismatched receipt | artifact build identity |
+
+  # Modular verification packs 027
+  Scenario Outline: Modular verification packs 027
+    Given a timing identity has <independent_samples> independent samples
+    And minimum independent sample count is <minimum_samples>
+    When sample-count eligibility is evaluated
+    Then its timing status is <timing_status>
+
+    Examples:
+      | independent_samples | minimum_samples | timing_status   |
+      | 3                   | default 5       | provisional     |
+      | 5                   | default 5       | non-provisional |
+      | 3                   | configured 3    | non-provisional |
+
+  # Modular verification packs 028
+  Scenario: Modular verification packs 028
+    Given the canonical index classifies FLOW_GRAPH_EXAMPLES_TARGET measurements of 10.734 seconds as normal and 24.322 seconds as loaded without changing either raw receipt
+    When timing statistics are reported for that target
+    Then normal p90 is 10.734 seconds and loaded p90 is 24.322 seconds
+    And the default target percentile does not merge normal and loaded samples
+    And machine-readable and human output identify receipt scope, environment class, sample count, and timing maturity
+
+  # Modular verification packs 029
+  Scenario Outline: Modular verification packs 029
+    Given local timing evidence contains accepted receipts, rejected receipts, and incomplete receipts
+    When receipt maintenance runs as <maintenance_action>
+    Then source evidence is <source_evidence_result>
+    And maintenance output is <maintenance_output>
+    And accepted receipt bytes remain unchanged
+
+    Examples:
+      | maintenance_action | source_evidence_result                         | maintenance_output                                      |
+      | report only        | unchanged                                      | no archive operation                                    |
+      | archive preview    | unchanged                                      | candidates with source, digest, and rejection reason    |
+      | explicit archive   | rejected and incomplete receipts recoverable  | manifest with original path, archive path, and digest   |
