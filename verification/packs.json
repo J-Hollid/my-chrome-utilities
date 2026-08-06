@@ -1458,6 +1458,7 @@
       "test/data-layer-flow-relationship-deletion-test.mjs",
       "test/data-layer-flow-page-instance-test.mjs",
       "test/data-layer-flow-graph-persistence-test.mjs",
+      "test/flow-examples-timing-test.mjs",
       "test/data-layer-flow-page-context-model-test.mjs",
       "test/data-layer-flow-event-insertion-semantics-test.mjs",
       "test/data-layer-flow-page-event-model-test.mjs",
@@ -1968,6 +1969,10 @@
       },
       {
         "path": "test/support/flow-graph-corrective-workflow.mjs",
+        "consumers": ["flow_graph"]
+      },
+      {
+        "path": "test/support/flow-examples-timing.mjs",
         "consumers": ["flow_graph"]
       },
       {

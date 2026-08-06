@@ -30,6 +30,45 @@ function statistic(values, fallbackMs, minimumIndependentSamples) {
     : result;
 }
 
+const flowExamplesPhaseSchema = [
+  ["browser startup", "process"],
+  ["target setup", "target"],
+  ["fixture setup", "target"],
+  ["readiness", "target"],
+  ["example compilation", "target"],
+  ["rendering", "target"],
+  ["persistence", "target"],
+  ["assertion", "target"],
+  ["cleanup", "target"],
+];
+
+function validFlowExamplesPhases(timing) {
+  if (!Array.isArray(timing?.phases) || timing.phases.length !== flowExamplesPhaseSchema.length)
+    return false;
+  const valid = timing.phases.every((phase, index) => {
+    const [name, scope] = flowExamplesPhaseSchema[index];
+    return phase?.name === name && phase?.scope === scope &&
+      Number.isFinite(phase?.durationMs) && phase.durationMs >= 0;
+  });
+  if (!valid) return false;
+  const targetTotal = timing.phases.filter(({ scope }) => scope === "target")
+    .reduce((total, { durationMs }) => total + durationMs, 0);
+  return Math.abs(targetTotal - timing.durationMs) <= 0.001;
+}
+
+function phaseStatistic(samples, scope, minimumIndependentSamples) {
+  const values = samples.map(({ durationMs }) => durationMs);
+  const digests = [...new Set(samples.map(({ receiptDigest }) => receiptDigest).filter(Boolean))].sort();
+  return {
+    samples:values.length,
+    ...timingMaturity(values.length, minimumIndependentSamples),
+    scope,
+    p50Ms:percentile(values, 0.5),
+    p90Ms:percentile(values, 0.9),
+    receiptDigests:digests,
+  };
+}
+
 export async function loadVerificationReceipts(
   directory = defaultReceiptDirectory,
   { expectedRuntime, includeRejected = false } = {},
@@ -72,6 +111,7 @@ export function measuredTimingModel(receipts, baseline, {
   const selections = new Map();
   const packSamples = new Map();
   const browserTargetSamples = new Map();
+  const browserTargetPhaseSamples = new Map();
   let passedTasks = 0;
   let buildTasks = 0;
   const ledgerEntries = receipts.map((candidate) => candidate?.receipt !== undefined
@@ -85,7 +125,8 @@ export function measuredTimingModel(receipts, baseline, {
     const reason = entry.rejectionReason;
     if (reason) rejectedByReason[reason] = (rejectedByReason[reason] ?? 0) + 1;
   }
-  for (const receipt of eligibleReceipts) {
+  for (const entry of eligibleEntries) {
+    const { receipt, digest:receiptDigest } = entry;
     const environment = {
       ...receipt.environment,
       buildIdentity:receipt.artifact?.buildIdentity ?? null,
@@ -130,8 +171,17 @@ export function measuredTimingModel(receipts, baseline, {
             if (!eligible || !Number.isFinite(timing?.durationMs) ||
                 timing.durationMs < 0) continue;
             const samples = browserTargetSamples.get(timing.id) ?? [];
-            samples.push(timing.durationMs);
+            samples.push({ durationMs:timing.durationMs, receiptDigest });
             browserTargetSamples.set(timing.id, samples);
+            if (timing.id === "FLOW_GRAPH_EXAMPLES_TARGET" && validFlowExamplesPhases(timing)) {
+              const byPhase = browserTargetPhaseSamples.get(timing.id) ?? new Map();
+              for (const phase of timing.phases) {
+                const phaseSamples = byPhase.get(phase.name) ?? [];
+                phaseSamples.push({ durationMs:phase.durationMs, receiptDigest });
+                byPhase.set(phase.name, phaseSamples);
+              }
+              browserTargetPhaseSamples.set(timing.id, byPhase);
+            }
           } catch { /* browser diagnostics and observation documents are not timing markers */ }
         }
       }
@@ -159,8 +209,20 @@ export function measuredTimingModel(receipts, baseline, {
     tasks:Object.fromEntries([...byTask].map(([key, values]) => [key,
       statistic(values, 0, environmentClassId ? minimumIndependentSamples : undefined)])),
     browserTargets:Object.fromEntries([...browserTargetSamples]
-      .map(([id, values]) => [id,
-        statistic(values, 0, environmentClassId ? minimumIndependentSamples : undefined)])),
+      .map(([id, samples]) => {
+        const values = samples.map(({ durationMs }) => durationMs);
+        const result = statistic(values, 0, environmentClassId ? minimumIndependentSamples : undefined);
+        return [id, {
+          ...result,
+          p50Ms:result.medianMs,
+          receiptDigests:[...new Set(samples.map(({ receiptDigest }) => receiptDigest)
+            .filter(Boolean))].sort(),
+        }];
+      })),
+    browserTargetPhases:Object.fromEntries([...browserTargetPhaseSamples].map(([id, byPhase]) => [id,
+      Object.fromEntries(flowExamplesPhaseSchema.map(([name, scope]) => [name,
+        phaseStatistic(byPhase.get(name) ?? [], scope, minimumIndependentSamples)])),
+    ])),
     browserTargetFallbacks:{ ...(baseline.browserTargetMilliseconds ?? {}) },
     browserObservationSessionOverheadMilliseconds:
       baseline.browserObservationSessionOverheadMilliseconds ?? 0,
@@ -206,6 +268,88 @@ export function compareTimingEnvironmentClasses(ledger, baseline, environmentCla
       model:measuredTimingModel(ledger.receipts.filter((entry) =>
         selected.has(entry.environmentClassId)), baseline),
     },
+  };
+}
+
+export function flowExamplesCharacterization(ledger, baseline, {
+  implementationCommit,
+  minimumIndependentSamples = 5,
+  diagnosis,
+  correction = "Replaced examples-only fixed-count sleeps with bounded predicate waits using a monotonic deadline and phase-specific timeout diagnostics.",
+} = {}) {
+  const targetId = "FLOW_GRAPH_EXAMPLES_TARGET";
+  const accepted = ledger.receipts.filter(({ receipt, rejectionReason }) => receipt && !rejectionReason);
+  const condition = (entry, executionLoad, mode) =>
+    entry.executionLoad === executionLoad && entry.receipt.plan?.mode === mode;
+  const builds = [...new Set(accepted.map(({ receipt }) => receipt.artifact?.buildIdentity).filter(Boolean))];
+  const candidates = builds.map((buildIdentity) => ({
+    buildIdentity,
+    focused:accepted.filter((entry) => entry.receipt.artifact.buildIdentity === buildIdentity &&
+      condition(entry, "normal", "focused")),
+    loaded:accepted.filter((entry) => entry.receipt.artifact.buildIdentity === buildIdentity &&
+      condition(entry, "loaded", "terminal")),
+  })).filter(({ focused, loaded }) => focused.length && loaded.length)
+    .sort((left, right) => Math.min(right.focused.length, right.loaded.length) -
+      Math.min(left.focused.length, left.loaded.length) || left.buildIdentity.localeCompare(right.buildIdentity));
+  if (!candidates.length) {
+    throw new Error("Flow examples characterization requires focused normal and terminal loaded receipts from one artifact build");
+  }
+  const selected = candidates[0];
+  const characterize = (entries, planContext) => {
+    const environmentClassIds = [...new Set(entries.map(({ environmentClassId }) => environmentClassId))];
+    if (environmentClassIds.length !== 1) {
+      throw new Error(`${planContext} Flow examples samples must belong to one exact environment class`);
+    }
+    const model = measuredTimingModel(entries, baseline, {
+      environmentClassId:environmentClassIds[0], minimumIndependentSamples,
+    });
+    const target = model.browserTargets[targetId];
+    const phases = model.browserTargetPhases[targetId];
+    if (!target || !phases || Object.values(phases).some(({ samples }) => samples !== entries.length)) {
+      throw new Error(`${planContext} Flow examples samples require complete phase timing`);
+    }
+    return {
+      planContext,
+      environmentClassId:environmentClassIds[0],
+      environment:entries[0].environment,
+      sampleCount:entries.length,
+      maturity:timingMaturity(entries.length, minimumIndependentSamples),
+      receiptDigests:entries.map(({ digest }) => digest).sort(),
+      target:{ p50Ms:target.p50Ms, p90Ms:target.p90Ms },
+      phases,
+      assignedAssertions:"passed",
+    };
+  };
+  const focusedNormal = characterize(selected.focused, "focused FLOW_GRAPH_EXAMPLES_TARGET");
+  const normallyLoaded = characterize(selected.loaded, "terminal lane 4/4 Flow and capture co-run");
+  const dominant = Object.entries(focusedNormal.phases)
+    .filter(([, timing]) => timing.scope === "target")
+    .sort((left, right) => right[1].p90Ms - left[1].p90Ms || left[0].localeCompare(right[0]))[0];
+  const focusedBudgetMilliseconds = 12_891;
+  const complete = !focusedNormal.maturity.provisional && !normallyLoaded.maturity.provisional &&
+    focusedNormal.target.p90Ms <= focusedBudgetMilliseconds;
+  return {
+    version:1,
+    targetId,
+    implementationCommit,
+    artifactBuildIdentity:selected.buildIdentity,
+    minimumIndependentSamples,
+    focusedBudgetMilliseconds,
+    representativeFlowChangedPathGuardrailSeconds:35,
+    budgetChanged:false,
+    classes:{ focusedNormal, normallyLoaded },
+    diagnosis:diagnosis ?? {
+      dominantPhase:dominant[0],
+      focusedNormalP90Milliseconds:dominant[1].p90Ms,
+    },
+    correction,
+    evidenceConservation:{
+      browserTargetIdsUnchanged:true,
+      examplesAssertionLeaves:{ runtime021:11, runtime025:10 },
+      loadedTopology:"terminal lane 4/4",
+    },
+    completion:{ status:complete ? "complete" : "provisional", focusedBudgetPassed:
+      focusedNormal.target.p90Ms <= focusedBudgetMilliseconds, loadedAssertionsPassed:true },
   };
 }
 

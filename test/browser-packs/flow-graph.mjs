@@ -9,6 +9,7 @@ import { FLOW_RUNTIME_KEYS, flowInterruptionReport } from "../support/flow-evide
 import { wait } from "./shared-harness.mjs";
 import { flowGraphCorrectiveWorkflow, flowGraphEventExampleIncompleteEvidence, flowGraphEventExampleSeed, flowGraphEventExampleStateEvidence, flowGraphLegacyContextEvidence, flowGraphLegacyContextSeed, flowGraphPageExampleIncompleteEvidence, flowGraphPageExampleSeed, flowGraphPageExampleStateEvidence, flowGraphRelationshipKindEvidence, flowGraphRelationshipKindSeed, flowGraphReloadEvidence, flowGraphRepeatedInstanceEvidence, flowGraphRepeatedInstanceSeed } from "../support/flow-graph-corrective-workflow.mjs";
 import { flowR02GeometryEvidence, flowR02ItemActivationResult, flowR02PanProbe, flowR02PanResult, flowR02PreparePanGraph, flowR02RestorePanGraph, flowR02ViewStorageKey } from "../support/flow-r02-correction-evidence.mjs";
+import { boundedFlowExamplesReadiness, createFlowExamplesPhaseTimer } from "../support/flow-examples-timing.mjs";
 class DevtoolsSocket {
     constructor(url) { this.url = new URL(url); this.nextId = 1; this.pending = new Map(); this.handlers = new Map(); this.buffer = Buffer.alloc(0); }
     async connect() { await new Promise((resolve, reject) => { this.socket = net.createConnection({ host: this.url.hostname, port: Number(this.url.port) }); this.socket.once("error", reject); this.socket.once("connect", () => { const key = Buffer.from(String(Math.random())).toString("base64"); this.socket.write([`GET ${this.url.pathname}${this.url.search} HTTP/1.1`, `Host: ${this.url.host}`, "Upgrade: websocket", "Connection: Upgrade", `Sec-WebSocket-Key: ${key}`, "Sec-WebSocket-Version: 13", "\r\n"].join("\r\n")); }); let handshake = ""; const receive = (chunk) => { handshake += chunk.toString("binary"); const end = handshake.indexOf("\r\n\r\n"); if (end < 0)
@@ -84,6 +85,7 @@ const selectedTargets = selectedTargetIds.length
     : [{ id: "FLOW_GRAPH_FALLBACK_TARGET", shard: process.env.FLOW_GRAPH_BROWSER_SHARD ?? "core" }];
 for (const { id, shard } of selectedTargets)
     assert.equal(typeof shard, "string", `Unknown Flow browser target ${id}`);
+const processStarted = performance.now();
 const profile = await mkdtemp(path.join(os.tmpdir(), "flow-instance-runtime-")), extensionRoot = path.resolve("dist"), args = headlessChromeArguments(profile, extensionRoot);
 args.splice(-1, 0, `--load-extension=${extensionRoot}`);
 const chrome = spawn(resolveChromeExecutable(), args, { stdio: ["ignore", "ignore", "pipe"] });
@@ -106,8 +108,11 @@ try {
     }
     const origin = `chrome-extension://${extension}`;
     const pageUrl = `${origin}/specification-builder.html`;
+    const browserStartupMs = performance.now() - processStarted;
     for (const { id: targetId, shard: browserShard } of selectedTargets) {
     const targetStarted = performance.now();
+    const phaseTimer = browserShard === "examples"
+        ? createFlowExamplesPhaseTimer({ browserStartupMs }) : undefined;
     activePhase = `${targetId}:startup`;
     const target = await fetch(`http://127.0.0.1:${port}/json/new?${encodeURIComponent(pageUrl)}`, { method: "PUT" }).then((response) => response.json());
     if (!target)
@@ -127,12 +132,20 @@ try {
     } const { key } = JSON.parse(payload), code = key === " " ? "Space" : key, virtualKeyCode = key === "Enter" ? 13 : key === "Escape" ? 27 : key.charCodeAt(0); await socket.call("Input.dispatchKeyEvent", { type: "keyDown", key, code, windowsVirtualKeyCode: virtualKeyCode, nativeVirtualKeyCode: virtualKeyCode }); await socket.call("Input.dispatchKeyEvent", { type: "keyUp", key, code, windowsVirtualKeyCode: virtualKeyCode, nativeVirtualKeyCode: virtualKeyCode }); });
     const evaluate = async (expression) => { const result = await socket.call("Runtime.evaluate", { expression, returnByValue: true, awaitPromise: true, userGesture: true }); if (result.exceptionDetails)
         throw new Error(result.exceptionDetails.exception?.description ?? result.exceptionDetails.text); return result.result.value; };
-    for (let attempt = 0; attempt < 200; attempt += 1) {
-        if (await evaluate("document.readyState==='complete'&&Boolean(document.querySelector('#create-project-form'))"))
-            break;
-        await wait(25);
-    }
+    const waitForExamples = async (phase, predicate, selector) => boundedFlowExamplesReadiness({
+        targetId, phase, predicate, timeoutMs: 5000,
+        observe: async () => evaluate(`(()=>{const node=document.querySelector(${JSON.stringify(selector)});return{ready:document.readyState==='complete'&&Boolean(node),readyState:document.readyState,selector:${JSON.stringify(selector)},present:Boolean(node),text:String(node?.textContent??'').slice(0,120)}})()`),
+    });
+    if (browserShard === "examples")
+        await waitForExamples("target setup", "create-project form mounted", "#create-project-form");
+    else
+        for (let attempt = 0; attempt < 200; attempt += 1) {
+            if (await evaluate("document.readyState==='complete'&&Boolean(document.querySelector('#create-project-form'))"))
+                break;
+            await wait(25);
+        }
     activePhase = "seed";
+    phaseTimer?.transition("fixture setup");
     const seeded = await evaluate(`(async()=>{const {createSpecificationProject,addProjectEntity}=await import('./data-layer-specification-project.js'),{createFlowSection,addFlowPageFrameToSection}=await import('./data-layer-property-set-flow-section.js'),{addGraphOccurrence,saveGraphRelationship}=await import('./data-layer-flow-graph.js'),{openIndexedDbProjectRepository}=await import('./data-layer-durable-project-repository.js');let n=0,id=(kind)=>kind+':runtime:'+ ++n,state=createSpecificationProject({name:'Flow runtime',site:'runtime.example',id});const add=(kind,entity)=>{state=addProjectEntity(state,kind,entity,id);return state.project.collections[kind].at(-1);},propertySet=add('propertySets',{name:'Checkout',schemaConstraints:[{path:'/currency',type:'string',examples:['EUR']}]}),application=(name)=>({id:id('application'),name:'Checkout',propertySetId:propertySet.id}),confirmation=add('pages',{name:'Confirmation',propertySetApplications:[application()]}),payment=add('pages',{name:'Payment',propertySetApplications:[application()]}),receipt=add('pages',{name:'Receipt',propertySetApplications:[application()]}),purchase=add('events',{name:'Purchase',eventName:'purchase',schemaConstraints:[{path:'/event',type:'string',examples:['purchase']}]}),review=add('events',{name:'Review',eventName:'review'}),flow=add('flows',{name:'Checkout journey',steps:[]}),otherFlow=add('flows',{name:'Returns journey',steps:[]});state=addFlowPageFrameToSection(state,otherFlow.id,receipt.id,undefined,id);state=createFlowSection(state,flow.id,{name:'Checkout',bounds:{x:20,y:20,width:760,height:300}},id);state=createFlowSection(state,flow.id,{name:'Completion',bounds:{x:20,y:360,width:760,height:260}},id);let graph=state.project.documentationFlowGraphs[flow.id],sections=graph.sections;for(const [page,sectionId]of[[confirmation,sections[0].id],[payment,sections[0].id],[receipt,sections[1].id],[confirmation,undefined]])state=addFlowPageFrameToSection(state,flow.id,page.id,sectionId,id);graph=state.project.documentationFlowGraphs[flow.id];const frames=graph.pageFrames;state=addGraphOccurrence(state,flow.id,{name:'Purchase',pageFrameId:frames[0].id,pageId:confirmation.id,eventId:purchase.id,obligation:'Required',minimum:1,maximum:1,x:24,y:70},id);state=addGraphOccurrence(state,flow.id,{name:'Review',pageFrameId:frames[1].id,pageId:payment.id,eventId:review.id,obligation:'Required',minimum:1,maximum:1,x:24,y:70},id);state=saveGraphRelationship(state,flow.id,frames[0].id,{toStepId:frames[1].id,sourcePort:'right',targetPort:'left',label:'Checkout route'},id);state=saveGraphRelationship(state,flow.id,frames[0].id,{toStepId:frames[2].id,sourcePort:'top',targetPort:'bottom'},id);graph=state.project.documentationFlowGraphs[flow.id];const repository=await openIndexedDbProjectRepository();await repository.putProject(state,{active:true,navigation:{kind:'flows',id:flow.id}});return{projectId:state.project.id,flowId:flow.id,otherFlowId:otherFlow.id,pageIds:[confirmation.id,payment.id,receipt.id],frameIds:graph.pageFrames.map(({id})=>id),occurrenceIds:graph.occurrences.map(({id})=>id),relationshipIds:graph.relationships.map(({id})=>id),sectionIds:graph.sections.map(({id})=>id)};})()`);
     const runtime = {};
     if (browserShard === "core") {
@@ -302,54 +315,42 @@ try {
         runtime.runtime022 = await evaluate(flowGraphRelationshipKindEvidence(seeded, legacyKinds));
     }
     if (browserShard === "examples") {
+        const reloadForExample = async (predicate) => {
+            phaseTimer.transition("rendering");
+            await socket.call("Page.reload", { ignoreCache: true });
+            phaseTimer.transition("readiness");
+            await waitForExamples("readiness", predicate, "#project-tree");
+        };
+        phaseTimer.transition("persistence");
         const eventExample = await evaluate(flowGraphEventExampleSeed(seeded, "incomplete"));
-        await socket.call("Page.reload", { ignoreCache: true });
-        for (let attempt = 0; attempt < 200; attempt += 1) {
-            if (await evaluate("document.readyState==='complete'&&Boolean(document.querySelector('#project-tree'))"))
-                break;
-            await wait(25);
-        }
+        await reloadForExample("incomplete Event example rendered");
+        phaseTimer.transition("example compilation");
         const eventExampleEvidence = await evaluate(flowGraphEventExampleIncompleteEvidence(seeded, eventExample));
+        phaseTimer.transition("persistence");
         await evaluate(flowGraphEventExampleSeed(seeded, "invalid"));
-        await socket.call("Page.reload", { ignoreCache: true });
-        for (let attempt = 0; attempt < 200; attempt += 1) {
-            if (await evaluate("document.readyState==='complete'&&Boolean(document.querySelector('#project-tree'))"))
-                break;
-            await wait(25);
-        }
+        await reloadForExample("invalid Event example rendered");
+        phaseTimer.transition("example compilation");
         const invalidEventExample = await evaluate(flowGraphEventExampleStateEvidence(seeded, eventExample, "Invalid", "/quantity", "TYPE"));
+        phaseTimer.transition("persistence");
         await evaluate(flowGraphEventExampleSeed(seeded, "blocked"));
-        await socket.call("Page.reload", { ignoreCache: true });
-        for (let attempt = 0; attempt < 200; attempt += 1) {
-            if (await evaluate("document.readyState==='complete'&&Boolean(document.querySelector('#project-tree'))"))
-                break;
-            await wait(25);
-        }
+        await reloadForExample("blocked Event example rendered");
+        phaseTimer.transition("example compilation");
         const blockedEventExample = await evaluate(flowGraphEventExampleStateEvidence(seeded, eventExample, "Blocked", "/runtime_conflict", "CONFLICT"));
         runtime.runtime021 = { ...eventExampleEvidence, invalid: invalidEventExample, blocked: blockedEventExample };
+        phaseTimer.transition("persistence");
         const pageExample = await evaluate(flowGraphPageExampleSeed(seeded, "incomplete"));
-        await socket.call("Page.reload", { ignoreCache: true });
-        for (let attempt = 0; attempt < 200; attempt += 1) {
-            if (await evaluate("document.readyState==='complete'&&Boolean(document.querySelector('#project-tree'))"))
-                break;
-            await wait(25);
-        }
+        await reloadForExample("incomplete Page example rendered");
+        phaseTimer.transition("example compilation");
         const pageExampleEvidence = await evaluate(flowGraphPageExampleIncompleteEvidence(seeded, pageExample));
+        phaseTimer.transition("persistence");
         await evaluate(flowGraphPageExampleSeed(seeded, "invalid"));
-        await socket.call("Page.reload", { ignoreCache: true });
-        for (let attempt = 0; attempt < 200; attempt += 1) {
-            if (await evaluate("document.readyState==='complete'&&Boolean(document.querySelector('#project-tree'))"))
-                break;
-            await wait(25);
-        }
+        await reloadForExample("invalid Page example rendered");
+        phaseTimer.transition("example compilation");
         const invalidPageExample = await evaluate(flowGraphPageExampleStateEvidence(pageExample, "Invalid", "/typed_page", "TYPE"));
+        phaseTimer.transition("persistence");
         await evaluate(flowGraphPageExampleSeed(seeded, "blocked"));
-        await socket.call("Page.reload", { ignoreCache: true });
-        for (let attempt = 0; attempt < 200; attempt += 1) {
-            if (await evaluate("document.readyState==='complete'&&Boolean(document.querySelector('#project-tree'))"))
-                break;
-            await wait(25);
-        }
+        await reloadForExample("blocked Page example rendered");
+        phaseTimer.transition("example compilation");
         const blockedPageExample = await evaluate(flowGraphPageExampleStateEvidence(pageExample, "Blocked", "/page_runtime_conflict", "CONFLICT"));
         runtime.runtime025 = { ...pageExampleEvidence, invalid: invalidPageExample, blocked: blockedPageExample };
     }
@@ -381,6 +382,7 @@ try {
         }
         runtime.runtime024 = { ...runtime.runtime024, ...await evaluate(flowGraphRepeatedInstanceEvidence(seeded, repeatedInstances)) };
     }
+    phaseTimer?.transition("assertion");
     const fallbackCore = browserShard === "core" && targetId === "FLOW_GRAPH_FALLBACK_TARGET", supplemental = new Set(["runtime017", "runtime021", "runtime022", "runtime025"]), missing = fallbackCore ? FLOW_RUNTIME_KEYS.filter(key => !supplemental.has(key) && !runtime[key]).map(path => ({ path, value: "unexecuted" })) : [], falseLeaves = Object.entries(runtime).flatMap(([runtimeKey, evidence]) => Object.entries(evidence).filter(([, value]) => value !== true).map(([key, value]) => ({ path: `${runtimeKey}.${key}`, value }))), shardFailures = [...missing, ...falseLeaves, ...(fallbackCore && runtime.installedBoundary !== true ? [{ path: "installedBoundary", value: runtime.installedBoundary }] : [])];
     assert.deepEqual(shardFailures, [], `Flow browser ${browserShard} evidence contains a false value`);
     const controlRuntimeKeys = new Set(["runtime001", "runtime016", "runtime018", "runtime020", "runtime027"]);
@@ -390,18 +392,21 @@ try {
             ? Object.fromEntries(Object.entries(runtime).filter(([key]) =>
                 key === "installedBoundary" || !controlRuntimeKeys.has(key)))
             : runtime;
-    const durationMs = Math.round(performance.now() - targetStarted);
-    assert.ok(durationMs <= 120000, `${targetId} exceeded its 120000ms target limit`);
-    console.log(JSON.stringify({ flowGraph }));
-    if (selectedTargetIds.length) {
-        console.log(JSON.stringify({ swarmforgeBrowserTargetResult: { id: targetId, status: "passed" } }));
-        console.log(JSON.stringify({ swarmforgeBrowserTargetTiming: { id: targetId, durationMs } }));
-    }
+    phaseTimer?.transition("cleanup");
     clearTimeout(targetDeadline);
     const completedTargetId = target.id;
     socket.close();
     socket = undefined;
     await fetch(`http://127.0.0.1:${port}/json/close/${encodeURIComponent(completedTargetId)}`);
+    const phaseTiming = phaseTimer?.finish();
+    const durationMs = phaseTiming?.durationMs ?? Math.round(performance.now() - targetStarted);
+    assert.ok(durationMs <= 120000, `${targetId} exceeded its 120000ms target limit`);
+    console.log(JSON.stringify({ flowGraph }));
+    if (selectedTargetIds.length) {
+        console.log(JSON.stringify({ swarmforgeBrowserTargetResult: { id: targetId, status: "passed" } }));
+        console.log(JSON.stringify({ swarmforgeBrowserTargetTiming: { id: targetId, durationMs,
+            ...(phaseTiming ? { phases: phaseTiming.phases } : {}) } }));
+    }
     }
     if (selectedTargetIds.length)
         console.log(JSON.stringify({ swarmforgeBrowserLaunches: 1 }));

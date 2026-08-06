@@ -27,6 +27,7 @@ import {
   compareTimingEnvironmentClasses,
   estimatePlanMilliseconds,
   estimateTaskTiming,
+  flowExamplesCharacterization,
   loadVerificationReceipts,
   measuredTimingModel,
   refreshVerificationPerformanceBudgets,
@@ -1671,6 +1672,12 @@ assert.equal(timingModel.browserTargets.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAP
   "batched receipts retain independent logical-target measurements");
 const canonicalReceiptRoot = await mkdtemp(path.join(os.tmpdir(), "canonical-timing-root-"));
 const canonicalReceiptWorktree = await mkdtemp(path.join(os.tmpdir(), "canonical-timing-worktree-"));
+const flowExamplePhases = (targetMs) => [
+  { name:"browser startup", scope:"process", durationMs:250 },
+  { name:"target setup", scope:"target", durationMs:targetMs - 700 },
+  ...["fixture setup", "readiness", "example compilation", "rendering", "persistence", "assertion", "cleanup"]
+    .map((name) => ({ name, scope:"target", durationMs:100 })),
+];
 const canonicalReceipt = ({ artifact = reportArtifact, completedAt, executionLoad, runId, targetMs }) => ({
   ...structuredClone(reportReceipt),
   runId,
@@ -1692,7 +1699,10 @@ const canonicalReceipt = ({ artifact = reportArtifact, completedAt, executionLoa
           swarmforgeBrowserTargetResult:{ id:"FLOW_GRAPH_EXAMPLES_TARGET", status:"passed" },
         }),
         JSON.stringify({
-          swarmforgeBrowserTargetTiming:{ id:"FLOW_GRAPH_EXAMPLES_TARGET", durationMs:targetMs },
+          swarmforgeBrowserTargetTiming:{
+            id:"FLOW_GRAPH_EXAMPLES_TARGET", durationMs:targetMs,
+            phases:flowExamplePhases(targetMs),
+          },
         }),
       ].join("\n"),
     },
@@ -1794,6 +1804,47 @@ const loadedTimingModel = measuredTimingModel(canonicalLedger.receipts, reportBa
 });
 assert.equal(normalTimingModel.browserTargets.FLOW_GRAPH_EXAMPLES_TARGET.p90Ms, 10734);
 assert.equal(loadedTimingModel.browserTargets.FLOW_GRAPH_EXAMPLES_TARGET.p90Ms, 24322);
+assert.equal(normalTimingModel.browserTargets.FLOW_GRAPH_EXAMPLES_TARGET.p50Ms, 10734,
+  "canonical target timing exposes an explicit p50 alongside p90");
+assert.deepEqual(normalTimingModel.browserTargets.FLOW_GRAPH_EXAMPLES_TARGET.receiptDigests,
+  [canonicalLedger.receipts.find(({ receipt }) => receipt?.runId === "alpha").digest],
+  "canonical target timing binds its raw immutable receipt digests");
+assert.equal(normalTimingModel.browserTargetPhases.FLOW_GRAPH_EXAMPLES_TARGET["target setup"].p90Ms,
+  10034);
+assert.deepEqual(normalTimingModel.browserTargetPhases.FLOW_GRAPH_EXAMPLES_TARGET["browser startup"], {
+  samples:1, independentSamples:1, minimumIndependentSamples:5, provisional:true,
+  status:"provisional", scope:"process", p50Ms:250, p90Ms:250,
+  receiptDigests:[canonicalLedger.receipts.find(({ receipt }) => receipt?.runId === "alpha").digest],
+});
+const characterizationEntries = [
+  ...Array.from({ length:5 }, (_, index) => {
+    const receipt = structuredClone(normalReceipt);
+    receipt.runId = `focused-${index}`;
+    receipt.environment.executionLoad = "normal";
+    receipt.plan.mode = "focused";
+    const environment = { ...receipt.environment, buildIdentity:receipt.artifact.buildIdentity };
+    return { receipt, digest:`a${String(index).padStart(63, "0")}`,
+      executionLoad:"normal", environment, environmentClassId:canonicalEnvironmentClassId(environment) };
+  }),
+  ...Array.from({ length:5 }, (_, index) => {
+    const receipt = structuredClone(normalReceipt);
+    receipt.runId = `loaded-${index}`;
+    receipt.environment.executionLoad = "loaded";
+    receipt.plan.mode = "terminal";
+    const environment = { ...receipt.environment, buildIdentity:receipt.artifact.buildIdentity };
+    return { receipt, digest:`b${String(index).padStart(63, "0")}`,
+      executionLoad:"loaded", environment, environmentClassId:canonicalEnvironmentClassId(environment) };
+  }),
+];
+const characterization = flowExamplesCharacterization(
+  { receipts:characterizationEntries }, reportBaseline, { implementationCommit:"f".repeat(40) },
+);
+assert.equal(characterization.completion.status, "complete");
+assert.equal(characterization.classes.focusedNormal.sampleCount, 5);
+assert.equal(characterization.classes.normallyLoaded.sampleCount, 5);
+assert.equal(characterization.classes.focusedNormal.target.p90Ms, 10734);
+assert.equal(characterization.diagnosis.dominantPhase, "target setup");
+assert.equal(characterization.evidenceConservation.examplesAssertionLeaves.runtime021, 11);
 assert.equal(normalTimingModel.browserTargets.FLOW_GRAPH_EXAMPLES_TARGET.provisional, true,
   "another environment class and a duplicate copy cannot satisfy sample maturity");
 assert.equal(normalTimingModel.packs.flow_graph.provisional, true,
