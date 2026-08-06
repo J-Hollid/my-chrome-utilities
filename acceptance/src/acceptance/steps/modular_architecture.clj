@@ -221,10 +221,12 @@
   ["browser startup" "target setup" "fixture setup" "readiness"
    "example compilation" "rendering" "persistence" "assertion" "cleanup"])
 
+(defn- verification-json [file-name]
+  (aps-json/read-json-file
+   (str (fs/path (support/repository-root) "verification" file-name))))
+
 (defn- flow-characterization []
-  (let [root (support/repository-root)]
-    (aps-json/read-json-file
-     (str (fs/path root "verification/flow-examples-characterization.json")))))
+  (verification-json "flow-examples-characterization.json"))
 
 (defn- finite-non-negative? [value]
   (and (number? value) (Double/isFinite (double value)) (not (neg? value))))
@@ -327,9 +329,7 @@
   world)
 
 (defn- performance-calibration []
-  (let [root (support/repository-root)]
-    (aps-json/read-json-file
-     (str (fs/path root "verification/performance-calibration.json")))))
+  (verification-json "performance-calibration.json"))
 
 (defn- calibration-pack [calibration pack-id]
   (first (filter #(= pack-id (:id %)) (:runnablePacks calibration))))

@@ -4,7 +4,11 @@ import os from "node:os";
 import path from "node:path";
 
 import { architectureViolations } from "../scripts/check-architecture.mjs";
-import { boundedStageMilliseconds, measuredTimingModel } from "../scripts/report-verification-throughput.mjs";
+import {
+  boundedStageMilliseconds,
+  measuredTimingModel,
+  refreshVerificationPerformanceBudgets,
+} from "../scripts/report-verification-throughput.mjs";
 import {
   artifactBuildIdentity,
   buildCanonicalTimingLedger,
@@ -116,6 +120,43 @@ for (let sample = 0; sample < 100; sample += 1) {
     Math.ceil(tasks.length / Math.min(workers, tasks.length)) * equalDuration,
     "equal indivisible tasks must fill bounded workers in complete batches",
   );
+}
+
+for (let sample = 0; sample < 100; sample += 1) {
+  const packId = `generated-${sample}`;
+  const projectedSeconds = 1 + ((sample + 11) * 7919) % 10_000;
+  const dependantFanOut = sample % 21;
+  const tolerance = 1 + (sample % 9) / 10;
+  const selectedPacks = Array.from(
+    { length:dependantFanOut + 1 },
+    (_, index) => `${packId}-selected-${index}`,
+  );
+  const calibrated = refreshVerificationPerformanceBudgets({
+    rows:[
+      { name:`${packId}:exact-full-pack`, projectedSeconds,
+        measurementCoverage:sample / 100, timingSources:{ generated:sample } },
+      { name:`${packId}:representative-change`, projectedSeconds, dependantFanOut,
+        changedPath:`src/${packId}/representative.ts`, selectedPacks,
+        measurementCoverage:sample / 100, timingSources:{ generated:sample } },
+    ],
+    browserTargetIds:[], model:{ browserTargets:{} },
+  }, { performanceBudgets:{} }, { tolerance });
+  const budgets = calibrated.performanceBudgets;
+
+  assert.equal(budgets.exactPackSeconds[packId].limit,
+    Math.ceil(projectedSeconds * tolerance),
+    "generated exact-pack budgets must apply the declared tolerance once");
+  assert.equal(budgets.changedPathSeconds[packId].limit,
+    Math.ceil(projectedSeconds * tolerance),
+    "generated representative-path budgets must apply the declared tolerance once");
+  assert.deepEqual(budgets.changedPathFanOut[packId], {
+    limit:dependantFanOut,
+    baseline:dependantFanOut,
+    percentile:"selected-dependant-count",
+    tolerance:1,
+    provisional:false,
+    selectedPacks,
+  }, "generated fan-out budgets must remain exact and preserve selected pack identities");
 }
 
 const closure = (packs, initial, direction) => {
@@ -621,4 +662,4 @@ for (let sample = 0; sample < 100; sample += 1) {
     /owned by both/);
 }
 
-console.log(`modular properties: 20 canonical timing receipts with duplicate provenance and isolated classes, ${declaredContracts.length} declared contracts, 100 bounded schedules, 100 undeclared contracts, 100 direct cross-module imports, 100 architecture boundaries, 100 verification graphs, 100 Chrome lifecycle argument sets, 300 lifecycle cases, 100 command registries, 100 navigation models, 100 utility directories, 100 isolation models, 100 controlled-reference models, 100 shell capability models, 100 storage models, and 100 panel models passed`);
+console.log(`modular properties: 20 canonical timing receipts with duplicate provenance and isolated classes, ${declaredContracts.length} declared contracts, 100 bounded schedules, 100 verification budget calibrations, 100 undeclared contracts, 100 direct cross-module imports, 100 architecture boundaries, 100 verification graphs, 100 Chrome lifecycle argument sets, 300 lifecycle cases, 100 command registries, 100 navigation models, 100 utility directories, 100 isolation models, 100 controlled-reference models, 100 shell capability models, 100 storage models, and 100 panel models passed`);
