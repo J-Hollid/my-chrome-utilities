@@ -17,6 +17,7 @@ import {
 import {
   createPendingVerificationEvidence,
   validateVerificationCandidateClean,
+  validateVerificationEvidenceCompatibility,
   validateStrictVerificationToolchain,
   verificationDigest,
 } from "./verification-evidence.mjs";
@@ -525,6 +526,8 @@ export async function checkpointPreflight({
   receiptContext,
   inputFingerprint,
   evidenceTask,
+  changedSince,
+  root = repositoryRoot,
   validators = {},
 }) {
   const defaults = {
@@ -577,6 +580,15 @@ export async function checkpointPreflight({
       if (evidenceTask && (plan.mode !== "exact" || !plan.includeProperties ||
           !plan.changeSet || !plan.baseCommit || !plan.claimPackIds?.length)) {
         throw new Error("Checkpoint preflight requires an exact canonical evidence plan");
+      }
+      if (evidenceTask) {
+        await validateVerificationEvidenceCompatibility({
+          task:evidenceTask,
+          plan,
+          receiptPath:receiptContext.receiptPath,
+          changedSince,
+          repositoryRoot:root,
+        });
       }
     },
   };
@@ -643,7 +655,7 @@ export async function runFocusedAcceptance(
     console.error(`[verify:receipt] ${path.relative(repositoryRoot, context.receiptPath)}`);
   }
   await checkpointPreflight({
-    packs, plan, receiptContext:context, inputFingerprint, evidenceTask,
+    packs, plan, receiptContext:context, inputFingerprint, evidenceTask, changedSince,
   });
   let executionPlan = plan;
   if (resumeReceiptPath) {

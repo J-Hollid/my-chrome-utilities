@@ -138,18 +138,23 @@ export function measuredTimingModel(receipts, baseline) {
         const logicalTargetIds = new Set(result.identity?.logicalTargetIds ?? []);
         const outputLines = String(result.output ?? "").split(/\r?\n/u);
         const passedTargetIds = new Set();
+        let explicitResultCount = 0;
         for (const line of outputLines) {
           try {
             const targetResult = JSON.parse(line).swarmforgeBrowserTargetResult;
-            if (logicalTargetIds.has(targetResult?.id) && targetResult?.status === "passed") {
-              passedTargetIds.add(targetResult.id);
+            if (logicalTargetIds.has(targetResult?.id)) {
+              explicitResultCount += 1;
+              if (targetResult?.status === "passed") passedTargetIds.add(targetResult.id);
             }
           } catch { /* observation documents and browser diagnostics are not result markers */ }
         }
         for (const line of outputLines) {
           try {
             const timing = JSON.parse(line).swarmforgeBrowserTargetTiming;
-            if (!passedTargetIds.has(timing?.id) || !Number.isFinite(timing?.durationMs) ||
+            const eligible = explicitResultCount === 0
+              ? logicalTargetIds.has(timing?.id)
+              : passedTargetIds.has(timing?.id);
+            if (!eligible || !Number.isFinite(timing?.durationMs) ||
                 timing.durationMs < 0) continue;
             const samples = browserTargetSamples.get(timing.id) ?? [];
             samples.push(timing.durationMs);

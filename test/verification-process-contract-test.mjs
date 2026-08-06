@@ -41,6 +41,7 @@ import {
 import {
   createPendingVerificationEvidence,
   recordPendingVerificationEvidence,
+  validateVerificationEvidenceCompatibility,
   verificationEvidence,
   verificationDigest,
   verifyVerificationEvidence,
@@ -1382,8 +1383,22 @@ for (const result of Object.values(legacyAggregateReceipt.tasks)) {
   }
 }
 const legacyAggregateModel = measuredTimingModel([legacyAggregateReceipt], reportBaseline);
-assert.deepEqual(legacyAggregateModel.browserTargets, {},
-  "legacy aggregate timing markers without target pass results cannot contaminate target budgets");
+assert.equal(legacyAggregateModel.browserTargets.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER.p90Ms, 700,
+  "passed legacy timing-only observations contribute their measured target duration");
+assert.equal(legacyAggregateModel.browserTargets.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER.p90Ms, 800,
+  "legacy timing-only batches retain each declared target measurement instead of using fallback");
+const partialExplicitReceipt = structuredClone(reportReceipt);
+for (const result of Object.values(partialExplicitReceipt.tasks)) {
+  if (result.identity.stage !== "browser-observation" || result.identity.logicalTargetIds.length < 2) continue;
+  const omitted = result.identity.logicalTargetIds[1];
+  result.output = result.output.split("\n")
+    .filter((line) => !line.includes(`\"id\":\"${omitted}\",\"status\"`))
+    .join("\n");
+  break;
+}
+const partialExplicitModel = measuredTimingModel([partialExplicitReceipt], reportBaseline);
+assert.equal(partialExplicitModel.browserTargets.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER, undefined,
+  "once an explicit result protocol appears, a target without its own passed result is ineligible");
 const throughput = reportVerificationThroughput({
   packs, baseline:reportBaseline,
   receipts:[reportReceipt, contaminatedReceipt, forgedIdentityReceipt, oldVersionReceipt,
@@ -1961,6 +1976,42 @@ try {
   const alphaPlan = await planFor("alpha");
   assert.ok(alphaPlan.propertyTasks.length > 0, "durable exact-pack fixtures include property leaves");
   const alphaReceipt = await receiptFor(alphaPlan, "alpha-receipt");
+  const preflightReceipt = path.join(evidenceRepository, "tmp", "verification-receipts", "preflight.json");
+  await writeFile(preflightReceipt, JSON.stringify({
+    version:2,
+    environment:{
+      node:lockedRuntime.node, typescript:lockedRuntime.typescript,
+      platform:`${process.platform}-${process.arch}`, concurrency:1, observationConcurrency:1,
+    },
+    tasks:{},
+  }));
+  const compatibility = await validateVerificationEvidenceCompatibility({
+    task:"preflight-compatibility", plan:alphaPlan, receiptPath:preflightReceipt,
+    changedSince:baseline, repositoryRoot:evidenceRepository,
+  });
+  assert.equal(compatibility.commit, await exec("git", ["rev-parse", "HEAD"], { cwd:evidenceRepository }),
+    "preflight evidence compatibility binds the clean committed candidate before execution");
+  await checkpointPreflight({
+    packs:evidencePacks, plan:alphaPlan,
+    receiptContext:{ receiptPath:preflightReceipt, receipt:{ version:2, tasks:{} } },
+    inputFingerprint:{ inputDigest:"a".repeat(64) },
+    evidenceTask:"preflight-compatibility", changedSince:baseline, root:evidenceRepository,
+    validators:{
+      registry:async() => {}, plan:async() => {}, receipt:async() => {}, artifact:async() => {},
+    },
+  });
+  await writeFile(path.join(evidenceRepository, "uncommitted-evidence-blocker"), "dirty\n");
+  await assert.rejects(() => checkpointPreflight({
+    packs:evidencePacks, plan:alphaPlan,
+    receiptContext:{ receiptPath:preflightReceipt, receipt:{ version:2, tasks:{} } },
+    inputFingerprint:{ inputDigest:"a".repeat(64) },
+    evidenceTask:"preflight-compatibility", changedSince:baseline, root:evidenceRepository,
+    validators:{
+      registry:async() => {}, plan:async() => {}, receipt:async() => {}, artifact:async() => {},
+    },
+  }), /Commit candidate changes/u,
+  "the default evidence preflight rejects an incompatible candidate before any verification command");
+  await rm(path.join(evidenceRepository, "uncommitted-evidence-blocker"));
   const redirectedReceipt = path.join(evidenceRepository, "tmp", "arbitrary-receipt.json");
   await writeFile(redirectedReceipt, await readFile(alphaReceipt));
   await assert.rejects(() => createPendingVerificationEvidence({
