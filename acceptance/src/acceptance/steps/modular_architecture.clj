@@ -1,5 +1,6 @@
 (ns acceptance.steps.modular-architecture
-  (:require [acceptance.steps.support :as support]
+  (:require [acceptance.verification-support.modular-architecture-project-management-handlers :as project-management]
+            [acceptance.steps.support :as support]
             [aps.json :as aps-json]
             [babashka.fs :as fs]
             [cheshire.core :as json]
@@ -395,101 +396,6 @@
   (support/assert! predicate message {:calibration (:vtd003/calibration world)})
   world)
 
-(defn- project-management-pack [registry]
-  (first (filter #(= "project_management" (:id %)) registry)))
-
-(defn- vtd004-world [world]
-  (let [inspected (verify-throughput! world)
-        pack (project-management-pack (:modular/registry inspected))]
-    (assoc inspected :vtd004/pack pack :vtd004/calibration (performance-calibration))))
-
-(defn- project-boundary-world [world source-path]
-  (let [prepared (vtd004-world world)
-        boundary (first (filter #(some #{source-path} (:prefixes %))
-                                (get-in prepared [:vtd004/pack :impactBoundaries])))]
-    (support/assert! boundary "Project-management path has no exact impact boundary."
-                     {:source-path source-path})
-    (assoc prepared :vtd004/boundary boundary :vtd004/path source-path)))
-
-(defn- project-change-world [world changed-path]
-  (let [prepared (project-boundary-world world changed-path)
-        selected (get-in prepared [:vtd004/evidence :currentPlans (keyword changed-path)])]
-    (support/assert! (seq selected) "Production planner returned no project impact scope."
-                     {:changed-path changed-path})
-    (assoc prepared :vtd004/selected-packs selected)))
-
-(defn- human-pack-list [packs]
-  (cond
-    (= 1 (count packs)) (first packs)
-    :else (str (str/join ", " (butlast packs)) ", and " (last packs))))
-
-(defn- project-handler-world [world]
-  (let [prepared (vtd004-world world)
-        pack (:vtd004/pack prepared)
-        handler (get-in prepared [:vtd004/evidence :handler])]
-    (support/assert! (and (= (:features pack) (:servedFeatures handler))
-                          (= (:isolatedVerificationHandlers pack) [(:path handler)])
-                          (empty? (:consumers handler))
-                          (:negativeMutationRejected handler)
-                          (= ["project_management"] (:ownerPlan handler)))
-                     "APS project handler still has a cross-pack consumer."
-                     {:features (:features pack) :handler handler})
-    (assoc prepared :vtd004/handler-isolated? true)))
-
-(defn- project-history-world [world change historical-registry]
-  (let [prepared (vtd004-world world)
-        plan-key (cond
-                   (not= historical-registry "readable and compatible") :unreadable
-                   (str/includes? change "to src/data-layer-project-library.ts") :renamePersistence
-                   (str/includes? change " to ") :renamePresentation
-                   :else :delete)
-        selected (get-in prepared [:vtd004/evidence :historyPlans plan-key])]
-    (support/assert! (seq selected) "Production historical planner returned no scope."
-                     {:change change :historical-registry historical-registry})
-    (assoc prepared :vtd004/historical-scope
-           (cond
-             (= 1 (count selected)) (first selected)
-             (= 20 (count selected)) "every runnable pack"
-             :else "the ten-pack dependant closure"))))
-
-(defn- project-conservation-world [world]
-  (let [prepared (vtd004-world world)
-        pack (:vtd004/pack prepared)
-        conservation (get-in prepared [:vtd004/evidence :conservation])
-        profile (:evidenceProfile conservation)]
-    (support/assert! (and (= (select-keys pack [:unit :property :features :handlers :browserAdapters])
-                              profile)
-                          (= (:unit profile) (get-in conservation [:exactTaskTargets :unitTasks]))
-                          (= (:property profile) (get-in conservation [:exactTaskTargets :propertyTasks]))
-                          (= (set (:features profile))
-                             (set (get-in conservation [:exactTaskTargets :parserTasks])))
-                          (= (:browserAdapters profile)
-                             (get-in conservation [:exactTaskTargets :browserTasks]))
-                          (= ["project_management"] (:handlerSessions conservation))
-                          (:terminalTaskIdentitiesConserved conservation)
-                          (= 1 (:packageCheckCount conservation)))
-                     "Project evidence identities or terminal leaves are not conserved."
-                     {:pack pack :conservation conservation})
-    (assoc prepared :vtd004/conserved? true)))
-
-(defn- project-calibration-world [world]
-  (let [prepared (vtd004-world world)
-        calibration (:vtd004/calibration prepared)
-        evidence (get-in prepared [:vtd004/evidence :calibration])
-        pack (:current evidence)]
-    (support/assert! (and (= ["project_management"] (:selectedPacks pack))
-                          (= 0 (get-in pack [:changedPathFanOut :limit]))
-                          (= 37.1 (get-in pack [:changedPathDuration :baseline]))
-                          (= 45 (get-in pack [:changedPathDuration :limit]))
-                          (= 1.2 (get-in pack [:changedPathDuration :tolerance]))
-                          (:otherPackRowsConserved evidence)
-                          (:browserTargetRowsConserved evidence)
-                          (:provenanceConserved evidence)
-                          (= 19 (:otherPackCount evidence))
-                          (= 81 (:browserTargetCount evidence)))
-                     "Project presentation calibration is not exact." {:pack pack})
-    (assoc prepared :vtd004/calibration-pack pack)))
-
 (defn- classified-browser-adapters [registry]
   (into {}
         (map (juxt :path :mode))
@@ -644,7 +550,7 @@
              :modular/registry registry
              :modular/browser-adapter-modes adapter-classifications))))
 
-(def handlers
+(def core-handlers
   [{:pattern #"^a bounded verification stage has (.+) and worker limit (.+)$"
     :handler (fn [world example captures]
                (apply bounded-stage-world world (example-values example captures)))}
@@ -942,7 +848,8 @@
     :handler (fn [world example captures]
                (if (:vtd004/selected-packs world)
                  (let [expected (first (example-values example captures))]
-                   (support/assert! (= expected (human-pack-list (:vtd004/selected-packs world)))
+                    (support/assert! (= expected (project-management/human-pack-list
+                                                  (:vtd004/selected-packs world)))
                                     "Project boundary selected the wrong pack closure."
                                     {:expected expected :actual (:vtd004/selected-packs world)})
                    world)
@@ -1109,139 +1016,17 @@
                                                     :assertionLeavesUnchanged :workerLimitsUnchanged
                                                     :terminalShardsUnchanged])))
                                "Verification topology conservation failed."))}
-   {:pattern #"^project_management owns source path (.+)$"
-    :handler (fn [world example captures]
-               (project-boundary-world world (first (example-values example captures))))}
-   {:pattern #"^its impact boundary is inspected$"
-    :handler (fn [world _ _]
-               (support/assert! (map? (:vtd004/boundary world))
-                                "Project impact boundary was not loaded from the registry." {})
-               world)}
-   {:pattern #"^its boundary is (.+)$"
-    :handler (fn [world example captures]
-               (support/assert! (= (first (example-values example captures))
-                                   (get-in world [:vtd004/boundary :id]))
-                                "Project boundary identity differs from the registry." {})
-               world)}
-   {:pattern #"^its source class is (.+)$"
-    :handler (fn [world example captures]
-               (support/assert! (= (first (example-values example captures))
-                                   (get-in world [:vtd004/boundary :sourceClass]))
-                                "Project source class differs from the registry." {})
-               world)}
-   {:pattern #"^dependant propagation is (.+)$"
-    :handler (fn [world example captures]
-               (let [expected (= "retained" (first (example-values example captures)))]
-                 (support/assert! (= expected (get-in world [:vtd004/boundary :propagateDependants]))
-                                  "Project dependant propagation differs from the registry." {}))
-               world)}
-   {:pattern #"^changed project-management path is (.+)$"
-    :handler (fn [world example captures]
-               (project-change-world world (first (example-values example captures))))}
-   {:pattern #"^impacted verification packs are selected$" :handler (fn [world _ _] (verify-throughput! world))}
-   {:pattern #"^its complete owner unit, property, feature, handler, and installed browser evidence is selected$"
-    :handler (fn [world _ _]
-               (let [pack (:vtd004/pack world)]
-                 (support/assert! (= [4 4 6 1 4]
-                                     (mapv #(count (% pack)) [:unit :property :features :handlers :browserAdapters]))
-                                  "Project owner evidence profile is incomplete." {}))
-               world)}
-   {:pattern #"^acceptance/src/acceptance/steps/project_management.clj owns six project-management feature files$"
-    :handler (fn [world _ _] (project-handler-world world))}
-   {:pattern #"^acceptance-handler isolation is audited from APS step consumers$"
-    :handler (fn [world _ _]
-               (support/assert! (:vtd004/handler-isolated? world)
-                                "APS handler isolation audit did not complete." {})
-               world)}
-   {:pattern #"^every served feature and step consumer belongs to project_management$"
-    :handler (fn [world _ _] (support/assert! (:vtd004/handler-isolated? world)
-                                              "Project handler consumer audit failed." {}) world)}
-   {:pattern #"^the handler is declared isolated$"
-    :handler (fn [world _ _]
-               (support/assert! (= ["acceptance/src/acceptance/steps/project_management.clj"]
-                                   (get-in world [:vtd004/pack :isolatedVerificationHandlers]))
-                                "Project handler is not declared isolated." {})
-               world)}
-   {:pattern #"^a handler-only change selects the complete project_management evidence without dependant packs$"
-    :handler (fn [world _ _]
-               (support/assert! (= ["project_management"]
-                                   (get-in world [:vtd004/evidence :handler :ownerPlan]))
-                                "Handler-only production planning escaped the owner pack." {})
-               world)}
-   {:pattern #"^any cross-pack consumer blocks isolation and retains dependant propagation$"
-    :handler (fn [world _ _]
-               (support/assert! (get-in world [:vtd004/evidence :handler :negativeMutationRejected])
-                                "Cross-pack consumer mutation did not block isolation." {})
-               world)}
-   {:pattern #"^project-management change is (.+)$"
-    :handler (fn [world example captures]
-               (assoc world :vtd004/change (first (example-values example captures))))}
-   {:pattern #"^historical registry state is (.+)$"
-    :handler (fn [world example captures]
-               (project-history-world world (:vtd004/change world)
-                                      (first (example-values example captures))))}
-   {:pattern #"^impacted verification packs are selected from current and historical ownership$"
-    :handler (fn [world _ _] (verify-throughput! world))}
-   {:pattern #"^selected scope is (.+)$"
-    :handler (fn [world example captures]
-               (support/assert! (= (first (example-values example captures))
-                                   (:vtd004/historical-scope world))
-                                "Historical project boundary selected the wrong scope." {})
-               world)}
-   {:pattern #"^every project-management boundary maps to the complete owner evidence profile$"
-    :handler (fn [world _ _] (project-conservation-world world))}
-   {:pattern #"^exact project_management verification and terminal-full planning are compared before and after VTD-004$"
-    :handler (fn [world _ _]
-               (support/assert! (:vtd004/conserved? world)
-                                "Exact and terminal plan comparison did not complete." {})
-               world)}
-   {:pattern #"^all four unit files, four property files, six features, one handler, and four installed browser adapters execute once in the exact owner plan$"
-    :handler (fn [world _ _] (support/assert! (:vtd004/conserved? world)
-                                              "Exact project evidence was not conserved." {}) world)}
-   {:pattern #"^terminal-full planning executes every conserved assertion leaf and package check exactly once$"
-    :handler (fn [world _ _]
-               (let [conservation (get-in world [:vtd004/evidence :conservation])]
-                 (support/assert! (and (:terminalTaskIdentitiesConserved conservation)
-                                       (= 1 (:packageCheckCount conservation)))
-                                  "Terminal plan lost or repeated a conserved leaf." {}))
-               world)}
-   {:pattern #"^browser batching, task order, worker limits, terminal shards, product behavior, durable bytes, migrations, Undo, and accessibility are unchanged$"
-    :handler (fn [world _ _]
-               (support/assert! (:terminalTaskIdentitiesConserved
-                                 (get-in world [:vtd004/evidence :conservation]))
-                                "Terminal product and verification identities changed." {})
-               world)}
-   {:pattern #"^the calibrated representative path src/data-layer-assignment-routing-ui.ts previously selected ten packs with critical-path baseline 390 seconds and limit 468 seconds$"
-    :handler (fn [world _ _] (project-calibration-world world))}
-   {:pattern #"^its non-propagating boundary is calibrated from the accepted VTD-003 receipt scope$"
-    :handler (fn [world _ _]
-               (support/assert! (get-in world [:vtd004/evidence :calibration :provenanceConserved])
-                                "Calibration receipt scope or provenance changed." {})
-               world)}
-   {:pattern #"^it selects only project_management with dependant fan-out 0$"
-    :handler (fn [world _ _]
-               (let [pack (:vtd004/calibration-pack world)]
-                 (support/assert! (and (= ["project_management"] (:selectedPacks pack))
-                                       (= 0 (get-in pack [:changedPathFanOut :limit])))
-                                  "Project calibration retained dependant fan-out." {}))
-               world)}
-   {:pattern #"^its critical-path baseline is 37.1 seconds with tolerance 1.2 and limit 45 seconds$"
-    :handler (fn [world _ _]
-               (let [duration (get-in world [:vtd004/calibration-pack :changedPathDuration])]
-                 (support/assert! (= [37.1 1.2 45]
-                                     ((juxt :baseline :tolerance :limit) duration))
-                                  "Project changed-path calibration is not exact." {}))
-               world)}
-   {:pattern #"^the other 19 pack calibrations and all 81 browser-target budgets are unchanged$"
-    :handler (fn [world _ _]
-               (support/assert! (and (get-in world [:vtd004/evidence :calibration :otherPackRowsConserved])
-                                     (get-in world [:vtd004/evidence :calibration :browserTargetRowsConserved])
-                                     (= 19 (get-in world [:vtd004/evidence :calibration :otherPackCount]))
-                                     (= 81 (get-in world [:vtd004/evidence :calibration :browserTargetCount])))
-                                "VTD-004 changed conserved calibration rows." {})
-               world)}
+   ])
+
+(def handlers
+  (vec (concat core-handlers
+               (project-management/handlers
+                {:example-values example-values
+                 :verify-throughput! verify-throughput!
+                 :performance-calibration performance-calibration})
+               [
    {:pattern #"^.*$"
-    :handler (fn [world _example _captures] (inspect! world))}])
+    :handler (fn [world _example _captures] (inspect! world))}])))
 
 ;; clj-mutate-manifest-begin
 ;; {:version 1, :tested-at "2026-08-06T22:07:16.36290748+02:00", :module-hash "-2005641589", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 5, :hash "-485998160"} {:id "defn-/enough-verification-packs?", :kind "defn-", :line 7, :end-line 8, :hash "380845414"} {:id "def/browser-adapter-modes", :kind "def", :line 10, :end-line 11, :hash "-1768145777"} {:id "form/3/defonce", :kind "defonce", :line 12, :end-line 12, :hash "-951894673"} {:id "form/4/declare", :kind "declare", :line 13, :end-line 13, :hash "470981416"} {:id "defn-/verify-throughput!", :kind "defn-", :line 15, :end-line 23, :hash "-675172632"} {:id "defn-/parse-seconds", :kind "defn-", :line 25, :end-line 27, :hash "-309137656"} {:id "defn-/bounded-worker-load", :kind "defn-", :line 29, :end-line 35, :hash "-2029624008"} {:id "defn-/parse-task-durations", :kind "defn-", :line 37, :end-line 46, :hash "1259277085"} {:id "defn-/bounded-stage-world", :kind "defn-", :line 48, :end-line 55, :hash "-1428085136"} {:id "defn-/timing-evidence", :kind "defn-", :line 57, :end-line 88, :hash "528684167"} {:id "defn-/timing-world", :kind "defn-", :line 90, :end-line 94, :hash "1314606518"} {:id "def/report-row-estimates", :kind "def", :line 96, :end-line 98, :hash "-1582722125"} {:id "defn-/budget-world", :kind "defn-", :line 100, :end-line 110, :hash "78919961"} {:id "defn-/assert-seconds!", :kind "defn-", :line 112, :end-line 117, :hash "726379898"} {:id "defn-/assert-value!", :kind "defn-", :line 119, :end-line 123, :hash "356760800"} {:id "defn-/example-values", :kind "defn-", :line 125, :end-line 127, :hash "613161209"} {:id "defn-/canonical-ledger-world", :kind "defn-", :line 129, :end-line 134, :hash "-968309789"} {:id "defn-/environment-class-world", :kind "defn-", :line 136, :end-line 144, :hash "-466670476"} {:id "def/rejection-reasons", :kind "def", :line 146, :end-line 150, :hash "621663720"} {:id "defn-/receipt-eligibility-world", :kind "defn-", :line 152, :end-line 160, :hash "-813563194"} {:id "defn-/timing-sample-world", :kind "defn-", :line 162, :end-line 166, :hash "877595569"} {:id "defn-/minimum-sample-world", :kind "defn-", :line 168, :end-line 173, :hash "145658693"} {:id "defn-/evaluate-maturity", :kind "defn-", :line 175, :end-line 181, :hash "1652383274"} {:id "defn-/indexed-load-world", :kind "defn-", :line 183, :end-line 193, :hash "-515305694"} {:id "def/maintenance-results", :kind "def", :line 195, :end-line 203, :hash "-1157939848"} {:id "defn-/maintenance-world", :kind "defn-", :line 205, :end-line 208, :hash "1219897170"} {:id "defn-/run-maintenance", :kind "defn-", :line 210, :end-line 214, :hash "-1616042970"} {:id "defn-/assert-vtd002!", :kind "defn-", :line 216, :end-line 218, :hash "-1181928910"} {:id "def/flow-phase-names", :kind "def", :line 220, :end-line 222, :hash "-349843343"} {:id "defn-/verification-json", :kind "defn-", :line 224, :end-line 226, :hash "1191550349"} {:id "defn-/flow-characterization", :kind "defn-", :line 228, :end-line 229, :hash "661898158"} {:id "defn-/finite-non-negative?", :kind "defn-", :line 231, :end-line 232, :hash "-361320050"} {:id "defn-/valid-flow-distributions?", :kind "defn-", :line 234, :end-line 248, :hash "-622248400"} {:id "defn-/flow-sample-world", :kind "defn-", :line 250, :end-line 271, :hash "-1723877432"} {:id "defn-/maturity-status", :kind "defn-", :line 273, :end-line 274, :hash "-1566647915"} {:id "defn-/flow-maturity-world", :kind "defn-", :line 276, :end-line 288, :hash "1850488950"} {:id "defn-/flow-budget-world", :kind "defn-", :line 290, :end-line 300, :hash "-1266897019"} {:id "defn-/flow-completion-world", :kind "defn-", :line 302, :end-line 325, :hash "-1466136333"} {:id "defn-/assert-vtd013!", :kind "defn-", :line 327, :end-line 329, :hash "2075911387"} {:id "defn-/performance-calibration", :kind "defn-", :line 331, :end-line 332, :hash "-582775852"} {:id "defn-/calibration-pack", :kind "defn-", :line 334, :end-line 335, :hash "1991585415"} {:id "defn-/calibration-target", :kind "defn-", :line 337, :end-line 338, :hash "-599804426"} {:id "defn-/calibration-pack-world", :kind "defn-", :line 340, :end-line 355, :hash "-1284541404"} {:id "defn-/calibration-target-world", :kind "defn-", :line 357, :end-line 369, :hash "353906553"} {:id "defn-/calibration-world", :kind "defn-", :line 371, :end-line 372, :hash "1460425773"} {:id "defn-/regression-world", :kind "defn-", :line 374, :end-line 386, :hash "6713325"} {:id "defn-/assert-vtd003!", :kind "defn-", :line 388, :end-line 390, :hash "60207851"} {:id "defn-/classified-browser-adapters", :kind "defn-", :line 392, :end-line 395, :hash "1447896627"} {:id "defn-/inspection-context", :kind "defn-", :line 397, :end-line 409, :hash "-360551503"} {:id "defn-/assert-pack-fields!", :kind "defn-", :line 411, :end-line 416, :hash "-687209790"} {:id "defn-/assert-adapter-classifications!", :kind "defn-", :line 418, :end-line 426, :hash "-1232601065"} {:id "defn-/assert-registered-paths!", :kind "defn-", :line 428, :end-line 432, :hash "-1890327722"} {:id "defn-/assert-shared-adapters!", :kind "defn-", :line 434, :end-line 438, :hash "-1256763437"} {:id "defn-/assert-source-signals!", :kind "defn-", :line 440, :end-line 489, :hash "1212118136"} {:id "defn-/assert-owning-pack-batches!", :kind "defn-", :line 491, :end-line 501, :hash "-1117210373"} {:id "defn-/assert-browser-batching!", :kind "defn-", :line 503, :end-line 515, :hash "-1575723724"} {:id "defn-/assert-runtime-boundaries!", :kind "defn-", :line 517, :end-line 525, :hash "767574382"} {:id "defn-/inspect-repository!", :kind "defn-", :line 527, :end-line 535, :hash "-552939158"} {:id "defn-/inspect!", :kind "defn-", :line 537, :end-line 544, :hash "661987012"} {:id "def/handlers", :kind "def", :line 546, :end-line 1006, :hash "1576638002"}]}
