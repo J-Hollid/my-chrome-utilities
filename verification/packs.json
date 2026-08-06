@@ -1928,6 +1928,10 @@
         "consumers": ["layered_schema"]
       },
       {
+        "path": "test/support/layered-schema-workflows.mjs",
+        "consumers": ["layered_schema"]
+      },
+      {
         "path": "test/support/journal-free-installed-runtime-probe.mjs",
         "consumers": ["layered_schema"]
       },

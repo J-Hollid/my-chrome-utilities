@@ -1,6 +1,20 @@
 import { runBrowserTargetSession } from "./browser-target-session.mjs";
-import { readFile } from "node:fs/promises";
 import assert from "node:assert/strict";
+import {
+  flowCrossFacetExpression,
+  flowFacetExpression,
+  flowMoveOwnershipExpression,
+  flowOwnershipSetupExpression,
+  flowStructureExpression,
+  flowStructureOwnershipSetupExpression,
+  initialLayeredInstalledExpression,
+  pageGroupRuntimeExpression,
+  pageGroupSeedExpression,
+  runLayeredEditorCanonicalWorkflow,
+  runLayeredEditorPolicyWorkflow,
+  runLayeredEditorRuleWorkflow,
+  runLayeredEditorSurfaceWorkflow,
+} from "./layered-schema-workflows.mjs";
 import { authoring034Expression,authoring035And036Expression } from "./layered-schema-usability-probes.mjs";
 import { authoring045Expression,flowFacet003Expression } from "./layered-schema-ownership-probes.mjs";
 import { patternHelperLayoutExpression,stringRuleValidationExpression,valueRuleDurableMigrationExpression } from "./string-rule-validation-runtime-probes.mjs";
@@ -10,63 +24,11 @@ import { typedLiteralFocusedEditorExpression } from "./typed-literal-focused-edi
 import { runProfileInheritanceControlsRuntimeProbe } from "./profile-inheritance-controls-runtime-probe.mjs";
 import { runJournalFreeInstalledRuntimeProbe } from "./journal-free-installed-runtime-probe.mjs";
 
-const layeredAdapterSource=await readFile(new URL("../browser-packs/layered-schema.mjs",import.meta.url),"utf8");
-const initialStart=layeredAdapterSource.indexOf("const evidence=await evaluate(socket,`");
-const initialEnd=layeredAdapterSource.indexOf("const compactPanelEvidence=",initialStart);
-if(initialStart<0||initialEnd<0)throw new Error("Cannot locate the intact initial layered installed workflow");
-const extractedInitialLayeredInstalledExpression=layeredAdapterSource.slice(layeredAdapterSource.indexOf("`",initialStart)+1,layeredAdapterSource.lastIndexOf("`",initialEnd));
-const initialLayeredInstalledExpression=extractedInitialLayeredInstalledExpression.replace(
-  "form.requestSubmit();for(let attempt=0;attempt<160;attempt+=1){const workspace=document.querySelector('[data-project-entity-workspace]');",
-  "form.requestSubmit();for(let attempt=0;attempt<600;attempt+=1){const workspace=document.querySelector('[data-project-entity-workspace]');");
-if(initialLayeredInstalledExpression===extractedInitialLayeredInstalledExpression)throw new Error("Cannot extend the intact entity settlement boundary");
 const editorInitialLayeredInstalledExpression=initialLayeredInstalledExpression;
-const extractedEvaluateTemplate=(marker,nextMarker)=>{
-  const start=layeredAdapterSource.indexOf(marker);
-  const end=layeredAdapterSource.indexOf(nextMarker,start);
-  if(start<0||end<0)throw new Error(`Cannot locate intact layered workflow slice: ${marker}`);
-  const opening=layeredAdapterSource.indexOf("`",start),closing=layeredAdapterSource.indexOf("`)",opening+1);
-  if(opening<0||closing<=opening)throw new Error(`Cannot locate intact layered workflow expression: ${marker}`);
-  return layeredAdapterSource.slice(opening+1,closing);
-};
-const flowFacetExpression=extractedEvaluateTemplate("const flowFacetEvidence=await evaluate(socket,`","const flowCrossFacetEvidence=");
-const flowOwnershipSetupExpression=extractedEvaluateTemplate("await evaluate(socket,`(async()=>{const pause=(ms=35)=>new Promise((resolve)=>setTimeout(resolve,ms));for(let layer=0;layer<3&&document.querySelector(':modal')","const flowCrossFacetEvidence=");
-const flowCrossFacetExpression=extractedEvaluateTemplate("const flowCrossFacetEvidence=await evaluate(socket,`","const flowMoveOwnershipEvidence=");
-const flowMoveOwnershipExpression=extractedEvaluateTemplate("const flowMoveOwnershipEvidence=await evaluate(socket,`","await evaluate(socket,`(()=>{globalThis.__flowStructureOwnershipObserver");
-const flowStructureOwnershipSetupExpression=extractedEvaluateTemplate("await evaluate(socket,`(()=>{globalThis.__flowStructureOwnershipObserver","const flowStructureEvidence=");
-const flowStructureExpression=extractedEvaluateTemplate("const flowStructureEvidence=await evaluate(socket,`","const pageGroupStructuralSeed=");
-const pageGroupSeedExpression=extractedEvaluateTemplate("const pageGroupStructuralSeed=await evaluate(socket,`","const pageGroupStructuralEvidence=");
-const pageGroupExpression=extractedEvaluateTemplate("const pageGroupStructuralEvidence=await evaluate(socket,`","const conflictClarityEvidence=");
-const pageGroupSeedIds={pageId:"page:structural:cart",retailFixtureId:"fixture:structural:retail",
-  tradeFixtureId:"fixture:structural:trade",flowId:"flow:structural:profile-inheritance",
-  frameId:"frame:structural:cart"};
-const pageGroupRuntimeExpression=Object.entries(pageGroupSeedIds).reduce((expression,[key,value])=>
-  expression.replaceAll(`'\${pageGroupStructuralSeed.${key}}'`,JSON.stringify(value)),pageGroupExpression)
-  .replace("const structural=","globalThis.__pageGroupStructuralStage='model';const structural=")
-  .replace("const openCart=","globalThis.__pageGroupStructuralStage='cart';let stableCartWorkspace;const openCart=")
-  .replace("return candidate?.querySelectorAll('[data-applicability-preview-set-id]').length===3&&candidate.querySelector('.composed-schema-workspace [data-effective-property-path]')?candidate:undefined;","const ready=candidate?.isConnected&&candidate.querySelectorAll('[data-applicability-preview-set-id]').length===3&&candidate.querySelector('.composed-schema-workspace [data-effective-property-path]');if(!ready){stableCartWorkspace=undefined;return;}if(stableCartWorkspace!==candidate){stableCartWorkspace=candidate;return;}return candidate;")
-  .replace("const beforePreview=","globalThis.__pageGroupStructuralStage='preview';const beforePreview=")
-  .replace("const applicationOrder=","globalThis.__pageGroupStructuralStage='reorder';const applicationOrder=")
-  .replace("document.querySelector('#project-tree button[data-kind=\"documentation\"]').click();const documentationWorkspace=","globalThis.__pageGroupStructuralStage='documentation';document.querySelector('#project-tree button[data-kind=\"documentation\"]').click();const documentationWorkspace=")
-  .replace("document.querySelector('#project-tree button[data-kind=\"flows\"]').click();const flowRoute=","globalThis.__pageGroupStructuralStage='flow';document.querySelector('#project-tree button[data-kind=\"flows\"]').click();const flowRoute=");
 const initialCoreKeys=["installedBoundary","consequential","persistenceReload",
   ...Array.from({length:14},(_,index)=>`authoring${String(index+1).padStart(3,"0")}`),
   ...[17,18,19,21,22,23,24,25].map(index=>`authoring${String(index).padStart(3,"0")}`),
   ...Array.from({length:21},(_,index)=>`layering${String(index+1).padStart(3,"0")}`)];
-const editorStart=layeredAdapterSource.indexOf("const compactPanelEvidence=");
-const editorRuleStart=layeredAdapterSource.indexOf("const ruleBuilderCorrectionEvidence=",editorStart);
-const editorCanonicalStart=layeredAdapterSource.indexOf("const canonicalFacetEvidence=await evaluate(socket,withStartedOptionalCondition",editorRuleStart);
-const editorEnd=layeredAdapterSource.indexOf("const flowFacetEvidence=",editorCanonicalStart);
-const editorTailStart=layeredAdapterSource.indexOf("const conflictClarityEvidence=",editorEnd);
-const editorTailEnd=layeredAdapterSource.indexOf("const flowEvidence=",editorTailStart);
-if([editorStart,editorRuleStart,editorCanonicalStart,editorEnd,editorTailStart,editorTailEnd].some((offset)=>offset<0))throw new Error("Cannot locate intact layered editor producer chain");
-const editorSurfaceSource=layeredAdapterSource.slice(editorStart,editorRuleStart);
-const editorRuleSource=layeredAdapterSource.slice(editorRuleStart,editorCanonicalStart);
-const editorCanonicalSource=layeredAdapterSource.slice(editorCanonicalStart,editorEnd);
-const optionalConditionStart=editorRuleSource.indexOf("const optionalRuleConditionEvidence=");
-const optionalConditionEnd=editorRuleSource.indexOf("if(!optionalRuleConditionEvidence",optionalConditionStart);
-const editorOptionalConditionSource=editorRuleSource.slice(optionalConditionStart,optionalConditionEnd);
-const editorTailSource=layeredAdapterSource.slice(editorTailStart,editorTailEnd)
-  .replace(/^.*(?:schemaTableContainmentEvidence|flowFacetEvidence).*$/gmu,"");
 const editorKeys=["sidePanelParity","authoring015","authoring016","authoring020",
   ...[...Array.from({length:9},(_,index)=>index+46),...Array.from({length:9},(_,index)=>index+59)]
     .map((index)=>`authoring${String(index).padStart(3,"0")}`)];
@@ -79,60 +41,21 @@ const editorCanonicalKeys=[...Array.from({length:11},(_,index)=>`authoring${Stri
 const editorPolicyKeys=[...Array.from({length:9},(_,index)=>`authoring${String(index+77).padStart(3,"0")}`),
   ...Array.from({length:7},(_,index)=>`layering${String(index+25).padStart(3,"0")}`)];
 const canonicalEditorKeys=["canonicalPresence","canonicalValues","canonicalConditions","canonicalRules","canonicalExample","canonicalPersisted"];
-const withStartedOptionalCondition=(expression)=>expression
-  .replaceAll("const property=panel.querySelector('[aria-label=\"Condition property\"]')","[...panel.querySelectorAll('button')].find(({textContent})=>textContent.trim()==='Add condition')?.click();const property=panel.querySelector('[aria-label=\"Condition property\"]')")
-  .replaceAll("const reusableProperty=host.querySelector('[aria-label=\"Condition property\"]')","[...host.querySelectorAll('button')].find(({textContent})=>textContent.trim()==='Add condition')?.click();const reusableProperty=host.querySelector('[aria-label=\"Condition property\"]')")
-  .replaceAll("const property=q('[aria-label=\"Condition property\"]',focused)","buttons(focused).find(({textContent})=>textContent.trim()==='Add condition')?.click();const property=q('[aria-label=\"Condition property\"]',focused)")
-  .replaceAll("const conditionProperty=q('[aria-label=\"Condition property\"]',focused)","buttons(focused).find(({textContent})=>textContent.trim()==='Add condition')?.click();const conditionProperty=q('[aria-label=\"Condition property\"]',focused)")
-  .replaceAll("const property=focused.querySelector('[aria-label=\"Condition property\"]')","buttons(focused).find(({textContent})=>textContent.trim()==='Add condition')?.click();const property=focused.querySelector('[aria-label=\"Condition property\"]')");
-const AsyncFunction=Object.getPrototypeOf(async function(){}).constructor;
-const editorProducerParameterNames=["initialExpression","evaluate","socket","activeSocket","ready","wait","assert","withStartedOptionalCondition",
-  "authoring034Expression","authoring035And036Expression","authoring045Expression","patternHelperLayoutExpression",
-  "stringRuleValidationExpression","valueRuleDurableMigrationExpression","authoringConceptRuntimeExpression",
-  "flatRuleMainProjectionLifecycleExpression","flatRulePanelProjectionDiagnosticExpression","flatRulePopupGeometryExpression",
-  "flatRuleResponsiveFinishExpression","flatRuleResponsiveSetupExpression","flatRuleResponsiveSnapshotExpression",
-  "typedLiteralFocusedEditorExpression","runProfileInheritanceControlsRuntimeProbe","runJournalFreeInstalledRuntimeProbe"];
-const runIntactEditorProducers=new AsyncFunction(...editorProducerParameterNames,`
-  const evidence=await evaluate(socket,initialExpression);
-  ${editorSurfaceSource}
-  const owned={};
-  for(const key of ${JSON.stringify(editorKeys)})owned[key]=evidence[key];
-  return{layeredSchema:owned};
-`);
-const runIntactEditorRuleProducers=new AsyncFunction(...editorProducerParameterNames,`
-  const evidence=await evaluate(socket,initialExpression);
-  ${editorSurfaceSource}
-  ${editorRuleSource}
-  const owned={};for(const key of ${JSON.stringify(editorRuleKeys)})owned[key]=evidence[key];
-  return{layeredSchema:owned};
-`);
-const runIntactEditorCanonicalProducers=new AsyncFunction(...editorProducerParameterNames,`
-  const evidence=await evaluate(socket,initialExpression);
-  ${editorSurfaceSource}
-  ${editorOptionalConditionSource}
-  ${editorCanonicalSource}
-  const canonicalFacetPersistence={canonicalPresence:canonicalFacetEvidence.presenceSaved,canonicalValues:canonicalFacetEvidence.valuesSaved,canonicalConditions:canonicalFacetEvidence.conditionsSaved,canonicalRules:canonicalFacetEvidence.rulesSaved,canonicalExample:canonicalFacetEvidence.exampleSaved,canonicalPersisted:canonicalFacetEvidence.persisted},owned={};
-  for(const key of ${JSON.stringify(editorCanonicalKeys)})owned[key]=evidence[key];
-  for(const key of ${JSON.stringify(canonicalEditorKeys)})owned[key]=canonicalFacetPersistence[key];
-  return{layeredSchema:owned};
-`);
-const runIntactEditorPolicyProducers=new AsyncFunction(...editorProducerParameterNames,`
-  const evidence=await evaluate(socket,initialExpression);
-  ${editorTailSource}
-  const owned={};
-  for(const key of ${JSON.stringify(editorPolicyKeys)})owned[key]=evidence[key];
-  return{layeredSchema:owned};
-`);
-
-const runEditorProducer=async(producer,{evaluate,socket})=>{
+const runEditorProducer=async(workflow,keys,{evaluate,socket},{canonical=false}={})=>{
   const liveSocket={call:(...arguments_)=>socket().call(...arguments_)},originalEvaluate=(unused,expression)=>{let body;try{Function(`return (${expression})`);body=`return await (${expression});`;}catch{body=expression.replace(/;\s*true\s*$/u,";return true;");}return evaluate(unused,body);},ready=async(unused,selector)=>{for(let attempt=0;attempt<240;attempt+=1){if(await originalEvaluate(liveSocket,`Boolean(document.querySelector(${JSON.stringify(selector)}))`))return true;await new Promise((resolve)=>setTimeout(resolve,25));}throw new Error(`Installed editor did not settle: ${selector}`);};
   await ready(liveSocket,"#create-project-form");let stableDocumentSamples=0;for(let attempt=0;attempt<240&&stableDocumentSamples<3;attempt+=1){const settled=await originalEvaluate(liveSocket,"document.readyState==='complete'&&Boolean(document.querySelector('#create-project-form')?.isConnected&&document.querySelector('#project-tree')?.isConnected)");stableDocumentSamples=settled?stableDocumentSamples+1:0;await new Promise((resolve)=>setTimeout(resolve,25));}if(stableDocumentSamples<3)throw new Error("Installed editor document did not hydrate stably");
-  return producer(editorInitialLayeredInstalledExpression,originalEvaluate,liveSocket,liveSocket,ready,(milliseconds)=>new Promise((resolve)=>setTimeout(resolve,milliseconds)),assert,withStartedOptionalCondition,
+  const evidence=await originalEvaluate(liveSocket,editorInitialLayeredInstalledExpression),result=await workflow({
+    evidence,evaluate:originalEvaluate,socket:liveSocket,activeSocket:liveSocket,ready,
+    wait:(milliseconds)=>new Promise((resolve)=>setTimeout(resolve,milliseconds)),assert,
     authoring034Expression,authoring035And036Expression,authoring045Expression,patternHelperLayoutExpression,
     stringRuleValidationExpression,valueRuleDurableMigrationExpression,authoringConceptRuntimeExpression,
     flatRuleMainProjectionLifecycleExpression,flatRulePanelProjectionDiagnosticExpression,flatRulePopupGeometryExpression,
     flatRuleResponsiveFinishExpression,flatRuleResponsiveSetupExpression,flatRuleResponsiveSnapshotExpression,
-    typedLiteralFocusedEditorExpression,runProfileInheritanceControlsRuntimeProbe,runJournalFreeInstalledRuntimeProbe);
+    typedLiteralFocusedEditorExpression,runProfileInheritanceControlsRuntimeProbe,runJournalFreeInstalledRuntimeProbe,
+  }),owned={};
+  for(const key of keys)owned[key]=result.evidence[key];
+  if(canonical){const facet=result.canonicalFacetEvidence,persistence={canonicalPresence:facet.presenceSaved,canonicalValues:facet.valuesSaved,canonicalConditions:facet.conditionsSaved,canonicalRules:facet.rulesSaved,canonicalExample:facet.exampleSaved,canonicalPersisted:facet.persisted};for(const key of canonicalEditorKeys)owned[key]=persistence[key];}
+  return{layeredSchema:owned};
 };
 
 const definitions = {
@@ -140,10 +63,10 @@ const definitions = {
     const complete=await (${initialLayeredInstalledExpression}),owned={};
     for(const key of ${JSON.stringify(initialCoreKeys)})owned[key]=complete[key];
     return{layeredSchema:owned};`},
-  LAYERED_SCHEMA_EDITOR_TARGET:{pagePath:"specification-builder.html",navigationRetries:4,run:(context)=>runEditorProducer(runIntactEditorProducers,context)},
-  LAYERED_SCHEMA_EDITOR_RULES_TARGET:{pagePath:"specification-builder.html",navigationRetries:4,run:(context)=>runEditorProducer(runIntactEditorRuleProducers,context)},
-  LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET:{pagePath:"specification-builder.html",navigationRetries:4,run:(context)=>runEditorProducer(runIntactEditorCanonicalProducers,context)},
-  LAYERED_SCHEMA_EDITOR_POLICY_TARGET:{pagePath:"specification-builder.html",navigationRetries:4,run:(context)=>runEditorProducer(runIntactEditorPolicyProducers,context)},
+  LAYERED_SCHEMA_EDITOR_TARGET:{pagePath:"specification-builder.html",navigationRetries:4,run:(context)=>runEditorProducer(runLayeredEditorSurfaceWorkflow,editorKeys,context)},
+  LAYERED_SCHEMA_EDITOR_RULES_TARGET:{pagePath:"specification-builder.html",navigationRetries:4,run:(context)=>runEditorProducer(runLayeredEditorRuleWorkflow,editorRuleKeys,context)},
+  LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET:{pagePath:"specification-builder.html",navigationRetries:4,run:(context)=>runEditorProducer(runLayeredEditorCanonicalWorkflow,editorCanonicalKeys,context,{canonical:true})},
+  LAYERED_SCHEMA_EDITOR_POLICY_TARGET:{pagePath:"specification-builder.html",navigationRetries:4,run:(context)=>runEditorProducer(runLayeredEditorPolicyWorkflow,editorPolicyKeys,context)},
   LAYERED_SCHEMA_COMPOSITION_TARGET:{
     pagePath:"specification-builder.html",navigationRetries:4,
     expression:()=>`
