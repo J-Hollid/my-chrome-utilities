@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "implementationCommit": "f39576cd533fd913a9a7934150325ad17e5c3b90",
+  "implementationCommit": "524cd3a7df6b5afcf51561d69c623b7615c50003",
   "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
   "environment": {
     "node": "24.19.0",
@@ -39,7 +39,6 @@
     "5d55b34a6065fbcd92cfd3f59a6fe62c256ce5e17af1dc351d68298ea9e74157",
     "674ec22d833be3173b435d486108f7ea77b2efe2dcdb7fe305ddd44c821358a4",
     "76dea26cead99649791f42f3fd6ef5c3e64e5e2a1ddaaaf6242aac383b1e3d7f",
-    "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6",
     "a21a3508539c9352eec25a404363b1d921f511604dc3e8cb012266cd68e9be8a",
     "c8de751d2208e049a4321a56499368bf662f6d62c97c5d77814c8c401d9cd750",
     "c98a057d261a70fa7384839cbbb5442d5e555dc54cf54eea34a3f753f79b7da6",
@@ -79,26 +78,28 @@
         "shell"
       ],
       "exactPackDuration": {
-        "limit": 45,
-        "baseline": 37.1,
+        "limit": 15,
+        "baseline": 12.2,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.045,
         "timingSources": {
-          "exact task samples": 22
+          "exact task samples": 1,
+          "bootstrap fallback": 21
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 469,
-        "baseline": 390.8,
+        "limit": 483,
+        "baseline": 402.3,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.396,
         "timingSources": {
-          "exact task samples": 187
+          "exact task samples": 74,
+          "bootstrap fallback": 113
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-assignment-routing-ui.ts"
@@ -135,26 +136,28 @@
         "property_set_flow_sections"
       ],
       "exactPackDuration": {
-        "limit": 109,
-        "baseline": 90.2,
+        "limit": 226,
+        "baseline": 187.6,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.077,
         "timingSources": {
-          "exact task samples": 13
+          "exact task samples": 1,
+          "bootstrap fallback": 12
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 396,
-        "baseline": 329.5,
+        "limit": 443,
+        "baseline": 368.8,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.179,
         "timingSources": {
-          "exact task samples": 95
+          "exact task samples": 17,
+          "bootstrap fallback": 78
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-durable-project-repository-ui.ts"
@@ -184,26 +187,28 @@
         "shell"
       ],
       "exactPackDuration": {
-        "limit": 9,
-        "baseline": 7.3,
+        "limit": 11,
+        "baseline": 8.7,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.077,
         "timingSources": {
-          "exact task samples": 13
+          "exact task samples": 1,
+          "bootstrap fallback": 12
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 46,
-        "baseline": 38.1,
+        "limit": 49,
+        "baseline": 40.1,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.846,
         "timingSources": {
-          "exact task samples": 78
+          "exact task samples": 66,
+          "bootstrap fallback": 12
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/command-palette-ui.ts"
@@ -241,8 +246,8 @@
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 46,
-        "baseline": 37.6,
+        "limit": 47,
+        "baseline": 38.9,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
@@ -281,26 +286,28 @@
         "shell"
       ],
       "exactPackDuration": {
-        "limit": 63,
-        "baseline": 52,
+        "limit": 28,
+        "baseline": 22.7,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.006,
         "timingSources": {
-          "exact task samples": 159
+          "exact task samples": 1,
+          "bootstrap fallback": 158
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 235,
-        "baseline": 195.5,
+        "limit": 95,
+        "baseline": 79.1,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.096,
         "timingSources": {
-          "exact task samples": 606
+          "exact task samples": 58,
+          "bootstrap fallback": 548
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-live-inspector-presentation-ui.ts"
@@ -338,26 +345,28 @@
         "shell"
       ],
       "exactPackDuration": {
-        "limit": 14,
-        "baseline": 11.6,
+        "limit": 25,
+        "baseline": 20.5,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.034,
         "timingSources": {
-          "exact task samples": 29
+          "exact task samples": 1,
+          "bootstrap fallback": 28
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 89,
-        "baseline": 73.9,
+        "limit": 71,
+        "baseline": 58.9,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.317,
         "timingSources": {
-          "exact task samples": 183
+          "exact task samples": 58,
+          "bootstrap fallback": 125
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-event-library-deletion.ts"
@@ -386,26 +395,28 @@
         "project_event_transport"
       ],
       "exactPackDuration": {
-        "limit": 12,
-        "baseline": 9.9,
+        "limit": 11,
+        "baseline": 8.7,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.125,
         "timingSources": {
-          "exact task samples": 8
+          "exact task samples": 1,
+          "bootstrap fallback": 7
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 12,
-        "baseline": 9.9,
+        "limit": 11,
+        "baseline": 8.7,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.125,
         "timingSources": {
-          "exact task samples": 8
+          "exact task samples": 1,
+          "bootstrap fallback": 7
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-project-event-transport.ts"
@@ -433,26 +444,28 @@
         "shell"
       ],
       "exactPackDuration": {
-        "limit": 180,
-        "baseline": 149.6,
+        "limit": 27,
+        "baseline": 22,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.004,
         "timingSources": {
-          "exact task samples": 259
+          "exact task samples": 1,
+          "bootstrap fallback": 258
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 223,
-        "baseline": 185.4,
+        "limit": 72,
+        "baseline": 59.2,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.142,
         "timingSources": {
-          "exact task samples": 408
+          "exact task samples": 58,
+          "bootstrap fallback": 350
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-allowed-value-expansion-ui.ts"
@@ -482,26 +495,28 @@
         "shell"
       ],
       "exactPackDuration": {
-        "limit": 45,
-        "baseline": 36.9,
+        "limit": 25,
+        "baseline": 20.7,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.014,
         "timingSources": {
-          "exact task samples": 70
+          "exact task samples": 1,
+          "bootstrap fallback": 69
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 72,
-        "baseline": 59.2,
+        "limit": 57,
+        "baseline": 47.4,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.426,
         "timingSources": {
-          "exact task samples": 136
+          "exact task samples": 58,
+          "bootstrap fallback": 78
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-defect-library-ui.ts"
@@ -527,26 +542,28 @@
         "shell"
       ],
       "exactPackDuration": {
-        "limit": 9,
-        "baseline": 7.4,
+        "limit": 11,
+        "baseline": 8.7,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.167,
         "timingSources": {
-          "exact task samples": 6
+          "exact task samples": 1,
+          "bootstrap fallback": 5
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 46,
-        "baseline": 37.9,
+        "limit": 48,
+        "baseline": 39.7,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.921,
         "timingSources": {
-          "exact task samples": 63
+          "exact task samples": 58,
+          "bootstrap fallback": 5
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-sequence-replay-ui.ts"
@@ -570,8 +587,8 @@
         "flow_graph"
       ],
       "exactPackDuration": {
-        "limit": 74,
-        "baseline": 61.1,
+        "limit": 73,
+        "baseline": 60.8,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
@@ -614,26 +631,28 @@
         "flow_export"
       ],
       "exactPackDuration": {
-        "limit": 58,
-        "baseline": 47.6,
+        "limit": 11,
+        "baseline": 8.7,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.077,
         "timingSources": {
-          "exact task samples": 13
+          "exact task samples": 1,
+          "bootstrap fallback": 12
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 58,
-        "baseline": 47.6,
+        "limit": 11,
+        "baseline": 8.7,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.077,
         "timingSources": {
-          "exact task samples": 13
+          "exact task samples": 1,
+          "bootstrap fallback": 12
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-project-documentation-workspace-ui.ts"
@@ -656,26 +675,28 @@
         "live_flow_testing"
       ],
       "exactPackDuration": {
-        "limit": 13,
-        "baseline": 10.6,
+        "limit": 11,
+        "baseline": 8.7,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.1,
         "timingSources": {
-          "exact task samples": 10
+          "exact task samples": 1,
+          "bootstrap fallback": 9
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 13,
-        "baseline": 10.6,
+        "limit": 11,
+        "baseline": 8.7,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.1,
         "timingSources": {
-          "exact task samples": 10
+          "exact task samples": 1,
+          "bootstrap fallback": 9
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-live-flow-testing-ui.ts"
@@ -698,26 +719,28 @@
         "layered_schema"
       ],
       "exactPackDuration": {
-        "limit": 258,
-        "baseline": 214.8,
+        "limit": 246,
+        "baseline": 204.4,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.026,
         "timingSources": {
-          "exact task samples": 39
+          "exact task samples": 1,
+          "bootstrap fallback": 38
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 258,
-        "baseline": 214.8,
+        "limit": 246,
+        "baseline": 204.4,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.042,
         "timingSources": {
-          "exact task samples": 24
+          "exact task samples": 1,
+          "bootstrap fallback": 23
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/canonical-schema-focused/navigator-rows.ts"
@@ -740,26 +763,28 @@
         "schema_relationship_tree"
       ],
       "exactPackDuration": {
-        "limit": 15,
-        "baseline": 11.8,
+        "limit": 11,
+        "baseline": 8.7,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.125,
         "timingSources": {
-          "exact task samples": 8
+          "exact task samples": 1,
+          "bootstrap fallback": 7
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 15,
-        "baseline": 11.8,
+        "limit": 11,
+        "baseline": 8.7,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.125,
         "timingSources": {
-          "exact task samples": 8
+          "exact task samples": 1,
+          "bootstrap fallback": 7
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/schema-relationship-tree.ts"
@@ -782,26 +807,28 @@
         "property_set_flow_sections"
       ],
       "exactPackDuration": {
-        "limit": 16,
-        "baseline": 13.1,
+        "limit": 11,
+        "baseline": 8.7,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.125,
         "timingSources": {
-          "exact task samples": 8
+          "exact task samples": 1,
+          "bootstrap fallback": 7
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 16,
-        "baseline": 13.1,
+        "limit": 11,
+        "baseline": 8.7,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.125,
         "timingSources": {
-          "exact task samples": 8
+          "exact task samples": 1,
+          "bootstrap fallback": 7
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-property-set-flow-section-ui.ts"
@@ -824,26 +851,28 @@
         "project_assurance_severity"
       ],
       "exactPackDuration": {
-        "limit": 12,
-        "baseline": 9.2,
+        "limit": 11,
+        "baseline": 8.7,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.125,
         "timingSources": {
-          "exact task samples": 8
+          "exact task samples": 1,
+          "bootstrap fallback": 7
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 12,
-        "baseline": 9.2,
+        "limit": 11,
+        "baseline": 8.7,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.125,
         "timingSources": {
-          "exact task samples": 8
+          "exact task samples": 1,
+          "bootstrap fallback": 7
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "features/data-layer-project-assurance-severity.feature"
@@ -866,26 +895,28 @@
         "branding_polish"
       ],
       "exactPackDuration": {
-        "limit": 114,
-        "baseline": 94.8,
+        "limit": 183,
+        "baseline": 152.3,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.071,
         "timingSources": {
-          "exact task samples": 14
+          "exact task samples": 1,
+          "bootstrap fallback": 13
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 114,
-        "baseline": 94.8,
+        "limit": 183,
+        "baseline": 152.3,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.071,
         "timingSources": {
-          "exact task samples": 14
+          "exact task samples": 1,
+          "bootstrap fallback": 13
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-studio-choice-controls.ts"
@@ -908,26 +939,28 @@
         "guided_test_cases"
       ],
       "exactPackDuration": {
-        "limit": 22,
-        "baseline": 17.9,
+        "limit": 11,
+        "baseline": 8.7,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.125,
         "timingSources": {
-          "exact task samples": 8
+          "exact task samples": 1,
+          "bootstrap fallback": 7
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 22,
-        "baseline": 17.9,
+        "limit": 11,
+        "baseline": 8.7,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.125,
         "timingSources": {
-          "exact task samples": 8
+          "exact task samples": 1,
+          "bootstrap fallback": 7
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-guided-test-cases.ts"
@@ -969,8 +1002,8 @@
         "shell"
       ],
       "exactPackDuration": {
-        "limit": 45,
-        "baseline": 37.2,
+        "limit": 47,
+        "baseline": 38.5,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
@@ -982,14 +1015,15 @@
         "budgetClass": "global-shell"
       },
       "changedPathDuration": {
-        "limit": 614,
-        "baseline": 511.5,
+        "limit": 633,
+        "baseline": 527.5,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.109,
         "timingSources": {
-          "exact task samples": 752
+          "exact task samples": 82,
+          "bootstrap fallback": 670
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/workspace-tabs-ui.ts",
@@ -1036,10 +1070,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1049,10 +1081,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1062,10 +1092,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "BRANDING_WORKFLOW_CHOICES_TARGET": {
       "limit": 101740,
@@ -1075,10 +1103,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "explicit target baseline",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "BRANDING_WORKFLOW_GUIDANCE_TARGET": {
       "limit": 72000,
@@ -1088,10 +1114,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "explicit target baseline",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "CANONICAL_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1101,10 +1125,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "CONDITIONAL_VALIDATION_RULES_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1114,10 +1136,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "DEFECT_LIBRARY_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1127,10 +1147,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "DEFECT_REPORT_COMPONENT_OPTIONS_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1140,10 +1158,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "DEFECT_REPORT_PROVENANCE_PRESENTATION_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1153,10 +1169,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "DEFECT_REPORT_SEMANTIC_DIFFERENCES_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1166,10 +1180,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "DEFECT_REPORT_UNDECLARED_REMOVAL_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1179,10 +1191,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "DURABLE_RENDERER_CORPUS_TARGET": {
       "limit": 24000,
@@ -1192,10 +1202,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "explicit target baseline",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "DURABLE_RENDERER_HISTORY_TARGET": {
       "limit": 95477,
@@ -1205,10 +1213,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "explicit target baseline",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "DURABLE_REPOSITORY_REVISION_TARGET": {
       "limit": 108000,
@@ -1218,10 +1224,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "explicit target baseline",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "DURABLE_REPOSITORY_STORAGE_TARGET": {
       "limit": 108000,
@@ -1231,10 +1235,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "explicit target baseline",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "EVENT_OCCURRENCE_DEFECT_REPORT_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1244,10 +1246,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "FLOW_GRAPH_EXAMPLES_TARGET": {
       "limit": 4596,
@@ -1268,53 +1268,50 @@
       "correctionCommit": "7f2095c346b39bf6b57e23893eace76e42438363"
     },
     "FLOW_GRAPH_LEGACY_TARGET": {
-      "limit": 1917,
-      "baseline": 1597,
+      "limit": 1554,
+      "baseline": 1295,
       "percentile": "p90",
       "tolerance": 1.2,
-      "provisional": false,
-      "maturity": "non-provisional",
-      "source": "accepted target samples",
-      "sampleCount": 5,
+      "provisional": true,
+      "maturity": "provisional",
+      "source": "explicit target baseline",
+      "sampleCount": 4,
       "receiptDigests": [
         "32c7702f8804718a38fda067e33bf121273dbdff2b94e5c81799dbd6b72f80ad",
         "3db06914559b048274e10725034474623736160a6eb7aa5a78ebd924e4211abb",
         "3e8f2a30516f3a801de4f0631c935bb7f0bd96d9d6026b2d5d4a1c2e1e72dc58",
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6",
         "dd223a48adb3c959475de41d1b37a10d6350aefb3deee80631c71ccea4f9fd94"
       ]
     },
     "FLOW_WORKSPACE_AUTHORING_TARGET": {
-      "limit": 19487,
-      "baseline": 16239,
+      "limit": 18687,
+      "baseline": 15572,
       "percentile": "p90",
       "tolerance": 1.2,
-      "provisional": false,
-      "maturity": "non-provisional",
-      "source": "accepted target samples",
-      "sampleCount": 5,
+      "provisional": true,
+      "maturity": "provisional",
+      "source": "explicit target baseline",
+      "sampleCount": 4,
       "receiptDigests": [
         "32c7702f8804718a38fda067e33bf121273dbdff2b94e5c81799dbd6b72f80ad",
         "3db06914559b048274e10725034474623736160a6eb7aa5a78ebd924e4211abb",
         "3e8f2a30516f3a801de4f0631c935bb7f0bd96d9d6026b2d5d4a1c2e1e72dc58",
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6",
         "dd223a48adb3c959475de41d1b37a10d6350aefb3deee80631c71ccea4f9fd94"
       ]
     },
     "FLOW_WORKSPACE_CONTROLS_TARGET": {
-      "limit": 43533,
-      "baseline": 36277,
+      "limit": 35000,
+      "baseline": 30318,
       "percentile": "p90",
       "tolerance": 1.2,
-      "provisional": false,
-      "maturity": "non-provisional",
-      "source": "accepted target samples",
-      "sampleCount": 5,
+      "provisional": true,
+      "maturity": "provisional",
+      "source": "explicit target baseline",
+      "sampleCount": 4,
       "receiptDigests": [
         "32c7702f8804718a38fda067e33bf121273dbdff2b94e5c81799dbd6b72f80ad",
         "3db06914559b048274e10725034474623736160a6eb7aa5a78ebd924e4211abb",
         "3e8f2a30516f3a801de4f0631c935bb7f0bd96d9d6026b2d5d4a1c2e1e72dc58",
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6",
         "dd223a48adb3c959475de41d1b37a10d6350aefb3deee80631c71ccea4f9fd94"
       ]
     },
@@ -1326,10 +1323,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "GUIDED_ASSIGNMENT_COVERAGE_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1339,10 +1334,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1352,10 +1345,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "GUIDED_NESTED_PROPERTY_MERGE_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1365,10 +1356,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "GUIDED_VALIDATION_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1378,10 +1367,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "JSON_SCHEMA_EXPORT_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1391,10 +1378,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "LAYERED_SCHEMA_COMPOSITION_TARGET": {
       "limit": 29837,
@@ -1404,10 +1389,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "explicit target baseline",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "LAYERED_SCHEMA_CORE_TARGET": {
       "limit": 8074,
@@ -1417,10 +1400,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "explicit target baseline",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET": {
       "limit": 103764,
@@ -1430,10 +1411,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "explicit target baseline",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "LAYERED_SCHEMA_EDITOR_POLICY_TARGET": {
       "limit": 22040,
@@ -1443,10 +1422,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "explicit target baseline",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "LAYERED_SCHEMA_EDITOR_RULES_TARGET": {
       "limit": 54972,
@@ -1456,10 +1433,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "explicit target baseline",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "LAYERED_SCHEMA_EDITOR_TARGET": {
       "limit": 55103,
@@ -1469,10 +1444,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "explicit target baseline",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "LAYERED_SCHEMA_INHERITANCE_TARGET": {
       "limit": 108000,
@@ -1482,10 +1455,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "explicit target baseline",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "LAYERED_SCHEMA_PAGE_GROUP_TARGET": {
       "limit": 6791,
@@ -1495,10 +1466,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "explicit target baseline",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1508,10 +1477,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "LIVE_GUIDED_CONDITIONAL_RULE_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1521,10 +1488,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1534,10 +1499,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "LIVE_VALIDATION_VISUALS_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1547,10 +1510,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "LOCAL_RULE_EDITING_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1560,10 +1521,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "LOCAL_RULE_PROMOTION_AVAILABILITY_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1573,10 +1532,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "LOCAL_RULE_PROMOTION_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1586,10 +1543,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "MISSING_EVENT_DEFECT_FIDELITY_BROWSER_OBSERVATION": {
       "limit": 120000,
@@ -1599,10 +1554,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "PAYLOAD_PATH_FILTER_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1612,10 +1565,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "RECURSIVE_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1625,10 +1576,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "RECURSIVE_PROPERTY_VALIDATION_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1638,10 +1587,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "REPRODUCTION_STEP_ACTION_ROWS_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1651,10 +1598,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "REQUIRED_PROPERTY_DEFECT_SCHEMA_CHOICES_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1664,10 +1609,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "REQUIRED_RULE_TYPE_INDEPENDENCE_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1677,10 +1620,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "REUSABLE_RULE_SYNC_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1690,10 +1631,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "SAVED_EVENT_FEED_FILTERS_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1703,10 +1642,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "SAVED_SESSION_LIVE_FEED_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1716,10 +1653,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "SCHEMA_ASSIGNMENT_DATA_CONDITIONS_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1729,10 +1664,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "SCHEMA_CARDINALITY_COMPARISON_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1742,10 +1675,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "SCHEMA_DECLARED_PROPERTY_EXCEPTIONS_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1755,10 +1686,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "SCHEMA_DOCUMENTATION_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1768,10 +1697,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "SCHEMA_MANUAL_PROPERTY_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1781,10 +1708,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "SCHEMA_NESTED_PATH_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1794,10 +1719,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "SCHEMA_PROPERTY_COMMENTS_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1807,10 +1730,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "SCHEMA_PROPERTY_COPY_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1820,10 +1741,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "SCHEMA_PROPERTY_EXAMPLE_VALUES_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1833,10 +1752,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "SCHEMA_PROPERTY_FILTER_SORT_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1846,10 +1763,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "SCHEMA_PROPERTY_REMOVAL_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1859,10 +1774,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "SCHEMA_PROPERTY_RULE_PICKER_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1872,10 +1785,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "SCHEMA_PROPERTY_TYPE_EDITING_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1885,10 +1796,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "SCHEMA_PUBLICATION_REFRESH_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1898,10 +1807,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "SCHEMA_RENAMING_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1911,10 +1818,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1924,10 +1829,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "SCHEMA_RULE_PROPERTY_IDENTITY_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1937,10 +1840,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "SCHEMA_SPECIFICATION_BUILDER_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1950,10 +1851,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "SCHEMA_SPECIFICATION_BUILDER_CUSTOMIZATION_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1963,10 +1862,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "SCHEMA_SPECIFICATION_CONTAINER_DEFAULTS_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1976,10 +1873,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "SCHEMA_SPECIFICATION_EXAMPLE_SELECTION_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1989,10 +1884,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "SCHEMA_SPECIFICATION_PREVIEW_LAYOUT_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -2002,10 +1895,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER": {
       "limit": 4175,
@@ -2015,12 +1906,11 @@
       "provisional": false,
       "maturity": "non-provisional",
       "source": "accepted target samples",
-      "sampleCount": 6,
+      "sampleCount": 5,
       "receiptDigests": [
         "32c7702f8804718a38fda067e33bf121273dbdff2b94e5c81799dbd6b72f80ad",
         "3db06914559b048274e10725034474623736160a6eb7aa5a78ebd924e4211abb",
         "4fbf4f08921f46a05a472cb1f4e80b4787f554ccd815ddce58328e744eec0dba",
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6",
         "a21a3508539c9352eec25a404363b1d921f511604dc3e8cb012266cd68e9be8a",
         "dd223a48adb3c959475de41d1b37a10d6350aefb3deee80631c71ccea4f9fd94"
       ]
@@ -2033,10 +1923,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "SCHEMA_WORKSPACE_BROWSER_ADAPTER:2:4": {
       "limit": 120000,
@@ -2046,10 +1934,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "SCHEMA_WORKSPACE_BROWSER_ADAPTER:default": {
       "limit": 120000,
@@ -2059,10 +1945,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "SINGLE_LIVE_EVENT_FEED_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -2072,10 +1956,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "VALIDATION_PRESENCE_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -2085,10 +1967,8 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 1,
-      "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
-      ]
+      "sampleCount": 0,
+      "receiptDigests": []
     },
     "WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER": {
       "limit": 1446,
@@ -2098,12 +1978,11 @@
       "provisional": false,
       "maturity": "non-provisional",
       "source": "accepted target samples",
-      "sampleCount": 6,
+      "sampleCount": 5,
       "receiptDigests": [
         "32c7702f8804718a38fda067e33bf121273dbdff2b94e5c81799dbd6b72f80ad",
         "3db06914559b048274e10725034474623736160a6eb7aa5a78ebd924e4211abb",
         "4fbf4f08921f46a05a472cb1f4e80b4787f554ccd815ddce58328e744eec0dba",
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6",
         "a21a3508539c9352eec25a404363b1d921f511604dc3e8cb012266cd68e9be8a",
         "dd223a48adb3c959475de41d1b37a10d6350aefb3deee80631c71ccea4f9fd94"
       ]
