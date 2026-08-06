@@ -2653,6 +2653,18 @@ try {
     repositoryRoot:evidenceRepository,
     toolchainValidator:skipToolchainValidation,
   }), /supplied artifact/u);
+  const missingExecutionLoadReceipt = JSON.parse(await readFile(alphaReceipt, "utf8"));
+  delete missingExecutionLoadReceipt.environment.executionLoad;
+  const missingExecutionLoadPath = path.join(
+    evidenceRepository, "tmp", "verification-receipts", "missing-execution-load.json",
+  );
+  await writeFile(missingExecutionLoadPath, JSON.stringify(missingExecutionLoadReceipt));
+  await assert.rejects(() => createPendingVerificationEvidence({
+    task:"missing-execution-load", plan:alphaPlan, receiptPath:missingExecutionLoadPath,
+    changedSince:baseline, buildManifest:artifact, repositoryRoot:evidenceRepository,
+    toolchainValidator:skipToolchainValidation,
+  }), /invalid exact runtime environment/u,
+  "new verification receipts must declare normal or loaded execution load");
   const pendingAlpha = await createPendingVerificationEvidence({
     task:"multi-pack-task", plan:alphaPlan, receiptPath:alphaReceipt,
     changedSince:baseline, buildManifest:artifact, repositoryRoot:evidenceRepository,
@@ -2751,6 +2763,17 @@ try {
   ), /does not exactly cover/u, "handoff evidence is bound to its received base");
 
   const genuineNote = await verificationEvidence("HEAD", { repositoryRoot:evidenceRepository });
+  const legacyEvidenceRecord = structuredClone(recordedAlpha);
+  delete legacyEvidenceRecord.receipt.environment.executionLoad;
+  await exec("git", ["notes", "--ref=refs/notes/swarmforge-verification", "add", "-f", "-m",
+    JSON.stringify({ version:2, records:[legacyEvidenceRecord] }), "HEAD"], {
+    cwd:evidenceRepository,
+  });
+  assert.equal((await verifyVerificationEvidence(
+    "HEAD", baseline, "multi-pack-task", "alpha", { repositoryRoot:evidenceRepository },
+  )).status, "passed", "immutable pre-load-field evidence remains verifiable");
+  await exec("git", ["notes", "--ref=refs/notes/swarmforge-verification", "add", "-f", "-m",
+    JSON.stringify(genuineNote), "HEAD"], { cwd:evidenceRepository });
   const forgedNoteRecord = structuredClone(recordedAlpha);
   const canonicalCompositePlan = await planFor(["alpha", "beta"]);
   const inventedBetaIdentity = verificationTaskIdentity(

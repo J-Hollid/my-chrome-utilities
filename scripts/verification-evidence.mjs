@@ -98,14 +98,17 @@ function artifactIdentity(manifest) {
   return identity;
 }
 
-function receiptEnvironment(environment) {
+function receiptEnvironment(environment, { allowLegacyExecutionLoad = false } = {}) {
   const keys = ["concurrency", "executionLoad", "node", "observationConcurrency", "platform", "typescript"];
+  const legacyKeys = keys.filter((key) => key !== "executionLoad");
+  const actualKeys = Object.keys(environment ?? {}).sort();
+  const legacyEnvironment = allowLegacyExecutionLoad && same(actualKeys, legacyKeys);
   if (!environment || Array.isArray(environment) ||
-      !same(Object.keys(environment).sort(), keys) ||
+      !same(actualKeys, keys) && !legacyEnvironment ||
       !runtimeVersionPattern.test(environment.node ?? "") ||
       !runtimeVersionPattern.test(environment.typescript ?? "") ||
       !/^[a-z0-9]+-[A-Za-z0-9_]+$/u.test(environment.platform ?? "") ||
-      !["normal", "loaded"].includes(environment.executionLoad) ||
+      !legacyEnvironment && !["normal", "loaded"].includes(environment.executionLoad) ||
       !Number.isInteger(environment.concurrency) || environment.concurrency < 1 ||
       !Number.isInteger(environment.observationConcurrency) || environment.observationConcurrency < 1) {
     throw new Error("Verification receipt has an invalid exact runtime environment");
@@ -114,7 +117,7 @@ function receiptEnvironment(environment) {
     node:environment.node,
     typescript:environment.typescript,
     platform:environment.platform,
-    executionLoad:environment.executionLoad,
+    executionLoad:legacyEnvironment ? "unclassified" : environment.executionLoad,
     concurrency:environment.concurrency,
     observationConcurrency:environment.observationConcurrency,
   };
@@ -428,7 +431,7 @@ function evidenceId(record) {
   });
 }
 
-function validateRecordDocument(record) {
+function validateRecordDocument(record, { allowLegacyExecutionLoad = false } = {}) {
   if (record?.version !== 2 || record.status !== "pending" && record.status !== "passed") {
     throw new Error("Verification evidence has an unsupported schema or status");
   }
@@ -461,7 +464,7 @@ function validateRecordDocument(record) {
   if (record.identities.artifact.schemaVersion !== 1) {
     throw new Error("Verification evidence has an unsupported artifact identity schema");
   }
-  const environment = receiptEnvironment(record.receipt?.environment);
+  const environment = receiptEnvironment(record.receipt?.environment, { allowLegacyExecutionLoad });
   const lockedRuntime = record.identities?.runtime;
   const artifactToolchain = record.identities?.artifact?.toolchain;
   if (!same({ node:environment.node, typescript:environment.typescript }, lockedRuntime) ||
@@ -659,7 +662,7 @@ export async function verificationEvidence(commit = "HEAD", { repositoryRoot = r
 }
 
 async function validateRecordedEvidence(record, canonical, tree, repositoryRoot) {
-  validateRecordDocument(record);
+  validateRecordDocument(record, { allowLegacyExecutionLoad:true });
   if (record.status !== "passed" || record.commit !== canonical || record.tree !== tree) {
     throw new Error(`Verification evidence does not match commit ${canonical}`);
   }
