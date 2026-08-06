@@ -1,22 +1,19 @@
-import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { loadVerificationPacks, planVerification } from "./verification-packs.mjs";
+import {
+  archiveCanonicalReceiptCandidates,
+  buildCanonicalTimingLedger,
+  formatCanonicalTimingLedgerSummary,
+  receiptRejectionReason,
+  timingMaturity,
+  validReceipt,
+} from "./verification-timing-ledger.mjs";
 
 const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
 const defaultReceiptDirectory = path.join(repositoryRoot, "tmp", "verification-receipts");
-const sha256Pattern = /^[a-f0-9]{64}$/u;
-
-function artifactBuildIdentity(artifact) {
-  return createHash("sha256").update(`${JSON.stringify({
-    schemaVersion:artifact?.schemaVersion,
-    inputDigest:artifact?.inputDigest,
-    outputDigest:artifact?.outputDigest,
-    toolchain:artifact?.toolchain,
-  })}\n`).digest("hex");
-}
 
 function percentile(values, quantile) {
   if (!values.length) return undefined;
@@ -24,46 +21,13 @@ function percentile(values, quantile) {
   return sorted[Math.min(sorted.length - 1, Math.ceil(sorted.length * quantile) - 1)];
 }
 
-function statistic(values, fallbackMs) {
-  return values.length
+function statistic(values, fallbackMs, minimumIndependentSamples) {
+  const result = values.length
     ? { samples:values.length, medianMs:percentile(values, 0.5), p90Ms:percentile(values, 0.9), source:"receipt-ledger" }
     : { samples:0, medianMs:fallbackMs, p90Ms:fallbackMs, source:"bootstrap-fallback" };
-}
-
-function receiptRejectionReason(receipt, expectedRuntime = {}) {
-  const environment = receipt?.environment;
-  const artifact = receipt?.artifact;
-  const plan = receipt?.plan;
-  const tasks = receipt?.tasks && !Array.isArray(receipt.tasks) ? Object.values(receipt.tasks) : [];
-  const runtimeMatches = ["node", "typescript", "platform"].every((key) =>
-    !expectedRuntime[key] || environment?.[key] === expectedRuntime[key]);
-  if (receipt?.version !== 2) return "receipt-version";
-  if (!runtimeMatches) return "runtime-mismatch";
-  if (!receipt.tasks || Array.isArray(receipt.tasks) || !tasks.length ||
-      tasks.some((result) => result?.status !== "passed" || !Number.isFinite(result.durationMs) ||
-        result.durationMs < 0 || !result.identity?.key || !result.identity?.stage)) {
-    return "incomplete-task-result";
-  }
-  const shapeValid = ["exact", "impact", "terminal", "focused"].includes(plan?.mode) &&
-    Array.isArray(plan.requestedPackIds) && Array.isArray(plan.selectedPackIds) &&
-    plan.changedOwners && !Array.isArray(plan.changedOwners) &&
-    (plan.changeSetDigest === null || sha256Pattern.test(plan.changeSetDigest ?? "")) &&
-    Object.hasOwn(plan, "conservativeHistoricalFallbackReason") &&
-    receipt.completedAt && !Number.isNaN(Date.parse(receipt.completedAt)) &&
-    Number.isInteger(environment?.concurrency) && environment.concurrency > 0 &&
-    Number.isInteger(environment?.observationConcurrency) && environment.observationConcurrency > 0 &&
-    artifact?.toolchain?.node === environment.node &&
-    artifact?.toolchain?.typescript === environment.typescript &&
-    artifact?.schemaVersion === 1 &&
-    [artifact?.buildIdentity, artifact?.inputDigest, artifact?.outputDigest]
-      .every((value) => sha256Pattern.test(value ?? ""));
-  if (!shapeValid) return "receipt-shape";
-  if (artifact?.buildIdentity !== artifactBuildIdentity(artifact)) return "artifact-build-identity";
-  return null;
-}
-
-function validReceipt(receipt, expectedRuntime = {}) {
-  return receiptRejectionReason(receipt, expectedRuntime) === null;
+  return minimumIndependentSamples
+    ? { ...result, ...timingMaturity(values.length, minimumIndependentSamples) }
+    : result;
 }
 
 export async function loadVerificationReceipts(
@@ -95,7 +59,10 @@ export async function loadVerificationReceipts(
   return receipts;
 }
 
-export function measuredTimingModel(receipts, baseline) {
+export function measuredTimingModel(receipts, baseline, {
+  environmentClassId,
+  minimumIndependentSamples = 5,
+} = {}) {
   const fallback = baseline.fallbackMilliseconds ?? Object.fromEntries(
     Object.entries(baseline.seconds ?? {}).map(([key, seconds]) => [key, seconds * 1000]),
   );
@@ -107,10 +74,15 @@ export function measuredTimingModel(receipts, baseline) {
   const browserTargetSamples = new Map();
   let passedTasks = 0;
   let buildTasks = 0;
-  const eligibleReceipts = receipts.filter((receipt) => validReceipt(receipt, baseline.runtime ?? {}));
+  const ledgerEntries = receipts.map((candidate) => candidate?.receipt !== undefined
+    ? candidate
+    : { receipt:candidate, rejectionReason:receiptRejectionReason(candidate, baseline.runtime ?? {}) });
+  const eligibleEntries = ledgerEntries.filter((entry) => entry.receipt && !entry.rejectionReason &&
+    (!environmentClassId || entry.environmentClassId === environmentClassId));
+  const eligibleReceipts = eligibleEntries.map(({ receipt }) => receipt);
   const rejectedByReason = {};
-  for (const receipt of receipts) {
-    const reason = receiptRejectionReason(receipt, baseline.runtime ?? {});
+  for (const entry of ledgerEntries) {
+    const reason = entry.rejectionReason;
     if (reason) rejectedByReason[reason] = (rejectedByReason[reason] ?? 0) + 1;
   }
   for (const receipt of eligibleReceipts) {
@@ -178,24 +150,58 @@ export function measuredTimingModel(receipts, baseline) {
   for (const stage of [
     "build", "unit", "property", "browser", "browser-observation",
     "acceptance-parse", "acceptance-generate", "checkpoint", "acceptance-session",
-  ]) stages[stage] = statistic(byStage.get(stage) ?? [], fallback[stage] ?? fallback.unknown ?? 1000);
+  ]) stages[stage] = statistic(byStage.get(stage) ?? [], fallback[stage] ?? fallback.unknown ?? 1000,
+    environmentClassId ? minimumIndependentSamples : undefined);
   return {
     stages,
-    tasks:Object.fromEntries([...byTask].map(([key, values]) => [key, statistic(values, 0)])),
+    tasks:Object.fromEntries([...byTask].map(([key, values]) => [key,
+      statistic(values, 0, environmentClassId ? minimumIndependentSamples : undefined)])),
     browserTargets:Object.fromEntries([...browserTargetSamples]
-      .map(([id, values]) => [id, statistic(values, 0)])),
+      .map(([id, values]) => [id,
+        statistic(values, 0, environmentClassId ? minimumIndependentSamples : undefined)])),
     browserTargetFallbacks:{ ...(baseline.browserTargetMilliseconds ?? {}) },
     browserObservationSessionOverheadMilliseconds:
       baseline.browserObservationSessionOverheadMilliseconds ?? 0,
     packWeightsMs:Object.fromEntries([...packSamples].map(([id, values]) => [id, percentile(values, 0.5)])),
     ledger:{
       receipts:eligibleReceipts.length,
-      rejectedReceipts:receipts.length - eligibleReceipts.length,
+      rejectedReceipts:ledgerEntries.filter(({ receipt, rejectionReason }) => receipt && rejectionReason).length,
       rejectedByReason:Object.fromEntries(Object.entries(rejectedByReason).sort()),
+      ...(environmentClassId ? {
+        selectedEnvironmentClass:environmentClassId,
+        maturity:timingMaturity(eligibleEntries.length, minimumIndependentSamples),
+      } : {}),
       passedTasks,
       buildTasks,
       environments:[...environments].map(([key, count]) => ({ ...JSON.parse(key), receipts:count })),
       selections:[...selections].map(([key, count]) => ({ ...JSON.parse(key), receipts:count })),
+    },
+  };
+}
+
+export function compareTimingEnvironmentClasses(ledger, baseline, environmentClassIds, {
+  minimumIndependentSamples = ledger.minimumIndependentSamples ?? 5,
+} = {}) {
+  const ids = [...new Set(environmentClassIds ?? [])].sort();
+  if (ids.length < 2) throw new Error("Cross-class timing comparison requires at least two environment classes");
+  const known = new Set(ledger.environmentClasses.map(({ id }) => id));
+  const missing = ids.filter((id) => !known.has(id));
+  if (missing.length) throw new Error(`Unknown timing environment class: ${missing.join(", ")}`);
+  const constituents = ids.map((id) => ({
+    environmentClassId:id,
+    model:measuredTimingModel(ledger.receipts, baseline, {
+      environmentClassId:id, minimumIndependentSamples,
+    }),
+  }));
+  const selected = new Set(ids);
+  return {
+    label:"explicit cross-class comparison",
+    environmentClassIds:ids,
+    constituents,
+    combined:{
+      label:"combined cross-class comparison",
+      model:measuredTimingModel(ledger.receipts.filter((entry) =>
+        selected.has(entry.environmentClassId)), baseline),
     },
   };
 }
@@ -444,8 +450,12 @@ export function reportVerificationThroughput({
   concurrency = 4,
   observationConcurrency = 2,
   shardCount = 4,
+  environmentClassId,
+  minimumIndependentSamples = 5,
 } = {}) {
-  const model = measuredTimingModel(receipts, baseline);
+  const model = measuredTimingModel(receipts, baseline, {
+    environmentClassId, minimumIndependentSamples,
+  });
   const options = { concurrency, observationConcurrency };
   const rows = [];
   const runnableIds = planVerification(packs, { terminalFull:true }).packIds;
@@ -476,6 +486,7 @@ export function reportVerificationThroughput({
     baselineVersion:baseline.version,
     concurrency,
     observationConcurrency,
+    ...(environmentClassId ? { selectedEnvironmentClass:environmentClassId } : {}),
     model,
     browserTargetIds:packs.flatMap((pack) => (pack.browserObservations ?? []).map(({ id }) => id)).sort(),
     comparisonScenarioBuilds:rows
@@ -496,20 +507,114 @@ export function reportVerificationThroughput({
   return report;
 }
 
+function commandOptions(args) {
+  const options = {
+    sources:[],
+    maintenance:"report",
+    legacyLoadIndex:path.join(repositoryRoot, "verification", "timing-receipt-index.json"),
+  };
+  for (let index = 0; index < args.length; index += 1) {
+    const value = args[index + 1];
+    if (args[index] === "--source" && value) {
+      const separator = value.indexOf("=");
+      options.sources.push(separator > 0
+        ? { id:value.slice(0, separator), path:value.slice(separator + 1) }
+        : { path:value });
+      index += 1;
+    } else if (args[index] === "--environment-class" && value) {
+      options.environmentClassId = value; index += 1;
+    } else if (args[index] === "--compare-environment-classes" && value) {
+      options.compareEnvironmentClasses = value.split(",").filter(Boolean); index += 1;
+    } else if (args[index] === "--minimum-independent-samples" && value) {
+      options.minimumIndependentSamples = Number(value); index += 1;
+    } else if (args[index] === "--maintenance" && value) {
+      options.maintenance = value; index += 1;
+    } else if (args[index] === "--archive-directory" && value) {
+      options.archiveDirectory = value; index += 1;
+    } else if (args[index] === "--legacy-load-index" && value) {
+      options.legacyLoadIndex = value; index += 1;
+    } else {
+      throw new Error(`Unknown or incomplete throughput option: ${args[index]}`);
+    }
+  }
+  if (!options.sources.length) options.sources.push({ id:"local", path:defaultReceiptDirectory });
+  return options;
+}
+
 async function main(args) {
-  if (args.length) throw new Error("report-verification-throughput.mjs does not accept positional options");
-  const [packs, baseline, receipts] = await Promise.all([
+  const options = commandOptions(args);
+  const [packs, baseline, lock, legacyLoadIndex, artifact] = await Promise.all([
     loadVerificationPacks(),
     readFile(new URL("../verification/timing-baseline.json", import.meta.url), "utf8").then(JSON.parse),
-    loadVerificationReceipts(defaultReceiptDirectory, { includeRejected:true }),
+    readFile(new URL("../swarmforge/toolchain.lock.json", import.meta.url), "utf8").then(JSON.parse),
+    readFile(options.legacyLoadIndex, "utf8").then(JSON.parse),
+    readFile(new URL("../dist/.dist-artifact.json", import.meta.url), "utf8").then(JSON.parse),
   ]);
+  const ledger = await buildCanonicalTimingLedger({
+    sources:options.sources,
+    expectedRuntime:{
+      node:lock.node.version,
+      typescript:lock.typescript.version,
+      platform:`${process.platform}-${process.arch}`,
+    },
+    minimumIndependentSamples:options.minimumIndependentSamples ?? 5,
+    legacyExecutionLoads:legacyLoadIndex.legacyExecutionLoads ?? {},
+  });
+  const concurrency = Number(process.env.VERIFICATION_CONCURRENCY ?? 4);
+  const observationConcurrency = Number(process.env.VERIFICATION_OBSERVATION_CONCURRENCY ?? 2);
+  const requestedLoad = process.env.VERIFICATION_EXECUTION_LOAD ?? "normal";
+  const exactCurrentClasses = ledger.environmentClasses.filter(({ environment }) =>
+    environment.node === lock.node.version &&
+    environment.typescript === lock.typescript.version &&
+    environment.platform === `${process.platform}-${process.arch}` &&
+    environment.executionLoad === requestedLoad &&
+    environment.concurrency === concurrency &&
+    environment.observationConcurrency === observationConcurrency &&
+    environment.buildIdentity === artifact.buildIdentity);
+  const declaredEnvironmentClasses = ledger.environmentClasses
+    .filter(({ environment }) => environment.executionLoad !== "unclassified");
+  const defaultEnvironmentClasses = exactCurrentClasses.length ? exactCurrentClasses
+    : declaredEnvironmentClasses.length ? declaredEnvironmentClasses : ledger.environmentClasses;
+  const selectedEnvironmentClass = options.environmentClassId ?? defaultEnvironmentClasses
+    .sort((left, right) => right.receiptDigests.length - left.receiptDigests.length ||
+      left.id.localeCompare(right.id))[0]?.id;
+  if (options.environmentClassId && !ledger.environmentClasses.some(({ id }) => id === options.environmentClassId)) {
+    throw new Error(`Unknown timing environment class: ${options.environmentClassId}`);
+  }
   const report = reportVerificationThroughput({
     packs,
     baseline,
-    receipts,
-    concurrency:Number(process.env.VERIFICATION_CONCURRENCY ?? 4),
-    observationConcurrency:Number(process.env.VERIFICATION_OBSERVATION_CONCURRENCY ?? 2),
+    receipts:ledger.receipts,
+    concurrency,
+    observationConcurrency,
+    environmentClassId:selectedEnvironmentClass,
+    minimumIndependentSamples:ledger.minimumIndependentSamples,
   });
+  report.timingLedger = {
+    sources:ledger.sources,
+    receipts:ledger.receipts.map(({ digest, sourcePaths, rejectionReason, environmentClassId }) =>
+      ({ digest, sourcePaths, rejectionReason, environmentClassId })),
+    environmentClasses:ledger.environmentClasses,
+    acceptedReceipts:ledger.acceptedReceipts,
+    rejectedReceipts:ledger.rejectedReceipts,
+    malformedReceipts:ledger.malformedReceipts,
+    rejectedByReason:ledger.rejectedByReason,
+    independentSamples:ledger.independentSamples,
+  };
+  if (options.compareEnvironmentClasses) {
+    report.crossClassComparison = compareTimingEnvironmentClasses(
+      ledger, baseline, options.compareEnvironmentClasses,
+      { minimumIndependentSamples:ledger.minimumIndependentSamples },
+    );
+  }
+  report.receiptMaintenance = await archiveCanonicalReceiptCandidates(ledger, {
+    action:options.maintenance,
+    archiveDirectory:options.archiveDirectory,
+  });
+  console.log(formatCanonicalTimingLedgerSummary(ledger, {
+    selectedEnvironmentClass,
+    minimumIndependentSamples:ledger.minimumIndependentSamples,
+  }));
   console.table(report.rows);
   console.log(JSON.stringify(report, null, 2));
   if (!report.performanceBudgets.passed) {

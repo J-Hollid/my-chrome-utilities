@@ -141,6 +141,7 @@
                root ["src/utility-registry.ts" "src/side-panel.ts"
                      "acceptance/src/acceptance/generator.clj" "scripts/verification-packs.mjs"
                      "scripts/report-verification-throughput.mjs" "scripts/run-focused-acceptance.mjs"
+                     "scripts/verification-timing-ledger.mjs" "verification/timing-receipt-index.json"
                      "scripts/run-browser-observation.mjs" "test/support/headless-chrome.mjs"
                      "test/side-panel-component-layout-runtime-test.mjs"])}))
 
@@ -191,11 +192,23 @@
             ["representative-change" "rejectedByReason" "checkVerificationPerformanceBudgets"
              "refreshVerificationPerformanceBudgets" "browserTargets"
              "defaultBrowserTargetMilliseconds" "boundedStageMilliseconds"
-             "composed target samples" "bootstrap fallback"]
+             "composed target samples" "bootstrap fallback"
+             "selectedEnvironmentClass" "compareTimingEnvironmentClasses"
+             "formatCanonicalTimingLedgerSummary" "receiptMaintenance"]
             "Verification throughput lacks complete rows or budget diagnostics."]
+           ["scripts/verification-timing-ledger.mjs"
+            ["buildCanonicalTimingLedger" "canonicalEnvironmentClassId" "sourcePaths"
+             "minimumIndependentSamples" "timingMaturity" "rejectedByReason"
+             "archiveCanonicalReceiptCandidates" "recovery-manifest.json"]
+            "Canonical timing evidence lacks provenance, isolation, maturity, or maintenance controls."]
+           ["verification/timing-receipt-index.json"
+            ["legacyExecutionLoads" "3e8f2a30516f3a801de4f0631c935bb7f0bd96d9d6026b2d5d4a1c2e1e72dc58"
+             "6ec4fe272461086cb9e2901f8ab34cd40d1b384ee895277cbed4342f47ebe357"]
+            "Legacy timing load classifications are not bound to immutable receipt digests."]
            ["scripts/run-focused-acceptance.mjs"
             ["checkpointPreflight" "resumeVerificationPlan"
-             "SWARMFORGE_VERIFICATION_OUTPUT_DIRECTORY" "provenance:\"fresh\""]
+             "SWARMFORGE_VERIFICATION_OUTPUT_DIRECTORY" "provenance:\"fresh\""
+             "VERIFICATION_EXECUTION_LOAD"]
             "Checkpoint preflight, resume, or isolated output routing is incomplete."]
            ["scripts/run-browser-observation.mjs"
             ["SWARMFORGE_BROWSER_TARGET_IDS" "SWARMFORGE_BROWSER_TARGET_CONFIGURATIONS"

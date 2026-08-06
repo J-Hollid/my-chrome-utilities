@@ -99,12 +99,13 @@ function artifactIdentity(manifest) {
 }
 
 function receiptEnvironment(environment) {
-  const keys = ["concurrency", "node", "observationConcurrency", "platform", "typescript"];
+  const keys = ["concurrency", "executionLoad", "node", "observationConcurrency", "platform", "typescript"];
   if (!environment || Array.isArray(environment) ||
       !same(Object.keys(environment).sort(), keys) ||
       !runtimeVersionPattern.test(environment.node ?? "") ||
       !runtimeVersionPattern.test(environment.typescript ?? "") ||
       !/^[a-z0-9]+-[A-Za-z0-9_]+$/u.test(environment.platform ?? "") ||
+      !["normal", "loaded"].includes(environment.executionLoad) ||
       !Number.isInteger(environment.concurrency) || environment.concurrency < 1 ||
       !Number.isInteger(environment.observationConcurrency) || environment.observationConcurrency < 1) {
     throw new Error("Verification receipt has an invalid exact runtime environment");
@@ -113,6 +114,7 @@ function receiptEnvironment(environment) {
     node:environment.node,
     typescript:environment.typescript,
     platform:environment.platform,
+    executionLoad:environment.executionLoad,
     concurrency:environment.concurrency,
     observationConcurrency:environment.observationConcurrency,
   };

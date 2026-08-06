@@ -1,9 +1,14 @@
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 
 import { architectureViolations } from "../scripts/check-architecture.mjs";
-import { boundedStageMilliseconds } from "../scripts/report-verification-throughput.mjs";
+import { boundedStageMilliseconds, measuredTimingModel } from "../scripts/report-verification-throughput.mjs";
+import {
+  artifactBuildIdentity,
+  buildCanonicalTimingLedger,
+} from "../scripts/verification-timing-ledger.mjs";
 import { executeAcceptancePlan, planVerification } from "../scripts/verification-packs.mjs";
 import { headlessChromeArguments } from "./support/headless-chrome.mjs";
 import { composeUtilityShell } from "../dist/utility-registry.js";
@@ -20,6 +25,64 @@ import { createUtilityStorage } from "../dist/platform/utility-storage.js";
 import { mountDataLayerNavigation } from "../dist/utilities/data-layer/layers/browser/navigation.js";
 
 const timingTask = (key) => ({ key, stage:"unit" });
+
+const timingPropertyRoot = await mkdtemp(path.join(os.tmpdir(), "canonical-timing-property-"));
+try {
+  const sources = ["alpha", "beta"].map((name) => path.join(timingPropertyRoot, name));
+  await Promise.all(sources.map((directory) => mkdir(directory)));
+  const artifact = {
+    schemaVersion:1,
+    inputDigest:"1".repeat(64),
+    outputDigest:"2".repeat(64),
+    toolchain:{ node:process.versions.node, typescript:"5.9.3" },
+  };
+  artifact.buildIdentity = artifactBuildIdentity(artifact);
+  for (let sample = 0; sample < 20; sample += 1) {
+    const executionLoad = sample % 2 ? "loaded" : "normal";
+    const durationMs = executionLoad === "loaded" ? 1000 + sample : 100 + sample;
+    const receipt = {
+      version:2, runId:`property-${sample}`, completedAt:"2026-08-06T12:00:00.000Z",
+      artifact,
+      plan:{ mode:"exact", requestedPackIds:["shell"], selectedPackIds:["shell"],
+        changedOwners:{}, changeSetDigest:null, conservativeHistoricalFallbackReason:null },
+      environment:{ node:process.versions.node, typescript:"5.9.3",
+        platform:`${process.platform}-${process.arch}`, executionLoad,
+        concurrency:4, observationConcurrency:2 },
+      tasks:{ observation:{ status:"passed", durationMs, identity:{ key:"observation", stage:"browser-observation",
+        logicalTargetIds:["PROPERTY_TARGET"] },
+      output:`${JSON.stringify({ swarmforgeBrowserTargetTiming:{ id:"PROPERTY_TARGET", durationMs } })}\n` } },
+    };
+    const bytes = JSON.stringify(receipt);
+    await Promise.all(sources.map((directory) =>
+      writeFile(path.join(directory, `${sample}.json`), bytes)));
+  }
+  const ledgerOptions = {
+    expectedRuntime:{ node:process.versions.node, typescript:"5.9.3",
+      platform:`${process.platform}-${process.arch}` },
+  };
+  const forward = await buildCanonicalTimingLedger({
+    ...ledgerOptions,
+    sources:[{ id:"alpha", path:sources[0] }, { id:"beta", path:sources[1] }],
+  });
+  const reverse = await buildCanonicalTimingLedger({
+    ...ledgerOptions,
+    sources:[{ id:"beta", path:sources[1] }, { id:"alpha", path:sources[0] }],
+  });
+  assert.deepEqual(forward.receipts.map(({ digest, sourcePaths }) => ({ digest, sourcePaths })),
+    reverse.receipts.map(({ digest, sourcePaths }) => ({ digest, sourcePaths })),
+    "canonical receipt identities and provenance must be invariant under source permutation");
+  assert.equal(forward.independentSamples, 20,
+    "copied raw receipts must contribute one independent sample per content digest");
+  assert.ok(forward.receipts.every(({ sourcePaths }) => sourcePaths.length === 2));
+  const baseline = { runtime:ledgerOptions.expectedRuntime, fallbackMilliseconds:{ unknown:1 } };
+  const classP90s = forward.environmentClasses.map(({ id }) =>
+    measuredTimingModel(forward.receipts, baseline, { environmentClassId:id })
+      .browserTargets.PROPERTY_TARGET.p90Ms).sort((left, right) => left - right);
+  assert.ok(classP90s[0] < 200 && classP90s[1] > 1000,
+    "exact environment classes must isolate loaded and normal timing distributions");
+} finally {
+  await rm(timingPropertyRoot, { recursive:true, force:true });
+}
 
 for (let sample = 0; sample < 100; sample += 1) {
   const durations = Array.from(
@@ -558,4 +621,4 @@ for (let sample = 0; sample < 100; sample += 1) {
     /owned by both/);
 }
 
-console.log(`modular properties: ${declaredContracts.length} declared contracts, 100 bounded schedules, 100 undeclared contracts, 100 direct cross-module imports, 100 architecture boundaries, 100 verification graphs, 100 Chrome lifecycle argument sets, 300 lifecycle cases, 100 command registries, 100 navigation models, 100 utility directories, 100 isolation models, 100 controlled-reference models, 100 shell capability models, 100 storage models, and 100 panel models passed`);
+console.log(`modular properties: 20 canonical timing receipts with duplicate provenance and isolated classes, ${declaredContracts.length} declared contracts, 100 bounded schedules, 100 undeclared contracts, 100 direct cross-module imports, 100 architecture boundaries, 100 verification graphs, 100 Chrome lifecycle argument sets, 300 lifecycle cases, 100 command registries, 100 navigation models, 100 utility directories, 100 isolation models, 100 controlled-reference models, 100 shell capability models, 100 storage models, and 100 panel models passed`);

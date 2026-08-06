@@ -24,6 +24,7 @@ import {
 import {
   boundedStageMilliseconds,
   checkVerificationPerformanceBudgets,
+  compareTimingEnvironmentClasses,
   estimatePlanMilliseconds,
   estimateTaskTiming,
   loadVerificationReceipts,
@@ -31,6 +32,13 @@ import {
   refreshVerificationPerformanceBudgets,
   reportVerificationThroughput,
 } from "../scripts/report-verification-throughput.mjs";
+import {
+  archiveCanonicalReceiptCandidates,
+  buildCanonicalTimingLedger,
+  canonicalEnvironmentClassId,
+  formatCanonicalTimingLedgerSummary,
+  timingMaturity,
+} from "../scripts/verification-timing-ledger.mjs";
 import {
   checkpointPreflight,
   createVerificationCommandRunner,
@@ -1661,6 +1669,162 @@ assert.equal(timingModel.ledger.selections[0].selectedPackIds.includes("shell"),
 assert.equal(timingModel.browserTargets.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER.p90Ms, 700);
 assert.equal(timingModel.browserTargets.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER.p90Ms, 800,
   "batched receipts retain independent logical-target measurements");
+const canonicalReceiptRoot = await mkdtemp(path.join(os.tmpdir(), "canonical-timing-root-"));
+const canonicalReceiptWorktree = await mkdtemp(path.join(os.tmpdir(), "canonical-timing-worktree-"));
+const canonicalReceipt = ({ artifact = reportArtifact, completedAt, executionLoad, runId, targetMs }) => ({
+  ...structuredClone(reportReceipt),
+  runId,
+  completedAt,
+  environment:{ ...reportReceipt.environment, executionLoad },
+  artifact,
+  tasks:{
+    "browser-observation:FLOW_GRAPH_EXAMPLES_TARGET":{
+      identity:{
+        key:"browser-observation:FLOW_GRAPH_EXAMPLES_TARGET",
+        stage:"browser-observation",
+        packId:"flow_graph",
+        logicalTargetIds:["FLOW_GRAPH_EXAMPLES_TARGET"],
+      },
+      status:"passed",
+      durationMs:targetMs + 100,
+      output:[
+        JSON.stringify({
+          swarmforgeBrowserTargetResult:{ id:"FLOW_GRAPH_EXAMPLES_TARGET", status:"passed" },
+        }),
+        JSON.stringify({
+          swarmforgeBrowserTargetTiming:{ id:"FLOW_GRAPH_EXAMPLES_TARGET", durationMs:targetMs },
+        }),
+      ].join("\n"),
+    },
+  },
+});
+const normalReceipt = canonicalReceipt({
+  runId:"alpha", completedAt:"2026-08-06T10:00:00.000Z", targetMs:10734,
+});
+const loadedArtifact = syntheticArtifact(
+  "4".repeat(64), "5".repeat(64),
+  { node:reportRuntime.node, typescript:reportRuntime.typescript },
+);
+const loadedReceipt = canonicalReceipt({
+  runId:"beta", completedAt:"2026-08-06T11:00:00.000Z", executionLoad:"loaded",
+  targetMs:24322, artifact:loadedArtifact,
+});
+const normalBytes = `${JSON.stringify(normalReceipt, null, 2)}\n`;
+const normalDigest = createHash("sha256").update(normalBytes).digest("hex");
+await writeFile(path.join(canonicalReceiptRoot, "alpha.json"), normalBytes);
+await writeFile(path.join(canonicalReceiptWorktree, "alpha-copy.json"), normalBytes);
+await writeFile(path.join(canonicalReceiptWorktree, "beta.json"), `${JSON.stringify(loadedReceipt)}\n`);
+for (const [name, receipt] of [
+  ["runtime-mismatch", contaminatedReceipt],
+  ["artifact-mismatch", forgedIdentityReceipt],
+  ["old-version", oldVersionReceipt],
+  ["incomplete", incompleteTaskReceipt],
+]) await writeFile(path.join(canonicalReceiptRoot, `${name}.json`), JSON.stringify(receipt));
+await writeFile(path.join(canonicalReceiptRoot, "malformed.json"), "{not-json\n");
+const canonicalSources = [
+  { id:"root", path:canonicalReceiptRoot },
+  { id:"worktree", path:canonicalReceiptWorktree },
+];
+const canonicalLedger = await buildCanonicalTimingLedger({
+  sources:canonicalSources,
+  expectedRuntime:reportRuntime,
+  legacyExecutionLoads:{ [normalDigest]:"normal" },
+});
+const reversedCanonicalLedger = await buildCanonicalTimingLedger({
+  sources:[...canonicalSources].reverse(),
+  expectedRuntime:reportRuntime,
+  legacyExecutionLoads:{ [normalDigest]:"normal" },
+});
+assert.deepEqual(canonicalLedger.sources, reversedCanonicalLedger.sources,
+  "canonical receipt sources are reported deterministically regardless of input order");
+assert.deepEqual(canonicalLedger.receipts.map(({ digest, sourcePaths }) => ({ digest, sourcePaths })),
+  reversedCanonicalLedger.receipts.map(({ digest, sourcePaths }) => ({ digest, sourcePaths })),
+  "canonical receipt identity and provenance do not depend on source order");
+assert.equal(canonicalLedger.acceptedReceipts, 2);
+assert.equal(canonicalLedger.rejectedReceipts, 4);
+assert.equal(canonicalLedger.malformedReceipts, 1);
+assert.deepEqual(canonicalLedger.rejectedByReason, {
+  "artifact-build-identity":1,
+  "incomplete-task-result":1,
+  "receipt-version":1,
+  "runtime-mismatch":1,
+});
+assert.equal(canonicalLedger.receipts.find(({ receipt }) => receipt?.runId === "alpha").sourcePaths.length, 2,
+  "an identical copied receipt retains both locations but contributes one independent sample");
+const normalClass = canonicalLedger.environmentClasses.find(({ environment }) =>
+  environment.executionLoad === "normal");
+const loadedClass = canonicalLedger.environmentClasses.find(({ environment }) =>
+  environment.executionLoad === "loaded");
+assert.ok(normalClass && loadedClass && normalClass.id !== loadedClass.id,
+  "execution load and artifact identity participate in exact timing environment classes");
+assert.equal(canonicalEnvironmentClassId(normalClass.environment), normalClass.id);
+const normalTimingModel = measuredTimingModel(canonicalLedger.receipts, reportBaseline, {
+  environmentClassId:normalClass.id,
+  minimumIndependentSamples:5,
+});
+const loadedTimingModel = measuredTimingModel(canonicalLedger.receipts, reportBaseline, {
+  environmentClassId:loadedClass.id,
+  minimumIndependentSamples:5,
+});
+assert.equal(normalTimingModel.browserTargets.FLOW_GRAPH_EXAMPLES_TARGET.p90Ms, 10734);
+assert.equal(loadedTimingModel.browserTargets.FLOW_GRAPH_EXAMPLES_TARGET.p90Ms, 24322);
+assert.equal(normalTimingModel.browserTargets.FLOW_GRAPH_EXAMPLES_TARGET.provisional, true,
+  "another environment class and a duplicate copy cannot satisfy sample maturity");
+const crossClassComparison = compareTimingEnvironmentClasses(
+  canonicalLedger, reportBaseline, [loadedClass.id, normalClass.id],
+);
+assert.equal(crossClassComparison.label, "explicit cross-class comparison");
+assert.deepEqual(crossClassComparison.constituents.map(({ environmentClassId, model }) => ({
+  environmentClassId,
+  p90Ms:model.browserTargets.FLOW_GRAPH_EXAMPLES_TARGET.p90Ms,
+})), [
+  { environmentClassId:[loadedClass.id, normalClass.id].sort()[0],
+    p90Ms:[loadedClass, normalClass].sort((left, right) => left.id.localeCompare(right.id))[0]
+      .environment.executionLoad === "loaded" ? 24322 : 10734 },
+  { environmentClassId:[loadedClass.id, normalClass.id].sort()[1],
+    p90Ms:[loadedClass, normalClass].sort((left, right) => left.id.localeCompare(right.id))[1]
+      .environment.executionLoad === "loaded" ? 24322 : 10734 },
+]);
+assert.equal(crossClassComparison.combined.label, "combined cross-class comparison");
+assert.equal(crossClassComparison.combined.model.browserTargets.FLOW_GRAPH_EXAMPLES_TARGET.p90Ms, 24322);
+assert.deepEqual(timingMaturity(3, 5), {
+  independentSamples:3, minimumIndependentSamples:5, provisional:true, status:"provisional",
+});
+assert.deepEqual(timingMaturity(5, 5), {
+  independentSamples:5, minimumIndependentSamples:5, provisional:false, status:"non-provisional",
+});
+assert.equal(timingMaturity(3, 3).status, "non-provisional");
+const ledgerSummary = formatCanonicalTimingLedgerSummary(canonicalLedger, {
+  selectedEnvironmentClass:normalClass.id,
+  minimumIndependentSamples:5,
+});
+assert.match(ledgerSummary,
+  /sources: 2.*accepted: 2.*rejected: 4.*environment class: .*independent samples: 1.*provisional/su,
+  "human timing output identifies source scope, eligibility, class, sample count, and maturity");
+const acceptedPath = path.join(canonicalReceiptRoot, "alpha.json");
+const acceptedBytesBeforeMaintenance = await readFile(acceptedPath);
+const archiveDirectory = path.join(canonicalReceiptRoot, "archive");
+const preview = await archiveCanonicalReceiptCandidates(canonicalLedger, {
+  action:"preview", archiveDirectory,
+});
+assert.equal(preview.archived, false);
+assert.ok(preview.candidates.every(({ sourcePath, digest, reason }) =>
+  sourcePath && /^[a-f0-9]{64}$/u.test(digest) && reason));
+assert.deepEqual(await readFile(acceptedPath), acceptedBytesBeforeMaintenance,
+  "reporting and archive preview never change accepted receipt bytes");
+const archived = await archiveCanonicalReceiptCandidates(canonicalLedger, {
+  action:"archive", archiveDirectory,
+});
+assert.equal(archived.archived, true);
+const archiveManifest = JSON.parse(await readFile(archived.manifestPath, "utf8"));
+assert.ok(archiveManifest.entries.every(({ originalPath, archivePath, digest }) =>
+  originalPath && archivePath && /^[a-f0-9]{64}$/u.test(digest)));
+assert.deepEqual(await readFile(acceptedPath), acceptedBytesBeforeMaintenance,
+  "explicit rejected-receipt archival never changes or archives accepted bytes");
+await Promise.all([
+  rm(canonicalReceiptRoot, { recursive:true, force:true }),
+  rm(canonicalReceiptWorktree, { recursive:true, force:true }),
+]);
 const legacyAggregateReceipt = structuredClone(reportReceipt);
 for (const result of Object.values(legacyAggregateReceipt.tasks)) {
   if (result.identity.stage === "browser-observation") {
@@ -1896,6 +2060,16 @@ assert.equal(refreshedBudgets.performanceBudgets.browserTargetP90Milliseconds.UN
 
 const preflightPlan = planVerification(synthetic, { packIds:["alpha"] });
 const preflightOrder = [];
+const verificationLoadReceiptDirectory = await mkdtemp(
+  path.join(os.tmpdir(), "verification-load-receipts-"),
+);
+assert.equal(createVerificationReceiptContext(1, 1, {
+  receiptDirectory:verificationLoadReceiptDirectory,
+  executionLoad:"loaded",
+}).receipt.environment.executionLoad, "loaded");
+assert.throws(() => createVerificationReceiptContext(1, 1, { executionLoad:"unknown" }),
+  /normal or loaded/u);
+await rm(verificationLoadReceiptDirectory, { recursive:true, force:true });
 await checkpointPreflight({
   packs:synthetic,
   plan:preflightPlan,
@@ -2375,7 +2549,8 @@ try {
       },
       environment:{
         node:lockedRuntime.node, typescript:lockedRuntime.typescript,
-        platform:`${process.platform}-${process.arch}`, concurrency:1, observationConcurrency:1,
+        platform:`${process.platform}-${process.arch}`, executionLoad:"normal",
+        concurrency:1, observationConcurrency:1,
       },
       tasks:Object.fromEntries(plan.tasks.map((task) => [task.key, {
         identity:verificationTaskIdentity(task), status:"passed", durationMs:1, output:"ok\n",
@@ -2396,7 +2571,8 @@ try {
     version:2,
     environment:{
       node:lockedRuntime.node, typescript:lockedRuntime.typescript,
-      platform:`${process.platform}-${process.arch}`, concurrency:1, observationConcurrency:1,
+      platform:`${process.platform}-${process.arch}`, executionLoad:"normal",
+      concurrency:1, observationConcurrency:1,
     },
     tasks:{},
   }));
@@ -2486,6 +2662,7 @@ try {
     node:lockedRuntime.node,
     typescript:lockedRuntime.typescript,
     platform:`${process.platform}-${process.arch}`,
+    executionLoad:"normal",
     concurrency:1,
     observationConcurrency:1,
   });

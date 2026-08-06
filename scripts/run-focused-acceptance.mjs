@@ -270,8 +270,14 @@ function trackVerificationChild(child, terminate) {
 export function createVerificationReceiptContext(
   concurrency,
   observationConcurrency = 2,
-  { receiptDirectory = path.join(repositoryRoot, "tmp", "verification-receipts") } = {},
+  {
+    receiptDirectory = path.join(repositoryRoot, "tmp", "verification-receipts"),
+    executionLoad = process.env.VERIFICATION_EXECUTION_LOAD ?? "normal",
+  } = {},
 ) {
+  if (!["normal", "loaded"].includes(executionLoad)) {
+    throw new Error("VERIFICATION_EXECUTION_LOAD must be normal or loaded");
+  }
   const receiptPath = path.join(receiptDirectory, `${process.pid}-${randomUUID()}.json`);
   const receipt = {
     version:2,
@@ -282,6 +288,7 @@ export function createVerificationReceiptContext(
       node:process.versions.node,
       typescript:installedTypeScriptVersion(),
       platform:`${process.platform}-${process.arch}`,
+      executionLoad,
       concurrency,
       observationConcurrency,
     },
