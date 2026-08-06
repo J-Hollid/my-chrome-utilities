@@ -356,10 +356,11 @@
 
 (defn- calibration-target-world [world target-id]
   (let [calibration (performance-calibration)
-        resolved-id (if (= target-id "an unmeasured target")
-                      "SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER"
-                      target-id)
-        budget (calibration-target calibration resolved-id)]
+        unmeasured? (= target-id "an unmeasured target")
+        fallback-case (get-in calibration [:calibrationCases :unmeasuredDeclaredRegistry])
+        resolved-id (if unmeasured? (:targetId fallback-case) target-id)
+        budget (if unmeasured? (:budget fallback-case)
+                   (calibration-target calibration resolved-id))]
     (support/assert! budget "Browser target calibration is missing."
                      {:target target-id :resolved-target resolved-id})
     (assoc (verify-throughput! world)

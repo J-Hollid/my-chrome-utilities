@@ -830,6 +830,19 @@ export function verificationPerformanceCalibration(
   if (runnablePacks.length !== 20 || Object.keys(browserTargets).length !== 81) {
     throw new Error("Performance calibration must cover 20 runnable packs and 81 browser targets");
   }
+  const declaredFallbackTarget = packs
+    .flatMap((pack) => pack.browserAdapterPerformance ?? [])
+    .flatMap((declaration) => declaration.targetIds ?? [])
+    .find((id) => !Number.isFinite(baseline.browserTargetMilliseconds?.[id]));
+  if (!declaredFallbackTarget) {
+    throw new Error("Performance calibration requires a declared target fallback case");
+  }
+  const unmeasuredDeclaredBudget = refreshVerificationPerformanceBudgets({
+    ...report,
+    browserTargetIds:[declaredFallbackTarget],
+    model:{ ...report.model, browserTargets:{} },
+  }, baseline, { packs, tolerance, minimumIndependentSamples, flowExamplesCharacterization })
+    .performanceBudgets.browserTargetP90Milliseconds[declaredFallbackTarget];
   const verificationTopologyDigest = createHash("sha256")
     .update(`${JSON.stringify(projectedTopology)}\n`)
     .digest("hex");
@@ -857,6 +870,12 @@ export function verificationPerformanceCalibration(
     },
     runnablePacks,
     browserTargets,
+    calibrationCases:{
+      unmeasuredDeclaredRegistry:{
+        targetId:declaredFallbackTarget,
+        budget:unmeasuredDeclaredBudget,
+      },
+    },
     conservation:{
       verificationTopologyDigest,
       referenceTopologyDigest,

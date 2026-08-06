@@ -2363,6 +2363,9 @@ assert.equal(calibrationReport.conservation.impactPropagationUnchanged, true);
 assert.equal(calibrationReport.receiptDigests.length, 5);
 assert.deepEqual(calibrationReport.sourceScope.map(({ id }) => id),
   ["architect", "coder", "refactorer", "root"]);
+assert.equal(calibrationReport.calibrationCases.unmeasuredDeclaredRegistry.budget.source,
+  "declared registry fallback");
+assert.equal(calibrationReport.calibrationCases.unmeasuredDeclaredRegistry.budget.provisional, true);
 assert.equal(calibrationReport.runnablePacks.find(({ id }) => id === "shell").budgetClass,
   "global-shell");
 assert.throws(() => verificationPerformanceCalibration(calibrationThroughput,
