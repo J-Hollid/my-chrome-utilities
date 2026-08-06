@@ -32,3 +32,27 @@
            (get (:modular/browser-adapter-modes inspected)
                 "test/twatility-projects-browser-test.mjs")))
     (is (identical? inspected (#'modular/inspect! inspected)))))
+
+(deftest vtd013-steps-use-dedicated-production-backed-semantics
+  (let [characterization (#'modular/flow-characterization)
+        focused (#'modular/flow-sample-world {} "focused single-target")
+        loaded (#'modular/flow-sample-world {} "normally loaded terminal lane 4 of 4")
+        maturity (#'modular/flow-maturity-world {} "4" "5" "5")
+        budget (#'modular/flow-budget-world {} "12.892 seconds")]
+    (is (= "complete" (get-in characterization [:completion :status])))
+    (is (= "normal" (:vtd013/execution-load focused)))
+    (is (= "loaded" (:vtd013/execution-load loaded)))
+    (is (= ["provisional" "non-provisional"]
+           [(:vtd013/focused-status maturity) (:vtd013/loaded-status maturity)]))
+    (is (= "fail" (:vtd013/budget-result budget))))
+  (let [feature (gherkin/parse-file "features/modular-verification-packs.feature")
+        steps (->> (:scenarios feature)
+                   (filter #(re-matches #"Modular verification packs 03[0-3]" (:name %)))
+                   (mapcat :steps)
+                   (map :text))]
+    (is (= 4 (count (filter #(re-matches #"Modular verification packs 03[0-3]" (:name %))
+                            (:scenarios feature)))))
+    (doseq [step steps]
+      (let [handler (first (filter #(re-matches (:pattern %) step) modular/handlers))]
+        (is (some? handler) step)
+        (is (not= "^.*$" (str (:pattern handler))) step)))))

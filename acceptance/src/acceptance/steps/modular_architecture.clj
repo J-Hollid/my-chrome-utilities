@@ -217,6 +217,110 @@
   (support/assert! predicate message details)
   world)
 
+(def ^:private flow-phase-names
+  ["browser startup" "target setup" "fixture setup" "readiness"
+   "example compilation" "rendering" "persistence" "assertion" "cleanup"])
+
+(defn- flow-characterization []
+  (let [root (support/repository-root)]
+    (aps-json/read-json-file
+     (str (fs/path root "verification/flow-examples-characterization.json")))))
+
+(defn- finite-non-negative? [value]
+  (and (number? value) (Double/isFinite (double value)) (not (neg? value))))
+
+(defn- valid-flow-distributions? [timing-class]
+  (let [phases (:phases timing-class)]
+    (and (= (set flow-phase-names) (set (map name (keys phases))))
+         (every? (fn [[phase-key timing]]
+                   (let [phase-name (name phase-key)]
+                     (and (= (if (= "browser startup" phase-name) "process" "target")
+                             (:scope timing))
+                        (finite-non-negative? (:p50Ms timing))
+                        (finite-non-negative? (:p90Ms timing))
+                        (<= (:p50Ms timing) (:p90Ms timing)))))
+                 phases)
+         (finite-non-negative? (get-in timing-class [:target :p50Ms]))
+         (finite-non-negative? (get-in timing-class [:target :p90Ms]))
+         (<= (get-in timing-class [:target :p50Ms])
+             (get-in timing-class [:target :p90Ms])))))
+
+(defn- flow-sample-world [world sample-condition]
+  (let [[class-key expected-load expected-plan reported-plan]
+        (case sample-condition
+          "focused single-target"
+          [:focusedNormal "normal" "focused FLOW_GRAPH_EXAMPLES_TARGET"
+           "focused FLOW_GRAPH_EXAMPLES_TARGET"]
+          "normally loaded terminal lane 4 of 4"
+          [:normallyLoaded "loaded" "existing Flow and capture co-run"
+           "terminal lane 4/4 Flow and capture co-run"]
+          nil)
+        report (flow-characterization)
+        timing-class (get-in report [:classes class-key])]
+    (support/assert! (and class-key timing-class
+                          (= expected-load (get-in timing-class [:environment :executionLoad]))
+                          (= reported-plan (:planContext timing-class)))
+                     "Flow sample condition is not backed by the committed characterization."
+                     {:sample-condition sample-condition})
+    (assoc (verify-throughput! world)
+           :vtd013/report report
+           :vtd013/timing-class timing-class
+           :vtd013/execution-load expected-load
+           :vtd013/plan-context expected-plan)))
+
+(defn- maturity-status [samples minimum]
+  (if (< samples minimum) "provisional" "non-provisional"))
+
+(defn- flow-maturity-world [world focused-samples loaded-samples minimum]
+  (let [focused (parse-long focused-samples)
+        loaded (parse-long loaded-samples)
+        minimum-count (parse-long minimum)
+        report (flow-characterization)]
+    (support/assert! (and (nat-int? focused) (nat-int? loaded) (pos-int? minimum-count)
+                          (every? valid-flow-distributions? (vals (:classes report))))
+                     "Flow timing maturity fixture or committed distributions are invalid."
+                     {:focused focused :loaded loaded :minimum minimum-count})
+    (assoc (verify-throughput! world)
+           :vtd013/report report
+           :vtd013/focused-status (maturity-status focused minimum-count)
+           :vtd013/loaded-status (maturity-status loaded minimum-count))))
+
+(defn- flow-budget-world [world focused-p90]
+  (let [seconds (parse-seconds focused-p90)
+        report (flow-characterization)
+        budget-ms (:focusedBudgetMilliseconds report)]
+    (support/assert! (and (number? seconds) (= 12891 budget-ms))
+                     "Flow examples budget boundary is not the committed 12891ms contract."
+                     {:focused-p90 focused-p90 :budget-ms budget-ms})
+    (assoc (verify-throughput! world)
+           :vtd013/report report
+           :vtd013/budget-result (if (<= (* seconds 1000) budget-ms) "pass" "fail")
+           :vtd013/loaded-excluded? true)))
+
+(defn- flow-completion-world [world]
+  (let [report (flow-characterization)
+        focused (get-in report [:classes :focusedNormal])
+        loaded (get-in report [:classes :normallyLoaded])
+        digests (concat (:receiptDigests focused) (:receiptDigests loaded))]
+    (support/assert! (and (= "complete" (get-in report [:completion :status]))
+                          (= 5 (:sampleCount focused)) (= 5 (:sampleCount loaded))
+                          (= 10 (count digests)) (= 10 (count (set digests)))
+                          (every? #(re-matches #"[a-f0-9]{64}" %) digests)
+                          (re-matches #"[a-f0-9]{64}" (:artifactBuildIdentity report))
+                          (= (:artifactBuildIdentity report)
+                             (get-in focused [:environment :buildIdentity])
+                             (get-in loaded [:environment :buildIdentity]))
+                          (re-matches #"[a-f0-9]{40}" (:implementationCommit report))
+                          (false? (get-in report [:evidenceConservation :rawReceiptBytesChanged])))
+                     "Committed Flow characterization is not exact, mature, and digest-bound."
+                     {:report report})
+    (assoc (verify-throughput! world)
+           :vtd013/report report :vtd013/focused focused :vtd013/loaded loaded)))
+
+(defn- assert-vtd013! [world predicate message]
+  (support/assert! predicate message {:report (:vtd013/report world)})
+  world)
+
 (defn- classified-browser-adapters [registry]
   (into {}
         (map (juxt :path :mode))
@@ -532,9 +636,120 @@
     :handler (fn [world _example _captures]
                (assert-vtd002! world (:vtd002/accepted-bytes-unchanged? world)
                                "Receipt maintenance changed accepted evidence." {}))}
+   {:pattern #"^a FLOW_GRAPH_EXAMPLES_TARGET sample is recorded under (.+)$"
+    :handler (fn [world example captures]
+               (apply flow-sample-world world (example-values example captures)))}
+   {:pattern #"^phase-aware target timing is emitted$"
+    :handler (fn [world _example _captures]
+               (assert-vtd013! world (valid-flow-distributions? (:vtd013/timing-class world))
+                               "Flow sample does not expose complete target and phase distributions."))}
+   {:pattern #"^receipt execution load is (.+)$"
+    :handler (fn [world example captures]
+               (assert-value! world (first (example-values example captures))
+                              (:vtd013/execution-load world)))}
+   {:pattern #"^plan context is (.+)$"
+    :handler (fn [world example captures]
+               (assert-value! world (first (example-values example captures))
+                              (:vtd013/plan-context world)))}
+   {:pattern #"^timing identifies browser startup, target setup, fixture setup, readiness, example compilation, rendering, persistence, assertion, and cleanup phases$"
+    :handler (fn [world _example _captures]
+               (assert-vtd013! world
+                               (= (set flow-phase-names)
+                                  (set (map name (keys (get-in world [:vtd013/timing-class :phases])))))
+                               "Flow phase identities are incomplete."))}
+   {:pattern #"^every phase has explicit process or target scope and a finite non-negative duration$"
+    :handler (fn [world _example _captures]
+               (assert-vtd013! world (valid-flow-distributions? (:vtd013/timing-class world))
+                               "Flow phase scope or duration distribution is invalid."))}
+   {:pattern #"^the canonical ledger contains (.+) focused normal samples and (.+) normally loaded samples for FLOW_GRAPH_EXAMPLES_TARGET from one artifact build$"
+    :handler (fn [world example captures]
+               (let [[focused loaded] (example-values example captures)]
+                 (assoc world :vtd013/focused-samples (parse-long focused)
+                        :vtd013/loaded-samples (parse-long loaded))))}
+   {:pattern #"^phase timing maturity is reported with minimum ([0-9]+)$"
+    :handler (fn [world _example [minimum]]
+               (flow-maturity-world world
+                                    (str (:vtd013/focused-samples world))
+                                    (str (:vtd013/loaded-samples world)) minimum))}
+   {:pattern #"^focused normal timing is (.+)$"
+    :handler (fn [world example captures]
+               (assert-value! world (first (example-values example captures))
+                              (:vtd013/focused-status world)))}
+   {:pattern #"^normally loaded timing is (.+)$"
+    :handler (fn [world example captures]
+               (assert-value! world (first (example-values example captures))
+                              (:vtd013/loaded-status world)))}
+   {:pattern #"^each class reports separate target and phase p50 and p90 values with receipt digests$"
+    :handler (fn [world _example _captures]
+               (let [classes (vals (get-in world [:vtd013/report :classes]))]
+                 (assert-vtd013! world
+                                 (and (= 2 (count classes))
+                                      (apply not= (map :environmentClassId classes))
+                                      (every? valid-flow-distributions? classes)
+                                      (every? #(= (:sampleCount %) (count (:receiptDigests %))) classes))
+                                 "Flow timing classes are merged or omit distributions and digests.")))}
+   {:pattern #"^five focused normal FLOW_GRAPH_EXAMPLES_TARGET samples have p90 (.+)$"
+    :handler (fn [world example captures]
+               (apply flow-budget-world world (example-values example captures)))}
+   {:pattern #"^verification performance budgets are checked$"
+    :handler (fn [world _example _captures]
+               (if (:vtd013/report world)
+                 (assert-vtd013! world (= 12891 (get-in world [:vtd013/report :focusedBudgetMilliseconds]))
+                                 "Flow examples focused budget changed.")
+                 (inspect! world)))}
+   {:pattern #"^the budget result is (.+)$"
+    :handler (fn [world example captures]
+               (if (:vtd013/report world)
+                 (assert-value! world (first (example-values example captures))
+                                (:vtd013/budget-result world))
+                 (inspect! world)))}
+   {:pattern #"^normally loaded samples do not enter the focused normal percentile$"
+    :handler (fn [world _example _captures]
+               (assert-vtd013! world (:vtd013/loaded-excluded? world)
+                               "Loaded Flow samples entered the focused percentile."))}
+   {:pattern #"^a committed Flow examples characterization references at least five focused normal and five normally loaded accepted receipt digests from the current artifact build$"
+    :handler (fn [world _example _captures] (flow-completion-world world))}
+   {:pattern #"^VTD-013 completion is evaluated$"
+    :handler (fn [world _example _captures]
+               (assert-vtd013! world (= "complete" (get-in world [:vtd013/report :completion :status]))
+                               "VTD-013 characterization is not complete."))}
+   {:pattern #"^every sample contains complete phase timing and environment identity$"
+    :handler (fn [world _example _captures]
+               (assert-vtd013! world
+                               (every? #(and (valid-flow-distributions? %)
+                                             (= (:sampleCount %) (count (:receiptDigests %)))
+                                             (= 7 (count (:environment %))))
+                                       [(:vtd013/focused world) (:vtd013/loaded world)])
+                               "Flow samples omit phase timing or exact environment identity."))}
+   {:pattern #"^the report identifies the dominant phase and the bounded synchronization or work correction$"
+    :handler (fn [world _example _captures]
+               (assert-vtd013! world
+                               (and (seq (get-in world [:vtd013/report :diagnosis :preCorrectionDominantPhase]))
+                                    (re-find #"bounded predicate waits"
+                                             (get-in world [:vtd013/report :correction])))
+                               "Flow diagnosis or bounded synchronization correction is missing."))}
+   {:pattern #"^every loaded sample passes its assigned assertions without widening the 12.891 second target budget$"
+    :handler (fn [world _example _captures]
+               (assert-vtd013! world
+                               (and (= "passed" (:assignedAssertions (:vtd013/loaded world)))
+                                    (false? (get-in world [:vtd013/report :budgetChanged]))
+                                    (= 12891 (get-in world [:vtd013/report :focusedBudgetMilliseconds])))
+                               "Loaded assertions or focused budget conservation failed."))}
+   {:pattern #"^the 35 second representative Flow changed-path guardrail is unchanged$"
+    :handler (fn [world _example _captures]
+               (assert-vtd013! world
+                               (= 35 (get-in world [:vtd013/report :representativeFlowChangedPathGuardrailSeconds]))
+                               "Representative Flow changed-path guardrail changed."))}
+   {:pattern #"^Flow controls, authoring, legacy, and all 21 examples assertion leaves retain their identities$"
+    :handler (fn [world _example _captures]
+               (assert-vtd013! world
+                               (and (true? (get-in world [:vtd013/report :evidenceConservation :browserTargetIdsUnchanged]))
+                                    (= {:runtime021 11 :runtime025 10}
+                                       (get-in world [:vtd013/report :evidenceConservation :examplesAssertionLeaves])))
+                               "Flow target or examples assertion identities changed."))}
    {:pattern #"^.*$"
     :handler (fn [world _example _captures] (inspect! world))}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-06T17:11:58.808861042+02:00", :module-hash "-1415187728", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 5, :hash "-485998160"} {:id "defn-/enough-verification-packs?", :kind "defn-", :line 7, :end-line 8, :hash "380845414"} {:id "def/browser-adapter-modes", :kind "def", :line 10, :end-line 11, :hash "-1768145777"} {:id "form/3/defonce", :kind "defonce", :line 12, :end-line 12, :hash "-951894673"} {:id "form/4/declare", :kind "declare", :line 13, :end-line 13, :hash "470981416"} {:id "defn-/verify-throughput!", :kind "defn-", :line 15, :end-line 23, :hash "-675172632"} {:id "defn-/parse-seconds", :kind "defn-", :line 25, :end-line 27, :hash "-309137656"} {:id "defn-/bounded-worker-load", :kind "defn-", :line 29, :end-line 35, :hash "-2029624008"} {:id "defn-/parse-task-durations", :kind "defn-", :line 37, :end-line 46, :hash "1259277085"} {:id "defn-/bounded-stage-world", :kind "defn-", :line 48, :end-line 55, :hash "-1428085136"} {:id "defn-/timing-evidence", :kind "defn-", :line 57, :end-line 88, :hash "528684167"} {:id "defn-/timing-world", :kind "defn-", :line 90, :end-line 94, :hash "1314606518"} {:id "def/report-row-estimates", :kind "def", :line 96, :end-line 98, :hash "-1582722125"} {:id "defn-/budget-world", :kind "defn-", :line 100, :end-line 110, :hash "78919961"} {:id "defn-/assert-seconds!", :kind "defn-", :line 112, :end-line 117, :hash "726379898"} {:id "defn-/assert-value!", :kind "defn-", :line 119, :end-line 123, :hash "356760800"} {:id "defn-/example-values", :kind "defn-", :line 125, :end-line 127, :hash "613161209"} {:id "defn-/canonical-ledger-world", :kind "defn-", :line 129, :end-line 134, :hash "-968309789"} {:id "defn-/environment-class-world", :kind "defn-", :line 136, :end-line 144, :hash "-466670476"} {:id "def/rejection-reasons", :kind "def", :line 146, :end-line 150, :hash "621663720"} {:id "defn-/receipt-eligibility-world", :kind "defn-", :line 152, :end-line 160, :hash "-813563194"} {:id "defn-/timing-sample-world", :kind "defn-", :line 162, :end-line 166, :hash "877595569"} {:id "defn-/minimum-sample-world", :kind "defn-", :line 168, :end-line 173, :hash "145658693"} {:id "defn-/evaluate-maturity", :kind "defn-", :line 175, :end-line 181, :hash "1652383274"} {:id "defn-/indexed-load-world", :kind "defn-", :line 183, :end-line 193, :hash "-515305694"} {:id "def/maintenance-results", :kind "def", :line 195, :end-line 203, :hash "-1157939848"} {:id "defn-/maintenance-world", :kind "defn-", :line 205, :end-line 208, :hash "1219897170"} {:id "defn-/run-maintenance", :kind "defn-", :line 210, :end-line 214, :hash "-1616042970"} {:id "defn-/assert-vtd002!", :kind "defn-", :line 216, :end-line 218, :hash "-1181928910"} {:id "defn-/classified-browser-adapters", :kind "defn-", :line 220, :end-line 223, :hash "1447896627"} {:id "defn-/inspection-context", :kind "defn-", :line 225, :end-line 237, :hash "-360551503"} {:id "defn-/assert-pack-fields!", :kind "defn-", :line 239, :end-line 244, :hash "-687209790"} {:id "defn-/assert-adapter-classifications!", :kind "defn-", :line 246, :end-line 254, :hash "1283499675"} {:id "defn-/assert-registered-paths!", :kind "defn-", :line 256, :end-line 260, :hash "-1045887639"} {:id "defn-/assert-shared-adapters!", :kind "defn-", :line 262, :end-line 266, :hash "1959980324"} {:id "defn-/assert-source-signals!", :kind "defn-", :line 268, :end-line 317, :hash "1212118136"} {:id "defn-/assert-owning-pack-batches!", :kind "defn-", :line 319, :end-line 329, :hash "791393763"} {:id "defn-/assert-browser-batching!", :kind "defn-", :line 331, :end-line 343, :hash "-2051603484"} {:id "defn-/assert-runtime-boundaries!", :kind "defn-", :line 345, :end-line 353, :hash "767574382"} {:id "defn-/inspect-repository!", :kind "defn-", :line 355, :end-line 363, :hash "-552939158"} {:id "defn-/inspect!", :kind "defn-", :line 365, :end-line 372, :hash "661987012"} {:id "def/handlers", :kind "def", :line 374, :end-line 536, :hash "713051708"}]}
+;; {:version 1, :tested-at "2026-08-06T18:25:52.599655658+02:00", :module-hash "-1477183072", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 5, :hash "-485998160"} {:id "defn-/enough-verification-packs?", :kind "defn-", :line 7, :end-line 8, :hash "380845414"} {:id "def/browser-adapter-modes", :kind "def", :line 10, :end-line 11, :hash "-1768145777"} {:id "form/3/defonce", :kind "defonce", :line 12, :end-line 12, :hash "-951894673"} {:id "form/4/declare", :kind "declare", :line 13, :end-line 13, :hash "470981416"} {:id "defn-/verify-throughput!", :kind "defn-", :line 15, :end-line 23, :hash "-675172632"} {:id "defn-/parse-seconds", :kind "defn-", :line 25, :end-line 27, :hash "-309137656"} {:id "defn-/bounded-worker-load", :kind "defn-", :line 29, :end-line 35, :hash "-2029624008"} {:id "defn-/parse-task-durations", :kind "defn-", :line 37, :end-line 46, :hash "1259277085"} {:id "defn-/bounded-stage-world", :kind "defn-", :line 48, :end-line 55, :hash "-1428085136"} {:id "defn-/timing-evidence", :kind "defn-", :line 57, :end-line 88, :hash "528684167"} {:id "defn-/timing-world", :kind "defn-", :line 90, :end-line 94, :hash "1314606518"} {:id "def/report-row-estimates", :kind "def", :line 96, :end-line 98, :hash "-1582722125"} {:id "defn-/budget-world", :kind "defn-", :line 100, :end-line 110, :hash "78919961"} {:id "defn-/assert-seconds!", :kind "defn-", :line 112, :end-line 117, :hash "726379898"} {:id "defn-/assert-value!", :kind "defn-", :line 119, :end-line 123, :hash "356760800"} {:id "defn-/example-values", :kind "defn-", :line 125, :end-line 127, :hash "613161209"} {:id "defn-/canonical-ledger-world", :kind "defn-", :line 129, :end-line 134, :hash "-968309789"} {:id "defn-/environment-class-world", :kind "defn-", :line 136, :end-line 144, :hash "-466670476"} {:id "def/rejection-reasons", :kind "def", :line 146, :end-line 150, :hash "621663720"} {:id "defn-/receipt-eligibility-world", :kind "defn-", :line 152, :end-line 160, :hash "-813563194"} {:id "defn-/timing-sample-world", :kind "defn-", :line 162, :end-line 166, :hash "877595569"} {:id "defn-/minimum-sample-world", :kind "defn-", :line 168, :end-line 173, :hash "145658693"} {:id "defn-/evaluate-maturity", :kind "defn-", :line 175, :end-line 181, :hash "1652383274"} {:id "defn-/indexed-load-world", :kind "defn-", :line 183, :end-line 193, :hash "-515305694"} {:id "def/maintenance-results", :kind "def", :line 195, :end-line 203, :hash "-1157939848"} {:id "defn-/maintenance-world", :kind "defn-", :line 205, :end-line 208, :hash "1219897170"} {:id "defn-/run-maintenance", :kind "defn-", :line 210, :end-line 214, :hash "-1616042970"} {:id "defn-/assert-vtd002!", :kind "defn-", :line 216, :end-line 218, :hash "-1181928910"} {:id "def/flow-phase-names", :kind "def", :line 220, :end-line 222, :hash "-349843343"} {:id "defn-/flow-characterization", :kind "defn-", :line 224, :end-line 227, :hash "-1250474525"} {:id "defn-/finite-non-negative?", :kind "defn-", :line 229, :end-line 230, :hash "-361320050"} {:id "defn-/valid-flow-distributions?", :kind "defn-", :line 232, :end-line 246, :hash "-622248400"} {:id "defn-/flow-sample-world", :kind "defn-", :line 248, :end-line 269, :hash "-1723877432"} {:id "defn-/maturity-status", :kind "defn-", :line 271, :end-line 272, :hash "-1566647915"} {:id "defn-/flow-maturity-world", :kind "defn-", :line 274, :end-line 286, :hash "1850488950"} {:id "defn-/flow-budget-world", :kind "defn-", :line 288, :end-line 298, :hash "-1266897019"} {:id "defn-/flow-completion-world", :kind "defn-", :line 300, :end-line 318, :hash "-2020536028"} {:id "defn-/assert-vtd013!", :kind "defn-", :line 320, :end-line 322, :hash "2075911387"} {:id "defn-/classified-browser-adapters", :kind "defn-", :line 324, :end-line 327, :hash "1447896627"} {:id "defn-/inspection-context", :kind "defn-", :line 329, :end-line 341, :hash "-360551503"} {:id "defn-/assert-pack-fields!", :kind "defn-", :line 343, :end-line 348, :hash "-687209790"} {:id "defn-/assert-adapter-classifications!", :kind "defn-", :line 350, :end-line 358, :hash "1733916403"} {:id "defn-/assert-registered-paths!", :kind "defn-", :line 360, :end-line 364, :hash "578859635"} {:id "defn-/assert-shared-adapters!", :kind "defn-", :line 366, :end-line 370, :hash "1295112235"} {:id "defn-/assert-source-signals!", :kind "defn-", :line 372, :end-line 421, :hash "1212118136"} {:id "defn-/assert-owning-pack-batches!", :kind "defn-", :line 423, :end-line 433, :hash "-1067228581"} {:id "defn-/assert-browser-batching!", :kind "defn-", :line 435, :end-line 447, :hash "-1863990007"} {:id "defn-/assert-runtime-boundaries!", :kind "defn-", :line 449, :end-line 457, :hash "767574382"} {:id "defn-/inspect-repository!", :kind "defn-", :line 459, :end-line 467, :hash "-552939158"} {:id "defn-/inspect!", :kind "defn-", :line 469, :end-line 476, :hash "661987012"} {:id "def/handlers", :kind "def", :line 478, :end-line 751, :hash "-715058414"}]}
 ;; clj-mutate-manifest-end
