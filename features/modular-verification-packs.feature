@@ -542,3 +542,88 @@ Feature: Modular verification packs
     Then it selects only project_management with dependant fan-out 0
     And its critical-path baseline is 37.1 seconds with tolerance 1.2 and limit 45 seconds
     And the other 19 pack calibrations and all 81 browser-target budgets are unchanged
+
+  # Modular verification packs 046
+  Scenario Outline: Modular verification packs 046
+    Given durable_project_repository owns source path <source_path>
+    When its impact boundary is inspected
+    Then its boundary is <boundary>
+    And its source class is <source_class>
+    And dependant propagation is <dependant_propagation>
+
+    Examples:
+      | source_path                                                        | boundary                               | source_class           | dependant_propagation |
+      | src/data-layer-durable-project-repository.ts                       | durable_repository_persistence         | persistence migration  | retained              |
+      | src/data-layer-production-model.ts                                 | durable_production_semantic             | core or semantic       | retained              |
+      | src/data-layer-production-specification.ts                         | durable_production_semantic             | core or semantic       | retained              |
+      | src/data-layer-durable-project-repository-ui.ts                    | durable_repository_controller           | application controller | retained              |
+      | src/data-layer-durable-project-repository-presentation-ui.ts       | durable_repository_presentation         | browser presentation   | excluded              |
+      | src/data-layer-durable-project-runtime.ts                          | durable_runtime_controller              | application controller | retained              |
+      | src/durable-project/runtime-core.ts                                | durable_runtime_controller              | application controller | retained              |
+      | src/durable-project/runtime-helpers.ts                             | durable_runtime_controller              | application controller | retained              |
+      | src/data-layer-compact-canonical-history.ts                        | durable_page_history_semantic           | core or semantic       | retained              |
+      | src/utilities/data-layer/saved-schema-feed.ts                      | durable_saved_schema_feed_semantic      | core or semantic       | retained              |
+
+  # Modular verification packs 047
+  Scenario: Modular verification packs 047
+    Given src/data-layer-durable-project-repository-ui.ts coordinates repository access and storage-changing recovery effects
+    When its display-only recovery and diagnostics rendering is extracted
+    Then src/data-layer-durable-project-repository-presentation-ui.ts accepts only supplied display values, DOM hosts, and owner callbacks
+    And it cannot access IndexedDB, Web Storage, navigator.storage, repository methods, recovery serialization, retry, reject, or backup deletion semantics
+    And the controller remains the sole owner of repository access and storage-changing effects
+    And existing DOM identities, accessible names, visible text, control states, dialog focus, return focus, callbacks, and 360-pixel behavior are unchanged
+
+  # Modular verification packs 048
+  Scenario Outline: Modular verification packs 048
+    Given changed durable-repository path is <changed_path>
+    When impacted verification packs are selected
+    Then selected packs are <selected_packs>
+    And its complete owner unit, property, feature, handler, and installed browser evidence is selected
+
+    Examples:
+      | changed_path                                                        | selected_packs                                                                                                         |
+      | src/data-layer-durable-project-repository-presentation-ui.ts        | durable_project_repository                                                                                             |
+      | src/data-layer-durable-project-repository.ts                        | durable_project_repository, flow_graph, flow_export, live_flow_testing, layered_schema, and property_set_flow_sections |
+      | src/data-layer-production-model.ts                                  | durable_project_repository, flow_graph, flow_export, live_flow_testing, layered_schema, and property_set_flow_sections |
+      | src/data-layer-durable-project-repository-ui.ts                     | durable_project_repository, flow_graph, flow_export, live_flow_testing, layered_schema, and property_set_flow_sections |
+      | src/data-layer-durable-project-runtime.ts                           | durable_project_repository, flow_graph, flow_export, live_flow_testing, layered_schema, and property_set_flow_sections |
+      | src/data-layer-compact-canonical-history.ts                         | durable_project_repository, flow_graph, flow_export, live_flow_testing, layered_schema, and property_set_flow_sections |
+      | src/utilities/data-layer/saved-schema-feed.ts                       | durable_project_repository, flow_graph, flow_export, live_flow_testing, layered_schema, and property_set_flow_sections |
+
+  # Modular verification packs 049
+  Scenario: Modular verification packs 049
+    Given acceptance/src/acceptance/steps/durable_project_repository.clj owns two durable-repository feature files
+    When acceptance-handler isolation is audited from APS step consumers
+    Then every served feature and step consumer belongs to durable_project_repository
+    And the handler is declared isolated
+    And a handler-only change selects the complete durable_project_repository evidence without dependant packs
+    But any cross-pack consumer blocks isolation and retains dependant propagation
+
+  # Modular verification packs 050
+  Scenario Outline: Modular verification packs 050
+    Given durable-repository change is <change>
+    And historical registry state is <historical_registry>
+    When impacted verification packs are selected from current and historical ownership
+    Then selected scope is <selected_scope>
+
+    Examples:
+      | change                                                                                                                                                                        | historical_registry                                | selected_scope                  |
+      | delete src/data-layer-durable-project-repository-presentation-ui.ts                                                                                                          | readable and compatible                            | durable_project_repository      |
+      | rename src/data-layer-durable-project-repository-presentation-ui.ts to src/data-layer-durable-project-repository-ui.ts                                                       | readable and compatible                            | the six-pack dependant closure  |
+      | delete src/data-layer-durable-project-repository-presentation-ui.ts                                                                                                          | missing, unreadable, incompatible, or malformed    | every runnable pack             |
+
+  # Modular verification packs 051
+  Scenario: Modular verification packs 051
+    Given every durable-repository boundary maps to the complete owner evidence profile
+    When exact durable_project_repository verification and terminal-full planning are compared before and after VTD-004
+    Then all five unit files, three property files, two features, one handler, two installed browser adapters, four browser targets, and 111 browser assertion leaves execute once in the exact owner plan
+    And terminal-full planning executes every conserved assertion leaf and package check exactly once
+    And browser batching, task order, worker limits, terminal shards, product behavior, durable bytes, migration, publication, Undo, recovery choices, accessibility, and focus are unchanged
+
+  # Modular verification packs 052
+  Scenario: Modular verification packs 052
+    Given the calibrated representative path src/data-layer-durable-project-repository-ui.ts previously selected six packs with critical-path baseline 328.8 seconds and limit 395 seconds
+    When src/data-layer-durable-project-repository-presentation-ui.ts becomes the calibrated non-propagating representative from the accepted VTD-003 receipt scope
+    Then it selects only durable_project_repository with dependant fan-out 0
+    And its critical-path baseline is 90.2 seconds with tolerance 1.2 and limit 109 seconds
+    And the other 19 pack calibrations, the durable exact-pack calibration, and all 81 browser-target budgets are unchanged

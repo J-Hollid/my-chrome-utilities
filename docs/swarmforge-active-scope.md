@@ -2029,12 +2029,12 @@ the normal coder, refactorer, and architect chain and the accepted commit is mer
 VTD-003 completed that chain and merged at
 `7aaab0458cb2cd793bc10a28e4ec58a9db3d4ccc`.
 
-## Verification throughput program — candidate slice VTD-004 project management (2026-08-06)
+## Verification throughput program — completed slice VTD-004 project management (2026-08-06)
 
-This is the only active specification slice. It covers the `project_management` pack
-only. It remains a candidate and grants no implementation authority until the user
-explicitly approves the bounded coder handoff. The other VTD-004 pack slices and
-VTD-005 through VTD-012 remain inactive.
+This completed specification slice covers the `project_management` pack only. It
+completed the normal coder, refactorer, and architect chain and merged at
+`acfdf39d8d562c321ab8a168f276fb55ad024acf`. It remains authoritative completed
+history; later VTD-004 packages do not reopen its delivered boundaries.
 
 ### Plain-language outcome
 
@@ -2142,3 +2142,125 @@ outcome. After the boundary is installed, either exact presentation path selects
 coordination paths retain their ten-pack closure. The broad checkpoint is task-owned by
 the unavoidable global architecture-ledger change and does not authorize the specifier
 to run it or make future Project UI changes global.
+
+## Verification throughput program — candidate slice VTD-004 durable repository presentation (2026-08-07)
+
+This is the only candidate specification slice. It covers the
+`durable_project_repository` pack only and grants no implementation authority until
+the user explicitly approves the bounded coder handoff. The remaining VTD-004 pack
+slices and VTD-005 through VTD-012 remain inactive.
+
+### Plain-language outcome
+
+Today the representative durable-storage UI file pulls six packs into the plan. The
+current calibrated model is about 328.8 seconds even though the complete
+`durable_project_repository` pack itself models at about 90.2 seconds. This package
+extracts the recovery and diagnostics screen's display-only work so that changes to
+wording, displayed values, control layout, dialog visibility, or focus behavior run
+the durable-repository checks without five unrelated dependant packs. The
+representative guardrail becomes 109 seconds instead of 395 seconds: about five and a
+half minutes of planned work becomes about one and a half minutes, saving roughly four
+minutes per visual change.
+
+This speedup does not apply to opening IndexedDB, storing or loading projects, retrying
+or rejecting saves, exporting recovery data, deleting a migration backup, migrating
+legacy data, publishing revisions, reconciling Saved Schemas, or applying page Undo and
+Redo. Those operations continue to run the current six-pack dependant set. Product
+behavior, stored bytes, recovery choices, and operator-visible results do not change.
+
+### Durable-repository impact boundaries
+
+Every current `durable_project_repository` source file belongs to exactly one boundary.
+An exact file cannot match two boundaries, and a new file below the owned
+`src/durable-project` directory is a validation error until it is classified.
+
+| Boundary | Exact source paths | Class | Propagate dependants | Reason |
+|---|---|---|---|---|
+| `durable_repository_persistence` | `src/data-layer-durable-project-repository.ts` | persistence/migration | yes | Owns IndexedDB records, transactions, migrations, recovery backups, publication records, and durable conflict behavior. |
+| `durable_production_semantic` | `src/data-layer-production-model.ts`, `src/data-layer-production-specification.ts` | core/semantic | yes | Defines and evaluates the public production-revision and schema-evidence contract. |
+| `durable_repository_controller` | `src/data-layer-durable-project-repository-ui.ts` | application/controller | yes | Opens the repository and coordinates retry, reject, diagnostics, recovery export, and backup deletion. |
+| `durable_repository_presentation` | `src/data-layer-durable-project-repository-presentation-ui.ts` | browser presentation | no | Renders supplied recovery and diagnostics values and emits owner callbacks without reading or changing durable state. |
+| `durable_runtime_controller` | `src/data-layer-durable-project-runtime.ts`, `src/durable-project/runtime-core.ts`, `src/durable-project/runtime-helpers.ts` | application/controller | yes | Coordinates durable project state, legacy projections, route hydration, save failures, and cross-surface updates. |
+| `durable_page_history_semantic` | `src/data-layer-compact-canonical-history.ts` | core/semantic | yes | Defines page-scoped Undo/Redo transitions and conflict-safe settlement. |
+| `durable_saved_schema_feed_semantic` | `src/utilities/data-layer/saved-schema-feed.ts` | core/semantic | yes | Defines reconciliation of incoming durable Saved Schema updates with an open draft. |
+
+The new presentation module is an information-hiding boundary, not another storage
+controller. It accepts plain display values and callbacks from
+`src/data-layer-durable-project-repository-ui.ts`. It may query and update its supplied
+DOM hosts, manage focus, and invoke callbacks. It cannot import the durable repository,
+runtime, production, history, or Saved Schema feed modules; access IndexedDB, Web
+Storage, or `navigator.storage`; invoke repository methods; choose retry/reject/delete
+semantics; serialize recovery data; or create a second durable-state projection.
+
+The extraction preserves the existing DOM identities, accessible names, status and
+explanation text, enabled/disabled and hidden states, dialog focus and return-focus
+behavior, 360-pixel layout, callbacks, and visible recovery results. The existing
+controller remains the sole owner of repository access and storage-changing effects.
+
+The six propagating boundaries retain this exact current selection in registry order:
+`durable_project_repository,flow_graph,flow_export,live_flow_testing,layered_schema,property_set_flow_sections`.
+The presentation boundary selects only `durable_project_repository`.
+
+### Exact evidence mapping
+
+Every boundary maps to the complete `durable_project_repository` evidence profile;
+VTD-004 narrows dependant-pack selection, not evidence within its owner. The profile is:
+
+| Evidence class | Exact paths or count |
+|---|---|
+| Unit | `test/data-layer-durable-project-repository-test.mjs`, `test/data-layer-durable-project-runtime-test.mjs`, `test/data-layer-durable-project-runtime-canonical-companion-test.mjs`, `test/data-layer-compact-canonical-history-test.mjs`, `test/data-layer-saved-schema-feed-test.mjs` |
+| Property | `test/data-layer-durable-project-repository-property-test.mjs`, `test/data-layer-durable-project-runtime-property-test.mjs`, `test/data-layer-selective-production-revisions-property-test.mjs` |
+| Feature | `features/data-layer-durable-project-repository.feature`, `features/data-layer-durable-project-repository-runtime.feature` |
+| Handler | `acceptance/src/acceptance/steps/durable_project_repository.clj` |
+| Installed browser evidence | `test/browser-packs/durable-project-repository.mjs`, `test/browser-packs/durable-project-renderer.mjs`; four registered targets and 111 conserved assertion leaves |
+
+The handler may be declared in `isolatedVerificationHandlers` only after the registry
+validator proves that its two feature files and every APS step entry it serves are
+owned by `durable_project_repository` and have no consumer in another pack. A handler-
+only change then selects the same exact owner evidence. A cross-pack consumer blocks
+isolation and keeps dependant propagation.
+
+### Historical selection and calibrated guardrail
+
+Changed-path planning compares the current registry with the registry at the requested
+base. A deletion uses the historical owner and boundary. A rename evaluates both old
+and new paths: a deletion of the presentation module remains owner-only, while a rename
+from it into any propagating boundary retains the six-pack dependant set. Missing,
+unreadable, incompatible, or malformed historical ownership fails closed to every
+runnable pack. No rename or deletion may disappear from the plan merely because its old
+path no longer exists.
+
+The committed receipt scope and environment class remain those accepted by VTD-003.
+Recalibration changes only the `durable_project_repository` representative changed-path
+row:
+
+- the representative changes from `src/data-layer-durable-project-repository-ui.ts` to
+  `src/data-layer-durable-project-repository-presentation-ui.ts`;
+- the presentation path selects `durable_project_repository` only;
+- dependant fan-out changes from 5 to 0;
+- its critical-path baseline is re-derived as 90.2 seconds from the accepted exact
+  owner evidence, with normal tolerance 1.2 and a 109-second limit; and
+- the other 19 pack calibrations, the durable exact-pack calibration, and all 81
+  browser-target budgets remain unchanged.
+
+### VTD-004 durable-repository evidence conservation
+
+| Evidence class | Conserved before/after mapping |
+|---|---|
+| Owner checkpoint | All five unit files, three property files, two features, one handler, two installed browser adapters, four browser targets, and 111 assertion leaves remain in `durable_project_repository` and execute once in its exact plan. |
+| Dependant safety | The nine persistence, production, controller, runtime, history, and feed files retain the existing six-pack closure. Only the new exact display-only path is owner-only. |
+| Product behavior | Durable reads and writes, Draft tokens, retries, rejection, recovery export, backup deletion, migration, production revisions, Saved Schema reconciliation, Undo/Redo, visible wording, accessibility, focus, and 360-pixel behavior are unchanged. |
+| Historical safety | Modifications, additions, deletions, and renames are planned from current and base registries; unavailable or malformed history selects every runnable pack. |
+| Terminal conservation | Terminal-full planning retains every registered unit, property, feature, handler, browser assertion leaf, shell check, and package check exactly once. Browser session batching, worker limits, and terminal shards are unchanged. |
+| Calibration | The same 24-receipt scope remains resolvable. Only the durable-repository representative path, selected packs, fan-out, and changed-path duration change; every other calibrated row stays byte-equivalent. |
+
+The implementation necessarily registers the extracted presentation module in
+`architecture/data-layer-boundaries.json`. That repository-wide architecture ledger
+remains globally impactful. The exact implementation checkpoint therefore contains all
+20 runnable packs in canonical order, followed by `node scripts/package.mjs`.
+
+This one-time broad implementation checkpoint does not change the delivered inner-loop
+outcome. After the boundary is installed, the exact presentation path selects only
+`durable_project_repository`; all storage-changing and semantic paths retain their six-
+pack closure. The broad checkpoint is task-owned by the unavoidable global architecture-
+ledger change and does not make future recovery-screen changes global.
