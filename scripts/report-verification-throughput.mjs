@@ -30,29 +30,40 @@ function statistic(values, fallbackMs) {
     : { samples:0, medianMs:fallbackMs, p90Ms:fallbackMs, source:"bootstrap-fallback" };
 }
 
-function validReceipt(receipt, expectedRuntime = {}) {
+function receiptRejectionReason(receipt, expectedRuntime = {}) {
   const environment = receipt?.environment;
   const artifact = receipt?.artifact;
   const plan = receipt?.plan;
   const tasks = receipt?.tasks && !Array.isArray(receipt.tasks) ? Object.values(receipt.tasks) : [];
   const runtimeMatches = ["node", "typescript", "platform"].every((key) =>
     !expectedRuntime[key] || environment?.[key] === expectedRuntime[key]);
-  return receipt?.version === 2 && receipt.tasks && !Array.isArray(receipt.tasks) && tasks.length > 0 &&
-    tasks.every((result) => result?.status === "passed" && Number.isFinite(result.durationMs) &&
-      result.durationMs >= 0 && result.identity?.key && result.identity?.stage) &&
-    ["exact", "impact", "terminal"].includes(plan?.mode) &&
+  if (receipt?.version !== 2) return "receipt-version";
+  if (!runtimeMatches) return "runtime-mismatch";
+  if (!receipt.tasks || Array.isArray(receipt.tasks) || !tasks.length ||
+      tasks.some((result) => result?.status !== "passed" || !Number.isFinite(result.durationMs) ||
+        result.durationMs < 0 || !result.identity?.key || !result.identity?.stage)) {
+    return "incomplete-task-result";
+  }
+  const shapeValid = ["exact", "impact", "terminal", "focused"].includes(plan?.mode) &&
     Array.isArray(plan.requestedPackIds) && Array.isArray(plan.selectedPackIds) &&
     plan.changedOwners && !Array.isArray(plan.changedOwners) &&
     (plan.changeSetDigest === null || sha256Pattern.test(plan.changeSetDigest ?? "")) &&
     Object.hasOwn(plan, "conservativeHistoricalFallbackReason") &&
     receipt.completedAt && !Number.isNaN(Date.parse(receipt.completedAt)) &&
-    runtimeMatches && Number.isInteger(environment?.concurrency) && environment.concurrency > 0 &&
+    Number.isInteger(environment?.concurrency) && environment.concurrency > 0 &&
     Number.isInteger(environment?.observationConcurrency) && environment.observationConcurrency > 0 &&
     artifact?.toolchain?.node === environment.node &&
     artifact?.toolchain?.typescript === environment.typescript &&
-    artifact?.schemaVersion === 1 && artifact?.buildIdentity === artifactBuildIdentity(artifact) &&
+    artifact?.schemaVersion === 1 &&
     [artifact?.buildIdentity, artifact?.inputDigest, artifact?.outputDigest]
       .every((value) => sha256Pattern.test(value ?? ""));
+  if (!shapeValid) return "receipt-shape";
+  if (artifact?.buildIdentity !== artifactBuildIdentity(artifact)) return "artifact-build-identity";
+  return null;
+}
+
+function validReceipt(receipt, expectedRuntime = {}) {
+  return receiptRejectionReason(receipt, expectedRuntime) === null;
 }
 
 export async function loadVerificationReceipts(
@@ -93,9 +104,15 @@ export function measuredTimingModel(receipts, baseline) {
   const environments = new Map();
   const selections = new Map();
   const packSamples = new Map();
+  const browserTargetSamples = new Map();
   let passedTasks = 0;
   let buildTasks = 0;
   const eligibleReceipts = receipts.filter((receipt) => validReceipt(receipt, baseline.runtime ?? {}));
+  const rejectedByReason = {};
+  for (const receipt of receipts) {
+    const reason = receiptRejectionReason(receipt, baseline.runtime ?? {});
+    if (reason) rejectedByReason[reason] = (rejectedByReason[reason] ?? 0) + 1;
+  }
   for (const receipt of eligibleReceipts) {
     const environment = {
       ...receipt.environment,
@@ -117,6 +134,19 @@ export function measuredTimingModel(receipts, baseline) {
       const taskValues = byTask.get(key) ?? [];
       taskValues.push(result.durationMs);
       byTask.set(key, taskValues);
+      if (stage === "browser-observation") {
+        const logicalTargetIds = new Set(result.identity?.logicalTargetIds ?? []);
+        for (const line of String(result.output ?? "").split(/\r?\n/u)) {
+          try {
+            const timing = JSON.parse(line).swarmforgeBrowserTargetTiming;
+            if (!logicalTargetIds.has(timing?.id) || !Number.isFinite(timing?.durationMs) ||
+                timing.durationMs < 0) continue;
+            const samples = browserTargetSamples.get(timing.id) ?? [];
+            samples.push(timing.durationMs);
+            browserTargetSamples.set(timing.id, samples);
+          } catch { /* browser diagnostics and observation documents are not timing markers */ }
+        }
+      }
       if (result.identity?.packId) {
         packTotals.set(result.identity.packId,
           (packTotals.get(result.identity.packId) ?? 0) + result.durationMs);
@@ -136,10 +166,13 @@ export function measuredTimingModel(receipts, baseline) {
   return {
     stages,
     tasks:Object.fromEntries([...byTask].map(([key, values]) => [key, statistic(values, 0)])),
+    browserTargets:Object.fromEntries([...browserTargetSamples]
+      .map(([id, values]) => [id, statistic(values, 0)])),
     packWeightsMs:Object.fromEntries([...packSamples].map(([id, values]) => [id, percentile(values, 0.5)])),
     ledger:{
       receipts:eligibleReceipts.length,
       rejectedReceipts:receipts.length - eligibleReceipts.length,
+      rejectedByReason:Object.fromEntries(Object.entries(rejectedByReason).sort()),
       passedTasks,
       buildTasks,
       environments:[...environments].map(([key, count]) => ({ ...JSON.parse(key), receipts:count })),
@@ -185,7 +218,52 @@ function summary(name, plan, model, options) {
     measuredTasks:measured,
     measurementCoverage:plan.tasks.length ? Number((measured / plan.tasks.length).toFixed(3)) : 0,
     projectedSeconds:Number((estimatePlanMilliseconds(plan, model, options) / 1000).toFixed(1)),
+    dependantFanOut:Math.max(0, plan.packIds.length - 1),
+    changedPath:plan.changedPaths[0] ?? null,
+    selectedPacks:[...plan.packIds],
   };
+}
+
+export function checkVerificationPerformanceBudgets(report, baseline) {
+  const budgets = baseline.performanceBudgets ?? {};
+  const results = [];
+  for (const row of report.rows.filter(({ name }) => name.endsWith(":exact-full-pack"))) {
+    const packId = row.name.slice(0, -":exact-full-pack".length);
+    const limit = budgets.exactPackSeconds?.[packId] ?? budgets.defaultExactPackSeconds;
+    if (!Number.isFinite(limit)) continue;
+    results.push({ metric:"exact-pack-duration", identity:packId,
+      measured:row.projectedSeconds, limit, passed:row.projectedSeconds <= limit });
+  }
+  for (const row of report.rows.filter(({ name }) => name.endsWith(":representative-change"))) {
+    const packId = row.name.slice(0, -":representative-change".length);
+    const limit = budgets.changedPathFanOut?.[packId] ?? budgets.defaultChangedPathFanOut;
+    if (!Number.isFinite(limit)) continue;
+    results.push({ metric:"changed-path-fan-out", identity:row.changedPath ?? row.name,
+      measured:row.dependantFanOut, limit, selectedPacks:[...(row.selectedPacks ?? [])],
+      passed:row.dependantFanOut <= limit });
+  }
+  const browserTargetIds = new Set([
+    ...(report.browserTargetIds ?? []),
+    ...Object.keys(budgets.browserTargetP90Milliseconds ?? {}),
+  ]);
+  for (const targetId of browserTargetIds) {
+    const limit = budgets.browserTargetP90Milliseconds?.[targetId] ??
+      budgets.defaultBrowserTargetP90Milliseconds;
+    if (!Number.isFinite(limit)) continue;
+    const timing = report.model.browserTargets?.[targetId];
+    const fallback = baseline.browserTargetMilliseconds?.[targetId] ??
+      baseline.defaultBrowserTargetMilliseconds;
+    const measured = timing?.p90Ms ?? fallback;
+    if (!Number.isFinite(measured)) continue;
+    results.push({ metric:"browser-target-p90", identity:targetId,
+      measured, limit, passed:measured <= limit });
+  }
+  const diagnostics = results.filter(({ passed }) => !passed).map((result) =>
+    result.metric === "changed-path-fan-out"
+      ? `${result.metric} ${result.identity} selected packs ${result.selectedPacks.join(", ")}; ` +
+        `measured ${result.measured}; allowed fan-out ${result.limit}`
+      : `${result.metric} ${result.identity} measured ${result.measured}; limit ${result.limit}`);
+  return { passed:diagnostics.length === 0, results, diagnostics };
 }
 
 export function reportVerificationThroughput({
@@ -199,12 +277,13 @@ export function reportVerificationThroughput({
   const model = measuredTimingModel(receipts, baseline);
   const options = { concurrency, observationConcurrency };
   const rows = [];
-  for (const id of ["flow_graph", "live_flow_testing", "capture", "schemas"]
-    .filter((candidate) => packs.some(({ id:packId }) => packId === candidate))) {
+  const runnableIds = planVerification(packs, { terminalFull:true }).packIds;
+  for (const id of runnableIds) {
     const pack = packs.find(({ id:packId }) => packId === id);
     rows.push(summary(`${id}:exact-full-pack`, planVerification(packs, { packIds:[id] }), model, options));
-    const impactPath = pack.source[0] ?? pack.features[0];
-    if (impactPath) rows.push(summary(`${id}:impact-full-packs`, planVerification(packs, {
+    const impactPath = pack.source?.[0] ?? pack.features?.[0] ?? pack.unit?.[0] ??
+      pack.browserAdapters?.[0] ?? pack.process?.[0];
+    if (impactPath) rows.push(summary(`${id}:representative-change`, planVerification(packs, {
       changedPaths:[impactPath],
     }), model, options));
   }
@@ -220,15 +299,16 @@ export function reportVerificationThroughput({
   const average = loads.reduce((sum, value) => sum + value, 0) / loads.length;
   const maxToAverageRatio = average ? Math.max(...loads) / average : 0;
   const balanceLimit = baseline.sharding?.maximumToAverageRatio ?? 1.75;
-  return {
+  const report = {
     version:2,
     recordedAt:new Date().toISOString(),
     baselineVersion:baseline.version,
     concurrency,
     observationConcurrency,
     model,
+    browserTargetIds:packs.flatMap((pack) => (pack.browserObservations ?? []).map(({ id }) => id)).sort(),
     comparisonScenarioBuilds:rows
-      .filter(({ name }) => name.endsWith(":exact-full-pack") || name.endsWith(":impact-full-packs"))
+      .filter(({ name }) => name.endsWith(":exact-full-pack") || name.endsWith(":representative-change"))
       .reduce((sum, row) => sum + row.builds, 0),
     terminalBuilds:shardRows.reduce((sum, row) => sum + row.builds, 0),
     terminalBuildTopology:"one lane-local build in each isolated CI matrix runner",
@@ -241,6 +321,8 @@ export function reportVerificationThroughput({
     },
     rows,
   };
+  report.performanceBudgets = checkVerificationPerformanceBudgets(report, baseline);
+  return report;
 }
 
 async function main(args) {
@@ -259,6 +341,9 @@ async function main(args) {
   });
   console.table(report.rows);
   console.log(JSON.stringify(report, null, 2));
+  if (!report.performanceBudgets.passed) {
+    throw new Error(`Verification performance budgets failed: ${report.performanceBudgets.diagnostics.join("; ")}`);
+  }
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

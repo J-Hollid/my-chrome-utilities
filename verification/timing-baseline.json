@@ -19,8 +19,25 @@
     "acceptance-session": 1000,
     "unknown": 1000
   },
+  "defaultBrowserTargetMilliseconds": 2000,
   "sharding": {
     "algorithm": "deterministic-greedy-pack-weight",
     "maximumToAverageRatio": 1.75
+  },
+  "performanceBudgets": {
+    "defaultExactPackSeconds": 1200,
+    "defaultChangedPathFanOut": 20,
+    "defaultBrowserTargetP90Milliseconds": 120000,
+    "exactPackSeconds": {
+      "shell": 900
+    },
+    "changedPathFanOut": {
+      "shell": 20
+    },
+    "browserTargetP90Milliseconds": {
+      "ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER": 120000,
+      "SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER": 10000,
+      "WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER": 10000
+    }
   }
 }

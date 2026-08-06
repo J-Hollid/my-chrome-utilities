@@ -87,7 +87,7 @@ export function focusedAcceptanceOptions(args) {
   const options = {
     packIds:[], changedPaths:[], terminalFull:false, includeProperties:false,
     withDependencies:false, skipBuild:false, changedSince:undefined, shard:undefined,
-    prepareEvidence:undefined,
+    prepareEvidence:undefined, browserTargetIds:[],
   };
   const seen = new Set();
   const once = (name) => {
@@ -140,6 +140,18 @@ export function focusedAcceptanceOptions(args) {
       index += 1;
       continue;
     }
+    if (argument === "--browser-target") {
+      const value = valueArgument(args, index, argument);
+      if (!/^[A-Za-z0-9][A-Za-z0-9_:.-]*$/u.test(value)) {
+        throw new Error(`Use a stable browser target id: ${value}`);
+      }
+      if (options.browserTargetIds.includes(value)) {
+        throw new Error(`Select every focused browser target once: ${value}`);
+      }
+      options.browserTargetIds.push(value);
+      index += 1;
+      continue;
+    }
     if (argument === "--changed") {
       const value = changedPath(valueArgument(args, index, argument));
       if (options.changedPaths.includes(value)) throw new Error(`Select every changed path once: ${value}`);
@@ -161,6 +173,11 @@ export function focusedAcceptanceOptions(args) {
   if (options.skipBuild && !options.terminalFull) throw new Error("Use --no-build only with a prepared --full shard");
   if (options.changedSince && options.changedPaths.length) {
     throw new Error("Use --changed-since or explicit --changed paths, not both");
+  }
+  if (options.browserTargetIds.length && (options.packIds.length !== 1 || options.changedPaths.length ||
+      options.changedSince || options.terminalFull || options.includeProperties || options.withDependencies ||
+      options.skipBuild || options.shard || options.prepareEvidence)) {
+    throw new Error("Use --browser-target with one --pack and no other verification mode options");
   }
   if (options.prepareEvidence) {
     if (!options.packIds.length || !options.changedSince) {
@@ -416,6 +433,7 @@ export async function runFocusedAcceptance(
     requestedPackIds:[...plan.requestedPackIds].sort(),
     selectedPackIds:[...plan.selectedPackIds].sort(),
     changedOwners:plan.changedOwners,
+    changedBoundaries:plan.changedBoundaries,
     changeSetDigest:plan.changeSet ? verificationDigest(plan.changeSet) : null,
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
   };

@@ -31,13 +31,50 @@ export function exactObservationEnvironment(packs, observation, inherited = proc
   return { ...environment, ...observation.environment };
 }
 
-function runObservationProcess(packs, observation) {
+export function browserTargetConfigurations(observations) {
+  return Object.fromEntries(observations.map(({ id, environment }) => [id, { ...environment }]));
+}
+
+export function validateBrowserObservationBatch(matches) {
+  const ids = matches.map(({ observation }) => observation.id);
+  const observations = matches.map(({ observation }) => observation);
+  if (new Set(ids).size !== ids.length) {
+    throw new Error(`Browser observation batch must select every target once: ${ids.join(", ")}`);
+  }
+  if (new Set(observations.map(({ path }) => path)).size !== 1) {
+    throw new Error(`Browser observation batch must use one program: ${ids.join(", ")}`);
+  }
+  if (matches.length > 1) {
+    if (new Set(matches.map(({ packId }) => packId)).size !== 1) {
+      throw new Error(`Browser observation batch must use one owning pack: ${ids.join(", ")}`);
+    }
+    const sessionBatches = observations.map(({ sessionBatch }) => sessionBatch);
+    if (sessionBatches.some((batch) => typeof batch !== "string" || !batch.trim()) ||
+        new Set(sessionBatches).size !== 1) {
+      throw new Error(`Browser observation batch must use one declared non-empty session batch: ${ids.join(", ")}`);
+    }
+  }
+  return observations;
+}
+
+function runObservationProcess(packs, observations) {
+  const combined = {
+    id:observations.map(({ id }) => id).join(","),
+    path:observations[0].path,
+    environment:Object.assign({}, ...observations.map(({ environment }) => environment)),
+  };
   return new Promise((resolve, reject) => {
-    const child = spawn(process.execPath, [observation.path], {
+    const child = spawn(process.execPath, [combined.path], {
       cwd:repositoryRoot,
       shell:false,
       stdio:["inherit", "pipe", "pipe"],
-      env:exactObservationEnvironment(packs, observation),
+      env:{
+        ...exactObservationEnvironment(packs, combined),
+        SWARMFORGE_BROWSER_TARGET_IDS:JSON.stringify(observations.map(({ id }) => id)),
+        SWARMFORGE_BROWSER_TARGET_CONFIGURATIONS:JSON.stringify(
+          browserTargetConfigurations(observations),
+        ),
+      },
     });
     const stdout = [];
     child.stdout.on("data", (chunk) => {
@@ -48,7 +85,7 @@ function runObservationProcess(packs, observation) {
     child.once("error", reject);
     child.once("close", (code, signal) => code === 0
       ? resolve(Buffer.concat(stdout).toString())
-      : reject(new Error(`Browser observation failed (${signal ?? code}): ${observation.id}`)));
+      : reject(new Error(`Browser observation failed (${signal ?? code}): ${combined.id}`)));
   });
 }
 
@@ -60,8 +97,12 @@ export function parseBrowserObservationOutput(stdout, observation) {
     try {
       const candidate = JSON.parse(line);
       if (candidate && typeof candidate === "object" && !Array.isArray(candidate)) {
-        Object.assign(document, candidate);
-        found = true;
+        const observed = Object.fromEntries(Object.entries(candidate)
+          .filter(([key]) => key !== "swarmforgeBrowserTargetTiming"));
+        if (Object.keys(observed).length) {
+          Object.assign(document, observed);
+          found = true;
+        }
       }
     } catch { /* diagnostic output may precede the adapter JSON */ }
   }
@@ -74,22 +115,52 @@ export function parseBrowserObservationOutput(stdout, observation) {
   return document;
 }
 
-export async function runBrowserObservation(id) {
-  if (!id || arguments.length !== 1) throw new Error("Use: run-browser-observation.mjs <observation-id>");
+export function parseBrowserObservationBatchOutput(stdout, observations) {
+  const document = {};
+  const results = {};
+  const failures = [];
+  for (const observation of observations) {
+    try {
+      const result = parseBrowserObservationOutput(stdout, observation);
+      results[observation.id] = result;
+      Object.assign(document, result);
+    } catch (error) {
+      failures.push({ id:observation.id, message:error.message });
+    }
+  }
+  return { document, results, failures };
+}
+
+export async function runBrowserObservation(...ids) {
+  if (!ids.length || ids.some((id) => !id)) {
+    throw new Error("Use: run-browser-observation.mjs <observation-id> [<observation-id> ...]");
+  }
   const packs = await loadVerificationPacks();
-  const { observation } = observationById(packs, id);
+  const matches = ids.map((id) => observationById(packs, id));
+  const observations = validateBrowserObservationBatch(matches);
   await assertFreshDist({ root:repositoryRoot });
-  return parseBrowserObservationOutput(await runObservationProcess(packs, observation), observation);
+  const stdout = await runObservationProcess(packs, observations);
+  const parsed = parseBrowserObservationBatchOutput(stdout, observations);
+  if (parsed.failures.length) {
+    const error = new AggregateError(parsed.failures.map(({ message }) => new Error(message)),
+      `Browser observation batch failed: ${parsed.failures.map(({ id }) => id).join(", ")}`);
+    error.partialDocument = parsed.document;
+    throw error;
+  }
+  return parsed.document;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
-  if (process.argv.length !== 3) {
-    console.error("Use: run-browser-observation.mjs <observation-id>");
+  if (process.argv.length < 3) {
+    console.error("Use: run-browser-observation.mjs <observation-id> [<observation-id> ...]");
     process.exitCode = 1;
   } else {
-    withDistArtifactLock(() => runBrowserObservation(process.argv[2]))
+    withDistArtifactLock(() => runBrowserObservation(...process.argv.slice(2)))
       .then((document) => console.log(JSON.stringify(document)))
       .catch((error) => {
+      if (error.partialDocument && Object.keys(error.partialDocument).length) {
+        console.log(JSON.stringify(error.partialDocument));
+      }
       console.error(error.message);
       process.exitCode = 1;
       });

@@ -34,6 +34,16 @@ function gitBytes(repositoryRoot, ...args) {
   });
 }
 
+function gitInput(repositoryRoot, args, input) {
+  return new Promise((resolve, reject) => {
+    const child = execFile("git", args, { cwd:repositoryRoot }, (error, stdout, stderr) => error
+      ? reject(new Error(stderr.trim() || error.message))
+      : resolve(stdout.trim()));
+    child.stdin.on("error", () => {});
+    child.stdin.end(input);
+  });
+}
+
 function normalized(value) {
   if (Array.isArray(value)) return value.map(normalized);
   if (value && typeof value === "object") {
@@ -150,6 +160,7 @@ function planDocument(plan) {
     baseCommit:plan.baseCommit,
     changeSet:plan.changeSet,
     changedOwners:plan.changedOwners ?? {},
+    changedBoundaries:plan.changedBoundaries ?? {},
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason ?? null,
     features:[...(plan.features ?? [])].sort(),
     handlers:[...(plan.handlers ?? [])].sort(),
@@ -205,6 +216,7 @@ async function parsedReceipt(receiptPath, plan) {
     requestedPackIds:plan.requestedPackIds,
     selectedPackIds:plan.selectedPackIds,
     changedOwners:plan.changedOwners,
+    changedBoundaries:plan.changedBoundaries,
     changeSetDigest:verificationDigest(plan.changeSet),
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
   };
@@ -587,7 +599,8 @@ export async function recordPendingVerificationEvidence(
         records:merged,
         ...(existing.version === 2 ? {} : { legacy:[existing] }),
       };
-      await git(repositoryRoot, "notes", `--ref=${notesRef}`, "add", "-f", "-m", JSON.stringify(note), commit);
+      await gitInput(repositoryRoot,
+        ["notes", `--ref=${notesRef}`, "add", "-f", "-F", "-", commit], JSON.stringify(note));
       return passed;
     } finally {
       await releaseNotes();
