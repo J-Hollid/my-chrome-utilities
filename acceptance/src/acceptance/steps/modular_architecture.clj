@@ -1,5 +1,6 @@
 (ns acceptance.steps.modular-architecture
-  (:require [acceptance.verification-support.modular-architecture-project-management-handlers :as project-management]
+  (:require [acceptance.verification-support.modular-architecture-durable-repository-handlers :as durable-repository]
+            [acceptance.verification-support.modular-architecture-project-management-handlers :as project-management]
             [acceptance.steps.support :as support]
             [aps.json :as aps-json]
             [babashka.fs :as fs]
@@ -26,8 +27,10 @@
       (support/assert! evidence-line
                        "Verification throughput omitted VTD-004 planner evidence."
                        {:out (:out result)})
-      (reset! throughput-evidence (:vtd004Acceptance (json/parse-string evidence-line true)))))
-  (assoc (inspect! world) :vtd004/evidence @throughput-evidence))
+      (reset! throughput-evidence (json/parse-string evidence-line true))))
+  (assoc (inspect! world)
+         :vtd004/project-evidence (:vtd004Acceptance @throughput-evidence)
+         :vtd004/durable-evidence (:vtd004DurableAcceptance @throughput-evidence)))
 
 (defn- parse-seconds [value]
   (when-let [[_ amount] (re-matches #"([0-9]+(?:\.[0-9]+)?) seconds" value)]
@@ -1020,6 +1023,10 @@
 
 (def handlers
   (vec (concat core-handlers
+               (durable-repository/handlers
+                {:example-values example-values
+                 :verify-throughput! verify-throughput!
+                 :performance-calibration performance-calibration})
                (project-management/handlers
                 {:example-values example-values
                  :verify-throughput! verify-throughput!

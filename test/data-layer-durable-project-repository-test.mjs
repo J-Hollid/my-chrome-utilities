@@ -11,6 +11,22 @@ import {
   durableProjectRouteForWorkspace,
   migrateLegacyProjectStorage,
 } from "../dist/data-layer-durable-project-repository.js";
+import {durableStorageDiagnosticsDisplay} from "../dist/data-layer-durable-project-repository-presentation-ui.js";
+
+assert.deepEqual(durableStorageDiagnosticsDisplay({
+  lastSavedAt:"2026-08-07T08:00:00.000Z",publishedRevision:4,unsavedCommand:"Rename project",
+  projectEntityBytes:512,releaseBytes:1536,fixtureBytes:0,migrationBackupBytes:2048,
+  explanation:"Durable values are supplied by the controller.",
+  browserEstimate:{usage:4096,quota:8192,label:"Browser storage estimate"},
+}),{
+  lastSavedAt:"2026-08-07T08:00:00.000Z",publishedRevision:"4",unsavedCommand:"Rename project",
+  projectSize:"512 B",releaseSize:"1.5 KiB",fixtureSize:"0 B",migrationBackupSize:"2.0 KiB",
+  browserEstimate:"4.0 KiB used of 8.0 KiB",explanation:"Durable values are supplied by the controller.",
+},"the presentation boundary formats only supplied diagnostics values");
+assert.equal(durableStorageDiagnosticsDisplay({
+  lastSavedAt:"Never",publishedRevision:0,projectEntityBytes:0,releaseBytes:0,fixtureBytes:0,
+  migrationBackupBytes:0,explanation:"No repository access.",
+}).browserEstimate,"Browser estimate unavailable","missing browser estimates stay a display concern");
 
 let sequence=0;const id=(kind)=>`${kind}:${++sequence}`;
 const retail=createSpecificationProject({name:"Retail website",site:"retail.example",id});

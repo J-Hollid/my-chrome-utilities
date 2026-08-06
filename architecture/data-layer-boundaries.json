@@ -1239,8 +1239,13 @@
     "module": "schemas",
     "layer": "browser",
     "contracts": [
-      "src/data-layer-durable-project-repository.ts"
+      "src/data-layer-durable-project-repository.ts",
+      "src/data-layer-durable-project-repository-presentation-ui.ts"
     ]
+  },
+  "src/data-layer-durable-project-repository-presentation-ui.ts": {
+    "module": "schemas",
+    "layer": "browser"
   },
   "src/data-layer-durable-project-runtime.ts": {
     "module": "schemas",

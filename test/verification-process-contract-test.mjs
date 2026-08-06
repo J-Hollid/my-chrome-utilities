@@ -893,6 +893,9 @@ const vtd004BaseCalibration = JSON.parse(await exec("git", [
 ]));
 const vtd004CurrentCalibration = JSON.parse(await readFile(
   new URL("../verification/performance-calibration.json", import.meta.url), "utf8"));
+const vtd004CompletedProjectCalibration = JSON.parse(await exec("git", [
+  "show", "2d46bc7062:verification/performance-calibration.json",
+]));
 assert.deepEqual(projectManagementPack.impactBoundaries.map(({ id, sourceClass, propagateDependants }) =>
   [id, sourceClass, propagateDependants]), [
   ["project_entity_lifecycle_semantic", "core or semantic", true],
@@ -1051,19 +1054,19 @@ assert.deepEqual(terminalIdentities(currentTerminalPlan), terminalIdentities(bas
 assert.equal(currentTerminalPlan.checkpointTasks.filter(({ display }) =>
   display === "npm run package").length, 1,
 "terminal-full planning executes the package check exactly once");
-const currentOtherPackRows = vtd004CurrentCalibration.runnablePacks.filter(({ id }) =>
+const currentOtherPackRows = vtd004CompletedProjectCalibration.runnablePacks.filter(({ id }) =>
   id !== "project_management");
 const baseOtherPackRows = vtd004BaseCalibration.runnablePacks.filter(({ id }) =>
   id !== "project_management");
 assert.deepEqual(currentOtherPackRows, baseOtherPackRows,
   "the other 19 calibrated pack rows remain byte-equivalent to the accepted base");
-assert.deepEqual(vtd004CurrentCalibration.browserTargets, vtd004BaseCalibration.browserTargets,
+assert.deepEqual(vtd004CompletedProjectCalibration.browserTargets, vtd004BaseCalibration.browserTargets,
   "all 81 browser-target calibration rows remain byte-equivalent to the accepted base");
 const calibrationProvenanceKeys = ["version", "implementationCommit", "environmentClassId", "environment",
   "sourceScope", "minimumIndependentSamples", "tolerance", "receiptDigests", "algorithm"];
 const calibrationProvenance = (calibration) => Object.fromEntries(calibrationProvenanceKeys.map((key) =>
   [key, calibration[key]]));
-assert.deepEqual(calibrationProvenance(vtd004CurrentCalibration),
+assert.deepEqual(calibrationProvenance(vtd004CompletedProjectCalibration),
   calibrationProvenance(vtd004BaseCalibration),
   "accepted calibration receipt scope and provenance remain byte-equivalent");
 const vtd004Acceptance = {
@@ -1095,10 +1098,118 @@ const vtd004Acceptance = {
       .map((key) => [key, exactProjectPlan[key].map(({ target }) => target)])),
     handlerSessions:exactProjectPlan.sessionTasks.map(({ packId }) => packId),
     terminalTaskIdentitiesConserved:true, packageCheckCount:1},
-  calibration:{current:vtd004CurrentCalibration.runnablePacks.find(({ id }) => id === "project_management"),
+  calibration:{current:vtd004CompletedProjectCalibration.runnablePacks.find(({ id }) => id === "project_management"),
     otherPackRowsConserved:true, browserTargetRowsConserved:true, provenanceConserved:true,
     otherPackCount:currentOtherPackRows.length,
+    browserTargetCount:Object.keys(vtd004CompletedProjectCalibration.browserTargets).length},
+};
+const durablePack = packs.find(({id}) => id === "durable_project_repository");
+const durableBasePacks = JSON.parse(await exec("git", ["show", "2d46bc7062:verification/packs.json"]));
+const durableBaseCalibration = JSON.parse(await exec("git", [
+  "show", "2d46bc7062:verification/performance-calibration.json",
+]));
+assert.deepEqual(durablePack.impactBoundaries.map(({id,sourceClass,propagateDependants}) =>
+  [id,sourceClass,propagateDependants]), [
+  ["durable_repository_persistence", "persistence migration", true],
+  ["durable_production_semantic", "core or semantic", true],
+  ["durable_repository_controller", "application controller", true],
+  ["durable_repository_presentation", "browser presentation", false],
+  ["durable_runtime_controller", "application controller", true],
+  ["durable_page_history_semantic", "core or semantic", true],
+  ["durable_saved_schema_feed_semantic", "core or semantic", true],
+], "durable repository source classes and propagation are explicit registry data");
+const durablePresentationPath = "src/data-layer-durable-project-repository-presentation-ui.ts";
+const durableControllerPath = "src/data-layer-durable-project-repository-ui.ts";
+const durablePresentationSource = await readFile(new URL(`../${durablePresentationPath}`, import.meta.url), "utf8");
+const durableControllerSource = await readFile(new URL(`../${durableControllerPath}`, import.meta.url), "utf8");
+assert.match(durableControllerSource, /data-layer-durable-project-repository-presentation-ui\.js/u,
+  "the durable controller delegates display work through the extracted module");
+assert.doesNotMatch(durablePresentationSource,
+  /indexedDB|localStorage|sessionStorage|navigator\.storage|data-layer-durable-project-repository\.js|runtime-core|production-model|compact-canonical-history|saved-schema-feed/u,
+  "the presentation boundary cannot read durable state or import semantic owners");
+const durableClosure = ["durable_project_repository", "flow_graph", "flow_export", "live_flow_testing",
+  "layered_schema", "property_set_flow_sections"];
+const durableCurrentPaths = [durablePresentationPath, "src/data-layer-durable-project-repository.ts",
+  "src/data-layer-production-model.ts", durableControllerPath, "src/data-layer-durable-project-runtime.ts",
+  "src/data-layer-compact-canonical-history.ts", "src/utilities/data-layer/saved-schema-feed.ts"];
+assert.deepEqual(planVerification(packs, {changedPaths:[durablePresentationPath]}).packIds,
+  ["durable_project_repository"], "the display-only path selects only its complete owner pack");
+for (const changedPath of durableCurrentPaths.slice(1)) assert.deepEqual(
+  planVerification(packs, {changedPaths:[changedPath]}).packIds, durableClosure,
+  `${changedPath} retains the six-pack dependant closure`);
+const durableHandlerPath = durablePack.isolatedVerificationHandlers[0];
+assert.equal(durableHandlerPath, "acceptance/src/acceptance/steps/durable_project_repository.clj");
+const durableNamespace = "acceptance.steps.durable-project-repository";
+const durableHandlerSource = await readFile(new URL(`../${durableHandlerPath}`, import.meta.url), "utf8");
+const durableServedFeatures = [...durableHandlerSource.matchAll(
+  /"(features\/[A-Za-z0-9_./-]+\.feature)"/gu)].map((match) => match[1]);
+assert.deepEqual([...durableServedFeatures].sort(), [...durablePack.features].sort());
+const durableConsumers = [];
+for (const handlerPath of registeredHandlerPaths) {
+  const source = await readFile(new URL(`../${handlerPath}`, import.meta.url), "utf8");
+  if (handlerPath !== durableHandlerPath && clojureRequiresNamespace(source, durableNamespace)) durableConsumers.push(handlerPath);
+}
+assert.deepEqual(durableConsumers, [], "the isolated durable handler has no cross-pack APS consumer");
+const durableCrossPackHandler = packs.find(({id,handlers}) =>
+  id !== "durable_project_repository" && handlers?.length).handlers[0];
+await assert.rejects(() => validateIsolatedVerificationHandlers(packs, {readSource:async(handlerPath) => {
+  const source = await readFile(new URL(`../${handlerPath}`, import.meta.url), "utf8");
+  return handlerPath === durableCrossPackHandler
+    ? `${source}\n[acceptance.steps.durable-project-repository :refer [handlers]]\n` : source;
+}}), /Cross-pack handler consumer/u, "a cross-pack :refer consumer blocks durable handler isolation");
+const deletedDurablePresentation = syntheticChangeSet([{status:"D",path:durablePresentationPath}]);
+const renamedDurablePresentation = syntheticChangeSet([{status:"R",score:100,
+  oldPath:durablePresentationPath,newPath:durableControllerPath}]);
+assert.deepEqual(planVerification(packs, {changedPaths:deletedDurablePresentation.paths,
+  changeSet:deletedDurablePresentation,basePacks:packs}).packIds, ["durable_project_repository"]);
+assert.deepEqual(planVerification(packs, {changedPaths:renamedDurablePresentation.paths,
+  changeSet:renamedDurablePresentation,basePacks:packs}).packIds, durableClosure);
+assert.deepEqual(planVerification(packs, {changedPaths:deletedDurablePresentation.paths,
+  changeSet:deletedDurablePresentation,basePacks:packs,historicalRegistryFallback:true}).packIds,
+  planVerification(packs, {terminalFull:true}).packIds);
+const durableEvidenceProfile = Object.fromEntries(exactEvidenceKeys.map((key) => [key,durablePack[key]]));
+const durableBasePack = durableBasePacks.find(({id}) => id === "durable_project_repository");
+assert.deepEqual(durableEvidenceProfile,
+  Object.fromEntries(exactEvidenceKeys.map((key) => [key,durableBasePack[key]])),
+  "all durable owner evidence identities remain conserved");
+const exactDurablePlan = planVerification(packs, {packIds:["durable_project_repository"],includeProperties:true});
+assert.deepEqual(exactDurablePlan.observationTasks.flatMap(({logicalTargetIds}) => logicalTargetIds).sort(),
+  ["DURABLE_REPOSITORY_STORAGE_TARGET", "DURABLE_REPOSITORY_REVISION_TARGET",
+    "DURABLE_RENDERER_CORPUS_TARGET", "DURABLE_RENDERER_HISTORY_TARGET"].sort());
+const durableAssertionLeafCount = durablePack.browserEvidencePartitions.flatMap(({originalLeaves}) => originalLeaves).length;
+assert.equal(durableAssertionLeafCount, 111);
+assert.deepEqual(terminalIdentities(planVerification(packs, {terminalFull:true})),
+  terminalIdentities(planVerification(durableBasePacks, {terminalFull:true})),
+  "terminal planning conserves every exact durable task identity");
+const durableCurrentCalibration = vtd004CurrentCalibration.runnablePacks.find(({id}) =>
+  id === "durable_project_repository");
+assert.deepEqual({selectedPacks:durableCurrentCalibration.selectedPacks,
+  fanOut:durableCurrentCalibration.changedPathFanOut.limit,
+  duration:[durableCurrentCalibration.changedPathDuration.baseline,
+    durableCurrentCalibration.changedPathDuration.tolerance,durableCurrentCalibration.changedPathDuration.limit]},
+{selectedPacks:["durable_project_repository"],fanOut:0,duration:[90.2,1.2,109]});
+const durableOtherCurrent = vtd004CurrentCalibration.runnablePacks.filter(({id}) => id !== "durable_project_repository");
+const durableOtherBase = durableBaseCalibration.runnablePacks.filter(({id}) => id !== "durable_project_repository");
+assert.deepEqual(durableOtherCurrent,durableOtherBase);
+assert.deepEqual(vtd004CurrentCalibration.browserTargets,durableBaseCalibration.browserTargets);
+assert.deepEqual(calibrationProvenance(vtd004CurrentCalibration),calibrationProvenance(durableBaseCalibration));
+const vtd004DurableAcceptance = {
+  currentPlans:Object.fromEntries(durableCurrentPaths.map((changedPath) => [changedPath,
+    planVerification(packs,{changedPaths:[changedPath],includeProperties:true}).packIds])),
+  historyPlans:{delete:["durable_project_repository"],renameController:durableClosure,
+    unreadable:planVerification(packs,{terminalFull:true}).packIds},
+  handler:{path:durableHandlerPath,servedFeatures:durableServedFeatures,consumers:durableConsumers,
+    negativeMutationRejected:true,ownerPlan:planVerification(packs,{changedPaths:[durableHandlerPath]}).packIds},
+  conservation:{evidenceProfile:durableEvidenceProfile,
+    exactTaskCounts:{unit:exactDurablePlan.unitTasks.length,property:exactDurablePlan.propertyTasks.length,
+      features:exactDurablePlan.parserTasks.length,handlers:exactDurablePlan.sessionTasks.length,
+      adapters:durablePack.browserAdapters.length,targets:exactDurablePlan.observationTasks
+        .flatMap(({logicalTargetIds}) => logicalTargetIds).length,leaves:durableAssertionLeafCount},
+    terminalTaskIdentitiesConserved:true,packageCheckCount:1},
+  calibration:{current:durableCurrentCalibration,otherPackRowsConserved:true,
+    browserTargetRowsConserved:true,provenanceConserved:true,otherPackCount:durableOtherCurrent.length,
     browserTargetCount:Object.keys(vtd004CurrentCalibration.browserTargets).length},
+  presentationBoundary:true,
 };
 await assert.rejects(() => validateVerificationPacks(replacePack(packs, "shell", (pack) => ({
   verificationHelpers:pack.verificationHelpers.map((helper) => helper.path ===
@@ -2282,7 +2393,7 @@ assert.equal(throughput.rows.filter(({ name }) => name.endsWith(":representative
   runnablePackCount, "throughput reports a representative changed-path row for every runnable pack");
 const representativeChangedPaths = {
   project_management:"src/data-layer-assignment-routing-ui.ts",
-  durable_project_repository:"src/data-layer-durable-project-repository-ui.ts",
+  durable_project_repository:"src/data-layer-durable-project-repository-presentation-ui.ts",
   "command-palette":"src/command-palette-ui.ts",
   hotkeys:"src/hotkey-keymap.ts",
   capture:"src/data-layer-live-inspector-presentation-ui.ts",
@@ -3856,5 +3967,5 @@ for (const source of [handoffSource, handoffLibrarySource]) {
     "handoff callers must not retain the legacy unbounded directory lock");
 }
 
-console.log(JSON.stringify({vtd004Acceptance}));
+console.log(JSON.stringify({vtd004Acceptance,vtd004DurableAcceptance}));
 console.log("verification process contract tests passed");

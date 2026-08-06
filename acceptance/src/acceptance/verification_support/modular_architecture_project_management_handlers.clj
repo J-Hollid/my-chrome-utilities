@@ -7,7 +7,8 @@
 (defn handlers [{:keys [example-values verify-throughput!] :as dependencies}]
   [{:pattern #"^project_management owns source path (.+)$"
     :handler (fn [world example captures]
-               (project/boundary-world world (first (example-values example captures)) dependencies))}
+               (project/boundary-world (assoc world :vtd004/owner "project_management")
+                                       (first (example-values example captures)) dependencies))}
    {:pattern #"^its impact boundary is inspected$"
     :handler (fn [world _ _]
                (support/assert! (map? (:vtd004/boundary world))
@@ -39,10 +40,11 @@
    {:pattern #"^its complete owner unit, property, feature, handler, and installed browser evidence is selected$"
     :handler (fn [world _ _]
                (let [pack (:vtd004/pack world)]
-                 (support/assert! (= [4 4 6 1 4]
+                 (support/assert! (= (if (= "durable_project_repository" (:id pack))
+                                       [5 3 2 1 2] [4 4 6 1 4])
                                      (mapv #(count (% pack))
                                            [:unit :property :features :handlers :browserAdapters]))
-                                  "Project owner evidence profile is incomplete." {}))
+                                  "Owner evidence profile is incomplete." {}))
                world)}
    {:pattern #"^acceptance/src/acceptance/steps/project_management.clj owns six project-management feature files$"
     :handler (fn [world _ _] (project/handler-world world dependencies))}
@@ -58,9 +60,9 @@
                world)}
    {:pattern #"^the handler is declared isolated$"
     :handler (fn [world _ _]
-               (support/assert! (= ["acceptance/src/acceptance/steps/project_management.clj"]
-                                   (get-in world [:vtd004/pack :isolatedVerificationHandlers]))
-                                "Project handler is not declared isolated." {})
+               (let [pack (:vtd004/pack world)]
+                 (support/assert! (= (:handlers pack) (:isolatedVerificationHandlers pack))
+                                  "Owner handler is not declared isolated." {}))
                world)}
    {:pattern #"^a handler-only change selects the complete project_management evidence without dependant packs$"
     :handler (fn [world _ _]

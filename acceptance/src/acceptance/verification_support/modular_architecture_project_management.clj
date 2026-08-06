@@ -4,9 +4,13 @@
 
 (defn vtd004-world [world {:keys [verify-throughput! performance-calibration]}]
   (let [inspected (verify-throughput! world)
-        pack (first (filter #(= "project_management" (:id %))
-                            (:modular/registry inspected)))]
-    (assoc inspected :vtd004/pack pack :vtd004/calibration (performance-calibration))))
+        owner (or (:vtd004/owner world) "project_management")
+        pack (first (filter #(= owner (:id %)) (:modular/registry inspected)))
+        evidence (if (= owner "durable_project_repository")
+                   (:vtd004/durable-evidence inspected)
+                   (:vtd004/project-evidence inspected))]
+    (assoc inspected :vtd004/owner owner :vtd004/pack pack :vtd004/evidence evidence
+           :vtd004/calibration (performance-calibration))))
 
 (defn boundary-world [world source-path dependencies]
   (let [prepared (vtd004-world world dependencies)
@@ -36,31 +40,34 @@
                           (= (:isolatedVerificationHandlers pack) [(:path handler)])
                           (empty? (:consumers handler))
                           (:negativeMutationRejected handler)
-                          (= ["project_management"] (:ownerPlan handler)))
-                     "APS project handler still has a cross-pack consumer."
+                          (= [(:id pack)] (:ownerPlan handler)))
+                     "APS owner handler still has a cross-pack consumer."
                      {:features (:features pack) :handler handler})
     (assoc prepared :vtd004/handler-isolated? true)))
 
-(defn- history-plan-key [change historical-registry]
+(defn- history-plan-key [owner change historical-registry]
   (cond
     (not= historical-registry "readable and compatible") :unreadable
+    (= owner "durable_project_repository") (if (str/includes? change " to ") :renameController :delete)
     (str/includes? change "to src/data-layer-project-library.ts") :renamePersistence
     (str/includes? change " to ") :renamePresentation
     :else :delete))
 
-(defn- history-scope [selected]
+(defn- history-scope [owner selected]
   (cond
     (= 1 (count selected)) (first selected)
     (= 20 (count selected)) "every runnable pack"
-    :else "the ten-pack dependant closure"))
+    :else (if (= owner "durable_project_repository")
+            "the six-pack dependant closure" "the ten-pack dependant closure")))
 
 (defn history-world [world change historical-registry dependencies]
   (let [prepared (vtd004-world world dependencies)
+        owner (:vtd004/owner prepared)
         selected (get-in prepared [:vtd004/evidence :historyPlans
-                                   (history-plan-key change historical-registry)])]
+                                   (history-plan-key owner change historical-registry)])]
     (support/assert! (seq selected) "Production historical planner returned no scope."
                      {:change change :historical-registry historical-registry})
-    (assoc prepared :vtd004/historical-scope (history-scope selected))))
+    (assoc prepared :vtd004/historical-scope (history-scope owner selected))))
 
 (defn conservation-world [world dependencies]
   (let [prepared (vtd004-world world dependencies)

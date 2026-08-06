@@ -312,18 +312,13 @@
         ]
       },
       "durable_project_repository": {
-        "limit": 5,
-        "baseline": 5,
+        "limit": 0,
+        "baseline": 0,
         "percentile": "selected-dependant-count",
         "tolerance": 1,
         "provisional": false,
         "selectedPacks": [
-          "durable_project_repository",
-          "flow_graph",
-          "flow_export",
-          "live_flow_testing",
-          "layered_schema",
-          "property_set_flow_sections"
+          "durable_project_repository"
         ]
       },
       "command-palette": {
@@ -567,17 +562,17 @@
         "path": "src/data-layer-assignment-routing-ui.ts"
       },
       "durable_project_repository": {
-        "limit": 395,
-        "baseline": 328.8,
+        "limit": 109,
+        "baseline": 90.2,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
         "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 95
+          "exact task samples": 13
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
-        "path": "src/data-layer-durable-project-repository-ui.ts"
+        "path": "src/data-layer-durable-project-repository-presentation-ui.ts"
       },
       "command-palette": {
         "limit": 46,
