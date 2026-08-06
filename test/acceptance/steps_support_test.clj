@@ -63,6 +63,37 @@
                (assoc-in receipt ["tasks" "unit:test/example-test.mjs" "status"] "failed")
                command)))))
 
+(deftest batched-browser-receipts-resolve-one-logical-target
+  (let [result {"identity" {"executable" "node"
+                            "args" ["scripts/run-browser-observation.mjs"
+                                    "FIRST" "SECOND"]
+                            "logicalTargetIds" ["FIRST" "SECOND"]}
+                "status" "passed"
+                "output" "{\"first\":true}\n{\"second\":true}\n"}
+        receipt {"version" 2
+                 "tasks" {"browser-observation:FIRST+SECOND" result}}
+        command ["node" "scripts/run-browser-observation.mjs" "SECOND"]]
+    (is (= {:exit 0
+            :out "{\"first\":true}\n{\"second\":true}\n"
+            :err ""
+            :receipt true}
+           (support/verification-receipt-result
+            receipt "browser-observation:SECOND" command)))
+    (is (nil? (support/verification-receipt-result
+               receipt "browser-observation:MISSING"
+               ["node" "scripts/run-browser-observation.mjs" "MISSING"])))
+    (is (nil? (support/verification-receipt-result
+               receipt "unit:SECOND" command)))
+    (is (thrown-with-msg?
+         clojure.lang.ExceptionInfo
+         #"duplicate command identities"
+         (support/verification-receipt-result
+          (assoc receipt "tasks"
+                 {"browser-observation:FIRST+SECOND" result
+                  "browser-observation:SECOND+FIRST" result})
+          "browser-observation:SECOND"
+          command)))))
+
 (deftest runner-owned-verification-commands-fail-closed-before-spawning
   (let [command ["node" "test/example-test.mjs"]
         passed-receipt {"version" 2

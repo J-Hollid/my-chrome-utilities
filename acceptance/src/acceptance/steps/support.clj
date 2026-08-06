@@ -28,17 +28,47 @@
 
 (def ^:private browser-observation-task-prefix "browser-observation:")
 
-(defn- batched-browser-command? [result task-key command]
-  (when (and task-key
+(defn- browser-observation-id [task-key]
+  (when (and (string? task-key)
              (str/starts-with? task-key browser-observation-task-prefix))
-    (let [observation-id (subs task-key (count browser-observation-task-prefix))
-          identity (get result "identity")]
-      (and (= ["node" "scripts/run-browser-observation.mjs" observation-id]
-              (vec command))
-           (= "node" (get identity "executable"))
-           (= "scripts/run-browser-observation.mjs"
-              (first (get identity "args" [])))
-           (some #{observation-id} (get identity "logicalTargetIds" []))))))
+    (subs task-key (count browser-observation-task-prefix))))
+
+(defn- batched-browser-command? [result task-key command]
+  (let [observation-id (browser-observation-id task-key)
+        identity (get result "identity")]
+    (= {:command ["node" "scripts/run-browser-observation.mjs" observation-id]
+        :executable "node"
+        :script "scripts/run-browser-observation.mjs"
+        :logical-target true}
+       {:command (vec command)
+        :executable (get identity "executable")
+        :script (first (get identity "args" []))
+        :logical-target (contains? (set (get identity "logicalTargetIds" []))
+                                   observation-id)})))
+
+(defn- receipt-candidates [tasks task-key]
+  (if (nil? task-key)
+    (vals tasks)
+    (if-let [task (get tasks task-key)]
+      [task]
+      (if (browser-observation-id task-key) (vals tasks) []))))
+
+(defn- matching-receipt-results [tasks task-key command]
+  (filter #(or (= (vec command) (task-command %))
+               (batched-browser-command? % task-key command))
+          (receipt-candidates tasks task-key)))
+
+(defn- unique-receipt-result [matches task-key command]
+  (when (> (count matches) 1)
+    (throw (ex-info "Verification receipt contains duplicate command identities."
+                    {:command (vec command) :task-key task-key})))
+  (some-> (first matches) receipt-result))
+
+(defn- version-2-receipt-result [receipt task-key command]
+  (unique-receipt-result
+   (matching-receipt-results (get receipt "tasks") task-key command)
+   task-key
+   command))
 
 (defn verification-receipt-result
   ([receipt command]
@@ -46,20 +76,7 @@
   ([receipt task-key command]
    (cond
      (= 2 (get receipt "version"))
-     (let [tasks (get receipt "tasks")
-           candidates (cond
-                        (nil? task-key) (vals tasks)
-                        (contains? tasks task-key) [(get tasks task-key)]
-                        (str/starts-with? task-key browser-observation-task-prefix) (vals tasks)
-                        :else [])
-           matches (filter #(and %
-                                 (or (= (vec command) (task-command %))
-                                     (batched-browser-command? % task-key command)))
-                           candidates)]
-       (when (> (count matches) 1)
-         (throw (ex-info "Verification receipt contains duplicate command identities."
-                         {:command (vec command) :task-key task-key})))
-       (some-> (first matches) receipt-result))
+     (version-2-receipt-result receipt task-key command)
 
      ;; Version 1 receipts remain readable outside strict orchestration so old
      ;; standalone acceptance helpers do not acquire a flag-day dependency.
