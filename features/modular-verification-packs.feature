@@ -328,3 +328,53 @@ Feature: Modular verification packs
       | report only        | unchanged                                      | no archive operation                                    |
       | archive preview    | unchanged                                      | candidates with source, digest, and rejection reason    |
       | explicit archive   | rejected and incomplete receipts recoverable  | manifest with original path, archive path, and digest   |
+
+  # Modular verification packs 030
+  Scenario Outline: Modular verification packs 030
+    Given a FLOW_GRAPH_EXAMPLES_TARGET sample is recorded under <sample_condition>
+    When phase-aware target timing is emitted
+    Then receipt execution load is <execution_load>
+    And plan context is <plan_context>
+    And timing identifies browser startup, target setup, fixture setup, readiness, example compilation, rendering, persistence, assertion, and cleanup phases
+    And every phase has explicit process or target scope and a finite non-negative duration
+
+    Examples:
+      | sample_condition                 | execution_load | plan_context                         |
+      | focused single-target            | normal         | focused FLOW_GRAPH_EXAMPLES_TARGET   |
+      | normally loaded terminal lane 4 of 4 | loaded      | existing Flow and capture co-run     |
+
+  # Modular verification packs 031
+  Scenario Outline: Modular verification packs 031
+    Given the canonical ledger contains <focused_samples> focused normal samples and <loaded_samples> normally loaded samples for FLOW_GRAPH_EXAMPLES_TARGET from one artifact build
+    When phase timing maturity is reported with minimum 5
+    Then focused normal timing is <focused_status>
+    And normally loaded timing is <loaded_status>
+    And each class reports separate target and phase p50 and p90 values with receipt digests
+
+    Examples:
+      | focused_samples | loaded_samples | focused_status   | loaded_status     |
+      | 4               | 5              | provisional      | non-provisional   |
+      | 5               | 4              | non-provisional  | provisional       |
+      | 5               | 5              | non-provisional  | non-provisional   |
+
+  # Modular verification packs 032
+  Scenario Outline: Modular verification packs 032
+    Given five focused normal FLOW_GRAPH_EXAMPLES_TARGET samples have p90 <focused_p90>
+    When verification performance budgets are checked
+    Then the budget result is <budget_result>
+    And normally loaded samples do not enter the focused normal percentile
+
+    Examples:
+      | focused_p90    | budget_result |
+      | 12.890 seconds | pass          |
+      | 12.892 seconds | fail          |
+
+  # Modular verification packs 033
+  Scenario: Modular verification packs 033
+    Given a committed Flow examples characterization references at least five focused normal and five normally loaded accepted receipt digests from the current artifact build
+    When VTD-013 completion is evaluated
+    Then every sample contains complete phase timing and environment identity
+    And the report identifies the dominant phase and the bounded synchronization or work correction
+    And every loaded sample passes its assigned assertions without widening the 12.891 second target budget
+    And the 35 second representative Flow changed-path guardrail is unchanged
+    And Flow controls, authoring, legacy, and all 21 examples assertion leaves retain their identities

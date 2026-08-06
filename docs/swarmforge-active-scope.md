@@ -1828,3 +1828,99 @@ VTD-002 is complete only after the canonical ledger reproduces the refreshed sou
 keeps loaded and normal Flow examples timing distinct, and the normal coder, refactorer,
 and architect chain accepts the implementation. VTD-003 remains inactive until that
 completion is merged.
+
+VTD-002 completed the normal coder, refactorer, and architect chain and was merged at
+`68c8f6369f024fae55bec19ec37011ad786dbfd9`. Its terminal `hotkeys,shell`
+checkpoint is recorded against specification base
+`1f5bcfe88863adebd2bc89c07505b43439394dee`.
+
+## Verification throughput program — candidate slice VTD-013 (2026-08-06)
+
+VTD-013 is the only active specification slice. It remains a candidate and grants no
+implementation authority until the user explicitly approves the coder handoff. VTD-003
+through VTD-012 remain inactive.
+
+### Expected work-package outcome toward the overall goal
+
+This package turns the remaining Flow-examples timing anomaly from sparse, mixed-context
+evidence into a mature and reproducible normal-versus-loaded measurement. Its local
+outcome is a stable examples target, phase-level diagnosis, and trustworthy evidence at
+the unchanged budget. Its program contribution is to finish Phase A's measurement-truth
+foundation so VTD-003 can set representative budgets from comparable samples rather than
+from provisional fallbacks or a hidden loaded outlier. It deliberately does not complete
+the later cross-program readiness standardization owned by VTD-007.
+
+The dependency on VTD-007 is reconciled narrowly. The current repository has coarse Flow
+`activePhase` interruption reporting but no shared predicate-readiness or phase-timing
+API. VTD-013 may add only the target-local timing and bounded readiness behavior needed
+to characterize `FLOW_GRAPH_EXAMPLES_TARGET`. It must not standardize unrelated Flow,
+layered-schema, or side-panel programs; that cross-program API remains VTD-007.
+
+The comparable accepted historical evidence contains a 10.734-second normal sample and
+a 24.322-second loaded sample at Node 24.19.0, TypeScript 5.9.3, linux-x64, worker
+concurrency 4, observation concurrency 2, and artifact build identity
+`4ea103138a47e7bda15a9d7463d88d9ef7aedfbebe48ec9da108d2ce3e6925c8`.
+Other observed Flow examples results are incomplete receipts or belong to another
+observation-concurrency class and cannot satisfy sample maturity.
+
+### VTD-013 sampling and timing contract
+
+Characterization uses one immutable implementation and artifact build. It records at
+least five independent accepted samples in each of two exact environment classes:
+
+1. **Focused normal.** Select only `FLOW_GRAPH_EXAMPLES_TARGET` through the existing
+   focused browser-target plan and declare execution load `normal`.
+2. **Normally loaded.** Reuse the existing terminal lane 4/4 topology, in which the
+   four-target Flow batch co-runs with the five-target capture batch at observation
+   concurrency 2, and declare execution load `loaded`.
+
+The loaded condition must use that existing verification topology rather than an
+invented sleep, synthetic CPU burner, target reorder, or altered terminal selection.
+Every run must retain the current runtime, platform, worker concurrency, observation
+concurrency, and artifact identity. Copied receipts, incomplete tasks, failed targets,
+rejected receipts, and another environment class do not count toward either minimum.
+
+Every `FLOW_GRAPH_EXAMPLES_TARGET` timing record must retain its existing `durationMs`
+budget input and add finite non-negative phase durations for browser startup, target
+setup, fixture setup, readiness, example compilation, rendering, persistence,
+assertion, and cleanup. Each phase declares whether it is process-scoped or
+target-scoped. Target-scoped phases cover the budgeted target interval exactly once,
+within clock-rounding tolerance; process-scoped startup remains visible but cannot be
+silently folded into or removed from the established target budget measurement.
+
+The canonical reporter must produce separate focused-normal and normally-loaded target
+and per-phase p50/p90 distributions, sample counts, maturity, environment class, and raw
+receipt digests. A committed machine-readable characterization report under
+`verification/` binds the ten or more samples to the current commit, artifact build,
+environment classes, diagnosis, and correction. Raw receipt bytes remain immutable.
+
+The examples-only synchronization path must use bounded predicate waits with a monotonic
+deadline instead of fixed-count sleeps where elapsed time is not itself under test. A
+timeout identifies `FLOW_GRAPH_EXAMPLES_TARGET`, phase, predicate, elapsed time, and a
+bounded last-state snapshot. The characterization report names the dominant phase and
+the exact bounded synchronization or unnecessary-work correction. This local behavior
+must remain suitable for later adoption by VTD-007 without creating a project-wide API
+in this slice.
+
+Completion requires five mature focused-normal samples whose p90 is at most the existing
+12.891-second budget, five normally-loaded samples that all pass their assigned leaves,
+and truthful separate loaded diagnostics. The budget may not be widened or reclassified
+to accept the historical outlier. Any external blocker must be reported to the
+specifier before a budget revision is proposed and does not itself complete VTD-013.
+The representative Flow changed-path guardrail remains 35 seconds.
+
+### VTD-013 evidence conservation
+
+| Evidence class | Conserved before/after mapping |
+|---|---|
+| Flow browser targets and batching | `FLOW_WORKSPACE_CONTROLS_TARGET`, `FLOW_WORKSPACE_AUTHORING_TARGET`, `FLOW_GRAPH_LEGACY_TARGET`, and `FLOW_GRAPH_EXAMPLES_TARGET` retain their ids, assigned features, existing session batch, focused selection, and terminal multiplicity. The normal loaded sample reuses terminal lane 4/4 without changing its Flow/capture co-run. |
+| Examples assertion leaves | The 11 `runtime021` Event-example leaves and 10 `runtime025` Page-example leaves retain their exact registry identities and boolean meaning. No controls, authoring, legacy, or examples leaf moves or is removed. |
+| Product and durable behavior | No externally visible Flow behavior, stored project bytes, migrations, Undo semantics, example derivation, rendering result, repair navigation, or accessibility outcome changes. Timing and readiness instrumentation observes the existing behavior. |
+| Receipt and timing evidence | Existing receipts stay byte-for-byte unchanged. New accepted receipts add declared execution load and phase timing; the durable report references raw digests and exact environment classes without fabricating or copying samples. |
+| Budgets and planning | The 12.891-second examples budget, 35-second representative changed-path guardrail, pack ownership, impact boundaries, task order, browser batching, worker limits, and terminal sharding remain unchanged. |
+| Acceptance and process contracts | `features/modular-verification-packs.feature` scenarios 001–029 retain their identities and steps; scenarios 030–033 add phase schema, class maturity, budget-boundary, characterization, and conservation behavior under `acceptance/src/acceptance/steps/modular_architecture.clj`. |
+
+The expected exact implementation checkpoint is `flow_graph,shell`, extended only by
+any additional pack that changed-path preflight proves is jointly owned. VTD-003 remains
+inactive until VTD-013 completes the normal coder, refactorer, and architect chain and
+the accepted commit is merged.
