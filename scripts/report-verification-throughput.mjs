@@ -148,11 +148,12 @@ export function measuredTimingModel(receipts, baseline) {
             }
           } catch { /* observation documents and browser diagnostics are not result markers */ }
         }
+        const timingOnlyBatchIsIndependent = explicitResultCount > 0 || logicalTargetIds.size === 1;
         for (const line of outputLines) {
           try {
             const timing = JSON.parse(line).swarmforgeBrowserTargetTiming;
             const eligible = explicitResultCount === 0
-              ? logicalTargetIds.has(timing?.id)
+              ? timingOnlyBatchIsIndependent && logicalTargetIds.has(timing?.id)
               : passedTargetIds.has(timing?.id);
             if (!eligible || !Number.isFinite(timing?.durationMs) ||
                 timing.durationMs < 0) continue;

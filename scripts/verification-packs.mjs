@@ -435,6 +435,76 @@ export function validateBrowserPerformanceDeclarations(packs) {
   }
 }
 
+export function browserObservationSessionBatch(pack, observation) {
+  if (observation.sessionBatch) return observation.sessionBatch;
+  return values(pack, "browserObservationBatches")
+    .find(({ path:program }) => program === observation.path)?.id;
+}
+
+const evidenceLeafSegments = (leaf) => typeof leaf === "string" ? leaf.split(".") : leaf;
+const evidenceLeafIdentity = (leaf) => JSON.stringify(evidenceLeafSegments(leaf));
+
+export function browserObservationEvidenceLeaves(pack, observation) {
+  return values(pack, "browserEvidencePartitions")
+    .flatMap(({ targets }) => targets ?? [])
+    .find(({ id }) => id === observation.id)?.leaves
+    ?.map(evidenceLeafSegments);
+}
+
+export function validateBrowserEvidencePartitions(packs) {
+  for (const pack of packs) {
+    const observationIds = new Set(values(pack, "browserObservations").map(({ id }) => id));
+    for (const partition of values(pack, "browserEvidencePartitions")) {
+      if (!partition || Array.isArray(partition) || typeof partition.path !== "string" ||
+          !Array.isArray(partition.originalLeaves) || !partition.originalLeaves.length ||
+          !Array.isArray(partition.targets) || partition.targets.length < 2) {
+        throw new Error(`Use an exact browser evidence partition in pack ${pack.id}`);
+      }
+      const original = partition.originalLeaves.map(evidenceLeafIdentity);
+      const assigned = partition.targets.flatMap(({ leaves }) => leaves ?? [])
+        .map(evidenceLeafIdentity);
+      const targetIds = partition.targets.map(({ id }) => id);
+      const validLeaf = (leaf) => {
+        const segments = evidenceLeafSegments(leaf);
+        return Array.isArray(segments) && segments.length >= 2 &&
+          segments.every((segment) => typeof segment === "string" && segment.length > 0);
+      };
+      if (new Set(targetIds).size !== targetIds.length ||
+          targetIds.some((id) => !observationIds.has(id)) ||
+          partition.originalLeaves.some((leaf) => !validLeaf(leaf)) ||
+          partition.targets.some(({ leaves }) => !Array.isArray(leaves) || !leaves.length ||
+            leaves.some((leaf) => !validLeaf(leaf))) ||
+          new Set(original).size !== original.length ||
+          new Set(assigned).size !== assigned.length ||
+          original.length !== assigned.length ||
+          original.some((leaf) => !assigned.includes(leaf))) {
+        throw new Error(`Browser evidence partition ${pack.id}:${partition.path} must assign every original assertion leaf exactly once`);
+      }
+    }
+  }
+}
+
+export function validateBrowserObservationBatches(packs) {
+  for (const pack of packs) {
+    const batchIds = new Set();
+    for (const batch of values(pack, "browserObservationBatches")) {
+      if (!batch || Array.isArray(batch) ||
+          !/^[a-z0-9][a-z0-9-]*$/u.test(batch.id ?? "") || batchIds.has(batch.id) ||
+          typeof batch.path !== "string" || !batch.path ||
+          !Number.isInteger(batch.observationCount) || batch.observationCount < 2) {
+        throw new Error(`Use exact compatible browser observation batches in pack ${pack.id}`);
+      }
+      batchIds.add(batch.id);
+      const observations = values(pack, "browserObservations")
+        .filter(({ path:program }) => program === batch.path);
+      if (observations.length !== batch.observationCount ||
+          observations.some(({ sessionBatch }) => sessionBatch !== undefined)) {
+        throw new Error(`Browser observation batch ${pack.id}:${batch.id} must own exactly ${batch.observationCount} compatible targets`);
+      }
+    }
+  }
+}
+
 function validatePrefixOwnership(packs, inventory, key) {
   const matches = key === "process" ? processPrefixMatches : prefixMatches;
   for (const pack of packs) {
@@ -572,6 +642,8 @@ export async function validateVerificationPacks(packs, { inventory } = {}) {
   validateDeclaredTasks(packs);
   await validateBrowserAdapterModes(packs);
   validateBrowserPerformanceDeclarations(packs);
+  validateBrowserObservationBatches(packs);
+  validateBrowserEvidencePartitions(packs);
   await validateVerificationHelpers(packs);
 
   const repositoryInventory = { ...await verificationInventory(), ...inventory };
@@ -783,7 +855,8 @@ function historicalRegistryHasPlanningShape(packs, known) {
     ...exactOwnedPathKeys, ...prefixOwnedPathKeys, "globalImpact", "features",
     "browserObservations", "checkpointCommands", "dependencies", "sharedComponents",
     "verificationInputs", "runtimeInputs", "verificationHelpers", "browserAdapterModes",
-    "browserAdapterPerformance", "impactBoundaries",
+    "browserAdapterPerformance", "browserObservationBatches", "browserEvidencePartitions",
+    "impactBoundaries",
   ];
   return Array.isArray(packs) && packs.length > 0 &&
     new Set(packs.map((pack) => pack?.id)).size === packs.length &&
@@ -1018,8 +1091,9 @@ export function planVerification(
   const observationGroups = new Map();
   for (const item of selectedObservations) {
     const { declarationPack, observation } = item;
-    const groupKey = observation.sessionBatch
-      ? `${declarationPack.id}\0${observation.path}\0${observation.sessionBatch}`
+    const sessionBatch = browserObservationSessionBatch(declarationPack, observation);
+    const groupKey = sessionBatch
+      ? `${declarationPack.id}\0${observation.path}\0${sessionBatch}`
       : `${declarationPack.id}\0${observation.id}`;
     const group = observationGroups.get(groupKey) ?? [];
     group.push(item);

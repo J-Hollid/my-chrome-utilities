@@ -173,6 +173,26 @@ function refreshBrowserTargetRuntime() {
 }
 refreshBrowserTargetRuntime();
 
+const removeExampleSelectionFixture = async (socket) => {
+  const removed = await evaluate(socket, `(async()=>{
+    const path="/products/*/product_name";
+    for(let attempt=0;attempt<240;attempt+=1){
+      const schemas=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1")||"[]");
+      const schema=schemas.find(({name})=>name==="Generic pageview");
+      if(schema?.documentation?.properties?.[path]&&
+          schema?.workingDraft?.documentation?.properties?.[path]){
+        delete schema.documentation.properties[path].example;
+        delete schema.workingDraft.documentation.properties[path].example;
+        localStorage.setItem("my-chrome-utilities.schema-library.v1",JSON.stringify(schemas));
+        return true;
+      }
+      await new Promise((resolve)=>setTimeout(resolve,25));
+    }
+    return false;
+  })()`);
+  assert.equal(removed, true, "Generic pageview example-selection fixture did not settle");
+};
+
 const chromeProfile = await mkdtemp(path.join(os.tmpdir(), "side-panel-layout-"));
 const assetServer = createServer(async (request, response) => {
   const pathname = new URL(request.url ?? "/", "http://127.0.0.1").pathname;
@@ -2986,10 +3006,10 @@ const canonicalDeclaredPropertyValidationRuntime = `(async () => {
   const draftSchema=()=>{const schemas=stored();const current=schemas[1];return {...current,document:current.workingDraft.document,attachedRules:current.workingDraft.attachedRules,parentSchemaId:current.workingDraft.parentSchemaId??current.parentSchemaId};};
   const validate=(payload,schema=draftSchema(),schemas=[stored()[0],schema])=>verification.validateWithSchema(event(payload),schema,schemas);
   q("#data-layer-view-schemas").click();openPageView();
-  const checkbox=q("#schema-only-declared-properties");const propertiesBefore=JSON.stringify(child().workingDraft.document.properties);checkbox.checked=true;checkbox.dispatchEvent(new Event("change",{bubbles:true}));await __waitForDurableSchemaObservation((schemas)=>schemas[1]?.workingDraft?.document?.additionalProperties===false,"the declared-property policy");
+  const checkbox=()=>q("#schema-only-declared-properties");const propertiesBefore=JSON.stringify(child().workingDraft.document.properties);checkbox().checked=true;checkbox().dispatchEvent(new Event("change",{bubbles:true}));await __waitForDurableSchemaObservation((schemas)=>schemas[1]?.workingDraft?.document?.additionalProperties===false,"the declared-property policy");await waitFor(()=>q("#schema-editor").getAttribute("aria-busy")!=="true","the declared-property policy presentation");
   const declared=validate({page_type:"product",login_status:"logged in",page_levels:["product"]});
   const extra=validate({page_type:"product",login_status:"logged in",page_levels:["product"],debug:true});
-  const policy={checked:checkbox.checked,stored:child().workingDraft.document.additionalProperties===false,propertiesUnchanged:JSON.stringify(child().workingDraft.document.properties)===propertiesBefore,declaredIssues:declared.issues.filter(({message})=>message==="Undeclared property").map(({instancePath})=>instancePath),extraIssues:extra.issues.filter(({message})=>message==="Undeclared property").map(({instancePath,expected,actual})=>({instancePath,expected,actual}))};
+  const policy={checked:checkbox().checked,stored:child().workingDraft.document.additionalProperties===false,propertiesUnchanged:JSON.stringify(child().workingDraft.document.properties)===propertiesBefore,declaredIssues:declared.issues.filter(({message})=>message==="Undeclared property").map(({instancePath})=>instancePath),extraIssues:extra.issues.filter(({message})=>message==="Undeclared property").map(({instancePath,expected,actual})=>({instancePath,expected,actual}))};
   const make=(name,document,parentSchemaId)=>({id:"case:"+name,name,version:1,document,assignments:[],...(parentSchemaId?{parentSchemaId}:{})});
   const representationCases=[];
   for(const [name,document,payload,canonical] of [
@@ -3001,8 +3021,8 @@ const canonicalDeclaredPropertyValidationRuntime = `(async () => {
   for(const [name,payload] of [["missing",{}],["numeric",{page_type:42}],["disallowed",{page_type:"internal"}],["allowed",{page_type:"product"}]]){const result=validate(payload);pageCases[name]={issues:result.issues.filter(({instancePath})=>instancePath==="/page_type").map(({message})=>message),undeclared:result.issues.some(({instancePath,message})=>instancePath==="/page_type"&&message==="Undeclared property"),evaluations:(result.evaluations??[]).filter(({propertyPath})=>propertyPath==="/page_type").map(({propertyPath,rule,ruleVersion})=>({propertyPath,rule,ruleVersion}))};}
   const parentBytes=JSON.stringify(stored()[0].document);const childBytes=JSON.stringify(child().workingDraft.document);const inherited=validate({site_id:"otelo",page_type:"product",debug:true});
   const inheritance={undeclared:inherited.issues.filter(({message})=>message==="Undeclared property").map(({instancePath})=>instancePath),parentUnchanged:JSON.stringify(stored()[0].document)===parentBytes,childUnchanged:JSON.stringify(child().workingDraft.document)===childBytes};
-  checkbox.checked=false;checkbox.dispatchEvent(new Event("change",{bubbles:true}));await __waitForDurableSchemaObservation((schemas)=>schemas[1]?.workingDraft?.document?.additionalProperties===undefined,"the open declared-property policy");const openResult=validate({page_type:"product",debug:true});const disabled={stored:child().workingDraft.document.additionalProperties===undefined,undeclared:openResult.issues.filter(({message})=>message==="Undeclared property").length,ruleActive:(openResult.evaluations??[]).some(({propertyPath,status})=>propertyPath==="/page_type"&&status==="pass")};
-  checkbox.checked=true;checkbox.dispatchEvent(new Event("change",{bubbles:true}));await __waitForDurableSchemaObservation((schemas)=>schemas[1]?.workingDraft?.document?.additionalProperties===false,"the restored declared-property policy");await waitFor(()=>!q("#save-schema").disabled,"the declared-property publish action");q("#save-schema").click();q("#confirm-schema-revision").click();const published=(await __waitForDurableSchemaObservation((schemas)=>schemas[1]?.version===4&&!schemas[1].workingDraft&&schemas[1].document.additionalProperties===false,"the declared-property publication"))[1];const publication={version:published.version,closed:!published.workingDraft,stored:published.document.additionalProperties===false,propertiesUnchanged:JSON.stringify(published.document.properties)===propertiesBefore,result:q("#schema-result").textContent};
+  checkbox().checked=false;checkbox().dispatchEvent(new Event("change",{bubbles:true}));await __waitForDurableSchemaObservation((schemas)=>schemas[1]?.workingDraft?.document?.additionalProperties===undefined,"the open declared-property policy");await waitFor(()=>q("#schema-editor").getAttribute("aria-busy")!=="true","the open declared-property policy presentation");const openResult=validate({page_type:"product",debug:true});const disabled={stored:child().workingDraft.document.additionalProperties===undefined,undeclared:openResult.issues.filter(({message})=>message==="Undeclared property").length,ruleActive:(openResult.evaluations??[]).some(({propertyPath,status})=>propertyPath==="/page_type"&&status==="pass")};
+  checkbox().checked=true;checkbox().dispatchEvent(new Event("change",{bubbles:true}));await __waitForDurableSchemaObservation((schemas)=>schemas[1]?.workingDraft?.document?.additionalProperties===false,"the restored declared-property policy");await waitFor(()=>!q("#save-schema").disabled,"the declared-property publish action");q("#save-schema").click();q("#confirm-schema-revision").click();const published=(await __waitForDurableSchemaObservation((schemas)=>schemas[1]?.version===4&&!schemas[1].workingDraft&&schemas[1].document.additionalProperties===false,"the declared-property publication"))[1];const publication={version:published.version,closed:!published.workingDraft,stored:published.document.additionalProperties===false,propertiesUnchanged:JSON.stringify(published.document.properties)===propertiesBefore,result:q("#schema-result").textContent};
   q("#data-layer-view-live").click();const feed=Array.from(q("#live-event-feed").querySelectorAll("button"));const feedRows=feed.map(({textContent,dataset})=>({textContent,eventId:dataset.eventId}));const extraButton=feed.find((button)=>button.dataset.eventId==="event:extra");if(!extraButton)throw new Error("Missing extra event");extraButton.click();
   const debugRow=q('.live-validation-property[data-property-path="/debug"]');const live={feedRows,summary:q("#live-inspector-validation-summary").textContent,debug:q(".live-property-status",debugRow).textContent,debugRows:document.querySelectorAll('.live-validation-property[data-property-path="/debug"]').length};
   q("#data-layer-view-schemas").click();openPageView();const reopened={checked:q("#schema-only-declared-properties").checked,propertiesUnchanged:JSON.stringify(child().document.properties)===propertiesBefore};
@@ -3751,7 +3771,7 @@ const schemaSourceCreationRuntime = `(() => {
   };
 })()`;
 
-const schemaInheritanceRuntime = `(async () => {
+const schemaInheritanceRuntime = (fixture) => `(async () => {
   const q = (selector) => { const element = document.querySelector(selector); if (!element) throw new Error("Missing " + selector); return element; };
   const input = (selector, value) => { const element = q(selector); element.value = value; element.dispatchEvent(new Event("input", { bubbles:true })); };
   const repository = await (await import("./data-layer-durable-project-repository.js")).openIndexedDbProjectRepository();
@@ -3787,7 +3807,7 @@ const schemaInheritanceRuntime = `(async () => {
   };
   q("#data-layer-view-schemas").click();
   q("#schema-subview-schemas").click();
-  if (${JSON.stringify(schemaLibraryExportFixture)} === "1:3") {
+  if (${JSON.stringify(fixture)} === "1:3") {
     q("#create-schema").click();
     input("#schema-editor-name", "Order confirmation");
     const parent = Array.from(q("#schema-editor-parent").options).find((option) => option.textContent.startsWith("Checkout schema v2"));
@@ -5637,7 +5657,7 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
       draftRefresh:{ unchanged:true, message:"Library draft validation: 1 issues · Checkout schema v2." },
       persistedAttachment:"schema:checkout-schema:1",
     }, "Library Create schema did not invoke the production source callback");
-    schemaInheritance = await evaluate(socket, schemaInheritanceRuntime);
+    schemaInheritance = await evaluate(socket, schemaInheritanceRuntime(schemaLibraryExportFixture));
     assert.deepEqual(schemaInheritance.groups.map(({ state }) => state), [
       "active-inherited", "disabled-inherited", "explicitly-reenabled", "local",
     ], "Schema inheritance state groups did not render");
@@ -5694,19 +5714,25 @@ async function captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility)
 try {
   const port = await debuggingPort();
   const extensionId=await loadedExtensionId(port);
+  const browserTargetFailures=[];
   for (const browserTargetId of browserTargetIds.length ? browserTargetIds : [null]) {
     if (browserTargetId) activateBrowserTarget(browserTargetId);
     refreshBrowserTargetRuntime();
     const browserTargetStartedAt = Date.now();
+    let browserTargetStoragePrepared=false;
+    try {
     for (const width of componentWidths) {
     const specificationScenarioId=process.env.SPECIFICATION_PROJECT_SCENARIO_ID??"",capturedContinuationScenario=process.env.SPECIFICATION_PROJECT_BROWSER_ADAPTER==="1"&&specificationScenarioId.includes("canonical project schema drafts runtime 021");
     const socket = process.env.SPECIFICATION_PROJECT_BROWSER_ADAPTER === "1" ? await openSpecificationBuilder(port,width,900,capturedContinuationScenario?`chrome-extension://${extensionId}/specification-builder.html`:undefined) : await openPanel(port, width);
-    if (browserTargetId) {
-      await socket.call("Storage.clearDataForOrigin", {
-        origin:`chrome-extension://${extensionId}`,
-        storageTypes:"all",
+    if (browserTargetId&&!browserTargetStoragePrepared) {
+      for(const origin of [`chrome-extension://${extensionId}`,`http://127.0.0.1:${assetPort}`]){
+        await socket.call("Storage.clearDataForOrigin", {origin,storageTypes:"all"});
+      }
+      await socket.call("Runtime.evaluate", {
+        expression:"delete globalThis.__flushDurableSchemaObservation",
       });
       await reloadPanel(socket);
+      browserTargetStoragePrepared=true;
     }
     if (process.env.SPECIFICATION_PROJECT_BROWSER_ADAPTER === "1") {
       if(capturedContinuationScenario){
@@ -6324,7 +6350,7 @@ try {
       await evaluate(socket,schemaSpecificationBuilderSeedRuntime);await evaluate(socket,`(()=>{const schemas=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"));schemas.find(({id})=>id==="base-event").attachedRules.push({id:"parent-page-types",version:1,propertyPath:"/page_type",operator:"allowed-values",allowedValues:["product_detail","product_list"]});localStorage.setItem("my-chrome-utilities.schema-library.v1",JSON.stringify(schemas));return true;})()`);await reloadPanel(socket);const base=await evaluate(socket,schemaSpecificationBuilderCustomizationRuntime),extended=await evaluate(socket,schemaSpecificationBuilderExtendedRuntime);schemaSpecificationBuilderCustomizationObservation={...base,extended};const observed=schemaSpecificationBuilderCustomizationObservation;assert.deepEqual(observed.defaults,{spreadsheet:true,headings:true,styleHidden:true,bars:1});assert.deepEqual(observed.moved,["Property name","Description","Type","Mandatory","Example value","Allowed values","Comments"]);assert.match(observed.choices.join(" "),/Documentation 24.*Allowed value 12.*Allowed value 24.*Custom value.*Blank/);assert.equal(observed.example,"12");assert.match(observed.spreadsheet,/^Property name\tDescription\tType\tMandatory/);assert.doesNotMatch(observed.unheaded,/^Property name/);assert.deepEqual(observed.rich.types,["text/html","text/plain"]);assert.match(observed.rich.html,/border:1px solid.*background:#eee/);assert.match(extended.provenance.conditional.join(" "),/Allowed value 12.*when price_monthly exists/);assert.match(extended.provenance.inherited.join(" "),/Allowed value otelo.*inherited/);assert.match(extended.provenance.localPropertyInheritedRule.join(" "),/Allowed value product_detail.*inherited.*Allowed value product_list.*inherited/);const duplicateChoices=extended.choiceIntegrity.duplicate.labels.filter((label)=>label.startsWith("Allowed value"));assert.equal(new Set(duplicateChoices).size,duplicateChoices.length);assert.match(duplicateChoices.join(" "),/Allowed value card.*Allowed value paypal.*Allowed value cash.*when commerce.currency equals EUR/);assert.doesNotMatch(duplicateChoices.join(" "),/bank/);assert.equal(extended.choiceIntegrity.conflict.enabledAllowed,0);assert.match(extended.choiceIntegrity.conflict.labels.join(" "),/Allowed value.*No effective allowed values exist/);assert.deepEqual(Object.fromEntries(Object.entries(extended.choiceExports).map(([key,value])=>[key,value.preview])),{documentation:"24",allowed:"12",custom:"18",blank:""});for(const value of Object.values(extended.choiceExports)){assert.match(value.spreadsheet,/products\[\]\.duration/);assert.match(value.richPlain,/products\[\]\.duration/);assert.match(value.richHtml,/<table/);}assert.doesNotMatch(extended.styles.plain,/border:1px solid/);assert.match(extended.styles.bordered,/border:1px solid.*padding:4px/);assert.match(extended.styles.highlighted,/font-weight:bold;background:#eee/);assert.doesNotMatch(extended.styles.unheaded,/<thead>/);assert.notDeepEqual(extended.drag.before,extended.drag.after);assert.deepEqual(extended.drag.boundaries,{firstLeft:true,lastRight:true});assert.deepEqual(extended.drag.reset,["Property name","Description","Mandatory","Type","Example value","Allowed values","Comments"]);assert.equal(extended.rerender.retained.value,"12");assert.deepEqual({rich:extended.rerender.retained.rich,headings:extended.rerender.retained.headings,style:extended.rerender.retained.style},{rich:true,headings:true,style:"highlighted"});assert.equal(extended.rerender.resetSource.value,"24");assert.deepEqual(extended.rerender.resetSource.columns,extended.rerender.retained.columns);assert.match(extended.failure,/Copy failed.*manual/i);assert.equal(extended.previewStillVisible&&extended.unchanged,true);assert.deepEqual([...observed.runtimeErrors,...extended.runtimeErrors],[]);assert.equal(observed.rich.styleVisible&&observed.unchanged,true);socket.close();continue;
     }
     if(process.env.SCHEMA_SPECIFICATION_EXAMPLE_SELECTION_BROWSER_ADAPTER==="1"){
-      await evaluate(socket,schemaSpecificationBuilderSeedRuntime);await evaluate(socket,`(()=>{const schemas=JSON.parse(localStorage.getItem("my-chrome-utilities.schema-library.v1"));const schema=schemas.find(({name})=>name==="Generic pageview");delete schema.documentation.properties["/products/*/product_name"].example;delete schema.workingDraft.documentation.properties["/products/*/product_name"].example;localStorage.setItem("my-chrome-utilities.schema-library.v1",JSON.stringify(schemas));return true;})()`);await reloadPanel(socket);schemaSpecificationExampleSelectionObservation=await evaluate(socket,schemaSpecificationExampleSelectionRuntime);const observed=schemaSpecificationExampleSelectionObservation;assert.equal(observed.initial.selected,"Documentation 24");assert.equal(observed.initial.standalone,0);assert.match(observed.initial.labels.join(" "),/Allowed value 12.*Allowed value 24.*Custom value.*Blank/);assert.deepEqual(observed.keyboardActivation,{open:true,focused:true,handled:true});assert.equal(observed.radioKeyNotTrapped,true);assert.equal(observed.selectedValue,"12");assert.match(observed.reopened,/Allowed value 12/);assert.deepEqual(observed.cancelled,{value:"12",focus:true});assert.deepEqual(observed.pointerReopened,{open:true,selected:"allowed:12"});assert.equal(observed.unavailable.selected,"blank");assert.equal(observed.unavailable.count,1);assert.equal(observed.unavailable.focused,true);assert.match(observed.unavailable.text,/No documented example exists.*No effective allowed values exist/);assert.deepEqual(observed.escaped,{focus:true,value:""});assert.equal(observed.unchanged,true);assert.deepEqual(observed.runtimeErrors,[]);socket.close();continue;
+      await evaluate(socket,schemaSpecificationBuilderSeedRuntime);await removeExampleSelectionFixture(socket);await reloadPanel(socket);schemaSpecificationExampleSelectionObservation=await evaluate(socket,schemaSpecificationExampleSelectionRuntime);const observed=schemaSpecificationExampleSelectionObservation;assert.equal(observed.initial.selected,"Documentation 24");assert.equal(observed.initial.standalone,0);assert.match(observed.initial.labels.join(" "),/Allowed value 12.*Allowed value 24.*Custom value.*Blank/);assert.deepEqual(observed.keyboardActivation,{open:true,focused:true,handled:true});assert.equal(observed.radioKeyNotTrapped,true);assert.equal(observed.selectedValue,"12");assert.match(observed.reopened,/Allowed value 12/);assert.deepEqual(observed.cancelled,{value:"12",focus:true});assert.deepEqual(observed.pointerReopened,{open:true,selected:"allowed:12"});assert.equal(observed.unavailable.selected,"blank");assert.equal(observed.unavailable.count,1);assert.equal(observed.unavailable.focused,true);assert.match(observed.unavailable.text,/No documented example exists.*No effective allowed values exist/);assert.deepEqual(observed.escaped,{focus:true,value:""});assert.equal(observed.unchanged,true);assert.deepEqual(observed.runtimeErrors,[]);socket.close();continue;
     }
     if(process.env.SCHEMA_SPECIFICATION_PREVIEW_LAYOUT_BROWSER_ADAPTER==="1"){
       await evaluate(socket,schemaSpecificationBuilderSeedRuntime);await reloadPanel(socket);schemaSpecificationPreviewLayoutObservation=await evaluate(socket,schemaSpecificationPreviewLayoutRuntime);const observed=schemaSpecificationPreviewLayoutObservation;await socket.call("Emulation.setEmulatedMedia",{features:[{name:"prefers-color-scheme",value:"light"}]});observed.light=await evaluate(socket,schemaSpecificationPreviewThemeRuntime);await socket.call("Emulation.setEmulatedMedia",{features:[{name:"prefers-color-scheme",value:"dark"}]});observed.dark=await evaluate(socket,schemaSpecificationPreviewThemeRuntime);await socket.call("Emulation.setEmulatedMedia",{features:[{name:"prefers-contrast",value:"more"}]});observed.contrast=await evaluate(socket,schemaSpecificationPreviewThemeRuntime);await socket.call("Emulation.setEmulatedMedia",{features:[]});assert.deepEqual([observed.geometry.regions,observed.geometry.name,observed.geometry.role],[1,"Specification preview","region"]);assert.ok(observed.geometry.regionClient<=observed.geometry.builderClient);assert.ok(observed.geometry.regionScroll>observed.geometry.regionClient);assert.ok(observed.geometry.table>observed.geometry.regionClient);assert.ok(observed.geometry.builderScroll<=observed.geometry.builderClient+1);assert.ok(observed.geometry.panelScroll<=observed.geometry.panelClient+1);assert.equal(observed.geometry.contained,true);assert.notEqual(observed.styles.headingBackground,observed.styles.cellBackground);assert.notEqual(observed.styles.border,"0px");assert.notEqual(observed.styles.padding,"0px");assert.equal(observed.styles.alternating,true);assert.equal(observed.styles.wrap,"normal");assert.equal(observed.styles.vertical,"top");assert.notEqual(observed.styles.focusShadow,"none");assert.ok(observed.scrolled.left>0);assert.equal(observed.scrolled.builder,0);assert.equal(observed.scrolled.panel,0);assert.equal(observed.scrolled.laterVisible,true);assert.ok(observed.retention.afterSort>0&&observed.retention.afterExport>0);assert.equal(observed.focused.inside&&observed.focused.visible,true);assert.equal(observed.light.colorScheme,"dark");assert.equal(observed.dark.colorScheme,"dark");assert.equal(observed.light.heading,observed.dark.heading);assert.notEqual(observed.light.text,observed.light.heading);assert.notEqual(observed.dark.text,observed.dark.heading);assert.notEqual(observed.contrast.border,"rgba(0, 0, 0, 0)");assert.deepEqual(observed.runtimeErrors,[]);socket.close();continue;
@@ -6764,9 +6790,10 @@ try {
         configurationInsideEditor:true,
       }, "Schema rule configuration visibility violated its " + width + "px browser contract");
       await reloadPanel(socket);
-      schemaWorkspaceAdapterObservations.push(
-        await captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility),
-      );
+      const schemaWorkspaceObservation =
+        await captureSchemaWorkspace(socket, width, schemaRuleEditorVisibility);
+      schemaWorkspaceAdapterObservations.push(schemaWorkspaceObservation);
+      if (browserTargetId) console.log(JSON.stringify({ schemaWorkspace:schemaWorkspaceObservation }));
       await evaluate(socket, guidedTransportProjectRestoreRuntime(previousActiveProjectId));
       socket.close();
       continue;
@@ -7543,7 +7570,17 @@ try {
     if (guidedLifecycleProject) await evaluate(socket, guidedTransportProjectRestoreRuntime(guidedLifecycleProject));
     socket.close();
     }
+    }catch(error){
+      if(!browserTargetId)throw error;
+      browserTargetFailures.push({id:browserTargetId,error});
+    }
     if (browserTargetId) {
+      const failure=browserTargetFailures.find(({id})=>id===browserTargetId);
+      console.log(JSON.stringify({
+        swarmforgeBrowserTargetResult:failure
+          ?{id:browserTargetId,status:"failed",error:String(failure.error?.message??failure.error)}
+          :{id:browserTargetId,status:"passed"},
+      }));
       console.log(JSON.stringify({
         swarmforgeBrowserTargetTiming:{ id:browserTargetId, durationMs:Date.now() - browserTargetStartedAt },
       }));
@@ -7726,6 +7763,10 @@ try {
   }
   if (process.env.RECURSIVE_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1") {
     console.log(JSON.stringify({ recursivePropertyValidation:recursivePropertyValidationObservation }));
+  }
+  if(browserTargetFailures.length){
+    throw new AggregateError(browserTargetFailures.map(({id,error})=>
+      new Error(`${id}: ${String(error?.message??error)}`)),"Side-panel browser target batch failed");
   }
 } finally {
   await stopHeadlessChrome(chrome);

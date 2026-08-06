@@ -29,7 +29,12 @@ export function summarizeBrowserTargetResults(targetResults) {
   const results = {};
   for (const result of targetResults) {
     if (result.status === "passed") {
-      Object.assign(document, result.observation);
+      for (const [key,value] of Object.entries(result.observation)) {
+        if (document[key] && value && typeof document[key] === "object" &&
+            typeof value === "object" && !Array.isArray(document[key]) && !Array.isArray(value)) {
+          Object.assign(document[key], value);
+        } else document[key] = value;
+      }
       results[result.id] = { status:"passed", durationMs:result.durationMs };
     } else {
       results[result.id] = {
@@ -105,9 +110,12 @@ class DevtoolsSocket {
     const mask = Buffer.from([1, 2, 3, 4]);
     let header;
     if (body.length < 126) header = Buffer.from([0x81, 0x80 | body.length]);
-    else {
+    else if (body.length <= 0xffff) {
       header = Buffer.alloc(4); header[0] = 0x81; header[1] = 0xfe;
       header.writeUInt16BE(body.length, 2);
+    } else {
+      header = Buffer.alloc(10); header[0] = 0x81; header[1] = 0xff;
+      header.writeBigUInt64BE(BigInt(body.length), 2);
     }
     for (let index = 0; index < body.length; index += 1) body[index] ^= mask[index % 4];
     this.socket.write(Buffer.concat([header, mask, body]));
@@ -156,12 +164,35 @@ async function freshTargetSocket(port, origin, pagePath) {
     { method:"PUT" },
   ).then((response) => response.json());
   const socket = new DevtoolsSocket(target.webSocketDebuggerUrl);
+  socket.targetId = target.id;
   await socket.connect();
   await socket.call("Runtime.enable");
   await socket.call("Page.enable");
   await socket.call("Storage.clearDataForOrigin", { origin, storageTypes:"all" });
   await socket.call("Page.reload", { ignoreCache:true });
   return socket;
+}
+
+async function reconnectTargetSocket(port, origin, pagePath) {
+  for (let attempt = 0; attempt < 240; attempt += 1) {
+    const targets = await fetch(`http://127.0.0.1:${port}/json/list`).then((response) => response.json());
+    const target = targets.find(({ type, url }) => type === "page" &&
+      url.startsWith(`${origin}/${pagePath}`));
+    if (target) {
+      let socket;
+      try {
+        socket = new DevtoolsSocket(target.webSocketDebuggerUrl);
+        socket.targetId = target.id;
+        await socket.connect();
+        await socket.call("Runtime.enable");
+        await socket.call("Page.enable");
+        await new Promise((resolve) => setTimeout(resolve, 100));
+        return socket;
+      } catch { socket?.close(); }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 25));
+  }
+  throw new Error(`Installed browser target did not settle after navigation: ${pagePath}`);
 }
 
 async function evaluate(socket, expression) {
@@ -196,7 +227,37 @@ export async function runBrowserTargetSession({
       try {
         const definition = definitions[target.id];
         socket = await freshTargetSocket(port, origin, definition.pagePath);
-        const observation = await evaluate(socket, definition.expression(target.environment));
+        const evaluateWithNavigationRetries=async(expression)=>{
+          for (let attempt = 0; attempt <= (definition.navigationRetries ?? 0); attempt += 1) {
+            try { return await evaluate(socket, expression); }
+            catch (error) {
+              if (!String(error).includes("Inspected target navigated or closed") ||
+                  attempt === (definition.navigationRetries ?? 0)) throw error;
+              socket.close();
+              socket = await reconnectTargetSocket(port, origin, definition.pagePath);
+            }
+          }
+        };
+        const targetWork=async()=>{
+          if (definition.beforeExpression) {
+            await evaluateWithNavigationRetries(definition.beforeExpression(target.environment));
+            await socket.call("Page.reload", { ignoreCache:true });
+            await new Promise((resolve) => setTimeout(resolve, 100));
+          }
+          return definition.run
+            ? definition.run({
+              environment:target.environment,
+              evaluate:(unusedSocket, expression)=>evaluateWithNavigationRetries(expression),
+              socket:()=>socket,
+            })
+            : evaluateWithNavigationRetries(definition.expression(target.environment));
+        };
+        const maximumElapsedMilliseconds=definition.maximumElapsedMilliseconds??120_000;
+        const remaining=Math.max(1,maximumElapsedMilliseconds-(performance.now()-started));
+        let deadline;
+        const observation=await Promise.race([targetWork(),new Promise((unusedResolve,reject)=>{
+          deadline=setTimeout(()=>{socket?.close();reject(new Error(`${target.id} exceeded outer ${maximumElapsedMilliseconds}ms target limit`));},remaining);
+        })]).finally(()=>clearTimeout(deadline));
         if (!observation || Array.isArray(observation) || typeof observation !== "object") {
           throw new Error(`${target.id} did not return an observation object`);
         }
@@ -212,7 +273,14 @@ export async function runBrowserTargetSession({
           swarmforgeBrowserTargetResult:{ id:target.id, status:"failed", error:error.message },
         }));
         console.log(JSON.stringify({ swarmforgeBrowserTargetTiming:{ id:target.id, durationMs } }));
-      } finally { socket?.close(); }
+      } finally {
+        const targetId=socket?.targetId;
+        socket?.close();
+        if (targetId) {
+          try { await fetch(`http://127.0.0.1:${port}/json/close/${encodeURIComponent(targetId)}`); }
+          catch { /* Chrome shutdown remains the final cleanup boundary. */ }
+        }
+      }
     }
   } finally {
     await stopHeadlessChrome(chrome);

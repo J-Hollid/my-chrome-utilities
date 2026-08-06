@@ -24,7 +24,9 @@
 (defonce model-verified? (atom false))
 (defonce browser-observation (atom nil))
 (defonce storage-observation (atom nil))
+(defonce revision-observation (atom nil))
 (defonce corpus-observation (atom nil))
+(defonce history-observation (atom nil))
 (defn- checked! [& command]
   (let [result (apply support/verified-command-result command)]
     (support/assert! (zero? (:exit result)) (:err result) {:out (:out result)})
@@ -35,29 +37,23 @@
     (checked! "node" "test/data-layer-durable-project-runtime-test.mjs")
     (reset! model-verified? true)))
 (defn- observe-browser! []
-  {:storage (support/cached-browser-observation!
-             storage-observation
-             {:observation-id "DURABLE_REPOSITORY_STORAGE_TARGET"
-              :observation-key :durableRepositoryStorage
-              :runtime-error "Durable repository storage browser verification failed."
-              :missing-error "Durable repository storage evidence is missing."})
-   :corpus (support/cached-browser-observation!
-            corpus-observation
-            {:observation-id "DURABLE_RENDERER_CORPUS_TARGET"
-             :observation-key :durableRendererCorpus
-             :runtime-error "Durable repository renderer browser verification failed."
-             :missing-error "Durable repository renderer evidence is missing."})})
+  (apply merge
+         (map (fn [[cache id key]]
+                (support/cached-browser-observation!
+                 cache {:observation-id id
+                        :observation-key key
+                        :runtime-error (str id " browser verification failed.")
+                        :missing-error (str id " browser evidence is missing.")}))
+              [[storage-observation "DURABLE_REPOSITORY_STORAGE_TARGET" :durableRepositoryStorage]
+               [revision-observation "DURABLE_REPOSITORY_REVISION_TARGET" :durableRepositoryRevision]
+               [corpus-observation "DURABLE_RENDERER_CORPUS_TARGET" :durableRendererCorpus]
+               [history-observation "DURABLE_RENDERER_HISTORY_TARGET" :durableRendererHistory]])))
 (def runtime-keys (set (map #(keyword (format "runtime%03d" %)) (range 1 19))))
 (def required-keys (conj runtime-keys :installedBoundary))
-(defn- all-true? [value] (boolean (and (map? value) (seq value) (every? true? (vals value)))))
 (defn complete-browser-evidence? [evidence]
-  (boolean (and (map? evidence)
-                (= required-keys (set (keys evidence)))
-                (true? (:installedBoundary evidence))
-                (every? #(all-true? (get evidence %)) runtime-keys))))
+  (support/complete-browser-evidence? evidence required-keys runtime-keys))
 (defn- assert-runtime! [evidence]
-  (support/assert! (and (= #{:storage :corpus} (set (keys evidence)))
-                        (every? all-true? (vals evidence)))
+  (support/assert! (complete-browser-evidence? evidence)
                    "Installed durable repository evidence is incomplete." evidence))
 (def failure-example-values
   {"failure" #{"quota exceeded" "transaction aborted" "repository unavailable"}})

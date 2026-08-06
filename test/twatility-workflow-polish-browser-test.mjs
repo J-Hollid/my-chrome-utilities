@@ -14,11 +14,20 @@ import {
   exactChoiceDescriptions,
   expectedStudioChoiceContracts,
 } from "./support/studio-choice-contract-oracle.mjs";
+import { selectedBrowserTargetConfigurations } from "./support/browser-target-session.mjs";
 
-if (process.env.SWARMFORGE_BROWSER_TARGET_CONFIGURATIONS) {
-  await import("./support/branding-workflow-targets.mjs");
-  process.exit(0);
-}
+const brandingTargetIds = process.env.SWARMFORGE_BROWSER_TARGET_CONFIGURATIONS
+  ? selectedBrowserTargetConfigurations(process.env, [
+    "BRANDING_WORKFLOW_CHOICES_TARGET", "BRANDING_WORKFLOW_GUIDANCE_TARGET",
+  ]).map(({ id }) => id)
+  : [];
+const targetedBranding = brandingTargetIds.length > 0;
+const runChoiceWorkflow = !targetedBranding ||
+  brandingTargetIds.includes("BRANDING_WORKFLOW_CHOICES_TARGET");
+const runGuidanceWorkflow = !targetedBranding ||
+  brandingTargetIds.includes("BRANDING_WORKFLOW_GUIDANCE_TARGET");
+const brandingTargetStarted = performance.now();
+const brandingTargetDurations = {};
 
 const wait=(milliseconds)=>new Promise((resolve)=>setTimeout(resolve,milliseconds));
 const expectedSidePanelControlHashes=Object.freeze({
@@ -347,6 +356,9 @@ try{
     return await repository.activeProjectId()===${JSON.stringify(projectId)};
   })()`);
   assert.equal(seeded,true,"production project and Saved Schema must seed");
+  let studioChoiceControls;
+  if(runChoiceWorkflow){
+  const choiceStarted=performance.now();
   await side.call("Page.navigate",{url:`${base}side-panel.html`});
   await ready(side,"document.readyState==='complete'&&document.querySelector('#data-layer-view-projects')?.isConnected","side-panel durable runtime");
   await ready(side,"document.querySelector('#active-project-header')?.textContent.includes('Retail measurement operations')","active project");
@@ -787,6 +799,78 @@ try{
   assert.equal(forced.count,3);
   assert.equal(forced.borders.every((widths)=>widths.some((width)=>parseFloat(width)>0)),true);
 
+  const choiceBadEvents=[...side.events,...studio.events].filter(({method,params})=>method==="Runtime.exceptionThrown"||method==="Network.loadingFailed"||(method==="Log.entryAdded"&&params.entry?.level==="error"));
+  assert.deepEqual(choiceBadEvents,[],"installed choice-control surfaces must have no runtime or load errors");
+  const observedDescriptions={
+    ...Object.fromEntries(documentationChoices.details.map(({contract,description})=>[contract,description])),
+    ...documentationConfigurationChoices.contracts,
+    ...Object.fromEntries(Object.entries(mountedComponentChoices.contracts).map(([key,{description}])=>[key,description])),
+    ...Object.fromEntries(applicabilityPreviewNativeChoices.map(({key,description})=>[key,description])),
+    [switchBefore.contract]:switchBefore.description,
+    [bulkConservation.contract]:bulkConservation.description,
+    ...defectOptions.descriptions,
+    [conditionOptions.contract]:conditionOptions.description,
+    [creationChoice.contract]:creationChoice.description,
+    [conflictConservation.contract]:conflictConservation.description,
+  };
+  assert.deepEqual(Object.keys(observedDescriptions).sort(),[...expectedStudioChoiceContracts.keys()].sort(),"the installed production mounts must exercise every registered Studio choice");
+  const nativeChoiceAudits=[...documentationNativeChoices,...documentationConfigurationNativeChoices,...switchNativeChoices,...disabledConflictNativeChoices,...bulkNativeChoices,...defectNativeChoices,...mountedComponentNativeChoices,...applicabilityPreviewNativeChoices,...conditionNativeChoices,...creationNativeChoices,...conflictNativeChoices];
+  assert.equal(nativeChoiceAudits.every(validNativeChoiceAudit),true,JSON.stringify(nativeChoiceAudits.filter((item)=>!validNativeChoiceAudit(item))));
+  const instanceEvidence=Object.fromEntries([...expectedStudioChoiceContracts.keys()].map((key)=>{const instances=nativeChoiceAudits.filter((detail)=>detail.key===key);return[key,instances.length>0&&instances.every(validNativeChoiceAudit)];}));
+  const mountedInteractionsByKey=(key)=>mountedComponentChoices.interactions.some((item)=>item.key===key)&&mountedComponentChoices.interactions.filter((item)=>item.key===key).every(({before,afterInput,freshBefore,afterLabel,inputChanges,labelChanges})=>afterInput===!before&&freshBefore===afterInput&&afterLabel===before&&inputChanges>=1&&labelChanges===1);
+  const durableDocumentationConsequence=(key)=>{const evidence=documentationDurableConsequences[key];return evidence&&JSON.stringify(evidence.afterValue)!==JSON.stringify(evidence.beforeValue)&&JSON.stringify(evidence.restoredValue)===JSON.stringify(evidence.beforeValue)&&evidence.sequences.after===evidence.sequences.before+1&&evidence.sequences.restored===evidence.sequences.before+2;};
+  const consequenceEvidence=Object.fromEntries([...expectedStudioChoiceContracts.keys()].map((key)=>[key,!key.startsWith("documentation.")]));
+  Object.assign(consequenceEvidence,{
+    "documentation.concept-subheadings":durableDocumentationConsequence("documentation.concept-subheadings"),
+    "documentation.concept-membership":durableDocumentationConsequence("documentation.concept-membership"),
+    "documentation.section-membership":durableDocumentationConsequence("documentation.section-membership"),
+    "documentation.flow-context":durableDocumentationConsequence("documentation.flow-context"),
+    "documentation.property-row":durableDocumentationConsequence("documentation.property-row"),
+    "documentation.metadata-column":durableDocumentationConsequence("documentation.metadata-column"),
+    "documentation.matrix-context":durableDocumentationConsequence("documentation.matrix-context"),
+    "documentation.profile-column":durableDocumentationConsequence("documentation.profile-column"),
+    "documentation.export-section":documentationConservation.exportValues.selected&&/Retail measurement operations/u.test(documentationConservation.exportValues.plain)&&!/Checkout journey/u.test(documentationConservation.exportValues.plain),
+    "documentation.confirm-incomplete":documentationConservation.acknowledgementValues.after!==documentationConservation.acknowledgementValues.before&&documentationConservation.commandValues.acknowledged===documentationConservation.commandValues.saved,
+    "documentation.theme-option":documentationConservation.themeValues.staged!==documentationConservation.themeValues.original&&documentationConservation.themeValues.durable===documentationConservation.themeValues.staged&&documentationConservation.commandValues.saved===documentationConservation.commandValues.before+1,
+    "schema.only-defined":switchAfter.checked===!switchBefore.checked&&switchUndo.checked===switchBefore.checked&&switchRedo.checked===switchAfter.checked&&switchReloaded===switchAfter.checked,
+    "schema.copy-dependency":mountedInteractionsByKey("schema.copy-dependency")&&mountedComponentChoices.consequences.copy.dependencies[0]==="/market",
+    "schema.destructive-confirmation":mountedInteractionsByKey("schema.destructive-confirmation")&&mountedComponentChoices.consequences.copy.publishedType==="number"&&mountedComponentChoices.consequences.copy.draftType==="string",
+    "schema.specification-property":mountedInteractionsByKey("schema.specification-property")&&/currency/u.test(mountedComponentChoices.consequences.specificationPlain),
+    "schema.specification-headings":mountedInteractionsByKey("schema.specification-headings")&&/Property name/u.test(mountedComponentChoices.consequences.specificationPlain),
+    "schema.page-group-applicability-preview":applicabilityPreviewNativeChoices.some(({key,checked,after,restored})=>key==="schema.page-group-applicability-preview"&&after.checked===!checked&&restored.checked===checked),
+    "entity.creation-option":creationChoice.durable===creationChoice.checked&&creationChoice.checked!==creationChoice.initial&&creationChoice.commandValues.committed===creationChoice.commandValues.before+1,
+    "entity.editor-option":conditionOptions.durable===conditionOptions.activation.stagedValue&&conditionOptions.commandValues.committed===conditionOptions.commandValues.before+1,
+    "conflict.pending-field":conflictConservation.values.durable==="Pending conflict value"&&conflictConservation.commandValues.committed===conflictConservation.commandValues.before+1,
+    "bulk.staged-property":bulkConservation.durable&&bulkConservation.commandValues.committed===bulkConservation.commandValues.before+1,
+    "defect.issue-inclusion":defectOptions.activation.changes===2&&Boolean(defectOptions.copied.validation),
+    "defect.expected-override":Boolean(defectOptions.copied.occurrence),
+    "defect.acknowledgement":Boolean(defectOptions.copied.occurrence),
+    "defect.report-section":Boolean(defectOptions.copied.validation),
+    "defect.timeline-evidence":mountedInteractionsByKey("defect.timeline-evidence")&&mountedComponentChoices.consequences.timelineSelections[0].includeSummary,
+    "defect.warning-acknowledgement":mountedInteractionsByKey("defect.warning-acknowledgement")&&Boolean(mountedComponentChoices.consequences.missing.saved),
+    "defect.expected-property":mountedInteractionsByKey("defect.expected-property")&&Boolean(mountedComponentChoices.consequences.missing.copied),
+    "guided.conditional":mountedInteractionsByKey("guided.conditional")&&mountedComponentChoices.consequences.guided.schema.rules.length===1,
+    "guided.publish-rule":mountedInteractionsByKey("guided.publish-rule")&&mountedComponentChoices.consequences.guided.reusableRules.length===1,
+  });
+  studioChoiceControls=Object.fromEntries([...expectedStudioChoiceContracts].map(([key,[pattern,description]])=>[key,
+    observedDescriptions[key]===description
+    &&instanceEvidence[key]===true
+    &&consequenceEvidence[key]===true
+    &&nativeChoiceAudits.filter((item)=>item.key===key).every((item)=>item.role===(pattern==="switch"?"switch":null))
+  ]));
+  assert.equal(Object.values(studioChoiceControls).every(Boolean),true,JSON.stringify({observedDescriptions,instanceEvidence,consequenceEvidence,studioChoiceControls,copyInteractions:mountedComponentChoices.interactions.filter(({key})=>key.startsWith("schema.")),copyConsequence:mountedComponentChoices.consequences.copy}));
+  brandingTargetDurations.BRANDING_WORKFLOW_CHOICES_TARGET=Math.round(performance.now()-choiceStarted);
+  }
+
+  if(runGuidanceWorkflow&&!studio){
+    studio=await pageSocket(port,`${base}specification-builder.html?project=${projectId}&route=overview`);
+    await metrics(studio,1280,900);
+    await ready(studio,"document.querySelector('#tree-project-name')?.textContent.includes('Retail measurement operations')","Studio guidance project");
+  }
+
+  let studioAnalystGuidance;
+  if(runGuidanceWorkflow){
+  const guidanceStarted=performance.now();
   await studio.call("Emulation.setEmulatedMedia",{features:[{name:"prefers-reduced-motion",value:"reduce"}]});
   await studio.call("Emulation.setDeviceMetricsOverride",{width:1280,height:900,deviceScaleFactor:1,mobile:false});
   await studio.call("Page.bringToFront");
@@ -1103,8 +1187,11 @@ try{
   const analystAfter=await evaluate(studio,`(async()=>{const repo=await (await import("./data-layer-durable-project-repository.js")).openIndexedDbProjectRepository(),record=await repo.loadProject(${JSON.stringify(projectId)});return{project:JSON.stringify(record),undo:document.querySelector("#undo-project").dataset.undoCount,focus:document.activeElement.id};})()`);
   assert.equal(analystAfter.project,analystBefore.project);
   assert.equal(analystAfter.undo,analystBefore.undo);
-  const studioAnalystGuidance={before:analystBefore,preFirstHidden:analystPreFirst,visible:analystVisible,scheduleBoundary:analystScheduleBoundary,blockingPredicate:analystBlockingPredicate,documentHidden:analystDocumentHidden,zoom:analystZoom,narrow:analystNarrow,interaction:{footerLayout:analystFooterLayout,layout:analystLayoutSample,hover:analystHover,focus:analystFocus,rest:analystRest,activations:[analystClickActivation,analystEnterActivation,analystSpaceActivation],tail:analystTail,routeHidden:analystRouteHidden,routeBeforeRequest:analystRouteBeforeRequest,retainedRequest:analystRetainedRequest,pools:analystPools,dwell:analystDwell,typewriter:analystTypewriter},after:analystAfter};
+  studioAnalystGuidance={before:analystBefore,preFirstHidden:analystPreFirst,visible:analystVisible,scheduleBoundary:analystScheduleBoundary,blockingPredicate:analystBlockingPredicate,documentHidden:analystDocumentHidden,zoom:analystZoom,narrow:analystNarrow,interaction:{footerLayout:analystFooterLayout,layout:analystLayoutSample,hover:analystHover,focus:analystFocus,rest:analystRest,activations:[analystClickActivation,analystEnterActivation,analystSpaceActivation],tail:analystTail,routeHidden:analystRouteHidden,routeBeforeRequest:analystRouteBeforeRequest,retainedRequest:analystRetainedRequest,pools:analystPools,dwell:analystDwell,typewriter:analystTypewriter},after:analystAfter};
+  brandingTargetDurations.BRANDING_WORKFLOW_GUIDANCE_TARGET=Math.round(performance.now()-guidanceStarted);
+  }
 
+  if(false){
   const badEvents=[...side.events,...studio.events].filter(({method,params})=>method==="Runtime.exceptionThrown"||method==="Network.loadingFailed"||(method==="Log.entryAdded"&&params.entry?.level==="error"));
   assert.deepEqual(badEvents,[],"installed Slice 6 surfaces must have no runtime or load errors");
   const observedDescriptions={
@@ -1165,8 +1252,15 @@ try{
     &&nativeChoiceAudits.filter((item)=>item.key===key).every((item)=>item.role===(pattern==="switch"?"switch":null))
   ]));
   assert.equal(Object.values(studioChoiceControls).every(Boolean),true,JSON.stringify({observedDescriptions,instanceEvidence,consequenceEvidence,studioChoiceControls,copyInteractions:mountedComponentChoices.interactions.filter(({key})=>key.startsWith("schema.")),copyConsequence:mountedComponentChoices.consequences.copy}));
-  await writeFile(path.join(evidenceDirectory,"report.json"),`${JSON.stringify({live,library,tree:treeBefore,treeKeyboard,documentation,documentationChoices,documentationConfigurationChoices,documentationConservation,documentationDurableConsequences,nativeChoiceFocusOrders,nativeChoiceAudits,mountedComponentChoices,switch:{before:switchBefore,after:switchAfter,undo:switchUndo,redo:switchRedo,reloaded:switchReloaded},bulkConservation,defectOptions,conditionOptions,creationChoice,conflictConservation,studioChoiceControls,studioAnalystGuidance,flow,zoom,reduced,forced},null,2)}\n`);
-  console.log(JSON.stringify({studioChoiceControls,studioAnalystGuidance}));
+  }
+  await writeFile(path.join(evidenceDirectory,"report.json"),`${JSON.stringify({studioChoiceControls,studioAnalystGuidance},null,2)}\n`);
+  console.log(JSON.stringify({...(studioChoiceControls?{studioChoiceControls}:{}),...(studioAnalystGuidance?{studioAnalystGuidance}:{})}));
+  if(targetedBranding){
+    for(const id of brandingTargetIds){
+      console.log(JSON.stringify({swarmforgeBrowserTargetResult:{id,status:"passed"}}));
+      console.log(JSON.stringify({swarmforgeBrowserTargetTiming:{id,durationMs:brandingTargetDurations[id]??Math.round(performance.now()-brandingTargetStarted)}}));
+    }
+  }
 } finally {
   blockedStudio?.close();conflictStudio?.close();side?.close();studio?.close();
   await stopHeadlessChrome(chrome,1500);

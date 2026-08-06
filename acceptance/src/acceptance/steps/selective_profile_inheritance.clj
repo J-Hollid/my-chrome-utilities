@@ -25,8 +25,8 @@
 (defn- validate-example! [_mode example] (when (seq example) (let [normalized (into {} (map (fn [[key value]] [(name key) value]) example))] (support/assert! (contains? authoritative-examples normalized) "Scenario Outline example is not an authoritative contract row." {:example normalized}))))
 (defn- assert-runtime! [evidence]
   (support/assert!
-   (and (every? true? (vals (dissoc evidence :unrelatedPageGroupExecuted)))
-        (false? (:unrelatedPageGroupExecuted evidence)))
+   (and (= runtime-paths (set (keys evidence)))
+        (every? true? (vals evidence)))
    "Installed selective-profile-inheritance evidence is incomplete." evidence))
 (def handlers (support/verified-feature-mode-handlers feature-files entry-modes :selective-profile-inheritance-mode verify-model! validate-example! observe-browser! assert-runtime!))
 

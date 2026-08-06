@@ -74,21 +74,20 @@
    task-key
    command))
 
+(defn- version-1-receipt-result [receipt task-key command]
+  ;; Version 1 remains readable outside strict orchestration so old standalone
+  ;; acceptance helpers do not acquire a flag-day dependency.
+  (when-not task-key
+    (receipt-result (get-in receipt ["commands" (str/join " " command)]))))
+
 (defn verification-receipt-result
   ([receipt command]
    (verification-receipt-result receipt nil command))
   ([receipt task-key command]
-   (cond
-     (= 2 (get receipt "version"))
-     (version-2-receipt-result receipt task-key command)
-
-     ;; Version 1 receipts remain readable outside strict orchestration so old
-     ;; standalone acceptance helpers do not acquire a flag-day dependency.
-     (= 1 (get receipt "version"))
-     (when-not task-key
-       (receipt-result (get-in receipt ["commands" (str/join " " command)])))
-
-     :else nil)))
+   (case (get receipt "version")
+     2 (version-2-receipt-result receipt task-key command)
+     1 (version-1-receipt-result receipt task-key command)
+     nil)))
 
 (defn verification-receipt-command
   ([command]
@@ -329,6 +328,43 @@
     (assert-observation! example observed)
     world))
 
+(defn- target-observation-document [candidate observation-key]
+  (let [observed (when (map? candidate)
+                   (dissoc candidate :swarmforgeBrowserTargetResult
+                           :swarmforgeBrowserTargetTiming))]
+    (when (contains? observed observation-key)
+      {observation-key (get observed observation-key)})))
+
+(defn- browser-observation-step
+  [{:keys [pending] :as state} line observation-id observation-key]
+  (let [candidate (try (json/parse-string line true) (catch Throwable _ nil))
+        result-id (get-in candidate [:swarmforgeBrowserTargetResult :id])
+        target-observed (target-observation-document candidate observation-key)]
+    (cond
+      (= observation-id result-id)
+      (if pending (reduced (assoc state :matched pending)) (assoc state :pending nil))
+
+      result-id (assoc state :pending nil)
+      target-observed (assoc state :pending target-observed :fallback target-observed)
+      (map? candidate) (assoc state :pending nil)
+      :else state)))
+
+(defn- browser-observation-payload [output observation-id observation-key]
+  (let [{:keys [matched fallback]}
+        (reduce #(browser-observation-step %1 %2 observation-id observation-key)
+                {:pending nil :fallback nil}
+                (str/split-lines output))]
+    (or matched fallback)))
+
+(defn all-values-true? [value]
+  (boolean (and (map? value) (seq value) (every? true? (vals value)))))
+
+(defn complete-browser-evidence? [evidence required-keys runtime-keys]
+  (boolean (and (map? evidence)
+                (= required-keys (set (keys evidence)))
+                (true? (:installedBoundary evidence))
+                (every? #(all-values-true? (get evidence %)) runtime-keys))))
+
 (defn load-browser-observation-with-environment!
   [{:keys [observation-id observation-key runtime-error missing-error]}]
   (assert! observation-id "Browser observation has no registered task id."
@@ -337,8 +373,7 @@
         result (verified-task-result task-key
                                      "node" "scripts/run-browser-observation.mjs"
                                      observation-id)
-        line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result))))
-        payload (when line (json/parse-string line true))
+        payload (browser-observation-payload (:out result) observation-id observation-key)
         observation (get payload observation-key)]
     (assert! (zero? (:exit result)) (str runtime-error " " (:err result)) {:out (:out result) :err (:err result)})
     (assert! observation missing-error {:payload payload})
@@ -352,7 +387,7 @@
 (defn cached-browser-observation!
   [cache options]
   (if packs/*runtime-cache*
-    (packs/cached-runtime! [:browser (select-keys options [:adapter-env :observation-key])]
+    (packs/cached-runtime! [:browser (select-keys options [:adapter-env :observation-id :observation-key])]
                            #(load-browser-observation! options))
     (or @cache
         (reset! cache (load-browser-observation! options)))))

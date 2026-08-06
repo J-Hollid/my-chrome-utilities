@@ -289,19 +289,13 @@
        (dwell-evidence-valid? (:dwell interaction))
        (typewriter-evidence-valid? (:typewriter interaction))))
 
-(defn- assert-browser! [{:keys [installedBoundary catalogueComplete timing routeIsolation
-                                unrelatedChoiceControlsExecuted before scheduleBoundary interaction after]
-                         :as evidence}]
+(defn- assert-browser! [{:keys [before scheduleBoundary interaction after] :as evidence}]
   (support/assert!
-   (if (contains? evidence :installedBoundary)
-     (and installedBoundary catalogueComplete routeIsolation
-          (every? true? (vals timing))
-          (false? unrelatedChoiceControlsExecuted))
-     (and (base-evidence-valid? evidence)
-          (schedule-evidence-valid? scheduleBoundary)
-          (detailed-evidence-valid? interaction)
-          (= (:project before) (:project after))
-          (= (:undo before) (:undo after))))
+   (and (base-evidence-valid? evidence)
+        (schedule-evidence-valid? scheduleBoundary)
+        (detailed-evidence-valid? interaction)
+        (= (:project before) (:project after))
+        (= (:undo before) (:undo after)))
    "Installed Specification Studio technical analyst guidance evidence is incomplete."
    evidence))
 

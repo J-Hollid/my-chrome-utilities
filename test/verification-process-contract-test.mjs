@@ -48,11 +48,15 @@ import {
 } from "../scripts/verification-evidence.mjs";
 import {
   browserAdapterUsesSharedHarness,
+  browserObservationEvidenceLeaves,
+  browserObservationSessionBatch,
   executeAcceptancePlan,
   loadVerificationPacks,
   planVerification,
   staticallyResolvableModuleImports,
   validateBrowserPerformanceDeclarations,
+  validateBrowserObservationBatches,
+  validateBrowserEvidencePartitions,
   validateVerificationPacks,
   verificationInventory,
   verificationOwner,
@@ -90,6 +94,22 @@ assert.match(batchedReceiptResult, /:exit 0/u,
   "acceptance consumers resolve a logical browser target from its passed batch receipt");
 assert.match(batchedReceiptResult, /second/u,
   "a logical browser target receives the shared batch output containing its observation");
+const targetScopedReceiptObservation = await exec("bb", ["-e", `
+  (require '[acceptance.steps.support])
+  (let [parse-payload (var-get (ns-resolve 'acceptance.steps.support 'browser-observation-payload))
+        output (str "{\\\"workspace\\\":{\\\"fixture\\\":\\\"1:3\\\"}}\\n"
+                    "{\\\"swarmforgeBrowserTargetResult\\\":{\\\"id\\\":\\\"FIRST\\\",\\\"status\\\":\\\"passed\\\"}}\\n"
+                    "{\\\"workspace\\\":{\\\"fixture\\\":\\\"2:4\\\"}}\\n"
+                    "{\\\"swarmforgeBrowserTargetResult\\\":{\\\"id\\\":\\\"SECOND\\\",\\\"status\\\":\\\"passed\\\"}}\\n"
+                    "{\\\"unrelated\\\":true}\\n"
+                    "{\\\"swarmforgeBrowserTargetResult\\\":{\\\"id\\\":\\\"THIRD\\\",\\\"status\\\":\\\"passed\\\"}}\\n"
+                    "{\\\"workspace\\\":{\\\"fixture\\\":\\\"merged\\\"},\\\"third\\\":{\\\"passed\\\":true}}\\n")]
+    (prn [(get-in (parse-payload output "FIRST" :workspace) [:workspace :fixture])
+          (get-in (parse-payload output "SECOND" :workspace) [:workspace :fixture])
+          (get-in (parse-payload output "THIRD" :third) [:third :passed])]))
+`]);
+assert.match(targetScopedReceiptObservation, /\["1:3" "2:4" true\]/u,
+  "Clojure acceptance consumers ignore another target's pending document and recover the later merged fallback");
 
 const options = focusedAcceptanceOptions([
   "--pack", "capture", "--pack", "schemas", "--changed-since", "base",
@@ -218,6 +238,63 @@ const focusedObservationPacks = [pack("browser", {
       observationKeys:["second"], features:["features/browser-two.feature"], sessionBatch:"browser-main" },
   ],
 })];
+const declaredProgramBatchPacks = [pack("browser", {
+  browserObservations:focusedObservationPacks[0].browserObservations.map((observation) => ({
+    ...observation, sessionBatch:undefined,
+  })),
+  browserObservationBatches:[{
+    id:"browser-main", path:"test/browser.mjs", observationCount:2,
+  }],
+})];
+const exactEvidencePartition = {
+  path:"test/browser.mjs",
+  originalLeaves:[["first", "mounted"], ["second", "persisted"]],
+  targets:[
+    { id:"BROWSER_FIRST", leaves:[["first", "mounted"]] },
+    { id:"BROWSER_SECOND", leaves:[["second", "persisted"]] },
+  ],
+};
+assert.doesNotThrow(() => validateBrowserEvidencePartitions([{
+  ...focusedObservationPacks[0], browserEvidencePartitions:[exactEvidencePartition],
+}]), "a split adapter may assign every original nested assertion leaf exactly once");
+const dottedEvidencePartition = {
+  ...exactEvidencePartition,
+  originalLeaves:["first.mounted", "second.persisted"],
+  targets:[
+    { id:"BROWSER_FIRST", leaves:["first.mounted"] },
+    { id:"BROWSER_SECOND", leaves:["second.persisted"] },
+  ],
+};
+assert.doesNotThrow(() => validateBrowserEvidencePartitions([{
+  ...focusedObservationPacks[0], browserEvidencePartitions:[dottedEvidencePartition],
+}]), "a registry may spell exact leaf paths compactly without weakening the partition");
+assert.deepEqual(browserObservationEvidenceLeaves(
+  { ...focusedObservationPacks[0], browserEvidencePartitions:[dottedEvidencePartition] },
+  focusedObservationPacks[0].browserObservations[1],
+), [["second", "persisted"]], "compact registry leaf paths normalize before runtime checks");
+assert.throws(() => validateBrowserEvidencePartitions([{
+  ...focusedObservationPacks[0],
+  browserEvidencePartitions:[{
+    ...exactEvidencePartition,
+    targets:exactEvidencePartition.targets.map((target) => ({
+      ...target, leaves:[["first", "mounted"]],
+    })),
+  }],
+}]), /assign every original assertion leaf exactly once/u,
+"a duplicated predicate cannot stand in for unrelated original assertion leaves");
+assert.equal(browserObservationSessionBatch(
+  declaredProgramBatchPacks[0], declaredProgramBatchPacks[0].browserObservations[0],
+), "browser-main", "an owning pack may declare one batch for every compatible program observation");
+assert.equal(planVerification(declaredProgramBatchPacks, { packIds:["browser"] })
+  .observationTasks.length, 1,
+"a declared program batch schedules one browser process without duplicating the batch on every target");
+assert.throws(() => validateBrowserObservationBatches([{
+  ...declaredProgramBatchPacks[0],
+  browserObservationBatches:[{
+    id:"browser-main", path:"test/browser.mjs", observationCount:3,
+  }],
+}]), /must own exactly 3 compatible targets/u,
+"a program batch cannot hide an omitted or newly unassigned logical observation");
 const focusedObservationPlan = planVerification(focusedObservationPacks, {
   packIds:["browser"], browserTargetIds:["BROWSER_SECOND"],
 });
@@ -328,15 +405,54 @@ assert.throws(() => completeBrowserObservationOutput(
   7,
 ), /BROWSER_SECOND.*own timing/u,
 "the browser runner rejects a batch that omits a logical target timing instead of assigning aggregate process time");
-const completedTimingOutput = completeBrowserObservationOutput(
+assert.throws(() => completeBrowserObservationOutput(
   '{"first":true}\n' +
   '{"swarmforgeBrowserTargetTiming":{"id":"BROWSER_FIRST","durationMs":3}}\n' +
   '{"swarmforgeBrowserTargetTiming":{"id":"BROWSER_SECOND","durationMs":4}}\n',
   focusedObservationPacks[0].browserObservations,
   7,
+), /must emit their own pass or failure result/u,
+"a multi-target browser process cannot substitute timings for independent results");
+const completedTimingOutput = completeBrowserObservationOutput(
+  '{"first":true}\n' +
+  '{"swarmforgeBrowserTargetResult":{"id":"BROWSER_FIRST","status":"passed"}}\n' +
+  '{"swarmforgeBrowserTargetTiming":{"id":"BROWSER_FIRST","durationMs":3}}\n' +
+  '{"swarmforgeBrowserTargetResult":{"id":"BROWSER_SECOND","status":"passed"}}\n' +
+  '{"swarmforgeBrowserTargetTiming":{"id":"BROWSER_SECOND","durationMs":4}}\n',
+  focusedObservationPacks[0].browserObservations, 7,
 );
 assert.equal(completedTimingOutput.match(/swarmforgeBrowserTargetTiming/gu)?.length, 2,
   "the browser runner preserves one adapter-emitted timing per logical target");
+assert.deepEqual(parseBrowserObservationBatchOutput(
+  '{"first":true}\n' +
+  '{"swarmforgeBrowserTargetResult":{"id":"BROWSER_FIRST","status":"passed"}}\n' +
+  '{"swarmforgeBrowserTargetResult":{"id":"BROWSER_SECOND","status":"failed","error":"owned failure"}}\n',
+  focusedObservationPacks[0].browserObservations,
+).failures, [{ id:"BROWSER_SECOND", message:"owned failure" }],
+"a failed logical target retains its own result without discarding an independent target document");
+const sharedRootBatch=parseBrowserObservationBatchOutput(
+  '{"layeredSchema":{"authoring001":true}}\n'+
+  '{"swarmforgeBrowserTargetResult":{"id":"FIRST","status":"passed"}}\n'+
+  '{"layeredSchema":{"authoring002":true}}\n'+
+  '{"swarmforgeBrowserTargetResult":{"id":"SECOND","status":"passed"}}\n',
+  [{id:"FIRST",observationKeys:["layeredSchema"],evidenceLeaves:[["layeredSchema","authoring001"]]},
+    {id:"SECOND",observationKeys:["layeredSchema"],evidenceLeaves:[["layeredSchema","authoring002"]]}],
+);
+assert.deepEqual(sharedRootBatch.document,{layeredSchema:{authoring001:true,authoring002:true}},
+  "disjoint assertion partitions retain the original shared evidence root without overwriting");
+assert.deepEqual(parseBrowserObservationOutput(
+  '{"schemaWorkspace":{"fixture":"2:4"}}\n'+
+  '{"swarmforgeBrowserTargetResult":{"id":"VALIDATION","status":"passed"}}\n'+
+  '{"schemaWorkspace":{"fixture":"2:4"},"validationPresenceSemantics":{"passed":true}}\n',
+  { id:"VALIDATION", observationKeys:["validationPresenceSemantics"] },
+), { validationPresenceSemantics:{ passed:true } },
+"a passed target ignores a preceding pending document owned by another target and uses its merged fallback");
+assert.throws(() => parseBrowserObservationOutput(
+  '{"first":{"mounted":true,"persisted":false}}\n',
+  { ...focusedObservationPacks[0].browserObservations[0],
+    evidenceLeaves:[["first", "mounted"], ["first", "persisted"]] },
+), /omitted or failed assigned assertion leaf.*persisted/u,
+"a renamed smoke observation or constant result cannot satisfy an assigned false leaf");
 assert.doesNotThrow(() => validateBrowserPerformanceDeclarations([
   {
     ...focusedObservationPacks[0],
@@ -776,7 +892,7 @@ const payloadPathPicker = componentLayoutBrowserSource.indexOf(
 assert.ok(schemaViewStop >= 0 && schemaViewStop < schemaWorkspaceStop && schemaViewStop < payloadPathPicker,
   "the focused Schema view containment observation stops before workspace and payload browser contracts");
 assert.match(componentLayoutBrowserSource,
-  /if \(process\.env\.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1"\) \{[\s\S]*?schemaWorkspaceAdapterObservations\.push\(\s*await captureSchemaWorkspace\(socket, width, schemaRuleEditorVisibility\),\s*\);\s*await evaluate\(socket, guidedTransportProjectRestoreRuntime\(previousActiveProjectId\)\);\s*socket\.close\(\);\s*continue;\s*\}\s*payloadPathFilterPickerObservation =/u,
+  /if \(process\.env\.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1"\) \{[\s\S]*?schemaWorkspaceAdapterObservations\.push\(schemaWorkspaceObservation\);[\s\S]*?console\.log\(JSON\.stringify\(\{ schemaWorkspace:schemaWorkspaceObservation \}\)\);\s*await evaluate\(socket, guidedTransportProjectRestoreRuntime\(previousActiveProjectId\)\);\s*socket\.close\(\);\s*continue;\s*\}\s*payloadPathFilterPickerObservation =/u,
   "the focused Schema workspace observation stops before unrelated browser contracts");
 assert.match(componentLayoutBrowserSource,
   /await reloadPanel\(socket\);\s*if \(process\.env\.GUIDED_VALIDATION_BROWSER_ADAPTER === "1"\) \{\s*socket\.close\(\); continue;\s*\}\s*liveValidationVisualsObservation =/su,
@@ -1130,8 +1246,12 @@ assert.deepEqual(canonicalEditorPlan.packIds, ["layered_schema"],
   "canonical schema editor changes exclude unrelated layered dependants");
 assert.deepEqual(canonicalEditorPlan.observationTasks
   .filter(({ packId }) => packId === "layered_schema")
-  .flatMap(({ logicalTargetIds }) => logicalTargetIds), ["LAYERED_SCHEMA_EDITOR_TARGET"],
-"canonical schema editor changes schedule only their split browser target");
+  .flatMap(({ logicalTargetIds }) => logicalTargetIds), [
+  "LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET",
+  "LAYERED_SCHEMA_EDITOR_POLICY_TARGET",
+  "LAYERED_SCHEMA_EDITOR_RULES_TARGET",
+  "LAYERED_SCHEMA_EDITOR_TARGET",
+], "canonical schema editor changes schedule only their assertion-leaf partitions");
 assert.deepEqual(canonicalEditorPlan.features,
   ["features/data-layer-canonical-shared-profile-schema-authoring.feature"],
   "a layered boundary plan parses only the feature owned by its selected logical observation");
@@ -1149,6 +1269,9 @@ assert.deepEqual(terminalLayeredPlan.observationTasks
   .flatMap(({ logicalTargetIds }) => logicalTargetIds).sort(), [
   "LAYERED_SCHEMA_COMPOSITION_TARGET",
   "LAYERED_SCHEMA_CORE_TARGET",
+  "LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET",
+  "LAYERED_SCHEMA_EDITOR_POLICY_TARGET",
+  "LAYERED_SCHEMA_EDITOR_RULES_TARGET",
   "LAYERED_SCHEMA_EDITOR_TARGET",
   "LAYERED_SCHEMA_INHERITANCE_TARGET",
   "LAYERED_SCHEMA_PAGE_GROUP_TARGET",
@@ -1162,6 +1285,20 @@ for (const [packId, adapterPath] of [
     .find(({ path:declaredPath }) => declaredPath === adapterPath);
   assert.ok(declaration.targetIds.length >= 2 && declaration.sessionBatch,
     `${packId} runtime outlier declares independently selectable batched targets`);
+}
+for (const [packId, logicalObservations] of [["capture", 5], ["schemas", 46], ["defects", 9]]) {
+  const pack = packs.find(({ id }) => id === packId);
+  const program = "test/side-panel-component-layout-runtime-test.mjs";
+  const observations = pack.browserObservations.filter(({ path }) => path === program);
+  assert.equal(observations.length, logicalObservations,
+    `${packId} retains the specified shared side-panel observation count`);
+  assert.deepEqual(pack.browserObservationBatches, [{
+    id:`${packId}-side-panel`, path:program, observationCount:logicalObservations,
+  }], `${packId} declares one compatible side-panel process batch`);
+  assert.equal(planVerification(packs, { packIds:[packId] }).observationTasks
+    .filter(({ logicalTargetIds }) => logicalTargetIds.some((id) =>
+      observations.some((observation) => observation.id === id))).length, 1,
+  `${packId} schedules all shared side-panel observations in one browser process`);
 }
 for (const editorPath of [
   "src/data-layer-canonical-schema-focused-editor.ts",
@@ -1383,10 +1520,20 @@ for (const result of Object.values(legacyAggregateReceipt.tasks)) {
   }
 }
 const legacyAggregateModel = measuredTimingModel([legacyAggregateReceipt], reportBaseline);
-assert.equal(legacyAggregateModel.browserTargets.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER.p90Ms, 700,
-  "passed legacy timing-only observations contribute their measured target duration");
-assert.equal(legacyAggregateModel.browserTargets.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER.p90Ms, 800,
-  "legacy timing-only batches retain each declared target measurement instead of using fallback");
+assert.equal(legacyAggregateModel.browserTargets.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER, undefined,
+  "a timing-only multi-target batch is aggregate compatibility evidence, not a target sample");
+assert.equal(legacyAggregateModel.browserTargets.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER, undefined,
+  "duplicated legacy batch timings remain provisional until independent results exist");
+const legacySingleTargetReceipt = structuredClone(legacyAggregateReceipt);
+for (const result of Object.values(legacySingleTargetReceipt.tasks)) {
+  if (result.identity.stage !== "browser-observation") continue;
+  result.identity.logicalTargetIds = result.identity.logicalTargetIds.slice(0, 1);
+  result.output = result.output.split("\n").filter((line) =>
+    line.includes(`\"id\":\"${result.identity.logicalTargetIds[0]}\"`)).join("\n");
+}
+const legacySingleTargetModel = measuredTimingModel([legacySingleTargetReceipt], reportBaseline);
+assert.equal(legacySingleTargetModel.browserTargets.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER.p90Ms, 700,
+  "a legacy timing-only task remains a valid sample when it owns exactly one target");
 const partialExplicitReceipt = structuredClone(reportReceipt);
 for (const result of Object.values(partialExplicitReceipt.tasks)) {
   if (result.identity.stage !== "browser-observation" || result.identity.logicalTargetIds.length < 2) continue;
@@ -1622,13 +1769,12 @@ const schemaWorkspaceImpact = planVerification(packs, { changedPaths:[schemaWork
 const schemaWorkspacePlan = planVerification(packs, {
   packIds:schemaWorkspaceImpact.packIds, changedPaths:[schemaWorkspacePath],
 });
-assert.deepEqual(schemaWorkspacePlan.observationTasks
-  .filter(({ packId }) => packId === "schemas").map(({ key }) => key).sort(),
-  packs.find(({ id }) => id === "schemas").browserObservations
-    .map(({ id }) => `browser-observation:${id}`).sort());
-assert.equal(schemaWorkspacePlan.observationTasks.find(({ key }) =>
-  key === "browser-observation:SCHEMA_WORKSPACE_BROWSER_ADAPTER:default")
-  .environment.SCHEMA_WORKSPACE_BROWSER_ADAPTER, "1");
+const schemaWorkspaceTask = schemaWorkspacePlan.observationTasks
+  .find(({ packId }) => packId === "schemas");
+assert.deepEqual(schemaWorkspaceTask.logicalTargetIds,
+  packs.find(({ id }) => id === "schemas").browserObservations.map(({ id }) => id).sort(),
+  "schema verification batches all compatible logical observations in one process");
+assert.equal(schemaWorkspaceTask.environment.SCHEMA_WORKSPACE_BROWSER_ADAPTER, "1");
 const schemaSourcePath = "src/data-layer-schema-verification.ts";
 const schemaSourceImpact = planVerification(packs, { changedPaths:[schemaSourcePath] });
 const sourceAndDist = planVerification(packs, {
