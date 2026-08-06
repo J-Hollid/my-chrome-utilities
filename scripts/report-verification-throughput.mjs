@@ -220,6 +220,7 @@ function summary(name, plan, model, options) {
     projectedSeconds:Number((estimatePlanMilliseconds(plan, model, options) / 1000).toFixed(1)),
     dependantFanOut:Math.max(0, plan.packIds.length - 1),
     changedPath:plan.changedPaths[0] ?? null,
+    selectedPacks:[...plan.packIds],
   };
 }
 
@@ -238,7 +239,8 @@ export function checkVerificationPerformanceBudgets(report, baseline) {
     const limit = budgets.changedPathFanOut?.[packId] ?? budgets.defaultChangedPathFanOut;
     if (!Number.isFinite(limit)) continue;
     results.push({ metric:"changed-path-fan-out", identity:row.changedPath ?? row.name,
-      measured:row.dependantFanOut, limit, passed:row.dependantFanOut <= limit });
+      measured:row.dependantFanOut, limit, selectedPacks:[...(row.selectedPacks ?? [])],
+      passed:row.dependantFanOut <= limit });
   }
   const browserTargetIds = new Set([
     ...(report.browserTargetIds ?? []),
@@ -256,8 +258,11 @@ export function checkVerificationPerformanceBudgets(report, baseline) {
     results.push({ metric:"browser-target-p90", identity:targetId,
       measured, limit, passed:measured <= limit });
   }
-  const diagnostics = results.filter(({ passed }) => !passed).map(({ metric, identity, measured, limit }) =>
-    `${metric} ${identity} measured ${measured}; limit ${limit}`);
+  const diagnostics = results.filter(({ passed }) => !passed).map((result) =>
+    result.metric === "changed-path-fan-out"
+      ? `${result.metric} ${result.identity} selected packs ${result.selectedPacks.join(", ")}; ` +
+        `measured ${result.measured}; allowed fan-out ${result.limit}`
+      : `${result.metric} ${result.identity} measured ${result.measured}; limit ${result.limit}`);
   return { passed:diagnostics.length === 0, results, diagnostics };
 }
 

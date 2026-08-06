@@ -35,6 +35,28 @@ export function browserTargetConfigurations(observations) {
   return Object.fromEntries(observations.map(({ id, environment }) => [id, { ...environment }]));
 }
 
+export function validateBrowserObservationBatch(matches) {
+  const ids = matches.map(({ observation }) => observation.id);
+  const observations = matches.map(({ observation }) => observation);
+  if (new Set(ids).size !== ids.length) {
+    throw new Error(`Browser observation batch must select every target once: ${ids.join(", ")}`);
+  }
+  if (new Set(observations.map(({ path }) => path)).size !== 1) {
+    throw new Error(`Browser observation batch must use one program: ${ids.join(", ")}`);
+  }
+  if (matches.length > 1) {
+    if (new Set(matches.map(({ packId }) => packId)).size !== 1) {
+      throw new Error(`Browser observation batch must use one owning pack: ${ids.join(", ")}`);
+    }
+    const sessionBatches = observations.map(({ sessionBatch }) => sessionBatch);
+    if (sessionBatches.some((batch) => typeof batch !== "string" || !batch.trim()) ||
+        new Set(sessionBatches).size !== 1) {
+      throw new Error(`Browser observation batch must use one declared non-empty session batch: ${ids.join(", ")}`);
+    }
+  }
+  return observations;
+}
+
 function runObservationProcess(packs, observations) {
   const combined = {
     id:observations.map(({ id }) => id).join(","),
@@ -114,10 +136,8 @@ export async function runBrowserObservation(...ids) {
     throw new Error("Use: run-browser-observation.mjs <observation-id> [<observation-id> ...]");
   }
   const packs = await loadVerificationPacks();
-  const observations = ids.map((id) => observationById(packs, id).observation);
-  if (new Set(observations.map(({ path }) => path)).size !== 1) {
-    throw new Error(`Browser observation batch must use one program: ${ids.join(", ")}`);
-  }
+  const matches = ids.map((id) => observationById(packs, id));
+  const observations = validateBrowserObservationBatch(matches);
   await assertFreshDist({ root:repositoryRoot });
   const stdout = await runObservationProcess(packs, observations);
   const parsed = parseBrowserObservationBatchOutput(stdout, observations);

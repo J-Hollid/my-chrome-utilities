@@ -219,10 +219,11 @@ function validateDependencies(packs, ids) {
   }
 }
 
-function validateImpactBoundaries(packs) {
+function validateImpactBoundaries(packs, sourcePaths) {
   const ids = new Set();
   for (const pack of packs) {
-    for (const boundary of values(pack, "impactBoundaries")) {
+    const boundaries = values(pack, "impactBoundaries");
+    for (const boundary of boundaries) {
       if (!boundary || Array.isArray(boundary) ||
           Object.keys(boundary).sort().join(",") !== "id,prefixes,propagateDependants" ||
           !/^[a-z0-9][a-z0-9_-]*$/u.test(boundary.id ?? "") || ids.has(boundary.id) ||
@@ -234,6 +235,14 @@ function validateImpactBoundaries(packs) {
         throw new Error(`Use exact owned impact boundaries in pack ${pack.id}`);
       }
       ids.add(boundary.id);
+    }
+    if (!boundaries.length) continue;
+    for (const sourcePath of sourcePaths.filter((candidate) => ownerOf(packs, candidate)?.id === pack.id)) {
+      const matches = boundaries.filter((boundary) =>
+        boundary.prefixes.some((prefix) => prefixMatches(prefix, sourcePath)));
+      if (matches.length !== 1) {
+        throw new Error(`Classify source path ${sourcePath} in exactly one impact boundary for pack ${pack.id}`);
+      }
     }
   }
 }
@@ -307,13 +316,27 @@ async function validateVerificationHelpers(packs) {
     }
   }
   const actual = new Map();
+  const importedHelpers = async(testPath) => {
+    const found = new Set();
+    const visit = async(importerPath) => {
+      const source = await readFile(path.join(repositoryRoot, importerPath), "utf8");
+      for (const importedPath of staticallyResolvableModuleImports(source, importerPath)) {
+        const helper = importedPath === sharedBrowserHarnessPath || importedPath.startsWith("test/support/");
+        if (!helper) continue;
+        if (!declarations.has(importedPath)) {
+          throw new Error(`Declare every imported verification helper consumer: ${importedPath}`);
+        }
+        if (found.has(importedPath)) continue;
+        found.add(importedPath);
+        await visit(importedPath);
+      }
+    };
+    await visit(testPath);
+    return found;
+  };
   for (const consumer of packs) {
     for (const testPath of testPathKeys.flatMap((key) => values(consumer, key))) {
-      const source = await readFile(path.join(repositoryRoot, testPath), "utf8");
-      for (const importedPath of staticallyResolvableModuleImports(source, testPath)) {
-        const helper = importedPath === sharedBrowserHarnessPath || importedPath.startsWith("test/support/")
-          ? importedPath : null;
-        if (!helper) continue;
+      for (const helper of await importedHelpers(testPath)) {
         const consumers = actual.get(helper) ?? new Set();
         consumers.add(consumer.id);
         actual.set(helper, consumers);
@@ -538,13 +561,13 @@ export async function validateVerificationPacks(packs, { inventory } = {}) {
   }
   await validateRegisteredPaths(packs);
   validateDependencies(packs, ids);
-  validateImpactBoundaries(packs);
   validateDeclaredTasks(packs);
   await validateBrowserAdapterModes(packs);
   validateBrowserPerformanceDeclarations(packs);
   await validateVerificationHelpers(packs);
 
   const repositoryInventory = { ...await verificationInventory(), ...inventory };
+  validateImpactBoundaries(packs, repositoryInventory.source);
   validatePrefixOwnership(packs, repositoryInventory.source, "source");
   validatePrefixOwnership(packs, repositoryInventory.process, "process");
   validateInventoryPaths(packs, repositoryInventory);
@@ -583,6 +606,12 @@ function exactVerificationConsumers(packs, path) {
     values(pack, "browserObservations").some((observation) => observation.path === path) ||
     values(pack, "checkpointCommands").some(({ executable, args }) => executable === "node" && args?.[0] === path)
   ).map(({ id }) => id);
+}
+
+function exactVerificationHelperConsumers(packs, path) {
+  return packs.flatMap((pack) => values(pack, "verificationHelpers")
+    .filter((declaration) => declaration.path === path)
+    .flatMap((declaration) => declaration.consumers));
 }
 
 function exactRuntimeConsumers(packs, path) {
@@ -847,11 +876,15 @@ export function planVerification(
     if (!owner) throw new Error(`Assign every changed path to one verification pack: ${changedPath}`);
     const boundary = impactBoundaryFor(owner, changedPath);
     const runtimeConsumers = exactRuntimeConsumers(registry, changedPath);
-    const semantic = globalImpact(registry, changedPath)
-      ? [owner.id, ...registry.filter(runnable).map(({ id }) => id)]
-      : [...(boundary && !boundary.propagateDependants ? [] : [owner.id]), ...runtimeConsumers];
+    const helperConsumers = exactVerificationHelperConsumers(registry, changedPath);
+    const semantic = helperConsumers.length ? []
+      : globalImpact(registry, changedPath)
+        ? [owner.id, ...registry.filter(runnable).map(({ id }) => id)]
+        : [...(boundary && !boundary.propagateDependants ? [] : [owner.id]), ...runtimeConsumers];
     const exactSemantic = boundary && !boundary.propagateDependants ? [owner.id] : [];
-    const verificationConsumers = exactVerificationConsumers(registry, changedPath);
+    const verificationConsumers = [
+      ...exactVerificationConsumers(registry, changedPath), ...helperConsumers,
+    ];
     const unavailable = [...new Set([...semantic, ...verificationConsumers])]
       .filter((id) => !known.has(id));
     if (unavailable.length) {

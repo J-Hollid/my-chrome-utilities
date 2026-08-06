@@ -110,5 +110,5 @@
     :handler (fn [world _example _captures] (inspect! world))}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-17T17:05:35.247263191+02:00", :module-hash "-571912471", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 5, :hash "-485998160"} {:id "defn-/enough-verification-packs?", :kind "defn-", :line 7, :end-line 8, :hash "380845414"} {:id "defn-/inspect!", :kind "defn-", :line 10, :end-line 38, :hash "-295830725"} {:id "def/handlers", :kind "def", :line 40, :end-line 42, :hash "1432102857"}]}
+;; {:version 1, :tested-at "2026-08-06T02:44:37.184462683+02:00", :module-hash "464313931", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 5, :hash "-485998160"} {:id "defn-/enough-verification-packs?", :kind "defn-", :line 7, :end-line 8, :hash "380845414"} {:id "def/browser-adapter-modes", :kind "def", :line 10, :end-line 11, :hash "-1768145777"} {:id "defn-/classified-browser-adapters", :kind "defn-", :line 13, :end-line 16, :hash "1447896627"} {:id "defn-/inspect!", :kind "defn-", :line 18, :end-line 106, :hash "1115867079"} {:id "def/handlers", :kind "def", :line 108, :end-line 110, :hash "1432102857"}]}
 ;; clj-mutate-manifest-end

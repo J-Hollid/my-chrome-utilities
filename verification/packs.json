@@ -1550,28 +1550,35 @@
       {
         "id": "canonical_schema_core",
         "prefixes": [
-          "src/canonical-schema",
+          "src/canonical-schema/",
           "src/data-layer-canonical-schema.ts",
           "src/data-layer-canonical-predicate-identity.ts",
           "src/data-layer-canonical-schema-facets.ts",
+          "src/data-layer-canonical-schema-commands.ts",
           "src/data-layer-canonical-schema-constraints.ts",
+          "src/data-layer-canonical-schema-migration.ts",
+          "src/data-layer-canonical-schema-journal.ts",
           "src/data-layer-canonical-schema-model.ts",
           "src/data-layer-canonical-array-items.ts",
-          "src/data-layer-canonical-schema-predicates.ts"
+          "src/data-layer-canonical-schema-predicates.ts",
+          "src/data-layer-saved-schema-canonical.ts"
         ],
         "propagateDependants": true
       },
       {
         "id": "canonical_schema_editor",
         "prefixes": [
-          "src/canonical-schema-focused",
+          "src/canonical-schema-focused/",
           "src/data-layer-canonical-schema-ui.ts",
-          "src/data-layer-canonical-schema-focused-sections.ts",
-          "src/data-layer-canonical-schema-focused-facets-ui.ts",
-          "src/data-layer-canonical-schema-focused-conditions.ts",
-          "src/data-layer-canonical-schema-focused-condition-tree.ts",
-          "src/data-layer-canonical-schema-focused-rules.ts",
-          "src/data-layer-canonical-schema-focused-rule-rows.ts",
+          "src/data-layer-canonical-schema-focused",
+          "src/data-layer-canonical-schema-render",
+          "src/data-layer-canonical-predicate-editor.ts",
+          "src/data-layer-shared-condition-tree-editor.ts",
+          "src/data-layer-project-condition-editor.ts",
+          "src/data-layer-focused-schema-property",
+          "src/data-layer-focused-rule-policy.ts",
+          "src/data-layer-string-rule-validation",
+          "src/data-layer-side-panel-unified-schema-editor.ts",
           "src/data-layer-side-panel-schema-editor.ts"
         ],
         "propagateDependants": false
@@ -1858,8 +1865,12 @@
         "consumers": ["flow_graph"]
       },
       {
+        "path": "test/support/flow-workspace-r02-runtime.mjs",
+        "consumers": ["flow_graph"]
+      },
+      {
         "path": "test/support/headless-chrome.mjs",
-        "consumers": ["branding_polish", "durable_project_repository", "flow_export", "flow_graph", "guided_test_cases", "hotkeys", "layered_schema", "project_assurance_severity", "project_event_transport", "project_management", "shell"]
+        "consumers": ["branding_polish", "capture", "command-palette", "defects", "durable_project_repository", "event-library", "flow_export", "flow_graph", "guided_test_cases", "hotkeys", "layered_schema", "live_flow_testing", "project_assurance_severity", "project_event_transport", "project_management", "property_set_flow_sections", "replay", "schema_relationship_tree", "schemas", "shell"]
       },
       {
         "path": "test/support/journal-free-installed-runtime-probe.mjs",

@@ -14,6 +14,7 @@ import {
   exactObservationEnvironment,
   parseBrowserObservationBatchOutput,
   parseBrowserObservationOutput,
+  validateBrowserObservationBatch,
 } from "../scripts/run-browser-observation.mjs";
 import {
   checkVerificationPerformanceBudgets,
@@ -220,6 +221,30 @@ assert.deepEqual(browserTargetConfigurations(focusedObservationPacks[0].browserO
   BROWSER_FIRST:{ BROWSER_FIRST:"1" },
   BROWSER_SECOND:{ BROWSER_SECOND:"1" },
 }, "a shared observation process receives each logical target's isolated environment");
+const browserBatchMatches = focusedObservationPacks[0].browserObservations.map((observation) => ({
+  packId:"browser", observation,
+}));
+assert.deepEqual(validateBrowserObservationBatch(browserBatchMatches)
+  .map(({ id }) => id), ["BROWSER_FIRST", "BROWSER_SECOND"],
+"the public browser runner accepts one owning pack, program, and declared session batch");
+assert.throws(() => validateBrowserObservationBatch([
+  browserBatchMatches[0], { ...browserBatchMatches[1], packId:"other" },
+]), /one owning pack/u,
+"the public browser runner rejects cross-pack batches even when their program matches");
+assert.throws(() => validateBrowserObservationBatch([
+  browserBatchMatches[0], {
+    ...browserBatchMatches[1],
+    observation:{ ...browserBatchMatches[1].observation, sessionBatch:undefined },
+  },
+]), /one declared non-empty session batch/u,
+"the public browser runner rejects a multi-target batch without a common declaration");
+assert.throws(() => validateBrowserObservationBatch([
+  browserBatchMatches[0], {
+    ...browserBatchMatches[1],
+    observation:{ ...browserBatchMatches[1].observation, sessionBatch:"other-batch" },
+  },
+]), /one declared non-empty session batch/u,
+"the public browser runner rejects incompatible declared session batches");
 assert.throws(() => validateBrowserPerformanceDeclarations([
   pack("browser", {
     browserAdapters:["test/browser.mjs"],
@@ -566,8 +591,43 @@ await assert.rejects(() => validateVerificationPacks(replacePack(packs, "shell",
     : helper),
 }))), /Correct verification helper consumers.*shared-harness.*schemas/u,
 "registry validation rejects an undeclared helper consumer with helper path and pack identity");
+await assert.rejects(() => validateVerificationPacks(replacePack(packs, "layered_schema", (pack) => ({
+  impactBoundaries:pack.impactBoundaries.map((boundary) => boundary.id === "canonical_schema_editor"
+    ? { ...boundary, prefixes:boundary.prefixes.filter((prefix) =>
+      prefix !== "src/data-layer-string-rule-validation") }
+    : boundary),
+}))), /Classify source path src\/data-layer-string-rule-validation.*exactly one impact boundary/u,
+"registry validation rejects a newly unclassified layered-schema source path");
+await assert.rejects(() => validateVerificationPacks(replacePack(packs, "layered_schema", (pack) => ({
+  impactBoundaries:pack.impactBoundaries.map((boundary) => boundary.id === "canonical_schema_core"
+    ? { ...boundary, prefixes:[...boundary.prefixes,
+      "src/data-layer-canonical-schema-focused-editor.ts"] }
+    : boundary),
+}))), /Classify source path src\/data-layer-canonical-schema-focused-editor.ts.*exactly one impact boundary/u,
+"registry validation rejects overlapping layered-schema impact boundaries");
 const realRegistryChange = syntheticChangeSet([{ status:"M", path:"verification/packs.json" }]);
 const runnableProductionPackIds = planVerification(packs, { terminalFull:true }).packIds;
+assert.deepEqual(planVerification(packs, {
+  changedPaths:["test/support/layered-schema-usability-probes.mjs"],
+}).packIds, ["layered_schema"],
+"the layered-schema verification helper selects only its exact registered consumer");
+assert.deepEqual(planVerification(packs, {
+  changedPaths:["test/support/flow-graph-corrective-workflow.mjs"],
+}).packIds, ["flow_graph"],
+"the flow-graph verification helper selects only its exact registered consumer");
+const sharedHarnessConsumers = packs.find(({ id }) => id === "shell").verificationHelpers
+  .find(({ path:helperPath }) => helperPath === "test/browser-packs/shared-harness.mjs").consumers;
+assert.deepEqual(planVerification(packs, {
+  changedPaths:["test/browser-packs/shared-harness.mjs"],
+}).packIds, packs.filter(({ id }) => sharedHarnessConsumers.includes(id)).map(({ id }) => id),
+"the shared browser harness selects every exact browser consumer without semantic dependant expansion");
+const browserPackIds = packs.filter((pack) =>
+  (pack.browserAdapters?.length ?? 0) + (pack.browserObservations?.length ?? 0) > 0)
+  .map(({ id }) => id);
+assert.deepEqual(planVerification(packs, {
+  changedPaths:["test/support/headless-chrome.mjs"],
+}).packIds, browserPackIds,
+"the shared headless Chrome harness selects every browser pack without semantic dependant expansion");
 const realRegistryBoundary = planVerification(packs, {
   packIds:runnableProductionPackIds, changedPaths:realRegistryChange.paths,
   changeSet:realRegistryChange, basePacks:packs,
@@ -975,6 +1035,22 @@ assert.equal(canonicalEditorPlan.changedBoundaries["src/data-layer-canonical-sch
   "canonical_schema_editor");
 assert.deepEqual(canonicalEditorPlan.packIds, ["layered_schema"],
   "canonical schema editor changes exclude unrelated layered dependants");
+for (const editorPath of [
+  "src/data-layer-canonical-schema-focused-editor.ts",
+  "src/data-layer-string-rule-validation-ui.ts",
+]) {
+  const editorPlan = planVerification(packs, { changedPaths:[editorPath] });
+  assert.equal(editorPlan.changedBoundaries[editorPath], "canonical_schema_editor");
+  assert.deepEqual(editorPlan.packIds, ["layered_schema"],
+    `${editorPath} remains inside the editor-only layered-schema boundary`);
+}
+const layeredSourceInventory = (await verificationInventory()).source
+  .filter((sourcePath) => verificationOwner(packs, sourcePath) === "layered_schema");
+assert.ok(layeredSourceInventory.length > 0);
+for (const sourcePath of layeredSourceInventory) {
+  assert.ok(planVerification(packs, { changedPaths:[sourcePath] }).changedBoundaries[sourcePath],
+    `${sourcePath} has one declared layered-schema impact boundary`);
+}
 const selectiveInheritancePlan = planVerification(packs, {
   changedPaths:["src/data-layer-selective-profile-inheritance-ui.ts"],
 });
@@ -1187,7 +1263,8 @@ assert.ok(throughput.rows.every(({ dependantFanOut }) => Number.isInteger(depend
 const budgetResult = checkVerificationPerformanceBudgets({
   rows:[
     { name:"alpha:exact-full-pack", projectedSeconds:8, dependantFanOut:0 },
-    { name:"alpha:representative-change", projectedSeconds:5, dependantFanOut:3 },
+    { name:"alpha:representative-change", projectedSeconds:5, dependantFanOut:3,
+      changedPath:"src/alpha/change.ts", selectedPacks:["alpha", "beta", "gamma", "delta"] },
   ],
   model:{
     browserTargets:{ ALPHA:{ p90Ms:900 } },
@@ -1203,8 +1280,12 @@ const budgetResult = checkVerificationPerformanceBudgets({
 assert.equal(budgetResult.passed, false);
 assert.match(budgetResult.diagnostics.join("\n"), /alpha.*8.*7/u,
   "exact-pack budget diagnostics identify pack, measured duration, and limit");
-assert.match(budgetResult.diagnostics.join("\n"), /alpha.*3.*2/u,
-  "fan-out budget diagnostics identify path row, selected fan-out, and limit");
+assert.match(budgetResult.diagnostics.join("\n"),
+  /src\/alpha\/change\.ts.*alpha, beta, gamma, delta.*3.*allowed fan-out 2/u,
+  "fan-out budget diagnostics identify changed path, selected packs, measured fan-out, and limit");
+assert.deepEqual(budgetResult.results.find(({ metric }) => metric === "changed-path-fan-out")
+  .selectedPacks, ["alpha", "beta", "gamma", "delta"],
+"fan-out budget results preserve selected pack identities for programmatic consumers");
 assert.ok(budgetResult.results.some(({ metric, passed }) =>
   metric === "browser-target-p90" && passed),
 "browser target p90 reports an explicit passing budget result");

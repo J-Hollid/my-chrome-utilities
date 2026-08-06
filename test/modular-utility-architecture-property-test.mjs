@@ -253,6 +253,31 @@ for (let sample = 0; sample < 100; sample += 1) {
 }
 
 for (let sample = 0; sample < 100; sample += 1) {
+  const helperPath = `test/support/generated-${sample}.mjs`;
+  const consumerCount = 2 + sample % 8;
+  const consumers = Array.from({ length:consumerCount }, (_, index) => `consumer-${sample}-${index}`);
+  const selectedConsumers = consumers.filter((_, index) => (sample + index) % 3 !== 0);
+  const helperPacks = [{
+    id:`process-${sample}`,
+    source:[], process:["test/support/"], globalImpact:["test/support/"],
+    dependencies:[], sharedComponents:[], verificationInputs:[], runtimeInputs:[],
+    verificationHelpers:[{ path:helperPath, consumers:selectedConsumers }],
+    unit:[`test/process-${sample}.mjs`], property:[], features:[], handlers:[],
+    browserAdapters:[], browserObservations:[], checkpointCommands:[],
+  }, ...consumers.map((id, index) => ({
+    id,
+    source:[`src/${id}/`], process:[], globalImpact:[],
+    dependencies:index ? [consumers[index - 1]] : [], sharedComponents:[],
+    verificationInputs:[], runtimeInputs:[], verificationHelpers:[],
+    unit:[`test/${id}.mjs`], property:[], features:[], handlers:[],
+    browserAdapters:[], browserObservations:[], checkpointCommands:[],
+  }))];
+  assert.deepEqual(planVerification(helperPacks, { changedPaths:[helperPath] }).packIds,
+    selectedConsumers,
+    "generated exact helper plans select declared consumers without owner or dependant expansion");
+}
+
+for (let sample = 0; sample < 100; sample += 1) {
   const count = 1 + sample % 12;
   const calls = [];
   const utilities = Array.from({ length:count }, (_, index) => ({
