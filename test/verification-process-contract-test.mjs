@@ -32,6 +32,7 @@ import {
   measuredTimingModel,
   refreshVerificationPerformanceBudgets,
   reportVerificationThroughput,
+  verificationPerformanceCalibration,
 } from "../scripts/report-verification-throughput.mjs";
 import {
   archiveCanonicalReceiptCandidates,
@@ -2052,6 +2053,44 @@ assert.equal(throughput.rows.filter(({ name }) => name.endsWith(":exact-full-pac
   runnablePackCount, "throughput reports an exact-pack row for every runnable pack");
 assert.equal(throughput.rows.filter(({ name }) => name.endsWith(":representative-change")).length,
   runnablePackCount, "throughput reports a representative changed-path row for every runnable pack");
+const representativeChangedPaths = {
+  project_management:"src/data-layer-assignment-routing-ui.ts",
+  durable_project_repository:"src/data-layer-durable-project-repository-ui.ts",
+  "command-palette":"src/command-palette-ui.ts",
+  hotkeys:"src/hotkey-keymap.ts",
+  capture:"src/data-layer-live-inspector-presentation-ui.ts",
+  "event-library":"src/data-layer-event-library-deletion.ts",
+  project_event_transport:"src/data-layer-project-event-transport.ts",
+  schemas:"src/data-layer-allowed-value-expansion-ui.ts",
+  defects:"src/data-layer-defect-library-ui.ts",
+  replay:"src/data-layer-sequence-replay-ui.ts",
+  flow_graph:"src/flow-graph/workspace-section-ui.ts",
+  flow_export:"src/data-layer-project-documentation-workspace-ui.ts",
+  live_flow_testing:"src/data-layer-live-flow-testing-ui.ts",
+  layered_schema:"src/canonical-schema-focused/navigator-rows.ts",
+  schema_relationship_tree:"src/schema-relationship-tree.ts",
+  property_set_flow_sections:"src/data-layer-property-set-flow-section-ui.ts",
+  project_assurance_severity:"features/data-layer-project-assurance-severity.feature",
+  branding_polish:"src/data-layer-studio-choice-controls.ts",
+  guided_test_cases:"src/data-layer-guided-test-cases.ts",
+  shell:"src/workspace-tabs-ui.ts",
+};
+assert.equal(Object.keys(representativeChangedPaths).length, runnablePackCount);
+for (const [packId, representativeChangedPath] of Object.entries(representativeChangedPaths)) {
+  const pack = packs.find(({ id }) => id === packId);
+  const row = throughput.rows.find(({ name }) => name === `${packId}:representative-change`);
+  assert.equal(pack?.representativeChangedPath, representativeChangedPath,
+    `${packId} declares its deliberate exact representative file`);
+  assert.equal(row?.changedPath, representativeChangedPath,
+    `${packId} throughput reporting rejects source-order representative fallbacks`);
+}
+const fallbackRepresentativePacks = structuredClone(packs);
+delete fallbackRepresentativePacks.find(({ id }) => id === "project_management")
+  .representativeChangedPath;
+assert.throws(() => reportVerificationThroughput({
+  packs:fallbackRepresentativePacks, baseline:reportBaseline, receipts:[reportReceipt], shardCount:4,
+}), /declared representative changed path.*project_management/u,
+"throughput calibration rejects directory, source-order, and feature-order representative fallbacks");
 assert.ok(throughput.rows.every(({ dependantFanOut }) => Number.isInteger(dependantFanOut)),
   "every throughput row reports dependant fan-out");
 assert.ok(throughput.rows.every(({ timingSources }) =>
@@ -2213,11 +2252,15 @@ assert.equal(missingTargetBudget.results[0].measured, 2400,
   "a missing logical-target timing uses its explicit bootstrap baseline, not another task's aggregate");
 const refreshedBudgets = refreshVerificationPerformanceBudgets({
   rows:[
-    { name:"alpha:exact-full-pack", projectedSeconds:8 },
-    { name:"alpha:representative-change", dependantFanOut:2 },
+    { name:"alpha:exact-full-pack", projectedSeconds:8, measurementCoverage:0.75,
+      timingSources:{ "exact task samples":3, "bootstrap fallback":1 } },
+    { name:"alpha:representative-change", projectedSeconds:5, dependantFanOut:2,
+      changedPath:"src/alpha/local-ui.ts", selectedPacks:["alpha", "beta", "gamma"],
+      measurementCoverage:1, timingSources:{ "exact task samples":4 } },
   ],
   browserTargetIds:["MEASURED", "UNMEASURED"],
-  model:{ browserTargets:{ MEASURED:{ p90Ms:900 } } },
+  model:{ browserTargets:{ MEASURED:{ p90Ms:900, samples:5,
+    receiptDigests:Array.from({ length:5 }, (_, index) => `${index}`.repeat(64)) } } },
 }, {
   performanceBudgets:{
     exactPackSeconds:{}, browserTargetP90Milliseconds:{},
@@ -2225,15 +2268,74 @@ const refreshedBudgets = refreshVerificationPerformanceBudgets({
   defaultBrowserTargetMilliseconds:2400,
 }, { tolerance:1.25 });
 assert.deepEqual(refreshedBudgets.performanceBudgets.exactPackSeconds.alpha, {
-  limit:10, baseline:8, percentile:"p90-projection", tolerance:1.25, provisional:false,
+  limit:10, baseline:8, percentile:"critical-path-projection", tolerance:1.25,
+  provisional:false, measurementCoverage:0.75,
+  timingSources:{ "exact task samples":3, "bootstrap fallback":1 },
 });
-assert.equal(refreshedBudgets.performanceBudgets.changedPathFanOut.alpha.limit, 3,
-  "measured pack fan-out receives an explicit budget instead of a permissive catch-all");
+assert.deepEqual(refreshedBudgets.performanceBudgets.changedPathFanOut.alpha, {
+  limit:2, baseline:2, percentile:"selected-dependant-count", tolerance:1,
+  provisional:false, selectedPacks:["alpha", "beta", "gamma"],
+}, "deterministic pack fan-out receives no noisy timing tolerance");
+assert.deepEqual(refreshedBudgets.performanceBudgets.changedPathSeconds.alpha, {
+  limit:7, baseline:5, percentile:"critical-path-projection", tolerance:1.25,
+  provisional:false, path:"src/alpha/local-ui.ts", measurementCoverage:1,
+  timingSources:{ "exact task samples":4 },
+});
 assert.deepEqual(refreshedBudgets.performanceBudgets.browserTargetP90Milliseconds.MEASURED, {
   limit:1125, baseline:900, percentile:"p90", tolerance:1.25, provisional:false,
+  maturity:"non-provisional", source:"accepted target samples", sampleCount:5,
+  receiptDigests:Array.from({ length:5 }, (_, index) => `${index}`.repeat(64)),
 });
 assert.equal(refreshedBudgets.performanceBudgets.browserTargetP90Milliseconds.UNMEASURED.provisional,
   true, "unmeasured browser targets retain an explicit provisional bootstrap budget");
+assert.equal(refreshedBudgets.performanceBudgets.browserTargetP90Milliseconds.UNMEASURED.source,
+  "conservative target limit", "absence of target evidence never falls back to a two-second estimate");
+
+const committedTimingBaseline = JSON.parse(await readFile(
+  new URL("../verification/timing-baseline.json", import.meta.url), "utf8",
+));
+const completeCalibration = refreshVerificationPerformanceBudgets(
+  throughput, committedTimingBaseline,
+  { packs, tolerance:1.2, minimumIndependentSamples:5,
+    flowExamplesCharacterization:committedFlowCharacterization },
+);
+assert.equal(Object.keys(completeCalibration.performanceBudgets.exactPackSeconds).length, 20);
+assert.equal(Object.keys(completeCalibration.performanceBudgets.changedPathSeconds).length, 20);
+assert.equal(Object.keys(completeCalibration.performanceBudgets.changedPathFanOut).length, 20);
+assert.equal(Object.keys(completeCalibration.performanceBudgets.browserTargetP90Milliseconds).length, 81);
+assert.deepEqual(completeCalibration.performanceBudgets.browserTargetP90Milliseconds
+  .FLOW_GRAPH_EXAMPLES_TARGET, {
+  limit:4596, baseline:3830, percentile:"p90", tolerance:1.2, provisional:false,
+  maturity:"non-provisional", source:"committed characterization digests", sampleCount:5,
+  receiptDigests:committedFlowCharacterization.classes.focusedNormal.receiptDigests,
+  correctionCommit:committedFlowCharacterization.implementationCommit,
+});
+assert.equal(completeCalibration.performanceBudgets.changedPathSeconds.flow_graph.limit, 35,
+  "the accepted representative Flow changed-path guardrail remains unchanged");
+assert.equal(completeCalibration.performanceBudgets.browserTargetP90Milliseconds
+  .LAYERED_SCHEMA_EDITOR_TARGET.tolerance, 1.2);
+assert.equal(completeCalibration.performanceBudgets.browserTargetP90Milliseconds
+  .LAYERED_SCHEMA_EDITOR_TARGET.source, "explicit target baseline");
+const calibrationReport = verificationPerformanceCalibration(
+  throughput,
+  committedTimingBaseline,
+  {
+    packs,
+    implementationCommit:"f".repeat(40),
+    environmentClassId:"e".repeat(64),
+    environment:{ node:"24.19.0", typescript:"5.9.3", platform:"linux-x64",
+      executionLoad:"normal", concurrency:4, observationConcurrency:2,
+      buildIdentity:"a".repeat(64) },
+    receiptDigests:Array.from({ length:5 }, (_, index) => `${index}`.repeat(64)),
+    flowExamplesCharacterization:committedFlowCharacterization,
+  },
+);
+assert.equal(calibrationReport.completion.status, "complete");
+assert.equal(calibrationReport.runnablePacks.length, 20);
+assert.equal(Object.keys(calibrationReport.browserTargets).length, 81);
+assert.match(calibrationReport.conservation.verificationTopologyDigest, /^[a-f0-9]{64}$/u);
+assert.equal(calibrationReport.runnablePacks.find(({ id }) => id === "shell").budgetClass,
+  "global-shell");
 
 const preflightPlan = planVerification(synthetic, { packIds:["alpha"] });
 const preflightOrder = [];

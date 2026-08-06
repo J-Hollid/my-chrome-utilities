@@ -220,12 +220,12 @@ function validateDependencies(packs, ids) {
   }
 }
 
-function validateImpactBoundaries(packs, sourcePaths) {
+function validateImpactBoundaries(packs, sourcePaths, representativePaths = sourcePaths) {
   const ids = new Set();
   for (const pack of packs) {
     if (pack.representativeChangedPath !== undefined &&
         (typeof pack.representativeChangedPath !== "string" ||
-          !sourcePaths.includes(pack.representativeChangedPath) ||
+          !representativePaths.includes(pack.representativeChangedPath) ||
           ownerOf(packs, pack.representativeChangedPath)?.id !== pack.id)) {
       throw new Error(`Use an exact owned representative changed path in pack ${pack.id}`);
     }
@@ -696,7 +696,8 @@ export async function validateVerificationPacks(packs, { inventory } = {}) {
   await validateVerificationHelpers(packs);
 
   const repositoryInventory = { ...await verificationInventory(), ...inventory };
-  validateImpactBoundaries(packs, repositoryInventory.source);
+  validateImpactBoundaries(packs, repositoryInventory.source,
+    [...repositoryInventory.source, ...repositoryInventory.features]);
   validatePrefixOwnership(packs, repositoryInventory.source, "source");
   validatePrefixOwnership(packs, repositoryInventory.process, "process");
   validateInventoryPaths(packs, repositoryInventory);

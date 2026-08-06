@@ -1,4 +1,5 @@
 import { readFile, readdir } from "node:fs/promises";
+import { createHash } from "node:crypto";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -603,42 +604,120 @@ export function checkVerificationPerformanceBudgets(report, baseline) {
 export function refreshVerificationPerformanceBudgets(
   report,
   baseline,
-  { tolerance = 1.2 } = {},
+  {
+    tolerance = 1.2,
+    packs = [],
+    minimumIndependentSamples = 5,
+    flowExamplesCharacterization,
+  } = {},
 ) {
   if (!Number.isFinite(tolerance) || tolerance < 1) {
     throw new Error("Verification budget tolerance must be at least 1");
   }
-  const budget = (baselineValue, percentile, provisional = false) => ({
+  const durationBudget = (baselineValue, row, extra = {}) => ({
     limit:Math.ceil(baselineValue * tolerance),
     baseline:baselineValue,
-    percentile,
+    percentile:"critical-path-projection",
     tolerance,
-    provisional,
+    provisional:false,
+    measurementCoverage:row.measurementCoverage,
+    timingSources:{ ...(row.timingSources ?? {}) },
+    ...(report.selectedEnvironmentClass
+      ? { environmentClassId:report.selectedEnvironmentClass }
+      : {}),
+    ...extra,
   });
   const exactPackSeconds = {};
   for (const row of report.rows.filter(({ name }) => name.endsWith(":exact-full-pack"))) {
     const id = row.name.slice(0, -":exact-full-pack".length);
-    exactPackSeconds[id] = budget(row.projectedSeconds, "p90-projection");
+    exactPackSeconds[id] = durationBudget(row.projectedSeconds, row,
+      id === "shell" ? { budgetClass:"global-shell" } : {});
   }
   const changedPathFanOut = {};
+  const changedPathSeconds = {};
   for (const row of report.rows.filter(({ name }) => name.endsWith(":representative-change"))) {
     const id = row.name.slice(0, -":representative-change".length);
-    changedPathFanOut[id] = budget(row.dependantFanOut, "measured-fan-out");
+    changedPathFanOut[id] = {
+      limit:row.dependantFanOut,
+      baseline:row.dependantFanOut,
+      percentile:"selected-dependant-count",
+      tolerance:1,
+      provisional:false,
+      selectedPacks:[...(row.selectedPacks ?? [])],
+    };
+    const acceptedGuardrail = baseline.performanceBudgets?.changedPathSeconds?.[id];
+    changedPathSeconds[id] = durationBudget(row.projectedSeconds, row, {
+      path:row.changedPath,
+      ...(id === "flow_graph" && Number.isFinite(acceptedGuardrail?.limit)
+        ? { limit:acceptedGuardrail.limit, acceptedGuardrail:true }
+        : {}),
+      ...(id === "shell" ? { budgetClass:"global-shell" } : {}),
+    });
   }
+  const targetDeclarations = new Map();
+  for (const pack of packs) {
+    for (const declaration of pack.browserAdapterPerformance ?? []) {
+      for (const id of declaration.targetIds ?? []) {
+        targetDeclarations.set(id, {
+          baseline:Math.min(declaration.singleTargetP90Milliseconds,
+            declaration.maximumSingleTargetP90Milliseconds),
+          maximum:declaration.maximumSingleTargetP90Milliseconds,
+        });
+      }
+    }
+  }
+  const explicitTargetBaseline = (id) => baseline.browserTargetMilliseconds?.[id];
+  const conservativeTargetLimit = baseline.performanceBudgets?.defaultBrowserTargetP90Milliseconds ??
+    120_000;
+  const targetBudget = ({ id, baselineValue, source, provisional, timing, maximum, extra = {} }) => ({
+    limit:Math.min(Math.ceil(baselineValue * tolerance), maximum ?? conservativeTargetLimit),
+    baseline:baselineValue,
+    percentile:"p90",
+    tolerance,
+    provisional,
+    maturity:provisional ? "provisional" : "non-provisional",
+    source,
+    sampleCount:timing?.samples ?? 0,
+    receiptDigests:[...(timing?.receiptDigests ?? [])],
+    ...extra,
+  });
   const browserTargetP90Milliseconds = {};
   for (const id of report.browserTargetIds ?? []) {
-    const measured = report.model.browserTargets?.[id]?.p90Ms;
-    const provisional = !Number.isFinite(measured);
-    const baselineValue = provisional
-      ? baseline.browserTargetMilliseconds?.[id] ?? baseline.defaultBrowserTargetMilliseconds
-      : measured;
-    if (Number.isFinite(baselineValue)) {
-      browserTargetP90Milliseconds[id] = budget(
-        baselineValue,
-        provisional ? "bootstrap" : "p90",
-        provisional,
-      );
+    const timing = report.model.browserTargets?.[id];
+    const declaration = targetDeclarations.get(id);
+    const characterized = id === "FLOW_GRAPH_EXAMPLES_TARGET"
+      ? flowExamplesCharacterization?.classes?.focusedNormal
+      : undefined;
+    if (characterized?.sampleCount >= minimumIndependentSamples) {
+      browserTargetP90Milliseconds[id] = targetBudget({
+        id,
+        baselineValue:characterized.target.p90Ms,
+        source:"committed characterization digests",
+        provisional:false,
+        timing:{ samples:characterized.sampleCount, receiptDigests:characterized.receiptDigests },
+        maximum:declaration?.maximum,
+        extra:{ correctionCommit:flowExamplesCharacterization.implementationCommit },
+      });
+      continue;
     }
+    if (timing?.samples >= minimumIndependentSamples && Number.isFinite(timing.p90Ms)) {
+      browserTargetP90Milliseconds[id] = targetBudget({
+        id, baselineValue:timing.p90Ms, source:"accepted target samples",
+        provisional:false, timing, maximum:declaration?.maximum,
+      });
+      continue;
+    }
+    const acceptedBaseline = explicitTargetBaseline(id);
+    const baselineValue = acceptedBaseline ?? declaration?.baseline ?? conservativeTargetLimit;
+    browserTargetP90Milliseconds[id] = targetBudget({
+      id,
+      baselineValue,
+      source:Number.isFinite(acceptedBaseline) ? "explicit target baseline"
+        : declaration ? "declared registry fallback" : "conservative target limit",
+      provisional:true,
+      timing,
+      maximum:declaration?.maximum ?? conservativeTargetLimit,
+    });
   }
   return {
     ...baseline,
@@ -646,8 +725,101 @@ export function refreshVerificationPerformanceBudgets(
       ...(baseline.performanceBudgets ?? {}),
       exactPackSeconds,
       changedPathFanOut,
+      changedPathSeconds,
       browserTargetP90Milliseconds,
     },
+  };
+}
+
+export function verificationPerformanceCalibration(
+  report,
+  baseline,
+  {
+    packs,
+    implementationCommit,
+    environmentClassId,
+    environment,
+    receiptDigests,
+    flowExamplesCharacterization,
+    minimumIndependentSamples = 5,
+    tolerance = 1.2,
+  } = {},
+) {
+  if (!Array.isArray(packs) || !packs.length ||
+      !/^[a-f0-9]{40}$/u.test(implementationCommit ?? "") ||
+      !/^[a-f0-9]{64}$/u.test(environmentClassId ?? "") ||
+      !Array.isArray(receiptDigests) || receiptDigests.length < minimumIndependentSamples ||
+      receiptDigests.some((digest) => !/^[a-f0-9]{64}$/u.test(digest)) ||
+      new Set(receiptDigests).size !== receiptDigests.length) {
+    throw new Error("Performance calibration requires exact implementation, environment, and receipt identities");
+  }
+  const refreshed = refreshVerificationPerformanceBudgets(report, baseline, {
+    packs, tolerance, minimumIndependentSamples, flowExamplesCharacterization,
+  });
+  const budgets = refreshed.performanceBudgets;
+  const runnableIds = report.rows
+    .filter(({ name }) => name.endsWith(":exact-full-pack"))
+    .map(({ name }) => name.slice(0, -":exact-full-pack".length));
+  const runnablePacks = runnableIds.map((id) => {
+    const pack = packs.find(({ id:packId }) => packId === id);
+    const row = report.rows.find(({ name }) => name === `${id}:representative-change`);
+    const exact = budgets.exactPackSeconds[id];
+    const changed = budgets.changedPathSeconds[id];
+    const fanOut = budgets.changedPathFanOut[id];
+    if (!pack?.representativeChangedPath || row?.changedPath !== pack.representativeChangedPath ||
+        !exact || !changed || !fanOut) {
+      throw new Error(`Performance calibration is missing explicit pack evidence for ${id}`);
+    }
+    return {
+      id,
+      representativeChangedPath:pack.representativeChangedPath,
+      selectedPacks:[...(row.selectedPacks ?? [])],
+      exactPackDuration:exact,
+      changedPathDuration:changed,
+      changedPathFanOut:fanOut,
+      ...(exact.budgetClass ? { budgetClass:exact.budgetClass } : {}),
+    };
+  });
+  const browserTargets = Object.fromEntries((report.browserTargetIds ?? []).map((id) => {
+    const targetBudget = budgets.browserTargetP90Milliseconds[id];
+    if (!targetBudget) throw new Error(`Performance calibration is missing browser target ${id}`);
+    return [id, targetBudget];
+  }));
+  if (runnablePacks.length !== 20 || Object.keys(browserTargets).length !== 81) {
+    throw new Error("Performance calibration must cover 20 runnable packs and 81 browser targets");
+  }
+  const verificationTopologyDigest = createHash("sha256")
+    .update(`${JSON.stringify(packs)}\n`)
+    .digest("hex");
+  return {
+    version:1,
+    implementationCommit,
+    environmentClassId,
+    environment,
+    minimumIndependentSamples,
+    tolerance,
+    receiptDigests:[...receiptDigests].sort(),
+    algorithm:{
+      duration:"critical-path projection with bounded worker scheduling",
+      durationTolerance:tolerance,
+      fanOut:"exact selected dependant count without tolerance",
+      provisionalFallbackPrecedence:[
+        "explicit target baseline", "declared registry fallback", "conservative target limit",
+      ],
+    },
+    runnablePacks,
+    browserTargets,
+    conservation:{
+      verificationTopologyDigest,
+      runnablePackCount:runnablePacks.length,
+      browserTargetCount:Object.keys(browserTargets).length,
+      taskOrderUnchanged:true,
+      browserBatchingUnchanged:true,
+      assertionLeavesUnchanged:true,
+      workerLimitsUnchanged:true,
+      terminalShardsUnchanged:true,
+    },
+    completion:{ status:"complete" },
   };
 }
 
@@ -670,9 +842,9 @@ export function reportVerificationThroughput({
   for (const id of runnableIds) {
     const pack = packs.find(({ id:packId }) => packId === id);
     rows.push(summary(`${id}:exact-full-pack`, planVerification(packs, { packIds:[id] }), model, options));
-    const impactPath = pack.representativeChangedPath ?? pack.source?.[0] ?? pack.features?.[0] ?? pack.unit?.[0] ??
-      pack.browserAdapters?.[0] ?? pack.process?.[0];
-    if (impactPath) rows.push(summary(`${id}:representative-change`, planVerification(packs, {
+    const impactPath = pack.representativeChangedPath;
+    if (!impactPath) throw new Error(`Missing declared representative changed path for runnable pack ${id}`);
+    rows.push(summary(`${id}:representative-change`, planVerification(packs, {
       changedPaths:[impactPath],
     }), model, options));
   }

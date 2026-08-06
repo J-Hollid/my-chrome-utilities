@@ -1,6 +1,7 @@
 [
   {
     "id": "project_management",
+    "representativeChangedPath": "src/data-layer-assignment-routing-ui.ts",
     "source": [
       "src/data-layer-project-entity-lifecycle.ts",
       "src/data-layer-page-authoring.ts",
@@ -48,6 +49,7 @@
   },
   {
     "id": "durable_project_repository",
+    "representativeChangedPath": "src/data-layer-durable-project-repository-ui.ts",
     "source": [
       "src/data-layer-durable-project-repository.ts",
       "src/data-layer-production-model.ts",
@@ -102,6 +104,7 @@
   },
   {
     "id": "command-palette",
+    "representativeChangedPath": "src/command-palette-ui.ts",
     "source": [
       "src/command-palette",
       "src/commands.ts",
@@ -134,6 +137,7 @@
   },
   {
     "id": "hotkeys",
+    "representativeChangedPath": "src/hotkey-keymap.ts",
     "source": [
       "src/hotkey",
       "src/utilities/hotkeys"
@@ -164,6 +168,7 @@
   },
   {
     "id": "capture",
+    "representativeChangedPath": "src/data-layer-live-inspector-presentation-ui.ts",
     "source": [
       "src/data-layer-event-feed-query-ui.ts",
       "src/data-layer-event-feed-query.ts",
@@ -407,6 +412,7 @@
   },
   {
     "id": "event-library",
+    "representativeChangedPath": "src/data-layer-event-library-deletion.ts",
     "source": [
       "src/data-layer-event-library",
       "src/data-layer-event-template",
@@ -466,6 +472,7 @@
   },
   {
     "id": "project_event_transport",
+    "representativeChangedPath": "src/data-layer-project-event-transport.ts",
     "source": [
       "src/data-layer-project-event-transport.ts"
     ],
@@ -496,6 +503,7 @@
   },
   {
     "id": "schemas",
+    "representativeChangedPath": "src/data-layer-allowed-value-expansion-ui.ts",
     "source": [
       "src/data-layer-allowed-value-expansion-ui.ts",
       "src/data-layer-allowed-value-expansion.ts",
@@ -1182,6 +1190,7 @@
   },
   {
     "id": "defects",
+    "representativeChangedPath": "src/data-layer-defect-library-ui.ts",
     "source": [
       "src/data-layer-defect",
       "src/data-layer-event-occurrence-defect-report-ui.ts",
@@ -1358,6 +1367,7 @@
   },
   {
     "id": "replay",
+    "representativeChangedPath": "src/data-layer-sequence-replay-ui.ts",
     "source": [
       "src/data-layer-sequence-replay"
     ],
@@ -1383,6 +1393,7 @@
   },
   {
     "id": "flow_graph",
+    "representativeChangedPath": "src/flow-graph/workspace-section-ui.ts",
     "source": [
       "src/data-layer-flow-graph.ts",
       "src/data-layer-flow-graph-ui.ts",
@@ -1496,6 +1507,7 @@
   },
   {
     "id": "flow_export",
+    "representativeChangedPath": "src/data-layer-project-documentation-workspace-ui.ts",
     "source": [
       "src/data-layer-flow-table-documentation-export.ts",
       "src/data-layer-flow-table-documentation-export-ui.ts",
@@ -1536,6 +1548,7 @@
   },
   {
     "id": "live_flow_testing",
+    "representativeChangedPath": "src/data-layer-live-flow-testing-ui.ts",
     "source": [
       "src/data-layer-live-flow-testing.ts",
       "src/data-layer-live-flow-testing-ui.ts",
@@ -1571,6 +1584,7 @@
   },
   {
     "id": "layered_schema",
+    "representativeChangedPath": "src/canonical-schema-focused/navigator-rows.ts",
     "source": [
       "src/canonical-schema-focused",
       "src/canonical-schema",
@@ -1790,6 +1804,7 @@
   },
   {
     "id": "schema_relationship_tree",
+    "representativeChangedPath": "src/schema-relationship-tree.ts",
     "source": [
       "src/schema-relationship-tree.ts"
     ],
@@ -1816,6 +1831,7 @@
   },
   {
     "id": "property_set_flow_sections",
+    "representativeChangedPath": "src/data-layer-property-set-flow-section-ui.ts",
     "source": [
       "src/data-layer-property-set-flow-section.ts",
       "src/data-layer-property-set-flow-section-ui.ts",
@@ -1847,6 +1863,7 @@
   },
   {
     "id": "project_assurance_severity",
+    "representativeChangedPath": "features/data-layer-project-assurance-severity.feature",
     "source": [],
     "dependencies": [
       "schemas"
@@ -1873,6 +1890,7 @@
   },
   {
     "id": "branding_polish",
+    "representativeChangedPath": "src/data-layer-studio-choice-controls.ts",
     "source": [
       "src/data-layer-studio-choice-controls.ts",
       "src/specification-studio-technical-analyst-guidance.ts"
@@ -1920,6 +1938,7 @@
   },
   {
     "id": "guided_test_cases",
+    "representativeChangedPath": "src/data-layer-guided-test-cases.ts",
     "source": [
       "src/data-layer-guided-test-cases.ts"
     ],
@@ -1950,6 +1969,7 @@
   },
   {
     "id": "shell",
+    "representativeChangedPath": "src/workspace-tabs-ui.ts",
     "verificationHelpers": [
       {
         "path": "test/browser-packs/shared-harness.mjs",
