@@ -211,3 +211,54 @@ Feature: Modular verification packs
     And the reduction from the accepted 104.4 second baseline is at least 65 percent
     And the report identifies selected packs, target identity, task count, browser launches, measured coverage, and duration
     And exact flow_graph verification still runs every Flow target and preserves complete assertion evidence
+
+  # Modular verification packs 020
+  Scenario Outline: Modular verification packs 020
+    Given a bounded verification stage has <ordered_tasks> and worker limit <worker_limit>
+    When verification throughput is reported
+    Then the stage estimate is <critical_path>
+    And tasks are assigned in execution order to the next available worker
+    And no indivisible task duration is divided by the worker limit
+
+    Examples:
+      | ordered_tasks                          | worker_limit | critical_path |
+      | no tasks                               | 2            | 0 seconds     |
+      | one task lasting 200 seconds           | 2            | 200 seconds   |
+      | tasks lasting 200, 40, and 40 seconds  | 2            | 200 seconds   |
+      | tasks lasting 120, 100, and 80 seconds | 2            | 180 seconds   |
+      | tasks lasting 120, 100, and 80 seconds | 3            | 120 seconds   |
+
+  # Modular verification packs 021
+  Scenario Outline: Modular verification packs 021
+    Given the timing ledger offers <timing_evidence> for a browser-observation task
+    When verification throughput is reported
+    Then the task estimate is <task_estimate>
+    And its reported timing source is <timing_source>
+
+    Examples:
+      | timing_evidence                                                          | task_estimate | timing_source           |
+      | exact task median 210 seconds plus target median 92 seconds              | 210 seconds   | exact task samples      |
+      | target medians 92 and 46 seconds plus modeled session overhead 5 seconds | 143 seconds   | composed target samples |
+      | one target median 92 seconds plus modeled session overhead 5 seconds     | 97 seconds    | composed target samples |
+      | no eligible task or target sample and explicit bootstrap 120 seconds     | 120 seconds   | bootstrap fallback      |
+
+  # Modular verification packs 022
+  Scenario: Modular verification packs 022
+    Given a verification plan contains sequential and bounded execution stages
+    When its complete throughput estimate is calculated
+    Then each sequential stage contributes the sum of its task estimates
+    And each bounded stage contributes its deterministic longest worker load
+    And the plan estimate is the sum of those stage critical paths
+    And estimation changes no task order, worker limit, pack selection, browser batch, or runner scheduling
+
+  # Modular verification packs 023
+  Scenario Outline: Modular verification packs 023
+    Given <report_row> has corrected estimate <corrected_estimate> and budget <budget>
+    When verification performance budgets are checked
+    Then the row result is <budget_result>
+    And the result identifies the row, corrected estimate, budget, and timing source
+
+    Examples:
+      | report_row                            | corrected_estimate | budget      | budget_result |
+      | one 200-second observation task       | 200 seconds        | 150 seconds | fail          |
+      | representative Flow workspace change | 26.2 seconds       | 35 seconds  | pass          |

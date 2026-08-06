@@ -1,5 +1,14 @@
 # SwarmForge active data-layer scope
 
+## Development-system planning backlog
+
+The user-approved repository throughput and technical-debt findings are recorded
+in `docs/verification-throughput-technical-debt-backlog-R01.md`. That document is
+the durable pickup point for a future specifier. It is a planning backlog, not an
+implementation handoff: it does not change the active product contracts below,
+authorize removal of verification evidence, or permit coder notification without
+the explicit approval required by the specifier role.
+
 ## Current authority
 
 The active specification cycles are the interactive directional Flow graph review,
@@ -1692,3 +1701,56 @@ Work the exception as five independently reviewable plans:
 Completion requires the exact `flow_graph` plan to conserve the full original evidence
 union, the representative Section-control path to satisfy the measured guardrail, and
 the normal coder, refactorer, and architect chain to approve the implementation.
+
+## Verification throughput program — active slice VTD-001 (2026-08-06)
+
+The user explicitly approved end-to-end oversight of
+`docs/verification-throughput-technical-debt-backlog-R01.md`. Work remains sequential:
+specify, approve, implement, review, and close one bounded backlog item before activating
+the next dependency-compatible slice. This exception supersedes the unrelated structural
+verification freeze only for the currently approved backlog slice and its conserved
+evidence. It does not authorize one unbounded coder task or a broad specifier regression
+run.
+
+VTD-001 is the active first slice. The accepted four-source receipt aggregation at
+`925efd0b` contains 39 eligible receipts, 144 rejected receipts, and 20,434 passed task
+results. Replaying its task medians with the runner's indivisible bounded-worker order
+reproduces these comparisons:
+
+| Scope | Existing projection | Bounded critical path |
+|---|---:|---:|
+| `layered_schema` exact pack | 142.1 s | 217.1 s |
+| `schemas` exact pack | 75.8 s | 145.9 s |
+| `flow_graph` exact pack | 36.5 s | 67.0 s |
+| representative Flow workspace change | 16.1 s | 26.2 s |
+| representative shell change | 510.8 s | 544.3 s |
+
+The throughput estimator must model each bounded stage by assigning indivisible tasks in
+execution order to the next available worker and taking the longest final worker load.
+Empty stages contribute zero and a single task contributes its complete estimate. Exact
+task samples take precedence. An observation task without an exact sample composes its
+eligible logical-target samples with measured or explicitly modeled session overhead;
+only absent task and target evidence may use an explicit bootstrap fallback. Every row
+identifies exact-task, composed-target, or bootstrap provenance. Sequential stages remain
+summed, and the complete plan estimate is the sum of its stage critical paths.
+
+Implementation is limited to throughput reporting and its focused process contract. It
+must not change `executeAcceptancePlan`, task order, concurrency, registry ownership,
+dependant expansion, browser target identity or batching, receipt eligibility, raw
+receipts, or performance limits. In particular, the representative Flow estimate remains
+under its 35-second guardrail while a row that passed only through arithmetic division
+must fail at its corrected estimate.
+
+### VTD-001 evidence conservation
+
+| Evidence class | Conserved before/after mapping |
+|---|---|
+| Unit/process contract | Existing receipt rejection, target-timing, report-row, budget-diagnostic, provisional-bootstrap, and Flow-guardrail assertions in `test/verification-process-contract-test.mjs` remain unchanged; new bounded scheduling and timing-source fixtures are additive. |
+| Acceptance | `features/modular-verification-packs.feature` scenarios 012, 013, 017, 018, and 019 retain their identities and steps; scenarios 020–023 add the VTD-001 contract under the existing `acceptance/src/acceptance/steps/modular_architecture.clj` handler. |
+| Planner and registry | Every existing pack, dependency, task, feature, handler, browser observation, batch, and assertion leaf retains the same identity and plan multiplicity. No `verification/packs.json` change is required. |
+| Receipt and timing inputs | Raw receipts remain immutable. Existing accepted/rejected classification and logical-target eligibility are conserved; only projection arithmetic and its source label change. |
+| Property, browser, and checkpoint evidence | No leaf moves or is removed. Exact-pack and terminal plans continue to execute every applicable leaf exactly once. |
+
+VTD-001 is complete only after the normal coder, refactorer, and architect chain accepts
+the implementation and the bounded estimator reproduces the accepted comparison table.
+VTD-002 remains inactive until that completion is merged.
