@@ -45,6 +45,18 @@
     (is (= ["provisional" "non-provisional"]
            [(:vtd013/focused-status maturity) (:vtd013/loaded-status maturity)]))
     (is (= "fail" (:vtd013/budget-result budget))))
+  (let [characterization (#'modular/flow-characterization)
+        expanded (-> characterization
+                     (assoc-in [:classes :focusedNormal :sampleCount] 6)
+                     (update-in [:classes :focusedNormal :receiptDigests]
+                                conj (apply str (repeat 64 "a")))
+                     (assoc-in [:classes :normallyLoaded :sampleCount] 6)
+                     (update-in [:classes :normallyLoaded :receiptDigests]
+                                conj (apply str (repeat 64 "b"))))]
+    (with-redefs-fn {#'modular/flow-characterization (constantly expanded)}
+      #(is (= 6 (get-in (#'modular/flow-completion-world {})
+                        [:vtd013/focused :sampleCount]))
+           "the at-least-five contract accepts additional independent samples")))
   (let [feature (gherkin/parse-file "features/modular-verification-packs.feature")
         steps (->> (:scenarios feature)
                    (filter #(re-matches #"Modular verification packs 03[0-3]" (:name %)))

@@ -77,6 +77,19 @@ await assert.rejects(() => boundedFlowExamplesReadiness({
   maximumSnapshotCharacters:80,
 }), /FLOW_GRAPH_EXAMPLES_TARGET.*rendering.*example row rendered.*20ms.*still-loading/su);
 
+readinessClock = 0;
+await assert.rejects(() => boundedFlowExamplesReadiness({
+  targetId:"FLOW_GRAPH_EXAMPLES_TARGET",
+  phase:"readiness",
+  predicate:"snapshot available",
+  timeoutMs:10,
+  now:() => readinessClock,
+  sleep:async(milliseconds) => { readinessClock += milliseconds; },
+  observe:async() => undefined,
+  intervalMs:10,
+}), /last state undefined/u,
+"a missing diagnostic snapshot must not mask the bounded-readiness timeout");
+
 assert.throws(() => validateFlowExamplesPhaseTiming({
   durationMs:10,
   phases:timing.phases.map((phase) => phase.name === "cleanup"

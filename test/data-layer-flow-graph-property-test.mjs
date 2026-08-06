@@ -5,8 +5,10 @@ import {addProjectEntity,createSpecificationProject,transactProject,undoProjectT
 import {boundsAroundItems,cameraFromMinimapPoint,fitFlowBounds,flowWorkspaceKey,panFlowCamera,relationshipDropTarget,sectionBoundsFromDrag,tidyFlowItems,zoomFlowCamera} from "../dist/flow-graph/workspace.js";
 import {flowOutlineProjection} from "../dist/flow-graph/workspace-outline-model.js";
 import {selectionAfterActivation} from "../dist/flow-graph/workspace-selection.js";
+import {createFlowExamplesPhaseTimer,flowExamplesPhaseNames} from "./support/flow-examples-timing.mjs";
 
 const sides=["left","right","top","bottom"],expected=new Map([["right:left","expected_next"],["top:bottom","alternative"],["bottom:top","merge"]]);let seed=0x5eed1234;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/0x100000000;};
+for(let sample=0;sample<256;sample+=1){let timestamp=0;const scale=sample%4===0?.1:1000,timer=createFlowExamplesPhaseTimer({browserStartupMs:random()*1000,now:()=>timestamp});for(const phase of flowExamplesPhaseNames.slice(2)){timestamp+=random()*scale;timer.transition(phase);}timestamp+=random()*scale;const timing=timer.finish(),targetPhases=timing.phases.filter(({scope})=>scope==="target");assert.deepEqual(timing.phases.map(({name})=>name),flowExamplesPhaseNames,"phase identities and order remain stable");assert.ok(targetPhases.every(({durationMs})=>Number.isFinite(durationMs)&&durationMs>=0));assert.ok(Math.abs(targetPhases.reduce((sum,{durationMs})=>sum+durationMs,0)-timing.durationMs)<=.001,"rounded phase durations conserve target wall time");}
 for(let sample=0;sample<1024;sample+=1){const source=sides[Math.floor(random()*4)],target=sides[Math.floor(random()*4)];assert.equal(inferFlowRelationshipKind(source,target),expected.get(`${source}:${target}`));}
 for(let sample=0;sample<512;sample+=1){
   const camera={x:random()*2000-1000,y:random()*2000-1000,zoom:.25+random()*1.75},anchor={x:random()*900,y:random()*700},factor=.2+random()*4,zoomed=zoomFlowCamera(camera,factor,anchor),worldBefore={x:camera.x+anchor.x/camera.zoom,y:camera.y+anchor.y/camera.zoom},worldAfter={x:zoomed.x+anchor.x/zoomed.zoom,y:zoomed.y+anchor.y/zoomed.zoom};

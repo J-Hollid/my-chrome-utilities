@@ -42,17 +42,11 @@ export function createFlowExamplesPhaseTimer({ browserStartupMs, now = () => per
       const ended = now();
       record(ended);
       finished = true;
-      const durationMs = Math.round(ended - started);
       const targetPhases = targetPhaseNames.map((name) => ({
         name, scope:"target", durationMs:Number(durations.get(name).toFixed(3)),
       }));
-      const targetSum = targetPhases.reduce((sum, phase) => sum + phase.durationMs, 0);
-      const adjustment = Number((durationMs - targetSum).toFixed(3));
-      if (adjustment) {
-        const largest = targetPhases.reduce((left, right) =>
-          right.durationMs > left.durationMs ? right : left);
-        largest.durationMs = Number((largest.durationMs + adjustment).toFixed(3));
-      }
+      const durationMs = Number(targetPhases
+        .reduce((sum, phase) => sum + phase.durationMs, 0).toFixed(3));
       return validateFlowExamplesPhaseTiming({
         durationMs,
         phases:[
@@ -86,6 +80,7 @@ function boundedSnapshot(value, maximumCharacters) {
   let serialized;
   try { serialized = JSON.stringify(value); }
   catch { serialized = String(value); }
+  if (serialized === undefined) serialized = String(value);
   return serialized.length <= maximumCharacters
     ? serialized : `${serialized.slice(0, maximumCharacters - 1)}…`;
 }
