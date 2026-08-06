@@ -335,14 +335,24 @@
     (when (contains? observed observation-key)
       {observation-key (get observed observation-key)})))
 
+(defn- parse-browser-observation-line [line]
+  (try
+    (json/parse-string line true)
+    (catch Throwable _ nil)))
+
+(defn- match-browser-target-result [{:keys [pending] :as state}]
+  (if pending
+    (reduced (assoc state :matched pending))
+    (assoc state :pending nil)))
+
 (defn- browser-observation-step
-  [{:keys [pending] :as state} line observation-id observation-key]
-  (let [candidate (try (json/parse-string line true) (catch Throwable _ nil))
+  [state line observation-id observation-key]
+  (let [candidate (parse-browser-observation-line line)
         result-id (get-in candidate [:swarmforgeBrowserTargetResult :id])
         target-observed (target-observation-document candidate observation-key)]
     (cond
       (= observation-id result-id)
-      (if pending (reduced (assoc state :matched pending)) (assoc state :pending nil))
+      (match-browser-target-result state)
 
       result-id (assoc state :pending nil)
       target-observed (assoc state :pending target-observed :fallback target-observed)
