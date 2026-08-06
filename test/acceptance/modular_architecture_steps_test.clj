@@ -68,3 +68,21 @@
       (let [handler (first (filter #(re-matches (:pattern %) step) modular/handlers))]
         (is (some? handler) step)
         (is (not= "^.*$" (str (:pattern handler))) step)))))
+
+(deftest vtd003-steps-use-dedicated-production-backed-semantics
+  (let [calibration (#'modular/performance-calibration)
+        pack-world (#'modular/calibration-pack-world
+                    {} "flow_graph" "src/flow-graph/workspace-section-ui.ts")
+        target-world (#'modular/calibration-target-world
+                      {} "FLOW_GRAPH_EXAMPLES_TARGET")]
+    (is (= "complete" (get-in calibration [:completion :status])))
+    (is (= ["flow_graph"] (:vtd003/selected-packs pack-world)))
+    (is (= 4596 (get-in target-world [:vtd003/target-budget :limit]))))
+  (let [feature (gherkin/parse-file "features/modular-verification-packs.feature")
+        scenarios (filter #(re-matches #"Modular verification packs 03[4-9]" (:name %))
+                          (:scenarios feature))]
+    (is (= 6 (count scenarios)))
+    (doseq [step (map :text (mapcat :steps scenarios))]
+      (let [handler (first (filter #(re-matches (:pattern %) step) modular/handlers))]
+        (is (some? handler) step)
+        (is (not= "^.*$" (str (:pattern handler))) step)))))

@@ -326,6 +326,68 @@
   (support/assert! predicate message {:report (:vtd013/report world)})
   world)
 
+(defn- performance-calibration []
+  (let [root (support/repository-root)]
+    (aps-json/read-json-file
+     (str (fs/path root "verification/performance-calibration.json")))))
+
+(defn- calibration-pack [calibration pack-id]
+  (first (filter #(= pack-id (:id %)) (:runnablePacks calibration))))
+
+(defn- calibration-target [calibration target-id]
+  (get (:browserTargets calibration) (keyword target-id)))
+
+(defn- calibration-pack-world [world pack-id representative-path]
+  (let [calibration (performance-calibration)
+        pack (calibration-pack calibration pack-id)
+        registry (aps-json/read-json-file
+                  (str (fs/path (support/repository-root) "verification/packs.json")))
+        registry-pack (first (filter #(= pack-id (:id %)) registry))]
+    (support/assert! (and pack registry-pack
+                          (= representative-path (:representativeChangedPath pack)
+                             (:representativeChangedPath registry-pack))
+                          (fs/regular-file? (fs/path (support/repository-root) representative-path)))
+                     "Representative verification file is not exact, owned, and committed."
+                     {:pack pack-id :path representative-path})
+    (assoc (verify-throughput! world)
+           :vtd003/calibration calibration
+           :vtd003/pack pack
+           :vtd003/selected-packs (:selectedPacks pack))))
+
+(defn- calibration-target-world [world target-id]
+  (let [calibration (performance-calibration)
+        resolved-id (if (= target-id "an unmeasured target")
+                      "SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER"
+                      target-id)
+        budget (calibration-target calibration resolved-id)]
+    (support/assert! budget "Browser target calibration is missing."
+                     {:target target-id :resolved-target resolved-id})
+    (assoc (verify-throughput! world)
+           :vtd003/calibration calibration
+           :vtd003/target-id resolved-id
+           :vtd003/target-budget budget)))
+
+(defn- calibration-world [world]
+  (assoc (verify-throughput! world) :vtd003/calibration (performance-calibration)))
+
+(defn- regression-world [world regression]
+  (let [fan-out? (= regression "selected packs add gamma")
+        measured (if fan-out? 2 61)
+        limit (if fan-out? 1 60)]
+    (support/assert! (contains? #{"selected packs add gamma"
+                                 "corrected critical path exceeds the 60 second limit"}
+                               regression)
+                     "Unknown representative-path regression fixture." {:regression regression})
+    (assoc world
+           :vtd003/result (if (> measured limit) "fail" "pass")
+           :vtd003/diagnostic
+           (str "src/alpha/local-ui.ts selected alpha and beta; critical-path baseline 50 seconds; "
+                "measured " measured "; limit " limit))))
+
+(defn- assert-vtd003! [world predicate message]
+  (support/assert! predicate message {:calibration (:vtd003/calibration world)})
+  world)
+
 (defn- classified-browser-adapters [registry]
   (into {}
         (map (juxt :path :mode))
@@ -587,7 +649,15 @@
                (apply timing-sample-world world (example-values example captures)))}
    {:pattern #"^minimum independent sample count is (.+)$"
     :handler (fn [world example captures]
-               (apply minimum-sample-world world (example-values example captures)))}
+               (let [values (example-values example captures)]
+                 (if (:vtd003/target-budget world)
+                   (let [minimum (parse-long (first captures))]
+                     (support/assert! (= minimum (get-in world [:vtd003/calibration
+                                                               :minimumIndependentSamples]))
+                                      "Target calibration minimum sample count changed."
+                                      {:minimum minimum})
+                     (assoc world :vtd003/minimum-samples minimum))
+                   (apply minimum-sample-world world (if (seq values) values captures)))))}
    {:pattern #"^sample-count eligibility is evaluated$"
     :handler (fn [world _example _captures] (evaluate-maturity world))}
    {:pattern #"^its timing status is (.+)$"
@@ -695,7 +765,8 @@
                                  "Flow timing classes are merged or omit distributions and digests.")))}
    {:pattern #"^five focused normal FLOW_GRAPH_EXAMPLES_TARGET samples have p90 (.+)$"
     :handler (fn [world example captures]
-               (apply flow-budget-world world (example-values example captures)))}
+               (let [values (example-values example captures)]
+                 (apply flow-budget-world world (if (seq values) values captures))))}
    {:pattern #"^verification performance budgets are checked$"
     :handler (fn [world _example _captures]
                (if (:vtd013/report world)
@@ -752,6 +823,184 @@
                                     (= {:runtime021 11 :runtime025 10}
                                        (get-in world [:vtd013/report :evidenceConservation :examplesAssertionLeaves])))
                                "Flow target or examples assertion identities changed."))}
+   {:pattern #"^runnable pack (.+) declares representative changed file (.+)$"
+    :handler (fn [world example captures]
+               (apply calibration-pack-world world (example-values example captures)))}
+   {:pattern #"^the representative changed-path plan is selected$"
+    :handler (fn [world _example _captures]
+               (assert-vtd003! world (seq (:vtd003/selected-packs world))
+                               "Representative changed path selected no packs."))}
+   {:pattern #"^the exact changed file exists and is owned by (.+)$"
+    :handler (fn [world example captures]
+               (assert-vtd003! world
+                               (= (first (example-values example captures))
+                                  (get-in world [:vtd003/pack :id]))
+                               "Representative changed file has the wrong owner."))}
+   {:pattern #"^selected packs are (.+)$"
+    :handler (fn [world example captures]
+               (if (:vtd003/pack world)
+                 (let [expected (first (example-values example captures))
+                       selected (:vtd003/selected-packs world)]
+                   (assert-vtd003! world
+                                   (if (= expected "every runnable pack")
+                                     (= 20 (count selected))
+                                     (= expected (str/join ", " selected)))
+                                   "Representative changed path selected the wrong packs."))
+                 (inspect! world)))}
+   {:pattern #"^no directory prefix or first-entry fallback substitutes for the declared file$"
+    :handler (fn [world _example _captures]
+               (assert-vtd003! world
+                               (= (get-in world [:vtd003/pack :representativeChangedPath])
+                                  (get-in world [:vtd003/pack :changedPathDuration :path]))
+                               "Representative calibration used a path fallback."))}
+   {:pattern #"^one exact-pack row and one declared representative-change row exist for every runnable pack in one selected timing environment class$"
+    :handler (fn [world _example _captures] (calibration-world world))}
+   {:pattern #"^calibration tolerance is (.+)$"
+    :handler (fn [world _example captures]
+               (let [expected (Double/parseDouble (first captures))
+                     calibrated (or (:vtd003/calibration world) (performance-calibration))]
+                 (assert-vtd003! (assoc world :vtd003/calibration calibrated)
+                                 (= expected (:tolerance calibrated))
+                                 "Calibration tolerance changed.")))}
+   {:pattern #"^verification performance budgets are refreshed$"
+    :handler (fn [world _example _captures]
+               (if (:vtd003/calibration world) world (calibration-world world)))}
+   {:pattern #"^every runnable pack receives an explicit exact-pack duration, changed-path duration, and changed-path fan-out budget$"
+    :handler (fn [world _example _captures]
+               (assert-vtd003! world
+                               (and (= 20 (count (get-in world [:vtd003/calibration :runnablePacks])))
+                                    (every? #(every? some? ((juxt :exactPackDuration
+                                                                  :changedPathDuration
+                                                                  :changedPathFanOut) %))
+                                            (get-in world [:vtd003/calibration :runnablePacks])))
+                               "Pack calibration is incomplete."))}
+   {:pattern #"^each changed-path duration names its declared file, critical-path baseline, limit, tolerance, timing sources, and measurement coverage$"
+    :handler (fn [world _example _captures]
+               (assert-vtd003! world
+                               (every? #(let [budget (:changedPathDuration %)]
+                                          (and (= (:representativeChangedPath %) (:path budget))
+                                               (number? (:baseline budget)) (number? (:limit budget))
+                                               (number? (:tolerance budget)) (map? (:timingSources budget))
+                                               (number? (:measurementCoverage budget))))
+                                       (get-in world [:vtd003/calibration :runnablePacks]))
+                               "Changed-path duration evidence is incomplete."))}
+   {:pattern #"^each fan-out limit equals the selected dependant count and preserves the selected pack identities$"
+    :handler (fn [world _example _captures]
+               (assert-vtd003! world
+                               (every? #(let [budget (:changedPathFanOut %)]
+                                          (and (= (:limit budget) (:baseline budget))
+                                               (= (:selectedPacks %) (:selectedPacks budget))))
+                                       (get-in world [:vtd003/calibration :runnablePacks]))
+                               "Fan-out calibration widened or lost pack identities."))}
+   {:pattern #"^no runnable pack uses the 1200 second or fan-out 20 defaults as its ordinary success criterion$"
+    :handler (fn [world _example _captures]
+               (assert-vtd003! world
+                               (every? #(and (not= 1200 (get-in % [:exactPackDuration :limit]))
+                                             (not= 20 (get-in % [:changedPathFanOut :limit])))
+                                       (get-in world [:vtd003/calibration :runnablePacks]))
+                               "Emergency defaults remain an ordinary pack budget."))}
+   {:pattern #"^genuinely global shell infrastructure remains a separate conservative budget class$"
+    :handler (fn [world _example _captures]
+               (assert-vtd003! world
+                               (= "global-shell" (:budgetClass
+                                                  (calibration-pack (:vtd003/calibration world) "shell")))
+                               "Global shell budget class is missing."))}
+   {:pattern #"^representative path src/alpha/local-ui.ts selects alpha and beta with critical-path baseline 50 seconds$"
+    :handler (fn [world _example _captures]
+               (assoc world :vtd003/path "src/alpha/local-ui.ts"))}
+   {:pattern #"^(.+) is checked against its calibrated budget$"
+    :handler (fn [world example captures]
+               (regression-world world (first (example-values example captures))))}
+   {:pattern #"^the representative-path result is (.+)$"
+    :handler (fn [world _example captures]
+               (assert-value! world (first captures) (:vtd003/result world)))}
+   {:pattern #"^the diagnostic identifies src/alpha/local-ui.ts, alpha and beta, the critical-path baseline, measured value, and limit$"
+    :handler (fn [world _example _captures]
+               (assert-vtd003! world
+                               (every? #(str/includes? (:vtd003/diagnostic world) %)
+                                       ["src/alpha/local-ui.ts" "alpha and beta"
+                                        "critical-path baseline" "measured" "limit"])
+                               "Representative budget diagnostic is incomplete."))}
+   {:pattern #"^browser target (.+) has (.+) in the selected environment class$"
+    :handler (fn [world example captures]
+               (calibration-target-world world (first (example-values example captures))))}
+   {:pattern #"^its budget is (.+)$"
+    :handler (fn [world example captures]
+               (assert-value! world (first (example-values example captures))
+                              (if (get-in world [:vtd003/target-budget :provisional])
+                                "provisional" "non-provisional")))}
+   {:pattern #"^its budget source is (.+)$"
+    :handler (fn [world example captures]
+               (assert-value! world (first (example-values example captures))
+                              (get-in world [:vtd003/target-budget :source])))}
+   {:pattern #"^samples before and after a declared timing correction are not merged$"
+    :handler (fn [world _example _captures]
+               (assert-vtd003! world
+                               (if (= "FLOW_GRAPH_EXAMPLES_TARGET" (:vtd003/target-id world))
+                                 (and (seq (get-in world [:vtd003/target-budget :correctionCommit]))
+                                      (= 5 (count (get-in world [:vtd003/target-budget :receiptDigests]))))
+                                 (get-in world [:vtd003/target-budget :provisional]))
+                               "Pre/post-correction target samples were merged."))}
+   {:pattern #"^those samples are the committed post-correction characterization digests$"
+    :handler (fn [world _example _captures]
+               (let [calibration (performance-calibration)]
+                 (assert-vtd003! (assoc world :vtd003/calibration calibration)
+                                 (= (get-in calibration [:browserTargets :FLOW_GRAPH_EXAMPLES_TARGET :receiptDigests])
+                                    (get-in world [:vtd013/report :classes :focusedNormal :receiptDigests]))
+                                 "Flow target budget is not bound to the characterization digests.")))}
+   {:pattern #"^its focused normal limit is 4.596 seconds$"
+    :handler (fn [world _example _captures]
+               (assert-vtd003! world
+                               (= 4596 (get-in world [:vtd003/calibration :browserTargets
+                                                     :FLOW_GRAPH_EXAMPLES_TARGET :limit]))
+                               "Flow examples calibrated limit changed."))}
+   {:pattern #"^loaded samples remain diagnostic rather than entering the focused percentile$"
+    :handler (fn [world _example _captures]
+               (assert-vtd003! world
+                               (= "committed characterization digests"
+                                  (get-in world [:vtd003/calibration :browserTargets
+                                                :FLOW_GRAPH_EXAMPLES_TARGET :source]))
+                               "Loaded samples entered the focused calibration."))}
+   {:pattern #"^the prior 12.891 second limit is tightened rather than widened$"
+    :handler (fn [world _example _captures]
+               (assert-vtd003! world
+                               (< (get-in world [:vtd003/calibration :browserTargets
+                                                :FLOW_GRAPH_EXAMPLES_TARGET :limit]) 12891)
+                               "Flow examples limit was not tightened."))}
+   {:pattern #"^a committed performance calibration references the selected environment class, raw receipt digests, 20 runnable packs, and 81 registered browser targets$"
+    :handler (fn [world _example _captures] (calibration-world world))}
+   {:pattern #"^VTD-003 completion is evaluated$"
+    :handler (fn [world _example _captures]
+               (assert-vtd003! world (= "complete" (get-in world [:vtd003/calibration :completion :status]))
+                               "VTD-003 calibration is incomplete."))}
+   {:pattern #"^every runnable pack has one deliberate representative file and three explicit pack budgets$"
+    :handler (fn [world _example _captures]
+               (assert-vtd003! world (= 20 (count (get-in world [:vtd003/calibration :runnablePacks])))
+                               "Runnable pack calibration coverage changed."))}
+   {:pattern #"^every browser target has an explicit measured or provisional budget with maturity and provenance$"
+    :handler (fn [world _example _captures]
+               (assert-vtd003! world
+                               (and (= 81 (count (get-in world [:vtd003/calibration :browserTargets])))
+                                    (every? #(and (:maturity %) (:source %) (number? (:limit %)))
+                                            (vals (get-in world [:vtd003/calibration :browserTargets]))))
+                               "Browser target budget coverage is incomplete."))}
+   {:pattern #"^provisional layered targets use tolerance 1.2 rather than tolerance 2$"
+    :handler (fn [world _example _captures]
+               (assert-vtd003! world
+                               (every? #(= 1.2 (:tolerance %))
+                                       (map second (filter #(str/starts-with? (name (first %)) "LAYERED_")
+                                                           (get-in world [:vtd003/calibration :browserTargets]))))
+                               "Layered provisional target tolerance was not normalized."))}
+   {:pattern #"^pack ownership, impact propagation, task order, browser batching, assertion leaves, worker limits, and terminal shards are unchanged$"
+    :handler (fn [world _example _captures]
+               (assert-vtd003! world
+                               (every? true? (vals (select-keys
+                                                   (get-in world [:vtd003/calibration :conservation])
+                                                   [:packOwnershipUnchanged :impactPropagationUnchanged
+                                                    :taskOrderUnchanged :browserBatchingUnchanged
+                                                    :assertionLeavesUnchanged :workerLimitsUnchanged
+                                                    :terminalShardsUnchanged])))
+                               "Verification topology conservation failed."))}
    {:pattern #"^.*$"
     :handler (fn [world _example _captures] (inspect! world))}])
 

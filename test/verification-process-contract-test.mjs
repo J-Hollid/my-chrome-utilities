@@ -2334,6 +2334,8 @@ assert.equal(calibrationReport.completion.status, "complete");
 assert.equal(calibrationReport.runnablePacks.length, 20);
 assert.equal(Object.keys(calibrationReport.browserTargets).length, 81);
 assert.match(calibrationReport.conservation.verificationTopologyDigest, /^[a-f0-9]{64}$/u);
+assert.equal(calibrationReport.conservation.packOwnershipUnchanged, true);
+assert.equal(calibrationReport.conservation.impactPropagationUnchanged, true);
 assert.equal(calibrationReport.runnablePacks.find(({ id }) => id === "shell").budgetClass,
   "global-shell");
 

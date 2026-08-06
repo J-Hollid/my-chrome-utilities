@@ -813,6 +813,8 @@ export function verificationPerformanceCalibration(
       verificationTopologyDigest,
       runnablePackCount:runnablePacks.length,
       browserTargetCount:Object.keys(browserTargets).length,
+      packOwnershipUnchanged:true,
+      impactPropagationUnchanged:true,
       taskOrderUnchanged:true,
       browserBatchingUnchanged:true,
       assertionLeavesUnchanged:true,
