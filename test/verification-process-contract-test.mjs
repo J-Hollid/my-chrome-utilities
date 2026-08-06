@@ -1849,6 +1849,25 @@ assert.equal(characterization.classes.normallyLoaded.sampleCount, 5);
 assert.equal(characterization.classes.focusedNormal.target.p90Ms, 10734);
 assert.equal(characterization.diagnosis.dominantPhase, "target setup");
 assert.equal(characterization.evidenceConservation.examplesAssertionLeaves.runtime021, 11);
+const committedFlowCharacterization = JSON.parse(await readFile(
+  new URL("../verification/flow-examples-characterization.json", import.meta.url), "utf8",
+));
+assert.match(committedFlowCharacterization.implementationCommit, /^[a-f0-9]{40}$/u);
+assert.equal(committedFlowCharacterization.completion.status, "complete");
+assert.equal(committedFlowCharacterization.focusedBudgetMilliseconds, 12_891);
+assert.equal(committedFlowCharacterization.representativeFlowChangedPathGuardrailSeconds, 35);
+for (const timingClass of Object.values(committedFlowCharacterization.classes)) {
+  assert.equal(timingClass.sampleCount, 5);
+  assert.equal(timingClass.receiptDigests.length, 5);
+  assert.equal(new Set(timingClass.receiptDigests).size, 5);
+  assert.equal(timingClass.maturity.status, "non-provisional");
+  assert.deepEqual(Object.keys(timingClass.phases), [
+    "browser startup", "target setup", "fixture setup", "readiness", "example compilation",
+    "rendering", "persistence", "assertion", "cleanup",
+  ]);
+}
+assert.ok(committedFlowCharacterization.classes.focusedNormal.target.p90Ms <=
+  committedFlowCharacterization.focusedBudgetMilliseconds);
 assert.equal(normalTimingModel.browserTargets.FLOW_GRAPH_EXAMPLES_TARGET.provisional, true,
   "another environment class and a duplicate copy cannot satisfy sample maturity");
 assert.equal(normalTimingModel.packs.flow_graph.provisional, true,
