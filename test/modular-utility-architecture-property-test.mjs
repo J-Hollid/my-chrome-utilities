@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { architectureViolations } from "../scripts/check-architecture.mjs";
+import { boundedStageMilliseconds } from "../scripts/report-verification-throughput.mjs";
 import { executeAcceptancePlan, planVerification } from "../scripts/verification-packs.mjs";
 import { headlessChromeArguments } from "./support/headless-chrome.mjs";
 import { composeUtilityShell } from "../dist/utility-registry.js";
@@ -17,6 +18,42 @@ import {
 import { shellRuntimeCapabilities } from "../dist/platform/shell-runtime-capabilities.js";
 import { createUtilityStorage } from "../dist/platform/utility-storage.js";
 import { mountDataLayerNavigation } from "../dist/utilities/data-layer/layers/browser/navigation.js";
+
+const timingTask = (key) => ({ key, stage:"unit" });
+
+for (let sample = 0; sample < 100; sample += 1) {
+  const durations = Array.from(
+    { length:1 + sample % 17 },
+    (_, index) => 1 + ((sample + 3) * (index + 5) * 7919) % 240_000,
+  );
+  const tasks = durations.map((_, index) => timingTask(`bounded-${sample}-${index}`));
+  const model = {
+    tasks:Object.fromEntries(tasks.map(({ key }, index) => [
+      key,
+      { samples:1, medianMs:durations[index] },
+    ])),
+  };
+  const sum = durations.reduce((total, duration) => total + duration, 0);
+  const workers = 1 + sample % 8;
+  const criticalPath = boundedStageMilliseconds(tasks, workers, model);
+
+  assert.equal(boundedStageMilliseconds(tasks, 1, model), sum,
+    "one bounded worker must conserve every indivisible task duration");
+  assert.ok(criticalPath >= Math.max(...durations),
+    "a bounded critical path must include the complete longest task");
+  assert.ok(criticalPath <= sum,
+    "parallel scheduling must not exceed the sequential task duration");
+
+  const equalDuration = 1 + sample * 101;
+  const equalModel = {
+    tasks:Object.fromEntries(tasks.map(({ key }) => [key, { samples:1, medianMs:equalDuration }])),
+  };
+  assert.equal(
+    boundedStageMilliseconds(tasks, workers, equalModel),
+    Math.ceil(tasks.length / Math.min(workers, tasks.length)) * equalDuration,
+    "equal indivisible tasks must fill bounded workers in complete batches",
+  );
+}
 
 const closure = (packs, initial, direction) => {
   const selected = new Set(initial);
@@ -521,4 +558,4 @@ for (let sample = 0; sample < 100; sample += 1) {
     /owned by both/);
 }
 
-console.log(`modular properties: ${declaredContracts.length} declared contracts, 100 undeclared contracts, 100 direct cross-module imports, 100 architecture boundaries, 100 verification graphs, 100 Chrome lifecycle argument sets, 300 lifecycle cases, 100 command registries, 100 navigation models, 100 utility directories, 100 isolation models, 100 controlled-reference models, 100 shell capability models, 100 storage models, and 100 panel models passed`);
+console.log(`modular properties: ${declaredContracts.length} declared contracts, 100 bounded schedules, 100 undeclared contracts, 100 direct cross-module imports, 100 architecture boundaries, 100 verification graphs, 100 Chrome lifecycle argument sets, 300 lifecycle cases, 100 command registries, 100 navigation models, 100 utility directories, 100 isolation models, 100 controlled-reference models, 100 shell capability models, 100 storage models, and 100 panel models passed`);
