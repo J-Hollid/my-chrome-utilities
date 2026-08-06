@@ -5,7 +5,7 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 
-import {headlessChromeArguments,resolveChromeExecutable,stopHeadlessChrome} from "../support/headless-chrome.mjs";
+import {headlessChromeArguments,removeChromeProfile,resolveChromeExecutable,stopHeadlessChrome} from "../support/headless-chrome.mjs";
 import {wait} from "./shared-harness.mjs";
 
 class DevtoolsSocket{
@@ -123,4 +123,4 @@ try{
   const evidence={installedBoundary:true,transport001:prior.transport001,transport002:prior.transport002,transport003:prior.transport003,transport004:prior.transport004,transport005:prior.transport005,transport006:prior.transport006,transport007,transport008:portability.passed,transport009:invalid};
   console.log(JSON.stringify({projectEventTransport:evidence,transport008Diagnostics:portability}));
   for(const[key,value]of Object.entries(evidence))assert.equal(value,true,`${key} failed: ${JSON.stringify(evidence)}`);
-}finally{side?.close();await stopHeadlessChrome(chrome);await rm(profile,{recursive:true,force:true,maxRetries:5,retryDelay:100});}
+}finally{side?.close();await stopHeadlessChrome(chrome);await removeChromeProfile(profile,{targetId:"project-event-transport"});}

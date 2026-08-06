@@ -13,13 +13,23 @@
 (defonce browser-observation (atom nil))
 (defn- checked! [& command] (let [result (apply support/verified-command-result command)] (support/assert! (zero? (:exit result)) (:err result) {:out (:out result)}) result))
 (defn- verify-model! [] (when-not @model-verified? (checked! "node" "test/data-layer-selective-profile-inheritance-test.mjs") (reset! model-verified? true)))
-(defn- observe-browser! [] (or @browser-observation (let [result (checked! "node" "test/browser-packs/selective-profile-inheritance.mjs") line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result)))) observed (:selectiveProfileInheritance (json/parse-string line true))] (reset! browser-observation observed))))
+(defn- observe-browser! []
+  (support/cached-browser-observation!
+   browser-observation
+   {:observation-id "LAYERED_SCHEMA_INHERITANCE_TARGET"
+    :observation-key :layeredSchemaInheritance
+    :runtime-error "Selective inheritance target browser verification failed."
+    :missing-error "Selective inheritance target browser evidence is missing."}))
 (def runtime-paths (set (map #(keyword (str "runtime" (format "%03d" %))) (range 1 23))))
 (def authoritative-examples (set (for [feature-file feature-files scenario (:scenarios (gherkin/parse-file feature-file)) example (:examples scenario)] example)))
 (defn- validate-example! [_mode example] (when (seq example) (let [normalized (into {} (map (fn [[key value]] [(name key) value]) example))] (support/assert! (contains? authoritative-examples normalized) "Scenario Outline example is not an authoritative contract row." {:example normalized}))))
-(defn- assert-runtime! [evidence] (support/assert! (and (= runtime-paths (set (keys evidence))) (every? true? (vals evidence))) "Installed selective-profile-inheritance evidence is incomplete." evidence))
+(defn- assert-runtime! [evidence]
+  (support/assert!
+   (and (= runtime-paths (set (keys evidence)))
+        (every? true? (vals evidence)))
+   "Installed selective-profile-inheritance evidence is incomplete." evidence))
 (def handlers (support/verified-feature-mode-handlers feature-files entry-modes :selective-profile-inheritance-mode verify-model! validate-example! observe-browser! assert-runtime!))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-04T11:33:29.792653074+02:00", :module-hash "-1992487090", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "1219657973"} {:id "def/feature-files", :kind "def", :line 8, :end-line nil, :hash "2022211930"} {:id "def/entry-modes", :kind "def", :line 10, :end-line nil, :hash "1254300539"} {:id "form/3/defonce", :kind "defonce", :line 12, :end-line nil, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 13, :end-line nil, :hash "-1618529344"} {:id "defn-/checked!", :kind "defn-", :line 14, :end-line nil, :hash "1504155082"} {:id "defn-/verify-model!", :kind "defn-", :line 15, :end-line nil, :hash "784662512"} {:id "defn-/observe-browser!", :kind "defn-", :line 16, :end-line nil, :hash "-1551087999"} {:id "def/runtime-paths", :kind "def", :line 17, :end-line nil, :hash "-1741936893"} {:id "def/authoritative-examples", :kind "def", :line 18, :end-line nil, :hash "-2126809929"} {:id "defn-/validate-example!", :kind "defn-", :line 19, :end-line nil, :hash "-154495481"} {:id "defn-/assert-runtime!", :kind "defn-", :line 20, :end-line nil, :hash "2049424878"} {:id "def/handlers", :kind "def", :line 21, :end-line nil, :hash "-1407196209"}]}
+;; {:version 1, :tested-at "2026-08-06T04:39:03.560920822+02:00", :module-hash "-193350766", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 6, :hash "1219657973"} {:id "def/feature-files", :kind "def", :line 8, :end-line 9, :hash "2022211930"} {:id "def/entry-modes", :kind "def", :line 10, :end-line 11, :hash "1254300539"} {:id "form/3/defonce", :kind "defonce", :line 12, :end-line 12, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 13, :end-line 13, :hash "-1618529344"} {:id "defn-/checked!", :kind "defn-", :line 14, :end-line 14, :hash "1504155082"} {:id "defn-/verify-model!", :kind "defn-", :line 15, :end-line 15, :hash "784662512"} {:id "defn-/observe-browser!", :kind "defn-", :line 16, :end-line 22, :hash "-942137044"} {:id "def/runtime-paths", :kind "def", :line 23, :end-line 23, :hash "542703816"} {:id "def/authoritative-examples", :kind "def", :line 24, :end-line 24, :hash "-2126809929"} {:id "defn-/validate-example!", :kind "defn-", :line 25, :end-line 25, :hash "-154495481"} {:id "defn-/assert-runtime!", :kind "defn-", :line 26, :end-line 30, :hash "-278501311"} {:id "def/handlers", :kind "def", :line 31, :end-line 31, :hash "-1407196209"}]}
 ;; clj-mutate-manifest-end

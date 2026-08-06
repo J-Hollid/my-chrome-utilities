@@ -21,7 +21,7 @@
 (defn- verify-browser! []
   (support/cached-command-observation!
    browser-observation
-   {:command ["node" "test/twatility-workflow-polish-browser-test.mjs"]
+   {:command ["node" "scripts/run-browser-observation.mjs" "BRANDING_WORKFLOW_CHOICES_TARGET"]
     :observation-key :studioChoiceControls
     :runtime-error "Specification Studio choice-control browser verification failed."
     :missing-error "Specification Studio choice-control browser evidence is missing."}))
@@ -77,5 +77,5 @@
    verify-browser! assert-browser!))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-07-29T18:23:39.928088863+02:00", :module-hash "-1480354669", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "1666609219"} {:id "def/feature-files", :kind "def", :line 4, :end-line 6, :hash "-669728793"} {:id "def/entry-modes", :kind "def", :line 8, :end-line 10, :hash "-385232689"} {:id "form/3/defonce", :kind "defonce", :line 12, :end-line 12, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 13, :end-line 13, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 15, :end-line 19, :hash "1860670314"} {:id "defn-/verify-browser!", :kind "defn-", :line 21, :end-line 27, :hash "912583480"} {:id "def/example-relations", :kind "def", :line 29, :end-line 44, :hash "-433954336"} {:id "defn-/validate-example!", :kind "defn-", :line 46, :end-line 49, :hash "-1064675176"} {:id "defn-/assert-browser!", :kind "defn-", :line 51, :end-line 69, :hash "-1291827217"} {:id "def/handlers", :kind "def", :line 71, :end-line 75, :hash "-1256697772"}]}
+;; {:version 1, :tested-at "2026-08-06T04:39:05.046093016+02:00", :module-hash "1036431409", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 2, :hash "1666609219"} {:id "def/feature-files", :kind "def", :line 4, :end-line 6, :hash "-669728793"} {:id "def/entry-modes", :kind "def", :line 8, :end-line 10, :hash "-385232689"} {:id "form/3/defonce", :kind "defonce", :line 12, :end-line 12, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 13, :end-line 13, :hash "-1618529344"} {:id "defn-/verify-model!", :kind "defn-", :line 15, :end-line 19, :hash "1860670314"} {:id "defn-/verify-browser!", :kind "defn-", :line 21, :end-line 27, :hash "-765068327"} {:id "def/example-relations", :kind "def", :line 29, :end-line 45, :hash "16109719"} {:id "defn-/validate-example!", :kind "defn-", :line 47, :end-line 50, :hash "-1064675176"} {:id "defn-/assert-browser!", :kind "defn-", :line 52, :end-line 71, :hash "-437790778"} {:id "def/handlers", :kind "def", :line 73, :end-line 77, :hash "-1256697772"}]}
 ;; clj-mutate-manifest-end

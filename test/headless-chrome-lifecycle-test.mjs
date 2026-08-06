@@ -3,6 +3,7 @@ import { EventEmitter } from "node:events";
 import {
   chromeExecutableCandidates,
   headlessChromeArguments,
+  removeChromeProfile,
   resolveChromeExecutable,
   stopHeadlessChrome,
 } from "./support/headless-chrome.mjs";
@@ -82,5 +83,23 @@ const exitedChrome = new FakeChrome();
 exitedChrome.exitCode = 0;
 await stopHeadlessChrome(exitedChrome, 1);
 assert.deepEqual(exitedChrome.signals, []);
+
+const cleanupAttempts = [];
+await removeChromeProfile("/tmp/profile-busy", {
+  targetId:"LAYERED_CORE",
+  retryDelayMilliseconds:1,
+  remove:async(profile) => {
+    cleanupAttempts.push(profile);
+    if (cleanupAttempts.length < 3) throw Object.assign(new Error("busy"), { code:"EBUSY" });
+  },
+  wait:async() => {},
+});
+assert.equal(cleanupAttempts.length, 3, "transient profile cleanup contention is retried");
+await assert.rejects(() => removeChromeProfile("/tmp/profile-stuck", {
+  targetId:"LAYERED_EDITOR", attempts:2, retryDelayMilliseconds:1,
+  remove:async() => { throw Object.assign(new Error("busy"), { code:"EBUSY" }); },
+  wait:async() => {},
+}), /LAYERED_EDITOR.*\/tmp\/profile-stuck/u,
+"exhausted cleanup identifies the logical target and isolated profile path");
 
 console.log("headless Chrome lifecycle tests passed");

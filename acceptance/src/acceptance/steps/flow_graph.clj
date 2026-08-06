@@ -155,17 +155,13 @@
   (runtime027-example-key mode example)
   example)
 (defn all-true? [values]
-  (boolean (and (map? values) (seq values) (every? true? (vals values)))))
+  (support/all-values-true? values))
 (defn complete-browser-evidence? [evidence]
-  (boolean
-   (and (map? evidence)
-        (= required-evidence-keys (set (keys evidence)))
-        (true? (:installedBoundary evidence))
-        (every? #(all-true? (get evidence %)) runtime-evidence-keys))))
+  (support/complete-browser-evidence? evidence required-evidence-keys runtime-evidence-keys))
 (defn- assert-runtime! [evidence]
   (support/assert! (complete-browser-evidence? evidence) "Installed graph evidence is incomplete or contains a false value." evidence)
   (doseq [runtime-key (sort runtime-evidence-keys)]
-    (support/assert! (all-true? (get evidence runtime-key))
+    (support/assert! (support/all-values-true? (get evidence runtime-key))
                      (str "Installed graph evidence failed for " (name runtime-key) ".")
                      (get evidence runtime-key))))
 

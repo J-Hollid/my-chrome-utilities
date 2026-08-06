@@ -435,6 +435,107 @@ export function validateBrowserPerformanceDeclarations(packs) {
   }
 }
 
+export function browserObservationSessionBatch(pack, observation) {
+  if (observation.sessionBatch) return observation.sessionBatch;
+  return values(pack, "browserObservationBatches")
+    .find(({ path:program }) => program === observation.path)?.id;
+}
+
+const evidenceLeafSegments = (leaf) => typeof leaf === "string" ? leaf.split(".") : leaf;
+const evidenceLeafIdentity = (leaf) => JSON.stringify(evidenceLeafSegments(leaf));
+
+export function browserObservationEvidenceLeaves(pack, observation) {
+  return values(pack, "browserEvidencePartitions")
+    .flatMap(({ targets }) => targets ?? [])
+    .find(({ id }) => id === observation.id)?.leaves
+    ?.map(evidenceLeafSegments);
+}
+
+export function validateBrowserEvidencePartitions(packs) {
+  for (const pack of packs) {
+    const observations = new Map(values(pack, "browserObservations").map((item) => [item.id, item]));
+    const partitions = values(pack, "browserEvidencePartitions");
+    const replacedWorkflows = values(pack, "browserAdapterPerformance")
+      .filter(({ targetIds }) => Array.isArray(targetIds) && targetIds.length > 0);
+    for (const workflow of replacedWorkflows) {
+      const matches = partitions.filter(({ path:program, sessionBatch }) =>
+        program === workflow.path && sessionBatch === workflow.sessionBatch);
+      if (matches.length !== 1) {
+        throw new Error(`Replaced browser workflow ${pack.id}:${workflow.path} requires one exact browser evidence partition for batch ${workflow.sessionBatch}`);
+      }
+    }
+    for (const partition of partitions) {
+      if (!partition || Array.isArray(partition) || typeof partition.path !== "string" ||
+          typeof partition.sessionBatch !== "string" || !partition.sessionBatch.trim() ||
+          !Array.isArray(partition.originalLeaves) || !partition.originalLeaves.length ||
+          !Array.isArray(partition.targets) || partition.targets.length < 1) {
+        throw new Error(`Use an exact browser evidence partition in pack ${pack.id}`);
+      }
+      const original = partition.originalLeaves.map(evidenceLeafIdentity);
+      const assigned = partition.targets.flatMap(({ leaves }) => leaves ?? [])
+        .map(evidenceLeafIdentity);
+      const targetIds = partition.targets.map(({ id }) => id);
+      const validLeaf = (leaf) => {
+        const segments = evidenceLeafSegments(leaf);
+        return Array.isArray(segments) && segments.length >= 2 &&
+          segments.every((segment) => typeof segment === "string" && segment.length > 0);
+      };
+      if (new Set(targetIds).size !== targetIds.length ||
+          targetIds.some((id) => !observations.has(id)) ||
+          partition.originalLeaves.some((leaf) => !validLeaf(leaf)) ||
+          partition.targets.some(({ leaves }) => !Array.isArray(leaves) || !leaves.length ||
+            leaves.some((leaf) => !validLeaf(leaf))) ||
+          new Set(original).size !== original.length ||
+          new Set(assigned).size !== assigned.length ||
+          original.length !== assigned.length ||
+          original.some((leaf) => !assigned.includes(leaf))) {
+        throw new Error(`Browser evidence partition ${pack.id}:${partition.path} must assign every original assertion leaf exactly once`);
+      }
+      for (const targetId of targetIds) {
+        const observation = observations.get(targetId);
+        if (observation.path !== partition.path) {
+          throw new Error(`Browser evidence partition target ${targetId} must use program ${partition.path}`);
+        }
+        if (browserObservationSessionBatch(pack, observation) !== partition.sessionBatch) {
+          throw new Error(`Browser evidence partition target ${targetId} must use batch ${partition.sessionBatch}`);
+        }
+      }
+      const declarations = replacedWorkflows.filter(({ path:program, sessionBatch }) =>
+        program === partition.path && sessionBatch === partition.sessionBatch);
+      if (declarations.length > 1) {
+        throw new Error(`Browser evidence partition ${pack.id}:${partition.path} has ambiguous target declarations`);
+      }
+      if (declarations.length === 1) {
+        const declared = declarations[0].targetIds;
+        if (declared.length !== targetIds.length || declared.some((id) => !targetIds.includes(id))) {
+          throw new Error(`Browser evidence partition ${pack.id}:${partition.path} must match its declared target set`);
+        }
+      }
+    }
+  }
+}
+
+export function validateBrowserObservationBatches(packs) {
+  for (const pack of packs) {
+    const batchIds = new Set();
+    for (const batch of values(pack, "browserObservationBatches")) {
+      if (!batch || Array.isArray(batch) ||
+          !/^[a-z0-9][a-z0-9-]*$/u.test(batch.id ?? "") || batchIds.has(batch.id) ||
+          typeof batch.path !== "string" || !batch.path ||
+          !Number.isInteger(batch.observationCount) || batch.observationCount < 2) {
+        throw new Error(`Use exact compatible browser observation batches in pack ${pack.id}`);
+      }
+      batchIds.add(batch.id);
+      const observations = values(pack, "browserObservations")
+        .filter(({ path:program }) => program === batch.path);
+      if (observations.length !== batch.observationCount ||
+          observations.some(({ sessionBatch }) => sessionBatch !== undefined)) {
+        throw new Error(`Browser observation batch ${pack.id}:${batch.id} must own exactly ${batch.observationCount} compatible targets`);
+      }
+    }
+  }
+}
+
 function validatePrefixOwnership(packs, inventory, key) {
   const matches = key === "process" ? processPrefixMatches : prefixMatches;
   for (const pack of packs) {
@@ -527,6 +628,14 @@ function validateDeclaredTasks(packs) {
           (typeof observation.sessionBatch !== "string" || !observation.sessionBatch.trim())) {
         throw new Error(`Use a stable reusable session batch for browser observation ${observation.id}`);
       }
+      if (observation.impactBoundaries !== undefined) {
+        const knownBoundaries = new Set(values(pack, "impactBoundaries").map(({ id }) => id));
+        if (!Array.isArray(observation.impactBoundaries) || !observation.impactBoundaries.length ||
+            new Set(observation.impactBoundaries).size !== observation.impactBoundaries.length ||
+            observation.impactBoundaries.some((id) => !knownBoundaries.has(id))) {
+          throw new Error(`Map browser observation ${observation.id} to exact impact boundaries in pack ${pack.id}`);
+        }
+      }
     }
     const checkpointIds = new Set();
     for (const checkpoint of values(pack, "checkpointCommands")) {
@@ -564,6 +673,8 @@ export async function validateVerificationPacks(packs, { inventory } = {}) {
   validateDeclaredTasks(packs);
   await validateBrowserAdapterModes(packs);
   validateBrowserPerformanceDeclarations(packs);
+  validateBrowserObservationBatches(packs);
+  validateBrowserEvidencePartitions(packs);
   await validateVerificationHelpers(packs);
 
   const repositoryInventory = { ...await verificationInventory(), ...inventory };
@@ -715,10 +826,11 @@ function displayArgument(argument) {
 
 function commandTask({
   key, stage, packId = null, executable, args, target = null, environment = null,
-  logicalTargetIds = undefined,
+  logicalTargetIds = undefined, aliasCommands = undefined,
 }) {
   const task = { key, stage, packId, executable, args:[...args], target, environment };
   if (logicalTargetIds) task.logicalTargetIds = [...logicalTargetIds];
+  if (aliasCommands) task.aliasCommands = aliasCommands.map((command) => [...command]);
   return { ...task, display:[executable, ...args].map(displayArgument).join(" ") };
 }
 
@@ -733,6 +845,7 @@ export function verificationTaskIdentity(task) {
     environment:task.environment ?? null,
   };
   if (task.logicalTargetIds) identity.logicalTargetIds = [...task.logicalTargetIds];
+  if (task.aliasCommands) identity.aliasCommands = task.aliasCommands.map((command) => [...command]);
   return identity;
 }
 
@@ -773,7 +886,8 @@ function historicalRegistryHasPlanningShape(packs, known) {
     ...exactOwnedPathKeys, ...prefixOwnedPathKeys, "globalImpact", "features",
     "browserObservations", "checkpointCommands", "dependencies", "sharedComponents",
     "verificationInputs", "runtimeInputs", "verificationHelpers", "browserAdapterModes",
-    "browserAdapterPerformance", "impactBoundaries",
+    "browserAdapterPerformance", "browserObservationBatches", "browserEvidencePartitions",
+    "impactBoundaries",
   ];
   return Array.isArray(packs) && packs.length > 0 &&
     new Set(packs.map((pack) => pack?.id)).size === packs.length &&
@@ -967,29 +1081,50 @@ export function planVerification(
       key:`property:${path}`, stage:"property", packId:pack.id, executable:"node", args:[path], target:path,
     })))
     : [];
-  const browserTasks = browserTargetIds.length ? [] : executionPacks.flatMap((pack) => values(pack, "browserAdapters").map((path) => commandTask({
-    key:`browser:${path}`, stage:"browser", packId:pack.id, executable:"node", args:[path], target:path,
-  })));
+  const observedAdapterPaths = new Set(executionPacks.flatMap((pack) =>
+    values(pack, "browserObservations").map(({ path }) => path)));
+  const browserTasks = browserTargetIds.length ? [] : executionPacks.flatMap((pack) =>
+    values(pack, "browserAdapters").filter((path) => !observedAdapterPaths.has(path)).map((path) => commandTask({
+      key:`browser:${path}`, stage:"browser", packId:pack.id, executable:"node", args:[path], target:path,
+    })));
 
-  const acceptancePacks = browserTargetIds.length ? [] : executionPacks.filter((pack) => values(pack, "features").length);
-  const features = acceptancePacks.flatMap((pack) => values(pack, "features")).sort();
-  const acceptance = featureTasks(features, acceptancePacks);
   const executionIds = new Set(executionPacks.map(({ id }) => id));
-  const selectedObservations = packs.flatMap((declarationPack) =>
-    executionIds.has(declarationPack.id)
-      ? values(declarationPack, "browserObservations")
-        .filter(({ id }) => !browserTargetIds.length || browserTargetIds.includes(id))
-        .map((observation) => ({ declarationPack, observation }))
-      : []);
+  const selectedObservations = packs.flatMap((declarationPack) => {
+    if (!executionIds.has(declarationPack.id)) return [];
+    const observations = values(declarationPack, "browserObservations");
+    const changedBoundaryIds = new Set(Object.entries(Object.fromEntries(changedBoundaries))
+      .filter(([changedPath]) => changedOwners.get(changedPath)?.includes(declarationPack.id))
+      .map(([, boundary]) => boundary));
+    const boundaryTargets = changedBoundaryIds.size
+      ? observations.filter(({ impactBoundaries }) => impactBoundaries?.some((id) => changedBoundaryIds.has(id)))
+      : [];
+    const selected = browserTargetIds.length
+      ? observations.filter(({ id }) => browserTargetIds.includes(id))
+      : boundaryTargets.length ? boundaryTargets : observations;
+    return selected.map((observation) => ({
+      declarationPack, observation, boundaryScoped:boundaryTargets.length > 0,
+    }));
+  });
   const selectedTargetIds = new Set(selectedObservations.map(({ observation }) => observation.id));
   for (const id of browserTargetIds) {
     if (!selectedTargetIds.has(id)) throw new Error(`Unknown browser target in selected pack: ${id}`);
   }
+  const acceptancePacks = browserTargetIds.length ? [] : executionPacks
+    .filter((pack) => values(pack, "features").length);
+  const features = acceptancePacks.flatMap((pack) => {
+    const selectedForPack = selectedObservations.filter(({ declarationPack }) =>
+      declarationPack.id === pack.id);
+    if (!selectedForPack.some(({ boundaryScoped }) => boundaryScoped)) return values(pack, "features");
+    const owned = new Set(selectedForPack.flatMap(({ observation }) => observation.features ?? []));
+    return values(pack, "features").filter((feature) => owned.has(feature));
+  }).sort();
+  const acceptance = featureTasks(features, acceptancePacks);
   const observationGroups = new Map();
   for (const item of selectedObservations) {
     const { declarationPack, observation } = item;
-    const groupKey = observation.sessionBatch
-      ? `${declarationPack.id}\0${observation.path}\0${observation.sessionBatch}`
+    const sessionBatch = browserObservationSessionBatch(declarationPack, observation);
+    const groupKey = sessionBatch
+      ? `${declarationPack.id}\0${observation.path}\0${sessionBatch}`
       : `${declarationPack.id}\0${observation.id}`;
     const group = observationGroups.get(groupKey) ?? [];
     group.push(item);
@@ -1002,7 +1137,10 @@ export function planVerification(
       key:`browser-observation:${ids.join("+")}`, stage:"browser-observation",
       packId:group[0].declarationPack.id, executable:"node",
       args:["scripts/run-browser-observation.mjs", ...ids], target:ids.join(","), environment,
-      logicalTargetIds:ids,
+      logicalTargetIds:ids, aliasCommands:[
+        ["node", group[0].observation.path],
+        ...ids.map((id) => ["node", "scripts/run-browser-observation.mjs", id]),
+      ],
     });
   });
   const mode = browserTargetIds.length ? "focused" : terminalFull ? "terminal" : explicit.size ? "exact" : "impact";
@@ -1094,7 +1232,7 @@ function legacyTasks(commands, stage) {
 
 export async function executeAcceptancePlan(
   plan,
-  { runCommand, concurrency = 4, observationConcurrency = 2 } = {},
+  { runCommand, concurrency = 4, observationConcurrency = 2, afterPreparation } = {},
 ) {
   if (typeof runCommand !== "function") throw new Error("Provide an acceptance command runner");
   if (!plan.unitCommands && !plan.parserCommands) {
@@ -1104,6 +1242,7 @@ export async function executeAcceptancePlan(
   }
   const group = (taskKey, commandKey, stage) => plan[taskKey] ?? legacyTasks(plan[commandKey], stage);
   for (const task of group("preparationTasks", "preparationCommands", "build")) await invoke(task, runCommand);
+  if (afterPreparation) await afterPreparation();
   await runBounded(group("unitTasks", "unitCommands", "unit"), concurrency, runCommand);
   await runBounded(group("propertyTasks", "propertyCommands", "property"), concurrency, runCommand);
 

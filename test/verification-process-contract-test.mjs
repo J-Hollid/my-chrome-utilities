@@ -8,9 +8,14 @@ import { pathToFileURL } from "node:url";
 import ts from "typescript";
 
 import { acquireDistArtifactLock, withDistArtifactLock } from "../scripts/dist-artifact-lock.mjs";
+import {
+  selectedBrowserTargetConfigurations,
+  summarizeBrowserTargetResults,
+} from "./support/browser-target-session.mjs";
 import { canonicalVerificationChangeSet } from "../scripts/verification-changes.mjs";
 import {
   browserTargetConfigurations,
+  completeBrowserObservationOutput,
   exactObservationEnvironment,
   parseBrowserObservationBatchOutput,
   parseBrowserObservationOutput,
@@ -20,28 +25,38 @@ import {
   checkVerificationPerformanceBudgets,
   loadVerificationReceipts,
   measuredTimingModel,
+  refreshVerificationPerformanceBudgets,
   reportVerificationThroughput,
 } from "../scripts/report-verification-throughput.mjs";
 import {
+  checkpointPreflight,
   createVerificationCommandRunner,
   createVerificationReceiptContext,
   focusedAcceptanceOptions,
+  resumeVerificationPlan,
+  validateCurrentArtifactForConsumers,
   validateExplicitChangedPaths,
+  verificationResumeIdentity,
 } from "../scripts/run-focused-acceptance.mjs";
 import {
   createPendingVerificationEvidence,
   recordPendingVerificationEvidence,
+  validateVerificationEvidenceCompatibility,
   verificationEvidence,
   verificationDigest,
   verifyVerificationEvidence,
 } from "../scripts/verification-evidence.mjs";
 import {
   browserAdapterUsesSharedHarness,
+  browserObservationEvidenceLeaves,
+  browserObservationSessionBatch,
   executeAcceptancePlan,
   loadVerificationPacks,
   planVerification,
   staticallyResolvableModuleImports,
   validateBrowserPerformanceDeclarations,
+  validateBrowserObservationBatches,
+  validateBrowserEvidencePartitions,
   validateVerificationPacks,
   verificationInventory,
   verificationOwner,
@@ -79,6 +94,22 @@ assert.match(batchedReceiptResult, /:exit 0/u,
   "acceptance consumers resolve a logical browser target from its passed batch receipt");
 assert.match(batchedReceiptResult, /second/u,
   "a logical browser target receives the shared batch output containing its observation");
+const targetScopedReceiptObservation = await exec("bb", ["-e", `
+  (require '[acceptance.steps.support])
+  (let [parse-payload (var-get (ns-resolve 'acceptance.steps.support 'browser-observation-payload))
+        output (str "{\\\"workspace\\\":{\\\"fixture\\\":\\\"1:3\\\"}}\\n"
+                    "{\\\"swarmforgeBrowserTargetResult\\\":{\\\"id\\\":\\\"FIRST\\\",\\\"status\\\":\\\"passed\\\"}}\\n"
+                    "{\\\"workspace\\\":{\\\"fixture\\\":\\\"2:4\\\"}}\\n"
+                    "{\\\"swarmforgeBrowserTargetResult\\\":{\\\"id\\\":\\\"SECOND\\\",\\\"status\\\":\\\"passed\\\"}}\\n"
+                    "{\\\"unrelated\\\":true}\\n"
+                    "{\\\"swarmforgeBrowserTargetResult\\\":{\\\"id\\\":\\\"THIRD\\\",\\\"status\\\":\\\"passed\\\"}}\\n"
+                    "{\\\"workspace\\\":{\\\"fixture\\\":\\\"merged\\\"},\\\"third\\\":{\\\"passed\\\":true}}\\n")]
+    (prn [(get-in (parse-payload output "FIRST" :workspace) [:workspace :fixture])
+          (get-in (parse-payload output "SECOND" :workspace) [:workspace :fixture])
+          (get-in (parse-payload output "THIRD" :third) [:third :passed])]))
+`]);
+assert.match(targetScopedReceiptObservation, /\["1:3" "2:4" true\]/u,
+  "Clojure acceptance consumers ignore another target's pending document and recover the later merged fallback");
 
 const options = focusedAcceptanceOptions([
   "--pack", "capture", "--pack", "schemas", "--changed-since", "base",
@@ -86,6 +117,10 @@ const options = focusedAcceptanceOptions([
 ]);
 assert.deepEqual(options.packIds, ["capture", "schemas"]);
 assert.equal(options.prepareEvidence, "task-17");
+assert.equal(focusedAcceptanceOptions([
+  "--pack", "schemas", "--changed-since", "base", "--property",
+  "--prepare-evidence", "task-17", "--resume-receipt", "tmp/verification-receipts/prior.json",
+]).resumeReceipt, "tmp/verification-receipts/prior.json");
 assert.deepEqual(focusedAcceptanceOptions([
   "--pack", "schemas", "--browser-target", "ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER",
 ]).browserTargetIds, ["ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER"]);
@@ -100,6 +135,7 @@ for (const invalid of [
   ["--pack", "schemas", "--record-evidence", "task"],
   ["--pack", "schemas", "--browser-target", "A", "--changed", "src/a.ts"],
   ["--pack", "schemas", "--changed-since", "base", "--prepare-evidence", "task"],
+  ["--pack", "schemas", "--resume-receipt", "docs/prior.json"],
   ["--wat"],
 ]) assert.throws(() => focusedAcceptanceOptions(invalid));
 await assert.rejects(() => validateExplicitChangedPaths(["test/definitely-deleted-verification-path.mjs"]),
@@ -202,6 +238,106 @@ const focusedObservationPacks = [pack("browser", {
       observationKeys:["second"], features:["features/browser-two.feature"], sessionBatch:"browser-main" },
   ],
 })];
+const declaredProgramBatchPacks = [pack("browser", {
+  browserObservations:focusedObservationPacks[0].browserObservations.map((observation) => ({
+    ...observation, sessionBatch:undefined,
+  })),
+  browserObservationBatches:[{
+    id:"browser-main", path:"test/browser.mjs", observationCount:2,
+  }],
+})];
+const exactEvidencePartition = {
+  path:"test/browser.mjs",
+  sessionBatch:"browser-main",
+  originalLeaves:[["first", "mounted"], ["second", "persisted"]],
+  targets:[
+    { id:"BROWSER_FIRST", leaves:[["first", "mounted"]] },
+    { id:"BROWSER_SECOND", leaves:[["second", "persisted"]] },
+  ],
+};
+assert.doesNotThrow(() => validateBrowserEvidencePartitions([{
+  ...focusedObservationPacks[0], browserEvidencePartitions:[exactEvidencePartition],
+}]), "a split adapter may assign every original nested assertion leaf exactly once");
+const dottedEvidencePartition = {
+  ...exactEvidencePartition,
+  sessionBatch:"browser-main",
+  originalLeaves:["first.mounted", "second.persisted"],
+  targets:[
+    { id:"BROWSER_FIRST", leaves:["first.mounted"] },
+    { id:"BROWSER_SECOND", leaves:["second.persisted"] },
+  ],
+};
+const partitionedPerformancePack = {
+  ...focusedObservationPacks[0],
+  browserAdapters:["test/browser.mjs"],
+  browserAdapterPerformance:[{
+    path:"test/browser.mjs",
+    singleTargetP90Milliseconds:20,
+    maximumSingleTargetP90Milliseconds:10,
+    targetIds:["BROWSER_FIRST", "BROWSER_SECOND"],
+    sessionBatch:"browser-main",
+  }],
+  browserEvidencePartitions:[dottedEvidencePartition],
+};
+assert.throws(() => validateBrowserEvidencePartitions([{
+  ...partitionedPerformancePack, browserEvidencePartitions:[],
+}]), /requires one exact browser evidence partition/u,
+"a replaced browser workflow cannot omit its assertion-leaf partition");
+assert.throws(() => validateBrowserEvidencePartitions([{
+  ...partitionedPerformancePack,
+  browserObservations:[...partitionedPerformancePack.browserObservations,
+    {id:"BROWSER_EXTRA", path:"test/browser.mjs", environment:{BROWSER_EXTRA:"1"},
+      observationKeys:["extra"], features:["features/browser-three.feature"], sessionBatch:"browser-main"}],
+  browserEvidencePartitions:[{
+    ...dottedEvidencePartition,
+    originalLeaves:[...dottedEvidencePartition.originalLeaves, "extra.observed"],
+    targets:[...dottedEvidencePartition.targets,
+      {id:"BROWSER_EXTRA", leaves:["extra.observed"]}],
+  }],
+}]), /must match its declared target set/u,
+"an evidence partition cannot add a target outside the replaced workflow declaration");
+assert.throws(() => validateBrowserEvidencePartitions([{
+  ...partitionedPerformancePack,
+  browserObservations:partitionedPerformancePack.browserObservations.map((observation) =>
+    observation.id === "BROWSER_SECOND" ? {...observation, path:"test/other-browser.mjs"} : observation),
+}]), /must use program test\/browser\.mjs/u,
+"a partition target cannot execute through a different browser program");
+assert.throws(() => validateBrowserEvidencePartitions([{
+  ...partitionedPerformancePack,
+  browserObservations:partitionedPerformancePack.browserObservations.map((observation) =>
+    observation.id === "BROWSER_SECOND" ? {...observation, sessionBatch:"browser-other"} : observation),
+}]), /must use batch browser-main/u,
+"a partition target cannot execute through a mismatched session batch");
+assert.doesNotThrow(() => validateBrowserEvidencePartitions([{
+  ...focusedObservationPacks[0], browserEvidencePartitions:[dottedEvidencePartition],
+}]), "a registry may spell exact leaf paths compactly without weakening the partition");
+assert.deepEqual(browserObservationEvidenceLeaves(
+  { ...focusedObservationPacks[0], browserEvidencePartitions:[dottedEvidencePartition] },
+  focusedObservationPacks[0].browserObservations[1],
+), [["second", "persisted"]], "compact registry leaf paths normalize before runtime checks");
+assert.throws(() => validateBrowserEvidencePartitions([{
+  ...focusedObservationPacks[0],
+  browserEvidencePartitions:[{
+    ...exactEvidencePartition,
+    targets:exactEvidencePartition.targets.map((target) => ({
+      ...target, leaves:[["first", "mounted"]],
+    })),
+  }],
+}]), /assign every original assertion leaf exactly once/u,
+"a duplicated predicate cannot stand in for unrelated original assertion leaves");
+assert.equal(browserObservationSessionBatch(
+  declaredProgramBatchPacks[0], declaredProgramBatchPacks[0].browserObservations[0],
+), "browser-main", "an owning pack may declare one batch for every compatible program observation");
+assert.equal(planVerification(declaredProgramBatchPacks, { packIds:["browser"] })
+  .observationTasks.length, 1,
+"a declared program batch schedules one browser process without duplicating the batch on every target");
+assert.throws(() => validateBrowserObservationBatches([{
+  ...declaredProgramBatchPacks[0],
+  browserObservationBatches:[{
+    id:"browser-main", path:"test/browser.mjs", observationCount:3,
+  }],
+}]), /must own exactly 3 compatible targets/u,
+"a program batch cannot hide an omitted or newly unassigned logical observation");
 const focusedObservationPlan = planVerification(focusedObservationPacks, {
   packIds:["browser"], browserTargetIds:["BROWSER_SECOND"],
 });
@@ -217,10 +353,62 @@ assert.deepEqual(exactObservationPlan.observationTasks[0].logicalTargetIds,
 assert.deepEqual(verificationTaskIdentity(exactObservationPlan.observationTasks[0]).logicalTargetIds,
   ["BROWSER_FIRST", "BROWSER_SECOND"],
   "receipt evidence retains every logical target inside a shared session task");
+assert.deepEqual(verificationTaskIdentity(exactObservationPlan.observationTasks[0]).aliasCommands,
+  [["node", "test/browser.mjs"],
+    ["node", "scripts/run-browser-observation.mjs", "BROWSER_FIRST"],
+    ["node", "scripts/run-browser-observation.mjs", "BROWSER_SECOND"]],
+  "strict acceptance can resolve the historical adapter command to its passed batch receipt");
+const boundedBrowserPacks = [pack("browser", {
+  source:["src/browser/core.ts", "src/browser/editor.ts"],
+  impactBoundaries:[
+    { id:"core", prefixes:["src/browser/core.ts"], propagateDependants:false },
+    { id:"editor", prefixes:["src/browser/editor.ts"], propagateDependants:false },
+  ],
+  browserAdapters:["test/browser.mjs"],
+  browserAdapterModes:[{ path:"test/browser.mjs", mode:"shared" }],
+  browserObservations:[
+    { id:"BROWSER_CORE", path:"test/browser.mjs", environment:{ BROWSER_CORE:"1" },
+      observationKeys:["core"], features:["features/browser-one.feature"],
+      sessionBatch:"browser-main", impactBoundaries:["core"] },
+    { id:"BROWSER_EDITOR", path:"test/browser.mjs", environment:{ BROWSER_EDITOR:"1" },
+      observationKeys:["editor"], features:["features/browser-two.feature"],
+      sessionBatch:"browser-main", impactBoundaries:["editor"] },
+  ],
+})];
+const boundedCorePlan = planVerification(boundedBrowserPacks, {
+  changedPaths:["src/browser/core.ts"],
+});
+assert.deepEqual(boundedCorePlan.browserTasks, [],
+  "a boundary-targeted impact plan does not schedule the monolithic adapter");
+assert.deepEqual(boundedCorePlan.observationTasks.map(({ logicalTargetIds }) => logicalTargetIds),
+  [["BROWSER_CORE"]], "a changed impact boundary schedules only its declared browser behavior");
+const boundedTerminalPlan = planVerification(boundedBrowserPacks, { terminalFull:true });
+assert.deepEqual(boundedTerminalPlan.observationTasks[0].logicalTargetIds,
+  ["BROWSER_CORE", "BROWSER_EDITOR"],
+  "terminal planning retains every split browser target in one compatible process");
+assert.deepEqual(boundedTerminalPlan.browserTasks, [],
+  "terminal planning does not repeat the replaced monolithic adapter");
 assert.deepEqual(browserTargetConfigurations(focusedObservationPacks[0].browserObservations), {
   BROWSER_FIRST:{ BROWSER_FIRST:"1" },
   BROWSER_SECOND:{ BROWSER_SECOND:"1" },
 }, "a shared observation process receives each logical target's isolated environment");
+const selectedTargetConfigurations = selectedBrowserTargetConfigurations({
+  SWARMFORGE_BROWSER_TARGET_IDS:JSON.stringify(["BROWSER_FIRST"]),
+  SWARMFORGE_BROWSER_TARGET_CONFIGURATIONS:JSON.stringify({
+    BROWSER_FIRST:{ BROWSER_FIRST:"1" },
+  }),
+}, ["BROWSER_FIRST", "BROWSER_SECOND"]);
+assert.deepEqual(selectedTargetConfigurations, [{
+  id:"BROWSER_FIRST", environment:{ BROWSER_FIRST:"1" },
+}], "a focused public target excludes the adapter's unrelated behavior target");
+assert.deepEqual(summarizeBrowserTargetResults([
+  { id:"BROWSER_FIRST", status:"passed", durationMs:3, observation:{ first:true } },
+  { id:"BROWSER_SECOND", status:"failed", durationMs:4, error:"sentinel failure" },
+]), {
+  document:{ first:true },
+  results:{ BROWSER_FIRST:{ status:"passed", durationMs:3 },
+    BROWSER_SECOND:{ status:"failed", durationMs:4, error:"sentinel failure" } },
+}, "one failed target retains an independent target's result and real timing");
 const browserBatchMatches = focusedObservationPacks[0].browserObservations.map((observation) => ({
   packId:"browser", observation,
 }));
@@ -254,6 +442,66 @@ assert.throws(() => validateBrowserPerformanceDeclarations([
     }],
   }),
 ]), /Split slow browser adapter.*independently selectable targets.*reusable session batch/u);
+assert.throws(() => completeBrowserObservationOutput(
+  '{"first":true}\n{"swarmforgeBrowserTargetTiming":{"id":"BROWSER_FIRST","durationMs":3}}\n',
+  focusedObservationPacks[0].browserObservations,
+  7,
+), /BROWSER_SECOND.*own timing/u,
+"the browser runner rejects a batch that omits a logical target timing instead of assigning aggregate process time");
+assert.throws(() => completeBrowserObservationOutput(
+  '{"first":true}\n' +
+  '{"swarmforgeBrowserTargetTiming":{"id":"BROWSER_FIRST","durationMs":3}}\n' +
+  '{"swarmforgeBrowserTargetTiming":{"id":"BROWSER_SECOND","durationMs":4}}\n',
+  focusedObservationPacks[0].browserObservations,
+  7,
+), /must emit their own pass or failure result/u,
+"a multi-target browser process cannot substitute timings for independent results");
+const completedTimingOutput = completeBrowserObservationOutput(
+  '{"first":true}\n' +
+  '{"swarmforgeBrowserTargetResult":{"id":"BROWSER_FIRST","status":"passed"}}\n' +
+  '{"swarmforgeBrowserTargetTiming":{"id":"BROWSER_FIRST","durationMs":3}}\n' +
+  '{"swarmforgeBrowserTargetResult":{"id":"BROWSER_SECOND","status":"passed"}}\n' +
+  '{"swarmforgeBrowserTargetTiming":{"id":"BROWSER_SECOND","durationMs":4}}\n',
+  focusedObservationPacks[0].browserObservations, 7,
+);
+assert.equal(completedTimingOutput.match(/swarmforgeBrowserTargetTiming/gu)?.length, 2,
+  "the browser runner preserves one adapter-emitted timing per logical target");
+assert.deepEqual(parseBrowserObservationBatchOutput(
+  '{"first":true}\n' +
+  '{"swarmforgeBrowserTargetResult":{"id":"BROWSER_FIRST","status":"passed"}}\n' +
+  '{"swarmforgeBrowserTargetResult":{"id":"BROWSER_SECOND","status":"failed","error":"owned failure"}}\n',
+  focusedObservationPacks[0].browserObservations,
+).failures, [{ id:"BROWSER_SECOND", message:"owned failure" }],
+"a failed logical target retains its own result without discarding an independent target document");
+const sharedRootBatch=parseBrowserObservationBatchOutput(
+  '{"layeredSchema":{"authoring001":true}}\n'+
+  '{"swarmforgeBrowserTargetResult":{"id":"FIRST","status":"passed"}}\n'+
+  '{"layeredSchema":{"authoring002":true}}\n'+
+  '{"swarmforgeBrowserTargetResult":{"id":"SECOND","status":"passed"}}\n',
+  [{id:"FIRST",observationKeys:["layeredSchema"],evidenceLeaves:[["layeredSchema","authoring001"]]},
+    {id:"SECOND",observationKeys:["layeredSchema"],evidenceLeaves:[["layeredSchema","authoring002"]]}],
+);
+assert.deepEqual(sharedRootBatch.document,{layeredSchema:{authoring001:true,authoring002:true}},
+  "disjoint assertion partitions retain the original shared evidence root without overwriting");
+assert.deepEqual(parseBrowserObservationOutput(
+  '{"schemaWorkspace":{"fixture":"2:4"}}\n'+
+  '{"swarmforgeBrowserTargetResult":{"id":"VALIDATION","status":"passed"}}\n'+
+  '{"schemaWorkspace":{"fixture":"2:4"},"validationPresenceSemantics":{"passed":true}}\n',
+  { id:"VALIDATION", observationKeys:["validationPresenceSemantics"] },
+), { validationPresenceSemantics:{ passed:true } },
+"a passed target ignores a preceding pending document owned by another target and uses its merged fallback");
+assert.throws(() => parseBrowserObservationOutput(
+  '{"first":{"mounted":true,"persisted":false}}\n',
+  { ...focusedObservationPacks[0].browserObservations[0],
+    evidenceLeaves:[["first", "mounted"], ["first", "persisted"]] },
+), /omitted or failed assigned assertion leaf.*persisted/u,
+"a renamed smoke observation or constant result cannot satisfy an assigned false leaf");
+assert.deepEqual(parseBrowserObservationOutput(
+  '{"studioChoiceControls":{"schema.only-defined":true}}\n',
+  { id:"CHOICES", observationKeys:["studioChoiceControls"],
+    evidenceLeaves:[["studioChoiceControls", "schema", "only-defined"]] },
+), { studioChoiceControls:{ "schema.only-defined":true } },
+"a literal dotted observation key satisfies its exact compact registry leaf identity");
 assert.doesNotThrow(() => validateBrowserPerformanceDeclarations([
   {
     ...focusedObservationPacks[0],
@@ -628,6 +876,16 @@ assert.deepEqual(planVerification(packs, {
   changedPaths:["test/support/headless-chrome.mjs"],
 }).packIds, browserPackIds,
 "the shared headless Chrome harness selects every browser pack without semantic dependant expansion");
+const registeredBrowserPrograms = new Set(packs.flatMap((pack) => [
+  ...(pack.browserAdapters ?? []),
+  ...(pack.browserObservations ?? []).map(({ path:programPath }) => programPath),
+]));
+for (const programPath of registeredBrowserPrograms) {
+  const source = await readFile(new URL(`../${programPath}`, import.meta.url), "utf8");
+  assert.doesNotMatch(source,
+    /\b(?:rm|rmSync)\([^\n]*(?:profile|userData|user-data|chromeProfile)/u,
+    `${programPath} must route profile cleanup through the bounded shared helper`);
+}
 const realRegistryBoundary = planVerification(packs, {
   packIds:runnableProductionPackIds, changedPaths:realRegistryChange.paths,
   changeSet:realRegistryChange, basePacks:packs,
@@ -683,7 +941,7 @@ const payloadPathPicker = componentLayoutBrowserSource.indexOf(
 assert.ok(schemaViewStop >= 0 && schemaViewStop < schemaWorkspaceStop && schemaViewStop < payloadPathPicker,
   "the focused Schema view containment observation stops before workspace and payload browser contracts");
 assert.match(componentLayoutBrowserSource,
-  /if \(process\.env\.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1"\) \{[\s\S]*?schemaWorkspaceAdapterObservations\.push\(\s*await captureSchemaWorkspace\(socket, width, schemaRuleEditorVisibility\),\s*\);\s*await evaluate\(socket, guidedTransportProjectRestoreRuntime\(previousActiveProjectId\)\);\s*socket\.close\(\);\s*continue;\s*\}\s*payloadPathFilterPickerObservation =/u,
+  /if \(process\.env\.SCHEMA_WORKSPACE_BROWSER_ADAPTER === "1"\) \{[\s\S]*?schemaWorkspaceAdapterObservations\.push\(schemaWorkspaceObservation\);[\s\S]*?console\.log\(JSON\.stringify\(\{ schemaWorkspace:schemaWorkspaceObservation \}\)\);\s*await evaluate\(socket, guidedTransportProjectRestoreRuntime\(previousActiveProjectId\)\);\s*socket\.close\(\);\s*continue;\s*\}\s*payloadPathFilterPickerObservation =/u,
   "the focused Schema workspace observation stops before unrelated browser contracts");
 assert.match(componentLayoutBrowserSource,
   /await reloadPanel\(socket\);\s*if \(process\.env\.GUIDED_VALIDATION_BROWSER_ADAPTER === "1"\) \{\s*socket\.close\(\); continue;\s*\}\s*liveValidationVisualsObservation =/su,
@@ -1035,6 +1293,62 @@ assert.equal(canonicalEditorPlan.changedBoundaries["src/data-layer-canonical-sch
   "canonical_schema_editor");
 assert.deepEqual(canonicalEditorPlan.packIds, ["layered_schema"],
   "canonical schema editor changes exclude unrelated layered dependants");
+assert.deepEqual(canonicalEditorPlan.observationTasks
+  .filter(({ packId }) => packId === "layered_schema")
+  .flatMap(({ logicalTargetIds }) => logicalTargetIds), [
+  "LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET",
+  "LAYERED_SCHEMA_EDITOR_POLICY_TARGET",
+  "LAYERED_SCHEMA_EDITOR_RULES_TARGET",
+  "LAYERED_SCHEMA_EDITOR_TARGET",
+], "canonical schema editor changes schedule only their assertion-leaf partitions");
+assert.deepEqual(canonicalEditorPlan.features,
+  ["features/data-layer-canonical-shared-profile-schema-authoring.feature"],
+  "a layered boundary plan parses only the feature owned by its selected logical observation");
+assert.equal(canonicalEditorPlan.sessionTasks.length, 1,
+  "a layered boundary plan retains one acceptance session for its selected feature");
+assert.equal(canonicalEditorPlan.sessionTasks[0].target,
+  "features/data-layer-canonical-shared-profile-schema-authoring.feature",
+  "the boundary acceptance receipt cannot be used as proof for unrelated layered features");
+assert.equal(canonicalEditorPlan.browserTasks.some(({ target }) =>
+  target === "test/browser-packs/layered-schema.mjs"), false,
+"focused boundary planning never schedules the monolithic layered-schema adapter");
+const terminalLayeredPlan = planVerification(packs, { terminalFull:true });
+assert.deepEqual(terminalLayeredPlan.observationTasks
+  .filter(({ packId }) => packId === "layered_schema")
+  .flatMap(({ logicalTargetIds }) => logicalTargetIds).sort(), [
+  "LAYERED_SCHEMA_COMPOSITION_TARGET",
+  "LAYERED_SCHEMA_CORE_TARGET",
+  "LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET",
+  "LAYERED_SCHEMA_EDITOR_POLICY_TARGET",
+  "LAYERED_SCHEMA_EDITOR_RULES_TARGET",
+  "LAYERED_SCHEMA_EDITOR_TARGET",
+  "LAYERED_SCHEMA_INHERITANCE_TARGET",
+  "LAYERED_SCHEMA_PAGE_GROUP_TARGET",
+], "terminal verification executes every split layered-schema target exactly once");
+for (const [packId, adapterPath] of [
+  ["layered_schema", "test/browser-packs/layered-schema.mjs"],
+  ["durable_project_repository", "test/browser-packs/durable-project-renderer.mjs"],
+  ["branding_polish", "test/twatility-workflow-polish-browser-test.mjs"],
+]) {
+  const declaration = packs.find(({ id }) => id === packId).browserAdapterPerformance
+    .find(({ path:declaredPath }) => declaredPath === adapterPath);
+  assert.ok(declaration.targetIds.length >= 2 && declaration.sessionBatch,
+    `${packId} runtime outlier declares independently selectable batched targets`);
+}
+for (const [packId, logicalObservations] of [["capture", 5], ["schemas", 46], ["defects", 9]]) {
+  const pack = packs.find(({ id }) => id === packId);
+  const program = "test/side-panel-component-layout-runtime-test.mjs";
+  const observations = pack.browserObservations.filter(({ path }) => path === program);
+  assert.equal(observations.length, logicalObservations,
+    `${packId} retains the specified shared side-panel observation count`);
+  assert.deepEqual(pack.browserObservationBatches, [{
+    id:`${packId}-side-panel`, path:program, observationCount:logicalObservations,
+  }], `${packId} declares one compatible side-panel process batch`);
+  assert.equal(planVerification(packs, { packIds:[packId] }).observationTasks
+    .filter(({ logicalTargetIds }) => logicalTargetIds.some((id) =>
+      observations.some((observation) => observation.id === id))).length, 1,
+  `${packId} schedules all shared side-panel observations in one browser process`);
+}
 for (const editorPath of [
   "src/data-layer-canonical-schema-focused-editor.ts",
   "src/data-layer-string-rule-validation-ui.ts",
@@ -1203,9 +1517,12 @@ const reportReceipt = {
   tasks:Object.fromEntries(shellPlan.tasks.map((task, index) => [task.key, {
     identity:verificationTaskIdentity(task), status:"passed", durationMs:index + 1,
     output:task.stage === "browser-observation"
-      ? task.logicalTargetIds.map((id, targetIndex) => JSON.stringify({
-        swarmforgeBrowserTargetTiming:{ id, durationMs:700 + targetIndex * 100 },
-      })).join("\n")
+      ? task.logicalTargetIds.flatMap((id, targetIndex) => [
+        JSON.stringify({ swarmforgeBrowserTargetResult:{ id, status:"passed" } }),
+        JSON.stringify({
+          swarmforgeBrowserTargetTiming:{ id, durationMs:700 + targetIndex * 100 },
+        }),
+      ]).join("\n")
       : "ok\n",
   }])),
 };
@@ -1243,6 +1560,41 @@ assert.equal(timingModel.ledger.selections[0].selectedPackIds.includes("shell"),
 assert.equal(timingModel.browserTargets.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER.p90Ms, 700);
 assert.equal(timingModel.browserTargets.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER.p90Ms, 800,
   "batched receipts retain independent logical-target measurements");
+const legacyAggregateReceipt = structuredClone(reportReceipt);
+for (const result of Object.values(legacyAggregateReceipt.tasks)) {
+  if (result.identity.stage === "browser-observation") {
+    result.output = result.output.split("\n")
+      .filter((line) => !line.includes("swarmforgeBrowserTargetResult"))
+      .join("\n");
+  }
+}
+const legacyAggregateModel = measuredTimingModel([legacyAggregateReceipt], reportBaseline);
+assert.equal(legacyAggregateModel.browserTargets.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER, undefined,
+  "a timing-only multi-target batch is aggregate compatibility evidence, not a target sample");
+assert.equal(legacyAggregateModel.browserTargets.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER, undefined,
+  "duplicated legacy batch timings remain provisional until independent results exist");
+const legacySingleTargetReceipt = structuredClone(legacyAggregateReceipt);
+for (const result of Object.values(legacySingleTargetReceipt.tasks)) {
+  if (result.identity.stage !== "browser-observation") continue;
+  result.identity.logicalTargetIds = result.identity.logicalTargetIds.slice(0, 1);
+  result.output = result.output.split("\n").filter((line) =>
+    line.includes(`\"id\":\"${result.identity.logicalTargetIds[0]}\"`)).join("\n");
+}
+const legacySingleTargetModel = measuredTimingModel([legacySingleTargetReceipt], reportBaseline);
+assert.equal(legacySingleTargetModel.browserTargets.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER.p90Ms, 700,
+  "a legacy timing-only task remains a valid sample when it owns exactly one target");
+const partialExplicitReceipt = structuredClone(reportReceipt);
+for (const result of Object.values(partialExplicitReceipt.tasks)) {
+  if (result.identity.stage !== "browser-observation" || result.identity.logicalTargetIds.length < 2) continue;
+  const omitted = result.identity.logicalTargetIds[1];
+  result.output = result.output.split("\n")
+    .filter((line) => !line.includes(`\"id\":\"${omitted}\",\"status\"`))
+    .join("\n");
+  break;
+}
+const partialExplicitModel = measuredTimingModel([partialExplicitReceipt], reportBaseline);
+assert.equal(partialExplicitModel.browserTargets.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER, undefined,
+  "once an explicit result protocol appears, a target without its own passed result is ineligible");
 const throughput = reportVerificationThroughput({
   packs, baseline:reportBaseline,
   receipts:[reportReceipt, contaminatedReceipt, forgedIdentityReceipt, oldVersionReceipt,
@@ -1298,6 +1650,144 @@ const missingTargetBudget = checkVerificationPerformanceBudgets({
 });
 assert.equal(missingTargetBudget.results[0].measured, 2400,
   "a missing logical-target timing uses its explicit bootstrap baseline, not another task's aggregate");
+const refreshedBudgets = refreshVerificationPerformanceBudgets({
+  rows:[
+    { name:"alpha:exact-full-pack", projectedSeconds:8 },
+    { name:"alpha:representative-change", dependantFanOut:2 },
+  ],
+  browserTargetIds:["MEASURED", "UNMEASURED"],
+  model:{ browserTargets:{ MEASURED:{ p90Ms:900 } } },
+}, {
+  performanceBudgets:{
+    exactPackSeconds:{}, browserTargetP90Milliseconds:{},
+  },
+  defaultBrowserTargetMilliseconds:2400,
+}, { tolerance:1.25 });
+assert.deepEqual(refreshedBudgets.performanceBudgets.exactPackSeconds.alpha, {
+  limit:10, baseline:8, percentile:"p90-projection", tolerance:1.25, provisional:false,
+});
+assert.equal(refreshedBudgets.performanceBudgets.changedPathFanOut.alpha.limit, 3,
+  "measured pack fan-out receives an explicit budget instead of a permissive catch-all");
+assert.deepEqual(refreshedBudgets.performanceBudgets.browserTargetP90Milliseconds.MEASURED, {
+  limit:1125, baseline:900, percentile:"p90", tolerance:1.25, provisional:false,
+});
+assert.equal(refreshedBudgets.performanceBudgets.browserTargetP90Milliseconds.UNMEASURED.provisional,
+  true, "unmeasured browser targets retain an explicit provisional bootstrap budget");
+
+const preflightPlan = planVerification(synthetic, { packIds:["alpha"] });
+const preflightOrder = [];
+await checkpointPreflight({
+  packs:synthetic,
+  plan:preflightPlan,
+  receiptContext:createVerificationReceiptContext(1, 1, {
+    receiptDirectory:await mkdtemp(path.join(os.tmpdir(), "verification-preflight-receipts-")),
+  }),
+  validators:{
+    registry:async() => preflightOrder.push("registry"),
+    plan:async() => preflightOrder.push("plan"),
+    receipt:async() => preflightOrder.push("receipt"),
+    artifact:async() => preflightOrder.push("artifact"),
+    evidence:async() => preflightOrder.push("evidence"),
+  },
+});
+assert.deepEqual(preflightOrder, ["registry", "plan", "receipt", "artifact", "evidence"],
+  "checkpoint preflight finishes every contract validation before execution");
+let preflightLeafStarted = false;
+await assert.rejects(() => checkpointPreflight({
+  packs:synthetic, plan:preflightPlan,
+  receiptContext:{ receiptPath:"/tmp/receipt.json", receipt:{ version:2, tasks:{} } },
+  validators:{
+    registry:async() => {}, plan:async() => {},
+    receipt:async() => { throw new Error("receipt recording limit incompatible"); },
+    artifact:async() => { preflightLeafStarted = true; }, evidence:async() => {},
+  },
+}), /receipt recording limit incompatible/u);
+assert.equal(preflightLeafStarted, false,
+  "a preflight failure stops before later validation or verification leaves start");
+const artifactGateStages = [];
+await assert.rejects(() => executeAcceptancePlan(preflightPlan, {
+  runCommand:async(_display, task) => artifactGateStages.push(task.stage),
+  afterPreparation:async() => { throw new Error("dist output digest mismatch"); },
+}), /dist output digest mismatch/u);
+assert.deepEqual(artifactGateStages, ["build"],
+  "the actual built artifact is validated after preparation and before the first verification leaf");
+await assert.rejects(() => validateCurrentArtifactForConsumers({
+  artifactValidator:async() => { throw new Error("dist manifest is missing"); },
+}), /dist manifest is missing/u,
+"a missing dist rejects resume before a reused consumer can run");
+await assert.rejects(() => validateCurrentArtifactForConsumers({
+  artifactValidator:async() => ({
+    inputDigest:"a".repeat(64), outputDigest:"tampered", buildIdentity:"b".repeat(64),
+  }),
+}), /invalid outputDigest/u,
+"a tampered dist identity rejects resume before a reused consumer can run");
+
+const resumableTasks = preflightPlan.tasks.slice(0, 3);
+const resumablePlan = { ...preflightPlan, tasks:resumableTasks };
+const resumeIdentity = {
+  commit:"a".repeat(40), artifactInputDigest:"b".repeat(64),
+  planDigest:"c".repeat(64), toolchainDigest:"d".repeat(64),
+};
+const priorReceipt = {
+  version:2, resumeIdentity, tasks:{
+    [resumableTasks[0].key]:{
+      identity:verificationTaskIdentity(resumableTasks[0]), status:"passed", durationMs:5, output:"ok",
+    },
+    [resumableTasks[1].key]:{
+      identity:verificationTaskIdentity(resumableTasks[1]), status:"failed", durationMs:5, output:"bad",
+    },
+  },
+};
+const resumed = resumeVerificationPlan(resumablePlan, priorReceipt, resumeIdentity);
+assert.deepEqual(resumed.tasks.map(({ key }) => key), resumableTasks.slice(1).map(({ key }) => key),
+  "bounded resume runs only failed and incomplete tasks");
+assert.equal(resumed.reusedTasks[resumableTasks[0].key].provenance, "reused");
+assert.equal(resumed.preparationTasks.some(({ key }) => key === resumableTasks[0].key), false,
+  "reused tasks are removed from their executable stage as well as the flat plan");
+const rejectedResume = resumeVerificationPlan(resumablePlan, priorReceipt,
+  { ...resumeIdentity, commit:"e".repeat(40) });
+assert.deepEqual(rejectedResume.tasks.map(({ key }) => key), resumableTasks.map(({ key }) => key),
+  "a mismatched resume identity reruns every checkpoint task");
+for (const [field, value] of [
+  ["artifactInputDigest", "e".repeat(64)],
+  ["planDigest", "f".repeat(64)],
+  ["toolchainDigest", "0".repeat(64)],
+]) {
+  const mismatch = resumeVerificationPlan(resumablePlan, priorReceipt,
+    { ...resumeIdentity, [field]:value });
+  assert.deepEqual(mismatch.tasks.map(({ key }) => key), resumableTasks.map(({ key }) => key),
+    `a ${field} mismatch rejects every prior task before a consumer can run`);
+}
+const observationTask = exactObservationPlan.observationTasks[0];
+const partialObservationPlan = {
+  ...exactObservationPlan,
+  tasks:[observationTask], observationTasks:[observationTask], preparationTasks:[],
+};
+const partialObservationReceipt = {
+  version:2, resumeIdentity, tasks:{
+    [observationTask.key]:{
+      identity:verificationTaskIdentity(observationTask), status:"failed", durationMs:9,
+      output:"first partial output\n", stderr:"",
+      logicalResults:{
+        BROWSER_FIRST:{ id:"BROWSER_FIRST", status:"passed", durationMs:3 },
+        BROWSER_SECOND:{ id:"BROWSER_SECOND", status:"failed", durationMs:4 },
+      },
+    },
+  },
+};
+const partialObservationResume = resumeVerificationPlan(
+  partialObservationPlan, partialObservationReceipt, resumeIdentity,
+);
+assert.deepEqual(partialObservationResume.tasks[0].executionArgs,
+  ["scripts/run-browser-observation.mjs", "BROWSER_SECOND"],
+  "a failed browser batch reruns only its failed logical target");
+assert.equal(partialObservationResume.tasks[0].priorReceiptTask,
+  partialObservationReceipt.tasks[observationTask.key],
+  "the resumed browser task retains the independent passing target result for the combined receipt");
+assert.equal(verificationResumeIdentity(resumablePlan, {
+  receipt:{ environment:{ node:"24", typescript:"5", platform:"linux", concurrency:1,
+    observationConcurrency:1 } },
+}, { inputDigest:"b".repeat(64) }).artifactInputDigest, "b".repeat(64));
 const isolatedReceiptDirectory = await mkdtemp(path.join(os.tmpdir(), "verification-receipts-"));
 try {
   await writeFile(path.join(isolatedReceiptDirectory, "valid.json"), JSON.stringify(reportReceipt));
@@ -1328,13 +1818,12 @@ const schemaWorkspaceImpact = planVerification(packs, { changedPaths:[schemaWork
 const schemaWorkspacePlan = planVerification(packs, {
   packIds:schemaWorkspaceImpact.packIds, changedPaths:[schemaWorkspacePath],
 });
-assert.deepEqual(schemaWorkspacePlan.observationTasks
-  .filter(({ packId }) => packId === "schemas").map(({ key }) => key).sort(),
-  packs.find(({ id }) => id === "schemas").browserObservations
-    .map(({ id }) => `browser-observation:${id}`).sort());
-assert.equal(schemaWorkspacePlan.observationTasks.find(({ key }) =>
-  key === "browser-observation:SCHEMA_WORKSPACE_BROWSER_ADAPTER:default")
-  .environment.SCHEMA_WORKSPACE_BROWSER_ADAPTER, "1");
+const schemaWorkspaceTask = schemaWorkspacePlan.observationTasks
+  .find(({ packId }) => packId === "schemas");
+assert.deepEqual(schemaWorkspaceTask.logicalTargetIds,
+  packs.find(({ id }) => id === "schemas").browserObservations.map(({ id }) => id).sort(),
+  "schema verification batches all compatible logical observations in one process");
+assert.equal(schemaWorkspaceTask.environment.SCHEMA_WORKSPACE_BROWSER_ADAPTER, "1");
 const schemaSourcePath = "src/data-layer-schema-verification.ts";
 const schemaSourceImpact = planVerification(packs, { changedPaths:[schemaSourcePath] });
 const sourceAndDist = planVerification(packs, {
@@ -1375,6 +1864,15 @@ if (process.platform !== "win32") {
     await runner(envTask.display, envTask);
     assert.equal(context.receipt.tasks[envTask.key].output.trim(), "visible");
     assert.equal(context.receipt.tasks[envTask.key].stderr, "");
+    const isolatedBrowserTask = {
+      ...envTask, key:"browser:isolated-output", stage:"browser", environment:null,
+      args:["-e", "require('node:fs').writeSync(1,process.env.BRAND_EVIDENCE_DIR+'\\n')"],
+    };
+    await runner(isolatedBrowserTask.display, isolatedBrowserTask);
+    const isolatedOutput = context.receipt.tasks[isolatedBrowserTask.key].output.trim();
+    assert.ok(isolatedOutput.startsWith(path.resolve("tmp/verification-runs")));
+    assert.equal(isolatedOutput.includes("docs/twatility-branding-evidence"), false,
+      "ordinary browser verification routes generated evidence to its isolated run directory");
     const stderrContext = createVerificationReceiptContext(1, 2, {
       receiptDirectory:commandReceiptDirectory,
     });
@@ -1416,6 +1914,27 @@ if (process.platform !== "win32") {
     await assert.rejects(() => runner("reserved env task", {
       ...envTask, key:"unit:reserved-environment", environment:{ PATH:"/untrusted" },
     }), /reserved environment: PATH/u);
+
+    const legacyLogicalTask = {
+      ...envTask, key:"browser-observation:legacy-target", stage:"browser-observation",
+      logicalTargetIds:["LEGACY_TARGET"], environment:null, display:"legacy logical target",
+      args:["-e", "console.log(JSON.stringify({swarmforgeBrowserTargetTiming:{id:'LEGACY_TARGET',durationMs:7}}))"],
+    };
+    await runner(legacyLogicalTask.display, legacyLogicalTask);
+    assert.equal(context.receipt.tasks[legacyLogicalTask.key].logicalResults.LEGACY_TARGET.status,
+      "passed", "legacy timing-only observations remain compatible with receipt execution");
+    const mixedProtocolTask = {
+      ...legacyLogicalTask, key:"browser-observation:mixed-protocol",
+      logicalTargetIds:["NEW_FIRST", "NEW_SECOND"], display:"mixed target protocol",
+      args:["-e", [
+        "console.log(JSON.stringify({swarmforgeBrowserTargetResult:{id:'NEW_FIRST',status:'passed'}}));",
+        "console.log(JSON.stringify({swarmforgeBrowserTargetTiming:{id:'NEW_FIRST',durationMs:3}}));",
+        "console.log(JSON.stringify({swarmforgeBrowserTargetTiming:{id:'NEW_SECOND',durationMs:4}}));",
+      ].join("")],
+    };
+    await assert.rejects(() => runner(mixedProtocolTask.display, mixedProtocolTask),
+      /Browser target result incomplete or failed/u,
+      "an isolated-target protocol cannot omit one target result after emitting another");
 
     process.env.VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES = "32";
     const overflowContext = createVerificationReceiptContext(1, 2, { receiptDirectory:commandReceiptDirectory });
@@ -1652,6 +2171,42 @@ try {
   const alphaPlan = await planFor("alpha");
   assert.ok(alphaPlan.propertyTasks.length > 0, "durable exact-pack fixtures include property leaves");
   const alphaReceipt = await receiptFor(alphaPlan, "alpha-receipt");
+  const preflightReceipt = path.join(evidenceRepository, "tmp", "verification-receipts", "preflight.json");
+  await writeFile(preflightReceipt, JSON.stringify({
+    version:2,
+    environment:{
+      node:lockedRuntime.node, typescript:lockedRuntime.typescript,
+      platform:`${process.platform}-${process.arch}`, concurrency:1, observationConcurrency:1,
+    },
+    tasks:{},
+  }));
+  const compatibility = await validateVerificationEvidenceCompatibility({
+    task:"preflight-compatibility", plan:alphaPlan, receiptPath:preflightReceipt,
+    changedSince:baseline, repositoryRoot:evidenceRepository,
+  });
+  assert.equal(compatibility.commit, await exec("git", ["rev-parse", "HEAD"], { cwd:evidenceRepository }),
+    "preflight evidence compatibility binds the clean committed candidate before execution");
+  await checkpointPreflight({
+    packs:evidencePacks, plan:alphaPlan,
+    receiptContext:{ receiptPath:preflightReceipt, receipt:{ version:2, tasks:{} } },
+    inputFingerprint:{ inputDigest:"a".repeat(64) },
+    evidenceTask:"preflight-compatibility", changedSince:baseline, root:evidenceRepository,
+    validators:{
+      registry:async() => {}, plan:async() => {}, receipt:async() => {}, artifact:async() => {},
+    },
+  });
+  await writeFile(path.join(evidenceRepository, "uncommitted-evidence-blocker"), "dirty\n");
+  await assert.rejects(() => checkpointPreflight({
+    packs:evidencePacks, plan:alphaPlan,
+    receiptContext:{ receiptPath:preflightReceipt, receipt:{ version:2, tasks:{} } },
+    inputFingerprint:{ inputDigest:"a".repeat(64) },
+    evidenceTask:"preflight-compatibility", changedSince:baseline, root:evidenceRepository,
+    validators:{
+      registry:async() => {}, plan:async() => {}, receipt:async() => {}, artifact:async() => {},
+    },
+  }), /Commit candidate changes/u,
+  "the default evidence preflight rejects an incompatible candidate before any verification command");
+  await rm(path.join(evidenceRepository, "uncommitted-evidence-blocker"));
   const redirectedReceipt = path.join(evidenceRepository, "tmp", "arbitrary-receipt.json");
   await writeFile(redirectedReceipt, await readFile(alphaReceipt));
   await assert.rejects(() => createPendingVerificationEvidence({

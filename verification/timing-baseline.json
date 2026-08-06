@@ -1,7 +1,7 @@
 {
   "version": 2,
   "recordedAt": "2026-08-04",
-  "source": "bootstrap fallback; 2026-08-04 pinned-runtime samples measured build at 6.06s and one array browser observation at 1.01s; validated receipt-ledger measurements take precedence",
+  "source": "bootstrap fallback plus completed 2026-08-06 exact-checkpoint target measurements; validated receipt-ledger measurements take precedence",
   "runtime": {
     "node": "24.19.0",
     "typescript": "5.9.3",
@@ -20,6 +20,25 @@
     "unknown": 1000
   },
   "defaultBrowserTargetMilliseconds": 2000,
+  "browserAggregateMeasurements": {
+    "test/browser-packs/layered-schema.mjs": {"durationMilliseconds": 175000, "kind": "completed-original-adapter-focused-measurement", "recordedAt": "2026-08-06", "provisional": true}
+  },
+  "browserTargetMilliseconds": {
+    "BRANDING_WORKFLOW_CHOICES_TARGET": 84783,
+    "BRANDING_WORKFLOW_GUIDANCE_TARGET": 60000,
+    "DURABLE_RENDERER_CORPUS_TARGET": 20000,
+    "DURABLE_RENDERER_HISTORY_TARGET": 79564,
+    "DURABLE_REPOSITORY_REVISION_TARGET": 90000,
+    "DURABLE_REPOSITORY_STORAGE_TARGET": 90000,
+    "LAYERED_SCHEMA_COMPOSITION_TARGET": 24864,
+    "LAYERED_SCHEMA_CORE_TARGET": 6728,
+    "LAYERED_SCHEMA_EDITOR_TARGET": 45919,
+    "LAYERED_SCHEMA_EDITOR_RULES_TARGET": 45810,
+    "LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET": 86470,
+    "LAYERED_SCHEMA_EDITOR_POLICY_TARGET": 18366,
+    "LAYERED_SCHEMA_INHERITANCE_TARGET": 90000,
+    "LAYERED_SCHEMA_PAGE_GROUP_TARGET": 5659
+  },
   "sharding": {
     "algorithm": "deterministic-greedy-pack-weight",
     "maximumToAverageRatio": 1.75
@@ -36,6 +55,20 @@
     },
     "browserTargetP90Milliseconds": {
       "ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER": 120000,
+      "BRANDING_WORKFLOW_CHOICES_TARGET": {"limit": 101740, "baseline": 84783, "percentile": "p90", "tolerance": 1.2, "provisional": false},
+      "BRANDING_WORKFLOW_GUIDANCE_TARGET": {"limit": 72000, "baseline": 60000, "percentile": "bootstrap", "tolerance": 1.2, "provisional": true},
+      "DURABLE_RENDERER_CORPUS_TARGET": {"limit": 24000, "baseline": 20000, "percentile": "bootstrap", "tolerance": 1.2, "provisional": true},
+      "DURABLE_RENDERER_HISTORY_TARGET": {"limit": 95477, "baseline": 79564, "percentile": "p90", "tolerance": 1.2, "provisional": false},
+      "DURABLE_REPOSITORY_REVISION_TARGET": {"limit": 108000, "baseline": 90000, "percentile": "bootstrap", "tolerance": 1.2, "provisional": true},
+      "DURABLE_REPOSITORY_STORAGE_TARGET": {"limit": 108000, "baseline": 90000, "percentile": "bootstrap", "tolerance": 1.2, "provisional": true},
+      "LAYERED_SCHEMA_COMPOSITION_TARGET": {"limit": 49728, "baseline": 24864, "percentile": "focused-sample", "tolerance": 2, "provisional": true},
+      "LAYERED_SCHEMA_CORE_TARGET": {"limit": 13456, "baseline": 6728, "percentile": "focused-sample", "tolerance": 2, "provisional": true},
+      "LAYERED_SCHEMA_EDITOR_TARGET": {"limit": 91838, "baseline": 45919, "percentile": "focused-sample", "tolerance": 2, "provisional": true},
+      "LAYERED_SCHEMA_EDITOR_RULES_TARGET": {"limit": 91620, "baseline": 45810, "percentile": "focused-sample", "tolerance": 2, "provisional": true},
+      "LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET": {"limit": 120000, "baseline": 86470, "percentile": "focused-sample", "tolerance": 1.388, "provisional": true},
+      "LAYERED_SCHEMA_EDITOR_POLICY_TARGET": {"limit": 36732, "baseline": 18366, "percentile": "focused-sample", "tolerance": 2, "provisional": true},
+      "LAYERED_SCHEMA_INHERITANCE_TARGET": {"limit": 108000, "baseline": 90000, "percentile": "bootstrap", "tolerance": 1.2, "provisional": true},
+      "LAYERED_SCHEMA_PAGE_GROUP_TARGET": {"limit": 11318, "baseline": 5659, "percentile": "focused-sample", "tolerance": 2, "provisional": true},
       "SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER": 10000,
       "WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER": 10000
     }

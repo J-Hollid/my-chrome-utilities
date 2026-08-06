@@ -296,6 +296,77 @@ export async function validateVerificationCandidateClean({ repositoryRoot = repo
   await cleanCandidate(repositoryRoot);
 }
 
+export async function validateVerificationEvidenceCompatibility({
+  task,
+  plan,
+  receiptPath,
+  changedSince,
+  buildManifest,
+  repositoryRoot = repository,
+  requireCompletedReceipt = false,
+}) {
+  assertTaskName(task);
+  if (!changedSince?.trim()) throw new Error("Evidence preparation requires --changed-since <commit>");
+  await cleanCandidate(repositoryRoot);
+  const [commit, tree, baseCommit, sourceIdentity] = await Promise.all([
+    git(repositoryRoot, "rev-parse", "HEAD^{commit}"),
+    git(repositoryRoot, "rev-parse", "HEAD^{tree}"),
+    git(repositoryRoot, "rev-parse", `${changedSince}^{commit}`),
+    repositoryIdentity(repositoryRoot),
+  ]);
+  const planRecord = planDocument(plan);
+  const actualChangeSet = await canonicalVerificationChangeSet({
+    base:baseCommit,
+    commit,
+    repositoryRoot,
+  });
+  if (!actualChangeSet.paths.length) {
+    throw new Error("Verification evidence requires a non-empty committed candidate range");
+  }
+  if (!same(actualChangeSet, planRecord.changeSet)) {
+    throw new Error("Planned canonical change set does not match the committed candidate range");
+  }
+  await assertCanonicalPlan(planRecord, {
+    commit,
+    baseCommit,
+    changeSet:actualChangeSet,
+    packIds:planRecord.packIds,
+    repositoryRoot,
+  });
+  const receiptSourcePath = repositoryRelativePath(repositoryRoot, receiptPath, "Verification receipt");
+  if (!validRawReceiptPath(receiptSourcePath)) {
+    throw new Error("Verification receipt must be runner-owned under tmp/verification-receipts");
+  }
+  const absoluteReceiptPath = path.join(repositoryRoot, receiptSourcePath);
+  if (!requireCompletedReceipt) {
+    const receipt = JSON.parse(await readFile(absoluteReceiptPath, "utf8"));
+    if (receipt?.version !== 2 || !receipt.tasks || Array.isArray(receipt.tasks)) {
+      throw new Error("Verification evidence requires a version 2 task receipt contract");
+    }
+    const environment = receiptEnvironment(receipt.environment);
+    if (!same({ node:environment.node, typescript:environment.typescript }, sourceIdentity.runtime)) {
+      throw new Error("Verification receipt contract and locked runtime identities must match");
+    }
+    return {
+      commit, tree, baseCommit, sourceIdentity, planRecord, actualChangeSet,
+      receiptSourcePath, environment,
+    };
+  }
+  const [{ bytes, results, environment, artifact:receiptArtifact }] = await Promise.all([
+    parsedReceipt(absoluteReceiptPath, planRecord),
+  ]);
+  const artifact = artifactIdentity(buildManifest);
+  if (!same(receiptArtifact, artifact) ||
+      !same({ node:environment.node, typescript:environment.typescript }, sourceIdentity.runtime) ||
+      !same(artifact.toolchain, sourceIdentity.runtime)) {
+    throw new Error("Verification receipt, supplied artifact, and locked runtime identities must match");
+  }
+  return {
+    commit, tree, baseCommit, sourceIdentity, planRecord, actualChangeSet,
+    receiptSourcePath, bytes, results, environment, artifact,
+  };
+}
+
 function pendingPathFor(repositoryRoot, task, planDigest) {
   return path.join(
     repositoryRoot,
@@ -419,47 +490,14 @@ export async function createPendingVerificationEvidence({
   repositoryRoot = repository,
   toolchainValidator = validateStrictVerificationToolchain,
 }) {
-  assertTaskName(task);
-  if (!changedSince?.trim()) throw new Error("Evidence preparation requires --changed-since <commit>");
   await toolchainValidator({ repositoryRoot });
-  await cleanCandidate(repositoryRoot);
-  const [commit, tree, baseCommit] = await Promise.all([
-    git(repositoryRoot, "rev-parse", "HEAD^{commit}"),
-    git(repositoryRoot, "rev-parse", "HEAD^{tree}"),
-    git(repositoryRoot, "rev-parse", `${changedSince}^{commit}`),
-  ]);
-  const planRecord = planDocument(plan);
-  const actualChangeSet = await canonicalVerificationChangeSet({
-    base:baseCommit,
-    commit,
-    repositoryRoot,
+  const {
+    commit, tree, baseCommit, sourceIdentity, planRecord, actualChangeSet,
+    receiptSourcePath, bytes, results, environment, artifact,
+  } = await validateVerificationEvidenceCompatibility({
+    task, plan, receiptPath, changedSince, buildManifest, repositoryRoot,
+    requireCompletedReceipt:true,
   });
-  const actualChangedPaths = actualChangeSet.paths;
-  if (!actualChangedPaths.length) throw new Error("Verification evidence requires a non-empty committed candidate range");
-  if (!same(actualChangeSet, planRecord.changeSet)) {
-    throw new Error("Planned canonical change set does not match the committed candidate range");
-  }
-  await assertCanonicalPlan(planRecord, {
-    commit,
-    baseCommit,
-    changeSet:actualChangeSet,
-    packIds:planRecord.packIds,
-    repositoryRoot,
-  });
-  const receiptSourcePath = repositoryRelativePath(repositoryRoot, receiptPath, "Verification receipt");
-  if (!validRawReceiptPath(receiptSourcePath)) {
-    throw new Error("Verification receipt must be runner-owned under tmp/verification-receipts");
-  }
-  const [{ bytes, results, environment, artifact:receiptArtifact }, sourceIdentity] = await Promise.all([
-    parsedReceipt(path.join(repositoryRoot, receiptSourcePath), planRecord),
-    repositoryIdentity(repositoryRoot),
-  ]);
-  const artifact = artifactIdentity(buildManifest);
-  if (!same(receiptArtifact, artifact) ||
-      !same({ node:environment.node, typescript:environment.typescript }, sourceIdentity.runtime) ||
-      !same(artifact.toolchain, sourceIdentity.runtime)) {
-    throw new Error("Verification receipt, supplied artifact, and locked runtime identities must match");
-  }
   const record = {
     version:2,
     status:"pending",
@@ -468,7 +506,7 @@ export async function createPendingVerificationEvidence({
     tree,
     baseCommit,
     packIds:planRecord.packIds,
-    changedPaths:actualChangedPaths,
+    changedPaths:actualChangeSet.paths,
     changeSet:actualChangeSet,
     plan:planRecord,
     planDigest:verificationDigest(planRecord),

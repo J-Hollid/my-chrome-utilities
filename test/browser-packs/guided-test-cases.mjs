@@ -3,7 +3,7 @@ import {spawn} from "node:child_process";
 import {mkdir,mkdtemp,rm} from "node:fs/promises";
 import net from "node:net";
 import path from "node:path";
-import {headlessChromeArguments,resolveChromeExecutable,stopHeadlessChrome} from "../support/headless-chrome.mjs";
+import {headlessChromeArguments,removeChromeProfile,resolveChromeExecutable,stopHeadlessChrome} from "../support/headless-chrome.mjs";
 import {wait} from "./shared-harness.mjs";
 
 class DevtoolsSocket{
@@ -159,4 +159,4 @@ try{
   };
   assert.equal(Object.values(evidence).every(Boolean),true,JSON.stringify({evidence,observation:observation.debug,pageContextResult,canonicalFacets,invalidControl,pairedIssue,keyboard360,keyboardFocus360,keyboardReviewLabel,saveFailure,saveFailureKeys,retrySaveKeyboard,retrySaved,compileFaultStatus:compileFaultSeed.compile,compileFailure,compileFailureKeys,preflightKeyboard,installedPreflight,publishKeyboard,installedPublication,desktopKeys,zoomKeys,desktop,zoom,missingGuidanceRepair,libraryHandoff:libraryHandoff.passed}));
   console.log(JSON.stringify({guidedTestCases:evidence}));
-}finally{side?.close();socket?.close();await stopHeadlessChrome(chrome);await rm(profile,{recursive:true,force:true,maxRetries:5,retryDelay:100});}
+}finally{side?.close();socket?.close();await stopHeadlessChrome(chrome);await removeChromeProfile(profile,{targetId:"guided-test-cases"});}
