@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "implementationCommit": "524cd3a7df6b5afcf51561d69c623b7615c50003",
+  "implementationCommit": "21bcee970e2921df4233939a34082a67d007449b",
   "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
   "environment": {
     "node": "24.19.0",
@@ -35,15 +35,21 @@
     "32c7702f8804718a38fda067e33bf121273dbdff2b94e5c81799dbd6b72f80ad",
     "3db06914559b048274e10725034474623736160a6eb7aa5a78ebd924e4211abb",
     "3e8f2a30516f3a801de4f0631c935bb7f0bd96d9d6026b2d5d4a1c2e1e72dc58",
+    "4c1e6b2a62f70eb379e3f7f1bef54055659fb070f4206b9e6bee647c1dce676d",
     "4fbf4f08921f46a05a472cb1f4e80b4787f554ccd815ddce58328e744eec0dba",
     "5d55b34a6065fbcd92cfd3f59a6fe62c256ce5e17af1dc351d68298ea9e74157",
     "674ec22d833be3173b435d486108f7ea77b2efe2dcdb7fe305ddd44c821358a4",
     "76dea26cead99649791f42f3fd6ef5c3e64e5e2a1ddaaaf6242aac383b1e3d7f",
+    "8d077faad9e492872bf2f9d9a7b24a7baeffbb070228c32f5312b68239593ef5",
+    "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6",
+    "a1a77655b5ad0a95fc2970a08153db9d927cff1c17bb256ed958071d708c26c0",
     "a21a3508539c9352eec25a404363b1d921f511604dc3e8cb012266cd68e9be8a",
     "c8de751d2208e049a4321a56499368bf662f6d62c97c5d77814c8c401d9cd750",
     "c98a057d261a70fa7384839cbbb5442d5e555dc54cf54eea34a3f753f79b7da6",
     "ccb6b489ef280b020e3024d27d9c2694dccdbe49827b55682efc3d7bd2b9626a",
     "cd3e4660d57954a428b686dab7c5aa52d648b948cb615fdc74a4b06abf417f99",
+    "d2668189d33fe32d6b8efc3960c8fd133984e0ade839b54b350917526cbb5d9c",
+    "dacf883d550250a96af2e685ea7213b10d36ff3669c9f4a7396135f15549a1b2",
     "dd223a48adb3c959475de41d1b37a10d6350aefb3deee80631c71ccea4f9fd94",
     "e1e29942e5325db069b0f464cf99fd070ebb07c601561c63953895ba0c9fd9f5",
     "f37942905e24142105289ed92e5564e24552e311317c5328ad2f1e4040f6aea2",
@@ -78,28 +84,26 @@
         "shell"
       ],
       "exactPackDuration": {
-        "limit": 15,
-        "baseline": 12.2,
+        "limit": 45,
+        "baseline": 37.1,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.045,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 1,
-          "bootstrap fallback": 21
+          "exact task samples": 22
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 483,
-        "baseline": 402.3,
+        "limit": 468,
+        "baseline": 390,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.396,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 74,
-          "bootstrap fallback": 113
+          "exact task samples": 187
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-assignment-routing-ui.ts"
@@ -136,28 +140,26 @@
         "property_set_flow_sections"
       ],
       "exactPackDuration": {
-        "limit": 226,
-        "baseline": 187.6,
+        "limit": 109,
+        "baseline": 90.2,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.077,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 1,
-          "bootstrap fallback": 12
+          "exact task samples": 13
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 443,
-        "baseline": 368.8,
+        "limit": 395,
+        "baseline": 328.8,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.179,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 17,
-          "bootstrap fallback": 78
+          "exact task samples": 95
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-durable-project-repository-ui.ts"
@@ -187,28 +189,26 @@
         "shell"
       ],
       "exactPackDuration": {
-        "limit": 11,
-        "baseline": 8.7,
+        "limit": 9,
+        "baseline": 7.3,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.077,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 1,
-          "bootstrap fallback": 12
+          "exact task samples": 13
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 49,
-        "baseline": 40.1,
+        "limit": 46,
+        "baseline": 38,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.846,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 66,
-          "bootstrap fallback": 12
+          "exact task samples": 78
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/command-palette-ui.ts"
@@ -246,8 +246,8 @@
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 47,
-        "baseline": 38.9,
+        "limit": 46,
+        "baseline": 37.6,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
@@ -286,28 +286,26 @@
         "shell"
       ],
       "exactPackDuration": {
-        "limit": 28,
-        "baseline": 22.7,
+        "limit": 63,
+        "baseline": 51.9,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.006,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 1,
-          "bootstrap fallback": 158
+          "exact task samples": 159
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 95,
-        "baseline": 79.1,
+        "limit": 235,
+        "baseline": 195.5,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.096,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 58,
-          "bootstrap fallback": 548
+          "exact task samples": 606
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-live-inspector-presentation-ui.ts"
@@ -345,28 +343,26 @@
         "shell"
       ],
       "exactPackDuration": {
-        "limit": 25,
-        "baseline": 20.5,
+        "limit": 14,
+        "baseline": 11.6,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.034,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 1,
-          "bootstrap fallback": 28
+          "exact task samples": 29
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 71,
-        "baseline": 58.9,
+        "limit": 89,
+        "baseline": 73.9,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.317,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 58,
-          "bootstrap fallback": 125
+          "exact task samples": 183
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-event-library-deletion.ts"
@@ -395,28 +391,26 @@
         "project_event_transport"
       ],
       "exactPackDuration": {
-        "limit": 11,
-        "baseline": 8.7,
+        "limit": 12,
+        "baseline": 9.9,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.125,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 1,
-          "bootstrap fallback": 7
+          "exact task samples": 8
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 11,
-        "baseline": 8.7,
+        "limit": 12,
+        "baseline": 9.9,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.125,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 1,
-          "bootstrap fallback": 7
+          "exact task samples": 8
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-project-event-transport.ts"
@@ -444,28 +438,26 @@
         "shell"
       ],
       "exactPackDuration": {
-        "limit": 27,
-        "baseline": 22,
+        "limit": 180,
+        "baseline": 149.6,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.004,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 1,
-          "bootstrap fallback": 258
+          "exact task samples": 259
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 72,
-        "baseline": 59.2,
+        "limit": 223,
+        "baseline": 185.4,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.142,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 58,
-          "bootstrap fallback": 350
+          "exact task samples": 408
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-allowed-value-expansion-ui.ts"
@@ -495,28 +487,26 @@
         "shell"
       ],
       "exactPackDuration": {
-        "limit": 25,
-        "baseline": 20.7,
+        "limit": 45,
+        "baseline": 36.9,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.014,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 1,
-          "bootstrap fallback": 69
+          "exact task samples": 70
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 57,
-        "baseline": 47.4,
+        "limit": 72,
+        "baseline": 59.2,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.426,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 58,
-          "bootstrap fallback": 78
+          "exact task samples": 136
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-defect-library-ui.ts"
@@ -542,28 +532,26 @@
         "shell"
       ],
       "exactPackDuration": {
-        "limit": 11,
-        "baseline": 8.7,
+        "limit": 9,
+        "baseline": 7.4,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.167,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 1,
-          "bootstrap fallback": 5
+          "exact task samples": 6
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 48,
-        "baseline": 39.7,
+        "limit": 46,
+        "baseline": 37.9,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.921,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 58,
-          "bootstrap fallback": 5
+          "exact task samples": 63
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-sequence-replay-ui.ts"
@@ -588,7 +576,7 @@
       ],
       "exactPackDuration": {
         "limit": 73,
-        "baseline": 60.8,
+        "baseline": 60.3,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
@@ -600,7 +588,7 @@
       },
       "changedPathDuration": {
         "limit": 35,
-        "baseline": 28.4,
+        "baseline": 28.3,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
@@ -631,28 +619,26 @@
         "flow_export"
       ],
       "exactPackDuration": {
-        "limit": 11,
-        "baseline": 8.7,
+        "limit": 58,
+        "baseline": 47.6,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.077,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 1,
-          "bootstrap fallback": 12
+          "exact task samples": 13
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 11,
-        "baseline": 8.7,
+        "limit": 58,
+        "baseline": 47.6,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.077,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 1,
-          "bootstrap fallback": 12
+          "exact task samples": 13
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-project-documentation-workspace-ui.ts"
@@ -675,28 +661,26 @@
         "live_flow_testing"
       ],
       "exactPackDuration": {
-        "limit": 11,
-        "baseline": 8.7,
+        "limit": 13,
+        "baseline": 10.6,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.1,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 1,
-          "bootstrap fallback": 9
+          "exact task samples": 10
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 11,
-        "baseline": 8.7,
+        "limit": 13,
+        "baseline": 10.6,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.1,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 1,
-          "bootstrap fallback": 9
+          "exact task samples": 10
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-live-flow-testing-ui.ts"
@@ -719,28 +703,26 @@
         "layered_schema"
       ],
       "exactPackDuration": {
-        "limit": 246,
-        "baseline": 204.4,
+        "limit": 258,
+        "baseline": 214.8,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.026,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 1,
-          "bootstrap fallback": 38
+          "exact task samples": 39
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 246,
-        "baseline": 204.4,
+        "limit": 258,
+        "baseline": 214.8,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.042,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 1,
-          "bootstrap fallback": 23
+          "exact task samples": 24
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/canonical-schema-focused/navigator-rows.ts"
@@ -763,28 +745,26 @@
         "schema_relationship_tree"
       ],
       "exactPackDuration": {
-        "limit": 11,
-        "baseline": 8.7,
+        "limit": 15,
+        "baseline": 11.7,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.125,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 1,
-          "bootstrap fallback": 7
+          "exact task samples": 8
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 11,
-        "baseline": 8.7,
+        "limit": 15,
+        "baseline": 11.7,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.125,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 1,
-          "bootstrap fallback": 7
+          "exact task samples": 8
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/schema-relationship-tree.ts"
@@ -807,28 +787,26 @@
         "property_set_flow_sections"
       ],
       "exactPackDuration": {
-        "limit": 11,
-        "baseline": 8.7,
+        "limit": 16,
+        "baseline": 13.1,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.125,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 1,
-          "bootstrap fallback": 7
+          "exact task samples": 8
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 11,
-        "baseline": 8.7,
+        "limit": 16,
+        "baseline": 13.1,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.125,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 1,
-          "bootstrap fallback": 7
+          "exact task samples": 8
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-property-set-flow-section-ui.ts"
@@ -852,27 +830,25 @@
       ],
       "exactPackDuration": {
         "limit": 11,
-        "baseline": 8.7,
+        "baseline": 9.1,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.125,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 1,
-          "bootstrap fallback": 7
+          "exact task samples": 8
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
         "limit": 11,
-        "baseline": 8.7,
+        "baseline": 9.1,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.125,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 1,
-          "bootstrap fallback": 7
+          "exact task samples": 8
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "features/data-layer-project-assurance-severity.feature"
@@ -895,28 +871,26 @@
         "branding_polish"
       ],
       "exactPackDuration": {
-        "limit": 183,
-        "baseline": 152.3,
+        "limit": 114,
+        "baseline": 94.8,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.071,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 1,
-          "bootstrap fallback": 13
+          "exact task samples": 14
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 183,
-        "baseline": 152.3,
+        "limit": 114,
+        "baseline": 94.8,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.071,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 1,
-          "bootstrap fallback": 13
+          "exact task samples": 14
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-studio-choice-controls.ts"
@@ -939,28 +913,26 @@
         "guided_test_cases"
       ],
       "exactPackDuration": {
-        "limit": 11,
-        "baseline": 8.7,
+        "limit": 22,
+        "baseline": 17.9,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.125,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 1,
-          "bootstrap fallback": 7
+          "exact task samples": 8
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 11,
-        "baseline": 8.7,
+        "limit": 22,
+        "baseline": 17.9,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.125,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 1,
-          "bootstrap fallback": 7
+          "exact task samples": 8
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-guided-test-cases.ts"
@@ -1002,8 +974,8 @@
         "shell"
       ],
       "exactPackDuration": {
-        "limit": 47,
-        "baseline": 38.5,
+        "limit": 45,
+        "baseline": 37.2,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
@@ -1015,15 +987,14 @@
         "budgetClass": "global-shell"
       },
       "changedPathDuration": {
-        "limit": 633,
-        "baseline": 527.5,
+        "limit": 613,
+        "baseline": 510.8,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 0.109,
+        "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 82,
-          "bootstrap fallback": 670
+          "exact task samples": 752
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/workspace-tabs-ui.ts",
@@ -1070,8 +1041,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1081,8 +1054,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1092,8 +1067,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "BRANDING_WORKFLOW_CHOICES_TARGET": {
       "limit": 101740,
@@ -1103,8 +1080,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "explicit target baseline",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "BRANDING_WORKFLOW_GUIDANCE_TARGET": {
       "limit": 72000,
@@ -1114,8 +1093,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "explicit target baseline",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "CANONICAL_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1125,8 +1106,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "CONDITIONAL_VALIDATION_RULES_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1136,8 +1119,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "DEFECT_LIBRARY_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1147,8 +1132,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "DEFECT_REPORT_COMPONENT_OPTIONS_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1158,8 +1145,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "DEFECT_REPORT_PROVENANCE_PRESENTATION_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1169,8 +1158,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "DEFECT_REPORT_SEMANTIC_DIFFERENCES_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1180,8 +1171,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "DEFECT_REPORT_UNDECLARED_REMOVAL_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1191,8 +1184,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "DURABLE_RENDERER_CORPUS_TARGET": {
       "limit": 24000,
@@ -1202,8 +1197,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "explicit target baseline",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "DURABLE_RENDERER_HISTORY_TARGET": {
       "limit": 95477,
@@ -1213,8 +1210,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "explicit target baseline",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "DURABLE_REPOSITORY_REVISION_TARGET": {
       "limit": 108000,
@@ -1224,8 +1223,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "explicit target baseline",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "DURABLE_REPOSITORY_STORAGE_TARGET": {
       "limit": 108000,
@@ -1235,8 +1236,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "explicit target baseline",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "EVENT_OCCURRENCE_DEFECT_REPORT_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1246,8 +1249,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "FLOW_GRAPH_EXAMPLES_TARGET": {
       "limit": 4596,
@@ -1268,50 +1273,68 @@
       "correctionCommit": "7f2095c346b39bf6b57e23893eace76e42438363"
     },
     "FLOW_GRAPH_LEGACY_TARGET": {
-      "limit": 1554,
-      "baseline": 1295,
+      "limit": 1878,
+      "baseline": 1565,
       "percentile": "p90",
       "tolerance": 1.2,
-      "provisional": true,
-      "maturity": "provisional",
-      "source": "explicit target baseline",
-      "sampleCount": 4,
+      "provisional": false,
+      "maturity": "non-provisional",
+      "source": "accepted target samples",
+      "sampleCount": 10,
       "receiptDigests": [
         "32c7702f8804718a38fda067e33bf121273dbdff2b94e5c81799dbd6b72f80ad",
         "3db06914559b048274e10725034474623736160a6eb7aa5a78ebd924e4211abb",
         "3e8f2a30516f3a801de4f0631c935bb7f0bd96d9d6026b2d5d4a1c2e1e72dc58",
+        "4c1e6b2a62f70eb379e3f7f1bef54055659fb070f4206b9e6bee647c1dce676d",
+        "8d077faad9e492872bf2f9d9a7b24a7baeffbb070228c32f5312b68239593ef5",
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6",
+        "a1a77655b5ad0a95fc2970a08153db9d927cff1c17bb256ed958071d708c26c0",
+        "d2668189d33fe32d6b8efc3960c8fd133984e0ade839b54b350917526cbb5d9c",
+        "dacf883d550250a96af2e685ea7213b10d36ff3669c9f4a7396135f15549a1b2",
         "dd223a48adb3c959475de41d1b37a10d6350aefb3deee80631c71ccea4f9fd94"
       ]
     },
     "FLOW_WORKSPACE_AUTHORING_TARGET": {
-      "limit": 18687,
-      "baseline": 15572,
+      "limit": 19056,
+      "baseline": 15880,
       "percentile": "p90",
       "tolerance": 1.2,
-      "provisional": true,
-      "maturity": "provisional",
-      "source": "explicit target baseline",
-      "sampleCount": 4,
+      "provisional": false,
+      "maturity": "non-provisional",
+      "source": "accepted target samples",
+      "sampleCount": 10,
       "receiptDigests": [
         "32c7702f8804718a38fda067e33bf121273dbdff2b94e5c81799dbd6b72f80ad",
         "3db06914559b048274e10725034474623736160a6eb7aa5a78ebd924e4211abb",
         "3e8f2a30516f3a801de4f0631c935bb7f0bd96d9d6026b2d5d4a1c2e1e72dc58",
+        "4c1e6b2a62f70eb379e3f7f1bef54055659fb070f4206b9e6bee647c1dce676d",
+        "8d077faad9e492872bf2f9d9a7b24a7baeffbb070228c32f5312b68239593ef5",
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6",
+        "a1a77655b5ad0a95fc2970a08153db9d927cff1c17bb256ed958071d708c26c0",
+        "d2668189d33fe32d6b8efc3960c8fd133984e0ade839b54b350917526cbb5d9c",
+        "dacf883d550250a96af2e685ea7213b10d36ff3669c9f4a7396135f15549a1b2",
         "dd223a48adb3c959475de41d1b37a10d6350aefb3deee80631c71ccea4f9fd94"
       ]
     },
     "FLOW_WORKSPACE_CONTROLS_TARGET": {
       "limit": 35000,
-      "baseline": 30318,
+      "baseline": 31252,
       "percentile": "p90",
       "tolerance": 1.2,
-      "provisional": true,
-      "maturity": "provisional",
-      "source": "explicit target baseline",
-      "sampleCount": 4,
+      "provisional": false,
+      "maturity": "non-provisional",
+      "source": "accepted target samples",
+      "sampleCount": 10,
       "receiptDigests": [
         "32c7702f8804718a38fda067e33bf121273dbdff2b94e5c81799dbd6b72f80ad",
         "3db06914559b048274e10725034474623736160a6eb7aa5a78ebd924e4211abb",
         "3e8f2a30516f3a801de4f0631c935bb7f0bd96d9d6026b2d5d4a1c2e1e72dc58",
+        "4c1e6b2a62f70eb379e3f7f1bef54055659fb070f4206b9e6bee647c1dce676d",
+        "8d077faad9e492872bf2f9d9a7b24a7baeffbb070228c32f5312b68239593ef5",
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6",
+        "a1a77655b5ad0a95fc2970a08153db9d927cff1c17bb256ed958071d708c26c0",
+        "d2668189d33fe32d6b8efc3960c8fd133984e0ade839b54b350917526cbb5d9c",
+        "dacf883d550250a96af2e685ea7213b10d36ff3669c9f4a7396135f15549a1b2",
         "dd223a48adb3c959475de41d1b37a10d6350aefb3deee80631c71ccea4f9fd94"
       ]
     },
@@ -1323,8 +1346,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "GUIDED_ASSIGNMENT_COVERAGE_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1334,8 +1359,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1345,8 +1372,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "GUIDED_NESTED_PROPERTY_MERGE_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1356,8 +1385,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "GUIDED_VALIDATION_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1367,8 +1398,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "JSON_SCHEMA_EXPORT_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1378,8 +1411,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "LAYERED_SCHEMA_COMPOSITION_TARGET": {
       "limit": 29837,
@@ -1389,8 +1424,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "explicit target baseline",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "LAYERED_SCHEMA_CORE_TARGET": {
       "limit": 8074,
@@ -1400,8 +1437,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "explicit target baseline",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET": {
       "limit": 103764,
@@ -1411,8 +1450,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "explicit target baseline",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "LAYERED_SCHEMA_EDITOR_POLICY_TARGET": {
       "limit": 22040,
@@ -1422,8 +1463,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "explicit target baseline",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "LAYERED_SCHEMA_EDITOR_RULES_TARGET": {
       "limit": 54972,
@@ -1433,8 +1476,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "explicit target baseline",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "LAYERED_SCHEMA_EDITOR_TARGET": {
       "limit": 55103,
@@ -1444,8 +1489,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "explicit target baseline",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "LAYERED_SCHEMA_INHERITANCE_TARGET": {
       "limit": 108000,
@@ -1455,8 +1502,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "explicit target baseline",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "LAYERED_SCHEMA_PAGE_GROUP_TARGET": {
       "limit": 6791,
@@ -1466,8 +1515,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "explicit target baseline",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1477,8 +1528,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "LIVE_GUIDED_CONDITIONAL_RULE_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1488,8 +1541,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1499,8 +1554,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "LIVE_VALIDATION_VISUALS_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1510,8 +1567,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "LOCAL_RULE_EDITING_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1521,8 +1580,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "LOCAL_RULE_PROMOTION_AVAILABILITY_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1532,8 +1593,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "LOCAL_RULE_PROMOTION_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1543,8 +1606,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "MISSING_EVENT_DEFECT_FIDELITY_BROWSER_OBSERVATION": {
       "limit": 120000,
@@ -1554,8 +1619,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "PAYLOAD_PATH_FILTER_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1565,8 +1632,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "RECURSIVE_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1576,8 +1645,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "RECURSIVE_PROPERTY_VALIDATION_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1587,8 +1658,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "REPRODUCTION_STEP_ACTION_ROWS_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1598,8 +1671,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "REQUIRED_PROPERTY_DEFECT_SCHEMA_CHOICES_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1609,8 +1684,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "REQUIRED_RULE_TYPE_INDEPENDENCE_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1620,8 +1697,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "REUSABLE_RULE_SYNC_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1631,8 +1710,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "SAVED_EVENT_FEED_FILTERS_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1642,8 +1723,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "SAVED_SESSION_LIVE_FEED_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1653,8 +1736,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "SCHEMA_ASSIGNMENT_DATA_CONDITIONS_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1664,8 +1749,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "SCHEMA_CARDINALITY_COMPARISON_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1675,8 +1762,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "SCHEMA_DECLARED_PROPERTY_EXCEPTIONS_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1686,8 +1775,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "SCHEMA_DOCUMENTATION_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1697,8 +1788,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "SCHEMA_MANUAL_PROPERTY_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1708,8 +1801,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "SCHEMA_NESTED_PATH_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1719,8 +1814,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "SCHEMA_PROPERTY_COMMENTS_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1730,8 +1827,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "SCHEMA_PROPERTY_COPY_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1741,8 +1840,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "SCHEMA_PROPERTY_EXAMPLE_VALUES_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1752,8 +1853,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "SCHEMA_PROPERTY_FILTER_SORT_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1763,8 +1866,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "SCHEMA_PROPERTY_REMOVAL_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1774,8 +1879,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "SCHEMA_PROPERTY_RULE_PICKER_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1785,8 +1892,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "SCHEMA_PROPERTY_TYPE_EDITING_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1796,8 +1905,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "SCHEMA_PUBLICATION_REFRESH_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1807,8 +1918,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "SCHEMA_RENAMING_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1818,8 +1931,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1829,8 +1944,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "SCHEMA_RULE_PROPERTY_IDENTITY_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1840,8 +1957,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "SCHEMA_SPECIFICATION_BUILDER_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1851,8 +1970,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "SCHEMA_SPECIFICATION_BUILDER_CUSTOMIZATION_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1862,8 +1983,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "SCHEMA_SPECIFICATION_CONTAINER_DEFAULTS_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1873,8 +1996,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "SCHEMA_SPECIFICATION_EXAMPLE_SELECTION_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1884,8 +2009,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "SCHEMA_SPECIFICATION_PREVIEW_LAYOUT_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1895,8 +2022,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER": {
       "limit": 4175,
@@ -1906,11 +2035,12 @@
       "provisional": false,
       "maturity": "non-provisional",
       "source": "accepted target samples",
-      "sampleCount": 5,
+      "sampleCount": 6,
       "receiptDigests": [
         "32c7702f8804718a38fda067e33bf121273dbdff2b94e5c81799dbd6b72f80ad",
         "3db06914559b048274e10725034474623736160a6eb7aa5a78ebd924e4211abb",
         "4fbf4f08921f46a05a472cb1f4e80b4787f554ccd815ddce58328e744eec0dba",
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6",
         "a21a3508539c9352eec25a404363b1d921f511604dc3e8cb012266cd68e9be8a",
         "dd223a48adb3c959475de41d1b37a10d6350aefb3deee80631c71ccea4f9fd94"
       ]
@@ -1923,8 +2053,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "SCHEMA_WORKSPACE_BROWSER_ADAPTER:2:4": {
       "limit": 120000,
@@ -1934,8 +2066,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "SCHEMA_WORKSPACE_BROWSER_ADAPTER:default": {
       "limit": 120000,
@@ -1945,8 +2079,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "SINGLE_LIVE_EVENT_FEED_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1956,8 +2092,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "VALIDATION_PRESENCE_BROWSER_ADAPTER": {
       "limit": 120000,
@@ -1967,8 +2105,10 @@
       "provisional": true,
       "maturity": "provisional",
       "source": "conservative target limit",
-      "sampleCount": 0,
-      "receiptDigests": []
+      "sampleCount": 1,
+      "receiptDigests": [
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+      ]
     },
     "WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER": {
       "limit": 1446,
@@ -1978,11 +2118,12 @@
       "provisional": false,
       "maturity": "non-provisional",
       "source": "accepted target samples",
-      "sampleCount": 5,
+      "sampleCount": 6,
       "receiptDigests": [
         "32c7702f8804718a38fda067e33bf121273dbdff2b94e5c81799dbd6b72f80ad",
         "3db06914559b048274e10725034474623736160a6eb7aa5a78ebd924e4211abb",
         "4fbf4f08921f46a05a472cb1f4e80b4787f554ccd815ddce58328e744eec0dba",
+        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6",
         "a21a3508539c9352eec25a404363b1d921f511604dc3e8cb012266cd68e9be8a",
         "dd223a48adb3c959475de41d1b37a10d6350aefb3deee80631c71ccea4f9fd94"
       ]
