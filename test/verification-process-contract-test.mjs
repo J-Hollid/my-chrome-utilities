@@ -2338,6 +2338,27 @@ assert.equal(calibrationReport.conservation.packOwnershipUnchanged, true);
 assert.equal(calibrationReport.conservation.impactPropagationUnchanged, true);
 assert.equal(calibrationReport.runnablePacks.find(({ id }) => id === "shell").budgetClass,
   "global-shell");
+const committedCalibrationReport = JSON.parse(await readFile(
+  new URL("../verification/performance-calibration.json", import.meta.url), "utf8",
+));
+assert.match(committedCalibrationReport.implementationCommit, /^[a-f0-9]{40}$/u);
+assert.equal(committedCalibrationReport.completion.status, "complete");
+assert.equal(committedCalibrationReport.runnablePacks.length, 20);
+assert.equal(Object.keys(committedCalibrationReport.browserTargets).length, 81);
+assert.equal(committedCalibrationReport.conservation.verificationTopologyDigest,
+  calibrationReport.conservation.verificationTopologyDigest,
+  "the durable calibration report binds the current verification topology exactly");
+assert.deepEqual(committedCalibrationReport.browserTargets,
+  committedTimingBaseline.performanceBudgets.browserTargetP90Milliseconds,
+  "the durable report and enforced browser-target budgets cannot drift apart");
+for (const calibratedPack of committedCalibrationReport.runnablePacks) {
+  assert.deepEqual(calibratedPack.exactPackDuration,
+    committedTimingBaseline.performanceBudgets.exactPackSeconds[calibratedPack.id]);
+  assert.deepEqual(calibratedPack.changedPathDuration,
+    committedTimingBaseline.performanceBudgets.changedPathSeconds[calibratedPack.id]);
+  assert.deepEqual(calibratedPack.changedPathFanOut,
+    committedTimingBaseline.performanceBudgets.changedPathFanOut[calibratedPack.id]);
+}
 
 const preflightPlan = planVerification(synthetic, { packIds:["alpha"] });
 const preflightOrder = [];

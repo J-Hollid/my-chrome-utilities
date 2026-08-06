@@ -1,7 +1,7 @@
 {
-  "version": 2,
-  "recordedAt": "2026-08-04",
-  "source": "bootstrap fallback plus completed 2026-08-06 exact-checkpoint target measurements; validated receipt-ledger measurements take precedence",
+  "version": 3,
+  "recordedAt": "2026-08-06",
+  "source": "VTD-003 canonical normal-load critical-path calibration",
   "runtime": {
     "node": "24.19.0",
     "typescript": "5.9.3",
@@ -22,7 +22,12 @@
   "defaultBrowserTargetMilliseconds": 2000,
   "browserObservationSessionOverheadMilliseconds": 5000,
   "browserAggregateMeasurements": {
-    "test/browser-packs/layered-schema.mjs": {"durationMilliseconds": 175000, "kind": "completed-original-adapter-focused-measurement", "recordedAt": "2026-08-06", "provisional": true}
+    "test/browser-packs/layered-schema.mjs": {
+      "durationMilliseconds": 175000,
+      "kind": "completed-original-adapter-focused-measurement",
+      "recordedAt": "2026-08-06",
+      "provisional": true
+    }
   },
   "browserTargetMilliseconds": {
     "FLOW_GRAPH_EXAMPLES_TARGET": 10742,
@@ -53,36 +58,1719 @@
     "defaultChangedPathFanOut": 20,
     "defaultBrowserTargetP90Milliseconds": 120000,
     "exactPackSeconds": {
-      "shell": 900
+      "project_management": {
+        "limit": 81,
+        "baseline": 67.5,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.045,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 21
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
+      },
+      "durable_project_repository": {
+        "limit": 226,
+        "baseline": 187.6,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.077,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 12
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
+      },
+      "command-palette": {
+        "limit": 27,
+        "baseline": 22.5,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.077,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 12
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
+      },
+      "hotkeys": {
+        "limit": 27,
+        "baseline": 22.4,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.111,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 8
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
+      },
+      "capture": {
+        "limit": 47,
+        "baseline": 39.1,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.006,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 158
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
+      },
+      "event-library": {
+        "limit": 42,
+        "baseline": 34.3,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.034,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 28
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
+      },
+      "project_event_transport": {
+        "limit": 27,
+        "baseline": 22.5,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.125,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 7
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
+      },
+      "schemas": {
+        "limit": 44,
+        "baseline": 36,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.004,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 258
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
+      },
+      "defects": {
+        "limit": 42,
+        "baseline": 34.6,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.014,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 69
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
+      },
+      "replay": {
+        "limit": 27,
+        "baseline": 22.5,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.167,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 5
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
+      },
+      "flow_graph": {
+        "limit": 80,
+        "baseline": 66.6,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.941,
+        "timingSources": {
+          "exact task samples": 16,
+          "bootstrap fallback": 1
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
+      },
+      "flow_export": {
+        "limit": 27,
+        "baseline": 22.5,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.077,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 12
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
+      },
+      "live_flow_testing": {
+        "limit": 27,
+        "baseline": 22.5,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.1,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 9
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
+      },
+      "layered_schema": {
+        "limit": 246,
+        "baseline": 204.4,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.026,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 38
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
+      },
+      "schema_relationship_tree": {
+        "limit": 27,
+        "baseline": 22.5,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.125,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 7
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
+      },
+      "property_set_flow_sections": {
+        "limit": 27,
+        "baseline": 22.5,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.125,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 7
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
+      },
+      "project_assurance_severity": {
+        "limit": 27,
+        "baseline": 22.5,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.125,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 7
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
+      },
+      "branding_polish": {
+        "limit": 183,
+        "baseline": 152.3,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.071,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 13
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
+      },
+      "guided_test_cases": {
+        "limit": 27,
+        "baseline": 22.5,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.125,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 7
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
+      },
+      "shell": {
+        "limit": 85,
+        "baseline": 70.4,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.017,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 57
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
+        "budgetClass": "global-shell"
+      }
     },
     "changedPathFanOut": {
-      "shell": 20
+      "project_management": {
+        "limit": 9,
+        "baseline": 9,
+        "percentile": "selected-dependant-count",
+        "tolerance": 1,
+        "provisional": false,
+        "selectedPacks": [
+          "project_management",
+          "durable_project_repository",
+          "project_event_transport",
+          "flow_graph",
+          "flow_export",
+          "live_flow_testing",
+          "layered_schema",
+          "property_set_flow_sections",
+          "guided_test_cases",
+          "shell"
+        ]
+      },
+      "durable_project_repository": {
+        "limit": 5,
+        "baseline": 5,
+        "percentile": "selected-dependant-count",
+        "tolerance": 1,
+        "provisional": false,
+        "selectedPacks": [
+          "durable_project_repository",
+          "flow_graph",
+          "flow_export",
+          "live_flow_testing",
+          "layered_schema",
+          "property_set_flow_sections"
+        ]
+      },
+      "command-palette": {
+        "limit": 2,
+        "baseline": 2,
+        "percentile": "selected-dependant-count",
+        "tolerance": 1,
+        "provisional": false,
+        "selectedPacks": [
+          "command-palette",
+          "hotkeys",
+          "shell"
+        ]
+      },
+      "hotkeys": {
+        "limit": 1,
+        "baseline": 1,
+        "percentile": "selected-dependant-count",
+        "tolerance": 1,
+        "provisional": false,
+        "selectedPacks": [
+          "hotkeys",
+          "shell"
+        ]
+      },
+      "capture": {
+        "limit": 9,
+        "baseline": 9,
+        "percentile": "selected-dependant-count",
+        "tolerance": 1,
+        "provisional": false,
+        "selectedPacks": [
+          "capture",
+          "event-library",
+          "project_event_transport",
+          "schemas",
+          "defects",
+          "replay",
+          "live_flow_testing",
+          "project_assurance_severity",
+          "guided_test_cases",
+          "shell"
+        ]
+      },
+      "event-library": {
+        "limit": 6,
+        "baseline": 6,
+        "percentile": "selected-dependant-count",
+        "tolerance": 1,
+        "provisional": false,
+        "selectedPacks": [
+          "event-library",
+          "project_event_transport",
+          "defects",
+          "replay",
+          "live_flow_testing",
+          "guided_test_cases",
+          "shell"
+        ]
+      },
+      "project_event_transport": {
+        "limit": 0,
+        "baseline": 0,
+        "percentile": "selected-dependant-count",
+        "tolerance": 1,
+        "provisional": false,
+        "selectedPacks": [
+          "project_event_transport"
+        ]
+      },
+      "schemas": {
+        "limit": 5,
+        "baseline": 5,
+        "percentile": "selected-dependant-count",
+        "tolerance": 1,
+        "provisional": false,
+        "selectedPacks": [
+          "schemas",
+          "defects",
+          "live_flow_testing",
+          "project_assurance_severity",
+          "guided_test_cases",
+          "shell"
+        ]
+      },
+      "defects": {
+        "limit": 2,
+        "baseline": 2,
+        "percentile": "selected-dependant-count",
+        "tolerance": 1,
+        "provisional": false,
+        "selectedPacks": [
+          "defects",
+          "live_flow_testing",
+          "shell"
+        ]
+      },
+      "replay": {
+        "limit": 1,
+        "baseline": 1,
+        "percentile": "selected-dependant-count",
+        "tolerance": 1,
+        "provisional": false,
+        "selectedPacks": [
+          "replay",
+          "shell"
+        ]
+      },
+      "flow_graph": {
+        "limit": 0,
+        "baseline": 0,
+        "percentile": "selected-dependant-count",
+        "tolerance": 1,
+        "provisional": false,
+        "selectedPacks": [
+          "flow_graph"
+        ]
+      },
+      "flow_export": {
+        "limit": 0,
+        "baseline": 0,
+        "percentile": "selected-dependant-count",
+        "tolerance": 1,
+        "provisional": false,
+        "selectedPacks": [
+          "flow_export"
+        ]
+      },
+      "live_flow_testing": {
+        "limit": 0,
+        "baseline": 0,
+        "percentile": "selected-dependant-count",
+        "tolerance": 1,
+        "provisional": false,
+        "selectedPacks": [
+          "live_flow_testing"
+        ]
+      },
+      "layered_schema": {
+        "limit": 0,
+        "baseline": 0,
+        "percentile": "selected-dependant-count",
+        "tolerance": 1,
+        "provisional": false,
+        "selectedPacks": [
+          "layered_schema"
+        ]
+      },
+      "schema_relationship_tree": {
+        "limit": 0,
+        "baseline": 0,
+        "percentile": "selected-dependant-count",
+        "tolerance": 1,
+        "provisional": false,
+        "selectedPacks": [
+          "schema_relationship_tree"
+        ]
+      },
+      "property_set_flow_sections": {
+        "limit": 0,
+        "baseline": 0,
+        "percentile": "selected-dependant-count",
+        "tolerance": 1,
+        "provisional": false,
+        "selectedPacks": [
+          "property_set_flow_sections"
+        ]
+      },
+      "project_assurance_severity": {
+        "limit": 0,
+        "baseline": 0,
+        "percentile": "selected-dependant-count",
+        "tolerance": 1,
+        "provisional": false,
+        "selectedPacks": [
+          "project_assurance_severity"
+        ]
+      },
+      "branding_polish": {
+        "limit": 0,
+        "baseline": 0,
+        "percentile": "selected-dependant-count",
+        "tolerance": 1,
+        "provisional": false,
+        "selectedPacks": [
+          "branding_polish"
+        ]
+      },
+      "guided_test_cases": {
+        "limit": 0,
+        "baseline": 0,
+        "percentile": "selected-dependant-count",
+        "tolerance": 1,
+        "provisional": false,
+        "selectedPacks": [
+          "guided_test_cases"
+        ]
+      },
+      "shell": {
+        "limit": 19,
+        "baseline": 19,
+        "percentile": "selected-dependant-count",
+        "tolerance": 1,
+        "provisional": false,
+        "selectedPacks": [
+          "project_management",
+          "durable_project_repository",
+          "command-palette",
+          "hotkeys",
+          "capture",
+          "event-library",
+          "project_event_transport",
+          "schemas",
+          "defects",
+          "replay",
+          "flow_graph",
+          "flow_export",
+          "live_flow_testing",
+          "layered_schema",
+          "schema_relationship_tree",
+          "property_set_flow_sections",
+          "project_assurance_severity",
+          "branding_polish",
+          "guided_test_cases",
+          "shell"
+        ]
+      }
     },
     "changedPathSeconds": {
-      "flow_graph": {"limit": 35, "baseline": 104.4, "minimumReduction": 0.65, "path": "src/flow-graph/workspace-section-ui.ts", "measured": 25.4, "receipt": "3137076-7fb3bfb7-1eb4-4573-89ad-6de9217afcd9", "provisional": false}
+      "project_management": {
+        "limit": 671,
+        "baseline": 558.6,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.086,
+        "timingSources": {
+          "exact task samples": 16,
+          "bootstrap fallback": 171
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
+        "path": "src/data-layer-assignment-routing-ui.ts"
+      },
+      "durable_project_repository": {
+        "limit": 500,
+        "baseline": 416.1,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.168,
+        "timingSources": {
+          "exact task samples": 16,
+          "bootstrap fallback": 79
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
+        "path": "src/data-layer-durable-project-repository-ui.ts"
+      },
+      "command-palette": {
+        "limit": 121,
+        "baseline": 100.6,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.013,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 77
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
+        "path": "src/command-palette-ui.ts"
+      },
+      "hotkeys": {
+        "limit": 103,
+        "baseline": 85.5,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.015,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 65
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
+        "path": "src/hotkey-keymap.ts"
+      },
+      "capture": {
+        "limit": 287,
+        "baseline": 238.4,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.002,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 605
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
+        "path": "src/data-layer-live-inspector-presentation-ui.ts"
+      },
+      "event-library": {
+        "limit": 209,
+        "baseline": 173.9,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.005,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 182
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
+        "path": "src/data-layer-event-library-deletion.ts"
+      },
+      "project_event_transport": {
+        "limit": 27,
+        "baseline": 22.5,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.125,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 7
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
+        "path": "src/data-layer-project-event-transport.ts"
+      },
+      "schemas": {
+        "limit": 193,
+        "baseline": 160.5,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.002,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 407
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
+        "path": "src/data-layer-allowed-value-expansion-ui.ts"
+      },
+      "defects": {
+        "limit": 122,
+        "baseline": 101,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.007,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 135
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
+        "path": "src/data-layer-defect-library-ui.ts"
+      },
+      "replay": {
+        "limit": 103,
+        "baseline": 85.4,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.016,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 62
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
+        "path": "src/data-layer-sequence-replay-ui.ts"
+      },
+      "flow_graph": {
+        "limit": 35,
+        "baseline": 28.2,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.867,
+        "timingSources": {
+          "exact task samples": 13,
+          "bootstrap fallback": 1,
+          "composed target samples": 1
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
+        "path": "src/flow-graph/workspace-section-ui.ts",
+        "acceptedGuardrail": true
+      },
+      "flow_export": {
+        "limit": 27,
+        "baseline": 22.5,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.077,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 12
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
+        "path": "src/data-layer-project-documentation-workspace-ui.ts"
+      },
+      "live_flow_testing": {
+        "limit": 27,
+        "baseline": 22.5,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.1,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 9
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
+        "path": "src/data-layer-live-flow-testing-ui.ts"
+      },
+      "layered_schema": {
+        "limit": 246,
+        "baseline": 204.4,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.042,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 23
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
+        "path": "src/canonical-schema-focused/navigator-rows.ts"
+      },
+      "schema_relationship_tree": {
+        "limit": 27,
+        "baseline": 22.5,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.125,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 7
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
+        "path": "src/schema-relationship-tree.ts"
+      },
+      "property_set_flow_sections": {
+        "limit": 27,
+        "baseline": 22.5,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.125,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 7
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
+        "path": "src/data-layer-property-set-flow-section-ui.ts"
+      },
+      "project_assurance_severity": {
+        "limit": 27,
+        "baseline": 22.5,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.125,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 7
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
+        "path": "features/data-layer-project-assurance-severity.feature"
+      },
+      "branding_polish": {
+        "limit": 183,
+        "baseline": 152.3,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.071,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 13
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
+        "path": "src/data-layer-studio-choice-controls.ts"
+      },
+      "guided_test_cases": {
+        "limit": 27,
+        "baseline": 22.5,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.125,
+        "timingSources": {
+          "exact task samples": 1,
+          "bootstrap fallback": 7
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
+        "path": "src/data-layer-guided-test-cases.ts"
+      },
+      "shell": {
+        "limit": 975,
+        "baseline": 812,
+        "percentile": "critical-path-projection",
+        "tolerance": 1.2,
+        "provisional": false,
+        "measurementCoverage": 0.021,
+        "timingSources": {
+          "exact task samples": 16,
+          "bootstrap fallback": 736
+        },
+        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
+        "path": "src/workspace-tabs-ui.ts",
+        "budgetClass": "global-shell"
+      }
     },
     "browserTargetP90Milliseconds": {
-      "ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER": 120000,
-      "FLOW_GRAPH_EXAMPLES_TARGET": {"limit": 12891, "baseline": 10742, "percentile": "focused-sample", "tolerance": 1.2, "provisional": false},
-      "FLOW_GRAPH_LEGACY_TARGET": {"limit": 1554, "baseline": 1295, "percentile": "focused-sample", "tolerance": 1.2, "provisional": false},
-      "FLOW_WORKSPACE_AUTHORING_TARGET": {"limit": 18687, "baseline": 15572, "percentile": "focused-sample", "tolerance": 1.2, "provisional": false},
-      "FLOW_WORKSPACE_CONTROLS_TARGET": {"limit": 35000, "baseline": 30318, "percentile": "focused-sample", "tolerance": 1.154, "provisional": false},
-      "BRANDING_WORKFLOW_CHOICES_TARGET": {"limit": 101740, "baseline": 84783, "percentile": "p90", "tolerance": 1.2, "provisional": false},
-      "BRANDING_WORKFLOW_GUIDANCE_TARGET": {"limit": 72000, "baseline": 60000, "percentile": "bootstrap", "tolerance": 1.2, "provisional": true},
-      "DURABLE_RENDERER_CORPUS_TARGET": {"limit": 24000, "baseline": 20000, "percentile": "bootstrap", "tolerance": 1.2, "provisional": true},
-      "DURABLE_RENDERER_HISTORY_TARGET": {"limit": 95477, "baseline": 79564, "percentile": "p90", "tolerance": 1.2, "provisional": false},
-      "DURABLE_REPOSITORY_REVISION_TARGET": {"limit": 108000, "baseline": 90000, "percentile": "bootstrap", "tolerance": 1.2, "provisional": true},
-      "DURABLE_REPOSITORY_STORAGE_TARGET": {"limit": 108000, "baseline": 90000, "percentile": "bootstrap", "tolerance": 1.2, "provisional": true},
-      "LAYERED_SCHEMA_COMPOSITION_TARGET": {"limit": 49728, "baseline": 24864, "percentile": "focused-sample", "tolerance": 2, "provisional": true},
-      "LAYERED_SCHEMA_CORE_TARGET": {"limit": 13456, "baseline": 6728, "percentile": "focused-sample", "tolerance": 2, "provisional": true},
-      "LAYERED_SCHEMA_EDITOR_TARGET": {"limit": 91838, "baseline": 45919, "percentile": "focused-sample", "tolerance": 2, "provisional": true},
-      "LAYERED_SCHEMA_EDITOR_RULES_TARGET": {"limit": 91620, "baseline": 45810, "percentile": "focused-sample", "tolerance": 2, "provisional": true},
-      "LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET": {"limit": 120000, "baseline": 86470, "percentile": "focused-sample", "tolerance": 1.388, "provisional": true},
-      "LAYERED_SCHEMA_EDITOR_POLICY_TARGET": {"limit": 36732, "baseline": 18366, "percentile": "focused-sample", "tolerance": 2, "provisional": true},
-      "LAYERED_SCHEMA_INHERITANCE_TARGET": {"limit": 108000, "baseline": 90000, "percentile": "bootstrap", "tolerance": 1.2, "provisional": true},
-      "LAYERED_SCHEMA_PAGE_GROUP_TARGET": {"limit": 11318, "baseline": 5659, "percentile": "focused-sample", "tolerance": 2, "provisional": true},
-      "SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER": 10000,
-      "WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER": 10000
+      "ALLOWED_VALUES_RULE_MIGRATION_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "BRANDING_WORKFLOW_CHOICES_TARGET": {
+        "limit": 101740,
+        "baseline": 84783,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "explicit target baseline",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "BRANDING_WORKFLOW_GUIDANCE_TARGET": {
+        "limit": 72000,
+        "baseline": 60000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "explicit target baseline",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "CANONICAL_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "CONDITIONAL_VALIDATION_RULES_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "DEFECT_LIBRARY_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "DEFECT_REPORT_COMPONENT_OPTIONS_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "DEFECT_REPORT_PROVENANCE_PRESENTATION_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "DEFECT_REPORT_SEMANTIC_DIFFERENCES_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "DEFECT_REPORT_UNDECLARED_REMOVAL_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "DURABLE_RENDERER_CORPUS_TARGET": {
+        "limit": 24000,
+        "baseline": 20000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "explicit target baseline",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "DURABLE_RENDERER_HISTORY_TARGET": {
+        "limit": 95477,
+        "baseline": 79564,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "explicit target baseline",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "DURABLE_REPOSITORY_REVISION_TARGET": {
+        "limit": 108000,
+        "baseline": 90000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "explicit target baseline",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "DURABLE_REPOSITORY_STORAGE_TARGET": {
+        "limit": 108000,
+        "baseline": 90000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "explicit target baseline",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "EVENT_OCCURRENCE_DEFECT_REPORT_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "FLOW_GRAPH_EXAMPLES_TARGET": {
+        "limit": 4596,
+        "baseline": 3830,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": false,
+        "maturity": "non-provisional",
+        "source": "committed characterization digests",
+        "sampleCount": 5,
+        "receiptDigests": [
+          "5d55b34a6065fbcd92cfd3f59a6fe62c256ce5e17af1dc351d68298ea9e74157",
+          "674ec22d833be3173b435d486108f7ea77b2efe2dcdb7fe305ddd44c821358a4",
+          "c98a057d261a70fa7384839cbbb5442d5e555dc54cf54eea34a3f753f79b7da6",
+          "cd3e4660d57954a428b686dab7c5aa52d648b948cb615fdc74a4b06abf417f99",
+          "fad26ef46287b62637529ff2b5135be2d16e10602ea65277e9c36469a66220f7"
+        ],
+        "correctionCommit": "7f2095c346b39bf6b57e23893eace76e42438363"
+      },
+      "FLOW_GRAPH_LEGACY_TARGET": {
+        "limit": 1554,
+        "baseline": 1295,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "explicit target baseline",
+        "sampleCount": 1,
+        "receiptDigests": [
+          "3e8f2a30516f3a801de4f0631c935bb7f0bd96d9d6026b2d5d4a1c2e1e72dc58"
+        ]
+      },
+      "FLOW_WORKSPACE_AUTHORING_TARGET": {
+        "limit": 18687,
+        "baseline": 15572,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "explicit target baseline",
+        "sampleCount": 1,
+        "receiptDigests": [
+          "3e8f2a30516f3a801de4f0631c935bb7f0bd96d9d6026b2d5d4a1c2e1e72dc58"
+        ]
+      },
+      "FLOW_WORKSPACE_CONTROLS_TARGET": {
+        "limit": 35000,
+        "baseline": 30318,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "explicit target baseline",
+        "sampleCount": 1,
+        "receiptDigests": [
+          "3e8f2a30516f3a801de4f0631c935bb7f0bd96d9d6026b2d5d4a1c2e1e72dc58"
+        ]
+      },
+      "FRESH_LIVE_SESSION_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "GUIDED_ASSIGNMENT_COVERAGE_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "GUIDED_DRAFT_CONTINUATION_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "GUIDED_NESTED_PROPERTY_MERGE_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "GUIDED_VALIDATION_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "JSON_SCHEMA_EXPORT_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "LAYERED_SCHEMA_COMPOSITION_TARGET": {
+        "limit": 29837,
+        "baseline": 24864,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "explicit target baseline",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "LAYERED_SCHEMA_CORE_TARGET": {
+        "limit": 8074,
+        "baseline": 6728,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "explicit target baseline",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET": {
+        "limit": 103764,
+        "baseline": 86470,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "explicit target baseline",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "LAYERED_SCHEMA_EDITOR_POLICY_TARGET": {
+        "limit": 22040,
+        "baseline": 18366,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "explicit target baseline",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "LAYERED_SCHEMA_EDITOR_RULES_TARGET": {
+        "limit": 54972,
+        "baseline": 45810,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "explicit target baseline",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "LAYERED_SCHEMA_EDITOR_TARGET": {
+        "limit": 55103,
+        "baseline": 45919,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "explicit target baseline",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "LAYERED_SCHEMA_INHERITANCE_TARGET": {
+        "limit": 108000,
+        "baseline": 90000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "explicit target baseline",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "LAYERED_SCHEMA_PAGE_GROUP_TARGET": {
+        "limit": 6791,
+        "baseline": 5659,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "explicit target baseline",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "LIVE_GUIDED_CONDITIONAL_RULE_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "LIVE_VALIDATION_VISUALS_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "LOCAL_RULE_EDITING_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "LOCAL_RULE_PROMOTION_AVAILABILITY_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "LOCAL_RULE_PROMOTION_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "MISSING_EVENT_DEFECT_FIDELITY_BROWSER_OBSERVATION": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "PAYLOAD_PATH_FILTER_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "RECURSIVE_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "RECURSIVE_PROPERTY_VALIDATION_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "REPRODUCTION_STEP_ACTION_ROWS_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "REQUIRED_PROPERTY_DEFECT_SCHEMA_CHOICES_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "REQUIRED_RULE_TYPE_INDEPENDENCE_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "REUSABLE_RULE_SYNC_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SAVED_EVENT_FEED_FILTERS_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SAVED_SESSION_LIVE_FEED_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SCHEMA_ASSIGNMENT_DATA_CONDITIONS_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SCHEMA_CARDINALITY_COMPARISON_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SCHEMA_DECLARED_PROPERTY_EXCEPTIONS_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SCHEMA_DOCUMENTATION_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SCHEMA_MANUAL_PROPERTY_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SCHEMA_NESTED_PATH_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SCHEMA_PROPERTY_COMMENTS_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SCHEMA_PROPERTY_COPY_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SCHEMA_PROPERTY_EXAMPLE_VALUES_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SCHEMA_PROPERTY_FILTER_SORT_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SCHEMA_PROPERTY_REMOVAL_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SCHEMA_PROPERTY_RULE_PICKER_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SCHEMA_PROPERTY_TYPE_EDITING_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SCHEMA_PUBLICATION_REFRESH_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SCHEMA_RENAMING_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SCHEMA_REVISION_LIFECYCLE_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SCHEMA_RULE_PROPERTY_IDENTITY_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SCHEMA_SPECIFICATION_BUILDER_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SCHEMA_SPECIFICATION_BUILDER_CUSTOMIZATION_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SCHEMA_SPECIFICATION_CONTAINER_DEFAULTS_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SCHEMA_SPECIFICATION_EXAMPLE_SELECTION_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SCHEMA_SPECIFICATION_PREVIEW_LAYOUT_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER": {
+        "limit": 10000,
+        "baseline": 10000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "declared registry fallback",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SCHEMA_WORKSPACE_BROWSER_ADAPTER:1:3": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SCHEMA_WORKSPACE_BROWSER_ADAPTER:2:4": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SCHEMA_WORKSPACE_BROWSER_ADAPTER:default": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "SINGLE_LIVE_EVENT_FEED_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "VALIDATION_PRESENCE_BROWSER_ADAPTER": {
+        "limit": 120000,
+        "baseline": 120000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "conservative target limit",
+        "sampleCount": 0,
+        "receiptDigests": []
+      },
+      "WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER": {
+        "limit": 10000,
+        "baseline": 10000,
+        "percentile": "p90",
+        "tolerance": 1.2,
+        "provisional": true,
+        "maturity": "provisional",
+        "source": "declared registry fallback",
+        "sampleCount": 0,
+        "receiptDigests": []
+      }
     }
   }
 }
