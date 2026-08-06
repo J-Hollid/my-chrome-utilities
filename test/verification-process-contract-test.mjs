@@ -1735,6 +1735,32 @@ const reversedCanonicalLedger = await buildCanonicalTimingLedger({
   expectedRuntime:reportRuntime,
   legacyExecutionLoads:{ [normalDigest]:"normal" },
 });
+await assert.rejects(() => buildCanonicalTimingLedger({
+  sources:canonicalSources,
+  expectedRuntime:reportRuntime,
+  legacyExecutionLoads:{ [normalDigest]:"bogus" },
+}), /Legacy receipt .* execution load must be normal or loaded/u,
+"legacy receipt classifications must use a declared execution-load class");
+await assert.rejects(() => buildCanonicalTimingLedger({
+  sources:[{ ...canonicalSources[0], executionLoad:"bogus" }],
+  expectedRuntime:reportRuntime,
+}), /Source root execution load must be normal or loaded/u,
+"source-level classifications must use a declared execution-load class");
+const promotedCanonicalLedger = await buildCanonicalTimingLedger({
+  sources:[canonicalSources[0], { ...canonicalSources[1], executionLoad:"normal" }],
+  expectedRuntime:reportRuntime,
+});
+assert.equal(promotedCanonicalLedger.receipts.find(({ receipt }) => receipt?.runId === "alpha")
+  .executionLoad, "normal",
+"a valid external declaration still promotes an unclassified duplicate receipt");
+await assert.rejects(() => buildCanonicalTimingLedger({
+  sources:[
+    { ...canonicalSources[0], executionLoad:"normal" },
+    { ...canonicalSources[1], executionLoad:"loaded" },
+  ],
+  expectedRuntime:reportRuntime,
+}), /Conflicting execution-load declarations/u,
+"conflicting valid declarations for duplicate receipt bytes still fail deterministically");
 assert.deepEqual(canonicalLedger.sources, reversedCanonicalLedger.sources,
   "canonical receipt sources are reported deterministically regardless of input order");
 assert.deepEqual(canonicalLedger.receipts.map(({ digest, sourcePaths }) => ({ digest, sourcePaths })),

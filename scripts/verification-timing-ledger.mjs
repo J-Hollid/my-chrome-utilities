@@ -12,7 +12,14 @@ import {
 import path from "node:path";
 
 const sha256Pattern = /^[a-f0-9]{64}$/u;
-const executionLoads = new Set(["normal", "loaded", "unclassified"]);
+const declaredExecutionLoads = new Set(["normal", "loaded"]);
+
+function externalExecutionLoad(value, location) {
+  if (!declaredExecutionLoads.has(value)) {
+    throw new Error(`${location} execution load must be normal or loaded`);
+  }
+  return value;
+}
 
 function sha256(value) {
   return createHash("sha256").update(value).digest("hex");
@@ -58,7 +65,7 @@ export function receiptRejectionReason(receipt, expectedRuntime = {}) {
     return "incomplete-task-result";
   }
   const declaredLoadIsValid = environment?.executionLoad === undefined ||
-    executionLoads.has(environment.executionLoad) && environment.executionLoad !== "unclassified";
+    declaredExecutionLoads.has(environment.executionLoad);
   const shapeValid = ["exact", "impact", "terminal", "focused"].includes(plan?.mode) &&
     Array.isArray(plan.requestedPackIds) && Array.isArray(plan.selectedPackIds) &&
     plan.changedOwners && !Array.isArray(plan.changedOwners) &&
@@ -94,7 +101,9 @@ function normalizedSource(source) {
   return {
     id:source.id ?? `source-${sha256(sourcePath).slice(0, 12)}`,
     path:sourcePath,
-    ...(source.executionLoad ? { executionLoad:source.executionLoad } : {}),
+    ...(Object.hasOwn(source, "executionLoad")
+      ? { executionLoad:externalExecutionLoad(source.executionLoad, `Source ${source.id ?? sourcePath}`) }
+      : {}),
   };
 }
 
@@ -139,6 +148,9 @@ export async function buildCanonicalTimingLedger({
   if (!Number.isInteger(minimumIndependentSamples) || minimumIndependentSamples < 1) {
     throw new Error("Minimum independent timing samples must be a positive integer");
   }
+  for (const [digest, executionLoad] of Object.entries(legacyExecutionLoads)) {
+    externalExecutionLoad(executionLoad, `Legacy receipt ${digest}`);
+  }
   const normalizedSources = sources.map(normalizedSource)
     .sort((left, right) => left.id.localeCompare(right.id) || left.path.localeCompare(right.path));
   if (new Set(normalizedSources.map(({ id }) => id)).size !== normalizedSources.length) {
@@ -158,7 +170,7 @@ export async function buildCanonicalTimingLedger({
       const existing = byDigest.get(digest);
       if (existing) {
         if (existing.executionLoad !== declaredLoad) {
-          if (existing.executionLoad === "unclassified" && executionLoads.has(declaredLoad)) {
+          if (existing.executionLoad === "unclassified" && declaredExecutionLoads.has(declaredLoad)) {
             existing.executionLoad = declaredLoad;
             if (existing.receipt && !existing.rejectionReason) {
               existing.environment = classifiedEnvironment(existing.receipt, declaredLoad);
