@@ -226,17 +226,18 @@ function summary(name, plan, model, options) {
 
 export function checkVerificationPerformanceBudgets(report, baseline) {
   const budgets = baseline.performanceBudgets ?? {};
+  const limitValue = (entry) => typeof entry === "number" ? entry : entry?.limit;
   const results = [];
   for (const row of report.rows.filter(({ name }) => name.endsWith(":exact-full-pack"))) {
     const packId = row.name.slice(0, -":exact-full-pack".length);
-    const limit = budgets.exactPackSeconds?.[packId] ?? budgets.defaultExactPackSeconds;
+    const limit = limitValue(budgets.exactPackSeconds?.[packId] ?? budgets.defaultExactPackSeconds);
     if (!Number.isFinite(limit)) continue;
     results.push({ metric:"exact-pack-duration", identity:packId,
       measured:row.projectedSeconds, limit, passed:row.projectedSeconds <= limit });
   }
   for (const row of report.rows.filter(({ name }) => name.endsWith(":representative-change"))) {
     const packId = row.name.slice(0, -":representative-change".length);
-    const limit = budgets.changedPathFanOut?.[packId] ?? budgets.defaultChangedPathFanOut;
+    const limit = limitValue(budgets.changedPathFanOut?.[packId] ?? budgets.defaultChangedPathFanOut);
     if (!Number.isFinite(limit)) continue;
     results.push({ metric:"changed-path-fan-out", identity:row.changedPath ?? row.name,
       measured:row.dependantFanOut, limit, selectedPacks:[...(row.selectedPacks ?? [])],
@@ -247,8 +248,8 @@ export function checkVerificationPerformanceBudgets(report, baseline) {
     ...Object.keys(budgets.browserTargetP90Milliseconds ?? {}),
   ]);
   for (const targetId of browserTargetIds) {
-    const limit = budgets.browserTargetP90Milliseconds?.[targetId] ??
-      budgets.defaultBrowserTargetP90Milliseconds;
+    const limit = limitValue(budgets.browserTargetP90Milliseconds?.[targetId] ??
+      budgets.defaultBrowserTargetP90Milliseconds);
     if (!Number.isFinite(limit)) continue;
     const timing = report.model.browserTargets?.[targetId];
     const fallback = baseline.browserTargetMilliseconds?.[targetId] ??
@@ -264,6 +265,57 @@ export function checkVerificationPerformanceBudgets(report, baseline) {
         `measured ${result.measured}; allowed fan-out ${result.limit}`
       : `${result.metric} ${result.identity} measured ${result.measured}; limit ${result.limit}`);
   return { passed:diagnostics.length === 0, results, diagnostics };
+}
+
+export function refreshVerificationPerformanceBudgets(
+  report,
+  baseline,
+  { tolerance = 1.2 } = {},
+) {
+  if (!Number.isFinite(tolerance) || tolerance < 1) {
+    throw new Error("Verification budget tolerance must be at least 1");
+  }
+  const budget = (baselineValue, percentile, provisional = false) => ({
+    limit:Math.ceil(baselineValue * tolerance),
+    baseline:baselineValue,
+    percentile,
+    tolerance,
+    provisional,
+  });
+  const exactPackSeconds = {};
+  for (const row of report.rows.filter(({ name }) => name.endsWith(":exact-full-pack"))) {
+    const id = row.name.slice(0, -":exact-full-pack".length);
+    exactPackSeconds[id] = budget(row.projectedSeconds, "p90-projection");
+  }
+  const changedPathFanOut = {};
+  for (const row of report.rows.filter(({ name }) => name.endsWith(":representative-change"))) {
+    const id = row.name.slice(0, -":representative-change".length);
+    changedPathFanOut[id] = budget(row.dependantFanOut, "measured-fan-out");
+  }
+  const browserTargetP90Milliseconds = {};
+  for (const id of report.browserTargetIds ?? []) {
+    const measured = report.model.browserTargets?.[id]?.p90Ms;
+    const provisional = !Number.isFinite(measured);
+    const baselineValue = provisional
+      ? baseline.browserTargetMilliseconds?.[id] ?? baseline.defaultBrowserTargetMilliseconds
+      : measured;
+    if (Number.isFinite(baselineValue)) {
+      browserTargetP90Milliseconds[id] = budget(
+        baselineValue,
+        provisional ? "bootstrap" : "p90",
+        provisional,
+      );
+    }
+  }
+  return {
+    ...baseline,
+    performanceBudgets:{
+      ...(baseline.performanceBudgets ?? {}),
+      exactPackSeconds,
+      changedPathFanOut,
+      browserTargetP90Milliseconds,
+    },
+  };
 }
 
 export function reportVerificationThroughput({

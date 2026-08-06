@@ -25,7 +25,9 @@
           generator (support/source-file root "acceptance/src/acceptance/generator.clj")
           verification-planner (support/source-file root "scripts/verification-packs.mjs")
           throughput-reporter (support/source-file root "scripts/report-verification-throughput.mjs")
+          focused-runner (support/source-file root "scripts/run-focused-acceptance.mjs")
           observation-runner (support/source-file root "scripts/run-browser-observation.mjs")
+          chrome-harness (support/source-file root "test/support/headless-chrome.mjs")
           component-layout-runner (support/source-file root "test/side-panel-component-layout-runtime-test.mjs")
           adapters (mapcat :browserAdapters registry)
           adapter-classifications (classified-browser-adapters registry)
@@ -69,15 +71,26 @@
       (support/assert! (support/includes-all? throughput-reporter
                                              ["representative-change" "rejectedByReason"
                                               "checkVerificationPerformanceBudgets"
+                                              "refreshVerificationPerformanceBudgets"
                                               "browserTargets"
                                               "defaultBrowserTargetMilliseconds"])
                        "Verification throughput lacks complete rows or budget diagnostics." {})
+      (support/assert! (support/includes-all? focused-runner
+                                             ["checkpointPreflight" "resumeVerificationPlan"
+                                              "SWARMFORGE_VERIFICATION_OUTPUT_DIRECTORY"
+                                              "provenance:\"fresh\""])
+                       "Checkpoint preflight, resume, or isolated output routing is incomplete." {})
       (support/assert! (support/includes-all? observation-runner
                                              ["SWARMFORGE_BROWSER_TARGET_IDS"
                                               "SWARMFORGE_BROWSER_TARGET_CONFIGURATIONS"
                                               "parseBrowserObservationBatchOutput"
+                                              "completeBrowserObservationOutput"
                                               "partialDocument"])
                        "Browser observation batching loses isolation or independent evidence." {})
+      (support/assert! (support/includes-all? chrome-harness
+                                             ["removeChromeProfile" "EBUSY" "ENOTEMPTY"
+                                              "targetId" "profile"])
+                       "Chrome profile cleanup lacks bounded contention diagnostics." {})
       (support/assert! (and (seq batched-observations)
                             (some #(>= (count %) 2)
                                   (vals (group-by (juxt :path :sessionBatch) batched-observations))))

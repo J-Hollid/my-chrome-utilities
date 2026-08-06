@@ -11,6 +11,7 @@ import { acquireDistArtifactLock, withDistArtifactLock } from "../scripts/dist-a
 import { canonicalVerificationChangeSet } from "../scripts/verification-changes.mjs";
 import {
   browserTargetConfigurations,
+  completeBrowserObservationOutput,
   exactObservationEnvironment,
   parseBrowserObservationBatchOutput,
   parseBrowserObservationOutput,
@@ -20,13 +21,17 @@ import {
   checkVerificationPerformanceBudgets,
   loadVerificationReceipts,
   measuredTimingModel,
+  refreshVerificationPerformanceBudgets,
   reportVerificationThroughput,
 } from "../scripts/report-verification-throughput.mjs";
 import {
+  checkpointPreflight,
   createVerificationCommandRunner,
   createVerificationReceiptContext,
   focusedAcceptanceOptions,
+  resumeVerificationPlan,
   validateExplicitChangedPaths,
+  verificationResumeIdentity,
 } from "../scripts/run-focused-acceptance.mjs";
 import {
   createPendingVerificationEvidence,
@@ -86,6 +91,10 @@ const options = focusedAcceptanceOptions([
 ]);
 assert.deepEqual(options.packIds, ["capture", "schemas"]);
 assert.equal(options.prepareEvidence, "task-17");
+assert.equal(focusedAcceptanceOptions([
+  "--pack", "schemas", "--changed-since", "base", "--property",
+  "--prepare-evidence", "task-17", "--resume-receipt", "tmp/verification-receipts/prior.json",
+]).resumeReceipt, "tmp/verification-receipts/prior.json");
 assert.deepEqual(focusedAcceptanceOptions([
   "--pack", "schemas", "--browser-target", "ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER",
 ]).browserTargetIds, ["ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER"]);
@@ -100,6 +109,7 @@ for (const invalid of [
   ["--pack", "schemas", "--record-evidence", "task"],
   ["--pack", "schemas", "--browser-target", "A", "--changed", "src/a.ts"],
   ["--pack", "schemas", "--changed-since", "base", "--prepare-evidence", "task"],
+  ["--pack", "schemas", "--resume-receipt", "docs/prior.json"],
   ["--wat"],
 ]) assert.throws(() => focusedAcceptanceOptions(invalid));
 await assert.rejects(() => validateExplicitChangedPaths(["test/definitely-deleted-verification-path.mjs"]),
@@ -217,6 +227,39 @@ assert.deepEqual(exactObservationPlan.observationTasks[0].logicalTargetIds,
 assert.deepEqual(verificationTaskIdentity(exactObservationPlan.observationTasks[0]).logicalTargetIds,
   ["BROWSER_FIRST", "BROWSER_SECOND"],
   "receipt evidence retains every logical target inside a shared session task");
+assert.deepEqual(verificationTaskIdentity(exactObservationPlan.observationTasks[0]).aliasCommands,
+  [["node", "test/browser.mjs"]],
+  "strict acceptance can resolve the historical adapter command to its passed batch receipt");
+const boundedBrowserPacks = [pack("browser", {
+  source:["src/browser/core.ts", "src/browser/editor.ts"],
+  impactBoundaries:[
+    { id:"core", prefixes:["src/browser/core.ts"], propagateDependants:false },
+    { id:"editor", prefixes:["src/browser/editor.ts"], propagateDependants:false },
+  ],
+  browserAdapters:["test/browser.mjs"],
+  browserAdapterModes:[{ path:"test/browser.mjs", mode:"shared" }],
+  browserObservations:[
+    { id:"BROWSER_CORE", path:"test/browser.mjs", environment:{ BROWSER_CORE:"1" },
+      observationKeys:["core"], features:["features/browser-one.feature"],
+      sessionBatch:"browser-main", impactBoundaries:["core"] },
+    { id:"BROWSER_EDITOR", path:"test/browser.mjs", environment:{ BROWSER_EDITOR:"1" },
+      observationKeys:["editor"], features:["features/browser-two.feature"],
+      sessionBatch:"browser-main", impactBoundaries:["editor"] },
+  ],
+})];
+const boundedCorePlan = planVerification(boundedBrowserPacks, {
+  changedPaths:["src/browser/core.ts"],
+});
+assert.deepEqual(boundedCorePlan.browserTasks, [],
+  "a boundary-targeted impact plan does not schedule the monolithic adapter");
+assert.deepEqual(boundedCorePlan.observationTasks.map(({ logicalTargetIds }) => logicalTargetIds),
+  [["BROWSER_CORE"]], "a changed impact boundary schedules only its declared browser behavior");
+const boundedTerminalPlan = planVerification(boundedBrowserPacks, { terminalFull:true });
+assert.deepEqual(boundedTerminalPlan.observationTasks[0].logicalTargetIds,
+  ["BROWSER_CORE", "BROWSER_EDITOR"],
+  "terminal planning retains every split browser target in one compatible process");
+assert.deepEqual(boundedTerminalPlan.browserTasks, [],
+  "terminal planning does not repeat the replaced monolithic adapter");
 assert.deepEqual(browserTargetConfigurations(focusedObservationPacks[0].browserObservations), {
   BROWSER_FIRST:{ BROWSER_FIRST:"1" },
   BROWSER_SECOND:{ BROWSER_SECOND:"1" },
@@ -254,6 +297,14 @@ assert.throws(() => validateBrowserPerformanceDeclarations([
     }],
   }),
 ]), /Split slow browser adapter.*independently selectable targets.*reusable session batch/u);
+const completedTimingOutput = completeBrowserObservationOutput(
+  '{"first":true}\n{"swarmforgeBrowserTargetTiming":{"id":"BROWSER_FIRST","durationMs":3}}\n',
+  focusedObservationPacks[0].browserObservations,
+  7,
+);
+assert.equal(completedTimingOutput.match(/swarmforgeBrowserTargetTiming/gu)?.length, 2,
+  "the browser runner preserves emitted timings and supplies each missing logical target timing");
+assert.match(completedTimingOutput, /BROWSER_SECOND.*7/u);
 assert.doesNotThrow(() => validateBrowserPerformanceDeclarations([
   {
     ...focusedObservationPacks[0],
@@ -1035,6 +1086,33 @@ assert.equal(canonicalEditorPlan.changedBoundaries["src/data-layer-canonical-sch
   "canonical_schema_editor");
 assert.deepEqual(canonicalEditorPlan.packIds, ["layered_schema"],
   "canonical schema editor changes exclude unrelated layered dependants");
+assert.deepEqual(canonicalEditorPlan.observationTasks
+  .filter(({ packId }) => packId === "layered_schema")
+  .flatMap(({ logicalTargetIds }) => logicalTargetIds), ["LAYERED_SCHEMA_EDITOR_TARGET"],
+"canonical schema editor changes schedule only their split browser target");
+assert.equal(canonicalEditorPlan.browserTasks.some(({ target }) =>
+  target === "test/browser-packs/layered-schema.mjs"), false,
+"focused boundary planning never schedules the monolithic layered-schema adapter");
+const terminalLayeredPlan = planVerification(packs, { terminalFull:true });
+assert.deepEqual(terminalLayeredPlan.observationTasks
+  .filter(({ packId }) => packId === "layered_schema")
+  .flatMap(({ logicalTargetIds }) => logicalTargetIds), [
+  "LAYERED_SCHEMA_COMPOSITION_TARGET",
+  "LAYERED_SCHEMA_CORE_TARGET",
+  "LAYERED_SCHEMA_EDITOR_TARGET",
+  "LAYERED_SCHEMA_INHERITANCE_TARGET",
+  "LAYERED_SCHEMA_PAGE_GROUP_TARGET",
+], "terminal verification executes every split layered-schema target exactly once");
+for (const [packId, adapterPath] of [
+  ["layered_schema", "test/browser-packs/layered-schema.mjs"],
+  ["durable_project_repository", "test/browser-packs/durable-project-renderer.mjs"],
+  ["branding_polish", "test/twatility-workflow-polish-browser-test.mjs"],
+]) {
+  const declaration = packs.find(({ id }) => id === packId).browserAdapterPerformance
+    .find(({ path:declaredPath }) => declaredPath === adapterPath);
+  assert.ok(declaration.targetIds.length >= 2 && declaration.sessionBatch,
+    `${packId} runtime outlier declares independently selectable batched targets`);
+}
 for (const editorPath of [
   "src/data-layer-canonical-schema-focused-editor.ts",
   "src/data-layer-string-rule-validation-ui.ts",
@@ -1298,6 +1376,91 @@ const missingTargetBudget = checkVerificationPerformanceBudgets({
 });
 assert.equal(missingTargetBudget.results[0].measured, 2400,
   "a missing logical-target timing uses its explicit bootstrap baseline, not another task's aggregate");
+const refreshedBudgets = refreshVerificationPerformanceBudgets({
+  rows:[
+    { name:"alpha:exact-full-pack", projectedSeconds:8 },
+    { name:"alpha:representative-change", dependantFanOut:2 },
+  ],
+  browserTargetIds:["MEASURED", "UNMEASURED"],
+  model:{ browserTargets:{ MEASURED:{ p90Ms:900 } } },
+}, {
+  performanceBudgets:{
+    exactPackSeconds:{}, browserTargetP90Milliseconds:{},
+  },
+  defaultBrowserTargetMilliseconds:2400,
+}, { tolerance:1.25 });
+assert.deepEqual(refreshedBudgets.performanceBudgets.exactPackSeconds.alpha, {
+  limit:10, baseline:8, percentile:"p90-projection", tolerance:1.25, provisional:false,
+});
+assert.equal(refreshedBudgets.performanceBudgets.changedPathFanOut.alpha.limit, 3,
+  "measured pack fan-out receives an explicit budget instead of a permissive catch-all");
+assert.deepEqual(refreshedBudgets.performanceBudgets.browserTargetP90Milliseconds.MEASURED, {
+  limit:1125, baseline:900, percentile:"p90", tolerance:1.25, provisional:false,
+});
+assert.equal(refreshedBudgets.performanceBudgets.browserTargetP90Milliseconds.UNMEASURED.provisional,
+  true, "unmeasured browser targets retain an explicit provisional bootstrap budget");
+
+const preflightPlan = planVerification(synthetic, { packIds:["alpha"] });
+const preflightOrder = [];
+await checkpointPreflight({
+  packs:synthetic,
+  plan:preflightPlan,
+  receiptContext:createVerificationReceiptContext(1, 1, {
+    receiptDirectory:await mkdtemp(path.join(os.tmpdir(), "verification-preflight-receipts-")),
+  }),
+  validators:{
+    registry:async() => preflightOrder.push("registry"),
+    plan:async() => preflightOrder.push("plan"),
+    receipt:async() => preflightOrder.push("receipt"),
+    artifact:async() => preflightOrder.push("artifact"),
+    evidence:async() => preflightOrder.push("evidence"),
+  },
+});
+assert.deepEqual(preflightOrder, ["registry", "plan", "receipt", "artifact", "evidence"],
+  "checkpoint preflight finishes every contract validation before execution");
+let preflightLeafStarted = false;
+await assert.rejects(() => checkpointPreflight({
+  packs:synthetic, plan:preflightPlan,
+  receiptContext:{ receiptPath:"/tmp/receipt.json", receipt:{ version:2, tasks:{} } },
+  validators:{
+    registry:async() => {}, plan:async() => {},
+    receipt:async() => { throw new Error("receipt recording limit incompatible"); },
+    artifact:async() => { preflightLeafStarted = true; }, evidence:async() => {},
+  },
+}), /receipt recording limit incompatible/u);
+assert.equal(preflightLeafStarted, false,
+  "a preflight failure stops before later validation or verification leaves start");
+
+const resumableTasks = preflightPlan.tasks.slice(0, 3);
+const resumablePlan = { ...preflightPlan, tasks:resumableTasks };
+const resumeIdentity = {
+  commit:"a".repeat(40), artifactInputDigest:"b".repeat(64),
+  planDigest:"c".repeat(64), toolchainDigest:"d".repeat(64),
+};
+const priorReceipt = {
+  version:2, resumeIdentity, tasks:{
+    [resumableTasks[0].key]:{
+      identity:verificationTaskIdentity(resumableTasks[0]), status:"passed", durationMs:5, output:"ok",
+    },
+    [resumableTasks[1].key]:{
+      identity:verificationTaskIdentity(resumableTasks[1]), status:"failed", durationMs:5, output:"bad",
+    },
+  },
+};
+const resumed = resumeVerificationPlan(resumablePlan, priorReceipt, resumeIdentity);
+assert.deepEqual(resumed.tasks.map(({ key }) => key), resumableTasks.slice(1).map(({ key }) => key),
+  "bounded resume runs only failed and incomplete tasks");
+assert.equal(resumed.reusedTasks[resumableTasks[0].key].provenance, "reused");
+assert.equal(resumed.preparationTasks.some(({ key }) => key === resumableTasks[0].key), false,
+  "reused tasks are removed from their executable stage as well as the flat plan");
+const rejectedResume = resumeVerificationPlan(resumablePlan, priorReceipt,
+  { ...resumeIdentity, commit:"e".repeat(40) });
+assert.deepEqual(rejectedResume.tasks.map(({ key }) => key), resumableTasks.map(({ key }) => key),
+  "a mismatched resume identity reruns every checkpoint task");
+assert.equal(verificationResumeIdentity(resumablePlan, {
+  receipt:{ environment:{ node:"24", typescript:"5", platform:"linux", concurrency:1,
+    observationConcurrency:1 } },
+}, { inputDigest:"b".repeat(64) }).artifactInputDigest, "b".repeat(64));
 const isolatedReceiptDirectory = await mkdtemp(path.join(os.tmpdir(), "verification-receipts-"));
 try {
   await writeFile(path.join(isolatedReceiptDirectory, "valid.json"), JSON.stringify(reportReceipt));
@@ -1375,6 +1538,15 @@ if (process.platform !== "win32") {
     await runner(envTask.display, envTask);
     assert.equal(context.receipt.tasks[envTask.key].output.trim(), "visible");
     assert.equal(context.receipt.tasks[envTask.key].stderr, "");
+    const isolatedBrowserTask = {
+      ...envTask, key:"browser:isolated-output", stage:"browser", environment:null,
+      args:["-e", "require('node:fs').writeSync(1,process.env.BRAND_EVIDENCE_DIR+'\\n')"],
+    };
+    await runner(isolatedBrowserTask.display, isolatedBrowserTask);
+    const isolatedOutput = context.receipt.tasks[isolatedBrowserTask.key].output.trim();
+    assert.ok(isolatedOutput.startsWith(path.resolve("tmp/verification-runs")));
+    assert.equal(isolatedOutput.includes("docs/twatility-branding-evidence"), false,
+      "ordinary browser verification routes generated evidence to its isolated run directory");
     const stderrContext = createVerificationReceiptContext(1, 2, {
       receiptDirectory:commandReceiptDirectory,
     });

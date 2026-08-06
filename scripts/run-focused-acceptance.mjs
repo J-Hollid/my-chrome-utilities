@@ -1,11 +1,11 @@
 import { spawn } from "node:child_process";
 import { randomUUID } from "node:crypto";
-import { access } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
-import { assertFreshDist, atomicWriteFile } from "./dist-artifact.mjs";
+import { assertFreshDist, atomicWriteFile, createDistInputFingerprint } from "./dist-artifact.mjs";
 import { withDistArtifactLock } from "./dist-artifact-lock.mjs";
 import {
   executeAcceptancePlan,
@@ -118,6 +118,16 @@ export function focusedAcceptanceOptions(args) {
       index += 1;
       continue;
     }
+    if (argument === "--resume-receipt") {
+      once(argument);
+      const value = changedPath(valueArgument(args, index, argument));
+      if (!/^tmp\/verification-receipts\/[A-Za-z0-9._-]+\.json$/u.test(value)) {
+        throw new Error("Resume receipts must be runner-owned under tmp/verification-receipts");
+      }
+      options.resumeReceipt = value;
+      index += 1;
+      continue;
+    }
     if (argument === "--record-evidence") {
       throw new Error("Use --prepare-evidence; record the pending file only after verification exits");
     }
@@ -189,6 +199,10 @@ export function focusedAcceptanceOptions(args) {
     if (options.withDependencies || options.skipBuild || options.shard || options.terminalFull) {
       throw new Error("Evidence cannot use dependencies, no-build, sharding, or terminal-full mode");
     }
+  }
+  if (options.resumeReceipt && (!options.packIds.length || !options.changedSince ||
+      !options.includeProperties || !options.prepareEvidence)) {
+    throw new Error("Resume requires an exact evidence checkpoint with packs, property, and changed-since selectors");
   }
   return options;
 }
@@ -279,7 +293,8 @@ export function createVerificationReceiptContext(
     });
     return writeQueue;
   };
-  return { receiptPath, receipt, write };
+  const runDirectory = path.join(repositoryRoot, "tmp", "verification-runs", receipt.runId);
+  return { receiptPath, runDirectory, receipt, write };
 }
 
 export function createVerificationCommandRunner(context) {
@@ -314,6 +329,9 @@ export function createVerificationCommandRunner(context) {
     // every Node leaf with the already strict-validated parent runtime instead
     // of resolving a second, potentially different Node through PATH.
     const executable = task.executable === "node" ? process.execPath : task.executable;
+    const browserOutputDirectory = ["browser", "browser-observation"].includes(task.stage)
+      ? path.join(context.runDirectory, task.key.replaceAll(/[^A-Za-z0-9._-]/gu, "_"))
+      : undefined;
     const child = spawn(executable, task.args, {
       cwd:repositoryRoot,
       shell:false,
@@ -326,6 +344,12 @@ export function createVerificationCommandRunner(context) {
           ? {}
           : { MY_CHROME_UTILITIES_DIST_LOCK_HELD:process.env.MY_CHROME_UTILITIES_DIST_LOCK_HELD }),
         SWARMFORGE_VERIFICATION_RECEIPT:context.receiptPath,
+        ...(browserOutputDirectory ? {
+          SWARMFORGE_VERIFICATION_OUTPUT_DIRECTORY:browserOutputDirectory,
+          ...(process.env.SWARMFORGE_UPDATE_FIXTURES === "1"
+            ? {}
+            : { BRAND_EVIDENCE_DIR:browserOutputDirectory }),
+        } : {}),
         ...(task.stage === "acceptance-session" ? { SWARMFORGE_STRICT_VERIFICATION_RECEIPT:"1" } : {}),
       },
     });
@@ -378,6 +402,7 @@ export function createVerificationCommandRunner(context) {
     context.receipt.tasks[task.key] = {
       identity,
       status:passed ? "passed" : "failed",
+      provenance:"fresh",
       durationMs,
       output:out,
       stderr:err,
@@ -392,6 +417,77 @@ export function createVerificationCommandRunner(context) {
   };
 }
 
+function sameIdentity(left, right) {
+  return JSON.stringify(left) === JSON.stringify(right);
+}
+
+export function resumeVerificationPlan(plan, priorReceipt, resumeIdentity) {
+  const reusable = priorReceipt?.version === 2 &&
+    sameIdentity(priorReceipt.resumeIdentity, resumeIdentity);
+  const reusedTasks = {};
+  const tasks = reusable ? plan.tasks.filter((task) => {
+    const prior = priorReceipt.tasks?.[task.key];
+    if (prior?.status !== "passed" ||
+        !sameIdentity(prior.identity, verificationTaskIdentity(task))) return true;
+    reusedTasks[task.key] = { ...prior, provenance:"reused" };
+    return false;
+  }) : [...plan.tasks];
+  const selectedKeys = new Set(tasks.map(({ key }) => key));
+  const filtered = Object.fromEntries(Object.entries(plan)
+    .filter(([key, value]) => key.endsWith("Tasks") && Array.isArray(value))
+    .map(([key, value]) => [key, value.filter(({ key:taskKey }) => selectedKeys.has(taskKey))]));
+  return { ...plan, ...filtered, tasks, reusedTasks, resumeAccepted:reusable };
+}
+
+export function verificationResumeIdentity(plan, receiptContext, artifact) {
+  return {
+    commit:plan.changeSet?.commit ?? null,
+    artifactInputDigest:artifact?.inputDigest ?? artifact?.digest ?? null,
+    planDigest:verificationDigest(plan.tasks.map(verificationTaskIdentity)),
+    toolchainDigest:verificationDigest(receiptContext.receipt.environment),
+  };
+}
+
+export async function checkpointPreflight({
+  packs,
+  plan,
+  receiptContext,
+  validators = {},
+}) {
+  const defaults = {
+    registry:() => validateVerificationPacks(packs),
+    plan:async() => {
+      if (plan?.version !== 2 || !Array.isArray(plan.tasks) || !plan.tasks.length ||
+          new Set(plan.tasks.map(({ key }) => key)).size !== plan.tasks.length) {
+        throw new Error("Checkpoint preflight requires one canonical version 2 plan");
+      }
+    },
+    receipt:async() => {
+      if (receiptContext?.receipt?.version !== 2 || !receiptContext.receiptPath ||
+          !receiptContext.receipt.tasks || Array.isArray(receiptContext.receipt.tasks)) {
+        throw new Error("Checkpoint preflight requires a writable version 2 receipt contract");
+      }
+    },
+    artifact:async() => {
+      const buildTasks = plan.tasks.filter(({ stage }) => stage === "build");
+      if (!plan.skipBuild && buildTasks.length !== 1) {
+        throw new Error("Checkpoint preflight requires exactly one artifact build task");
+      }
+      if (plan.skipBuild && buildTasks.length) {
+        throw new Error("Checkpoint preflight cannot build a prepared artifact");
+      }
+    },
+    evidence:async() => {
+      environmentInteger("VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES", defaultOutputLimitBytes, {
+        maximum:maximumOutputLimitBytes,
+      });
+    },
+  };
+  for (const name of ["registry", "plan", "receipt", "artifact", "evidence"]) {
+    await (validators[name] ?? defaults[name])();
+  }
+}
+
 export async function runFocusedAcceptance(
   args,
   { commandRunner, artifactValidator = ({ root }) => assertFreshDist({ root }) } = {},
@@ -399,6 +495,7 @@ export async function runFocusedAcceptance(
   const packs = await loadVerificationPacks();
   const options = focusedAcceptanceOptions(args);
   const evidenceTask = options.prepareEvidence;
+  const resumeReceiptPath = options.resumeReceipt;
   if (evidenceTask) {
     await validateStrictVerificationToolchain({ repositoryRoot });
     await validateVerificationCandidateClean({ repositoryRoot });
@@ -423,6 +520,7 @@ export async function runFocusedAcceptance(
   }
   delete options.changedSince;
   delete options.prepareEvidence;
+  delete options.resumeReceipt;
   await validateVerificationPacks(packs);
   const plan = planVerification(packs, options);
   const concurrency = environmentInteger("VERIFICATION_CONCURRENCY", 4, { maximum:64 });
@@ -437,6 +535,10 @@ export async function runFocusedAcceptance(
     changeSetDigest:plan.changeSet ? verificationDigest(plan.changeSet) : null,
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
   };
+  if (evidenceTask) {
+    const inputFingerprint = await createDistInputFingerprint({ root:repositoryRoot });
+    context.receipt.resumeIdentity = verificationResumeIdentity(plan, context, inputFingerprint);
+  }
   const runner = commandRunner ?? createVerificationCommandRunner(context);
   let buildManifest;
   if (options.skipBuild) buildManifest = await artifactValidator({ root:repositoryRoot });
@@ -444,8 +546,31 @@ export async function runFocusedAcceptance(
     await context.write();
     console.error(`[verify:receipt] ${path.relative(repositoryRoot, context.receiptPath)}`);
   }
+  await checkpointPreflight({
+    packs, plan, receiptContext:context,
+    validators:{ registry:async() => {} },
+  });
+  let executionPlan = plan;
+  if (resumeReceiptPath) {
+    let priorReceipt;
+    try {
+      priorReceipt = JSON.parse(await readFile(path.join(repositoryRoot, resumeReceiptPath), "utf8"));
+    } catch (error) {
+      console.error(`[verify:resume-rejected] ${error.message}`);
+    }
+    if (priorReceipt) {
+      const resumeIdentity = context.receipt.resumeIdentity;
+      executionPlan = resumeVerificationPlan(plan, priorReceipt, resumeIdentity);
+      context.receipt.resumeIdentity = resumeIdentity;
+      Object.assign(context.receipt.tasks, executionPlan.reusedTasks);
+      await context.write();
+      console.error(executionPlan.resumeAccepted
+        ? `[verify:resume] reusing ${Object.keys(executionPlan.reusedTasks).length} passed task(s)`
+        : "[verify:resume-rejected] checkpoint identity changed; running every task");
+    }
+  }
   console.error(`[verify:plan] ${plan.packIds.length} pack(s), ${plan.tasks.length} task(s), concurrency ${concurrency}, observation concurrency ${observationConcurrency}`);
-  await executeAcceptancePlan(plan, { runCommand:runner, concurrency, observationConcurrency });
+  await executeAcceptancePlan(executionPlan, { runCommand:runner, concurrency, observationConcurrency });
   if (!commandRunner) {
     buildManifest = buildManifest ?? await artifactValidator({ root:repositoryRoot });
     context.receipt.completedAt = new Date().toISOString();

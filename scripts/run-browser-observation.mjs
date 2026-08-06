@@ -64,6 +64,7 @@ function runObservationProcess(packs, observations) {
     environment:Object.assign({}, ...observations.map(({ environment }) => environment)),
   };
   return new Promise((resolve, reject) => {
+    const started = performance.now();
     const child = spawn(process.execPath, [combined.path], {
       cwd:repositoryRoot,
       shell:false,
@@ -83,10 +84,35 @@ function runObservationProcess(packs, observations) {
     });
     child.stderr.on("data", (chunk) => process.stderr.write(chunk));
     child.once("error", reject);
-    child.once("close", (code, signal) => code === 0
-      ? resolve(Buffer.concat(stdout).toString())
-      : reject(new Error(`Browser observation failed (${signal ?? code}): ${combined.id}`)));
+    child.once("close", (code, signal) => {
+      if (code !== 0) {
+        reject(new Error(`Browser observation failed (${signal ?? code}): ${combined.id}`));
+        return;
+      }
+      const original = Buffer.concat(stdout).toString();
+      const completed = completeBrowserObservationOutput(
+        original, observations, Math.round(performance.now() - started),
+      );
+      if (completed.length > original.length) process.stdout.write(completed.slice(original.length));
+      resolve(completed);
+    });
   });
+}
+
+export function completeBrowserObservationOutput(stdout, observations, durationMs) {
+  const timed = new Set();
+  for (const line of stdout.split(/\r?\n/u)) {
+    try {
+      const id = JSON.parse(line).swarmforgeBrowserTargetTiming?.id;
+      if (typeof id === "string") timed.add(id);
+    } catch { /* ordinary browser diagnostics are not timing records */ }
+  }
+  const missing = observations.filter(({ id }) => !timed.has(id));
+  if (!missing.length) return stdout;
+  const suffix = missing.map(({ id }) => JSON.stringify({
+    swarmforgeBrowserTargetTiming:{ id, durationMs },
+  })).join("\n");
+  return `${stdout}${stdout.endsWith("\n") || !stdout ? "" : "\n"}${suffix}\n`;
 }
 
 export function parseBrowserObservationOutput(stdout, observation) {

@@ -527,6 +527,14 @@ function validateDeclaredTasks(packs) {
           (typeof observation.sessionBatch !== "string" || !observation.sessionBatch.trim())) {
         throw new Error(`Use a stable reusable session batch for browser observation ${observation.id}`);
       }
+      if (observation.impactBoundaries !== undefined) {
+        const knownBoundaries = new Set(values(pack, "impactBoundaries").map(({ id }) => id));
+        if (!Array.isArray(observation.impactBoundaries) || !observation.impactBoundaries.length ||
+            new Set(observation.impactBoundaries).size !== observation.impactBoundaries.length ||
+            observation.impactBoundaries.some((id) => !knownBoundaries.has(id))) {
+          throw new Error(`Map browser observation ${observation.id} to exact impact boundaries in pack ${pack.id}`);
+        }
+      }
     }
     const checkpointIds = new Set();
     for (const checkpoint of values(pack, "checkpointCommands")) {
@@ -715,10 +723,11 @@ function displayArgument(argument) {
 
 function commandTask({
   key, stage, packId = null, executable, args, target = null, environment = null,
-  logicalTargetIds = undefined,
+  logicalTargetIds = undefined, aliasCommands = undefined,
 }) {
   const task = { key, stage, packId, executable, args:[...args], target, environment };
   if (logicalTargetIds) task.logicalTargetIds = [...logicalTargetIds];
+  if (aliasCommands) task.aliasCommands = aliasCommands.map((command) => [...command]);
   return { ...task, display:[executable, ...args].map(displayArgument).join(" ") };
 }
 
@@ -733,6 +742,7 @@ export function verificationTaskIdentity(task) {
     environment:task.environment ?? null,
   };
   if (task.logicalTargetIds) identity.logicalTargetIds = [...task.logicalTargetIds];
+  if (task.aliasCommands) identity.aliasCommands = task.aliasCommands.map((command) => [...command]);
   return identity;
 }
 
@@ -967,20 +977,31 @@ export function planVerification(
       key:`property:${path}`, stage:"property", packId:pack.id, executable:"node", args:[path], target:path,
     })))
     : [];
-  const browserTasks = browserTargetIds.length ? [] : executionPacks.flatMap((pack) => values(pack, "browserAdapters").map((path) => commandTask({
-    key:`browser:${path}`, stage:"browser", packId:pack.id, executable:"node", args:[path], target:path,
-  })));
+  const observedAdapterPaths = new Set(executionPacks.flatMap((pack) =>
+    values(pack, "browserObservations").map(({ path }) => path)));
+  const browserTasks = browserTargetIds.length ? [] : executionPacks.flatMap((pack) =>
+    values(pack, "browserAdapters").filter((path) => !observedAdapterPaths.has(path)).map((path) => commandTask({
+      key:`browser:${path}`, stage:"browser", packId:pack.id, executable:"node", args:[path], target:path,
+    })));
 
   const acceptancePacks = browserTargetIds.length ? [] : executionPacks.filter((pack) => values(pack, "features").length);
   const features = acceptancePacks.flatMap((pack) => values(pack, "features")).sort();
   const acceptance = featureTasks(features, acceptancePacks);
   const executionIds = new Set(executionPacks.map(({ id }) => id));
-  const selectedObservations = packs.flatMap((declarationPack) =>
-    executionIds.has(declarationPack.id)
-      ? values(declarationPack, "browserObservations")
-        .filter(({ id }) => !browserTargetIds.length || browserTargetIds.includes(id))
-        .map((observation) => ({ declarationPack, observation }))
-      : []);
+  const selectedObservations = packs.flatMap((declarationPack) => {
+    if (!executionIds.has(declarationPack.id)) return [];
+    const observations = values(declarationPack, "browserObservations");
+    const changedBoundaryIds = new Set(Object.entries(Object.fromEntries(changedBoundaries))
+      .filter(([changedPath]) => changedOwners.get(changedPath)?.includes(declarationPack.id))
+      .map(([, boundary]) => boundary));
+    const boundaryTargets = changedBoundaryIds.size
+      ? observations.filter(({ impactBoundaries }) => impactBoundaries?.some((id) => changedBoundaryIds.has(id)))
+      : [];
+    const selected = browserTargetIds.length
+      ? observations.filter(({ id }) => browserTargetIds.includes(id))
+      : boundaryTargets.length ? boundaryTargets : observations;
+    return selected.map((observation) => ({ declarationPack, observation }));
+  });
   const selectedTargetIds = new Set(selectedObservations.map(({ observation }) => observation.id));
   for (const id of browserTargetIds) {
     if (!selectedTargetIds.has(id)) throw new Error(`Unknown browser target in selected pack: ${id}`);
@@ -1002,7 +1023,7 @@ export function planVerification(
       key:`browser-observation:${ids.join("+")}`, stage:"browser-observation",
       packId:group[0].declarationPack.id, executable:"node",
       args:["scripts/run-browser-observation.mjs", ...ids], target:ids.join(","), environment,
-      logicalTargetIds:ids,
+      logicalTargetIds:ids, aliasCommands:[["node", group[0].observation.path]],
     });
   });
   const mode = browserTargetIds.length ? "focused" : terminalFull ? "terminal" : explicit.size ? "exact" : "impact";

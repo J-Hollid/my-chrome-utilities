@@ -1,4 +1,5 @@
 import { existsSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import path from "node:path";
 
 export function chromeExecutableCandidates({
@@ -99,4 +100,28 @@ export async function stopHeadlessChrome(chrome, timeoutMilliseconds = 1000) {
   if (await exitWithin(chrome, timeoutMilliseconds)) return;
   chrome.kill("SIGKILL");
   await exitWithin(chrome, timeoutMilliseconds);
+}
+
+export async function removeChromeProfile(profile, {
+  targetId = "browser-target",
+  attempts = 6,
+  retryDelayMilliseconds = 100,
+  remove = (target) => rm(target, { recursive:true, force:true }),
+  wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
+} = {}) {
+  const transient = new Set(["EBUSY", "ENOTEMPTY", "EPERM"]);
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      await remove(profile);
+      return;
+    } catch (error) {
+      if (!transient.has(error?.code) || attempt === attempts) {
+        throw new Error(
+          `Chrome profile cleanup failed for ${targetId} at ${profile} after ${attempt} attempt(s): ${error.message}`,
+          { cause:error },
+        );
+      }
+      await wait(retryDelayMilliseconds * attempt);
+    }
+  }
 }

@@ -26,6 +26,9 @@
   (let [identity (get result "identity")]
     (into [(get identity "executable")] (get identity "args" []))))
 
+(defn- task-command-aliases [result]
+  (mapv vec (get-in result ["identity" "aliasCommands"] [])))
+
 (def ^:private browser-observation-task-prefix "browser-observation:")
 
 (defn- browser-observation-id [task-key]
@@ -55,6 +58,7 @@
 
 (defn- matching-receipt-results [tasks task-key command]
   (filter #(or (= (vec command) (task-command %))
+               (contains? (set (task-command-aliases %)) (vec command))
                (batched-browser-command? % task-key command))
           (receipt-candidates tasks task-key)))
 

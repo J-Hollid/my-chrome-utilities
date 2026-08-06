@@ -94,6 +94,19 @@
           "browser-observation:SECOND"
           command)))))
 
+(deftest browser-batch-receipt-resolves-its-adapter-command-alias
+  (let [command ["node" "test/browser.mjs"]
+        receipt {"version" 2
+                 "tasks" {"browser-observation:FIRST+SECOND"
+                          {"identity" {"executable" "node"
+                                       "args" ["scripts/run-browser-observation.mjs"
+                                               "FIRST" "SECOND"]
+                                       "aliasCommands" [command]}
+                           "status" "passed"
+                           "output" "{\"browser\":true}\n"}}}]
+    (is (= {:exit 0 :out "{\"browser\":true}\n" :err "" :receipt true}
+           (support/verification-receipt-result receipt command)))))
+
 (deftest runner-owned-verification-commands-fail-closed-before-spawning
   (let [command ["node" "test/example-test.mjs"]
         passed-receipt {"version" 2

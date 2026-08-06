@@ -1,11 +1,12 @@
 import assert from "node:assert/strict";
 import {spawn} from "node:child_process";
-import {mkdir,mkdtemp,rm,writeFile} from "node:fs/promises";
+import {mkdir,mkdtemp,writeFile} from "node:fs/promises";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import {
   headlessChromeArguments,
+  removeChromeProfile,
   resolveChromeExecutable,
   stopHeadlessChrome,
 } from "./support/headless-chrome.mjs";
@@ -1164,7 +1165,7 @@ try{
 } finally {
   blockedStudio?.close();conflictStudio?.close();side?.close();studio?.close();
   await stopHeadlessChrome(chrome,1500);
-  await rm(profile,{recursive:true,force:true,maxRetries:5,retryDelay:100});
+  await removeChromeProfile(profile,{targetId:process.env.SWARMFORGE_BROWSER_TARGET_IDS??"branding-workflow-polish"});
 }
 
 console.log("TWAtility Belt packaged Slice 6 workflow polish browser test passed");

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import {spawn} from "node:child_process";
-import {mkdtemp,rm} from "node:fs/promises";
+import {mkdtemp} from "node:fs/promises";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
@@ -8,7 +8,7 @@ import {canonicalSchemaWithConstraint,createCanonicalSchema} from "../../dist/da
 import {createSpecificationProject} from "../../dist/data-layer-specification-project.js";
 import {projectLibrary,serializeProjectLibrary} from "../../dist/data-layer-project-library.js";
 import {serializeCanonicalProjectState} from "../../dist/data-layer-specification-repository.js";
-import {headlessChromeArguments,resolveChromeExecutable,stopHeadlessChrome} from "../support/headless-chrome.mjs";
+import {headlessChromeArguments,removeChromeProfile,resolveChromeExecutable,stopHeadlessChrome} from "../support/headless-chrome.mjs";
 import {wait} from "./shared-harness.mjs";
 
 const phase=(name,state="start")=>console.error(`[renderer-target] ${name} ${state}`);
@@ -241,4 +241,4 @@ try{
   const reloadEmptyHistory=await reloadedCompactHistoryEmptyCheck(side,profileId,projectBName);assert.equal(reloadEmptyHistory,true);
   console.log(JSON.stringify({durableRenderer:{migration,stage,commit,undo,redo,sidePanel,compactHistoryRecovery,compactHistoryProjectIsolation,reloadEmptyHistory,final:{visible:final.visible,count:final.count,stable:final.stable}}}));
   }
-}finally{phase("cleanup");builder?.close();side?.close();await stopHeadlessChrome(chrome);await rm(profile,{recursive:true,force:true,maxRetries:5,retryDelay:100});phase("cleanup","end");}
+}finally{phase("cleanup");builder?.close();side?.close();await stopHeadlessChrome(chrome);await removeChromeProfile(profile,{targetId:process.env.SWARMFORGE_BROWSER_TARGET_IDS??"durable-project-renderer"});phase("cleanup","end");}
