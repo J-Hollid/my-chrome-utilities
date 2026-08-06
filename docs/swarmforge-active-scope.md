@@ -2129,9 +2129,16 @@ Recalibration changes only the `project_management` representative changed-path 
 | Terminal conservation | Terminal-full planning retains every registered unit, property, feature, handler, browser assertion leaf, shell check, and package check exactly once. Browser session batching, worker limits, and terminal shards are unchanged. |
 | Calibration | The same 24-receipt scope remains resolvable. Only the project-management representative path, fan-out, and duration row change; every other calibrated row stays byte-equivalent. |
 
-The exact implementation checkpoint is one invocation containing
-`project_management,shell`, followed by `node scripts/package.mjs`. The shell pack is
-included because the shared planner process contract and modular-verification feature
-must prove the registry boundary, handler isolation, historical rename/delete behavior,
-and terminal conservation. This does not authorize the specifier to run those checks or
-authorize a broad terminal suite.
+The implementation necessarily registers the extracted presentation module in
+`architecture/data-layer-boundaries.json`. That repository-wide architecture ledger
+remains globally impactful: VTD-004 must not narrow its ownership or global-impact
+classification merely to reduce this package's one-time checkpoint. The exact
+implementation checkpoint therefore contains all 20 runnable packs in canonical order,
+followed by `node scripts/package.mjs`.
+
+This one-time broad implementation checkpoint does not change the delivered inner-loop
+outcome. After the boundary is installed, either exact presentation path selects only
+`project_management`; the five semantic, controller, persistence, migration, and public-
+coordination paths retain their ten-pack closure. The broad checkpoint is task-owned by
+the unavoidable global architecture-ledger change and does not authorize the specifier
+to run it or make future Project UI changes global.
