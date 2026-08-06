@@ -38,9 +38,11 @@ here.
   `45731650a2a5044da04dd7f0d3b94b6dde34b36f`.
 - VTD-002 completed the normal coder, refactorer, and architect chain and merged at
   `68c8f6369f024fae55bec19ec37011ad786dbfd9`.
-- VTD-013 is the active specification slice. Its implementation remains inactive
+- VTD-013 completed the normal coder, refactorer, and architect chain and merged at
+  `c18f305bdba76a280a5bcf24efbbc744cef1950e`.
+- VTD-003 is the active specification slice. Its implementation remains inactive
   until the user explicitly approves the bounded coder handoff.
-- VTD-003 through VTD-012 remain queued and inactive.
+- VTD-004 through VTD-012 remain queued and inactive.
 
 ## Executive assessment
 

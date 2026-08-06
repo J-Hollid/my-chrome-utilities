@@ -1924,3 +1924,104 @@ The expected exact implementation checkpoint is `flow_graph,shell`, extended onl
 any additional pack that changed-path preflight proves is jointly owned. VTD-003 remains
 inactive until VTD-013 completes the normal coder, refactorer, and architect chain and
 the accepted commit is merged.
+
+VTD-013 completed the normal coder, refactorer, and architect chain and was merged at
+`c18f305bdba76a280a5bcf24efbbc744cef1950e`. Its terminal `flow_graph,shell`
+checkpoint is recorded against architect base
+`6973697fd2ea460454285fad67e9da0307474aad`.
+
+## Verification throughput program — candidate slice VTD-003 (2026-08-06)
+
+VTD-003 is the only active specification slice. It remains a candidate and grants no
+implementation authority until the user explicitly approves the coder handoff. VTD-004
+through VTD-012 remain inactive.
+
+### Plain-language outcome
+
+Today most packs can become dramatically slower or start pulling in unrelated work
+without crossing a meaningful limit: the emergency defaults allow twenty extra packs,
+twenty minutes for an exact pack, and two minutes for an unmeasured browser target.
+This package replaces those defaults with a named, ordinary changed file and a concrete
+limit for every runnable pack. A slowdown will fail at the pack that caused it and say
+which packs, browser targets, and critical-path work made it slow.
+
+This enables quick detection of verification regressions before the later packages make
+structural speed improvements. It also gives VTD-004 onward a stable before/after ruler:
+when ownership or browser programs are narrowed, the benefit can be measured against a
+real local path rather than a directory guess. It does not make tests skip work, change
+product behavior, or narrow any dependency boundary in this package.
+
+### VTD-003 calibration contract
+
+The calibration uses the canonical Node 24.19.0, TypeScript 5.9.3, linux-x64, normal-load,
+worker-concurrency 4, observation-concurrency 2 environment for artifact build
+`4ea103138a47e7bda15a9d7463d88d9ef7aedfbebe48ec9da108d2ce3e6925c8`.
+The minimum independent sample count remains five. A committed machine-readable report
+under `verification/` identifies the exact environment class, every input receipt digest,
+the calibration algorithm, and the resulting rows. Raw receipt bytes remain immutable.
+
+Every one of the 20 runnable packs declares the exact existing file in scenario 034 as
+its `representativeChangedPath`. A representative may be an exact pack-owned feature
+file only where the pack has no production source ownership; VTD-003 must not move
+production ownership merely to manufacture a source representative. Directory prefixes,
+the first source entry, and other reporter fallbacks are rejected. The plan selected for
+each file must retain the exact pack identities in scenario 034. In particular,
+`src/workspace-tabs-ui.ts` deliberately represents the conservative global shell class,
+while Flow and layered-schema representatives exercise their existing non-propagating UI
+boundaries. This package adds no impact boundary and changes no dependency.
+
+Each runnable pack receives explicit entries for:
+
+1. exact-pack critical-path duration;
+2. representative changed-path critical-path duration; and
+3. representative changed-path dependant fan-out.
+
+Duration entries preserve baseline, limit, tolerance, selected environment class,
+measurement coverage, timing-source counts, and the declared path where applicable.
+Their normal tolerance is 1.2. The Flow representative path keeps its already accepted
+35-second cap. Fan-out is deterministic rather than noisy, so its limit equals the
+current selected dependant count; it receives no extra-pack tolerance. The 1,200-second
+exact-pack and fan-out-20 values remain emergency defaults only and cannot be the
+ordinary success criterion for any runnable pack. The global shell row remains separately
+identified and cannot widen a local pack's limit.
+
+All 81 registered browser targets receive an explicit budget entry. A target is
+non-provisional only when at least five independent comparable samples, or a committed
+characterization containing those exact digests, support its p90. Otherwise it remains
+explicitly provisional and names its fallback provenance. Fallback precedence is an
+accepted target baseline, then the target's registry declaration, then the existing
+conservative target limit; absence of evidence must not silently become the generic
+two-second timing estimate. A normal 1.2 tolerance applies unless an existing declared
+maximum produces a tighter cap or measured variance documents another value.
+
+The VTD-013 characterization is authoritative for post-correction
+`FLOW_GRAPH_EXAMPLES_TARGET` timing: focused-normal p90 3.830 seconds produces a
+4.596-second limit at tolerance 1.2. Its loaded samples remain separate diagnostics. Receipts
+from before the bounded-readiness correction cannot be pooled with the characterized
+post-correction samples merely because the built extension artifact is identical. The
+35-second representative Flow path remains unchanged. Layered targets with fewer than
+five comparable samples remain provisional but no longer retain tolerance 2 solely for
+missing evidence.
+
+A calibration is incomplete if a runnable pack or browser target is absent, a declared
+representative is not an exact existing owned file, a normal pack row falls back to the
+emergency defaults, a fan-out limit exceeds its calibrated selection, a target is
+promoted without five comparable samples, or a committed digest cannot be resolved.
+
+### VTD-003 evidence conservation
+
+| Evidence class | Conserved before/after mapping |
+|---|---|
+| Planner and registry | All 20 runnable pack ids, dependencies, shared components, impact boundaries, task identities, and target selections are unchanged. Only exact representative-file declarations are added or replaced. |
+| Timing evidence | Existing receipt bytes, environment classes, rejection reasons, and VTD-013 characterization digests remain unchanged. Calibration adds a derived report and explicit baseline entries. |
+| Product behavior | No extension source behavior, stored project data, migrations, Undo behavior, rendering, interaction, or accessibility contract changes. |
+| Browser and acceptance evidence | All 81 browser target ids, session batches, result markers, assertion leaves, features, and handlers retain their identity and multiplicity. Scenarios 034–039 are additive. |
+| Execution topology | Task order, worker and observation concurrency, build count, browser batching, package checks, exact-pack behavior, and terminal shard assignment remain unchanged. |
+| Existing guardrails | The representative Flow changed-path limit stays 35 seconds. VTD-003 may tighten the examples target from its mature post-correction evidence but cannot widen an accepted measured limit without documented variance. |
+
+Because this slice changes the global pack registry and calibrates every pack, its exact
+implementation checkpoint is all 20 runnable packs in canonical order:
+`project_management,durable_project_repository,command-palette,hotkeys,capture,event-library,project_event_transport,schemas,defects,replay,flow_graph,flow_export,live_flow_testing,layered_schema,schema_relationship_tree,property_set_flow_sections,project_assurance_severity,branding_polish,guided_test_cases,shell`.
+This broad pack set is task-owned by the registry change; it is not permission for the
+specifier to run the terminal suite. VTD-004 remains inactive until VTD-003 completes
+the normal coder, refactorer, and architect chain and the accepted commit is merged.

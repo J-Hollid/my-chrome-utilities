@@ -1,8 +1,3 @@
-# mutation-stamp: sha256=824ceeed256727a68389dcd8c81bb21aa33a25c3c2cf90033264d8d08a96bdc5
-# acceptance-mutation-manifest-begin
-# {"version":1,"tested_at":"2026-08-06T16:54:05.826101614Z","feature_name":"Modular verification packs","feature_path":"features/modular-verification-packs.feature","background_hash":"f33e1b593c6a58d0cb825bd8b87cc66db387636af0fb41927faa73a9bdc3e5f5","implementation_hash":"unknown","scenarios":[{"index":1,"name":"Modular verification packs 002","scenario_hash":"100447131896035b88d138c0b861fcc67ee5e840929104e1e291659eb8894707","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-08-06T16:54:05.826101614Z"},{"index":3,"name":"Modular verification packs 004","scenario_hash":"e2c3b81ba094747b19f211fa20b4b99c32807181f3dc63ef8ba89875748a4b5f","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-08-06T16:54:05.826101614Z"},{"index":5,"name":"Modular verification packs 006","scenario_hash":"da39baba335fb1d61aa5bd86ebd3a119f6a5e8d981cee966971ef2de9a185d6d","mutation_count":10,"result":{"Total":10,"Killed":10,"Survived":0,"Errors":0},"tested_at":"2026-08-06T16:54:05.826101614Z"},{"index":7,"name":"Modular verification packs 008","scenario_hash":"7a8ae6d197d710fffe79e23b942ab036a724efdf8d4a8222adf60e4ae17bf21b","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-08-06T16:54:05.826101614Z"},{"index":9,"name":"Modular verification packs 010","scenario_hash":"25a585da1eecb742029ca60682cb8febf011deb84f551b2c9d69509f6238c60b","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-08-06T16:54:05.826101614Z"},{"index":12,"name":"Modular verification packs 013","scenario_hash":"461093216fdfb9502f5a828ab23ffef3e3aba76e487edbf3cdc594dc329eb1dd","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-08-06T16:54:05.826101614Z"},{"index":14,"name":"Modular verification packs 015","scenario_hash":"e0e76e3958d828dfb9e30575de01943a3fb6e5a9c45bc3782184782367009eed","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-08-06T16:54:05.826101614Z"},{"index":15,"name":"Modular verification packs 016","scenario_hash":"1632c6f5e09638fcd5b9162b233274aa0acb0ecb8c4a93904f15e583142b9824","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-08-06T16:54:05.826101614Z"},{"index":17,"name":"Modular verification packs 018","scenario_hash":"8841b04c1a5bcabe725cd4b7eeafa67f6d52f9a69a3b0fa0a63d086563737a62","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-08-06T16:54:05.826101614Z"},{"index":19,"name":"Modular verification packs 020","scenario_hash":"6e27c9c3bce1394c18508be2f8d2ce60457927ade79a258bc8506efe16564c68","mutation_count":15,"result":{"Total":15,"Killed":15,"Survived":0,"Errors":0},"tested_at":"2026-08-06T16:54:05.826101614Z"},{"index":20,"name":"Modular verification packs 021","scenario_hash":"4c576be9ad2b76a12c811f843505f7f1a2f56ceab885fadcc6918473c30f9e49","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-08-06T16:54:05.826101614Z"},{"index":22,"name":"Modular verification packs 023","scenario_hash":"ab8da8c3c53119dec0a9644c4fa8fe6ceebe24ef9ead24a0072f0a7d0dcdd8d3","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-08-06T16:54:05.826101614Z"},{"index":25,"name":"Modular verification packs 026","scenario_hash":"0c8d97e432d5c3e4fd419511113a4b19e6eed9d3f587eafc1700a33495dcfe8f","mutation_count":8,"result":{"Total":8,"Killed":8,"Survived":0,"Errors":0},"tested_at":"2026-08-06T16:54:05.826101614Z"},{"index":26,"name":"Modular verification packs 027","scenario_hash":"f76f4226ebe2fd91ed936b99cd2805e762bc4315a26ba0b5df3db5baf1917248","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-08-06T16:54:05.826101614Z"},{"index":28,"name":"Modular verification packs 029","scenario_hash":"c03cfac498c3ac1d3c66b7045e3a926398892db5f56ea03cde57ac34d653d2d6","mutation_count":9,"result":{"Total":9,"Killed":9,"Survived":0,"Errors":0},"tested_at":"2026-08-06T16:54:05.826101614Z"},{"index":29,"name":"Modular verification packs 030","scenario_hash":"c6ce4c6d0277f028b9ce83fa972671b1d59da26879f7341c3eeda766f05df85a","mutation_count":6,"result":{"Total":6,"Killed":6,"Survived":0,"Errors":0},"tested_at":"2026-08-06T16:54:05.826101614Z"},{"index":30,"name":"Modular verification packs 031","scenario_hash":"aaedb5c39e87c5ff0af5882ee20d7fdf54563bb81b0fb058273c1d9e2fbe2b35","mutation_count":12,"result":{"Total":12,"Killed":12,"Survived":0,"Errors":0},"tested_at":"2026-08-06T16:54:05.826101614Z"},{"index":31,"name":"Modular verification packs 032","scenario_hash":"911d3a7d770c41d1453d398a9afea9fea3654792ecf58fc8d09d23d6c958200d","mutation_count":4,"result":{"Total":4,"Killed":4,"Survived":0,"Errors":0},"tested_at":"2026-08-06T16:54:05.826101614Z"}]}
-# acceptance-mutation-manifest-end
-
 Feature: Modular verification packs
 
   Background:
@@ -383,3 +378,93 @@ Feature: Modular verification packs
     And every loaded sample passes its assigned assertions without widening the 12.891 second target budget
     And the 35 second representative Flow changed-path guardrail is unchanged
     And Flow controls, authoring, legacy, and all 21 examples assertion leaves retain their identities
+
+  # Modular verification packs 034
+  Scenario Outline: Modular verification packs 034
+    Given runnable pack <pack> declares representative changed file <representative_path>
+    When the representative changed-path plan is selected
+    Then the exact changed file exists and is owned by <pack>
+    And selected packs are <selected_packs>
+    And no directory prefix or first-entry fallback substitutes for the declared file
+
+    Examples:
+      | pack                         | representative_path                                      | selected_packs                                                                                                                                                                                                     |
+      | project_management           | src/data-layer-assignment-routing-ui.ts                   | project_management, durable_project_repository, project_event_transport, flow_graph, flow_export, live_flow_testing, layered_schema, property_set_flow_sections, guided_test_cases, shell                            |
+      | durable_project_repository   | src/data-layer-durable-project-repository-ui.ts           | durable_project_repository, flow_graph, flow_export, live_flow_testing, layered_schema, property_set_flow_sections                                                                                                  |
+      | command-palette              | src/command-palette-ui.ts                                 | command-palette, hotkeys, shell                                                                                                                                                                                     |
+      | hotkeys                      | src/hotkey-keymap.ts                                      | hotkeys, shell                                                                                                                                                                                                      |
+      | capture                      | src/data-layer-live-inspector-presentation-ui.ts          | capture, event-library, project_event_transport, schemas, defects, replay, live_flow_testing, project_assurance_severity, guided_test_cases, shell                                                                   |
+      | event-library                | src/data-layer-event-library-deletion.ts                  | event-library, project_event_transport, defects, replay, live_flow_testing, guided_test_cases, shell                                                                                                                 |
+      | project_event_transport      | src/data-layer-project-event-transport.ts                 | project_event_transport                                                                                                                                                                                             |
+      | schemas                      | src/data-layer-allowed-value-expansion-ui.ts              | schemas, defects, live_flow_testing, project_assurance_severity, guided_test_cases, shell                                                                                                                            |
+      | defects                      | src/data-layer-defect-library-ui.ts                       | defects, live_flow_testing, shell                                                                                                                                                                                    |
+      | replay                       | src/data-layer-sequence-replay-ui.ts                      | replay, shell                                                                                                                                                                                                       |
+      | flow_graph                   | src/flow-graph/workspace-section-ui.ts                    | flow_graph                                                                                                                                                                                                          |
+      | flow_export                  | src/data-layer-project-documentation-workspace-ui.ts      | flow_export                                                                                                                                                                                                         |
+      | live_flow_testing            | src/data-layer-live-flow-testing-ui.ts                    | live_flow_testing                                                                                                                                                                                                   |
+      | layered_schema               | src/canonical-schema-focused/navigator-rows.ts            | layered_schema                                                                                                                                                                                                      |
+      | schema_relationship_tree     | src/schema-relationship-tree.ts                           | schema_relationship_tree                                                                                                                                                                                            |
+      | property_set_flow_sections   | src/data-layer-property-set-flow-section-ui.ts            | property_set_flow_sections                                                                                                                                                                                          |
+      | project_assurance_severity   | features/data-layer-project-assurance-severity.feature    | project_assurance_severity                                                                                                                                                                                          |
+      | branding_polish              | src/data-layer-studio-choice-controls.ts                  | branding_polish                                                                                                                                                                                                     |
+      | guided_test_cases            | src/data-layer-guided-test-cases.ts                       | guided_test_cases                                                                                                                                                                                                   |
+      | shell                        | src/workspace-tabs-ui.ts                                  | every runnable pack                                                                                                                                                                                                 |
+
+  # Modular verification packs 035
+  Scenario: Modular verification packs 035
+    Given one exact-pack row and one declared representative-change row exist for every runnable pack in one selected timing environment class
+    And calibration tolerance is 1.2
+    When verification performance budgets are refreshed
+    Then every runnable pack receives an explicit exact-pack duration, changed-path duration, and changed-path fan-out budget
+    And each changed-path duration names its declared file, critical-path baseline, limit, tolerance, timing sources, and measurement coverage
+    And each fan-out limit equals the selected dependant count and preserves the selected pack identities
+    And no runnable pack uses the 1200 second or fan-out 20 defaults as its ordinary success criterion
+    And genuinely global shell infrastructure remains a separate conservative budget class
+
+  # Modular verification packs 036
+  Scenario Outline: Modular verification packs 036
+    Given representative path src/alpha/local-ui.ts selects alpha and beta with critical-path baseline 50 seconds
+    When <regression> is checked against its calibrated budget
+    Then the representative-path result is fail
+    And the diagnostic identifies src/alpha/local-ui.ts, alpha and beta, the critical-path baseline, measured value, and limit
+
+    Examples:
+      | regression                                      |
+      | selected packs add gamma                        |
+      | corrected critical path exceeds the 60 second limit |
+
+  # Modular verification packs 037
+  Scenario Outline: Modular verification packs 037
+    Given browser target <target> has <timing_evidence> in the selected environment class
+    And minimum independent sample count is 5
+    And calibration tolerance is 1.2
+    When verification performance budgets are refreshed
+    Then its budget is <budget_status>
+    And its budget source is <budget_source>
+    And samples before and after a declared timing correction are not merged
+
+    Examples:
+      | target                       | timing_evidence                                                        | budget_status   | budget_source                      |
+      | FLOW_GRAPH_EXAMPLES_TARGET   | five post-correction focused samples with p90 3.830 seconds             | non-provisional | committed characterization digests |
+      | LAYERED_SCHEMA_EDITOR_TARGET | fewer than five comparable samples and focused baseline 45.919 seconds | provisional     | explicit target baseline            |
+      | an unmeasured target         | no comparable target sample and a declared registry fallback           | provisional     | declared registry fallback          |
+
+  # Modular verification packs 038
+  Scenario: Modular verification packs 038
+    Given five focused normal FLOW_GRAPH_EXAMPLES_TARGET samples have p90 3.830 seconds
+    And those samples are the committed post-correction characterization digests
+    And calibration tolerance is 1.2
+    When verification performance budgets are refreshed
+    Then its focused normal limit is 4.596 seconds
+    And loaded samples remain diagnostic rather than entering the focused percentile
+    And the prior 12.891 second limit is tightened rather than widened
+    And the 35 second representative Flow changed-path guardrail is unchanged
+
+  # Modular verification packs 039
+  Scenario: Modular verification packs 039
+    Given a committed performance calibration references the selected environment class, raw receipt digests, 20 runnable packs, and 81 registered browser targets
+    When VTD-003 completion is evaluated
+    Then every runnable pack has one deliberate representative file and three explicit pack budgets
+    And every browser target has an explicit measured or provisional budget with maturity and provenance
+    And provisional layered targets use tolerance 1.2 rather than tolerance 2
+    And pack ownership, impact propagation, task order, browser batching, assertion leaves, worker limits, and terminal shards are unchanged
