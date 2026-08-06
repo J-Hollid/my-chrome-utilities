@@ -1646,3 +1646,49 @@ and browser-launch/observation data, and log repeated sandbox-approval prompts a
 false pack-targeting incidents manually. Reopen process design only for a correctness
 blocker or evidence from that window; otherwise prefer ordinary defect fixes within
 the frozen structure.
+
+## Explicit Flow-editor verification exception (2026-08-06)
+
+The user explicitly reopened the frozen verification structure for the measured Flow
+editor bottleneck. This exception is limited to Flow-editor impact targeting, exact
+Flow browser evidence partitions, and compatible Flow target batching. The broader
+5–10-task observation freeze remains in force for unrelated verification structure.
+
+The accepted baseline is the representative change
+`src/flow-graph/workspace-section-ui.ts`: 4 selected packs, 46 tasks, 104.4 seconds,
+with 96.117 seconds in browser work. Direct Flow work must not select
+`layered_schema` merely because `flow_graph` declares it as a dependency; dependencies
+remain opt-in during ordinary impact verification. The delivery target is a completed,
+fully measured representative receipt of at most 35 seconds, at least 65 percent below
+the accepted baseline.
+
+Work the exception as five independently reviewable plans:
+
+1. **Precise impact boundaries.** Declare explicit Flow workspace camera-controls,
+   Section-authoring/layout, and surface-composition path boundaries. Presentational
+   boundaries stop dependant propagation. Semantic-model paths and any new,
+   unclassified path below `src/flow-graph` retain the conservative complete Flow
+   workflow and declared dependant propagation.
+2. **Exact browser targets.** Replace the three Flow browser adapters with
+   `FLOW_WORKSPACE_CONTROLS_TARGET`, `FLOW_WORKSPACE_AUTHORING_TARGET`,
+   `FLOW_GRAPH_LEGACY_TARGET`, and `FLOW_GRAPH_EXAMPLES_TARGET`. Assign every original
+   assertion leaf to exactly one target, preserve the production UI operation behind
+   each leaf, and reject missing, duplicate, constant, or relaxed evidence.
+3. **Compatible batching.** Run selected targets from the shared installed Flow
+   program. Exact and terminal plans batch compatible targets into one Chrome process,
+   while retaining fresh page/storage state, independent timings, and independent
+   pass/failure results for each logical target.
+4. **Focused selection.** Camera-only changes select the controls target;
+   `workspace-section-ui.ts` and Section-layout changes select the authoring target;
+   workspace composition changes select both. None of these boundaries selects
+   `flow_export`, `live_flow_testing`, or `property_set_flow_sections`. Model changes
+   retain all four targets and the declared dependant closure.
+5. **Measured guardrail.** Seed target budgets as explicitly provisional, capture a
+   completed representative receipt, refresh accepted target timing from measured
+   history, and enforce the 35-second/65-percent changed-path guardrail. Report pack
+   fan-out, exact target identity, task count, Chrome launches, measured coverage, and
+   duration so an apparent improvement cannot be created by missing evidence.
+
+Completion requires the exact `flow_graph` plan to conserve the full original evidence
+union, the representative Section-control path to satisfy the measured guardrail, and
+the normal coder, refactorer, and architect chain to approve the implementation.

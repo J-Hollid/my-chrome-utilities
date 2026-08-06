@@ -151,3 +151,26 @@ Feature: Modular browser runtime adapters
       | capture     | 5                    |
       | schemas     | 46                   |
       | defects     | 9                    |
+
+  # Modular browser runtime adapters 015
+  Scenario Outline: Modular browser runtime adapters 015
+    Given the installed Flow editor workflow has <evidence_class> evidence in <original_adapter>
+    When exact Flow evidence ownership is declared
+    Then that evidence belongs to <browser_target>
+    And <original_adapter> is replaced without retaining an unpartitioned adapter run
+
+    Examples:
+      | evidence_class       | original_adapter                          | browser_target                  |
+      | controls and camera  | test/browser-packs/flow-graph.mjs         | FLOW_WORKSPACE_CONTROLS_TARGET  |
+      | authoring and layout | test/browser-packs/flow-graph.mjs         | FLOW_WORKSPACE_AUTHORING_TARGET |
+      | legacy compatibility | test/browser-packs/flow-graph-legacy.mjs | FLOW_GRAPH_LEGACY_TARGET        |
+      | example validation   | test/browser-packs/flow-graph-examples.mjs | FLOW_GRAPH_EXAMPLES_TARGET      |
+
+  # Modular browser runtime adapters 016
+  Scenario: Modular browser runtime adapters 016
+    Given all four Flow editor targets use the same installed browser program and Flow session batch
+    When exact Flow verification is planned
+    Then one browser observation task contains all four logical Flow target identities
+    And no browser task remains for any of the three replaced Flow adapters
+    And a focused authoring plan contains one browser observation task with only FLOW_WORKSPACE_AUTHORING_TARGET
+    And exact evidence partition validation applies the installed workflow conservation contract

@@ -185,3 +185,29 @@ Feature: Modular verification packs
     And an unmeasured target uses an explicit bootstrap budget identified as provisional
     And a permissive catch-all limit cannot hide a regression in a measured pack or target
     And the report compares current measurements with the accepted baseline
+
+  # Modular verification packs 018
+  Scenario Outline: Modular verification packs 018
+    Given a changed Flow path belongs to <flow_boundary>
+    When impacted verification packs are selected
+    Then selected packs are <selected_packs>
+    And selected Flow browser targets are <browser_targets>
+
+    Examples:
+      | flow_boundary                                 | selected_packs                    | browser_targets                                                    |
+      | workspace camera controls                     | flow_graph                        | FLOW_WORKSPACE_CONTROLS_TARGET                                     |
+      | workspace Section controls and layout         | flow_graph                        | FLOW_WORKSPACE_AUTHORING_TARGET                                    |
+      | workspace surface composition                 | flow_graph                        | FLOW_WORKSPACE_CONTROLS_TARGET and FLOW_WORKSPACE_AUTHORING_TARGET |
+      | Flow graph semantic model                     | flow_graph and declared dependants | every Flow target                                                  |
+      | an unclassified new path below src/flow-graph | flow_graph and declared dependants | every Flow target                                                  |
+
+  # Modular verification packs 019
+  Scenario: Modular verification packs 019
+    Given the measured representative change src/flow-graph/workspace-section-ui.ts previously selected 4 packs and 46 tasks in 104.4 seconds
+    When its focused Flow editor verification plan and completed receipt are reported
+    Then only flow_graph and FLOW_WORKSPACE_AUTHORING_TARGET are selected
+    And every planned task has a measured completed result
+    And the representative changed-path duration is at most 35 seconds
+    And the reduction from the accepted 104.4 second baseline is at least 65 percent
+    And the report identifies selected packs, target identity, task count, browser launches, measured coverage, and duration
+    And exact flow_graph verification still runs every Flow target and preserves complete assertion evidence
