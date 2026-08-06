@@ -43,20 +43,21 @@
         pack (first (filter #(= "flow_graph" (:id %)) registry))
         partition (first (:browserEvidencePartitions pack))]
     (into {} (map (juxt :id #(set (:leaves %))) (:targets partition)))))
+(defn- parse-target-line [line]
+  (try (json/parse-string line true) (catch Throwable _ nil)))
+(defn- observe-target-line [{:keys [pending] :as state} line]
+  (let [candidate (parse-target-line line)
+        document (:flowGraph candidate)
+        result (:swarmforgeBrowserTargetResult candidate)]
+    (cond
+      document (assoc state :pending document)
+      (and result (= "passed" (:status result)) pending)
+      (-> state (update :observed conj [(:id result) pending]) (assoc :pending nil))
+      result (assoc state :pending nil)
+      :else state)))
 (defn- observed-targets [output]
   (:observed
-   (reduce (fn [{:keys [pending] :as state} line]
-             (let [candidate (try (json/parse-string line true) (catch Throwable _ nil))
-                   document (:flowGraph candidate)
-                   result (:swarmforgeBrowserTargetResult candidate)]
-               (cond
-                 document (assoc state :pending document)
-                 (and result (= "passed" (:status result)) pending)
-                 (-> state (update :observed conj [(:id result) pending]) (assoc :pending nil))
-                 result (assoc state :pending nil)
-                 :else state)))
-           {:pending nil :observed []}
-           (str/split-lines output))))
+   (reduce observe-target-line {:pending nil :observed []} (str/split-lines output))))
 (defn- observe-browser! []
   (or @browser-observation
       (let [result (checked-command! "Flow graph browser targets failed."
