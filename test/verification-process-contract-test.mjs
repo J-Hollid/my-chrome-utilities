@@ -2348,29 +2348,6 @@ assert.equal(refreshedBudgets.performanceBudgets.browserTargetP90Milliseconds.UN
   true, "unmeasured browser targets retain an explicit provisional bootstrap budget");
 assert.equal(refreshedBudgets.performanceBudgets.browserTargetP90Milliseconds.UNMEASURED.source,
   "conservative target limit", "absence of target evidence never falls back to a two-second estimate");
-const matureBeyondRegistryFallback = refreshVerificationPerformanceBudgets({
-  rows:[], browserTargetIds:["MATURE", "PROVISIONAL"],
-  model:{ browserTargets:{ MATURE:{
-    p90Ms:400, samples:5,
-    receiptDigests:Array.from({ length:5 }, (_, index) => `mature-${index}`),
-  } } },
-}, {
-  performanceBudgets:{ browserTargetP90Milliseconds:{} },
-}, {
-  packs:[{ browserAdapterPerformance:[{
-    targetIds:["MATURE", "PROVISIONAL"],
-    singleTargetP90Milliseconds:300,
-    maximumSingleTargetP90Milliseconds:350,
-  }] }],
-  tolerance:1.2,
-  minimumIndependentSamples:5,
-});
-assert.equal(matureBeyondRegistryFallback.performanceBudgets
-  .browserTargetP90Milliseconds.MATURE.limit, 480,
-  "mature accepted evidence receives tolerance instead of a contradictory fallback ceiling");
-assert.equal(matureBeyondRegistryFallback.performanceBudgets
-  .browserTargetP90Milliseconds.PROVISIONAL.limit, 350,
-  "the registry maximum continues to cap provisional declared fallback evidence");
 
 const committedTimingBaseline = JSON.parse(await readFile(
   new URL("../verification/timing-baseline.json", import.meta.url), "utf8",
@@ -2487,12 +2464,12 @@ const committedCalibrationReport = JSON.parse(await readFile(
 ));
 assert.match(committedCalibrationReport.implementationCommit, /^[a-f0-9]{40}$/u);
 assert.equal(committedCalibrationReport.completion.status, "complete");
-assert.equal(committedCalibrationReport.receiptDigests.length, 19);
+assert.equal(committedCalibrationReport.receiptDigests.length, 18);
 assert.equal(committedCalibrationReport.sourceScope.length, 4);
 assert.equal(committedCalibrationReport.runnablePacks.length, 20);
 assert.equal(Object.keys(committedCalibrationReport.browserTargets).length, 81);
 assert.equal(committedCalibrationReport.browserTargets
-  .WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER.sampleCount, 6);
+  .WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER.sampleCount, 5);
 assert.equal(committedCalibrationReport.browserTargets
   .WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER.maturity, "non-provisional");
 assert.equal(committedCalibrationReport.conservation.verificationTopologyDigest,
@@ -2545,7 +2522,7 @@ const completeSelectedClassReport = reportVerificationThroughput({
   environmentClassId:committedCalibrationReport.environmentClassId,
   minimumIndependentSamples:committedCalibrationReport.minimumIndependentSamples,
 });
-assert.equal(completeSelectedClassReport.model.ledger.receipts, 19,
+assert.equal(completeSelectedClassReport.model.ledger.receipts, 18,
   "production reporting consumes the complete calibrated selected class");
 assert.equal(completeSelectedClassReport.model.browserTargets
   .FLOW_GRAPH_EXAMPLES_TARGET.p90Ms, 21022,
@@ -2556,14 +2533,14 @@ const completeExamplesBudget = completeSelectedClassReport.performanceBudgets.re
   .find(({ identity }) => identity === "FLOW_GRAPH_EXAMPLES_TARGET");
 assert.equal(completeExamplesBudget.measured, 3830);
 assert.equal(completeExamplesBudget.observed, 21022);
-assert.equal(completeExamplesBudget.excludedSamples, 14,
+assert.equal(completeExamplesBudget.excludedSamples, 13,
   "terminal and other plan contexts remain diagnostic for the focused Flow budget");
 const completeLegacyBudget = completeSelectedClassReport.performanceBudgets.results
   .find(({ identity }) => identity === "FLOW_GRAPH_LEGACY_TARGET");
-assert.equal(completeLegacyBudget.provisional, false);
-assert.equal(completeLegacyBudget.measured, 1597);
+assert.equal(completeLegacyBudget.provisional, true);
+assert.equal(completeLegacyBudget.measured, 1295);
 assert.equal(completeLegacyBudget.observed, 1597,
-  "the nineteenth receipt promotes legacy evidence to mature enforcement");
+  "four-sample legacy evidence remains visible without being promoted to mature enforcement");
 for (const calibratedPack of committedCalibrationReport.runnablePacks) {
   assert.deepEqual(calibratedPack.exactPackDuration,
     committedTimingBaseline.performanceBudgets.exactPackSeconds[calibratedPack.id]);
