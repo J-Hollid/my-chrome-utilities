@@ -1705,6 +1705,27 @@ if (process.platform !== "win32") {
       ...envTask, key:"unit:reserved-environment", environment:{ PATH:"/untrusted" },
     }), /reserved environment: PATH/u);
 
+    const legacyLogicalTask = {
+      ...envTask, key:"browser-observation:legacy-target", stage:"browser-observation",
+      logicalTargetIds:["LEGACY_TARGET"], environment:null, display:"legacy logical target",
+      args:["-e", "console.log(JSON.stringify({swarmforgeBrowserTargetTiming:{id:'LEGACY_TARGET',durationMs:7}}))"],
+    };
+    await runner(legacyLogicalTask.display, legacyLogicalTask);
+    assert.equal(context.receipt.tasks[legacyLogicalTask.key].logicalResults.LEGACY_TARGET.status,
+      "passed", "legacy timing-only observations remain compatible with receipt execution");
+    const mixedProtocolTask = {
+      ...legacyLogicalTask, key:"browser-observation:mixed-protocol",
+      logicalTargetIds:["NEW_FIRST", "NEW_SECOND"], display:"mixed target protocol",
+      args:["-e", [
+        "console.log(JSON.stringify({swarmforgeBrowserTargetResult:{id:'NEW_FIRST',status:'passed'}}));",
+        "console.log(JSON.stringify({swarmforgeBrowserTargetTiming:{id:'NEW_FIRST',durationMs:3}}));",
+        "console.log(JSON.stringify({swarmforgeBrowserTargetTiming:{id:'NEW_SECOND',durationMs:4}}));",
+      ].join("")],
+    };
+    await assert.rejects(() => runner(mixedProtocolTask.display, mixedProtocolTask),
+      /Browser target result incomplete or failed/u,
+      "an isolated-target protocol cannot omit one target result after emitting another");
+
     process.env.VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES = "32";
     const overflowContext = createVerificationReceiptContext(1, 2, { receiptDirectory:commandReceiptDirectory });
     const overflowRunner = createVerificationCommandRunner(overflowContext);

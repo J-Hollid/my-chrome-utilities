@@ -405,14 +405,23 @@ export function createVerificationCommandRunner(context) {
     const err = `${priorTask?.stderr ?? ""}${freshErr}`;
     const parseLogicalResults = (source, ids) => {
       const values = Object.fromEntries(ids.map((id) => [id, {}]));
+      let explicitResultCount = 0;
       for (const line of source.split(/\r?\n/u)) {
         try {
           const record = JSON.parse(line);
           const resultRecord = record.swarmforgeBrowserTargetResult;
           const timingRecord = record.swarmforgeBrowserTargetTiming;
-          if (resultRecord && resultRecord.id in values) Object.assign(values[resultRecord.id], resultRecord);
+          if (resultRecord && resultRecord.id in values) {
+            Object.assign(values[resultRecord.id], resultRecord);
+            explicitResultCount += 1;
+          }
           if (timingRecord && timingRecord.id in values) values[timingRecord.id].durationMs = timingRecord.durationMs;
         } catch { /* ordinary task output is not a logical browser result */ }
+      }
+      if (explicitResultCount === 0) {
+        for (const value of Object.values(values)) {
+          if (Number.isFinite(value.durationMs)) value.status = "passed";
+        }
       }
       return values;
     };
