@@ -717,7 +717,9 @@ export function refreshVerificationPerformanceBudgets(
   const conservativeTargetLimit = baseline.performanceBudgets?.defaultBrowserTargetP90Milliseconds ??
     120_000;
   const targetBudget = ({ id, baselineValue, source, provisional, timing, maximum, extra = {} }) => ({
-    limit:Math.min(Math.ceil(baselineValue * tolerance), maximum ?? conservativeTargetLimit),
+    limit:provisional
+      ? Math.min(Math.ceil(baselineValue * tolerance), maximum ?? conservativeTargetLimit)
+      : Math.ceil(baselineValue * tolerance),
     baseline:baselineValue,
     percentile:"p90",
     tolerance,
