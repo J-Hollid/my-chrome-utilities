@@ -302,22 +302,13 @@
     },
     "changedPathFanOut": {
       "project_management": {
-        "limit": 9,
-        "baseline": 9,
+        "limit": 0,
+        "baseline": 0,
         "percentile": "selected-dependant-count",
         "tolerance": 1,
         "provisional": false,
         "selectedPacks": [
-          "project_management",
-          "durable_project_repository",
-          "project_event_transport",
-          "flow_graph",
-          "flow_export",
-          "live_flow_testing",
-          "layered_schema",
-          "property_set_flow_sections",
-          "guided_test_cases",
-          "shell"
+          "project_management"
         ]
       },
       "durable_project_repository": {
@@ -563,14 +554,14 @@
     },
     "changedPathSeconds": {
       "project_management": {
-        "limit": 468,
-        "baseline": 390,
+        "limit": 45,
+        "baseline": 37.1,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
         "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 187
+          "exact task samples": 22
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-assignment-routing-ui.ts"

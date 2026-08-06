@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import {readFile} from "node:fs/promises";
 import {createSpecificationProject} from "../dist/data-layer-specification-project.js";
 import {subscribeProjectLibraryChanges} from "../dist/data-layer-project-library-ui.js";
 import {
@@ -20,6 +21,14 @@ import {
   stageProjectImport,
   updateProjectMetadata,
 } from "../dist/data-layer-project-library.js";
+
+const presentationSource=await readFile(new URL("../src/data-layer-project-library-presentation-ui.ts",import.meta.url),"utf8");
+const controllerSource=await readFile(new URL("../src/data-layer-project-library-ui.ts",import.meta.url),"utf8");
+assert.match(controllerSource,/renderProjectLibraryPresentation/u,"the project-library coordinator delegates supplied view values to its presentation boundary");
+assert.doesNotMatch(presentationSource,/data-layer-project-library\.js|localStorage|sessionStorage|indexedDB|activeProjectId|ProjectState/u,
+  "the pure project-library presentation owns no persistence, migration, active-context, or project-state access");
+assert.match(presentationSource,/focusSearch|createProject|openProject|editProject|exportProject|closeProject|switchProject/u,
+  "the presentation exposes owner callbacks for every preserved operator action");
 
 const clock=(()=>{let tick=0;return()=>`2026-07-20T12:${String(tick++).padStart(2,"0")}:00.000Z`;})();
 const state=(id,name,site)=>{

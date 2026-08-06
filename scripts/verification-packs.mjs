@@ -62,6 +62,11 @@ export function browserAdapterUsesSharedHarness(source, adapterPath) {
   return staticallyResolvableModuleImports(source, adapterPath).includes(sharedBrowserHarnessPath);
 }
 
+export function clojureRequiresNamespace(source, namespace) {
+  const escapedNamespace = namespace.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+  return new RegExp(`\\[\\s*${escapedNamespace}(?=\\s|\\])`, "u").test(source);
+}
+
 export async function loadVerificationPacks() {
   return JSON.parse(await readFile(registryUrl, "utf8"));
 }
@@ -232,13 +237,17 @@ function validateImpactBoundaries(packs, sourcePaths, representativePaths = sour
     const boundaries = values(pack, "impactBoundaries");
     for (const boundary of boundaries) {
       if (!boundary || Array.isArray(boundary) ||
-          Object.keys(boundary).sort().join(",") !== "id,prefixes,propagateDependants" ||
+          !["id,prefixes,propagateDependants", "id,prefixes,propagateDependants,sourceClass"]
+            .includes(Object.keys(boundary).sort().join(",")) ||
           !/^[a-z0-9][a-z0-9_-]*$/u.test(boundary.id ?? "") || ids.has(boundary.id) ||
           !Array.isArray(boundary.prefixes) || !boundary.prefixes.length ||
           boundary.prefixes.some((prefix) => typeof prefix !== "string" || !prefix ||
             !values(pack, "source").some((owned) =>
               prefixMatches(owned, prefix) || prefixMatches(prefix, owned))) ||
-          typeof boundary.propagateDependants !== "boolean") {
+          typeof boundary.propagateDependants !== "boolean" ||
+          boundary.sourceClass !== undefined &&
+            !["core or semantic", "application controller", "browser presentation",
+              "persistence migration"].includes(boundary.sourceClass)) {
         throw new Error(`Use exact owned impact boundaries in pack ${pack.id}`);
       }
       ids.add(boundary.id);
@@ -303,12 +312,34 @@ function validateRuntimeInputs(packs, trackedPaths) {
   }
 }
 
-function validateIsolatedVerificationHandlers(packs) {
+export async function validateIsolatedVerificationHandlers(
+  packs,
+  { readSource = (handler) => readFile(path.join(repositoryRoot, handler), "utf8") } = {},
+) {
   for (const pack of packs) {
     const isolated = values(pack, "isolatedVerificationHandlers");
     if (new Set(isolated).size !== isolated.length ||
         isolated.some((handler) => !values(pack, "handlers").includes(handler))) {
       throw new Error(`Isolate only exact handlers owned by pack ${pack.id}`);
+    }
+    for (const handler of isolated) {
+      const source = await readSource(handler);
+      const servedFeatures = [...source.matchAll(/"(features\/[A-Za-z0-9_./-]+\.feature)"/gu)]
+        .map((match) => match[1]);
+      if (new Set(servedFeatures).size !== values(pack, "features").length ||
+          canonicalPaths(servedFeatures).join("\0") !== canonicalPaths(values(pack, "features")).join("\0")) {
+        throw new Error(`Isolated handler ${handler} must serve exactly the features owned by ${pack.id}`);
+      }
+      const namespace = handler.replace(/^acceptance\/src\//u, "").replace(/\.clj$/u, "")
+        .replaceAll("/", ".").replaceAll("_", "-");
+      for (const consumer of packs.filter(({ id }) => id !== pack.id)) {
+        for (const consumerHandler of values(consumer, "handlers")) {
+          const consumerSource = await readSource(consumerHandler);
+          if (clojureRequiresNamespace(consumerSource, namespace)) {
+            throw new Error(`Cross-pack handler consumer ${consumerHandler} blocks isolation of ${handler}`);
+          }
+        }
+      }
     }
   }
 }
@@ -692,7 +723,7 @@ export async function validateVerificationPacks(packs, { inventory } = {}) {
   validateBrowserPerformanceDeclarations(packs);
   validateBrowserObservationBatches(packs);
   validateBrowserEvidencePartitions(packs);
-  validateIsolatedVerificationHandlers(packs);
+  await validateIsolatedVerificationHandlers(packs);
   await validateVerificationHelpers(packs);
 
   const repositoryInventory = { ...await verificationInventory(), ...inventory };
@@ -1096,7 +1127,9 @@ export function planVerification(
           throw new Error(`Conflicting current and historical verification ownership for ${entry.path}: ${formerOwner} -> ${currentOwner}`);
         }
         const currentPack = packs.find(({ id }) => id === currentOwner);
-        const isolatedHandler = values(currentPack, "isolatedVerificationHandlers").includes(entry.path);
+        const isolatedHandler = currentPack
+          ? values(currentPack, "isolatedVerificationHandlers").includes(entry.path)
+          : false;
         const former = affectedFor(basePacks, entry.path, {
           forceVerificationExact:isolatedHandler,
         });

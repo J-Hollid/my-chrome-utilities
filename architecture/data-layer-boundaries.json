@@ -1150,9 +1150,14 @@
     "layer": "browser",
     "contracts": [
       "src/data-layer-project-library.ts",
+      "src/data-layer-project-library-presentation-ui.ts",
       "src/data-layer-specification-project.ts",
       "src/data-layer-specification-repository.ts"
     ]
+  },
+  "src/data-layer-project-library-presentation-ui.ts": {
+    "module": "schemas",
+    "layer": "browser"
   },
   "src/data-layer-project-entity-lifecycle.ts": {
     "module": "schemas",

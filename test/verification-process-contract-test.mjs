@@ -63,6 +63,7 @@ import {
   browserAdapterUsesSharedHarness,
   browserObservationEvidenceLeaves,
   browserObservationSessionBatch,
+  clojureRequiresNamespace,
   executeAcceptancePlan,
   loadVerificationPacks,
   planVerification,
@@ -70,6 +71,7 @@ import {
   validateBrowserPerformanceDeclarations,
   validateBrowserObservationBatches,
   validateBrowserEvidencePartitions,
+  validateIsolatedVerificationHandlers,
   validateVerificationPacks,
   verificationInventory,
   verificationOwner,
@@ -874,6 +876,189 @@ await assert.rejects(() => validateVerificationPacks(replacePack(packs,
   "flow_graph", () => ({
     isolatedVerificationHandlers:["acceptance/src/acceptance/steps/not-flow-graph.clj"],
   }))), /Isolate only exact handlers owned by pack flow_graph/u);
+const projectManagementPack = packs.find(({ id }) => id === "project_management");
+const vtd004BasePacks = JSON.parse(await exec("git", [
+  "show", "9a2f202483:verification/packs.json",
+]));
+const vtd004BaseCalibration = JSON.parse(await exec("git", [
+  "show", "9a2f202483:verification/performance-calibration.json",
+]));
+const vtd004CurrentCalibration = JSON.parse(await readFile(
+  new URL("../verification/performance-calibration.json", import.meta.url), "utf8"));
+assert.deepEqual(projectManagementPack.impactBoundaries.map(({ id, sourceClass, propagateDependants }) =>
+  [id, sourceClass, propagateDependants]), [
+  ["project_entity_lifecycle_semantic", "core or semantic", true],
+  ["project_page_authoring_controller", "application controller", true],
+  ["project_assignment_routing_semantic", "core or semantic", true],
+  ["project_assignment_routing_presentation", "browser presentation", false],
+  ["project_library_persistence", "persistence migration", true],
+  ["project_library_controller", "application controller", true],
+  ["project_library_presentation", "browser presentation", false],
+], "project-management source classes and propagation are explicit production registry data");
+assert.deepEqual(projectManagementPack.isolatedVerificationHandlers,
+  ["acceptance/src/acceptance/steps/project_management.clj"],
+  "the project-management APS handler is explicitly isolated");
+const projectHandlerPath = projectManagementPack.isolatedVerificationHandlers[0];
+const projectHandlerSource = await readFile(new URL(`../${projectHandlerPath}`, import.meta.url), "utf8");
+const projectServedFeatures = [...projectHandlerSource.matchAll(
+  /"(features\/[A-Za-z0-9_./-]+\.feature)"/gu,
+)].map((match) => match[1]);
+assert.deepEqual([...projectServedFeatures].sort(), [...projectManagementPack.features].sort(),
+  "the isolated handler serves exactly all six project-management feature identities");
+const projectNamespace = "acceptance.steps.project-management";
+const registeredHandlerPaths = [...new Set(packs.flatMap((pack) => pack.handlers ?? []))];
+const projectHandlerConsumers = [];
+for (const handlerPath of registeredHandlerPaths) {
+  const source = await readFile(new URL(`../${handlerPath}`, import.meta.url), "utf8");
+  if (clojureRequiresNamespace(source, projectNamespace)) projectHandlerConsumers.push(handlerPath);
+}
+assert.deepEqual(projectHandlerConsumers, [],
+  "no registered APS/Clojure handler outside the owner consumes the isolated project handler");
+const crossPackConsumer = packs.find(({ id, handlers }) => id !== "project_management" && handlers?.length);
+const crossPackHandler = crossPackConsumer.handlers[0];
+await assert.rejects(() => validateIsolatedVerificationHandlers(packs, {
+  readSource:async(handlerPath) => {
+    const source = await readFile(new URL(`../${handlerPath}`, import.meta.url), "utf8");
+    return handlerPath === crossPackHandler
+      ? `${source}\n[acceptance.steps.project-management :as project-management]\n`
+      : source;
+  },
+}), new RegExp(`Cross-pack handler consumer ${crossPackHandler.replaceAll("/", "\\/")} blocks isolation`, "u"),
+"a negative cross-pack APS consumer mutation blocks handler isolation");
+await assert.rejects(() => validateIsolatedVerificationHandlers(packs, {
+  readSource:async(handlerPath) => {
+    const source = await readFile(new URL(`../${handlerPath}`, import.meta.url), "utf8");
+    return handlerPath === crossPackHandler
+      ? `${source}\n[acceptance.steps.project-management :refer [handlers]]\n`
+      : source;
+  },
+}), new RegExp(`Cross-pack handler consumer ${crossPackHandler.replaceAll("/", "\\/")} blocks isolation`, "u"),
+"a non-alias :refer consumer mutation also blocks handler isolation");
+const projectClosure = ["project_management", "durable_project_repository", "project_event_transport",
+  "flow_graph", "flow_export", "live_flow_testing", "layered_schema",
+  "property_set_flow_sections", "guided_test_cases", "shell"];
+for (const changedPath of ["src/data-layer-assignment-routing-ui.ts",
+  "src/data-layer-project-library-presentation-ui.ts"]) {
+  const plan = planVerification(packs, { changedPaths:[changedPath], includeProperties:true });
+  assert.deepEqual(plan.packIds, ["project_management"], `${changedPath} remains owner-only`);
+  assert.equal(plan.unitTasks.length, 4);
+  assert.equal(plan.propertyTasks.length, 4);
+  assert.equal(plan.sessionTasks.length, 1);
+  assert.equal(plan.parserTasks.length, 6);
+  assert.equal(plan.browserTasks.length + plan.observationTasks.length, 4);
+}
+for (const changedPath of ["src/data-layer-project-entity-lifecycle.ts",
+  "src/data-layer-page-authoring.ts", "src/data-layer-assignment-routing.ts",
+  "src/data-layer-project-library.ts", "src/data-layer-project-library-ui.ts"]) {
+  assert.deepEqual(planVerification(packs, { changedPaths:[changedPath] }).packIds, projectClosure,
+    `${changedPath} retains the exact ten-pack dependant closure`);
+}
+assert.deepEqual(planVerification(packs, {
+  changedPaths:["acceptance/src/acceptance/steps/project_management.clj"],
+}).packIds, ["project_management"], "an isolated project handler selects only complete owner evidence");
+const projectHistoryChange = (entry) => syntheticChangeSet([entry]);
+const modifiedGeneratedArtifact = projectHistoryChange({
+  status:"M", path:"dist/data-layer-project-library-ui.js",
+});
+assert.deepEqual(planVerification(packs, {
+  packIds:["project_management"], changedPaths:modifiedGeneratedArtifact.paths,
+  changeSet:modifiedGeneratedArtifact, basePacks:packs,
+}).packIds, ["project_management"],
+"a modified generated artifact remains excluded before isolated-handler history lookup");
+const deletedProjectPresentation = projectHistoryChange({
+  status:"D", path:"src/data-layer-assignment-routing-ui.ts",
+});
+assert.deepEqual(planVerification(packs, {
+  changedPaths:deletedProjectPresentation.paths, changeSet:deletedProjectPresentation, basePacks:packs,
+}).packIds, ["project_management"], "a deleted presentation retains its historical owner-only boundary");
+const renamedBetweenPresentations = projectHistoryChange({status:"R", score:100,
+  oldPath:"src/data-layer-assignment-routing-ui.ts",
+  newPath:"src/data-layer-project-library-presentation-ui.ts"});
+assert.deepEqual(planVerification(packs, {
+  changedPaths:renamedBetweenPresentations.paths, changeSet:renamedBetweenPresentations, basePacks:packs,
+}).packIds, ["project_management"], "a presentation-to-presentation rename remains owner-only");
+const renamedIntoPersistence = projectHistoryChange({status:"R", score:100,
+  oldPath:"src/data-layer-assignment-routing-ui.ts", newPath:"src/data-layer-project-library.ts"});
+assert.deepEqual(planVerification(packs, {
+  changedPaths:renamedIntoPersistence.paths, changeSet:renamedIntoPersistence, basePacks:packs,
+}).packIds, projectClosure, "a presentation-to-propagating rename unions to the ten-pack closure");
+assert.deepEqual(planVerification(packs, {
+  changedPaths:deletedProjectPresentation.paths, changeSet:deletedProjectPresentation,
+  basePacks:packs, historicalRegistryFallback:true,
+}).packIds, planVerification(packs, {terminalFull:true}).packIds,
+"an unreadable historical project boundary falls back to every runnable pack");
+const exactEvidenceKeys = ["unit", "property", "features", "handlers", "browserAdapters"];
+const baseProjectManagementPack = vtd004BasePacks.find(({ id }) => id === "project_management");
+const projectEvidenceProfile = Object.fromEntries(exactEvidenceKeys.map((key) =>
+  [key, projectManagementPack[key]]));
+assert.deepEqual(projectEvidenceProfile, Object.fromEntries(exactEvidenceKeys.map((key) =>
+  [key, baseProjectManagementPack[key]])),
+"all exact project-management evidence identities are conserved from the accepted base");
+const exactProjectPlan = planVerification(packs, {packIds:["project_management"], includeProperties:true});
+for (const [key, taskKey] of [["unit", "unitTasks"], ["property", "propertyTasks"],
+  ["features", "parserTasks"], ["browserAdapters", "browserTasks"]]) {
+  assert.deepEqual(exactProjectPlan[taskKey].map(({ target }) => target).sort(),
+    [...projectEvidenceProfile[key]].sort(), `${key} evidence executes exactly once by identity`);
+}
+assert.deepEqual(exactProjectPlan.sessionTasks.map(({ packId }) => packId), ["project_management"],
+  "the one exact owner session consumes the one isolated project-management handler");
+const baseTerminalPlan = planVerification(vtd004BasePacks, {terminalFull:true});
+const currentTerminalPlan = planVerification(packs, {terminalFull:true});
+const terminalIdentities = (plan) => plan.tasks.map(verificationTaskIdentity);
+assert.deepEqual(terminalIdentities(currentTerminalPlan), terminalIdentities(baseTerminalPlan),
+  "terminal-full planning conserves every exact task identity and ordering");
+assert.equal(currentTerminalPlan.checkpointTasks.filter(({ display }) =>
+  display === "npm run package").length, 1,
+"terminal-full planning executes the package check exactly once");
+const currentOtherPackRows = vtd004CurrentCalibration.runnablePacks.filter(({ id }) =>
+  id !== "project_management");
+const baseOtherPackRows = vtd004BaseCalibration.runnablePacks.filter(({ id }) =>
+  id !== "project_management");
+assert.deepEqual(currentOtherPackRows, baseOtherPackRows,
+  "the other 19 calibrated pack rows remain byte-equivalent to the accepted base");
+assert.deepEqual(vtd004CurrentCalibration.browserTargets, vtd004BaseCalibration.browserTargets,
+  "all 81 browser-target calibration rows remain byte-equivalent to the accepted base");
+const calibrationProvenanceKeys = ["version", "implementationCommit", "environmentClassId", "environment",
+  "sourceScope", "minimumIndependentSamples", "tolerance", "receiptDigests", "algorithm"];
+const calibrationProvenance = (calibration) => Object.fromEntries(calibrationProvenanceKeys.map((key) =>
+  [key, calibration[key]]));
+assert.deepEqual(calibrationProvenance(vtd004CurrentCalibration),
+  calibrationProvenance(vtd004BaseCalibration),
+  "accepted calibration receipt scope and provenance remain byte-equivalent");
+const vtd004Acceptance = {
+  currentPlans:Object.fromEntries([
+    ...["src/data-layer-assignment-routing-ui.ts", "src/data-layer-project-library-presentation-ui.ts",
+      "src/data-layer-project-entity-lifecycle.ts", "src/data-layer-page-authoring.ts",
+      "src/data-layer-assignment-routing.ts", "src/data-layer-project-library.ts",
+      "src/data-layer-project-library-ui.ts"].map((changedPath) => [changedPath,
+      planVerification(packs, {changedPaths:[changedPath], includeProperties:true}).packIds]),
+    [projectHandlerPath, planVerification(packs, {changedPaths:[projectHandlerPath],
+      includeProperties:true}).packIds],
+  ]),
+  historyPlans:{
+    delete:planVerification(packs, {changedPaths:deletedProjectPresentation.paths,
+      changeSet:deletedProjectPresentation, basePacks:packs}).packIds,
+    renamePresentation:planVerification(packs, {changedPaths:renamedBetweenPresentations.paths,
+      changeSet:renamedBetweenPresentations, basePacks:packs}).packIds,
+    renamePersistence:planVerification(packs, {changedPaths:renamedIntoPersistence.paths,
+      changeSet:renamedIntoPersistence, basePacks:packs}).packIds,
+    unreadable:planVerification(packs, {changedPaths:deletedProjectPresentation.paths,
+      changeSet:deletedProjectPresentation, basePacks:packs,
+      historicalRegistryFallback:true}).packIds,
+  },
+  handler:{path:projectHandlerPath, servedFeatures:projectServedFeatures,
+    consumers:projectHandlerConsumers, negativeMutationRejected:true,
+    ownerPlan:planVerification(packs, {changedPaths:[projectHandlerPath], includeProperties:true}).packIds},
+  conservation:{evidenceProfile:projectEvidenceProfile,
+    exactTaskTargets:Object.fromEntries(["unitTasks", "propertyTasks", "parserTasks", "browserTasks"]
+      .map((key) => [key, exactProjectPlan[key].map(({ target }) => target)])),
+    handlerSessions:exactProjectPlan.sessionTasks.map(({ packId }) => packId),
+    terminalTaskIdentitiesConserved:true, packageCheckCount:1},
+  calibration:{current:vtd004CurrentCalibration.runnablePacks.find(({ id }) => id === "project_management"),
+    otherPackRowsConserved:true, browserTargetRowsConserved:true, provenanceConserved:true,
+    otherPackCount:currentOtherPackRows.length,
+    browserTargetCount:Object.keys(vtd004CurrentCalibration.browserTargets).length},
+};
 await assert.rejects(() => validateVerificationPacks(replacePack(packs, "shell", (pack) => ({
   verificationHelpers:pack.verificationHelpers.map((helper) => helper.path ===
     "test/browser-packs/shared-harness.mjs"
@@ -1151,11 +1336,12 @@ for (const name of await readdir(stepDirectory)) {
 for (const [requiringPath, requiredPath] of [
   ["acceptance/src/acceptance/steps/event_library_editor.clj",
     "acceptance/src/acceptance/steps/event_library_editor_support.clj"],
-  ["acceptance/src/acceptance/steps/all.clj",
-    "acceptance/src/acceptance/steps/project_management.clj"],
 ]) assert.ok(crossPackStepRequires.some((edge) =>
   edge.requiringPath === requiringPath && edge.requiredPath === requiredPath),
   `${requiringPath} exposes its cross-pack requirement on ${requiredPath}`);
+assert.equal(crossPackStepRequires.some(({ requiredPath }) =>
+  requiredPath === "acceptance/src/acceptance/steps/project_management.clj"), false,
+"the isolated project-management handler has no cross-pack Clojure consumer");
 const requiredPathImpacts = new Map();
 for (const edge of [...crossPackStepRequires, ...crossPackLiteralSourceReads]) {
   if (!requiredPathImpacts.has(edge.requiredPath)) {
@@ -3629,4 +3815,5 @@ for (const source of [handoffSource, handoffLibrarySource]) {
     "handoff callers must not retain the legacy unbounded directory lock");
 }
 
+console.log(JSON.stringify({vtd004Acceptance}));
 console.log("verification process contract tests passed");

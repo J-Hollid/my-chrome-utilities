@@ -8,9 +8,19 @@
       "src/data-layer-assignment-routing.ts",
       "src/data-layer-assignment-routing-ui.ts",
       "src/data-layer-project-library.ts",
-      "src/data-layer-project-library-ui.ts"
+      "src/data-layer-project-library-ui.ts",
+      "src/data-layer-project-library-presentation-ui.ts"
     ],
     "dependencies": [],
+    "impactBoundaries": [
+      {"id":"project_entity_lifecycle_semantic","prefixes":["src/data-layer-project-entity-lifecycle.ts"],"propagateDependants":true,"sourceClass":"core or semantic"},
+      {"id":"project_page_authoring_controller","prefixes":["src/data-layer-page-authoring.ts"],"propagateDependants":true,"sourceClass":"application controller"},
+      {"id":"project_assignment_routing_semantic","prefixes":["src/data-layer-assignment-routing.ts"],"propagateDependants":true,"sourceClass":"core or semantic"},
+      {"id":"project_assignment_routing_presentation","prefixes":["src/data-layer-assignment-routing-ui.ts"],"propagateDependants":false,"sourceClass":"browser presentation"},
+      {"id":"project_library_persistence","prefixes":["src/data-layer-project-library.ts"],"propagateDependants":true,"sourceClass":"persistence migration"},
+      {"id":"project_library_controller","prefixes":["src/data-layer-project-library-ui.ts"],"propagateDependants":true,"sourceClass":"application controller"},
+      {"id":"project_library_presentation","prefixes":["src/data-layer-project-library-presentation-ui.ts"],"propagateDependants":false,"sourceClass":"browser presentation"}
+    ],
     "unit": [
       "test/data-layer-project-entity-lifecycle-test.mjs",
       "test/data-layer-page-authoring-test.mjs",
@@ -32,6 +42,9 @@
       ,"features/specification-studio-assignment-owned-routing-runtime.feature"
     ],
     "handlers": [
+      "acceptance/src/acceptance/steps/project_management.clj"
+    ],
+    "isolatedVerificationHandlers": [
       "acceptance/src/acceptance/steps/project_management.clj"
     ],
     "browserAdapters": [

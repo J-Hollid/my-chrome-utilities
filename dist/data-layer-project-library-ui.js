@@ -1,5 +1,6 @@
 import { activateProject, createProjectInLibrary, deactivateProject, migrateSingletonProject, projectMetadata, replayProjectCommand, resolveProjectWrite, restoreProjectLibrary, saveProjectState, serializeProjectLibrary, stageProjectImport, updateProjectMetadata, PROJECT_LIBRARY_STORAGE_KEY } from "./data-layer-project-library.js";
 import { restoreCanonicalProjectEnvelope, restoreCanonicalProjectState, serializeCanonicalProjectState } from "./data-layer-specification-repository.js";
+import { renderProjectLibraryPresentation } from "./data-layer-project-library-presentation-ui.js";
 const q = (root, selector) => { const value = root.querySelector(selector); if (!value)
     throw new Error(`Missing ${selector}`); return value; };
 const button = (text, aria, run) => { const control = document.createElement("button"); control.type = "button"; control.textContent = text; control.setAttribute("aria-label", aria); control.addEventListener("click", run); return control; };
@@ -139,46 +140,25 @@ export function mountProjectLibraryUi(options) {
         summary.textContent = `Import was not committed. ${error instanceof Error ? error.message : String(error)}`;
     } })(); }), cancel = button("Close import review", "Close import review", () => closeDialog(dialog)); heading.textContent = "Review project import"; name.value = staged.targetName; name.setAttribute("aria-label", "Unique target project name"); summary.textContent = staged.blockers.length ? staged.blockers.map(({ section, message }) => `${section}: ${message}`).join(" · ") : `Format version ${formatVersion} · source ${staged.sourceName} · Saved Draft · entity counts ${JSON.stringify(staged.entityCounts)} · reference integrity ${staged.referenceIntegrity} · migrations ${staged.migrations.join(", ") || "none"} · unique target name ${staged.targetName} · Import as new project.`; commit.disabled = Boolean(staged.blockers.length); dialog.append(heading, summary, name, commit, cancel); document.body.append(dialog); dialog.addEventListener("close", () => returnFocus.focus(), { once: true }); dialog.showModal(); heading.tabIndex = -1; heading.focus(); };
     function render() {
-        const record = active(), term = search.value.trim().toLowerCase();
-        create.disabled = blocked();
-        activeHeader.textContent = record ? `Active project: ${record.state.project.name} · ${record.state.project.id} · Saved Draft · Published revision ${publishedRevision(record)}` : "No active project · Open project or Create project";
-        activeCard.replaceChildren();
-        if (record) {
-            const heading = document.createElement("h4"), summary = document.createElement("p"), openButton = button("Open in Specification Studio", `Open ${record.state.project.name} in Specification Studio`, () => open(record.state.project.id)), editButton = button("Edit details", `Edit details for ${record.state.project.name}`, () => void prepare(record.state.project.id).then(() => edit(record.state.project.id, editButton))), closeButton = button("Close project", `Close active project ${record.state.project.name}`, () => { try {
+        const record = active(), term = search.value.trim().toLowerCase(), blockedNow = blocked();
+        create.disabled = blockedNow;
+        const entries = Object.entries(library.projects).filter(([, entry]) => [entry.state.project.name, entry.state.project.site, String(entry.state.project.owner ?? "")].some((value) => value.toLowerCase().includes(term))).sort(([, left], [, right]) => sort?.value === "last-saved" ? right.lastModifiedAt.localeCompare(left.lastModifiedAt) || left.state.project.name.localeCompare(right.state.project.name) : left.state.project.name.localeCompare(right.state.project.name));
+        renderProjectLibraryPresentation({ activeHeader, activeCard, list }, {
+            activeHeader: record ? `Active project: ${record.state.project.name} · ${record.state.project.id} · Saved Draft · Published revision ${publishedRevision(record)}` : "No active project · Open project or Create project",
+            ...(record ? { active: { id: record.state.project.id, name: record.state.project.name, summary: `${record.state.project.site} · Saved Draft · last saved ${record.lastModifiedAt} · Published revision ${publishedRevision(record)}` } } : {}),
+            entries: entries.map(([projectId, entry]) => ({ id: projectId, name: entry.state.project.name, active: projectId === library.activeProjectId, summary: `${entry.state.project.name} · ${entry.state.project.site} · Saved Draft · Published revision ${publishedRevision(entry)} · ${projectId === library.activeProjectId ? "Active" : "Saved"} · last saved ${entry.lastModifiedAt}` })), blocked: blockedNow,
+        }, {
+            focusSearch: () => search.focus(), createProject: (control) => creation(control), openProject: (projectId) => open(projectId),
+            editProject: (projectId, control) => void prepare(projectId).then(() => edit(projectId, control)), exportProject: (projectId) => void download(projectId),
+            closeProject: () => { try {
                 persist(deactivateProject(library), true);
             }
             catch (error) {
                 status.textContent = error instanceof Error ? error.message : String(error);
-            } });
-            openButton.disabled = editButton.disabled = closeButton.disabled = blocked();
-            heading.textContent = record.state.project.name;
-            summary.textContent = `${record.state.project.site} · Saved Draft · last saved ${record.lastModifiedAt} · Published revision ${publishedRevision(record)}`;
-            activeCard.append(heading, summary, openButton, editButton, button("Export", `Export ${record.state.project.name}`, () => void download(record.state.project.id)), closeButton);
-        }
-        else {
-            const message = document.createElement("p"), openProject = button("Open project", "Open a project", () => search.focus()), createProject = button("Create project", "Create project", () => creation(createProject));
-            message.textContent = "No active project";
-            activeCard.append(message, openProject, createProject);
-        }
-        const entries = Object.entries(library.projects).filter(([, entry]) => [entry.state.project.name, entry.state.project.site, String(entry.state.project.owner ?? "")].some((value) => value.toLowerCase().includes(term))).sort(([, left], [, right]) => sort?.value === "last-saved" ? right.lastModifiedAt.localeCompare(left.lastModifiedAt) || left.state.project.name.localeCompare(right.state.project.name) : left.state.project.name.localeCompare(right.state.project.name));
-        list.replaceChildren();
-        for (const [projectId, entry] of entries) {
-            const item = document.createElement("li"), summary = document.createElement("p"), isActive = projectId === library.activeProjectId;
-            item.dataset.projectId = projectId;
-            item.tabIndex = -1;
-            summary.textContent = `${entry.state.project.name} · ${entry.state.project.site} · Saved Draft · Published revision ${publishedRevision(entry)} · ${isActive ? "Active" : "Saved"} · last saved ${entry.lastModifiedAt}`;
-            item.append(summary);
-            if (isActive)
-                item.append(button("Active", `${entry.state.project.name} Active`, () => { }));
-            else {
-                const switchButton = button("Switch", `Switch to ${entry.state.project.name}`, function () { if (blocked())
-                    return; const control = this; control.disabled = true; void prepare(projectId).then(() => { control.disabled = false; switchReview(projectId, control); }, error => { control.disabled = false; status.textContent = `Project switch could not load its Saved Draft. ${error instanceof Error ? error.message : String(error)}`; }); });
-                switchButton.disabled = blocked();
-                item.append(switchButton);
-            }
-            item.append(button("Edit details", `Edit details for ${entry.state.project.name}`, function () { const control = this; void prepare(projectId).then(() => edit(projectId, control)); }), button("Export", `Export ${entry.state.project.name}`, () => void download(projectId)));
-            list.append(item);
-        }
+            } },
+            switchProject: (projectId, control) => { if (blocked())
+                return; control.disabled = true; void prepare(projectId).then(() => { control.disabled = false; switchReview(projectId, control); }, error => { control.disabled = false; status.textContent = `Project switch could not load its Saved Draft. ${error instanceof Error ? error.message : String(error)}`; }); },
+        });
     }
     search.addEventListener("input", render);
     sort?.addEventListener("change", render);

@@ -72,16 +72,7 @@
       "id": "project_management",
       "representativeChangedPath": "src/data-layer-assignment-routing-ui.ts",
       "selectedPacks": [
-        "project_management",
-        "durable_project_repository",
-        "project_event_transport",
-        "flow_graph",
-        "flow_export",
-        "live_flow_testing",
-        "layered_schema",
-        "property_set_flow_sections",
-        "guided_test_cases",
-        "shell"
+        "project_management"
       ],
       "exactPackDuration": {
         "limit": 45,
@@ -96,35 +87,26 @@
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 468,
-        "baseline": 390,
+        "limit": 45,
+        "baseline": 37.1,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
         "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 187
+          "exact task samples": 22
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-assignment-routing-ui.ts"
       },
       "changedPathFanOut": {
-        "limit": 9,
-        "baseline": 9,
+        "limit": 0,
+        "baseline": 0,
         "percentile": "selected-dependant-count",
         "tolerance": 1,
         "provisional": false,
         "selectedPacks": [
-          "project_management",
-          "durable_project_repository",
-          "project_event_transport",
-          "flow_graph",
-          "flow_export",
-          "live_flow_testing",
-          "layered_schema",
-          "property_set_flow_sections",
-          "guided_test_cases",
-          "shell"
+          "project_management"
         ]
       }
     },
@@ -2146,7 +2128,7 @@
     }
   },
   "conservation": {
-    "verificationTopologyDigest": "082c3858fd748766baaac36e408b27d66af9978ad9ab64039db6160f0a5530cc",
+    "verificationTopologyDigest": "be894fad2ebc0c6cb647cd472f778f7402f0fd6b558e4e7a17a5a2a439232f66",
     "referenceTopologyDigest": "082c3858fd748766baaac36e408b27d66af9978ad9ab64039db6160f0a5530cc",
     "runnablePackCount": 20,
     "browserTargetCount": 81,
