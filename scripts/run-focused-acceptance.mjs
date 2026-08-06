@@ -435,10 +435,11 @@ export function createVerificationCommandRunner(context) {
     const failure = termination ?? result.spawnError?.message ??
       (!logicalPassed ? `Browser target result incomplete or failed: ${display}`
         : `Verification command failed (${result.signal ?? result.code}): ${display}`);
+    const taskProvenance = priorTask ? { provenance:"mixed" } : { provenance:"fresh" };
     context.receipt.tasks[task.key] = {
       identity,
       status:passed ? "passed" : "failed",
-      provenance:priorTask ? "mixed" : "fresh",
+      ...taskProvenance,
       durationMs:(priorTask?.durationMs ?? 0) + freshDurationMs,
       output:out,
       stderr:err,
