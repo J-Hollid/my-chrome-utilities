@@ -127,3 +127,27 @@ Feature: Modular browser runtime adapters
     And profile cleanup retries bounded transient filesystem contention
     And exhausted cleanup reports the logical target and profile path
     And cleanup failure does not discard independent target results
+
+  # Modular browser runtime adapters 013
+  Scenario: Modular browser runtime adapters 013
+    Given an installed browser workflow is divided into independently selectable targets
+    When those targets replace the original adapter in exact verification
+    Then every original acceptance assertion leaf is assigned to exactly one target
+    And each target performs the production UI operation and observation for every assigned leaf
+    And the union of target evidence equals the original installed workflow evidence without relaxed handler branches
+    And a constant result, a renamed smoke observation, or one predicate reused for unrelated leaves blocks verification
+
+  # Modular browser runtime adapters 014
+  Scenario Outline: Modular browser runtime adapters 014
+    Given <owning_pack> owns <logical_observations> compatible observations of the shared side-panel browser program
+    When terminal browser verification is planned
+    Then those observations are scheduled in one browser process
+    And each observation receives its declared configuration
+    And every logical observation retains fresh page and storage state, its own timing, and its own pass or failure result
+    And the process emits every observation key required by that owning pack
+
+    Examples:
+      | owning_pack | logical_observations |
+      | capture     | 5                    |
+      | schemas     | 46                   |
+      | defects     | 9                    |
