@@ -140,3 +140,48 @@ Feature: Modular verification packs
       | browser target p90 is within its declared limit | pass          | target identity and measured p90                  |
       | exact pack duration exceeds its declared limit  | fail          | pack identity, measured duration, and limit       |
       | changed path fan-out exceeds its declared limit | fail          | changed path, selected packs, and allowed fan-out |
+
+  # Modular verification packs 014
+  Scenario: Modular verification packs 014
+    Given an exact verification plan and evidence contract are prepared
+    When checkpoint preflight runs
+    Then registry validation, canonical plan validation, receipt-schema validation, artifact validation, and evidence-recording validation finish before the first verification task starts
+    And a preflight failure exits without starting unit, property, acceptance, or browser tasks
+    And the failure identifies the incompatible contract field or recording limit
+
+  # Modular verification packs 015
+  Scenario Outline: Modular verification packs 015
+    Given browser verification produces <generated_output>
+    When it runs in <execution_mode>
+    Then the output destination is <output_destination>
+    And tracked delivery evidence is <tracked_evidence_result>
+
+    Examples:
+      | generated_output            | execution_mode          | output_destination                 | tracked_evidence_result |
+      | screenshots and reports     | ordinary verification   | an isolated temporary run directory | unchanged              |
+      | screenshots and reports     | explicit fixture update | the declared delivery evidence path | updated                |
+      | Chrome profile and downloads | ordinary verification  | an isolated temporary run directory | unchanged              |
+
+  # Modular verification packs 016
+  Scenario Outline: Modular verification packs 016
+    Given a checkpoint receipt contains independently identified passing tasks and <remaining_result>
+    And the resumed checkpoint has <resume_identity>
+    When bounded checkpoint resume runs
+    Then prior passing tasks are <passing_task_result>
+    And tasks selected to run are <selected_tasks>
+    And the combined receipt records reused and fresh task provenance
+
+    Examples:
+      | remaining_result             | resume_identity                              | passing_task_result | selected_tasks                 |
+      | one transient failed target  | identical commit, artifact, plan, and toolchain | reused            | the failed target only         |
+      | one incomplete target        | identical commit, artifact, plan, and toolchain | reused            | the incomplete target only     |
+      | one transient failed target  | a different commit, artifact, plan, or toolchain | rejected          | every required checkpoint task |
+
+  # Modular verification packs 017
+  Scenario: Modular verification packs 017
+    Given accepted timing history exists for every runnable pack and registered browser target
+    When verification performance budgets are refreshed
+    Then each default budget is derived from the target's measured percentile and declared tolerance
+    And an unmeasured target uses an explicit bootstrap budget identified as provisional
+    And a permissive catch-all limit cannot hide a regression in a measured pack or target
+    And the report compares current measurements with the accepted baseline

@@ -77,3 +77,53 @@ Feature: Modular browser runtime adapters
     Then that adapter declares at least two independently selectable behavior targets
     And compatible targets declare a reusable session batch
     And selecting one target does not execute the adapter's unrelated behavior
+
+  # Modular browser runtime adapters 009
+  Scenario Outline: Modular browser runtime adapters 009
+    Given a changed file belongs to <layered_boundary>
+    When focused browser verification is planned
+    Then scheduled browser behavior is <scheduled_behavior>
+    And the monolithic layered-schema adapter is not scheduled
+    And terminal verification still executes every layered-schema target exactly once
+
+    Examples:
+      | layered_boundary              | scheduled_behavior                         |
+      | canonical schema model        | canonical schema core targets              |
+      | canonical schema editor       | canonical schema editor targets            |
+      | layered schema composition    | layered schema composition targets         |
+      | page group structure          | page group structure targets               |
+      | selective profile inheritance | selective profile inheritance targets only |
+
+  # Modular browser runtime adapters 010
+  Scenario: Modular browser runtime adapters 010
+    Given several browser observations use the same program and compatible harness configuration
+    And those browser observations have one owning pack
+    When registry validation and exact-pack planning run
+    Then every compatible multi-observation group declares one non-empty session batch
+    And the plan schedules one browser process per declared compatible group
+    And the process launch count is lower than the logical observation count
+    And every logical observation retains fresh page and storage state, its own timing, and its own pass or failure result
+
+  # Modular browser runtime adapters 011
+  Scenario Outline: Modular browser runtime adapters 011
+    Given measured browser adapter is <runtime_outlier>
+    And a browser adapter exceeds the declared maximum single-target p90
+    When its registry declaration is validated
+    Then that adapter declares at least two independently selectable behavior targets
+    And a focused target excludes unrelated behavior in that adapter
+    And compatible targets declare a reusable session batch
+
+    Examples:
+      | runtime_outlier                    |
+      | layered schema workflow adapter    |
+      | durable repository corpus adapter  |
+      | branding workflow polish adapter   |
+
+  # Modular browser runtime adapters 012
+  Scenario: Modular browser runtime adapters 012
+    Given a browser target owns an isolated Chrome profile
+    When the target starts, finishes, or fails
+    Then page and storage state are clean before its assertions run
+    And profile cleanup retries bounded transient filesystem contention
+    And exhausted cleanup reports the logical target and profile path
+    And cleanup failure does not discard independent target results
