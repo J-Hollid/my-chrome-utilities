@@ -184,6 +184,9 @@ export function measuredTimingModel(receipts, baseline) {
     tasks:Object.fromEntries([...byTask].map(([key, values]) => [key, statistic(values, 0)])),
     browserTargets:Object.fromEntries([...browserTargetSamples]
       .map(([id, values]) => [id, statistic(values, 0)])),
+    browserTargetFallbacks:{ ...(baseline.browserTargetMilliseconds ?? {}) },
+    browserObservationSessionOverheadMilliseconds:
+      baseline.browserObservationSessionOverheadMilliseconds ?? 0,
     packWeightsMs:Object.fromEntries([...packSamples].map(([id, values]) => [id, percentile(values, 0.5)])),
     ledger:{
       receipts:eligibleReceipts.length,
@@ -197,29 +200,91 @@ export function measuredTimingModel(receipts, baseline) {
   };
 }
 
-function taskMilliseconds(task, model) {
-  return model.tasks[task.key]?.medianMs ?? model.stages[task.stage]?.medianMs ?? 1000;
+export function estimateTaskTiming(task, model) {
+  const exact = model.tasks?.[task.key];
+  if (exact?.samples > 0 && Number.isFinite(exact.medianMs)) {
+    return { milliseconds:exact.medianMs, source:"exact task samples" };
+  }
+  if (task.stage === "browser-observation" && task.logicalTargetIds?.length) {
+    const targetSamples = task.logicalTargetIds.map((id) => model.browserTargets?.[id]);
+    if (targetSamples.every((timing) => timing?.samples > 0 && Number.isFinite(timing.medianMs))) {
+      const targetMilliseconds = targetSamples.reduce((sum, timing) => sum + timing.medianMs, 0);
+      return {
+        milliseconds:targetMilliseconds +
+          (model.browserObservationSessionOverheadMilliseconds ?? 0),
+        source:"composed target samples",
+      };
+    }
+    const targetFallbacks = task.logicalTargetIds.map((id) => model.browserTargetFallbacks?.[id]);
+    if (targetFallbacks.every(Number.isFinite)) {
+      return {
+        milliseconds:targetFallbacks.reduce((sum, duration) => sum + duration, 0),
+        source:"bootstrap fallback",
+      };
+    }
+  }
+  return {
+    milliseconds:model.stages?.[task.stage]?.medianMs ?? 1000,
+    source:"bootstrap fallback",
+  };
 }
 
-function parallelMilliseconds(tasks, concurrency, model) {
-  return tasks.reduce((sum, task) => sum + taskMilliseconds(task, model), 0) / Math.max(1, concurrency);
+function sequentialStageEstimate(tasks, model) {
+  const timings = tasks.map((task) => estimateTaskTiming(task, model));
+  return {
+    milliseconds:timings.reduce((sum, timing) => sum + timing.milliseconds, 0),
+    timings,
+  };
+}
+
+function boundedStageEstimate(tasks, concurrency, model) {
+  if (!tasks.length) return { milliseconds:0, timings:[] };
+  const workerLoads = Array.from({ length:Math.max(1, Math.min(concurrency, tasks.length)) }, () => 0);
+  const timings = tasks.map((task) => estimateTaskTiming(task, model));
+  for (const timing of timings) {
+    let nextWorker = 0;
+    for (let index = 1; index < workerLoads.length; index += 1) {
+      if (workerLoads[index] < workerLoads[nextWorker]) nextWorker = index;
+    }
+    workerLoads[nextWorker] += timing.milliseconds;
+  }
+  return { milliseconds:Math.max(...workerLoads), timings };
+}
+
+export function boundedStageMilliseconds(tasks, concurrency, model) {
+  return boundedStageEstimate(tasks, concurrency, model).milliseconds;
+}
+
+function estimatePlan(plan, model, { concurrency = 4, observationConcurrency = 2 } = {}) {
+  const stages = [
+    sequentialStageEstimate(plan.preparationTasks, model),
+    boundedStageEstimate(plan.unitTasks, concurrency, model),
+    boundedStageEstimate(plan.propertyTasks, concurrency, model),
+    sequentialStageEstimate(plan.browserTasks, model),
+    boundedStageEstimate(plan.observationTasks, observationConcurrency, model),
+    boundedStageEstimate(plan.parserTasks, concurrency, model),
+    boundedStageEstimate(plan.generatorTasks, concurrency, model),
+    sequentialStageEstimate(plan.checkpointTasks, model),
+    boundedStageEstimate(plan.sessionTasks, concurrency, model),
+  ];
+  const timingSources = {};
+  for (const { timings } of stages) {
+    for (const { source } of timings) timingSources[source] = (timingSources[source] ?? 0) + 1;
+  }
+  return {
+    milliseconds:stages.reduce((sum, stage) => sum + stage.milliseconds, 0),
+    timingSources,
+  };
 }
 
 export function estimatePlanMilliseconds(plan, model, { concurrency = 4, observationConcurrency = 2 } = {}) {
-  return plan.preparationTasks.reduce((sum, task) => sum + taskMilliseconds(task, model), 0)
-    + parallelMilliseconds(plan.unitTasks, concurrency, model)
-    + parallelMilliseconds(plan.propertyTasks, concurrency, model)
-    + plan.browserTasks.reduce((sum, task) => sum + taskMilliseconds(task, model), 0)
-    + parallelMilliseconds(plan.observationTasks, observationConcurrency, model)
-    + parallelMilliseconds(plan.parserTasks, concurrency, model)
-    + parallelMilliseconds(plan.generatorTasks, concurrency, model)
-    + plan.checkpointTasks.reduce((sum, task) => sum + taskMilliseconds(task, model), 0)
-    + parallelMilliseconds(plan.sessionTasks, concurrency, model);
+  return estimatePlan(plan, model, { concurrency, observationConcurrency }).milliseconds;
 }
 
 function summary(name, plan, model, options) {
   const measured = plan.tasks.filter((task) => model.tasks[task.key]?.samples).length;
   const browserTargets = plan.observationTasks.flatMap(({ logicalTargetIds }) => logicalTargetIds ?? []);
+  const estimate = estimatePlan(plan, model, options);
   return {
     name,
     packs:plan.packIds.length,
@@ -236,7 +301,8 @@ function summary(name, plan, model, options) {
     sessions:plan.sessionTasks.length,
     measuredTasks:measured,
     measurementCoverage:plan.tasks.length ? Number((measured / plan.tasks.length).toFixed(3)) : 0,
-    projectedSeconds:Number((estimatePlanMilliseconds(plan, model, options) / 1000).toFixed(1)),
+    projectedSeconds:Number((estimate.milliseconds / 1000).toFixed(1)),
+    timingSources:estimate.timingSources,
     dependantFanOut:Math.max(0, plan.packIds.length - 1),
     changedPath:plan.changedPaths[0] ?? null,
     selectedPacks:[...plan.packIds],
@@ -284,6 +350,7 @@ export function checkVerificationPerformanceBudgets(report, baseline) {
         tasks:row.tasks,
         browserLaunches:row.browserLaunches,
         measurementCoverage:row.measurementCoverage,
+        ...(row.timingSources ? { timingSources:row.timingSources } : {}),
         passed:row.projectedSeconds <= durationLimit && reductionPassed,
       });
     }
@@ -313,7 +380,8 @@ export function checkVerificationPerformanceBudgets(report, baseline) {
           `targets ${result.browserTargets.join(", ")}; tasks ${result.tasks}; browser launches ` +
           `${result.browserLaunches}; measured coverage ${result.measurementCoverage}; measured ` +
           `${result.measured}s; limit ${result.limit}s; reduction ${result.reduction}; ` +
-          `minimum ${result.minimumReduction}`
+          `minimum ${result.minimumReduction}` +
+          (result.timingSources ? `; timing sources ${Object.keys(result.timingSources).join(", ")}` : "")
       : `${result.metric} ${result.identity} measured ${result.measured}; limit ${result.limit}`);
   return { passed:diagnostics.length === 0, results, diagnostics };
 }

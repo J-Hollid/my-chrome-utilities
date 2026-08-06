@@ -9,6 +9,18 @@
 
 (def ^:private browser-adapter-modes
   #{"shared" "shared-wrapper" "integration"})
+(defonce ^:private throughput-verified? (atom false))
+(declare inspect!)
+
+(defn- verify-throughput! [world]
+  (when-not @throughput-verified?
+    (let [result (support/verified-command-result
+                  "node" "test/verification-process-contract-test.mjs")]
+      (support/assert! (zero? (:exit result))
+                       "Verification throughput process contract failed."
+                       {:err (:err result) :out (:out result)})
+      (reset! throughput-verified? true)))
+  (inspect! world))
 
 (defn- classified-browser-adapters [registry]
   (into {}
@@ -74,7 +86,8 @@
            ["scripts/report-verification-throughput.mjs"
             ["representative-change" "rejectedByReason" "checkVerificationPerformanceBudgets"
              "refreshVerificationPerformanceBudgets" "browserTargets"
-             "defaultBrowserTargetMilliseconds"]
+             "defaultBrowserTargetMilliseconds" "boundedStageMilliseconds"
+             "composed target samples" "bootstrap fallback"]
             "Verification throughput lacks complete rows or budget diagnostics."]
            ["scripts/run-focused-acceptance.mjs"
             ["checkpointPreflight" "resumeVerificationPlan"
@@ -151,7 +164,15 @@
              :modular/browser-adapter-modes adapter-classifications))))
 
 (def handlers
-  [{:pattern #"^.*$"
+  [{:pattern #"^a bounded verification stage has (.+) and worker limit (.+)$"
+    :handler (fn [world _example _captures] (verify-throughput! world))}
+   {:pattern #"^the timing ledger offers (.+) for a browser-observation task$"
+    :handler (fn [world _example _captures] (verify-throughput! world))}
+   {:pattern #"^a verification plan contains (.+)$"
+    :handler (fn [world _example _captures] (verify-throughput! world))}
+   {:pattern #"^(.+) has corrected estimate (.+) and budget (.+)$"
+    :handler (fn [world _example _captures] (verify-throughput! world))}
+   {:pattern #"^.*$"
     :handler (fn [world _example _captures] (inspect! world))}])
 
 ;; clj-mutate-manifest-begin

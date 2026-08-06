@@ -20,6 +20,7 @@
     "unknown": 1000
   },
   "defaultBrowserTargetMilliseconds": 2000,
+  "browserObservationSessionOverheadMilliseconds": 5000,
   "browserAggregateMeasurements": {
     "test/browser-packs/layered-schema.mjs": {"durationMilliseconds": 175000, "kind": "completed-original-adapter-focused-measurement", "recordedAt": "2026-08-06", "provisional": true}
   },

@@ -22,7 +22,10 @@ import {
   validateBrowserObservationBatch,
 } from "../scripts/run-browser-observation.mjs";
 import {
+  boundedStageMilliseconds,
   checkVerificationPerformanceBudgets,
+  estimatePlanMilliseconds,
+  estimateTaskTiming,
   loadVerificationReceipts,
   measuredTimingModel,
   refreshVerificationPerformanceBudgets,
@@ -1710,6 +1713,71 @@ assert.equal(throughput.rows.filter(({ name }) => name.endsWith(":representative
   runnablePackCount, "throughput reports a representative changed-path row for every runnable pack");
 assert.ok(throughput.rows.every(({ dependantFanOut }) => Number.isInteger(dependantFanOut)),
   "every throughput row reports dependant fan-out");
+assert.ok(throughput.rows.every(({ timingSources }) =>
+  timingSources && Object.keys(timingSources).length > 0),
+  "every throughput row reports exact-task, composed-target, or bootstrap provenance");
+const boundedTimingModel = {
+  tasks:{
+    exact:{ samples:1, medianMs:210000 },
+    long:{ samples:1, medianMs:200000 },
+    medium:{ samples:1, medianMs:120000 },
+    short:{ samples:1, medianMs:40000 },
+    hundred:{ samples:1, medianMs:100000 },
+    eighty:{ samples:1, medianMs:80000 },
+  },
+  stages:{
+    unit:{ medianMs:1000 },
+    "browser-observation":{ medianMs:120000 },
+  },
+  browserTargets:{
+    TARGET_A:{ samples:3, medianMs:92000 },
+    TARGET_B:{ samples:3, medianMs:46000 },
+  },
+  browserTargetFallbacks:{ TARGET_BOOTSTRAP:120000 },
+  browserObservationSessionOverheadMilliseconds:5000,
+};
+const timingTask = (key, stage = "unit", logicalTargetIds = undefined) =>
+  ({ key, stage, ...(logicalTargetIds ? { logicalTargetIds } : {}) });
+assert.equal(boundedStageMilliseconds([], 2, boundedTimingModel), 0,
+  "an empty bounded stage contributes no duration");
+assert.equal(boundedStageMilliseconds([timingTask("long")], 2, boundedTimingModel), 200000,
+  "one indivisible task retains its complete duration at concurrency two");
+assert.equal(boundedStageMilliseconds([
+  timingTask("long"), timingTask("short"), timingTask("short"),
+], 2, boundedTimingModel), 200000,
+  "bounded workers assign tasks in execution order instead of dividing their aggregate duration");
+assert.equal(boundedStageMilliseconds([
+  timingTask("medium"), timingTask("hundred"), timingTask("eighty"),
+], 2, boundedTimingModel), 180000,
+  "the bounded stage estimate is the longest deterministic final worker load");
+assert.equal(boundedStageMilliseconds([
+  timingTask("medium"), timingTask("hundred"), timingTask("eighty"),
+], 3, boundedTimingModel), 120000,
+  "adding a worker does not divide an indivisible task");
+assert.deepEqual(estimateTaskTiming(
+  timingTask("exact", "browser-observation", ["TARGET_A"]), boundedTimingModel,
+), { milliseconds:210000, source:"exact task samples" },
+  "an exact task sample takes precedence over logical-target timing");
+assert.deepEqual(estimateTaskTiming(
+  timingTask("unseen-two", "browser-observation", ["TARGET_A", "TARGET_B"]), boundedTimingModel,
+), { milliseconds:143000, source:"composed target samples" },
+  "an unseen observation task composes eligible target samples and modeled session overhead");
+assert.deepEqual(estimateTaskTiming(
+  timingTask("unseen-one", "browser-observation", ["TARGET_A"]), boundedTimingModel,
+), { milliseconds:97000, source:"composed target samples" },
+  "a newly focused single-target task uses that target instead of a generic stage median");
+assert.deepEqual(estimateTaskTiming(
+  timingTask("unseen-bootstrap", "browser-observation", ["TARGET_BOOTSTRAP"]), boundedTimingModel,
+), { milliseconds:120000, source:"bootstrap fallback" },
+  "absent task and target samples use the explicit bootstrap fallback truthfully");
+const mixedStagePlan = {
+  preparationTasks:[timingTask("short")],
+  unitTasks:[timingTask("medium"), timingTask("hundred"), timingTask("eighty")],
+  propertyTasks:[], browserTasks:[], observationTasks:[], parserTasks:[], generatorTasks:[],
+  checkpointTasks:[timingTask("short")], sessionTasks:[],
+};
+assert.equal(estimatePlanMilliseconds(mixedStagePlan, boundedTimingModel, { concurrency:2 }), 260000,
+  "the complete estimate sums sequential stages and bounded-stage critical paths");
 const budgetResult = checkVerificationPerformanceBudgets({
   rows:[
     { name:"alpha:exact-full-pack", projectedSeconds:8, dependantFanOut:0 },
@@ -1739,6 +1807,22 @@ assert.deepEqual(budgetResult.results.find(({ metric }) => metric === "changed-p
 assert.ok(budgetResult.results.some(({ metric, passed }) =>
   metric === "browser-target-p90" && passed),
 "browser target p90 reports an explicit passing budget result");
+const correctedDurationBudget = checkVerificationPerformanceBudgets({
+  rows:[{
+    name:"alpha:representative-change", projectedSeconds:200, dependantFanOut:0,
+    changedPath:"src/alpha/one-long-observation.ts", selectedPacks:["alpha"],
+    browserTargets:["TARGET_A"], tasks:1, browserLaunches:1, measurementCoverage:1,
+    timingSources:{ "exact task samples":1 },
+  }],
+  model:{ browserTargets:{} },
+}, {
+  performanceBudgets:{ changedPathSeconds:{ alpha:{ limit:150 } } },
+});
+assert.equal(correctedDurationBudget.passed, false,
+  "a long indivisible observation fails a budget it previously passed through arithmetic division");
+assert.match(correctedDurationBudget.diagnostics[0],
+  /one-long-observation.*measured 200s.*limit 150s.*exact task samples/u,
+  "duration diagnostics identify the row, corrected estimate, budget, and timing source");
 const flowGuardrail = checkVerificationPerformanceBudgets({
   rows:[{
     name:"flow_graph:representative-change",
