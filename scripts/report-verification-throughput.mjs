@@ -219,6 +219,7 @@ export function estimatePlanMilliseconds(plan, model, { concurrency = 4, observa
 
 function summary(name, plan, model, options) {
   const measured = plan.tasks.filter((task) => model.tasks[task.key]?.samples).length;
+  const browserTargets = plan.observationTasks.flatMap(({ logicalTargetIds }) => logicalTargetIds ?? []);
   return {
     name,
     packs:plan.packIds.length,
@@ -227,6 +228,8 @@ function summary(name, plan, model, options) {
     unit:plan.unitTasks.length,
     property:plan.propertyTasks.length,
     browser:plan.browserTasks.length,
+    browserLaunches:plan.browserTasks.length + plan.observationTasks.length,
+    browserTargets,
     observations:plan.observationTasks.length,
     checkpoints:plan.checkpointTasks.length,
     features:plan.features.length,
@@ -254,10 +257,36 @@ export function checkVerificationPerformanceBudgets(report, baseline) {
   for (const row of report.rows.filter(({ name }) => name.endsWith(":representative-change"))) {
     const packId = row.name.slice(0, -":representative-change".length);
     const limit = limitValue(budgets.changedPathFanOut?.[packId] ?? budgets.defaultChangedPathFanOut);
-    if (!Number.isFinite(limit)) continue;
-    results.push({ metric:"changed-path-fan-out", identity:row.changedPath ?? row.name,
-      measured:row.dependantFanOut, limit, selectedPacks:[...(row.selectedPacks ?? [])],
-      passed:row.dependantFanOut <= limit });
+    if (Number.isFinite(limit)) {
+      results.push({ metric:"changed-path-fan-out", identity:row.changedPath ?? row.name,
+        measured:row.dependantFanOut, limit, selectedPacks:[...(row.selectedPacks ?? [])],
+        passed:row.dependantFanOut <= limit });
+    }
+    const durationBudget = budgets.changedPathSeconds?.[packId];
+    const durationLimit = limitValue(durationBudget);
+    if (Number.isFinite(durationLimit) &&
+        (!durationBudget.path || durationBudget.path === row.changedPath)) {
+      const reduction = Number.isFinite(durationBudget.baseline) && durationBudget.baseline > 0
+        ? Number((1 - row.projectedSeconds / durationBudget.baseline).toFixed(3))
+        : undefined;
+      const reductionPassed = !Number.isFinite(durationBudget.minimumReduction) ||
+        (Number.isFinite(reduction) && reduction >= durationBudget.minimumReduction);
+      results.push({
+        metric:"changed-path-duration",
+        identity:row.changedPath ?? row.name,
+        measured:row.projectedSeconds,
+        limit:durationLimit,
+        baseline:durationBudget.baseline,
+        reduction,
+        minimumReduction:durationBudget.minimumReduction,
+        selectedPacks:[...(row.selectedPacks ?? [])],
+        browserTargets:[...(row.browserTargets ?? [])],
+        tasks:row.tasks,
+        browserLaunches:row.browserLaunches,
+        measurementCoverage:row.measurementCoverage,
+        passed:row.projectedSeconds <= durationLimit && reductionPassed,
+      });
+    }
   }
   const browserTargetIds = new Set([
     ...(report.browserTargetIds ?? []),
@@ -279,6 +308,12 @@ export function checkVerificationPerformanceBudgets(report, baseline) {
     result.metric === "changed-path-fan-out"
       ? `${result.metric} ${result.identity} selected packs ${result.selectedPacks.join(", ")}; ` +
         `measured ${result.measured}; allowed fan-out ${result.limit}`
+      : result.metric === "changed-path-duration"
+        ? `${result.metric} ${result.identity} selected packs ${result.selectedPacks.join(", ")}; ` +
+          `targets ${result.browserTargets.join(", ")}; tasks ${result.tasks}; browser launches ` +
+          `${result.browserLaunches}; measured coverage ${result.measurementCoverage}; measured ` +
+          `${result.measured}s; limit ${result.limit}s; reduction ${result.reduction}; ` +
+          `minimum ${result.minimumReduction}`
       : `${result.metric} ${result.identity} measured ${result.measured}; limit ${result.limit}`);
   return { passed:diagnostics.length === 0, results, diagnostics };
 }
@@ -349,7 +384,7 @@ export function reportVerificationThroughput({
   for (const id of runnableIds) {
     const pack = packs.find(({ id:packId }) => packId === id);
     rows.push(summary(`${id}:exact-full-pack`, planVerification(packs, { packIds:[id] }), model, options));
-    const impactPath = pack.source?.[0] ?? pack.features?.[0] ?? pack.unit?.[0] ??
+    const impactPath = pack.representativeChangedPath ?? pack.source?.[0] ?? pack.features?.[0] ?? pack.unit?.[0] ??
       pack.browserAdapters?.[0] ?? pack.process?.[0];
     if (impactPath) rows.push(summary(`${id}:representative-change`, planVerification(packs, {
       changedPaths:[impactPath],

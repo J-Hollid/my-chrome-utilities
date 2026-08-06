@@ -7,6 +7,7 @@ import ts from "typescript";
 const registryUrl = new URL("../verification/packs.json", import.meta.url);
 const repositoryRoot = fileURLToPath(new URL("../", import.meta.url));
 const exactOwnedPathKeys = ["unit", "property", "features", "handlers", "browserAdapters"];
+const verificationImplementationPathKeys = ["unit", "property", "browserAdapters"];
 const testPathKeys = ["unit", "property", "browserAdapters"];
 const prefixOwnedPathKeys = ["source", "process"];
 const reservedTaskEnvironment = new Set([
@@ -222,6 +223,12 @@ function validateDependencies(packs, ids) {
 function validateImpactBoundaries(packs, sourcePaths) {
   const ids = new Set();
   for (const pack of packs) {
+    if (pack.representativeChangedPath !== undefined &&
+        (typeof pack.representativeChangedPath !== "string" ||
+          !sourcePaths.includes(pack.representativeChangedPath) ||
+          ownerOf(packs, pack.representativeChangedPath)?.id !== pack.id)) {
+      throw new Error(`Use an exact owned representative changed path in pack ${pack.id}`);
+    }
     const boundaries = values(pack, "impactBoundaries");
     for (const boundary of boundaries) {
       if (!boundary || Array.isArray(boundary) ||
@@ -292,6 +299,16 @@ function validateRuntimeInputs(packs, trackedPaths) {
         throw new Error(`Correct the missing runtime input in pack ${pack.id}: ${input}`);
       }
       if (!ownerOf(packs, input)) throw new Error(`Assign runtime input ${input} to one verification owner`);
+    }
+  }
+}
+
+function validateIsolatedVerificationHandlers(packs) {
+  for (const pack of packs) {
+    const isolated = values(pack, "isolatedVerificationHandlers");
+    if (new Set(isolated).size !== isolated.length ||
+        isolated.some((handler) => !values(pack, "handlers").includes(handler))) {
+      throw new Error(`Isolate only exact handlers owned by pack ${pack.id}`);
     }
   }
 }
@@ -675,6 +692,7 @@ export async function validateVerificationPacks(packs, { inventory } = {}) {
   validateBrowserPerformanceDeclarations(packs);
   validateBrowserObservationBatches(packs);
   validateBrowserEvidencePartitions(packs);
+  validateIsolatedVerificationHandlers(packs);
   await validateVerificationHelpers(packs);
 
   const repositoryInventory = { ...await verificationInventory(), ...inventory };
@@ -885,7 +903,7 @@ function historicalRegistryHasPlanningShape(packs, known) {
   const arrayKeys = [
     ...exactOwnedPathKeys, ...prefixOwnedPathKeys, "globalImpact", "features",
     "browserObservations", "checkpointCommands", "dependencies", "sharedComponents",
-    "verificationInputs", "runtimeInputs", "verificationHelpers", "browserAdapterModes",
+    "verificationInputs", "runtimeInputs", "verificationHelpers", "isolatedVerificationHandlers", "browserAdapterModes",
     "browserAdapterPerformance", "browserObservationBatches", "browserEvidencePartitions",
     "impactBoundaries",
   ];
@@ -972,17 +990,25 @@ export function planVerification(
         : []).filter((changedPath) => changedPath !== "dist" && !changedPath.startsWith("dist/"));
   const historicalOwnershipUnavailable = historicalOwnerPaths.some((changedPath) =>
     !ownerOf(basePacks, changedPath));
-  const forceAll = Boolean(changeSet) && (registryChanged || historicalRegistryFallback ||
+  const registryPackChanges = registryChanged && historicalPacksCompatible
+    ? [...new Set([...packs.map(({ id }) => id), ...basePacks.map(({ id }) => id)])]
+      .filter((id) => JSON.stringify(packs.find((pack) => pack.id === id)) !==
+        JSON.stringify(basePacks.find((pack) => pack.id === id)))
+    : [];
+  const registryChangeUnmapped = registryChanged && registryPackChanges.length === 0;
+  const forceAll = Boolean(changeSet) && (registryChangeUnmapped || historicalRegistryFallback ||
     !historicalPacksCompatible || historicalOwnershipUnavailable);
   const conservativeHistoricalFallbackReason = !changeSet ? null
-    : registryChanged ? "verification-registry-changed"
+    : registryChangeUnmapped ? "verification-registry-changed"
       : historicalRegistryFallback ? "historical-registry-unreadable"
         : !historicalPacksCompatible ? "historical-registry-incompatible"
           : historicalOwnershipUnavailable ? "historical-ownership-unavailable"
             : null;
   const allRunnableIds = packs.filter(runnable).map(({ id }) => id);
 
-  const affectedFor = (registry, changedPath) => {
+  const affectedFor = (registry, changedPath, {
+    exactVerificationChange = true, forceVerificationExact = false,
+  } = {}) => {
     if (changedPath === "dist" || changedPath.startsWith("dist/")) {
       return { semantic:[], exactSemantic:[], verificationConsumers:[], boundary:null };
     }
@@ -991,11 +1017,15 @@ export function planVerification(
     const boundary = impactBoundaryFor(owner, changedPath);
     const runtimeConsumers = exactRuntimeConsumers(registry, changedPath);
     const helperConsumers = exactVerificationHelperConsumers(registry, changedPath);
-    const semantic = helperConsumers.length ? []
+    const verificationOwned = exactVerificationChange && (forceVerificationExact ||
+      verificationImplementationPathKeys.some((key) => values(owner, key).includes(changedPath)) ||
+      values(owner, "isolatedVerificationHandlers").includes(changedPath)
+    );
+    const semantic = helperConsumers.length || verificationOwned ? []
       : globalImpact(registry, changedPath)
         ? [owner.id, ...registry.filter(runnable).map(({ id }) => id)]
         : [...(boundary && !boundary.propagateDependants ? [] : [owner.id]), ...runtimeConsumers];
-    const exactSemantic = boundary && !boundary.propagateDependants ? [owner.id] : [];
+    const exactSemantic = verificationOwned || boundary && !boundary.propagateDependants ? [owner.id] : [];
     const verificationConsumers = [
       ...exactVerificationConsumers(registry, changedPath), ...helperConsumers,
     ];
@@ -1042,21 +1072,34 @@ export function planVerification(
     }
   } else if (changeSet) {
     for (const entry of changeSet.entries) {
-      if (entry.status === "A") {
+      if (entry.path === "verification/packs.json") {
+        applyAffected(entry.path, {
+          semantic:[], exactSemantic:registryPackChanges,
+          verificationConsumers:[], boundary:null,
+        }, [basePacks, packs]);
+      } else if (entry.status === "A") {
         applyAffected(entry.path, affectedFor(packs, entry.path));
       } else if (entry.status === "D") {
-        applyAffected(entry.path, affectedFor(basePacks, entry.path), [basePacks, packs]);
+        applyAffected(entry.path, affectedFor(basePacks, entry.path, {
+          exactVerificationChange:false,
+        }), [basePacks, packs]);
       } else if (entry.status === "R" || entry.status === "C") {
-        applyAffected(entry.oldPath, affectedFor(basePacks, entry.oldPath), [basePacks, packs]);
+        applyAffected(entry.oldPath, affectedFor(basePacks, entry.oldPath, {
+          exactVerificationChange:entry.status !== "R",
+        }), [basePacks, packs]);
         applyAffected(entry.newPath, affectedFor(packs, entry.newPath), [packs, basePacks]);
       } else {
-        const former = affectedFor(basePacks, entry.path);
-        const current = affectedFor(packs, entry.path);
         const formerOwner = ownerOf(basePacks, entry.path)?.id;
         const currentOwner = ownerOf(packs, entry.path)?.id;
         if (formerOwner !== currentOwner) {
           throw new Error(`Conflicting current and historical verification ownership for ${entry.path}: ${formerOwner} -> ${currentOwner}`);
         }
+        const currentPack = packs.find(({ id }) => id === currentOwner);
+        const isolatedHandler = values(currentPack, "isolatedVerificationHandlers").includes(entry.path);
+        const former = affectedFor(basePacks, entry.path, {
+          forceVerificationExact:isolatedHandler,
+        });
+        const current = affectedFor(packs, entry.path);
         applyAffected(entry.path, combinedAffected(former, current), [basePacks, packs]);
       }
     }

@@ -140,7 +140,7 @@ function mergeObservationDocument(target, observed) {
   for (const [key, value] of Object.entries(observed)) {
     if (target[key] && value && typeof target[key] === "object" && typeof value === "object" &&
         !Array.isArray(target[key]) && !Array.isArray(value)) Object.assign(target[key], value);
-    else target[key] = value;
+    else target[key] = structuredClone(value);
   }
 }
 

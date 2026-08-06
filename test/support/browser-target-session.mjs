@@ -51,6 +51,7 @@ class DevtoolsSocket {
     this.nextId = 1;
     this.pending = new Map();
     this.buffer = Buffer.alloc(0);
+    this.handlers = new Map();
   }
   async connect() {
     await new Promise((resolve, reject) => {
@@ -98,7 +99,10 @@ class DevtoolsSocket {
       if ((first & 15) !== 1) continue;
       const message = JSON.parse(payload.toString());
       const pending = this.pending.get(message.id);
-      if (!pending) continue;
+      if (!pending) {
+        this.handlers.get(message.method)?.(message.params);
+        continue;
+      }
       this.pending.delete(message.id);
       clearTimeout(pending.timeout);
       if (message.error) pending.reject(new Error(message.error.message));
@@ -131,6 +135,7 @@ class DevtoolsSocket {
       this.pending.set(id, { resolve, reject, timeout });
     });
   }
+  on(method, handler) { this.handlers.set(method, handler); }
   close() { this.socket?.destroy(); }
 }
 

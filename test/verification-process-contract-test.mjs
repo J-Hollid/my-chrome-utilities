@@ -184,6 +184,14 @@ assert.throws(() => planVerification(synthetic, {
 }), /outside the explicit pack set/u);
 assert.deepEqual(planVerification(synthetic, { packIds:["alpha"] }).packIds, ["alpha"],
   "an ordinary exact pack remains exact when no changed-path boundary is requested");
+for (const verificationPath of [
+  "test/alpha-one-test.mjs",
+]) {
+  assert.deepEqual(planVerification(synthetic, {
+    packIds:["alpha"], changedPaths:[verificationPath],
+  }).packIds, ["alpha"],
+  `verification-only change remains exact to its owning pack: ${verificationPath}`);
+}
 assert.throws(() => planVerification(synthetic, {
   packIds:["alpha"], changedPaths:["src/alpha/change.ts"],
 }), /outside the explicit pack set: beta/u,
@@ -483,6 +491,19 @@ const sharedRootBatch=parseBrowserObservationBatchOutput(
 );
 assert.deepEqual(sharedRootBatch.document,{layeredSchema:{authoring001:true,authoring002:true}},
   "disjoint assertion partitions retain the original shared evidence root without overwriting");
+const repeatedNestedRootBatch=parseBrowserObservationBatchOutput(
+  '{"flowGraph":{"runtime021":{"examples":true}}}\n'+
+  '{"swarmforgeBrowserTargetResult":{"id":"EXAMPLES","status":"passed"}}\n'+
+  '{"flowGraph":{"runtime021":{"authoring":true}}}\n'+
+  '{"swarmforgeBrowserTargetResult":{"id":"AUTHORING","status":"passed"}}\n',
+  [{id:"EXAMPLES",observationKeys:["flowGraph"],
+    evidenceLeaves:[["flowGraph","runtime021","examples"]]},
+  {id:"AUTHORING",observationKeys:["flowGraph"],
+    evidenceLeaves:[["flowGraph","runtime021","authoring"]]}],
+);
+assert.deepEqual(repeatedNestedRootBatch.results.EXAMPLES,
+  {flowGraph:{runtime021:{examples:true}}},
+  "later targets sharing a runtime root cannot mutate an already matched target document");
 assert.deepEqual(parseBrowserObservationOutput(
   '{"schemaWorkspace":{"fixture":"2:4"}}\n'+
   '{"swarmforgeBrowserTargetResult":{"id":"VALIDATION","status":"passed"}}\n'+
@@ -680,6 +701,15 @@ assert.deepEqual(planVerification(currentOwnershipPacks, {
   packIds:["alpha", "beta"], changedPaths:registryChange.paths,
   changeSet:registryChange, basePacks:formerOwnershipPacks,
 }).packIds, ["alpha", "beta"]);
+const alphaOnlyRegistryPacks = [
+  pack("alpha", { unit:["test/alpha-new-test.mjs"] }),
+  pack("beta", { unit:["test/beta-current-test.mjs"] }),
+];
+assert.deepEqual(planVerification(alphaOnlyRegistryPacks, {
+  packIds:["alpha"], changedPaths:registryChange.paths,
+  changeSet:registryChange, basePacks:currentOwnershipPacks,
+}).packIds, ["alpha"],
+"a registry edit may narrow only to the exact pack entries whose declarations changed");
 const incompleteHistoricalRegistry = [
   pack("alpha", { unit:["test/alpha-current-test.mjs"] }),
   pack("beta", { unit:["test/beta-current-test.mjs"] }),
@@ -772,10 +802,9 @@ const packs = await loadVerificationPacks();
 await validateVerificationPacks(packs);
 const adapterModes = new Map(packs.flatMap((pack) => (pack.browserAdapterModes ?? [])
   .map(({ path:adapterPath, mode }) => [adapterPath, mode])));
-assert.equal([...adapterModes.values()].filter((mode) => mode === "shared-wrapper").length, 2);
+assert.equal([...adapterModes.values()].filter((mode) => mode === "shared-wrapper").length, 0);
 assert.equal([...adapterModes.values()].filter((mode) => mode === "integration").length, 7);
 assert.equal(adapterModes.get("test/browser-packs/flow-graph.mjs"), "shared");
-assert.equal(adapterModes.get("test/browser-packs/flow-graph-legacy.mjs"), "shared-wrapper");
 assert.equal(adapterModes.get("test/twatility-projects-browser-test.mjs"), "integration");
 assert.deepEqual(staticallyResolvableModuleImports([
   'import { wait } from "./shared-harness.mjs";',
@@ -806,10 +835,6 @@ await assert.rejects(() => validateVerificationPacks(replacePack(packs, "flow_gr
 }))), /Classify every browser adapter/u);
 await assert.rejects(() => validateVerificationPacks(replacePack(packs, "flow_graph", (pack) => ({
   browserAdapterModes:pack.browserAdapterModes.map((entry) => entry.path ===
-    "test/browser-packs/flow-graph-legacy.mjs" ? { ...entry, mode:"shared" } : entry),
-}))), /Shared browser adapter does not use the shared harness/u);
-await assert.rejects(() => validateVerificationPacks(replacePack(packs, "flow_graph", (pack) => ({
-  browserAdapterModes:pack.browserAdapterModes.map((entry) => entry.path ===
     "test/browser-packs/flow-graph.mjs" ? { ...entry, mode:"integration" } : entry),
 }))), /Integration browser adapter must not masquerade as a shared adapter/u,
   "an integration classification must reject an adapter that genuinely imports the shared harness");
@@ -831,7 +856,11 @@ await assert.rejects(() => validateVerificationPacks(replacePack(packs,
 await assert.rejects(() => validateVerificationPacks(replacePack(packs,
   "branding_polish", () => ({
     runtimeInputs:["../outside.css"],
-  }))), /exact normalized runtime input/u);
+}))), /exact normalized runtime input/u);
+await assert.rejects(() => validateVerificationPacks(replacePack(packs,
+  "flow_graph", () => ({
+    isolatedVerificationHandlers:["acceptance/src/acceptance/steps/not-flow-graph.clj"],
+  }))), /Isolate only exact handlers owned by pack flow_graph/u);
 await assert.rejects(() => validateVerificationPacks(replacePack(packs, "shell", (pack) => ({
   verificationHelpers:pack.verificationHelpers.map((helper) => helper.path ===
     "test/browser-packs/shared-harness.mjs"
@@ -863,6 +892,75 @@ assert.deepEqual(planVerification(packs, {
   changedPaths:["test/support/flow-graph-corrective-workflow.mjs"],
 }).packIds, ["flow_graph"],
 "the flow-graph verification helper selects only its exact registered consumer");
+const flowPack = packs.find(({ id }) => id === "flow_graph");
+assert.deepEqual(planVerification(packs, {
+  packIds:["flow_graph"],
+  changedPaths:["acceptance/src/acceptance/steps/flow_graph.clj"],
+}).packIds, ["flow_graph"],
+"a partition-validating Flow handler remains exact to the pack that owns every evidence leaf");
+const flowHandlerChange = syntheticChangeSet([{
+  status:"M", path:"acceptance/src/acceptance/steps/flow_graph.clj",
+}]);
+const preIsolationPacks = replacePack(packs, "flow_graph", () => ({
+  isolatedVerificationHandlers:[],
+}));
+assert.deepEqual(planVerification(packs, {
+  packIds:["flow_graph"], changedPaths:flowHandlerChange.paths,
+  changeSet:flowHandlerChange, basePacks:preIsolationPacks,
+}).packIds, ["flow_graph"],
+"a newly declared isolated handler applies consistently to its unchanged historical ownership");
+const flowTargetIds = [
+  "FLOW_WORKSPACE_CONTROLS_TARGET",
+  "FLOW_WORKSPACE_AUTHORING_TARGET",
+  "FLOW_GRAPH_LEGACY_TARGET",
+  "FLOW_GRAPH_EXAMPLES_TARGET",
+];
+assert.deepEqual(new Set(flowPack.browserObservations.map(({ id }) => id)), new Set(flowTargetIds),
+  "the three Flow adapters are replaced by four exact logical targets");
+assert.ok(flowPack.browserObservations.every(({ path:program, sessionBatch }) =>
+  program === "test/browser-packs/flow-graph.mjs" && sessionBatch === "flow-graph"),
+"every Flow target shares the installed Flow program and compatible session batch");
+assert.deepEqual(flowPack.browserAdapters, ["test/browser-packs/flow-graph.mjs"],
+  "no unpartitioned legacy or example adapter remains scheduled");
+const exactFlowPlan = planVerification(packs, { packIds:["flow_graph"] });
+assert.equal(exactFlowPlan.observationTasks.length, 1,
+  "exact Flow verification uses one compatible installed-browser process");
+assert.deepEqual(new Set(exactFlowPlan.observationTasks[0].logicalTargetIds), new Set(flowTargetIds),
+  "the exact Flow process retains all four independent logical identities");
+const authoringFlowPlan = planVerification(packs, {
+  changedPaths:["src/flow-graph/workspace-section-ui.ts"],
+});
+assert.deepEqual(authoringFlowPlan.packIds, ["flow_graph"],
+  "Section authoring changes do not propagate to declared Flow dependants");
+assert.deepEqual(authoringFlowPlan.observationTasks.map(({ logicalTargetIds }) => logicalTargetIds),
+  [["FLOW_WORKSPACE_AUTHORING_TARGET"]],
+  "the representative Section path selects only its exact authoring target");
+const controlsFlowPlan = planVerification(packs, {
+  changedPaths:["src/flow-graph/workspace-camera-ui.ts"],
+});
+assert.deepEqual(controlsFlowPlan.packIds, ["flow_graph"]);
+assert.deepEqual(controlsFlowPlan.observationTasks.map(({ logicalTargetIds }) => logicalTargetIds),
+  [["FLOW_WORKSPACE_CONTROLS_TARGET"]]);
+const compositionFlowPlan = planVerification(packs, {
+  changedPaths:["src/flow-graph/workspace-ui.ts"],
+});
+assert.deepEqual(compositionFlowPlan.packIds, ["flow_graph"]);
+assert.deepEqual(new Set(compositionFlowPlan.observationTasks[0].logicalTargetIds),
+  new Set(["FLOW_WORKSPACE_AUTHORING_TARGET", "FLOW_WORKSPACE_CONTROLS_TARGET"]));
+const semanticFlowPlan = planVerification(packs, {
+  changedPaths:["src/flow-graph/relationships.ts"],
+});
+assert.ok(semanticFlowPlan.packIds.length > 1 && semanticFlowPlan.packIds.includes("flow_graph"),
+  "semantic Flow changes retain declared dependant propagation");
+assert.deepEqual(new Set(semanticFlowPlan.observationTasks
+  .find(({ packId }) => packId === "flow_graph").logicalTargetIds), new Set(flowTargetIds));
+const unclassifiedFlowPlan = planVerification(packs, {
+  changedPaths:["src/flow-graph/new-semantic-model.ts"],
+});
+assert.ok(unclassifiedFlowPlan.packIds.length > 1 && unclassifiedFlowPlan.packIds.includes("flow_graph"),
+  "a new unclassified Flow source fails closed to the dependant closure");
+assert.deepEqual(new Set(unclassifiedFlowPlan.observationTasks
+  .find(({ packId }) => packId === "flow_graph").logicalTargetIds), new Set(flowTargetIds));
 const sharedHarnessConsumers = packs.find(({ id }) => id === "shell").verificationHelpers
   .find(({ path:helperPath }) => helperPath === "test/browser-packs/shared-harness.mjs").consumers;
 assert.deepEqual(planVerification(packs, {
@@ -1641,6 +1739,44 @@ assert.deepEqual(budgetResult.results.find(({ metric }) => metric === "changed-p
 assert.ok(budgetResult.results.some(({ metric, passed }) =>
   metric === "browser-target-p90" && passed),
 "browser target p90 reports an explicit passing budget result");
+const flowGuardrail = checkVerificationPerformanceBudgets({
+  rows:[{
+    name:"flow_graph:representative-change",
+    changedPath:"src/flow-graph/workspace-section-ui.ts",
+    selectedPacks:["flow_graph"],
+    browserTargets:["FLOW_WORKSPACE_AUTHORING_TARGET"],
+    tasks:12,
+    browserLaunches:1,
+    measurementCoverage:1,
+    projectedSeconds:34.9,
+    dependantFanOut:0,
+  }],
+  model:{ browserTargets:{} },
+}, {
+  performanceBudgets:{
+    changedPathSeconds:{
+      flow_graph:{ limit:35, baseline:104.4, minimumReduction:0.65,
+        path:"src/flow-graph/workspace-section-ui.ts" },
+    },
+  },
+});
+assert.equal(flowGuardrail.passed, true,
+  "the measured Flow representative path satisfies both duration and reduction guardrails");
+assert.deepEqual(flowGuardrail.results.find(({ metric }) => metric === "changed-path-duration"), {
+  metric:"changed-path-duration",
+  identity:"src/flow-graph/workspace-section-ui.ts",
+  measured:34.9,
+  limit:35,
+  baseline:104.4,
+  reduction:0.666,
+  minimumReduction:0.65,
+  selectedPacks:["flow_graph"],
+  browserTargets:["FLOW_WORKSPACE_AUTHORING_TARGET"],
+  tasks:12,
+  browserLaunches:1,
+  measurementCoverage:1,
+  passed:true,
+}, "the guardrail result reports selection, target, task, launch, coverage, and duration evidence");
 const missingTargetBudget = checkVerificationPerformanceBudgets({
   rows:[], browserTargetIds:["MISSING"],
   model:{ browserTargets:{}, stages:{ "browser-observation":{ p90Ms:1 } } },

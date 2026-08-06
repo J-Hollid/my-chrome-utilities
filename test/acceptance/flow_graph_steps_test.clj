@@ -29,18 +29,21 @@
 (deftest browser-observation-is-keywordized-and-cached
   (let [commands (atom [])
         observe! (var-get (private-var 'observe-browser!))
-        checked-var (private-var 'checked-command!)]
+        checked-var (private-var 'checked-command!)
+        partitions-var (private-var 'target-partitions)]
     (reset! flow-graph/browser-observation nil)
     (try
       (with-redefs-fn
         {checked-var (fn [& command]
                        (swap! commands conj command)
                        {:exit 0
-                        :out "noise\n{\"flowGraph\":{\"runtime001\":{\"exact\":true}}}\n"})}
+                        :out (str "noise\n{\"flowGraph\":{\"runtime001\":{\"exact\":true}}}\n"
+                                  "{\"swarmforgeBrowserTargetResult\":{\"id\":\"TEST\",\"status\":\"passed\"}}\n")})
+         partitions-var (fn [] {"TEST" #{"flowGraph.runtime001.exact"}})}
         #(do
            (is (= {:runtime001 {:exact true}} (observe!)))
            (is (= {:runtime001 {:exact true}} (observe!)))))
-      (is (= 3 (count @commands)) "independent browser shards are each consumed once")
+      (is (= 1 (count @commands)) "the shared browser batch is consumed once")
       (finally
         (reset! flow-graph/browser-observation nil)))))
 

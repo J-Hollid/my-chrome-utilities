@@ -5,6 +5,7 @@ import {
   flowEvidenceFailures,
   flowInterruptionReport,
 } from "./support/flow-evidence-reporter.mjs";
+import {flowGraphCorrectiveWorkflow} from "./support/flow-graph-corrective-workflow.mjs";
 
 const complete=()=>Object.fromEntries([
   ...FLOW_RUNTIME_KEYS.map((runtime)=>[runtime,{observed:true}]),
@@ -13,6 +14,12 @@ const complete=()=>Object.fromEntries([
 
 assert.deepEqual(FLOW_RUNTIME_EXECUTION_PLAN,FLOW_RUNTIME_KEYS);
 assert.equal(FLOW_RUNTIME_KEYS.at(-1),"runtime027","the reporter must audit the newest Flow runtime");
+const controlsWorkflow=flowGraphCorrectiveWorkflow({projectId:"project",flowId:"flow"},
+  {stopAfterRuntime:20});
+assert.match(controlsWorkflow,/evidence\.runtime020=/u,
+  "the controls workflow retains its final assigned producer");
+assert.ok(controlsWorkflow.indexOf("return evidence;")<controlsWorkflow.indexOf("evidence.runtime021="),
+  "the controls workflow stops before unrelated semantic and editor producers");
 
 assert.deepEqual(flowEvidenceFailures(complete()),[]);
 

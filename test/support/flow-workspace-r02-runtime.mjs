@@ -1,4 +1,5 @@
-export function flowWorkspaceR02Runtime(seeded) {
+export function flowWorkspaceR02Runtime(seeded, { stopAfterRuntime } = {}) {
+  const stopAfterRuntime020 = stopAfterRuntime === 20 ? "return evidence;" : "";
   return `
 (async()=>{
   const q=(selector,root=document)=>root?.querySelector(selector);
@@ -117,6 +118,7 @@ export function flowWorkspaceR02Runtime(seeded) {
   evidence.runtime019={selectionScope:tidySelectedIds.length===2&&previewCount===2,previewed:previewCount>1,edgePreview:edgePreview>0,cancelled,oneCommand:JSON.stringify(tidied.pageFrames)!==JSON.stringify(tidyBase.pageFrames),unselectedStable,semantics:JSON.stringify(tidied.relationships)===JSON.stringify(tidyBase.relationships)&&tidied.pageFrames.every((item,index)=>item.id===tidyBase.pageFrames[index]?.id&&item.sectionId===tidyBase.pageFrames[index]?.sectionId)};
   refresh();const bottomRect=viewport.getBoundingClientRect();canvas.dispatchEvent(new MouseEvent('dblclick',{bubbles:true,clientX:bottomRect.right-8,clientY:bottomRect.bottom-8}));await waitFor(()=>surfaceOpen(),'bottom-edge Add surface');const bottomSurface=surface().getBoundingClientRect(),bottomContained=bottomSurface.right<=bottomRect.right+2&&bottomSurface.bottom<=bottomRect.bottom+2;click('Close',surface());const skipAgain=button('Skip to canvas',toolbar);skipAgain.focus();flowNativeKey(JSON.stringify({key:' '}));await waitFor(()=>document.activeElement===canvas,'keyboard Skip to canvas');
   evidence.runtime020={contained:viewport.getBoundingClientRect().right<=innerWidth+2&&document.documentElement.scrollWidth<=innerWidth+2,focusable:all('button,[tabindex="0"]',workspace).every(item=>item.getAttribute('aria-label')||item.textContent.trim()),bottomSurfaceContained:bottomContained,keyboardSkip:document.activeElement===canvas,outerStable:document.documentElement.scrollWidth<=Math.max(outerBefore,innerWidth)};
+  ${stopAfterRuntime020}
 
   click('Zoom out',toolbar);click('Zoom out',toolbar);click('Zoom out',toolbar);click('Zoom out',toolbar);const distant=canvas.dataset.semanticDetail==='identity';click('100 percent',toolbar);refresh();const eventGroup=q('[data-occurrence-id]',canvas),eventReady=Boolean(q('.flow-readiness',eventGroup));eventGroup.dispatchEvent(new MouseEvent('click',{bubbles:true}));await pause();refresh();const eventActions=q('[aria-label="Selected Event occurrence inline actions"]');click('Details',eventActions);await pause();
   evidence.runtime021={semanticZoom:distant,eventReadiness:eventReady,details:Boolean(q('[data-event-example-for]',surface())),noCanvasJson:all('foreignObject',canvas).every(item=>getComputedStyle(item).display==='none')};

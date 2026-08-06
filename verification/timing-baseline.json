@@ -24,6 +24,10 @@
     "test/browser-packs/layered-schema.mjs": {"durationMilliseconds": 175000, "kind": "completed-original-adapter-focused-measurement", "recordedAt": "2026-08-06", "provisional": true}
   },
   "browserTargetMilliseconds": {
+    "FLOW_GRAPH_EXAMPLES_TARGET": 10742,
+    "FLOW_GRAPH_LEGACY_TARGET": 1295,
+    "FLOW_WORKSPACE_AUTHORING_TARGET": 15572,
+    "FLOW_WORKSPACE_CONTROLS_TARGET": 30318,
     "BRANDING_WORKFLOW_CHOICES_TARGET": 84783,
     "BRANDING_WORKFLOW_GUIDANCE_TARGET": 60000,
     "DURABLE_RENDERER_CORPUS_TARGET": 20000,
@@ -53,8 +57,15 @@
     "changedPathFanOut": {
       "shell": 20
     },
+    "changedPathSeconds": {
+      "flow_graph": {"limit": 35, "baseline": 104.4, "minimumReduction": 0.65, "path": "src/flow-graph/workspace-section-ui.ts", "measured": 25.4, "receipt": "3137076-7fb3bfb7-1eb4-4573-89ad-6de9217afcd9", "provisional": false}
+    },
     "browserTargetP90Milliseconds": {
       "ARRAY_VALIDATION_ROLLUP_BROWSER_ADAPTER": 120000,
+      "FLOW_GRAPH_EXAMPLES_TARGET": {"limit": 12891, "baseline": 10742, "percentile": "focused-sample", "tolerance": 1.2, "provisional": false},
+      "FLOW_GRAPH_LEGACY_TARGET": {"limit": 1554, "baseline": 1295, "percentile": "focused-sample", "tolerance": 1.2, "provisional": false},
+      "FLOW_WORKSPACE_AUTHORING_TARGET": {"limit": 18687, "baseline": 15572, "percentile": "focused-sample", "tolerance": 1.2, "provisional": false},
+      "FLOW_WORKSPACE_CONTROLS_TARGET": {"limit": 35000, "baseline": 30318, "percentile": "focused-sample", "tolerance": 1.154, "provisional": false},
       "BRANDING_WORKFLOW_CHOICES_TARGET": {"limit": 101740, "baseline": 84783, "percentile": "p90", "tolerance": 1.2, "provisional": false},
       "BRANDING_WORKFLOW_GUIDANCE_TARGET": {"limit": 72000, "baseline": 60000, "percentile": "bootstrap", "tolerance": 1.2, "provisional": true},
       "DURABLE_RENDERER_CORPUS_TARGET": {"limit": 24000, "baseline": 20000, "percentile": "bootstrap", "tolerance": 1.2, "provisional": true},

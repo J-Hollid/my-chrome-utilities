@@ -2,6 +2,7 @@
   (:require [acceptance.steps.support :as support]
             [babashka.process :as process]
             [cheshire.core :as json]
+            [clojure.set :as set]
             [clojure.string :as str]))
 
 (def feature-files
@@ -28,20 +29,53 @@
     (checked-command! "Flow graph persistence verification failed." "node" "test/data-layer-flow-graph-persistence-test.mjs")
     (checked-command! "Canvas-first Flow workspace verification failed." "node" "test/data-layer-flow-workspace-test.mjs")
     (reset! model-verified? true)))
+(defn- true-leaf-paths
+  ([value] (true-leaf-paths ["flowGraph"] value))
+  ([prefix value]
+   (if (map? value)
+     (mapcat (fn [[key nested]] (true-leaf-paths (conj prefix (name key)) nested)) value)
+     (do
+       (support/assert! (true? value) "Flow target evidence contains a false leaf."
+                        {:leaf (str/join "." prefix) :value value})
+       [(str/join "." prefix)]))))
+(defn- target-partitions []
+  (let [registry (json/parse-string (slurp "verification/packs.json") true)
+        pack (first (filter #(= "flow_graph" (:id %)) registry))
+        partition (first (:browserEvidencePartitions pack))]
+    (into {} (map (juxt :id #(set (:leaves %))) (:targets partition)))))
+(defn- observed-targets [output]
+  (:observed
+   (reduce (fn [{:keys [pending] :as state} line]
+             (let [candidate (try (json/parse-string line true) (catch Throwable _ nil))
+                   document (:flowGraph candidate)
+                   result (:swarmforgeBrowserTargetResult candidate)]
+               (cond
+                 document (assoc state :pending document)
+                 (and result (= "passed" (:status result)) pending)
+                 (-> state (update :observed conj [(:id result) pending]) (assoc :pending nil))
+                 result (assoc state :pending nil)
+                 :else state)))
+           {:pending nil :observed []}
+           (str/split-lines output))))
 (defn- observe-browser! []
   (or @browser-observation
-      (let [results (mapv #(checked-command! "Flow graph browser shard failed." "node" %)
-                          ["test/browser-packs/flow-graph.mjs"
-                           "test/browser-packs/flow-graph-legacy.mjs"
-                           "test/browser-packs/flow-graph-examples.mjs"])
-            observed (apply merge
-                            (map (fn [result]
-                                   (let [line (last (filter #(str/starts-with? % "{")
-                                                            (str/split-lines (:out result))))]
-                                     (:flowGraph (json/parse-string line true))))
-                                 results))]
+      (let [result (checked-command! "Flow graph browser targets failed."
+                                     "node" "test/browser-packs/flow-graph.mjs")
+            targets (observed-targets (:out result))
+            partitions (target-partitions)
+            observed (apply merge (map second targets))]
+        (doseq [[target-id document] targets]
+          (let [expected (get partitions target-id)
+                actual (set (true-leaf-paths document))]
+            (support/assert! expected "Flow target has no declared evidence partition."
+                             {:target target-id})
+            (support/assert! (= expected actual)
+                             "Flow target evidence does not exactly match its assigned leaves."
+                             {:target target-id
+                              :missing (sort (set/difference expected actual))
+                              :unexpected (sort (set/difference actual expected))})))
         (support/assert! observed "Flow graph browser evidence is missing."
-                         {:out (mapv :out results)})
+                         {:out (:out result)})
         (reset! browser-observation observed))))
 (def runtime-evidence-keys
   (set (map #(keyword (format "runtime%03d" %)) (range 1 28))))
@@ -159,11 +193,14 @@
 (defn complete-browser-evidence? [evidence]
   (support/complete-browser-evidence? evidence required-evidence-keys runtime-evidence-keys))
 (defn- assert-runtime! [evidence]
-  (support/assert! (complete-browser-evidence? evidence) "Installed graph evidence is incomplete or contains a false value." evidence)
-  (doseq [runtime-key (sort runtime-evidence-keys)]
+  (support/assert! (seq evidence) "Installed graph evidence is missing." evidence)
+  (doseq [runtime-key (sort (filter evidence runtime-evidence-keys))]
     (support/assert! (support/all-values-true? (get evidence runtime-key))
                      (str "Installed graph evidence failed for " (name runtime-key) ".")
-                     (get evidence runtime-key))))
+                     (get evidence runtime-key)))
+  (when (contains? evidence :installedBoundary)
+    (support/assert! (true? (:installedBoundary evidence))
+                     "Installed graph boundary evidence failed." evidence)))
 
 (def handlers
   (support/verified-feature-mode-handlers
