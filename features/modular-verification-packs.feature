@@ -468,3 +468,77 @@ Feature: Modular verification packs
     And every browser target has an explicit measured or provisional budget with maturity and provenance
     And provisional layered targets use tolerance 1.2 rather than tolerance 2
     And pack ownership, impact propagation, task order, browser batching, assertion leaves, worker limits, and terminal shards are unchanged
+
+  # Modular verification packs 040
+  Scenario Outline: Modular verification packs 040
+    Given project_management owns source path <source_path>
+    When its impact boundary is inspected
+    Then its boundary is <boundary>
+    And its source class is <source_class>
+    And dependant propagation is <dependant_propagation>
+
+    Examples:
+      | source_path                                       | boundary                                | source_class           | dependant_propagation |
+      | src/data-layer-project-entity-lifecycle.ts        | project_entity_lifecycle_semantic       | core or semantic       | retained              |
+      | src/data-layer-page-authoring.ts                  | project_page_authoring_controller       | application controller | retained              |
+      | src/data-layer-assignment-routing.ts              | project_assignment_routing_semantic     | core or semantic       | retained              |
+      | src/data-layer-assignment-routing-ui.ts           | project_assignment_routing_presentation | browser presentation   | excluded              |
+      | src/data-layer-project-library.ts                 | project_library_persistence             | persistence migration  | retained              |
+      | src/data-layer-project-library-ui.ts              | project_library_controller              | application controller | retained              |
+      | src/data-layer-project-library-presentation-ui.ts | project_library_presentation            | browser presentation   | excluded              |
+
+  # Modular verification packs 041
+  Scenario Outline: Modular verification packs 041
+    Given changed project-management path is <changed_path>
+    When impacted verification packs are selected
+    Then selected packs are <selected_packs>
+    And its complete owner unit, property, feature, handler, and installed browser evidence is selected
+
+    Examples:
+      | changed_path                                      | selected_packs                                                                                                                                                                             |
+      | src/data-layer-assignment-routing-ui.ts           | project_management                                                                                                                                                                         |
+      | src/data-layer-project-library-presentation-ui.ts | project_management                                                                                                                                                                         |
+      | src/data-layer-project-entity-lifecycle.ts        | project_management, durable_project_repository, project_event_transport, flow_graph, flow_export, live_flow_testing, layered_schema, property_set_flow_sections, guided_test_cases, and shell |
+      | src/data-layer-page-authoring.ts                  | project_management, durable_project_repository, project_event_transport, flow_graph, flow_export, live_flow_testing, layered_schema, property_set_flow_sections, guided_test_cases, and shell |
+      | src/data-layer-assignment-routing.ts              | project_management, durable_project_repository, project_event_transport, flow_graph, flow_export, live_flow_testing, layered_schema, property_set_flow_sections, guided_test_cases, and shell |
+      | src/data-layer-project-library.ts                 | project_management, durable_project_repository, project_event_transport, flow_graph, flow_export, live_flow_testing, layered_schema, property_set_flow_sections, guided_test_cases, and shell |
+      | src/data-layer-project-library-ui.ts              | project_management, durable_project_repository, project_event_transport, flow_graph, flow_export, live_flow_testing, layered_schema, property_set_flow_sections, guided_test_cases, and shell |
+
+  # Modular verification packs 042
+  Scenario: Modular verification packs 042
+    Given acceptance/src/acceptance/steps/project_management.clj owns six project-management feature files
+    When acceptance-handler isolation is audited from APS step consumers
+    Then every served feature and step consumer belongs to project_management
+    And the handler is declared isolated
+    And a handler-only change selects the complete project_management evidence without dependant packs
+    But any cross-pack consumer blocks isolation and retains dependant propagation
+
+  # Modular verification packs 043
+  Scenario Outline: Modular verification packs 043
+    Given project-management change is <change>
+    And historical registry state is <historical_registry>
+    When impacted verification packs are selected from current and historical ownership
+    Then selected scope is <selected_scope>
+
+    Examples:
+      | change                                                                                               | historical_registry        | selected_scope                 |
+      | delete src/data-layer-assignment-routing-ui.ts                                                      | readable and compatible    | project_management             |
+      | rename src/data-layer-assignment-routing-ui.ts to src/data-layer-project-library-presentation-ui.ts | readable and compatible    | project_management             |
+      | rename src/data-layer-assignment-routing-ui.ts to src/data-layer-project-library.ts                 | readable and compatible    | the ten-pack dependant closure |
+      | delete src/data-layer-assignment-routing-ui.ts                                                      | unreadable or incompatible | every runnable pack            |
+
+  # Modular verification packs 044
+  Scenario: Modular verification packs 044
+    Given every project-management boundary maps to the complete owner evidence profile
+    When exact project_management verification and terminal-full planning are compared before and after VTD-004
+    Then all four unit files, four property files, six features, one handler, and four installed browser adapters execute once in the exact owner plan
+    And terminal-full planning executes every conserved assertion leaf and package check exactly once
+    And browser batching, task order, worker limits, terminal shards, product behavior, durable bytes, migrations, Undo, and accessibility are unchanged
+
+  # Modular verification packs 045
+  Scenario: Modular verification packs 045
+    Given the calibrated representative path src/data-layer-assignment-routing-ui.ts previously selected ten packs with critical-path baseline 390 seconds and limit 468 seconds
+    When its non-propagating boundary is calibrated from the accepted VTD-003 receipt scope
+    Then it selects only project_management with dependant fan-out 0
+    And its critical-path baseline is 37.1 seconds with tolerance 1.2 and limit 45 seconds
+    And the other 19 pack calibrations and all 81 browser-target budgets are unchanged

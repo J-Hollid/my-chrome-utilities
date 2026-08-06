@@ -2025,3 +2025,113 @@ implementation checkpoint is all 20 runnable packs in canonical order:
 This broad pack set is task-owned by the registry change; it is not permission for the
 specifier to run the terminal suite. VTD-004 remains inactive until VTD-003 completes
 the normal coder, refactorer, and architect chain and the accepted commit is merged.
+
+VTD-003 completed that chain and merged at
+`7aaab0458cb2cd793bc10a28e4ec58a9db3d4ccc`.
+
+## Verification throughput program — candidate slice VTD-004 project management (2026-08-06)
+
+This is the only active specification slice. It covers the `project_management` pack
+only. It remains a candidate and grants no implementation authority until the user
+explicitly approves the bounded coder handoff. The other VTD-004 pack slices and
+VTD-005 through VTD-012 remain inactive.
+
+### Plain-language outcome
+
+Today the representative Assignment-screen file pulls ten packs into the plan. The
+current calibrated model is about 390 seconds even though the complete
+`project_management` pack itself models at about 37.1 seconds. This package makes a
+change confined to the Assignment workspace, or to the Project Library's pure visual
+rendering, run the project-management checks without the nine unrelated dependant
+packs. The representative guardrail therefore becomes 45 seconds instead of 468
+seconds: roughly six and a half minutes of planned work becomes well under one minute.
+
+This speedup does not apply to project meaning, saved bytes, migrations, active-project
+coordination, or public project APIs. Those changes continue to run the current broad
+dependant set. In particular, `src/data-layer-project-library-ui.ts` currently combines
+rendering with active-context and durable-write coordination used outside the Projects
+view. It remains propagating. Only a separate presentation module that cannot read or
+write durable state and is consumed solely by the project-management coordinator may
+use the narrow Project Library boundary.
+
+### Project-management impact boundaries
+
+Every `project_management` source path belongs to exactly one boundary. An exact file
+cannot match two boundaries, and an unclassified new path below an owned directory is a
+validation error rather than an implicit narrow match.
+
+| Boundary | Exact source path | Class | Propagate dependants | Reason |
+|---|---|---|---|---|
+| `project_entity_lifecycle_semantic` | `src/data-layer-project-entity-lifecycle.ts` | core/semantic | yes | Creates, removes, and relates canonical project entities and owned Flow topology. |
+| `project_page_authoring_controller` | `src/data-layer-page-authoring.ts` | application/controller | yes | Commits Page state transitions consumed by project features. |
+| `project_assignment_routing_semantic` | `src/data-layer-assignment-routing.ts` | core/semantic | yes | The specification engine consumes its matching and rejection contract. |
+| `project_assignment_routing_presentation` | `src/data-layer-assignment-routing-ui.ts` | browser presentation | no | Its installed Assignment workspace is covered by the owner pack and does not publish a semantic output to a declared dependant. |
+| `project_library_persistence` | `src/data-layer-project-library.ts` | persistence/migration | yes | Owns serialized project-library bytes, navigation, import/export, migration, and active identity. |
+| `project_library_controller` | `src/data-layer-project-library-ui.ts` | application/controller | yes | Coordinates durable writes and exposes active-project operations consumed by other installed surfaces. |
+| `project_library_presentation` | `src/data-layer-project-library-presentation-ui.ts` | browser presentation | no | May render Project Library controls from supplied values and emit owner callbacks only; it cannot own persistence, migration, active-context, or project-state transitions. |
+
+The new presentation path is an information-hiding boundary, not a second Project
+Library implementation. Moving rendering into it must preserve the existing DOM
+identities, accessible names, focus behavior, 360-pixel layout, callbacks, and visible
+states. `src/data-layer-project-library-ui.ts` remains the sole coordinator and the
+existing project-library model remains the sole source of serialized bytes.
+
+The propagating paths retain this exact current selection in registry order:
+`project_management,durable_project_repository,project_event_transport,flow_graph,flow_export,live_flow_testing,layered_schema,property_set_flow_sections,guided_test_cases,shell`.
+Either non-propagating presentation path selects only `project_management`.
+
+### Exact evidence mapping
+
+Every boundary maps to the complete `project_management` evidence profile; VTD-004
+narrows dependant-pack selection, not evidence within its owner. The profile is:
+
+| Evidence class | Exact paths |
+|---|---|
+| Unit | `test/data-layer-project-entity-lifecycle-test.mjs`, `test/data-layer-page-authoring-test.mjs`, `test/data-layer-assignment-routing-test.mjs`, `test/data-layer-project-library-test.mjs` |
+| Property | `test/data-layer-project-entity-lifecycle-property-test.mjs`, `test/data-layer-page-authoring-property-test.mjs`, `test/data-layer-assignment-routing-property-test.mjs`, `test/data-layer-project-library-property-test.mjs` |
+| Feature | `features/data-layer-project-library-and-active-context.feature`, `features/data-layer-project-library-and-active-context-runtime.feature`, `features/data-layer-project-portability-and-upgrade.feature`, `features/data-layer-project-portability-and-upgrade-runtime.feature`, `features/specification-studio-assignment-owned-routing.feature`, `features/specification-studio-assignment-owned-routing-runtime.feature` |
+| Handler | `acceptance/src/acceptance/steps/project_management.clj` |
+| Installed browser evidence | `test/browser-packs/project-management.mjs`, `test/browser-packs/project-entity-lifecycle.mjs`, `test/twatility-projects-browser-test.mjs`, `test/twatility-studio-shell-browser-test.mjs` |
+
+The handler may be declared in `isolatedVerificationHandlers` only after the registry
+validator proves that its six feature files and every APS step entry it serves are owned
+by `project_management` and have no consumer in another pack. A handler-only change then
+selects the same exact owner evidence. A cross-pack consumer blocks isolation and keeps
+dependant propagation.
+
+### Historical selection and calibrated guardrail
+
+Changed-path planning compares the current registry with the registry at the requested
+base. A deletion uses the historical owner and boundary. A rename evaluates both old
+and new paths: a rename wholly inside the two narrow presentation boundaries remains
+owner-only, while a rename into any propagating boundary retains the broad dependant
+set. Missing, unreadable, or incompatible historical ownership fails closed to every
+runnable pack. No rename or deletion may disappear from the plan merely because its old
+path no longer exists.
+
+The committed receipt scope and environment class remain those accepted by VTD-003.
+Recalibration changes only the `project_management` representative changed-path row:
+
+- `src/data-layer-assignment-routing-ui.ts` selects `project_management` only;
+- dependant fan-out changes from 9 to 0;
+- its critical-path baseline is re-derived as 37.1 seconds from the accepted exact owner
+  evidence, with normal tolerance 1.2 and a 45-second limit; and
+- the other 19 pack calibrations and all 81 browser-target budgets remain unchanged.
+
+### VTD-004 project-management evidence conservation
+
+| Evidence class | Conserved before/after mapping |
+|---|---|
+| Owner checkpoint | All four unit files, four property files, six features, one handler, and four installed browser adapters remain in `project_management` and execute once in its exact plan. |
+| Dependant safety | The five semantic, controller, persistence, migration, and public-coordination paths retain the existing ten-pack closure. Only the two exact presentation paths are owner-only. |
+| Product behavior | Assignment authoring, routing evaluation, Project Library controls, durable bytes, migration, import/export, active-context switching, Undo, accessibility, and 360-pixel behavior are unchanged. |
+| Historical safety | Modifications, additions, deletions, and renames are planned from current and base registries; unavailable history selects every runnable pack. |
+| Terminal conservation | Terminal-full planning retains every registered unit, property, feature, handler, browser assertion leaf, shell check, and package check exactly once. Browser session batching, worker limits, and terminal shards are unchanged. |
+| Calibration | The same 24-receipt scope remains resolvable. Only the project-management representative path, fan-out, and duration row change; every other calibrated row stays byte-equivalent. |
+
+The exact implementation checkpoint is one invocation containing
+`project_management,shell`, followed by `node scripts/package.mjs`. The shell pack is
+included because the shared planner process contract and modular-verification feature
+must prove the registry boundary, handler isolation, historical rename/delete behavior,
+and terminal conservation. This does not authorize the specifier to run those checks or
+authorize a broad terminal suite.
