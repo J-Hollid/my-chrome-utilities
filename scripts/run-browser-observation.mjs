@@ -144,6 +144,23 @@ function mergeObservationDocument(target, observed) {
   }
 }
 
+function evidenceLeafValue(document, segments, index = 0) {
+  if (index === segments.length) return document;
+  if (!document || typeof document !== "object") return undefined;
+  if (Object.hasOwn(document, segments[index])) {
+    const nested = evidenceLeafValue(document[segments[index]], segments, index + 1);
+    if (nested !== undefined) return nested;
+  }
+  for (let end = segments.length; end > index + 1; end -= 1) {
+    const literalKey = segments.slice(index, end).join(".");
+    if (Object.hasOwn(document, literalKey)) {
+      const nested = evidenceLeafValue(document[literalKey], segments, end);
+      if (nested !== undefined) return nested;
+    }
+  }
+  return undefined;
+}
+
 export function parseBrowserObservationOutput(stdout, observation) {
   const lines = stdout.split(/\r?\n/u).map((line) => line.trim()).filter(Boolean);
   const keys = observation.observationKeys ?? [observation.observationKey].filter(Boolean);
@@ -183,9 +200,7 @@ export function parseBrowserObservationOutput(stdout, observation) {
     throw new Error(`Browser observation ${observation.id} omitted required key(s): ${missing.join(", ")}`);
   }
   const missingLeaves = (observation.evidenceLeaves ?? []).filter((leaf) => {
-    let value = document;
-    for (const segment of leaf) value = value?.[segment];
-    return value !== true;
+    return evidenceLeafValue(document, leaf) !== true;
   });
   if (missingLeaves.length) {
     throw new Error(`Browser observation ${observation.id} omitted or failed assigned assertion leaf(s): ${missingLeaves.map((leaf) => leaf.join(" → ")).join(", ")}`);

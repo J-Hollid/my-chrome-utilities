@@ -496,6 +496,12 @@ assert.throws(() => parseBrowserObservationOutput(
     evidenceLeaves:[["first", "mounted"], ["first", "persisted"]] },
 ), /omitted or failed assigned assertion leaf.*persisted/u,
 "a renamed smoke observation or constant result cannot satisfy an assigned false leaf");
+assert.deepEqual(parseBrowserObservationOutput(
+  '{"studioChoiceControls":{"schema.only-defined":true}}\n',
+  { id:"CHOICES", observationKeys:["studioChoiceControls"],
+    evidenceLeaves:[["studioChoiceControls", "schema", "only-defined"]] },
+), { studioChoiceControls:{ "schema.only-defined":true } },
+"a literal dotted observation key satisfies its exact compact registry leaf identity");
 assert.doesNotThrow(() => validateBrowserPerformanceDeclarations([
   {
     ...focusedObservationPacks[0],
