@@ -2316,18 +2316,42 @@ assert.equal(completeCalibration.performanceBudgets.browserTargetP90Milliseconds
   .LAYERED_SCHEMA_EDITOR_TARGET.tolerance, 1.2);
 assert.equal(completeCalibration.performanceBudgets.browserTargetP90Milliseconds
   .LAYERED_SCHEMA_EDITOR_TARGET.source, "explicit target baseline");
+const calibrationEntries = characterizationEntries.slice(0, 5);
+const calibrationEnvironmentClass = {
+  id:calibrationEntries[0].environmentClassId,
+  environment:calibrationEntries[0].environment,
+  receiptDigests:calibrationEntries.map(({ digest }) => digest).sort(),
+};
+const calibrationLedger = {
+  sources:["root", "coder", "refactorer", "architect"].map((id) =>
+    ({ id, path:`/receipts/${id}` })),
+  receipts:calibrationEntries,
+  environmentClasses:[calibrationEnvironmentClass],
+};
+const calibrationCharacterization = structuredClone(committedFlowCharacterization);
+calibrationCharacterization.classes.focusedNormal.receiptDigests =
+  calibrationEnvironmentClass.receiptDigests;
+const calibrationThroughput = structuredClone(throughput);
+calibrationThroughput.selectedEnvironmentClass = calibrationEnvironmentClass.id;
+calibrationThroughput.model.ledger = {
+  ...calibrationThroughput.model.ledger,
+  receipts:5,
+  selectedEnvironmentClass:calibrationEnvironmentClass.id,
+  maturity:timingMaturity(5, 5),
+};
+for (const timing of Object.values(calibrationThroughput.model.browserTargets)) {
+  timing.receiptDigests = [];
+}
+const referencePacks = packs.map(({ representativeChangedPath:_allowedCalibrationField, ...pack }) => pack);
 const calibrationReport = verificationPerformanceCalibration(
-  throughput,
+  calibrationThroughput,
   committedTimingBaseline,
   {
     packs,
+    referencePacks,
     implementationCommit:"f".repeat(40),
-    environmentClassId:"e".repeat(64),
-    environment:{ node:"24.19.0", typescript:"5.9.3", platform:"linux-x64",
-      executionLoad:"normal", concurrency:4, observationConcurrency:2,
-      buildIdentity:"a".repeat(64) },
-    receiptDigests:Array.from({ length:5 }, (_, index) => `${index}`.repeat(64)),
-    flowExamplesCharacterization:committedFlowCharacterization,
+    timingLedger:calibrationLedger,
+    flowExamplesCharacterization:calibrationCharacterization,
   },
 );
 assert.equal(calibrationReport.completion.status, "complete");
@@ -2336,15 +2360,57 @@ assert.equal(Object.keys(calibrationReport.browserTargets).length, 81);
 assert.match(calibrationReport.conservation.verificationTopologyDigest, /^[a-f0-9]{64}$/u);
 assert.equal(calibrationReport.conservation.packOwnershipUnchanged, true);
 assert.equal(calibrationReport.conservation.impactPropagationUnchanged, true);
+assert.equal(calibrationReport.receiptDigests.length, 5);
+assert.deepEqual(calibrationReport.sourceScope.map(({ id }) => id),
+  ["architect", "coder", "refactorer", "root"]);
 assert.equal(calibrationReport.runnablePacks.find(({ id }) => id === "shell").budgetClass,
   "global-shell");
+assert.throws(() => verificationPerformanceCalibration(calibrationThroughput,
+  committedTimingBaseline, {
+    packs,
+    referencePacks,
+    implementationCommit:"f".repeat(40),
+    timingLedger:{ ...calibrationLedger, environmentClasses:[{
+      ...calibrationEnvironmentClass,
+      receiptDigests:calibrationEnvironmentClass.receiptDigests.slice(1),
+    }] },
+    flowExamplesCharacterization:calibrationCharacterization,
+  }), /exactly match the selected environment class/u,
+"calibration rejects a class declaration that omits an accepted receipt");
+const unresolvedCharacterization = structuredClone(calibrationCharacterization);
+unresolvedCharacterization.classes.focusedNormal.receiptDigests[0] = "e".repeat(64);
+assert.throws(() => verificationPerformanceCalibration(calibrationThroughput,
+  committedTimingBaseline, {
+    packs,
+    referencePacks,
+    implementationCommit:"f".repeat(40),
+    timingLedger:calibrationLedger,
+    flowExamplesCharacterization:unresolvedCharacterization,
+  }), /characterization receipt .* is not resolved/u,
+"hash-shaped characterization identities must resolve to accepted selected-class receipts");
+assert.throws(() => verificationPerformanceCalibration(calibrationThroughput,
+  committedTimingBaseline, {
+    packs,
+    referencePacks:referencePacks.map((pack) => pack.id === "flow_graph"
+      ? { ...pack, unit:pack.unit.slice(1) } : pack),
+    implementationCommit:"f".repeat(40),
+    timingLedger:calibrationLedger,
+    flowExamplesCharacterization:calibrationCharacterization,
+  }), /Verification topology changed outside representative paths/u,
+"conservation is derived from the topology projection instead of asserted unconditionally");
 const committedCalibrationReport = JSON.parse(await readFile(
   new URL("../verification/performance-calibration.json", import.meta.url), "utf8",
 ));
 assert.match(committedCalibrationReport.implementationCommit, /^[a-f0-9]{40}$/u);
 assert.equal(committedCalibrationReport.completion.status, "complete");
+assert.equal(committedCalibrationReport.receiptDigests.length, 18);
+assert.equal(committedCalibrationReport.sourceScope.length, 4);
 assert.equal(committedCalibrationReport.runnablePacks.length, 20);
 assert.equal(Object.keys(committedCalibrationReport.browserTargets).length, 81);
+assert.equal(committedCalibrationReport.browserTargets
+  .WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER.sampleCount, 5);
+assert.equal(committedCalibrationReport.browserTargets
+  .WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER.maturity, "non-provisional");
 assert.equal(committedCalibrationReport.conservation.verificationTopologyDigest,
   calibrationReport.conservation.verificationTopologyDigest,
   "the durable calibration report binds the current verification topology exactly");

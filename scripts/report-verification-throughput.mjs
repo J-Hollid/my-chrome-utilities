@@ -7,6 +7,7 @@ import { loadVerificationPacks, planVerification } from "./verification-packs.mj
 import {
   archiveCanonicalReceiptCandidates,
   buildCanonicalTimingLedger,
+  canonicalEnvironmentClassId,
   formatCanonicalTimingLedgerSummary,
   receiptRejectionReason,
   timingMaturity,
@@ -736,22 +737,63 @@ export function verificationPerformanceCalibration(
   baseline,
   {
     packs,
+    referencePacks,
     implementationCommit,
-    environmentClassId,
-    environment,
-    receiptDigests,
+    timingLedger,
     flowExamplesCharacterization,
     minimumIndependentSamples = 5,
     tolerance = 1.2,
   } = {},
 ) {
-  if (!Array.isArray(packs) || !packs.length ||
+  if (!Array.isArray(packs) || !packs.length || !Array.isArray(referencePacks) ||
       !/^[a-f0-9]{40}$/u.test(implementationCommit ?? "") ||
-      !/^[a-f0-9]{64}$/u.test(environmentClassId ?? "") ||
-      !Array.isArray(receiptDigests) || receiptDigests.length < minimumIndependentSamples ||
+      !Array.isArray(timingLedger?.sources) || !timingLedger.sources.length ||
+      !Array.isArray(timingLedger?.receipts) ||
+      !Array.isArray(timingLedger?.environmentClasses)) {
+    throw new Error("Performance calibration requires implementation, reference topology, and canonical timing ledger evidence");
+  }
+  const environmentClassId = report.selectedEnvironmentClass;
+  const environmentClass = timingLedger.environmentClasses
+    .find(({ id }) => id === environmentClassId);
+  if (!environmentClass || canonicalEnvironmentClassId(environmentClass.environment) !== environmentClassId) {
+    throw new Error("Performance calibration requires the report's canonical selected environment class");
+  }
+  const receiptDigests = timingLedger.receipts
+    .filter(({ receipt, rejectionReason, environmentClassId:entryClassId }) =>
+      receipt && !rejectionReason && entryClassId === environmentClassId)
+    .map(({ digest }) => digest)
+    .sort();
+  const declaredDigests = [...(environmentClass.receiptDigests ?? [])].sort();
+  if (receiptDigests.length < minimumIndependentSamples ||
       receiptDigests.some((digest) => !/^[a-f0-9]{64}$/u.test(digest)) ||
-      new Set(receiptDigests).size !== receiptDigests.length) {
-    throw new Error("Performance calibration requires exact implementation, environment, and receipt identities");
+      new Set(receiptDigests).size !== receiptDigests.length ||
+      JSON.stringify(receiptDigests) !== JSON.stringify(declaredDigests)) {
+    throw new Error("Canonical receipt digests must exactly match the selected environment class");
+  }
+  if (report.model?.ledger?.selectedEnvironmentClass !== environmentClassId ||
+      report.model?.ledger?.receipts !== receiptDigests.length ||
+      report.model?.ledger?.maturity?.independentSamples !== receiptDigests.length) {
+    throw new Error("Performance report must be computed from the complete selected environment class");
+  }
+  const selectedDigests = new Set(receiptDigests);
+  for (const [id, timing] of Object.entries(report.model?.browserTargets ?? {})) {
+    if ((timing.receiptDigests ?? []).some((digest) => !selectedDigests.has(digest))) {
+      throw new Error(`Browser target ${id} contains timing outside the selected environment class`);
+    }
+  }
+  for (const digest of flowExamplesCharacterization?.classes?.focusedNormal?.receiptDigests ?? []) {
+    if (!selectedDigests.has(digest)) {
+      throw new Error(`Flow characterization receipt ${digest} is not resolved in the selected environment class`);
+    }
+  }
+  const topologyProjection = (registry) => registry.map((pack) =>
+    Object.fromEntries(Object.entries(pack)
+      .filter(([key]) => key !== "representativeChangedPath")));
+  const projectedTopology = topologyProjection(packs);
+  const referenceTopology = topologyProjection(referencePacks);
+  const topologyUnchanged = JSON.stringify(projectedTopology) === JSON.stringify(referenceTopology);
+  if (!topologyUnchanged) {
+    throw new Error("Verification topology changed outside representative paths");
   }
   const refreshed = refreshVerificationPerformanceBudgets(report, baseline, {
     packs, tolerance, minimumIndependentSamples, flowExamplesCharacterization,
@@ -789,13 +831,19 @@ export function verificationPerformanceCalibration(
     throw new Error("Performance calibration must cover 20 runnable packs and 81 browser targets");
   }
   const verificationTopologyDigest = createHash("sha256")
-    .update(`${JSON.stringify(packs)}\n`)
+    .update(`${JSON.stringify(projectedTopology)}\n`)
+    .digest("hex");
+  const referenceTopologyDigest = createHash("sha256")
+    .update(`${JSON.stringify(referenceTopology)}\n`)
     .digest("hex");
   return {
     version:1,
     implementationCommit,
     environmentClassId,
-    environment,
+    environment:environmentClass.environment,
+    sourceScope:timingLedger.sources
+      .map(({ id, path:sourcePath }) => ({ id, path:sourcePath }))
+      .sort((left, right) => left.id.localeCompare(right.id) || left.path.localeCompare(right.path)),
     minimumIndependentSamples,
     tolerance,
     receiptDigests:[...receiptDigests].sort(),
@@ -811,15 +859,16 @@ export function verificationPerformanceCalibration(
     browserTargets,
     conservation:{
       verificationTopologyDigest,
+      referenceTopologyDigest,
       runnablePackCount:runnablePacks.length,
       browserTargetCount:Object.keys(browserTargets).length,
-      packOwnershipUnchanged:true,
-      impactPropagationUnchanged:true,
-      taskOrderUnchanged:true,
-      browserBatchingUnchanged:true,
-      assertionLeavesUnchanged:true,
-      workerLimitsUnchanged:true,
-      terminalShardsUnchanged:true,
+      packOwnershipUnchanged:topologyUnchanged,
+      impactPropagationUnchanged:topologyUnchanged,
+      taskOrderUnchanged:topologyUnchanged,
+      browserBatchingUnchanged:topologyUnchanged,
+      assertionLeavesUnchanged:topologyUnchanged,
+      workerLimitsUnchanged:topologyUnchanged,
+      terminalShardsUnchanged:topologyUnchanged,
     },
     completion:{ status:"complete" },
   };
