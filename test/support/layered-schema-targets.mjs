@@ -14,11 +14,12 @@ const layeredAdapterSource=await readFile(new URL("../browser-packs/layered-sche
 const initialStart=layeredAdapterSource.indexOf("const evidence=await evaluate(socket,`");
 const initialEnd=layeredAdapterSource.indexOf("const compactPanelEvidence=",initialStart);
 if(initialStart<0||initialEnd<0)throw new Error("Cannot locate the intact initial layered installed workflow");
-const initialLayeredInstalledExpression=layeredAdapterSource.slice(layeredAdapterSource.indexOf("`",initialStart)+1,layeredAdapterSource.lastIndexOf("`",initialEnd));
-const editorInitialLayeredInstalledExpression=initialLayeredInstalledExpression.replace(
+const extractedInitialLayeredInstalledExpression=layeredAdapterSource.slice(layeredAdapterSource.indexOf("`",initialStart)+1,layeredAdapterSource.lastIndexOf("`",initialEnd));
+const initialLayeredInstalledExpression=extractedInitialLayeredInstalledExpression.replace(
   "form.requestSubmit();for(let attempt=0;attempt<160;attempt+=1){const workspace=document.querySelector('[data-project-entity-workspace]');",
   "form.requestSubmit();for(let attempt=0;attempt<600;attempt+=1){const workspace=document.querySelector('[data-project-entity-workspace]');");
-if(editorInitialLayeredInstalledExpression===initialLayeredInstalledExpression)throw new Error("Cannot extend the intact editor entity settlement boundary");
+if(initialLayeredInstalledExpression===extractedInitialLayeredInstalledExpression)throw new Error("Cannot extend the intact entity settlement boundary");
+const editorInitialLayeredInstalledExpression=initialLayeredInstalledExpression;
 const extractedEvaluateTemplate=(marker,nextMarker)=>{
   const start=layeredAdapterSource.indexOf(marker);
   const end=layeredAdapterSource.indexOf(nextMarker,start);
