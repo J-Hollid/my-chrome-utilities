@@ -98,3 +98,7 @@
                           (= 81 (:browserTargetCount evidence)))
                      "Project presentation calibration is not exact." {:pack pack})
     (assoc prepared :vtd004/calibration-pack pack)))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-08-07T00:40:47.845522221+02:00", :module-hash "2053275984", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "1433682608"} {:id "defn/vtd004-world", :kind "defn", :line 5, :end-line 9, :hash "2025311817"} {:id "defn/boundary-world", :kind "defn", :line 11, :end-line 17, :hash "1341774244"} {:id "defn/change-world", :kind "defn", :line 19, :end-line 24, :hash "-1576629533"} {:id "defn/human-pack-list", :kind "defn", :line 26, :end-line 29, :hash "-918827022"} {:id "defn/handler-world", :kind "defn", :line 31, :end-line 42, :hash "-26821719"} {:id "defn-/history-plan-key", :kind "defn-", :line 44, :end-line 49, :hash "-284618113"} {:id "defn-/history-scope", :kind "defn-", :line 51, :end-line 55, :hash "-1038242451"} {:id "defn/history-world", :kind "defn", :line 57, :end-line 63, :hash "789610311"} {:id "defn/conservation-world", :kind "defn", :line 65, :end-line 83, :hash "2025288657"} {:id "defn/calibration-world", :kind "defn", :line 85, :end-line 100, :hash "-1870049910"}]}
+;; clj-mutate-manifest-end

@@ -741,6 +741,14 @@ assert.deepEqual(planVerification(currentOwnershipPacks, {
   changedPaths:deletedChange.paths, changeSet:deletedChange,
   basePacks:[{ ...formerOwnershipPacks[0], unit:"not-an-array" }],
 }).packIds, ["alpha", "beta"], "schema-incompatible historical registries use every runnable pack");
+const malformedHistoricalImpactPlan = planVerification(currentOwnershipPacks, {
+  changedPaths:deletedChange.paths, changeSet:deletedChange,
+  basePacks:[{ ...formerOwnershipPacks[0], impactBoundaries:[{}] }],
+});
+assert.deepEqual(malformedHistoricalImpactPlan.packIds, ["alpha", "beta"],
+  "malformed historical impact boundaries fail closed to every runnable pack");
+assert.equal(malformedHistoricalImpactPlan.conservativeHistoricalFallbackReason,
+  "historical-registry-incompatible");
 assert.throws(() => planVerification(currentOwnershipPacks, {
   changedPaths:deletedChange.paths,
   changeSet:deletedChange,
@@ -906,11 +914,28 @@ const projectServedFeatures = [...projectHandlerSource.matchAll(
 assert.deepEqual([...projectServedFeatures].sort(), [...projectManagementPack.features].sort(),
   "the isolated handler serves exactly all six project-management feature identities");
 const projectNamespace = "acceptance.steps.project-management";
+assert.equal(clojureRequiresNamespace(
+  `(ns acceptance.steps.consumer (:require ${projectNamespace}))`, projectNamespace,
+), true, "a bare Clojure libspec is a cross-pack namespace consumer");
+assert.equal(clojureRequiresNamespace(
+  `(ns acceptance.steps.consumer (:require [^{:load true} ${projectNamespace} :as project]))`,
+  projectNamespace,
+), true, "a metadata-decorated Clojure libspec is a cross-pack namespace consumer");
+assert.equal(clojureRequiresNamespace(
+  "(ns acceptance.steps.consumer (:require [acceptance.steps [project-management :as project]]))",
+  projectNamespace,
+), true, "a prefix-list Clojure libspec is a cross-pack namespace consumer");
+assert.equal(clojureRequiresNamespace(
+  `(ns acceptance.steps.consumer) ; ${projectNamespace}\n(def example \"${projectNamespace}\")`,
+  projectNamespace,
+), false, "comments and strings do not create cross-pack namespace consumers");
 const registeredHandlerPaths = [...new Set(packs.flatMap((pack) => pack.handlers ?? []))];
 const projectHandlerConsumers = [];
 for (const handlerPath of registeredHandlerPaths) {
   const source = await readFile(new URL(`../${handlerPath}`, import.meta.url), "utf8");
-  if (clojureRequiresNamespace(source, projectNamespace)) projectHandlerConsumers.push(handlerPath);
+  if (handlerPath !== projectHandlerPath && clojureRequiresNamespace(source, projectNamespace)) {
+    projectHandlerConsumers.push(handlerPath);
+  }
 }
 assert.deepEqual(projectHandlerConsumers, [],
   "no registered APS/Clojure handler outside the owner consumes the isolated project handler");
@@ -934,6 +959,22 @@ await assert.rejects(() => validateIsolatedVerificationHandlers(packs, {
   },
 }), new RegExp(`Cross-pack handler consumer ${crossPackHandler.replaceAll("/", "\\/")} blocks isolation`, "u"),
 "a non-alias :refer consumer mutation also blocks handler isolation");
+for (const [description, mutation] of [
+  ["a bare cross-pack Clojure libspec blocks handler isolation",
+    `(ns acceptance.steps.consumer (:require ${projectNamespace}))`],
+  ["a metadata-decorated cross-pack Clojure libspec blocks handler isolation",
+    `(ns acceptance.steps.consumer (:require [^{:load true} ${projectNamespace} :as project-management]))`],
+  ["a prefix-list cross-pack Clojure libspec blocks handler isolation",
+    "(ns acceptance.steps.consumer (:require [acceptance.steps [project-management :as project-management]]))"],
+]) {
+  await assert.rejects(() => validateIsolatedVerificationHandlers(packs, {
+    readSource:async(handlerPath) => {
+      const source = await readFile(new URL(`../${handlerPath}`, import.meta.url), "utf8");
+      return handlerPath === crossPackHandler ? `${source}\n${mutation}\n` : source;
+    },
+  }), new RegExp(`Cross-pack handler consumer ${crossPackHandler.replaceAll("/", "\\/")} blocks isolation`, "u"),
+  description);
+}
 const projectClosure = ["project_management", "durable_project_repository", "project_event_transport",
   "flow_graph", "flow_export", "live_flow_testing", "layered_schema",
   "property_set_flow_sections", "guided_test_cases", "shell"];

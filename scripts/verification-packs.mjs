@@ -63,8 +63,19 @@ export function browserAdapterUsesSharedHarness(source, adapterPath) {
 }
 
 export function clojureRequiresNamespace(source, namespace) {
-  const escapedNamespace = namespace.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
-  return new RegExp(`\\[\\s*${escapedNamespace}(?=\\s|\\])`, "u").test(source);
+  const withoutStringsOrComments = source.replace(/"(?:\\\\.|[^"\\\\])*"|;[^\n\r]*/gu, " ");
+  const escape = (value) => value.replace(/[.*+?^${}()|[\]\\]/gu, "\\$&");
+  const token = (value) => `(?<![^\\s\\[\\](){}'\`~^@,])${escape(value)}(?![^\\s\\[\\](){}'\`~^@,])`;
+  if (new RegExp(token(namespace), "u").test(withoutStringsOrComments)) return true;
+  const separator = namespace.lastIndexOf(".");
+  if (separator < 1 || separator === namespace.length - 1) return false;
+  const prefix = namespace.slice(0, separator);
+  const leaf = namespace.slice(separator + 1);
+  return new RegExp(
+    `\\[\\s*(?:\\^[^\\s\\[\\]]+\\s*)*${token(prefix)}[\\s\\S]*?` +
+      `\\[\\s*(?:\\^[^\\s\\[\\]]+\\s*)*${token(leaf)}`,
+    "u",
+  ).test(withoutStringsOrComments);
 }
 
 export async function loadVerificationPacks() {
@@ -225,6 +236,23 @@ function validateDependencies(packs, ids) {
   }
 }
 
+const impactBoundarySourceClasses = [
+  "core or semantic", "application controller", "browser presentation", "persistence migration",
+];
+
+function validImpactBoundaryShape(boundary, pack) {
+  return boundary && !Array.isArray(boundary) &&
+    ["id,prefixes,propagateDependants", "id,prefixes,propagateDependants,sourceClass"]
+      .includes(Object.keys(boundary).sort().join(",")) &&
+    /^[a-z0-9][a-z0-9_-]*$/u.test(boundary.id ?? "") &&
+    Array.isArray(boundary.prefixes) && boundary.prefixes.length > 0 &&
+    boundary.prefixes.every((prefix) => typeof prefix === "string" && prefix &&
+      values(pack, "source").some((owned) =>
+        prefixMatches(owned, prefix) || prefixMatches(prefix, owned))) &&
+    typeof boundary.propagateDependants === "boolean" &&
+    (boundary.sourceClass === undefined || impactBoundarySourceClasses.includes(boundary.sourceClass));
+}
+
 function validateImpactBoundaries(packs, sourcePaths, representativePaths = sourcePaths) {
   const ids = new Set();
   for (const pack of packs) {
@@ -236,18 +264,7 @@ function validateImpactBoundaries(packs, sourcePaths, representativePaths = sour
     }
     const boundaries = values(pack, "impactBoundaries");
     for (const boundary of boundaries) {
-      if (!boundary || Array.isArray(boundary) ||
-          !["id,prefixes,propagateDependants", "id,prefixes,propagateDependants,sourceClass"]
-            .includes(Object.keys(boundary).sort().join(",")) ||
-          !/^[a-z0-9][a-z0-9_-]*$/u.test(boundary.id ?? "") || ids.has(boundary.id) ||
-          !Array.isArray(boundary.prefixes) || !boundary.prefixes.length ||
-          boundary.prefixes.some((prefix) => typeof prefix !== "string" || !prefix ||
-            !values(pack, "source").some((owned) =>
-              prefixMatches(owned, prefix) || prefixMatches(prefix, owned))) ||
-          typeof boundary.propagateDependants !== "boolean" ||
-          boundary.sourceClass !== undefined &&
-            !["core or semantic", "application controller", "browser presentation",
-              "persistence migration"].includes(boundary.sourceClass)) {
+      if (!validImpactBoundaryShape(boundary, pack) || ids.has(boundary.id)) {
         throw new Error(`Use exact owned impact boundaries in pack ${pack.id}`);
       }
       ids.add(boundary.id);
@@ -939,8 +956,14 @@ function historicalRegistryHasPlanningShape(packs, known) {
     "browserAdapterPerformance", "browserObservationBatches", "browserEvidencePartitions",
     "impactBoundaries",
   ];
+  const boundaryIds = Array.isArray(packs)
+    ? packs.flatMap((pack) => Array.isArray(pack?.impactBoundaries)
+      ? pack.impactBoundaries.map((boundary) => boundary?.id)
+      : [])
+    : [];
   return Array.isArray(packs) && packs.length > 0 &&
     new Set(packs.map((pack) => pack?.id)).size === packs.length &&
+    new Set(boundaryIds).size === boundaryIds.length &&
     packs.every((pack) => pack && typeof pack.id === "string" && known.has(pack.id) &&
       arrayKeys.every((key) => pack[key] === undefined || Array.isArray(pack[key])) &&
       exactOwnedPathKeys.concat(prefixOwnedPathKeys, "globalImpact", "features", "verificationInputs", "runtimeInputs")
@@ -952,6 +975,8 @@ function historicalRegistryHasPlanningShape(packs, known) {
         browserAdapterModeNames.has(entry.mode)) &&
       values(pack, "verificationHelpers").every((entry) => entry && typeof entry.path === "string" &&
         Array.isArray(entry.consumers)) &&
+      values(pack, "impactBoundaries").every((boundary) =>
+        validImpactBoundaryShape(boundary, pack)) &&
       values(pack, "browserObservations").every((entry) => entry && typeof entry.path === "string") &&
       values(pack, "checkpointCommands").every((entry) => entry && typeof entry.executable === "string" &&
         Array.isArray(entry.args)));
