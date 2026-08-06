@@ -2464,12 +2464,28 @@ const committedCalibrationReport = JSON.parse(await readFile(
 ));
 assert.match(committedCalibrationReport.implementationCommit, /^[a-f0-9]{40}$/u);
 assert.equal(committedCalibrationReport.completion.status, "complete");
-assert.equal(committedCalibrationReport.receiptDigests.length, 18);
+assert.equal(committedCalibrationReport.receiptDigests.length, 24);
 assert.equal(committedCalibrationReport.sourceScope.length, 4);
+const committedReceiptIndex = JSON.parse(await readFile(
+  new URL("../verification/timing-receipt-index.json", import.meta.url), "utf8",
+));
+const liveCalibrationLedger = await buildCanonicalTimingLedger({
+  sources:committedCalibrationReport.sourceScope,
+  expectedRuntime:reportRuntime,
+  minimumIndependentSamples:committedCalibrationReport.minimumIndependentSamples,
+  legacyExecutionLoads:committedReceiptIndex.legacyExecutionLoads ?? {},
+});
+const liveSelectedDigests = liveCalibrationLedger.receipts
+  .filter(({ environmentClassId, rejectionReason }) =>
+    rejectionReason === null && environmentClassId === committedCalibrationReport.environmentClassId)
+  .map(({ digest }) => digest)
+  .sort();
+assert.deepEqual(liveSelectedDigests, [...committedCalibrationReport.receiptDigests].sort(),
+  "the committed calibration must include every eligible receipt in its declared live source scope");
 assert.equal(committedCalibrationReport.runnablePacks.length, 20);
 assert.equal(Object.keys(committedCalibrationReport.browserTargets).length, 81);
 assert.equal(committedCalibrationReport.browserTargets
-  .WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER.sampleCount, 5);
+  .WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER.sampleCount, 6);
 assert.equal(committedCalibrationReport.browserTargets
   .WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER.maturity, "non-provisional");
 assert.equal(committedCalibrationReport.conservation.verificationTopologyDigest,
@@ -2522,7 +2538,7 @@ const completeSelectedClassReport = reportVerificationThroughput({
   environmentClassId:committedCalibrationReport.environmentClassId,
   minimumIndependentSamples:committedCalibrationReport.minimumIndependentSamples,
 });
-assert.equal(completeSelectedClassReport.model.ledger.receipts, 18,
+assert.equal(completeSelectedClassReport.model.ledger.receipts, 24,
   "production reporting consumes the complete calibrated selected class");
 assert.equal(completeSelectedClassReport.model.browserTargets
   .FLOW_GRAPH_EXAMPLES_TARGET.p90Ms, 21022,
@@ -2533,14 +2549,14 @@ const completeExamplesBudget = completeSelectedClassReport.performanceBudgets.re
   .find(({ identity }) => identity === "FLOW_GRAPH_EXAMPLES_TARGET");
 assert.equal(completeExamplesBudget.measured, 3830);
 assert.equal(completeExamplesBudget.observed, 21022);
-assert.equal(completeExamplesBudget.excludedSamples, 13,
+assert.equal(completeExamplesBudget.excludedSamples, 19,
   "terminal and other plan contexts remain diagnostic for the focused Flow budget");
 const completeLegacyBudget = completeSelectedClassReport.performanceBudgets.results
   .find(({ identity }) => identity === "FLOW_GRAPH_LEGACY_TARGET");
-assert.equal(completeLegacyBudget.provisional, true);
-assert.equal(completeLegacyBudget.measured, 1295);
-assert.equal(completeLegacyBudget.observed, 1597,
-  "four-sample legacy evidence remains visible without being promoted to mature enforcement");
+assert.equal(completeLegacyBudget.provisional, false);
+assert.equal(completeLegacyBudget.measured, 1565);
+assert.equal(completeLegacyBudget.observed, 1565,
+  "ten-sample legacy evidence is mature under the complete selected class");
 for (const calibratedPack of committedCalibrationReport.runnablePacks) {
   assert.deepEqual(calibratedPack.exactPackDuration,
     committedTimingBaseline.performanceBudgets.exactPackSeconds[calibratedPack.id]);
