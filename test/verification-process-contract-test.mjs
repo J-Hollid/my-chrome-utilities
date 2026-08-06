@@ -1796,6 +1796,11 @@ assert.equal(normalTimingModel.browserTargets.FLOW_GRAPH_EXAMPLES_TARGET.p90Ms, 
 assert.equal(loadedTimingModel.browserTargets.FLOW_GRAPH_EXAMPLES_TARGET.p90Ms, 24322);
 assert.equal(normalTimingModel.browserTargets.FLOW_GRAPH_EXAMPLES_TARGET.provisional, true,
   "another environment class and a duplicate copy cannot satisfy sample maturity");
+assert.equal(normalTimingModel.packs.flow_graph.provisional, true,
+  "exact-class pack statistics remain provisional below the independent-sample threshold");
+assert.equal(normalTimingModel.packs.flow_graph.independentSamples, 1);
+assert.equal(normalTimingModel.packWeightsMs.flow_graph, normalTimingModel.packs.flow_graph.medianMs,
+  "legacy pack weights are derived from the scoped pack timing statistic");
 const crossClassComparison = compareTimingEnvironmentClasses(
   canonicalLedger, reportBaseline, [loadedClass.id, normalClass.id],
 );

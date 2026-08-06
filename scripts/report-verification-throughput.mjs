@@ -152,6 +152,8 @@ export function measuredTimingModel(receipts, baseline, {
     "acceptance-parse", "acceptance-generate", "checkpoint", "acceptance-session",
   ]) stages[stage] = statistic(byStage.get(stage) ?? [], fallback[stage] ?? fallback.unknown ?? 1000,
     environmentClassId ? minimumIndependentSamples : undefined);
+  const packs = Object.fromEntries([...packSamples].map(([id, values]) => [id,
+    statistic(values, 0, environmentClassId ? minimumIndependentSamples : undefined)]));
   return {
     stages,
     tasks:Object.fromEntries([...byTask].map(([key, values]) => [key,
@@ -162,7 +164,8 @@ export function measuredTimingModel(receipts, baseline, {
     browserTargetFallbacks:{ ...(baseline.browserTargetMilliseconds ?? {}) },
     browserObservationSessionOverheadMilliseconds:
       baseline.browserObservationSessionOverheadMilliseconds ?? 0,
-    packWeightsMs:Object.fromEntries([...packSamples].map(([id, values]) => [id, percentile(values, 0.5)])),
+    packs,
+    packWeightsMs:Object.fromEntries(Object.entries(packs).map(([id, timing]) => [id, timing.medianMs])),
     ledger:{
       receipts:eligibleReceipts.length,
       rejectedReceipts:ledgerEntries.filter(({ receipt, rejectionReason }) => receipt && rejectionReason).length,
