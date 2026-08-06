@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import {
   headlessChromeArguments,
+  removeChromeProfile,
   resolveChromeExecutable,
   stopHeadlessChrome,
 } from "./support/headless-chrome.mjs";
@@ -436,7 +437,7 @@ try {
   side?.close();
   studio?.close();
   await stopHeadlessChrome(chrome, 1500);
-  await rm(profile, { recursive: true, force: true });
+  await removeChromeProfile(profile, { targetId:"twatility-brand-foundation" });
 }
 
 console.log("TWAtility Belt packaged foundation browser test passed");

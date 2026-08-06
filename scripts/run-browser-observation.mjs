@@ -85,16 +85,13 @@ function runObservationProcess(packs, observations) {
     child.stderr.on("data", (chunk) => process.stderr.write(chunk));
     child.once("error", reject);
     child.once("close", (code, signal) => {
-      if (code !== 0) {
-        reject(new Error(`Browser observation failed (${signal ?? code}): ${combined.id}`));
-        return;
-      }
       const original = Buffer.concat(stdout).toString();
-      const completed = completeBrowserObservationOutput(
-        original, observations, Math.round(performance.now() - started),
-      );
-      if (completed.length > original.length) process.stdout.write(completed.slice(original.length));
-      resolve(completed);
+      try {
+        const completed = completeBrowserObservationOutput(
+          original, observations, Math.round(performance.now() - started),
+        );
+        resolve({ stdout:completed, code, signal });
+      } catch (error) { reject(error); }
     });
   });
 }
@@ -108,11 +105,13 @@ export function completeBrowserObservationOutput(stdout, observations, durationM
     } catch { /* ordinary browser diagnostics are not timing records */ }
   }
   const missing = observations.filter(({ id }) => !timed.has(id));
-  if (!missing.length) return stdout;
-  const suffix = missing.map(({ id }) => JSON.stringify({
-    swarmforgeBrowserTargetTiming:{ id, durationMs },
-  })).join("\n");
-  return `${stdout}${stdout.endsWith("\n") || !stdout ? "" : "\n"}${suffix}\n`;
+  if (missing.length) {
+    throw new Error(
+      `Browser observation target(s) ${missing.map(({ id }) => id).join(", ")} must emit their own timing; ` +
+      `aggregate process duration ${durationMs}ms is not target evidence`,
+    );
+  }
+  return stdout;
 }
 
 export function parseBrowserObservationOutput(stdout, observation) {
@@ -124,7 +123,8 @@ export function parseBrowserObservationOutput(stdout, observation) {
       const candidate = JSON.parse(line);
       if (candidate && typeof candidate === "object" && !Array.isArray(candidate)) {
         const observed = Object.fromEntries(Object.entries(candidate)
-          .filter(([key]) => key !== "swarmforgeBrowserTargetTiming"));
+          .filter(([key]) => key !== "swarmforgeBrowserTargetTiming" &&
+            key !== "swarmforgeBrowserTargetResult"));
         if (Object.keys(observed).length) {
           Object.assign(document, observed);
           found = true;
@@ -165,11 +165,16 @@ export async function runBrowserObservation(...ids) {
   const matches = ids.map((id) => observationById(packs, id));
   const observations = validateBrowserObservationBatch(matches);
   await assertFreshDist({ root:repositoryRoot });
-  const stdout = await runObservationProcess(packs, observations);
-  const parsed = parseBrowserObservationBatchOutput(stdout, observations);
-  if (parsed.failures.length) {
-    const error = new AggregateError(parsed.failures.map(({ message }) => new Error(message)),
-      `Browser observation batch failed: ${parsed.failures.map(({ id }) => id).join(", ")}`);
+  const processResult = await runObservationProcess(packs, observations);
+  const parsed = parseBrowserObservationBatchOutput(processResult.stdout, observations);
+  const failures = [...parsed.failures];
+  if (processResult.code !== 0 && !failures.length) {
+    failures.push({ id:"batch-program-or-cleanup",
+      message:`Browser observation program failed (${processResult.signal ?? processResult.code})` });
+  }
+  if (failures.length) {
+    const error = new AggregateError(failures.map(({ message }) => new Error(message)),
+      `Browser observation batch failed: ${failures.map(({ id }) => id).join(", ")}`);
     error.partialDocument = parsed.document;
     throw error;
   }

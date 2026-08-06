@@ -23,6 +23,8 @@
    "production storage contains an older Project revision 3 whose canonical schema has edit revision 2847 and 2847 change entries" :runtime})
 (defonce model-verified? (atom false))
 (defonce browser-observation (atom nil))
+(defonce storage-observation (atom nil))
+(defonce corpus-observation (atom nil))
 (defn- checked! [& command]
   (let [result (apply support/verified-command-result command)]
     (support/assert! (zero? (:exit result)) (:err result) {:out (:out result)})
@@ -33,12 +35,18 @@
     (checked! "node" "test/data-layer-durable-project-runtime-test.mjs")
     (reset! model-verified? true)))
 (defn- observe-browser! []
-  (or @browser-observation
-      (let [result (checked! "node" "test/browser-packs/durable-project-repository.mjs")
-            line (last (filter #(str/starts-with? % "{") (str/split-lines (:out result))))
-            observed (:durableProjectRepository (json/parse-string line true))]
-        (support/assert! observed "Durable repository browser evidence is missing." {:out (:out result)})
-        (reset! browser-observation observed))))
+  {:storage (support/cached-browser-observation!
+             storage-observation
+             {:observation-id "DURABLE_REPOSITORY_STORAGE_TARGET"
+              :observation-key :durableRepositoryStorage
+              :runtime-error "Durable repository storage browser verification failed."
+              :missing-error "Durable repository storage evidence is missing."})
+   :corpus (support/cached-browser-observation!
+            corpus-observation
+            {:observation-id "DURABLE_RENDERER_CORPUS_TARGET"
+             :observation-key :durableRendererCorpus
+             :runtime-error "Durable repository renderer browser verification failed."
+             :missing-error "Durable repository renderer evidence is missing."})})
 (def runtime-keys (set (map #(keyword (format "runtime%03d" %)) (range 1 19))))
 (def required-keys (conj runtime-keys :installedBoundary))
 (defn- all-true? [value] (boolean (and (map? value) (seq value) (every? true? (vals value)))))
@@ -48,7 +56,9 @@
                 (true? (:installedBoundary evidence))
                 (every? #(all-true? (get evidence %)) runtime-keys))))
 (defn- assert-runtime! [evidence]
-  (support/assert! (complete-browser-evidence? evidence) "Installed durable repository evidence is incomplete." evidence))
+  (support/assert! (and (= #{:storage :corpus} (set (keys evidence)))
+                        (every? all-true? (vals evidence)))
+                   "Installed durable repository evidence is incomplete." evidence))
 (def failure-example-values
   {"failure" #{"quota exceeded" "transaction aborted" "repository unavailable"}})
 (def authoritative-examples
@@ -68,5 +78,5 @@
                                           observe-browser! assert-runtime!))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-04T11:33:29.531364522+02:00", :module-hash "632681613", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line nil, :hash "-976827486"} {:id "def/feature-files", :kind "def", :line 7, :end-line nil, :hash "-314391133"} {:id "def/entry-modes", :kind "def", :line 9, :end-line nil, :hash "426928939"} {:id "form/3/defonce", :kind "defonce", :line 24, :end-line nil, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 25, :end-line nil, :hash "-1618529344"} {:id "defn-/checked!", :kind "defn-", :line 26, :end-line nil, :hash "1504155082"} {:id "defn-/verify-model!", :kind "defn-", :line 30, :end-line nil, :hash "-379187691"} {:id "defn-/observe-browser!", :kind "defn-", :line 35, :end-line nil, :hash "-980948312"} {:id "def/runtime-keys", :kind "def", :line 42, :end-line nil, :hash "575369566"} {:id "def/required-keys", :kind "def", :line 43, :end-line nil, :hash "-627843649"} {:id "defn-/all-true?", :kind "defn-", :line 44, :end-line nil, :hash "-1681869564"} {:id "defn/complete-browser-evidence?", :kind "defn", :line 45, :end-line nil, :hash "-385744476"} {:id "defn-/assert-runtime!", :kind "defn-", :line 50, :end-line nil, :hash "217878866"} {:id "def/failure-example-values", :kind "def", :line 52, :end-line nil, :hash "-644280616"} {:id "def/authoritative-examples", :kind "def", :line 54, :end-line nil, :hash "1598887325"} {:id "defn/validate-example!", :kind "defn", :line 56, :end-line nil, :hash "559851829"} {:id "def/handlers", :kind "def", :line 65, :end-line nil, :hash "2100359538"}]}
+;; {:version 1, :tested-at "2026-08-06T04:39:00.566658541+02:00", :module-hash "-181389743", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 5, :hash "-976827486"} {:id "def/feature-files", :kind "def", :line 7, :end-line 8, :hash "-314391133"} {:id "def/entry-modes", :kind "def", :line 9, :end-line 23, :hash "426928939"} {:id "form/3/defonce", :kind "defonce", :line 24, :end-line 24, :hash "344781070"} {:id "form/4/defonce", :kind "defonce", :line 25, :end-line 25, :hash "-1618529344"} {:id "form/5/defonce", :kind "defonce", :line 26, :end-line 26, :hash "329821225"} {:id "form/6/defonce", :kind "defonce", :line 27, :end-line 27, :hash "-930697338"} {:id "defn-/checked!", :kind "defn-", :line 28, :end-line 31, :hash "1504155082"} {:id "defn-/verify-model!", :kind "defn-", :line 32, :end-line 36, :hash "-379187691"} {:id "defn-/observe-browser!", :kind "defn-", :line 37, :end-line 49, :hash "-71992732"} {:id "def/runtime-keys", :kind "def", :line 50, :end-line 50, :hash "-2115802576"} {:id "def/required-keys", :kind "def", :line 51, :end-line 51, :hash "-627843649"} {:id "defn-/all-true?", :kind "defn-", :line 52, :end-line 52, :hash "-1681869564"} {:id "defn/complete-browser-evidence?", :kind "defn", :line 53, :end-line 57, :hash "1254199964"} {:id "defn-/assert-runtime!", :kind "defn-", :line 58, :end-line 61, :hash "-1123957088"} {:id "def/failure-example-values", :kind "def", :line 62, :end-line 63, :hash "-644280616"} {:id "def/authoritative-examples", :kind "def", :line 64, :end-line 65, :hash "1598887325"} {:id "defn/validate-example!", :kind "defn", :line 66, :end-line 74, :hash "463474669"} {:id "def/handlers", :kind "def", :line 75, :end-line 78, :hash "2100359538"}]}
 ;; clj-mutate-manifest-end

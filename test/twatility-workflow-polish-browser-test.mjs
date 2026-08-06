@@ -15,6 +15,11 @@ import {
   expectedStudioChoiceContracts,
 } from "./support/studio-choice-contract-oracle.mjs";
 
+if (process.env.SWARMFORGE_BROWSER_TARGET_CONFIGURATIONS) {
+  await import("./support/branding-workflow-targets.mjs");
+  process.exit(0);
+}
+
 const wait=(milliseconds)=>new Promise((resolve)=>setTimeout(resolve,milliseconds));
 const expectedSidePanelControlHashes=Object.freeze({
   dom:"d631b978338eae5c282bd0bbd4512a97a57d784728c2e606ae4bdbfd3872f8b2",

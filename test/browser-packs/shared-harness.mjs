@@ -5,7 +5,7 @@ import { createServer } from "node:http";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
-import { resolveChromeExecutable } from "../support/headless-chrome.mjs";
+import { removeChromeProfile, resolveChromeExecutable, stopHeadlessChrome } from "../support/headless-chrome.mjs";
 
 export const wait=(ms)=>new Promise((resolve)=>setTimeout(resolve,ms));
 const chromeAdapterSource=`(()=>{const calls=[];globalThis.__chromeAdapter={calls};const event=(name)=>({addListener(listener){calls.push('listen:'+name);globalThis.__chromeAdapter[name]=listener;}});globalThis.chrome={runtime:{onMessage:event('runtime.onMessage')},tabs:{async query(){calls.push('tabs.query');return [{id:7,windowId:1,active:true,title:'Fixture tab',url:'https://example.test/checkout'}];},async get(id){calls.push('tabs.get:'+id);return {id,windowId:1,title:'Fixture tab',url:'https://example.test/checkout'};},onUpdated:event('tabs.onUpdated'),onRemoved:event('tabs.onRemoved')},permissions:{async contains(){calls.push('permissions.contains');return true;},async request(){calls.push('permissions.request');return true;},onRemoved:event('permissions.onRemoved')},windows:{async getCurrent(){calls.push('windows.getCurrent');return {id:1};}},scripting:{async executeScript(){calls.push('scripting.executeScript');return [{result:{success:true,result:'pushed'}}];}}};})()`;
@@ -74,7 +74,7 @@ export async function runRenderedWorkflow(id,workflow,options={}){
     const accessibility=await socket.call("Runtime.evaluate",{expression:accessibilityAssertionExpression,returnByValue:true});assert.equal(accessibility.result.value?.passed,true,`${id} accessibility outcomes failed: ${JSON.stringify(accessibility.result.value)}`);
     console.log(`${id} rendered browser workflow passed`);
     return result.result.value;
-  }finally{socket?.close();const exited=new Promise((resolve)=>chrome.once("exit",resolve));chrome.kill();await Promise.race([exited,wait(3000)]);await new Promise((resolve)=>server.close(resolve));await rm(profile,{recursive:true,force:true,maxRetries:5,retryDelay:100});}
+  }finally{socket?.close();await stopHeadlessChrome(chrome,3000);await new Promise((resolve)=>server.close(resolve));await removeChromeProfile(profile,{targetId:`${id}-shared-harness`});}
 }
 
 export const workflowPreamble=`const q=(selector)=>{const element=document.querySelector(selector);if(!element)throw new Error('Missing '+selector);return element;};const visible=(element)=>element.getClientRects().length>0;`;

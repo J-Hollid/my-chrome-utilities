@@ -15,6 +15,11 @@ import {typedLiteralFocusedEditorExpression} from "../support/typed-literal-focu
 import {runProfileInheritanceControlsRuntimeProbe} from "../support/profile-inheritance-controls-runtime-probe.mjs";
 import {runJournalFreeInstalledRuntimeProbe} from "../support/journal-free-installed-runtime-probe.mjs";
 
+if (process.env.SWARMFORGE_BROWSER_TARGET_CONFIGURATIONS) {
+  await import("../support/layered-schema-targets.mjs");
+  process.exit(0);
+}
+
 const callContainmentProbe=(evaluate,socket,fn,input)=>evaluate(socket,`(${fn})(${JSON.stringify(input)})`);
 
 async function seedPageTableContainment(){

@@ -6,6 +6,7 @@ import os from "node:os";
 import path from "node:path";
 import {
   headlessChromeArguments,
+  removeChromeProfile,
   resolveChromeExecutable,
   stopHeadlessChrome,
 } from "./support/headless-chrome.mjs";
@@ -512,12 +513,7 @@ try {
 } finally {
   side?.close();
   await stopHeadlessChrome(chrome, 1500);
-  await rm(profile, {
-    recursive: true,
-    force: true,
-    maxRetries: 5,
-    retryDelay: 100,
-  });
+  await removeChromeProfile(profile, { targetId:"twatility-side-panel-shell" });
 }
 
 console.log("TWAtility Belt packaged side-panel shell browser test passed");

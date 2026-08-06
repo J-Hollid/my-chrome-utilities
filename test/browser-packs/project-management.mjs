@@ -4,7 +4,7 @@ import {mkdtemp,rm} from "node:fs/promises";
 import net from "node:net";
 import os from "node:os";
 import path from "node:path";
-import {headlessChromeArguments,resolveChromeExecutable,stopHeadlessChrome} from "../support/headless-chrome.mjs";
+import {headlessChromeArguments,removeChromeProfile,resolveChromeExecutable,stopHeadlessChrome} from "../support/headless-chrome.mjs";
 import {wait} from "./shared-harness.mjs";
 
 class DevtoolsSocket{
@@ -141,4 +141,4 @@ try{
   const evidence={installedBoundary:true,context001,context002,context003:durableCommands.context003,context004:durableCommands.context004,context005:durableCommands.context005,context006:context006&&noActive,context007,context008,context009,context010,context019,context020,context022,context023,context024,context025,context026,context027,...portability};
   console.log(JSON.stringify({projectManagement:evidence}));
   for(const [key,value] of Object.entries(evidence))assert.equal(value,true,`${key} failed: ${JSON.stringify(evidence)}`);
-}finally{side?.close();studio?.close();await stopHeadlessChrome(chrome);await rm(profile,{recursive:true,force:true,maxRetries:5,retryDelay:100});}
+}finally{side?.close();studio?.close();await stopHeadlessChrome(chrome);await removeChromeProfile(profile,{targetId:"project-management"});}

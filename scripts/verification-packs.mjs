@@ -984,9 +984,6 @@ export function planVerification(
       key:`browser:${path}`, stage:"browser", packId:pack.id, executable:"node", args:[path], target:path,
     })));
 
-  const acceptancePacks = browserTargetIds.length ? [] : executionPacks.filter((pack) => values(pack, "features").length);
-  const features = acceptancePacks.flatMap((pack) => values(pack, "features")).sort();
-  const acceptance = featureTasks(features, acceptancePacks);
   const executionIds = new Set(executionPacks.map(({ id }) => id));
   const selectedObservations = packs.flatMap((declarationPack) => {
     if (!executionIds.has(declarationPack.id)) return [];
@@ -1000,12 +997,24 @@ export function planVerification(
     const selected = browserTargetIds.length
       ? observations.filter(({ id }) => browserTargetIds.includes(id))
       : boundaryTargets.length ? boundaryTargets : observations;
-    return selected.map((observation) => ({ declarationPack, observation }));
+    return selected.map((observation) => ({
+      declarationPack, observation, boundaryScoped:boundaryTargets.length > 0,
+    }));
   });
   const selectedTargetIds = new Set(selectedObservations.map(({ observation }) => observation.id));
   for (const id of browserTargetIds) {
     if (!selectedTargetIds.has(id)) throw new Error(`Unknown browser target in selected pack: ${id}`);
   }
+  const acceptancePacks = browserTargetIds.length ? [] : executionPacks
+    .filter((pack) => values(pack, "features").length);
+  const features = acceptancePacks.flatMap((pack) => {
+    const selectedForPack = selectedObservations.filter(({ declarationPack }) =>
+      declarationPack.id === pack.id);
+    if (!selectedForPack.some(({ boundaryScoped }) => boundaryScoped)) return values(pack, "features");
+    const owned = new Set(selectedForPack.flatMap(({ observation }) => observation.features ?? []));
+    return values(pack, "features").filter((feature) => owned.has(feature));
+  }).sort();
+  const acceptance = featureTasks(features, acceptancePacks);
   const observationGroups = new Map();
   for (const item of selectedObservations) {
     const { declarationPack, observation } = item;
@@ -1023,7 +1032,10 @@ export function planVerification(
       key:`browser-observation:${ids.join("+")}`, stage:"browser-observation",
       packId:group[0].declarationPack.id, executable:"node",
       args:["scripts/run-browser-observation.mjs", ...ids], target:ids.join(","), environment,
-      logicalTargetIds:ids, aliasCommands:[["node", group[0].observation.path]],
+      logicalTargetIds:ids, aliasCommands:[
+        ["node", group[0].observation.path],
+        ...ids.map((id) => ["node", "scripts/run-browser-observation.mjs", id]),
+      ],
     });
   });
   const mode = browserTargetIds.length ? "focused" : terminalFull ? "terminal" : explicit.size ? "exact" : "impact";
@@ -1115,7 +1127,7 @@ function legacyTasks(commands, stage) {
 
 export async function executeAcceptancePlan(
   plan,
-  { runCommand, concurrency = 4, observationConcurrency = 2 } = {},
+  { runCommand, concurrency = 4, observationConcurrency = 2, afterPreparation } = {},
 ) {
   if (typeof runCommand !== "function") throw new Error("Provide an acceptance command runner");
   if (!plan.unitCommands && !plan.parserCommands) {
@@ -1125,6 +1137,7 @@ export async function executeAcceptancePlan(
   }
   const group = (taskKey, commandKey, stage) => plan[taskKey] ?? legacyTasks(plan[commandKey], stage);
   for (const task of group("preparationTasks", "preparationCommands", "build")) await invoke(task, runCommand);
+  if (afterPreparation) await afterPreparation();
   await runBounded(group("unitTasks", "unitCommands", "unit"), concurrency, runCommand);
   await runBounded(group("propertyTasks", "propertyCommands", "property"), concurrency, runCommand);
 

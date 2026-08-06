@@ -10,6 +10,11 @@ import {serializeCanonicalProjectState} from "../../dist/data-layer-specificatio
 import {headlessChromeArguments,removeChromeProfile,resolveChromeExecutable,stopHeadlessChrome} from "../support/headless-chrome.mjs";
 import {wait} from "./shared-harness.mjs";
 
+if (process.env.SWARMFORGE_BROWSER_TARGET_CONFIGURATIONS) {
+  await import("../support/durable-project-targets.mjs");
+  process.exit(0);
+}
+
 class Socket{
   constructor(url){this.url=new URL(url);this.id=0;this.pending=new Map();this.buffer=Buffer.alloc(0);}
   async connect(){await new Promise((resolve,reject)=>{this.socket=net.createConnection({host:this.url.hostname,port:Number(this.url.port)});this.socket.once("error",reject);this.socket.once("connect",()=>{const key=Buffer.from(String(Math.random())).toString("base64");this.socket.write([`GET ${this.url.pathname}${this.url.search} HTTP/1.1`,`Host: ${this.url.host}`,"Upgrade: websocket","Connection: Upgrade",`Sec-WebSocket-Key: ${key}`,"Sec-WebSocket-Version: 13","\r\n"].join("\r\n"));});let header="";const receive=chunk=>{header+=chunk.toString("binary");const end=header.indexOf("\r\n\r\n");if(end<0)return;this.socket.off("data",receive);if(!header.startsWith("HTTP/1.1 101"))return reject(new Error("CDP upgrade failed"));this.socket.on("data",data=>this.receive(data));const rest=Buffer.from(header.slice(end+4),"binary");if(rest.length)this.receive(rest);resolve();};this.socket.on("data",receive);});}

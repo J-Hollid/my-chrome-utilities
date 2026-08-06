@@ -11,6 +11,11 @@ import {serializeCanonicalProjectState} from "../../dist/data-layer-specificatio
 import {headlessChromeArguments,removeChromeProfile,resolveChromeExecutable,stopHeadlessChrome} from "../support/headless-chrome.mjs";
 import {wait} from "./shared-harness.mjs";
 
+if (process.env.SWARMFORGE_BROWSER_TARGET_CONFIGURATIONS) {
+  await import("../support/durable-project-targets.mjs");
+  process.exit(0);
+}
+
 const phase=(name,state="start")=>console.error(`[renderer-target] ${name} ${state}`);
 class Socket{
   constructor(url){this.url=new URL(url);this.id=0;this.pending=new Map();this.buffer=Buffer.alloc(0);}

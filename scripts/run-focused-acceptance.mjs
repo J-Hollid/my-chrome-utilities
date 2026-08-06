@@ -323,8 +323,12 @@ export function createVerificationCommandRunner(context) {
       ].includes(name));
     if (reservedEnvironment) throw new Error(`Verification task cannot override reserved environment: ${reservedEnvironment}`);
     const identity = verificationTaskIdentity(task);
+    const executionArgs = task.executionArgs ?? task.args;
+    const executionDisplay = task.executionArgs
+      ? [task.executable, ...executionArgs].join(" ")
+      : display;
     const started = Date.now();
-    console.error(`[verify:start] ${display}`);
+    console.error(`[verify:start] ${executionDisplay}`);
     // Keep the portable logical task identity (`node`) in receipts, but execute
     // every Node leaf with the already strict-validated parent runtime instead
     // of resolving a second, potentially different Node through PATH.
@@ -332,7 +336,7 @@ export function createVerificationCommandRunner(context) {
     const browserOutputDirectory = ["browser", "browser-observation"].includes(task.stage)
       ? path.join(context.runDirectory, task.key.replaceAll(/[^A-Za-z0-9._-]/gu, "_"))
       : undefined;
-    const child = spawn(executable, task.args, {
+    const child = spawn(executable, executionArgs, {
       cwd:repositoryRoot,
       shell:false,
       stdio:["inherit", "pipe", "pipe"],
@@ -393,24 +397,47 @@ export function createVerificationCommandRunner(context) {
     untrackChild();
     clearTimeout(timeout);
     clearTimeout(killTimer);
-    const durationMs = Date.now() - started;
-    const out = Buffer.concat(output).toString();
-    const err = Buffer.concat(stderr).toString();
-    const passed = !termination && !result.spawnError && result.code === 0;
+    const freshDurationMs = Date.now() - started;
+    const freshOut = Buffer.concat(output).toString();
+    const freshErr = Buffer.concat(stderr).toString();
+    const priorTask = task.priorReceiptTask;
+    const out = `${priorTask?.output ?? ""}${freshOut}`;
+    const err = `${priorTask?.stderr ?? ""}${freshErr}`;
+    const parseLogicalResults = (source, ids) => {
+      const values = Object.fromEntries(ids.map((id) => [id, {}]));
+      for (const line of source.split(/\r?\n/u)) {
+        try {
+          const record = JSON.parse(line);
+          const resultRecord = record.swarmforgeBrowserTargetResult;
+          const timingRecord = record.swarmforgeBrowserTargetTiming;
+          if (resultRecord && resultRecord.id in values) Object.assign(values[resultRecord.id], resultRecord);
+          if (timingRecord && timingRecord.id in values) values[timingRecord.id].durationMs = timingRecord.durationMs;
+        } catch { /* ordinary task output is not a logical browser result */ }
+      }
+      return values;
+    };
+    const logicalResults = task.logicalTargetIds
+      ? parseLogicalResults(out, task.logicalTargetIds)
+      : undefined;
+    const logicalPassed = !logicalResults || Object.values(logicalResults)
+      .every(({ status, durationMs }) => status === "passed" && Number.isFinite(durationMs));
+    const passed = !termination && !result.spawnError && result.code === 0 && logicalPassed;
     const failure = termination ?? result.spawnError?.message ??
-      `Verification command failed (${result.signal ?? result.code}): ${display}`;
+      (!logicalPassed ? `Browser target result incomplete or failed: ${display}`
+        : `Verification command failed (${result.signal ?? result.code}): ${display}`);
     context.receipt.tasks[task.key] = {
       identity,
       status:passed ? "passed" : "failed",
-      provenance:"fresh",
-      durationMs,
+      provenance:priorTask ? "mixed" : "fresh",
+      durationMs:(priorTask?.durationMs ?? 0) + freshDurationMs,
       output:out,
       stderr:err,
+      ...(logicalResults ? { logicalResults } : {}),
       ...(passed ? {} : { exitCode:result.code, signal:result.signal, error:failure }),
     };
     await context.write();
     if (passed) {
-      console.error(`[verify:pass ${(durationMs / 1000).toFixed(1)}s] ${display}`);
+      console.error(`[verify:pass ${(freshDurationMs / 1000).toFixed(1)}s] ${executionDisplay}`);
       return { out };
     }
     throw new Error(failure);
@@ -425,13 +452,29 @@ export function resumeVerificationPlan(plan, priorReceipt, resumeIdentity) {
   const reusable = priorReceipt?.version === 2 &&
     sameIdentity(priorReceipt.resumeIdentity, resumeIdentity);
   const reusedTasks = {};
-  const tasks = reusable ? plan.tasks.filter((task) => {
-    const prior = priorReceipt.tasks?.[task.key];
-    if (prior?.status !== "passed" ||
-        !sameIdentity(prior.identity, verificationTaskIdentity(task))) return true;
-    reusedTasks[task.key] = { ...prior, provenance:"reused" };
-    return false;
-  }) : [...plan.tasks];
+  const tasks = [];
+  for (const task of plan.tasks) {
+    const prior = reusable ? priorReceipt.tasks?.[task.key] : undefined;
+    if (prior?.status === "passed" &&
+        sameIdentity(prior.identity, verificationTaskIdentity(task))) {
+      reusedTasks[task.key] = { ...prior, provenance:"reused" };
+      continue;
+    }
+    if (prior && sameIdentity(prior.identity, verificationTaskIdentity(task)) &&
+        task.stage === "browser-observation" && task.logicalTargetIds?.length > 1) {
+      const remaining = task.logicalTargetIds.filter((id) =>
+        prior.logicalResults?.[id]?.status !== "passed");
+      if (remaining.length && remaining.length < task.logicalTargetIds.length) {
+        tasks.push({
+          ...task,
+          executionArgs:["scripts/run-browser-observation.mjs", ...remaining],
+          priorReceiptTask:prior,
+        });
+        continue;
+      }
+    }
+    tasks.push(task);
+  }
   const selectedKeys = new Set(tasks.map(({ key }) => key));
   const filtered = Object.fromEntries(Object.entries(plan)
     .filter(([key, value]) => key.endsWith("Tasks") && Array.isArray(value))
@@ -443,15 +486,36 @@ export function verificationResumeIdentity(plan, receiptContext, artifact) {
   return {
     commit:plan.changeSet?.commit ?? null,
     artifactInputDigest:artifact?.inputDigest ?? artifact?.digest ?? null,
+    artifactOutputDigest:artifact?.outputDigest ?? null,
+    artifactBuildIdentity:artifact?.buildIdentity ?? null,
     planDigest:verificationDigest(plan.tasks.map(verificationTaskIdentity)),
     toolchainDigest:verificationDigest(receiptContext.receipt.environment),
   };
+}
+
+export async function validateCurrentArtifactForConsumers({
+  root = repositoryRoot,
+  artifactValidator = ({ root:artifactRoot }) => assertFreshDist({ root:artifactRoot }),
+} = {}) {
+  const artifact = await artifactValidator({ root });
+  for (const [field, pattern] of [
+    ["inputDigest", /^[a-f0-9]{64}$/u],
+    ["outputDigest", /^[a-f0-9]{64}$/u],
+    ["buildIdentity", /^[a-f0-9]{64}$/u],
+  ]) {
+    if (!pattern.test(artifact?.[field] ?? "")) {
+      throw new Error(`Current dist artifact has an invalid ${field}`);
+    }
+  }
+  return artifact;
 }
 
 export async function checkpointPreflight({
   packs,
   plan,
   receiptContext,
+  inputFingerprint,
+  evidenceTask,
   validators = {},
 }) {
   const defaults = {
@@ -461,11 +525,28 @@ export async function checkpointPreflight({
           new Set(plan.tasks.map(({ key }) => key)).size !== plan.tasks.length) {
         throw new Error("Checkpoint preflight requires one canonical version 2 plan");
       }
+      const staged = Object.entries(plan)
+        .filter(([key, value]) => key.endsWith("Tasks") && key !== "tasks" && Array.isArray(value))
+        .flatMap(([, value]) => value);
+      const stagedByKey = new Map(staged.map((task) => [task.key, task]));
+      if (staged.length !== plan.tasks.length ||
+          stagedByKey.size !== staged.length ||
+          !plan.tasks.every((task) => stagedByKey.has(task.key) &&
+            sameIdentity(verificationTaskIdentity(task),
+              verificationTaskIdentity(stagedByKey.get(task.key))))) {
+        throw new Error("Checkpoint preflight canonical plan stages do not match its task identities");
+      }
     },
     receipt:async() => {
       if (receiptContext?.receipt?.version !== 2 || !receiptContext.receiptPath ||
           !receiptContext.receipt.tasks || Array.isArray(receiptContext.receipt.tasks)) {
         throw new Error("Checkpoint preflight requires a writable version 2 receipt contract");
+      }
+      await receiptContext.write();
+      const recorded = JSON.parse(await readFile(receiptContext.receiptPath, "utf8"));
+      if (recorded.version !== 2 || !recorded.environment || !recorded.plan ||
+          !recorded.tasks || Array.isArray(recorded.tasks)) {
+        throw new Error("Checkpoint preflight receipt schema is not recordable");
       }
     },
     artifact:async() => {
@@ -476,11 +557,18 @@ export async function checkpointPreflight({
       if (plan.skipBuild && buildTasks.length) {
         throw new Error("Checkpoint preflight cannot build a prepared artifact");
       }
+      if (!/^[a-f0-9]{64}$/u.test(inputFingerprint?.inputDigest ?? inputFingerprint?.digest ?? "")) {
+        throw new Error("Checkpoint preflight requires the current artifact input identity");
+      }
     },
     evidence:async() => {
       environmentInteger("VERIFICATION_RECEIPT_OUTPUT_LIMIT_BYTES", defaultOutputLimitBytes, {
         maximum:maximumOutputLimitBytes,
       });
+      if (evidenceTask && (plan.mode !== "exact" || !plan.includeProperties ||
+          !plan.changeSet || !plan.baseCommit || !plan.claimPackIds?.length)) {
+        throw new Error("Checkpoint preflight requires an exact canonical evidence plan");
+      }
     },
   };
   for (const name of ["registry", "plan", "receipt", "artifact", "evidence"]) {
@@ -526,6 +614,7 @@ export async function runFocusedAcceptance(
   const concurrency = environmentInteger("VERIFICATION_CONCURRENCY", 4, { maximum:64 });
   const observationConcurrency = environmentInteger("VERIFICATION_OBSERVATION_CONCURRENCY", 2, { maximum:4 });
   const context = createVerificationReceiptContext(concurrency, observationConcurrency);
+  const inputFingerprint = await createDistInputFingerprint({ root:repositoryRoot });
   context.receipt.plan = {
     mode:plan.mode,
     requestedPackIds:[...plan.requestedPackIds].sort(),
@@ -535,20 +624,17 @@ export async function runFocusedAcceptance(
     changeSetDigest:plan.changeSet ? verificationDigest(plan.changeSet) : null,
     conservativeHistoricalFallbackReason:plan.conservativeHistoricalFallbackReason,
   };
-  if (evidenceTask) {
-    const inputFingerprint = await createDistInputFingerprint({ root:repositoryRoot });
-    context.receipt.resumeIdentity = verificationResumeIdentity(plan, context, inputFingerprint);
-  }
   const runner = commandRunner ?? createVerificationCommandRunner(context);
   let buildManifest;
-  if (options.skipBuild) buildManifest = await artifactValidator({ root:repositoryRoot });
+  if (options.skipBuild) buildManifest = await validateCurrentArtifactForConsumers({
+    root:repositoryRoot, artifactValidator,
+  });
   if (!commandRunner) {
     await context.write();
     console.error(`[verify:receipt] ${path.relative(repositoryRoot, context.receiptPath)}`);
   }
   await checkpointPreflight({
-    packs, plan, receiptContext:context,
-    validators:{ registry:async() => {} },
+    packs, plan, receiptContext:context, inputFingerprint, evidenceTask,
   });
   let executionPlan = plan;
   if (resumeReceiptPath) {
@@ -559,7 +645,17 @@ export async function runFocusedAcceptance(
       console.error(`[verify:resume-rejected] ${error.message}`);
     }
     if (priorReceipt) {
-      const resumeIdentity = context.receipt.resumeIdentity;
+      try {
+        buildManifest = await validateCurrentArtifactForConsumers({
+          root:repositoryRoot, artifactValidator,
+        });
+      } catch (error) {
+        priorReceipt = undefined;
+        console.error(`[verify:resume-rejected] current artifact is missing, stale, or tampered: ${error.message}`);
+      }
+    }
+    if (priorReceipt) {
+      const resumeIdentity = verificationResumeIdentity(plan, context, buildManifest);
       executionPlan = resumeVerificationPlan(plan, priorReceipt, resumeIdentity);
       context.receipt.resumeIdentity = resumeIdentity;
       Object.assign(context.receipt.tasks, executionPlan.reusedTasks);
@@ -570,9 +666,22 @@ export async function runFocusedAcceptance(
     }
   }
   console.error(`[verify:plan] ${plan.packIds.length} pack(s), ${plan.tasks.length} task(s), concurrency ${concurrency}, observation concurrency ${observationConcurrency}`);
-  await executeAcceptancePlan(executionPlan, { runCommand:runner, concurrency, observationConcurrency });
+  await executeAcceptancePlan(executionPlan, {
+    runCommand:runner, concurrency, observationConcurrency,
+    afterPreparation:async() => {
+      buildManifest = await validateCurrentArtifactForConsumers({
+        root:repositoryRoot, artifactValidator,
+      });
+      if (evidenceTask) {
+        context.receipt.resumeIdentity = verificationResumeIdentity(plan, context, buildManifest);
+        await context.write();
+      }
+    },
+  });
   if (!commandRunner) {
-    buildManifest = buildManifest ?? await artifactValidator({ root:repositoryRoot });
+    buildManifest = buildManifest ?? await validateCurrentArtifactForConsumers({
+      root:repositoryRoot, artifactValidator,
+    });
     context.receipt.completedAt = new Date().toISOString();
     context.receipt.artifact = {
       schemaVersion:buildManifest.schemaVersion,

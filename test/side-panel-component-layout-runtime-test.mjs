@@ -6,7 +6,7 @@ import net from "node:net";
 import os from "node:os";
 import path from "node:path";
 import Ajv2020 from "ajv/dist/2020.js";
-import { headlessChromeArguments, resolveChromeExecutable, stopHeadlessChrome } from "./support/headless-chrome.mjs";
+import { headlessChromeArguments, removeChromeProfile, resolveChromeExecutable, stopHeadlessChrome } from "./support/headless-chrome.mjs";
 
 const schemaWorkspaceAdapterObservations = [];
 let guidedValidationObservation;
@@ -7730,5 +7730,7 @@ try {
 } finally {
   await stopHeadlessChrome(chrome);
   await new Promise((resolve) => assetServer.close(resolve));
-  await rm(chromeProfile, { recursive:true, force:true, maxRetries:5, retryDelay:50 });
+  await removeChromeProfile(chromeProfile, {
+    targetId:process.env.SWARMFORGE_BROWSER_TARGET_IDS ?? "side-panel-component-layout",
+  });
 }

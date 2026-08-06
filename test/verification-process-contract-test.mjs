@@ -8,6 +8,10 @@ import { pathToFileURL } from "node:url";
 import ts from "typescript";
 
 import { acquireDistArtifactLock, withDistArtifactLock } from "../scripts/dist-artifact-lock.mjs";
+import {
+  selectedBrowserTargetConfigurations,
+  summarizeBrowserTargetResults,
+} from "./support/browser-target-session.mjs";
 import { canonicalVerificationChangeSet } from "../scripts/verification-changes.mjs";
 import {
   browserTargetConfigurations,
@@ -30,6 +34,7 @@ import {
   createVerificationReceiptContext,
   focusedAcceptanceOptions,
   resumeVerificationPlan,
+  validateCurrentArtifactForConsumers,
   validateExplicitChangedPaths,
   verificationResumeIdentity,
 } from "../scripts/run-focused-acceptance.mjs";
@@ -228,7 +233,9 @@ assert.deepEqual(verificationTaskIdentity(exactObservationPlan.observationTasks[
   ["BROWSER_FIRST", "BROWSER_SECOND"],
   "receipt evidence retains every logical target inside a shared session task");
 assert.deepEqual(verificationTaskIdentity(exactObservationPlan.observationTasks[0]).aliasCommands,
-  [["node", "test/browser.mjs"]],
+  [["node", "test/browser.mjs"],
+    ["node", "scripts/run-browser-observation.mjs", "BROWSER_FIRST"],
+    ["node", "scripts/run-browser-observation.mjs", "BROWSER_SECOND"]],
   "strict acceptance can resolve the historical adapter command to its passed batch receipt");
 const boundedBrowserPacks = [pack("browser", {
   source:["src/browser/core.ts", "src/browser/editor.ts"],
@@ -264,6 +271,23 @@ assert.deepEqual(browserTargetConfigurations(focusedObservationPacks[0].browserO
   BROWSER_FIRST:{ BROWSER_FIRST:"1" },
   BROWSER_SECOND:{ BROWSER_SECOND:"1" },
 }, "a shared observation process receives each logical target's isolated environment");
+const selectedTargetConfigurations = selectedBrowserTargetConfigurations({
+  SWARMFORGE_BROWSER_TARGET_IDS:JSON.stringify(["BROWSER_FIRST"]),
+  SWARMFORGE_BROWSER_TARGET_CONFIGURATIONS:JSON.stringify({
+    BROWSER_FIRST:{ BROWSER_FIRST:"1" },
+  }),
+}, ["BROWSER_FIRST", "BROWSER_SECOND"]);
+assert.deepEqual(selectedTargetConfigurations, [{
+  id:"BROWSER_FIRST", environment:{ BROWSER_FIRST:"1" },
+}], "a focused public target excludes the adapter's unrelated behavior target");
+assert.deepEqual(summarizeBrowserTargetResults([
+  { id:"BROWSER_FIRST", status:"passed", durationMs:3, observation:{ first:true } },
+  { id:"BROWSER_SECOND", status:"failed", durationMs:4, error:"sentinel failure" },
+]), {
+  document:{ first:true },
+  results:{ BROWSER_FIRST:{ status:"passed", durationMs:3 },
+    BROWSER_SECOND:{ status:"failed", durationMs:4, error:"sentinel failure" } },
+}, "one failed target retains an independent target's result and real timing");
 const browserBatchMatches = focusedObservationPacks[0].browserObservations.map((observation) => ({
   packId:"browser", observation,
 }));
@@ -297,14 +321,21 @@ assert.throws(() => validateBrowserPerformanceDeclarations([
     }],
   }),
 ]), /Split slow browser adapter.*independently selectable targets.*reusable session batch/u);
-const completedTimingOutput = completeBrowserObservationOutput(
+assert.throws(() => completeBrowserObservationOutput(
   '{"first":true}\n{"swarmforgeBrowserTargetTiming":{"id":"BROWSER_FIRST","durationMs":3}}\n',
+  focusedObservationPacks[0].browserObservations,
+  7,
+), /BROWSER_SECOND.*own timing/u,
+"the browser runner rejects a batch that omits a logical target timing instead of assigning aggregate process time");
+const completedTimingOutput = completeBrowserObservationOutput(
+  '{"first":true}\n' +
+  '{"swarmforgeBrowserTargetTiming":{"id":"BROWSER_FIRST","durationMs":3}}\n' +
+  '{"swarmforgeBrowserTargetTiming":{"id":"BROWSER_SECOND","durationMs":4}}\n',
   focusedObservationPacks[0].browserObservations,
   7,
 );
 assert.equal(completedTimingOutput.match(/swarmforgeBrowserTargetTiming/gu)?.length, 2,
-  "the browser runner preserves emitted timings and supplies each missing logical target timing");
-assert.match(completedTimingOutput, /BROWSER_SECOND.*7/u);
+  "the browser runner preserves one adapter-emitted timing per logical target");
 assert.doesNotThrow(() => validateBrowserPerformanceDeclarations([
   {
     ...focusedObservationPacks[0],
@@ -679,6 +710,16 @@ assert.deepEqual(planVerification(packs, {
   changedPaths:["test/support/headless-chrome.mjs"],
 }).packIds, browserPackIds,
 "the shared headless Chrome harness selects every browser pack without semantic dependant expansion");
+const registeredBrowserPrograms = new Set(packs.flatMap((pack) => [
+  ...(pack.browserAdapters ?? []),
+  ...(pack.browserObservations ?? []).map(({ path:programPath }) => programPath),
+]));
+for (const programPath of registeredBrowserPrograms) {
+  const source = await readFile(new URL(`../${programPath}`, import.meta.url), "utf8");
+  assert.doesNotMatch(source,
+    /\b(?:rm|rmSync)\([^\n]*(?:profile|userData|user-data|chromeProfile)/u,
+    `${programPath} must route profile cleanup through the bounded shared helper`);
+}
 const realRegistryBoundary = planVerification(packs, {
   packIds:runnableProductionPackIds, changedPaths:realRegistryChange.paths,
   changeSet:realRegistryChange, basePacks:packs,
@@ -1090,13 +1131,21 @@ assert.deepEqual(canonicalEditorPlan.observationTasks
   .filter(({ packId }) => packId === "layered_schema")
   .flatMap(({ logicalTargetIds }) => logicalTargetIds), ["LAYERED_SCHEMA_EDITOR_TARGET"],
 "canonical schema editor changes schedule only their split browser target");
+assert.deepEqual(canonicalEditorPlan.features,
+  ["features/data-layer-canonical-shared-profile-schema-authoring.feature"],
+  "a layered boundary plan parses only the feature owned by its selected logical observation");
+assert.equal(canonicalEditorPlan.sessionTasks.length, 1,
+  "a layered boundary plan retains one acceptance session for its selected feature");
+assert.equal(canonicalEditorPlan.sessionTasks[0].target,
+  "features/data-layer-canonical-shared-profile-schema-authoring.feature",
+  "the boundary acceptance receipt cannot be used as proof for unrelated layered features");
 assert.equal(canonicalEditorPlan.browserTasks.some(({ target }) =>
   target === "test/browser-packs/layered-schema.mjs"), false,
 "focused boundary planning never schedules the monolithic layered-schema adapter");
 const terminalLayeredPlan = planVerification(packs, { terminalFull:true });
 assert.deepEqual(terminalLayeredPlan.observationTasks
   .filter(({ packId }) => packId === "layered_schema")
-  .flatMap(({ logicalTargetIds }) => logicalTargetIds), [
+  .flatMap(({ logicalTargetIds }) => logicalTargetIds).sort(), [
   "LAYERED_SCHEMA_COMPOSITION_TARGET",
   "LAYERED_SCHEMA_CORE_TARGET",
   "LAYERED_SCHEMA_EDITOR_TARGET",
@@ -1281,9 +1330,12 @@ const reportReceipt = {
   tasks:Object.fromEntries(shellPlan.tasks.map((task, index) => [task.key, {
     identity:verificationTaskIdentity(task), status:"passed", durationMs:index + 1,
     output:task.stage === "browser-observation"
-      ? task.logicalTargetIds.map((id, targetIndex) => JSON.stringify({
-        swarmforgeBrowserTargetTiming:{ id, durationMs:700 + targetIndex * 100 },
-      })).join("\n")
+      ? task.logicalTargetIds.flatMap((id, targetIndex) => [
+        JSON.stringify({ swarmforgeBrowserTargetResult:{ id, status:"passed" } }),
+        JSON.stringify({
+          swarmforgeBrowserTargetTiming:{ id, durationMs:700 + targetIndex * 100 },
+        }),
+      ]).join("\n")
       : "ok\n",
   }])),
 };
@@ -1321,6 +1373,17 @@ assert.equal(timingModel.ledger.selections[0].selectedPackIds.includes("shell"),
 assert.equal(timingModel.browserTargets.SCHEMA_VIEW_CONTAINMENT_BROWSER_ADAPTER.p90Ms, 700);
 assert.equal(timingModel.browserTargets.WORKSPACE_PANEL_CONTAINMENT_BROWSER_ADAPTER.p90Ms, 800,
   "batched receipts retain independent logical-target measurements");
+const legacyAggregateReceipt = structuredClone(reportReceipt);
+for (const result of Object.values(legacyAggregateReceipt.tasks)) {
+  if (result.identity.stage === "browser-observation") {
+    result.output = result.output.split("\n")
+      .filter((line) => !line.includes("swarmforgeBrowserTargetResult"))
+      .join("\n");
+  }
+}
+const legacyAggregateModel = measuredTimingModel([legacyAggregateReceipt], reportBaseline);
+assert.deepEqual(legacyAggregateModel.browserTargets, {},
+  "legacy aggregate timing markers without target pass results cannot contaminate target budgets");
 const throughput = reportVerificationThroughput({
   packs, baseline:reportBaseline,
   receipts:[reportReceipt, contaminatedReceipt, forgedIdentityReceipt, oldVersionReceipt,
@@ -1430,6 +1493,23 @@ await assert.rejects(() => checkpointPreflight({
 }), /receipt recording limit incompatible/u);
 assert.equal(preflightLeafStarted, false,
   "a preflight failure stops before later validation or verification leaves start");
+const artifactGateStages = [];
+await assert.rejects(() => executeAcceptancePlan(preflightPlan, {
+  runCommand:async(_display, task) => artifactGateStages.push(task.stage),
+  afterPreparation:async() => { throw new Error("dist output digest mismatch"); },
+}), /dist output digest mismatch/u);
+assert.deepEqual(artifactGateStages, ["build"],
+  "the actual built artifact is validated after preparation and before the first verification leaf");
+await assert.rejects(() => validateCurrentArtifactForConsumers({
+  artifactValidator:async() => { throw new Error("dist manifest is missing"); },
+}), /dist manifest is missing/u,
+"a missing dist rejects resume before a reused consumer can run");
+await assert.rejects(() => validateCurrentArtifactForConsumers({
+  artifactValidator:async() => ({
+    inputDigest:"a".repeat(64), outputDigest:"tampered", buildIdentity:"b".repeat(64),
+  }),
+}), /invalid outputDigest/u,
+"a tampered dist identity rejects resume before a reused consumer can run");
 
 const resumableTasks = preflightPlan.tasks.slice(0, 3);
 const resumablePlan = { ...preflightPlan, tasks:resumableTasks };
@@ -1457,6 +1537,42 @@ const rejectedResume = resumeVerificationPlan(resumablePlan, priorReceipt,
   { ...resumeIdentity, commit:"e".repeat(40) });
 assert.deepEqual(rejectedResume.tasks.map(({ key }) => key), resumableTasks.map(({ key }) => key),
   "a mismatched resume identity reruns every checkpoint task");
+for (const [field, value] of [
+  ["artifactInputDigest", "e".repeat(64)],
+  ["planDigest", "f".repeat(64)],
+  ["toolchainDigest", "0".repeat(64)],
+]) {
+  const mismatch = resumeVerificationPlan(resumablePlan, priorReceipt,
+    { ...resumeIdentity, [field]:value });
+  assert.deepEqual(mismatch.tasks.map(({ key }) => key), resumableTasks.map(({ key }) => key),
+    `a ${field} mismatch rejects every prior task before a consumer can run`);
+}
+const observationTask = exactObservationPlan.observationTasks[0];
+const partialObservationPlan = {
+  ...exactObservationPlan,
+  tasks:[observationTask], observationTasks:[observationTask], preparationTasks:[],
+};
+const partialObservationReceipt = {
+  version:2, resumeIdentity, tasks:{
+    [observationTask.key]:{
+      identity:verificationTaskIdentity(observationTask), status:"failed", durationMs:9,
+      output:"first partial output\n", stderr:"",
+      logicalResults:{
+        BROWSER_FIRST:{ id:"BROWSER_FIRST", status:"passed", durationMs:3 },
+        BROWSER_SECOND:{ id:"BROWSER_SECOND", status:"failed", durationMs:4 },
+      },
+    },
+  },
+};
+const partialObservationResume = resumeVerificationPlan(
+  partialObservationPlan, partialObservationReceipt, resumeIdentity,
+);
+assert.deepEqual(partialObservationResume.tasks[0].executionArgs,
+  ["scripts/run-browser-observation.mjs", "BROWSER_SECOND"],
+  "a failed browser batch reruns only its failed logical target");
+assert.equal(partialObservationResume.tasks[0].priorReceiptTask,
+  partialObservationReceipt.tasks[observationTask.key],
+  "the resumed browser task retains the independent passing target result for the combined receipt");
 assert.equal(verificationResumeIdentity(resumablePlan, {
   receipt:{ environment:{ node:"24", typescript:"5", platform:"linux", concurrency:1,
     observationConcurrency:1 } },

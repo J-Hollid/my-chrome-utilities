@@ -6,9 +6,15 @@ import os from "node:os";
 import path from "node:path";
 import {
   headlessChromeArguments,
+  removeChromeProfile,
   resolveChromeExecutable,
   stopHeadlessChrome,
 } from "./support/headless-chrome.mjs";
+
+if (process.env.SWARMFORGE_BROWSER_TARGET_CONFIGURATIONS) {
+  await import("./support/layered-schema-targets.mjs");
+  process.exit(0);
+}
 
 const wait=(milliseconds)=>new Promise((resolve)=>setTimeout(resolve,milliseconds));
 
@@ -284,5 +290,5 @@ try{
   console.log("TWAtility Belt packaged rules and conditions browser test passed");
 }finally{
   studio?.close();sidePanel?.close();await stopHeadlessChrome(chrome);
-  await rm(profile,{recursive:true,force:true,maxRetries:5,retryDelay:100});
+  await removeChromeProfile(profile,{targetId:"twatility-rules-conditions"});
 }

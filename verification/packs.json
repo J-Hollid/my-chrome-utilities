@@ -89,10 +89,10 @@
       {"path": "test/browser-packs/durable-project-renderer.mjs", "mode": "shared"}
     ],
     "browserObservations": [
-      {"id": "DURABLE_REPOSITORY_STORAGE_TARGET", "path": "test/browser-packs/durable-project-repository.mjs", "environment": {"DURABLE_REPOSITORY_STORAGE_TARGET": "1"}, "sessionBatch": "durable-repository", "observationKeys": ["durableProjectRepository"], "features": ["features/data-layer-durable-project-repository-runtime.feature"]},
-      {"id": "DURABLE_REPOSITORY_REVISION_TARGET", "path": "test/browser-packs/durable-project-repository.mjs", "environment": {"DURABLE_REPOSITORY_REVISION_TARGET": "1"}, "sessionBatch": "durable-repository", "observationKeys": ["durableProjectRepository"], "features": ["features/data-layer-durable-project-repository.feature"]},
-      {"id": "DURABLE_RENDERER_CORPUS_TARGET", "path": "test/browser-packs/durable-project-renderer.mjs", "environment": {"DURABLE_RENDERER_CORPUS_TARGET": "1"}, "sessionBatch": "durable-renderer", "observationKeys": ["durableRenderer"], "features": ["features/data-layer-durable-project-repository-runtime.feature"]},
-      {"id": "DURABLE_RENDERER_HISTORY_TARGET", "path": "test/browser-packs/durable-project-renderer.mjs", "environment": {"DURABLE_RENDERER_HISTORY_TARGET": "1"}, "sessionBatch": "durable-renderer", "observationKeys": ["durableRenderer"], "features": ["features/data-layer-durable-project-repository.feature"]}
+      {"id": "DURABLE_REPOSITORY_STORAGE_TARGET", "path": "test/browser-packs/durable-project-repository.mjs", "environment": {"DURABLE_REPOSITORY_STORAGE_TARGET": "1"}, "sessionBatch": "durable-repository", "observationKeys": ["durableRepositoryStorage"], "features": ["features/data-layer-durable-project-repository-runtime.feature"]},
+      {"id": "DURABLE_REPOSITORY_REVISION_TARGET", "path": "test/browser-packs/durable-project-repository.mjs", "environment": {"DURABLE_REPOSITORY_REVISION_TARGET": "1"}, "sessionBatch": "durable-repository", "observationKeys": ["durableRepositoryRevision"], "features": ["features/data-layer-durable-project-repository.feature"]},
+      {"id": "DURABLE_RENDERER_CORPUS_TARGET", "path": "test/browser-packs/durable-project-renderer.mjs", "environment": {"DURABLE_RENDERER_CORPUS_TARGET": "1"}, "sessionBatch": "durable-renderer", "observationKeys": ["durableRendererCorpus"], "features": ["features/data-layer-durable-project-repository-runtime.feature"]},
+      {"id": "DURABLE_RENDERER_HISTORY_TARGET", "path": "test/browser-packs/durable-project-renderer.mjs", "environment": {"DURABLE_RENDERER_HISTORY_TARGET": "1"}, "sessionBatch": "durable-renderer", "observationKeys": ["durableRendererHistory"], "features": ["features/data-layer-durable-project-repository.feature"]}
     ],
     "browserAdapterPerformance": [
       {"path": "test/browser-packs/durable-project-repository.mjs", "singleTargetP90Milliseconds": 180000, "maximumSingleTargetP90Milliseconds": 120000, "targetIds": ["DURABLE_REPOSITORY_STORAGE_TARGET", "DURABLE_REPOSITORY_REVISION_TARGET"], "sessionBatch": "durable-repository"},
@@ -1682,14 +1682,14 @@
       {"path": "test/twatility-rules-conditions-browser-test.mjs", "mode": "integration"}
     ],
     "browserObservations": [
-      {"id": "LAYERED_SCHEMA_CORE_TARGET", "path": "test/browser-packs/layered-schema.mjs", "environment": {"LAYERED_SCHEMA_CORE_TARGET": "1"}, "sessionBatch": "layered-schema", "impactBoundaries": ["canonical_schema_core"], "observationKeys": ["layeredSchema"], "features": ["features/data-layer-canonical-shared-profile-schema-authoring-runtime.feature"]},
-      {"id": "LAYERED_SCHEMA_EDITOR_TARGET", "path": "test/browser-packs/layered-schema.mjs", "environment": {"LAYERED_SCHEMA_EDITOR_TARGET": "1"}, "sessionBatch": "layered-schema", "impactBoundaries": ["canonical_schema_editor"], "observationKeys": ["layeredSchema"], "features": ["features/data-layer-canonical-shared-profile-schema-authoring.feature"]},
-      {"id": "LAYERED_SCHEMA_COMPOSITION_TARGET", "path": "test/browser-packs/layered-schema.mjs", "environment": {"LAYERED_SCHEMA_COMPOSITION_TARGET": "1"}, "sessionBatch": "layered-schema", "impactBoundaries": ["layered_schema_composition"], "observationKeys": ["layeredSchema"], "features": ["features/data-layer-layered-schema-constraints-runtime.feature"]},
-      {"id": "LAYERED_SCHEMA_PAGE_GROUP_TARGET", "path": "test/browser-packs/layered-schema.mjs", "environment": {"LAYERED_SCHEMA_PAGE_GROUP_TARGET": "1"}, "sessionBatch": "layered-schema", "impactBoundaries": ["page_group_structure"], "observationKeys": ["layeredSchema"], "features": ["features/data-layer-page-group-structural-authoring.feature"]},
-      {"id": "LAYERED_SCHEMA_INHERITANCE_TARGET", "path": "test/browser-packs/layered-schema.mjs", "environment": {"LAYERED_SCHEMA_INHERITANCE_TARGET": "1"}, "sessionBatch": "layered-schema", "impactBoundaries": ["selective_profile_inheritance"], "observationKeys": ["layeredSchema"], "features": ["features/specification-studio-selective-profile-inheritance-runtime.feature"]}
+      {"id": "LAYERED_SCHEMA_CORE_TARGET", "path": "test/data-layer-canonical-migration-browser-test.mjs", "environment": {"LAYERED_SCHEMA_CORE_TARGET": "1"}, "sessionBatch": "layered-schema-core", "impactBoundaries": ["canonical_schema_core"], "observationKeys": ["layeredSchemaCore"], "features": ["features/data-layer-canonical-shared-profile-schema-authoring-runtime.feature"]},
+      {"id": "LAYERED_SCHEMA_EDITOR_TARGET", "path": "test/twatility-rules-conditions-browser-test.mjs", "environment": {"LAYERED_SCHEMA_EDITOR_TARGET": "1"}, "sessionBatch": "layered-schema-editor", "impactBoundaries": ["canonical_schema_editor"], "observationKeys": ["layeredSchemaEditor"], "features": ["features/data-layer-canonical-shared-profile-schema-authoring.feature"]},
+      {"id": "LAYERED_SCHEMA_COMPOSITION_TARGET", "path": "test/browser-packs/layered-schema.mjs", "environment": {"LAYERED_SCHEMA_COMPOSITION_TARGET": "1"}, "sessionBatch": "layered-schema", "impactBoundaries": ["layered_schema_composition"], "observationKeys": ["layeredSchemaComposition"], "features": ["features/data-layer-layered-schema-constraints-runtime.feature"]},
+      {"id": "LAYERED_SCHEMA_PAGE_GROUP_TARGET", "path": "test/browser-packs/layered-schema.mjs", "environment": {"LAYERED_SCHEMA_PAGE_GROUP_TARGET": "1"}, "sessionBatch": "layered-schema", "impactBoundaries": ["page_group_structure"], "observationKeys": ["layeredSchemaPageGroup"], "features": ["features/data-layer-page-group-structural-authoring.feature"]},
+      {"id": "LAYERED_SCHEMA_INHERITANCE_TARGET", "path": "test/browser-packs/selective-profile-inheritance.mjs", "environment": {"LAYERED_SCHEMA_INHERITANCE_TARGET": "1"}, "sessionBatch": "layered-schema-inheritance", "impactBoundaries": ["selective_profile_inheritance"], "observationKeys": ["layeredSchemaInheritance"], "features": ["features/specification-studio-selective-profile-inheritance-runtime.feature"]}
     ],
     "browserAdapterPerformance": [
-      {"path": "test/browser-packs/layered-schema.mjs", "singleTargetP90Milliseconds": 300000, "maximumSingleTargetP90Milliseconds": 120000, "targetIds": ["LAYERED_SCHEMA_CORE_TARGET", "LAYERED_SCHEMA_EDITOR_TARGET", "LAYERED_SCHEMA_COMPOSITION_TARGET", "LAYERED_SCHEMA_PAGE_GROUP_TARGET", "LAYERED_SCHEMA_INHERITANCE_TARGET"], "sessionBatch": "layered-schema"}
+      {"path": "test/browser-packs/layered-schema.mjs", "singleTargetP90Milliseconds": 300000, "maximumSingleTargetP90Milliseconds": 120000, "targetIds": ["LAYERED_SCHEMA_COMPOSITION_TARGET", "LAYERED_SCHEMA_PAGE_GROUP_TARGET"], "sessionBatch": "layered-schema"}
     ]
   },
   {
@@ -1898,6 +1898,22 @@
       {
         "path": "test/support/headless-chrome.mjs",
         "consumers": ["branding_polish", "capture", "command-palette", "defects", "durable_project_repository", "event-library", "flow_export", "flow_graph", "guided_test_cases", "hotkeys", "layered_schema", "live_flow_testing", "project_assurance_severity", "project_event_transport", "project_management", "property_set_flow_sections", "replay", "schema_relationship_tree", "schemas", "shell"]
+      },
+      {
+        "path": "test/support/browser-target-session.mjs",
+        "consumers": ["branding_polish", "durable_project_repository", "layered_schema", "shell"]
+      },
+      {
+        "path": "test/support/branding-workflow-targets.mjs",
+        "consumers": ["branding_polish"]
+      },
+      {
+        "path": "test/support/durable-project-targets.mjs",
+        "consumers": ["durable_project_repository"]
+      },
+      {
+        "path": "test/support/layered-schema-targets.mjs",
+        "consumers": ["layered_schema"]
       },
       {
         "path": "test/support/journal-free-installed-runtime-probe.mjs",
