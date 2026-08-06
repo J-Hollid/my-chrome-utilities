@@ -242,8 +242,39 @@ export function mountComposedSchemaWorkspace(options) {
             return { status: "invalid", diagnostic: error instanceof Error ? error.message : String(error) };
         }
     };
-    const close = (reason = "cancel") => { overlayState = schemaTableOverlayTransition(overlayState, { kind: reason }); const restorePath = ("restorePath" in overlayState ? overlayState.restorePath : undefined) ?? originPath; activePath = undefined; overlayOpen = false; focusedOpen = false; reviewOpen = false; saveIssue = undefined; activeSection = "definition"; draft = undefined; removed = false; confirmedAction = undefined; removedRuleIds = new Set(); removedValueIds = new Set(); restoredRuleIds = new Set(); restoredValueIds = new Set(); stagedLocalValueIds = new Set(); overriddenRuleIds = new Set(); pendingStructure = []; pendingAction = undefined; ownershipSession = { inherited: false, local: true, structureOwned: true, activated: [] }; rerender(); const target = originFocus?.isConnected ? originFocus : restorePath ? rows.querySelector(`[aria-label="Property actions for ${CSS.escape(restorePath)}"]`) : undefined; originFocus = undefined; originPath = undefined; if (target)
-        queueMicrotask(() => target.focus({ preventScroll: true })); };
+    const close = (reason = "cancel") => {
+        overlayState = schemaTableOverlayTransition(overlayState, { kind: reason });
+        const restorePath = ("restorePath" in overlayState ? overlayState.restorePath : undefined) ?? originPath, preferred = originFocus;
+        activePath = undefined;
+        overlayOpen = false;
+        focusedOpen = false;
+        reviewOpen = false;
+        saveIssue = undefined;
+        activeSection = "definition";
+        draft = undefined;
+        removed = false;
+        confirmedAction = undefined;
+        removedRuleIds = new Set();
+        removedValueIds = new Set();
+        restoredRuleIds = new Set();
+        restoredValueIds = new Set();
+        stagedLocalValueIds = new Set();
+        overriddenRuleIds = new Set();
+        pendingStructure = [];
+        pendingAction = undefined;
+        ownershipSession = { inherited: false, local: true, structureOwned: true, activated: [] };
+        rerender();
+        originFocus = undefined;
+        originPath = undefined;
+        const restore = () => { if (overlayOpen || !section.isConnected)
+            return; const live = preferred?.isConnected ? preferred : Array.from(rows.querySelectorAll("[data-property-actions-path]")).find(({ dataset }) => dataset.propertyActionsPath === restorePath); live?.focus({ preventScroll: true }); };
+        queueMicrotask(restore);
+        const view = section.ownerDocument.defaultView;
+        if (view?.requestAnimationFrame)
+            view.requestAnimationFrame(() => { restore(); view.requestAnimationFrame(restore); });
+        else
+            view?.setTimeout(restore, 0);
+    };
     const closeChild = () => { if (reviewOpen) {
         cancelReview();
         return;
