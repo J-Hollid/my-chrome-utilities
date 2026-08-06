@@ -248,6 +248,7 @@ const declaredProgramBatchPacks = [pack("browser", {
 })];
 const exactEvidencePartition = {
   path:"test/browser.mjs",
+  sessionBatch:"browser-main",
   originalLeaves:[["first", "mounted"], ["second", "persisted"]],
   targets:[
     { id:"BROWSER_FIRST", leaves:[["first", "mounted"]] },
@@ -259,12 +260,54 @@ assert.doesNotThrow(() => validateBrowserEvidencePartitions([{
 }]), "a split adapter may assign every original nested assertion leaf exactly once");
 const dottedEvidencePartition = {
   ...exactEvidencePartition,
+  sessionBatch:"browser-main",
   originalLeaves:["first.mounted", "second.persisted"],
   targets:[
     { id:"BROWSER_FIRST", leaves:["first.mounted"] },
     { id:"BROWSER_SECOND", leaves:["second.persisted"] },
   ],
 };
+const partitionedPerformancePack = {
+  ...focusedObservationPacks[0],
+  browserAdapters:["test/browser.mjs"],
+  browserAdapterPerformance:[{
+    path:"test/browser.mjs",
+    singleTargetP90Milliseconds:20,
+    maximumSingleTargetP90Milliseconds:10,
+    targetIds:["BROWSER_FIRST", "BROWSER_SECOND"],
+    sessionBatch:"browser-main",
+  }],
+  browserEvidencePartitions:[dottedEvidencePartition],
+};
+assert.throws(() => validateBrowserEvidencePartitions([{
+  ...partitionedPerformancePack, browserEvidencePartitions:[],
+}]), /requires one exact browser evidence partition/u,
+"a replaced browser workflow cannot omit its assertion-leaf partition");
+assert.throws(() => validateBrowserEvidencePartitions([{
+  ...partitionedPerformancePack,
+  browserObservations:[...partitionedPerformancePack.browserObservations,
+    {id:"BROWSER_EXTRA", path:"test/browser.mjs", environment:{BROWSER_EXTRA:"1"},
+      observationKeys:["extra"], features:["features/browser-three.feature"], sessionBatch:"browser-main"}],
+  browserEvidencePartitions:[{
+    ...dottedEvidencePartition,
+    originalLeaves:[...dottedEvidencePartition.originalLeaves, "extra.observed"],
+    targets:[...dottedEvidencePartition.targets,
+      {id:"BROWSER_EXTRA", leaves:["extra.observed"]}],
+  }],
+}]), /must match its declared target set/u,
+"an evidence partition cannot add a target outside the replaced workflow declaration");
+assert.throws(() => validateBrowserEvidencePartitions([{
+  ...partitionedPerformancePack,
+  browserObservations:partitionedPerformancePack.browserObservations.map((observation) =>
+    observation.id === "BROWSER_SECOND" ? {...observation, path:"test/other-browser.mjs"} : observation),
+}]), /must use program test\/browser\.mjs/u,
+"a partition target cannot execute through a different browser program");
+assert.throws(() => validateBrowserEvidencePartitions([{
+  ...partitionedPerformancePack,
+  browserObservations:partitionedPerformancePack.browserObservations.map((observation) =>
+    observation.id === "BROWSER_SECOND" ? {...observation, sessionBatch:"browser-other"} : observation),
+}]), /must use batch browser-main/u,
+"a partition target cannot execute through a mismatched session batch");
 assert.doesNotThrow(() => validateBrowserEvidencePartitions([{
   ...focusedObservationPacks[0], browserEvidencePartitions:[dottedEvidencePartition],
 }]), "a registry may spell exact leaf paths compactly without weakening the partition");

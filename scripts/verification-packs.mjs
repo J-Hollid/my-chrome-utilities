@@ -453,11 +453,22 @@ export function browserObservationEvidenceLeaves(pack, observation) {
 
 export function validateBrowserEvidencePartitions(packs) {
   for (const pack of packs) {
-    const observationIds = new Set(values(pack, "browserObservations").map(({ id }) => id));
-    for (const partition of values(pack, "browserEvidencePartitions")) {
+    const observations = new Map(values(pack, "browserObservations").map((item) => [item.id, item]));
+    const partitions = values(pack, "browserEvidencePartitions");
+    const replacedWorkflows = values(pack, "browserAdapterPerformance")
+      .filter(({ targetIds }) => Array.isArray(targetIds) && targetIds.length > 0);
+    for (const workflow of replacedWorkflows) {
+      const matches = partitions.filter(({ path:program, sessionBatch }) =>
+        program === workflow.path && sessionBatch === workflow.sessionBatch);
+      if (matches.length !== 1) {
+        throw new Error(`Replaced browser workflow ${pack.id}:${workflow.path} requires one exact browser evidence partition for batch ${workflow.sessionBatch}`);
+      }
+    }
+    for (const partition of partitions) {
       if (!partition || Array.isArray(partition) || typeof partition.path !== "string" ||
+          typeof partition.sessionBatch !== "string" || !partition.sessionBatch.trim() ||
           !Array.isArray(partition.originalLeaves) || !partition.originalLeaves.length ||
-          !Array.isArray(partition.targets) || partition.targets.length < 2) {
+          !Array.isArray(partition.targets) || partition.targets.length < 1) {
         throw new Error(`Use an exact browser evidence partition in pack ${pack.id}`);
       }
       const original = partition.originalLeaves.map(evidenceLeafIdentity);
@@ -470,7 +481,7 @@ export function validateBrowserEvidencePartitions(packs) {
           segments.every((segment) => typeof segment === "string" && segment.length > 0);
       };
       if (new Set(targetIds).size !== targetIds.length ||
-          targetIds.some((id) => !observationIds.has(id)) ||
+          targetIds.some((id) => !observations.has(id)) ||
           partition.originalLeaves.some((leaf) => !validLeaf(leaf)) ||
           partition.targets.some(({ leaves }) => !Array.isArray(leaves) || !leaves.length ||
             leaves.some((leaf) => !validLeaf(leaf))) ||
@@ -479,6 +490,26 @@ export function validateBrowserEvidencePartitions(packs) {
           original.length !== assigned.length ||
           original.some((leaf) => !assigned.includes(leaf))) {
         throw new Error(`Browser evidence partition ${pack.id}:${partition.path} must assign every original assertion leaf exactly once`);
+      }
+      for (const targetId of targetIds) {
+        const observation = observations.get(targetId);
+        if (observation.path !== partition.path) {
+          throw new Error(`Browser evidence partition target ${targetId} must use program ${partition.path}`);
+        }
+        if (browserObservationSessionBatch(pack, observation) !== partition.sessionBatch) {
+          throw new Error(`Browser evidence partition target ${targetId} must use batch ${partition.sessionBatch}`);
+        }
+      }
+      const declarations = replacedWorkflows.filter(({ path:program, sessionBatch }) =>
+        program === partition.path && sessionBatch === partition.sessionBatch);
+      if (declarations.length > 1) {
+        throw new Error(`Browser evidence partition ${pack.id}:${partition.path} has ambiguous target declarations`);
+      }
+      if (declarations.length === 1) {
+        const declared = declarations[0].targetIds;
+        if (declared.length !== targetIds.length || declared.some((id) => !targetIds.includes(id))) {
+          throw new Error(`Browser evidence partition ${pack.id}:${partition.path} must match its declared target set`);
+        }
       }
     }
   }
