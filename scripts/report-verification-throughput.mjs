@@ -219,6 +219,10 @@ export function measuredTimingModel(receipts, baseline, {
           p50Ms:result.medianMs,
           receiptDigests:[...new Set(samples.map(({ receiptDigest }) => receiptDigest)
             .filter(Boolean))].sort(),
+          observations:samples
+            .filter(({ receiptDigest }) => receiptDigest)
+            .map(({ durationMs, receiptDigest }) => ({ durationMs, receiptDigest }))
+            .sort((left, right) => left.receiptDigest.localeCompare(right.receiptDigest)),
         }];
       })),
     browserTargetPhases:Object.fromEntries([...browserTargetPhaseSamples].map(([id, byPhase]) => [id,
@@ -525,6 +529,33 @@ function summary(name, plan, model, options) {
   };
 }
 
+function browserTargetMeasurement(timing, budget, fallback) {
+  const observed = timing?.p90Ms;
+  if (budget?.source !== "committed characterization digests") {
+    return {
+      measured:budget?.provisional ? budget.baseline ?? fallback : observed ?? fallback,
+      observed,
+      characterizationComplete:true,
+    };
+  }
+  const characterizedDigests = new Set(budget.receiptDigests ?? []);
+  const observations = (timing?.observations ?? []).filter(({ receiptDigest }) =>
+    characterizedDigests.has(receiptDigest));
+  const resolvedDigests = new Set(observations.map(({ receiptDigest }) => receiptDigest));
+  const characterizationComplete = characterizedDigests.size > 0 &&
+    [...characterizedDigests].every((digest) => resolvedDigests.has(digest));
+  return {
+    measured:characterizationComplete
+      ? percentile(observations.map(({ durationMs }) => durationMs), 0.9)
+      : undefined,
+    observed,
+    characterizationComplete,
+    characterizedSamples:observations.length,
+    excludedSamples:Math.max(0, (timing?.samples ?? 0) - observations.length),
+    missingCharacterizedSamples:Math.max(0, characterizedDigests.size - resolvedDigests.size),
+  };
+}
+
 export function checkVerificationPerformanceBudgets(report, baseline) {
   const budgets = baseline.performanceBudgets ?? {};
   const limitValue = (entry) => typeof entry === "number" ? entry : entry?.limit;
@@ -576,16 +607,28 @@ export function checkVerificationPerformanceBudgets(report, baseline) {
     ...Object.keys(budgets.browserTargetP90Milliseconds ?? {}),
   ]);
   for (const targetId of browserTargetIds) {
-    const limit = limitValue(budgets.browserTargetP90Milliseconds?.[targetId] ??
-      budgets.defaultBrowserTargetP90Milliseconds);
+    const targetBudget = budgets.browserTargetP90Milliseconds?.[targetId] ??
+      budgets.defaultBrowserTargetP90Milliseconds;
+    const limit = limitValue(targetBudget);
     if (!Number.isFinite(limit)) continue;
     const timing = report.model.browserTargets?.[targetId];
     const fallback = baseline.browserTargetMilliseconds?.[targetId] ??
       baseline.defaultBrowserTargetMilliseconds;
-    const measured = timing?.p90Ms ?? fallback;
-    if (!Number.isFinite(measured)) continue;
+    const {
+      measured, observed, characterizationComplete,
+      characterizedSamples, excludedSamples, missingCharacterizedSamples,
+    } = browserTargetMeasurement(timing, targetBudget, fallback);
+    if (!Number.isFinite(measured) && characterizationComplete) continue;
     results.push({ metric:"browser-target-p90", identity:targetId,
-      measured, limit, passed:measured <= limit });
+      measured, limit,
+      ...(Number.isFinite(observed) ? { observed } : {}),
+      ...(targetBudget && typeof targetBudget === "object" ? {
+        provisional:Boolean(targetBudget.provisional),
+        source:targetBudget.source,
+      } : {}),
+      ...(Number.isInteger(characterizedSamples) ? { characterizedSamples, excludedSamples } : {}),
+      ...(missingCharacterizedSamples ? { missingCharacterizedSamples } : {}),
+      passed:characterizationComplete && Number.isFinite(measured) && measured <= limit });
   }
   const diagnostics = results.filter(({ passed }) => !passed).map((result) =>
     result.metric === "changed-path-fan-out"
@@ -598,6 +641,9 @@ export function checkVerificationPerformanceBudgets(report, baseline) {
           `${result.measured}s; limit ${result.limit}s; reduction ${result.reduction}; ` +
           `minimum ${result.minimumReduction}` +
           (result.timingSources ? `; timing sources ${Object.keys(result.timingSources).join(", ")}` : "")
+      : result.missingCharacterizedSamples
+        ? `${result.metric} ${result.identity} missing ${result.missingCharacterizedSamples} ` +
+          "committed characterization sample(s)"
       : `${result.metric} ${result.identity} measured ${result.measured}; limit ${result.limit}`);
   return { passed:diagnostics.length === 0, results, diagnostics };
 }

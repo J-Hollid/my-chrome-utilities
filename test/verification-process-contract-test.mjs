@@ -2250,6 +2250,64 @@ const missingTargetBudget = checkVerificationPerformanceBudgets({
 });
 assert.equal(missingTargetBudget.results[0].measured, 2400,
   "a missing logical-target timing uses its explicit bootstrap baseline, not another task's aggregate");
+const planScopedTargetBudgets = checkVerificationPerformanceBudgets({
+  rows:[], browserTargetIds:["FLOW_GRAPH_EXAMPLES_TARGET", "FLOW_GRAPH_LEGACY_TARGET"],
+  model:{ browserTargets:{
+    FLOW_GRAPH_EXAMPLES_TARGET:{
+      samples:6, p90Ms:21022,
+      observations:[
+        ...Array.from({ length:5 }, (_, index) => ({
+          receiptDigest:`focused-${index}`, durationMs:3750 + index * 20,
+        })),
+        { receiptDigest:"terminal-loaded", durationMs:21022 },
+      ],
+    },
+    FLOW_GRAPH_LEGACY_TARGET:{ samples:4, p90Ms:1597, observations:[] },
+  } },
+}, {
+  performanceBudgets:{ browserTargetP90Milliseconds:{
+    FLOW_GRAPH_EXAMPLES_TARGET:{
+      limit:4596, baseline:3830, provisional:false,
+      source:"committed characterization digests",
+      receiptDigests:Array.from({ length:5 }, (_, index) => `focused-${index}`),
+    },
+    FLOW_GRAPH_LEGACY_TARGET:{
+      limit:1554, baseline:1295, provisional:true, source:"explicit target baseline",
+    },
+  } },
+});
+const scopedExamplesResult = planScopedTargetBudgets.results.find(({ identity }) =>
+  identity === "FLOW_GRAPH_EXAMPLES_TARGET");
+assert.deepEqual(scopedExamplesResult, {
+  metric:"browser-target-p90", identity:"FLOW_GRAPH_EXAMPLES_TARGET",
+  measured:3830, limit:4596, observed:21022, provisional:false,
+  source:"committed characterization digests", characterizedSamples:5, excludedSamples:1,
+  passed:true,
+}, "committed focused-normal samples are enforced while other plan contexts remain diagnostic");
+const provisionalLegacyResult = planScopedTargetBudgets.results.find(({ identity }) =>
+  identity === "FLOW_GRAPH_LEGACY_TARGET");
+assert.deepEqual(provisionalLegacyResult, {
+  metric:"browser-target-p90", identity:"FLOW_GRAPH_LEGACY_TARGET",
+  measured:1295, limit:1554, observed:1597, provisional:true,
+  source:"explicit target baseline", passed:true,
+}, "an immature legacy sample remains visible without replacing its provisional baseline");
+const unresolvedCharacterizedBudget = checkVerificationPerformanceBudgets({
+  rows:[], browserTargetIds:["FLOW_GRAPH_EXAMPLES_TARGET"],
+  model:{ browserTargets:{ FLOW_GRAPH_EXAMPLES_TARGET:{
+    samples:1, p90Ms:3830,
+    observations:[{ receiptDigest:"focused-0", durationMs:3830 }],
+  } } },
+}, { performanceBudgets:{ browserTargetP90Milliseconds:{
+  FLOW_GRAPH_EXAMPLES_TARGET:{
+    limit:4596, baseline:3830, provisional:false,
+    source:"committed characterization digests",
+    receiptDigests:["focused-0", "focused-missing"],
+  },
+} } });
+assert.equal(unresolvedCharacterizedBudget.passed, false,
+  "a production report cannot silently lose committed characterization provenance");
+assert.match(unresolvedCharacterizedBudget.diagnostics[0],
+  /missing 1 committed characterization sample/u);
 const refreshedBudgets = refreshVerificationPerformanceBudgets({
   rows:[
     { name:"alpha:exact-full-pack", projectedSeconds:8, measurementCoverage:0.75,
@@ -2420,6 +2478,69 @@ assert.equal(committedCalibrationReport.conservation.verificationTopologyDigest,
 assert.deepEqual(committedCalibrationReport.browserTargets,
   committedTimingBaseline.performanceBudgets.browserTargetP90Milliseconds,
   "the durable report and enforced browser-target budgets cannot drift apart");
+const completeSelectedClassEntries = committedCalibrationReport.receiptDigests.map(
+  (digest, receiptIndex) => {
+    const receipt = structuredClone(reportReceipt);
+    receipt.runId = `complete-selected-class-${receiptIndex}`;
+    receipt.plan = {
+      mode:"exact",
+      requestedPackIds:[...terminalPlan.packIds],
+      selectedPackIds:[...terminalPlan.packIds],
+      changedOwners:{}, changedBoundaries:[], changeSetDigest:null,
+      conservativeHistoricalFallbackReason:null,
+    };
+    receipt.tasks = Object.fromEntries(terminalPlan.tasks.map((task) => {
+      const output = (task.logicalTargetIds ?? []).flatMap((targetId) => {
+        const budget = committedCalibrationReport.browserTargets[targetId];
+        const characterized = targetId === "FLOW_GRAPH_EXAMPLES_TARGET";
+        const included = budget?.receiptDigests?.includes(digest);
+        if (!included && !characterized) return [];
+        const durationMs = characterized
+          ? included ? budget.baseline : 21022
+          : targetId === "FLOW_GRAPH_LEGACY_TARGET" && digest === budget.receiptDigests[0]
+            ? 1597
+            : budget.baseline;
+        return [
+          JSON.stringify({ swarmforgeBrowserTargetResult:{ id:targetId, status:"passed" } }),
+          JSON.stringify({ swarmforgeBrowserTargetTiming:{ id:targetId, durationMs } }),
+        ];
+      }).join("\n");
+      return [task.key, {
+        identity:verificationTaskIdentity(task), status:"passed", durationMs:0, output,
+      }];
+    }));
+    return {
+      digest, receipt, rejectionReason:null,
+      environmentClassId:committedCalibrationReport.environmentClassId,
+    };
+  },
+);
+const completeSelectedClassReport = reportVerificationThroughput({
+  packs,
+  baseline:committedTimingBaseline,
+  receipts:completeSelectedClassEntries,
+  environmentClassId:committedCalibrationReport.environmentClassId,
+  minimumIndependentSamples:committedCalibrationReport.minimumIndependentSamples,
+});
+assert.equal(completeSelectedClassReport.model.ledger.receipts, 18,
+  "production reporting consumes the complete calibrated selected class");
+assert.equal(completeSelectedClassReport.model.browserTargets
+  .FLOW_GRAPH_EXAMPLES_TARGET.p90Ms, 21022,
+  "the selected class regression includes non-focused Flow examples observations");
+assert.equal(completeSelectedClassReport.performanceBudgets.passed, true,
+  "the complete selected class passes its focused, mature, and provisional budget classes");
+const completeExamplesBudget = completeSelectedClassReport.performanceBudgets.results
+  .find(({ identity }) => identity === "FLOW_GRAPH_EXAMPLES_TARGET");
+assert.equal(completeExamplesBudget.measured, 3830);
+assert.equal(completeExamplesBudget.observed, 21022);
+assert.equal(completeExamplesBudget.excludedSamples, 13,
+  "terminal and other plan contexts remain diagnostic for the focused Flow budget");
+const completeLegacyBudget = completeSelectedClassReport.performanceBudgets.results
+  .find(({ identity }) => identity === "FLOW_GRAPH_LEGACY_TARGET");
+assert.equal(completeLegacyBudget.provisional, true);
+assert.equal(completeLegacyBudget.measured, 1295);
+assert.equal(completeLegacyBudget.observed, 1597,
+  "four-sample legacy evidence remains visible without being promoted to mature enforcement");
 for (const calibratedPack of committedCalibrationReport.runnablePacks) {
   assert.deepEqual(calibratedPack.exactPackDuration,
     committedTimingBaseline.performanceBudgets.exactPackSeconds[calibratedPack.id]);

@@ -6,6 +6,7 @@ import path from "node:path";
 import { architectureViolations } from "../scripts/check-architecture.mjs";
 import {
   boundedStageMilliseconds,
+  checkVerificationPerformanceBudgets,
   measuredTimingModel,
   refreshVerificationPerformanceBudgets,
 } from "../scripts/report-verification-throughput.mjs";
@@ -157,6 +158,34 @@ for (let sample = 0; sample < 100; sample += 1) {
     provisional:false,
     selectedPacks,
   }, "generated fan-out budgets must remain exact and preserve selected pack identities");
+
+  const focusedDigests = Array.from({ length:5 }, (_, index) =>
+    `${packId}-focused-${index}`);
+  const focusedDurations = focusedDigests.map((_, index) =>
+    100 + ((sample + 17) * (index + 3) * 7919) % 10_000);
+  const focusedP90 = Math.max(...focusedDurations);
+  const excludedDuration = focusedP90 + 100_000;
+  const targetId = `GENERATED_TARGET_${sample}`;
+  const targetResult = checkVerificationPerformanceBudgets({
+    rows:[], browserTargetIds:[targetId],
+    model:{ browserTargets:{ [targetId]:{
+      samples:6, p90Ms:excludedDuration,
+      observations:[
+        ...focusedDigests.map((receiptDigest, index) =>
+          ({ receiptDigest, durationMs:focusedDurations[index] })),
+        { receiptDigest:`${packId}-excluded`, durationMs:excludedDuration },
+      ],
+    } } },
+  }, { performanceBudgets:{ browserTargetP90Milliseconds:{ [targetId]:{
+    limit:focusedP90, baseline:focusedP90, provisional:false,
+    source:"committed characterization digests", receiptDigests:focusedDigests,
+  } } } }).results[0];
+  assert.equal(targetResult.measured, focusedP90,
+    "generated characterized budgets must enforce only their bound receipt identities");
+  assert.equal(targetResult.observed, excludedDuration,
+    "generated observations from other plan contexts must remain visible diagnostically");
+  assert.equal(targetResult.excludedSamples, 1);
+  assert.equal(targetResult.passed, true);
 }
 
 const closure = (packs, initial, direction) => {
@@ -662,4 +691,4 @@ for (let sample = 0; sample < 100; sample += 1) {
     /owned by both/);
 }
 
-console.log(`modular properties: 20 canonical timing receipts with duplicate provenance and isolated classes, ${declaredContracts.length} declared contracts, 100 bounded schedules, 100 verification budget calibrations, 100 undeclared contracts, 100 direct cross-module imports, 100 architecture boundaries, 100 verification graphs, 100 Chrome lifecycle argument sets, 300 lifecycle cases, 100 command registries, 100 navigation models, 100 utility directories, 100 isolation models, 100 controlled-reference models, 100 shell capability models, 100 storage models, and 100 panel models passed`);
+console.log(`modular properties: 20 canonical timing receipts with duplicate provenance and isolated classes, ${declaredContracts.length} declared contracts, 100 bounded schedules, 100 verification budget calibrations with plan-scoped evidence, 100 undeclared contracts, 100 direct cross-module imports, 100 architecture boundaries, 100 verification graphs, 100 Chrome lifecycle argument sets, 300 lifecycle cases, 100 command registries, 100 navigation models, 100 utility directories, 100 isolation models, 100 controlled-reference models, 100 shell capability models, 100 storage models, and 100 panel models passed`);
