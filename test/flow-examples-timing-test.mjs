@@ -5,6 +5,12 @@ import {
   createFlowExamplesPhaseTimer,
   validateFlowExamplesPhaseTiming,
 } from "./support/flow-examples-timing.mjs";
+import {
+  flowGraphEventExampleIncompleteEvidence,
+  flowGraphEventExampleStateEvidence,
+  flowGraphPageExampleIncompleteEvidence,
+  flowGraphPageExampleStateEvidence,
+} from "./support/flow-graph-corrective-workflow.mjs";
 
 let timestamp = 0;
 const timer = createFlowExamplesPhaseTimer({
@@ -76,5 +82,21 @@ assert.throws(() => validateFlowExamplesPhaseTiming({
   phases:timing.phases.map((phase) => phase.name === "cleanup"
     ? { ...phase, durationMs:phase.durationMs + 2 } : phase),
 }), /cover target duration/u);
+
+const exampleEvidenceSources = [
+  flowGraphEventExampleIncompleteEvidence({ projectId:"project", flowId:"flow" },
+    { occurrenceId:"occurrence" }),
+  flowGraphEventExampleStateEvidence({}, { occurrenceId:"occurrence" }, "Invalid", "/quantity", "TYPE"),
+  flowGraphPageExampleIncompleteEvidence({ projectId:"project", flowId:"flow" }, { frameId:"frame" }),
+  flowGraphPageExampleStateEvidence({ frameId:"frame" }, "Invalid", "/typed_page", "TYPE"),
+];
+for (const source of exampleEvidenceSources) {
+  assert.match(source, /FLOW_GRAPH_EXAMPLES_TARGET example compilation timed out/u);
+  assert.match(source, /performance\.now\(\)/u);
+  assert.doesNotMatch(source, /for\(let attempt=/u,
+    "examples-only readiness must not use fixed-count polling");
+  assert.doesNotMatch(source, /setTimeout\(resolve,120\)/u,
+    "examples-only readiness must not use fixed-duration polling");
+}
 
 console.log("Flow examples phase timing tests passed");
