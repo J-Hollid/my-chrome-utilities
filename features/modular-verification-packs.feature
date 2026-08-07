@@ -1204,7 +1204,7 @@ Feature: Modular verification packs
   Scenario Outline: Modular verification packs 078
     Given editor boundary <boundary> relies on provisional target timing <prior_target_timing>
     When at least five independent comparable focused-normal samples are accepted
-    Then every selected target p90 budget is non-provisional and cites every accepted receipt digest
+    Then every selected target p90 budget is non-provisional and cites every receipt digest accepted into that calibration snapshot
     And its focused changed-path critical-plan baseline is at most <baseline_ceiling>
     And its tolerance is 1.2 with a guardrail of at most <guardrail_ceiling>
     And failed, duplicate, cross-environment, and aggregate-fallback samples are excluded
@@ -1354,3 +1354,16 @@ Feature: Modular verification packs
       | rename src/workspace-tabs-ui.ts to src/side-panel.ts                                                           | every runnable pack               |
       | delete test/support/branding-workflow-targets.mjs from its current undeclared historical state                 | every runnable pack               |
       | use unavailable, malformed, or incompatible historical ownership                                               | every runnable pack               |
+
+  # Modular verification packs 087
+  Scenario: Modular verification packs 087
+    Given the committed VTD-005 calibration snapshot contains seven eligible receipt digests from one environment class and an immutable cutoff
+    And another eligible same-class receipt completes after that cutoff
+    When VTD-009 validates the calibration and records its delivery checkpoint
+    Then the later receipt remains discoverable in the canonical timing ledger
+    And the VTD-005 snapshot continues to resolve exactly its seven raw digests without changing its budgets
+    And the VTD-009 Shell representative retains its accepted 37.2 second baseline and 45 second limit
+    And validation does not require an immutable calibration snapshot to equal its mutable live receipt sources
+    And an explicit future refresh includes every eligible unique same-class receipt completed at or before its new cutoff
+    And a missing, rejected, cross-class, duplicate digest declaration, or omitted pre-cutoff snapshot receipt is rejected
+    And a post-cutoff verification receipt cannot retroactively invalidate the calibration used to verify that commit

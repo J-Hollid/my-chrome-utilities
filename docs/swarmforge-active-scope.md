@@ -2998,6 +2998,35 @@ The accepted calibration changes only the Shell representative changed-path row:
 - the Shell exact-pack row, the other 19 pack rows, and every browser-target budget
   remain byte-equivalent.
 
+### Calibration snapshot safety
+
+A committed calibration is an immutable evidence snapshot, not a live query whose
+answer changes whenever another verification run finishes. The VTD-005 snapshot has
+seven accepted receipt digests and a cutoff of `2026-08-07T17:52:01Z`, the commit time
+of the last calibration update. Every one of its declared receipts completed at or
+before that cutoff.
+
+Receipt `1133dc7d9344e823e4e0efee51daa030e737d9d8db18914d20590a480123f245`
+is a valid normal-load receipt in the same environment class, but it completed at
+`2026-08-07T19:48:51.141Z`, after the VTD-005 cutoff. It remains accepted and visible
+in the canonical timing ledger. It does not retroactively change the VTD-005 target
+budgets or focused projections, and it does not replace VTD-009's separately accepted
+37.2-second Shell baseline with a projection from another timing snapshot.
+
+Snapshot validation resolves every declared raw digest, checks its eligibility and
+environment identity, and requires every eligible unique same-class receipt completed
+at or before the cutoff in the declared sources to appear exactly once. Copied raw
+receipts still deduplicate by digest; a missing, rejected, cross-class, duplicate digest
+declaration, or omitted pre-cutoff receipt is an error. Receipts
+completed after the cutoff remain ordinary ledger evidence without invalidating the
+snapshot. A later explicit calibration refresh chooses a new immutable cutoff and must
+include every then-eligible pre-cutoff receipt; the cutoff cannot be used to cherry-pick
+favourable timings.
+
+This prevents a delivery checkpoint from invalidating the calibration used to decide
+whether that same delivery may run. It changes no measured duration, tolerance,
+verification task, selected pack, target, assertion leaf, or raw receipt byte.
+
 ### Historical and failure safety
 
 Changed-path planning compares the current and base helper declarations and Shell
