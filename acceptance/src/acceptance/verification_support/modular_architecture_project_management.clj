@@ -5,7 +5,8 @@
 (def ^:private owner-evidence-keys
   {"capture" :vtd004/capture-evidence
    "durable_project_repository" :vtd004/durable-evidence
-   "event-library" :vtd004/event-evidence})
+   "event-library" :vtd004/event-evidence
+   "schemas" :vtd004/schemas-evidence})
 
 (defn- owner-evidence [inspected owner]
   (get inspected (get owner-evidence-keys owner :vtd004/project-evidence)))

@@ -3,6 +3,7 @@
             [acceptance.verification-support.modular-architecture-durable-repository-handlers :as durable-repository]
             [acceptance.verification-support.modular-architecture-event-library-handlers :as event-library]
             [acceptance.verification-support.modular-architecture-project-management-handlers :as project-management]
+            [acceptance.verification-support.modular-architecture-schemas-handlers :as schemas]
             [acceptance.steps.support :as support]
             [aps.json :as aps-json]
             [babashka.fs :as fs]
@@ -34,7 +35,8 @@
          :vtd004/project-evidence (:vtd004Acceptance @throughput-evidence)
          :vtd004/durable-evidence (:vtd004DurableAcceptance @throughput-evidence)
          :vtd004/event-evidence (:vtd004EventAcceptance @throughput-evidence)
-         :vtd004/capture-evidence (:vtd004CaptureAcceptance @throughput-evidence)))
+         :vtd004/capture-evidence (:vtd004CaptureAcceptance @throughput-evidence)
+         :vtd004/schemas-evidence (:vtd004SchemasAcceptance @throughput-evidence)))
 
 (defn- parse-seconds [value]
   (when-let [[_ amount] (re-matches #"([0-9]+(?:\.[0-9]+)?) seconds" value)]
@@ -354,8 +356,9 @@
 (defn- calibration-pack-world [world pack-id representative-path]
   (let [inspected (verify-throughput! world)
         calibration (performance-calibration)
-        pack (if (= "capture" pack-id)
-               (get-in inspected [:vtd004/capture-evidence :calibration :previous])
+        pack (case pack-id
+               "capture" (get-in inspected [:vtd004/capture-evidence :calibration :previous])
+               "schemas" (get-in inspected [:vtd004/schemas-evidence :calibration :previous])
                (calibration-pack calibration pack-id))
         registry (aps-json/read-json-file
                   (str (fs/path (support/repository-root) "verification/packs.json")))
@@ -1034,6 +1037,10 @@
 (def handlers
   (vec (concat core-handlers
                (capture/handlers
+                {:example-values example-values
+                 :verify-throughput! verify-throughput!
+                 :performance-calibration performance-calibration})
+               (schemas/handlers
                 {:example-values example-values
                  :verify-throughput! verify-throughput!
                  :performance-calibration performance-calibration})

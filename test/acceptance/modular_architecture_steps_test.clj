@@ -113,6 +113,9 @@
 (deftest vtd004-capture-steps-use-dedicated-production-backed-semantics
   (assert-dedicated-scenario-handlers! #"Modular verification packs 06[1-7]" 7))
 
+(deftest vtd004-schemas-steps-use-dedicated-production-backed-semantics
+  (assert-dedicated-scenario-handlers! #"Modular verification packs 0(?:6[8-9]|7[0-4])" 7))
+
 (defn- assert-parsed-cross-pack-step-consumer!
   [{:keys [owner owner-feature handler consumer consumer-feature pattern step message]}]
   (let [packs [{:id owner
@@ -152,3 +155,14 @@
     :pattern #"captured event event-7 has no matching automatic assignment or manual attachment"
     :step "captured event event-7 has no matching automatic assignment or manual attachment"
     :message "Capture feature metadata cannot conceal a parsed cross-pack step"}))
+
+(deftest schemas-isolation-audit-matches-effective-patterns-against-parsed-dependant-steps
+  (assert-parsed-cross-pack-step-consumer!
+   {:owner "schemas"
+    :owner-feature "features/data-layer-live-allowed-value-expansion.feature"
+    :handler "acceptance/src/acceptance/steps/allowed_value_expansion.clj"
+    :consumer "defects"
+    :consumer-feature "features/data-layer-defect-library.feature"
+    :pattern #"a testing session contains captured events with schema validation results"
+    :step "a testing session contains captured events with schema validation results"
+    :message "Schemas feature metadata cannot conceal a parsed cross-pack step"}))

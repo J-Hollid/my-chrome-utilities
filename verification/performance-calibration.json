@@ -370,12 +370,7 @@
       "id": "schemas",
       "representativeChangedPath": "src/data-layer-allowed-value-expansion-ui.ts",
       "selectedPacks": [
-        "schemas",
-        "defects",
-        "live_flow_testing",
-        "project_assurance_severity",
-        "guided_test_cases",
-        "shell"
+        "schemas"
       ],
       "exactPackDuration": {
         "limit": 180,
@@ -390,31 +385,26 @@
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 223,
-        "baseline": 185.4,
+        "limit": 180,
+        "baseline": 149.6,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
         "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 408
+          "exact task samples": 259
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/data-layer-allowed-value-expansion-ui.ts"
       },
       "changedPathFanOut": {
-        "limit": 5,
-        "baseline": 5,
+        "limit": 0,
+        "baseline": 0,
         "percentile": "selected-dependant-count",
         "tolerance": 1,
         "provisional": false,
         "selectedPacks": [
-          "schemas",
-          "defects",
-          "live_flow_testing",
-          "project_assurance_severity",
-          "guided_test_cases",
-          "shell"
+          "schemas"
         ]
       }
     },
@@ -2086,7 +2076,7 @@
     }
   },
   "conservation": {
-    "verificationTopologyDigest": "0c9097ad3892df683ae1c6442404efe9e056a2ea700eae01735757143352ff08",
+    "verificationTopologyDigest": "ffa74a4d615be5e733b4b5380432d90ee6bf99e2bfbdb5875ec18ef3d70b0add",
     "referenceTopologyDigest": "082c3858fd748766baaac36e408b27d66af9978ad9ab64039db6160f0a5530cc",
     "runnablePackCount": 20,
     "browserTargetCount": 81,

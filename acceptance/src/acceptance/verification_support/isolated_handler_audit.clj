@@ -29,7 +29,7 @@
         (parsed-steps feature)))
 
 (def ^:private parsed-consumer-audit-owner-ids
-  #{"capture" "event-library"})
+  #{"capture" "event-library" "schemas"})
 
 (defn loaded-cross-pack-step-consumers [packs]
   (vec

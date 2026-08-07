@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 
 import {
   revalidateCurrentLiveSession,
@@ -7,6 +8,14 @@ import {
   buildValidationPropertyTree,
   presentValidationPropertyTree,
 } from "../dist/data-layer-live-validation-presentation.js";
+
+const publicationHandlers=await readFile(new URL(
+  "../acceptance/src/acceptance/steps/schema_publication_refresh.clj",import.meta.url),"utf8");
+const visibilityHandlers=await readFile(new URL(
+  "../acceptance/src/acceptance/steps/non_applicable_property_visibility.clj",import.meta.url),"utf8");
+assert.doesNotMatch(publicationHandlers,/data-layer-non-applicable-property-visibility/);
+assert.match(visibilityHandlers,/data-layer-non-applicable-property-visibility-runtime\.feature/);
+assert.doesNotMatch(visibilityHandlers,/data-layer-schema-publication-live-revalidation/);
 
 const required = (version, severity = "error") => ({
   id:"required-page-type", name:"Required page type", version,
