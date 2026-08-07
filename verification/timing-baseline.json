@@ -498,31 +498,12 @@
         ]
       },
       "shell": {
-        "limit": 19,
-        "baseline": 19,
+        "limit": 0,
+        "baseline": 0,
         "percentile": "selected-dependant-count",
         "tolerance": 1,
         "provisional": false,
         "selectedPacks": [
-          "project_management",
-          "durable_project_repository",
-          "command-palette",
-          "hotkeys",
-          "capture",
-          "event-library",
-          "project_event_transport",
-          "schemas",
-          "defects",
-          "replay",
-          "flow_graph",
-          "flow_export",
-          "live_flow_testing",
-          "layered_schema",
-          "schema_relationship_tree",
-          "property_set_flow_sections",
-          "project_assurance_severity",
-          "branding_polish",
-          "guided_test_cases",
           "shell"
         ]
       }
@@ -779,14 +760,14 @@
         "path": "src/data-layer-guided-test-cases.ts"
       },
       "shell": {
-        "limit": 613,
-        "baseline": 510.8,
+        "limit": 45,
+        "baseline": 37.2,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
         "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 752
+          "exact task samples": 58
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/workspace-tabs-ui.ts",

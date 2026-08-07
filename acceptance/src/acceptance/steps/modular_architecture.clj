@@ -5,6 +5,7 @@
             [acceptance.verification-support.modular-architecture-layered-editor-handlers :as layered-editor]
             [acceptance.verification-support.modular-architecture-project-management-handlers :as project-management]
             [acceptance.verification-support.modular-architecture-schemas-handlers :as schemas]
+            [acceptance.verification-support.modular-architecture-vtd009-handlers :as vtd009]
             [acceptance.steps.support :as support]
             [aps.json :as aps-json]
             [babashka.fs :as fs]
@@ -38,7 +39,8 @@
          :vtd004/event-evidence (:vtd004EventAcceptance @throughput-evidence)
          :vtd004/capture-evidence (:vtd004CaptureAcceptance @throughput-evidence)
          :vtd004/schemas-evidence (:vtd004SchemasAcceptance @throughput-evidence)
-         :vtd005/evidence (:vtd005Acceptance @throughput-evidence)))
+         :vtd005/evidence (:vtd005Acceptance @throughput-evidence)
+         :vtd009/evidence (:vtd009Acceptance @throughput-evidence)))
 
 (defn- parse-seconds [value]
   (when-let [[_ amount] (re-matches #"([0-9]+(?:\.[0-9]+)?) seconds" value)]
@@ -1043,7 +1045,10 @@
    ])
 
 (def handlers
-  (vec (concat core-handlers
+  (vec (concat (vtd009/handlers
+                {:example-values example-values
+                 :verify-throughput! verify-throughput!})
+               core-handlers
                (capture/handlers
                 {:example-values example-values
                  :verify-throughput! verify-throughput!

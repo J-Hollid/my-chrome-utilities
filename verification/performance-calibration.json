@@ -1,6 +1,7 @@
 {
   "version": 1,
   "implementationCommit": "4b3df11b8d7167ba49365b1774ee4d24c6ff64a5",
+  "receiptCutoff": "2026-08-07T17:52:01Z",
   "environmentClassId": "548b7d5ebd3dd1b89eec2e34cab6d8c697d1ebf7fd320c07682fbee7077e6606",
   "environment": {
     "node": "24.19.0",
@@ -868,25 +869,6 @@
       "id": "shell",
       "representativeChangedPath": "src/workspace-tabs-ui.ts",
       "selectedPacks": [
-        "project_management",
-        "durable_project_repository",
-        "command-palette",
-        "hotkeys",
-        "capture",
-        "event-library",
-        "project_event_transport",
-        "schemas",
-        "defects",
-        "replay",
-        "flow_graph",
-        "flow_export",
-        "live_flow_testing",
-        "layered_schema",
-        "schema_relationship_tree",
-        "property_set_flow_sections",
-        "project_assurance_severity",
-        "branding_polish",
-        "guided_test_cases",
         "shell"
       ],
       "exactPackDuration": {
@@ -903,45 +885,26 @@
         "budgetClass": "global-shell"
       },
       "changedPathDuration": {
-        "limit": 613,
-        "baseline": 510.8,
+        "limit": 45,
+        "baseline": 37.2,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
         "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 752
+          "exact task samples": 58
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
         "path": "src/workspace-tabs-ui.ts",
         "budgetClass": "global-shell"
       },
       "changedPathFanOut": {
-        "limit": 19,
-        "baseline": 19,
+        "limit": 0,
+        "baseline": 0,
         "percentile": "selected-dependant-count",
         "tolerance": 1,
         "provisional": false,
         "selectedPacks": [
-          "project_management",
-          "durable_project_repository",
-          "command-palette",
-          "hotkeys",
-          "capture",
-          "event-library",
-          "project_event_transport",
-          "schemas",
-          "defects",
-          "replay",
-          "flow_graph",
-          "flow_export",
-          "live_flow_testing",
-          "layered_schema",
-          "schema_relationship_tree",
-          "property_set_flow_sections",
-          "project_assurance_severity",
-          "branding_polish",
-          "guided_test_cases",
           "shell"
         ]
       },
@@ -2083,7 +2046,7 @@
     }
   },
   "conservation": {
-    "verificationTopologyDigest": "02a3ce07c0a6935624be274cb0eb1144f3a9ec0432738a7e6699b469aa127ecb",
+    "verificationTopologyDigest": "25e7d16fe55f8a0cc959dd876854a6a718c28afbbaa39eab65ad4bc9a716a065",
     "referenceTopologyDigest": "02a3ce07c0a6935624be274cb0eb1144f3a9ec0432738a7e6699b469aa127ecb",
     "runnablePackCount": 20,
     "browserTargetCount": 81,

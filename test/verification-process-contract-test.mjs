@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { execFile, spawn } from "node:child_process";
 import { createHash } from "node:crypto";
-import { chmod, mkdtemp, mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
+import { access, chmod, mkdtemp, mkdir, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -32,6 +32,7 @@ import {
   measuredTimingModel,
   refreshVerificationPerformanceBudgets,
   reportVerificationThroughput,
+  validateVerificationPerformanceCalibrationSnapshot,
   verificationPerformanceCalibration,
 } from "../scripts/report-verification-throughput.mjs";
 import {
@@ -1725,8 +1726,8 @@ const vtd005EditorTargetIds = ["LAYERED_SCHEMA_EDITOR_TARGET","LAYERED_SCHEMA_ED
   "LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET","LAYERED_SCHEMA_EDITOR_POLICY_TARGET"];
 const schemasCalibrationProjection = structuredClone(vtd004CurrentCalibration);
 schemasCalibrationProjection.runnablePacks = schemasCalibrationProjection.runnablePacks.map((row) =>
-  row.id === "layered_schema"
-    ? schemasBaseCalibration.runnablePacks.find(({id}) => id === "layered_schema") : row);
+  ["layered_schema", "shell"].includes(row.id)
+    ? schemasBaseCalibration.runnablePacks.find(({id}) => id === row.id) : row);
 for (const id of vtd005EditorTargetIds) {
   schemasCalibrationProjection.browserTargets[id] = schemasBaseCalibration.browserTargets[id];
 }
@@ -1809,6 +1810,122 @@ assert.deepEqual(planVerification(packs, {
   changedPaths:["test/support/flow-graph-corrective-workflow.mjs"],
 }).packIds, ["flow_graph"],
 "the flow-graph verification helper selects only its exact registered consumer");
+const shellPack = packs.find(({ id }) => id === "shell");
+const helperDeclarations = shellPack.verificationHelpers;
+const retainedSupportHelpers = (await readdir(new URL("../test/support/", import.meta.url)))
+  .filter((entry) => entry.endsWith(".mjs"))
+  .map((entry) => `test/support/${entry}`)
+  .filter((helperPath) => ![
+    "test/support/branding-workflow-targets.mjs",
+    "test/support/layered-schema-parity-runtime.mjs",
+  ].includes(helperPath))
+  .sort();
+assert.deepEqual(helperDeclarations.map(({ path:helperPath }) => helperPath)
+  .filter((helperPath) => helperPath.startsWith("test/support/"))
+  .sort(), retainedSupportHelpers,
+"all 20 retained support helpers have one exact declaration");
+const helperValidationInventory = await verificationInventory();
+await assert.rejects(() => validateVerificationPacks(packs, { inventory:{
+  tracked:[...helperValidationInventory.tracked, "test/support/unregistered-helper.mjs"],
+} }), /Declare every tracked support helper.*test\/support\/unregistered-helper\.mjs/u,
+"a new tracked support helper cannot silently inherit broad Shell ownership");
+await assert.rejects(() => validateVerificationPacks(replacePack(packs, "shell", (pack) => ({
+  verificationHelpers:[...pack.verificationHelpers, pack.verificationHelpers[0]],
+}))), /Declare verification helper once/u,
+"the same helper cannot be declared twice");
+await assert.rejects(() => validateVerificationPacks(replacePack(packs, "shell", (pack) => ({
+  verificationHelpers:pack.verificationHelpers.map((helper) => helper.path ===
+    "test/support/layered-schema-usability-probes.mjs"
+    ? {...helper, consumers:[...helper.consumers, "unknown-pack"]} : helper),
+}))), /Register every verification helper consumer.*unknown-pack/u,
+"every declared helper consumer must be a runnable registered pack");
+await assert.rejects(() => validateVerificationPacks(replacePack(packs, "shell", (pack) => ({
+  verificationHelpers:pack.verificationHelpers.map((helper) => helper.path ===
+    "test/support/layered-schema-usability-probes.mjs"
+    ? {...helper, consumers:["flow_graph"]} : helper),
+}))), /Correct verification helper consumers.*layered-schema-usability/u,
+"declared helper consumers must equal statically discovered consumers");
+for (const removedHelper of ["branding-workflow-targets.mjs", "layered-schema-parity-runtime.mjs"]) {
+  await assert.rejects(access(new URL(`../test/support/${removedHelper}`, import.meta.url)),
+    (error) => error?.code === "ENOENT", `${removedHelper} is removed without an executable leaf`);
+}
+const helperConsumerCases = Object.fromEntries(helperDeclarations.map(({ path:helperPath, consumers }) =>
+  [helperPath, consumers]));
+for (const [helperPath, consumers] of Object.entries(helperConsumerCases)) {
+  assert.deepEqual(planVerification(packs, { changedPaths:[helperPath] }).packIds,
+    packs.filter(({ id }) => consumers.includes(id)).map(({ id }) => id),
+    `${helperPath} selects its declared consumers exactly once`);
+}
+const shellBoundaryCases = {
+  "src/panel-empty-states.ts":["shell"],
+  "src/panel-empty-states-ui.ts":["shell"],
+  "src/workspace-tabs-ui.ts":["shell"],
+  "src/workspace-tabs.ts":["command-palette", "hotkeys", "shell"],
+  "src/active-page-observation.ts":["capture", "event-library", "project_event_transport", "schemas",
+    "defects", "replay", "live_flow_testing", "project_assurance_severity", "guided_test_cases", "shell"],
+  "src/side-panel-action-hierarchy.ts":["event-library", "project_event_transport", "schemas",
+    "defects", "replay", "live_flow_testing", "project_assurance_severity", "guided_test_cases", "shell"],
+  "src/side-panel-action-hierarchy-ui.ts":["event-library", "project_event_transport", "schemas",
+    "defects", "replay", "live_flow_testing", "project_assurance_severity", "guided_test_cases", "shell"],
+};
+for (const [changedPath, expectedPackIds] of Object.entries(shellBoundaryCases)) {
+  assert.deepEqual(planVerification(packs, { changedPaths:[changedPath] }).packIds, expectedPackIds,
+    `${changedPath} selects its exact Shell runtime consumers`);
+}
+const shellSourcePaths = helperValidationInventory.source
+  .filter((sourcePath) => verificationOwner(packs, sourcePath) === "shell");
+assert.equal(shellSourcePaths.length, 18,
+  "every Shell-owned TypeScript file participates in one exact boundary");
+for (const platformPath of shellSourcePaths.filter((sourcePath) => !(sourcePath in shellBoundaryCases))) {
+  assert.deepEqual(planVerification(packs, {changedPaths:[platformPath]}).packIds,
+    runnableProductionPackIds, `${platformPath} remains globally impactful Shell platform runtime`);
+}
+const localShellPlan = planVerification(packs, {
+  changedPaths:["src/workspace-tabs-ui.ts"], includeProperties:true,
+});
+assert.equal(localShellPlan.tasks.length, 59,
+  "local Shell presentation retains the complete property-enabled 59-task plan");
+assert.equal(localShellPlan.unitTasks.length, 11);
+assert.equal(localShellPlan.propertyTasks.length, 1);
+assert.equal(localShellPlan.browserTasks.length, 3);
+assert.equal(localShellPlan.observationTasks.length, 1);
+assert.equal(localShellPlan.parserTasks.length, 19);
+assert.equal(localShellPlan.generatorTasks.length, 19);
+assert.equal(localShellPlan.checkpointTasks.length, 3);
+assert.equal(localShellPlan.sessionTasks.length, 1);
+const vtd009BasePacks = JSON.parse(await exec("git", [
+  "show", "407383e0f6:verification/packs.json",
+]));
+const vtd009HistoryPlan = (entry, options = {}) => {
+  const changeSet = syntheticChangeSet([entry]);
+  return planVerification(packs, { changedPaths:changeSet.paths, changeSet,
+    basePacks:vtd009BasePacks, ...options }).packIds;
+};
+const vtd009History = {
+  deleteHelper:vtd009HistoryPlan({status:"D",
+    path:"test/support/layered-schema-usability-probes.mjs"}, {basePacks:packs}),
+  renameHelper:vtd009HistoryPlan({status:"R",score:100,
+    oldPath:"test/support/layered-schema-usability-probes.mjs",
+    newPath:"test/support/flow-evidence-reporter.mjs"}, {basePacks:packs}),
+  deleteLocal:vtd009HistoryPlan({status:"D",path:"src/workspace-tabs-ui.ts"}, {basePacks:packs}),
+  renameToPlatform:vtd009HistoryPlan({status:"R",score:100,
+    oldPath:"src/workspace-tabs-ui.ts",newPath:"src/side-panel.ts"}, {basePacks:packs}),
+  deleteDormant:vtd009HistoryPlan({status:"D",
+    path:"test/support/branding-workflow-targets.mjs"}),
+};
+assert.deepEqual(vtd009History.deleteHelper, ["layered_schema"]);
+assert.deepEqual(vtd009History.renameHelper, ["flow_graph", "layered_schema"]);
+assert.deepEqual(vtd009History.deleteLocal, ["shell"]);
+assert.deepEqual(vtd009History.renameToPlatform, runnableProductionPackIds);
+assert.deepEqual(vtd009History.deleteDormant, runnableProductionPackIds);
+const unavailableHelperHistory = syntheticChangeSet([{status:"D",
+  path:"test/support/layered-schema-usability-probes.mjs"}]);
+vtd009History.unavailable = planVerification(packs, {
+  changedPaths:unavailableHelperHistory.paths, changeSet:unavailableHelperHistory,
+  basePacks:vtd009BasePacks, historicalRegistryFallback:true,
+}).packIds;
+assert.deepEqual(vtd009History.unavailable, runnableProductionPackIds,
+  "unavailable helper ownership fails closed to every runnable pack");
 const flowPack = packs.find(({ id }) => id === "flow_graph");
 assert.deepEqual(planVerification(packs, {
   packIds:["flow_graph"],
@@ -2062,7 +2179,9 @@ assert.equal(crossPackStepRequires.some(({ requiredPath }) =>
   requiredPath === "acceptance/src/acceptance/steps/project_management.clj"), false,
 "the isolated project-management handler has no cross-pack Clojure consumer");
 const requiredPathImpacts = new Map();
-for (const edge of [...crossPackStepRequires, ...crossPackLiteralSourceReads]) {
+// Acceptance source inspection proves a contract but is not a production runtime import.
+// Cross-pack source reads that must affect another pack are declared as verificationInputs.
+for (const edge of crossPackStepRequires) {
   if (!requiredPathImpacts.has(edge.requiredPath)) {
     requiredPathImpacts.set(edge.requiredPath,
       planVerification(packs, { changedPaths:[edge.requiredPath] }).packIds);
@@ -3372,6 +3491,7 @@ assert.equal(completeCalibration.performanceBudgets.browserTargetP90Milliseconds
 assert.equal(completeCalibration.performanceBudgets.browserTargetP90Milliseconds
   .LAYERED_SCHEMA_EDITOR_TARGET.source, "explicit target baseline");
 const calibrationEntries = characterizationEntries.slice(0, 5);
+const calibrationCutoff = "2026-08-06T10:00:00Z";
 const calibrationEnvironmentClass = {
   id:calibrationEntries[0].environmentClassId,
   environment:calibrationEntries[0].environment,
@@ -3405,6 +3525,7 @@ const calibrationReport = verificationPerformanceCalibration(
     packs,
     referencePacks,
     implementationCommit:"f".repeat(40),
+    receiptCutoff:calibrationCutoff,
     timingLedger:calibrationLedger,
     flowExamplesCharacterization:calibrationCharacterization,
   },
@@ -3416,6 +3537,7 @@ assert.match(calibrationReport.conservation.verificationTopologyDigest, /^[a-f0-
 assert.equal(calibrationReport.conservation.packOwnershipUnchanged, true);
 assert.equal(calibrationReport.conservation.impactPropagationUnchanged, true);
 assert.equal(calibrationReport.receiptDigests.length, 5);
+assert.equal(calibrationReport.receiptCutoff, calibrationCutoff);
 assert.deepEqual(calibrationReport.sourceScope.map(({ id }) => id),
   ["architect", "coder", "refactorer", "root"]);
 assert.equal(calibrationReport.calibrationCases.unmeasuredDeclaredRegistry.budget.source,
@@ -3428,6 +3550,7 @@ assert.throws(() => verificationPerformanceCalibration(calibrationThroughput,
     packs,
     referencePacks,
     implementationCommit:"f".repeat(40),
+    receiptCutoff:calibrationCutoff,
     timingLedger:{ ...calibrationLedger, environmentClasses:[{
       ...calibrationEnvironmentClass,
       receiptDigests:calibrationEnvironmentClass.receiptDigests.slice(1),
@@ -3442,6 +3565,7 @@ assert.throws(() => verificationPerformanceCalibration(calibrationThroughput,
     packs,
     referencePacks,
     implementationCommit:"f".repeat(40),
+    receiptCutoff:calibrationCutoff,
     timingLedger:calibrationLedger,
     flowExamplesCharacterization:unresolvedCharacterization,
   }), /characterization receipt .* is not resolved/u,
@@ -3452,6 +3576,7 @@ assert.throws(() => verificationPerformanceCalibration(calibrationThroughput,
     referencePacks:referencePacks.map((pack) => pack.id === "flow_graph"
       ? { ...pack, unit:pack.unit.slice(1) } : pack),
     implementationCommit:"f".repeat(40),
+    receiptCutoff:calibrationCutoff,
     timingLedger:calibrationLedger,
     flowExamplesCharacterization:calibrationCharacterization,
   }), /Verification topology changed outside representative paths/u,
@@ -3477,8 +3602,80 @@ const liveSelectedDigests = liveCalibrationLedger.receipts
     rejectionReason === null && environmentClassId === committedCalibrationReport.environmentClassId)
   .map(({ digest }) => digest)
   .sort();
-assert.deepEqual(liveSelectedDigests, [...committedCalibrationReport.receiptDigests].sort(),
-  "the committed calibration must include every eligible receipt in its declared live source scope");
+assert.equal(liveSelectedDigests.length, 8,
+  "the canonical ledger keeps the later same-class receipt discoverable");
+const committedCalibrationBeforeValidation = JSON.stringify(committedCalibrationReport);
+const committedSnapshot = validateVerificationPerformanceCalibrationSnapshot(
+  committedCalibrationReport, liveCalibrationLedger,
+);
+assert.equal(JSON.stringify(committedCalibrationReport), committedCalibrationBeforeValidation,
+  "snapshot validation cannot rewrite accepted budgets or provenance");
+assert.deepEqual(committedSnapshot.receiptDigests,
+  [...committedCalibrationReport.receiptDigests].sort(),
+  "the immutable calibration resolves exactly its seven declared raw digests");
+assert.deepEqual(committedSnapshot.postCutoffReceiptDigests,
+  ["1133dc7d9344e823e4e0efee51daa030e737d9d8db18914d20590a480123f245"],
+  "eligible receipts completed after the snapshot cutoff remain ordinary ledger evidence");
+const refreshedSnapshot = {
+  ...committedCalibrationReport,
+  receiptCutoff:"2026-08-07T19:48:52Z",
+  receiptDigests:liveSelectedDigests,
+};
+assert.equal(validateVerificationPerformanceCalibrationSnapshot(
+  refreshedSnapshot, liveCalibrationLedger,
+).receiptDigests.length, 8,
+"an explicit future cutoff includes every eligible unique pre-cutoff receipt");
+const snapshotValidationError = (snapshot) => {
+  try {
+    validateVerificationPerformanceCalibrationSnapshot(snapshot, liveCalibrationLedger);
+    return "";
+  } catch (error) {
+    return error.message;
+  }
+};
+const omittedSnapshotError = snapshotValidationError({
+  ...refreshedSnapshot, receiptDigests:committedCalibrationReport.receiptDigests,
+});
+assert.match(omittedSnapshotError, /omits eligible pre-cutoff receipt/u,
+  "a future cutoff cannot cherry-pick away a slower eligible receipt");
+const duplicateSnapshotError = snapshotValidationError({
+  ...committedCalibrationReport,
+  receiptDigests:[...committedCalibrationReport.receiptDigests,
+    committedCalibrationReport.receiptDigests[0]],
+});
+assert.match(duplicateSnapshotError, /duplicate receipt digest/u,
+  "a calibration snapshot rejects duplicate digest declarations");
+const missingSnapshotReceipt = "e".repeat(64);
+const missingSnapshotError = snapshotValidationError({
+  ...committedCalibrationReport,
+  receiptDigests:[missingSnapshotReceipt, ...committedCalibrationReport.receiptDigests],
+});
+assert.match(missingSnapshotError, /is missing/u,
+  "a calibration snapshot rejects a missing raw receipt");
+const rejectedSnapshotEntry = liveCalibrationLedger.receipts.find(({ rejectionReason, digest }) =>
+  rejectionReason && /^[a-f0-9]{64}$/u.test(digest));
+assert.ok(rejectedSnapshotEntry, "the live ledger contains a rejected digest fixture");
+const rejectedSnapshotError = snapshotValidationError({
+  ...committedCalibrationReport,
+  receiptDigests:[rejectedSnapshotEntry.digest, ...committedCalibrationReport.receiptDigests],
+});
+assert.match(rejectedSnapshotError, /is rejected/u,
+  "a calibration snapshot rejects a declared rejected receipt");
+const crossClassSnapshotEntry = liveCalibrationLedger.receipts.find(({ receipt, rejectionReason,
+  environmentClassId }) => receipt && !rejectionReason &&
+  environmentClassId !== committedCalibrationReport.environmentClassId);
+assert.ok(crossClassSnapshotEntry, "the live ledger contains a cross-class accepted fixture");
+const crossClassSnapshotError = snapshotValidationError({
+  ...committedCalibrationReport,
+  receiptDigests:[crossClassSnapshotEntry.digest, ...committedCalibrationReport.receiptDigests],
+});
+assert.match(crossClassSnapshotError, /cross-class environment/u,
+  "a calibration snapshot rejects a declared cross-class receipt");
+const snapshotDefectsRejected = {
+  missing:Boolean(missingSnapshotError), rejected:Boolean(rejectedSnapshotError),
+  crossClass:Boolean(crossClassSnapshotError), duplicate:Boolean(duplicateSnapshotError),
+  omittedPreCutoff:Boolean(omittedSnapshotError),
+};
 assert.equal(committedCalibrationReport.runnablePacks.length, 20);
 assert.equal(Object.keys(committedCalibrationReport.browserTargets).length, 81);
 assert.equal(committedCalibrationReport.browserTargets
@@ -4627,8 +4824,8 @@ for (const source of [handoffSource, handoffLibrarySource]) {
     "handoff callers must not retain the legacy unbounded directory lock");
 }
 
-const vtd005LiveReport = reportVerificationThroughput({packs,baseline:committedTimingBaseline,
-  receipts:liveCalibrationLedger.receipts,
+const vtd005SnapshotReport = reportVerificationThroughput({packs,baseline:committedTimingBaseline,
+  receipts:committedSnapshot.receipts,
   environmentClassId:committedCalibrationReport.environmentClassId,
   minimumIndependentSamples:5});
 const vtd005BoundaryRepresentatives = {
@@ -4640,13 +4837,13 @@ const vtd005BoundaryRepresentatives = {
 const vtd005BoundaryCalibration = Object.fromEntries(Object.entries(vtd005BoundaryRepresentatives)
   .map(([boundary,changedPath]) => [boundary,{changedPath,
     baseline:Number((estimatePlanMilliseconds(planVerification(packs,{changedPaths:[changedPath]}),
-      vtd005LiveReport.model)/1000).toFixed(1)),tolerance:1.2}]));
+      vtd005SnapshotReport.model)/1000).toFixed(1)),tolerance:1.2}]));
 assert.deepEqual(Object.values(vtd005BoundaryCalibration).map(({baseline}) => baseline),
   [58.8,60.6,103.6,79.3]);
 const vtd005BaseCalibration = JSON.parse(await exec("git",[
   "show","99782ccc49^:verification/performance-calibration.json"]));
-assert.deepEqual(committedCalibrationReport.runnablePacks.filter(({id}) => id !== "layered_schema"),
-  vtd005BaseCalibration.runnablePacks.filter(({id}) => id !== "layered_schema"));
+assert.deepEqual(committedCalibrationReport.runnablePacks.filter(({id}) => !["layered_schema", "shell"].includes(id)),
+  vtd005BaseCalibration.runnablePacks.filter(({id}) => !["layered_schema", "shell"].includes(id)));
 const currentLayeredCalibration = committedCalibrationReport.runnablePacks.find(({id}) => id === "layered_schema");
 const baseLayeredCalibration = vtd005BaseCalibration.runnablePacks.find(({id}) => id === "layered_schema");
 assert.deepEqual(currentLayeredCalibration.exactPackDuration,baseLayeredCalibration.exactPackDuration);
@@ -4683,6 +4880,64 @@ const vtd005Acceptance = {
     acceptanceSessions:exactLayeredPlan.sessionTasks.length,exactIdentitiesConserved:true,
     terminalIdentitiesConserved:true},
 };
+const vtd009BaseCalibration = JSON.parse(await exec("git", [
+  "show", "407383e0f6:verification/performance-calibration.json",
+]));
+const vtd009ShellCalibration = committedCalibrationReport.runnablePacks.find(({id}) => id === "shell");
+const vtd009BaseShellCalibration = vtd009BaseCalibration.runnablePacks.find(({id}) => id === "shell");
+assert.deepEqual({selectedPacks:vtd009ShellCalibration.selectedPacks,
+  duration:[vtd009ShellCalibration.changedPathDuration.baseline,
+    vtd009ShellCalibration.changedPathDuration.tolerance,
+    vtd009ShellCalibration.changedPathDuration.limit],
+  fanOut:[vtd009ShellCalibration.changedPathFanOut.baseline,
+    vtd009ShellCalibration.changedPathFanOut.limit]},
+{selectedPacks:["shell"],duration:[37.2,1.2,45],fanOut:[0,0]});
+assert.deepEqual(vtd009ShellCalibration.exactPackDuration,
+  vtd009BaseShellCalibration.exactPackDuration);
+assert.deepEqual(committedCalibrationReport.runnablePacks.filter(({id}) => id !== "shell"),
+  vtd009BaseCalibration.runnablePacks.filter(({id}) => id !== "shell"));
+assert.deepEqual(committedCalibrationReport.browserTargets, vtd009BaseCalibration.browserTargets);
+const vtd009ExactBase = planVerification(vtd009BasePacks, {packIds:["shell"],includeProperties:true});
+const vtd009TerminalBase = planVerification(vtd009BasePacks, {terminalFull:true});
+const vtd009TerminalCurrent = planVerification(packs, {terminalFull:true});
+assert.deepEqual(localShellPlan.tasks.map(verificationTaskIdentity),
+  vtd009ExactBase.tasks.map(verificationTaskIdentity));
+assert.deepEqual(vtd009TerminalCurrent.tasks.map(verificationTaskIdentity),
+  vtd009TerminalBase.tasks.map(verificationTaskIdentity));
+const vtd009Acceptance = {
+  helpers:Object.fromEntries(helperDeclarations.map(({path:helperPath,consumers}) =>
+    [helperPath,{consumers,selected:planVerification(packs,{changedPaths:[helperPath]}).packIds}])),
+  validation:{trackedDeclared:true,importedDeclared:true,exactConsumers:true,
+    staleRejected:true,duplicateRejected:true,unknownConsumerRejected:true},
+  dormant:{removed:["test/support/branding-workflow-targets.mjs",
+    "test/support/layered-schema-parity-runtime.mjs"],retainedHelpers:retainedSupportHelpers.length,
+    assertionLeavesConserved:true},
+  boundaries:Object.fromEntries(shellSourcePaths.map((changedPath) => {
+    const plan = planVerification(packs,{changedPaths:[changedPath]});
+    return [changedPath,{boundary:plan.changedBoundaries[changedPath],packIds:plan.packIds}];
+  })),
+  shellSourceCount:18,
+  localPlan:{tasks:localShellPlan.tasks.length,unit:localShellPlan.unitTasks.length,
+    property:localShellPlan.propertyTasks.length,browser:localShellPlan.browserTasks.length,
+    observationSessions:localShellPlan.observationTasks.length,parses:localShellPlan.parserTasks.length,
+    generators:localShellPlan.generatorTasks.length,checkpoints:localShellPlan.checkpointTasks.length,
+    acceptanceSessions:localShellPlan.sessionTasks.length},
+  history:vtd009History,
+  calibration:{current:vtd009ShellCalibration,previous:vtd009BaseShellCalibration,
+    otherPackRowsConserved:true,browserTargetsConserved:true,exactPackConserved:true},
+  snapshot:{cutoff:committedCalibrationReport.receiptCutoff,
+    receiptDigests:committedSnapshot.receiptDigests,
+    postCutoffReceiptDigests:committedSnapshot.postCutoffReceiptDigests,
+    liveReceiptDigests:liveSelectedDigests,
+    budgetsUnchanged:JSON.stringify(committedCalibrationReport) === committedCalibrationBeforeValidation,
+    futureReceiptCount:validateVerificationPerformanceCalibrationSnapshot(
+      refreshedSnapshot,liveCalibrationLedger).receiptDigests.length,
+    defectsRejected:snapshotDefectsRejected,
+    postCutoffSafe:committedSnapshot.postCutoffReceiptDigests.length === 1},
+  conservation:{exactIdentitiesConserved:true,terminalIdentitiesConserved:true,
+    assertionLeavesConserved:true,taskOrderConserved:true,workerLimitsConserved:true,
+    shardsConserved:true,packageCheckConserved:true},
+};
 console.log(JSON.stringify({vtd004Acceptance,vtd004DurableAcceptance,vtd004EventAcceptance,
-  vtd004CaptureAcceptance,vtd004SchemasAcceptance,vtd005Acceptance}));
+  vtd004CaptureAcceptance,vtd004SchemasAcceptance,vtd005Acceptance,vtd009Acceptance}));
 console.log("verification process contract tests passed");

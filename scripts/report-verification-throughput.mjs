@@ -778,6 +778,61 @@ export function refreshVerificationPerformanceBudgets(
   };
 }
 
+const digestPattern = /^[a-f0-9]{64}$/u;
+
+const receiptCompletedAt = (entry) => Date.parse(entry?.receipt?.completedAt ?? "");
+
+export function validateVerificationPerformanceCalibrationSnapshot(calibration, timingLedger) {
+  const cutoff = Date.parse(calibration?.receiptCutoff ?? "");
+  if (!Number.isFinite(cutoff)) {
+    throw new Error("Calibration snapshot requires a valid immutable receipt cutoff");
+  }
+  if (!Array.isArray(timingLedger?.receipts)) {
+    throw new Error("Calibration snapshot requires a canonical timing ledger");
+  }
+  const declared = calibration?.receiptDigests ?? [];
+  if (!Array.isArray(declared) || declared.some((digest) => !digestPattern.test(digest))) {
+    throw new Error("Calibration snapshot contains a missing or malformed receipt digest declaration");
+  }
+  if (new Set(declared).size !== declared.length) {
+    throw new Error("Calibration snapshot contains a duplicate receipt digest declaration");
+  }
+  const entriesByDigest = new Map(timingLedger.receipts.map((entry) => [entry.digest, entry]));
+  for (const digest of declared) {
+    const entry = entriesByDigest.get(digest);
+    if (!entry?.receipt) throw new Error(`Calibration snapshot receipt ${digest} is missing`);
+    if (entry.rejectionReason) throw new Error(`Calibration snapshot receipt ${digest} is rejected`);
+    if (entry.environmentClassId !== calibration.environmentClassId) {
+      throw new Error(`Calibration snapshot receipt ${digest} belongs to a cross-class environment`);
+    }
+    if (!Number.isFinite(receiptCompletedAt(entry)) || receiptCompletedAt(entry) > cutoff) {
+      throw new Error(`Calibration snapshot receipt ${digest} completed after its cutoff`);
+    }
+  }
+  const eligible = [...new Map(timingLedger.receipts
+    .filter((entry) => entry.receipt && !entry.rejectionReason &&
+      entry.environmentClassId === calibration.environmentClassId &&
+      Number.isFinite(receiptCompletedAt(entry)))
+    .map((entry) => [entry.digest, entry])).values()];
+  const receipts = eligible.filter((entry) => receiptCompletedAt(entry) <= cutoff);
+  const receiptDigests = receipts.map(({ digest }) => digest).sort();
+  const declaredSorted = [...declared].sort();
+  const omitted = receiptDigests.find((digest) => !declared.includes(digest));
+  if (omitted) {
+    throw new Error(`Calibration snapshot omits eligible pre-cutoff receipt ${omitted}`);
+  }
+  if (JSON.stringify(receiptDigests) !== JSON.stringify(declaredSorted)) {
+    throw new Error("Calibration snapshot declarations do not exactly match eligible pre-cutoff receipts");
+  }
+  return {
+    receiptCutoff:calibration.receiptCutoff,
+    receiptDigests,
+    receipts,
+    postCutoffReceiptDigests:eligible.filter((entry) => receiptCompletedAt(entry) > cutoff)
+      .map(({ digest }) => digest).sort(),
+  };
+}
+
 export function verificationPerformanceCalibration(
   report,
   baseline,
@@ -785,6 +840,7 @@ export function verificationPerformanceCalibration(
     packs,
     referencePacks,
     implementationCommit,
+    receiptCutoff,
     timingLedger,
     flowExamplesCharacterization,
     minimumIndependentSamples = 5,
@@ -793,6 +849,7 @@ export function verificationPerformanceCalibration(
 ) {
   if (!Array.isArray(packs) || !packs.length || !Array.isArray(referencePacks) ||
       !/^[a-f0-9]{40}$/u.test(implementationCommit ?? "") ||
+      !Number.isFinite(Date.parse(receiptCutoff ?? "")) ||
       !Array.isArray(timingLedger?.sources) || !timingLedger.sources.length ||
       !Array.isArray(timingLedger?.receipts) ||
       !Array.isArray(timingLedger?.environmentClasses)) {
@@ -804,17 +861,25 @@ export function verificationPerformanceCalibration(
   if (!environmentClass || canonicalEnvironmentClassId(environmentClass.environment) !== environmentClassId) {
     throw new Error("Performance calibration requires the report's canonical selected environment class");
   }
-  const receiptDigests = timingLedger.receipts
+  const liveReceiptDigests = timingLedger.receipts
     .filter(({ receipt, rejectionReason, environmentClassId:entryClassId }) =>
       receipt && !rejectionReason && entryClassId === environmentClassId)
     .map(({ digest }) => digest)
     .sort();
   const declaredDigests = [...(environmentClass.receiptDigests ?? [])].sort();
-  if (receiptDigests.length < minimumIndependentSamples ||
-      receiptDigests.some((digest) => !/^[a-f0-9]{64}$/u.test(digest)) ||
-      new Set(receiptDigests).size !== receiptDigests.length ||
-      JSON.stringify(receiptDigests) !== JSON.stringify(declaredDigests)) {
+  if (liveReceiptDigests.some((digest) => !digestPattern.test(digest)) ||
+      new Set(liveReceiptDigests).size !== liveReceiptDigests.length ||
+      JSON.stringify(liveReceiptDigests) !== JSON.stringify(declaredDigests)) {
     throw new Error("Canonical receipt digests must exactly match the selected environment class");
+  }
+  const { receiptDigests } = validateVerificationPerformanceCalibrationSnapshot({
+    environmentClassId, receiptCutoff, receiptDigests:timingLedger.receipts
+      .filter((entry) => entry.receipt && !entry.rejectionReason &&
+        entry.environmentClassId === environmentClassId && receiptCompletedAt(entry) <= Date.parse(receiptCutoff))
+      .map(({ digest }) => digest),
+  }, timingLedger);
+  if (receiptDigests.length < minimumIndependentSamples) {
+    throw new Error("Calibration snapshot has too few independent pre-cutoff receipts");
   }
   if (report.model?.ledger?.selectedEnvironmentClass !== environmentClassId ||
       report.model?.ledger?.receipts !== receiptDigests.length ||
@@ -900,6 +965,7 @@ export function verificationPerformanceCalibration(
     implementationCommit,
     environmentClassId,
     environment:environmentClass.environment,
+    receiptCutoff,
     sourceScope:timingLedger.sources
       .map(({ id, path:sourcePath }) => ({ id, path:sourcePath }))
       .sort((left, right) => left.id.localeCompare(right.id) || left.path.localeCompare(right.path)),

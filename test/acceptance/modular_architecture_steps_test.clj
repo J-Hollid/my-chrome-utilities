@@ -2,6 +2,7 @@
   (:require [acceptance.runtime :as runtime]
             [acceptance.steps.modular-architecture :as modular]
             [acceptance.verification-support.isolated-handler-audit :as isolation-audit]
+            [acceptance.verification-support.modular-architecture-vtd009-handlers :as vtd009]
             [aps.gherkin :as gherkin]
             [clojure.test :refer [deftest is]]))
 
@@ -118,6 +119,23 @@
 
 (deftest vtd005-layered-editor-steps-use-dedicated-production-backed-semantics
   (assert-dedicated-scenario-handlers! #"Modular verification packs 0(?:7[5-9]|80)" 6))
+
+(deftest vtd009-helper-shell-steps-use-dedicated-production-backed-semantics
+  (assert-dedicated-scenario-handlers! #"Modular verification packs 08[1-7]" 7))
+
+(deftest vtd009-scope-labels-and-history-changes-resolve-exactly
+  (is (= 20 (#'vtd009/scope "every runnable pack")))
+  (is (= ["flow_graph" "layered_schema"]
+         (#'vtd009/scope "layered_schema and flow_graph")))
+  (is (= ["capture dependant closure" "shell" "10 packs"]
+         (#'vtd009/scope "capture dependant closure, shell, and 10 packs")))
+  (is (= :deleteHelper
+         (#'vtd009/history-key
+          "delete test/support/layered-schema-usability-targets.mjs")))
+  (is (= :renameToPlatform
+         (#'vtd009/history-key
+          "rename src/workspace-tabs-ui.ts to src/platform/workspace-tabs-ui.ts")))
+  (is (= :unavailable (#'vtd009/history-key "modify an unrelated file"))))
 
 (defn- assert-parsed-cross-pack-step-consumer!
   [{:keys [owner owner-feature handler consumer consumer-feature pattern step message]}]

@@ -264,7 +264,8 @@ const impactBoundarySourceClasses = [
 
 function validImpactBoundaryShape(boundary, pack) {
   return boundary && !Array.isArray(boundary) &&
-    ["id,prefixes,propagateDependants", "id,prefixes,propagateDependants,sourceClass"]
+    ["id,prefixes,propagateDependants", "id,prefixes,propagateDependants,sourceClass",
+      "consumers,id,prefixes,propagateDependants,sourceClass"]
       .includes(Object.keys(boundary).sort().join(",")) &&
     /^[a-z0-9][a-z0-9_-]*$/u.test(boundary.id ?? "") &&
     Array.isArray(boundary.prefixes) && boundary.prefixes.length > 0 &&
@@ -272,6 +273,9 @@ function validImpactBoundaryShape(boundary, pack) {
       values(pack, "source").some((owned) =>
         prefixMatches(owned, prefix) || prefixMatches(prefix, owned))) &&
     typeof boundary.propagateDependants === "boolean" &&
+    (boundary.consumers === undefined || Array.isArray(boundary.consumers) &&
+      new Set(boundary.consumers).size === boundary.consumers.length &&
+      boundary.consumers.every((id) => id !== pack.id && typeof id === "string")) &&
     (boundary.sourceClass === undefined || impactBoundarySourceClasses.includes(boundary.sourceClass));
 }
 
@@ -288,6 +292,11 @@ function validateImpactBoundaries(packs, sourcePaths, representativePaths = sour
     for (const boundary of boundaries) {
       if (!validImpactBoundaryShape(boundary, pack) || ids.has(boundary.id)) {
         throw new Error(`Use exact owned impact boundaries in pack ${pack.id}`);
+      }
+      const unknownConsumers = values(boundary, "consumers")
+        .filter((id) => !packs.some((candidate) => candidate.id === id && runnable(candidate)));
+      if (unknownConsumers.length) {
+        throw new Error(`Register every impact-boundary consumer for ${boundary.id}: ${unknownConsumers.join(", ")}`);
       }
       ids.add(boundary.id);
     }
@@ -408,7 +417,8 @@ export async function validateIsolatedVerificationHandlers(
   }
 }
 
-async function validateVerificationHelpers(packs) {
+async function validateVerificationHelpers(packs, trackedPaths) {
+  const knownConsumers = new Set(packs.filter(runnable).map(({ id }) => id));
   const declarations = new Map();
   for (const owner of packs) {
     for (const declaration of values(owner, "verificationHelpers")) {
@@ -424,7 +434,19 @@ async function validateVerificationHelpers(packs) {
       if (ownerOf(packs, declaration.path)?.id !== owner.id) {
         throw new Error(`Declare verification helper under its owning pack: ${declaration.path}`);
       }
+      const unknownConsumers = declaration.consumers.filter((id) => !knownConsumers.has(id));
+      if (unknownConsumers.length) {
+        throw new Error(`Register every verification helper consumer for ${declaration.path}: ` +
+          unknownConsumers.join(", "));
+      }
       declarations.set(declaration.path, { ownerId:owner.id, consumers:[...declaration.consumers].sort() });
+    }
+  }
+  const trackedHelpers = trackedPaths.filter((trackedPath) =>
+    trackedPath.startsWith("test/support/") || trackedPath === sharedBrowserHarnessPath);
+  for (const helper of trackedHelpers) {
+    if (!declarations.has(helper)) {
+      throw new Error(`Declare every tracked support helper: ${helper}`);
     }
   }
   const actual = new Map();
@@ -788,9 +810,8 @@ export async function validateVerificationPacks(packs, { inventory } = {}) {
   validateBrowserObservationBatches(packs);
   validateBrowserEvidencePartitions(packs);
   await validateIsolatedVerificationHandlers(packs);
-  await validateVerificationHelpers(packs);
-
   const repositoryInventory = { ...await verificationInventory(), ...inventory };
+  await validateVerificationHelpers(packs, repositoryInventory.tracked);
   validateImpactBoundaries(packs, repositoryInventory.source,
     [...repositoryInventory.source, ...repositoryInventory.features]);
   validatePrefixOwnership(packs, repositoryInventory.source, "source");
@@ -1120,6 +1141,7 @@ export function planVerification(
     if (!owner) throw new Error(`Assign every changed path to one verification pack: ${changedPath}`);
     const boundary = impactBoundaryFor(owner, changedPath);
     const runtimeConsumers = exactRuntimeConsumers(registry, changedPath);
+    const boundaryConsumers = values(boundary ?? {}, "consumers");
     const helperConsumers = exactVerificationHelperConsumers(registry, changedPath);
     const verificationOwned = exactVerificationChange && (forceVerificationExact ||
       verificationImplementationPathKeys.some((key) => values(owner, key).includes(changedPath)) ||
@@ -1129,7 +1151,8 @@ export function planVerification(
       : globalImpact(registry, changedPath)
         ? [owner.id, ...registry.filter(runnable).map(({ id }) => id)]
         : [...(boundary && !boundary.propagateDependants ? [] : [owner.id]), ...runtimeConsumers];
-    const exactSemantic = verificationOwned || boundary && !boundary.propagateDependants ? [owner.id] : [];
+    const exactSemantic = verificationOwned || boundary && !boundary.propagateDependants
+      ? [owner.id, ...boundaryConsumers] : [];
     const verificationConsumers = [
       ...exactVerificationConsumers(registry, changedPath), ...helperConsumers,
     ];
