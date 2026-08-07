@@ -2406,12 +2406,12 @@ This broad delivery checkpoint does not make future review-renderer changes glob
 after installation, either exact review-presentation path selects only
 `event-library`.
 
-## Verification throughput program — candidate slice VTD-004 Capture local presentation (2026-08-07)
+## Verification throughput program — completed slice VTD-004 Capture local presentation (2026-08-07)
 
-This is the only candidate specification slice. It covers the `capture` pack only
-and grants no implementation authority until the user explicitly approves the
-bounded coder handoff. The remaining `schemas` VTD-004 pack slice and VTD-005 through
-VTD-012 remain inactive.
+This slice merged after the normal coder, refactorer, and architect chain at
+`1105e3e8b6d72f5ea29795fa6fb786406f2ee5fb`. It is fixed delivery history; later
+VTD-004 packages do not reopen its delivered boundaries. The remaining `schemas`
+VTD-004 pack slice and VTD-005 through VTD-012 remain inactive.
 
 ### Plain-language outcome
 
@@ -2570,3 +2570,179 @@ coverage. Its one-time exact implementation checkpoint therefore contains all 20
 runnable packs in canonical order, followed by `node scripts/package.mjs`. This broad
 delivery checkpoint does not make future local Capture display changes global; after
 installation, any of the six exact local-presentation paths selects only `capture`.
+
+## Verification throughput program — candidate slice VTD-004 Schemas local presentation (2026-08-07)
+
+This is the only candidate specification slice. It covers the `schemas` pack only
+and grants no implementation authority until the user explicitly approves the
+bounded coder handoff. VTD-005 through VTD-012 remain inactive.
+
+### Plain-language outcome
+
+Today the representative Schemas display change pulls six packs into the plan. The
+calibrated model is 185.4 seconds, or about three minutes and five seconds. The
+complete `schemas` pack itself models at 149.6 seconds, or about two minutes and
+thirty seconds. This package makes changes confined to eight exact screen files run
+the complete Schemas checks without the five downstream packs. The representative
+guardrail becomes 180 seconds instead of 223 seconds, saving about 36 seconds per
+focused change.
+
+The shorter route is intentionally modest because the Schemas owner is already a
+large test pack. It still runs every Schemas unit, property, acceptance, and installed
+browser check. Larger gains require the later target-partitioning and module-splitting
+packages; this slice does not pretend that display-only routing solves those costs.
+
+The short route applies only to eight files that draw or edit supplied values and
+return choices through callbacks: allowed-value expansion, guided schema picking,
+live property declaration, local-rule promotion, assignment conditions, property
+copy, property type editing, and the specification-builder view. It does not apply
+to choosing validation meaning, publishing or saving a schema, shaping validation
+results, applying reusable rules, project mutation, workflow coordination, storage,
+migration, or any public utility facade. Those changes retain the six-pack route:
+`schemas,defects,live_flow_testing,project_assurance_severity,guided_test_cases,shell`.
+
+### Schemas impact boundaries
+
+Every one of the 88 source files currently owned by `schemas` belongs to exactly one
+boundary below. A file cannot match two boundaries, and a newly owned path is a
+validation error until it is classified.
+
+| Boundary | Exact source paths | Class | Propagate dependants | Reason |
+|---|---|---|---|---|
+| `schemas_local_browser_presentation` | `src/data-layer-allowed-value-expansion-ui.ts`, `src/data-layer-guided-schema-picker-ui.ts`, `src/data-layer-live-schema-property-declaration-ui.ts`, `src/data-layer-local-rule-promotion-ui.ts`, `src/data-layer-schema-assignment-data-conditions-ui.ts`, `src/data-layer-schema-property-copy-ui.ts`, `src/data-layer-schema-property-type-editing-ui.ts`, `src/data-layer-schema-specification-builder-ui.ts` | browser presentation | no | Draws supplied values and returns an operator choice through a supplied callback. |
+| `schemas_shared_browser_workflows` | `src/data-layer-guided-validation-ui.ts`, `src/data-layer-live-guided-workflow-ui.ts` | browser presentation | yes | Coordinates complete guided workflows or is exported through Capture's public browser facade. |
+| `schemas_application_controllers` | `src/data-layer-schema-publication-refresh.ts`, `src/data-layer-specification-bulk.ts`, `src/data-layer-specification-executable-flow-ui.ts`, `src/data-layer-specification-project.ts`, `src/data-layer-specification-runtime.ts`, `src/specification-builder.ts` | application controller | yes | Publishes, persists, mutates project state, records runtime observations, or coordinates the builder root. |
+| `schemas_persistence_and_migration` | `src/data-layer-allowed-values-rule.ts`, `src/data-layer-local-rule-promotion.ts`, `src/data-layer-schema-canonical-document.ts`, `src/data-layer-schema-document.ts`, `src/data-layer-schema-verification.ts`, `src/data-layer-specification-repository.ts` | persistence migration | yes | Defines stored schema bytes, migration, revision persistence, rule promotion, or repository behavior. |
+| `schemas_core_semantics` | `src/data-layer-allowed-value-expansion.ts`, `src/data-layer-cardinality.ts`, `src/data-layer-conditional-validation-rules.ts`, `src/data-layer-guided-nested-property-merge.ts`, `src/data-layer-guided-rule-parameter-integrity.ts`, `src/data-layer-guided-validation-continuation.ts`, `src/data-layer-guided-validation-types.ts`, `src/data-layer-guided-validation.ts`, `src/data-layer-json-schema-export.ts`, `src/data-layer-live-guided-conditional-rule-authoring.ts`, `src/data-layer-live-guided-workflow.ts`, `src/data-layer-live-schema-property-declaration.ts`, `src/data-layer-live-validation-presentation.ts`, `src/data-layer-local-rule-editing.ts`, `src/data-layer-path-conditions.ts`, `src/data-layer-reusable-rule-sync.ts`, `src/data-layer-schema-assignment-data-conditions.ts`, `src/data-layer-schema-documentation.ts`, `src/data-layer-schema-manual-property.ts`, `src/data-layer-schema-nested-path.ts`, `src/data-layer-schema-property-copy.ts`, `src/data-layer-schema-property-example-values.ts`, `src/data-layer-schema-property-path.ts`, `src/data-layer-schema-property-removal.ts`, `src/data-layer-schema-property-rule-picker.ts`, `src/data-layer-schema-property-type-editing.ts`, `src/data-layer-schema-property-view.ts`, `src/data-layer-schema-rule-property-identity.ts`, `src/data-layer-schema-specification-builder.ts`, `src/data-layer-schema-table-quick-edit.ts`, `src/data-layer-schema-table.ts`, `src/data-layer-specification-assurance.ts`, `src/data-layer-specification-engine.ts`, `src/data-layer-specification-guidance.ts`, `src/data-layer-specification-model.ts`, `src/data-layer-validation-model.ts` | core or semantic | yes | Defines validation meaning, schema and rule transformations, documentation, export, result shaping, or specification semantics consumed beyond one screen. |
+| `schemas_public_core_facades` | `src/utilities/data-layer/layers/core/capture.ts`, `src/utilities/data-layer/layers/core/event-library.ts`, `src/utilities/data-layer/layers/core/live-inspection.ts`, `src/utilities/data-layer/layers/core/schemas.ts` | core or semantic | yes | Public core exports are shared contracts even when an exported implementation is locally presented. |
+| `schemas_public_application_facades` | `src/utilities/data-layer/layers/application/capture.ts`, `src/utilities/data-layer/layers/application/defect-reporting.ts`, `src/utilities/data-layer/layers/application/event-library.ts`, `src/utilities/data-layer/layers/application/replay.ts`, `src/utilities/data-layer/layers/application/schemas.ts` | application controller | yes | Public application exports compose several product areas. |
+| `schemas_public_browser_facades` | `src/utilities/data-layer/capture.ts`, `src/utilities/data-layer/defect-reporting.ts`, `src/utilities/data-layer/event-library.ts`, `src/utilities/data-layer/flow-graph.ts`, `src/utilities/data-layer/index.ts`, `src/utilities/data-layer/live-inspection.ts`, `src/utilities/data-layer/page-group-membership.ts`, `src/utilities/data-layer/replay.ts`, `src/utilities/data-layer/schemas.ts`, `src/utilities/data-layer/layers/browser/capture.ts`, `src/utilities/data-layer/layers/browser/defect-reporting.ts`, `src/utilities/data-layer/layers/browser/event-library.ts`, `src/utilities/data-layer/layers/browser/live-inspection.ts`, `src/utilities/data-layer/layers/browser/navigation.ts`, `src/utilities/data-layer/layers/browser/replay.ts`, `src/utilities/data-layer/layers/browser/schemas.ts`, `src/utilities/data-layer/layers/browser/scoped-runtime.ts`, `src/utilities/data-layer/layers/browser/scoped/defect-runtime.ts`, `src/utilities/data-layer/layers/browser/scoped/event-library-runtime.ts`, `src/utilities/data-layer/layers/browser/scoped/runtime-support.ts`, `src/utilities/data-layer/layers/browser/scoped/schema-runtime.ts` | browser presentation | yes | Public and scoped browser composition is a shared product boundary, not a local renderer. |
+
+The eight non-propagating files may create and manage their own supplied dialog or
+editor DOM, render supplied labels and compatibility results, manage focus inside
+that view, and invoke supplied callbacks. They cannot read or write storage, publish
+or validate a schema, derive a second schema model, mutate a project, choose page
+access, perform a Capture or Defects operation, or bypass the callback boundary.
+
+The extraction preserves current labels, compatibility explanations, counts,
+enabled and disabled states, dialog behavior, keyboard order, focus return,
+accessibility, saved bytes, selected schemas and rules, validation results, published
+revisions, and installed browser results. A callback receives the same operator
+choice as before; all effects remain outside the local renderer.
+
+### Exact evidence mapping
+
+Every boundary maps to the complete `schemas` evidence profile; VTD-004 narrows
+dependant-pack selection, not evidence within its owner.
+
+| Evidence class | Exact paths or count |
+|---|---|
+| Unit | All 49 registered Schemas unit files |
+| Property | All 29 registered Schemas property files |
+| Feature | All 103 registered Schemas feature files |
+| Handler | All 60 registered Schemas acceptance handlers |
+| Installed browser evidence | `test/browser-packs/schemas.mjs`; all 46 registered targets in the existing shared `test/side-panel-component-layout-runtime-test.mjs` batch |
+| Checkpoint | None |
+| Exact plan | 288 tasks: one build, 49 unit, 29 property, one shared browser adapter, one 46-target browser batch, 103 parses, 103 generators, and one Schemas acceptance session |
+
+The existing registered browser observations directly exercise all eight local
+presentation files. Seven have a dedicated target: allowed-value expansion, live
+schema property declaration, local-rule promotion, assignment data conditions,
+property copy, property type editing, and schema specification building. The guided
+schema picker is directly opened, searched, selected, dismissed, and focus-restored
+inside `GUIDED_VALIDATION_BROWSER_ADAPTER`. No new browser process or plan task is
+needed.
+
+Handler isolation is decided per exact handler from real APS consumers. These 36
+handlers name complete Schemas-owned features, have no matching step in another
+loaded pack, and have no cross-pack namespace consumer, so they may be declared
+isolated:
+
+- `allowed_value_expansion.clj`, `allowed_values_rule_migration.clj`,
+  `canonical_declared_property_validation.clj`, `conditional_validation_rules.clj`,
+  `guided_assignment_coverage.clj`, `guided_nested_property_merge.clj`,
+  `guided_rule_parameter_integrity.clj`, `guided_validation.clj`,
+  `json_schema_export.clj`, `live_guided_conditional_rules.clj`,
+  `live_schema_property_declaration.clj`, `live_validation_visuals.clj`,
+  `local_rule_promotion.clj`, `local_rule_promotion_availability.clj`,
+  `non_applicable_property_visibility.clj`,
+  `recursive_declared_property_validation.clj`, `recursive_property_validation.clj`,
+  `schema_assignment_data_conditions.clj`, `schema_cardinality_comparison.clj`,
+  `schema_container_child_authoring.clj`, `schema_declared_property_exceptions.clj`,
+  `schema_nested_path.clj`, `schema_property_comments.clj`,
+  `schema_property_copy.clj`, `schema_property_example_values.clj`,
+  `schema_property_filter_sort.clj`, `schema_property_type_editing.clj`,
+  `schema_publication_refresh.clj`, `schema_renaming.clj`,
+  `schema_revision_lifecycle.clj`, `schema_specification_builder_customization.clj`,
+  `schema_specification_container_defaults.clj`,
+  `schema_specification_example_selection.clj`,
+  `schema_specification_preview_layout.clj`, `schema_workspace_runtime.clj`, and
+  `validation_presence_semantics.clj`.
+
+Eleven handlers have actual matching steps in Defects or Shell and remain
+propagating: `array_validation_issue_rollup.clj`, `guided_draft_continuation.clj`,
+`local_rule_editing.clj`, `required_rule_type_independence.clj`,
+`reusable_rule_sync.clj`, `schema_documentation.clj`,
+`schema_manual_property.clj`, `schema_property_removal.clj`,
+`schema_property_rule_picker.clj`, `schema_rule_property_identity.clj`, and
+`schema_specification_builder.clj`.
+
+The other 13 handlers also remain propagating because they are support composition
+or do not completely name owner-only served features:
+`guided_validation_assertions.clj`, `guided_validation_destination_assertions.clj`,
+`guided_validation_path_assertions.clj`, `guided_validation_picker_assertions.clj`,
+`guided_validation_step_assertions.clj`, `live_validation_visual_assertions.clj`,
+`schema_publication_refresh_support.clj`, `schema_verification.clj`,
+`schema_workspace_runtime_browser_assertions.clj`,
+`schema_workspace_runtime_editor_transitions.clj`,
+`schema_workspace_runtime_export_transitions.clj`,
+`schema_workspace_runtime_support.clj`, and
+`schema_workspace_runtime_validation_transitions.clj`.
+
+The generic parsed-consumer audit must include `schemas` alongside Capture and Event
+Library. It validates all 36 candidates against every real session that loads them.
+A matching cross-pack step, a cross-pack namespace require, missing or foreign
+served-feature metadata, or unreadable audit evidence rejects isolation and preserves
+dependant propagation. A handler's own feature list is never sufficient proof by
+itself.
+
+### Historical selection and calibrated guardrail
+
+Changed-path planning compares current ownership with the registry at the requested
+base. A deletion uses its historical boundary. A rename wholly inside the eight
+local presentation files remains owner-only. A rename from one of them into any
+semantic, controller, persistence, shared-workflow, or public-facade path retains the
+six-pack dependant set. Missing, unreadable, incompatible, or malformed historical
+ownership fails closed to every runnable pack. No deleted or renamed Schemas file may
+disappear merely because its old path no longer exists.
+
+The committed receipt scope and environment class remain those accepted by VTD-003.
+Recalibration changes only the `schemas` representative changed-path row:
+
+- the representative remains `src/data-layer-allowed-value-expansion-ui.ts`;
+- it selects only `schemas` instead of the current six-pack closure;
+- dependant fan-out changes from 5 to 0;
+- its critical-path baseline changes from 185.4 seconds to the accepted exact-owner
+  baseline of 149.6 seconds, with normal tolerance 1.2 and a 180-second limit instead
+  of 223 seconds; and
+- the other 19 pack calibrations, the Schemas exact-pack calibration, and all 81
+  browser-target budgets remain unchanged.
+
+### VTD-004 Schemas evidence conservation
+
+| Evidence class | Conserved before/after mapping |
+|---|---|
+| Owner checkpoint | All 49 unit files, 29 property files, 103 features, 60 handlers, one shared browser adapter, and 46 registered browser targets remain in `schemas` and execute once in its 288-task exact plan. |
+| Direct presentation proof | Existing installed-browser assertions directly exercise every one of the eight local presentation files without another Chrome launch or plan task. |
+| Dependant safety | The 80 semantic, controller, persistence, shared-workflow, and public-facade files retain the six-pack closure. Only the eight exact callback-bounded presentation files are owner-only. |
+| Handler safety | Only 36 individually proven handlers become owner-only. Eleven real cross-pack consumers and 13 incomplete/shared handler compositions retain dependant propagation. |
+| Product behavior | Schema meaning, validation, publication, project mutation, saved bytes, visible wording, accessibility, keyboard behavior, focus, and operator results are unchanged. |
+| Historical safety | Modifications, additions, deletions, and renames use current and base registries; unavailable or malformed history selects every runnable pack. |
+| Terminal conservation | Terminal-full planning retains every registered unit, property, feature, handler, browser assertion leaf, shell check, and package check exactly once. Browser batching, task order, worker limits, and terminal shards are unchanged. |
+| Calibration | The same 24-receipt scope remains resolvable. Only the Schemas representative selection, fan-out, changed-path duration, and limit change; every other calibrated row stays byte-equivalent. |
+
+The implementation changes the global verification registry and its process-contract
+coverage. Its one-time exact implementation checkpoint therefore contains all 20
+runnable packs in canonical order, followed by `node scripts/package.mjs`. This broad
+delivery checkpoint does not make future local Schemas display changes global; after
+installation, any of the eight exact local-presentation paths selects only `schemas`.

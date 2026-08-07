@@ -51,8 +51,11 @@ here.
 - The `event-library` review-presentation slice completed the normal coder,
   refactorer, and architect chain and merged at
   `b54e02866f9e0c76b6fa95873ea2b6f459da3aa5`.
-- The remaining `capture` and `schemas` VTD-004 pack slices and VTD-005 through
-  VTD-012 remain queued and inactive.
+- The `capture` local-presentation slice completed the normal coder, refactorer,
+  and architect chain and merged at
+  `1105e3e8b6d72f5ea29795fa6fb786406f2ee5fb`.
+- The remaining `schemas` VTD-004 pack slice and VTD-005 through VTD-012 remain
+  queued and inactive.
 
 ## Executive assessment
 

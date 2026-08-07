@@ -891,3 +891,241 @@ Feature: Modular verification packs
     Then it selects only capture with dependant fan-out 0
     And its critical-path baseline is 51.9 seconds with tolerance 1.2 and limit 63 seconds
     And the other 19 pack calibrations, the Capture exact-pack calibration, and all 81 browser-target budgets are unchanged
+
+  # Modular verification packs 068
+  Scenario Outline: Modular verification packs 068
+    Given the current Schemas dependant closure is schemas, defects, live_flow_testing, project_assurance_severity, guided_test_cases, shell
+    When Schemas changed path <changed_path> is classified
+    Then its exact boundary is <boundary>
+    And its source class is <source_class>
+    And its selected scope is <selected_scope>
+    And every one of the 88 Schemas-owned source files matches exactly one boundary
+
+    Examples:
+      | changed_path                                                               | boundary                           | source_class          | selected_scope             |
+      | src/data-layer-allowed-value-expansion-ui.ts                               | schemas_local_browser_presentation | browser presentation  | schemas only               |
+      | src/data-layer-guided-schema-picker-ui.ts                                  | schemas_local_browser_presentation | browser presentation  | schemas only               |
+      | src/data-layer-live-schema-property-declaration-ui.ts                      | schemas_local_browser_presentation | browser presentation  | schemas only               |
+      | src/data-layer-local-rule-promotion-ui.ts                                  | schemas_local_browser_presentation | browser presentation  | schemas only               |
+      | src/data-layer-schema-assignment-data-conditions-ui.ts                     | schemas_local_browser_presentation | browser presentation  | schemas only               |
+      | src/data-layer-schema-property-copy-ui.ts                                  | schemas_local_browser_presentation | browser presentation  | schemas only               |
+      | src/data-layer-schema-property-type-editing-ui.ts                          | schemas_local_browser_presentation | browser presentation  | schemas only               |
+      | src/data-layer-schema-specification-builder-ui.ts                          | schemas_local_browser_presentation | browser presentation  | schemas only               |
+      | src/data-layer-guided-validation-ui.ts                                     | schemas_shared_browser_workflows   | browser presentation  | six-pack dependant closure |
+      | src/data-layer-live-guided-workflow-ui.ts                                  | schemas_shared_browser_workflows   | browser presentation  | six-pack dependant closure |
+      | src/data-layer-schema-publication-refresh.ts                               | schemas_application_controllers    | application controller | six-pack dependant closure |
+      | src/data-layer-specification-bulk.ts                                       | schemas_application_controllers    | application controller | six-pack dependant closure |
+      | src/data-layer-specification-executable-flow-ui.ts                         | schemas_application_controllers    | application controller | six-pack dependant closure |
+      | src/data-layer-specification-project.ts                                    | schemas_application_controllers    | application controller | six-pack dependant closure |
+      | src/data-layer-specification-runtime.ts                                    | schemas_application_controllers    | application controller | six-pack dependant closure |
+      | src/specification-builder.ts                                               | schemas_application_controllers    | application controller | six-pack dependant closure |
+      | src/data-layer-allowed-values-rule.ts                                      | schemas_persistence_and_migration  | persistence migration | six-pack dependant closure |
+      | src/data-layer-local-rule-promotion.ts                                     | schemas_persistence_and_migration  | persistence migration | six-pack dependant closure |
+      | src/data-layer-schema-canonical-document.ts                                | schemas_persistence_and_migration  | persistence migration | six-pack dependant closure |
+      | src/data-layer-schema-document.ts                                          | schemas_persistence_and_migration  | persistence migration | six-pack dependant closure |
+      | src/data-layer-schema-verification.ts                                      | schemas_persistence_and_migration  | persistence migration | six-pack dependant closure |
+      | src/data-layer-specification-repository.ts                                 | schemas_persistence_and_migration  | persistence migration | six-pack dependant closure |
+      | src/data-layer-allowed-value-expansion.ts                                  | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-cardinality.ts                                              | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-conditional-validation-rules.ts                             | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-guided-nested-property-merge.ts                             | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-guided-rule-parameter-integrity.ts                          | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-guided-validation-continuation.ts                           | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-guided-validation-types.ts                                  | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-guided-validation.ts                                        | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-json-schema-export.ts                                       | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-live-guided-conditional-rule-authoring.ts                   | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-live-guided-workflow.ts                                     | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-live-schema-property-declaration.ts                         | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-live-validation-presentation.ts                             | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-local-rule-editing.ts                                       | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-path-conditions.ts                                          | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-reusable-rule-sync.ts                                       | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-schema-assignment-data-conditions.ts                        | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-schema-documentation.ts                                     | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-schema-manual-property.ts                                   | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-schema-nested-path.ts                                       | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-schema-property-copy.ts                                     | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-schema-property-example-values.ts                           | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-schema-property-path.ts                                     | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-schema-property-removal.ts                                  | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-schema-property-rule-picker.ts                              | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-schema-property-type-editing.ts                             | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-schema-property-view.ts                                     | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-schema-rule-property-identity.ts                            | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-schema-specification-builder.ts                             | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-schema-table-quick-edit.ts                                  | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-schema-table.ts                                             | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-specification-assurance.ts                                  | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-specification-engine.ts                                     | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-specification-guidance.ts                                   | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-specification-model.ts                                      | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/data-layer-validation-model.ts                                         | schemas_core_semantics             | core or semantic       | six-pack dependant closure |
+      | src/utilities/data-layer/layers/core/capture.ts                            | schemas_public_core_facades        | core or semantic       | six-pack dependant closure |
+      | src/utilities/data-layer/layers/core/event-library.ts                      | schemas_public_core_facades        | core or semantic       | six-pack dependant closure |
+      | src/utilities/data-layer/layers/core/live-inspection.ts                    | schemas_public_core_facades        | core or semantic       | six-pack dependant closure |
+      | src/utilities/data-layer/layers/core/schemas.ts                            | schemas_public_core_facades        | core or semantic       | six-pack dependant closure |
+      | src/utilities/data-layer/layers/application/capture.ts                     | schemas_public_application_facades | application controller | six-pack dependant closure |
+      | src/utilities/data-layer/layers/application/defect-reporting.ts            | schemas_public_application_facades | application controller | six-pack dependant closure |
+      | src/utilities/data-layer/layers/application/event-library.ts               | schemas_public_application_facades | application controller | six-pack dependant closure |
+      | src/utilities/data-layer/layers/application/replay.ts                      | schemas_public_application_facades | application controller | six-pack dependant closure |
+      | src/utilities/data-layer/layers/application/schemas.ts                     | schemas_public_application_facades | application controller | six-pack dependant closure |
+      | src/utilities/data-layer/capture.ts                                        | schemas_public_browser_facades     | browser presentation  | six-pack dependant closure |
+      | src/utilities/data-layer/defect-reporting.ts                               | schemas_public_browser_facades     | browser presentation  | six-pack dependant closure |
+      | src/utilities/data-layer/event-library.ts                                  | schemas_public_browser_facades     | browser presentation  | six-pack dependant closure |
+      | src/utilities/data-layer/flow-graph.ts                                     | schemas_public_browser_facades     | browser presentation  | six-pack dependant closure |
+      | src/utilities/data-layer/index.ts                                          | schemas_public_browser_facades     | browser presentation  | six-pack dependant closure |
+      | src/utilities/data-layer/live-inspection.ts                                | schemas_public_browser_facades     | browser presentation  | six-pack dependant closure |
+      | src/utilities/data-layer/page-group-membership.ts                          | schemas_public_browser_facades     | browser presentation  | six-pack dependant closure |
+      | src/utilities/data-layer/replay.ts                                         | schemas_public_browser_facades     | browser presentation  | six-pack dependant closure |
+      | src/utilities/data-layer/schemas.ts                                        | schemas_public_browser_facades     | browser presentation  | six-pack dependant closure |
+      | src/utilities/data-layer/layers/browser/capture.ts                         | schemas_public_browser_facades     | browser presentation  | six-pack dependant closure |
+      | src/utilities/data-layer/layers/browser/defect-reporting.ts                | schemas_public_browser_facades     | browser presentation  | six-pack dependant closure |
+      | src/utilities/data-layer/layers/browser/event-library.ts                   | schemas_public_browser_facades     | browser presentation  | six-pack dependant closure |
+      | src/utilities/data-layer/layers/browser/live-inspection.ts                 | schemas_public_browser_facades     | browser presentation  | six-pack dependant closure |
+      | src/utilities/data-layer/layers/browser/navigation.ts                      | schemas_public_browser_facades     | browser presentation  | six-pack dependant closure |
+      | src/utilities/data-layer/layers/browser/replay.ts                          | schemas_public_browser_facades     | browser presentation  | six-pack dependant closure |
+      | src/utilities/data-layer/layers/browser/schemas.ts                         | schemas_public_browser_facades     | browser presentation  | six-pack dependant closure |
+      | src/utilities/data-layer/layers/browser/scoped-runtime.ts                  | schemas_public_browser_facades     | browser presentation  | six-pack dependant closure |
+      | src/utilities/data-layer/layers/browser/scoped/defect-runtime.ts           | schemas_public_browser_facades     | browser presentation  | six-pack dependant closure |
+      | src/utilities/data-layer/layers/browser/scoped/event-library-runtime.ts    | schemas_public_browser_facades     | browser presentation  | six-pack dependant closure |
+      | src/utilities/data-layer/layers/browser/scoped/runtime-support.ts          | schemas_public_browser_facades     | browser presentation  | six-pack dependant closure |
+      | src/utilities/data-layer/layers/browser/scoped/schema-runtime.ts           | schemas_public_browser_facades     | browser presentation  | six-pack dependant closure |
+
+  # Modular verification packs 069
+  Scenario Outline: Modular verification packs 069
+    Given Schemas local presentation <changed_path> draws supplied values and returns choices through supplied callbacks
+    When its owner-only route is installed
+    Then it cannot read or write storage, publish or validate schemas, mutate projects, derive a second schema model, choose page access, or perform Capture or Defects operations
+    And existing browser target <browser_target> directly proves <direct_proof>
+    And the assertion remains in the existing 46-target Schemas batch without another browser process or plan task
+
+    Examples:
+      | changed_path                                           | browser_target                                      | direct_proof                                              |
+      | src/data-layer-allowed-value-expansion-ui.ts           | ALLOWED_VALUE_EXPANSION_BROWSER_ADAPTER             | supplied values are expanded and returned                 |
+      | src/data-layer-guided-schema-picker-ui.ts              | GUIDED_VALIDATION_BROWSER_ADAPTER                    | search, select, dismiss, keyboard, and focus return        |
+      | src/data-layer-live-schema-property-declaration-ui.ts  | LIVE_SCHEMA_PROPERTY_DECLARATION_BROWSER_ADAPTER    | declaration fields and callback result                    |
+      | src/data-layer-local-rule-promotion-ui.ts              | LOCAL_RULE_PROMOTION_BROWSER_ADAPTER                 | review, availability, and promotion callback               |
+      | src/data-layer-schema-assignment-data-conditions-ui.ts | SCHEMA_ASSIGNMENT_DATA_CONDITIONS_BROWSER_ADAPTER   | condition editing and callback result                      |
+      | src/data-layer-schema-property-copy-ui.ts              | SCHEMA_PROPERTY_COPY_BROWSER_ADAPTER                 | copy review and confirmation callback                      |
+      | src/data-layer-schema-property-type-editing-ui.ts      | SCHEMA_PROPERTY_TYPE_EDITING_BROWSER_ADAPTER         | type editing and callback result                           |
+      | src/data-layer-schema-specification-builder-ui.ts      | SCHEMA_SPECIFICATION_BUILDER_BROWSER_ADAPTER         | builder projection and operator choice                     |
+
+  # Modular verification packs 070
+  Scenario Outline: Modular verification packs 070
+    Given Schemas handler <handler> has <consumer_evidence>
+    When handler isolation is validated from served-feature metadata, parsed loaded steps, and namespace consumers
+    Then its isolation decision is <decision>
+    And its changed-path scope is <selected_scope>
+
+    Examples:
+      | handler                                            | consumer_evidence                                  | decision                | selected_scope             |
+      | allowed_value_expansion.clj                       | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | allowed_values_rule_migration.clj                 | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | canonical_declared_property_validation.clj        | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | conditional_validation_rules.clj                  | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | guided_assignment_coverage.clj                    | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | guided_nested_property_merge.clj                  | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | guided_rule_parameter_integrity.clj               | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | guided_validation.clj                             | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | json_schema_export.clj                            | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | live_guided_conditional_rules.clj                 | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | live_schema_property_declaration.clj              | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | live_validation_visuals.clj                       | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | local_rule_promotion.clj                          | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | local_rule_promotion_availability.clj             | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | non_applicable_property_visibility.clj            | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | recursive_declared_property_validation.clj        | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | recursive_property_validation.clj                 | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | schema_assignment_data_conditions.clj             | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | schema_cardinality_comparison.clj                 | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | schema_container_child_authoring.clj              | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | schema_declared_property_exceptions.clj           | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | schema_nested_path.clj                            | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | schema_property_comments.clj                      | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | schema_property_copy.clj                          | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | schema_property_example_values.clj                | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | schema_property_filter_sort.clj                   | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | schema_property_type_editing.clj                  | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | schema_publication_refresh.clj                    | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | schema_renaming.clj                               | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | schema_revision_lifecycle.clj                     | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | schema_specification_builder_customization.clj    | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | schema_specification_container_defaults.clj       | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | schema_specification_example_selection.clj        | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | schema_specification_preview_layout.clj           | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | schema_workspace_runtime.clj                      | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | validation_presence_semantics.clj                 | only named Schemas-owned steps                     | isolated                | schemas only               |
+      | array_validation_issue_rollup.clj                 | matching steps in defects and shell                | retain propagation      | six-pack dependant closure |
+      | guided_draft_continuation.clj                     | matching steps in defects and shell                | retain propagation      | six-pack dependant closure |
+      | local_rule_editing.clj                            | matching steps in defects and shell                | retain propagation      | six-pack dependant closure |
+      | required_rule_type_independence.clj               | matching steps in defects and shell                | retain propagation      | six-pack dependant closure |
+      | reusable_rule_sync.clj                            | matching steps in defects and shell                | retain propagation      | six-pack dependant closure |
+      | schema_documentation.clj                          | matching steps in defects                          | retain propagation      | six-pack dependant closure |
+      | schema_manual_property.clj                        | matching steps in defects                          | retain propagation      | six-pack dependant closure |
+      | schema_property_removal.clj                       | matching steps in defects                          | retain propagation      | six-pack dependant closure |
+      | schema_property_rule_picker.clj                   | matching steps in defects and shell                | retain propagation      | six-pack dependant closure |
+      | schema_rule_property_identity.clj                 | matching steps in defects                          | retain propagation      | six-pack dependant closure |
+      | schema_specification_builder.clj                  | matching steps in defects                          | retain propagation      | six-pack dependant closure |
+      | guided_validation_assertions.clj                  | support or incomplete owner feature metadata       | retain propagation      | six-pack dependant closure |
+      | guided_validation_destination_assertions.clj      | support or incomplete owner feature metadata       | retain propagation      | six-pack dependant closure |
+      | guided_validation_path_assertions.clj             | support or incomplete owner feature metadata       | retain propagation      | six-pack dependant closure |
+      | guided_validation_picker_assertions.clj           | support or incomplete owner feature metadata       | retain propagation      | six-pack dependant closure |
+      | guided_validation_step_assertions.clj             | support or incomplete owner feature metadata       | retain propagation      | six-pack dependant closure |
+      | live_validation_visual_assertions.clj             | support or incomplete owner feature metadata       | retain propagation      | six-pack dependant closure |
+      | schema_publication_refresh_support.clj            | support or incomplete owner feature metadata       | retain propagation      | six-pack dependant closure |
+      | schema_verification.clj                           | support or incomplete owner feature metadata       | retain propagation      | six-pack dependant closure |
+      | schema_workspace_runtime_browser_assertions.clj   | support or incomplete owner feature metadata       | retain propagation      | six-pack dependant closure |
+      | schema_workspace_runtime_editor_transitions.clj   | support or incomplete owner feature metadata       | retain propagation      | six-pack dependant closure |
+      | schema_workspace_runtime_export_transitions.clj   | support or incomplete owner feature metadata       | retain propagation      | six-pack dependant closure |
+      | schema_workspace_runtime_support.clj              | support or incomplete owner feature metadata       | retain propagation      | six-pack dependant closure |
+      | schema_workspace_runtime_validation_transitions.clj | support or incomplete owner feature metadata     | retain propagation      | six-pack dependant closure |
+
+  # Modular verification packs 071
+  Scenario Outline: Modular verification packs 071
+    Given an isolated Schemas handler gains <cross_pack_consumer>
+    When the generic isolation audit includes Schemas and inspects real loaded sessions
+    Then isolation is rejected with an actionable diagnostic
+    And the handler retains the six-pack dependant closure
+
+    Examples:
+      | cross_pack_consumer                                      |
+      | a pattern-matching step in a Defects feature             |
+      | a pattern-matching step in a Shell feature               |
+      | a namespace require from another pack handler            |
+      | missing or foreign served-feature metadata               |
+      | unreadable or malformed parsed consumer evidence         |
+
+  # Modular verification packs 072
+  Scenario Outline: Modular verification packs 072
+    Given Schemas change is <change>
+    When current and historical impact boundaries are compared
+    Then planning selects <expected_scope>
+    And the changed path cannot disappear because its current file is absent
+
+    Examples:
+      | change                                                                                                      | expected_scope             |
+      | modify src/data-layer-allowed-value-expansion-ui.ts                                                        | schemas only               |
+      | delete src/data-layer-guided-schema-picker-ui.ts                                                           | schemas only               |
+      | rename src/data-layer-guided-schema-picker-ui.ts to src/data-layer-schema-property-copy-ui.ts             | schemas only               |
+      | rename src/data-layer-guided-schema-picker-ui.ts to src/data-layer-guided-validation-ui.ts                | six-pack dependant closure |
+      | modify src/data-layer-live-validation-presentation.ts                                                      | six-pack dependant closure |
+      | delete src/utilities/data-layer/schemas.ts                                                                  | six-pack dependant closure |
+      | use unavailable, malformed, or incompatible historical ownership                                           | every runnable pack        |
+
+  # Modular verification packs 073
+  Scenario: Modular verification packs 073
+    Given every Schemas boundary maps to the complete owner evidence profile
+    When exact schemas verification and terminal-full planning are compared before and after VTD-004
+    Then all 49 unit files, 29 property files, 103 feature files, 60 handlers, one shared browser adapter, and 46 registered browser targets execute once in the 288-task exact owner plan
+    And the eight local presentation files retain direct installed-browser proof without another browser process or plan task
+    And terminal-full planning executes every conserved assertion leaf and package check exactly once
+    And browser batching, task order, worker limits, terminal shards, schema meaning, saved bytes, visible output, accessibility, and operator results are unchanged
+
+  # Modular verification packs 074
+  Scenario: Modular verification packs 074
+    Given src/data-layer-allowed-value-expansion-ui.ts currently selects six packs with dependant fan-out 5, critical-path baseline 185.4 seconds, and limit 223 seconds
+    When its proven local-presentation boundary remains the Schemas representative from the accepted VTD-003 receipt scope
+    Then it selects only schemas with dependant fan-out 0
+    And its critical-path baseline is 149.6 seconds with tolerance 1.2 and limit 180 seconds
+    And the other 19 pack calibrations, the Schemas exact-pack calibration, and all 81 browser-target budgets are unchanged
