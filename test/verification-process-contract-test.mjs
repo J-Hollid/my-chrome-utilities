@@ -3461,7 +3461,7 @@ const committedCalibrationReport = JSON.parse(await readFile(
 ));
 assert.match(committedCalibrationReport.implementationCommit, /^[a-f0-9]{40}$/u);
 assert.equal(committedCalibrationReport.completion.status, "complete");
-assert.equal(committedCalibrationReport.receiptDigests.length, 5);
+assert.equal(committedCalibrationReport.receiptDigests.length, 7);
 assert.equal(committedCalibrationReport.sourceScope.length, 4);
 const committedReceiptIndex = JSON.parse(await readFile(
   new URL("../verification/timing-receipt-index.json", import.meta.url), "utf8",
@@ -3535,7 +3535,7 @@ const completeSelectedClassReport = reportVerificationThroughput({
   environmentClassId:committedCalibrationReport.environmentClassId,
   minimumIndependentSamples:committedCalibrationReport.minimumIndependentSamples,
 });
-assert.equal(completeSelectedClassReport.model.ledger.receipts, 5,
+assert.equal(completeSelectedClassReport.model.ledger.receipts, 7,
   "production reporting consumes the complete calibrated selected class");
 assert.equal(completeSelectedClassReport.model.browserTargets
   .FLOW_GRAPH_EXAMPLES_TARGET.p90Ms, 21022,
@@ -4642,7 +4642,7 @@ const vtd005BoundaryCalibration = Object.fromEntries(Object.entries(vtd005Bounda
     baseline:Number((estimatePlanMilliseconds(planVerification(packs,{changedPaths:[changedPath]}),
       vtd005LiveReport.model)/1000).toFixed(1)),tolerance:1.2}]));
 assert.deepEqual(Object.values(vtd005BoundaryCalibration).map(({baseline}) => baseline),
-  [58.9,60.6,103.9,79.3]);
+  [58.8,60.6,103.6,79.3]);
 const vtd005BaseCalibration = JSON.parse(await exec("git",[
   "show","99782ccc49^:verification/performance-calibration.json"]));
 assert.deepEqual(committedCalibrationReport.runnablePacks.filter(({id}) => id !== "layered_schema"),

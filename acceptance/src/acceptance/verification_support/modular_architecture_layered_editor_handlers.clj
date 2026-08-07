@@ -52,7 +52,7 @@
     (str/includes? change "navigator-rows.ts to") :renameGeneralShared
     :else :unavailable))
 
-(defn handlers [{:keys [example-values verify-throughput! performance-calibration]}]
+(defn- boundary-handlers [example-values verify-throughput!]
   [{:pattern #"^(.+) currently belongs to the combined canonical_schema_editor boundary$"
     :handler (fn [world example captures]
                (let [path (first (values example-values example captures))
@@ -80,7 +80,10 @@
     :handler (fn [world _ _]
                (let [c (get-in world [:vtd005/evidence :conservation])]
                  (assert-vtd005! world (= [32 85] [(:editorFiles c) (:layeredFiles c)])
-                                 "Layered editor ownership partition is not exact." {:conservation c})))}
+                                 "Layered editor ownership partition is not exact." {:conservation c})))}])
+
+(defn- multi-change-handlers [example-values verify-throughput!]
+  [
    {:pattern #"^Layered editor changes are (.+)$"
     :handler (fn [world example captures]
                (let [description (first (values example-values example captures))
@@ -107,7 +110,10 @@
                                             (= #{"features/data-layer-canonical-shared-profile-schema-authoring.feature"}
                                                (:features plan))
                                             (seq (:handlers plan)))
-                                 "Focused editor plan lost exact owner evidence." {:plan plan})))}
+                                 "Focused editor plan lost exact owner evidence." {:plan plan})))}])
+
+(defn- conservation-handlers [verify-throughput!]
+  [
    {:pattern #"^the Layered editor partition contains 22 general, 19 rule, 23 canonical, and 16 policy assertion leaves$"
     :handler (fn [world _ _]
                (let [ready (prepared world verify-throughput!)
@@ -139,7 +145,10 @@
    {:pattern #"^product behavior, saved canonical bytes, feature and handler evidence, task order, worker limits, and terminal shards are unchanged$"
     :handler (fn [world _ _]
                (assert-vtd005! world (get-in world [:vtd005/evidence :conservation :exactIdentitiesConserved])
-                               "Layered editor conservation failed." {}))}
+                               "Layered editor conservation failed." {}))}])
+
+(defn- history-handlers [example-values verify-throughput!]
+  [
    {:pattern #"^Layered editor history is (.+)$"
     :handler (fn [world example captures]
                (assoc (prepared world verify-throughput!) :vtd005/change
@@ -160,7 +169,10 @@
    {:pattern #"^unavailable, malformed, or incompatible history cannot omit the old editor evidence$"
     :handler (fn [world _ _]
                (assert-vtd005! world (= 20 (count (get-in world [:vtd005/evidence :history :unavailable])))
-                               "Unavailable history did not fail closed." {}))}
+                               "Unavailable history did not fail closed." {}))}])
+
+(defn- sample-calibration-handlers [example-values verify-throughput! performance-calibration]
+  [
    {:pattern #"^editor boundary (.+) relies on provisional target timing (.+)$"
     :handler (fn [world example captures]
                (let [[boundary _] (values example-values example captures)]
@@ -176,7 +188,10 @@
                                  (every? #(let [b (get budgets (keyword %))]
                                             (and (false? (:provisional b)) (>= (:sampleCount b) 5)
                                                  (= (:sampleCount b) (count (:receiptDigests b))))) targets)
-                                 "Layered editor target calibration is immature." {:targets targets})))}
+                                 "Layered editor target calibration is immature." {:targets targets})))}])
+
+(defn- boundary-budget-handlers [example-values]
+  [
    {:pattern #"^its focused changed-path critical-plan baseline is at most (.+)$"
     :handler (fn [world example captures]
                (let [ceiling (seconds (first (values example-values example captures)))
@@ -194,15 +209,22 @@
                  (assert-vtd005! world (and (= 1.2 (:tolerance evidence))
                                             (<= guardrail ceiling))
                                  "Layered editor tolerance or guardrail is invalid."
-                                 {:guardrail guardrail :ceiling ceiling})))}
+                                 {:guardrail guardrail :ceiling ceiling})))}])
+
+(defn- calibration-provenance-handlers []
+  [
    {:pattern #"^failed, duplicate, cross-environment, and aggregate-fallback samples are excluded$"
     :handler (fn [world _ _]
                (let [digests (get-in world [:vtd005/evidence :calibration :receiptDigests])
                      rejected (get-in world [:vtd005/evidence :calibration :rejectedByReason])]
-                 (assert-vtd005! world (and (= 5 (count digests)) (= 5 (count (set digests)))
+                 (assert-vtd005! world (and (>= (count digests) 5)
+                                            (= (count digests) (count (set digests)))
                                             (every? #(re-matches #"[a-f0-9]{64}" %) digests)
                                             (pos? (get rejected :incomplete-task-result 0)))
-                               "Layered editor calibration lacks canonical digest provenance." {})))}
+                               "Layered editor calibration lacks canonical digest provenance." {})))}])
+
+(defn- representative-calibration-handlers [verify-throughput!]
+  [
    {:pattern #"^src/canonical-schema-focused/navigator-rows.ts currently selects all four editor targets with critical-path baseline 214.8 seconds and limit 258 seconds$"
     :handler (fn [world _ _] (prepared world verify-throughput!))}
    {:pattern #"^it remains the representative inside canonical_editor_general_presentation$"
@@ -240,3 +262,14 @@
                                             (:exactPackCalibrationConserved c)
                                             (:nonEditorTargetRowsConserved c))
                                  "VTD-005 changed conserved calibration rows." {})))}])
+
+(defn handlers [{:keys [example-values verify-throughput! performance-calibration]}]
+  (vec (concat (boundary-handlers example-values verify-throughput!)
+               (multi-change-handlers example-values verify-throughput!)
+               (conservation-handlers verify-throughput!)
+               (history-handlers example-values verify-throughput!)
+               (sample-calibration-handlers example-values verify-throughput!
+                                            performance-calibration)
+               (boundary-budget-handlers example-values)
+               (calibration-provenance-handlers)
+               (representative-calibration-handlers verify-throughput!))))

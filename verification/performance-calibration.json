@@ -33,9 +33,11 @@
   "tolerance": 1.2,
   "receiptDigests": [
     "036d34237df27751e01c1f14b8a72d549091a337334080c1b4c48bc5c305f94f",
+    "06c5d8d3ab8f6c24f338400a4b732ba38d6b4bb61e1512791a551efa7d7f1e6c",
     "0ae5a5030a8a22dc27635db9f6652e48ca1215042ee0050d7442da37e14964f3",
     "67079c46c2b9252184ca2565f6612e7feb78c9b079b13cf022ad8ca74e29a68c",
     "7ba1be419524ae6bb11fd37d38869c32fea46594bff342af20b1c4c67ece14d4",
+    "7ec18d4652e12c04c5a3df91afc8243c6a88d4ab9ab16c2b4def2d1a2c8ac255",
     "dfab23992aa1c83ae5d17c86a858abacb943b174194a39be314ad99c0ea756a2"
   ],
   "algorithm": {
@@ -629,7 +631,7 @@
       },
       "changedPathDuration": {
         "limit": 71,
-        "baseline": 58.9,
+        "baseline": 58.8,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
@@ -1364,9 +1366,10 @@
       "provisional": false,
       "maturity": "non-provisional",
       "source": "accepted target samples",
-      "sampleCount": 5,
+      "sampleCount": 6,
       "receiptDigests": [
         "036d34237df27751e01c1f14b8a72d549091a337334080c1b4c48bc5c305f94f",
+        "06c5d8d3ab8f6c24f338400a4b732ba38d6b4bb61e1512791a551efa7d7f1e6c",
         "0ae5a5030a8a22dc27635db9f6652e48ca1215042ee0050d7442da37e14964f3",
         "67079c46c2b9252184ca2565f6612e7feb78c9b079b13cf022ad8ca74e29a68c",
         "7ba1be419524ae6bb11fd37d38869c32fea46594bff342af20b1c4c67ece14d4",
@@ -1374,19 +1377,21 @@
       ]
     },
     "LAYERED_SCHEMA_EDITOR_POLICY_TARGET": {
-      "limit": 23024,
-      "baseline": 19186,
+      "limit": 24528,
+      "baseline": 20440,
       "percentile": "p90",
       "tolerance": 1.2,
       "provisional": false,
       "maturity": "non-provisional",
       "source": "accepted target samples",
-      "sampleCount": 5,
+      "sampleCount": 7,
       "receiptDigests": [
         "036d34237df27751e01c1f14b8a72d549091a337334080c1b4c48bc5c305f94f",
+        "06c5d8d3ab8f6c24f338400a4b732ba38d6b4bb61e1512791a551efa7d7f1e6c",
         "0ae5a5030a8a22dc27635db9f6652e48ca1215042ee0050d7442da37e14964f3",
         "67079c46c2b9252184ca2565f6612e7feb78c9b079b13cf022ad8ca74e29a68c",
         "7ba1be419524ae6bb11fd37d38869c32fea46594bff342af20b1c4c67ece14d4",
+        "7ec18d4652e12c04c5a3df91afc8243c6a88d4ab9ab16c2b4def2d1a2c8ac255",
         "dfab23992aa1c83ae5d17c86a858abacb943b174194a39be314ad99c0ea756a2"
       ]
     },
@@ -1398,9 +1403,10 @@
       "provisional": false,
       "maturity": "non-provisional",
       "source": "accepted target samples",
-      "sampleCount": 5,
+      "sampleCount": 6,
       "receiptDigests": [
         "036d34237df27751e01c1f14b8a72d549091a337334080c1b4c48bc5c305f94f",
+        "06c5d8d3ab8f6c24f338400a4b732ba38d6b4bb61e1512791a551efa7d7f1e6c",
         "0ae5a5030a8a22dc27635db9f6652e48ca1215042ee0050d7442da37e14964f3",
         "67079c46c2b9252184ca2565f6612e7feb78c9b079b13cf022ad8ca74e29a68c",
         "7ba1be419524ae6bb11fd37d38869c32fea46594bff342af20b1c4c67ece14d4",
@@ -1415,9 +1421,10 @@
       "provisional": false,
       "maturity": "non-provisional",
       "source": "accepted target samples",
-      "sampleCount": 5,
+      "sampleCount": 6,
       "receiptDigests": [
         "036d34237df27751e01c1f14b8a72d549091a337334080c1b4c48bc5c305f94f",
+        "06c5d8d3ab8f6c24f338400a4b732ba38d6b4bb61e1512791a551efa7d7f1e6c",
         "0ae5a5030a8a22dc27635db9f6652e48ca1215042ee0050d7442da37e14964f3",
         "67079c46c2b9252184ca2565f6612e7feb78c9b079b13cf022ad8ca74e29a68c",
         "7ba1be419524ae6bb11fd37d38869c32fea46594bff342af20b1c4c67ece14d4",
