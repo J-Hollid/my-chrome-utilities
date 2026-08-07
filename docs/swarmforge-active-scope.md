@@ -2880,11 +2880,11 @@ contracts. Its one-time implementation checkpoint therefore runs all 20 packs in
 canonical order followed by `node scripts/package.mjs`. That broad delivery check
 does not make future focused editor changes global.
 
-## Verification throughput program — candidate VTD-009 exact helper and Shell ownership (2026-08-07)
+## Verification throughput program — completed VTD-009 exact helper and Shell ownership (2026-08-07)
 
-This is the only candidate specification package. It covers VTD-009 only and grants
-no implementation authority until the user explicitly approves the bounded coder
-handoff. VTD-006 through VTD-008 and VTD-010 through VTD-012 remain inactive.
+This accepted package completed the normal coder, refactorer, and architect chain
+and merged at `60458b958ccfbb59238cc7a96c573ab207de5bcc`. Its retained detail below is
+settled authority rather than a pending handoff.
 
 ### Plain-language outcome
 
@@ -3043,3 +3043,177 @@ contracts, and tracked support inventory. Its checkpoint therefore runs all 20
 runnable packs in canonical order followed by `node scripts/package.mjs`. This
 broad delivery checkpoint does not make future focused helper or local Shell changes
 global.
+
+## Verification throughput program — candidate VTD-007 browser readiness and timing (2026-08-08)
+
+This is the only candidate specification package. It covers VTD-007 only and grants
+no implementation authority until the user explicitly approves the bounded coder
+handoff. VTD-006, VTD-008, and VTD-010 through VTD-012 remain inactive.
+
+### Plain-language outcome
+
+Browser-backed verification is part of ordinary Specification Studio development.
+The shared side-panel harness is consumed by 19 of the 20 runnable verification
+packs. The installed-browser session helper also covers branding and the principal
+Layered Schema targets, while the Flow browser program runs its own similar loops.
+This friction is therefore hit frequently when Studio pages, editors, persistence,
+or Flow behavior are changed.
+
+Today these entry points each keep their own version of “try again after 25 or 50
+milliseconds.” Some stop early, some wait blindly after navigation, and failures
+often say only that a page did not settle. A developer then has to reproduce the
+failure to discover whether Chrome failed to start, the page failed to navigate, a
+fixture failed to load, or the expected control never appeared.
+
+After this package, a ready page continues immediately, a page that briefly flickers
+ready can be required to stay ready, and a timeout states which browser target was
+running, which stage it was in, what it expected, how long it waited, and the last
+bounded state it saw. Per-stage timings show whether navigation, fixture setup,
+interaction, persistence, assertion, or cleanup consumed the time. This shortens the
+normal edit-check-diagnose loop without removing a test, weakening a condition, or
+changing product behavior.
+
+### Shared readiness contract
+
+Add one declared `test/support/browser-observation-control.mjs` helper. Its exact
+transitive consumer set is all 20 runnable packs because the side-panel harness,
+installed-browser session helper, and Flow program together reach every pack. It
+provides the shared readiness, browser-program syntax validation, and phase-timing
+primitives; it does not own product fixtures or product assertions.
+
+The readiness call requires:
+
+- logical target id and phase name;
+- a human-readable predicate description;
+- a finite non-negative monotonic timeout and positive poll interval;
+- an observation function, readiness predicate, and diagnostic snapshot provider;
+- a positive diagnostic-character bound; and
+- an optional non-negative stability interval.
+
+It observes immediately before sleeping. It uses a monotonic clock, sleeps for no
+more than the smaller of the poll interval and remaining time, and never converts
+wall-clock changes into extra waiting. A zero stability interval returns the first
+ready observation. A positive stability interval returns only after the predicate
+has remained continuously true for that elapsed interval; a false observation resets
+the stability clock. The successful caller receives the final observation rather
+than losing the state it just proved.
+
+On timeout the error includes the logical target id, phase, predicate description,
+elapsed monotonic milliseconds, and bounded final snapshot. Snapshot production and
+serialization cannot hide the primary timeout: circular, undefined, throwing, or
+otherwise non-JSON values fall back to bounded diagnostic text. The bound includes
+the truncation marker, so a hostile or unexpectedly large page state cannot flood a
+receipt.
+
+Deterministic unit coverage uses injected clocks and sleepers to prove immediate
+success, early success after polling, deadline clamping, stability success, stability
+reset, final-state return, bounded ordinary snapshots, and bounded serialization
+fallbacks. It does not sleep in real time.
+
+### Shared entry-point adoption
+
+The package migrates the duplicated top-level readiness owned by these shared browser
+entry points:
+
+| Entry point | Readiness covered by the common API | Stability |
+|---|---|---:|
+| `test/browser-packs/shared-harness.mjs` | initial side-panel navigation, the reload after production fixture setup, and the optional installed reload; complete document, ready Shell root, and requested utility isolation are reported separately in the last state | none |
+| `test/support/browser-target-session.mjs` | installed extension discovery, target creation or reconnection after navigation, and definition-owned page readiness | none unless the definition requests it |
+| `test/support/layered-schema-targets.mjs` | create-project form mount and connected, completely loaded editor hydration | hydration remains true for 50 ms |
+| `test/browser-packs/flow-graph.mjs` | extension discovery, initial project mount, post-reload project or canvas mounts, visible canvas actions, and live geometry | live geometry remains true for 250 ms |
+| `test/support/flow-examples-timing.mjs` | its Flow-only readiness implementation delegates to the common API while retaining the existing Flow timing interface | caller-selected |
+
+The existing product predicates are conserved. Migration replaces fixed attempt
+counts with explicit elapsed deadlines; it cannot weaken a compound predicate to a
+selector-only check. Every call supplies a bounded state containing the useful parts
+of the current document state, selector presence, connection or geometry state, and
+short visible text where relevant.
+
+This is the incremental boundary authorized by VTD-007. It standardizes the shared
+fixture and target-session readiness named by the backlog acceptance criteria. Local
+domain interactions inside an injected workflow may continue to poll for the
+domain-specific state they assert, but they may not add an unexplained fixed sleep.
+Their later migration can use the same API without changing this package's browser
+target identities.
+
+### Phase timing and failure locality
+
+The common phase timer accepts a declared ordered phase schema and a monotonic clock.
+It accumulates revisited phases, rejects undeclared transitions, and emits finite
+non-negative durations. Target-scoped durations cover the logical target duration
+exactly once within the existing millisecond rounding tolerance. Browser startup and
+whole-process shutdown remain process-scoped; they are never repeated in every target
+inside a compatible multi-target process.
+
+The shared side-panel and installed-target runners record applicable target setup,
+navigation, fixture, interaction, persistence, assertion, and target cleanup phases.
+A phase may be absent only when the target performs no work of that kind. A failed
+target still emits completed durations, the elapsed part of the active phase, and its
+active phase name, without emitting a passed result. Closing an individual page or
+socket is target cleanup; stopping Chrome and removing the shared profile are process
+cleanup.
+
+The Flow examples target keeps its current accepted phase names and scopes: browser
+startup, target setup, fixture setup, readiness, example compilation, rendering,
+persistence, assertion, and cleanup. Its five characterized receipt digests, 12.891
+second p90 budget, 1.2 tolerance, and 16 second limit remain unchanged. The common
+timer replaces duplicate mechanics; it does not reinterpret or recalibrate those
+measurements.
+
+Each `swarmforgeBrowserTargetTiming` record retains its current target id and target
+duration and may add the ordered phase list. Single-target aggregate fallback remains
+compatible while migrated programs begin emitting their own phase detail. Receipt,
+report, and calibration readers accept the additive phase data without treating it
+as a new logical target or a second measurement.
+
+### Protocol and process deadlines
+
+Product readiness is not a substitute for infrastructure deadlines. Chrome
+debug-port discovery, each DevTools protocol call, logical-target outer work, Chrome
+termination, and profile cleanup retain separate finite limits owned by their
+respective layers. The currently unbounded DevTools calls in the shared side-panel
+harness gain an explicit finite call limit no greater than the enclosing target
+limit. Existing finite Flow and installed-session protocol limits remain finite.
+
+Forced-hang tests cover each boundary independently. A missing debug port reports
+startup and bounded captured stderr; a missing protocol response reports the DevTools
+method; outer target expiry reports the logical target; stubborn Chrome termination
+still escalates through the existing bounded stop policy; and a busy profile still
+uses the existing bounded cleanup policy. Expiring one layer cannot extend, disable,
+or be relabelled as another layer's timeout.
+
+### Browser-program syntax and fixed-delay policy
+
+Setup, workflow, reload, persistence, and observation programs generated by the
+shared side-panel harness, installed-target definitions, Layered targets, and Flow
+fixtures are syntax-checked in the same async expression or statement shape that is
+sent to DevTools. Invalid generated syntax fails before protocol transmission and
+names the logical target and phase. This is the backlog's permitted syntax-checked
+alternative where extracting every existing injected fixture into a browser module
+would make this bounded infrastructure change materially larger. Existing importable
+fixture modules remain importable and are not folded back into strings.
+
+Blind post-navigation and fixed-attempt sleeps in the five migrated entry points are
+replaced by predicate readiness. An explicit fixed delay remains only when elapsed
+time, key-repeat behavior, animation, or rendering stability is itself being observed,
+and its reason is adjacent in source. Zero-delay event-loop yields remain permitted
+when the yield, rather than readiness, is the behavior under test.
+
+### Evidence conservation and delivery checkpoint
+
+This package changes test infrastructure only. It changes no `src/` product file,
+saved value, visible control, browser-target identity, observation identifier,
+assertion leaf, feature ownership, handler ownership, pack dependency, changed-path
+production boundary, calibration, budget, worker limit, shard, or batching rule.
+
+The new shared helper is declared once with all 20 runnable packs as its exact
+consumers. `flow-examples-timing.mjs` remains a declared `flow_graph` helper and
+delegates common mechanics rather than duplicating them. Current and historical
+helper validation retains fail-closed selection for additions, deletion, and renames.
+
+Exact-pack and terminal-full plans retain every task and evidence leaf exactly once.
+Because the new helper is genuinely shared by all browser-backed pack paths and the
+process contract gains phase fields, the one-time implementation checkpoint runs all
+20 packs in canonical order followed by `node scripts/package.mjs`. This broad
+delivery check verifies the shared migration; it does not make later domain-local
+fixture changes global.

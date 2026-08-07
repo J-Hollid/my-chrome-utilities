@@ -59,8 +59,11 @@ here.
   `daaac105c1dd8ecf6fee5a53550c5863d943e84d`.
 - VTD-005 completed the normal coder, refactorer, and architect chain and merged at
   `caad024a5366ab6c1798d7e8a62aa50c7f1e6a31`.
-- VTD-004 and VTD-005 are complete. VTD-006 through VTD-012 remain queued and
-  inactive.
+- VTD-009 completed the normal coder, refactorer, and architect chain and merged at
+  `60458b958ccfbb59238cc7a96c573ab207de5bcc`.
+- VTD-004, VTD-005, and VTD-009 are complete. VTD-007 has a bounded candidate
+  specification awaiting user approval; VTD-006, VTD-008, and VTD-010 through
+  VTD-012 remain queued and inactive.
 
 ## Executive assessment
 

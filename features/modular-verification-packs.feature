@@ -1367,3 +1367,83 @@ Feature: Modular verification packs
     And an explicit future refresh includes every eligible unique same-class receipt completed at or before its new cutoff
     And a missing, rejected, cross-class, duplicate digest declaration, or omitted pre-cutoff snapshot receipt is rejected
     And a post-cutoff verification receipt cannot retroactively invalidate the calibration used to verify that commit
+
+  # Modular verification packs 088
+  Scenario Outline: Modular verification packs 088
+    Given a shared browser readiness check for target TARGET-READY, phase navigation, and predicate "the requested workspace is mounted"
+    And its monotonic deadline is 100 milliseconds, poll interval is 25 milliseconds, maximum snapshot is 80 characters, and stability interval is <stability_interval>
+    When its observed ready states are <ready_states>
+    Then the readiness outcome is <outcome>
+    And it performs <sleep_count> sleeps
+    And the caller receives the final observed state when readiness succeeds
+
+    Examples:
+      | stability_interval | ready_states                         | outcome                                              | sleep_count |
+      | 0 milliseconds     | true                                 | succeeds immediately                                | 0           |
+      | 0 milliseconds     | false, false, true                   | succeeds after 50 milliseconds                      | 2           |
+      | 50 milliseconds    | false, true, true, true              | succeeds at 75 ms after 50 ms of continuous truth   | 3           |
+      | 50 milliseconds    | true, false, true, true, true        | succeeds only after the stability clock resets      | 4           |
+
+  # Modular verification packs 089
+  Scenario: Modular verification packs 089
+    Given a shared browser readiness check never satisfies its predicate before its monotonic deadline
+    When its last observed state is larger than the configured diagnostic bound
+    Then its timeout names TARGET-READY, navigation, "the requested workspace is mounted", and the elapsed milliseconds
+    And it includes the bounded final state without exceeding the configured snapshot length
+    And a circular, undefined, or otherwise non-JSON snapshot still produces a bounded diagnostic
+
+  # Modular verification packs 090
+  Scenario Outline: Modular verification packs 090
+    Given <browser_surface> currently owns local fixed-attempt readiness loops
+    When VTD-007 adopts the shared browser readiness API
+    Then <readiness_boundary> uses one monotonic deadline and returns as soon as it is ready
+    And its timeout identifies the logical target, active phase, unmet predicate, elapsed time, and bounded last state
+    And <stability_requirement> is enforced by elapsed stable time rather than a sample count
+
+    Examples:
+      | browser_surface                    | readiness_boundary                                                     | stability_requirement                         |
+      | the shared side-panel harness      | initial navigation, post-fixture reload, and installed reload           | no extra stability interval                   |
+      | the installed Layered Schema batch | create-project mount and fully connected editor hydration               | editor hydration remains true for 50 ms       |
+      | the Flow graph browser program     | extension discovery, page mounts, reloads, canvas geometry, and actions | live canvas geometry remains true for 250 ms  |
+
+  # Modular verification packs 091
+  Scenario: Modular verification packs 091
+    Given a browser target records target setup, navigation, fixture, interaction, persistence, assertion, and cleanup when those phases apply
+    When the target passes or fails
+    Then its existing swarmforgeBrowserTargetTiming identity and duration remain compatible
+    And its target-scoped phase durations are finite, non-negative, ordered, and cover the target duration exactly once within rounding tolerance
+    And a failure retains completed phase durations and identifies the active partial phase
+    And browser startup remains process-scoped rather than being charged to every logical target
+    And the Flow examples target preserves its accepted phase names, characterized receipts, 12.891 second budget, and 16 second limit
+
+  # Modular verification packs 092
+  Scenario Outline: Modular verification packs 092
+    Given the browser boundary <deadline_owner> has its own bounded deadline
+    When <failure> is forced independently
+    Then the failure names <deadline_owner> rather than a product readiness predicate
+    And no product readiness timeout replaces, extends, or disables that deadline
+
+    Examples:
+      | deadline_owner            | failure                                      |
+      | Chrome debug-port startup | Chrome never exposes a debugging port        |
+      | DevTools protocol call    | a requested protocol response never arrives  |
+      | logical target outer work | target work never completes                  |
+      | Chrome termination        | the browser ignores graceful termination     |
+      | profile cleanup           | the browser profile remains temporarily busy |
+
+  # Modular verification packs 093
+  Scenario: Modular verification packs 093
+    Given shared side-panel, installed Layered Schema, and Flow fixture programs are generated before DevTools evaluation
+    When a generated program has invalid syntax
+    Then it is rejected before transmission with its logical target and phase
+    And valid setup, workflow, readiness, persistence, and observation programs retain their current results
+    And fixed waits in those shared entry points remain only where elapsed time or animation is the behavior under test and the reason is adjacent
+
+  # Modular verification packs 094
+  Scenario: Modular verification packs 094
+    Given VTD-007 adds one shared browser-observation control helper consumed transitively by all 20 runnable packs
+    When the common control helper replaces the five shared polling implementations
+    Then every logical browser target, feature, and handler executes exactly once as before
+    And the migration neither adds nor removes a planned task or evidence leaf in exact-pack and terminal-full scope
+    And product behavior, durable bytes, browser-target budgets, pack calibrations, and changed-path ownership are unchanged
+    And the former Flow-only readiness behavior is conserved by the shared API without duplicate polling implementations
