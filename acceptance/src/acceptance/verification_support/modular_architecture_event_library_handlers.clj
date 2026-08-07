@@ -231,6 +231,44 @@
                                  ((juxt :baseline :tolerance :limit)
                                   (get-in world [:vtd004/calibration-pack :changedPathDuration])))
                               "Event Library changed-path duration is not exact." {}))}
+   {:pattern #"^an isolated Event Library handler gains (.+)$"
+    :handler (fn [world example captures]
+               (let [condition (first (example-values example captures))]
+                 (assoc (event-world world dependencies)
+                        :vtd004/isolation-condition condition)))}
+   {:pattern #"^isolation validation scans the parsed APS steps and namespaces of every session that loads the handler$"
+    :handler (fn [world _ _]
+               (let [audit (get-in world [:vtd004/evidence :isolationAudit])]
+                 (assert-event! (assoc world :vtd004/isolation-audit audit)
+                                (and (str/includes? (:loadedStepDiagnostic audit)
+                                                    "Loaded cross-pack step consumer blocks isolation")
+                                     (str/includes? (:namespaceDiagnostic audit)
+                                                    "Cross-pack handler consumer blocks isolation"))
+                                "Event Library isolation audit did not exercise both consumer classes."
+                                {:audit audit})))}
+   {:pattern #"^isolation is rejected with (.+)$"
+    :handler (fn [world example captures]
+               (let [expected (first (example-values example captures))
+                     diagnostic (if (str/includes? (:vtd004/isolation-condition world)
+                                                   "pattern matching")
+                                  (get-in world [:vtd004/isolation-audit :loadedStepDiagnostic])
+                                  (get-in world [:vtd004/isolation-audit :namespaceDiagnostic]))]
+                 (assert-event! world (str/includes? diagnostic expected)
+                                "Isolation rejection returned the wrong diagnostic."
+                                {:expected expected :diagnostic diagnostic})))}
+   {:pattern #"^the handler-only change retains the seven-pack dependant closure$"
+    :handler (fn [world _ _]
+               (assert-event! world
+                              (= seven-pack-dependant-closure
+                                 (get-in world [:vtd004/isolation-audit :rejectedHandlerPlan]))
+                              "Rejected handler isolation retained an incorrect dependant closure."
+                              {}))}
+   {:pattern #"^a self-declared feature list cannot conceal the cross-pack consumer$"
+    :handler (fn [world _ _]
+               (assert-event! world
+                              (get-in world [:vtd004/isolation-audit :metadataCannotConceal])
+                              "Handler feature metadata concealed a loaded cross-pack consumer."
+                              {}))}
    {:pattern #"^the other 19 pack calibrations, the Event Library exact-pack calibration, and all 81 browser-target budgets are unchanged$"
     :handler (fn [world _ _]
                (let [evidence (get-in world [:vtd004/evidence :calibration])]

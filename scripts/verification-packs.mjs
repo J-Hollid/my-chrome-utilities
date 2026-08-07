@@ -1,4 +1,4 @@
-import { execFile } from "node:child_process";
+import { execFile, spawn } from "node:child_process";
 import { access, readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -76,6 +76,28 @@ export function clojureRequiresNamespace(source, namespace) {
       `\\[\\s*(?:\\^[^\\s\\[\\]]+\\s*)*${token(leaf)}`,
     "u",
   ).test(withoutStringsOrComments);
+}
+
+async function loadedCrossPackStepConsumers(packs) {
+  const stdout = await new Promise((resolve, reject) => {
+    const child = spawn("bb", ["-m", "acceptance.verification-support.isolated-handler-audit"], {
+      cwd:repositoryRoot, stdio:["pipe", "pipe", "pipe"],
+    });
+    let output = "";
+    let diagnostics = "";
+    child.stdout.setEncoding("utf8");
+    child.stderr.setEncoding("utf8");
+    child.stdout.on("data", (chunk) => { output += chunk; });
+    child.stderr.on("data", (chunk) => { diagnostics += chunk; });
+    child.on("error", reject);
+    child.on("close", (status) => status === 0
+      ? resolve(output)
+      : reject(new Error(diagnostics.trim() || output.trim() || `APS handler audit exited ${status}`)));
+    child.stdin.end(JSON.stringify(packs));
+  });
+  const consumers = JSON.parse(stdout);
+  if (!Array.isArray(consumers)) throw new Error("APS isolated-handler audit returned invalid evidence");
+  return consumers;
 }
 
 export async function loadVerificationPacks() {
@@ -331,8 +353,12 @@ function validateRuntimeInputs(packs, trackedPaths) {
 
 export async function validateIsolatedVerificationHandlers(
   packs,
-  { readSource = (handler) => readFile(path.join(repositoryRoot, handler), "utf8") } = {},
+  {
+    readSource = (handler) => readFile(path.join(repositoryRoot, handler), "utf8"),
+    findLoadedStepConsumers = loadedCrossPackStepConsumers,
+  } = {},
 ) {
+  const loadedStepConsumers = await findLoadedStepConsumers(packs);
   for (const pack of packs) {
     const isolated = values(pack, "isolatedVerificationHandlers");
     if (new Set(isolated).size !== isolated.length ||
@@ -340,6 +366,13 @@ export async function validateIsolatedVerificationHandlers(
       throw new Error(`Isolate only exact handlers owned by pack ${pack.id}`);
     }
     for (const handler of isolated) {
+      const stepConsumer = loadedStepConsumers.find((consumer) => consumer.handler === handler);
+      if (stepConsumer) {
+        throw new Error(
+          `Loaded cross-pack step consumer blocks isolation of ${handler}: ` +
+          `${stepConsumer.consumerPack} ${stepConsumer.feature} — ${stepConsumer.step}`,
+        );
+      }
       const source = await readSource(handler);
       const servedFeatures = [...source.matchAll(/"(features\/[A-Za-z0-9_./-]+\.feature)"/gu)]
         .map((match) => match[1]);
@@ -355,7 +388,9 @@ export async function validateIsolatedVerificationHandlers(
           if (consumerHandler === "acceptance/src/acceptance/steps/all.clj") continue;
           const consumerSource = await readSource(consumerHandler);
           if (clojureRequiresNamespace(consumerSource, namespace)) {
-            throw new Error(`Cross-pack handler consumer ${consumerHandler} blocks isolation of ${handler}`);
+            throw new Error(
+              `Cross-pack handler consumer blocks isolation of ${handler}: ${consumerHandler}`,
+            );
           }
         }
       }
