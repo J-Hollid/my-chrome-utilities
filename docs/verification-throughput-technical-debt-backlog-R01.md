@@ -54,8 +54,10 @@ here.
 - The `capture` local-presentation slice completed the normal coder, refactorer,
   and architect chain and merged at
   `1105e3e8b6d72f5ea29795fa6fb786406f2ee5fb`.
-- The remaining `schemas` VTD-004 pack slice and VTD-005 through VTD-012 remain
-  queued and inactive.
+- The `schemas` local-presentation slice completed the normal coder, refactorer,
+  and architect chain and merged at
+  `daaac105c1dd8ecf6fee5a53550c5863d943e84d`.
+- VTD-004 is complete. VTD-005 through VTD-012 remain queued and inactive.
 
 ## Executive assessment
 

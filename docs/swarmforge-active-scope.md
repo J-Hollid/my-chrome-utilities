@@ -2571,11 +2571,12 @@ runnable packs in canonical order, followed by `node scripts/package.mjs`. This 
 delivery checkpoint does not make future local Capture display changes global; after
 installation, any of the six exact local-presentation paths selects only `capture`.
 
-## Verification throughput program — candidate slice VTD-004 Schemas local presentation (2026-08-07)
+## Verification throughput program — completed slice VTD-004 Schemas local presentation (2026-08-07)
 
-This is the only candidate specification slice. It covers the `schemas` pack only
-and grants no implementation authority until the user explicitly approves the
-bounded coder handoff. VTD-005 through VTD-012 remain inactive.
+This slice merged after the normal coder, refactorer, and architect chain at
+`daaac105c1dd8ecf6fee5a53550c5863d943e84d`. It is fixed delivery history; later
+packages do not reopen its delivered boundaries. VTD-005 through VTD-012 remain
+inactive.
 
 ### Plain-language outcome
 
@@ -2746,3 +2747,141 @@ coverage. Its one-time exact implementation checkpoint therefore contains all 20
 runnable packs in canonical order, followed by `node scripts/package.mjs`. This broad
 delivery checkpoint does not make future local Schemas display changes global; after
 installation, any of the eight exact local-presentation paths selects only `schemas`.
+
+## Verification throughput program — candidate VTD-005 Layered editor target routing (2026-08-07)
+
+This is the only candidate specification package. It covers VTD-005 only and grants
+no implementation authority until the user explicitly approves the bounded coder
+handoff. VTD-006 through VTD-012 remain inactive.
+
+### Plain-language outcome
+
+Today any change inside the Layered Schema editor's 32-file UI boundary runs four
+large browser workflows. The calibrated plan takes about 214.8 seconds, or three
+minutes and thirty-five seconds, with a 258-second guardrail. The browser already
+records those workflows separately, but the source registry asks for all four every
+time.
+
+This package connects each kind of editor code to the browser workflow that proves
+it. Based on the accepted target timings plus the rest of the focused plan, expected
+feedback becomes approximately:
+
+| Focused change | Current plan | Expected plan | Approximate saving |
+|---|---:|---:|---:|
+| General editor display and navigation | 3:35 | 1:04 | 70% |
+| Rule and condition editing | 3:35 | 1:04 | 70% |
+| Canonical definition, facets, and document integration | 3:35 | 1:45 | 51% |
+| Focused rule policy | 3:35 | 1:23 | 61% |
+
+Those expected values are acceptance ceilings, not invented final measurements.
+The implementation must collect at least five comparable focused-normal samples for
+each editor target, refresh its p90 budget from those samples, and record the final
+measured values. A result that cannot stay within the ceilings below is not complete.
+
+No assertion is removed and no new Chrome process is added to exact-pack or terminal
+verification. If a change touches several behavior groups, their selected workflows
+still run together in the existing single Layered editor browser session. Changes to
+shared editor plumbing intentionally retain all four workflows.
+
+### Editor behavior boundaries
+
+The single `canonical_schema_editor` boundary is replaced by five boundaries. All 32
+current editor source files appear exactly once below. Combined with the four existing
+non-editor Layered Schema boundaries, all 85 Layered Schema source files still match
+exactly one boundary.
+
+| Boundary | Exact source paths | Selected browser evidence | Reason |
+|---|---|---|---|
+| `canonical_editor_general_presentation` | `src/canonical-schema-focused/navigator-rows.ts`, `src/data-layer-canonical-schema-render-navigator.ts`, `src/data-layer-side-panel-schema-editor.ts`, `src/data-layer-side-panel-unified-schema-editor.ts` | `LAYERED_SCHEMA_EDITOR_TARGET` | Owns editor navigation, general surface projection, and the compact side-panel representation. |
+| `canonical_editor_rule_authoring` | `src/data-layer-canonical-predicate-editor.ts`, `src/data-layer-canonical-schema-focused-condition-tree.ts`, `src/data-layer-canonical-schema-focused-conditions.ts`, `src/data-layer-canonical-schema-focused-rule-add.ts`, `src/data-layer-canonical-schema-focused-rule-rows.ts`, `src/data-layer-canonical-schema-focused-rules.ts`, `src/data-layer-project-condition-editor.ts`, `src/data-layer-shared-condition-tree-editor.ts`, `src/data-layer-string-rule-validation-ui.ts`, `src/data-layer-string-rule-validation.ts` | `LAYERED_SCHEMA_EDITOR_RULES_TARGET` | Owns rule creation and editing, condition trees, typed operands, regular-expression testing, and project-condition adaptation. |
+| `canonical_editor_document_integration` | `src/canonical-schema-focused/definition.ts`, `src/canonical-schema-focused/documentation.ts`, `src/canonical-schema-focused/example.ts`, `src/canonical-schema-focused/presence.ts`, `src/canonical-schema-focused/structure.ts`, `src/canonical-schema-focused/values.ts`, `src/data-layer-canonical-schema-focused-command.ts`, `src/data-layer-canonical-schema-focused-drafts.ts` | `LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET` | Owns canonical property facets, structural drafts, command review, and saved document integration. |
+| `canonical_editor_focused_policy` | `src/data-layer-focused-rule-policy.ts` | `LAYERED_SCHEMA_EDITOR_RULES_TARGET` and `LAYERED_SCHEMA_EDITOR_POLICY_TARGET` | Owns compatible rule policy and repair guidance; rule-authoring integration is retained because the UI consumes this policy. |
+| `canonical_editor_shared_primitives` | `src/canonical-schema-focused/dom.ts`, `src/data-layer-canonical-schema-focused-editor.ts`, `src/data-layer-canonical-schema-focused-facets-ui.ts`, `src/data-layer-canonical-schema-focused-menu.ts`, `src/data-layer-canonical-schema-focused-sections.ts`, `src/data-layer-canonical-schema-render.ts`, `src/data-layer-canonical-schema-ui.ts`, `src/data-layer-focused-schema-property-menu.ts`, `src/data-layer-focused-schema-property-ui.ts` | all four Layered editor targets | Mounts, routes, owns editability, or renders primitives used across several editor behaviors; narrowing these would create a blind spot. |
+
+All five boundaries remain non-propagating outside `layered_schema`, as the existing
+editor aggregate already does. VTD-005 narrows evidence inside the owner; it does not
+change production dependencies. `canonical_schema_core`,
+`layered_schema_composition`, and `page_group_structure` continue to propagate to
+declared dependant packs. `selective_profile_inheritance` retains its current
+owner-only route and target.
+
+The representative remains the real editor file
+`src/canonical-schema-focused/navigator-rows.ts`, now inside
+`canonical_editor_general_presentation`. A rule-only path selects only the rule
+target, a canonical-facet path only the canonical target, and the focused rule-policy
+path selects the rule and policy targets. A shared-primitives path selects all four.
+Multiple changed editor boundaries select the union of their targets once in the
+existing `layered-schema-editor` session batch.
+
+### Evidence conservation
+
+Every focused editor boundary still selects all 19 Layered Schema unit files and all
+13 property files. Each selects the exact shared-profile authoring feature, its parse
+and generator, and the existing Layered Schema acceptance session. Only the logical
+browser targets within the existing editor batch differ.
+
+The editor browser partition retains all 80 assertion leaves exactly once:
+
+| Logical target | Conserved leaves | Boundary selection |
+|---|---:|---|
+| `LAYERED_SCHEMA_EDITOR_TARGET` | 22 | general presentation plus shared primitives |
+| `LAYERED_SCHEMA_EDITOR_RULES_TARGET` | 19 | rule authoring plus shared primitives |
+| `LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET` | 23 | canonical document integration plus shared primitives |
+| `LAYERED_SCHEMA_EDITOR_POLICY_TARGET` | 16 | focused rule policy plus shared primitives |
+
+Exact `layered_schema` verification remains a 52-task plan: one build, 19 unit tasks,
+13 property tasks, four browser-observation session tasks containing all eight logical
+targets, seven parses, seven generators, and one acceptance session. Terminal-full
+planning retains the same eight Layered Schema target identities, the same four
+compatible browser sessions, and every assertion leaf exactly once.
+
+### Measurement and guardrails
+
+The four current editor target baselines are provisional one-sample values: 45.919
+seconds for general presentation, 45.810 seconds for rules, 86.470 seconds for
+canonical integration, and 18.366 seconds for focused policy. They are sufficient to
+set safe acceptance ceilings but not final budgets.
+
+Implementation must produce at least five independent, comparable focused-normal
+samples for every editor target in the accepted environment class. The refreshed
+target p90 baselines and their receipt digests become non-provisional calibration
+data. Samples from a different environment class, failed runs, duplicate receipts,
+or the current aggregate fallback cannot enter those budgets.
+
+The resulting changed-path critical-plan projections, including build, unit,
+property, feature, and session work, must meet these ceilings:
+
+| Boundary | Baseline ceiling | Guardrail ceiling with tolerance 1.2 |
+|---|---:|---:|
+| `canonical_editor_general_presentation` | 65 seconds | 78 seconds |
+| `canonical_editor_rule_authoring` | 65 seconds | 78 seconds |
+| `canonical_editor_document_integration` | 105 seconds | 126 seconds |
+| `canonical_editor_focused_policy` | 83 seconds | 100 seconds |
+
+The representative row changes from the current 214.8-second baseline and 258-second
+limit to the measured general-presentation values within the 65/78-second ceilings.
+Its selected pack and dependant fan-out remain `layered_schema` and zero. The other
+19 runnable-pack rows, the exact `layered_schema` row, all non-editor representative
+rows, and all non-editor browser-target budgets remain byte-equivalent. The four
+editor target budgets change only from provisional explicit baselines to accepted
+sample-derived p90 values.
+
+### Historical and failure safety
+
+Changed-path planning compares current and base registries. A deletion retains its
+historical editor boundary and target. A rename inside one focused boundary retains
+that target. A rename across two focused boundaries selects both historical and
+current targets in the existing batch. A rename into shared primitives selects all
+four. Missing, unreadable, malformed, or incompatible historical ownership fails
+closed to every runnable pack.
+
+An unclassified new Layered editor file, an overlapping source prefix, a browser
+target without a declared boundary, a focused boundary without its target, a changed
+assertion-leaf partition, or a target sample without accepted evidence is a validation
+error. Shared primitives may not be narrowed merely because one workflow currently
+imports them more directly than another.
+
+The implementation changes the verification registry, calibration, and process
+contracts. Its one-time implementation checkpoint therefore runs all 20 packs in
+canonical order followed by `node scripts/package.mjs`. That broad delivery check
+does not make future focused editor changes global.

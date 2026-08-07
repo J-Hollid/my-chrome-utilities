@@ -1129,3 +1129,113 @@ Feature: Modular verification packs
     Then it selects only schemas with dependant fan-out 0
     And its critical-path baseline is 149.6 seconds with tolerance 1.2 and limit 180 seconds
     And the other 19 pack calibrations, the Schemas exact-pack calibration, and all 81 browser-target budgets are unchanged
+
+  # Modular verification packs 075
+  Scenario Outline: Modular verification packs 075
+    Given <changed_path> currently belongs to the combined canonical_schema_editor boundary
+    When VTD-005 classifies the Layered editor source
+    Then its exact boundary is <boundary>
+    And it selects browser evidence <target>
+    And every one of the 32 current editor files and 85 Layered Schema files matches exactly one boundary
+
+    Examples:
+      | changed_path                                                   | boundary                                  | target                                 |
+      | src/canonical-schema-focused/navigator-rows.ts                 | canonical_editor_general_presentation     | LAYERED_SCHEMA_EDITOR_TARGET           |
+      | src/data-layer-canonical-schema-render-navigator.ts            | canonical_editor_general_presentation     | LAYERED_SCHEMA_EDITOR_TARGET           |
+      | src/data-layer-side-panel-schema-editor.ts                     | canonical_editor_general_presentation     | LAYERED_SCHEMA_EDITOR_TARGET           |
+      | src/data-layer-side-panel-unified-schema-editor.ts             | canonical_editor_general_presentation     | LAYERED_SCHEMA_EDITOR_TARGET           |
+      | src/data-layer-canonical-predicate-editor.ts                   | canonical_editor_rule_authoring           | LAYERED_SCHEMA_EDITOR_RULES_TARGET     |
+      | src/data-layer-canonical-schema-focused-condition-tree.ts      | canonical_editor_rule_authoring           | LAYERED_SCHEMA_EDITOR_RULES_TARGET     |
+      | src/data-layer-canonical-schema-focused-conditions.ts          | canonical_editor_rule_authoring           | LAYERED_SCHEMA_EDITOR_RULES_TARGET     |
+      | src/data-layer-canonical-schema-focused-rule-add.ts            | canonical_editor_rule_authoring           | LAYERED_SCHEMA_EDITOR_RULES_TARGET     |
+      | src/data-layer-canonical-schema-focused-rule-rows.ts           | canonical_editor_rule_authoring           | LAYERED_SCHEMA_EDITOR_RULES_TARGET     |
+      | src/data-layer-canonical-schema-focused-rules.ts               | canonical_editor_rule_authoring           | LAYERED_SCHEMA_EDITOR_RULES_TARGET     |
+      | src/data-layer-project-condition-editor.ts                     | canonical_editor_rule_authoring           | LAYERED_SCHEMA_EDITOR_RULES_TARGET     |
+      | src/data-layer-shared-condition-tree-editor.ts                 | canonical_editor_rule_authoring           | LAYERED_SCHEMA_EDITOR_RULES_TARGET     |
+      | src/data-layer-string-rule-validation-ui.ts                    | canonical_editor_rule_authoring           | LAYERED_SCHEMA_EDITOR_RULES_TARGET     |
+      | src/data-layer-string-rule-validation.ts                       | canonical_editor_rule_authoring           | LAYERED_SCHEMA_EDITOR_RULES_TARGET     |
+      | src/canonical-schema-focused/definition.ts                     | canonical_editor_document_integration     | LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET |
+      | src/canonical-schema-focused/documentation.ts                  | canonical_editor_document_integration     | LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET |
+      | src/canonical-schema-focused/example.ts                        | canonical_editor_document_integration     | LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET |
+      | src/canonical-schema-focused/presence.ts                       | canonical_editor_document_integration     | LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET |
+      | src/canonical-schema-focused/structure.ts                      | canonical_editor_document_integration     | LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET |
+      | src/canonical-schema-focused/values.ts                         | canonical_editor_document_integration     | LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET |
+      | src/data-layer-canonical-schema-focused-command.ts             | canonical_editor_document_integration     | LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET |
+      | src/data-layer-canonical-schema-focused-drafts.ts              | canonical_editor_document_integration     | LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET |
+      | src/data-layer-focused-rule-policy.ts                          | canonical_editor_focused_policy           | rule and policy editor targets         |
+      | src/canonical-schema-focused/dom.ts                            | canonical_editor_shared_primitives        | all four Layered editor targets        |
+      | src/data-layer-canonical-schema-focused-editor.ts              | canonical_editor_shared_primitives        | all four Layered editor targets        |
+      | src/data-layer-canonical-schema-focused-facets-ui.ts           | canonical_editor_shared_primitives        | all four Layered editor targets        |
+      | src/data-layer-canonical-schema-focused-menu.ts                | canonical_editor_shared_primitives        | all four Layered editor targets        |
+      | src/data-layer-canonical-schema-focused-sections.ts            | canonical_editor_shared_primitives        | all four Layered editor targets        |
+      | src/data-layer-canonical-schema-render.ts                      | canonical_editor_shared_primitives        | all four Layered editor targets        |
+      | src/data-layer-canonical-schema-ui.ts                          | canonical_editor_shared_primitives        | all four Layered editor targets        |
+      | src/data-layer-focused-schema-property-menu.ts                 | canonical_editor_shared_primitives        | all four Layered editor targets        |
+      | src/data-layer-focused-schema-property-ui.ts                   | canonical_editor_shared_primitives        | all four Layered editor targets        |
+
+  # Modular verification packs 076
+  Scenario Outline: Modular verification packs 076
+    Given Layered editor changes are <changed_paths>
+    When their behavior targets are planned
+    Then selected logical targets are <selected_targets>
+    And they execute in <browser_sessions> Layered editor browser session
+    And all 19 Layered Schema unit files, 13 property files, and the exact shared-profile feature and handler evidence remain selected
+
+    Examples:
+      | changed_paths                                                                                                                       | selected_targets                                                                          | browser_sessions |
+      | src/canonical-schema-focused/navigator-rows.ts                                                                                      | LAYERED_SCHEMA_EDITOR_TARGET                                                              | one              |
+      | src/data-layer-canonical-schema-focused-rules.ts                                                                                    | LAYERED_SCHEMA_EDITOR_RULES_TARGET                                                        | one              |
+      | src/canonical-schema-focused/definition.ts                                                                                          | LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET                                                    | one              |
+      | src/data-layer-focused-rule-policy.ts                                                                                               | LAYERED_SCHEMA_EDITOR_RULES_TARGET and LAYERED_SCHEMA_EDITOR_POLICY_TARGET               | one              |
+      | src/data-layer-canonical-schema-render.ts                                                                                           | all four Layered editor targets                                                           | one              |
+      | src/canonical-schema-focused/navigator-rows.ts and src/data-layer-canonical-schema-focused-rules.ts                                 | LAYERED_SCHEMA_EDITOR_TARGET and LAYERED_SCHEMA_EDITOR_RULES_TARGET                       | one              |
+      | src/data-layer-canonical-schema-focused-rules.ts and src/canonical-schema-focused/definition.ts                                    | LAYERED_SCHEMA_EDITOR_RULES_TARGET and LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET             | one              |
+
+  # Modular verification packs 077
+  Scenario: Modular verification packs 077
+    Given the Layered editor partition contains 22 general, 19 rule, 23 canonical, and 16 policy assertion leaves
+    When exact layered_schema verification and terminal-full planning are compared before and after VTD-005
+    Then all 80 editor assertion leaves execute exactly once
+    And the 52-task exact owner plan retains one build, 19 unit tasks, 13 property tasks, four browser sessions containing all eight logical targets, seven parses, seven generators, and one acceptance session
+    And terminal-full planning retains the same eight Layered Schema target identities and four compatible browser sessions
+    And product behavior, saved canonical bytes, feature and handler evidence, task order, worker limits, and terminal shards are unchanged
+
+  # Modular verification packs 078
+  Scenario Outline: Modular verification packs 078
+    Given editor boundary <boundary> relies on provisional target timing <prior_target_timing>
+    When at least five independent comparable focused-normal samples are accepted
+    Then every selected target p90 budget is non-provisional and cites every accepted receipt digest
+    And its focused changed-path critical-plan baseline is at most <baseline_ceiling>
+    And its tolerance is 1.2 with a guardrail of at most <guardrail_ceiling>
+    And failed, duplicate, cross-environment, and aggregate-fallback samples are excluded
+
+    Examples:
+      | boundary                                  | prior_target_timing                                             | baseline_ceiling | guardrail_ceiling |
+      | canonical_editor_general_presentation     | general target 45.919 seconds                                  | 65 seconds       | 78 seconds        |
+      | canonical_editor_rule_authoring           | rule target 45.810 seconds                                     | 65 seconds       | 78 seconds        |
+      | canonical_editor_document_integration     | canonical target 86.470 seconds                               | 105 seconds      | 126 seconds       |
+      | canonical_editor_focused_policy           | rule target 45.810 seconds and policy target 18.366 seconds    | 83 seconds       | 100 seconds       |
+
+  # Modular verification packs 079
+  Scenario Outline: Modular verification packs 079
+    Given Layered editor history is <change>
+    When current and base impact boundaries are compared
+    Then browser evidence selection is <expected_targets>
+    And unavailable, malformed, or incompatible history cannot omit the old editor evidence
+
+    Examples:
+      | change                                                                                                                          | expected_targets                                                                          |
+      | delete src/data-layer-canonical-schema-focused-rules.ts                                                                         | LAYERED_SCHEMA_EDITOR_RULES_TARGET                                                        |
+      | rename src/data-layer-canonical-schema-focused-rule-add.ts to src/data-layer-canonical-schema-focused-rule-rows.ts             | LAYERED_SCHEMA_EDITOR_RULES_TARGET                                                        |
+      | rename src/data-layer-canonical-schema-focused-rules.ts to src/canonical-schema-focused/definition.ts                          | LAYERED_SCHEMA_EDITOR_RULES_TARGET and LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET             |
+      | rename src/canonical-schema-focused/navigator-rows.ts to src/data-layer-canonical-schema-render.ts                             | all four Layered editor targets                                                           |
+      | use unavailable, malformed, or incompatible historical ownership                                                               | every runnable pack                                                                       |
+
+  # Modular verification packs 080
+  Scenario: Modular verification packs 080
+    Given src/canonical-schema-focused/navigator-rows.ts currently selects all four editor targets with critical-path baseline 214.8 seconds and limit 258 seconds
+    When it remains the representative inside canonical_editor_general_presentation
+    Then it selects only LAYERED_SCHEMA_EDITOR_TARGET in the existing browser session
+    And its sample-derived critical-path baseline is at most 65 seconds with tolerance 1.2 and limit at most 78 seconds
+    And its selected pack remains layered_schema with dependant fan-out 0
+    And the other 19 pack calibrations, the exact layered_schema calibration, and all non-editor browser-target budgets are unchanged
