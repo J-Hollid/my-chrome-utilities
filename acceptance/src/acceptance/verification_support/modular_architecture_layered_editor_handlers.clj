@@ -179,7 +179,7 @@
                  (assoc (prepared world verify-throughput!) :vtd005/boundary boundary)))}
    {:pattern #"^at least five independent comparable focused-normal samples are accepted$"
     :handler (fn [world _ _] (assoc world :vtd005/calibration (performance-calibration)))}
-   {:pattern #"^every selected target p90 budget is non-provisional and cites every accepted receipt digest$"
+   {:pattern #"^every selected target p90 budget is non-provisional and cites every receipt digest accepted into that calibration snapshot$"
     :handler (fn [world _ _]
                (let [targets (get-in world [:vtd005/evidence :classes
                                             (keyword (:vtd005/boundary world)) :targets])

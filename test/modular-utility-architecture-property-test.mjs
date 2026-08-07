@@ -9,6 +9,7 @@ import {
   checkVerificationPerformanceBudgets,
   measuredTimingModel,
   refreshVerificationPerformanceBudgets,
+  validateVerificationPerformanceCalibrationSnapshot,
 } from "../scripts/report-verification-throughput.mjs";
 import {
   artifactBuildIdentity,
@@ -46,7 +47,8 @@ try {
     const executionLoad = sample % 2 ? "loaded" : "normal";
     const durationMs = executionLoad === "loaded" ? 1000 + sample : 100 + sample;
     const receipt = {
-      version:2, runId:`property-${sample}`, completedAt:"2026-08-06T12:00:00.000Z",
+      version:2, runId:`property-${sample}`,
+      completedAt:`2026-08-06T12:${String(sample).padStart(2, "0")}:00.000Z`,
       artifact,
       plan:{ mode:"exact", requestedPackIds:["shell"], selectedPackIds:["shell"],
         changedOwners:{}, changeSetDigest:null, conservativeHistoricalFallbackReason:null },
@@ -85,6 +87,27 @@ try {
       .browserTargets.PROPERTY_TARGET.p90Ms).sort((left, right) => left - right);
   assert.ok(classP90s[0] < 200 && classP90s[1] > 1000,
     "exact environment classes must isolate loaded and normal timing distributions");
+  for (const environmentClass of forward.environmentClasses) {
+    const entries = forward.receipts.filter(({ environmentClassId }) =>
+      environmentClassId === environmentClass.id)
+      .sort((left, right) =>
+        Date.parse(left.receipt.completedAt) - Date.parse(right.receipt.completedAt));
+    for (let cutoffIndex = 0; cutoffIndex < entries.length; cutoffIndex += 1) {
+      const beforeCutoff = entries.slice(0, cutoffIndex + 1);
+      const afterCutoff = entries.slice(cutoffIndex + 1);
+      const snapshot = validateVerificationPerformanceCalibrationSnapshot({
+        environmentClassId:environmentClass.id,
+        receiptCutoff:beforeCutoff.at(-1).receipt.completedAt,
+        receiptDigests:beforeCutoff.map(({ digest }) => digest),
+      }, forward);
+      assert.deepEqual(snapshot.receiptDigests,
+        beforeCutoff.map(({ digest }) => digest).sort(),
+        "an immutable cutoff must include every same-class receipt completed through that instant");
+      assert.deepEqual(snapshot.postCutoffReceiptDigests,
+        afterCutoff.map(({ digest }) => digest).sort(),
+        "an immutable cutoff must leave every later same-class receipt visible");
+    }
+  }
 } finally {
   await rm(timingPropertyRoot, { recursive:true, force:true });
 }
@@ -691,4 +714,4 @@ for (let sample = 0; sample < 100; sample += 1) {
     /owned by both/);
 }
 
-console.log(`modular properties: 20 canonical timing receipts with duplicate provenance and isolated classes, ${declaredContracts.length} declared contracts, 100 bounded schedules, 100 verification budget calibrations with plan-scoped evidence, 100 undeclared contracts, 100 direct cross-module imports, 100 architecture boundaries, 100 verification graphs, 100 Chrome lifecycle argument sets, 300 lifecycle cases, 100 command registries, 100 navigation models, 100 utility directories, 100 isolation models, 100 controlled-reference models, 100 shell capability models, 100 storage models, and 100 panel models passed`);
+console.log(`modular properties: 20 canonical timing receipts with duplicate provenance, isolated classes, and immutable cutoff partitions, ${declaredContracts.length} declared contracts, 100 bounded schedules, 100 verification budget calibrations with plan-scoped evidence, 100 undeclared contracts, 100 direct cross-module imports, 100 architecture boundaries, 100 verification graphs, 100 Chrome lifecycle argument sets, 300 lifecycle cases, 100 command registries, 100 navigation models, 100 utility directories, 100 isolation models, 100 controlled-reference models, 100 shell capability models, 100 storage models, and 100 panel models passed`);

@@ -204,7 +204,7 @@
                           "The committed calibration snapshot is incomplete." {})))}
    {:pattern #"^another eligible same-class receipt completes after that cutoff$"
     :handler (fn [world _ _]
-               (assert! world (= 1 (count (evidence world :snapshot :postCutoffReceiptDigests)))
+               (assert! world (seq (evidence world :snapshot :postCutoffReceiptDigests))
                         "The post-cutoff receipt is not classified separately." {}))}
    {:pattern #"^VTD-009 validates the calibration and records its delivery checkpoint$"
     :handler (fn [world _ _]
@@ -212,8 +212,10 @@
                         "Snapshot validation changed committed calibration data." {}))}
    {:pattern #"^the later receipt remains discoverable in the canonical timing ledger$"
     :handler (fn [world _ _]
-               (assert! world (= 8 (count (evidence world :snapshot :liveReceiptDigests)))
-                        "The canonical ledger concealed the later receipt." {}))}
+               (let [later (set (evidence world :snapshot :postCutoffReceiptDigests))
+                     live (set (evidence world :snapshot :liveReceiptDigests))]
+                 (assert! world (and (seq later) (every? live later))
+                          "The canonical ledger concealed a later receipt." {})))}
    {:pattern #"^the VTD-005 snapshot continues to resolve exactly its seven raw digests without changing its budgets$"
     :handler (fn [world _ _]
                (assert! world (and (= 7 (count (evidence world :snapshot :receiptDigests)))
@@ -226,12 +228,14 @@
                           "The accepted Shell calibration changed." {:duration duration})))}
    {:pattern #"^validation does not require an immutable calibration snapshot to equal its mutable live receipt sources$"
     :handler (fn [world _ _]
-               (assert! world (= [7 8] [(count (evidence world :snapshot :receiptDigests))
-                                        (count (evidence world :snapshot :liveReceiptDigests))])
-                        "Snapshot validation still requires mutable-source equality." {}))}
+               (let [snapshot-count (count (evidence world :snapshot :receiptDigests))
+                     live-count (count (evidence world :snapshot :liveReceiptDigests))]
+                 (assert! world (and (= 7 snapshot-count) (< snapshot-count live-count))
+                          "Snapshot validation still requires mutable-source equality." {})))}
    {:pattern #"^an explicit future refresh includes every eligible unique same-class receipt completed at or before its new cutoff$"
     :handler (fn [world _ _]
-               (assert! world (= 8 (evidence world :snapshot :futureReceiptCount))
+               (assert! world (= (count (evidence world :snapshot :liveReceiptDigests))
+                                 (evidence world :snapshot :futureReceiptCount))
                         "A future snapshot omitted eligible pre-cutoff evidence." {}))}
    {:pattern #"^a missing, rejected, cross-class, duplicate digest declaration, or omitted pre-cutoff snapshot receipt is rejected$"
     :handler (fn [world _ _]

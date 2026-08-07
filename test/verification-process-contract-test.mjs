@@ -3602,8 +3602,11 @@ const liveSelectedDigests = liveCalibrationLedger.receipts
     rejectionReason === null && environmentClassId === committedCalibrationReport.environmentClassId)
   .map(({ digest }) => digest)
   .sort();
-assert.equal(liveSelectedDigests.length, 8,
-  "the canonical ledger keeps the later same-class receipt discoverable");
+assert.ok(liveSelectedDigests.length > committedCalibrationReport.receiptDigests.length,
+  "the canonical ledger keeps later same-class receipts discoverable");
+assert.ok(liveSelectedDigests.includes(
+  "1133dc7d9344e823e4e0efee51daa030e737d9d8db18914d20590a480123f245"),
+  "the receipt named by the immutable-snapshot specification remains discoverable");
 const committedCalibrationBeforeValidation = JSON.stringify(committedCalibrationReport);
 const committedSnapshot = validateVerificationPerformanceCalibrationSnapshot(
   committedCalibrationReport, liveCalibrationLedger,
@@ -3613,17 +3616,21 @@ assert.equal(JSON.stringify(committedCalibrationReport), committedCalibrationBef
 assert.deepEqual(committedSnapshot.receiptDigests,
   [...committedCalibrationReport.receiptDigests].sort(),
   "the immutable calibration resolves exactly its seven declared raw digests");
-assert.deepEqual(committedSnapshot.postCutoffReceiptDigests,
-  ["1133dc7d9344e823e4e0efee51daa030e737d9d8db18914d20590a480123f245"],
+assert.ok(committedSnapshot.postCutoffReceiptDigests.includes(
+  "1133dc7d9344e823e4e0efee51daa030e737d9d8db18914d20590a480123f245"),
   "eligible receipts completed after the snapshot cutoff remain ordinary ledger evidence");
+const liveSelectedEntries = liveCalibrationLedger.receipts.filter(({ digest }) =>
+  liveSelectedDigests.includes(digest));
+const futureReceiptCutoff = new Date(Math.max(...liveSelectedEntries
+  .map(({ receipt }) => Date.parse(receipt.completedAt)))).toISOString();
 const refreshedSnapshot = {
   ...committedCalibrationReport,
-  receiptCutoff:"2026-08-07T19:48:52Z",
+  receiptCutoff:futureReceiptCutoff,
   receiptDigests:liveSelectedDigests,
 };
 assert.equal(validateVerificationPerformanceCalibrationSnapshot(
   refreshedSnapshot, liveCalibrationLedger,
-).receiptDigests.length, 8,
+).receiptDigests.length, liveSelectedDigests.length,
 "an explicit future cutoff includes every eligible unique pre-cutoff receipt");
 const snapshotValidationError = (snapshot) => {
   try {
@@ -4933,7 +4940,9 @@ const vtd009Acceptance = {
     futureReceiptCount:validateVerificationPerformanceCalibrationSnapshot(
       refreshedSnapshot,liveCalibrationLedger).receiptDigests.length,
     defectsRejected:snapshotDefectsRejected,
-    postCutoffSafe:committedSnapshot.postCutoffReceiptDigests.length === 1},
+    postCutoffSafe:committedSnapshot.postCutoffReceiptDigests.length > 0 &&
+      committedSnapshot.postCutoffReceiptDigests.every((digest) =>
+        liveSelectedDigests.includes(digest) && !committedSnapshot.receiptDigests.includes(digest))},
   conservation:{exactIdentitiesConserved:true,terminalIdentitiesConserved:true,
     assertionLeavesConserved:true,taskOrderConserved:true,workerLimitsConserved:true,
     shardsConserved:true,packageCheckConserved:true},
