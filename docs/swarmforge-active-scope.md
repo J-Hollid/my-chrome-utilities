@@ -2748,35 +2748,35 @@ runnable packs in canonical order, followed by `node scripts/package.mjs`. This 
 delivery checkpoint does not make future local Schemas display changes global; after
 installation, any of the eight exact local-presentation paths selects only `schemas`.
 
-## Verification throughput program — candidate VTD-005 Layered editor target routing (2026-08-07)
+## Verification throughput program — completed VTD-005 Layered editor target routing (2026-08-07)
 
-This is the only candidate specification package. It covers VTD-005 only and grants
-no implementation authority until the user explicitly approves the bounded coder
-handoff. VTD-006 through VTD-012 remain inactive.
+This package merged after the normal coder, refactorer, and architect chain at
+`caad024a5366ab6c1798d7e8a62aa50c7f1e6a31`. It is fixed delivery history; later
+packages do not reopen its delivered boundaries. VTD-006 through VTD-012 remain
+inactive.
 
 ### Plain-language outcome
 
-Today any change inside the Layered Schema editor's 32-file UI boundary runs four
-large browser workflows. The calibrated plan takes about 214.8 seconds, or three
-minutes and thirty-five seconds, with a 258-second guardrail. The browser already
-records those workflows separately, but the source registry asks for all four every
-time.
+Before this delivery, any change inside the Layered Schema editor's 32-file UI
+boundary ran four large browser workflows. The calibrated plan took about 214.8
+seconds, or three minutes and thirty-five seconds, with a 258-second guardrail. The
+browser already recorded those workflows separately, but the source registry asked
+for all four every time.
 
 This package connects each kind of editor code to the browser workflow that proves
 it. Based on the accepted target timings plus the rest of the focused plan, expected
 feedback becomes approximately:
 
-| Focused change | Current plan | Expected plan | Approximate saving |
+| Focused change | Prior plan | Delivered plan | Approximate saving |
 |---|---:|---:|---:|
-| General editor display and navigation | 3:35 | 1:04 | 70% |
-| Rule and condition editing | 3:35 | 1:04 | 70% |
-| Canonical definition, facets, and document integration | 3:35 | 1:45 | 51% |
-| Focused rule policy | 3:35 | 1:23 | 61% |
+| General editor display and navigation | 3:35 | 0:59 | 73% |
+| Rule and condition editing | 3:35 | 1:01 | 72% |
+| Canonical definition, facets, and document integration | 3:35 | 1:44 | 52% |
+| Focused rule policy | 3:35 | 1:19 | 63% |
 
-Those expected values are acceptance ceilings, not invented final measurements.
-The implementation must collect at least five comparable focused-normal samples for
-each editor target, refresh its p90 budget from those samples, and record the final
-measured values. A result that cannot stay within the ceilings below is not complete.
+Delivery collected six comparable focused-normal samples for the general, rule, and
+canonical targets and seven for policy. The resulting changed-path projections are
+58.8, 60.6, 103.6, and 79.3 seconds respectively, all within the approved ceilings.
 
 No assertion is removed and no new Chrome process is added to exact-pack or terminal
 verification. If a change touches several behavior groups, their selected workflows
@@ -2837,34 +2837,27 @@ compatible browser sessions, and every assertion leaf exactly once.
 
 ### Measurement and guardrails
 
-The four current editor target baselines are provisional one-sample values: 45.919
-seconds for general presentation, 45.810 seconds for rules, 86.470 seconds for
-canonical integration, and 18.366 seconds for focused policy. They are sufficient to
-set safe acceptance ceilings but not final budgets.
+Before delivery, the four target baselines were provisional one-sample values.
+Delivery accepted six independent comparable focused-normal samples for general,
+rules, and canonical, and seven for policy. Failed, duplicate, cross-environment,
+and aggregate-fallback samples were excluded. The resulting non-provisional target
+p90 values are 44.975, 46.488, 89.948, and 20.440 seconds respectively.
 
-Implementation must produce at least five independent, comparable focused-normal
-samples for every editor target in the accepted environment class. The refreshed
-target p90 baselines and their receipt digests become non-provisional calibration
-data. Samples from a different environment class, failed runs, duplicate receipts,
-or the current aggregate fallback cannot enter those budgets.
+The delivered changed-path critical-plan projections, including build, unit,
+property, feature, and session work, are:
 
-The resulting changed-path critical-plan projections, including build, unit,
-property, feature, and session work, must meet these ceilings:
+| Boundary | Delivered baseline | Delivered guardrail | Approved ceiling |
+|---|---:|---:|---:|
+| `canonical_editor_general_presentation` | 58.8 seconds | 71 seconds | 65 / 78 seconds |
+| `canonical_editor_rule_authoring` | 60.6 seconds | 73 seconds | 65 / 78 seconds |
+| `canonical_editor_document_integration` | 103.6 seconds | 125 seconds | 105 / 126 seconds |
+| `canonical_editor_focused_policy` | 79.3 seconds | 96 seconds | 83 / 100 seconds |
 
-| Boundary | Baseline ceiling | Guardrail ceiling with tolerance 1.2 |
-|---|---:|---:|
-| `canonical_editor_general_presentation` | 65 seconds | 78 seconds |
-| `canonical_editor_rule_authoring` | 65 seconds | 78 seconds |
-| `canonical_editor_document_integration` | 105 seconds | 126 seconds |
-| `canonical_editor_focused_policy` | 83 seconds | 100 seconds |
-
-The representative row changes from the current 214.8-second baseline and 258-second
-limit to the measured general-presentation values within the 65/78-second ceilings.
-Its selected pack and dependant fan-out remain `layered_schema` and zero. The other
-19 runnable-pack rows, the exact `layered_schema` row, all non-editor representative
-rows, and all non-editor browser-target budgets remain byte-equivalent. The four
-editor target budgets change only from provisional explicit baselines to accepted
-sample-derived p90 values.
+The representative row changed from a 214.8-second baseline and 258-second limit to
+58.8 seconds and 71 seconds. Its selected pack and dependant fan-out remain
+`layered_schema` and zero. The other 19 runnable-pack rows, the exact
+`layered_schema` row, all non-editor representative rows, and all non-editor
+browser-target budgets remain byte-equivalent.
 
 ### Historical and failure safety
 
@@ -2885,3 +2878,138 @@ The implementation changes the verification registry, calibration, and process
 contracts. Its one-time implementation checkpoint therefore runs all 20 packs in
 canonical order followed by `node scripts/package.mjs`. That broad delivery check
 does not make future focused editor changes global.
+
+## Verification throughput program — candidate VTD-009 exact helper and Shell ownership (2026-08-07)
+
+This is the only candidate specification package. It covers VTD-009 only and grants
+no implementation authority until the user explicitly approves the bounded coder
+handoff. VTD-006 through VTD-008 and VTD-010 through VTD-012 remain inactive.
+
+### Plain-language outcome
+
+A small change to workspace-tab display currently starts checks for all 20 product
+areas. Its accepted projection is 510.8 seconds, or about eight minutes and thirty-one
+seconds, with a 613-second guardrail. The code only draws and switches the Shell's
+two top-level tabs. This package makes that file, plus the two small empty-state
+display files, use the already calibrated Shell-only plan: 37.2 seconds with a
+45-second guardrail. That is about 93% faster without dropping a Shell check.
+
+The package also closes a misleading fallback. A focused test helper already selects
+its real consumers when it is declared, but a new unregistered file under
+`test/support/` silently looks global. After this package, every tracked helper must
+name its exact consumers before the registry is valid. A Layered Schema helper keeps
+selecting only `layered_schema`; `headless-chrome.mjs`, which really is shared by all
+20 areas, deliberately keeps the full run.
+
+Two tracked files are dormant: `test/support/branding-workflow-targets.mjs` and
+`test/support/layered-schema-parity-runtime.mjs`. Current `master` contains no static
+or dynamic importer, verification registration, executable leaf, browser target,
+acceptance contract, checkpoint, or prior active specification requiring either file. Their
+intended evidence is supplied by the registered branding workflow browser program
+and the current Layered Schema programs. This package explicitly removes both files;
+it does not remove or relocate an assertion leaf.
+
+### Exact helper inventory
+
+After the two dormant files are removed, all 20 tracked `test/support/*.mjs` files
+are declared verification helpers with the exact transitive consumers below.
+`test/browser-packs/shared-harness.mjs` remains a separately declared shared helper.
+
+| Helper | Exact consumers |
+|---|---|
+| `documentation-concept-runtime-probes.mjs` | `flow_export` |
+| `flat-rule-builder-runtime-probes.mjs` | `layered_schema` |
+| `flow-evidence-reporter.mjs` | `flow_graph` |
+| `flow-graph-corrective-workflow.mjs` | `flow_graph` |
+| `flow-examples-timing.mjs` | `flow_graph` |
+| `flow-r02-correction-evidence.mjs` | `flow_graph` |
+| `flow-workspace-r02-runtime.mjs` | `flow_graph` |
+| `headless-chrome.mjs` | all 20 runnable packs |
+| `browser-target-session.mjs` | `branding_polish`, `durable_project_repository`, `layered_schema`, `shell` |
+| `durable-project-targets.mjs` | `durable_project_repository` |
+| `layered-schema-targets.mjs` | `layered_schema` |
+| `layered-schema-workflows.mjs` | `layered_schema` |
+| `journal-free-installed-runtime-probe.mjs` | `layered_schema` |
+| `layered-schema-ownership-probes.mjs` | `layered_schema` |
+| `layered-schema-usability-probes.mjs` | `layered_schema` |
+| `profile-inheritance-controls-runtime-probe.mjs` | `layered_schema` |
+| `schema-concept-runtime-probes.mjs` | `layered_schema` |
+| `string-rule-validation-runtime-probes.mjs` | `layered_schema` |
+| `studio-choice-contract-oracle.mjs` | `branding_polish` |
+| `typed-literal-focused-editor-probes.mjs` | `layered_schema` |
+| `test/browser-packs/shared-harness.mjs` | every runnable pack except `branding_polish` |
+
+Registry validation follows statically resolvable imports transitively, including
+helper-to-helper imports and the configuration-only target modules loaded by a
+registered browser program. Each tracked support file must be declared exactly once,
+the declared consumer set must equal the discovered set, and every consumer must be
+a runnable registered pack. An unused declaration, undeclared imported helper, or
+new tracked but unregistered support file is an error. A tracked helper can no longer
+gain all-pack ownership merely by falling through the Shell's directory prefix.
+
+### Shell production boundaries
+
+All 18 Shell-owned TypeScript files match exactly one boundary. The current broad
+prefixes are replaced by exact boundaries and consumer declarations so locally
+presented values do not masquerade as shared platform code.
+
+| Boundary | Exact source paths | Selected scope |
+|---|---|---|
+| `shell_local_presentation` | `src/panel-empty-states.ts`, `src/panel-empty-states-ui.ts`, `src/workspace-tabs-ui.ts` | `shell` only |
+| `shell_workspace_navigation` | `src/workspace-tabs.ts` | `command-palette`, `hotkeys`, and `shell` |
+| `shell_active_page_integration` | `src/active-page-observation.ts` | `capture`, its eight current downstream consumers, and `shell` — 10 packs total |
+| `shell_shared_action_presentation` | `src/side-panel-action-hierarchy.ts`, `src/side-panel-action-hierarchy-ui.ts` | `event-library`, `schemas`, their current downstream consumers, and `shell` — 9 packs total |
+| `shell_platform_runtime` | `src/background.ts`, all seven `src/platform/*.ts` files, `src/side-panel-bootstrap.ts`, `src/side-panel.ts`, `src/utility-registry.ts` | all 20 runnable packs |
+
+The three local-presentation files receive already-computed values, render text and
+tab state, manage focus within their own controls, and return the selected tab or
+recovery action. They do not call Chrome APIs, choose page access, own product data,
+mutate another product area, or define a shared utility contract.
+
+`workspace-tabs.ts` also supplies command-palette navigation, so its exact runtime
+consumer keeps `command-palette`, `hotkeys`, and `shell`. Active-page observation
+queries tabs and injects a page read for Capture, so it keeps Capture's dependant
+closure plus Shell. Action-hierarchy presentation is imported by Event Library and
+Schemas UI, so those real consumer closures remain. Background startup, shared
+utility contracts, DOM isolation, lifecycle and storage, bootstrapping, registry
+composition, `side-panel.ts`, and runtime capability detection stay global.
+
+### Evidence and timing conservation
+
+A local Shell presentation change selects the complete 59-task property-enabled
+Shell plan: one build, 11 unit files, one property file, three browser adapters, one
+browser-observation session containing both Shell targets, 19 parses, 19 generators,
+three checkpoints, and one Shell acceptance session. It does not select a subset of
+Shell evidence.
+
+Exact-pack and terminal-full planning retain every task identity, browser target,
+assertion leaf, feature, handler, checkpoint, package check, process batch, task
+order, worker limit, and shard exactly once. Removing the two dormant support files
+changes no plan because neither file is an active input or executable leaf.
+
+The accepted calibration changes only the Shell representative changed-path row:
+
+- the representative remains `src/workspace-tabs-ui.ts`;
+- selected packs change from all 20 runnable packs to `shell` only;
+- dependant fan-out changes from 19 to 0;
+- its baseline changes from 510.8 seconds to the accepted exact-Shell baseline of
+  37.2 seconds, with tolerance 1.2 and a 45-second limit instead of 613 seconds; and
+- the Shell exact-pack row, the other 19 pack rows, and every browser-target budget
+  remain byte-equivalent.
+
+### Historical and failure safety
+
+Changed-path planning compares the current and base helper declarations and Shell
+boundaries. Deleting a declared helper retains its historical consumers. Renaming a
+helper across consumer sets selects the union once. Deleting or renaming a local
+Shell file retains its former boundary; moving it into the platform kernel restores
+all-pack selection. Missing, unreadable, malformed, or incompatible historical
+ownership fails closed to every runnable pack.
+
+The one-time removal of each currently undeclared dormant helper retains its
+historical broad Shell ownership, so implementation verification remains broad.
+The implementation changes the global registry, planner validation, process
+contracts, and tracked support inventory. Its checkpoint therefore runs all 20
+runnable packs in canonical order followed by `node scripts/package.mjs`. This
+broad delivery checkpoint does not make future focused helper or local Shell changes
+global.

@@ -1239,3 +1239,118 @@ Feature: Modular verification packs
     And its sample-derived critical-path baseline is at most 65 seconds with tolerance 1.2 and limit at most 78 seconds
     And its selected pack remains layered_schema with dependant fan-out 0
     And the other 19 pack calibrations, the exact layered_schema calibration, and all non-editor browser-target budgets are unchanged
+
+  # Modular verification packs 081
+  Scenario Outline: Modular verification packs 081
+    Given tracked verification helper <helper> is active on current master
+    When VTD-009 validates its statically resolvable transitive import graph
+    Then its exact consumers are <consumer_scope>
+    And changing the helper selects exactly those consumers once
+    And all 20 retained support helpers and shared-harness have one declaration
+
+    Examples:
+      | helper                                                       | consumer_scope                                                        |
+      | test/support/documentation-concept-runtime-probes.mjs        | flow_export                                                           |
+      | test/support/flat-rule-builder-runtime-probes.mjs            | layered_schema                                                        |
+      | test/support/flow-evidence-reporter.mjs                      | flow_graph                                                            |
+      | test/support/flow-graph-corrective-workflow.mjs              | flow_graph                                                            |
+      | test/support/flow-examples-timing.mjs                        | flow_graph                                                            |
+      | test/support/flow-r02-correction-evidence.mjs                | flow_graph                                                            |
+      | test/support/flow-workspace-r02-runtime.mjs                  | flow_graph                                                            |
+      | test/support/headless-chrome.mjs                             | every runnable pack                                                   |
+      | test/support/browser-target-session.mjs                      | branding_polish, durable_project_repository, layered_schema, shell    |
+      | test/support/durable-project-targets.mjs                     | durable_project_repository                                           |
+      | test/support/layered-schema-targets.mjs                      | layered_schema                                                        |
+      | test/support/layered-schema-workflows.mjs                    | layered_schema                                                        |
+      | test/support/journal-free-installed-runtime-probe.mjs        | layered_schema                                                        |
+      | test/support/layered-schema-ownership-probes.mjs             | layered_schema                                                        |
+      | test/support/layered-schema-usability-probes.mjs             | layered_schema                                                        |
+      | test/support/profile-inheritance-controls-runtime-probe.mjs  | layered_schema                                                        |
+      | test/support/schema-concept-runtime-probes.mjs               | layered_schema                                                        |
+      | test/support/string-rule-validation-runtime-probes.mjs       | layered_schema                                                        |
+      | test/support/studio-choice-contract-oracle.mjs               | branding_polish                                                       |
+      | test/support/typed-literal-focused-editor-probes.mjs         | layered_schema                                                        |
+      | test/browser-packs/shared-harness.mjs                        | every runnable pack except branding_polish                            |
+
+  # Modular verification packs 082
+  Scenario Outline: Modular verification packs 082
+    Given verification helper registry defect is <defect>
+    When tracked support inventory and transitive consumers are validated
+    Then validation is rejected with <diagnostic>
+    And the helper cannot silently inherit broad Shell ownership
+
+    Examples:
+      | defect                                           | diagnostic                                      |
+      | a new tracked but unused support helper          | Declare every tracked support helper            |
+      | an imported helper without a declaration         | Declare every imported verification helper      |
+      | a declaration with a missing or extra consumer   | Correct verification helper consumers           |
+      | a declared helper with no reachable consumer     | Remove stale verification helper declaration    |
+      | the same helper declared twice                   | Declare verification helper once                |
+      | a declaration naming an unknown consumer         | Register every verification helper consumer     |
+
+  # Modular verification packs 083
+  Scenario Outline: Modular verification packs 083
+    Given dormant support file <helper> has no importer, registration, executable leaf, browser target, acceptance contract, or checkpoint
+    When VTD-009 removes it
+    Then its intended evidence remains supplied by <active_evidence>
+    And no active assertion leaf or task identity is removed
+    And after both removals the 20 tracked support helpers are all declared
+
+    Examples:
+      | helper                                                   | active_evidence                                   |
+      | test/support/branding-workflow-targets.mjs               | the registered branding workflow browser program |
+      | test/support/layered-schema-parity-runtime.mjs           | the current Layered Schema browser programs       |
+
+  # Modular verification packs 084
+  Scenario Outline: Modular verification packs 084
+    Given Shell source <changed_path> currently falls through the global Shell prefix
+    When VTD-009 classifies its exact production boundary and runtime consumers
+    Then its boundary is <boundary>
+    And its selected scope is <selected_scope>
+    And every one of the 18 Shell-owned TypeScript files matches exactly one boundary
+
+    Examples:
+      | changed_path                                  | boundary                           | selected_scope                                                  |
+      | src/panel-empty-states.ts                     | shell_local_presentation           | shell only                                                      |
+      | src/panel-empty-states-ui.ts                  | shell_local_presentation           | shell only                                                      |
+      | src/workspace-tabs-ui.ts                      | shell_local_presentation           | shell only                                                      |
+      | src/workspace-tabs.ts                         | shell_workspace_navigation         | command-palette, hotkeys, and shell                             |
+      | src/active-page-observation.ts                | shell_active_page_integration      | capture dependant closure and shell, 10 packs                   |
+      | src/side-panel-action-hierarchy.ts            | shell_shared_action_presentation   | event-library and schemas dependant closures and shell, 9 packs |
+      | src/side-panel-action-hierarchy-ui.ts         | shell_shared_action_presentation   | event-library and schemas dependant closures and shell, 9 packs |
+      | src/background.ts                             | shell_platform_runtime             | every runnable pack                                             |
+      | src/platform/shell-runtime-capabilities.ts    | shell_platform_runtime             | every runnable pack                                             |
+      | src/platform/utility-bootstrap.ts             | shell_platform_runtime             | every runnable pack                                             |
+      | src/platform/utility-contract.ts              | shell_platform_runtime             | every runnable pack                                             |
+      | src/platform/utility-dom-isolation.ts         | shell_platform_runtime             | every runnable pack                                             |
+      | src/platform/utility-lifecycle-dom.ts         | shell_platform_runtime             | every runnable pack                                             |
+      | src/platform/utility-shell-dom.ts             | shell_platform_runtime             | every runnable pack                                             |
+      | src/platform/utility-storage.ts               | shell_platform_runtime             | every runnable pack                                             |
+      | src/side-panel-bootstrap.ts                   | shell_platform_runtime             | every runnable pack                                             |
+      | src/side-panel.ts                             | shell_platform_runtime             | every runnable pack                                             |
+      | src/utility-registry.ts                       | shell_platform_runtime             | every runnable pack                                             |
+
+  # Modular verification packs 085
+  Scenario: Modular verification packs 085
+    Given src/workspace-tabs-ui.ts currently selects all 20 packs with dependant fan-out 19, critical-path baseline 510.8 seconds, and limit 613 seconds
+    When its proven shell_local_presentation boundary becomes the Shell representative
+    Then it selects only the complete 59-task property-enabled shell plan with dependant fan-out 0
+    And its accepted critical-path baseline is 37.2 seconds with tolerance 1.2 and limit 45 seconds
+    And the shell exact-pack calibration, the other 19 pack calibrations, and every browser-target budget are unchanged
+    And exact-pack and terminal-full planning retain every task identity, assertion leaf, browser batch, checkpoint, package check, worker limit, and shard exactly once
+
+  # Modular verification packs 086
+  Scenario Outline: Modular verification packs 086
+    Given VTD-009 historical change is <change>
+    When current and base helper declarations and Shell boundaries are compared
+    Then selected scope is <selected_scope>
+    And unavailable, malformed, or incompatible history cannot omit prior consumers
+
+    Examples:
+      | change                                                                                                         | selected_scope                    |
+      | delete test/support/layered-schema-usability-probes.mjs                                                        | layered_schema only               |
+      | rename test/support/layered-schema-usability-probes.mjs to test/support/flow-evidence-reporter.mjs             | layered_schema and flow_graph     |
+      | delete src/workspace-tabs-ui.ts                                                                                | shell only                        |
+      | rename src/workspace-tabs-ui.ts to src/side-panel.ts                                                           | every runnable pack               |
+      | delete test/support/branding-workflow-targets.mjs from its current undeclared historical state                 | every runnable pack               |
+      | use unavailable, malformed, or incompatible historical ownership                                               | every runnable pack               |

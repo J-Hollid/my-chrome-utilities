@@ -57,7 +57,10 @@ here.
 - The `schemas` local-presentation slice completed the normal coder, refactorer,
   and architect chain and merged at
   `daaac105c1dd8ecf6fee5a53550c5863d943e84d`.
-- VTD-004 is complete. VTD-005 through VTD-012 remain queued and inactive.
+- VTD-005 completed the normal coder, refactorer, and architect chain and merged at
+  `caad024a5366ab6c1798d7e8a62aa50c7f1e6a31`.
+- VTD-004 and VTD-005 are complete. VTD-006 through VTD-012 remain queued and
+  inactive.
 
 ## Executive assessment
 
