@@ -413,7 +413,7 @@ Feature: Modular verification packs
       | project_assurance_severity   | features/data-layer-project-assurance-severity.feature    | project_assurance_severity                                                                                                                                                                                          |
       | branding_polish              | src/data-layer-studio-choice-controls.ts                  | branding_polish                                                                                                                                                                                                     |
       | guided_test_cases            | src/data-layer-guided-test-cases.ts                       | guided_test_cases                                                                                                                                                                                                   |
-      | shell                        | src/workspace-tabs-ui.ts                                  | every runnable pack                                                                                                                                                                                                 |
+      | shell                        | src/workspace-tabs-ui.ts                                  | shell                                                                                                                                                                                                               |
 
   # Modular verification packs 035
   Scenario: Modular verification packs 035

@@ -1962,13 +1962,14 @@ the calibration algorithm, and the resulting rows. Raw receipt bytes remain immu
 
 Every one of the 20 runnable packs declares the exact existing file in scenario 034 as
 its `representativeChangedPath`. A representative may be an exact pack-owned feature
-file only where the pack has no production source ownership; VTD-003 must not move
+file only where the pack has no production source ownership; VTD-003 did not move
 production ownership merely to manufacture a source representative. Directory prefixes,
-the first source entry, and other reporter fallbacks are rejected. The plan selected for
-each file must retain the exact pack identities in scenario 034. In particular,
-`src/workspace-tabs-ui.ts` deliberately represents the conservative global shell class,
-while Flow and layered-schema representatives exercise their existing non-propagating UI
-boundaries. This package adds no impact boundary and changes no dependency.
+the first source entry, and other reporter fallbacks are rejected. The current plan for
+each file must retain the exact pack identities in scenario 034. VTD-003 originally
+calibrated `src/workspace-tabs-ui.ts` as conservative global Shell work without adding an
+impact boundary. VTD-009 supersedes that one selection: the same representative now
+exercises `shell_local_presentation` and selects `shell` only. Flow and layered-schema
+representatives continue to exercise their non-propagating UI boundaries.
 
 Each runnable pack receives explicit entries for:
 
@@ -1982,8 +1983,8 @@ Their normal tolerance is 1.2. The Flow representative path keeps its already ac
 35-second cap. Fan-out is deterministic rather than noisy, so its limit equals the
 current selected dependant count; it receives no extra-pack tolerance. The 1,200-second
 exact-pack and fan-out-20 values remain emergency defaults only and cannot be the
-ordinary success criterion for any runnable pack. The global shell row remains separately
-identified and cannot widen a local pack's limit.
+ordinary success criterion for any runnable pack. Genuinely global Shell infrastructure
+remains separately identified and cannot widen the local Shell representative's limit.
 
 All 81 registered browser targets receive an explicit budget entry. A target is
 non-provisional only when at least five independent comparable samples, or a committed
