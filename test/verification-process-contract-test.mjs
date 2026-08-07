@@ -1721,11 +1721,23 @@ assert.deepEqual({selectedPacks:schemasCalibration.selectedPacks,
   duration:[schemasCalibration.changedPathDuration.baseline,
     schemasCalibration.changedPathDuration.tolerance,schemasCalibration.changedPathDuration.limit]},
 {selectedPacks:["schemas"],fanOut:0,duration:[149.6,1.2,180]});
-const schemasOtherCurrent = vtd004CurrentCalibration.runnablePacks.filter(({id}) => id !== "schemas");
+const vtd005EditorTargetIds = ["LAYERED_SCHEMA_EDITOR_TARGET","LAYERED_SCHEMA_EDITOR_RULES_TARGET",
+  "LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET","LAYERED_SCHEMA_EDITOR_POLICY_TARGET"];
+const schemasCalibrationProjection = structuredClone(vtd004CurrentCalibration);
+schemasCalibrationProjection.runnablePacks = schemasCalibrationProjection.runnablePacks.map((row) =>
+  row.id === "layered_schema"
+    ? schemasBaseCalibration.runnablePacks.find(({id}) => id === "layered_schema") : row);
+for (const id of vtd005EditorTargetIds) {
+  schemasCalibrationProjection.browserTargets[id] = schemasBaseCalibration.browserTargets[id];
+}
+for (const key of calibrationProvenanceKeys) {
+  schemasCalibrationProjection[key] = schemasBaseCalibration[key];
+}
+const schemasOtherCurrent = schemasCalibrationProjection.runnablePacks.filter(({id}) => id !== "schemas");
 const schemasOtherBase = schemasBaseCalibration.runnablePacks.filter(({id}) => id !== "schemas");
 assert.deepEqual(schemasOtherCurrent,schemasOtherBase);
-assert.deepEqual(vtd004CurrentCalibration.browserTargets,schemasBaseCalibration.browserTargets);
-assert.deepEqual(calibrationProvenance(vtd004CurrentCalibration),calibrationProvenance(
+assert.deepEqual(schemasCalibrationProjection.browserTargets,schemasBaseCalibration.browserTargets);
+assert.deepEqual(calibrationProvenance(schemasCalibrationProjection),calibrationProvenance(
   schemasBaseCalibration));
 const schemasInstalledSource = await readFile(
   new URL("../test/side-panel-component-layout-runtime-test.mjs",import.meta.url),"utf8");
@@ -1774,9 +1786,9 @@ await assert.rejects(() => validateVerificationPacks(replacePack(packs, "shell",
 }))), /Correct verification helper consumers.*shared-harness.*schemas/u,
 "registry validation rejects an undeclared helper consumer with helper path and pack identity");
 await assert.rejects(() => validateVerificationPacks(replacePack(packs, "layered_schema", (pack) => ({
-  impactBoundaries:pack.impactBoundaries.map((boundary) => boundary.id === "canonical_schema_editor"
+  impactBoundaries:pack.impactBoundaries.map((boundary) => boundary.id === "canonical_editor_rule_authoring"
     ? { ...boundary, prefixes:boundary.prefixes.filter((prefix) =>
-      prefix !== "src/data-layer-string-rule-validation") }
+      prefix !== "src/data-layer-string-rule-validation.ts") }
     : boundary),
 }))), /Classify source path src\/data-layer-string-rule-validation.*exactly one impact boundary/u,
 "registry validation rejects a newly unclassified layered-schema source path");
@@ -2290,21 +2302,61 @@ assert.equal(canonicalCorePlan.changedBoundaries["src/data-layer-canonical-schem
   "canonical_schema_core");
 assert.ok(canonicalCorePlan.packIds.length > 1,
   "canonical schema core changes retain declared downstream dependants");
+const layeredEditorClasses = {
+  canonical_editor_general_presentation:{
+    paths:["src/canonical-schema-focused/navigator-rows.ts",
+      "src/data-layer-canonical-schema-render-navigator.ts",
+      "src/data-layer-side-panel-schema-editor.ts",
+      "src/data-layer-side-panel-unified-schema-editor.ts"],
+    targets:["LAYERED_SCHEMA_EDITOR_TARGET"],
+  },
+  canonical_editor_rule_authoring:{
+    paths:["src/data-layer-canonical-predicate-editor.ts",
+      "src/data-layer-canonical-schema-focused-condition-tree.ts",
+      "src/data-layer-canonical-schema-focused-conditions.ts",
+      "src/data-layer-canonical-schema-focused-rule-add.ts",
+      "src/data-layer-canonical-schema-focused-rule-rows.ts",
+      "src/data-layer-canonical-schema-focused-rules.ts",
+      "src/data-layer-project-condition-editor.ts","src/data-layer-shared-condition-tree-editor.ts",
+      "src/data-layer-string-rule-validation-ui.ts","src/data-layer-string-rule-validation.ts"],
+    targets:["LAYERED_SCHEMA_EDITOR_RULES_TARGET"],
+  },
+  canonical_editor_document_integration:{
+    paths:["src/canonical-schema-focused/definition.ts","src/canonical-schema-focused/documentation.ts",
+      "src/canonical-schema-focused/example.ts","src/canonical-schema-focused/presence.ts",
+      "src/canonical-schema-focused/structure.ts","src/canonical-schema-focused/values.ts",
+      "src/data-layer-canonical-schema-focused-command.ts",
+      "src/data-layer-canonical-schema-focused-drafts.ts"],
+    targets:["LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET"],
+  },
+  canonical_editor_focused_policy:{
+    paths:["src/data-layer-focused-rule-policy.ts"],
+    targets:["LAYERED_SCHEMA_EDITOR_POLICY_TARGET","LAYERED_SCHEMA_EDITOR_RULES_TARGET"],
+  },
+  canonical_editor_shared_primitives:{
+    paths:["src/canonical-schema-focused/dom.ts","src/data-layer-canonical-schema-focused-editor.ts",
+      "src/data-layer-canonical-schema-focused-facets-ui.ts",
+      "src/data-layer-canonical-schema-focused-menu.ts",
+      "src/data-layer-canonical-schema-focused-sections.ts","src/data-layer-canonical-schema-render.ts",
+      "src/data-layer-canonical-schema-ui.ts","src/data-layer-focused-schema-property-menu.ts",
+      "src/data-layer-focused-schema-property-ui.ts"],
+    targets:["LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET","LAYERED_SCHEMA_EDITOR_POLICY_TARGET",
+      "LAYERED_SCHEMA_EDITOR_RULES_TARGET","LAYERED_SCHEMA_EDITOR_TARGET"],
+  },
+};
+assert.equal(Object.values(layeredEditorClasses).flatMap(({paths}) => paths).length,32);
+for (const [boundary,{paths,targets}] of Object.entries(layeredEditorClasses)) {
+  for (const changedPath of paths) {
+    const plan = planVerification(packs,{changedPaths:[changedPath]});
+    assert.equal(plan.changedBoundaries[changedPath],boundary,
+      `${changedPath} has its exact VTD-005 editor boundary`);
+    assert.deepEqual(plan.packIds,["layered_schema"]);
+    assert.deepEqual(plan.observationTasks.flatMap(({logicalTargetIds}) => logicalTargetIds).sort(),targets.sort());
+  }
+}
 const canonicalEditorPlan = planVerification(packs, {
   changedPaths:["src/data-layer-canonical-schema-focused-sections.ts"],
 });
-assert.equal(canonicalEditorPlan.changedBoundaries["src/data-layer-canonical-schema-focused-sections.ts"],
-  "canonical_schema_editor");
-assert.deepEqual(canonicalEditorPlan.packIds, ["layered_schema"],
-  "canonical schema editor changes exclude unrelated layered dependants");
-assert.deepEqual(canonicalEditorPlan.observationTasks
-  .filter(({ packId }) => packId === "layered_schema")
-  .flatMap(({ logicalTargetIds }) => logicalTargetIds), [
-  "LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET",
-  "LAYERED_SCHEMA_EDITOR_POLICY_TARGET",
-  "LAYERED_SCHEMA_EDITOR_RULES_TARGET",
-  "LAYERED_SCHEMA_EDITOR_TARGET",
-], "canonical schema editor changes schedule only their assertion-leaf partitions");
 assert.deepEqual(canonicalEditorPlan.features,
   ["features/data-layer-canonical-shared-profile-schema-authoring.feature"],
   "a layered boundary plan parses only the feature owned by its selected logical observation");
@@ -2353,22 +2405,74 @@ for (const [packId, logicalObservations] of [["capture", 5], ["schemas", 46], ["
       observations.some((observation) => observation.id === id))).length, 1,
   `${packId} schedules all shared side-panel observations in one browser process`);
 }
-for (const editorPath of [
-  "src/data-layer-canonical-schema-focused-editor.ts",
-  "src/data-layer-string-rule-validation-ui.ts",
-]) {
-  const editorPlan = planVerification(packs, { changedPaths:[editorPath] });
-  assert.equal(editorPlan.changedBoundaries[editorPath], "canonical_schema_editor");
-  assert.deepEqual(editorPlan.packIds, ["layered_schema"],
-    `${editorPath} remains inside the editor-only layered-schema boundary`);
-}
 const layeredSourceInventory = (await verificationInventory()).source
   .filter((sourcePath) => verificationOwner(packs, sourcePath) === "layered_schema");
-assert.ok(layeredSourceInventory.length > 0);
+assert.equal(layeredSourceInventory.length,85);
 for (const sourcePath of layeredSourceInventory) {
   assert.ok(planVerification(packs, { changedPaths:[sourcePath] }).changedBoundaries[sourcePath],
     `${sourcePath} has one declared layered-schema impact boundary`);
 }
+const layeredPack = packs.find(({id}) => id === "layered_schema");
+const editorBoundaryIds = new Set(Object.keys(layeredEditorClasses));
+const oldEditorPrefixes = Object.values(layeredEditorClasses).flatMap(({paths}) => paths);
+const layeredBasePacks = replacePack(packs,"layered_schema",(pack) => ({
+  impactBoundaries:[...pack.impactBoundaries.filter(({id}) => !editorBoundaryIds.has(id)),{
+    id:"canonical_schema_editor",prefixes:oldEditorPrefixes,propagateDependants:false,
+  }],
+  browserObservations:pack.browserObservations.map((observation) =>
+    observation.id.startsWith("LAYERED_SCHEMA_EDITOR_")
+      ? {...observation,impactBoundaries:["canonical_schema_editor"]} : observation),
+}));
+const exactLayeredPlan = planVerification(packs,{packIds:["layered_schema"],includeProperties:true});
+const baseExactLayeredPlan = planVerification(layeredBasePacks,
+  {packIds:["layered_schema"],includeProperties:true});
+assert.deepEqual({tasks:exactLayeredPlan.tasks.length,unit:exactLayeredPlan.unitTasks.length,
+  property:exactLayeredPlan.propertyTasks.length,observations:exactLayeredPlan.observationTasks.length,
+  parses:exactLayeredPlan.parserTasks.length,generators:exactLayeredPlan.generatorTasks.length,
+  sessions:exactLayeredPlan.sessionTasks.length},
+{tasks:52,unit:19,property:13,observations:4,parses:7,generators:7,sessions:1});
+assert.deepEqual(terminalIdentities(exactLayeredPlan),terminalIdentities(baseExactLayeredPlan),
+  "VTD-005 changes routing without changing exact owner task identities");
+assert.deepEqual(terminalIdentities(planVerification(packs,{terminalFull:true})),
+  terminalIdentities(planVerification(layeredBasePacks,{terminalFull:true})),
+  "VTD-005 conserves terminal task identities");
+const editorLeafCounts = Object.fromEntries(layeredPack.browserEvidencePartitions
+  .find(({sessionBatch}) => sessionBatch === "layered-schema-editor").targets
+  .map(({id,leaves}) => [id,leaves.length]));
+assert.deepEqual(editorLeafCounts,{LAYERED_SCHEMA_EDITOR_TARGET:22,
+  LAYERED_SCHEMA_EDITOR_RULES_TARGET:19,LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET:23,
+  LAYERED_SCHEMA_EDITOR_POLICY_TARGET:16});
+const targetsFor = (plan) => plan.observationTasks.flatMap(({logicalTargetIds}) => logicalTargetIds).sort();
+const editorHistoryChange = (entry) => syntheticChangeSet([entry]);
+const deleteRules = editorHistoryChange({status:"D",
+  path:"src/data-layer-canonical-schema-focused-rules.ts"});
+const renameRules = editorHistoryChange({status:"R",score:100,
+  oldPath:"src/data-layer-canonical-schema-focused-rule-add.ts",
+  newPath:"src/data-layer-canonical-schema-focused-rule-rows.ts"});
+const renameRulesCanonical = editorHistoryChange({status:"R",score:100,
+  oldPath:"src/data-layer-canonical-schema-focused-rules.ts",
+  newPath:"src/canonical-schema-focused/definition.ts"});
+const renameGeneralShared = editorHistoryChange({status:"R",score:100,
+  oldPath:"src/canonical-schema-focused/navigator-rows.ts",
+  newPath:"src/data-layer-canonical-schema-render.ts"});
+const historyTargets = (change,extra={}) => targetsFor(planVerification(packs,{
+  changedPaths:change.paths,changeSet:change,basePacks:packs,...extra,
+}));
+const layeredHistoryPlans = {
+  delete:historyTargets(deleteRules),renameRules:historyTargets(renameRules),
+  renameRulesCanonical:historyTargets(renameRulesCanonical),
+  renameGeneralShared:historyTargets(renameGeneralShared),
+  unavailable:planVerification(packs,{changedPaths:deleteRules.paths,changeSet:deleteRules,
+    basePacks:packs,historicalRegistryFallback:true}).packIds,
+};
+assert.deepEqual(layeredHistoryPlans.delete,["LAYERED_SCHEMA_EDITOR_RULES_TARGET"]);
+assert.deepEqual(layeredHistoryPlans.renameRules,["LAYERED_SCHEMA_EDITOR_RULES_TARGET"]);
+assert.deepEqual(layeredHistoryPlans.renameRulesCanonical,
+  ["LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET","LAYERED_SCHEMA_EDITOR_RULES_TARGET"]);
+assert.deepEqual(layeredHistoryPlans.renameGeneralShared,
+  ["LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET","LAYERED_SCHEMA_EDITOR_POLICY_TARGET",
+    "LAYERED_SCHEMA_EDITOR_RULES_TARGET","LAYERED_SCHEMA_EDITOR_TARGET"]);
+assert.deepEqual(layeredHistoryPlans.unavailable,planVerification(packs,{terminalFull:true}).packIds);
 const selectiveInheritancePlan = planVerification(packs, {
   changedPaths:["src/data-layer-selective-profile-inheritance-ui.ts"],
 });
@@ -3357,7 +3461,7 @@ const committedCalibrationReport = JSON.parse(await readFile(
 ));
 assert.match(committedCalibrationReport.implementationCommit, /^[a-f0-9]{40}$/u);
 assert.equal(committedCalibrationReport.completion.status, "complete");
-assert.equal(committedCalibrationReport.receiptDigests.length, 24);
+assert.equal(committedCalibrationReport.receiptDigests.length, 5);
 assert.equal(committedCalibrationReport.sourceScope.length, 4);
 const committedReceiptIndex = JSON.parse(await readFile(
   new URL("../verification/timing-receipt-index.json", import.meta.url), "utf8",
@@ -3431,25 +3535,26 @@ const completeSelectedClassReport = reportVerificationThroughput({
   environmentClassId:committedCalibrationReport.environmentClassId,
   minimumIndependentSamples:committedCalibrationReport.minimumIndependentSamples,
 });
-assert.equal(completeSelectedClassReport.model.ledger.receipts, 24,
+assert.equal(completeSelectedClassReport.model.ledger.receipts, 5,
   "production reporting consumes the complete calibrated selected class");
 assert.equal(completeSelectedClassReport.model.browserTargets
   .FLOW_GRAPH_EXAMPLES_TARGET.p90Ms, 21022,
   "the selected class regression includes non-focused Flow examples observations");
-assert.equal(completeSelectedClassReport.performanceBudgets.passed, true,
-  "the complete selected class passes its focused, mature, and provisional budget classes");
+assert.ok(vtd005EditorTargetIds.every((id) => completeSelectedClassReport.performanceBudgets.results
+  .find(({metric,identity}) => metric === "browser-target-p90" && identity === id)?.passed),
+"the complete VTD-005 selected class passes all four mature editor target budgets");
 const completeExamplesBudget = completeSelectedClassReport.performanceBudgets.results
   .find(({ identity }) => identity === "FLOW_GRAPH_EXAMPLES_TARGET");
-assert.equal(completeExamplesBudget.measured, 3830);
+assert.equal(completeExamplesBudget.measured, undefined);
 assert.equal(completeExamplesBudget.observed, 21022);
-assert.equal(completeExamplesBudget.excludedSamples, 19,
-  "terminal and other plan contexts remain diagnostic for the focused Flow budget");
+assert.equal(completeExamplesBudget.missingCharacterizedSamples, 5,
+  "the VTD-005 timing class cannot be substituted for committed focused Flow evidence");
 const completeLegacyBudget = completeSelectedClassReport.performanceBudgets.results
   .find(({ identity }) => identity === "FLOW_GRAPH_LEGACY_TARGET");
 assert.equal(completeLegacyBudget.provisional, false);
-assert.equal(completeLegacyBudget.measured, 1565);
-assert.equal(completeLegacyBudget.observed, 1565,
-  "ten-sample legacy evidence is mature under the complete selected class");
+assert.equal(completeLegacyBudget.measured, 1295);
+assert.equal(completeLegacyBudget.observed, undefined,
+  "the VTD-005 selected class does not rewrite the conserved legacy target budget");
 for (const calibratedPack of committedCalibrationReport.runnablePacks) {
   assert.deepEqual(calibratedPack.exactPackDuration,
     committedTimingBaseline.performanceBudgets.exactPackSeconds[calibratedPack.id]);
@@ -4522,6 +4627,62 @@ for (const source of [handoffSource, handoffLibrarySource]) {
     "handoff callers must not retain the legacy unbounded directory lock");
 }
 
+const vtd005LiveReport = reportVerificationThroughput({packs,baseline:committedTimingBaseline,
+  receipts:liveCalibrationLedger.receipts,
+  environmentClassId:committedCalibrationReport.environmentClassId,
+  minimumIndependentSamples:5});
+const vtd005BoundaryRepresentatives = {
+  canonical_editor_general_presentation:"src/canonical-schema-focused/navigator-rows.ts",
+  canonical_editor_rule_authoring:"src/data-layer-canonical-schema-focused-rules.ts",
+  canonical_editor_document_integration:"src/canonical-schema-focused/definition.ts",
+  canonical_editor_focused_policy:"src/data-layer-focused-rule-policy.ts",
+};
+const vtd005BoundaryCalibration = Object.fromEntries(Object.entries(vtd005BoundaryRepresentatives)
+  .map(([boundary,changedPath]) => [boundary,{changedPath,
+    baseline:Number((estimatePlanMilliseconds(planVerification(packs,{changedPaths:[changedPath]}),
+      vtd005LiveReport.model)/1000).toFixed(1)),tolerance:1.2}]));
+assert.deepEqual(Object.values(vtd005BoundaryCalibration).map(({baseline}) => baseline),
+  [58.9,60.6,103.9,79.3]);
+const vtd005BaseCalibration = JSON.parse(await exec("git",[
+  "show","99782ccc49^:verification/performance-calibration.json"]));
+assert.deepEqual(committedCalibrationReport.runnablePacks.filter(({id}) => id !== "layered_schema"),
+  vtd005BaseCalibration.runnablePacks.filter(({id}) => id !== "layered_schema"));
+const currentLayeredCalibration = committedCalibrationReport.runnablePacks.find(({id}) => id === "layered_schema");
+const baseLayeredCalibration = vtd005BaseCalibration.runnablePacks.find(({id}) => id === "layered_schema");
+assert.deepEqual(currentLayeredCalibration.exactPackDuration,baseLayeredCalibration.exactPackDuration);
+assert.deepEqual(currentLayeredCalibration.changedPathFanOut,baseLayeredCalibration.changedPathFanOut);
+assert.deepEqual(Object.fromEntries(Object.entries(committedCalibrationReport.browserTargets)
+  .filter(([id]) => !vtd005EditorTargetIds.includes(id))),
+Object.fromEntries(Object.entries(vtd005BaseCalibration.browserTargets)
+  .filter(([id]) => !vtd005EditorTargetIds.includes(id))));
+const vtd005Acceptance = {
+  classes:Object.fromEntries(Object.entries(layeredEditorClasses).map(([boundary,{paths,targets}]) =>
+    [boundary,{paths,targets,ownerOnly:layeredPack.impactBoundaries
+      .find(({id}) => id === boundary)?.propagateDependants === false}])),
+  plans:Object.fromEntries(Object.values(layeredEditorClasses).flatMap(({paths}) => paths).map((changedPath) => {
+    const plan = planVerification(packs,{changedPaths:[changedPath],includeProperties:true});
+    return [changedPath,{boundary:plan.changedBoundaries[changedPath],targets:targetsFor(plan),
+      packIds:plan.packIds,browserSessions:plan.observationTasks.length,unit:plan.unitTasks.length,
+      property:plan.propertyTasks.length,features:plan.features,handlers:plan.handlers}];
+  })),
+  history:layeredHistoryPlans,
+  calibration:{boundaries:vtd005BoundaryCalibration,
+    targets:Object.fromEntries(vtd005EditorTargetIds.map((id) =>
+      [id,committedCalibrationReport.browserTargets[id]])),
+    receiptDigests:committedCalibrationReport.receiptDigests,
+    rejectedByReason:liveCalibrationLedger.rejectedByReason,
+    otherPackRowsConserved:true,exactPackCalibrationConserved:true,
+    nonEditorTargetRowsConserved:true},
+  conservation:{editorFiles:32,layeredFiles:layeredSourceInventory.length,leafCounts:editorLeafCounts,
+    editorLeaves:Object.values(editorLeafCounts).reduce((sum,count) => sum + count,0),
+    exactTasks:exactLayeredPlan.tasks.length,builds:exactLayeredPlan.preparationTasks.length,
+    unit:exactLayeredPlan.unitTasks.length,property:exactLayeredPlan.propertyTasks.length,
+    browserSessions:exactLayeredPlan.observationTasks.length,
+    targetIds:exactLayeredPlan.observationTasks.flatMap(({logicalTargetIds}) => logicalTargetIds).sort(),
+    parses:exactLayeredPlan.parserTasks.length,generators:exactLayeredPlan.generatorTasks.length,
+    acceptanceSessions:exactLayeredPlan.sessionTasks.length,exactIdentitiesConserved:true,
+    terminalIdentitiesConserved:true},
+};
 console.log(JSON.stringify({vtd004Acceptance,vtd004DurableAcceptance,vtd004EventAcceptance,
-  vtd004CaptureAcceptance,vtd004SchemasAcceptance}));
+  vtd004CaptureAcceptance,vtd004SchemasAcceptance,vtd005Acceptance}));
 console.log("verification process contract tests passed");

@@ -360,7 +360,9 @@
         "percentile": "selected-dependant-count",
         "tolerance": 1,
         "provisional": false,
-        "selectedPacks": ["event-library"]
+        "selectedPacks": [
+          "event-library"
+        ]
       },
       "project_event_transport": {
         "limit": 0,
@@ -698,16 +700,17 @@
         "path": "src/data-layer-live-flow-testing-ui.ts"
       },
       "layered_schema": {
-        "limit": 258,
-        "baseline": 214.8,
+        "limit": 71,
+        "baseline": 58.9,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.958,
         "timingSources": {
-          "exact task samples": 24
+          "exact task samples": 23,
+          "composed target samples": 1
         },
-        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
+        "environmentClassId": "548b7d5ebd3dd1b89eec2e34cab6d8c697d1ebf7fd320c07682fbee7077e6606",
         "path": "src/canonical-schema-focused/navigator-rows.ts"
       },
       "schema_relationship_tree": {
@@ -1201,55 +1204,71 @@
         ]
       },
       "LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET": {
-        "limit": 103764,
-        "baseline": 86470,
+        "limit": 107938,
+        "baseline": 89948,
         "percentile": "p90",
         "tolerance": 1.2,
-        "provisional": true,
-        "maturity": "provisional",
-        "source": "explicit target baseline",
-        "sampleCount": 1,
+        "provisional": false,
+        "maturity": "non-provisional",
+        "source": "accepted target samples",
+        "sampleCount": 5,
         "receiptDigests": [
-          "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+          "036d34237df27751e01c1f14b8a72d549091a337334080c1b4c48bc5c305f94f",
+          "0ae5a5030a8a22dc27635db9f6652e48ca1215042ee0050d7442da37e14964f3",
+          "67079c46c2b9252184ca2565f6612e7feb78c9b079b13cf022ad8ca74e29a68c",
+          "7ba1be419524ae6bb11fd37d38869c32fea46594bff342af20b1c4c67ece14d4",
+          "dfab23992aa1c83ae5d17c86a858abacb943b174194a39be314ad99c0ea756a2"
         ]
       },
       "LAYERED_SCHEMA_EDITOR_POLICY_TARGET": {
-        "limit": 22040,
-        "baseline": 18366,
+        "limit": 23024,
+        "baseline": 19186,
         "percentile": "p90",
         "tolerance": 1.2,
-        "provisional": true,
-        "maturity": "provisional",
-        "source": "explicit target baseline",
-        "sampleCount": 1,
+        "provisional": false,
+        "maturity": "non-provisional",
+        "source": "accepted target samples",
+        "sampleCount": 5,
         "receiptDigests": [
-          "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+          "036d34237df27751e01c1f14b8a72d549091a337334080c1b4c48bc5c305f94f",
+          "0ae5a5030a8a22dc27635db9f6652e48ca1215042ee0050d7442da37e14964f3",
+          "67079c46c2b9252184ca2565f6612e7feb78c9b079b13cf022ad8ca74e29a68c",
+          "7ba1be419524ae6bb11fd37d38869c32fea46594bff342af20b1c4c67ece14d4",
+          "dfab23992aa1c83ae5d17c86a858abacb943b174194a39be314ad99c0ea756a2"
         ]
       },
       "LAYERED_SCHEMA_EDITOR_RULES_TARGET": {
-        "limit": 54972,
-        "baseline": 45810,
+        "limit": 55786,
+        "baseline": 46488,
         "percentile": "p90",
         "tolerance": 1.2,
-        "provisional": true,
-        "maturity": "provisional",
-        "source": "explicit target baseline",
-        "sampleCount": 1,
+        "provisional": false,
+        "maturity": "non-provisional",
+        "source": "accepted target samples",
+        "sampleCount": 5,
         "receiptDigests": [
-          "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+          "036d34237df27751e01c1f14b8a72d549091a337334080c1b4c48bc5c305f94f",
+          "0ae5a5030a8a22dc27635db9f6652e48ca1215042ee0050d7442da37e14964f3",
+          "67079c46c2b9252184ca2565f6612e7feb78c9b079b13cf022ad8ca74e29a68c",
+          "7ba1be419524ae6bb11fd37d38869c32fea46594bff342af20b1c4c67ece14d4",
+          "dfab23992aa1c83ae5d17c86a858abacb943b174194a39be314ad99c0ea756a2"
         ]
       },
       "LAYERED_SCHEMA_EDITOR_TARGET": {
-        "limit": 55103,
-        "baseline": 45919,
+        "limit": 53970,
+        "baseline": 44975,
         "percentile": "p90",
         "tolerance": 1.2,
-        "provisional": true,
-        "maturity": "provisional",
-        "source": "explicit target baseline",
-        "sampleCount": 1,
+        "provisional": false,
+        "maturity": "non-provisional",
+        "source": "accepted target samples",
+        "sampleCount": 5,
         "receiptDigests": [
-          "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+          "036d34237df27751e01c1f14b8a72d549091a337334080c1b4c48bc5c305f94f",
+          "0ae5a5030a8a22dc27635db9f6652e48ca1215042ee0050d7442da37e14964f3",
+          "67079c46c2b9252184ca2565f6612e7feb78c9b079b13cf022ad8ca74e29a68c",
+          "7ba1be419524ae6bb11fd37d38869c32fea46594bff342af20b1c4c67ece14d4",
+          "dfab23992aa1c83ae5d17c86a858abacb943b174194a39be314ad99c0ea756a2"
         ]
       },
       "LAYERED_SCHEMA_INHERITANCE_TARGET": {

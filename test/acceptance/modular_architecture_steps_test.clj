@@ -116,6 +116,9 @@
 (deftest vtd004-schemas-steps-use-dedicated-production-backed-semantics
   (assert-dedicated-scenario-handlers! #"Modular verification packs 0(?:6[8-9]|7[0-4])" 7))
 
+(deftest vtd005-layered-editor-steps-use-dedicated-production-backed-semantics
+  (assert-dedicated-scenario-handlers! #"Modular verification packs 0(?:7[5-9]|80)" 6))
+
 (defn- assert-parsed-cross-pack-step-consumer!
   [{:keys [owner owner-feature handler consumer consumer-feature pattern step message]}]
   (let [packs [{:id owner

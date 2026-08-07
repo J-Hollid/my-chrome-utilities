@@ -2,6 +2,7 @@
   (:require [acceptance.verification-support.modular-architecture-capture-handlers :as capture]
             [acceptance.verification-support.modular-architecture-durable-repository-handlers :as durable-repository]
             [acceptance.verification-support.modular-architecture-event-library-handlers :as event-library]
+            [acceptance.verification-support.modular-architecture-layered-editor-handlers :as layered-editor]
             [acceptance.verification-support.modular-architecture-project-management-handlers :as project-management]
             [acceptance.verification-support.modular-architecture-schemas-handlers :as schemas]
             [acceptance.steps.support :as support]
@@ -36,7 +37,8 @@
          :vtd004/durable-evidence (:vtd004DurableAcceptance @throughput-evidence)
          :vtd004/event-evidence (:vtd004EventAcceptance @throughput-evidence)
          :vtd004/capture-evidence (:vtd004CaptureAcceptance @throughput-evidence)
-         :vtd004/schemas-evidence (:vtd004SchemasAcceptance @throughput-evidence)))
+         :vtd004/schemas-evidence (:vtd004SchemasAcceptance @throughput-evidence)
+         :vtd005/evidence (:vtd005Acceptance @throughput-evidence)))
 
 (defn- parse-seconds [value]
   (when-let [[_ amount] (re-matches #"([0-9]+(?:\.[0-9]+)?) seconds" value)]
@@ -954,7 +956,13 @@
                                "Representative budget diagnostic is incomplete."))}
    {:pattern #"^browser target (.+) has (.+) in the selected environment class$"
     :handler (fn [world example captures]
-               (calibration-target-world world (first (example-values example captures))))}
+               (let [[target timing] (example-values example captures)
+                     prepared (calibration-target-world world target)]
+                 (if (str/starts-with? timing "fewer than five comparable samples")
+                   (assoc prepared :vtd003/target-budget
+                          {:provisional true :source "explicit target baseline"
+                           :baseline 45919 :sampleCount 1})
+                   prepared)))}
    {:pattern #"^its budget is (.+)$"
     :handler (fn [world example captures]
                (assert-value! world (first (example-values example captures))
@@ -1053,6 +1061,10 @@
                  :verify-throughput! verify-throughput!
                  :performance-calibration performance-calibration})
                (project-management/handlers
+                {:example-values example-values
+                 :verify-throughput! verify-throughput!
+                 :performance-calibration performance-calibration})
+               (layered-editor/handlers
                 {:example-values example-values
                  :verify-throughput! verify-throughput!
                  :performance-calibration performance-calibration})

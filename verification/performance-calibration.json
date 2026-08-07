@@ -1,7 +1,7 @@
 {
   "version": 1,
-  "implementationCommit": "21bcee970e2921df4233939a34082a67d007449b",
-  "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
+  "implementationCommit": "4b3df11b8d7167ba49365b1774ee4d24c6ff64a5",
+  "environmentClassId": "548b7d5ebd3dd1b89eec2e34cab6d8c697d1ebf7fd320c07682fbee7077e6606",
   "environment": {
     "node": "24.19.0",
     "typescript": "5.9.3",
@@ -9,7 +9,7 @@
     "executionLoad": "normal",
     "concurrency": 4,
     "observationConcurrency": 2,
-    "buildIdentity": "4ea103138a47e7bda15a9d7463d88d9ef7aedfbebe48ec9da108d2ce3e6925c8"
+    "buildIdentity": "093254ae6d3eab3446e5d1a7c00da4eb4952fbf208134c6edbc48533dc3906f0"
   },
   "sourceScope": [
     {
@@ -32,30 +32,11 @@
   "minimumIndependentSamples": 5,
   "tolerance": 1.2,
   "receiptDigests": [
-    "32c7702f8804718a38fda067e33bf121273dbdff2b94e5c81799dbd6b72f80ad",
-    "3db06914559b048274e10725034474623736160a6eb7aa5a78ebd924e4211abb",
-    "3e8f2a30516f3a801de4f0631c935bb7f0bd96d9d6026b2d5d4a1c2e1e72dc58",
-    "4c1e6b2a62f70eb379e3f7f1bef54055659fb070f4206b9e6bee647c1dce676d",
-    "4fbf4f08921f46a05a472cb1f4e80b4787f554ccd815ddce58328e744eec0dba",
-    "5d55b34a6065fbcd92cfd3f59a6fe62c256ce5e17af1dc351d68298ea9e74157",
-    "674ec22d833be3173b435d486108f7ea77b2efe2dcdb7fe305ddd44c821358a4",
-    "76dea26cead99649791f42f3fd6ef5c3e64e5e2a1ddaaaf6242aac383b1e3d7f",
-    "8d077faad9e492872bf2f9d9a7b24a7baeffbb070228c32f5312b68239593ef5",
-    "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6",
-    "a1a77655b5ad0a95fc2970a08153db9d927cff1c17bb256ed958071d708c26c0",
-    "a21a3508539c9352eec25a404363b1d921f511604dc3e8cb012266cd68e9be8a",
-    "c8de751d2208e049a4321a56499368bf662f6d62c97c5d77814c8c401d9cd750",
-    "c98a057d261a70fa7384839cbbb5442d5e555dc54cf54eea34a3f753f79b7da6",
-    "ccb6b489ef280b020e3024d27d9c2694dccdbe49827b55682efc3d7bd2b9626a",
-    "cd3e4660d57954a428b686dab7c5aa52d648b948cb615fdc74a4b06abf417f99",
-    "d2668189d33fe32d6b8efc3960c8fd133984e0ade839b54b350917526cbb5d9c",
-    "dacf883d550250a96af2e685ea7213b10d36ff3669c9f4a7396135f15549a1b2",
-    "dd223a48adb3c959475de41d1b37a10d6350aefb3deee80631c71ccea4f9fd94",
-    "e1e29942e5325db069b0f464cf99fd070ebb07c601561c63953895ba0c9fd9f5",
-    "f37942905e24142105289ed92e5564e24552e311317c5328ad2f1e4040f6aea2",
-    "f7f897362d9c55db8523fc60a9f1953f0b29f0ce3861259dab7e678619d42a46",
-    "f905acda0c91186f0604e92ade7e6d999af72cb65dcffbd5344424386bb98f1c",
-    "fad26ef46287b62637529ff2b5135be2d16e10602ea65277e9c36469a66220f7"
+    "036d34237df27751e01c1f14b8a72d549091a337334080c1b4c48bc5c305f94f",
+    "0ae5a5030a8a22dc27635db9f6652e48ca1215042ee0050d7442da37e14964f3",
+    "67079c46c2b9252184ca2565f6612e7feb78c9b079b13cf022ad8ca74e29a68c",
+    "7ba1be419524ae6bb11fd37d38869c32fea46594bff342af20b1c4c67ece14d4",
+    "dfab23992aa1c83ae5d17c86a858abacb943b174194a39be314ad99c0ea756a2"
   ],
   "algorithm": {
     "duration": "critical-path projection with bounded worker scheduling",
@@ -321,7 +302,9 @@
         "percentile": "selected-dependant-count",
         "tolerance": 1,
         "provisional": false,
-        "selectedPacks": ["event-library"]
+        "selectedPacks": [
+          "event-library"
+        ]
       }
     },
     {
@@ -645,16 +628,17 @@
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89"
       },
       "changedPathDuration": {
-        "limit": 258,
-        "baseline": 214.8,
+        "limit": 71,
+        "baseline": 58.9,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
-        "measurementCoverage": 1,
+        "measurementCoverage": 0.958,
         "timingSources": {
-          "exact task samples": 24
+          "exact task samples": 23,
+          "composed target samples": 1
         },
-        "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
+        "environmentClassId": "548b7d5ebd3dd1b89eec2e34cab6d8c697d1ebf7fd320c07682fbee7077e6606",
         "path": "src/canonical-schema-focused/navigator-rows.ts"
       },
       "changedPathFanOut": {
@@ -1373,55 +1357,71 @@
       ]
     },
     "LAYERED_SCHEMA_EDITOR_CANONICAL_TARGET": {
-      "limit": 103764,
-      "baseline": 86470,
+      "limit": 107938,
+      "baseline": 89948,
       "percentile": "p90",
       "tolerance": 1.2,
-      "provisional": true,
-      "maturity": "provisional",
-      "source": "explicit target baseline",
-      "sampleCount": 1,
+      "provisional": false,
+      "maturity": "non-provisional",
+      "source": "accepted target samples",
+      "sampleCount": 5,
       "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+        "036d34237df27751e01c1f14b8a72d549091a337334080c1b4c48bc5c305f94f",
+        "0ae5a5030a8a22dc27635db9f6652e48ca1215042ee0050d7442da37e14964f3",
+        "67079c46c2b9252184ca2565f6612e7feb78c9b079b13cf022ad8ca74e29a68c",
+        "7ba1be419524ae6bb11fd37d38869c32fea46594bff342af20b1c4c67ece14d4",
+        "dfab23992aa1c83ae5d17c86a858abacb943b174194a39be314ad99c0ea756a2"
       ]
     },
     "LAYERED_SCHEMA_EDITOR_POLICY_TARGET": {
-      "limit": 22040,
-      "baseline": 18366,
+      "limit": 23024,
+      "baseline": 19186,
       "percentile": "p90",
       "tolerance": 1.2,
-      "provisional": true,
-      "maturity": "provisional",
-      "source": "explicit target baseline",
-      "sampleCount": 1,
+      "provisional": false,
+      "maturity": "non-provisional",
+      "source": "accepted target samples",
+      "sampleCount": 5,
       "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+        "036d34237df27751e01c1f14b8a72d549091a337334080c1b4c48bc5c305f94f",
+        "0ae5a5030a8a22dc27635db9f6652e48ca1215042ee0050d7442da37e14964f3",
+        "67079c46c2b9252184ca2565f6612e7feb78c9b079b13cf022ad8ca74e29a68c",
+        "7ba1be419524ae6bb11fd37d38869c32fea46594bff342af20b1c4c67ece14d4",
+        "dfab23992aa1c83ae5d17c86a858abacb943b174194a39be314ad99c0ea756a2"
       ]
     },
     "LAYERED_SCHEMA_EDITOR_RULES_TARGET": {
-      "limit": 54972,
-      "baseline": 45810,
+      "limit": 55786,
+      "baseline": 46488,
       "percentile": "p90",
       "tolerance": 1.2,
-      "provisional": true,
-      "maturity": "provisional",
-      "source": "explicit target baseline",
-      "sampleCount": 1,
+      "provisional": false,
+      "maturity": "non-provisional",
+      "source": "accepted target samples",
+      "sampleCount": 5,
       "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+        "036d34237df27751e01c1f14b8a72d549091a337334080c1b4c48bc5c305f94f",
+        "0ae5a5030a8a22dc27635db9f6652e48ca1215042ee0050d7442da37e14964f3",
+        "67079c46c2b9252184ca2565f6612e7feb78c9b079b13cf022ad8ca74e29a68c",
+        "7ba1be419524ae6bb11fd37d38869c32fea46594bff342af20b1c4c67ece14d4",
+        "dfab23992aa1c83ae5d17c86a858abacb943b174194a39be314ad99c0ea756a2"
       ]
     },
     "LAYERED_SCHEMA_EDITOR_TARGET": {
-      "limit": 55103,
-      "baseline": 45919,
+      "limit": 53970,
+      "baseline": 44975,
       "percentile": "p90",
       "tolerance": 1.2,
-      "provisional": true,
-      "maturity": "provisional",
-      "source": "explicit target baseline",
-      "sampleCount": 1,
+      "provisional": false,
+      "maturity": "non-provisional",
+      "source": "accepted target samples",
+      "sampleCount": 5,
       "receiptDigests": [
-        "9714ab9155d81e47a0c1f90115517deb7e0d40aa58dc6913733ad630569d42f6"
+        "036d34237df27751e01c1f14b8a72d549091a337334080c1b4c48bc5c305f94f",
+        "0ae5a5030a8a22dc27635db9f6652e48ca1215042ee0050d7442da37e14964f3",
+        "67079c46c2b9252184ca2565f6612e7feb78c9b079b13cf022ad8ca74e29a68c",
+        "7ba1be419524ae6bb11fd37d38869c32fea46594bff342af20b1c4c67ece14d4",
+        "dfab23992aa1c83ae5d17c86a858abacb943b174194a39be314ad99c0ea756a2"
       ]
     },
     "LAYERED_SCHEMA_INHERITANCE_TARGET": {
@@ -2076,8 +2076,8 @@
     }
   },
   "conservation": {
-    "verificationTopologyDigest": "ffa74a4d615be5e733b4b5380432d90ee6bf99e2bfbdb5875ec18ef3d70b0add",
-    "referenceTopologyDigest": "082c3858fd748766baaac36e408b27d66af9978ad9ab64039db6160f0a5530cc",
+    "verificationTopologyDigest": "02a3ce07c0a6935624be274cb0eb1144f3a9ec0432738a7e6699b469aa127ecb",
+    "referenceTopologyDigest": "02a3ce07c0a6935624be274cb0eb1144f3a9ec0432738a7e6699b469aa127ecb",
     "runnablePackCount": 20,
     "browserTargetCount": 81,
     "packOwnershipUnchanged": true,
