@@ -59,14 +59,21 @@
     (str/includes? change " to ") :renameController
     :else :delete))
 
+(def ^:private event-history-renames
+  [["event-library-editor-ui.ts" :renameEditorUi]
+   ["event-library-editor.ts" :renameEditorModel]
+   ["push-draft-review.ts" :renameSemantic]
+   [" to " :renamePresentation]])
+
+(defn- event-history-rename-key [change]
+  (some (fn [[fragment plan-key]]
+          (when (str/includes? change fragment) plan-key))
+        event-history-renames))
+
 (defn- event-history-plan-key [change historical-registry]
-  (cond
-    (not= historical-registry "readable and compatible") :unreadable
-    (str/includes? change "event-library-editor-ui.ts") :renameEditorUi
-    (str/includes? change "event-library-editor.ts") :renameEditorModel
-    (str/includes? change "push-draft-review.ts") :renameSemantic
-    (str/includes? change " to ") :renamePresentation
-    :else :delete))
+  (if (= historical-registry "readable and compatible")
+    (or (event-history-rename-key change) :delete)
+    :unreadable))
 
 (defn- history-plan-key [owner change historical-registry]
   ((case owner
@@ -75,13 +82,14 @@
      project-history-plan-key)
    change historical-registry))
 
+(def ^:private event-history-scopes
+  {1 "event-library only"
+   7 "the seven-pack dependant closure"
+   8 "the eight-pack Capture closure"
+   20 "every runnable pack"})
+
 (defn- event-history-scope [_owner selected]
-  (case (count selected)
-    1 "event-library only"
-    7 "the seven-pack dependant closure"
-    8 "the eight-pack Capture closure"
-    20 "every runnable pack"
-    "the ten-pack dependant closure"))
+  (get event-history-scopes (count selected) "the ten-pack dependant closure"))
 
 (defn- shared-history-scope [owner selected]
   (cond
@@ -141,5 +149,5 @@
     (assoc prepared :vtd004/calibration-pack pack)))
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-07T09:46:38.680583419+02:00", :module-hash "-1749734962", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "1433682608"} {:id "defn/vtd004-world", :kind "defn", :line 5, :end-line 14, :hash "1061067102"} {:id "defn/boundary-world", :kind "defn", :line 16, :end-line 22, :hash "1341774244"} {:id "defn/change-world", :kind "defn", :line 24, :end-line 29, :hash "-1576629533"} {:id "defn/human-pack-list", :kind "defn", :line 31, :end-line 34, :hash "-918827022"} {:id "defn/handler-world", :kind "defn", :line 36, :end-line 47, :hash "-1854915647"} {:id "defn-/project-history-plan-key", :kind "defn-", :line 49, :end-line 54, :hash "978955326"} {:id "defn-/durable-history-plan-key", :kind "defn-", :line 56, :end-line 60, :hash "1164008891"} {:id "defn-/event-history-plan-key", :kind "defn-", :line 62, :end-line 69, :hash "1558908102"} {:id "defn-/history-plan-key", :kind "defn-", :line 71, :end-line 76, :hash "-796105228"} {:id "defn-/event-history-scope", :kind "defn-", :line 78, :end-line 84, :hash "-462521218"} {:id "defn-/shared-history-scope", :kind "defn-", :line 86, :end-line 91, :hash "1830708106"} {:id "defn-/history-scope", :kind "defn-", :line 93, :end-line 95, :hash "-1554174545"} {:id "defn/history-world", :kind "defn", :line 97, :end-line 104, :hash "-1336914715"} {:id "defn/conservation-world", :kind "defn", :line 106, :end-line 124, :hash "2025288657"} {:id "defn/calibration-world", :kind "defn", :line 126, :end-line 141, :hash "-1870049910"}]}
+;; {:version 1, :tested-at "2026-08-07T12:15:42.76385093+02:00", :module-hash "559604353", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "1433682608"} {:id "defn/vtd004-world", :kind "defn", :line 5, :end-line 14, :hash "1061067102"} {:id "defn/boundary-world", :kind "defn", :line 16, :end-line 22, :hash "1341774244"} {:id "defn/change-world", :kind "defn", :line 24, :end-line 29, :hash "-1576629533"} {:id "defn/human-pack-list", :kind "defn", :line 31, :end-line 34, :hash "-918827022"} {:id "defn/handler-world", :kind "defn", :line 36, :end-line 47, :hash "-1854915647"} {:id "defn-/project-history-plan-key", :kind "defn-", :line 49, :end-line 54, :hash "978955326"} {:id "defn-/durable-history-plan-key", :kind "defn-", :line 56, :end-line 60, :hash "1164008891"} {:id "def/event-history-renames", :kind "def", :line 62, :end-line 66, :hash "-2080932088"} {:id "defn-/event-history-rename-key", :kind "defn-", :line 68, :end-line 71, :hash "1066251871"} {:id "defn-/event-history-plan-key", :kind "defn-", :line 73, :end-line 76, :hash "1132938760"} {:id "defn-/history-plan-key", :kind "defn-", :line 78, :end-line 83, :hash "-796105228"} {:id "def/event-history-scopes", :kind "def", :line 85, :end-line 89, :hash "2079201826"} {:id "defn-/event-history-scope", :kind "defn-", :line 91, :end-line 92, :hash "-2082482000"} {:id "defn-/shared-history-scope", :kind "defn-", :line 94, :end-line 99, :hash "1830708106"} {:id "defn-/history-scope", :kind "defn-", :line 101, :end-line 103, :hash "-1554174545"} {:id "defn/history-world", :kind "defn", :line 105, :end-line 112, :hash "-1336914715"} {:id "defn/conservation-world", :kind "defn", :line 114, :end-line 132, :hash "2025288657"} {:id "defn/calibration-world", :kind "defn", :line 134, :end-line 149, :hash "-1870049910"}]}
 ;; clj-mutate-manifest-end

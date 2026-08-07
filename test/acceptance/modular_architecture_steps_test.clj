@@ -1,6 +1,7 @@
 (ns acceptance.modular-architecture-steps-test
   (:require [acceptance.runtime :as runtime]
             [acceptance.steps.modular-architecture :as modular]
+            [acceptance.verification-support.isolated-handler-audit :as isolation-audit]
             [aps.gherkin :as gherkin]
             [clojure.test :refer [deftest is]]))
 
@@ -105,3 +106,23 @@
 
 (deftest vtd004-event-library-steps-use-dedicated-production-backed-semantics
   (assert-dedicated-scenario-handlers! #"Modular verification packs 05[3-9]" 7))
+
+(deftest vtd004-event-library-isolation-audit-uses-dedicated-semantics
+  (assert-dedicated-scenario-handlers! #"Modular verification packs 060" 1))
+
+(deftest event-library-isolation-audit-matches-effective-patterns-against-parsed-dependant-steps
+  (let [packs [{:id "event-library"
+                :dependencies []
+                :features ["features/data-layer-event-template-library.feature"]
+                :isolatedVerificationHandlers ["acceptance/src/acceptance/steps/event_template_library.clj"]}
+               {:id "project_event_transport"
+                :dependencies ["event-library"]
+                :features ["features/data-layer-project-event-transport-settings.feature"]}]]
+    (with-redefs-fn {#'acceptance.verification-support.isolated-handler-audit/namespace-handlers
+                     (constantly [{:pattern #"<project> is active"}])}
+      #(is (= [{:handler "acceptance/src/acceptance/steps/event_template_library.clj"
+                :consumerPack "project_event_transport"
+                :feature "features/data-layer-project-event-transport-settings.feature"
+                :step "<project> is active"}]
+              (isolation-audit/loaded-cross-pack-step-consumers packs))
+           "handler feature metadata cannot conceal a pattern matching a parsed dependant step"))))

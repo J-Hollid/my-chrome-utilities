@@ -951,7 +951,7 @@ await assert.rejects(() => validateIsolatedVerificationHandlers(packs, {
       ? `${source}\n[acceptance.steps.project-management :as project-management]\n`
       : source;
   },
-}), new RegExp(`Cross-pack handler consumer ${crossPackHandler.replaceAll("/", "\\/")} blocks isolation`, "u"),
+}), new RegExp(`Cross-pack handler consumer blocks isolation.*${crossPackHandler.replaceAll("/", "\\/")}`, "u"),
 "a negative cross-pack APS consumer mutation blocks handler isolation");
 await assert.rejects(() => validateIsolatedVerificationHandlers(packs, {
   readSource:async(handlerPath) => {
@@ -960,7 +960,7 @@ await assert.rejects(() => validateIsolatedVerificationHandlers(packs, {
       ? `${source}\n[acceptance.steps.project-management :refer [handlers]]\n`
       : source;
   },
-}), new RegExp(`Cross-pack handler consumer ${crossPackHandler.replaceAll("/", "\\/")} blocks isolation`, "u"),
+}), new RegExp(`Cross-pack handler consumer blocks isolation.*${crossPackHandler.replaceAll("/", "\\/")}`, "u"),
 "a non-alias :refer consumer mutation also blocks handler isolation");
 for (const [description, mutation] of [
   ["a bare cross-pack Clojure libspec blocks handler isolation",
@@ -975,7 +975,7 @@ for (const [description, mutation] of [
       const source = await readFile(new URL(`../${handlerPath}`, import.meta.url), "utf8");
       return handlerPath === crossPackHandler ? `${source}\n${mutation}\n` : source;
     },
-  }), new RegExp(`Cross-pack handler consumer ${crossPackHandler.replaceAll("/", "\\/")} blocks isolation`, "u"),
+  }), new RegExp(`Cross-pack handler consumer blocks isolation.*${crossPackHandler.replaceAll("/", "\\/")}`, "u"),
   description);
 }
 const projectClosure = ["project_management", "durable_project_repository", "project_event_transport",
@@ -1286,13 +1286,40 @@ for (const handlerPath of eventLibraryPack.isolatedVerificationHandlers) {
     ownerPlan:planVerification(packs, {changedPaths:[handlerPath]}).packIds,
     negativeMutationRejected:true});
 }
-const eventCrossPackHandler = packs.find(({id,handlers}) =>
-  id !== "event-library" && id !== "shell" && handlers?.length).handlers[0];
-await assert.rejects(() => validateIsolatedVerificationHandlers(packs, {readSource:async(handlerPath) => {
+const captureRejection = async(action) => {
+  let rejected;
+  try { await action(); } catch (error) { rejected = error; }
+  assert.ok(rejected instanceof Error, "the isolation mutation must be rejected");
+  return rejected.message;
+};
+const loadedStepDiagnostic = await captureRejection(() => validateIsolatedVerificationHandlers(packs, {
+  findLoadedStepConsumers:async() => [{
+    handler:"acceptance/src/acceptance/steps/event_template_library.clj",
+    consumerPack:"project_event_transport",
+    feature:"features/data-layer-project-event-transport-settings.feature",
+    step:"<project> is active",
+  }],
+}));
+assert.match(loadedStepDiagnostic,
+  /Loaded cross-pack step consumer blocks isolation.*project_event_transport/u,
+  "an effective Event Library pattern matching a parsed dependant step blocks isolation");
+const eventCrossPackHandler = packs.find(({id}) => id === "project_event_transport").handlers[0];
+const namespaceDiagnostic = await captureRejection(() => validateIsolatedVerificationHandlers(packs, {
+  readSource:async(handlerPath) => {
   const source = await readFile(new URL(`../${handlerPath}`, import.meta.url), "utf8");
   return handlerPath === eventCrossPackHandler
     ? `${source}\n[acceptance.steps.event-template-library :refer [handlers]]\n` : source;
-}}), /Cross-pack handler consumer/u, "a non-:as Event Library consumer blocks handler isolation");
+}}));
+assert.match(namespaceDiagnostic, /Cross-pack handler consumer/u,
+  "a non-:as Event Library consumer blocks handler isolation");
+const nonIsolatedEventPacks = replacePack(packs, "event-library", (pack) => ({
+  isolatedVerificationHandlers:[],
+}));
+const rejectedHandlerPlan = planVerification(nonIsolatedEventPacks, {
+  changedPaths:["acceptance/src/acceptance/steps/event_template_library.clj"],
+}).packIds;
+assert.deepEqual(rejectedHandlerPlan,eventClosure,
+  "a handler rejected from isolation retains the seven-pack dependant closure");
 const eventHistoryChange = (entry) => syntheticChangeSet([entry]);
 const deletedEventPresentation = eventHistoryChange({status:"D",path:eventReviewPresentationPaths[0]});
 const renameEventPresentation = (newPath) => eventHistoryChange({status:"R",score:100,
@@ -1358,6 +1385,8 @@ const vtd004EventAcceptance = {
     .map((changedPath) => [changedPath,planVerification(packs,{changedPaths:[changedPath]}).packIds])),
   historyPlans:eventHistoryPlans,
   handlers:eventHandlerEvidence,
+  isolationAudit:{loadedStepDiagnostic,namespaceDiagnostic,
+    rejectedHandlerPlan,metadataCannotConceal:true},
   conservation:{evidenceProfile:eventEvidenceProfile,exactTaskCount:exactEventPlan.tasks.length,
     unitCount:exactEventPlan.unitTasks.length,propertyCount:exactEventPlan.propertyTasks.length,
     featureCount:exactEventPlan.parserTasks.length,handlerCount:eventLibraryPack.handlers.length,

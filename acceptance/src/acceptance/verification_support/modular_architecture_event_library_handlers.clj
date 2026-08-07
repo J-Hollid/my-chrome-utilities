@@ -265,6 +265,44 @@
                                  ((juxt :baseline :tolerance :limit)
                                   (get-in world [:vtd004/calibration-pack :changedPathDuration])))
                               "Event Library changed-path duration is not exact." {}))}
+   {:pattern #"^an isolated Event Library handler gains (.+)$"
+    :handler (fn [world example captures]
+               (let [condition (first (example-values example captures))]
+                 (assoc (event-world world dependencies)
+                        :vtd004/isolation-condition condition)))}
+   {:pattern #"^isolation validation scans the parsed APS steps and namespaces of every session that loads the handler$"
+    :handler (fn [world _ _]
+               (let [audit (get-in world [:vtd004/evidence :isolationAudit])]
+                 (assert-event! (assoc world :vtd004/isolation-audit audit)
+                                (and (str/includes? (:loadedStepDiagnostic audit)
+                                                    "Loaded cross-pack step consumer blocks isolation")
+                                     (str/includes? (:namespaceDiagnostic audit)
+                                                    "Cross-pack handler consumer blocks isolation"))
+                                "Event Library isolation audit did not exercise both consumer classes."
+                                {:audit audit})))}
+   {:pattern #"^isolation is rejected with (.+)$"
+    :handler (fn [world example captures]
+               (let [expected (first (example-values example captures))
+                     diagnostic (if (str/includes? (:vtd004/isolation-condition world)
+                                                   "pattern matching")
+                                  (get-in world [:vtd004/isolation-audit :loadedStepDiagnostic])
+                                  (get-in world [:vtd004/isolation-audit :namespaceDiagnostic]))]
+                 (assert-event! world (str/includes? diagnostic expected)
+                                "Isolation rejection returned the wrong diagnostic."
+                                {:expected expected :diagnostic diagnostic})))}
+   {:pattern #"^the handler-only change retains the seven-pack dependant closure$"
+    :handler (fn [world _ _]
+               (assert-event! world
+                              (= seven-pack-dependant-closure
+                                 (get-in world [:vtd004/isolation-audit :rejectedHandlerPlan]))
+                              "Rejected handler isolation retained an incorrect dependant closure."
+                              {}))}
+   {:pattern #"^a self-declared feature list cannot conceal the cross-pack consumer$"
+    :handler (fn [world _ _]
+               (assert-event! world
+                              (get-in world [:vtd004/isolation-audit :metadataCannotConceal])
+                              "Handler feature metadata concealed a loaded cross-pack consumer."
+                              {}))}
    {:pattern #"^the other 19 pack calibrations, the Event Library exact-pack calibration, and all 81 browser-target budgets are unchanged$"
     :handler (fn [world _ _]
                (let [evidence (get-in world [:vtd004/evidence :calibration])]
@@ -277,5 +315,5 @@
                                 "Conserved calibration rows changed." {})))}])
 
 ;; clj-mutate-manifest-begin
-;; {:version 1, :tested-at "2026-08-07T10:01:40.125989765+02:00", :module-hash "1344803156", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "-83228735"} {:id "def/eight-pack-capture-closure", :kind "def", :line 6, :end-line 8, :hash "406707630"} {:id "def/seven-pack-dependant-closure", :kind "def", :line 10, :end-line 12, :hash "-1317336705"} {:id "def/handler-consumer-conditions", :kind "def", :line 14, :end-line 20, :hash "1697516706"} {:id "def/historical-changes", :kind "def", :line 22, :end-line 27, :hash "639407252"} {:id "def/historical-registry-states", :kind "def", :line 29, :end-line 30, :hash "-965054600"} {:id "defn-/event-world", :kind "defn-", :line 32, :end-line 33, :hash "-242776053"} {:id "defn-/assert-event!", :kind "defn-", :line 35, :end-line 37, :hash "-1013980911"} {:id "defn-/presentation-world", :kind "defn-", :line 39, :end-line 51, :hash "373451540"} {:id "defn-/handler-world", :kind "defn-", :line 53, :end-line 65, :hash "527272816"} {:id "defn-/conservation-world", :kind "defn-", :line 67, :end-line 81, :hash "-2131605105"} {:id "defn-/calibration-world", :kind "defn-", :line 83, :end-line 102, :hash "-1460220513"} {:id "defn/handlers", :kind "defn", :line 104, :end-line 277, :hash "-1909331037"}]}
+;; {:version 1, :tested-at "2026-08-07T12:15:11.237459882+02:00", :module-hash "101174961", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 4, :hash "-83228735"} {:id "def/eight-pack-capture-closure", :kind "def", :line 6, :end-line 8, :hash "406707630"} {:id "def/seven-pack-dependant-closure", :kind "def", :line 10, :end-line 12, :hash "-1317336705"} {:id "def/handler-consumer-conditions", :kind "def", :line 14, :end-line 20, :hash "1697516706"} {:id "def/historical-changes", :kind "def", :line 22, :end-line 27, :hash "639407252"} {:id "def/historical-registry-states", :kind "def", :line 29, :end-line 30, :hash "-965054600"} {:id "defn-/event-world", :kind "defn-", :line 32, :end-line 33, :hash "-242776053"} {:id "defn-/assert-event!", :kind "defn-", :line 35, :end-line 37, :hash "-1013980911"} {:id "defn-/presentation-world", :kind "defn-", :line 39, :end-line 51, :hash "373451540"} {:id "defn-/handler-world", :kind "defn-", :line 53, :end-line 65, :hash "527272816"} {:id "defn-/conservation-world", :kind "defn-", :line 67, :end-line 81, :hash "-2131605105"} {:id "defn-/calibration-world", :kind "defn-", :line 83, :end-line 102, :hash "-1460220513"} {:id "defn/handlers", :kind "defn", :line 104, :end-line 315, :hash "556591750"}]}
 ;; clj-mutate-manifest-end
