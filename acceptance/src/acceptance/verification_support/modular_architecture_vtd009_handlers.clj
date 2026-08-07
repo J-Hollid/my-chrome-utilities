@@ -65,12 +65,18 @@
                       (first (values example-values example captures))))}
    {:pattern #"^tracked support inventory and transitive consumers are validated$"
     :handler (fn [world _ _]
-               (assert! world (every? true? (vals (evidence world :validation)))
-                        "Helper registry defects were not validated." {}))}
+               (let [validation (evidence world :validation)]
+                 (assert! world (and (= 6 (count validation))
+                                     (every? true? (vals validation)))
+                          "Helper registry defects were not validated." {})))}
    {:pattern #"^validation is rejected with (.+)$"
-    :handler (fn [world _ _]
-               (assert! world (seq (:vtd009/defect world))
-                        "Registry rejection lacks a concrete defect." {}))}
+    :handler (fn [world example captures]
+               (let [expected (first (values example-values example captures))
+                     defect (:vtd009/defect world)
+                     diagnostic (get (evidence world :diagnostics) (keyword defect))]
+                 (assert! world (and (seq diagnostic) (str/includes? diagnostic expected))
+                          "Registry rejection does not match the scenario diagnostic."
+                          {:defect defect :expected expected :actual diagnostic}))) }
    {:pattern #"^the helper cannot silently inherit broad Shell ownership$"
     :handler (fn [world _ _]
                (assert! world (evidence world :validation :trackedDeclared)
@@ -254,3 +260,7 @@
                (representative-handlers verify-throughput!)
                (history-handlers example-values verify-throughput!)
                (snapshot-handlers verify-throughput!))))
+
+;; clj-mutate-manifest-begin
+;; {:version 1, :tested-at "2026-08-07T23:48:29.512058372+02:00", :module-hash "1533913092", :forms [{:id "form/0/ns", :kind "ns", :line 1, :end-line 3, :hash "-1195833157"} {:id "defn-/values", :kind "defn-", :line 5, :end-line 7, :hash "-170718585"} {:id "defn-/ready", :kind "defn-", :line 9, :end-line 10, :hash "475939197"} {:id "defn-/assert!", :kind "defn-", :line 12, :end-line 14, :hash "-1557256114"} {:id "defn-/evidence", :kind "defn-", :line 16, :end-line 17, :hash "1303825807"} {:id "def/scopes", :kind "def", :line 19, :end-line 27, :hash "244864918"} {:id "defn-/scope", :kind "defn-", :line 29, :end-line 32, :hash "1976674990"} {:id "defn-/helper-handlers", :kind "defn-", :line 34, :end-line 59, :hash "179432668"} {:id "defn-/validation-handlers", :kind "defn-", :line 61, :end-line 83, :hash "-1764443311"} {:id "defn-/dormant-handlers", :kind "defn-", :line 85, :end-line 108, :hash "278209537"} {:id "defn-/boundary-handlers", :kind "defn-", :line 110, :end-line 138, :hash "-318829380"} {:id "defn-/representative-handlers", :kind "defn-", :line 140, :end-line 166, :hash "-2000121832"} {:id "def/history-prefixes", :kind "def", :line 168, :end-line 173, :hash "-1907895100"} {:id "defn-/history-key", :kind "defn-", :line 175, :end-line 179, :hash "-153313306"} {:id "defn-/history-handlers", :kind "defn-", :line 181, :end-line 201, :hash "1079822317"} {:id "defn-/snapshot-handlers", :kind "defn-", :line 203, :end-line 253, :hash "-554645162"} {:id "defn/handlers", :kind "defn", :line 255, :end-line 262, :hash "1641483224"}]}
+;; clj-mutate-manifest-end

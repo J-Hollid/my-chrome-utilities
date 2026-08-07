@@ -1825,6 +1825,73 @@ assert.deepEqual(helperDeclarations.map(({ path:helperPath }) => helperPath)
   .sort(), retainedSupportHelpers,
 "all 20 retained support helpers have one exact declaration");
 const helperValidationInventory = await verificationInventory();
+const verificationPackValidationError = async(candidatePacks, inventory) => {
+  try {
+    await validateVerificationPacks(candidatePacks, { inventory });
+  } catch (error) {
+    return error.message;
+  }
+  assert.fail("expected verification-pack validation to reject the defect fixture");
+};
+const trackedUnusedHelperPath = "test/support/unregistered-helper.mjs";
+const trackedUnusedDiagnostic = await verificationPackValidationError(packs, {
+  ...helperValidationInventory,
+  tracked:[...helperValidationInventory.tracked, trackedUnusedHelperPath],
+});
+const importedUndeclaredDiagnostic = await verificationPackValidationError(
+  replacePack(packs, "shell", (pack) => ({
+    verificationHelpers:pack.verificationHelpers.filter(({ path:helperPath }) =>
+      helperPath !== "test/browser-packs/shared-harness.mjs"),
+  })),
+  { ...helperValidationInventory, tracked:helperValidationInventory.tracked.filter((trackedPath) =>
+    trackedPath !== "test/browser-packs/shared-harness.mjs") },
+);
+const incorrectConsumersDiagnostic = await verificationPackValidationError(
+  replacePack(packs, "shell", (pack) => ({
+    verificationHelpers:pack.verificationHelpers.map((helper) => helper.path ===
+      "test/support/layered-schema-usability-probes.mjs"
+      ? {...helper, consumers:["flow_graph"]} : helper),
+  })), helperValidationInventory,
+);
+const staleDeclarationDiagnostic = await verificationPackValidationError(
+  replacePack(packs, "shell", (pack) => ({
+    verificationHelpers:[...pack.verificationHelpers,
+      { path:trackedUnusedHelperPath, consumers:["shell"] }],
+  })),
+  { ...helperValidationInventory,
+    tracked:[...helperValidationInventory.tracked, trackedUnusedHelperPath] },
+);
+const duplicateDeclarationDiagnostic = await verificationPackValidationError(
+  replacePack(packs, "shell", (pack) => ({
+    verificationHelpers:[...pack.verificationHelpers, pack.verificationHelpers[0]],
+  })), helperValidationInventory,
+);
+const unknownConsumerDiagnostic = await verificationPackValidationError(
+  replacePack(packs, "shell", (pack) => ({
+    verificationHelpers:pack.verificationHelpers.map((helper) => helper.path ===
+      "test/support/layered-schema-usability-probes.mjs"
+      ? {...helper, consumers:[...helper.consumers, "unknown-pack"]} : helper),
+  })), helperValidationInventory,
+);
+const helperValidationDiagnostics = {
+  "a new tracked but unused support helper":trackedUnusedDiagnostic,
+  "an imported helper without a declaration":importedUndeclaredDiagnostic,
+  "a declaration with a missing or extra consumer":incorrectConsumersDiagnostic,
+  "a declared helper with no reachable consumer":staleDeclarationDiagnostic,
+  "the same helper declared twice":duplicateDeclarationDiagnostic,
+  "a declaration naming an unknown consumer":unknownConsumerDiagnostic,
+};
+for (const [defect, expectedDiagnostic] of [
+  ["a new tracked but unused support helper", "Declare every tracked support helper"],
+  ["an imported helper without a declaration", "Declare every imported verification helper"],
+  ["a declaration with a missing or extra consumer", "Correct verification helper consumers"],
+  ["a declared helper with no reachable consumer", "Remove stale verification helper declaration"],
+  ["the same helper declared twice", "Declare verification helper once"],
+  ["a declaration naming an unknown consumer", "Register every verification helper consumer"],
+]) {
+  assert.match(helperValidationDiagnostics[defect], new RegExp(expectedDiagnostic, "u"),
+    `${defect} emits its scenario-specific production diagnostic`);
+}
 await assert.rejects(() => validateVerificationPacks(packs, { inventory:{
   tracked:[...helperValidationInventory.tracked, "test/support/unregistered-helper.mjs"],
 } }), /Declare every tracked support helper.*test\/support\/unregistered-helper\.mjs/u,
@@ -4914,8 +4981,15 @@ assert.deepEqual(vtd009TerminalCurrent.tasks.map(verificationTaskIdentity),
 const vtd009Acceptance = {
   helpers:Object.fromEntries(helperDeclarations.map(({path:helperPath,consumers}) =>
     [helperPath,{consumers,selected:planVerification(packs,{changedPaths:[helperPath]}).packIds}])),
-  validation:{trackedDeclared:true,importedDeclared:true,exactConsumers:true,
-    staleRejected:true,duplicateRejected:true,unknownConsumerRejected:true},
+  validation:{
+    trackedDeclared:trackedUnusedDiagnostic.includes("Declare every tracked support helper"),
+    importedDeclared:importedUndeclaredDiagnostic.includes("Declare every imported verification helper"),
+    exactConsumers:incorrectConsumersDiagnostic.includes("Correct verification helper consumers"),
+    staleRejected:staleDeclarationDiagnostic.includes("Remove stale verification helper declaration"),
+    duplicateRejected:duplicateDeclarationDiagnostic.includes("Declare verification helper once"),
+    unknownConsumerRejected:unknownConsumerDiagnostic.includes("Register every verification helper consumer"),
+  },
+  diagnostics:helperValidationDiagnostics,
   dormant:{removed:["test/support/branding-workflow-targets.mjs",
     "test/support/layered-schema-parity-runtime.mjs"],retainedHelpers:retainedSupportHelpers.length,
     assertionLeavesConserved:true},
