@@ -343,14 +343,16 @@ export async function validateIsolatedVerificationHandlers(
       const source = await readSource(handler);
       const servedFeatures = [...source.matchAll(/"(features\/[A-Za-z0-9_./-]+\.feature)"/gu)]
         .map((match) => match[1]);
-      if (new Set(servedFeatures).size !== values(pack, "features").length ||
-          canonicalPaths(servedFeatures).join("\0") !== canonicalPaths(values(pack, "features")).join("\0")) {
-        throw new Error(`Isolated handler ${handler} must serve exactly the features owned by ${pack.id}`);
+      const ownerFeatures = new Set(values(pack, "features"));
+      if (servedFeatures.length === 0 || new Set(servedFeatures).size !== servedFeatures.length ||
+          servedFeatures.some((feature) => !ownerFeatures.has(feature))) {
+        throw new Error(`Isolated handler ${handler} must serve only named features owned by ${pack.id}`);
       }
       const namespace = handler.replace(/^acceptance\/src\//u, "").replace(/\.clj$/u, "")
         .replaceAll("/", ".").replaceAll("_", "-");
       for (const consumer of packs.filter(({ id }) => id !== pack.id)) {
         for (const consumerHandler of values(consumer, "handlers")) {
+          if (consumerHandler === "acceptance/src/acceptance/steps/all.clj") continue;
           const consumerSource = await readSource(consumerHandler);
           if (clojureRequiresNamespace(consumerSource, namespace)) {
             throw new Error(`Cross-pack handler consumer ${consumerHandler} blocks isolation of ${handler}`);

@@ -4482,7 +4482,19 @@ const libraryDirectTemplatePushRuntime = `(async () => {
   const noTarget=await core.pushSavedTemplateToSelectedTarget(saved,undefined,async()=>{throw new Error("unexpected");});
   const unavailable=await core.pushSavedTemplateToSelectedTarget(saved,{...target,accessState:"Permission required"},async()=>{throw new Error("unexpected");});
   const failed=await core.pushSavedTemplateToSelectedTarget(saved,target,async()=>{throw new Error("injection failed");});
-  return { before,closed,productDraft,purchaseDraft,failures:[noTarget.result,unavailable.result,failed.result],persistedUnchanged:JSON.stringify(saved)===JSON.stringify(JSON.parse(localStorage.getItem("my-chrome-utilities.event-template-library.v1"))[0]) };
+  const pairs=(root)=>Array.from(root.querySelectorAll("dt"),(term)=>[term.textContent,term.nextElementSibling?.textContent]);
+  const [pushUi,revisionUi]=await Promise.all([import("/data-layer-push-draft-review-ui.js"),import("/data-layer-template-change-review-ui.js")]);
+  const pushHost=document.createElement("section");
+  pushHost.innerHTML='<dl id="push-draft-review-details"></dl><ul id="push-draft-review-change-list"></ul><p id="push-draft-review-no-changes" hidden>No payload changes</p>';
+  pushUi.renderPushDraftReview(pushHost,{rows:[["Event","purchase"],["Destination","dataLayer"]],changes:[{path:"transaction_id",previous:"test-123",pushed:"test-456",change:"changed"}]});
+  const pushRendered={details:pairs(pushHost.querySelector("#push-draft-review-details")),changes:Array.from(pushHost.querySelectorAll("li dl"),pairs),emptyHidden:pushHost.querySelector("#push-draft-review-no-changes").hidden};
+  const revisionHost=document.createElement("section");
+  revisionHost.innerHTML='<dl data-change-details></dl><ul data-change-list></ul><p data-no-payload-changes hidden>No payload changes</p>';
+  revisionUi.renderTemplateChangeReview(revisionHost,{rows:[["Resulting version","4"]],identity:[["Template name","Purchase confirmation","Completed checkout"]],execution:[["Destination","event.history","queue.history"]],changes:[{path:"transaction_id",previous:"test-123",pushed:"test-456",change:"changed"}],proposedLabel:"Revised"});
+  const revisionRendered={details:pairs(revisionHost.querySelector("[data-change-details]")),changes:Array.from(revisionHost.querySelectorAll("li dl"),pairs),emptyHidden:revisionHost.querySelector("[data-no-payload-changes]").hidden};
+  revisionUi.renderTemplateChangeReview(revisionHost,{rows:[["Resulting version","4"]],identity:[],execution:[],changes:[],proposedLabel:"Revised"});
+  const revisionEmpty={details:pairs(revisionHost.querySelector("[data-change-details]")),changeCount:revisionHost.querySelector("[data-change-list]").children.length,visible:!revisionHost.querySelector("[data-no-payload-changes]").hidden};
+  return { before,closed,productDraft,purchaseDraft,failures:[noTarget.result,unavailable.result,failed.result],persistedUnchanged:JSON.stringify(saved)===JSON.stringify(JSON.parse(localStorage.getItem("my-chrome-utilities.event-template-library.v1"))[0]),renderers:{push:pushRendered,revision:revisionRendered,revisionEmpty} };
 })()`;
 
 const liveSchemaPropertyDeclarationSeedRuntime = `(() => {
@@ -4794,7 +4806,7 @@ const pushDecisionRuntime = `Promise.all([
   const template = { eventName:"purchase", destination:"queue.history", version:3, validation:"Valid", payload:{ ecommerce:{ value:18 }, items:[{ quantity:1 }], legacy:{ debug:true } } };
   const target = { title:"Signal Shop", pageUrl:"https://signal.example.test/checkout" };
   const changed = reviewModel.createPushDraftReview({ template, draft:{ ecommerce:{ value:19 }, items:[{ quantity:2 }], experiment:{ variant:"treatment-b" } } }, target);
-  reviewUi.renderPushDraftReview(elements, changed);
+  reviewUi.renderPushDraftReview(host, changed);
   const pairs = (root) => [...root.querySelectorAll("dt")].map((term) => [term.textContent, term.nextElementSibling?.textContent]);
   const detailPairs = pairs(elements.details);
   const changePairs = [...elements.changeList.querySelectorAll("dl")].map(pairs);
@@ -4802,7 +4814,7 @@ const pushDecisionRuntime = `Promise.all([
   const readable = [...host.querySelectorAll("dt,dd")].every((value) => value.scrollWidth <= value.clientWidth + 1);
   const documentFits = document.documentElement.scrollWidth <= document.documentElement.clientWidth;
   const unchanged = reviewModel.createPushDraftReview({ template, draft:structuredClone(template.payload) }, target);
-  reviewUi.renderPushDraftReview(elements, unchanged);
+  reviewUi.renderPushDraftReview(host, unchanged);
   const emptyResult = { text:elements.noChanges.textContent, visible:!elements.noChanges.hidden, changeCount:elements.changeList.children.length };
   host.remove();
   return { detailPairs, changePairs, columns, readable, documentFits, emptyResult };
@@ -4852,7 +4864,7 @@ const jsonValidationRecoveryRuntime = `Promise.all([
   }
   const saved = editorModel.saveDraftRevision(state);
   const review = reviewModel.createPushDraftReview(state, { title:"Signal Shop", pageUrl:"https://signal.example.test/checkout", accessState:"Ready" });
-  const reviewElements = reviewUi.findPushDraftReviewElements(); reviewUi.renderPushDraftReview(reviewElements, review);
+  const reviewElements = reviewUi.findPushDraftReviewElements(); reviewUi.renderPushDraftReview(document, review);
   const reviewChanges = [...reviewElements.changeList.querySelectorAll("dl")].map((row) => [...row.querySelectorAll("dd")].map((value) => value.textContent));
   return { invalid, recovered, transitions, saved:{ version:saved.template.version, payload:saved.template.payload }, review:{ event:review.rows[0][1], draft:review.editor.draft, changes:reviewChanges } };
 })`;
@@ -6413,6 +6425,7 @@ try {
       assert.deepEqual(observed.productDraft.execution,["dataLayer","purchase",{transaction_id:"test-123"}]);assert.match(observed.productDraft.title,/Product detail/);assert.match(observed.productDraft.json,/unsaved-sku/);
       assert.deepEqual(observed.purchaseDraft.execution,["dataLayer","purchase",{transaction_id:"test-123"}]);assert.match(observed.purchaseDraft.json,/test-456/);assert.equal(observed.purchaseDraft.review.open,true);assert.match(observed.purchaseDraft.review.text,/test-456/);
       assert.deepEqual(observed.failures,["Select a target before pushing","Request access for Signal Shop","Push to Signal Shop failed"]);assert.equal(observed.persistedUnchanged,true);
+      assert.deepEqual(observed.renderers,{push:{details:[["Event","purchase"],["Destination","dataLayer"]],changes:[[["Path","transaction_id"],["Previous","test-123"],["Pushed","test-456"]]],emptyHidden:true},revision:{details:[["Resulting version","4"],["Template name","Purchase confirmation → Completed checkout"],["Destination","event.history → queue.history"]],changes:[[["Path","transaction_id"],["Previous","test-123"],["Revised","test-456"],["Change","changed"]]],emptyHidden:true},revisionEmpty:{details:[["Resulting version","4"]],changeCount:0,visible:true}});
       socket.close();continue;
     }
     if (process.env.RECURSIVE_DECLARED_PROPERTY_VALIDATION_BROWSER_ADAPTER === "1") {

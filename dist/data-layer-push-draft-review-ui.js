@@ -14,7 +14,8 @@ function labelledValues(rows) {
         return [term, description];
     });
 }
-export function renderPushDraftReview(elements, review) {
+export function renderPushDraftReview(root, review) {
+    const elements = findPushDraftReviewElements(root);
     elements.details?.replaceChildren(...labelledValues(review.rows));
     elements.changeList?.replaceChildren(...review.changes.map((change) => {
         const item = document.createElement("li");

@@ -1,5 +1,6 @@
 (ns acceptance.steps.modular-architecture
   (:require [acceptance.verification-support.modular-architecture-durable-repository-handlers :as durable-repository]
+            [acceptance.verification-support.modular-architecture-event-library-handlers :as event-library]
             [acceptance.verification-support.modular-architecture-project-management-handlers :as project-management]
             [acceptance.steps.support :as support]
             [aps.json :as aps-json]
@@ -30,7 +31,8 @@
       (reset! throughput-evidence (json/parse-string evidence-line true))))
   (assoc (inspect! world)
          :vtd004/project-evidence (:vtd004Acceptance @throughput-evidence)
-         :vtd004/durable-evidence (:vtd004DurableAcceptance @throughput-evidence)))
+         :vtd004/durable-evidence (:vtd004DurableAcceptance @throughput-evidence)
+         :vtd004/event-evidence (:vtd004EventAcceptance @throughput-evidence)))
 
 (defn- parse-seconds [value]
   (when-let [[_ amount] (re-matches #"([0-9]+(?:\.[0-9]+)?) seconds" value)]
@@ -851,8 +853,11 @@
     :handler (fn [world example captures]
                (if (:vtd004/selected-packs world)
                  (let [expected (first (example-values example captures))]
-                    (support/assert! (= expected (project-management/human-pack-list
-                                                  (:vtd004/selected-packs world)))
+                    (support/assert! (= expected
+                                        (if (= "event-library" (:vtd004/owner world))
+                                          (str/join ", " (:vtd004/selected-packs world))
+                                          (project-management/human-pack-list
+                                           (:vtd004/selected-packs world))))
                                     "Project boundary selected the wrong pack closure."
                                     {:expected expected :actual (:vtd004/selected-packs world)})
                    world)
@@ -1023,6 +1028,10 @@
 
 (def handlers
   (vec (concat core-handlers
+               (event-library/handlers
+                {:example-values example-values
+                 :verify-throughput! verify-throughput!
+                 :performance-calibration performance-calibration})
                (durable-repository/handlers
                 {:example-values example-values
                  :verify-throughput! verify-throughput!

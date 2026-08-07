@@ -364,20 +364,12 @@
         ]
       },
       "event-library": {
-        "limit": 6,
-        "baseline": 6,
+        "limit": 0,
+        "baseline": 0,
         "percentile": "selected-dependant-count",
         "tolerance": 1,
         "provisional": false,
-        "selectedPacks": [
-          "event-library",
-          "project_event_transport",
-          "defects",
-          "replay",
-          "live_flow_testing",
-          "guided_test_cases",
-          "shell"
-        ]
+        "selectedPacks": ["event-library"]
       },
       "project_event_transport": {
         "limit": 0,
@@ -614,17 +606,17 @@
         "path": "src/data-layer-live-inspector-presentation-ui.ts"
       },
       "event-library": {
-        "limit": 89,
-        "baseline": 73.9,
+        "limit": 14,
+        "baseline": 11.6,
         "percentile": "critical-path-projection",
         "tolerance": 1.2,
         "provisional": false,
         "measurementCoverage": 1,
         "timingSources": {
-          "exact task samples": 183
+          "exact task samples": 29
         },
         "environmentClassId": "3086797c33c29fa0535cdda2e8bfaed369f81e90898d7e29b4707d37c2197e89",
-        "path": "src/data-layer-event-library-deletion.ts"
+        "path": "src/data-layer-push-draft-review-ui.ts"
       },
       "project_event_transport": {
         "limit": 12,

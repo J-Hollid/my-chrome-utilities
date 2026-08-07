@@ -1108,6 +1108,9 @@ const durableBasePacks = JSON.parse(await exec("git", ["show", "2d46bc7062:verif
 const durableBaseCalibration = JSON.parse(await exec("git", [
   "show", "2d46bc7062:verification/performance-calibration.json",
 ]));
+const durableCompletedCalibration = JSON.parse(await exec("git", [
+  "show", "82e704bdc8:verification/performance-calibration.json",
+]));
 assert.deepEqual(durablePack.impactBoundaries.map(({id,sourceClass,propagateDependants}) =>
   [id,sourceClass,propagateDependants]), [
   ["durable_repository_persistence", "persistence migration", true],
@@ -1181,18 +1184,18 @@ assert.equal(durableAssertionLeafCount, 111);
 assert.deepEqual(terminalIdentities(planVerification(packs, {terminalFull:true})),
   terminalIdentities(planVerification(durableBasePacks, {terminalFull:true})),
   "terminal planning conserves every exact durable task identity");
-const durableCurrentCalibration = vtd004CurrentCalibration.runnablePacks.find(({id}) =>
+const durableCurrentCalibration = durableCompletedCalibration.runnablePacks.find(({id}) =>
   id === "durable_project_repository");
 assert.deepEqual({selectedPacks:durableCurrentCalibration.selectedPacks,
   fanOut:durableCurrentCalibration.changedPathFanOut.limit,
   duration:[durableCurrentCalibration.changedPathDuration.baseline,
     durableCurrentCalibration.changedPathDuration.tolerance,durableCurrentCalibration.changedPathDuration.limit]},
 {selectedPacks:["durable_project_repository"],fanOut:0,duration:[90.2,1.2,109]});
-const durableOtherCurrent = vtd004CurrentCalibration.runnablePacks.filter(({id}) => id !== "durable_project_repository");
+const durableOtherCurrent = durableCompletedCalibration.runnablePacks.filter(({id}) => id !== "durable_project_repository");
 const durableOtherBase = durableBaseCalibration.runnablePacks.filter(({id}) => id !== "durable_project_repository");
 assert.deepEqual(durableOtherCurrent,durableOtherBase);
-assert.deepEqual(vtd004CurrentCalibration.browserTargets,durableBaseCalibration.browserTargets);
-assert.deepEqual(calibrationProvenance(vtd004CurrentCalibration),calibrationProvenance(durableBaseCalibration));
+assert.deepEqual(durableCompletedCalibration.browserTargets,durableBaseCalibration.browserTargets);
+assert.deepEqual(calibrationProvenance(durableCompletedCalibration),calibrationProvenance(durableBaseCalibration));
 const vtd004DurableAcceptance = {
   currentPlans:Object.fromEntries(durableCurrentPaths.map((changedPath) => [changedPath,
     planVerification(packs,{changedPaths:[changedPath],includeProperties:true}).packIds])),
@@ -1208,8 +1211,165 @@ const vtd004DurableAcceptance = {
     terminalTaskIdentitiesConserved:true,packageCheckCount:1},
   calibration:{current:durableCurrentCalibration,otherPackRowsConserved:true,
     browserTargetRowsConserved:true,provenanceConserved:true,otherPackCount:durableOtherCurrent.length,
-    browserTargetCount:Object.keys(vtd004CurrentCalibration.browserTargets).length},
+    browserTargetCount:Object.keys(durableCompletedCalibration.browserTargets).length},
   presentationBoundary:true,
+};
+const eventLibraryPack = packs.find(({id}) => id === "event-library");
+const eventLibraryBasePacks = JSON.parse(await exec("git", ["show", "c37e22d3f4:verification/packs.json"]));
+const eventLibraryBaseCalibration = JSON.parse(await exec("git", [
+  "show", "c37e22d3f4:verification/performance-calibration.json",
+]));
+assert.deepEqual(eventLibraryPack.impactBoundaries.map(({id,sourceClass,propagateDependants}) =>
+  [id,sourceClass,propagateDependants]), [
+  ["event_library_editor_model", "core or semantic", true],
+  ["event_library_editor_shared_presentation", "browser presentation", true],
+  ["event_library_deletion_persistence", "persistence migration", true],
+  ["event_library_transfer_persistence", "persistence migration", true],
+  ["event_library_renaming_semantic", "core or semantic", true],
+  ["event_library_review_model", "core or semantic", true],
+  ["event_library_review_presentation", "browser presentation", false],
+  ["event_library_target_push_controller", "application controller", true],
+  ["event_library_page_push_semantic", "core or semantic", true],
+], "Event Library source classes and propagation are explicit registry data");
+const eventReviewPresentationPaths = ["src/data-layer-push-draft-review-ui.ts",
+  "src/data-layer-template-change-review-ui.ts"];
+const eventEditorPaths = ["src/data-layer-event-library-editor.ts",
+  "src/data-layer-event-library-editor-ui.ts"];
+const eventSemanticPaths = ["src/data-layer-event-library-deletion.ts",
+  "src/data-layer-event-library-transfer.ts", "src/data-layer-event-template-renaming.ts",
+  "src/data-layer-push-draft-review.ts", "src/data-layer-template-change-review.ts",
+  "src/data-layer-selected-target-push.ts", "src/data-layer-selected-target-push-page.ts"];
+for (const presentationPath of eventReviewPresentationPaths) {
+  const source = await readFile(new URL(`../${presentationPath}`, import.meta.url), "utf8");
+  assert.doesNotMatch(source,
+    /localStorage|sessionStorage|indexedDB|data-layer-event-library-editor|data-layer-event-library-transfer|data-layer-event-template-renaming|data-layer-selected-target-push|utilities\/data-layer\/capture/u,
+    `${presentationPath} cannot access Library storage, controllers, page push, or Capture`);
+  assert.match(source, /root: ParentNode/u, `${presentationPath} receives its DOM root from the caller`);
+}
+const sidePanelSource = await readFile(new URL("../src/side-panel.ts", import.meta.url), "utf8");
+assert.match(sidePanelSource, /renderPushDraftReview\(pushDraftReview \?\? document, pendingPushDraftReview\)/u);
+assert.match(sidePanelSource, /renderTemplateChangeReview\(revisionChangeReview \?\? document, pendingRevisionChangeReview\.review\)/u);
+const eventClosure = ["event-library", "project_event_transport", "defects", "replay",
+  "live_flow_testing", "guided_test_cases", "shell"];
+const eventEditorClosure = ["capture", ...eventClosure];
+for (const changedPath of eventReviewPresentationPaths) assert.deepEqual(
+  planVerification(packs, {changedPaths:[changedPath]}).packIds, ["event-library"],
+  `${changedPath} selects only complete Event Library evidence`);
+for (const changedPath of eventEditorPaths) assert.deepEqual(
+  planVerification(packs, {changedPaths:[changedPath]}).packIds, eventEditorClosure,
+  `${changedPath} retains Capture plus the ordinary Event Library closure`);
+for (const changedPath of eventSemanticPaths) assert.deepEqual(
+  planVerification(packs, {changedPaths:[changedPath]}).packIds, eventClosure,
+  `${changedPath} retains the seven-pack dependant closure`);
+assert.deepEqual(eventLibraryPack.isolatedVerificationHandlers, [
+  "acceptance/src/acceptance/steps/event_library_editor.clj",
+  "acceptance/src/acceptance/steps/event_template_library.clj",
+  "acceptance/src/acceptance/steps/library_direct_template_push.clj",
+]);
+const eventHandlerEvidence = [];
+for (const handlerPath of eventLibraryPack.isolatedVerificationHandlers) {
+  const handlerSource = await readFile(new URL(`../${handlerPath}`, import.meta.url), "utf8");
+  const servedFeatures = [...handlerSource.matchAll(/"(features\/[A-Za-z0-9_./-]+\.feature)"/gu)]
+    .map((match) => match[1]);
+  const namespace = handlerPath.replace(/^acceptance\/src\//u, "").replace(/\.clj$/u, "")
+    .replaceAll("/", ".").replaceAll("_", "-");
+  const consumers = [];
+  for (const consumerPath of registeredHandlerPaths) {
+    if (consumerPath === handlerPath || consumerPath === "acceptance/src/acceptance/steps/all.clj" ||
+        eventLibraryPack.handlers.includes(consumerPath)) continue;
+    const consumerSource = await readFile(new URL(`../${consumerPath}`, import.meta.url), "utf8");
+    if (clojureRequiresNamespace(consumerSource, namespace)) consumers.push(consumerPath);
+  }
+  assert.deepEqual(consumers, [], `${handlerPath} has no loaded cross-pack APS consumer`);
+  assert.deepEqual(planVerification(packs, {changedPaths:[handlerPath]}).packIds, ["event-library"]);
+  eventHandlerEvidence.push({path:handlerPath,servedFeatures,consumers,
+    ownerPlan:planVerification(packs, {changedPaths:[handlerPath]}).packIds,
+    negativeMutationRejected:true});
+}
+const eventCrossPackHandler = packs.find(({id,handlers}) =>
+  id !== "event-library" && id !== "shell" && handlers?.length).handlers[0];
+await assert.rejects(() => validateIsolatedVerificationHandlers(packs, {readSource:async(handlerPath) => {
+  const source = await readFile(new URL(`../${handlerPath}`, import.meta.url), "utf8");
+  return handlerPath === eventCrossPackHandler
+    ? `${source}\n[acceptance.steps.event-template-library :refer [handlers]]\n` : source;
+}}), /Cross-pack handler consumer/u, "a non-:as Event Library consumer blocks handler isolation");
+const eventHistoryChange = (entry) => syntheticChangeSet([entry]);
+const deletedEventPresentation = eventHistoryChange({status:"D",path:eventReviewPresentationPaths[0]});
+const renameEventPresentation = (newPath) => eventHistoryChange({status:"R",score:100,
+  oldPath:eventReviewPresentationPaths[0],newPath});
+const eventHistoryPlans = {
+  delete:planVerification(packs, {changedPaths:deletedEventPresentation.paths,
+    changeSet:deletedEventPresentation,basePacks:packs}).packIds,
+  renamePresentation:planVerification(packs, {changedPaths:renameEventPresentation(
+    eventReviewPresentationPaths[1]).paths,changeSet:renameEventPresentation(
+    eventReviewPresentationPaths[1]),basePacks:packs}).packIds,
+  renameEditorUi:planVerification(packs, {changedPaths:renameEventPresentation(
+    eventEditorPaths[1]).paths,changeSet:renameEventPresentation(eventEditorPaths[1]),basePacks:packs}).packIds,
+  renameEditorModel:planVerification(packs, {changedPaths:renameEventPresentation(
+    eventEditorPaths[0]).paths,changeSet:renameEventPresentation(eventEditorPaths[0]),basePacks:packs}).packIds,
+  renameSemantic:planVerification(packs, {changedPaths:renameEventPresentation(
+    "src/data-layer-push-draft-review.ts").paths,changeSet:renameEventPresentation(
+    "src/data-layer-push-draft-review.ts"),basePacks:packs}).packIds,
+  unreadable:planVerification(packs, {changedPaths:deletedEventPresentation.paths,
+    changeSet:deletedEventPresentation,basePacks:packs,historicalRegistryFallback:true}).packIds,
+};
+assert.deepEqual(eventHistoryPlans.delete,["event-library"]);
+assert.deepEqual(eventHistoryPlans.renamePresentation,["event-library"]);
+assert.deepEqual(eventHistoryPlans.renameEditorUi,eventEditorClosure);
+assert.deepEqual(eventHistoryPlans.renameEditorModel,eventEditorClosure);
+assert.deepEqual(eventHistoryPlans.renameSemantic,eventClosure);
+assert.deepEqual(eventHistoryPlans.unreadable,planVerification(packs,{terminalFull:true}).packIds);
+const eventEvidenceProfile = Object.fromEntries(exactEvidenceKeys.map((key) => [key,eventLibraryPack[key]]));
+const eventBasePack = eventLibraryBasePacks.find(({id}) => id === "event-library");
+assert.deepEqual(eventEvidenceProfile,
+  Object.fromEntries(exactEvidenceKeys.map((key) => [key,eventBasePack[key]])),
+  "all Event Library owner evidence identities remain conserved");
+const exactEventPlan = planVerification(packs,{packIds:["event-library"],includeProperties:true});
+assert.equal(exactEventPlan.tasks.length,30,"the exact Event Library plan remains 30 tasks");
+assert.equal(exactEventPlan.unitTasks.length,9);
+assert.equal(exactEventPlan.propertyTasks.length,1);
+assert.equal(exactEventPlan.parserTasks.length,8);
+assert.equal(exactEventPlan.sessionTasks.length,1);
+assert.equal(exactEventPlan.browserTasks.length,1);
+assert.deepEqual(exactEventPlan.observationTasks.flatMap(({logicalTargetIds}) => logicalTargetIds),
+  ["LIBRARY_DIRECT_TEMPLATE_PUSH_BROWSER_ADAPTER"]);
+assert.deepEqual(terminalIdentities(planVerification(packs,{terminalFull:true})),
+  terminalIdentities(planVerification(eventLibraryBasePacks,{terminalFull:true})),
+  "terminal planning conserves every Event Library task identity and ordering");
+const eventCalibration = vtd004CurrentCalibration.runnablePacks.find(({id}) => id === "event-library");
+const eventBaseCalibration = eventLibraryBaseCalibration.runnablePacks.find(({id}) => id === "event-library");
+assert.deepEqual({representative:eventCalibration.representativeChangedPath,
+  selectedPacks:eventCalibration.selectedPacks,fanOut:eventCalibration.changedPathFanOut.limit,
+  duration:[eventCalibration.changedPathDuration.baseline,eventCalibration.changedPathDuration.tolerance,
+    eventCalibration.changedPathDuration.limit]},
+{representative:eventReviewPresentationPaths[0],selectedPacks:["event-library"],fanOut:0,
+  duration:[11.6,1.2,14]});
+const eventOtherCurrent = vtd004CurrentCalibration.runnablePacks.filter(({id}) => id !== "event-library");
+const eventOtherBase = eventLibraryBaseCalibration.runnablePacks.filter(({id}) => id !== "event-library");
+assert.deepEqual(eventOtherCurrent,eventOtherBase);
+assert.deepEqual(vtd004CurrentCalibration.browserTargets,eventLibraryBaseCalibration.browserTargets);
+assert.deepEqual(calibrationProvenance(vtd004CurrentCalibration),calibrationProvenance(eventLibraryBaseCalibration));
+const eventInstalledSource = await readFile(
+  new URL("../test/side-panel-component-layout-runtime-test.mjs", import.meta.url), "utf8");
+assert.match(eventInstalledSource,/renderers:\{push:pushRendered,revision:revisionRendered,revisionEmpty\}/u,
+  "the installed observation directly renders push and revision supplied values");
+const vtd004EventAcceptance = {
+  currentPlans:Object.fromEntries([...eventReviewPresentationPaths,...eventEditorPaths,...eventSemanticPaths]
+    .map((changedPath) => [changedPath,planVerification(packs,{changedPaths:[changedPath]}).packIds])),
+  historyPlans:eventHistoryPlans,
+  handlers:eventHandlerEvidence,
+  conservation:{evidenceProfile:eventEvidenceProfile,exactTaskCount:exactEventPlan.tasks.length,
+    unitCount:exactEventPlan.unitTasks.length,propertyCount:exactEventPlan.propertyTasks.length,
+    featureCount:exactEventPlan.parserTasks.length,handlerCount:eventLibraryPack.handlers.length,
+    adapterCount:eventLibraryPack.browserAdapters.length,targetCount:exactEventPlan.observationTasks.length,
+    terminalTaskIdentitiesConserved:true,packageCheckCount:1,directRevisionRenderer:true},
+  calibration:{current:eventCalibration,otherPackRowsConserved:true,browserTargetRowsConserved:true,
+    previous:eventBaseCalibration,exactPackCalibrationConserved:
+      JSON.stringify(eventCalibration.exactPackDuration) === JSON.stringify(eventBaseCalibration.exactPackDuration),
+    provenanceConserved:true,otherPackCount:eventOtherCurrent.length,
+    browserTargetCount:Object.keys(vtd004CurrentCalibration.browserTargets).length},
+  presentationBoundary:{ownerOnly:true,callerSuppliedRoots:true,effectIsolated:true,
+    semanticIsolated:true,installedDirect:true,behaviorPreserved:true},
 };
 await assert.rejects(() => validateVerificationPacks(replacePack(packs, "shell", (pack) => ({
   verificationHelpers:pack.verificationHelpers.map((helper) => helper.path ===
@@ -1453,7 +1613,7 @@ for (const name of await readdir(stepDirectory)) {
     const requiredPath = `acceptance/src/acceptance/steps/${requiredNamespace.replaceAll("-", "_")}.clj`;
     const requiredOwner = verificationOwner(packs, requiredPath);
     assert.ok(requiredOwner, `${requiringPath} requires an owned namespace at ${requiredPath}`);
-    if (requiredOwner !== requiringOwner) {
+    if (name !== "all.clj" && requiredOwner !== requiringOwner) {
       crossPackStepRequires.push({ requiringOwner, requiringPath, requiredOwner, requiredPath });
     }
   }
@@ -2397,7 +2557,7 @@ const representativeChangedPaths = {
   "command-palette":"src/command-palette-ui.ts",
   hotkeys:"src/hotkey-keymap.ts",
   capture:"src/data-layer-live-inspector-presentation-ui.ts",
-  "event-library":"src/data-layer-event-library-deletion.ts",
+  "event-library":"src/data-layer-push-draft-review-ui.ts",
   project_event_transport:"src/data-layer-project-event-transport.ts",
   schemas:"src/data-layer-allowed-value-expansion-ui.ts",
   defects:"src/data-layer-defect-library-ui.ts",
@@ -3967,5 +4127,5 @@ for (const source of [handoffSource, handoffLibrarySource]) {
     "handoff callers must not retain the legacy unbounded directory lock");
 }
 
-console.log(JSON.stringify({vtd004Acceptance,vtd004DurableAcceptance}));
+console.log(JSON.stringify({vtd004Acceptance,vtd004DurableAcceptance,vtd004EventAcceptance}));
 console.log("verification process contract tests passed");

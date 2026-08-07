@@ -4,6 +4,7 @@
             [acceptance.steps.event-template-library :as library]))
 
 (def event-library-editor-wired? support/wired?)
+(def feature-files ["features/data-layer-event-template-library.feature"])
 (def handlers (vec (concat library/handlers property/handlers)))
 
 (defn event-library-editor-step-covered? [text]

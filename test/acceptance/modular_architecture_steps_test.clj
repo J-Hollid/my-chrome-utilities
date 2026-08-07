@@ -102,3 +102,6 @@
 
 (deftest vtd004-durable-steps-use-dedicated-production-backed-semantics
   (assert-dedicated-scenario-handlers! #"Modular verification packs 0(?:4[6-9]|5[0-2])" 7))
+
+(deftest vtd004-event-library-steps-use-dedicated-production-backed-semantics
+  (assert-dedicated-scenario-handlers! #"Modular verification packs 05[3-9]" 7))

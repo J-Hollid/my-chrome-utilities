@@ -40,8 +40,10 @@
    {:pattern #"^its complete owner unit, property, feature, handler, and installed browser evidence is selected$"
     :handler (fn [world _ _]
                (let [pack (:vtd004/pack world)]
-                 (support/assert! (= (if (= "durable_project_repository" (:id pack))
-                                       [5 3 2 1 2] [4 4 6 1 4])
+                 (support/assert! (= (case (:id pack)
+                                       "durable_project_repository" [5 3 2 1 2]
+                                       "event-library" [9 1 8 3 1]
+                                       [4 4 6 1 4])
                                      (mapv #(count (% pack))
                                            [:unit :property :features :handlers :browserAdapters]))
                                   "Owner evidence profile is incomplete." {}))

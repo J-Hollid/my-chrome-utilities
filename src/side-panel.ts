@@ -346,7 +346,6 @@ import {
   type PushDraftReview,
 } from "./utilities/data-layer/event-library.js";
 import {
-  findPushDraftReviewElements,
   renderPushDraftReview,
 } from "./utilities/data-layer/event-library.js";
 import { createTemplateChangeReview, type TemplateChangeReview } from "./utilities/data-layer/event-library.js";
@@ -781,7 +780,6 @@ if (schemaAssignmentEditor && saveSchemaAssignmentButton) schemaAssignmentEditor
 const pushDraftReview = document.querySelector<HTMLDialogElement>("#push-draft-review");
 const pushDraftReviewHeading = document.querySelector<HTMLElement>("#push-draft-review-heading");
 const pushDraftReviewSummary = document.querySelector<HTMLElement>("#push-draft-review-summary");
-const pushDraftReviewElements = findPushDraftReviewElements();
 const confirmPushDraftButton = document.querySelector<HTMLButtonElement>("#confirm-push-draft");
 const cancelPushDraftButton = document.querySelector<HTMLButtonElement>("#cancel-push-draft");
 const revisionChangeReview = document.querySelector<HTMLDialogElement>("#revision-change-review");
@@ -4892,7 +4890,7 @@ function openPushDraftReview(): void {
     return;
   }
   pendingPushDraftReview = createPushDraftReview(propertyEditorState, target);
-  renderPushDraftReview(pushDraftReviewElements, pendingPushDraftReview);
+  renderPushDraftReview(pushDraftReview ?? document, pendingPushDraftReview);
   if (pushDraftReviewSummary) pushDraftReviewSummary.textContent = "";
   if (confirmPushDraftButton) confirmPushDraftButton.textContent = pendingPushDraftReview.confirmLabel;
   openPushReview({ dialog: pushDraftReview, heading: pushDraftReviewHeading, trigger: pushTemplateDraftButton });

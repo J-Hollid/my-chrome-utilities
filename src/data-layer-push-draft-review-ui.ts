@@ -27,9 +27,10 @@ function labelledValues(rows: readonly (readonly [string, string])[]): Node[] {
 }
 
 export function renderPushDraftReview(
-  elements: PushDraftReviewElements,
+  root: ParentNode,
   review: Pick<PushDraftReview, "rows" | "changes">,
 ): void {
+  const elements = findPushDraftReviewElements(root);
   elements.details?.replaceChildren(...labelledValues(review.rows));
   elements.changeList?.replaceChildren(...review.changes.map((change) => {
     const item = document.createElement("li");

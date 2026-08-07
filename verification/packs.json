@@ -438,7 +438,7 @@
   },
   {
     "id": "event-library",
-    "representativeChangedPath": "src/data-layer-event-library-deletion.ts",
+    "representativeChangedPath": "src/data-layer-push-draft-review-ui.ts",
     "source": [
       "src/data-layer-event-library",
       "src/data-layer-event-template",
@@ -450,6 +450,17 @@
     ],
     "dependencies": [
       "capture"
+    ],
+    "impactBoundaries": [
+      {"id":"event_library_editor_model","prefixes":["src/data-layer-event-library-editor.ts"],"propagateDependants":true,"sourceClass":"core or semantic"},
+      {"id":"event_library_editor_shared_presentation","prefixes":["src/data-layer-event-library-editor-ui.ts"],"propagateDependants":true,"sourceClass":"browser presentation"},
+      {"id":"event_library_deletion_persistence","prefixes":["src/data-layer-event-library-deletion.ts"],"propagateDependants":true,"sourceClass":"persistence migration"},
+      {"id":"event_library_transfer_persistence","prefixes":["src/data-layer-event-library-transfer.ts"],"propagateDependants":true,"sourceClass":"persistence migration"},
+      {"id":"event_library_renaming_semantic","prefixes":["src/data-layer-event-template-renaming.ts"],"propagateDependants":true,"sourceClass":"core or semantic"},
+      {"id":"event_library_review_model","prefixes":["src/data-layer-push-draft-review.ts","src/data-layer-template-change-review.ts"],"propagateDependants":true,"sourceClass":"core or semantic"},
+      {"id":"event_library_review_presentation","prefixes":["src/data-layer-push-draft-review-ui.ts","src/data-layer-template-change-review-ui.ts"],"propagateDependants":false,"sourceClass":"browser presentation"},
+      {"id":"event_library_target_push_controller","prefixes":["src/data-layer-selected-target-push.ts"],"propagateDependants":true,"sourceClass":"application controller"},
+      {"id":"event_library_page_push_semantic","prefixes":["src/data-layer-selected-target-push-page.ts"],"propagateDependants":true,"sourceClass":"core or semantic"}
     ],
     "unit": [
       "test/data-layer-event-library-deletion-test.mjs",
@@ -476,6 +487,11 @@
       "features/data-layer-template-editor-progressive-disclosure.feature"
     ],
     "handlers": [
+      "acceptance/src/acceptance/steps/event_library_editor.clj",
+      "acceptance/src/acceptance/steps/event_template_library.clj",
+      "acceptance/src/acceptance/steps/library_direct_template_push.clj"
+    ],
+    "isolatedVerificationHandlers": [
       "acceptance/src/acceptance/steps/event_library_editor.clj",
       "acceptance/src/acceptance/steps/event_template_library.clj",
       "acceptance/src/acceptance/steps/library_direct_template_push.clj"

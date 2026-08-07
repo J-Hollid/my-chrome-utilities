@@ -6,8 +6,9 @@
   (let [inspected (verify-throughput! world)
         owner (or (:vtd004/owner world) "project_management")
         pack (first (filter #(= owner (:id %)) (:modular/registry inspected)))
-        evidence (if (= owner "durable_project_repository")
-                   (:vtd004/durable-evidence inspected)
+        evidence (case owner
+                   "durable_project_repository" (:vtd004/durable-evidence inspected)
+                   "event-library" (:vtd004/event-evidence inspected)
                    (:vtd004/project-evidence inspected))]
     (assoc inspected :vtd004/owner owner :vtd004/pack pack :vtd004/evidence evidence
            :vtd004/calibration (performance-calibration))))
@@ -59,15 +60,26 @@
     :else :delete))
 
 (defn- history-plan-key [owner change historical-registry]
-  ((if (= owner "durable_project_repository")
-     durable-history-plan-key
-     project-history-plan-key)
-   change historical-registry))
+  (if (= owner "event-library")
+    (cond
+      (not= historical-registry "readable and compatible") :unreadable
+      (str/includes? change "event-library-editor-ui.ts") :renameEditorUi
+      (str/includes? change "event-library-editor.ts") :renameEditorModel
+      (str/includes? change "push-draft-review.ts") :renameSemantic
+      (str/includes? change " to ") :renamePresentation
+      :else :delete)
+    ((if (= owner "durable_project_repository")
+       durable-history-plan-key
+       project-history-plan-key)
+     change historical-registry)))
 
 (defn- history-scope [owner selected]
   (cond
+    (and (= owner "event-library") (= 1 (count selected))) "event-library only"
     (= 1 (count selected)) (first selected)
     (= 20 (count selected)) "every runnable pack"
+    (and (= owner "event-library") (= 8 (count selected))) "the eight-pack Capture closure"
+    (and (= owner "event-library") (= 7 (count selected))) "the seven-pack dependant closure"
     :else (if (= owner "durable_project_repository")
             "the six-pack dependant closure" "the ten-pack dependant closure")))
 

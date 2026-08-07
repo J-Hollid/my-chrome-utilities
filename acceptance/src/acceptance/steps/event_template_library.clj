@@ -3,6 +3,8 @@
             [acceptance.steps.support :as support]
             [clojure.string :as str]))
 
+(def feature-files ["features/data-layer-event-template-library.feature"])
+
 (def templates
   ["captured event <event_name> is available from source <source_name>"
    "the user saves captured event <event_name> to the Library as <template_name>"
